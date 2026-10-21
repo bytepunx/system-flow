@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0027
 owner: alex
 created: 2026-10-21T06:59:38Z
-updated: 2026-10-21T07:55:01Z
+updated: 2026-10-21T08:03:17Z
 transitions:
   - to: ready
     at: 2026-10-21T07:54:23Z
@@ -17,16 +17,29 @@ transitions:
     by: agent-S-0458
 tags: [dashboard]
 topics: [dashboard, design]
-touches: [flaiover/package.json, flaiover/pnpm-lock.yaml, design/tech/icons.md, design/tech/README.md, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/NavRail.svelte, flaiover/src/lib/components/NavRail.svelte.test.ts, flaiover/src/lib/navrail.svelte.ts, flaiover/src/lib/navrail.svelte.test.ts, design/components/flaiover/src/lib/components/NavRail.examples.json, flaiover/src/routes/+layout.svelte, flaiover/src/routes/layout.svelte.test.ts, flaiover/src/routes/layout.css, flaiover/src/lib/components/SiteMenu.svelte, flaiover/e2e/layout.e2e.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
+touches: [flaiover/package.json, flaiover/pnpm-lock.yaml, design/tech/icons.md, design/tech/README.md, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/NavRail.svelte, flaiover/src/lib/components/NavRail.svelte.test.ts, flaiover/src/lib/navrail.svelte.ts, flaiover/src/lib/navrail.svelte.test.ts, design/components/flaiover/src/lib/components/NavRail.examples.json, flaiover/src/routes/+layout.svelte, flaiover/src/routes/layout.svelte.test.ts, flaiover/src/routes/layout.css, flaiover/src/lib/components/SiteMenu.svelte, flaiover/e2e/layout.e2e.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flaiover/src/lib/components/SiteMenu.svelte.test.ts]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1143
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-21
+      ceremony: 2
+      hand_edits: 1
+      work: 33
+  models:
+    - model: claude-opus-5-5
+      input: 234
+      output: 1351
+      cache_read: 10378992
+      cache_write: 432800
+      cost: 4.0179
   strategic:
     - kind: orchestrator
       seconds: 95

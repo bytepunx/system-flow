@@ -21,6 +21,18 @@ transitions:
 stream: S-0464
 tags: [flai]
 touches: [flai/internal/mergequeue/batch.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/bisect_test.go, flai/internal/verify/story.go, flai/internal/mergequeue/land_test.go, flai/internal/serve/mergequeue_test.go]
+usage:
+  source: log
+  seconds: 915
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 36
+      output: 11385
+      cache_read: 2209517
+      cache_write: 79836
+      cost: 1.1711
 ---
 # T-1974 The merge queue's batch and bisection run their tiers with MERGE_QUEUE_STORIES naming the stories they verify
 

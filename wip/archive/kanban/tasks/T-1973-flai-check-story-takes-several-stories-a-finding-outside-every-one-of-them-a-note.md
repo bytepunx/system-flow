@@ -21,6 +21,18 @@ transitions:
 stream: S-0464
 tags: [flai]
 touches: [flai/cmd/check.go, flai/cmd/check_test.go, flai/internal/check/story.go, flai/internal/check/scope.go, flai/internal/check/scope_test.go, docs/users/flai-reference.md]
+usage:
+  source: log
+  seconds: 1006
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 77
+      output: 24057
+      cache_read: 4668717
+      cache_write: 168694
+      cost: 2.4745
 ---
 # T-1973 flai check --story takes several stories, a finding outside every one of them a note
 

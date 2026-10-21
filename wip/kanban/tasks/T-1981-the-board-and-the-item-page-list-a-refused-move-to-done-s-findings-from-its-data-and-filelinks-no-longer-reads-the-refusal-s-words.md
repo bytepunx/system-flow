@@ -3,19 +3,37 @@ id: T-1981
 type: task
 nature: improvement
 title: The board and the item page list a refused move to done's findings from its data, and filelinks no longer reads the refusal's words
-status: ready
+status: done
 parent: S-0465
 owner: alex
 created: 2026-10-21T07:37:01Z
-updated: 2026-10-21T07:39:06Z
+updated: 2026-10-21T08:07:49Z
 transitions:
   - to: ready
     at: 2026-10-21T07:39:06Z
     by: agent-S-0465
+  - to: in-progress
+    at: 2026-10-21T08:01:24Z
+    by: system-flow
+  - to: done
+    at: 2026-10-21T08:07:49Z
+    by: agent-S-0465
 stream: S-0465
 tags: [flaiover]
-touches: [flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts, "flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts", "flaiover/src/routes/api/items/[id]/move/+server.ts", flaiover/src/lib/filelinks.ts, flaiover/src/lib/filelinks.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
+touches: [flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts, "flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts", "flaiover/src/routes/api/items/[id]/move/+server.ts", flaiover/src/lib/filelinks.ts, flaiover/src/lib/filelinks.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/components/AcceptFindings.svelte]
 after: [T-1979, T-1980]
+usage:
+  source: log
+  seconds: 385
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 118
+      output: 624
+      cache_read: 4781134
+      cache_write: 124160
+      cost: 1.822
 ---
 # T-1981 The board and the item page list a refused move to done's findings from its data, and filelinks no longer reads the refusal's words
 

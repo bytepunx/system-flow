@@ -3,11 +3,11 @@ id: T-1979
 type: task
 nature: improvement
 title: flai move to done prints a refused acceptance as data with exit 4 under --json, and item.move answers it as Refused
-status: in-progress
+status: done
 parent: S-0465
 owner: alex
 created: 2026-10-21T07:36:21Z
-updated: 2026-10-21T07:39:03Z
+updated: 2026-10-21T08:16:46Z
 transitions:
   - to: ready
     at: 2026-10-21T07:39:03Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-21T07:39:03Z
     by: agent-S-0465
+  - to: done
+    at: 2026-10-21T07:54:28Z
+    by: agent-S-0465
 stream: S-0465
 tags: [flai]
-touches: [flai/cmd/move.go, flai/cmd/move_refused_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, docs/users/flai.md, design/system/flai-cli.md]
+touches: [flai/cmd/move.go, flai/cmd/move_refused_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, docs/users/flai.md, design/system/flai-cli.md, docs/users/flai-reference.md]
+usage:
+  source: log
+  seconds: 925
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 72
+      output: 408
+      cache_read: 2585274
+      cache_write: 277951
+      cost: 1.0635
 ---
 # T-1979 flai move to done prints a refused acceptance as data with exit 4 under --json, and item.move answers it as Refused
 

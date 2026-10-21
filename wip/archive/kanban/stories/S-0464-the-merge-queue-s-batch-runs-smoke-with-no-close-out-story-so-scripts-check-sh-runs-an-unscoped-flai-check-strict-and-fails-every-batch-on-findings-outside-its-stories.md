@@ -3,10 +3,10 @@ id: S-0464
 type: story
 nature: remediation
 title: The merge queue's batch runs smoke with no CLOSE_OUT_STORY, so scripts/check.sh runs an unscoped flai check --strict and fails every batch on findings outside its stories
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-21T07:19:58Z
-updated: 2026-10-21T07:47:38Z
+updated: 2026-10-21T08:22:18Z
 transitions:
   - to: ready
     at: 2026-10-21T07:27:18Z
@@ -14,29 +14,54 @@ transitions:
   - to: in-progress
     at: 2026-10-21T07:31:41Z
     by: agent-S-0464
+  - to: review
+    at: 2026-10-21T08:12:44Z
+    by: agent-S-0464
+  - to: done
+    at: 2026-10-21T08:22:18Z
+    by: alex
 tags: [flai, template]
 topics: [cli, template, orchestration]
-touches: [flai/cmd/check.go, flai/cmd/check_test.go, flai/internal/check/story.go, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/internal/check/check_test.go, flai/internal/mdlint/repo_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/bisect_test.go, flai/internal/verify/story.go, scripts/check.sh, scripts/lint-md.sh, scripts/README.md, template/root/scripts/check.sh, template/root/scripts/README.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/devex.md, design/adrs/README.md, design/issues/I-0174-the-merge-queue-s-batch-runs-smoke-with-no-close-out-story-so-scripts-check-sh-runs-an-unscoped-flai-check-strict-and-fails-every-batch-on-findings-outside-its-stories.md, design/issues/summary.md, flai/internal/mergequeue/land_test.go, flai/internal/serve/mergequeue_test.go]
+touches: [flai/cmd/check.go, flai/cmd/check_test.go, flai/internal/check/story.go, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/internal/check/check_test.go, flai/internal/mdlint/repo_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/bisect_test.go, flai/internal/verify/story.go, scripts/check.sh, scripts/lint-md.sh, scripts/README.md, template/root/scripts/check.sh, template/root/scripts/README.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/devex.md, design/adrs/README.md, design/issues/I-0174-the-merge-queue-s-batch-runs-smoke-with-no-close-out-story-so-scripts-check-sh-runs-an-unscoped-flai-check-strict-and-fails-every-batch-on-findings-outside-its-stories.md, design/issues/summary.md, flai/internal/mergequeue/land_test.go, flai/internal/serve/mergequeue_test.go, design/adrs/0183-the-merge-queue-s-batch-and-each-bisection-step-run-their-tiers-with-merge.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2486
+  priced_by: harness
+  turns:
+    - day: 2026-10-21
+      ceremony: 6
+      test_runs: 1
+      hand_edits: 2
+      work: 51
+  models:
+    - model: claude-opus-5-5
+      input: 282
+      output: 88388
+      cache_read: 17153269
+      cache_write: 619798
+      cost: 9.0915
   strategic:
     - kind: orchestrator
-      seconds: 197
+      seconds: 390
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 28
-          output: 402
-          cache_read: 5278247
-          cache_write: 14660
-          cost: 1.3271
+          input: 36
+          output: 499
+          cache_read: 6122908
+          cache_write: 19154
+          cost: 1.54
+        - model: claude-sonnet-5-5
+          input: 3
+          output: 21
+          cache_read: 28013
+          cache_write: 12552
+          cost: 0.0332
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m
@@ -62,8 +87,8 @@ finalized:
 This story remediates [I-0174](../../../design/issues/I-0174-the-merge-queue-s-batch-runs-smoke-with-no-close-out-story-so-scripts-check-sh-runs-an-unscoped-flai-check-strict-and-fails-every-batch-on-findings-outside-its-stories.md), "The merge queue's batch runs smoke with no CLOSE_OUT_STORY, so scripts/check.sh runs an unscoped flai check --strict and fails every batch on findings outside its stories". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0174 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0174 is closed with `flai issue close I-0174 --reason` saying what fixed it
+- [x] The cause I-0174 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0174 is closed with `flai issue close I-0174 --reason` saying what fixed it
 
 ## Tasks
 - T-1973 flai check --story takes several stories, a finding outside every one of them a note

@@ -3,19 +3,37 @@ id: T-1982
 type: task
 nature: remediation
 title: Close I-0145 with what fixed it
-status: ready
+status: done
 parent: S-0465
 owner: alex
 created: 2026-10-21T07:37:13Z
-updated: 2026-10-21T07:39:06Z
+updated: 2026-10-21T08:08:44Z
 transitions:
   - to: ready
     at: 2026-10-21T07:39:06Z
+    by: agent-S-0465
+  - to: in-progress
+    at: 2026-10-21T08:08:36Z
+    by: agent-S-0465
+  - to: done
+    at: 2026-10-21T08:08:44Z
     by: agent-S-0465
 stream: S-0465
 tags: [flaiover]
 touches: [design/issues/I-0145-flai-move-to-done-refuses-unfixed-lint-as-text-only-so-the-dashboard-picks-each-file-s-checkout-from-the-refusal-s-words.md, design/issues/summary.md]
 after: [T-1981]
+usage:
+  source: log
+  seconds: 5
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 40
+      cache_read: 370660
+      cache_write: 941
+      cost: 0.138
 ---
 # T-1982 Close I-0145 with what fixed it
 

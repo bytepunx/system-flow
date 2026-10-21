@@ -3,16 +3,37 @@ id: T-1976
 type: task
 nature: remediation
 title: Record the batch's scoped checks in an ADR, the design, and the docs, and close I-0174
-status: backlog
+status: done
 parent: S-0464
 owner: alex
 created: 2026-10-21T07:30:46Z
-updated: 2026-10-21T07:30:46Z
-transitions: []
+updated: 2026-10-21T08:00:45Z
+transitions:
+  - to: ready
+    at: 2026-10-21T07:59:45Z
+    by: agent-S-0464
+  - to: in-progress
+    at: 2026-10-21T07:59:47Z
+    by: agent-S-0464
+  - to: done
+    at: 2026-10-21T08:00:45Z
+    by: agent-S-0464
 stream: S-0464
 tags: [flai]
-touches: [design/adrs/README.md, design/system/flai-cli.md, design/system/devex.md, docs/users/flai.md, design/issues/I-0174-the-merge-queue-s-batch-runs-smoke-with-no-close-out-story-so-scripts-check-sh-runs-an-unscoped-flai-check-strict-and-fails-every-batch-on-findings-outside-its-stories.md, design/issues/summary.md]
+touches: [design/adrs/README.md, design/system/flai-cli.md, design/system/devex.md, docs/users/flai.md, design/issues/I-0174-the-merge-queue-s-batch-runs-smoke-with-no-close-out-story-so-scripts-check-sh-runs-an-unscoped-flai-check-strict-and-fails-every-batch-on-findings-outside-its-stories.md, design/issues/summary.md, design/adrs/0183-the-merge-queue-s-batch-and-each-bisection-step-run-their-tiers-with-merge.md, template/CHANGELOG.md]
 after: [T-1974, T-1975]
+usage:
+  source: log
+  seconds: 58
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 32
+      output: 10093
+      cache_read: 1958648
+      cache_write: 70772
+      cost: 1.0381
 ---
 # T-1976 Record the batch's scoped checks in an ADR, the design, and the docs, and close I-0174
 

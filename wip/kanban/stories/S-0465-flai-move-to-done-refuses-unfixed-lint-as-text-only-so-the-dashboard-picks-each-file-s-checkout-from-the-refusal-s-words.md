@@ -6,7 +6,7 @@ title: flai move to done refuses unfixed lint as text only, so the dashboard pic
 status: in-progress
 owner: alex
 created: 2026-10-21T07:24:59Z
-updated: 2026-10-21T07:38:37Z
+updated: 2026-10-21T08:16:46Z
 transitions:
   - to: ready
     at: 2026-10-21T07:38:29Z
@@ -16,16 +16,29 @@ transitions:
     by: agent-S-0465
 tags: [flai, flaiover]
 topics: [cli, dashboard]
-touches: [flai/cmd/move.go, flai/cmd/move_refused_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, docs/users/flai.md, design/system/flai-cli.md, flaiover/src/lib/components/AcceptFindings.svelte, flaiover/src/lib/components/AcceptFindings.svelte.test.ts, design/components/flaiover/src/lib/components/AcceptFindings.examples.json, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts, "flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts", "flaiover/src/routes/api/items/[id]/move/+server.ts", flaiover/src/lib/filelinks.ts, flaiover/src/lib/filelinks.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/issues/I-0145-flai-move-to-done-refuses-unfixed-lint-as-text-only-so-the-dashboard-picks-each-file-s-checkout-from-the-refusal-s-words.md, design/issues/summary.md]
+touches: [flai/cmd/move.go, flai/cmd/move_refused_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, docs/users/flai.md, design/system/flai-cli.md, flaiover/src/lib/components/AcceptFindings.svelte, flaiover/src/lib/components/AcceptFindings.svelte.test.ts, design/components/flaiover/src/lib/components/AcceptFindings.examples.json, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts, "flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts", "flaiover/src/routes/api/items/[id]/move/+server.ts", flaiover/src/lib/filelinks.ts, flaiover/src/lib/filelinks.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/issues/I-0145-flai-move-to-done-refuses-unfixed-lint-as-text-only-so-the-dashboard-picks-each-file-s-checkout-from-the-refusal-s-words.md, design/issues/summary.md, docs/users/flai-reference.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1806
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-21
+      ceremony: 2
+      hand_edits: 1
+      work: 25
+  models:
+    - model: claude-opus-5-5
+      input: 276
+      output: 1599
+      cache_read: 11132133
+      cache_write: 625492
+      cost: 4.3672
   strategic:
     - kind: orchestrator
       seconds: 80

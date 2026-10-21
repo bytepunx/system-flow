@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1099.3003
-accrued_seconds: 1033857
-tasks_completed: 745
-last_run: 2026-10-21T07:48:37Z
+accrued_cost: 1107.4326
+accrued_seconds: 1035728
+tasks_completed: 753
+last_run: 2026-10-21T08:19:48Z
 ---
 
 # Orchestrator activity
@@ -5226,6 +5226,62 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0456
 - Seconds: 62
 - Cost: 0.6026 USD, estimated
+
+### 2026-10-21T07:49:57Z
+
+- Summary: The operator accepted S-0453, so I resolved my TH-0559. Published under publish, policy judgement. Pending: 1 story, 50 USD/week. Released flai 1.67.6 (tag flai/v1.67.6) and template 1.0.106 (system-flow-template v1.0.106 at db2e680), both pushed, bundling S-0453 (patch). Reason: ADR-0181's awaiting rule is complete across the inbox, the MCP tools, the template and the docs.
+- Items: S-0453
+- Seconds: 80
+- Cost: 0.7417 USD, estimated
+
+### 2026-10-21T07:54:35Z
+
+- Summary: The operator moved S-0458 to ready, and S-0459 and S-0460 are in ready too. Re-applied the throughput order under order_ready: S-0459 (45m), S-0460 (1h), S-0458 (1h30m). S-0459 and S-0460 wait for S-0458 (after), so S-0458 is the one pullable.
+- Items: S-0458, S-0459, S-0460
+- Seconds: 278
+- Cost: 1.0360 USD, estimated
+
+### 2026-10-21T07:54:45Z
+
+- Summary: The operator moved S-0461 and S-0462 to ready. Re-applied the throughput order under order_ready: S-0459 (45m), S-0461 (45m), S-0462 (50m), S-0460 (1h), S-0458 (1h30m). The others wait for S-0458 (after), so it is the one pullable.
+- Items: S-0458, S-0459, S-0460, S-0461, S-0462
+- Seconds: 10
+- Cost: 0.0398 USD, estimated
+
+### 2026-10-21T07:55:11Z
+
+- Summary: S-0458 moved to in-progress, taking E-0027 with it. Re-applied the throughput order under order_ready: S-0459 (45m), S-0461 (45m), S-0462 (50m), S-0460 (1h). All wait for S-0458.
+- Items: S-0459, S-0460, S-0461, S-0462
+- Seconds: 26
+- Cost: 0.2416 USD, estimated
+
+### 2026-10-21T08:02:37Z
+
+- Summary: Enqueued S-0456 in the merge queue under accept_reviews at 097b48d8. flai verify passed every step there, the accept dry run showed no blocker, and the verifier matched criterion 1 to gateway_test.go, litellm.sh, agent-adapters.md and contributors/index.md, and criterion 2 to the I-0170 file and summary.md. The queue batches it, rebasing onto main.
+- Items: S-0456
+- Seconds: 446
+- Cost: 4.3168 USD, estimated
+
+### 2026-10-21T08:10:12Z
+
+- Summary: Enqueued S-0463 in the merge queue under accept_reviews at 630c8d48. flai verify passed there, the reused tiers covering the head, and the accept dry run showed no blocker. The verifier matched criterion 1 to flai/internal/host/host_test.go, and criterion 2 to the I-0173 file and summary.md. Two in the queue.
+- Items: S-0463
+- Seconds: 455
+- Cost: 1.0181 USD, estimated
+
+### 2026-10-21T08:14:10Z
+
+- Summary: S-0464 is in review. Under accept_reviews: flai verify passed at its head 3b3eb4c6, the accept dry run showed no blocker, and the verifier matched both criteria (the batch scoping code and tests, ADR-0183 accepted, I-0174 closed). I'm holding the enqueue until S-0463's running batch reports. The queue sent S-0456 back at smoke (TH-0560) on a wip.overlap warning outside it, S-0458 against S-0465. The installed flai serve does not set MERGE_QUEUE_STORIES yet, so S-0464's own batch would likely fail the same way.
+- Items: S-0464, S-0456, S-0463
+- Seconds: 238
+- Cost: 0.4125 USD, estimated
+
+### 2026-10-21T08:19:48Z
+
+- Summary: The queue sent back S-0463 at smoke (TH-0561) on the same S-0458/S-0465 wip.overlap warning that failed S-0456 (TH-0560). Opened TH-0562 on S-0464 recommending the operator accept it by hand at 3b3eb4c6, since the installed flai serve 1.67.6 does not set MERGE_QUEUE_STORIES and its own batch would fail too. Then publish, and restart serve on that release. Left S-0464 in review, not enqueued.
+- Items: S-0464, S-0463, S-0456
+- Seconds: 338
+- Cost: 0.3258 USD, estimated
 
 ## Refusals
 

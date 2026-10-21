@@ -6,7 +6,7 @@ title: The LiteLLM gateway smoke check's default free model is refused by Claude
 status: in-progress
 owner: alex
 created: 2026-10-21T02:08:41Z
-updated: 2026-10-21T07:48:30Z
+updated: 2026-10-21T08:13:09Z
 transitions:
   - to: ready
     at: 2026-10-21T07:28:20Z
@@ -14,8 +14,14 @@ transitions:
   - to: in-progress
     at: 2026-10-21T07:48:27Z
     by: agent-S-0456
+  - to: review
+    at: 2026-10-21T08:01:47Z
+    by: agent-S-0456
+  - to: in-progress
+    at: 2026-10-21T08:12:42Z
+    by: flai
 tags: [flai, serve, tests]
-touches: [flai/internal/serve/gateway_test.go, scripts/litellm.sh, design/system/agent-adapters.md, docs/contributors/index.md, design/issues/I-0170-the-litellm-gateway-smoke-check-s-default-free-model-is-refused-by-claude-code-as-unrecognized-model-so-every-close-out-on-this-host-fails-smoke.md, design/issues/summary.md, design/issues/I-0176-a-usage-write-to-a-story-overwrites-its-move-to-in-progress-made-meanwhile-so-a-started-story-reads-as-ready-again.md]
+touches: [flai/internal/serve/gateway_test.go, scripts/litellm.sh, design/system/agent-adapters.md, docs/contributors/index.md, design/issues/I-0170-the-litellm-gateway-smoke-check-s-default-free-model-is-refused-by-claude-code-as-unrecognized-model-so-every-close-out-on-this-host-fails-smoke.md, design/issues/summary.md, design/issues/I-0176-a-usage-write-to-a-story-overwrites-its-move-to-in-progress-made-meanwhile-so-a-started-story-reads-as-ready-again.md, design/issues/I-0174-the-merge-queue-s-batch-runs-smoke-with-no-close-out-story-so-scripts-check-sh-runs-an-unscoped-flai-check-strict-and-fails-every-batch-on-findings-outside-its-stories.md]
 after: [S-0455]
 agent:
   harness: claude-code
@@ -23,20 +29,38 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2013
+  priced_by: harness
+  turns:
+    - day: 2026-10-21
+      ceremony: 2
+      hand_edits: 3
+      work: 37
+  models:
+    - model: claude-opus-5-5
+      input: 160
+      output: 56060
+      cache_read: 9630284
+      cache_write: 363331
+      cost: 5.535
   strategic:
     - kind: orchestrator
-      seconds: 9973
+      seconds: 10610
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 203
-          output: 3643
-          cache_read: 31123915
-          cache_write: 55412
-          cost: 7.8171
+          input: 403
+          output: 7078
+          cache_read: 49018653
+          cache_write: 94104
+          cost: 12.3135
+        - model: claude-sonnet-5-5
+          input: 7
+          output: 62
+          cache_read: 40126
+          cache_write: 41040
+          cost: 0.0665
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -62,8 +86,8 @@ finalized:
 This story remediates [I-0170](../../../design/issues/I-0170-the-litellm-gateway-smoke-check-s-default-free-model-is-refused-by-claude-code-as-unrecognized-model-so-every-close-out-on-this-host-fails-smoke.md), "The LiteLLM gateway smoke check's default free model is refused by Claude Code as unrecognized_model, so every close-out on this host fails smoke". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0170 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0170 is closed with `flai issue close I-0170 --reason` saying what fixed it
+- [x] The cause I-0170 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0170 is closed with `flai issue close I-0170 --reason` saying what fixed it
 
 ## Tasks
 - T-1944 TestGatewayLiteLLM falls back through a list of free models when the proxy answers its default with a refusal
@@ -96,3 +120,4 @@ Touches, all files, no folder:
 Forecast: flai gave 5m with no touches, then 15m with them (110 s per unit of size over 24 done remediation stories, size 8). Raised to 1h. T-1944 tries free models live through the proxy, about 150 s a run, and T-1946 runs the smoke check live again. S-0455, with the same kind of live runs, was forecast 45m. Delivery 2026-10-21T21:58:00Z, flai's 21:13 plus the 45m added; it is 29th in the pull order.
 
 Cost of delay: 37.50 USD a week, as `flai cod` works it out from flai's input, 15m lost per 168h cycle at 150 USD an hour. Kept as given. The input understates the cost while no fallback exists, since a retirement stops every close-out on this host at smoke, but the input is the operator's.
+- 2026-10-21T08:12:42Z: moved to in-progress: merge queue batch 20261021-080642 fails with S-0456 at 9db1029f06e4: smoke failed: smoke: smoke: template render and check

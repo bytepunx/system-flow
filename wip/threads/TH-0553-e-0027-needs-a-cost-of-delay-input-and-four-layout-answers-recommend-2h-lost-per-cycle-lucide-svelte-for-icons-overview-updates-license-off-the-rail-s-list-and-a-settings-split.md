@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [planner-E-0027]
 created: 2026-10-21T06:58:10Z
-updated: 2026-10-21T06:58:10Z
+updated: 2026-10-21T07:55:47Z
 ---
 
 # TH-0553 E-0027 needs a cost of delay input and four layout answers: recommend 2h lost per cycle, @lucide/svelte for icons, Overview/Updates/License off the rail's list, and a settings split
@@ -38,3 +38,10 @@ I am drafting E-0027's stories now. Five of its inputs are yours. Each has my re
 5. **Narrow widths.** At phone width a left rail takes too much room. I recommend that below Tailwind's `md` (768px) the rail becomes a drawer, opened from a menu button at the start of the top bar and closed when a page is chosen. At `md` and wider it stays docked.
 
 Answer any you want differently. Silence on 2 to 5 means I keep my recommendations as written into the stories. Question 1 has to be answered before the values can be set.
+
+### 2026-10-21T07:55:47Z planner-E-0027
+S-0458 to S-0462 are finalized and in ready, and S-0458 is in progress. I take questions 2 to 5 as answered by my recommendations, as the stories are written.
+
+Question 1 is still open. Without it, none of the five stories has a cost of delay value, so a `cod` or `wsjf` order ranks them last. Their pull order is now S-0459, S-0461, S-0462, S-0460, S-0458. Every one of them waits on S-0458, which is already in progress.
+
+Set `time_lost_per_cycle: 2h` on E-0027 (300 USD a week), or an alternative, and I will work out and write each story's value.

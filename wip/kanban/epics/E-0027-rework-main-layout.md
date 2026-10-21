@@ -3,15 +3,46 @@ id: E-0027
 type: epic
 nature: feature
 title: Rework main layout
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-21T06:54:07Z
-updated: 2026-10-21T07:01:02Z
+updated: 2026-10-21T07:55:01Z
 transitions:
   - to: ready
     at: 2026-10-21T06:54:13Z
     by: alex
+  - to: in-progress
+    at: 2026-10-21T07:55:01Z
+    by: agent-S-0458
 tags: []
+usage:
+  source: sum
+  seconds: 1143
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-21
+      ceremony: 2
+      hand_edits: 1
+      work: 33
+  models:
+    - model: claude-opus-5-5
+      input: 234
+      output: 1351
+      cache_read: 10378992
+      cache_write: 432800
+      cost: 4.0179
+  strategic:
+    - kind: orchestrator
+      seconds: 314
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 68
+          output: 1071
+          cache_read: 5238307
+          cache_write: 15993
+          cost: 1.3175
 ---
 # E-0027 Rework main layout
 
@@ -79,3 +110,4 @@ When a wider layout is possible, do not stack lanes vertically! Instead, allow t
 - S-0462 The board's lanes sit side by side and scroll sideways on a wide screen, and collapse to their headings, toggled by a tap, on a narrow one
 
 ## Notes
+- 2026-10-21T07:55:01Z: moved to in-progress: follows S-0458, which moved to in-progress

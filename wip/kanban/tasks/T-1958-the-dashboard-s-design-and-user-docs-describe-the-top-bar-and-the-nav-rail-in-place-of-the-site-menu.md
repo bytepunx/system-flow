@@ -3,12 +3,18 @@ id: T-1958
 type: task
 nature: feature
 title: The dashboard's design and user docs describe the top bar and the nav rail in place of the site menu
-status: backlog
+status: in-progress
 parent: S-0458
 owner: alex
 created: 2026-10-21T07:02:36Z
-updated: 2026-10-21T07:02:36Z
-transitions: []
+updated: 2026-10-21T08:14:11Z
+transitions:
+  - to: ready
+    at: 2026-10-21T08:14:09Z
+    by: agent-S-0458
+  - to: in-progress
+    at: 2026-10-21T08:14:11Z
+    by: agent-S-0458
 stream: S-0458
 tags: [dashboard, docs]
 touches: [design/system/flaiover-dashboard.md, docs/users/flaiover.md]

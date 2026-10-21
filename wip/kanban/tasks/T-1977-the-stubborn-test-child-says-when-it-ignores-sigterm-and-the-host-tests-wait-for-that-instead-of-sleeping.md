@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 132
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 24
-      output: 204
-      cache_read: 1523776
-      cache_write: 16907
-      cost: 0.5711
+      input: 22
+      output: 5062
+      cache_read: 1501336
+      cache_write: 39349
+      cost: 0.7164
 ---
 # T-1977 The stubborn test child says when it ignores SIGTERM, and the host tests wait for that instead of sleeping
 

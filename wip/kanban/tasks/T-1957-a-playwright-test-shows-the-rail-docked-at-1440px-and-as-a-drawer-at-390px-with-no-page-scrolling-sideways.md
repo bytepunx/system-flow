@@ -3,12 +3,18 @@ id: T-1957
 type: task
 nature: feature
 title: A Playwright test shows the rail docked at 1440px and as a drawer at 390px, with no page scrolling sideways
-status: backlog
+status: in-progress
 parent: S-0458
 owner: alex
 created: 2026-10-21T07:02:24Z
-updated: 2026-10-21T07:02:24Z
-transitions: []
+updated: 2026-10-21T08:14:10Z
+transitions:
+  - to: ready
+    at: 2026-10-21T08:14:09Z
+    by: agent-S-0458
+  - to: in-progress
+    at: 2026-10-21T08:14:10Z
+    by: agent-S-0458
 stream: S-0458
 tags: [dashboard]
 touches: [flaiover/e2e/layout.e2e.ts]

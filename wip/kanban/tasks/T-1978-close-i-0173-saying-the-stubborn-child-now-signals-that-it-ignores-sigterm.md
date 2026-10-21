@@ -24,16 +24,16 @@ touches: [design/issues/I-0173-testachildisstoppedonlyonceitsprocesshasended-fai
 after: [T-1977]
 usage:
   source: log
-  seconds: 7
+  seconds: 9
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 4
-      output: 24
-      cache_read: 290442
-      cache_write: 2311
-      cost: 0.1085
+      output: 962
+      cache_read: 285276
+      cache_write: 7477
+      cost: 0.1361
 ---
 # T-1978 Close I-0173 saying the stubborn child now signals that it ignores SIGTERM
 

@@ -3,16 +3,37 @@ id: T-1956
 type: task
 nature: feature
 title: The layout's top bar holds the name, the project picker, the theme, and the status pills, with the rail docked from md and a drawer below it, and SiteMenu.svelte is gone
-status: backlog
+status: done
 parent: S-0458
 owner: alex
 created: 2026-10-21T07:02:12Z
-updated: 2026-10-21T07:02:12Z
-transitions: []
+updated: 2026-10-21T08:14:03Z
+transitions:
+  - to: ready
+    at: 2026-10-21T08:08:27Z
+    by: agent-S-0458
+  - to: in-progress
+    at: 2026-10-21T08:08:29Z
+    by: agent-S-0458
+  - to: done
+    at: 2026-10-21T08:14:03Z
+    by: agent-S-0458
 stream: S-0458
 tags: [dashboard]
-touches: [flaiover/src/routes/+layout.svelte, flaiover/src/routes/layout.svelte.test.ts, flaiover/src/routes/layout.css, flaiover/src/lib/components/SiteMenu.svelte]
+touches: [flaiover/src/routes/+layout.svelte, flaiover/src/routes/layout.svelte.test.ts, flaiover/src/routes/layout.css]
 after: [T-1955]
+usage:
+  source: log
+  seconds: 333
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 46
+      output: 278
+      cache_read: 1973283
+      cache_write: 85464
+      cost: 0.7651
 ---
 # T-1956 The layout's top bar holds the name, the project picker, the theme, and the status pills, with the rail docked from md and a drawer below it, and SiteMenu.svelte is gone
 

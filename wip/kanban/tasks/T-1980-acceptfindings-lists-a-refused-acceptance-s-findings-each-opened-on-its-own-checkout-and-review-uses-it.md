@@ -3,11 +3,11 @@ id: T-1980
 type: task
 nature: improvement
 title: AcceptFindings lists a refused acceptance's findings, each opened on its own checkout, and Review uses it
-status: in-progress
+status: done
 parent: S-0465
 owner: alex
 created: 2026-10-21T07:36:38Z
-updated: 2026-10-21T07:39:05Z
+updated: 2026-10-21T07:54:43Z
 transitions:
   - to: ready
     at: 2026-10-21T07:39:04Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-21T07:39:05Z
     by: agent-S-0465
+  - to: done
+    at: 2026-10-21T07:54:43Z
+    by: agent-S-0465
 stream: S-0465
 tags: [flaiover]
 touches: [flaiover/src/lib/components/AcceptFindings.svelte, flaiover/src/lib/components/AcceptFindings.svelte.test.ts, design/components/flaiover/src/lib/components/AcceptFindings.examples.json, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts]
+usage:
+  source: log
+  seconds: 938
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 56
+      output: 328
+      cache_read: 2026105
+      cache_write: 95016
+      cost: 0.7879
 ---
 # T-1980 AcceptFindings lists a refused acceptance's findings, each opened on its own checkout, and Review uses it
 

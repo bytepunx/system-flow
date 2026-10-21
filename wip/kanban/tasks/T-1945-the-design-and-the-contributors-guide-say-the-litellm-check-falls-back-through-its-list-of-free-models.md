@@ -3,11 +3,11 @@ id: T-1945
 type: task
 nature: remediation
 title: The design and the contributors guide say the LiteLLM check falls back through its list of free models
-status: in-progress
+status: done
 parent: S-0456
 owner: alex
 created: 2026-10-21T06:03:41Z
-updated: 2026-10-21T07:48:42Z
+updated: 2026-10-21T07:50:05Z
 transitions:
   - to: ready
     at: 2026-10-21T07:48:42Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-21T07:48:42Z
     by: agent-S-0456
+  - to: done
+    at: 2026-10-21T07:50:05Z
+    by: agent-S-0456
 stream: S-0456
 tags: [docs, tests]
 touches: [design/system/agent-adapters.md, docs/contributors/index.md]
 after: [T-1944]
+usage:
+  source: log
+  seconds: 83
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 9
+      output: 3302
+      cache_read: 567160
+      cache_write: 21398
+      cost: 0.326
 ---
 # T-1945 The design and the contributors guide say the LiteLLM check falls back through its list of free models
 

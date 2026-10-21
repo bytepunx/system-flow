@@ -3,16 +3,37 @@ id: T-1975
 type: task
 nature: remediation
 title: scripts/check.sh, scripts/lint-md.sh, and the integration checks scope to MERGE_QUEUE_STORIES in a batch, recording no issue
-status: backlog
+status: done
 parent: S-0464
 owner: alex
 created: 2026-10-21T07:30:32Z
-updated: 2026-10-21T07:30:32Z
-transitions: []
+updated: 2026-10-21T07:59:19Z
+transitions:
+  - to: ready
+    at: 2026-10-21T07:55:04Z
+    by: agent-S-0464
+  - to: in-progress
+    at: 2026-10-21T07:55:05Z
+    by: agent-S-0464
+  - to: done
+    at: 2026-10-21T07:59:19Z
+    by: agent-S-0464
 stream: S-0464
 tags: [flai, template]
 touches: [scripts/check.sh, scripts/lint-md.sh, scripts/README.md, template/root/scripts/check.sh, template/root/scripts/README.md, template/CHANGELOG.md, flai/internal/check/check_test.go, flai/internal/mdlint/repo_test.go]
 after: [T-1973]
+usage:
+  source: log
+  seconds: 254
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 44
+      output: 13646
+      cache_read: 2648248
+      cache_write: 95689
+      cost: 1.4036
 ---
 # T-1975 scripts/check.sh, scripts/lint-md.sh, and the integration checks scope to MERGE_QUEUE_STORIES in a batch, recording no issue
 

@@ -21,6 +21,18 @@ transitions:
 stream: S-0456
 tags: [flai, serve, tests]
 touches: [flai/internal/serve/gateway_test.go, scripts/litellm.sh]
+usage:
+  source: log
+  seconds: 1085
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 49
+      output: 17228
+      cache_read: 2959508
+      cache_write: 111656
+      cost: 1.701
 ---
 # T-1944 TestGatewayLiteLLM falls back through a list of free models when the proxy answers its default with a refusal
 

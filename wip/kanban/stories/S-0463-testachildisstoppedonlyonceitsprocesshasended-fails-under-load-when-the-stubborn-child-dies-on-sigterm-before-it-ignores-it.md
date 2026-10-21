@@ -6,7 +6,7 @@ title: TestAChildIsStoppedOnlyOnceItsProcessHasEnded fails under load when the s
 status: in-progress
 owner: alex
 created: 2026-10-21T07:19:49Z
-updated: 2026-10-21T07:44:07Z
+updated: 2026-10-21T08:19:31Z
 transitions:
   - to: ready
     at: 2026-10-21T07:33:31Z
@@ -14,8 +14,14 @@ transitions:
   - to: in-progress
     at: 2026-10-21T07:37:05Z
     by: agent-S-0463
+  - to: review
+    at: 2026-10-21T08:09:15Z
+    by: agent-S-0463
+  - to: in-progress
+    at: 2026-10-21T08:19:09Z
+    by: flai
 tags: [flai, tests, issues]
-touches: [flai/internal/host/host_test.go, design/issues/I-0173-testachildisstoppedonlyonceitsprocesshasended-fails-under-load-when-the-stubborn-child-dies-on-sigterm-before-it-ignores-it.md, design/issues/summary.md, design/issues/I-0175-a-story-s-in-progress-transition-from-flai-story-start-was-lost-when-a-concurrent-write-rewrote-the-item-file-leaving-it-ready-while-its-agent-worked-it.md, design/issues/I-0158-testasettledreplystartstheagentwaitingonitonce-in-flai-internal-serve-fails-now-and-then-in-the-close-out-s-integration-tier-on-a-branch-that-does-not-touch-serve.md]
+touches: [flai/internal/host/host_test.go, design/issues/I-0173-testachildisstoppedonlyonceitsprocesshasended-fails-under-load-when-the-stubborn-child-dies-on-sigterm-before-it-ignores-it.md, design/issues/summary.md, design/issues/I-0175-a-story-s-in-progress-transition-from-flai-story-start-was-lost-when-a-concurrent-write-rewrote-the-item-file-leaving-it-ready-while-its-agent-worked-it.md, design/issues/I-0158-testasettledreplystartstheagentwaitingonitonce-in-flai-internal-serve-fails-now-and-then-in-the-close-out-s-integration-tier-on-a-branch-that-does-not-touch-serve.md, design/issues/I-0174-the-merge-queue-s-batch-runs-smoke-with-no-close-out-story-so-scripts-check-sh-runs-an-unscoped-flai-check-strict-and-fails-every-batch-on-findings-outside-its-stories.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -23,21 +29,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 193
-  estimated: true
-  priced_by: estimate
+  seconds: 2149
+  priced_by: harness
   turns:
     - day: 2026-10-21
+      ceremony: 1
       test_runs: 4
       hand_edits: 2
-      work: 16
+      work: 40
   models:
     - model: claude-opus-5-5
-      input: 44
-      output: 328
-      cache_read: 2439788
-      cache_write: 132907
-      cost: 0.9537
+      input: 96
+      output: 22154
+      cache_read: 6571094
+      cache_write: 172223
+      cost: 3.1355
   strategic:
     - kind: planner
       seconds: 62
@@ -50,15 +56,21 @@ usage:
           cache_write: 80352
           cost: 2.5393
     - kind: orchestrator
-      seconds: 220
+      seconds: 867
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 47
-          output: 759
-          cache_read: 9527902
-          cache_write: 42286
-          cost: 2.3992
+          input: 93
+          output: 1462
+          cache_read: 14173933
+          cache_write: 56071
+          cost: 3.5675
+        - model: claude-sonnet-5-5
+          input: 8
+          output: 69
+          cache_read: 68156
+          cache_write: 49020
+          cost: 0.0959
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -113,3 +125,4 @@ Figures:
 
 - Forecast: flai gave 11m (131 s per unit over 8 small remediation stories, times size 5). Raised to 25m. The tasks include a race stress run of the host tests under load, and the close-out's integration tier alone took 5m56s in I-0173's instance. Delivery moved by the same 14m, to 2026-10-22T01:16:00Z.
 - Cost of delay value: 25 USD a week, as `flai cod` worked it out from the input flai set (10m lost per 168h cycle at 150 USD an hour). It stands: one occurrence in under a day, and a flake in the integration tier stops whichever story's close-out it hits.
+- 2026-10-21T08:19:09Z: moved to in-progress: merge queue batch 20261021-081243 fails with S-0463 at e69059a341aa: smoke failed: smoke: smoke: template render and check
