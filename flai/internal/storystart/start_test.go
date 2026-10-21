@@ -3,6 +3,7 @@ package storystart
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,6 +16,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/gittest"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
+	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -507,5 +509,87 @@ func TestFitCutsThePackBeforeTheThreads(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// thread opens a thread on on by opener and adds an entry by each of
+// replies in turn, a minute apart.
+func (f *fixture) thread(t *testing.T, title, on, opener string, replies ...string) *threads.Thread {
+	t.Helper()
+	th, err := threads.New(f.repo, threads.NewOptions{Title: title, On: on, Author: opener, Text: "Which way?", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, by := range replies {
+		if th, err = threads.Reply(f.repo, th.ID, by, "This way.", t0.Add(time.Duration(i+1)*time.Minute)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return th
+}
+
+// operatorsThreads opens the 2026-10-20 measurement's 31 threads awaiting
+// the operator, none on the story started (ADR-0181): planners' questions, the
+// orchestrator's escalations, and flai serve's notices, on another story,
+// the epic, and a design folder, every fifth answered by alex, the
+// project's owner, and asked again.
+func (f *fixture) operatorsThreads(t *testing.T) {
+	t.Helper()
+	f.repo.Manifest.Owner = "alex"
+	other := f.story(t, "Other", workitem.NewOptions{}, workitem.Ready)
+	authors := []string{"planner-" + other.ID, "orchestrator", "flai"}
+	for i := range 31 {
+		on := []string{other.ID, f.epic.ID, "design/system"}[i%3]
+		var replies []string
+		if i%5 == 0 {
+			replies = []string{"alex", authors[i%3]}
+		}
+		f.thread(t, fmt.Sprintf("Question %d", i), on, authors[i%3], replies...)
+	}
+}
+
+// ADR-0181: with the 31 threads awaiting the operator open and none on the
+// story, the inbox Start answers lists no thread and counts none, awaiting
+// the agent or omitted.
+func TestStartCarriesNoneOfTheOperatorsThreads(t *testing.T) {
+	f := newFixture(t, true)
+	s := f.story(t, "One", workitem.NewOptions{}, workitem.Ready)
+	f.operatorsThreads(t)
+
+	res, err := Start(context.Background(), f.options(s.ID, noGit{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if in := res.Inbox; in == nil || len(in.Threads) != 0 || in.AwaitingYou != 0 || in.ThreadsOmitted != 0 {
+		t.Errorf("the inbox carries the operator's threads: %+v", in)
+	}
+}
+
+// ADR-0181: beside the operator's threads, a thread on the story and one on
+// a task of it, each with the operator's last entry, await the story's
+// agent: the inbox lists the two alone, awaiting it.
+func TestStartCarriesTheStorysThreadsAwaitingItsAgent(t *testing.T) {
+	f := newFixture(t, true)
+	s := f.story(t, "One", workitem.NewOptions{}, workitem.Ready)
+	f.operatorsThreads(t)
+	task, err := f.repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "A task", Parent: s.ID, Owner: "alex", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	onStory := f.thread(t, "Which way here?", s.ID, "alex")
+	onTask := f.thread(t, "And on the task?", task.ID, "planner-"+s.ID, "alex")
+
+	res, err := Start(context.Background(), f.options(s.ID, noGit{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	in := res.Inbox
+	if in == nil || len(in.Threads) != 2 || in.AwaitingYou != 2 || in.ThreadsOmitted != 0 {
+		t.Fatalf("the inbox lists the story's two threads alone: %+v", in)
+	}
+	for i, want := range []string{onStory.ID, onTask.ID} {
+		if th := in.Threads[i]; th.ID != want || th.Awaiting != "you" || th.LastBy != "alex" || th.Story != s.ID {
+			t.Errorf("thread %d: %+v, want %s awaiting the agent", i, th, want)
+		}
 	}
 }

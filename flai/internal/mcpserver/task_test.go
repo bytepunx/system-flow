@@ -379,18 +379,30 @@ func TestTaskDoneAnswersWhatTheCommandPrints(t *testing.T) {
 	}
 }
 
+// sixInProgress writes S-006, a story of E-001 in progress, to repo's main
+// checkout.
+func sixInProgress(t *testing.T, repo *workitem.Repo) {
+	t.Helper()
+	writeIn(t, repo.Root, "wip/kanban/stories/S-006-six.md", "---\nid: S-006\ntype: story\nnature: feature\ntitle: Six\nstatus: in-progress\nparent: E-001\nowner: agent\ncreated: 2026-08-25T09:00:00Z\nupdated: 2026-08-31T10:00:00Z\ntransitions:\n  - to: ready\n    at: 2026-08-25T10:00:00Z\n    by: agent\n  - to: in-progress\n    at: 2026-08-31T10:00:00Z\n    by: agent\ntags: []\ntouches: [docs/other]\n---\n\n# S-006 Six\n\n## Goal\ng\n\n## Acceptance criteria\n- [ ] works\n\n## Tasks\n\n## Notes\n")
+}
+
 // manyThreadsElsewhere is S-0398's instance (I-0167) in a close project:
-// S-006 in progress, 33 open threads by the operator awaiting S-004's agent
-// on S-006 and E-001, each with a last entry of about 1,500 bytes, none on
-// S-004, and T-003's file and an open sibling's in the worktree.
+// S-006 in progress, 33 open threads awaiting S-004's agent on S-006 and
+// E-001, each its question, so that it takes part in each (ADR-0181), with
+// the operator's answer of about 1,500 bytes, none on S-004, and T-003's
+// file and an open sibling's in the worktree.
 func manyThreadsElsewhere(t *testing.T) *workitem.Repo {
 	t.Helper()
 	repo, wt := closeProject(t)
-	writeIn(t, repo.Root, "wip/kanban/stories/S-006-six.md", "---\nid: S-006\ntype: story\nnature: feature\ntitle: Six\nstatus: in-progress\nparent: E-001\nowner: agent\ncreated: 2026-08-25T09:00:00Z\nupdated: 2026-08-31T10:00:00Z\ntransitions:\n  - to: ready\n    at: 2026-08-25T10:00:00Z\n    by: agent\n  - to: in-progress\n    at: 2026-08-31T10:00:00Z\n    by: agent\ntags: []\ntouches: [docs/other]\n---\n\n# S-006 Six\n\n## Goal\ng\n\n## Acceptance criteria\n- [ ] works\n\n## Tasks\n\n## Notes\n")
+	sixInProgress(t, repo)
 	long := strings.Repeat("The operator's question, at length. ", 42)
 	for i := range 33 {
 		on := []string{"S-006", "E-001"}[i%2]
-		if _, err := threads.New(repo, threads.NewOptions{Title: fmt.Sprintf("Question %d", i), On: on, Author: "alex", Text: long, Now: closeClock}); err != nil {
+		th, err := threads.New(repo, threads.NewOptions{Title: fmt.Sprintf("Question %d", i), On: on, Author: "agent-S-004", Text: "Which way?", Now: closeClock})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := threads.Reply(repo, th.ID, "alex", long, closeClock); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -441,6 +453,61 @@ func TestTaskDoneFitsTheAnswerWithManyThreadsElsewhere(t *testing.T) {
 	}
 	if got, want := canonical(t, out, viaTool.Root), canonical(t, res, direct.Root); got != want {
 		t.Errorf("task_done answered\n%s\nflai task done --json prints\n%s", got, want)
+	}
+}
+
+// operatorsClose is a close project with the fixture's own thread on S-004
+// resolved, S-006 in progress, and the 2026-10-20 measurement's 31 threads
+// awaiting the operator on S-006, E-001, and a design folder, none on S-004
+// (ADR-0181).
+func operatorsClose(t *testing.T) *workitem.Repo {
+	t.Helper()
+	repo, _ := closeProject(t)
+	if _, err := threads.Resolve(repo, "TH-0001", "alex", "ticked", closeClock); err != nil {
+		t.Fatal(err)
+	}
+	sixInProgress(t, repo)
+	operatorsQuestions(t, repo, "S-006", "E-001", "design/system")
+	return repo
+}
+
+// ADR-0181: with the operator's threads open and none on the story,
+// task_done's inbox lists no thread, awaiting_you 0, and no threads_omitted.
+func TestTaskDoneCarriesNoneOfTheOperatorsThreads(t *testing.T) {
+	repo := operatorsClose(t)
+
+	out, failed := closer(t, repo).call(t, "task_done", map[string]any{"task": "T-003"})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	if out["stopped"] != "" {
+		t.Fatalf("stopped at %v: %v", out["stopped"], out["error"])
+	}
+	if listed, _ := field(out, "inbox.threads").([]any); len(listed) != 0 || field(out, "inbox.awaiting_you") != 0.0 || field(out, "inbox.threads_omitted") != nil {
+		t.Errorf("the inbox carries the operator's threads: %v, awaiting_you %v, threads_omitted %v", listed, field(out, "inbox.awaiting_you"), field(out, "inbox.threads_omitted"))
+	}
+}
+
+// ADR-0181: beside the operator's threads, a thread on the story and one on
+// its task, each with the operator's last entry, await the story's agent:
+// task_done's inbox lists the two alone, awaiting "you".
+func TestTaskDoneCarriesTheStorysThreadsAwaitingItsAgent(t *testing.T) {
+	repo := operatorsClose(t)
+	onStory := threadBy(t, repo, "Which way here?", "S-004", "A or B?", "alex")
+	onTask := threadBy(t, repo, "And on the task?", "T-003", "Split it?", "planner-S-004", "alex")
+
+	out, failed := closer(t, repo).call(t, "task_done", map[string]any{"task": "T-003"})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	listed, _ := field(out, "inbox.threads").([]any)
+	if out["stopped"] != "" || len(listed) != 2 || field(out, "inbox.awaiting_you") != 2.0 || field(out, "inbox.threads_omitted") != nil {
+		t.Fatalf("stopped at %v: %v; the inbox lists the story's two threads alone: %v, awaiting_you %v, threads_omitted %v", out["stopped"], out["error"], listed, field(out, "inbox.awaiting_you"), field(out, "inbox.threads_omitted"))
+	}
+	for i, want := range []string{onStory.ID, onTask.ID} {
+		if th := listed[i].(map[string]any); th["id"] != want || th["awaiting"] != "you" || th["last_by"] != "alex" || th["story"] != "S-004" {
+			t.Errorf("thread %d: %v, want %s awaiting the agent", i, th, want)
+		}
 	}
 }
 

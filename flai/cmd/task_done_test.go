@@ -363,7 +363,8 @@ func TestTaskDoneNeedsAMessageOnlyToCommit(t *testing.T) {
 }
 
 // ADR-0179: the inbox flai task done prints lists the threads on the story
-// and counts those on other items, naming where they are listed.
+// and counts those awaiting the agent on other items, its questions the
+// operator answered (ADR-0181), naming where they are listed.
 func TestTaskDoneCountsTheThreadsOnOtherItems(t *testing.T) {
 	root, wt := taskDoneProject(t)
 	repo, err := workitem.Open(root)
@@ -371,7 +372,11 @@ func TestTaskDoneCountsTheThreadsOnOtherItems(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, on := range []string{"E-001", "E-001"} {
-		if _, err := threads.New(repo, threads.NewOptions{Title: "Elsewhere", On: on, Author: "alex", Text: "And there?", Now: taskDoneClock}); err != nil {
+		th, err := threads.New(repo, threads.NewOptions{Title: "Elsewhere", On: on, Author: "agent-S-004", Text: "And there?", Now: taskDoneClock})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := threads.Reply(repo, th.ID, "alex", "There too.", taskDoneClock); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -382,5 +387,29 @@ func TestTaskDoneCountsTheThreadsOnOtherItems(t *testing.T) {
 	}
 	if !strings.Contains(out, "\ninbox: 2 threads on other items: flai thread list lists them\n") || strings.Contains(out, "Elsewhere") {
 		t.Errorf("output:\n%s", out)
+	}
+}
+
+// ADR-0181: with the fixture's thread on S-004 resolved and the operator's
+// threads open on S-006, the epic, and a design folder, flai task done
+// prints no thread and none on other items.
+func TestTaskDonePrintsNoneOfTheOperatorsThreads(t *testing.T) {
+	root, wt := taskDoneProject(t)
+	writeIn(t, root, "wip/kanban/stories/S-006-six.md", otherStory)
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := threads.Resolve(repo, "TH-0001", "alex", "ticked", taskDoneClock); err != nil {
+		t.Fatal(err)
+	}
+	openOperatorsThreads(t, repo, "S-006", "E-001", "design/system")
+
+	out, errOut, code := taskDone(t, wt, "T-003")
+	if code != 0 {
+		t.Fatalf("task done: %d\n%s\n%s", code, out, errOut)
+	}
+	if !strings.Contains(out, "\ninbox: 0 threads awaiting agent-S-004\n") || strings.Contains(out, "Question") || strings.Contains(out, "on other items") {
+		t.Errorf("the output tells of the operator's threads:\n%s", out)
 	}
 }

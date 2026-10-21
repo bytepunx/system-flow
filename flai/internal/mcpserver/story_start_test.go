@@ -300,11 +300,45 @@ func TestStoryStartLeavesOutOldChangesToKeepPartOne(t *testing.T) {
 	}
 }
 
+// threadBy opens a thread on on by the first of by, and adds an entry by
+// each of the rest in turn, a minute apart, each entry text.
+func threadBy(t *testing.T, repo *workitem.Repo, title, on, text string, by ...string) *threads.Thread {
+	t.Helper()
+	th, err := threads.New(repo, threads.NewOptions{Title: title, On: on, Author: by[0], Text: text, Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, who := range by[1:] {
+		if th, err = threads.Reply(repo, th.ID, who, text, t0.Add(time.Duration(i+1)*time.Minute)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return th
+}
+
+// operatorsQuestions opens the 2026-10-20 measurement's 31 threads awaiting
+// the operator (ADR-0181): planners' questions, the orchestrator's
+// escalations, and flai serve's notices, on each of on in turn, every fifth
+// answered by alex, the project's owner, and asked again.
+func operatorsQuestions(t *testing.T, repo *workitem.Repo, on ...string) {
+	t.Helper()
+	repo.Manifest.Owner = "alex"
+	authors := []string{"planner-" + on[0], "orchestrator", "flai"}
+	for i := range 31 {
+		by := []string{authors[i%3]}
+		if i%5 == 0 {
+			by = append(by, "alex", authors[i%3])
+		}
+		threadBy(t, repo, fmt.Sprintf("Question %d", i), on[i%len(on)], "Operator, which way?", by...)
+	}
+}
+
 // ADR-0179, I-0167: S-0399's instance. Thirty-two open threads await the
-// agent on other items, a story and a design document, each with a last
-// entry of 1,500 bytes, and one on the story: the answer is at most
-// ctxpack.PartLimit bytes, lists the story's thread alone, and counts the
-// others in threads_omitted.
+// agent on other items, a story and a design document, each the agent's
+// question with the operator's answer of 1,500 bytes, so that the agent
+// takes part in each (ADR-0181), and one on the story: the answer is at
+// most ctxpack.PartLimit bytes, lists the story's thread alone, and counts
+// the others in threads_omitted.
 func TestStoryStartListsOnlyTheStorysThreads(t *testing.T) {
 	repo, epic := startProject(t, t.TempDir(), "t", startConvention("- Commit at landing."))
 	story := storyOfEpic(t, repo, epic, "Started", []string{"docs/started"}, workitem.Ready)
@@ -315,14 +349,9 @@ func TestStoryStartListsOnlyTheStorysThreads(t *testing.T) {
 		if i%2 == 1 {
 			on = "design/system/plan.md"
 		}
-		if _, err := threads.New(repo, threads.NewOptions{Title: fmt.Sprintf("Elsewhere %d", i), On: on, Author: "alex", Text: long, Now: t0}); err != nil {
-			t.Fatal(err)
-		}
+		threadBy(t, repo, fmt.Sprintf("Elsewhere %d", i), on, long, "agent-x", "alex")
 	}
-	mine, err := threads.New(repo, threads.NewOptions{Title: "On the story", On: story.ID, Author: "alex", Text: long, Now: t0})
-	if err != nil {
-		t.Fatal(err)
-	}
+	mine := threadBy(t, repo, "On the story", story.ID, long, "alex")
 	f := starter(t, repo, noGitRunner{}, nil)
 
 	out, failed := f.call(t, "story_start", map[string]any{"story": story.ID})
@@ -343,6 +372,59 @@ func TestStoryStartListsOnlyTheStorysThreads(t *testing.T) {
 	}
 	if in["threads_omitted"] != 32.0 {
 		t.Errorf("threads_omitted %v, want 32", in["threads_omitted"])
+	}
+}
+
+// ADR-0181: with the 31 threads awaiting the operator open on another
+// story, the epic, and a design folder, and none on the story, the inbox
+// story_start answers lists no thread, awaiting_you 0, and no
+// threads_omitted.
+func TestStoryStartCarriesNoneOfTheOperatorsThreads(t *testing.T) {
+	repo, epic := startProject(t, t.TempDir(), "t", startConvention("- Commit at landing."))
+	story := storyOfEpic(t, repo, epic, "Started", []string{"docs/started"}, workitem.Ready)
+	other := storyOfEpic(t, repo, epic, "Other", []string{"docs/other"}, workitem.Ready)
+	operatorsQuestions(t, repo, other.ID, epic.ID, "design/system")
+	f := starter(t, repo, noGitRunner{}, nil)
+
+	out, failed := f.call(t, "story_start", map[string]any{"story": story.ID})
+	if failed != "" {
+		t.Fatalf("story_start: %s", failed)
+	}
+	in := out["inbox"].(map[string]any)
+	if listed, _ := in["threads"].([]any); len(listed) != 0 || in["awaiting_you"] != 0.0 || in["threads_omitted"] != nil {
+		t.Errorf("the inbox carries the operator's threads: %v, awaiting_you %v, threads_omitted %v", listed, in["awaiting_you"], in["threads_omitted"])
+	}
+}
+
+// ADR-0181: beside the operator's threads, a thread on the story and one on
+// a task of it, each with the operator's last entry, await the story's
+// agent: story_start's inbox lists the two alone, awaiting "you".
+func TestStoryStartCarriesTheStorysThreadsAwaitingItsAgent(t *testing.T) {
+	repo, epic := startProject(t, t.TempDir(), "t", startConvention("- Commit at landing."))
+	story := storyOfEpic(t, repo, epic, "Started", []string{"docs/started"}, workitem.Ready)
+	other := storyOfEpic(t, repo, epic, "Other", []string{"docs/other"}, workitem.Ready)
+	operatorsQuestions(t, repo, other.ID, epic.ID, "design/system")
+	task, err := repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "A task", Parent: story.ID, Owner: "alex", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	onStory := threadBy(t, repo, "Which way here?", story.ID, "A or B?", "alex")
+	onTask := threadBy(t, repo, "And on the task?", task.ID, "Split it?", "planner-"+story.ID, "alex")
+	f := starter(t, repo, noGitRunner{}, nil)
+
+	out, failed := f.call(t, "story_start", map[string]any{"story": story.ID})
+	if failed != "" {
+		t.Fatalf("story_start: %s", failed)
+	}
+	in := out["inbox"].(map[string]any)
+	listed, _ := in["threads"].([]any)
+	if len(listed) != 2 || in["awaiting_you"] != 2.0 || in["threads_omitted"] != nil {
+		t.Fatalf("the inbox lists the story's two threads alone: %v, awaiting_you %v, threads_omitted %v", listed, in["awaiting_you"], in["threads_omitted"])
+	}
+	for i, want := range []string{onStory.ID, onTask.ID} {
+		if th := listed[i].(map[string]any); th["id"] != want || th["awaiting"] != "you" || th["last_by"] != "alex" || th["story"] != story.ID {
+			t.Errorf("thread %d: %v, want %s awaiting the agent", i, th, want)
+		}
 	}
 }
 

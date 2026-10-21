@@ -240,8 +240,10 @@ func printTaskDoneCheck(w io.Writer, story string, c *taskdone.Check) {
 }
 
 // printTaskDoneInbox summarises the inbox: the threads on the story awaiting
-// the agent, the count of those on other items, the stories ready to pull in
-// pull order, and what others changed.
+// the agent, the count of those awaiting it on other items, the stories ready
+// to pull in pull order, and what others changed. It says nothing of the
+// threads awaiting the operator, which the story-scoped inbox neither lists
+// nor counts (ADR-0181).
 func printTaskDoneInbox(w io.Writer, in *inbox.Inbox) {
 	fmt.Fprintf(w, "inbox: %s awaiting %s\n", plural(in.AwaitingYou, "thread"), in.Agent)
 	for _, t := range in.Threads {

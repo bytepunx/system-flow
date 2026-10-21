@@ -716,12 +716,17 @@ func TestRunAnswersTheStorysMessages(t *testing.T) {
 // longEntry is a thread's text of about 1,500 bytes, as I-0167's were.
 var longEntry = strings.Repeat("The operator's question, at length. ", 42)
 
-// openThreads opens n threads by the operator awaiting S-004's agent, on
-// each of on in turn, each with a long entry.
+// openThreads opens n threads awaiting S-004's agent, on each of on in
+// turn: each S-004's agent asked, so that it takes part in it on another
+// item too (ADR-0181), and the operator answered with a long entry.
 func openThreads(t *testing.T, repo *workitem.Repo, n int, on ...string) {
 	t.Helper()
 	for i := range n {
-		if _, err := threads.New(repo, threads.NewOptions{Title: fmt.Sprintf("Question %d", i), On: on[i%len(on)], Author: "alex", Text: longEntry, Now: clock}); err != nil {
+		th, err := threads.New(repo, threads.NewOptions{Title: fmt.Sprintf("Question %d", i), On: on[i%len(on)], Author: "agent-S-004", Text: "Which way?", Now: clock})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := threads.Reply(repo, th.ID, "alex", longEntry, clock); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -776,7 +781,7 @@ func TestRunAnswersTheStorysInboxWithManyThreadsElsewhere(t *testing.T) {
 	if compact, indented := jsonSizes(t, res); compact > ctxpack.PartLimit || indented > ctxpack.PartLimit {
 		t.Errorf("the answer is %d bytes compact, %d indented, over %d", compact, indented, ctxpack.PartLimit)
 	}
-	whole, err := inbox.Read(context.Background(), inbox.Options{Repo: repo, Agent: "agent-S-004", Now: func() time.Time { return clock }})
+	whole, err := inbox.Read(context.Background(), inbox.Options{Repo: repo, Agent: "agent-S-004", Own: "S-004", Now: func() time.Time { return clock }})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -819,6 +824,88 @@ func TestRunFitsTheAnswerByShorteningTheStorysThreads(t *testing.T) {
 	}
 	if compact, indented := jsonSizes(t, res); compact > ctxpack.PartLimit || indented > ctxpack.PartLimit {
 		t.Errorf("the answer is %d bytes compact, %d indented, over %d", compact, indented, ctxpack.PartLimit)
+	}
+}
+
+// operatorsThreads resolves the fixture's own thread on S-004 and opens the
+// 2026-10-20 measurement's 31 threads awaiting the operator, none on S-004
+// (ADR-0181): planners' questions, the orchestrator's escalations, and flai
+// serve's notices, on S-006, the epic, and a design folder, every fifth
+// answered by alex, the project's owner, and asked again.
+func operatorsThreads(t *testing.T, repo *workitem.Repo) {
+	t.Helper()
+	repo.Manifest.Owner = "alex"
+	if _, err := threads.Resolve(repo, "TH-0001", "alex", "ticked", clock); err != nil {
+		t.Fatal(err)
+	}
+	story(t, repo, "S-006", workitem.InProgress, "docs/other")
+	authors := []string{"planner-S-006", "orchestrator", "flai"}
+	for i := range 31 {
+		by := authors[i%3]
+		th, err := threads.New(repo, threads.NewOptions{Title: fmt.Sprintf("Question %d", i), On: []string{"S-006", "E-001", "design/system"}[i%3], Author: by, Text: "Operator, which way?", Now: clock})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if i%5 != 0 {
+			continue
+		}
+		for _, who := range []string{"alex", by} {
+			if _, err := threads.Reply(repo, th.ID, who, "More.", clock); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+}
+
+// ADR-0181: with the 31 threads awaiting the operator open and none on the
+// story, the inbox a close answers lists no thread and counts none, awaiting
+// the agent or omitted.
+func TestRunCarriesNoneOfTheOperatorsThreads(t *testing.T) {
+	repo, _ := project(t)
+	operatorsThreads(t, repo)
+
+	res, err := Run(context.Background(), options(repo, ""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != "" || res.Error != "" {
+		t.Fatalf("stopped at %q: %s", res.Stopped, res.Error)
+	}
+	if in := res.Inbox; in == nil || len(in.Threads) != 0 || in.AwaitingYou != 0 || in.ThreadsOmitted != 0 {
+		t.Errorf("the inbox carries the operator's threads: %+v", in)
+	}
+}
+
+// ADR-0181: beside the operator's threads, a thread on the story and one on
+// its task, each with the operator's last entry, await the story's agent:
+// the inbox lists the two alone, awaiting it.
+func TestRunCarriesTheStorysThreadsAwaitingItsAgent(t *testing.T) {
+	repo, _ := project(t)
+	operatorsThreads(t, repo)
+	onStory, err := threads.New(repo, threads.NewOptions{Title: "Which way here?", On: "S-004", Author: "alex", Text: "A or B?", Now: clock})
+	if err != nil {
+		t.Fatal(err)
+	}
+	onTask, err := threads.New(repo, threads.NewOptions{Title: "And on the task?", On: "T-003", Author: "planner-S-004", Text: "Split it?", Now: clock})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := threads.Reply(repo, onTask.ID, "alex", "Yes, split it.", clock); err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := Run(context.Background(), options(repo, ""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	in := res.Inbox
+	if res.Stopped != "" || in == nil || len(in.Threads) != 2 || in.AwaitingYou != 2 || in.ThreadsOmitted != 0 {
+		t.Fatalf("stopped at %q: %s; the inbox lists the story's two threads alone: %+v", res.Stopped, res.Error, in)
+	}
+	for i, want := range []string{onStory.ID, onTask.ID} {
+		if th := in.Threads[i]; th.ID != want || th.Awaiting != "you" || th.LastBy != "alex" || th.Story != "S-004" {
+			t.Errorf("thread %d: %+v, want %s awaiting the agent", i, th, want)
+		}
 	}
 }
 

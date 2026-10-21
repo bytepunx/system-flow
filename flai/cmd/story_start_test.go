@@ -277,31 +277,58 @@ func TestStoryStartHelpNamesWhatItReplaces(t *testing.T) {
 	}
 }
 
-// storyStartThreads opens, as alex, 32 threads on other items, S-0002 and
-// a design document, each with a last entry of 1,500 bytes, and one on
-// S-0001, which it returns: S-0399's instance (I-0167).
+// threadWith opens a thread on on in repo by the first of by, and adds an
+// entry by each of the rest in turn, each entry text.
+func threadWith(t *testing.T, repo *workitem.Repo, title, on, text string, by ...string) *threads.Thread {
+	t.Helper()
+	at := time.Date(2026, 9, 15, 21, 0, 0, 0, time.UTC)
+	th, err := threads.New(repo, threads.NewOptions{Title: title, On: on, Author: by[0], Text: text, Now: at})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, who := range by[1:] {
+		if th, err = threads.Reply(repo, th.ID, who, text, at); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return th
+}
+
+// openOperatorsThreads opens in repo the 2026-10-20 measurement's 31 threads
+// awaiting the operator (ADR-0181): planners' questions, the orchestrator's
+// escalations, and flai serve's notices, on each of on in turn, every fifth
+// answered by alex and asked again.
+func openOperatorsThreads(t *testing.T, repo *workitem.Repo, on ...string) {
+	t.Helper()
+	authors := []string{"planner-" + on[0], "orchestrator", "flai"}
+	for i := range 31 {
+		by := []string{authors[i%3]}
+		if i%5 == 0 {
+			by = append(by, "alex", authors[i%3])
+		}
+		threadWith(t, repo, fmt.Sprintf("Question %d", i), on[i%len(on)], "Operator, which way?", by...)
+	}
+}
+
+// storyStartThreads opens 32 threads on other items, S-0002 and a design
+// document, each agent-a's question, so that it takes part in each
+// (ADR-0181), with alex's answer of 1,500 bytes, and one on S-0001 by alex,
+// which it returns: S-0399's instance (I-0167).
 func storyStartThreads(t *testing.T, root string) string {
 	t.Helper()
 	repo, err := workitem.Open(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	at := time.Date(2026, 9, 15, 21, 0, 0, 0, time.UTC)
 	long := strings.Repeat("Which library do we take here? ", 50)[:1500]
 	for i := range 32 {
 		on := "S-0002"
 		if i%2 == 1 {
 			on = "design/system/plan.md"
 		}
-		if _, err := threads.New(repo, threads.NewOptions{Title: fmt.Sprintf("Elsewhere %d", i), On: on, Author: "alex", Text: long, Now: at}); err != nil {
-			t.Fatal(err)
-		}
+		threadWith(t, repo, fmt.Sprintf("Elsewhere %d", i), on, long, "agent-a", "alex")
 	}
-	th, err := threads.New(repo, threads.NewOptions{Title: "On the story", On: "S-0001", Author: "alex", Text: long, Now: at})
-	if err != nil {
-		t.Fatal(err)
-	}
-	return th.ID
+	return threadWith(t, repo, "On the story", "S-0001", long, "alex").ID
 }
 
 // ADR-0179: --json lists the story's threads alone, counts the others in
@@ -348,5 +375,79 @@ func TestStoryStartSaysHowManyThreadsAreElsewhere(t *testing.T) {
 	}
 	if strings.Contains(out, "Elsewhere") {
 		t.Errorf("output lists a thread of another item:\n%s", out)
+	}
+}
+
+// storyStartOperatorsProject is storyStartProject owned by alex, with the 31
+// threads awaiting the operator open on S-0002, S-0003, and a design
+// document, none on S-0001 (ADR-0181), and its repository.
+func storyStartOperatorsProject(t *testing.T) (string, *workitem.Repo) {
+	t.Helper()
+	root := storyStartProject(t)
+	writeIn(t, root, "system-flow.yaml", "version: 1\nname: t\nkey: t\nowner: alex\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n")
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	openOperatorsThreads(t, repo, "S-0002", "S-0003", "design/system/plan.md")
+	return root, repo
+}
+
+// ADR-0181: with the operator's threads open and none on the story, flai
+// story start prints no thread and none on other items, and --json's inbox
+// lists none and counts none.
+func TestStoryStartPrintsNoneOfTheOperatorsThreads(t *testing.T) {
+	root, _ := storyStartOperatorsProject(t)
+	out, errOut, code := runIn(t, root, "story", "start", "S-0001")
+	if code != 0 {
+		t.Fatalf("story start: %d\n%s\n%s", code, out, errOut)
+	}
+	if !strings.Contains(out, "inbox: 0 threads awaiting agent-a\n") || strings.Contains(out, "Question") || strings.Contains(out, "on other items") {
+		t.Errorf("the output tells of the operator's threads:\n%s", out)
+	}
+
+	root, _ = storyStartOperatorsProject(t)
+	out, errOut, code = runIn(t, root, "story", "start", "S-0001", "--json")
+	if code != 0 {
+		t.Fatalf("story start --json: %d\n%s\n%s", code, out, errOut)
+	}
+	var got struct {
+		Inbox struct {
+			AwaitingYou    int   `json:"awaiting_you"`
+			Threads        []any `json:"threads"`
+			ThreadsOmitted int   `json:"threads_omitted"`
+		} `json:"inbox"`
+	}
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("not JSON: %v\n%s", err, out)
+	}
+	if in := got.Inbox; len(in.Threads) != 0 || in.AwaitingYou != 0 || in.ThreadsOmitted != 0 {
+		t.Errorf("inbox: %d awaiting, %d omitted, threads %v; want none", in.AwaitingYou, in.ThreadsOmitted, in.Threads)
+	}
+}
+
+// ADR-0181: beside the operator's threads, a thread on the story and one on
+// a task of it, each with alex's last entry, are printed awaiting the agent,
+// and no other thread is.
+func TestStoryStartPrintsTheStorysThreadsAwaitingItsAgent(t *testing.T) {
+	root, repo := storyStartOperatorsProject(t)
+	task, err := repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "A task", Parent: "S-0001", Owner: "alex", Now: time.Date(2026, 9, 15, 21, 0, 0, 0, time.UTC)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	onStory := threadWith(t, repo, "Which way here?", "S-0001", "A or B?", "alex")
+	onTask := threadWith(t, repo, "And on the task?", task.ID, "Split it?", "planner-S-0001", "alex")
+
+	out, errOut, code := runIn(t, root, "story", "start", "S-0001")
+	if code != 0 {
+		t.Fatalf("story start: %d\n%s\n%s", code, out, errOut)
+	}
+	for _, want := range []string{"inbox: 2 threads awaiting agent-a\n", "  " + onStory.ID + " Which way here? (awaiting you, last by alex)\n", "  " + onTask.ID + " And on the task? (awaiting you, last by alex)\n"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output lacks %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "Question") || strings.Contains(out, "on other items") {
+		t.Errorf("the output tells of the operator's threads:\n%s", out)
 	}
 }
