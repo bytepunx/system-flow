@@ -71,7 +71,7 @@ describe('TokenEditor (S-0383)', () => {
 	const row = (path: string) =>
 		document.querySelector<HTMLElement>(`[data-testid="edit-${path}"]`)!;
 	const cell = (path: string, theme: string) =>
-		row(path).querySelector<HTMLElement>(`[data-theme="${theme}"]`)!;
+		row(path).querySelector<HTMLElement>(`[data-cell-theme="${theme}"]`)!;
 	const words = (e: Element) => e.textContent!.replace(/\s+/g, ' ').trim();
 	const fails = (path: string, theme: string) =>
 		[...cell(path, theme).querySelectorAll('[data-testid="contrast-fail"]')].map(words);
@@ -277,5 +277,20 @@ describe('TokenEditor (S-0383)', () => {
 			return !/^color\.[a-z-]+, (light|dark)(, picker)?$/.test(label);
 		});
 		expect(unlabelled).toEqual([]);
+	});
+
+	// I-0159: layout.css scopes the dark palette and Tailwind's dark variant to any element with
+	// data-theme="dark", so a cell carrying it drew the other theme's fields unreadable.
+	it('sets data-theme on no element, so the page theme styles every cell (I-0159)', () => {
+		for (const namespace of ['color', 'font', 'radius', 'shadow', 'text']) {
+			render(namespace);
+			const editor = document.querySelector('[data-testid="token-editor"]')!;
+			expect(editor.querySelectorAll('[data-theme]'), namespace).toHaveLength(0);
+			if (c) unmount(c);
+			c = undefined;
+			document.body.innerHTML = '';
+		}
+		render('color');
+		expect(cell('color.primary', 'dark').querySelector('input')).not.toBeNull();
 	});
 });

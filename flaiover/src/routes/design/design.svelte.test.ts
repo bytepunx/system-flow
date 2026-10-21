@@ -367,7 +367,7 @@ describe('editing the design system on the design page (S-0383)', () => {
 
 	it('flags a failing contrast beside the token and in the token sheet after an edit', async () => {
 		await edit();
-		const muted = () => q('edit-color.text-muted')!.querySelector('[data-theme="light"]')!;
+		const muted = () => q('edit-color.text-muted')!.querySelector('[data-cell-theme="light"]')!;
 		expect(muted().querySelector('[data-testid="contrast-fail"]')).toBeNull();
 		type('color.text-muted, light', '#bbbbbb');
 		await settle();

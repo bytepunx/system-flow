@@ -368,7 +368,7 @@
 			{:else}
 				<div class="mt-1 flex flex-wrap gap-4">
 					{#each cells(row) as c (c.theme)}
-						<div class="min-w-0" data-theme={c.label.replaceAll(' ', '-')}>
+						<div class="min-w-0" data-cell-theme={c.label.replaceAll(' ', '-')}>
 							<div class="mb-1 text-xs text-muted">{c.label}</div>
 							{#if row.kind === 'color'}
 								{@render colourCell(c)}
