@@ -99,6 +99,24 @@ describe('SettingsPanel (S-0105)', () => {
 		expect(q('section-tokens')!.textContent).toContain('http://127.0.0.1:4243/mcp');
 	});
 
+	it('gives the first section of each of the nav rail’s Configuration pages its anchor (S-0458)', async () => {
+		const v = view(false, false);
+		v.host!.shared = [];
+		backend(v);
+		await show();
+		const anchored = {
+			features: 'section-actions',
+			agents: 'section-default-agent',
+			'file-system': 'section-shared',
+			projects: 'section-projects',
+			harnesses: 'section-agent'
+		};
+		for (const [id, section] of Object.entries(anchored)) {
+			expect(q(section)).not.toBeNull();
+			expect(document.getElementById(id)).toBe(q(section));
+		}
+	});
+
 	it('changes this project’s own settings when settings is on here, and not the host-wide ones', async () => {
 		const sent = backend(view(true, false));
 		await show();

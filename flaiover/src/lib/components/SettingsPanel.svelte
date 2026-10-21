@@ -403,7 +403,9 @@
 			</p>
 		</div>
 
-		<section data-testid="section-actions">
+		<!-- The nav rail's Configuration pages open at the first section of each by its id, features,
+		agents, file-system, harnesses, and projects (S-0458, TH-0553). -->
+		<section id="features" data-testid="section-actions">
 			<h2 class="mb-2 font-medium">Host actions, for this project</h2>
 			{@render gate('action')}
 			<ul class="space-y-2">
@@ -433,7 +435,7 @@
 			{@render result('actions')}
 		</section>
 
-		<section data-testid="section-default-agent">
+		<section id="agents" data-testid="section-default-agent">
 			<h2 class="mb-2 font-medium">Default agent, for this project's new stories</h2>
 			{@render gate('default_agent')}
 			<AgentFields
@@ -454,7 +456,7 @@
 		</section>
 
 		{#if h.shared}
-			<section data-testid="section-shared">
+			<section id="file-system" data-testid="section-shared">
 				<h2 class="mb-2 font-medium">Shared paths, for this project</h2>
 				{@render gate('shared')}
 				<p class="text-xs text-muted">
@@ -595,7 +597,7 @@
 			</section>
 		{/if}
 
-		<section data-testid="section-agent">
+		<section id="harnesses" data-testid="section-agent">
 			<h2 class="mb-2 font-medium">Starting agents, on this host</h2>
 			{@render gate('agent')}
 			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -894,7 +896,7 @@
 			{@render result('import')}
 		</section>
 
-		<section data-testid="section-projects">
+		<section id="projects" data-testid="section-projects">
 			<h2 class="mb-2 font-medium">Projects, served by flai on this host</h2>
 			{#if h.projects?.error}
 				<p class="text-xs text-danger" role="alert">{h.projects.error}</p>
