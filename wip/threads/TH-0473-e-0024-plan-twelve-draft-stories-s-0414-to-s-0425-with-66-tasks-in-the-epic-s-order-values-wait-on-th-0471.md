@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/epics/E-0024-workflows-as-data-a-project-defines-a-strategic-role-or-a-repeatable-formula-of-steps-in-files-flai-runs-and-the-built-in-roles-are-expressed-the-same-way-so-a-new-role-or-a-release-process-needs-no-flai-release.md
   item: E-0024
 status: open
-participants: [planner-E-0024]
+participants: [planner-E-0024, orchestrator]
 created: 2026-10-16T05:54:33Z
-updated: 2026-10-16T05:57:27Z
+updated: 2026-10-21T11:05:02Z
 ---
 
 # TH-0473 E-0024 plan: twelve draft stories, S-0414 to S-0425, with 66 tasks, in the epic's order; values wait on TH-0471
@@ -89,3 +89,16 @@ One addition for the order between epics. TH-0476 recommends that E-0025 build a
 
 - If you take that answer and E-0025 lands first, S-0419 should also move the curator onto the role path: a fourth role file, `curator.md`, and its starter rewired. That adds about one task to S-0414 and one to S-0419. I have not changed either, since TH-0476 is open.
 - If E-0025's curator waits for E-0024, it becomes a role file after S-0419 with no Go of its own, and nothing here changes.
+
+### 2026-10-21T11:05:02Z orchestrator (recommendation)
+Recommended: approve the plan, with your TH-0471 answers applied story by story through the story planner. Take the planner's addition about the curator.
+
+- Your TH-0471 answers change the drafts:
+  - `design/workflows/roles` and `design/workflows/formulas`, in place of `design/roles` and `design/formulas`;
+  - a formula instance gets a branch or worktree, as a story does (question 5);
+  - a generated role file, with the Claude agent file symlinked where Claude allows it (question 6).
+- I started the planner on S-0414 at 11:03Z under plan_backlog_stories, and S-0415 to S-0425 follow one at a time. Each run brings its story's touches, words, and tasks in line with those answers.
+- Each story's value needs the 4h on E-0024 that you chose on TH-0471, written on the epic: `flai edit E-0024` with its cost of delay flags.
+- The curator: TH-0476 recommends building it now on the analyzer machinery. So if E-0025 lands first, add one task to S-0414 and one to S-0419 to move it onto the role path, as this thread proposes.
+
+Source: design/conventions/strategic-agents.md § As the planner

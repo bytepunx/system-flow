@@ -6,7 +6,7 @@ title: "Workflows as data: a project defines a strategic role or a repeatable fo
 status: backlog
 owner: alex
 created: 2026-10-16T04:28:02Z
-updated: 2026-10-21T05:57:42Z
+updated: 2026-10-21T11:10:38Z
 transitions:
   - to: ready
     at: 2026-10-20T19:01:17Z
@@ -23,15 +23,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 814
+      seconds: 1270
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 163
-          output: 2956
-          cache_read: 64481860
-          cache_write: 34923
-          cost: 16.1737
+          input: 223
+          output: 3605
+          cache_read: 69293183
+          cache_write: 80748
+          cost: 17.2463
 ---
 # E-0024 Workflows as data: a project defines a strategic role or a repeatable formula of steps in files flai runs, and the built-in roles are expressed the same way, so a new role or a release process needs no flai release
 
@@ -51,7 +51,7 @@ The planner, the orchestrator, and the analyzer are fixed in Go: their prompts, 
 ## Stories
 
 To be drafted by the planner. Order: the role file format and its validation first, read by `flai prime --role` and the guard, with the three built-in roles expressed in it and their tests green; then `flai serve` starting a defined role; then the dashboard's generic role page and status; then formulas and `flai formula run`; then the baseline formulas, each run here once; then metrics per role with its ADR; documentation and the template with each story.
-- S-0414 A strategic role is a markdown file under design/roles that flai reads and flai check validates, and the template ships the planner, the orchestrator, and the analyzer as baseline role files
+- S-0414 A strategic role is a markdown file under design/workflows/roles that flai reads and flai check validates, and the template ships the planner, the orchestrator, and the analyzer as baseline role files
 - S-0415 flai prime --role gives a role a project defines its pack within the budget, from the topics and the item kind its role file names, and the three built-in roles prime from their files unchanged
 - S-0416 flai guard reads a role's permitted calls from its role file and refuses the rest, and the planner's, the orchestrator's, and the analyzer's rules move into their files with their guard tests unchanged
 - S-0417 flai serve starts a role a project defines on the operator's word, behind the host action its file names, with an activity document under wip/agents and the same journal entries as the built-in roles

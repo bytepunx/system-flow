@@ -3,10 +3,10 @@ id: S-0463
 type: story
 nature: remediation
 title: TestAChildIsStoppedOnlyOnceItsProcessHasEnded fails under load when the stubborn child dies on SIGTERM before it ignores it
-status: review
+status: done
 owner: alex
 created: 2026-10-21T07:19:49Z
-updated: 2026-10-21T09:35:58Z
+updated: 2026-10-21T11:12:19Z
 transitions:
   - to: ready
     at: 2026-10-21T07:33:31Z
@@ -29,6 +29,9 @@ transitions:
   - to: review
     at: 2026-10-21T09:35:58Z
     by: agent-S-0463
+  - to: done
+    at: 2026-10-21T11:12:19Z
+    by: orchestrator
 tags: [flai, tests, issues]
 touches: [flai/internal/host/host_test.go, design/issues/I-0173-testachildisstoppedonlyonceitsprocesshasended-fails-under-load-when-the-stubborn-child-dies-on-sigterm-before-it-ignores-it.md, design/issues/summary.md, design/issues/I-0175-a-story-s-in-progress-transition-from-flai-story-start-was-lost-when-a-concurrent-write-rewrote-the-item-file-leaving-it-ready-while-its-agent-worked-it.md, design/issues/I-0158-testasettledreplystartstheagentwaitingonitonce-in-flai-internal-serve-fails-now-and-then-in-the-close-out-s-integration-tier-on-a-branch-that-does-not-touch-serve.md, design/issues/I-0174-the-merge-queue-s-batch-runs-smoke-with-no-close-out-story-so-scripts-check-sh-runs-an-unscoped-flai-check-strict-and-fails-every-batch-on-findings-outside-its-stories.md, design/issues/I-0179-accepting-a-story-that-adds-a-flaiover-dependency-leaves-the-main-checkout-s-flaiover-node-modules-without-it-so-every-close-out-s-integration-tier-fails-testeverylistedflaiovercomponentcompilesintheharness-until-someone-installs.md]
 agent:
@@ -65,21 +68,21 @@ usage:
           cache_write: 80352
           cost: 2.5393
     - kind: orchestrator
-      seconds: 2411
+      seconds: 2450
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 200
-          output: 3123
-          cache_read: 30207875
-          cache_write: 86518
-          cost: 7.5949
+          input: 210
+          output: 3207
+          cache_read: 30758862
+          cache_write: 94047
+          cost: 7.7182
         - model: claude-sonnet-5-5
-          input: 8
-          output: 69
-          cache_read: 68156
-          cache_write: 49020
-          cost: 0.0959
+          input: 12
+          output: 109
+          cache_read: 79962
+          cache_write: 78120
+          cost: 0.1241
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -136,3 +139,14 @@ Figures:
 - Cost of delay value: 25 USD a week, as `flai cod` worked it out from the input flai set (10m lost per 168h cycle at 150 USD an hour). It stands: one occurrence in under a day, and a flake in the integration tier stops whichever story's close-out it hits.
 - 2026-10-21T08:19:09Z: moved to in-progress: merge queue batch 20261021-081243 fails with S-0463 at e69059a341aa: smoke failed: smoke: smoke: template render and check
 - 2026-10-21T09:23:55Z: moved to in-progress: merge queue batch 20261021-091124 fails with S-0463 at 92c4b9f89cbd: integration failed: flai/internal/serve/agents_test.go:1348 TestASettledReplyStartsTheAgentWaitingOnItOnce: started before the reply: [{At:2026-10-21T09:17:59Z Action:agent Method:serve.agent Project:t Root:/tmp/TestASettledReplyStartsTheAgentWaitingOnItOnce69115204/001 By:flai serve RequestID: Outcome:done Detail:started stub-agent (command) again for S-0001 as builder-S-0001, a message on MS-0001 (pid 1889218); log /tmp/TestASettledReplyStartsTheAgentWaitingOnItOnce69115204/003/serve/agents/t-S-0001-20261021T091759Z.log}]
+
+### Accepted by the orchestrator
+
+- Verified: df29e866248439eb8783d82fb270ddd08ebcc2b5
+- Batch: 20261021-110213
+- Enqueued verified: 49cce4a7d719d4f74c891a9859913af68c69b7a5
+- At: 2026-10-21T11:12:19Z
+
+Verdict: meets all criteria
+- 1: flai/internal/host/host_test.go
+- 2: design/issues/I-0173-testachildisstoppedonlyonceitsprocesshasended-fails-under-load-when-the-stubborn-child-dies-on-sigterm-before-it-ignores-it.md, design/issues/summary.md

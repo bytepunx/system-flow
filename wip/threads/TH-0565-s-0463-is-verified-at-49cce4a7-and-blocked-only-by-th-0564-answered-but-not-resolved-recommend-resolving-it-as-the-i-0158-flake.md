@@ -4,10 +4,10 @@ title: "S-0463 is verified at 49cce4a7 and blocked only by TH-0564, answered but
 anchor:
   path: wip/kanban/stories/S-0463-testachildisstoppedonlyonceitsprocesshasended-fails-under-load-when-the-stubborn-child-dies-on-sigterm-before-it-ignores-it.md
   item: S-0463
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-10-21T09:36:28Z
-updated: 2026-10-21T09:36:28Z
+updated: 2026-10-21T11:01:42Z
 ---
 
 # TH-0565 S-0463 is verified at 49cce4a7 and blocked only by TH-0564, answered but not resolved; recommend resolving it as the I-0158 flake
@@ -28,3 +28,6 @@ Recommended: resolve TH-0564 as the I-0158 flake, then S-0463 can be enqueued ag
 - I-0158 has now sent stories back out of the merge queue, at count 4. A remediation story for it would stop the next one.
 
 S-0463 is not in the queue. The queue holds S-0456, S-0459 and S-0462.
+
+### 2026-10-21T11:01:42Z orchestrator
+Resolved: TH-0564 is resolved (flai serve, 09:37:28Z), so nothing blocks enqueueing S-0463 any more.

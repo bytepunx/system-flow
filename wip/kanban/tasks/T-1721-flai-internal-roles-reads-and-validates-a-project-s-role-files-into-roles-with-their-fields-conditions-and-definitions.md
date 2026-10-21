@@ -7,7 +7,7 @@ status: backlog
 parent: S-0414
 owner: alex
 created: 2026-10-16T05:42:59Z
-updated: 2026-10-16T05:42:59Z
+updated: 2026-10-21T11:09:08Z
 transitions: []
 stream: S-0414
 tags: [cli]
@@ -32,3 +32,5 @@ Waits for T-1720, the ADR that fixes the fields.
 `go test ./internal/roles/...` passes and `flai test` on the package is clean.
 
 ## Notes
+
+- After TH-0471's answers, the roles folder is `design/workflows/roles` (answer 2). The role file holds the fields its harness definition is generated from (answer 6). `Validate` checks those fields as T-1720's ADR lists them.

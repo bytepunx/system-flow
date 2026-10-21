@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/epics/E-0023-an-opencode-adapter-runs-a-story-s-agent-on-opencode-with-the-guard-the-permission-prompt-the-roles-and-usage-measured-through-its-plugin-hooks-and-its-server-s-events-so-a-non-claude-model-works-a-story-end-to-end.md
   item: E-0023
 status: open
-participants: [planner-E-0023]
+participants: [planner-E-0023, orchestrator]
 created: 2026-10-16T05:24:38Z
-updated: 2026-10-16T05:24:38Z
+updated: 2026-10-21T11:04:58Z
 ---
 
 # TH-0468 E-0023 plan: seven draft stories, S-0406 to S-0412, with 38 tasks, in the epic's order; values wait on TH-0467
@@ -66,3 +66,14 @@ These stories share files with E-0021's and E-0022's drafts, so the holds run th
 - `flai/internal/serve/agents.go` and `agents_test.go`: S-0406 and S-0411, with S-0394.
 
 Nothing else overlaps outside `design/adrs` and the shared docs.
+
+### 2026-10-21T11:04:58Z orchestrator (recommendation)
+Recommended: resolve this thread, approving the plan as drafted.
+
+- Each story has its value from the 500 USD a week penalty you set on E-0023 (TH-0467, question 1).
+- S-0407 to S-0411 are finalized and wait on S-0406 by `after`.
+- S-0406 and S-0412 stay drafts. They need only TH-0467's questions 2 and 3: OpenCode on the host, and an OpenRouter key and model.
+
+Nothing on this thread needs a decision beyond those two.
+
+Source: design/conventions/strategic-agents.md § As the planner

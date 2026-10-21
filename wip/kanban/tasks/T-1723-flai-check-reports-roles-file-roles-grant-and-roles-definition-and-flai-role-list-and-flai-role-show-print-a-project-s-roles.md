@@ -7,18 +7,18 @@ status: backlog
 parent: S-0414
 owner: alex
 created: 2026-10-16T05:43:11Z
-updated: 2026-10-16T05:43:11Z
+updated: 2026-10-21T11:11:54Z
 transitions: []
 stream: S-0414
 tags: [cli]
-touches: [flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/cmd/role.go, flai/cmd/role_test.go, flai/cmd/root.go, docs/users/flai-reference.md]
+touches: [flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/cmd/role.go, flai/cmd/role_test.go, flai/cmd/root.go, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [T-1721, T-1722]
 ---
 # T-1723 flai check reports roles.file, roles.grant, and roles.definition, and flai role list and flai role show print a project's roles
 
 ## Work
 
-- Call `roles.Validate` from `flai check`. Report `roles.file`, `roles.grant`, and `roles.definition`, each on its field's line. `roles.definition` reads the `.claude/agents/<name>.md` the file names and compares its `tools:` with the role's rules.
+- Call `roles.Validate` from `flai check`. Report `roles.file`, `roles.grant`, and `roles.definition`, each on its field's line. `roles.definition` reads the role file's own definition fields, the ones T-1720's ADR says flai generates the harness definition from. It reports them missing, or listing a tool the role's rules refuse.
 - Add `flai role list [--json]` and `flai role show <name> [--json]`.
 - Regenerate `docs/users/flai-reference.md` with `make flai-reference`.
 
@@ -26,6 +26,9 @@ Waits for T-1721, the loader, and T-1722, so the check runs clean on the shipped
 
 ## Done when
 
-The check tests cover each finding. The command tests cover both commands. `flai check --strict` in this repository reports nothing on `design/roles/`.
+The check tests cover each finding. The command tests cover both commands. `flai check --strict` in this repository reports nothing on `design/workflows/roles/`.
 
 ## Notes
+
+- Register `c.roles()` in `Run` in `check.go`, after `c.conventions()`. Register `newRoleCmd` in the second `AddCommand` batch in `root.go`.
+- `scripts/flai-reference.sh`, behind `make flai-reference`, also rewrites the flag index in `docs/operators/settings.md`. `TestReferenceIsCurrent` fails while either file is stale.

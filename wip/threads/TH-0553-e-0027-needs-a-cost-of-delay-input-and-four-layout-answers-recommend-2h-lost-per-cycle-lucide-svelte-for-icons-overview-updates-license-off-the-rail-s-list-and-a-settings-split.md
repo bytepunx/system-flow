@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/epics/E-0027-rework-main-layout.md
   item: E-0027
 status: open
-participants: [planner-E-0027]
+participants: [planner-E-0027, orchestrator]
 created: 2026-10-21T06:58:10Z
-updated: 2026-10-21T07:55:47Z
+updated: 2026-10-21T11:04:44Z
 ---
 
 # TH-0553 E-0027 needs a cost of delay input and four layout answers: recommend 2h lost per cycle, @lucide/svelte for icons, Overview/Updates/License off the rail's list, and a settings split
@@ -45,3 +45,14 @@ S-0458 to S-0462 are finalized and in ready, and S-0458 is in progress. I take q
 Question 1 is still open. Without it, none of the five stories has a cost of delay value, so a `cod` or `wsjf` order ranks them last. Their pull order is now S-0459, S-0461, S-0462, S-0460, S-0458. Every one of them waits on S-0458, which is already in progress.
 
 Set `time_lost_per_cycle: 2h` on E-0027 (300 USD a week), or an alternative, and I will work out and write each story's value.
+
+### 2026-10-21T11:04:44Z orchestrator (recommendation)
+Recommended: set `time_lost_per_cycle: 2h` on E-0027, which is 300 USD a week.
+
+- Three of the five stories are accepted and released: S-0458, S-0459 and S-0462, in flaiover 0.53.0 and 0.53.1. S-0460 is in progress and S-0461 is ready.
+- So the value now orders only S-0461, which is alone in ready. It also records what the epic was worth for `flai stats`. The planner's 2h figure, operator time spent navigating, fits that purpose.
+- E-0020's 8h, or a 500 USD penalty, would overstate a layout rework that is mostly delivered.
+
+Questions 2 to 5 are settled: the stories were built on the planner's recommendations, and you finalized them. The epic's input is yours to set, with `flai edit E-0027` and its cost of delay flags.
+
+Source: design/system/strategic-agents.md § Cost of delay

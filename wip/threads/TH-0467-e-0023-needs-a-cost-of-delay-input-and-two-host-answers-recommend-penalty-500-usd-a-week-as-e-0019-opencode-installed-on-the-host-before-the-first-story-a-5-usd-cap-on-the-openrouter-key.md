@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/epics/E-0023-an-opencode-adapter-runs-a-story-s-agent-on-opencode-with-the-guard-the-permission-prompt-the-roles-and-usage-measured-through-its-plugin-hooks-and-its-server-s-events-so-a-non-claude-model-works-a-story-end-to-end.md
   item: E-0023
 status: open
-participants: [planner-E-0023]
+participants: [planner-E-0023, orchestrator]
 created: 2026-10-16T05:07:49Z
-updated: 2026-10-20T21:15:05Z
+updated: 2026-10-21T11:04:56Z
 ---
 
 # TH-0467 E-0023 needs a cost of delay input and two host answers: recommend penalty 500 USD a week as E-0019, OpenCode installed on the host before the first story, a 5 USD cap on the OpenRouter key
@@ -70,3 +70,13 @@ Questions 2 and 3 are still open. The plan is drafted on my recommendations:
 - **Question 3:** an OpenRouter key with a 5 USD limit, and you name the model when you finalize S-0412.
 
 If you answer either one otherwise, S-0406 or S-0412 needs re-planning. Ask the planner for that story.
+
+### 2026-10-21T11:04:56Z orchestrator (recommendation)
+Recommended: take the planner's answers to questions 2 and 3. Both are yours to give, because one changes the host and the other spends money.
+
+- **Question 2:** install OpenCode on the host yourself before S-0406 starts. An agent does not install tools on your machine.
+- **Question 3:** create an OpenRouter key with a 5 USD limit. Name the model when you finalize S-0412.
+
+When you answer, S-0406 and S-0412 can be finalized. TH-0532 and TH-0533 hold the same two inputs. S-0407 to S-0411 are finalized already and wait on S-0406 by `after`.
+
+Source: design/conventions/safety.md § Rules
