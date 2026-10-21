@@ -6,7 +6,7 @@ title: TokenEditor sets data-theme on each value cell, so the other theme's hex 
 status: backlog
 owner: alex
 created: 2026-10-21T11:59:01Z
-updated: 2026-10-21T11:59:01Z
+updated: 2026-10-21T12:04:23Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
     by: flai
     at: 2026-10-21T11:59:01Z
+finalized:
+  by: alex
+  at: 2026-10-21T12:04:23Z
 ---
 # S-0474 TokenEditor sets data-theme on each value cell, so the other theme's hex fields are dark text on a dark field and cannot be read
 
