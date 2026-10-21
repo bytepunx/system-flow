@@ -327,7 +327,7 @@ func verifyText(rep verify.Report, recorded []recordedIssue, stopped bool, maxNo
 		if s.Note != "" {
 			b.WriteString("    " + strings.Join(strings.Fields(s.Note), " ") + "\n")
 		}
-		b.WriteString(stepFindings(s))
+		b.WriteString(verify.StepFindings(s, "    "))
 	}
 	if len(rep.Notes) > 0 {
 		fmt.Fprintf(&b, "outside %s, notes that do not fail it:\n", rep.Story)
@@ -342,23 +342,6 @@ func verifyText(rep verify.Report, recorded []recordedIssue, stopped bool, maxNo
 		fmt.Fprintf(&b, "recorded %s outside %s in %s (%s)\n", r.Rule, rep.Story, r.Issue, r.describe())
 	}
 	b.WriteString(verifyOutcome(rep, stopped) + "\n")
-	return b.String()
-}
-
-// stepFindings are the step's findings and how many were left out, as flai
-// test prints a tier's, each line indented under the step.
-func stepFindings(s verify.Step) string {
-	var b strings.Builder
-	for _, f := range s.Findings {
-		for _, line := range strings.SplitAfter(f.Text(), "\n") {
-			if line != "" {
-				b.WriteString("    " + line)
-			}
-		}
-	}
-	if s.Omitted > 0 {
-		fmt.Fprintf(&b, "    … %d more findings left out\n", s.Omitted)
-	}
 	return b.String()
 }
 

@@ -34,6 +34,23 @@ func (r Result) Text() string {
 	return b.String()
 }
 
+// StepFindings are the step's findings and how many were left out, as flai
+// test prints a tier's, with indent before every line.
+func StepFindings(s Step, indent string) string {
+	var b strings.Builder
+	for _, f := range s.Findings {
+		for _, line := range strings.SplitAfter(f.Text(), "\n") {
+			if line != "" {
+				b.WriteString(indent + line)
+			}
+		}
+	}
+	if s.Omitted > 0 {
+		fmt.Fprintf(&b, "%s… %d more findings left out\n", indent, s.Omitted)
+	}
+	return b.String()
+}
+
 // Text is the finding as a line, path:line name: message, with the
 // message's further lines indented under it.
 func (f Finding) Text() string {
