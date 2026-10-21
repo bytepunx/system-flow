@@ -6,7 +6,7 @@ title: The LiteLLM gateway smoke check's default free model is refused by Claude
 status: ready
 owner: alex
 created: 2026-10-21T02:08:41Z
-updated: 2026-10-21T07:33:37Z
+updated: 2026-10-21T07:47:11Z
 transitions:
   - to: ready
     at: 2026-10-21T07:28:20Z
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-10-21T06:04:37Z
 forecast:
   duration: 1h
-  delivery: 2026-10-21T08:41:00Z
-  basis: "Its own forecast of 1h; 2nd in the pull order with an in-progress limit of 5, behind S-0453, S-0464 and S-0463."
+  delivery: 2026-10-21T08:55:00Z
+  basis: "Its own forecast of 1h; 1st in the pull order with an in-progress limit of 5, behind S-0463, S-0464 and S-0465."
   by: flai
-  at: 2026-10-21T07:33:37Z
+  at: 2026-10-21T07:47:11Z
 finalized:
   by: alex
   at: 2026-10-21T05:58:31Z

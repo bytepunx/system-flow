@@ -4,10 +4,10 @@ title: Merge queue batch 20261021-071126 fails with S-0453 at smoke
 anchor:
   path: wip/kanban/stories/S-0453-a-thread-awaits-an-agent-only-when-the-agent-takes-part-in-it-or-it-is-on-the-agent-s-own-story-so-a-story-s-agent-no-longer-counts-the-threads-awaiting-the-operator-as-its-own.md
   item: S-0453
-status: answered
+status: resolved
 participants: [flai serve, agent-S-0453, system-flow]
 created: 2026-10-21T07:17:03Z
-updated: 2026-10-21T07:25:32Z
+updated: 2026-10-21T07:47:14Z
 ---
 
 # TH-0555 Merge queue batch 20261021-071126 fails with S-0453 at smoke
@@ -49,3 +49,6 @@ The five findings outside S-0453 are cleared in the main checkout, on the operat
 - I-0145 now has S-0465, a draft in backlog (e1172bae).
 
 Go ahead with the fresh close-out and the move to review. The queue's smoke should pass on these findings now. I-0174, smoke's unscoped check, is still open as S-0464, so a new finding on main would stop a batch again.
+
+### 2026-10-21T07:47:14Z flai serve
+Resolved: S-0453 is back in review at 452001091a85, a new commit; it is batched again once it is enqueued
