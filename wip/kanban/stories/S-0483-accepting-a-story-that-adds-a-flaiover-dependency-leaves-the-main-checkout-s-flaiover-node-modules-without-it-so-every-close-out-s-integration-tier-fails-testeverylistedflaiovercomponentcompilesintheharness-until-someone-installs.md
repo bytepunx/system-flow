@@ -6,7 +6,7 @@ title: Accepting a story that adds a flaiover dependency leaves the main checkou
 status: backlog
 owner: alex
 created: 2026-10-21T12:00:17Z
-updated: 2026-10-21T12:12:36Z
+updated: 2026-10-21T12:13:57Z
 transitions: []
 tags: [flai, cli]
 topics: [release, testing]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-10-21T12:12:36Z
 forecast:
   duration: 1h
-  delivery: 2026-10-22T07:10:00Z
-  basis: flai forecast's 24m (89 s per unit of size, 33 done remediation stories, large band, size 16) raised to 1h for an ADR, a manifest key with its check, and an acceptance step tested through a git merge fixture
-  by: planner-S-0483
-  at: 2026-10-21T12:12:36Z
+  delivery: 2026-10-22T06:52:00Z
+  basis: "Its own forecast of 1h; 41st in the pull order with an in-progress limit of 5, behind S-0461, S-0471, S-0473, S-0474, S-0479, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432, S-0433, S-0434, S-0435, S-0466, S-0467, S-0468, S-0469, S-0470, S-0472, S-0476, S-0477, S-0478, S-0480, S-0481 and S-0482."
+  by: flai
+  at: 2026-10-21T12:13:57Z
 finalized:
   by: alex
   at: 2026-10-21T12:03:49Z
