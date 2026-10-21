@@ -2,6 +2,8 @@
 // nested entries; a pane entry shows its pane only; the choice is kept in the hash both ways; an
 // unknown hash falls back to the page's default; a scroll entry scrolls to its section and is
 // current where nothing reports what is in view; the page can choose and read the entry current.
+// S-0461: an entry with an href is a plain link the router follows, current while the page's
+// current names it; a label heads its children without being a link; a header sits above the list.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createRawSnippet, flushSync, mount, unmount } from 'svelte';
 import type { SidebarEntry } from '$lib/pagesidebar.svelte';
@@ -26,6 +28,20 @@ const pane = createRawSnippet((id: () => string) => ({
 			el.textContent = `the ${id()} pane`;
 		});
 	}
+}));
+const LINKS: SidebarEntry[] = [
+	{
+		id: 'flow',
+		label: 'Flow',
+		children: [
+			{ id: 'cfd', label: 'Cumulative flow', href: '/charts/cfd' },
+			{ id: 'wip', label: 'WIP', href: '/charts/wip', count: 3 }
+		]
+	},
+	{ id: 'lead', label: 'Lead time', href: '/charts/lead' }
+];
+const header = createRawSnippet(() => ({
+	render: () => '<div data-testid="header">the tree</div>'
 }));
 const sections = createRawSnippet(() => ({
 	render: () =>
@@ -280,6 +296,100 @@ describe('PageSidebar (S-0460)', () => {
 			await settle();
 			expect(shown()).toEqual(['the questions pane']);
 			expect(currentIds()).toEqual(['open']);
+		});
+	});
+
+	describe('linked entries (S-0461)', () => {
+		const links = (current?: string) => show({ entries: LINKS, pane: undefined, current });
+
+		it('links each to its page, with no hash, and heads them with a label that is no link', () => {
+			links('wip');
+			expect(entry('cfd').getAttribute('href')).toBe('/charts/cfd');
+			expect(entry('wip').getAttribute('href')).toBe('/charts/wip');
+			expect(entry('lead').getAttribute('href')).toBe('/charts/lead');
+			expect(entry('wip').querySelector('[data-sidebar-count]')?.textContent).toBe('3');
+			const flow = entry('flow');
+			expect(flow.tagName).toBe('SPAN');
+			expect(flow.hasAttribute('href')).toBe(false);
+			expect(flow.querySelector('span')!.textContent).toBe('Flow');
+			const nested = flow.parentElement!.querySelector('[data-sidebar-list="nested"]')!;
+			expect([...nested.querySelectorAll('a')].map((a) => a.dataset.sidebarEntry)).toEqual([
+				'cfd',
+				'wip'
+			]);
+		});
+
+		it('is current, as the page it is, while the page’s current names it', () => {
+			links('wip');
+			expect(currentIds()).toEqual(['wip']);
+			expect(entry('wip').getAttribute('aria-current')).toBe('page');
+			expect(entry('wip').className).toContain('text-accent');
+			expect(entry('cfd').className).not.toContain('font-semibold');
+		});
+
+		it('follows the page’s current as its route changes', () => {
+			const props = $state<Record<string, unknown>>({
+				label: 'Charts',
+				entries: LINKS,
+				current: 'cfd'
+			});
+			c = mount(PageSidebar, { target: document.body, props: props as never });
+			flushSync();
+			expect(currentIds()).toEqual(['cfd']);
+			props.current = 'lead';
+			flushSync();
+			expect(currentIds()).toEqual(['lead']);
+		});
+
+		it('leaves a click to the router: nothing prevented, no hash written, nothing chosen', async () => {
+			links('cfd');
+			let prevented: boolean | undefined;
+			// The router's own listener, which takes the click and navigates.
+			const router = (e: Event) => {
+				prevented = e.defaultPrevented;
+				e.preventDefault();
+			};
+			document.addEventListener('click', router);
+			try {
+				entry('lead').click();
+				await settle();
+			} finally {
+				document.removeEventListener('click', router);
+			}
+			expect(prevented).toBe(false);
+			expect(location.hash).toBe('');
+			expect(location.pathname).toBe('/items/S-0001');
+			expect(currentIds()).toEqual(['cfd']);
+		});
+
+		it('keeps the page’s current on back and forward, which change no hash of its', () => {
+			links('wip');
+			window.dispatchEvent(new PopStateEvent('popstate'));
+			flushSync();
+			expect(currentIds()).toEqual(['wip']);
+		});
+	});
+
+	describe('header (S-0461)', () => {
+		it('draws the header in the nav above the entries, in a box that scrolls sideways itself', () => {
+			show({ entries: SECTIONS, pane: undefined, children: sections, header });
+			const nav = document.querySelector('[data-sidebar-nav]')!;
+			const box = nav.querySelector('[data-sidebar-header]')!;
+			expect(box.querySelector('[data-testid="header"]')?.textContent).toBe('the tree');
+			expect(nav.firstElementChild).toBe(box);
+			const list = nav.querySelector('[data-sidebar-list="top"]')!;
+			expect(box.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+			expect(box.className).toContain('min-w-0');
+			expect(box.className).toContain('overflow-x-auto');
+			expect(nav.className).toContain('md:sticky');
+			expect(nav.className).toContain('md:w-64');
+			expect(currentIds()).toEqual(['goal']);
+		});
+
+		it('draws no header box without one', () => {
+			show({});
+			expect(document.querySelector('[data-sidebar-header]')).toBeNull();
+			expect(document.querySelector('[data-sidebar-nav]')!.className).toContain('md:w-48');
 		});
 	});
 

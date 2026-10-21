@@ -1,11 +1,14 @@
 // S-0460: the state behind a page's sidebar. The choice resolves against the entries, falling back
 // to the page's default and then the first entry; the pane shown is the choice's own or the one it
 // sits in; the hash chooses both ways; a scroll entry is current while its section is in view.
+// S-0461: a linked entry is never a pane or watched, and a page of links does not follow the hash.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
 	PageSidebarState,
 	flatten,
 	hashId,
+	hashless,
+	kindOf,
 	paneOf,
 	resolveChoice,
 	scrollBehavior,
@@ -30,6 +33,19 @@ const SECTIONS: SidebarEntry[] = [
 	{ id: 'notes', label: 'Notes', mode: 'scroll' }
 ];
 
+// The charts page's entries: a label over links to other pages.
+const LINKS: SidebarEntry[] = [
+	{
+		id: 'flow',
+		label: 'Flow',
+		children: [
+			{ id: 'cfd', label: 'Cumulative flow', href: '/charts/cfd' },
+			{ id: 'wip', label: 'WIP', href: '/charts/wip' }
+		]
+	},
+	{ id: 'lead', label: 'Lead time', href: '/charts/lead' }
+];
+
 const src = (entries: SidebarEntry[], more: Partial<SidebarSource> = {}): SidebarSource => ({
 	entries,
 	...more
@@ -44,6 +60,30 @@ describe('flatten', () => {
 			['open-threads', 'questions']
 		]);
 		expect(flatten(SECTIONS).map((p) => p.pane)).toEqual([undefined, undefined, undefined]);
+	});
+});
+
+describe('kindOf (S-0461)', () => {
+	it('is a link for an href whatever the mode, the mode otherwise, and a label without either', () => {
+		expect(kindOf({ id: 'a', label: 'A', href: '/charts/a' })).toBe('link');
+		expect(kindOf({ id: 'a', label: 'A', href: '/charts/a', mode: 'pane' })).toBe('link');
+		expect(kindOf({ id: 'a', label: 'A', mode: 'pane' })).toBe('pane');
+		expect(kindOf({ id: 'a', label: 'A', mode: 'scroll' })).toBe('scroll');
+		expect(kindOf({ id: 'a', label: 'A' })).toBe('label');
+	});
+
+	it('makes a linked entry no pane for the entries under it', () => {
+		const under = [{ id: 'x', label: 'X', href: '/x', mode: 'pane' as const, children: SECTIONS }];
+		expect(flatten(under).map((p) => p.pane)).toEqual([undefined, undefined, undefined, undefined]);
+	});
+});
+
+describe('hashless (S-0461)', () => {
+	it('is true for a page of links and labels only, and not while there are no entries', () => {
+		expect(hashless(LINKS)).toBe(true);
+		expect(hashless([])).toBe(false);
+		expect(hashless(PANES)).toBe(false);
+		expect(hashless([...LINKS, ...SECTIONS])).toBe(false);
 	});
 });
 
@@ -78,6 +118,14 @@ describe('resolveChoice', () => {
 		expect(resolveChoice('MS-0002', src(PANES, { match: () => 'gone' }))).toBe('story');
 	});
 
+	it('never chooses a label, and chooses a link the page names (S-0461)', () => {
+		expect(resolveChoice('flow', src(LINKS))).toBe('cfd');
+		expect(resolveChoice(undefined, src(LINKS))).toBe('cfd');
+		expect(resolveChoice('wip', src(LINKS))).toBe('wip');
+		expect(resolveChoice('nope', src(LINKS, { fallback: 'lead' }))).toBe('lead');
+		expect(resolveChoice('nope', src(LINKS, { fallback: 'flow' }))).toBe('cfd');
+	});
+
 	it('resolves to nothing while there are no entries', () => {
 		expect(resolveChoice('tasks', src([]))).toBeUndefined();
 	});
@@ -97,6 +145,10 @@ describe('paneOf', () => {
 
 	it('shows no pane on a page of scroll entries', () => {
 		expect(paneOf('goal', src(SECTIONS))).toBeUndefined();
+	});
+
+	it('shows no pane on a page of links (S-0461)', () => {
+		expect(paneOf('wip', src(LINKS))).toBeUndefined();
 	});
 });
 
@@ -165,6 +217,21 @@ describe('PageSidebarState', () => {
 		expect(s.watched).toEqual(['open-threads']);
 		s.choose('tasks');
 		expect(s.watched).toEqual([]);
+	});
+
+	it('watches no link, and leaves a page of links to its current on back and forward (S-0461)', () => {
+		history.replaceState(null, '', '#wip');
+		const s = new PageSidebarState(() => src([...LINKS, ...SECTIONS]));
+		expect(s.current).toBe('wip');
+		expect(s.watched).toEqual(['goal', 'criteria', 'notes']);
+		const links = new PageSidebarState(() => src(LINKS));
+		links.choose('lead');
+		const stop = links.listen();
+		history.replaceState(null, '', location.pathname);
+		window.dispatchEvent(new PopStateEvent('popstate'));
+		expect(links.current).toBe('lead');
+		expect(links.watched).toEqual([]);
+		stop();
 	});
 
 	it('makes the choice current where there is no IntersectionObserver', () => {

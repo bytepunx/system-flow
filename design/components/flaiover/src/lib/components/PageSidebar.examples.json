@@ -76,6 +76,46 @@
         "fallback": "story",
         "pane": "The pane chosen in the sidebar is shown here."
       }
+    },
+    {
+      "name": "Links to other pages, under labels",
+      "props": {
+        "label": "Charts",
+        "entries": [
+          {
+            "id": "flow",
+            "label": "Flow",
+            "children": [
+              { "id": "cfd", "label": "Cumulative flow", "href": "/charts/cfd" },
+              { "id": "wip", "label": "Work in progress", "href": "/charts/wip" },
+              { "id": "throughput", "label": "Throughput", "href": "/charts/throughput" }
+            ]
+          },
+          {
+            "id": "time",
+            "label": "Time",
+            "children": [
+              { "id": "lead", "label": "Lead time", "href": "/charts/lead" },
+              { "id": "cycle", "label": "Cycle time", "href": "/charts/cycle" }
+            ]
+          }
+        ],
+        "current": "wip",
+        "children": "The chart the route names is shown here."
+      }
+    },
+    {
+      "name": "A header above scroll entries",
+      "props": {
+        "label": "Documents",
+        "entries": [
+          { "id": "goal", "label": "Goal", "mode": "scroll" },
+          { "id": "layout", "label": "Layout", "mode": "scroll" },
+          { "id": "decisions", "label": "Decisions", "mode": "scroll" }
+        ],
+        "header": "The tree of documents is drawn here.",
+        "children": "The document, its headings with the ids its entries name."
+      }
     }
   ]
 }

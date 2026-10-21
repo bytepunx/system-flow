@@ -4,18 +4,34 @@
 // The raw choice is kept as given, so a hash that names a pane the page has not drawn yet chooses
 // it once the entries arrive, and a pane that goes away falls back to the page's default. A scroll
 // entry is current while its section is in view, which an IntersectionObserver reports; where
-// there is none, as under jsdom, the choice is current.
+// there is none, as under jsdom, the choice is current. S-0461 adds an entry that links to another
+// page, which the page makes current through its bound current, and a label that heads its
+// children; neither is kept in the hash, and a page of only those does not follow it.
 
 export type SidebarMode = 'pane' | 'scroll';
 
+/** What an entry is: a pane, a section to scroll to, a link to another page, or a label. */
+export type SidebarKind = SidebarMode | 'link' | 'label';
+
+/**
+ * One entry. With an href it is a link to another page, whatever its mode: the router follows it,
+ * nothing is written to the hash, and it is current while the page's current names it (S-0461).
+ * With neither an href nor a mode it is a label, a heading for its children that is not a link and
+ * is never chosen or current. Otherwise its mode says what it is.
+ */
 export type SidebarEntry = {
-	/** The entry's id: the URL hash that chooses it, and for a scroll entry its section's element id. */
+	/**
+	 * The entry's id: the URL hash that chooses it, and for a scroll entry its section's element
+	 * id; for a link or a label, only a name the page's current and fallback can use.
+	 */
 	id: string;
 	label: string;
 	/** A count shown beside the label, such as the open threads. */
 	count?: number;
 	/** pane shows one pane at a time; scroll scrolls to a section on the page or in its pane. */
-	mode: SidebarMode;
+	mode?: SidebarMode;
+	/** The page the entry links to, resolve()d by the page, such as /charts/cfd. */
+	href?: string;
 	/** Entries listed under this one: a scroll entry under a pane is a section of that pane. */
 	children?: SidebarEntry[];
 };
@@ -32,11 +48,17 @@ export type SidebarSource = {
 /** An entry, with the pane it sits in: itself for a pane, its nearest pane above it otherwise. */
 export type Placed = { entry: SidebarEntry; pane?: string };
 
+/** What an entry is: a link for an href, its mode otherwise, and a label without either. */
+export function kindOf(entry: SidebarEntry): SidebarKind {
+	if (entry.href) return 'link';
+	return entry.mode ?? 'label';
+}
+
 /** Every entry, depth first, each with the pane it sits in. */
 export function flatten(entries: SidebarEntry[], pane?: string): Placed[] {
 	const out: Placed[] = [];
 	for (const entry of entries) {
-		const here = entry.mode === 'pane' ? entry.id : pane;
+		const here = kindOf(entry) === 'pane' ? entry.id : pane;
 		out.push({ entry, pane: here });
 		if (entry.children?.length) out.push(...flatten(entry.children, here));
 	}
@@ -55,19 +77,26 @@ export function hashId(hash: string): string {
 
 /**
  * The entry a choice resolves to: the entry it names, else the entry match says holds it, else
- * the fallback, else the first entry; undefined while there are no entries.
+ * the fallback, else the first entry; undefined while there are no entries. A label is never
+ * chosen; a link is, so that the page's current makes it current.
  */
 export function resolveChoice(
 	id: string | undefined,
 	{ entries, fallback, match }: SidebarSource
 ): string | undefined {
-	const all = flatten(entries);
+	const all = flatten(entries).filter((p) => kindOf(p.entry) !== 'label');
 	const known = (x: string | undefined) => !!x && all.some((p) => p.entry.id === x);
 	if (known(id)) return id;
 	const held = id ? match?.(id) : undefined;
 	if (known(held)) return held;
 	if (known(fallback)) return fallback;
 	return all[0]?.entry.id;
+}
+
+/** Whether the hash means nothing to these entries: there are some, and each is a link or a label. */
+export function hashless(entries: SidebarEntry[]): boolean {
+	const all = flatten(entries);
+	return all.length > 0 && all.every((p) => ['link', 'label'].includes(kindOf(p.entry)));
 }
 
 /**
@@ -110,7 +139,7 @@ export class PageSidebarState {
 	/** The scroll entries whose sections are on the page: those outside a pane or in the one shown. */
 	watched = $derived.by(() =>
 		flatten(this.#source().entries)
-			.filter((p) => p.entry.mode === 'scroll' && (!p.pane || p.pane === this.pane))
+			.filter((p) => kindOf(p.entry) === 'scroll' && (!p.pane || p.pane === this.pane))
 			.map((p) => p.entry.id)
 	);
 	/** The entry current: the first section in view, else the choice. */
@@ -126,8 +155,12 @@ export class PageSidebarState {
 		this.chosen = id;
 	}
 
-	/** Follow the URL's hash, as arrival, back, and forward set it. */
+	/**
+	 * Follow the URL's hash, as arrival, back, and forward set it; not on a page of links and
+	 * labels, whose current is the page's to set, so that back to another page leaves it alone.
+	 */
 	follow(hash: string): void {
+		if (hashless(this.entries)) return;
 		this.chosen = hashId(hash);
 	}
 

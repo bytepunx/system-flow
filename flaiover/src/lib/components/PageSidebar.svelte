@@ -7,9 +7,17 @@
 	// hash link, adding a history entry, and a scroll entry's replaces the hash as it scrolls, at
 	// once when the reader asks for reduced motion. From md the list is sticky at the left of the
 	// content; below md it is one row above it that scrolls within itself. A pane's id should not
-	// be an element id on the page, or following its link scrolls to that element.
+	// be an element id on the page, or following its link scrolls to that element. S-0461: an
+	// entry with an href is a plain link to another page, left to the router, and current while the
+	// page's current names it; an entry with neither href nor mode is a label over its children; and
+	// a header, such as a tree of documents, is drawn in the column above the entries.
 	import { tick, untrack, type Snippet } from 'svelte';
-	import { PageSidebarState, scrollBehavior, type SidebarEntry } from '$lib/pagesidebar.svelte';
+	import {
+		PageSidebarState,
+		kindOf,
+		scrollBehavior,
+		type SidebarEntry
+	} from '$lib/pagesidebar.svelte';
 
 	let {
 		label,
@@ -18,6 +26,7 @@
 		match,
 		current = $bindable(),
 		pane,
+		header,
 		children
 	}: {
 		/** The sidebar's accessible name, such as "Story sections". */
@@ -32,6 +41,8 @@
 		current?: string;
 		/** Renders the pane shown, given its id; left out on a page with no panes. */
 		pane?: Snippet<[string]>;
+		/** Drawn in the sidebar above its entries, such as a tree of documents; it widens the column. */
+		header?: Snippet;
 		/** Content after the pane, on every pane, such as the sections scroll entries name. */
 		children?: Snippet;
 	} = $props();
@@ -68,7 +79,7 @@
 	// Arriving with a scroll entry's hash scrolls to its section once the content is drawn.
 	$effect(() => {
 		const arrived = untrack(() => sidebar.entry(sidebar.chosen));
-		if (arrived?.mode === 'scroll')
+		if (arrived && kindOf(arrived) === 'scroll')
 			void tick().then(() => document.getElementById(arrived.id)?.scrollIntoView?.());
 	});
 
@@ -99,6 +110,16 @@
 	}
 </script>
 
+{#snippet inner(e: SidebarEntry)}
+	<span class="min-w-0 truncate">{e.label}</span>
+	{#if e.count !== undefined}
+		<span
+			class="ml-auto rounded-full bg-raised px-1.5 text-xs font-normal text-muted"
+			data-sidebar-count>{e.count}</span
+		>
+	{/if}
+{/snippet}
+
 {#snippet list(items: SidebarEntry[], top: boolean)}
 	<ul
 		class={top
@@ -107,28 +128,41 @@
 		data-sidebar-list={top ? 'top' : 'nested'}
 	>
 		{#each items as e (e.id)}
+			{@const kind = kindOf(e)}
 			{@const isCurrent = sidebar.current === e.id}
 			{@const shown = isCurrent || sidebar.pane === e.id}
+			{@const look = `flex items-center gap-2 rounded px-2 py-1 whitespace-nowrap hover:bg-raised ${
+				shown ? 'font-semibold text-accent' : 'text-ink-soft hover:text-accent'
+			}`}
 			<li class="flex shrink-0 gap-1 md:block">
-				<a
-					class="flex items-center gap-2 rounded px-2 py-1 whitespace-nowrap hover:bg-raised {shown
-						? 'font-semibold text-accent'
-						: 'text-ink-soft hover:text-accent'}"
-					href="#{encodeURIComponent(e.id)}"
-					aria-current={isCurrent ? 'true' : undefined}
-					data-sidebar-entry={e.id}
-					data-mode={e.mode}
-					onclick={e.mode === 'pane' ? (ev) => choosePane(ev, e.id) : undefined}
-					onclickcapture={e.mode === 'scroll' ? (ev) => chooseSection(ev, e.id) : undefined}
-				>
-					<span class="min-w-0 truncate">{e.label}</span>
-					{#if e.count !== undefined}
-						<span
-							class="ml-auto rounded-full bg-raised px-1.5 text-xs font-normal text-muted"
-							data-sidebar-count>{e.count}</span
-						>
-					{/if}
-				</a>
+				{#if kind === 'label'}
+					<span
+						class="flex items-center gap-2 px-2 py-1 text-xs font-semibold whitespace-nowrap text-muted"
+						data-sidebar-entry={e.id}
+						data-sidebar-label>{@render inner(e)}</span
+					>
+				{:else if kind === 'link'}
+					<!-- eslint-disable svelte/no-navigation-without-resolve -- the page resolve()s the entry's href -->
+					<a
+						class={look}
+						href={e.href}
+						aria-current={isCurrent ? 'page' : undefined}
+						data-sidebar-entry={e.id}
+						data-sidebar-link>{@render inner(e)}</a
+					>
+					<!-- eslint-enable svelte/no-navigation-without-resolve -->
+				{:else}
+					<a
+						class={look}
+						href="#{encodeURIComponent(e.id)}"
+						aria-current={isCurrent ? 'true' : undefined}
+						data-sidebar-entry={e.id}
+						data-mode={kind}
+						onclick={kind === 'pane' ? (ev) => choosePane(ev, e.id) : undefined}
+						onclickcapture={kind === 'scroll' ? (ev) => chooseSection(ev, e.id) : undefined}
+						>{@render inner(e)}</a
+					>
+				{/if}
 				{#if e.children?.length}{@render list(e.children, false)}{/if}
 			</li>
 		{/each}
@@ -137,10 +171,15 @@
 
 <div class="flex min-w-0 flex-col gap-4 md:flex-row md:items-start md:gap-6" data-page-sidebar>
 	<nav
-		class="min-w-0 text-sm md:sticky md:top-4 md:max-h-screen md:w-48 md:shrink-0 md:overflow-y-auto"
+		class="min-w-0 text-sm md:sticky md:top-4 md:max-h-screen md:shrink-0 md:overflow-y-auto {header
+			? 'md:w-64'
+			: 'md:w-48'}"
 		aria-label={label}
 		data-sidebar-nav
 	>
+		{#if header}
+			<div class="mb-2 min-w-0 overflow-x-auto md:mb-3" data-sidebar-header>{@render header()}</div>
+		{/if}
 		{@render list(entries, true)}
 	</nav>
 	<div bind:this={region} class="min-w-0 flex-1" data-sidebar-content>
