@@ -23,6 +23,10 @@
 	const OVERVIEW = resolve('/');
 	// The login page has no session: no rail, no menu button, no project picker or status pills.
 	const signedIn = $derived(page.url.pathname !== '/login');
+	// The board takes the whole main area beside the rail, its lanes one row (S-0462); every other
+	// page keeps the reading width.
+	const BOARD = resolve('/board');
+	const wide = $derived(page.url.pathname === BOARD);
 	const modeLabel = {
 		system: 'theme: system',
 		light: 'theme: light',
@@ -160,7 +164,7 @@ sit beside it; the column is min-w-0 so a wide page cannot push the window sidew
 			</div>
 		</header>
 		{#if signedIn}<HostFlaiBanner /><UnsignedBanner />{/if}
-		<main class="mx-auto max-w-6xl px-4 py-6">
+		<main class="mx-auto px-4 py-6 {wide ? '' : 'max-w-6xl'}">
 			{#key projectState.current}
 				{#if projectState.project?.candidate}
 					<ImportPrompt project={projectState.project} />

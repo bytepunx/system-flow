@@ -6,6 +6,7 @@ import { GATHER_MS, RETRY_MS } from '$lib/events';
 import { resetForTests } from '$lib/project.svelte';
 import { BoardTypes, boardTypes, itemTypes } from '$lib/boardtypes.svelte';
 import { BoardNatures, boardNatures, natures } from '$lib/boardnatures.svelte';
+import { LaneCollapse, laneCollapse, laneStates } from '$lib/lanecollapse.svelte';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
@@ -283,7 +284,9 @@ describe("each lane's counts by type (S-0256)", () => {
 		const lane = (state: string) => {
 			const section = document.querySelector(`[data-lane="${state}"]`)!;
 			const counts = section.querySelector<HTMLElement>('[data-testid="lane-counts"]')!;
-			expect(counts.previousElementSibling?.tagName).toBe('H2');
+			// below the lane's name, in its heading's toggle since S-0462
+			expect(counts.closest('h2 > button')).not.toBeNull();
+			expect(counts.previousElementSibling?.textContent).toContain(state);
 			return {
 				short: counts.textContent!.trim(),
 				long: counts.title,
@@ -686,5 +689,147 @@ describe('a move to done refused for lint the fix left (S-0465)', () => {
 		expect(document.querySelector('[data-testid="board-notice"]')!.textContent).toBe(
 			'rule: S-0041 has an open blocker'
 		);
+	});
+});
+
+// S-0462: below sm each lane is its heading, a button that opens or closes its cards; Ready, In
+// progress, and Review are open the first time, and the choice is kept per browser. jsdom has no
+// layout, so these read the attributes and the classes that hide a closed lane's cards below sm.
+describe("each lane's heading opens or closes it on a narrow screen (S-0462)", () => {
+	let c: ReturnType<typeof mount> | undefined;
+	const card = (id: string, status: string) => ({
+		id,
+		type: 'story',
+		title: id,
+		nature: 'feature',
+		status,
+		blocked: false,
+		age_seconds: 0
+	});
+	let columns: Record<string, unknown[]>;
+	const lane = (state: string) => document.querySelector(`section[data-lane="${state}"]`)!;
+	const toggle = (state: string) => lane(state).querySelector<HTMLButtonElement>('h2 > button')!;
+	const list = (state: string) => document.getElementById(`lane-cards-${state}`)!;
+	const hidden = (state: string) => list(state).classList.contains('hidden');
+	const stored = () => JSON.parse(localStorage.getItem('flaiover-board-lanes') ?? 'null');
+	const open = async () => {
+		c = mount(BoardPage, { target: document.body });
+		await settle();
+	};
+	beforeEach(() => {
+		resetForTests();
+		vi.stubGlobal('WebSocket', FakeWebSocket);
+		// the lanes as they start from nothing stored
+		localStorage.clear();
+		laneCollapse.open = new LaneCollapse().open;
+		for (const t of itemTypes) boardTypes.set(t, true);
+		boardNatures.shown = new BoardNatures().shown;
+		columns = { ready: [card('S-0001', 'ready')], backlog: [] };
+		api.mockImplementation(async (url: string) => {
+			if (url === '/api/board')
+				return answer({ ...board, writable: true, wip_limits: { ready: 3 }, columns });
+			if (url === '/api/publish') return answer({ plans: [], push_enabled: false });
+			if (url === '/api/items/S-0001/move') {
+				columns = { ready: [], backlog: [card('S-0001', 'backlog')] };
+				return answer({});
+			}
+			return answer({ enabled: false });
+		});
+	});
+	afterEach(() => {
+		if (c) unmount(c);
+		c = undefined;
+		api.mockReset();
+		vi.unstubAllGlobals();
+		document.body.innerHTML = '';
+		localStorage.clear();
+		laneCollapse.open = new LaneCollapse().open;
+	});
+
+	it('makes each heading a button for its cards, with Ready, In progress, and Review open', async () => {
+		await open();
+		for (const state of laneStates) {
+			const button = toggle(state);
+			expect(button.type).toBe('button');
+			expect(button.getAttribute('aria-controls')).toBe(`lane-cards-${state}`);
+			expect(lane(state).querySelector(`#lane-cards-${state}`)).not.toBeNull();
+			expect(button.querySelector('[data-testid="lane-counts"]')).not.toBeNull();
+		}
+		expect(laneStates.map((s) => toggle(s).getAttribute('aria-expanded'))).toEqual([
+			'false',
+			'true',
+			'true',
+			'true',
+			'false',
+			'false'
+		]);
+		// hidden only below sm: from sm every lane shows its cards
+		expect(laneStates.filter(hidden)).toEqual(['backlog', 'done', 'cancelled']);
+		expect(list('backlog').classList.contains('sm:block')).toBe(true);
+		const ready = toggle('ready').textContent!.replace(/\s+/g, ' ');
+		expect(ready).toContain('ready');
+		expect(ready).toContain('0 | 1 | 0');
+		expect(ready).toContain('1/3');
+	});
+
+	it('opens and closes a lane on a click and keeps the choice in this browser', async () => {
+		await open();
+		toggle('backlog').click();
+		flushSync();
+		expect(toggle('backlog').getAttribute('aria-expanded')).toBe('true');
+		expect(hidden('backlog')).toBe(false);
+		expect(stored()).toEqual(['backlog', 'ready', 'in-progress', 'review']);
+		toggle('ready').click();
+		flushSync();
+		expect(toggle('ready').getAttribute('aria-expanded')).toBe('false');
+		expect(hidden('ready')).toBe(true);
+		expect(stored()).toEqual(['backlog', 'in-progress', 'review']);
+		// the next page load reads it back
+		expect(new LaneCollapse().open).toEqual(['backlog', 'in-progress', 'review']);
+	});
+
+	it('takes a card moved into a closed lane and changes its counts at once', async () => {
+		await open();
+		expect(hidden('backlog')).toBe(true);
+		const counts = (state: string) =>
+			lane(state).querySelector('[data-testid="lane-counts"]')!.textContent!.trim();
+		expect(counts('backlog')).toBe('0 | 0 | 0');
+		document
+			.querySelector('a[data-id="S-0001"]')!
+			.dispatchEvent(new Event('dragstart', { bubbles: true }));
+		document
+			.querySelector('section[data-lane="backlog"]')!
+			.dispatchEvent(new Event('drop', { bubbles: true, cancelable: true }));
+		await settle();
+		expect(api.mock.calls.map(([u]) => u)).toContain('/api/items/S-0001/move');
+		expect(counts('backlog')).toBe('0 | 1 | 0');
+		expect(counts('ready')).toBe('0 | 0 | 0');
+		// still closed, with the card in it
+		expect(hidden('backlog')).toBe(true);
+		expect(list('backlog').querySelector('[data-card="S-0001"]')).not.toBeNull();
+	});
+
+	it('reads every lane as open from sm, and a click there leaves the narrow choice alone', async () => {
+		vi.stubGlobal('matchMedia', () => ({
+			matches: true,
+			addEventListener: () => {},
+			removeEventListener: () => {}
+		}));
+		await open();
+		expect(laneStates.every((s) => toggle(s).getAttribute('aria-expanded') === 'true')).toBe(true);
+		toggle('ready').click();
+		flushSync();
+		expect(laneCollapse.open).toEqual(['ready', 'in-progress', 'review']);
+		expect(stored()).toBeNull();
+	});
+
+	it("opens the lane menu from a closed lane's heading", async () => {
+		await open();
+		toggle('backlog').dispatchEvent(
+			new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 10, clientY: 10 })
+		);
+		flushSync();
+		expect(document.querySelector('[data-testid="lane-menu"]')).not.toBeNull();
+		expect(toggle('backlog').getAttribute('aria-expanded')).toBe('false');
 	});
 });

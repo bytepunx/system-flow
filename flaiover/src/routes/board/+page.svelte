@@ -22,6 +22,8 @@
 	import BoardLegend from '$lib/components/BoardLegend.svelte';
 	import { boardTypes, type ItemType } from '$lib/boardtypes.svelte';
 	import { boardNatures } from '$lib/boardnatures.svelte';
+	import { laneCollapse } from '$lib/lanecollapse.svelte';
+	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 	import HostAgentNotice from '$lib/components/HostAgentNotice.svelte';
 	import {
 		anyRunning,
@@ -205,6 +207,18 @@
 			for (const stop of stops) stop();
 			agents.stop();
 		};
+	});
+
+	// From sm every lane shows its cards (S-0462): there a heading reads as open and toggles nothing,
+	// so the choice kept for a narrow screen is left as it was.
+	let wide = $state(false);
+	$effect(() => {
+		if (typeof matchMedia !== 'function') return;
+		const sm = matchMedia('(min-width: 40rem)');
+		wide = sm.matches;
+		const onchange = (e: MediaQueryListEvent) => (wide = e.matches);
+		sm.addEventListener('change', onchange);
+		return () => sm.removeEventListener('change', onchange);
 	});
 
 	// What a lane holds: while the clone lags its remote's release tags, the done lane leaves out the
@@ -674,11 +688,17 @@
 	/>
 {/if}
 {#if board}
-	<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
+	<!-- The lanes (S-0462): from sm one row as wide as the main area, each lane at least min-w-56,
+	     never wrapping; when they do not fit, the row scrolls sideways inside the board, never the
+	     page, and each lane scrolls its own cards under its sticky heading. Below sm they stack, and
+	     each collapses to its heading, a button that opens or closes its cards. -->
+	<div class="flex flex-col gap-3 sm:flex-row sm:overflow-x-auto sm:pb-2" data-testid="lanes">
 		{#each states as state (state)}
 			{@const counts = laneCounts(held(state))}
+			{@const open = laneCollapse.isOpen(state)}
 			<section
-				class="min-h-40 rounded border bg-surface p-2 {over === state
+				class="rounded border bg-surface px-2 pt-2 sm:max-h-dvh sm:min-h-40 sm:min-w-56 sm:flex-1 sm:overflow-y-auto {over ===
+				state
 					? 'border-accent'
 					: 'border-line '}"
 				role="group"
@@ -722,24 +742,43 @@
 					if (p) void place(id, p);
 				}}
 			>
-				<h2 class="flex items-baseline justify-between text-sm font-medium">
-					<span>{state}</span>
-					{#if board.wip_limits[state]}
+				<!-- The heading stays in view while the lane's cards scroll (S-0462). Below sm it is the
+				     lane's toggle; from sm every lane shows its cards, so only its chevron is hidden. -->
+				<h2 class="sticky top-0 z-20 bg-surface pb-2 text-sm font-medium">
+					<button
+						type="button"
+						class="flex w-full cursor-pointer flex-col text-left sm:cursor-default"
+						aria-expanded={open || wide}
+						aria-controls="lane-cards-{state}"
+						data-testid="lane-toggle"
+						onclick={() => wide || laneCollapse.toggle(state)}
+					>
+						<span class="flex items-baseline justify-between gap-2">
+							<span class="flex items-center gap-1">
+								<ChevronRightIcon
+									class="size-4 shrink-0 text-muted sm:hidden {open ? 'rotate-90' : ''}"
+									aria-hidden="true"
+								/>
+								{state}
+							</span>
+							{#if board.wip_limits[state]}
+								<span
+									class="text-xs {count(state) > board.wip_limits[state]
+										? 'text-danger'
+										: 'text-muted'}">{count(state)}/{board.wip_limits[state]}</span
+								>
+							{/if}
+						</span>
 						<span
-							class="text-xs {count(state) > board.wip_limits[state]
-								? 'text-danger'
-								: 'text-muted'}">{count(state)}/{board.wip_limits[state]}</span
+							class="text-xs font-normal text-muted"
+							data-testid="lane-counts"
+							title={longCounts(counts)}
+							aria-label={longCounts(counts)}
 						>
-					{/if}
+							{shortCounts(counts)}
+						</span>
+					</button>
 				</h2>
-				<p
-					class="mb-2 text-xs text-muted"
-					data-testid="lane-counts"
-					title={longCounts(counts)}
-					aria-label={longCounts(counts)}
-				>
-					{shortCounts(counts)}
-				</p>
 				{#if state === 'review'}
 					<MergeQueue
 						{queue}
@@ -760,117 +799,124 @@
 						}}
 					/>
 				{/if}
-				{#each cards(state) as c (c.id)}
-					<!-- The wrapper is the drop target for reordering and holds the controls beside the
-					     card's link. A drop on a card of another column falls through to the column. -->
-					<!-- On touch a long press opens the card's menu (S-0202); the browser's own callout
-					     would cover it. -->
-					<div
-						class="group relative {board.writable ? '[-webkit-touch-callout:none]' : ''}"
-						role="presentation"
-						data-card={c.id}
-						onpointerdown={(e) => {
-							if (!board?.writable) return;
-							const card = e.currentTarget;
-							press.down(e, () => openCardMenu(c.id, state, below(card)));
-						}}
-						onpointermove={(e) => press.move(e)}
-						onpointerup={() => press.up()}
-						onpointercancel={() => press.up()}
-						onclickcapture={(e) => press.click(e)}
-						ondragover={(e) => {
-							const from = dragging ? cardOf(dragging) : undefined;
-							if (!canReorderOnto(from, c, writable())) {
-								// not a place to reorder to: no marker left over from the last card
-								marker = null;
-								return;
-							}
-							e.preventDefault();
-							e.stopPropagation();
-							const box = e.currentTarget.getBoundingClientRect();
-							const half = e.clientY < box.top + box.height / 2 ? 'above' : 'below';
-							marker = dropPlacement(stories(state), from!.id, c.id, half)
-								? { id: c.id, half }
-								: null;
-						}}
-						ondrop={(e) => {
-							const from = dragging ? cardOf(dragging) : undefined;
-							if (!canReorderOnto(from, c, writable())) return;
-							e.preventDefault();
-							e.stopPropagation();
-							const half = marker && 'id' in marker && marker.id === c.id ? marker.half : null;
-							const p = half ? dropPlacement(stories(state), from!.id, c.id, half) : null;
-							dragging = null;
-							over = null;
-							marker = null;
-							if (p) void place(from!.id, p);
-						}}
-					>
-						{#if marker && 'id' in marker && marker.id === c.id}
-							<div
-								class="pointer-events-none absolute inset-x-0 h-0.5 rounded bg-accent {marker.half ===
-								'above'
-									? '-top-[5px]'
-									: '-bottom-[5px]'}"
-								data-testid="drop-marker"
-							></div>
-						{/if}
-						<BoardCard
-							card={c}
-							draggable={board.writable}
-							dragging={dragging === c.id}
-							waiting={state === 'done' && waitingIds.has(c.id)}
-							activity={activity[c.id]}
-							queue={marks[c.id]}
-							ondragstart={() => {
-								dragging = c.id;
-								// the last action's notice must not read as this drag's result
-								notice = null;
+				<!-- A closed lane hides its cards below sm only (S-0462); they stay in the document, and
+				     the lane, its heading, still takes a dropped card. -->
+				<div id="lane-cards-{state}" class={open ? undefined : 'hidden sm:block'}>
+					{#each cards(state) as c (c.id)}
+						<!-- The wrapper is the drop target for reordering and holds the controls beside the
+						     card's link. A drop on a card of another column falls through to the column. -->
+						<!-- On touch a long press opens the card's menu (S-0202); the browser's own callout
+						     would cover it. -->
+						<div
+							class="group relative {board.writable ? '[-webkit-touch-callout:none]' : ''}"
+							role="presentation"
+							data-card={c.id}
+							onpointerdown={(e) => {
+								if (!board?.writable) return;
+								const card = e.currentTarget;
+								press.down(e, () => openCardMenu(c.id, state, below(card)));
 							}}
-							ondragend={() => {
-								dragging = null;
-								marker = null;
-							}}
-							onkeydown={(e) => {
-								const dir = keyStep(e);
-								if (!dir || !reorderable(c, writable())) return;
+							onpointermove={(e) => press.move(e)}
+							onpointerup={() => press.up()}
+							onpointercancel={() => press.up()}
+							onclickcapture={(e) => press.click(e)}
+							ondragover={(e) => {
+								const from = dragging ? cardOf(dragging) : undefined;
+								if (!canReorderOnto(from, c, writable())) {
+									// not a place to reorder to: no marker left over from the last card
+									marker = null;
+									return;
+								}
 								e.preventDefault();
-								step(c, dir, `a[data-id="${c.id}"]`);
+								e.stopPropagation();
+								const box = e.currentTarget.getBoundingClientRect();
+								const half = e.clientY < box.top + box.height / 2 ? 'above' : 'below';
+								marker = dropPlacement(stories(state), from!.id, c.id, half)
+									? { id: c.id, half }
+									: null;
 							}}
-						/>
-						{#if reorderable(c, board.writable) && !dragging}
-							<CardReorder
-								id={c.id}
-								up={stepPlacement(stories(state), c.id, 'up')}
-								down={stepPlacement(stories(state), c.id, 'down')}
-								onplace={(p, dir) =>
-									place(c.id, p, `button[data-step="${dir}"][data-for="${c.id}"]`)}
+							ondrop={(e) => {
+								const from = dragging ? cardOf(dragging) : undefined;
+								if (!canReorderOnto(from, c, writable())) return;
+								e.preventDefault();
+								e.stopPropagation();
+								const half = marker && 'id' in marker && marker.id === c.id ? marker.half : null;
+								const p = half ? dropPlacement(stories(state), from!.id, c.id, half) : null;
+								dragging = null;
+								over = null;
+								marker = null;
+								if (p) void place(from!.id, p);
+							}}
+						>
+							{#if marker && 'id' in marker && marker.id === c.id}
+								<div
+									class="pointer-events-none absolute inset-x-0 h-0.5 rounded bg-accent {marker.half ===
+									'above'
+										? '-top-[5px]'
+										: '-bottom-[5px]'}"
+									data-testid="drop-marker"
+								></div>
+							{/if}
+							<BoardCard
+								card={c}
+								draggable={board.writable}
+								dragging={dragging === c.id}
+								waiting={state === 'done' && waitingIds.has(c.id)}
+								activity={activity[c.id]}
+								queue={marks[c.id]}
+								ondragstart={() => {
+									dragging = c.id;
+									// the last action's notice must not read as this drag's result
+									notice = null;
+								}}
+								ondragend={() => {
+									dragging = null;
+									marker = null;
+								}}
+								onkeydown={(e) => {
+									const dir = keyStep(e);
+									if (!dir || !reorderable(c, writable())) return;
+									e.preventDefault();
+									step(c, dir, `a[data-id="${c.id}"]`);
+								}}
 							/>
-						{/if}
-						{#if board.writable && !dragging}
-							<!-- The card's menu from the keyboard (S-0202): beside the link, never in it, at the
-							     top right, clear of the reorder controls. -->
-							<button
-								type="button"
-								class="absolute top-1.5 right-1.5 z-10 rounded border border-line-strong bg-surface px-1.5 text-xs leading-4 text-ink hover:bg-raised {menuCard?.id ===
-								c.id
-									? 'block'
-									: 'hidden group-focus-within:block group-hover:block'}"
-								aria-label="Actions for {c.id}"
-								aria-haspopup="menu"
-								aria-expanded={menuCard?.id === c.id}
-								title="Actions"
-								data-testid="card-menu-button"
-								data-for={c.id}
-								onclick={(e) => openCardMenu(c.id, state, below(e.currentTarget.parentElement!))}
-								>⋯</button
-							>
-						{/if}
-					</div>
-				{/each}
-				{#if marker && 'end' in marker && marker.end === state}
-					<div class="pointer-events-none h-0.5 rounded bg-accent" data-testid="drop-marker"></div>
-				{/if}
+							{#if reorderable(c, board.writable) && !dragging}
+								<CardReorder
+									id={c.id}
+									up={stepPlacement(stories(state), c.id, 'up')}
+									down={stepPlacement(stories(state), c.id, 'down')}
+									onplace={(p, dir) =>
+										place(c.id, p, `button[data-step="${dir}"][data-for="${c.id}"]`)}
+								/>
+							{/if}
+							{#if board.writable && !dragging}
+								<!-- The card's menu from the keyboard (S-0202): beside the link, never in it, at the
+								     top right, clear of the reorder controls. -->
+								<button
+									type="button"
+									class="absolute top-1.5 right-1.5 z-10 rounded border border-line-strong bg-surface px-1.5 text-xs leading-4 text-ink hover:bg-raised {menuCard?.id ===
+									c.id
+										? 'block'
+										: 'hidden group-focus-within:block group-hover:block'}"
+									aria-label="Actions for {c.id}"
+									aria-haspopup="menu"
+									aria-expanded={menuCard?.id === c.id}
+									title="Actions"
+									data-testid="card-menu-button"
+									data-for={c.id}
+									onclick={(e) => openCardMenu(c.id, state, below(e.currentTarget.parentElement!))}
+									>⋯</button
+								>
+							{/if}
+						</div>
+					{/each}
+					{#if marker && 'end' in marker && marker.end === state}
+						<div
+							class="pointer-events-none h-0.5 rounded bg-accent"
+							data-testid="drop-marker"
+						></div>
+					{/if}
+				</div>
 			</section>
 		{/each}
 	</div>
