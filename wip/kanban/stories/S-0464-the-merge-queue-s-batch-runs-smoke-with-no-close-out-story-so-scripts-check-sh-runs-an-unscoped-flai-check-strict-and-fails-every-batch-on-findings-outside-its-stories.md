@@ -6,7 +6,7 @@ title: The merge queue's batch runs smoke with no CLOSE_OUT_STORY, so scripts/ch
 status: backlog
 owner: alex
 created: 2026-10-21T07:19:58Z
-updated: 2026-10-21T07:19:58Z
+updated: 2026-10-21T07:26:42Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m
     by: flai
     at: 2026-10-21T07:19:58Z
+finalized:
+  by: alex
+  at: 2026-10-21T07:26:42Z
 ---
 # S-0464 The merge queue's batch runs smoke with no CLOSE_OUT_STORY, so scripts/check.sh runs an unscoped flai check --strict and fails every batch on findings outside its stories
 
