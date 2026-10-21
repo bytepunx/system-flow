@@ -7,7 +7,7 @@ count: 1
 cost: 44h
 first_reported: 2026-10-15T22:48:43Z
 last_reported: 2026-10-15T22:48:43Z
-updated: 2026-10-15T22:48:43Z
+updated: 2026-10-21T11:58:08Z
 usage:
   strategic:
     - kind: analyzer
@@ -47,3 +47,5 @@ flai stats claims.weeks held_seconds: W40 overlap 653,549 + after 582,160; W41 o
 ## Remediation
 
 Found by the analysis in [2026-10-15-bottlenecks.md](../analysis/2026-10-15-bottlenecks.md).
+
+Story S-0468 remediates this issue, created from it at 2026-10-21T11:58:08Z.
