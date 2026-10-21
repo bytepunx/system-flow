@@ -3,11 +3,14 @@ id: S-0456
 type: story
 nature: remediation
 title: The LiteLLM gateway smoke check's default free model is refused by Claude Code as unrecognized_model, so every close-out on this host fails smoke
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-21T02:08:41Z
-updated: 2026-10-21T07:19:47Z
-transitions: []
+updated: 2026-10-21T07:28:26Z
+transitions:
+  - to: ready
+    at: 2026-10-21T07:28:20Z
+    by: alex
 tags: [flai, serve, tests]
 touches: [flai/internal/serve/gateway_test.go, scripts/litellm.sh, design/system/agent-adapters.md, docs/contributors/index.md, design/issues/I-0170-the-litellm-gateway-smoke-check-s-default-free-model-is-refused-by-claude-code-as-unrecognized-model-so-every-close-out-on-this-host-fails-smoke.md, design/issues/summary.md]
 after: [S-0455]
@@ -22,15 +25,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 9607
+      seconds: 9639
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 52
-          output: 1129
-          cache_read: 22724837
-          cache_write: 14940
-          cost: 5.7007
+          input: 54
+          output: 1149
+          cache_read: 23687329
+          cache_write: 15541
+          cost: 5.9422
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -41,10 +44,10 @@ cost_of_delay:
   at: 2026-10-21T06:04:37Z
 forecast:
   duration: 1h
-  delivery: 2026-10-21T23:19:00Z
-  basis: "Its own forecast of 1h; 29th in the pull order with an in-progress limit of 5, behind S-0453, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432, S-0433, S-0434 and S-0435."
+  delivery: 2026-10-21T08:36:00Z
+  basis: "Its own forecast of 1h; 1st in the pull order with an in-progress limit of 5, behind S-0453."
   by: flai
-  at: 2026-10-21T07:19:47Z
+  at: 2026-10-21T07:28:26Z
 finalized:
   by: alex
   at: 2026-10-21T05:58:31Z
