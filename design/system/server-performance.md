@@ -1,6 +1,6 @@
 ---
 title: Server-side response times
-updated: 2026-10-03
+updated: 2026-10-21
 status: active
 topics: [server-side, back-end, cli, dashboard]
 ---
@@ -145,9 +145,50 @@ The dashboard asks `items.list` without bodies, which it never showed from the l
 
 The overview's first answers from flai are 8.4 KB and 28 B, where they were 1.36 MB. `docs.tree` stays over 200 KB: with 1128 files, the names and paths alone are 229 KB. What is left of a warm answer is the walk that tells flai which files changed, one `lstat` per file. Neither was measured in the running dashboard, for the reason given under cause 6.
 
+## A regression in the chart data: the hold replay (S-0471)
+
+On 2026-09-29, `stats.get` answered in 125 ms cold and 9.1 to 10.6 ms warm (cause 4). On 2026-10-16, S-0427 measured the same call, with the parameters the charts page sends (`{"since":"30d","type":"story","bucket":"day"}`), at 4,715 ms cold and 4,022 ms warm, and `flai stats --json` at 4,701 ms ([S-0427's results](../experiments/S-0427-sqlite-and-postgres-read-models.md#what-was-done)). A CPU profile of the warm calls put 67 percent of the samples under `metrics.replayHolds` ([I-0155](../issues/I-0155-the-chart-data-takes-about-4-s-warm-against-10-ms-measured-on-2026-09-29-almost-all-of-it-in-metrics-replayholds.md)). The charts page asks for the statistics again on every item change, and every agent's `flai stats` waits on the same work.
+
+### Cause
+
+`metrics.replayHolds` came with S-0205 on 2026-10-03. It gives each story the seconds it was held, and `claims` its held days and weeks. At every distinct event time in the history, it built a `workitem.Holds` over every item created so far and judged every ready story again. Its cost grew with the square of the history.
+
+### Fix
+
+`replayHolds` judges the holds again only at an event time that can change one. That is a story's creation, or its move into or out of ready, in progress, or done. It is also the creation of a task of a story in ready or in progress, or that task's move into or out of done or cancelled. It judges only the stories in ready or in progress, the stories their `after` names, and their tasks. A `workitem.HoldsMemo` remembers claims, shared-path coverage, and how one claim holds another, between judgements. `PathsOverlap` no longer allocates. Tests compare the replay with a reference that judges at every event time, on the hold rules and on a generated history of this repository's shape, and find the same held seconds (`flai/internal/metrics/claims_test.go`, `flai/internal/metrics/claims_bench_test.go`).
+
+On a generated history at this repository's scale, `BenchmarkReplayHolds` in `flai/internal/metrics/claims_bench_test.go` gave these figures for one replay. `BenchmarkComputeClaims`, the whole report over the same history, takes 134 to 147 ms after the fix.
+
+| One replay | Time | Memory | Allocations |
+|------------|------|--------|-------------|
+| Before | 2,726 ms | 1.07 GB | 14.3 million |
+| After | 71 ms | 26.8 MB | 275 thousand |
+
+### Measured on this repository
+
+On 2026-10-21, between 12:41 and 12:47 UTC, on the operator's host (WSL2, 24 cores, Go 1.26.0), against this repository: 4160 Markdown files under `design`, `docs`, and `wip`, 3713 of them under `wip`, and 483 stories in the report. Two flai binaries were built the same hour: `main` at b465e0a28 and `story/S-0471` at db7a2c03a. Both ran from the main checkout, with `FLAI_CONFIG` and `FLAI_CACHE_DIR` as `scripts/env.sh` sets them.
+
+- Cold is a fresh process: `flai hostapi --timing stats.get '{"since":"30d","type":"story","bucket":"day"}'`, three runs each, the binaries alternating. The figure is the median wall time; the phases are from the `request answered` event.
+- Warm is a throw-away program that called the host API's method table six times in one process, with the same recorder as `--timing`, as S-0427 did. It was built with `go build -overlay`, which wrote nothing into the module. The figure is the median of calls 2 to 6; CPU is from `getrusage`.
+- `flai stats --json` is a fresh process, three runs each, wall time.
+
+The host was busy: the one-minute load average was 11 to 21, with other flai processes using one to one and a half cores each.
+
+| Request | `main` | `main`, where the time went | S-0471 | S-0471, where the time went |
+|---------|--------|-----------------------------|--------|-----------------------------|
+| `stats.get` cold | 7,552 ms (6,888 to 8,357) | `stats.compute` 7,485, of which `exec.git.log` 448 | 1,569 ms (1,505 to 1,764) | `stats.compute` 1,510, of which `exec.git.log` 432; `encode` 9 |
+| `stats.get` warm, calls 2 to 6 | 5,695 ms (5,454 to 5,896), 7.8 s of CPU a call | `stats.compute` 5,672, of which `exec.git.log` 452 | 894 ms (884 to 945), 0.7 s of CPU a call | `stats.compute` 874, of which `exec.git.log` 453 |
+| `flai stats --json` | 7,730 ms (6,521 to 8,112) | | 1,569 ms (1,528 to 1,799) | |
+
+A first round, a few minutes earlier at a load of 10 to 30, gave the same picture: `stats.get` cold 12,033 ms against 2,680 ms, warm 10,514 ms against 1,079 ms, and `flai stats --json` 10,513 ms against 2,717 ms. In CPU profiles of that round's warm calls, `metrics.replayHolds` held 73 percent of the samples for `main` and 22 percent for S-0471.
+
+The two binaries give the same report. Their `flai stats --json`, run seconds apart, differ only in fields measured from now: `generated_at`, `window_start`, ages, times in state, cost of delay incurred and the times of its order, waits clipped to the window's start, and the blocked seconds of a story still blocked. `claims`, with its days and weeks, `coordination`, and every story's held seconds are identical in each of the four pairs compared. The six pairs of `stats.get` answers agree the same way. One of them also differs in turns and spend, because an agent's session went on between its two runs: the `flai stats --json` run between them already has the later figures.
+
+A warm answer is still about 90 times the 9.1 to 10.6 ms of 2026-09-29. Half of it is `exec.git.log`: at every call, `statsread.Read` reads the stories' commits for `claims.drift` with one `git log` (`storygit.Committed`), which S-0427 measured at about 370 ms on 2026-10-16. By the S-0471 profile, a warm call spends about 330 ms of CPU in `metrics.Compute`, about 160 ms of it in `replayHolds`, and about 170 ms in `statsread.Read`, two fifths of that reading the threads. These figures were taken under the load above.
+
 ## Stories
 
-Each cause has a backlog story under [E-0012](../../wip/kanban/epics/E-0012-performance-analysis-and-improvements.md), with the cause's numbers and a proposed solution. Causes 1 to 4 are the largest share of a board load; 5 multiplies 4 and every write on hosts with a long `PATH`.
+Each cause has a backlog story under [E-0012](../../wip/kanban/epics/E-0012-performance-analysis-and-improvements.md), with the cause's numbers and a proposed solution. Causes 1 to 4 are the largest share of a board load; 5 multiplies 4 and every write on hosts with a long `PATH`. S-0471 remedies a regression found later, recorded as I-0155.
 
 | # | Story |
 |---|-------|
@@ -158,3 +199,4 @@ Each cause has a backlog story under [E-0012](../../wip/kanban/epics/E-0012-perf
 | 5 | [S-0160](../../wip/kanban/stories/S-0160-a-flai-process-starts-in-milliseconds-whatever-the-host-s-path.md) A flai process starts in milliseconds whatever the host's PATH |
 | 6 | [S-0161](../../wip/kanban/stories/S-0161-the-dashboard-forgets-only-the-answers-a-changed-file-affects-and-gathers-changes-that-arrive-together.md) The dashboard forgets only the answers a changed file affects, and gathers changes that arrive together |
 | 7 | [S-0162](../../wip/kanban/stories/S-0162-the-items-and-documents-pages-ask-for-what-they-show-not-the-whole-archive-and-every-file-s-front-matter.md) The items and documents pages ask for what they show, not the whole archive and every file's front matter |
+| I-0155 | [S-0471](../../wip/kanban/stories/S-0471-the-chart-data-takes-about-4-s-warm-against-10-ms-measured-on-2026-09-29-almost-all-of-it-in-metrics-replayholds.md) The chart data takes about 4 s warm, against 10 ms measured on 2026-09-29, almost all of it in metrics.replayHolds |
