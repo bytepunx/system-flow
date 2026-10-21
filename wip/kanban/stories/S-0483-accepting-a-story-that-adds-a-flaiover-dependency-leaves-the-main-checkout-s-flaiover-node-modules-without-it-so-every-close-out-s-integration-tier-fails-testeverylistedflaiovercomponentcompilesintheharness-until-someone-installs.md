@@ -6,19 +6,45 @@ title: Accepting a story that adds a flaiover dependency leaves the main checkou
 status: backlog
 owner: alex
 created: 2026-10-21T12:00:17Z
-updated: 2026-10-21T12:03:49Z
+updated: 2026-10-21T12:12:36Z
 transitions: []
-tags: []
+tags: [flai, cli]
+topics: [release, testing]
+touches: [design/adrs/README.md, design/system/project-manifest.md, design/system/flai-cli.md, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, system-flow.yaml, docs/operators/settings.md, flai/cmd/accept.go, flai/cmd/accept_install.go, flai/cmd/accept_install_test.go, docs/users/flai.md, design/system/devex.md, design/issues/I-0179-accepting-a-story-that-adds-a-flaiover-dependency-leaves-the-main-checkout-s-flaiover-node-modules-without-it-so-every-close-out-s-integration-tier-fails-testeverylistedflaiovercomponentcompilesintheharness-until-someone-installs.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 4
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 1
+          output: 8
+          cache_read: 132275
+          cache_write: 1977
+          cost: 0.0296
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
     by: flai
     at: 2026-10-21T12:00:17Z
+  value: 37.5
+  by: planner-S-0483
+  at: 2026-10-21T12:12:36Z
+forecast:
+  duration: 1h
+  delivery: 2026-10-22T07:10:00Z
+  basis: flai forecast's 24m (89 s per unit of size, 33 done remediation stories, large band, size 16) raised to 1h for an ADR, a manifest key with its check, and an acceptance step tested through a git merge fixture
+  by: planner-S-0483
+  at: 2026-10-21T12:12:36Z
 finalized:
   by: alex
   at: 2026-10-21T12:03:49Z
@@ -34,7 +60,36 @@ This story remediates [I-0179](../../../design/issues/I-0179-accepting-a-story-t
 - [ ] I-0179 is closed with `flai issue close I-0179 --reason` saying what fixed it
 
 ## Tasks
+- T-1998 An ADR decides that flai accept runs a sub-project's install command in the main checkout when the accepted change touched its lock file
+- T-2000 The manifest takes a sub-project's install command, flai check validates it, and flaiover's names scripts/flaiover-install.sh --if-needed
+- T-2003 flai accept runs the install command of each sub-project whose lock file the accepted change touched, in the main checkout, with a test that reproduces I-0179
+- T-2004 The user and developer docs say that an acceptance runs a sub-project's install when it changed the lock file
+- T-2006 Verify an acceptance that changes flaiover's lock file leaves the main checkout's node_modules current, and close I-0179
 
 ## Notes
 
 Cost of delay inputs set by flai from I-0179. time_lost_per_cycle 15m: 15m per occurrence × 1 occurrence ÷ 1 cycle of 168h (first reported 2026-10-21T08:44:04Z, 0.1 days before this story; under one cycle counts as one).
+
+### Planning
+
+Proposed fix: `flai accept` runs a sub-project's `install` command, a new manifest key, in the main checkout when the accepted change touched that sub-project's lock file or `package.json`. flaiover's is `scripts/flaiover-install.sh --if-needed`, which uses the pnpm store `scripts/env.sh` sets (I-0177). S-0482 fixes the story worktree's side: its integration tier installs its own `node_modules`. This story keeps the main checkout current.
+
+Touches, by source:
+
+- Design, from I-0179, I-0178, and the practice of recording acceptance steps in an ADR: `design/adrs/README.md`, `design/system/project-manifest.md`, `design/system/flai-cli.md`.
+- Layout, from the explorer's read of the code:
+  - `flai/internal/manifest/manifest.go` and `manifest_test.go`, which hold `Project`.
+  - `flai/cmd/accept.go`, whose `acceptItem` every acceptance mode passes through.
+  - The new `flai/cmd/accept_install.go` and `accept_install_test.go`, beside `accept_fix_test.go`.
+  - `system-flow.yaml`, for flaiover's `install`.
+  - `docs/operators/settings.md`, since `settings_doc_test.go` needs a row for each manifest key.
+  - `docs/users/flai.md` and `design/system/devex.md`.
+- Declared by the criteria: the I-0179 file.
+- Co-change, from `flai touches suggest` on the I-0179 file: `design/issues/summary.md`.
+- Left out of what `flai touches suggest` listed: `harness.mjs`, `component-library.md`, `scripts/README.md`, `smoke.sh`, and `Fetcher.svelte`. They changed with the harness test. This plan does not change that test; S-0482 changes it and `scripts/integration.sh`.
+- No folder touch is kept. The ADR's own file has no number until `flai adr new` gives it one, and `flai task done` adds it to T-1998's touches.
+
+Figures:
+
+- Forecast 1h, adjusted from flai's 24m. flai's figure is 89 s per unit of size over 33 done remediation stories in the large band, times size 16. The sample's remediations mostly change one function or one test. This one adds an ADR, a manifest key with its check and settings row, and an acceptance step tested through a git merge fixture. Delivery moves by the 36m difference, from 2026-10-22T06:34:00Z to 07:10:00Z.
+- Cost of delay 37.50 USD a week, from `flai cod`: 15m lost per 168h cycle at 150 USD an hour. It stands. I-0178 records the same cause at 20m for S-0482, so the joint cost is higher, but each story carries its own issue's input.

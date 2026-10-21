@@ -7,11 +7,11 @@ status: backlog
 parent: S-0418
 owner: alex
 created: 2026-10-16T05:45:58Z
-updated: 2026-10-16T05:50:22Z
+updated: 2026-10-21T12:02:02Z
 transitions: []
 stream: S-0418
 tags: [cli, template]
-touches: [design/system/strategic-agents.md, docs/users/flai.md, docs/operators/index.md, template/CHANGELOG.md, design/system/flai-cli.md]
+touches: [design/system/strategic-agents.md, design/system/dashboard-host-channel.md, docs/users/flai.md, docs/operators/index.md, template/CHANGELOG.md, design/system/flai-cli.md]
 after: [T-1748]
 ---
 # T-1751 The design and the user and operator docs say how each trigger starts a role

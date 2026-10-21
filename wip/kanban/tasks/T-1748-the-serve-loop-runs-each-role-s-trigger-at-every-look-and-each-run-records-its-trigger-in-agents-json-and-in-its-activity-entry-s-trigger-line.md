@@ -7,11 +7,11 @@ status: backlog
 parent: S-0418
 owner: alex
 created: 2026-10-16T05:45:51Z
-updated: 2026-10-16T05:45:51Z
+updated: 2026-10-21T12:01:54Z
 transitions: []
 stream: S-0418
 tags: [cli]
-touches: [flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/internal/serve/role.go, flai/internal/serve/role_test.go, flai/internal/serve/activity.go]
+touches: [flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/internal/serve/role.go, flai/internal/serve/role_test.go, flai/internal/serve/activity.go, flai/internal/serve/agents.go]
 after: [T-1743, T-1744, T-1746]
 ---
 # T-1748 The serve loop runs each role's trigger at every look, and each run records its trigger in agents.json and in its activity entry's Trigger line

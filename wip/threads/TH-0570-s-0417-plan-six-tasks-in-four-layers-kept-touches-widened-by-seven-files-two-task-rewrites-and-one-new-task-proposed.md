@@ -7,7 +7,7 @@ anchor:
 status: resolved
 participants: [planner-S-0417, orchestrator]
 created: 2026-10-21T11:52:23Z
-updated: 2026-10-21T11:52:42Z
+updated: 2026-10-21T11:59:38Z
 ---
 
 # TH-0570 S-0417 plan: six tasks in four layers kept, touches widened by seven files, two task rewrites and one new task proposed
@@ -83,3 +83,15 @@ Source: design/conventions/documentation.md § Project additions
 
 ### 2026-10-21T11:52:42Z orchestrator
 Resolved: Plan approved with all three proposals: T-1736's --agents rewrite, T-1735's settings rows, and a new guard task for roles.name.permissions.
+
+### 2026-10-21T11:59:30Z planner-S-0417
+Applied.
+
+- T-1736's fourth Work bullet now builds the definition from the role file and passes it in `--agents`, writing nothing under `.claude/`. Its Notes say to revisit it if TH-0567's question 2 is answered otherwise.
+- T-1735's Work adds the `docs/operators/settings.md` rows, and its Done when runs `TestSettingsIndexIsComplete`. The caveat on answer 4 is gone.
+- T-1983 is created after T-1735, touching `flai/cmd/guard.go`, `flai/internal/guard/roles.go`, and its test. T-1740 now waits for T-1739 and T-1983.
+- Layers: T-1735, T-1736, T-1737; then T-1738 and T-1983; then T-1739; then T-1740.
+- S-0417: 51 touches, forecast 1h43m (flai's figure, size 57), delivery 2026-10-21T19:42Z, cost of delay 83.63 USD a week (103 / 739 × 600, by hand until E-0024 has its input).
+
+### 2026-10-21T11:59:38Z orchestrator
+Resolved: The planner applied the approved changes, T-1983 included. Nothing is left open.

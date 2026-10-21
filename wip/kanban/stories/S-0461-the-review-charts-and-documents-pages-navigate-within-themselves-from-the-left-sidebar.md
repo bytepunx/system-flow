@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0027
 owner: alex
 created: 2026-10-21T07:00:44Z
-updated: 2026-10-21T11:58:51Z
+updated: 2026-10-21T12:11:54Z
 transitions:
   - to: ready
     at: 2026-10-21T07:54:29Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0461
 tags: [dashboard]
 topics: [dashboard]
-touches: [flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", "flaiover/src/routes/docs/[...path]/+page.svelte", flaiover/src/routes/docs/docs.svelte.test.ts, flaiover/src/lib/components/DocTree.svelte, design/components/flaiover/src/lib/components/DocTree.examples.json, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/components/PageSidebar.svelte, flaiover/src/lib/components/PageSidebar.svelte.test.ts, flaiover/src/lib/pagesidebar.svelte.ts, flaiover/src/lib/pagesidebar.svelte.test.ts, design/components/flaiover/src/lib/components/PageSidebar.examples.json]
+touches: [flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", "flaiover/src/routes/docs/[...path]/+page.svelte", flaiover/src/routes/docs/docs.svelte.test.ts, flaiover/src/lib/components/DocTree.svelte, design/components/flaiover/src/lib/components/DocTree.examples.json, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/components/PageSidebar.svelte, flaiover/src/lib/components/PageSidebar.svelte.test.ts, flaiover/src/lib/pagesidebar.svelte.ts, flaiover/src/lib/pagesidebar.svelte.test.ts, design/components/flaiover/src/lib/components/PageSidebar.examples.json, flaiover/src/lib/components/DiffView.svelte]
 after: [S-0460]
 agent:
   harness: claude-code
@@ -25,9 +25,22 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 833
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-21
+      ceremony: 1
+      hand_edits: 3
+      work: 23
+  models:
+    - model: claude-opus-5-5
+      input: 150
+      output: 770
+      cache_read: 7432617
+      cache_write: 349850
+      cost: 2.6346
   strategic:
     - kind: orchestrator
       seconds: 485
@@ -61,7 +74,7 @@ Three more of the pages the operator scrolls through most carry the sidebar S-04
 
 ## Acceptance criteria
 
-- [ ] `/review/:id` has a `PageSidebar` whose scroll entries are Criteria, State, Threads, Changes, and Release plan, in the page's order. Under Changes there is one entry per changed file, and choosing one opens that file's panel and scrolls to it. Blockers and the undone-main cards stay above the sections, where Accept is decided.
+- [x] `/review/:id` has a `PageSidebar` whose scroll entries are Criteria, State, Threads, Changes, and Release plan, in the page's order. Under Changes there is one entry per changed file, and choosing one opens that file's panel and scrolls to it. Blockers and the undone-main cards stay above the sections, where Accept is decided.
 - [ ] `/charts/:kind` lists its groups and kinds in a `PageSidebar` in place of the row above the chart. Each kind is a pane entry that routes to `/charts/<kind>` as the links do now, and the chart window control stays with the chart.
 - [ ] `/docs/<path>` puts `DocTree` in the sidebar's place. Below it, the open document's headings, from `headingsOf`, are scroll entries, with the heading in view current. Editing a document and its threads work as before.
 - [ ] Each page's existing tests pass, and new tests cover its sidebar's entries and what choosing one does. Below Tailwind's `md` width no page scrolls sideways.

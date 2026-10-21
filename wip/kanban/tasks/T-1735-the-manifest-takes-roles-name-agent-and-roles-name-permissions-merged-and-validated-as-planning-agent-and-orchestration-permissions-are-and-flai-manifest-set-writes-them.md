@@ -7,7 +7,7 @@ status: backlog
 parent: S-0417
 owner: alex
 created: 2026-10-16T05:44:41Z
-updated: 2026-10-21T11:50:52Z
+updated: 2026-10-21T11:58:02Z
 transitions: []
 stream: S-0417
 tags: [cli]
@@ -21,13 +21,14 @@ touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_te
 - `Manifest.RoleAgent(name)` returns the merged agent. `planning.agent`, `orchestration.agent`, and `analysis.agent` win for their roles, so nothing changes for the three.
 - `flai check` reports `manifest.roles` for an agent that is not valid, or a permission the role's file does not declare.
 - Add the keys to the settings table so `flai manifest set` writes them.
+- Add rows for `roles.<name>.agent` and `roles.<name>.permissions` to `docs/operators/settings.md`, since `TestSettingsIndexIsComplete` fails on a manifest key with no row and T-1737 runs `./cmd/...` in the same layer. T-1740 writes the prose.
 
-First layer: the serve path (T-1738) reads it.
+First layer: the serve path (T-1738) and the guard task read it.
 
 ## Done when
 
-`go test ./internal/manifest/...` passes. The existing settings and manifest tests are unchanged.
+`go test ./internal/manifest/...` and `go test ./cmd/ -run TestSettingsIndexIsComplete` pass. The existing settings and manifest tests are unchanged.
 
 ## Notes
 
-The `roles.<name>.agent` key assumes TH-0471's answer to question 4. If the operator says no, this task keeps only `permissions`.
+- TH-0471's answer 4 confirmed `roles.<name>.agent`. The settings rows were added by planner-S-0417 on TH-0570's approval.

@@ -7,7 +7,7 @@ status: backlog
 parent: S-0417
 owner: alex
 created: 2026-10-16T05:44:46Z
-updated: 2026-10-16T05:44:46Z
+updated: 2026-10-21T11:57:54Z
 transitions: []
 stream: S-0417
 tags: [cli]
@@ -20,8 +20,8 @@ touches: [flai/internal/harness/harness.go, flai/internal/harness/adapters.go, f
 - `harness.Request` gains the role's name and its prompt body.
 - `Prompt` gives a defined role its file's body, the item, and the run's inputs.
 - `roleEnv` sets `FLAI_AGENT` to `<name>` or `<name>-<item>`, `FLAI_ROLE` to its verb, and `FLAI_ITEM` when it has one, and refuses a story for a role whose file says it works none.
-- The claude-code adapter passes `--agent <definition>` over the `.claude/agents/<name>.md` its file names, beside the explorer and the verifier, and refuses a missing definition, naming `flai upgrade` or the file.
-- Test a fixture role's request, its environment, and the refusal. Keep the planner's, the orchestrator's, and the analyzer's tests unchanged.
+- The claude-code adapter builds the role's definition from its role file's definition fields and body. It passes that definition in `--agents` beside the explorer and the verifier, and selects it with `--agent <name>`. It refuses a role whose definition fields are missing, naming `flai check`. It reads and writes nothing under `.claude/` (TH-0471, answer 6; TH-0570).
+- Test a fixture role's request, its environment, its generated definition, and the refusal. Keep the planner's, the orchestrator's, and the analyzer's tests unchanged.
 
 First layer: shares no path with T-1735 or T-1737.
 
@@ -30,3 +30,5 @@ First layer: shares no path with T-1735 or T-1737.
 `go test ./internal/harness/...` passes.
 
 ## Notes
+
+- The fourth Work bullet was rewritten by planner-S-0417 on TH-0570's approval: the definition is generated from the role file, not read from `.claude/agents/<name>.md`. If the operator answers TH-0567's question 2 otherwise, revisit it.

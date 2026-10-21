@@ -7,11 +7,11 @@ status: backlog
 parent: S-0418
 owner: alex
 created: 2026-10-16T05:45:36Z
-updated: 2026-10-16T05:45:46Z
+updated: 2026-10-21T12:01:47Z
 transitions: []
 stream: S-0418
 tags: [cli]
-touches: [flai/internal/serve/role_continuous.go, flai/internal/serve/role_continuous_test.go, flai/cmd/role.go, flai/cmd/role_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, docs/users/flai-reference.md]
+touches: [flai/internal/serve/role_continuous.go, flai/internal/serve/role_continuous_test.go, flai/internal/serve/agents.go, flai/cmd/role.go, flai/cmd/role_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/server/agent.ts, docs/users/flai-reference.md]
 after: [T-1741]
 ---
 # T-1746 serve keeps a continuous role running while its action is on, and flai role stop and start and the host API's role.stop and role.start hold and release it

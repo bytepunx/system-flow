@@ -7,11 +7,11 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:11Z
-updated: 2026-10-21T11:57:35Z
+updated: 2026-10-21T12:03:24Z
 transitions: []
 tags: [cli, template]
 topics: [cli, planning, orchestration]
-touches: [design/system/strategic-agents.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/role.go, flai/cmd/role_test.go, flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/serve/activity.go, flai/internal/serve/analysis_schedule.go, flai/internal/serve/role_continuous.go, flai/internal/serve/role_continuous_test.go, flai/internal/serve/role_events.go, flai/internal/serve/role_events_test.go, flai/internal/serve/role.go, flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go, flai/internal/serve/role_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, template/CHANGELOG.md, design/system/flai-cli.md]
+touches: [design/system/strategic-agents.md, design/system/dashboard-host-channel.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/role.go, flai/cmd/role_test.go, flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/serve/activity.go, flai/internal/serve/agents.go, flai/internal/serve/role_continuous.go, flai/internal/serve/role_continuous_test.go, flai/internal/serve/role_events.go, flai/internal/serve/role_events_test.go, flai/internal/serve/role.go, flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go, flai/internal/serve/role_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flaiover/src/lib/server/agent.ts, template/CHANGELOG.md, design/system/flai-cli.md]
 after: [S-0417]
 agent:
   harness: claude-code
@@ -24,22 +24,26 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 58
+      seconds: 226
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 26
-          output: 464
-          cache_read: 4057797
-          cache_write: 6545
-          cost: 0.8975
+          input: 76
+          output: 1154
+          cache_read: 12813704
+          cache_write: 18415
+          cost: 2.8335
 draft: true
+cost_of_delay:
+  value: 49.26
+  by: planner-S-0418
+  at: 2026-10-21T12:03:24Z
 forecast:
-  duration: 51m
-  delivery: 2026-10-21T20:31:00Z
-  basis: "Its own forecast of 51m; 14th in the pull order with an in-progress limit of 5, behind S-0461, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416 and S-0417."
-  by: flai
-  at: 2026-10-21T11:57:35Z
+  duration: 1h1m
+  delivery: 2026-10-21T20:47:00Z
+  basis: "flai's figure kept: 107 s a unit over 85 done feature stories on claude-opus-5-5, times size 34 (6 criteria, 28 touches); 13th in the pull order with an in-progress limit of 5, behind S-0461, S-0241, S-0406 to S-0412, and S-0414 to S-0417."
+  by: planner-S-0418
+  at: 2026-10-21T12:03:24Z
 ---
 # S-0418 A role a project defines starts on an event, on a schedule, or for as long as its host action is on, as its role file's trigger says, coalesced and logged with its trigger as the planner's runs are
 
@@ -71,11 +75,18 @@ A role starts when its file says, not only when the operator asks. A role file's
 
 ### Planning
 
-- **Touches.** The story declared none. Every touch comes from its six tasks.
-  - **From layout:** the trigger in `flai/internal/roles`, the check, three new serve files (`role_events.go`, `role_schedule.go`, `role_continuous.go`) with their tests, `analysis_schedule.go` for the shared cadence, `serve.go`, `role.go`, and `activity.go` for the loop and the `- Trigger:` line, `flai/cmd/role.go`, and the host API's `writes.go`.
-  - **From design:** `strategic-agents.md`, the user and operator docs, and the changelog.
-  - **Co-change, added:** `design/system/flai-cli.md` (46%); shared.
-  - **Co-change, not added:** `flai/cmd/serve_actions.go`. Its Settings section shows the planner's triggers, and no criterion asks for a role's there; the role page in S-0420 shows them.
-  - No folder touch.
-- **Forecast.** Kept at flai's 51m. Each trigger is modelled on a starter that exists. The forecast's basis gives the figures, and its delivery is flai's play-out moved by any raise times the cycle factor.
-- **Cost of delay.** Not set. Neither the story nor E-0024 has inputs, so `flai cod` refuses. The epic's input is asked on TH-0471, question 1, and the value follows its answer.
+- **TH-0471's answers (2026-10-21).** Only answer 1 changes this story: it gives the cost of delay below. Answer 2's folder, `design/workflows/roles/`, is read through S-0414's loader, so no touch or task here names it. Answers 3 to 6 do not reach the triggers.
+- **Touches.** 28, all files; no folder touch. The story declared none of its own; every touch comes from its six tasks.
+  - **From layout, kept:** the trigger in `flai/internal/roles` and its check; the three new serve files (`role_events.go`, `role_schedule.go`, `role_continuous.go`) with their tests; `serve.go`, `role.go`, and `activity.go` for the loop and the `- Trigger:` line; `flai/cmd/role.go` and the host API's `writes.go` for the hold.
+  - **From layout, added (code read 2026-10-21):**
+    - `flai/internal/serve/agents.go` on T-1746 and T-1748. Its `Held` field is set on the orchestrator's run alone, and its `Trigger` field says it is a planner's or an analyzer's. A continuous role's hold and a defined role's trigger both land there. T-1748 waits for T-1746, so the two never share a layer.
+    - `flaiover/src/lib/server/agent.ts` on T-1746. `TestTheDashboardAsksForExactlyWhatFlaiOffers` fails when `role.stop` and `role.start` are offered but missing from `REQUIRED_METHODS`.
+  - **From layout, dropped:** `flai/internal/serve/analysis_schedule.go` from T-1744. The shared `cadence` lives in `replan.go`, in the same package, so a new file uses it without moving it. T-1744's Work moves it only "if it lives there". Dropping it stops this story holding S-0419 and S-0424, which change that file.
+  - **From design:** `strategic-agents.md`, the user and operator docs, the reference, and the changelog. Added `design/system/dashboard-host-channel.md` on T-1751: it lists the host API's methods, `orchestrate.stop` and `start` among them, and `role.stop` and `role.start` join it.
+  - **Co-change, kept:** `design/system/flai-cli.md` (shared; holds nothing).
+  - **Co-change, not added:** `docs/operators/settings.md`, since a trigger lives in the role file and adds no manifest key. `flai/cmd/serve_actions.go`, since `flai role stop` and `start` live in `flai/cmd/role.go`. `design/system/flaiover-dashboard.md` and `docs/users/flaiover.md`, since the role page that shows a trigger is S-0420's.
+- **Forecast.** flai's 1h1m is kept: 107 s a unit times size 34, six criteria and 28 touches. Three of the touches added are small (a field comment, two method names, a design line). The hold that `agents.go` now carries for any continuous role is real work that offsets that. The delivery is flai's play-out, 2026-10-21T20:47Z.
+- **Cost of delay.** 49.26 USD a week, worked out by hand from answer 1, as S-0414's and S-0417's planners did, because `flai cod` refuses while E-0024 has no inputs.
+  - 4h lost per cycle at `planning.hour_rate` 150 over the default 168h cycle gives E-0024 600 USD a week.
+  - S-0418 takes the share its 1h1m is of the 12h23m forecast for E-0024's twelve open stories: 61 / 743 × 600.
+  - Setting 4h on E-0024 is asked on TH-0567, question 3. Once it is set, `flai cod S-0418` gives the same figure while the forecasts stand.

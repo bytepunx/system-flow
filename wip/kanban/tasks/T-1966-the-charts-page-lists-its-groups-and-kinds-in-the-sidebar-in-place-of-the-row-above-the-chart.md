@@ -3,15 +3,22 @@ id: T-1966
 type: task
 nature: improvement
 title: The charts page lists its groups and kinds in the sidebar in place of the row above the chart
-status: backlog
+status: in-progress
 parent: S-0461
 owner: alex
 created: 2026-10-21T07:04:18Z
-updated: 2026-10-21T07:04:18Z
-transitions: []
+updated: 2026-10-21T12:12:06Z
+transitions:
+  - to: ready
+    at: 2026-10-21T12:12:05Z
+    by: agent-S-0461
+  - to: in-progress
+    at: 2026-10-21T12:12:06Z
+    by: agent-S-0461
 stream: S-0461
 tags: [dashboard]
 touches: ["flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts"]
+after: [T-1984]
 ---
 # T-1966 The charts page lists its groups and kinds in the sidebar in place of the row above the chart
 
@@ -20,7 +27,7 @@ touches: ["flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes
 - In `flaiover/src/routes/charts/[kind]/+page.svelte`, replace the group-and-kind `<nav>` with a `PageSidebar`. Each group is an entry, and its kinds are child pane entries linking `/charts/<kind>`, with the current kind marked.
 - Keep the chart window control with the chart.
 - Update `charts.svelte.test.ts` to find the kind links in the sidebar, with `aria-current` on the kind shown.
-- Waits for nothing in this story. It runs beside the review and documents tasks.
+- Waits for T-1984, which lets a sidebar entry link to another page. It runs beside the review and documents tasks.
 
 ## Done when
 

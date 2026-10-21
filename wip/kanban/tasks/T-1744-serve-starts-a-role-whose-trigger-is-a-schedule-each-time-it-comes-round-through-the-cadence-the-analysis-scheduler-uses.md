@@ -7,11 +7,11 @@ status: backlog
 parent: S-0418
 owner: alex
 created: 2026-10-16T05:45:31Z
-updated: 2026-10-16T05:45:44Z
+updated: 2026-10-21T12:01:40Z
 transitions: []
 stream: S-0418
 tags: [cli]
-touches: [flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go, flai/internal/serve/analysis_schedule.go]
+touches: [flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go]
 after: [T-1741]
 ---
 # T-1744 serve starts a role whose trigger is a schedule each time it comes round, through the cadence the analysis scheduler uses

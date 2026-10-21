@@ -1,0 +1,34 @@
+---
+id: T-2000
+type: task
+nature: remediation
+title: The manifest takes a sub-project's install command, flai check validates it, and flaiover's names scripts/flaiover-install.sh --if-needed
+status: backlog
+parent: S-0483
+owner: alex
+created: 2026-10-21T12:10:20Z
+updated: 2026-10-21T12:10:20Z
+transitions: []
+stream: S-0483
+tags: [flai]
+touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, docs/operators/settings.md, system-flow.yaml]
+after: [T-1998]
+---
+# T-2000 The manifest takes a sub-project's install command, flai check validates it, and flaiover's names scripts/flaiover-install.sh --if-needed
+
+## Work
+
+Build the manifest key T-1998's ADR decides. It waits for T-1998 because the key's name, shape, and rules are that ADR's.
+
+- In `flai/internal/manifest/manifest.go`, give `Project` an `install` command, a list of strings like a test tier's `command`, with `omitempty`. Validate it where the manifest's other sub-project keys are checked: an empty first element, or a key set on a project of kind `template`, is a `flai check` error naming the fix.
+- Test the load and each refusal in `flai/internal/manifest/manifest_test.go`.
+- Add the `projects[].install` row to `docs/operators/settings.md`, which `flai/cmd/settings_doc_test.go` requires for every manifest key.
+- In `system-flow.yaml`, give the `flaiover` project `install: [scripts/flaiover-install.sh, --if-needed]`.
+
+## Done when
+
+- `flai check --strict` passes on this repository with flaiover's `install` set.
+- The new manifest tests and `settings_doc_test.go` pass.
+- `flai test flai/internal/manifest docs/operators/settings.md` passes.
+
+## Notes
