@@ -6,7 +6,7 @@ title: An OpenCode adapter runs a story's agent on OpenCode with the guard, the 
 status: backlog
 owner: alex
 created: 2026-10-16T04:28:00Z
-updated: 2026-10-16T05:20:15Z
+updated: 2026-10-20T21:13:23Z
 transitions: []
 tags: [cli, template]
 topics: [cli, agents, template]
@@ -17,15 +17,20 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 1419
+      seconds: 2469
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 221
-          output: 3890
-          cache_read: 82715885
-          cache_write: 56196
-          cost: 20.7502
+          input: 273
+          output: 4844
+          cache_read: 98931454
+          cache_write: 72242
+          cost: 24.8194
+cost_of_delay:
+  inputs:
+    penalty_per_week: 500
+    by: planner-E-0023
+    at: 2026-10-20T21:13:23Z
 ---
 # E-0023 An OpenCode adapter runs a story's agent on OpenCode with the guard, the permission prompt, the roles, and usage measured, through its plugin hooks and its server's events, so a non-Claude model works a story end to end
 

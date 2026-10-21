@@ -1,9 +1,9 @@
 ---
 kind: planner
-accrued_cost: 761.2840
-accrued_seconds: 31542
-tasks_completed: 80
-last_run: 2026-10-20T05:03:54Z
+accrued_cost: 792.9522
+accrued_seconds: 32575
+tasks_completed: 82
+last_run: 2026-10-20T22:24:54Z
 ---
 
 # Planner activity
@@ -643,3 +643,19 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: E-0022, S-0398, S-0399, S-0400, S-0401, S-0402, S-0403, S-0404, S-0405
 - Seconds: 152
 - Cost: 10.2167 USD, estimated
+
+### 2026-10-20T19:06:38Z
+
+- Summary: S-0450 is planned: I created six backlog tasks, T-1914 to T-1919, and wrote the story's touches, forecast (37m, delivery 2026-10-21T10:40:00Z) and cost of delay (30 USD a week), with plan thread TH-0527 on S-0450 awaiting the operator. No existing tasks were revisited. Proposed fix, recorded in an ADR by T-1914: story_start and task_done answers list only the story's own threads, count the others, and are capped at 40,000 bytes, MCP and CLI --json alike; T-1915 adds that to the inbox package, T-1916 and T-1917 apply it in parallel, T-1918 updates the docs and T-1919 closes I-0167.
+- Trigger: edited touches by system-flow
+- Items: S-0408, T-1696, T-1698
+- Seconds: 324
+- Cost: 19.9309 USD, estimated
+
+### 2026-10-20T22:24:54Z
+
+- Summary: I planned S-0453: it now has 30 file touches, a 51m forecast, a cost of delay of 50 USD a week, and six tasks in four layers T-1927 → T-1929, T-1933 → T-1930, T-1932 → T-1935, summarised on TH-0537 — but my reply reopened TH-0536 after the orchestrator resolved it, and the guard refused my `flai thread resolve`, so it needs the orchestrator or you to resolve it again.
+- Trigger: asked
+- Items: S-0453, T-1927, T-1929, T-1930, T-1932, T-1933, T-1935
+- Seconds: 709
+- Cost: 11.7373 USD, estimated

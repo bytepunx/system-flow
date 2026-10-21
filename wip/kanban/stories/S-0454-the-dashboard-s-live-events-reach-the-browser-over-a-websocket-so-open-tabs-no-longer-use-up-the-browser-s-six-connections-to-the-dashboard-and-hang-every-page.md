@@ -6,15 +6,45 @@ title: The dashboard's live events reach the browser over a WebSocket, so open t
 status: backlog
 owner: alex
 created: 2026-10-20T22:10:33Z
-updated: 2026-10-20T22:12:50Z
+updated: 2026-10-20T22:25:11Z
 transitions: []
 tags: [dashboard]
-topics: [client-side, server-side]
+topics: [client-side, server-side, components]
+touches: [design/adrs/0179-the-dashboard-s-live-events-reach-the-browser-over-a-websocket.md, design/adrs/README.md, flaiover/src/lib/server/events-socket.ts, flaiover/src/lib/server/events-socket.test.ts, flaiover/src/lib/server/agent.ts, flaiover/src/hooks.server.ts, flaiover/server.js, flaiover/vite.config.ts, flaiover/src/lib/events.ts, flaiover/src/lib/events.test.ts, flaiover/src/lib/inbox.svelte.test.ts, flaiover/src/routes/board/board.svelte.test.ts, flaiover/src/routes/board/cardmenu.svelte.test.ts, flaiover/src/routes/board/lanemenu.svelte.test.ts, flaiover/src/lib/components/StoryAgent.svelte.test.ts, flai/internal/components/harness/harness.mjs, flai/internal/components/integration_test.go, flai/internal/components/testdata/harness/src/lib/Fetcher.svelte, flaiover/playwright.config.ts, flaiover/e2e/live-events.e2e.ts, scripts/flaiover-e2e.sh, Makefile, flaiover/src/routes/api/events/+server.ts, flaiover/src/lib/server/sse.ts, flaiover/src/lib/server/sse.test.ts, design/system/flaiover-dashboard.md, design/system/dashboard-host-channel.md, design/system/component-library.md, design/tech/sveltekit.md, docs/users/flaiover.md, docs/operators/index.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 50
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 10
+          output: 203
+          cache_read: 3477317
+          cache_write: 13352
+          cost: 0.875
+cost_of_delay:
+  inputs:
+    time_lost_per_cycle: 15m
+    by: orchestrator
+    at: 2026-10-20T22:24:25Z
+  value: 37.5
+  by: planner-S-0454
+  at: 2026-10-20T22:25:11Z
+forecast:
+  duration: 1h30m
+  delivery: 2026-10-21T15:38:00Z
+  basis: "flai forecast's 57m (median 89 s per unit of size over 30 done large remediation stories on claude-opus-5-5, times size 38), raised by 33m for flaiover's first Playwright test, which needs node server.js and a flai to dial it, and a harness integration test that runs on flaiover's Playwright; 30th in the pull order under an in-progress limit of 5."
+  by: planner-S-0454
+  at: 2026-10-20T22:23:36Z
 finalized:
   by: alex
   at: 2026-10-20T22:12:50Z
@@ -39,6 +69,13 @@ This story moves the live events to a WebSocket. WebSockets do not count toward 
 - [ ] The server-sent events endpoint and `flaiover/src/lib/server/sse.ts` are removed, or kept only if something else still needs them, as the ADR says. `design/system/flaiover-dashboard.md`'s API table, `design/system/dashboard-host-channel.md`, and `docs/users/flaiover.md` describe the WebSocket.
 
 ## Tasks
+- T-1931 An accepted ADR records that the dashboard's live events go to the browser over a WebSocket, why, and that local TLS and HTTP/2 wait
+- T-1934 The server upgrades the live-events WebSocket in server.js and the dev server, authenticated as /api/events is, and sends ready, change, and agent with a ping
+- T-1936 events.ts follows the project's events over one WebSocket per project per tab, reconnects with a backoff, and tells every listener to refetch on reconnecting
+- T-1937 The component harness opens no WebSocket to the app's own server, fails it as a refused one, and lists it under Events
+- T-1938 The dashboard's design, its host channel design, and the user and operator docs describe the live-events WebSocket
+- T-1939 A Playwright test opens seven pages of one browser context on one project's events and a fetch from the last page answers, where it hangs on the server-sent events
+- T-1940 The server-sent events endpoint and sse.ts are removed, as the ADR says
 
 ## Notes
 
@@ -47,3 +84,24 @@ Chosen with the operator on 2026-10-20 over closing the stream while a tab is hi
 `ws` is already a dependency, and `server.js` already routes `upgrade` to `globalThis.__flaioverAgentUpgrade` for `/agent`. That handler is the one to extend into a router by path.
 
 Not in this story: the streaming responses of `/api/items/[id]/accept`, `/api/items/[id]/checks/tail`, and `/api/import` hold a connection too, but only while they run.
+
+### Planning
+
+Touches, 31 files and no folder. The story declared none, so `flai touches suggest` ran from the five files its goal and criteria name; the explorer read the code for the rest.
+
+| Source | Touches |
+|--------|---------|
+| Criteria | `flaiover/server.js`, `flaiover/vite.config.ts`, `flaiover/src/hooks.server.ts`, `flaiover/src/lib/events.ts`, `flaiover/src/lib/server/sse.ts`, `design/system/flaiover-dashboard.md`, `design/system/dashboard-host-channel.md`, `docs/users/flaiover.md` |
+| Co-change | `flaiover/src/lib/server/agent.ts` (33%), which sets the upgrade global and refuses any path but `/agent`; `flaiover/src/lib/server/sse.test.ts` (14%) |
+| Layout | the new `flaiover/src/lib/server/events-socket.ts` and its test; `flaiover/src/routes/api/events/+server.ts`; `flaiover/src/lib/events.test.ts` and the five component tests that stub `EventSource`, since jsdom has a real `WebSocket`; the harness's `harness.mjs`, `integration_test.go`, and fixture `Fetcher.svelte`; `flaiover/playwright.config.ts`, the new `flaiover/e2e/live-events.e2e.ts`, `scripts/flaiover-e2e.sh`, and `Makefile` |
+| Design | `design/adrs/0179-the-dashboard-s-live-events-reach-the-browser-over-a-websocket.md` (the number and slug are predicted) and `design/adrs/README.md`; `design/system/component-library.md` (ADR-0172's harness rule); `design/tech/sveltekit.md` (the `ws` row); `docs/operators/index.md` ("even with event streams open", which T-1934's shutdown keeps true) |
+
+Left out though co-change lists them: `flaiover/src/lib/server/repo.ts` (38%), `flaiover/package.json`, and the lock file. The socket uses `Repo`'s existing `on` and `off`, and `ws` is already a dependency. `flaiover/src/lib/server/auth.ts` is called, not changed.
+
+`docs/operators/index.md` is claimed by S-0445 and S-0451, both in progress, so this story is held while either is when it reaches ready. The line is one sentence of T-1938; if the hold costs more than it is worth, narrowing it out is the story agent's call.
+
+Forecast 1h30m, delivery 2026-10-21T15:38:00Z. `flai forecast` gave 57m at size 38. Raised by 33m: flaiover has no Playwright test yet, `vite preview` loads no upgrade hook, so T-1939 has to run `node server.js` with a flai to dial it. T-1937's integration test also runs on flaiover's Playwright. The delivery moves by the same 33m.
+
+Cost of delay 37.50 USD a week, as `flai cod` gives it from the orchestrator's input on TH-0535, 15m lost per 168h cycle at 150 USD an hour. Kept: it matches S-0445, a remediation with the same kind of stop and workaround.
+
+Topic `components` added: T-1937 changes the component harness.

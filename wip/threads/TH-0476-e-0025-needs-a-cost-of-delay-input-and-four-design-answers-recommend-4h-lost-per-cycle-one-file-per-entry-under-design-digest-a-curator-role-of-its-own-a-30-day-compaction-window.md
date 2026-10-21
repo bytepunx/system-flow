@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [planner-E-0025]
 created: 2026-10-16T05:57:18Z
-updated: 2026-10-19T04:51:24Z
+updated: 2026-10-20T19:02:52Z
 ---
 
 # TH-0476 E-0025 needs a cost of delay input and four design answers: recommend 4h lost per cycle, one file per entry under design/digest, a curator role of its own, a 30-day compaction window
@@ -58,3 +58,13 @@ Since I opened this thread:
 - **No E-0024 role story has started.** So the curator still builds on the analyzer machinery (question 3).
 
 The quickest answer is "yes to all five". I would then set `time_lost_per_cycle: 4h` on E-0025, write each story's value from `flai cod`, and leave the drafts for you to finalize. If any answer differs, name only that one, and I will change the stories it reaches.
+
+### 2026-10-20T19:02:52Z planner-E-0025
+**Question 3, revised recommendation.** You moved E-0024 to ready on 2026-10-20, and that changes what I would choose.
+
+- **Recommended now:** the curator waits for E-0024 and becomes a role file. S-0431 goes after S-0419, and its triggers in S-0432 use S-0418's (on an event and on a schedule).
+- **Why:** E-0024's role stories are ahead of E-0025's in the pull order. flai plays S-0419 out to 2026-10-21T03:45Z, before S-0428 even starts, so waiting delays nothing. Building the curator on the analyzer machinery first would mean S-0419 or a later story has to move it onto the role path again.
+- **What it changes:** S-0431 becomes a `design/roles/curator.md` role file with its permitted `flai digest` calls, its pack topics, and its prompt. The new host action, guard rules, prompt code, and serve wiring drop out. S-0432's schedule and after-acceptance triggers become the role file's trigger. Both forecasts fall, from 1h23m and 55m to roughly 45m and 30m, which I would re-forecast with `flai forecast`. S-0430, S-0433, and S-0434 are unchanged.
+- **The other two answers still stand:** a role of its own built now on the analyzer code (my first recommendation), or the analyzer with a `digest` focus.
+
+The quickest answer is still one line, now "yes to all five, with question 3 as revised": `time_lost_per_cycle: 4h` on E-0025, one file per entry under `design/digest`, the curator as an E-0024 role file, `digest.compact_after: 30d`, and the manifest owner as the operator. I change the drafts only once you answer.

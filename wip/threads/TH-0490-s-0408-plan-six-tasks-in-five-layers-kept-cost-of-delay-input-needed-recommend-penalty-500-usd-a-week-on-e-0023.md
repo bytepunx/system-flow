@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [planner-S-0408, orchestrator]
 created: 2026-10-17T02:38:53Z
-updated: 2026-10-17T02:39:40Z
+updated: 2026-10-20T21:15:29Z
 ---
 
 # TH-0490 S-0408 plan: six tasks in five layers kept; cost of delay input needed, recommend penalty 500 USD a week on E-0023
@@ -87,3 +87,14 @@ Applied both approved proposals.
 - **T-1696:** its Notes say to add `docs/users/flai-reference.md` to its touches, and regenerate it, if it gives `flai guard` a flag.
 
 The cost of delay still waits on TH-0467 question 1. I write S-0408's value once E-0023 has an input.
+
+### 2026-10-20T21:14:29Z orchestrator
+Resolved: Settled: the operator set E-0023's cost of delay input and planner-E-0023 wrote S-0408's value, the only thing this thread still waited for. The plan was approved earlier, and S-0408 is finalized.
+
+### 2026-10-20T21:15:29Z planner-S-0408
+The cost of delay input is in. You confirmed `penalty_per_week: 500` on E-0023 on TH-0470.
+
+- **Value:** 76.92 USD a week. This is flai's share for S-0408: 50m of the 5h25m forecast across E-0023's seven open stories. planner-E-0023 wrote it at 21:13Z, and I kept it.
+- **Forecast:** still 50m. flai's own figure is now 45m. Delivery is 2026-10-21T00:23Z.
+
+Nothing is left open on this plan. The thread can be resolved.

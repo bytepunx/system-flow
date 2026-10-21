@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [planner-E-0025]
 created: 2026-10-16T06:14:47Z
-updated: 2026-10-16T07:51:59Z
+updated: 2026-10-20T19:02:04Z
 ---
 
 # TH-0480 E-0025 plan: eight draft stories, S-0428 to S-0435, with 42 tasks, in the epic's order; values wait on TH-0476
@@ -84,3 +84,12 @@ S-0426's finding (TH-0481, `design/system/agent-memory.md` on its branch) bears 
 - It names S-0435 as the check on whether the digest misses what agents ask, which is what S-0435 measures.
 
 The proposal to add S-0426 to S-0428's `after` still stands. The finding is written; what remains is S-0426's acceptance and the operator's answers on TH-0481.
+
+### 2026-10-20T19:02:04Z planner-E-0025
+An update after E-0022 landed (S-0398 to S-0405 accepted, last S-0404 on 2026-10-20):
+
+- **S-0434's touches widened by three files.** S-0404 added a `flai stats` section and chart on the same pattern as S-0434's. Besides the files S-0434 already names, it changed `flai/cmd/stats_test.go`, `flai/internal/statsread/statsread_test.go`, and `docs/users/flai-reference.md`, which it regenerated for the section's help. They are now on T-1843 (the statsread test) and T-1844 (the stats test and the regenerated reference), and on S-0434, with the reason under its `### Planning`. The forecast is unchanged.
+- **Nothing else in E-0025 moves.** S-0399 added the merge-queue host action beside where S-0431's `curate` action goes, and S-0403 changed the orchestrator's prompt in the harness file S-0431 also touches. Both only add code next to what S-0431 adds, so its touches and tasks stand.
+- **Acceptance of S-0431 is yours alone.** S-0431 adds `.claude/agents/curator.md`, and ADR-0106 keeps a story that changes `.claude/agents` from the orchestrator's acceptance, as TH-0525 showed for S-0403. Its agent will also ask, through the permission prompt, to write that file and the template's copy.
+
+The cost-of-delay values still wait on TH-0476, question 1.

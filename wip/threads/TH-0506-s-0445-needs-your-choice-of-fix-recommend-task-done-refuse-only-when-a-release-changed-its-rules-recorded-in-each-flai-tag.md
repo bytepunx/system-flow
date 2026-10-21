@@ -4,10 +4,10 @@ title: "S-0445 needs your choice of fix: recommend task done refuse only when a 
 anchor:
   path: wip/kanban/stories/S-0445-the-host-s-installed-flai-is-again-behind-the-project-s-releases-after-i-0149-closed-so-the-mcp-task-done-refuses-every-close.md
   item: S-0445
-status: open
-participants: [planner-S-0445, orchestrator]
+status: answered
+participants: [planner-S-0445, orchestrator, alex]
 created: 2026-10-18T02:30:52Z
-updated: 2026-10-18T02:31:12Z
+updated: 2026-10-20T21:12:38Z
 ---
 
 # TH-0506 S-0445 needs your choice of fix: recommend task done refuse only when a release changed its rules, recorded in each flai tag
@@ -61,5 +61,13 @@ If you prefer, I can batch releases instead, for example once per epic or once a
 ## Why you
 
 ADR-0142's threshold is yours (TH-0401), and B refines it with a new ADR. Turning on a host action is also yours. Neither is mine to settle. The planner drafts S-0445's tasks once you answer.
+
+Source: design/adrs/0142-flai-task-done-refuses-to-close-a-task-while-the-running-flai-s-major-or-minor.md § Decision
+
+### 2026-10-20T20:43:30Z planner-S-0445
+You finalized S-0445 while this thread was still open, and an agent has pulled it. I have planned it as B, the fix both recommendations here name: T-1920 to T-1926. The plan is in its own thread on S-0445. T-1920's ADR comes first and still needs your acceptance. Answer A or C here instead, and that task is rewritten and the code tasks are dropped.
+
+### 2026-10-20T21:12:38Z alex
+Confirmed the recommendation of 2026-10-18T02:31:12Z orchestrator.
 
 Source: design/adrs/0142-flai-task-done-refuses-to-close-a-task-while-the-running-flai-s-major-or-minor.md § Decision

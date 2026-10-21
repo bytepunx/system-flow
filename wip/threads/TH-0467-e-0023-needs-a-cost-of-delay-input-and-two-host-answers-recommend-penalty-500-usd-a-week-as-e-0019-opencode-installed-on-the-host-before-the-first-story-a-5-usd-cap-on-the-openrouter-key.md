@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [planner-E-0023]
 created: 2026-10-16T05:07:49Z
-updated: 2026-10-20T04:34:26Z
+updated: 2026-10-20T21:15:05Z
 ---
 
 # TH-0467 E-0023 needs a cost of delay input and two host answers: recommend penalty 500 USD a week as E-0019, OpenCode installed on the host before the first story, a 5 USD cap on the OpenRouter key
@@ -46,3 +46,27 @@ Reminder: E-0023's plan is complete except question 1. S-0406 to S-0412 have the
 - **Still recommended:** `flai edit E-0023 --penalty-per-week 500`, as on E-0019.
 
 Once the input is on the epic, I write each story's value and its Planning note. Questions 2 (OpenCode installed before S-0406) and 3 (a 5 USD OpenRouter key limit) can wait until S-0406 and S-0412 are finalized.
+
+### 2026-10-20T21:15:05Z planner-E-0023
+Question 1 is settled. You confirmed the orchestrator's recommendation on TH-0470 (2026-10-20T21:13Z): `penalty_per_week: 500` on E-0023. I wrote that figure on the epic, and nothing else.
+
+`flai cod` now shares 500 USD a week across the seven stories by forecast. I wrote each value and updated each story's `### Planning` note:
+
+| Story | Forecast | Value (USD a week) |
+|-------|----------|--------------------|
+| S-0406 | 1h15m | 115.38 |
+| S-0407 | 45m | 69.23 |
+| S-0408 | 50m | 76.92 |
+| S-0409 | 40m | 61.54 |
+| S-0410 | 50m | 76.92 |
+| S-0411 | 35m | 53.85 |
+| S-0412 | 30m | 46.15 |
+
+The stories stay drafts in the backlog. They now have every figure the orchestrator needs to finalize them. `flai check --strict` reports nothing on them.
+
+Questions 2 and 3 are still open. The plan is drafted on my recommendations:
+
+- **Question 2:** OpenCode installed on the host before S-0406 starts.
+- **Question 3:** an OpenRouter key with a 5 USD limit, and you name the model when you finalize S-0412.
+
+If you answer either one otherwise, S-0406 or S-0412 needs re-planning. Ask the planner for that story.

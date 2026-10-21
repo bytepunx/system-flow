@@ -6,16 +6,62 @@ title: A thread awaits an agent only when the agent takes part in it or it is on
 status: backlog
 owner: alex
 created: 2026-10-20T21:49:07Z
-updated: 2026-10-20T22:12:55Z
+updated: 2026-10-20T22:24:31Z
 transitions: []
-tags: [flai]
-topics: [mcp, inbox]
+tags: [flai, template]
+topics: [mcp, inbox, orchestration]
+touches: [design/adrs/README.md, design/system/agent-narrative.md, design/system/flai-cli.md, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/work.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/work_test.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/orchestrator_threads_test.go, flai/internal/mcpserver/story_start_test.go, flai/internal/mcpserver/task_test.go, flai/internal/storystart/start_test.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/cmd/story_start_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/strategic-agents.md, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md]
 after: [S-0450]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: planner
+      seconds: 709
+      estimated: true
+      models:
+        - model: claude-haiku-5-5
+          input: 152
+          output: 42615
+          cache_read: 8116741
+          cache_write: 324710
+          cost: 0.5652
+        - model: claude-opus-5-5
+          input: 268
+          output: 34097
+          cache_read: 37861975
+          cache_write: 383777
+          cost: 11.1721
+    - kind: orchestrator
+      seconds: 3841
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 176
+          output: 3514
+          cache_read: 58835687
+          cache_write: 33021
+          cost: 14.758
+cost_of_delay:
+  inputs:
+    time_lost_per_cycle: 20m
+    by: orchestrator
+    at: 2026-10-20T22:23:30Z
+  value: 50
+  by: planner-S-0453
+  at: 2026-10-20T22:24:31Z
+forecast:
+  duration: 51m
+  delivery: 2026-10-21T14:04:00Z
+  basis: "flai forecast: median 89 s per unit of size over 30 done large remediation stories on claude-opus-5-5, times size 34 (4 criteria, 30 touches), 29th in the pull order under an in-progress limit of 5."
+  by: planner-S-0453
+  at: 2026-10-20T22:22:07Z
 finalized:
   by: alex
   at: 2026-10-20T22:12:55Z
@@ -37,6 +83,12 @@ This story fixes the rule. The operator chose this on 2026-10-20 over shorter su
 - [ ] The operator's view is unchanged: the dashboard and `flai thread list` show the same threads awaiting the operator as before.
 
 ## Tasks
+- T-1927 Record in an ADR and the design that a thread awaits an agent only when the agent takes part in it or it is on the agent's own story, and is awaiting operator or other otherwise
+- T-1929 Make the inbox package's Summarize and Read apply the rule: awaiting you only on the agent's own story or a thread it takes part in, else operator or other
+- T-1930 Make the MCP inbox, wait_for_work, the folder inbox, and the thread tools apply the rule, with the orchestrator listing the threads awaiting the operator by default
+- T-1932 Make story_start and task_done, MCP and CLI, carry only the threads awaiting the story's agent by the rule, with tests of the 2026-10-20 measurement
+- T-1933 Name the threads the orchestrator answers by awaiting operator in its instructions, its agent definition, and the strategic-agents convention
+- T-1935 Document in the user docs and the generated reference what inbox and wait_for_work report as awaiting you, operator, and other
 
 ## Notes
 
@@ -47,3 +99,27 @@ Open for the planner:
 - Whether a reply adds its author to a thread's `participants`.
 
 Seen alongside, and not this story's: 17 of the 31 open threads were flai serve's "host flai is older than …" notices, each replaced by a newer one and never resolved, 18 KB of the 42 KB. Resolving a replaced notice when a newer one opens would be a separate story.
+
+### Planning
+
+Answers to the two open questions, taken into T-1927's ADR:
+
+- The operator is the manifest's `owner` or the thread's story's `owner`, the names ADR-0097 takes an answer from. A thread awaits the operator when a recommendation is pending or its last entry is by neither. `inbox.designer` in `flai/internal/hostapi/people.go` already applies this rule, so the dashboard keeps its view (criterion 4).
+- A reply already adds its author to `participants`: `threads.ReplyWith`, `Confirm`, and `Resolve` do. No change is needed.
+
+Touches, all files; no folder touch is kept. The story declared none, so `flai touches suggest` ran from four seeds the explorer found.
+
+| Touch | Source |
+|-------|--------|
+| `flai/internal/inbox/inbox.go`, `flai/internal/mcpserver/work.go`, `flai/internal/mcpserver/server.go`, `flai/internal/harness/harness.go` | design: the goal and criteria name them; the seeds |
+| `flai/internal/harness/harness_test.go`, `flai/internal/mcpserver/folder.go`, `flai/internal/mcpserver/server_test.go`, `flai/internal/mcpserver/folder_test.go`, `design/system/flai-cli.md`, `docs/users/flai.md`, `docs/users/flai-reference.md`, `template/CHANGELOG.md` | co-change with the seeds |
+| `flai/internal/inbox/inbox_test.go`, `flai/internal/mcpserver/messages.go`, `flai/internal/mcpserver/work_test.go`, `flai/internal/mcpserver/orchestrator_threads_test.go` | layout: the other callers of `Summarize` and the tests of the rule |
+| `flai/internal/mcpserver/story_start_test.go`, `flai/internal/mcpserver/task_test.go`, `flai/internal/storystart/start_test.go`, `flai/internal/taskdone/taskdone_test.go`, `flai/cmd/task_done.go`, `flai/cmd/task_done_test.go`, `flai/cmd/story_start_test.go` | layout: criterion 2's `story_start` and `task_done`, and the printed inbox |
+| `design/adrs/README.md`, `design/system/agent-narrative.md` | design: criterion 1's ADR and § What an agent is told through MCP |
+| `design/conventions/strategic-agents.md`, `template/root/design/conventions/strategic-agents.md`, `design/system/strategic-agents.md`, `.claude/agents/orchestrator.md`, `template/root/.claude/agents/orchestrator.md` | layout: every place that tells the orchestrator which threads await the operator (criterion 3) |
+
+Left out of the co-change list: `flai/internal/serve/agents.go`, whose `awaitsAnswer` is its own rule for starting agents again; `flai/cmd/mcp.go`, `mcp_http.go`, and `cursor.go`, which do not read `awaiting`; `work-management.md` and the settings docs, which name no thread rule. `flai/internal/storystart/start.go` and `flai/internal/taskdone/taskdone.go` are left out too: they already call `inbox.Read` with the story as `Own`. The ADR's file is named by `flai adr new`; `flai task done` widens the touches with it.
+
+Forecast 51m, delivery 2026-10-21T14:04:00Z, as `flai forecast` gives them after the touches were set (9m before, at size 4 with no touches). Kept: the median comes from 30 done large remediation stories on the same model, and size 34 counts the six tasks' 30 files. S-0450, of the same shape, was forecast 37m at size 25.
+
+Cost of delay 50 USD a week, as `flai cod` gives it from 20m lost per 168h cycle at 150 USD an hour. The input was missing; TH-0536 asked for it, and the orchestrator set the recommended 20m. Kept: S-0450 has 12m for the part of this cause it fixes, and what is left reaches every agent's standalone `inbox` and `wait_for_work`, more sessions than I-0167 counted.

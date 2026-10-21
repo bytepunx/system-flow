@@ -3,17 +3,38 @@ id: S-0452
 type: story
 nature: improvement
 title: Keep the top menu visible at all times
-status: backlog
+status: cancelled
 owner: alex
 created: 2026-10-20T20:56:45Z
-updated: 2026-10-20T20:56:45Z
-transitions: []
+updated: 2026-10-20T21:19:38Z
+transitions:
+  - to: ready
+    at: 2026-10-20T20:56:48Z
+    by: alex
+  - to: cancelled
+    at: 2026-10-20T21:19:38Z
+    by: alex
 tags: []
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 925
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 44
+          output: 1118
+          cache_read: 13582013
+          cache_write: 20244
+          cost: 3.4101
 ---
 # S-0452 Keep the top menu visible at all times
 
@@ -28,3 +49,4 @@ By default, the top menu and submenu should stay visible at all times. A setting
 ## Tasks
 
 ## Notes
+- 2026-10-20T21:19:38Z: moved to cancelled: Lets look at a different screen layout instead

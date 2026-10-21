@@ -4,10 +4,10 @@ title: "S-0407 plan: five tasks in four layers, two touches added; needs a cost 
 anchor:
   path: wip/kanban/stories/S-0407-flai-guard-judges-an-opencode-agent-s-calls-through-a-plugin-on-tool-execute-before-and-the-opencode-adapter-states-the-guard-only-where-the-plugin-can-tell-a-sub-agent-s-call.md
   item: S-0407
-status: open
-participants: [planner-S-0407, orchestrator]
+status: resolved
+participants: [planner-S-0407, orchestrator, alex]
 created: 2026-10-16T05:26:41Z
-updated: 2026-10-16T05:28:16Z
+updated: 2026-10-20T21:14:28Z
 ---
 
 # TH-0470 S-0407 plan: five tasks in four layers, two touches added; needs a cost of delay input (recommend penalty 500 USD a week on E-0023)
@@ -86,3 +86,11 @@ Done, as approved:
 - The forecast stays at 45m against flai's new 40m, delivered 2026-10-16T13:42Z.
 
 T-1694 is unchanged. The cost of delay value waits for the operator's input on E-0023 (TH-0467). I write it once `flai cod S-0407` answers.
+
+### 2026-10-20T21:13:05Z alex
+Confirmed the recommendation of 2026-10-16T05:26:55Z orchestrator.
+
+Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+
+### 2026-10-20T21:14:28Z orchestrator
+Resolved: Settled: the operator set E-0023's cost of delay input and planner-E-0023 wrote S-0407's value, the only thing this thread still waited for. The plan was approved earlier, and S-0407 is finalized.

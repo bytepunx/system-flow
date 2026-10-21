@@ -7,11 +7,11 @@ status: backlog
 parent: S-0434
 owner: alex
 created: 2026-10-16T06:08:21Z
-updated: 2026-10-16T06:08:21Z
+updated: 2026-10-20T19:01:08Z
 transitions: []
 stream: S-0434
 tags: [cli]
-touches: [flai/internal/metrics/digest.go, flai/internal/metrics/digest_test.go, flai/internal/metrics/metrics.go, flai/internal/statsread/statsread.go]
+touches: [flai/internal/metrics/digest.go, flai/internal/metrics/digest_test.go, flai/internal/metrics/metrics.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go]
 after: [T-1842]
 ---
 # T-1843 flai/internal/metrics computes digest.weeks and digest.entries from the threads, the completed stories, and the entries
