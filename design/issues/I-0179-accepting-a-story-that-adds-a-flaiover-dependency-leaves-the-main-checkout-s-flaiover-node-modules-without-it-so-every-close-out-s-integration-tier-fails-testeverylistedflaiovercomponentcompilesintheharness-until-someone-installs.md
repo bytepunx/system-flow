@@ -2,12 +2,12 @@
 id: I-0179
 title: Accepting a story that adds a flaiover dependency leaves the main checkout's flaiover/node_modules without it, so every close-out's integration tier fails TestEveryListedFlaioverComponentCompilesInTheHarness until someone installs
 class: blocker
-status: open
+status: closed
 count: 1
 cost: 15m
 first_reported: 2026-10-21T08:44:04Z
 last_reported: 2026-10-21T08:44:04Z
-updated: 2026-10-21T12:00:17Z
+updated: 2026-10-21T13:28:09Z
 ---
 
 # I-0179 Accepting a story that adds a flaiover dependency leaves the main checkout's flaiover/node_modules without it, so every close-out's integration tier fails TestEveryListedFlaioverComponentCompilesInTheHarness until someone installs
@@ -24,3 +24,4 @@ S-0458 added @lucide/svelte (748a07c5) for NavRail.svelte and was accepted at 08
 ## Remediation
 
 Story S-0483 remediates this issue, created from it at 2026-10-21T12:00:17Z.
+Closed 2026-10-21T13:28:09Z: S-0483: flai accept now runs a sub-project's projects[].install command in the main checkout after an acceptance that changed its install.paths (ADR-0185). flaiover's names scripts/flaiover-install.sh --if-needed on package.json and pnpm-lock.yaml, so accepting a story that adds a flaiover dependency leaves the main checkout's node_modules current. TestAcceptInstallsASubProjectWhoseLockTheStoryChanged reproduces the cause.
