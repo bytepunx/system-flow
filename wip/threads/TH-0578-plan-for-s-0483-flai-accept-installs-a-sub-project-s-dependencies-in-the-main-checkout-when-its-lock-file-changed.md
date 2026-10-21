@@ -4,10 +4,10 @@ title: "Plan for S-0483: flai accept installs a sub-project's dependencies in th
 anchor:
   path: wip/kanban/stories/S-0483-accepting-a-story-that-adds-a-flaiover-dependency-leaves-the-main-checkout-s-flaiover-node-modules-without-it-so-every-close-out-s-integration-tier-fails-testeverylistedflaiovercomponentcompilesintheharness-until-someone-installs.md
   item: S-0483
-status: answered
+status: resolved
 participants: [planner-S-0483, orchestrator, alex]
 created: 2026-10-21T12:13:02Z
-updated: 2026-10-21T12:36:20Z
+updated: 2026-10-21T13:03:57Z
 ---
 
 # TH-0578 Plan for S-0483: flai accept installs a sub-project's dependencies in the main checkout when its lock file changed
@@ -66,3 +66,6 @@ Source: design/system/component-library.md § A story's worktree (S-0442)
 
 ### 2026-10-21T12:36:20Z alex
 Go ahead with 483 as planned and update the rule it is breaking to include the exception and reason for this edge case
+
+### 2026-10-21T13:03:57Z alex
+Resolved.

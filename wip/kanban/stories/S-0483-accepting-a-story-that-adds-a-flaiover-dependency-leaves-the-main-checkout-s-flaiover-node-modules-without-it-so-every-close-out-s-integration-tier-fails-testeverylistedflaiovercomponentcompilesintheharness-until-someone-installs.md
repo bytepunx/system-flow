@@ -3,34 +3,52 @@ id: S-0483
 type: story
 nature: remediation
 title: Accepting a story that adds a flaiover dependency leaves the main checkout's flaiover/node_modules without it, so every close-out's integration tier fails TestEveryListedFlaioverComponentCompilesInTheHarness until someone installs
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-21T12:00:17Z
-updated: 2026-10-21T12:51:45Z
-transitions: []
+updated: 2026-10-21T13:06:56Z
+transitions:
+  - to: ready
+    at: 2026-10-21T13:04:10Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-21T13:04:17Z
+    by: agent-S-0483
 tags: [flai, cli]
 topics: [release, testing]
-touches: [design/adrs/README.md, design/system/project-manifest.md, design/system/flai-cli.md, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, system-flow.yaml, docs/operators/settings.md, flai/cmd/accept.go, flai/cmd/accept_install.go, flai/cmd/accept_install_test.go, docs/users/flai.md, design/system/devex.md, design/issues/I-0179-accepting-a-story-that-adds-a-flaiover-dependency-leaves-the-main-checkout-s-flaiover-node-modules-without-it-so-every-close-out-s-integration-tier-fails-testeverylistedflaiovercomponentcompilesintheharness-until-someone-installs.md, design/issues/summary.md]
+touches: [design/adrs/README.md, design/system/project-manifest.md, design/system/flai-cli.md, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, system-flow.yaml, docs/operators/settings.md, flai/cmd/accept.go, flai/cmd/accept_install.go, flai/cmd/accept_install_test.go, docs/users/flai.md, design/system/devex.md, design/issues/I-0179-accepting-a-story-that-adds-a-flaiover-dependency-leaves-the-main-checkout-s-flaiover-node-modules-without-it-so-every-close-out-s-integration-tier-fails-testeverylistedflaiovercomponentcompilesintheharness-until-someone-installs.md, design/issues/summary.md, design/adrs/0185-flai-accept-runs-a-sub-project-s-install-command-in-the-main-checkout-when-the.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 156
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-21
+      hand_edits: 1
+      work: 27
+  models:
+    - model: claude-opus-5-5
+      input: 56
+      output: 302
+      cache_read: 3475641
+      cache_write: 151666
+      cost: 1.2318
   strategic:
     - kind: orchestrator
-      seconds: 4
+      seconds: 52
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1
-          output: 8
-          cache_read: 132275
-          cache_write: 1977
-          cost: 0.0296
+          input: 11
+          output: 170
+          cache_read: 3203296
+          cache_write: 6002
+          cost: 0.7086
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m

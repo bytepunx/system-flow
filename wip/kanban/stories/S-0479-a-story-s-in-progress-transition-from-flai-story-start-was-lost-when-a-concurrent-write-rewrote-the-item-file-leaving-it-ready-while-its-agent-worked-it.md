@@ -6,7 +6,7 @@ title: A story's in-progress transition from flai story start was lost when a co
 status: in-progress
 owner: alex
 created: 2026-10-21T11:59:43Z
-updated: 2026-10-21T12:48:32Z
+updated: 2026-10-21T12:57:06Z
 transitions:
   - to: ready
     at: 2026-10-21T12:05:53Z
@@ -15,7 +15,7 @@ transitions:
     at: 2026-10-21T12:09:40Z
     by: agent-S-0479
 tags: []
-touches: [flai/internal/workitem/itemlock.go, flai/internal/workitem/itemlock_test.go, flai/internal/workitem/repo.go, flai/internal/itemedit/itemedit.go, flai/internal/itemedit/lock_test.go, design/system/work-hierarchy.md, design/adrs, design/issues/I-0175-a-story-s-in-progress-transition-from-flai-story-start-was-lost-when-a-concurrent-write-rewrote-the-item-file-leaving-it-ready-while-its-agent-worked-it.md, design/issues/summary.md, flai/cmd/accept_resume_test.go, flai/cmd/check_stats_test.go, flai/cmd/issue_test.go, flai/internal/workitem/item.go, design/issues/I-0176-a-usage-write-to-a-story-overwrites-its-move-to-in-progress-made-meanwhile-so-a-started-story-reads-as-ready-again.md]
+touches: [flai/internal/workitem/itemlock.go, flai/internal/workitem/itemlock_test.go, flai/internal/workitem/repo.go, flai/internal/itemedit/itemedit.go, flai/internal/itemedit/lock_test.go, design/system/work-hierarchy.md, design/adrs, design/issues/I-0175-a-story-s-in-progress-transition-from-flai-story-start-was-lost-when-a-concurrent-write-rewrote-the-item-file-leaving-it-ready-while-its-agent-worked-it.md, design/issues/summary.md, flai/cmd/accept_resume_test.go, flai/cmd/check_stats_test.go, flai/cmd/issue_test.go, flai/internal/workitem/item.go, design/issues/I-0176-a-usage-write-to-a-story-overwrites-its-move-to-in-progress-made-meanwhile-so-a-started-story-reads-as-ready-again.md, flai/internal/itemnew/itemnew_test.go, flai/internal/statsread/statsread_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -23,21 +23,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2192
+  seconds: 2347
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-10-21
-      ceremony: 3
-      hand_edits: 4
-      work: 37
+      ceremony: 5
+      hand_edits: 6
+      work: 49
   models:
     - model: claude-opus-5-5
-      input: 232
-      output: 1079
-      cache_read: 12592126
-      cache_write: 539953
-      cost: 4.4495
+      input: 264
+      output: 1330
+      cache_read: 16314079
+      cache_write: 568976
+      cost: 5.7203
   strategic:
     - kind: planner
       seconds: 349

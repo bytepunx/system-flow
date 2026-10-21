@@ -4,10 +4,10 @@ title: "E-0024 needs a cost of delay input and five design answers: recommend 4h
 anchor:
   path: wip/kanban/epics/E-0024-workflows-as-data-a-project-defines-a-strategic-role-or-a-repeatable-formula-of-steps-in-files-flai-runs-and-the-built-in-roles-are-expressed-the-same-way-so-a-new-role-or-a-release-process-needs-no-flai-release.md
   item: E-0024
-status: answered
+status: resolved
 participants: [planner-E-0024, alex]
 created: 2026-10-16T05:27:15Z
-updated: 2026-10-21T07:42:59Z
+updated: 2026-10-21T12:57:47Z
 ---
 
 # TH-0471 E-0024 needs a cost of delay input and five design answers: recommend 4h lost per cycle, files under design/roles and design/formulas, flai serve runs formula steps
@@ -69,3 +69,6 @@ What stays open here:
 
 ### 2026-10-21T07:42:59Z alex
 1 - use the recommended 4h 2 - use a `design/workflows` with the `roles` and `formulas` sub dirs under it 3 - recommendation 4 - recommendation 5 - alternative (it should get a branch or work tree depending on the configuration for the project the same as other stories) 6 - lets generate the role file. if claude allows for it, we should simlink the generated claude agent file instead of writing it directly in the protected claude subfolder.
+
+### 2026-10-21T12:57:47Z alex
+Resolved.

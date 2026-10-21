@@ -3,10 +3,10 @@ id: E-0027
 type: epic
 nature: feature
 title: Rework main layout
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-21T06:54:07Z
-updated: 2026-10-21T07:55:01Z
+updated: 2026-10-21T13:07:23Z
 transitions:
   - to: ready
     at: 2026-10-21T06:54:13Z
@@ -14,42 +14,47 @@ transitions:
   - to: in-progress
     at: 2026-10-21T07:55:01Z
     by: agent-S-0458
+  - to: review
+    at: 2026-10-21T13:02:10Z
+    by: agent-S-0461
+  - to: done
+    at: 2026-10-21T13:07:23Z
+    by: orchestrator
 tags: []
 usage:
   source: sum
-  seconds: 8808
-  estimated: true
-  priced_by: estimate
+  seconds: 11407
+  priced_by: harness
   turns:
     - day: 2026-10-21
-      ceremony: 12
+      ceremony: 14
       test_runs: 2
-      hand_edits: 12
-      work: 234
+      hand_edits: 16
+      work: 254
   models:
     - model: claude-opus-5-5
-      input: 1372
-      output: 495413
-      cache_read: 73683801
-      cache_write: 2707994
-      cost: 40.0408
+      input: 1568
+      output: 690849
+      cache_read: 87132598
+      cache_write: 3024548
+      cost: 50.0173
   strategic:
     - kind: orchestrator
-      seconds: 2901
+      seconds: 2970
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 393
-          output: 6113
-          cache_read: 55628840
-          cache_write: 160756
-          cost: 13.6926
+          input: 403
+          output: 6268
+          cache_read: 58665015
+          cache_write: 166197
+          cost: 14.3642
         - model: claude-sonnet-5-5
-          input: 48
-          output: 287
-          cache_read: 704236
-          cache_write: 193034
-          cost: 0.7008
+          input: 62
+          output: 359
+          cache_read: 951422
+          cache_write: 243989
+          cost: 0.906
 ---
 # E-0027 Rework main layout
 
@@ -118,3 +123,5 @@ When a wider layout is possible, do not stack lanes vertically! Instead, allow t
 
 ## Notes
 - 2026-10-21T07:55:01Z: moved to in-progress: follows S-0458, which moved to in-progress
+- 2026-10-21T13:02:10Z: moved to review: follows S-0461, which moved to review
+- 2026-10-21T13:07:23Z: moved to done: follows S-0461, which moved to done

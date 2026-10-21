@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 754
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 42
-      output: 186
-      cache_read: 1691903
-      cache_write: 83341
-      cost: 0.6013
+      input: 30
+      output: 13774
+      cache_read: 1759541
+      cache_write: 61022
+      cost: 0.9889
 ---
 
 # T-1984 PageSidebar takes entries that link to another page and a header shown above its entries

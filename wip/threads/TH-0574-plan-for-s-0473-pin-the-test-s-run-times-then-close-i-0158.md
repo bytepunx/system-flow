@@ -4,10 +4,10 @@ title: "Plan for S-0473: pin the test's run times, then close I-0158"
 anchor:
   path: wip/kanban/stories/S-0473-testasettledreplystartstheagentwaitingonitonce-in-flai-internal-serve-fails-now-and-then-in-the-close-out-s-integration-tier-on-a-branch-that-does-not-touch-serve.md
   item: S-0473
-status: answered
+status: resolved
 participants: [planner-S-0473, orchestrator, agent-S-0473, alex]
 created: 2026-10-21T12:08:46Z
-updated: 2026-10-21T12:43:55Z
+updated: 2026-10-21T13:05:46Z
 ---
 
 # TH-0574 Plan for S-0473: pin the test's run times, then close I-0158
@@ -74,3 +74,6 @@ flai edit S-0473 --cost-of-delay-value 190
 Or, to set the input the planner suggested so that `flai cod` works the value out, `flai edit S-0473 --time-lost-per-cycle 73m`, which gives about 182.50.
 
 Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md
+
+### 2026-10-21T13:05:46Z orchestrator
+Resolved: The plan was settled: S-0473's agent kept T-1992 and the story is in review. The operator's "Set COD to 190" stays theirs to run, since flai gives the orchestrator a cost of delay on backlog stories only: flai edit S-0473 --cost-of-delay-value 190.

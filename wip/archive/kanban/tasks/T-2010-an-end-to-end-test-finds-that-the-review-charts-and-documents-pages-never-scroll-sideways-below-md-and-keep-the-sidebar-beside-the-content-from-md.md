@@ -3,11 +3,11 @@ id: T-2010
 type: task
 nature: feature
 title: An end-to-end test finds that the review, charts, and documents pages never scroll sideways below md and keep the sidebar beside the content from md
-status: in-progress
+status: done
 parent: S-0461
 owner: alex
 created: 2026-10-21T12:18:59Z
-updated: 2026-10-21T12:49:10Z
+updated: 2026-10-21T12:53:10Z
 transitions:
   - to: ready
     at: 2026-10-21T12:19:35Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-21T12:19:36Z
     by: agent-S-0461
+  - to: done
+    at: 2026-10-21T12:53:10Z
+    by: agent-S-0461
 stream: S-0461
 tags: []
 touches: [flaiover/e2e/page-sidebar.e2e.ts]
 after: [T-1965, T-1966, T-1967, T-2011]
+usage:
+  source: log
+  seconds: 2014
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 81
+      output: 37713
+      cache_read: 4817683
+      cache_write: 167081
+      cost: 2.7075
 ---
 # T-2010 An end-to-end test finds that the review, charts, and documents pages never scroll sideways below md and keep the sidebar beside the content from md
 

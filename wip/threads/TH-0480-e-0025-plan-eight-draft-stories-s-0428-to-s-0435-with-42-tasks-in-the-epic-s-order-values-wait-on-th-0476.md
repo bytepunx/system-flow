@@ -4,10 +4,10 @@ title: "E-0025 plan: eight draft stories, S-0428 to S-0435, with 42 tasks, in th
 anchor:
   path: wip/kanban/epics/E-0025-a-digest-of-the-archive-kept-by-an-agent-and-decayed-as-the-design-absorbs-it-primes-a-story-s-agent-with-what-past-stories-decided-and-what-the-operator-answered-so-the-same-question-is-not-asked-twice.md
   item: E-0025
-status: open
-participants: [planner-E-0025, orchestrator]
+status: answered
+participants: [planner-E-0025, orchestrator, alex]
 created: 2026-10-16T06:14:47Z
-updated: 2026-10-21T11:05:04Z
+updated: 2026-10-21T13:01:30Z
 ---
 
 # TH-0480 E-0025 plan: eight draft stories, S-0428 to S-0435, with 42 tasks, in the epic's order; values wait on TH-0476
@@ -100,5 +100,10 @@ Recommended: approve E-0025's plan as drafted, with the update of 2026-10-20: S-
 - The eight drafts follow the planner's answers on TH-0476. I recommend taking those answers there, with 4h a cycle on E-0025.
 - Once that input is on the epic, each story's planner run writes its value.
 - Accepting S-0431 stays yours alone, because it changes `.claude/agents` (ADR-0106).
+
+Source: design/conventions/strategic-agents.md § As the planner
+
+### 2026-10-21T13:01:30Z alex
+Confirmed the recommendation of 2026-10-21T11:05:04Z orchestrator.
 
 Source: design/conventions/strategic-agents.md § As the planner

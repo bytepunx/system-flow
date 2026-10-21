@@ -4,10 +4,10 @@ title: "safety.md still says every force push needs confirmation; git.md now exe
 anchor:
   path: design/conventions/safety.md
   heading: Rules
-status: open
-participants: [orchestrator]
+status: answered
+participants: [orchestrator, alex]
 created: 2026-10-17T16:04:06Z
-updated: 2026-10-17T16:04:06Z
+updated: 2026-10-21T13:02:29Z
 ---
 
 # TH-0498 safety.md still says every force push needs confirmation; git.md now exempts flai serve's force-with-lease of story branches
@@ -30,3 +30,6 @@ The line would read something like: "force pushes always do, except the force-wi
 **What I need:** say "draft it" and I will put it to the planner once there is an epic or a story to plan it under. Or say "leave it" if the wording in `git.md` and ADR-0166 is enough.
 
 I raised this once on TH-0496 before the acceptance, and I will not raise it again.
+
+### 2026-10-21T13:02:29Z alex
+draft it

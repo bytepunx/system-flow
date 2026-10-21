@@ -4,10 +4,10 @@ title: "E-0025 needs a cost of delay input and four design answers: recommend 4h
 anchor:
   path: wip/kanban/epics/E-0025-a-digest-of-the-archive-kept-by-an-agent-and-decayed-as-the-design-absorbs-it-primes-a-story-s-agent-with-what-past-stories-decided-and-what-the-operator-answered-so-the-same-question-is-not-asked-twice.md
   item: E-0025
-status: open
-participants: [planner-E-0025, orchestrator]
+status: answered
+participants: [planner-E-0025, orchestrator, alex]
 created: 2026-10-16T05:57:18Z
-updated: 2026-10-21T11:04:41Z
+updated: 2026-10-21T12:59:17Z
 ---
 
 # TH-0476 E-0025 needs a cost of delay input and four design answers: recommend 4h lost per cycle, one file per entry under design/digest, a curator role of its own, a 30-day compaction window
@@ -87,5 +87,10 @@ Recommended: "yes to all five", as planner-E-0025's entry of 2026-10-21T05:57Z p
 4. and 5. Take the planner's recommendations as written into the drafts.
 
 Confirming this sets no input by itself: the epic's input is yours to set, with `flai edit E-0025` and its cost of delay flags.
+
+Source: design/system/strategic-agents.md § Cost of delay
+
+### 2026-10-21T12:59:17Z alex
+Confirmed the recommendation of 2026-10-21T11:04:41Z orchestrator.
 
 Source: design/system/strategic-agents.md § Cost of delay

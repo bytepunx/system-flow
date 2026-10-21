@@ -3,15 +3,36 @@ id: T-1998
 type: task
 nature: remediation
 title: An ADR decides that flai accept runs a sub-project's install command in the main checkout when the accepted change touched its lock file
-status: backlog
+status: done
 parent: S-0483
 owner: alex
 created: 2026-10-21T12:10:03Z
-updated: 2026-10-21T12:10:03Z
-transitions: []
+updated: 2026-10-21T13:06:56Z
+transitions:
+  - to: ready
+    at: 2026-10-21T13:05:47Z
+    by: agent-S-0483
+  - to: in-progress
+    at: 2026-10-21T13:05:49Z
+    by: agent-S-0483
+  - to: done
+    at: 2026-10-21T13:06:56Z
+    by: agent-S-0483
 stream: S-0483
 tags: [flai]
-touches: [design/adrs/README.md, design/system/project-manifest.md, design/system/flai-cli.md]
+touches: [design/adrs/README.md, design/system/project-manifest.md, design/system/flai-cli.md, design/adrs/0185-flai-accept-runs-a-sub-project-s-install-command-in-the-main-checkout-when-the.md]
+usage:
+  source: log
+  seconds: 61
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 22
+      output: 120
+      cache_read: 1715130
+      cache_write: 20714
+      cost: 0.5895
 ---
 # T-1998 An ADR decides that flai accept runs a sub-project's install command in the main checkout when the accepted change touched its lock file
 

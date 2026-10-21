@@ -22,6 +22,18 @@ stream: S-0479
 tags: []
 touches: [design/system/work-hierarchy.md, design/adrs, design/issues/I-0175-a-story-s-in-progress-transition-from-flai-story-start-was-lost-when-a-concurrent-write-rewrote-the-item-file-leaving-it-ready-while-its-agent-worked-it.md, design/issues/summary.md, design/issues/I-0176-a-usage-write-to-a-story-overwrites-its-move-to-in-progress-made-meanwhile-so-a-started-story-reads-as-ready-again.md]
 after: [T-2008]
+usage:
+  source: log
+  seconds: 60
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 14
+      output: 166
+      cache_read: 1632851
+      cache_write: 10884
+      cost: 0.5569
 ---
 # T-2009 The design and an ADR say how concurrent item writes merge, and I-0175 and I-0176 are closed
 

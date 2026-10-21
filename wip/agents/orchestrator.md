@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1169.3533
-accrued_seconds: 1046553
-tasks_completed: 838
-last_run: 2026-10-21T12:44:21Z
+accrued_cost: 1190.5362
+accrued_seconds: 1047871
+tasks_completed: 845
+last_run: 2026-10-21T13:06:19Z
 ---
 
 # Orchestrator activity
@@ -5877,6 +5877,55 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0422
 - Seconds: 18
 - Cost: 0.3616 USD, estimated
+
+### 2026-10-21T12:49:48Z
+
+- Summary: S-0482 landed through the merge queue (enqueued by me). Published under publish, policy judgement. Pending: 2 stories worth 62.5 USD/week, none held by whole_epics. Released flai 1.67.10 (tag flai/v1.67.10, patch, from 1.67.9) with S-0482, and flaiover 0.54.1 (tag flaiover/v0.54.1, patch, from 0.54.0) with S-0474. Pushed. S-0474 no longer waits for S-0461, which gained a task.
+- Items: S-0482, S-0474
+- Seconds: 327
+- Cost: 4.7666 USD, estimated
+
+### 2026-10-21T12:58:29Z
+
+- Summary: Answered TH-0582, citing design/conventions/strategic-agents.md § As the planner
+- Items: S-0422
+- Seconds: 521
+- Cost: 11.0525 USD, estimated
+
+### 2026-10-21T12:58:41Z
+
+- Summary: Under plan_backlog_stories, settled planner-S-0422's TH-0582: approved the replan on TH-0471 answer 5 (a story's agent works a formula instance; seven tasks in three layers, 41 touches, 1h25m, hand-worked 64.07 USD/week), the rewrites of T-1774 to T-1779, and the new T-2012 (flai formula run --ready), which the story's schedule-start criterion needs. Resolved the thread. The operator resolved TH-0471.
+- Items: S-0422
+- Seconds: 12
+- Cost: 0.0000 USD
+
+### 2026-10-21T13:02:20Z
+
+- Summary: S-0422's planner applied the rewrites and ended. The operator confirmed my TH-0476 recommendation (4h on E-0025 and the design answers); the input is not yet on E-0025. Under plan_backlog_stories, started the planner for S-0423 (pid 3190459), next in flai plan --candidates. It must replan for TH-0471 answers 2 and 5.
+- Items: S-0422, S-0423, E-0025
+- Seconds: 219
+- Cost: 2.6636 USD, estimated
+
+### 2026-10-21T13:03:29Z
+
+- Summary: Enqueued S-0461 in the merge queue under accept_reviews at c4d04d3b, first in the queue (alone). It is the last open story of E-0027, which followed it to review. flai verify passed at the branch head. The verifier matched all five criteria to changed files within touches; criterion 3 reads headings from the rendered HTML in place of headingsOf, for a reason the story records. PageSidebar's examples follow its new props.
+- Items: S-0461, E-0027
+- Seconds: 69
+- Cost: 0.8767 USD, estimated
+
+### 2026-10-21T13:04:17Z
+
+- Summary: The operator resolved TH-0578 and kept S-0483, which is not cancelled, so its question is settled. Under promote_to_ready, moved S-0483 to ready as candidate 1 by throughput (1h, 37.50 USD/week). S-0241 (2h) stays out, blocked. Under order_ready, applied the throughput order: S-0483 alone.
+- Items: S-0483
+- Seconds: 48
+- Cost: 0.6790 USD, estimated
+
+### 2026-10-21T13:06:19Z
+
+- Summary: S-0473 reached review at 562d5e44. queue_add would have refused it on TH-0574, its planner's thread, which I resolved under plan_backlog_stories since the plan is settled; the operator's COD 190 stays theirs to set. flai verify passed at the head, and the verifier found both criteria met by a deterministic test fix in agents_test.go and the closed I-0158, with no production change. Enqueued S-0473, second in the queue behind S-0461 (batch 20261021-130439 verifying flaiover), value 112.50 USD/week.
+- Items: S-0473
+- Seconds: 122
+- Cost: 1.1445 USD, estimated
 
 ## Refusals
 

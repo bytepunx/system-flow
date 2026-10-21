@@ -3,11 +3,11 @@ id: T-2011
 type: task
 nature: feature
 title: A thread's message, the review narrative's long paths, and the charts page's epic list wrap or narrow within a phone's width
-status: in-progress
+status: done
 parent: S-0461
 owner: alex
 created: 2026-10-21T12:49:03Z
-updated: 2026-10-21T12:49:26Z
+updated: 2026-10-21T12:52:53Z
 transitions:
   - to: ready
     at: 2026-10-21T12:49:25Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-21T12:49:26Z
     by: agent-S-0461
+  - to: done
+    at: 2026-10-21T12:52:53Z
+    by: agent-S-0461
 stream: S-0461
 tags: []
 touches: [flaiover/src/lib/components/Threads.svelte, flaiover/src/lib/components/Review.svelte, "flaiover/src/routes/charts/[kind]/+page.svelte"]
+usage:
+  source: log
+  seconds: 207
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 8
+      output: 3926
+      cache_read: 501486
+      cache_write: 17392
+      cost: 0.2818
 ---
 
 # T-2011 A thread's message, the review narrative's long paths, and the charts page's epic list wrap or narrow within a phone's width

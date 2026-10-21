@@ -3,10 +3,10 @@ id: TH-0505
 title: The host's flai 1.57.0 is older than flai 1.62.0 in this project's history
 anchor:
   path: system-flow.yaml
-status: open
-participants: [flai serve]
+status: resolved
+participants: [flai serve, alex]
 created: 2026-10-18T02:24:01Z
-updated: 2026-10-18T02:24:01Z
+updated: 2026-10-21T12:53:20Z
 ---
 
 # TH-0505 The host's flai 1.57.0 is older than flai 1.62.0 in this project's history
@@ -23,3 +23,6 @@ Upgrade it in a shell on the host with: flai host upgrade --version 1.62.0
 Or have flai serve upgrade the host whenever this project's history gets ahead of it: run flai serve enable auto-upgrade in the project (ADR-0158).
 
 flai serve asks once for each release: a newer one asks again.
+
+### 2026-10-21T12:53:20Z alex
+Resolved.

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 444
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 48
-      output: 211
-      cache_read: 1782197
-      cache_write: 100773
-      cost: 0.638
+      input: 40
+      output: 16861
+      cache_read: 1861803
+      cache_write: 66291
+      cost: 1.1136
 ---
 # T-1991 A benchmark and a reference test replay the holds over a generated history of this repository's size, and the profile names the fix
 

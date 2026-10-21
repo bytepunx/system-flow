@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 322
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 30
-      output: 158
-      cache_read: 1401975
-      cache_write: 99324
-      cost: 0.5085
+      input: 25
+      output: 11648
+      cache_read: 1488017
+      cache_write: 51606
+      cost: 0.8363
 ---
 # T-1966 The charts page lists its groups and kinds in the sidebar in place of the row above the chart
 

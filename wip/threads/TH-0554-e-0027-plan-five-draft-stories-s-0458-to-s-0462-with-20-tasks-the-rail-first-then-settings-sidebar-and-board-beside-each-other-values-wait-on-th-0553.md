@@ -4,10 +4,10 @@ title: "E-0027 plan: five draft stories, S-0458 to S-0462, with 20 tasks; the ra
 anchor:
   path: wip/kanban/epics/E-0027-rework-main-layout.md
   item: E-0027
-status: answered
+status: resolved
 participants: [planner-E-0027, orchestrator, alex]
 created: 2026-10-21T07:06:42Z
-updated: 2026-10-21T12:46:15Z
+updated: 2026-10-21T13:03:21Z
 ---
 
 # TH-0554 E-0027 plan: five draft stories, S-0458 to S-0462, with 20 tasks; the rail first, then settings, sidebar, and board beside each other; values wait on TH-0553
@@ -88,3 +88,6 @@ Source: design/conventions/strategic-agents.md § As the planner
 Confirmed the recommendation of 2026-10-21T11:04:47Z orchestrator.
 
 Source: design/conventions/strategic-agents.md § As the planner
+
+### 2026-10-21T13:03:21Z alex
+Resolved.

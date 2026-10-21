@@ -23,16 +23,16 @@ tags: []
 touches: [flai/internal/serve/agents_test.go, design/issues/I-0158-testasettledreplystartstheagentwaitingonitonce-in-flai-internal-serve-fails-now-and-then-in-the-close-out-s-integration-tier-on-a-branch-that-does-not-touch-serve.md, design/issues/summary.md]
 usage:
   source: log
-  seconds: 11
+  seconds: 13
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 2
-      output: 16
-      cache_read: 139725
-      cache_write: 1683
-      cost: 0.0479
+      output: 444
+      cache_read: 137338
+      cache_write: 4070
+      cost: 0.0689
 ---
 
 # T-1992 TestASettledReplyStartsTheAgentWaitingOnItOnce writes its message before the other story's run started, so a turning second cannot make it new

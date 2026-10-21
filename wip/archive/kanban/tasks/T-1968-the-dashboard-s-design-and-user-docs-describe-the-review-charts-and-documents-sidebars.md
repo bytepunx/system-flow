@@ -24,16 +24,16 @@ touches: [design/system/flaiover-dashboard.md, docs/users/flaiover.md]
 after: [T-1965, T-1966, T-1967, T-1984]
 usage:
   source: log
-  seconds: 23
+  seconds: 1801
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 10
-      output: 40
-      cache_read: 1055087
-      cache_write: 6783
-      cost: 0.3596
+      input: 93
+      output: 43360
+      cache_read: 5539086
+      cache_write: 192100
+      cost: 3.1129
 ---
 # T-1968 The dashboard's design and user docs describe the review, charts, and documents sidebars
 

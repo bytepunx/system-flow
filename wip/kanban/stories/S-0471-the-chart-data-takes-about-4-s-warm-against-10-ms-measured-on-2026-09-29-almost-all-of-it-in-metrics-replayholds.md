@@ -3,10 +3,10 @@ id: S-0471
 type: story
 nature: remediation
 title: The chart data takes about 4 s warm, against 10 ms measured on 2026-09-29, almost all of it in metrics.replayHolds
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-21T11:58:35Z
-updated: 2026-10-21T12:40:01Z
+updated: 2026-10-21T13:05:30Z
 transitions:
   - to: ready
     at: 2026-10-21T12:10:31Z
@@ -14,9 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-21T12:13:10Z
     by: agent-S-0471
+  - to: review
+    at: 2026-10-21T13:05:30Z
+    by: agent-S-0471
 tags: [flai]
 topics: [metrics, performance]
-touches: [flai/internal/metrics/claims.go, flai/internal/metrics/claims_test.go, flai/internal/metrics/claims_bench_test.go, flai/internal/workitem/hold.go, design/system/server-performance.md, design/issues/I-0155-the-chart-data-takes-about-4-s-warm-against-10-ms-measured-on-2026-09-29-almost-all-of-it-in-metrics-replayholds.md, design/issues/summary.md, flai/internal/workitem/hold_test.go]
+touches: [flai/internal/metrics/claims.go, flai/internal/metrics/claims_test.go, flai/internal/metrics/claims_bench_test.go, flai/internal/workitem/hold.go, design/system/server-performance.md, design/issues/I-0155-the-chart-data-takes-about-4-s-warm-against-10-ms-measured-on-2026-09-29-almost-all-of-it-in-metrics-replayholds.md, design/issues/summary.md, flai/internal/workitem/hold_test.go, design/issues/I-0184-every-stats-get-and-flai-stats-runs-one-git-log-for-claims-drift-about-450-ms-of-a-900-ms-warm-answer.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,20 +27,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1613
-  estimated: true
-  priced_by: estimate
+  seconds: 3153
+  priced_by: harness
   turns:
     - day: 2026-10-21
-      hand_edits: 3
-      work: 17
+      hand_edits: 4
+      work: 29
   models:
     - model: claude-opus-5-5
-      input: 254
-      output: 1204
-      cache_read: 11659015
-      cache_write: 492454
-      cost: 4.1173
+      input: 394
+      output: 165524
+      cache_read: 18277379
+      cache_write: 650781
+      cost: 10.9318
   strategic:
     - kind: orchestrator
       seconds: 18
@@ -74,8 +76,8 @@ finalized:
 This story remediates [I-0155](../../../design/issues/I-0155-the-chart-data-takes-about-4-s-warm-against-10-ms-measured-on-2026-09-29-almost-all-of-it-in-metrics-replayholds.md), "The chart data takes about 4 s warm, against 10 ms measured on 2026-09-29, almost all of it in metrics.replayHolds". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0155 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0155 is closed with `flai issue close I-0155 --reason` saying what fixed it
+- [x] The cause I-0155 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0155 is closed with `flai issue close I-0155 --reason` saying what fixed it
 
 ## Tasks
 - T-1991 A benchmark and a reference test replay the holds over a generated history of this repository's size, and the profile names the fix

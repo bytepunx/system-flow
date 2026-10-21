@@ -24,16 +24,16 @@ touches: [flai/internal/metrics/claims.go, flai/internal/metrics/claims_test.go,
 after: [T-1991]
 usage:
   source: log
-  seconds: 1113
+  seconds: 1114
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 188
-      output: 873
-      cache_read: 9122319
-      cache_write: 255957
-      cost: 3.1776
+      input: 200
+      output: 83977
+      cache_read: 9272802
+      cache_write: 330166
+      cost: 5.5461
 ---
 # T-1993 replayHolds judges the holds again only at an event that can change one, over only the open stories, giving the reference replay's result
 

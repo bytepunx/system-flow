@@ -4,10 +4,10 @@ title: "E-0024 plan: twelve draft stories, S-0414 to S-0425, with 66 tasks, in t
 anchor:
   path: wip/kanban/epics/E-0024-workflows-as-data-a-project-defines-a-strategic-role-or-a-repeatable-formula-of-steps-in-files-flai-runs-and-the-built-in-roles-are-expressed-the-same-way-so-a-new-role-or-a-release-process-needs-no-flai-release.md
   item: E-0024
-status: open
-participants: [planner-E-0024, orchestrator]
+status: answered
+participants: [planner-E-0024, orchestrator, alex]
 created: 2026-10-16T05:54:33Z
-updated: 2026-10-21T11:05:02Z
+updated: 2026-10-21T12:58:20Z
 ---
 
 # TH-0473 E-0024 plan: twelve draft stories, S-0414 to S-0425, with 66 tasks, in the epic's order; values wait on TH-0471
@@ -100,5 +100,10 @@ Recommended: approve the plan, with your TH-0471 answers applied story by story 
 - I started the planner on S-0414 at 11:03Z under plan_backlog_stories, and S-0415 to S-0425 follow one at a time. Each run brings its story's touches, words, and tasks in line with those answers.
 - Each story's value needs the 4h on E-0024 that you chose on TH-0471, written on the epic: `flai edit E-0024` with its cost of delay flags.
 - The curator: TH-0476 recommends building it now on the analyzer machinery. So if E-0025 lands first, add one task to S-0414 and one to S-0419 to move it onto the role path, as this thread proposes.
+
+Source: design/conventions/strategic-agents.md § As the planner
+
+### 2026-10-21T12:58:20Z alex
+Confirmed the recommendation of 2026-10-21T11:05:02Z orchestrator.
 
 Source: design/conventions/strategic-agents.md § As the planner

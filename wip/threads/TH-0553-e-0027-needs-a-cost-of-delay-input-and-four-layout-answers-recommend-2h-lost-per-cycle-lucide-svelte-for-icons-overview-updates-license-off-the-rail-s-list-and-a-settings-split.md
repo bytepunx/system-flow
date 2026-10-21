@@ -4,10 +4,10 @@ title: "E-0027 needs a cost of delay input and four layout answers: recommend 2h
 anchor:
   path: wip/kanban/epics/E-0027-rework-main-layout.md
   item: E-0027
-status: answered
+status: resolved
 participants: [planner-E-0027, orchestrator, alex]
 created: 2026-10-21T06:58:10Z
-updated: 2026-10-21T12:46:52Z
+updated: 2026-10-21T13:03:19Z
 ---
 
 # TH-0553 E-0027 needs a cost of delay input and four layout answers: recommend 2h lost per cycle, @lucide/svelte for icons, Overview/Updates/License off the rail's list, and a settings split
@@ -61,3 +61,6 @@ Source: design/system/strategic-agents.md § Cost of delay
 Confirmed the recommendation of 2026-10-21T11:04:44Z orchestrator.
 
 Source: design/system/strategic-agents.md § Cost of delay
+
+### 2026-10-21T13:03:19Z alex
+Resolved.

@@ -3,16 +3,19 @@ id: S-0473
 type: story
 nature: remediation
 title: TestASettledReplyStartsTheAgentWaitingOnItOnce in flai/internal/serve fails now and then in the close-out's integration tier on a branch that does not touch serve
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-21T11:58:53Z
-updated: 2026-10-21T12:40:57Z
+updated: 2026-10-21T13:05:28Z
 transitions:
   - to: ready
     at: 2026-10-21T12:05:25Z
     by: alex
   - to: in-progress
     at: 2026-10-21T12:06:08Z
+    by: agent-S-0473
+  - to: review
+    at: 2026-10-21T13:05:28Z
     by: agent-S-0473
 tags: []
 touches: [flai/internal/serve/agents_test.go, design/issues/I-0158-testasettledreplystartstheagentwaitingonitonce-in-flai-internal-serve-fails-now-and-then-in-the-close-out-s-integration-tier-on-a-branch-that-does-not-touch-serve.md, design/issues/summary.md, design/issues/I-0183-flai-check-finds-item-chronology-outside-the-story-at-close-out.md]
@@ -23,31 +26,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 286
-  estimated: true
-  priced_by: estimate
+  seconds: 3572
+  priced_by: harness
   turns:
     - day: 2026-10-21
-      hand_edits: 2
-      work: 19
+      ceremony: 3
+      hand_edits: 3
+      work: 36
   models:
     - model: claude-opus-5-5
-      input: 42
-      output: 356
-      cache_read: 2206353
-      cache_write: 127568
-      cost: 0.7901
+      input: 86
+      output: 18792
+      cache_read: 5810132
+      cache_write: 172185
+      cost: 2.9157
   strategic:
     - kind: orchestrator
-      seconds: 527
+      seconds: 649
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 133
-          output: 2167
-          cache_read: 25881209
-          cache_write: 41873
-          cost: 5.7241
+          input: 149
+          output: 2387
+          cache_read: 30817894
+          cache_write: 49846
+          cost: 6.8159
+        - model: claude-sonnet-5-5
+          input: 6
+          output: 50
+          cache_read: 47656
+          cache_write: 28940
+          cost: 0.0527
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 45m

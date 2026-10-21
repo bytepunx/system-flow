@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 327
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 30
-      output: 167
-      cache_read: 1033899
-      cache_write: 72265
-      cost: 0.3747
+      input: 19
+      output: 8582
+      cache_read: 1096385
+      cache_write: 38024
+      cost: 0.6162
 ---
 # T-1967 The documents page holds the document tree and the open document's headings in the sidebar
 

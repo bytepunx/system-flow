@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 766
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 82
-      output: 413
-      cache_read: 4559324
-      cache_write: 161474
-      cost: 1.5989
+      input: 79
+      output: 36627
+      cache_read: 4679022
+      cache_write: 162273
+      cost: 2.6296
 ---
 # T-1965 The review page's sidebar scrolls to its criteria, state, threads, each changed file, and release plan
 
