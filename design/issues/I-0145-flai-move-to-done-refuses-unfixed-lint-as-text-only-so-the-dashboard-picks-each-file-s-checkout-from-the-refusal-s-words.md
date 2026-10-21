@@ -2,12 +2,12 @@
 id: I-0145
 title: flai move to done refuses unfixed lint as text only, so the dashboard picks each file's checkout from the refusal's words
 class: impression
-status: open
+status: closed
 count: 1
 cost: 10m
 first_reported: 2026-10-13T18:47:09Z
 last_reported: 2026-10-13T18:47:09Z
-updated: 2026-10-21T07:24:59Z
+updated: 2026-10-21T08:08:39Z
 ---
 
 # I-0145 flai move to done refuses unfixed lint as text only, so the dashboard picks each file's checkout from the refusal's words
@@ -24,3 +24,4 @@ S-0378 made `flai accept --json` refuse markdown the lint fix left with exit 4 a
 ## Remediation
 
 Story S-0465 remediates this issue, created from it at 2026-10-21T07:24:59Z.
+Closed 2026-10-21T08:08:39Z: S-0465: flai move <story> done --json now refuses as flai accept --json does (exit 4, the refused object with each finding's checkout), item.move answers it as Refused with that data, and the board and the item page list the findings through AcceptFindings, so linkSegments no longer reads flai's wording to pick a file's checkout.
