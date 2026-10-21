@@ -43,6 +43,7 @@ vi.mock('echarts/renderers', () => ({ CanvasRenderer: {} }));
 
 import ChartsPage from './+page.svelte';
 import { chartWindow } from '$lib/chartwindow.svelte';
+import { KINDS } from '$lib/viz/charts';
 
 const opus = (items: number, tokens: number, cost: number, seconds: number) => ({
 	model: 'claude-opus-5-5',
@@ -135,6 +136,12 @@ const settle = async () => {
 };
 const text = (sel: string) =>
 	document.querySelector(sel)?.textContent?.replace(/\s+/g, ' ').trim() ?? null;
+/** The links the sidebar lists under a group's label, in order (S-0461). */
+const group = (name: string) => [
+	...(document
+		.querySelector(`[data-sidebar-entry="group-${name}"]`)
+		?.parentElement?.querySelectorAll<HTMLAnchorElement>('[data-sidebar-link]') ?? [])
+];
 const choose = async (testid: string, value: string) => {
 	const el = document.querySelector<HTMLSelectElement>(`[data-testid="${testid}"]`)!;
 	el.value = value;
@@ -180,9 +187,7 @@ describe('the charts page (S-0163)', () => {
 
 	it('lists the flow charts and the usage charts apart, and draws tokens per day with its table', async () => {
 		await open('tokens-spent');
-		expect(
-			[...document.querySelectorAll('[data-testid="charts-flow"] a')].map((l) => l.textContent)
-		).toEqual([
+		expect(group('flow').map((l) => l.textContent!.trim())).toEqual([
 			'Cycle Time',
 			'Burn-up',
 			'Cumulative Flow',
@@ -191,9 +196,7 @@ describe('the charts page (S-0163)', () => {
 			'Agent Waiting',
 			'Merge Queue'
 		]);
-		expect(
-			[...document.querySelectorAll('[data-testid="charts-usage"] a')].map((l) => l.textContent)
-		).toEqual([
+		expect(group('usage').map((l) => l.textContent!.trim())).toEqual([
 			'Tokens / Min',
 			'Tokens / Day',
 			'Tokens per item',
@@ -651,8 +654,8 @@ describe('the planning charts (S-0212)', () => {
 
 	it('lists the planning charts as a third group, each opening its chart', async () => {
 		await open('forecast-accuracy');
-		const links = [...document.querySelectorAll('[data-testid="charts-planning"] a')];
-		expect(links.map((l) => [l.textContent, l.getAttribute('href')])).toEqual([
+		const links = group('planning');
+		expect(links.map((l) => [l.textContent!.trim(), l.getAttribute('href')])).toEqual([
 			['Forecast Accuracy', '/charts/forecast-accuracy'],
 			['Delivery Accuracy', '/charts/delivery-accuracy'],
 			['Forecast Error / Model', '/charts/forecast-by-model'],
@@ -1403,13 +1406,15 @@ describe('the strategic charts (S-0216)', () => {
 
 	it('lists the strategic charts as a fourth group and states the ratio on Strategic Cost', async () => {
 		await open('strategic-cost');
-		const links = [...document.querySelectorAll('[data-testid="charts-strategic"] a')];
-		expect(links.map((l) => [l.textContent, l.getAttribute('href')])).toEqual([
+		const links = group('strategic');
+		expect(links.map((l) => [l.textContent!.trim(), l.getAttribute('href')])).toEqual([
 			['Strategic Cost', '/charts/strategic-cost'],
 			['Strategic Use', '/charts/strategic-use']
 		]);
-		const navs = [...document.querySelectorAll('nav')].map((n) => n.getAttribute('data-testid'));
-		expect(navs).toEqual(['charts-flow', 'charts-usage', 'charts-planning', 'charts-strategic']);
+		const labels = [...document.querySelectorAll('[data-sidebar-label]')].map((l) =>
+			l.textContent!.trim()
+		);
+		expect(labels).toEqual(['flow', 'usage', 'planning', 'strategic']);
 		expect(text('h1')).toBe('Strategic Cost');
 		expect(controls()).toEqual(['window', 'type']);
 		expect(text('[data-testid="strategic-summary"]')).toBe(
@@ -1590,9 +1595,7 @@ describe('the cost of delay charts (S-0213)', () => {
 
 	it('lists the three cost of delay charts under planning, after the forecast and claims charts, with the window and the type to choose', async () => {
 		await open('cod-outstanding');
-		expect(
-			[...document.querySelectorAll('[data-testid="charts-planning"] a')].map((l) => l.textContent)
-		).toEqual([
+		expect(group('planning').map((l) => l.textContent!.trim())).toEqual([
 			'Forecast Accuracy',
 			'Delivery Accuracy',
 			'Forecast Error / Model',
@@ -1603,17 +1606,6 @@ describe('the cost of delay charts (S-0213)', () => {
 			'CoD Outstanding',
 			'CoD Incurred',
 			'CoD by Order'
-		]);
-		expect(
-			[...document.querySelectorAll('nav')].map((n) => [
-				n.dataset.testid,
-				n.classList.contains('mb-3')
-			])
-		).toEqual([
-			['charts-flow', false],
-			['charts-usage', false],
-			['charts-planning', false],
-			['charts-strategic', true]
 		]);
 		expect(text('h1')).toBe('CoD Outstanding');
 		expect(
@@ -1723,5 +1715,110 @@ describe('the cost of delay charts (S-0213)', () => {
 		expect(older('does not count the items without a value')).toBe(true);
 		expect(document.querySelector('[data-testid="cod-without-value"]')).toBeNull();
 		expect(rows('cod-week-table').length).toBe(2);
+	});
+});
+
+describe('the sidebar of charts (S-0461)', () => {
+	let c: ReturnType<typeof mount> | undefined;
+	beforeEach(() => {
+		globalThis.ResizeObserver = class {
+			observe() {}
+			disconnect() {}
+			unobserve() {}
+		} as unknown as typeof ResizeObserver;
+		api.mockImplementation(async (url: string) => {
+			if (url.startsWith('/api/items')) return answer([]);
+			const bucket = new URL(url, 'http://localhost').searchParams.get('bucket') ?? 'day';
+			return answer(reportIn(bucket));
+		});
+	});
+	afterEach(() => {
+		if (c) unmount(c);
+		c = undefined;
+		api.mockReset();
+		setOption.mockClear();
+		document.body.innerHTML = '';
+		chartWindow.set('30d');
+	});
+	const open = async (kind: string) => {
+		at.params.kind = kind;
+		c = mount(ChartsPage, { target: document.body });
+		await settle();
+	};
+	/** Goes to another chart on the same page, as the router does on following a link. */
+	const go = async (kind: string) => {
+		at.params.kind = kind;
+		at.moved();
+		await settle();
+	};
+	const nav = () => document.querySelector<HTMLElement>('nav[aria-label="Charts"]')!;
+	const links = () => [...nav().querySelectorAll<HTMLAnchorElement>('[data-sidebar-link]')];
+	const currents = () =>
+		[...document.querySelectorAll('[aria-current]')].map((a) => [
+			a.getAttribute('data-sidebar-entry'),
+			a.getAttribute('aria-current')
+		]);
+
+	it('lists the groups as labels in order over a link to every chart, in place of the rows above it', async () => {
+		await open('cfd');
+		expect(document.querySelectorAll('nav').length).toBe(1);
+		const labels = [...nav().querySelectorAll('[data-sidebar-label]')];
+		expect(labels.map((l) => l.textContent!.trim())).toEqual([
+			'flow',
+			'usage',
+			'planning',
+			'strategic'
+		]);
+		expect(labels.every((l) => l.closest('a') === null)).toBe(true);
+		// every chart once, each a link to its own page with no hash
+		expect(
+			links()
+				.map((a) => a.dataset.sidebarEntry)
+				.sort()
+		).toEqual([...KINDS].sort());
+		for (const a of links())
+			expect(a.getAttribute('href')).toBe(`/charts/${a.dataset.sidebarEntry}`);
+		expect(currents()).toEqual([['cfd', 'page']]);
+		expect(text('[data-sidebar-entry="cfd"]')).toBe('Cumulative Flow');
+	});
+
+	it('makes the chart chosen current and draws it, leaving the hash alone', async () => {
+		await open('cycle-time');
+		expect(currents()).toEqual([['cycle-time', 'page']]);
+		const href = document
+			.querySelector('[data-sidebar-entry="tokens-spent"]')!
+			.getAttribute('href');
+		expect(href).toBe('/charts/tokens-spent');
+		await go('tokens-spent');
+		expect(currents()).toEqual([['tokens-spent', 'page']]);
+		expect(text('h1')).toBe('Tokens / Day');
+		expect(location.hash).toBe('');
+		await go('strategic-use');
+		expect(currents()).toEqual([['strategic-use', 'page']]);
+		expect(text('h1')).toBe('Strategic Use');
+	});
+
+	it('keeps the window and the other controls with the chart, in the content beside the sidebar', async () => {
+		await open('cost-spent');
+		const content = document.querySelector('[data-sidebar-content]')!;
+		const window = document.querySelector('[data-testid="window"]')!;
+		expect(nav().contains(window)).toBe(false);
+		expect(content.contains(window)).toBe(true);
+		expect(content.contains(document.querySelector('[data-testid="bucket"]'))).toBe(true);
+		expect(content.querySelector('h1')?.textContent).toBe('$ / Day');
+		// the links name the charts by the bucket chosen, as the chart's title does
+		await choose('bucket', 'hour');
+		expect(text('[data-sidebar-entry="cost-spent"]')).toBe('$ / Hour');
+		expect(currents()).toEqual([['cost-spent', 'page']]);
+	});
+
+	it('scrolls the sidebar within itself below md and wraps the controls, so the page does not scroll sideways', async () => {
+		await open('cycle-time');
+		const top = nav().querySelector('[data-sidebar-list="top"]')!;
+		expect(top.classList).toContain('overflow-x-auto');
+		expect(nav().classList).toContain('min-w-0');
+		expect(document.querySelector('[data-sidebar-content]')!.classList).toContain('min-w-0');
+		const controls = document.querySelector('[data-testid="window"]')!.closest('div')!;
+		expect(controls.classList).toContain('flex-wrap');
 	});
 });
