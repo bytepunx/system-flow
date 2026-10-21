@@ -26,9 +26,6 @@ import (
 func project(t *testing.T) *workitem.Repo {
 	t.Helper()
 	root := t.TempDir()
-	if err := os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".flai-cache/\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
 	manifest := "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\nprojects:\n  - name: cli\n    path: cli\n"
 	if err := os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte(manifest), 0o644); err != nil {
 		t.Fatal(err)
@@ -103,8 +100,16 @@ func TestReadInARepositoryReadsTheCommits(t *testing.T) {
 	r := execx.System{}
 	for _, args := range [][]string{
 		{"init", "-q", "-b", "main"}, {"config", "user.email", "t@t"}, {"config", "user.name", "t"},
-		{"add", "-A"}, {"commit", "-q", "-m", "feat: [S-0001] the story"},
 	} {
+		if out, err := r.Run(repo.Root, "git", args...); err != nil {
+			t.Fatal(out, err)
+		}
+	}
+	// the items lock lives in .flai-cache, which the commit must not carry
+	if err := os.WriteFile(filepath.Join(repo.Root, ".git", "info", "exclude"), []byte(".flai-cache/\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{{"add", "-A"}, {"commit", "-q", "-m", "feat: [S-0001] the story"}} {
 		if out, err := r.Run(repo.Root, "git", args...); err != nil {
 			t.Fatal(out, err)
 		}
