@@ -89,12 +89,18 @@ type LeftOut struct {
 }
 
 // Result is a batch's verification: whether it passed, the step or test
-// tier it stopped at when it did not, its findings in short, when it
-// finished, in UTC, and the folder its tiers' whole output was kept in.
+// tier it stopped at when it did not, its findings in short and in full,
+// when it finished, in UTC, and the folder its tiers' whole output was kept
+// in.
 type Result struct {
-	Passed     bool      `json:"passed"`
-	StoppedAt  string    `json:"stopped_at,omitempty"`
-	Summary    string    `json:"summary,omitempty"`
+	Passed    bool   `json:"passed"`
+	StoppedAt string `json:"stopped_at,omitempty"`
+	Summary   string `json:"summary,omitempty"`
+	// Findings are the failing tier's findings as flai verify prints them
+	// under it, every line of each, a plain tier's failure lines and the tail
+	// of its output among them, cut to findingsMax characters; "" when it
+	// passed, its tiers could not run, or the failing tier had none.
+	Findings   string    `json:"findings,omitempty"`
 	FinishedAt time.Time `json:"finished_at"`
 	// Log is the folder, relative to the project's root and slash-separated,
 	// holding a <tier>.log of each tier that ran, as BatchLogs names it for

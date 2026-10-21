@@ -52,10 +52,12 @@ const (
 )
 
 // summaryFindings is how many of the failing tier's findings a result's
-// summary names; summaryMax caps its length.
+// summary names; summaryMax caps its length, and findingsMax that of its
+// findings in full.
 const (
 	summaryFindings = 3
 	summaryMax      = 600
+	findingsMax     = 8000
 )
 
 // logsKept is how many batches' folders of tier output, under the queue's
@@ -702,6 +704,9 @@ func result(rep verify.Report, err error, at time.Time) *Result {
 		res.Summary = passedSummary(rep)
 	default:
 		res.Summary = failedSummary(rep)
+		if s, ok := failingStep(rep); ok {
+			res.Findings = clipFindings(verify.StepFindings(s, ""))
+		}
 	}
 	return res
 }
@@ -722,28 +727,55 @@ func passedSummary(rep verify.Report) string {
 
 // failedSummary is the failing tier and its first findings, a line each.
 func failedSummary(rep verify.Report) string {
-	for _, s := range rep.Steps {
-		if s.Name != rep.StoppedAt || s.State != verify.Failed {
-			continue
-		}
-		if len(s.Findings) == 0 {
-			if s.ExitCode != nil {
-				return clip(fmt.Sprintf("%s failed with exit status %d", s.Name, *s.ExitCode))
-			}
-			return clip(s.Name + " failed")
-		}
-		var lines []string
-		for _, f := range s.Findings[:min(summaryFindings, len(s.Findings))] {
-			lines = append(lines, strings.TrimSpace(strings.SplitN(f.Text(), "\n", 2)[0]))
-		}
-		more := len(s.Findings) - len(lines) + s.Omitted
-		text := s.Name + " failed: " + strings.Join(lines, "; ")
-		if more > 0 {
-			text += fmt.Sprintf("; and %d more", more)
-		}
-		return clip(text)
+	s, ok := failingStep(rep)
+	if !ok {
+		return clip(rep.StoppedAt + " failed")
 	}
-	return clip(rep.StoppedAt + " failed")
+	if len(s.Findings) == 0 {
+		if s.ExitCode != nil {
+			return clip(fmt.Sprintf("%s failed with exit status %d", s.Name, *s.ExitCode))
+		}
+		return clip(s.Name + " failed")
+	}
+	var lines []string
+	for _, f := range s.Findings[:min(summaryFindings, len(s.Findings))] {
+		lines = append(lines, strings.TrimSpace(strings.SplitN(f.Text(), "\n", 2)[0]))
+	}
+	more := len(s.Findings) - len(lines) + s.Omitted
+	text := s.Name + " failed: " + strings.Join(lines, "; ")
+	if more > 0 {
+		text += fmt.Sprintf("; and %d more", more)
+	}
+	return clip(text)
+}
+
+// failingStep is the step of a failed report that it stopped at, and whether
+// there is one.
+func failingStep(rep verify.Report) (verify.Step, bool) {
+	for _, s := range rep.Steps {
+		if s.Name == rep.StoppedAt && s.State == verify.Failed {
+			return s, true
+		}
+	}
+	return verify.Step{}, false
+}
+
+// clipFindings is findings cut to findingsMax characters at the end of a
+// line where it can be, marked with how many more were left out when it is
+// cut.
+func clipFindings(findings string) string {
+	r := []rune(findings)
+	if len(r) <= findingsMax {
+		return findings
+	}
+	kept := string(r[:findingsMax])
+	if i := strings.LastIndexByte(kept, '\n'); i > 0 {
+		kept = kept[:i+1]
+	} else {
+		kept += "\n"
+	}
+	left := len(r) - len([]rune(kept))
+	return kept + fmt.Sprintf("… %d more characters left out; the tier's whole output is in its log\n", left)
 }
 
 // clip is s cut to summaryMax characters, marked when it is cut.

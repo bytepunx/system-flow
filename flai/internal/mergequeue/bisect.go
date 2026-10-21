@@ -245,8 +245,9 @@ func (b *build) checkout(what string, args ...string) error {
 // merge queue batch found, and reports whether it moved it. A story in review
 // is moved by flai, the reason, naming the batch, the commit, and what failed
 // there, appended to its notes, and a thread opened on it to its agent by flai
-// serve, saying what failed, at which commit, with which stories, and what to
-// do. A story no longer in review is not moved and gets no thread. Either way
+// serve, saying what failed, the failing tier's findings in full and the
+// folder of its whole output, at which commit, with which stories, and what
+// to do. A story no longer in review is not moved and gets no thread. Either way
 // it leaves the queue with OutcomeFailing as its outcome, and the bisection
 // is marked sent back. It does nothing under pull-request acceptance, with no
 // batch, or with one dropped, not bisected, or sent back already.
@@ -266,10 +267,12 @@ func SendBack(d Deps, repo *workitem.Repo) (bool, error) {
 	bs := batch.Bisect
 	story, now := bs.Failing, d.Now().UTC()
 	head, _ := batch.HeadOf(story)
-	tier, summary := "verify", "the batch failed"
+	var failed Result
 	if bs.Result != nil {
-		tier, summary = orDefault(bs.Result.StoppedAt, tier), orDefault(bs.Result.Summary, summary)
+		failed = *bs.Result
 	}
+	failed.StoppedAt, failed.Summary = orDefault(failed.StoppedAt, "verify"), orDefault(failed.Summary, "the batch failed")
+	tier := failed.StoppedAt
 	it, err := repo.Get(story)
 	if err != nil && !errors.Is(err, workitem.ErrNotFound) {
 		return false, fmt.Errorf("send %s back to in-progress, as merge queue batch %s fails with it: read it: %w; fix the story's file, and flai serve sends it back at its next look", story, batch.ID, err)
@@ -277,11 +280,11 @@ func SendBack(d Deps, repo *workitem.Repo) (bool, error) {
 	moved := err == nil && it.Type == workitem.Story && it.Status == workitem.Review
 	detail := fmt.Sprintf("sent back to in-progress: merge queue batch %s fails with it at %s", batch.ID, tier)
 	if moved {
-		th, err := openFailing(repo, batch, tier, summary, head, now)
+		th, err := openFailing(repo, batch, failed, head, now)
 		if err != nil {
 			return false, fmt.Errorf("send %s back to in-progress, as merge queue batch %s fails with it: open its thread: %w; flai serve sends it back at its next look", story, batch.ID, err)
 		}
-		reason := fmt.Sprintf("merge queue batch %s fails with %s at %s: %s", batch.ID, story, short(bs.Commit), oneLine(summary))
+		reason := fmt.Sprintf("merge queue batch %s fails with %s at %s: %s", batch.ID, story, short(bs.Commit), oneLine(failed.Summary))
 		if _, err := repo.Transition(it, workitem.InProgress, sendBackBy, reason, now); err != nil {
 			return false, fmt.Errorf("send %s back to in-progress, as merge queue batch %s fails with it: %w; move it with flai move %s in-progress --reason, and see thread %s", story, batch.ID, err, story, th.ID)
 		}
@@ -354,13 +357,14 @@ func ResolveSentBack(d Deps, repo *workitem.Repo) ([]string, error) {
 }
 
 // openFailing opens the thread on the failing story of batch to its agent,
-// or answers the open one flai serve opened on it with the same title, as a
-// send-back before this one opened and could not record.
-func openFailing(repo *workitem.Repo, batch *Batch, tier, summary string, head Head, now time.Time) (*threads.Thread, error) {
+// saying what failed, the result failed, or answers the open one flai serve
+// opened on it with the same title, as a send-back before this one opened
+// and could not record.
+func openFailing(repo *workitem.Repo, batch *Batch, failed Result, head Head, now time.Time) (*threads.Thread, error) {
 	story := batch.Bisect.Failing
 	opt := threads.NewOptions{
-		Title: fmt.Sprintf("Merge queue batch %s fails with %s at %s", batch.ID, story, tier),
-		On:    story, Author: sendBackAuthor, Text: failingText(batch, tier, summary, head), Now: now,
+		Title: fmt.Sprintf("Merge queue batch %s fails with %s at %s", batch.ID, story, failed.StoppedAt),
+		On:    story, Author: sendBackAuthor, Text: failingText(batch, failed, head), Now: now,
 	}
 	if all, err := threads.For(repo, story); err == nil {
 		title := workitem.CleanTitle(opt.Title)
@@ -374,9 +378,14 @@ func openFailing(repo *workitem.Repo, batch *Batch, tier, summary string, head H
 }
 
 // failingText says what failed of batch's failing story, at which commit,
-// with which stories, and what to do.
-func failingText(batch *Batch, tier, summary string, head Head) string {
+// with which stories, and what to do. What failed is the failing tier's
+// findings in full, as flai verify prints them, or the summary when the
+// result has none, as one kept by an older flai or one whose tiers could not
+// run, followed by the folder the tiers' whole output is in, when there is
+// one.
+func failingText(batch *Batch, failed Result, head Head) string {
 	bs := batch.Bisect
+	tier := failed.StoppedAt
 	story := bs.Failing
 	with := "alone"
 	before := batch.Stories[:bs.Bad-1]
@@ -386,7 +395,10 @@ func failingText(batch *Batch, tier, summary string, head Head) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Merge queue batch %s fails with %s at %s. The queue verified %s %s on main at %s, at %s, the copy of its verified head %s rebased in the batch, and %s failed:\n\n",
 		codeSpan(batch.ID), story, codeSpan(tier), story, with, codeSpan(short(batch.Base)), codeSpan(short(bs.Commit)), codeSpan(short(head.Verified)), codeSpan(tier))
-	fmt.Fprintf(&b, "%s\n\n", fenced(summary))
+	fmt.Fprintf(&b, "%s\n\n", fenced(orDefault(failed.Findings, failed.Summary)))
+	if failed.Log != "" {
+		fmt.Fprintf(&b, "The whole output of each tier it ran is in %s.\n\n", codeSpan(failed.Log))
+	}
 	if len(before) > 0 {
 		b.WriteString("The stories before it land; those after it stay enqueued. ")
 	}

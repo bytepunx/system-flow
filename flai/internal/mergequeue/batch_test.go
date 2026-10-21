@@ -997,11 +997,21 @@ func TestTheResultSummarisesTheVerification(t *testing.T) {
 	if r := result(failed, nil, t1); r.Passed || r.StoppedAt != "unit" || r.Summary != "unit failed: a.go:3 TestA: boom; TestB: b; TestC: c; and 3 more" || !r.FinishedAt.Equal(t1) {
 		t.Errorf("failed result %+v", r)
 	}
-	if r := result(verify.Report{Passed: true}, errors.New("the manifest's tests are not valid"), t1); r.Passed || r.StoppedAt != StoppedAtVerify || !strings.Contains(r.Summary, "not valid") {
+	if r := result(failed, nil, t1); r.Findings != "a.go:3 TestA: boom\n    more\nTestB: b\nTestC: c\nTestD: d\n… 2 more findings left out\n" {
+		t.Errorf("failed result's findings:\n%s", r.Findings)
+	}
+	line := strings.Repeat("x", 99)
+	long := verify.Report{StoppedAt: "smoke", Steps: []verify.Step{{Name: "smoke", Tier: true, State: verify.Failed, Findings: []verify.Finding{{Name: "smoke", Message: strings.TrimSuffix(strings.Repeat(line+"\n", 100), "\n")}}}}}
+	r := result(long, nil, t1)
+	if n := len([]rune(r.Findings)); n > findingsMax+100 || !strings.HasPrefix(r.Findings, "smoke: "+line+"\n    "+line+"\n") ||
+		!strings.HasSuffix(r.Findings, "    "+line+"\n… 2496 more characters left out; the tier's whole output is in its log\n") {
+		t.Errorf("findings of %d characters, want them cut at a line within %d and marked:\n%s", n, findingsMax, r.Findings)
+	}
+	if r := result(verify.Report{Passed: true}, errors.New("the manifest's tests are not valid"), t1); r.Passed || r.StoppedAt != StoppedAtVerify || !strings.Contains(r.Summary, "not valid") || r.Findings != "" {
 		t.Errorf("result of an error %+v", r)
 	}
 	ok := verify.Report{Passed: true, Steps: []verify.Step{{Name: "unit", State: verify.Passed}, {Name: "lint", State: verify.Skipped}}}
-	if r := result(ok, nil, t1); !r.Passed || r.Summary != "passed unit" {
+	if r := result(ok, nil, t1); !r.Passed || r.Summary != "passed unit" || r.Findings != "" {
 		t.Errorf("passed result %+v", r)
 	}
 	if r := result(verify.Report{Passed: true, Steps: []verify.Step{}}, nil, t1); r.Summary != "no tier selects the paths the batch changes" {

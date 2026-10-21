@@ -20,25 +20,30 @@ import (
 // t2 is when the failed batches are bisected, after they were verified.
 var t2 = t1.Add(time.Hour)
 
-// fileVerifier verifies a worktree by the files in it: its unit tier fails
-// when every one of files is there, and logs the worktree's head to unit.log
-// in the folder it is given, standing for the tier's output. It keeps the
-// batch's step in the state as each verification runs; cancel, when set,
-// ends the run's context as one runs, and drop, when set, runs once as one
-// runs.
+// fileVerifier verifies a worktree by the files in it: its tier, unit or the
+// one named, fails when every one of files is there, and logs the worktree's
+// head to <tier>.log in the folder it is given, standing for the tier's
+// output. Its finding names the files, or, with output set, is a plain
+// tier's that printed output and exited 1, as flai verify finds one. It
+// keeps the batch's step in the state as each verification runs; cancel,
+// when set, ends the run's context as one runs, and drop, when set, runs once
+// as one runs.
 type fileVerifier struct {
 	cacheDir string
 	files    []string
+	tier     string
+	output   string
 	cancel   context.CancelFunc
 	drop     func()
 	steps    []string
 }
 
 func (v *fileVerifier) verify(_ context.Context, dir, _, logDir string, started func(string)) (verify.Report, error) {
-	started("unit")
+	tier := orDefault(v.tier, "unit")
+	started(tier)
 	if head, err := (execx.System{}).Run(dir, "git", "rev-parse", "HEAD"); err == nil {
 		if err := os.MkdirAll(logDir, 0o755); err == nil {
-			_ = os.WriteFile(filepath.Join(logDir, "unit.log"), []byte("unit at "+head), 0o644)
+			_ = os.WriteFile(filepath.Join(logDir, tier+".log"), []byte(tier+" at "+head), 0o644)
 		}
 	}
 	if st, err := ReadState(v.cacheDir); err == nil && st.Batch != nil {
@@ -56,10 +61,13 @@ func (v *fileVerifier) verify(_ context.Context, dir, _, logDir string, started 
 		return err != nil
 	}) < 0
 	if !there {
-		return verify.Report{Passed: true, Steps: []verify.Step{{Name: "unit", Tier: true, State: verify.Passed}}}, nil
+		return verify.Report{Passed: true, Steps: []verify.Step{{Name: tier, Tier: true, State: verify.Passed}}}, nil
 	}
 	finding := verify.Finding{Name: "TestFiles", Message: strings.Join(v.files, " and ") + " are there"}
-	return verify.Report{StoppedAt: "unit", Steps: []verify.Step{{Name: "unit", Tier: true, State: verify.Failed, Findings: []verify.Finding{finding}}}}, nil
+	if v.output != "" {
+		finding = verify.Finding{Name: tier, Message: strings.TrimSpace(v.output) + "\nexit status 1"}
+	}
+	return verify.Report{StoppedAt: tier, Steps: []verify.Step{{Name: tier, Tier: true, State: verify.Failed, Findings: []verify.Finding{finding}}}}, nil
 }
 
 // fileDeps run real git at the clock at, verifying with v.
@@ -355,8 +363,9 @@ func bisected(t *testing.T) (*workitem.Repo, string, string) {
 	return repo, first.ID, failing.ID
 }
 
-// threadsBy are the threads on story that author opened.
-func threadsBy(t *testing.T, repo *workitem.Repo, story, author string) []*threads.Thread {
+// serveThreads are the threads on story that flai serve opened, as the
+// queue's send-back does.
+func serveThreads(t *testing.T, repo *workitem.Repo, story string) []*threads.Thread {
 	t.Helper()
 	all, err := threads.For(repo, story)
 	if err != nil {
@@ -364,7 +373,7 @@ func threadsBy(t *testing.T, repo *workitem.Repo, story, author string) []*threa
 	}
 	var out []*threads.Thread
 	for _, th := range all {
-		if th.Opener() == author {
+		if th.Opener() == sendBackAuthor {
 			out = append(out, th)
 		}
 	}
@@ -397,7 +406,7 @@ func TestTheFailingStoryIsSentBackOnceWithAThread(t *testing.T) {
 	if !strings.Contains(it.Body, reason) {
 		t.Errorf("%s's notes do not say %q:\n%s", failing, reason, it.Body)
 	}
-	ths := threadsBy(t, repo, failing, "flai serve")
+	ths := serveThreads(t, repo, failing)
 	if len(ths) != 1 {
 		t.Fatalf("threads by flai serve on %s: %d, want 1", failing, len(ths))
 	}
@@ -437,8 +446,58 @@ func TestTheFailingStoryIsSentBackOnceWithAThread(t *testing.T) {
 	if again || err != nil {
 		t.Errorf("sent again %v, %v; want nothing done", again, err)
 	}
-	if it2, _ := repo.Get(failing); len(it2.Transitions) != len(it.Transitions) || len(threadsBy(t, repo, failing, "flai serve")) != 1 {
+	if it2, _ := repo.Get(failing); len(it2.Transitions) != len(it.Transitions) || len(serveThreads(t, repo, failing)) != 1 {
 		t.Errorf("a second send-back moved %s or opened a thread", failing)
+	}
+}
+
+// I-0172: a batch that fails a plain tier, whose output begins with a
+// heading and names its failure further down, sends its failing story back
+// with a thread that quotes the tier's findings in full, as flai verify
+// prints them, its failure lines and the tail of its output with them, not
+// the heading alone, and names the folder of the tiers' whole output. The
+// move's reason stays the one-line summary.
+func TestASentBackThreadQuotesAPlainTiersFailureInFull(t *testing.T) {
+	repo, _ := gitProject(t, "")
+	v := &fileVerifier{cacheDir: repo.CacheDir(), files: []string{"f2.txt"}, tier: "smoke",
+		output: "smoke: template render and check\nrendering the template into /tmp/render\nFAIL check: 1 finding\n  AGENTS.md:12 links.broken: design/x.md does not exist\n"}
+	var stories []string
+	for i := 1; i <= 2; i++ {
+		id, _ := readyStory(t, repo, fmt.Sprintf("Story %d", i), t0.Add(time.Duration(i)*time.Hour), fmt.Sprintf("f%d.txt", i), "f\n")
+		stories = append(stories, id)
+	}
+	enqueue(t, repo, stories...)
+	if _, st := runBatch(t, fileDeps(v, t1), repo); st.Batch == nil || st.Batch.Step != StepFailed {
+		t.Fatalf("batch %+v, want it failed", st.Batch)
+	}
+	_, st := runBisect(t, fileDeps(v, t2), repo)
+	bs := st.Batch.Bisect
+	if !bs.Found() || bs.Failing != stories[1] {
+		t.Fatalf("bisection %+v, want it to find %s", bs, stories[1])
+	}
+
+	if sent, err := SendBack(fileDeps(v, t2), repo); !sent || err != nil {
+		t.Fatalf("sent %v, %v; want %s sent back", sent, err, stories[1])
+	}
+	ths := serveThreads(t, repo, stories[1])
+	if len(ths) != 1 {
+		t.Fatalf("threads by flai serve on %s: %d, want 1", stories[1], len(ths))
+	}
+	body := ths[0].Body
+	quoted := "```text\nsmoke: smoke: template render and check\n    rendering the template into /tmp/render\n    FAIL check: 1 finding\n      AGENTS.md:12 links.broken: design/x.md does not exist\n    exit status 1\n```"
+	if !strings.Contains(body, quoted) {
+		t.Errorf("thread does not quote smoke's findings in full:\n%s\nwant\n%s", body, quoted)
+	}
+	if log := "The whole output of each tier it ran is in `.flai-cache/merge-queue/batches/" + st.Batch.ID + "`."; !strings.Contains(body, log) {
+		t.Errorf("thread does not say %q:\n%s", log, body)
+	}
+	it, err := repo.Get(stories[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	reason := "fails with " + stories[1] + " at " + short(bs.Commit) + ": smoke failed: smoke: smoke: template render and check"
+	if it.Status != workitem.InProgress || !strings.Contains(it.Body, reason) || strings.Contains(it.Body, "FAIL check") {
+		t.Errorf("%s is %s; want it in-progress with the reason %q alone:\n%s", stories[1], it.Status, reason, it.Body)
 	}
 }
 
@@ -459,7 +518,7 @@ func TestAFailingStoryNotInReviewIsNotMovedButLeavesTheQueue(t *testing.T) {
 	if sent || err != nil {
 		t.Fatalf("sent %v, %v; want it not sent back", sent, err)
 	}
-	if it, _ = repo.Get(failing); len(it.Transitions) != moves || len(threadsBy(t, repo, failing, "flai serve")) != 0 {
+	if it, _ = repo.Get(failing); len(it.Transitions) != moves || len(serveThreads(t, repo, failing)) != 0 {
 		t.Errorf("%s moved %d times, want %d, or got a thread", failing, len(it.Transitions), moves)
 	}
 	st, err := ReadState(repo.CacheDir())
