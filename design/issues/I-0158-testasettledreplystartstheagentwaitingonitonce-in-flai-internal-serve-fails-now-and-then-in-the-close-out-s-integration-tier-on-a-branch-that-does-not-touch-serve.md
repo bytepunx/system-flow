@@ -2,12 +2,12 @@
 id: I-0158
 title: TestASettledReplyStartsTheAgentWaitingOnItOnce in flai/internal/serve fails now and then in the close-out's integration tier on a branch that does not touch serve
 class: defect
-status: open
+status: closed
 count: 5
 cost: 9m
 first_reported: 2026-10-17T04:54:11Z
 last_reported: 2026-10-21T09:24:20Z
-updated: 2026-10-21T11:58:53Z
+updated: 2026-10-21T12:10:42Z
 ---
 
 # I-0158 TestASettledReplyStartsTheAgentWaitingOnItOnce in flai/internal/serve fails now and then in the close-out's integration tier on a branch that does not touch serve
@@ -40,3 +40,4 @@ Merge queue batch 20261021-091124 failed with S-0463 at integration (TH-0564): f
 ## Remediation
 
 Story S-0473 remediates this issue, created from it at 2026-10-21T11:58:53Z.
+Closed 2026-10-21T12:10:42Z: S-0473: the failure came from the test, not from flai serve. TestASettledReplyStartsTheAgentWaitingOnItOnce stamped the other story's run and the message from separate time.Now() calls, and messages.ToSince takes what is strictly after a run's start. So when the clock's second turned between the two putEnded calls, the message was new to the other story's agent and look started it, rightly by ADR-0154. The test now puts the waiting story's run, and so its message, a minute before the other run started. It also puts the other run a second earlier, which reproduced the failure on every run before the fix.
