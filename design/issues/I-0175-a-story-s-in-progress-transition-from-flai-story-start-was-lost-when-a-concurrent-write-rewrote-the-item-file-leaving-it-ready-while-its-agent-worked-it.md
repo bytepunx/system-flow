@@ -2,12 +2,12 @@
 id: I-0175
 title: A story's in-progress transition from flai story start was lost when a concurrent write rewrote the item file, leaving it ready while its agent worked it
 class: defect
-status: open
+status: closed
 count: 1
 cost: 5m
 first_reported: 2026-10-21T07:37:23Z
 last_reported: 2026-10-21T07:37:23Z
-updated: 2026-10-21T11:59:43Z
+updated: 2026-10-21T12:47:59Z
 ---
 
 # I-0175 A story's in-progress transition from flai story start was lost when a concurrent write rewrote the item file, leaving it ready while its agent worked it
@@ -24,3 +24,4 @@ story_start moved S-0463 to in-progress at about 07:33:32Z (its narrative opened
 ## Remediation
 
 Story S-0479 remediates this issue, created from it at 2026-10-21T11:59:43Z.
+Closed 2026-10-21T12:47:59Z: S-0479 (ADR-0184): Repo.Save takes one items lock, reads the file again, and merges a copy read before another writer's save by front-matter key and body section, refusing a part both changed, so the replanner's forecast write through itemedit.Apply keeps a move made meanwhile; a refused edit takes out only its own change. TestSaveKeepsAMoveSavedSinceTheCopyWasRead and TestRestoreKeepsAMoveSavedAfterTheEdit reproduce it.
