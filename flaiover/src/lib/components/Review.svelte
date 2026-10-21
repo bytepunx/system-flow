@@ -19,6 +19,8 @@
 	} from '$lib/review';
 	import { acceptLabel, issueRows, type Issue, type IssueRow } from '$lib/issues';
 	import DiffView from '$lib/components/DiffView.svelte';
+	import PageSidebar from '$lib/components/PageSidebar.svelte';
+	import { hashId, type SidebarEntry } from '$lib/pagesidebar.svelte';
 	import Threads from '$lib/components/Threads.svelte';
 	import ForgeStatus, { type PullRequestStatus } from '$lib/components/ForgeStatus.svelte';
 	import {
@@ -269,6 +271,77 @@
 	const branchFile = (path: string) =>
 		((diff?.files ?? []) as DiffFile[]).find((f) => f.path === path);
 
+	// The sidebar (S-0461): a scroll entry for each section the page shows, in its order, and under
+	// Changes one for each changed file. A file's id is its path made fit for an id, kept unique.
+	const acceptShown = $derived(inReview || !!result);
+	const issuesShown = $derived(acceptShown && (issues.length > 0 || !!issuesError));
+	const checksShown = $derived(inReview || !!checksRun?.started);
+	const verifyShown = $derived(!!verify || !!verifyError);
+	const fileIds = $derived.by((): Record<string, string> => {
+		const files = diff?.files;
+		if (!Array.isArray(files)) return {};
+		const taken: Record<string, boolean> = {};
+		const ids: Record<string, string> = {};
+		for (const f of files as DiffFile[]) {
+			const base = `review-file-${f.path.replace(/[^A-Za-z0-9_-]+/g, '-')}`;
+			let fileId = base;
+			for (let n = 2; taken[fileId]; n++) fileId = `${base}-${n}`;
+			taken[fileId] = true;
+			ids[f.path] = fileId;
+		}
+		return ids;
+	});
+	const fileEntries = $derived(
+		Object.entries(fileIds).map(([path, fileId]): SidebarEntry => ({
+			id: fileId,
+			label: path.split('/').pop() || path,
+			mode: 'scroll'
+		}))
+	);
+	const sidebarEntries = $derived.by((): SidebarEntry[] => {
+		const all: (SidebarEntry | false)[] = [
+			{ id: 'review-criteria', label: 'Criteria', mode: 'scroll' },
+			{ id: 'review-state', label: 'State', mode: 'scroll' },
+			{ id: 'review-threads', label: 'Threads', mode: 'scroll' },
+			{ id: 'review-changes', label: 'Changes', mode: 'scroll', children: fileEntries },
+			acceptShown && { id: 'review-release', label: 'Release plan', mode: 'scroll' },
+			issuesShown && { id: 'review-issues', label: 'Issues', mode: 'scroll' },
+			checksShown && { id: 'review-checks', label: 'Checks', mode: 'scroll' },
+			verifyShown && { id: 'review-verification', label: 'Verification', mode: 'scroll' }
+		];
+		return all.filter((e): e is SidebarEntry => !!e);
+	});
+
+	// Each file's row in DiffView takes its entry's id, so the sidebar scrolls to it and a link
+	// with its hash lands on it.
+	let diffView = $state<ReturnType<typeof DiffView>>();
+
+	// A file's panel is opened as its summary line opens it, unless it is open already.
+	function openFile(fileId: string) {
+		const path = Object.keys(fileIds).find((p) => fileIds[p] === fileId);
+		if (path) diffView?.show(path);
+	}
+
+	// Choosing a file's entry opens its panel: this runs in the capture phase on an ancestor of the
+	// sidebar, before the entry's own handler scrolls to the row. A click that opens the link
+	// elsewhere is left alone; the hash opens the file where it lands.
+	function openChosenFile(e: MouseEvent) {
+		if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+		const entry = (e.target as Element | null)?.closest('[data-sidebar-entry]');
+		const fileId = entry?.getAttribute('data-sidebar-entry');
+		if (fileId && fileEntries.some((f) => f.id === fileId)) openFile(fileId);
+	}
+
+	// Arriving with a file's hash opens its panel and scrolls to it once the diff is drawn.
+	async function openArrived(target: string) {
+		const fileId = hashId(location.hash);
+		if (target !== id || !fileEntries.some((f) => f.id === fileId)) return;
+		await tick();
+		openFile(fileId);
+		await tick();
+		document.getElementById(fileId)?.scrollIntoView?.();
+	}
+
 	function undoneOf(data: unknown): Undone[] {
 		const list = (data as { undoes_main?: unknown } | undefined)?.undoes_main;
 		return Array.isArray(list) ? (list as Undone[]) : [];
@@ -334,7 +407,7 @@
 				await renderNarrative(target);
 			})
 			.catch(() => (narrative = ''));
-		void loadDiff(target);
+		void loadDiff(target).then(() => openArrived(target));
 		if (item.status === 'in-progress' || item.status === 'review') void loadCatalogue(target);
 		if (item.status === 'review') {
 			void loadPreview(target);
@@ -768,6 +841,340 @@
 	{/each}
 {/snippet}
 
+<!-- The sections the sidebar scrolls to, in its order (S-0461), given the story loaded. -->
+{#snippet sections(item: Item)}
+	<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+		<section id="review-criteria" class="min-w-0 rounded border border-line bg-surface p-3 text-sm">
+			<h2 class="mb-2 font-medium">
+				Acceptance criteria
+				<span class="text-xs font-normal text-muted">{ticked} of {criteria.length} checked</span>
+			</h2>
+			{#if criteria.length}
+				<ul class="space-y-1">
+					{#each criteria as c (c.text)}
+						<li class="flex gap-2">
+							<span aria-hidden="true" class={c.checked ? 'text-good' : 'text-danger'}
+								>{c.checked ? '☑' : '☐'}</span
+							>
+							<span class:text-muted={c.checked}
+								><span class="sr-only">{c.checked ? 'checked: ' : 'not checked: '}</span
+								>{c.text}</span
+							>
+						</li>
+					{/each}
+				</ul>
+			{:else}
+				<p class="text-muted">The story has no acceptance criteria.</p>
+			{/if}
+		</section>
+
+		<section id="review-state" class="min-w-0 rounded border border-line bg-surface p-3 text-sm">
+			<h2 class="mb-2 font-medium">
+				Narrative
+				<a
+					class="text-xs font-normal underline"
+					href={resolve('/docs/[...path]', { path: `wip/agents/${item.id}.md` })}>open</a
+				>
+			</h2>
+			{#if narrative === null}
+				<p class="text-muted">Loading…</p>
+			{:else if !narrative}
+				<p class="text-muted">No narrative for this story.</p>
+			{:else}
+				<div bind:this={narrativeContent}>
+					<h3 class="text-xs font-medium text-muted">Current state</h3>
+					<div class="prose mb-2 max-w-none">
+						<!-- eslint-disable-next-line svelte/no-at-html-tags -- markdown from the narrative, rendered client side -->
+						{@html currentStateHtml}
+					</div>
+					<h3 class="text-xs font-medium text-muted">Next steps</h3>
+					<div class="prose max-w-none">
+						<!-- eslint-disable-next-line svelte/no-at-html-tags -- markdown from the narrative, rendered client side -->
+						{@html nextStepsHtml}
+					</div>
+				</div>
+			{/if}
+		</section>
+	</div>
+
+	<section id="review-threads" class="mt-4">
+		<Threads on={item.id} {writable} />
+	</section>
+
+	<section id="review-changes" class="mt-4 rounded border border-line bg-surface p-3 text-sm">
+		<h2 class="mb-2 font-medium">Changes on the branch</h2>
+		{#if changedList.length}
+			<p class="mb-2" data-testid="open-in-components">
+				It changes the components
+				<span class="font-medium">{changedList.map((c) => c.name).join(', ')}</span>.
+				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- the path is resolve()d; only ?story= is added -->
+				<a class="underline" href={componentsHref}>Open in Components</a>
+			</p>
+		{/if}
+		{#if diffError}
+			<p class="text-muted">{diffError}</p>
+		{:else if !diff}
+			<p class="text-muted">Loading…</p>
+		{:else}
+			<DiffView bind:this={diffView} diff={diff as never} ids={fileIds} />
+		{/if}
+	</section>
+
+	{#if acceptShown}
+		<section id="review-release" class="mt-4 rounded border border-line bg-surface p-3 text-sm">
+			<h2 class="mb-2 font-medium">
+				Release plan
+				<span class="text-xs font-normal text-muted">what accepting does</span>
+			</h2>
+			{#if preview}
+				<ul class="ml-4 list-disc space-y-1">
+					{#if preview.branch}
+						<li>
+							Rebase <code>{preview.branch}</code>, fast-forward it into main, remove its worktree.
+						</li>
+					{/if}
+					{#if preview.pull_request && !forgeBlockers.length}
+						<li data-testid="accept-pull-request">
+							Its <a
+								class="underline"
+								href={preview.pull_request}
+								target="_blank"
+								rel="external noopener noreferrer">pull request</a
+							> passes its required checks and reviews.
+						</li>
+					{/if}
+					<li>Move the story to done, archive it with its tasks and narrative, and commit.</li>
+					{#if preview.plan?.skipped}
+						<li>
+							No release: {preview.plan.skipped}.
+							<UnreleasedList unreleased={preview.plan.unreleased} />
+						</li>
+					{:else if preview.plan?.steps?.length}
+						<li>
+							Tag a {preview.plan.level} release:
+							{#each preview.plan.steps as s, i (s.component.name)}{i ? ', ' : ''}<span
+									class="font-medium">{s.component.name}</span
+								>
+								{v(s.from)} → {v(s.to)}{/each}
+						</li>
+					{/if}
+					{#if chosen.length}
+						<li data-testid="accept-makes-stories">
+							Then, once it is accepted, make a backlog story for each checked issue: {chosen
+								.map((r) => r.id)
+								.join(', ')}.
+						</li>
+					{/if}
+					<li data-testid="accept-stays-local">
+						Nothing is pushed: the accepted work stays local until it is published, from Publish on
+						the board or with <code>flai release --pending</code> on the host.
+					</li>
+				</ul>
+			{:else if previewError}
+				<p class="text-muted">No plan while the preview cannot be read.</p>
+			{:else if !result}
+				<p class="text-muted">Working it out…</p>
+			{/if}
+		</section>
+	{/if}
+
+	{#if issuesShown}
+		<section
+			id="review-issues"
+			class="mt-4 rounded border border-line bg-surface p-3 text-sm"
+			data-testid="issues-section"
+		>
+			<h2 class="mb-2 font-medium">
+				Issues
+				<span class="text-xs font-normal text-muted"
+					>a backlog story is made for each one checked</span
+				>
+			</h2>
+			{#if issuesError}
+				<p class="text-muted">{issuesError}</p>
+			{:else}
+				<ul class="space-y-1">
+					{#each issues as row (row.id)}
+						<li>
+							<label class="flex items-baseline gap-2">
+								<input
+									type="checkbox"
+									bind:checked={row.checked}
+									disabled={running || !!result || !writable}
+								/>
+								<span>
+									<a class="underline" href={resolve('/docs/[...path]', { path: row.doc })}
+										>{row.id}</a
+									>
+									{row.title}
+									<span class="text-xs text-muted"
+										>{row.class}{row.recorded ? ', recorded by this story' : ''}</span
+									>
+								</span>
+							</label>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</section>
+	{/if}
+
+	{#if checksShown}
+		<section
+			id="review-checks"
+			class="mt-4 rounded border border-line bg-surface p-3 text-sm"
+			data-testid="checks-section"
+		>
+			<h2 class="mb-2 font-medium">Checks</h2>
+			{#if checksError}
+				<p
+					class="mb-2 rounded border border-danger bg-danger-soft p-2 text-danger"
+					role="alert"
+					data-testid="checks-error"
+				>
+					{checksError}
+				</p>
+			{/if}
+			{#if checksRun?.started}
+				<p data-testid="checks-summary">
+					{#if checksRun.running}
+						Running {checksRun.current}, started {localTime(checksRun.started)}.
+					{:else}
+						{checksRun.outcome}, started {localTime(checksRun.started)}, ended
+						{localTime(checksRun.ended ?? '')}.
+					{/if}
+				</p>
+				{#if checksRun.steps?.length}
+					<ul class="mt-1 ml-4 list-disc">
+						{#each checksRun.steps as s (s.name)}
+							<li>
+								{s.name}: {s.exit == null
+									? 'did not start'
+									: s.exit === 0
+										? 'ok'
+										: `exit ${s.exit}`}
+							</li>
+						{/each}
+					</ul>
+				{/if}
+				{#if checksLines.length}
+					<pre
+						class="mt-2 max-h-64 overflow-y-auto rounded bg-ground p-2 font-mono text-xs whitespace-pre-wrap"
+						data-testid="checks-output">{checksLines.join('\n')}</pre>
+				{/if}
+			{:else if checksEnabled}
+				<p class="text-muted">No checks have run yet.</p>
+			{/if}
+
+			{#if !checksEnabled}
+				<p class="mt-2 text-muted">
+					Off: the operator turns this on in a shell on the host with
+					<code class="rounded bg-ground px-1 text-ink">flai serve enable checks</code>.
+				</p>
+			{:else if writable && inReview}
+				<p class="mt-3 flex flex-wrap gap-2">
+					{#if checksRun?.running}
+						<button
+							type="button"
+							class="rounded border border-warn px-2 py-1 text-warn disabled:opacity-60"
+							onclick={cancelChecks}
+							disabled={checksBusy !== null}
+							data-testid="checks-cancel"
+							>{checksBusy === 'cancel' ? 'Cancelling…' : 'Cancel'}</button
+						>
+					{:else}
+						<button
+							type="button"
+							class="rounded border border-line px-2 py-1 disabled:opacity-60"
+							onclick={runChecks}
+							disabled={checksBusy !== null}
+							data-testid="checks-run">{checksBusy === 'run' ? 'Starting…' : 'Run checks'}</button
+						>
+					{/if}
+				</p>
+			{/if}
+		</section>
+	{/if}
+
+	<ForgeStatus status={pullRequest} class="mt-4" />
+
+	{#if verifyShown}
+		<section
+			id="review-verification"
+			class="mt-4 rounded border border-line bg-surface p-3 text-sm"
+			data-testid="verify-section"
+		>
+			<h2 class="mb-2 font-medium">
+				Verification
+				<span class="text-xs font-normal text-muted">the last flai verify of the story</span>
+			</h2>
+			{#if verifyError}
+				<p class="text-muted" data-testid="verify-error">{verifyError}</p>
+			{:else if verify}
+				<p data-testid="verify-summary">
+					<span class={verify.passed ? 'font-medium text-good' : 'font-medium text-danger'}
+						>{verify.outcome}</span
+					>. Verified <code class="rounded bg-ground px-1 text-ink">{verify.commit}</code> against
+					<code class="rounded bg-ground px-1 text-ink">{verify.base}</code> at
+					{localTime(verify.ranAt)}, in {verify.duration}.
+				</p>
+				<ul class="mt-2 space-y-1">
+					{#each verify.rows as row, i (i)}
+						<li data-testid="verify-step">
+							<span class="flex flex-wrap items-baseline gap-2">
+								<span
+									class={row.state === 'passed'
+										? 'text-good'
+										: row.state === 'reused'
+											? 'text-good opacity-70'
+											: row.state === 'failed'
+												? 'font-medium text-danger'
+												: 'text-muted'}>{row.label}</span
+								>
+								<span class="font-medium">{row.name}</span>
+								{#if row.tier}<span class="text-xs text-muted">tier</span>{/if}
+								{#if row.duration}<span class="text-xs text-muted">{row.duration}</span>{/if}
+							</span>
+							{#if row.findings.length || row.omitted}
+								<ul
+									class="mt-1 ml-4 space-y-1 rounded border border-danger bg-danger-soft p-2 font-mono text-xs text-danger"
+									aria-label="What {row.name} found"
+								>
+									{#each row.findings as f, j (j)}
+										<li>
+											{#if f.where}<span class="font-medium">{f.where}{f.message ? ':' : ''}</span
+												>{/if}
+											<span class="whitespace-pre-wrap">{f.message}</span>
+										</li>
+									{/each}
+									{#if row.omitted}<li>… {row.omitted} more findings left out</li>{/if}
+								</ul>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+				{#if verify.notes.length}
+					<details class="mt-2" data-testid="verify-notes">
+						<summary class="cursor-pointer text-muted">
+							{verify.notes.length}
+							{verify.notes.length === 1 ? 'note' : 'notes'} from flai check outside the story; they do
+							not fail it
+						</summary>
+						<ul class="mt-1 ml-4 list-disc font-mono text-xs">
+							{#each verify.notes as n, i (i)}
+								<li>
+									{#if n.where}<span class="font-medium">{n.where}:</span>{/if}
+									<span class="whitespace-pre-wrap">{n.message}</span>
+								</li>
+							{/each}
+						</ul>
+					</details>
+				{/if}
+			{/if}
+		</section>
+	{/if}
+{/snippet}
+
 {#if error}
 	<p class="rounded border border-danger bg-danger-soft p-3 text-sm text-danger" role="alert">
 		{error}
@@ -825,122 +1232,14 @@
 		</p>
 	{/if}
 
-	<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-		<section class="min-w-0 rounded border border-line bg-surface p-3 text-sm">
-			<h2 class="mb-2 font-medium">
-				Acceptance criteria
-				<span class="text-xs font-normal text-muted">{ticked} of {criteria.length} checked</span>
-			</h2>
-			{#if criteria.length}
-				<ul class="space-y-1">
-					{#each criteria as c (c.text)}
-						<li class="flex gap-2">
-							<span aria-hidden="true" class={c.checked ? 'text-good' : 'text-danger'}
-								>{c.checked ? '☑' : '☐'}</span
-							>
-							<span class:text-muted={c.checked}
-								><span class="sr-only">{c.checked ? 'checked: ' : 'not checked: '}</span
-								>{c.text}</span
-							>
-						</li>
-					{/each}
-				</ul>
-			{:else}
-				<p class="text-muted">The story has no acceptance criteria.</p>
-			{/if}
-		</section>
-
-		<section class="min-w-0 rounded border border-line bg-surface p-3 text-sm">
-			<h2 class="mb-2 font-medium">
-				Narrative
-				<a
-					class="text-xs font-normal underline"
-					href={resolve('/docs/[...path]', { path: `wip/agents/${item.id}.md` })}>open</a
-				>
-			</h2>
-			{#if narrative === null}
-				<p class="text-muted">Loading…</p>
-			{:else if !narrative}
-				<p class="text-muted">No narrative for this story.</p>
-			{:else}
-				<div bind:this={narrativeContent}>
-					<h3 class="text-xs font-medium text-muted">Current state</h3>
-					<div class="prose mb-2 max-w-none">
-						<!-- eslint-disable-next-line svelte/no-at-html-tags -- markdown from the narrative, rendered client side -->
-						{@html currentStateHtml}
-					</div>
-					<h3 class="text-xs font-medium text-muted">Next steps</h3>
-					<div class="prose max-w-none">
-						<!-- eslint-disable-next-line svelte/no-at-html-tags -- markdown from the narrative, rendered client side -->
-						{@html nextStepsHtml}
-					</div>
-				</div>
-			{/if}
-		</section>
-	</div>
-
-	<section class="mt-4 rounded border border-line bg-surface p-3 text-sm">
-		<h2 class="mb-2 font-medium">Changes on the branch</h2>
-		{#if changedList.length}
-			<p class="mb-2" data-testid="open-in-components">
-				It changes the components
-				<span class="font-medium">{changedList.map((c) => c.name).join(', ')}</span>.
-				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- the path is resolve()d; only ?story= is added -->
-				<a class="underline" href={componentsHref}>Open in Components</a>
-			</p>
-		{/if}
-		{#if diffError}
-			<p class="text-muted">{diffError}</p>
-		{:else if !diff}
-			<p class="text-muted">Loading…</p>
-		{:else}
-			<DiffView diff={diff as never} />
-		{/if}
-	</section>
-
-	{#if (inReview || result) && (issues.length || issuesError)}
+	<!-- What decides Accept stays above the sections (S-0461): the cards, the blockers, and the
+	     buttons, with what each step of an acceptance did. -->
+	{#if acceptShown}
 		<section
-			class="mt-4 rounded border border-line bg-surface p-3 text-sm"
-			data-testid="issues-section"
+			class="mb-4 rounded border border-line bg-surface p-3 text-sm"
+			data-testid="review-accept"
 		>
-			<h2 class="mb-2 font-medium">
-				Issues
-				<span class="text-xs font-normal text-muted"
-					>a backlog story is made for each one checked</span
-				>
-			</h2>
-			{#if issuesError}
-				<p class="text-muted">{issuesError}</p>
-			{:else}
-				<ul class="space-y-1">
-					{#each issues as row (row.id)}
-						<li>
-							<label class="flex items-baseline gap-2">
-								<input
-									type="checkbox"
-									bind:checked={row.checked}
-									disabled={running || !!result || !writable}
-								/>
-								<span>
-									<a class="underline" href={resolve('/docs/[...path]', { path: row.doc })}
-										>{row.id}</a
-									>
-									{row.title}
-									<span class="text-xs text-muted"
-										>{row.class}{row.recorded ? ', recorded by this story' : ''}</span
-									>
-								</span>
-							</label>
-						</li>
-					{/each}
-				</ul>
-			{/if}
-		</section>
-	{/if}
-
-	{#if inReview || result}
-		<section class="mt-4 rounded border border-line bg-surface p-3 text-sm">
-			<h2 class="mb-2 font-medium">What accepting does</h2>
+			<h2 class="mb-2 font-medium">Acceptance</h2>
 			{#if previewError}
 				<p class="rounded border border-danger bg-danger-soft p-2 text-danger" role="alert">
 					{previewError}
@@ -1160,49 +1459,6 @@
 						</label>
 					</div>
 				{/if}
-				<ul class="ml-4 list-disc space-y-1">
-					{#if preview.branch}
-						<li>
-							Rebase <code>{preview.branch}</code>, fast-forward it into main, remove its worktree.
-						</li>
-					{/if}
-					{#if preview.pull_request && !forgeBlockers.length}
-						<li data-testid="accept-pull-request">
-							Its <a
-								class="underline"
-								href={preview.pull_request}
-								target="_blank"
-								rel="external noopener noreferrer">pull request</a
-							> passes its required checks and reviews.
-						</li>
-					{/if}
-					<li>Move the story to done, archive it with its tasks and narrative, and commit.</li>
-					{#if preview.plan?.skipped}
-						<li>
-							No release: {preview.plan.skipped}.
-							<UnreleasedList unreleased={preview.plan.unreleased} />
-						</li>
-					{:else if preview.plan?.steps?.length}
-						<li>
-							Tag a {preview.plan.level} release:
-							{#each preview.plan.steps as s, i (s.component.name)}{i ? ', ' : ''}<span
-									class="font-medium">{s.component.name}</span
-								>
-								{v(s.from)} → {v(s.to)}{/each}
-						</li>
-					{/if}
-					{#if chosen.length}
-						<li data-testid="accept-makes-stories">
-							Then, once it is accepted, make a backlog story for each checked issue: {chosen
-								.map((r) => r.id)
-								.join(', ')}.
-						</li>
-					{/if}
-					<li data-testid="accept-stays-local">
-						Nothing is pushed: the accepted work stays local until it is published, from Publish on
-						the board or with <code>flai release --pending</code> on the host.
-					</li>
-				</ul>
 			{/if}
 
 			{#if progress.length || running}
@@ -1297,160 +1553,10 @@
 		</section>
 	{/if}
 
-	{#if inReview || checksRun?.started}
-		<section
-			class="mt-4 rounded border border-line bg-surface p-3 text-sm"
-			data-testid="checks-section"
-		>
-			<h2 class="mb-2 font-medium">Checks</h2>
-			{#if checksError}
-				<p
-					class="mb-2 rounded border border-danger bg-danger-soft p-2 text-danger"
-					role="alert"
-					data-testid="checks-error"
-				>
-					{checksError}
-				</p>
-			{/if}
-			{#if checksRun?.started}
-				<p data-testid="checks-summary">
-					{#if checksRun.running}
-						Running {checksRun.current}, started {localTime(checksRun.started)}.
-					{:else}
-						{checksRun.outcome}, started {localTime(checksRun.started)}, ended
-						{localTime(checksRun.ended ?? '')}.
-					{/if}
-				</p>
-				{#if checksRun.steps?.length}
-					<ul class="mt-1 ml-4 list-disc">
-						{#each checksRun.steps as s (s.name)}
-							<li>
-								{s.name}: {s.exit == null
-									? 'did not start'
-									: s.exit === 0
-										? 'ok'
-										: `exit ${s.exit}`}
-							</li>
-						{/each}
-					</ul>
-				{/if}
-				{#if checksLines.length}
-					<pre
-						class="mt-2 max-h-64 overflow-y-auto rounded bg-ground p-2 font-mono text-xs whitespace-pre-wrap"
-						data-testid="checks-output">{checksLines.join('\n')}</pre>
-				{/if}
-			{:else if checksEnabled}
-				<p class="text-muted">No checks have run yet.</p>
-			{/if}
-
-			{#if !checksEnabled}
-				<p class="mt-2 text-muted">
-					Off: the operator turns this on in a shell on the host with
-					<code class="rounded bg-ground px-1 text-ink">flai serve enable checks</code>.
-				</p>
-			{:else if writable && inReview}
-				<p class="mt-3 flex flex-wrap gap-2">
-					{#if checksRun?.running}
-						<button
-							type="button"
-							class="rounded border border-warn px-2 py-1 text-warn disabled:opacity-60"
-							onclick={cancelChecks}
-							disabled={checksBusy !== null}
-							data-testid="checks-cancel"
-							>{checksBusy === 'cancel' ? 'Cancelling…' : 'Cancel'}</button
-						>
-					{:else}
-						<button
-							type="button"
-							class="rounded border border-line px-2 py-1 disabled:opacity-60"
-							onclick={runChecks}
-							disabled={checksBusy !== null}
-							data-testid="checks-run">{checksBusy === 'run' ? 'Starting…' : 'Run checks'}</button
-						>
-					{/if}
-				</p>
-			{/if}
-		</section>
-	{/if}
-
-	<ForgeStatus status={pullRequest} class="mt-4" />
-
-	{#if verify || verifyError}
-		<section
-			class="mt-4 rounded border border-line bg-surface p-3 text-sm"
-			data-testid="verify-section"
-		>
-			<h2 class="mb-2 font-medium">
-				Verification
-				<span class="text-xs font-normal text-muted">the last flai verify of the story</span>
-			</h2>
-			{#if verifyError}
-				<p class="text-muted" data-testid="verify-error">{verifyError}</p>
-			{:else if verify}
-				<p data-testid="verify-summary">
-					<span class={verify.passed ? 'font-medium text-good' : 'font-medium text-danger'}
-						>{verify.outcome}</span
-					>. Verified <code class="rounded bg-ground px-1 text-ink">{verify.commit}</code> against
-					<code class="rounded bg-ground px-1 text-ink">{verify.base}</code> at
-					{localTime(verify.ranAt)}, in {verify.duration}.
-				</p>
-				<ul class="mt-2 space-y-1">
-					{#each verify.rows as row, i (i)}
-						<li data-testid="verify-step">
-							<span class="flex flex-wrap items-baseline gap-2">
-								<span
-									class={row.state === 'passed'
-										? 'text-good'
-										: row.state === 'reused'
-											? 'text-good opacity-70'
-											: row.state === 'failed'
-												? 'font-medium text-danger'
-												: 'text-muted'}>{row.label}</span
-								>
-								<span class="font-medium">{row.name}</span>
-								{#if row.tier}<span class="text-xs text-muted">tier</span>{/if}
-								{#if row.duration}<span class="text-xs text-muted">{row.duration}</span>{/if}
-							</span>
-							{#if row.findings.length || row.omitted}
-								<ul
-									class="mt-1 ml-4 space-y-1 rounded border border-danger bg-danger-soft p-2 font-mono text-xs text-danger"
-									aria-label="What {row.name} found"
-								>
-									{#each row.findings as f, j (j)}
-										<li>
-											{#if f.where}<span class="font-medium">{f.where}{f.message ? ':' : ''}</span
-												>{/if}
-											<span class="whitespace-pre-wrap">{f.message}</span>
-										</li>
-									{/each}
-									{#if row.omitted}<li>… {row.omitted} more findings left out</li>{/if}
-								</ul>
-							{/if}
-						</li>
-					{/each}
-				</ul>
-				{#if verify.notes.length}
-					<details class="mt-2" data-testid="verify-notes">
-						<summary class="cursor-pointer text-muted">
-							{verify.notes.length}
-							{verify.notes.length === 1 ? 'note' : 'notes'} from flai check outside the story; they do
-							not fail it
-						</summary>
-						<ul class="mt-1 ml-4 list-disc font-mono text-xs">
-							{#each verify.notes as n, i (i)}
-								<li>
-									{#if n.where}<span class="font-medium">{n.where}:</span>{/if}
-									<span class="whitespace-pre-wrap">{n.message}</span>
-								</li>
-							{/each}
-						</ul>
-					</details>
-				{/if}
-			{/if}
-		</section>
-	{/if}
-
-	<section class="mt-4">
-		<Threads on={item.id} {writable} />
-	</section>
+	<!-- A file's entry opens its panel before the sidebar scrolls to it (openChosenFile). -->
+	<div class="min-w-0" onclickcapture={openChosenFile}>
+		<PageSidebar label="Review sections" entries={sidebarEntries}>
+			{@render sections(item)}
+		</PageSidebar>
+	</div>
 {/if}

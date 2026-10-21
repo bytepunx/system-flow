@@ -25,9 +25,21 @@
 		truncated: boolean;
 	};
 
-	let { diff }: { diff: Diff } = $props();
+	let {
+		diff,
+		ids = {}
+	}: {
+		diff: Diff;
+		/** The element id of each file's row, by its path, for a page that links to a file (S-0461). */
+		ids?: Record<string, string>;
+	} = $props();
 	const uid = $props.id();
 	let open = $state<Record<string, boolean>>({});
+
+	/** Open a file's panel, as its summary line does; an open one stays open. */
+	export function show(path: string) {
+		open[path] = true;
+	}
 
 	// the outline round a run, and the background and text of each line in it
 	const outline: Record<PatchKind, string> = {
@@ -60,7 +72,7 @@
 {/if}
 <ul class="mt-2 space-y-1">
 	{#each diff.files as f, i (f.path)}
-		<li class="rounded border border-line bg-ground">
+		<li id={ids[f.path]} class="rounded border border-line bg-ground">
 			<button
 				type="button"
 				class="flex w-full cursor-pointer flex-wrap items-baseline gap-2 px-2 py-1 text-left text-xs"

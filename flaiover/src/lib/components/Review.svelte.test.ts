@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import Review from './Review.svelte';
 
@@ -1562,6 +1562,155 @@ describe('Review', () => {
 				c = undefined;
 				document.body.innerHTML = '';
 			}
+		});
+	});
+
+	// S-0461: what decides Accept stays on top, and below it a sidebar scrolls to each section the
+	// page shows, in its order, and to each changed file, whose panel choosing it opens.
+	describe('the sidebar (S-0461)', () => {
+		const FILES = {
+			...DIFF,
+			files: [
+				DIFF.files[0],
+				{ ...DIFF.files[0], path: 'docs/a-md', patch: '@@ -1 +1 @@\n-old\n+new' },
+				{ ...DIFF.files[0], path: 'flaiover/src/lib/x y.ts' }
+			]
+		};
+		const files = () => json(FILES);
+		const top = () =>
+			[...document.querySelectorAll('[data-sidebar-list="top"] > li > a')].map((a) =>
+				a.getAttribute('data-sidebar-entry')
+			);
+		const nested = () =>
+			[...document.querySelectorAll('[data-sidebar-list="nested"] > li > a')].map((a) => [
+				a.getAttribute('data-sidebar-entry'),
+				a.textContent!.trim()
+			]);
+		const entry = (id: string) =>
+			document.querySelector<HTMLAnchorElement>(`[data-sidebar-entry="${id}"]`)!;
+		const panel = (id: string) =>
+			document.getElementById(id)?.querySelector('[data-testid="diff-panel"]');
+		const before = (a: Element, b: Element) =>
+			!!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+		let scrolled: string[] = [];
+		const scrollIntoView = Element.prototype.scrollIntoView;
+		beforeEach(() => {
+			scrolled = [];
+			Element.prototype.scrollIntoView = function (this: Element) {
+				scrolled.push(this.id);
+			};
+		});
+		afterEach(() => {
+			Element.prototype.scrollIntoView = scrollIntoView;
+			history.replaceState(null, '', '/');
+		});
+
+		it('lists the sections shown in the page’s order, and under Changes each file', async () => {
+			backend({ diff: files });
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			const ids = top();
+			expect(ids).toEqual([
+				'review-criteria',
+				'review-state',
+				'review-threads',
+				'review-changes',
+				'review-release',
+				'review-checks'
+			]);
+			const sections = ids.map((id) => document.getElementById(id!)!);
+			for (let i = 1; i < sections.length; i++)
+				expect(before(sections[i - 1], sections[i]), ids[i]!).toBe(true);
+			expect(nested()).toEqual([
+				['review-file-docs-a-md', 'a.md'],
+				['review-file-docs-a-md-2', 'a-md'],
+				['review-file-flaiover-src-lib-x-y-ts', 'x y.ts']
+			]);
+			// each file's id is on its row of the diff, and each id once on the page
+			for (const [id] of nested()) {
+				expect(document.getElementById(id!)!.closest('#review-changes')).not.toBeNull();
+				expect(document.querySelectorAll(`[id="${id}"]`)).toHaveLength(1);
+			}
+			// Accept and what holds it are above the sidebar, not among its sections
+			const accept = document.querySelector('[data-testid="review-accept"]')!;
+			const sidebar = document.querySelector('[data-page-sidebar]')!;
+			expect(accept.contains(button('Accept'))).toBe(true);
+			expect(sidebar.contains(accept)).toBe(false);
+			expect(before(accept, sidebar)).toBe(true);
+		});
+
+		it('lists issues and verification when shown, and no release plan out of review', async () => {
+			backend({
+				issues: [
+					{
+						id: 'I-0003',
+						title: 'Flaky',
+						class: 'defect',
+						status: 'open',
+						count: 1,
+						path: '/repo/design/issues/I-0003-flaky.md',
+						stories: [],
+						story: ''
+					}
+				],
+				verify: () => json({ error: 'no flai connected' }, 503)
+			});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(top()).toEqual([
+				'review-criteria',
+				'review-state',
+				'review-threads',
+				'review-changes',
+				'review-release',
+				'review-issues',
+				'review-checks',
+				'review-verification'
+			]);
+			unmount(c!);
+			document.body.innerHTML = '';
+			backend({ item: { ...STORY, status: 'in-progress' } });
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(top()).toEqual([
+				'review-criteria',
+				'review-state',
+				'review-threads',
+				'review-changes'
+			]);
+			expect(document.querySelector('[data-testid="review-accept"]')).toBeNull();
+		});
+
+		it('opens a file’s panel when its entry is chosen, and scrolls to it', async () => {
+			backend({ diff: files });
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(panel('review-file-docs-a-md-2')).toBeFalsy();
+			entry('review-file-docs-a-md-2').click();
+			await settle();
+			expect(panel('review-file-docs-a-md-2')!.textContent).toContain('+new');
+			expect(panel('review-file-docs-a-md')).toBeFalsy();
+			expect(location.hash).toBe('#review-file-docs-a-md-2');
+			expect(scrolled).toEqual(['review-file-docs-a-md-2']);
+			// choosing it again leaves it open
+			entry('review-file-docs-a-md-2').click();
+			await settle();
+			expect(panel('review-file-docs-a-md-2')).toBeTruthy();
+			// a section's entry opens nothing
+			entry('review-changes').click();
+			await settle();
+			expect(document.querySelectorAll('[data-testid="diff-panel"]')).toHaveLength(1);
+			expect(scrolled.at(-1)).toBe('review-changes');
+		});
+
+		it('opens the file a link’s hash names on arrival', async () => {
+			history.replaceState(null, '', '#review-file-docs-a-md');
+			backend({ diff: files });
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(panel('review-file-docs-a-md')!.textContent).toContain('+three');
+			expect(document.querySelectorAll('[data-testid="diff-panel"]')).toHaveLength(1);
+			expect(scrolled).toContain('review-file-docs-a-md');
 		});
 	});
 
