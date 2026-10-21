@@ -3,11 +3,11 @@ id: I-0174
 title: The merge queue's batch runs smoke with no CLOSE_OUT_STORY, so scripts/check.sh runs an unscoped flai check --strict and fails every batch on findings outside its stories
 class: blocker
 status: closed
-count: 2
-cost: 30m
+count: 3
+cost: 25m
 first_reported: 2026-10-21T06:29:55Z
-last_reported: 2026-10-21T07:20:28Z
-updated: 2026-10-21T08:00:37Z
+last_reported: 2026-10-21T08:13:09Z
+updated: 2026-10-21T08:13:09Z
 ---
 
 # I-0174 The merge queue's batch runs smoke with no CLOSE_OUT_STORY, so scripts/check.sh runs an unscoped flai check --strict and fails every batch on findings outside its stories
@@ -24,6 +24,10 @@ Merge queue batch 20261021-061843 sent S-0455 back at smoke (TH-0551), at the co
 ### 2026-10-21T07:20:28Z
 Story: S-0453.
 Merge queue batches 20261021-065925, 20261021-070546, and 20261021-071126 each sent S-0453 back at smoke (TH-0555), at 83a35607, whose own close-out passed smoke at 06:05Z. The thread quoted only 'smoke: template render and check' (I-0172). Reproduced with scripts/smoke.sh in a scratch worktree of story/S-0453 rebased onto main d53c0c13: the template step passes and 'smoke: repository check' fails, an unscoped flai check --strict counting five warnings no story owns: item.archive on cancelled S-0452, threads.archived on TH-0526 (S-0404 archived), and issues.no-story on I-0143, I-0144, and I-0145. Every system-flow batch since 01:44Z (S-0454, S-0455, S-0453 three times) stopped at smoke.
+
+### 2026-10-21T08:13:09Z
+Story: S-0456.
+Merge queue batch 20261021-080642 verified S-0456 alone at 9db1029f06e4 and failed it at smoke: scripts/check.sh's unscoped flai check --strict found a wip.overlap between S-0458 and S-0465, two other stories in progress, which S-0456 neither owns nor changes. S-0456's own close-out had passed every step at 097b48d8, smoke included. flai serve sent S-0456 back on TH-0560; nothing on its branch needed a fix. S-0464, in review, fixes this.
 
 ## Remediation
 
