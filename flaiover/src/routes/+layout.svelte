@@ -17,6 +17,7 @@
 	import { withProject } from '$lib/sitemenu';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
+	import { afterNavigate } from '$app/navigation';
 
 	let { children } = $props();
 	const OVERVIEW = resolve('/');
@@ -88,6 +89,17 @@
 		drawerOpen = false;
 		toggle?.focus();
 	}
+	// A page chosen in the drawer closes it before the navigation ends, and SvelteKit then resets
+	// focus to the body; afterNavigate runs after that reset, so focus goes back to the button there.
+	let chose = false;
+	function chosen() {
+		chose = true;
+		closeDrawer();
+	}
+	afterNavigate(() => {
+		if (chose) toggle?.focus();
+		chose = false;
+	});
 	// Widening the window to md docks the rail, so an open drawer closes.
 	$effect(() => {
 		if (typeof window.matchMedia !== 'function') return;
@@ -170,7 +182,7 @@ sit beside it; the column is min-w-0 so a wide page cannot push the window sidew
 			onclose={closed}
 			onclick={(e) => e.target === e.currentTarget && closeDrawer()}
 		>
-			{#if drawerOpen}<NavRail onnavigate={closeDrawer} />{/if}
+			{#if drawerOpen}<NavRail onnavigate={chosen} />{/if}
 		</dialog>
 	{/if}
 	<!-- The document editor over any page: links open it with openEditor (S-0378). -->
