@@ -3,7 +3,7 @@ id: I-0158
 title: TestASettledReplyStartsTheAgentWaitingOnItOnce in flai/internal/serve fails now and then in the close-out's integration tier on a branch that does not touch serve
 class: defect
 status: open
-count: 3
+count: 4
 cost: 6m
 first_reported: 2026-10-17T04:54:11Z
 last_reported: 2026-10-21T08:49:08Z
@@ -24,6 +24,10 @@ S-0443's close-out stopped at integration: agents_test.go:1309 'started before t
 ### 2026-10-17T18:09:01Z
 Story: S-0396.
 S-0396: failed again in the close-out's integration tier (agents_test.go:1347, "started before the reply"); S-0396 changes nothing under flai/internal/serve. Ran the close-out again.
+
+### 2026-10-21T07:44:07Z
+Story: S-0463.
+S-0463's close-out stopped at the integration tier (6m19s): flai/internal/serve/agents_test.go:1348 reported "started before the reply", with flai serve having started stub-agent again for S-0001 on a message on MS-0001 before the settled reply was written. S-0463 changes only flai/internal/host/host_test.go and design/issues.
 
 ### 2026-10-21T08:49:08Z
 Story: S-0456.
