@@ -1,13 +1,13 @@
 ---
 title: Active streams
-updated: 2026-10-21T16:25:08Z
+updated: 2026-10-21T20:51:54Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0483](S-0483.md) | Accepting a story that adds a flaiover dependency leaves the main checkout's flaiover/node_modules without it, so every close-out's integration tier fails TestEveryListedFlaioverComponentCompilesInTheHarness until someone installs | in-progress | agent-S-0483 | 2026-10-21T13:28:27Z |
+| [S-0483](S-0483.md) | Accepting a story that adds a flaiover dependency leaves the main checkout's flaiover/node_modules without it, so every close-out's integration tier fails TestEveryListedFlaioverComponentCompilesInTheHarness until someone installs | review | agent-S-0483 | 2026-10-21T20:45:50Z |
 
 ## Strategic agents
 

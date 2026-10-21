@@ -6,7 +6,7 @@ title: A close-out whose run main outruns takes two rounds of the integration an
 status: backlog
 owner: alex
 created: 2026-10-21T11:57:48Z
-updated: 2026-10-21T11:57:48Z
+updated: 2026-10-21T20:51:54Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 25m
     by: flai
     at: 2026-10-21T11:57:48Z
+finalized:
+  by: alex
+  at: 2026-10-21T20:51:54Z
 ---
 # S-0466 A close-out whose run main outruns takes two rounds of the integration and smoke tiers, about 24 minutes, past the Bash tool's 10-minute limit, so the agent's call is killed mid-round
 
