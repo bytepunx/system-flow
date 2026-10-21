@@ -7,7 +7,7 @@ status: backlog
 parent: E-0027
 owner: alex
 created: 2026-10-21T06:59:57Z
-updated: 2026-10-21T07:05:51Z
+updated: 2026-10-21T07:19:47Z
 transitions: []
 tags: [dashboard]
 topics: [dashboard]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 45m
-  delivery: 2026-10-22T01:17:00Z
-  basis: "flai's 29m from 89s per unit of size, raised because every SettingsPanel case is re-run per page and the anchor redirect is client-side; delivery is flai's play-out moved by its own 16m raise and S-0458's 43m."
-  by: planner-E-0027
-  at: 2026-10-21T07:05:51Z
+  delivery: 2026-10-22T01:43:00Z
+  basis: "Its own forecast of 45m; 31st in the pull order with an in-progress limit of 5, behind S-0453, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432, S-0433, S-0434, S-0435, S-0456 and S-0458."
+  by: flai
+  at: 2026-10-21T07:19:47Z
 ---
 # S-0459 The settings page becomes five Configuration pages, Features, Agents, File System, Projects, and Harnesses, each reached from the rail
 
@@ -59,3 +59,12 @@ The split is the operator's answer to TH-0553 question 4. Each page shows only i
 
 - Drafted by the planner for E-0027. Second, after S-0458, whose rail it points at its pages.
 - The sections stay in `SettingsPanel.svelte`, told which page to render, rather than being split into ten components. Their shared load, gate, and save state is one script, and splitting it is not this story's outcome.
+
+### Planning
+
+- **Touches.** None were declared, so every touch is the planner's. All are files, and no folder touch was kept.
+  - **Layout:** `flaiover/src/lib/components/SettingsPanel.svelte` (1049 lines, ten `<h2>` sections) and its test. `flaiover/src/lib/settingspages.ts` and its test are new. `flaiover/src/routes/settings/+page.svelte` and a new `+page.ts` handle the redirect. `settings/[page]/+page.svelte` and `+page.ts` are new, with `settings.svelte.test.ts`. `sitemenu.ts` and its test retarget the five entries.
+  - **Design:** `docs/users/flaiover.md` § Settings and `design/system/flaiover-dashboard.md` § Views. `docs/operators/settings.md` names "the dashboard's Settings page" for host actions and shared paths. It is also the strongest co-change outside the hubs, at 7%.
+  - **Co-change:** the rest of `flai touches suggest`'s list is hub documents and flai's Go code, none of which this story reaches. None was added.
+- **Forecast.** 45m against flai's 29m. Every `SettingsPanel` case is re-run on its section's page, and an anchor redirect must run in the browser, because the server never sees the hash. The delivery is flai's play-out, moved by its own 16m raise and S-0458's 43m.
+- **Cost of delay.** Not yet set. E-0027 has no inputs, so `flai cod` refuses. The input is asked on TH-0553 question 1.

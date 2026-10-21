@@ -7,7 +7,7 @@ status: backlog
 parent: E-0027
 owner: alex
 created: 2026-10-21T07:00:44Z
-updated: 2026-10-21T07:06:08Z
+updated: 2026-10-21T07:19:47Z
 transitions: []
 tags: [dashboard]
 topics: [dashboard]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 45m
-  delivery: 2026-10-22T02:20:00Z
-  basis: "flai's 23m from 89s per unit of size, raised for three pages changed with their tests, the charts page at 807 lines; delivery is flai's play-out moved by its own 22m raise and those of S-0460 and S-0458."
-  by: planner-E-0027
-  at: 2026-10-21T07:06:08Z
+  delivery: 2026-10-22T02:50:00Z
+  basis: "Its own forecast of 45m; 33rd in the pull order with an in-progress limit of 5, behind S-0453, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432, S-0433, S-0434, S-0435, S-0456, S-0458, S-0459 and S-0460."
+  by: flai
+  at: 2026-10-21T07:19:47Z
 ---
 # S-0461 The review, charts, and documents pages navigate within themselves from the left sidebar
 
@@ -54,3 +54,12 @@ Three more of the pages the operator scrolls through most carry the sidebar S-04
 
 - Drafted by the planner for E-0027. Fourth, after S-0460, whose `PageSidebar.svelte` it uses.
 - Other pages could take the sidebar later: Inbox by kind of entry, Harnesses by harness, and the Design page by token group. They are left out to keep the story to one or two sessions. They are proposed on the plan thread.
+
+### Planning
+
+- **Touches.** None were declared, so every touch is the planner's. All are files, and no folder touch was kept.
+  - **Layout:** `flaiover/src/lib/components/Review.svelte` and its test. The route `review/[id]/+page.svelte` is 13 lines that only render it, so it is not touched. `flaiover/src/routes/charts/[kind]/+page.svelte` (807 lines, its group-and-kind `<nav>` at line 267) and `charts.svelte.test.ts`. `flaiover/src/routes/docs/[...path]/+page.svelte`, which imports `DocTree` and `headingsOf`, with `docs.svelte.test.ts`. `DocTree.svelte`, in case fitting the column changes its props.
+  - **Design:** `design/system/flaiover-dashboard.md` § Views, and `docs/users/flaiover.md` § Reviewing a story, § Charts, and § Docs. `DocTree.examples.json` follows `DocTree`'s props, as ADR-0164 requires.
+  - **Co-change:** `flai touches suggest` lists `flaiover/src/lib/viz/charts.ts` and its test at 7%. They build the charts' data, not the navigation, so none was added.
+- **Forecast.** 45m against flai's 23m. The story changes three pages, each with its own tests, and the charts page alone is 807 lines. The delivery is flai's play-out, moved by its own 22m raise and the raises of S-0460 and S-0458.
+- **Cost of delay.** Not yet set. E-0027 has no inputs, so `flai cod` refuses. The input is asked on TH-0553 question 1.

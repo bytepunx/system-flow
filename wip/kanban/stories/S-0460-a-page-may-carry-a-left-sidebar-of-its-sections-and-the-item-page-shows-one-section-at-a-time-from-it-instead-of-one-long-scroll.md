@@ -7,7 +7,7 @@ status: backlog
 parent: E-0027
 owner: alex
 created: 2026-10-21T07:00:19Z
-updated: 2026-10-21T07:05:58Z
+updated: 2026-10-21T07:19:47Z
 transitions: []
 tags: [dashboard]
 topics: [dashboard, design]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 1h
-  delivery: 2026-10-22T01:32:00Z
-  basis: "flai's 26m from 107s per unit of size counts nine touches, but one is the 669-line item page restructured into panes with its tests rewritten; delivery is flai's play-out moved by its own 34m raise and S-0458's 43m."
-  by: planner-E-0027
-  at: 2026-10-21T07:05:58Z
+  delivery: 2026-10-22T01:59:00Z
+  basis: "Its own forecast of 1h; 32nd in the pull order with an in-progress limit of 5, behind S-0453, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432, S-0433, S-0434, S-0435, S-0456, S-0458 and S-0459."
+  by: flai
+  at: 2026-10-21T07:19:47Z
 ---
 # S-0460 A page may carry a left sidebar of its sections, and the item page shows one section at a time from it instead of one long scroll
 
@@ -64,3 +64,12 @@ The operator finds what they want on a story's page from a sidebar at the left o
 
 - Drafted by the planner for E-0027. Third, after S-0458, whose layout gives the main area the sidebar sits in. It can run beside S-0459 and S-0462, which touch none of its code, though all three update the same two documents.
 - The pane list is the planner's reading of today's page (`flaiover/src/routes/items/[id]/+page.svelte`). The story's agent may merge or rename panes when the page reads better, and should say why in the narrative.
+
+### Planning
+
+- **Touches.** None were declared, so every touch is the planner's. All are files, and no folder touch was kept.
+  - **Layout:** `flaiover/src/routes/items/[id]/+page.svelte` (669 lines, the main column and the 320px aside at line 366) and its `item.svelte.test.ts`. `PageSidebar.svelte`, `pagesidebar.svelte.ts`, and their tests are new under `flaiover/src/lib`.
+  - **Design:** `design/system/flaiover-dashboard.md` § Views (the `/items/:id` row) and `docs/users/flaiover.md` § The item page. `PageSidebar.examples.json` is under `design/components/`, as ADR-0164 requires.
+  - **Co-change:** `flai touches suggest` lists hub documents and `Threads.svelte` at 6%. The panes host `Threads` and its siblings unchanged, so none was added.
+- **Forecast.** 1h against flai's 26m. flai's size counts nine touches, but one of them is the 669-line item page, restructured into panes with every one of its tests moved to the pane that now holds its content. The delivery is flai's play-out, moved by its own 34m raise and S-0458's 43m.
+- **Cost of delay.** Not yet set. E-0027 has no inputs, so `flai cod` refuses. The input is asked on TH-0553 question 1.

@@ -7,7 +7,7 @@ status: backlog
 parent: E-0027
 owner: alex
 created: 2026-10-21T07:01:02Z
-updated: 2026-10-21T07:06:20Z
+updated: 2026-10-21T07:19:47Z
 transitions: []
 tags: [dashboard]
 topics: [dashboard]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 50m
-  delivery: 2026-10-22T01:47:00Z
-  basis: "flai's 21m from 89s per unit of size, raised because the 860-line board keeps its menus, reordering, and moves working in two layouts, checked by a Playwright test; delivery is flai's play-out moved by its own 29m raise and S-0458's 43m."
-  by: planner-E-0027
-  at: 2026-10-21T07:06:20Z
+  delivery: 2026-10-22T01:48:00Z
+  basis: "Its own forecast of 50m; 34th in the pull order with an in-progress limit of 5, behind S-0453, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432, S-0433, S-0434, S-0435, S-0456, S-0458, S-0459, S-0460 and S-0461."
+  by: flai
+  at: 2026-10-21T07:19:47Z
 ---
 # S-0462 The board's lanes sit side by side and scroll sideways on a wide screen, and collapse to their headings, toggled by a tap, on a narrow one
 
@@ -51,3 +51,12 @@ The board reads as a board at every width. Today its six lanes stack in one colu
 
 - Drafted by the planner for E-0027. After S-0458, which changes the layout's main area that the board opts out of `max-w-6xl` in. It can run beside S-0459 and S-0460.
 - Which lanes start open on a phone is the planner's assumption, named on the plan thread: the three where the work moves.
+
+### Planning
+
+- **Touches.** None were declared, so every touch is the planner's. All are files, and no folder touch was kept.
+  - **Layout:** `flaiover/src/routes/board/+page.svelte` (860 lines, the lane grid at line 658 and each lane's `<h2>` at line 706) and `board.svelte.test.ts`. `flaiover/src/lib/lanecollapse.svelte.ts` and its test are new, after `boardtypes.svelte.ts`. `flaiover/src/routes/+layout.svelte` lets the board leave `max-w-6xl`. `flaiover/e2e/board-layout.e2e.ts` is new.
+  - **Design:** `design/system/flaiover-dashboard.md` § Views (the `/board` row) and `docs/users/flaiover.md` § Board.
+  - **Co-change:** `flai touches suggest` lists `BoardCard.svelte` and its test at 5%. The cards keep their shape inside a wider or a collapsed lane, so none was added. `LaneMenu.svelte`, `CardReorder.svelte`, and `LaneMoveDialog.svelte` are only checked, not changed.
+- **Forecast.** 50m against flai's 21m. The 860-line board must keep its lane menu, card menu, reordering, and moves working in two layouts, checked by a Playwright test at two widths. The delivery is flai's play-out, moved by its own 29m raise and S-0458's 43m.
+- **Cost of delay.** Not yet set. E-0027 has no inputs, so `flai cod` refuses. The input is asked on TH-0553 question 1.

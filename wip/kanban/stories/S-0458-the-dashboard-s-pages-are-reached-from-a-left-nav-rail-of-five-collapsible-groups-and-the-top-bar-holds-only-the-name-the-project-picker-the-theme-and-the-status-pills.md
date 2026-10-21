@@ -7,7 +7,7 @@ status: backlog
 parent: E-0027
 owner: alex
 created: 2026-10-21T06:59:38Z
-updated: 2026-10-21T07:05:45Z
+updated: 2026-10-21T07:19:47Z
 transitions: []
 tags: [dashboard]
 topics: [dashboard, design]
@@ -20,10 +20,10 @@ agent:
 draft: true
 forecast:
   duration: 1h30m
-  delivery: 2026-10-22T00:29:00Z
-  basis: "flai's 47m from 107s per unit of size, raised for a new icon dependency, a responsive drawer checked in a browser, and the project's second Playwright test; delivery is flai's play-out, 30th in the pull order, moved by the 43m raise."
-  by: planner-E-0027
-  at: 2026-10-21T07:05:45Z
+  delivery: 2026-10-22T00:52:00Z
+  basis: "Its own forecast of 1h30m; 30th in the pull order with an in-progress limit of 5, behind S-0453, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432, S-0433, S-0434, S-0435 and S-0456."
+  by: flai
+  at: 2026-10-21T07:19:47Z
 ---
 # S-0458 The dashboard's pages are reached from a left nav rail of five collapsible groups, and the top bar holds only the name, the project picker, the theme, and the status pills
 
@@ -72,3 +72,12 @@ Each group expands or collapses to show the icons of its pages. An expanded grou
 - The Configuration entries point at anchors on `/settings` until the next story splits that page into five pages and points the entries at them. The Documentation System, Conventions, and Issues entries open the existing document viewer, so no new page is made for them.
 - S-0420 (E-0024, backlog) merges the Planner, Orchestrator, and Analyzer pages into one role page, and touches `sitemenu.ts` and `SiteMenu.svelte`. Whichever of the two lands second moves the Agents group's three entries to the routes it then finds.
 - Replaces the cancelled S-0452 (keep the top menu visible). With the rail docked, no menu scrolls away.
+
+### Planning
+
+- **Touches.** None were declared, so every touch is the planner's. All are files, and no folder touch was kept.
+  - **Layout:** `flaiover/src/routes/+layout.svelte`, which holds the header today (lines 68 to 90), and `layout.css`. `flaiover/src/lib/sitemenu.ts` and its test hold `SITE_MENU` and `locate`. `SiteMenu.svelte` is removed. `NavRail.svelte`, `navrail.svelte.ts`, and their tests are new, following `boardtypes.svelte.ts` for the per-browser state. `SettingsPanel.svelte` gets the Configuration anchors. `flaiover/e2e/layout.e2e.ts` is new beside `live-events.e2e.ts`. `flaiover/package.json` and `pnpm-lock.yaml` take the icon library.
+  - **Design:** `design/system/flaiover-dashboard.md` § Views and `docs/users/flaiover.md` § The header describe the site menu now. `design/tech/icons.md` is new, with its `README.md` row. `NavRail.examples.json` is under `design/components/`, as ADR-0164 requires.
+  - **Co-change:** `flai touches suggest` lists hub documents (`design/system/flai-cli.md`, `docs/users/flai.md`, `docs/operators/index.md`), none of which this story changes. `items/[id]/+page.svelte` and `board/+page.svelte` are left to S-0460 and S-0462. None was added.
+- **Forecast.** 1h30m against flai's 47m. flai's figure counts 7 criteria and 19 touches at the median for feature stories. This story also adds a dependency, builds a drawer whose behaviour is checked in a browser at two widths, and writes the project's second Playwright test, so the raise is about double. The delivery is flai's play-out, 30th in the pull order, moved by the 43m raise.
+- **Cost of delay.** Not yet set. E-0027 has no inputs, so `flai cod` refuses. The input is asked on TH-0553 question 1.

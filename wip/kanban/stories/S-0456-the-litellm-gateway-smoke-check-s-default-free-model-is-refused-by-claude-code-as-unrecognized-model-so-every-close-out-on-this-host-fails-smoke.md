@@ -6,7 +6,7 @@ title: The LiteLLM gateway smoke check's default free model is refused by Claude
 status: backlog
 owner: alex
 created: 2026-10-21T02:08:41Z
-updated: 2026-10-21T06:04:37Z
+updated: 2026-10-21T07:19:47Z
 transitions: []
 tags: [flai, serve, tests]
 touches: [flai/internal/serve/gateway_test.go, scripts/litellm.sh, design/system/agent-adapters.md, docs/contributors/index.md, design/issues/I-0170-the-litellm-gateway-smoke-check-s-default-free-model-is-refused-by-claude-code-as-unrecognized-model-so-every-close-out-on-this-host-fails-smoke.md, design/issues/summary.md]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-10-21T06:04:37Z
 forecast:
   duration: 1h
-  delivery: 2026-10-21T21:58:00Z
-  basis: "flai's 15m (110 s per unit over 24 done remediation stories, size 8) raised to 1h for the live runs through the proxy that T-1944 and T-1946 need; delivery is flai's 21:13 plus the 45m added, 29th in the pull order."
-  by: planner-S-0456
-  at: 2026-10-21T06:04:37Z
+  delivery: 2026-10-21T23:19:00Z
+  basis: "Its own forecast of 1h; 29th in the pull order with an in-progress limit of 5, behind S-0453, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432, S-0433, S-0434 and S-0435."
+  by: flai
+  at: 2026-10-21T07:19:47Z
 finalized:
   by: alex
   at: 2026-10-21T05:58:31Z
