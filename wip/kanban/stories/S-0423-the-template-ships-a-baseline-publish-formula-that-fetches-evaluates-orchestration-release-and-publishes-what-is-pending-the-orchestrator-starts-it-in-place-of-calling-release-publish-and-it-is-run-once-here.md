@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:41:11Z
-updated: 2026-10-21T12:51:45Z
+updated: 2026-10-21T13:10:20Z
 transitions: []
 tags: [cli, template]
 topics: [cli, orchestration, template, conventions]
@@ -36,10 +36,10 @@ usage:
 draft: true
 forecast:
   duration: 50m
-  delivery: 2026-10-22T04:03:00Z
-  basis: "Its own forecast of 50m; 18th in the pull order with an in-progress limit of 5, behind S-0461, S-0471, S-0473, S-0479, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421 and S-0422."
+  delivery: 2026-10-22T04:30:00Z
+  basis: "Its own forecast of 50m; 18th in the pull order with an in-progress limit of 5, behind S-0479, S-0483, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421 and S-0422."
   by: flai
-  at: 2026-10-21T12:51:45Z
+  at: 2026-10-21T13:07:24Z
 ---
 # S-0423 The template ships a baseline publish formula that fetches, evaluates orchestration.release, and publishes what is pending, the orchestrator starts it in place of calling release_publish, and it is run once here
 
@@ -61,6 +61,8 @@ Publishing a release stops being prose. A baseline formula, `publish`, spells ou
 - T-1782 Under publish, the orchestrator's role file tells it to run flai formula run publish when release_evaluate is met, and the guard lets it run that formula
 - T-1783 The publish formula is run once in this repository, its instance worked to review and accepted, and the release or the evaluation that stopped it recorded
 - T-1784 The design, the conventions that describe publishing, the operator docs, and the changelog say that publishing is the publish formula
+- T-2013 A formula step may say in: main, which flai formula run writes into its task's Work as the main checkout's path and flai check validates
+- T-2014 release_publish refuses, naming flai formula run publish, while the project defines a publish formula, and stays for a project with none
 
 ## Notes
 
