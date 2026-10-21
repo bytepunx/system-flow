@@ -7,7 +7,7 @@ count: 1
 cost: 15m
 first_reported: 2026-10-20T20:07:32Z
 last_reported: 2026-10-20T20:07:32Z
-updated: 2026-10-20T20:07:32Z
+updated: 2026-10-21T00:29:30Z
 ---
 
 # I-0171 The LiteLLM gateway smoke check fails because Claude Code 2.1.296 refuses the default haiku model name as unrecognized_model
@@ -24,3 +24,5 @@ S-0450's close-out stopped at the smoke tier: TestGatewayLiteLLM/unified (flai/i
 Correction, 2026-10-20: the diagnosis above is wrong. `unrecognized_model` is only a warning Claude Code prints for a model it has no metadata for, on passing runs too. The cause is upstream: OpenRouter answers 404 for `nvidia/nemotron-3-super-120b-a12b:free` through the proxy, as S-0451 found on TH-0529, and I-0170 records the same cause. `TestGatewayLiteLLM` passes with `FLAI_TEST_LITELLM_HAIKU=openrouter-messages/nvidia/nemotron-3-ultra-550b-a55b:free`. On the operator's word on TH-0530, S-0450's close-out ran with that model set for the run, while `.flai-cache/litellm/litellm.env` still names the retired one.
 
 ## Remediation
+
+Story S-0455 remediates this issue, created from it at 2026-10-21T00:29:30Z.
