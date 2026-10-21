@@ -7,7 +7,7 @@ status: ready
 parent: E-0027
 owner: alex
 created: 2026-10-21T07:00:19Z
-updated: 2026-10-21T07:54:30Z
+updated: 2026-10-21T07:58:04Z
 transitions:
   - to: ready
     at: 2026-10-21T07:54:27Z
@@ -38,10 +38,10 @@ usage:
           cost: 0.0684
 forecast:
   duration: 1h
-  delivery: 2026-10-21T09:09:00Z
-  basis: "Its own forecast of 1h; 2nd in the pull order with an in-progress limit of 5, behind S-0456, S-0463, S-0464, S-0465 and S-0459."
+  delivery: 2026-10-21T10:43:00Z
+  basis: "Its own forecast of 1h; 4th in the pull order with an in-progress limit of 5, behind S-0456, S-0458, S-0463, S-0464, S-0465, S-0459, S-0461 and S-0462."
   by: flai
-  at: 2026-10-21T07:54:30Z
+  at: 2026-10-21T07:58:04Z
 finalized:
   by: alex
   at: 2026-10-21T07:53:49Z
