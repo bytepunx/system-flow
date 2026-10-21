@@ -36,7 +36,10 @@
 #   LITELLM_PORT          host port, default 4000
 #   LITELLM_IMAGE         default ghcr.io/berriai/litellm:main-stable; pin a tag
 #   LITELLM_MAX_BUDGET    the virtual key's budget in USD per 30 days, default 5
-#   LITELLM_HAIKU_MODEL   default openrouter-messages/nvidia/nemotron-3-ultra-550b-a55b:free
+#   LITELLM_HAIKU_MODEL   the gateway check's model, default HAIKU_DEFAULT below;
+#                         kept in admin.env only when set, so that a newer
+#                         default takes effect, and dropped from it when it is a
+#                         default this script has retired (I-0171)
 #
 # POSIX sh. Needs docker with the compose plugin, curl, jq, and openssl.
 set -eu
@@ -49,6 +52,9 @@ CONFIG="$DIR/config.yaml"
 COMPOSE="$DIR/compose.yaml"
 PROJECT="system-flow-litellm"
 ALIAS="system-flow-agents"
+# The model FLAI_TEST_LITELLM_HAIKU names when LITELLM_HAIKU_MODEL is not set:
+# a free OpenRouter model, so the gateway check spends nothing.
+HAIKU_DEFAULT="openrouter-messages/nvidia/nemotron-3-ultra-550b-a55b:free"
 
 say() { echo "litellm: $*"; }
 die() { echo "litellm: $*" >&2; exit 1; }
@@ -59,7 +65,7 @@ compose() { docker compose -p "$PROJECT" --env-file "$ADMIN" -f "$COMPOSE" "$@";
 readvar() { sed -n "s/^$1=//p" "$2" 2>/dev/null | head -n1; }
 
 # admin: the admin env file, written once with fresh secrets; later runs may
-# change the port, image, budget, or upstream key by setting the variable.
+# change the port, image, budget, upstream key, or model by setting the variable.
 admin() {
   mkdir -p "$DIR"
   if [ ! -f "$ADMIN" ]; then
@@ -73,8 +79,8 @@ ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
 LITELLM_PORT=${LITELLM_PORT:-4000}
 LITELLM_IMAGE=${LITELLM_IMAGE:-ghcr.io/berriai/litellm:main-stable}
 LITELLM_MAX_BUDGET=${LITELLM_MAX_BUDGET:-5}
-LITELLM_HAIKU_MODEL=${LITELLM_HAIKU_MODEL:-openrouter-messages/nvidia/nemotron-3-ultra-550b-a55b:free}
 EOT
+      if [ -n "${LITELLM_HAIKU_MODEL:-}" ]; then echo "LITELLM_HAIKU_MODEL=$LITELLM_HAIKU_MODEL" >> "$ADMIN"; fi
     )
     say "wrote $ADMIN (master key, salt key, database password, upstream keys)"
   else
@@ -87,10 +93,21 @@ EOT
       fi
     done
   fi
+  # The defaults this script has retired. A host whose admin.env recorded one
+  # before S-0455 kept it on every up; dropping it lets HAIKU_DEFAULT apply.
+  #   nemotron-3-super: OpenRouter retired its free model, a 404 upstream (I-0171)
+  for old in 'openrouter-messages/nvidia/nemotron-3-super-120b-a12b:free'; do
+    if [ "$(readvar LITELLM_HAIKU_MODEL "$ADMIN")" = "$old" ]; then
+      tmp="$ADMIN.tmp"
+      ( umask 077; grep -vxF "LITELLM_HAIKU_MODEL=$old" "$ADMIN" > "$tmp" ); mv "$tmp" "$ADMIN"
+      say "dropped LITELLM_HAIKU_MODEL=$old from $ADMIN, a default this script has retired"
+    fi
+  done
   MASTER_KEY="$(readvar LITELLM_MASTER_KEY "$ADMIN")"
   PORT="$(readvar LITELLM_PORT "$ADMIN")"
   MAX_BUDGET="$(readvar LITELLM_MAX_BUDGET "$ADMIN")"
-  HAIKU="$(readvar LITELLM_HAIKU_MODEL "$ADMIN")"
+  HAIKU="${LITELLM_HAIKU_MODEL:-$(readvar LITELLM_HAIKU_MODEL "$ADMIN")}"
+  HAIKU="${HAIKU:-$HAIKU_DEFAULT}"
   BASE_URL="http://127.0.0.1:$PORT"
 }
 

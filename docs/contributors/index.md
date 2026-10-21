@@ -1,6 +1,6 @@
 ---
 title: Contributors guide
-updated: 2026-10-17
+updated: 2026-10-21
 status: draft
 ---
 
@@ -48,7 +48,7 @@ Every script in `scripts/` sources `scripts/env.sh`, which sets this environment
 | `PATH` | The tree's own `bin/`, then the main checkout's `bin/` (from a story worktree under `.flai-cache/worktrees/`), then the main checkout's pnpm, then `~/go/bin` |
 | `FLAI_CONFIG` | `.flai-cache/config.json` in the main checkout, unless already set |
 | `FLAI_CACHE_DIR`, npm and pnpm caches | Under the main checkout's `.flai-cache/` |
-| `LITELLM_BASE_URL`, `LITELLM_API_KEY`, `FLAI_TEST_LITELLM_HAIKU` | From `.flai-cache/litellm/litellm.env` when `scripts/litellm.sh up` has written it and the environment does not already set them: the local LiteLLM proxy and its budgeted virtual key, for the gateway tests and the agents `flai serve` starts |
+| `LITELLM_BASE_URL`, `LITELLM_API_KEY`, `FLAI_TEST_LITELLM_HAIKU` | From `.flai-cache/litellm/litellm.env` when `scripts/litellm.sh up` has written it and the environment does not already set them: the local LiteLLM proxy and its budgeted virtual key, for the gateway tests and the agents `flai serve` starts; `up` writes `FLAI_TEST_LITELLM_HAIKU` as `LITELLM_HAIKU_MODEL` when that is set, and the script's default otherwise |
 
 Run `make install-tools` once, from any tree: it installs the pinned golangci-lint v2 and GoReleaser into the main checkout's `bin/`, so every story worktree lints with them. `make flai-test` names the golangci-lint it runs and stops if it is not v2.
 
@@ -62,7 +62,7 @@ The gateway checks run `claude -p` through a gateway with the `claude-code` adap
 | `FLAI_TEST_OPENROUTER_HAIKU` | `anthropic/claude-haiku-4.5` | The OpenRouter model `haiku` resolves to |
 | `LITELLM_BASE_URL` | none: the check skips | The LiteLLM proxy's root, such as `http://127.0.0.1:4000`; the check runs through its unified `/v1/messages` |
 | `LITELLM_API_KEY` | none: the check skips | The proxy's virtual key the check runs on |
-| `FLAI_TEST_LITELLM_HAIKU` | `openrouter-messages/nvidia/nemotron-3-ultra-550b-a55b:free` | The proxy's model `haiku` resolves to on the unified route; the default is a free OpenRouter model, so the check spends nothing |
+| `FLAI_TEST_LITELLM_HAIKU` | `openrouter-messages/nvidia/nemotron-3-ultra-550b-a55b:free` | The proxy's model `haiku` resolves to on the unified route; the default is a free OpenRouter model, so the check spends nothing. `scripts/litellm.sh up` sets it in the key file: `admin.env` keeps `LITELLM_HAIKU_MODEL` only when it was set, and drops it when it is a default the script has retired |
 | `FLAI_TEST_LITELLM_PASSTHROUGH` | unset: the pass-through skips | `1` runs the check through the proxy's `/anthropic` pass-through too, on `claude-haiku-4-5`; it forwards to Anthropic only, so it needs the proxy's upstream `ANTHROPIC_API_KEY` and spends on it |
 | `LITELLM_MASTER_KEY` | none: the spend log is not read | The proxy's master key, the only key that reads `/spend/logs`; without it the check logs the virtual key's spend from `/key/info` alone |
 | `FLAI_TEST_GATEWAY_BUDGET` | `1.00` | The run's `max_budget_usd`, held to Claude Code's own count, which runs three to four times what OpenRouter charges; a run costs about $0.06 at OpenRouter |
