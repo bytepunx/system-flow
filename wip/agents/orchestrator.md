@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1190.5362
-accrued_seconds: 1047871
-tasks_completed: 845
-last_run: 2026-10-21T13:06:19Z
+accrued_cost: 1191.4998
+accrued_seconds: 1047949
+tasks_completed: 846
+last_run: 2026-10-21T13:07:37Z
 ---
 
 # Orchestrator activity
@@ -5926,6 +5926,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0473
 - Seconds: 122
 - Cost: 1.1445 USD, estimated
+
+### 2026-10-21T13:07:37Z
+
+- Summary: S-0471 reached review at 27d62cb7. flai verify passed at the head, and the verifier found both criteria met: replayHolds judges only at events that can change a hold, with equivalence tests against the old replay, and one replay drops from 2,726 ms to 71 ms; I-0155 is closed. Enqueued S-0471, second in the queue behind S-0473 (batch 20261021-130727). Meanwhile S-0461 landed through batch 20261021-130439, which completes E-0027.
+- Items: S-0471, S-0461, E-0027
+- Seconds: 78
+- Cost: 0.9636 USD, estimated
 
 ## Refusals
 

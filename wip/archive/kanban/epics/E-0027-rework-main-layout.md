@@ -40,21 +40,21 @@ usage:
       cost: 50.0173
   strategic:
     - kind: orchestrator
-      seconds: 2970
+      seconds: 3022
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 403
-          output: 6268
-          cache_read: 58665015
-          cache_write: 166197
-          cost: 14.3642
+          input: 411
+          output: 6398
+          cache_read: 61173951
+          cache_write: 172512
+          cost: 14.9196
         - model: claude-sonnet-5-5
-          input: 62
-          output: 359
-          cache_read: 951422
-          cache_write: 243989
-          cost: 0.906
+          input: 68
+          output: 391
+          cache_read: 1047168
+          cache_write: 274689
+          cost: 0.993
 ---
 # E-0027 Rework main layout
 
