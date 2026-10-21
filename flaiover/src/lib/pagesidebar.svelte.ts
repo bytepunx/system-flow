@@ -104,11 +104,11 @@ export class PageSidebarState {
 	}
 
 	/** The entry chosen, resolved against the entries. */
-	choice = $derived(resolveChoice(this.chosen, this.#source()));
+	choice = $derived.by(() => resolveChoice(this.chosen, this.#source()));
 	/** The pane shown. */
-	pane = $derived(paneOf(this.choice, this.#source()));
+	pane = $derived.by(() => paneOf(this.choice, this.#source()));
 	/** The scroll entries whose sections are on the page: those outside a pane or in the one shown. */
-	watched = $derived(
+	watched = $derived.by(() =>
 		flatten(this.#source().entries)
 			.filter((p) => p.entry.mode === 'scroll' && (!p.pane || p.pane === this.pane))
 			.map((p) => p.entry.id)
