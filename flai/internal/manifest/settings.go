@@ -839,6 +839,7 @@ func (m Manifest) settingsProblems() []Problem {
 	msgs = append(msgs, m.TestErrors()...)
 	msgs = append(msgs, m.ProviderErrors()...)
 	msgs = append(msgs, m.ComponentErrors(nil)...)
+	msgs = append(msgs, m.InstallErrors()...)
 	for _, e := range m.Claims.Errors() {
 		msgs = append(msgs, e.Error())
 	}

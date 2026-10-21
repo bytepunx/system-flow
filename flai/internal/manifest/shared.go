@@ -112,14 +112,7 @@ func (c Claims) first(entry string, folder bool) (string, bool) {
 	}
 	segs := strings.Split(e, "/")
 	for _, p := range c.Shared {
-		if patternProblem(p) != "" {
-			continue
-		}
-		ps := strings.Split(p, "/")
-		if !strings.ContainsAny(p, `*?[\`) {
-			ps = append(ps, "**")
-		}
-		if matchSegments(ps, segs, folder) {
+		if patternProblem(p) == "" && patternMatches(p, segs, folder) {
 			return p, true
 		}
 	}
@@ -137,6 +130,18 @@ func cleanEntry(entry string) string {
 func hasExtension(base string) bool {
 	i := strings.LastIndex(base, ".")
 	return i > 0 && i < len(base)-1
+}
+
+// patternMatches reports whether p, a valid pattern, matches the path whose
+// segments are segs, or, when below is set, it and every path below it. A
+// pattern with no glob character matches the path itself and everything
+// below it.
+func patternMatches(p string, segs []string, below bool) bool {
+	ps := strings.Split(p, "/")
+	if !strings.ContainsAny(p, `*?[\`) {
+		ps = append(ps, "**")
+	}
+	return matchSegments(ps, segs, below)
 }
 
 // matchSegments reports whether the pattern's segments match the path's.

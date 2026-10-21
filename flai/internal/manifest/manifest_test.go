@@ -1354,3 +1354,119 @@ func TestComponentErrors(t *testing.T) {
 		t.Errorf("the problem's field: %+v", p)
 	}
 }
+
+// S-0483: a sub-project's install key, on a sub-project of any kind, loads
+// from the manifest as its command and paths; none leaves it nil.
+func TestInstallLoads(t *testing.T) {
+	m := componentsManifest(t, `  - name: web
+    path: web
+    kind: sveltekit
+    install:
+      command: ["../scripts/web-install.sh", "--if-needed"]
+      paths: ["package.json", "pnpm-lock.yaml"]
+  - name: api
+    path: api
+    kind: go
+    install:
+      command: [go, mod, download]
+      paths: [go.sum]
+  - {name: site, path: site, kind: svelte}
+`)
+	for i, want := range []*Install{
+		{Command: []string{"../scripts/web-install.sh", "--if-needed"}, Paths: []string{"package.json", "pnpm-lock.yaml"}},
+		{Command: []string{"go", "mod", "download"}, Paths: []string{"go.sum"}},
+		nil,
+	} {
+		if got := m.Projects[i].Install; !reflect.DeepEqual(got, want) {
+			t.Errorf("%s: install %+v, want %+v", m.Projects[i].Name, got, want)
+		}
+	}
+	if errs := m.InstallErrors(); len(errs) != 0 {
+		t.Errorf("valid install keys: %q", errs)
+	}
+}
+
+// S-0483: InstallErrors refuses an install key with no command, no program
+// first, no paths, or a glob components would refuse, each by the
+// sub-project's index, field, and name; a sub-project with no install key
+// has none.
+func TestInstallErrors(t *testing.T) {
+	for _, c := range []struct {
+		name, project string
+		want          []string
+	}{
+		{"valid", "    install:\n      command: [pnpm, install]\n      paths: [package.json, \"src/**/*.lock\"]\n", nil},
+		{"unset", "", nil},
+		{"no command", "    install:\n      paths: [package.json]\n",
+			[]string{`projects[0].install.command (sub-project "web") is empty; write the program and its arguments as a list`}},
+		{"an empty command", "    install:\n      command: []\n      paths: [package.json]\n",
+			[]string{`projects[0].install.command (sub-project "web") is empty`}},
+		{"an empty first element", "    install:\n      command: [\" \", install]\n      paths: [package.json]\n",
+			[]string{`projects[0].install.command (sub-project "web") has no program first`}},
+		{"no paths", "    install:\n      command: [pnpm, install]\n",
+			[]string{`projects[0].install.paths (sub-project "web") is empty; write the globs of the files whose change needs the install, relative to the sub-project's folder, such as package.json`}},
+		{"an empty key", "    install: {}\n",
+			[]string{`projects[0].install.command (sub-project "web") is empty`, `projects[0].install.paths (sub-project "web") is empty`}},
+		{"an unclosed bracket", "    install:\n      command: [pnpm, install]\n      paths: [\"pnpm-[.yaml\"]\n",
+			[]string{`projects[0].install.paths (sub-project "web") pattern "pnpm-[.yaml" is not a valid glob`}},
+		{"a glob that leaves", "    install:\n      command: [pnpm, install]\n      paths: [\"../pnpm-lock.yaml\"]\n",
+			[]string{`projects[0].install.paths (sub-project "web") pattern "../pnpm-lock.yaml" has a .. segment, which leaves the sub-project; write a glob inside its folder, relative to it, such as package.json`}},
+		{"an empty glob", "    install:\n      command: [pnpm, install]\n      paths: [\"\"]\n",
+			[]string{`projects[0].install.paths (sub-project "web") pattern "" is empty; write a glob relative to the sub-project's folder, such as package.json, or remove it`}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			m := componentsManifest(t, "  - name: web\n    path: web\n    kind: go\n"+c.project)
+			errs := m.InstallErrors()
+			if len(errs) != len(c.want) {
+				t.Fatalf("want %d beginning %q, got %q", len(c.want), c.want, errs)
+			}
+			for i, w := range c.want {
+				if !strings.HasPrefix(errs[i], w) {
+					t.Errorf("error %d: got %q, want one beginning %q", i, errs[i], w)
+				}
+			}
+		})
+	}
+	m := componentsManifest(t, "  - name: web\n    path: web\n    kind: go\n    install:\n      paths: [package.json]\n")
+	if p := splitProblem(m.InstallErrors()[0]); p.Field != "projects[0].install.command" {
+		t.Errorf("the problem's field: %+v", p)
+	}
+}
+
+// S-0483: InstallMatches says whether a changed path under the sub-project's
+// folder matches one of its install globs, read from that folder; a path of
+// another sub-project, another file, and a sub-project with no install key
+// do not.
+func TestInstallMatches(t *testing.T) {
+	m := componentsManifest(t, `  - name: flaiover
+    path: flaiover
+    kind: sveltekit
+    install:
+      command: ["../scripts/flaiover-install.sh", "--if-needed"]
+      paths: ["package.json", "pnpm-lock.yaml", "packages/**/package.json", "pnpm-[.yaml"]
+  - {name: flai, path: flai, kind: go}
+`)
+	flaiover, flai := m.Projects[0], m.Projects[1]
+	for _, c := range []struct {
+		name    string
+		changed []string
+		want    bool
+	}{
+		{"its lock file", []string{"flai/main.go", "flaiover/pnpm-lock.yaml"}, true},
+		{"its package.json", []string{"./flaiover/package.json"}, true},
+		{"a ** glob, no segment between", []string{"flaiover/packages/package.json"}, true},
+		{"a ** glob, segments between", []string{"flaiover/packages/ui/kit/package.json"}, true},
+		{"another file of it", []string{"flaiover/src/app.css", "flaiover/package-lock.json"}, false},
+		{"its file under another folder", []string{"flaiover/src/package.json"}, false},
+		{"another sub-project's lock file", []string{"flai/pnpm-lock.yaml", "pnpm-lock.yaml"}, false},
+		{"a folder whose name begins with its own", []string{"flaiover2/pnpm-lock.yaml"}, false},
+		{"nothing changed", nil, false},
+	} {
+		if got := flaiover.InstallMatches(c.changed); got != c.want {
+			t.Errorf("%s %q: got %v, want %v", c.name, c.changed, got, c.want)
+		}
+	}
+	if flai.InstallMatches([]string{"flai/go.sum", "flai/pnpm-lock.yaml"}) {
+		t.Error("a sub-project with no install key matches")
+	}
+}

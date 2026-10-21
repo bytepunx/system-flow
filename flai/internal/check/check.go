@@ -252,6 +252,10 @@ func (c *checker) layout() {
 		mf := filepath.Join(c.repo.Root, "system-flow.yaml")
 		c.add(Error, "manifest.components", mf, keyLine(mf, "projects"), "%s", msg)
 	}
+	for _, msg := range m.InstallErrors() {
+		mf := filepath.Join(c.repo.Root, "system-flow.yaml")
+		c.add(Error, "manifest.install", mf, keyLine(mf, "projects"), "%s", msg)
+	}
 	for _, msg := range m.ProviderErrors() {
 		mf := filepath.Join(c.repo.Root, "system-flow.yaml")
 		c.add(Error, "manifest.providers", mf, keyLine(mf, "providers"), "%s", msg)

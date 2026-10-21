@@ -1178,6 +1178,80 @@ type Project struct {
 	// what the harness imports before them (S-0437); nil means the defaults
 	// ComponentSettings gives. Only a kind SupportsComponents takes it.
 	Components *Components `yaml:"components,omitempty" json:"components,omitempty"`
+	// Install is how the sub-project installs its dependencies, for flai
+	// accept to run in the main checkout after an acceptance that changed
+	// them (S-0483, ADR-0185); nil means flai installs nothing for it.
+	Install *Install `yaml:"install,omitempty" json:"install,omitempty"`
+}
+
+// Install is a sub-project's install command and the paths whose change
+// needs it (S-0483, ADR-0185). Its globs have the syntax of components'
+// globs, relative to the sub-project's folder.
+type Install struct {
+	// Command is the program and its arguments, run with no shell in the
+	// sub-project's folder.
+	Command []string `yaml:"command" json:"command"`
+	// Paths are the globs of the files whose change needs Command run.
+	Paths []string `yaml:"paths" json:"paths"`
+}
+
+// exampleInstallPath is the glob a refusal of install.paths gives as one to
+// write.
+const exampleInstallPath = "package.json"
+
+// InstallErrors are what is wrong with the sub-projects' install keys, one
+// sentence each, each beginning with the sub-project's index and field, such
+// as projects[1].install.command: a command that is empty or has no program
+// first, and paths that are empty or hold a glob that is not valid. None when
+// every key is valid.
+func (m Manifest) InstallErrors() []string {
+	var errs []string
+	for i, p := range m.Projects {
+		in := p.Install
+		if in == nil {
+			continue
+		}
+		at := func(field string) string { return projectField(i, p, "install", field) }
+		switch {
+		case len(in.Command) == 0:
+			errs = append(errs, at("command")+" is empty; write the program and its arguments as a list, run in the sub-project's folder, such as [pnpm, install]")
+		case strings.TrimSpace(in.Command[0]) == "":
+			errs = append(errs, at("command")+" has no program first; write the program, then its arguments, such as [pnpm, install]")
+		}
+		if len(in.Paths) == 0 {
+			errs = append(errs, at("paths")+" is empty; write the globs of the files whose change needs the install, relative to the sub-project's folder, such as "+exampleInstallPath)
+		}
+		for _, g := range in.Paths {
+			if r := projectGlobProblem(g, exampleInstallPath); r != "" {
+				errs = append(errs, fmt.Sprintf("%s pattern %q %s", at("paths"), g, r))
+			}
+		}
+	}
+	return errs
+}
+
+// InstallMatches reports whether the sub-project's install command needs to
+// run for changed, paths relative to the repository root: whether one of
+// them lies under the sub-project's folder and a valid glob of install.paths
+// matches it there. False when the sub-project has no install key.
+func (p Project) InstallMatches(changed []string) bool {
+	if p.Install == nil {
+		return false
+	}
+	dir := path.Clean(strings.TrimSpace(p.Path)) + "/"
+	for _, c := range changed {
+		rel, ok := strings.CutPrefix(cleanEntry(c), dir)
+		if !ok || rel == "" {
+			continue
+		}
+		segs := strings.Split(rel, "/")
+		for _, g := range p.Install.Paths {
+			if projectGlobProblem(g, exampleInstallPath) == "" && patternMatches(g, segs, false) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // The kinds of sub-project whose components flai reads (S-0437).
@@ -1258,7 +1332,7 @@ func (m Manifest) ComponentErrors(fsys fs.FS) []string {
 		if c == nil {
 			continue
 		}
-		at := func(field string) string { return componentField(i, p, field) }
+		at := func(field string) string { return projectField(i, p, "components", field) }
 		if !SupportsComponents(p.Kind) {
 			errs = append(errs, fmt.Sprintf("%s is set on a sub-project of kind %q, whose components flai does not read; remove it, or set kind to %s if the sub-project is one", at(""), p.Kind, strings.Join(ComponentKinds, " or ")))
 			continue
@@ -1268,7 +1342,7 @@ func (m Manifest) ComponentErrors(fsys fs.FS) []string {
 			globs []string
 		}{{"include", c.Include}, {"exclude", c.Exclude}} {
 			for _, g := range list.globs {
-				if r := componentGlobProblem(g); r != "" {
+				if r := projectGlobProblem(g, DefaultComponentInclude); r != "" {
 					errs = append(errs, fmt.Sprintf("%s pattern %q %s", at(list.field), g, r))
 				}
 			}
@@ -1283,11 +1357,11 @@ func (m Manifest) ComponentErrors(fsys fs.FS) []string {
 	return errs
 }
 
-// componentField is a sub-project's components field as ComponentErrors
-// names it, such as projects[1].components.include (sub-project "web"), or
-// the key itself when field is empty.
-func componentField(i int, p Project, field string) string {
-	s := fmt.Sprintf("projects[%d].components", i)
+// projectField is a field of a sub-project's key as ComponentErrors and
+// InstallErrors name it, such as projects[1].components.include (sub-project
+// "web"), or the key itself when field is empty.
+func projectField(i int, p Project, key, field string) string {
+	s := fmt.Sprintf("projects[%d].%s", i, key)
 	if field != "" {
 		s += "." + field
 	}
@@ -1297,22 +1371,23 @@ func componentField(i int, p Project, field string) string {
 	return s
 }
 
-// componentGlobProblem says what is wrong with a glob of components.include
-// or components.exclude, or "" when it is valid: a path relative to the
-// sub-project's folder and inside it, with the syntax of claims.shared's.
-func componentGlobProblem(g string) string {
+// projectGlobProblem says what is wrong with a glob of a sub-project's key,
+// such as components.include or install.paths, or "" when it is valid: a path
+// relative to the sub-project's folder and inside it, with the syntax of
+// claims.shared's. example is a glob the reason gives as one to write.
+func projectGlobProblem(g, example string) string {
 	switch {
 	case strings.TrimSpace(g) == "":
-		return "is empty; write a glob relative to the sub-project's folder, such as " + DefaultComponentInclude + ", or remove it"
+		return "is empty; write a glob relative to the sub-project's folder, such as " + example + ", or remove it"
 	case isAbsolute(g):
-		return "is an absolute path; write it relative to the sub-project's folder, such as " + DefaultComponentInclude
+		return "is an absolute path; write it relative to the sub-project's folder, such as " + example
 	}
 	for _, seg := range strings.Split(g, "/") {
 		switch seg {
 		case "..":
-			return "has a .. segment, which leaves the sub-project; write a glob inside its folder, relative to it, such as " + DefaultComponentInclude
+			return "has a .. segment, which leaves the sub-project; write a glob inside its folder, relative to it, such as " + example
 		case ".":
-			return "has a . segment; write the glob without it, such as " + DefaultComponentInclude + " for ./" + DefaultComponentInclude
+			return "has a . segment; write the glob without it, such as " + example + " for ./" + example
 		}
 	}
 	return patternProblem(g)
