@@ -45,6 +45,7 @@ func issueProject(t *testing.T) string {
 	t.Setenv("FLAI_STORY", "")
 	t.Setenv("FLAI_AGENT", "")
 	root := tempProject(t)
+	_ = os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".flai-cache/\n"), 0o644)
 	_ = os.MkdirAll(filepath.Join(root, "design", "conventions"), 0o755)
 	_ = os.WriteFile(filepath.Join(root, "design", "conventions", "README.md"), []byte("# c\n"), 0o644)
 	return root

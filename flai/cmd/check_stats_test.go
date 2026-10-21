@@ -463,6 +463,7 @@ func TestStatsReportsTheIssuesStrategicUsageOnce(t *testing.T) {
 	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
 	t.Setenv("FLAI_STORY", "")
 	root := tempProject(t)
+	_ = os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".flai-cache/\n"), 0o644)
 	at := time.Date(2026, 10, 3, 20, 0, 0, 0, time.UTC)
 	a := func(args ...string) (string, string, int) { return runInAt(t, root, at, args...) }
 	if out, errOut, code := a("stats", "--json"); code != 0 || !strings.Contains(out, `"strategic_issues": []`) {

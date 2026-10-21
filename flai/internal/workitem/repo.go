@@ -248,7 +248,10 @@ func FileName(id, title string) string {
 	return id + "-" + slug + ".md"
 }
 
-// Save writes the item to its Path, creating the folder if needed.
+// Save writes the item to its Path, creating the folder if needed. What
+// another writer saved to the file since the item was read is kept, and a
+// change both made to the same key refuses the save with a *ConflictError,
+// writing nothing (I-0175). On success the item is what was written.
 func (r *Repo) Save(it *Item) error {
 	if it.Path == "" {
 		it.Path = filepath.Join(r.ItemDir(it.Type, it.Archived), FileName(it.ID, it.Title))
@@ -256,7 +259,20 @@ func (r *Repo) Save(it *Item) error {
 	if err := os.MkdirAll(filepath.Dir(it.Path), 0o755); err != nil {
 		return err
 	}
-	return atomicfile.WriteFile(it.Path, []byte(it.Marshal()), 0o644)
+	unlock, err := r.lockItems()
+	if err != nil {
+		return fmt.Errorf("save %s: %w", it.ID, err)
+	}
+	defer unlock()
+	doc, err := mergeSaved(it)
+	if err != nil {
+		return err
+	}
+	if err := atomicfile.WriteFile(it.Path, []byte(doc), 0o644); err != nil {
+		return err
+	}
+	it.readAs = doc
+	return nil
 }
 
 func lessID(a, b string) bool {

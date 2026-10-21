@@ -109,6 +109,11 @@ type Item struct {
 	Path     string `yaml:"-" json:"path"`     // file on disk
 	Archived bool   `yaml:"-" json:"archived"` // lives under wip/archive
 	Body     string `yaml:"-" json:"body"`     // markdown after the front matter
+
+	// readAs is the item's Marshal as it was read from Path, or as Save last
+	// wrote it; empty for an item made in memory. Save merges with it what
+	// another writer saved since (I-0175).
+	readAs string
 }
 
 // ErrNoFrontMatter is returned for files without a leading --- block.
@@ -159,6 +164,7 @@ func ReadItem(path string) (*Item, error) {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	it.Path = path
+	it.readAs = it.Marshal()
 	return it, nil
 }
 

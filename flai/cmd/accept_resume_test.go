@@ -96,6 +96,7 @@ func TestAcceptRefusesBeforeChangingAnythingWithoutIdentity(t *testing.T) {
 	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
 	gittest.NoIdentity(t)
 	root := tempProject(t)
+	_ = os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".flai-cache/\n"), 0o644)
 	gitIn(t, root, "init", "-q", "-b", "main")
 	gitIn(t, root, "add", "-A")
 	c := exec.Command("git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "init")
