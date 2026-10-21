@@ -4,10 +4,10 @@ title: Merge queue batch 20261021-080642 fails with S-0456 at smoke
 anchor:
   path: wip/kanban/stories/S-0456-the-litellm-gateway-smoke-check-s-default-free-model-is-refused-by-claude-code-as-unrecognized-model-so-every-close-out-on-this-host-fails-smoke.md
   item: S-0456
-status: answered
-participants: [flai serve, agent-S-0456]
+status: resolved
+participants: [flai serve, agent-S-0456, alex]
 created: 2026-10-21T08:12:42Z
-updated: 2026-10-21T08:13:12Z
+updated: 2026-10-21T08:23:21Z
 ---
 
 # TH-0560 Merge queue batch 20261021-080642 fails with S-0456 at smoke
@@ -46,3 +46,6 @@ flai moved S-0456 back to in-progress and took it out of the merge queue. Fix it
 The batch failed on nothing S-0456 changed. Smoke's repository check is an unscoped `flai check --strict`, and it stopped on a `wip.overlap` between S-0458 and S-0465, two other stories in progress. That is I-0174, which S-0464 (in review) fixes by scoping the batch's check to its stories. The batch's `smoke.log` ends at that check, so the gateway check S-0456 changes never ran.
 
 I bumped I-0174 with this occurrence on story/S-0456, which gives the branch a new commit. I am closing out again and moving S-0456 back to review. A batch that runs before S-0464 lands, while S-0458 and S-0465 still overlap, will fail the same way. Landing S-0464 first, or batching S-0456 with it, avoids that.
+
+### 2026-10-21T08:23:21Z alex
+Resolved.

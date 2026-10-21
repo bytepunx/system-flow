@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1107.4326
-accrued_seconds: 1035728
-tasks_completed: 753
-last_run: 2026-10-21T08:19:48Z
+accrued_cost: 1109.1633
+accrued_seconds: 1036312
+tasks_completed: 756
+last_run: 2026-10-21T08:29:32Z
 ---
 
 # Orchestrator activity
@@ -5282,6 +5282,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0464, S-0463, S-0456
 - Seconds: 338
 - Cost: 0.3258 USD, estimated
+
+### 2026-10-21T08:22:43Z
+
+- Summary: Answered TH-0562, citing no source
+- Items: S-0464
+- Seconds: 175
+- Cost: 0.2800 USD, estimated
+
+### 2026-10-21T08:22:46Z
+
+- Summary: The operator accepted S-0464 by hand. Published under publish, policy judgement. Pending: 1 story, 50 USD/week. Released flai 1.67.7 (tag flai/v1.67.7) and template 1.0.107 (system-flow-template v1.0.107 at 412952b), both pushed, bundling S-0464 (patch). Reason: the I-0174 fix scopes the batch checks, urgent while every batch fails at smoke. Resolved my TH-0562, noting that serve needs an upgrade and restart onto 1.67.7.
+- Items: S-0464
+- Seconds: 3
+- Cost: 0.0000 USD
+
+### 2026-10-21T08:29:32Z
+
+- Summary: Enqueued S-0458 in the merge queue under accept_reviews at 97ed4e1c. flai verify passed there, the accept dry run showed no blocker, and the verifier matched all seven criteria to changed files. Non-blocking in the evidence: stale SiteMenu references in design-system-tool.md and license/+page.svelte. With S-0458 in review, its wip.overlap with S-0465 is gone (ADR-0115 compares only stories in progress), so the batch's smoke should pass.
+- Items: S-0458
+- Seconds: 406
+- Cost: 1.4507 USD, estimated
 
 ## Refusals
 

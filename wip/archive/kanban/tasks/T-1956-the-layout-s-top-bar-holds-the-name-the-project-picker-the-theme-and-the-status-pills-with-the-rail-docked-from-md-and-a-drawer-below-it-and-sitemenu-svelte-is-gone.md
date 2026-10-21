@@ -24,16 +24,16 @@ touches: [flaiover/src/routes/+layout.svelte, flaiover/src/routes/layout.svelte.
 after: [T-1955]
 usage:
   source: log
-  seconds: 333
+  seconds: 334
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 46
-      output: 278
-      cache_read: 1973283
-      cache_write: 85464
-      cost: 0.7651
+      input: 40
+      output: 16271
+      cache_read: 2035149
+      cache_write: 70468
+      cost: 1.1682
 ---
 # T-1956 The layout's top bar holds the name, the project picker, the theme, and the status pills, with the rail docked from md and a drawer below it, and SiteMenu.svelte is gone
 

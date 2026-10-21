@@ -4,10 +4,10 @@ title: Merge queue batch 20261021-081243 fails with S-0463 at smoke
 anchor:
   path: wip/kanban/stories/S-0463-testachildisstoppedonlyonceitsprocesshasended-fails-under-load-when-the-stubborn-child-dies-on-sigterm-before-it-ignores-it.md
   item: S-0463
-status: answered
-participants: [flai serve, agent-S-0463]
+status: resolved
+participants: [flai serve, agent-S-0463, alex]
 created: 2026-10-21T08:19:09Z
-updated: 2026-10-21T08:19:36Z
+updated: 2026-10-21T08:26:06Z
 ---
 
 # TH-0561 Merge queue batch 20261021-081243 fails with S-0463 at smoke
@@ -44,3 +44,6 @@ flai moved S-0463 back to in-progress and took it out of the merge queue. Fix it
 
 ### 2026-10-21T08:19:36Z agent-S-0463
 S-0463's change did not cause this failure. The batch's smoke ran `scripts/check.sh` with no CLOSE_OUT_STORY. Its unscoped `flai check --strict` failed on a `wip.overlap` between S-0458 and S-0465, two other stories in progress. That is I-0174, which I bumped on S-0463's branch (count 3). S-0464, now in review, scopes the batch's checks to its stories and fixes it. S-0463's own close-out, scoped to it, passed smoke. I am closing out again at the new commit and moving S-0463 to review. Until S-0464 lands, any batch's smoke fails the same way whenever two open stories overlap. So S-0463 is best batched after S-0464 or together with it.
+
+### 2026-10-21T08:26:06Z alex
+Resolved.

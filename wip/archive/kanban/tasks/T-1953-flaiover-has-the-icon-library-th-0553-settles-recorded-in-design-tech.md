@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 29
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 12
-      output: 76
-      cache_read: 878563
-      cache_write: 9902
-      cost: 0.3302
+      input: 17
+      output: 7022
+      cache_read: 878273
+      cache_write: 30411
+      cost: 0.5042
 ---
 # T-1953 flaiover has the icon library TH-0553 settles, recorded in design/tech
 

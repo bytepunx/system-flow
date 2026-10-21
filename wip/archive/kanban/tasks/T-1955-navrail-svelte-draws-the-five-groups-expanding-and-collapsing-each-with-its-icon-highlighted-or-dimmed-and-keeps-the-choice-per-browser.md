@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 283
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 52
-      output: 367
-      cache_read: 2152328
-      cache_write: 80172
-      cost: 0.8297
+      input: 43
+      output: 17644
+      cache_read: 2206912
+      cache_write: 76415
+      cost: 1.2668
 ---
 # T-1955 NavRail.svelte draws the five groups, expanding and collapsing each with its icon highlighted or dimmed, and keeps the choice per browser
 

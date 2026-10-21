@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 371
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 90
-      output: 429
-      cache_read: 3386056
-      cache_write: 103265
-      cost: 1.2967
+      input: 67
+      output: 27577
+      cache_read: 3449337
+      cache_write: 119435
+      cost: 1.98
 ---
 # T-1954 sitemenu.ts defines the rail's five groups, their icons, and their pages, and the settings sections carry anchors for the Configuration entries
 

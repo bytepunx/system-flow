@@ -6,7 +6,7 @@ title: flai move to done refuses unfixed lint as text only, so the dashboard pic
 status: in-progress
 owner: alex
 created: 2026-10-21T07:24:59Z
-updated: 2026-10-21T08:16:46Z
+updated: 2026-10-21T08:27:05Z
 transitions:
   - to: ready
     at: 2026-10-21T07:38:29Z
@@ -76,7 +76,7 @@ This story remediates [I-0145](../../../design/issues/I-0145-flai-move-to-done-r
 
 ## Acceptance criteria
 - [ ] The cause I-0145 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0145 is closed with `flai issue close I-0145 --reason` saying what fixed it
+- [x] I-0145 is closed with `flai issue close I-0145 --reason` saying what fixed it
 
 ## Tasks
 - T-1979 flai move to done prints a refused acceptance as data with exit 4 under --json, and item.move answers it as Refused

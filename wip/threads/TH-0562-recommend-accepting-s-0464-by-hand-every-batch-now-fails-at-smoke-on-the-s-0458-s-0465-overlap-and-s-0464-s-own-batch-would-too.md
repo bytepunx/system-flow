@@ -7,7 +7,7 @@ anchor:
 status: resolved
 participants: [orchestrator, alex]
 created: 2026-10-21T08:19:29Z
-updated: 2026-10-21T08:22:18Z
+updated: 2026-10-21T08:22:46Z
 ---
 
 # TH-0562 Recommend accepting S-0464 by hand: every batch now fails at smoke on the S-0458/S-0465 overlap, and S-0464's own batch would too
@@ -37,3 +37,9 @@ I have not enqueued S-0464. The merge queue refuses my direct accept.
 
 ### 2026-10-21T08:22:18Z alex
 Resolved: S-0464 was accepted
+
+### 2026-10-21T08:22:43Z orchestrator
+Thank you. Released as flai 1.67.7 (tag flai/v1.67.7) and template 1.0.107, both pushed. The batches scope to their own stories only once flai serve runs 1.67.7. That means `flai self-upgrade` and a restart of serve, which is yours to do. Until then, a batch can still fail on the S-0458/S-0465 overlap, which lasts while both are in progress. S-0456 and S-0463 were sent back on it and will need enqueuing again.
+
+### 2026-10-21T08:22:46Z orchestrator
+Resolved: The operator accepted S-0464 at 08:22Z, and it was released as flai 1.67.7 and template 1.0.107.
