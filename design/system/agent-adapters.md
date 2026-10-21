@@ -1,6 +1,6 @@
 ---
 title: Agent adapters for LiteLLM and OpenRouter
-updated: 2026-10-17
+updated: 2026-10-21
 status: active
 topics: [cli, template]
 ---
@@ -328,6 +328,11 @@ S-0356's `TestGatewayLiteLLM` (`flai/internal/serve/gateway_test.go`) ran on 202
 | What else? | Through LiteLLM's `openrouter/` provider, which translates to OpenRouter's chat completions, Claude Code stalled in all 4 runs: a request of about 50,000 tokens got no first byte for 5 minutes (`Slow first byte` in Claude Code's debug log). The proxy logged no response for it and no error. Small requests answered, a streamed tool call by `curl` ended correctly with `message_stop`, and the same model through OpenRouter's Anthropic API directly passed. So the deployment that works is `anthropic/<slug>` with `api_base: https://openrouter.ai/api`: Anthropic's format end to end, with LiteLLM keying, logging, and budgeting. On the working deployment, the close-out's run stalled once: the free model's stream took 4 minutes 40 seconds to finish, past the check's 5 minutes. `stream_timeout: 45` on the deployment ends such a stream so that Claude Code retries; three runs after it finished in 22 to 34 seconds. One run's model launched its sub-agent in the background, and one dropped the trailing period of the line it was to write; the check's prompt now asks for the foreground, and the line has no period. | |
 
 What it settles: an agent runs through a LiteLLM proxy with the guard and `permission_prompt` as against Anthropic or OpenRouter. A provider entry names the proxy's root, so its unified `/v1/messages`, with a virtual key carrying a `max_budget`. Its models are served in Anthropic's format: Anthropic's own, or another gateway's Anthropic API, such as `openrouter-messages/<slug>` in `scripts/litellm.sh`, never a deployment LiteLLM translates to chat completions. The pass-through reaches Anthropic alone and gains nothing a provider needs. LiteLLM's spend joins a story by the session ID in `/spend/logs` rows, read with the master key, which a per-call price can come from (ADR-0132); `total_cost_usd` is not the bill here either.
+
+The free model is not fixed. OpenRouter retired `nvidia/nemotron-3-super-120b-a12b:free`, and the proxy answered 404 for it. The check failed after a Claude Code session that showed only `[claude-code:unrecognized_model]`, a warning it also prints on passing runs, so the cause was read wrongly at first (I-0170, I-0171). The default is now `nvidia/nemotron-3-ultra-550b-a55b:free` (S-0451), and two rules keep a retired model from hiding again (S-0455):
+
+- The check probes its model first. Before the session, the unified case sends one message of one token through the proxy. An answer other than 2xx fails the check at once, naming the slug, whether `FLAI_TEST_LITELLM_HAIKU` or the built-in default named it, the status and the upstream's message, and how to name another model. On 2026-10-21, with the retired slug set, the check failed at the probe in 0.34 s on OpenRouter's 404. On the default, it passed in 156 s.
+- `scripts/litellm.sh` keeps a model only when the operator chose one. It records `LITELLM_HAIKU_MODEL` in `admin.env` only when it is set, and otherwise writes its current default into `litellm.env` on every `up`. A recorded value on its list of retired defaults is dropped on any run. Before this rule, the first `up` froze the default into `admin.env`, and the host kept the retired slug after the default moved on. On this host, on the operator's word (TH-0547), the fixed `up` dropped the retired slug from `admin.env` and wrote nemotron-3-ultra into `litellm.env`, leaving everything else as it was. The check then passed in 145 s from that file alone, as `flai serve` runs it, with no proxy variables set in the environment.
 
 ## Abstractions
 
