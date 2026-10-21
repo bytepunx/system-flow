@@ -1,4 +1,4 @@
-.PHONY: check flai flai-reference test integration smoke install-test install-published-test flai-test flai-snapshot template-test install-tools lint-md mdlint-fixtures board stats dashboard dashboard-stop flaiover-install flaiover-dev flaiover-build flaiover-test flaiover-image litellm litellm-stop litellm-status help
+.PHONY: check flai flai-reference test integration smoke install-test install-published-test flai-test flai-snapshot template-test install-tools lint-md mdlint-fixtures board stats dashboard dashboard-stop flaiover-install flaiover-dev flaiover-build flaiover-test flaiover-e2e flaiover-image litellm litellm-stop litellm-status help
 
 check: ## Validate this repo against the standard (flai check --strict)
 	scripts/check.sh
@@ -54,6 +54,9 @@ flaiover-build: ## flaiover production build
 flaiover-test: ## flaiover lint, type check, unit tests
 	scripts/flaiover-test.sh
 
+flaiover-e2e: ## flaiover end-to-end tests: the built server in Playwright's Chromium
+	scripts/flaiover-e2e.sh
+
 flaiover-image: ## Build the flaiover image as flaiover:local
 	scripts/flaiover-image.sh
 
@@ -79,4 +82,4 @@ dashboard-stop:
 	scripts/flai.sh dashboard stop
 
 help:
-	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-16s %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-16s %s\n", $$1, $$2}'
