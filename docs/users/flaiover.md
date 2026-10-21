@@ -20,21 +20,29 @@ In a project, run `flai dashboard`. It starts the dashboard, and `flai serve` be
 
 ## The header
 
-The header is the same on every page.
+Every page but the login page has a top bar across the top and a nav rail at the left.
 
-- **Project switcher**, at the left: the project you are looking at, and the others this dashboard serves. See [More than one project](#more-than-one-project).
-- **Site menu**: four groups, each with its pages in a row below the header. Each page is a section below.
+The top bar holds, from the left:
 
-  | Group | Pages |
-  |-------|-------|
-  | Workflow | Overview, Board, Inbox (with the number of things that need you), Threads, Activity, Planner, Orchestrator, Analyzer |
-  | Status | Charts, ADRs, Docs, Search |
-  | Host | Updates (the [Host](#host) page), Settings |
-  | Design | [Design system](#design-system), [Components](#components) |
-
-  Point at a group, click it, or tap it to show its pages. Move the pointer off the menu, or press Escape, and the row shows the group of the page you are on again. The group and the page you are on are bold and coloured. A group shows the number its pages show, so the Inbox count also stands beside Workflow.
-- **Host flai badge**, at the right: whether a flai on the host has the dashboard connected. See [Host flai](#host-flai).
+- **Menu button**, only on a window narrower than 768 pixels: opens the nav rail over the page. Choose a page, press Escape, or click outside the rail to close it.
+- **flaiover**: the name, a link to [Overview](#overview).
+- **Project switcher**: the project you are looking at, and the others this dashboard serves. See [More than one project](#more-than-one-project).
 - **Theme button**: see [Theme](#theme).
+- **Host flai badge**, at the right: whether a flai on the host has the dashboard connected, and a link to the [Host](#host) page. See [Host flai](#host-flai).
+
+The nav rail lists five groups. Each page is a section below.
+
+| Group | Pages |
+|-------|-------|
+| Flow | [Board](#board), [Inbox](#inbox) (with the number of things that need you), [Charts](#charts), and Workflow, still to come and marked soon |
+| Agents | Orchestration (the [Orchestrator](#orchestrator)), Planning (the [Planner](#planner)), Analysis (the [Analyzer](#analyzer)), [Activity](#activity), [Threads](#threads), [Messages](#messages) |
+| Design | System (the [Design system](#design-system)), [Components](#components) |
+| Documentation | System, Conventions, and Issues, which open those folders in [Docs](#docs); [ADRs](#adrs); [Search](#search) |
+| Configuration | Features, Agents, File System, Projects, and Harnesses, each a part of the [Settings](#settings) page |
+
+Click a group to show or hide its pages. An open group's icon is coloured and a closed group's is grey. A closed group still shows its pages' numbers, so the Inbox count stands beside Flow. The page you are on is bold and coloured, and its group opens when you arrive. The browser remembers which groups you opened and closed. [License](#license) is at the foot of the rail.
+
+On a window 768 pixels wide or more, the rail stays at the left. On a narrower one, the menu button opens it.
 
 Every time the dashboard shows is in your browser's time zone, such as `2026-10-07 15:35 EDT`, and every date is the date there. flai records times in UTC; the dashboard converts them as it shows them, including a time flai names in a message it answers with. The text of a document or a narrative, and its front matter, is shown as it is written.
 
@@ -96,7 +104,7 @@ A repository that is not a system-flow project yet can be imported from the boar
 
 ## Overview
 
-The front page. For one project it shows the project's name and description from `system-flow.yaml`, the template version it follows, how many items are active and how many archived, and a table counting epics, stories, and tasks in each state from backlog to done. It is the quickest answer to "how much is there, and where is it".
+The front page, which the flaiover name in the top bar opens. For one project it shows the project's name and description from `system-flow.yaml`, the template version it follows, how many items are active and how many archived, and a table counting epics, stories, and tasks in each state from backlog to done. It is the quickest answer to "how much is there, and where is it".
 
 While no project is chosen and more than one is known, the front page shows a list of every project instead, with a filter box, each with whether it is connected, how many stories are in review, how many threads are awaiting you, and whether an agent is attending, so you can tell at a glance which one needs you. Pick one to open it.
 
@@ -219,7 +227,7 @@ When a required check fails or a reviewer requests changes, flai opens a thread 
 
 ## Inbox
 
-Inbox is the list of things that need you, and the number beside its link in the site menu, and beside Workflow, is how many there are. It holds five kinds of entry, each a link to where you deal with it, never to a document you could not answer it from: stories in review, which open their review page; threads where someone other than you wrote last, which open the story or item they are on (or whose file or narrative they are on) at that thread, and otherwise the [Threads](#threads) page at that thread; open questions agents left in their narratives, which open the story's page at that question; blocked items, with the reason, which open the item; and overlapping touches, where two stories in progress say they change the same files, which open the first story named. An entry leaves the list when its cause does: you answer the thread, accept the story, the item is unblocked. A hand-written open question (one with no thread of its own) can be answered right there, in the inbox, or on its story's page, when the dashboard can write: type the answer and submit it, and it moves to the narrative's Decisions and drops off the list. A thread where an agent, such as the orchestrator, recommends an answer waits for you until you confirm it: its entry says so, shows the recommendation, marked as one, with the document and heading it cites as a link, and, when the dashboard can write, **Confirm**. Confirm makes the recommendation the thread's answer, and the entry drops off the list; to answer otherwise, open the thread and reply. The list and the count refresh by themselves when files change.
+Inbox is the list of things that need you, and the number beside its link in the nav rail, and beside Flow while Flow is closed, is how many there are. It holds five kinds of entry, each a link to where you deal with it, never to a document you could not answer it from: stories in review, which open their review page; threads where someone other than you wrote last, which open the story or item they are on (or whose file or narrative they are on) at that thread, and otherwise the [Threads](#threads) page at that thread; open questions agents left in their narratives, which open the story's page at that question; blocked items, with the reason, which open the item; and overlapping touches, where two stories in progress say they change the same files, which open the first story named. An entry leaves the list when its cause does: you answer the thread, accept the story, the item is unblocked. A hand-written open question (one with no thread of its own) can be answered right there, in the inbox, or on its story's page, when the dashboard can write: type the answer and submit it, and it moves to the narrative's Decisions and drops off the list. A thread where an agent, such as the orchestrator, recommends an answer waits for you until you confirm it: its entry says so, shows the recommendation, marked as one, with the document and heading it cites as a link, and, when the dashboard can write, **Confirm**. Confirm makes the recommendation the thread's answer, and the entry drops off the list; to answer otherwise, open the thread and reply. The list and the count refresh by themselves when files change.
 
 You can ask the browser to tell you when something new arrives: tick "Desktop notification" on the inbox page and allow it when the browser asks. It is off until you turn it on, it is remembered per browser, and it only fires for entries that appear while a dashboard tab is open, never for what was already there.
 
@@ -245,7 +253,7 @@ When `flai serve` started an agent for the story, the card also shows the agent'
 
 ## Planner
 
-Planner shows the agent that plans epics and stories: what it is doing, what it has done, and what that cost, and below that its settings. Find it in the Workflow group, after Activity.
+Planner shows the agent that plans epics and stories: what it is doing, what it has done, and what that cost, and below that its settings. Find it in the rail's Agents group as Planning, after Orchestration.
 
 - **The plan host action** says whether `flai serve` starts the planner here. While it is off, the page gives the command that turns it on, to run on the host in the project: `flai serve enable plan`.
 - **Running now** shows the planner run under way, if there is one: the epic or story it plans, the agent, when it started, and why (`asked`, or what changed to start it again). Its stream window shows what it is saying and doing, as the Activity page does for a story's agent.
@@ -269,7 +277,7 @@ The page follows the planner as it works: it reads itself again when the planner
 
 ## Orchestrator
 
-Orchestrator shows the agent that keeps the project's work moving: whether it runs, what it is doing, what it has decided, and what that cost, and below that its settings. Find it in the Workflow group, after Planner. The orchestrator runs while the operator has the `orchestrate` host action on ([Running the orchestrator](flai.md#running-the-orchestrator)).
+Orchestrator shows the agent that keeps the project's work moving: whether it runs, what it is doing, what it has decided, and what that cost, and below that its settings. Find it first in the rail's Agents group, as Orchestration. The orchestrator runs while the operator has the `orchestrate` host action on ([Running the orchestrator](flai.md#running-the-orchestrator)).
 
 - **The orchestrate host action** says whether `flai serve` runs the orchestrator: on; off, with the command that turns it on, `flai serve enable orchestrate`; or held, because you stopped it.
 - **Stop** ends the orchestrator's run and holds it stopped. While the action is on, `flai serve` starts the orchestrator again whenever a run ends; while it is held, it does not. **Start** lifts the hold and starts it at once. Stop shows while the orchestrator is not held, and Start while it is. Both need the `orchestrate` host action on, and are disabled, saying so, while it is off. The page says what flai did, or why it refused, such as an orchestrator already held. The run you stopped logs its activity as `stopped: stopped from the dashboard`. Turning the action off and on again lifts the hold too. On the host, `flai serve orchestrate stop` and `flai serve orchestrate start` do the same.
@@ -309,7 +317,7 @@ The orchestrator's own agent is set by hand in `system-flow.yaml`, under `orches
 
 ## Analyzer
 
-Analyzer shows the agent that looks at the whole project and writes a report under `design/analysis/` ([Running the analyzer](flai.md#running-the-analyzer)): whether it may run, what it is doing, what it has found, and what that cost, and below that its settings. Find it last in the Workflow group. Its reports are on the [Docs](#docs) page.
+Analyzer shows the agent that looks at the whole project and writes a report under `design/analysis/` ([Running the analyzer](flai.md#running-the-analyzer)): whether it may run, what it is doing, what it has found, and what that cost, and below that its settings. Find it in the rail's Agents group as Analysis, after Planning. Its reports are on the [Docs](#docs) page.
 
 - **The analyze host action** says whether `flai serve` may start the analyzer here. While it is off, the page gives the command that turns it on: `flai serve enable analyze`.
 - **Run** starts the analyzer now, looking for the **Focus** you choose: `bottlenecks`, `intent`, `risk`, or all three, the default. The page says what flai answered: the run it started, or why it refused. One analyzer runs at a time, so Run is disabled while one runs, and while the host action is off. The page says which.
@@ -458,7 +466,7 @@ The strip above the chart gives what the strategic agents spent and worked over 
 
 ## Docs
 
-Docs shows every markdown file under `design/`, `docs/`, and `wip/` in a collapsible tree. The analyzer's reports are there, in `design/analysis/`, one per run beside the folder's README, as experiments' results are in `design/experiments/`; a report's front matter names its focus and the window its figures cover, `from` and `to`. A document renders with its Mermaid diagrams, highlighted code, task-list checkboxes, and heading anchors; links between documents open in the explorer. The front matter is shown in a panel above the text, and the threads on the document below it. When a story in progress or in review says it touches the document, the page names the story: an edit here may collide with that story's branch. When the dashboard can write, an **Edit** link opens the editor.
+Docs shows every markdown file under `design/`, `docs/`, and `wip/` in a collapsible tree. The rail's Documentation group opens it at three places: System at `design/system/README.md`, Conventions at `design/conventions/README.md`, and Issues at `design/issues/summary.md`. The analyzer's reports are there, in `design/analysis/`, one per run beside the folder's README, as experiments' results are in `design/experiments/`; a report's front matter names its focus and the window its figures cover, `from` and `to`. A document renders with its Mermaid diagrams, highlighted code, task-list checkboxes, and heading anchors; links between documents open in the explorer. The front matter is shown in a panel above the text, and the threads on the document below it. When a story in progress or in review says it touches the document, the page names the story: an edit here may collide with that story's branch. When the dashboard can write, an **Edit** link opens the editor.
 
 ### Editing documents
 
@@ -504,7 +512,7 @@ Search covers `design/` and `wip/` by default and `docs/` when you tick the box.
 
 ## Host
 
-The host flai badge in the header is a link to this page, which is Updates in the site menu's Host group, beside [Settings](#settings) and [License](#license). It has two parts.
+Host is the Updates page. The host flai badge in the top bar is its link; no group of the rail has it. It has two parts.
 
 **Dashboard** shows what image and version the dashboard container is running, and, once the operator has enabled it (`flai serve enable dashboard`), Restart, Upgrade, and Stop. **Check for updates** always works and changes nothing. Restart and a successful upgrade stop the very container answering the page, so the page expects the connection to drop and shows "Reconnecting…" rather than an error, then says what came back once it does. An upgrade never touches the running container until the new image has proven itself healthy: if it does not, the page says so and nothing changed.
 
@@ -514,7 +522,7 @@ Each area has **Versions** beside its check, to go back to an earlier release or
 
 ## Settings
 
-Settings shows how flai on the host is set up for this project:
+Settings shows how flai on the host is set up for this project. The rail's Configuration group opens it at its parts: Features at the host actions, Agents at the default agent, File System at the shared paths, Projects at the projects, and Harnesses at the command and harnesses that start agents. It shows:
 
 - which host actions are on, each with what it does, `plan` and `orchestrate` among them;
 - the default agent new stories get;
@@ -541,11 +549,11 @@ Commands are written one argument a line, and are run exactly as written, with n
 
 ## License
 
-License, the last page of the Host group, shows the Bytepunx Shield License: the terms the dashboard, flai, and the system-flow repository are distributed under. The text is the `LICENSE.md` the dashboard's image carries beside its server, so it is the license of the very dashboard you are looking at, and the same text `flai license` prints and the repository keeps at its root. It is the one page that asks flai on the host for nothing: the file is the dashboard's own, not the project's. An image built without the file says so instead.
+License, at the foot of the nav rail, shows the Bytepunx Shield License: the terms the dashboard, flai, and the system-flow repository are distributed under. The text is the `LICENSE.md` the dashboard's image carries beside its server, so it is the license of the very dashboard you are looking at, and the same text `flai license` prints and the repository keeps at its root. It is the one page that asks flai on the host for nothing: the file is the dashboard's own, not the project's. An image built without the file says so instead.
 
 ## Design system
 
-Design system, the first page of the Design group, shows the project's design system as it stands: the design tokens in the file the manifest's `design.tokens` names, `design/system/design-system.tokens.json` by default, and the guidance beside them, `design/system/design-system.md`. You see the effect of the tokens in the browser without building or deploying the project.
+Design system, System in the rail's Design group, shows the project's design system as it stands: the design tokens in the file the manifest's `design.tokens` names, `design/system/design-system.tokens.json` by default, and the guidance beside them, `design/system/design-system.md`. You see the effect of the tokens in the browser without building or deploying the project.
 
 - **Problems**: what flai found wrong in the token file, by line, as `flai check` reports it.
 - **Preview**: sample components styled by the tokens, light and dark side by side: buttons, inputs, a form, a card, an alert per state, a table, navigation, and headings over body text. They are generic components, not the project's own, so they show its tokens, not its markup. The dashboard's own theme never reaches them, and switching it changes nothing in the preview.
@@ -702,7 +710,7 @@ The page can show a story's worktree instead of the main checkout, so you watch 
 
 ## Theme
 
-flaiover uses the brand palette in a light and a dark theme. It follows your system preference by default; the button at the right of the navigation cycles system, light, and dark, and the choice is remembered per browser. Both themes are checked for readable contrast, and the charts use palettes validated for colour-vision deficiency in each theme.
+flaiover uses the brand palette in a light and a dark theme. It follows your system preference by default; the theme button in the top bar cycles system, light, and dark, and the choice is remembered per browser. Both themes are checked for readable contrast, and the charts use palettes validated for colour-vision deficiency in each theme.
 
 ## Agents on other machines
 
