@@ -4,10 +4,10 @@ title: Publishing flai 1.67.0 and flaiover 0.52.9 (S-0404, E-0022 done) was tagg
 anchor:
   path: wip/archive/kanban/stories/S-0404-metrics-md-defines-the-queue-wait-per-story-the-batch-size-and-the-bisections-per-week-by-an-adr-and-flai-stats-and-the-dashboard-s-charts-report-them.md
   item: S-0404
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-20T19:00:58Z
-updated: 2026-10-20T19:00:58Z
+updated: 2026-10-21T07:24:54Z
 ---
 
 # TH-0526 Publishing flai 1.67.0 and flaiover 0.52.9 (S-0404, E-0022 done) was tagged here but the push failed
@@ -32,3 +32,6 @@ I called `release_publish` after you accepted S-0404, which completed E-0022. It
 - I cannot list or push tags: flai guard keeps me to `release_publish`.
 
 **Released by this run, if the tags land:** flai 1.66.0 to 1.67.0 and flaiover 0.52.8 to 0.52.9, both carrying S-0404.
+
+### 2026-10-21T07:24:54Z alex
+Resolved: Both tags reached the remote: git ls-remote origin on 2026-10-21 lists flai/v1.67.0 at b50515bb and flaiover/v0.52.9 at daea57ed, and main was already there at b3123cd8. Nothing left to push.
