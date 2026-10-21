@@ -6,7 +6,7 @@ title: The chart data takes about 4 s warm, against 10 ms measured on 2026-09-29
 status: in-progress
 owner: alex
 created: 2026-10-21T11:58:35Z
-updated: 2026-10-21T12:21:24Z
+updated: 2026-10-21T12:40:01Z
 transitions:
   - to: ready
     at: 2026-10-21T12:10:31Z
@@ -16,7 +16,7 @@ transitions:
     by: agent-S-0471
 tags: [flai]
 topics: [metrics, performance]
-touches: [flai/internal/metrics/claims.go, flai/internal/metrics/claims_test.go, flai/internal/metrics/claims_bench_test.go, flai/internal/workitem/hold.go, design/system/server-performance.md, design/issues/I-0155-the-chart-data-takes-about-4-s-warm-against-10-ms-measured-on-2026-09-29-almost-all-of-it-in-metrics-replayholds.md, design/issues/summary.md]
+touches: [flai/internal/metrics/claims.go, flai/internal/metrics/claims_test.go, flai/internal/metrics/claims_bench_test.go, flai/internal/workitem/hold.go, design/system/server-performance.md, design/issues/I-0155-the-chart-data-takes-about-4-s-warm-against-10-ms-measured-on-2026-09-29-almost-all-of-it-in-metrics-replayholds.md, design/issues/summary.md, flai/internal/workitem/hold_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,20 +24,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 488
+  seconds: 1613
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-10-21
-      hand_edits: 2
-      work: 9
+      hand_edits: 3
+      work: 17
   models:
     - model: claude-opus-5-5
-      input: 64
-      output: 328
-      cache_read: 2386228
-      cache_write: 224405
-      cost: 0.8843
+      input: 254
+      output: 1204
+      cache_read: 11659015
+      cache_write: 492454
+      cost: 4.1173
   strategic:
     - kind: orchestrator
       seconds: 18

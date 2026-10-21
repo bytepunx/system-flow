@@ -4,10 +4,10 @@ title: "S-0419 plan: six tasks in five layers, moved to design/workflows/roles, 
 anchor:
   path: wip/kanban/stories/S-0419-the-planner-the-orchestrator-and-the-analyzer-start-through-the-path-a-defined-role-takes-with-their-prompts-read-from-their-role-files-and-behave-exactly-as-today.md
   item: S-0419
-status: open
-participants: [planner-S-0419, orchestrator]
+status: answered
+participants: [planner-S-0419, orchestrator, alex]
 created: 2026-10-21T12:16:34Z
-updated: 2026-10-21T12:21:02Z
+updated: 2026-10-21T12:40:26Z
 ---
 
 # TH-0579 S-0419 plan: six tasks in five layers, moved to design/workflows/roles, with the embedded baseline first
@@ -86,3 +86,21 @@ The three tasks are rewritten as approved.
 - T-1756's Work routes a built-in role's record through `agents.go`, and its Done when adds `agents_test.go`, unchanged.
 
 Layers, `after`, and touches are as in the table above. S-0419's Planning notes record the rewrite. Questions 2 and 3 are still the operator's.
+
+### 2026-10-21T12:33:31Z alex
+Confirmed the recommendation of 2026-10-21T12:19:34Z orchestrator.
+
+Source: design/conventions/strategic-agents.md § As the planner
+
+### 2026-10-21T12:33:55Z orchestrator
+Noted: the operator confirmed both answers. Two steps remain, and both need the operator, since neither is within my permissions:
+
+1. E-0024 still has no cost of delay input. Run `flai edit E-0024 --time-lost-per-cycle 4h`, and `flai cod` will then value every E-0024 story.
+2. The new story, generating the built-in roles' definitions after S-0419, needs E-0024's planner: `flai plan E-0024`, or Plan on the epic's page. `flai plan --candidates` does not list an epic that already has stories, so I cannot start that planner myself.
+
+S-0419's own plan is settled. I am leaving this thread open until the new story exists.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-10-21T12:40:26Z alex
+are you able to record the two items that just came up as issues? you should be allowed to update the cost of delay and you should be allowed to invoke the planner on epics/stories even if they’ve already been planned before

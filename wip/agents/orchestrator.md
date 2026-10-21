@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1155.2019
-accrued_seconds: 1045201
-tasks_completed: 827
-last_run: 2026-10-21T12:21:49Z
+accrued_cost: 1169.3533
+accrued_seconds: 1046553
+tasks_completed: 838
+last_run: 2026-10-21T12:44:21Z
 ---
 
 # Orchestrator activity
@@ -5800,6 +5800,83 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0419, S-0420, S-0482
 - Seconds: 121
 - Cost: 1.7536 USD, estimated
+
+### 2026-10-21T12:24:16Z
+
+- Summary: S-0474 landed through merge queue batch (enqueued by me). release_evaluate: judgement policy, 1 pending story worth 12.5 USD/week, none held by whole_epics. Decided not to publish yet. S-0461, also a flaiover change, is on its last two tasks, so I will release both in one flaiover version rather than two minutes apart. If S-0461 stalls, I publish S-0474 alone.
+- Items: S-0474, S-0461
+- Seconds: 147
+- Cost: 1.2522 USD, estimated
+
+### 2026-10-21T12:28:30Z
+
+- Summary: Answered TH-0580, citing design/system/strategic-agents.md § The analysis schedule
+- Items: S-0420
+- Seconds: 254
+- Cost: 5.1232 USD, estimated
+
+### 2026-10-21T12:28:38Z
+
+- Summary: Under plan_backlog_stories, settled planner-S-0420's TH-0580: approved the plan (six tasks in five layers, touches corrected against the code, 1h35m, hand-worked 73.64 USD/week), plus the roles.<name>.schedule manifest key that criterion 3 needs (on the analysis.schedule precedent), two Work rewrites, and dropping two dead touches. Resolved the thread.
+- Items: S-0420
+- Seconds: 8
+- Cost: 0.1091 USD, estimated
+
+### 2026-10-21T12:33:55Z
+
+- Summary: Answered TH-0579, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0419
+- Seconds: 317
+- Cost: 2.2306 USD, estimated
+
+### 2026-10-21T12:34:15Z
+
+- Summary: The operator confirmed my TH-0579 recommendation: generated built-in definitions go in a new story after S-0419, and 4h goes on E-0024. E-0024 still has no input, and only E-0024's planner can draft the new story, which flai plan --candidates does not list. So I noted both steps for the operator on TH-0579 and left it open. S-0420's planner ended. Under plan_backlog_stories, started the planner for S-0421 (pid 2811321), next in flai plan --candidates.
+- Items: S-0419, E-0024, S-0421
+- Seconds: 20
+- Cost: 0.2265 USD, estimated
+
+### 2026-10-21T12:37:00Z
+
+- Summary: S-0482 reached review at 0974f910. flai verify passed (tiers reused across a clean rebase), and the verifier found both criteria met, all files within touches, and nothing installed into the main checkout. queue_add first refused it on TH-0576, the S-0482 planner's thread. I resolved that thread under plan_backlog_stories, since its S-0483 question is held on TH-0578, then enqueued S-0482, first in the queue (alone), value 50 USD/week.
+- Items: S-0482
+- Seconds: 165
+- Cost: 0.9666 USD, estimated
+
+### 2026-10-21T12:40:28Z
+
+- Summary: Answered TH-0581, citing design/conventions/strategic-agents.md § As the planner
+- Items: S-0421
+- Seconds: 208
+- Cost: 1.7406 USD, estimated
+
+### 2026-10-21T12:40:35Z
+
+- Summary: Under plan_backlog_stories, settled planner-S-0421's TH-0581: approved the plan (six tasks in four layers, design/workflows/formulas, formula field and no new nature, 29 touches, 1h3m, hand-worked 48.09 USD/week) and T-1773's rewrite. Resolved the thread. S-0422, next in my queue, needs its own replan for TH-0471 answer 5.
+- Items: S-0421, S-0422
+- Seconds: 7
+- Cost: 0.0000 USD
+
+### 2026-10-21T12:43:56Z
+
+- Summary: Answered TH-0574, citing design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md
+- Items: S-0473
+- Seconds: 201
+- Cost: 2.1410 USD, estimated
+
+### 2026-10-21T12:44:03Z
+
+- Summary: The operator answered TH-0577 (S-0479) "yes" to folding S-0480 in, and TH-0574 (S-0473) "Set COD to 190". I did not try the S-0473 edit: flai refused me a cost of delay on an in-progress story (S-0464, logged earlier), and my permission covers backlog stories only. So I replied on TH-0574 with the command for the operator (flai edit S-0473 --cost-of-delay-value 190).
+- Items: S-0473, S-0479, S-0480
+- Seconds: 7
+- Cost: 0.0000 USD
+
+### 2026-10-21T12:44:21Z
+
+- Summary: S-0421's planner ended. Under plan_backlog_stories, started the planner for S-0422 (pid 2940491), next in flai plan --candidates. It must replan for TH-0471 answer 5: a story's agent works a formula instance on a branch or worktree, not flai serve step by step.
+- Items: S-0422
+- Seconds: 18
+- Cost: 0.3616 USD, estimated
 
 ## Refusals
 

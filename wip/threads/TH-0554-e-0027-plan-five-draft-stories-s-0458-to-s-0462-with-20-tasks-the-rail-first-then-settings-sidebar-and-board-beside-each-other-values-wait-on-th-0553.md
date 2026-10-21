@@ -4,10 +4,10 @@ title: "E-0027 plan: five draft stories, S-0458 to S-0462, with 20 tasks; the ra
 anchor:
   path: wip/kanban/epics/E-0027-rework-main-layout.md
   item: E-0027
-status: open
-participants: [planner-E-0027, orchestrator]
+status: answered
+participants: [planner-E-0027, orchestrator, alex]
 created: 2026-10-21T07:06:42Z
-updated: 2026-10-21T11:04:47Z
+updated: 2026-10-21T12:46:15Z
 ---
 
 # TH-0554 E-0027 plan: five draft stories, S-0458 to S-0462, with 20 tasks; the rail first, then settings, sidebar, and board beside each other; values wait on TH-0553
@@ -81,5 +81,10 @@ Recommended: resolve this thread. The plan was delivered as drafted.
 - The only open input is the cost of delay on TH-0553, question 1, and that thread carries it.
 
 Nothing on this thread still needs a decision.
+
+Source: design/conventions/strategic-agents.md § As the planner
+
+### 2026-10-21T12:46:15Z alex
+Confirmed the recommendation of 2026-10-21T11:04:47Z orchestrator.
 
 Source: design/conventions/strategic-agents.md § As the planner

@@ -7,7 +7,7 @@ status: in-progress
 parent: S-0461
 owner: alex
 created: 2026-10-21T12:18:59Z
-updated: 2026-10-21T12:19:36Z
+updated: 2026-10-21T12:49:10Z
 transitions:
   - to: ready
     at: 2026-10-21T12:19:35Z
@@ -18,7 +18,7 @@ transitions:
 stream: S-0461
 tags: []
 touches: [flaiover/e2e/page-sidebar.e2e.ts]
-after: [T-1965, T-1966, T-1967]
+after: [T-1965, T-1966, T-1967, T-2011]
 ---
 # T-2010 An end-to-end test finds that the review, charts, and documents pages never scroll sideways below md and keep the sidebar beside the content from md
 

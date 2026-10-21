@@ -3,17 +3,20 @@ id: T-1968
 type: task
 nature: improvement
 title: The dashboard's design and user docs describe the review, charts, and documents sidebars
-status: in-progress
+status: done
 parent: S-0461
 owner: alex
 created: 2026-10-21T07:04:36Z
-updated: 2026-10-21T12:18:36Z
+updated: 2026-10-21T12:48:37Z
 transitions:
   - to: ready
     at: 2026-10-21T12:18:35Z
     by: agent-S-0461
   - to: in-progress
     at: 2026-10-21T12:18:36Z
+    by: agent-S-0461
+  - to: done
+    at: 2026-10-21T12:48:37Z
     by: agent-S-0461
 stream: S-0461
 tags: [dashboard]

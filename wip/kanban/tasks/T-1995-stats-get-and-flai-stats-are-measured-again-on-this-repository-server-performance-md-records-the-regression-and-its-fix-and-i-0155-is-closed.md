@@ -3,12 +3,18 @@ id: T-1995
 type: task
 nature: remediation
 title: stats.get and flai stats are measured again on this repository, server-performance.md records the regression and its fix, and I-0155 is closed
-status: backlog
+status: in-progress
 parent: S-0471
 owner: alex
 created: 2026-10-21T12:08:25Z
-updated: 2026-10-21T12:08:25Z
-transitions: []
+updated: 2026-10-21T12:40:09Z
+transitions:
+  - to: ready
+    at: 2026-10-21T12:40:08Z
+    by: agent-S-0471
+  - to: in-progress
+    at: 2026-10-21T12:40:09Z
+    by: agent-S-0471
 stream: S-0471
 tags: [flai, docs]
 touches: [design/system/server-performance.md, design/issues/I-0155-the-chart-data-takes-about-4-s-warm-against-10-ms-measured-on-2026-09-29-almost-all-of-it-in-metrics-replayholds.md, design/issues/summary.md]

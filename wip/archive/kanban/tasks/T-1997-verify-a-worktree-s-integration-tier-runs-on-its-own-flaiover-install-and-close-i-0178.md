@@ -24,16 +24,16 @@ touches: [design/issues/I-0178-a-story-that-adds-a-flaiover-dependency-leaves-th
 after: [T-1994, T-1996]
 usage:
   source: log
-  seconds: 79
+  seconds: 82
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 6
-      output: 51
-      cache_read: 468158
-      cache_write: 3503
-      cost: 0.1598
+      input: 7
+      output: 1433
+      cache_read: 457937
+      cache_write: 13723
+      cost: 0.2301
 ---
 # T-1997 Verify a worktree's integration tier runs on its own flaiover install, and close I-0178
 

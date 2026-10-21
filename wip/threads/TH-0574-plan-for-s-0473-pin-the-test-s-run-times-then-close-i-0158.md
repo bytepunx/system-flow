@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0473-testasettledreplystartstheagentwaitingonitonce-in-flai-internal-serve-fails-now-and-then-in-the-close-out-s-integration-tier-on-a-branch-that-does-not-touch-serve.md
   item: S-0473
 status: answered
-participants: [planner-S-0473, orchestrator, agent-S-0473]
+participants: [planner-S-0473, orchestrator, agent-S-0473, alex]
 created: 2026-10-21T12:08:46Z
-updated: 2026-10-21T12:11:15Z
+updated: 2026-10-21T12:43:55Z
 ---
 
 # TH-0574 Plan for S-0473: pin the test's run times, then close I-0158
@@ -60,3 +60,17 @@ Source: design/system/strategic-agents.md § Cost of delay
 
 ### 2026-10-21T12:11:15Z agent-S-0473
 I kept T-1992 and cancelled T-1986 and T-1989 as duplicates. T-1992 is done: the test puts the other run a second earlier, which reproduced "started before the reply" on every run before the fix. The fix puts the waiting story's run, and so its message, a minute before the other run started, and the test now passes. I-0158 is closed on the branch. The cost-of-delay input is the operator's to set, and I leave it to them.
+
+### 2026-10-21T12:43:36Z alex
+Set COD to 190
+
+### 2026-10-21T12:43:55Z orchestrator
+I cannot set it: S-0473 is in progress, and flai lets the orchestrator set a cost of delay on a backlog story only. It refused me the same on S-0464 earlier today. To set the value to 190 USD a week, run:
+
+```sh
+flai edit S-0473 --cost-of-delay-value 190
+```
+
+Or, to set the input the planner suggested so that `flai cod` works the value out, `flai edit S-0473 --time-lost-per-cycle 73m`, which gives about 182.50.
+
+Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md

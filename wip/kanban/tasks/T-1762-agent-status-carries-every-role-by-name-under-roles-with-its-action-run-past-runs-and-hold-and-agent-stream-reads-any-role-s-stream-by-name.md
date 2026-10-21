@@ -7,11 +7,11 @@ status: backlog
 parent: S-0420
 owner: alex
 created: 2026-10-16T05:46:34Z
-updated: 2026-10-16T05:50:22Z
+updated: 2026-10-21T12:26:05Z
 transitions: []
 stream: S-0420
 tags: [cli]
-touches: [flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/contract_test.go, flai/internal/serve/stream.go, flai/internal/serve/stream_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go]
+touches: [flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/contract_test.go, flai/internal/serve/stream.go, flai/internal/serve/stream_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go]
 ---
 # T-1762 agent.status carries every role by name under roles with its action, run, past runs, and hold, and agent.stream reads any role's stream by name
 

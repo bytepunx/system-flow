@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 102
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 9
-      output: 48
-      cache_read: 628663
-      cache_write: 6238
-      cost: 0.215
+      output: 1929
+      cache_read: 616425
+      cache_write: 18473
+      cost: 0.3097
 ---
 # T-1994 scripts/integration.sh installs flaiover's dependencies in a worktree before the Go run, as flaiover-unit.sh does
 

@@ -3,11 +3,14 @@ id: S-0480
 type: story
 nature: remediation
 title: A usage write to a story overwrites its move to in-progress made meanwhile, so a started story reads as ready again
-status: backlog
+status: cancelled
 owner: alex
 created: 2026-10-21T11:59:52Z
-updated: 2026-10-21T12:03:36Z
-transitions: []
+updated: 2026-10-21T12:46:53Z
+transitions:
+  - to: cancelled
+    at: 2026-10-21T12:46:53Z
+    by: system-flow
 tags: []
 agent:
   harness: claude-code
@@ -38,3 +41,4 @@ This story remediates [I-0176](../../../design/issues/I-0176-a-usage-write-to-a-
 ## Notes
 
 Cost of delay inputs set by flai from I-0176. time_lost_per_cycle 10m: 10m per occurrence × 1 occurrence ÷ 1 cycle of 168h (first reported 2026-10-21T07:48:30Z, 0.2 days before this story; under one cycle counts as one).
+- 2026-10-21T12:46:53Z: moved to cancelled: duplicate of S-0479, merged on the operator's yes on TH-0577: S-0479's Repo.Save merge fixes I-0176 and closes it

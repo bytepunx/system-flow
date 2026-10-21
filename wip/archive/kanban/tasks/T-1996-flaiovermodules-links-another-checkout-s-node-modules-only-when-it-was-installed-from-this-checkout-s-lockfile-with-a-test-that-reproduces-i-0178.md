@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 113
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 13
-      output: 99
-      cache_read: 928160
-      cache_write: 11444
-      cost: 0.3183
+      output: 2854
+      cache_read: 912262
+      cache_write: 27338
+      cost: 0.4583
 ---
 # T-1996 flaioverModules links another checkout's node_modules only when it was installed from this checkout's lockfile, with a test that reproduces I-0178
 

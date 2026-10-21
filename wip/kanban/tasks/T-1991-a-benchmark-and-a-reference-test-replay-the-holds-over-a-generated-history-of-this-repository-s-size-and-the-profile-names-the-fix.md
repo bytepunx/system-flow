@@ -32,7 +32,7 @@ usage:
       output: 211
       cache_read: 1782197
       cache_write: 100773
-      cost: 0.6378
+      cost: 0.638
 ---
 # T-1991 A benchmark and a reference test replay the holds over a generated history of this repository's size, and the profile names the fix
 

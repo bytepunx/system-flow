@@ -7,11 +7,11 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:31Z
-updated: 2026-10-21T12:28:25Z
+updated: 2026-10-21T12:46:53Z
 transitions: []
 tags: [dashboard, cli]
 topics: [dashboard, planning, orchestration]
-touches: [design/system/flaiover-dashboard.md, docs/users/flaiover.md, flai/internal/hostapi/contract_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/serve/agents.go, flai/internal/serve/stream.go, flai/internal/serve/stream_test.go, flaiover/src/lib/agent.ts, flaiover/src/lib/components/RolePage.svelte, flaiover/src/lib/components/RolePage.svelte.test.ts, flaiover/src/lib/components/SiteMenu.svelte, flaiover/src/lib/components/StrategicAgentPanel.svelte, flaiover/src/lib/components/StrategicSettings.svelte, flaiover/src/lib/components/StrategicSettings.svelte.test.ts, flaiover/src/lib/roles.test.ts, flaiover/src/lib/roles.ts, flaiover/src/lib/settings.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/sitemenu.ts, "flaiover/src/routes/api/roles/[name]/roles.test.ts", "flaiover/src/routes/api/roles/[name]/+server.ts", flaiover/src/routes/workflow/analyzer/analyzer.svelte.test.ts, flaiover/src/routes/workflow/analyzer/+page.svelte, flaiover/src/routes/workflow/orchestrator/orchestrator.svelte.test.ts, flaiover/src/routes/workflow/orchestrator/+page.svelte, flaiover/src/routes/workflow/planner/+page.svelte, flaiover/src/routes/workflow/planner/planner.svelte.test.ts, "flaiover/src/routes/workflow/[role]/+page.svelte", flai/internal/serve/agents_test.go, flaiover/src/lib/server/agent.ts, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go, docs/operators/settings.md, flaiover/src/lib/strategic.ts, flaiover/src/lib/strategic.test.ts, "flaiover/src/routes/api/agent-stream/[story]/+server.ts", "flaiover/src/routes/api/agent-stream/[story]/agent-stream.test.ts", flaiover/src/lib/components/NavRail.svelte, flaiover/src/lib/components/NavRail.svelte.test.ts, flaiover/src/routes/+layout.svelte, flaiover/src/routes/layout.svelte.test.ts, design/system/project-manifest.md, design/system/flai-cli.md]
+touches: [design/system/flaiover-dashboard.md, docs/users/flaiover.md, flai/internal/hostapi/contract_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/serve/agents.go, flai/internal/serve/stream.go, flai/internal/serve/stream_test.go, flaiover/src/lib/components/RolePage.svelte, flaiover/src/lib/components/RolePage.svelte.test.ts, flaiover/src/lib/components/StrategicAgentPanel.svelte, flaiover/src/lib/components/StrategicSettings.svelte, flaiover/src/lib/components/StrategicSettings.svelte.test.ts, flaiover/src/lib/roles.test.ts, flaiover/src/lib/roles.ts, flaiover/src/lib/settings.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/sitemenu.ts, "flaiover/src/routes/api/roles/[name]/roles.test.ts", "flaiover/src/routes/api/roles/[name]/+server.ts", flaiover/src/routes/workflow/analyzer/analyzer.svelte.test.ts, flaiover/src/routes/workflow/analyzer/+page.svelte, flaiover/src/routes/workflow/orchestrator/orchestrator.svelte.test.ts, flaiover/src/routes/workflow/orchestrator/+page.svelte, flaiover/src/routes/workflow/planner/+page.svelte, flaiover/src/routes/workflow/planner/planner.svelte.test.ts, "flaiover/src/routes/workflow/[role]/+page.svelte", flai/internal/serve/agents_test.go, flaiover/src/lib/server/agent.ts, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go, docs/operators/settings.md, flaiover/src/lib/strategic.ts, flaiover/src/lib/strategic.test.ts, "flaiover/src/routes/api/agent-stream/[story]/+server.ts", "flaiover/src/routes/api/agent-stream/[story]/agent-stream.test.ts", flaiover/src/lib/components/NavRail.svelte, flaiover/src/lib/components/NavRail.svelte.test.ts, flaiover/src/routes/+layout.svelte, flaiover/src/routes/layout.svelte.test.ts, design/system/project-manifest.md, design/system/flai-cli.md]
 after: [S-0419]
 agent:
   harness: claude-code
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-10-21T12:28:25Z
 forecast:
   duration: 1h35m
-  delivery: 2026-10-22T00:31:00Z
-  basis: "107 s a unit over 85 done feature stories on claude-opus-5-5 in the large band, times size 53 (5 criteria, 48 touches a task changes); after S-0419's delivery at 22:45Z, times the cycle factor 1.12."
-  by: planner-S-0420
-  at: 2026-10-21T12:28:25Z
+  delivery: 2026-10-22T00:27:00Z
+  basis: "Its own forecast of 1h35m; 15th in the pull order with an in-progress limit of 5, behind S-0461, S-0471, S-0473, S-0479, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418 and S-0419."
+  by: flai
+  at: 2026-10-21T12:46:53Z
 ---
 # S-0420 The dashboard's Planner, Orchestrator, and Analyzer pages become one role page per defined role, with its settings panel, its activity document, and its runs, and agent.status carries every role by name
 
@@ -74,21 +74,33 @@ A role a project defines shows on the dashboard as the built-in ones do. The Wor
 
 ### Planning
 
-- **Plan thread.** TH-0580, replanned 2026-10-21. It asks three questions: the schedule key, two Work bullets, and two dead touches.
-- **Layers.** Five layers. T-1762 runs first. T-1763 and T-1764 run together; they share no path. T-1765, T-1766, and T-1767 follow in turn. T-1763 now waits for T-1762, because both change `flai/cmd/serve_actions.go`.
-- **What earlier stories give.** S-0414 gives the role loader. S-0417 gives `role.run`, the `roles.<name>.agent` and `roles.<name>.permissions` keys, and runs under `roles` in `agent.status`. S-0418 gives `role.stop`, `role.start`, and the schedule trigger. T-1762 extends S-0417's `roles` record with the action state, `held`, 20 past runs, and the built-in roles.
-- **Touches.** 50, all files; no folder touch.
-  - **Declared, kept:** the 35 earlier touches. `flaiover/src/lib/agent.ts` and `flaiover/src/lib/components/SiteMenu.svelte` stay declared, though no task changes them now. `agent.ts`'s `Role` is a sub-agent's harness and model, and `SiteMenu.svelte` does not exist. TH-0580, question 3, proposes dropping both.
+- **Plan thread.** TH-0580, replanned 2026-10-21, approved and resolved by the orchestrator. It settled three things:
+  - `roles.<name>.schedule` is a manifest key that overrides the role file's schedule, as `analysis.schedule` sets the analyzer's. T-1763 adds it.
+  - T-1764's and T-1766's Work bullets were rewritten to `strategic.ts` with the agent-stream route, and to the rail's Agents group.
+  - `flaiover/src/lib/agent.ts` and `flaiover/src/lib/components/SiteMenu.svelte` were dropped from the touches.
+- **Reading of the criteria.** The "Workflow menu" is the rail's Agents group, where S-0458 put the three pages. The Flow group's Workflow entry stays a placeholder.
+- **Layers.** Five layers. T-1762 runs first. T-1763 and T-1764 run together; they share no path. T-1765, T-1766, and T-1767 follow in turn. T-1763 waits for T-1762, because both change `flai/cmd/serve_actions.go`.
+- **What earlier stories give.**
+  - S-0414 gives the role loader.
+  - S-0417 gives `role.run`, the `roles.<name>.agent` and `roles.<name>.permissions` keys, and runs under `roles` in `agent.status`.
+  - S-0418 gives `role.stop`, `role.start`, and the schedule trigger.
+  - T-1762 extends S-0417's `roles` record with the action state, `held`, 20 past runs, and the built-in roles.
+  - The three pages keep their API routes and their `PlannerPanel`, `OrchestratorPanel`, and `AnalyzerPanel`, plugged into `RolePage`, so their tests keep their assertions.
+- **Touches.** 48, all files; no folder touch.
+  - **Declared, kept:** 33 of the 35 earlier touches. The two dropped, on TH-0580, were `lib/agent.ts`, whose `Role` is a sub-agent's harness and model, and `SiteMenu.svelte`, which does not exist.
   - **From layout, added (code read 2026-10-21):**
     - `flai/cmd/serve_actions.go` and its test, on T-1762 and T-1763. It builds `agent.status`'s state and `settings.get`'s strategic block.
-    - `flai/internal/serve/role_schedule.go` and its test, on T-1763. They are for `roles.<name>.schedule` (TH-0580, question 1).
+    - `flai/internal/serve/role_schedule.go` and its test, on T-1763, for `roles.<name>.schedule`.
     - `flaiover/src/lib/strategic.ts` and its test, on T-1764. They hold `STREAM_ROLES` and the run types.
     - `flaiover/src/routes/api/agent-stream/[story]/+server.ts` and its test, on T-1764. The route refuses any role but `orchestrate` and `analyze`.
-    - `flaiover/src/lib/components/NavRail.svelte` and its test, `flaiover/src/routes/+layout.svelte`, and `layout.svelte.test.ts`, on T-1766. Since S-0458 the rail renders `SITE_MENU`, and the three pages sit in its Agents group.
-  - **From design, added:** `docs/operators/settings.md` on T-1763, which `TestSettingsIndexIsComplete` needs for a new manifest key. `design/system/project-manifest.md` on T-1767, for the keys.
+    - `flaiover/src/lib/components/NavRail.svelte` and its test, `flaiover/src/routes/+layout.svelte`, and `layout.svelte.test.ts`, on T-1766. Since S-0458 the rail renders `SITE_MENU`.
+  - **From design, added:** `docs/operators/settings.md` on T-1763, which `TestSettingsIndexIsComplete` needs for the new key. `design/system/project-manifest.md` on T-1767, for the keys.
   - **Co-change, added:** `design/system/flai-cli.md` (30%) on T-1767. It describes `agent.status`'s fields, and it is a shared path, so it holds nothing.
-  - **Co-change, not added:** `flai/internal/hostapi/writes.go` and its test (16%). `role.run`, `role.stop`, and `role.start` come from S-0417 and S-0418. Also `docs/users/flai.md`, since no command changes. Also the three pages' API routes under `flaiover/src/routes/api/`, since the pages keep them.
-- **Forecast.** 1h35m, down from flai's 1h39m. flai's figure is 107 s a unit over 85 done feature stories on this model in the large band, times size 55: 5 criteria and 50 touches. Two of those touches no task changes, so I used size 53. The delivery is S-0419's delivery at 22:45Z plus 1h35m times the cycle factor 1.12: 2026-10-22T00:31Z.
+  - **Co-change, not added:**
+    - `flai/internal/hostapi/writes.go` and its test (16%), since `role.run`, `role.stop`, and `role.start` come from S-0417 and S-0418.
+    - `docs/users/flai.md`, since no command changes.
+    - The three pages' API routes under `flaiover/src/routes/api/`, since the pages keep them.
+- **Forecast.** flai's 1h35m is kept: 107 s a unit over 85 done feature stories on this model in the large band, times size 53 (5 criteria and 48 touches). The delivery is flai's play-out, S-0419's delivery at 22:45Z plus 1h35m times the cycle factor 1.12: 2026-10-22T00:31Z.
 - **Cost of delay.** 73.64 USD a week. I worked it out by hand from TH-0471's answer 1, as the planners of S-0417 to S-0419 did, because `flai cod` refuses while E-0024 has no inputs.
   - 4h lost per cycle, at `planning.hour_rate` 150 over the default 168h cycle, gives E-0024 600 USD a week.
   - S-0420's share is its 1h35m of the 12h54m forecast for E-0024's twelve open stories: 95 / 774 × 600.

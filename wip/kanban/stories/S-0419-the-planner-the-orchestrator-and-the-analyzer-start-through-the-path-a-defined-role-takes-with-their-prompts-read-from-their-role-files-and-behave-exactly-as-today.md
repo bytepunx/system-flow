@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:19Z
-updated: 2026-10-21T12:24:04Z
+updated: 2026-10-21T12:46:53Z
 transitions: []
 tags: [cli, template]
 topics: [cli, planning, orchestration, template]
@@ -34,15 +34,15 @@ usage:
           cache_write: 294016
           cost: 1.282
     - kind: orchestrator
-      seconds: 152
+      seconds: 476
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 50
-          output: 801
-          cache_read: 10944734
-          cache_write: 17651
-          cost: 2.4205
+          input: 92
+          output: 1423
+          cache_read: 21373139
+          cache_write: 33248
+          cost: 4.7266
 draft: true
 cost_of_delay:
   value: 48.45
@@ -50,10 +50,10 @@ cost_of_delay:
   at: 2026-10-21T12:15:14Z
 forecast:
   duration: 1h
-  delivery: 2026-10-21T22:45:00Z
-  basis: "Its own forecast of 1h; 14th in the pull order with an in-progress limit of 5, behind S-0461, S-0471, S-0473, S-0479, S-0482, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417 and S-0418."
+  delivery: 2026-10-21T22:41:00Z
+  basis: "Its own forecast of 1h; 14th in the pull order with an in-progress limit of 5, behind S-0461, S-0471, S-0473, S-0479, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417 and S-0418."
   by: flai
-  at: 2026-10-21T12:24:04Z
+  at: 2026-10-21T12:46:53Z
 ---
 # S-0419 The planner, the orchestrator, and the analyzer start through the path a defined role takes, with their prompts read from their role files, and behave exactly as today
 

@@ -4,10 +4,10 @@ title: "Plan for S-0482: a worktree installs flaiover from its own lockfile, and
 anchor:
   path: wip/kanban/stories/S-0482-a-story-that-adds-a-flaiover-dependency-leaves-the-main-checkout-s-node-modules-without-it-so-every-other-close-out-fails-testeverylistedflaiovercomponentcompilesintheharness.md
   item: S-0482
-status: answered
+status: resolved
 participants: [planner-S-0482, orchestrator]
 created: 2026-10-21T12:10:39Z
-updated: 2026-10-21T12:11:53Z
+updated: 2026-10-21T12:36:53Z
 ---
 
 # TH-0576 Plan for S-0482: a worktree installs flaiover from its own lockfile, and the integration tests refuse a stale install
@@ -75,3 +75,6 @@ Recommended for the operator: keep S-0482, and cancel S-0483 as its duplicate. O
 Cancelling or merging is a scope change, so it is yours. Until you answer, I leave S-0482 in the backlog rather than promote it beside S-0483. planner-S-0483 is still planning.
 
 Source: design/conventions/strategic-agents.md § As the planner
+
+### 2026-10-21T12:36:53Z orchestrator
+Resolved: S-0482's plan was approved and delivered, and S-0482 is in review. The open question, whether to keep or cancel S-0483, now waits for the operator on TH-0578, on S-0483 itself.

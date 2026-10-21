@@ -6,7 +6,7 @@ title: "Workflows as data: a project defines a strategic role or a repeatable fo
 status: backlog
 owner: alex
 created: 2026-10-16T04:28:02Z
-updated: 2026-10-21T11:10:38Z
+updated: 2026-10-21T12:39:49Z
 transitions:
   - to: ready
     at: 2026-10-20T19:01:17Z
@@ -33,15 +33,15 @@ usage:
           cache_write: 294016
           cost: 1.282
     - kind: orchestrator
-      seconds: 4036
+      seconds: 4861
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 618
-          output: 9970
-          cache_read: 128476433
-          cache_write: 187336
-          cost: 30.3384
+          input: 796
+          output: 12991
+          cache_read: 172768138
+          cache_write: 240222
+          cost: 40.13
 ---
 # E-0024 Workflows as data: a project defines a strategic role or a repeatable formula of steps in files flai runs, and the built-in roles are expressed the same way, so a new role or a release process needs no flai release
 
@@ -68,7 +68,7 @@ To be drafted by the planner. Order: the role file format and its validation fir
 - S-0418 A role a project defines starts on an event, on a schedule, or for as long as its host action is on, as its role file's trigger says, coalesced and logged with its trigger as the planner's runs are
 - S-0419 The planner, the orchestrator, and the analyzer start through the path a defined role takes, with their prompts read from their role files, and behave exactly as today
 - S-0420 The dashboard's Planner, Orchestrator, and Analyzer pages become one role page per defined role, with its settings panel, its activity document, and its runs, and agent.status carries every role by name
-- S-0421 A formula is a markdown file under design/formulas that flai check validates, and flai formula run makes a story from it with one task per step and the steps' after between them
+- S-0421 A formula is a markdown file under design/workflows/formulas that flai check validates, and flai formula run makes a story from it with one task per step and the steps' after between them
 - S-0422 flai serve works a formula's instance step by step, commands and scripts in the main checkout and roles through their runs, and a formula starts from a host action, a schedule, or a role
 - S-0423 The template ships a baseline publish formula that fetches, evaluates orchestration.release, and publishes what is pending, the orchestrator starts it in place of calling release_publish, and it is run once here
 - S-0424 The template ships baseline formulas for importing a repository from the board and for the analyzer's cadence, the board's import starts its formula, and each is run once here

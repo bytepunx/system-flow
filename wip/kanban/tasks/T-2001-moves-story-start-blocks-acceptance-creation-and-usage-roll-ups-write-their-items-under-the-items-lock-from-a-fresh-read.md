@@ -3,12 +3,15 @@ id: T-2001
 type: task
 nature: remediation
 title: Moves, story start, blocks, acceptance, creation, and usage roll-ups write their items under the items lock from a fresh read
-status: backlog
+status: cancelled
 parent: S-0479
 owner: alex
 created: 2026-10-21T12:10:33Z
-updated: 2026-10-21T12:11:16Z
-transitions: []
+updated: 2026-10-21T12:40:53Z
+transitions:
+  - to: cancelled
+    at: 2026-10-21T12:40:53Z
+    by: system-flow
 stream: S-0479
 tags: [flai, workitem]
 touches: [flai/internal/workitem/transition.go, flai/internal/workitem/create.go, flai/internal/workitem/usage.go, flai/internal/storystart/start.go, flai/internal/storystart/start_test.go, flai/cmd/move.go, flai/cmd/accept.go]
@@ -34,3 +37,4 @@ Move the state writers onto the lock T-1999 adds. They wait for T-1999 because t
 ## Notes
 
 Drafted by the planner. It runs beside T-2002, since the two touch no file in common.
+- 2026-10-21T12:40:53Z: moved to cancelled: superseded by T-2007 to T-2009: Repo.Save merges a stale copy under the items lock, so no writer needs rewriting

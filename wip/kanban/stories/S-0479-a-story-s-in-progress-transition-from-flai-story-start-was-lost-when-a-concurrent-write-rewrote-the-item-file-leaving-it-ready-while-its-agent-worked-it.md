@@ -6,7 +6,7 @@ title: A story's in-progress transition from flai story start was lost when a co
 status: in-progress
 owner: alex
 created: 2026-10-21T11:59:43Z
-updated: 2026-10-21T12:13:03Z
+updated: 2026-10-21T12:48:32Z
 transitions:
   - to: ready
     at: 2026-10-21T12:05:53Z
@@ -15,16 +15,29 @@ transitions:
     at: 2026-10-21T12:09:40Z
     by: agent-S-0479
 tags: []
-touches: [flai/internal/workitem/itemlock.go, flai/internal/workitem/itemlock_test.go, flai/internal/workitem/repo.go, flai/internal/workitem/transition.go, flai/internal/workitem/create.go, flai/internal/workitem/usage.go, flai/internal/storystart/start.go, flai/internal/storystart/start_test.go, flai/cmd/move.go, flai/cmd/accept.go, flai/cmd/touches.go, flai/internal/serve/usage.go, flai/internal/serve/usage_test.go, flai/internal/itemedit/itemedit.go, flai/internal/itemedit/widen.go, flai/internal/itemedit/lock_test.go, design/system/work-hierarchy.md, design/adrs, design/issues/I-0175-a-story-s-in-progress-transition-from-flai-story-start-was-lost-when-a-concurrent-write-rewrote-the-item-file-leaving-it-ready-while-its-agent-worked-it.md, design/issues/summary.md]
+touches: [flai/internal/workitem/itemlock.go, flai/internal/workitem/itemlock_test.go, flai/internal/workitem/repo.go, flai/internal/itemedit/itemedit.go, flai/internal/itemedit/lock_test.go, design/system/work-hierarchy.md, design/adrs, design/issues/I-0175-a-story-s-in-progress-transition-from-flai-story-start-was-lost-when-a-concurrent-write-rewrote-the-item-file-leaving-it-ready-while-its-agent-worked-it.md, design/issues/summary.md, flai/cmd/accept_resume_test.go, flai/cmd/check_stats_test.go, flai/cmd/issue_test.go, flai/internal/workitem/item.go, design/issues/I-0176-a-usage-write-to-a-story-overwrites-its-move-to-in-progress-made-meanwhile-so-a-started-story-reads-as-ready-again.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2192
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-21
+      ceremony: 3
+      hand_edits: 4
+      work: 37
+  models:
+    - model: claude-opus-5-5
+      input: 232
+      output: 1079
+      cache_read: 12592126
+      cache_write: 539953
+      cost: 4.4495
   strategic:
     - kind: planner
       seconds: 349
@@ -77,8 +90,9 @@ finalized:
 This story remediates [I-0175](../../../design/issues/I-0175-a-story-s-in-progress-transition-from-flai-story-start-was-lost-when-a-concurrent-write-rewrote-the-item-file-leaving-it-ready-while-its-agent-worked-it.md), "A story's in-progress transition from flai story start was lost when a concurrent write rewrote the item file, leaving it ready while its agent worked it". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0175 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0175 is closed with `flai issue close I-0175 --reason` saying what fixed it
+- [x] The cause I-0175 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0175 is closed with `flai issue close I-0175 --reason` saying what fixed it
+- [x] I-0176 is closed with `flai issue close I-0176 --reason` saying what fixed it
 
 ## Tasks
 - T-1999 A work item write takes a project-wide items lock and reads the item again under it, with a test that reproduces the lost update
@@ -87,7 +101,7 @@ This story remediates [I-0175](../../../design/issues/I-0175-a-story-s-in-progre
 - T-2005 The design records that every work item write takes the items lock, and I-0175 is closed with what fixed it
 - T-2007 Repo.Save merges an item copy read before a concurrent write with the file on disk, key by key, under one lock, and refuses a key both changed
 - T-2008 An item edit refused by the check puts back only its own change to an item file, keeping what was written meanwhile
-- T-2009 The design and an ADR say how concurrent item writes merge, and I-0175 is closed
+- T-2009 The design and an ADR say how concurrent item writes merge, and I-0175 and I-0176 are closed
 
 ## Notes
 

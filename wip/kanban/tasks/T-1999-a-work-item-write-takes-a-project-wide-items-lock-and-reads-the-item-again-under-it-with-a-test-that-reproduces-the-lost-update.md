@@ -3,12 +3,15 @@ id: T-1999
 type: task
 nature: remediation
 title: A work item write takes a project-wide items lock and reads the item again under it, with a test that reproduces the lost update
-status: backlog
+status: cancelled
 parent: S-0479
 owner: alex
 created: 2026-10-21T12:10:12Z
-updated: 2026-10-21T12:10:12Z
-transitions: []
+updated: 2026-10-21T12:40:52Z
+transitions:
+  - to: cancelled
+    at: 2026-10-21T12:40:52Z
+    by: system-flow
 stream: S-0479
 tags: [flai, workitem]
 touches: [flai/internal/workitem/itemlock.go, flai/internal/workitem/itemlock_test.go, flai/internal/workitem/repo.go]
@@ -35,3 +38,4 @@ It waits for nothing: it is the first layer.
 ## Notes
 
 Drafted by the planner. The writers move onto the lock in the next layer's two tasks.
+- 2026-10-21T12:40:52Z: moved to cancelled: superseded by T-2007 to T-2009: Repo.Save merges a stale copy under the items lock, so no writer needs rewriting

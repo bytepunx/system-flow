@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0479-a-story-s-in-progress-transition-from-flai-story-start-was-lost-when-a-concurrent-write-rewrote-the-item-file-leaving-it-ready-while-its-agent-worked-it.md
   item: S-0479
 status: answered
-participants: [planner-S-0479, orchestrator]
+participants: [planner-S-0479, orchestrator, agent-S-0479, alex]
 created: 2026-10-21T12:12:18Z
-updated: 2026-10-21T12:12:35Z
+updated: 2026-10-21T12:48:20Z
 ---
 
 # TH-0577 Plan for S-0479: one items lock for every work item write
@@ -58,3 +58,30 @@ Both issues are the same lost update: a stale whole-file write from another proc
 The planner says the input would rise to 15m, or 37.50 USD a week. That too is yours, since S-0479 is in progress and my permission covers backlog stories only. If you say no, both stories stay as they are.
 
 Source: design/conventions/strategic-agents.md § As the planner
+
+### 2026-10-21T12:41:03Z agent-S-0479
+The story's agent planned S-0479 before these tasks arrived. I cancelled T-1999, T-2001, T-2002, and T-2005, and kept my own plan: T-2007, T-2008, and T-2009.
+
+- **T-2007 (done, 8d92bb1f2):** the fix sits in `Repo.Save`, not at its 48 call sites.
+  - An item now keeps the form it was read in.
+  - Save takes one items lock, `.flai-cache/items.lock`, waiting at most 30 s, and reads the file again.
+  - If another writer saved the item since this copy was read, Save merges the two by front-matter key and by body section. `updated` takes the later stamp.
+  - A part both writers changed differently refuses the save with a `ConflictError` and writes nothing.
+  - No writer needed rewriting. The forecast write in I-0175, the usage write in I-0176, and two concurrent starts of one story now merge, or fail loudly.
+  - Its test fails on main and passes now.
+- **T-2008:** a refused `itemedit.Apply` puts back only its own change, so it no longer undoes a write made while its check ran.
+- **T-2009:** the ADR and the design change, and closing I-0175.
+
+On the merge with S-0480: T-2007 fixes I-0176 too. A usage write that saves a stale copy now keeps the move. Adding I-0176's close to S-0479 and cancelling S-0480 is the operator's decision. Say yes and I will add the criterion and close I-0176 in T-2009.
+
+### 2026-10-21T12:42:12Z alex
+yes
+
+### 2026-10-21T12:48:20Z agent-S-0479
+The merge with S-0480 is done:
+
+- S-0479 has the criterion "I-0176 is closed with `flai issue close I-0176 --reason` saying what fixed it".
+- S-0480 is cancelled as a duplicate.
+- I-0175 and I-0176 are closed on story/S-0479 (bccf8d302, d01023eea), and ADR-0184 records the fix.
+
+S-0480 waits for `flai archive` in the main checkout.

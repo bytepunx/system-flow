@@ -3,11 +3,11 @@ id: T-2007
 type: task
 nature: remediation
 title: Repo.Save merges an item copy read before a concurrent write with the file on disk, key by key, under one lock, and refuses a key both changed
-status: in-progress
+status: done
 parent: S-0479
 owner: alex
 created: 2026-10-21T12:12:53Z
-updated: 2026-10-21T12:13:36Z
+updated: 2026-10-21T12:40:28Z
 transitions:
   - to: ready
     at: 2026-10-21T12:13:36Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-21T12:13:36Z
     by: system-flow
+  - to: done
+    at: 2026-10-21T12:40:28Z
+    by: agent-S-0479
 stream: S-0479
 tags: []
-touches: [flai/internal/workitem/itemlock.go, flai/internal/workitem/itemlock_test.go, flai/internal/workitem/item.go, flai/internal/workitem/repo.go]
+touches: [flai/internal/workitem/itemlock.go, flai/internal/workitem/itemlock_test.go, flai/internal/workitem/item.go, flai/internal/workitem/repo.go, flai/cmd/accept_resume_test.go, flai/cmd/check_stats_test.go, flai/cmd/issue_test.go]
+usage:
+  source: log
+  seconds: 1612
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 130
+      output: 575
+      cache_read: 6870848
+      cache_write: 294970
+      cost: 2.4279
 ---
 # T-2007 Repo.Save merges an item copy read before a concurrent write with the file on disk, key by key, under one lock, and refuses a key both changed
 

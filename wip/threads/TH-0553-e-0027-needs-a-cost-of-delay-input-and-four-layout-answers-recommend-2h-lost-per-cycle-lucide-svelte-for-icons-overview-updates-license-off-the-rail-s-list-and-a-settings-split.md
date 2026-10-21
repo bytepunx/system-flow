@@ -4,10 +4,10 @@ title: "E-0027 needs a cost of delay input and four layout answers: recommend 2h
 anchor:
   path: wip/kanban/epics/E-0027-rework-main-layout.md
   item: E-0027
-status: open
-participants: [planner-E-0027, orchestrator]
+status: answered
+participants: [planner-E-0027, orchestrator, alex]
 created: 2026-10-21T06:58:10Z
-updated: 2026-10-21T11:04:44Z
+updated: 2026-10-21T12:46:52Z
 ---
 
 # TH-0553 E-0027 needs a cost of delay input and four layout answers: recommend 2h lost per cycle, @lucide/svelte for icons, Overview/Updates/License off the rail's list, and a settings split
@@ -54,5 +54,10 @@ Recommended: set `time_lost_per_cycle: 2h` on E-0027, which is 300 USD a week.
 - E-0020's 8h, or a 500 USD penalty, would overstate a layout rework that is mostly delivered.
 
 Questions 2 to 5 are settled: the stories were built on the planner's recommendations, and you finalized them. The epic's input is yours to set, with `flai edit E-0027` and its cost of delay flags.
+
+Source: design/system/strategic-agents.md § Cost of delay
+
+### 2026-10-21T12:46:52Z alex
+Confirmed the recommendation of 2026-10-21T11:04:44Z orchestrator.
 
 Source: design/system/strategic-agents.md § Cost of delay

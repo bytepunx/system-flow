@@ -3,11 +3,11 @@ id: T-1993
 type: task
 nature: remediation
 title: replayHolds judges the holds again only at an event that can change one, over only the open stories, giving the reference replay's result
-status: in-progress
+status: done
 parent: S-0471
 owner: alex
 created: 2026-10-21T12:08:09Z
-updated: 2026-10-21T12:21:27Z
+updated: 2026-10-21T12:40:01Z
 transitions:
   - to: ready
     at: 2026-10-21T12:21:27Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-21T12:21:27Z
     by: agent-S-0471
+  - to: done
+    at: 2026-10-21T12:40:01Z
+    by: agent-S-0471
 stream: S-0471
 tags: [flai]
-touches: [flai/internal/metrics/claims.go, flai/internal/metrics/claims_test.go, flai/internal/workitem/hold.go]
+touches: [flai/internal/metrics/claims.go, flai/internal/metrics/claims_test.go, flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go]
 after: [T-1991]
+usage:
+  source: log
+  seconds: 1113
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 188
+      output: 873
+      cache_read: 9122319
+      cache_write: 255957
+      cost: 3.1776
 ---
 # T-1993 replayHolds judges the holds again only at an event that can change one, over only the open stories, giving the reference replay's result
 

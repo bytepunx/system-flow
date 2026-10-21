@@ -3,12 +3,15 @@ id: T-2002
 type: task
 nature: remediation
 title: flai serve's usage writer, flai edit and item_edit, touches, and widening write their items under the items lock from a fresh read
-status: backlog
+status: cancelled
 parent: S-0479
 owner: alex
 created: 2026-10-21T12:10:53Z
-updated: 2026-10-21T12:10:53Z
-transitions: []
+updated: 2026-10-21T12:40:54Z
+transitions:
+  - to: cancelled
+    at: 2026-10-21T12:40:54Z
+    by: system-flow
 stream: S-0479
 tags: [flai, serve, itemedit]
 touches: [flai/internal/serve/usage.go, flai/internal/serve/usage_test.go, flai/internal/itemedit/itemedit.go, flai/internal/itemedit/widen.go, flai/internal/itemedit/lock_test.go, flai/cmd/touches.go]
@@ -34,3 +37,4 @@ Move the edit and usage writers onto the lock T-1999 adds. They wait for T-1999 
 ## Notes
 
 Drafted by the planner. It runs beside T-2001, since the two touch no file in common.
+- 2026-10-21T12:40:54Z: moved to cancelled: superseded by T-2007 to T-2009: Repo.Save merges a stale copy under the items lock, so no writer needs rewriting

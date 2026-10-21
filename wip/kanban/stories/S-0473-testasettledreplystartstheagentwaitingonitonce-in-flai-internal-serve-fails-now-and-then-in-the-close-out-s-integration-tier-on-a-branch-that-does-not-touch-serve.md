@@ -6,7 +6,7 @@ title: TestASettledReplyStartsTheAgentWaitingOnItOnce in flai/internal/serve fai
 status: in-progress
 owner: alex
 created: 2026-10-21T11:58:53Z
-updated: 2026-10-21T12:11:21Z
+updated: 2026-10-21T12:40:57Z
 transitions:
   - to: ready
     at: 2026-10-21T12:05:25Z
@@ -15,7 +15,7 @@ transitions:
     at: 2026-10-21T12:06:08Z
     by: agent-S-0473
 tags: []
-touches: [flai/internal/serve/agents_test.go, design/issues/I-0158-testasettledreplystartstheagentwaitingonitonce-in-flai-internal-serve-fails-now-and-then-in-the-close-out-s-integration-tier-on-a-branch-that-does-not-touch-serve.md, design/issues/summary.md]
+touches: [flai/internal/serve/agents_test.go, design/issues/I-0158-testasettledreplystartstheagentwaitingonitonce-in-flai-internal-serve-fails-now-and-then-in-the-close-out-s-integration-tier-on-a-branch-that-does-not-touch-serve.md, design/issues/summary.md, design/issues/I-0183-flai-check-finds-item-chronology-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -39,15 +39,15 @@ usage:
       cost: 0.7901
   strategic:
     - kind: orchestrator
-      seconds: 326
+      seconds: 527
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 97
-          output: 1692
-          cache_read: 16197899
-          cache_write: 28688
-          cost: 3.5831
+          input: 133
+          output: 2167
+          cache_read: 25881209
+          cache_write: 41873
+          cost: 5.7241
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 45m

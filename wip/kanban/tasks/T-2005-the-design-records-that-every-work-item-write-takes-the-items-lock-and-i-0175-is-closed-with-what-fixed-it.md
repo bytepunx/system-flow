@@ -3,12 +3,15 @@ id: T-2005
 type: task
 nature: remediation
 title: The design records that every work item write takes the items lock, and I-0175 is closed with what fixed it
-status: backlog
+status: cancelled
 parent: S-0479
 owner: alex
 created: 2026-10-21T12:11:28Z
-updated: 2026-10-21T12:11:28Z
-transitions: []
+updated: 2026-10-21T12:40:55Z
+transitions:
+  - to: cancelled
+    at: 2026-10-21T12:40:55Z
+    by: system-flow
 stream: S-0479
 tags: [design, issues]
 touches: [design/system/work-hierarchy.md, design/adrs, design/issues/I-0175-a-story-s-in-progress-transition-from-flai-story-start-was-lost-when-a-concurrent-write-rewrote-the-item-file-leaving-it-ready-while-its-agent-worked-it.md, design/issues/summary.md]
@@ -34,3 +37,4 @@ Record the rule the code now keeps, and close the issue. It waits for T-2001 and
 ## Notes
 
 Drafted by the planner. If the operator folds S-0480 into this story on the plan's thread, close I-0176 here too.
+- 2026-10-21T12:40:55Z: moved to cancelled: superseded by T-2007 to T-2009: Repo.Save merges a stale copy under the items lock, so no writer needs rewriting
