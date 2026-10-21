@@ -6,7 +6,7 @@ title: A story's in-progress transition from flai story start was lost when a co
 status: backlog
 owner: alex
 created: 2026-10-21T11:59:43Z
-updated: 2026-10-21T11:59:43Z
+updated: 2026-10-21T12:04:48Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
     by: flai
     at: 2026-10-21T11:59:43Z
+finalized:
+  by: alex
+  at: 2026-10-21T12:04:48Z
 ---
 # S-0479 A story's in-progress transition from flai story start was lost when a concurrent write rewrote the item file, leaving it ready while its agent worked it
 
