@@ -6,7 +6,7 @@ title: A thread awaits an agent only when the agent takes part in it or it is on
 status: backlog
 owner: alex
 created: 2026-10-20T21:49:07Z
-updated: 2026-10-20T22:24:31Z
+updated: 2026-10-21T00:29:28Z
 transitions: []
 tags: [flai, template]
 topics: [mcp, inbox, orchestration]
@@ -58,10 +58,10 @@ cost_of_delay:
   at: 2026-10-20T22:24:31Z
 forecast:
   duration: 51m
-  delivery: 2026-10-21T14:04:00Z
-  basis: "flai forecast: median 89 s per unit of size over 30 done large remediation stories on claude-opus-5-5, times size 34 (4 criteria, 30 touches), 29th in the pull order under an in-progress limit of 5."
-  by: planner-S-0453
-  at: 2026-10-20T22:22:07Z
+  delivery: 2026-10-21T16:15:00Z
+  basis: "Its own forecast of 51m; 29th in the pull order with an in-progress limit of 5, behind S-0445, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432, S-0433, S-0434 and S-0435."
+  by: flai
+  at: 2026-10-21T00:29:28Z
 finalized:
   by: alex
   at: 2026-10-20T22:12:55Z

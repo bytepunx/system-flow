@@ -6,7 +6,7 @@ title: The dashboard's live events reach the browser over a WebSocket, so open t
 status: backlog
 owner: alex
 created: 2026-10-20T22:10:33Z
-updated: 2026-10-20T22:25:11Z
+updated: 2026-10-21T00:29:28Z
 transitions: []
 tags: [dashboard]
 topics: [client-side, server-side, components]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-10-20T22:25:11Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-21T15:38:00Z
-  basis: "flai forecast's 57m (median 89 s per unit of size over 30 done large remediation stories on claude-opus-5-5, times size 38), raised by 33m for flaiover's first Playwright test, which needs node server.js and a flai to dial it, and a harness integration test that runs on flaiover's Playwright; 30th in the pull order under an in-progress limit of 5."
-  by: planner-S-0454
-  at: 2026-10-20T22:23:36Z
+  delivery: 2026-10-21T17:47:00Z
+  basis: "Its own forecast of 1h30m; 30th in the pull order with an in-progress limit of 5, behind S-0445, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432, S-0433, S-0434, S-0435 and S-0453."
+  by: flai
+  at: 2026-10-21T00:29:28Z
 finalized:
   by: alex
   at: 2026-10-20T22:12:50Z
