@@ -3,11 +3,11 @@ id: S-0460
 type: story
 nature: feature
 title: A page may carry a left sidebar of its sections, and the item page shows one section at a time from it instead of one long scroll
-status: in-progress
+status: done
 parent: E-0027
 owner: alex
 created: 2026-10-21T07:00:19Z
-updated: 2026-10-21T09:10:02Z
+updated: 2026-10-21T11:57:35Z
 transitions:
   - to: ready
     at: 2026-10-21T07:54:27Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-21T09:10:02Z
     by: agent-S-0460
+  - to: review
+    at: 2026-10-21T11:44:43Z
+    by: agent-S-0460
+  - to: done
+    at: 2026-10-21T11:57:35Z
+    by: alex
 tags: [dashboard]
 topics: [dashboard, design]
-touches: [flaiover/src/lib/components/PageSidebar.svelte, flaiover/src/lib/components/PageSidebar.svelte.test.ts, flaiover/src/lib/pagesidebar.svelte.ts, flaiover/src/lib/pagesidebar.svelte.test.ts, design/components/flaiover/src/lib/components/PageSidebar.examples.json, "flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts", design/system/flaiover-dashboard.md, docs/users/flaiover.md]
+touches: [flaiover/src/lib/components/PageSidebar.svelte, flaiover/src/lib/components/PageSidebar.svelte.test.ts, flaiover/src/lib/pagesidebar.svelte.ts, flaiover/src/lib/pagesidebar.svelte.test.ts, design/components/flaiover/src/lib/components/PageSidebar.examples.json, "flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts", design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/issues/I-0181-events-socket-test-ts-closes-every-events-socket-with-1001-when-the-server-stops-fails-now-and-then-a-change-listener-is-still-attached-when-the-server-has-closed.md, design/issues/summary.md]
 after: [S-0458]
 agent:
   harness: claude-code
@@ -26,30 +32,38 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1592
+  seconds: 2254
   priced_by: harness
   turns:
     - day: 2026-10-21
-      hand_edits: 1
-      work: 15
+      ceremony: 1
+      test_runs: 2
+      hand_edits: 2
+      work: 72
   models:
     - model: claude-opus-5-5
-      input: 182
-      output: 136837
-      cache_read: 9439475
-      cache_write: 434004
-      cost: 7.2065
+      input: 306
+      output: 158237
+      cache_read: 18062085
+      cache_write: 611552
+      cost: 10.7799
   strategic:
     - kind: orchestrator
-      seconds: 21
+      seconds: 113
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 6
-          output: 97
-          cache_read: 691967
-          cache_write: 2418
-          cost: 0.1741
+          input: 28
+          output: 359
+          cache_read: 3696394
+          cache_write: 9587
+          cost: 0.8391
+        - model: claude-sonnet-5-5
+          input: 14
+          output: 81
+          cache_read: 210212
+          cache_write: 48189
+          cost: 0.1778
 forecast:
   duration: 1h
   delivery: 2026-10-21T10:12:00Z
@@ -68,13 +82,13 @@ The operator finds what they want on a story's page from a sidebar at the left o
 
 ## Acceptance criteria
 
-- [ ] `PageSidebar.svelte` takes a list of entries, each with a label, an id, an optional count, and a mode: pane or scroll. It renders them as a left-aligned list, with `aria-current` on the entry shown.
+- [x] `PageSidebar.svelte` takes a list of entries, each with a label, an id, an optional count, and a mode: pane or scroll. It renders them as a left-aligned list, with `aria-current` on the entry shown.
   - A pane entry shows its pane and hides the others.
   - A scroll entry scrolls to its section, and the entry is current while its section is in view.
   - The chosen entry is kept in the URL's hash, so back, forward, and a shared link open the same pane.
   - From Tailwind's `md` width the sidebar is sticky beside the content. Below `md` it is a single row above the content that never makes the page scroll sideways.
   - It is reachable and usable by keyboard alone.
-- [ ] On the item page, the title, kind chips, status line, notices, and action buttons stay above the panes on every pane. The panes are these, in this order:
+- [x] On the item page, the title, kind chips, status line, notices, and action buttons stay above the panes on every pane. The panes are these, in this order:
   - **Story**: the body in `ItemEditor`, with the review block.
   - **Tasks**: children and the task plan, for an item with children.
   - **Questions and threads**: `OpenQuestions` and `Threads`, with the count of open ones.
@@ -85,9 +99,9 @@ The operator finds what they want on a story's page from a sidebar at the left o
   - **Planning and usage**: cost of delay, forecast, expected cost, usage, and the metadata block.
 
   A pane with nothing to show for the item is left out of the sidebar.
-- [ ] Story is the pane shown on arrival. A link with `?thread=<TH-id>` or `?question=<key>`, as the Inbox makes, opens Questions and threads with that thread or question in view. A link with a pane's hash opens that pane.
-- [ ] The item page's existing tests pass, each finding its content on the pane that now holds it. New tests cover the panes left out, the arrival pane, and the inbox links.
-- [ ] `PageSidebar.svelte` has its examples file under `design/components/`. `design/system/flaiover-dashboard.md` § Views (`/items/:id`) and `docs/users/flaiover.md` § The item page describe the sidebar and the panes.
+- [x] Story is the pane shown on arrival. A link with `?thread=<TH-id>` or `?question=<key>`, as the Inbox makes, opens Questions and threads with that thread or question in view. A link with a pane's hash opens that pane.
+- [x] The item page's existing tests pass, each finding its content on the pane that now holds it. New tests cover the panes left out, the arrival pane, and the inbox links.
+- [x] `PageSidebar.svelte` has its examples file under `design/components/`. `design/system/flaiover-dashboard.md` § Views (`/items/:id`) and `docs/users/flaiover.md` § The item page describe the sidebar and the panes.
 
 ## Tasks
 - T-1962 PageSidebar.svelte lists a page's sections at its left, each showing a pane or scrolling to a section, with the choice kept in the URL's hash

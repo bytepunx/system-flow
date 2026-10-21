@@ -7,11 +7,11 @@ status: backlog
 parent: S-0417
 owner: alex
 created: 2026-10-16T05:44:51Z
-updated: 2026-10-16T05:44:51Z
+updated: 2026-10-21T11:50:59Z
 transitions: []
 stream: S-0417
 tags: [cli]
-touches: [flai/internal/workitem/activity.go, flai/internal/workitem/activity_test.go, flai/internal/workitem/narrative.go, flai/internal/check/activity.go, flai/internal/check/activity_test.go, flai/internal/mcpserver/activity.go, flai/internal/mcpserver/activity_test.go, flai/cmd/activity.go, flai/cmd/activity_test.go]
+touches: [flai/internal/workitem/activity.go, flai/internal/workitem/activity_test.go, flai/internal/workitem/narrative.go, flai/internal/check/activity.go, flai/internal/check/activity_test.go, flai/internal/mcpserver/activity.go, flai/internal/mcpserver/activity_test.go, flai/cmd/activity.go, flai/cmd/activity_test.go, flai/internal/serve/activity.go, flai/internal/serve/agents.go, flai/internal/hostapi/people.go]
 ---
 # T-1737 Activity documents, activity_log, and flai activity log take any defined role's name as their kind, and wip/agents/index.md lists each and flai check validates it
 

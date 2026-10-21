@@ -7,11 +7,11 @@ status: backlog
 parent: S-0417
 owner: alex
 created: 2026-10-16T05:44:41Z
-updated: 2026-10-16T05:44:56Z
+updated: 2026-10-21T11:50:52Z
 transitions: []
 stream: S-0417
 tags: [cli]
-touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/check/check.go]
+touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/check/check.go, docs/operators/settings.md]
 ---
 # T-1735 The manifest takes roles.name.agent and roles.name.permissions, merged and validated as planning.agent and orchestration.permissions are, and flai manifest set writes them
 

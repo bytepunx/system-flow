@@ -7,11 +7,11 @@ status: backlog
 parent: S-0416
 owner: alex
 created: 2026-10-16T05:44:01Z
-updated: 2026-10-16T05:50:22Z
+updated: 2026-10-21T11:40:48Z
 transitions: []
 stream: S-0416
 tags: [cli]
-touches: [flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/guard/call.go, flai/cmd/guard.go, docs/users/flai-reference.md]
+touches: [flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/guard/call.go, flai/internal/guard/guard.go, flai/cmd/guard.go, docs/users/flai-reference.md]
 ---
 # T-1729 flai guard decides a defined role's own calls from its role file: tools, commands, and file edits under their conditions, gated by the manifest's permissions at each call
 
@@ -30,3 +30,6 @@ First layer: the built-in roles move onto it in T-1730 and T-1731.
 `go test ./internal/guard/... ./cmd/...` passes. The existing guard tests are unchanged.
 
 ## Notes
+
+- Planner (S-0416, 2026-10-21): the touches add `flai/internal/guard/guard.go`. The `Guard` struct is declared there, and it needs a field for the defined role's file and its permissions.
+- `roles.Load` and the named conditions come from S-0414's `flai/internal/roles`. This task reads them and does not change them.

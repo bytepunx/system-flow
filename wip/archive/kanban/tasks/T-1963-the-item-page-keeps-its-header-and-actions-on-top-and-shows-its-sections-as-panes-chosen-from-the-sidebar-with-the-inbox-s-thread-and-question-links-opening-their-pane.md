@@ -3,11 +3,11 @@ id: T-1963
 type: task
 nature: feature
 title: The item page keeps its header and actions on top and shows its sections as panes chosen from the sidebar, with the Inbox's thread and question links opening their pane
-status: in-progress
+status: done
 parent: S-0460
 owner: alex
 created: 2026-10-21T07:03:54Z
-updated: 2026-10-21T09:24:22Z
+updated: 2026-10-21T11:36:27Z
 transitions:
   - to: ready
     at: 2026-10-21T09:24:22Z
@@ -15,22 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-21T09:24:22Z
     by: agent-S-0460
+  - to: done
+    at: 2026-10-21T11:36:27Z
+    by: agent-S-0460
 stream: S-0460
 tags: [dashboard]
 touches: ["flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts"]
 after: [T-1962]
 usage:
   source: log
-  seconds: 729
+  seconds: 885
   estimated: true
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 68
-      output: 50992
-      cache_read: 3517596
-      cache_write: 161730
-      cost: 2.6855
+      input: 113
+      output: 58798
+      cache_read: 6662703
+      cache_write: 226491
+      cost: 3.9889
 ---
 # T-1963 The item page keeps its header and actions on top and shows its sections as panes chosen from the sidebar, with the Inbox's thread and question links opening their pane
 

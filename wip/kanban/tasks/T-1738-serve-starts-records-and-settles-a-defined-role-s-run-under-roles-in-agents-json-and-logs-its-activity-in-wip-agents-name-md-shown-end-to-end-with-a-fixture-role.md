@@ -7,11 +7,11 @@ status: backlog
 parent: S-0417
 owner: alex
 created: 2026-10-16T05:45:01Z
-updated: 2026-10-16T05:45:01Z
+updated: 2026-10-21T11:51:06Z
 transitions: []
 stream: S-0417
 tags: [cli]
-touches: [flai/internal/serve/role.go, flai/internal/serve/role_test.go, flai/internal/serve/agents.go, flai/internal/serve/activity.go]
+touches: [flai/internal/serve/role.go, flai/internal/serve/role_test.go, flai/internal/serve/agents.go, flai/internal/serve/activity.go, flai/internal/serve/serve.go]
 after: [T-1735, T-1736, T-1737]
 ---
 # T-1738 serve starts, records, and settles a defined role's run under roles in agents.json and logs its activity in wip/agents/name.md, shown end to end with a fixture role

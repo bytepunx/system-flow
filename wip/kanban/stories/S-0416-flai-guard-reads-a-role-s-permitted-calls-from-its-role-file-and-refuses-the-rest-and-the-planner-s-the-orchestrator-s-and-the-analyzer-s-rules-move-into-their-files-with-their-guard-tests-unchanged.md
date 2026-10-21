@@ -7,24 +7,43 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:39:46Z
-updated: 2026-10-21T11:12:19Z
+updated: 2026-10-21T11:43:45Z
 transitions: []
 tags: [cli, template]
 topics: [cli, planning, orchestration, template]
-touches: [".claude/settings.json", design/roles/analyzer.md, design/roles/orchestrator.md, design/roles/planner.md, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, flai/cmd/guard.go, flai/internal/guard/authors.go, flai/internal/guard/authors_test.go, flai/internal/guard/call.go, flai/internal/guard/guard.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/guard/shared.go, template/CHANGELOG.md, template/root/.claude/settings.json, template/root/design/roles/analyzer.md, template/root/design/roles/orchestrator.md, template/root/design/roles/planner.md, docs/users/flai-reference.md]
+touches: [".claude/settings.json", template/root/.claude/settings.json, design/workflows/roles/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/analyzer.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/analyzer.md, design/adrs, design/adrs/README.md, design/system/agent-adapters.md, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, template/CHANGELOG.md, flai/cmd/guard.go, flai/cmd/guard_test.go, flai/internal/guard/authors.go, flai/internal/guard/authors_test.go, flai/internal/guard/call.go, flai/internal/guard/guard.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/guard/shared.go, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/harness/harness_test.go]
 after: [S-0414]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 1511
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 67
+          output: 1162
+          cache_read: 8560656
+          cache_write: 20404
+          cost: 1.8949
 draft: true
+cost_of_delay:
+  value: 59.07
+  by: planner-S-0416
+  at: 2026-10-21T11:41:58Z
 forecast:
-  duration: 1h
-  delivery: 2026-10-21T16:49:00Z
-  basis: "Its own forecast of 1h; 12th in the pull order with an in-progress limit of 5, behind S-0460, S-0461, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414 and S-0415."
-  by: flai
-  at: 2026-10-21T11:12:19Z
+  duration: 1h10m
+  delivery: 2026-10-21T17:30:00Z
+  basis: "flai's 1h1m (107 s a unit over 84 done feature stories, size 34: 6 criteria, 28 touches) raised by 9m, because guard.go is 1646 lines whose three roles' rules move into data with every refusal text kept; delivery is flai's play-out, 12th in the pull order, moved by the raise."
+  by: planner-S-0416
+  at: 2026-10-21T11:43:45Z
 ---
 # S-0416 flai guard reads a role's permitted calls from its role file and refuses the rest, and the planner's, the orchestrator's, and the analyzer's rules move into their files with their guard tests unchanged
 
@@ -35,7 +54,7 @@ The guard holds a role a project defines as it holds the three built-in roles to
 ## Acceptance criteria
 
 - [ ] With `FLAI_ROLE` naming a defined role, `flai guard` decides the session's own calls from its role file: the reads every sub-agent has pass; each MCP tool, flai command, and file edit the file lists passes under its conditions and, when it names one, while the operator's permission for it is on in the manifest; every other write is refused with the role's name, the rule broken, and the advice to ask the operator with `thread_open`.
-- [ ] The planner's, the orchestrator's, and the analyzer's rules are read from `design/roles/planner.md`, `orchestrator.md`, and `analyzer.md`, and `flai/internal/guard/guard_test.go`, `orchestrate_test.go`, `thread_test.go`, `authors_test.go`, `flai/cmd/guard_test.go`, `guard_permissions_change_test.go`, and `orchestrate_permissions_test.go` pass unchanged.
+- [ ] The planner's, the orchestrator's, and the analyzer's rules are read from `design/workflows/roles/planner.md`, `orchestrator.md`, and `analyzer.md`, and `flai/internal/guard/guard_test.go`, `orchestrate_test.go`, `thread_test.go`, `authors_test.go`, `flai/cmd/guard_test.go`, `guard_permissions_change_test.go`, and `orchestrate_permissions_test.go` pass unchanged, but for the hook condition `flai/cmd/guard_test.go` holds, which changes with criterion 5.
 - [ ] ADR-0143's own-name rule holds a defined role as it holds the planner and the analyzer: a `--by`, `--placed-by`, `FLAI_AGENT`, or `FLAI_SESSION` naming another is refused, its own name being the hook's `FLAI_AGENT` or the name `flai serve` gives the role's run.
 - [ ] A role whose file is missing or does not parse is refused every write, naming the file and `flai check`; the guard fails closed.
 - [ ] The `Edit|MultiEdit|Write|NotebookEdit` entry of `.claude/settings.json`, in the template and here, runs the guard for any `FLAI_ROLE`, not only `plan`, `orchestrate`, and `analyze`, so a defined role's file edits are held.
@@ -57,11 +76,33 @@ The guard holds a role a project defines as it holds the three built-in roles to
 
 ### Planning
 
-- **Touches.** The story declared none. Every touch comes from its six tasks.
-  - **From layout:** a new `flai/internal/guard/roles.go` with its test; `call.go`, `guard.go`, `authors.go` with its test, and `shared.go`; `flai/cmd/guard.go`; the three role files in both copies; and `.claude/settings.json` in both copies.
-  - **From design:** `strategic-agents.md`, `flai-cli.md`, `docs/users/flai.md`, and `template/CHANGELOG.md` for criterion 6.
-  - **Co-change, added:** `docs/users/flai-reference.md` (24%), regenerated from `flai guard`'s help, on the first task.
-  - **Co-change, not added:** the operator docs, the dashboard's design, and `work-management.md`. The guard's tests are named in criterion 2 to pass unchanged, so they are not touched.
-  - No folder touch. `.claude/settings.json` is a protected path: its task makes the write through `permission_prompt`.
-- **Forecast.** Raised from flai's 43m to 1h. The size counts files, and `guard.go` is one file of about 1200 lines whose rules move into data with every refusal text kept. The forecast's basis gives the figures, and its delivery is flai's play-out moved by any raise times the cycle factor.
-- **Cost of delay.** Not set. Neither the story nor E-0024 has inputs, so `flai cod` refuses. The epic's input is asked on TH-0471, question 1, and the value follows its answer.
+- **TH-0471's answers (2026-10-21).** The plan follows them in two places.
+  - **Answer 2** moved the role files from `design/roles/` to `design/workflows/roles/`, as S-0414 now says. Criterion 2 and the six role-file touches now give the new path. The tasks' titles and Work name the files without a folder, so they did not change.
+  - **Answer 1:** E-0024 does not yet carry the input, `time_lost_per_cycle: 4h`.
+  - Answers 3 to 6 change nothing the guard decides.
+- **TH-0569's approval.** The orchestrator approved the plan and its three proposals.
+  - **Criterion 2, narrowed.** Two tests assert the hook's condition word for word: `flai/cmd/guard_test.go` checks its `editGuardCondition`, and `flai/internal/harness/harness_test.go` checks the template's hook. Criterion 5 could not hold while criterion 2 held as written, so criterion 2 now excepts that one condition, which T-1733 changes.
+  - **An ADR.** T-1732 records a short ADR that refines ADR-0143. ADR-0143's decision names the agents it holds, and a defined role is not among them.
+  - **T-1734's Work** now covers `agent-adapters.md` and `flai guard`'s help.
+- **Touches.** 27 of the 28 are files.
+  - **Declared, kept:** the 15 earlier touches that are not role files.
+  - **Declared, moved:** the six role files, now under `design/workflows/roles/` (answer 2).
+  - **From layout, added:**
+    - `flai/internal/guard/guard.go` on T-1729, which declares the `Guard` struct that the role path needs a field on.
+    - `flai/internal/roles/conditions.go` and its test on T-1730 and T-1731, in case a built-in rule needs a named condition that S-0414's set lacks.
+    - `flai/cmd/guard.go` and `docs/users/flai-reference.md` on T-1734, for the guard's help, which describes each built-in role's rules and the hook's condition.
+  - **From the tests, added:** `flai/cmd/guard_test.go` and `flai/internal/harness/harness_test.go` on T-1733. Both pin the hook's condition.
+  - **From design, added:**
+    - `design/system/agent-adapters.md` on T-1734. It names the planner and the analyzer as the agents ADR-0143 holds, and it gives the hook's condition and the values of `FLAI_ROLE`.
+    - `design/adrs/README.md` on T-1732, for the new ADR's entry.
+  - **Folder touch kept:** `design/adrs`, on T-1732, because the ADR's file name is known only once `flai adr new` makes it. The folder is in `claims.shared`, so it holds no story.
+  - **Co-change, not added:** the operator docs, the dashboard's design, `workflow.md`, `work-management.md`, and `flai/internal/harness/harness.go`. The guard changes none of them.
+  - `.claude/settings.json` in both copies is a protected path, so T-1733 makes its write through `permission_prompt`.
+- **Forecast.** flai's 1h1m is raised to 1h10m: size 34 at 107 s a unit.
+  - The size counts files, and `guard.go` is one of them, at 1646 lines. The three built-in roles' rules move out of it into data, and every refusal text must stay word for word.
+  - The two `conditions.go` touches may not be needed, so they overstate the size a little.
+  - The delivery, 2026-10-21T17:30Z, is flai's play-out moved later by the 9 minutes of the raise.
+- **Cost of delay.** 59.07 USD a week. `flai cod` refuses while E-0024 has no input, so the figure is worked out by hand from answer 1, as S-0414's and S-0415's planners did.
+  - 4h lost per cycle, at `planning.hour_rate` 150 over the default 168h cycle, gives E-0024 600 USD a week.
+  - S-0416 takes the share its 1h10m is of the 11h51m forecast for E-0024's twelve open stories: 70 / 711 × 600.
+  - Once the input is on E-0024, `flai cod S-0416` gives the same figure while the forecasts stand.

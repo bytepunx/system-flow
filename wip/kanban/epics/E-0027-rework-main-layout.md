@@ -17,37 +17,38 @@ transitions:
 tags: []
 usage:
   source: sum
-  seconds: 6865
+  seconds: 7527
   priced_by: harness
   turns:
     - day: 2026-10-21
-      ceremony: 10
-      hand_edits: 8
-      work: 141
+      ceremony: 11
+      test_runs: 2
+      hand_edits: 9
+      work: 198
   models:
     - model: claude-opus-5-5
-      input: 1020
-      output: 472807
-      cache_read: 53389589
-      cache_write: 1975803
-      cost: 32.3264
+      input: 1144
+      output: 494207
+      cache_read: 62012199
+      cache_write: 2153351
+      cost: 35.8998
   strategic:
     - kind: orchestrator
-      seconds: 2405
+      seconds: 2497
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 335
-          output: 5319
-          cache_read: 46225592
-          cache_write: 131072
-          cost: 11.6097
+          input: 357
+          output: 5581
+          cache_read: 49230019
+          cache_write: 138241
+          cost: 12.2747
         - model: claude-sonnet-5-5
-          input: 34
-          output: 206
-          cache_read: 494024
-          cache_write: 144845
-          cost: 0.523
+          input: 48
+          output: 287
+          cache_read: 704236
+          cache_write: 193034
+          cost: 0.7008
 ---
 # E-0027 Rework main layout
 

@@ -3,16 +3,37 @@ id: T-1964
 type: task
 nature: feature
 title: The dashboard's design and user docs describe the page sidebar and the item page's panes
-status: backlog
+status: done
 parent: S-0460
 owner: alex
 created: 2026-10-21T07:04:00Z
-updated: 2026-10-21T07:04:00Z
-transitions: []
+updated: 2026-10-21T11:38:13Z
+transitions:
+  - to: ready
+    at: 2026-10-21T11:36:40Z
+    by: agent-S-0460
+  - to: in-progress
+    at: 2026-10-21T11:36:41Z
+    by: agent-S-0460
+  - to: done
+    at: 2026-10-21T11:38:13Z
+    by: agent-S-0460
 stream: S-0460
 tags: [dashboard]
 touches: [design/system/flaiover-dashboard.md, docs/users/flaiover.md]
 after: [T-1963]
+usage:
+  source: log
+  seconds: 92
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 32
+      output: 5457
+      cache_read: 2198869
+      cache_write: 45277
+      cost: 0.9113
 ---
 # T-1964 The dashboard's design and user docs describe the page sidebar and the item page's panes
 

@@ -7,11 +7,11 @@ status: backlog
 parent: S-0416
 owner: alex
 created: 2026-10-16T05:44:23Z
-updated: 2026-10-16T05:44:29Z
+updated: 2026-10-21T11:40:24Z
 transitions: []
 stream: S-0416
 tags: [template]
-touches: [".claude/settings.json", template/root/.claude/settings.json]
+touches: [".claude/settings.json", template/root/.claude/settings.json, flai/internal/harness/harness_test.go, flai/cmd/guard_test.go]
 after: [T-1729]
 ---
 # T-1733 The Edit, Write, and NotebookEdit hook in .claude/settings.json runs flai guard for any FLAI_ROLE, in the template and here
@@ -27,3 +27,5 @@ It waits for T-1729, whose role path decides the edits this hook hands over. It 
 A test, or a session with `FLAI_ROLE=reviewer`, shows the guard refusing a fixture role's `Write` outside the files its role file lists. `flai check --strict` passes.
 
 ## Notes
+
+- Planner (S-0416, 2026-10-21): two tests assert the hook's condition word for word, so they change with it. `flai/internal/harness/harness_test.go` checks the template entry's prefix. `flai/cmd/guard_test.go` checks both settings files against its `editGuardCondition`. Change only that condition text. The touches name both files, and the plan thread proposes the matching exception to criterion 2.
