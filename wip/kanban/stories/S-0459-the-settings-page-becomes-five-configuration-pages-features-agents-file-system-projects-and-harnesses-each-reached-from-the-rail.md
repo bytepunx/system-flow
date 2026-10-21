@@ -3,12 +3,15 @@ id: S-0459
 type: story
 nature: improvement
 title: The settings page becomes five Configuration pages, Features, Agents, File System, Projects, and Harnesses, each reached from the rail
-status: backlog
+status: ready
 parent: E-0027
 owner: alex
 created: 2026-10-21T06:59:57Z
-updated: 2026-10-21T07:53:42Z
-transitions: []
+updated: 2026-10-21T07:54:30Z
+transitions:
+  - to: ready
+    at: 2026-10-21T07:54:25Z
+    by: alex
 tags: [dashboard]
 topics: [dashboard]
 touches: [flaiover/src/lib/settingspages.ts, flaiover/src/lib/settingspages.test.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flaiover/src/routes/settings/+page.svelte, flaiover/src/routes/settings/+page.ts, "flaiover/src/routes/settings/[page]/+page.svelte", "flaiover/src/routes/settings/[page]/+page.ts", flaiover/src/routes/settings/settings.svelte.test.ts, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, docs/operators/settings.md]
@@ -18,12 +21,27 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 102
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 22
+          output: 335
+          cache_read: 1645103
+          cache_write: 4857
+          cost: 0.4137
 forecast:
   duration: 45m
-  delivery: 2026-10-22T01:27:00Z
-  basis: "Its own forecast of 45m; 31st in the pull order with an in-progress limit of 5, behind S-0463, S-0464, S-0465, S-0456, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432, S-0433, S-0434, S-0435 and S-0458."
+  delivery: 2026-10-21T08:46:00Z
+  basis: "Its own forecast of 45m; 1st in the pull order with an in-progress limit of 5, behind S-0456, S-0463, S-0464 and S-0465."
   by: flai
-  at: 2026-10-21T07:47:11Z
+  at: 2026-10-21T07:54:30Z
 finalized:
   by: alex
   at: 2026-10-21T07:53:42Z

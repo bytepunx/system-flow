@@ -3,12 +3,15 @@ id: S-0460
 type: story
 nature: feature
 title: A page may carry a left sidebar of its sections, and the item page shows one section at a time from it instead of one long scroll
-status: backlog
+status: ready
 parent: E-0027
 owner: alex
 created: 2026-10-21T07:00:19Z
-updated: 2026-10-21T07:53:49Z
-transitions: []
+updated: 2026-10-21T07:54:30Z
+transitions:
+  - to: ready
+    at: 2026-10-21T07:54:27Z
+    by: alex
 tags: [dashboard]
 topics: [dashboard, design]
 touches: [flaiover/src/lib/components/PageSidebar.svelte, flaiover/src/lib/components/PageSidebar.svelte.test.ts, flaiover/src/lib/pagesidebar.svelte.ts, flaiover/src/lib/pagesidebar.svelte.test.ts, design/components/flaiover/src/lib/components/PageSidebar.examples.json, "flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts", design/system/flaiover-dashboard.md, docs/users/flaiover.md]
@@ -18,12 +21,27 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 9
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 3
+          output: 60
+          cache_read: 271604
+          cache_write: 1066
+          cost: 0.0684
 forecast:
   duration: 1h
-  delivery: 2026-10-22T01:43:00Z
-  basis: "Its own forecast of 1h; 32nd in the pull order with an in-progress limit of 5, behind S-0463, S-0464, S-0465, S-0456, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432, S-0433, S-0434, S-0435, S-0458 and S-0459."
+  delivery: 2026-10-21T09:09:00Z
+  basis: "Its own forecast of 1h; 2nd in the pull order with an in-progress limit of 5, behind S-0456, S-0463, S-0464, S-0465 and S-0459."
   by: flai
-  at: 2026-10-21T07:47:11Z
+  at: 2026-10-21T07:54:30Z
 finalized:
   by: alex
   at: 2026-10-21T07:53:49Z

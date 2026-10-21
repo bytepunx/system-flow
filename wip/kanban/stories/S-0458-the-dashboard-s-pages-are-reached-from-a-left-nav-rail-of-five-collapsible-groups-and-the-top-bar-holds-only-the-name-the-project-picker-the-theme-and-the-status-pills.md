@@ -3,12 +3,18 @@ id: S-0458
 type: story
 nature: feature
 title: The dashboard's pages are reached from a left nav rail of five collapsible groups, and the top bar holds only the name, the project picker, the theme, and the status pills
-status: backlog
+status: in-progress
 parent: E-0027
 owner: alex
 created: 2026-10-21T06:59:38Z
-updated: 2026-10-21T07:47:11Z
-transitions: []
+updated: 2026-10-21T07:55:01Z
+transitions:
+  - to: ready
+    at: 2026-10-21T07:54:23Z
+    by: alex
+  - to: in-progress
+    at: 2026-10-21T07:55:01Z
+    by: agent-S-0458
 tags: [dashboard]
 topics: [dashboard, design]
 touches: [flaiover/package.json, flaiover/pnpm-lock.yaml, design/tech/icons.md, design/tech/README.md, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/NavRail.svelte, flaiover/src/lib/components/NavRail.svelte.test.ts, flaiover/src/lib/navrail.svelte.ts, flaiover/src/lib/navrail.svelte.test.ts, design/components/flaiover/src/lib/components/NavRail.examples.json, flaiover/src/routes/+layout.svelte, flaiover/src/routes/layout.svelte.test.ts, flaiover/src/routes/layout.css, flaiover/src/lib/components/SiteMenu.svelte, flaiover/e2e/layout.e2e.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
@@ -17,12 +23,27 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 95
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 19
+          output: 284
+          cache_read: 1404894
+          cache_write: 4151
+          cost: 0.3533
 forecast:
   duration: 1h30m
-  delivery: 2026-10-22T00:36:00Z
-  basis: "Its own forecast of 1h30m; 30th in the pull order with an in-progress limit of 5, behind S-0463, S-0464, S-0465, S-0456, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432, S-0433, S-0434 and S-0435."
+  delivery: 2026-10-21T10:19:00Z
+  basis: "Its own forecast of 1h30m; 3rd in the pull order with an in-progress limit of 5, behind S-0456, S-0463, S-0464, S-0465, S-0459 and S-0460."
   by: flai
-  at: 2026-10-21T07:47:11Z
+  at: 2026-10-21T07:54:30Z
 finalized:
   by: alex
   at: 2026-10-21T07:29:11Z

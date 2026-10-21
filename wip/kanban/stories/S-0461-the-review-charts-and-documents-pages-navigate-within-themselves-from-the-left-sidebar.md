@@ -3,12 +3,15 @@ id: S-0461
 type: story
 nature: improvement
 title: The review, charts, and documents pages navigate within themselves from the left sidebar
-status: backlog
+status: ready
 parent: E-0027
 owner: alex
 created: 2026-10-21T07:00:44Z
-updated: 2026-10-21T07:53:56Z
-transitions: []
+updated: 2026-10-21T07:54:30Z
+transitions:
+  - to: ready
+    at: 2026-10-21T07:54:29Z
+    by: alex
 tags: [dashboard]
 topics: [dashboard]
 touches: [flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", "flaiover/src/routes/docs/[...path]/+page.svelte", flaiover/src/routes/docs/docs.svelte.test.ts, flaiover/src/lib/components/DocTree.svelte, design/components/flaiover/src/lib/components/DocTree.examples.json, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
@@ -18,12 +21,27 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 8
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 3
+          output: 59
+          cache_read: 271604
+          cache_write: 1064
+          cost: 0.0684
 forecast:
   duration: 45m
-  delivery: 2026-10-22T02:34:00Z
-  basis: "Its own forecast of 45m; 33rd in the pull order with an in-progress limit of 5, behind S-0463, S-0464, S-0465, S-0456, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432, S-0433, S-0434, S-0435, S-0458, S-0459 and S-0460."
+  delivery: 2026-10-21T10:01:00Z
+  basis: "Its own forecast of 45m; 4th in the pull order with an in-progress limit of 5, behind S-0456, S-0463, S-0464, S-0465, S-0459, S-0460 and S-0458."
   by: flai
-  at: 2026-10-21T07:47:11Z
+  at: 2026-10-21T07:54:30Z
 finalized:
   by: alex
   at: 2026-10-21T07:53:56Z

@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:40Z
-updated: 2026-10-21T07:47:11Z
+updated: 2026-10-21T07:54:30Z
 transitions: []
 tags: [cli, template]
 topics: [cli, orchestration, template, conventions]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 51m
-  delivery: 2026-10-21T18:58:00Z
-  basis: "Its own forecast of 51m; 17th in the pull order with an in-progress limit of 5, behind S-0463, S-0464, S-0465, S-0456, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419 and S-0420."
+  delivery: 2026-10-21T19:57:00Z
+  basis: "Its own forecast of 51m; 20th in the pull order with an in-progress limit of 5, behind S-0456, S-0463, S-0464, S-0465, S-0459, S-0460, S-0458, S-0461, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419 and S-0420."
   by: flai
-  at: 2026-10-21T07:47:11Z
+  at: 2026-10-21T07:54:30Z
 ---
 # S-0421 A formula is a markdown file under design/formulas that flai check validates, and flai formula run makes a story from it with one task per step and the steps' after between them
 
