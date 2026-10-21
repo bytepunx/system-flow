@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:31Z
-updated: 2026-10-21T13:25:33Z
+updated: 2026-10-21T13:30:08Z
 transitions: []
 tags: [dashboard, cli]
 topics: [dashboard, planning, orchestration]
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-10-21T12:28:25Z
 forecast:
   duration: 1h35m
-  delivery: 2026-10-22T01:05:00Z
+  delivery: 2026-10-22T01:10:00Z
   basis: "Its own forecast of 1h35m; 15th in the pull order with an in-progress limit of 5, behind S-0479, S-0483, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418 and S-0419."
   by: flai
-  at: 2026-10-21T13:25:33Z
+  at: 2026-10-21T13:30:08Z
 ---
 # S-0420 The dashboard's Planner, Orchestrator, and Analyzer pages become one role page per defined role, with its settings panel, its activity document, and its runs, and agent.status carries every role by name
 

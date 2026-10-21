@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:41:11Z
-updated: 2026-10-21T13:29:29Z
+updated: 2026-10-21T13:30:08Z
 transitions: []
 tags: [cli, template]
 topics: [cli, orchestration, template, conventions]
@@ -24,15 +24,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 620
+      seconds: 785
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 131
-          output: 2238
-          cache_read: 42142552
-          cache_write: 29128
-          cost: 9.3117
+          input: 192
+          output: 3232
+          cache_read: 62996281
+          cache_write: 40349
+          cost: 13.9187
 draft: true
 cost_of_delay:
   value: 44.67
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-10-21T13:13:04Z
 forecast:
   duration: 1h
-  delivery: 2026-10-22T04:59:00Z
-  basis: "Median 89 s per unit of size over 85 done improvement stories on claude-opus-5-5 in the large band, times size 36 (5 criteria, 31 touches), 53m, raised to 1h for the live run, whose agent waits on an instance another agent works and on its acceptance; 18th in the pull order with an in-progress limit of 5, after S-0422's delivery, times the cycle factor 1.15."
-  by: planner-S-0423
-  at: 2026-10-21T13:29:29Z
+  delivery: 2026-10-22T05:04:00Z
+  basis: "Its own forecast of 1h; 18th in the pull order with an in-progress limit of 5, behind S-0479, S-0483, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421 and S-0422."
+  by: flai
+  at: 2026-10-21T13:30:08Z
 ---
 # S-0423 The template ships a baseline publish formula that fetches, evaluates orchestration.release, and publishes what is pending, the orchestrator starts it in place of calling release_publish, and it is run once here
 

@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:50Z
-updated: 2026-10-21T13:25:33Z
+updated: 2026-10-21T13:30:08Z
 transitions: []
 tags: [cli, template]
 topics: [cli, orchestration, conventions, template]
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-10-21T12:57:41Z
 forecast:
   duration: 1h25m
-  delivery: 2026-10-22T03:50:00Z
+  delivery: 2026-10-22T03:55:00Z
   basis: "Its own forecast of 1h25m; 17th in the pull order with an in-progress limit of 5, behind S-0479, S-0483, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420 and S-0421."
   by: flai
-  at: 2026-10-21T13:25:33Z
+  at: 2026-10-21T13:30:08Z
 ---
 # S-0422 A story's agent works a formula's instance on its branch, a role step runs its role charged to the instance, a failed step asks on a thread, and a formula starts from its schedule or a role
 
