@@ -28,10 +28,12 @@
 // Framed, a component's request to the app's own server, such as a fetch of
 // /api/..., is not sent (S-0449): the dev server's server code has no
 // dashboard token and no host channel, so it would answer 500. The harness
-// answers a fetch 501 with a JSON error, and an EventSource with an error
-// event and no connection, and posts each as an event, named fetch or
-// EventSource, so that the page's event log shows it. Vite's and flai's own
-// requests, a module or a static asset, and another origin's go through.
+// answers a fetch 501 with a JSON error, an EventSource with an error event
+// and no connection, and a WebSocket (ADR-0182) with an error event, then a
+// close event with code 1006, and no connection, and posts each as an event,
+// named fetch, EventSource, or WebSocket, so that the page's event log shows
+// it. Vite's and flai's own requests, a module or a static asset, Vite's HMR
+// and ping sockets, and another host's go through.
 import { createRawSnippet, flushSync, mount, unmount } from 'svelte';
 import Frame from 'virtual:flai-components/Frame.svelte';
 import { components, root, setup, setupPath } from 'virtual:flai-components';
@@ -106,15 +108,29 @@ function requested(input, init) {
 	}
 }
 
+// socketForTheApp is whether a WebSocket for url, with the subprotocols
+// protocols, is for the app's own server: url, its ws: or wss: read as
+// http: or https:, passes forTheApp, and no subprotocol is Vite's own, such
+// as vite-hmr and vite-ping, which Vite's client opens on its base path.
+function socketForTheApp(url, protocols) {
+	const http = new URL(url.href);
+	if (http.protocol === 'ws:') http.protocol = 'http:';
+	else if (http.protocol === 'wss:') http.protocol = 'https:';
+	if (!forTheApp(http, '')) return false;
+	return ![].concat(protocols ?? []).some((p) => String(p).startsWith('vite-'));
+}
+
 // pathOf is url's path and query, as a component on this origin names it.
 function pathOf(url) {
 	return url.pathname + url.search;
 }
 
-// answerTheAppsRequests replaces fetch and EventSource, before the setup
-// module or any component runs, so that a request for the app's own server
-// is answered here, and posted as an event of the component last selected.
+// answerTheAppsRequests replaces fetch, EventSource, and WebSocket, before
+// the setup module or any component runs, so that a request for the app's
+// own server is answered here, and posted as an event of the component last
+// selected.
 function answerTheAppsRequests() {
+	answerTheAppsSockets();
 	const send = window.fetch.bind(window);
 	window.fetch = function fetch(input, init) {
 		const r = requested(input, init);
@@ -160,6 +176,58 @@ function answerTheAppsRequests() {
 			this.readyState = 2;
 		}
 	};
+}
+
+// answerTheAppsSockets replaces WebSocket. A WebSocket for the app's server
+// (ADR-0182) opens no connection: it fails as one refused would, with an
+// error event and then a close event, code 1006 and not clean, and is
+// closed. Its on- handlers and its listeners both hear them.
+function answerTheAppsSockets() {
+	const Native = window.WebSocket;
+	if (!Native) return;
+	// Its states are on the class and on each socket, as the native one's are.
+	const states = { CONNECTING: 0, OPEN: 1, CLOSING: 2, CLOSED: 3 };
+	class WebSocket extends EventTarget {
+		constructor(url, protocols) {
+			let u;
+			try {
+				u = new URL(String(url), document.baseURI);
+			} catch {
+				return new Native(url, protocols);
+			}
+			if (!socketForTheApp(u, protocols)) return new Native(url, protocols);
+			super();
+			if (u.protocol === 'http:') u.protocol = 'ws:';
+			else if (u.protocol === 'https:') u.protocol = 'wss:';
+			this.url = u.href;
+			this.readyState = 0;
+			this.protocol = '';
+			this.extensions = '';
+			this.bufferedAmount = 0;
+			this.binaryType = 'blob';
+			for (const type of ['open', 'message', 'error', 'close']) {
+				this['on' + type] = null;
+				this.addEventListener(type, (e) => this['on' + type]?.call(this, e));
+			}
+			post({ type: 'event', component: wanted, name: 'WebSocket', args: [pathOf(u)] });
+			setTimeout(() => {
+				this.readyState = 3;
+				this.dispatchEvent(new Event('error'));
+				this.dispatchEvent(new CloseEvent('close', { code: 1006, reason: '', wasClean: false }));
+			});
+		}
+		send() {
+			if (this.readyState === 0) throw new DOMException("Failed to execute 'send' on 'WebSocket': Still in CONNECTING state.", 'InvalidStateError');
+		}
+		close() {
+			if (this.readyState === 0) this.readyState = 2;
+		}
+	}
+	for (const [name, value] of Object.entries(states)) {
+		Object.defineProperty(WebSocket, name, { value, enumerable: true });
+		Object.defineProperty(WebSocket.prototype, name, { value, enumerable: true });
+	}
+	window.WebSocket = WebSocket;
 }
 
 async function select(path, props, functions, snippets) {

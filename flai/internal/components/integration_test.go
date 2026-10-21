@@ -187,9 +187,10 @@ const inPlaceComponent = "src/lib/Stateful.svelte"
 // is its own parent: it posts the page's messages to itself, as the
 // dashboard posts them into the frame, and receives what the harness posts.
 // The body runs once the harness is ready, with the script's arguments after
-// the harness URL as args, and send and seen to post and await messages. The
-// script reports skip, and why, when Playwright or its browser is not
-// installed.
+// the harness URL as args, send and seen to post and await messages, and
+// sockets, the path and query of each WebSocket the page opened, and whether
+// it received Vite's connected message. The script reports skip, and why,
+// when Playwright or its browser is not installed.
 const pageScriptStart = `const [url, ...args] = process.argv.slice(2);
 const report = { errors: [], messages: [] };
 let chromium;
@@ -226,6 +227,15 @@ try {
 	});
 	const seen = (types, n) =>
 		page.waitForFunction(([types, n]) => window.__flai.filter((m) => types.includes(m.type)).length >= n, [types, n], { timeout: 30000 });
+	const sockets = [];
+	page.on('websocket', (ws) => {
+		const u = new URL(ws.url());
+		const s = { path: u.pathname + u.search, connected: false };
+		sockets.push(s);
+		ws.on('framereceived', (f) => {
+			if (String(f.payload).includes('"type":"connected"')) s.connected = true;
+		});
+	});
 	const send = (m) => page.evaluate((m) => postMessage({ source: 'flai-components', version: 1, ...m }, location.origin), m);
 	// lastSize is the last size the harness posted, once one follows its
 	// last rendered, or within 2s.
@@ -777,8 +787,9 @@ func checkPropsWhileLoading(t *testing.T, dir, harnessURL string, vite func() st
 const fetcherComponent = "src/lib/Fetcher.svelte"
 
 // fetchScript is the body of a page script that selects fetcherComponent
-// and reports what it was answered, as it shows it, and the path of every
-// request for /api the page sent.
+// and reports what it was answered, as it shows it, the path of every
+// request for /api the page sent, the WebSockets it opened, and whether a
+// socket on Vite's vite-ping, opened through the harness, opened.
 const fetchScript = `	const [component] = args;
 	const sent = [];
 	page.on('request', (r) => {
@@ -789,7 +800,44 @@ const fetchScript = `	const [component] = args;
 	await seen(['rendered', 'error'], 1);
 	await page.waitForSelector('.fetched', { timeout: 30000 });
 	report.answers = JSON.parse(await page.textContent('.fetched'));
-	report.sent = sent;`
+	report.sent = sent;
+	report.sockets = sockets;
+	// Vite's client opens its HMR socket before the harness replaces
+	// WebSocket, but reopens it, after a ping on vite-ping, through the
+	// harness's: the ping must reach Vite.
+	const hmr = sockets.find((s) => s.connected);
+	report.ping = hmr
+		? await page.evaluate(
+				(path) =>
+					new Promise((resolve) => {
+						const ws = new WebSocket(path, 'vite-ping');
+						ws.onopen = () => {
+							ws.close();
+							resolve('open');
+						};
+						ws.onerror = () => resolve('error');
+					}),
+				hmr.path.split('?')[0]
+			)
+		: '';`
+
+// socketAnswer is how fetcherComponent's WebSocket ended, as it shows it:
+// the events it heard, in order, its readyState as it closed, and its close
+// event's code and wasClean, and whether its state was WebSocket.CLOSED.
+type socketAnswer struct {
+	Heard  string `json:"heard"`
+	State  int    `json:"state"`
+	Code   int    `json:"code"`
+	Clean  bool   `json:"clean"`
+	Closed bool   `json:"closed"`
+}
+
+// pageSocket is a WebSocket the page opened: its path and query, and whether
+// it received Vite's connected message.
+type pageSocket struct {
+	Path      string `json:"path"`
+	Connected bool   `json:"connected"`
+}
 
 // fetchAnswer is a response as fetcherComponent shows it.
 type fetchAnswer struct {
@@ -800,22 +848,25 @@ type fetchAnswer struct {
 }
 
 // checkFetches runs fetchScript against the harness at harnessURL, and
-// checks that each request for the app's own server, by fetch or
-// EventSource, in the component's module or as it mounts, was answered by
+// checks that each request for the app's own server, by fetch, EventSource,
+// or WebSocket, in the component's module or as it mounts, was answered by
 // the harness, never sent, and posted as an event, and that a fetch of a
-// module still reached the dev server.
+// module, and Vite's HMR socket, still reached the dev server.
 func checkFetches(t *testing.T, dir, harnessURL string, vite func() string) {
 	t.Helper()
 	var r struct {
 		Answers *struct {
-			Module  int         `json:"module"`
-			String  fetchAnswer `json:"string"`
-			URL     fetchAnswer `json:"url"`
-			Request fetchAnswer `json:"request"`
-			Asset   fetchAnswer `json:"asset"`
-			Stream  int         `json:"stream"`
+			Module  int          `json:"module"`
+			String  fetchAnswer  `json:"string"`
+			URL     fetchAnswer  `json:"url"`
+			Request fetchAnswer  `json:"request"`
+			Asset   fetchAnswer  `json:"asset"`
+			Stream  int          `json:"stream"`
+			Socket  socketAnswer `json:"socket"`
 		} `json:"answers"`
-		Sent []string `json:"sent"`
+		Sent    []string     `json:"sent"`
+		Sockets []pageSocket `json:"sockets"`
+		Ping    string       `json:"ping"`
 	}
 	messages := runPage(t, dir, "fetches.mjs", fetchScript, "that a component's fetch of /api is answered 501 by the harness", vite, &r,
 		harnessURL, fetcherComponent)
@@ -851,8 +902,24 @@ func checkFetches(t *testing.T, dir, harnessURL string, vite func() string) {
 	if a.Stream != 2 {
 		t.Errorf("the EventSource for /api/events was in state %d at its error, want 2, closed", a.Stream)
 	}
+	if wantSocket := (socketAnswer{Heard: "error close", State: 3, Code: 1006, Clean: false, Closed: true}); a.Socket != wantSocket {
+		t.Errorf("the WebSocket for /api/events was answered %+v, want %+v", a.Socket, wantSocket)
+	}
 	if len(r.Sent) != 0 {
 		t.Errorf("the page sent %v, want no request for /api", r.Sent)
+	}
+	hmr := false
+	for _, s := range r.Sockets {
+		if strings.HasPrefix(s.Path, "/api/") {
+			t.Errorf("the page opened a WebSocket to %s, want none for /api", s.Path)
+		}
+		hmr = hmr || s.Connected
+	}
+	if !hmr {
+		t.Errorf("the page's WebSockets were %+v, want Vite's HMR socket connected", r.Sockets)
+	}
+	if r.Ping != "open" {
+		t.Errorf("a WebSocket on vite-ping to Vite's HMR path ended %q, want open: the harness must let Vite's own sockets through", r.Ping)
 	}
 	var events []string
 	for _, m := range messages {
@@ -866,6 +933,7 @@ func checkFetches(t *testing.T, dir, harnessURL string, vite func() string) {
 		fetcherComponent + ` fetch ["PUT","/api/y?z=1"]`,
 		fetcherComponent + ` fetch ["POST","/api/r"]`,
 		fetcherComponent + ` EventSource ["/api/events?project=x"]`,
+		fetcherComponent + ` WebSocket ["/api/events?project=x"]`,
 	}
 	if !slices.Equal(events, want) {
 		t.Errorf("the harness posted the events\n%s\nwant\n%s", strings.Join(events, "\n"), strings.Join(want, "\n"))
