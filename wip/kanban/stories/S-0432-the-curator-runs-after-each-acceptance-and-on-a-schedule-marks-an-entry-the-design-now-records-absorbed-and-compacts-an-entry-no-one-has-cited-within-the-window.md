@@ -7,7 +7,7 @@ status: backlog
 parent: E-0025
 owner: alex
 created: 2026-10-16T05:59:39Z
-updated: 2026-10-21T07:28:26Z
+updated: 2026-10-21T07:47:11Z
 transitions: []
 tags: [cli, template]
 topics: [cli, planning, analysis, conventions]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 55m
-  delivery: 2026-10-21T23:32:00Z
-  basis: "Its own forecast of 55m; 27th in the pull order with an in-progress limit of 5, behind S-0453, S-0456, S-0464, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430 and S-0431."
+  delivery: 2026-10-22T00:06:00Z
+  basis: "Its own forecast of 55m; 26th in the pull order with an in-progress limit of 5, behind S-0463, S-0464, S-0465, S-0456, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430 and S-0431."
   by: flai
-  at: 2026-10-21T07:28:26Z
+  at: 2026-10-21T07:47:11Z
 ---
 # S-0432 The curator runs after each acceptance and on a schedule, marks an entry the design now records absorbed, and compacts an entry no one has cited within the window
 

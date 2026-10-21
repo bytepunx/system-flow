@@ -2,6 +2,7 @@
 
 ## 1.0.106 - 2026-10-21
 
+- S-0453 A thread awaits an agent only when the agent takes part in it or it is on the agent's own story, so a story's agent no longer counts the threads awaiting the operator as its own (patch).
 - S-0453 The orchestrator answers the threads `inbox` marks `awaiting: "operator"` (patch, ADR-0181): in `strategic-agents.md`, the section "As the orchestrator" says that under `answer_threads` it takes from `inbox` the threads it marks `awaiting: "operator"`, which `inbox` lists in the orchestrator's role without `all: true`, and leaves out those it opened, those whose last entry is its own, those with a `pending_recommendation`, and those whose last entry is by neither a story's agent nor a planner, such as `flai serve`'s notices. The orchestrator's agent definition, `orchestrator.md`, names them the same way in its step 9. It needs a flai that has it, the release that carries S-0453: an older flai marks no thread `awaiting: "operator"`, so under it the orchestrator finds none to answer.
 
 ## 1.0.105 - 2026-10-20
