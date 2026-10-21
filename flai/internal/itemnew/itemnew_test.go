@@ -20,6 +20,9 @@ const lintCases = "../mdlint/testdata/cases"
 func project(t *testing.T) *workitem.Repo {
 	t.Helper()
 	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".flai-cache/\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	cfg, err := os.ReadFile(filepath.Join(lintCases, ".markdownlint.yaml"))
 	if err != nil {
 		t.Fatal(err)
