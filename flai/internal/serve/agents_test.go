@@ -1330,8 +1330,13 @@ func TestASettledReplyStartsTheAgentWaitingOnItOnce(t *testing.T) {
 	ctx := context.Background()
 	lab.hold()
 	other := lab.putEnded("Other", AgentRun{Outcome: OutcomeAsked})
+	// I-0158: as when the clock's second turns before the next run is put
+	lab.endedAgo(other, time.Second)
 	lab.asksOn(other, time.Now())
 	id := lab.putEnded("Messages and waits", AgentRun{Outcome: OutcomeAsked})
+	// its message comes before the other's run started, so that it is never
+	// new to the other's agent, however the seconds fall (I-0158)
+	lab.endedAgo(id, time.Minute)
 	run := lab.run(id)
 	started, _ := time.Parse(time.RFC3339, run.Started)
 	th := lab.asksOn(id, started)
