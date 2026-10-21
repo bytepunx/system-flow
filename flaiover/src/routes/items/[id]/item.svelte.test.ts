@@ -1,6 +1,7 @@
 // S-0154: a story page follows the project: its status, history, children, and body change on the
-// page as they change in the project, without a reload.
-import { afterEach, describe, expect, it, vi } from 'vitest';
+// page as they change in the project, without a reload. S-0460: its sections are panes chosen
+// from a sidebar, so each case opens the pane that holds what it checks.
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 
 const api = vi.fn();
@@ -37,6 +38,10 @@ const changed = (path: string) => events.heard.forEach((l) => l.change?.(path));
 
 import ItemPage from './+page.svelte';
 import { inboxState } from '$lib/inbox.svelte';
+import { page } from '$app/state';
+
+const home = 'http://localhost/items/S-0154';
+const scrollIntoView = Element.prototype.scrollIntoView;
 
 const answer = (body: unknown) => ({ ok: true, json: async () => body });
 const settle = async () => {
@@ -56,16 +61,79 @@ const story = {
 	archived: false,
 	body: '# S-0154\n\n## Goal\n\nPages follow the project.\n'
 };
+const thread = (id: string, title: string, status = 'open') => ({
+	id,
+	title,
+	anchor: { path: story.path, item: 'S-0154' },
+	status,
+	participants: ['agent-S-0154'],
+	updated: '2026-09-29T08:00:00Z',
+	entries: [{ at: '2026-09-29T08:00:00Z', author: 'agent-S-0154', text: `${title}?` }]
+});
+const conversation = {
+	id: 'MS-0003',
+	title: 'Who owns the port?',
+	from: 'S-0154',
+	to: 'S-0155',
+	about: ['flaiover/src/lib/server/port.ts'],
+	status: 'open',
+	closed: false,
+	closed_reason: '',
+	awaiting: 'S-0155',
+	participants: ['agent-S-0154'],
+	created: '2026-09-29T07:10:00Z',
+	updated: '2026-09-29T07:10:00Z',
+	path: 'wip/messages/MS-0003-who-owns-the-port.md',
+	entries: [
+		{
+			at: '2026-09-29T07:10:00Z',
+			author: 'agent-S-0154',
+			story: 'S-0154',
+			text: 'Do you change the port?'
+		}
+	]
+};
+
+// Arrive on a pane by its hash, as a shared link does.
+const at = (hash: string) => history.replaceState(null, '', `/items/S-0154#${hash}`);
+// Arrive by a link with a query, as the inbox makes.
+const linked = (query: string) => Object.assign(page, { url: new URL(home + query) });
+// The panes the sidebar lists, by id, and the one shown.
+const panes = () =>
+	[...document.querySelectorAll('[data-sidebar-list="top"] > li > a')].map((a) =>
+		a.getAttribute('data-sidebar-entry')
+	);
+const showing = () =>
+	document.querySelector('[data-sidebar-pane]')?.getAttribute('data-sidebar-pane');
+// Record what is scrolled into view.
+const scrolls = () => {
+	const into: Element[] = [];
+	Element.prototype.scrollIntoView = function (this: Element) {
+		into.push(this);
+	};
+	return into;
+};
 
 describe('the item page (S-0154)', () => {
 	let c: ReturnType<typeof mount> | undefined;
-	afterEach(() => {
+	beforeEach(() => history.replaceState(null, '', '/items/S-0154'));
+	// jsdom follows a link's hash a task later: let it land before the next case sets its own.
+	afterEach(async () => {
+		await settle();
 		if (c) unmount(c);
 		c = undefined;
 		api.mockReset();
 		enhance.mockClear();
 		document.body.innerHTML = '';
+		Element.prototype.scrollIntoView = scrollIntoView;
+		history.replaceState(null, '', '/');
+		linked('');
 	});
+	// Choose a pane from the sidebar, as the reader does.
+	const open = async (id: string) => {
+		document.querySelector<HTMLAnchorElement>(`[data-sidebar-entry="${id}"]`)!.click();
+		await settle();
+	};
 
 	const serve = (item: typeof story, children: unknown[] = []) =>
 		api.mockImplementation(async (url: string) => {
@@ -75,7 +143,8 @@ describe('the item page (S-0154)', () => {
 			return answer({ enabled: false });
 		});
 	const asked = (url: string) => api.mock.calls.filter(([u]) => u === url).length;
-	const history = () => document.querySelector('aside ol')!.textContent!.replace(/\s+/g, ' ');
+	const moves = () =>
+		document.querySelector('[data-sidebar-pane="history"] ol')!.textContent!.replace(/\s+/g, ' ');
 
 	it('shows a move, a new task, and a changed body when the project changes', async () => {
 		serve(story);
@@ -97,15 +166,24 @@ describe('the item page (S-0154)', () => {
 		changed('wip/kanban/stories/S-0154-story-pages-receive-live-updates.md');
 		await settle();
 		expect(document.querySelector('[data-testid="item-line"]')!.textContent).toContain('review');
-		// every time in the local zone (S-0329): the tests run in New York
-		expect(history()).toContain('2026-09-29 01:55 EDT created');
-		expect(history()).toContain('2026-09-29 04:00 EDT review by agent-S-0154');
-		expect(history()).not.toContain('Z ');
-		expect(document.body.textContent).toContain('T-0553');
-		expect(document.body.textContent).toContain('Review this story');
+		expect(document.querySelector('[data-sidebar-pane="story"]')!.textContent).toContain(
+			'Review this story'
+		);
 		// the body did not change: it is not drawn again, and writable is not asked again
 		expect(enhance).toHaveBeenCalledTimes(1);
 		expect(asked('/api/board')).toBe(1);
+		await open('history');
+		// every time in the local zone (S-0329): the tests run in New York
+		expect(moves()).toContain('2026-09-29 01:55 EDT created');
+		expect(moves()).toContain('2026-09-29 04:00 EDT review by agent-S-0154');
+		expect(moves()).not.toContain('Z ');
+		await open('children');
+		expect(document.querySelector('[data-sidebar-pane="children"]')!.textContent).toContain(
+			'T-0553'
+		);
+		// the body's pane draws a new article when it is shown again
+		await open('story');
+		expect(enhance).toHaveBeenCalledTimes(2);
 
 		serve({ ...review, body: '# S-0154\n\n## Goal\n\nPages follow the project, live.\n' });
 		changed('wip/kanban/stories/S-0154-story-pages-receive-live-updates.md');
@@ -113,7 +191,7 @@ describe('the item page (S-0154)', () => {
 		expect(document.querySelector('article')!.textContent).toContain(
 			'Pages follow the project, live.'
 		);
-		expect(enhance).toHaveBeenCalledTimes(2);
+		expect(enhance).toHaveBeenCalledTimes(3);
 	});
 
 	it("says in the story's thread that its agent is working on the operator's reply", async () => {
@@ -146,8 +224,11 @@ describe('the item page (S-0154)', () => {
 				});
 			return answer({});
 		});
+		at('threads');
 		c = mount(ItemPage, { target: document.body });
 		await settle();
+		// the agent's pane is not shown, but what its agent is doing reaches the threads
+		expect(showing()).toBe('threads');
 		expect(document.querySelector('[data-testid="agent-working"]')!.textContent).toContain(
 			'agent-S-0154 is working on your reply'
 		);
@@ -351,6 +432,7 @@ describe('the item page (S-0154)', () => {
 			]
 		};
 		serve(story);
+		at('threads');
 		c = mount(ItemPage, { target: document.body });
 		await settle();
 		expect(document.querySelector('[data-testid="open-questions"]')?.textContent).toContain(
@@ -367,6 +449,7 @@ describe('the item page (S-0154)', () => {
 	// S-0199: a story's page shows its cost of delay and forecast, read only, each only when set;
 	// S-0204: the inputs and the planner's value each with who set them and when (ADR-0080)
 	describe('its cost of delay and forecast', () => {
+		beforeEach(() => at('usage'));
 		const text = (testid: string) =>
 			[...(document.querySelector(`[data-testid="${testid}"]`)?.children ?? [])].map((d) =>
 				d.textContent!.trim()
@@ -585,6 +668,7 @@ describe('the item page (S-0154)', () => {
 		});
 
 		it("marks an epic's draft story among its children", async () => {
+			at('children');
 			await show(epic, [
 				{ ...story, id: 'S-0201', title: 'Drafted', draft: true },
 				{ ...story, id: 'S-0200', title: 'Finalized' }
@@ -707,9 +791,10 @@ describe('the item page (S-0154)', () => {
 				t.textContent!.replace(/\s+/g, ' ').trim()
 			);
 		show(plan);
+		at('children');
 		c = mount(ItemPage, { target: document.body });
 		await settle();
-		expect(shown()!.closest('aside')).not.toBeNull();
+		expect(shown()!.closest('[data-sidebar-pane="children"]')).not.toBeNull();
 		expect(tasks()).toEqual([
 			'T-0001 waiting for T-0002',
 			'T-0002 in progress',
@@ -748,9 +833,10 @@ describe('the item page (S-0154)', () => {
 				{ from: '2026-09-30T03:00:00Z', reason: 'waiting on Y' }
 			]
 		} as typeof story);
+		at('history');
 		c = mount(ItemPage, { target: document.body });
 		await settle();
-		const headings = [...document.querySelectorAll('aside h3')];
+		const headings = [...document.querySelectorAll('[data-sidebar-pane="history"] h3')];
 		const heading = headings.find((h) => h.textContent === 'Blocked')!;
 		const blocked = [...heading.nextElementSibling!.querySelectorAll('li')].map((li) =>
 			li.textContent!.replace(/\s+/g, ' ').trim()
@@ -797,6 +883,19 @@ describe('the item page (S-0154)', () => {
 			expect(document.getElementById('accepted-by-the-orchestrator')!.textContent).toContain(
 				'Accepted by the orchestrator'
 			);
+		});
+
+		it("shows the body's pane when its evidence link is followed from another (S-0460)", async () => {
+			serve(done('orchestrator', notes));
+			at('history');
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+			expect(document.getElementById('accepted-by-the-orchestrator')).toBeNull();
+			link()!.click();
+			await settle();
+			expect(showing()).toBe('story');
+			expect(location.hash).toBe('#accepted-by-the-orchestrator');
+			expect(document.getElementById('accepted-by-the-orchestrator')).not.toBeNull();
 		});
 
 		it('names the operator with no evidence link, and says nothing of a story that is not done', async () => {
@@ -881,9 +980,12 @@ describe('the item page (S-0154)', () => {
 		const section = () => document.querySelector('[data-testid="forge-status"]');
 
 		it('shows the link to it, each required check, and each review', async () => {
+			at('agent');
 			await show(story, () => answer({ story: 'S-0154', pull_request: pullRequest }));
 			expect(asked('/api/items/S-0154/forge')).toBeGreaterThan(0);
-			expect(section()!.closest('aside')).not.toBeNull();
+			expect(showing()).toBe('agent');
+			const pane = section()!.closest<HTMLElement>('[data-testid="item-agent-pane"]')!;
+			expect(pane.hidden).toBe(false);
 			const link = section()!.querySelector<HTMLAnchorElement>('h2 a')!;
 			expect(link.textContent!.trim()).toBe('Pull request #7');
 			expect(link.getAttribute('href')).toBe(pullRequest.url);
@@ -893,9 +995,10 @@ describe('the item page (S-0154)', () => {
 			expect(section()!.querySelector('[data-review="alex"]')!.textContent).toContain('approved');
 		});
 
-		it('shows nothing for a story with none', async () => {
+		it('shows nothing for a story with none, and with no agent either, no Agent pane', async () => {
 			await show(story, () => answer({ story: 'S-0154', pull_request: null }));
 			expect(section()).toBeNull();
+			expect(panes()).not.toContain('agent');
 		});
 
 		it('shows nothing, and the page still, when it cannot be read', async () => {
@@ -921,37 +1024,22 @@ describe('the item page (S-0154)', () => {
 		});
 	});
 
-	// S-0336: a story's page lists its conversations with other stories' agents under its threads
+	// S-0336: a story's page lists its conversations with other stories' agents, on their own pane
+	// since S-0460, which a story with none leaves out
 	describe("a story's conversations (S-0336)", () => {
-		const conversation = {
-			id: 'MS-0003',
-			title: 'Who owns the port?',
-			from: 'S-0154',
-			to: 'S-0155',
-			about: ['flaiover/src/lib/server/port.ts'],
-			status: 'open',
-			closed: false,
-			closed_reason: '',
-			awaiting: 'S-0155',
-			participants: ['agent-S-0154'],
-			created: '2026-09-29T07:10:00Z',
-			updated: '2026-09-29T07:10:00Z',
-			path: 'wip/messages/MS-0003-who-owns-the-port.md',
-			entries: [
-				{
-					at: '2026-09-29T07:10:00Z',
-					author: 'agent-S-0154',
-					story: 'S-0154',
-					text: 'Do you change the port?'
-				}
-			]
-		};
-		const show = async (item: Record<string, unknown>, conversations: unknown[] = []) => {
+		beforeEach(() => at('messages'));
+		// all is what the sidebar reads, closed ones too; conversations what the pane lists at first
+		const show = async (
+			item: Record<string, unknown>,
+			conversations: unknown[] = [],
+			all = conversations
+		) => {
 			api.mockImplementation(async (url: string) => {
 				if (url === '/api/items/S-0154') return answer({ item, children: [] });
 				if (url === '/api/board') return answer({ writable: false });
 				if (url.startsWith('/api/threads')) return answer([]);
-				if (url.startsWith('/api/messages')) return answer(conversations);
+				if (url.startsWith('/api/messages'))
+					return answer(url.includes('all=1') ? all : conversations);
 				return answer({ enabled: false });
 			});
 			c = mount(ItemPage, { target: document.body });
@@ -959,12 +1047,12 @@ describe('the item page (S-0154)', () => {
 		};
 		const section = () => document.querySelector('section[data-messages]');
 
-		it('lists them after its threads, each with the other story linked and its entries', async () => {
+		it('lists them on their own pane, each with the other story linked and its entries', async () => {
 			await show(story, [conversation]);
 			expect(asked('/api/messages?story=S-0154')).toBe(1);
+			expect(showing()).toBe('messages');
 			expect(section()!.getAttribute('data-messages')).toBe('S-0154');
-			const threads = document.querySelector('section[data-threads="S-0154"]')!;
-			expect(threads.nextElementSibling).toBe(section());
+			expect(document.querySelector('section[data-threads]')).toBeNull();
 			const li = section()!.querySelector('[data-conversation="MS-0003"]')!;
 			expect(li.textContent).toContain('Who owns the port?');
 			expect(li.querySelector('[data-with]')!.textContent!.replace(/\s+/g, ' ')).toBe('to S-0155');
@@ -976,12 +1064,19 @@ describe('the item page (S-0154)', () => {
 			);
 		});
 
-		it('says so when the story has none', async () => {
-			await show(story);
+		it('says so when the story has only closed ones', async () => {
+			await show(story, [], [{ ...conversation, status: 'closed', closed: true }]);
 			expect(section()!.querySelector('[data-empty]')!.textContent).toContain(
 				'No open conversations here.'
 			);
 			expect(section()!.querySelector('[data-conversation]')).toBeNull();
+		});
+
+		it('leaves the pane out for a story with none, and shows its body instead', async () => {
+			await show(story);
+			expect(panes()).not.toContain('messages');
+			expect(showing()).toBe('story');
+			expect(section()).toBeNull();
 		});
 
 		it("is not on an epic's or a task's page", async () => {
@@ -1068,6 +1163,225 @@ describe('the item page (S-0154)', () => {
 			expect(document.querySelector('[data-testid="item-notice"]')!.textContent).toBe(
 				'refused: S-0154 has an open blocker'
 			);
+		});
+	});
+
+	// S-0460: the header and actions stay on top, and the sections are panes chosen from a sidebar,
+	// each left out when the item has nothing for it; the body is shown on arrival, and the inbox's
+	// thread and question links open Questions and threads.
+	describe('its panes (S-0460)', () => {
+		const task = { ...story, id: 'T-0553', type: 'task', title: 'A task', status: 'done' };
+		const run = {
+			story: 'S-0154',
+			command: 'claude',
+			agent: 'agent-S-0154',
+			started: '2026-09-29T07:06:00Z'
+		};
+		// A story with tasks, threads, conversations, an agent, and an owner: every pane has something.
+		const full = (url: string) => {
+			if (url === '/api/items/S-0154')
+				return answer({ item: { ...story, owner: 'alex' }, children: [task] });
+			if (url === '/api/board') return answer({ writable: true });
+			if (url.startsWith('/api/threads'))
+				return answer([
+					thread('TH-0040', 'Dots or a bar'),
+					thread('TH-0041', 'Which port', 'answered'),
+					thread('TH-0042', 'Which colour', 'resolved')
+				]);
+			if (url.startsWith('/api/messages')) return answer([conversation]);
+			if (url === '/api/host-agent')
+				return answer({
+					enabled: true,
+					state: { command: 'claude', stories: { 'S-0154': { state: 'working', run } } }
+				});
+			return answer({ enabled: false });
+		};
+		const show = async (
+			item: Record<string, unknown>,
+			{ children = [] as unknown[], writable = false, threads = [] as unknown[] } = {}
+		) => {
+			api.mockImplementation(async (url: string) => {
+				if (url === '/api/items/S-0154') return answer({ item, children });
+				if (url === '/api/board') return answer({ writable });
+				if (url.startsWith('/api/threads')) return answer(threads);
+				return answer({ enabled: false });
+			});
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+		};
+		const again = () => {
+			unmount(c!);
+			c = undefined;
+			document.body.innerHTML = '';
+			history.replaceState(null, '', '/items/S-0154');
+		};
+		const labels = () =>
+			[...document.querySelectorAll('[data-sidebar-list="top"] > li > a')].map((a) =>
+				a.textContent!.replace(/\s+/g, ' ').trim()
+			);
+		const agentPane = () => document.querySelector<HTMLElement>('[data-testid="item-agent-pane"]')!;
+		afterEach(() => {
+			inboxState.data = null;
+		});
+
+		it('lists every pane in order for a story with tasks, threads, and messages, each showing its section', async () => {
+			api.mockImplementation(async (url: string) => full(url));
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+			expect(panes()).toEqual([
+				'story',
+				'children',
+				'threads',
+				'messages',
+				'agent',
+				'history',
+				'files',
+				'usage'
+			]);
+			// the threads not resolved are counted
+			expect(labels()).toEqual([
+				'Story',
+				'Tasks',
+				'Questions and threads 2',
+				'Messages',
+				'Agent',
+				'History',
+				'Files',
+				'Planning and usage'
+			]);
+			const holds: Record<string, string> = {
+				children: '[data-sidebar-pane="children"] a[href="/items/T-0553"]',
+				threads: 'section[data-threads="S-0154"]',
+				messages: '[data-conversation="MS-0003"]',
+				agent: '[data-testid="story-agent"]',
+				history: '[data-sidebar-pane="history"] ol',
+				files: `[data-sidebar-pane="files"] a[href="/docs/${story.path}"]`,
+				usage: '[data-sidebar-pane="usage"] section',
+				story: '[data-sidebar-pane="story"] article'
+			};
+			for (const [id, selector] of Object.entries(holds)) {
+				await open(id);
+				expect(showing()).toBe(id);
+				expect(location.hash).toBe(`#${id}`);
+				expect(document.querySelector(selector), id).not.toBeNull();
+				expect(agentPane().hidden, id).toBe(id !== 'agent');
+			}
+			// the header and the actions stay above every pane
+			for (const testid of ['item-line', 'edit-item']) {
+				const el = document.querySelector(`[data-testid="${testid}"]`)!;
+				expect(el.closest('[data-page-sidebar]'), testid).toBeNull();
+			}
+		});
+
+		it('leaves out the panes an item has nothing for, and names an epic’s and a task’s own', async () => {
+			// not writable, with no tasks, threads, conversations, agent, or planning
+			await show(story);
+			expect(panes()).toEqual(['story', 'history', 'files']);
+			expect(labels()[0]).toBe('Story');
+			again();
+			await show(
+				{ ...story, id: 'E-0013', type: 'epic' },
+				{ children: [{ ...story, id: 'S-0155' }] }
+			);
+			expect(panes()).toEqual(['story', 'children', 'history', 'files']);
+			expect(labels().slice(0, 2)).toEqual(['Epic', 'Stories']);
+			again();
+			// a writer opens threads on the item, so its pane stays; a task has no Messages or Agent
+			await show({ ...story, id: 'T-0606', type: 'task', parent: 'S-0154' }, { writable: true });
+			expect(panes()).toEqual(['story', 'threads', 'history', 'files']);
+			expect(labels().slice(0, 2)).toEqual(['Task', 'Threads']);
+			await open('files');
+			expect(document.querySelector('[data-sidebar-pane="files"]')!.textContent).toContain(
+				"Tasks are the agent's to write."
+			);
+		});
+
+		it('shows the body on arrival, and for a hash that names no pane the item has', async () => {
+			api.mockImplementation(async (url: string) => full(url));
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+			expect(showing()).toBe('story');
+			expect(
+				document.querySelector('[data-sidebar-entry="story"]')!.getAttribute('aria-current')
+			).toBe('true');
+			expect(document.querySelector('[data-sidebar-pane="story"] article')).not.toBeNull();
+			expect(agentPane().hidden).toBe(true);
+			again();
+			at('children');
+			await show(story);
+			expect(showing()).toBe('story');
+		});
+
+		it('opens the pane a link’s hash names, and Messages for a conversation’s anchor', async () => {
+			api.mockImplementation(async (url: string) => full(url));
+			at('history');
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+			expect(showing()).toBe('history');
+			again();
+			const into = scrolls();
+			at('MS-0003');
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+			expect(showing()).toBe('messages');
+			expect(into).toContain(document.getElementById('MS-0003'));
+		});
+
+		it("opens Questions and threads on the inbox's link to a thread, with that thread in view", async () => {
+			const into = scrolls();
+			linked('?thread=TH-0041');
+			await show(story, {
+				threads: [thread('TH-0040', 'Dots or a bar'), thread('TH-0041', 'Which port')]
+			});
+			expect(showing()).toBe('threads');
+			const section = document.querySelector('section[data-threads="S-0154"]')!;
+			expect(section.textContent).toContain('Which port');
+			expect(section.textContent).not.toContain('Dots or a bar');
+			expect(into).toContain(section);
+		});
+
+		it("opens Questions and threads on the inbox's link to a question, with that question in view", async () => {
+			const key = 'question:S-0154:abc';
+			inboxState.data = {
+				total: 1,
+				counts: { thread: 0, question: 1, review: 0, blocked: 0, overlap: 0 },
+				notes: [],
+				entries: [
+					{
+						key,
+						kind: 'question',
+						title: 'Which port should it use?',
+						href: `/items/S-0154?question=${encodeURIComponent(key)}`,
+						item: 'S-0154'
+					}
+				]
+			};
+			const into = scrolls();
+			linked(`?question=${encodeURIComponent(key)}`);
+			await show(story);
+			expect(showing()).toBe('threads');
+			expect(labels()[1]).toBe('Questions and threads 1');
+			const question = document.querySelector(`[data-question="${key}"]`)!;
+			expect(question.getAttribute('aria-current')).toBe('true');
+			expect(into).toContain(question);
+		});
+
+		it("shows the body's pane when edit… is pressed on another", async () => {
+			api.mockImplementation(async (url: string) => {
+				if (url === '/api/items/S-0154') return answer({ item: story, children: [] });
+				if (url === '/api/board') return answer({ writable: true });
+				if (url === '/api/items/S-0154/edit')
+					return { ok: false, json: async () => ({ error: 'the story is being edited' }) };
+				if (url.startsWith('/api/threads')) return answer([]);
+				return answer({ enabled: false });
+			});
+			at('history');
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+			document.querySelector<HTMLButtonElement>('[data-testid="edit-item"]')!.click();
+			await settle();
+			expect(showing()).toBe('story');
+			expect(asked('/api/items/S-0154/edit')).toBeGreaterThan(0);
 		});
 	});
 

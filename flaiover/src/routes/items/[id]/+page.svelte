@@ -14,10 +14,13 @@
 	import PlanAction from '$lib/components/PlanAction.svelte';
 	import TaskPlan from '$lib/components/TaskPlan.svelte';
 	import ForgeStatus, { type PullRequestStatus } from '$lib/components/ForgeStatus.svelte';
+	import PageSidebar from '$lib/components/PageSidebar.svelte';
+	import type { SidebarEntry } from '$lib/pagesidebar.svelte';
+	import { inboxState } from '$lib/inbox.svelte';
 	import { toggleCriterion } from '$lib/review';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { onMount, tick } from 'svelte';
+	import { flushSync, onMount, tick, untrack } from 'svelte';
 	import { follow } from '$lib/events';
 	import { render, enhance } from '$lib/markdown';
 	import { agentLine, type Agent } from '$lib/agent';
@@ -38,7 +41,7 @@
 		type CostOfDelay,
 		type Forecast
 	} from '$lib/planning';
-	import type { Hold, StoryActivity } from '$lib/activity';
+	import { startable, type Hold, type StoryActivity } from '$lib/activity';
 	import type { TaskPlan as Plan } from '$lib/taskplan';
 
 	type Transition = { to: string; at: string; by: string };
@@ -115,6 +118,8 @@
 	const costOfDelay = $derived(costOfDelayLines(item?.cost_of_delay));
 	// The inputs changed after the planner set the value (ADR-0080), so it is to be worked out again.
 	const valueStale = $derived(costOfDelayStale(item?.cost_of_delay));
+	const staleNote =
+		"The inputs changed after the value was set, so the planner's value is out of date.";
 	const forecast = $derived(forecastLines(item?.forecast));
 	// Who accepted a done story and on which day, from its last transition to done (ADR-0093). The
 	// orchestrator's acceptance writes its evidence under ### Accepted by the orchestrator in the
@@ -178,6 +183,107 @@
 				: null
 	);
 
+	// The page's sections are panes chosen from its sidebar, one at a time (S-0460). The sidebar
+	// counts the item's threads, resolved ones too, and lists Messages only for a story with
+	// conversations, closed ones too, so the page reads both itself.
+	let threads = $state<{ status: string }[]>([]);
+	let conversations = $state(0);
+	// Whether flai serve's agent action is on, asked for a ready story only, where Start agent needs it.
+	let agentsOn = $state(false);
+	// The pane shown, bound to the sidebar: an action above that needs the body shows its pane.
+	let shown = $state<string>();
+	const kind = $derived(item ? item.type[0].toUpperCase() + item.type.slice(1) : '');
+	const questions = $derived(
+		item?.type === 'story'
+			? (inboxState.data?.entries ?? []).filter((e) => e.kind === 'question' && e.item === item!.id)
+					.length
+			: 0
+	);
+	// The inbox links a thread or a question here (S-0155, S-0173): its pane is the one opened.
+	const linked = $derived(
+		page.url.searchParams.has('thread') || page.url.searchParams.has('question')
+	);
+	// The metadata block's fields, any of which puts it on the Planning and usage pane.
+	const details = $derived(
+		!!item &&
+			!!(
+				item.tags?.length ||
+				item.topics?.length ||
+				item.touches?.length ||
+				item.owner ||
+				item.estimate ||
+				item.agent ||
+				costOfDelay.length ||
+				forecast.length ||
+				expected
+			)
+	);
+	// The panes in order, each left out when it would show nothing for the item. Questions and
+	// threads stays for a writer, who opens a thread there, and for an inbox link to it.
+	const sections = $derived.by((): SidebarEntry[] => {
+		if (!item) return [];
+		const story = item.type === 'story';
+		const open = questions + threads.filter((t) => t.status !== 'resolved').length;
+		const agent =
+			!!activity ||
+			!!pullRequest ||
+			startable(activity, agentsOn, item.status, writable && !item.archived);
+		const all: (SidebarEntry | false)[] = [
+			{ id: 'story', label: kind, mode: 'pane' },
+			children.length > 0 && {
+				id: 'children',
+				label: item.type === 'epic' ? 'Stories' : 'Tasks',
+				mode: 'pane'
+			},
+			(writable || linked || threads.length > 0 || questions > 0) && {
+				id: 'threads',
+				label: story ? 'Questions and threads' : 'Threads',
+				count: open || undefined,
+				mode: 'pane'
+			},
+			story && conversations > 0 && { id: 'messages', label: 'Messages', mode: 'pane' },
+			story && agent && { id: 'agent', label: 'Agent', mode: 'pane' },
+			{ id: 'history', label: 'History', mode: 'pane' },
+			{ id: 'files', label: 'Files', mode: 'pane' },
+			(spent(item.usage) || strategic.length > 0 || details) && {
+				id: 'usage',
+				label: 'Planning and usage',
+				mode: 'pane'
+			}
+		];
+		return all.filter((e): e is SidebarEntry => !!e);
+	});
+	// A conversation's anchor, as a board card links it (S-0338), is on Messages; any other hash
+	// that is no pane's, such as a heading's in the body, is on the body's.
+	const holder = (hash: string) => (/^MS-\d+$/.test(hash) ? 'messages' : 'story');
+
+	async function askThreads(of: Item) {
+		const data = await api(`/api/threads?on=${encodeURIComponent(of.id)}&all=1`)
+			.then((r) => (r.ok ? r.json() : null))
+			.catch(() => null);
+		if (item?.id === of.id) threads = Array.isArray(data) ? data : [];
+	}
+	async function askMessages(of: Item) {
+		if (of.type !== 'story') {
+			conversations = 0;
+			return;
+		}
+		const data = await api(`/api/messages?story=${encodeURIComponent(of.id)}&all=1`)
+			.then((r) => (r.ok ? r.json() : null))
+			.catch(() => null);
+		if (item?.id === of.id) conversations = Array.isArray(data) ? data.length : 0;
+	}
+	async function askAgents(of: Item) {
+		if (of.type !== 'story' || of.status !== 'ready' || !writable || of.archived) {
+			agentsOn = false;
+			return;
+		}
+		const data = await api('/api/host-agent')
+			.then((r) => (r.ok ? r.json() : null))
+			.catch(() => null);
+		if (item?.id === of.id) agentsOn = data?.enabled === true;
+	}
+
 	// What the body was last rendered for, with whether it was editable: a live reload that changes
 	// neither leaves the body alone (keep), so a change elsewhere in the project does not redraw its
 	// diagrams (S-0154). Every other load draws it again, as a refused tick needs.
@@ -233,6 +339,9 @@
 		}
 		void askParent(item!);
 		void askForge(item!);
+		void askThreads(item!);
+		void askMessages(item!);
+		void askAgents(item!);
 		const next = render(item!.body, item!.path);
 		if (keep && next + canEdit === rendered) return;
 		// cleared first, so that the same body is drawn again rather than left as it was
@@ -240,9 +349,18 @@
 		await tick();
 		html = next;
 		rendered = next + canEdit;
-		await tick();
-		if (content) await enhance(content, themeState.dark, { story: branch });
-		if (canEdit) wireCriteria();
+	}
+
+	// The body's diagrams and links are drawn, and its criteria wired, wherever its article is: at
+	// a load that changes it, and each time its pane is shown again, which draws a new article.
+	$effect(() => {
+		const el = content;
+		if (!el || !html) return;
+		untrack(() => void decorate(el));
+	});
+	async function decorate(el: HTMLElement) {
+		await enhance(el, themeState.dark, { story: branch });
+		if (canEdit) wireCriteria(el);
 	}
 
 	// Stories and epics are edited here (S-0085); tasks are the agent's to write, and their body
@@ -258,9 +376,8 @@
 	);
 
 	/** The rendered criteria become tickable in place: each tick is an edit of the body by flai. */
-	function wireCriteria() {
-		if (!content) return;
-		const heading = [...content.querySelectorAll('h2')].find(
+	function wireCriteria(article: HTMLElement) {
+		const heading = [...article.querySelectorAll('h2')].find(
 			(h) => h.textContent?.trim().toLowerCase() === 'acceptance criteria'
 		);
 		const boxes: HTMLInputElement[] = [];
@@ -301,6 +418,14 @@
 	// The item, its history, its children, and its body follow the work items as they change
 	// (S-0154, S-0161).
 	onMount(() => follow(['item'], () => void load(true)));
+	// So do the threads and conversations the sidebar counts; a conversation's file is a document.
+	onMount(() =>
+		follow(['thread', 'document'], () => {
+			if (!item) return;
+			void askThreads(item);
+			void askMessages(item);
+		})
+	);
 
 	function fileSaved(key: string) {
 		if (!saved.includes(key)) saved = [...saved, key];
@@ -376,7 +501,7 @@
 {#if error}
 	<p class="rounded border border-danger bg-danger-soft p-3 text-sm text-danger">{error}</p>
 {:else if item}
-	<div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+	<div class="space-y-6">
 		<div class="min-w-0">
 			<div class="flex items-start justify-between gap-4">
 				<h1 class="text-2xl font-semibold">
@@ -438,11 +563,16 @@
 					>{/if}
 			</p>
 			{#if accepted}
+				<!-- Its evidence link draws the body's pane before the browser follows it, so it lands. -->
 				<p class="mt-1 text-sm text-muted" data-testid="item-accepted">
 					Accepted by {accepted.by} on {accepted.on}{#if accepted.evidence}, with
 						<a
 							class="underline"
 							href="#accepted-by-the-orchestrator"
+							onclick={() => {
+								shown = 'story';
+								flushSync();
+							}}
 							data-testid="item-accepted-evidence">its evidence</a
 						> in the Notes{/if}.
 				</p>
@@ -457,17 +587,6 @@
 			{#if findings.length}
 				<AcceptFindings id={item.id} status={item.status} {findings} {saved} onsaved={fileSaved} />
 			{/if}
-			{#if item.type === 'story' && item.status === 'review'}
-				<p class="mt-3 text-sm">
-					<a
-						class="rounded border border-line-strong px-2 py-1 hover:bg-raised"
-						href={resolve('/review/[id]', { id: item.id })}>Review this story</a
-					>
-					<span class="ml-2 text-xs text-muted"
-						>criteria, narrative, threads, the branch's diff, and what accepting does</span
-					>
-				</p>
-			{/if}
 			{#if writable && !item.archived}
 				<div class="mt-3 flex flex-wrap gap-2">
 					{#each moves as to (to)}
@@ -478,10 +597,14 @@
 						>
 					{/each}
 					{#if canEdit && !editing}
+						<!-- The editor is on the body's pane, which it shows. -->
 						<button
 							type="button"
 							class="rounded border border-line-strong px-2 py-1 text-xs hover:bg-raised"
-							onclick={() => (editing = true)}
+							onclick={() => {
+								editing = true;
+								shown = 'story';
+							}}
 							data-testid="edit-item">edit…</button
 						>
 					{/if}
@@ -512,185 +635,243 @@
 					{/if}
 				</div>
 			{/if}
-			{#if editing}
-				<div class="mt-4">
-					<ItemEditor
-						id={item.id}
-						oncancel={() => {
-							// the body may have changed while it was edited: draw it with its criteria wired
-							editing = false;
-							void load();
-						}}
-						onsaved={async (changed) => {
-							editing = false;
-							notice = changed.length ? `saved: ${changed.join(', ')}` : 'nothing changed';
-							await load();
-						}}
-					/>
-				</div>
-			{:else}
-				<article bind:this={content} class="prose mt-4 max-w-none">
-					<!-- eslint-disable-next-line svelte/no-at-html-tags -- markdown of the project, asked of flai on the host, rendered client side -->
-					{@html html}
-				</article>
-			{/if}
-			{#if item.type === 'story'}
-				<!-- Its narrative's open questions, answered here: the inbox leads to them (S-0173). -->
-				<OpenQuestions
-					story={item.id}
-					writable={writable && !item.archived}
-					select={page.url.searchParams.get('question') ?? undefined}
-				/>
-			{/if}
-			<Threads
-				on={item.id}
-				story={branch}
-				{writable}
-				select={page.url.searchParams.get('thread') ?? undefined}
-				agent={item.type === 'story' ? activity : undefined}
-			/>
-			<!-- Its conversations with other stories' agents, read only (S-0336). -->
-			{#if item.type === 'story'}<Messages story={item.id} />{/if}
 		</div>
-		<aside class="space-y-4 text-sm">
-			{#if item.type === 'story'}<StoryAgent
-					story={item.id}
-					status={item.status}
-					writable={writable && !item.archived}
-					onhold={(h) => (hold = h)}
-					onactivity={(a) => (activity = a)}
-				/>{/if}
-			{#if item.type === 'story'}<ForgeStatus status={pullRequest} />{/if}
-			<section class="rounded border border-line bg-surface p-3">
-				<h2 class="mb-2 font-medium">History</h2>
-				<ol class="space-y-1 text-xs">
-					<li><span class="font-mono text-muted">{localTime(item.created)}</span> created</li>
-					{#each item.transitions as t (t.at + t.to)}
-						<li>
-							<span class="font-mono text-muted">{localTime(t.at)}</span>
-							{t.to} <span class="text-muted">by {t.by}</span>
-						</li>
-					{/each}
-				</ol>
-				{#if item.blocked?.length}
-					<h3 class="mt-3 mb-1 font-medium">Blocked</h3>
-					<ul class="space-y-1 text-xs">
-						{#each item.blocked as b (b.from)}
-							<li>
-								<span class="font-mono text-muted">{localTime(b.from)}</span> →
-								{b.until ? localTime(b.until) : 'open'}: {b.reason}
-							</li>
-						{/each}
-					</ul>
-				{/if}
-			</section>
-			{#if children.length}
-				<section class="rounded border border-line bg-surface p-3">
-					<h2 class="mb-2 font-medium">Children</h2>
-					<ul class="space-y-1 text-xs">
-						{#each children as c (c.id)}
-							<li>
-								<a class="font-mono underline" href={resolve('/items/[id]', { id: c.id })}>{c.id}</a
-								> <span class="text-muted">{c.status}</span>
-								{#if c.type === 'story' && c.draft}<span
-										class="font-semibold text-warn"
-										data-testid="child-draft">Draft</span
-									>{/if}
-								{c.title}
-							</li>
-						{/each}
-					</ul>
-				</section>
-			{/if}
-			{#if item.type === 'story' && plan}
-				<TaskPlan {plan} titles={Object.fromEntries(children.map((c) => [c.id, c.title]))} />
-			{/if}
-			<section class="rounded border border-line bg-surface p-3">
-				<h2 class="mb-2 font-medium">Files</h2>
-				<p class="text-xs">
-					<a class="underline" href={resolve('/docs/[...path]', { path: item.path })}>{item.path}</a
-					>
-					{#if writable && !item.archived && item.type === 'task'}
-						· <a class="underline" href={resolve('/edit/[...path]', { path: item.path })}
-							>edit the body</a
-						>
-					{/if}
-				</p>
-				{#if narrative}
-					<p class="mt-1 text-xs">
-						narrative: <a class="underline" href={resolve('/docs/[...path]', { path: narrative })}
-							>{narrative}</a
-						>
-					</p>
-					{#if writable && item.type === 'story' && !item.archived}
-						<form
-							class="mt-2 flex gap-2"
-							onsubmit={(e) => {
-								e.preventDefault();
-								if (entry.trim()) {
-									post(`/api/streams/${item!.id}/log`, { entry });
-									entry = '';
-								}
-							}}
-						>
-							<input
-								class="min-w-0 flex-1 rounded border border-line-strong px-2 py-1 text-xs"
-								placeholder="log entry"
-								bind:value={entry}
+		<!-- One section at a time, chosen from the sidebar (S-0460): the body on arrival, and
+		     Questions and threads for the inbox's link to a thread or a question there. -->
+		<PageSidebar
+			label="{kind} sections"
+			entries={sections}
+			fallback={linked ? 'threads' : 'story'}
+			match={holder}
+			bind:current={shown}
+		>
+			{#snippet pane(id: string)}
+				{#if item}
+					{#if id === 'story'}
+						<div class="space-y-4">
+							{#if item.type === 'story' && item.status === 'review'}
+								<p class="text-sm">
+									<a
+										class="rounded border border-line-strong px-2 py-1 hover:bg-raised"
+										href={resolve('/review/[id]', { id: item.id })}>Review this story</a
+									>
+									<span class="ml-2 text-xs text-muted"
+										>criteria, narrative, threads, the branch's diff, and what accepting does</span
+									>
+								</p>
+							{/if}
+							{#if editing}
+								<ItemEditor
+									id={item.id}
+									oncancel={() => {
+										// the body may have changed while it was edited: draw it with its criteria wired
+										editing = false;
+										void load();
+									}}
+									onsaved={async (changed) => {
+										editing = false;
+										notice = changed.length ? `saved: ${changed.join(', ')}` : 'nothing changed';
+										await load();
+									}}
+								/>
+							{:else}
+								<article bind:this={content} class="prose max-w-none">
+									<!-- eslint-disable-next-line svelte/no-at-html-tags -- markdown of the project, asked of flai on the host, rendered client side -->
+									{@html html}
+								</article>
+							{/if}
+						</div>
+					{:else if id === 'children'}
+						<div class="space-y-4 text-sm">
+							<section class="rounded border border-line bg-surface p-3">
+								<h2 class="mb-2 font-medium">Children</h2>
+								<ul class="space-y-1 text-xs">
+									{#each children as c (c.id)}
+										<li>
+											<a class="font-mono underline" href={resolve('/items/[id]', { id: c.id })}
+												>{c.id}</a
+											> <span class="text-muted">{c.status}</span>
+											{#if c.type === 'story' && c.draft}<span
+													class="font-semibold text-warn"
+													data-testid="child-draft">Draft</span
+												>{/if}
+											{c.title}
+										</li>
+									{/each}
+								</ul>
+							</section>
+							{#if item.type === 'story' && plan}
+								<TaskPlan
+									{plan}
+									titles={Object.fromEntries(children.map((c) => [c.id, c.title]))}
+								/>
+							{/if}
+						</div>
+					{:else if id === 'threads'}
+						{#if item.type === 'story'}
+							<!-- Its narrative's open questions, answered here: the inbox leads to them (S-0173). -->
+							<OpenQuestions
+								story={item.id}
+								writable={writable && !item.archived}
+								select={page.url.searchParams.get('question') ?? undefined}
 							/>
-							<button type="submit" class="rounded border border-line-strong px-2 py-1 text-xs"
-								>log</button
-							>
-						</form>
+						{/if}
+						<Threads
+							on={item.id}
+							story={branch}
+							{writable}
+							select={page.url.searchParams.get('thread') ?? undefined}
+							agent={item.type === 'story' ? activity : undefined}
+						/>
+					{:else if id === 'messages'}
+						<!-- Its conversations with other stories' agents, read only (S-0336). -->
+						<Messages story={item.id} />
+					{:else if id === 'history'}
+						<section class="rounded border border-line bg-surface p-3 text-sm">
+							<h2 class="mb-2 font-medium">History</h2>
+							<ol class="space-y-1 text-xs">
+								<li><span class="font-mono text-muted">{localTime(item.created)}</span> created</li>
+								{#each item.transitions as t (t.at + t.to)}
+									<li>
+										<span class="font-mono text-muted">{localTime(t.at)}</span>
+										{t.to} <span class="text-muted">by {t.by}</span>
+									</li>
+								{/each}
+							</ol>
+							{#if item.blocked?.length}
+								<h3 class="mt-3 mb-1 font-medium">Blocked</h3>
+								<ul class="space-y-1 text-xs">
+									{#each item.blocked as b (b.from)}
+										<li>
+											<span class="font-mono text-muted">{localTime(b.from)}</span> →
+											{b.until ? localTime(b.until) : 'open'}: {b.reason}
+										</li>
+									{/each}
+								</ul>
+							{/if}
+						</section>
+					{:else if id === 'files'}
+						<div class="space-y-4 text-sm">
+							<section class="rounded border border-line bg-surface p-3">
+								<h2 class="mb-2 font-medium">Files</h2>
+								<p class="text-xs">
+									<a class="underline" href={resolve('/docs/[...path]', { path: item.path })}
+										>{item.path}</a
+									>
+									{#if writable && !item.archived && item.type === 'task'}
+										· <a class="underline" href={resolve('/edit/[...path]', { path: item.path })}
+											>edit the body</a
+										>
+									{/if}
+								</p>
+								{#if narrative}
+									<p class="mt-1 text-xs">
+										narrative: <a
+											class="underline"
+											href={resolve('/docs/[...path]', { path: narrative })}>{narrative}</a
+										>
+									</p>
+									{#if writable && item.type === 'story' && !item.archived}
+										<form
+											class="mt-2 flex gap-2"
+											onsubmit={(e) => {
+												e.preventDefault();
+												if (entry.trim()) {
+													post(`/api/streams/${item!.id}/log`, { entry });
+													entry = '';
+												}
+											}}
+										>
+											<input
+												class="min-w-0 flex-1 rounded border border-line-strong px-2 py-1 text-xs"
+												placeholder="log entry"
+												bind:value={entry}
+											/>
+											<button
+												type="submit"
+												class="rounded border border-line-strong px-2 py-1 text-xs">log</button
+											>
+										</form>
+									{/if}
+								{/if}
+							</section>
+							{#if item.type === 'task' && writable && !item.archived}
+								<p class="text-xs text-muted">
+									Tasks are the agent's to write. Their title and fields are not edited here; the
+									body can be opened as a document.
+								</p>
+							{/if}
+						</div>
+					{:else if id === 'usage'}
+						<div class="space-y-4 text-sm">
+							{#if spent(item.usage) || strategic.length}
+								<section
+									class="rounded border border-line bg-surface p-3 text-xs"
+									data-testid="item-usage"
+								>
+									<div class="mb-1 font-medium">usage</div>
+									{#if spent(item.usage)}<div>{usageLine(item.usage)}</div>
+										{#each item.usage.models as m (m.model)}<div class="text-muted">
+												{modelLine(m)}
+											</div>{/each}{/if}
+									{#each strategic as line, i (i)}<div data-testid="item-strategic">
+											{line}
+										</div>{/each}
+								</section>
+							{/if}
+							{#if details}
+								<section class="rounded border border-line bg-surface p-3 text-xs">
+									{#if item.owner}<div>owner: {item.owner}</div>{/if}
+									{#if item.estimate}<div>estimate: {item.estimate}</div>{/if}
+									{#if costOfDelay.length}<div data-testid="item-cost-of-delay">
+											<div>{costOfDelay[0]}</div>
+											{#each costOfDelay.slice(1) as line, i (i)}<div class="text-muted">
+													{line}
+												</div>{/each}
+											{#if valueStale}<div
+													class="font-semibold text-warn"
+													data-testid="item-cost-of-delay-stale"
+												>
+													{staleNote}
+												</div>{/if}
+										</div>{/if}
+									{#if forecast.length}<div data-testid="item-forecast">
+											<div>{forecast[0]}</div>
+											{#each forecast.slice(1) as line, i (i)}<div class="text-muted">
+													{line}
+												</div>{/each}
+										</div>{/if}
+									{#if expected}<div data-testid="item-expected-cost">{expected}</div>{/if}
+									{#if item.tags?.length}<div>tags: {item.tags.join(', ')}</div>{/if}
+									{#if item.topics?.length}<div data-testid="item-topics">
+											topics: {item.topics.join(', ')}
+										</div>{/if}
+									{#if item.touches?.length}<div>touches: {item.touches.join(', ')}</div>{/if}
+									{#if item.agent}<div data-testid="item-agent">
+											agent: {agentLine(item.agent)}
+										</div>{/if}
+								</section>
+							{/if}
+						</div>
 					{/if}
 				{/if}
-			</section>
-			{#if item.type === 'task' && writable && !item.archived}
-				<p class="text-xs text-muted">
-					Tasks are the agent's to write. Their title and fields are not edited here; the body can
-					be opened as a document.
-				</p>
+			{/snippet}
+			<!-- The Agent pane's content stays drawn on every pane, hidden on the others: the story's
+			     hold marks the header HELD (S-0129), and what its agent is doing tells the threads it
+			     is at work on a reply (S-0154). -->
+			{#if item.type === 'story'}
+				<div class="space-y-4 text-sm" hidden={shown !== 'agent'} data-testid="item-agent-pane">
+					<StoryAgent
+						story={item.id}
+						status={item.status}
+						writable={writable && !item.archived}
+						onhold={(h) => (hold = h)}
+						onactivity={(a) => (activity = a)}
+					/>
+					<ForgeStatus status={pullRequest} />
+				</div>
 			{/if}
-			{#if spent(item.usage) || strategic.length}
-				<section class="rounded border border-line bg-surface p-3 text-xs" data-testid="item-usage">
-					<div class="mb-1 font-medium">usage</div>
-					{#if spent(item.usage)}<div>{usageLine(item.usage)}</div>
-						{#each item.usage.models as m (m.model)}<div class="text-muted">
-								{modelLine(m)}
-							</div>{/each}{/if}
-					{#each strategic as line, i (i)}<div data-testid="item-strategic">{line}</div>{/each}
-				</section>
-			{/if}
-			{#if item.tags?.length || item.topics?.length || item.touches?.length || item.owner || item.estimate || item.agent || costOfDelay.length || forecast.length || expected}
-				<section class="rounded border border-line bg-surface p-3 text-xs">
-					{#if item.owner}<div>owner: {item.owner}</div>{/if}
-					{#if item.estimate}<div>estimate: {item.estimate}</div>{/if}
-					{#if costOfDelay.length}<div data-testid="item-cost-of-delay">
-							<div>{costOfDelay[0]}</div>
-							{#each costOfDelay.slice(1) as line, i (i)}<div class="text-muted">{line}</div>{/each}
-							{#if valueStale}<div
-									class="font-semibold text-warn"
-									data-testid="item-cost-of-delay-stale"
-								>
-									The inputs changed after the value was set, so the planner's value is out of date.
-								</div>{/if}
-						</div>{/if}
-					{#if forecast.length}<div data-testid="item-forecast">
-							<div>{forecast[0]}</div>
-							{#each forecast.slice(1) as line, i (i)}<div class="text-muted">
-									{line}
-								</div>{/each}
-						</div>{/if}
-					{#if expected}<div data-testid="item-expected-cost">{expected}</div>{/if}
-					{#if item.tags?.length}<div>tags: {item.tags.join(', ')}</div>{/if}
-					{#if item.topics?.length}<div data-testid="item-topics">
-							topics: {item.topics.join(', ')}
-						</div>{/if}
-					{#if item.touches?.length}<div>touches: {item.touches.join(', ')}</div>{/if}
-					{#if item.agent}<div data-testid="item-agent">agent: {agentLine(item.agent)}</div>{/if}
-				</section>
-			{/if}
-		</aside>
+		</PageSidebar>
 	</div>
 {:else}
 	<p class="text-sm text-muted">Loading…</p>
