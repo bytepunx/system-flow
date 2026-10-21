@@ -84,6 +84,46 @@ func TestCheckStoryPassesOverFindingsOutsideIt(t *testing.T) {
 	}
 }
 
+// I-0174: --story takes several stories, comma-separated or repeated, as a
+// merge queue batch names them; a finding outside both is a note, the
+// summary names both, and --record-issues, which records one close-out's
+// findings, is refused before checking.
+func TestCheckStoryTakesSeveralStories(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := overlapFixture(t, "", map[string]string{"S-006": "docs"})
+	refs := filepath.Join(root, ".git", "refs", "heads", "story")
+	if err := os.MkdirAll(refs, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(refs, "S-002"), []byte("0123456789abcdef0123456789abcdef01234567\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	const unaccepted = "warning: story.unaccepted: S-002 is done but its branch story/S-002 was never merged; merge or delete it"
+	out, errOut, code := runIn(t, root, "check", "--strict")
+	if code != 1 || !strings.Contains(out, unaccepted+"\n") {
+		t.Fatalf("unscoped --strict should fail on S-002's branch: %d\n%s%s", code, out, errOut)
+	}
+	for _, args := range [][]string{{"--story", "S-004,S-006"}, {"--story", "S-4", "--story", "S-006"}} {
+		out, errOut, code = runIn(t, root, append([]string{"check", "--strict"}, args...)...)
+		if code != 0 {
+			t.Fatalf("%v: scoped to S-004 and S-006, --strict should pass: %d\n%s%s", args, code, out, errOut)
+		}
+		for _, want := range []string{unaccepted + " (outside S-004, S-006)\n", "; 2 outside S-004, S-006, notes the run passes over\n"} {
+			if !strings.Contains(out, want) {
+				t.Errorf("%v: output lacks %q:\n%s", args, want, out)
+			}
+		}
+	}
+
+	out, errOut, code = runIn(t, root, "check", "--strict", "--story", "S-004,S-006", "--record-issues")
+	if code == 0 || !strings.Contains(errOut, "--record-issues records the findings outside one story's close-out, and --story names 2 (S-004, S-006)") || strings.Contains(out, "items checked") {
+		t.Errorf("--record-issues with two stories should be refused before checking: %d\n%s%s", code, out, errOut)
+	}
+	if names := issueFiles(t, root); names != nil {
+		t.Errorf("a refused run should write nothing under design/issues, got %v", names)
+	}
+}
+
 // gitScript answers the git commands flai stream diff and git status run,
 // for a story branch that changes design/system/overview.md, or, with
 // porcelain, a worktree that has it uncommitted; statusErr fails git status.

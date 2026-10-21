@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-10-20
+updated: 2026-10-21
 status: active
 ---
 
@@ -481,14 +481,16 @@ Findings print as path:line: level: rule: message. Errors exit 1; with --strict 
 
 With --story S-nnnn, a finding is inside the story when it is on the story's item file or one of its tasks', its narrative, a thread anchored on the story or one of its tasks, or a path its branch changes against the main branch (as flai stream diff reads it), or that is uncommitted in its worktree. Every other finding is outside it. A wip.overlap that names the story is outside it too, and one between two other stories is left out, as is an item.archive outside the story, which only flai archive in the main checkout clears, a board.wip-limit outside the story, which counts the main checkout's columns and only the operator's acceptances, cancellations, or a raised limit clear, an issues.no-story outside the story, which names an issue the story did not touch and only the operator's choice to make a story for it clears, a threads.archived outside the story, an open or answered thread on an archived item that only the operator or the thread's opener resolves in the main checkout, the note components.examples gives when it could not check examples for want of node or a sub-project's svelte, unless the story changes a file under the folder it names, which only installing the tool clears, and a markdown or narrative.state finding on the narrative of another story that is neither done nor cancelled, which that story's own close-out finds. A finding outside keeps its level and is printed with "(outside S-nnnn)"; it is a note that neither an error nor --strict fails on, and the summary counts it, as does outside in --json. Without --story every finding counts, as the main branch's check needs.
 
-With --record-issues as well, each rule with findings outside the story is recorded in design/issues, in the checkout the run reads, which is the story's worktree at close-out. A wip.overlap is not recorded: the pull hold and the other story's agent clear it. Each rule is recorded in the open issue whose title names it, as "flai check finds `story.unaccepted` outside the story at close-out" does, opened with class efficiency when none is, with an instance naming the story and each finding's path and message. An instance for the same story and the same findings is written once, so running the check again does not count it again; another story, or other findings, bump the count. summary.md is regenerated, each issue is printed as opened, bumped, or already recorded, and --json lists them in recorded. The run records whether or not it passes; a failure to record is an error.
+--story takes several stories, comma-separated or repeated, as a merge queue batch names the stories it verifies: a finding is inside when it is inside any of them, and outside only when it is outside every one, printed with "(outside S-0001, S-0002)". A wip.overlap is outside when it names any of them and left out when it names none, and a markdown or narrative.state finding is left out on the narrative of an open story that is none of them.
+
+With --record-issues and one story, each rule with findings outside the story is recorded in design/issues, in the checkout the run reads, which is the story's worktree at close-out. A wip.overlap is not recorded: the pull hold and the other story's agent clear it. Each rule is recorded in the open issue whose title names it, as "flai check finds `story.unaccepted` outside the story at close-out" does, opened with class efficiency when none is, with an instance naming the story and each finding's path and message. An instance for the same story and the same findings is written once, so running the check again does not count it again; another story, or other findings, bump the count. summary.md is regenerated, each issue is printed as opened, bumped, or already recorded, and --json lists them in recorded. The run records whether or not it passes; a failure to record is an error. With several stories --record-issues is refused: it records a close-out's findings, and a batch records none.
 
 Flags:
 
 | Flag | Meaning |
 |------|---------|
-| `--record-issues` | with --story, record each rule's findings outside the story in an issue, opening or bumping it once per story and findings |
-| `--story` string | scope the run to a story (S-nnnn): findings outside it are notes that do not fail it |
+| `--record-issues` | with --story and one story, record each rule's findings outside the story in an issue, opening or bumping it once per story and findings |
+| `--story` strings | scope the run to a story (S-nnnn), or to several, comma-separated or repeated: findings outside every one are notes that do not fail it |
 | `--strict` | treat warnings as failures, except the review column over its limit and an epic behind its stories |
 
 ### flai checks

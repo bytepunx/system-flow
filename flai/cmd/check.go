@@ -16,7 +16,7 @@ import (
 
 func newCheckCmd(a *app) *cobra.Command {
 	var strict, record bool
-	var story string
+	var stories []string
 	c := &cobra.Command{
 		Use:   "check [dir]",
 		Short: "Validate the repository against the system-flow standard",
@@ -51,10 +51,17 @@ close-out finds. A finding outside keeps its level and is printed with
 on, and the summary counts it, as does outside in --json. Without --story
 every finding counts, as the main branch's check needs.
 
-With --record-issues as well, each rule with findings outside the story is
-recorded in design/issues, in the checkout the run reads, which is the
-story's worktree at close-out. A wip.overlap is not recorded: the pull hold
-and the other story's agent clear it. Each rule is recorded in the open
+--story takes several stories, comma-separated or repeated, as a merge
+queue batch names the stories it verifies: a finding is inside when it is
+inside any of them, and outside only when it is outside every one, printed
+with "(outside S-0001, S-0002)". A wip.overlap is outside when it names any
+of them and left out when it names none, and a markdown or narrative.state
+finding is left out on the narrative of an open story that is none of them.
+
+With --record-issues and one story, each rule with findings outside the
+story is recorded in design/issues, in the checkout the run reads, which is
+the story's worktree at close-out. A wip.overlap is not recorded: the pull
+hold and the other story's agent clear it. Each rule is recorded in the open
 issue whose title names it, as "flai check finds ` + "`story.unaccepted`" + ` outside
 the story at close-out" does, opened with class efficiency when none is,
 with an instance naming the story and each finding's path and message. An
@@ -63,11 +70,16 @@ running the check again does not count it again; another story, or other
 findings, bump the count.
 summary.md is regenerated, each issue is printed as opened, bumped, or
 already recorded, and --json lists them in recorded. The run records
-whether or not it passes; a failure to record is an error.`,
+whether or not it passes; a failure to record is an error. With several
+stories --record-issues is refused: it records a close-out's findings, and a
+batch records none.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if record && story == "" {
+			if record && len(stories) == 0 {
 				return fmt.Errorf("--record-issues records the findings outside a story: give --story S-nnnn")
+			}
+			if record && len(stories) > 1 {
+				return fmt.Errorf("--record-issues records the findings outside one story's close-out, and --story names %d (%s): give --story one story, or run without --record-issues, as a merge queue batch does", len(stories), strings.Join(stories, ", "))
 			}
 			var repo *workitem.Repo
 			var err error
@@ -79,20 +91,22 @@ whether or not it passes; a failure to record is an error.`,
 			if err != nil {
 				return err
 			}
-			if story != "" {
+			ids := make([]string, 0, len(stories))
+			for _, story := range stories {
 				it, err := repo.Get(story)
 				if err != nil {
 					return err
 				}
-				story = it.ID
+				ids = append(ids, it.ID)
 			}
-			res, err := check.RunScoped(repo, a.runner, a.now(), story)
+			scope := strings.Join(ids, ", ")
+			res, err := check.RunScoped(repo, a.runner, a.now(), ids...)
 			if err != nil {
 				return err
 			}
 			var recorded []recordedIssue
 			if record {
-				if recorded, err = a.recordOutside(repo, res, story); err != nil {
+				if recorded, err = a.recordOutside(repo, res, ids[0]); err != nil {
 					return err
 				}
 			}
@@ -108,7 +122,7 @@ whether or not it passes; a failure to record is an error.`,
 				for _, f := range res.Findings {
 					fmt.Fprintf(a.out, "%s:%d: %s: %s: %s", f.Path, f.Line, f.Level, f.Rule, f.Message)
 					if f.Outside {
-						fmt.Fprintf(a.out, " (outside %s)", story)
+						fmt.Fprintf(a.out, " (outside %s)", scope)
 					}
 					fmt.Fprintln(a.out)
 				}
@@ -119,11 +133,11 @@ whether or not it passes; a failure to record is an error.`,
 				}
 				if res.Outside > 0 {
 					// S-0249: say how many findings were notes outside the story.
-					fmt.Fprintf(a.out, "; %d outside %s, notes the run passes over", res.Outside, story)
+					fmt.Fprintf(a.out, "; %d outside %s, notes the run passes over", res.Outside, scope)
 				}
 				fmt.Fprintln(a.out)
 				for _, r := range recorded {
-					fmt.Fprintf(a.out, "recorded %s outside %s in %s (%s)\n", r.Rule, story, r.Issue, r.describe())
+					fmt.Fprintf(a.out, "recorded %s outside %s in %s (%s)\n", r.Rule, scope, r.Issue, r.describe())
 				}
 			}
 			if !res.OK(strict) {
@@ -133,8 +147,8 @@ whether or not it passes; a failure to record is an error.`,
 		},
 	}
 	c.Flags().BoolVar(&strict, "strict", false, "treat warnings as failures, except the review column over its limit and an epic behind its stories")
-	c.Flags().StringVar(&story, "story", "", "scope the run to a story (S-nnnn): findings outside it are notes that do not fail it")
-	c.Flags().BoolVar(&record, "record-issues", false, "with --story, record each rule's findings outside the story in an issue, opening or bumping it once per story and findings")
+	c.Flags().StringSliceVar(&stories, "story", nil, "scope the run to a story (S-nnnn), or to several, comma-separated or repeated: findings outside every one are notes that do not fail it")
+	c.Flags().BoolVar(&record, "record-issues", false, "with --story and one story, record each rule's findings outside the story in an issue, opening or bumping it once per story and findings")
 	return c
 }
 

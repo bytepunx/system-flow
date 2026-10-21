@@ -818,6 +818,64 @@ func TestScopeToStoryNamesAStory(t *testing.T) {
 	}
 }
 
+// I-0174: scoped to two stories, as a merge queue batch names them, a
+// finding inside the second is counted and fails --strict, and one outside
+// both is a note. A wip.overlap naming one of them is a note too, a
+// narrative.state on the second's narrative stays inside, and one on the
+// narrative of an open story that is neither is left out.
+func TestScopedCheckToTwoStoriesNotesOnlyWhatIsOutsideBoth(t *testing.T) {
+	root := scopeProject(t)
+	edit(t, root, "wip/kanban/board.md", "in-progress: 2\n", "in-progress: 5\n")
+	addStory(t, root, "S-006", "E-001", "touches: [flai]\n")
+	addStory(t, root, "S-007", "E-001", "touches: [flai/cmd]\n")
+	edit(t, root, "wip/kanban/stories/S-006-six.md", "\n## Notes", "\n")
+	unwriteState(t, root, "wip/agents/S-006.md")
+	unwriteState(t, root, "wip/agents/S-007.md")
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scoped, err := Run(repo, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ScopeToStories(scoped, repo, []string{"S-004", "S-6"}, nil); err != nil {
+		t.Fatal(err)
+	}
+	find := func(rule, path string) []Finding {
+		var out []Finding
+		for _, f := range scoped.Findings {
+			if f.Rule == rule && strings.HasSuffix(filepath.ToSlash(f.Path), path) {
+				out = append(out, f)
+			}
+		}
+		return out
+	}
+	if got := find("item.heading", "S-006-six.md"); len(got) != 1 || got[0].Outside {
+		t.Errorf("the item.heading on the second story should be inside: %+v", got)
+	}
+	if got := find("story.unaccepted", "S-002-two.md"); len(got) != 1 || !got[0].Outside {
+		t.Errorf("the story.unaccepted on S-002 should be a note outside both: %+v", got)
+	}
+	if got := find("wip.overlap", ""); len(got) != 1 || !got[0].Outside {
+		t.Errorf("the overlap of S-006 and S-007 names S-006, so it should be a note: %+v", got)
+	}
+	if got := find("narrative.state", "wip/agents/S-006.md"); len(got) != 2 || got[0].Outside || got[1].Outside {
+		t.Errorf("the narrative.state on the second story's narrative should be inside: %+v", got)
+	}
+	if got := find("narrative.state", "wip/agents/S-007.md"); len(got) != 0 {
+		t.Errorf("the narrative.state on S-007's, open and neither story, should be left out: %+v", got)
+	}
+	if scoped.OK(true) {
+		t.Errorf("a finding inside the second story should fail --strict: %+v", scoped.Findings)
+	}
+	assertCountsMatch(t, scoped)
+
+	if err := ScopeToStories(&Result{}, repo, nil, nil); err == nil || !strings.Contains(err.Error(), "name a story") {
+		t.Errorf("no story: want an error asking for one, got %v", err)
+	}
+}
+
 // writeConversation writes a conversation between two stories with no dated
 // entries, which the messages rule warns on (ADR-0120).
 func writeConversation(t *testing.T, root, from, to string) {

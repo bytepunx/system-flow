@@ -11,9 +11,10 @@ import (
 )
 
 // RunScoped runs the check on repo as flai check does: with the findings of
-// the installed git's version, and, given a story, each finding outside what
-// the story owns or changes marked a note (ADR-0085).
-func RunScoped(repo *workitem.Repo, r execx.Runner, now time.Time, story string) (*Result, error) {
+// the installed git's version, and, given stories, each finding outside what
+// every one of them owns or changes marked a note (ADR-0085). Given none,
+// every finding counts.
+func RunScoped(repo *workitem.Repo, r execx.Runner, now time.Time, stories ...string) (*Result, error) {
 	res, err := Run(repo, now)
 	if err != nil {
 		return nil, err
@@ -23,14 +24,18 @@ func RunScoped(repo *workitem.Repo, r execx.Runner, now time.Time, story string)
 	if v, err := gitver.Installed(r); err == nil {
 		GitCompat(res, repo, v)
 	}
-	if story == "" {
+	if len(stories) == 0 {
 		return res, nil
 	}
-	changed, err := storygit.StoryChanges(r, repo, story)
-	if err != nil {
-		return nil, fmt.Errorf("scope the check to %s: %w", story, err)
+	var changed []string
+	for _, story := range stories {
+		paths, err := storygit.StoryChanges(r, repo, story)
+		if err != nil {
+			return nil, fmt.Errorf("scope the check to %s: %w", story, err)
+		}
+		changed = append(changed, paths...)
 	}
-	if err := ScopeToStory(res, repo, story, changed); err != nil {
+	if err := ScopeToStories(res, repo, stories, changed); err != nil {
 		return nil, err
 	}
 	return res, nil

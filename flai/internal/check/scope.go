@@ -41,20 +41,40 @@ import (
 // done nor cancelled: that story's own close-out finds it (ADR-0123, I-0096;
 // ADR-0125, I-0109).
 func ScopeToStory(res *Result, repo *workitem.Repo, story string, changed []string) error {
-	st, err := repo.Get(story)
-	if err != nil {
-		return fmt.Errorf("scope the check to %s: %w", story, err)
+	return ScopeToStories(res, repo, []string{story}, changed)
+}
+
+// ScopeToStories is ScopeToStory for several stories, as a merge queue batch
+// names them (I-0174): a finding is inside when it is inside any of them, and
+// outside, a note or left out, only when it is outside every one. changed is
+// the paths all of them change. A wip.overlap that names any of them is
+// outside; one that names none is left out. A markdown or narrative.state
+// finding is left out on the narrative of an open story that is none of them.
+func ScopeToStories(res *Result, repo *workitem.Repo, stories []string, changed []string) error {
+	if len(stories) == 0 {
+		return fmt.Errorf("scope the check to a story: none given; name a story (S-nnnn)")
 	}
-	if st.Type != workitem.Story {
-		return fmt.Errorf("scope the check to %s: it is a %s; name a story (S-nnnn)", st.ID, st.Type)
+	sts := make([]*workitem.Item, 0, len(stories))
+	ids := make([]string, 0, len(stories))
+	for _, story := range stories {
+		st, err := repo.Get(story)
+		if err != nil {
+			return fmt.Errorf("scope the check to %s: %w", story, err)
+		}
+		if st.Type != workitem.Story {
+			return fmt.Errorf("scope the check to %s: it is a %s; name a story (S-nnnn)", st.ID, st.Type)
+		}
+		sts = append(sts, st)
+		ids = append(ids, st.ID)
 	}
-	in, err := storyPaths(repo, st)
+	scope := strings.Join(ids, ", ")
+	in, err := storyPaths(repo, sts)
 	if err != nil {
-		return fmt.Errorf("scope the check to %s: %w", st.ID, err)
+		return fmt.Errorf("scope the check to %s: %w", scope, err)
 	}
-	others, err := openNarratives(repo, st.ID)
+	others, err := openNarratives(repo, ids)
 	if err != nil {
-		return fmt.Errorf("scope the check to %s: %w", st.ID, err)
+		return fmt.Errorf("scope the check to %s: %w", scope, err)
 	}
 	var folders, paths []string
 	for _, p := range changed {
@@ -107,7 +127,7 @@ func ScopeToStory(res *Result, repo *workitem.Repo, story string, changed []stri
 	}
 	kept := res.Findings[:0]
 	for _, f := range res.Findings {
-		if (f.Rule == "wip.overlap" && !namesStory(f, st.ID)) ||
+		if (f.Rule == "wip.overlap" && !namesStory(f, ids)) ||
 			((f.Rule == "item.archive" || f.Rule == "board.wip-limit" || f.Rule == "issues.no-story" || f.Rule == "threads.archived") && !inside(f.Path)) ||
 			(f.unchecked && !under(f.Path)) ||
 			((strings.HasPrefix(f.Rule, "markdown.") || f.Rule == "narrative.state") && others[resolve(f.Path)]) {
@@ -135,12 +155,14 @@ func ScopeToStory(res *Result, repo *workitem.Repo, story string, changed []stri
 	return nil
 }
 
-// namesStory reports whether f, a wip.overlap, names story in its Stories
-// (ADR-0115); the message is never read.
-func namesStory(f Finding, story string) bool {
+// namesStory reports whether f, a wip.overlap, names any of stories in its
+// Stories (ADR-0115); the message is never read.
+func namesStory(f Finding, stories []string) bool {
 	for _, id := range f.Stories {
-		if workitem.CanonicalID(id) == workitem.CanonicalID(story) {
-			return true
+		for _, story := range stories {
+			if workitem.CanonicalID(id) == workitem.CanonicalID(story) {
+				return true
+			}
 		}
 	}
 	return false
@@ -167,16 +189,21 @@ func (r *Result) drop(f Finding) {
 }
 
 // openNarratives is the cleaned paths of the narratives of the stories other
-// than story whose status is neither done nor cancelled (ADR-0123, ADR-0125).
-func openNarratives(repo *workitem.Repo, story string) (map[string]bool, error) {
+// than stories whose status is neither done nor cancelled (ADR-0123,
+// ADR-0125).
+func openNarratives(repo *workitem.Repo, stories []string) (map[string]bool, error) {
 	items, err := repo.List(true)
 	if err != nil {
 		return nil, err
 	}
+	scoped := map[string]bool{}
+	for _, story := range stories {
+		scoped[workitem.CanonicalID(story)] = true
+	}
 	open := map[string]bool{}
 	for _, it := range items {
 		if it.Type != workitem.Story || it.Status == workitem.Done || it.Status == workitem.Cancelled ||
-			workitem.CanonicalID(it.ID) == workitem.CanonicalID(story) {
+			scoped[workitem.CanonicalID(it.ID)] {
 			continue
 		}
 		open[filepath.Clean(repo.NarrativePath(it.ID))] = true
@@ -184,19 +211,24 @@ func openNarratives(repo *workitem.Repo, story string) (map[string]bool, error) 
 	return open, nil
 }
 
-// storyPaths is the cleaned paths of the files that belong to st: its item
-// file and its tasks', its narrative, the threads anchored on any of them,
-// and the conversations it is one of the two stories of (ADR-0120).
-func storyPaths(repo *workitem.Repo, st *workitem.Item) (map[string]bool, error) {
+// storyPaths is the cleaned paths of the files that belong to any of sts:
+// its item file and its tasks', its narrative, the threads anchored on any of
+// them, and the conversations it is one of the two stories of (ADR-0120).
+func storyPaths(repo *workitem.Repo, sts []*workitem.Item) (map[string]bool, error) {
 	items, err := repo.List(true)
 	if err != nil {
 		return nil, err
 	}
-	in := map[string]bool{filepath.Clean(st.Path): true, filepath.Clean(repo.NarrativePath(st.ID)): true}
-	ids := map[string]bool{workitem.CanonicalID(st.ID): true}
-	for _, t := range workitem.Children(items, st.ID) {
-		in[filepath.Clean(t.Path)] = true
-		ids[workitem.CanonicalID(t.ID)] = true
+	in := map[string]bool{}
+	ids := map[string]bool{}
+	for _, st := range sts {
+		in[filepath.Clean(st.Path)] = true
+		in[filepath.Clean(repo.NarrativePath(st.ID))] = true
+		ids[workitem.CanonicalID(st.ID)] = true
+		for _, t := range workitem.Children(items, st.ID) {
+			in[filepath.Clean(t.Path)] = true
+			ids[workitem.CanonicalID(t.ID)] = true
+		}
 	}
 	// A thread folder that does not read is reported on the folder by the
 	// threads rule, which then checks no thread: none is the story's.
@@ -216,8 +248,10 @@ func storyPaths(repo *workitem.Repo, st *workitem.Item) (map[string]bool, error)
 		return in, nil //nolint:nilerr // the messages rule reports it; no conversation is inside
 	}
 	for _, c := range convs {
-		if c.Names(st.ID) {
-			in[filepath.Clean(c.Path)] = true
+		for _, st := range sts {
+			if c.Names(st.ID) {
+				in[filepath.Clean(c.Path)] = true
+			}
 		}
 	}
 	return in, nil
