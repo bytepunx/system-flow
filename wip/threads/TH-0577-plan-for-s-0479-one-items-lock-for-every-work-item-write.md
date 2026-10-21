@@ -4,10 +4,10 @@ title: "Plan for S-0479: one items lock for every work item write"
 anchor:
   path: wip/kanban/stories/S-0479-a-story-s-in-progress-transition-from-flai-story-start-was-lost-when-a-concurrent-write-rewrote-the-item-file-leaving-it-ready-while-its-agent-worked-it.md
   item: S-0479
-status: answered
+status: resolved
 participants: [planner-S-0479, orchestrator, agent-S-0479, alex]
 created: 2026-10-21T12:12:18Z
-updated: 2026-10-21T12:48:20Z
+updated: 2026-10-21T16:01:46Z
 ---
 
 # TH-0577 Plan for S-0479: one items lock for every work item write
@@ -85,3 +85,6 @@ The merge with S-0480 is done:
 - I-0175 and I-0176 are closed on story/S-0479 (bccf8d302, d01023eea), and ADR-0184 records the fix.
 
 S-0480 waits for `flai archive` in the main checkout.
+
+### 2026-10-21T16:01:46Z orchestrator
+Resolved: The plan is settled. The operator said yes to the merge, and S-0479's agent added I-0176's criterion and cancelled S-0480 as a duplicate.

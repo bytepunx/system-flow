@@ -3,11 +3,11 @@ id: T-2003
 type: task
 nature: remediation
 title: flai accept runs the install command of each sub-project whose lock file the accepted change touched, in the main checkout, with a test that reproduces I-0179
-status: in-progress
+status: done
 parent: S-0483
 owner: alex
 created: 2026-10-21T12:10:56Z
-updated: 2026-10-21T13:17:04Z
+updated: 2026-10-21T13:27:42Z
 transitions:
   - to: ready
     at: 2026-10-21T13:17:03Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-21T13:17:04Z
     by: agent-S-0483
+  - to: done
+    at: 2026-10-21T13:27:41Z
+    by: agent-S-0483
 stream: S-0483
 tags: [flai]
-touches: [flai/cmd/accept.go, flai/cmd/accept_install.go, flai/cmd/accept_install_test.go]
+touches: [flai/cmd/accept.go, flai/cmd/accept_install.go, flai/cmd/accept_install_test.go, design/system/flai-cli.md]
 after: [T-2000]
+usage:
+  source: log
+  seconds: 637
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 59
+      output: 16595
+      cache_read: 2980183
+      cache_write: 150213
+      cost: 1.8374
 ---
 # T-2003 flai accept runs the install command of each sub-project whose lock file the accepted change touched, in the main checkout, with a test that reproduces I-0179
 

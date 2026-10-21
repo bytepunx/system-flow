@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 290
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 44
-      output: 201
-      cache_read: 1874501
-      cache_write: 76086
-      cost: 0.6609
+      input: 25
+      output: 8939
+      cache_read: 1901511
+      cache_write: 65568
+      cost: 1.0088
 ---
 # T-2008 An item edit refused by the check puts back only its own change to an item file, keeping what was written meanwhile
 

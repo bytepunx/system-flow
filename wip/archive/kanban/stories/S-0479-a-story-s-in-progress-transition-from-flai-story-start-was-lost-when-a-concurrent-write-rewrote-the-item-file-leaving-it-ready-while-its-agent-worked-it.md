@@ -3,10 +3,10 @@ id: S-0479
 type: story
 nature: remediation
 title: A story's in-progress transition from flai story start was lost when a concurrent write rewrote the item file, leaving it ready while its agent worked it
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-21T11:59:43Z
-updated: 2026-10-21T13:12:46Z
+updated: 2026-10-21T16:25:08Z
 transitions:
   - to: ready
     at: 2026-10-21T12:05:53Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-21T12:09:40Z
     by: agent-S-0479
+  - to: review
+    at: 2026-10-21T16:13:01Z
+    by: system-flow
+  - to: done
+    at: 2026-10-21T16:25:08Z
+    by: orchestrator
 tags: []
 touches: [flai/internal/workitem/itemlock.go, flai/internal/workitem/itemlock_test.go, flai/internal/workitem/repo.go, flai/internal/itemedit/itemedit.go, flai/internal/itemedit/lock_test.go, design/system/work-hierarchy.md, design/adrs, design/issues/I-0175-a-story-s-in-progress-transition-from-flai-story-start-was-lost-when-a-concurrent-write-rewrote-the-item-file-leaving-it-ready-while-its-agent-worked-it.md, design/issues/summary.md, flai/cmd/accept_resume_test.go, flai/cmd/check_stats_test.go, flai/cmd/issue_test.go, flai/internal/workitem/item.go, design/issues/I-0176-a-usage-write-to-a-story-overwrites-its-move-to-in-progress-made-meanwhile-so-a-started-story-reads-as-ready-again.md, flai/internal/itemnew/itemnew_test.go, flai/internal/statsread/statsread_test.go, flai/internal/mcpserver/folder_test.go, design/issues/I-0186-testwaitforeventsacrossafolder-can-wake-on-the-new-story-s-creation-before-its-move-to-ready-and-finds-no-event.md]
 agent:
@@ -23,21 +29,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2347
-  estimated: true
-  priced_by: estimate
+  seconds: 6171
+  priced_by: harness
   turns:
     - day: 2026-10-21
-      ceremony: 5
+      ceremony: 7
       hand_edits: 6
-      work: 49
+      work: 81
   models:
     - model: claude-opus-5-5
-      input: 264
-      output: 1330
-      cache_read: 16314079
-      cache_write: 568976
-      cost: 5.7203
+      input: 338
+      output: 120322
+      cache_read: 25595582
+      cache_write: 882587
+      cost: 13.5785
   strategic:
     - kind: planner
       seconds: 349
@@ -56,15 +61,21 @@ usage:
           cache_write: 513779
           cost: 6.1419
     - kind: orchestrator
-      seconds: 32
+      seconds: 160
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 10
-          output: 121
-          cache_read: 2106278
-          cache_write: 9094
-          cost: 0.4671
+          input: 43
+          output: 529
+          cache_read: 5359267
+          cache_write: 27841
+          cost: 1.1896
+        - model: claude-sonnet-5-5
+          input: 12
+          output: 72
+          cache_read: 169854
+          cache_write: 48476
+          cost: 0.1511
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -132,3 +143,15 @@ Figures:
 
 - Forecast: 2h, raised from flai's 33m. S-0377 fixed a lock for three writers on an existing pattern in 37m. This story adds a lock primitive, moves about a dozen writers onto it, restructures `itemedit.Apply`, and adds race tests and design. Delivery is 2h after the 12:09:40Z start.
 - Cost of delay: 12.50 USD a week, as `flai cod` gives from flai's input of 5m lost per 168h cycle. It stands. It counts I-0175 alone. With I-0176 (10m), the same cause would cost 37.50 USD a week.
+
+### Accepted by the orchestrator
+
+- Verified: 1cc7b80cc2b54c784ee5b26d7ff9e1187c53fe49
+- Batch: 20261021-161406
+- Enqueued verified: 1cc7b80cc2b54c784ee5b26d7ff9e1187c53fe49
+- At: 2026-10-21T16:25:08Z
+
+Verdict: pass at 1cc7b80cc2b54c784ee5b26d7ff9e1187c53fe49
+- 1: flai/internal/workitem/itemlock.go, flai/internal/workitem/itemlock_test.go, flai/internal/workitem/repo.go, flai/internal/workitem/item.go, flai/internal/itemedit/itemedit.go, flai/internal/itemedit/lock_test.go, design/system/work-hierarchy.md, design/adrs/0184-every-work-item-write-takes-one-items-lock-and-merges-a-copy-read-before.md, design/adrs/README.md
+- 2: design/issues/I-0175-a-story-s-in-progress-transition-from-flai-story-start-was-lost-when-a-concurrent-write-rewrote-the-item-file-leaving-it-ready-while-its-agent-worked-it.md, design/issues/summary.md
+- 3: design/issues/I-0176-a-usage-write-to-a-story-overwrites-its-move-to-in-progress-made-meanwhile-so-a-started-story-reads-as-ready-again.md, design/issues/summary.md

@@ -4,10 +4,10 @@ title: "S-0419 plan: six tasks in five layers, moved to design/workflows/roles, 
 anchor:
   path: wip/kanban/stories/S-0419-the-planner-the-orchestrator-and-the-analyzer-start-through-the-path-a-defined-role-takes-with-their-prompts-read-from-their-role-files-and-behave-exactly-as-today.md
   item: S-0419
-status: answered
+status: resolved
 participants: [planner-S-0419, orchestrator, alex]
 created: 2026-10-21T12:16:34Z
-updated: 2026-10-21T12:40:26Z
+updated: 2026-10-21T16:01:49Z
 ---
 
 # TH-0579 S-0419 plan: six tasks in five layers, moved to design/workflows/roles, with the embedded baseline first
@@ -104,3 +104,19 @@ Source: design/conventions/strategic-agents.md § As the orchestrator
 
 ### 2026-10-21T12:40:26Z alex
 are you able to record the two items that just came up as issues? you should be allowed to update the cost of delay and you should be allowed to invoke the planner on epics/stories even if they’ve already been planned before
+
+### 2026-10-21T16:01:44Z orchestrator
+Yes. Both are recorded as issues, committed on main:
+
+- **I-0187** (cabd78500): the orchestrator cannot set a cost of delay input you decided on an epic, or on a story past the backlog. I tried E-0024's 4h just now, and flai guard refused: it allows me story inputs only.
+- **I-0188** (04ce72d24): `flai plan --candidates` lists no epic or story planned before, so I cannot start the planner on E-0024 again for the new story after S-0419.
+
+Until those change, two steps stay with you:
+
+1. `flai edit E-0024 --time-lost-per-cycle 4h`, and `flai edit E-0025 --time-lost-per-cycle 4h` (TH-0476).
+2. `flai plan E-0024`, to draft the story that generates the built-in roles' definitions.
+
+S-0419's own plan is settled, so I am resolving this thread.
+
+### 2026-10-21T16:01:49Z orchestrator
+Resolved: S-0419's plan is settled. The operator's two follow-ups are recorded as I-0187 and I-0188, and the E-0024 input and replan steps are named for the operator.

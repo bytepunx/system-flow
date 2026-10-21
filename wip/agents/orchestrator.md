@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1200.0637
-accrued_seconds: 1048531
-tasks_completed: 850
-last_run: 2026-10-21T13:17:19Z
+accrued_cost: 1212.7357
+accrued_seconds: 1050233
+tasks_completed: 859
+last_run: 2026-10-21T16:14:09Z
 ---
 
 # Orchestrator activity
@@ -5962,6 +5962,69 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 9
 - Cost: 0.0000 USD
 
+### 2026-10-21T13:26:07Z
+
+- Summary: S-0473 and S-0471 landed through the merge queue (both enqueued by me). Published under publish, policy judgement. Pending: 2 stories worth 112.67 USD/week, none held by whole_epics. Released flai 1.67.11 (tag flai/v1.67.11, patch, from 1.67.10) with S-0473 and S-0471, and pushed.
+- Items: S-0473, S-0471
+- Seconds: 528
+- Cost: 1.0353 USD, estimated
+
+### 2026-10-21T13:31:36Z
+
+- Summary: S-0423's planner applied the approved rewrites (ADR task T-2015 added, refining ADR-0094 and ADR-0067) and now holds wait_for_events for the operator's answer on TH-0583, questions 1 to 3. Starting planners one at a time under plan_backlog_stories, I am holding S-0424 and the rest of flai plan --candidates until that run ends.
+- Items: S-0423, S-0424
+- Seconds: 329
+- Cost: 9.2140 USD, estimated
+
+### 2026-10-21T16:01:44Z
+
+- Summary: Answered TH-0579, citing no source
+- Items: S-0419
+- Seconds: 100
+- Cost: 0.5317 USD, estimated
+
+### 2026-10-21T16:01:51Z
+
+- Summary: On the operator's TH-0579 request, recorded I-0187 (orchestrator cannot set a cost of delay input on an epic or a story past the backlog; flai guard refused my item_edit of 4h on E-0024 just now) and I-0188 (flai plan --candidates excludes planned epics and stories). On TH-0498's "draft it", recorded I-0189 (safety.md force-push line contradicts git.md). Resolved TH-0579 and TH-0577 (story-planner threads, plans settled) and my own TH-0498.
+- Items: S-0419, S-0479, E-0024
+- Seconds: 7
+- Cost: 0.0638 USD, estimated
+
+### 2026-10-21T16:02:49Z
+
+- Summary: The planner runs stopped at a session limit at 13:31Z (now reset). Under plan_backlog_stories, started the planner for S-0424 (pid 3795021), first in flai plan --candidates (no cost of delay value); S-0425 and S-0428 to S-0435, then S-0466 to S-0481, follow one at a time. Under finalize_drafts, held S-0414 to S-0422 (complete per flai promote --drafts, but with values the planners worked out by hand while E-0024 has no input) and opened TH-0587 on E-0024 recommending the operator set 4h; S-0406 and S-0412 stay on TH-0532/TH-0533, S-0423 on TH-0583. Under promote_to_ready, the only candidate is S-0241 (rank 1, 2h), still blocked, so nothing promoted; ready stays empty. Review is empty. flai guard refused me `flai serve status --json`.
+- Items: S-0424, E-0024, S-0241
+- Seconds: 58
+- Cost: 0.3498 USD, estimated
+
+### 2026-10-21T16:11:53Z
+
+- Summary: Answered TH-0588, citing design/conventions/strategic-agents.md § As the planner
+- Items: S-0424
+- Seconds: 544
+- Cost: 0.5825 USD, estimated
+
+### 2026-10-21T16:11:57Z
+
+- Summary: Recommended an answer on TH-0588, citing design/conventions/strategic-agents.md § As the planner
+- Items: S-0424
+- Seconds: 4
+- Cost: 0.0000 USD
+
+### 2026-10-21T16:12:03Z
+
+- Summary: Under plan_backlog_stories, on planner-S-0424's TH-0588: approved the replan on TH-0471 answers 2 and 5 (seven tasks in three layers, 34 file touches, after S-0423 added, 1h10m, hand-worked 50.85 USD/week) and the task rewrites that only apply those answers. Recommended the operator take the planner's answers to questions 1 (import instance in the imported repo after the commit, flai import --formula) and 2 (cadence as role step plus flai issue list --report, analysis.formula), which add commands and a manifest key. Thread left open. The next story planner waits until S-0424's run ends.
+- Items: S-0424
+- Seconds: 6
+- Cost: 0.0426 USD, estimated
+
+### 2026-10-21T16:14:09Z
+
+- Summary: Enqueued S-0479 in the merge queue under accept_reviews at 1cc7b80c, first in the queue (alone); forecast 2h, value 12.50 USD/week. flai verify passed every step at the branch head. The verifier matched all three criteria to changed files within touches: Repo.Save takes one items lock and merges a stale copy (ADR-0184, work-hierarchy.md, reproducing tests), and I-0175 and I-0176 are closed with reasons.
+- Items: S-0479
+- Seconds: 126
+- Cost: 0.8523 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -6087,4 +6150,14 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-10-21T06:40:16Z
 
 - Call: `flai queue 2>&1`
+- Needs: none
+
+### 2026-10-21T16:01:23Z
+
+- Call: `item_edit E-0024`
+- Needs: none
+
+### 2026-10-21T16:01:56Z
+
+- Call: `flai serve status --json 2>&1`
 - Needs: none

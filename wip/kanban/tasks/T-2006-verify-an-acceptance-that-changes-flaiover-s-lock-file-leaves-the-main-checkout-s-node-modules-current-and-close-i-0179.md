@@ -3,16 +3,37 @@ id: T-2006
 type: task
 nature: remediation
 title: Verify an acceptance that changes flaiover's lock file leaves the main checkout's node_modules current, and close I-0179
-status: backlog
+status: done
 parent: S-0483
 owner: alex
 created: 2026-10-21T12:11:39Z
-updated: 2026-10-21T12:11:39Z
-transitions: []
+updated: 2026-10-21T13:28:14Z
+transitions:
+  - to: ready
+    at: 2026-10-21T13:28:07Z
+    by: agent-S-0483
+  - to: in-progress
+    at: 2026-10-21T13:28:07Z
+    by: agent-S-0483
+  - to: done
+    at: 2026-10-21T13:28:14Z
+    by: agent-S-0483
 stream: S-0483
 tags: [flai]
 touches: [design/issues/I-0179-accepting-a-story-that-adds-a-flaiover-dependency-leaves-the-main-checkout-s-flaiover-node-modules-without-it-so-every-close-out-s-integration-tier-fails-testeverylistedflaiovercomponentcompilesintheharness-until-someone-installs.md, design/issues/summary.md]
 after: [T-2003, T-2004]
+usage:
+  source: log
+  seconds: 7
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 1233
+      cache_read: 221346
+      cache_write: 11157
+      cost: 0.1365
 ---
 # T-2006 Verify an acceptance that changes flaiover's lock file leaves the main checkout's node_modules current, and close I-0179
 

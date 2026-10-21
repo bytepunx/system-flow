@@ -7,7 +7,7 @@ status: backlog
 parent: S-0423
 owner: alex
 created: 2026-10-16T05:48:44Z
-updated: 2026-10-21T13:11:08Z
+updated: 2026-10-21T13:26:52Z
 transitions: []
 stream: S-0423
 tags: [cli]
@@ -17,7 +17,7 @@ after: [T-1781, T-1782, T-2014]
 
 ## Work
 
-With the `formula` and `push` host actions on, run `flai formula run publish` in the main checkout, or let the orchestrator start it under `publish`. Watch `flai serve` work the instance to review. Ask the operator on this story's thread to accept it, or let the orchestrator accept it under `accept_reviews`. Record in this story's Notes:
+With the `formula` and `push` host actions on, start the formula: run `flai formula run publish --ready` in the main checkout, or let the orchestrator start it under `publish` when `release_evaluate` is met. `flai serve` starts the instance's agent, which works the steps as its tasks say, the main-checkout steps from the main checkout, closes each task as its step passes, and moves the instance to review. Ask the operator on this story's thread to accept it, or let the orchestrator accept it under `accept_reviews`. Record in this story's Notes:
 
 - the instance's ID;
 - each step's exit;
@@ -25,7 +25,7 @@ With the `formula` and `push` host actions on, run `flai formula run publish` in
 
 Fix what the run finds in a task of its own before this one is done.
 
-Waits for both the publish step and the orchestrator's rule, which the run exercises.
+Waits for the `push` gate, the orchestrator's rule, and `release_publish`'s refusal, which the run exercises.
 
 ## Done when
 
@@ -33,6 +33,6 @@ The instance is accepted and archived, and this story's Notes record the run.
 
 ## Notes
 
-The run changes no file of this story: the instance's items are written in the main checkout by `flai serve`, so the task touches nothing.
+The run changes no file of this story: the instance is a story of its own, whose agent's commits are its own, so the task touches nothing.
 
-Replanned 2026-10-21 by planner-S-0423 on TH-0471's answer 5: the instance is a story that `flai serve` starts an agent for, which works the steps in its worktree and runs the `main` steps from the main checkout; it is started with `flai formula run publish --ready`, or by the orchestrator under `publish`. The task now also waits for T-2014, so that the orchestrator cannot publish past the formula during the run. The rewrite of the Work to say so is asked on the plan thread.
+Rewritten 2026-10-21 by planner-S-0423 on TH-0471's answer 5, as approved on TH-0583: a story's agent works the instance, in place of `flai serve`.

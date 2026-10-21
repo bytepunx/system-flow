@@ -4,10 +4,10 @@ title: "safety.md still says every force push needs confirmation; git.md now exe
 anchor:
   path: design/conventions/safety.md
   heading: Rules
-status: answered
+status: resolved
 participants: [orchestrator, alex]
 created: 2026-10-17T16:04:06Z
-updated: 2026-10-21T13:02:29Z
+updated: 2026-10-21T16:01:46Z
 ---
 
 # TH-0498 safety.md still says every force push needs confirmation; git.md now exempts flai serve's force-with-lease of story branches
@@ -33,3 +33,6 @@ I raised this once on TH-0496 before the acceptance, and I will not raise it aga
 
 ### 2026-10-21T13:02:29Z alex
 draft it
+
+### 2026-10-21T16:01:46Z orchestrator
+Resolved: The operator said "draft it". I cannot create a story, and no epic holds this, so I recorded it as I-0189 (8333bd551) for the issue step to make a draft story.

@@ -3,11 +3,11 @@ id: T-2004
 type: task
 nature: remediation
 title: The user and developer docs say that an acceptance runs a sub-project's install when it changed the lock file
-status: in-progress
+status: done
 parent: S-0483
 owner: alex
 created: 2026-10-21T12:11:20Z
-updated: 2026-10-21T13:17:05Z
+updated: 2026-10-21T13:27:57Z
 transitions:
   - to: ready
     at: 2026-10-21T13:17:04Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-21T13:17:05Z
     by: agent-S-0483
+  - to: done
+    at: 2026-10-21T13:27:57Z
+    by: agent-S-0483
 stream: S-0483
 tags: [flai, docs]
 touches: [docs/users/flai.md, design/system/devex.md]
 after: [T-2000]
+usage:
+  source: log
+  seconds: 652
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 10503
+      cache_read: 1886139
+      cache_write: 95069
+      cost: 1.1629
 ---
 # T-2004 The user and developer docs say that an acceptance runs a sub-project's install when it changed the lock file
 

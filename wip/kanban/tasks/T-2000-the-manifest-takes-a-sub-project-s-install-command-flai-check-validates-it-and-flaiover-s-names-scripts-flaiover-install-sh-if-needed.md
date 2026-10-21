@@ -24,16 +24,16 @@ touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_te
 after: [T-1998]
 usage:
   source: log
-  seconds: 568
+  seconds: 574
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 62
-      output: 411
-      cache_read: 2265288
-      cache_write: 171546
-      cost: 0.8276
+      input: 47
+      output: 13176
+      cache_read: 2366157
+      cache_write: 119264
+      cost: 1.4588
 ---
 # T-2000 The manifest takes a sub-project's install command, flai check validates it, and flaiover's names scripts/flaiover-install.sh --if-needed
 

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1612
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 130
-      output: 575
-      cache_read: 6870848
-      cache_write: 294970
-      cost: 2.4279
+      input: 92
+      output: 32838
+      cache_read: 6985500
+      cache_write: 240874
+      cost: 3.7058
 ---
 # T-2007 Repo.Save merges an item copy read before a concurrent write with the file on disk, key by key, under one lock, and refuses a key both changed
 

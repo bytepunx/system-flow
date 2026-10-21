@@ -6,7 +6,7 @@ title: Accepting a story that adds a flaiover dependency leaves the main checkou
 status: in-progress
 owner: alex
 created: 2026-10-21T12:00:17Z
-updated: 2026-10-21T13:16:42Z
+updated: 2026-10-21T13:28:19Z
 transitions:
   - to: ready
     at: 2026-10-21T13:04:10Z
@@ -24,20 +24,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 742
-  estimated: true
-  priced_by: estimate
+  seconds: 2161
+  priced_by: harness
   turns:
     - day: 2026-10-21
-      hand_edits: 1
-      work: 33
+      hand_edits: 2
+      work: 48
   models:
     - model: claude-opus-5-5
-      input: 122
-      output: 745
-      cache_read: 6075092
-      cache_write: 327463
-      cost: 2.1743
+      input: 248
+      output: 70021
+      cache_read: 12574280
+      cache_write: 633793
+      cost: 7.7524
   strategic:
     - kind: orchestrator
       seconds: 52
@@ -75,7 +74,7 @@ This story remediates [I-0179](../../../design/issues/I-0179-accepting-a-story-t
 
 ## Acceptance criteria
 - [ ] The cause I-0179 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0179 is closed with `flai issue close I-0179 --reason` saying what fixed it
+- [x] I-0179 is closed with `flai issue close I-0179 --reason` saying what fixed it
 
 ## Tasks
 - T-1998 An ADR decides that flai accept runs a sub-project's install command in the main checkout when the accepted change touched its lock file

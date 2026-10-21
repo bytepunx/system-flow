@@ -7,12 +7,12 @@ status: backlog
 parent: S-0423
 owner: alex
 created: 2026-10-16T05:48:51Z
-updated: 2026-10-21T13:11:19Z
+updated: 2026-10-21T13:27:32Z
 transitions: []
 stream: S-0423
 tags: [cli, template]
 touches: [design/system/strategic-agents.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, docs/operators/index.md, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md]
-after: [T-1782, T-2013]
+after: [T-1782, T-2013, T-2015]
 ---
 # T-1784 The design, the conventions that describe publishing, the operator docs, and the changelog say that publishing is the publish formula
 

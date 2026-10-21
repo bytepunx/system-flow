@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 60
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 14
-      output: 166
-      cache_read: 1632851
-      cache_write: 10884
-      cost: 0.5569
+      input: 21
+      output: 7533
+      cache_read: 1602357
+      cache_write: 55252
+      cost: 0.8501
 ---
 # T-2009 The design and an ADR say how concurrent item writes merge, and I-0175 and I-0176 are closed
 

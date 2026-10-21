@@ -23,9 +23,21 @@ usage:
   models: []
   strategic:
     - kind: planner
-      seconds: 120
+      seconds: 1866
       estimated: true
       models:
+        - model: claude-fable-5-1
+          input: 1090
+          output: 50181
+          cache_read: 10121204
+          cache_write: 346401
+          cost: 11.9783
+        - model: claude-haiku-5-5
+          input: 84
+          output: 28177
+          cache_read: 2955958
+          cache_write: 109701
+          cost: 0.123
         - model: claude-opus-5-5
           input: 51
           output: 5737
@@ -33,15 +45,15 @@ usage:
           cache_write: 294016
           cost: 1.282
     - kind: orchestrator
-      seconds: 6075
+      seconds: 7098
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1115
-          output: 18574
-          cache_read: 268952259
-          cache_write: 304332
-          cost: 61.3821
+          input: 1328
+          output: 21306
+          cache_read: 316965016
+          cache_write: 508731
+          cost: 72.0287
 ---
 # E-0024 Workflows as data: a project defines a strategic role or a repeatable formula of steps in files flai runs, and the built-in roles are expressed the same way, so a new role or a release process needs no flai release
 

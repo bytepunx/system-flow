@@ -7,11 +7,11 @@ status: backlog
 parent: S-0424
 owner: alex
 created: 2026-10-16T05:49:12Z
-updated: 2026-10-16T05:50:22Z
+updated: 2026-10-21T16:09:26Z
 transitions: []
 stream: S-0424
 tags: [cli, template]
-touches: [design/system/strategic-agents.md, design/system/continuous-improvement.md, design/system/project-manifest.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flaiover.md, template/CHANGELOG.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md]
+touches: [design/system/strategic-agents.md, design/system/continuous-improvement.md, design/system/project-manifest.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flaiover.md, docs/users/flai.md, template/CHANGELOG.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md]
 after: [T-1785, T-1786]
 ---
 # T-1789 The design, the manifest's design, the operator and user docs, and the changelog say that import and the analyzer's cadence are formulas

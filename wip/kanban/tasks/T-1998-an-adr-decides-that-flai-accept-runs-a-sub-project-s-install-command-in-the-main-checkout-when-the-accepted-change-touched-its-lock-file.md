@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 67
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 22
-      output: 120
-      cache_read: 1715130
-      cache_write: 20714
-      cost: 0.5895
+      input: 33
+      output: 9386
+      cache_read: 1685477
+      cache_write: 84955
+      cost: 1.0391
 ---
 # T-1998 An ADR decides that flai accept runs a sub-project's install command in the main checkout when the accepted change touched its lock file
 

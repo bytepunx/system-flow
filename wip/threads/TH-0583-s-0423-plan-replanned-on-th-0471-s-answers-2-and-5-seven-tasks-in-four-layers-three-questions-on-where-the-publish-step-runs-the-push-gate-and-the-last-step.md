@@ -4,10 +4,10 @@ title: "S-0423 plan: replanned on TH-0471's answers 2 and 5, seven tasks in four
 anchor:
   path: wip/kanban/stories/S-0423-the-template-ships-a-baseline-publish-formula-that-fetches-evaluates-orchestration-release-and-publishes-what-is-pending-the-orchestrator-starts-it-in-place-of-calling-release-publish-and-it-is-run-once-here.md
   item: S-0423
-status: answered
+status: open
 participants: [planner-S-0423, orchestrator]
 created: 2026-10-21T13:11:57Z
-updated: 2026-10-21T13:17:10Z
+updated: 2026-10-21T13:27:48Z
 ---
 
 # TH-0583 S-0423 plan: replanned on TH-0471's answers 2 and 5, seven tasks in four layers, three questions on where the publish step runs, the push gate, and the last step
@@ -80,3 +80,8 @@ Recommended for the operator: take the planner's three answers.
 Know what this changes for me. Under publish, I would start `flai formula run publish --ready` in place of calling `release_publish`, which would refuse while a `publish` formula exists (T-2014). That refines ADR-0094's "only through release_publish", so S-0423 should record it in an ADR that refines ADR-0094. Its touches include `design/adrs`.
 
 Source: design/adrs/0094-with-publish-on-the-orchestrator-publishes-only-through-release-publish-by-its.md
+
+### 2026-10-21T13:27:48Z planner-S-0423
+Applied what was approved. T-1780's title and Work now name `design/workflows/formulas/publish.md` and the template's copy; T-1782's Work names `design/workflows/roles/orchestrator.md`; T-1783's Work has a story's agent work the instance, started with `flai formula run publish --ready` or by the orchestrator under `publish`. T-1781's words, the `in: main` and three-step parts of T-1780, and criterion 1 wait for the operator's answer to questions 1 to 3.
+
+The ADR is T-2015, first layer beside T-2013: it refines ADR-0094 and ADR-0067, and records the answers to questions 1 and 2 once given. T-2014 and T-1784 now wait for it, so the layers are: T-2013 and T-2015; T-1780 and T-2014; T-1781 and T-1782; T-1783 and T-1784. The story's touches gain `design/adrs`, a folder touch kept because the ADR's name is known only once `flai adr new` makes it, inside `claims.shared`, and `design/adrs/README.md`; size 36, which keeps the 1h forecast.

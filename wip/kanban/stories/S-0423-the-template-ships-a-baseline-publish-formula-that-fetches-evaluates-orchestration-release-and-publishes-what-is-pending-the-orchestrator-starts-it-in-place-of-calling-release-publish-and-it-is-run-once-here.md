@@ -23,6 +23,22 @@ usage:
   seconds: 0
   models: []
   strategic:
+    - kind: planner
+      seconds: 1746
+      estimated: true
+      models:
+        - model: claude-fable-5-1
+          input: 1090
+          output: 50181
+          cache_read: 10121204
+          cache_write: 346401
+          cost: 11.9783
+        - model: claude-haiku-5-5
+          input: 84
+          output: 28177
+          cache_read: 2955958
+          cache_write: 109701
+          cost: 0.123
     - kind: orchestrator
       seconds: 785
       estimated: true
