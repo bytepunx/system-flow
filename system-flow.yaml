@@ -40,6 +40,8 @@ agent:
     effort: high
 planning:
   hour_rate: 150
+  agent:
+    model: claude-fable-5-1
 claims:
   shared:
     - docs/users/flai.md
