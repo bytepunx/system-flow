@@ -469,7 +469,7 @@ func TestAdvanceDoesNothingWithNoVerifiedBatch(t *testing.T) {
 				called = true
 				return nil
 			}
-			d := Deps{Runner: scriptedGit{}, Now: func() time.Time { return t3 }, Verify: func(context.Context, string, string, func(string)) (verify.Report, error) {
+			d := Deps{Runner: scriptedGit{}, Now: func() time.Time { return t3 }, Verify: func(context.Context, string, string, string, func(string)) (verify.Report, error) {
 				called = true
 				return verify.Report{}, nil
 			}}

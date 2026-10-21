@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -60,10 +61,13 @@ func withDefaults(d Deps) Deps {
 // most known to pass and the fewest known to fail, checked out in the batch's
 // worktree at the last one's rebased head, and halves again, until the first
 // story with which the batch fails is found: its commit in the batch, the
-// result there, and a landing of the stories before it. Each step is written
-// to the state as it begins and once it has a result. When ctx ends it stops
-// with ctx's error, leaving the step without a result, and the next run
-// verifies that step again. A batch dropped meanwhile is left as it is.
+// result there, and a landing of the stories before it. The n-th step's
+// tiers write their whole output to step-<n> in the batch's BatchLogs, which
+// its result names, emptied first when the step is verified again. Each
+// step is written to the state as it begins and once it has a result. When
+// ctx ends it stops with ctx's error, leaving the step without a result, and
+// the next run verifies that step again. A batch dropped meanwhile is left
+// as it is.
 func RunBisect(ctx context.Context, d Deps, repo *workitem.Repo) (bool, error) {
 	d = withDefaults(d)
 	if repo.Manifest.Acceptance.PullRequest() {
@@ -87,7 +91,7 @@ func RunBisect(ctx context.Context, d Deps, repo *workitem.Repo) (bool, error) {
 		if err := ctx.Err(); err != nil {
 			return ran, err
 		}
-		mid, commit, dropped, found := 0, "", false, false
+		mid, commit, dropped, found, stepNo := 0, "", false, false, 0
 		if err := b.update(func(_ *State, batch *Batch) {
 			if batch.Dropped != nil {
 				dropped = true
@@ -109,6 +113,7 @@ func RunBisect(ctx context.Context, d Deps, repo *workitem.Repo) (bool, error) {
 			} else {
 				bs.Steps = append(bs.Steps, step)
 			}
+			stepNo = len(bs.Steps)
 			batch.Step = fmt.Sprintf("%s %d of %d", StepBisecting, mid, n)
 		}); err != nil {
 			return ran, err
@@ -123,7 +128,11 @@ func RunBisect(ctx context.Context, d Deps, repo *workitem.Repo) (bool, error) {
 		if err := b.checkout(commit, "--detach", commit); err != nil {
 			return ran, err
 		}
-		rep, verr := d.Verify(ctx, b.path, b.base, func(tier string) {
+		sub := fmt.Sprintf("step-%d", stepNo)
+		if err := os.RemoveAll(b.logs(sub)); err != nil {
+			d.Log.Warn("merge queue bisection step's earlier logs not removed; bisection goes on", "component", "mergequeue", "batch", b.id, "path", b.logs(sub), "err", err.Error())
+		}
+		rep, verr := d.Verify(ctx, b.path, b.base, b.logs(sub), func(tier string) {
 			if ctx.Err() != nil {
 				return
 			}
@@ -135,6 +144,7 @@ func RunBisect(ctx context.Context, d Deps, repo *workitem.Repo) (bool, error) {
 			return ran, err
 		}
 		res := result(rep, verr, d.Now())
+		res.Log = b.logged(sub)
 		if err := b.update(func(_ *State, batch *Batch) {
 			bs := batch.Bisect
 			if bs == nil || len(bs.Steps) == 0 {

@@ -89,13 +89,18 @@ type LeftOut struct {
 }
 
 // Result is a batch's verification: whether it passed, the step or test
-// tier it stopped at when it did not, its findings in short, and when it
-// finished, in UTC.
+// tier it stopped at when it did not, its findings in short, when it
+// finished, in UTC, and the folder its tiers' whole output was kept in.
 type Result struct {
 	Passed     bool      `json:"passed"`
 	StoppedAt  string    `json:"stopped_at,omitempty"`
 	Summary    string    `json:"summary,omitempty"`
 	FinishedAt time.Time `json:"finished_at"`
+	// Log is the folder, relative to the project's root and slash-separated,
+	// holding a <tier>.log of each tier that ran, as BatchLogs names it for
+	// the batch and a step-<n> folder below it for its bisection's n-th step;
+	// "" when nothing was written there.
+	Log string `json:"log,omitempty"`
 }
 
 // Dropped is why a batch was dropped, who dropped it, and when, in UTC.
@@ -144,6 +149,13 @@ const lockWait = 10 * time.Second
 // main checkout's .flai-cache.
 func StatePath(cacheDir string) string {
 	return filepath.Join(cacheDir, "merge-queue", "state.json")
+}
+
+// BatchLogs is the folder, in the cache folder cacheDir, that the tiers of
+// the batch with the ID id write their whole output to, beside the queue's
+// state, so that it outlives the batch's worktree.
+func BatchLogs(cacheDir, id string) string {
+	return filepath.Join(cacheDir, "merge-queue", "batches", id)
 }
 
 // ReadState is the queue's state in cacheDir: empty, with no batch and no

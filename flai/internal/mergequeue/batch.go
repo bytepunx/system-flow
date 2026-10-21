@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -57,24 +58,31 @@ const (
 	summaryMax      = 600
 )
 
+// logsKept is how many batches' folders of tier output, under the queue's
+// merge-queue/batches, are kept, the new batch's among them.
+const logsKept = 20
+
 // Verifier verifies the batch's worktree at dir, built on base, with the
 // tiers flai verify selects for what it changes against base, calling
-// started with each tier's name as it starts. An error with ctx ended is a
-// verification stopped; any other is one that could not run.
-type Verifier func(ctx context.Context, dir, base string, started func(tier string)) (verify.Report, error)
+// started with each tier's name as it starts, and writing each tier's whole
+// output to <tier>.log in logDir, an absolute folder outside the worktree.
+// An error with ctx ended is a verification stopped; any other is one that
+// could not run.
+type Verifier func(ctx context.Context, dir, base, logDir string, started func(tier string)) (verify.Report, error)
 
 // CheckoutVerifier is the Verifier flai serve runs: the test tiers of the
 // manifest in the batch's worktree, read for the flai at version, run with
-// verify.Tiers, git run through r. It leaves no tier out: the tiers marked
-// queue, which flai verify leaves to the batch while the queue can batch,
-// run here whenever the batch's paths select them (ADR-0174).
+// verify.Tiers, git run through r, each logged in logDir. It leaves no tier
+// out: the tiers marked queue, which flai verify leaves to the batch while
+// the queue can batch, run here whenever the batch's paths select them
+// (ADR-0174).
 func CheckoutVerifier(r execx.Runner, version string) Verifier {
-	return func(ctx context.Context, dir, base string, started func(string)) (verify.Report, error) {
+	return func(ctx context.Context, dir, base, logDir string, started func(string)) (verify.Report, error) {
 		tiers, err := verify.CheckoutTiersFor(dir, r, version)
 		if err != nil {
 			return verify.Report{}, err
 		}
-		return verify.Tiers(ctx, verify.TierOptions{Dir: dir, Base: base, Tiers: tiers, Git: r, Started: started})
+		return verify.Tiers(ctx, verify.TierOptions{Dir: dir, Base: base, Tiers: tiers, Git: r, Started: started, RunOptions: verify.RunOptions{LogDir: logDir}})
 	}
 }
 
@@ -122,10 +130,13 @@ type Deps struct {
 // in-progress with the paths as the reason and dequeued, or, when the move
 // fails, left out. With every story taken out the
 // batch is removed and the state left with none. Otherwise the batch is
-// verified once with d.Verify, and its result recorded; a batch dropped
-// meanwhile keeps its result and stays dropped. Each step is written to the
-// state as it begins. When ctx ends it stops with ctx's error and writes no
-// result, so that the next run builds the batch again.
+// verified once with d.Verify, and its result recorded, naming the folder,
+// BatchLogs, its tiers' whole output is kept in; of the batches' folders
+// there, the newest logsKept are kept, by batch ID, which is when each was
+// built. A batch dropped meanwhile keeps its result and stays dropped. Each
+// step is written to the state as it begins. When ctx ends it stops with
+// ctx's error and writes no result, so that the next run builds the batch
+// again.
 func RunBatch(ctx context.Context, d Deps, repo *workitem.Repo) (bool, error) {
 	if d.Runner == nil {
 		d.Runner = execx.System{}
@@ -241,6 +252,10 @@ func (b *build) run(ctx context.Context, prev *Batch, picks []Entry, now time.Ti
 	if err := b.clean(prev); err != nil {
 		return err
 	}
+	if err := pruneLogs(b.repo.CacheDir(), b.id); err != nil {
+		b.d.Log.Warn("merge queue batch logs not pruned; the batch goes on", "component", "mergequeue", "batch", b.id,
+			"path", filepath.Dir(BatchLogs(b.repo.CacheDir(), b.id)), "err", err.Error())
+	}
 	rel := filepath.ToSlash(filepath.Join(".flai-cache", "worktrees", WorktreeName))
 	stories := make([]string, 0, len(picks))
 	for _, e := range picks {
@@ -301,7 +316,7 @@ func (b *build) run(ctx context.Context, prev *Batch, picks []Entry, now time.Ti
 	if err := b.step(StepVerifying); err != nil {
 		return err
 	}
-	rep, verr := b.d.Verify(ctx, b.path, b.base, func(tier string) {
+	rep, verr := b.d.Verify(ctx, b.path, b.base, b.logs(""), func(tier string) {
 		if ctx.Err() != nil {
 			return
 		}
@@ -313,6 +328,7 @@ func (b *build) run(ctx context.Context, prev *Batch, picks []Entry, now time.Ti
 		return err
 	}
 	res := result(rep, verr, b.d.Now())
+	res.Log = b.logged("")
 	if err := b.update(func(_ *State, batch *Batch) {
 		batch.Result, batch.Step = res, StepVerified
 		if !res.Passed {
@@ -600,6 +616,58 @@ func (b *build) clean(prev *Batch) error {
 		if _, err := r.Run(root, "git", "branch", "-D", br); err != nil {
 			return fmt.Errorf("delete the merge queue's last batch branch %s: %w; delete it with git branch -D %s", br, err, br)
 		}
+	}
+	return nil
+}
+
+// logs is the folder, absolute, that the batch's tiers write their output
+// to, BatchLogs, or its folder sub below it, as a bisection step's.
+func (b *build) logs(sub string) string {
+	return filepath.Join(BatchLogs(b.repo.CacheDir(), b.id), sub)
+}
+
+// logged is the folder logs(sub) as a Result names it, relative to the
+// project's root; "" when nothing was written there.
+func (b *build) logged(sub string) string {
+	if entries, err := os.ReadDir(b.logs(sub)); err != nil || len(entries) == 0 {
+		return ""
+	}
+	return filepath.ToSlash(filepath.Join(".flai-cache", "merge-queue", "batches", b.id, sub))
+}
+
+// pruneLogs makes room, under the merge-queue/batches folder of cacheDir,
+// for the folder of the batch with the ID id: it removes that folder, which
+// an earlier build of a batch with the same ID left, and of the other
+// batches' folders all but the newest logsKept-1. A batch's ID is when it
+// was built, so the newest is the last by name. It touches nothing but
+// folders there.
+func pruneLogs(cacheDir, id string) error {
+	own := BatchLogs(cacheDir, id)
+	dir := filepath.Dir(own)
+	if err := os.RemoveAll(own); err != nil {
+		return fmt.Errorf("prune the merge queue's batch logs: remove %s: %w; check that the project's .flai-cache is writable", own, err)
+	}
+	entries, err := os.ReadDir(dir) // sorted by name
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("prune the merge queue's batch logs: read %s: %w; check that the project's .flai-cache is readable", dir, err)
+	}
+	var others []string
+	for _, e := range entries {
+		if e.IsDir() && e.Name() != id {
+			others = append(others, e.Name())
+		}
+	}
+	var errs []error
+	for _, name := range others[:max(0, len(others)-(logsKept-1))] {
+		if err := os.RemoveAll(filepath.Join(dir, name)); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if len(errs) > 0 {
+		return fmt.Errorf("prune the merge queue's batch logs in %s: %w; remove the oldest folders there by hand", dir, errors.Join(errs...))
 	}
 	return nil
 }

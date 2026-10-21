@@ -700,7 +700,7 @@ func TestAPassLandsAndSendsBackThroughTheRealAdvance(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	tiers := func(_ context.Context, dir, _ string, started func(string)) (verify.Report, error) {
+	tiers := func(_ context.Context, dir, _, _ string, started func(string)) (verify.Report, error) {
 		started("unit")
 		if _, err := os.Stat(filepath.Join(dir, "b.txt")); err == nil {
 			return verify.Report{StoppedAt: "unit", Steps: []verify.Step{{Name: "unit", Tier: true, State: verify.Failed}}}, nil

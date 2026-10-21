@@ -62,10 +62,11 @@ func (p *tierProc) Run(_ context.Context, _ string, argv, _ []string, _, stderr 
 }
 
 // verifier verifies a batch with flai verify's tier selection and runner, as
-// CheckoutVerifier does, with batchTiers run by p and real git.
+// CheckoutVerifier does, with batchTiers run by p and real git, each tier
+// logged in the folder it is given.
 func verifier(p *tierProc) Verifier {
-	return func(ctx context.Context, dir, base string, started func(string)) (verify.Report, error) {
-		return verify.Tiers(ctx, verify.TierOptions{Dir: dir, Base: base, Tiers: batchTiers, Git: execx.System{}, Started: started, RunOptions: verify.RunOptions{Proc: p}})
+	return func(ctx context.Context, dir, base, logDir string, started func(string)) (verify.Report, error) {
+		return verify.Tiers(ctx, verify.TierOptions{Dir: dir, Base: base, Tiers: batchTiers, Git: execx.System{}, Started: started, RunOptions: verify.RunOptions{Proc: p, LogDir: logDir}})
 	}
 }
 
@@ -674,6 +675,100 @@ func TestAFailingTierFailsTheBatch(t *testing.T) {
 	}
 }
 
+// S-0457 criterion 1 (I-0172): the tiers of a batch that fails keep their
+// whole output in the batch's own folder beside the queue's state, which its
+// result names, after the batch's worktree is cleaned.
+func TestAFailingBatchKeepsItsTiersOutputAfterItsWorktreeIsCleaned(t *testing.T) {
+	repo, proc := gitProject(t, "")
+	a, _ := readyStory(t, repo, "A", t0.Add(time.Hour), "a.txt", "a\n")
+	enqueue(t, repo, a)
+	proc.fail["unit"] = true
+	d := deps(proc, t1)
+
+	_, st := runBatch(t, d, repo)
+	if st.Batch == nil || st.Batch.Result == nil || st.Batch.Result.Passed {
+		t.Fatalf("batch %+v, want it failed", st.Batch)
+	}
+	want := ".flai-cache/merge-queue/batches/" + st.Batch.ID
+	if got := st.Batch.Result.Log; got != want {
+		t.Errorf("result's log %q, want %q", got, want)
+	}
+	b := &build{d: withDefaults(d), repo: repo, path: filepath.Join(repo.CacheDir(), "worktrees", WorktreeName)}
+	if err := b.clean(st.Batch); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(b.path); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("the batch's worktree is still there: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(repo.MainRoot, filepath.FromSlash(want), "unit.log"))
+	if err != nil || !strings.Contains(string(data), "unit: boom") {
+		t.Errorf("unit's log %q, %v; want the tier's whole output kept", data, err)
+	}
+	if _, err := os.Stat(filepath.Join(BatchLogs(repo.CacheDir(), st.Batch.ID), "lint.log")); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("lint, which did not run, has a log: %v", err)
+	}
+}
+
+// S-0457: a new batch keeps the newest logsKept batches' folders of tier
+// output, its own among them, by batch ID, and removes the older ones; it
+// touches no file there.
+func TestANewBatchKeepsTheNewestBatchesLogs(t *testing.T) {
+	repo, proc := gitProject(t, "")
+	a, _ := readyStory(t, repo, "A", t0.Add(time.Hour), "a.txt", "a\n")
+	enqueue(t, repo, a)
+	var old []string
+	for i := range 25 {
+		id := t1.Add(-time.Duration(25-i) * time.Hour).Format("20060102-150405")
+		old = append(old, id)
+		writeFile(t, BatchLogs(repo.CacheDir(), id), "unit.log", "old\n")
+	}
+	stray := filepath.Join(filepath.Dir(BatchLogs(repo.CacheDir(), "x")), "notes.txt")
+	writeFile(t, filepath.Dir(stray), filepath.Base(stray), "kept\n")
+
+	_, st := runBatch(t, deps(proc, t1), repo)
+	if st.Batch == nil || st.Batch.Result == nil || st.Batch.Result.Log == "" {
+		t.Fatalf("batch %+v, want it verified and logged", st.Batch)
+	}
+	entries, err := os.ReadDir(filepath.Dir(BatchLogs(repo.CacheDir(), st.Batch.ID)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var kept []string
+	for _, e := range entries {
+		if e.IsDir() {
+			kept = append(kept, e.Name())
+		}
+	}
+	if want := append(slices.Clone(old[25-(logsKept-1):]), st.Batch.ID); !slices.Equal(kept, want) {
+		t.Errorf("kept %v, want the newest %d, %v", kept, logsKept, want)
+	}
+	if _, err := os.Stat(stray); err != nil {
+		t.Errorf("a file there was removed: %v", err)
+	}
+}
+
+// S-0457: a folder of batch logs that cannot be pruned is logged at warn and
+// stops no batch.
+func TestABatchWhoseLogsCannotBePrunedGoesOn(t *testing.T) {
+	repo, proc := gitProject(t, "")
+	a, _ := readyStory(t, repo, "A", t0.Add(time.Hour), "a.txt", "a\n")
+	enqueue(t, repo, a)
+	// a file where the batches' folder should be: nothing can be pruned or
+	// logged there
+	writeFile(t, filepath.Dir(StatePath(repo.CacheDir())), "batches", "not a folder\n")
+	var logged bytes.Buffer
+	d := deps(proc, t1)
+	d.Log = slog.New(slog.NewTextHandler(&logged, nil))
+
+	_, st := runBatch(t, d, repo)
+	if st.Batch == nil || st.Batch.Step != StepVerified || st.Batch.Result == nil || st.Batch.Result.Log != "" {
+		t.Fatalf("batch %+v, want it verified with no log", st.Batch)
+	}
+	if !strings.Contains(logged.String(), "level=WARN") || !strings.Contains(logged.String(), "not pruned") {
+		t.Errorf("logged %q, want a warning that the logs were not pruned", logged.String())
+	}
+}
+
 // S-0405 criterion 3: the batch's verification, as flai serve runs it with
 // the manifest of the batch's worktree, runs the tiers marked queue that its
 // paths select, those flai verify leaves to the queue while it can batch, so
@@ -730,11 +825,11 @@ func TestADroppedBatchKeepsItsResultAndIsReplaced(t *testing.T) {
 	enqueue(t, repo, a, b)
 	d := deps(proc, t1)
 	inner := d.Verify
-	d.Verify = func(ctx context.Context, dir, base string, started func(string)) (verify.Report, error) {
+	d.Verify = func(ctx context.Context, dir, base, logDir string, started func(string)) (verify.Report, error) {
 		if _, err := AcceptedByHand(repo.CacheDir(), a, "alex", t1); err != nil {
 			t.Fatal(err)
 		}
-		return inner(ctx, dir, base, started)
+		return inner(ctx, dir, base, logDir, started)
 	}
 
 	_, st := runBatch(t, d, repo)
@@ -809,7 +904,7 @@ func TestRunBatchDoesNothingWhenThereIsNothingToBuild(t *testing.T) {
 			}
 			before, _ := os.ReadFile(StatePath(repo.CacheDir()))
 			called := false
-			d := Deps{Runner: g, Now: func() time.Time { return t1 }, Verify: func(context.Context, string, string, func(string)) (verify.Report, error) {
+			d := Deps{Runner: g, Now: func() time.Time { return t1 }, Verify: func(context.Context, string, string, string, func(string)) (verify.Report, error) {
 				called = true
 				return verify.Report{}, nil
 			}}

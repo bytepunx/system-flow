@@ -21,9 +21,11 @@ import (
 var t2 = t1.Add(time.Hour)
 
 // fileVerifier verifies a worktree by the files in it: its unit tier fails
-// when every one of files is there. It keeps the batch's step in the state
-// as each verification runs; cancel, when set, ends the run's context as one
-// runs, and drop, when set, runs once as one runs.
+// when every one of files is there, and logs the worktree's head to unit.log
+// in the folder it is given, standing for the tier's output. It keeps the
+// batch's step in the state as each verification runs; cancel, when set,
+// ends the run's context as one runs, and drop, when set, runs once as one
+// runs.
 type fileVerifier struct {
 	cacheDir string
 	files    []string
@@ -32,8 +34,13 @@ type fileVerifier struct {
 	steps    []string
 }
 
-func (v *fileVerifier) verify(_ context.Context, dir, _ string, started func(string)) (verify.Report, error) {
+func (v *fileVerifier) verify(_ context.Context, dir, _, logDir string, started func(string)) (verify.Report, error) {
 	started("unit")
+	if head, err := (execx.System{}).Run(dir, "git", "rev-parse", "HEAD"); err == nil {
+		if err := os.MkdirAll(logDir, 0o755); err == nil {
+			_ = os.WriteFile(filepath.Join(logDir, "unit.log"), []byte("unit at "+head), 0o644)
+		}
+	}
 	if st, err := ReadState(v.cacheDir); err == nil && st.Batch != nil {
 		v.steps = append(v.steps, st.Batch.Step)
 	}
@@ -152,6 +159,22 @@ func TestARedBatchIsBisectedToTheFirstStoryWithWhichItFails(t *testing.T) {
 				if wantPassed := i < len(tc.passed) && tc.passed[i]; s.Result == nil || s.Result.Passed != wantPassed {
 					t.Errorf("step %d result %+v, want passed %v", i, s.Result, wantPassed)
 				}
+				// S-0457 criterion 1 (I-0172): each step's output is kept in
+				// its own folder below the batch's, which its result names
+				wantLog := fmt.Sprintf(".flai-cache/merge-queue/batches/%s/step-%d", bt.ID, i+1)
+				if s.Result == nil || s.Result.Log != wantLog {
+					t.Errorf("step %d result %+v, want its log in %s", i, s.Result, wantLog)
+				}
+				if data, err := os.ReadFile(filepath.Join(repo.MainRoot, filepath.FromSlash(wantLog), "unit.log")); err != nil || !strings.Contains(string(data), s.Commit) {
+					t.Errorf("step %d's log %q, %v; want unit's output at %s", i, data, err, s.Commit)
+				}
+			}
+			batchLog := ".flai-cache/merge-queue/batches/" + bt.ID
+			if bt.Result == nil || bt.Result.Log != batchLog {
+				t.Errorf("batch's result %+v, want its log in %s", bt.Result, batchLog)
+			}
+			if data, err := os.ReadFile(filepath.Join(repo.MainRoot, filepath.FromSlash(batchLog), "unit.log")); err != nil || !strings.Contains(string(data), bt.Heads[3].Rebased) {
+				t.Errorf("the batch's log %q, %v; want unit's output at the batch's head", data, err)
 			}
 			want := stories[tc.failing-1]
 			if bs.Failing != want || bs.Commit != bt.Heads[tc.failing-1].Rebased || bs.Good != tc.good || bs.Bad != tc.bad || bs.SentBack {
@@ -285,7 +308,7 @@ func TestRunBisectDoesNothingWhenThereIsNothingToBisect(t *testing.T) {
 			writeState(t, repo.CacheDir(), tc.state)
 			before, _ := os.ReadFile(StatePath(repo.CacheDir()))
 			called := false
-			d := Deps{Runner: scriptedGit{}, Now: func() time.Time { return t2 }, Verify: func(context.Context, string, string, func(string)) (verify.Report, error) {
+			d := Deps{Runner: scriptedGit{}, Now: func() time.Time { return t2 }, Verify: func(context.Context, string, string, string, func(string)) (verify.Report, error) {
 				called = true
 				return verify.Report{}, nil
 			}}
