@@ -3,11 +3,11 @@ id: T-2000
 type: task
 nature: remediation
 title: The manifest takes a sub-project's install command, flai check validates it, and flaiover's names scripts/flaiover-install.sh --if-needed
-status: in-progress
+status: done
 parent: S-0483
 owner: alex
 created: 2026-10-21T12:10:20Z
-updated: 2026-10-21T13:07:12Z
+updated: 2026-10-21T13:16:42Z
 transitions:
   - to: ready
     at: 2026-10-21T13:07:06Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-21T13:07:08Z
     by: agent-S-0483
+  - to: done
+    at: 2026-10-21T13:16:42Z
+    by: agent-S-0483
 stream: S-0483
 tags: [flai]
-touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, docs/operators/settings.md, system-flow.yaml, flai/internal/check/check.go, flai/internal/check/check_test.go, flai/internal/manifest/settings.go]
+touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, docs/operators/settings.md, system-flow.yaml, flai/internal/check/check.go, flai/internal/check/check_test.go, flai/internal/manifest/settings.go, flai/internal/check/install_test.go, flai/internal/manifest/shared.go]
 after: [T-1998]
+usage:
+  source: log
+  seconds: 568
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 62
+      output: 411
+      cache_read: 2265288
+      cache_write: 171546
+      cost: 0.8276
 ---
 # T-2000 The manifest takes a sub-project's install command, flai check validates it, and flaiover's names scripts/flaiover-install.sh --if-needed
 

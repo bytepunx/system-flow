@@ -7,12 +7,12 @@ status: backlog
 parent: S-0423
 owner: alex
 created: 2026-10-16T05:48:51Z
-updated: 2026-10-16T05:50:22Z
+updated: 2026-10-21T13:11:19Z
 transitions: []
 stream: S-0423
 tags: [cli, template]
 touches: [design/system/strategic-agents.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, docs/operators/index.md, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md]
-after: [T-1782]
+after: [T-1782, T-2013]
 ---
 # T-1784 The design, the conventions that describe publishing, the operator docs, and the changelog say that publishing is the publish formula
 
@@ -29,3 +29,5 @@ Waits for the orchestrator's rule. Runs beside the run, since they share no path
 The markdown lint and `flai check --strict` pass.
 
 ## Notes
+
+Replanned 2026-10-21 by planner-S-0423: it also waits for T-2013, so that the formula section of `design/system/strategic-agents.md` and `docs/users/flai.md` can say what a step's `in: main` does, and `design/system/flai-cli.md` and `docs/users/flai.md` carry `flai release --evaluate --require-met` and the refusal of `--pending` while `push` is off.

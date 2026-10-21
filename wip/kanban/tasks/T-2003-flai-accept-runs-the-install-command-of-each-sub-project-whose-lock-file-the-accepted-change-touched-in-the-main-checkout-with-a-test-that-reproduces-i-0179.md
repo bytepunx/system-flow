@@ -3,12 +3,18 @@ id: T-2003
 type: task
 nature: remediation
 title: flai accept runs the install command of each sub-project whose lock file the accepted change touched, in the main checkout, with a test that reproduces I-0179
-status: backlog
+status: in-progress
 parent: S-0483
 owner: alex
 created: 2026-10-21T12:10:56Z
-updated: 2026-10-21T12:10:56Z
-transitions: []
+updated: 2026-10-21T13:17:04Z
+transitions:
+  - to: ready
+    at: 2026-10-21T13:17:03Z
+    by: agent-S-0483
+  - to: in-progress
+    at: 2026-10-21T13:17:04Z
+    by: agent-S-0483
 stream: S-0483
 tags: [flai]
 touches: [flai/cmd/accept.go, flai/cmd/accept_install.go, flai/cmd/accept_install_test.go]

@@ -7,11 +7,12 @@ status: backlog
 parent: S-0423
 owner: alex
 created: 2026-10-16T05:48:17Z
-updated: 2026-10-16T05:48:29Z
+updated: 2026-10-21T13:10:40Z
 transitions: []
 stream: S-0423
 tags: [template]
-touches: [design/formulas/publish.md, template/root/design/formulas/publish.md, template/template.yaml, flai/cmd/release.go, flai/cmd/release_evaluate_test.go, docs/users/flai-reference.md]
+touches: [design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, template/template.yaml, flai/cmd/release.go, flai/cmd/release_evaluate_test.go, docs/users/flai-reference.md]
+after: [T-2013]
 ---
 # T-1780 design/formulas/publish.md, in the template and here, fetches, evaluates the release policy, publishes what is pending, and records the versions and tags
 
@@ -37,3 +38,5 @@ First layer.
 ## Notes
 
 The orchestrator starts the formula only when `release_evaluate` is met. Step 2 therefore stops an instance only when the policy changed between the two, and that stop is a failure with a thread, as any step's is.
+
+Replanned 2026-10-21 by planner-S-0423 on TH-0471: the formula lives at `design/workflows/formulas/publish.md` (answer 2), and its instance is worked by a story's agent in its worktree (answer 5), so steps 1 to 3 carry `in: main` from T-2013, which this task now waits for. The rewrite of the title and the Work to say so, and whether step 4 stays, is asked on the plan thread.

@@ -6,7 +6,7 @@ title: Accepting a story that adds a flaiover dependency leaves the main checkou
 status: in-progress
 owner: alex
 created: 2026-10-21T12:00:17Z
-updated: 2026-10-21T13:06:56Z
+updated: 2026-10-21T13:16:42Z
 transitions:
   - to: ready
     at: 2026-10-21T13:04:10Z
@@ -16,7 +16,7 @@ transitions:
     by: agent-S-0483
 tags: [flai, cli]
 topics: [release, testing]
-touches: [design/adrs/README.md, design/system/project-manifest.md, design/system/flai-cli.md, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, system-flow.yaml, docs/operators/settings.md, flai/cmd/accept.go, flai/cmd/accept_install.go, flai/cmd/accept_install_test.go, docs/users/flai.md, design/system/devex.md, design/issues/I-0179-accepting-a-story-that-adds-a-flaiover-dependency-leaves-the-main-checkout-s-flaiover-node-modules-without-it-so-every-close-out-s-integration-tier-fails-testeverylistedflaiovercomponentcompilesintheharness-until-someone-installs.md, design/issues/summary.md, design/adrs/0185-flai-accept-runs-a-sub-project-s-install-command-in-the-main-checkout-when-the.md]
+touches: [design/adrs/README.md, design/system/project-manifest.md, design/system/flai-cli.md, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, system-flow.yaml, docs/operators/settings.md, flai/cmd/accept.go, flai/cmd/accept_install.go, flai/cmd/accept_install_test.go, docs/users/flai.md, design/system/devex.md, design/issues/I-0179-accepting-a-story-that-adds-a-flaiover-dependency-leaves-the-main-checkout-s-flaiover-node-modules-without-it-so-every-close-out-s-integration-tier-fails-testeverylistedflaiovercomponentcompilesintheharness-until-someone-installs.md, design/issues/summary.md, design/adrs/0185-flai-accept-runs-a-sub-project-s-install-command-in-the-main-checkout-when-the.md, flai/internal/check/check.go, flai/internal/check/install_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/shared.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,20 +24,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 156
+  seconds: 742
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-10-21
       hand_edits: 1
-      work: 27
+      work: 33
   models:
     - model: claude-opus-5-5
-      input: 56
-      output: 302
-      cache_read: 3475641
-      cache_write: 151666
-      cost: 1.2318
+      input: 122
+      output: 745
+      cache_read: 6075092
+      cache_write: 327463
+      cost: 2.1743
   strategic:
     - kind: orchestrator
       seconds: 52

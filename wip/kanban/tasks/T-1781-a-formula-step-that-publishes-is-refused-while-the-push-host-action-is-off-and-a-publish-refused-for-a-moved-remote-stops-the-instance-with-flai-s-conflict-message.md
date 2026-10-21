@@ -7,11 +7,11 @@ status: backlog
 parent: S-0423
 owner: alex
 created: 2026-10-16T05:48:33Z
-updated: 2026-10-16T05:48:33Z
+updated: 2026-10-21T13:10:50Z
 transitions: []
 stream: S-0423
 tags: [cli]
-touches: [flai/internal/serve/formula.go, flai/internal/serve/formula_publish_test.go]
+touches: [flai/cmd/release.go, flai/cmd/release_push_action_test.go]
 after: [T-1780]
 ---
 # T-1781 A formula step that publishes is refused while the push host action is off, and a publish refused for a moved remote stops the instance with flai's conflict message
@@ -31,3 +31,5 @@ Waits for the formula file, whose steps it runs in its test.
 `go test ./internal/serve/...` passes, with a test for each case.
 
 ## Notes
+
+Replanned 2026-10-21 by planner-S-0423 on TH-0471's answer 5: there is no serve-side step runner, so `flai/internal/serve/formula.go` is gone from the touches. The refusal moves into `flai release --pending` itself, for an agent `flai serve` started while the `push` host action is off, read from the host's config as `cmd/verify.go`'s `hostActionOn` reads it; the `conflict:` exit 3 is already flai's, and S-0422's failure path carries it to the task and a thread. The rewrite of the Work to say so is asked on the plan thread. It waits for T-1780 because both change `flai/cmd/release.go`.

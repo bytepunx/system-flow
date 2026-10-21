@@ -23,7 +23,7 @@ tags: [flai]
 touches: [design/adrs/README.md, design/system/project-manifest.md, design/system/flai-cli.md, design/adrs/0185-flai-accept-runs-a-sub-project-s-install-command-in-the-main-checkout-when-the.md]
 usage:
   source: log
-  seconds: 61
+  seconds: 67
   estimated: true
   priced_by: estimate
   models:

@@ -3,10 +3,10 @@ id: S-0473
 type: story
 nature: remediation
 title: TestASettledReplyStartsTheAgentWaitingOnItOnce in flai/internal/serve fails now and then in the close-out's integration tier on a branch that does not touch serve
-status: review
+status: done
 owner: alex
 created: 2026-10-21T11:58:53Z
-updated: 2026-10-21T13:05:28Z
+updated: 2026-10-21T13:25:32Z
 transitions:
   - to: ready
     at: 2026-10-21T12:05:25Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-21T13:05:28Z
     by: agent-S-0473
+  - to: done
+    at: 2026-10-21T13:25:32Z
+    by: orchestrator
 tags: []
 touches: [flai/internal/serve/agents_test.go, design/issues/I-0158-testasettledreplystartstheagentwaitingonitonce-in-flai-internal-serve-fails-now-and-then-in-the-close-out-s-integration-tier-on-a-branch-that-does-not-touch-serve.md, design/issues/summary.md, design/issues/I-0183-flai-check-finds-item-chronology-outside-the-story-at-close-out.md]
 agent:
@@ -114,3 +117,14 @@ Figures:
 
 - Forecast 45m, up from `flai forecast`'s 11m (131 s per size unit × size 5). The close-out's integration tier alone took 6m19s in S-0463's instance, and the fix runs the test 200 times. Delivery is 45m after the story started at 12:06Z.
 - Cost of delay value 112.50 USD a week, as `flai cod` gives it: 45m lost per 168h cycle at 150 USD an hour. It stands on the operator's inputs. The instances suggest they understate: 5 occurrences in 4.3 days is about 8 a week, and the last one cost a story its place in the merge queue too. That is raised on the plan's thread, not changed here.
+
+### Accepted by the orchestrator
+
+- Verified: 745cd45a7bed131a6ebcdfb27ef9dc13f9e05f9c
+- Batch: 20261021-131344
+- Enqueued verified: 562d5e44b058d5eb07722a05e5f5b8bd0c1c382f
+- At: 2026-10-21T13:25:32Z
+
+Verdict: pass. Both criteria are met, no production code changed, and every changed file is within the story's touches.
+- 1: flai/internal/serve/agents_test.go
+- 2: design/issues/I-0158-testasettledreplystartstheagentwaitingonitonce-in-flai-internal-serve-fails-now-and-then-in-the-close-out-s-integration-tier-on-a-branch-that-does-not-touch-serve.md, design/issues/summary.md

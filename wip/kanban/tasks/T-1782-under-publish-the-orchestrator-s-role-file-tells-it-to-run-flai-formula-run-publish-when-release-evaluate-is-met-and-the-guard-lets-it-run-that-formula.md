@@ -7,11 +7,11 @@ status: backlog
 parent: S-0423
 owner: alex
 created: 2026-10-16T05:48:37Z
-updated: 2026-10-16T05:48:37Z
+updated: 2026-10-21T13:10:59Z
 transitions: []
 stream: S-0423
 tags: [cli, template]
-touches: [design/roles/orchestrator.md, template/root/design/roles/orchestrator.md, flai/cmd/orchestrate_permissions_test.go]
+touches: [design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/cmd/orchestrate_permissions_test.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/cmd/formula.go, flai/cmd/formula_test.go]
 after: [T-1780]
 ---
 # T-1782 Under publish, the orchestrator's role file tells it to run flai formula run publish when release_evaluate is met, and the guard lets it run that formula
@@ -33,3 +33,5 @@ Waits for the formula file. Runs beside the publish step task, since they share 
 `go test ./cmd/...` passes. The existing orchestrator permission cases are unchanged.
 
 ## Notes
+
+Replanned 2026-10-21 by planner-S-0423 on TH-0471's answer 2: the role file is `design/workflows/roles/orchestrator.md`, in both copies, as S-0414 writes it; S-0419 reads the orchestrator's prompt from it, so no `.claude/agents` file changes. The guard's role path (S-0416, S-0422's T-2012) allows `formula run <name>` for the formulas a role file names, so `flai/internal/guard/roles.go` is touched in case the `publish` permission on that line needs code. flai holds the write itself too: `flai formula run` under `FLAI_ROLE=orchestrate` checks `OrchestratorPermits(PermitPublish)` and that the formula is `publish` in `flai/cmd/formula.go`. The orchestrator starts the instance with `flai formula run publish --ready` (T-2012).

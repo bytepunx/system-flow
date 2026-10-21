@@ -3,12 +3,18 @@ id: T-2004
 type: task
 nature: remediation
 title: The user and developer docs say that an acceptance runs a sub-project's install when it changed the lock file
-status: backlog
+status: in-progress
 parent: S-0483
 owner: alex
 created: 2026-10-21T12:11:20Z
-updated: 2026-10-21T12:11:20Z
-transitions: []
+updated: 2026-10-21T13:17:05Z
+transitions:
+  - to: ready
+    at: 2026-10-21T13:17:04Z
+    by: agent-S-0483
+  - to: in-progress
+    at: 2026-10-21T13:17:05Z
+    by: agent-S-0483
 stream: S-0483
 tags: [flai, docs]
 touches: [docs/users/flai.md, design/system/devex.md]

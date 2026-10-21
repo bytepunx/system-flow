@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1191.4998
-accrued_seconds: 1047949
-tasks_completed: 846
-last_run: 2026-10-21T13:07:37Z
+accrued_cost: 1200.0637
+accrued_seconds: 1048531
+tasks_completed: 850
+last_run: 2026-10-21T13:17:19Z
 ---
 
 # Orchestrator activity
@@ -5933,6 +5933,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0471, S-0461, E-0027
 - Seconds: 78
 - Cost: 0.9636 USD, estimated
+
+### 2026-10-21T13:07:57Z
+
+- Summary: Published under publish, policy judgement. Pending: 1 story, unvalued (0 USD/week), none held by whole_epics. Released flaiover 0.54.2 (tag flaiover/v0.54.2, patch, from 0.54.1) with S-0461, and pushed. That completes E-0027, the main layout rework.
+- Items: S-0461, E-0027
+- Seconds: 20
+- Cost: 0.1401 USD, estimated
+
+### 2026-10-21T13:17:04Z
+
+- Summary: Answered TH-0583, citing design/conventions/strategic-agents.md § As the planner
+- Items: S-0423
+- Seconds: 547
+- Cost: 8.4238 USD, estimated
+
+### 2026-10-21T13:17:10Z
+
+- Summary: Recommended an answer on TH-0583, citing design/adrs/0094-with-publish-on-the-orchestrator-publishes-only-through-release-publish-by-its.md
+- Items: S-0423
+- Seconds: 6
+- Cost: 0.0000 USD
+
+### 2026-10-21T13:17:19Z
+
+- Summary: Under plan_backlog_stories, on planner-S-0423's TH-0583 I approved the replan on TH-0471 answers 2 and 5 (seven tasks in four layers, 29 touches, 1h) and the rewrites that only apply those answers. I recommended the operator take the planner's three design answers: the in: main step field, the push gate inside flai release --pending for served agents, and a three-step publish formula. I noted that the orchestrator would then publish through the formula, which refines ADR-0094 and calls for an ADR in S-0423. Thread left open.
+- Items: S-0423
+- Seconds: 9
+- Cost: 0.0000 USD
 
 ## Refusals
 
