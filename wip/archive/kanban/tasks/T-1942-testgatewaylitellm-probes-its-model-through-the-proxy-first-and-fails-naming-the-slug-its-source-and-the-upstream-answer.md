@@ -21,6 +21,18 @@ transitions:
 stream: S-0455
 tags: [flai, serve, tests]
 touches: [flai/internal/serve/gateway_test.go]
+usage:
+  source: log
+  seconds: 286
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 16
+      output: 5846
+      cache_read: 1278604
+      cache_write: 46862
+      cost: 0.7166
 ---
 # T-1942 TestGatewayLiteLLM probes its model through the proxy first and fails naming the slug, its source, and the upstream answer
 

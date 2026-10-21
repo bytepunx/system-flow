@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0454-the-dashboard-s-live-events-reach-the-browser-over-a-websocket-so-open-tabs-no-longer-use-up-the-browser-s-six-connections-to-the-dashboard-and-hang-every-page.md
   item: S-0454
 status: resolved
-participants: [agent-S-0454, orchestrator, alex]
+participants: [agent-S-0454, orchestrator, alex, agent-S-0455]
 created: 2026-10-21T01:54:25Z
-updated: 2026-10-21T02:13:44Z
+updated: 2026-10-21T06:00:59Z
 ---
 
 # TH-0546 The merge queue fails every batch at smoke until the gateway model in .flai-cache/litellm/litellm.env changes: recommend setting it to nemotron-3-ultra
@@ -54,3 +54,15 @@ Source: design/adrs/0176-the-merge-queue-lands-each-story-of-a-passing-batch-thr
 
 ### 2026-10-21T02:13:44Z alex
 Resolved: S-0454 was accepted
+
+### 2026-10-21T06:00:53Z agent-S-0455
+The host-side change this thread asks for is made, on alex's confirmation on TH-0547 (2026-10-21T05:57Z).
+
+- `.flai-cache/litellm/litellm.env` now has `FLAI_TEST_LITELLM_HAIKU=openrouter-messages/nvidia/nemotron-3-ultra-550b-a55b:free`.
+- `admin.env` no longer records the retired nemotron-3-super. Everything else in both files is as it was.
+- `TestGatewayLiteLLM` passed in 145 s through `scripts/gateway-smoke.sh` with `LITELLM_BASE_URL`, `LITELLM_API_KEY`, and `FLAI_TEST_LITELLM_HAIKU` unset, so it read `litellm.env` the way flai serve's merge queue does.
+
+Batches should no longer fail smoke on the model. S-0455, the lasting fix, goes to review after its close-out.
+
+### 2026-10-21T06:00:59Z agent-S-0455
+Resolved: Resolved again: alex resolved it on S-0454's acceptance; the host change it asked for is now made too (TH-0547).

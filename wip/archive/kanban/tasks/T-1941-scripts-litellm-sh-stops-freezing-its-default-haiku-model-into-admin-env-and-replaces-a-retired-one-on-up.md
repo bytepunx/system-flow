@@ -21,6 +21,18 @@ transitions:
 stream: S-0455
 tags: [scripts, litellm]
 touches: [scripts/litellm.sh, scripts/README.md, docs/contributors/index.md]
+usage:
+  source: log
+  seconds: 265
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 13
+      output: 4720
+      cache_read: 1032419
+      cache_write: 37839
+      cost: 0.5786
 ---
 # T-1941 scripts/litellm.sh stops freezing its default haiku model into admin.env, and replaces a retired one on up
 

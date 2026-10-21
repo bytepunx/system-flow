@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 19
-      output: 6590
-      cache_read: 1069355
-      cache_write: 46171
-      cost: 0.6065
+      input: 17
+      output: 5412
+      cache_read: 1066156
+      cache_write: 44842
+      cost: 0.5966
 ---
 # T-1935 Document in the user docs and the generated reference what inbox and wait_for_work report as awaiting you, operator, and other
 

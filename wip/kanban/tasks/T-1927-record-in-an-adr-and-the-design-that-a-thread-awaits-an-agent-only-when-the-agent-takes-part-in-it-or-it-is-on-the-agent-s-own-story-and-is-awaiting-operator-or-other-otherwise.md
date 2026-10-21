@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 22
-      output: 7622
-      cache_read: 1236810
-      cache_write: 53401
-      cost: 0.7015
+      input: 19
+      output: 6259
+      cache_read: 1233110
+      cache_write: 51863
+      cost: 0.69
 ---
 # T-1927 Record in an ADR and the design that a thread awaits an agent only when the agent takes part in it or it is on the agent's own story, and is awaiting operator or other otherwise
 

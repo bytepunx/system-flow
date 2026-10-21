@@ -3,16 +3,37 @@ id: T-1943
 type: task
 nature: remediation
 title: The host's LiteLLM files take the current model, the gateway check passes at smoke, and I-0171 is closed
-status: backlog
+status: done
 parent: S-0455
 owner: alex
 created: 2026-10-21T00:40:05Z
-updated: 2026-10-21T00:40:05Z
-transitions: []
+updated: 2026-10-21T06:00:29Z
+transitions:
+  - to: ready
+    at: 2026-10-21T02:19:01Z
+    by: agent-S-0455
+  - to: in-progress
+    at: 2026-10-21T02:19:02Z
+    by: agent-S-0455
+  - to: done
+    at: 2026-10-21T06:00:29Z
+    by: agent-S-0455
 stream: S-0455
 tags: [litellm, issues]
 touches: [design/system/agent-adapters.md, design/issues/I-0171-the-litellm-gateway-smoke-check-fails-because-claude-code-2-1-296-refuses-the-default-haiku-model-name-as-unrecognized-model.md, design/issues/summary.md]
 after: [T-1941, T-1942]
+usage:
+  source: log
+  seconds: 229
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 26
+      output: 9517
+      cache_read: 2081542
+      cache_write: 76291
+      cost: 1.1666
 ---
 # T-1943 The host's LiteLLM files take the current model, the gateway check passes at smoke, and I-0171 is closed
 

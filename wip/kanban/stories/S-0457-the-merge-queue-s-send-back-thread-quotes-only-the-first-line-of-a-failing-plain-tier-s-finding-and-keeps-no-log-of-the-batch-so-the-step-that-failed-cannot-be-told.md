@@ -3,10 +3,10 @@ id: S-0457
 type: story
 nature: improvement
 title: The merge queue's send-back thread quotes only the first line of a failing plain tier's finding and keeps no log of the batch, so the step that failed cannot be told
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-21T02:13:46Z
-updated: 2026-10-21T07:06:15Z
+updated: 2026-10-21T07:06:59Z
 transitions:
   - to: ready
     at: 2026-10-21T06:12:25Z
@@ -20,6 +20,9 @@ transitions:
   - to: in-progress
     at: 2026-10-21T07:02:37Z
     by: alex
+  - to: review
+    at: 2026-10-21T07:06:59Z
+    by: alex
 tags: [flai]
 topics: [cli]
 touches: [flai/internal/verify/text.go, flai/internal/verify/text_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/verify/run.go, flai/internal/verify/run_test.go, flai/internal/verify/story.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/state.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/bisect_test.go, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, docs/operators/runbooks/backup.md, design/issues/I-0172-the-merge-queue-s-send-back-thread-quotes-only-the-first-line-of-a-failing-plain-tier-s-finding-and-keeps-no-log-of-the-batch-so-the-step-that-failed-cannot-be-told.md, design/issues/summary.md, flai/internal/verify/verify.go, flai/internal/mergequeue/land_test.go, flai/internal/serve/mergequeue_test.go]
@@ -30,21 +33,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2662
-  estimated: true
-  priced_by: estimate
+  seconds: 3339
+  priced_by: harness
   turns:
     - day: 2026-10-21
       ceremony: 1
-      hand_edits: 1
-      work: 35
+      hand_edits: 2
+      work: 41
   models:
     - model: claude-opus-5-5
-      input: 262
-      output: 1631
-      cache_read: 10722082
-      cache_write: 588843
-      cost: 4.1801
+      input: 296
+      output: 98926
+      cache_read: 12890249
+      cache_write: 649893
+      cost: 8.3841
   strategic:
     - kind: orchestrator
       seconds: 470

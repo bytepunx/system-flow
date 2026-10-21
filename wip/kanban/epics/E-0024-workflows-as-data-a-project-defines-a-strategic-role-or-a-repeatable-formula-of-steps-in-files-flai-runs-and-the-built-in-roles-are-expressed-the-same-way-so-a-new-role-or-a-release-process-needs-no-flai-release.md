@@ -3,13 +3,16 @@ id: E-0024
 type: epic
 nature: feature
 title: "Workflows as data: a project defines a strategic role or a repeatable formula of steps in files flai runs, and the built-in roles are expressed the same way, so a new role or a release process needs no flai release"
-status: ready
+status: backlog
 owner: alex
 created: 2026-10-16T04:28:02Z
-updated: 2026-10-20T19:01:17Z
+updated: 2026-10-21T05:57:42Z
 transitions:
   - to: ready
     at: 2026-10-20T19:01:17Z
+    by: alex
+  - to: backlog
+    at: 2026-10-21T05:57:42Z
     by: alex
 tags: [cli, dashboard, template]
 topics: [cli, orchestration, planning, template, conventions]

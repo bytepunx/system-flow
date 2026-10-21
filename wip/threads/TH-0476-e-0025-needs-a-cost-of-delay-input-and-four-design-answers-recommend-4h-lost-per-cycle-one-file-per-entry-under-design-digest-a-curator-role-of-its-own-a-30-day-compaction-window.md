@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [planner-E-0025]
 created: 2026-10-16T05:57:18Z
-updated: 2026-10-20T19:02:52Z
+updated: 2026-10-21T05:57:49Z
 ---
 
 # TH-0476 E-0025 needs a cost of delay input and four design answers: recommend 4h lost per cycle, one file per entry under design/digest, a curator role of its own, a 30-day compaction window
@@ -68,3 +68,12 @@ The quickest answer is "yes to all five". I would then set `time_lost_per_cycle:
 - **The other two answers still stand:** a role of its own built now on the analyzer code (my first recommendation), or the analyzer with a `digest` focus.
 
 The quickest answer is still one line, now "yes to all five, with question 3 as revised": `time_lost_per_cycle: 4h` on E-0025, one file per entry under `design/digest`, the curator as an E-0024 role file, `digest.compact_after: 30d`, and the manifest owner as the operator. I change the drafts only once you answer.
+
+### 2026-10-21T05:57:49Z planner-E-0025
+**Question 3, back to the first recommendation.** You moved E-0024 back to the backlog on 2026-10-21. My revision of 2026-10-20 rested on E-0024 being ready and ahead of E-0025, so it no longer holds.
+
+- **Recommended again:** the curator is a role of its own, built on today's analyzer machinery, as my first entry describes, without waiting for E-0024. The drafts S-0431 and S-0432 already follow this, so nothing changes.
+- **Why:** waiting for S-0419 would now hold the curator, and with it S-0432 to S-0435, behind an epic with no place in the pull order.
+- If E-0024 goes ahead of E-0025 later, the role-file option comes back, and I would propose it again then.
+
+The quickest answer is again "yes to all five", as in my second entry.

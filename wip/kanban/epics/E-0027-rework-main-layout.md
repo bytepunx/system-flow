@@ -3,11 +3,14 @@ id: E-0027
 type: epic
 nature: feature
 title: Rework main layout
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-21T06:54:07Z
-updated: 2026-10-21T06:54:07Z
-transitions: []
+updated: 2026-10-21T07:01:02Z
+transitions:
+  - to: ready
+    at: 2026-10-21T06:54:13Z
+    by: alex
 tags: []
 ---
 # E-0027 Rework main layout
@@ -69,5 +72,10 @@ When in especially constrained widths, each lane's heading should remain visible
 When a wider layout is possible, do not stack lanes vertically! Instead, allow the user to horizontally scroll between lanes.
 
 ## Stories
+- S-0458 The dashboard's pages are reached from a left nav rail of five collapsible groups, and the top bar holds only the name, the project picker, the theme, and the status pills
+- S-0459 The settings page becomes five Configuration pages, Features, Agents, File System, Projects, and Harnesses, each reached from the rail
+- S-0460 A page may carry a left sidebar of its sections, and the item page shows one section at a time from it instead of one long scroll
+- S-0461 The review, charts, and documents pages navigate within themselves from the left sidebar
+- S-0462 The board's lanes sit side by side and scroll sideways on a wide screen, and collapse to their headings, toggled by a tap, on a narrow one
 
 ## Notes

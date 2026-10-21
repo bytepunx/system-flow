@@ -6,7 +6,7 @@ title: A thread awaits an agent only when the agent takes part in it or it is on
 status: in-progress
 owner: alex
 created: 2026-10-20T21:49:07Z
-updated: 2026-10-21T01:25:15Z
+updated: 2026-10-21T07:17:03Z
 transitions:
   - to: ready
     at: 2026-10-21T00:36:24Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-21T00:37:12Z
     by: agent-S-0453
+  - to: review
+    at: 2026-10-21T06:07:24Z
+    by: agent-S-0453
+  - to: in-progress
+    at: 2026-10-21T07:17:03Z
+    by: flai
 tags: [flai, template]
 topics: [mcp, inbox, orchestration]
 touches: [design/adrs/README.md, design/system/agent-narrative.md, design/system/flai-cli.md, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/work.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/work_test.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/orchestrator_threads_test.go, flai/internal/mcpserver/story_start_test.go, flai/internal/mcpserver/task_test.go, flai/internal/storystart/start_test.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/cmd/story_start_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/strategic-agents.md, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, design/adrs/0181-a-thread-awaits-an-agent-only-when-the-agent-takes-part-in-it-or-it-is-on-the.md]
@@ -25,20 +31,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3527
+  seconds: 4700
   priced_by: harness
   turns:
     - day: 2026-10-21
-      ceremony: 1
+      ceremony: 3
       hand_edits: 2
-      work: 78
+      work: 102
   models:
     - model: claude-opus-5-5
-      input: 414
-      output: 145525
-      cache_read: 23614381
-      cache_write: 1019586
-      cost: 13.3938
+      input: 474
+      output: 155106
+      cache_read: 30558067
+      cache_write: 1285243
+      cost: 17.0997
   strategic:
     - kind: planner
       seconds: 709
@@ -57,15 +63,21 @@ usage:
           cache_write: 383777
           cost: 11.1721
     - kind: orchestrator
-      seconds: 4288
+      seconds: 4459
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 232
-          output: 4683
-          cache_read: 79672409
-          cache_write: 46435
-          cost: 19.985
+          input: 242
+          output: 4843
+          cache_read: 84115783
+          cache_write: 52022
+          cost: 21.1003
+        - model: claude-sonnet-5-5
+          input: 20
+          output: 101
+          cache_read: 480096
+          cache_write: 81528
+          cost: 0.4596
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m
@@ -141,3 +153,4 @@ Left out of the co-change list: `flai/internal/serve/agents.go`, whose `awaitsAn
 Forecast 51m, delivery 2026-10-21T14:04:00Z, as `flai forecast` gives them after the touches were set (9m before, at size 4 with no touches). Kept: the median comes from 30 done large remediation stories on the same model, and size 34 counts the six tasks' 30 files. S-0450, of the same shape, was forecast 37m at size 25.
 
 Cost of delay 50 USD a week, as `flai cod` gives it from 20m lost per 168h cycle at 150 USD an hour. The input was missing; TH-0536 asked for it, and the orchestrator set the recommended 20m. Kept: S-0450 has 12m for the part of this cause it fixes, and what is left reaches every agent's standalone `inbox` and `wait_for_work`, more sessions than I-0167 counted.
+- 2026-10-21T07:17:03Z: moved to in-progress: merge queue batch 20261021-071126 fails with S-0453 at 28b5c7d30c60: smoke failed: smoke: smoke: template render and check
