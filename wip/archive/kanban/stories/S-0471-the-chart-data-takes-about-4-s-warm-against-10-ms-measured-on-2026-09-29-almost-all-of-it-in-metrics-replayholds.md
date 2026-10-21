@@ -3,10 +3,10 @@ id: S-0471
 type: story
 nature: remediation
 title: The chart data takes about 4 s warm, against 10 ms measured on 2026-09-29, almost all of it in metrics.replayHolds
-status: review
+status: done
 owner: alex
 created: 2026-10-21T11:58:35Z
-updated: 2026-10-21T13:05:30Z
+updated: 2026-10-21T13:25:39Z
 transitions:
   - to: ready
     at: 2026-10-21T12:10:31Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-21T13:05:30Z
     by: agent-S-0471
+  - to: done
+    at: 2026-10-21T13:25:39Z
+    by: orchestrator
 tags: [flai]
 topics: [metrics, performance]
 touches: [flai/internal/metrics/claims.go, flai/internal/metrics/claims_test.go, flai/internal/metrics/claims_bench_test.go, flai/internal/workitem/hold.go, design/system/server-performance.md, design/issues/I-0155-the-chart-data-takes-about-4-s-warm-against-10-ms-measured-on-2026-09-29-almost-all-of-it-in-metrics-replayholds.md, design/issues/summary.md, flai/internal/workitem/hold_test.go, design/issues/I-0184-every-stats-get-and-flai-stats-runs-one-git-log-for-claims-drift-about-450-ms-of-a-900-ms-warm-answer.md]
@@ -121,3 +124,14 @@ Tasks, in three layers:
 1. T-1991: the generator, the benchmarks, and the reference replay; the profile names the fix
 2. T-1993, after T-1991: the fix in `replayHolds`, with the equivalence and counting tests
 3. T-1995, after T-1993: measure on this repository, record it in `server-performance.md`, and close I-0155
+
+### Accepted by the orchestrator
+
+- Verified: 0eb3945f66f1c4001d7fac2fc7a21f28b3afa5ef
+- Batch: 20261021-131344
+- Enqueued verified: 27d62cb78b70f53dd1a35c581db5377703a332a7
+- At: 2026-10-21T13:25:39Z
+
+Verdict: pass. Both criteria are met, the replay's output is unchanged against the reference, and every changed file is within the story's touches.
+- 1: flai/internal/metrics/claims.go, flai/internal/metrics/claims_bench_test.go, flai/internal/metrics/claims_test.go, flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, design/system/server-performance.md
+- 2: design/issues/I-0155-the-chart-data-takes-about-4-s-warm-against-10-ms-measured-on-2026-09-29-almost-all-of-it-in-metrics-replayholds.md, design/issues/summary.md
