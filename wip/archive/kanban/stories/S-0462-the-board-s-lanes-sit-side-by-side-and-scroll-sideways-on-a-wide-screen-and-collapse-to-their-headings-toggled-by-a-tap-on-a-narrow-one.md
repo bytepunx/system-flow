@@ -3,11 +3,11 @@ id: S-0462
 type: story
 nature: improvement
 title: The board's lanes sit side by side and scroll sideways on a wide screen, and collapse to their headings, toggled by a tap, on a narrow one
-status: review
+status: done
 parent: E-0027
 owner: alex
 created: 2026-10-21T07:01:02Z
-updated: 2026-10-21T09:29:52Z
+updated: 2026-10-21T09:39:28Z
 transitions:
   - to: ready
     at: 2026-10-21T07:54:32Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-10-21T09:29:52Z
     by: agent-S-0462
+  - to: done
+    at: 2026-10-21T09:39:28Z
+    by: orchestrator
 tags: [dashboard]
 topics: [dashboard]
 touches: [flaiover/src/lib/lanecollapse.svelte.ts, flaiover/src/lib/lanecollapse.svelte.test.ts, flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts, flaiover/src/routes/+layout.svelte, flaiover/e2e/board-layout.e2e.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/issues/I-0180-the-top-bar-s-project-switcher-has-no-maximum-width-so-with-two-projects-connected-the-page-is-wider-than-a-390px-viewport.md, design/issues/summary.md]
@@ -104,3 +107,18 @@ The board reads as a board at every width. Today its six lanes stack in one colu
   - **Co-change:** `flai touches suggest` lists `BoardCard.svelte` and its test at 5%. The cards keep their shape inside a wider or a collapsed lane, so none was added. `LaneMenu.svelte`, `CardReorder.svelte`, and `LaneMoveDialog.svelte` are only checked, not changed.
 - **Forecast.** 50m against flai's 21m. The 860-line board must keep its lane menu, card menu, reordering, and moves working in two layouts, checked by a Playwright test at two widths. The delivery is flai's play-out, moved by its own 29m raise and S-0458's 43m.
 - **Cost of delay.** Not yet set. E-0027 has no inputs, so `flai cod` refuses. The input is asked on TH-0553 question 1.
+
+### Accepted by the orchestrator
+
+- Verified: 8e59456ee488d328e27db9760d599febd50b17c0
+- Batch: 20261021-093728
+- Enqueued verified: 7995922b84d38ba881408769ef9104b1599626db
+- At: 2026-10-21T09:39:28Z
+
+Verdict: S-0462 meets all six acceptance criteria at 7995922b; flai verify passed every step there (the flaiover tier covering flaiover-lint and vitest).
+- 1: flaiover/src/routes/board/+page.svelte, flaiover/src/routes/+layout.svelte
+- 2: flaiover/src/routes/board/+page.svelte
+- 3: flaiover/src/lib/lanecollapse.svelte.ts, flaiover/src/lib/lanecollapse.svelte.test.ts
+- 4: flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts
+- 5: flaiover/e2e/board-layout.e2e.ts
+- 6: design/system/flaiover-dashboard.md, docs/users/flaiover.md

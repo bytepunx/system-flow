@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-10-21T09:37:25Z
+updated: 2026-10-21T09:39:28Z
 ---
 
 # Active streams
@@ -8,7 +8,6 @@ updated: 2026-10-21T09:37:25Z
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
 | [S-0460](S-0460.md) | A page may carry a left sidebar of its sections, and the item page shows one section at a time from it instead of one long scroll | in-progress | agent-S-0460 | 2026-10-21T09:24:26Z |
-| [S-0462](S-0462.md) | The board's lanes sit side by side and scroll sideways on a wide screen, and collapse to their headings, toggled by a tap, on a narrow one | review | agent-S-0462 | 2026-10-21T09:29:52Z |
 | [S-0463](S-0463.md) | TestAChildIsStoppedOnlyOnceItsProcessHasEnded fails under load when the stubborn child dies on SIGTERM before it ignores it | review | agent-S-0463 | 2026-10-21T09:35:58Z |
 
 ## Strategic agents

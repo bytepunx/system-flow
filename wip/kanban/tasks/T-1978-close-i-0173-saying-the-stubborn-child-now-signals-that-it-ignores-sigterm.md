@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 3
-      output: 784
-      cache_read: 288170
-      cache_write: 4583
-      cost: 0.11
+      output: 765
+      cache_read: 288474
+      cache_write: 4280
+      cost: 0.1072
 ---
 # T-1978 Close I-0173 saying the stubborn child now signals that it ignores SIGTERM
 

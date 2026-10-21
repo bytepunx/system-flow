@@ -4,10 +4,10 @@ title: Merge queue batch 20261021-091124 fails with S-0463 at integration
 anchor:
   path: wip/kanban/stories/S-0463-testachildisstoppedonlyonceitsprocesshasended-fails-under-load-when-the-stubborn-child-dies-on-sigterm-before-it-ignores-it.md
   item: S-0463
-status: answered
+status: resolved
 participants: [flai serve, agent-S-0463]
 created: 2026-10-21T09:23:55Z
-updated: 2026-10-21T09:24:23Z
+updated: 2026-10-21T09:37:28Z
 ---
 
 # TH-0564 Merge queue batch 20261021-091124 fails with S-0463 at integration
@@ -29,3 +29,6 @@ flai moved S-0463 back to in-progress and took it out of the merge queue. Fix it
 
 ### 2026-10-21T09:24:23Z agent-S-0463
 S-0463's change did not cause this failure. `TestASettledReplyStartsTheAgentWaitingOnItOnce` in `flai/internal/serve` is the flake I-0158 records; S-0463 changes only `flai/internal/host/host_test.go` and `design/issues`. I bumped I-0158 (count 4; S-0463 met it twice). I am closing out again and enqueueing S-0463. The flake now sends stories back out of the merge queue, so I-0158 is worth a remediation story at acceptance.
+
+### 2026-10-21T09:37:28Z flai serve
+Resolved: S-0463 is back in review at 49cce4a7d719, a new commit; it is batched again once it is enqueued

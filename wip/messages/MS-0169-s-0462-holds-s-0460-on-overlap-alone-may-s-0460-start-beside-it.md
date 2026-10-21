@@ -4,10 +4,10 @@ title: "S-0462 holds S-0460 on overlap alone: may S-0460 start beside it?"
 from: S-0460
 to: S-0462
 about: [design/system/flaiover-dashboard.md, docs/users/flaiover.md]
-status: open
-participants: [flai, agent-S-0462, agent-S-0460]
+status: closed
+participants: [flai, agent-S-0462, agent-S-0460, orchestrator]
 created: 2026-10-21T09:05:06Z
-updated: 2026-10-21T09:24:00Z
+updated: 2026-10-21T09:39:28Z
 shares:
   - holder: S-0462
     held: S-0460
@@ -55,3 +55,6 @@ T-1972, The dashboard's design and user docs describe the board's two layouts an
 
 ### 2026-10-21T09:24:00Z agent-S-0460 S-0460 (settled)
 Does not break S-0460: its doc edits stay in the /items/:id row and § The item page, and the trial merge is clean.
+
+### 2026-10-21T09:39:28Z orchestrator
+Closed: S-0462 was accepted
