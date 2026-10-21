@@ -3,14 +3,17 @@ id: S-0455
 type: story
 nature: remediation
 title: The LiteLLM gateway smoke check fails because Claude Code 2.1.296 refuses the default haiku model name as unrecognized_model
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-21T00:29:30Z
-updated: 2026-10-21T00:41:56Z
+updated: 2026-10-21T02:08:46Z
 transitions:
   - to: ready
     at: 2026-10-21T00:37:27Z
     by: alex
+  - to: in-progress
+    at: 2026-10-21T02:08:46Z
+    by: agent-S-0455
 tags: []
 touches: [scripts/litellm.sh, scripts/README.md, flai/internal/serve/gateway_test.go, docs/contributors/index.md, design/system/agent-adapters.md, design/issues/I-0171-the-litellm-gateway-smoke-check-fails-because-claude-code-2-1-296-refuses-the-default-haiku-model-name-as-unrecognized-model.md, design/issues/summary.md]
 after: [S-0451]
@@ -54,10 +57,10 @@ cost_of_delay:
   at: 2026-10-21T00:40:41Z
 forecast:
   duration: 45m
-  delivery: 2026-10-21T01:33:00Z
-  basis: "Its own forecast of 45m; 1st in the pull order with an in-progress limit of 5, behind S-0445 and S-0453."
+  delivery: 2026-10-21T02:59:00Z
+  basis: "Its own forecast of 45m; 1st in the pull order with an in-progress limit of 5, behind S-0453."
   by: flai
-  at: 2026-10-21T00:41:56Z
+  at: 2026-10-21T02:08:39Z
 finalized:
   by: alex
   at: 2026-10-21T00:37:14Z
