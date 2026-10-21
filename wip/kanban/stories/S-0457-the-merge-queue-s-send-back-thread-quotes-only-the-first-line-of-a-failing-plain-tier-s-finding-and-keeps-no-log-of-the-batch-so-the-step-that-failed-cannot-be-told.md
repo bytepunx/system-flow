@@ -6,7 +6,7 @@ title: The merge queue's send-back thread quotes only the first line of a failin
 status: in-progress
 owner: alex
 created: 2026-10-21T02:13:46Z
-updated: 2026-10-21T07:02:49Z
+updated: 2026-10-21T07:03:00Z
 transitions:
   - to: ready
     at: 2026-10-21T06:12:25Z
@@ -82,7 +82,7 @@ This story remediates [I-0172](../../../design/issues/I-0172-the-merge-queue-s-s
 
 ## Acceptance criteria
 - [x] The cause I-0172 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0172 is closed with `flai issue close I-0172 --reason` saying what fixed it
+- [x] I-0172 is closed with `flai issue close I-0172 --reason` saying what fixed it
 
 ## Tasks
 - T-1947 Move flai verify's step findings formatter into internal/verify so the merge queue can quote a failing tier as flai verify prints it
