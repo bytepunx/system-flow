@@ -7,7 +7,7 @@ count: 1
 cost: 96h
 first_reported: 2026-10-15T22:48:32Z
 last_reported: 2026-10-15T22:48:32Z
-updated: 2026-10-15T22:48:32Z
+updated: 2026-10-21T11:57:59Z
 usage:
   strategic:
     - kind: analyzer
@@ -47,3 +47,5 @@ flai stats W42 review.total_seconds 973,317 over 58 stories, 933,886 of it on S-
 ## Remediation
 
 Found by the analysis in [2026-10-15-bottlenecks.md](../analysis/2026-10-15-bottlenecks.md).
+
+Story S-0467 remediates this issue, created from it at 2026-10-21T11:57:59Z.
