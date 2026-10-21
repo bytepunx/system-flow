@@ -6,7 +6,7 @@ title: The Components page cannot list, start, or stop anything through the dash
 status: backlog
 owner: alex
 created: 2026-10-21T11:59:09Z
-updated: 2026-10-21T11:59:09Z
+updated: 2026-10-21T12:04:35Z
 transitions: []
 tags: []
 agent:
@@ -14,13 +14,15 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     penalty_per_week: 1000
     time_lost_per_cycle: 20m
     by: flai
     at: 2026-10-21T11:59:09Z
+finalized:
+  by: alex
+  at: 2026-10-21T12:04:35Z
 ---
 # S-0475 The Components page cannot list, start, or stop anything through the dashboard, because the channel's project key and the components methods' sub-project share the one params field project
 
