@@ -23,6 +23,9 @@ const version = (() => {
 	}
 })();
 
+// The upgrades the application routes (src/lib/server/agent.ts); every other one is Vite's.
+const UPGRADE_PATHS = new Set(['/agent', '/api/events']);
+
 // Tests run in a zone that is not UTC, so that a test of a time shown proves it is shown in local time.
 const TZ = 'America/New_York';
 
@@ -31,12 +34,12 @@ export default defineConfig({
 	plugins: [
 		tailwindcss(),
 		{
-			// The development server's hook for /agent, as server.js is the image's (ADR-0029).
-			// Vite's own WebSocket upgrades are left alone.
+			// The development server's hook for /agent and /api/events, as server.js is the image's
+			// (ADR-0029, ADR-0182). Vite's own WebSocket upgrades are left alone.
 			name: 'flaiover-agent-upgrade',
 			configureServer(server) {
 				server.httpServer?.on('upgrade', (req, socket, head) => {
-					if ((req.url ?? '').split('?')[0] === '/agent')
+					if (UPGRADE_PATHS.has((req.url ?? '').split('?')[0]))
 						(
 							globalThis as {
 								__flaioverAgentUpgrade?: (r: unknown, s: unknown, h: unknown) => void;

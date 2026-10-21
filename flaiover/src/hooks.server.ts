@@ -21,6 +21,7 @@ import { repo } from '$lib/server/repo';
 import { startNotifier } from '$lib/server/notify';
 import { projectIdentity, setIdentityHeaders } from '$lib/server/project';
 import { agent, exposeAgentUpgrade, registry, withProject } from '$lib/server/agent';
+import { EVENTS_PATH, EventsSocket } from '$lib/server/events-socket';
 import { redirect, json } from '@sveltejs/kit';
 
 export const init: ServerInit = async () => {
@@ -44,8 +45,9 @@ export const init: ServerInit = async () => {
 	}
 	const auth = initAuth();
 	const tracing = await startTracing();
-	// The channel flai on the host dials (ADR-0029): the server entry hands /agent upgrades to the hub.
-	exposeAgentUpgrade();
+	// The server entry hands every upgrade to one router: /agent, the channel flai on the host dials,
+	// to the hub (ADR-0029), and /api/events, the live events a page follows, to its socket (ADR-0182).
+	exposeAgentUpgrade({ [EVENTS_PATH]: new EventsSocket() });
 	const channel = agent().status().configured;
 	// flai on the host says which files changed; the caches, /api/events, and the notifier listen (S-0073).
 	const r = repo();

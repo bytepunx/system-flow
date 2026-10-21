@@ -963,15 +963,35 @@ export function resetAgent(): void {
 	reg = null;
 }
 
+/** An HTTP server's 'upgrade' event: answer the upgrade, or refuse it on the raw socket. */
+export type Upgrade = (req: IncomingMessage, socket: Duplex, head: Buffer) => void;
+
+/** One upgrade path's handler, and how to close the sockets it opened when the server stops. */
+export type UpgradeRoute = {
+	upgrade(req: IncomingMessage, socket: Duplex, head: Buffer): void;
+	close(): void;
+};
+
 declare global {
-	var __flaioverAgentUpgrade:
-		((req: IncomingMessage, socket: Duplex, head: Buffer) => void) | undefined;
+	var __flaioverAgentUpgrade: (Upgrade & { close(): void }) | undefined;
 }
 
-/** Called from the server's init hook: the custom server entry and the dev server find the registry here. */
-export function exposeAgentUpgrade(): void {
-	globalThis.__flaioverAgentUpgrade = (req, socket, head) =>
-		registry().handleUpgrade(req, socket, head);
+/**
+ * Called from the server's init hook: the custom server entry and the dev server hand every upgrade
+ * here. The one router by path (ADR-0182) gives each of routes its own path, ahead of the registry,
+ * which refuses any request with an Origin; every other path goes to the registry, which serves /agent
+ * and refuses the rest. Its close closes what the routes opened, for a server that is stopping.
+ */
+export function exposeAgentUpgrade(routes: Record<string, UpgradeRoute> = {}): void {
+	const byPath = new Map(Object.entries(routes));
+	const router: Upgrade = (req, socket, head) => {
+		const route = byPath.get((req.url ?? '').split('?')[0]);
+		if (route) route.upgrade(req, socket, head);
+		else registry().handleUpgrade(req, socket, head);
+	};
+	globalThis.__flaioverAgentUpgrade = Object.assign(router, {
+		close: () => byPath.forEach((route) => route.close())
+	});
 }
 
 /** Resolves when a flai is connected, or after ms with whether one is. */

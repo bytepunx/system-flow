@@ -1,8 +1,9 @@
 // The server entry of the image: adapter-node's handler on a plain HTTP
 // server, plus the one thing SvelteKit cannot do itself, the WebSocket
-// upgrade for /agent that flai on the host dials (ADR-0029). The hub lives
-// in the application (src/lib/server/agent.ts) and is found through a global
-// it sets when the server initialises.
+// upgrades: /agent, which flai on the host dials (ADR-0029), and /api/events,
+// which a page follows (ADR-0182). The router by path lives in the
+// application (src/lib/server/agent.ts) and is found through a global it
+// sets when the server initialises.
 import http from 'node:http';
 import { noteScheme, schemeHeader } from './scheme.js';
 
@@ -43,13 +44,16 @@ server.listen(port, host, () => {
 });
 
 // Stop listening, give requests a moment, then close what is left: an open
-// event stream must not keep a server that no longer listens alive (I-0025).
+// connection must not keep a server that no longer listens alive (I-0025).
+// An upgraded socket is no longer the HTTP server's to close, so the router
+// closes every events socket, with 1001, at once.
 let stopping = false;
 function shutdown() {
 	if (stopping) return;
 	stopping = true;
 	server.close(() => process.exit(0));
 	server.closeIdleConnections();
+	globalThis.__flaioverAgentUpgrade?.close();
 	setTimeout(() => {
 		server.closeAllConnections();
 		process.exit(0);
