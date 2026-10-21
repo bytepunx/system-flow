@@ -195,6 +195,8 @@ type holdReplay struct {
 	seconds map[string]*float64
 	days    []int
 	weeks   []HeldByCode
+	// judged is how many times the holds were judged anew (I-0155).
+	judged int
 }
 
 // replayHolds replays the hold rules for each story among items that was ever
@@ -202,7 +204,10 @@ type holdReplay struct {
 // task, over the states of the time and today's touches and after; nothing
 // changes until the next one, and nothing after now counts. A hold counts
 // under the reason it is named by, the code Holds.Of gives it. An overlap
-// inside the manifest's shared paths holds nothing (ADR-0096).
+// inside the manifest's shared paths holds nothing (ADR-0096). The holds are
+// judged anew only after an event that can change one, of a story or of a
+// task of a story in ready or in progress, over only the items they read, and
+// with what did not change remembered (I-0155).
 func replayHolds(items, all []*workitem.Item, start time.Time, opt Options) holdReplay {
 	// Held time is whole seconds, as timestamps are: a hold still open runs
 	// to now's last whole second.
@@ -255,16 +260,109 @@ func replayHolds(items, all []*workitem.Item, start time.Time, opt Options) hold
 		}
 		return end
 	}
-	var snapshot []*workitem.Item
+	// What a hold reads, kept as the events apply: the stories created, in
+	// creation order and by ID, the last created of each; the tasks created, by
+	// parent as written, as NewHolds keys them; and how many stories of each ID
+	// are in ready or in progress.
+	var stories []*workitem.Item
+	byID := map[string]*workitem.Item{}
+	tasks := map[string][]*workitem.Item{}
+	active := map[string]int{}
+	isActive := func(status string) bool { return status == workitem.Ready || status == workitem.InProgress }
+	// A story's move changes a hold only into or out of a state a hold reads,
+	// and a task's only into or out of done or cancelled, the states Claim and
+	// NewHolds read.
+	reads := func(status string) bool { return isActive(status) || status == workitem.Done }
+	closing := func(status string) string {
+		if status == workitem.Done || status == workitem.Cancelled {
+			return status
+		}
+		return ""
+	}
+	// held is the judgement in force: each tracked story held, by its code.
+	type heldStory struct {
+		seconds *float64
+		code    string
+	}
+	var held []heldStory
+	// memo keeps what the holds work out, claims and how one holds another,
+	// from one judgement to the next. A story's claim is forgotten when a task
+	// of it is created or enters or leaves done or cancelled: all Claim reads
+	// of them.
+	memo := workitem.NewHoldsMemo()
 	day := 0
 	for k := 0; k < len(events) && !events[k].at.After(now); {
 		at := events[k].at
+		judge := false
 		for ; k < len(events) && events[k].at.Equal(at); k++ {
-			e := events[k]
-			if e.to == "" {
-				snapshot = append(snapshot, &copies[e.i])
-			} else {
-				copies[e.i].Status = e.to
+			c := &copies[events[k].i]
+			from, to := c.Status, events[k].to
+			switch {
+			case to == "" && c.Type == workitem.Story:
+				stories = append(stories, c)
+				byID[c.ID] = c
+				judge = true
+			case to == "":
+				tasks[c.Parent] = append(tasks[c.Parent], c)
+				memo.Forget(c.Parent)
+				judge = judge || active[c.Parent] > 0
+			case c.Type == workitem.Story:
+				if isActive(from) {
+					active[c.ID]--
+				}
+				if isActive(to) {
+					active[c.ID]++
+				}
+				c.Status = to
+				judge = judge || reads(from) || reads(to)
+			default:
+				c.Status = to
+				if closing(from) != closing(to) {
+					memo.Forget(c.Parent)
+					judge = judge || active[c.Parent] > 0
+				}
+			}
+		}
+		if judge {
+			held = held[:0]
+			var ready, in []*workitem.Item
+			for _, s := range stories {
+				if s.Status == workitem.Ready && out.seconds[s.ID] != nil {
+					ready = append(ready, s)
+				}
+			}
+			if len(ready) > 0 {
+				// Only the stories in ready or in progress and their tasks,
+				// and the stories the ready ones name in after, are read.
+				withTasks := map[string]bool{}
+				for _, s := range stories {
+					if !isActive(s.Status) {
+						continue
+					}
+					in = append(in, s)
+					if !withTasks[s.ID] {
+						withTasks[s.ID] = true
+						for _, t := range tasks[s.ID] {
+							if t.Status != workitem.Cancelled {
+								in = append(in, t)
+							}
+						}
+					}
+				}
+				for _, s := range ready {
+					for _, e := range s.After {
+						if a := byID[workitem.CanonicalID(e)]; a != nil && !isActive(a.Status) {
+							in = append(in, a)
+						}
+					}
+				}
+				h := memo.NewHolds(in, opt.Projects).WithShared(opt.Shared)
+				out.judged++
+				for _, s := range ready {
+					if hold := h.Of(s); hold != nil {
+						held = append(held, heldStory{seconds: out.seconds[s.ID], code: hold.Code})
+					}
+				}
 			}
 		}
 		// The states hold from at up to next; until is next, not after now.
@@ -273,18 +371,9 @@ func replayHolds(items, all []*workitem.Item, start time.Time, opt Options) hold
 			until, next = events[k].at, events[k].at
 		}
 		byCode := map[string]int{}
-		var h *workitem.Holds
-		for _, it := range snapshot {
-			if out.seconds[it.ID] == nil || it.Status != workitem.Ready {
-				continue
-			}
-			if h == nil {
-				h = workitem.NewHolds(snapshot, opt.Projects).WithShared(opt.Shared)
-			}
-			if hold := h.Of(it); hold != nil {
-				*out.seconds[it.ID] += until.Sub(at).Seconds()
-				byCode[hold.Code]++
-			}
+		for _, s := range held {
+			*s.seconds += until.Sub(at).Seconds()
+			byCode[s.code]++
 		}
 		for code, n := range byCode {
 			for i := range out.weeks {

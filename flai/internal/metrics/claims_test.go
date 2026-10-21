@@ -22,9 +22,85 @@ func claimItem(id, typ, created string, touches []string, moves ...string) *work
 	return it
 }
 
+// holdRuleCase is a small history, the manifest's projects, and the seconds
+// each story in it is held.
+type holdRuleCase struct {
+	name     string
+	items    []*workitem.Item
+	projects []manifest.Project
+	want     map[string]*float64
+}
+
 // S-0205: a story's held time is replayed from the states of the time, each
 // hold lasting until the next creation or transition, up to now.
 func TestHeldSecondsReplayTheHoldRules(t *testing.T) {
+	for _, c := range holdRuleCases() {
+		t.Run(c.name, func(t *testing.T) {
+			rep := Compute(c.items, Options{Now: now, Projects: c.projects})
+			got := map[string]*float64{}
+			for _, m := range rep.Items {
+				got[m.ID] = m.HeldSeconds
+			}
+			for id, want := range c.want {
+				if g := got[id]; (g == nil) != (want == nil) || (g != nil && *g != *want) {
+					t.Errorf("%s held = %v, want %v", id, deref(g), deref(want))
+				}
+			}
+		})
+	}
+}
+
+// I-0155: the replay that judges the holds only when they can change gives
+// what the reference, which judges them at every event time, gives.
+func TestReplayHoldsMatchesTheReferenceOnTheHoldRules(t *testing.T) {
+	for _, c := range holdRuleCases() {
+		t.Run(c.name, func(t *testing.T) {
+			var items []*workitem.Item
+			for _, it := range c.items {
+				if it.Type == workitem.Story {
+					items = append(items, it)
+				}
+			}
+			opt := Options{Now: now, Since: threeDays, Projects: c.projects}
+			start := now.Add(-opt.Since)
+			got, want := replayHolds(items, c.items, start, opt), replayHoldsReference(items, c.items, start, opt)
+			for id, w := range want.seconds {
+				if g, ok := got.seconds[id]; !ok || (g == nil) != (w == nil) || (g != nil && *g != *w) {
+					t.Errorf("%s held = %v, want %v", id, deref(g), deref(w))
+				}
+			}
+			if len(got.seconds) != len(want.seconds) {
+				t.Errorf("stories replayed = %d, want %d", len(got.seconds), len(want.seconds))
+			}
+			if !reflect.DeepEqual(got.days, want.days) {
+				t.Errorf("days = %v, want %v", got.days, want.days)
+			}
+			if !reflect.DeepEqual(got.weeks, want.weeks) {
+				t.Errorf("weeks = %+v, want %+v", got.weeks, want.weeks)
+			}
+		})
+	}
+}
+
+// I-0155: over a history at this repository's scale, smaller in short mode,
+// the holds are judged anew no more often than an event changes what a hold
+// reads, and less often than at every event time with a story in ready.
+func TestReplayHoldsJudgesOnlyWhenAHoldCanChange(t *testing.T) {
+	n := historyStories
+	if testing.Short() {
+		n = 60
+	}
+	all, opt, start := claimsHistory(n)
+	items := storiesOf(all)
+	_, built, changed := replayCounts(items, all, opt.Now)
+	got := replayHolds(items, all, start, opt).judged
+	if got == 0 || got > changed || got >= built {
+		t.Errorf("judged %d times, want some, at most the %d that change a hold and fewer than the %d with a story in ready", got, changed, built)
+	}
+}
+
+// holdRuleCases are the hold rules' small histories (S-0205).
+func holdRuleCases() []holdRuleCase {
 	const day = "2026-08-29T00:00:00Z"
 	s, task := workitem.Story, workitem.Task
 	rd, ip, rv, done := workitem.Ready, workitem.InProgress, workitem.Review, workitem.Done
@@ -36,12 +112,7 @@ func TestHeldSecondsReplayTheHoldRules(t *testing.T) {
 		it.After = ids
 		return it
 	}
-	cases := []struct {
-		name     string
-		items    []*workitem.Item
-		projects []manifest.Project
-		want     map[string]*float64
-	}{
+	return []holdRuleCase{
 		{
 			name: "overlap while the other is in progress, not in review, archived since",
 			items: []*workitem.Item{
@@ -103,20 +174,6 @@ func TestHeldSecondsReplayTheHoldRules(t *testing.T) {
 			},
 			want: map[string]*float64{"S-0002": val(5 * 3600)},
 		},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			rep := Compute(c.items, Options{Now: now, Projects: c.projects})
-			got := map[string]*float64{}
-			for _, m := range rep.Items {
-				got[m.ID] = m.HeldSeconds
-			}
-			for id, want := range c.want {
-				if g := got[id]; (g == nil) != (want == nil) || (g != nil && *g != *want) {
-					t.Errorf("%s held = %v, want %v", id, deref(g), deref(want))
-				}
-			}
-		})
 	}
 }
 

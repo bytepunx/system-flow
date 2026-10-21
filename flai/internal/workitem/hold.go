@@ -65,19 +65,73 @@ type Holds struct {
 	// lookup finds a story named in after: that was not given, such as an
 	// archived one when only the active items were read.
 	lookup func(id string) *Item
+	memo   *HoldsMemo
+}
+
+// HoldsMemo remembers, for the Holds that share it, the claim of each story,
+// whether the shared paths cover a path, and how one claim holds another, for
+// a caller that judges the same stories again and again, such as the replay
+// of the holds (I-0155). Its Holds must be given the same projects and shared
+// paths, and its caller must Forget a story's claim when the story's tasks or
+// their states change. The claims it gives are shared, not to be changed.
+type HoldsMemo struct {
+	claims  map[string][]memoClaim // by story ID, one per story item
+	covered map[string]bool        // whether the shared paths cover a path
+	pairs   map[claimPair]pairHold // how a ready story's claim is held by an open one's
+	last    int                    // the number of the last claim worked out
+}
+
+type memoClaim struct {
+	story *Item
+	paths []string
+	n     int // its number, from 1, a new one each time a claim is worked out
+}
+
+// claimPair is a ready story's claim and an open story's, by number, and how
+// the open one is named.
+type claimPair struct {
+	held, holder int
+	label        string
+}
+
+// pairHold is what holdBy says of a pair.
+type pairHold struct {
+	part, code string
+}
+
+// NewHoldsMemo is an empty HoldsMemo.
+func NewHoldsMemo() *HoldsMemo {
+	return &HoldsMemo{claims: map[string][]memoClaim{}, covered: map[string]bool{}, pairs: map[claimPair]pairHold{}}
+}
+
+// Forget has m forget the claim of each story with ID id.
+func (m *HoldsMemo) Forget(id string) {
+	delete(m.claims, id)
+}
+
+// NewHolds is NewHolds with the Holds remembering what they work out in m,
+// the claims of the stories in progress among items too.
+func (m *HoldsMemo) NewHolds(items []*Item, projects []manifest.Project) *Holds {
+	return newHolds(items, projects, m)
 }
 
 type openClaim struct {
 	id    string
 	label string // how the reason names its state: in progress, its agent started
 	paths []string
+	n     int // the claim's number in the memo, 0 without one
 }
 
 // NewHolds reads from items the claims of the stories in progress, the only
 // stories that hold (ADR-0096); projects are the manifest's sub-projects,
 // whose names and tags a claim reads as their paths.
 func NewHolds(items []*Item, projects []manifest.Project) *Holds {
-	h := &Holds{projects: projects, tasks: map[string][]*Item{}, stories: map[string]*Item{}}
+	return newHolds(items, projects, nil)
+}
+
+// newHolds is NewHolds with memo, if any.
+func newHolds(items []*Item, projects []manifest.Project, memo *HoldsMemo) *Holds {
+	h := &Holds{projects: projects, tasks: map[string][]*Item{}, stories: map[string]*Item{}, memo: memo}
 	for _, it := range items {
 		if !it.Archived && it.Type == Task && it.Status != Cancelled {
 			h.tasks[it.Parent] = append(h.tasks[it.Parent], it)
@@ -139,8 +193,21 @@ func (h *Holds) Overlaps(a, b string) bool {
 	if !PathsOverlap(a, b) {
 		return false
 	}
-	_, shared := h.shared.Covers(narrower(a, b))
-	return !shared
+	return !h.covers(narrower(a, b))
+}
+
+// covers says whether p lies wholly inside a shared path, as Covers says.
+func (h *Holds) covers(p string) bool {
+	if h.memo == nil {
+		_, ok := h.shared.Covers(p)
+		return ok
+	}
+	ok, seen := h.memo.covered[p]
+	if !seen {
+		_, ok = h.shared.Covers(p)
+		h.memo.covered[p] = ok
+	}
+	return ok
 }
 
 // overlapsFor is Overlaps for mine, an entry of held's claim, and theirs, an
@@ -163,7 +230,8 @@ func narrower(a, b string) string {
 // launcher opens a story whose agent it has started before the agent moves
 // it to in progress, so that one look does not start two that overlap.
 func (h *Holds) Open(story *Item, label string) {
-	h.open = append(h.open, openClaim{id: story.ID, label: label, paths: h.Claim(story)})
+	paths, n := h.claimOf(story)
+	h.open = append(h.open, openClaim{id: story.ID, label: label, paths: paths, n: n})
 	sort.SliceStable(h.open, func(i, j int) bool { return h.open[i].id < h.open[j].id })
 }
 
@@ -174,6 +242,28 @@ func (h *Holds) Open(story *Item, label string) {
 // stays whole; and a touch of an open task outside every story touch is added.
 // A done task's touch counts only where it narrows: the branch changed it.
 func (h *Holds) Claim(story *Item) []string {
+	paths, _ := h.claimOf(story)
+	return paths
+}
+
+// claimOf is Claim and the claim's number in the memo, 0 without one.
+func (h *Holds) claimOf(story *Item) ([]string, int) {
+	if h.memo == nil {
+		return h.claim(story), 0
+	}
+	for _, c := range h.memo.claims[story.ID] {
+		if c.story == story {
+			return c.paths, c.n
+		}
+	}
+	h.memo.last++
+	c := memoClaim{story: story, paths: h.claim(story), n: h.memo.last}
+	h.memo.claims[story.ID] = append(h.memo.claims[story.ID], c)
+	return c.paths, c.n
+}
+
+// claim is Claim worked out.
+func (h *Holds) claim(story *Item) []string {
 	var out []string
 	seen := map[string]bool{}
 	add := func(p string) {
@@ -334,7 +424,7 @@ func stateLabel(status string) string {
 
 // overlap is why story's claim is held by the open stories', or nil.
 func (h *Holds) overlap(story *Item) *Hold {
-	claim := h.Claim(story)
+	claim, n := h.claimOf(story)
 	var others []openClaim
 	for _, o := range h.open {
 		if o.id != story.ID {
@@ -355,7 +445,7 @@ func (h *Holds) overlap(story *Item) *Hold {
 	var parts []string
 	var by []openClaim
 	for _, o := range others {
-		part, c := h.holdBy(story.ID, claim, o)
+		part, c := h.heldBy(story.ID, claim, n, o)
 		if part == "" {
 			continue
 		}
@@ -371,6 +461,21 @@ func (h *Holds) overlap(story *Item) *Hold {
 	return &Hold{Code: code, Reason: fmt.Sprintf("held (%s): %s; starts when %s", code, strings.Join(parts, "; "), clears(by))}
 }
 
+// heldBy is holdBy, remembered in the memo for claim, numbered n, and o's
+// while no share is in force.
+func (h *Holds) heldBy(held string, claim []string, n int, o openClaim) (part, code string) {
+	if n == 0 || o.n == 0 || len(h.shares) > 0 {
+		return h.holdBy(held, claim, o)
+	}
+	k := claimPair{held: n, holder: o.n, label: o.label}
+	if r, ok := h.memo.pairs[k]; ok {
+		return r.part, r.code
+	}
+	part, code = h.holdBy(held, claim, o)
+	h.memo.pairs[k] = pairHold{part: part, code: code}
+	return part, code
+}
+
 // holdBy says how claim, held's, overlaps o's, if it does, naming the first
 // pair that holds: a pair whose overlap lies wholly inside a shared path, or
 // inside a path o shared with held, does not, so the pair named is one still
@@ -380,11 +485,10 @@ func (h *Holds) holdBy(held string, claim []string, o openClaim) (part, code str
 	if len(o.paths) == 0 {
 		return who + " declares no touches, so it may change anything", HoldNoTouches
 	}
-	pairs := h.holding(held, claim, o)
-	if len(pairs) == 0 {
+	mine, theirs, ok := h.firstHolding(held, claim, o)
+	if !ok {
 		return "", ""
 	}
-	mine, theirs := pairs[0][0], pairs[0][1]
 	switch {
 	case mine == theirs:
 		return fmt.Sprintf("touches %s, which %s touches too", mine, who), HoldOverlap
@@ -409,6 +513,19 @@ func (h *Holds) holding(held string, claim []string, o openClaim) [][2]string {
 	return out
 }
 
+// firstHolding is the first pair holding gives, mine and theirs, and whether
+// there is one.
+func (h *Holds) firstHolding(held string, claim []string, o openClaim) (string, string, bool) {
+	for _, mine := range claim {
+		for _, theirs := range o.paths {
+			if h.overlapsFor(held, o.id, mine, theirs) {
+				return mine, theirs, true
+			}
+		}
+	}
+	return "", "", false
+}
+
 // clears says what ends a hold by these stories: each leaving in progress.
 func clears(by []openClaim) string {
 	ids := make([]string, len(by))
@@ -425,7 +542,10 @@ func clears(by []openClaim) string {
 // or one a /-bounded prefix of the other (ADR-0019).
 func PathsOverlap(a, b string) bool {
 	a, b = strings.TrimSuffix(a, "/"), strings.TrimSuffix(b, "/")
-	return a == b || strings.HasPrefix(a, b+"/") || strings.HasPrefix(b, a+"/")
+	if len(a) > len(b) {
+		a, b = b, a
+	}
+	return strings.HasPrefix(b, a) && (len(a) == len(b) || b[len(a)] == '/')
 }
 
 func and(xs []string) string {

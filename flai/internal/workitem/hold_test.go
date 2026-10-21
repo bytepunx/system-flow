@@ -163,9 +163,55 @@ func TestPathsOverlapByPrefix(t *testing.T) {
 		{"flai/cmd", "flaiover", false},
 		{"flai", "flaiover/src", false},
 		{"docs/users", "docs/operators", false},
+		{"", "", true},
+		{"", "flai", false},
+		{"", "/flai", true},
+		{"flai/", "flai", true},
+		{"flaiover", "flai", false},
+		{"flai/cmd", "flai/", true},
+		{"flai//", "flai/cmd", false},
 	} {
 		if got := PathsOverlap(c.a, c.b); got != c.want {
 			t.Errorf("PathsOverlap(%q, %q) = %v", c.a, c.b, got)
+		}
+	}
+}
+
+// I-0155: Holds that share a memo judge as Holds without one, from one
+// reading to the next, while a story's claim is forgotten whenever its tasks
+// change; two stories with one ID are told apart.
+func TestHoldsWithAMemoJudgeAsWithout(t *testing.T) {
+	open := claimed("S-0001", InProgress, "flai/cmd", "docs/users")
+	task := claimTask("T-0001", "S-0001", InProgress, "flai/cmd/serve.go")
+	ready := []*Item{
+		claimed("S-0009", Ready, "flai/cmd/board.go"),
+		waiting("S-0001"),
+		claimed("S-0010", Ready, "docs/users/flai.md"),
+		claimed("S-0011", Ready, "docs/users/other.md", "flaiover"),
+		claimed("S-0012", Ready),
+	}
+	shared := manifest.Claims{Shared: []string{"docs/users/flai.md"}}
+	judge := func(h *Holds) []string {
+		h.Open(ready[3], "its agent started")
+		var out []string
+		for _, s := range ready {
+			if hold := h.Of(s); hold != nil {
+				out = append(out, s.ID+": "+hold.Reason)
+				continue
+			}
+			out = append(out, s.ID+": not held")
+		}
+		return out
+	}
+	memo := NewHoldsMemo()
+	for _, status := range []string{InProgress, Done, Cancelled, Ready, Cancelled} {
+		task.Status = status
+		memo.Forget(task.Parent)
+		items := append([]*Item{open, task}, ready...)
+		got := judge(memo.NewHolds(items, holdProjects).WithShared(shared))
+		want := judge(NewHolds(items, holdProjects).WithShared(shared))
+		if strings.Join(got, "\n") != strings.Join(want, "\n") {
+			t.Errorf("task %s, with a memo:\n%s\nwithout:\n%s", status, strings.Join(got, "\n"), strings.Join(want, "\n"))
 		}
 	}
 }
