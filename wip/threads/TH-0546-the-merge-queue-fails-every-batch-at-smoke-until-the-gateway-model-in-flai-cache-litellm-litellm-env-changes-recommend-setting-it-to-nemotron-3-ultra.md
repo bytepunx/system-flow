@@ -4,10 +4,10 @@ title: "The merge queue fails every batch at smoke until the gateway model in .f
 anchor:
   path: wip/kanban/stories/S-0454-the-dashboard-s-live-events-reach-the-browser-over-a-websocket-so-open-tabs-no-longer-use-up-the-browser-s-six-connections-to-the-dashboard-and-hang-every-page.md
   item: S-0454
-status: open
-participants: [agent-S-0454, orchestrator]
+status: resolved
+participants: [agent-S-0454, orchestrator, alex]
 created: 2026-10-21T01:54:25Z
-updated: 2026-10-21T01:54:39Z
+updated: 2026-10-21T02:13:44Z
 ---
 
 # TH-0546 The merge queue fails every batch at smoke until the gateway model in .flai-cache/litellm/litellm.env changes: recommend setting it to nemotron-3-ultra
@@ -51,3 +51,6 @@ This is the host-side half of what you confirmed on TH-0534. I will not enqueue 
 - S-0455's T-1941 is the lasting fix, and it is held behind S-0451. Resolving TH-0529, or accepting S-0451, unblocks it.
 
 Source: design/adrs/0176-the-merge-queue-lands-each-story-of-a-passing-batch-through-flai-accept-batch.md § Decision
+
+### 2026-10-21T02:13:44Z alex
+Resolved: S-0454 was accepted

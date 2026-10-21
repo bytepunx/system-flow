@@ -3,12 +3,18 @@ id: T-1942
 type: task
 nature: remediation
 title: TestGatewayLiteLLM probes its model through the proxy first and fails naming the slug, its source, and the upstream answer
-status: backlog
+status: in-progress
 parent: S-0455
 owner: alex
 created: 2026-10-21T00:39:48Z
-updated: 2026-10-21T00:39:48Z
-transitions: []
+updated: 2026-10-21T02:10:09Z
+transitions:
+  - to: ready
+    at: 2026-10-21T02:10:08Z
+    by: agent-S-0455
+  - to: in-progress
+    at: 2026-10-21T02:10:09Z
+    by: agent-S-0455
 stream: S-0455
 tags: [flai, serve, tests]
 touches: [flai/internal/serve/gateway_test.go]

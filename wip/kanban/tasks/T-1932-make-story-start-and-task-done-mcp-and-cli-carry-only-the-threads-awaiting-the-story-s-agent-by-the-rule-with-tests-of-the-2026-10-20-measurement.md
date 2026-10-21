@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 101
-      output: 36570
-      cache_read: 5421321
-      cache_write: 259668
-      cost: 3.277
+      input: 98
+      output: 34840
+      cache_read: 5428826
+      cache_write: 245500
+      cost: 3.1672
 ---
 # T-1932 Make story_start and task_done, MCP and CLI, carry only the threads awaiting the story's agent by the rule, with tests of the 2026-10-20 measurement
 

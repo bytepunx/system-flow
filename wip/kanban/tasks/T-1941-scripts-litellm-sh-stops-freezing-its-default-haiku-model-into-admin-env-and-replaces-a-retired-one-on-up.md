@@ -3,12 +3,18 @@ id: T-1941
 type: task
 nature: remediation
 title: scripts/litellm.sh stops freezing its default haiku model into admin.env, and replaces a retired one on up
-status: backlog
+status: in-progress
 parent: S-0455
 owner: alex
 created: 2026-10-21T00:39:43Z
-updated: 2026-10-21T00:39:43Z
-transitions: []
+updated: 2026-10-21T02:10:07Z
+transitions:
+  - to: ready
+    at: 2026-10-21T02:10:07Z
+    by: agent-S-0455
+  - to: in-progress
+    at: 2026-10-21T02:10:07Z
+    by: agent-S-0455
 stream: S-0455
 tags: [scripts, litellm]
 touches: [scripts/litellm.sh, scripts/README.md, docs/contributors/index.md]

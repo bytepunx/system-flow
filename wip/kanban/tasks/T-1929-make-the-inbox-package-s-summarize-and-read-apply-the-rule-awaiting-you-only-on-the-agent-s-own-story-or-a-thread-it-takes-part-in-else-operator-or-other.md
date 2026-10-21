@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 28
-      output: 10220
-      cache_read: 1515019
-      cache_write: 72566
-      cost: 0.9158
+      input: 27
+      output: 9736
+      cache_read: 1517117
+      cache_write: 68607
+      cost: 0.8851
 ---
 # T-1929 Make the inbox package's Summarize and Read apply the rule: awaiting you only on the agent's own story or a thread it takes part in, else operator or other
 

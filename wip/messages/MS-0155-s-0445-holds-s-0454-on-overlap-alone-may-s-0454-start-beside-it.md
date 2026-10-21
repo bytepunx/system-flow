@@ -4,10 +4,10 @@ title: "S-0445 holds S-0454 on overlap alone: may S-0454 start beside it?"
 from: S-0454
 to: S-0445
 about: [docs/operators/index.md, docs/users/flai.md]
-status: open
-participants: [flai, agent-S-0454]
+status: closed
+participants: [flai, agent-S-0454, alex]
 created: 2026-10-21T00:36:38Z
-updated: 2026-10-21T01:16:30Z
+updated: 2026-10-21T02:13:44Z
 ---
 
 # MS-0155 S-0445 holds S-0454 on overlap alone: may S-0454 start beside it?
@@ -39,3 +39,6 @@ Answer in one of three ways:
 T-1938 of S-0454 changed paths S-0445's claim covers.
 
 T-1938, The dashboard's design, its host channel design, and the user and operator docs describe the live-events WebSocket, committed cb900b5 on story/S-0454, `docs: [S-0454] the dashboard's design and docs describe the live-events WebSocket`, changing `docs/operators/index.md`, `docs/users/flai.md`. It reaches the main branch when S-0454 is accepted; `git show cb900b5` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-10-21T02:13:44Z alex
+Closed: S-0454 was accepted

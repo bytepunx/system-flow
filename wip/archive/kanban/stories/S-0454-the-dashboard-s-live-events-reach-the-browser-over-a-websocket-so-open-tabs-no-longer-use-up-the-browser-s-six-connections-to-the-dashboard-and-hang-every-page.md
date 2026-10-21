@@ -3,10 +3,10 @@ id: S-0454
 type: story
 nature: remediation
 title: The dashboard's live events reach the browser over a WebSocket, so open tabs no longer use up the browser's six connections to the dashboard and hang every page
-status: review
+status: done
 owner: alex
 created: 2026-10-20T22:10:33Z
-updated: 2026-10-21T02:06:07Z
+updated: 2026-10-21T02:13:44Z
 transitions:
   - to: ready
     at: 2026-10-21T00:36:37Z
@@ -23,6 +23,9 @@ transitions:
   - to: review
     at: 2026-10-21T02:06:07Z
     by: agent-S-0454
+  - to: done
+    at: 2026-10-21T02:13:44Z
+    by: alex
 tags: [dashboard]
 topics: [client-side, server-side, components]
 touches: [design/adrs/README.md, flaiover/src/lib/server/events-socket.ts, flaiover/src/lib/server/events-socket.test.ts, flaiover/src/lib/server/agent.ts, flaiover/src/hooks.server.ts, flaiover/server.js, flaiover/vite.config.ts, flaiover/src/lib/events.ts, flaiover/src/lib/events.test.ts, flaiover/src/lib/inbox.svelte.test.ts, flaiover/src/routes/board/board.svelte.test.ts, flaiover/src/routes/board/cardmenu.svelte.test.ts, flaiover/src/routes/board/lanemenu.svelte.test.ts, flaiover/src/lib/components/StoryAgent.svelte.test.ts, flai/internal/components/harness/harness.mjs, flai/internal/components/integration_test.go, flai/internal/components/testdata/harness/src/lib/Fetcher.svelte, flaiover/playwright.config.ts, flaiover/e2e/live-events.e2e.ts, scripts/flaiover-e2e.sh, Makefile, flaiover/src/routes/api/events/+server.ts, flaiover/src/lib/server/sse.ts, flaiover/src/lib/server/sse.test.ts, design/system/flaiover-dashboard.md, design/system/dashboard-host-channel.md, design/system/component-library.md, design/tech/sveltekit.md, docs/users/flaiover.md, docs/operators/index.md, design/adrs/0182-the-dashboard-s-live-events-reach-the-browser-over-a-websocket.md, docs/users/flai.md, flaiover/package.json, scripts/README.md, design/issues/I-0171-the-litellm-gateway-smoke-check-fails-because-claude-code-2-1-296-refuses-the-default-haiku-model-name-as-unrecognized-model.md, design/issues/summary.md, design/issues/I-0172-the-merge-queue-s-send-back-thread-quotes-only-the-first-line-of-a-failing-plain-tier-s-finding-and-keeps-no-log-of-the-batch-so-the-step-that-failed-cannot-be-told.md]
