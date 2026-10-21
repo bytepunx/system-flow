@@ -3,15 +3,18 @@ id: S-0460
 type: story
 nature: feature
 title: A page may carry a left sidebar of its sections, and the item page shows one section at a time from it instead of one long scroll
-status: ready
+status: in-progress
 parent: E-0027
 owner: alex
 created: 2026-10-21T07:00:19Z
-updated: 2026-10-21T09:04:46Z
+updated: 2026-10-21T09:10:02Z
 transitions:
   - to: ready
     at: 2026-10-21T07:54:27Z
     by: alex
+  - to: in-progress
+    at: 2026-10-21T09:10:02Z
+    by: agent-S-0460
 tags: [dashboard]
 topics: [dashboard, design]
 touches: [flaiover/src/lib/components/PageSidebar.svelte, flaiover/src/lib/components/PageSidebar.svelte.test.ts, flaiover/src/lib/pagesidebar.svelte.ts, flaiover/src/lib/pagesidebar.svelte.test.ts, design/components/flaiover/src/lib/components/PageSidebar.examples.json, "flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts", design/system/flaiover-dashboard.md, docs/users/flaiover.md]
@@ -22,9 +25,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1592
+  priced_by: harness
+  turns:
+    - day: 2026-10-21
+      hand_edits: 1
+      work: 15
+  models:
+    - model: claude-opus-5-5
+      input: 182
+      output: 136837
+      cache_read: 9439475
+      cache_write: 434004
+      cost: 7.2065
   strategic:
     - kind: orchestrator
       seconds: 21

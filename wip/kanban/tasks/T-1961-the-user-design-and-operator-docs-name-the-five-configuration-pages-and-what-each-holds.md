@@ -3,16 +3,37 @@ id: T-1961
 type: task
 nature: improvement
 title: The user, design, and operator docs name the five Configuration pages and what each holds
-status: backlog
+status: done
 parent: S-0459
 owner: alex
 created: 2026-10-21T07:03:25Z
-updated: 2026-10-21T07:03:25Z
-transitions: []
+updated: 2026-10-21T09:16:42Z
+transitions:
+  - to: ready
+    at: 2026-10-21T09:12:15Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-21T09:12:16Z
+    by: system-flow
+  - to: done
+    at: 2026-10-21T09:16:42Z
+    by: agent-S-0459
 stream: S-0459
 tags: [dashboard]
 touches: [docs/users/flaiover.md, design/system/flaiover-dashboard.md, docs/operators/settings.md]
 after: [T-1960]
+usage:
+  source: log
+  seconds: 266
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 83
+      output: 33517
+      cache_read: 4479150
+      cache_write: 151689
+      cost: 2.482
 ---
 # T-1961 The user, design, and operator docs name the five Configuration pages and what each holds
 

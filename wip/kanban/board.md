@@ -8,8 +8,6 @@ wip_limits:
   review: 5
 order:
   - S-0461
-  - S-0462
-  - S-0460
 ---
 
 # Board

@@ -27,15 +27,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 18
+      seconds: 308
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 6
-          output: 96
-          cache_read: 691966
-          cache_write: 2415
-          cost: 0.1741
+          input: 124
+          output: 2217
+          cache_read: 20110119
+          cache_write: 20494
+          cost: 5.0469
 forecast:
   duration: 45m
   delivery: 2026-10-21T09:57:00Z

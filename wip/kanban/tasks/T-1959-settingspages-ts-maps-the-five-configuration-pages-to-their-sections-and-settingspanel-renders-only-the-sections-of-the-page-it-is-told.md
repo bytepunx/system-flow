@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 755
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 96
-      output: 478
-      cache_read: 5135011
-      cache_write: 167145
-      cost: 1.9767
+      input: 98
+      output: 39250
+      cache_read: 5245359
+      cache_write: 177637
+      cost: 2.9066
 ---
 # T-1959 settingspages.ts maps the five Configuration pages to their sections, and SettingsPanel renders only the sections of the page it is told
 

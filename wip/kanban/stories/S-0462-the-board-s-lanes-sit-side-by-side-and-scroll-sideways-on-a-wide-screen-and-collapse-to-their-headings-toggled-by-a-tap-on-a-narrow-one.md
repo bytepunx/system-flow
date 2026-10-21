@@ -3,18 +3,24 @@ id: S-0462
 type: story
 nature: improvement
 title: The board's lanes sit side by side and scroll sideways on a wide screen, and collapse to their headings, toggled by a tap, on a narrow one
-status: ready
+status: review
 parent: E-0027
 owner: alex
 created: 2026-10-21T07:01:02Z
-updated: 2026-10-21T08:32:26Z
+updated: 2026-10-21T09:29:52Z
 transitions:
   - to: ready
     at: 2026-10-21T07:54:32Z
     by: alex
+  - to: in-progress
+    at: 2026-10-21T09:04:57Z
+    by: agent-S-0462
+  - to: review
+    at: 2026-10-21T09:29:52Z
+    by: agent-S-0462
 tags: [dashboard]
 topics: [dashboard]
-touches: [flaiover/src/lib/lanecollapse.svelte.ts, flaiover/src/lib/lanecollapse.svelte.test.ts, flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts, flaiover/src/routes/+layout.svelte, flaiover/e2e/board-layout.e2e.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
+touches: [flaiover/src/lib/lanecollapse.svelte.ts, flaiover/src/lib/lanecollapse.svelte.test.ts, flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts, flaiover/src/routes/+layout.svelte, flaiover/e2e/board-layout.e2e.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/issues/I-0180-the-top-bar-s-project-switcher-has-no-maximum-width-so-with-two-projects-connected-the-page-is-wider-than-a-390px-viewport.md, design/issues/summary.md]
 after: [S-0458]
 agent:
   harness: claude-code
@@ -22,20 +28,38 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1512
+  priced_by: harness
+  turns:
+    - day: 2026-10-21
+      ceremony: 1
+      hand_edits: 2
+      work: 39
+  models:
+    - model: claude-opus-5-5
+      input: 182
+      output: 69308
+      cache_read: 9523823
+      cache_write: 362490
+      cost: 5.6913
   strategic:
     - kind: orchestrator
-      seconds: 13
+      seconds: 425
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 3
-          output: 71
-          cache_read: 373871
-          cache_write: 1419
-          cost: 0.0941
+          input: 27
+          output: 487
+          cache_read: 4636013
+          cache_write: 7997
+          cost: 1.1643
+        - model: claude-sonnet-5-5
+          input: 12
+          output: 74
+          cache_read: 173276
+          cache_write: 47914
+          cost: 0.1811
 forecast:
   duration: 50m
   delivery: 2026-10-21T09:30:00Z
@@ -54,12 +78,12 @@ The board reads as a board at every width. Today its six lanes stack in one colu
 
 ## Acceptance criteria
 
-- [ ] From Tailwind's `sm` width the six lanes are one row with a minimum lane width. The row scrolls sideways inside the board when the lanes do not fit, with the page itself never scrolling sideways, and the lanes never wrap or stack at any width from `sm`. The board takes the whole main area beside the rail, not the layout's `max-w-6xl`. Each lane's heading stays visible while the lane's cards scroll.
-- [ ] Below `sm` each lane is its heading, with its name, its counts line, and its WIP count against the limit, as a button with `aria-expanded` and `aria-controls`. Tapping it, or pressing Enter or Space on it, opens or closes the lane's cards. Ready, In progress, and Review are open the first time, and the others are closed.
-- [ ] The lanes the operator opened or closed are kept per browser in `localStorage` (`$lib/lanecollapse.svelte.ts`), as the board's type toggles are, and are used only below `sm`.
-- [ ] The lane menu, the card menu, reordering within a lane, moving a card to another lane through the lane-move dialog, the merge queue in Review, and the publish banner in Done work as before at both widths. A collapsed lane still takes a moved card, and its counts change at once.
-- [ ] A Playwright test at 390px and at 1440px checks the collapsed lanes and their toggling, and the one row that scrolls sideways with the document no wider than the viewport. The board's existing tests pass.
-- [ ] `design/system/flaiover-dashboard.md` § Views (`/board`) and `docs/users/flaiover.md` § Board describe both layouts.
+- [x] From Tailwind's `sm` width the six lanes are one row with a minimum lane width. The row scrolls sideways inside the board when the lanes do not fit, with the page itself never scrolling sideways, and the lanes never wrap or stack at any width from `sm`. The board takes the whole main area beside the rail, not the layout's `max-w-6xl`. Each lane's heading stays visible while the lane's cards scroll.
+- [x] Below `sm` each lane is its heading, with its name, its counts line, and its WIP count against the limit, as a button with `aria-expanded` and `aria-controls`. Tapping it, or pressing Enter or Space on it, opens or closes the lane's cards. Ready, In progress, and Review are open the first time, and the others are closed.
+- [x] The lanes the operator opened or closed are kept per browser in `localStorage` (`$lib/lanecollapse.svelte.ts`), as the board's type toggles are, and are used only below `sm`.
+- [x] The lane menu, the card menu, reordering within a lane, moving a card to another lane through the lane-move dialog, the merge queue in Review, and the publish banner in Done work as before at both widths. A collapsed lane still takes a moved card, and its counts change at once.
+- [x] A Playwright test at 390px and at 1440px checks the collapsed lanes and their toggling, and the one row that scrolls sideways with the document no wider than the viewport. The board's existing tests pass.
+- [x] `design/system/flaiover-dashboard.md` § Views (`/board`) and `docs/users/flaiover.md` § Board describe both layouts.
 
 ## Tasks
 - T-1969 lanecollapse.svelte.ts keeps which lanes are open on a narrow board per browser, with Ready, In progress, and Review open at first

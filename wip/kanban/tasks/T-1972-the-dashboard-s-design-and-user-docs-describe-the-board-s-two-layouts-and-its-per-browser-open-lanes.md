@@ -3,16 +3,37 @@ id: T-1972
 type: task
 nature: improvement
 title: The dashboard's design and user docs describe the board's two layouts and its per-browser open lanes
-status: backlog
+status: done
 parent: S-0462
 owner: alex
 created: 2026-10-21T07:05:13Z
-updated: 2026-10-21T07:05:13Z
-transitions: []
+updated: 2026-10-21T09:15:04Z
+transitions:
+  - to: ready
+    at: 2026-10-21T09:14:36Z
+    by: agent-S-0462
+  - to: in-progress
+    at: 2026-10-21T09:14:36Z
+    by: agent-S-0462
+  - to: done
+    at: 2026-10-21T09:15:04Z
+    by: agent-S-0462
 stream: S-0462
 tags: [dashboard]
 touches: [design/system/flaiover-dashboard.md, docs/users/flaiover.md]
 after: [T-1970]
+usage:
+  source: log
+  seconds: 28
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 7
+      output: 2688
+      cache_read: 369432
+      cache_write: 14061
+      cost: 0.2208
 ---
 # T-1972 The dashboard's design and user docs describe the board's two layouts and its per-browser open lanes
 

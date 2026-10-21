@@ -3,11 +3,11 @@ id: S-0459
 type: story
 nature: improvement
 title: The settings page becomes five Configuration pages, Features, Agents, File System, Projects, and Harnesses, each reached from the rail
-status: in-progress
+status: review
 parent: E-0027
 owner: alex
 created: 2026-10-21T06:59:57Z
-updated: 2026-10-21T08:50:47Z
+updated: 2026-10-21T09:20:01Z
 transitions:
   - to: ready
     at: 2026-10-21T07:54:25Z
@@ -15,9 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-10-21T08:50:47Z
     by: agent-S-0459
+  - to: review
+    at: 2026-10-21T09:20:01Z
+    by: system-flow
 tags: [dashboard]
 topics: [dashboard]
-touches: [flaiover/src/lib/settingspages.ts, flaiover/src/lib/settingspages.test.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flaiover/src/routes/settings/+page.svelte, flaiover/src/routes/settings/+page.ts, "flaiover/src/routes/settings/[page]/+page.svelte", "flaiover/src/routes/settings/[page]/+page.ts", flaiover/src/routes/settings/settings.svelte.test.ts, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, docs/operators/settings.md]
+touches: [flaiover/src/lib/settingspages.ts, flaiover/src/lib/settingspages.test.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flaiover/src/routes/settings/+page.svelte, flaiover/src/routes/settings/+page.ts, "flaiover/src/routes/settings/[page]/+page.svelte", "flaiover/src/routes/settings/[page]/+page.ts", flaiover/src/routes/settings/settings.svelte.test.ts, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, docs/operators/settings.md, flaiover/src/lib/components/NavRail.svelte, flaiover/src/lib/components/NavRail.svelte.test.ts, flaiover/src/lib/components/ProjectSwitcher.svelte, flaiover/src/lib/components/ProjectSwitcher.svelte.test.ts]
 after: [S-0458]
 agent:
   harness: claude-code
@@ -26,32 +29,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 813
-  estimated: true
-  priced_by: estimate
+  seconds: 1764
+  priced_by: harness
   turns:
     - day: 2026-10-21
-      ceremony: 2
-      hand_edits: 1
-      work: 12
+      ceremony: 4
+      hand_edits: 3
+      work: 36
   models:
     - model: claude-opus-5-5
-      input: 114
-      output: 584
-      cache_read: 5871124
-      cache_write: 276434
-      cost: 2.2919
+      input: 312
+      output: 125242
+      cache_read: 16737324
+      cache_write: 566820
+      cost: 9.2747
   strategic:
     - kind: orchestrator
-      seconds: 102
+      seconds: 832
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 22
-          output: 335
-          cache_read: 1645103
-          cache_write: 4857
-          cost: 0.4137
+          input: 79
+          output: 1153
+          cache_read: 11476879
+          cache_write: 17106
+          cost: 2.8816
+        - model: claude-sonnet-5-5
+          input: 10
+          output: 56
+          cache_read: 115530
+          cache_write: 39231
+          cost: 0.1267
 forecast:
   duration: 45m
   delivery: 2026-10-21T09:24:00Z
@@ -80,11 +88,11 @@ The split is the operator's answer to TH-0553 question 4. Each page shows only i
 
 ## Acceptance criteria
 
-- [ ] `$lib/settingspages.ts` maps each of the five pages to its slug, its title, and its sections, as TH-0553 settles them. Each of `SettingsPanel.svelte`'s ten sections belongs to exactly one page, and a test fails when a section belongs to none or to two.
-- [ ] `/settings/<page>` renders the page's title and only its sections, for `features`, `agents`, `file-system`, `projects`, and `harnesses`. An unknown slug is a 404. `/settings` redirects to `/settings/features`, and a link to one of the old `/settings` anchors lands on the page that holds that section.
-- [ ] Each section reads, saves, and refuses as it did on the one page. The settings host action's gate, the read-only dashboard, and a host flai that keeps no settings still show their notice on each page. The existing `SettingsPanel` tests pass, run against each section's page.
-- [ ] The rail's five Configuration entries link `/settings/<page>`. `locate` names each as the current page, so the right entry is `aria-current` there.
-- [ ] `docs/users/flaiover.md` § Settings, `design/system/flaiover-dashboard.md` § Views, and the Settings page references in `docs/operators/settings.md` name the five pages and what each holds.
+- [x] `$lib/settingspages.ts` maps each of the five pages to its slug, its title, and its sections, as TH-0553 settles them. Each of `SettingsPanel.svelte`'s ten sections belongs to exactly one page, and a test fails when a section belongs to none or to two.
+- [x] `/settings/<page>` renders the page's title and only its sections, for `features`, `agents`, `file-system`, `projects`, and `harnesses`. An unknown slug is a 404. `/settings` redirects to `/settings/features`, and a link to one of the old `/settings` anchors lands on the page that holds that section.
+- [x] Each section reads, saves, and refuses as it did on the one page. The settings host action's gate, the read-only dashboard, and a host flai that keeps no settings still show their notice on each page. The existing `SettingsPanel` tests pass, run against each section's page.
+- [x] The rail's five Configuration entries link `/settings/<page>`. `locate` names each as the current page, so the right entry is `aria-current` there.
+- [x] `docs/users/flaiover.md` § Settings, `design/system/flaiover-dashboard.md` § Views, and the Settings page references in `docs/operators/settings.md` name the five pages and what each holds.
 
 ## Tasks
 - T-1959 settingspages.ts maps the five Configuration pages to their sections, and SettingsPanel renders only the sections of the page it is told

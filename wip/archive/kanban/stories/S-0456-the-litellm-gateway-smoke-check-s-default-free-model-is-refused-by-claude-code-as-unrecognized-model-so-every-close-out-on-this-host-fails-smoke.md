@@ -3,10 +3,10 @@ id: S-0456
 type: story
 nature: remediation
 title: The LiteLLM gateway smoke check's default free model is refused by Claude Code as unrecognized_model, so every close-out on this host fails smoke
-status: review
+status: done
 owner: alex
 created: 2026-10-21T02:08:41Z
-updated: 2026-10-21T08:59:46Z
+updated: 2026-10-21T09:37:17Z
 transitions:
   - to: ready
     at: 2026-10-21T07:28:20Z
@@ -22,6 +22,9 @@ transitions:
     by: flai
   - to: review
     at: 2026-10-21T08:59:46Z
+    by: agent-S-0456
+  - to: done
+    at: 2026-10-21T09:37:17Z
     by: agent-S-0456
 tags: [flai, serve, tests]
 touches: [flai/internal/serve/gateway_test.go, scripts/litellm.sh, design/system/agent-adapters.md, docs/contributors/index.md, design/issues/I-0170-the-litellm-gateway-smoke-check-s-default-free-model-is-refused-by-claude-code-as-unrecognized-model-so-every-close-out-on-this-host-fails-smoke.md, design/issues/summary.md, design/issues/I-0176-a-usage-write-to-a-story-overwrites-its-move-to-in-progress-made-meanwhile-so-a-started-story-reads-as-ready-again.md, design/issues/I-0174-the-merge-queue-s-batch-runs-smoke-with-no-close-out-story-so-scripts-check-sh-runs-an-unscoped-flai-check-strict-and-fails-every-batch-on-findings-outside-its-stories.md, design/issues/I-0178-a-story-that-adds-a-flaiover-dependency-leaves-the-main-checkout-s-node-modules-without-it-so-every-other-close-out-fails-testeverylistedflaiovercomponentcompilesintheharness.md, design/issues/I-0158-testasettledreplystartstheagentwaitingonitonce-in-flai-internal-serve-fails-now-and-then-in-the-close-out-s-integration-tier-on-a-branch-that-does-not-touch-serve.md]
@@ -49,15 +52,15 @@ usage:
       cost: 7.4584
   strategic:
     - kind: orchestrator
-      seconds: 10706
+      seconds: 10859
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 413
-          output: 7256
-          cache_read: 50582567
-          cache_write: 97400
-          cost: 12.7064
+          input: 419
+          output: 7336
+          cache_read: 51693830
+          cache_write: 99656
+          cost: 12.9855
         - model: claude-sonnet-5-5
           input: 7
           output: 62

@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1115.3679
-accrued_seconds: 1038152
-tasks_completed: 765
-last_run: 2026-10-21T09:00:12Z
+accrued_cost: 1125.3900
+accrued_seconds: 1040329
+tasks_completed: 772
+last_run: 2026-10-21T09:36:29Z
 ---
 
 # Orchestrator activity
@@ -5366,6 +5366,55 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0456
 - Seconds: 96
 - Cost: 0.3929 USD, estimated
+
+### 2026-10-21T09:05:05Z
+
+- Summary: S-0465 landed through the merge queue. release_evaluate: judgement policy, pending 1 story worth 22.5 USD/week. Decided not to publish yet: S-0463 and S-0456 are enqueued with passing verifies and should land in the next batch, so I'll release the three together rather than cut two flai patches minutes apart.
+- Items: S-0465, S-0463, S-0456
+- Seconds: 293
+- Cost: 0.3970 USD, estimated
+
+### 2026-10-21T09:05:16Z
+
+- Summary: S-0462 moved to in-progress. Re-applied the throughput order under order_ready: S-0461 (45m, waits for S-0460), then S-0460 (1h).
+- Items: S-0460, S-0461
+- Seconds: 11
+- Cost: 0.1600 USD, estimated
+
+### 2026-10-21T09:10:06Z
+
+- Summary: S-0460 moved to in-progress. Re-applied the throughput order under order_ready: ready holds S-0461 (45m) alone, which waits for S-0460.
+- Items: S-0461
+- Seconds: 290
+- Cost: 4.8728 USD, estimated
+
+### 2026-10-21T09:21:20Z
+
+- Summary: Enqueued S-0459 in the merge queue under accept_reviews at 87cd3e98. flai verify passed there, the accept dry run showed no blocker, and the verifier matched all five criteria to changed files. Three in the queue. flai serve now runs 1.67.7 (restarted), so batches scope to their stories (ADR-0183) and the S-0460/S-0462 overlap no longer fails them.
+- Items: S-0459
+- Seconds: 674
+- Cost: 2.4478 USD, estimated
+
+### 2026-10-21T09:24:09Z
+
+- Summary: The queue sent S-0463 back at integration (TH-0564) on TestASettledReplyStartsTheAgentWaitingOnItOnce in flai/internal/serve. That is I-0158's known intermittent failure, in a package S-0463 does not touch. TH-0564 is flai serve's, for S-0463's agent to re-enqueue. Batch 20261021-092356 now verifies S-0456 and S-0459.
+- Items: S-0463, S-0456, S-0459
+- Seconds: 169
+- Cost: 0.4405 USD, estimated
+
+### 2026-10-21T09:31:01Z
+
+- Summary: Enqueued S-0462 in the merge queue under accept_reviews at 7995922b. flai verify passed there, the accept dry run showed no blocker, and the verifier matched all six criteria to changed files. It found no conflict on +layout.svelte with S-0459 today. Three in the queue.
+- Items: S-0462
+- Seconds: 412
+- Cost: 1.2513 USD, estimated
+
+### 2026-10-21T09:36:29Z
+
+- Summary: S-0463 came back to review at 49cce4a7. flai verify passed, and host_test.go is unchanged from the reviewed 630c8d48. The accept dry run is blocked by TH-0564, flai serve's send-back thread, answered by agent-S-0463 as the I-0158 flake but not resolved. Left S-0463 in review and opened a thread asking the operator to resolve TH-0564, after which it can be enqueued, and suggesting a remediation story for I-0158.
+- Items: S-0463
+- Seconds: 328
+- Cost: 0.4527 USD, estimated
 
 ## Refusals
 

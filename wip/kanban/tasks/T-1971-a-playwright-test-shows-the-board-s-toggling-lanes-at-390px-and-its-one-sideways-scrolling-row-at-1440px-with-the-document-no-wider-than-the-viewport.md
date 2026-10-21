@@ -3,16 +3,37 @@ id: T-1971
 type: task
 nature: improvement
 title: A Playwright test shows the board's toggling lanes at 390px and its one sideways-scrolling row at 1440px, with the document no wider than the viewport
-status: backlog
+status: done
 parent: S-0462
 owner: alex
 created: 2026-10-21T07:05:07Z
-updated: 2026-10-21T07:05:07Z
-transitions: []
+updated: 2026-10-21T09:26:35Z
+transitions:
+  - to: ready
+    at: 2026-10-21T09:14:34Z
+    by: agent-S-0462
+  - to: in-progress
+    at: 2026-10-21T09:14:35Z
+    by: agent-S-0462
+  - to: done
+    at: 2026-10-21T09:26:35Z
+    by: agent-S-0462
 stream: S-0462
 tags: [dashboard]
 touches: [flaiover/e2e/board-layout.e2e.ts]
 after: [T-1970]
+usage:
+  source: log
+  seconds: 720
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 47
+      output: 17768
+      cache_read: 2441580
+      cache_write: 92930
+      cost: 1.4591
 ---
 # T-1971 A Playwright test shows the board's toggling lanes at 390px and its one sideways-scrolling row at 1440px, with the document no wider than the viewport
 

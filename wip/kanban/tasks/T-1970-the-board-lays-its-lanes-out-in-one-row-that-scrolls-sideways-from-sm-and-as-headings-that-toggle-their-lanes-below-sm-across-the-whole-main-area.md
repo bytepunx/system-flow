@@ -3,16 +3,37 @@ id: T-1970
 type: task
 nature: improvement
 title: The board lays its lanes out in one row that scrolls sideways from sm and as headings that toggle their lanes below sm, across the whole main area
-status: backlog
+status: done
 parent: S-0462
 owner: alex
 created: 2026-10-21T07:04:56Z
-updated: 2026-10-21T07:04:56Z
-transitions: []
+updated: 2026-10-21T09:14:23Z
+transitions:
+  - to: ready
+    at: 2026-10-21T09:06:55Z
+    by: agent-S-0462
+  - to: in-progress
+    at: 2026-10-21T09:06:56Z
+    by: agent-S-0462
+  - to: done
+    at: 2026-10-21T09:14:23Z
+    by: agent-S-0462
 stream: S-0462
 tags: [dashboard]
 touches: [flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts, flaiover/src/routes/+layout.svelte]
 after: [T-1969]
+usage:
+  source: log
+  seconds: 447
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 59
+      output: 22323
+      cache_read: 3067513
+      cache_write: 116754
+      cost: 1.8331
 ---
 # T-1970 The board lays its lanes out in one row that scrolls sideways from sm and as headings that toggle their lanes below sm, across the whole main area
 
