@@ -1,6 +1,7 @@
 package workitem
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 	"github.com/bytepunx/system-flow/flai/internal/filelock"
 )
 
@@ -76,6 +78,44 @@ func mergeSaved(it *Item) (string, error) {
 	merged.Path, merged.Archived = it.Path, it.Archived
 	*it = *merged
 	return it.Marshal(), nil
+}
+
+// Restore takes a write out of the work item file at path, under the items
+// lock: wrote is what the write left there and before what it replaced. The
+// file is given before when no other writer changed it since, or it is
+// missing or one of the three does not parse; otherwise only the write's own
+// change is taken out, part by part, keeping the other writers', and a part
+// they changed too is a *ConflictError, with nothing written (S-0479, I-0175).
+func (r *Repo) Restore(path string, wrote, before []byte) error {
+	unlock, err := r.lockItems()
+	if err != nil {
+		return fmt.Errorf("restore %s: %w", path, err)
+	}
+	defer unlock()
+	data, err := os.ReadFile(path)
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("restore %s: read it for what another writer saved since: %w", path, err)
+	}
+	base, okBase := canonical(string(wrote))
+	mine, okMine := canonical(string(before))
+	cur, perr := ParseItem(string(data))
+	// a file no other writer changed since, or one of the three that does
+	// not parse, holds no change to keep
+	if err != nil || perr != nil || !okBase || !okMine || bytes.Equal(data, wrote) || cur.Marshal() == base {
+		return atomicfile.WriteFile(path, before, 0o644)
+	}
+	doc, both, err := merge3(base, mine, cur.Marshal())
+	if err != nil {
+		return fmt.Errorf("restore %s: merge with what another writer saved: %w", cur.ID, err)
+	}
+	if len(both) > 0 {
+		return &ConflictError{ID: cur.ID, Keys: both}
+	}
+	merged, err := ParseItem(doc)
+	if err != nil {
+		return fmt.Errorf("restore %s: the merge with what another writer saved does not parse, so nothing was written (%w): read %s and take the change out by hand", cur.ID, err, cur.ID)
+	}
+	return atomicfile.WriteFile(path, []byte(merged.Marshal()), 0o644)
 }
 
 // canonical is doc as Marshal writes it, and whether it parses.

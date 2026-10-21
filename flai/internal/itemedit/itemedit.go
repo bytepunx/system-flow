@@ -293,14 +293,19 @@ func bodyChanges(before, after string) []string {
 	return out
 }
 
-// file is one file an edit touches, with what it held before.
+// file is one file an edit touches, with what it held before and, for a work
+// item the edit saved, what the edit wrote to it.
 type file struct {
 	path    string
 	before  []byte
+	wrote   []byte
 	existed bool
 }
 
-type undo struct{ files map[string]*file }
+type undo struct {
+	repo  *workitem.Repo
+	files map[string]*file
+}
 
 func (u *undo) note(path string) {
 	if _, ok := u.files[path]; ok {
@@ -310,11 +315,23 @@ func (u *undo) note(path string) {
 	u.files[path] = &file{path: path, before: data, existed: err == nil}
 }
 
+// saved records what the edit wrote to it, so that restore takes out only
+// that and keeps what another writer saved to it since (S-0479, I-0175).
+func (u *undo) saved(it *workitem.Item) {
+	if f, ok := u.files[it.Path]; ok {
+		f.wrote = []byte(it.Marshal())
+	}
+}
+
+// restore puts back each file as it was before the edit: a work item the
+// edit saved without the edit's own change, every other file byte for byte.
 func (u *undo) restore() error {
 	var first error
 	for _, f := range u.files {
 		var err error
-		if f.existed {
+		if f.existed && f.wrote != nil {
+			err = u.repo.Restore(f.path, f.wrote, f.before)
+		} else if f.existed {
 			err = atomicfile.WriteFile(f.path, f.before, 0o644)
 		} else if rmErr := os.Remove(f.path); rmErr != nil && !os.IsNotExist(rmErr) {
 			err = rmErr
@@ -523,7 +540,7 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 	if err != nil {
 		return nil, err
 	}
-	u := &undo{files: map[string]*file{}}
+	u := &undo{repo: repo, files: map[string]*file{}}
 	fail := func(err error) (*Result, error) {
 		if rerr := u.restore(); rerr != nil {
 			return nil, fmt.Errorf("%w; and putting the files back failed: %w", err, rerr)
@@ -545,6 +562,7 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 	if err := repo.Save(it); err != nil {
 		return fail(err)
 	}
+	u.saved(it)
 	if it.Path != oldPath {
 		if err := os.Remove(oldPath); err != nil {
 			return fail(err)
@@ -558,6 +576,7 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 		if err := repo.Save(formerParent); err != nil {
 			return fail(err)
 		}
+		u.saved(formerParent)
 	}
 	if newParent != nil {
 		u.note(newParent.Path)
@@ -566,6 +585,7 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 		if err := repo.Save(newParent); err != nil {
 			return fail(err)
 		}
+		u.saved(newParent)
 	} else if retitled && it.Parent != "" {
 		if p, err := repo.Get(it.Parent); err == nil && !p.Archived {
 			if nb := retitleChild(p.Body, it.ID, it.Title); nb != p.Body {
@@ -574,6 +594,7 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 				if err := repo.Save(p); err != nil {
 					return fail(err)
 				}
+				u.saved(p)
 			}
 		}
 	}

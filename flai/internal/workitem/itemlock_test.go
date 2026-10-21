@@ -3,6 +3,7 @@ package workitem
 import (
 	"errors"
 	"fmt"
+	"os"
 	"slices"
 	"strings"
 	"sync"
@@ -211,5 +212,45 @@ func TestSaveAgainOfTheSameCopy(t *testing.T) {
 	got := onDisk(t, it.Path)
 	if !slices.Equal(got.Tags, []string{"second"}) || !slices.Equal(got.Touches, []string{"flai/cmd"}) {
 		t.Errorf("tags %v, touches %v, want [second] and [flai/cmd]", got.Tags, got.Touches)
+	}
+}
+
+// Restore refuses to take out a change another writer changed again since,
+// writing nothing, and gives a file that is gone back as it was (S-0479).
+func TestRestoreRefusesAKeyChangedAgainSince(t *testing.T) {
+	r := newProject(t)
+	readyStory(t, r)
+	it := copies(t, r, 1)[0]
+	before, err := os.ReadFile(it.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	it.Tags = []string{"edited"}
+	if err := r.Save(it); err != nil {
+		t.Fatal(err)
+	}
+	wrote := []byte(it.Marshal())
+	again := copies(t, r, 1)[0]
+	again.Tags = []string{"changed again"}
+	if err := r.Save(again); err != nil {
+		t.Fatal(err)
+	}
+	written := onDisk(t, it.Path).Marshal()
+	err = r.Restore(it.Path, wrote, before)
+	var conflict *ConflictError
+	if !errors.As(err, &conflict) || conflict.ID != "S-0001" || !slices.Equal(conflict.Keys, []string{"tags"}) {
+		t.Fatalf("restore over tags changed again: %v, want a conflict on S-0001's tags", err)
+	}
+	if got := onDisk(t, it.Path).Marshal(); got != written {
+		t.Errorf("a refused restore changed the file:\n%s\nwant\n%s", got, written)
+	}
+	if err := os.Remove(it.Path); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Restore(it.Path, wrote, before); err != nil {
+		t.Fatalf("restore of a file that is gone: %v", err)
+	}
+	if got, _ := os.ReadFile(it.Path); string(got) != string(before) {
+		t.Errorf("restore of a file that is gone wrote\n%s\nwant\n%s", got, before)
 	}
 }
