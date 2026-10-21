@@ -38,10 +38,10 @@ func makeProject(t *testing.T, dir, key string) *workitem.Repo {
 	return repo
 }
 
-// readyStoryIn makes a story with a criterion and moves it to ready. It
-// writes the criterion atomically, as flai writes items, so that a wait held
+// backlogStoryIn makes a story with a criterion, left in backlog. It writes
+// the criterion atomically, as flai writes items, so that a wait held
 // meanwhile never reads the story half-written (I-0102).
-func readyStoryIn(t *testing.T, repo *workitem.Repo, title string, at time.Time, touches ...string) *workitem.Item {
+func backlogStoryIn(t *testing.T, repo *workitem.Repo, title string, at time.Time, touches ...string) *workitem.Item {
 	t.Helper()
 	s, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: title, Owner: "alex", Touches: touches, Now: at})
 	if err != nil {
@@ -57,6 +57,13 @@ func readyStoryIn(t *testing.T, repo *workitem.Repo, title string, at time.Time,
 	if s, err = repo.Get(s.ID); err != nil {
 		t.Fatal(err)
 	}
+	return s
+}
+
+// readyStoryIn makes a story with a criterion and moves it to ready.
+func readyStoryIn(t *testing.T, repo *workitem.Repo, title string, at time.Time, touches ...string) *workitem.Item {
+	t.Helper()
+	s := backlogStoryIn(t, repo, title, at, touches...)
 	if _, err := repo.Transition(s, workitem.Ready, "alex", "", at); err != nil {
 		t.Fatal(err)
 	}
@@ -333,9 +340,14 @@ func TestWaitForEventsAcrossAFolder(t *testing.T) {
 	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
 		t.Fatal(failed)
 	}
+	// the story is written before the wait, so that the wait wakes on its
+	// move, not on its creation, which is no event
+	story := backlogStoryIn(t, beta, "Beta work", t0.Add(2*time.Minute))
 	done := f.callLater(t, "wait_for_events", map[string]any{"timeout_seconds": 3})
 	time.Sleep(150 * time.Millisecond)
-	readyStoryIn(t, beta, "Beta work", t0.Add(2*time.Minute))
+	if _, err := beta.Transition(story, workitem.Ready, "alex", "", t0.Add(2*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
 	select {
 	case a := <-done:
 		out := a.out
