@@ -3,6 +3,7 @@
 package serve
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -12,6 +13,7 @@ import (
 	"io"
 	"maps"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"os/exec"
@@ -446,16 +448,23 @@ func TestGatewayLiteLLM(t *testing.T) {
 	slug := envOr(litellmHaikuEnv, litellmHaikuDefault)
 	for _, c := range []struct {
 		name, route, baseURL, slug string
-		optIn                      bool
+		optIn, probe               bool
 	}{
-		{"unified", "LiteLLM (unified)", root, slug, false},
-		{"pass-through", "LiteLLM (Anthropic pass-through)", root + "/anthropic", litellmPassThroughHaiku, true},
+		{"unified", "LiteLLM (unified)", root, slug, false, true},
+		{"pass-through", "LiteLLM (Anthropic pass-through)", root + "/anthropic", litellmPassThroughHaiku, true, false},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			if c.optIn && os.Getenv(litellmPassThroughEnv) != "1" {
 				t.Skip("the pass-through reaches only Anthropic, a paid upstream: set " + litellmPassThroughEnv + "=1 where the proxy has an Anthropic key")
 			}
 			ctx := context.Background()
+			// a model the proxy cannot reach fails claude with only a warning
+			// it prints on passing runs too, so ask the proxy first (I-0171)
+			if c.probe {
+				if err := litellmProbe(ctx, root, key, c.slug); err != nil {
+					t.Fatal(litellmProbeFailure(c.slug, litellmHaikuSource(os.Getenv), err))
+				}
+			}
 			var before litellmKeyInfo
 			var beforeErr error
 			checkGateway(t, claude, gatewayRoute{
@@ -910,6 +919,70 @@ func TestLiteLLMSpendLogIsJudged(t *testing.T) {
 	}
 }
 
+// TestLiteLLMProbeNamesTheModel covers the probe of the unified case's model
+// against a stand-in proxy, with no call out of this host (I-0171): a model
+// OpenRouter retired, which the proxy answers 404 for, fails naming the
+// slug, where it came from, the status, the upstream's message, and how to
+// name another; a model it serves passes; a proxy that is down fails.
+func TestLiteLLMProbeNamesTheModel(t *testing.T) {
+	const slug = "openrouter-messages/nvidia/nemotron-3-super-120b-a12b:free"
+	retired := `{"error":{"message":"litellm.NotFoundError: AnthropicException - {\"error\":{\"message\":\"No endpoints found for nvidia/nemotron-3-super-120b-a12b:free.\",\"code\":404}}","type":null,"param":null,"code":"404"}}`
+	type request struct {
+		method, path, auth, version string
+		model                       string
+		maxTokens                   int
+	}
+	status, answer := http.StatusNotFound, retired
+	sent := make(chan request, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Model     string `json:"model"`
+			MaxTokens int    `json:"max_tokens"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		sent <- request{r.Method, r.URL.Path, r.Header.Get("Authorization"), r.Header.Get("anthropic-version"), body.Model, body.MaxTokens}
+		w.WriteHeader(status)
+		_, _ = io.WriteString(w, answer)
+	}))
+	defer srv.Close()
+	ctx := context.Background()
+
+	err := litellmProbe(ctx, srv.URL, "sk-virtual", slug)
+	if err == nil {
+		t.Fatal("the probe of a retired model passed, want the proxy's 404")
+	}
+	if got, want := <-sent, (request{http.MethodPost, "/v1/messages", "Bearer sk-virtual", "2023-06-01", slug, 1}); got != want {
+		t.Errorf("the probe sent %+v, want %+v", got, want)
+	}
+	set := func(string) string { return slug }
+	unset := func(string) string { return "" }
+	for _, c := range []struct {
+		getenv func(string) string
+		source string
+	}{
+		{set, litellmHaikuEnv + ", set in the environment or by .flai-cache/litellm/litellm.env"},
+		{unset, "litellmHaikuDefault"},
+	} {
+		msg := litellmProbeFailure(slug, litellmHaikuSource(c.getenv), err)
+		for _, want := range []string{slug, c.source, "answered 404", "No endpoints found for nvidia/nemotron-3-super-120b-a12b:free.", "LITELLM_HAIKU_MODEL=<slug> scripts/litellm.sh up", "set " + litellmHaikuEnv} {
+			if !strings.Contains(msg, want) {
+				t.Errorf("the probe's failure does not name %q:\n%s", want, msg)
+			}
+		}
+	}
+
+	status, answer = http.StatusOK, `{"type":"message","content":[]}`
+	if err := litellmProbe(ctx, srv.URL, "sk-virtual", slug); err != nil {
+		t.Errorf("the probe of a model the proxy serves failed: %v", err)
+	}
+	<-sent
+
+	srv.Close()
+	if err := litellmProbe(ctx, srv.URL, "sk-virtual", slug); err == nil || !strings.Contains(err.Error(), "POST "+srv.URL+"/v1/messages") {
+		t.Errorf("the probe of a proxy that is down answered %v, want an error naming the POST", err)
+	}
+}
+
 // logLiteLLMSpend logs the proxy's reading of a run's spend: the key's
 // spend before and after, the spend log's rows since started when the master
 // key is at hand and whether they carry the run's session ID, and the cost
@@ -959,6 +1032,78 @@ func litellmKey(ctx context.Context, root, key string) (litellmKeyInfo, error) {
 	}
 	_, err := litellmGet(ctx, root, key, "/key/info", nil, &body)
 	return body.Info, err
+}
+
+// litellmProbe sends one message of one token for slug by the unified API
+// of the proxy at root with key; it answers nil when the proxy answers 2xx,
+// and otherwise an error naming the status and what the proxy said.
+func litellmProbe(ctx context.Context, root, key, slug string) error {
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+	target := root + "/v1/messages"
+	body, err := json.Marshal(map[string]any{
+		"model":      slug,
+		"max_tokens": 1,
+		"messages":   []map[string]string{{"role": "user", "content": "ping"}},
+	})
+	if err != nil {
+		return fmt.Errorf("POST %s: %w", target, err)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, target, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("POST %s: %w", target, err)
+	}
+	req.Header.Set("Authorization", "Bearer "+key)
+	req.Header.Set("anthropic-version", "2023-06-01")
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("POST %s: %w", target, err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		return nil
+	}
+	data, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
+	said := litellmErrorMessage(data)
+	if key != "" {
+		said = strings.ReplaceAll(said, key, "<redacted>")
+	}
+	return fmt.Errorf("POST %s answered %d: %s", target, resp.StatusCode, said)
+}
+
+// litellmErrorMessage is the message of the proxy's error body,
+// {"error":{"message":...}}, on one line, or the body on one line when it
+// holds none.
+func litellmErrorMessage(body []byte) string {
+	var e struct {
+		Error struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if json.Unmarshal(body, &e) == nil && e.Error.Message != "" {
+		return oneLine(e.Error.Message)
+	}
+	return oneLine(string(body))
+}
+
+// litellmHaikuSource says where the unified case's slug came from:
+// litellmHaikuEnv, which the environment or the proxy's key file sets, the
+// check cannot tell which, or the built-in default when it is unset.
+func litellmHaikuSource(getenv func(string) string) string {
+	if getenv(litellmHaikuEnv) != "" {
+		return litellmHaikuEnv + ", set in the environment or by .flai-cache/litellm/litellm.env (scripts/env.sh sources it)"
+	}
+	return "the built-in default, litellmHaikuDefault in gateway_test.go, as " + litellmHaikuEnv + " is not set"
+}
+
+// litellmProbeFailure is what the check says when the probe of slug, which
+// came from source, failed with err: what failed, on what, and how to name a
+// model the proxy serves.
+func litellmProbeFailure(slug, source string, err error) string {
+	return fmt.Sprintf("the haiku alias's model %q, from %s, does not answer through the LiteLLM proxy, so claude -p would fail with no more than its unrecognized_model warning: %v; "+
+		"a 404 is an upstream that does not serve the slug, as when OpenRouter retires a free model (I-0170): name one it serves with LITELLM_HAIKU_MODEL=<slug> scripts/litellm.sh up, which writes it to .flai-cache/litellm/litellm.env, or set %s for this run",
+		slug, source, err, litellmHaikuEnv)
 }
 
 // litellmKeyAfter reads the key's spend once the run has settled in it: the
