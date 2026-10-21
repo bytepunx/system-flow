@@ -1,10 +1,11 @@
 <script lang="ts">
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.png';
-	import { onMount } from 'svelte';
+	import { flushSync, onMount } from 'svelte';
 	import { themeState } from '$lib/theme.svelte';
 	import { inboxState } from '$lib/inbox.svelte';
-	import SiteMenu from '$lib/components/SiteMenu.svelte';
+	import MenuIcon from '@lucide/svelte/icons/menu';
+	import NavRail from '$lib/components/NavRail.svelte';
 	import HostFlai from '$lib/components/HostFlai.svelte';
 	import HostFlaiBanner from '$lib/components/HostFlaiBanner.svelte';
 	import UnsignedBanner from '$lib/components/UnsignedBanner.svelte';
@@ -13,9 +14,14 @@
 	import ProjectSwitcher from '$lib/components/ProjectSwitcher.svelte';
 	import ImportPrompt from '$lib/components/ImportPrompt.svelte';
 	import EditorDialog from '$lib/components/EditorDialog.svelte';
+	import { withProject } from '$lib/sitemenu';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 
 	let { children } = $props();
+	const OVERVIEW = resolve('/');
+	// The login page has no session: no rail, no menu button, no project picker or status pills.
+	const signedIn = $derived(page.url.pathname !== '/login');
 	const modeLabel = {
 		system: 'theme: system',
 		light: 'theme: light',
@@ -32,7 +38,6 @@
 	let started = false;
 	let listTimer: ReturnType<typeof setInterval> | null = null;
 	$effect(() => {
-		const signedIn = page.url.pathname !== '/login';
 		if (signedIn && !started) {
 			started = true;
 			inboxState.start();
@@ -60,42 +65,114 @@
 		}
 		shownProject = current;
 	});
+
+	// The nav rail (S-0458): docked at the left from Tailwind's md width, and below it a drawer the
+	// menu button opens. The drawer is a native <dialog> opened modal: the browser closes it on Escape,
+	// keeps focus inside it, makes the page behind it inert, and draws it in the top layer, so closed
+	// or open it never widens the page. Closing it, however it closes, returns focus to the button.
+	// Only one rail is in the DOM at a time, so NavRail's ids stay unique: the docked one gives way
+	// while the drawer is open, which it only is below md, where the docked one is not shown.
+	let drawer = $state<HTMLDialogElement>();
+	let toggle = $state<HTMLButtonElement>();
+	let drawerOpen = $state(false);
+	function openDrawer() {
+		drawerOpen = true;
+		// The rail is drawn before the dialog opens, so the browser focuses its first group.
+		flushSync();
+		drawer?.showModal();
+	}
+	function closeDrawer() {
+		drawer?.close();
+	}
+	function closed() {
+		drawerOpen = false;
+		toggle?.focus();
+	}
+	// Widening the window to md docks the rail, so an open drawer closes.
+	$effect(() => {
+		if (typeof window.matchMedia !== 'function') return;
+		const wide = window.matchMedia('(min-width: 48rem)');
+		const onchange = (e: MediaQueryListEvent) => e.matches && closeDrawer();
+		wide.addEventListener('change', onchange);
+		return () => wide.removeEventListener('change', onchange);
+	});
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /><title>flaiover</title></svelte:head>
 
-<div class="min-h-screen bg-ground text-ink">
-	<header class="border-b border-line bg-surface">
-		<SiteMenu>
-			{#snippet start()}<span class="font-semibold tracking-tight text-accent">flaiover</span
-				>{/snippet}
-			{#snippet end()}
-				{#if page.url.pathname !== '/login'}<ProjectSwitcher />{/if}
-				<span class="ml-auto"
-					>{#if page.url.pathname !== '/login'}<HostFlai />{/if}</span
+<!-- The rail runs the height of the window at the left, from the top, and the top bar and the page
+sit beside it; the column is min-w-0 so a wide page cannot push the window sideways. -->
+<div class="flex min-h-dvh bg-ground text-ink">
+	{#if signedIn && !drawerOpen}
+		<aside class="hidden w-56 shrink-0 border-r border-line bg-surface md:block" data-nav-docked>
+			<div class="sticky top-0 h-dvh overflow-y-auto"><NavRail /></div>
+		</aside>
+	{/if}
+	<div class="min-w-0 flex-1">
+		<header class="border-b border-line bg-surface">
+			<div
+				class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3"
+				data-top-bar
+			>
+				{#if signedIn}
+					<button
+						bind:this={toggle}
+						type="button"
+						class="cursor-pointer rounded p-1 text-muted hover:text-ink md:hidden"
+						aria-label="Open navigation"
+						aria-expanded={drawerOpen}
+						aria-controls="nav-drawer"
+						data-nav-toggle
+						onclick={openDrawer}><MenuIcon class="size-5" aria-hidden="true" /></button
+					>
+				{/if}
+				<!-- eslint-disable svelte/no-navigation-without-resolve -- OVERVIEW is resolve()d; only ?project= is added -->
+				<a
+					class="font-semibold tracking-tight text-accent no-underline"
+					href={withProject(OVERVIEW, projectState.current)}
+					data-top-name>flaiover</a
 				>
+				<!-- eslint-enable svelte/no-navigation-without-resolve -->
+				{#if signedIn}<ProjectSwitcher />{/if}
 				<button
 					type="button"
 					class="rounded border border-line px-2 py-1 text-xs text-muted hover:text-ink"
 					title="Cycle system, light, dark"
 					aria-label={modeLabel[themeState.mode]}
+					data-top-theme
 					onclick={() => themeState.cycle()}
 				>
 					{modeLabel[themeState.mode]}
 				</button>
-			{/snippet}
-		</SiteMenu>
-	</header>
-	{#if page.url.pathname !== '/login'}<HostFlaiBanner /><UnsignedBanner />{/if}
-	<main class="mx-auto max-w-6xl px-4 py-6">
-		{#key projectState.current}
-			{#if projectState.project?.candidate}
-				<ImportPrompt project={projectState.project} />
-			{:else}
-				{@render children()}
-			{/if}
-		{/key}
-	</main>
+				{#if signedIn}<span class="ml-auto" data-top-pills><HostFlai /></span>{/if}
+			</div>
+		</header>
+		{#if signedIn}<HostFlaiBanner /><UnsignedBanner />{/if}
+		<main class="mx-auto max-w-6xl px-4 py-6">
+			{#key projectState.current}
+				{#if projectState.project?.candidate}
+					<ImportPrompt project={projectState.project} />
+				{:else}
+					{@render children()}
+				{/if}
+			{/key}
+		</main>
+	</div>
+	{#if signedIn}
+		<!-- The drawer below md. Escape closes it natively; a click on the backdrop, which lands on the
+		dialog itself, closes it too, a pointer convenience over what the keyboard already has. -->
+		<dialog
+			bind:this={drawer}
+			id="nav-drawer"
+			class="fixed inset-y-0 left-0 h-full max-h-none w-56 border-r border-line bg-surface text-ink backdrop:bg-ink/40"
+			aria-label="Navigation"
+			data-nav-drawer
+			onclose={closed}
+			onclick={(e) => e.target === e.currentTarget && closeDrawer()}
+		>
+			{#if drawerOpen}<NavRail onnavigate={closeDrawer} />{/if}
+		</dialog>
+	{/if}
 	<!-- The document editor over any page: links open it with openEditor (S-0378). -->
-	{#if page.url.pathname !== '/login'}<EditorDialog />{/if}
+	{#if signedIn}<EditorDialog />{/if}
 </div>
