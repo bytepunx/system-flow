@@ -6,7 +6,7 @@ title: pnpm add run bare in a story worktree installs from the default store, so
 status: backlog
 owner: alex
 created: 2026-10-21T12:00:00Z
-updated: 2026-10-21T12:00:00Z
+updated: 2026-10-22T20:52:11Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
     by: flai
     at: 2026-10-21T12:00:00Z
+finalized:
+  by: alex
+  at: 2026-10-22T20:52:11Z
 ---
 # S-0481 pnpm add run bare in a story worktree installs from the default store, so the next flaiover-install.sh aborts with ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY
 
