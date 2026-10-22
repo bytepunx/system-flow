@@ -1,5 +1,6 @@
 // The nav rail's groups and pages (S-0458, replacing S-0172's two-tier header menu): five groups,
-// each with its icon and its pages in order, and which group and page a path belongs to.
+// each with its icon and its pages in order, and which group and page a path belongs to. The Charts
+// page carries its charts by group from the catalogue, and a path names the chart it shows (S-0484).
 import { resolve } from '$app/paths';
 import type { LucideIcon } from '@lucide/svelte';
 // Each icon by its own module, so dev and tests load the icons used and not the whole library.
@@ -30,6 +31,8 @@ import ToggleRightIcon from '@lucide/svelte/icons/toggle-right';
 import UserCogIcon from '@lucide/svelte/icons/user-cog';
 import WavesIcon from '@lucide/svelte/icons/waves';
 import WorkflowIcon from '@lucide/svelte/icons/workflow';
+// The catalogue, not viz/charts, so the layout's bundle does not take in the charts' builders.
+import { CHART_GROUPS, TITLES, type ChartGroupKey, type Kind } from '$lib/viz/catalog';
 
 /** A page the rail links to: the paths it answers, and the href that opens it. */
 export type LinkedPage = {
@@ -42,8 +45,14 @@ export type LinkedPage = {
 	href: string;
 	/** An indicator the page carries, shown on its group too. */
 	badge?: 'inbox';
+	/** What the page lists below it in the rail, by group. */
+	children?: PageChildGroup[];
 	soon?: false;
 };
+/** A labelled group of the things a page lists below it. */
+export type PageChildGroup = { key: ChartGroupKey; label: string; items: PageChild[] };
+/** One thing a page lists below it, a chart, and the href that opens it, resolve()d. */
+export type PageChild = { key: Kind; label: string; href: string };
 /** A page still to come: shown in the rail, but no link and no path. */
 export type SoonPage = {
 	key: PageKey;
@@ -53,6 +62,7 @@ export type SoonPage = {
 	path?: never;
 	href?: never;
 	badge?: never;
+	children?: never;
 };
 export type MenuPage = LinkedPage | SoonPage;
 export type MenuGroup = {
@@ -114,7 +124,16 @@ export const SITE_MENU: MenuGroup[] = [
 				label: 'Charts',
 				icon: ChartLineIcon,
 				path: '/charts',
-				href: resolve('/charts/[kind]', { kind: 'cycle-time' })
+				href: resolve('/charts/[kind]', { kind: 'cycle-time' }),
+				children: CHART_GROUPS.map((g) => ({
+					key: g.key,
+					label: g.label,
+					items: g.kinds.map((kind) => ({
+						key: kind,
+						label: TITLES[kind],
+						href: resolve('/charts/[kind]', { kind })
+					}))
+				}))
 			},
 			// The workflow's own page is still to come (S-0458).
 			{ key: 'workflow', label: 'Workflow', icon: WorkflowIcon, soon: true }
@@ -289,13 +308,23 @@ function under(pathname: string, path: string): boolean {
 	return pathname === path || pathname.startsWith(`${path}/`);
 }
 
+function childAt(page: LinkedPage, pathname: string): Kind | null {
+	const items = page.children?.flatMap((g) => g.items) ?? [];
+	return items.find((c) => under(pathname, c.href))?.key ?? null;
+}
+
+/** Where a path is in the rail: its group, its page, and the page's child it shows. */
+export type Located = { group: GroupKey | null; page: PageKey | null; child: Kind | null };
+
 /**
- * The group and page a path belongs to; either is null where the rail has none for it, as for
+ * The group, page, and child a path belongs to; each is null where the rail has none for it, as for
  * Overview, Updates, and License, which the top bar and the rail's foot link to. Within a group the
  * page with the longest path that answers wins, so Components at /design/components wins below the
- * design system at /design.
+ * design system at /design. The child is the page's child whose href the path is or is under, so
+ * /charts/throughput names its chart and /charts/nope none (S-0484). The path is compared with the
+ * hrefs as given, as the License link is: both carry the base path, which the page paths leave out.
  */
-export function locate(pathname: string): { group: GroupKey | null; page: PageKey | null } {
+export function locate(pathname: string): Located {
 	for (const g of SITE_MENU) {
 		const page = g.pages
 			.filter((p): p is LinkedPage => !p.soon)
@@ -304,10 +333,10 @@ export function locate(pathname: string): { group: GroupKey | null; page: PageKe
 				(a, p) => (a && a.path.length >= p.path.length ? a : p),
 				undefined
 			);
-		if (page) return { group: g.key, page: page.key };
-		if (g.also?.some((a) => under(pathname, a))) return { group: g.key, page: null };
+		if (page) return { group: g.key, page: page.key, child: childAt(page, pathname) };
+		if (g.also?.some((a) => under(pathname, a))) return { group: g.key, page: null, child: null };
 	}
-	return { group: null, page: null };
+	return { group: null, page: null, child: null };
 }
 
 /** A page's href with the project it was followed from, for a copied link. */
