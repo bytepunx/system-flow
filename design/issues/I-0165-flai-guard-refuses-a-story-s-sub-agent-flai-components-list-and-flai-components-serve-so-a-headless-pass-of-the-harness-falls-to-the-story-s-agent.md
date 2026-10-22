@@ -2,12 +2,12 @@
 id: I-0165
 title: flai guard refuses a story's sub-agent flai components list and flai components serve, so a headless pass of the harness falls to the story's agent
 class: efficiency
-status: open
+status: closed
 count: 1
 cost: 10m
 first_reported: 2026-10-19T05:38:19Z
 last_reported: 2026-10-19T05:38:19Z
-updated: 2026-10-21T11:59:27Z
+updated: 2026-10-22T21:19:46Z
 ---
 
 # I-0165 flai guard refuses a story's sub-agent flai components list and flai components serve, so a headless pass of the harness falls to the story's agent
@@ -24,3 +24,4 @@ S-0449's T-1906 sub-agent was refused both `flai components list` (a read) and `
 ## Remediation
 
 Story S-0477 remediates this issue, created from it at 2026-10-21T11:59:27Z.
+Closed 2026-10-22T21:19:46Z: S-0477 (ADR-0186): flai guard lets every agent run flai components list, and a story's task sub-agent run flai components serve, with or without --story; a read-only sub-agent and the strategic agents' own calls are refused serve, and config stays refused. TestASubAgentListsComponentsAndATaskSubAgentServesThem and TestTheStrategicAgentsListComponentsButDoNotServeThem in flai/internal/guard, and TestGuardLetsATaskSubAgentListAndServeComponents in flai/cmd, reproduce the refusal against main's guard.
