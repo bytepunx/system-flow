@@ -247,13 +247,15 @@ func TestComponentsListExamples(t *testing.T) {
 	writeExamples("design/components/ui/src/lib/Button.examples.json", `{
   "examples": [
     {"name": "Small", "props": {"label": "Save", "size": "sm"}},
-    {"name": "Large, dark, narrow", "props": {"label": "Delete", "size": "lg"}, "theme": "dark", "width": 375}
+    {"name": "Large, dark, narrow", "props": {"label": "Delete", "size": "lg"}, "theme": "dark", "width": 375,
+     "answers": [{"path": "/api/threads", "status": 201, "body": {"id": "TH-0002"}}]}
   ]
 }
 `)
 	// kit is the sub-project's name and packages/kit its path: the file is
-	// found by the name. Its second example's props are not an object.
-	writeExamples("design/components/kit/src/Card.examples.json", `{"examples": [{"name": "Empty", "props": {"items": []}, "colour": "red"}, {"name": "Broken", "props": "x"}]}`)
+	// found by the name. Its second example's props and answers are not an
+	// object and an array.
+	writeExamples("design/components/kit/src/Card.examples.json", `{"examples": [{"name": "Empty", "props": {"items": []}, "colour": "red"}, {"name": "Broken", "props": "x", "answers": "x"}]}`)
 
 	out, errOut, code := runIn(t, root, "components", "list", "--json")
 	if code != 0 {
@@ -265,10 +267,11 @@ func TestComponentsListExamples(t *testing.T) {
 			Components []struct {
 				Path     string `json:"path"`
 				Examples []struct {
-					Name  string                     `json:"name"`
-					Props map[string]json.RawMessage `json:"props"`
-					Theme string                     `json:"theme"`
-					Width int                        `json:"width"`
+					Name    string                     `json:"name"`
+					Props   map[string]json.RawMessage `json:"props"`
+					Theme   string                     `json:"theme"`
+					Width   int                        `json:"width"`
+					Answers json.RawMessage            `json:"answers"`
 				} `json:"examples"`
 				ExamplesPath *string `json:"examples_path"`
 			} `json:"components"`
@@ -282,21 +285,24 @@ func TestComponentsListExamples(t *testing.T) {
 	if button.ExamplesPath == nil || *button.ExamplesPath != "design/components/ui/src/lib/Button.examples.json" || len(button.Examples) != 2 {
 		t.Fatalf("Button: %+v", button)
 	}
-	if small := button.Examples[0]; small.Name != "Small" || string(small.Props["label"]) != `"Save"` || small.Theme != "" || small.Width != 0 {
+	if small := button.Examples[0]; small.Name != "Small" || string(small.Props["label"]) != `"Save"` || small.Theme != "" || small.Width != 0 || small.Answers != nil {
 		t.Errorf("Small: %+v", small)
 	}
-	if large := button.Examples[1]; large.Name != "Large, dark, narrow" || string(large.Props["size"]) != `"lg"` || large.Theme != "dark" || large.Width != 375 {
-		t.Errorf("Large: %+v", large)
+	var answers []map[string]json.RawMessage
+	if large := button.Examples[1]; large.Name != "Large, dark, narrow" || string(large.Props["size"]) != `"lg"` || large.Theme != "dark" || large.Width != 375 ||
+		json.Unmarshal(large.Answers, &answers) != nil || len(answers) != 1 || string(answers[0]["path"]) != `"/api/threads"` || string(answers[0]["status"]) != "201" {
+		t.Errorf("Large, with its answers: %+v", large)
 	}
 	if field.ExamplesPath == nil || *field.ExamplesPath != "design/components/ui/src/lib/forms/Field.examples.json" || field.Examples == nil || len(field.Examples) != 0 {
 		t.Errorf("a component without a file has examples [] and the path its first goes to: %+v", field)
 	}
 	if card.ExamplesPath == nil || *card.ExamplesPath != "design/components/kit/src/Card.examples.json" || len(card.Examples) != 2 ||
-		card.Examples[0].Name != "Empty" || string(card.Examples[0].Props["items"]) != "[]" || card.Examples[1].Props == nil || len(card.Examples[1].Props) != 0 {
-		t.Errorf("a file that does not fit the format gives what parsed, props {} where they are not an object: %+v", card)
+		card.Examples[0].Name != "Empty" || string(card.Examples[0].Props["items"]) != "[]" || card.Examples[1].Props == nil || len(card.Examples[1].Props) != 0 || card.Examples[1].Answers != nil {
+		t.Errorf("a file that does not fit the format gives what parsed, props {} where they are not an object, answers left out where they are not an array: %+v", card)
 	}
-	if strings.Contains(out, `"examples": null`) || strings.Contains(out, `"props": null`) || strings.Contains(out, `"theme": ""`) || strings.Contains(out, `"width": 0`) {
-		t.Errorf("examples and props are never null, an absent theme and width left out:\n%s", out)
+	if strings.Contains(out, `"examples": null`) || strings.Contains(out, `"props": null`) || strings.Contains(out, `"theme": ""`) || strings.Contains(out, `"width": 0`) ||
+		strings.Count(out, `"answers"`) != 1 {
+		t.Errorf("examples and props are never null, an absent theme, width, and answers left out:\n%s", out)
 	}
 
 	out, errOut, code = runIn(t, root, "components", "list")

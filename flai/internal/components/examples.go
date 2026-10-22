@@ -72,6 +72,10 @@ type Example struct {
 	Theme string `json:"theme,omitempty"`
 	// Width is the frame's width in CSS pixels; 0 for the width it shows.
 	Width int `json:"width,omitempty"`
+	// Answers are what the harness answers the component's requests to the
+	// app's own server with (ADR-0187), the file's array as it has it; nil
+	// when the example gives none or they are not an array.
+	Answers json.RawMessage `json:"answers,omitempty"`
 	// Index is its place in the file's examples, from 1.
 	Index int `json:"-"`
 	// Line is the line its object opens on.
@@ -83,8 +87,9 @@ type Example struct {
 // Problem is one thing in an examples file that does not fit the format or
 // the component's props.
 type Problem struct {
-	// Line is where: the prop's key, the example's opening brace, a syntax
-	// error, or a key of the file's own.
+	// Line is where: the prop's key, the example's opening brace, an
+	// answer's key or opening brace, a syntax error, or a key of the file's
+	// own.
 	Line int
 	// Index is the example's place in the file, from 1; 0 for a problem of
 	// the file's own.
@@ -126,8 +131,8 @@ func Examples(fsys fs.FS, name string) ([]Example, []Problem, error) {
 // that is an object, in the file's order, and what in it does not fit the
 // format: JSON that does not parse, a key the format does not name, a name
 // that is missing, empty, or used twice, props that are missing or not an
-// object, a theme that is not light or dark, and a width that is not a whole
-// number, 1 or more.
+// object, a theme that is not light or dark, a width that is not a whole
+// number, 1 or more, and answers that do not fit ADR-0187's format.
 func ParseExamples(data []byte) ([]Example, []Problem) {
 	p := &parser{data: data}
 	if !json.Valid(data) {
@@ -186,7 +191,12 @@ func (p *parser) file(line int, format string, args ...any) {
 
 // example adds a problem of ex at its opening brace.
 func (p *parser) example(ex Example, format string, args ...any) {
-	p.problems = append(p.problems, Problem{Line: ex.Line, Index: ex.Index, Example: ex.Name, Message: fmt.Sprintf(format, args...)})
+	p.exampleAt(ex, ex.Line, format, args...)
+}
+
+// exampleAt adds a problem of ex at line.
+func (p *parser) exampleAt(ex Example, line int, format string, args ...any) {
+	p.problems = append(p.problems, Problem{Line: line, Index: ex.Index, Example: ex.Name, Message: fmt.Sprintf(format, args...)})
 }
 
 // lineAt is the line, from 1, of the byte at offset in the file.
@@ -305,8 +315,17 @@ func (p *parser) oneExample(ex Example, el member) Example {
 				continue
 			}
 			ex.Width = int(width)
+		case "answers":
+			if kind := jsonKind(m.value); kind != "an array" {
+				p.exampleAt(ex, p.lineAt(m.keyAt), "its answers are %s, not an array of answers; write [] for none, or leave answers out", kind)
+				continue
+			}
+			ex.Answers = m.value
+			for i, el := range p.elements(m.value, m.valueAt) {
+				p.oneAnswer(ex, i+1, el)
+			}
 		default:
-			p.example(ex, "key %q is not one an example has; it has name, props, theme, and width only, so remove it", m.key)
+			p.example(ex, "key %q is not one an example has; it has name, props, theme, width, and answers only, so remove it", m.key)
 		}
 	}
 	if !hasName {
@@ -316,6 +335,115 @@ func (p *parser) oneExample(ex Example, el member) Example {
 		p.example(ex, "it has no props; write props, {} for none")
 	}
 	return ex
+}
+
+// oneAnswer adds the problems of el, answer n of ex's answers, by ADR-0187's
+// format: not an object, a key an answer does not have, a value that does
+// not fit its key, no path, a body with a status that sends none, and events
+// with a key or method an EventSource's answer does not take. Each is on its
+// key's line, or on the answer's opening brace for one about the answer.
+func (p *parser) oneAnswer(ex Example, n int, el member) {
+	line := p.lineAt(el.valueAt)
+	if kind := jsonKind(el.value); kind != "an object" {
+		p.exampleAt(ex, line, `answer %d is %s, not an object with a path; write {"path": "/api/..."}`, n, kind)
+		return
+	}
+	keys := map[string]int{}
+	status, method := 200, ""
+	for _, m := range p.members(el.value, el.valueAt) {
+		at := p.lineAt(m.keyAt)
+		keys[m.key] = at
+		switch m.key {
+		case "path":
+			var s string
+			if json.Unmarshal(m.value, &s) != nil || !strings.HasPrefix(s, "/") {
+				p.exampleAt(ex, at, `answer %d's path %s is not a string starting with /; give the request's path, such as "/api/threads", with its query when the answer is for that query alone`, n, shown(m.value))
+			}
+		case "method":
+			if json.Unmarshal(m.value, &method) != nil || !isMethod(method) {
+				p.exampleAt(ex, at, `answer %d's method %s is not an HTTP method; give one, such as "GET" or "POST", or leave method out to match every method`, n, shown(m.value))
+				method = ""
+			}
+		case "status":
+			var s float64
+			if json.Unmarshal(m.value, &s) != nil || s != math.Trunc(s) || s < 200 || s > 599 {
+				p.exampleAt(ex, at, "answer %d's status %s is not a whole number from 200 to 599; give one, such as 404, or leave status out for 200", n, shown(m.value))
+				continue
+			}
+			status = int(s)
+		case "headers":
+			if kind := jsonKind(m.value); kind != "an object" {
+				p.exampleAt(ex, at, `answer %d's headers are %s, not an object of header name to string; write {"content-type": "text/csv"}, or leave headers out`, n, kind)
+				continue
+			}
+			for _, h := range p.members(m.value, m.valueAt) {
+				if kind := jsonKind(h.value); kind != "a string" {
+					p.exampleAt(ex, p.lineAt(h.keyAt), "answer %d's header %q is %s, not a string; write its value as a string", n, h.key, kind)
+				}
+			}
+		case "body":
+			// Any JSON value is a body; only its status can refuse it.
+		case "events":
+			if kind := jsonKind(m.value); kind != "an array" {
+				p.exampleAt(ex, at, `answer %d's events are %s, not an array of events; write [{"data": ...}], one object for each message`, n, kind)
+				continue
+			}
+			for j, ev := range p.elements(m.value, m.valueAt) {
+				p.oneEvent(ex, n, j+1, ev)
+			}
+		default:
+			p.exampleAt(ex, at, "answer %d's key %q is not one an answer has; it has path, method, status, headers, body, and events only, so remove it", n, m.key)
+		}
+	}
+	if _, ok := keys["path"]; !ok {
+		p.exampleAt(ex, line, `answer %d has no path; give the request's path, starting with /, such as "/api/threads"`, n)
+	}
+	if at, ok := keys["body"]; ok && (status == 204 || status == 205 || status == 304) {
+		p.exampleAt(ex, at, "answer %d has a body, but its status %d sends none; leave body out, or give another status", n, status)
+	}
+	if _, ok := keys["events"]; !ok {
+		return
+	}
+	for _, k := range []string{"status", "headers", "body"} {
+		if at, ok := keys[k]; ok {
+			p.exampleAt(ex, at, "answer %d has events, so it answers an EventSource, which takes no %s; leave %s out, or leave events out to answer a fetch", n, k, k)
+		}
+	}
+	if method != "" && !strings.EqualFold(method, "GET") {
+		p.exampleAt(ex, keys["method"], `answer %d has events, so it answers an EventSource, whose method is GET, not %q; give "GET", or leave method out`, n, method)
+	}
+}
+
+// oneEvent adds the problems of el, event j of answer n of ex's answers: not
+// an object, no data, a key an event does not have, and an event or id that
+// is not a string.
+func (p *parser) oneEvent(ex Example, n, j int, el member) {
+	line := p.lineAt(el.valueAt)
+	if kind := jsonKind(el.value); kind != "an object" {
+		p.exampleAt(ex, line, `answer %d's event %d is %s, not an object with data; write {"data": ...}`, n, j, kind)
+		return
+	}
+	hasData := false
+	for _, m := range p.members(el.value, el.valueAt) {
+		switch m.key {
+		case "data":
+			hasData = true
+		case "event", "id":
+			if kind := jsonKind(m.value); kind != "a string" {
+				p.exampleAt(ex, p.lineAt(m.keyAt), "answer %d's event %d has an %s that is %s, not a string; write it as a string, or leave %s out", n, j, m.key, kind, m.key)
+			}
+		default:
+			p.exampleAt(ex, p.lineAt(m.keyAt), "answer %d's event %d has key %q, which an event does not; it has event, data, and id only, so remove it", n, j, m.key)
+		}
+	}
+	if !hasData {
+		p.exampleAt(ex, line, "answer %d's event %d has no data; give it data, the message's text or any JSON value", n, j)
+	}
+}
+
+// isMethod reports whether s is an HTTP method's letters, such as GET.
+func isMethod(s string) bool {
+	return s != "" && strings.Trim(s, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz") == ""
 }
 
 // Validate is what in examples does not fit props, their component's: a prop

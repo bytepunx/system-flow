@@ -665,6 +665,39 @@ func TestComponentsListCarriesExamplesFromItsCheckout(t *testing.T) {
 	}
 }
 
+// S-0476, ADR-0187: components.list gives an example's answers as its file
+// has them, and leaves the key out of an example without them and of one
+// whose answers are not an array.
+func TestComponentsListCarriesAnExamplesAnswers(t *testing.T) {
+	p := shipyardStories(t)
+	host := componentsHost(new(bool), &[]Entry{}, &fakeServers{running: map[string]bool{}})
+	withNode(t, &listNode{stdout: `{"components":[{"path":"src/lib/Button.svelte","props":[]}]}`})
+	const file = "design/components/ui/src/lib/Button.examples.json"
+	writeFile(t, p.Root, file, []byte(`{"examples": [
+  {"name": "Answered", "props": {}, "answers": [{"path": "/api/threads", "body": {"threads": []}}, {"path": "/api/events", "events": [{"data": "ping"}]}]},
+  {"name": "Plain", "props": {}},
+  {"name": "Broken", "props": {}, "answers": {"path": "/api/threads"}}
+]}`))
+
+	m, ok := MethodsFor("test", func() time.Time { return t0 }, host)["components.list"]
+	if !ok {
+		t.Fatal("no method components.list")
+	}
+	res, rerr := m(context.Background(), p, json.RawMessage(`{"sub_project":"ui"}`))
+	if rerr != nil {
+		t.Fatal(rerr)
+	}
+	data, err := json.Marshal(res)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `"examples":[{"name":"Answered","props":{},"answers":[{"path":"/api/threads","body":{"threads":[]}},{"path":"/api/events","events":[{"data":"ping"}]}]},` +
+		`{"name":"Plain","props":{}},{"name":"Broken","props":{}}]`
+	if !strings.Contains(string(data), want) {
+		t.Errorf("components.list:\n%s\nwant it to hold\n%s", data, want)
+	}
+}
+
 // S-0442, ADR-0145: a story that is not a work item is NotFound; a task, a
 // story neither in progress nor in review, and one without a worktree are
 // refused, saying how to open it, by every components method, and nothing

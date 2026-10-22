@@ -253,3 +253,112 @@ func TestValidateChecksPropsByKind(t *testing.T) {
 		t.Errorf("a prop of a component without props: %+v", got)
 	}
 }
+
+// S-0476, ADR-0187: an example's answers are kept as the file has them and
+// listed with it; an example without answers is listed without the key.
+func TestParseExamplesReadsAnswers(t *testing.T) {
+	data := `{
+  "examples": [
+    {
+      "name": "Two threads",
+      "props": { "item": "S-0001" },
+      "answers": [
+        { "path": "/api/threads?item=S-0001", "body": { "threads": [] } },
+        { "path": "/api/threads", "method": "POST", "status": 201, "headers": { "x-id": "TH-0002" }, "body": { "id": "TH-0002" } },
+        { "path": "/api/events", "events": [{ "event": "change", "data": { "kind": "edited" }, "id": "1" }, { "data": "ping" }] }
+      ]
+    },
+    { "name": "Asks nothing", "props": {}, "answers": [] },
+    { "name": "None", "props": {} }
+  ]
+}`
+	got, problems := ParseExamples([]byte(data))
+	if len(problems) != 0 {
+		t.Fatalf("problems: %+v", problems)
+	}
+	if len(got) != 3 {
+		t.Fatalf("examples: %+v", got)
+	}
+	var answers []map[string]json.RawMessage
+	if err := json.Unmarshal(got[0].Answers, &answers); err != nil || len(answers) != 3 || string(answers[1]["status"]) != "201" || string(answers[2]["path"]) != `"/api/events"` {
+		t.Errorf("first's answers: %s %v", got[0].Answers, err)
+	}
+	out, err := json.Marshal(got[0])
+	if err != nil || !strings.Contains(string(out), `"answers":[{"path":"/api/threads?item=S-0001","body":{"threads":[]}},`) {
+		t.Errorf("first as JSON: %s %v", out, err)
+	}
+	for i, want := range []string{`{"name":"Asks nothing","props":{},"answers":[]}`, `{"name":"None","props":{}}`} {
+		if out, err := json.Marshal(got[i+1]); err != nil || string(out) != want {
+			t.Errorf("example %d as JSON: %s %v, want %s", i+2, out, err, want)
+		}
+	}
+}
+
+// Each way an answer can miss ADR-0187's format is one problem, on its key's
+// line or on the answer's opening brace; answers that are not an array are
+// left out of the example, and answers that are, kept.
+func TestParseExamplesReportsAnswers(t *testing.T) {
+	// file is an example whose answers key, on line 6, has the value answers,
+	// so that an array's first element on a line of its own is on line 7.
+	file := func(answers string) string {
+		return "{\n  \"examples\": [\n    {\n      \"name\": \"A\",\n      \"props\": {},\n      \"answers\": " + answers + "\n    }\n  ]\n}"
+	}
+	for _, answers := range []string{
+		"[\n{\"path\": \"/a\", \"method\": \"post\", \"status\": 201, \"headers\": {\"content-type\": \"text/csv\"}, \"body\": \"a,b\"}\n]",
+		"[\n{\"path\": \"/a?b=1\", \"status\": 599, \"body\": null}\n]",
+		"[\n{\"path\": \"/a\", \"status\": 204}\n]",
+		"[\n{\"path\": \"/e\", \"method\": \"get\", \"events\": [{\"data\": \"x\", \"event\": \"e\", \"id\": \"1\"}, {\"data\": {\"a\": 1}}]}\n]",
+		"[\n{\"path\": \"/e\", \"events\": []}\n]",
+	} {
+		if got, problems := ParseExamples([]byte(file(answers))); len(problems) != 0 || len(got) != 1 || got[0].Answers == nil {
+			t.Errorf("%s: %+v %+v, want it to fit", answers, got, problems)
+		}
+	}
+	for _, tc := range []struct {
+		answers string
+		line    int
+		want    string
+	}{
+		{"[\n\"x\"\n]", 7, "answer 1 is a string, not an object with a path"},
+		{"[\n{\"path\": \"/a\"},\n{\"method\": \"GET\"}\n]", 8, "answer 2 has no path; give the request's path, starting with /"},
+		{"[\n{\"path\": \"api/threads\"}\n]", 7, `answer 1's path "api/threads" is not a string starting with /`},
+		{"[\n{\"path\": 7}\n]", 7, "answer 1's path 7 is not a string starting with /"},
+		{"[\n{\"path\": \"/a\",\n\"method\": \"GE T\"}\n]", 8, `answer 1's method "GE T" is not an HTTP method`},
+		{"[\n{\"path\": \"/a\",\n\"method\": \"\"}\n]", 8, `answer 1's method "" is not an HTTP method`},
+		{"[\n{\"path\": \"/a\",\n\"status\": 199}\n]", 8, "answer 1's status 199 is not a whole number from 200 to 599"},
+		{"[\n{\"path\": \"/a\",\n\"status\": 600}\n]", 8, "answer 1's status 600 is not a whole number from 200 to 599"},
+		{"[\n{\"path\": \"/a\",\n\"status\": 404.5}\n]", 8, "answer 1's status 404.5 is not a whole number"},
+		{"[\n{\"path\": \"/a\",\n\"status\": \"404\"}\n]", 8, `answer 1's status "404" is not a whole number`},
+		{"[\n{\"path\": \"/a\",\n\"headers\": []}\n]", 8, "answer 1's headers are an array, not an object of header name to string"},
+		{"[\n{\"path\": \"/a\", \"headers\": {\n\"x-n\": 1}}\n]", 8, `answer 1's header "x-n" is a number, not a string`},
+		{"[\n{\"path\": \"/a\", \"status\": 204,\n\"body\": \"x\"}\n]", 8, "answer 1 has a body, but its status 204 sends none; leave body out"},
+		{"[\n{\"path\": \"/a\", \"status\": 205,\n\"body\": {}}\n]", 8, "its status 205 sends none"},
+		{"[\n{\"path\": \"/a\", \"status\": 304,\n\"body\": null}\n]", 8, "its status 304 sends none"},
+		{"[\n{\"path\": \"/a\",\n\"delay\": 5}\n]", 8, `answer 1's key "delay" is not one an answer has; it has path, method, status, headers, body, and events only`},
+		{"[\n{\"path\": \"/e\",\n\"events\": {}}\n]", 8, "answer 1's events are an object, not an array of events"},
+		{"[\n{\"path\": \"/e\", \"events\": [\n\"x\"]}\n]", 8, "answer 1's event 1 is a string, not an object with data"},
+		{"[\n{\"path\": \"/e\", \"events\": [{\"data\": 1},\n{\"event\": \"change\"}]}\n]", 8, "answer 1's event 2 has no data"},
+		{"[\n{\"path\": \"/e\", \"events\": [{\"data\": 1,\n\"retry\": 5}]}\n]", 8, `answer 1's event 1 has key "retry", which an event does not`},
+		{"[\n{\"path\": \"/e\", \"events\": [{\"data\": 1,\n\"id\": 3}]}\n]", 8, "answer 1's event 1 has an id that is a number, not a string"},
+		{"[\n{\"path\": \"/e\", \"events\": [{\"data\": 1,\n\"event\": null}]}\n]", 8, "answer 1's event 1 has an event that is null, not a string"},
+		{"[\n{\"path\": \"/e\", \"events\": [],\n\"status\": 200}\n]", 8, "answer 1 has events, so it answers an EventSource, which takes no status"},
+		{"[\n{\"path\": \"/e\", \"events\": [],\n\"headers\": {}}\n]", 8, "which takes no headers"},
+		{"[\n{\"path\": \"/e\", \"events\": [],\n\"body\": \"x\"}\n]", 8, "which takes no body"},
+		{"[\n{\"path\": \"/e\", \"events\": [],\n\"method\": \"POST\"}\n]", 8, `answer 1 has events, so it answers an EventSource, whose method is GET, not "POST"`},
+	} {
+		got, problems := ParseExamples([]byte(file(tc.answers)))
+		if len(problems) != 1 || !problemAt(problems, tc.line, tc.want) || !strings.HasPrefix(problems[0].String(), `example "A": answer `) {
+			t.Errorf("%s: problems %+v, want one on line %d with %q", tc.answers, problems, tc.line, tc.want)
+		}
+		if len(got) != 1 || got[0].Answers == nil {
+			t.Errorf("%s: examples %+v, want the answers kept", tc.answers, got)
+		}
+	}
+	got, problems := ParseExamples([]byte(file(`"none"`)))
+	if len(problems) != 1 || !problemAt(problems, 6, `example "A": its answers are a string, not an array of answers`) {
+		t.Errorf("answers not an array: %+v", problems)
+	}
+	if len(got) != 1 || got[0].Answers != nil {
+		t.Errorf("answers not an array: %+v, want them left out", got)
+	}
+}

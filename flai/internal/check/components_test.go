@@ -213,6 +213,50 @@ func TestComponentExamplesReportEachFindingOnItsLine(t *testing.T) {
 	}
 }
 
+// S-0476, ADR-0187: an answer that does not fit the format is a warning on
+// its key's line, naming the example, which --strict fails on; answers that
+// fit have no finding.
+func TestComponentExamplesReportAMalformedAnswer(t *testing.T) {
+	withNode(t, &fakeNode{props: map[string]string{"src/lib/Card.svelte": cardProps}})
+	repo := examplesProject(t, webAndAPI, map[string]string{
+		cardFile: `{"examples": [{"name": "Answered", "props": {"title": "A"}, "answers": [
+  {"path": "/api/threads?item=S-0001", "body": {"threads": []}},
+  {"path": "/api/threads", "method": "POST", "status": 201, "headers": {"location": "/api/threads/TH-0002"}},
+  {"path": "/api/events", "events": [{"event": "change", "data": {"kind": "edited"}}]}
+]}]}
+`,
+	})
+	if got := findings(t, repo, "components.examples"); len(got) != 0 {
+		t.Errorf("answers that fit: %+v", got)
+	}
+
+	withNode(t, &fakeNode{props: map[string]string{"src/lib/Card.svelte": cardProps}})
+	repo = examplesProject(t, webAndAPI, map[string]string{
+		cardFile: `{"examples": [{"name": "Answered", "props": {"title": "A"}, "answers": [
+  {"path": "/api/threads",
+   "status": 204, "body": {"threads": []}}
+]}]}
+`,
+	})
+	res, err := Run(repo, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []Finding
+	for _, fd := range res.Findings {
+		if fd.Rule == "components.examples" {
+			got = append(got, fd)
+		}
+	}
+	if len(got) != 1 || filepath.ToSlash(got[0].Path) != cardPath || got[0].Line != 3 || got[0].Level != Warning || got[0].advisory ||
+		!strings.Contains(got[0].Message, `example "Answered": answer 1 has a body, but its status 204 sends none`) {
+		t.Errorf("findings: %+v, want one warning on line 3 for the body", got)
+	}
+	if res.OK(true) {
+		t.Error("the strict check passes over the malformed answer")
+	}
+}
+
 // A file whose sub-project or component does not exist is a warning on line
 // 1, and its examples' props are not read; JSON that does not parse is a
 // warning on its line, as well.
