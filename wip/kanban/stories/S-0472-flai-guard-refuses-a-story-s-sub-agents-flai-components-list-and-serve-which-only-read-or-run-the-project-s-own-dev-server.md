@@ -6,7 +6,7 @@ title: flai guard refuses a story's sub-agents flai components list and serve, w
 status: backlog
 owner: alex
 created: 2026-10-21T11:58:44Z
-updated: 2026-10-21T11:58:44Z
+updated: 2026-10-22T20:53:07Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
     by: flai
     at: 2026-10-21T11:58:44Z
+finalized:
+  by: alex
+  at: 2026-10-22T20:53:07Z
 ---
 # S-0472 flai guard refuses a story's sub-agents flai components list and serve, which only read or run the project's own dev server
 
