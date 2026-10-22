@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-10-21
+updated: 2026-10-22
 status: active
 ---
 
@@ -34,13 +34,15 @@ The nav rail lists five groups. Each page is a section below.
 
 | Group | Pages |
 |-------|-------|
-| Flow | [Board](#board), [Inbox](#inbox) (with the number of things that need you), [Charts](#charts), and Workflow, still to come and marked soon |
+| Flow | [Board](#board), [Inbox](#inbox) (with the number of things that need you), [Charts](#charts) (which opens to list the charts), and Workflow, still to come and marked soon |
 | Agents | Orchestration (the [Orchestrator](#orchestrator)), Planning (the [Planner](#planner)), Analysis (the [Analyzer](#analyzer)), [Activity](#activity), [Threads](#threads), [Messages](#messages) |
 | Design | System (the [Design system](#design-system)), [Components](#components) |
 | Documentation | System, Conventions, and Issues, which open those folders in [Docs](#docs); [ADRs](#adrs); [Search](#search) |
 | Configuration | [Features](#features), [Agents](#agents), [File System](#file-system), [Projects](#projects), and [Harnesses](#harnesses), the five pages of the [Settings](#settings) |
 
 Click a group to show or hide its pages. An open group's icon is coloured and a closed group's is grey. A closed group still shows its pages' numbers, so the Inbox count stands beside Flow. The page you are on is bold and coloured, and its group opens when you arrive. The browser remembers which groups you opened and closed. [License](#license) is at the foot of the rail.
+
+Charts, in Flow, opens and closes as a group does; it is not a link itself. Open, it lists the charts under four grey labels: flow, usage, planning, and strategic. Click a chart to open it. The chart shown is bold and coloured, and Charts is bold while any chart is shown. Arriving on a chart opens Flow and Charts. The browser remembers whether you left Charts open or closed, as it does the groups. On a narrow window, choosing a chart closes the rail.
 
 On a window 768 pixels wide or more, the rail stays at the left. On a narrower one, the menu button opens it.
 
@@ -383,7 +385,7 @@ The same settings are changed in a shell with `flai manifest set` ([Changing the
 
 ## Charts
 
-Charts plots the flow metrics `flai stats` computes, so the numbers are the same in both places. The charts are listed at the left of the chart, in four groups: flow, usage, planning, and strategic. Click a chart's name to open it; the chart shown is highlighted. The list is a column beside the chart on a wide window, and stays in view as you scroll; on a narrow one it is a row above the chart, which you can scroll sideways. Pick a window, and the controls the chart offers: an item type, an epic, on the usage charts over time and Forecast Error / Model what a bar or a point covers (an hour, a day, or a week), and on the forecast charts of planning a nature and a model. The strategic charts offer only the item type. Every chart has a table view under it and follows the light or dark theme. The window sets what each chart shows: its time axis runs from the start of the window to now, and the charts of items and their tables list only the items completed in the window. The window you pick last is kept in this browser, so every chart opens at it, after a reload or a visit to another page too.
+Charts plots the flow metrics `flai stats` computes, so the numbers are the same in both places. You choose a chart from Charts in the nav rail, which lists them in four groups: flow, usage, planning, and strategic ([The header](#the-header)). The page has no list of its own: its controls, the chart, the notes under it, and its table take its whole width. Pick a window, and the controls the chart offers: an item type, an epic, on the usage charts over time and Forecast Error / Model what a bar or a point covers (an hour, a day, or a week), and on the forecast charts of planning a nature and a model. The strategic charts offer only the item type. Every chart has a table view under it and follows the light or dark theme. The window sets what each chart shows: its time axis runs from the start of the window to now, and the charts of items and their tables list only the items completed in the window. The window you pick last is kept in this browser, so every chart opens at it, after a reload or a visit to another page too.
 
 | Chart | Shows |
 |-------|-------|
