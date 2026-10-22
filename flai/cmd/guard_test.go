@@ -310,6 +310,41 @@ func TestGuardRefusesAReadOnlySubAgentsShellWrite(t *testing.T) {
 	}
 }
 
+// I-0165, I-0156, S-0477, ADR-0186: flai guard, with flai's own command
+// names, lets a task sub-agent list and serve the component library, through
+// bin/flai and scripts/flai.sh alike, lets a read-only one list but refuses
+// it serve, and refuses every sub-agent config, with exit 2.
+func TestGuardLetsATaskSubAgentListAndServeComponents(t *testing.T) {
+	root := tempProject(t)
+	agents := filepath.Join(root, ".claude", "agents")
+	if err := os.MkdirAll(agents, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(agents, "verifier.md"), []byte("---\nname: verifier\ntools: Read, Grep, Glob, Bash\n---\n\nYou review.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	bash := func(agent, command string) string {
+		in, _ := json.Marshal(map[string]any{"tool_name": "Bash", "tool_input": map[string]string{"command": command}, "agent_type": agent, "agent_id": "a1"})
+		return string(in)
+	}
+	for _, c := range []struct {
+		in   string
+		code int
+		err  string
+	}{
+		{bash("general-purpose", "scripts/flai.sh components list --json"), 0, ""},
+		{bash("general-purpose", "bin/flai components serve --story S-0449"), 0, ""},
+		{bash("verifier", "flai components list"), 0, ""},
+		{bash("verifier", "scripts/flai.sh components serve --project flaiover"), 2, `a sub-agent (verifier) cannot run "scripts/flai.sh components serve --project flaiover"`},
+		{bash("general-purpose", "flai components config flaiover --setup x"), 2, "rewrites system-flow.yaml"},
+	} {
+		_, errOut, code := runStdin(t, root, c.in, "guard")
+		if code != c.code || (c.err == "" && errOut != "") || !strings.Contains(errOut, c.err) {
+			t.Errorf("%s: code %d, stderr %q", c.in, code, errOut)
+		}
+	}
+}
+
 // S-0208, TH-0096, S-0218, S-0299: this repository's settings and the
 // template's run the guard before Bash and flai's MCP tools in every session,
 // and before Edit, MultiEdit, Write, and NotebookEdit in a planner's, an
