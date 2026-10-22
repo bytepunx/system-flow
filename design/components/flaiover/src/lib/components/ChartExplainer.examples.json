@@ -1,0 +1,20 @@
+{
+  "examples": [
+    {
+      "name": "Flow: Cycle Time",
+      "props": { "kind": "cycle-time", "type": "story", "bucket": "day" }
+    },
+    {
+      "name": "Usage: Tokens / Week, per task",
+      "props": { "kind": "tokens-spent", "type": "task", "bucket": "week" }
+    },
+    {
+      "name": "Planning: CoD by Order",
+      "props": { "kind": "cod-order", "type": "story", "bucket": "day" }
+    },
+    {
+      "name": "Strategic: Strategic Cost",
+      "props": { "kind": "strategic-cost", "type": "story", "bucket": "day" }
+    }
+  ]
+}
