@@ -141,6 +141,32 @@ const choose = async (testid: string, value: string) => {
 	el.dispatchEvent(new Event('change', { bubbles: true }));
 	await settle();
 };
+/** The chart a page draws, 380 pixels high; the share chart of Time in State is 120 (S-0485). */
+const chartEl = (height = 380) => document.querySelector(`[style*="height: ${height}px"]`);
+/** The page's table view, the details element summarised "table view" (S-0485). */
+const tableView = () =>
+	[...document.querySelectorAll('details')].find(
+		(d) => d.querySelector('summary')?.textContent?.trim() === 'table view'
+	) ?? null;
+/** The summary strip at the end of the controls row, whatever it holds (S-0485). */
+const summaryStrip = () =>
+	document
+		.querySelector('[data-testid="window"]')
+		?.closest('div')
+		?.querySelector(':scope > span') ?? null;
+/** Asserts each element is in the page and follows the one before it in the DOM (S-0485). */
+const expectOrder = (...parts: (string | Element | null)[]) => {
+	const els = parts.map((p) => (typeof p === 'string' ? document.querySelector(p) : p));
+	const name = (i: number) => (typeof parts[i] === 'string' ? (parts[i] as string) : `part ${i}`);
+	els.forEach((el, i) => expect(el, name(i)).not.toBeNull());
+	for (let i = 1; i < els.length; i++)
+		expect(
+			els[i - 1]!.compareDocumentPosition(els[i]!) & Node.DOCUMENT_POSITION_FOLLOWING,
+			`${name(i - 1)} before ${name(i)}`
+		).toBeTruthy();
+};
+const EXPLAINER = '[data-testid="explainer"]';
+const WINDOW = '[data-testid="window"]';
 
 describe('the charts page (S-0163)', () => {
 	let c: ReturnType<typeof mount> | undefined;
@@ -187,7 +213,12 @@ describe('the charts page (S-0163)', () => {
 		expect(text('[data-testid="usage-summary"]')).toContain(
 			'per story 12.0M tokens, $5.00 · 1.2M tokens per agent minute · 2.4M tokens per dollar'
 		);
-		expect(text('[data-testid="spend-note"]')).toContain('The dashed line is the mean per day');
+		// the note under the chart is in its explainer (S-0485)
+		expect(document.querySelector('[data-testid="spend-note"]')).toBeNull();
+		expect(text('[data-testid="explainer-how"]')).toContain(
+			'Each day holds the items that entered done in it, in UTC'
+		);
+		expect(text('[data-testid="explainer-how"]')).toContain('The dashed line is the mean per day');
 		const row = [...document.querySelectorAll('[data-testid="spend-table"] tbody tr')][0];
 		expect([...row.querySelectorAll('td')].map((td) => td.textContent?.trim())).toEqual([
 			'2026-09-29',
@@ -263,7 +294,13 @@ describe('the charts page (S-0163)', () => {
 		expect(controls()).toEqual(['window', 'per', 'type']);
 		const drawn = setOption.mock.calls.at(-1)![0] as { series: { name: string }[] };
 		expect(drawn.series.map((s) => s.name)).toEqual(['claude-opus-5-5']);
-		expect(text('[data-testid="spend-note"]')).toContain('Each day holds the items');
+		// the note and the star under the chart are in its explainer (S-0485)
+		expect(document.querySelector('[data-testid="spend-note"]')).toBeNull();
+		expect(document.body.textContent).not.toContain('* estimated in part');
+		expect(text('[data-testid="explainer-how"]')).toContain('Each day holds the items');
+		expect(text('[data-testid="explainer-how"]')).toContain(
+			"A star marks a cost estimated in part: a task's share of its story's session, or a run that ended without its totals."
+		);
 		expect(
 			[...document.querySelectorAll('[data-testid="spend-table"] tbody tr')].map(
 				(tr) => tr.querySelectorAll('td')[1].textContent
@@ -723,6 +760,18 @@ describe('the planning charts (S-0212)', () => {
 			'0 stories with a forecast in the window · forecast error p50 - p85 - · delivery error p50 - p85 -'
 		);
 		expect(rows()).toEqual(['S-0001']);
+		// the notice above the chart, the filters and the summary after its explainer (S-0485)
+		expectOrder(
+			'h1',
+			'[data-testid="forecast-none"]',
+			chartEl(),
+			EXPLAINER,
+			WINDOW,
+			'[data-testid="nature"]',
+			'[data-testid="model"]',
+			'[data-testid="planning-summary"]',
+			tableView()
+		);
 	});
 
 	it('says the flai on the host is older when it sends no forecast errors', async () => {
@@ -1114,6 +1163,14 @@ describe('the claims charts (S-0214)', () => {
 			['2026-W40', '2026-09-28', '0', '1', '0', '1', '0', '1', '1', '2', '6h']
 		]);
 		expect(coordinationNotes()).toEqual([]);
+		// the note under the chart is in its explainer (S-0485)
+		expect(document.querySelector('[data-testid="coordination-note"]')).toBeNull();
+		expect(text('[data-testid="explainer-how"]')).toContain(
+			'The bars are the conflicts a trial merge found while both stories were open, early'
+		);
+		expect(text('[data-testid="explainer-how"]')).toContain(
+			'is what the stories started on a share would have waited for their holder'
+		);
 		await choose('window', '7d');
 		expect(asked().at(-1)).toBe('/api/stats?since=7d&type=story&bucket=day');
 	});
@@ -1140,6 +1197,33 @@ describe('the claims charts (S-0214)', () => {
 			['-', '-', '-']
 		]);
 		expect(text('[data-testid="coordination-shares"]')).toContain('3');
+	});
+
+	it('puts the notice, the chart, the shares, the explainer, the window, and the table in order (S-0485)', async () => {
+		answered = { items, claims, coordination };
+		await open('coordination');
+		expectOrder(
+			'h1',
+			chartEl(),
+			'[data-testid="coordination-shares"]',
+			EXPLAINER,
+			WINDOW,
+			summaryStrip(),
+			tableView()
+		);
+		unmount(c!);
+		document.body.innerHTML = '';
+		answered = { items, claims, coordination: { ...coordination, logged: false } };
+		await open('coordination');
+		expectOrder(
+			'h1',
+			'[data-testid="conflicts-unread"]',
+			chartEl(),
+			'[data-testid="coordination-shares"]',
+			EXPLAINER,
+			WINDOW,
+			tableView()
+		);
 	});
 
 	it('says the flai on the host is older when it sends no coordination (S-0337)', async () => {
@@ -1247,7 +1331,15 @@ describe('the claims charts (S-0214)', () => {
 				]
 			]
 		]);
-		expect(queueNotes()).toEqual(['queue-note']);
+		// the note under the chart is in its explainer (S-0485)
+		expect(queueNotes()).toEqual([]);
+		expect(text('[data-testid="explainer-what"]')).toContain(
+			'The lines are the mean and the longest time the stories the merge queue landed or sent back each week waited in it'
+		);
+		expect(text('[data-testid="explainer-what"]')).toContain(
+			'the mean number of stories in the batches it built, and as bars the red batches it bisected'
+		);
+		expect(text('[data-testid="explainer-how"]')).toContain('from its enqueueing');
 		expect(cells('queue-table')).toEqual([
 			['2026-W39', '2026-09-21', '2', '0', '2h', '3h', '1', '2', '2', '0'],
 			['2026-W40', '2026-09-28', '0', '1', '2h', '2h', '1', '1', '1', '1']
@@ -1371,10 +1463,20 @@ describe('the strategic charts (S-0216)', () => {
 		expect(text('[data-testid="strategic-summary"]')).toBe(
 			'strategic agents $1.50 · 2.3h · 3 stories completed'
 		);
-		expect(text('[data-testid="strategic-note"]')).toContain(
-			'The bars are what planning, orchestration, and analysis cost each day.'
+		// the explanation under the chart is in its explainer, the ratio stays under it (S-0485)
+		expect(document.querySelector('[data-testid="strategic-note"]')).toBeNull();
+		expect(text('[data-testid="explainer-what"]')).toContain(
+			'The bars are what planning, orchestration, and analysis cost each day'
 		);
-		expect(text('[data-testid="strategic-ratio"]')).toBe(
+		expect(text('[data-testid="explainer-what"]')).toContain(
+			'the dashed line is what the strategic agents add to each story over the window'
+		);
+		expect(text('[data-testid="explainer-how"]')).toContain(
+			'A star marks a cost estimated in part: an activity of that agent that day carries an estimated cost.'
+		);
+		expect(document.body.textContent).not.toContain('* estimated in part');
+		expect(text('[data-testid="strategic-figures"]')).not.toContain('The bars');
+		expect(text('[data-testid="strategic-figures"] [data-testid="strategic-ratio"]')).toBe(
 			'Over the window they spent $1.50 for 3 stories completed: $0.500 per story, 10% of the $5.00 the agents spent per story.'
 		);
 		expect(series()).toEqual(['planner', 'orchestrator', 'analyzer', 'mean per story']);
@@ -1397,8 +1499,17 @@ describe('the strategic charts (S-0216)', () => {
 	it('draws Strategic Use in hours against the cycle time and waiting of the type chosen', async () => {
 		await open('strategic-use');
 		expect(text('h1')).toBe('Strategic Use');
-		expect(text('[data-testid="strategic-note"]')).toBe(
-			"The bars are the hours the planner, the orchestrator, and the analyzer worked each day. The lines are the mean cycle time and the mean waiting of the stories completed that day. Waiting or cycle time falling while the strategic agents' hours rise is the return on their time."
+		// the note under the chart is in its explainer (S-0485)
+		expect(document.querySelector('[data-testid="strategic-note"]')).toBeNull();
+		expect(document.querySelector('[data-testid="strategic-figures"]')).toBeNull();
+		expect(text('[data-testid="explainer-what"]')).toContain(
+			'The bars are the hours the planner, the orchestrator, and the analyzer worked each day'
+		);
+		expect(text('[data-testid="explainer-what"]')).toContain(
+			'The lines are the mean cycle time and the mean waiting of the stories completed that day'
+		);
+		expect(text('[data-testid="explainer-read"]')).toContain(
+			"Waiting or cycle time falling while the strategic agents' hours rise is the return on their time."
 		);
 		expect(document.querySelector('[data-testid="strategic-ratio"]')).toBeNull();
 		expect(series()).toEqual([
@@ -1421,14 +1532,15 @@ describe('the strategic charts (S-0216)', () => {
 		type.dispatchEvent(new Event('change', { bubbles: true }));
 		await settle();
 		expect(api.mock.calls.at(-1)![0]).toBe('/api/stats?since=30d&type=task&bucket=day');
-		expect(text('[data-testid="strategic-note"]')).toContain('of the tasks completed that day');
+		// the explainer names the type the report reads (S-0485)
+		expect(text('[data-testid="explainer-what"]')).toContain('of the tasks completed that day');
 	});
 
 	it('says why there is no ratio', async () => {
 		answered = { items: [], strategic_days: days.map((d) => ({ ...d, completed: 0 })) };
 		await open('strategic-cost');
 		expect(document.querySelector('[data-testid="strategic-ratio"]')).toBeNull();
-		expect(text('[data-testid="strategic-note"]')).toContain(
+		expect(text('[data-testid="strategic-figures"]')).toBe(
 			'No stories were completed in the window, so there is no ratio.'
 		);
 		unmount(c!);
@@ -1439,16 +1551,34 @@ describe('the strategic charts (S-0216)', () => {
 			usage: { items: 0, tokens: 0, cost: 0, seconds: 0 }
 		};
 		await open('strategic-cost');
-		expect(text('[data-testid="strategic-note"]')).toContain(
+		expect(text('[data-testid="strategic-figures"]')).toBe(
 			'The agents spent nothing in the window, so there is no ratio.'
 		);
+	});
+
+	it('puts the chart, the ratio, the explainer, and the controls with the summary in order (S-0485)', async () => {
+		await open('strategic-cost');
+		expectOrder(
+			'h1',
+			chartEl(),
+			'[data-testid="strategic-figures"]',
+			EXPLAINER,
+			WINDOW,
+			'[data-testid="strategic-summary"]',
+			tableView()
+		);
+		unmount(c!);
+		document.body.innerHTML = '';
+		answered = { items };
+		await open('strategic-cost');
+		expectOrder('h1', '[data-testid="strategic-older"]', chartEl(), EXPLAINER, WINDOW, tableView());
 	});
 
 	it('says the flai on the host is older when it sends no strategic days', async () => {
 		answered = { items };
 		await open('strategic-use');
 		expect(text('[data-testid="strategic-older"]')).toContain('flai self-upgrade');
-		expect(document.querySelector('[data-testid="strategic-note"]')).toBeNull();
+		expect(document.querySelector('[data-testid="strategic-figures"]')).toBeNull();
 		expect(document.querySelector('[data-testid="strategic-summary"]')).toBeNull();
 		expect(rows()).toEqual([]);
 	});
@@ -1620,6 +1750,28 @@ describe('the cost of delay charts (S-0213)', () => {
 		);
 	});
 
+	it('puts the chart, the figures it states, the explainer, the controls, and the table in order (S-0485)', async () => {
+		await open('cod-order');
+		expectOrder(
+			'h1',
+			chartEl(),
+			'[data-testid="cod-saving"]',
+			'[data-testid="cod-totals"]',
+			'[data-testid="cod-left-out"]',
+			'[data-testid="cod-without-value"]',
+			EXPLAINER,
+			WINDOW,
+			summaryStrip(),
+			tableView()
+		);
+		expect(tableView()!.querySelector('[data-testid="cod-order-table"]')).not.toBeNull();
+		unmount(c!);
+		document.body.innerHTML = '';
+		cod = undefined;
+		await open('cod-outstanding');
+		expectOrder('h1', '[data-testid="cod-none"]', chartEl(), EXPLAINER, WINDOW, tableView());
+	});
+
 	it('says the flai on the host is older when it sends no cost of delay, order, or counts', async () => {
 		const older = (missing: string) =>
 			text('[data-testid="cod-none"]')?.startsWith(`The flai on the host ${missing}`) &&
@@ -1714,5 +1866,186 @@ describe('the charts page beside the rail (S-0484)', () => {
 		expect(location.hash).toBe('');
 		await go('strategic-use');
 		expect(text('h1')).toBe('Strategic Use');
+	});
+});
+
+describe("the chart page's order (S-0485)", () => {
+	let c: ReturnType<typeof mount> | undefined;
+	const done = (id: string, completed: string) => ({
+		id,
+		type: 'story',
+		nature: 'feature',
+		title: id,
+		status: 'done',
+		created: '2026-09-01T00:00:00Z',
+		started: '2026-09-01T00:00:00Z',
+		completed,
+		cycle_time_seconds: 3600,
+		lead_time_seconds: 7200,
+		blocked_seconds: 0,
+		time_in_state_seconds: { ready: 3600, 'in-progress': 3600 }
+	});
+	const items = [done('S-0001', '2026-09-28T21:00:00Z'), done('S-0002', '2026-09-09T21:00:00Z')];
+	/** What flai answers beside the report of reportIn; each test changes it. */
+	let answered: Record<string, unknown> = {};
+	/** How flai answers the statistics: with the report, an error, or not at all. */
+	let stats: 'report' | 'error' | 'never' = 'report';
+	beforeEach(() => {
+		answered = { items };
+		stats = 'report';
+		globalThis.ResizeObserver = class {
+			observe() {}
+			disconnect() {}
+			unobserve() {}
+		} as unknown as typeof ResizeObserver;
+		api.mockImplementation(async (url: string) => {
+			if (url.startsWith('/api/items')) return answer([]);
+			if (stats === 'error')
+				return {
+					ok: false,
+					statusText: 'Bad Request',
+					json: async () => ({ error: 'stats down' })
+				};
+			if (stats === 'never') return new Promise(() => {});
+			const q = new URL(url, 'http://localhost').searchParams;
+			return answer({ ...reportIn(q.get('bucket') ?? 'day'), type: q.get('type'), ...answered });
+		});
+	});
+	afterEach(() => {
+		if (c) unmount(c);
+		c = undefined;
+		api.mockReset();
+		setOption.mockClear();
+		document.body.innerHTML = '';
+		chartWindow.set('30d');
+	});
+	const open = async (kind: string) => {
+		at.params.kind = kind;
+		c = mount(ChartsPage, { target: document.body });
+		await settle();
+	};
+	const paragraph = (words: string) =>
+		[...document.querySelectorAll('p')].find((p) => p.textContent?.includes(words)) ?? null;
+
+	it('puts the title, the chart, the explainer, the controls with the summary, and the table view in order on a flow chart', async () => {
+		await open('cycle-time');
+		expect(text('h1')).toBe('Cycle Time');
+		expectOrder('h1', chartEl(), EXPLAINER, WINDOW, summaryStrip(), tableView());
+		expect(text('[data-testid="explainer"] summary')).toBe('About this chart');
+		expect(document.querySelector<HTMLDetailsElement>(EXPLAINER)!.open).toBe(true);
+		expect(text('[data-testid="explainer-what"]')).toContain('One point per story completed');
+		expect(
+			document.querySelector('[data-testid="explainer-metrics"]')!.getAttribute('href')
+		).toContain('/docs/design/system/metrics.md#');
+		expect(summaryStrip()!.textContent).toContain('completed 3');
+		// nothing stands between the title and the chart when nothing qualifies it
+		expect(document.querySelector('h1')!.nextElementSibling).toBe(chartEl());
+	});
+
+	it('keeps the share chart of Time in State with the chart, before the explainer', async () => {
+		await open('time-in-state');
+		expectOrder(
+			'h1',
+			chartEl(),
+			'h2',
+			chartEl(120),
+			EXPLAINER,
+			WINDOW,
+			summaryStrip(),
+			tableView()
+		);
+		expect(text('h2')).toBe('Share of lead time per state');
+	});
+
+	it('keeps the longest waits of Agent Waiting with the chart, before the explainer', async () => {
+		answered = {
+			items,
+			waiting: {
+				weeks: [],
+				empty_wakes: { count: 0 },
+				longest: [
+					{
+						item: 'S-0001',
+						kind: 'thread',
+						thread: 'TH-0003',
+						started: '2026-09-29T09:00:00Z',
+						seconds: 3600
+					}
+				]
+			}
+		};
+		await open('agent-waiting');
+		expectOrder(
+			'h1',
+			chartEl(),
+			'h2',
+			'[data-testid="wait-table"]',
+			EXPLAINER,
+			WINDOW,
+			tableView()
+		);
+		expect(tableView()!.querySelector('[data-testid="wait-table"]')).toBeNull();
+	});
+
+	it('names the type and the bucket chosen in the explainer of a spend chart, its controls after it', async () => {
+		await open('tokens-spent');
+		await choose('bucket', 'week');
+		expect(text('h1')).toBe('Tokens / Week');
+		expectOrder(
+			'h1',
+			chartEl(),
+			EXPLAINER,
+			WINDOW,
+			'[data-testid="bucket"]',
+			'[data-testid="usage-summary"]',
+			tableView()
+		);
+		expect(text('[data-testid="explainer-what"]')).toBe(
+			'One bar per week: the tokens spent on the stories done in it, stacked by model, with the mean per week so far as a dashed line.'
+		);
+		expect(text('[data-testid="explainer-how"]')).toContain(
+			'Each week holds the items that entered done in it, in UTC'
+		);
+		expect(text('[data-testid="explainer-how"]')).toContain('The dashed line is the mean per week');
+		expect(document.querySelector('[data-testid="spend-note"]')).toBeNull();
+		const type = [...document.querySelectorAll('label')]
+			.find((l) => l.textContent!.trim().startsWith('type'))!
+			.querySelector('select')!;
+		type.value = 'task';
+		type.dispatchEvent(new Event('change', { bubbles: true }));
+		await settle();
+		expect(text('[data-testid="explainer-what"]')).toContain(
+			'the tokens spent on the tasks done in it'
+		);
+	});
+
+	it('puts the notice between the title and the chart', async () => {
+		const r = reportIn('day');
+		answered = { items, usage: { ...r.usage, bucket: undefined, spend: undefined } };
+		await open('token-rate');
+		expectOrder('h1', '[data-testid="spend-none"]', chartEl(), EXPLAINER, WINDOW, tableView());
+		expect(document.querySelector('[data-testid="spend-note"]')).toBeNull();
+	});
+
+	it('shows the controls while the report loads and when flai answers an error', async () => {
+		stats = 'never';
+		await open('cycle-time');
+		expectOrder(paragraph('Loading…'), WINDOW);
+		expect(document.querySelector('h1')).toBeNull();
+		expect(document.querySelector(EXPLAINER)).toBeNull();
+		expect(tableView()).toBeNull();
+		unmount(c!);
+		document.body.innerHTML = '';
+		stats = 'error';
+		await open('cycle-time');
+		expectOrder(paragraph('stats down'), WINDOW);
+		expect(document.querySelector('h1')).toBeNull();
+		expect(document.querySelector(EXPLAINER)).toBeNull();
+		expect(tableView()).toBeNull();
+		// the window can still be changed, and asks flai again
+		stats = 'report';
+		await choose('window', '7d');
+		expect(api.mock.calls.at(-1)![0]).toBe('/api/stats?since=7d&type=story&bucket=day');
+		expectOrder('h1', chartEl(), EXPLAINER, WINDOW, tableView());
 	});
 });

@@ -8,6 +8,7 @@
 	import SpendTable from '$lib/components/SpendTable.svelte';
 	import ForecastTable from '$lib/components/ForecastTable.svelte';
 	import WaitTable from '$lib/components/WaitTable.svelte';
+	import ChartExplainer from '$lib/components/ChartExplainer.svelte';
 	import {
 		bucketsFor,
 		bucketLabel,
@@ -255,7 +256,140 @@
 
 <svelte:head><title>{title} · flaiover</title></svelte:head>
 
-<div class="mb-4 flex flex-wrap items-center gap-3 text-sm">
+{#if error}
+	<p class="rounded border border-danger bg-danger-soft p-3 text-sm text-danger">{error}</p>
+{:else if option}
+	<h1 class="mb-2 text-xl font-semibold">{title}</h1>
+	{#if spendKind && report && !hasSpend(report)}
+		<p class="mb-2 text-sm text-muted" data-testid="spend-none">
+			The flai on the host sends no spend over time, which this chart is drawn from: it is older
+			than the dashboard. Upgrade it with <code>flai self-upgrade</code>.
+		</p>
+	{:else if codMissing}
+		<p class="mb-2 text-sm text-muted" data-testid="cod-none">
+			The flai on the host {codMissing}: it is older than the dashboard. Upgrade it with
+			<code>flai self-upgrade</code>.
+		</p>
+	{:else if usageKind && report && !report.items.some((i) => i.usage)}
+		<p class="mb-2 text-sm text-muted" data-testid="usage-none">
+			No {report.type} here carries usage yet. flai serve records the tokens and cost of the agents it
+			starts; <code>flai serve agent usage --all --write</code> fills in stories worked before.
+		</p>
+	{:else if forecastKind && report && !report.forecasts}
+		<p class="mb-2 text-sm text-muted" data-testid="forecasts-older">
+			The flai on the host sends no forecast errors, which this chart is drawn from: it is older
+			than the dashboard. Upgrade it with <code>flai self-upgrade</code>.
+		</p>
+	{:else if kind === 'agent-waiting' && report && !report.waiting}
+		<p class="mb-2 text-sm text-muted" data-testid="waiting-older">
+			The flai on the host sends no waiting, which this chart is drawn from: it is older than the
+			dashboard. Upgrade it with <code>flai self-upgrade</code>.
+		</p>
+	{:else if kind === 'queue' && report && !hasQueue(report)}
+		<p class="mb-2 text-sm text-muted" data-testid="queue-none">
+			The flai on the host sends no merge queue, which this chart is drawn from: either the merge
+			queue there has logged no event yet, or the flai is older than the dashboard. Then upgrade it
+			with <code>flai self-upgrade</code>.
+		</p>
+	{:else if forecastKind && !forecastSet}
+		<p class="mb-2 text-sm text-muted" data-testid="forecast-none">
+			No story done in the window has a forecast. The planner sets one when it plans a story, or set
+			one with <code
+				>flai edit &lt;story&gt; --forecast-duration 6h --forecast-delivery &lt;UTC time&gt;</code
+			>.
+		</p>
+	{:else if kind === 'coordination' && report && !hasCoordination(report)}
+		<p class="mb-2 text-sm text-muted" data-testid="coordination-older">
+			The flai on the host sends no coordination, which this chart is drawn from: it is older than
+			the dashboard. Upgrade it with <code>flai self-upgrade</code>.
+		</p>
+	{:else if kind === 'coordination' && report?.coordination && !report.coordination.logged}
+		<p class="mb-2 text-sm text-muted" data-testid="conflicts-unread">
+			flai could not read the conflict log on the host, <code>.flai-cache/conflicts.jsonl</code>
+			in the main checkout, so this chart draws no conflicts found or met. <code>flai stats</code> says
+			why.
+		</p>
+	{:else if claimsKind && kind !== 'coordination' && report && !hasClaims(report)}
+		<p class="mb-2 text-sm text-muted" data-testid="claims-older">
+			The flai on the host sends no held stories or time held, which this chart is drawn from: it is
+			older than the dashboard. Upgrade it with <code>flai self-upgrade</code>.
+		</p>
+	{:else if kind === 'touches-drift' && report?.claims && report.claims.drift === undefined}
+		<p class="mb-2 text-sm text-muted" data-testid="drift-none">
+			flai could not read git on the host, which touches drift is drawn from: install git there and
+			check that the project is a git repository. <code>flai stats</code> says why.
+		</p>
+	{:else if strategicKind && strategic.length === 0}
+		<p class="mb-2 text-sm text-muted" data-testid="strategic-older">
+			The flai on the host sends no strategic use per day, which this chart is drawn from: it is
+			older than the dashboard. Upgrade it with <code>flai self-upgrade</code>.
+		</p>
+	{/if}
+	<Chart {option} theme={t} height={380} />
+	{#if kind === 'strategic-cost' && report && strategic.length > 0}
+		<p class="mt-2 text-xs text-muted" data-testid="strategic-figures">
+			{#if ratio}<span data-testid="strategic-ratio"
+					>Over the window they spent {dollars(ratio.cost)} for {ratio.completed}
+					{ratio.completed === 1 ? report.type : plural(report.type)} completed: {dollars(
+						ratio.cost_per_item
+					)} per {report.type}, {Math.round(ratio.share * 100)}% of the {dollars(
+						ratio.agent_cost_per_item
+					)} the agents spent per {report.type}.</span
+				>{:else if strategicTotal.completed === 0}No {plural(report.type)} were completed in the window,
+				so there is no ratio.{:else}The agents spent nothing in the window, so there is no ratio.{/if}
+		</p>
+	{/if}
+	{#if kind === 'time-in-state' && report}
+		<h2 class="mt-6 mb-2 text-base font-medium">Share of lead time per state</h2>
+		{#await import('$lib/viz/charts') then m}
+			<Chart option={m.stateShare(report, t)} theme={t} height={120} />
+		{/await}
+	{/if}
+	{#if kind === 'coordination' && shares}
+		<p class="mt-2 text-sm" data-testid="coordination-shares">
+			Stories started on a share in the window: {shares.started} · hold time saved: {hours(
+				shares.held_seconds
+			)}h.
+		</p>
+	{/if}
+	{#if kind === 'agent-waiting' && report?.waiting}
+		<h2 class="mt-6 mb-2 text-base font-medium">Longest waits</h2>
+		<div class="overflow-x-auto text-xs">
+			<WaitTable rows={report.waiting.longest ?? []} type={report.type} />
+		</div>
+	{/if}
+	{#if kind === 'cod-order' && ordered}
+		<p class="mt-2 text-sm" data-testid="cod-saving">
+			{#if ordered.saving > 0}Ordering {ORDER_LABEL[ordered.cheaper]} would save {amount(
+					ordered.saving
+				)} on the pull order.{:else}The pull order is already the cheapest of the three.{/if}
+		</p>
+		<p class="text-xs text-muted" data-testid="cod-totals">
+			Projected from now until each ready story is pulled, in the project's currency: {ORDERS.map(
+				(by) => `${ORDER_LABEL[by]} ${amount(ordered.totals[by])}`
+			).join(' · ')}.
+		</p>
+		<p class="text-xs text-muted" data-testid="cod-left-out">
+			Ready stories left out, without a value or a forecast duration: {ordered.left_out.length
+				? ordered.left_out.join(', ')
+				: 'none'}.
+		</p>
+	{/if}
+	{#if codKind && unvalued}
+		<p class="mt-2 text-xs text-muted" data-testid="cod-without-value">
+			{#if COD_COLUMNS.some((col) => unvalued[col] > 0)}Items without a value now, which add nothing
+				to this chart: {COD_COLUMNS.map((col) => `${col} ${unvalued[col]}`).join(
+					' · '
+				)}.{:else}Items without a value now: none.{/if}
+		</p>
+	{/if}
+	<div class="mt-4">
+		<ChartExplainer {kind} type={report?.type ?? asType} bucket={report?.usage?.bucket ?? bucket} />
+	</div>
+{:else}
+	<p class="text-sm text-muted">Loading…</p>
+{/if}
+<div class="mt-4 flex flex-wrap items-center gap-3 text-sm">
 	<label
 		>window <select
 			class="rounded border border-line-strong bg-surface px-2 py-1"
@@ -341,173 +475,7 @@
 		>
 	{/if}
 </div>
-{#if error}
-	<p class="rounded border border-danger bg-danger-soft p-3 text-sm text-danger">{error}</p>
-{:else if option}
-	<h1 class="mb-2 text-xl font-semibold">{title}</h1>
-	{#if spendKind && report && !hasSpend(report)}
-		<p class="mb-2 text-sm text-muted" data-testid="spend-none">
-			The flai on the host sends no spend over time, which this chart is drawn from: it is older
-			than the dashboard. Upgrade it with <code>flai self-upgrade</code>.
-		</p>
-	{:else if codMissing}
-		<p class="mb-2 text-sm text-muted" data-testid="cod-none">
-			The flai on the host {codMissing}: it is older than the dashboard. Upgrade it with
-			<code>flai self-upgrade</code>.
-		</p>
-	{:else if usageKind && report && !report.items.some((i) => i.usage)}
-		<p class="mb-2 text-sm text-muted" data-testid="usage-none">
-			No {report.type} here carries usage yet. flai serve records the tokens and cost of the agents it
-			starts; <code>flai serve agent usage --all --write</code> fills in stories worked before.
-		</p>
-	{:else if forecastKind && report && !report.forecasts}
-		<p class="mb-2 text-sm text-muted" data-testid="forecasts-older">
-			The flai on the host sends no forecast errors, which this chart is drawn from: it is older
-			than the dashboard. Upgrade it with <code>flai self-upgrade</code>.
-		</p>
-	{:else if kind === 'agent-waiting' && report && !report.waiting}
-		<p class="mb-2 text-sm text-muted" data-testid="waiting-older">
-			The flai on the host sends no waiting, which this chart is drawn from: it is older than the
-			dashboard. Upgrade it with <code>flai self-upgrade</code>.
-		</p>
-	{:else if kind === 'queue' && report && !hasQueue(report)}
-		<p class="mb-2 text-sm text-muted" data-testid="queue-none">
-			The flai on the host sends no merge queue, which this chart is drawn from: either the merge
-			queue there has logged no event yet, or the flai is older than the dashboard. Then upgrade it
-			with <code>flai self-upgrade</code>.
-		</p>
-	{:else if forecastKind && !forecastSet}
-		<p class="mb-2 text-sm text-muted" data-testid="forecast-none">
-			No story done in the window has a forecast. The planner sets one when it plans a story, or set
-			one with <code
-				>flai edit &lt;story&gt; --forecast-duration 6h --forecast-delivery &lt;UTC time&gt;</code
-			>.
-		</p>
-	{:else if kind === 'coordination' && report && !hasCoordination(report)}
-		<p class="mb-2 text-sm text-muted" data-testid="coordination-older">
-			The flai on the host sends no coordination, which this chart is drawn from: it is older than
-			the dashboard. Upgrade it with <code>flai self-upgrade</code>.
-		</p>
-	{:else if kind === 'coordination' && report?.coordination && !report.coordination.logged}
-		<p class="mb-2 text-sm text-muted" data-testid="conflicts-unread">
-			flai could not read the conflict log on the host, <code>.flai-cache/conflicts.jsonl</code>
-			in the main checkout, so this chart draws no conflicts found or met. <code>flai stats</code> says
-			why.
-		</p>
-	{:else if claimsKind && kind !== 'coordination' && report && !hasClaims(report)}
-		<p class="mb-2 text-sm text-muted" data-testid="claims-older">
-			The flai on the host sends no held stories or time held, which this chart is drawn from: it is
-			older than the dashboard. Upgrade it with <code>flai self-upgrade</code>.
-		</p>
-	{:else if kind === 'touches-drift' && report?.claims && report.claims.drift === undefined}
-		<p class="mb-2 text-sm text-muted" data-testid="drift-none">
-			flai could not read git on the host, which touches drift is drawn from: install git there and
-			check that the project is a git repository. <code>flai stats</code> says why.
-		</p>
-	{:else if strategicKind && strategic.length === 0}
-		<p class="mb-2 text-sm text-muted" data-testid="strategic-older">
-			The flai on the host sends no strategic use per day, which this chart is drawn from: it is
-			older than the dashboard. Upgrade it with <code>flai self-upgrade</code>.
-		</p>
-	{/if}
-	{#if spendKind && report && hasSpend(report)}
-		<p class="mb-2 text-xs text-muted" data-testid="spend-note">
-			Each {report.usage?.bucket ?? bucket} holds the items that entered done in it, in UTC, with everything
-			their agents spent on them.
-			{#if kind === 'tokens-spent' || kind === 'cost-spent'}The dashed line is the mean per
-				{report.usage?.bucket ?? bucket} so far, from the first with spend.{/if}
-		</p>
-	{/if}
-	{#if kind === 'cost' || kind === 'cost-spent' || kind === 'cost-per-item' || kind === 'cost-per-model'}
-		<p class="mb-2 text-xs text-muted">
-			* estimated in part: a task's share of its story's session, or a run that ended without its
-			totals.
-		</p>
-	{:else if kind === 'strategic-cost'}
-		<p class="mb-2 text-xs text-muted">
-			* estimated in part: an activity of that agent that day carries an estimated cost.
-		</p>
-	{/if}
-	<Chart {option} theme={t} height={380} />
-	{#if kind === 'strategic-cost' && report && strategic.length > 0}
-		<p class="mt-2 text-xs text-muted" data-testid="strategic-note">
-			The bars are what planning, orchestration, and analysis cost each day. The line is what the
-			agents spent per {report.type} completed that day, the strategic agents left out; the dashed line
-			is what the strategic agents add to each {report.type} over the window.
-			{#if ratio}<span data-testid="strategic-ratio"
-					>Over the window they spent {dollars(ratio.cost)} for {ratio.completed}
-					{ratio.completed === 1 ? report.type : plural(report.type)} completed: {dollars(
-						ratio.cost_per_item
-					)} per {report.type}, {Math.round(ratio.share * 100)}% of the {dollars(
-						ratio.agent_cost_per_item
-					)} the agents spent per {report.type}.</span
-				>{:else if strategicTotal.completed === 0}No {plural(report.type)} were completed in the window,
-				so there is no ratio.{:else}The agents spent nothing in the window, so there is no ratio.{/if}
-		</p>
-	{:else if kind === 'strategic-use' && report && strategic.length > 0}
-		<p class="mt-2 text-xs text-muted" data-testid="strategic-note">
-			The bars are the hours the planner, the orchestrator, and the analyzer worked each day. The
-			lines are the mean cycle time and the mean waiting of the {plural(report.type)} completed that day.
-			Waiting or cycle time falling while the strategic agents' hours rise is the return on their time.
-		</p>
-	{/if}
-	{#if kind === 'time-in-state' && report}
-		<h2 class="mt-6 mb-2 text-base font-medium">Share of lead time per state</h2>
-		{#await import('$lib/viz/charts') then m}
-			<Chart option={m.stateShare(report, t)} theme={t} height={120} />
-		{/await}
-	{/if}
-	{#if kind === 'coordination' && shares}
-		<p class="mt-2 text-sm" data-testid="coordination-shares">
-			Stories started on a share in the window: {shares.started} · hold time saved: {hours(
-				shares.held_seconds
-			)}h.
-		</p>
-		<p class="text-xs text-muted" data-testid="coordination-note">
-			The bars are the conflicts a trial merge found while both stories were open, early, against
-			those a rebase met at sync or at acceptance, late. The lines are the conversations between
-			stories opened each week, and those that agreed, were escalated, or closed with their story.
-			The hold time saved is what the stories started on a share would have waited for their holder.
-		</p>
-	{/if}
-	{#if kind === 'queue' && report?.queue}
-		<p class="mt-2 text-xs text-muted" data-testid="queue-note">
-			The lines are the mean and the longest time the stories the merge queue landed or sent back
-			each week waited in it, from their enqueueing; a week with none has no wait. On the right are
-			the mean number of stories in the batches it built, and as bars the red batches it bisected.
-		</p>
-	{/if}
-	{#if kind === 'agent-waiting' && report?.waiting}
-		<h2 class="mt-6 mb-2 text-base font-medium">Longest waits</h2>
-		<div class="overflow-x-auto text-xs">
-			<WaitTable rows={report.waiting.longest ?? []} type={report.type} />
-		</div>
-	{/if}
-	{#if kind === 'cod-order' && ordered}
-		<p class="mt-2 text-sm" data-testid="cod-saving">
-			{#if ordered.saving > 0}Ordering {ORDER_LABEL[ordered.cheaper]} would save {amount(
-					ordered.saving
-				)} on the pull order.{:else}The pull order is already the cheapest of the three.{/if}
-		</p>
-		<p class="text-xs text-muted" data-testid="cod-totals">
-			Projected from now until each ready story is pulled, in the project's currency: {ORDERS.map(
-				(by) => `${ORDER_LABEL[by]} ${amount(ordered.totals[by])}`
-			).join(' · ')}.
-		</p>
-		<p class="text-xs text-muted" data-testid="cod-left-out">
-			Ready stories left out, without a value or a forecast duration: {ordered.left_out.length
-				? ordered.left_out.join(', ')
-				: 'none'}.
-		</p>
-	{/if}
-	{#if codKind && unvalued}
-		<p class="mt-2 text-xs text-muted" data-testid="cod-without-value">
-			{#if COD_COLUMNS.some((col) => unvalued[col] > 0)}Items without a value now, which add nothing
-				to this chart: {COD_COLUMNS.map((col) => `${col} ${unvalued[col]}`).join(
-					' · '
-				)}.{:else}Items without a value now: none.{/if}
-		</p>
-	{/if}
+{#if option && !error}
 	<details class="mt-4 text-xs">
 		<summary class="cursor-pointer text-muted">table view</summary>
 		<div class="mt-2 overflow-x-auto">
@@ -780,6 +748,4 @@
 			{/if}
 		</div>
 	</details>
-{:else}
-	<p class="text-sm text-muted">Loading…</p>
 {/if}
