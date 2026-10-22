@@ -6,7 +6,7 @@ title: Folder-wide touches and after hubs on planned stories held up to ten read
 status: backlog
 owner: alex
 created: 2026-10-21T11:58:08Z
-updated: 2026-10-21T11:58:08Z
+updated: 2026-10-22T20:51:09Z
 transitions: []
 tags: []
 agent:
@@ -35,12 +35,14 @@ usage:
           cache_read: 204809
           cache_write: 23259
           cost: 0.0083
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 44h
     by: flai
     at: 2026-10-21T11:58:08Z
+finalized:
+  by: alex
+  at: 2026-10-22T20:51:09Z
 ---
 # S-0468 Folder-wide touches and after hubs on planned stories held up to ten ready stories a day while in-progress stayed at two of five
 
