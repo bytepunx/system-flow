@@ -3,12 +3,15 @@ id: S-0485
 type: story
 nature: improvement
 title: The chart page shows the title and the chart first, then a collapsible explainer of what the chart shows and how it is measured, then the controls, then the table view
-status: backlog
+status: ready
 parent: E-0028
 owner: alex
 created: 2026-10-21T20:55:38Z
-updated: 2026-10-22T20:16:59Z
-transitions: []
+updated: 2026-10-22T20:17:34Z
+transitions:
+  - to: ready
+    at: 2026-10-22T20:17:34Z
+    by: alex
 tags: [dashboard]
 topics: [analysis]
 touches: [flaiover/src/lib/viz/explain.ts, flaiover/src/lib/viz/explain.test.ts, flaiover/src/lib/chartexplainer.svelte.ts, flaiover/src/lib/chartexplainer.svelte.test.ts, flaiover/src/lib/components/ChartExplainer.svelte, flaiover/src/lib/components/ChartExplainer.svelte.test.ts, design/components/flaiover/src/lib/components/ChartExplainer.examples.json, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", docs/users/flaiover.md, design/system/flaiover-dashboard.md]
@@ -18,6 +21,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 41887
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 66
+          output: 1031
+          cache_read: 9622405
+          cache_write: 12689
+          cost: 2.1276
 forecast:
   duration: 1h
   delivery: 2026-10-22T17:05:00Z

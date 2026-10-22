@@ -3,10 +3,10 @@ id: S-0483
 type: story
 nature: remediation
 title: Accepting a story that adds a flaiover dependency leaves the main checkout's flaiover/node_modules without it, so every close-out's integration tier fails TestEveryListedFlaioverComponentCompilesInTheHarness until someone installs
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-21T12:00:17Z
-updated: 2026-10-21T13:28:19Z
+updated: 2026-10-22T20:48:17Z
 transitions:
   - to: ready
     at: 2026-10-21T13:04:10Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-21T13:04:17Z
     by: agent-S-0483
+  - to: review
+    at: 2026-10-21T20:45:56Z
+    by: agent-S-0483
+  - to: done
+    at: 2026-10-22T20:48:17Z
+    by: alex
 tags: [flai, cli]
 topics: [release, testing]
 touches: [design/adrs/README.md, design/system/project-manifest.md, design/system/flai-cli.md, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, system-flow.yaml, docs/operators/settings.md, flai/cmd/accept.go, flai/cmd/accept_install.go, flai/cmd/accept_install_test.go, docs/users/flai.md, design/system/devex.md, design/issues/I-0179-accepting-a-story-that-adds-a-flaiover-dependency-leaves-the-main-checkout-s-flaiover-node-modules-without-it-so-every-close-out-s-integration-tier-fails-testeverylistedflaiovercomponentcompilesintheharness-until-someone-installs.md, design/issues/summary.md, design/adrs/0185-flai-accept-runs-a-sub-project-s-install-command-in-the-main-checkout-when-the.md, flai/internal/check/check.go, flai/internal/check/install_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/shared.go]
@@ -24,30 +30,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2161
+  seconds: 2872
   priced_by: harness
   turns:
     - day: 2026-10-21
+      ceremony: 3
       hand_edits: 2
-      work: 48
+      work: 68
   models:
     - model: claude-opus-5-5
-      input: 248
-      output: 70021
-      cache_read: 12574280
-      cache_write: 633793
-      cost: 7.7524
+      input: 296
+      output: 75804
+      cache_read: 14218611
+      cache_write: 710611
+      cost: 8.8116
   strategic:
     - kind: orchestrator
-      seconds: 52
+      seconds: 16089
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 11
-          output: 170
-          cache_read: 3203296
-          cache_write: 6002
-          cost: 0.7086
+          input: 165
+          output: 2434
+          cache_read: 21312822
+          cache_write: 54373
+          cost: 4.7183
+        - model: claude-sonnet-5-5
+          input: 20
+          output: 89
+          cache_read: 352622
+          cache_write: 57130
+          cost: 0.2836
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -73,7 +86,7 @@ finalized:
 This story remediates [I-0179](../../../design/issues/I-0179-accepting-a-story-that-adds-a-flaiover-dependency-leaves-the-main-checkout-s-flaiover-node-modules-without-it-so-every-close-out-s-integration-tier-fails-testeverylistedflaiovercomponentcompilesintheharness-until-someone-installs.md), "Accepting a story that adds a flaiover dependency leaves the main checkout's flaiover/node_modules without it, so every close-out's integration tier fails TestEveryListedFlaioverComponentCompilesInTheHarness until someone installs". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0179 describes no longer occurs, with a test that reproduces it where one fits
+- [x] The cause I-0179 describes no longer occurs, with a test that reproduces it where one fits
 - [x] I-0179 is closed with `flai issue close I-0179 --reason` saying what fixed it
 
 ## Tasks

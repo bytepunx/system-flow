@@ -3,11 +3,14 @@ id: E-0025
 type: epic
 nature: feature
 title: A digest of the archive, kept by an agent and decayed as the design absorbs it, primes a story's agent with what past stories decided and what the operator answered, so the same question is not asked twice
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-16T04:28:05Z
-updated: 2026-10-16T06:00:41Z
-transitions: []
+updated: 2026-10-21T20:49:14Z
+transitions:
+  - to: ready
+    at: 2026-10-21T20:49:14Z
+    by: alex
 tags: [cli, template]
 topics: [cli, planning, analysis, conventions]
 touches: [flai/internal/context, flai/internal/serve, flai/cmd, design/system/agent-context.md, design/system/strategic-agents.md, design/system/metrics.md, design/conventions/agent-narrative.md, docs/users/flai.md, docs/operators/index.md, template]

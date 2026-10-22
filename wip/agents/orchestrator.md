@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1212.7357
-accrued_seconds: 1050233
-tasks_completed: 859
-last_run: 2026-10-21T16:14:09Z
+accrued_cost: 1226.7166
+accrued_seconds: 1152968
+tasks_completed: 868
+last_run: 2026-10-22T20:46:24Z
 ---
 
 # Orchestrator activity
@@ -6025,6 +6025,69 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 126
 - Cost: 0.8523 USD, estimated
 
+### 2026-10-21T16:25:30Z
+
+- Summary: S-0479 landed through the merge queue (enqueued by me). Published under publish, policy judgement: pending 1 story worth 12.5 USD/week, none held by whole_epics. Reason: a self-contained fix for the lost work-item writes of I-0175 and I-0176 (ADR-0184). Released flai 1.67.12 (tag flai/v1.67.12, patch, from 1.67.11) with S-0479, and pushed.
+- Items: S-0479
+- Seconds: 681
+- Cost: 0.2322 USD, estimated
+
+### 2026-10-21T20:52:47Z
+
+- Summary: S-0483 reached review at 42b03609. flai verify passed at the head (integration and smoke queued). The verifier matched both criteria to changed files within touches (accept runs the manifest's install command, ADR-0185; I-0179 closed), but the operator's TH-0578 instruction to update the rule it breaks is undone: component-library.md line 232 still says the main checkout is never installed into. I did not enqueue it. I left it in review and opened a thread on S-0483 recommending a send-back for that one edit, noting the unstated install timeout as minor. Forecast 1h, value 37.50 USD/week.
+- Items: S-0483
+- Seconds: 16037
+- Cost: 4.2933 USD, estimated
+
+### 2026-10-21T20:53:56Z
+
+- Summary: Recommended an answer on TH-0590, citing design/system/strategic-agents.md § Cost of delay
+- Items: none
+- Seconds: 69
+- Cost: 0.3505 USD, estimated
+
+### 2026-10-21T20:53:58Z
+
+- Summary: Under answer_threads (autonomous), recommended on planner-E-0028's TH-0590 that the operator set time_lost_per_cycle 1h on E-0028 (150 USD/week), with 500 and 50 USD/week as alternatives; an epic input is money and the operator's, and flai guard refuses it to me (I-0187).
+- Items: E-0028
+- Seconds: 2
+- Cost: 0.0000 USD
+
+### 2026-10-21T21:02:16Z
+
+- Summary: Recommended an answer on TH-0591, citing design/conventions/strategic-agents.md § As the planner
+- Items: none
+- Seconds: 498
+- Cost: 1.5707 USD, estimated
+
+### 2026-10-21T21:02:18Z
+
+- Summary: Under answer_threads (autonomous), recommended on planner-E-0028's TH-0591 that the operator approve the plan: S-0484 (45m) then S-0485 (1h, after S-0484), with the rail as the single chart picker (S-0461's page sidebar removed, a scope assumption). Values wait on TH-0590's epic input.
+- Items: E-0028, S-0484, S-0485
+- Seconds: 2
+- Cost: 0.0000 USD
+
+### 2026-10-22T20:17:43Z
+
+- Summary: The operator finalized S-0484 and S-0485 and moved them to ready. Under order_ready, applied flai order --by throughput: S-0484 (45m), then S-0485 (1h, after S-0484). flai guard first refused the same command written as `flai order --by throughput --apply --json 2>&1`, and passed it bare.
+- Items: S-0484, S-0485
+- Seconds: 83725
+- Cost: 4.0344 USD, estimated
+
+### 2026-10-22T20:18:59Z
+
+- Summary: agent-S-0484 pulled S-0484. Under order_ready, re-applied flai order --by throughput: S-0485 (1h) alone, held after S-0484. planner-E-0028 ended, noting E-0028 still has no input, so S-0484 and S-0485 carry no value (TH-0590 awaits the operator).
+- Items: S-0484, S-0485, E-0028
+- Seconds: 76
+- Cost: 0.3313 USD, estimated
+
+### 2026-10-22T20:46:24Z
+
+- Summary: Enqueued S-0484 in the merge queue under accept_reviews at cf9faca1, first in the queue (alone); forecast 45m, no cost of delay value (E-0028 has no input, TH-0590). flai verify passed every step at the branch head. The verifier matched all seven criteria to changed files within touches: the rail's Charts item expands to the grouped chart list, the chart shown is current, the catalogue moves to viz/catalog.ts, and the page's own list (S-0461's sidebar) goes, with docs and design updated.
+- Items: S-0484
+- Seconds: 1645
+- Cost: 3.1685 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -6160,4 +6223,9 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-10-21T16:01:56Z
 
 - Call: `flai serve status --json 2>&1`
+- Needs: none
+
+### 2026-10-22T20:17:38Z
+
+- Call: `flai order --by throughput --apply --json 2>&1`
 - Needs: none

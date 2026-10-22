@@ -1,9 +1,9 @@
 ---
 kind: planner
-accrued_cost: 830.4685
-accrued_seconds: 35350
-tasks_completed: 93
-last_run: 2026-10-21T13:31:29Z
+accrued_cost: 844.5657
+accrued_seconds: 119970
+tasks_completed: 94
+last_run: 2026-10-22T20:18:18Z
 ---
 
 # Planner activity
@@ -747,3 +747,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0419, T-1753, T-1754, T-1756, T-1759
 - Seconds: 1746
 - Cost: 12.1013 USD, estimated
+
+### 2026-10-22T20:18:18Z
+
+- Summary: Planned E-0028: drafted stories S-0484 (rail's Charts item lists the charts by group, page sidebar removed; tasks T-2018, T-2019, T-2022, T-2024, T-2026, T-2028 in five layers, forecast 45m) and S-0485 (chart page order with a per-chart explainer, `after` S-0484; tasks T-2020, T-2021, T-2023, T-2025, T-2027 in four layers, forecast 1h), each with file-level touches and `### Planning` notes; plan thread TH-0591; cost of delay values not written because E-0028 has no inputs (asked on TH-0590, unanswered; the operator finalized both stories and started S-0484 meanwhile).
+- Trigger: asked
+- Items: E-0028, S-0484, S-0485, T-2018, T-2019, T-2020, T-2021, T-2022, T-2023, T-2024, T-2025, T-2026, T-2027, T-2028
+- Seconds: 84620
+- Cost: 14.0972 USD, estimated

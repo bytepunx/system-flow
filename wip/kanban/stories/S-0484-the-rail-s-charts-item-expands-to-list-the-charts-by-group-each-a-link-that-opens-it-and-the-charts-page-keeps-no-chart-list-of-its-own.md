@@ -3,20 +3,63 @@ id: S-0484
 type: story
 nature: improvement
 title: The rail's Charts item expands to list the charts by group, each a link that opens it, and the charts page keeps no chart list of its own
-status: backlog
+status: review
 parent: E-0028
 owner: alex
 created: 2026-10-21T20:55:01Z
-updated: 2026-10-22T20:17:07Z
-transitions: []
+updated: 2026-10-22T20:45:25Z
+transitions:
+  - to: ready
+    at: 2026-10-22T20:17:25Z
+    by: alex
+  - to: in-progress
+    at: 2026-10-22T20:17:45Z
+    by: agent-S-0484
+  - to: review
+    at: 2026-10-22T20:45:25Z
+    by: agent-S-0484
 tags: [dashboard]
 topics: [navigation]
-touches: [flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/navrail.svelte.ts, flaiover/src/lib/navrail.svelte.test.ts, flaiover/src/lib/components/NavRail.svelte, flaiover/src/lib/components/NavRail.svelte.test.ts, flaiover/src/lib/viz/catalog.ts, flaiover/src/lib/viz/catalog.test.ts, flaiover/src/lib/viz/charts.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", flaiover/e2e/page-sidebar.e2e.ts, flaiover/e2e/layout.e2e.ts, docs/users/flaiover.md, design/system/flaiover-dashboard.md]
+touches: [flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/navrail.svelte.ts, flaiover/src/lib/navrail.svelte.test.ts, flaiover/src/lib/components/NavRail.svelte, flaiover/src/lib/components/NavRail.svelte.test.ts, flaiover/src/lib/viz/catalog.ts, flaiover/src/lib/viz/catalog.test.ts, flaiover/src/lib/viz/charts.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", flaiover/e2e/page-sidebar.e2e.ts, flaiover/e2e/layout.e2e.ts, docs/users/flaiover.md, design/system/flaiover-dashboard.md, design/issues/I-0190-pagesidebar-s-link-entries-have-no-page-using-them-since-the-charts-page-dropped-its-sidebar.md, design/issues/summary.md, design/issues/I-0191-a-work-item-write-in-a-project-with-no-gitignore-makes-flai-cache-items-lock-and-then-refuses-itself-on-layout-gitignore.md, flaiover/src/lib/server/writes.test.ts]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 1681
+  priced_by: harness
+  turns:
+    - day: 2026-10-22
+      ceremony: 2
+      test_runs: 2
+      hand_edits: 4
+      work: 54
+  models:
+    - model: claude-opus-5-5
+      input: 332
+      output: 103932
+      cache_read: 16266309
+      cache_write: 583183
+      cost: 8.8835
+  strategic:
+    - kind: orchestrator
+      seconds: 43534
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 151
+          output: 2520
+          cache_read: 22949425
+          cache_write: 30844
+          cost: 5.0745
+        - model: claude-sonnet-5-5
+          input: 14
+          output: 85
+          cache_read: 255175
+          cache_write: 65016
+          cost: 0.2216
 forecast:
   duration: 45m
   delivery: 2026-10-22T15:56:00Z
@@ -35,13 +78,13 @@ The dashboard's charts are chosen from the nav rail. Charts, in the rail's Flow 
 
 ## Acceptance criteria
 
-- [ ] In `NavRail.svelte`, Charts is a button with `aria-expanded` and `aria-controls`, its icon in the accent colour while expanded and muted while collapsed, as a group's is. Expanded, it lists under it the four chart groups, `flow`, `usage`, `planning`, and `strategic`, each a muted label that is not a link, and under each label its charts in the order `KINDS` gives them, each an `<a>` to `/charts/<kind>` through `resolve` and `withProject`, labelled by `TITLES`. Collapsed, nothing below Charts is in the DOM, and Charts still links nowhere but through its charts.
-- [ ] The chart shown is bold in the accent colour with `aria-current="page"`, and Charts is marked current while any `/charts/*` path is shown; `locate` in `sitemenu.ts` gives the chart's kind beside the group and the page, and an unknown kind under `/charts` marks Charts current with no chart.
-- [ ] Arriving on `/charts/<kind>` expands Flow and Charts for the page's life without storing it. Clicking Charts expands or collapses it and keeps that choice per browser under `flaiover-nav-rail` beside the groups' choices; `parseChosen` keeps a boolean for Charts and drops anything else unknown, so a stored value from an older dashboard still parses. Choosing a chart in the drawer below `md` closes the drawer, as choosing a page does.
-- [ ] The chart catalogue the rail and the page share, the kinds, their groups, and their titles, lives in `flaiover/src/lib/viz/catalog.ts`, imported by `sitemenu.ts` without pulling `viz/charts.ts` and its builders into the layout's bundle; `viz/charts.ts` re-exports it so its callers and tests are unchanged.
-- [ ] `/charts/[kind]/+page.svelte` no longer uses `PageSidebar`: the page has no `nav[aria-label="Charts"]`, and its controls, chart, notes, and table view are drawn as they are today, full width beside the rail. `flaiover/src/routes/charts/+page.ts` still redirects `/charts` to cycle time.
-- [ ] `sitemenu.test.ts`, `navrail.svelte.test.ts`, `NavRail.svelte.test.ts`, and `charts.svelte.test.ts` cover the criteria above, the S-0461 sidebar tests in `charts.svelte.test.ts` and the charts cases of `e2e/page-sidebar.e2e.ts` replaced by tests of the rail's chart list, `e2e/layout.e2e.ts` opening a chart from the rail; `flai test` on the changed paths passes, `design/components/flaiover/src/lib/components/NavRail.examples.json` stays in step with `NavRail`'s props, and `flai check --strict` is clean.
-- [ ] `docs/users/flaiover.md` § The header and § Charts, and `design/system/flaiover-dashboard.md` § Views, the rail's groups table, the rail behaviour table, the page sidebar paragraph, and the `/charts/*` rows, say that the charts are chosen from the rail and that the page has no list of its own.
+- [x] In `NavRail.svelte`, Charts is a button with `aria-expanded` and `aria-controls`, its icon in the accent colour while expanded and muted while collapsed, as a group's is. Expanded, it lists under it the four chart groups, `flow`, `usage`, `planning`, and `strategic`, each a muted label that is not a link, and under each label its charts in the order `KINDS` gives them, each an `<a>` to `/charts/<kind>` through `resolve` and `withProject`, labelled by `TITLES`. Collapsed, nothing below Charts is in the DOM, and Charts still links nowhere but through its charts.
+- [x] The chart shown is bold in the accent colour with `aria-current="page"`, and Charts is marked current while any `/charts/*` path is shown; `locate` in `sitemenu.ts` gives the chart's kind beside the group and the page, and an unknown kind under `/charts` marks Charts current with no chart.
+- [x] Arriving on `/charts/<kind>` expands Flow and Charts for the page's life without storing it. Clicking Charts expands or collapses it and keeps that choice per browser under `flaiover-nav-rail` beside the groups' choices; `parseChosen` keeps a boolean for Charts and drops anything else unknown, so a stored value from an older dashboard still parses. Choosing a chart in the drawer below `md` closes the drawer, as choosing a page does.
+- [x] The chart catalogue the rail and the page share, the kinds, their groups, and their titles, lives in `flaiover/src/lib/viz/catalog.ts`, imported by `sitemenu.ts` without pulling `viz/charts.ts` and its builders into the layout's bundle; `viz/charts.ts` re-exports it so its callers and tests are unchanged.
+- [x] `/charts/[kind]/+page.svelte` no longer uses `PageSidebar`: the page has no `nav[aria-label="Charts"]`, and its controls, chart, notes, and table view are drawn as they are today, full width beside the rail. `flaiover/src/routes/charts/+page.ts` still redirects `/charts` to cycle time.
+- [x] `sitemenu.test.ts`, `navrail.svelte.test.ts`, `NavRail.svelte.test.ts`, and `charts.svelte.test.ts` cover the criteria above, the S-0461 sidebar tests in `charts.svelte.test.ts` and the charts cases of `e2e/page-sidebar.e2e.ts` replaced by tests of the rail's chart list, `e2e/layout.e2e.ts` opening a chart from the rail; `flai test` on the changed paths passes, `design/components/flaiover/src/lib/components/NavRail.examples.json` stays in step with `NavRail`'s props, and `flai check --strict` is clean.
+- [x] `docs/users/flaiover.md` § The header and § Charts, and `design/system/flaiover-dashboard.md` § Views, the rail's groups table, the rail behaviour table, the page sidebar paragraph, and the `/charts/*` rows, say that the charts are chosen from the rail and that the page has no list of its own.
 
 ## Tasks
 - T-2018 The chart catalogue, the kinds, their four groups, and their titles, moves to viz/catalog.ts, which viz/charts.ts re-exports
@@ -50,6 +93,7 @@ The dashboard's charts are chosen from the nav rail. Charts, in the rail's Flow 
 - T-2024 NavRail.svelte draws Charts as an expandable item listing the chart groups and their charts, the chart shown current, and the e2e layout test opens a chart from the rail
 - T-2026 The charts page drops its PageSidebar and chart list, and the sidebar tests of charts move to tests of the rail's list
 - T-2028 The user docs and the dashboard design say the charts are chosen from the rail's Charts item and the page has no list of its own
+- T-2029 writes.test.ts's temp projects ignore .flai-cache/ as a project made from the template does, so flai's items lock does not trip layout.gitignore
 
 ## Notes
 
