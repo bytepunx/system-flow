@@ -96,6 +96,39 @@ describe('connect', () => {
 		]);
 	});
 
+	it('carries the answers on a select and on props, each whole (S-0476)', () => {
+		const { frame, client, answer } = setup();
+		answer({ type: 'ready' });
+		const threads = [{ path: '/api/threads', body: [{ id: 'TH-1' }] }];
+		const events = [{ path: '/api/events', events: [{ event: 'change', data: { kind: 'item' } }] }];
+		client.select('A.svelte', {}, [], [], threads);
+		client.props({ n: 1 }, [], [], events);
+		client.props({ n: 1 });
+		expect(frame.posted.map((p) => p.message)).toEqual([
+			{
+				source: 'flai-components',
+				version: 1,
+				type: 'select',
+				component: 'A.svelte',
+				props: {},
+				functions: [],
+				snippets: [],
+				answers: threads
+			},
+			{
+				source: 'flai-components',
+				version: 1,
+				type: 'props',
+				props: { n: 1 },
+				functions: [],
+				snippets: [],
+				answers: events
+			},
+			{ source: 'flai-components', version: 1, type: 'props', props: { n: 1 } }
+		]);
+		expect(frame.posted[2].message.answers).toBeUndefined();
+	});
+
 	it('keeps only the last of each kind before ready, in theme, tokens, select, props order', () => {
 		const { frame, client, answer } = setup();
 		client.props({ n: 1 });

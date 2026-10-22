@@ -8,11 +8,16 @@
 // calls of its function props. S-0441: the frames are sent the tried tokens, the Design page's
 // unsaved edits kept in this browser, on load and on another tab's change, and again on each
 // ready; the page says it shows them, and drops them on request. S-0449: a JSON prop without a
-// literal default starts at its skeleton, which is sent.
+// literal default starts at its skeleton, which is sent. S-0476: the answers panel sends the
+// harness the answers with every select and props message, loads them from the example chosen,
+// holds back text that is not a JSON array, empties on another pick, and saves them with the
+// example, never in the URL.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import type {
 	Component,
+	ComponentAnswer,
+	ComponentExample,
 	ComponentProp,
 	ComponentsCatalogue,
 	ComponentsStatus,
@@ -458,7 +463,8 @@ describe('the components page (S-0439)', () => {
 				version: 1,
 				type: 'props',
 				props: { count: 3, label: 'Go' },
-				...LOGGED
+				...LOGGED,
+				answers: []
 			});
 			expect(urlProps()).toEqual({ c: SWATCH, props: { count: 3, label: 'Go' } });
 			expect(q('component-missing')).toBeNull();
@@ -586,6 +592,174 @@ describe('the components page (S-0439)', () => {
 
 			await click(q(`component-${BUTTON}`));
 			expect(entries()).toHaveLength(0);
+		});
+	});
+
+	describe('the answers (S-0476)', () => {
+		const PATH = 'design/components/flaiover/src/lib/components/design/Swatch.examples.json';
+		const THREADS: ComponentAnswer[] = [
+			{ path: '/api/threads', body: [{ id: 'TH-1', title: 'Which width?' }] },
+			{ path: '/api/events', events: [{ event: 'change', data: { kind: 'thread' } }] }
+		];
+		const ANSWERED: ComponentExample = {
+			name: 'Answered',
+			props: { label: 'Go' },
+			answers: THREADS
+		};
+		const PLAIN: ComponentExample = { name: 'Plain', props: { label: 'Hi' } };
+		let saved: unknown[] = [];
+
+		/** Serves the catalogue with SWATCH's examples, and takes each save of one. */
+		function serveExamples() {
+			const [flaiover, ...others] = catalogue.projects;
+			const components = flaiover.components.map((x) =>
+				x.path === SWATCH ? { ...x, examples: [ANSWERED, PLAIN], examples_path: PATH } : x
+			);
+			const listed = { projects: [{ ...flaiover, components }, ...others] };
+			saved = [];
+			api.mockImplementation(async (url: string, init?: RequestInit) => {
+				if (url === '/api/components') return answer({ catalogue: listed, status: running });
+				if (url === '/api/components/examples' && init?.method === 'PUT') {
+					const { example } = JSON.parse(String(init.body));
+					saved.push(example);
+					return answer({ examples: [ANSWERED, PLAIN, example] });
+				}
+				return answer({ error: `unexpected ${url}` }, 404);
+			});
+		}
+		const area = () => q('components-answers-text') as HTMLTextAreaElement;
+		const type = async (text: string) => {
+			area().value = text;
+			area().dispatchEvent(new Event('input', { bubbles: true }));
+			await settle();
+		};
+		/** Frames SWATCH, with the harness ready. */
+		async function framed() {
+			serveExamples();
+			await show();
+			await click(q(`component-${SWATCH}`));
+			const [w] = fakeWindows();
+			await harness(w, { type: 'ready' });
+			return w;
+		}
+		/** Saves the panels as the example name. */
+		async function saveAs(name: string) {
+			await click(q('example-save-as'));
+			const input = q('example-name') as HTMLInputElement;
+			input.value = name;
+			input.dispatchEvent(new Event('input', { bubbles: true }));
+			flushSync();
+			(q('example-save-form') as HTMLFormElement).requestSubmit();
+			await settle();
+		}
+
+		it('sends none on the select, and loads and sends the answers of the example chosen', async () => {
+			const w = await framed();
+			expect(q('components-answers')!.querySelector('h3')!.textContent).toBe('Answers');
+			expect(area().value).toBe('');
+			expect(posted(w).at(-1)).toMatchObject({ type: 'select', component: SWATCH, answers: [] });
+
+			await click(q('example-Answered'));
+			expect(JSON.parse(area().value)).toEqual(THREADS);
+			expect(posted(w).at(-1)).toEqual({
+				source: 'flai-components',
+				version: 1,
+				type: 'props',
+				props: { count: 3, label: 'Go' },
+				...LOGGED,
+				answers: THREADS
+			});
+			// the answers stay out of the URL, which keeps the props alone
+			const [href] = goto.mock.lastCall as unknown[];
+			const url = new URL(String(href), 'http://localhost');
+			expect([...url.searchParams.keys()].sort()).toEqual(['c', 'p', 'props']);
+			expect(fromQuery(url.searchParams.get('props'))).toEqual({ count: 3, label: 'Go' });
+
+			// a reloaded harness is sent them again
+			w.postMessage.mockClear();
+			await harness(w, { type: 'ready', component: SWATCH });
+			expect(posted(w).at(-1)).toMatchObject({ type: 'props', answers: THREADS });
+
+			await click(q('example-Plain'));
+			expect(area().value).toBe('');
+			expect(posted(w).at(-1)).toMatchObject({
+				type: 'props',
+				props: { label: 'Hi' },
+				answers: []
+			});
+		});
+
+		it('sends an edit of the answers at once, with the props as they stand', async () => {
+			const w = await framed();
+			const field = document.querySelector<HTMLInputElement>('#props-panel-label')!;
+			field.value = 'Go';
+			field.dispatchEvent(new Event('input', { bubbles: true }));
+			await settle();
+			const edited = [{ path: '/api/board', status: 503, body: 'down' }];
+			await type(JSON.stringify(edited));
+			expect(posted(w).at(-1)).toEqual({
+				source: 'flai-components',
+				version: 1,
+				type: 'props',
+				props: { count: 3, label: 'Go' },
+				...LOGGED,
+				answers: edited
+			});
+			// blank is none
+			await type('  ');
+			expect(posted(w).at(-1)).toMatchObject({ type: 'props', answers: [] });
+			expect(posted(w).filter((m) => m.type === 'select')).toHaveLength(1);
+		});
+
+		it('shows text that does not parse, or is not an array, with its error and sends nothing', async () => {
+			const w = await framed();
+			await click(q('example-Answered'));
+			const sent = posted(w).length;
+			await type('[{"path": ');
+			expect(q('components-answers-error')!.textContent).toMatch(
+				/^\s*Invalid JSON: .+; not sent\.\s*$/
+			);
+			expect(area().value).toBe('[{"path": ');
+			expect(area().getAttribute('aria-invalid')).toBe('true');
+			expect(posted(w)).toHaveLength(sent);
+			await type('{"path": "/api/threads"}');
+			expect(q('components-answers-error')!.textContent!.trim()).toBe('Not an array; not sent.');
+			expect(posted(w)).toHaveLength(sent);
+			// a change of props meanwhile goes with the answers last sent
+			const field = document.querySelector<HTMLInputElement>('#props-panel-label')!;
+			field.value = 'Stop';
+			field.dispatchEvent(new Event('input', { bubbles: true }));
+			await settle();
+			expect(posted(w).at(-1)).toMatchObject({ props: { label: 'Stop' }, answers: THREADS });
+			await type('[]');
+			expect(q('components-answers-error')).toBeNull();
+			expect(posted(w).at(-1)).toMatchObject({ type: 'props', answers: [] });
+		});
+
+		it('empties the answers on another pick', async () => {
+			const w = await framed();
+			await click(q('example-Answered'));
+			await click(q(`component-${BUTTON}`));
+			expect(area().value).toBe('');
+			expect(posted(w).at(-1)).toMatchObject({ type: 'select', component: BUTTON, answers: [] });
+			await click(q(`component-${SWATCH}`));
+			expect(area().value).toBe('');
+			expect(posted(w).at(-1)).toMatchObject({ type: 'select', component: SWATCH, answers: [] });
+		});
+
+		it('saves the answers with the example, and leaves them out when there are none', async () => {
+			await framed();
+			await click(q('example-Answered'));
+			await saveAs('With threads');
+			expect(saved.at(-1)).toMatchObject({
+				name: 'With threads',
+				props: { count: 3, label: 'Go' },
+				answers: THREADS
+			});
+			await type('');
+			await saveAs('Without');
+			expect(saved.at(-1)).toMatchObject({ name: 'Without', props: { count: 3, label: 'Go' } });
+			expect(saved.at(-1)).not.toHaveProperty('answers');
 		});
 	});
 

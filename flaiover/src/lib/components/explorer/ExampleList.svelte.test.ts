@@ -25,6 +25,19 @@ describe('exampleFrom', () => {
 		});
 		expect(exampleFrom('Both', {}, ['light', 'dark'], null)).toEqual({ name: 'Both', props: {} });
 	});
+
+	it('keeps the answers when there are any, and leaves them out when there are none (S-0476)', () => {
+		const answers = [{ path: '/api/threads', body: [{ id: 'TH-1' }] }];
+		expect(exampleFrom('Full', {}, ['light', 'dark'], null, answers)).toEqual({
+			name: 'Full',
+			props: {},
+			answers
+		});
+		expect(exampleFrom('Empty', {}, ['light', 'dark'], null, [])).toEqual({
+			name: 'Empty',
+			props: {}
+		});
+	});
 });
 
 describe('ExampleList (S-0443)', () => {

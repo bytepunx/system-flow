@@ -11,13 +11,16 @@
 	is dropped (S-0449). The frame's border is its wrapper's, which clips nothing, so content wider
 	than the frame scrolls on the frame's own scroll bars. Tried token values are sent as they
 	change, and an empty tokens message once they are gone (S-0441); the client sends the last of
-	each message again on every ready, so a reloaded harness keeps them.
+	each message again on every ready, so a reloaded harness keeps them. The answers the harness
+	gives the component's requests to the app's own server go with every select and props message,
+	and a change of answers alone is a props message (S-0476, ADR-0187).
 -->
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import {
 		connect,
 		harnessUrl,
+		type Answers,
 		type Called,
 		type Client,
 		type Props,
@@ -35,6 +38,7 @@
 		functions = [],
 		snippets = [],
 		missing = [],
+		answers = [],
 		tokens = null,
 		onevent
 	}: {
@@ -54,6 +58,8 @@
 		snippets?: string[];
 		/** The required props without a value, which keep the component from being shown. */
 		missing?: string[];
+		/** What the harness answers the component's requests to the app's own server with. */
+		answers?: Answers;
 		/** The tried token values laid over the stylesheet's, light and dark; null for none. */
 		tokens?: { light: Tokens; dark: Tokens } | null;
 		/** Called with each call of a logged function prop of the component framed. */
@@ -68,8 +74,8 @@
 	let client = $state.raw<Client | null>(null);
 	let height = $state(0);
 	let error = $state.raw<RenderError | null>(null);
-	// The component the client last selected, and the props it was last sent, as JSON: a catalogue
-	// read again gives equal props anew, which are not sent again.
+	// The component the client last selected, and the props and answers it was last sent, as JSON:
+	// a catalogue read again gives equal props anew, which are not sent again.
 	let selected: string | null = null;
 	let sent = '';
 	// The tokens last sent, as JSON; '' when none are laid over the stylesheet.
@@ -108,19 +114,20 @@
 		client?.theme(theme);
 	});
 
-	// A new component is a select, carrying its props; a change of props alone is a props message.
+	// A new component is a select, carrying its props and answers; a change of props or answers alone
+	// is a props message.
 	$effect(() => {
 		if (!client) return;
-		const given = JSON.stringify([props, functions, snippets]);
+		const given = JSON.stringify([props, functions, snippets, answers]);
 		if (component !== selected) {
 			selected = component;
 			sent = given;
 			// an error is the component's it was raised for: the next one starts clear
 			error = null;
-			client.select(component, props, functions, snippets);
+			client.select(component, props, functions, snippets, answers);
 		} else if (given !== sent) {
 			sent = given;
-			client.props(props, functions, snippets);
+			client.props(props, functions, snippets, answers);
 		}
 	});
 

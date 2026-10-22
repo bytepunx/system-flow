@@ -1,13 +1,14 @@
 <!--
 	The picked component's examples (S-0443, ADR-0164): named sets of its props, kept in its
 	examples file under design/components. Choosing one hands it up for the page to load its props,
-	theme, and width into the panel; Save as example asks for a name and hands it up for the page to
-	save the panel as it stands, on main or on the story the page reads. A save that fails shows
+	theme, and width into the panel, and its answers into the answers panel (S-0476); Save as example
+	asks for a name and hands it up for the page to save the panels as they stand, on main or on the
+	story the page reads. A save that fails shows
 	flai's words and its findings, and the name stays to save again.
 -->
 <script lang="ts" module>
 	import type { ComponentExample } from '$lib/server/repo';
-	import type { Props, Theme } from '$lib/explorer/protocol';
+	import type { Answers, Props, Theme } from '$lib/explorer/protocol';
 
 	/** One finding of flai check's that refused a save. */
 	export type Finding = {
@@ -21,19 +22,22 @@
 	 * between the read and the save. */
 	export type SaveFailure = { error: string; findings?: Finding[]; conflict?: boolean };
 
-	/** The example name saves the panel as: its props, the theme when the page shows one, and the
-	 * width when one is picked rather than the panel's own (ADR-0164 § 2). */
+	/** The example name saves the panel as: its props, the theme when the page shows one, the
+	 * width when one is picked rather than the panel's own (ADR-0164 § 2), and the answers when
+	 * there are any (ADR-0187). */
 	export function exampleFrom(
 		name: string,
 		props: Props,
 		themes: readonly Theme[],
-		width: number | null
+		width: number | null,
+		answers: Answers = []
 	): ComponentExample {
 		return {
 			name: name.trim(),
 			props,
 			...(themes.length === 1 ? { theme: themes[0] } : {}),
-			...(width !== null ? { width } : {})
+			...(width !== null ? { width } : {}),
+			...(answers.length ? { answers } : {})
 		};
 	}
 </script>

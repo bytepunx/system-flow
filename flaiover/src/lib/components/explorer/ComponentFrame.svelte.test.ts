@@ -1,9 +1,11 @@
 // S-0449: the frame takes only the answers about the component it last selected, so a late
 // rendered or error about the pick before it changes nothing it shows; it is as tall as the
-// harness's size message says, at the width chosen, and its wrapper clips nothing.
+// harness's size message says, at the width chosen, and its wrapper clips nothing. S-0476: the
+// answers go with the select and the props, and a change of answers alone is a props message.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import ComponentFrame from './ComponentFrame.svelte';
+import type { Answers } from '$lib/explorer/protocol';
 
 const HARNESS = 'http://127.0.0.1:5199/__flai/components/';
 const DEV = 'http://127.0.0.1:5199';
@@ -25,8 +27,15 @@ describe('ComponentFrame (S-0449)', () => {
 	const box = () => q('component-frame-box')!;
 
 	/** Frames BUTTON, with props the test changes as the page would, and a fake frame window. */
-	function show(width: number | null = null) {
-		const props = $state({ server: HARNESS, component: BUTTON, theme: 'light' as const, width });
+	function show(width: number | null = null, answers: Answers = []) {
+		const props = $state({
+			server: HARNESS,
+			component: BUTTON,
+			theme: 'light' as const,
+			width,
+			answers,
+			props: {}
+		});
 		c = mount(ComponentFrame, { target: document.body, props });
 		flushSync();
 		const w: Fake = { postMessage: vi.fn() };
@@ -84,5 +93,29 @@ describe('ComponentFrame (S-0449)', () => {
 		// the frame is 480 pixels inside the box's 1-pixel border, however wide the content is
 		expect(box().style.width).toBe('482px');
 		expect(box().className).not.toMatch(/overflow-(hidden|clip)/);
+	});
+
+	it('sends the answers with the select, and a change of answers alone as props (S-0476)', () => {
+		const threads: Answers = [{ path: '/api/threads', body: [] }];
+		const { props, w } = show(null, threads);
+		harness(w, { type: 'ready' });
+		expect(lastPosted(w)).toMatchObject({ type: 'select', component: BUTTON, answers: threads });
+		const sent = w.postMessage.mock.calls.length;
+		props.answers = [{ path: '/api/threads', body: [] }];
+		flushSync();
+		// equal answers anew are not sent again
+		expect(w.postMessage.mock.calls).toHaveLength(sent);
+		const full: Answers = [{ path: '/api/threads', body: [{ id: 'TH-1' }] }];
+		props.answers = full;
+		flushSync();
+		expect(lastPosted(w)).toMatchObject({ type: 'props', props: {}, answers: full });
+		props.props = { label: 'Go' };
+		flushSync();
+		expect(lastPosted(w)).toMatchObject({ type: 'props', props: { label: 'Go' }, answers: full });
+		props.component = SWATCH;
+		props.answers = [];
+		flushSync();
+		expect(lastPosted(w)).toMatchObject({ type: 'select', component: SWATCH, answers: [] });
+		expect(w.postMessage.mock.calls.filter(([m]) => m.type === 'select')).toHaveLength(2);
 	});
 });

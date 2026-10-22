@@ -2,7 +2,10 @@
 // page posts to the harness it frames from a sub-project's dev server, and what it takes back.
 // Every message is {source: 'flai-components', version: 1, type, ...}; the page posts only to the
 // dev server's origin and takes answers only from that origin and its own frame. A select and a
-// props message name the props to log and those to render as snippets (S-0440).
+// props message name the props to log and those to render as snippets (S-0440), and carry the
+// answers the harness gives the component's requests to the app's own server (S-0476, ADR-0187).
+
+import type { ComponentAnswer } from '$lib/server/repo';
 
 export const SOURCE = 'flai-components';
 export const VERSION = 1;
@@ -11,11 +14,21 @@ export type Theme = 'light' | 'dark';
 /** CSS custom properties by name, with or without their leading `--`. */
 export type Tokens = Record<string, string | number>;
 export type Props = Record<string, unknown>;
+/** What the harness answers the component's requests to the app's own server with, in the order it
+ * tries them; each message's replace the last's, and none leaves every request a 501. */
+export type Answers = ComponentAnswer[];
 
 /** What the page posts to the harness. */
 export type PageMessage =
-	| { type: 'select'; component: string; props?: Props; functions?: string[]; snippets?: string[] }
-	| { type: 'props'; props: Props; functions?: string[]; snippets?: string[] }
+	| {
+			type: 'select';
+			component: string;
+			props?: Props;
+			functions?: string[];
+			snippets?: string[];
+			answers?: Answers;
+	  }
+	| { type: 'props'; props: Props; functions?: string[]; snippets?: string[]; answers?: Answers }
 	| { type: 'theme'; theme: Theme }
 	| { type: 'tokens'; light: Tokens; dark: Tokens };
 
@@ -53,11 +66,18 @@ export type PageWindow = {
 
 /** A connection to one harness frame. */
 export type Client = {
-	/** Mounts the component at path, with props, a logger for each name in functions, and each
-	 * name in snippets whose value is a string as a snippet of that text. */
-	select(component: string, props?: Props, functions?: string[], snippets?: string[]): void;
-	/** Gives the mounted component props, every one it is to have, without remounting it. */
-	props(props: Props, functions?: string[], snippets?: string[]): void;
+	/** Mounts the component at path, with props, a logger for each name in functions, each name
+	 * in snippets whose value is a string as a snippet of that text, and answers for its requests. */
+	select(
+		component: string,
+		props?: Props,
+		functions?: string[],
+		snippets?: string[],
+		answers?: Answers
+	): void;
+	/** Gives the mounted component props, every one it is to have, without remounting it, and the
+	 * answers its requests are to get from now on. */
+	props(props: Props, functions?: string[], snippets?: string[], answers?: Answers): void;
 	/** Sets the harness document's theme. */
 	theme(theme: Theme): void;
 	/** Lays CSS custom properties over the stylesheet's; empty objects clear them. */
@@ -163,9 +183,10 @@ export function connect(
 
 	page.addEventListener('message', receive);
 	return {
-		select: (component, props, functions, snippets) =>
-			send({ type: 'select', component, props, functions, snippets }),
-		props: (props, functions, snippets) => send({ type: 'props', props, functions, snippets }),
+		select: (component, props, functions, snippets, answers) =>
+			send({ type: 'select', component, props, functions, snippets, answers }),
+		props: (props, functions, snippets, answers) =>
+			send({ type: 'props', props, functions, snippets, answers }),
 		theme: (theme) => send({ type: 'theme', theme }),
 		tokens: (light, dark) => send({ type: 'tokens', light, dark }),
 		close() {

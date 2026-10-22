@@ -20,6 +20,10 @@
 	// changes, from its stream.diff. Beside the panel (S-0443), the component's examples, its
 	// examples file's named sets of props: choosing one loads its props, theme, and width into the
 	// panel, and Save as example saves the panel as one, on main or on the story the page reads.
+	// Under the examples (S-0476, ADR-0187), the answers panel holds, as a JSON array, what the
+	// harness answers the component's requests to the app's own server with: sent with every select
+	// and props message, loaded from the example chosen, emptied on another pick, saved with the
+	// example, and not kept in the URL, since they can be large.
 	import type {
 		ComponentExample,
 		ComponentProp,
@@ -29,7 +33,7 @@
 		DesignSystem,
 		DesignTheme
 	} from '$lib/server/repo';
-	import type { Called, Props, Theme } from '$lib/explorer/protocol';
+	import type { Answers, Called, Props, Theme } from '$lib/explorer/protocol';
 	import {
 		PROPS_PARAM,
 		fromQuery,
@@ -102,6 +106,14 @@
 		texts: Record<string, string>;
 		values: Props;
 	} | null = $state.raw(null);
+	// The answers panel's text, for the component it was written for, and the answers last sent from
+	// it: text that does not parse, or is not an array, holds them back until it is.
+	let answering: {
+		project: string;
+		path: string;
+		text: string;
+		values: Answers;
+	} | null = $state.raw(null);
 	let events = $state.raw<Logged[]>([]);
 
 	// The story whose worktree the page reads, undefined for main's; the stories it may pick; and the
@@ -155,6 +167,9 @@
 	const logs = $derived(functions(propsOf));
 	const snippets = $derived(propsOf.filter((p) => p.kind === 'snippet').map((p) => p.name));
 	const unset = $derived(propsOf.filter((p) => missing(p, texts[p.name])).map((p) => p.name));
+	const answerText = $derived(forPicked(answering) ? answering!.text : '');
+	const answers = $derived(forPicked(answering) ? answering!.values : []);
+	const answersRead = $derived(readAnswers(answerText));
 
 	/** Shows the one theme. */
 	function one(theme: Theme) {
@@ -163,6 +178,18 @@
 	}
 
 	const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+	/** What the answers panel's text means: blank is none; else a JSON array, or why it is not one.
+	 * The harness and flai check hold each answer to the format. */
+	function readAnswers(text: string): { ok: true; value: Answers } | { ok: false; error: string } {
+		if (text.trim() === '') return { ok: true, value: [] };
+		try {
+			const v: unknown = JSON.parse(text);
+			return Array.isArray(v) ? { ok: true, value: v } : { ok: false, error: 'Not an array' };
+		} catch (e) {
+			return { ok: false, error: `Invalid JSON: ${errorText(e)}` };
+		}
+	}
 
 	/** Lists the stories in progress or in review, from the board; none when it cannot be read. */
 	async function loadStories() {
@@ -286,7 +313,7 @@
 	/** Frames the component with its default props, and keeps it in the URL. */
 	function pick(name: string, path: string) {
 		if (name !== pickedProject || path !== pickedPath) {
-			linked = edits = null;
+			linked = edits = answering = null;
 			events = [];
 		}
 		pickedProject = name;
@@ -302,11 +329,25 @@
 		if (valid) keep(edits.values);
 	}
 
-	/** Loads the example's props into the panel, and its theme and width where it gives them. */
+	/** Takes the answers panel's text; once it is an array, its answers are sent. */
+	function editAnswers(text: string) {
+		if (!picked) return;
+		const read = readAnswers(text);
+		answering = { ...picked, text, values: read.ok ? read.value : answers };
+	}
+
+	/** Loads the example's props into the panel, its answers into the answers panel, empty when it
+	 * has none, and its theme and width where it gives them. */
 	function chooseExample(example: ComponentExample) {
 		if (!picked) return;
 		const next = toTexts(propsOf, example.props);
 		edits = { ...picked, texts: next, values: toValues(propsOf, next) };
+		const given = example.answers ?? [];
+		answering = {
+			...picked,
+			text: given.length ? JSON.stringify(given, null, 2) : '',
+			values: given
+		};
 		keep(edits.values);
 		if (example.theme) one(example.theme);
 		if (example.width) width = example.width;
@@ -324,7 +365,7 @@
 				body: JSON.stringify({
 					project: target.project,
 					component: target.path,
-					example: exampleFrom(name, values, themes, width),
+					example: exampleFrom(name, values, themes, width, answers),
 					...(story ? { story } : {})
 				})
 			});
@@ -612,6 +653,7 @@
 										functions={logs}
 										{snippets}
 										missing={unset}
+										{answers}
 										tokens={tried}
 										onevent={called}
 									/>
@@ -633,6 +675,33 @@
 								onsave={saveExample}
 							/>
 						{/key}
+						<section aria-labelledby="components-answers-heading" data-testid="components-answers">
+							<h3 id="components-answers-heading" class="text-sm font-semibold">Answers</h3>
+							<p class="mt-1 text-xs text-muted">
+								What the frame answers the component's requests to the app's own server with, as a
+								JSON array. The first answer whose path and method match a request answers it; a
+								request none matches gets 501.
+							</p>
+							<textarea
+								class="mt-1 w-full rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
+								rows="4"
+								value={answerText}
+								placeholder="JSON"
+								aria-labelledby="components-answers-heading"
+								aria-describedby={answersRead.ok ? undefined : 'components-answers-error'}
+								aria-invalid={!answersRead.ok}
+								data-testid="components-answers-text"
+								oninput={(e) => editAnswers(e.currentTarget.value)}></textarea>
+							{#if !answersRead.ok}
+								<p
+									id="components-answers-error"
+									class="mt-1 text-xs text-danger"
+									data-testid="components-answers-error"
+								>
+									{answersRead.error}; not sent.
+								</p>
+							{/if}
+						</section>
 						<PropsPanel
 							props={component.props}
 							{texts}
