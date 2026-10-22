@@ -232,9 +232,10 @@ func (g Guard) asSubAgent(c Call) Verdict {
 		return deny(fmt.Sprintf("a sub-agent (%s) cannot call %s: it reads, and only the story's agent changes work items, threads, and conversations with other stories or reads the inbox (ADR-0059). Put what you need done, or the question for the designer, in your final message.", who, c.Tool))
 	case Shell:
 		readOnly := g.ReadOnly != nil && g.ReadOnly(c.Agent)
+		r := subAgent(readOnly)
 		for _, s := range parse(c.Command) {
 			run := strings.Join(s.words, " ")
-			if why, _ := g.refuse(s.words, subAgent); why != "" {
+			if why, _ := g.refuse(s.words, r); why != "" {
 				return deny(fmt.Sprintf("a sub-agent (%s) cannot run %q: %s. Put what you need done in your final message; the story's agent does it.", who, run, why))
 			}
 			if !readOnly {

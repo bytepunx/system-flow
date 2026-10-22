@@ -175,26 +175,28 @@ const (
 
 // cliReads are the flai commands a sub-agent may run, each with the
 // subcommands it may run; nil allows the command whatever follows it, and ""
-// allows it with no subcommand.
+// allows it with no subcommand. flai components list reads the component
+// library, and flai components alone prints its help (S-0477, ADR-0186).
 var cliReads = map[string][]string{
-	"board":    {""},
-	"check":    nil,
-	"cod":      nil,
-	"criteria": {"list"},
-	"doc":      {"search", "show"},
-	"forecast": nil,
-	"help":     nil,
-	"issue":    {"list"},
-	"message":  {"list", "show"},
-	"prime":    nil,
-	"shared":   {"list", "check"},
-	"show":     nil,
-	"stats":    nil,
-	"stream":   {"diff"},
-	"test":     nil,
-	"thread":   {"list", "show"},
-	"touches":  {"suggest"},
-	"version":  nil,
+	"board":      {""},
+	"check":      nil,
+	"cod":        nil,
+	"components": {"", "list"},
+	"criteria":   {"list"},
+	"doc":        {"search", "show"},
+	"forecast":   nil,
+	"help":       nil,
+	"issue":      {"list"},
+	"message":    {"list", "show"},
+	"prime":      nil,
+	"shared":     {"list", "check"},
+	"show":       nil,
+	"stats":      nil,
+	"stream":     {"diff"},
+	"test":       nil,
+	"thread":     {"list", "show"},
+	"touches":    {"suggest"},
+	"version":    nil,
 }
 
 // flagReads are the flai commands a sub-agent may run only in the form that
@@ -624,25 +626,43 @@ type rules struct {
 	git  func(cmd string) string
 }
 
-// subAgent are a sub-agent's rules: flai's reads, the flai adr commands that
-// write an ADR without committing it (S-0287, ADR-0127), and git's reads.
-// Each refusal cites its ADRs.
-var subAgent = rules{
-	flai: func(cmd, sub string, rest []string) (string, string) {
-		switch {
-		case reads(cmd, sub, rest):
-			return "", ""
-		case cmd == "adr" && slices.Contains(adrWrites, sub):
-			if slices.ContainsFunc(adrCommits, func(f string) bool { return named(rest, f) }) {
-				return commitsADR + "; run it without --commit or --autocommit " + leavesADRToIt, ""
+// Why a read-only sub-agent does not serve the component library, and what
+// it does instead (S-0477, ADR-0186); and why no sub-agent writes its
+// manifest key.
+const (
+	servesComponents = "flai components serve writes a Vite config under .flai-cache and, with --story, may install the worktree's dependencies, and a read-only sub-agent writes no file but under the temporary folder (ADR-0141, ADR-0186); ask the story's agent, or a task sub-agent, to run it"
+	configsManifest  = "flai components config rewrites system-flow.yaml, which is the story's agent's to change (ADR-0060, ADR-0186)"
+)
+
+// subAgent are a sub-agent's rules, read-only or not: flai's reads, the flai
+// adr commands that write an ADR without committing it (S-0287, ADR-0127),
+// flai components serve unless it is read-only (S-0477, ADR-0186), and git's
+// reads. Each refusal cites its ADRs.
+func subAgent(readOnly bool) rules {
+	return rules{
+		flai: func(cmd, sub string, rest []string) (string, string) {
+			switch {
+			case reads(cmd, sub, rest):
+				return "", ""
+			case cmd == "adr" && slices.Contains(adrWrites, sub):
+				if slices.ContainsFunc(adrCommits, func(f string) bool { return named(rest, f) }) {
+					return commitsADR + "; run it without --commit or --autocommit " + leavesADRToIt, ""
+				}
+				return "", ""
+			case cmd == "components" && sub == "serve":
+				if readOnly {
+					return servesComponents, ""
+				}
+				return "", ""
+			case cmd == "components" && sub == "config":
+				return configsManifest, ""
 			}
-			return "", ""
-		}
-		return "flai commands that change work items, threads, conversations between stories, narratives, or releases are the story's agent's (ADR-0060)", ""
-	},
-	git: func(string) string {
-		return "git commands that change the worktree, the index, branches, or history are the story's agent's (ADR-0060)"
-	},
+			return "flai commands that change work items, threads, conversations between stories, narratives, or releases are the story's agent's (ADR-0060)", ""
+		},
+		git: func(string) string {
+			return "git commands that change the worktree, the index, branches, or history are the story's agent's (ADR-0060)"
+		},
+	}
 }
 
 // planning are the planner's rules: flai's reads and its planning commands,

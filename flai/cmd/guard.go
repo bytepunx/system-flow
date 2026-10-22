@@ -31,7 +31,8 @@ thread, a narrative, or the repository's history (ADR-0059, ADR-0060): any
 of flai's MCP tools but board, doc_get, doc_search, item_get,
 order_by_policy, prime, promote_candidates, release_evaluate, shared_paths,
 thread_get, and who_touches; a flai command other than one that reads
-(board, check, cod, doc search and show, forecast, help, issue list, order
+(board, check, cod, components list or alone, doc search and show,
+forecast, help, issue list, order
 --by without --apply and without a story to place, plan --candidates,
 prime, promote --candidates or --drafts, release --evaluate, shared list
 and check, show, stats, stream diff,
@@ -88,6 +89,16 @@ names the command and the file and tells the sub-agent to put the
 correction in its final message. Every other sub-agent, a task sub-agent
 and general-purpose among them, writes through the shell as before, as it
 does when the definition or the project cannot be read.
+
+Every sub-agent may run flai components list, and a sub-agent that is not
+read-only, a story's task sub-agent among them, may run flai components
+serve, with or without --story (S-0477, ADR-0186). A read-only sub-agent is
+refused serve, since it writes a Vite config under .flai-cache and with
+--story may install the worktree's dependencies; the refusal tells it to ask
+the story's agent, or a task sub-agent, to run it. flai components config,
+which rewrites system-flow.yaml, is refused to every sub-agent. The
+planner's, the orchestrator's, and the analyzer's own calls list the
+component library but are refused serve and config.
 
 A story's agent, the planner, and the analyzer, sessions flai serve
 starts (FLAI_STORY, FLAI_STARTED_BY=flai-serve, or FLAI_ROLE plan or

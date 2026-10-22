@@ -1,6 +1,6 @@
 ---
 title: The component library
-updated: 2026-10-21
+updated: 2026-10-22
 status: active
 topics: [components, design, dashboard, cli]
 ---
@@ -116,6 +116,8 @@ The program costs time. Listing flaiover's 54 components takes about 2.3 seconds
 
 [flai-cli.md](flai-cli.md) describes both commands.
 
+`flai guard` lets every agent run `flai components list`: every sub-agent, read-only ones among them, and the planner's, the orchestrator's, and the analyzer's own calls. No sub-agent and no strategic agent runs `flai components config`, which rewrites the manifest; it is the story's agent's (S-0477, [ADR-0186](../adrs/0186-flai-guard-lets-every-agent-run-flai-components-list-and-a-story-s-task-sub.md)).
+
 ## The dev server and its harness (S-0438)
 
 flai runs a sub-project's own Vite dev server on the host, with the project's own config, plugins, and dependencies, so aliases, Tailwind, and the design stylesheet behave as in the app. A plugin flai embeds serves a harness page that renders one component by its path, inside an error boundary, after the `setup` module. Vite's hot module replacement carries each saved change, to the source or the stylesheet, into the harness.
@@ -134,6 +136,8 @@ flai runs a sub-project's own Vite dev server on the host, with the project's ow
 - Stopping it ends its whole process group: SIGTERM, then SIGKILL five seconds later.
 
 The dev server binds 127.0.0.1. The browser on the host frames it; the dashboard's container never reaches it.
+
+A story's task sub-agent may run `flai components serve`, with or without `--story`, so that it can run a pass of the harness it wrote (S-0477, [ADR-0186](../adrs/0186-flai-guard-lets-every-agent-run-flai-components-list-and-a-story-s-task-sub.md)). `flai guard` refuses it to a read-only sub-agent, such as the explorer or the verifier, since serving writes the harness under `.flai-cache` and with `--story` may install the worktree's dependencies, which [ADR-0141](../adrs/0141-flai-guard-refuses-a-read-only-sub-agent-a-shell-command-that-writes-a-file.md) forbids it. It refuses it to the planner's, the orchestrator's, and the analyzer's own calls too.
 
 ### The harness
 

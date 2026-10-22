@@ -13,7 +13,7 @@ import (
 )
 
 // g knows flai's commands as the cmd package gives them.
-var g = Guard{Commands: []string{"accept", "adr", "archive", "block", "board", "check", "cod", "criteria", "doc", "edit", "epic", "forecast", "guard", "help", "issue", "message", "move", "order", "prime", "promote", "push", "release", "show", "stats", "story", "stream", "task", "test", "thread", "touches", "unblock", "verify", "version"}}
+var g = Guard{Commands: []string{"accept", "adr", "archive", "block", "board", "check", "cod", "components", "criteria", "doc", "edit", "epic", "forecast", "guard", "help", "issue", "message", "move", "order", "prime", "promote", "push", "release", "show", "stats", "story", "stream", "task", "test", "thread", "touches", "unblock", "verify", "version"}}
 
 func bash(agent, cmd string) Event {
 	e := Event{ToolName: "Bash", AgentType: agent}
@@ -496,6 +496,71 @@ func TestASubAgentRunsFlaiVerifyButRecordsNoIssues(t *testing.T) {
 	}
 	if why := g.Check(Event{ToolName: MCPPrefix + "verify", AgentID: "a1", AgentType: "verifier"}); why != "" {
 		t.Errorf("sub-agent verify refused: %s", why)
+	}
+}
+
+// I-0165, I-0156, S-0477, ADR-0186: flai components list, and flai
+// components alone, which prints its help, are reads for every agent the
+// guard holds to reads; a story's task sub-agent serves the component
+// library, through bin/flai and scripts/flai.sh alike, but a read-only
+// sub-agent does not, since serving writes under .flai-cache and may install
+// dependencies (ADR-0141); and no sub-agent writes the manifest's components
+// key. Main's guard, with no components entry in cliReads, refused all of it.
+func TestASubAgentListsComponentsAndATaskSubAgentServesThem(t *testing.T) {
+	gr := Guard{Commands: g.Commands, ReadOnly: func(agentType string) bool { return agentType == "verifier" || agentType == "explorer" }}
+	lists := []string{"flai components list", "scripts/flai.sh components list --json", "bin/flai components list --project flaiover", "flai components"}
+	serves := []string{"bin/flai components serve --story S-0449", "flai components serve --project flaiover", "scripts/flai.sh components serve --project flaiover --json"}
+	for _, gd := range []Guard{g, gr} {
+		for _, c := range append(append([]string{}, lists...), serves...) {
+			if why := gd.Check(bash("general-purpose", c)); why != "" {
+				t.Errorf("task sub-agent %q refused: %s", c, why)
+			}
+		}
+	}
+	for _, who := range []string{"verifier", "explorer"} {
+		for _, c := range lists {
+			if why := gr.Check(bash(who, c)); why != "" {
+				t.Errorf("read-only %s, %q refused: %s", who, c, why)
+			}
+		}
+		for _, c := range serves {
+			why := gr.Check(bash(who, c))
+			if !strings.Contains(why, fmt.Sprintf("a sub-agent (%s) cannot run %q", who, c)) || !strings.Contains(why, "ADR-0141, ADR-0186") || !strings.Contains(why, "ask the story's agent, or a task sub-agent, to run it") {
+				t.Errorf("read-only %s, %q: %q", who, c, why)
+			}
+		}
+	}
+	for _, gd := range []Guard{g, gr} {
+		for _, who := range []string{"general-purpose", "verifier", "explorer"} {
+			c := "flai components config flaiover --setup x"
+			if why := gd.Check(bash(who, c)); !strings.Contains(why, fmt.Sprintf("a sub-agent (%s) cannot run %q", who, c)) || !strings.Contains(why, "rewrites system-flow.yaml") {
+				t.Errorf("%s, %q: %q", who, c, why)
+			}
+		}
+	}
+}
+
+// S-0477, ADR-0186: the planner's, the orchestrator's, and the analyzer's own
+// calls list the component library, but do not serve it.
+func TestTheStrategicAgentsListComponentsButDoNotServeThem(t *testing.T) {
+	for _, s := range []struct {
+		name string
+		gd   Guard
+	}{
+		{"planner", planGuard},
+		{"orchestrator", orchestrator(allOn)},
+		{"analyzer", Guard{Commands: g.Commands, Role: RoleAnalyze}},
+	} {
+		for _, c := range []string{"flai components list", "scripts/flai.sh components list --json", "flai components"} {
+			if why := s.gd.Check(bash("", c)); why != "" {
+				t.Errorf("the %s, %q refused: %s", s.name, c, why)
+			}
+		}
+		for _, c := range []string{"flai components serve --project flaiover", "bin/flai components serve --story S-0449", "flai components config flaiover --setup x"} {
+			if why := s.gd.Check(bash("", c)); !strings.Contains(why, fmt.Sprintf("the %s cannot run %q", s.name, c)) {
+				t.Errorf("the %s, %q: %q", s.name, c, why)
+			}
+		}
 	}
 }
 
