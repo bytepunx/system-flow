@@ -27,6 +27,20 @@ describe('parseChosen', () => {
 			design: true
 		});
 	});
+
+	// S-0484: whether Charts is expanded is kept beside the groups.
+	it('reads Charts back when it is a boolean and leaves it out when it is not', () => {
+		expect(parseChosen('{"flow":true,"charts":true}')).toEqual({ flow: true, charts: true });
+		expect(parseChosen('{"charts":false}')).toEqual({ charts: false });
+		expect(parseChosen('{"flow":false,"charts":"yes"}')).toEqual({ flow: false });
+	});
+
+	it('reads a value stored by an older dashboard, with groups only', () => {
+		expect(parseChosen('{"agents":true,"configuration":false}')).toEqual({
+			agents: true,
+			configuration: false
+		});
+	});
 });
 
 describe('NavRailState', () => {
@@ -72,6 +86,31 @@ describe('NavRailState', () => {
 		rail.toggle('flow');
 		expect(rail.isExpanded('flow')).toBe(false);
 		expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({ flow: false });
+	});
+
+	it('toggles Charts and writes the choice beside the groups, which a new page reads back', () => {
+		const rail = new NavRailState();
+		rail.toggle('design');
+		rail.toggle('charts');
+		expect(rail.isExpanded('charts')).toBe(true);
+		expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({ design: true, charts: true });
+		rail.toggle('charts');
+		expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({ design: true, charts: false });
+		rail.toggle('charts');
+		const next = new NavRailState();
+		expect(next.isExpanded('charts')).toBe(true);
+		expect(next.isExpanded('design')).toBe(true);
+	});
+
+	it('expands Charts on arrival without storing it', () => {
+		const rail = new NavRailState();
+		rail.toggle('flow');
+		rail.expand('flow');
+		rail.expand('charts');
+		expect(rail.isExpanded('charts')).toBe(true);
+		expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({ flow: true });
+		const next = new NavRailState();
+		expect(next.isExpanded('charts')).toBe(false);
 	});
 
 	it('keeps the choice for the page when storage refuses it', () => {
