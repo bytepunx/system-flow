@@ -339,6 +339,8 @@ describe.skipIf(!haveFlai)('editing an item through flai', () => {
 	beforeAll(async () => {
 		dir = await mkdtemp(join(tmpdir(), 'flaiover-edit-'));
 		await cp(fixture, dir, { recursive: true });
+		// ignored as a project made from the template ignores it: flai locks the items there (S-0479)
+		await writeFile(join(dir, '.gitignore'), '.flai-cache/\n');
 		r = new Repo(dir, flaiAsk(dir));
 	});
 	afterAll(async () => {
@@ -471,6 +473,7 @@ describe.skipIf(!haveFlai)('the markdown lint through flai', () => {
 	beforeAll(async () => {
 		dir = await mkdtemp(join(tmpdir(), 'flaiover-lint-'));
 		await cp(fixture, dir, { recursive: true });
+		await writeFile(join(dir, '.gitignore'), '.flai-cache/\n');
 		await cp(resolve('../.markdownlint.yaml'), join(dir, '.markdownlint.yaml'));
 		r = new Repo(dir, flaiAsk(dir));
 	});
