@@ -3,17 +3,35 @@ id: S-0481
 type: story
 nature: improvement
 title: pnpm add run bare in a story worktree installs from the default store, so the next flaiover-install.sh aborts with ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-21T12:00:00Z
-updated: 2026-10-22T20:52:11Z
-transitions: []
+updated: 2026-10-22T20:55:39Z
+transitions:
+  - to: ready
+    at: 2026-10-22T20:55:39Z
+    by: alex
 tags: []
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 43
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 16
+          output: 307
+          cache_read: 3107006
+          cache_write: 2859
+          cost: 0.6867
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m

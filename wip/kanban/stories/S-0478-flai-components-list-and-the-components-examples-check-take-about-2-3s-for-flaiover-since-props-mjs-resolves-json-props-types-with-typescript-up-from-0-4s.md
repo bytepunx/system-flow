@@ -3,17 +3,35 @@ id: S-0478
 type: story
 nature: improvement
 title: flai components list, and the components examples check, take about 2.3s for flaiover since props.mjs resolves json props' types with typescript, up from 0.4s
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-21T11:59:35Z
-updated: 2026-10-22T20:52:09Z
-transitions: []
+updated: 2026-10-22T20:55:35Z
+transitions:
+  - to: ready
+    at: 2026-10-22T20:55:35Z
+    by: alex
 tags: []
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 43
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 17
+          output: 307
+          cache_read: 3107006
+          cache_write: 2859
+          cost: 0.6867
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 2s

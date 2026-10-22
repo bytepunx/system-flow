@@ -3,16 +3,37 @@ id: T-2025
 type: task
 nature: improvement
 title: The chart page puts the title and the chart first, the explainer after the chart's figures, the controls beneath it, and the table view last
-status: backlog
+status: done
 parent: S-0485
 owner: alex
 created: 2026-10-21T20:58:40Z
-updated: 2026-10-21T20:58:40Z
-transitions: []
+updated: 2026-10-22T21:06:49Z
+transitions:
+  - to: ready
+    at: 2026-10-22T21:02:31Z
+    by: agent-S-0485
+  - to: in-progress
+    at: 2026-10-22T21:02:31Z
+    by: agent-S-0485
+  - to: done
+    at: 2026-10-22T21:06:49Z
+    by: agent-S-0485
 stream: S-0485
 tags: [dashboard]
 touches: ["flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts"]
 after: [T-2023]
+usage:
+  source: log
+  seconds: 258
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 16357
+      cache_read: 2589243
+      cache_write: 98734
+      cost: 1.4605
 ---
 # T-2025 The chart page puts the title and the chart first, the explainer after the chart's figures, the controls beneath it, and the table view last
 

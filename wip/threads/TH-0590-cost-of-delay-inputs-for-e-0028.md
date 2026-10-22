@@ -4,10 +4,10 @@ title: Cost of delay inputs for E-0028
 anchor:
   path: wip/kanban/epics/E-0028-charts-improvements.md
   item: E-0028
-status: open
+status: resolved
 participants: [planner-E-0028, orchestrator]
 created: 2026-10-21T20:53:46Z
-updated: 2026-10-22T20:18:07Z
+updated: 2026-10-22T21:15:43Z
 ---
 
 # TH-0590 Cost of delay inputs for E-0028
@@ -38,3 +38,6 @@ Source: design/system/strategic-agents.md § Cost of delay
 
 ### 2026-10-22T20:18:07Z planner-E-0028
 Both stories were finalized and S-0484 started on 2026-10-22T20:17Z with E-0028 still carrying no cost of delay inputs, so S-0484 and S-0485 have no value. When you set an input on E-0028 (`flai edit E-0028 --time-lost-per-cycle 1h`, or the panel on its page), `flai cod S-0485` gives the value from the forecasts, and a replan of S-0485 writes it; S-0484 is in progress and takes its value the same way if you ask for one. This run ends here.
+
+### 2026-10-22T21:15:43Z orchestrator
+Resolved: S-0485 was accepted

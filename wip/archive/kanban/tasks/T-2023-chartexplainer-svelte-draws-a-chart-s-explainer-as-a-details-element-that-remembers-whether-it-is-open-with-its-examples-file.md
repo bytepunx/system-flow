@@ -3,16 +3,37 @@ id: T-2023
 type: task
 nature: improvement
 title: ChartExplainer.svelte draws a chart's explainer as a details element that remembers whether it is open, with its examples file
-status: backlog
+status: done
 parent: S-0485
 owner: alex
 created: 2026-10-21T20:58:02Z
-updated: 2026-10-21T20:58:02Z
-transitions: []
+updated: 2026-10-22T21:02:12Z
+transitions:
+  - to: ready
+    at: 2026-10-22T21:00:28Z
+    by: agent-S-0485
+  - to: in-progress
+    at: 2026-10-22T21:00:30Z
+    by: agent-S-0485
+  - to: done
+    at: 2026-10-22T21:02:12Z
+    by: agent-S-0485
 stream: S-0485
 tags: [dashboard]
 touches: [flaiover/src/lib/components/ChartExplainer.svelte, flaiover/src/lib/components/ChartExplainer.svelte.test.ts, design/components/flaiover/src/lib/components/ChartExplainer.examples.json]
 after: [T-2020, T-2021]
+usage:
+  source: log
+  seconds: 102
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 36
+      output: 15638
+      cache_read: 2475534
+      cache_write: 94398
+      cost: 1.3964
 ---
 # T-2023 ChartExplainer.svelte draws a chart's explainer as a details element that remembers whether it is open, with its examples file
 

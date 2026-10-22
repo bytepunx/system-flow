@@ -3,17 +3,35 @@ id: S-0472
 type: story
 nature: improvement
 title: flai guard refuses a story's sub-agents flai components list and serve, which only read or run the project's own dev server
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-21T11:58:44Z
-updated: 2026-10-22T20:53:07Z
-transitions: []
+updated: 2026-10-22T20:55:27Z
+transitions:
+  - to: ready
+    at: 2026-10-22T20:55:27Z
+    by: alex
 tags: []
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 87
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 45
+          output: 835
+          cache_read: 8759213
+          cache_write: 8303
+          cost: 1.936
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m

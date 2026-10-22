@@ -3,11 +3,14 @@ id: S-0469
 type: story
 nature: improvement
 title: Ready stories waited up to 3.5 days unheld with in-progress lanes free and review under its limit
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-21T11:58:17Z
-updated: 2026-10-22T20:53:14Z
-transitions: []
+updated: 2026-10-22T20:55:21Z
+transitions:
+  - to: ready
+    at: 2026-10-22T20:55:21Z
+    by: alex
 tags: []
 agent:
   harness: claude-code
@@ -19,6 +22,16 @@ usage:
   seconds: 0
   models: []
   strategic:
+    - kind: orchestrator
+      seconds: 44
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 17
+          output: 308
+          cache_read: 3107007
+          cache_write: 2860
+          cost: 0.6867
     - kind: analyzer
       seconds: 113
       estimated: true

@@ -4,10 +4,10 @@ title: "Plan for E-0028: two stories, S-0484 then S-0485"
 anchor:
   path: wip/kanban/epics/E-0028-charts-improvements.md
   item: E-0028
-status: open
+status: resolved
 participants: [planner-E-0028, orchestrator]
 created: 2026-10-21T21:02:07Z
-updated: 2026-10-21T21:02:16Z
+updated: 2026-10-22T21:15:43Z
 ---
 
 # TH-0591 Plan for E-0028: two stories, S-0484 then S-0485
@@ -55,3 +55,6 @@ Recommended for the operator: approve the plan as drafted, with its six assumpti
 The stories get their values once you set E-0028's input on TH-0590. I then finalize them under finalize_drafts.
 
 Source: design/conventions/strategic-agents.md § As the planner
+
+### 2026-10-22T21:15:43Z orchestrator
+Resolved: S-0485 was accepted

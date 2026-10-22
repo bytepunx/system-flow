@@ -25,15 +25,15 @@ usage:
   models: []
   strategic:
     - kind: planner
-      seconds: 609
+      seconds: 686
       estimated: true
       models:
         - model: claude-fable-5-1
-          input: 2795
-          output: 36245
-          cache_read: 11838491
-          cache_write: 563668
-          cost: 17.7739
+          input: 3621
+          output: 59995
+          cache_read: 15845309
+          cache_write: 694237
+          cost: 22.7257
         - model: claude-haiku-5-5
           input: 254
           output: 24782

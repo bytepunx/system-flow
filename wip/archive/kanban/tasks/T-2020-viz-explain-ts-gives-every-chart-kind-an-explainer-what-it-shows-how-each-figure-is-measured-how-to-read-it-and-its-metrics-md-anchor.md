@@ -3,15 +3,36 @@ id: T-2020
 type: task
 nature: improvement
 title: viz/explain.ts gives every chart kind an explainer, what it shows, how each figure is measured, how to read it, and its metrics.md anchor
-status: backlog
+status: done
 parent: S-0485
 owner: alex
 created: 2026-10-21T20:57:25Z
-updated: 2026-10-21T20:57:25Z
-transitions: []
+updated: 2026-10-22T20:59:06Z
+transitions:
+  - to: ready
+    at: 2026-10-22T20:50:56Z
+    by: agent-S-0485
+  - to: in-progress
+    at: 2026-10-22T20:51:00Z
+    by: agent-S-0485
+  - to: done
+    at: 2026-10-22T20:59:06Z
+    by: agent-S-0485
 stream: S-0485
 tags: [dashboard]
 touches: [flaiover/src/lib/viz/explain.ts, flaiover/src/lib/viz/explain.test.ts]
+usage:
+  source: log
+  seconds: 486
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 79
+      output: 34601
+      cache_read: 5477286
+      cache_write: 208862
+      cost: 3.0895
 ---
 # T-2020 viz/explain.ts gives every chart kind an explainer, what it shows, how each figure is measured, how to read it, and its metrics.md anchor
 

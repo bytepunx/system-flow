@@ -3,10 +3,10 @@ id: E-0028
 type: epic
 nature: improvement
 title: Charts improvements
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-21T20:40:56Z
-updated: 2026-10-22T20:17:45Z
+updated: 2026-10-22T21:15:43Z
 transitions:
   - to: ready
     at: 2026-10-21T20:41:04Z
@@ -14,24 +14,30 @@ transitions:
   - to: in-progress
     at: 2026-10-22T20:17:45Z
     by: agent-S-0484
+  - to: review
+    at: 2026-10-22T21:11:53Z
+    by: agent-S-0485
+  - to: done
+    at: 2026-10-22T21:15:43Z
+    by: orchestrator
 tags: [dashboard]
 usage:
   source: sum
-  seconds: 1681
+  seconds: 2970
   priced_by: harness
   turns:
     - day: 2026-10-22
-      ceremony: 2
+      ceremony: 4
       test_runs: 2
-      hand_edits: 4
-      work: 54
+      hand_edits: 6
+      work: 102
   models:
     - model: claude-opus-5-5
-      input: 332
-      output: 103932
-      cache_read: 16266309
-      cache_write: 583183
-      cost: 8.8835
+      input: 578
+      output: 212039
+      cache_read: 33379536
+      cache_write: 1235752
+      cost: 18.5364
   strategic:
     - kind: planner
       seconds: 84620
@@ -50,21 +56,21 @@ usage:
           cache_write: 155410
           cost: 0.197
     - kind: orchestrator
-      seconds: 85515
+      seconds: 85933
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 224
-          output: 3608
-          cache_read: 33730041
-          cache_write: 51201
-          cost: 7.4595
+          input: 287
+          output: 4530
+          cache_read: 46647709
+          cache_write: 86214
+          cost: 10.3196
         - model: claude-sonnet-5-5
-          input: 14
-          output: 85
-          cache_read: 255175
-          cache_write: 65016
-          cost: 0.2216
+          input: 30
+          output: 192
+          cache_read: 604441
+          cache_write: 138989
+          cost: 0.5145
 ---
 # E-0028 Charts improvements
 
@@ -83,3 +89,5 @@ Instead, I would like the following changes:
 
 ## Notes
 - 2026-10-22T20:17:45Z: moved to in-progress: follows S-0484, which moved to in-progress
+- 2026-10-22T21:11:53Z: moved to review: follows S-0485, which moved to review
+- 2026-10-22T21:15:43Z: moved to done: follows S-0485, which moved to done
