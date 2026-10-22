@@ -3,11 +3,11 @@ id: S-0484
 type: story
 nature: improvement
 title: The rail's Charts item expands to list the charts by group, each a link that opens it, and the charts page keeps no chart list of its own
-status: review
+status: done
 parent: E-0028
 owner: alex
 created: 2026-10-21T20:55:01Z
-updated: 2026-10-22T20:45:25Z
+updated: 2026-10-22T20:49:16Z
 transitions:
   - to: ready
     at: 2026-10-22T20:17:25Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-10-22T20:45:25Z
     by: agent-S-0484
+  - to: done
+    at: 2026-10-22T20:49:16Z
+    by: alex
 tags: [dashboard]
 topics: [navigation]
 touches: [flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/navrail.svelte.ts, flaiover/src/lib/navrail.svelte.test.ts, flaiover/src/lib/components/NavRail.svelte, flaiover/src/lib/components/NavRail.svelte.test.ts, flaiover/src/lib/viz/catalog.ts, flaiover/src/lib/viz/catalog.test.ts, flaiover/src/lib/viz/charts.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", flaiover/e2e/page-sidebar.e2e.ts, flaiover/e2e/layout.e2e.ts, docs/users/flaiover.md, design/system/flaiover-dashboard.md, design/issues/I-0190-pagesidebar-s-link-entries-have-no-page-using-them-since-the-charts-page-dropped-its-sidebar.md, design/issues/summary.md, design/issues/I-0191-a-work-item-write-in-a-project-with-no-gitignore-makes-flai-cache-items-lock-and-then-refuses-itself-on-layout-gitignore.md, flaiover/src/lib/server/writes.test.ts]
@@ -45,15 +48,15 @@ usage:
       cost: 8.8835
   strategic:
     - kind: orchestrator
-      seconds: 43534
+      seconds: 43603
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 151
-          output: 2520
-          cache_read: 22949425
-          cache_write: 30844
-          cost: 5.0745
+          input: 155
+          output: 2545
+          cache_read: 23611828
+          cache_write: 34126
+          cost: 5.2215
         - model: claude-sonnet-5-5
           input: 14
           output: 85

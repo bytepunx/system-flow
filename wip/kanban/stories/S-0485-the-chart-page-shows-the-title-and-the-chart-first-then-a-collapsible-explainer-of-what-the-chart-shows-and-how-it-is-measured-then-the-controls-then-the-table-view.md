@@ -7,7 +7,7 @@ status: ready
 parent: E-0028
 owner: alex
 created: 2026-10-21T20:55:38Z
-updated: 2026-10-22T20:17:34Z
+updated: 2026-10-22T20:48:17Z
 transitions:
   - to: ready
     at: 2026-10-22T20:17:34Z
@@ -38,10 +38,10 @@ usage:
           cost: 2.1276
 forecast:
   duration: 1h
-  delivery: 2026-10-22T17:05:00Z
-  basis: "flai forecast's 24m at size 16 (5 criteria, 11 touches), 89 s a unit over 86 done improvement stories on claude-opus-5-5 in the large band, raised to 1h because explain.ts counts one touch but holds three paragraphs written against metrics.md for each of the 28 chart kinds; delivery follows S-0484, which it waits for, at 2026-10-22T15:56Z, plus 1h at the pull order's cycle factor of 1.15."
-  by: planner-E-0028
-  at: 2026-10-21T21:03:27Z
+  delivery: 2026-10-22T21:58:00Z
+  basis: "Its own forecast of 1h; 1st in the pull order with an in-progress limit of 5, with nothing ahead of it."
+  by: flai
+  at: 2026-10-22T20:48:17Z
 finalized:
   by: alex
   at: 2026-10-22T20:16:59Z
