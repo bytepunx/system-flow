@@ -3,15 +3,18 @@ id: S-0485
 type: story
 nature: improvement
 title: The chart page shows the title and the chart first, then a collapsible explainer of what the chart shows and how it is measured, then the controls, then the table view
-status: ready
+status: in-progress
 parent: E-0028
 owner: alex
 created: 2026-10-21T20:55:38Z
-updated: 2026-10-22T20:48:17Z
+updated: 2026-10-22T20:50:34Z
 transitions:
   - to: ready
     at: 2026-10-22T20:17:34Z
     by: alex
+  - to: in-progress
+    at: 2026-10-22T20:50:34Z
+    by: agent-S-0485
 tags: [dashboard]
 topics: [analysis]
 touches: [flaiover/src/lib/viz/explain.ts, flaiover/src/lib/viz/explain.test.ts, flaiover/src/lib/chartexplainer.svelte.ts, flaiover/src/lib/chartexplainer.svelte.test.ts, flaiover/src/lib/components/ChartExplainer.svelte, flaiover/src/lib/components/ChartExplainer.svelte.test.ts, design/components/flaiover/src/lib/components/ChartExplainer.examples.json, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", docs/users/flaiover.md, design/system/flaiover-dashboard.md]
@@ -27,15 +30,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 41887
+      seconds: 41916
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 66
-          output: 1031
-          cache_read: 9622405
-          cache_write: 12689
-          cost: 2.1276
+          input: 86
+          output: 1354
+          cache_read: 13084367
+          cache_write: 17146
+          cost: 2.893
 forecast:
   duration: 1h
   delivery: 2026-10-22T21:58:00Z
