@@ -6,7 +6,7 @@ title: flai components list, and the components examples check, take about 2.3s 
 status: backlog
 owner: alex
 created: 2026-10-21T11:59:35Z
-updated: 2026-10-21T11:59:35Z
+updated: 2026-10-22T20:52:09Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 2s
     by: flai
     at: 2026-10-21T11:59:35Z
+finalized:
+  by: alex
+  at: 2026-10-22T20:52:09Z
 ---
 # S-0478 flai components list, and the components examples check, take about 2.3s for flaiover since props.mjs resolves json props' types with typescript, up from 0.4s
 
