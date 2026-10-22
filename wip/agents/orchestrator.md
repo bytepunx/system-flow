@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1251.5612
-accrued_seconds: 1154603
-tasks_completed: 897
-last_run: 2026-10-22T21:13:39Z
+accrued_cost: 1262.6264
+accrued_seconds: 1155747
+tasks_completed: 902
+last_run: 2026-10-22T21:32:43Z
 ---
 
 # Orchestrator activity
@@ -6291,6 +6291,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 366
 - Cost: 1.9019 USD, estimated
 
+### 2026-10-22T21:15:56Z
+
+- Summary: S-0485 landed through the merge queue (enqueued by me), completing E-0028. Published under publish, policy judgement: pending 1 story, unvalued (0 USD/week), none held by whole_epics; reason: it completes E-0028's outcome. Released flaiover 0.54.4 (tag flaiover/v0.54.4, patch, from 0.54.3) with S-0485, and pushed.
+- Items: S-0485, E-0028
+- Seconds: 137
+- Cost: 0.8784 USD, estimated
+
+### 2026-10-22T21:19:19Z
+
+- Summary: flai guard refused me `flai board --json` in the shell (it treats it as a write); the MCP board tool reads the same. No new threads since TH-0598; S-0466, S-0477 in progress, S-0485 landed and released.
+- Items: none
+- Seconds: 203
+- Cost: 6.8578 USD, estimated
+
+### 2026-10-22T21:19:46Z
+
+- Summary: agent-S-0476 pulled S-0476. Under order_ready, re-applied flai order --by throughput: S-0468 (2h), S-0467 (2h), then five without a forecast in their current order.
+- Items: S-0476
+- Seconds: 27
+- Cost: 0.4589 USD, estimated
+
+### 2026-10-22T21:32:33Z
+
+- Summary: Recommended an answer on TH-0595, citing design/conventions/work-management.md § Rules
+- Items: S-0472
+- Seconds: 767
+- Cost: 2.7513 USD, estimated
+
+### 2026-10-22T21:32:43Z
+
+- Summary: S-0477 reached review at e54d72a7. flai verify passed every step at the head; the verifier matched both criteria to changed files within touches (components list a read for all, serve for a task sub-agent only, config refused, ADR-0186 proposed and indexed, I-0165 closed). queue_add first refused it on TH-0593, planner-S-0477's settled plan thread, so under plan_backlog_stories I resolved TH-0593 and moved its open S-0472 merge question to TH-0595 with an updated recommendation (cancel S-0472, close I-0156 as fixed by S-0477). Then enqueued S-0477, first in the queue (alone); forecast 40m, value 25 USD/week.
+- Items: S-0477, S-0472
+- Seconds: 10
+- Cost: 0.1188 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -6431,4 +6466,9 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-10-22T20:17:38Z
 
 - Call: `flai order --by throughput --apply --json 2>&1`
+- Needs: none
+
+### 2026-10-22T21:19:14Z
+
+- Call: `flai board --json 2>/dev/null`
 - Needs: none

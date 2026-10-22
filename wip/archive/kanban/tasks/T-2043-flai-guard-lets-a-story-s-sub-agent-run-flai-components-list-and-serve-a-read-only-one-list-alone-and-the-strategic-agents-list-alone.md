@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 737
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 98
-      output: 664
-      cache_read: 4822249
-      cache_write: 140739
-      cost: 1.6812
+      input: 74
+      output: 20662
+      cache_read: 4870105
+      cache_write: 141132
+      cost: 2.3803
 ---
 
 # T-2043 flai guard lets a story's sub-agent run flai components list and serve, a read-only one list alone, and the strategic agents list alone

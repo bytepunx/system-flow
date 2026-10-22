@@ -3,16 +3,37 @@ id: T-2041
 type: task
 nature: improvement
 title: The dashboard's examples route and repo type carry an example's answers through list and save
-status: backlog
+status: done
 parent: S-0476
 owner: alex
 created: 2026-10-22T20:59:41Z
-updated: 2026-10-22T21:01:35Z
-transitions: []
+updated: 2026-10-22T21:39:27Z
+transitions:
+  - to: ready
+    at: 2026-10-22T21:21:11Z
+    by: agent-S-0476
+  - to: in-progress
+    at: 2026-10-22T21:24:25Z
+    by: agent-S-0476
+  - to: done
+    at: 2026-10-22T21:39:27Z
+    by: agent-S-0476
 stream: S-0476
 tags: [flaiover]
 touches: [flaiover/src/routes/api/components/examples/+server.ts, flaiover/src/routes/api/components/examples/examples.test.ts, flaiover/src/lib/server/repo.ts]
 after: [T-2035]
+usage:
+  source: log
+  seconds: 873
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 23
+      output: 95
+      cache_read: 689779
+      cache_write: 53479
+      cost: 0.2519
 ---
 # T-2041 The dashboard's examples route and repo type carry an example's answers through list and save
 

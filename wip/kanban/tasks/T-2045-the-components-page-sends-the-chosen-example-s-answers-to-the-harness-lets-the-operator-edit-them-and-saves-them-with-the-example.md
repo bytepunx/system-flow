@@ -3,12 +3,18 @@ id: T-2045
 type: task
 nature: improvement
 title: The Components page sends the chosen example's answers to the harness, lets the operator edit them, and saves them with the example
-status: backlog
+status: in-progress
 parent: S-0476
 owner: alex
 created: 2026-10-22T21:00:10Z
-updated: 2026-10-22T21:00:10Z
-transitions: []
+updated: 2026-10-22T21:39:54Z
+transitions:
+  - to: ready
+    at: 2026-10-22T21:39:54Z
+    by: agent-S-0476
+  - to: in-progress
+    at: 2026-10-22T21:39:54Z
+    by: agent-S-0476
 stream: S-0476
 tags: [flaiover]
 touches: [flaiover/src/lib/explorer/protocol.ts, flaiover/src/lib/explorer/protocol.test.ts, flaiover/src/lib/components/explorer/ComponentFrame.svelte, flaiover/src/lib/components/explorer/ComponentFrame.svelte.test.ts, flaiover/src/lib/components/explorer/ExampleList.svelte, flaiover/src/lib/components/explorer/ExampleList.svelte.test.ts, flaiover/src/routes/design/components/+page.svelte, flaiover/src/routes/design/components/components.svelte.test.ts]

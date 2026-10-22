@@ -3,16 +3,37 @@ id: T-2040
 type: task
 nature: improvement
 title: The harness answers a framed component's fetch and EventSource from the answers select and props carry, and 501 only what none matches
-status: backlog
+status: done
 parent: S-0476
 owner: alex
 created: 2026-10-22T20:59:33Z
-updated: 2026-10-22T21:01:29Z
-transitions: []
+updated: 2026-10-22T21:38:58Z
+transitions:
+  - to: ready
+    at: 2026-10-22T21:21:10Z
+    by: agent-S-0476
+  - to: in-progress
+    at: 2026-10-22T21:24:24Z
+    by: agent-S-0476
+  - to: done
+    at: 2026-10-22T21:38:58Z
+    by: agent-S-0476
 stream: S-0476
 tags: [flai]
-touches: [flai/internal/components/harness/harness.mjs, flai/internal/components/integration_test.go, flai/internal/components/testdata/harness/src/lib/Fetcher.svelte]
+touches: [flai/internal/components/harness/harness.mjs, flai/internal/components/integration_test.go, flai/internal/components/testdata/harness/src/lib/Fetcher.svelte, flai/internal/components/testdata/harness/src/lib/Answered.svelte]
 after: [T-2035]
+usage:
+  source: log
+  seconds: 874
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 43
+      output: 228
+      cache_read: 1820404
+      cache_write: 109280
+      cost: 0.6539
 ---
 # T-2040 The harness answers a framed component's fetch and EventSource from the answers select and props carry, and 501 only what none matches
 

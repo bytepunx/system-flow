@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:50Z
-updated: 2026-10-22T21:03:08Z
+updated: 2026-10-22T21:15:43Z
 transitions: []
 tags: [cli, template]
 topics: [cli, orchestration, conventions, template]
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-10-21T12:57:41Z
 forecast:
   duration: 1h25m
-  delivery: 2026-10-23T12:23:00Z
-  basis: "Its own forecast of 1h25m; 25th in the pull order with an in-progress limit of 5, behind S-0466, S-0477, S-0485, S-0468, S-0467, S-0476, S-0469, S-0470, S-0472, S-0478, S-0481, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420 and S-0421."
+  delivery: 2026-10-23T13:40:00Z
+  basis: "Its own forecast of 1h25m; 25th in the pull order with an in-progress limit of 5, behind S-0466, S-0477, S-0468, S-0467, S-0476, S-0469, S-0470, S-0472, S-0478, S-0481, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420 and S-0421."
   by: flai
-  at: 2026-10-22T21:03:08Z
+  at: 2026-10-22T21:15:43Z
 ---
 # S-0422 A story's agent works a formula's instance on its branch, a role step runs its role charged to the instance, a failed step asks on a thread, and a formula starts from its schedule or a role
 

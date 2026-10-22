@@ -24,16 +24,16 @@ touches: [flai/cmd/guard.go, docs/users/flai-reference.md, docs/users/flai.md, d
 after: [T-2032]
 usage:
   source: log
-  seconds: 9
+  seconds: 19
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 1
-      output: 26
-      cache_read: 104215
-      cache_write: 384
-      cost: 0.0354
+      input: 5
+      output: 1341
+      cache_read: 316012
+      cache_write: 9158
+      cost: 0.1545
 ---
 # T-2034 The guard's help, the generated reference, the user docs, and the design say a sub-agent may list and serve components
 

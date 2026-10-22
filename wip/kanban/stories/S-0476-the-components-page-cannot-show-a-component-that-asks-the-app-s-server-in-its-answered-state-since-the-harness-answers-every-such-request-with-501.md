@@ -3,26 +3,41 @@ id: S-0476
 type: story
 nature: improvement
 title: The Components page cannot show a component that asks the app's server in its answered state, since the harness answers every such request with 501
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-21T11:59:18Z
-updated: 2026-10-22T21:03:08Z
+updated: 2026-10-22T21:39:18Z
 transitions:
   - to: ready
     at: 2026-10-22T20:55:29Z
     by: alex
+  - to: in-progress
+    at: 2026-10-22T21:19:41Z
+    by: agent-S-0476
 tags: [flai, flaiover]
 topics: [components, dashboard, cli]
-touches: [design/adrs/README.md, design/system/component-library.md, design/components/README.md, template/root/design/components/README.md, flai/internal/components/examples.go, flai/internal/components/examples_test.go, flai/internal/check/components_test.go, flai/cmd/components.go, flai/cmd/components_test.go, flai/internal/hostapi/components_test.go, flai/internal/components/harness/harness.mjs, flai/internal/components/integration_test.go, flai/internal/components/testdata/harness/src/lib/Fetcher.svelte, flaiover/src/routes/api/components/examples/+server.ts, flaiover/src/routes/api/components/examples/examples.test.ts, flaiover/src/lib/server/repo.ts, flaiover/src/lib/explorer/protocol.ts, flaiover/src/lib/explorer/protocol.test.ts, flaiover/src/lib/components/explorer/ComponentFrame.svelte, flaiover/src/lib/components/explorer/ComponentFrame.svelte.test.ts, flaiover/src/lib/components/explorer/ExampleList.svelte, flaiover/src/lib/components/explorer/ExampleList.svelte.test.ts, flaiover/src/routes/design/components/+page.svelte, flaiover/src/routes/design/components/components.svelte.test.ts, design/components/flaiover/src/lib/components/AcceptConfirm.examples.json, design/components/flaiover/src/lib/components/ActivityView.examples.json, design/components/flaiover/src/lib/components/AnalyzerPanel.examples.json, design/components/flaiover/src/lib/components/CancelConfirm.examples.json, design/components/flaiover/src/lib/components/ImportPrompt.examples.json, design/components/flaiover/src/lib/components/InboxView.examples.json, design/components/flaiover/src/lib/components/Messages.examples.json, design/components/flaiover/src/lib/components/NewAdrForm.examples.json, design/components/flaiover/src/lib/components/NewItemForm.examples.json, design/components/flaiover/src/lib/components/OrchestratorPanel.examples.json, design/components/flaiover/src/lib/components/PlannerPanel.examples.json, design/components/flaiover/src/lib/components/PublishBanner.examples.json, design/components/flaiover/src/lib/components/Threads.examples.json, design/components/flaiover/src/lib/components/WorktreeUncommitted.examples.json, docs/users/flai.md, docs/users/flaiover.md, design/issues/I-0164-the-components-page-cannot-show-a-component-that-asks-the-app-s-server-in-its-answered-state-since-the-harness-answers-every-such-request-with-501.md, design/issues/summary.md]
+touches: [design/adrs/README.md, design/system/component-library.md, design/components/README.md, template/root/design/components/README.md, flai/internal/components/examples.go, flai/internal/components/examples_test.go, flai/internal/check/components_test.go, flai/cmd/components.go, flai/cmd/components_test.go, flai/internal/hostapi/components_test.go, flai/internal/components/harness/harness.mjs, flai/internal/components/integration_test.go, flai/internal/components/testdata/harness/src/lib/Fetcher.svelte, flaiover/src/routes/api/components/examples/+server.ts, flaiover/src/routes/api/components/examples/examples.test.ts, flaiover/src/lib/server/repo.ts, flaiover/src/lib/explorer/protocol.ts, flaiover/src/lib/explorer/protocol.test.ts, flaiover/src/lib/components/explorer/ComponentFrame.svelte, flaiover/src/lib/components/explorer/ComponentFrame.svelte.test.ts, flaiover/src/lib/components/explorer/ExampleList.svelte, flaiover/src/lib/components/explorer/ExampleList.svelte.test.ts, flaiover/src/routes/design/components/+page.svelte, flaiover/src/routes/design/components/components.svelte.test.ts, design/components/flaiover/src/lib/components/AcceptConfirm.examples.json, design/components/flaiover/src/lib/components/ActivityView.examples.json, design/components/flaiover/src/lib/components/AnalyzerPanel.examples.json, design/components/flaiover/src/lib/components/CancelConfirm.examples.json, design/components/flaiover/src/lib/components/ImportPrompt.examples.json, design/components/flaiover/src/lib/components/InboxView.examples.json, design/components/flaiover/src/lib/components/Messages.examples.json, design/components/flaiover/src/lib/components/NewAdrForm.examples.json, design/components/flaiover/src/lib/components/NewItemForm.examples.json, design/components/flaiover/src/lib/components/OrchestratorPanel.examples.json, design/components/flaiover/src/lib/components/PlannerPanel.examples.json, design/components/flaiover/src/lib/components/PublishBanner.examples.json, design/components/flaiover/src/lib/components/Threads.examples.json, design/components/flaiover/src/lib/components/WorktreeUncommitted.examples.json, docs/users/flai.md, docs/users/flaiover.md, design/issues/I-0164-the-components-page-cannot-show-a-component-that-asks-the-app-s-server-in-its-answered-state-since-the-harness-answers-every-such-request-with-501.md, design/issues/summary.md, design/adrs/0187-an-example-may-carry-the-answers-the-component-harness-gives-a-framed-component.md, template/CHANGELOG.md, flai/internal/components/testdata/harness/src/lib/Answered.svelte, docs/users/flai-reference.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1161
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-22
+      hand_edits: 1
+      work: 28
+  models:
+    - model: claude-opus-5-5
+      input: 172
+      output: 836
+      cache_read: 8605289
+      cache_write: 465511
+      cost: 3.0736
   strategic:
     - kind: planner
       seconds: 686
@@ -41,21 +56,21 @@ usage:
           cache_write: 501352
           cost: 0.9075
     - kind: orchestrator
-      seconds: 47
+      seconds: 74
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 18
-          output: 312
-          cache_read: 3321987
-          cache_write: 6688
-          cost: 0.735
+          input: 26
+          output: 407
+          cache_read: 5397995
+          cache_write: 8855
+          cost: 1.1939
 forecast:
   duration: 2h30m
-  delivery: 2026-10-23T00:31:00Z
-  basis: "Its own forecast of 2h30m; 3rd in the pull order with an in-progress limit of 5, behind S-0466, S-0477, S-0485, S-0468 and S-0467."
+  delivery: 2026-10-23T00:09:00Z
+  basis: "Its own forecast of 2h30m; 3rd in the pull order with an in-progress limit of 5, behind S-0466, S-0477, S-0468 and S-0467."
   by: flai
-  at: 2026-10-22T21:03:08Z
+  at: 2026-10-22T21:15:43Z
 finalized:
   by: alex
   at: 2026-10-22T20:52:34Z

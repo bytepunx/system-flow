@@ -3,16 +3,37 @@ id: T-2036
 type: task
 nature: improvement
 title: I-0165 is closed with the reason that names the cliReads entry and the test that reproduces it
-status: backlog
+status: done
 parent: S-0477
 owner: alex
 created: 2026-10-22T20:59:03Z
-updated: 2026-10-22T20:59:03Z
-transitions: []
+updated: 2026-10-22T21:19:53Z
+transitions:
+  - to: ready
+    at: 2026-10-22T21:19:40Z
+    by: agent-S-0477
+  - to: in-progress
+    at: 2026-10-22T21:19:40Z
+    by: agent-S-0477
+  - to: done
+    at: 2026-10-22T21:19:53Z
+    by: agent-S-0477
 stream: S-0477
 tags: [flai, guard, issues]
 touches: [design/issues/I-0165-flai-guard-refuses-a-story-s-sub-agent-flai-components-list-and-flai-components-serve-so-a-headless-pass-of-the-harness-falls-to-the-story-s-agent.md, design/issues/summary.md]
 after: [T-2032, T-2034]
+usage:
+  source: log
+  seconds: 13
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 7
+      output: 1926
+      cache_read: 454037
+      cache_write: 13158
+      cost: 0.2219
 ---
 # T-2036 I-0165 is closed with the reason that names the cliReads entry and the test that reproduces it
 

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 11
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 1
-      output: 26
-      cache_read: 104215
-      cache_write: 384
-      cost: 0.0354
+      input: 2
+      output: 435
+      cache_read: 102639
+      cache_write: 2974
+      cost: 0.0502
 ---
 # T-2032 flai guard passes a sub-agent flai components list and flai components serve and keeps refusing components config, with tests
 

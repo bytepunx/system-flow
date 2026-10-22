@@ -3,15 +3,36 @@ id: T-2035
 type: task
 nature: improvement
 title: An ADR refining ADR-0172 lets an example carry the answers the harness gives a component's requests to the app's own server, and the design describes the format
-status: backlog
+status: done
 parent: S-0476
 owner: alex
 created: 2026-10-22T20:58:53Z
-updated: 2026-10-22T20:58:53Z
-transitions: []
+updated: 2026-10-22T21:23:49Z
+transitions:
+  - to: ready
+    at: 2026-10-22T21:21:08Z
+    by: agent-S-0476
+  - to: in-progress
+    at: 2026-10-22T21:21:11Z
+    by: agent-S-0476
+  - to: done
+    at: 2026-10-22T21:23:48Z
+    by: agent-S-0476
 stream: S-0476
 tags: [flai, flaiover]
-touches: [design/adrs/README.md, design/system/component-library.md, design/components/README.md, template/root/design/components/README.md]
+touches: [design/adrs/README.md, design/system/component-library.md, design/components/README.md, template/root/design/components/README.md, design/adrs/0187-an-example-may-carry-the-answers-the-component-harness-gives-a-framed-component.md, template/CHANGELOG.md]
+usage:
+  source: log
+  seconds: 157
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 22
+      output: 98
+      cache_read: 1960432
+      cache_write: 20373
+      cost: 0.6712
 ---
 # T-2035 An ADR refining ADR-0172 lets an example carry the answers the harness gives a component's requests to the app's own server, and the design describes the format
 

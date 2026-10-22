@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [agent-S-0477, orchestrator]
 created: 2026-10-22T21:00:46Z
-updated: 2026-10-22T21:00:54Z
+updated: 2026-10-22T21:32:33Z
 ---
 
 # TH-0595 S-0472 duplicates S-0477: cancel it once S-0477 is accepted?
@@ -27,5 +27,12 @@ Recommended for the operator: cancel S-0472 now, with the reason "duplicate of S
 - If you would rather keep S-0472 for closing I-0156 alone, give it `after: S-0477`, so that it waits for the fix to land.
 
 This is the same question as TH-0593. Answer either one and I will treat both as settled.
+
+Source: design/conventions/work-management.md § Rules
+
+### 2026-10-22T21:32:33Z orchestrator (recommendation)
+Update for the operator: S-0477 is in review, verified at e54d72a7. It closes I-0165 and, by ADR-0186, lets every agent run `flai components list` and a story's task sub-agent run `serve`. That fixes I-0156's refusal too. I am resolving TH-0593 so that the merge queue can take S-0477. This thread now carries the S-0472 question alone.
+
+Recommended: cancel S-0472 as a duplicate of S-0477, and close I-0156 with `flai issue close I-0156 --reason "fixed by S-0477 (ADR-0186)"`. S-0477 no longer closes I-0156 in its own diff, but nothing else is lost. If you would rather keep S-0472, give it `after: S-0477`, and its agent closes I-0156 once S-0477 lands.
 
 Source: design/conventions/work-management.md § Rules

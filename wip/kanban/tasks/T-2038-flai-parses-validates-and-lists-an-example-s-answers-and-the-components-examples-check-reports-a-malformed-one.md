@@ -3,16 +3,37 @@ id: T-2038
 type: task
 nature: improvement
 title: flai parses, validates, and lists an example's answers, and the components.examples check reports a malformed one
-status: backlog
+status: done
 parent: S-0476
 owner: alex
 created: 2026-10-22T20:59:16Z
-updated: 2026-10-22T20:59:16Z
-transitions: []
+updated: 2026-10-22T21:39:18Z
+transitions:
+  - to: ready
+    at: 2026-10-22T21:21:09Z
+    by: agent-S-0476
+  - to: in-progress
+    at: 2026-10-22T21:24:23Z
+    by: agent-S-0476
+  - to: done
+    at: 2026-10-22T21:39:17Z
+    by: agent-S-0476
 stream: S-0476
 tags: [flai]
-touches: [flai/internal/components/examples.go, flai/internal/components/examples_test.go, flai/internal/check/components_test.go, flai/cmd/components.go, flai/cmd/components_test.go, flai/internal/hostapi/components_test.go]
+touches: [flai/internal/components/examples.go, flai/internal/components/examples_test.go, flai/internal/check/components_test.go, flai/cmd/components.go, flai/cmd/components_test.go, flai/internal/hostapi/components_test.go, docs/users/flai-reference.md]
 after: [T-2035]
+usage:
+  source: log
+  seconds: 875
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 63
+      output: 286
+      cache_read: 2721285
+      cache_write: 118514
+      cost: 0.9623
 ---
 # T-2038 flai parses, validates, and lists an example's answers, and the components.examples check reports a malformed one
 
