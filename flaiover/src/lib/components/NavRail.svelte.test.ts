@@ -1,12 +1,14 @@
 // S-0458: the nav rail. Each group is a button that shows or hides its pages; an expanded group's
 // icon is in the accent colour and a collapsed one's muted; the page shown is current and its group
 // expanded on arrival; a collapsed group carries its pages' indicators; the operator's choices are
-// kept per browser.
+// kept per browser. S-0484: Charts is a button that lists the charts by group, each a link, the
+// chart shown current; it expands on arrival at a chart and keeps the operator's choice.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import { inboxState, type Inbox } from '$lib/inbox.svelte';
 import { projectState, resetForTests } from '$lib/project.svelte';
 import { NavRailState } from '$lib/navrail.svelte';
+import { CHART_GROUPS, TITLES } from '$lib/viz/catalog';
 
 const where = vi.hoisted(() => ({ url: new URL('http://localhost/board') }));
 vi.mock('$app/state', () => ({ page: where }));
@@ -29,6 +31,9 @@ const group = (key: string) =>
 	document.querySelector(`[data-rail-group="${key}"]`) as HTMLButtonElement;
 const pages = (key: string) => document.querySelector(`[data-rail-pages="${key}"]`) as HTMLElement;
 const groupIcon = (key: string) => group(key).querySelector('[data-rail-icon]') as SVGElement;
+const charts = () => document.querySelector('[data-rail-page="charts"]') as HTMLButtonElement;
+const chart = (kind: string) =>
+	document.querySelector(`[data-rail-chart="${kind}"]`) as HTMLAnchorElement;
 const press = (el: HTMLElement) => {
 	el.click();
 	flushSync();
@@ -208,5 +213,125 @@ describe('the nav rail (S-0458)', () => {
 		show('/');
 		expect(group('design').getAttribute('aria-expanded')).toBe('true');
 		expect(group('flow').getAttribute('aria-expanded')).toBe('false');
+	});
+
+	describe('Charts (S-0484)', () => {
+		it('is a button that controls its list and links nowhere', () => {
+			show('/board');
+			expect(charts().tagName).toBe('BUTTON');
+			expect(charts().getAttribute('type')).toBe('button');
+			expect(charts().hasAttribute('href')).toBe(false);
+			expect(charts().closest('a')).toBeNull();
+			expect(charts().getAttribute('aria-expanded')).toBe('false');
+			expect(charts().getAttribute('aria-controls')).toBe('nav-rail-page-charts');
+			expect(charts().textContent!.trim()).toBe('Charts');
+		});
+
+		it('draws nothing below it while collapsed', () => {
+			show('/board');
+			expect(document.getElementById('nav-rail-page-charts')).toBeNull();
+			expect(document.querySelector('[data-rail-chart]')).toBeNull();
+			expect(document.querySelector('[data-rail-label]')).toBeNull();
+		});
+
+		it('lists the four groups’ muted labels and their charts in catalogue order when pressed', () => {
+			projectState.current = 'harbour';
+			show('/board');
+			press(charts());
+			expect(charts().getAttribute('aria-expanded')).toBe('true');
+			const list = document.getElementById('nav-rail-page-charts')!;
+			const labels = [...list.querySelectorAll<HTMLElement>('[data-rail-label]')];
+			expect(labels.map((l) => l.textContent!.trim())).toEqual([
+				'flow',
+				'usage',
+				'planning',
+				'strategic'
+			]);
+			for (const l of labels) {
+				expect(l.tagName).not.toBe('A');
+				expect(l.closest('a')).toBeNull();
+				expect(l.getAttribute('class')).toContain('text-muted');
+			}
+			const links = [...list.querySelectorAll<HTMLAnchorElement>('[data-rail-chart]')];
+			const kinds = CHART_GROUPS.flatMap((g) => g.kinds);
+			expect(links.map((a) => a.dataset.railChart)).toEqual(kinds);
+			for (const a of links) {
+				expect(a.tagName).toBe('A');
+				expect(a.getAttribute('href')).toBe(`/charts/${a.dataset.railChart}?project=harbour`);
+			}
+			for (const g of CHART_GROUPS) {
+				const under = list.querySelector(`[data-rail-label="${g.key}"]`)!.parentElement!;
+				const titles = [...under.querySelectorAll('[data-rail-chart]')].map((a) => a.textContent);
+				expect(titles).toEqual(g.kinds.map((k) => TITLES[k]));
+			}
+			expect(chart('cost-spent').textContent).toBe('$ / Day');
+		});
+
+		it('draws its icon in the accent colour while expanded and muted while collapsed', () => {
+			show('/board');
+			const icon = () => charts().querySelector('[data-rail-icon]') as SVGElement;
+			expect(icon().getAttribute('class')).toContain('text-muted');
+			expect(icon().getAttribute('class')).not.toContain('text-accent');
+			press(charts());
+			expect(icon().getAttribute('class')).toContain('text-accent');
+			expect(icon().getAttribute('class')).not.toContain('text-muted');
+		});
+
+		it('expands Flow and Charts on arrival at a chart, marks it current, and stores nothing', () => {
+			show('/charts/throughput');
+			expect(group('flow').getAttribute('aria-expanded')).toBe('true');
+			expect(charts().getAttribute('aria-expanded')).toBe('true');
+			expect(localStorage.getItem(KEY)).toBeNull();
+			const current = document.querySelectorAll('[aria-current="page"]');
+			expect(current).toHaveLength(1);
+			expect(current[0]).toBe(chart('throughput'));
+			expect(chart('throughput').getAttribute('class')).toContain('font-semibold');
+			expect(chart('throughput').getAttribute('class')).toContain('text-accent');
+			expect(chart('cycle-time').getAttribute('class')).not.toContain('font-semibold');
+			expect(charts().getAttribute('class')).toContain('font-semibold');
+			expect(charts().getAttribute('class')).toContain('text-accent');
+		});
+
+		it('marks Charts current with no chart at an unknown kind', () => {
+			show('/charts/nope');
+			expect(charts().getAttribute('aria-expanded')).toBe('true');
+			expect(charts().getAttribute('class')).toContain('font-semibold');
+			expect(document.querySelector('[data-rail-chart][aria-current]')).toBeNull();
+			expect(document.querySelector('[aria-current="page"]')).toBeNull();
+		});
+
+		it('is not current away from the charts', () => {
+			show('/board');
+			expect(charts().getAttribute('class')).not.toContain('font-semibold');
+		});
+
+		it('keeps the operator’s choice in localStorage beside the groups’', () => {
+			show('/board');
+			press(charts());
+			expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({ charts: true });
+			press(charts());
+			expect(charts().getAttribute('aria-expanded')).toBe('false');
+			expect(document.querySelector('[data-rail-chart]')).toBeNull();
+			expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({ charts: false });
+			press(charts());
+			unmount(c!);
+			c = undefined;
+			document.body.innerHTML = '';
+			rail = new NavRailState();
+			show('/board');
+			expect(charts().getAttribute('aria-expanded')).toBe('true');
+		});
+
+		it('calls onnavigate when a chart is chosen, and not when Charts is pressed', () => {
+			const onnavigate = vi.fn();
+			show('/charts/cycle-time', { onnavigate });
+			press(charts());
+			press(charts());
+			expect(onnavigate).not.toHaveBeenCalled();
+			const a = chart('throughput');
+			a.addEventListener('click', (e) => e.preventDefault());
+			a.click();
+			expect(onnavigate).toHaveBeenCalledTimes(1);
+		});
 	});
 });

@@ -2,12 +2,21 @@
 // beside the main area; below md it is a drawer that the menu button at the start of the top bar
 // opens, that choosing a page or pressing Escape closes, and that gives focus back to the button.
 // At 390px and at 1440px no page scrolls sideways, the drawer open or closed. The pages are ones
-// that render signed in with no project connected, so no fake flai is needed.
+// that render signed in with no project connected, so no fake flai is needed. S-0484: Charts in the
+// rail expands to list the charts, on arrival at a chart or when pressed, and choosing one opens it,
+// marks it current, and closes the drawer.
 import { expect, test, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const PAGES = ['/', '/board', '/settings', '/license', '/docs/design/system/README.md'];
+const PAGES = [
+	'/',
+	'/board',
+	'/settings',
+	'/license',
+	'/docs/design/system/README.md',
+	'/charts/cycle-time'
+];
 
 // what playwright.config.ts made for the run and gave the server
 const dir = process.env.FLAIOVER_E2E_DIR ?? '';
@@ -45,6 +54,34 @@ test.describe('at 1440px', () => {
 			expect(rail.x + rail.width).toBeLessThanOrEqual(main.x);
 			expect(await overflow(page)).toBeLessThanOrEqual(0);
 		});
+
+	test('arriving on a chart expands Charts in the rail and marks the chart current', async ({
+		page
+	}) => {
+		await arrive(page, '/charts/cycle-time');
+		const docked = page.locator('[data-nav-docked]');
+		const charts = docked.locator('[data-rail-page=charts]');
+		await expect(charts).toHaveAttribute('aria-expanded', 'true');
+		const shown = docked.locator('[data-rail-chart=cycle-time]');
+		await expect(shown).toHaveAttribute('aria-current', 'page');
+	});
+
+	test('pressing Charts lists the charts, and choosing one opens it and marks it current', async ({
+		page
+	}) => {
+		await arrive(page, '/board');
+		const docked = page.locator('[data-nav-docked]');
+		const charts = docked.locator('[data-rail-page=charts]');
+		await expect(charts).toHaveAttribute('aria-expanded', 'false');
+		await expect(docked.locator('[data-rail-chart]')).toHaveCount(0);
+		await charts.click();
+		await expect(charts).toHaveAttribute('aria-expanded', 'true');
+		await docked.locator('[data-rail-chart=throughput]').click();
+
+		await expect(page).toHaveURL(/\/charts\/throughput(\?|$)/);
+		const shown = docked.locator('[data-rail-chart=throughput]');
+		await expect(shown).toHaveAttribute('aria-current', 'page');
+	});
 });
 
 test.describe('at 390px', () => {
@@ -98,5 +135,34 @@ test.describe('at 390px', () => {
 		await page.keyboard.press('Escape');
 		await expect(drawer).not.toHaveAttribute('open');
 		await expect(toggle).toBeFocused();
+	});
+
+	test('choosing a chart in the drawer opens it, closes the drawer, and marks it current', async ({
+		page
+	}) => {
+		await arrive(page, '/board');
+		const toggle = page.locator('[data-nav-toggle]');
+		const drawer = page.locator('[data-nav-drawer]');
+		await toggle.click();
+		await expect(drawer).toHaveAttribute('open', '');
+
+		const charts = drawer.locator('[data-rail-page=charts]');
+		await expect(charts).toHaveAttribute('aria-expanded', 'false');
+		await charts.click();
+		await expect(charts).toHaveAttribute('aria-expanded', 'true');
+		await expect(drawer).toHaveAttribute('open', '');
+		await drawer.locator('[data-rail-chart=throughput]').click();
+
+		await expect(page).toHaveURL(/\/charts\/throughput(\?|$)/);
+		await expect(drawer).not.toHaveAttribute('open');
+		await expect(toggle).toBeFocused();
+
+		// opened again, the rail lists the charts and marks the one it went to
+		await toggle.click();
+		await expect(charts).toHaveAttribute('aria-expanded', 'true');
+		const shown = drawer.locator('[data-rail-chart=throughput]');
+		await expect(shown).toHaveAttribute('aria-current', 'page');
+		await page.keyboard.press('Escape');
+		await expect(drawer).not.toHaveAttribute('open');
 	});
 });

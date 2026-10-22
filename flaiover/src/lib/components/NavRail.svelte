@@ -5,13 +5,25 @@
 	// still carries its pages' indicators, so Flow shows the Inbox count. The group of the page shown
 	// expands on each arrival; the groups the operator expands or collapses are kept per browser
 	// (navrail.svelte). License sits at the foot; Overview and Updates are in the top bar (TH-0553).
-	// The rail fills the width its container gives it.
+	// Charts is a button too, not a link (S-0484): expanded, it lists the charts under their groups'
+	// muted labels, each chart a link, the chart shown current and Charts current on any chart; it
+	// expands on arrival at a chart and keeps the operator's choice as a group does, and collapsed,
+	// nothing below it is drawn. The rail fills the width its container gives it.
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 	import { projectState } from '$lib/project.svelte';
-	import { navRail, type NavRailState } from '$lib/navrail.svelte';
-	import { SITE_MENU, groupBadges, locate, withProject } from '$lib/sitemenu';
+	import { navRail, type NavRailState, type RailKey } from '$lib/navrail.svelte';
+	import {
+		SITE_MENU,
+		groupBadges,
+		locate,
+		withProject,
+		type LinkedPage,
+		type MenuPage,
+		type PageChildGroup,
+		type PageKey
+	} from '$lib/sitemenu';
 	import InboxBadge from './InboxBadge.svelte';
 
 	let { onnavigate, rail = navRail }: { onnavigate?: () => void; rail?: NavRailState } = $props();
@@ -20,10 +32,20 @@
 	const LICENSE = resolve('/license');
 	const here = $derived(locate(page.url.pathname));
 
-	// Arriving on a page in a group expands it, before the rail is drawn.
+	/** A page that lists its children below it and expands as a group does. */
+	type ParentPage = LinkedPage & { key: PageKey & RailKey; children: PageChildGroup[] };
+	// Charts is the one page with children, and the one page the rail's state expands, which is what
+	// its key being a RailKey says.
+	const isParent = (p: MenuPage): p is ParentPage => p.key === 'charts' && p.children !== undefined;
+	const PARENTS = SITE_MENU.flatMap((g) => g.pages).filter(isParent);
+
+	// Arriving on a page in a group expands it, and the page too when it has children, before the
+	// rail is drawn.
 	$effect.pre(() => {
-		const g = here.group;
+		const { group: g, page: at } = here;
 		if (g) rail.expand(g);
+		const parent = PARENTS.find((p) => p.key === at);
+		if (parent) rail.expand(parent.key);
 	});
 </script>
 
@@ -78,6 +100,62 @@
 									</span>
 									<span class="sr-only">(coming soon)</span>
 								</span>
+							{:else if isParent(p)}
+								{@const listed = rail.isExpanded(p.key)}
+								{@const current = here.page === p.key}
+								<button
+									type="button"
+									class="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1 text-left hover:bg-raised {current
+										? 'font-semibold text-accent'
+										: 'text-ink-soft hover:text-accent'}"
+									aria-expanded={listed}
+									aria-controls="nav-rail-page-{p.key}"
+									data-rail-page={p.key}
+									onclick={() => rail.toggle(p.key)}
+								>
+									<p.icon
+										class="size-4 shrink-0 {listed ? 'text-accent' : 'text-muted'}"
+										aria-hidden="true"
+										data-rail-icon
+									/>
+									<span class="min-w-0 truncate">{p.label}</span>
+									<ChevronRightIcon
+										class="ml-auto size-4 shrink-0 text-muted {listed ? 'rotate-90' : ''}"
+										aria-hidden="true"
+									/>
+								</button>
+								{#if listed}
+									<ul
+										id="nav-rail-page-{p.key}"
+										class="mt-1 ml-4 flex flex-col gap-2 border-l border-line pl-2"
+									>
+										{#each p.children as cg (cg.key)}
+											<li>
+												<span class="block px-2 text-xs text-muted" data-rail-label={cg.key}>
+													{cg.label}
+												</span>
+												<ul class="flex flex-col gap-0.5">
+													{#each cg.items as item (item.key)}
+														{@const shown = here.child === item.key}
+														<li>
+															<!-- eslint-disable svelte/no-navigation-without-resolve -- item.href is resolve()d; only ?project= is added -->
+															<a
+																class="block truncate rounded px-2 py-1 hover:bg-raised {shown
+																	? 'font-semibold text-accent'
+																	: 'text-ink-soft hover:text-accent'}"
+																href={withProject(item.href, projectState.current)}
+																aria-current={shown ? 'page' : undefined}
+																data-rail-chart={item.key}
+																onclick={() => onnavigate?.()}>{item.label}</a
+															>
+															<!-- eslint-enable svelte/no-navigation-without-resolve -->
+														</li>
+													{/each}
+												</ul>
+											</li>
+										{/each}
+									</ul>
+								{/if}
 							{:else}
 								{@const current = here.page === p.key}
 								<!-- eslint-disable svelte/no-navigation-without-resolve -- p.href is resolve()d; only ?project= is added -->
