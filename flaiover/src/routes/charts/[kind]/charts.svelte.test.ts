@@ -43,7 +43,6 @@ vi.mock('echarts/renderers', () => ({ CanvasRenderer: {} }));
 
 import ChartsPage from './+page.svelte';
 import { chartWindow } from '$lib/chartwindow.svelte';
-import { KINDS } from '$lib/viz/charts';
 
 const opus = (items: number, tokens: number, cost: number, seconds: number) => ({
 	model: 'claude-opus-5-5',
@@ -136,12 +135,6 @@ const settle = async () => {
 };
 const text = (sel: string) =>
 	document.querySelector(sel)?.textContent?.replace(/\s+/g, ' ').trim() ?? null;
-/** The links the sidebar lists under a group's label, in order (S-0461). */
-const group = (name: string) => [
-	...(document
-		.querySelector(`[data-sidebar-entry="group-${name}"]`)
-		?.parentElement?.querySelectorAll<HTMLAnchorElement>('[data-sidebar-link]') ?? [])
-];
 const choose = async (testid: string, value: string) => {
 	const el = document.querySelector<HTMLSelectElement>(`[data-testid="${testid}"]`)!;
 	el.value = value;
@@ -185,28 +178,8 @@ describe('the charts page (S-0163)', () => {
 	const controls = () =>
 		[...document.querySelectorAll('label')].map((l) => l.textContent!.trim().split(/\s+/)[0]);
 
-	it('lists the flow charts and the usage charts apart, and draws tokens per day with its table', async () => {
+	it('draws tokens per day with its table', async () => {
 		await open('tokens-spent');
-		expect(group('flow').map((l) => l.textContent!.trim())).toEqual([
-			'Cycle Time',
-			'Burn-up',
-			'Cumulative Flow',
-			'Time in State',
-			'Throughput',
-			'Agent Waiting',
-			'Merge Queue'
-		]);
-		expect(group('usage').map((l) => l.textContent!.trim())).toEqual([
-			'Tokens / Min',
-			'Tokens / Day',
-			'Tokens per item',
-			'Tokens / $',
-			'$ / Day',
-			'$ / Work Type',
-			'$ / Item',
-			'Avg. Time / Model',
-			'Avg. Cost / Model'
-		]);
 		expect(text('h1')).toBe('Tokens / Day');
 		expect(asked()).toEqual(['/api/stats?since=30d&type=story&bucket=day']);
 		// no epic narrows what flai summed
@@ -652,21 +625,8 @@ describe('the planning charts (S-0212)', () => {
 			tr.querySelector('a')!.textContent!.trim()
 		);
 
-	it('lists the planning charts as a third group, each opening its chart', async () => {
+	it('draws each planning chart it goes to from the one report', async () => {
 		await open('forecast-accuracy');
-		const links = group('planning');
-		expect(links.map((l) => [l.textContent!.trim(), l.getAttribute('href')])).toEqual([
-			['Forecast Accuracy', '/charts/forecast-accuracy'],
-			['Delivery Accuracy', '/charts/delivery-accuracy'],
-			['Forecast Error / Model', '/charts/forecast-by-model'],
-			['Parallelism', '/charts/parallelism'],
-			['Hold Time', '/charts/hold-time'],
-			['Coordination', '/charts/coordination'],
-			['Touches Drift', '/charts/touches-drift'],
-			['CoD Outstanding', '/charts/cod-outstanding'],
-			['CoD Incurred', '/charts/cod-incurred'],
-			['CoD by Order', '/charts/cod-order']
-		]);
 		expect(text('h1')).toBe('Forecast Accuracy');
 		expect(points()).toEqual([
 			['forecast error', ['S-0002', 'S-0003']],
@@ -1404,17 +1364,8 @@ describe('the strategic charts (S-0216)', () => {
 	const series = () =>
 		(setOption.mock.calls.at(-1)![0] as { series: { name: string }[] }).series.map((s) => s.name);
 
-	it('lists the strategic charts as a fourth group and states the ratio on Strategic Cost', async () => {
+	it('states the ratio on Strategic Cost', async () => {
 		await open('strategic-cost');
-		const links = group('strategic');
-		expect(links.map((l) => [l.textContent!.trim(), l.getAttribute('href')])).toEqual([
-			['Strategic Cost', '/charts/strategic-cost'],
-			['Strategic Use', '/charts/strategic-use']
-		]);
-		const labels = [...document.querySelectorAll('[data-sidebar-label]')].map((l) =>
-			l.textContent!.trim()
-		);
-		expect(labels).toEqual(['flow', 'usage', 'planning', 'strategic']);
 		expect(text('h1')).toBe('Strategic Cost');
 		expect(controls()).toEqual(['window', 'type']);
 		expect(text('[data-testid="strategic-summary"]')).toBe(
@@ -1593,20 +1544,8 @@ describe('the cost of delay charts (S-0213)', () => {
 			[...tr.querySelectorAll('td')].map((td) => td.textContent!.trim())
 		);
 
-	it('lists the three cost of delay charts under planning, after the forecast and claims charts, with the window and the type to choose', async () => {
+	it('offers the window and the type to choose on a cost of delay chart', async () => {
 		await open('cod-outstanding');
-		expect(group('planning').map((l) => l.textContent!.trim())).toEqual([
-			'Forecast Accuracy',
-			'Delivery Accuracy',
-			'Forecast Error / Model',
-			'Parallelism',
-			'Hold Time',
-			'Coordination',
-			'Touches Drift',
-			'CoD Outstanding',
-			'CoD Incurred',
-			'CoD by Order'
-		]);
 		expect(text('h1')).toBe('CoD Outstanding');
 		expect(
 			[...document.querySelectorAll('label')].map((l) => l.textContent!.trim().split(/\s+/)[0])
@@ -1718,7 +1657,7 @@ describe('the cost of delay charts (S-0213)', () => {
 	});
 });
 
-describe('the sidebar of charts (S-0461)', () => {
+describe('the charts page beside the rail (S-0484)', () => {
 	let c: ReturnType<typeof mount> | undefined;
 	beforeEach(() => {
 		globalThis.ResizeObserver = class {
@@ -1751,74 +1690,29 @@ describe('the sidebar of charts (S-0461)', () => {
 		at.moved();
 		await settle();
 	};
-	const nav = () => document.querySelector<HTMLElement>('nav[aria-label="Charts"]')!;
-	const links = () => [...nav().querySelectorAll<HTMLAnchorElement>('[data-sidebar-link]')];
-	const currents = () =>
-		[...document.querySelectorAll('[aria-current]')].map((a) => [
-			a.getAttribute('data-sidebar-entry'),
-			a.getAttribute('aria-current')
-		]);
 
-	it('lists the groups as labels in order over a link to every chart, in place of the rows above it', async () => {
-		await open('cfd');
-		expect(document.querySelectorAll('nav').length).toBe(1);
-		const labels = [...nav().querySelectorAll('[data-sidebar-label]')];
-		expect(labels.map((l) => l.textContent!.trim())).toEqual([
-			'flow',
-			'usage',
-			'planning',
-			'strategic'
-		]);
-		expect(labels.every((l) => l.closest('a') === null)).toBe(true);
-		// every chart once, each a link to its own page with no hash
-		expect(
-			links()
-				.map((a) => a.dataset.sidebarEntry)
-				.sort()
-		).toEqual([...KINDS].sort());
-		for (const a of links())
-			expect(a.getAttribute('href')).toBe(`/charts/${a.dataset.sidebarEntry}`);
-		expect(currents()).toEqual([['cfd', 'page']]);
-		expect(text('[data-sidebar-entry="cfd"]')).toBe('Cumulative Flow');
+	it('has no list of charts of its own, and draws its controls and the chart in the page', async () => {
+		await open('cost-spent');
+		// the rail lists the charts: the page has no nav, sidebar, or links to them
+		expect(document.querySelectorAll('nav').length).toBe(0);
+		expect(document.querySelector('nav[aria-label="Charts"]')).toBeNull();
+		expect(document.querySelector('[data-sidebar-content]')).toBeNull();
+		expect(document.querySelector('[data-sidebar-entry]')).toBeNull();
+		expect(document.querySelector('a[href^="/charts/"]')).toBeNull();
+		const window = document.querySelector('[data-testid="window"]')!;
+		expect(window.closest('div')!.classList).toContain('flex-wrap');
+		expect(document.querySelector('[data-testid="bucket"]')).not.toBeNull();
+		expect(text('h1')).toBe('$ / Day');
+		expect(setOption).toHaveBeenCalled();
 	});
 
-	it('makes the chart chosen current and draws it, leaving the hash alone', async () => {
+	it('draws the chart gone to, leaving the hash alone', async () => {
 		await open('cycle-time');
-		expect(currents()).toEqual([['cycle-time', 'page']]);
-		const href = document
-			.querySelector('[data-sidebar-entry="tokens-spent"]')!
-			.getAttribute('href');
-		expect(href).toBe('/charts/tokens-spent');
+		expect(text('h1')).toBe('Cycle Time');
 		await go('tokens-spent');
-		expect(currents()).toEqual([['tokens-spent', 'page']]);
 		expect(text('h1')).toBe('Tokens / Day');
 		expect(location.hash).toBe('');
 		await go('strategic-use');
-		expect(currents()).toEqual([['strategic-use', 'page']]);
 		expect(text('h1')).toBe('Strategic Use');
-	});
-
-	it('keeps the window and the other controls with the chart, in the content beside the sidebar', async () => {
-		await open('cost-spent');
-		const content = document.querySelector('[data-sidebar-content]')!;
-		const window = document.querySelector('[data-testid="window"]')!;
-		expect(nav().contains(window)).toBe(false);
-		expect(content.contains(window)).toBe(true);
-		expect(content.contains(document.querySelector('[data-testid="bucket"]'))).toBe(true);
-		expect(content.querySelector('h1')?.textContent).toBe('$ / Day');
-		// the links name the charts by the bucket chosen, as the chart's title does
-		await choose('bucket', 'hour');
-		expect(text('[data-sidebar-entry="cost-spent"]')).toBe('$ / Hour');
-		expect(currents()).toEqual([['cost-spent', 'page']]);
-	});
-
-	it('scrolls the sidebar within itself below md and wraps the controls, so the page does not scroll sideways', async () => {
-		await open('cycle-time');
-		const top = nav().querySelector('[data-sidebar-list="top"]')!;
-		expect(top.classList).toContain('overflow-x-auto');
-		expect(nav().classList).toContain('min-w-0');
-		expect(document.querySelector('[data-sidebar-content]')!.classList).toContain('min-w-0');
-		const controls = document.querySelector('[data-testid="window"]')!.closest('div')!;
-		expect(controls.classList).toContain('flex-wrap');
 	});
 });

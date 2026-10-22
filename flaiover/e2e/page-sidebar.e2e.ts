@@ -1,13 +1,13 @@
-// S-0461: the page sidebar on the review page, the charts page, and the documents page, at a
-// phone's width and a desktop's. Below Tailwind's md width the sidebar is a row above the page's
-// content, its entries listed in it, and no page scrolls sideways; from md it is a column at the
-// left of the content, and still no page scrolls sideways. A file's entry on the review page opens
-// its panel and brings it into view, a heading's entry on the documents page brings its heading to
-// the top, and a chart's link goes to its chart and is marked current. Each page's own requests are
-// answered in the browser with enough to lay it out as a real project would: long paths, a diff
-// with a long line, long headings, a wide table, and a long line of code. A fake flai would make a
-// project known to the server for every test file that runs after it, and the pages layout.e2e.ts
-// checks render with none.
+// S-0461: the page sidebar on the review page and the documents page, at a phone's width and a
+// desktop's. Below Tailwind's md width the sidebar is a row above the page's content, its entries
+// listed in it, and no page scrolls sideways; from md it is a column at the left of the content,
+// and still no page scrolls sideways. A file's entry on the review page opens its panel and brings
+// it into view, and a heading's entry on the documents page brings its heading to the top. The
+// charts page has no sidebar since S-0484: the nav rail lists the charts, and layout.e2e.ts checks
+// it. Each page's own requests are answered in the browser with enough to lay it out as a real
+// project would: long paths, a diff with a long line, long headings, a wide table, and a long line
+// of code. A fake flai would make a project known to the server for every test file that runs
+// after it, and the pages layout.e2e.ts checks render with none.
 import { expect, test, type Page, type Route } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -222,55 +222,6 @@ const tree = [
 	{ name: 'wip', path: 'wip', kind: 'dir', children: [] }
 ];
 
-/** /api/stats's answer: a few stories done in the window, each with a cycle time. */
-const dist = {
-	count: 6,
-	p50_seconds: 7200,
-	p85_seconds: 36000,
-	max_seconds: 86400,
-	mean_seconds: 18000
-};
-const report = {
-	generated_at: NOW,
-	type: 'story',
-	window_days: 30,
-	window_start: '2026-09-21T09:00:00Z',
-	summary: {
-		completed: 6,
-		cancelled: 1,
-		cancellation_rate: 0.14,
-		throughput_per_week: 1.5,
-		wip: 2,
-		cycle_time: dist,
-		lead_time: dist,
-		queue_time: dist,
-		flow_efficiency: 0.6,
-		time_in_state_share: { 'in-progress': 0.6, review: 0.3, ready: 0.1 }
-	},
-	items: Array.from({ length: 6 }, (_, n) => ({
-		id: `S-90${10 + n}`,
-		type: 'story',
-		nature: n % 2 ? 'feature' : 'improvement',
-		title: `A story done in the window with a long enough title to wrap, number ${n + 1}`,
-		status: 'done',
-		created: `2026-10-0${n + 1}T09:00:00Z`,
-		started: `2026-10-0${n + 1}T10:00:00Z`,
-		completed: `2026-10-${10 + n}T12:00:00Z`,
-		lead_time_seconds: 3600 * (n + 3),
-		cycle_time_seconds: 3600 * (n + 2),
-		queue_time_seconds: 3600,
-		blocked_seconds: 0,
-		time_in_state_seconds: { 'in-progress': 3600 * (n + 1), review: 3600 }
-	})),
-	throughput: [
-		{ week: '2026-W40', start: '2026-09-28', done: 2, by_nature: { feature: 1, improvement: 1 } },
-		{ week: '2026-W41', start: '2026-10-05', done: 3, by_nature: { feature: 2, improvement: 1 } },
-		{ week: '2026-W42', start: '2026-10-12', done: 1, by_nature: { feature: 1 } }
-	],
-	burnup: {},
-	cfd: []
-};
-
 /** Each page's own requests, answered here; the rest, the event stream among them, go on. */
 async function answer(route: Route) {
 	const url = new URL(route.request().url());
@@ -278,15 +229,7 @@ async function answer(route: Route) {
 	const json = (body: unknown, status = 200) => route.fulfill({ status, json: body });
 	if (route.request().method() !== 'GET') return json({ error: 'not in this test' }, 405);
 	if (at === '/api/board') return json({ writable: true, wip_limits: {}, order: [], columns: {} });
-	if (at === '/api/items')
-		return json(
-			url.searchParams.get('type') === 'epic'
-				? [
-						{ id: 'E-0011', title: 'Agent status' },
-						{ id: 'E-0012', title: 'An epic with a long title that a select would have to show' }
-					]
-				: []
-		);
+	if (at === '/api/items') return json([]);
 	if (at === `/api/items/${STORY}`) return json({ item });
 	if (at === `/api/items/${STORY}/diff`) return json(diff);
 	if (at === `/api/items/${STORY}/acceptance`) return json(preview);
@@ -317,7 +260,6 @@ async function answer(route: Route) {
 			});
 		return json({ error: 'no such document' }, 404);
 	}
-	if (at === '/api/stats') return json(report);
 	return route.fallback();
 }
 
@@ -381,13 +323,6 @@ async function arriveReview(page: Page) {
 	await expect(page.locator('#review-state')).toContainText('Current state');
 }
 
-/** The charts page, its chart drawn. */
-async function arriveCharts(page: Page, kind = 'cycle-time') {
-	await page.goto(`/charts/${kind}`);
-	await expect(page.locator('[data-sidebar-content] h1')).toBeVisible();
-	await expect(page.locator('[data-sidebar-content] canvas').first()).toBeVisible();
-}
-
 /** The documents page, the tree and the open document's headings drawn. */
 async function arriveDocs(page: Page) {
 	await page.goto(`/docs/${DOC}`);
@@ -428,8 +363,6 @@ const REVIEW_ENTRIES = [
 	'review-release',
 	'review-checks'
 ];
-const CHART_GROUPS = ['group-flow', 'group-usage', 'group-planning', 'group-strategic'];
-const CHART_LINKS = ['cycle-time', 'throughput', 'tokens-spent', 'forecast-accuracy'];
 const DOC_HEADINGS = (page: Page) =>
 	page
 		.locator('article.prose')
@@ -451,16 +384,6 @@ test.describe('at 375px', () => {
 		await entry(page, fileId(FILES[1])).click();
 		const row = page.locator(`[id="${fileId(FILES[1])}"]`);
 		await expect(row.locator('[data-testid="diff-panel"]')).toBeVisible();
-		await expectNoOverflow(page);
-	});
-
-	test('the charts page lists its groups and charts above the chart, and does not scroll sideways', async ({
-		page
-	}) => {
-		await arriveCharts(page);
-		await expectListed(page, [...CHART_GROUPS, ...CHART_LINKS]);
-		await expect(entry(page, 'cycle-time')).toHaveAttribute('aria-current', 'page');
-		await expectAbove(page);
 		await expectNoOverflow(page);
 	});
 
@@ -499,23 +422,6 @@ test.describe('at 1280px', () => {
 		await expect(row.locator('[data-testid="diff-panel"]')).toBeVisible();
 		await expect(row).toBeInViewport();
 		await expect(page).toHaveURL(new RegExp(`#${fileId(last)}$`));
-		await expectNoOverflow(page);
-	});
-
-	test('the charts page has its sidebar left of the chart, and a chart link goes to its chart', async ({
-		page
-	}) => {
-		await arriveCharts(page);
-		await expectListed(page, [...CHART_GROUPS, ...CHART_LINKS]);
-		await expectBeside(page);
-		await expectNoOverflow(page);
-
-		await entry(page, 'throughput').click();
-		await expect(page).toHaveURL(/\/charts\/throughput$/);
-		await expect(entry(page, 'throughput')).toHaveAttribute('aria-current', 'page');
-		await expect(entry(page, 'cycle-time')).not.toHaveAttribute('aria-current');
-		await expect(page.locator('[data-sidebar-content] canvas').first()).toBeVisible();
-		await expectBeside(page);
 		await expectNoOverflow(page);
 	});
 

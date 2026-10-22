@@ -21,7 +21,6 @@
 		controls,
 		driftedIn,
 		errorFacets,
-		FLOW_KINDS,
 		forecastRows,
 		hasClaims,
 		hasCoordination,
@@ -68,8 +67,6 @@
 	import { localDate } from '$lib/localtime';
 	import { theme } from '$lib/viz/palette';
 	import KindChips from '$lib/components/KindChips.svelte';
-	import PageSidebar from '$lib/components/PageSidebar.svelte';
-	import type { SidebarEntry } from '$lib/pagesidebar.svelte';
 	import { themeState } from '$lib/theme.svelte';
 	import { chartWindow } from '$lib/chartwindow.svelte';
 
@@ -94,25 +91,6 @@
 	);
 	const t = $derived(theme(dark));
 	const shown = $derived(controls(kind));
-	/** The groups of charts the sidebar lists, in order. */
-	const groups = [
-		{ name: 'flow', kinds: FLOW_KINDS },
-		{ name: 'usage', kinds: USAGE_KINDS },
-		{ name: 'planning', kinds: [...PLANNING_KINDS, ...COD_KINDS] },
-		{ name: 'strategic', kinds: STRATEGIC_KINDS }
-	];
-	// each group a label over its charts, each chart a link to its page, current while shown (S-0461)
-	const entries = $derived<SidebarEntry[]>(
-		groups.map((g) => ({
-			id: `group-${g.name}`,
-			label: g.name,
-			children: g.kinds.map((k) => ({
-				id: k,
-				label: titleOf(k, bucket),
-				href: resolve('/charts/[kind]', { kind: k })
-			}))
-		}))
-	);
 	const filter = $derived<ErrorFilter>({
 		nature: (shown.nature && nature) || undefined,
 		model: (shown.model && model) || undefined
@@ -277,536 +255,531 @@
 
 <svelte:head><title>{title} · flaiover</title></svelte:head>
 
-<!-- The groups and their charts in a sidebar beside the controls and the chart (S-0461) -->
-<PageSidebar label="Charts" {entries} current={kind}>
-	<div class="mb-4 flex flex-wrap items-center gap-3 text-sm">
+<div class="mb-4 flex flex-wrap items-center gap-3 text-sm">
+	<label
+		>window <select
+			class="rounded border border-line-strong bg-surface px-2 py-1"
+			value={since}
+			onchange={(e) => {
+				chartWindow.set(e.currentTarget.value);
+				void load();
+			}}
+			data-testid="window"
+			>{#each WINDOWS as w (w)}<option value={w}>{w}</option>{/each}</select
+		></label
+	>
+	{#if shown.bucket}
 		<label
-			>window <select
+			>per <select
 				class="rounded border border-line-strong bg-surface px-2 py-1"
-				value={since}
-				onchange={(e) => {
-					chartWindow.set(e.currentTarget.value);
-					void load();
-				}}
-				data-testid="window"
-				>{#each WINDOWS as w (w)}<option value={w}>{w}</option>{/each}</select
+				bind:value={bucket}
+				onchange={load}
+				data-testid="bucket"
+				>{#each buckets as b (b)}<option value={b}>{b}</option>{/each}</select
 			></label
 		>
-		{#if shown.bucket}
-			<label
-				>per <select
-					class="rounded border border-line-strong bg-surface px-2 py-1"
-					bind:value={bucket}
-					onchange={load}
-					data-testid="bucket"
-					>{#each buckets as b (b)}<option value={b}>{b}</option>{/each}</select
-				></label
-			>
-		{/if}
-		{#if shown.type}
-			<label
-				>type <select
-					class="rounded border border-line-strong bg-surface px-2 py-1"
-					bind:value={type}
-					onchange={load}
-					>{#each ['story', 'task', 'epic'] as ty (ty)}<option value={ty}>{ty}</option
-						>{/each}</select
-				></label
-			>
-		{/if}
-		{#if shown.epic}
-			<label
-				>epic <select
-					class="max-w-64 rounded border border-line-strong bg-surface px-2 py-1"
-					bind:value={epic}
-					><option value="">all</option>{#each epics as e (e.id)}<option value={e.id}
-							>{e.id} {e.title}</option
-						>{/each}</select
-				></label
-			>
-		{/if}
-		{#if shown.nature}
-			<label
-				>nature <select
-					class="rounded border border-line-strong bg-surface px-2 py-1"
-					bind:value={nature}
-					data-testid="nature"
-					><option value="">all</option>{#each facets.natures as n (n)}<option value={n}>{n}</option
-						>{/each}</select
-				></label
-			>
-		{/if}
-		{#if shown.model}
-			<label
-				>model <select
-					class="rounded border border-line-strong bg-surface px-2 py-1"
-					bind:value={model}
-					data-testid="model"
-					><option value="">all</option>{#each facets.models as m (m)}<option value={m}>{m}</option
-						>{/each}</select
-				></label
-			>
-		{/if}
-		{#if forecastKind && planningSummary}
-			<span class="text-xs text-muted" data-testid="planning-summary">{planningSummary}</span>
-		{:else if usageKind && report?.usage && report.usage.items > 0}
-			<span class="text-xs text-muted" data-testid="usage-summary">{usageSummary}</span>
-		{:else if strategicKind && report && strategic.length > 0}
-			<span class="text-xs text-muted" data-testid="strategic-summary"
-				>strategic agents {dollars(strategicTotal.cost)} · {inHours(strategicTotal.seconds)} · {strategicTotal.completed}
-				{strategicTotal.completed === 1 ? report.type : plural(report.type)} completed</span
-			>
-		{:else if s}
-			<span class="text-xs text-muted"
-				>completed {s.completed} · cancelled {s.cancelled} · WIP {s.wip} · throughput {s.throughput_per_week.toFixed(
-					1
-				)}/week · cycle p50 {human(s.cycle_time.p50_seconds)} p85 {human(
-					s.cycle_time.p85_seconds
-				)}</span
-			>
-		{/if}
-	</div>
-	{#if error}
-		<p class="rounded border border-danger bg-danger-soft p-3 text-sm text-danger">{error}</p>
-	{:else if option}
-		<h1 class="mb-2 text-xl font-semibold">{title}</h1>
-		{#if spendKind && report && !hasSpend(report)}
-			<p class="mb-2 text-sm text-muted" data-testid="spend-none">
-				The flai on the host sends no spend over time, which this chart is drawn from: it is older
-				than the dashboard. Upgrade it with <code>flai self-upgrade</code>.
-			</p>
-		{:else if codMissing}
-			<p class="mb-2 text-sm text-muted" data-testid="cod-none">
-				The flai on the host {codMissing}: it is older than the dashboard. Upgrade it with
-				<code>flai self-upgrade</code>.
-			</p>
-		{:else if usageKind && report && !report.items.some((i) => i.usage)}
-			<p class="mb-2 text-sm text-muted" data-testid="usage-none">
-				No {report.type} here carries usage yet. flai serve records the tokens and cost of the agents
-				it starts; <code>flai serve agent usage --all --write</code> fills in stories worked before.
-			</p>
-		{:else if forecastKind && report && !report.forecasts}
-			<p class="mb-2 text-sm text-muted" data-testid="forecasts-older">
-				The flai on the host sends no forecast errors, which this chart is drawn from: it is older
-				than the dashboard. Upgrade it with <code>flai self-upgrade</code>.
-			</p>
-		{:else if kind === 'agent-waiting' && report && !report.waiting}
-			<p class="mb-2 text-sm text-muted" data-testid="waiting-older">
-				The flai on the host sends no waiting, which this chart is drawn from: it is older than the
-				dashboard. Upgrade it with <code>flai self-upgrade</code>.
-			</p>
-		{:else if kind === 'queue' && report && !hasQueue(report)}
-			<p class="mb-2 text-sm text-muted" data-testid="queue-none">
-				The flai on the host sends no merge queue, which this chart is drawn from: either the merge
-				queue there has logged no event yet, or the flai is older than the dashboard. Then upgrade
-				it with <code>flai self-upgrade</code>.
-			</p>
-		{:else if forecastKind && !forecastSet}
-			<p class="mb-2 text-sm text-muted" data-testid="forecast-none">
-				No story done in the window has a forecast. The planner sets one when it plans a story, or
-				set one with <code
-					>flai edit &lt;story&gt; --forecast-duration 6h --forecast-delivery &lt;UTC time&gt;</code
-				>.
-			</p>
-		{:else if kind === 'coordination' && report && !hasCoordination(report)}
-			<p class="mb-2 text-sm text-muted" data-testid="coordination-older">
-				The flai on the host sends no coordination, which this chart is drawn from: it is older than
-				the dashboard. Upgrade it with <code>flai self-upgrade</code>.
-			</p>
-		{:else if kind === 'coordination' && report?.coordination && !report.coordination.logged}
-			<p class="mb-2 text-sm text-muted" data-testid="conflicts-unread">
-				flai could not read the conflict log on the host, <code>.flai-cache/conflicts.jsonl</code>
-				in the main checkout, so this chart draws no conflicts found or met. <code>flai stats</code> says
-				why.
-			</p>
-		{:else if claimsKind && kind !== 'coordination' && report && !hasClaims(report)}
-			<p class="mb-2 text-sm text-muted" data-testid="claims-older">
-				The flai on the host sends no held stories or time held, which this chart is drawn from: it
-				is older than the dashboard. Upgrade it with <code>flai self-upgrade</code>.
-			</p>
-		{:else if kind === 'touches-drift' && report?.claims && report.claims.drift === undefined}
-			<p class="mb-2 text-sm text-muted" data-testid="drift-none">
-				flai could not read git on the host, which touches drift is drawn from: install git there
-				and check that the project is a git repository. <code>flai stats</code> says why.
-			</p>
-		{:else if strategicKind && strategic.length === 0}
-			<p class="mb-2 text-sm text-muted" data-testid="strategic-older">
-				The flai on the host sends no strategic use per day, which this chart is drawn from: it is
-				older than the dashboard. Upgrade it with <code>flai self-upgrade</code>.
-			</p>
-		{/if}
-		{#if spendKind && report && hasSpend(report)}
-			<p class="mb-2 text-xs text-muted" data-testid="spend-note">
-				Each {report.usage?.bucket ?? bucket} holds the items that entered done in it, in UTC, with everything
-				their agents spent on them.
-				{#if kind === 'tokens-spent' || kind === 'cost-spent'}The dashed line is the mean per
-					{report.usage?.bucket ?? bucket} so far, from the first with spend.{/if}
-			</p>
-		{/if}
-		{#if kind === 'cost' || kind === 'cost-spent' || kind === 'cost-per-item' || kind === 'cost-per-model'}
-			<p class="mb-2 text-xs text-muted">
-				* estimated in part: a task's share of its story's session, or a run that ended without its
-				totals.
-			</p>
-		{:else if kind === 'strategic-cost'}
-			<p class="mb-2 text-xs text-muted">
-				* estimated in part: an activity of that agent that day carries an estimated cost.
-			</p>
-		{/if}
-		<Chart {option} theme={t} height={380} />
-		{#if kind === 'strategic-cost' && report && strategic.length > 0}
-			<p class="mt-2 text-xs text-muted" data-testid="strategic-note">
-				The bars are what planning, orchestration, and analysis cost each day. The line is what the
-				agents spent per {report.type} completed that day, the strategic agents left out; the dashed line
-				is what the strategic agents add to each {report.type} over the window.
-				{#if ratio}<span data-testid="strategic-ratio"
-						>Over the window they spent {dollars(ratio.cost)} for {ratio.completed}
-						{ratio.completed === 1 ? report.type : plural(report.type)} completed: {dollars(
-							ratio.cost_per_item
-						)} per {report.type}, {Math.round(ratio.share * 100)}% of the {dollars(
-							ratio.agent_cost_per_item
-						)} the agents spent per {report.type}.</span
-					>{:else if strategicTotal.completed === 0}No {plural(report.type)} were completed in the window,
-					so there is no ratio.{:else}The agents spent nothing in the window, so there is no ratio.{/if}
-			</p>
-		{:else if kind === 'strategic-use' && report && strategic.length > 0}
-			<p class="mt-2 text-xs text-muted" data-testid="strategic-note">
-				The bars are the hours the planner, the orchestrator, and the analyzer worked each day. The
-				lines are the mean cycle time and the mean waiting of the {plural(report.type)} completed that
-				day. Waiting or cycle time falling while the strategic agents' hours rise is the return on their
-				time.
-			</p>
-		{/if}
-		{#if kind === 'time-in-state' && report}
-			<h2 class="mt-6 mb-2 text-base font-medium">Share of lead time per state</h2>
-			{#await import('$lib/viz/charts') then m}
-				<Chart option={m.stateShare(report, t)} theme={t} height={120} />
-			{/await}
-		{/if}
-		{#if kind === 'coordination' && shares}
-			<p class="mt-2 text-sm" data-testid="coordination-shares">
-				Stories started on a share in the window: {shares.started} · hold time saved: {hours(
-					shares.held_seconds
-				)}h.
-			</p>
-			<p class="text-xs text-muted" data-testid="coordination-note">
-				The bars are the conflicts a trial merge found while both stories were open, early, against
-				those a rebase met at sync or at acceptance, late. The lines are the conversations between
-				stories opened each week, and those that agreed, were escalated, or closed with their story.
-				The hold time saved is what the stories started on a share would have waited for their
-				holder.
-			</p>
-		{/if}
-		{#if kind === 'queue' && report?.queue}
-			<p class="mt-2 text-xs text-muted" data-testid="queue-note">
-				The lines are the mean and the longest time the stories the merge queue landed or sent back
-				each week waited in it, from their enqueueing; a week with none has no wait. On the right
-				are the mean number of stories in the batches it built, and as bars the red batches it
-				bisected.
-			</p>
-		{/if}
-		{#if kind === 'agent-waiting' && report?.waiting}
-			<h2 class="mt-6 mb-2 text-base font-medium">Longest waits</h2>
-			<div class="overflow-x-auto text-xs">
-				<WaitTable rows={report.waiting.longest ?? []} type={report.type} />
-			</div>
-		{/if}
-		{#if kind === 'cod-order' && ordered}
-			<p class="mt-2 text-sm" data-testid="cod-saving">
-				{#if ordered.saving > 0}Ordering {ORDER_LABEL[ordered.cheaper]} would save {amount(
-						ordered.saving
-					)} on the pull order.{:else}The pull order is already the cheapest of the three.{/if}
-			</p>
-			<p class="text-xs text-muted" data-testid="cod-totals">
-				Projected from now until each ready story is pulled, in the project's currency: {ORDERS.map(
-					(by) => `${ORDER_LABEL[by]} ${amount(ordered.totals[by])}`
-				).join(' · ')}.
-			</p>
-			<p class="text-xs text-muted" data-testid="cod-left-out">
-				Ready stories left out, without a value or a forecast duration: {ordered.left_out.length
-					? ordered.left_out.join(', ')
-					: 'none'}.
-			</p>
-		{/if}
-		{#if codKind && unvalued}
-			<p class="mt-2 text-xs text-muted" data-testid="cod-without-value">
-				{#if COD_COLUMNS.some((col) => unvalued[col] > 0)}Items without a value now, which add
-					nothing to this chart: {COD_COLUMNS.map((col) => `${col} ${unvalued[col]}`).join(
-						' · '
-					)}.{:else}Items without a value now: none.{/if}
-			</p>
-		{/if}
-		<details class="mt-4 text-xs">
-			<summary class="cursor-pointer text-muted">table view</summary>
-			<div class="mt-2 overflow-x-auto">
-				{#if forecastKind}
-					<ForecastTable rows={forecasts} />
-				{:else if kind === 'cod-outstanding' && report}
-					<table class="min-w-full" data-testid="cod-day-table">
-						<thead
-							><tr class="text-left text-muted"
-								><th class="pr-4">date</th>{#each COD_COLUMNS as col (col)}<th class="pr-4"
-										>{col}</th
-									>{/each}<th>without value</th></tr
-							></thead
-						><tbody
-							>{#each codDayRows(report) as d (d.date)}<tr
-									><td class="pr-4 font-mono">{d.date}</td>{#each COD_COLUMNS as col (col)}<td
-											class="pr-4">{amount(d.outstanding[col] ?? 0)}</td
-										>{/each}<td
-										>{d.without_value
-											? COD_COLUMNS.reduce((n, col) => n + (d.without_value?.[col] ?? 0), 0)
-											: '-'}</td
-									></tr
-								>{/each}</tbody
-						>
-					</table>
-				{:else if kind === 'cod-incurred' && report}
-					<table class="min-w-full" data-testid="cod-week-table">
-						<thead
-							><tr class="text-left text-muted"
-								><th class="pr-4">week</th><th class="pr-4">start</th><th class="pr-4">incurred</th
-								><th>mean per week</th></tr
-							></thead
-						><tbody
-							>{#each codWeekRows(report) as w (w.week)}<tr
-									><td class="pr-4 font-mono">{w.week}</td><td class="pr-4 font-mono">{w.start}</td
-									><td class="pr-4">{amount(w.incurred)}</td><td>{amount(w.mean)}</td></tr
-								>{/each}</tbody
-						>
-					</table>
-				{:else if kind === 'cod-order' && report}
-					<table class="min-w-full" data-testid="cod-order-table">
-						<thead
-							><tr class="text-left text-muted"
-								><th class="pr-4">order</th><th class="pr-4">pulled</th><th class="pr-4">story</th
-								><th>cumulative incurred</th></tr
-							></thead
-						><tbody
-							>{#each codOrderRows(report) as p (`${p.by} ${p.id}`)}<tr
-									><td class="pr-4">{ORDER_LABEL[p.by]}</td><td
-										class="pr-4 font-mono whitespace-nowrap">{bucketLabel(p.at, 'hour')}</td
-									><td class="pr-4 font-mono">{p.id}</td><td>{amount(p.incurred)}</td></tr
-								>{/each}</tbody
-						>
-					</table>
-				{:else if kind === 'parallelism' && report}
-					<table class="min-w-full" data-testid="parallelism-table">
-						<thead
-							><tr class="text-left text-muted"
-								><th class="pr-4">day</th><th class="pr-4">in progress</th><th class="pr-4">held</th
-								><th>limit</th></tr
-							></thead
-						><tbody
-							>{#each report.claims?.days ?? [] as d (d.date)}<tr
-									><td class="pr-4 font-mono">{d.date}</td><td class="pr-4">{d.in_progress}</td><td
-										class="pr-4">{d.held ?? '-'}</td
-									><td>{report.claims?.limit ?? '-'}</td></tr
-								>{/each}</tbody
-						>
-					</table>
-				{:else if kind === 'hold-time' && report}
-					<table class="min-w-full" data-testid="hold-time-table">
-						<thead
-							><tr class="text-left text-muted"
-								><th class="pr-4">week</th><th class="pr-4">start</th><th class="pr-4">overlap</th
-								><th class="pr-4">after</th><th class="pr-4">empty claim</th><th>held</th></tr
-							></thead
-						><tbody
-							>{#each report.claims?.weeks ?? [] as w (w.week)}<tr
-									><td class="pr-4 font-mono">{w.week}</td><td class="pr-4 font-mono">{w.start}</td
-									><td class="pr-4">{human(w.held_seconds.overlap)}</td><td class="pr-4"
-										>{human(w.held_seconds.after)}</td
-									><td class="pr-4">{human(w.held_seconds['no-touches'])}</td><td
-										>{human(
-											w.held_seconds.overlap + w.held_seconds.after + w.held_seconds['no-touches']
-										)}</td
-									></tr
-								>{/each}</tbody
-						>
-					</table>
-				{:else if kind === 'coordination' && report}
-					<table class="min-w-full" data-testid="coordination-table">
-						<thead
-							><tr class="text-left text-muted"
-								><th class="pr-4">week</th><th class="pr-4">start</th><th class="pr-4">opened</th
-								><th class="pr-4">agreed</th><th class="pr-4">escalated</th><th class="pr-4"
-									>closed with story</th
-								><th class="pr-4">found early</th><th class="pr-4">met at sync</th><th class="pr-4"
-									>met at acceptance</th
-								><th class="pr-4">started on a share</th><th>hold saved</th></tr
-							></thead
-						><tbody
-							>{#each report.coordination?.weeks ?? [] as w (w.week)}<tr
-									><td class="pr-4 font-mono">{w.week}</td><td class="pr-4 font-mono">{w.start}</td
-									><td class="pr-4">{w.conversations.opened}</td><td class="pr-4"
-										>{w.conversations.agreed}</td
-									><td class="pr-4">{w.conversations.escalated}</td><td class="pr-4"
-										>{w.conversations.closed_with_story}</td
-									><td class="pr-4">{w.conflicts?.found ?? '-'}</td><td class="pr-4"
-										>{w.conflicts?.met_sync ?? '-'}</td
-									><td class="pr-4">{w.conflicts?.met_accept ?? '-'}</td><td class="pr-4"
-										>{w.shares.started}</td
-									><td>{human(w.shares.held_seconds)}</td></tr
-								>{/each}</tbody
-						>
-					</table>
-				{:else if kind === 'queue' && report}
-					<table class="min-w-full" data-testid="queue-table">
-						<thead>
-							<tr class="text-left text-muted">
-								<th class="pr-4">week</th>
-								<th class="pr-4">start</th>
-								<th class="pr-4">landed</th>
-								<th class="pr-4">sent back</th>
-								<th class="pr-4">mean wait</th>
-								<th class="pr-4">longest wait</th>
-								<th class="pr-4">batches</th>
-								<th class="pr-4">mean batch size</th>
-								<th class="pr-4">largest batch</th>
-								<th>bisections</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each report.queue?.weeks ?? [] as w (w.week)}
-								{@const out = w.landed + w.sent_back > 0}
-								{@const batched = w.batches > 0}
-								<tr>
-									<td class="pr-4 font-mono">{w.week}</td>
-									<td class="pr-4 font-mono">{w.start}</td>
-									<td class="pr-4">{w.landed}</td>
-									<td class="pr-4">{w.sent_back}</td>
-									<td class="pr-4">{out ? human(w.wait_mean_seconds) : '-'}</td>
-									<td class="pr-4">{out ? human(w.wait_max_seconds) : '-'}</td>
-									<td class="pr-4">{w.batches}</td>
-									<td class="pr-4">{batched ? Math.round(w.batch_size_mean * 10) / 10 : '-'}</td>
-									<td class="pr-4">{batched ? w.batch_size_max : '-'}</td>
-									<td>{w.bisections}</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				{:else if kind === 'touches-drift' && report}
-					<table class="min-w-full" data-testid="drift-table">
-						<thead
-							><tr class="text-left text-muted"
-								><th class="pr-4">story</th><th class="pr-4">completed</th><th class="pr-4"
-									>outside its touches</th
-								><th>touches unchanged</th></tr
-							></thead
-						><tbody
-							>{#each drifted as d (d.id)}<tr
-									><td class="pr-4"
-										><a class="font-mono underline" href={resolve('/items/[id]', { id: d.id })}
-											>{d.id}</a
-										>
-										{d.title}</td
-									><td class="pr-4 font-mono">{localDate(d.completed)}</td><td class="pr-4"
-										>{d.outside_count}</td
-									><td>{d.unchanged_count}</td></tr
-								>{/each}</tbody
-						>
-					</table>
-					<table class="mt-4 min-w-full" data-testid="exact-table">
-						<thead
-							><tr class="text-left text-muted"
-								><th class="pr-4">week</th><th class="pr-4">start</th><th class="pr-4">stories</th
-								><th class="pr-4">exact</th><th>share</th></tr
-							></thead
-						><tbody
-							>{#each report.claims?.weeks ?? [] as w (w.week)}<tr
-									><td class="pr-4 font-mono">{w.week}</td><td class="pr-4 font-mono">{w.start}</td
-									><td class="pr-4">{w.stories ?? '-'}</td><td class="pr-4">{w.exact ?? '-'}</td><td
-										>{share(w.exact_share)}</td
-									></tr
-								>{/each}</tbody
-						>
-					</table>
-				{:else if spendKind && report}
-					<SpendTable rows={spendRows(report, kind)} bucket={report.usage?.bucket ?? bucket} />
-				{:else if usageKind && report}
-					<table class="min-w-full" data-testid="usage-table">
-						<thead
-							><tr class="text-left text-muted"
-								><th class="pr-4">item</th><th class="pr-4">completed</th><th class="pr-4">model</th
-								><th class="pr-4">tokens</th><th class="pr-4">tokens/agent minute</th><th>cost</th
-								></tr
-							></thead
-						><tbody
-							>{#each spenders as i (i.id)}{#each i.usage?.models ?? [] as m (m.model)}<tr
-										><td class="pr-4 font-mono">{i.id}</td><td class="pr-4"
-											>{i.completed ? localDate(i.completed) : '-'}</td
-										><td class="pr-4">{m.model}</td><td class="pr-4">{count(m.tokens)}</td><td
-											class="pr-4">{perMinute(m) !== undefined ? count(perMinute(m)!) : '-'}</td
-										><td>{dollars(m.cost)}{i.usage?.estimated ? '*' : ''}</td></tr
-									>{/each}{#if kind === 'cost' && strategicCost(i) > 0}<tr
-										data-testid="usage-strategic"
-										><td class="pr-4 font-mono">{i.id}</td><td class="pr-4"
-											>{i.completed ? localDate(i.completed) : '-'}</td
-										><td class="pr-4">strategic</td><td class="pr-4"
-											>{count((i.usage?.strategic ?? []).reduce((n, x) => n + x.tokens, 0))}</td
-										><td class="pr-4">-</td><td>{dollars(strategicCost(i))}*</td></tr
-									>{/if}{/each}</tbody
-						>
-					</table>
-				{:else if strategicKind && report}
-					<table class="min-w-full" data-testid="strategic-table">
-						<thead
-							><tr class="text-left text-muted"
-								><th class="pr-4">day</th>{#each STRATEGIC_AGENTS as a (a)}<th class="pr-4">{a}</th
-									>{/each}<th class="pr-4">total</th><th class="pr-4">completed</th
-								>{#if kind === 'strategic-cost'}<th>mean per {report.type}</th>{:else}<th
-										class="pr-4">mean cycle time</th
-									><th>mean waiting</th>{/if}</tr
-							></thead
-						><tbody
-							>{#each strategic as d (d.date)}<tr
-									><td class="pr-4 font-mono">{d.date}</td>{#each STRATEGIC_AGENTS as a (a)}<td
-											class="pr-4">{agentDay(d.agents[a])}</td
-										>{/each}<td class="pr-4"
-										>{kind === 'strategic-cost' ? dollars(d.cost) : inHours(d.seconds)}</td
-									><td class="pr-4">{d.completed}</td>{#if kind === 'strategic-cost'}<td
-											>{d.cost_per_item !== undefined ? dollars(d.cost_per_item) : '-'}</td
-										>{:else}<td class="pr-4">{inHours(d.cycle_time_seconds)}</td><td
-											>{inHours(d.wait_seconds)}</td
-										>{/if}</tr
-								>{/each}</tbody
-						>
-					</table>
-				{:else if kind === 'throughput' && report}
-					<table class="min-w-full">
-						<thead
-							><tr class="text-left text-muted"><th class="pr-4">week</th><th>done</th></tr></thead
-						><tbody
-							>{#each report.throughput as w (w.week)}<tr
-									><td class="pr-4 font-mono">{w.week}</td><td>{w.done}</td></tr
-								>{/each}</tbody
-						>
-					</table>
-				{:else if report}
-					<table class="min-w-full">
-						<thead
-							><tr class="text-left text-muted"
-								><th class="pr-4">item</th><th class="pr-4">nature</th><th class="pr-4"
-									>completed</th
-								><th class="pr-4">cycle</th><th class="pr-4">lead</th><th>blocked</th></tr
-							></thead
-						><tbody
-							>{#each completed as i (i.id)}<tr
-									><td class="pr-4 font-mono">{i.id}</td><td class="py-0.5 pr-4"
-										><KindChips nature={i.nature} /></td
-									><td class="pr-4">{i.completed ? localDate(i.completed) : ''}</td><td class="pr-4"
-										>{i.cycle_time_seconds !== undefined ? human(i.cycle_time_seconds) : '-'}</td
-									><td class="pr-4"
-										>{i.lead_time_seconds !== undefined ? human(i.lead_time_seconds) : '-'}</td
-									><td>{human(i.blocked_seconds)}</td></tr
-								>{/each}</tbody
-						>
-					</table>
-				{/if}
-			</div>
-		</details>
-	{:else}
-		<p class="text-sm text-muted">Loading…</p>
 	{/if}
-</PageSidebar>
+	{#if shown.type}
+		<label
+			>type <select
+				class="rounded border border-line-strong bg-surface px-2 py-1"
+				bind:value={type}
+				onchange={load}
+				>{#each ['story', 'task', 'epic'] as ty (ty)}<option value={ty}>{ty}</option>{/each}</select
+			></label
+		>
+	{/if}
+	{#if shown.epic}
+		<label
+			>epic <select
+				class="max-w-64 rounded border border-line-strong bg-surface px-2 py-1"
+				bind:value={epic}
+				><option value="">all</option>{#each epics as e (e.id)}<option value={e.id}
+						>{e.id} {e.title}</option
+					>{/each}</select
+			></label
+		>
+	{/if}
+	{#if shown.nature}
+		<label
+			>nature <select
+				class="rounded border border-line-strong bg-surface px-2 py-1"
+				bind:value={nature}
+				data-testid="nature"
+				><option value="">all</option>{#each facets.natures as n (n)}<option value={n}>{n}</option
+					>{/each}</select
+			></label
+		>
+	{/if}
+	{#if shown.model}
+		<label
+			>model <select
+				class="rounded border border-line-strong bg-surface px-2 py-1"
+				bind:value={model}
+				data-testid="model"
+				><option value="">all</option>{#each facets.models as m (m)}<option value={m}>{m}</option
+					>{/each}</select
+			></label
+		>
+	{/if}
+	{#if forecastKind && planningSummary}
+		<span class="text-xs text-muted" data-testid="planning-summary">{planningSummary}</span>
+	{:else if usageKind && report?.usage && report.usage.items > 0}
+		<span class="text-xs text-muted" data-testid="usage-summary">{usageSummary}</span>
+	{:else if strategicKind && report && strategic.length > 0}
+		<span class="text-xs text-muted" data-testid="strategic-summary"
+			>strategic agents {dollars(strategicTotal.cost)} · {inHours(strategicTotal.seconds)} · {strategicTotal.completed}
+			{strategicTotal.completed === 1 ? report.type : plural(report.type)} completed</span
+		>
+	{:else if s}
+		<span class="text-xs text-muted"
+			>completed {s.completed} · cancelled {s.cancelled} · WIP {s.wip} · throughput {s.throughput_per_week.toFixed(
+				1
+			)}/week · cycle p50 {human(s.cycle_time.p50_seconds)} p85 {human(
+				s.cycle_time.p85_seconds
+			)}</span
+		>
+	{/if}
+</div>
+{#if error}
+	<p class="rounded border border-danger bg-danger-soft p-3 text-sm text-danger">{error}</p>
+{:else if option}
+	<h1 class="mb-2 text-xl font-semibold">{title}</h1>
+	{#if spendKind && report && !hasSpend(report)}
+		<p class="mb-2 text-sm text-muted" data-testid="spend-none">
+			The flai on the host sends no spend over time, which this chart is drawn from: it is older
+			than the dashboard. Upgrade it with <code>flai self-upgrade</code>.
+		</p>
+	{:else if codMissing}
+		<p class="mb-2 text-sm text-muted" data-testid="cod-none">
+			The flai on the host {codMissing}: it is older than the dashboard. Upgrade it with
+			<code>flai self-upgrade</code>.
+		</p>
+	{:else if usageKind && report && !report.items.some((i) => i.usage)}
+		<p class="mb-2 text-sm text-muted" data-testid="usage-none">
+			No {report.type} here carries usage yet. flai serve records the tokens and cost of the agents it
+			starts; <code>flai serve agent usage --all --write</code> fills in stories worked before.
+		</p>
+	{:else if forecastKind && report && !report.forecasts}
+		<p class="mb-2 text-sm text-muted" data-testid="forecasts-older">
+			The flai on the host sends no forecast errors, which this chart is drawn from: it is older
+			than the dashboard. Upgrade it with <code>flai self-upgrade</code>.
+		</p>
+	{:else if kind === 'agent-waiting' && report && !report.waiting}
+		<p class="mb-2 text-sm text-muted" data-testid="waiting-older">
+			The flai on the host sends no waiting, which this chart is drawn from: it is older than the
+			dashboard. Upgrade it with <code>flai self-upgrade</code>.
+		</p>
+	{:else if kind === 'queue' && report && !hasQueue(report)}
+		<p class="mb-2 text-sm text-muted" data-testid="queue-none">
+			The flai on the host sends no merge queue, which this chart is drawn from: either the merge
+			queue there has logged no event yet, or the flai is older than the dashboard. Then upgrade it
+			with <code>flai self-upgrade</code>.
+		</p>
+	{:else if forecastKind && !forecastSet}
+		<p class="mb-2 text-sm text-muted" data-testid="forecast-none">
+			No story done in the window has a forecast. The planner sets one when it plans a story, or set
+			one with <code
+				>flai edit &lt;story&gt; --forecast-duration 6h --forecast-delivery &lt;UTC time&gt;</code
+			>.
+		</p>
+	{:else if kind === 'coordination' && report && !hasCoordination(report)}
+		<p class="mb-2 text-sm text-muted" data-testid="coordination-older">
+			The flai on the host sends no coordination, which this chart is drawn from: it is older than
+			the dashboard. Upgrade it with <code>flai self-upgrade</code>.
+		</p>
+	{:else if kind === 'coordination' && report?.coordination && !report.coordination.logged}
+		<p class="mb-2 text-sm text-muted" data-testid="conflicts-unread">
+			flai could not read the conflict log on the host, <code>.flai-cache/conflicts.jsonl</code>
+			in the main checkout, so this chart draws no conflicts found or met. <code>flai stats</code> says
+			why.
+		</p>
+	{:else if claimsKind && kind !== 'coordination' && report && !hasClaims(report)}
+		<p class="mb-2 text-sm text-muted" data-testid="claims-older">
+			The flai on the host sends no held stories or time held, which this chart is drawn from: it is
+			older than the dashboard. Upgrade it with <code>flai self-upgrade</code>.
+		</p>
+	{:else if kind === 'touches-drift' && report?.claims && report.claims.drift === undefined}
+		<p class="mb-2 text-sm text-muted" data-testid="drift-none">
+			flai could not read git on the host, which touches drift is drawn from: install git there and
+			check that the project is a git repository. <code>flai stats</code> says why.
+		</p>
+	{:else if strategicKind && strategic.length === 0}
+		<p class="mb-2 text-sm text-muted" data-testid="strategic-older">
+			The flai on the host sends no strategic use per day, which this chart is drawn from: it is
+			older than the dashboard. Upgrade it with <code>flai self-upgrade</code>.
+		</p>
+	{/if}
+	{#if spendKind && report && hasSpend(report)}
+		<p class="mb-2 text-xs text-muted" data-testid="spend-note">
+			Each {report.usage?.bucket ?? bucket} holds the items that entered done in it, in UTC, with everything
+			their agents spent on them.
+			{#if kind === 'tokens-spent' || kind === 'cost-spent'}The dashed line is the mean per
+				{report.usage?.bucket ?? bucket} so far, from the first with spend.{/if}
+		</p>
+	{/if}
+	{#if kind === 'cost' || kind === 'cost-spent' || kind === 'cost-per-item' || kind === 'cost-per-model'}
+		<p class="mb-2 text-xs text-muted">
+			* estimated in part: a task's share of its story's session, or a run that ended without its
+			totals.
+		</p>
+	{:else if kind === 'strategic-cost'}
+		<p class="mb-2 text-xs text-muted">
+			* estimated in part: an activity of that agent that day carries an estimated cost.
+		</p>
+	{/if}
+	<Chart {option} theme={t} height={380} />
+	{#if kind === 'strategic-cost' && report && strategic.length > 0}
+		<p class="mt-2 text-xs text-muted" data-testid="strategic-note">
+			The bars are what planning, orchestration, and analysis cost each day. The line is what the
+			agents spent per {report.type} completed that day, the strategic agents left out; the dashed line
+			is what the strategic agents add to each {report.type} over the window.
+			{#if ratio}<span data-testid="strategic-ratio"
+					>Over the window they spent {dollars(ratio.cost)} for {ratio.completed}
+					{ratio.completed === 1 ? report.type : plural(report.type)} completed: {dollars(
+						ratio.cost_per_item
+					)} per {report.type}, {Math.round(ratio.share * 100)}% of the {dollars(
+						ratio.agent_cost_per_item
+					)} the agents spent per {report.type}.</span
+				>{:else if strategicTotal.completed === 0}No {plural(report.type)} were completed in the window,
+				so there is no ratio.{:else}The agents spent nothing in the window, so there is no ratio.{/if}
+		</p>
+	{:else if kind === 'strategic-use' && report && strategic.length > 0}
+		<p class="mt-2 text-xs text-muted" data-testid="strategic-note">
+			The bars are the hours the planner, the orchestrator, and the analyzer worked each day. The
+			lines are the mean cycle time and the mean waiting of the {plural(report.type)} completed that day.
+			Waiting or cycle time falling while the strategic agents' hours rise is the return on their time.
+		</p>
+	{/if}
+	{#if kind === 'time-in-state' && report}
+		<h2 class="mt-6 mb-2 text-base font-medium">Share of lead time per state</h2>
+		{#await import('$lib/viz/charts') then m}
+			<Chart option={m.stateShare(report, t)} theme={t} height={120} />
+		{/await}
+	{/if}
+	{#if kind === 'coordination' && shares}
+		<p class="mt-2 text-sm" data-testid="coordination-shares">
+			Stories started on a share in the window: {shares.started} · hold time saved: {hours(
+				shares.held_seconds
+			)}h.
+		</p>
+		<p class="text-xs text-muted" data-testid="coordination-note">
+			The bars are the conflicts a trial merge found while both stories were open, early, against
+			those a rebase met at sync or at acceptance, late. The lines are the conversations between
+			stories opened each week, and those that agreed, were escalated, or closed with their story.
+			The hold time saved is what the stories started on a share would have waited for their holder.
+		</p>
+	{/if}
+	{#if kind === 'queue' && report?.queue}
+		<p class="mt-2 text-xs text-muted" data-testid="queue-note">
+			The lines are the mean and the longest time the stories the merge queue landed or sent back
+			each week waited in it, from their enqueueing; a week with none has no wait. On the right are
+			the mean number of stories in the batches it built, and as bars the red batches it bisected.
+		</p>
+	{/if}
+	{#if kind === 'agent-waiting' && report?.waiting}
+		<h2 class="mt-6 mb-2 text-base font-medium">Longest waits</h2>
+		<div class="overflow-x-auto text-xs">
+			<WaitTable rows={report.waiting.longest ?? []} type={report.type} />
+		</div>
+	{/if}
+	{#if kind === 'cod-order' && ordered}
+		<p class="mt-2 text-sm" data-testid="cod-saving">
+			{#if ordered.saving > 0}Ordering {ORDER_LABEL[ordered.cheaper]} would save {amount(
+					ordered.saving
+				)} on the pull order.{:else}The pull order is already the cheapest of the three.{/if}
+		</p>
+		<p class="text-xs text-muted" data-testid="cod-totals">
+			Projected from now until each ready story is pulled, in the project's currency: {ORDERS.map(
+				(by) => `${ORDER_LABEL[by]} ${amount(ordered.totals[by])}`
+			).join(' · ')}.
+		</p>
+		<p class="text-xs text-muted" data-testid="cod-left-out">
+			Ready stories left out, without a value or a forecast duration: {ordered.left_out.length
+				? ordered.left_out.join(', ')
+				: 'none'}.
+		</p>
+	{/if}
+	{#if codKind && unvalued}
+		<p class="mt-2 text-xs text-muted" data-testid="cod-without-value">
+			{#if COD_COLUMNS.some((col) => unvalued[col] > 0)}Items without a value now, which add nothing
+				to this chart: {COD_COLUMNS.map((col) => `${col} ${unvalued[col]}`).join(
+					' · '
+				)}.{:else}Items without a value now: none.{/if}
+		</p>
+	{/if}
+	<details class="mt-4 text-xs">
+		<summary class="cursor-pointer text-muted">table view</summary>
+		<div class="mt-2 overflow-x-auto">
+			{#if forecastKind}
+				<ForecastTable rows={forecasts} />
+			{:else if kind === 'cod-outstanding' && report}
+				<table class="min-w-full" data-testid="cod-day-table">
+					<thead
+						><tr class="text-left text-muted"
+							><th class="pr-4">date</th>{#each COD_COLUMNS as col (col)}<th class="pr-4">{col}</th
+								>{/each}<th>without value</th></tr
+						></thead
+					><tbody
+						>{#each codDayRows(report) as d (d.date)}<tr
+								><td class="pr-4 font-mono">{d.date}</td>{#each COD_COLUMNS as col (col)}<td
+										class="pr-4">{amount(d.outstanding[col] ?? 0)}</td
+									>{/each}<td
+									>{d.without_value
+										? COD_COLUMNS.reduce((n, col) => n + (d.without_value?.[col] ?? 0), 0)
+										: '-'}</td
+								></tr
+							>{/each}</tbody
+					>
+				</table>
+			{:else if kind === 'cod-incurred' && report}
+				<table class="min-w-full" data-testid="cod-week-table">
+					<thead
+						><tr class="text-left text-muted"
+							><th class="pr-4">week</th><th class="pr-4">start</th><th class="pr-4">incurred</th
+							><th>mean per week</th></tr
+						></thead
+					><tbody
+						>{#each codWeekRows(report) as w (w.week)}<tr
+								><td class="pr-4 font-mono">{w.week}</td><td class="pr-4 font-mono">{w.start}</td
+								><td class="pr-4">{amount(w.incurred)}</td><td>{amount(w.mean)}</td></tr
+							>{/each}</tbody
+					>
+				</table>
+			{:else if kind === 'cod-order' && report}
+				<table class="min-w-full" data-testid="cod-order-table">
+					<thead
+						><tr class="text-left text-muted"
+							><th class="pr-4">order</th><th class="pr-4">pulled</th><th class="pr-4">story</th><th
+								>cumulative incurred</th
+							></tr
+						></thead
+					><tbody
+						>{#each codOrderRows(report) as p (`${p.by} ${p.id}`)}<tr
+								><td class="pr-4">{ORDER_LABEL[p.by]}</td><td
+									class="pr-4 font-mono whitespace-nowrap">{bucketLabel(p.at, 'hour')}</td
+								><td class="pr-4 font-mono">{p.id}</td><td>{amount(p.incurred)}</td></tr
+							>{/each}</tbody
+					>
+				</table>
+			{:else if kind === 'parallelism' && report}
+				<table class="min-w-full" data-testid="parallelism-table">
+					<thead
+						><tr class="text-left text-muted"
+							><th class="pr-4">day</th><th class="pr-4">in progress</th><th class="pr-4">held</th
+							><th>limit</th></tr
+						></thead
+					><tbody
+						>{#each report.claims?.days ?? [] as d (d.date)}<tr
+								><td class="pr-4 font-mono">{d.date}</td><td class="pr-4">{d.in_progress}</td><td
+									class="pr-4">{d.held ?? '-'}</td
+								><td>{report.claims?.limit ?? '-'}</td></tr
+							>{/each}</tbody
+					>
+				</table>
+			{:else if kind === 'hold-time' && report}
+				<table class="min-w-full" data-testid="hold-time-table">
+					<thead
+						><tr class="text-left text-muted"
+							><th class="pr-4">week</th><th class="pr-4">start</th><th class="pr-4">overlap</th><th
+								class="pr-4">after</th
+							><th class="pr-4">empty claim</th><th>held</th></tr
+						></thead
+					><tbody
+						>{#each report.claims?.weeks ?? [] as w (w.week)}<tr
+								><td class="pr-4 font-mono">{w.week}</td><td class="pr-4 font-mono">{w.start}</td
+								><td class="pr-4">{human(w.held_seconds.overlap)}</td><td class="pr-4"
+									>{human(w.held_seconds.after)}</td
+								><td class="pr-4">{human(w.held_seconds['no-touches'])}</td><td
+									>{human(
+										w.held_seconds.overlap + w.held_seconds.after + w.held_seconds['no-touches']
+									)}</td
+								></tr
+							>{/each}</tbody
+					>
+				</table>
+			{:else if kind === 'coordination' && report}
+				<table class="min-w-full" data-testid="coordination-table">
+					<thead
+						><tr class="text-left text-muted"
+							><th class="pr-4">week</th><th class="pr-4">start</th><th class="pr-4">opened</th><th
+								class="pr-4">agreed</th
+							><th class="pr-4">escalated</th><th class="pr-4">closed with story</th><th
+								class="pr-4">found early</th
+							><th class="pr-4">met at sync</th><th class="pr-4">met at acceptance</th><th
+								class="pr-4">started on a share</th
+							><th>hold saved</th></tr
+						></thead
+					><tbody
+						>{#each report.coordination?.weeks ?? [] as w (w.week)}<tr
+								><td class="pr-4 font-mono">{w.week}</td><td class="pr-4 font-mono">{w.start}</td
+								><td class="pr-4">{w.conversations.opened}</td><td class="pr-4"
+									>{w.conversations.agreed}</td
+								><td class="pr-4">{w.conversations.escalated}</td><td class="pr-4"
+									>{w.conversations.closed_with_story}</td
+								><td class="pr-4">{w.conflicts?.found ?? '-'}</td><td class="pr-4"
+									>{w.conflicts?.met_sync ?? '-'}</td
+								><td class="pr-4">{w.conflicts?.met_accept ?? '-'}</td><td class="pr-4"
+									>{w.shares.started}</td
+								><td>{human(w.shares.held_seconds)}</td></tr
+							>{/each}</tbody
+					>
+				</table>
+			{:else if kind === 'queue' && report}
+				<table class="min-w-full" data-testid="queue-table">
+					<thead>
+						<tr class="text-left text-muted">
+							<th class="pr-4">week</th>
+							<th class="pr-4">start</th>
+							<th class="pr-4">landed</th>
+							<th class="pr-4">sent back</th>
+							<th class="pr-4">mean wait</th>
+							<th class="pr-4">longest wait</th>
+							<th class="pr-4">batches</th>
+							<th class="pr-4">mean batch size</th>
+							<th class="pr-4">largest batch</th>
+							<th>bisections</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each report.queue?.weeks ?? [] as w (w.week)}
+							{@const out = w.landed + w.sent_back > 0}
+							{@const batched = w.batches > 0}
+							<tr>
+								<td class="pr-4 font-mono">{w.week}</td>
+								<td class="pr-4 font-mono">{w.start}</td>
+								<td class="pr-4">{w.landed}</td>
+								<td class="pr-4">{w.sent_back}</td>
+								<td class="pr-4">{out ? human(w.wait_mean_seconds) : '-'}</td>
+								<td class="pr-4">{out ? human(w.wait_max_seconds) : '-'}</td>
+								<td class="pr-4">{w.batches}</td>
+								<td class="pr-4">{batched ? Math.round(w.batch_size_mean * 10) / 10 : '-'}</td>
+								<td class="pr-4">{batched ? w.batch_size_max : '-'}</td>
+								<td>{w.bisections}</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			{:else if kind === 'touches-drift' && report}
+				<table class="min-w-full" data-testid="drift-table">
+					<thead
+						><tr class="text-left text-muted"
+							><th class="pr-4">story</th><th class="pr-4">completed</th><th class="pr-4"
+								>outside its touches</th
+							><th>touches unchanged</th></tr
+						></thead
+					><tbody
+						>{#each drifted as d (d.id)}<tr
+								><td class="pr-4"
+									><a class="font-mono underline" href={resolve('/items/[id]', { id: d.id })}
+										>{d.id}</a
+									>
+									{d.title}</td
+								><td class="pr-4 font-mono">{localDate(d.completed)}</td><td class="pr-4"
+									>{d.outside_count}</td
+								><td>{d.unchanged_count}</td></tr
+							>{/each}</tbody
+					>
+				</table>
+				<table class="mt-4 min-w-full" data-testid="exact-table">
+					<thead
+						><tr class="text-left text-muted"
+							><th class="pr-4">week</th><th class="pr-4">start</th><th class="pr-4">stories</th><th
+								class="pr-4">exact</th
+							><th>share</th></tr
+						></thead
+					><tbody
+						>{#each report.claims?.weeks ?? [] as w (w.week)}<tr
+								><td class="pr-4 font-mono">{w.week}</td><td class="pr-4 font-mono">{w.start}</td
+								><td class="pr-4">{w.stories ?? '-'}</td><td class="pr-4">{w.exact ?? '-'}</td><td
+									>{share(w.exact_share)}</td
+								></tr
+							>{/each}</tbody
+					>
+				</table>
+			{:else if spendKind && report}
+				<SpendTable rows={spendRows(report, kind)} bucket={report.usage?.bucket ?? bucket} />
+			{:else if usageKind && report}
+				<table class="min-w-full" data-testid="usage-table">
+					<thead
+						><tr class="text-left text-muted"
+							><th class="pr-4">item</th><th class="pr-4">completed</th><th class="pr-4">model</th
+							><th class="pr-4">tokens</th><th class="pr-4">tokens/agent minute</th><th>cost</th
+							></tr
+						></thead
+					><tbody
+						>{#each spenders as i (i.id)}{#each i.usage?.models ?? [] as m (m.model)}<tr
+									><td class="pr-4 font-mono">{i.id}</td><td class="pr-4"
+										>{i.completed ? localDate(i.completed) : '-'}</td
+									><td class="pr-4">{m.model}</td><td class="pr-4">{count(m.tokens)}</td><td
+										class="pr-4">{perMinute(m) !== undefined ? count(perMinute(m)!) : '-'}</td
+									><td>{dollars(m.cost)}{i.usage?.estimated ? '*' : ''}</td></tr
+								>{/each}{#if kind === 'cost' && strategicCost(i) > 0}<tr
+									data-testid="usage-strategic"
+									><td class="pr-4 font-mono">{i.id}</td><td class="pr-4"
+										>{i.completed ? localDate(i.completed) : '-'}</td
+									><td class="pr-4">strategic</td><td class="pr-4"
+										>{count((i.usage?.strategic ?? []).reduce((n, x) => n + x.tokens, 0))}</td
+									><td class="pr-4">-</td><td>{dollars(strategicCost(i))}*</td></tr
+								>{/if}{/each}</tbody
+					>
+				</table>
+			{:else if strategicKind && report}
+				<table class="min-w-full" data-testid="strategic-table">
+					<thead
+						><tr class="text-left text-muted"
+							><th class="pr-4">day</th>{#each STRATEGIC_AGENTS as a (a)}<th class="pr-4">{a}</th
+								>{/each}<th class="pr-4">total</th><th class="pr-4">completed</th
+							>{#if kind === 'strategic-cost'}<th>mean per {report.type}</th>{:else}<th class="pr-4"
+									>mean cycle time</th
+								><th>mean waiting</th>{/if}</tr
+						></thead
+					><tbody
+						>{#each strategic as d (d.date)}<tr
+								><td class="pr-4 font-mono">{d.date}</td>{#each STRATEGIC_AGENTS as a (a)}<td
+										class="pr-4">{agentDay(d.agents[a])}</td
+									>{/each}<td class="pr-4"
+									>{kind === 'strategic-cost' ? dollars(d.cost) : inHours(d.seconds)}</td
+								><td class="pr-4">{d.completed}</td>{#if kind === 'strategic-cost'}<td
+										>{d.cost_per_item !== undefined ? dollars(d.cost_per_item) : '-'}</td
+									>{:else}<td class="pr-4">{inHours(d.cycle_time_seconds)}</td><td
+										>{inHours(d.wait_seconds)}</td
+									>{/if}</tr
+							>{/each}</tbody
+					>
+				</table>
+			{:else if kind === 'throughput' && report}
+				<table class="min-w-full">
+					<thead
+						><tr class="text-left text-muted"><th class="pr-4">week</th><th>done</th></tr></thead
+					><tbody
+						>{#each report.throughput as w (w.week)}<tr
+								><td class="pr-4 font-mono">{w.week}</td><td>{w.done}</td></tr
+							>{/each}</tbody
+					>
+				</table>
+			{:else if report}
+				<table class="min-w-full">
+					<thead
+						><tr class="text-left text-muted"
+							><th class="pr-4">item</th><th class="pr-4">nature</th><th class="pr-4">completed</th
+							><th class="pr-4">cycle</th><th class="pr-4">lead</th><th>blocked</th></tr
+						></thead
+					><tbody
+						>{#each completed as i (i.id)}<tr
+								><td class="pr-4 font-mono">{i.id}</td><td class="py-0.5 pr-4"
+									><KindChips nature={i.nature} /></td
+								><td class="pr-4">{i.completed ? localDate(i.completed) : ''}</td><td class="pr-4"
+									>{i.cycle_time_seconds !== undefined ? human(i.cycle_time_seconds) : '-'}</td
+								><td class="pr-4"
+									>{i.lead_time_seconds !== undefined ? human(i.lead_time_seconds) : '-'}</td
+								><td>{human(i.blocked_seconds)}</td></tr
+							>{/each}</tbody
+					>
+				</table>
+			{/if}
+		</div>
+	</details>
+{:else}
+	<p class="text-sm text-muted">Loading…</p>
+{/if}
