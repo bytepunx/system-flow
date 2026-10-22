@@ -28,12 +28,17 @@
 // Framed, a component's request to the app's own server, such as a fetch of
 // /api/..., is not sent (S-0449): the dev server's server code has no
 // dashboard token and no host channel, so it would answer 500. The harness
-// answers a fetch 501 with a JSON error, an EventSource with an error event
-// and no connection, and a WebSocket (ADR-0182) with an error event, then a
-// close event with code 1006, and no connection, and posts each as an event,
-// named fetch, EventSource, or WebSocket, so that the page's event log shows
-// it. Vite's and flai's own requests, a module or a static asset, Vite's HMR
-// and ping sockets, and another host's go through.
+// answers a fetch or an EventSource from the first of the answers the last
+// select or props message carried that matches it (S-0476, ADR-0187): a
+// fetch with a Response of its status, headers, and body, an EventSource
+// with open and then its events, and no connection. One that none matches
+// it answers as ADR-0172 does, a fetch 501 with a JSON error, an EventSource
+// with an error event and no connection, and a WebSocket (ADR-0182) always
+// with an error event, then a close event with code 1006, and no connection.
+// It posts each as an event, named fetch, EventSource, or WebSocket, a
+// fetch's and an EventSource's with the status it got, so that the page's
+// event log shows it. Vite's and flai's own requests, a module or a static
+// asset, Vite's HMR and ping sockets, and another host's go through.
 import { createRawSnippet, flushSync, mount, unmount } from 'svelte';
 import Frame from 'virtual:flai-components/Frame.svelte';
 import { components, root, setup, setupPath } from 'virtual:flai-components';
@@ -66,6 +71,9 @@ const margin = 10;
 let own = new Set();
 // tokenStyle is the style element the last tokens message wrote, or null.
 let tokenStyle = null;
+// answers are those the last select or props message carried, as
+// readAnswers reads them, which the app's requests are answered from.
+let answers = [];
 
 // pageOrigin is value when it is an origin, such as http://127.0.0.1:4242,
 // or empty.
@@ -125,6 +133,63 @@ function pathOf(url) {
 	return url.pathname + url.search;
 }
 
+// readAnswers is list's answers as the harness gives them, or none when it
+// is not an array. It passes over an answer it cannot use, as the check
+// would refuse it, and one whose headers or body the browser refuses, such
+// as a header name with a space.
+function readAnswers(list) {
+	if (!Array.isArray(list)) return [];
+	return list
+		.map((a) => {
+			try {
+				return readAnswer(a);
+			} catch {
+				return null;
+			}
+		})
+		.filter((a) => a);
+}
+
+// readAnswer is a, an answer of an example's (ADR-0187), as the harness
+// gives it, or null when it is not an object, has no path starting with /,
+// or has a method that is not a string, a status that is not an integer
+// from 200 to 599, headers that are not an object of strings, or events
+// that are not objects with data and a string event and id. An answer with
+// events is an EventSource's: each event's data a string, as it is or as
+// JSON. Any other is a fetch's: its body a string, as it is or as JSON, with
+// the content-type that says which unless its headers name one, and none
+// with status 204, 205, or 304.
+function readAnswer(a) {
+	if (typeof a !== 'object' || a === null || typeof a.path !== 'string' || !a.path.startsWith('/')) return null;
+	const { path, method = '', status = 200, headers = {}, body, events } = a;
+	if (typeof method !== 'string' || !Number.isInteger(status) || status < 200 || status > 599) return null;
+	if (typeof headers !== 'object' || headers === null || Array.isArray(headers) || Object.values(headers).some((v) => typeof v !== 'string')) return null;
+	if (events !== undefined) {
+		const fits = (e) => typeof e === 'object' && e !== null && e.data !== undefined && [e.event, e.id].every((v) => v === undefined || typeof v === 'string');
+		if (!Array.isArray(events) || !events.every(fits)) return null;
+		const sent = events.map((e) => ({ type: e.event ?? 'message', data: typeof e.data === 'string' ? e.data : JSON.stringify(e.data), lastEventId: e.id ?? '' }));
+		return { path, method: method.toUpperCase(), events: sent };
+	}
+	const h = new Headers(headers);
+	let text = null;
+	if (body !== undefined && ![204, 205, 304].includes(status)) {
+		text = typeof body === 'string' ? body : JSON.stringify(body);
+		if (!h.has('content-type')) h.set('content-type', typeof body === 'string' ? 'text/plain; charset=utf-8' : 'application/json');
+	}
+	return { path, method: method.toUpperCase(), status, headers: h, body: text };
+}
+
+// answerFor is the answer for a request by method for path, its path and
+// query, of answers with events when stream, for an EventSource, and without
+// them otherwise: the first whose method is method, or absent, and whose path
+// is path, else the first whose path has no query and is path without its
+// query, else undefined.
+function answerFor(stream, method, path) {
+	const fit = answers.filter((a) => !!a.events === stream && (!a.method || a.method === method));
+	const bare = path.split('?')[0];
+	return fit.find((a) => a.path === path) ?? fit.find((a) => !a.path.includes('?') && a.path === bare);
+}
+
 // answerTheAppsRequests replaces fetch, EventSource, and WebSocket, before
 // the setup module or any component runs, so that a request for the app's
 // own server is answered here, and posted as an event of the component last
@@ -136,7 +201,10 @@ function answerTheAppsRequests() {
 		const r = requested(input, init);
 		if (!r || !forTheApp(r.url, r.accept)) return send(input, init);
 		const path = pathOf(r.url);
-		post({ type: 'event', component: wanted, name: 'fetch', args: [r.method, path] });
+		const a = answerFor(false, r.method, path);
+		post({ type: 'event', component: wanted, name: 'fetch', args: [r.method, path, a ? a.status : 501] });
+		// An answer comes after the current task, as one over the network would.
+		if (a) return new Promise((resolve) => setTimeout(() => resolve(new Response(a.body, { status: a.status, headers: a.headers }))));
 		const body = JSON.stringify({ error: `flai's component harness does not answer the app's own requests: ${r.method} ${path}` });
 		return Promise.resolve(
 			new Response(body, { status: 501, statusText: 'Not Implemented', headers: { 'content-type': 'application/json' } })
@@ -144,8 +212,11 @@ function answerTheAppsRequests() {
 	};
 	const Native = window.EventSource;
 	if (!Native) return;
-	// An EventSource for the app's server opens no connection: it fails as
-	// one refused would, with an error event, and is closed.
+	// An EventSource for the app's server opens no connection. Answered, it
+	// opens, then sends each of the answer's events, each in a task of its
+	// own, until the component closes it; unanswered, it fails as one refused
+	// would, with an error event, and is closed. Its on- handlers and its
+	// listeners both hear them.
 	window.EventSource = class EventSource extends EventTarget {
 		static CONNECTING = 0;
 		static OPEN = 1;
@@ -162,14 +233,34 @@ function answerTheAppsRequests() {
 			this.url = u.href;
 			this.withCredentials = !!init?.withCredentials;
 			this.readyState = 0;
-			this.onopen = this.onmessage = this.onerror = null;
-			post({ type: 'event', component: wanted, name: 'EventSource', args: [pathOf(u)] });
+			for (const type of ['open', 'message', 'error']) {
+				this['on' + type] = null;
+				this.addEventListener(type, (e) => this['on' + type]?.call(this, e));
+			}
+			const path = pathOf(u);
+			const a = answerFor(true, 'GET', path);
+			post({ type: 'event', component: wanted, name: 'EventSource', args: [path, a ? 200 : 501] });
+			// next sends the answer's events from i on, each in a task of its
+			// own, while the source is open.
+			const next = (i) => {
+				if (i === a.events.length) return;
+				setTimeout(() => {
+					if (this.readyState !== 1) return;
+					const e = a.events[i];
+					this.dispatchEvent(new MessageEvent(e.type, { data: e.data, lastEventId: e.lastEventId, origin: u.origin }));
+					next(i + 1);
+				});
+			};
 			setTimeout(() => {
 				if (this.readyState === 2) return;
-				this.readyState = 2;
-				const e = new Event('error');
-				this.onerror?.(e);
-				this.dispatchEvent(e);
+				if (!a) {
+					this.readyState = 2;
+					this.dispatchEvent(new Event('error'));
+					return;
+				}
+				this.readyState = 1;
+				this.dispatchEvent(new Event('open'));
+				next(0);
 			});
 		}
 		close() {
@@ -519,9 +610,11 @@ function receive(event) {
 	if (!m || m.source !== source || m.version !== version) return;
 	switch (m.type) {
 		case 'select':
+			answers = readAnswers(m.answers);
 			if (typeof m.component === 'string') select(m.component, m.props ?? {}, m.functions, m.snippets);
 			break;
 		case 'props':
+			answers = readAnswers(m.answers);
 			if (loading) pending = { props: m.props ?? {}, functions: m.functions, snippets: m.snippets };
 			else render(m.props ?? {}, m.functions, m.snippets);
 			break;

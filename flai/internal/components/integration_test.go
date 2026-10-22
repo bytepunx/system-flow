@@ -13,7 +13,8 @@ package components
 // harness frames a component: in a margin, a fixed dialog whole, with
 // nothing of the component before, only once the page selects it, and with
 // the props the page sent while it loaded, and that it answers the
-// component's requests for the app's own server itself. It needs node and
+// component's requests for the app's own server itself, and (S-0476) from
+// the answers the page sends where one matches. It needs node and
 // flaiover's dependencies installed from this tree's lockfile, so it skips
 // without them, fails on an install from another lockfile, and skips under
 // -short; the browser checks skip without Playwright's Chromium. The build
@@ -174,6 +175,9 @@ func TestServeCarriesHotUpdatesOfTheComponentAndTheStylesheet(t *testing.T) {
 	})
 	t.Run("a request for the app's own server is answered by the harness", func(t *testing.T) {
 		checkFetches(t, dir, s.URL(), vite)
+	})
+	t.Run("the harness answers the app's requests from the answers the page sends", func(t *testing.T) {
+		checkAnswers(t, dir, s.URL(), vite)
 	})
 }
 
@@ -892,7 +896,7 @@ func checkFetches(t *testing.T, dir, harnessURL string, vite func() string) {
 	} {
 		want := fetchAnswer{
 			Status: http.StatusNotImplemented, StatusText: "Not Implemented", Type: "application/json",
-			Body: fmt.Sprintf(`{"error":"flai's component harness does not answer the app's own requests: %s %s"}`, c.method, c.path),
+			Body: notAnswered(c.method, c.path),
 		}
 		if c.got != want {
 			t.Errorf("the fetch by %s was answered %+v, want %+v", c.what, c.got, want)
@@ -930,16 +934,214 @@ func checkFetches(t *testing.T, dir, harnessURL string, vite func() string) {
 		}
 	}
 	want := []string{
-		fetcherComponent + ` fetch ["GET","/api/module"]`,
-		fetcherComponent + ` fetch ["GET","/api/x"]`,
-		fetcherComponent + ` fetch ["PUT","/api/y?z=1"]`,
-		fetcherComponent + ` fetch ["POST","/api/r"]`,
-		fetcherComponent + ` EventSource ["/api/events?project=x"]`,
+		fetcherComponent + ` fetch ["GET","/api/module",501]`,
+		fetcherComponent + ` fetch ["GET","/api/x",501]`,
+		fetcherComponent + ` fetch ["PUT","/api/y?z=1",501]`,
+		fetcherComponent + ` fetch ["POST","/api/r",501]`,
+		fetcherComponent + ` EventSource ["/api/events?project=x",501]`,
 		fetcherComponent + ` WebSocket ["/api/events?project=x"]`,
 	}
 	if !slices.Equal(events, want) {
 		t.Errorf("the harness posted the events\n%s\nwant\n%s", strings.Join(events, "\n"), strings.Join(want, "\n"))
 	}
+}
+
+// answeredComponent is the fixture component whose requests for the app's
+// own server the page's answers answer.
+const answeredComponent = "src/lib/Answered.svelte"
+
+// fixtureAnswers are the answers the page selects answeredComponent with
+// (ADR-0187): first some the harness cannot use, then, of those it can, one
+// for a path with no query and one for that path with a query after it, two
+// for a path by method, a 204 with a body the harness drops, and two for an
+// EventSource, one for a POST.
+const fixtureAnswers = `[
+	"not an answer",
+	{"events": []},
+	{"path": 5},
+	{"path": "api/missing"},
+	{"path": "/api/missing", "status": 700},
+	{"path": "/api/missing", "headers": {"bad name": "x"}},
+	{"path": "/api/missing", "events": "none"},
+	{"path": "/api/module", "body": "from the module"},
+	{"path": "/api/items", "body": "every item"},
+	{"path": "/api/items?id=1", "body": {"id": 1}},
+	{"path": "/api/accept", "method": "DELETE", "status": 500},
+	{"path": "/api/accept", "method": "post", "status": 201, "headers": {"Content-Type": "text/csv", "X-Flai": "yes"}, "body": "a,b"},
+	{"path": "/api/gone", "status": 204, "body": "dropped"},
+	{"path": "/api/events", "method": "POST", "events": [{"data": "not for a GET"}]},
+	{"path": "/api/events", "events": [{"data": "one", "id": "1"}, {"data": {"n": 2}}, {"event": "change", "data": {"kind": "edited"}, "id": "3"}, {"data": "after the close"}]}
+]`
+
+// answersScript is the body of a page script that selects answeredComponent
+// with fixtureAnswers and reports what it was answered, as it shows it. Then
+// it sends props messages, one without answers, one with an answer of its
+// own, and one whose answers are not an array, and reports what the page's
+// own fetch was answered after each, and the path of every request for /api
+// the page sent.
+const answersScript = `	const [component, answers] = args;
+	const sent = [];
+	page.on('request', (r) => {
+		const u = new URL(r.url());
+		if (u.pathname.startsWith('/api/')) sent.push(u.pathname);
+	});
+	const ask = (path) => page.evaluate((path) => fetch(path).then(async (r) => ({ status: r.status, body: await r.text() })), path);
+	await send({ type: 'select', component, answers: JSON.parse(answers) });
+	await seen(['rendered', 'error'], 1);
+	await page.waitForSelector('.answered', { timeout: 30000 });
+	report.answered = JSON.parse(await page.textContent('.answered'));
+	await send({ type: 'props', props: {} });
+	await seen(['rendered', 'error'], 2);
+	report.without = await ask('/api/items?id=1');
+	await send({ type: 'props', props: {}, answers: [{ path: '/api/late', body: 'late' }] });
+	await seen(['rendered', 'error'], 3);
+	report.late = await ask('/api/late');
+	await send({ type: 'props', props: {}, answers: { path: '/api/late', body: 'late' } });
+	await seen(['rendered', 'error'], 4);
+	report.notArray = await ask('/api/late');
+	report.sent = sent;`
+
+// answeredFetch is a response as answeredComponent shows it: its status,
+// its content-type and x-flai headers, empty when it has none, and its body.
+type answeredFetch struct {
+	Status int    `json:"status"`
+	Type   string `json:"type"`
+	Flai   string `json:"flai"`
+	Body   string `json:"body"`
+}
+
+// answeredStream is what an EventSource of answeredComponent's heard, in
+// order, and its readyState once it had closed it.
+type answeredStream struct {
+	Heard []string `json:"heard"`
+	State int      `json:"state"`
+}
+
+// askedFetch is a response to the page's own fetch, as answersScript reports
+// it.
+type askedFetch struct {
+	Status int    `json:"status"`
+	Body   string `json:"body"`
+}
+
+// notAnswered is the body of the harness's 501 to method and path.
+func notAnswered(method, path string) string {
+	return fmt.Sprintf(`{"error":"flai's component harness does not answer the app's own requests: %s %s"}`, method, path)
+}
+
+// checkAnswers runs answersScript against the harness at harnessURL, and
+// checks that the harness answered each fetch and EventSource of the app's
+// from the first answer that matches it, by path with its query before path
+// alone, and by method, passing over those it cannot use; that it answered
+// one no answer matches 501, or with an error; that each message's answers
+// replaced the last's; that no request reached the dev server; and that the
+// events it posted carry the status each request got.
+func checkAnswers(t *testing.T, dir, harnessURL string, vite func() string) {
+	t.Helper()
+	var r struct {
+		Answered *struct {
+			Module  answeredFetch  `json:"module"`
+			Query   answeredFetch  `json:"query"`
+			Other   answeredFetch  `json:"other"`
+			Post    answeredFetch  `json:"post"`
+			Empty   answeredFetch  `json:"empty"`
+			Events  answeredFetch  `json:"events"`
+			Missing answeredFetch  `json:"missing"`
+			Stream  answeredStream `json:"stream"`
+			Silent  answeredStream `json:"silent"`
+		} `json:"answered"`
+		Without  askedFetch `json:"without"`
+		Late     askedFetch `json:"late"`
+		NotArray askedFetch `json:"notArray"`
+		Sent     []string   `json:"sent"`
+	}
+	messages := runPage(t, dir, "answers.mjs", answersScript, "that the Components page's answers answer a component's fetch of /api", vite, &r,
+		harnessURL, answeredComponent, fixtureAnswers)
+	noErrors(t, messages)
+	if r.Answered == nil {
+		t.Fatalf("%s showed no answers", answeredComponent)
+	}
+	a := r.Answered
+	text := "text/plain; charset=utf-8"
+	fetched := func(t *testing.T, what string, got, want answeredFetch) {
+		t.Helper()
+		if got != want {
+			t.Errorf("the fetch %s was answered %+v, want %+v", what, got, want)
+		}
+	}
+	t.Run("an answered fetch gets the answer's status, headers, and body", func(t *testing.T) {
+		fetched(t, "of /api/module, as the module was imported", a.Module, answeredFetch{Status: 200, Type: text, Body: "from the module"})
+		fetched(t, "POST /api/accept, of the answers by method", a.Post, answeredFetch{Status: 201, Type: "text/csv", Flai: "yes", Body: "a,b"})
+		fetched(t, "DELETE /api/gone, of a 204", a.Empty, answeredFetch{Status: 204})
+	})
+	t.Run("a fetch takes the answer for its query before the one for its path", func(t *testing.T) {
+		fetched(t, "of /api/items?id=1", a.Query, answeredFetch{Status: 200, Type: "application/json", Body: `{"id":1}`})
+		fetched(t, "of /api/items?id=2", a.Other, answeredFetch{Status: 200, Type: text, Body: "every item"})
+	})
+	t.Run("an answered EventSource opens and sends the answer's events until it is closed", func(t *testing.T) {
+		want := answeredStream{State: 2, Heard: []string{
+			"open|1",
+			"onmessage|one|1", "message|one|1",
+			`onmessage|{"n":2}|`, `message|{"n":2}|`,
+			`change|{"kind":"edited"}|3`,
+		}}
+		if !slices.Equal(a.Stream.Heard, want.Heard) || a.Stream.State != want.State {
+			t.Errorf("the EventSource for /api/events?project=x heard\n%s\nand was in state %d, want\n%s\nand state %d",
+				strings.Join(a.Stream.Heard, "\n"), a.Stream.State, strings.Join(want.Heard, "\n"), want.State)
+		}
+	})
+	t.Run("a request no answer matches is still answered 501", func(t *testing.T) {
+		fetched(t, "of /api/missing, whose answers the harness cannot use", a.Missing,
+			answeredFetch{Status: 501, Type: "application/json", Body: notAnswered("GET", "/api/missing")})
+		fetched(t, "of /api/events?project=x, whose answers are an EventSource's", a.Events,
+			answeredFetch{Status: 501, Type: "application/json", Body: notAnswered("GET", "/api/events?project=x")})
+		if want := []string{"error|2"}; !slices.Equal(a.Silent.Heard, want) || a.Silent.State != 2 {
+			t.Errorf("the EventSource for /api/silent heard %v and was in state %d, want %v and state 2", a.Silent.Heard, a.Silent.State, want)
+		}
+		if len(r.Sent) != 0 {
+			t.Errorf("the page sent %v, want no request for /api", r.Sent)
+		}
+	})
+	t.Run("each message's answers replace the last's", func(t *testing.T) {
+		for _, c := range []struct {
+			what string
+			got  askedFetch
+			want askedFetch
+		}{
+			{"of /api/items?id=1, after a props message without answers", r.Without, askedFetch{Status: 501, Body: notAnswered("GET", "/api/items?id=1")}},
+			{"of /api/late, after a props message with an answer for it", r.Late, askedFetch{Status: 200, Body: "late"}},
+			{"of /api/late, after a props message whose answers are not an array", r.NotArray, askedFetch{Status: 501, Body: notAnswered("GET", "/api/late")}},
+		} {
+			if c.got != c.want {
+				t.Errorf("the page's fetch %s was answered %+v, want %+v", c.what, c.got, c.want)
+			}
+		}
+	})
+	t.Run("the posted events carry the status each request got", func(t *testing.T) {
+		var events []string
+		for _, m := range messages {
+			if m.Type == "event" {
+				events = append(events, m.Component+" "+m.Name+" "+string(m.Args))
+			}
+		}
+		want := []string{
+			answeredComponent + ` fetch ["GET","/api/module",200]`,
+			answeredComponent + ` fetch ["GET","/api/items?id=1",200]`,
+			answeredComponent + ` fetch ["GET","/api/items?id=2",200]`,
+			answeredComponent + ` fetch ["POST","/api/accept",201]`,
+			answeredComponent + ` fetch ["DELETE","/api/gone",204]`,
+			answeredComponent + ` fetch ["GET","/api/events?project=x",501]`,
+			answeredComponent + ` fetch ["GET","/api/missing",501]`,
+			answeredComponent + ` EventSource ["/api/events?project=x",200]`,
+			answeredComponent + ` EventSource ["/api/silent",501]`,
+			answeredComponent + ` fetch ["GET","/api/items?id=1",501]`,
+			answeredComponent + ` fetch ["GET","/api/late",200]`,
+			answeredComponent + ` fetch ["GET","/api/late",501]`,
+		}
+		if !slices.Equal(events, want) {
+			t.Errorf("the harness posted the events\n%s\nwant\n%s", strings.Join(events, "\n"), strings.Join(want, "\n"))
+		}
+	})
 }
 
 // noErrors fails the test for each error the harness posted.
