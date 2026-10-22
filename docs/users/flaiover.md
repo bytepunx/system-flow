@@ -385,7 +385,18 @@ The same settings are changed in a shell with `flai manifest set` ([Changing the
 
 ## Charts
 
-Charts plots the flow metrics `flai stats` computes, so the numbers are the same in both places. You choose a chart from Charts in the nav rail, which lists them in four groups: flow, usage, planning, and strategic ([The header](#the-header)). The page has no list of its own: its controls, the chart, the notes under it, and its table take its whole width. Pick a window, and the controls the chart offers: an item type, an epic, on the usage charts over time and Forecast Error / Model what a bar or a point covers (an hour, a day, or a week), and on the forecast charts of planning a nature and a model. The strategic charts offer only the item type. Every chart has a table view under it and follows the light or dark theme. The window sets what each chart shows: its time axis runs from the start of the window to now, and the charts of items and their tables list only the items completed in the window. The window you pick last is kept in this browser, so every chart opens at it, after a reload or a visit to another page too.
+Charts plots the flow metrics `flai stats` computes, so the numbers are the same in both places. You choose a chart from Charts in the nav rail, which lists them in four groups: flow, usage, planning, and strategic ([The header](#the-header)). The page has no list of its own and takes its whole width. It reads from the top down:
+
+1. The chart's title.
+2. Any notice that replaces or qualifies the chart: the flai on the host is older than the dashboard, no item carries usage yet, no story has a forecast, or flai cannot read the conflict log or git.
+3. The chart, with what belongs to it: the share bar of Time in State, the Longest waits table of Agent Waiting, and the figures a chart states, such as Strategic Cost's ratio, Coordination's shares, CoD by Order's saving, and the stories without a value.
+4. **About this chart**, the chart's explainer.
+5. The controls: the window and the controls the chart offers, with the summary strip at their end.
+6. The table view, which you expand to read every number the chart draws.
+
+Pick a window, and the controls the chart offers: an item type, an epic, on the usage charts over time and Forecast Error / Model what a bar or a point covers (an hour, a day, or a week), and on the forecast charts of planning a nature and a model. The strategic charts offer only the item type. The controls show while a chart loads, and when it fails to load, so you can change the window. Every chart follows the light or dark theme. The window sets what each chart shows: its time axis runs from the start of the window to now, and the charts of items and their tables list only the items completed in the window. The window you pick last is kept in this browser, so every chart opens at it, after a reload or a visit to another page too.
+
+About this chart explains the chart in three short paragraphs: what it draws, how each figure is measured, naming the transitions, timestamps, and `flai stats --json` fields behind it, and what a shape of the chart means. It names the item type and the bucket you chose. A link at its end opens the heading of [metrics.md](../../design/system/metrics.md) that defines the chart's figures; metrics.md is the source of those definitions, and the explainer follows it. The explainer is open on your first visit. Close or open it on one chart, and every chart shows it that way in this browser, after a reload too.
 
 | Chart | Shows |
 |-------|-------|
@@ -400,9 +411,9 @@ Charts plots the flow metrics `flai stats` computes, so the numbers are the same
 | Tokens / Day | The tokens spent on the items done each day, stacked by model, with the mean per day so far as a dashed line |
 | Tokens per item | The tokens an item took on average, over time: a line for epics, for stories, and for tasks |
 | Tokens / $ | How many tokens a dollar bought, over time, one line per model |
-| $ / Day | The dollars spent on the items done each day, stacked by model, with the mean per day so far as a dashed line. What the planner spent on them is stacked on top as its own series, strategic, estimated; the mean leaves it out |
+| $ / Day | The dollars spent on the items done each day, stacked by model, with the mean per day so far as a dashed line. What the strategic agents spent on them, the planner, the orchestrator, and the analyzer, is stacked on top as its own series, strategic, estimated; the mean leaves it out |
 | $ / Work Type | What an item cost on average, over time: a line for epics, for stories, and for tasks |
-| $ / Item | What each item completed in the window cost, stacked by model; an asterisk marks an item whose cost is estimated in part. What the planner spent on an item is stacked on top as its own series, strategic, estimated, and apart from the item's total. An item only the planner spent on shows that alone |
+| $ / Item | What each item completed in the window cost, stacked by model; an asterisk marks an item whose cost is estimated in part. What the strategic agents spent on an item, the planner, the orchestrator, and the analyzer, is stacked on top as its own series, strategic, estimated, and apart from the item's total. An item only the strategic agents spent on shows that alone |
 | Avg. Time / Model | The minutes of agent work an item of the chosen type took on average, over time, one line per model |
 | Avg. Cost / Model | What an item of the chosen type cost on average, over time, one line per model |
 | Forecast Accuracy | One point per story done in the window with a forecast: how much longer or shorter it took than forecast. Triangles show the same against your estimate, where a story has one. The p50 and p85 lines sit either side of zero |
@@ -426,7 +437,7 @@ Every usage chart but $ / Item lays what was spent out over time.
 - **Which items.** The charts cover the item type you choose, except Tokens per item and $ / Work Type, which put epics, stories, and tasks side by side. A story's spend includes its tasks', and an epic's its stories', so the types are never added together.
 - **Per model.** A model's line averages the items of the chosen type it worked on. An item two models worked on counts whole for each, with all its agent time, since flai does not split agent time by model. Click a name in the legend to hide a line, such as epics, which dwarf the others.
 - **The dashed lines.** On Tokens / Day and $ / Day, the mean per day so far, from the first day with spend, days with nothing done counted. On the other charts per model with more than one model, all models together.
-- **The strip above the chart** says what the items done in the window spent, and what that comes to per item, per minute of agent work, and per dollar.
+- **The summary strip**, at the end of the controls, says what the items done in the window spent, and what that comes to per item, per minute of agent work, and per dollar.
 
 The table view lists each hour, day, or week in which items were done, newest first, with every number the charts draw.
 
@@ -442,7 +453,7 @@ Forecast Accuracy, Delivery Accuracy, and Forecast Error / Model compare the pla
 - **Filters.** Narrow a chart to one nature or one model. A story's model is its agent's model; a story without one is listed as `(none)`. Forecast Error / Model shows every model, so it offers only the nature.
 - **Which stories appear.** Only stories with a forecast. The planner sets one when it plans a story, or set it yourself with `flai edit <story> --forecast-duration 6h --forecast-delivery 2026-10-09T17:00:00Z` ([Drafts, cost of delay, and forecasts](flai.md#drafts-cost-of-delay-and-forecasts)). Until a story done in the window has one, the chart says so.
 
-The strip above the chart gives how many stories had a forecast, and the p50 and p85 of the forecast and delivery errors. The table view lists each story, newest first: when it was completed, its nature and model, its forecast, how long it took, and its forecast, delivery, and estimate errors.
+The summary strip, at the end of the controls, gives how many stories had a forecast, and the p50 and p85 of the forecast and delivery errors. The table view lists each story, newest first: when it was completed, its nature and model, its forecast, how long it took, and its forecast, delivery, and estimate errors.
 
 Parallelism, Hold Time, and Touches Drift show what claims cost. A story in ready is held while its claim overlaps a story in progress, while a story it waits for is not done, or while either claim is empty (see [Held stories](#board) on the board, and [Touches](flai.md#touches)).
 
@@ -501,7 +512,7 @@ The strategic charts set what the planner, the orchestrator, and the analyzer co
 - **Strategic Use, in hours.** The bars are the hours each strategic agent worked that day. The two lines cover the items completed that day: their mean cycle time, and their mean waiting time, the time each waited on its threads while in progress plus its time in review ([Waiting](../../design/system/metrics.md#waiting)). A day with nothing completed has no point.
 - **Reading Strategic Use.** The return on the strategic agents' time is the waiting and cycle-time lines falling while their bars rise.
 
-The strip above the chart gives what the strategic agents spent and worked over the window, and the items completed in it. Under each chart a note says how to read it, and on Strategic Cost it states the ratio. The table view lists each day: each agent's cost or hours, the total, the items completed, and the figures of the lines. When the flai on the host is too old to send these figures, the page says so; upgrade it with `flai self-upgrade`.
+Under Strategic Cost, a line states the ratio, or why there is none. About this chart says how to read each of the two. The summary strip, at the end of the controls, gives what the strategic agents spent and worked over the window, and the items completed in it. The table view lists each day: each agent's cost or hours, the total, the items completed, and the figures of the lines. When the flai on the host is too old to send these figures, the page says so; upgrade it with `flai self-upgrade`.
 
 ## Docs
 
