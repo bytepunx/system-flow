@@ -6,7 +6,7 @@ title: task_done's answer repeats every open thread not on the agent's story, so
 status: backlog
 owner: alex
 created: 2026-10-21T11:58:27Z
-updated: 2026-10-21T11:58:27Z
+updated: 2026-10-22T20:53:05Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
     by: flai
     at: 2026-10-21T11:58:27Z
+finalized:
+  by: alex
+  at: 2026-10-22T20:53:05Z
 ---
 # S-0470 task_done's answer repeats every open thread not on the agent's story, so it overflows a tool result
 
