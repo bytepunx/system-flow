@@ -53,7 +53,77 @@
             "reason": "it changed no component's files, so no release covers it"
           }
         ]
-      }
+      },
+      "answers": [
+        {
+          "path": "/api/publish",
+          "method": "POST",
+          "body": {
+            "plans": [
+              {
+                "component": {
+                  "name": "flai",
+                  "path": "flai",
+                  "kind": "go"
+                },
+                "level": "minor",
+                "from": "1.56.0",
+                "to": "1.57.0",
+                "tag": "flai/v1.57.0",
+                "version": "1.57.0",
+                "items": [
+                  {
+                    "id": "S-0443",
+                    "title": "A component's examples are kept under design/components",
+                    "level": "minor"
+                  },
+                  {
+                    "id": "S-0445",
+                    "title": "flai check reports an example whose props do not fit",
+                    "level": "patch"
+                  }
+                ],
+                "files": [
+                  "flai/internal/components/examples.go"
+                ]
+              },
+              {
+                "component": {
+                  "name": "flaiover",
+                  "path": "flaiover",
+                  "kind": "sveltekit"
+                },
+                "level": "patch",
+                "from": "0.52.1",
+                "to": "0.52.2",
+                "tag": "flaiover/v0.52.2",
+                "version": "0.52.2",
+                "items": [
+                  {
+                    "id": "S-0444",
+                    "title": "flaiover's components load its stylesheet",
+                    "level": "patch"
+                  }
+                ],
+                "files": [
+                  "flaiover/src/routes/layout.css"
+                ]
+              }
+            ],
+            "tags": [
+              "flai/v1.57.0",
+              "flaiover/v0.52.2"
+            ],
+            "pushed": true,
+            "published": [],
+            "log": [],
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        }
+      ]
     },
     {
       "name": "Behind the remote",

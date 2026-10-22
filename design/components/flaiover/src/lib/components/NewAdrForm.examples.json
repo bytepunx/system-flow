@@ -2,7 +2,82 @@
   "examples": [
     {
       "name": "A blank decision",
-      "props": {}
+      "props": {},
+      "answers": [
+        {
+          "path": "/api/adrs/template",
+          "body": {
+            "body": "## Context\n\nWhat situation forces a decision. Facts, constraints, and the question being answered.\n\n## Decision\n\nWhat was decided, in the present tense. One decision. If two things were decided, write two ADRs.\n\n## Consequences\n\nWhat becomes easier, what becomes harder, what must now be done, and what was given up.\n\n## Alternatives considered\n\nEach alternative with one line on why it lost.\n",
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        },
+        {
+          "path": "/api/docs/adrs",
+          "body": [
+            {
+              "path": "design/adrs/0164-a-component-s-examples-are-named-sets-of-props-in-one-json-file-per-component.md",
+              "file": "0164-a-component-s-examples-are-named-sets-of-props-in-one-json-file-per-component.md",
+              "id": "ADR-0164",
+              "title": "A component's examples are named sets of props, in one JSON file per component",
+              "status": "accepted",
+              "date": "2026-10-12",
+              "supersedes": [],
+              "supersededBy": [],
+              "refines": []
+            },
+            {
+              "path": "design/adrs/0172-the-component-harness-answers-the-app-s-own-requests-501.md",
+              "file": "0172-the-component-harness-answers-the-app-s-own-requests-501.md",
+              "id": "ADR-0172",
+              "title": "The component harness answers the app's own requests 501",
+              "status": "accepted",
+              "date": "2026-10-15",
+              "supersedes": [],
+              "supersededBy": [],
+              "refines": []
+            },
+            {
+              "path": "design/adrs/0187-an-example-may-carry-the-answers-the-component-harness-gives-a-framed-component.md",
+              "file": "0187-an-example-may-carry-the-answers-the-component-harness-gives-a-framed-component.md",
+              "id": "ADR-0187",
+              "title": "An example may carry the answers the component harness gives a framed component",
+              "status": "proposed",
+              "date": "2026-10-22",
+              "supersedes": [],
+              "supersededBy": [],
+              "refines": [
+                "ADR-0172"
+              ]
+            }
+          ]
+        },
+        {
+          "path": "/api/adrs",
+          "method": "POST",
+          "body": {
+            "id": "ADR-0188",
+            "number": 188,
+            "title": "The dashboard authenticates every request with a project token",
+            "status": "proposed",
+            "path": "design/adrs/0188-the-dashboard-authenticates-every-request-with-a-project-token.md",
+            "changed": [
+              "design/adrs/0188-the-dashboard-authenticates-every-request-with-a-project-token.md",
+              "design/adrs/README.md"
+            ],
+            "warnings": [],
+            "committed": true,
+            "commit": "9b1e0c4f2a77",
+            "log": [],
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        }
+      ]
     }
   ]
 }

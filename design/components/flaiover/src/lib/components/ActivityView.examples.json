@@ -54,7 +54,94 @@
           }
         },
         "canStop": true
-      }
+      },
+      "answers": [
+        {
+          "path": "/api/agent-stream/S-0444",
+          "body": {
+            "story": "S-0444",
+            "agent": "agent-S-0444",
+            "started": "2026-10-16T09:12:04Z",
+            "running": true,
+            "from": 0,
+            "next": 6120,
+            "size": 6120,
+            "entries": [
+              {
+                "kind": "session",
+                "text": "session started (claude-opus-5-5)"
+              },
+              {
+                "kind": "text",
+                "text": "T-1890 is done. Starting T-1891: examples for the agents' components."
+              },
+              {
+                "kind": "tool",
+                "tool": "Read",
+                "text": "flaiover/src/lib/components/AgentDot.svelte"
+              },
+              {
+                "kind": "result",
+                "text": "88 lines"
+              },
+              {
+                "kind": "thinking",
+                "text": "AgentDot takes an activity, so it needs an example for each state."
+              },
+              {
+                "kind": "tool",
+                "tool": "Write",
+                "text": "design/components/flaiover/src/lib/components/AgentDot.examples.json"
+              },
+              {
+                "kind": "result",
+                "text": "File created successfully"
+              },
+              {
+                "kind": "text",
+                "text": "AgentDot has an example for each state: working, waiting, failed, and idle."
+              }
+            ],
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        },
+        {
+          "path": "/api/agent-stream/S-0444?after=6120",
+          "body": {
+            "story": "S-0444",
+            "agent": "agent-S-0444",
+            "started": "2026-10-16T09:12:04Z",
+            "running": true,
+            "from": 6120,
+            "next": 6120,
+            "size": 6120,
+            "entries": [],
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        },
+        {
+          "path": "/api/items/S-0444/agent",
+          "method": "POST",
+          "body": {
+            "story": "S-0444",
+            "agent": "agent-S-0444",
+            "pid": 48213,
+            "stopped": "2026-10-16T10:00:12Z",
+            "ended": "",
+            "why": "",
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        }
+      ]
     },
     {
       "name": "No active streams",

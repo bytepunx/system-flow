@@ -97,7 +97,89 @@
             }
           ]
         }
-      }
+      },
+      "answers": [
+        {
+          "path": "/api/agent-stream/orchestrator?role=orchestrate",
+          "body": {
+            "story": "",
+            "agent": "orchestrator",
+            "started": "2026-10-16T06:58:00Z",
+            "running": true,
+            "from": 0,
+            "next": 2950,
+            "size": 2950,
+            "entries": [
+              {
+                "kind": "session",
+                "text": "session started (claude-sonnet-5)"
+              },
+              {
+                "kind": "tool",
+                "tool": "mcp__flai__inbox",
+                "text": "{}"
+              },
+              {
+                "kind": "result",
+                "text": "1 thread awaits the operator; S-0445 is ready"
+              },
+              {
+                "kind": "text",
+                "text": "TH-0512 has a recommendation awaiting the operator; nothing to settle there."
+              },
+              {
+                "kind": "tool",
+                "tool": "mcp__flai__wait_for_events",
+                "text": "timeout_seconds=600"
+              }
+            ],
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        },
+        {
+          "path": "/api/agent-stream/orchestrator?role=orchestrate&after=2950",
+          "body": {
+            "story": "",
+            "agent": "orchestrator",
+            "started": "2026-10-16T06:58:00Z",
+            "running": true,
+            "from": 2950,
+            "next": 2950,
+            "size": 2950,
+            "entries": [],
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        },
+        {
+          "path": "/api/orchestrator",
+          "method": "POST",
+          "body": {
+            "held": true,
+            "orchestrator": {
+              "story": "",
+              "harness": "claude",
+              "model": "sonnet",
+              "command": "claude",
+              "agent": "orchestrator",
+              "pid": 40112,
+              "started": "2026-10-16T06:58:00Z",
+              "log": "/home/alex/.flai/serve/agents/sf-orchestrator-20261016T065800Z.log",
+              "stopped": "2026-10-16T10:20:00Z",
+              "held": true
+            },
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        }
+      ]
     },
     {
       "name": "Held by the operator",
@@ -141,7 +223,30 @@
             }
           ]
         }
-      }
+      },
+      "answers": [
+        {
+          "path": "/api/orchestrator",
+          "method": "POST",
+          "body": {
+            "held": false,
+            "orchestrator": {
+              "story": "",
+              "harness": "claude",
+              "model": "sonnet",
+              "command": "claude",
+              "agent": "orchestrator",
+              "pid": 40388,
+              "started": "2026-10-16T10:25:00Z",
+              "log": "/home/alex/.flai/serve/agents/sf-orchestrator-20261016T102500Z.log"
+            },
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        }
+      ]
     }
   ]
 }

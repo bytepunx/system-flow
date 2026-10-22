@@ -9,7 +9,124 @@
           "connected": false,
           "candidate": true
         }
-      }
+      },
+      "answers": [
+        {
+          "path": "/api/import",
+          "method": "GET",
+          "body": {
+            "analysis": {
+              "root": "/home/alex/src/acme-shop",
+              "git": true,
+              "manifest": false,
+              "existing": {},
+              "candidates": {
+                "docs": "docs/users"
+              },
+              "markdown": [
+                "NOTES.md"
+              ],
+              "projects": [
+                {
+                  "name": "api",
+                  "path": "api",
+                  "kind": "go"
+                },
+                {
+                  "name": "web",
+                  "path": "web",
+                  "kind": "sveltekit"
+                }
+              ]
+            },
+            "plan": {
+              "create": [
+                "design",
+                "wip",
+                "scripts"
+              ],
+              "folder_moves": [
+                {
+                  "from": "docs",
+                  "to": "docs/users"
+                }
+              ],
+              "markdown": [
+                "NOTES.md"
+              ],
+              "projects": [
+                {
+                  "name": "api",
+                  "path": "api",
+                  "kind": "go"
+                },
+                {
+                  "name": "web",
+                  "path": "web",
+                  "kind": "sveltekit"
+                }
+              ]
+            },
+            "tests": [
+              {
+                "name": "api",
+                "dir": "api",
+                "command": [
+                  "go",
+                  "test",
+                  "./..."
+                ]
+              },
+              {
+                "name": "web",
+                "dir": "web",
+                "command": [
+                  "npm",
+                  "test"
+                ]
+              }
+            ],
+            "tests_from": "repository",
+            "project": {
+              "name": "",
+              "key": ""
+            }
+          }
+        },
+        {
+          "path": "/api/import",
+          "method": "POST",
+          "headers": {
+            "content-type": "application/x-ndjson",
+            "cache-control": "no-store"
+          },
+          "body": "{\"event\": \"progress\", \"msg\": \"importing\"}\n{\"event\": \"progress\", \"msg\": \"running api\"}\n{\"event\": \"progress\", \"msg\": \"api passed\"}\n{\"event\": \"progress\", \"msg\": \"running web\"}\n{\"event\": \"progress\", \"msg\": \"web passed\"}\n{\"event\": \"done\", \"result\": {\"root\": \"/home/alex/src/acme-shop\", \"written\": [\"CLAUDE.md\", \"system-flow.yaml\", \"design/conventions/README.md\", \"wip/kanban/board.md\"], \"skipped\": [], \"moved\": [{\"from\": \"docs\", \"to\": \"docs/users\"}], \"kept\": [\"NOTES.md\"], \"projects\": [{\"name\": \"api\", \"path\": \"api\", \"kind\": \"go\"}, {\"name\": \"web\", \"path\": \"web\", \"kind\": \"sveltekit\"}], \"key\": \"acme-shop\", \"name\": \"acme-shop\", \"commit\": {\"tests\": [{\"name\": \"api\", \"dir\": \"api\", \"command\": [\"go\", \"test\", \"./...\"], \"ok\": true, \"exit_code\": 0, \"seconds\": 14, \"output\": \"ok  \\tacme-shop/api/orders\\t0.412s\\n\"}, {\"name\": \"web\", \"dir\": \"web\", \"command\": [\"npm\", \"test\"], \"ok\": true, \"exit_code\": 0, \"seconds\": 9, \"output\": \"Test Files  12 passed (12)\\n\"}], \"tests_from\": \"repository\", \"committed\": true, \"commit\": \"3f9c2a1d7e4b\"}}, \"committed\": true}\n"
+        },
+        {
+          "path": "/api/projects",
+          "body": {
+            "projects": [
+              {
+                "key": "sf",
+                "name": "system-flow",
+                "connected": true,
+                "since": "2026-10-16T06:40:00Z",
+                "signed": true,
+                "served": true,
+                "review": 1,
+                "threadsAwaiting": 2,
+                "agentAttending": true
+              },
+              {
+                "key": "acme-shop",
+                "name": "acme-shop",
+                "connected": false,
+                "candidate": true
+              }
+            ]
+          }
+        }
+      ]
     }
   ]
 }

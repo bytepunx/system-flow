@@ -2,14 +2,333 @@
   "examples": [
     {
       "name": "A new story in backlog",
-      "props": {}
+      "props": {},
+      "answers": [
+        {
+          "path": "/api/items/template?type=story",
+          "body": {
+            "type": "story",
+            "body": "## Goal\n\n## Acceptance criteria\n- [ ]\n\n## Tasks\n\n## Notes\n",
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        },
+        {
+          "path": "/api/items/template?type=epic",
+          "body": {
+            "type": "epic",
+            "body": "## Outcome\n\n## Stories\n\n## Notes\n",
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        },
+        {
+          "path": "/api/items?type=epic&archived=false",
+          "body": [
+            {
+              "id": "E-0003",
+              "type": "epic",
+              "nature": "feature",
+              "title": "flaiover dashboard",
+              "status": "in-progress",
+              "parent": "",
+              "owner": "alex",
+              "created": "2026-09-15T10:00:00Z",
+              "updated": "2026-10-16T08:00:00Z",
+              "transitions": [
+                {
+                  "to": "backlog",
+                  "at": "2026-09-15T10:00:00Z",
+                  "by": "alex"
+                },
+                {
+                  "to": "ready",
+                  "at": "2026-09-15T10:00:00Z",
+                  "by": "alex"
+                },
+                {
+                  "to": "in-progress",
+                  "at": "2026-10-01T09:00:00Z",
+                  "by": "alex"
+                }
+              ],
+              "blocked": [],
+              "estimate": "",
+              "stream": "",
+              "tags": [],
+              "path": "wip/kanban/epics/E-0003-flaiover-dashboard.md",
+              "archived": false
+            },
+            {
+              "id": "E-0038",
+              "type": "epic",
+              "nature": "feature",
+              "title": "The component library",
+              "status": "ready",
+              "parent": "",
+              "owner": "alex",
+              "created": "2026-10-10T10:00:00Z",
+              "updated": "2026-10-16T08:00:00Z",
+              "transitions": [
+                {
+                  "to": "backlog",
+                  "at": "2026-10-10T10:00:00Z",
+                  "by": "alex"
+                },
+                {
+                  "to": "ready",
+                  "at": "2026-10-10T10:00:00Z",
+                  "by": "alex"
+                }
+              ],
+              "blocked": [],
+              "estimate": "",
+              "stream": "",
+              "tags": [],
+              "path": "wip/kanban/epics/E-0038-the-component-library.md",
+              "archived": false
+            }
+          ]
+        },
+        {
+          "path": "/api/manifest",
+          "body": {
+            "name": "system-flow",
+            "key": "sf",
+            "owner": "alex",
+            "description": "Agentic lean project management system",
+            "agent": {
+              "harness": "claude-code",
+              "model": "claude-opus-5-5",
+              "config": {
+                "effort": "high"
+              }
+            },
+            "planning": {
+              "hour_rate": 150,
+              "currency": "USD"
+            },
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        },
+        {
+          "path": "/api/items",
+          "method": "POST",
+          "body": {
+            "item": {
+              "id": "S-0448",
+              "type": "story",
+              "nature": "feature",
+              "title": "Title",
+              "status": "backlog",
+              "parent": "",
+              "owner": "alex",
+              "created": "2026-10-16T10:10:00Z",
+              "updated": "2026-10-16T10:10:00Z",
+              "transitions": [
+                {
+                  "to": "backlog",
+                  "at": "2026-10-16T10:10:00Z",
+                  "by": "alex"
+                }
+              ],
+              "blocked": [],
+              "estimate": "",
+              "stream": "",
+              "tags": [],
+              "path": "wip/kanban/stories/S-0448-title.md",
+              "archived": false
+            },
+            "committed": true,
+            "commit": "c41d9e0a3b12",
+            "log": [],
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        }
+      ]
     },
     {
       "name": "A new epic to start in ready",
       "props": {
         "initialType": "epic",
         "initialLane": "ready"
-      }
+      },
+      "answers": [
+        {
+          "path": "/api/items/template?type=story",
+          "body": {
+            "type": "story",
+            "body": "## Goal\n\n## Acceptance criteria\n- [ ]\n\n## Tasks\n\n## Notes\n",
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        },
+        {
+          "path": "/api/items/template?type=epic",
+          "body": {
+            "type": "epic",
+            "body": "## Outcome\n\n## Stories\n\n## Notes\n",
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        },
+        {
+          "path": "/api/items?type=epic&archived=false",
+          "body": [
+            {
+              "id": "E-0003",
+              "type": "epic",
+              "nature": "feature",
+              "title": "flaiover dashboard",
+              "status": "in-progress",
+              "parent": "",
+              "owner": "alex",
+              "created": "2026-09-15T10:00:00Z",
+              "updated": "2026-10-16T08:00:00Z",
+              "transitions": [
+                {
+                  "to": "backlog",
+                  "at": "2026-09-15T10:00:00Z",
+                  "by": "alex"
+                },
+                {
+                  "to": "ready",
+                  "at": "2026-09-15T10:00:00Z",
+                  "by": "alex"
+                },
+                {
+                  "to": "in-progress",
+                  "at": "2026-10-01T09:00:00Z",
+                  "by": "alex"
+                }
+              ],
+              "blocked": [],
+              "estimate": "",
+              "stream": "",
+              "tags": [],
+              "path": "wip/kanban/epics/E-0003-flaiover-dashboard.md",
+              "archived": false
+            },
+            {
+              "id": "E-0038",
+              "type": "epic",
+              "nature": "feature",
+              "title": "The component library",
+              "status": "ready",
+              "parent": "",
+              "owner": "alex",
+              "created": "2026-10-10T10:00:00Z",
+              "updated": "2026-10-16T08:00:00Z",
+              "transitions": [
+                {
+                  "to": "backlog",
+                  "at": "2026-10-10T10:00:00Z",
+                  "by": "alex"
+                },
+                {
+                  "to": "ready",
+                  "at": "2026-10-10T10:00:00Z",
+                  "by": "alex"
+                }
+              ],
+              "blocked": [],
+              "estimate": "",
+              "stream": "",
+              "tags": [],
+              "path": "wip/kanban/epics/E-0038-the-component-library.md",
+              "archived": false
+            }
+          ]
+        },
+        {
+          "path": "/api/manifest",
+          "body": {
+            "name": "system-flow",
+            "key": "sf",
+            "owner": "alex",
+            "description": "Agentic lean project management system",
+            "agent": {
+              "harness": "claude-code",
+              "model": "claude-opus-5-5",
+              "config": {
+                "effort": "high"
+              }
+            },
+            "planning": {
+              "hour_rate": 150,
+              "currency": "USD"
+            },
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        },
+        {
+          "path": "/api/items",
+          "method": "POST",
+          "body": {
+            "item": {
+              "id": "E-0042",
+              "type": "epic",
+              "nature": "feature",
+              "title": "Title",
+              "status": "backlog",
+              "parent": "",
+              "owner": "alex",
+              "created": "2026-10-16T10:10:00Z",
+              "updated": "2026-10-16T10:10:00Z",
+              "transitions": [
+                {
+                  "to": "backlog",
+                  "at": "2026-10-16T10:10:00Z",
+                  "by": "alex"
+                }
+              ],
+              "blocked": [],
+              "estimate": "",
+              "stream": "",
+              "tags": [],
+              "path": "wip/kanban/epics/E-0042-title.md",
+              "archived": false
+            },
+            "committed": true,
+            "commit": "c41d9e0a3b12",
+            "log": [],
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        },
+        {
+          "path": "/api/items/E-0042/move",
+          "method": "POST",
+          "body": {
+            "id": "E-0042",
+            "status": "ready",
+            "warnings": [],
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        }
+      ]
     }
   ]
 }

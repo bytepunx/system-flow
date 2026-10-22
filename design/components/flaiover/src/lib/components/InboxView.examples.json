@@ -77,7 +77,136 @@
           ]
         },
         "writable": true
-      }
+      },
+      "answers": [
+        {
+          "path": "/api/threads/TH-0512/confirm",
+          "method": "POST",
+          "body": {
+            "id": "TH-0512",
+            "title": "Should an example name its theme when it shows both?",
+            "anchor": {
+              "path": "wip/kanban/stories/S-0444-flaiover-s-components-load-its-stylesheet.md",
+              "item": "S-0444"
+            },
+            "status": "answered",
+            "participants": [
+              "agent-S-0444",
+              "orchestrator",
+              "alex"
+            ],
+            "created": "2026-10-16T09:40:00Z",
+            "updated": "2026-10-16T10:02:00Z",
+            "path": "wip/threads/TH-0512-should-an-example-name-its-theme-when-it-shows-both.md",
+            "entries": [
+              {
+                "at": "2026-10-16T09:40:00Z",
+                "author": "agent-S-0444",
+                "recommendation": false,
+                "text": "Should an example name its theme when it shows both? The page can keep what it shows, or the example can say."
+              },
+              {
+                "at": "2026-10-16T09:41:00Z",
+                "author": "orchestrator",
+                "recommendation": true,
+                "text": "Leave the theme out, so the page shows the example in light and dark.\n\nSource: design/system/component-library.md § Examples (S-0443)",
+                "source": {
+                  "path": "design/system/component-library.md",
+                  "heading": "Examples (S-0443)"
+                }
+              },
+              {
+                "at": "2026-10-16T10:02:00Z",
+                "author": "alex",
+                "recommendation": false,
+                "text": "Confirmed orchestrator's recommendation as the answer."
+              }
+            ],
+            "story": "S-0444",
+            "pending_recommendation": null,
+            "warnings": [],
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        },
+        {
+          "path": "/api/streams/S-0445/answer",
+          "method": "POST",
+          "body": {
+            "stream": "S-0445",
+            "updated": "2026-10-16T10:03:00Z",
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        },
+        {
+          "path": "/api/inbox",
+          "method": "GET",
+          "body": {
+            "total": 5,
+            "counts": {
+              "review": 1,
+              "thread": 1,
+              "question": 1,
+              "blocked": 1,
+              "overlap": 1
+            },
+            "entries": [
+              {
+                "key": "review:S-0443",
+                "kind": "review",
+                "title": "S-0443 A component's examples are kept under design/components",
+                "detail": "in review since 2026-10-16",
+                "href": "/review/S-0443",
+                "item": "S-0443",
+                "at": "2026-10-16T08:12:00Z"
+              },
+              {
+                "key": "thread:TH-0509",
+                "kind": "thread",
+                "title": "Which port should the harness use?",
+                "detail": "agent-S-0441 asks, on S-0441",
+                "href": "/items/S-0441?thread=TH-0509",
+                "item": "S-0441",
+                "at": "2026-10-15T17:02:00Z"
+              },
+              {
+                "key": "question:S-0445:width",
+                "kind": "question",
+                "title": "Should the frame's width be saved with an example?",
+                "href": "/items/S-0445?question=question%3AS-0445%3Awidth",
+                "item": "S-0445"
+              },
+              {
+                "key": "blocked:T-1892",
+                "kind": "blocked",
+                "title": "T-1892 Record the harness's screenshots",
+                "detail": "blocked: waiting on the designer",
+                "href": "/items/T-1892",
+                "item": "T-1892"
+              },
+              {
+                "key": "overlap:S-0444:S-0446",
+                "kind": "overlap",
+                "title": "S-0444 and S-0446 both touch flaiover/src/lib/components",
+                "href": "/items/S-0444",
+                "item": "S-0444"
+              }
+            ],
+            "notes": [
+              "The inbox was read at 2026-10-16 10:00 UTC."
+            ],
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        }
+      ]
     },
     {
       "name": "Nothing needs you",

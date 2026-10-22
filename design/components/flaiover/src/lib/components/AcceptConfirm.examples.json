@@ -4,7 +4,25 @@
       "name": "Accepting a story in review",
       "props": {
         "id": "S-0444"
-      }
+      },
+      "answers": [
+        {
+          "path": "/api/items/S-0444/acceptance",
+          "body": {
+            "id": "S-0444",
+            "status": "done",
+            "dry_run": true,
+            "branch": "story/S-0444",
+            "merged": false,
+            "archived": 0,
+            "warnings": [],
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        }
+      ]
     }
   ]
 }

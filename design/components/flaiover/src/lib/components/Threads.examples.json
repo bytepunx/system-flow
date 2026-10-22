@@ -1,0 +1,489 @@
+{
+  "examples": [
+    {
+      "name": "A story's threads",
+      "props": {
+        "on": "S-0444",
+        "writable": true,
+        "story": "S-0444"
+      },
+      "answers": [
+        {
+          "path": "/api/threads?on=S-0444",
+          "method": "GET",
+          "body": [
+            {
+              "id": "TH-0512",
+              "title": "Should an example name its theme when it shows both?",
+              "anchor": {
+                "path": "wip/kanban/stories/S-0444-flaiover-s-components-load-its-stylesheet.md",
+                "item": "S-0444"
+              },
+              "status": "open",
+              "participants": [
+                "agent-S-0444",
+                "orchestrator"
+              ],
+              "created": "2026-10-16T09:40:00Z",
+              "updated": "2026-10-16T09:41:00Z",
+              "path": "wip/threads/TH-0512-should-an-example-name-its-theme-when-it-shows-both.md",
+              "entries": [
+                {
+                  "at": "2026-10-16T09:40:00Z",
+                  "author": "agent-S-0444",
+                  "recommendation": false,
+                  "text": "Should an example name its theme when it shows both? The page can keep what it shows, or the example can say.",
+                  "operator": false
+                },
+                {
+                  "at": "2026-10-16T09:41:00Z",
+                  "author": "orchestrator",
+                  "recommendation": true,
+                  "text": "Leave the theme out, so the page shows the example in light and dark.\n\nSource: design/system/component-library.md § Examples (S-0443)",
+                  "source": {
+                    "path": "design/system/component-library.md",
+                    "heading": "Examples (S-0443)"
+                  },
+                  "operator": false
+                }
+              ],
+              "story": "S-0444",
+              "pending_recommendation": {
+                "at": "2026-10-16T09:41:00Z",
+                "author": "orchestrator",
+                "recommendation": true,
+                "text": "Leave the theme out, so the page shows the example in light and dark.\n\nSource: design/system/component-library.md § Examples (S-0443)",
+                "source": {
+                  "path": "design/system/component-library.md",
+                  "heading": "Examples (S-0443)"
+                },
+                "operator": false
+              }
+            },
+            {
+              "id": "TH-0514",
+              "title": "Is a 375px frame narrow enough for the phone check?",
+              "anchor": {
+                "path": "wip/kanban/stories/S-0444-flaiover-s-components-load-its-stylesheet.md",
+                "item": "S-0444"
+              },
+              "status": "answered",
+              "participants": [
+                "agent-S-0444",
+                "alex"
+              ],
+              "created": "2026-10-16T08:30:00Z",
+              "updated": "2026-10-16T08:52:00Z",
+              "path": "wip/threads/TH-0514-is-a-375px-frame-narrow-enough-for-the-phone-check.md",
+              "entries": [
+                {
+                  "at": "2026-10-16T08:30:00Z",
+                  "author": "agent-S-0444",
+                  "recommendation": false,
+                  "operator": false,
+                  "text": "The examples use `width: 375` for a phone. Is that narrow enough, or should they use 320?"
+                },
+                {
+                  "at": "2026-10-16T08:52:00Z",
+                  "author": "alex",
+                  "recommendation": false,
+                  "operator": true,
+                  "text": "375 is right: it is the narrowest phone we support."
+                }
+              ],
+              "story": "S-0444",
+              "pending_recommendation": null
+            }
+          ]
+        },
+        {
+          "path": "/api/threads?on=S-0444&all=1",
+          "method": "GET",
+          "body": [
+            {
+              "id": "TH-0503",
+              "title": "Where do a component's examples live?",
+              "anchor": {
+                "path": "wip/kanban/stories/S-0444-flaiover-s-components-load-its-stylesheet.md",
+                "item": "S-0444"
+              },
+              "status": "resolved",
+              "participants": [
+                "agent-S-0444",
+                "alex"
+              ],
+              "created": "2026-10-14T10:00:00Z",
+              "updated": "2026-10-14T11:15:00Z",
+              "path": "wip/threads/TH-0503-where-do-a-component-s-examples-live.md",
+              "entries": [
+                {
+                  "at": "2026-10-14T10:00:00Z",
+                  "author": "agent-S-0444",
+                  "recommendation": false,
+                  "operator": false,
+                  "text": "Beside the component, or under `design/components`?"
+                },
+                {
+                  "at": "2026-10-14T11:15:00Z",
+                  "author": "alex",
+                  "recommendation": false,
+                  "operator": true,
+                  "text": "Under `design/components`, mirroring the component's path."
+                }
+              ],
+              "story": "S-0444",
+              "pending_recommendation": null
+            },
+            {
+              "id": "TH-0512",
+              "title": "Should an example name its theme when it shows both?",
+              "anchor": {
+                "path": "wip/kanban/stories/S-0444-flaiover-s-components-load-its-stylesheet.md",
+                "item": "S-0444"
+              },
+              "status": "open",
+              "participants": [
+                "agent-S-0444",
+                "orchestrator"
+              ],
+              "created": "2026-10-16T09:40:00Z",
+              "updated": "2026-10-16T09:41:00Z",
+              "path": "wip/threads/TH-0512-should-an-example-name-its-theme-when-it-shows-both.md",
+              "entries": [
+                {
+                  "at": "2026-10-16T09:40:00Z",
+                  "author": "agent-S-0444",
+                  "recommendation": false,
+                  "text": "Should an example name its theme when it shows both? The page can keep what it shows, or the example can say.",
+                  "operator": false
+                },
+                {
+                  "at": "2026-10-16T09:41:00Z",
+                  "author": "orchestrator",
+                  "recommendation": true,
+                  "text": "Leave the theme out, so the page shows the example in light and dark.\n\nSource: design/system/component-library.md § Examples (S-0443)",
+                  "source": {
+                    "path": "design/system/component-library.md",
+                    "heading": "Examples (S-0443)"
+                  },
+                  "operator": false
+                }
+              ],
+              "story": "S-0444",
+              "pending_recommendation": {
+                "at": "2026-10-16T09:41:00Z",
+                "author": "orchestrator",
+                "recommendation": true,
+                "text": "Leave the theme out, so the page shows the example in light and dark.\n\nSource: design/system/component-library.md § Examples (S-0443)",
+                "source": {
+                  "path": "design/system/component-library.md",
+                  "heading": "Examples (S-0443)"
+                },
+                "operator": false
+              }
+            },
+            {
+              "id": "TH-0514",
+              "title": "Is a 375px frame narrow enough for the phone check?",
+              "anchor": {
+                "path": "wip/kanban/stories/S-0444-flaiover-s-components-load-its-stylesheet.md",
+                "item": "S-0444"
+              },
+              "status": "answered",
+              "participants": [
+                "agent-S-0444",
+                "alex"
+              ],
+              "created": "2026-10-16T08:30:00Z",
+              "updated": "2026-10-16T08:52:00Z",
+              "path": "wip/threads/TH-0514-is-a-375px-frame-narrow-enough-for-the-phone-check.md",
+              "entries": [
+                {
+                  "at": "2026-10-16T08:30:00Z",
+                  "author": "agent-S-0444",
+                  "recommendation": false,
+                  "operator": false,
+                  "text": "The examples use `width: 375` for a phone. Is that narrow enough, or should they use 320?"
+                },
+                {
+                  "at": "2026-10-16T08:52:00Z",
+                  "author": "alex",
+                  "recommendation": false,
+                  "operator": true,
+                  "text": "375 is right: it is the narrowest phone we support."
+                }
+              ],
+              "story": "S-0444",
+              "pending_recommendation": null
+            }
+          ]
+        },
+        {
+          "path": "/api/threads",
+          "method": "POST",
+          "body": {
+            "id": "TH-0515",
+            "title": "Title",
+            "anchor": {
+              "path": "wip/kanban/stories/S-0444-flaiover-s-components-load-its-stylesheet.md",
+              "item": "S-0444"
+            },
+            "status": "open",
+            "participants": [
+              "alex"
+            ],
+            "created": "2026-10-16T10:45:00Z",
+            "updated": "2026-10-16T10:45:00Z",
+            "path": "wip/threads/TH-0515-title.md",
+            "entries": [
+              {
+                "at": "2026-10-16T10:45:00Z",
+                "author": "alex",
+                "recommendation": false,
+                "text": "What you asked."
+              }
+            ],
+            "story": "S-0444",
+            "pending_recommendation": null,
+            "warnings": [],
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        },
+        {
+          "path": "/api/threads/TH-0512/confirm",
+          "method": "POST",
+          "body": {
+            "id": "TH-0512",
+            "title": "Should an example name its theme when it shows both?",
+            "anchor": {
+              "path": "wip/kanban/stories/S-0444-flaiover-s-components-load-its-stylesheet.md",
+              "item": "S-0444"
+            },
+            "status": "answered",
+            "participants": [
+              "agent-S-0444",
+              "orchestrator",
+              "alex"
+            ],
+            "created": "2026-10-16T09:40:00Z",
+            "updated": "2026-10-16T10:02:00Z",
+            "path": "wip/threads/TH-0512-should-an-example-name-its-theme-when-it-shows-both.md",
+            "entries": [
+              {
+                "at": "2026-10-16T09:40:00Z",
+                "author": "agent-S-0444",
+                "recommendation": false,
+                "text": "Should an example name its theme when it shows both? The page can keep what it shows, or the example can say."
+              },
+              {
+                "at": "2026-10-16T09:41:00Z",
+                "author": "orchestrator",
+                "recommendation": true,
+                "text": "Leave the theme out, so the page shows the example in light and dark.\n\nSource: design/system/component-library.md § Examples (S-0443)",
+                "source": {
+                  "path": "design/system/component-library.md",
+                  "heading": "Examples (S-0443)"
+                }
+              },
+              {
+                "at": "2026-10-16T10:02:00Z",
+                "author": "alex",
+                "recommendation": false,
+                "text": "Confirmed orchestrator's recommendation as the answer."
+              }
+            ],
+            "story": "S-0444",
+            "pending_recommendation": null,
+            "warnings": [],
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        },
+        {
+          "path": "/api/threads/TH-0512/reply",
+          "method": "POST",
+          "body": {
+            "id": "TH-0512",
+            "title": "Should an example name its theme when it shows both?",
+            "anchor": {
+              "path": "wip/kanban/stories/S-0444-flaiover-s-components-load-its-stylesheet.md",
+              "item": "S-0444"
+            },
+            "status": "answered",
+            "participants": [
+              "agent-S-0444",
+              "orchestrator",
+              "alex"
+            ],
+            "created": "2026-10-16T09:40:00Z",
+            "updated": "2026-10-16T10:40:00Z",
+            "path": "wip/threads/TH-0512-should-an-example-name-its-theme-when-it-shows-both.md",
+            "entries": [
+              {
+                "at": "2026-10-16T09:40:00Z",
+                "author": "agent-S-0444",
+                "recommendation": false,
+                "text": "Should an example name its theme when it shows both? The page can keep what it shows, or the example can say."
+              },
+              {
+                "at": "2026-10-16T09:41:00Z",
+                "author": "orchestrator",
+                "recommendation": true,
+                "text": "Leave the theme out, so the page shows the example in light and dark.\n\nSource: design/system/component-library.md § Examples (S-0443)",
+                "source": {
+                  "path": "design/system/component-library.md",
+                  "heading": "Examples (S-0443)"
+                }
+              },
+              {
+                "at": "2026-10-16T10:40:00Z",
+                "author": "alex",
+                "recommendation": false,
+                "text": "Agreed: leave it out."
+              }
+            ],
+            "story": "S-0444",
+            "pending_recommendation": null,
+            "warnings": [],
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        },
+        {
+          "path": "/api/threads/TH-0512/resolve",
+          "method": "POST",
+          "body": {
+            "id": "TH-0512",
+            "title": "Should an example name its theme when it shows both?",
+            "anchor": {
+              "path": "wip/kanban/stories/S-0444-flaiover-s-components-load-its-stylesheet.md",
+              "item": "S-0444"
+            },
+            "status": "resolved",
+            "participants": [
+              "agent-S-0444",
+              "orchestrator"
+            ],
+            "created": "2026-10-16T09:40:00Z",
+            "updated": "2026-10-16T10:41:00Z",
+            "path": "wip/threads/TH-0512-should-an-example-name-its-theme-when-it-shows-both.md",
+            "entries": [
+              {
+                "at": "2026-10-16T09:40:00Z",
+                "author": "agent-S-0444",
+                "recommendation": false,
+                "text": "Should an example name its theme when it shows both? The page can keep what it shows, or the example can say."
+              },
+              {
+                "at": "2026-10-16T09:41:00Z",
+                "author": "orchestrator",
+                "recommendation": true,
+                "text": "Leave the theme out, so the page shows the example in light and dark.\n\nSource: design/system/component-library.md § Examples (S-0443)",
+                "source": {
+                  "path": "design/system/component-library.md",
+                  "heading": "Examples (S-0443)"
+                }
+              }
+            ],
+            "story": "S-0444",
+            "pending_recommendation": null,
+            "warnings": [],
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        },
+        {
+          "path": "/api/threads/TH-0514/reply",
+          "method": "POST",
+          "body": {
+            "id": "TH-0514",
+            "title": "Is a 375px frame narrow enough for the phone check?",
+            "anchor": {
+              "path": "wip/kanban/stories/S-0444-flaiover-s-components-load-its-stylesheet.md",
+              "item": "S-0444"
+            },
+            "status": "answered",
+            "participants": [
+              "agent-S-0444",
+              "alex"
+            ],
+            "created": "2026-10-16T08:30:00Z",
+            "updated": "2026-10-16T08:52:00Z",
+            "path": "wip/threads/TH-0514-is-a-375px-frame-narrow-enough-for-the-phone-check.md",
+            "entries": [
+              {
+                "at": "2026-10-16T08:30:00Z",
+                "author": "agent-S-0444",
+                "recommendation": false,
+                "text": "The examples use `width: 375` for a phone. Is that narrow enough, or should they use 320?"
+              },
+              {
+                "at": "2026-10-16T08:52:00Z",
+                "author": "alex",
+                "recommendation": false,
+                "text": "375 is right: it is the narrowest phone we support."
+              }
+            ],
+            "story": "S-0444",
+            "pending_recommendation": null,
+            "warnings": [],
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        },
+        {
+          "path": "/api/threads/TH-0514/resolve",
+          "method": "POST",
+          "body": {
+            "id": "TH-0514",
+            "title": "Is a 375px frame narrow enough for the phone check?",
+            "anchor": {
+              "path": "wip/kanban/stories/S-0444-flaiover-s-components-load-its-stylesheet.md",
+              "item": "S-0444"
+            },
+            "status": "resolved",
+            "participants": [
+              "agent-S-0444",
+              "alex"
+            ],
+            "created": "2026-10-16T08:30:00Z",
+            "updated": "2026-10-16T08:52:00Z",
+            "path": "wip/threads/TH-0514-is-a-375px-frame-narrow-enough-for-the-phone-check.md",
+            "entries": [
+              {
+                "at": "2026-10-16T08:30:00Z",
+                "author": "agent-S-0444",
+                "recommendation": false,
+                "text": "The examples use `width: 375` for a phone. Is that narrow enough, or should they use 320?"
+              },
+              {
+                "at": "2026-10-16T08:52:00Z",
+                "author": "alex",
+                "recommendation": false,
+                "text": "375 is right: it is the narrowest phone we support."
+              }
+            ],
+            "story": "S-0444",
+            "pending_recommendation": null,
+            "warnings": [],
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

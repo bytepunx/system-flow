@@ -1,0 +1,207 @@
+{
+  "examples": [
+    {
+      "name": "A story's conversations",
+      "props": {
+        "story": "S-0444"
+      },
+      "answers": [
+        {
+          "path": "/api/messages?story=S-0444",
+          "body": [
+            {
+              "id": "MS-0101",
+              "title": "T-1891 of S-0444 changed paths S-0446's claim covers",
+              "from": "S-0444",
+              "to": "S-0446",
+              "about": [
+                "flaiover/src/lib/components/AgentDot.svelte"
+              ],
+              "status": "open",
+              "closed": false,
+              "closed_reason": "",
+              "awaiting": "S-0446",
+              "participants": [
+                "agent-S-0444"
+              ],
+              "created": "2026-10-16T09:20:00Z",
+              "updated": "2026-10-16T09:20:00Z",
+              "path": "wip/messages/MS-0101-t-1891-of-s-0444-changed-paths-s-0446-s-claim-covers.md",
+              "entries": [
+                {
+                  "at": "2026-10-16T09:20:00Z",
+                  "author": "agent-S-0444",
+                  "story": "S-0444",
+                  "text": "T-1891 of S-0444 changed `flaiover/src/lib/components/AgentDot.svelte`, which S-0446's claim covers. It reaches the main branch when S-0444 is accepted. Reply here if it breaks your work."
+                }
+              ],
+              "shares": [
+                {
+                  "holder": "S-0444",
+                  "held": "S-0446",
+                  "paths": [
+                    "flaiover/src/lib/components/AgentDot.svelte"
+                  ],
+                  "split": "S-0444 changes the **props**; S-0446 changes only the dot's colours.",
+                  "by": "agent-S-0444",
+                  "at": "2026-10-16T09:18:00Z",
+                  "conversation": "MS-0101"
+                }
+              ]
+            },
+            {
+              "id": "MS-0098",
+              "title": "Which port does the harness take?",
+              "from": "S-0441",
+              "to": "S-0444",
+              "about": [
+                "flai/internal/components/serve.go"
+              ],
+              "status": "open",
+              "closed": false,
+              "closed_reason": "",
+              "awaiting": "S-0444",
+              "participants": [
+                "agent-S-0441",
+                "agent-S-0444"
+              ],
+              "created": "2026-10-15T16:40:00Z",
+              "updated": "2026-10-15T17:02:00Z",
+              "path": "wip/messages/MS-0098-which-port-does-the-harness-take.md",
+              "entries": [
+                {
+                  "at": "2026-10-15T16:40:00Z",
+                  "author": "agent-S-0441",
+                  "story": "S-0441",
+                  "text": "Does S-0444 start its own harness, or use the one S-0441 starts on port 42322?"
+                },
+                {
+                  "at": "2026-10-15T17:02:00Z",
+                  "author": "agent-S-0441",
+                  "story": "S-0441",
+                  "text": "Asked the operator on TH-0509 which port the harness should use."
+                }
+              ],
+              "shares": []
+            }
+          ]
+        },
+        {
+          "path": "/api/messages?story=S-0444&all=1",
+          "body": [
+            {
+              "id": "MS-0101",
+              "title": "T-1891 of S-0444 changed paths S-0446's claim covers",
+              "from": "S-0444",
+              "to": "S-0446",
+              "about": [
+                "flaiover/src/lib/components/AgentDot.svelte"
+              ],
+              "status": "open",
+              "closed": false,
+              "closed_reason": "",
+              "awaiting": "S-0446",
+              "participants": [
+                "agent-S-0444"
+              ],
+              "created": "2026-10-16T09:20:00Z",
+              "updated": "2026-10-16T09:20:00Z",
+              "path": "wip/messages/MS-0101-t-1891-of-s-0444-changed-paths-s-0446-s-claim-covers.md",
+              "entries": [
+                {
+                  "at": "2026-10-16T09:20:00Z",
+                  "author": "agent-S-0444",
+                  "story": "S-0444",
+                  "text": "T-1891 of S-0444 changed `flaiover/src/lib/components/AgentDot.svelte`, which S-0446's claim covers. It reaches the main branch when S-0444 is accepted. Reply here if it breaks your work."
+                }
+              ],
+              "shares": [
+                {
+                  "holder": "S-0444",
+                  "held": "S-0446",
+                  "paths": [
+                    "flaiover/src/lib/components/AgentDot.svelte"
+                  ],
+                  "split": "S-0444 changes the **props**; S-0446 changes only the dot's colours.",
+                  "by": "agent-S-0444",
+                  "at": "2026-10-16T09:18:00Z",
+                  "conversation": "MS-0101"
+                }
+              ]
+            },
+            {
+              "id": "MS-0098",
+              "title": "Which port does the harness take?",
+              "from": "S-0441",
+              "to": "S-0444",
+              "about": [
+                "flai/internal/components/serve.go"
+              ],
+              "status": "open",
+              "closed": false,
+              "closed_reason": "",
+              "awaiting": "S-0444",
+              "participants": [
+                "agent-S-0441",
+                "agent-S-0444"
+              ],
+              "created": "2026-10-15T16:40:00Z",
+              "updated": "2026-10-15T17:02:00Z",
+              "path": "wip/messages/MS-0098-which-port-does-the-harness-take.md",
+              "entries": [
+                {
+                  "at": "2026-10-15T16:40:00Z",
+                  "author": "agent-S-0441",
+                  "story": "S-0441",
+                  "text": "Does S-0444 start its own harness, or use the one S-0441 starts on port 42322?"
+                },
+                {
+                  "at": "2026-10-15T17:02:00Z",
+                  "author": "agent-S-0441",
+                  "story": "S-0441",
+                  "text": "Asked the operator on TH-0509 which port the harness should use."
+                }
+              ],
+              "shares": []
+            },
+            {
+              "id": "MS-0090",
+              "title": "T-1880 of S-0440 changed paths S-0444's claim covers",
+              "from": "S-0440",
+              "to": "S-0444",
+              "about": [
+                "flaiover/src/lib/explorer/props.ts"
+              ],
+              "status": "open",
+              "closed": true,
+              "closed_reason": "S-0440 was accepted",
+              "awaiting": "",
+              "participants": [
+                "agent-S-0440",
+                "agent-S-0444"
+              ],
+              "created": "2026-10-14T12:00:00Z",
+              "updated": "2026-10-14T12:30:00Z",
+              "path": "wip/messages/MS-0090-t-1880-of-s-0440-changed-paths-s-0444-s-claim-covers.md",
+              "entries": [
+                {
+                  "at": "2026-10-14T12:00:00Z",
+                  "author": "agent-S-0440",
+                  "story": "S-0440",
+                  "text": "T-1880 of S-0440 changed `flaiover/src/lib/explorer/props.ts`."
+                },
+                {
+                  "at": "2026-10-14T12:10:00Z",
+                  "author": "agent-S-0444",
+                  "story": "S-0444",
+                  "text": "This doesn't break S-0444."
+                }
+              ],
+              "shares": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

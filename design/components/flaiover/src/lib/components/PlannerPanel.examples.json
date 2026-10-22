@@ -80,7 +80,90 @@
             }
           ]
         }
-      }
+      },
+      "answers": [
+        {
+          "path": "/api/agent-stream/S-0446?plan",
+          "body": {
+            "story": "",
+            "item": "S-0446",
+            "agent": "planner",
+            "started": "2026-10-16T09:41:00Z",
+            "running": true,
+            "from": 0,
+            "next": 3310,
+            "size": 3310,
+            "entries": [
+              {
+                "kind": "session",
+                "text": "session started (claude-opus-5-5)"
+              },
+              {
+                "kind": "tool",
+                "tool": "mcp__flai__item_get",
+                "text": "{\"id\":\"S-0446\"}"
+              },
+              {
+                "kind": "result",
+                "text": "S-0446 The board's cards show their agent's dot"
+              },
+              {
+                "kind": "text",
+                "text": "S-0446 needs two tasks: the dot on the card, and its examples."
+              },
+              {
+                "kind": "tool",
+                "tool": "mcp__flai__item_new",
+                "text": "type=\"task\" story=\"S-0446\" title=\"The card shows its agent's dot\""
+              },
+              {
+                "kind": "result",
+                "text": "T-1895"
+              }
+            ],
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        },
+        {
+          "path": "/api/agent-stream/S-0446?plan&after=3310",
+          "body": {
+            "story": "",
+            "item": "S-0446",
+            "agent": "planner",
+            "started": "2026-10-16T09:41:00Z",
+            "running": true,
+            "from": 3310,
+            "next": 3310,
+            "size": 3310,
+            "entries": [],
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        },
+        {
+          "path": "/api/items/S-0447/plan",
+          "method": "POST",
+          "body": {
+            "item": "S-0447",
+            "agent": "planner",
+            "harness": "claude",
+            "command": "claude",
+            "pid": 52190,
+            "log": "/home/alex/.flai/serve/agents/sf-planner-20261016T103000Z.log",
+            "session": "",
+            "started": "2026-10-16T10:30:00Z",
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        }
+      ]
     },
     {
       "name": "The plan action off",

@@ -4,7 +4,45 @@
       "name": "Cancelling a story",
       "props": {
         "id": "S-0444"
-      }
+      },
+      "answers": [
+        {
+          "path": "/api/items/S-0444/move",
+          "method": "POST",
+          "body": {
+            "id": "S-0444",
+            "status": "cancelled",
+            "dry_run": true,
+            "cancelled": [
+              {
+                "id": "T-1891",
+                "type": "task",
+                "title": "Write examples for the agents' components",
+                "from": "in-progress"
+              },
+              {
+                "id": "T-1892",
+                "type": "task",
+                "title": "Record the harness's screenshots",
+                "from": "ready"
+              }
+            ],
+            "left_behind": [
+              {
+                "id": "S-0444",
+                "narrative": "wip/agents/S-0444.md",
+                "branch": "story/S-0444",
+                "worktree": ".flai-cache/worktrees/S-0444"
+              }
+            ],
+            "warnings": [],
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        }
+      ]
     }
   ]
 }

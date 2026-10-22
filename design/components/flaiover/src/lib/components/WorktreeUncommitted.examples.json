@@ -9,7 +9,26 @@
           "flaiover/src/lib/components/BoardCard.svelte",
           "design/components/flaiover/src/lib/components/BoardCard.examples.json"
         ]
-      }
+      },
+      "answers": [
+        {
+          "path": "/api/items/S-0444/agent",
+          "method": "POST",
+          "body": {
+            "story": "S-0444",
+            "agent": "agent-S-0444",
+            "harness": "claude",
+            "command": "claude",
+            "pid": 48733,
+            "log": "/home/alex/.flai/serve/agents/sf-S-0444-20261016T104800Z.log",
+            "started": "2026-10-16T10:48:00Z",
+            "project": {
+              "name": "system-flow",
+              "key": "sf"
+            }
+          }
+        }
+      ]
     }
   ]
 }
