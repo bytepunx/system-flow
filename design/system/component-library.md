@@ -145,7 +145,8 @@ The harness at `/__flai/components/` imports the `setup` module, posts `ready`, 
 
 - **Only what the page selects (S-0449).** Framed, with `?origin=`, the harness does not mount `?c=`. The page sends `select` on every `ready`, so a frame that reloads shows the component the page has picked, not the one its URL first named. A `props` message that comes while a `select` is still importing its component is kept, and the component mounts with it.
 - **Nothing of the component before.** A `select` unmounts the component, then empties `#flai-component` and removes from the body whatever was added to it after the `setup` module ran, such as a portal. What a mount that threw had rendered goes with it.
-- **The app's own requests (S-0449).** Framed, the harness answers a component's requests to the app's own server itself, so none reaches the dev server's server code, which would answer 500 with no dashboard token and no host channel ([ADR-0172](../adrs/0172-the-component-harness-answers-a-framed-component-s-requests-to-the-app-s-own.md)). It replaces `fetch`, `EventSource`, and `WebSocket` before the `setup` module runs. A request is the app's when it goes to the dev server's origin and is none of these: a path under `/@`, `/__`, or `/node_modules/`, Vite's ping, or a path whose last segment has a file extension, such as a module or an asset. A `fetch` of the app's is answered 501 Not Implemented, with a JSON body `{"error": "flai's component harness does not answer the app's own requests: <METHOD> <path>"}`. An `EventSource` of the app's opens no connection: it fires `error` and is closed. A `WebSocket` is the app's by the same rule, its `ws:` or `wss:` read as `http:` or `https:`, unless it asks for one of Vite's own subprotocols, such as `vite-hmr` or `vite-ping`, which Vite's client opens on the base path, so that hot updates still reach the harness ([ADR-0182](../adrs/0182-the-dashboard-s-live-events-reach-the-browser-over-a-websocket.md)). A `WebSocket` of the app's opens no connection either: it fires `error`, then `close` with code 1006 and `wasClean` false, as a refused one does, and is closed. Each posts an `event` of the component last selected, named `fetch` with the method and the path, or `EventSource` or `WebSocket` with the path and its query. Every other request goes through, as does every request when the harness is opened directly. `XMLHttpRequest`, `sendBeacon`, and a form's submission are not covered; no flaiover component uses them.
+- **The app's own requests (S-0449).** Framed, the harness answers a component's requests to the app's own server itself, so none reaches the dev server's server code, which would answer 500 with no dashboard token and no host channel ([ADR-0172](../adrs/0172-the-component-harness-answers-a-framed-component-s-requests-to-the-app-s-own.md)). It replaces `fetch`, `EventSource`, and `WebSocket` before the `setup` module runs. A request is the app's when it goes to the dev server's origin and is none of these: a path under `/@`, `/__`, or `/node_modules/`, Vite's ping, or a path whose last segment has a file extension, such as a module or an asset. A `fetch` of the app's is answered 501 Not Implemented, with a JSON body `{"error": "flai's component harness does not answer the app's own requests: <METHOD> <path>"}`. An `EventSource` of the app's opens no connection: it fires `error` and is closed. A `WebSocket` is the app's by the same rule, its `ws:` or `wss:` read as `http:` or `https:`, unless it asks for one of Vite's own subprotocols, such as `vite-hmr` or `vite-ping`, which Vite's client opens on the base path, so that hot updates still reach the harness ([ADR-0182](../adrs/0182-the-dashboard-s-live-events-reach-the-browser-over-a-websocket.md)). A `WebSocket` of the app's opens no connection either: it fires `error`, then `close` with code 1006 and `wasClean` false, as a refused one does, and is closed. Each posts an `event` of the component last selected, named `fetch` with the method, the path, and the status it got, or `EventSource` with the path and 200 or 501, or `WebSocket` with the path, each path with its query. Every other request goes through, as does every request when the harness is opened directly. `XMLHttpRequest`, `sendBeacon`, and a form's submission are not covered; no flaiover component uses them.
+- **Answered from the example (S-0476).** A `fetch` or an `EventSource` of the app's that one of the answers the last `select` or `props` message carried matches is answered from it instead ([Answers](#answers), [ADR-0187](../adrs/0187-an-example-may-carry-the-answers-the-component-harness-gives-a-framed-component.md)). The `fetch` resolves, after the current task, with a `Response` of the answer's status, headers, and body, and its `event` carries that status. The `EventSource` opens no connection: after the current task it fires `open`, with `readyState` 1, then a `MessageEvent` for each of the answer's events, of its `event` name, `data`, and `lastEventId`, each in a task of its own, and stays open until the component closes it; its `event` carries 200. A `WebSocket` is never answered from an example.
 - **The margin.** `#flai-component` has 10px of padding, and the body none, so the component sits 10px from each edge of the frame.
 - **SvelteKit.** The plugin adds its middleware directly in `configureServer`, not in a hook it returns, so the harness page is answered before SvelteKit's router, which answers every other path.
 - **Virtual modules.** The page's script, the error boundary (`Frame.svelte`), and the catalogue are modules no file backs: `virtual:flai-components/harness.mjs`, `virtual:flai-components/Frame.svelte`, and `virtual:flai-components`. So `svelte` and every other import resolve from the sub-project, not from `.flai-cache`. The catalogue maps each component's path to a function that imports it, found as `flai components list` finds them.
@@ -171,8 +172,8 @@ The dashboard frames the harness cross-origin and talks to it by `postMessage`. 
 
 | From | Type | Fields | Meaning |
 |------|------|--------|---------|
-| page | `select` | `component`, `props?`, `functions?`, `snippets?` | Mount this component, by its path in the sub-project, with these props. |
-| page | `props` | `props`, `functions?`, `snippets?` | Set the mounted component's props without remounting it. Each name in `functions` gets a logger that posts `event`; each name in `snippets` with a string value is rendered as a snippet of that text. |
+| page | `select` | `component`, `props?`, `functions?`, `snippets?`, `answers?` | Mount this component, by its path in the sub-project, with these props. |
+| page | `props` | `props`, `functions?`, `snippets?`, `answers?` | Set the mounted component's props without remounting it. Each name in `functions` gets a logger that posts `event`; each name in `snippets` with a string value is rendered as a snippet of that text. `answers` are what the harness answers the app's requests with ([Answers](#answers)). |
 | page | `theme` | `theme` | Set `data-theme` on the document to `light` or `dark`. |
 | page | `tokens` | `light`, `dark` | Lay these CSS custom properties over the stylesheet's, under `:root` and `[data-theme='dark']`, in place of the last message's; empty objects clear them. |
 | harness | `ready` | `component?` | The harness has loaded and its `setup` module has run. |
@@ -184,6 +185,7 @@ The dashboard frames the harness cross-origin and talks to it by `postMessage`. 
 `select` takes `functions` and `snippets` as `props` does, so that a component that calls a function prop, or renders a snippet, as it mounts already has it. ADR-0163's table names `functions` on `props` only, and `snippets` nowhere; S-0440 added them.
 
 - **A props message is whole.** It carries every prop the page sets, not a change. The harness spreads them over the mounted component, which takes them in place, without a remount, and keeps its own state. A prop left out falls back to its default.
+- **Answers are whole too (S-0476).** A `select` or `props` message's `answers` replace the last message's, for the requests made after it; a message without them leaves none, so every request of the app's gets 501. An `answers` that is not an array is taken as none. The harness reads each answer as the check would have it ([Answers](#answers)) and passes over one it cannot use, such as one without a `path`.
 - **Loggers.** Each name in `functions` is given a logger. A call posts `event` with the component, the prop's name, and each argument as JSON, or as far as JSON carries it: an Event as `{type, detail?}`, a DOM node as `<tag>`, a function as `[function name]` or `[function anonymous]`, and a cycle cut off.
 - **Snippets.** Each name in `snippets` whose value is a string is rendered as a snippet of that text, made with Svelte's `createRawSnippet`: a `<span>` holding the text as text, not markup. A listed name without a string value is passed as it is; a string not listed is passed as a plain string.
 - **Identity.** Loggers and snippets keep their identity between props messages: a logger is the same function each time, and a snippet the same while its text is.
@@ -255,6 +257,7 @@ The file is JSON, an exception to "Everything is markdown" as the token file is 
 | `props` | object, prop name to JSON value | yes, may be `{}` | The props, as the panel sends them ([Controls for props](#controls-for-props-s-0440)): a snippet's text, no function prop. |
 | `theme` | `"light"` or `"dark"` | no | The one theme the page shows. Absent, the page keeps what it shows. |
 | `width` | integer, 1 or more | no | The frame's width in CSS pixels. Absent, the page keeps what it shows. |
+| `answers` | array of answers | no | What the harness answers the component's requests to the app's own server with, since S-0476 ([Answers](#answers)). Absent, every such request gets the harness's 501. |
 
 ```json
 {
@@ -269,7 +272,36 @@ The file is JSON, an exception to "Everything is markdown" as the token file is 
 }
 ```
 
-The page writes the file with two-space indentation and a final newline. It writes `theme` when it shows one theme, not both, and `width` when a width is picked, not the panel's own.
+The page writes the file with two-space indentation and a final newline. It writes `theme` when it shows one theme, not both, `width` when a width is picked, not the panel's own, and `answers` when the example has any.
+
+#### Answers
+
+An example's `answers` let a component that asks the app's server be shown in its answered state ([ADR-0187](../adrs/0187-an-example-may-carry-the-answers-the-component-harness-gives-a-framed-component.md), refining ADR-0172). The harness answers a framed component's `fetch` or `EventSource` to the app's own server from them ([The harness](#the-harness)). Each answer has these keys and no others:
+
+| Key | Type | Required | Meaning |
+|-----|------|----------|---------|
+| `path` | string starting with `/` | yes | The request's path, with its query when the answer is for that query alone. |
+| `method` | string, an HTTP method | no | Compared without case. Absent, the answer matches every method. |
+| `status` | integer, 200 to 599 | no | The fetch's status, 200 when absent. |
+| `headers` | object, name to string | no | The fetch's response headers. |
+| `body` | any JSON value | no | The fetch's body: a string as it is, with `content-type: text/plain; charset=utf-8`, anything else as JSON, with `content-type: application/json`, unless `headers` names a `content-type`. Absent, the body is empty, as it must be with status 204, 205, or 304. |
+| `events` | array of `{event?, data, id?}` | no | Makes it an `EventSource`'s answer: the messages it sends, in order. `data` is sent as it is when a string, as JSON otherwise; `event` absent is `message`. It takes no `status`, `headers`, or `body`, and no `method` but `GET`. |
+
+- **Which answer.** A `fetch` matches the answers without `events`, an `EventSource` those with them. Of those, the first in the example's order whose `method` matches and whose `path` is the request's path with its query wins; when none is, the first whose `path` has no query and is the request's path without it.
+- **None matches.** The request gets the harness's answer of ADR-0172, a 501 or an `error`.
+- **Fixtures.** Answers are not checked against the app's routes. A story that changes what a route answers changes the examples that copy it, as one that changes a component's props changes its examples ([design/components/README.md](../components/README.md)).
+
+```json
+{
+  "name": "Two threads",
+  "props": { "item": "S-0001" },
+  "answers": [
+    { "path": "/api/threads?item=S-0001", "body": { "threads": [] } },
+    { "path": "/api/threads", "method": "POST", "status": 201, "body": { "id": "TH-0002" } },
+    { "path": "/api/events", "events": [{ "event": "change", "data": { "kind": "edited" } }] }
+  ]
+}
+```
 
 ### In the catalogue
 
@@ -280,7 +312,7 @@ The page writes the file with two-space indentation and a final newline. It writ
 | `examples` | Its file's examples, in the file's order; `[]` when it has no file |
 | `examples_path` | Its file's path in the repository, given whether or not the file exists, so the page knows where a first example goes |
 
-A file that does not fit the format gives the examples that parsed, with `props` `{}` where they are not an object; `flai check` reports what does not fit. A file that cannot be read fails the list. The text output adds `(N examples)` after a component that has any. Reading examples needs no `node`.
+Each example is as the file has it, `answers` among its keys when it has them. A file that does not fit the format gives the examples that parsed, with `props` `{}` where they are not an object, and `answers` left out where they are not an array; `flai check` reports what does not fit. A file that cannot be read fails the list. The text output adds `(N examples)` after a component that has any. Reading examples needs no `node`.
 
 ### Saving one
 
@@ -290,6 +322,8 @@ The page saves through `file.save`, on main or on the story its source names. `d
 
 The Components page lists the picked component's examples above the props panel. Choosing one loads its props into the panel, and its theme and width when it gives them; the URL follows, as for any change of props. **Save as example** asks for a name, starting from the example last chosen, says when the name is one the file has, and saves the panel's props as that example, with the theme and width as [The file](#the-file) says. An example of the same name is replaced in its place; a new one goes last. The save goes on main, or on the story the source picker names ([Sources](#sources)). A conflict or a refusal is shown with flai's words and its findings, and the name and the panel's values are kept. **Save as example** is offered only when the catalogue gives `examples_path`.
 
+**Answers (S-0476).** Under the examples, an **Answers** panel holds the answers the page sends the harness, as a JSON editor of the array ([Answers](#answers)). Choosing an example loads its answers, or empties the panel when it has none; picking another component empties it. The page sends the answers with every `select` and `props` message, so an edit reaches the harness at once, for the requests the component makes after it. Text that does not parse, or is not an array, is shown with its error, and nothing is sent meanwhile, as for a prop's JSON editor. The answers are not kept in the URL, since they can be large. **Save as example** saves the panel's answers with the props, and leaves `answers` out when the panel is empty.
+
 The page saves through `PUT /api/components/examples`. The route finds the file by `examples_path` in `components.list` for the source. When the catalogue gives the component examples, it reads the file and its hash with `file.get` and saves with that hash. When it gives none, it creates the file with an empty hash; if the file exists after all, flai's conflict gives its content and hash, and the route adds the example to that and saves once more. [flaiover-dashboard.md § API](flaiover-dashboard.md#api-s-0011) gives its answers.
 
 ### The check
@@ -297,6 +331,7 @@ The page saves through `PUT /api/components/examples`. The route finds the file 
 `flai check` reports `components.examples`, a warning, which `flai check --strict` fails on, for:
 
 - a file that does not parse as JSON or does not fit the format: a key it does not name, an empty or repeated `name`, `props` that is not an object, a `theme` that is not `light` or `dark`, a `width` that is not a positive integer;
+- an `answers` that does not fit [Answers](#answers): not an array, an answer that is not an object or has a key the table does not name, a `path` missing or not starting with `/`, a `method` that is not an HTTP method's letters, a `status` that is not an integer from 200 to 599, `headers` that are not an object of strings, a `body` with status 204, 205, or 304, `events` that are not an array of objects with `data` and only a string `event` and `id` beside it, or `events` with `status`, `headers`, `body`, or a `method` other than `GET`;
 - an example that names a prop its component lacks, misses a required prop that is not a function, or gives a value that does not fit its prop's kind;
 - a file whose component does not exist: no supported sub-project of that name, or no component at that path in its catalogue;
 - a file whose component's props flai could not read for any other reason, once, with the reader's error.

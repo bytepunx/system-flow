@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.108 - 2026-10-22
+
+- S-0476 A component's example may carry `answers`, so the component harness answers a framed component's requests to the app's own server from them (patch, ADR-0187): `design/components/README.md` says each example may carry the `answers` the harness gives the component's requests to the app's own server, as fixtures not checked against the app's routes, and that a story that changes what a route answers edits the examples' answers that copy it. Checking answers and answering from them need a flai that has them, the release that carries S-0476; an older flai's `flai check` reports `answers` as a key it does not name.
+
 ## 1.0.107 - 2026-10-21
 
 - S-0464 The merge queue's batch runs smoke with no CLOSE_OUT_STORY, so scripts/check.sh runs an unscoped flai check --strict and fails every batch on findings outside its stories (patch).
