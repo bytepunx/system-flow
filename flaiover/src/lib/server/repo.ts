@@ -318,6 +318,34 @@ export type ComponentExample = {
 	theme?: 'light' | 'dark';
 	/** The frame's width in CSS pixels; absent, the page keeps the width it shows. */
 	width?: number;
+	/** What the harness answers the component's requests to the app's own server with, in the order
+	 * it tries them (S-0476, ADR-0187); absent, every such request gets the harness's 501. */
+	answers?: ComponentAnswer[];
+};
+
+/** One answer an example gives a framed component's fetch, or with events its EventSource, to the
+ * app's own server (ADR-0187). flai check's components.examples holds it to the format. */
+export type ComponentAnswer = {
+	/** The request's path, starting with /, with its query when it answers that query alone. */
+	path: string;
+	/** An HTTP method, compared without case; absent, it matches every method. */
+	method?: string;
+	/** The fetch's status, 200 to 599; 200 when absent. */
+	status?: number;
+	/** The fetch's response headers, name to value. */
+	headers?: Record<string, string>;
+	/** The fetch's body: a string sent as it is, anything else as JSON; absent, empty. */
+	body?: unknown;
+	/** Makes it an EventSource's answer: the messages it sends, in order. */
+	events?: ComponentAnswerEvent[];
+};
+
+/** One message an answered EventSource sends: data as it is when a string, as JSON otherwise. */
+export type ComponentAnswerEvent = {
+	/** The event's name; absent, message. */
+	event?: string;
+	data: unknown;
+	id?: string;
 };
 
 /** One sub-project of the manifest in the catalogue; only a supported one has components. */

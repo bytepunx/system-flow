@@ -1,6 +1,12 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AgentError } from '$lib/server/agent';
-import { Repo, useRepo, type Ask, type ComponentExample } from '$lib/server/repo';
+import {
+	Repo,
+	useRepo,
+	type Ask,
+	type ComponentAnswer,
+	type ComponentExample
+} from '$lib/server/repo';
 
 // /api/components/examples adds an example to a component's examples file, or replaces the one of
 // its name, through flai's file.get and file.save (S-0443, ADR-0164), against a stubbed host.
@@ -11,6 +17,11 @@ const FILE = 'design/components/web/src/lib/components/Card.examples.json';
 const HASH = 'a'.repeat(64);
 const SAVED = 'b'.repeat(64);
 const LONG: ComponentExample = { name: 'Long title', props: { title: 'A long one' } };
+// ADR-0187's answers: a fetch's and an EventSource's
+const ANSWERS: ComponentAnswer[] = [
+	{ path: '/api/threads?item=S-0001', body: { threads: [] } },
+	{ path: '/api/events', events: [{ event: 'change', data: { kind: 'edited' } }] }
+];
 
 const catalogue = (examples: ComponentExample[] | undefined, path: string | null = FILE) => ({
 	projects: [
@@ -135,6 +146,38 @@ describe('/api/components/examples (S-0443)', () => {
 		]);
 	});
 
+	it('keeps the answers a saved example carries, after its other keys (S-0476)', async () => {
+		serve(catalogue([]));
+		const answered = { name: 'Answered', props: {}, answers: ANSWERS, width: 375 };
+		const r = await put(body(answered));
+		expect(r.status).toBe(200);
+		const example = { name: 'Answered', props: {}, width: 375, answers: ANSWERS };
+		expect((await r.json()).examples).toEqual([example]);
+		expect(saved().content).toBe(JSON.stringify({ examples: [example] }, null, 2) + '\n');
+	});
+
+	it('writes an example without answers, or with none, without the key (S-0476)', async () => {
+		serve(catalogue([]));
+		await put(body(LONG));
+		await put(body({ ...LONG, answers: [] }));
+		for (const i of [0, 1]) {
+			expect(JSON.parse(saved(i).content as string)).toEqual({ examples: [LONG] });
+			expect(saved(i).content).not.toContain('answers');
+		}
+	});
+
+	it("keeps another example's answers when one is saved (S-0476)", async () => {
+		const answered = { name: 'Answered', props: {}, answers: ANSWERS };
+		serve(catalogue([answered, LONG]));
+		const content = JSON.stringify({ examples: [answered, LONG] });
+		script['file.get'] = [{ data: { path: FILE, content, hash: HASH } }];
+		const changed = { name: 'Long title', props: { title: 'Longer still' } };
+		const r = await put(body(changed));
+		expect(r.status).toBe(200);
+		expect((await r.json()).examples).toEqual([answered, changed]);
+		expect(JSON.parse(saved().content as string).examples).toEqual([answered, changed]);
+	});
+
 	it('adds to a file that holds no examples once the create finds it, with its hash', async () => {
 		serve(catalogue([]));
 		script['file.save'] = [
@@ -212,6 +255,7 @@ describe('/api/components/examples (S-0443)', () => {
 			body({ name: 'x', props: {}, theme: 'blue' }),
 			body({ name: 'x', props: {}, width: 0 }),
 			body({ name: 'x', props: {}, width: 1.5 }),
+			body({ name: 'x', props: {}, answers: ANSWERS[0] }),
 			body(LONG, { story: 'main' })
 		];
 		for (const b of bodies) expect((await put(b)).status, JSON.stringify(b)).toBe(400);

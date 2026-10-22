@@ -1,4 +1,10 @@
-import { repo, RepoError, storyParam, type ComponentExample } from '$lib/server/repo';
+import {
+	repo,
+	RepoError,
+	storyParam,
+	type ComponentAnswer,
+	type ComponentExample
+} from '$lib/server/repo';
 import { respond } from '$lib/server/respond';
 import type { RequestHandler } from './$types';
 
@@ -7,8 +13,9 @@ type SaveBody = { project?: unknown; component?: unknown; example?: unknown; sto
 const isObject = (v: unknown): v is Record<string, unknown> =>
 	typeof v === 'object' && v !== null && !Array.isArray(v);
 
-/** The example the body gives, with ADR-0164's keys in its order and no others; 400 when it does
- * not fit the format. */
+/** The example the body gives, with ADR-0164's keys and ADR-0187's answers in its order and no
+ * others, answers left out when there are none; 400 when it does not fit the format. The answers
+ * need only be an array: flai check's components.examples holds each to the format on save. */
 function exampleOf(v: unknown): ComponentExample {
 	if (!isObject(v) || typeof v.name !== 'string' || !v.name.trim() || !isObject(v.props))
 		throw new RepoError(400, 'example needs a name that is not empty and props, an object');
@@ -16,11 +23,16 @@ function exampleOf(v: unknown): ComponentExample {
 		throw new RepoError(400, `example's theme is light or dark, or left out, not ${v.theme}`);
 	if (v.width !== undefined && !(Number.isInteger(v.width) && (v.width as number) >= 1))
 		throw new RepoError(400, `example's width is a whole number of pixels, 1 or more, or left out`);
+	if (v.answers !== undefined && !Array.isArray(v.answers))
+		throw new RepoError(400, `example's answers are an array, or left out`);
 	return {
 		name: v.name.trim(),
 		props: v.props,
 		...(v.theme ? { theme: v.theme } : {}),
-		...(v.width !== undefined ? { width: v.width as number } : {})
+		...(v.width !== undefined ? { width: v.width as number } : {}),
+		...(Array.isArray(v.answers) && v.answers.length
+			? { answers: v.answers as ComponentAnswer[] }
+			: {})
 	};
 }
 
@@ -41,7 +53,8 @@ function examplesIn(path: string, content: string): unknown[] {
 	return parsed.examples;
 }
 
-/** examples with example in place of the one of its name, else after them. */
+/** examples with example in place of the one of its name, else after them; the others are kept
+ * as the file writes them, answers and all. */
 function withExample(examples: unknown[], example: ComponentExample): unknown[] {
 	const named = (e: unknown) => isObject(e) && e.name === example.name;
 	return examples.some(named)
@@ -71,15 +84,16 @@ async function examplesFile(project: string, component: string, story?: string) 
 }
 
 /**
- * PUT /api/components/examples { project, component, example: { name, props, theme?, width? },
- * story? }: adds the example to the component's examples file, or replaces the one of its name, and
- * saves it through flai's file.save on the host (S-0443, ADR-0164): on the main checkout, or on the
- * story's branch when story names one. project is the sub-project's manifest name and component its
- * path in the sub-project; the file is the one components.list names. When the catalogue gives the
- * component examples, the file and its hash are read afresh through file.get; else the file is
- * created with an empty hash, and when it exists after all, holding none, flai's conflict gives its
- * content and hash and the example is added to that, once. The file is written as JSON with
- * two-space indentation and a final newline.
+ * PUT /api/components/examples { project, component, example: { name, props, theme?, width?,
+ * answers? }, story? }: adds the example to the component's examples file, or replaces the one of
+ * its name, and saves it through flai's file.save on the host (S-0443, ADR-0164; answers since
+ * S-0476, ADR-0187): on the main checkout, or on the story's branch when story names one. project
+ * is the sub-project's manifest name and component its path in the sub-project; the file is the one
+ * components.list names. When the catalogue gives the component examples, the file and its hash are
+ * read afresh through file.get; else the file is created with an empty hash, and when it exists
+ * after all, holding none, flai's conflict gives its content and hash and the example is added to
+ * that, once. The file is written as JSON with two-space indentation and a final newline, with
+ * answers only when the example has any; the other examples are written as the file held them.
  * Answers file.save's { path, hash, committed, … } with the file's examples and the log. 400 for a
  * malformed body; 404 for a component the catalogue lacks; 409 { error, current, hash, diff } when
  * the file changed between the read and the save; 422 { error, findings } when flai refuses the
