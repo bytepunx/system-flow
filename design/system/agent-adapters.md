@@ -1,6 +1,6 @@
 ---
 title: Agent adapters for LiteLLM and OpenRouter
-updated: 2026-10-21
+updated: 2026-10-22
 status: active
 topics: [cli, template]
 ---
@@ -102,7 +102,7 @@ The template ships five agent definitions in `template/root/.claude/agents/`, co
 
 The `tools` list is an allowlist in Claude Code's vocabulary, built-in names and `mcp__flai__*` names, and the `model` is a Claude Code alias (`haiku`, `sonnet`) or `inherit`. The explorer and verifier run as Claude Code sub-agents inside the story's session, started by the Agent tool; `flai serve` passes their definitions as `--agents` with the story's role model laid over them (ADR-0065). The three strategic agents are sessions of their own that `flai serve` starts with `--agent planner`, `--agent orchestrator`, or `--agent analyzer`, so the definition is the source of their tools and instructions (`claudeCodeStrategic` in `flai/internal/harness/adapters.go`).
 
-The `tools` line also tells the guard which sub-agents are read-only ([ADR-0141](../adrs/0141-flai-guard-refuses-a-read-only-sub-agent-a-shell-command-that-writes-a-file.md)). A sub-agent whose definition names neither `Edit` nor `Write`, as the explorer and verifier do, and Claude Code's built-in `Explore` and `Plan`, are refused a shell command that writes a file outside the temporary folder. A task sub-agent, `general-purpose`, and a definition the guard cannot read or with no `tools` line still write through the shell.
+The `tools` line also tells the guard which sub-agents are read-only ([ADR-0141](../adrs/0141-flai-guard-refuses-a-read-only-sub-agent-a-shell-command-that-writes-a-file.md)). A sub-agent whose definition names neither `Edit` nor `Write`, as the explorer and verifier do, and Claude Code's built-in `Explore` and `Plan`, are refused a shell command that writes a file outside the temporary folder, and `flai components serve`, which writes under `.flai-cache` and may install a worktree's dependencies; every sub-agent may run `flai components list` ([ADR-0186](../adrs/0186-flai-guard-lets-every-agent-run-flai-components-list-and-a-story-s-task-sub.md)). A task sub-agent, `general-purpose`, and a definition the guard cannot read or with no `tools` line still write through the shell.
 
 The conventions lean on the Agent tool directly. [delegation.md](../conventions/delegation.md) tells a story's agent to launch each task sub-agent in the foreground, "in Claude Code, the Agent tool's `run_in_background` set to false", to name the task's ID in the Agent tool's `description` so that usage is apportioned, and to "use a fork, which inherits your conversation, where the harness offers one". A sub-agent is told apart from its parent in the log by `parent_tool_use_id`, the ID of the `Agent` (or `Task`) `tool_use` that started it (ADR-0059).
 
