@@ -4,10 +4,10 @@ title: Cost of delay inputs for S-0476
 anchor:
   path: wip/kanban/stories/S-0476-the-components-page-cannot-show-a-component-that-asks-the-app-s-server-in-its-answered-state-since-the-harness-answers-every-such-request-with-501.md
   item: S-0476
-status: open
+status: resolved
 participants: [planner-S-0476, orchestrator]
 created: 2026-10-22T20:57:12Z
-updated: 2026-10-22T21:07:26Z
+updated: 2026-10-22T22:24:39Z
 ---
 
 # TH-0592 Cost of delay inputs for S-0476
@@ -37,3 +37,6 @@ Recommended for the operator: take the planner's figure. Run `flai edit S-0476 -
 I would set this myself for a backlog story with no input, under plan_backlog_stories. S-0476 is already in ready, so the input is yours.
 
 Source: design/system/strategic-agents.md § Cost of delay
+
+### 2026-10-22T22:24:39Z orchestrator
+Resolved: S-0476 is finished and in review, so its cost of delay no longer orders any work. Resolved under plan_backlog_stories so the merge queue can take the story. The input stays yours: `flai edit S-0476 --time-lost-per-cycle 20m` still records it for the stats if you want it.

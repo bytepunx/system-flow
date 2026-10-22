@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1262.6264
-accrued_seconds: 1155747
-tasks_completed: 902
-last_run: 2026-10-22T21:32:43Z
+accrued_cost: 1273.7479
+accrued_seconds: 1158876
+tasks_completed: 905
+last_run: 2026-10-22T22:24:52Z
 ---
 
 # Orchestrator activity
@@ -6325,6 +6325,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0477, S-0472
 - Seconds: 10
 - Cost: 0.1188 USD, estimated
+
+### 2026-10-22T21:44:35Z
+
+- Summary: S-0477 landed through the merge queue (enqueued by me). Under publish, policy judgement: pending 1 story, 25 USD/week, none held by whole_epics. Decided not to publish yet: S-0477 changes flai guard's permissions (components list for all agents, serve for task sub-agents only) under ADR-0186, which is still proposed and departs from the approved plan. Opened TH-0599 on the ADR asking the operator to accept it or say publish.
+- Items: S-0477
+- Seconds: 712
+- Cost: 1.4406 USD, estimated
+
+### 2026-10-22T21:44:42Z
+
+- Summary: Correction to the previous entry: the thread asking the operator to accept ADR-0186 before S-0477 is published is TH-0600, not TH-0599.
+- Items: S-0477
+- Seconds: 7
+- Cost: 0.1212 USD, estimated
+
+### 2026-10-22T22:24:52Z
+
+- Summary: S-0476 reached review at 240d519c. flai verify passed every step at the head; the verifier matched both criteria to changed files within touches (examples carry answers, the harness answers fetch and EventSource and 501s the rest, never a WebSocket, ADR-0187 accepted, all fourteen I-0164 components have answered examples, I-0164 closed). Under plan_backlog_stories resolved planner-S-0476's TH-0597 (plan delivered, design recorded as ADR-0187) and TH-0592 (cost of delay input moot for a finished story; still the operator's to set). Enqueued S-0476, first in the queue (alone); forecast 2h30m, no value.
+- Items: S-0476
+- Seconds: 2410
+- Cost: 9.5597 USD, estimated
 
 ## Refusals
 

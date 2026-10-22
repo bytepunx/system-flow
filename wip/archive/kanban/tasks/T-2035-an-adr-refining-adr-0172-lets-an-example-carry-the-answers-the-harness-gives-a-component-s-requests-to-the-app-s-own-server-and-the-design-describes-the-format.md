@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 157
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 22
-      output: 98
-      cache_read: 1960432
-      cache_write: 20373
-      cost: 0.6712
+      input: 28
+      output: 10299
+      cache_read: 1962719
+      cache_write: 47166
+      cost: 0.8772
 ---
 # T-2035 An ADR refining ADR-0172 lets an example carry the answers the harness gives a component's requests to the app's own server, and the design describes the format
 

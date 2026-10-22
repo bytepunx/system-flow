@@ -3,16 +3,37 @@ id: T-2048
 type: task
 nature: improvement
 title: The fourteen flaiover components I-0164 names carry examples with answers, each shown in its answered state in the harness
-status: backlog
+status: done
 parent: S-0476
 owner: alex
 created: 2026-10-22T21:00:37Z
-updated: 2026-10-22T21:00:37Z
-transitions: []
+updated: 2026-10-22T22:05:57Z
+transitions:
+  - to: ready
+    at: 2026-10-22T21:48:00Z
+    by: agent-S-0476
+  - to: in-progress
+    at: 2026-10-22T21:48:01Z
+    by: agent-S-0476
+  - to: done
+    at: 2026-10-22T22:05:57Z
+    by: agent-S-0476
 stream: S-0476
 tags: [flaiover]
 touches: [design/components/flaiover/src/lib/components/AcceptConfirm.examples.json, design/components/flaiover/src/lib/components/ActivityView.examples.json, design/components/flaiover/src/lib/components/AnalyzerPanel.examples.json, design/components/flaiover/src/lib/components/CancelConfirm.examples.json, design/components/flaiover/src/lib/components/ImportPrompt.examples.json, design/components/flaiover/src/lib/components/InboxView.examples.json, design/components/flaiover/src/lib/components/Messages.examples.json, design/components/flaiover/src/lib/components/NewAdrForm.examples.json, design/components/flaiover/src/lib/components/NewItemForm.examples.json, design/components/flaiover/src/lib/components/OrchestratorPanel.examples.json, design/components/flaiover/src/lib/components/PlannerPanel.examples.json, design/components/flaiover/src/lib/components/PublishBanner.examples.json, design/components/flaiover/src/lib/components/Threads.examples.json, design/components/flaiover/src/lib/components/WorktreeUncommitted.examples.json]
 after: [T-2038, T-2045]
+usage:
+  source: log
+  seconds: 1076
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 234
+      output: 86372
+      cache_read: 16460257
+      cache_write: 395555
+      cost: 7.3565
 ---
 # T-2048 The fourteen flaiover components I-0164 names carry examples with answers, each shown in its answered state in the harness
 

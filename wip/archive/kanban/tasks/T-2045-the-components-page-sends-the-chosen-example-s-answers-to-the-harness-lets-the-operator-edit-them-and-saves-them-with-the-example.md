@@ -3,11 +3,11 @@ id: T-2045
 type: task
 nature: improvement
 title: The Components page sends the chosen example's answers to the harness, lets the operator edit them, and saves them with the example
-status: in-progress
+status: done
 parent: S-0476
 owner: alex
 created: 2026-10-22T21:00:10Z
-updated: 2026-10-22T21:39:54Z
+updated: 2026-10-22T21:47:16Z
 transitions:
   - to: ready
     at: 2026-10-22T21:39:54Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-22T21:39:54Z
     by: agent-S-0476
+  - to: done
+    at: 2026-10-22T21:47:16Z
+    by: agent-S-0476
 stream: S-0476
 tags: [flaiover]
 touches: [flaiover/src/lib/explorer/protocol.ts, flaiover/src/lib/explorer/protocol.test.ts, flaiover/src/lib/components/explorer/ComponentFrame.svelte, flaiover/src/lib/components/explorer/ComponentFrame.svelte.test.ts, flaiover/src/lib/components/explorer/ExampleList.svelte, flaiover/src/lib/components/explorer/ExampleList.svelte.test.ts, flaiover/src/routes/design/components/+page.svelte, flaiover/src/routes/design/components/components.svelte.test.ts]
 after: [T-2040, T-2041]
+usage:
+  source: log
+  seconds: 442
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 59
+      output: 21858
+      cache_read: 4165481
+      cache_write: 100100
+      cost: 1.8616
 ---
 # T-2045 The Components page sends the chosen example's answers to the harness, lets the operator edit them, and saves them with the example
 

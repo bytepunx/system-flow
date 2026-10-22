@@ -24,16 +24,16 @@ touches: [flai/internal/components/examples.go, flai/internal/components/example
 after: [T-2035]
 usage:
   source: log
-  seconds: 875
+  seconds: 894
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 63
-      output: 286
-      cache_read: 2721285
-      cache_write: 118514
-      cost: 0.9623
+      input: 45
+      output: 16549
+      cache_read: 3153745
+      cache_write: 75787
+      cost: 1.4095
 ---
 # T-2038 flai parses, validates, and lists an example's answers, and the components.examples check reports a malformed one
 

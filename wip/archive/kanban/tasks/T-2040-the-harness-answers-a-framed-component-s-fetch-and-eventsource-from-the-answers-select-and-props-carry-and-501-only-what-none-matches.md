@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 874
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 43
-      output: 228
-      cache_read: 1820404
-      cache_write: 109280
-      cost: 0.6539
+      input: 27
+      output: 10033
+      cache_read: 1912086
+      cache_write: 45949
+      cost: 0.8546
 ---
 # T-2040 The harness answers a framed component's fetch and EventSource from the answers select and props carry, and 501 only what none matches
 

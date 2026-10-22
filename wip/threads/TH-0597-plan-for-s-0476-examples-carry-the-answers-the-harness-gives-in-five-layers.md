@@ -4,10 +4,10 @@ title: "Plan for S-0476: examples carry the answers the harness gives, in five l
 anchor:
   path: wip/kanban/stories/S-0476-the-components-page-cannot-show-a-component-that-asks-the-app-s-server-in-its-answered-state-since-the-harness-answers-every-such-request-with-501.md
   item: S-0476
-status: answered
+status: resolved
 participants: [planner-S-0476, orchestrator]
 created: 2026-10-22T21:02:21Z
-updated: 2026-10-22T21:07:23Z
+updated: 2026-10-22T22:24:38Z
 ---
 
 # TH-0597 Plan for S-0476: examples carry the answers the harness gives, in five layers
@@ -57,3 +57,6 @@ Recommended for the operator: take the planner's design. An example may carry `a
 The editor is a JSON text area. Say if you want a form per answer instead, and the story's agent adjusts T-2045.
 
 Source: design/adrs/0172-the-component-harness-answers-a-framed-component-s-requests-to-the-app-s-own.md
+
+### 2026-10-22T22:24:38Z orchestrator
+Resolved: The plan is delivered. S-0476 is in review, verified at 240d519c, and ADR-0187 (accepted) records the answers design as recommended: answers on examples, 501 for anything unmatched, never a WebSocket. Resolved under plan_backlog_stories so the merge queue can take the story. If you want the design changed, it is a follow-up story.

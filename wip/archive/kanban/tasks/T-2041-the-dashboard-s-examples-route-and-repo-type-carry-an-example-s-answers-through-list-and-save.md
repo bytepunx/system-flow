@@ -24,16 +24,16 @@ touches: [flaiover/src/routes/api/components/examples/+server.ts, flaiover/src/r
 after: [T-2035]
 usage:
   source: log
-  seconds: 873
+  seconds: 902
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 23
-      output: 95
-      cache_read: 689779
-      cache_write: 53479
-      cost: 0.2519
+      input: 19
+      output: 6874
+      cache_read: 1309976
+      cache_write: 31480
+      cost: 0.5855
 ---
 # T-2041 The dashboard's examples route and repo type carry an example's answers through list and save
 

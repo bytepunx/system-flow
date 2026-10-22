@@ -3,16 +3,37 @@ id: T-2051
 type: task
 nature: improvement
 title: The user docs describe an example's answers, and I-0164 is closed with what fixed it
-status: backlog
+status: done
 parent: S-0476
 owner: alex
 created: 2026-10-22T21:00:56Z
-updated: 2026-10-22T21:00:56Z
-transitions: []
+updated: 2026-10-22T22:08:44Z
+transitions:
+  - to: ready
+    at: 2026-10-22T22:06:58Z
+    by: agent-S-0476
+  - to: in-progress
+    at: 2026-10-22T22:06:59Z
+    by: agent-S-0476
+  - to: done
+    at: 2026-10-22T22:08:44Z
+    by: agent-S-0476
 stream: S-0476
 tags: [flai, flaiover]
 touches: [docs/users/flai.md, docs/users/flaiover.md, design/system/component-library.md, design/issues/I-0164-the-components-page-cannot-show-a-component-that-asks-the-app-s-server-in-its-answered-state-since-the-harness-answers-every-such-request-with-501.md, design/issues/summary.md]
 after: [T-2048]
+usage:
+  source: log
+  seconds: 105
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 46
+      output: 17024
+      cache_read: 3244234
+      cache_write: 77962
+      cost: 1.4499
 ---
 # T-2051 The user docs describe an example's answers, and I-0164 is closed with what fixed it
 
