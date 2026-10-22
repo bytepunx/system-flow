@@ -1406,9 +1406,26 @@ An example is a named set of a component's props, so a component that renders on
 
 The dashboard's Components page lists them, loads one into its props panel, and saves new ones ([flaiover.md § Examples](flaiover.md#examples)). You can also write the file by hand. When you rename, move, or remove a component, or change its props, change its examples in the same story.
 
+An example may also carry `answers`: what the component harness answers the component's requests to the app's own server with, in place of its 501, so that a component that asks the server for its data shows answered ([ADR-0187](../../design/adrs/0187-an-example-may-carry-the-answers-the-component-harness-gives-a-framed-component.md)). Each answer has a `path`, starting with `/`, with its query when it answers that query alone, and optionally a `method` (any when left out), a `status` (200 when left out), `headers`, and a `body`, a string sent as text or any other JSON value sent as JSON. An answer with `events`, a list of `{"event", "data", "id"}` of which only `data` is needed, answers an `EventSource` instead, and takes no `status`, `headers`, or `body`. The first answer whose method matches and whose path is the request's, with its query, wins, then the first whose path is the request's without its query; a request none matches still gets 501, and a `WebSocket` is never answered. [component-library.md § Answers](../../design/system/component-library.md#answers) has the whole format.
+
+```json
+{
+  "name": "No threads, and a resolve refused",
+  "props": { "on": "S-0001" },
+  "answers": [
+    { "path": "/api/threads?on=S-0001", "body": [] },
+    { "path": "/api/threads/TH-0002/resolve", "method": "POST", "status": 409, "body": { "error": "TH-0002 is resolved already" } },
+    { "path": "/api/stream", "events": [{ "event": "change", "data": { "kind": "edited" } }] }
+  ]
+}
+```
+
+Answers are fixtures: nothing checks them against the app's routes. When you change what a route answers, change the examples' answers that copy it in the same story.
+
 `flai check` warns `components.examples`, which fails `--strict`, at the line of the problem:
 
 - a file that is not JSON, or does not fit the format: a key it does not know, an empty or repeated `name`, `props` that is not an object, a `theme` that is not `light` or `dark`, a `width` that is not a whole number of 1 or more;
+- `answers` that do not fit their format: not a list, an answer that is not an object or has a key it does not know, no `path` or one not starting with `/`, a `method` that is not an HTTP method, a `status` that is not a whole number from 200 to 599, `headers` that are not strings, a `body` with status 204, 205, or 304, `events` that are not objects with `data`, or `events` with a `status`, `headers`, `body`, or a `method` other than `GET`;
 - an example that names a prop the component does not have, leaves out a required prop, or gives a value that does not fit the prop's kind;
 - a file whose component does not exist, at line 1: move it with its component, or remove it.
 
