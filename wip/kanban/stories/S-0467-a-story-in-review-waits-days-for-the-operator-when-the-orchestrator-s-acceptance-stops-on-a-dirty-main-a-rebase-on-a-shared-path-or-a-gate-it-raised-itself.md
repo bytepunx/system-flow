@@ -6,7 +6,7 @@ title: A story in review waits days for the operator when the orchestrator's acc
 status: ready
 owner: alex
 created: 2026-10-21T11:57:59Z
-updated: 2026-10-22T21:15:43Z
+updated: 2026-10-22T21:44:12Z
 transitions:
   - to: ready
     at: 2026-10-22T20:49:53Z
@@ -76,10 +76,10 @@ cost_of_delay:
   at: 2026-10-22T21:02:20Z
 forecast:
   duration: 2h
-  delivery: 2026-10-22T23:35:00Z
-  basis: "Its own forecast of 2h; 2nd in the pull order with an in-progress limit of 5, behind S-0466, S-0477 and S-0468."
+  delivery: 2026-10-23T00:03:00Z
+  basis: "Its own forecast of 2h; 2nd in the pull order with an in-progress limit of 5, behind S-0466, S-0476 and S-0468."
   by: flai
-  at: 2026-10-22T21:15:43Z
+  at: 2026-10-22T21:44:12Z
 finalized:
   by: alex
   at: 2026-10-21T20:51:58Z
