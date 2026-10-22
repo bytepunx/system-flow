@@ -7,7 +7,7 @@ status: backlog
 parent: E-0025
 owner: alex
 created: 2026-10-16T06:00:01Z
-updated: 2026-10-22T21:44:12Z
+updated: 2026-10-22T22:37:19Z
 transitions: []
 tags: [cli]
 topics: [cli, orchestration, planning]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 29m
-  delivery: 2026-10-23T18:14:00Z
-  basis: "Its own forecast of 29m; 33rd in the pull order with an in-progress limit of 5, behind S-0466, S-0476, S-0468, S-0467, S-0469, S-0470, S-0472, S-0478, S-0481, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431 and S-0432."
+  delivery: 2026-10-23T17:19:00Z
+  basis: "Its own forecast of 29m; 33rd in the pull order with an in-progress limit of 5, behind S-0466, S-0468, S-0467, S-0469, S-0470, S-0472, S-0478, S-0481, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431 and S-0432."
   by: flai
-  at: 2026-10-22T21:44:12Z
+  at: 2026-10-22T22:37:19Z
 ---
 # S-0433 An operator's answer on a thread becomes a digest entry at once, before the curator's next run, so the next story that meets the question finds it
 
