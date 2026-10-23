@@ -1,6 +1,6 @@
 ---
 title: Node.js and pnpm
-updated: 2026-09-15
+updated: 2026-10-23
 status: active
 topics: [sveltekit]
 ---
@@ -11,6 +11,7 @@ topics: [sveltekit]
 |-|-|
 | Node version | 24 LTS, pinned in `flaiover/.nvmrc` and `engines`, and the Dockerfile base image `node:24-alpine`; the dev host runs 25 and has no corepack, so pnpm is installed by `scripts/install-tools.sh` into `.flai-cache/pnpm` and all Node caches live under `.flai-cache` |
 | pnpm version | 10, pinned via `packageManager` in `flaiover/package.json` and enabled by corepack |
+| pnpm store | `.flai-cache/pnpm-store` of the main checkout, shared by every worktree, set by `scripts/env.sh` as `npm_config_store_dir`. Add a dependency with `scripts/flaiover-pnpm.sh add <package>`, not a bare `pnpm add`, which uses the default store and may be another pnpm on the host's `PATH`; `scripts/flaiover-install.sh` purges an install from another store and makes it again from this one (I-0177) |
 | Used in | `flaiover` |
 
 ## Why

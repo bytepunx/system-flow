@@ -7,6 +7,8 @@ if [ ! -x "$ROOT/bin/flai" ] || [ -n "$(find "$ROOT/flai" -name '*.go' -newer "$
   "$ROOT/scripts/flai-build.sh" >&2
 fi
 export FLAI_BIN="$ROOT/bin/flai"
+# the install below must recover from an install made from another store (I-0177)
+echo "flaiover-install-test"; "$ROOT/scripts/flaiover-install-test.sh"
 # none of the steps runs without flaiover's dependencies: install them when missing or stale
 "$ROOT/scripts/flaiover-install.sh" --if-needed
 cd "$ROOT/flaiover"
