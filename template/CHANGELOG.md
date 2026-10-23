@@ -2,6 +2,8 @@
 
 ## 1.0.111 - 2026-10-23
 
+- S-0430 flai prime gives a story's agent the digest entries its topics and touches select, and the orchestrator the entries on the threads it answers, ranked within the budget and marked as the digest's (patch).
+- S-0491 Add sub-project management (patch).
 - S-0491 Sub-projects are added, changed, and removed through `flai subproject`, and the orchestrator may do it with `edit_subprojects` (patch, ADR-0195): in `strategic-agents.md`, the section "As the orchestrator" says that with `orchestration.permissions.edit_subprojects` it adds, changes, or removes a sub-project only when a story or a thread asks, reads them with `subprojects`, runs `flai subproject add`, `set`, or `remove` with `--autocommit` and a `Co-Authored-By:` trailer, never `subproject_edit`, which commits nothing, and logs the change with `activity_log`. The orchestrator's agent definition, `orchestrator.md`, gains the tool `subprojects`, the permission in its step 3, and the same rule in a new step 13. The template's `system-flow.yaml` gains a comment above `projects` saying what an entry holds and that `flai subproject add` writes one, and `CLAUDE.md`'s row for `system-flow.yaml` says `flai subproject` adds, changes, and removes sub-projects. It needs a flai that has it, the release that carries S-0491: an older flai has no `flai subproject`, no MCP tools `subprojects` and `subproject_edit`, and no `manifest.projects` check. It does not know `edit_subprojects`: its `flai manifest set` refuses the key, and a permission written by hand stays off, its `flai check` reports it as a `manifest.orchestration` error, and its `flai manifest set` refuses every other change while it is there.
 
 ## 1.0.110 - 2026-10-23

@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1450.9847
-accrued_seconds: 1238569
-tasks_completed: 998
-last_run: 2026-10-23T21:24:13Z
+accrued_cost: 1457.6855
+accrued_seconds: 1246648
+tasks_completed: 999
+last_run: 2026-10-23T23:39:00Z
 ---
 
 # Orchestrator activity
@@ -6997,6 +6997,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0490
 - Seconds: 3
 - Cost: 0.0000 USD
+
+### 2026-10-23T23:39:00Z
+
+- Summary: S-0491 reached review at 49925dd1. flai verify passed at the head (integration and smoke queued). The verifier matched all three criteria within touches: the Projects page sub-project section via settings.subproject behind settings, flai subproject creating a missing folder with a README, MCP subprojects and subproject_edit, and edit_subprojects off by default with guard tests. Not enqueued: it changes .claude/agents/orchestrator.md in both trees, so acceptance is the operator's (ADR-0106). Opened a thread on S-0491 recommending verify --all first, naming the exact change to my agent definition, the permission's default, and ADR-0195 already set accepted by the story's agent, with my stake stated.
+- Items: S-0491
+- Seconds: 8079
+- Cost: 6.7008 USD, estimated
 
 ## Refusals
 
