@@ -1,6 +1,6 @@
 ---
 title: Strategic agents
-updated: 2026-10-21
+updated: 2026-10-23
 status: active
 topics: [planning, orchestration, analysis]
 ---
@@ -385,7 +385,7 @@ With `orchestration.permissions.accept_reviews` on, the orchestrator accepts a s
 1. Reads the story's last `flai verify` result, and runs `flai verify` when it did not pass or its commit is not the branch's head; a run that did not pass is a blocker. Its `flai verify` runs the tiers under `FLAI_ROLE=verify`, not `orchestrate`, so a story whose tests run flai's writes is not refused by the orchestrator's own checks (S-0311, TH-0260). Then hands the story's worktree and that result to its verifier, which reads the result rather than running the suite, and matches each acceptance criterion to the files the branch changes that meet it (S-0270, [ADR-0110](../adrs/0110-a-story-s-agent-runs-the-close-out-which-runs-flai-verify-itself-before-review.md)).
 2. Runs `flai accept <S-nnnn> --by orchestrator --verified <commit> --dry-run`, with the commit the verifier checked, and reads the blockers.
 3. With no blocker and every criterion matched, runs `flai accept <S-nnnn> --by orchestrator --verified <commit> --evidence <file>`, and logs the acceptance with `activity_log`, naming the story and the commit.
-4. Otherwise leaves the story in review, opens a thread on it saying what is missing, each blocker and each criterion it could not check against the diff, and logs that decision.
+4. Otherwise leaves the story in review, opens a thread on it saying what is missing, each blocker and each criterion it could not check against the diff, and logs that decision. It opens a thread on a story in review only for a reason not to accept it, and resolves that thread with a reason once the reason is gone ([ADR-0189](../adrs/0189-the-orchestrator-s-acceptance-lands-on-a-dirty-main-as-the-merge-queue-s-does.md)).
 
 While the merge queue runs for the project, the orchestrator enqueues each story it verifies instead of accepting it, and the queue lands it as the orchestrator (S-0403, [ADR-0173](../adrs/0173-a-merge-queue-in-flai-serve-with-no-model-runs-behind-the-merge-queue-host.md), [ADR-0176](../adrs/0176-the-merge-queue-lands-each-story-of-a-passing-batch-through-flai-accept-batch.md)). The queue runs while the `merge-queue` host action is on, `accept_reviews` is on, and acceptance is local. Its prompt says whether it does ([What it is told](#what-it-is-told)).
 
@@ -397,14 +397,25 @@ While the merge queue runs for the project, the orchestrator enqueues each story
 
 The enqueue is refused, changing nothing, as the acceptance is: while `accept_reviews` is off; without `verified` or `evidence`; for evidence with a heading in it or that cannot be read; for a story `flai queue add` refuses; and on each orchestrator blocker of the preview below, each named by its code (`mcpserver.EnqueueByOrchestrator`). The queue's state records the commit and the evidence with the story's enqueue, as `verified` and `evidence` ([ADR-0093](../adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md)). The orchestrator never lands, bisects, holds, resumes, or dequeues a story by hand.
 
-The acceptance preview adds four blockers for an acceptance by the orchestrator, beside those it reports for any acceptance, and `flai accept` refuses on any blocker before anything is merged:
+The acceptance preview adds these blockers for an acceptance by the orchestrator, beside those it reports for any acceptance, and `flai accept` refuses on any blocker before anything is merged:
 
 | Condition | Blocker when |
 |-----------|--------------|
 | The verifier passed at the branch head | `--verified` is missing, or names a commit that is not the story branch's head. In the merge queue's landing, `--batch` takes its place: each reason the queue does not let the story land from that batch now (below) |
 | Every criterion is ticked | A criterion under `## Acceptance criteria` is unticked; each is named |
 | The diff stays within the touches | A file the branch changes is under none of the story's touches, read as a claim reads them; each is named. The workflow's own records are the story's whatever it touches: the `wip` folder, the issues under `design/issues`, and an experiment's results |
-| No thread is open | A thread on the story or one of its tasks is not resolved; each is named |
+| No thread is open | A thread on the story or one of its tasks is not resolved; each is named. A thread the orchestrator opened that nobody else wrote on is `own_thread_open`, which says the orchestrator resolves it; every other is `thread_open` ([ADR-0189](../adrs/0189-the-orchestrator-s-acceptance-lands-on-a-dirty-main-as-the-merge-queue-s-does.md)) |
+| Main's uncommitted files are safe | The story's change, `main...story/S-nnnn`, would overwrite a file the main checkout has not committed outside `wip/`, or an untracked one: `dirty_main`, naming the files and the command that sets them aside. The checkout's other uncommitted files stop nothing ([ADR-0189](../adrs/0189-the-orchestrator-s-acceptance-lands-on-a-dirty-main-as-the-merge-queue-s-does.md)) |
+
+Three things set the orchestrator's acceptance apart from the operator's by hand, so that none of them waits for the operator ([ADR-0189](../adrs/0189-the-orchestrator-s-acceptance-lands-on-a-dirty-main-as-the-merge-queue-s-does.md), [I-0150](../issues/I-0150-a-story-in-review-waits-days-for-the-operator-when-the-orchestrator-s-acceptance-stops-on-a-dirty-main-a-rebase-on-a-shared-path-or-a-gate-it-raised-itself.md)):
+
+| When | The orchestrator's acceptance | The operator's by hand |
+|------|-------------------------------|------------------------|
+| The main checkout has uncommitted files outside `wip/` | Leaves them as the merge queue's landing does ([ADR-0178](../adrs/0178-the-merge-queue-lands-each-story-in-the-main-checkout-with-git-s-own-check.md)): out of the lint fix and the acceptance commit, held only by `dirty_main` | Refuses them unless `--yes` includes them in the commit |
+| An acceptance stopped before its archive or commit | Finishes it when the orchestrator made its move to done, with `flai accept <S-nnnn> --by orchestrator` and no evidence. One anyone else made is refused, naming who, and stays the operator's | Finishes any |
+| Its rebase stops on conflicts the section merge and the generated-file steps cannot settle ([ADR-0175](../adrs/0175-a-rebase-that-stops-on-a-markdown-file-inside-the-manifest-s-shared-paths.md)) | Aborts the rebase in the story's worktree, so the branch and main are as they were, records the conflict, moves the story back to in-progress as `flai` with the paths in the reason, and opens one thread by `flai`, `Acceptance sent back: …`, naming the paths and the branch. It exits saying the story was sent back; with `--json` it exits 4 with `{"refused": {id, reason, sent_back, branch, base, conflicts, thread}}`. With the `agent` host action on, `flai serve` starts the story's agent on that thread, resuming its session, as for a story the merge queue sent back, and resolves the thread once the story is back in review | Leaves the stopped rebase in the worktree, to finish or abort |
+
+The merge queue's landing, `--batch`, leaves a stopped rebase as the operator's does.
 
 The evidence, `--evidence <file>` or `-` for standard input, is markdown: a `Verdict:` line from the verifier's report, and one list item per criterion, `- <n>: <files>`, naming the changed files that meet criterion `<n>`. flai refuses an orchestrator's acceptance without evidence, and one whose evidence names no changed file for a criterion. It writes the evidence, with the verified commit, under `### Accepted by the orchestrator` in the story's `## Notes`, in the acceptance commit, and returns it in `--json`. The done transition is recorded `by: orchestrator`, and the dashboard's review and story pages name who accepted.
 
