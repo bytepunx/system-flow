@@ -961,7 +961,13 @@ func TestServeSettingsAreShownToTheDashboard(t *testing.T) {
 	}
 	runIn(t, root, "serve", "enable", "settings")
 	runIn(t, root, "serve", "checks", "set", "--name", "unit", "--", "go", "test", "./...")
-	runIn(t, root, "serve", "import", "add", t.TempDir())
+	// S-0488: a temp directory's name may hold 4242, so the import root holds
+	// it always, and only the registered entry's URL is refused below
+	importRoot := filepath.Join(t.TempDir(), "harbour-4242")
+	if err := os.Mkdir(importRoot, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	runIn(t, root, "serve", "import", "add", importRoot)
 	runIn(t, root, "agent", "set", "--harness", "claude-code", "--model", "claude-haiku-4-5")
 	repo, err := workitem.Open(root)
 	if err != nil {
@@ -971,13 +977,13 @@ func TestServeSettingsAreShownToTheDashboard(t *testing.T) {
 	for _, want := range []string{`"here":true,"means":"change this project's host settings`, `"here":false,"means":"publish when you press Publish`, `"name":"builder"`,
 		`"claude-code":{"args":["--permission-mode","acceptEdits","--allowedTools","Bash,mcp__flai"],"ask_capable":true,"deny_protected":false,"guard":"","guard_capable":true,"program":"claude","set":false}`,
 		`"command":{"args":[],"ask_capable":false,"deny_protected":false,"guard":"","guard_capable":false,"program":"","set":false}`,
-		`{"name":"unit","command":["go","test","./..."]}`, `"timeout_minutes":15`, `"import_roots":["/`, `"default_agent":{"harness":"claude-code","model":"claude-haiku-4-5"}`, `"mcp":{"running":false}`,
+		`{"name":"unit","command":["go","test","./..."]}`, `"timeout_minutes":15`, `"import_roots":["` + importRoot + `"]`, `"default_agent":{"harness":"claude-code","model":"claude-haiku-4-5"}`, `"mcp":{"running":false}`,
 		`"projects":{"running":false,"served":[{"key":"harbour","name":"Harbour","root":"/p/harbour","from":"registry","state":"unavailable","reason":"`, `"unserved":[]}`} {
 		if !strings.Contains(string(got), want) {
 			t.Errorf("settings lack %s:\n%s", want, got)
 		}
 	}
-	if strings.Contains(string(got), `"token"`) || strings.Contains(string(got), "4242") || strings.Contains(string(got), "/p/harbour/k") {
+	if strings.Contains(string(got), `"token"`) || strings.Contains(string(got), "127.0.0.1:4242") || strings.Contains(string(got), "/p/harbour/k") {
 		t.Errorf("no token in the settings: %s", got)
 	}
 }
