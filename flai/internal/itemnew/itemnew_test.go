@@ -2,6 +2,7 @@ package itemnew
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -422,5 +423,25 @@ func TestThePlannersDraftStoryNeedsItsNoteForAFolderTouch(t *testing.T) {
 	}
 	if _, err := Create(repo, nil, Options{New: story([]string{"flai/cmd"}, "None.\n"), By: "alex"}); err != nil {
 		t.Errorf("another author's folder touch is kept: %v", err)
+	}
+}
+
+// S-0468: the third open story to name a story in after makes it a hub, and
+// the new story stands with the wip.after-hub warning rather than being
+// refused, since the finding is advisory (ADR-0188).
+func TestTheThirdStoryAfterAHubIsKeptWithAWarning(t *testing.T) {
+	now := time.Date(2026, 10, 3, 9, 0, 0, 0, time.UTC)
+	repo := planned(t, now)
+	const body = "## Goal\n\nWait for S-0001.\n\n## Acceptance criteria\n\n- [ ] It builds on S-0001.\n\n## Tasks\n\n## Notes\n\nNone.\n"
+	var res *Result
+	for i := range 3 {
+		var err error
+		res, err = Create(repo, nil, Options{New: workitem.NewOptions{Type: workitem.Story, Title: fmt.Sprintf("After %d", i), Owner: "alex", Now: now, After: []string{"S-0001"}, Body: body}})
+		if err != nil {
+			t.Fatalf("story %d after S-0001 must be kept: %v", i, err)
+		}
+	}
+	if len(res.Warnings) != 1 || res.Warnings[0].Rule != "wip.after-hub" {
+		t.Errorf("the third story warns wip.after-hub: %+v", res.Warnings)
 	}
 }

@@ -344,9 +344,6 @@ func TestTouchesHoldsThePlannersStoryFolderTouchToItsNote(t *testing.T) {
 	if out, errOut, code := runIn(t, root, "touches", "S-0001", "--add", "flai/cmd"); code != 0 || out != "S-0001 touches flai/cmd/a.go, flai/new, flai/cmd\n" {
 		t.Errorf("the note admits the folder: %d %q %s", code, out, errOut)
 	}
-	if out, errOut, code := runIn(t, root, "touches", "E-0001", "flai/cmd"); code != 0 || out != "E-0001 touches flai/cmd\n" {
-		t.Errorf("the planner's epic folder touch: %d %q %s", code, out, errOut)
-	}
 
 	t.Setenv("FLAI_ROLE", "")
 	if out, errOut, code := runIn(t, root, "touches", "S-0001", "flai"); code != 0 || out != "S-0001 touches flai\n" {

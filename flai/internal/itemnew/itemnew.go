@@ -111,6 +111,10 @@ func Create(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 			// touches that reach another story in progress are advisory
 			// (ADR-0019): the item stands, and the warning says so (I-0169)
 			res.Warnings = append(res.Warnings, f)
+		case f.Rule == "touches.folder" || f.Rule == "wip.after-hub":
+			// a kept folder and an after hub are advisory (ADR-0188): the
+			// item stands, and the warning says so
+			res.Warnings = append(res.Warnings, f)
 		default:
 			blocking = append(blocking, f)
 		}
