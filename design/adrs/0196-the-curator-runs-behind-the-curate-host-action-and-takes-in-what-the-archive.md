@@ -6,6 +6,7 @@ date: 2026-10-23
 supersedes: []
 superseded_by: []
 refines: [ADR-0075, ADR-0099]
+topics: [cli, template, analysis, planning]
 ---
 
 # ADR-0196 The curator runs behind the curate host action and takes in what the archive and the threads gained since its last run as digest entries written through flai digest alone, which flai guard holds it to
