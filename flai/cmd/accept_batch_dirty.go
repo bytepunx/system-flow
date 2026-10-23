@@ -7,18 +7,20 @@ import (
 )
 
 // The merge queue's landing, flai accept --batch, lands while the main
-// checkout has uncommitted files outside wip (S-0402): it does not refuse
-// them, as an acceptance by hand does unless --yes includes them, and it
-// leaves them as they are, out of the lint fix over the main checkout's
-// uncommitted files and out of the acceptance commit, which holds only the
-// acceptance. A file the story's change would overwrite still stops its
-// merge, by git's own check.
+// checkout has uncommitted files outside wip (S-0402), and so does the
+// orchestrator's acceptance (ADR-0189): neither refuses them, as an
+// acceptance by hand does unless --yes includes them, and each leaves them
+// as they are, out of the lint fix over the main checkout's uncommitted files
+// and out of the acceptance commit, which holds only the acceptance. A file
+// the story's change would overwrite still stops its merge: the orchestrator's
+// preview names it as the blocker dirty_main, and git's own check stops the
+// queue's.
 
 // leftUncommitted is what acceptance res leaves uncommitted in the main
-// checkout: under --batch, the files outside wip uncommitted before it
-// began, as its preview read them; none by hand.
+// checkout: under --batch or by the orchestrator, the files outside wip
+// uncommitted before it began, as its preview read them; none by hand.
 func leftUncommitted(res *preview.Acceptance) []string {
-	if res == nil || res.Batch == "" {
+	if res == nil || (res.Batch == "" && !res.Orchestrator) {
 		return nil
 	}
 	return res.Uncommitted

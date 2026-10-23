@@ -105,8 +105,9 @@ step 2 does, and from step 3, committing what the main checkout holds under
 the usual subject, and step 4 tells the open stories the paths the story's
 commits changed. A done, archived item whose file is committed is refused as
 already done.
-The orchestrator completes neither: that is the operator's. --dry-run
-changes nothing.
+The orchestrator completes either only when it made the move to done
+itself; one anyone else made is the operator's to complete, and the refusal
+names who made it (ADR-0189). --dry-run changes nothing.
 
 A story whose branch changes a path Claude Code protects (a .claude folder,
 .mcp.json, and the others of ADR-0106) is accepted by its operator only: the
@@ -133,6 +134,12 @@ ticked, every file the branch changes is under the story's touches and on no
 path Claude Code protects, no thread on the story or its tasks is open, and
 --evidence, a Verdict: line and one item "- <n>: <files>" per criterion,
 names a changed file for each of them.
+It leaves the main checkout's uncommitted files outside wip as the merge
+queue's landing does, --yes or not: out of the lint fix and the acceptance
+commit. It is refused only while the story's change, main...story/<id>,
+would overwrite one of them or an untracked one; --dry-run lists that as the
+blocker dirty_main, naming the files and the command that sets them aside
+(ADR-0189).
 The evidence is written, with the commit, under ### Accepted by the
 orchestrator in the story's Notes. With --dry-run the evidence is optional.
 While the merge-queue host action is on and the queue batches (accept_reviews
@@ -253,12 +260,8 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	if err != nil {
 		return nil, err
 	}
-	if opts.Orchestrator && res.Resumed {
-		left := "is done but was never archived"
-		if res.CommitOnly {
-			left = "is done and archived but its acceptance was never committed"
-		}
-		return nil, fmt.Errorf("rule: %s %s; the orchestrator accepts only a story in review, so the operator completes this acceptance with flai accept %s", it.ID, left, it.ID)
+	if opts.Orchestrator && res.Resumed && !workitem.IsOrchestrator(res.DoneBy) {
+		return nil, notOrchestratorsToResume(it.ID, res)
 	}
 	acc := &accepted{Acceptance: res}
 	messagesToClose(repo, it, acc)
@@ -266,8 +269,9 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	if !o.dryRun {
 		res.By = orDefault(o.by, a.author())
 	}
-	// the merge queue's landing leaves them as they are (S-0402)
-	if dirty := res.Uncommitted; len(dirty) > 0 && !a.yes && !o.dryRun && o.batch == "" {
+	// the merge queue's landing and the orchestrator's acceptance leave them
+	// as they are (S-0402, ADR-0189)
+	if dirty := res.Uncommitted; len(dirty) > 0 && !a.yes && !o.dryRun && o.batch == "" && !opts.Orchestrator {
 		return nil, fmt.Errorf("working tree has uncommitted changes outside wip (%s); commit or stash them so the acceptance commit holds only acceptance, or pass --yes to include them", strings.Join(dirty, ", "))
 	}
 	if err := keptHeld(it.ID, res.UndoesMain, opts.Keep); err != nil {
@@ -442,6 +446,21 @@ func (a *app) leaveQueue(repo *workitem.Repo, story, batch, by string) {
 	if err != nil {
 		a.logger().Warn("accepted story not taken out of the merge queue", "component", "accept", "item", story, "batch", batch, "err", err)
 	}
+}
+
+// notOrchestratorsToResume is the refusal of the orchestrator's acceptance of
+// id, done already, whose move to done someone else made: finishing it is the
+// operator's, and the refusal names who made it (ADR-0189).
+func notOrchestratorsToResume(id string, res *preview.Acceptance) error {
+	left := "is done but was never archived"
+	if res.CommitOnly {
+		left = "is done and archived but its acceptance was never committed"
+	}
+	who := res.DoneBy
+	if who == "" {
+		who = "no one its transitions name"
+	}
+	return fmt.Errorf("rule: %s %s, and %s moved it to done; the orchestrator finishes only an acceptance it made itself, so the operator completes this acceptance with flai accept %s (ADR-0189)", id, left, who, id)
 }
 
 // logAcceptConflict writes a line of the conflict log (S-0337) when err is
@@ -689,9 +708,12 @@ func (a *app) tellAccepted(repo *workitem.Repo, it *workitem.Item, res *preview.
 // queue, beside --verified, whose place it takes, or under
 // FLAI_ROLE=orchestrate, since the orchestrator never lands a story by hand,
 // while the orchestrator's landing from a batch needs no evidence (ADR-0176);
-// the orchestrator's acceptance but as the queue's landing, or a dry run,
-// while the merge queue batches, since it enqueues a story instead (S-0403);
-// and --keep-removal as keptRemovals refuses it (ADR-0155). For the queue's
+// the orchestrator's acceptance but as the queue's landing, a dry run, or the
+// finishing of a story done already, while the merge queue batches, since it
+// enqueues a story instead (S-0403); and --keep-removal as keptRemovals
+// refuses it (ADR-0155). The finishing of a story done already needs no
+// evidence, since the acceptance that moved it to done wrote its own
+// (ADR-0189). For the queue's
 // landing of a story the orchestrator enqueued with its evidence, and no
 // --evidence, it is also that enqueue, whose evidence the acceptance takes.
 func (a *app) acceptance(repo *workitem.Repo, it *workitem.Item, o acceptOptions) (preview.AcceptOptions, mergequeue.Enqueued, error) {
@@ -724,8 +746,10 @@ func (a *app) acceptance(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		return preview.AcceptOptions{}, none, fmt.Errorf("rule: %w", err)
 	}
 	// while the queue batches, it lands what the orchestrator would accept;
-	// a dry run changes nothing and previews what an enqueue vouches for
-	if o.batch == "" && !o.dryRun && a.queueBatches(mainRootOf(repo)) {
+	// a dry run changes nothing and previews what an enqueue vouches for, and
+	// a story done already, whose acceptance stopped, is never batched
+	resume := it.Status == workitem.Done
+	if o.batch == "" && !o.dryRun && !resume && a.queueBatches(mainRootOf(repo)) {
 		return preview.AcceptOptions{}, none, fmt.Errorf("rule: the merge-queue host action is on and the queue batches, so the merge queue lands %s, not the orchestrator: %s, and flai serve lands it as the orchestrator once its batch passes (ADR-0176)", it.ID, enqueueInstead(it.ID))
 	}
 	opts := preview.AcceptOptions{Orchestrator: true, Verified: o.verified, Batch: o.batch}
@@ -737,6 +761,10 @@ func (a *app) acceptance(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 			// orchestrator enqueued the story with goes into its Notes
 			return a.enqueuedEvidence(repo, it.ID, opts)
 		case o.dryRun:
+			return opts, none, nil
+		case resume:
+			// the acceptance that moved it to done wrote its evidence in
+			// its Notes, and finishing it writes none (ADR-0189)
 			return opts, none, nil
 		}
 		return preview.AcceptOptions{}, none, fmt.Errorf("rule: the orchestrator's acceptance of %s needs its evidence: --evidence <file> or -, a Verdict: line and one - <n>: <files> item per criterion (ADR-0093)", it.ID)
@@ -1010,6 +1038,8 @@ func (a *app) printAccept(acc *accepted) error {
 			switch {
 			case res.Batch != "":
 				effect = "the merge queue's landing leaves them as they are, out of the acceptance commit (ADR-0178)"
+			case res.Orchestrator:
+				effect = "the orchestrator's acceptance leaves them as they are, out of the acceptance commit, and is refused only while its change would overwrite one (ADR-0189)"
 			case a.yes:
 				effect = "--yes includes them in the acceptance commit"
 			}

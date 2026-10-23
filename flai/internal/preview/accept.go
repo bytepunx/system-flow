@@ -40,9 +40,17 @@ type Acceptance struct {
 	// CommitOnly says the item is done and archived but its acceptance
 	// commit is missing: only the commit and the notices are left (I-0100).
 	CommitOnly bool `json:"commit_only,omitempty"`
+	// DoneBy is who moved a resumed item to done, as its last transition to
+	// done records: the orchestrator finishes only an acceptance it made
+	// itself (ADR-0189).
+	DoneBy string `json:"done_by,omitempty"`
+	// Orchestrator says the acceptance is the orchestrator's (ADR-0093).
+	Orchestrator bool `json:"orchestrator,omitempty"`
 	// Uncommitted paths outside wip. The real run refuses them unless --yes
 	// includes them in the acceptance commit; a dry run reports them so the
-	// choice can be made before confirming (S-0051).
+	// choice can be made before confirming (S-0051). The merge queue's
+	// landing and the orchestrator's acceptance leave them as they are, out
+	// of the acceptance commit (S-0402, ADR-0189).
 	Uncommitted []string `json:"uncommitted,omitempty"`
 	// WorktreeUncommitted are the uncommitted paths in the story's worktree.
 	// They block acceptance: the branch is merged as it is committed, and
@@ -132,6 +140,11 @@ const (
 	BlockApprovalsMissing   = "approvals_missing"    // fewer reviewers approve than the base branch requires
 )
 
+// BlockDirtyMain is the code of the orchestrator's blocker for a story whose
+// change would overwrite a file the main checkout has not committed outside
+// wip (ADR-0189).
+const BlockDirtyMain = "dirty_main"
+
 // UndonePath is a path the story's branch undoes of the main branch's change
 // (ADR-0155): main's lines the branch removes, and the operator's reason when
 // the acceptance keeps the removal.
@@ -160,7 +173,10 @@ func Accept(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by string, n
 
 // AcceptWith is Accept with what the acceptance adds: under
 // opts.Orchestrator, a blocker for each condition of ADR-0093 that fails,
-// beside every blocker Accept reports, and no blocker for a path the branch
+// beside every blocker Accept reports, and one for a change of the story's
+// that would overwrite a file the main checkout has not committed, while a
+// story already done is resumed without ADR-0093's conditions, which held
+// when it was moved to done (ADR-0189); and no blocker for a path the branch
 // undoes of main that opts.Keep keeps (ADR-0155). With opts.Batch, the
 // queue's landing, a blocker for each reason the merge queue does not let the
 // story land from that batch now, and the story's rebased head in the batch
@@ -175,7 +191,7 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 	if it.Type == workitem.Task {
 		return nil, fmt.Errorf("%s is a task; accept its story instead", it.ID)
 	}
-	res := &Acceptance{ID: it.ID, Status: it.Status, DryRun: true}
+	res := &Acceptance{ID: it.ID, Status: it.Status, DryRun: true, Orchestrator: opts.Orchestrator}
 	switch {
 	case it.Status == workitem.Done && !it.Archived:
 		// Done without acceptance: finish the job rather than refuse it.
@@ -190,6 +206,9 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 		return nil, fmt.Errorf("%s is already %s", it.ID, it.Status)
 	case it.Type == workitem.Story && it.Status != workitem.Review:
 		return nil, fmt.Errorf("%s is %s; a story is accepted from review", it.ID, it.Status)
+	}
+	if res.Resumed {
+		res.DoneBy = doneBy(it)
 	}
 	if useGit {
 		res.Uncommitted = storygit.DirtyOutsideWip(r, repo)
@@ -301,13 +320,74 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 	}
 	if opts.Orchestrator {
 		res.Evidence = opts.Evidence
-		res.OrchestratorBlockers, res.Verified = orchestratorBlockers(r, repo, it, opts, res.Protected, res.Verified, landing)
+		// a story the orchestrator moved to done met its conditions then:
+		// its acceptance is finished as the operator's resume finishes one
+		// (ADR-0189)
+		if !res.Resumed || it.Type != workitem.Story {
+			res.OrchestratorBlockers, res.Verified = orchestratorBlockers(r, repo, it, opts, res.Protected, res.Verified, landing)
+		}
+		if res.Branch != "" {
+			if b := dirtyMainBlocker(r, repo, it.ID); b != nil {
+				res.OrchestratorBlockers = append(res.OrchestratorBlockers, *b)
+			}
+		}
 		for _, b := range res.OrchestratorBlockers {
 			res.Blockers = append(res.Blockers, b.Message)
 		}
 	}
 	threadsToResolve(repo, it, res)
 	return res, nil
+}
+
+// dirtyMainBlocker is the orchestrator's blocker for story id when its
+// change, its branch from the commit it shares with the main branch, would
+// overwrite a file the main checkout has not committed, or has not tracked,
+// outside wip, naming the files and the command that sets them aside; nil
+// when it would overwrite none. The checkout's other uncommitted files stop
+// nothing: the acceptance leaves them as they are (ADR-0189). What git
+// cannot read is the blocker too, since the merge would meet it unread.
+func dirtyMainBlocker(r execx.Runner, repo *workitem.Repo, id string) *Blocker {
+	branch := storygit.Branch(id)
+	unread := func(err error) *Blocker {
+		return &Blocker{Code: BlockDirtyMain, Message: fmt.Sprintf("cannot read which uncommitted files of the main checkout %s would overwrite: %v; check that git can read the main checkout and %s (ADR-0189)", branch, err, branch)}
+	}
+	files, err := storygit.DirtyFiles(r, repo.MainRoot)
+	if err != nil {
+		return unread(err)
+	}
+	wip := strings.TrimSuffix(repo.Manifest.Layout["wip"], "/") + "/"
+	var outside []string
+	for _, f := range files {
+		if !strings.HasPrefix(f, wip) {
+			outside = append(outside, f)
+		}
+	}
+	if len(outside) == 0 {
+		return nil
+	}
+	main, err := storygit.MainBranch(r, repo.MainRoot)
+	if err != nil {
+		return unread(fmt.Errorf("find the main branch: %w", err))
+	}
+	paths, err := storygit.ChangedAmong(r, repo.MainRoot, main, branch, outside)
+	if err != nil {
+		return unread(err)
+	}
+	if len(paths) == 0 {
+		return nil
+	}
+	return &Blocker{Code: BlockDirtyMain, Message: fmt.Sprintf("%s's change would overwrite %s, which the main checkout has not committed, so the orchestrator does not accept it: commit them, or set them aside with %s, and it is accepted once they are clean (ADR-0189)", id, strings.Join(paths, ", "), mergequeue.FreeCommand(paths))}
+}
+
+// doneBy is who made it's last move to done, as its transitions record it;
+// "" when none records one.
+func doneBy(it *workitem.Item) string {
+	for i := len(it.Transitions) - 1; i >= 0; i-- {
+		if it.Transitions[i].To == workitem.Done {
+			return it.Transitions[i].By
+		}
+	}
+	return ""
 }
 
 // batchLanding is every reason the merge queue does not let story id land
