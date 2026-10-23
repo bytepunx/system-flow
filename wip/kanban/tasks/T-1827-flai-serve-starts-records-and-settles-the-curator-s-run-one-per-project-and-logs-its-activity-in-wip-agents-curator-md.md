@@ -7,11 +7,11 @@ status: backlog
 parent: S-0431
 owner: alex
 created: 2026-10-16T06:06:02Z
-updated: 2026-10-16T06:06:02Z
+updated: 2026-10-23T17:03:48Z
 transitions: []
 stream: S-0431
 tags: [cli]
-touches: [flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/agents.go, flai/internal/serve/activity.go]
+touches: [flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/agents.go, flai/internal/serve/activity.go, flai/internal/serve/claudecheck.go]
 after: [T-1825]
 ---
 # T-1827 flai serve starts, records, and settles the curator's run, one per project, and logs its activity in wip/agents/curator.md

@@ -7,11 +7,11 @@ status: backlog
 parent: S-0431
 owner: alex
 created: 2026-10-16T06:06:28Z
-updated: 2026-10-16T06:06:28Z
+updated: 2026-10-23T17:04:02Z
 transitions: []
 stream: S-0431
 tags: [cli, template]
-touches: [design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/strategic-agents.md, design/system/project-manifest.md, design/system/flai-cli.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flai.md, template/CHANGELOG.md, template/template.yaml]
+touches: [design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/conventions/README.md, template/root/design/conventions/README.md, design/system/strategic-agents.md, design/system/agent-narrative.md, design/system/agent-adapters.md, design/system/project-manifest.md, design/system/flai-cli.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flai.md, wip/agents/README.md, template/root/wip/agents/README.md, template/CHANGELOG.md, template/template.yaml]
 after: [T-1828, T-1829]
 ---
 # T-1830 The strategic-agents convention gains As the curator, and the design and the user and operator docs describe the role, its action, and digest.agent

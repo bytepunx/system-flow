@@ -7,24 +7,51 @@ status: backlog
 parent: E-0025
 owner: alex
 created: 2026-10-16T06:00:01Z
-updated: 2026-10-23T07:23:39Z
+updated: 2026-10-23T17:18:00Z
 transitions: []
 tags: [cli]
 topics: [cli, orchestration, planning]
-touches: [design/system/agent-narrative.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flaiover.md, flai/cmd/thread.go, flai/cmd/thread_test.go, flai/internal/digest/onanswer.go, flai/internal/digest/onanswer_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go]
+touches: [design/system/agent-narrative.md, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flaiover.md, flai/cmd/thread.go, flai/cmd/thread_test.go, flai/internal/digest/onanswer.go, flai/internal/digest/onanswer_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go]
 after: [S-0432]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 381
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 50
+          output: 782
+          cache_read: 6168673
+          cache_write: 15792
+          cost: 1.3603
+        - model: claude-sonnet-5-5
+          input: 4
+          output: 19
+          cache_read: 41178
+          cache_write: 15419
+          cost: 0.039
+cost_of_delay:
+  value: 46.88
+  by: planner-S-0433
+  at: 2026-10-23T17:17:11Z
 forecast:
-  duration: 29m
-  delivery: 2026-10-24T01:54:00Z
-  basis: "Its own forecast of 29m; 26th in the pull order with an in-progress limit of 5, behind S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431 and S-0432."
-  by: flai
-  at: 2026-10-23T07:23:39Z
+  duration: 35m
+  delivery: 2026-10-24T12:00:00Z
+  basis: "flai's median of 107 s per unit of size over 85 done feature stories on claude-opus-5-5 in the large band gives 35m for size 19 (6 criteria, 13 touches); kept, since the work is one function and two call sites (the CLI's afterThread, which the dashboard's host API also runs, and the MCP threadReply) with docs in five files; delivery is flai's play-out, 25th in the pull order behind S-0428, S-0241, and the E-0023, E-0024, and earlier E-0025 stories, moved as the order ahead changes."
+  by: planner-S-0433
+  at: 2026-10-23T17:16:25Z
+finalized:
+  by: orchestrator
+  at: 2026-10-23T17:18:00Z
 ---
 # S-0433 An operator's answer on a thread becomes a digest entry at once, before the curator's next run, so the next story that meets the question finds it
 
@@ -55,11 +82,15 @@ The question the operator just answered is not asked again while the curator wai
 
 ### Planning
 
-- **Touches.** The story declared none. Every touch comes from its five tasks, file by file.
-  - **From layout:** a new `flai/internal/digest/onanswer.go` with its test, called from the three places that save an answer, which the explorer found: `flai/cmd/thread.go`, `threadReply` in `flai/internal/mcpserver/server.go`, and `thread.reply` and `thread.confirm` in `flai/internal/hostapi/writes.go`, each with its test. `threads.ReplyWith` itself is left alone, so that `flai/internal/threads` does not import `digest`, which reads threads.
-  - **From design:** `strategic-agents.md`, `agent-narrative.md`, `docs/users/flai.md`, and `docs/users/flaiover.md` for criterion 6.
-  - **Co-change, added:** `flai/internal/hostapi/writes_test.go` (74% of the commits that changed `threads.go` or `writes.go`) and `docs/users/flai.md` (13%).
-  - **Co-change, not added:** `flaiover/src/lib/server/agent.ts` (41%), since the dashboard need not show the entry; `flai/cmd/serve_actions.go` (27%), since no host action changes; `docs/users/flai-reference.md` (23%), since no flag is added, only a field of the result.
-  - **No folder touch.** The entries are written in the main checkout at run time, not on the story's branch.
-- **Forecast.** Kept at flai's 29m. It is one function and three call sites. Delivery is flai's play-out moved by S-0429's raise.
-- **Cost of delay.** Not set. Neither the story nor E-0025 has inputs, so `flai cod` refuses. The epic's input is asked on TH-0476, question 1, and the value follows its answer.
+Revisited by planner-S-0433 on 2026-10-23, with S-0428 in progress (its `flai/internal/digest` on its branch, not yet on main) and E-0025's cost of delay input set on TH-0476.
+
+- **Touches.** The 12 declared touches stand, file by file, and one is added. Every touch is on a task.
+  - **Declared, from layout:** a new `flai/internal/digest/onanswer.go` with its test (T-1837); the two places that save an operator's answer, `afterThread` in `flai/cmd/thread.go`, which `reply` and `confirm` share, and `threadReply` in `flai/internal/mcpserver/server.go`, each with its test (T-1840, T-1838). The host API's `thread.reply` and `thread.confirm` in `flai/internal/hostapi/writes.go` do not save a thread themselves: they run `flai thread reply --by=<owner> --json` and `flai thread confirm --by=<owner> --json` through `ExecRunner` and pass the CLI's JSON through, so the dashboard's entry is written by the CLI's code, and `writes.go` changes only if the result needs shaping; `writes_test.go` shows the path (T-1839). `threads.ReplyWith` and `threads.Confirm` are left alone: S-0428's `digest.go` imports `threads`, so `threads` cannot import `digest`.
+  - **Declared, from design:** `design/system/strategic-agents.md`, `design/system/agent-narrative.md`, `docs/users/flai.md`, and `docs/users/flaiover.md`, named by criterion 6 (T-1841).
+  - **Co-change, added:** `design/system/flai-cli.md` (48% of the commits that changed the declared files), on T-1841: its `## Commands` section describes `flai thread reply` and `confirm`, the MCP `thread_reply`, and the host API's `thread.reply` and `thread.confirm`, whose results gain `digest`. It is in `claims.shared`, as `docs/users/flai.md` is, so it holds no story.
+  - **Co-change, not added:** `design/system/flaiover-dashboard.md` (31%), since the dashboard's pages do not change; `docs/users/flai-reference.md` (20%), since no flag is added, only a field of `--json`; `docs/operators/index.md` and `settings.md` (18%, 14%), since no setting is added; `flai/internal/mcpserver/folder.go` (12%), since no tool is added or registered; `flaiover/src/lib/server/agent.ts` (8%), since the dashboard need not show the entry.
+  - **No folder touch.** The entries are written under `design/digest` in the main checkout at run time, as a thread entry is, not on the story's branch.
+- **Forecast.** Kept at flai's 35m: the median of 107 s per unit of size over 85 done feature stories on claude-opus-5-5 in the large band, for size 19 (6 criteria, 13 touches). The work is one function and two call sites, with the dashboard path covered by the CLI's; the docs in five files are short additions. Delivery is flai's play-out, 25th in the pull order, moved as the order ahead changes.
+- **Cost of delay.** 46.88 USD a week, from `flai cod`: the story's share by forecast (35m of 7h28m) of E-0025's 600 USD a week, which the operator set on TH-0476 as 4h lost per 168h cycle at 150 USD an hour. No input of the story's own; none is needed while it shares the epic's.
+- **Who is the operator.** The manifest's `owner` (TH-0476 question 5), compared with the entry's author: the dashboard replies as `--by=<owner>`, the CLI as `--by`, else `FLAI_AGENT`, else the config author, and the MCP server as `--agent`, else `FLAI_AGENT`. An agent `flai serve` started is never the owner.
+- **Layers.** T-1837; then T-1838 and T-1840, which touch different files; then T-1839, which waits for T-1840 because the dashboard path runs the CLI's code; then T-1841.

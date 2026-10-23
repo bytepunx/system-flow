@@ -7,24 +7,45 @@ status: backlog
 parent: E-0025
 owner: alex
 created: 2026-10-16T05:59:39Z
-updated: 2026-10-23T07:23:39Z
+updated: 2026-10-23T17:11:31Z
 transitions: []
 tags: [cli, template]
 topics: [cli, planning, analysis, conventions]
-touches: [".claude/agents/curator.md", design/adrs, design/adrs/README.md, design/system/flai-cli.md, design/system/project-manifest.md, design/system/strategic-agents.md, docs/operators/settings.md, docs/users/flai-reference.md, docs/users/flai.md, flai/cmd/digest.go, flai/cmd/digest_test.go, flai/internal/digest/decay.go, flai/internal/digest/decay_test.go, flai/internal/guard/curate_test.go, flai/internal/guard/guard.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/curate_schedule_test.go, flai/internal/serve/serve.go, template/CHANGELOG.md, template/root/.claude/agents/curator.md, template/root/system-flow.yaml.tmpl, template/template.yaml]
+touches: [".claude/agents/curator.md", design/adrs, design/adrs/README.md, design/system/flai-cli.md, design/system/project-manifest.md, design/system/strategic-agents.md, docs/operators/settings.md, docs/users/flai-reference.md, docs/users/flai.md, flai/cmd/digest.go, flai/cmd/digest_test.go, flai/internal/check/check.go, flai/internal/check/digest_test.go, flai/internal/digest/decay.go, flai/internal/digest/decay_test.go, flai/internal/guard/curate_test.go, flai/internal/guard/guard.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/curate_schedule_test.go, flai/internal/serve/serve.go, template/CHANGELOG.md, template/root/.claude/agents/curator.md, template/root/system-flow.yaml.tmpl, template/template.yaml]
 after: [S-0431]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 270
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 24
+          output: 371
+          cache_read: 2804521
+          cache_write: 11517
+          cost: 0.6194
+cost_of_delay:
+  value: 95.02
+  by: planner-S-0432
+  at: 2026-10-23T17:11:07Z
 forecast:
-  duration: 55m
-  delivery: 2026-10-24T01:21:00Z
-  basis: "Its own forecast of 55m; 25th in the pull order with an in-progress limit of 5, behind S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430 and S-0431."
-  by: flai
-  at: 2026-10-23T07:23:39Z
+  duration: 1h10m
+  delivery: 2026-10-24T11:11:00Z
+  basis: "flai forecast gives 1h1m: median 107 s per unit of size over 85 done feature stories on claude-opus-5-5 in the large band, times size 34 (6 criteria, 28 touches). Raised to 1h10m for the four touches the plan adds (flai/internal/check/check.go and digest_test.go for manifest.digest, flai/internal/serve/curate.go and curate_test.go for the trigger), size 38 at the same rate. Delivery is flai's play-out of 2026-10-24T11:02Z moved by the 9 minutes added, 24th in the pull order with an in-progress limit of 5, behind S-0428 to S-0431 and the E-0023 and E-0024 stories."
+  by: planner-S-0432
+  at: 2026-10-23T17:10:01Z
+finalized:
+  by: orchestrator
+  at: 2026-10-23T17:11:31Z
 ---
 # S-0432 The curator runs after each acceptance and on a schedule, marks an entry the design now records absorbed, and compacts an entry no one has cited within the window
 
@@ -56,11 +77,11 @@ The digest stays small and true without the operator asking. With the `curate` a
 
 ### Planning
 
-- **Touches.** The story declared none. Every touch comes from its six tasks, file by file.
-  - **From layout:** `flai/internal/serve/curate_schedule.go` with its test, on the pattern of `analysis_schedule.go`, and its wiring in `serve.go`; `flai/internal/digest/decay.go` with its test; `flai/cmd/digest.go` and its test; `flai/internal/manifest/manifest.go` and `settings.go` with their tests; `flai/internal/harness/harness.go`, `flai/internal/guard/guard.go`, their tests, and `.claude/agents/curator.md` in both copies; `template/root/system-flow.yaml.tmpl`.
-  - **From design:** the ADR and its index; `docs/operators/settings.md`, `project-manifest.md`, `strategic-agents.md`, `flai-cli.md`, `docs/users/flai.md`, `template/CHANGELOG.md`, and `template/template.yaml` for criterion 6.
-  - **Co-change, added:** `flai/internal/manifest/manifest.go` (75% of the commits that changed `analysis_schedule.go` or `settings.go`), `docs/operators/settings.md` (62%), `manifest_test.go` (62%), `docs/users/flai-reference.md` (38%), and `settings_test.go` (38%).
-  - **Co-change, not added:** `flai/internal/check/check.go` (25%), since the manifest's own check reports `manifest.digest`, as it does `manifest.analysis`.
+- **Touches.** The story declared none when drafted; every touch comes from its six tasks, file by file, checked against the main checkout on 2026-10-23.
+  - **From layout:** `flai/internal/serve/curate_schedule.go` with its test, on the pattern of `analysis_schedule.go`, wired in `serve.go` beside `newAnalysisScheduler`; `flai/internal/serve/curate.go` and its test (S-0431's), since the start it makes takes the trigger `accepted S-nnnn` or `schedule <spec>` and journals it, as `serve/analyze.go` does; `flai/internal/digest/decay.go` with its test; `flai/cmd/digest.go` and its test; `flai/internal/manifest/manifest.go` and `settings.go` with their tests; `flai/internal/check/check.go` and `flai/internal/check/digest_test.go`, because `manifest.analysis` and `manifest.planning` are reported from `check.go`, which loops the manifest's `Errors()`, so `manifest.digest` is reported there too, and its test follows `analysis_test.go`; `flai/internal/harness/harness.go`, `flai/internal/guard/guard.go`, their tests, and `.claude/agents/curator.md` in both copies; `template/root/system-flow.yaml.tmpl`.
+  - **From design:** the ADR and its index; `docs/operators/settings.md`, `project-manifest.md`, `strategic-agents.md`, `flai-cli.md`, `docs/users/flai.md`, `template/CHANGELOG.md`, and `template/template.yaml` for criterion 6; `docs/users/flai-reference.md`, regenerated with the commands, which `reference_test.go` checks.
+  - **Co-change** (`flai touches suggest`, 781 of 2289 commits): the strongest are `docs/operators/index.md` (15%), `design/system/flaiover-dashboard.md` (13%), and `docs/users/flaiover.md` (12%), which the dashboard and host-action stories drag in and this story does not change; the curate action's row in `docs/operators/index.md` is S-0431's. `flai/internal/check/check.go` (4%) is added from layout, above. `flai/internal/serve/agents.go` (4%) is not: `AgentRun.Trigger` already exists.
   - **Folder touch kept:** `design/adrs`, because the ADR's file name is known only once `flai adr new` makes it. It is in `claims.shared`, so it holds no story.
-- **Forecast.** Kept at flai's 55m. The scheduler mirrors the analysis scheduler and the decay commands are small. Delivery is flai's play-out moved by S-0429's raise.
-- **Cost of delay.** Not set. Neither the story nor E-0025 has inputs, so `flai cod` refuses. The epic's input is asked on TH-0476, question 1, and the value follows its answer.
+  - Not on main yet: `flai/internal/digest/`, `flai/cmd/digest.go`, `serve/curate.go`, and `curator.md` come with S-0428 and S-0431, which this story waits for through `after`.
+- **Forecast.** 1h10m, from flai's 1h1m (107 s per unit of size over 85 done feature stories on claude-opus-5-5 in the large band, size 34) raised for the four touches added, size 38 at the same rate; delivery is flai's play-out moved by the minutes added. Not raised further: the scheduler mirrors `analysis_schedule.go` and the `cadence` type in `replan.go`, and the decay commands are small.
+- **Cost of delay.** 95.02 USD a week, `flai cod` on 2026-10-23: the story's 1h10m share of E-0025's 600.00 USD a week (`time_lost_per_cycle: 4h`, set on the epic after TH-0476 was confirmed) over 7h22m across its eight open stories without inputs. It moves when a sibling's forecast does.

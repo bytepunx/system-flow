@@ -7,11 +7,11 @@ status: backlog
 parent: S-0434
 owner: alex
 created: 2026-10-16T06:08:45Z
-updated: 2026-10-16T06:08:45Z
+updated: 2026-10-23T17:24:04Z
 transitions: []
 stream: S-0434
 tags: [cli, dashboard, template]
-touches: [docs/users/flai.md, docs/users/flaiover.md, design/system/flaiover-dashboard.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, template/template.yaml]
+touches: [docs/users/flai.md, docs/users/flaiover.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, template/template.yaml]
 after: [T-1844, T-1845]
 ---
 # T-1846 The user docs and the dashboard's design describe the digest's measure and chart, and the analyzer is told to read it on a bottlenecks run

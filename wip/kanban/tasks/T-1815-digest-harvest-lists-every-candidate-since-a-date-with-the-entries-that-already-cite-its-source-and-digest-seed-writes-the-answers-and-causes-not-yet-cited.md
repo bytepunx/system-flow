@@ -7,7 +7,7 @@ status: backlog
 parent: S-0429
 owner: alex
 created: 2026-10-16T06:04:04Z
-updated: 2026-10-16T06:04:04Z
+updated: 2026-10-23T16:43:11Z
 transitions: []
 stream: S-0429
 tags: [cli]
@@ -30,3 +30,5 @@ Waits for the answer rule and the sources tasks, which it joins.
 ## Notes
 
 The curator (S-0431) reads `Harvest` since its last run on every run, so its output must be stable for the same files.
+
+Planner-S-0429, 2026-10-23: `threads.List` returns every thread, resolved ones included, and there is no threads archive, so `Harvest` reads `wip/threads` alone (610 threads, 591 of them resolved). Sort by date, then by source ID, so two candidates of one second keep one order. `digest.New` and `digest.List` are the names the draft assumed before S-0428 landed its package: take the exported names `flai/internal/digest` has once S-0428 is accepted, and the entry format from ADR-0191, which S-0428 writes.

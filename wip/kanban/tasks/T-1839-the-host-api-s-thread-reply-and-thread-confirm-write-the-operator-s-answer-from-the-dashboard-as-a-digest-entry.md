@@ -7,12 +7,12 @@ status: backlog
 parent: S-0433
 owner: alex
 created: 2026-10-16T06:07:44Z
-updated: 2026-10-16T06:07:44Z
+updated: 2026-10-23T17:17:18Z
 transitions: []
 stream: S-0433
 tags: [cli]
 touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go]
-after: [T-1837]
+after: [T-1840]
 ---
 # T-1839 The host API's thread.reply and thread.confirm write the operator's answer from the dashboard as a digest entry
 

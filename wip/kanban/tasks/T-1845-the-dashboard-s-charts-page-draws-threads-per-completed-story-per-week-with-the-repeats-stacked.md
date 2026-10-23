@@ -7,11 +7,11 @@ status: backlog
 parent: S-0434
 owner: alex
 created: 2026-10-16T06:08:34Z
-updated: 2026-10-16T06:08:34Z
+updated: 2026-10-23T17:23:57Z
 transitions: []
 stream: S-0434
 tags: [dashboard]
-touches: [flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts"]
+touches: [flaiover/src/lib/viz/catalog.ts, flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/viz/explain.ts, flaiover/src/lib/viz/explain.test.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts"]
 after: [T-1843]
 ---
 # T-1845 The dashboard's charts page draws threads per completed story per week with the repeats stacked

@@ -7,24 +7,45 @@ status: backlog
 parent: E-0025
 owner: alex
 created: 2026-10-16T05:59:25Z
-updated: 2026-10-23T07:23:39Z
+updated: 2026-10-23T17:06:47Z
 transitions: []
 tags: [cli, template]
 topics: [cli, planning, analysis, conventions, template]
-touches: [".claude/agents/curator.md", ".claude/settings.json", design/adrs, design/adrs/README.md, design/conventions/strategic-agents.md, design/system/flai-cli.md, design/system/project-manifest.md, design/system/strategic-agents.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flai-reference.md, docs/users/flai.md, flai/cmd/curate.go, flai/cmd/curate_test.go, flai/cmd/guard.go, flai/cmd/root.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/context/strategic.go, flai/internal/context/strategic_test.go, flai/internal/conventions/conventions.go, flai/internal/conventions/conventions_test.go, flai/internal/guard/curate_test.go, flai/internal/guard/guard.go, flai/internal/harness/adapters.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/mcpserver/curate.go, flai/internal/mcpserver/folder.go, flai/internal/serve/activity.go, flai/internal/serve/agents.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/workitem/activity.go, flai/internal/workitem/activity_test.go, template/CHANGELOG.md, template/root/.claude/agents/curator.md, template/root/.claude/settings.json, template/root/design/conventions/strategic-agents.md, template/template.yaml]
+touches: [".claude/agents/curator.md", ".claude/settings.json", design/adrs, design/adrs/README.md, design/conventions/README.md, design/conventions/strategic-agents.md, design/system/agent-adapters.md, design/system/agent-narrative.md, design/system/flai-cli.md, design/system/project-manifest.md, design/system/strategic-agents.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flai-reference.md, docs/users/flai.md, flai/cmd/curate.go, flai/cmd/curate_test.go, flai/cmd/guard.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/cmd/root.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/context/strategic.go, flai/internal/context/strategic_test.go, flai/internal/conventions/conventions.go, flai/internal/conventions/conventions_test.go, flai/internal/guard/authors.go, flai/internal/guard/call.go, flai/internal/guard/curate_test.go, flai/internal/guard/guard.go, flai/internal/guard/shared.go, flai/internal/harness/adapters.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/mcpserver/activity.go, flai/internal/mcpserver/curate.go, flai/internal/mcpserver/curate_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/serve/activity.go, flai/internal/serve/agents.go, flai/internal/serve/claudecheck.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/usage/usage.go, flai/internal/workitem/activity.go, flai/internal/workitem/activity_test.go, flai/internal/workitem/usage_test.go, template/CHANGELOG.md, template/root/.claude/agents/curator.md, template/root/.claude/settings.json, template/root/design/conventions/README.md, template/root/design/conventions/strategic-agents.md, template/root/wip/agents/README.md, template/template.yaml, wip/agents/README.md]
 after: [S-0430]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 820
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 51
+          output: 850
+          cache_read: 5629905
+          cache_write: 12112
+          cost: 1.2411
+cost_of_delay:
+  value: 147.54
+  by: planner-S-0431
+  at: 2026-10-23T17:06:20Z
 forecast:
-  duration: 1h23m
-  delivery: 2026-10-24T00:20:00Z
-  basis: "Its own forecast of 1h23m; 24th in the pull order with an in-progress limit of 5, behind S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429 and S-0430."
-  by: flai
-  at: 2026-10-23T07:23:39Z
+  duration: 1h45m
+  delivery: 2026-10-24T09:54:00Z
+  basis: "flai's 2h8m (median 107 s per unit of size over 85 done feature stories on claude-opus-5-5 in the large band, size 71: 7 criteria, 64 touches) brought down to 1h45m: 19 of the touches this revisit added are one-line registrations, kind-list pins, and index rows the per-unit median overstates, and S-0223, which built the analyzer whole, took 47 min against a 2h forecast; kept above flai's 1h34m at the declared size because the eight tasks run through six layers of sub-agents and two permission_prompt waits. Delivery is flai's play-out, 23rd in the pull order behind S-0428, S-0429, S-0430 and the E-0024 and OpenCode drafts, with the shorter duration."
+  by: planner-S-0431
+  at: 2026-10-23T17:05:26Z
+finalized:
+  by: orchestrator
+  at: 2026-10-23T17:06:47Z
 ---
 # S-0431 The curator, a strategic agent behind the curate host action, takes in what the archive and the threads gained since its last run as digest entries written through flai alone
 
@@ -61,12 +82,14 @@ An agent keeps the digest, so that the decisions in narratives, which only a mod
 
 ### Planning
 
-- **Touches.** The story declared none. Every touch comes from its eight tasks, file by file. Each of the curator's files mirrors one of the analyzer's that the explorer mapped.
-  - **From layout:** `flai/internal/serve/curate.go` (as `analyze.go`), `agents.go`, and `activity.go`; `flai/internal/harness/harness.go` and `adapters.go`; `flai/internal/guard/guard.go` with a new `curate_test.go`, and `flai/cmd/guard.go`; `flai/cmd/curate.go` (as `analyze.go`) and `root.go`; `flai/internal/mcpserver/curate.go` and `folder.go`; `flai/internal/hostapi/writes.go`; `flai/cmd/serve_actions.go`; `flai/internal/conventions/conventions.go`; `flai/internal/context/strategic.go`; `flai/internal/workitem/activity.go`; `flai/internal/manifest/manifest.go` and `settings.go`; the tests of each; `.claude/agents/curator.md` and `.claude/settings.json` with their template copies.
-  - **From design:** the ADR and its index; for criterion 7, the convention in both copies, `strategic-agents.md`, `project-manifest.md`, `flai-cli.md`, `docs/operators/index.md`, `docs/operators/settings.md`, `docs/users/flai.md`, `template/CHANGELOG.md`, and `template/template.yaml`.
-  - **Co-change, added:** `flai/internal/harness/harness_test.go` (92% of the commits that changed the analyzer's files), `template/CHANGELOG.md` (33%), `template/template.yaml` (18%), `design/system/flai-cli.md` (20%), `flai/internal/serve/agents.go` (18%), `adapters.go` (15%), `flai/cmd/serve_actions.go` (13%), and the convention `strategic-agents.md` (12%).
-  - **Co-change, not added:** `work-management.md` and `delegation.md` in both copies (18% and 15%), since nothing changes in how a story's agent works or delegates; `flai/internal/serve/agents_test.go` (12%), since `curate_test.go` covers the curator's record.
-  - **Folder touch kept:** `design/adrs`, because the ADR's file name is known only once `flai adr new` makes it. It is in `claims.shared`, so it holds no story.
-- **Forecast.** Kept at flai's 1h23m. Most of the 45 touches mirror the analyzer's code, which is faster than new code; the waits on `permission_prompt` for the `.claude/` writes are not agent time. Delivery is flai's play-out moved by S-0429's raise.
-- **Cost of delay.** Not set. Neither the story nor E-0025 has inputs, so `flai cod` refuses. The epic's input is asked on TH-0476, question 1, and the value follows its answer.
-- **Overlap.** `guard.go`, `harness.go`, `adapters.go`, `serve/agents.go`, `conventions.go`, and `strategic.go` are also claimed by E-0024's S-0414 to S-0419, and `hostapi/writes.go` and `serve_actions.go` by E-0021's and E-0022's drafts, so the holds run them one after the other.
+Revisited on 2026-10-23 by planner-S-0431 against the analyzer's files on today's main, mapped by the explorer; the plan of 2026-10-16 stands, with wider touches and the figures below.
+
+- **Touches.** 64 paths, each a file but `design/adrs`, the union of the eight tasks' touches. Every one of the 45 the story declared is kept.
+  - **Declared (45).** The first plan's, each a file that mirrors one of the analyzer's: `flai/internal/serve/curate.go` and `curate_test.go` as `analyze.go` and its test, `flai/cmd/curate.go` as `analyze.go`, `flai/internal/mcpserver/curate.go` as `analyze.go`, `flai/internal/guard/curate_test.go` beside the analyzer's cases in `guard_test.go`, `.claude/agents/curator.md` as `analyzer.md`, and the registrations in `agents.go`, `activity.go`, `harness.go`, `adapters.go`, `guard.go`, `cmd/guard.go`, `root.go`, `folder.go`, `hostapi/writes.go`, `serve_actions.go`, `conventions.go`, `context/strategic.go`, `workitem/activity.go`, `manifest.go`, `settings.go`, their tests, the ADR index, the convention and docs criterion 7 names, `template/CHANGELOG.md`, and `template/template.yaml`.
+  - **Layout, added (19).** What the explorer found the analyzer also lives in: `flai/internal/usage/usage.go`, whose `StrategicKinds` is hard-coded and pinned equal to `ActivityKinds` by `flai/internal/workitem/usage_test.go`, so T-1824 fails its own tests without both; `flai/internal/mcpserver/activity.go`, the kind wording of `activity_log`; `flai/internal/guard/call.go`, whose `Decide` switches on the role with no default, so an unknown role passes every call, and `guard/authors.go` and `guard/shared.go`, which give the agent the name the guard holds it to (ADR-0143); `flai/internal/serve/claudecheck.go`, which gates the Claude Code check on the host actions and lists the strategic agents; `flai/internal/mcpserver/server.go`, `flai/cmd/mcp.go`, and `flai/cmd/mcp_http.go`, which wire the tool as they wire `Analyses`, with `mcpserver/folder_test.go` and `server_test.go`, which pin the tool names, and a new `mcpserver/curate_test.go` as `analyze_test.go`; `docs/operators/settings.md` on T-1829 as well as T-1830, since `make flai-reference` regenerates its flag table and `reference_test.go` pins it; `design/system/agent-narrative.md` and `design/system/agent-adapters.md`, which list the activity documents and the strategic agents; `design/conventions/README.md`, `wip/agents/README.md`, and their template copies, which name the three agents.
+  - **Co-change, not added.** `flai touches suggest` lists `design/system/flaiover-dashboard.md` (12%), `docs/users/flaiover.md` (10%), `design/system/workflow.md` (8%), `design/issues/summary.md` (7%), `design/conventions/work-management.md` (6%), `flaiover/src/lib/server/agent.ts` (5%), `flai/internal/guard/guard_test.go` (3%), and `flai/internal/serve/agents_test.go` (3%): the story has no dashboard page (the settings page lists whatever host actions flai reports), the workflow and work management do not change, the summary is the close-out's, the guard's cases go in `curate_test.go`, and `serve/curate_test.go` covers the run record. `flai/internal/mcpserver/server.go` (7%) and `server_test.go` (5%) are added from layout above.
+  - **Folder touch kept.** `design/adrs`: the ADR's file name is known only once `flai adr new` makes it. It is in `claims.shared`, so it holds no story.
+- **Forecast.** 1h45m, delivery 2026-10-24T09:54:00Z. flai gives 2h8m (median 107 s per unit of size over 85 done feature stories on claude-opus-5-5 in the large band, size 71 from 7 criteria and 64 touches), up from 1h34m at the declared 45 touches. Brought down because the 19 added paths are one-line registrations, kind-list pins, and index rows the per-unit median overstates, and S-0223, which built the analyzer whole with nine tasks, took 47 min of agent time against a 2h forecast; kept above 1h34m because the eight tasks run through six layers of sub-agents and the two `.claude/` writes wait on `permission_prompt`. Delivery is flai's play-out with the shorter duration: 23rd in the pull order behind S-0428, S-0429, S-0430, and the E-0024 and OpenCode drafts.
+- **Cost of delay.** 147.54 USD a week, flai's figure: the story's share of E-0025's 600.00 USD a week (from the epic's `time_lost_per_cycle` of 4h), 1h45m of the 7h7m forecast over the epic's eight open stories without inputs. No input of the story's own; none asked for, since the epic's covers it.
+- **Findings for the tasks.** Three things the first plan's `## Work` does not name, proposed on the plan thread: `serve/agents.go`'s `orchestrates()` takes any run with no story, no item, and no focus for the orchestrator's, so a curator run would overwrite `Orchestrator` in `serve/agents.json` unless the run carries a mark of its own (T-1827); `guard/call.go`'s `Decide` needs a `curate` case or the role passes everything (T-1826); `usage.StrategicKinds` and its pin (T-1824). `flai digest new`, `edit`, `harvest`, `list`, and `show` do not exist on main yet: S-0428 (in progress) and S-0429 build them, and the story waits on S-0430, which waits on S-0429.
+- **Overlap.** `guard.go`, `harness.go`, `adapters.go`, `serve/agents.go`, `conventions.go`, and `context/strategic.go` are also claimed by E-0024's S-0414 to S-0419, and `hostapi/writes.go` and `serve_actions.go` by E-0021's and E-0022's drafts, so the holds run them one after the other.

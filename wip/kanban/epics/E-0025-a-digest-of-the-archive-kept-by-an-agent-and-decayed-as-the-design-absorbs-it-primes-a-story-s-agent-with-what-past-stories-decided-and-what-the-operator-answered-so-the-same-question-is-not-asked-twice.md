@@ -3,32 +3,58 @@ id: E-0025
 type: epic
 nature: feature
 title: A digest of the archive, kept by an agent and decayed as the design absorbs it, primes a story's agent with what past stories decided and what the operator answered, so the same question is not asked twice
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-16T04:28:05Z
-updated: 2026-10-21T20:49:14Z
+updated: 2026-10-23T16:36:56Z
 transitions:
   - to: ready
     at: 2026-10-21T20:49:14Z
     by: alex
+  - to: in-progress
+    at: 2026-10-23T16:36:56Z
+    by: agent-S-0428
 tags: [cli, template]
 topics: [cli, planning, analysis, conventions]
 touches: [flai/internal/context, flai/internal/serve, flai/cmd, design/system/agent-context.md, design/system/strategic-agents.md, design/system/metrics.md, design/conventions/agent-narrative.md, docs/users/flai.md, docs/operators/index.md, template]
 usage:
   source: sum
-  seconds: 0
-  models: []
+  seconds: 2452
+  priced_by: harness
+  turns:
+    - day: 2026-10-23
+      ceremony: 4
+      hand_edits: 4
+      work: 55
+  models:
+    - model: claude-opus-5-5
+      input: 402
+      output: 165571
+      cache_read: 22298638
+      cache_write: 847816
+      cost: 12.7647
   strategic:
     - kind: orchestrator
-      seconds: 353
+      seconds: 5025
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 99
-          output: 1728
-          cache_read: 36445899
-          cache_write: 27120
-          cost: 9.0233
+          input: 374
+          output: 5824
+          cache_read: 65621479
+          cache_write: 135289
+          cost: 15.4646
+        - model: claude-sonnet-5-5
+          input: 16
+          output: 871
+          cache_read: 268747
+          cache_write: 53676
+          cost: 0.2227
+cost_of_delay:
+  inputs:
+    time_lost_per_cycle: 4h
+    by: planner-S-0428
+    at: 2026-10-23T16:20:04Z
 ---
 # E-0025 A digest of the archive, kept by an agent and decayed as the design absorbs it, primes a story's agent with what past stories decided and what the operator answered, so the same question is not asked twice
 
@@ -63,3 +89,4 @@ To be drafted by the planner. Order: the entry format and its home first, with t
 - The planner reads first: `design/system/agent-context.md` § As built and § Fitting the pack to a budget; `design/conventions/agent-narrative.md`; `design/system/strategic-agents.md` for how the analyzer runs and writes; ADR-0047, ADR-0049, ADR-0091, ADR-0099, ADR-0104; `flai/internal/context` for the pack.
 - Open to the designer: whether the digest is a folder of markdown entries, one file per topic, or front matter on the archived items themselves; whether the analyzer keeps the digest or a role of its own does; what the compaction window is.
 - Safety: an entry never carries a secret's value, only where the operator said it lives; the run's prompt says so and `flai check` refuses an entry that matches a key's shape.
+- 2026-10-23T16:36:56Z: moved to in-progress: follows S-0428, which moved to in-progress

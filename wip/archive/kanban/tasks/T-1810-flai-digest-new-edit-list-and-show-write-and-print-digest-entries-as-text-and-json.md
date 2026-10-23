@@ -3,16 +3,37 @@ id: T-1810
 type: task
 nature: feature
 title: flai digest new, edit, list, and show write and print digest entries, as text and JSON
-status: backlog
+status: done
 parent: S-0428
 owner: alex
 created: 2026-10-16T06:03:22Z
-updated: 2026-10-16T06:03:22Z
-transitions: []
+updated: 2026-10-23T17:00:30Z
+transitions:
+  - to: ready
+    at: 2026-10-23T16:48:37Z
+    by: agent-S-0428
+  - to: in-progress
+    at: 2026-10-23T16:48:38Z
+    by: agent-S-0428
+  - to: done
+    at: 2026-10-23T17:00:30Z
+    by: agent-S-0428
 stream: S-0428
 tags: [cli]
-touches: [flai/cmd/digest.go, flai/cmd/digest_test.go, flai/cmd/root.go, docs/users/flai-reference.md]
+touches: [flai/cmd/digest.go, flai/cmd/digest_test.go, flai/cmd/root.go, docs/users/flai-reference.md, docs/operators/settings.md, flai/internal/guard/guard.go, flai/internal/guard/digest_test.go]
 after: [T-1808]
+usage:
+  source: log
+  seconds: 712
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 63
+      output: 25984
+      cache_read: 3499385
+      cache_write: 133050
+      cost: 2.0032
 ---
 # T-1810 flai digest new, edit, list, and show write and print digest entries, as text and JSON
 

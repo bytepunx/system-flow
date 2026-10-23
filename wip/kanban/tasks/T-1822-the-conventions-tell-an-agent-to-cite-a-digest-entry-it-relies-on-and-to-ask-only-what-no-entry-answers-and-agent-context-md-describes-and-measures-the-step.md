@@ -7,11 +7,11 @@ status: backlog
 parent: S-0430
 owner: alex
 created: 2026-10-16T06:05:07Z
-updated: 2026-10-16T06:05:07Z
+updated: 2026-10-23T16:50:42Z
 transitions: []
 stream: S-0430
 tags: [cli, template]
-touches: [design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/agent-narrative.md, design/system/agent-context.md, docs/users/flai.md, template/CHANGELOG.md, template/template.yaml]
+touches: [design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/agent-narrative.md, design/system/agent-context.md, design/system/flai-cli.md, docs/users/flai.md, template/CHANGELOG.md, template/template.yaml]
 after: [T-1820]
 ---
 # T-1822 The conventions tell an agent to cite a digest entry it relies on and to ask only what no entry answers, and agent-context.md describes and measures the step

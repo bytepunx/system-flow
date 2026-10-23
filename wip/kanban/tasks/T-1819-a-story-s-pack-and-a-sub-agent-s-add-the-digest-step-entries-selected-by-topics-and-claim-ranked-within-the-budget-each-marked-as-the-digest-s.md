@@ -7,11 +7,11 @@ status: backlog
 parent: S-0430
 owner: alex
 created: 2026-10-16T06:04:41Z
-updated: 2026-10-16T06:04:41Z
+updated: 2026-10-23T16:50:28Z
 transitions: []
 stream: S-0430
 tags: [cli]
-touches: [flai/internal/context/digest.go, flai/internal/context/digest_test.go, flai/internal/context/items.go, flai/internal/context/design.go, flai/internal/context/context.go, flai/internal/context/story.go]
+touches: [flai/internal/context/digest.go, flai/internal/context/digest_test.go, flai/internal/context/items.go, flai/internal/context/design.go, flai/internal/context/context.go, flai/internal/context/rank.go, flai/internal/context/story.go]
 after: [T-1818]
 ---
 # T-1819 A story's pack and a sub-agent's add the digest step: entries selected by topics and claim, ranked within the budget, each marked as the digest's

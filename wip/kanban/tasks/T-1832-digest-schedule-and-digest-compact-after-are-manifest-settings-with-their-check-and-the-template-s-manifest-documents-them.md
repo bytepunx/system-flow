@@ -7,11 +7,11 @@ status: backlog
 parent: S-0432
 owner: alex
 created: 2026-10-16T06:06:47Z
-updated: 2026-10-16T06:06:47Z
+updated: 2026-10-23T17:09:32Z
 transitions: []
 stream: S-0432
 tags: [cli, template]
-touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/settings.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings_test.go, template/root/system-flow.yaml.tmpl]
+touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/settings.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings_test.go, flai/internal/check/check.go, flai/internal/check/digest_test.go, template/root/system-flow.yaml.tmpl]
 after: [T-1831]
 ---
 # T-1832 digest.schedule and digest.compact_after are manifest settings with their check, and the template's manifest documents them

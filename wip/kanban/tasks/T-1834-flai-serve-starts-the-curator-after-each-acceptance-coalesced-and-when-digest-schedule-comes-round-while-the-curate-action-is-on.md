@@ -7,11 +7,11 @@ status: backlog
 parent: S-0432
 owner: alex
 created: 2026-10-16T06:07:04Z
-updated: 2026-10-16T06:07:04Z
+updated: 2026-10-23T17:09:39Z
 transitions: []
 stream: S-0432
 tags: [cli]
-touches: [flai/internal/serve/curate_schedule.go, flai/internal/serve/curate_schedule_test.go, flai/internal/serve/serve.go]
+touches: [flai/internal/serve/curate_schedule.go, flai/internal/serve/curate_schedule_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/serve.go]
 after: [T-1832]
 ---
 # T-1834 flai serve starts the curator after each acceptance, coalesced, and when digest.schedule comes round, while the curate action is on

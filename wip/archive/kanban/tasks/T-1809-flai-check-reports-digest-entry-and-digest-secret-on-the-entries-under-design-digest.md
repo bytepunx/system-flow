@@ -3,16 +3,37 @@ id: T-1809
 type: task
 nature: feature
 title: flai check reports digest.entry and digest.secret on the entries under design/digest
-status: backlog
+status: done
 parent: S-0428
 owner: alex
 created: 2026-10-16T06:03:16Z
-updated: 2026-10-16T06:03:16Z
-transitions: []
+updated: 2026-10-23T17:00:48Z
+transitions:
+  - to: ready
+    at: 2026-10-23T16:48:36Z
+    by: agent-S-0428
+  - to: in-progress
+    at: 2026-10-23T16:48:36Z
+    by: agent-S-0428
+  - to: done
+    at: 2026-10-23T17:00:48Z
+    by: agent-S-0428
 stream: S-0428
 tags: [cli]
 touches: [flai/internal/check/check.go, flai/internal/check/digest_test.go]
 after: [T-1808]
+usage:
+  source: log
+  seconds: 732
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 15300
+      cache_read: 2060614
+      cache_write: 78347
+      cost: 1.1796
 ---
 # T-1809 flai check reports digest.entry and digest.secret on the entries under design/digest
 

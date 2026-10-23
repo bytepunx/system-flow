@@ -7,24 +7,49 @@ status: backlog
 parent: E-0025
 owner: alex
 created: 2026-10-16T06:00:19Z
-updated: 2026-10-23T07:23:39Z
+updated: 2026-10-23T17:26:19Z
 transitions: []
 tags: [cli, dashboard]
 topics: [cli, dashboard, analysis]
-touches: [design/adrs, design/adrs/README.md, design/conventions/strategic-agents.md, design/system/flaiover-dashboard.md, design/system/metrics.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md, flai/cmd/check_stats_test.go, flai/cmd/stats.go, flai/cmd/stats_test.go, flai/internal/metrics/digest.go, flai/internal/metrics/digest_test.go, flai/internal/metrics/metrics.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/viz/charts.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", template/CHANGELOG.md, template/root/design/conventions/strategic-agents.md, template/template.yaml]
+touches: [design/adrs, design/adrs/README.md, design/conventions/strategic-agents.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/system/metrics.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md, flai/cmd/check_stats_test.go, flai/cmd/stats.go, flai/cmd/stats_test.go, flai/internal/metrics/digest.go, flai/internal/metrics/digest_test.go, flai/internal/metrics/metrics.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, flaiover/src/lib/viz/catalog.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/explain.test.ts, flaiover/src/lib/viz/explain.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", template/CHANGELOG.md, template/root/design/conventions/strategic-agents.md, template/template.yaml]
 after: [S-0433]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 101
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 14
+          output: 122
+          cache_read: 1868873
+          cache_write: 7430
+          cost: 0.4127
+        - model: claude-sonnet-5-5
+          input: 3
+          output: 18
+          cache_read: 41178
+          cache_write: 15418
+          cost: 0.039
 draft: true
+cost_of_delay:
+  value: 92.98
+  by: planner-S-0434
+  at: 2026-10-23T17:26:19Z
 forecast:
-  duration: 39m
-  delivery: 2026-10-24T02:37:00Z
-  basis: "Its own forecast of 39m; 27th in the pull order with an in-progress limit of 5, behind S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432 and S-0433."
-  by: flai
-  at: 2026-10-23T07:23:39Z
+  duration: 1h15m
+  delivery: 2026-10-24T13:23:00Z
+  basis: "flai forecast 2026-10-23: median 107 s per unit of size over 85 done feature stories on claude-opus-5-5 in the large band, times size 27 (4 criteria, 23 touches), 49m; 26th in the pull order with an in-progress limit of 5, played out to 2026-10-24T12:57Z. Raised by planner-S-0434 to 1h15m, delivery 26m later: S-0404, of the same shape (an ADR on metrics.md, a stats section, its print, a chart, the docs), was forecast 37m and took 1h14m of agent time, and this story adds a package input (digest.List) and the flaiover catalogue, explainer, and their test, which the first plan predates."
+  by: planner-S-0434
+  at: 2026-10-23T17:23:50Z
 ---
 # S-0434 flai stats reports per week the threads opened to the operator per completed story and how many asked what a digest entry already answered, and the dashboard charts it
 
@@ -53,12 +78,14 @@ The analyzer and the operator can see whether the digest cut the questions that 
 
 ### Planning
 
-- **Touches.** The story declared none. Every touch comes from its five tasks, file by file.
-  - **From layout:** a new `flai/internal/metrics/digest.go` with its test, on the pattern of `waiting.go`; `metrics.go` for the report's field; `flai/internal/statsread/statsread.go` to load the entries; `flai/cmd/stats.go` and `check_stats_test.go`; `flaiover/src/lib/viz/charts.ts`, `charts.test.ts`, and the charts page with its test.
-  - **From design:** the ADR, its index, and `metrics.md`; `docs/users/flai.md`, `docs/users/flaiover.md`, `flaiover-dashboard.md`, the convention `strategic-agents.md` in both copies, `template/CHANGELOG.md`, and `template/template.yaml` for criterion 4.
-  - **Co-change, added:** `flaiover/src/lib/viz/charts.test.ts` (51% of the commits that changed `waiting.go`, `stats.go`, or `charts.ts`), the charts page (31%) and its test (27%), `flai/cmd/check_stats_test.go` (29%), `flai/internal/metrics/metrics.go` (27%), `design/system/metrics.md` (24%), `docs/users/flai.md` (22%), `flaiover-dashboard.md` (13%), and `docs/users/flaiover.md` (13%).
-  - **Added after S-0404 was accepted (2026-10-20):** S-0404 added a section to `flai stats` on the same pattern and also changed `flai/cmd/stats_test.go`, `flai/internal/statsread/statsread_test.go`, and `docs/users/flai-reference.md`, which it regenerated for the section's help. S-0434's tasks T-1843 and T-1844 do the same work, so the three are on them now. `docs/users/flai-reference.md` had been left out at 18% co-change because no flag is added; S-0404 shows a new section regenerates it.
-  - **Co-change, not added:** `usage.go`, `spend.go`, `strategic.go`, `SpendTable.svelte.test.ts`, and `palette.ts`, since neither usage nor spend changes and the chart reads the palette as it is.
+Replanned on 2026-10-23 by planner-S-0434, with S-0428 in review and E-0025's input set. The five tasks were revisited against the criteria: each criterion has its task and their `after` stand; T-1845 and T-1846 gained touches, below. The plan is on TH-0616.
+
+- **Touches.** The story declared none at first; all 27 come from its five tasks, file by file, and `flai touches suggest` lists them as the claim.
+  - **From layout:** `flai/internal/metrics/digest.go` with its test, on the pattern of `queue.go` (S-0404): an input on `Options`, a field on the report, a call from `Compute`; `metrics.go`; `flai/internal/statsread/statsread.go` with its test, which already loads the threads and the manifest and so can load the entries with `digest.List(repo)` and pass `repo.Manifest.Owner`; `flai/cmd/stats.go` with `check_stats_test.go` and `stats_test.go`; `flaiover/src/lib/viz/charts.ts` and the charts page with their tests.
+  - **From layout, added by this plan:** `flaiover/src/lib/viz/catalog.ts`, since S-0484 moved the chart kinds there and its `TITLES` is a `Record<Kind, string>`, so a new kind does not compile without a title; `flaiover/src/lib/viz/explain.ts`, whose `EXPLAINERS` is a `Record<Kind, ...>` too; and `explain.test.ts`, which runs every kind against a heading of `metrics.md`. S-0404 predates the catalogue, which is why the first plan lacked them.
+  - **From design:** the ADR and its index, `metrics.md`, `docs/users/flai.md`, `docs/users/flaiover.md`, `flaiover-dashboard.md`, the convention `strategic-agents.md` in both copies, `template/CHANGELOG.md`, and `template/template.yaml` for criterion 4.
+  - **Co-change, added:** `design/system/flai-cli.md` (38%, the highest `flai touches suggest` lists): its `flai stats` row names each section, `queue` since S-0404, which changed it; the digest section belongs there too, on T-1846. Earlier plans added `charts.test.ts`, the charts page and its test, `check_stats_test.go`, `metrics.go`, `metrics.md`, `docs/users/flai.md`, `flaiover-dashboard.md`, `docs/users/flaiover.md`, and, after S-0404 was accepted, `stats_test.go`, `statsread_test.go`, and `docs/users/flai-reference.md`, which a new section's help regenerates.
+  - **Co-change, not added:** `docs/operators/index.md` and `settings.md` (14%) and `project-manifest.md`, since no setting is added; `workflow.md`, `work-management.md`, `work-hierarchy.md`, `agent-narrative.md`, and `issues/summary.md`, co-changes of the shared docs this story has no reason to edit; `flai/cmd/root.go`, `harness.go`, `hostapi/writes.go`, and `mcpserver/folder.go`, since no command, prompt, or write is added.
   - **Folder touch kept:** `design/adrs`, because the ADR's file name is known only once `flai adr new` makes it. It is in `claims.shared`, so it holds no story.
-- **Forecast.** Kept at flai's 39m. It is a metric on the waiting section's pattern and one chart, and S-0404's section is the same shape. Delivery is flai's play-out.
-- **Cost of delay.** Not set. Neither the story nor E-0025 has inputs, so `flai cod` refuses. The epic's input is asked on TH-0476, question 1, and the value follows its answer.
+- **Forecast.** flai's 49m (size 27: 4 criteria, 23 touches; 26th in the pull order) raised to 1h15m, delivery 2026-10-24T13:23Z, 26m after flai's play-out. S-0404, of the same shape (an ADR on `metrics.md`, a stats section and its print, a chart, the docs), was forecast 37m and took 1h14m of agent time (4464 s in its archived record), and this story adds a package input and the three catalogue files above.
+- **Cost of delay.** 92.98 USD a week: S-0434's share of E-0025's 600 USD a week, 1h15m of the 8h4m forecast over its eight stories, from `flai cod` on 2026-10-23 with the forecast above. The epic's input, `time_lost_per_cycle: 4h`, is the answer the operator confirmed on TH-0476 (2026-10-21). Kept at flai's figure.

@@ -7,7 +7,7 @@ status: backlog
 parent: S-0429
 owner: alex
 created: 2026-10-16T06:03:54Z
-updated: 2026-10-16T06:03:54Z
+updated: 2026-10-23T16:43:04Z
 transitions: []
 stream: S-0429
 tags: [cli]
@@ -31,3 +31,5 @@ First layer: runs beside the answer rule's task, which touches other files.
 ## Notes
 
 If `workitem.NarrativeSection` cannot read an archived narrative's path, extend it there and add `flai/internal/workitem/narrative.go` to this task's touches.
+
+Planner-S-0429, 2026-10-23: `workitem.NarrativeSection(text, name)` takes the narrative's text, so an archived narrative is read with `workitem.ReadNarrative` from `wip/archive/agents/S-nnnn.md` and the section taken from its `Body`; `narrative.go` needs no change. A story's completion date is `Item.CompletedAt()` on the archived story under `wip/archive/kanban/stories/`. An issue file (`flai/internal/issues`) has no cause or fix heading: its sections are `## Description`, `## Instances`, and `## Remediation`, and `issues.Close` appends `Closed <ts>: <reason>` to the body. Read the cause from `## Description`, the fix from the `Closed` line's reason, with `## Remediation` when the reason names none, the close date from that line's timestamp, and the story that closed it from the `S-nnnn` the reason names. A rewording of `## Work` to say so is proposed on the plan's thread. On 2026-10-23, 168 of the 190 issues are closed and 442 narratives are archived.

@@ -7,11 +7,11 @@ status: backlog
 parent: S-0431
 owner: alex
 created: 2026-10-16T06:05:32Z
-updated: 2026-10-16T06:05:32Z
+updated: 2026-10-23T17:03:35Z
 transitions: []
 stream: S-0431
 tags: [cli]
-touches: [flai/internal/conventions/conventions.go, flai/internal/conventions/conventions_test.go, flai/internal/context/strategic.go, flai/internal/context/strategic_test.go, flai/internal/workitem/activity.go, flai/internal/workitem/activity_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/settings.go, flai/internal/manifest/manifest_test.go]
+touches: [flai/internal/conventions/conventions.go, flai/internal/conventions/conventions_test.go, flai/internal/context/strategic.go, flai/internal/context/strategic_test.go, flai/internal/workitem/activity.go, flai/internal/workitem/activity_test.go, flai/internal/workitem/usage_test.go, flai/internal/usage/usage.go, flai/internal/mcpserver/activity.go, flai/internal/manifest/manifest.go, flai/internal/manifest/settings.go, flai/internal/manifest/manifest_test.go]
 after: [T-1823]
 ---
 # T-1824 The curate role is known to the conventions, the strategic pack, the activity documents, and the manifest's digest.agent

@@ -45,15 +45,15 @@ usage:
           cache_write: 294016
           cost: 1.282
     - kind: orchestrator
-      seconds: 7098
+      seconds: 9333
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1328
-          output: 21306
-          cache_read: 316965016
-          cache_write: 508731
-          cost: 72.0287
+          input: 1394
+          output: 22035
+          cache_read: 321336815
+          cache_write: 602056
+          cost: 73.0108
 ---
 # E-0024 Workflows as data: a project defines a strategic role or a repeatable formula of steps in files flai runs, and the built-in roles are expressed the same way, so a new role or a release process needs no flai release
 

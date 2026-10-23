@@ -7,7 +7,7 @@ status: backlog
 parent: E-0025
 owner: alex
 created: 2026-10-16T05:58:28Z
-updated: 2026-10-23T07:23:39Z
+updated: 2026-10-23T16:44:53Z
 transitions: []
 tags: [cli]
 topics: [cli, planning, analysis]
@@ -18,13 +18,34 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 479
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 52
+          output: 780
+          cache_read: 4797537
+          cache_write: 19380
+          cost: 1.0596
+cost_of_delay:
+  value: 76.92
+  by: planner-S-0429
+  at: 2026-10-23T16:44:02Z
 forecast:
-  duration: 45m
-  delivery: 2026-10-23T21:54:00Z
-  basis: "Its own forecast of 45m; 22nd in the pull order with an in-progress limit of 5, behind S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425 and S-0428."
-  by: flai
-  at: 2026-10-23T07:23:39Z
+  duration: 50m
+  delivery: 2026-10-24T06:15:00Z
+  basis: "flai's median of 107 s per unit of size over 85 done feature stories on claude-opus-5-5 in the large band gives 36m for size 20 (5 criteria, 15 touches); raised to 50m because the seed run over 610 threads and 168 closed issues, and fixing what flai check reports on the entries it writes, is work the size does not count; delivery is flai's play-out, 21st in the pull order behind S-0428 and the E-0023 and E-0024 stories, moved by the raise."
+  by: planner-S-0429
+  at: 2026-10-23T16:42:43Z
+finalized:
+  by: orchestrator
+  at: 2026-10-23T16:44:53Z
 ---
 # S-0429 flai digest harvest lists what the archive and the threads hold since a date, and a one-off seed fills the digest from the operator's answers and the closed issues so there is something to prime with
 
@@ -55,11 +76,13 @@ The digest starts full enough to prime with. `flai digest harvest` lists, as can
 
 ### Planning
 
-- **Touches.** The story declared none. Every touch comes from its five tasks, file by file.
-  - **From layout:** `answer.go`, `sources.go`, `harvest.go`, and `seed.go` in `flai/internal/digest`, each with its test; `flai/cmd/digest.go` and its test, which S-0428 makes.
-  - **From design:** `design/system/flai-cli.md`, `docs/users/flai.md`, `docs/users/flai-reference.md`, and `design/digest/README.md` for criterion 5.
-  - **Co-change, added:** `design/system/flai-cli.md` (36% of the commits that changed `threads.go`, `narrative.go`, or `cmd/thread.go`) and `docs/users/flai.md` (23%).
-  - **Co-change, not added:** `flai/internal/threads/threads_test.go` and `flai/internal/workitem/narrative_test.go` (27%), since the digest reads threads and narratives without changing their packages; T-1814 adds `narrative.go` if reading an archived narrative needs it, and `flai task done` widens the touches then. `design/system/agent-narrative.md` (23%), since no narrative rule changes here.
-  - **Folder touch kept:** `design/digest`, because the seed's entry file names are known only once it runs. Only this story writes there while it is in progress, and it holds a ready story only for that time.
-- **Forecast.** Raised from flai's 32m to 45m. The seed runs over about 480 threads and 138 closed issues, and fixing what the check reports on its entries is work the size, 5 criteria and 15 touches, does not count. Delivery is flai's play-out moved by the raise.
-- **Cost of delay.** Not set. Neither the story nor E-0025 has inputs, so `flai cod` refuses. The epic's input is asked on TH-0476, question 1, and the value follows its answer.
+Revisited by planner-S-0429 on 2026-10-23, with S-0428 in progress (its digest package not yet landed) and E-0025's cost of delay input set.
+
+- **Touches.** The 15 declared touches stand, file by file; `flai touches suggest` added none.
+  - **Declared, from layout:** `answer.go`, `sources.go`, `harvest.go`, and `seed.go` in `flai/internal/digest`, each with its test, one pair per task of the first three layers; `flai/cmd/digest.go` and its test, which S-0428 creates and T-1816 extends.
+  - **Declared, from design:** `design/system/flai-cli.md`, `docs/users/flai.md`, `docs/users/flai-reference.md`, and `design/digest/README.md`, named by criterion 5.
+  - **Co-change, not added:** the list is led by `docs/operators/index.md` and `settings.md` (23%, 22%), `design/system/flaiover-dashboard.md` (20%), `docs/users/flaiover.md` (18%), and `design/adrs/README.md` (16%), which travel with any `flai/cmd` change; this story adds no setting, no dashboard change, and no ADR (S-0428 writes ADR-0191). `flai/cmd/root.go` (6%) is not needed: S-0428 registers `digest` there, and the two subcommands are added inside `digest.go`. `flai/internal/threads`, `workitem`, and `issues` are read, not changed: `threads.List`, `Thread.Entries`, `workitem.NarrativeSection`, `workitem.ReadNarrative`, `Item.CompletedAt`, and `issues.List` give what the sources need, so the contingency on `narrative.go` in T-1814 falls away.
+  - **Folder touch kept:** `design/digest`, on the story and on T-1817, because the seed's entry file names (`D-nnnn-<slug>.md`) are known only once it runs. Only S-0428 writes there before this story, and S-0433 after it, so the hold reaches no ready story while S-0429 is in progress.
+- **Forecast.** flai gives 36m (median 107 s per unit of size over 85 done feature stories on claude-opus-5-5 in the large band, size 20). Set to 50m: the seed runs over 610 threads (591 resolved) and 168 closed issues and may write a few hundred entries, and fixing what `flai check --strict` reports on them with `flai digest edit` is work the size does not count. Delivery is flai's play-out of 2026-10-24T06:01Z moved by the raise; flai replays it as the order ahead changes.
+- **Cost of delay.** 76.92 USD a week, from `flai cod`: the story's share by forecast (50m of 6h30m) of E-0025's 600 USD a week, which the operator set on TH-0476 as 4h lost per 168h cycle at 150 USD an hour. No input of the story's own; none is needed while it shares the epic's.
+- **Sizing facts behind the tasks' notes:** 610 threads under `wip/threads` (none archived; 15 open), 442 archived narratives, 190 issues of which 168 are closed. Issue files carry no cause or fix heading: the cause is the `## Description`, the fix the reason of the `Closed <ts>: <reason>` line, with `## Remediation` as fallback.

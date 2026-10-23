@@ -3,16 +3,37 @@ id: T-1808
 type: task
 nature: feature
 title: flai/internal/digest reads, validates, and writes digest entries, and refuses one whose text has a secret's shape
-status: backlog
+status: done
 parent: S-0428
 owner: alex
 created: 2026-10-16T06:03:05Z
-updated: 2026-10-16T06:03:05Z
-transitions: []
+updated: 2026-10-23T16:48:29Z
+transitions:
+  - to: ready
+    at: 2026-10-23T16:38:40Z
+    by: agent-S-0428
+  - to: in-progress
+    at: 2026-10-23T16:38:42Z
+    by: agent-S-0428
+  - to: done
+    at: 2026-10-23T16:48:29Z
+    by: agent-S-0428
 stream: S-0428
 tags: [cli]
 touches: [flai/internal/digest/digest.go, flai/internal/digest/digest_test.go, flai/internal/digest/write.go, flai/internal/digest/write_test.go, flai/internal/digest/secret.go, flai/internal/digest/secret_test.go]
 after: [T-1807]
+usage:
+  source: log
+  seconds: 587
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 62
+      output: 25397
+      cache_read: 3420333
+      cache_write: 130044
+      cost: 1.9579
 ---
 # T-1808 flai/internal/digest reads, validates, and writes digest entries, and refuses one whose text has a secret's shape
 

@@ -7,11 +7,11 @@ status: backlog
 parent: S-0425
 owner: alex
 created: 2026-10-16T05:49:19Z
-updated: 2026-10-16T05:49:19Z
+updated: 2026-10-23T15:34:23Z
 transitions: []
 stream: S-0425
 tags: [cli]
-touches: [design/adrs, design/adrs/README.md, design/system/metrics.md]
+touches: [design/adrs, design/adrs/README.md, design/system/metrics.md, design/system/work-hierarchy.md]
 ---
 # T-1790 An ADR refining ADR-0083, ADR-0095, and ADR-0100 defines strategic usage per role, and metrics.md says the same
 

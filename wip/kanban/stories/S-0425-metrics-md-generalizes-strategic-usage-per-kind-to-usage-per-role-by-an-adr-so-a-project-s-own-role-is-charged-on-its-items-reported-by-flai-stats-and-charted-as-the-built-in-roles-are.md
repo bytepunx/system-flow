@@ -7,24 +7,43 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:41:28Z
-updated: 2026-10-23T07:23:39Z
+updated: 2026-10-23T15:35:46Z
 transitions: []
 tags: [cli, dashboard]
-topics: [cli, dashboard, planning, orchestration]
-touches: [design/adrs, design/adrs/README.md, design/system/flaiover-dashboard.md, design/system/metrics.md, docs/users/flai.md, docs/users/flaiover.md, flai/internal/metrics/strategic.go, flai/internal/metrics/strategic_test.go, flai/internal/metrics/usage.go, flai/internal/metrics/usage_test.go, flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, flai/internal/statsread/statsread.go, flai/internal/usage/usage.go, flai/internal/usage/usage_test.go, flai/internal/workitem/usage.go, flai/internal/workitem/usage_test.go, flaiover/src/lib/components/RolePage.svelte, flaiover/src/lib/components/RolePage.svelte.test.ts, flaiover/src/lib/strategic.test.ts, flaiover/src/lib/strategic.ts, flaiover/src/lib/usage.test.ts, flaiover/src/lib/usage.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/viz/charts.ts, design/system/flai-cli.md]
+topics: [cli, dashboard, planning, orchestration, template]
+touches: [design/adrs, design/adrs/README.md, design/system/flaiover-dashboard.md, design/system/metrics.md, design/system/work-hierarchy.md, design/system/strategic-agents.md, design/system/continuous-improvement.md, design/system/flai-cli.md, design/tech/charts.md, docs/users/flai.md, docs/users/flaiover.md, design/workflows/roles/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/analyzer.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/analyzer.md, template/CHANGELOG.md, flai/cmd/activity.go, flai/cmd/activity_test.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/internal/issues/usage.go, flai/internal/issues/usage_test.go, flai/internal/mcpserver/activity.go, flai/internal/mcpserver/activity_test.go, flai/internal/metrics/strategic.go, flai/internal/metrics/strategic_test.go, flai/internal/metrics/usage.go, flai/internal/metrics/usage_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, flai/internal/statsread/statsread.go, flai/internal/usage/usage.go, flai/internal/usage/usage_test.go, flai/internal/workitem/usage.go, flai/internal/workitem/usage_test.go, flaiover/src/lib/components/RolePage.svelte, flaiover/src/lib/components/RolePage.svelte.test.ts, flaiover/src/lib/strategic.test.ts, flaiover/src/lib/strategic.ts, flaiover/src/lib/usage.test.ts, flaiover/src/lib/usage.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/viz/charts.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts"]
 after: [S-0423, S-0424]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 2235
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 66
+          output: 729
+          cache_read: 4371799
+          cache_write: 93325
+          cost: 0.9821
 draft: true
+cost_of_delay:
+  value: 62.36
+  by: planner-S-0425
+  at: 2026-10-23T15:35:46Z
 forecast:
-  duration: 50m
-  delivery: 2026-10-24T01:16:00Z
-  basis: "Its own forecast of 50m; 20th in the pull order with an in-progress limit of 5, behind S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423 and S-0424."
-  by: flai
-  at: 2026-10-23T07:23:39Z
+  duration: 1h30m
+  delivery: 2026-10-24T10:02:00Z
+  basis: "flai's 1h41m from 107 s a unit over 85 done feature stories on this model in the large band, times size 56 (5 criteria, 51 touches), cut to 1h30m because 14 of the touches are one-line edits (a charge line per role file, a doc sentence each); 20th in the pull order with an in-progress limit of 5, delivered after S-0424's 08:22Z plus 1h30m times the cycle factor 1.12."
+  by: planner-S-0425
+  at: 2026-10-23T15:35:46Z
 ---
 # S-0425 metrics.md generalizes strategic usage per kind to usage per role by an ADR, so a project's own role is charged on its items, reported by flai stats, and charted as the built-in roles are
 
@@ -46,6 +65,7 @@ What a defined role spends counts as the built-in roles' spend does. An ADR gene
 - T-1792 flai stats reports strategic totals, items, issues, project, and use per day for every role a project defines
 - T-1793 The dashboard's Strategic Cost and Strategic Use charts and each role page draw a series per role from flai stats
 - T-1794 The user guides and the dashboard's design say that strategic usage is charged, reported, and charted per role
+- T-2073 A role file names its charge rule, item, named, or issues, the baseline role files carry theirs, and flai check reports an unknown rule
 
 ## Notes
 
@@ -54,11 +74,23 @@ What a defined role spends counts as the built-in roles' spend does. An ADR gene
 
 ### Planning
 
-- **Touches.** The story declared none. Every touch comes from its five tasks.
-  - **From layout:** serve's `activity.go`, `workitem/usage.go`, and `usage/usage.go`, each with its test; `metrics/strategic.go` and `usage.go` with their tests; `statsread.go`; and in `flaiover/src/lib`, `strategic.ts`, `usage.ts`, `viz/charts.ts`, and `RolePage.svelte`, each with its test.
-  - **From design:** the ADR's index, `metrics.md`, `flaiover-dashboard.md`, and the user guides.
-  - **Co-change, added:** `design/system/flai-cli.md` (48%), which describes `flai stats`.
-  - **Co-change, not added:** the operator docs (no setting changes) and `agent-narrative.md`, which S-0417 updates.
-  - **Folder touch kept:** `design/adrs`, for the ADR's new file; it is shared.
-- **Forecast.** Kept at flai's 50m. The forecast's basis gives the figures, and its delivery is flai's play-out moved by any raise times the cycle factor.
-- **Cost of delay.** Not set. Neither the story nor E-0024 has inputs, so `flai cod` refuses. The epic's input is asked on TH-0471, question 1, and the value follows its answer.
+- **Plan thread.** Replanned 2026-10-23 on the story's own thread, after the code was read. One task added, T-2073: the role file S-0414 defines has no field for the charge rule criterion 1 names, so the field, the three baseline role files, and its check are a task of their own.
+- **Touches.** 51, all files but `design/adrs`.
+  - **Declared, kept:** the 26 earlier touches, from the five earlier tasks.
+  - **From layout, added (code read 2026-10-23):**
+    - `flai/internal/issues/usage.go` and its test on T-1791: `ChargeStrategic` there refuses any kind but the three, as `workitem/usage.go` does.
+    - `flai/cmd/activity.go` and its test on T-1791: `chargedTo` says what an activity charged with a branch per kind.
+    - `flai/internal/mcpserver/activity.go` and its test on T-1791: `activity_log`'s description states the three rules by kind.
+    - `flai/cmd/stats.go` and `flai/cmd/check_stats_test.go` on T-1792: the printed labels, and the stats tests criterion 3 keeps unchanged, beside a new one with a fixture role.
+    - `flaiover/src/routes/charts/[kind]/+page.svelte` and its test on T-1793: the table view's columns come from `STRATEGIC_AGENTS` in `viz/charts.ts`, which also filters a role outside the list out of the bars.
+    - `flai/internal/roles/roles.go`, `flai/internal/check/check.go`, and their tests on T-2073, for the `charge` field.
+  - **From design, added:** `design/system/work-hierarchy.md` on T-1790, which defines the `strategic` entry with `metrics.md` (ADR-0083); the six baseline role files and `template/CHANGELOG.md` on T-2073; `design/system/strategic-agents.md` on T-1794, whose sections on what each run costs describe the charges; `design/system/continuous-improvement.md` § Issue file, which says one entry per kind; `design/tech/charts.md` § Palette and rules, for the slot a role beyond the three takes.
+  - **Co-change, kept:** `design/system/flai-cli.md` (48%), shared, so it holds nothing.
+  - **Co-change, not added:** `docs/operators/index.md` and `settings.md` (no setting changes), `docs/users/flai-reference.md` (no flag changes), `workflow.md`, `work-management.md`, `project-manifest.md`, and `agent-narrative.md`, which S-0417 updates for defined roles' activity documents.
+  - **Left to earlier stories:** `workitem/activity.go`'s kind gate, `serve/agents.go`, and `hostapi/people.go`, which S-0417 (T-1737) opens to any role's name; the dashboard's role page and `strategic.ts`'s run types, which S-0420 builds; the three roles' start path, which S-0419 moves.
+  - **Folder touch kept:** `design/adrs`, because the ADR's file name is known only once `flai adr new` makes it. The folder is in `claims.shared`, so it holds no story.
+- **Forecast.** 1h30m, cut from flai's 1h41m (107 s a unit over 85 done feature stories on this model in the large band, times size 56). Fourteen of the touches are one-line edits: a `charge:` line in each of six role files, a CHANGELOG line, and a sentence each in seven documents. The Go charge dispatch and the dashboard's series per role are the work, and they are the size of S-0417's or S-0420's. The delivery is flai's play-out with the new duration: S-0424's 08:22Z plus 1h30m times the cycle factor 1.12, 2026-10-24T10:02Z.
+- **Cost of delay.** 62.36 USD a week, worked out by hand from TH-0471's answer 1, as the planners of S-0414 to S-0420 did, because `flai cod` refuses while E-0024 has no inputs.
+  - 4h lost per cycle at `planning.hour_rate` 150 over the default 168h cycle gives E-0024 600 USD a week.
+  - S-0425 takes the share its 1h30m is of the 14h26m forecast for E-0024's twelve open stories: 90 / 866 × 600.
+  - The input the operator chose is still not on E-0024; the plan thread asks for it. Once it is set, `flai cod S-0425` gives the same figure while the forecasts stand.

@@ -7,11 +7,11 @@ status: backlog
 parent: S-0430
 owner: alex
 created: 2026-10-16T06:05:01Z
-updated: 2026-10-16T06:05:01Z
+updated: 2026-10-23T16:50:35Z
 transitions: []
 stream: S-0430
 tags: [cli]
-touches: [flai/cmd/prime_test.go, flai/internal/mcpserver/prime_test.go, flai/internal/mcpserver/server_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go]
+touches: [flai/cmd/prime.go, flai/cmd/prime_test.go, docs/users/flai-reference.md, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/prime_test.go, flai/internal/mcpserver/server_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go]
 after: [T-1820]
 ---
 # T-1821 flai prime and the MCP prime carry the digest step, a thread_reply source may cite an entry, and the orchestrator's prompt says to cite the answer the operator gave last time

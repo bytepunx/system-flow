@@ -3,16 +3,37 @@ id: T-1811
 type: task
 nature: feature
 title: doc_search finds a digest entry and the dashboard's documents tree lists design/digest, shown by tests
-status: backlog
+status: done
 parent: S-0428
 owner: alex
 created: 2026-10-16T06:03:27Z
-updated: 2026-10-16T06:03:27Z
-transitions: []
+updated: 2026-10-23T17:00:54Z
+transitions:
+  - to: ready
+    at: 2026-10-23T16:48:39Z
+    by: agent-S-0428
+  - to: in-progress
+    at: 2026-10-23T16:48:39Z
+    by: agent-S-0428
+  - to: done
+    at: 2026-10-23T17:00:54Z
+    by: agent-S-0428
 stream: S-0428
 tags: [cli]
 touches: [flai/internal/context/sections_test.go, flai/internal/hostapi/docs_test.go]
 after: [T-1808]
+usage:
+  source: log
+  seconds: 735
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 41
+      output: 16689
+      cache_read: 2247595
+      cache_write: 85456
+      cost: 1.2866
 ---
 # T-1811 doc_search finds a digest entry and the dashboard's documents tree lists design/digest, shown by tests
 

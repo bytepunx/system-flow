@@ -7,11 +7,11 @@ status: backlog
 parent: S-0433
 owner: alex
 created: 2026-10-16T06:08:01Z
-updated: 2026-10-16T06:08:01Z
+updated: 2026-10-23T17:16:07Z
 transitions: []
 stream: S-0433
 tags: [cli]
-touches: [design/system/strategic-agents.md, design/system/agent-narrative.md, docs/users/flai.md, docs/users/flaiover.md]
+touches: [design/system/strategic-agents.md, design/system/agent-narrative.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md]
 after: [T-1838, T-1839, T-1840]
 ---
 # T-1841 The design and the user docs say that an operator's answer on a thread becomes a digest entry at once

@@ -7,11 +7,11 @@ status: backlog
 parent: S-0425
 owner: alex
 created: 2026-10-16T05:49:40Z
-updated: 2026-10-16T05:50:23Z
+updated: 2026-10-23T15:34:51Z
 transitions: []
 stream: S-0425
 tags: [cli, dashboard]
-touches: [docs/users/flai.md, docs/users/flaiover.md, design/system/flaiover-dashboard.md, design/system/flai-cli.md]
+touches: [docs/users/flai.md, docs/users/flaiover.md, design/system/flaiover-dashboard.md, design/system/flai-cli.md, design/system/strategic-agents.md, design/system/continuous-improvement.md, design/tech/charts.md]
 after: [T-1791, T-1793]
 ---
 # T-1794 The user guides and the dashboard's design say that strategic usage is charged, reported, and charted per role

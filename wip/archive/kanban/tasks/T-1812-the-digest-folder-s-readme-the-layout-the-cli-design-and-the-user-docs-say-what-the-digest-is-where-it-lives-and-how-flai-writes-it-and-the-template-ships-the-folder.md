@@ -3,16 +3,37 @@ id: T-1812
 type: task
 nature: feature
 title: The digest folder's README, the layout, the CLI design, and the user docs say what the digest is, where it lives, and how flai writes it, and the template ships the folder
-status: backlog
+status: done
 parent: S-0428
 owner: alex
 created: 2026-10-16T06:03:37Z
-updated: 2026-10-16T06:10:44Z
-transitions: []
+updated: 2026-10-23T17:11:55Z
+transitions:
+  - to: ready
+    at: 2026-10-23T17:06:51Z
+    by: agent-S-0428
+  - to: in-progress
+    at: 2026-10-23T17:06:52Z
+    by: agent-S-0428
+  - to: done
+    at: 2026-10-23T17:11:55Z
+    by: agent-S-0428
 stream: S-0428
 tags: [cli, template]
 touches: [design/digest/README.md, template/root/design/digest/README.md, design/README.md, template/root/design/README.md.tmpl, design/system/repository-layout.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/conventions.md, CLAUDE.md, template/root/CLAUDE.md.tmpl, template/CHANGELOG.md, template/template.yaml]
 after: [T-1809, T-1810, T-1811]
+usage:
+  source: log
+  seconds: 303
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 93
+      output: 38105
+      cache_read: 5131885
+      cache_write: 195119
+      cost: 2.9377
 ---
 # T-1812 The digest folder's README, the layout, the CLI design, and the user docs say what the digest is, where it lives, and how flai writes it, and the template ships the folder
 

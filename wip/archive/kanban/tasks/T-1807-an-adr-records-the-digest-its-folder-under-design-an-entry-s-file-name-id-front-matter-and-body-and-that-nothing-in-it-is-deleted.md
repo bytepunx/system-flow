@@ -3,15 +3,36 @@ id: T-1807
 type: task
 nature: feature
 title: "An ADR records the digest: its folder under design, an entry's file name, ID, front matter, and body, and that nothing in it is deleted"
-status: backlog
+status: done
 parent: S-0428
 owner: alex
 created: 2026-10-16T06:02:34Z
-updated: 2026-10-16T06:02:34Z
-transitions: []
+updated: 2026-10-23T16:38:30Z
+transitions:
+  - to: ready
+    at: 2026-10-23T16:37:31Z
+    by: agent-S-0428
+  - to: in-progress
+    at: 2026-10-23T16:37:32Z
+    by: agent-S-0428
+  - to: done
+    at: 2026-10-23T16:38:30Z
+    by: agent-S-0428
 stream: S-0428
 tags: [cli]
 touches: [design/adrs, design/adrs/README.md]
+usage:
+  source: log
+  seconds: 58
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 19
+      output: 7794
+      cache_read: 1049632
+      cache_write: 39908
+      cost: 0.6009
 ---
 # T-1807 An ADR records the digest: its folder under design, an entry's file name, ID, front matter, and body, and that nothing in it is deleted
 

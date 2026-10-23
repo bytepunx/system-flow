@@ -7,11 +7,11 @@ status: backlog
 parent: S-0431
 owner: alex
 created: 2026-10-16T06:06:18Z
-updated: 2026-10-16T06:06:18Z
+updated: 2026-10-23T17:03:55Z
 transitions: []
 stream: S-0431
 tags: [cli]
-touches: [flai/cmd/curate.go, flai/cmd/curate_test.go, flai/cmd/root.go, flai/internal/mcpserver/curate.go, flai/internal/mcpserver/folder.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, docs/users/flai-reference.md]
+touches: [flai/cmd/curate.go, flai/cmd/curate_test.go, flai/cmd/root.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/internal/mcpserver/curate.go, flai/internal/mcpserver/curate_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [T-1827]
 ---
 # T-1829 flai curate, the MCP tool curate, the host API's curate.run, and the curate host action start the curator

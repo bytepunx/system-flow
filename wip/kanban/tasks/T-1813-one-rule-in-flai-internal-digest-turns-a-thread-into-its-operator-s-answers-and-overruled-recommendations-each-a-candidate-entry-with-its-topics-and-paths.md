@@ -7,7 +7,7 @@ status: backlog
 parent: S-0429
 owner: alex
 created: 2026-10-16T06:03:49Z
-updated: 2026-10-16T06:03:49Z
+updated: 2026-10-23T16:42:53Z
 transitions: []
 stream: S-0429
 tags: [cli]
@@ -34,3 +34,5 @@ First layer: runs beside the narrative and issue sources task, which touches oth
 ## Notes
 
 `threads.PendingRecommendation` and the confirmation line ADR-0090 writes tell a confirmation from a reply.
+
+Planner-S-0429, 2026-10-23: in `flai/internal/threads/threads.go`, `Thread.Entries()` gives each entry's `At`, `Author`, `Recommendation`, and `Source`; `Entry.Confirms()` tells a confirmation, written as `Confirmed the recommendation of <At> <author>.`; `Thread.Opener()` names the opener, and `Thread.Anchor` holds `Item`, `Path`, and `Heading`. An overruled recommendation is an entry by the operator, after a recommendation by someone else, that does not confirm it; `PendingRecommendation` returns nil then, so read the entries in order. The operator is `manifest.Manifest.Owner`. A story's topics come from `topics.OfStory` in `flai/internal/topics/story.go`, with its epic and tasks; `threads.StoryOf` gives the story of a task anchor; an epic anchor takes the epic's own topics and its tags through the manifest.

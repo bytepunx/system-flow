@@ -7,11 +7,11 @@ status: backlog
 parent: S-0431
 owner: alex
 created: 2026-10-16T06:05:50Z
-updated: 2026-10-16T06:05:50Z
+updated: 2026-10-23T17:03:41Z
 transitions: []
 stream: S-0431
 tags: [cli]
-touches: [flai/internal/guard/guard.go, flai/internal/guard/curate_test.go, flai/cmd/guard.go]
+touches: [flai/internal/guard/guard.go, flai/internal/guard/call.go, flai/internal/guard/authors.go, flai/internal/guard/shared.go, flai/internal/guard/curate_test.go, flai/cmd/guard.go]
 after: [T-1824]
 ---
 # T-1826 flai guard holds the curator to the reads, the digest commands, and its thread and activity tools, and refuses it every file edit and work item write
