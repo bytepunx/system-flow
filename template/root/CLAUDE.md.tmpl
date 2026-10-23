@@ -32,7 +32,7 @@ Precedence when rules conflict: an explicit instruction from the operator in thi
 | `{{ .layout.wip }}/agents/` | Your narrative, one file per story | Keep `## Current state` and `## Next steps` true. |
 | `{{ .layout.wip }}/archive/` | Finished items and narratives | Do not edit. `flai archive` moves things here. |
 | `scripts/` | Purpose-named shell scripts behind the `Makefile` | Add a script rather than inlining a command sequence. |
-| `system-flow.yaml` | Project manifest | Edit only `name`, `description`, `dashboard`. `flai` owns the rest. |
+| `system-flow.yaml` | Project manifest | Edit only `name`, `description`, `dashboard`. `flai subproject` adds, changes, and removes sub-projects. `flai` owns the rest. |
 
 Do not create top-level folders beyond these and the sub-projects listed in `system-flow.yaml`.
 
