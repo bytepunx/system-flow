@@ -6,7 +6,7 @@ title: flai test runs go test with -short, so a real-git test a task adds is ski
 status: backlog
 owner: alex
 created: 2026-10-23T20:20:26Z
-updated: 2026-10-23T21:23:34Z
+updated: 2026-10-23T23:39:23Z
 transitions: []
 tags: [flai, tests, manifest]
 topics: [testing, flai, cli]
@@ -31,7 +31,6 @@ usage:
           cache_read: 45021714
           cache_write: 23453
           cost: 9.9073
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 40m
@@ -46,6 +45,9 @@ forecast:
   basis: "flai forecast gave 24m (median 117 s per unit of size over 30 done remediation stories, size 12) and delivery 2026-10-24T14:48:00Z as 27th in the pull order; raised to 1h because the three tasks span ten files in six documents whose wording must be read before it is changed, and the close-out's go-test on verify now runs its real-git tests; delivery moved by the same 36m."
   by: planner-S-0490
   at: 2026-10-23T21:23:34Z
+finalized:
+  by: alex
+  at: 2026-10-23T23:39:23Z
 ---
 # S-0490 flai test runs go test with -short, so a real-git test a task adds is skipped until the integration tier runs in the merge queue's batch
 
