@@ -1712,7 +1712,7 @@ verify: S-0037 passed every step, integration and smoke left to the merge queue
 
 After `flai stream sync` rebases the branch onto a newer main branch, its `commit` and `base_commit` differ from the stored report's, but the run can still reuse that report's tiers ([ADR-0156](../../design/adrs/0156-a-close-out-that-main-outran-syncs-and-verifies-again-at-most-three-rounds-and.md)). It does so when all of these hold:
 
-- The branch's own change is the same: its `patch`, the `git patch-id --stable` of its diff from the merge base with the main branch, matches the report's. A run records its `patch` only when the worktree has nothing uncommitted.
+- The branch's own change is the same: its `patch`, the `git patch-id --stable` of its diff from the merge base with the main branch, matches the report's. The diff leaves out `design/issues/summary.md`, which a sync writes again from the issue files, so a rebase that rewrote it does not change the `patch` ([ADR-0192](../../design/adrs/0192-flai-verify-s-patch-id-leaves-out-the-files-a-sync-s-rebase-writes-again-so-a.md)). A run records its `patch` only when the worktree has nothing uncommitted.
 - The `fingerprint` and the list of tiers match, as for a resume.
 - `--fresh` is not given.
 
