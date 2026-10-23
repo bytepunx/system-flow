@@ -1,6 +1,6 @@
 ---
 title: Priming an agent with the documentation its story needs
-updated: 2026-10-15
+updated: 2026-10-23
 status: active
 topics: [cli, conventions]
 ---
@@ -217,6 +217,26 @@ What is left named is ADRs by ID (ADR-0047 9 KB, ADR-0049 15 KB), which ADR-0050
 Each file larger than an eighth of the budget is briefed instead, as ADR-0050 briefs a path written out. The line under the brief says the design system reaches the story and to read it whole before building or changing UI. The token file's brief has no outline: it says the file is JSON that `doc_get` cannot read, and to read the file or run `flai design show --json`. A document the story links already is not loaded twice; the reason is listed on it. A sub-agent's pack briefs both files. A strategic pack does not get the design system. Without a token file the step gives the guidance alone. A project without a guidance document has no design system, and its packs are as before.
 
 The convention `design-system.md` (`roles: [story, verify]`) goes with the step. It is in a story's pack, or a verifier's, only when the design system reaches the story: the project has a guidance document and its `topics` reach the story's. `flai prime`, `--cat`, and `--json` without a story leave it out when the project has no guidance document, and give it otherwise.
+
+### The digest
+
+The digest ([ADR-0191](../adrs/0191-the-digest-is-one-markdown-file-per-entry-under-the-design-folder-s-digest.md)) holds one entry per fact a past story learned, under `design/digest/`. [ADR-0194](../adrs/0194-a-story-s-pack-loads-the-digest-entries-its-topics-or-claim-select-ranked.md) (S-0430) gives the entries to the agents that need them, so an agent does not ask the operator again what a past story settled. It is built in `flai/internal/context/digest.go`.
+
+A story's pack gains a step after the briefs and before the ranked sections:
+
+- **What it selects.** An `active` or `compacted` entry that shares a topic other than `all` with the story, or whose paths meet the story's claim: the story's touches and its tasks', each path equal to the entry's, a folder holding it, or held by it. An `absorbed` entry never loads: the document its `absorbed_by` names says it now.
+- **How it ranks.** By BM25 over each entry's title and body, against the story's title, goal, and criteria, the query the ranked step uses. An entry whose paths meet the claim ranks before one its topics alone select; within each, by score, then the newest first. An entry with no word in common with the query loads only when its paths meet the claim.
+- **How much it takes.** Entries load in rank order while the digest's items stay within an eighth of the budget, 10 KB of 80 KB, and the pack within the budget. One that does not fit is skipped and the next is tried. The share is a constant beside `DefaultBudget`, not a manifest key.
+- **Over the budget.** When the pack is over its budget before the step, as `Exceeded` says, the step loads nothing, as the ranked step does.
+- **How an entry loads.** Each is an item with `step: digest`, its ID `D-nnnn`, its path, title, size, and reason: `path: <the claimed path it meets>` or `topics: <the topics it shares>`, then `rank n`, and `; compacted` for a compacted entry. An active entry loads its title and body. A compacted entry loads as a one-line brief, since compaction left it no body. In text the entries print under a `digest` heading, which says they are what past stories decided and the operator answered, not the design: an agent that relies on one cites its `D-nnnn` in its narrative or thread, checks it against the design before changing what it describes, and asks the operator only what no entry answers.
+
+A sub-agent's pack selects and ranks entries as the story's does and loads each as a one-line brief, after the design and ADR briefs, while the budget has room; those left out are counted with the briefs.
+
+The orchestrator's pack, `flai prime --role orchestrate`, takes the `active` and `compacted` entries of kind `answer` or `recommendation`. It ranks them against each thread awaiting the operator ([ADR-0181](../adrs/0181-a-thread-awaits-an-agent-only-when-the-agent-takes-part-in-it-or-it-is-on-the.md)), by the thread's title and first entry, and takes each thread's best entry not yet taken, round by round, threads in ID order, within the same eighth of the budget. An entry with no word in common with a thread is not taken for it. The reason is `thread TH-nnnn; rank n`. With no thread awaiting the operator the step loads nothing. An entry's path is a valid `source` on `thread_reply`, so the orchestrator cites the answer the operator gave last time. The planner's and the analyzer's packs take no digest step; they find entries with `doc_search`.
+
+#### Measured
+
+Measured in S-0430 once TH-0624 is answered.
 
 ### Delivered in parts
 
