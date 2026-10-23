@@ -309,3 +309,44 @@ func TestTheOrchestratorOnlyEnqueuesInTheMergeQueue(t *testing.T) {
 		t.Errorf("the orchestrator's acceptance without --batch is flai accept's to judge by the queue: %+v", r)
 	}
 }
+
+// S-0491 (ADR-0195): while edit_subprojects is on, the orchestrator adds,
+// changes, and removes a sub-project, with flai subproject and its
+// --autocommit, which commits the change on main, or with subproject_edit;
+// while it is off, whatever the others are, each is refused naming the
+// permission. Listing them passes with every permission off.
+func TestTheOrchestratorEditsSubprojectsByItsPermission(t *testing.T) {
+	subprojecting := func(p manifest.Permissions) Guard {
+		o := orchestrator(p)
+		o.Commands = append(o.Commands, "subproject")
+		return o
+	}
+	needs := "orchestration.permissions." + manifest.PermitEditSubprojects
+	for _, e := range []Event{
+		call(t, SubprojectEdit, `{"op":"add","name":"web","kind":"sveltekit"}`),
+		call(t, SubprojectEdit, `{"op":"remove","name":"web"}`),
+		bash("", "flai subproject add web --kind sveltekit --autocommit --trailer 'Co-Authored-By: someone <s@s>'"),
+		bash("", "flai subproject set web --tags ui,app --autocommit"),
+		bash("", "scripts/flai.sh --config c.json subproject remove web --autocommit --json"),
+	} {
+		for _, on := range []manifest.Permissions{{EditSubprojects: true}, allOn} {
+			if r := subprojecting(on).Decide(e); r.Why != "" {
+				t.Errorf("on: %s refused: %+v", described(e), r)
+			}
+		}
+		for _, off := range []manifest.Permissions{{}, except(manifest.PermitEditSubprojects)} {
+			r := subprojecting(off).Decide(e)
+			if !strings.HasPrefix(r.Why, "the orchestrator cannot ") || !strings.Contains(r.Why, ": it needs "+needs+", which is off. "+askOperator) || r.Needs != needs || r.Call == "" {
+				t.Errorf("off: %s: %+v", described(e), r)
+			}
+		}
+	}
+	if r := subprojecting(manifest.Permissions{}).Decide(call(t, SubprojectEdit, `{"op":"add","name":"web"}`)); r.Why != "the orchestrator cannot edit sub-projects: it needs "+needs+", which is off. "+askOperator || r.Call != SubprojectEdit {
+		t.Errorf("the refusal of subproject_edit: %+v", r)
+	}
+	for _, e := range []Event{call(t, Subprojects, `{}`), bash("", "flai subproject list --json"), bash("", "flai subproject")} {
+		if r := subprojecting(manifest.Permissions{}).Decide(e); r.Why != "" {
+			t.Errorf("%s refused with every permission off: %+v", described(e), r)
+		}
+	}
+}

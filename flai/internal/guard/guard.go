@@ -116,7 +116,8 @@
 // The manifest's sub-projects are the project's to shape (S-0491): a story's
 // agent changes them, with subproject_edit or flai subproject add, set, and
 // remove, on its story's branch; no sub-agent does, a task sub-agent among
-// them, nor the planner, the analyzer, or the orchestrator. Listing them,
+// them, nor the planner or the analyzer, and the orchestrator only while
+// orchestration.permissions.edit_subprojects is on (ADR-0195). Listing them,
 // with subprojects or flai subproject list, is a read open to all.
 //
 // No session flai serve starts, and no sub-agent, runs flai forge push
@@ -157,8 +158,10 @@ var MCPReads = []string{"board", "doc_get", "doc_search", "item_get", "order_by_
 // the sub-projects are the project's to shape, on the story's branch. Every
 // sub-agent, a task sub-agent among them, is refused both, as it is flai
 // components config, since they rewrite system-flow.yaml, which is the story's
-// agent's to change; the planner, the analyzer, and the orchestrator are
-// refused them by their own rules, which allow no write they do not name.
+// agent's to change; the planner and the analyzer are refused them by their
+// own rules, which allow no write they do not name, and the orchestrator is
+// allowed both only while orchestration.permissions.edit_subprojects is on
+// (ADR-0195).
 const (
 	Subprojects    = "subprojects"
 	SubprojectEdit = "subproject_edit"
@@ -813,6 +816,10 @@ func orchestrated(cmd, sub string, rest []string) (needs, never string) {
 	case "push", "release":
 		// flai release --evaluate is a read, let through above
 		return "", publishesThrough
+	case "subproject":
+		// flai subproject list, and flai subproject alone, are reads, let
+		// through above: add, set, and remove remain (ADR-0195)
+		return manifest.PermitEditSubprojects, ""
 	}
 	return "", "of flai's commands that write, it runs only thread new, issue new and bump, and those its permissions allow"
 }
@@ -1208,6 +1215,11 @@ func (g Guard) orchestrate(c Call) Verdict {
 		case tool == QueueAdd:
 			call = strings.TrimSpace(tool + " " + in.Story)
 			what, needs = strings.TrimSpace("enqueue "+in.Story), manifest.PermitAcceptReviews
+		case tool == SubprojectEdit:
+			// it uses flai subproject --autocommit instead, which commits
+			// the change on main; the tool is held to the same permission
+			// all the same (ADR-0195)
+			what, needs = "edit sub-projects", manifest.PermitEditSubprojects
 		default:
 			never = "of flai's tools that write, it calls only thread_open and activity_log, thread_reply and thread_resolve as the thread allows, and those its permissions allow"
 		}

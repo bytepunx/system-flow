@@ -388,9 +388,9 @@ func TestOrchestrationPermissions(t *testing.T) {
 		return m
 	}
 	all := "orchestration:\n  policy: cod\n  permissions:\n    plan_backlog_epics: true\n    plan_backlog_stories: true\n    finalize_drafts: true\n    promote_to_ready: true\n" +
-		"    order_ready: true\n    answer_threads: autonomous\n    accept_reviews: true\n    publish: true\n"
+		"    order_ready: true\n    answer_threads: autonomous\n    accept_reviews: true\n    publish: true\n    edit_subprojects: true\n"
 	o := load(t, all).Orchestration
-	want := Permissions{PlanBacklogEpics: true, PlanBacklogStories: true, FinalizeDrafts: true, PromoteToReady: true, OrderReady: true, AnswerThreads: AnswerAutonomous, AcceptReviews: true, Publish: true}
+	want := Permissions{PlanBacklogEpics: true, PlanBacklogStories: true, FinalizeDrafts: true, PromoteToReady: true, OrderReady: true, AnswerThreads: AnswerAutonomous, AcceptReviews: true, Publish: true, EditSubprojects: true}
 	if !reflect.DeepEqual(o.Permissions, want) {
 		t.Errorf("read %+v, want %+v", o.Permissions, want)
 	}
@@ -431,7 +431,7 @@ func TestOrchestrationPermissions(t *testing.T) {
 	}
 	got := o.Errors()
 	if len(got) != 2 || !strings.Contains(got[0], `orchestration.permissions has no permission "accept"; write one of plan_backlog_epics,`) ||
-		!strings.Contains(got[1], `orchestration.permissions has no permission "publsh"`) || !strings.HasSuffix(got[1], "publish, or remove it") {
+		!strings.Contains(got[1], `orchestration.permissions has no permission "publsh"`) || !strings.HasSuffix(got[1], "publish, edit_subprojects, or remove it") {
 		t.Errorf("unknown keys: %q", got)
 	}
 	for _, bad := range []string{"yes", "Autonomous", "always"} {

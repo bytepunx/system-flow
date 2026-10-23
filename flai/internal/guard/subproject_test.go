@@ -5,6 +5,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 )
 
 // subprojectCommands are flai's commands as the cmd package gives them,
@@ -75,10 +77,12 @@ func TestASubAgentListsTheSubprojectsButDoesNotEditThem(t *testing.T) {
 }
 
 // S-0491: the planner, the analyzer, and the orchestrator list the
-// sub-projects, but their rules, which allow no write they do not name,
-// refuse them subproject_edit and flai subproject add, set, and remove; the
-// orchestrator's refusal names the call for its activity document, and no
-// permission of its allows it yet, every one on.
+// sub-projects whatever their permissions. The planner's and the analyzer's
+// rules, which allow no write they do not name, refuse them subproject_edit
+// and flai subproject add, set, and remove; the orchestrator is refused them
+// only while orchestration.permissions.edit_subprojects is off, and its
+// refusal names the call and that permission (ADR-0195), as
+// TestTheOrchestratorEditsSubprojectsByItsPermission shows.
 func TestTheStrategicAgentsListTheSubprojectsButDoNotEditThem(t *testing.T) {
 	for _, s := range []struct {
 		name string
@@ -86,8 +90,10 @@ func TestTheStrategicAgentsListTheSubprojectsButDoNotEditThem(t *testing.T) {
 	}{
 		{"planner", Guard{Commands: subprojectCommands, Role: RolePlan}},
 		{"analyzer", Guard{Commands: subprojectCommands, Role: RoleAnalyze}},
-		{"orchestrator", Guard{Commands: subprojectCommands, Role: RoleOrchestrate, Permissions: allOn}},
+		{"orchestrator", Guard{Commands: subprojectCommands, Role: RoleOrchestrate, Permissions: except(manifest.PermitEditSubprojects)}},
+		{"orchestrator, every permission off", Guard{Commands: subprojectCommands, Role: RoleOrchestrate}},
 	} {
+		who, _, _ := strings.Cut(s.name, ",")
 		if why := s.gd.Check(Event{ToolName: MCPPrefix + Subprojects}); why != "" {
 			t.Errorf("the %s: subprojects refused: %s", s.name, why)
 		}
@@ -96,16 +102,20 @@ func TestTheStrategicAgentsListTheSubprojectsButDoNotEditThem(t *testing.T) {
 				t.Errorf("the %s: %q refused: %s", s.name, c, why)
 			}
 		}
+		needs := ""
+		if s.gd.Role == RoleOrchestrate {
+			needs = "orchestration.permissions." + manifest.PermitEditSubprojects
+		}
 		r := s.gd.Decide(Event{ToolName: MCPPrefix + SubprojectEdit})
-		if !strings.Contains(r.Why, fmt.Sprintf("the %s cannot call %s", s.name, SubprojectEdit)) || r.Needs != "" {
+		if !strings.Contains(r.Why, fmt.Sprintf("the %s cannot ", who)) || r.Needs != needs {
 			t.Errorf("the %s: subproject_edit: %+v", s.name, r)
 		}
 		if s.gd.Role == RoleOrchestrate && r.Call != SubprojectEdit {
 			t.Errorf("the orchestrator's refusal should name the call: %+v", r)
 		}
 		for _, c := range subprojectEdits {
-			if why := s.gd.Check(bash("", c)); !strings.Contains(why, fmt.Sprintf("the %s cannot run", s.name)) {
-				t.Errorf("the %s: %q: %q", s.name, c, why)
+			if r := s.gd.Decide(bash("", c)); !strings.Contains(r.Why, fmt.Sprintf("the %s cannot run", who)) || r.Needs != needs {
+				t.Errorf("the %s: %q: %+v", s.name, c, r)
 			}
 		}
 	}

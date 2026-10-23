@@ -129,6 +129,10 @@ var permissionText = map[string][2]string{
 		"Lets the orchestrator release and push accepted work, as flai release --pending and flai push do.",
 		"A release reaches everyone who pulls or installs the project, and a published release cannot be taken back.",
 	},
+	PermitEditSubprojects: {
+		"Lets the orchestrator add, change, and remove the project's sub-projects, as flai subproject add, set, and remove do, when a story or a thread asks for it.",
+		"It changes the list of sub-projects that flai reads for releases, touches, and checks, and adding one creates its folder on the main branch, without your review.",
+	},
 }
 
 // catalog is every setting in the order it is listed to the operator.

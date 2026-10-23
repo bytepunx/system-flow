@@ -446,6 +446,9 @@ type Permissions struct {
 	AcceptReviews bool `yaml:"accept_reviews,omitempty" json:"accept_reviews,omitempty"`
 	// Publish lets it release and push accepted work.
 	Publish bool `yaml:"publish,omitempty" json:"publish,omitempty"`
+	// EditSubprojects lets it add, change, and remove the manifest's
+	// sub-projects, as flai subproject does (S-0491).
+	EditSubprojects bool `yaml:"edit_subprojects,omitempty" json:"edit_subprojects,omitempty"`
 
 	// unknown are the keys under orchestration.permissions that name no
 	// permission, for Errors.
@@ -462,11 +465,12 @@ const (
 	PermitAnswerThreads      = "answer_threads"
 	PermitAcceptReviews      = "accept_reviews"
 	PermitPublish            = "publish"
+	PermitEditSubprojects    = "edit_subprojects"
 )
 
 // PermissionNames are the keys of orchestration.permissions, in the order
 // they are listed to the operator.
-var PermissionNames = []string{PermitPlanBacklogEpics, PermitPlanBacklogStories, PermitFinalizeDrafts, PermitPromoteToReady, PermitOrderReady, PermitAnswerThreads, PermitAcceptReviews, PermitPublish}
+var PermissionNames = []string{PermitPlanBacklogEpics, PermitPlanBacklogStories, PermitFinalizeDrafts, PermitPromoteToReady, PermitOrderReady, PermitAnswerThreads, PermitAcceptReviews, PermitPublish, PermitEditSubprojects}
 
 // The values of orchestration.permissions.answer_threads.
 const (
@@ -532,6 +536,8 @@ func (p Permissions) Allows(name string) bool {
 		return p.AcceptReviews
 	case PermitPublish:
 		return p.Publish
+	case PermitEditSubprojects:
+		return p.EditSubprojects
 	}
 	return false
 }

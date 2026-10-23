@@ -738,7 +738,7 @@ func orchestrator(p manifest.Permissions) Guard {
 }
 
 // allOn are every permission on; except turns one of them off.
-var allOn = manifest.Permissions{PlanBacklogEpics: true, PlanBacklogStories: true, FinalizeDrafts: true, PromoteToReady: true, OrderReady: true, AnswerThreads: manifest.AnswerAutonomous, AcceptReviews: true, Publish: true}
+var allOn = manifest.Permissions{PlanBacklogEpics: true, PlanBacklogStories: true, FinalizeDrafts: true, PromoteToReady: true, OrderReady: true, AnswerThreads: manifest.AnswerAutonomous, AcceptReviews: true, Publish: true, EditSubprojects: true}
 
 func except(name string) manifest.Permissions {
 	p := allOn
@@ -759,6 +759,8 @@ func except(name string) manifest.Permissions {
 		p.AcceptReviews = false
 	case manifest.PermitPublish:
 		p.Publish = false
+	case manifest.PermitEditSubprojects:
+		p.EditSubprojects = false
 	}
 	return p
 }

@@ -116,6 +116,28 @@ func TestEditSettingsAddsMissingBlocks(t *testing.T) {
 	}
 }
 
+// S-0491: orchestration.permissions.edit_subprojects is a boolean off by
+// default that flai manifest set writes, Load reads back, and Errors accepts.
+func TestEditSettingsWritesEditSubprojects(t *testing.T) {
+	if s, ok := SettingFor("orchestration.permissions.edit_subprojects"); !ok || s.Kind != KindBoolean || s.Default != "false" || s.Risk == "" {
+		t.Fatalf("orchestration.permissions.edit_subprojects in the catalog: %+v, %v", s, ok)
+	}
+	got, err := EditSettings([]byte(settingsFixture), []Assignment{{"orchestration.permissions.edit_subprojects", "true"}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(got), "    edit_subprojects: true\n") {
+		t.Fatalf("the key is not written:\n%s", got)
+	}
+	m := loaded(t, got)
+	if !m.Orchestration.Permissions.Allows(PermitEditSubprojects) || len(m.Orchestration.Errors()) != 0 {
+		t.Errorf("read back %+v, %v", m.Orchestration.Permissions, m.Orchestration.Errors())
+	}
+	if loaded(t, []byte(settingsFixture)).Orchestration.Permissions.Allows(PermitEditSubprojects) {
+		t.Error("edit_subprojects is on unset")
+	}
+}
+
 // S-0229: a bad value of each kind, a key outside the catalog, and a
 // manifest left invalid as a whole are refused with the field and the
 // reason, and the file is not written.
