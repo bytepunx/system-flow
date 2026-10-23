@@ -1133,6 +1133,9 @@ func TestThePlannersPromptPlansItsItem(t *testing.T) {
 			"Run flai touches suggest S-nnnn, adding", "Run flai forecast S-nnnn and flai cod S-nnnn", "under a ### Planning heading",
 			// S-0295: file-level touches, a folder kept only for files no task can name yet
 			"Name files, not folders, in the touches you write for the story and for each of its tasks: keep a folder touch only where the story may add files there that no task can name yet",
+			// S-0468 (ADR-0188): flai refuses the folder touches, and after names a needed change
+			"flai refuses the folder touches this asks you not to write, writing nothing: a task's always, and a story's unless the story's Notes name the folder under ### Planning",
+			"Name in a story's after only a story whose accepted change it needs on main, never an order of preference, which the pull order sets",
 			"make each one you write pass flai check --strict",
 			// S-0300: and its tasks drafted, in layers, with no draft flag of their own
 			"For each story you draft, and each one you revisit that is a draft with no tasks, draft the tasks that deliver its outcome",
@@ -1150,6 +1153,9 @@ func TestThePlannersPromptPlansItsItem(t *testing.T) {
 			"predict its touches from what that lists, its goal and criteria, the design documents it links, and the code layout, keeping every touch it already declares",
 			// S-0295 (ADR-0096): file-level touches, and why a folder was kept
 			"Name files, not folders, in the touches you write for the story and for each of its tasks: keep a folder touch only where the story may add files there that no task can name yet, since a folder touch claims every file below it and, while the story is in progress, holds every ready story that touches one; record each folder touch you kept, and why, under the story's ### Planning heading",
+			// S-0468 (ADR-0188): flai refuses the folder touches it asks against, and after names a needed change
+			"flai refuses the folder touches this asks you not to write, writing nothing: a task's always, and a story's unless the story's Notes name the folder under ### Planning, which one item_edit may add with the touch (ADR-0188)",
+			"Name in a story's after only a story whose accepted change it needs on main, never an order of preference, which the pull order sets",
 			"Run flai forecast S-0208 and flai cod S-0208",
 			"Review each figure, adjust it where you have a reason and state the reason",
 			"write the touches, the forecast (duration, delivery, and basis), and the cost of delay value through flai: item_edit, or flai edit and flai touches",

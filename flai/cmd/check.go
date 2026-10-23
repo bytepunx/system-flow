@@ -129,7 +129,7 @@ batch records none.`,
 				fmt.Fprintf(a.out, "%d items checked, %d errors, %d warnings", res.Items, res.Errors, res.Warnings)
 				if res.Advisory > 0 {
 					// S-0243: say which warnings --strict does not fail on.
-					fmt.Fprintf(a.out, " (%d that --strict passes over: review over its limit and an epic behind its stories, which only the operator clears, or a narrative not yet written, which flai stream state writes, or component examples left unchecked for want of node, a Svelte sub-project, or a sub-project's svelte)", res.Advisory)
+					fmt.Fprintf(a.out, " (%d that --strict passes over: review over its limit and an epic behind its stories, which only the operator clears, or a narrative not yet written, which flai stream state writes, or component examples left unchecked for want of node, a Svelte sub-project, or a sub-project's svelte, or a story in progress keeping a folder touch or a story three or more open stories name in after, which only their stories clear)", res.Advisory)
 				}
 				if res.Outside > 0 {
 					// S-0249: say how many findings were notes outside the story.
