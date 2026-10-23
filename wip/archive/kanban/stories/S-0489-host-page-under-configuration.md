@@ -3,10 +3,10 @@ id: S-0489
 type: story
 nature: feature
 title: Host page under configuration
-status: review
+status: done
 owner: alex
 created: 2026-10-23T17:57:14Z
-updated: 2026-10-23T20:00:04Z
+updated: 2026-10-23T20:20:24Z
 transitions:
   - to: ready
     at: 2026-10-23T17:57:21Z
@@ -23,6 +23,9 @@ transitions:
   - to: review
     at: 2026-10-23T20:00:04Z
     by: agent-S-0489
+  - to: done
+    at: 2026-10-23T20:20:24Z
+    by: alex
 tags: [flai, flaiover, dashboard]
 topics: [dashboard, cli]
 touches: [flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/components/NavRail.svelte.test.ts, flaiover/src/lib/server/allowed-hosts.ts, flaiover/src/lib/server/allowed-hosts.test.ts, flaiover/src/lib/server/events-socket.ts, flaiover/src/lib/server/events-socket.test.ts, flaiover/server.js, flaiover/src/lib/settings.ts, flaiover/src/lib/components/HostAddresses.svelte, flaiover/src/lib/components/HostAddresses.svelte.test.ts, flaiover/src/routes/host/+page.svelte, flaiover/src/routes/api/settings/+server.ts, flaiover/src/routes/api/settings/settings.test.ts, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/dashboard.go, flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard_watch.go, flai/cmd/dashboard_test.go, flai/cmd/dashboard_watch_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/writes_test.go, design/components/flaiover/src/lib/components/HostAddresses.examples.json, design/system/flaiover-dashboard.md, design/system/flai-cli.md, docs/users/flaiover.md, docs/users/flai.md, docs/operators/settings.md, docs/operators/index.md, design/adrs/0193-the-dashboard-accepts-a-browser-origin-naming-one-of-the-hosts-in-dashboard.md, design/adrs/README.md, flaiover/src/lib/server/agent.ts, design/issues/I-0201-flai-test-runs-go-test-with-short-so-a-real-git-test-a-task-adds-is-skipped-until-the-integration-tier-runs-in-the-merge-queue-s-batch.md, design/issues/summary.md, docs/users/flai-reference.md]
@@ -55,15 +58,15 @@ usage:
       cost: 15.5183
   strategic:
     - kind: orchestrator
-      seconds: 1733
+      seconds: 1852
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 261
-          output: 4337
-          cache_read: 57880476
-          cache_write: 51980
-          cost: 12.7419
+          input: 266
+          output: 4377
+          cache_read: 59413916
+          cache_write: 53611
+          cost: 13.0795
         - model: claude-sonnet-5-5
           input: 15
           output: 496

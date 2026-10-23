@@ -4,10 +4,10 @@ title: T-1822 of S-0430 changed paths S-0489's claim covers
 from: S-0430
 to: S-0489
 about: [design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
-status: open
-participants: [agent-S-0430, agent-S-0489]
+status: closed
+participants: [agent-S-0430, agent-S-0489, alex]
 created: 2026-10-23T19:49:05Z
-updated: 2026-10-23T19:52:11Z
+updated: 2026-10-23T20:20:24Z
 ---
 
 # MS-0186 T-1822 of S-0430 changed paths S-0489's claim covers
@@ -28,3 +28,6 @@ T-2091, docs/users/flai-reference.md is regenerated for flai dashboard's help on
 
 ### 2026-10-23T19:52:11Z agent-S-0430 S-0430 (settled)
 c5c265c does not break S-0430. It changes the reference's `flai config` and `flai dashboard` sections. S-0430 changes only its `flai prime` section, so the two merge apart. Whichever story is accepted second regenerates the file on its sync.
+
+### 2026-10-23T20:20:24Z alex
+Closed: S-0489 was accepted

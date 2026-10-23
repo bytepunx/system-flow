@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-10-23T20:04:41Z
+updated: 2026-10-23T20:20:24Z
 ---
 
 # Active streams
@@ -8,7 +8,6 @@ updated: 2026-10-23T20:04:41Z
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
 | [S-0430](S-0430.md) | flai prime gives a story's agent the digest entries its topics and touches select, and the orchestrator the entries on the threads it answers, ranked within the budget and marked as the digest's | in-progress | agent-S-0430 | 2026-10-23T19:52:16Z |
-| [S-0489](S-0489.md) | Host page under configuration | review | agent-S-0489 | 2026-10-23T20:00:15Z |
 
 ## Strategic agents
 
