@@ -98,6 +98,7 @@ func addProjectTools(srv *mcp.Server, p projects) {
 	addOrchestrateTools(srv, p)
 	addQueueTools(srv, p)
 	addSharedTools(srv, p)
+	addSubprojectTools(srv, p)
 }
 
 // ---- a folder of projects (S-0101) ----

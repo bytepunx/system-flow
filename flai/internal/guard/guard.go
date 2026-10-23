@@ -113,6 +113,12 @@
 // (S-0295, ADR-0096): they decide which overlaps hold a story. Only the
 // operator's own session does; listing and checking them are reads.
 //
+// The manifest's sub-projects are the project's to shape (S-0491): a story's
+// agent changes them, with subproject_edit or flai subproject add, set, and
+// remove, on its story's branch; no sub-agent does, a task sub-agent among
+// them, nor the planner, the analyzer, or the orchestrator. Listing them,
+// with subprojects or flai subproject list, is a read open to all.
+//
 // No session flai serve starts, and no sub-agent, runs flai forge push
 // (S-0393): the forge host action has flai serve push a story's branch and
 // open its pull request on the move to review, with the host's credentials
@@ -142,7 +148,21 @@ import (
 // agent's identity.
 // verify runs a story's checks and stores its last result in flai's cache,
 // which is neither a work item, a thread, nor history (S-0270).
-var MCPReads = []string{"board", "doc_get", "doc_search", "item_get", "order_by_policy", "prime", "promote_candidates", "release_evaluate", "shared_paths", "test", "thread_get", "verify", "who_touches"}
+var MCPReads = []string{"board", "doc_get", "doc_search", "item_get", "order_by_policy", "prime", "promote_candidates", "release_evaluate", "shared_paths", Subprojects, "test", "thread_get", "verify", "who_touches"}
+
+// Subprojects is flai's MCP tool that lists the manifest's sub-projects, a
+// read open to every agent; SubprojectEdit is the one that adds, changes, and
+// removes one (S-0491). A story's agent and the operator's own session call
+// SubprojectEdit and run flai subproject add, set, and remove with no rule:
+// the sub-projects are the project's to shape, on the story's branch. Every
+// sub-agent, a task sub-agent among them, is refused both, as it is flai
+// components config, since they rewrite system-flow.yaml, which is the story's
+// agent's to change; the planner, the analyzer, and the orchestrator are
+// refused them by their own rules, which allow no write they do not name.
+const (
+	Subprojects    = "subprojects"
+	SubprojectEdit = "subproject_edit"
+)
 
 // MCPStoryReads are flai's MCP tools that read for the calling agent's
 // story, which a story's sub-agent may call besides MCPReads: message_get
@@ -177,7 +197,9 @@ const (
 // subcommands it may run; nil allows the command whatever follows it, and ""
 // allows it with no subcommand. flai components list reads the component
 // library, and flai components alone prints its help (S-0477, ADR-0186).
-// flai digest list and show read the digest (S-0428).
+// flai digest list and show read the digest (S-0428). flai subproject list
+// reads the manifest's sub-projects, and flai subproject alone prints its
+// help (S-0491).
 var cliReads = map[string][]string{
 	"board":      {""},
 	"check":      nil,
@@ -195,6 +217,7 @@ var cliReads = map[string][]string{
 	"show":       nil,
 	"stats":      nil,
 	"stream":     {"diff"},
+	"subproject": {"", "list"},
 	"test":       nil,
 	"thread":     {"list", "show"},
 	"touches":    {"suggest"},
@@ -634,12 +657,17 @@ type rules struct {
 const (
 	servesComponents = "flai components serve writes a Vite config under .flai-cache and, with --story, may install the worktree's dependencies, and a read-only sub-agent writes no file but under the temporary folder (ADR-0141, ADR-0186); ask the story's agent, or a task sub-agent, to run it"
 	configsManifest  = "flai components config rewrites system-flow.yaml, which is the story's agent's to change (ADR-0060, ADR-0186)"
+	// editsSubprojects says why no sub-agent adds, changes, or removes a
+	// sub-project (S-0491).
+	editsSubprojects = "flai subproject add, set, and remove rewrite system-flow.yaml and create a sub-project's folder, which are the story's agent's to change, with flai subproject or subproject_edit (ADR-0060)"
 )
 
 // subAgent are a sub-agent's rules, read-only or not: flai's reads, the flai
 // adr commands that write an ADR without committing it (S-0287, ADR-0127),
 // flai components serve unless it is read-only (S-0477, ADR-0186), and git's
-// reads. Each refusal cites its ADRs.
+// reads; flai components config and flai subproject add, set, and remove
+// (S-0491), which rewrite the manifest, are refused it. Each refusal cites
+// its ADRs.
 func subAgent(readOnly bool) rules {
 	return rules{
 		flai: func(cmd, sub string, rest []string) (string, string) {
@@ -658,6 +686,8 @@ func subAgent(readOnly bool) rules {
 				return "", ""
 			case cmd == "components" && sub == "config":
 				return configsManifest, ""
+			case cmd == "subproject":
+				return editsSubprojects, ""
 			}
 			return "flai commands that change work items, threads, conversations between stories, narratives, or releases are the story's agent's (ADR-0060)", ""
 		},
