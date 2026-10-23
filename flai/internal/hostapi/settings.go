@@ -268,6 +268,96 @@ func manifestEdit(_ channel.Project, raw json.RawMessage) ([]string, string, *ch
 	return args, "", nil
 }
 
+// subprojectChange is what settings.subproject is asked (S-0491): the edit of
+// the manifest's projects, op, the sub-project it is of, name, and for add
+// and set its path, kind, tags, and for set its new_name. tags absent keeps
+// a set entry's tags and an empty list removes them.
+type subprojectChange struct {
+	Op      string    `json:"op"`
+	Name    string    `json:"name"`
+	NewName string    `json:"new_name"`
+	Path    string    `json:"path"`
+	Kind    string    `json:"kind"`
+	Tags    *[]string `json:"tags"`
+}
+
+// subprojectEdit is settings.subproject's command line: flai subproject add,
+// set, or remove with a flag for each field given and the name last,
+// committed with the dashboard's trailer, so that flai creates a missing
+// folder and commits it with system-flow.yaml. Each value is checked for its
+// shape, since it becomes an argument; whether the manifest takes it is
+// flai's to say. A refusal here names each field and why in Data, as flai's
+// own refusal does.
+func subprojectEdit(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+	in, e := decode[subprojectChange](raw)
+	if e != nil {
+		return nil, "", e
+	}
+	var problems []manifest.Problem
+	refuse := func(key, reason string) { problems = append(problems, manifest.Problem{Field: key, Reason: reason}) }
+	line := func(key, v string) string {
+		v = strings.TrimSpace(v)
+		if strings.ContainsAny(v, "\x00\n\r") {
+			refuse(key, "holds a line break or NUL; give one line")
+		}
+		return v
+	}
+	name, newName, path, kind := line("name", in.Name), line("new_name", in.NewName), line("path", in.Path), line("kind", in.Kind)
+	if name == "" {
+		refuse("name", "is missing; give the sub-project's name, such as web")
+	}
+	var tags []string
+	if in.Tags != nil {
+		for _, t := range *in.Tags {
+			if t = strings.TrimSpace(t); !listValue.MatchString(t) {
+				refuse("tags", fmt.Sprintf("%q is not a tag: each is a single word without commas, such as ui", t))
+			}
+			tags = append(tags, t)
+		}
+	}
+	switch in.Op {
+	case "add":
+		if kind == "" {
+			refuse("kind", "is missing; give what the sub-project is, such as go, node, python, rust, sveltekit, svelte, or template")
+		}
+		if newName != "" {
+			refuse("new_name", "renames a sub-project with op set; add takes name")
+		}
+	case "set":
+		if newName == "" && path == "" && kind == "" && in.Tags == nil {
+			refuse("op", "set changes nothing without new_name, path, kind, or tags")
+		}
+	case "remove":
+		for key, given := range map[string]bool{"new_name": newName != "", "path": path != "", "kind": kind != "", "tags": in.Tags != nil} {
+			if given {
+				refuse(key, "is not taken by remove, which removes the entry whole")
+			}
+		}
+	default:
+		refuse("op", fmt.Sprintf("is add, set, or remove, not %q", in.Op))
+	}
+	if len(problems) > 0 {
+		sort.SliceStable(problems, func(i, j int) bool { return problems[i].Field < problems[j].Field })
+		return nil, "", &channel.Error{Code: channel.CodeInvalidParams,
+			Message: (&manifest.RefusedError{Problems: problems}).Error(),
+			Data:    map[string]any{"refused": problems}}
+	}
+	args := []string{"subproject", in.Op}
+	if newName != "" {
+		args = append(args, "--name="+newName)
+	}
+	if path != "" {
+		args = append(args, "--path="+path)
+	}
+	if kind != "" {
+		args = append(args, "--kind="+kind)
+	}
+	if in.Tags != nil {
+		args = append(args, "--tags="+strings.Join(tags, ","))
+	}
+	return append(args, "--autocommit", "--trailer="+Trailer, "--", name), "", nil
+}
+
 // settingArg is a setting's value as flai manifest set reads it from its
 // command line: true or false, a number written out in digits, a line of
 // text as it stands, or an agent as compact JSON; or why the value is not
@@ -408,6 +498,17 @@ func settingsSpecs() map[string]spec {
 		// in Data, so that the panel can say what is wrong beside each field.
 		"settings.manifest": {action: ActionSettings, exits: map[int]int{1: Refused}, describe: settingsDone("the project's strategic agents' settings changed"),
 			say: sayArgs(manifestEdit), build: manifestEdit},
+
+		// settings.subproject: a sub-project added to, changed in, or removed
+		// from projects in the project's system-flow.yaml (S-0491), by flai
+		// subproject add, set, or remove with --autocommit, which creates a
+		// missing folder with its README.md and commits it with the manifest.
+		// flai exits 1 refusing the edit, with {"refused": [{field, reason}]}
+		// on standard output for a field the manifest check refuses, and with
+		// its reason alone for a name it has already or does not have: either
+		// is answered as Refused, so that the panel can say what is wrong.
+		"settings.subproject": {action: ActionSettings, exits: map[int]int{1: Refused}, describe: settingsDone("the project's sub-projects changed"),
+			say: sayArgs(subprojectEdit), build: subprojectEdit},
 
 		// settings.agent: the agent's name and command, kept for every
 		// project. command null removes the command (and with it the name,

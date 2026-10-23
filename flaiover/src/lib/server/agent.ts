@@ -180,6 +180,8 @@ export const REQUIRED_METHODS = [
 	'settings.provider',
 	// S-0489: the hosts the dashboard accepts, under the settings action enabled for every project
 	'settings.dashboard_hosts',
+	// S-0491: a sub-project added, changed, or removed in the manifest, under the settings action
+	'settings.subproject',
 	// S-0116: a new agent for a story whose agent dropped or failed, gated by the agent host action
 	'agent.restart',
 	// S-0115: a ready story's agent now, gated by the agent host action

@@ -1,6 +1,6 @@
 ---
 title: A channel between the dashboard and flai on the host
-updated: 2026-10-21
+updated: 2026-10-23
 status: active
 topics: [cli, dashboard]
 ---
@@ -175,3 +175,10 @@ The stories, in build order, under E-0003:
     | `queue.hold` | `{held, request_id}` | Yes | The same: `held` true holds the queue, false resumes it; `changed` false when it was so already |
 
     The three run no flai command, since a command run here records the `FLAI_AGENT` it has, `flaiover`. Their spec has a `do`, which writes the queue's state in `flai serve`'s own process through `internal/mergequeue`, as the project's owner (`owner` in `system-flow.yaml`, else `designer`), stamped with the time; `queue.add` reads each story's branch with the host's git to judge eligibility. Each is journalled under the action `merge-queue`, its detail saying what changed or that nothing did. A refusal, a story not in review, not eligible, or not enqueued, or any `queue.add` under pull-request acceptance, is Refused (-32010) with `mergequeue.Refusal` as data, `{story, text, reasons[]}`, each reason `{kind, text}` as `flai queue` gives it, so the dashboard shows them as flai words them; an ID no item has is not found (-32004). A `held` that is not a boolean, or an `id` that is not a story's, is a bad argument (-32602). The reads need no new method: `board.get` carries the queue, and `project.info`'s `host_actions` says whether the action is on. The three are in the dashboard's `REQUIRED_METHODS`, so the banner names a flai older than them.
+21. S-0491: a sub-project added, changed, or removed from the dashboard's projects page, one more write under the `settings` host action for the project (not every project), beside `settings.shared` and `settings.manifest`.
+
+    | Method | Params | Gated and journalled | Answer |
+    |--------|--------|----------------------|--------|
+    | `settings.subproject` | `{op, name, path?, kind?, tags?, new_name?, request_id}` | Yes, under `settings` | What `flai subproject <op> --json` prints, `{action, project: {name, path, kind, tags, components, install}, from?, created?, written[], commit?}` |
+
+    `op` is `add`, `set`, or `remove`, and `name` the sub-project's name. `add` needs `kind`, takes `path` (flai defaults it to the name) and `tags`, and creates a missing folder with its `README.md`. `set` needs at least one of `new_name`, `path`, `kind`, and `tags`, and changes those alone; `tags` absent keeps the entry's tags and `[]` removes them. `remove` takes `name` alone and leaves the folder. It runs `flai subproject <op>` with `--name`, `--path`, `--kind`, and `--tags` for the fields given, `--autocommit`, the dashboard's trailer, and `--json`, the name after `--`, so that flai commits `system-flow.yaml` and the `README.md` it wrote; the journal holds that command without the trailer. A missing `op` or `name`, an `op` not among the three, `add` without `kind`, a `set` that changes nothing, `remove` with another field, a value with a line break, or a tag that is not one word without commas is invalid params (-32602) before flai runs, with `{refused: [{field, reason}]}` as data, as `settings.manifest`'s own refusal is. flai's refusal, exit 1, is Refused (-32010): with `{refused: [{field, reason}]}` as data for a field the manifest check refuses, and with flai's reason alone for a name it has already or does not have. None of its params is named `project`, the channel's key. The panel reads the sub-projects from `project.info`'s `projects`, each `{name, path, kind, tags, components, install}`; whether a folder is there is `flai subproject list`'s, not `project.info`'s. The method is in the dashboard's `REQUIRED_METHODS`, so the banner names a flai older than it.

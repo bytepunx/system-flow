@@ -116,6 +116,9 @@ var good = map[string]struct {
 	"settings.shared_check": {`{"paths":["docs/users/flai.md"," --help "],"story":"S-0001"}`, "shared check --json -- docs/users/flai.md --help S-0001", ""},
 	// S-0229: the strategic agents' settings, through flai manifest set under the settings action
 	"settings.manifest": {manifestSave, "manifest set --autocommit --trailer=" + Trailer + " --unset=analysis.schedule --json -- " + manifestSaveArgs, ""},
+	// S-0491: a sub-project added, changed, or removed through flai subproject under the settings action
+	"settings.subproject": {`{"op":"add","name":" --web ","path":" apps/web ","kind":"sveltekit","tags":["ui"," app"],` + rid + `}`,
+		"subproject add --path=apps/web --kind=sveltekit --tags=ui,app --autocommit --trailer=" + Trailer + " --json -- --web", ""},
 	// S-0275: an issue filed, bumped, and closed from the dashboard, committed in the main checkout
 	"issue.new":   {`{"title":" --json  is my title ","class":"defect","story":"S-0212","cost":" 20m ","note":"  seen\n again ",` + rid + `}`, "issue new --class=defect --story=S-0212 --cost=20m --note=seen again --autocommit --trailer=" + Trailer + " --json -- --json is my title", ""},
 	"issue.bump":  {`{"id":"I-0007","story":"S-0212","cost":"5m","note":"--again",` + rid + `}`, "issue bump I-0007 --story=S-0212 --cost=5m --note=--again --autocommit --trailer=" + Trailer + " --json", ""},
@@ -287,6 +290,13 @@ var refused = map[string][]string{
 		`{"set":{"planning.replan":["agent"]},` + rid + `}`, `{"set":{"planning.replan":{"x":1}},` + rid + `}`, `{"set":{"planning.replan":null},` + rid + `}`,
 		`{"set":{"planning.schedule":"0 6 * * *\n--unset=x"},` + rid + `}`, `{"set":{"planning.agent":"claude-sonnet-5"},` + rid + `}`,
 		`{"set":{"planning.agent":{"harness":"--dangerously-skip-permissions"}},` + rid + `}`, `{"set":{"planning.agent":{"provider":"--x"}},` + rid + `}`, `{"set":{"planning.agent":{"modelname":"claude-sonnet-5"}},` + rid + `}`},
+	// S-0491: an op from the list, a name, a kind to add, something to set, nothing but the name to remove, each value one line, each tag one word
+	"settings.subproject": {`{"name":"web","kind":"go",` + rid + `}`, `{"op":"move","name":"web",` + rid + `}`, `{"op":"--help","name":"web",` + rid + `}`,
+		`{"op":"add","kind":"go",` + rid + `}`, `{"op":"add","name":"  ","kind":"go",` + rid + `}`, `{"op":"add","name":"web",` + rid + `}`,
+		`{"op":"add","name":"web","kind":"go","new_name":"site",` + rid + `}`, `{"op":"set","name":"web",` + rid + `}`, `{"op":"remove","name":"web","path":"web",` + rid + `}`,
+		`{"op":"remove","name":"web","tags":[],` + rid + `}`, `{"op":"add","name":"web","kind":"go","tags":["a,b"],` + rid + `}`, `{"op":"add","name":"web","kind":"go","tags":["--x"],` + rid + `}`,
+		`{"op":"add","name":"web","kind":"go","tags":"ui",` + rid + `}`, `{"op":"add","name":"web\n--help","kind":"go",` + rid + `}`, `{"op":"set","name":"web","path":"a\nb",` + rid + `}`,
+		`{"op":"add","name":"web","kind":"go"}`},
 	"settings.shared_check": {`{}`, `{"paths":[]}`, `{"paths":[" "]}`, `{"paths":["a\u0000b"]}`, `{"paths":["S-0001"]}`, `{"paths":"docs"}`,
 		`{"story":"T-0001"}`, `{"story":"--help"}`, `{"story":"S-0001 --json"}`},
 	// S-0275: an issue's ID, a story's ID, a class from the list, a duration, and a title or reason
@@ -1538,6 +1548,97 @@ func TestSettingsManifestSavesThroughFlaiManifestSet(t *testing.T) {
 	}
 	for i, w := range want {
 		if got := journal[i]; got.Action != ActionSettings || got.Method != "settings.manifest" || got.Outcome != w.outcome || got.Detail != w.detail {
+			t.Errorf("entry %d: %+v, want %+v", i, got, w)
+		}
+	}
+}
+
+// S-0491: settings.subproject adds, changes, and removes a sub-project
+// through flai subproject, under this project's settings action, committed
+// with the dashboard's trailer and journalled as the command it ran; an empty
+// tags removes a set entry's tags. A call missing its name or with an op flai
+// subproject lacks is refused before anything runs, and flai's refusal is
+// Refused; either carries each field and reason in Data. With the action off
+// nothing runs and the refusal says what enables it.
+func TestSettingsSubprojectEditsThroughFlaiSubproject(t *testing.T) {
+	p := withDocs(t)
+	var journal []Entry
+	on := true
+	host := Host{Enabled: func(a, root string) bool { return on && a == ActionSettings && root == p.Root }, Record: func(e Entry) { journal = append(journal, e) }}
+	rec := &recorder{}
+	m := writeMethods(rec.run, time.Now, host)["settings.subproject"]
+	call := func(params string, ran Ran) (any, *channel.Error) {
+		rec.ran = ran
+		return m(context.Background(), p, json.RawMessage(params))
+	}
+	refusedData := func(e *channel.Error) string {
+		data, _ := json.Marshal(e.Data)
+		return string(data)
+	}
+
+	answer := `{"action":"add","project":{"name":"web","path":"web","kind":"sveltekit","tags":[]},"created":"web","written":["system-flow.yaml","web/README.md"],"commit":"abc1234"}`
+	res, e := call(`{"op":"add","name":"web","kind":"sveltekit","request_id":"req-00000091"}`, Ran{Stdout: []byte(answer)})
+	if e != nil || string(res.(Written).Data) != answer {
+		t.Fatalf("an add answers flai's change: %+v %+v", res, e)
+	}
+	res, e = call(`{"op":"set","name":"web","new_name":"site","tags":[],"request_id":"req-00000092"}`, Ran{Stdout: []byte(`{"action":"set"}`)})
+	if e != nil || string(res.(Written).Data) != `{"action":"set"}` {
+		t.Fatalf("a set answers flai's change: %+v %+v", res, e)
+	}
+	if _, e = call(`{"op":"remove","name":"site","request_id":"req-00000093"}`, Ran{Stdout: []byte(`{"action":"remove"}`)}); e != nil {
+		t.Fatalf("a remove answers flai's change: %+v", e)
+	}
+
+	why := `is the repository root; give the sub-project's folder, such as web`
+	_, e = call(`{"op":"add","name":"web","path":".","kind":"go","request_id":"req-00000094"}`, Ran{Exit: 1,
+		Stdout: []byte(`{"refused":[{"field":"projects[0].path","reason":"` + why + `"}]}`),
+		Events: []map[string]any{{"level": "FATAL", "msg": "command failed", "err": "rule: projects[0].path: " + why}}})
+	if e == nil || e.Code != Refused || refusedData(e) != `{"refused":[{"field":"projects[0].path","reason":"`+why+`"}]}` || !strings.Contains(e.Message, why) {
+		t.Errorf("flai's refusal reaches the caller with the field and the reason: %+v", e)
+	}
+
+	_, e = call(`{"op":"rename","kind":"go","request_id":"req-00000095"}`, Ran{Stdout: []byte(`{}`)})
+	if e == nil || e.Code != channel.CodeInvalidParams || !strings.Contains(e.Message, `op: is add, set, or remove, not "rename"`) ||
+		!strings.Contains(refusedData(e), `{"field":"name","reason":"is missing`) || !strings.Contains(refusedData(e), `{"field":"op","reason":"is add, set, or remove`) {
+		t.Errorf("a missing name and an unknown op are refused, each with its field and reason: %+v", e)
+	}
+	_, e = call(`{"op":"add","name":"web","request_id":"req-00000096"}`, Ran{Stdout: []byte(`{}`)})
+	if e == nil || e.Code != channel.CodeInvalidParams || refusedData(e) != `{"refused":[{"field":"kind","reason":"is missing; give what the sub-project is, such as go, node, python, rust, sveltekit, svelte, or template"}]}` {
+		t.Errorf("an add without a kind is refused, naming kind: %+v", e)
+	}
+
+	on = false
+	_, e = call(`{"op":"remove","name":"web","request_id":"req-00000097"}`, Ran{Stdout: []byte(`{}`)})
+	if e == nil || e.Code != Disabled || !strings.Contains(e.Message, "flai serve enable settings") || e.Data.(map[string]any)["enable"] != "flai serve enable settings" {
+		t.Errorf("with the settings action off it is read-only, and says what enables it: %+v", e)
+	}
+
+	ran := []string{
+		"subproject add --kind=sveltekit --autocommit --trailer=" + Trailer + " --json -- web",
+		"subproject set --name=site --tags= --autocommit --trailer=" + Trailer + " --json -- web",
+		"subproject remove --autocommit --trailer=" + Trailer + " --json -- site",
+		"subproject add --path=. --kind=go --autocommit --trailer=" + Trailer + " --json -- web",
+	}
+	if len(rec.runs) != len(ran) {
+		t.Fatalf("ran %d commands, want %d: %+v", len(rec.runs), len(ran), rec.runs)
+	}
+	for i, want := range ran {
+		if got := strings.Join(rec.runs[i].Args, " "); got != want || rec.runs[i].Dir != p.Root {
+			t.Errorf("run %d: %q in %s, want %q in %s", i, got, rec.runs[i].Dir, want, p.Root)
+		}
+	}
+	want := []struct{ outcome, detail string }{
+		{"done", "flai subproject add --kind=sveltekit --autocommit -- web"},
+		{"done", "flai subproject set --name=site --tags= --autocommit -- web"},
+		{"done", "flai subproject remove --autocommit -- site"},
+		{"failed", "projects[0].path: " + why},
+		{"disabled", ""},
+	}
+	if len(journal) != len(want) {
+		t.Fatalf("journal: %+v", journal)
+	}
+	for i, w := range want {
+		if got := journal[i]; got.Action != ActionSettings || got.Method != "settings.subproject" || got.Outcome != w.outcome || got.Detail != w.detail {
 			t.Errorf("entry %d: %+v, want %+v", i, got, w)
 		}
 	}
