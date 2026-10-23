@@ -417,6 +417,147 @@ func overlapFindings(res *Result) []Finding {
 	return out
 }
 
+// I-0152, ADR-0188: a story in progress whose claim keeps a folder of the
+// tree that holds files gets one advisory touches.folder on its file, naming
+// the folder, its file count, and the ready story it holds through it, but
+// not a ready story elsewhere. A task naming a file inside narrows the folder
+// away, and a folder inside claims.shared holds nothing: neither is reported.
+func TestTouchesFolder(t *testing.T) {
+	repo := overlapProject(t)
+	for _, f := range []string{"flai/internal/serve/serve.go", "flai/internal/serve/stop.go"} {
+		writeFile(t, filepath.Join(repo.Root, f), "package serve\n")
+	}
+	e := mustItem(t, repo, workitem.Epic, "E", "")
+	a := mustItem(t, repo, workitem.Story, "A", e.ID)
+	held := mustItem(t, repo, workitem.Story, "Held", e.ID)
+	free := mustItem(t, repo, workitem.Story, "Free", e.ID)
+	task := mustItem(t, repo, workitem.Task, "Elsewhere", a.ID)
+	a.Status, a.Touches = workitem.InProgress, []string{"flai/internal/serve", "flai/cmd/new.go"}
+	held.Status, held.Touches = workitem.Ready, []string{"flai/internal/serve/stop.go"}
+	free.Status, free.Touches = workitem.Ready, []string{"docs/users/flai.md"}
+	task.Status, task.Touches = workitem.InProgress, []string{"flai/cmd/new.go"}
+	for _, it := range []*workitem.Item{a, held, free, task} {
+		if err := repo.Save(it); err != nil {
+			t.Fatal(err)
+		}
+	}
+	folders := func() []Finding {
+		t.Helper()
+		res, err := Run(repo, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []Finding
+		for _, f := range res.Findings {
+			if f.Rule == "touches.folder" {
+				out = append(out, f)
+			}
+		}
+		return out
+	}
+
+	want := "S-0001's claim keeps the folder flai/internal/serve, which holds 2 files, and holds the ready story S-0002 through it; name the files its tasks change with flai touches, or say under ### Planning in S-0001's Notes why files may be added there (ADR-0188)"
+	got := folders()
+	if len(got) != 1 || got[0].Message != want || got[0].Level != Warning || !got[0].advisory ||
+		!slices.Equal(got[0].Stories, []string{"S-0001"}) || !strings.HasSuffix(got[0].Path, filepath.Base(a.Path)) || got[0].Line != keyLine(a.Path, "touches") {
+		t.Fatalf("touches.folder = %+v\nwant one advisory on S-0001's touches: %s", got, want)
+	}
+
+	// the folder held alone: no ready story through it
+	held.Touches = []string{"flai/internal/check/check.go"}
+	if err := repo.Save(held); err != nil {
+		t.Fatal(err)
+	}
+	if got := folders(); len(got) != 1 || !strings.Contains(got[0].Message, "which holds 2 files, and holds no ready story now;") {
+		t.Errorf("with no ready story in the folder, touches.folder = %+v", got)
+	}
+
+	// a task naming a file inside narrows the claim to that file
+	task.Touches = []string{"flai/cmd/new.go", "flai/internal/serve/serve.go"}
+	if err := repo.Save(task); err != nil {
+		t.Fatal(err)
+	}
+	if got := folders(); len(got) != 0 {
+		t.Errorf("a claim narrowed to flai/internal/serve/serve.go keeps no folder: %+v", got)
+	}
+
+	// a folder inside a shared pattern holds nothing
+	task.Touches = []string{"flai/cmd/new.go"}
+	if err := repo.Save(task); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(repo.Root, "system-flow.yaml"), "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\nclaims:\n  shared:\n    - flai/internal\n")
+	if got := folders(); len(got) != 0 {
+		t.Errorf("a folder inside claims.shared is no folder touch: %+v", got)
+	}
+}
+
+// I-0152, ADR-0188: a story not done or cancelled that three stories in
+// backlog, ready, or in progress name in after: gets one advisory
+// wip.after-hub on its file, naming them; two are not a hub, a done or
+// cancelled story naming it does not count, and a done hub is not reported.
+func TestAfterHub(t *testing.T) {
+	repo := overlapProject(t)
+	e := mustItem(t, repo, workitem.Epic, "E", "")
+	hub := mustItem(t, repo, workitem.Story, "Hub", e.ID)
+	var deps []*workitem.Item
+	for i, status := range []string{workitem.Backlog, workitem.Ready, workitem.InProgress, workitem.Cancelled} {
+		d := mustItem(t, repo, workitem.Story, fmt.Sprintf("Dep %d", i), e.ID)
+		d.Status, d.After = status, []string{hub.ID}
+		deps = append(deps, d)
+	}
+	hub.Status = workitem.Review
+	for _, it := range append([]*workitem.Item{hub}, deps...) {
+		if err := repo.Save(it); err != nil {
+			t.Fatal(err)
+		}
+	}
+	hubs := func() []Finding {
+		t.Helper()
+		res, err := Run(repo, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []Finding
+		for _, f := range res.Findings {
+			if f.Rule == "wip.after-hub" {
+				out = append(out, f)
+			}
+		}
+		return out
+	}
+	set := func(it *workitem.Item, status string) {
+		t.Helper()
+		it.Status = status
+		if err := repo.Save(it); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	want := "S-0001 is named in after by 3 open stories, S-0002, S-0003 and S-0004, and each of them waits until it is accepted; after names only a story whose accepted change the story needs on main, and the pull order sets an order of preference, so drop S-0001 from the after of each that does not need its change (flai edit <id> --after) (ADR-0188)"
+	got := hubs()
+	if len(got) != 1 || got[0].Message != want || got[0].Level != Warning || !got[0].advisory ||
+		!slices.Equal(got[0].Stories, []string{"S-0001"}) || !strings.HasSuffix(got[0].Path, filepath.Base(hub.Path)) {
+		t.Fatalf("wip.after-hub = %+v\nwant one advisory on S-0001: %s", got, want)
+	}
+
+	// a done story naming it does not count, so two are left: no hub
+	set(deps[2], workitem.Done)
+	if got := hubs(); len(got) != 0 {
+		t.Errorf("two open stories and a done and a cancelled one make no hub: %+v", got)
+	}
+
+	// three again, and the hub done: not reported
+	set(deps[3], workitem.Backlog)
+	if got := hubs(); len(got) != 1 || !strings.Contains(got[0].Message, "by 3 open stories, S-0002, S-0003 and S-0005,") {
+		t.Errorf("with S-0005 back in backlog, wip.after-hub = %+v", got)
+	}
+	set(hub, workitem.Done)
+	if got := hubs(); len(got) != 0 {
+		t.Errorf("a done hub is not reported: %+v", got)
+	}
+}
+
 // S-0130, ADR-0046: an after: entry that names no story, the story itself,
 // or something other than a story is an error, and so is a cycle, once.
 func TestAfterRules(t *testing.T) {

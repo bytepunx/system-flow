@@ -220,6 +220,60 @@ func TestScopedCheckLeavesOutAnOverlapBetweenTwoOtherStories(t *testing.T) {
 	}
 }
 
+// I-0152, ADR-0188: scoped to a story, a touches.folder on another story and
+// a wip.after-hub whose hub is another story are left out of the result, with
+// their counts, advisory included, taken back, even when the story's branch
+// changes that story's file; the story's own are kept, inside it and
+// advisory, so the run still passes --strict. Unscoped, all four are
+// reported.
+func TestScopedCheckLeavesOutAnotherStorysFolderTouchAndAfterHub(t *testing.T) {
+	root := scopeProject(t)
+	edit(t, root, "wip/kanban/board.md", "in-progress: 2\n", "in-progress: 5\n")
+	for _, f := range []string{"flai/cmd/root.go", "flai/internal/serve/serve.go"} {
+		writeFile(t, filepath.Join(root, f), "package x\n")
+	}
+	edit(t, root, "wip/kanban/stories/S-004-four.md", "tags: []\n", "tags: []\ntouches: [flai/cmd]\n")
+	addStory(t, root, "S-006", "E-001", "touches: [flai/internal/serve]\n")
+	for _, id := range []string{"S-007", "S-008", "S-009"} {
+		addStory(t, root, id, "E-001", "after: [S-004, S-006]\n")
+	}
+	ruleFindings := func(res *Result) map[string][]Finding {
+		out := map[string][]Finding{}
+		for _, f := range res.Findings {
+			if f.Rule == "touches.folder" || f.Rule == "wip.after-hub" {
+				out[f.Rule+" "+strings.Join(f.Stories, ",")] = append(out[f.Rule+" "+strings.Join(f.Stories, ",")], f)
+			}
+		}
+		return out
+	}
+	whole, scoped := runScoped(t, root, []string{"wip/kanban/stories/S-006-six.md"})
+	all := ruleFindings(whole)
+	for _, k := range []string{"touches.folder S-004", "touches.folder S-006", "wip.after-hub S-004", "wip.after-hub S-006"} {
+		if len(all[k]) != 1 || !all[k][0].advisory {
+			t.Fatalf("unscoped, the run should report one advisory %s: %+v", k, whole.Findings)
+		}
+	}
+	kept := ruleFindings(scoped)
+	if len(kept) != 2 || len(kept["touches.folder S-004"]) != 1 || len(kept["wip.after-hub S-004"]) != 1 {
+		t.Fatalf("scoped to S-004, only its own touches.folder and wip.after-hub should be kept: %+v", kept)
+	}
+	for _, fs := range kept {
+		if fs[0].Outside || !fs[0].advisory {
+			t.Errorf("S-004's own finding should be inside it and advisory: %+v", fs[0])
+		}
+	}
+	if len(scoped.Findings) != len(whole.Findings)-2 || scoped.Warnings != whole.Warnings-2 || scoped.Errors != whole.Errors {
+		t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-2, whole.Warnings-2, whole.Errors)
+	}
+	if scoped.Advisory != 2 {
+		t.Errorf("scoped advisory = %d, want S-004's two", scoped.Advisory)
+	}
+	assertCountsMatch(t, scoped)
+	if !scoped.OK(true) {
+		t.Errorf("S-004's own advisory findings should not fail --strict: %+v", scoped.Findings)
+	}
+}
+
 // I-0078, ADR-0122: scoped to a story, an item.archive on another story,
 // cancelled from backlog and not archived, is left out of the result, and
 // its warning is taken back from the counts, so the run neither notes nor

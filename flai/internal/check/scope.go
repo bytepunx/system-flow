@@ -39,7 +39,11 @@ import (
 // and the note is inside it (ADR-0171, I-0161). So is a markdown or
 // narrative.state finding on the narrative of another story that is neither
 // done nor cancelled: that story's own close-out finds it (ADR-0123, I-0096;
-// ADR-0125, I-0109).
+// ADR-0125, I-0109). So is a touches.folder on another story, and a
+// wip.after-hub whose hub is another story, by the story in its Stories, not
+// by the paths changed: only that story's tasks clear the one, and only the
+// stories that name the hub clear the other; on the story itself both are
+// kept, advisory (S-0468, ADR-0188, I-0152).
 func ScopeToStory(res *Result, repo *workitem.Repo, story string, changed []string) error {
 	return ScopeToStories(res, repo, []string{story}, changed)
 }
@@ -48,7 +52,8 @@ func ScopeToStory(res *Result, repo *workitem.Repo, story string, changed []stri
 // names them (I-0174): a finding is inside when it is inside any of them, and
 // outside, a note or left out, only when it is outside every one. changed is
 // the paths all of them change. A wip.overlap that names any of them is
-// outside; one that names none is left out. A markdown or narrative.state
+// outside; one that names none is left out, and so is a touches.folder or a
+// wip.after-hub on a story that is none of them. A markdown or narrative.state
 // finding is left out on the narrative of an open story that is none of them.
 func ScopeToStories(res *Result, repo *workitem.Repo, stories []string, changed []string) error {
 	if len(stories) == 0 {
@@ -127,7 +132,7 @@ func ScopeToStories(res *Result, repo *workitem.Repo, stories []string, changed 
 	}
 	kept := res.Findings[:0]
 	for _, f := range res.Findings {
-		if (f.Rule == "wip.overlap" && !namesStory(f, ids)) ||
+		if ((f.Rule == "wip.overlap" || f.Rule == "touches.folder" || f.Rule == "wip.after-hub") && !namesStory(f, ids)) ||
 			((f.Rule == "item.archive" || f.Rule == "board.wip-limit" || f.Rule == "issues.no-story" || f.Rule == "threads.archived") && !inside(f.Path)) ||
 			(f.unchecked && !under(f.Path)) ||
 			((strings.HasPrefix(f.Rule, "markdown.") || f.Rule == "narrative.state") && others[resolve(f.Path)]) {
@@ -155,8 +160,9 @@ func ScopeToStories(res *Result, repo *workitem.Repo, stories []string, changed 
 	return nil
 }
 
-// namesStory reports whether f, a wip.overlap, names any of stories in its
-// Stories (ADR-0115); the message is never read.
+// namesStory reports whether f, a wip.overlap, a touches.folder, or a
+// wip.after-hub, names any of stories in its Stories (ADR-0115, ADR-0188);
+// the message is never read.
 func namesStory(f Finding, stories []string) bool {
 	for _, id := range f.Stories {
 		for _, story := range stories {

@@ -52,7 +52,9 @@ type Finding struct {
 	// (ScopeToStory): a note the run passes over, whatever its level.
 	Outside bool `json:"outside,omitempty"`
 	// Stories are the two stories a wip.overlap names, lower ID first, so a
-	// run scoped to a story keeps it only when it names that story (ADR-0115).
+	// run scoped to a story keeps it only when it names that story (ADR-0115),
+	// or the one story a touches.folder or a wip.after-hub is on, so a run
+	// scoped to another story leaves it out (ADR-0188).
 	Stories []string `json:"stories,omitempty"`
 	// advisory marks a warning --strict passes over (advise).
 	advisory bool
@@ -110,6 +112,8 @@ func Run(repo *workitem.Repo, now time.Time) (*Result, error) {
 	c.overlap()
 	c.componentTag()
 	c.after()
+	c.touchesFolder()
+	c.afterHub()
 	c.unaccepted()
 	c.epicLags()
 	c.board()
@@ -670,6 +674,141 @@ func (c *checker) after() {
 		if cycle := c.afterCycle(it, c.named); cycle != nil {
 			c.add(Error, rule, p, keyLine(p, "after"), "after forms a cycle, %s, so none of them would start; drop one of the entries", strings.Join(cycle, " waits for "))
 		}
+	}
+}
+
+// touchesFolder gives an advisory warning on each story in progress whose
+// claim, its touches narrowed by its tasks' (ADR-0096), keeps a folder touch:
+// an entry FolderTouch finds a folder of the checkout holding files, outside
+// the shared paths (S-0468, ADR-0188). It names the folder, its file count,
+// and the ready stories the folder holds (readyHeld), with the story in
+// Stories, so a run scoped to another story leaves it out. It is advisory: a
+// story keeps its folder touch until its tasks name files, and a planner may
+// keep one with its note, so it informs rather than stopping a close-out.
+func (c *checker) touchesFolder() {
+	shared := c.repo.SharedClaims()
+	var holds *workitem.Holds
+	var ready []readyClaim
+	for _, it := range c.items {
+		if it.Archived || it.Type != workitem.Story || it.Status != workitem.InProgress {
+			continue
+		}
+		if holds == nil {
+			holds = c.repo.Holds(c.items)
+			ready = readyClaims(holds, c.items)
+		}
+		for _, p := range holds.Claim(it) {
+			n, ok := workitem.FolderTouch(c.repo.Root, c.repo.Manifest.Projects, shared, p)
+			if !ok {
+				continue
+			}
+			held := "and holds no ready story now"
+			if ids := readyHeld(holds, ready, it.ID, p); len(ids) > 0 {
+				held = "and holds the ready " + oneOrMany(len(ids), "story", "stories") + " " + andList(ids) + " through it"
+			}
+			c.advise("touches.folder", it.Path, keyLine(it.Path, "touches"), "%s's claim keeps the folder %s, which holds %d %s, %s; name the files its tasks change with flai touches, or say under ### Planning in %s's Notes why files may be added there (ADR-0188)",
+				it.ID, p, n, oneOrMany(n, "file", "files"), held, it.ID)
+			c.res.Findings[len(c.res.Findings)-1].Stories = []string{it.ID}
+		}
+	}
+}
+
+// readyClaim is a ready story held by something, as touchesFolder reads it:
+// the stories that hold it on overlap alone with the paths they hold it on,
+// which no share clears, or, held otherwise, its claim.
+type readyClaim struct {
+	id      string
+	overlap []workitem.Overlap
+	claim   []string
+}
+
+// readyClaims is the ready stories among items that holds holds, in ID
+// order.
+func readyClaims(holds *workitem.Holds, items []*workitem.Item) []readyClaim {
+	var out []readyClaim
+	for _, it := range items {
+		if it.Archived || it.Type != workitem.Story || it.Status != workitem.Ready {
+			continue
+		}
+		if over := holds.OverlapsBy(it); over != nil {
+			out = append(out, readyClaim{id: it.ID, overlap: over})
+		} else if holds.Of(it) != nil {
+			out = append(out, readyClaim{id: it.ID, claim: holds.Claim(it)})
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].id < out[j].id })
+	return out
+}
+
+// readyHeld is the IDs of the ready stories the folder, an entry of holder's
+// claim, holds: one held on overlap alone when holder holds it on a path in
+// the folder, and one held otherwise, on after: or by a story with no
+// touches, when its claim overlaps the folder where it counts.
+func readyHeld(holds *workitem.Holds, ready []readyClaim, holder, folder string) []string {
+	var out []string
+	for _, r := range ready {
+		in := slices.ContainsFunc(r.overlap, func(o workitem.Overlap) bool {
+			return o.By == holder && slices.ContainsFunc(o.Paths, func(p string) bool { return workitem.PathsOverlap(p, folder) })
+		})
+		in = in || slices.ContainsFunc(r.claim, func(p string) bool { return holds.Overlaps(p, folder) })
+		if in {
+			out = append(out, r.id)
+		}
+	}
+	return out
+}
+
+// oneOrMany is one when n is 1, else many.
+func oneOrMany(n int, one, many string) string {
+	if n == 1 {
+		return one
+	}
+	return many
+}
+
+// afterHubAt is how many open stories must name a story in after: for it to
+// be a hub (ADR-0188).
+const afterHubAt = 3
+
+// afterHub gives an advisory warning on each story not done or cancelled
+// that afterHubAt or more stories in backlog, ready, or in progress name in
+// after:, naming them, with the hub in Stories, so a run scoped to another
+// story leaves it out (S-0468, ADR-0188). An archived story is done or
+// cancelled, so it is neither a hub nor one that waits. It is advisory: only
+// the stories that name the hub can drop it, which its own agent cannot.
+func (c *checker) afterHub() {
+	waiting := map[string][]string{}
+	for _, it := range c.items {
+		if it.Archived || it.Type != workitem.Story || (it.Status != workitem.Backlog && it.Status != workitem.Ready && it.Status != workitem.InProgress) {
+			continue
+		}
+		seen := map[string]bool{}
+		for _, e := range it.After {
+			hub := c.named(e)
+			if hub == nil || hub.Type != workitem.Story || hub.ID == it.ID || seen[hub.ID] {
+				continue
+			}
+			seen[hub.ID] = true
+			waiting[hub.ID] = append(waiting[hub.ID], it.ID)
+		}
+	}
+	hubs := make([]string, 0, len(waiting))
+	for id, by := range waiting {
+		if len(by) >= afterHubAt {
+			hubs = append(hubs, id)
+		}
+	}
+	slices.Sort(hubs)
+	for _, id := range hubs {
+		hub := c.byID[id]
+		if hub.Archived || hub.Closed() {
+			continue
+		}
+		by := waiting[id]
+		slices.Sort(by)
+		c.advise("wip.after-hub", hub.Path, 1, "%s is named in after by %d open stories, %s, and each of them waits until it is accepted; after names only a story whose accepted change the story needs on main, and the pull order sets an order of preference, so drop %s from the after of each that does not need its change (flai edit <id> --after) (ADR-0188)",
+			id, len(by), andList(by), id)
+		c.res.Findings[len(c.res.Findings)-1].Stories = []string{id}
 	}
 }
 
