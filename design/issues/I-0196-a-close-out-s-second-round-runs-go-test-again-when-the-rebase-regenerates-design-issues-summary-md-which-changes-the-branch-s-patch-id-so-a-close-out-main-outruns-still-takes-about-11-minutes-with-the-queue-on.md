@@ -2,12 +2,12 @@
 id: I-0196
 title: A close-out's second round runs go-test again when the rebase regenerates design/issues/summary.md, which changes the branch's patch id, so a close-out main outruns still takes about 11 minutes with the queue on
 class: efficiency
-status: open
+status: closed
 count: 1
 cost: 6m
 first_reported: 2026-10-23T05:04:30Z
 last_reported: 2026-10-23T05:04:30Z
-updated: 2026-10-23T17:43:16Z
+updated: 2026-10-23T18:27:19Z
 ---
 
 # I-0196 A close-out's second round runs go-test again when the rebase regenerates design/issues/summary.md, which changes the branch's patch id, so a close-out main outruns still takes about 11 minutes with the queue on
@@ -24,3 +24,4 @@ S-0466's close-out, with integration and smoke left to the merge queue, ran go-t
 ## Remediation
 
 Story S-0487 remediates this issue, created from it at 2026-10-23T17:43:16Z.
+Closed 2026-10-23T18:27:19Z: S-0487: flai verify's patch id leaves out the files a sync's rebase writes again, design/issues/summary.md (ADR-0192), so a round after a rebase that rewrote the summary reuses the tiers main's new paths do not select; TestVerifyReusesTheTiersAcrossARebaseThatWritesTheSummaryAgain reproduces it.
