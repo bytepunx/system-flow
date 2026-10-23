@@ -177,12 +177,14 @@ const (
 // subcommands it may run; nil allows the command whatever follows it, and ""
 // allows it with no subcommand. flai components list reads the component
 // library, and flai components alone prints its help (S-0477, ADR-0186).
+// flai digest list and show read the digest (S-0428).
 var cliReads = map[string][]string{
 	"board":      {""},
 	"check":      nil,
 	"cod":        nil,
 	"components": {"", "list"},
 	"criteria":   {"list"},
+	"digest":     {"list", "show"},
 	"doc":        {"search", "show"},
 	"forecast":   nil,
 	"help":       nil,

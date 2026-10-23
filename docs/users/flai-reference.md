@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-10-22
+updated: 2026-10-23
 status: active
 ---
 
@@ -28,6 +28,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [criteria](#flai-criteria) | List, tick, and untick an item's acceptance criteria by their numbers |
 | [dashboard](#flai-dashboard) | Make sure the one flaiover dashboard runs and serves this project |
 | [design](#flai-design) | Write, show, and render the project's design system |
+| [digest](#flai-digest) | Record and read the digest: the facts past stories learned (ADR-0191) |
 | [doc](#flai-doc) | Search, read, and save markdown documents |
 | [edit](#flai-edit) | Change an item's title, nature, tags, topics, touches, after, parent, planning data, or body, checked and in one step |
 | [epic](#flai-epic) | Create epics (flai show prints one, flai move transitions it) |
@@ -105,6 +106,7 @@ Subcommands:
 - [criteria](#flai-criteria): List, tick, and untick an item's acceptance criteria by their numbers
 - [dashboard](#flai-dashboard): Make sure the one flaiover dashboard runs and serves this project
 - [design](#flai-design): Write, show, and render the project's design system
+- [digest](#flai-digest): Record and read the digest: the facts past stories learned (ADR-0191)
 - [doc](#flai-doc): Search, read, and save markdown documents
 - [edit](#flai-edit): Change an item's title, nature, tags, topics, touches, after, parent, planning data, or body, checked and in one step
 - [epic](#flai-epic): Create epics (flai show prints one, flai move transitions it)
@@ -1311,6 +1313,109 @@ Flags:
 | Flag | Meaning |
 |------|---------|
 | `--story` string | read the design system the open story S-nnnn proposes, from its worktree, instead of the main checkout's |
+
+### flai digest
+
+Record and read the digest: the facts past stories learned (ADR-0191).
+
+The digest is one markdown file per fact a story learned, D-nnnn-&lt;slug&gt;.md in the design folder's digest folder (ADR-0191): a decision, the operator's answer on a thread, a recommendation the operator confirmed or overruled, or an issue's cause and fix. flai writes and checks each entry's front matter, and nothing in the folder is ever deleted.
+
+Subcommands:
+
+- [edit](#flai-digest-edit): Change a digest entry's body, topics, paths, sources, or asked\_again
+- [list](#flai-digest-list): List the digest's entries with their sources, topics, paths, date, and status
+- [new](#flai-digest-new): Record a digest entry: its ID, file, and front matter are supplied
+- [show](#flai-digest-show): Print a digest entry: its front matter and its body
+
+#### flai digest edit
+
+Change a digest entry's body, topics, paths, sources, or asked\_again.
+
+```text
+flai digest edit <D-nnnn> [flags]
+```
+
+Change a digest entry in the checkout it runs in. Each flag given replaces that part of the entry, and leaves the rest of the file as it was: --body or --body-file the text below the heading, and --topic, --path, --source, and --asked-again their lists, each repeatable or comma separated. Give a list flag an empty value, such as --topic=, to empty it. The ID may be written in any padding: D-7 is D-0007.
+
+The check runs on what was written: when it reports a problem the change introduced, the file is put back as it was, each problem is printed, and the exit code is 4.
+
+Examples:
+
+```bash
+flai digest edit D-0007 --topic cli --topic go
+flai digest edit D-0007 --asked-again TH-0512 --asked-again TH-0530 --json
+flai digest edit D-0007 --body-file - < body.md
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--asked-again` strings | thread that asked what the entry already answered; replaces the entry's asked\_again (repeatable, or comma separated) |
+| `--body` string | the text below the heading: what was asked or decided, the answer and its reason, and links to its sources |
+| `--body-file` string | read the text below the heading from this file, or from standard input when it is - |
+| `--path` strings | repository path the fact bears on; replaces the entry's paths (repeatable, or comma separated) |
+| `--source` strings | work item, thread, or issue the fact comes from; replaces the entry's sources (repeatable, or comma separated) |
+| `--topic` strings | topic the fact bears on; replaces the entry's topics (repeatable, or comma separated) |
+
+#### flai digest list
+
+List the digest's entries with their sources, topics, paths, date, and status.
+
+```text
+flai digest list [flags]
+```
+
+List the entries in this checkout's digest folder, in ID order: each one's ID, status, kind, date, and title, and below it its sources, topics, and paths. --status keeps the entries in that status (active, absorbed, compacted); --topic keeps those that bear on the topic. --json gives an array of the entries, bodies included, [] when none.
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--status` string | only the entries in this status: active, absorbed, compacted |
+| `--topic` string | only the entries that bear on this topic |
+
+#### flai digest new
+
+Record a digest entry: its ID, file, and front matter are supplied.
+
+```text
+flai digest new "<fact>" --kind <kind> --source <id>... [flags]
+```
+
+Record one fact a story learned as a new digest entry, in the checkout it runs in. The ID is one more than the highest D-nnnn in this checkout, on main, in any worktree, and on any story branch, so parallel writers do not take the same one; gaps are not filled. The file is D-nnnn-&lt;slug&gt;.md in the digest folder, dated today, with status active.
+
+--kind is what the fact is: decision, answer, recommendation, cause. --source names the work items (E-, S-, T-), threads (TH-), and issues (I-) it comes from, at least one, each in the project or its archive. --source, --topic, and --path are repeatable, or comma separated. The body is a few sentences below the heading; it says where a secret lives, never its value.
+
+The check runs on what was written: when it reports anything, such as a source that names nothing or text with the shape of a key or token, the file is removed, each problem is printed, and the exit code is 4.
+
+Examples:
+
+```bash
+flai digest new "Story worktrees install with the project's pnpm store" --kind cause --source I-0177 --source S-0481 --topic flaiover --path scripts/flaiover-install.sh
+flai digest new "The digest lives under design/digest" --kind answer --source TH-0476 --body-file answer.md --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--body` string | the text below the heading: what was asked or decided, the answer and its reason, and links to its sources |
+| `--body-file` string | read the text below the heading from this file, or from standard input when it is - |
+| `--kind` string | what the fact is: decision, answer, recommendation, cause |
+| `--path` strings | repository path the fact bears on, from the project root (repeatable, or comma separated) |
+| `--source` strings | work item (E-, S-, T-), thread (TH-), or issue (I-) the fact comes from (repeatable, or comma separated; at least one) |
+| `--topic` strings | topic the fact bears on, as a story's are (repeatable, or comma separated) |
+
+#### flai digest show
+
+Print a digest entry: its front matter and its body.
+
+```text
+flai digest show <D-nnnn>
+```
+
+Print one digest entry: its title, kind, status, date, sources, topics, paths, absorbed\_by when it is absorbed, asked\_again, cited, its file, and the body below its heading. The ID may be written in any padding: D-7 is D-0007. --json gives the entry.
 
 ### flai doc
 

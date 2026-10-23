@@ -1,6 +1,6 @@
 ---
 title: Settings index
-updated: 2026-10-21
+updated: 2026-10-23
 status: active
 ---
 
@@ -309,6 +309,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--allow-unsigned` | [flai dashboard](../users/flai-reference.md#flai-dashboard) |
 | `--api` | [flai serve agent provider](../users/flai-reference.md#flai-serve-agent-provider) |
 | `--apply` | [flai order](../users/flai-reference.md#flai-order), [flai release](../users/flai-reference.md#flai-release) |
+| `--asked-again` | [flai digest edit](../users/flai-reference.md#flai-digest-edit) |
 | `--attach` | [flai dashboard](../users/flai-reference.md#flai-dashboard) |
 | `--auto-restarts` | [flai serve agent set](../users/flai-reference.md#flai-serve-agent-set) |
 | `--autocommit` | [flai adr accept](../users/flai-reference.md#flai-adr-accept), [flai adr new](../users/flai-reference.md#flai-adr-new), [flai adr topics](../users/flai-reference.md#flai-adr-topics), [flai agent clear](../users/flai-reference.md#flai-agent-clear), [flai agent set](../users/flai-reference.md#flai-agent-set), [flai criteria tick](../users/flai-reference.md#flai-criteria-tick), [flai criteria untick](../users/flai-reference.md#flai-criteria-untick), [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue close](../users/flai-reference.md#flai-issue-close), [flai issue new](../users/flai-reference.md#flai-issue-new), [flai issue story](../users/flai-reference.md#flai-issue-story), [flai manifest set](../users/flai-reference.md#flai-manifest-set), [flai shared add](../users/flai-reference.md#flai-shared-add), [flai shared remove](../users/flai-reference.md#flai-shared-remove), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new) |
@@ -316,6 +317,8 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--batch` | [flai accept](../users/flai-reference.md#flai-accept) |
 | `--before` | [flai order](../users/flai-reference.md#flai-order) |
 | `--bind` | [flai dashboard](../users/flai-reference.md#flai-dashboard), [flai dashboard restart](../users/flai-reference.md#flai-dashboard-restart), [flai dashboard upgrade](../users/flai-reference.md#flai-dashboard-upgrade) |
+| `--body` | [flai digest edit](../users/flai-reference.md#flai-digest-edit), [flai digest new](../users/flai-reference.md#flai-digest-new) |
+| `--body-file` | [flai digest edit](../users/flai-reference.md#flai-digest-edit), [flai digest new](../users/flai-reference.md#flai-digest-new) |
 | `--body-stdin` | [flai adr new](../users/flai-reference.md#flai-adr-new), [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new) |
 | `--bottom` | [flai order](../users/flai-reference.md#flai-order) |
 | `--bucket` | [flai stats](../users/flai-reference.md#flai-stats) |
@@ -371,6 +374,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--keep-placed` | [flai order](../users/flai-reference.md#flai-order) |
 | `--keep-removal` | [flai accept](../users/flai-reference.md#flai-accept), [flai move](../users/flai-reference.md#flai-move) |
 | `--key-env` | [flai serve agent provider](../users/flai-reference.md#flai-serve-agent-provider) |
+| `--kind` | [flai digest new](../users/flai-reference.md#flai-digest-new) |
 | `--last` | [flai verify](../users/flai-reference.md#flai-verify) |
 | `-n`, `--last` | [flai serve journal](../users/flai-reference.md#flai-serve-journal) |
 | `--layout` | [flai import](../users/flai-reference.md#flai-import), [flai new](../users/flai-reference.md#flai-new) |
@@ -399,7 +403,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--owner` | [flai epic new](../users/flai-reference.md#flai-epic-new), [flai issue story](../users/flai-reference.md#flai-issue-story), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new) |
 | `--parent` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--part` | [flai prime](../users/flai-reference.md#flai-prime) |
-| `--path` | [flai stream restore](../users/flai-reference.md#flai-stream-restore) |
+| `--path` | [flai digest edit](../users/flai-reference.md#flai-digest-edit), [flai digest new](../users/flai-reference.md#flai-digest-new), [flai stream restore](../users/flai-reference.md#flai-stream-restore) |
 | `--paths` | [flai message share](../users/flai-reference.md#flai-message-share) |
 | `--penalty-per-week` | [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue new](../users/flai-reference.md#flai-issue-new), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--pending` | [flai push](../users/flai-reference.md#flai-push), [flai release](../users/flai-reference.md#flai-release) |
@@ -435,9 +439,9 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--setup` | [flai components config](../users/flai-reference.md#flai-components-config) |
 | `--show` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--since` | [flai stats](../users/flai-reference.md#flai-stats) |
-| `--source` | [flai thread reply](../users/flai-reference.md#flai-thread-reply) |
+| `--source` | [flai digest edit](../users/flai-reference.md#flai-digest-edit), [flai digest new](../users/flai-reference.md#flai-digest-new), [flai thread reply](../users/flai-reference.md#flai-thread-reply) |
 | `--spend-key-env` | [flai serve agent provider](../users/flai-reference.md#flai-serve-agent-provider) |
-| `--status` | [flai adr new](../users/flai-reference.md#flai-adr-new) |
+| `--status` | [flai adr new](../users/flai-reference.md#flai-adr-new), [flai digest list](../users/flai-reference.md#flai-digest-list) |
 | `--stdin` | [flai doc lint](../users/flai-reference.md#flai-doc-lint) |
 | `--story` | [flai check](../users/flai-reference.md#flai-check), [flai components serve](../users/flai-reference.md#flai-components-serve), [flai design show](../users/flai-reference.md#flai-design-show), [flai doc save](../users/flai-reference.md#flai-doc-save), [flai doc show](../users/flai-reference.md#flai-doc-show), [flai file save](../users/flai-reference.md#flai-file-save), [flai file show](../users/flai-reference.md#flai-file-show), [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue list](../users/flai-reference.md#flai-issue-list), [flai issue new](../users/flai-reference.md#flai-issue-new), [flai issue story](../users/flai-reference.md#flai-issue-story), [flai message list](../users/flai-reference.md#flai-message-list), [flai prime](../users/flai-reference.md#flai-prime), [flai task new](../users/flai-reference.md#flai-task-new) |
 | `--strict` | [flai check](../users/flai-reference.md#flai-check) |
@@ -451,6 +455,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--title` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--token-env` | [flai serve forge](../users/flai-reference.md#flai-serve-forge) |
 | `--top` | [flai order](../users/flai-reference.md#flai-order) |
+| `--topic` | [flai digest edit](../users/flai-reference.md#flai-digest-edit), [flai digest list](../users/flai-reference.md#flai-digest-list), [flai digest new](../users/flai-reference.md#flai-digest-new) |
 | `--topics` | [flai design init](../users/flai-reference.md#flai-design-init), [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--touches` | [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new) |
 | `--trailer` | [flai accept](../users/flai-reference.md#flai-accept), [flai adr accept](../users/flai-reference.md#flai-adr-accept), [flai adr new](../users/flai-reference.md#flai-adr-new), [flai adr topics](../users/flai-reference.md#flai-adr-topics), [flai agent clear](../users/flai-reference.md#flai-agent-clear), [flai agent set](../users/flai-reference.md#flai-agent-set), [flai criteria tick](../users/flai-reference.md#flai-criteria-tick), [flai criteria untick](../users/flai-reference.md#flai-criteria-untick), [flai doc save](../users/flai-reference.md#flai-doc-save), [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai file save](../users/flai-reference.md#flai-file-save), [flai import](../users/flai-reference.md#flai-import), [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue close](../users/flai-reference.md#flai-issue-close), [flai issue new](../users/flai-reference.md#flai-issue-new), [flai issue story](../users/flai-reference.md#flai-issue-story), [flai manifest set](../users/flai-reference.md#flai-manifest-set), [flai move](../users/flai-reference.md#flai-move), [flai shared add](../users/flai-reference.md#flai-shared-add), [flai shared remove](../users/flai-reference.md#flai-shared-remove), [flai story new](../users/flai-reference.md#flai-story-new), [flai stream restore](../users/flai-reference.md#flai-stream-restore), [flai task new](../users/flai-reference.md#flai-task-new) |
