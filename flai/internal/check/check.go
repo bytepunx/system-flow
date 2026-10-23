@@ -24,6 +24,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/conflictmark"
 	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
+	"github.com/bytepunx/system-flow/flai/internal/digest"
 	"github.com/bytepunx/system-flow/flai/internal/experiment"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
@@ -118,6 +119,7 @@ func Run(repo *workitem.Repo, now time.Time) (*Result, error) {
 	c.issues()
 	c.experiments()
 	c.analysis()
+	c.digest()
 	c.designTokens()
 	c.componentExamples()
 	c.threads()
@@ -902,7 +904,7 @@ func (c *checker) documentation() {
 				return nil //nolint:nilerr // an unreadable entry is skipped, the walk continues
 			}
 			if d.IsDir() {
-				if (d.Name() == conventions.Folder || d.Name() == issues.Folder || (key == "design" && (d.Name() == experiment.Folder || d.Name() == analysis.Folder))) && filepath.Dir(path) == root {
+				if (d.Name() == conventions.Folder || d.Name() == issues.Folder || (key == "design" && (d.Name() == experiment.Folder || d.Name() == analysis.Folder || d.Name() == digest.Folder))) && filepath.Dir(path) == root {
 					return filepath.SkipDir // validated by their own rules
 				}
 				return nil
@@ -1375,6 +1377,34 @@ func (c *checker) analysis() {
 }
 
 var analysisLink = regexp.MustCompile(`\]\((?:\./)?(\d{4}-\d{2}-\d{2}-[a-z]+\.md)\)`)
+
+// digest validates the design folder's digest (ADR-0191): each entry's name
+// and front matter, what its sources and absorbed_by name, as digest.entry,
+// and text with the shape of a secret, as digest.secret, each on its line.
+func (c *checker) digest() {
+	dir := filepath.Join(c.repo.Root, filepath.FromSlash(digest.Dir(c.repo.Manifest)))
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return // optional until the first entry is written
+	}
+	env := digest.EnvFor(c.repo)
+	for _, e := range entries {
+		name := e.Name()
+		if e.IsDir() || !strings.HasSuffix(name, ".md") || digest.Skipped(name) {
+			continue
+		}
+		path := filepath.Join(dir, name)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			c.add(Error, digest.RuleEntry, path, 1, "%v", err)
+			continue
+		}
+		_, problems := digest.Validate(name, string(data), env)
+		for _, p := range problems {
+			c.add(Error, p.Rule, path, p.Line, "%s", p.Message)
+		}
+	}
+}
 
 // LintFindings are a refused write's markdown lint findings as flai check
 // reports them, for the commands that refuse with check findings.
