@@ -227,6 +227,56 @@ func TestDocsAnalysisReports(t *testing.T) {
 	}
 }
 
+// TestDocsDigestEntries: the digest's entries under design/digest are in the
+// tree beside the folder's README, as any design folder is, and an entry is
+// served with its front matter and body, with no code of its own (ADR-0191).
+func TestDocsDigestEntries(t *testing.T) {
+	p := withDocs(t)
+	entry := "design/digest/D-0001-the-operator-keeps-the-forge-token-in-the-host-s-environment-never-in-the.md"
+	title := "The operator keeps the forge token in the host's environment, never in the repository"
+	content := "---\nid: D-0001\ntitle: " + title + "\nkind: answer\nsources: [TH-0001]\ntopics: [git]\npaths: []\ndate: 2026-10-23\nstatus: active\nabsorbed_by: \"\"\nasked_again: []\ncited: []\n---\n\n" +
+		"# D-0001 " + title + "\n\nAsked on TH-0001; the operator answered that the host holds it.\n"
+	for rel, c := range map[string]string{
+		"design/digest/README.md": "---\ntitle: Digest\n---\n\n# Digest\n",
+		entry:                     content,
+	} {
+		full := filepath.Join(p.Root, filepath.FromSlash(rel))
+		_ = os.MkdirAll(filepath.Dir(full), 0o755)
+		if err := os.WriteFile(full, []byte(c), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var roots []*DocNode
+	if err := call(t, p, "docs.tree", `{}`, &roots); err != nil {
+		t.Fatal(err)
+	}
+	digest := find(roots, "design/digest")
+	if digest == nil || digest.Kind != "dir" {
+		t.Fatalf("design/digest: %+v", digest)
+	}
+	var names []string
+	for _, n := range digest.Children {
+		names = append(names, n.Name)
+	}
+	if strings.Join(names, ",") != filepath.Base(entry)+",README.md" {
+		t.Errorf("design/digest lists %v", names)
+	}
+	if n := find(roots, entry); n == nil || n.Kind != "file" || n.Title != title {
+		t.Errorf("the entry: %+v", n)
+	}
+	var d Doc
+	if err := call(t, p, "doc.get", `{"path":"`+entry+`"}`, &d); err != nil {
+		t.Fatal(err)
+	}
+	fm := d.FrontMatter
+	if d.Path != entry || fm["id"] != "D-0001" || fm["title"] != title || fm["kind"] != "answer" || fm["status"] != "active" ||
+		fm["date"] != "2026-10-23" || fm["absorbed_by"] != "" || strings.Join(strs(fm["sources"]), ",") != "TH-0001" ||
+		strings.Join(strs(fm["topics"]), ",") != "git" || len(strs(fm["cited"])) != 0 || d.Raw != content ||
+		d.Body != "\n# D-0001 "+title+"\n\nAsked on TH-0001; the operator answered that the host holds it.\n" {
+		t.Errorf("the entry served: %+v", d)
+	}
+}
+
 func TestAdrsList(t *testing.T) {
 	var list []Adr
 	if err := call(t, withDocs(t), "adrs.list", `{}`, &list); err != nil {
