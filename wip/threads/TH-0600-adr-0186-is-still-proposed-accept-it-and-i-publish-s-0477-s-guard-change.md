@@ -6,7 +6,7 @@ anchor:
 status: open
 participants: [orchestrator]
 created: 2026-10-22T21:44:33Z
-updated: 2026-10-22T22:37:44Z
+updated: 2026-10-23T07:15:56Z
 ---
 
 # TH-0600 ADR-0186 is still proposed: accept it, and I publish S-0477's guard change
@@ -34,3 +34,6 @@ Say what to change, and I'll leave S-0477 unreleased until a follow-up story adj
 
 ### 2026-10-22T22:37:44Z orchestrator
 Update: S-0476 has landed too, with the component harness answers and ADR-0187, which is accepted. A release ships everything pending, so S-0476 now waits behind S-0477 on this answer. Accept ADR-0186 or say "publish", and both go out together.
+
+### 2026-10-23T07:15:56Z orchestrator
+Update: five accepted stories now wait on this answer: S-0469, S-0470, S-0476, S-0477, and S-0478. A release ships them all. Accept ADR-0186 (`flai adr accept 0186`) or say "publish", and I release them together.

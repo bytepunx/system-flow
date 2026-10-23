@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1325.2852
-accrued_seconds: 1190074
-tasks_completed: 929
-last_run: 2026-10-23T07:04:50Z
+accrued_cost: 1338.8132
+accrued_seconds: 1191191
+tasks_completed: 933
+last_run: 2026-10-23T07:23:27Z
 ---
 
 # Orchestrator activity
@@ -6514,6 +6514,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0478
 - Seconds: 1239
 - Cost: 13.5582 USD, estimated
+
+### 2026-10-23T07:15:53Z
+
+- Summary: S-0478 landed through the merge queue (enqueued by me). Under publish, judgement: not published; pending S-0469, S-0470, S-0476, S-0477, S-0478, and a release would bundle S-0477's guard change, which waits on the operator accepting ADR-0186 (TH-0600).
+- Items: S-0478
+- Seconds: 663
+- Cost: 0.1762 USD, estimated
+
+### 2026-10-23T07:15:56Z
+
+- Summary: Answered TH-0600, citing no source
+- Items: none
+- Seconds: 3
+- Cost: 0.1765 USD, estimated
+
+### 2026-10-23T07:16:03Z
+
+- Summary: agent-S-0481 pulled S-0481, the last ready story. Under order_ready, re-applied flai order --by throughput: ready is now empty.
+- Items: S-0481
+- Seconds: 7
+- Cost: 0.3538 USD, estimated
+
+### 2026-10-23T07:23:27Z
+
+- Summary: S-0481 reached review at cbd98d1d. flai verify passed at the head (check and markdown only; no tier selects scripts/**). The verifier matched both criteria within touches (flaiover-install.sh lets pnpm purge a foreign-store install, flaiover-pnpm.sh adds with the project's store, a reproducing test wired into flaiover-test.sh, I-0177 closed), with the test's pass resting on the agent's account. Enqueued S-0481, first in the queue (alone); no forecast, no value. Recorded I-0199 (6d075dc64): no tier selects scripts/**, so script changes and their tests pass verify and the queue unrun.
+- Items: S-0481
+- Seconds: 444
+- Cost: 12.8215 USD, estimated
 
 ## Refusals
 
