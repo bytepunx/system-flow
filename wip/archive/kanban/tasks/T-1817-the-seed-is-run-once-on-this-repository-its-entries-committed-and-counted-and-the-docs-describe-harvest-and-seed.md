@@ -3,19 +3,37 @@ id: T-1817
 type: task
 nature: feature
 title: The seed is run once on this repository, its entries committed and counted, and the docs describe harvest and seed
-status: ready
+status: done
 parent: S-0429
 owner: alex
 created: 2026-10-16T06:04:22Z
-updated: 2026-10-23T17:37:52Z
+updated: 2026-10-23T18:22:17Z
 transitions:
   - to: ready
     at: 2026-10-23T17:37:52Z
+    by: agent-S-0429
+  - to: in-progress
+    at: 2026-10-23T18:20:20Z
+    by: agent-S-0429
+  - to: done
+    at: 2026-10-23T18:22:17Z
     by: agent-S-0429
 stream: S-0429
 tags: [cli]
 touches: [design/digest, design/digest/README.md, design/system/flai-cli.md, docs/users/flai.md]
 after: [T-1816]
+usage:
+  source: log
+  seconds: 117
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 35
+      output: 16112
+      cache_read: 2641120
+      cache_write: 85532
+      cost: 1.3646
 ---
 # T-1817 The seed is run once on this repository, its entries committed and counted, and the docs describe harvest and seed
 

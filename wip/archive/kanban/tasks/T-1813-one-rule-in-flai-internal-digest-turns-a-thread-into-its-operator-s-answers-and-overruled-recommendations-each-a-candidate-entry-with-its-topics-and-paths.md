@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 548
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 39
-      output: 203
-      cache_read: 1346709
-      cache_write: 72205
-      cost: 0.4787
+      input: 19
+      output: 8532
+      cache_read: 1398556
+      cache_write: 45292
+      cost: 0.7226
 ---
 # T-1813 One rule in flai/internal/digest turns a thread into its operator's answers and overruled recommendations, each a candidate entry with its topics and paths
 

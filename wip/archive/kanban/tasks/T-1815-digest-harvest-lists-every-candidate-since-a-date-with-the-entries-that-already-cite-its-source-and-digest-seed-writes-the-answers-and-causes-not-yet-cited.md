@@ -3,11 +3,11 @@ id: T-1815
 type: task
 nature: feature
 title: digest.Harvest lists every candidate since a date with the entries that already cite its source, and digest.Seed writes the answers and causes not yet cited
-status: in-progress
+status: done
 parent: S-0429
 owner: alex
 created: 2026-10-16T06:04:04Z
-updated: 2026-10-23T17:47:16Z
+updated: 2026-10-23T17:55:31Z
 transitions:
   - to: ready
     at: 2026-10-23T17:37:51Z
@@ -15,22 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-23T17:47:16Z
     by: agent-S-0429
+  - to: done
+    at: 2026-10-23T17:55:31Z
+    by: agent-S-0429
 stream: S-0429
 tags: [cli]
-touches: [flai/internal/digest/harvest.go, flai/internal/digest/harvest_test.go, flai/internal/digest/seed.go, flai/internal/digest/seed_test.go]
+touches: [flai/internal/digest/harvest.go, flai/internal/digest/harvest_test.go, flai/internal/digest/seed.go, flai/internal/digest/seed_test.go, flai/internal/digest/answer.go, flai/internal/digest/sources.go]
 after: [T-1813, T-1814]
 usage:
   source: log
-  seconds: 111
+  seconds: 495
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 18
-      output: 99
-      cache_read: 718624
-      cache_write: 85825
-      cost: 0.2714
+      input: 39
+      output: 17706
+      cache_read: 2902537
+      cache_write: 93998
+      cost: 1.4997
 ---
 # T-1815 digest.Harvest lists every candidate since a date with the entries that already cite its source, and digest.Seed writes the answers and causes not yet cited
 

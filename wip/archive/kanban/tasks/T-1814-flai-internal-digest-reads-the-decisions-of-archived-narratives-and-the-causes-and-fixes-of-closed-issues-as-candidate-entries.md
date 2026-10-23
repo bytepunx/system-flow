@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 555
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 57
-      output: 266
-      cache_read: 2685730
-      cache_write: 133502
-      cost: 0.9511
+      input: 37
+      output: 16951
+      cache_read: 2778768
+      cache_write: 89990
+      cost: 1.4358
 ---
 # T-1814 flai/internal/digest reads the decisions of archived narratives and the causes and fixes of closed issues as candidate entries
 
