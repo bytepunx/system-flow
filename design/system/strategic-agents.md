@@ -149,6 +149,19 @@ The planner predicts the touches from what `touches suggest` lists, the story's 
 
 It records why under a `### Planning` heading in the story's Notes: where each touch came from (declared, co-change, design, or layout) and why each figure stands or was adjusted. That heading is the planner's, rewritten on each run; the rest of the Notes is left as it was. `planPrompt`, the convention's "As the planner", and `planner.md` say the same.
 
+Since S-0468 ([ADR-0188](../adrs/0188-a-task-takes-no-folder-touch-the-planner-s-folder-touch-on-a-story-needs-the.md), I-0152) flai holds the planner to touches that name files. The planner is the writer when `FLAI_ROLE=plan` is in the environment, as the planner's session has it, or else when the author's name starts with `planner-`. A folder touch is an entry that, read as a claim reads it, names a folder of the repository tree holding at least one file; a path absent from the tree is a file to be made, and a folder wholly inside `claims.shared` does not count ([workflow.md](workflow.md#branches-and-collisions-adr-0019)).
+
+| Write | Refused when | Through |
+|-------|--------------|---------|
+| A task's touches, by anyone | an entry is a folder touch | `flai task new --touches`, `flai edit --touches`, `flai touches`, `item_new`, `item_edit` |
+| A story's touches, by the planner | an entry is a folder touch that the story's Notes do not name under `### Planning` | `flai edit --touches`, `flai touches`, `item_new`, `item_edit` |
+
+A refusal writes nothing. It names the folder and how many files it holds, and says to name the files, or to leave the folder to the story's touches with a `### Planning` note. The note is read as the body will be after the write, so one `item_edit` may carry both the note and the touch. The operator's and the story's agent's story touches are not refused.
+
+The planner writes `after` on a story only for a story whose accepted change it needs on main, never for an order of preference, which the pull order sets. `flai check` gives advisory warnings, which `--strict` passes over: `wip.after-hub` on a story that three or more open stories name in `after`, and `touches.folder` on a story in progress whose claim keeps a folder ([flai-cli.md](flai-cli.md#commands)).
+
+`planPrompt`, the convention's "As the planner", and `.claude/agents/planner.md` say these rules too.
+
 ### The guard
 
 `flai guard` reads `FLAI_ROLE` from the hook's environment. With `plan`, it checks the session's own calls, which carry no agent ID, against the planner's rules ([flai-cli.md](flai-cli.md#commands), `flai guard`):
