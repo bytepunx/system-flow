@@ -1,6 +1,6 @@
 ---
 title: Flow metrics
-updated: 2026-10-20
+updated: 2026-10-23
 status: active
 topics: [cli, dashboard, analysis]
 ---
@@ -26,7 +26,7 @@ Everything the dashboard charts is derived from work item front matter. This doc
 |--------|---------|---------|
 | Lead time | `completed - created` | How long from idea to delivered |
 | Cycle time | `completed - started` | How long once someone started |
-| Queue time | `started - committed` | How long ready work waits |
+| Queue time | Sum of the `ready` intervals in `state_intervals` that end at or before `started`; `started - committed` for an item never moved out of `ready` but to `in-progress` ([ADR-0190](../adrs/0190-an-item-s-queue-time-is-the-seconds-it-spent-in-ready-before-it-started-so-a.md)) | How long ready work waits, leaving out a stretch back in backlog |
 | Time in state | Sum of `state_intervals` per state | Where the process spends time |
 | Blocked time | `blocked_total` | How much of cycle time was waiting |
 | Estimate error | `(cycle time - estimate) / estimate` | How good estimates are, when present |
@@ -476,7 +476,7 @@ So that `flai stats` and the dashboard agree to the second:
 
 - Percentiles use nearest rank on the sorted values: the p-th percentile is the value at position `ceil(p/100 × n)`.
 - The backlog interval starts at `created`. An open item's current interval ends at now. Closed items accrue nothing after `completed`.
-- Queue time exists only when both `committed` and `started` exist and `started` is not before `committed`.
+- Queue time exists only when both `committed` and `started` exist and `started` is not before `committed`. It counts only the time in `ready`: a story sent back to `backlog`, or cancelled, and made ready again does not count the time in between ([ADR-0190](../adrs/0190-an-item-s-queue-time-is-the-seconds-it-spent-in-ready-before-it-started-so-a.md)).
 - Cycle time exists only when the item was started. An item cancelled from backlog has a lead time but no cycle time and is excluded from cycle aggregates.
 - Burn-up counts an item in scope from its `created` day and excludes cancelled items. Cumulative flow uses the item's state at the end of each day (23:59:59 UTC). Both run from the day that holds the window's start, or the first item's `created` day if that is later, to today (S-0166).
 - Throughput per week is completed items in the window divided by window days over seven. Weekly buckets are ISO weeks starting Monday, from the one that holds the window's start to the one that holds now.
