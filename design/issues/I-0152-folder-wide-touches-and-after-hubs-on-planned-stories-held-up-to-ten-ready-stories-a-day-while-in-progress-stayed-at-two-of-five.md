@@ -2,12 +2,12 @@
 id: I-0152
 title: Folder-wide touches and after hubs on planned stories held up to ten ready stories a day while in-progress stayed at two of five
 class: efficiency
-status: open
+status: closed
 count: 1
 cost: 44h
 first_reported: 2026-10-15T22:48:43Z
 last_reported: 2026-10-15T22:48:43Z
-updated: 2026-10-21T11:58:08Z
+updated: 2026-10-23T04:58:49Z
 usage:
   strategic:
     - kind: analyzer
@@ -49,3 +49,4 @@ flai stats claims.weeks held_seconds: W40 overlap 653,549 + after 582,160; W41 o
 Found by the analysis in [2026-10-15-bottlenecks.md](../analysis/2026-10-15-bottlenecks.md).
 
 Story S-0468 remediates this issue, created from it at 2026-10-21T11:58:08Z.
+Closed 2026-10-23T04:58:49Z: Fixed by S-0468 (ADR-0188). flai refuses a task a folder touch through flai task new, flai edit --touches, flai touches, item_new, and item_edit, so ADR-0096's narrowing always has files to narrow to. It refuses the planner's folder touch on a story unless the story's ### Planning note names the folder. flai check gives the advisory warnings touches.folder, on a story in progress whose claim keeps a folder, and wip.after-hub, on a story three or more open stories name in after. The planner's convention, planPrompt, and planner.md say that after names only a story whose accepted change is needed on main, never an order of preference.
