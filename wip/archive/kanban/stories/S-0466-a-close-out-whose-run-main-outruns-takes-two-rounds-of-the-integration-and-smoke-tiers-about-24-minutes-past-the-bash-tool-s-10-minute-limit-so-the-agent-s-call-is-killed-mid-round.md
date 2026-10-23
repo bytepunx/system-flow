@@ -3,10 +3,10 @@ id: S-0466
 type: story
 nature: improvement
 title: A close-out whose run main outruns takes two rounds of the integration and smoke tiers, about 24 minutes, past the Bash tool's 10-minute limit, so the agent's call is killed mid-round
-status: review
+status: done
 owner: alex
 created: 2026-10-21T11:57:48Z
-updated: 2026-10-23T05:11:03Z
+updated: 2026-10-23T17:43:05Z
 transitions:
   - to: ready
     at: 2026-10-22T20:50:02Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-23T05:11:03Z
     by: agent-S-0466
+  - to: done
+    at: 2026-10-23T17:43:05Z
+    by: alex
 tags: [flai, template]
 topics: [cli, conventions, template]
 touches: [flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/verify/story.go, design/system/flai-cli.md, docs/users/flai-reference.md, design/system/devex.md, docs/contributors/index.md, scripts/close-out.sh, design/issues/I-0148-a-close-out-whose-run-main-outruns-takes-two-rounds-of-the-integration-and-smoke-tiers-about-24-minutes-past-the-bash-tool-s-10-minute-limit-so-the-agent-s-call-is-killed-mid-round.md, design/issues/summary.md, design/issues/I-0182-criteria-tick-is-refused-on-another-open-story-s-narrative-state-finding-which-the-story-s-own-scoped-check-leaves-out.md, design/issues/I-0196-a-close-out-s-second-round-runs-go-test-again-when-the-rebase-regenerates-design-issues-summary-md-which-changes-the-branch-s-patch-id-so-a-close-out-main-outruns-still-takes-about-11-minutes-with-the-queue-on.md]

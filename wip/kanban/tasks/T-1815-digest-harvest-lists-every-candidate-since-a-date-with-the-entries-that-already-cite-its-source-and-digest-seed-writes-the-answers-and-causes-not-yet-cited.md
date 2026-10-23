@@ -3,12 +3,15 @@ id: T-1815
 type: task
 nature: feature
 title: digest.Harvest lists every candidate since a date with the entries that already cite its source, and digest.Seed writes the answers and causes not yet cited
-status: backlog
+status: ready
 parent: S-0429
 owner: alex
 created: 2026-10-16T06:04:04Z
-updated: 2026-10-23T16:43:11Z
-transitions: []
+updated: 2026-10-23T17:37:51Z
+transitions:
+  - to: ready
+    at: 2026-10-23T17:37:51Z
+    by: agent-S-0429
 stream: S-0429
 tags: [cli]
 touches: [flai/internal/digest/harvest.go, flai/internal/digest/harvest_test.go, flai/internal/digest/seed.go, flai/internal/digest/seed_test.go]

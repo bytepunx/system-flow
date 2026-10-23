@@ -3,12 +3,15 @@ id: T-1817
 type: task
 nature: feature
 title: The seed is run once on this repository, its entries committed and counted, and the docs describe harvest and seed
-status: backlog
+status: ready
 parent: S-0429
 owner: alex
 created: 2026-10-16T06:04:22Z
-updated: 2026-10-16T06:04:22Z
-transitions: []
+updated: 2026-10-23T17:37:52Z
+transitions:
+  - to: ready
+    at: 2026-10-23T17:37:52Z
+    by: agent-S-0429
 stream: S-0429
 tags: [cli]
 touches: [design/digest, design/digest/README.md, design/system/flai-cli.md, docs/users/flai.md]

@@ -3,12 +3,18 @@ id: T-1814
 type: task
 nature: feature
 title: flai/internal/digest reads the decisions of archived narratives and the causes and fixes of closed issues as candidate entries
-status: backlog
+status: in-progress
 parent: S-0429
 owner: alex
 created: 2026-10-16T06:03:54Z
-updated: 2026-10-23T16:43:04Z
-transitions: []
+updated: 2026-10-23T17:37:54Z
+transitions:
+  - to: ready
+    at: 2026-10-23T17:37:50Z
+    by: agent-S-0429
+  - to: in-progress
+    at: 2026-10-23T17:37:54Z
+    by: agent-S-0429
 stream: S-0429
 tags: [cli]
 touches: [flai/internal/digest/sources.go, flai/internal/digest/sources_test.go]

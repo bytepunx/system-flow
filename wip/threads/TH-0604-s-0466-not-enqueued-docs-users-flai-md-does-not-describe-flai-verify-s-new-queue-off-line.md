@@ -4,10 +4,10 @@ title: "S-0466 not enqueued: docs/users/flai.md does not describe flai verify's 
 anchor:
   path: wip/kanban/stories/S-0466-a-close-out-whose-run-main-outruns-takes-two-rounds-of-the-integration-and-smoke-tiers-about-24-minutes-past-the-bash-tool-s-10-minute-limit-so-the-agent-s-call-is-killed-mid-round.md
   item: S-0466
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-23T05:12:24Z
-updated: 2026-10-23T05:12:24Z
+updated: 2026-10-23T17:43:05Z
 ---
 
 # TH-0604 S-0466 not enqueued: docs/users/flai.md does not describe flai verify's new queue_off line
@@ -33,3 +33,6 @@ On wip/kanban/stories/S-0466-a-close-out-whose-run-main-outruns-takes-two-rounds
 ## The blocker
 
 The project addition to `design/conventions/documentation.md` says `docs/users/flai.md` is updated in the same story that changes a command. This story changes `flai verify`'s text and JSON output, and `docs/users/flai.md` is neither in the diff nor in the touches. Only the generated reference changed.
+
+### 2026-10-23T17:43:05Z alex
+Resolved: S-0466 was accepted

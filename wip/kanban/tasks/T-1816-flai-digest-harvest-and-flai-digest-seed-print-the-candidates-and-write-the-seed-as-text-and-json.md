@@ -3,12 +3,15 @@ id: T-1816
 type: task
 nature: feature
 title: flai digest harvest and flai digest seed print the candidates and write the seed, as text and JSON
-status: backlog
+status: ready
 parent: S-0429
 owner: alex
 created: 2026-10-16T06:04:11Z
-updated: 2026-10-16T06:04:11Z
-transitions: []
+updated: 2026-10-23T17:37:52Z
+transitions:
+  - to: ready
+    at: 2026-10-23T17:37:52Z
+    by: agent-S-0429
 stream: S-0429
 tags: [cli]
 touches: [flai/cmd/digest.go, flai/cmd/digest_test.go, docs/users/flai-reference.md]

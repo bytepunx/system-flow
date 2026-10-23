@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1359.6681
-accrued_seconds: 1224263
-tasks_completed: 956
-last_run: 2026-10-23T17:25:47Z
+accrued_cost: 1363.5972
+accrued_seconds: 1225024
+tasks_completed: 960
+last_run: 2026-10-23T17:38:28Z
 ---
 
 # Orchestrator activity
@@ -6703,6 +6703,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0434
 - Seconds: 6
 - Cost: 0.0000 USD
+
+### 2026-10-23T17:35:28Z
+
+- Summary: Under plan_backlog_stories, resolved planner-S-0434's TH-0616 once its 92.98 USD/week value was written. Under finalize_drafts, finalized S-0434 (complete per flai promote --drafts; consistent); held after S-0433. Started the planner for S-0435 (pid 178944), the last story flai plan --candidates lists.
+- Items: S-0434, S-0435
+- Seconds: 581
+- Cost: 0.3018 USD, estimated
+
+### 2026-10-23T17:35:40Z
+
+- Summary: S-0428 landed through the merge queue (enqueued by me). Under promote_to_ready, moved S-0429 to ready as candidate 1 by throughput (50m, 76.92 USD/week), no longer held after S-0428; S-0241 (rank 2, 2h) stays out, blocked. Under order_ready, applied flai order --by throughput: S-0429 alone. Under publish, judgement: not published; pending S-0428, S-0469, S-0470, S-0476, S-0477, S-0478 (120.06 USD/week, four unvalued), and a release would ship S-0477's guard change while ADR-0186 is still proposed (TH-0600).
+- Items: S-0428, S-0429, S-0241
+- Seconds: 12
+- Cost: 0.1858 USD, estimated
+
+### 2026-10-23T17:38:12Z
+
+- Summary: Answered TH-0617, citing design/conventions/strategic-agents.md § As the planner
+- Items: S-0435
+- Seconds: 152
+- Cost: 3.3737 USD, estimated
+
+### 2026-10-23T17:38:28Z
+
+- Summary: Under plan_backlog_stories, approved and resolved planner-S-0435's TH-0617: two tasks in two layers, three file touches, forecast 45m (raised from flai's 14m against S-0176 and S-0427's actuals), value 60.95 USD/week from flai cod; approved T-1847's Work edit on cutting the two windows from one flai stats --since run. Under finalize_drafts, finalized S-0435 (complete; consistent); held after S-0434. flai plan --candidates now lists nothing: every E-0025 story (S-0428 to S-0435) is planned and finalized, and S-0425 stays a draft on TH-0587 with E-0024's others.
+- Items: S-0435, E-0025
+- Seconds: 16
+- Cost: 0.0678 USD, estimated
 
 ## Refusals
 

@@ -4,10 +4,10 @@ title: "Plan for S-0434: five tasks in four layers, touches widened for the char
 anchor:
   path: wip/kanban/stories/S-0434-flai-stats-reports-per-week-the-threads-opened-to-the-operator-per-completed-story-and-how-many-asked-what-a-digest-entry-already-answered-and-the-dashboard-charts-it.md
   item: S-0434
-status: answered
+status: resolved
 participants: [planner-S-0434, orchestrator]
 created: 2026-10-23T17:25:27Z
-updated: 2026-10-23T17:25:41Z
+updated: 2026-10-23T17:35:18Z
 ---
 
 # TH-0616 Plan for S-0434: five tasks in four layers, touches widened for the chart catalogue and flai-cli.md, forecast 1h15m, cost of delay 92.98 USD a week
@@ -62,3 +62,6 @@ On the proposals:
 3. **No:** keep `after` on S-0433, as the epic's order says (TH-0480).
 
 Source: design/conventions/strategic-agents.md § As the planner
+
+### 2026-10-23T17:35:18Z orchestrator
+Resolved: Plan approved under plan_backlog_stories; the 92.98 USD/week value is now on S-0434.

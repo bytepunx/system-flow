@@ -3,12 +3,18 @@ id: S-0429
 type: story
 nature: feature
 title: flai digest harvest lists what the archive and the threads hold since a date, and a one-off seed fills the digest from the operator's answers and the closed issues so there is something to prime with
-status: backlog
+status: in-progress
 parent: E-0025
 owner: alex
 created: 2026-10-16T05:58:28Z
-updated: 2026-10-23T16:44:53Z
-transitions: []
+updated: 2026-10-23T17:35:59Z
+transitions:
+  - to: ready
+    at: 2026-10-23T17:35:36Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-23T17:35:59Z
+    by: agent-S-0429
 tags: [cli]
 topics: [cli, planning, analysis]
 touches: [design/digest, design/digest/README.md, design/system/flai-cli.md, docs/users/flai-reference.md, docs/users/flai.md, flai/cmd/digest.go, flai/cmd/digest_test.go, flai/internal/digest/answer.go, flai/internal/digest/answer_test.go, flai/internal/digest/harvest.go, flai/internal/digest/harvest_test.go, flai/internal/digest/seed.go, flai/internal/digest/seed_test.go, flai/internal/digest/sources.go, flai/internal/digest/sources_test.go]
@@ -24,15 +30,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 479
+      seconds: 483
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 52
-          output: 780
-          cache_read: 4797537
-          cache_write: 19380
-          cost: 1.0596
+          input: 54
+          output: 793
+          cache_read: 5075714
+          cache_write: 22828
+          cost: 1.1215
 cost_of_delay:
   value: 76.92
   by: planner-S-0429
