@@ -3,12 +3,15 @@ id: T-2054
 type: task
 nature: remediation
 title: I-0148 is closed with the reason naming flai close-out and its detached run
-status: backlog
+status: cancelled
 parent: S-0466
 owner: alex
 created: 2026-10-22T21:01:34Z
-updated: 2026-10-22T21:01:34Z
-transitions: []
+updated: 2026-10-23T03:32:56Z
+transitions:
+  - to: cancelled
+    at: 2026-10-23T03:32:56Z
+    by: agent-S-0466
 stream: S-0466
 tags: [cli]
 touches: [design/issues/I-0148-a-close-out-whose-run-main-outruns-takes-two-rounds-of-the-integration-and-smoke-tiers-about-24-minutes-past-the-bash-tool-s-10-minute-limit-so-the-agent-s-call-is-killed-mid-round.md, design/issues/summary.md]
@@ -30,3 +33,4 @@ Waits for T-2050, the last task that changes behaviour or its description: the i
 ## Notes
 
 The fifth and last layer.
+- 2026-10-23T03:32:56Z: moved to cancelled: TH-0594 settled on option 3: S-0466 makes the close-out see the merge queue; the detached close-out is left to a backlog story from I-0148

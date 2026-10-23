@@ -6,7 +6,7 @@ anchor:
 status: open
 participants: [orchestrator]
 created: 2026-10-22T21:44:33Z
-updated: 2026-10-22T21:44:33Z
+updated: 2026-10-22T22:37:44Z
 ---
 
 # TH-0600 ADR-0186 is still proposed: accept it, and I publish S-0477's guard change
@@ -31,3 +31,6 @@ The approved plan made `serve` a plain read for every sub-agent. The story's age
 ## If you would rather change it
 
 Say what to change, and I'll leave S-0477 unreleased until a follow-up story adjusts the rule. Nothing else is pending release.
+
+### 2026-10-22T22:37:44Z orchestrator
+Update: S-0476 has landed too, with the component harness answers and ADR-0187, which is accepted. A release ships everything pending, so S-0476 now waits behind S-0477 on this answer. Accept ADR-0186 or say "publish", and both go out together.

@@ -3,37 +3,61 @@ id: S-0468
 type: story
 nature: improvement
 title: Folder-wide touches and after hubs on planned stories held up to ten ready stories a day while in-progress stayed at two of five
-status: ready
+status: review
 owner: alex
 created: 2026-10-21T11:58:08Z
-updated: 2026-10-22T22:37:19Z
+updated: 2026-10-23T05:13:26Z
 transitions:
   - to: ready
     at: 2026-10-22T20:51:26Z
     by: alex
+  - to: in-progress
+    at: 2026-10-23T03:33:07Z
+    by: agent-S-0468
+  - to: review
+    at: 2026-10-23T05:13:26Z
+    by: agent-S-0468
 tags: [cli, template]
 topics: [planning]
-touches: [flai/internal/workitem/create.go, flai/internal/workitem/create_test.go, flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/itemedit/itemedit.go, flai/internal/itemedit/planning_test.go, flai/internal/itemedit/folder_test.go, flai/internal/itemnew/itemnew.go, flai/internal/itemnew/itemnew_test.go, flai/cmd/touches.go, flai/cmd/touches_test.go, flai/internal/mcpserver/items_write.go, flai/internal/mcpserver/items_write_test.go, flai/internal/check/check.go, flai/internal/check/check_test.go, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/adrs, design/adrs/README.md, design/system/strategic-agents.md, design/system/workflow.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/strategic-agents.md, template/root/design/conventions/work-management.md, ".claude/agents/planner.md", template/root/.claude/agents/planner.md, template/template.yaml, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0152-folder-wide-touches-and-after-hubs-on-planned-stories-held-up-to-ten-ready-stories-a-day-while-in-progress-stayed-at-two-of-five.md, design/issues/summary.md]
+touches: [flai/internal/workitem/create.go, flai/internal/workitem/create_test.go, flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/itemedit/itemedit.go, flai/internal/itemedit/planning_test.go, flai/internal/itemedit/folder_test.go, flai/internal/itemnew/itemnew.go, flai/internal/itemnew/itemnew_test.go, flai/cmd/touches.go, flai/cmd/touches_test.go, flai/internal/mcpserver/items_write.go, flai/internal/mcpserver/items_write_test.go, flai/internal/check/check.go, flai/internal/check/check_test.go, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/adrs, design/adrs/README.md, design/system/strategic-agents.md, design/system/workflow.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/strategic-agents.md, template/root/design/conventions/work-management.md, ".claude/agents/planner.md", template/root/.claude/agents/planner.md, template/template.yaml, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0152-folder-wide-touches-and-after-hubs-on-planned-stories-held-up-to-ten-ready-stories-a-day-while-in-progress-stayed-at-two-of-five.md, design/issues/summary.md, flai/cmd/edit.go, flai/cmd/check.go, flai/cmd/check_stats_test.go, design/issues/I-0197-testservesettingsareshowntothedashboard-in-flai-cmd-fails-now-and-then-in-the-close-out-s-go-test-tier-on-a-branch-that-does-not-touch-serve.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 6007
+  priced_by: harness
+  turns:
+    - day: 2026-10-23
+      ceremony: 1
+      hand_edits: 4
+      work: 82
+  models:
+    - model: claude-opus-5-5
+      input: 538
+      output: 182984
+      cache_read: 35802047
+      cache_write: 1167610
+      cost: 17.6108
   strategic:
     - kind: orchestrator
-      seconds: 101
+      seconds: 18072
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 63
-          output: 1164
-          cache_read: 13205031
-          cache_write: 10420
-          cost: 2.9181
+          input: 170
+          output: 2578
+          cache_read: 46419500
+          cache_write: 71194
+          cost: 10.2655
+        - model: claude-sonnet-5-5
+          input: 12
+          output: 49
+          cache_read: 213243
+          cache_write: 75897
+          cost: 0.2001
     - kind: analyzer
       seconds: 113
       estimated: true
@@ -75,8 +99,8 @@ finalized:
 This story remediates [I-0152](../../../design/issues/I-0152-folder-wide-touches-and-after-hubs-on-planned-stories-held-up-to-ten-ready-stories-a-day-while-in-progress-stayed-at-two-of-five.md), "Folder-wide touches and after hubs on planned stories held up to ten ready stories a day while in-progress stayed at two of five", which the analysis in [2026-10-15-bottlenecks.md](../../../design/analysis/2026-10-15-bottlenecks.md) found. The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0152 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0152 is closed with `flai issue close I-0152 --reason` saying what fixed it
+- [x] The cause I-0152 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0152 is closed with `flai issue close I-0152 --reason` saying what fixed it
 
 ## Tasks
 - T-2055 An ADR records the remedy for I-0152: a task takes no folder touch, a planner's folder touch on a story needs its Planning note, and a kept folder or an after hub is a check finding

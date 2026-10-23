@@ -3,12 +3,15 @@ id: T-2033
 type: task
 nature: improvement
 title: The close-out's run is detached from the call that starts it, kept under .flai-cache/close-out, followed by calls that return within --wait, and survives the caller's death
-status: backlog
+status: cancelled
 parent: S-0466
 owner: alex
 created: 2026-10-22T20:58:30Z
-updated: 2026-10-22T21:01:13Z
-transitions: []
+updated: 2026-10-23T03:22:00Z
+transitions:
+  - to: cancelled
+    at: 2026-10-23T03:22:00Z
+    by: agent-S-0466
 stream: S-0466
 tags: [cli]
 touches: [flai/internal/closeout/detach.go, flai/internal/closeout/detach_test.go, flai/cmd/closeout.go, flai/cmd/closeout_test.go]
@@ -32,3 +35,4 @@ Waits for T-2031, whose command and package this changes.
 ## Notes
 
 The third layer, with T-2046 (the scripts); the two share no path. The default wait of 9m is a flag's default, not a setting, so `docs/operators/settings.md` gains no row; the ADR may choose otherwise.
+- 2026-10-23T03:22:00Z: moved to cancelled: TH-0594 settled on option 3: S-0466 makes the close-out see the merge queue; the detached close-out is left to a backlog story from I-0148

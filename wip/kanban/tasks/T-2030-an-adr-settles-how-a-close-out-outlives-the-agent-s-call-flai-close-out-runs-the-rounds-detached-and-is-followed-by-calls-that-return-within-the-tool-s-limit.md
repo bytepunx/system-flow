@@ -3,12 +3,15 @@ id: T-2030
 type: task
 nature: improvement
 title: "An ADR settles how a close-out outlives the agent's call: flai close-out runs the rounds detached and is followed by calls that return within the tool's limit"
-status: backlog
+status: cancelled
 parent: S-0466
 owner: alex
 created: 2026-10-22T20:57:35Z
-updated: 2026-10-22T20:57:35Z
-transitions: []
+updated: 2026-10-23T03:21:59Z
+transitions:
+  - to: cancelled
+    at: 2026-10-23T03:21:59Z
+    by: agent-S-0466
 stream: S-0466
 tags: [cli, template]
 touches: [design/adrs, design/adrs/README.md]
@@ -35,3 +38,4 @@ Alternatives to weigh in the ADR: the agent runs the close-out with the Bash too
 ## Notes
 
 The first layer of the plan: the code tasks follow its decision. The `design/adrs/` folder touch stands for the new ADR, whose number is not known until `flai adr new` allocates it.
+- 2026-10-23T03:21:59Z: moved to cancelled: TH-0594 settled on option 3: S-0466 makes the close-out see the merge queue; the detached close-out is left to a backlog story from I-0148

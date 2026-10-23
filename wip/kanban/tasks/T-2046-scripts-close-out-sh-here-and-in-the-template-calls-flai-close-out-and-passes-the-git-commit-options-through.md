@@ -3,12 +3,15 @@ id: T-2046
 type: task
 nature: improvement
 title: scripts/close-out.sh, here and in the template, calls flai close-out and passes the git commit options through
-status: backlog
+status: cancelled
 parent: S-0466
 owner: alex
 created: 2026-10-22T21:00:16Z
-updated: 2026-10-22T21:00:16Z
-transitions: []
+updated: 2026-10-23T03:32:54Z
+transitions:
+  - to: cancelled
+    at: 2026-10-23T03:32:54Z
+    by: agent-S-0466
 stream: S-0466
 tags: [cli, template]
 touches: [scripts/close-out.sh, scripts/README.md, template/root/scripts/close-out.sh, template/root/scripts/README.md]
@@ -31,3 +34,4 @@ Waits for T-2031, which adds the command the scripts call. It does not wait for 
 ## Notes
 
 The third layer, with T-2033 (the detached run); the two share no path.
+- 2026-10-23T03:32:54Z: moved to cancelled: TH-0594 settled on option 3: S-0466 makes the close-out see the merge queue; the detached close-out is left to a backlog story from I-0148

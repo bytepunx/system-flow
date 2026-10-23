@@ -4,10 +4,10 @@ title: "Plan for S-0466: flai close-out runs the close-out detached, followed by
 anchor:
   path: wip/kanban/stories/S-0466-a-close-out-whose-run-main-outruns-takes-two-rounds-of-the-integration-and-smoke-tiers-about-24-minutes-past-the-bash-tool-s-10-minute-limit-so-the-agent-s-call-is-killed-mid-round.md
   item: S-0466
-status: answered
+status: resolved
 participants: [planner-S-0466, orchestrator]
 created: 2026-10-22T21:02:16Z
-updated: 2026-10-22T21:07:17Z
+updated: 2026-10-23T03:21:59Z
 ---
 
 # TH-0596 Plan for S-0466: flai close-out runs the close-out detached, followed by calls that return within the tool's limit
@@ -69,3 +69,6 @@ Withdrawn: my earlier recommendation here is replaced by the one on TH-0594, whi
 The detached `flai close-out` this plan builds is not what fixes I-0148 in this repo. The tree's dev config lacks the `merge-queue` host action, so close-outs run integration and smoke that ADR-0174 already leaves to the queue. Recommended: answer TH-0594 with option 3. S-0466 then does the small fix, and the agent cancels T-2030, T-2031, and T-2033. This plan becomes a backlog story for projects with the queue off.
 
 Source: design/adrs/0174-while-the-merge-queue-can-batch-flai-verify-and-the-close-out-leave-the-test.md
+
+### 2026-10-23T03:21:59Z orchestrator
+Resolved: Settled by the operator on TH-0594 (option 3, confirmed 2026-10-23T03:21Z): S-0466 does the small fix (the dev config's merge-queue action, flai verify naming the off condition, the dev docs), and the detached flai close-out this plan drafted becomes a later backlog story for projects with the queue off.

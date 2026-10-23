@@ -3,16 +3,37 @@ id: T-2039
 type: task
 nature: improvement
 title: flai accept --by orchestrator lands on a dirty main as the batch's landing does, refuses only a change that would overwrite an uncommitted file, and finishes an acceptance of its own that stopped before its commit
-status: backlog
+status: done
 parent: S-0467
 owner: alex
 created: 2026-10-22T20:59:30Z
-updated: 2026-10-22T21:00:31Z
-transitions: []
+updated: 2026-10-23T05:51:47Z
+transitions:
+  - to: ready
+    at: 2026-10-23T04:26:16Z
+    by: agent-S-0467
+  - to: in-progress
+    at: 2026-10-23T04:26:17Z
+    by: agent-S-0467
+  - to: done
+    at: 2026-10-23T04:50:47Z
+    by: agent-S-0467
 stream: S-0467
 tags: [flai]
-touches: [flai/cmd/accept.go, flai/cmd/accept_batch_dirty.go, flai/cmd/accept_batch_dirty_test.go, flai/cmd/accept_uncommitted_test.go, flai/cmd/accept_orchestrator_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go]
+touches: [flai/cmd/accept.go, flai/cmd/accept_batch_dirty.go, flai/internal/preview/accept.go, flai/cmd/accept_orchestrator_dirty_test.go]
 after: [T-2037]
+usage:
+  source: log
+  seconds: 1470
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 72
+      output: 28037
+      cache_read: 4968032
+      cache_write: 244322
+      cost: 2.9037
 ---
 # T-2039 flai accept --by orchestrator lands on a dirty main as the batch's landing does, refuses only a change that would overwrite an uncommitted file, and finishes an acceptance of its own that stopped before its commit
 

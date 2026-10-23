@@ -3,15 +3,36 @@ id: T-2055
 type: task
 nature: improvement
 title: "An ADR records the remedy for I-0152: a task takes no folder touch, a planner's folder touch on a story needs its Planning note, and a kept folder or an after hub is a check finding"
-status: backlog
+status: done
 parent: S-0468
 owner: alex
 created: 2026-10-22T21:04:24Z
-updated: 2026-10-22T21:04:24Z
-transitions: []
+updated: 2026-10-23T03:39:07Z
+transitions:
+  - to: ready
+    at: 2026-10-23T03:34:08Z
+    by: agent-S-0468
+  - to: in-progress
+    at: 2026-10-23T03:34:09Z
+    by: agent-S-0468
+  - to: done
+    at: 2026-10-23T03:39:07Z
+    by: agent-S-0468
 stream: S-0468
 tags: [cli]
 touches: [design/adrs, design/adrs/README.md, design/system/workflow.md, design/system/strategic-agents.md, design/system/flai-cli.md]
+usage:
+  source: log
+  seconds: 298
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 46
+      output: 15705
+      cache_read: 3072856
+      cache_write: 100215
+      cost: 1.5115
 ---
 # T-2055 An ADR records the remedy for I-0152: a task takes no folder touch, a planner's folder touch on a story needs its Planning note, and a kept folder or an after hub is a check finding
 

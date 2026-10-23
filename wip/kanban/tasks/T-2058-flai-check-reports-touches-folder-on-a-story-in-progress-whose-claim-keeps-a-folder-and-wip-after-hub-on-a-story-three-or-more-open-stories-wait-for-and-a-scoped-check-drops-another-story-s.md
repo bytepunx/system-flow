@@ -3,16 +3,37 @@ id: T-2058
 type: task
 nature: improvement
 title: flai check reports touches.folder on a story in progress whose claim keeps a folder and wip.after-hub on a story three or more open stories wait for, and a scoped check drops another story's
-status: backlog
+status: done
 parent: S-0468
 owner: alex
 created: 2026-10-22T21:05:53Z
-updated: 2026-10-22T21:05:53Z
-transitions: []
+updated: 2026-10-23T04:14:25Z
+transitions:
+  - to: ready
+    at: 2026-10-23T03:57:11Z
+    by: agent-S-0468
+  - to: in-progress
+    at: 2026-10-23T03:57:12Z
+    by: agent-S-0468
+  - to: done
+    at: 2026-10-23T04:14:25Z
+    by: agent-S-0468
 stream: S-0468
 tags: [cli]
 touches: [flai/internal/check/check.go, flai/internal/check/check_test.go, flai/internal/check/scope.go, flai/internal/check/scope_test.go]
 after: [T-2056]
+usage:
+  source: log
+  seconds: 1033
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 64
+      output: 21679
+      cache_read: 4241604
+      cache_write: 138331
+      cost: 2.0864
 ---
 # T-2058 flai check reports touches.folder on a story in progress whose claim keeps a folder and wip.after-hub on a story three or more open stories wait for, and a scoped check drops another story's
 

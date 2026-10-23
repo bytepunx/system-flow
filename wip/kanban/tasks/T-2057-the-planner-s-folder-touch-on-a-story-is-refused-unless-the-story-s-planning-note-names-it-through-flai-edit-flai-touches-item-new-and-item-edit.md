@@ -3,16 +3,37 @@ id: T-2057
 type: task
 nature: improvement
 title: The planner's folder touch on a story is refused unless the story's Planning note names it, through flai edit, flai touches, item_new, and item_edit
-status: backlog
+status: done
 parent: S-0468
 owner: alex
 created: 2026-10-22T21:05:36Z
-updated: 2026-10-22T21:05:36Z
-transitions: []
+updated: 2026-10-23T04:14:14Z
+transitions:
+  - to: ready
+    at: 2026-10-23T03:57:09Z
+    by: agent-S-0468
+  - to: in-progress
+    at: 2026-10-23T03:57:10Z
+    by: agent-S-0468
+  - to: done
+    at: 2026-10-23T04:14:14Z
+    by: agent-S-0468
 stream: S-0468
 tags: [cli]
-touches: [flai/internal/itemedit/itemedit.go, flai/internal/itemedit/planning_test.go, flai/internal/itemnew/itemnew.go, flai/internal/itemnew/itemnew_test.go, flai/cmd/touches.go, flai/cmd/touches_test.go, flai/internal/mcpserver/items_write.go, flai/internal/mcpserver/items_write_test.go]
+touches: [flai/internal/itemedit/itemedit.go, flai/internal/itemedit/planning_test.go, flai/internal/itemnew/itemnew.go, flai/internal/itemnew/itemnew_test.go, flai/cmd/touches.go, flai/cmd/touches_test.go, flai/internal/mcpserver/items_write.go, flai/internal/mcpserver/items_write_test.go, flai/cmd/edit.go, flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go]
 after: [T-2056]
+usage:
+  source: log
+  seconds: 1024
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 87
+      output: 29571
+      cache_read: 5785855
+      cache_write: 188694
+      cost: 2.846
 ---
 # T-2057 The planner's folder touch on a story is refused unless the story's Planning note names it, through flai edit, flai touches, item_new, and item_edit
 

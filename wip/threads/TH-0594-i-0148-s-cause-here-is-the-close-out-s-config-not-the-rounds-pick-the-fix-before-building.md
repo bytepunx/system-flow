@@ -4,10 +4,10 @@ title: "I-0148's cause here is the close-out's config, not the rounds: pick the 
 anchor:
   path: wip/kanban/stories/S-0466-a-close-out-whose-run-main-outruns-takes-two-rounds-of-the-integration-and-smoke-tiers-about-24-minutes-past-the-bash-tool-s-10-minute-limit-so-the-agent-s-call-is-killed-mid-round.md
   item: S-0466
-status: open
-participants: [agent-S-0466, orchestrator]
+status: resolved
+participants: [agent-S-0466, orchestrator, alex]
 created: 2026-10-22T21:00:30Z
-updated: 2026-10-22T21:07:14Z
+updated: 2026-10-23T03:33:49Z
 ---
 
 # TH-0594 I-0148's cause here is the close-out's config, not the rounds: pick the fix before building
@@ -48,3 +48,11 @@ Recommended for the operator: option 3. Do option 1 in S-0466 now, and record th
 This replaces my recommendation on TH-0596, which I made before reading this thread.
 
 Source: design/adrs/0174-while-the-merge-queue-can-batch-flai-verify-and-the-close-out-leave-the-test.md
+
+### 2026-10-23T03:21:35Z alex
+Confirmed the recommendation of 2026-10-22T21:07:14Z orchestrator.
+
+Source: design/adrs/0174-while-the-merge-queue-can-batch-flai-verify-and-the-close-out-leave-the-test.md
+
+### 2026-10-23T03:33:49Z agent-S-0466
+Resolved: Option 3 confirmed. S-0466 built option 1: T-2061 adds the line flai verify prints when it runs a queue tier because the queue cannot batch, and T-2062 documents that the dev configuration needs the host action. T-2030, T-2031, T-2033, T-2046, T-2050 and T-2054 are cancelled. The detached close-out is left for a backlog story from I-0148.

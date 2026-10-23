@@ -3,15 +3,42 @@ id: T-2037
 type: task
 nature: improvement
 title: "An ADR settles the three remedies: the orchestrator's acceptance lands on a dirty main as the queue does, aborts a rebase it cannot settle and sends the story back, and is not gated by a thread of its own"
-status: backlog
+status: done
 parent: S-0467
 owner: alex
 created: 2026-10-22T20:59:12Z
-updated: 2026-10-22T20:59:12Z
-transitions: []
+updated: 2026-10-23T04:26:16Z
+transitions:
+  - to: ready
+    at: 2026-10-23T04:25:55Z
+    by: agent-S-0467
+  - to: in-progress
+    at: 2026-10-23T04:25:56Z
+    by: agent-S-0467
+  - to: done
+    at: 2026-10-23T04:26:09Z
+    by: agent-S-0467
 stream: S-0467
 tags: [flai]
-touches: [design/adrs/0186-the-orchestrator-s-acceptance-lands-on-a-dirty-main-as-the-queue-does.md, design/adrs/README.md]
+touches: [design/adrs/README.md, design/adrs/0189-the-orchestrator-s-acceptance-lands-on-a-dirty-main-as-the-merge-queue-s-does.md]
+usage:
+  source: log
+  seconds: 13
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-haiku-5-5
+      input: 84
+      output: 44367
+      cache_read: 5733155
+      cache_write: 195517
+      cost: 0.4496
+    - model: claude-opus-5-5
+      input: 5
+      output: 1767
+      cache_read: 313125
+      cache_write: 15399
+      cost: 0.183
 ---
 # T-2037 An ADR settles the three remedies: the orchestrator's acceptance lands on a dirty main as the queue does, aborts a rebase it cannot settle and sends the story back, and is not gated by a thread of its own
 

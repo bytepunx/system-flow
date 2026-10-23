@@ -3,10 +3,10 @@ id: S-0466
 type: story
 nature: improvement
 title: A close-out whose run main outruns takes two rounds of the integration and smoke tiers, about 24 minutes, past the Bash tool's 10-minute limit, so the agent's call is killed mid-round
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-21T11:57:48Z
-updated: 2026-10-22T21:04:13Z
+updated: 2026-10-23T05:11:03Z
 transitions:
   - to: ready
     at: 2026-10-22T20:50:02Z
@@ -14,9 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-22T21:00:00Z
     by: agent-S-0466
+  - to: review
+    at: 2026-10-23T05:11:03Z
+    by: agent-S-0466
 tags: [flai, template]
 topics: [cli, conventions, template]
-touches: [design/adrs, design/adrs/README.md, flai/cmd/closeout.go, flai/cmd/closeout_test.go, flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go, flai/internal/closeout/detach.go, flai/internal/closeout/detach_test.go, scripts/close-out.sh, scripts/README.md, template/root/scripts/close-out.sh, template/root/scripts/README.md, design/conventions/delegation.md, template/root/design/conventions/delegation.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, ".claude/agents/verifier.md", template/root/.claude/agents/verifier.md, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/workflow.md, design/issues/I-0148-a-close-out-whose-run-main-outruns-takes-two-rounds-of-the-integration-and-smoke-tiers-about-24-minutes-past-the-bash-tool-s-10-minute-limit-so-the-agent-s-call-is-killed-mid-round.md, design/issues/summary.md]
+touches: [flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/verify/story.go, design/system/flai-cli.md, docs/users/flai-reference.md, design/system/devex.md, docs/contributors/index.md, scripts/close-out.sh, design/issues/I-0148-a-close-out-whose-run-main-outruns-takes-two-rounds-of-the-integration-and-smoke-tiers-about-24-minutes-past-the-bash-tool-s-10-minute-limit-so-the-agent-s-call-is-killed-mid-round.md, design/issues/summary.md, design/issues/I-0182-criteria-tick-is-refused-on-another-open-story-s-narrative-state-finding-which-the-story-s-own-scoped-check-leaves-out.md, design/issues/I-0196-a-close-out-s-second-round-runs-go-test-again-when-the-rebase-regenerates-design-issues-summary-md-which-changes-the-branch-s-patch-id-so-a-close-out-main-outruns-still-takes-about-11-minutes-with-the-queue-on.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,30 +27,40 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 274
+  seconds: 2611
   priced_by: harness
   turns:
     - day: 2026-10-22
       ceremony: 1
       work: 41
+    - day: 2026-10-23
+      ceremony: 6
+      hand_edits: 1
+      work: 51
   models:
     - model: claude-opus-5-5
-      input: 98
-      output: 25490
-      cache_read: 4587083
-      cache_write: 134790
-      cost: 2.5059
+      input: 270
+      output: 71840
+      cache_read: 19415752
+      cache_write: 799444
+      cost: 11.1975
   strategic:
     - kind: orchestrator
-      seconds: 293
+      seconds: 1510
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 158
-          output: 2756
-          cache_read: 33835404
-          cache_write: 43577
-          cost: 7.4808
+          input: 203
+          output: 3451
+          cache_read: 48833911
+          cache_write: 62000
+          cost: 10.7967
+        - model: claude-sonnet-5-5
+          input: 16
+          output: 74
+          cache_read: 270847
+          cache_write: 56332
+          cost: 0.2264
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 25m
@@ -73,8 +86,8 @@ finalized:
 This story remediates [I-0148](../../../design/issues/I-0148-a-close-out-whose-run-main-outruns-takes-two-rounds-of-the-integration-and-smoke-tiers-about-24-minutes-past-the-bash-tool-s-10-minute-limit-so-the-agent-s-call-is-killed-mid-round.md), "A close-out whose run main outruns takes two rounds of the integration and smoke tiers, about 24 minutes, past the Bash tool's 10-minute limit, so the agent's call is killed mid-round". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0148 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0148 is closed with `flai issue close I-0148 --reason` saying what fixed it
+- [x] The cause I-0148 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0148 is closed with `flai issue close I-0148 --reason` saying what fixed it
 
 ## Tasks
 - T-2030 An ADR settles how a close-out outlives the agent's call: flai close-out runs the rounds detached and is followed by calls that return within the tool's limit
@@ -83,6 +96,9 @@ This story remediates [I-0148](../../../design/issues/I-0148-a-close-out-whose-r
 - T-2046 scripts/close-out.sh, here and in the template, calls flai close-out and passes the git commit options through
 - T-2050 The conventions, the agents' prompts, the user docs, and the design describe the detached close-out and the calls that follow it, in place of one 600000 ms call
 - T-2054 I-0148 is closed with the reason naming flai close-out and its detached run
+- T-2061 flai verify says why it runs a tier the manifest marks queue: the merge-queue condition that is off and the configuration it read
+- T-2062 The contributor docs and devex say the dev configuration needs the merge-queue host action for the close-out to leave integration and smoke to the queue
+- T-2063 I-0148 is closed once a close-out here leaves integration and smoke to the merge queue
 
 ## Notes
 

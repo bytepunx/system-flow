@@ -3,16 +3,37 @@ id: T-2052
 type: task
 nature: improvement
 title: The design and the user docs describe the orchestrator's acceptance on a dirty main, the send-back on a stop it cannot settle, and the thread that does not gate it
-status: backlog
+status: done
 parent: S-0467
 owner: alex
 created: 2026-10-22T21:00:58Z
-updated: 2026-10-22T21:00:58Z
-transitions: []
+updated: 2026-10-23T05:36:27Z
+transitions:
+  - to: ready
+    at: 2026-10-23T05:20:48Z
+    by: agent-S-0467
+  - to: in-progress
+    at: 2026-10-23T05:20:49Z
+    by: agent-S-0467
+  - to: done
+    at: 2026-10-23T05:36:27Z
+    by: agent-S-0467
 stream: S-0467
 tags: [flai]
-touches: [design/system/strategic-agents.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md]
+touches: [design/system/strategic-agents.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
 after: [T-2039, T-2042, T-2047]
+usage:
+  source: log
+  seconds: 938
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 51
+      output: 19719
+      cache_read: 3494228
+      cache_write: 171842
+      cost: 2.0423
 ---
 # T-2052 The design and the user docs describe the orchestrator's acceptance on a dirty main, the send-back on a stop it cannot settle, and the thread that does not gate it
 

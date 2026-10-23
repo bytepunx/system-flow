@@ -3,12 +3,15 @@ id: T-2031
 type: task
 nature: improvement
 title: flai close-out runs the close-out's rounds in Go, verify, commit, sync check, stream sync, at most three rounds, with the script's last line
-status: backlog
+status: cancelled
 parent: S-0466
 owner: alex
 created: 2026-10-22T20:57:59Z
-updated: 2026-10-22T21:01:03Z
-transitions: []
+updated: 2026-10-23T03:22:00Z
+transitions:
+  - to: cancelled
+    at: 2026-10-23T03:22:00Z
+    by: agent-S-0466
 stream: S-0466
 tags: [cli]
 touches: [flai/cmd/closeout.go, flai/cmd/closeout_test.go, flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go]
@@ -31,3 +34,4 @@ Waits for T-2030, which settles the command and its flags.
 ## Notes
 
 The second layer. `scripts/close-out.sh` is not changed here: T-2046 makes it call this command, beside T-2033, which detaches the run.
+- 2026-10-23T03:22:00Z: moved to cancelled: TH-0594 settled on option 3: S-0466 makes the close-out see the merge queue; the detached close-out is left to a backlog story from I-0148

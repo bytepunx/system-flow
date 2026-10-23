@@ -3,16 +3,37 @@ id: T-2053
 type: task
 nature: remediation
 title: I-0150 is closed with the reason naming what fixed each of its three causes
-status: backlog
+status: done
 parent: S-0467
 owner: alex
 created: 2026-10-22T21:01:26Z
-updated: 2026-10-22T21:01:26Z
-transitions: []
+updated: 2026-10-23T05:41:19Z
+transitions:
+  - to: ready
+    at: 2026-10-23T05:41:09Z
+    by: agent-S-0467
+  - to: in-progress
+    at: 2026-10-23T05:41:10Z
+    by: agent-S-0467
+  - to: done
+    at: 2026-10-23T05:41:19Z
+    by: agent-S-0467
 stream: S-0467
 tags: [flai]
 touches: [design/issues/I-0150-a-story-in-review-waits-days-for-the-operator-when-the-orchestrator-s-acceptance-stops-on-a-dirty-main-a-rebase-on-a-shared-path-or-a-gate-it-raised-itself.md, design/issues/summary.md]
 after: [T-2049, T-2052]
+usage:
+  source: log
+  seconds: 9
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 2
+      output: 797
+      cache_read: 141238
+      cache_write: 6946
+      cost: 0.0826
 ---
 # T-2053 I-0150 is closed with the reason naming what fixed each of its three causes
 

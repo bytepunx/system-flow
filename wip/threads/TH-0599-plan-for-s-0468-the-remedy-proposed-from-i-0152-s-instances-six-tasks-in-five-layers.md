@@ -4,10 +4,10 @@ title: "Plan for S-0468: the remedy proposed from I-0152's instances, six tasks 
 anchor:
   path: wip/kanban/stories/S-0468-folder-wide-touches-and-after-hubs-on-planned-stories-held-up-to-ten-ready-stories-a-day-while-in-progress-stayed-at-two-of-five.md
   item: S-0468
-status: open
-participants: [planner-S-0468]
+status: resolved
+participants: [planner-S-0468, orchestrator, alex]
 created: 2026-10-22T21:07:12Z
-updated: 2026-10-22T21:07:12Z
+updated: 2026-10-23T04:57:44Z
 ---
 
 # TH-0599 Plan for S-0468: the remedy proposed from I-0152's instances, six tasks in five layers
@@ -44,3 +44,30 @@ On wip/kanban/stories/S-0468-folder-wide-touches-and-after-hubs-on-planned-stori
 - `.claude/agents/planner.md` is in scope because `design/system/strategic-agents.md` says it, the convention, and `planPrompt` say the same, and it lacks the folder rule today; its write goes through the permission prompt, and the story is then the operator's to accept (ADR-0106).
 
 Nothing in the plan waits on an answer; the story's agent reviews the tasks when it pulls the story.
+
+### 2026-10-23T03:22:10Z orchestrator
+Approved under plan_backlog_stories, as a plan: six tasks in five layers, with the ADR (T-2055) first. T-2057 and T-2058 run together after the shared helper (T-2056). The touches are files, but for `design/adrs`, which sits inside `claims.shared`. The forecast is raised from flai's 55m to 2h, with the reason in the story's Planning notes.
+
+The four remedies add tool-enforced refusals on touches, two check rules, and a planner rule. None of that is recorded yet, so it is the operator's, and a recommendation follows. The story also changes `.claude/agents/planner.md`, which makes it the operator's to accept (ADR-0106): I cannot enqueue it.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-10-23T03:22:15Z orchestrator (recommendation)
+Recommended for the operator: take the planner's four remedies, with the refusal for a task's folder touch rather than a warning.
+
+- **Why a refusal.** The convention and `planPrompt` already ask for file touches (S-0295), and I-0152 shows they were not followed: folder touches and `after` hubs held up to ten ready stories a day. ADR-0096's narrowing only works once tasks name files. A refusal at the write is testable, and it says what to do.
+- **Why the planner alone, for stories.** Your words on a story stay yours. A story's agent's folder touches are narrowed by its tasks and reported by `touches.folder` while in progress, so they hold only as long as they need to.
+- **The hub rule** (`wip.after-hub` at three dependents) and the convention line that `after` names only a needed change are advisory, and cheap.
+- **The one cost.** Agents that today write a folder touch on a task get refused and must name files. That is the intended behaviour, but expect a few refusals in the first stories after it lands.
+
+S-0468 is held on overlap by S-0466 (`flai/internal/harness/harness.go`), so this can be answered before it starts. Its value is 6,600 USD a week.
+
+Source: design/adrs/0096-a-story-in-review-holds-nothing-an-overlap-inside-the-manifest-s-shared-paths.md
+
+### 2026-10-23T04:57:33Z alex
+Confirmed the recommendation of 2026-10-23T03:22:15Z orchestrator.
+
+Source: design/adrs/0096-a-story-in-review-holds-nothing-an-overlap-inside-the-manifest-s-shared-paths.md
+
+### 2026-10-23T04:57:44Z orchestrator
+Resolved: The plan is settled. The operator confirmed the four remedies at 04:57Z: a refusal for a task's folder touch, the planner-only story rule, and the touches.folder and wip.after-hub findings. S-0468's agent is building them.

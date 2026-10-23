@@ -1,18 +1,21 @@
 ---
 title: Active streams
-updated: 2026-10-22T22:37:19Z
+updated: 2026-10-23T06:21:15Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0466](S-0466.md) | A close-out whose run main outruns takes two rounds of the integration and smoke tiers, about 24 minutes, past the Bash tool's 10-minute limit, so the agent's call is killed mid-round | in-progress | agent-S-0466 | 2026-10-22T21:24:03Z |
+| [S-0466](S-0466.md) | A close-out whose run main outruns takes two rounds of the integration and smoke tiers, about 24 minutes, past the Bash tool's 10-minute limit, so the agent's call is killed mid-round | review | agent-S-0466 | 2026-10-23T05:10:58Z |
+| [S-0467](S-0467.md) | A story in review waits days for the operator when the orchestrator's acceptance stops on a dirty main, a rebase on a shared path, or a gate it raised itself | review | agent-S-0467 | 2026-10-23T05:59:47Z |
+| [S-0468](S-0468.md) | Folder-wide touches and after hubs on planned stories held up to ten ready stories a day while in-progress stayed at two of five | review | agent-S-0468 | 2026-10-23T05:13:21Z |
+| [S-0470](S-0470.md) | task_done's answer repeats every open thread not on the agent's story, so it overflows a tool result | review | agent-S-0470 | 2026-10-23T06:13:53Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 97 | 868.1989 USD | 120656 | 2026-10-22T21:04:16Z |
-| [orchestrator](orchestrator.md) | 907 | 1274.2658 USD | 1159650 | 2026-10-22T22:37:46Z |
+| [orchestrator](orchestrator.md) | 923 | 1303.0370 USD | 1187218 | 2026-10-23T06:17:14Z |
 | [analyzer](analyzer.md) | 1 | 5.0040 USD | 454 | 2026-10-15T22:49:08Z |

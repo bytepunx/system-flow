@@ -3,16 +3,37 @@ id: T-2047
 type: task
 nature: improvement
 title: An orchestrator's acceptance whose rebase stops on a conflict it cannot settle aborts the rebase, sends the story back to in-progress with the paths, and flai serve starts its agent as for a story the queue sent back
-status: backlog
+status: done
 parent: S-0467
 owner: alex
 created: 2026-10-22T21:00:19Z
-updated: 2026-10-22T21:00:19Z
-transitions: []
+updated: 2026-10-23T05:51:47Z
+transitions:
+  - to: ready
+    at: 2026-10-23T04:51:16Z
+    by: agent-S-0467
+  - to: in-progress
+    at: 2026-10-23T04:51:17Z
+    by: agent-S-0467
+  - to: done
+    at: 2026-10-23T05:20:25Z
+    by: agent-S-0467
 stream: S-0467
 tags: [flai]
-touches: [flai/cmd/accept.go, flai/cmd/branch.go, flai/cmd/accept_conflict_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go]
+touches: [flai/cmd/accept.go, flai/cmd/accept_conflict_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go]
 after: [T-2037, T-2039]
+usage:
+  source: log
+  seconds: 1748
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 152
+      output: 58764
+      cache_read: 10412809
+      cache_write: 512090
+      cost: 6.0861
 ---
 # T-2047 An orchestrator's acceptance whose rebase stops on a conflict it cannot settle aborts the rebase, sends the story back to in-progress with the paths, and flai serve starts its agent as for a story the queue sent back
 

@@ -3,16 +3,37 @@ id: T-2060
 type: task
 nature: improvement
 title: I-0152 is closed with what fixed it and the story's criteria are verified and ticked
-status: backlog
+status: done
 parent: S-0468
 owner: alex
 created: 2026-10-22T21:06:52Z
-updated: 2026-10-22T21:06:52Z
-transitions: []
+updated: 2026-10-23T04:59:05Z
+transitions:
+  - to: ready
+    at: 2026-10-23T04:58:40Z
+    by: agent-S-0468
+  - to: in-progress
+    at: 2026-10-23T04:58:41Z
+    by: agent-S-0468
+  - to: done
+    at: 2026-10-23T04:59:05Z
+    by: agent-S-0468
 stream: S-0468
 tags: [cli]
 touches: [design/issues/I-0152-folder-wide-touches-and-after-hubs-on-planned-stories-held-up-to-ten-ready-stories-a-day-while-in-progress-stayed-at-two-of-five.md, design/issues/summary.md]
 after: [T-2059]
+usage:
+  source: log
+  seconds: 24
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 9
+      output: 3149
+      cache_read: 616123
+      cache_write: 20094
+      cost: 0.3031
 ---
 # T-2060 I-0152 is closed with what fixed it and the story's criteria are verified and ticked
 

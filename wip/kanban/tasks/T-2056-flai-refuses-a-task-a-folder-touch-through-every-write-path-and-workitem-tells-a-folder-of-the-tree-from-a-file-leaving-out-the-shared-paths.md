@@ -3,16 +3,37 @@ id: T-2056
 type: task
 nature: improvement
 title: flai refuses a task a folder touch through every write path, and workitem tells a folder of the tree from a file, leaving out the shared paths
-status: backlog
+status: done
 parent: S-0468
 owner: alex
 created: 2026-10-22T21:04:59Z
-updated: 2026-10-22T21:04:59Z
-transitions: []
+updated: 2026-10-23T03:51:34Z
+transitions:
+  - to: ready
+    at: 2026-10-23T03:39:23Z
+    by: agent-S-0468
+  - to: in-progress
+    at: 2026-10-23T03:39:24Z
+    by: agent-S-0468
+  - to: done
+    at: 2026-10-23T03:51:34Z
+    by: agent-S-0468
 stream: S-0468
 tags: [cli]
 touches: [flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/workitem/create.go, flai/internal/workitem/create_test.go, flai/internal/itemedit/itemedit.go, flai/internal/itemedit/folder_test.go, flai/cmd/touches.go, flai/cmd/touches_test.go, flai/internal/mcpserver/items_write_test.go]
 after: [T-2055]
+usage:
+  source: log
+  seconds: 730
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 50
+      output: 17036
+      cache_read: 3333154
+      cache_write: 108704
+      cost: 1.6396
 ---
 # T-2056 flai refuses a task a folder touch through every write path, and workitem tells a folder of the tree from a file, leaving out the shared paths
 

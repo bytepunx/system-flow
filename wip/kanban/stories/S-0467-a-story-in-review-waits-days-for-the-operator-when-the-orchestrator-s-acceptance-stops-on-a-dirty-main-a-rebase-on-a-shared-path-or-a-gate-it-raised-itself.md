@@ -3,17 +3,23 @@ id: S-0467
 type: story
 nature: improvement
 title: A story in review waits days for the operator when the orchestrator's acceptance stops on a dirty main, a rebase on a shared path, or a gate it raised itself
-status: ready
+status: review
 owner: alex
 created: 2026-10-21T11:57:59Z
-updated: 2026-10-22T22:37:19Z
+updated: 2026-10-23T05:59:57Z
 transitions:
   - to: ready
     at: 2026-10-22T20:49:53Z
     by: alex
+  - to: in-progress
+    at: 2026-10-23T04:20:03Z
+    by: agent-S-0467
+  - to: review
+    at: 2026-10-23T05:59:57Z
+    by: agent-S-0467
 tags: [flai, template]
 topics: [orchestration]
-touches: [flai/cmd/accept.go, flai/cmd/accept_batch_dirty.go, flai/cmd/accept_batch_dirty_test.go, flai/cmd/accept_uncommitted_test.go, flai/cmd/accept_orchestrator_test.go, flai/cmd/accept_own_thread_test.go, flai/cmd/accept_conflict_test.go, flai/cmd/branch.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/internal/preview/orchestrator.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/internal/threads/threads.go, flai/internal/threads/threads_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, design/adrs/0186-the-orchestrator-s-acceptance-lands-on-a-dirty-main-as-the-queue-does.md, design/adrs/README.md, design/system/strategic-agents.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0150-a-story-in-review-waits-days-for-the-operator-when-the-orchestrator-s-acceptance-stops-on-a-dirty-main-a-rebase-on-a-shared-path-or-a-gate-it-raised-itself.md, design/issues/summary.md]
+touches: [flai/cmd/accept.go, flai/cmd/accept_batch_dirty.go, flai/cmd/accept_own_thread_test.go, flai/cmd/accept_conflict_test.go, flai/internal/preview/accept.go, flai/internal/preview/orchestrator.go, flai/internal/threads/threads.go, flai/internal/threads/threads_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, design/adrs/README.md, design/system/strategic-agents.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0150-a-story-in-review-waits-days-for-the-operator-when-the-orchestrator-s-acceptance-stops-on-a-dirty-main-a-rebase-on-a-shared-path-or-a-gate-it-raised-itself.md, design/issues/summary.md, design/adrs/0189-the-orchestrator-s-acceptance-lands-on-a-dirty-main-as-the-merge-queue-s-does.md, flai/cmd/accept_orchestrator_dirty_test.go, docs/users/flai-reference.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -21,35 +27,45 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 290
+  seconds: 6303
   priced_by: harness
   turns:
     - day: 2026-10-22
       work: 10
+    - day: 2026-10-23
+      ceremony: 6
+      hand_edits: 5
+      work: 68
   models:
     - model: claude-haiku-5-5
-      input: 80
-      output: 40242
-      cache_read: 4975842
-      cache_write: 202818
-      cost: 0.3874
+      input: 164
+      output: 84609
+      cache_read: 10708997
+      cache_write: 398335
+      cost: 0.837
     - model: claude-opus-5-5
-      input: 22
-      output: 4645
-      cache_read: 568705
-      cache_write: 61338
-      cost: 0.6974
+      input: 562
+      output: 213522
+      cache_read: 37581218
+      cache_write: 1881572
+      cost: 22.3306
   strategic:
     - kind: orchestrator
-      seconds: 77
+      seconds: 6389
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 44
-          output: 679
-          cache_read: 7979314
-          cache_write: 22767
-          cost: 1.7669
+          input: 172
+          output: 2671
+          cache_read: 49893764
+          cache_write: 60707
+          cost: 11.0302
+        - model: claude-sonnet-5-5
+          input: 9
+          output: 45
+          cache_read: 176976
+          cache_write: 35436
+          cost: 0.147
     - kind: analyzer
       seconds: 114
       estimated: true
@@ -91,13 +107,13 @@ finalized:
 This story remediates [I-0150](../../../design/issues/I-0150-a-story-in-review-waits-days-for-the-operator-when-the-orchestrator-s-acceptance-stops-on-a-dirty-main-a-rebase-on-a-shared-path-or-a-gate-it-raised-itself.md), "A story in review waits days for the operator when the orchestrator's acceptance stops on a dirty main, a rebase on a shared path, or a gate it raised itself", which the analysis in [2026-10-15-bottlenecks.md](../../../design/analysis/2026-10-15-bottlenecks.md) found. The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0150 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0150 is closed with `flai issue close I-0150 --reason` saying what fixed it
+- [x] The cause I-0150 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0150 is closed with `flai issue close I-0150 --reason` saying what fixed it
 
 ## Tasks
 - T-2037 An ADR settles the three remedies: the orchestrator's acceptance lands on a dirty main as the queue does, aborts a rebase it cannot settle and sends the story back, and is not gated by a thread of its own
 - T-2039 flai accept --by orchestrator lands on a dirty main as the batch's landing does, refuses only a change that would overwrite an uncommitted file, and finishes an acceptance of its own that stopped before its commit
-- T-2042 A thread the orchestrator opened with no entry by anyone else does not gate the story: the acceptance preview notes it, the merge queue's eligibility leaves it out, and the acceptance resolves it
+- T-2042 A thread the orchestrator opened that nobody else wrote on holds the story until the orchestrator resolves it: the acceptance preview names it as the orchestrator's own to resolve
 - T-2047 An orchestrator's acceptance whose rebase stops on a conflict it cannot settle aborts the rebase, sends the story back to in-progress with the paths, and flai serve starts its agent as for a story the queue sent back
 - T-2049 The orchestrator's prompt, agent definition, and convention say it accepts on flai's blockers and the criteria alone, finishes its own stopped acceptance, and expects the send-back, with the template copies and changelog
 - T-2052 The design and the user docs describe the orchestrator's acceptance on a dirty main, the send-back on a stop it cannot settle, and the thread that does not gate it

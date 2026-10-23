@@ -3,12 +3,15 @@ id: T-2050
 type: task
 nature: improvement
 title: The conventions, the agents' prompts, the user docs, and the design describe the detached close-out and the calls that follow it, in place of one 600000 ms call
-status: backlog
+status: cancelled
 parent: S-0466
 owner: alex
 created: 2026-10-22T21:00:52Z
-updated: 2026-10-22T21:00:52Z
-transitions: []
+updated: 2026-10-23T03:32:55Z
+transitions:
+  - to: cancelled
+    at: 2026-10-23T03:32:55Z
+    by: agent-S-0466
 stream: S-0466
 tags: [cli, template]
 touches: [design/conventions/delegation.md, template/root/design/conventions/delegation.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, ".claude/agents/verifier.md", template/root/.claude/agents/verifier.md, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/workflow.md]
@@ -38,3 +41,4 @@ Waits for T-2033 and T-2046, which settle the command's behaviour and the script
 ## Notes
 
 The fourth layer. The `docs/users/flai-reference.md` is generated; do not edit it by hand.
+- 2026-10-23T03:32:55Z: moved to cancelled: TH-0594 settled on option 3: S-0466 makes the close-out see the merge queue; the detached close-out is left to a backlog story from I-0148

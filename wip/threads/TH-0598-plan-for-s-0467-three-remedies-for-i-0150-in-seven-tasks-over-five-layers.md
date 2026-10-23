@@ -4,10 +4,10 @@ title: "Plan for S-0467: three remedies for I-0150 in seven tasks over five laye
 anchor:
   path: wip/kanban/stories/S-0467-a-story-in-review-waits-days-for-the-operator-when-the-orchestrator-s-acceptance-stops-on-a-dirty-main-a-rebase-on-a-shared-path-or-a-gate-it-raised-itself.md
   item: S-0467
-status: answered
-participants: [planner-S-0467, orchestrator]
+status: resolved
+participants: [planner-S-0467, orchestrator, agent-S-0467, alex]
 created: 2026-10-22T21:02:46Z
-updated: 2026-10-22T21:03:00Z
+updated: 2026-10-23T05:45:58Z
 ---
 
 # TH-0598 Plan for S-0467: three remedies for I-0150 in seven tasks over five layers
@@ -64,3 +64,57 @@ This story changes the rules on my own acceptances, so weigh my view with that i
 The value is 14,400 USD a week, from your 96h input, which puts this story near the top of anything ordered by value.
 
 Source: design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md
+
+### 2026-10-23T04:20:39Z agent-S-0467
+S-0467 is started (agent-S-0467). Your recommendation on remedy 3 is still unconfirmed, so I need your call on one point.
+
+**Question: which form does remedy 3 take?**
+
+- **A, recommended: the orchestrator's stricter form.** The orchestrator must resolve a thread it opened, and nobody else wrote on, before it accepts. flai's preview names such a thread as the orchestrator's own to resolve rather than as a plain "thread open" blocker. A thread anyone else wrote on still holds the story. A concern it raises stays a decision it records, and never lapses at archive.
+- **B: the planner's form.** Such a thread does not gate the acceptance or the queue at all, and the acceptance resolves it when it archives.
+
+Unless you answer otherwise, I build A.
+
+**What I am doing meanwhile.** I will draft the ADR (T-2037) with remedies 1 and 2 as proposed, since the planner and the orchestrator agree on both. I will then build them on the story branch:
+
+- T-2039: the acceptance lands on a dirty main.
+- T-2047: an unsettled rebase is aborted and the story sent back.
+
+Nothing lands until you accept the story. I hold T-2042 for your answer.
+
+### 2026-10-23T04:46:55Z alex
+can we introduce an additional setting that would allow the orchestrator or another agent to make decisions on unresolved threads after a time threshold?
+
+### 2026-10-23T04:47:14Z orchestrator (recommendation)
+Recommended: yes, as its own story, not inside S-0467. S-0467 stays as planned, and its remedy 3 still needs your A or B.
+
+**A shape that fits what exists:**
+
+- **A new permission,** off by default: `orchestration.permissions.confirm_after`, a duration such as `48h`.
+- **What it covers.** When a recommendation I posted has waited that long with no entry from you, flai confirms it as the answer. The entry is marked as confirmed by timeout, so it shows as such in the thread, the log, and `flai stats`, beside the confirmations you make (ADR-0091).
+- **What it never covers:**
+  - money: cost of delay inputs, estimates, or spend;
+  - host changes: installs, keys, host actions;
+  - permission prompts;
+  - `.claude/` writes;
+  - a thread you have written on since the recommendation.
+
+  Those keep waiting for you.
+- **Who acts.** flai serve does the confirming, on a schedule. I would not resolve your threads myself, so the rule stays in one place that the guard and the stats can see.
+
+**Why exclusions, not a blanket timer.** Today most threads awaiting you are money or host questions (TH-0467, TH-0532, TH-0533, TH-0587, TH-0590). The ones a timer would safely settle are design choices with a clear recommendation, like TH-0583, TH-0588, and this one.
+
+It needs an ADR, since it changes who may answer a thread (it refines ADR-0090). Say "draft it" and I'll record it as an issue so that the issue step can make the story.
+
+Source: design/adrs/0090-a-thread-entry-is-marked-a-recommendation-in-its-heading-and-cites-its-source.md
+
+### 2026-10-23T04:56:05Z alex
+Confirmed the recommendation of 2026-10-23T04:47:14Z orchestrator.
+
+Source: design/adrs/0090-a-thread-entry-is-marked-a-recommendation-in-its-heading-and-cites-its-source.md
+
+### 2026-10-23T04:56:46Z orchestrator
+Recorded as I-0195 (36b27984f): a new `orchestration.permissions.confirm_after` setting, with the exclusions above and an ADR refining ADR-0090. The issue step can make it a story. S-0467 is unchanged and builds remedy 3 in form A, as its agent said.
+
+### 2026-10-23T05:45:58Z alex
+Resolved.

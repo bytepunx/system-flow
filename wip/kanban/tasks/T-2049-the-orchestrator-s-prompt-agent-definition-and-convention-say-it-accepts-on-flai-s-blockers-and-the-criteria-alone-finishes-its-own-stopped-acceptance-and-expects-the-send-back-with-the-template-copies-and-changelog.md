@@ -3,16 +3,37 @@ id: T-2049
 type: task
 nature: improvement
 title: The orchestrator's prompt, agent definition, and convention say it accepts on flai's blockers and the criteria alone, finishes its own stopped acceptance, and expects the send-back, with the template copies and changelog
-status: backlog
+status: done
 parent: S-0467
 owner: alex
 created: 2026-10-22T21:00:46Z
-updated: 2026-10-22T21:00:46Z
-transitions: []
+updated: 2026-10-23T05:51:27Z
+transitions:
+  - to: ready
+    at: 2026-10-23T05:20:46Z
+    by: agent-S-0467
+  - to: in-progress
+    at: 2026-10-23T05:20:47Z
+    by: agent-S-0467
+  - to: done
+    at: 2026-10-23T05:51:27Z
+    by: agent-S-0467
 stream: S-0467
 tags: [flai, template]
-touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md]
+touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, flai/internal/serve/agents.go]
 after: [T-2039, T-2042, T-2047]
+usage:
+  source: log
+  seconds: 1840
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 136
+      output: 52479
+      cache_read: 9299214
+      cache_write: 457325
+      cost: 5.4352
 ---
 # T-2049 The orchestrator's prompt, agent definition, and convention say it accepts on flai's blockers and the criteria alone, finishes its own stopped acceptance, and expects the send-back, with the template copies and changelog
 

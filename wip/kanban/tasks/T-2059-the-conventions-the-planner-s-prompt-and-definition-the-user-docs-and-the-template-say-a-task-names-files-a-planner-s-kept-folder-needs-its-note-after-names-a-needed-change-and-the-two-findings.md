@@ -3,16 +3,37 @@ id: T-2059
 type: task
 nature: improvement
 title: The conventions, the planner's prompt and definition, the user docs, and the template say a task names files, a planner's kept folder needs its note, after names a needed change, and the two findings
-status: backlog
+status: done
 parent: S-0468
 owner: alex
 created: 2026-10-22T21:06:23Z
-updated: 2026-10-22T21:06:23Z
-transitions: []
+updated: 2026-10-23T04:58:33Z
+transitions:
+  - to: ready
+    at: 2026-10-23T04:28:11Z
+    by: agent-S-0468
+  - to: in-progress
+    at: 2026-10-23T04:28:12Z
+    by: agent-S-0468
+  - to: done
+    at: 2026-10-23T04:58:32Z
+    by: agent-S-0468
 stream: S-0468
 tags: [cli, template]
-touches: [design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/strategic-agents.md, template/root/design/conventions/work-management.md, ".claude/agents/planner.md", template/root/.claude/agents/planner.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, docs/users/flai.md, docs/users/flai-reference.md, template/template.yaml, template/CHANGELOG.md]
+touches: [design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/strategic-agents.md, template/root/design/conventions/work-management.md, ".claude/agents/planner.md", template/root/.claude/agents/planner.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, docs/users/flai.md, docs/users/flai-reference.md, template/template.yaml, template/CHANGELOG.md, design/system/workflow.md, flai/cmd/check.go, flai/cmd/check_stats_test.go]
 after: [T-2057, T-2058]
+usage:
+  source: log
+  seconds: 1782
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 135
+      output: 45841
+      cache_read: 8969093
+      cache_write: 292508
+      cost: 4.4118
 ---
 # T-2059 The conventions, the planner's prompt and definition, the user docs, and the template say a task names files, a planner's kept folder needs its note, after names a needed change, and the two findings
 
