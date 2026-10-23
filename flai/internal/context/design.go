@@ -28,10 +28,12 @@ const (
 // Steps of the pack that select design documents, in the order they run
 // (ADR-0049): what the story, its epic, and its tasks name loads whole;
 // what topics select, and the ADRs one step from either, are briefed;
-// ranked sections fill what the budget leaves.
+// the digest entries topics and the claim select load within their share
+// (ADR-0194); ranked sections fill what the budget leaves.
 const (
 	StepNamed   = "named"
 	StepBriefed = "briefed"
+	StepDigest  = "digest"
 	StepRanked  = "ranked"
 )
 

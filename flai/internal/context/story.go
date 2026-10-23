@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
+	"github.com/bytepunx/system-flow/flai/internal/digest"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/topics"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -17,10 +18,11 @@ import (
 // with the sections its topics leave out taken out (S-0136), the open
 // issues, then what the story, its epic, and its tasks name, and the design
 // system when its guidance's topics reach the story (ADR-0152), briefs of the
-// design, tech, and ADRs its topics and one link step select, the sections
-// that rank highest to fill the budget, and a catalog of the rest (S-0137,
-// S-0146). budget is a size as ParseSize reads it; empty means the
-// project's prime.budget, else DefaultBudget. flai prime --story and the MCP
+// design, tech, and ADRs its topics and one link step select, the digest
+// entries its topics or its claim select, ranked against it within their
+// share (ADR-0194), the sections that rank highest to fill the budget, and a
+// catalog of the rest (S-0137, S-0146). budget is a size as ParseSize reads
+// it; empty means the project's prime.budget, else DefaultBudget. flai prime --story and the MCP
 // prime tool both call it. An archived story gets the pack it would get
 // today, which is how a pack is replayed.
 func ForStory(repo *workitem.Repo, id, budget string) (*Pack, error) {
@@ -38,7 +40,8 @@ func ForStory(repo *workitem.Repo, id, budget string) (*Pack, error) {
 	if err != nil {
 		return nil, err
 	}
-	pack.AddDesign(Design(st.docs, names, st.sources, BriefOver(size), st.design), Query(st.item.Title, st.item.Body))
+	query := Query(st.item.Title, st.item.Body)
+	pack.addDesign(Design(st.docs, names, st.sources, BriefOver(size), st.design), query, digestFor(st.digest, names, st.claim, query, true))
 	return pack, nil
 }
 
@@ -47,8 +50,9 @@ func ForStory(repo *workitem.Repo, id, budget string) (*Pack, error) {
 // topics leave out taken out; the story's goal and acceptance criteria; and
 // briefs, never bodies, of what the story, its epic, and its tasks name,
 // the design system its guidance's topics reach (ADR-0152), what their
-// topics select, and the ADRs one step reaches, in the order
-// Items gives them, each while the budget has room. budget is a size as
+// topics select, and the ADRs one step reaches, in the order Items gives
+// them, then the digest entries the story's would load, ranked as its are
+// (ADR-0194), each while the budget has room. budget is a size as
 // ParseSize reads it; empty means half the story's agent's.
 func ForRole(repo *workitem.Repo, id, role, budget string) (*Pack, error) {
 	if !slices.Contains(conventions.SubAgentRoles, role) {
@@ -77,7 +81,7 @@ func ForRole(repo *workitem.Repo, id, role, budget string) (*Pack, error) {
 	s.DesignSystem(st.design, names)
 	s.ByTopics(names)
 	s.Step()
-	pack.AddBriefs(s)
+	pack.AddBriefs(s, digestFor(st.digest, names, st.claim, Query(st.item.Title, st.item.Body), false))
 	return pack, nil
 }
 
@@ -90,12 +94,14 @@ type project struct {
 }
 
 // story is what a story's pack is built from: the project, the story, its
-// topics, and what links them.
+// topics, what links them, its claim, and the digest.
 type story struct {
 	*project
 	item    *workitem.Item
 	topics  []topics.StoryTopic
 	sources []Source
+	claim   []string       // the story's touches and its tasks', as paths
+	digest  []digest.Entry // every entry, whatever its status
 }
 
 // readBy is the conventions the agent in role reads (ADR-0068): those whose
@@ -155,16 +161,28 @@ func loadStory(repo *workitem.Repo, id string) (*story, error) {
 	if err != nil {
 		return nil, err
 	}
-	sources, err := storySources(repo, it)
+	items, err := repo.List(true)
 	if err != nil {
 		return nil, err
 	}
-	return &story{project: pr, item: it, topics: storyTopics, sources: sources}, nil
+	// A digest entry that does not parse is flai check's to report; the pack
+	// does without the digest rather than fail, as it does without the issues.
+	entries, _ := digest.List(repo)
+	return &story{project: pr, item: it, topics: storyTopics, sources: sourcesIn(repo, it, items), claim: storyClaim(repo, it, items), digest: entries}, nil
 }
 
 // storySources is the story, its epic, and its tasks, archived or not, for
 // the documents they link.
 func storySources(repo *workitem.Repo, story *workitem.Item) ([]Source, error) {
+	items, err := repo.List(true)
+	if err != nil {
+		return nil, err
+	}
+	return sourcesIn(repo, story, items), nil
+}
+
+// sourcesIn is storySources with the story's tasks found in items.
+func sourcesIn(repo *workitem.Repo, story *workitem.Item, items []*workitem.Item) []Source {
 	src := func(it *workitem.Item) Source {
 		return Source{ID: it.ID, Path: rel(repo.Root, it.Path), Body: it.Body}
 	}
@@ -174,16 +192,26 @@ func storySources(repo *workitem.Repo, story *workitem.Item) ([]Source, error) {
 			out = append(out, src(epic))
 		}
 	}
-	items, err := repo.List(true)
-	if err != nil {
-		return nil, err
-	}
 	for _, it := range items {
 		if it.Type == workitem.Task && it.Parent == story.ID {
 			out = append(out, src(it))
 		}
 	}
-	return out, nil
+	return out
+}
+
+// storyClaim is what a digest entry's paths are met against (ADR-0194): the
+// story's touches and those of its tasks in items that are not cancelled,
+// archived or not, each read as a path as a claim reads it, a component's
+// name or tag as its path, without duplicates.
+func storyClaim(repo *workitem.Repo, story *workitem.Item, items []*workitem.Item) []string {
+	touches := slices.Clone(story.Touches)
+	for _, it := range items {
+		if it.Type == workitem.Task && it.Parent == story.ID && it.Status != workitem.Cancelled {
+			touches = append(touches, it.Touches...)
+		}
+	}
+	return workitem.NewHolds(nil, repo.Manifest.Projects).Claim(&workitem.Item{Touches: touches})
 }
 
 // rel is p relative to root, or p when it is not under root.

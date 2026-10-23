@@ -81,7 +81,7 @@ type Pack struct {
 	Issues      string              `json:"-"` // the open-issues table, empty when none is open
 	OpenIssues  int                 `json:"open_issues"`
 	Omitted     []string            `json:"left_out"` // one line per outermost section left out
-	Items       []Item              `json:"items"`    // the design, tech, and ADRs chosen, in the order chosen
+	Items       []Item              `json:"items"`    // the design, tech, ADRs, and digest entries chosen, in the order chosen
 	Catalog     Catalog             `json:"catalog"`
 	// BriefsLeftOut counts the briefs a role pack had no room for.
 	BriefsLeftOut int `json:"briefs_left_out,omitempty"`
@@ -172,7 +172,13 @@ func Design(docs []*Doc, storyTopics []string, sources []Source, briefOver int, 
 // what the story names exceed it, everything named is still loaded; when
 // the briefs take it over, every brief is still printed (TH-0032). In the
 // last two nothing is ranked. Which part took it over is in Exceeded.
-func (p *Pack) AddDesign(s *Selection, query string) {
+func (p *Pack) AddDesign(s *Selection, query string) { p.addDesign(s, query, nil) }
+
+// addDesign is AddDesign with the digest step (ADR-0194) after the briefs
+// and before the ranked sections: the digest items, best first, as
+// digestFor gives them, loaded as addDigest loads them. Like the ranked
+// step, it loads nothing when Exceeded is set.
+func (p *Pack) addDesign(s *Selection, query string, digest []Item) {
 	p.size()
 	if p.Size.Bytes > p.Budget {
 		p.Exceeded = ExceededConventions
@@ -185,13 +191,14 @@ func (p *Pack) AddDesign(s *Selection, query string) {
 	if p.Size.Bytes > p.Budget {
 		p.Exceeded = ExceededNamed
 	}
-	p.take(s)
+	p.take(s, nil)
 	if p.Exceeded == "" && p.Size.Bytes > p.Budget {
 		p.Exceeded = ExceededBriefs
 	}
 	if p.Exceeded != "" {
 		return
 	}
+	digested := p.addDigest(digest)
 	n := 0
 	for _, c := range s.Candidates(query) {
 		wholes := []bool{false}
@@ -204,7 +211,7 @@ func (p *Pack) AddDesign(s *Selection, query string) {
 			}
 			items, catalog, size := p.Items, p.Catalog, p.Size
 			undo := s.Rank(c, n+1, whole)
-			p.take(s)
+			p.take(s, digested)
 			if p.Size.Bytes <= p.Budget {
 				n++
 				break
@@ -216,21 +223,25 @@ func (p *Pack) AddDesign(s *Selection, query string) {
 }
 
 // AddBriefs puts a role pack's briefs into it (ADR-0059): each brief the
-// selection made, in the order Items gives them, that fits what the budget
+// selection made, in the order Items gives them, then the digest briefs
+// digest gives, best first (ADR-0194), each that fits what the budget
 // leaves, and a count of those that do not. Nothing is ranked and there is
 // no catalog: a sub-agent finds the rest with doc_search. When the
 // conventions and the story's goal alone exceed the budget, no brief is
 // added and Exceeded says conventions.
-func (p *Pack) AddBriefs(s *Selection) {
+func (p *Pack) AddBriefs(s *Selection, digest []Item) {
 	p.size()
 	over := p.Size.Bytes > p.Budget
 	if over {
 		p.Exceeded = ExceededConventions
 	}
+	var briefs []Item
 	for _, it := range s.Items() {
-		if it.Step != StepBriefed {
-			continue
+		if it.Step == StepBriefed {
+			briefs = append(briefs, it)
 		}
+	}
+	for _, it := range append(briefs, digest...) {
 		if over {
 			p.BriefsLeftOut++
 			continue
@@ -252,9 +263,15 @@ func (p *Pack) AddBriefs(s *Selection) {
 	}
 }
 
-// take puts everything a selection chose, and its catalog, into the pack.
-func (p *Pack) take(s *Selection) {
-	p.Items = s.Items()
+// take puts everything a selection chose, and its catalog, into the pack,
+// with the digest items digested before what is ranked.
+func (p *Pack) take(s *Selection, digested []Item) {
+	items := s.Items()
+	at := slices.IndexFunc(items, func(it Item) bool { return it.Step == StepRanked })
+	if at < 0 {
+		at = len(items)
+	}
+	p.Items = slices.Insert(items, at, digested...)
 	p.Catalog.NotLoaded, p.Catalog.InPart = s.Catalog()
 	p.size()
 }
@@ -387,8 +404,9 @@ func (c Convention) label(p Piece) string {
 // convention under the header flai prime --cat gives it, the open-issues
 // table, each named item headed with its path, heading path, and reason,
 // the brief of each design and tech file, the decisions of the ADRs
-// briefed, each ranked item, the catalog, then what was left out. With
-// nothing left out and no design documents it is flai prime --cat.
+// briefed, the digest entries, each ranked item, the catalog, then what was
+// left out. With nothing left out and no design documents it is flai prime
+// --cat.
 func (p *Pack) Body() string {
 	var b strings.Builder
 	for i, c := range p.files() {
@@ -421,22 +439,25 @@ func (p *Pack) Body() string {
 	return b.String()
 }
 
-// Groups of items that print under one heading: design briefs and ADR
-// briefs. Loaded items head themselves.
+// Groups of items that print under one heading: design briefs, ADR briefs,
+// and digest entries. Other loaded items head themselves.
 const (
 	groupBriefs    = "briefs"
 	groupDecisions = "decisions"
+	groupDigest    = "digest"
 )
 
 var groupHead = map[string]string{
 	groupBriefs:    "\nbriefs\n======\n\nThe design and tech files the story, its epic, or its tasks name by a path written out and that are too large to load whole (reason: named in <ID>), the design system's guidance and token file when they are too large to load whole (reason: design system: topics <topics>), then those the story's topics select, each as its title, size, reason, first paragraph, and outline. A brief is not the document: when one bears on the story, read the section with the MCP doc_get and its heading, or flai doc show <path> --heading \"<heading>\", or the whole file, before relying on it or changing what it describes. doc_search, or flai doc search, finds sections by their words.\n",
 	groupDecisions: "\ndecisions\n=========\n\nThe ADRs the pack reached, and those named by a path written out and too large to load whole, each by its decision sentence. When one bears on the story, read it with the MCP doc_get, or its decision alone with heading Decision (flai doc show <path> --heading Decision), before relying on it.\n\n",
+	groupDigest:    "\ndigest\n======\n\nThe digest entries whose paths meet the story's claim (reason: path: <claimed path>) or whose topics the story shares (reason: topics: <topics>), ranked against the story's title, goal, and criteria, within an eighth of the budget (ADR-0194): each with its body, or as one line when it is compacted. They are what past stories decided and the operator answered, not the design. When you rely on one, cite its D-nnnn in your narrative or thread; check it against the design before changing what it describes; and ask the operator only what no entry answers. Read one whole with the MCP doc_get and its path, or flai doc show <path>.\n",
 }
 
 // roleHead is groupHead for a sub-agent's pack, which briefs everything.
 var roleHead = map[string]string{
 	groupBriefs:    "\nbriefs\n======\n\nThe design and tech files the story, its epic, or its tasks name, the design system's guidance and token file when its topics reach the story, then those the story's topics select, each as its title, size, reason, first paragraph, and outline. A sub-agent's pack holds no bodies: when one bears on your question, read the section that does with the MCP doc_get and its heading, or flai doc show <path> --heading \"<heading>\". doc_search, or flai doc search, finds sections by their words.\n",
 	groupDecisions: "\ndecisions\n=========\n\nThe ADRs the story names and those the pack reached, each by its decision sentence. When one bears on your question, read it with the MCP doc_get.\n\n",
+	groupDigest:    "\ndigest\n======\n\nThe digest entries the story's claim or topics select, ranked against the story (ADR-0194), each as one line: its ID, title, path, size, and reason. They are what past stories decided and the operator answered, not the design. When one bears on your question, read it with the MCP doc_get and its path, and name its D-nnnn in your report.\n",
 }
 
 // strategicHead is groupHead for a strategic agent's pack, which has no
@@ -444,6 +465,7 @@ var roleHead = map[string]string{
 var strategicHead = map[string]string{
 	groupBriefs:    "\nbriefs\n======\n\nThe design and tech files the item planned or its stories name by a path written out and that are too large to load whole (reason: named in <ID>), then those the pack's topics select, each as its title, size, reason, first paragraph, and outline. A brief is not the document: when one bears on the work, read the section with the MCP doc_get and its heading, or flai doc show <path> --heading \"<heading>\", or the whole file, before relying on it or changing what it describes. doc_search, or flai doc search, finds sections by their words.\n",
 	groupDecisions: "\ndecisions\n=========\n\nThe ADRs the pack reached, and those named by a path written out and too large to load whole, each by its decision sentence. When one bears on the work, read it with the MCP doc_get, or its decision alone with heading Decision (flai doc show <path> --heading Decision), before relying on it.\n\n",
+	groupDigest:    "\ndigest\n======\n\nThe answers and recommendations of the digest that rank highest against each thread awaiting the operator (reason: thread TH-nnnn; rank n), within an eighth of the budget (ADR-0194): each with its body, or as one line when it is compacted. They are what the operator answered and confirmed before, not the design. When one answers a thread, cite its D-nnnn and give its path as a source on thread_reply; ask the operator only what no entry answers. Read one whole with the MCP doc_get and its path, or flai doc show <path>.\n",
 }
 
 // groupHead is the heading each group prints under in this pack.
@@ -471,9 +493,12 @@ func (p *Pack) printed(it Item) string {
 // by its path written out (ADR-0050).
 const namedBrief = "The story names this file; it is briefed for its size. Decide from the brief whether the work needs its body, and read the file, or the sections you will change, before relying on it or changing it.\n"
 
-// group is the heading an item prints under, empty for one loaded.
+// group is the heading an item prints under, empty for one loaded that is
+// not a digest entry.
 func group(it Item) string {
 	switch {
+	case it.Step == StepDigest:
+		return groupDigest
 	case it.Step != StepBriefed:
 		return ""
 	case it.ID != "":
@@ -483,16 +508,22 @@ func group(it Item) string {
 }
 
 // Printed is the item as the pack prints it: an ADR brief as one line, a
-// design brief as a line naming it followed by its text, both under their
-// group's heading; what is loaded headed with its path, heading path, and
-// reason. A brief names its first reason, without the heading it was found
-// under, and counts the rest; what is loaded names them all.
+// design brief as a line naming it followed by its text, a digest entry
+// that loads no body as one line, all under their group's heading; what is
+// loaded headed with its path, heading path, and reason, a digest entry
+// under the digest heading. A brief names its first reason, without the
+// heading it was found under, and counts the rest; what is loaded names
+// them all.
 func (it Item) Printed() string { return it.print(true) }
 
 // print is Printed, with the line that says a named document is briefed for
 // its size when sized is true.
 func (it Item) print(sized bool) string {
 	switch group(it) {
+	case groupDigest:
+		if it.Text == "" {
+			return it.digestBrief()
+		}
 	case groupDecisions:
 		return fmt.Sprintf("- %s %s (%s; %s): %s\n", it.ID, it.Title, it.Path, it.briefReason(), it.Text)
 	case groupBriefs:
@@ -624,14 +655,27 @@ func (p *Pack) Header() string {
 		row(len(p.Goal), "story", "goal and acceptance criteria")
 	}
 	decisions, adrs := len(p.groupHead()[groupDecisions]), 0
+	digested, entries, whole := len(p.groupHead()[groupDigest]), 0, 0
 	for _, it := range p.Items {
-		if group(it) == groupDecisions {
+		switch group(it) {
+		case groupDecisions:
 			decisions += len(p.printed(it))
 			adrs++
+		case groupDigest:
+			digested += len(p.printed(it))
+			entries++
+			if it.Text != "" {
+				whole++
+			}
 		}
 	}
 	for _, it := range p.Items {
 		switch {
+		case group(it) == groupDigest:
+			if entries > 0 {
+				row(digested, "digest", digestRow(entries, whole))
+				entries = 0
+			}
 		case group(it) != groupDecisions:
 			name := it.Path
 			if it.Label != "" {

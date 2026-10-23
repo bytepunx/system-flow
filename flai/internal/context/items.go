@@ -9,11 +9,11 @@ import (
 // document, a run of its sections that one reason chose, or a brief.
 type Item struct {
 	Path    string   `json:"path"`
-	ID      string   `json:"id,omitempty"` // ADR-nnnn for an ADR
+	ID      string   `json:"id,omitempty"` // ADR-nnnn for an ADR, D-nnnn for a digest entry
 	Title   string   `json:"title"`
 	Heading []string `json:"heading,omitempty"` // heading path of the first section; empty for the whole document
 	Label   string   `json:"label,omitempty"`   // the heading path as printed, without the document's title
-	Step    string   `json:"step"`              // named, briefed, or ranked
+	Step    string   `json:"step"`              // named, briefed, digest, or ranked
 	Reason  string   `json:"reason"`
 	Also    []string `json:"also,omitempty"`  // the reasons found for it after the first
 	Size    int      `json:"size"`            // bytes of Text
