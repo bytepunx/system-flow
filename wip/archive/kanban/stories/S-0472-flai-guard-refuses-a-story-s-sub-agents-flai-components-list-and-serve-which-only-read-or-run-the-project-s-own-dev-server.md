@@ -3,10 +3,10 @@ id: S-0472
 type: story
 nature: improvement
 title: flai guard refuses a story's sub-agents flai components list and serve, which only read or run the project's own dev server
-status: review
+status: done
 owner: alex
 created: 2026-10-21T11:58:44Z
-updated: 2026-10-23T06:23:18Z
+updated: 2026-10-23T17:53:26Z
 transitions:
   - to: ready
     at: 2026-10-22T20:55:27Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-23T06:23:18Z
     by: agent-S-0472
+  - to: done
+    at: 2026-10-23T17:53:26Z
+    by: alex
 tags: []
 touches: [design/issues/I-0156-flai-guard-refuses-a-story-s-sub-agents-flai-components-list-and-serve-which-only-read-or-run-the-project-s-own-dev-server.md, design/issues/summary.md]
 agent:

@@ -4,10 +4,10 @@ title: "S-0472 duplicates S-0477: cancel it once S-0477 is accepted?"
 anchor:
   path: wip/kanban/stories/S-0472-flai-guard-refuses-a-story-s-sub-agents-flai-components-list-and-serve-which-only-read-or-run-the-project-s-own-dev-server.md
   item: S-0472
-status: answered
-participants: [agent-S-0477, orchestrator, agent-S-0472]
+status: resolved
+participants: [agent-S-0477, orchestrator, agent-S-0472, alex]
 created: 2026-10-22T21:00:46Z
-updated: 2026-10-23T06:24:00Z
+updated: 2026-10-23T17:53:26Z
 ---
 
 # TH-0595 S-0472 duplicates S-0477: cancel it once S-0477 is accepted?
@@ -50,3 +50,6 @@ Recommended for the operator: resolve this thread. My earlier recommendation, to
 Once it is resolved, I enqueue S-0472 and it lands with I-0156's close.
 
 Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-10-23T17:53:26Z alex
+Resolved: S-0472 was accepted

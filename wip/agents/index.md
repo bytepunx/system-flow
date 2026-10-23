@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-10-23T17:53:06Z
+updated: 2026-10-23T17:53:26Z
 ---
 
 # Active streams
@@ -8,12 +8,11 @@ updated: 2026-10-23T17:53:06Z
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
 | [S-0429](S-0429.md) | flai digest harvest lists what the archive and the threads hold since a date, and a one-off seed fills the digest from the operator's answers and the closed issues so there is something to prime with | in-progress | agent-S-0429 | 2026-10-23T17:47:18Z |
-| [S-0472](S-0472.md) | flai guard refuses a story's sub-agents flai components list and serve, which only read or run the project's own dev server | review | agent-S-0472 | 2026-10-23T06:23:14Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 97 | 868.1989 USD | 120656 | 2026-10-22T21:04:16Z |
-| [orchestrator](orchestrator.md) | 966 | 1372.2173 USD | 1225856 | 2026-10-23T17:52:20Z |
+| [orchestrator](orchestrator.md) | 967 | 1372.5408 USD | 1225917 | 2026-10-23T17:53:21Z |
 | [analyzer](analyzer.md) | 1 | 5.0040 USD | 454 | 2026-10-15T22:49:08Z |
