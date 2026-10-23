@@ -7,7 +7,7 @@ status: backlog
 parent: E-0025
 owner: alex
 created: 2026-10-16T05:59:39Z
-updated: 2026-10-23T17:53:06Z
+updated: 2026-10-23T17:56:28Z
 transitions: []
 tags: [cli, template]
 topics: [cli, planning, analysis, conventions]
@@ -39,10 +39,10 @@ cost_of_delay:
   at: 2026-10-23T17:11:07Z
 forecast:
   duration: 1h10m
-  delivery: 2026-10-24T11:05:00Z
+  delivery: 2026-10-24T11:09:00Z
   basis: "Its own forecast of 1h10m; 23rd in the pull order with an in-progress limit of 5, behind S-0429, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0430 and S-0431."
   by: flai
-  at: 2026-10-23T17:53:06Z
+  at: 2026-10-23T17:56:28Z
 finalized:
   by: orchestrator
   at: 2026-10-23T17:11:31Z
