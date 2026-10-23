@@ -29,7 +29,10 @@ export const GET: RequestHandler = () => respond(() => repo().ask<SettingsView>(
  * it stays logged in while every other session and agent must log in again. The answer carries
  * the new login link, never the token alone. dashboard_hosts (S-0489) sets the hosts the dashboard
  * accepts; it is passed through as the others are, and this container keeps the list it was
- * started with until it is restarted.
+ * started with until it is restarted. subproject (S-0491) adds, changes, or removes an entry of the
+ * manifest's projects: kind names the setting, so the sub-project's own kind comes as
+ * subproject_kind and goes to flai as kind, and flai's answer's project, the entry as written,
+ * comes back as subproject, since every answer's project is this project's name and key (ADR-0024).
  */
 export const POST: RequestHandler = async ({ request, url }) => {
 	const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
@@ -38,6 +41,10 @@ export const POST: RequestHandler = async ({ request, url }) => {
 	const res = await respond(async () => {
 		const params = { ...body };
 		delete params.kind;
+		if (kind === 'subproject' && 'subproject_kind' in params) {
+			params.kind = params.subproject_kind;
+			delete params.subproject_kind;
+		}
 		if (SETTINGS_READS.includes(kind as SettingsRead)) {
 			const { data, warnings } = await repo().run<SharedCheck[]>(`settings.${kind}`, params);
 			return { entries: data ?? [], warnings };
@@ -62,7 +69,12 @@ export const POST: RequestHandler = async ({ request, url }) => {
 			}
 			return { login_url: data?.login_url, warnings };
 		}
-		return { ...(data ?? {}), warnings };
+		const answer: Record<string, unknown> = { ...(data ?? {}), warnings };
+		if (kind === 'subproject') {
+			answer.subproject = answer.project;
+			delete answer.project;
+		}
+		return answer;
 	});
 	if (cookie) res.headers.append('set-cookie', cookie);
 	return res;

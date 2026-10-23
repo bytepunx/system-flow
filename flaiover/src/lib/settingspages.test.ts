@@ -8,7 +8,7 @@ import {
 	type SettingsPage
 } from './settingspages';
 
-/** How many pages hold each section, and the sections pages name that are none of the ten. */
+/** How many pages hold each section, and the sections pages name that are none of the eleven. */
 function homes(pages: readonly SettingsPage[]) {
 	const count = Object.fromEntries(SETTINGS_SECTIONS.map((s) => [s, 0]));
 	const unknown: string[] = [];
@@ -26,14 +26,14 @@ describe('the Configuration pages (S-0459)', () => {
 			['features', 'Features', ['actions', 'checks']],
 			['agents', 'Agents', ['default-agent', 'providers', 'planning']],
 			['file-system', 'File System', ['shared', 'import']],
-			['projects', 'Projects', ['projects', 'tokens']],
+			['projects', 'Projects', ['projects', 'sub-projects', 'tokens']],
 			['harnesses', 'Harnesses', ['agent']]
 		]);
 	});
 
-	it('puts each of the ten sections on exactly one page', () => {
-		expect(SETTINGS_SECTIONS).toHaveLength(10);
-		expect(new Set(SETTINGS_SECTIONS).size).toBe(10);
+	it('puts each of the eleven sections on exactly one page', () => {
+		expect(SETTINGS_SECTIONS).toHaveLength(11);
+		expect(new Set(SETTINGS_SECTIONS).size).toBe(11);
 		const { count, unknown } = homes(SETTINGS_PAGES);
 		expect(unknown).toEqual([]);
 		for (const s of SETTINGS_SECTIONS) expect(count[s], s).toBe(1);
@@ -73,5 +73,6 @@ describe('the Configuration pages (S-0459)', () => {
 		expect(pageOfAnchor('')).toBe('features');
 		expect(pageOfAnchor('#')).toBe('features');
 		expect(pageOfAnchor('#tokens')).toBe('features');
+		expect(pageOfAnchor('#sub-projects')).toBe('features');
 	});
 });

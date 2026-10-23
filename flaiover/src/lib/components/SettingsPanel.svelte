@@ -21,12 +21,19 @@
 		replanMeans,
 		sharedQuery,
 		sharedRefusal,
+		subprojectAdd,
+		subprojectForm,
+		subprojectSet,
+		SUBPROJECT_KINDS,
 		type Harness,
 		type ProviderForm,
 		type ServedProject,
 		type SettingsKind,
 		type SettingsView,
-		type SharedCheck
+		type SharedCheck,
+		type SubProject,
+		type SubProjectChange,
+		type SubProjectForm
 	} from '$lib/settings';
 	import { settingsPage, type SettingsPageSlug, type SettingsSection } from '$lib/settingspages';
 	import AgentFields from './AgentFields.svelte';
@@ -73,6 +80,14 @@
 		warnings?: string[];
 		error?: string;
 	} | null>(null);
+	/** The sub-projects of this project, project.info's projects (S-0491); null until read. */
+	let subprojects = $state<SubProject[] | null>(null);
+	let subprojectsError = $state<string | null>(null);
+	let newSubproject = $state<SubProjectForm>(subprojectForm());
+	/** The sub-project whose fields are open, by its name as the manifest has it, and the fields. */
+	let editing = $state<{ name: string; form: SubProjectForm } | null>(null);
+	/** The name of the sub-project whose Remove is waiting for a yes. */
+	let confirmingSub = $state<string | null>(null);
 
 	function fill(v: SettingsView) {
 		const h = v.host;
@@ -301,6 +316,51 @@
 		}
 	}
 
+	// The sub-projects (S-0491) are project.info's projects, read through /api/manifest, which a
+	// write leaves fresh: read when the page shows them and again after each change of one.
+	async function loadSubprojects() {
+		try {
+			const r = await api('/api/manifest');
+			const body = await r.json();
+			if (!r.ok) {
+				subprojectsError = body.error ?? r.statusText;
+				return;
+			}
+			subprojectsError = null;
+			subprojects = body.projects ?? [];
+		} catch (e) {
+			subprojectsError = e instanceof Error ? e.message : String(e);
+		}
+	}
+	$effect(() => {
+		if (shows('sub-projects')) void loadSubprojects();
+	});
+	// A sub-project added, changed, or removed through flai subproject, which commits the manifest
+	// and, for a folder the project lacks, the folder with a README.md; flai's refusal is said as
+	// flai words it, each field it refused with why.
+	async function editSubproject(c: SubProjectChange) {
+		const body = await change('sub-projects', 'subproject', c);
+		if (!body) return false;
+		const name = body.subproject?.name ?? c.new_name ?? c.name;
+		const done = { add: 'added', set: 'changed', remove: 'removed' }[c.op];
+		const after = body.created
+			? `, and created its folder ${body.created} with a README.md`
+			: c.op === 'remove'
+				? '; its folder is left as it is'
+				: '';
+		said['sub-projects'] = { ok: true, text: `${done} ${name}${after}` };
+		await loadSubprojects();
+		return true;
+	}
+	async function saveSubproject(p: SubProject, form: SubProjectForm) {
+		const c = subprojectSet(p, form);
+		if (c && (await editSubproject(c))) editing = null;
+	}
+	async function removeSubproject(name: string) {
+		confirmingSub = null;
+		await editSubproject({ op: 'remove', name });
+	}
+
 	async function rotate(section: string, kind: 'mcp_token' | 'dashboard_token') {
 		const body = await change(section, kind, {});
 		if (!body) return;
@@ -364,6 +424,50 @@
 			placeholder="opus=anthropic/claude-opus-5-5"
 			data-testid="provider-models"></textarea>
 	</label>
+{/snippet}
+
+{#snippet subprojectFields(f: SubProjectForm, id: string, adding: boolean)}
+	<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+		<label class="block">
+			<span class="mb-1 block text-xs text-muted">name</span>
+			<input
+				class="w-full rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
+				bind:value={f.name}
+				placeholder="web"
+				data-testid="{id}-name"
+			/>
+		</label>
+		<label class="block">
+			<span class="mb-1 block text-xs text-muted"
+				>path: its folder, from the repository root{adding ? '; left empty, the name' : ''}</span
+			>
+			<input
+				class="w-full rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
+				bind:value={f.path}
+				placeholder={f.name.trim() || 'web'}
+				data-testid="{id}-path"
+			/>
+		</label>
+		<label class="block">
+			<span class="mb-1 block text-xs text-muted">kind: what it is</span>
+			<input
+				class="w-full rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
+				bind:value={f.kind}
+				list="subproject-kinds"
+				placeholder="sveltekit"
+				data-testid="{id}-kind"
+			/>
+		</label>
+		<label class="block">
+			<span class="mb-1 block text-xs text-muted">tags, separated by commas</span>
+			<input
+				class="w-full rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
+				bind:value={f.tags}
+				placeholder="ui, app"
+				data-testid="{id}-tags"
+			/>
+		</label>
+	</div>
 {/snippet}
 
 {#snippet result(section: string)}
@@ -924,6 +1028,120 @@
 					{/if}
 				{/if}
 				{@render result('projects')}
+			</section>
+		{/if}
+
+		{#if shows('sub-projects')}
+			<section data-testid="section-sub-projects">
+				<h2 class="mb-2 font-medium">Sub-projects of this project</h2>
+				{@render gate('subproject')}
+				<p class="text-xs text-muted">
+					The folders of this repository that are projects of their own, each with its kind and
+					tags. Stored in system-flow.yaml, under projects, and committed. A folder the project
+					lacks is created when a sub-project is added or moved to it, with a README.md in it.
+				</p>
+				{#if subprojectsError}
+					<p class="text-xs text-danger" role="alert" data-testid="subprojects-error">
+						{subprojectsError}
+					</p>
+				{:else if subprojects === null}
+					<p class="text-xs text-muted">Asking flai on the host…</p>
+				{:else}
+					<ul class="mt-2 space-y-2">
+						{#each subprojects as p (p.name)}
+							<li class="rounded border border-line p-2" data-testid="subproject-{p.name}">
+								{#if editing?.name === p.name}
+									{@render subprojectFields(editing.form, 'edit-subproject', false)}
+									<div class="mt-2 flex gap-2">
+										<button
+											class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
+											disabled={busy !== null || !subprojectSet(p, editing.form)}
+											data-testid="save-subproject"
+											onclick={() => editing && saveSubproject(p, editing.form)}>Save</button
+										>
+										<button
+											class="rounded border border-line-strong px-3 py-1"
+											data-testid="cancel-subproject"
+											onclick={() => (editing = null)}>Cancel</button
+										>
+									</div>
+								{:else}
+									<div class="flex flex-wrap items-baseline gap-2">
+										<span class="font-mono">{p.name}</span>
+										<code class="text-xs text-muted">{p.path}</code>
+										<span class="text-xs">{p.kind}</span>
+										{#if p.tags?.length}
+											<span class="text-xs text-muted">tags: {p.tags.join(', ')}</span>
+										{/if}
+									</div>
+									{#if confirmingSub === p.name}
+										<div class="mt-1 text-xs" data-testid="confirm-remove-subproject">
+											<p>
+												Remove {p.name} from system-flow.yaml? Its folder, <code>{p.path}</code>,
+												and the files in it are left as they are.
+											</p>
+											<div class="mt-1 flex gap-2">
+												<button
+													class="rounded border border-danger px-2 text-danger disabled:opacity-50"
+													disabled={busy !== null}
+													data-testid="confirm-remove-subproject-yes"
+													onclick={() => removeSubproject(p.name)}>Remove</button
+												>
+												<button
+													class="rounded border border-line-strong px-2"
+													data-testid="confirm-remove-subproject-no"
+													onclick={() => (confirmingSub = null)}>Keep it</button
+												>
+											</div>
+										</div>
+									{:else if can('subproject').ok}
+										<div class="mt-1 flex gap-2">
+											<button
+												class="rounded border border-line-strong px-2 text-xs disabled:opacity-50"
+												disabled={busy !== null}
+												aria-label="Edit {p.name}"
+												data-testid="edit-subproject"
+												onclick={() => (editing = { name: p.name, form: subprojectForm(p) })}
+												>Edit</button
+											>
+											<button
+												class="rounded border border-line-strong px-2 text-xs disabled:opacity-50"
+												disabled={busy !== null}
+												aria-label="Remove {p.name}"
+												data-testid="remove-subproject"
+												onclick={() => (confirmingSub = p.name)}>Remove</button
+											>
+										</div>
+									{/if}
+								{/if}
+							</li>
+						{/each}
+					</ul>
+					{#if subprojects.length === 0}
+						<p class="text-xs text-muted" data-testid="subprojects-none">
+							None: system-flow.yaml lists no sub-project under projects.
+						</p>
+					{/if}
+				{/if}
+				{#if can('subproject').ok}
+					<datalist id="subproject-kinds">
+						{#each SUBPROJECT_KINDS as k (k)}<option value={k}></option>{/each}
+					</datalist>
+					<div class="mt-4 rounded border border-line p-3" data-testid="new-subproject">
+						<h3 class="mb-2 text-xs font-medium">Add a sub-project</h3>
+						{@render subprojectFields(newSubproject, 'new-subproject', true)}
+						<button
+							class="mt-2 rounded border border-line-strong px-3 py-1 disabled:opacity-50"
+							disabled={busy !== null || !newSubproject.name.trim() || !newSubproject.kind.trim()}
+							data-testid="add-subproject"
+							onclick={async () => {
+								if (await editSubproject(subprojectAdd(newSubproject)))
+									newSubproject = subprojectForm();
+							}}>Add sub-project</button
+						>
+					</div>
+				{/if}
+				{@render result('sub-projects')}
 			</section>
 		{/if}
 

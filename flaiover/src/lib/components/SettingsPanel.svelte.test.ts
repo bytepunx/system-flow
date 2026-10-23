@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import SettingsPanel from './SettingsPanel.svelte';
-import type { PlanningTriggers, SettingsView } from '$lib/settings';
+import type { PlanningTriggers, SettingsView, SubProject } from '$lib/settings';
 import { SETTINGS_PAGES, type SettingsPageSlug } from '$lib/settingspages';
 
 const api = vi.fn();
@@ -60,7 +60,12 @@ function view(here: boolean, everywhere: boolean): SettingsView {
 }
 
 type Sent = { kind: string } & Record<string, unknown>;
-function backend(v: SettingsView, answers: Record<string, [number, unknown]> = {}) {
+/** Answers the panel as flai would: v for the settings, subprojects as project.info's projects. */
+function backend(
+	v: SettingsView,
+	answers: Record<string, [number, unknown]> = {},
+	subprojects: SubProject[] = []
+) {
 	const sent: Sent[] = [];
 	api.mockImplementation(async (url: string, init?: { method?: string; body?: string }) => {
 		if (init?.method === 'POST') {
@@ -69,6 +74,7 @@ function backend(v: SettingsView, answers: Record<string, [number, unknown]> = {
 			const [status, res] = answers[body.kind] ?? [200, { ok: true }];
 			return answer(status, res);
 		}
+		if (url === '/api/manifest') return answer(200, { name: 'Flow', projects: subprojects });
 		return answer(200, v);
 	});
 	return sent;
@@ -923,6 +929,200 @@ describe('SettingsPanel (S-0105)', () => {
 			await settle();
 			expect(q('shared-checked')!.getAttribute('role')).toBe('alert');
 			expect(q('shared-checked')!.textContent).toContain('no story S-0999');
+		});
+	});
+
+	// S-0491: the manifest's projects, the sub-projects of this project, read from project.info and
+	// changed through settings.subproject while the settings action is on for the project.
+	describe('sub-projects (S-0491)', () => {
+		const subs = (): SubProject[] => [
+			{ name: 'web', path: 'apps/web', kind: 'sveltekit', tags: ['ui', 'app'] },
+			{ name: 'api', path: 'api', kind: 'go' }
+		];
+		const type = (id: string, value: string, within: ParentNode = document) => {
+			const input = within.querySelector<HTMLInputElement>(`[data-testid="${id}"]`)!;
+			input.value = value;
+			input.dispatchEvent(new Event('input', { bubbles: true }));
+			flushSync();
+		};
+		const button = (row: string, id: string) =>
+			q(`subproject-${row}`)!.querySelector<HTMLButtonElement>(`[data-testid="${id}"]`);
+		const manifestReads = () => api.mock.calls.filter(([url]) => url === '/api/manifest').length;
+
+		it('lists each with its name, path, kind, and tags, read-only and saying why while settings is off', async () => {
+			backend(view(false, false), {}, subs());
+			await show('projects');
+			const section = q('section-sub-projects')!;
+			expect(section.querySelector('h2')!.textContent).toBe('Sub-projects of this project');
+			const web = q('subproject-web')!.textContent!.replace(/\s+/g, ' ');
+			expect(web).toContain('web');
+			expect(web).toContain('apps/web');
+			expect(web).toContain('sveltekit');
+			expect(web).toContain('tags: ui, app');
+			expect(q('subproject-api')!.textContent).toContain('go');
+			expect(q('subproject-api')!.textContent).not.toContain('tags:');
+			expect(section.querySelector('[data-testid="gate"]')!.textContent).toContain(
+				'flai serve enable settings'
+			);
+			expect(section.querySelector('[data-testid="gate"]')!.textContent).not.toContain(
+				'--all-projects'
+			);
+			expect(button('web', 'edit-subproject')).toBeNull();
+			expect(button('web', 'remove-subproject')).toBeNull();
+			expect(q('new-subproject')).toBeNull();
+			expect(q('add-subproject')).toBeNull();
+		});
+
+		it('says when there are none, and what stops it reading them', async () => {
+			backend(view(true, false));
+			await show('projects');
+			expect(q('subprojects-none')!.textContent).toContain('lists no sub-project');
+			api.mockImplementation(async (url: string) =>
+				url === '/api/manifest'
+					? answer(500, { error: 'system-flow.yaml is missing layout.design' })
+					: answer(200, view(true, false))
+			);
+			await show('projects');
+			expect(q('subprojects-error')!.getAttribute('role')).toBe('alert');
+			expect(q('subprojects-error')!.textContent).toContain('missing layout.design');
+		});
+
+		it('adds one with the kinds flai knows suggested, its path the name when left empty, says the folder it created, and reads the list again', async () => {
+			const sent = backend(
+				view(true, false),
+				{
+					subproject: [
+						200,
+						{
+							action: 'add',
+							subproject: { name: 'docs', path: 'docs', kind: 'node', tags: ['site', 'ui'] },
+							created: 'docs',
+							written: ['system-flow.yaml', 'docs/README.md']
+						}
+					]
+				},
+				subs()
+			);
+			await show('projects');
+			expect(q('section-sub-projects')!.textContent!.replace(/\s+/g, ' ')).toContain(
+				'A folder the project lacks is created'
+			);
+			const kinds = [...document.querySelectorAll('#subproject-kinds option')].map((o) =>
+				o.getAttribute('value')
+			);
+			expect(kinds).toEqual(['go', 'node', 'python', 'rust', 'sveltekit', 'svelte', 'template']);
+			expect(q('new-subproject-kind')!.getAttribute('list')).toBe('subproject-kinds');
+			expect(q<HTMLButtonElement>('add-subproject')!.disabled).toBe(true);
+			type('new-subproject-name', ' docs ');
+			expect(q('new-subproject-path')!.getAttribute('placeholder')).toBe('docs');
+			type('new-subproject-kind', 'node');
+			type('new-subproject-tags', 'site, ui,');
+			const reads = manifestReads();
+			q<HTMLButtonElement>('add-subproject')!.click();
+			await settle();
+			expect(sent).toEqual([
+				{
+					kind: 'subproject',
+					op: 'add',
+					name: 'docs',
+					subproject_kind: 'node',
+					tags: ['site', 'ui']
+				}
+			]);
+			expect(q('said-sub-projects')!.textContent).toContain(
+				'added docs, and created its folder docs with a README.md'
+			);
+			expect(q<HTMLInputElement>('new-subproject-name')!.value).toBe('');
+			expect(manifestReads()).toBeGreaterThan(reads);
+		});
+
+		it('edits one, sending only the keys that changed, tags as the whole list', async () => {
+			const sent = backend(
+				view(true, false),
+				{
+					subproject: [
+						200,
+						{
+							action: 'set',
+							subproject: { name: 'site', path: 'apps/site', kind: 'sveltekit', tags: [] },
+							from: 'web',
+							written: ['system-flow.yaml']
+						}
+					]
+				},
+				subs()
+			);
+			await show('projects');
+			button('web', 'edit-subproject')!.click();
+			flushSync();
+			const row = q('subproject-web')!;
+			expect(
+				row.querySelector<HTMLInputElement>('[data-testid="edit-subproject-tags"]')!.value
+			).toBe('ui, app');
+			expect(button('web', 'save-subproject')!.disabled).toBe(true);
+			type('edit-subproject-name', 'site', row);
+			type('edit-subproject-path', 'apps/site', row);
+			type('edit-subproject-tags', '', row);
+			button('web', 'save-subproject')!.click();
+			await settle();
+			expect(sent).toEqual([
+				{
+					kind: 'subproject',
+					op: 'set',
+					name: 'web',
+					new_name: 'site',
+					path: 'apps/site',
+					tags: []
+				}
+			]);
+			expect(q('said-sub-projects')!.textContent).toContain('changed site');
+		});
+
+		it('removes one only once it is confirmed, and says its folder is left', async () => {
+			const sent = backend(
+				view(true, false),
+				{
+					subproject: [
+						200,
+						{ action: 'remove', subproject: subs()[1], written: ['system-flow.yaml'] }
+					]
+				},
+				subs()
+			);
+			await show('projects');
+			expect(button('api', 'remove-subproject')!.getAttribute('aria-label')).toBe('Remove api');
+			button('api', 'remove-subproject')!.click();
+			flushSync();
+			expect(q('confirm-remove-subproject')!.textContent!.replace(/\s+/g, ' ')).toContain(
+				'Its folder, api, and the files in it are left as they are'
+			);
+			q<HTMLButtonElement>('confirm-remove-subproject-no')!.click();
+			flushSync();
+			expect(q('confirm-remove-subproject')).toBeNull();
+			expect(sent).toEqual([]);
+			button('api', 'remove-subproject')!.click();
+			flushSync();
+			q<HTMLButtonElement>('confirm-remove-subproject-yes')!.click();
+			await settle();
+			expect(sent).toEqual([{ kind: 'subproject', op: 'remove', name: 'api' }]);
+			expect(q('said-sub-projects')!.textContent).toContain(
+				'removed api; its folder is left as it is'
+			);
+		});
+
+		it('shows flai’s refusal as flai words it, and keeps the form', async () => {
+			const why =
+				'system-flow.yaml has a sub-project "web" already; give the new one another name, or set that one';
+			backend(view(true, false), { subproject: [422, { error: why }] }, subs());
+			await show('projects');
+			type('new-subproject-name', 'web');
+			type('new-subproject-kind', 'go');
+			q<HTMLButtonElement>('add-subproject')!.click();
+			await settle();
+			const said = q('said-sub-projects')!;
+			expect(said.getAttribute('role')).toBe('alert');
+			expect(said.textContent!.trim()).toBe(why);
+			expect(q<HTMLInputElement>('new-subproject-name')!.value).toBe('web');
 		});
 	});
 

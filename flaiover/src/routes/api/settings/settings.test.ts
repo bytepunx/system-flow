@@ -176,6 +176,61 @@ describe('/api/settings (S-0105)', () => {
 		});
 	});
 
+	it("changes a sub-project through settings.subproject as a write, its kind sent as kind, and passes flai's refusal (S-0491)", async () => {
+		const project = { name: 'web', path: 'apps/web', kind: 'sveltekit', tags: ['ui'] };
+		script['settings.subproject'] = {
+			data: { action: 'add', project, created: 'apps/web', written: ['system-flow.yaml'] }
+		};
+		const r = await post({
+			kind: 'subproject',
+			op: 'add',
+			name: 'web',
+			path: 'apps/web',
+			subproject_kind: 'sveltekit',
+			tags: ['ui']
+		});
+		expect(r.status).toBe(200);
+		// flai's project, the entry written, is subproject: every answer's project is this project's
+		const added = await r.json();
+		expect(added).toMatchObject({ action: 'add', subproject: project, created: 'apps/web' });
+		expect(added.project).toEqual({ name: expect.any(String), key: expect.any(String) });
+		const call = asked.find((a) => a.method === 'settings.subproject')!;
+		expect(call.params).toMatchObject({
+			op: 'add',
+			name: 'web',
+			path: 'apps/web',
+			kind: 'sveltekit',
+			tags: ['ui']
+		});
+		expect(call.params.subproject_kind).toBeUndefined();
+		expect(call.params.request_id).toEqual(expect.any(String));
+
+		asked = [];
+		await post({ kind: 'subproject', op: 'remove', name: 'web' });
+		const remove = asked.find((a) => a.method === 'settings.subproject')!;
+		expect(remove.params).toEqual({ op: 'remove', name: 'web', request_id: expect.any(String) });
+
+		const refused = [{ field: 'kind', reason: 'is missing; give what the sub-project is' }];
+		script['settings.subproject'] = {
+			error: new AgentError(502, 'kind: is missing; give what the sub-project is', -32602, {
+				refused
+			})
+		};
+		const bad = await post({ kind: 'subproject', op: 'add', name: 'web' });
+		expect(bad.status).toBe(400);
+		expect(await bad.json()).toMatchObject({
+			refused,
+			error: 'kind: is missing; give what the sub-project is'
+		});
+
+		const why =
+			'system-flow.yaml has a sub-project "web" already; give the new one another name, or set that one';
+		script['settings.subproject'] = { error: new AgentError(502, why, -32010) };
+		const dup = await post({ kind: 'subproject', op: 'add', name: 'web', subproject_kind: 'go' });
+		expect(dup.status).toBe(422);
+		expect(await dup.json()).toMatchObject({ error: why });
+	});
+
 	it("sets the hosts the dashboard accepts through settings.dashboard_hosts, passing flai's refusal (S-0489)", async () => {
 		script['settings.dashboard_hosts'] = {
 			data: { key: 'dashboard.allowed_hosts', value: 'flow.example.com' }

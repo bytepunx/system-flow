@@ -17,7 +17,8 @@ export const SETTINGS_KINDS = [
 	'dashboard_token',
 	'dashboard_hosts',
 	'shared',
-	'manifest'
+	'manifest',
+	'subproject'
 ] as const;
 export type SettingsKind = (typeof SETTINGS_KINDS)[number];
 
@@ -388,6 +389,88 @@ export function sharedQuery(text: string): { story: string } | { paths: string[]
  */
 export function sharedRefusal(text: string): string {
 	return text.replace(/^\S*system-flow\.yaml: /, '');
+}
+
+/**
+ * A sub-project of this project (S-0491): an entry of its manifest's projects as project.info
+ * answers it, its name, its folder relative to the repository root, its kind, and its tags.
+ */
+export type SubProject = { name: string; path: string; kind: string; tags?: string[] };
+
+/** The kinds of sub-project flai knows, suggested beside the kind field; flai checks what is sent. */
+export const SUBPROJECT_KINDS = [
+	'go',
+	'node',
+	'python',
+	'rust',
+	'sveltekit',
+	'svelte',
+	'template'
+] as const;
+
+/** A sub-project as its fields are typed: tags separated by commas. */
+export type SubProjectForm = { name: string; path: string; kind: string; tags: string };
+
+/** The form as the manifest has the sub-project, or an empty one for a new sub-project. */
+export function subprojectForm(p?: SubProject): SubProjectForm {
+	return {
+		name: p?.name ?? '',
+		path: p?.path ?? '',
+		kind: p?.kind ?? '',
+		tags: (p?.tags ?? []).join(', ')
+	};
+}
+
+/** The tags typed, separated by commas, each trimmed, an empty one dropped. */
+export function tagList(text: string): string[] {
+	return text
+		.split(',')
+		.map((t) => t.trim())
+		.filter((t) => t !== '');
+}
+
+/**
+ * What settings.subproject is asked, without the settings kind: the sub-project's kind goes as
+ * subproject_kind, which /api/settings sends to flai as kind, since kind names the setting.
+ */
+export type SubProjectChange = {
+	op: 'add' | 'set' | 'remove';
+	name: string;
+	new_name?: string;
+	path?: string;
+	subproject_kind?: string;
+	tags?: string[];
+};
+
+/** The add the form asks for: a path left empty is the name's folder, flai's default. */
+export function subprojectAdd(form: SubProjectForm): SubProjectChange {
+	const change: SubProjectChange = {
+		op: 'add',
+		name: form.name.trim(),
+		subproject_kind: form.kind.trim()
+	};
+	if (form.path.trim()) change.path = form.path.trim();
+	const tags = tagList(form.tags);
+	if (tags.length) change.tags = tags;
+	return change;
+}
+
+/**
+ * The set the form asks for of the sub-project as the manifest has it: only the keys that changed,
+ * tags as the whole list, [] clearing them; null when nothing changed. A name, path, or kind
+ * emptied is no change, since flai keeps each that is not sent.
+ */
+export function subprojectSet(p: SubProject, form: SubProjectForm): SubProjectChange | null {
+	const change: SubProjectChange = { op: 'set', name: p.name };
+	const name = form.name.trim();
+	const path = form.path.trim();
+	const kind = form.kind.trim();
+	if (name && name !== p.name) change.new_name = name;
+	if (path && path !== p.path) change.path = path;
+	if (kind && kind !== p.kind) change.subproject_kind = kind;
+	const tags = tagList(form.tags);
+	if (tags.join(',') !== (p.tags ?? []).join(',')) change.tags = tags;
+	return Object.keys(change).length > 2 ? change : null;
 }
 
 /** Why the dashboard refused a project's flai as unsigned (S-0237), as /api/projects gives it. */

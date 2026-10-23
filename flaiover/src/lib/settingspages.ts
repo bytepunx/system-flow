@@ -12,6 +12,7 @@ export const SETTINGS_SECTIONS = [
 	'shared',
 	'import',
 	'projects',
+	'sub-projects',
 	'tokens',
 	'agent'
 ] as const;
@@ -34,7 +35,7 @@ export const SETTINGS_PAGES: readonly SettingsPage[] = [
 	{ slug: 'features', title: 'Features', sections: ['actions', 'checks'] },
 	{ slug: 'agents', title: 'Agents', sections: ['default-agent', 'providers', 'planning'] },
 	{ slug: 'file-system', title: 'File System', sections: ['shared', 'import'] },
-	{ slug: 'projects', title: 'Projects', sections: ['projects', 'tokens'] },
+	{ slug: 'projects', title: 'Projects', sections: ['projects', 'sub-projects', 'tokens'] },
 	{ slug: 'harnesses', title: 'Harnesses', sections: ['agent'] }
 ];
 
