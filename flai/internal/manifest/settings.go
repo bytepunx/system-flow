@@ -416,14 +416,7 @@ func EditComponents(data []byte, fsys fs.FS, project string, c *Components) ([]b
 	}
 	idx := slices.IndexFunc(before.Projects, func(p Project) bool { return p.Name == project })
 	if idx < 0 {
-		names := make([]string, len(before.Projects))
-		for i, p := range before.Projects {
-			names[i] = p.Name
-		}
-		if len(names) == 0 {
-			return nil, fmt.Errorf("system-flow.yaml has no sub-project %q, and names none under projects; add the sub-project there first", project)
-		}
-		return nil, fmt.Errorf("system-flow.yaml has no sub-project %q; name one of %s", project, strings.Join(names, ", "))
+		return nil, noProject(before, project)
 	}
 	lines, err := componentsLines(strings.Split(string(data), "\n"), idx, project, c)
 	if err != nil {
@@ -452,64 +445,13 @@ func componentsLines(lines []string, idx int, project string, c *Components) ([]
 	cannot := func(why string) error {
 		return fmt.Errorf("cannot write sub-project %q's components: %s; edit the key by hand, or write it that way and run this again", project, why)
 	}
-	list, _ := findKey(lines, 0, len(lines), "projects")
-	if list.at < 0 {
-		return nil, cannot("system-flow.yaml has no projects block")
+	e, why := locateProjects(lines).entry(lines, idx)
+	if why != "" {
+		return nil, cannot(why)
 	}
-	rest, _ := keyRest(lines[list.at], "projects")
-	if value, _ := splitComment(rest); value != "" {
-		return nil, cannot("projects is written on one line; write it as a block, a sub-project an item under it")
-	}
-	var items []int
-	itemIn := ""
-	for i := list.at + 1; i < list.end; i++ {
-		if !isContent(lines[i]) {
-			continue
-		}
-		t := strings.TrimSpace(lines[i])
-		if len(items) == 0 {
-			itemIn = indent(lines[i])
-		}
-		if indent(lines[i]) == itemIn && (t == "-" || strings.HasPrefix(t, "- ")) {
-			items = append(items, i)
-		}
-	}
-	if idx >= len(items) {
-		return nil, cannot("projects is not a list of items, each a sub-project")
-	}
-	from, to := items[idx], list.end
-	if idx+1 < len(items) {
-		to = items[idx+1]
-	}
-	first := strings.TrimPrefix(strings.TrimSpace(lines[from]), "-")
-	head, _ := splitComment(first)
-	var keyIn string
-	switch {
-	case head == "":
-		next := from + 1
-		for next < to && !isContent(lines[next]) {
-			next++
-		}
-		if next == to {
-			return nil, cannot("its entry under projects is empty")
-		}
-		keyIn = indent(lines[next])
-	case strings.HasPrefix(head, "{"):
-		return nil, cannot("its entry under projects is written on one line; write it as a block, a key a line")
-	default:
-		keyIn = itemIn + " " + strings.Repeat(" ", len(first)-len(strings.TrimLeft(first, " \t")))
-	}
-	if _, ok := keyRest(head, "components"); ok {
+	key, onHead := e.find(lines, "components")
+	if onHead {
 		return nil, cannot("its entry under projects begins with components; move name to its first line")
-	}
-	key := span{at: -1}
-	for i := from + 1; i < to; i++ {
-		if isContent(lines[i]) && indent(lines[i]) == keyIn {
-			if _, ok := keyRest(lines[i], "components"); ok {
-				key = span{at: i, end: valueEnd(lines, i, to)}
-				break
-			}
-		}
 	}
 	if c == nil {
 		if key.at < 0 {
@@ -517,29 +459,27 @@ func componentsLines(lines []string, idx int, project string, c *Components) ([]
 		}
 		return slices.Delete(slices.Clone(lines), key.at, key.end), nil
 	}
-	block := []string{keyIn + "components:"}
 	if key.at >= 0 {
-		old, _ := keyRest(lines[key.at], "components")
-		if value, comment := splitComment(old); value == "" {
-			block[0] = lines[key.at] // keep the key's line and its comment
-		} else {
-			block[0] = withComment(block[0], comment)
-		}
+		return slices.Concat(lines[:key.at], componentsBlock(e.keyIn, lines[key.at], c), lines[key.end:]), nil
 	}
+	at := contentEnd(lines, e.from, e.to)
+	return slices.Concat(lines[:at], componentsBlock(e.keyIn, "", c), lines[at:]), nil
+}
+
+// componentsBlock is the lines of a components key at the indent in, keeping
+// the comment of the key's line old, which it replaces, when there is one.
+func componentsBlock(in, old string, c *Components) []string {
+	block := []string{blockHead(in, "components", old)}
 	if len(c.Include) > 0 {
-		block = append(block, keyIn+"  include: "+flowList(c.Include))
+		block = append(block, in+"  include: "+flowList(c.Include))
 	}
 	if len(c.Exclude) > 0 {
-		block = append(block, keyIn+"  exclude: "+flowList(c.Exclude))
+		block = append(block, in+"  exclude: "+flowList(c.Exclude))
 	}
 	if c.Setup != "" {
-		block = append(block, keyIn+"  setup: "+yamlScalar(c.Setup))
+		block = append(block, in+"  setup: "+yamlScalar(c.Setup))
 	}
-	if key.at >= 0 {
-		return slices.Concat(lines[:key.at], block, lines[key.end:]), nil
-	}
-	at := contentEnd(lines, from, to)
-	return slices.Concat(lines[:at], block, lines[at:]), nil
+	return block
 }
 
 // componentsReadBack reports whether after, the manifest as written, has
@@ -838,6 +778,7 @@ func (m Manifest) settingsProblems() []Problem {
 	msgs = append(msgs, m.MergeQueue.Errors()...)
 	msgs = append(msgs, m.TestErrors()...)
 	msgs = append(msgs, m.ProviderErrors()...)
+	msgs = append(msgs, m.ProjectErrors(nil)...)
 	msgs = append(msgs, m.ComponentErrors(nil)...)
 	msgs = append(msgs, m.InstallErrors()...)
 	for _, e := range m.Claims.Errors() {
