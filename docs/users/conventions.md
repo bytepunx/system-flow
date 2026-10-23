@@ -1,6 +1,6 @@
 ---
 title: Conventions guide
-updated: 2026-10-07
+updated: 2026-10-23
 status: active
 ---
 
@@ -25,7 +25,8 @@ my-project/
 │   ├── conventions/        # how agents work here, read every session
 │   ├── issues/             # recurring friction, with counts and cost
 │   ├── experiments/        # what each experiment story found
-│   └── analysis/           # what the analyzer found, one report per run
+│   ├── analysis/           # what the analyzer found, one report per run
+│   └── digest/             # what past stories learned, one fact per file
 ├── docs/                   # outward-facing: one folder per audience
 │   ├── users/
 │   ├── operators/
@@ -213,6 +214,7 @@ A resuming agent reads `index.md`, then each active narrative's current state an
 | Issues | `design/issues/I-nnnn-slug.md`, tabulated in `summary.md` | A class (`defect`, `blocker`, `efficiency`, `impression`), a count, an average cost per occurrence, first and last reported | Record each occurrence as it happens with `flai issue`, which names the story; at a story's acceptance, the operator chooses which issues become backlog stories; remediate the most expensive first |
 | Experiment results | `design/experiments/S-nnnn-slug.md`, named for the experiment story; the folder's `template.md` is the shape | Front matter `title`, `updated`, `status`, `story`; sections Hypothesis, Success measure, What was done, Results, Recommendation (adopt, adapt, or drop) | Written by the experiment story before review; acceptance refuses an experiment without it, and `flai check` validates it |
 | Analysis reports | `design/analysis/<date>-<focus>.md`, the focus `bottlenecks`, `intent`, `risk`, or `all`; indexed in `design/analysis/README.md` | Front matter `title`, `updated`, `status` (`draft` while the analyzer writes it, then `active`), `focus`, and the window, `from` and `to`; one section per finding, with its evidence, severity, and estimated impact | Written by the analyzer alone, one per run; `flai check` validates each and warns of one the index does not list |
+| Digest entries | `design/digest/D-nnnn-<slug>.md`, one fact a story learned per file; no index, since `flai digest list` prints one ([ADR-0191](../../design/adrs/0191-the-digest-is-one-markdown-file-per-entry-under-the-design-folder-s-digest.md)) | Front matter `id`, `title` (the fact), `kind` (`decision`, `answer`, `recommendation`, or `cause`), `sources`, `topics`, `paths`, `date`, `status` (`active`, `absorbed` with `absorbed_by`, or `compacted`), `asked_again`, and `cited`; a few sentences below the heading, which say where a secret lives, never its value | Written only through `flai digest new` and `flai digest edit`, which refuse a write with a problem; `flai check` reports `digest.entry` and `digest.secret`; never deleted, only absorbed or compacted |
 | Threads | `wip/threads/` | A conversation anchored to a document, a heading, or a work item | Opened and answered with `flai thread` or from the dashboard |
 | Messages | `wip/messages/` | A conversation between the agents of two stories in progress or in review, apart from the threads ([ADR-0120](../../design/adrs/0120-agents-of-two-open-stories-message-each-other-in-conversations-kept-under-wip.md)) | Sent and answered with `flai message`; closed when either story is accepted, cancelled, or archived |
 

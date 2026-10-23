@@ -11,6 +11,7 @@ Internal documentation for the system-flow monorepo. Nothing here is written for
 | `issues/` | Recurring friction, defects, blockers, and inefficiencies with counts and cost. | Recorded as they occur; `summary.md` regenerated with every occurrence. |
 | `experiments/` | What each experiment found: hypothesis, success measure, what was done, results, and a recommendation (ADR-0066). | One per `experiment` story, written before it is accepted; kept as the record of what was tried. |
 | `analysis/` | What the analyzer found: one report per run, its focus, the window its metrics cover, and each finding with its evidence, severity, and estimated impact. | Written by the analyzer alone, one per run, and listed in its `README.md`; kept as the record of what was found. |
+| `digest/` | What past stories learned: one fact per file, `D-nnnn-<slug>.md`, a decision, an operator's answer, a confirmed or overruled recommendation, or an issue's cause and fix, with its sources, topics, and paths, for priming (ADR-0191). | Written only through `flai digest`, by the digest's keeper; no index, since `flai digest list` is one; never deleted, only absorbed or compacted by a change of status. |
 | `components/` | Supporting files for the project's components: one examples file per component, `<sub-project>/<path>.examples.json`, its named sets of props (ADR-0164). | Written by the Components page's save and by the stories that change a component; `flai check` keeps each in step with its component's props. |
 
 Rules that apply to everything under `design/`:

@@ -1,6 +1,6 @@
 ---
 title: flai CLI
-updated: 2026-10-22
+updated: 2026-10-23
 status: active
 ---
 
@@ -1214,6 +1214,37 @@ Conventions, `design/system` and `design/tech` files, and ADRs say which stories
 
 A heading's topics cover everything down to the next heading at its level or higher; a heading without them takes its parent's, and the top headings take the file's. `all` is every story, and a convention without `topics` is read as `[all]`. A convention's `roles` list every agent that reads it: `story` for the agent working a story; `explore` and `verify` for its sub-agents ([Sub-agents](#sub-agents)); and `plan`, `orchestrate`, and `analyze` for the planner, the orchestrator, and the analyzer ([The planner, the orchestrator, and the analyzer](#the-planner-the-orchestrator-and-the-analyzer)). A convention without `roles` is read by every agent. `flai prime --story` prints the conventions whose roles are empty or list `story`, `flai prime --role` those whose roles are empty or list the role, and `flai prime --cat` prints them all. `flai check` accepts these six roles and warns with `conventions.roles` on any other. `flai check` warns with `doc.topics` on a `design/system` or `design/tech` file without topics, and with `doc.topic` on a topic that is not `all`, `code`, a sub-project's name, tag, or kind, or one that a story or epic declares ([A story's topics](#a-storys-topics)). `flai prime --story` selects conventions, design, tech files, and ADRs by them ([Prime a session](#prime-a-session)). A design, tech, or ADR file without topics comes into a pack only when something names or links it, or it ranks.
 
+## Record what a story learned
+
+```bash
+flai digest new "Story worktrees install with the project's pnpm store" --kind cause --source I-0177 --source S-0481 --topic flaiover --path scripts/flaiover-install.sh
+flai digest new "The digest lives under design/digest" --kind answer --source TH-0476 --body-file answer.md --json
+flai digest edit D-0007 --topic cli --topic go          # replaces the entry's topics
+flai digest edit D-0007 --asked-again TH-0512           # a thread that asked what it already answered
+flai digest edit D-0007 --body-file - < body.md         # the body from standard input
+flai digest list --status active --topic cli            # the index: every entry, or those you keep
+flai digest show D-7 --json                             # one entry; D-7 is D-0007
+```
+
+The digest is what past stories learned, one fact per file in `design/digest/`, so that a later story's agent is primed with it rather than asking again ([ADR-0191](../../design/adrs/0191-the-digest-is-one-markdown-file-per-entry-under-the-design-folder-s-digest.md)). Each entry is one of four kinds:
+
+| Kind | The fact |
+|------|----------|
+| `decision` | A decision from a narrative's `## Decisions` or an ADR |
+| `answer` | The operator's answer on a thread |
+| `recommendation` | A recommendation the operator confirmed or overruled, and why |
+| `cause` | An issue's cause and fix |
+
+`flai digest new` records one. It numbers the entry one past the highest `D-nnnn` it finds where the command runs, in the main checkout, in every story's worktree, on the main branch, and on every `story/S-nnnn` branch, so two stories never take the same number; gaps are not filled. It writes `D-nnnn-<slug>.md` in the checkout it runs in, with `id`, `title`, `kind`, `sources`, `topics`, `paths`, today's `date`, and `status: active`, and the body below `# D-nnnn <title>`. `--kind` and at least one `--source` are required: a work item (`E-`, `S-`, `T-`), thread (`TH-`), or issue (`I-`) in the project or its archive. `--source`, `--topic`, and `--path` are repeatable or comma separated. Give the body, a few sentences on what was asked or decided, the answer and its reason, with `--body`, or with `--body-file`, a file or `-` for standard input.
+
+`flai digest edit` changes an entry's body, topics, paths, sources, or `asked_again`. Each flag you give replaces that field and leaves the rest of the file as it was; an empty value, such as `--topic=`, empties a list.
+
+Both run `flai check`'s digest rules on what they wrote. If they report anything, `new` removes the file, and `edit` puts the file back unless the problem was there before your edit; the problems are printed and the exit code is 4. An entry says where a secret lives, never its value: text with the shape of a key or token is refused. Each prints the entry's ID, title, kind, status, and path; `--json` gives the entry.
+
+The folder has no index: `flai digest list` is one. It prints each entry's ID, status, kind, date, and title, with its sources, topics, and paths below. `--status` (`active`, `absorbed`, or `compacted`) and `--topic` keep the entries that match; `--json` gives them with their bodies. `flai digest show` prints one entry whole. Nothing in the folder is deleted: an entry that a document now records is `absorbed`, with `absorbed_by` naming the document, and one no story cited for a while is `compacted`.
+
+`flai check` reports `digest.entry` on an entry whose name or front matter is wrong, or whose sources or `absorbed_by` name nothing, and `digest.secret` on text with the shape of a key or token. Every agent may run `list` and `show`. `flai guard` refuses `new` and `edit` to every sub-agent and to the planner, the orchestrator, and the analyzer.
+
 ## Read design on demand
 
 A context pack briefs most of what it selects ([ADR-0049](../../design/adrs/0049-a-story-s-context-pack-fits-a-size-budget-what-the-story-names-loads-whole-what.md)). Find the sections that bear on a question, then fetch one by its heading rather than the whole file:
@@ -2087,7 +2118,7 @@ A story that changes one of these files ships it from its own branch: its agent,
 
 Both sub-agents run a model cheaper than the story's agent's, since they read and review and decide nothing. Set `model` in a definition to change it, or to `inherit` to run it on the story's agent's model. To change it for one story, or for every new story, without editing the definitions, give the agent a role: `flai agent set --role-model verify=claude-sonnet-5-5`, or `flai story new` and `flai edit` with `--role-model`. `flai serve` then starts the story's session with that role's sub-agent on that model.
 
-A sub-agent may read and run checks, `flai test` and `flai verify` among them, but not `flai verify --record-issues`, which writes issues. It may record a decision its task makes with `flai adr new`, `flai adr topics`, and `flai adr accept`, or the MCP tool `adr_new`, but not commit it: `flai guard` refuses `--commit` and `--autocommit`, in any form, and `adr_new` with `commit`, and the story's agent commits the ADR with the task (S-0287, [ADR-0127](../../design/adrs/0127-flai-guard-lets-a-story-s-sub-agent-write-an-adr-with-flai-adr-new-topics-and.md)). It may list the component library with `flai components list`, and a task sub-agent may run a sub-project's dev server with `flai components serve`, `--story` included, to run a pass of the harness it wrote. A read-only sub-agent, such as the explorer or the verifier, is refused `serve`, since serving writes under `.flai-cache` and may install the worktree's dependencies; it asks the story's agent or a task sub-agent to run it. No sub-agent may run `flai components config`, which rewrites `system-flow.yaml` (S-0477, [ADR-0186](../../design/adrs/0186-flai-guard-lets-every-agent-run-flai-components-list-and-a-story-s-task-sub.md)). It may not move, create, or edit a work item, write to a thread, send or answer a message, read the inbox, or wait for events or work: neither definition has those tools, and `flai guard` refuses them, and the flai and git commands that write, to any sub-agent, the built-in ones included ([ADR-0060](../../design/adrs/0060-a-claude-code-pretooluse-hook-flai-guard-refuses-any-sub-agent-s-call-that.md)). Nor may it write a path flai protects, such as a file in a `.claude/` folder or `.mcp.json`, while `auto-approve` is off: it returns the file's whole new content in its final message, and the story's agent writes it ([Writes to protected paths](#writes-to-protected-paths)). The story's agent's own calls pass, save the wait and the names below. A refused call tells the sub-agent to say what it needs in its final message instead.
+A sub-agent may read and run checks, `flai test` and `flai verify` among them, but not `flai verify --record-issues`, which writes issues. It may record a decision its task makes with `flai adr new`, `flai adr topics`, and `flai adr accept`, or the MCP tool `adr_new`, but not commit it: `flai guard` refuses `--commit` and `--autocommit`, in any form, and `adr_new` with `commit`, and the story's agent commits the ADR with the task (S-0287, [ADR-0127](../../design/adrs/0127-flai-guard-lets-a-story-s-sub-agent-write-an-adr-with-flai-adr-new-topics-and.md)). It may list the component library with `flai components list`, and a task sub-agent may run a sub-project's dev server with `flai components serve`, `--story` included, to run a pass of the harness it wrote. A read-only sub-agent, such as the explorer or the verifier, is refused `serve`, since serving writes under `.flai-cache` and may install the worktree's dependencies; it asks the story's agent or a task sub-agent to run it. No sub-agent may run `flai components config`, which rewrites `system-flow.yaml` (S-0477, [ADR-0186](../../design/adrs/0186-flai-guard-lets-every-agent-run-flai-components-list-and-a-story-s-task-sub.md)). It may read the digest with `flai digest list` and `flai digest show`, but not write it: `flai digest new` and `flai digest edit` are refused to every sub-agent, and to the planner, the orchestrator, and the analyzer ([Record what a story learned](#record-what-a-story-learned)). It may not move, create, or edit a work item, write to a thread, send or answer a message, read the inbox, or wait for events or work: neither definition has those tools, and `flai guard` refuses them, and the flai and git commands that write, to any sub-agent, the built-in ones included ([ADR-0060](../../design/adrs/0060-a-claude-code-pretooluse-hook-flai-guard-refuses-any-sub-agent-s-call-that.md)). Nor may it write a path flai protects, such as a file in a `.claude/` folder or `.mcp.json`, while `auto-approve` is off: it returns the file's whole new content in its final message, and the story's agent writes it ([Writes to protected paths](#writes-to-protected-paths)). The story's agent's own calls pass, save the wait and the names below. A refused call tells the sub-agent to say what it needs in its final message instead.
 
 ```bash
 echo '{"tool_name":"Bash","tool_input":{"command":"flai move S-0001 review"},"agent_type":"verifier","agent_id":"a1"}' | flai guard

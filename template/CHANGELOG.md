@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.109 - 2026-10-23
+
+- S-0428 The digest, what past stories learned, is one markdown file per fact in `design/digest/`, written through `flai digest` (patch, ADR-0191): the template ships `design/digest/README.md`, which says what an entry is, that it is named `D-nnnn-<slug>.md`, what its front matter holds, that the folder has no index since `flai digest list` is one, that an entry says where a secret lives and never its value, that only flai and the digest's keeper write there, and that nothing is deleted. `design/README.md` and `CLAUDE.md` gain the folder's row beside `analysis/`. Writing, listing, and checking entries need a flai that has them, the release that carries S-0428: `flai digest new`, `edit`, `list`, and `show`, and `flai check`'s `digest.entry` and `digest.secret`; an older flai has no `flai digest`, and its `flai check` warns `doc.updated` on every entry, since it checks the folder as ordinary design documents.
+
 ## 1.0.108 - 2026-10-22
 
 - S-0476 A component's example may carry `answers`, so the component harness answers a framed component's requests to the app's own server from them (patch, ADR-0187): `design/components/README.md` says each example may carry the `answers` the harness gives the component's requests to the app's own server, as fixtures not checked against the app's routes, and that a story that changes what a route answers edits the examples' answers that copy it. Checking answers and answering from them need a flai that has them, the release that carries S-0476; an older flai's `flai check` reports `answers` as a key it does not name.
