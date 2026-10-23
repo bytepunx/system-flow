@@ -1259,6 +1259,28 @@ The folder has no index: `flai digest list` is one. It prints each entry's ID, s
 
 `flai check` reports `digest.entry` on an entry whose name or front matter is wrong, or whose sources or `absorbed_by` name nothing, and `digest.secret` on text with the shape of a key or token. Every agent may run `list` and `show`. `flai guard` refuses `new` and `edit` to every sub-agent and to the planner, the orchestrator, and the analyzer.
 
+### Harvest and seed the digest
+
+```bash
+flai digest harvest                                   # every candidate, all kinds
+flai digest harvest --since 2026-10-01 --kind answer,cause --json
+flai digest seed --dry-run                            # what a seed would write
+flai digest seed                                      # write the answers and causes no entry records yet
+```
+
+`flai digest harvest` lists what the digest could record, learned on or after `--since` (a date in UTC; with none, everything), and writes nothing, so the same files always give the same list:
+
+| Kind | Where it comes from |
+|------|---------------------|
+| `decision` | Each bullet under `## Decisions` of a done story's narrative |
+| `answer` | Each entry by the manifest's `owner` on a thread someone else opened, or their confirmation of a recommendation, which answers with the recommendation's text |
+| `recommendation` | An owner's reply that follows a pending recommendation without confirming it: it carries both texts |
+| `cause` | Each closed issue's description, with the reason it was closed, or its remediation, as the fix |
+
+A resolution (`Resolved.`) is not an answer, and neither is a reply to a permission prompt (`Allow <tool> <path>?`). Each candidate names its source, a story, thread, or issue, with the thread entry's time or the narrative's path, and carries the topics and paths of the item it comes from, its date, its text, and the entries that already cite its source. `--kind` keeps the kinds you name.
+
+`flai digest seed` writes an entry for each `answer`, `recommendation`, and `cause` the harvest lists, through the same path as `flai digest new`. An entry's date is the day the fact was learned, and its body quotes the question, the answer, and any recommendation it overruled, or the cause and the fix. It skips what an entry already records, so a second run writes nothing, and an entry the check refuses, such as one with a secret's shape, which it names by the rule and goes on. It never seeds decisions, which the curator judges. `--dry-run` writes nothing and lists what a seed would write. Both commands take `--json`.
+
 ## Read design on demand
 
 A context pack briefs most of what it selects ([ADR-0049](../../design/adrs/0049-a-story-s-context-pack-fits-a-size-budget-what-the-story-names-loads-whole-what.md)). Find the sections that bear on a question, then fetch one by its heading rather than the whole file:
