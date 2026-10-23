@@ -2,12 +2,12 @@
 id: I-0166
 title: flai components list, and the components examples check, take about 2.3s for flaiover since props.mjs resolves json props' types with typescript, up from 0.4s
 class: efficiency
-status: open
+status: closed
 count: 1
 cost: 2s
 first_reported: 2026-10-19T14:20:51Z
 last_reported: 2026-10-19T14:20:51Z
-updated: 2026-10-21T11:59:35Z
+updated: 2026-10-23T07:02:23Z
 ---
 
 # I-0166 flai components list, and the components examples check, take about 2.3s for flaiover since props.mjs resolves json props' types with typescript, up from 0.4s
@@ -24,3 +24,4 @@ S-0449's T-1907 resolves each json prop's type with the sub-project's typescript
 ## Remediation
 
 Story S-0478 remediates this issue, created from it at 2026-10-21T11:59:35Z.
+Closed 2026-10-23T07:02:23Z: Fixed by S-0478 (T-2068): props.mjs keeps the skeletons it resolves in a cache under .flai-cache/component-props/<sub-project path>/, keyed by the script, the sub-project, its typescript, and the components' typings, and stamped by every path typescript looked at. A run with nothing changed takes them from the cache without loading typescript: flaiover's 58 components take 0.43s, against 2.7s cold. TestListTakesSkeletonsFromTheCacheUntilAFileTypescriptReadChanges reproduces it.
