@@ -1323,8 +1323,10 @@ The digest is one markdown file per fact a story learned, D-nnnn-&lt;slug&gt;.md
 Subcommands:
 
 - [edit](#flai-digest-edit): Change a digest entry's body, topics, paths, sources, or asked\_again
+- [harvest](#flai-digest-harvest): List the facts the digest could record: answers, recommendations, decisions, and causes
 - [list](#flai-digest-list): List the digest's entries with their sources, topics, paths, date, and status
 - [new](#flai-digest-new): Record a digest entry: its ID, file, and front matter are supplied
+- [seed](#flai-digest-seed): Write a digest entry for each operator answer and closed issue's cause no entry records yet
 - [show](#flai-digest-show): Print a digest entry: its front matter and its body
 
 #### flai digest edit
@@ -1357,6 +1359,32 @@ Flags:
 | `--path` strings | repository path the fact bears on; replaces the entry's paths (repeatable, or comma separated) |
 | `--source` strings | work item, thread, or issue the fact comes from; replaces the entry's sources (repeatable, or comma separated) |
 | `--topic` strings | topic the fact bears on; replaces the entry's topics (repeatable, or comma separated) |
+
+#### flai digest harvest
+
+List the facts the digest could record: answers, recommendations, decisions, and causes.
+
+```text
+flai digest harvest [flags]
+```
+
+List every candidate for the digest in this checkout, learned on or after --since, or every one when it is not given: the operator's answers and the recommendations the operator overruled on every thread, resolved or not, the decisions in done stories' narratives, and the causes and fixes of closed issues. It is deterministic and writes nothing, so the curator reads the same list every run.
+
+Each line gives the candidate's kind, its date, its source with where in it (the thread entry's time, or the narrative's path), its title, and the entries that already cite the source; the last line counts them by kind. --since is a day, YYYY-MM-DD in UTC, or an RFC 3339 time. --kind keeps the candidates of that kind (decision, answer, recommendation, cause), repeatable or comma separated. --json gives an array of the candidates with every field, their topics, paths, and text included, [] when none.
+
+Examples:
+
+```bash
+flai digest harvest --since 2026-10-01
+flai digest harvest --kind answer,recommendation --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--kind` strings | only the candidates of this kind: decision, answer, recommendation, cause (repeatable, or comma separated) |
+| `--since` string | only the candidates learned on or after this day, YYYY-MM-DD in UTC, or this RFC 3339 time |
 
 #### flai digest list
 
@@ -1406,6 +1434,34 @@ Flags:
 | `--path` strings | repository path the fact bears on, from the project root (repeatable, or comma separated) |
 | `--source` strings | work item (E-, S-, T-), thread (TH-), or issue (I-) the fact comes from (repeatable, or comma separated; at least one) |
 | `--topic` strings | topic the fact bears on, as a story's are (repeatable, or comma separated) |
+
+#### flai digest seed
+
+Write a digest entry for each operator answer and closed issue's cause no entry records yet.
+
+```text
+flai digest seed [flags]
+```
+
+Seed the digest in the checkout it runs in from what harvest lists, learned on or after --since, or all of it when it is not given. It writes an answer or recommendation entry for each answer the operator gave on a thread, and a cause entry for each closed issue with a cause and a fix, each dated the day it was learned and quoting its source. It never seeds decisions: a model judges which of them a design document already records.
+
+A source an entry already records is skipped: an issue any entry cites, or a thread's answer when an entry citing the thread holds the answer's time. So a second run writes nothing. Each entry is checked as flai digest new checks it; one the check refuses, such as an answer with the shape of a key or token, is skipped and named by the rules it broke, never its text, and the rest are written.
+
+Each entry written is printed with its ID, kind, source, and title, and each skipped one with its reason, then the candidates listed, written, and skipped by kind. --dry-run prints what would be written and writes nothing. --json gives the result: listed by kind, written, skipped, and dry\_run. A skipped entry is not an error: the exit code is 0 unless the seed fails.
+
+Examples:
+
+```bash
+flai digest seed --dry-run
+flai digest seed --since 2026-10-01 --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--dry-run` | print what would be written and write nothing |
+| `--since` string | only the candidates learned on or after this day, YYYY-MM-DD in UTC, or this RFC 3339 time |
 
 #### flai digest show
 

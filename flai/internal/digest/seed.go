@@ -121,6 +121,15 @@ func Seed(repo *workitem.Repo, r execx.Runner, opts SeedOptions) (SeedResult, er
 		body := seedBody(c, repo.Manifest.Owner)
 		title := seedTitle(c.Title)
 		if opts.DryRun {
+			// The check a dry run can refuse on without writing: a secret's
+			// shape, as New would report it.
+			if len(Secrets(title+"\n"+body)) > 0 {
+				if len(Secrets(c.Title)) > 0 {
+					title = ""
+				}
+				skip(title, "refused: "+RuleSecret)
+				continue
+			}
 			res.Written = append(res.Written, SeedEntry{Kind: c.Kind, Source: c.Source, Ref: c.Ref, Title: title})
 			entries = append(entries, Entry{Sources: []string{c.Source}, Body: body})
 			continue

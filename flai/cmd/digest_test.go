@@ -334,3 +334,246 @@ func TestDigestShow(t *testing.T) {
 		}
 	}
 }
+
+// seedProject is a project owned by alex with one candidate source of each
+// kind, learned on different days: TH-0001 with two answers by alex on
+// 2026-10-19, the archived S-0001 done on 2026-10-20 with one decision,
+// I-0001 closed on 2026-10-21 with a cause and a fix, and TH-0002 with alex
+// overruling a recommendation on 2026-10-22.
+func seedProject(t *testing.T) string {
+	t.Helper()
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	thread := func(id, title, status string, entries ...string) string {
+		var b strings.Builder
+		b.WriteString("---\nid: " + id + "\ntitle: " + title + "\nanchor:\n  path: wip/archive/kanban/stories/S-0001-s.md\n  item: S-0001\nstatus: " + status + "\nparticipants: [claude, alex]\ncreated: 2026-10-19T10:00:00Z\nupdated: 2026-10-23T10:00:00Z\n---\n\n# " + id + " " + title + "\n\n## Entries\n")
+		for i := 0; i+1 < len(entries); i += 2 {
+			b.WriteString("\n### " + entries[i] + "\n" + entries[i+1] + "\n")
+		}
+		return b.String()
+	}
+	for path, body := range map[string]string{
+		"system-flow.yaml":                       "version: 1\nname: t\nkey: t\nowner: alex\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n",
+		"wip/archive/kanban/stories/S-0001-s.md": "---\nid: S-0001\ntype: story\nnature: feature\ntitle: S-0001 title\nstatus: done\nparent: \nowner: alex\ncreated: 2026-08-01T00:00:00Z\nupdated: 2026-08-01T00:00:00Z\ntransitions:\n  - to: in-progress\n    at: 2026-08-01T00:00:00Z\n    by: alex\n  - to: done\n    at: 2026-10-20T12:00:00Z\n    by: alex\n---\n\n# S-0001 S-0001 title\n",
+		"wip/archive/agents/S-0001.md":           "---\nstream: S-0001\ntitle: t\nupdated: 2026-08-01T00:00:00Z\nagent: a\nsession: s\n---\n\n# S-0001 t\n\n## Context\n\nWhy.\n\n## Decisions\n\n- Keep one file per entry. It merges cleanly.\n\n## Log\n",
+		"wip/agents/index.md":                    "# Narratives\n",
+		"design/issues/I-0001-a.md":              "---\nid: I-0001\ntitle: I-0001 went wrong\nclass: defect\nstatus: closed\ncount: 1\nfirst_reported: 2026-08-01T00:00:00Z\nlast_reported: 2026-08-01T00:00:00Z\nupdated: 2026-08-02T00:00:00Z\n---\n\n# I-0001 went wrong\n\n## Description\nTwo writers took one number.\n\n## Remediation\nClosed 2026-10-21T09:00:00Z: S-0001: numbers come from every branch.\n",
+		"wip/threads/TH-0001-shape.md": thread("TH-0001", "Which shape?", "answered",
+			"2026-10-19T10:00:00Z claude", "Left or right?",
+			"2026-10-19T10:05:00Z alex", "Left. It is cheaper.",
+			"2026-10-19T10:10:00Z alex", "Narrow, too."),
+		"wip/threads/TH-0002-store.md": thread("TH-0002", "Which store?", "resolved",
+			"2026-10-22T08:00:00Z claude", "Files or a database?",
+			"2026-10-22T08:01:00Z orchestrator (recommendation)", "A database.",
+			"2026-10-22T08:02:00Z alex", "Files: git keeps them."),
+		"wip/threads/TH-0003-key.md": thread("TH-0003", "Which key?", "answered",
+			"2026-10-20T09:00:00Z claude", "Which key does the deploy use?",
+			"2026-10-20T09:01:00Z alex", "The key is AKIAIOSFODNN7EXAMPLE."),
+	} {
+		file := filepath.Join(root, filepath.FromSlash(path))
+		if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(file, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return root
+}
+
+// harvested is each candidate's kind, source, and time, one string each.
+func harvested(list []digest.Candidate) []string {
+	out := []string{}
+	for _, c := range list {
+		out = append(out, c.Kind+" "+c.Source+" "+c.At)
+	}
+	return out
+}
+
+// S-0429 criterion 1: harvest lists every candidate with its kind, source,
+// where in it, date, title, and the entries citing it, then a count by kind;
+// --json is the candidates with every field.
+func TestDigestHarvest(t *testing.T) {
+	root := seedProject(t)
+	if err := os.Remove(filepath.Join(root, "wip", "threads", "TH-0003-key.md")); err != nil {
+		t.Fatal(err)
+	}
+	if out, errOut, code := runIn(t, root, "digest", "new", "Left is cheaper", "--kind", "answer", "--source", "I-0001"); code != 0 {
+		t.Fatalf("digest new: %d %s %s", code, out, errOut)
+	}
+	out, errOut, code := runIn(t, root, "digest", "harvest")
+	if code != 0 {
+		t.Fatalf("digest harvest: %d %s", code, errOut)
+	}
+	want := "answer         2026-10-19 TH-0001 2026-10-19T10:05:00Z: Which shape: Left.\n" +
+		"answer         2026-10-19 TH-0001 2026-10-19T10:10:00Z: Which shape: Narrow, too.\n" +
+		"decision       2026-10-20 S-0001 wip/archive/agents/S-0001.md: Keep one file per entry.\n" +
+		"cause          2026-10-21 I-0001: I-0001 went wrong  (cited by D-0001)\n" +
+		"recommendation 2026-10-22 TH-0002 2026-10-22T08:02:00Z: Which store: Files: git keeps them.\n" +
+		"5 candidates, 4 cited by no entry: 1 decision, 2 answer, 1 recommendation, 1 cause\n"
+	if out != want {
+		t.Errorf("harvest text:\n%s\nwant:\n%s", out, want)
+	}
+	if files := digestFiles(t, root); len(files) != 1 {
+		t.Errorf("harvest writes nothing: %v", files)
+	}
+
+	out, _, code = runIn(t, root, "digest", "harvest", "--json")
+	var got []digest.Candidate
+	if err := json.Unmarshal([]byte(out), &got); err != nil || code != 0 {
+		t.Fatalf("harvest --json: %d %v %s", code, err, out)
+	}
+	if len(got) != 5 {
+		t.Fatalf("harvest --json: %+v", got)
+	}
+	if c := got[4]; c.Kind != "recommendation" || c.Source != "TH-0002" || c.Ref != "2026-10-22T08:02:00Z" || c.Date != "2026-10-22" || c.Text != "Files: git keeps them." || c.Overruled != "A database." || c.Question != "Files or a database?" || c.Topics == nil || c.Paths == nil {
+		t.Errorf("the recommendation, every field: %+v", c)
+	}
+	if c := got[3]; strings.Join(c.CitedBy, ",") != "D-0001" || c.Fix != "S-0001: numbers come from every branch." {
+		t.Errorf("the cause, cited by D-0001: %+v", c)
+	}
+}
+
+// S-0429 criterion 1: --since keeps what was learned on or after it, as a
+// day or a time; --kind keeps its kinds, repeated or comma separated; a
+// --since or --kind with nothing to list is [] and "no candidates".
+func TestDigestHarvestSinceAndKind(t *testing.T) {
+	root := seedProject(t)
+	for _, c := range []struct {
+		args []string
+		want []string
+	}{
+		{[]string{"--since", "2026-10-21"}, []string{"cause I-0001 2026-10-21T09:00:00Z", "recommendation TH-0002 2026-10-22T08:02:00Z"}},
+		{[]string{"--since", "2026-10-20T12:00:00Z"}, []string{"decision S-0001 2026-10-20T12:00:00Z", "cause I-0001 2026-10-21T09:00:00Z", "recommendation TH-0002 2026-10-22T08:02:00Z"}},
+		{[]string{"--kind", "cause", "--kind", "recommendation"}, []string{"cause I-0001 2026-10-21T09:00:00Z", "recommendation TH-0002 2026-10-22T08:02:00Z"}},
+		{[]string{"--kind", "answer,decision", "--since", "2026-10-20"}, []string{"answer TH-0003 2026-10-20T09:01:00Z", "decision S-0001 2026-10-20T12:00:00Z"}},
+		{[]string{"--since", "2026-11-01"}, []string{}},
+	} {
+		out, errOut, code := runIn(t, root, append([]string{"digest", "harvest", "--json"}, c.args...)...)
+		var got []digest.Candidate
+		if err := json.Unmarshal([]byte(out), &got); err != nil || code != 0 {
+			t.Fatalf("%v: %d %v %s %s", c.args, code, err, out, errOut)
+		}
+		if strings.Join(harvested(got), "|") != strings.Join(c.want, "|") {
+			t.Errorf("%v: %v\nwant %v", c.args, harvested(got), c.want)
+		}
+	}
+	if out, _, _ := runIn(t, root, "digest", "harvest", "--since", "2026-11-01", "--json"); strings.TrimSpace(out) != "[]" {
+		t.Errorf("nothing to list is [], not null: %q", out)
+	}
+	if out, _, _ := runIn(t, root, "digest", "harvest", "--since", "2026-11-01"); out != "no candidates\n" {
+		t.Errorf("text when empty: %q", out)
+	}
+}
+
+// harvest and seed refuse a --since that is not a date, and harvest a
+// --kind that is none of the kinds, each saying what to give.
+func TestDigestHarvestRefusesABadSinceOrKind(t *testing.T) {
+	root := seedProject(t)
+	for _, c := range []struct {
+		args []string
+		want []string
+	}{
+		{[]string{"digest", "harvest", "--kind", "answer,rumour"}, []string{"rumour", "is none of decision, answer, recommendation, cause; give one of them"}},
+		{[]string{"digest", "harvest", "--since", "last week"}, []string{"last week", "give a day, YYYY-MM-DD in UTC"}},
+		{[]string{"digest", "seed", "--since", "2026-13-01"}, []string{"2026-13-01", "give a day, YYYY-MM-DD in UTC"}},
+	} {
+		_, errOut, code := runIn(t, root, c.args...)
+		for _, want := range c.want {
+			if code != 1 || !strings.Contains(errOut, want) {
+				t.Errorf("%v: code %d, want 1 and %q in:\n%s", c.args, code, want, errOut)
+			}
+		}
+	}
+	if files := digestFiles(t, root); files != nil {
+		t.Errorf("nothing is written: %v", files)
+	}
+}
+
+// S-0429 criterion 3: seed writes an entry for each answer, overruled
+// recommendation, and cause, never a decision; the secret-shaped answer the
+// check refuses is skipped and named by its rule, never its text, while the
+// rest are written; a second run writes nothing.
+func TestDigestSeed(t *testing.T) {
+	root := seedProject(t)
+	out, errOut, code := runIn(t, root, "digest", "seed")
+	if code != 0 {
+		t.Fatalf("digest seed: %d %s %s", code, out, errOut)
+	}
+	want := "D-0001 answer TH-0001 Which shape: Left\n" +
+		"D-0002 answer TH-0001 Which shape: Narrow, too\n" +
+		"D-0003 cause I-0001 I-0001 went wrong\n" +
+		"D-0004 recommendation TH-0002 Which store: Files: git keeps them\n" +
+		"skipped answer TH-0003 2026-10-20T09:01:00Z: refused: digest.secret\n" +
+		"answer:         listed 3, written 2, skipped 1\n" +
+		"recommendation: listed 1, written 1, skipped 0\n" +
+		"cause:          listed 1, written 1, skipped 0\n"
+	if out != want {
+		t.Errorf("seed text:\n%s\nwant:\n%s", out, want)
+	}
+	files := digestFiles(t, root)
+	if len(files) != 4 {
+		t.Fatalf("four entries are written: %v", files)
+	}
+	for _, f := range files {
+		data, _ := os.ReadFile(filepath.Join(root, "design", "digest", f))
+		if strings.Contains(string(data), "AKIA") {
+			t.Errorf("%s holds the key", f)
+		}
+	}
+
+	out, errOut, code = runIn(t, root, "digest", "seed", "--json")
+	if code != 0 {
+		t.Fatalf("second digest seed: %d %s %s", code, out, errOut)
+	}
+	var res digest.SeedResult
+	if err := json.Unmarshal([]byte(out), &res); err != nil {
+		t.Fatalf("json: %v\n%s", err, out)
+	}
+	var reasons []string
+	for _, s := range res.Skipped {
+		reasons = append(reasons, s.Source+" "+s.Reason)
+	}
+	wantReasons := "TH-0001 cited by D-0001|TH-0001 cited by D-0002|TH-0003 refused: digest.secret|I-0001 cited by D-0003|TH-0002 cited by D-0004"
+	if res.Written == nil || len(res.Written) != 0 || res.DryRun || strings.Join(reasons, "|") != wantReasons || res.Listed["answer"] != 3 || res.Listed["cause"] != 1 {
+		t.Errorf("a second run writes nothing: %+v\nreasons %q", res, reasons)
+	}
+	if files := digestFiles(t, root); len(files) != 4 {
+		t.Errorf("still four entries: %v", files)
+	}
+}
+
+// S-0429 criterion 3: a dry run prints what it would write and writes
+// nothing; --json gives the result with no IDs, and an answer with a key's
+// shape is skipped as the real run skips it.
+func TestDigestSeedDryRun(t *testing.T) {
+	root := seedProject(t)
+	out, errOut, code := runIn(t, root, "digest", "seed", "--dry-run", "--since", "2026-10-21")
+	if code != 0 {
+		t.Fatalf("digest seed --dry-run: %d %s %s", code, out, errOut)
+	}
+	want := "would write cause I-0001 I-0001 went wrong\n" +
+		"would write recommendation TH-0002 Which store: Files: git keeps them\n" +
+		"answer:         listed 0, would write 0, skipped 0\n" +
+		"recommendation: listed 1, would write 1, skipped 0\n" +
+		"cause:          listed 1, would write 1, skipped 0\n"
+	if out != want {
+		t.Errorf("dry run text:\n%s\nwant:\n%s", out, want)
+	}
+
+	out, _, code = runIn(t, root, "digest", "seed", "--dry-run", "--json")
+	var res digest.SeedResult
+	if err := json.Unmarshal([]byte(out), &res); err != nil || code != 0 {
+		t.Fatalf("dry run --json: %d %v %s", code, err, out)
+	}
+	refused := len(res.Skipped) == 1 && res.Skipped[0].Source == "TH-0003" && res.Skipped[0].Reason == "refused: digest.secret"
+	if !res.DryRun || len(res.Written) != 4 || res.Written[0].ID != "" || res.Written[0].Path != "" || res.Written[0].Kind != "answer" || !refused {
+		t.Errorf("dry run --json: %+v", res)
+	}
+	if strings.Contains(out, "AKIA") {
+		t.Errorf("a dry run printed the key: %s", out)
+	}
+	if files := digestFiles(t, root); files != nil {
+		t.Errorf("a dry run writes nothing: %v", files)
+	}
+}

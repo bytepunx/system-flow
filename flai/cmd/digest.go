@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -25,7 +26,7 @@ answer on a thread, a recommendation the operator confirmed or overruled, or
 an issue's cause and fix. flai writes and checks each entry's front matter,
 and nothing in the folder is ever deleted.`,
 	}
-	c.AddCommand(newDigestNewCmd(a), newDigestEditCmd(a), newDigestListCmd(a), newDigestShowCmd(a))
+	c.AddCommand(newDigestNewCmd(a), newDigestEditCmd(a), newDigestListCmd(a), newDigestShowCmd(a), newDigestHarvestCmd(a), newDigestSeedCmd(a))
 	return c
 }
 
@@ -332,6 +333,192 @@ D-0007. --json gives the entry.`,
 			return nil
 		},
 	}
+}
+
+func newDigestHarvestCmd(a *app) *cobra.Command {
+	var since string
+	var kinds []string
+	c := &cobra.Command{
+		Use:   "harvest",
+		Short: "List the facts the digest could record: answers, recommendations, decisions, and causes",
+		Long: `List every candidate for the digest in this checkout, learned on or after
+--since, or every one when it is not given: the operator's answers and the
+recommendations the operator overruled on every thread, resolved or not, the
+decisions in done stories' narratives, and the causes and fixes of closed
+issues. It is deterministic and writes nothing, so the curator reads the same
+list every run.
+
+Each line gives the candidate's kind, its date, its source with where in it
+(the thread entry's time, or the narrative's path), its title, and the
+entries that already cite the source; the last line counts them by kind.
+--since is a day, YYYY-MM-DD in UTC, or an RFC 3339 time. --kind keeps the
+candidates of that kind (` + strings.Join(digest.Kinds, ", ") + `), repeatable or
+comma separated. --json gives an array of the candidates with every field,
+their topics, paths, and text included, [] when none.`,
+		Example: `  flai digest harvest --since 2026-10-01
+  flai digest harvest --kind answer,recommendation --json`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			from, err := digestSince(since)
+			if err != nil {
+				return err
+			}
+			for _, k := range kinds {
+				if !slices.Contains(digest.Kinds, strings.TrimSpace(k)) {
+					return fmt.Errorf("--kind %q is none of %s; give one of them", k, strings.Join(digest.Kinds, ", "))
+				}
+			}
+			repo, err := a.project()
+			if err != nil {
+				return err
+			}
+			list, err := digest.Harvest(repo, from, kinds)
+			if err != nil {
+				return err
+			}
+			if a.jsonOut {
+				return a.printJSON(list)
+			}
+			if len(list) == 0 {
+				fmt.Fprintln(a.out, "no candidates")
+				return nil
+			}
+			count := map[string]int{}
+			uncited := 0
+			for _, cand := range list {
+				count[cand.Kind]++
+				cited := ""
+				if len(cand.CitedBy) > 0 {
+					cited = "  (cited by " + strings.Join(cand.CitedBy, ", ") + ")"
+				} else {
+					uncited++
+				}
+				title, _, _ := strings.Cut(cand.Title, "\n")
+				fmt.Fprintf(a.out, "%-14s %-10s %s: %s%s\n", cand.Kind, cand.Date, digestWhere(cand.Source, cand.Ref), title, cited)
+			}
+			var counts []string
+			for _, k := range digest.Kinds {
+				if count[k] > 0 {
+					counts = append(counts, fmt.Sprintf("%d %s", count[k], k))
+				}
+			}
+			fmt.Fprintf(a.out, "%d candidates, %d cited by no entry: %s\n", len(list), uncited, strings.Join(counts, ", "))
+			return nil
+		},
+	}
+	c.Flags().StringVar(&since, "since", "", "only the candidates learned on or after this day, YYYY-MM-DD in UTC, or this RFC 3339 time")
+	c.Flags().StringSliceVar(&kinds, "kind", nil, "only the candidates of this kind: "+strings.Join(digest.Kinds, ", ")+" (repeatable, or comma separated)")
+	return c
+}
+
+func newDigestSeedCmd(a *app) *cobra.Command {
+	var since string
+	var dryRun bool
+	c := &cobra.Command{
+		Use:   "seed",
+		Short: "Write a digest entry for each operator answer and closed issue's cause no entry records yet",
+		Long: `Seed the digest in the checkout it runs in from what harvest lists, learned
+on or after --since, or all of it when it is not given. It writes an answer
+or recommendation entry for each answer the operator gave on a thread, and a
+cause entry for each closed issue with a cause and a fix, each dated the day
+it was learned and quoting its source. It never seeds decisions: a model
+judges which of them a design document already records.
+
+A source an entry already records is skipped: an issue any entry cites, or a
+thread's answer when an entry citing the thread holds the answer's time. So
+a second run writes nothing. Each entry is checked as flai digest new checks
+it; one the check refuses, such as an answer with the shape of a key or
+token, is skipped and named by the rules it broke, never its text, and the
+rest are written.
+
+Each entry written is printed with its ID, kind, source, and title, and each
+skipped one with its reason, then the candidates listed, written, and
+skipped by kind. --dry-run prints what would be written and writes nothing.
+--json gives the result: listed by kind, written, skipped, and dry_run. A
+skipped entry is not an error: the exit code is 0 unless the seed fails.`,
+		Example: `  flai digest seed --dry-run
+  flai digest seed --since 2026-10-01 --json`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			from, err := digestSince(since)
+			if err != nil {
+				return err
+			}
+			repo, err := a.project()
+			if err != nil {
+				return err
+			}
+			res, err := digest.Seed(repo, a.runner, digest.SeedOptions{Since: from, DryRun: dryRun})
+			if err != nil {
+				if len(res.Written) > 0 && !a.jsonOut {
+					a.printSeedResult(res)
+				}
+				return err
+			}
+			if a.jsonOut {
+				return a.printJSON(res)
+			}
+			a.printSeedResult(res)
+			return nil
+		},
+	}
+	c.Flags().StringVar(&since, "since", "", "only the candidates learned on or after this day, YYYY-MM-DD in UTC, or this RFC 3339 time")
+	c.Flags().BoolVar(&dryRun, "dry-run", false, "print what would be written and write nothing")
+	return c
+}
+
+// printSeedResult prints each entry seed wrote, or would write, each it
+// skipped with its reason, and the counts by kind.
+func (a *app) printSeedResult(res digest.SeedResult) {
+	written := "written"
+	if res.DryRun {
+		written = "would write"
+	}
+	for _, w := range res.Written {
+		lead := w.ID
+		if res.DryRun {
+			lead = "would write"
+		}
+		fmt.Fprintf(a.out, "%s %s %s %s\n", lead, w.Kind, w.Source, w.Title)
+	}
+	for _, s := range res.Skipped {
+		title := ""
+		if s.Title != "" {
+			title = " " + s.Title
+		}
+		fmt.Fprintf(a.out, "skipped %s %s%s: %s\n", s.Kind, digestWhere(s.Source, s.Ref), title, s.Reason)
+	}
+	tally := res.ByKind()
+	for _, k := range digest.Kinds {
+		t, ok := tally[k]
+		if !ok {
+			continue
+		}
+		fmt.Fprintf(a.out, "%-15s listed %d, %s %d, skipped %d\n", k+":", t.Listed, written, t.Written, t.Skipped)
+	}
+}
+
+// digestSince is the time --since gives, a day in UTC or an RFC 3339 time,
+// or the zero time, every candidate, when it is empty.
+func digestSince(s string) (time.Time, error) {
+	if s == "" {
+		return time.Time{}, nil
+	}
+	if t, err := time.Parse(time.DateOnly, s); err == nil {
+		return t, nil
+	}
+	if t, err := time.Parse(time.RFC3339, s); err == nil {
+		return t, nil
+	}
+	return time.Time{}, fmt.Errorf("--since %q is not a date: give a day, YYYY-MM-DD in UTC, such as 2026-10-01, or an RFC 3339 time, such as 2026-10-01T12:00:00Z", s)
+}
+
+// digestWhere is a candidate's source, followed by where in it when it says.
+func digestWhere(source, ref string) string {
+	if ref == "" {
+		return source
+	}
+	return source + " " + ref
 }
 
 // digestList is a list as the text output shows it: comma separated, or -

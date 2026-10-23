@@ -127,11 +127,18 @@ func TestSeedSkipsARefusedEntryAndGoesOn(t *testing.T) {
 	write(t, r.Root, "wip/threads/TH-0003-key.md", threadFile("TH-0003", "Which key?", "answered",
 		"2026-10-20T09:00:00Z claude", "Which key does the deploy use?",
 		"2026-10-20T09:01:00Z alex", "The key is AKIAIOSFODNN7EXAMPLE."))
+	dry, err := Seed(r, fakeGit{}, SeedOptions{DryRun: true})
+	if err != nil {
+		t.Fatal(err)
+	}
 	res, err := Seed(r, fakeGit{}, SeedOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := []SeedSkip{{Kind: "answer", Source: "TH-0003", Ref: "2026-10-20T09:01:00Z", Reason: "refused: digest.secret"}}
+	if len(dry.Skipped) != 1 || dry.Skipped[0].Source != "TH-0003" || dry.Skipped[0].Reason != want[0].Reason || len(dry.Written) != len(seeded) {
+		t.Errorf("a dry run skips what the real run refuses: %+v", dry)
+	}
 	if !reflect.DeepEqual(res.Skipped, want) || len(res.Written) != 4 || res.Listed["answer"] != 3 {
 		t.Errorf("written %+v\nskipped %+v", res.Written, res.Skipped)
 	}

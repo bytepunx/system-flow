@@ -348,7 +348,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--dir` | [flai self-upgrade](../users/flai-reference.md#flai-self-upgrade) |
 | `--draft` | [flai edit](../users/flai-reference.md#flai-edit), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--drafts` | [flai promote](../users/flai-reference.md#flai-promote) |
-| `--dry-run` | [flai accept](../users/flai-reference.md#flai-accept), [flai archive](../users/flai-reference.md#flai-archive), [flai import](../users/flai-reference.md#flai-import), [flai migrate ids](../users/flai-reference.md#flai-migrate-ids), [flai move](../users/flai-reference.md#flai-move), [flai push](../users/flai-reference.md#flai-push), [flai release](../users/flai-reference.md#flai-release), [flai template push](../users/flai-reference.md#flai-template-push), [flai upgrade](../users/flai-reference.md#flai-upgrade) |
+| `--dry-run` | [flai accept](../users/flai-reference.md#flai-accept), [flai archive](../users/flai-reference.md#flai-archive), [flai digest seed](../users/flai-reference.md#flai-digest-seed), [flai import](../users/flai-reference.md#flai-import), [flai migrate ids](../users/flai-reference.md#flai-migrate-ids), [flai move](../users/flai-reference.md#flai-move), [flai push](../users/flai-reference.md#flai-push), [flai release](../users/flai-reference.md#flai-release), [flai template push](../users/flai-reference.md#flai-template-push), [flai upgrade](../users/flai-reference.md#flai-upgrade) |
 | `--epic` | [flai issue story](../users/flai-reference.md#flai-issue-story), [flai prime](../users/flai-reference.md#flai-prime), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--evaluate` | [flai release](../users/flai-reference.md#flai-release) |
 | `--evidence` | [flai accept](../users/flai-reference.md#flai-accept), [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue new](../users/flai-reference.md#flai-issue-new), [flai move](../users/flai-reference.md#flai-move), [flai queue add](../users/flai-reference.md#flai-queue-add) |
@@ -374,7 +374,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--keep-placed` | [flai order](../users/flai-reference.md#flai-order) |
 | `--keep-removal` | [flai accept](../users/flai-reference.md#flai-accept), [flai move](../users/flai-reference.md#flai-move) |
 | `--key-env` | [flai serve agent provider](../users/flai-reference.md#flai-serve-agent-provider) |
-| `--kind` | [flai digest new](../users/flai-reference.md#flai-digest-new) |
+| `--kind` | [flai digest harvest](../users/flai-reference.md#flai-digest-harvest), [flai digest new](../users/flai-reference.md#flai-digest-new) |
 | `--last` | [flai verify](../users/flai-reference.md#flai-verify) |
 | `-n`, `--last` | [flai serve journal](../users/flai-reference.md#flai-serve-journal) |
 | `--layout` | [flai import](../users/flai-reference.md#flai-import), [flai new](../users/flai-reference.md#flai-new) |
@@ -438,7 +438,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--settled` | [flai message reply](../users/flai-reference.md#flai-message-reply) |
 | `--setup` | [flai components config](../users/flai-reference.md#flai-components-config) |
 | `--show` | [flai edit](../users/flai-reference.md#flai-edit) |
-| `--since` | [flai stats](../users/flai-reference.md#flai-stats) |
+| `--since` | [flai digest harvest](../users/flai-reference.md#flai-digest-harvest), [flai digest seed](../users/flai-reference.md#flai-digest-seed), [flai stats](../users/flai-reference.md#flai-stats) |
 | `--source` | [flai digest edit](../users/flai-reference.md#flai-digest-edit), [flai digest new](../users/flai-reference.md#flai-digest-new), [flai thread reply](../users/flai-reference.md#flai-thread-reply) |
 | `--spend-key-env` | [flai serve agent provider](../users/flai-reference.md#flai-serve-agent-provider) |
 | `--status` | [flai adr new](../users/flai-reference.md#flai-adr-new), [flai digest list](../users/flai-reference.md#flai-digest-list) |
