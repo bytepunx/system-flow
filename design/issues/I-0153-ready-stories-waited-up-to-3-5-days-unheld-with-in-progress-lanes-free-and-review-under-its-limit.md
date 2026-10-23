@@ -2,12 +2,12 @@
 id: I-0153
 title: Ready stories waited up to 3.5 days unheld with in-progress lanes free and review under its limit
 class: impression
-status: open
+status: closed
 count: 1
 cost: 75h
 first_reported: 2026-10-15T22:48:48Z
 last_reported: 2026-10-15T22:48:48Z
-updated: 2026-10-21T11:58:17Z
+updated: 2026-10-23T06:08:11Z
 usage:
   strategic:
     - kind: analyzer
@@ -49,3 +49,4 @@ flai stats items queue_time_seconds S-0216 305,070, S-0215 303,610, S-0214 301,4
 Found by the analysis in [2026-10-15-bottlenecks.md](../analysis/2026-10-15-bottlenecks.md).
 
 Story S-0469 remediates this issue, created from it at 2026-10-21T11:58:17Z.
+Closed 2026-10-23T06:08:11Z: S-0469: the 75 h were not unheld ready wait. The operator sent S-0212 to S-0216 back to backlog on 2026-10-04 and made them ready again on 2026-10-07; queue time, started - committed, counted the 269,000 s in backlog, and their time in ready was held almost whole. ADR-0190 makes queue time the time in ready before started, which flai stats now derives, so queue time minus held_seconds is the unheld ready wait.
