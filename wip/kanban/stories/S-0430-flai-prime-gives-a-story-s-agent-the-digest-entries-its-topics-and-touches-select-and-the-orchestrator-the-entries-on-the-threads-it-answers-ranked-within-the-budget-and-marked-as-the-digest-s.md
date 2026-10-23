@@ -3,15 +3,21 @@ id: S-0430
 type: story
 nature: feature
 title: flai prime gives a story's agent the digest entries its topics and touches select, and the orchestrator the entries on the threads it answers, ranked within the budget and marked as the digest's
-status: backlog
+status: in-progress
 parent: E-0025
 owner: alex
 created: 2026-10-16T05:58:39Z
-updated: 2026-10-23T17:56:28Z
-transitions: []
+updated: 2026-10-23T19:30:00Z
+transitions:
+  - to: ready
+    at: 2026-10-23T19:11:25Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-23T19:12:05Z
+    by: agent-S-0430
 tags: [cli, template]
 topics: [cli, conventions, orchestration]
-touches: [design/adrs, design/adrs/README.md, design/conventions/strategic-agents.md, design/conventions/work-management.md, design/system/agent-context.md, design/system/agent-narrative.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/prime.go, flai/cmd/prime_test.go, flai/internal/context/context.go, flai/internal/context/design.go, flai/internal/context/digest.go, flai/internal/context/digest_test.go, flai/internal/context/items.go, flai/internal/context/rank.go, flai/internal/context/story.go, flai/internal/context/strategic.go, flai/internal/context/strategic_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/prime_test.go, flai/internal/mcpserver/server_test.go, template/CHANGELOG.md, template/root/design/conventions/strategic-agents.md, template/root/design/conventions/work-management.md, template/template.yaml]
+touches: [design/adrs, design/adrs/README.md, design/conventions/strategic-agents.md, design/conventions/work-management.md, design/system/agent-context.md, design/system/agent-narrative.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/prime.go, flai/cmd/prime_test.go, flai/internal/context/context.go, flai/internal/context/design.go, flai/internal/context/digest.go, flai/internal/context/digest_test.go, flai/internal/context/items.go, flai/internal/context/rank.go, flai/internal/context/story.go, flai/internal/context/strategic.go, flai/internal/context/strategic_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/prime_test.go, flai/internal/mcpserver/server_test.go, template/CHANGELOG.md, template/root/design/conventions/strategic-agents.md, template/root/design/conventions/work-management.md, template/template.yaml, flai/internal/inbox/inbox.go, flai/internal/threads/threads.go]
 after: [S-0429]
 agent:
   harness: claude-code
@@ -19,20 +25,33 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1074
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-23
+      ceremony: 1
+      hand_edits: 1
+      work: 35
+  models:
+    - model: claude-opus-5-5
+      input: 164
+      output: 937
+      cache_read: 9963720
+      cache_write: 449025
+      cost: 3.52
   strategic:
     - kind: orchestrator
-      seconds: 487
+      seconds: 709
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 45
-          output: 728
-          cache_read: 4635880
-          cache_write: 15211
-          cost: 1.0232
+          input: 54
+          output: 866
+          cache_read: 6824311
+          cache_write: 20492
+          cost: 1.5057
 cost_of_delay:
   value: 93.33
   by: planner-S-0430
@@ -55,8 +74,8 @@ What a past story decided, or the operator answered, reaches the next agent that
 
 ## Acceptance criteria
 
-- [ ] An ADR, refining ADR-0049 and ADR-0075, records the digest step: which entries a story's pack selects (topics, paths against the claim), where they rank among the ranked sections, how a compacted entry loads (its one-line title, as a brief), that an absorbed entry never loads, how much of the budget the step may take, and what the orchestrator's pack selects; the sub-agents' packs take entries as briefs only.
-- [ ] `flai/internal/context` adds the step: each entry carries `step: digest`, its reason (`topics: ...`, `path: ...`, `rank n`), and its size in text and `--json`; a test packs a fixture story whose topics select one entry, whose touches select another, and whose budget leaves out a third, and a fixture with an absorbed entry that never loads.
+- [x] An ADR, refining ADR-0049 and ADR-0075, records the digest step: which entries a story's pack selects (topics, paths against the claim), where they rank among the ranked sections, how a compacted entry loads (its one-line title, as a brief), that an absorbed entry never loads, how much of the budget the step may take, and what the orchestrator's pack selects; the sub-agents' packs take entries as briefs only.
+- [x] `flai/internal/context` adds the step: each entry carries `step: digest`, its reason (`topics: ...`, `path: ...`, `rank n`), and its size in text and `--json`; a test packs a fixture story whose topics select one entry, whose touches select another, and whose budget leaves out a third, and a fixture with an absorbed entry that never loads.
 - [ ] `flai prime --role orchestrate`, as text, `--json`, and the MCP `prime` with role `orchestrate`, includes the answer and recommendation entries ranked against the titles and first entries of the threads awaiting the operator, within the budget; a test shows an entry ranked first for a thread that asks its question again.
 - [ ] A `source` on `thread_reply` may name an entry's path, and the orchestrator's prompt and the convention `strategic-agents.md` say to cite the entry when one answers the question.
 - [ ] The convention `work-management.md` (template and here) and `design/system/agent-narrative.md` say an agent cites `D-nnnn` in its narrative or thread when it relies on an entry, and asks the operator only what no entry answers; `design/system/agent-context.md`, `docs/users/flai.md`, and `template/CHANGELOG.md` describe the step.

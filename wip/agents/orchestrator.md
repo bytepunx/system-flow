@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1397.1831
-accrued_seconds: 1229946
-tasks_completed: 981
-last_run: 2026-10-23T19:00:30Z
+accrued_cost: 1406.1224
+accrued_seconds: 1231730
+tasks_completed: 983
+last_run: 2026-10-23T19:30:14Z
 ---
 
 # Orchestrator activity
@@ -6878,6 +6878,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0429, S-0487
 - Seconds: 1163
 - Cost: 2.9532 USD, estimated
+
+### 2026-10-23T19:11:36Z
+
+- Summary: S-0429 landed through the merge queue (re-enqueued by its agent, verified by me at dae76a34), with the I-0200 fix that unbreaks main's integration tier. Under promote_to_ready, moved S-0430 to ready as candidate 1 by throughput (1h3m, 93.33 USD/week), no longer held after S-0429; S-0241 (rank 2, 2h) stays out, blocked. Under order_ready, applied flai order --by throughput: S-0430 alone. Under publish, judgement: not published; pending S-0428, S-0429, S-0466, S-0467, S-0468, S-0469, S-0470, S-0476, S-0477, S-0478 (21259.48 USD/week), and ADR-0186 and ADR-0189 still proposed (TH-0600).
+- Items: S-0429, S-0430, S-0241
+- Seconds: 666
+- Cost: 1.4475 USD, estimated
+
+### 2026-10-23T19:30:14Z
+
+- Summary: Enqueued S-0489 at d75b8189, second in the queue behind S-0487 (batch 20261023-192227 verifying smoke); no value (no inputs). flai verify passed at the head (integration and smoke queued). The verifier matched both criteria within touches: the Host link in the rail's Configuration group, and the Addresses area writing dashboard.allowed_hosts through settings.dashboard_hosts behind the settings host action, with the events socket still refusing unlisted origins and the settings index and guides updated; ADR-0193 proposed. Under plan_backlog_stories resolved planner-S-0489's TH-0619 (cost of delay input moot for a built story; still the operator's to set), which would have held the story out of the queue.
+- Items: S-0489, S-0487
+- Seconds: 1118
+- Cost: 7.4918 USD, estimated
 
 ## Refusals
 

@@ -3,15 +3,36 @@ id: T-1818
 type: task
 nature: feature
 title: "An ADR records the pack's digest step: what a story's pack and the orchestrator's select, how entries rank and load, and what part of the budget they may take"
-status: backlog
+status: done
 parent: S-0430
 owner: alex
 created: 2026-10-16T06:04:32Z
-updated: 2026-10-16T06:04:32Z
-transitions: []
+updated: 2026-10-23T19:14:42Z
+transitions:
+  - to: ready
+    at: 2026-10-23T19:13:45Z
+    by: agent-S-0430
+  - to: in-progress
+    at: 2026-10-23T19:13:46Z
+    by: agent-S-0430
+  - to: done
+    at: 2026-10-23T19:14:42Z
+    by: agent-S-0430
 stream: S-0430
 tags: [cli]
 touches: [design/adrs, design/adrs/README.md]
+usage:
+  source: log
+  seconds: 56
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 10
+      output: 55
+      cache_read: 810434
+      cache_write: 7477
+      cost: 0.2765
 ---
 # T-1818 An ADR records the pack's digest step: what a story's pack and the orchestrator's select, how entries rank and load, and what part of the budget they may take
 

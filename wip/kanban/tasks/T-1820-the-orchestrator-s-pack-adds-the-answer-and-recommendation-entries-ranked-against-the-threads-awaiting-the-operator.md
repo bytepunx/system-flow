@@ -3,16 +3,37 @@ id: T-1820
 type: task
 nature: feature
 title: The orchestrator's pack adds the answer and recommendation entries ranked against the threads awaiting the operator
-status: backlog
+status: done
 parent: S-0430
 owner: alex
 created: 2026-10-16T06:04:49Z
-updated: 2026-10-16T06:04:49Z
-transitions: []
+updated: 2026-10-23T19:30:00Z
+transitions:
+  - to: ready
+    at: 2026-10-23T19:24:51Z
+    by: agent-S-0430
+  - to: in-progress
+    at: 2026-10-23T19:24:52Z
+    by: agent-S-0430
+  - to: done
+    at: 2026-10-23T19:29:59Z
+    by: agent-S-0430
 stream: S-0430
 tags: [cli]
-touches: [flai/internal/context/strategic.go, flai/internal/context/strategic_test.go]
+touches: [flai/internal/context/strategic.go, flai/internal/context/strategic_test.go, flai/internal/inbox/inbox.go, flai/internal/threads/threads.go]
 after: [T-1819]
+usage:
+  source: log
+  seconds: 305
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 48
+      output: 249
+      cache_read: 2838913
+      cache_write: 103091
+      cost: 0.9945
 ---
 # T-1820 The orchestrator's pack adds the answer and recommendation entries ranked against the threads awaiting the operator
 

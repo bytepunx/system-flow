@@ -3,10 +3,10 @@ id: S-0487
 type: story
 nature: improvement
 title: A close-out's second round runs go-test again when the rebase regenerates design/issues/summary.md, which changes the branch's patch id, so a close-out main outruns still takes about 11 minutes with the queue on
-status: review
+status: done
 owner: alex
 created: 2026-10-23T17:43:16Z
-updated: 2026-10-23T18:33:10Z
+updated: 2026-10-23T19:33:47Z
 transitions:
   - to: ready
     at: 2026-10-23T18:08:42Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-23T18:33:10Z
     by: agent-S-0487
+  - to: done
+    at: 2026-10-23T19:33:47Z
+    by: orchestrator
 tags: [cli]
 topics: [cli]
 touches: [flai/internal/verify/paths.go, flai/internal/verify/paths_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/cmd/verify.go, design/adrs, design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0196-a-close-out-s-second-round-runs-go-test-again-when-the-rebase-regenerates-design-issues-summary-md-which-changes-the-branch-s-patch-id-so-a-close-out-main-outruns-still-takes-about-11-minutes-with-the-queue-on.md, design/issues/summary.md, design/issues/I-0201-flai-test-runs-go-test-with-short-so-a-real-git-test-a-task-adds-is-skipped-until-the-integration-tier-runs-in-the-merge-queue-s-batch.md]
@@ -44,21 +47,21 @@ usage:
       cost: 4.8137
   strategic:
     - kind: orchestrator
-      seconds: 1688
+      seconds: 2247
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 178
-          output: 2964
-          cache_read: 38852615
-          cache_write: 44912
-          cost: 8.5555
+          input: 241
+          output: 4035
+          cache_read: 55441400
+          cache_write: 57971
+          cost: 12.207
         - model: claude-sonnet-5-5
-          input: 22
-          output: 507
-          cache_read: 348737
-          cache_write: 69532
-          cost: 0.2885
+          input: 29
+          output: 948
+          cache_read: 458396
+          cache_write: 96551
+          cost: 0.383
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 6m
@@ -112,3 +115,14 @@ Touches. `flai touches suggest` had nothing to start from (the story declared no
 Forecast. `flai forecast` gave 23m: 89 s per unit of size over 93 done improvement stories on claude-opus-5-5, size 15 (2 criteria, 13 touches), delivery 2026-10-24T12:22Z as 28th in the pull order. Raised to 45m: the three verify remediations this one resembles, each a verify change with an ADR, docs, and an issue close, took 35m (S-0374), 44m (S-0466), and 77m (S-0405) of agent time, and this one has two git-fixture tests to write and four tasks closed one after another by one agent. Delivery moved by the 22m added, to 2026-10-24T12:45Z.
 
 Cost of delay. `flai cod` gives 15.00 USD a week from the inputs flai set (6m per 168h cycle at 150 USD an hour), and the value stands at that: the inputs are not mine to change. They understate it: the issue says every story that records or closes an issue meets this whenever main moves during its close-out, and each occurrence is about six minutes of a close-out that also outlives the 600000 ms call.
+
+### Accepted by the orchestrator
+
+- Verified: ce13fa6ddc8c5092a450c9fb5d56964bd994e5f5
+- Batch: 20261023-192227
+- Enqueued verified: 5bb483d7454ecc73682bbaf93bf5aca58679d11b
+- At: 2026-10-23T19:33:47Z
+
+Verdict: pass. The patch id now leaves out only design/issues/summary.md, the path issues.Generated names, a real-git test reproduces I-0196, and every changed file is within the story's touches.
+- 1: flai/internal/verify/paths.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/verify/paths_test.go
+- 2: design/issues/I-0196-a-close-out-s-second-round-runs-go-test-again-when-the-rebase-regenerates-design-issues-summary-md-which-changes-the-branch-s-patch-id-so-a-close-out-main-outruns-still-takes-about-11-minutes-with-the-queue-on.md, design/issues/summary.md

@@ -3,16 +3,37 @@ id: T-1819
 type: task
 nature: feature
 title: "A story's pack and a sub-agent's add the digest step: entries selected by topics and claim, ranked within the budget, each marked as the digest's"
-status: backlog
+status: done
 parent: S-0430
 owner: alex
 created: 2026-10-16T06:04:41Z
-updated: 2026-10-23T16:50:28Z
-transitions: []
+updated: 2026-10-23T19:24:25Z
+transitions:
+  - to: ready
+    at: 2026-10-23T19:15:04Z
+    by: agent-S-0430
+  - to: in-progress
+    at: 2026-10-23T19:15:05Z
+    by: agent-S-0430
+  - to: done
+    at: 2026-10-23T19:24:25Z
+    by: agent-S-0430
 stream: S-0430
 tags: [cli]
 touches: [flai/internal/context/digest.go, flai/internal/context/digest_test.go, flai/internal/context/items.go, flai/internal/context/design.go, flai/internal/context/context.go, flai/internal/context/rank.go, flai/internal/context/story.go]
 after: [T-1818]
+usage:
+  source: log
+  seconds: 560
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 70
+      output: 379
+      cache_read: 3905126
+      cache_write: 168249
+      cost: 1.377
 ---
 # T-1819 A story's pack and a sub-agent's add the digest step: entries selected by topics and claim, ranked within the budget, each marked as the digest's
 

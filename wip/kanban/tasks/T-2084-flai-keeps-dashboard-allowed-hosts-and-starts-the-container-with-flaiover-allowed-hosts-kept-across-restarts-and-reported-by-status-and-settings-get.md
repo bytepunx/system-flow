@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1301
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 128
-      output: 639
-      cache_read: 7283175
-      cache_write: 330817
-      cost: 2.5724
+      input: 122
+      output: 40639
+      cache_read: 7509912
+      cache_write: 240335
+      cost: 3.7387
 ---
 # T-2084 flai keeps dashboard.allowed_hosts and starts the container with FLAIOVER_ALLOWED_HOSTS, kept across restarts and reported by status and settings.get
 

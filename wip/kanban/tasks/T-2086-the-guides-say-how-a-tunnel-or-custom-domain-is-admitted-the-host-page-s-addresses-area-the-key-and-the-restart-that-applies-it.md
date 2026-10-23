@@ -24,16 +24,16 @@ touches: [docs/users/flaiover.md, docs/operators/index.md]
 after: [T-2082, T-2085]
 usage:
   source: log
-  seconds: 103
+  seconds: 107
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 22
-      output: 153
-      cache_read: 1119775
-      cache_write: 55591
-      cost: 0.3971
+      input: 19
+      output: 6273
+      cache_read: 1159302
+      cache_write: 37100
+      cost: 0.5771
 ---
 # T-2086 The guides say how a tunnel or custom domain is admitted: the Host page's Addresses area, the key, and the restart that applies it
 

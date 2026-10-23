@@ -3,12 +3,18 @@ id: T-1821
 type: task
 nature: feature
 title: flai prime and the MCP prime carry the digest step, a thread_reply source may cite an entry, and the orchestrator's prompt says to cite the answer the operator gave last time
-status: backlog
+status: in-progress
 parent: S-0430
 owner: alex
 created: 2026-10-16T06:05:01Z
-updated: 2026-10-23T16:50:35Z
-transitions: []
+updated: 2026-10-23T19:30:16Z
+transitions:
+  - to: ready
+    at: 2026-10-23T19:30:15Z
+    by: agent-S-0430
+  - to: in-progress
+    at: 2026-10-23T19:30:16Z
+    by: agent-S-0430
 stream: S-0430
 tags: [cli]
 touches: [flai/cmd/prime.go, flai/cmd/prime_test.go, docs/users/flai-reference.md, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/prime_test.go, flai/internal/mcpserver/server_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go]

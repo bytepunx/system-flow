@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 248
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 40
-      output: 195
-      cache_read: 1759870
-      cache_write: 81505
-      cost: 0.6221
+      input: 30
+      output: 9828
+      cache_read: 1816214
+      cache_write: 58123
+      cost: 0.9042
 ---
 # T-2083 The dashboard's server accepts a request whose Origin names one of FLAIOVER_ALLOWED_HOSTS
 

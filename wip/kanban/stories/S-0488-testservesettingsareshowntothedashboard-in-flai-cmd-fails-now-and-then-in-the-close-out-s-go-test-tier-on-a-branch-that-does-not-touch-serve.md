@@ -21,6 +21,16 @@ usage:
   seconds: 0
   models: []
   strategic:
+    - kind: planner
+      seconds: 163
+      estimated: true
+      models:
+        - model: claude-fable-5-1
+          input: 694
+          output: 14205
+          cache_read: 3400632
+          cache_write: 122988
+          cost: 4.0271
     - kind: orchestrator
       seconds: 97
       estimated: true

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 657
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 140
-      output: 802
-      cache_read: 9593600
-      cache_write: 184950
-      cost: 3.3037
+      input: 157
+      output: 52192
+      cache_read: 9644860
+      cache_write: 308658
+      cost: 4.8015
 ---
 # T-2085 The Host page edits the accepted hosts through settings.dashboard_hosts, behind the settings host action, and says a restart applies them
 

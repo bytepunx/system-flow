@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1250
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 32
-      output: 195
-      cache_read: 905323
-      cache_write: 63705
-      cost: 0.3274
+      input: 16
+      output: 5172
+      cache_read: 955795
+      cache_write: 30588
+      cost: 0.4758
 ---
 # T-2082 The nav rail's Configuration group links the Host page
 

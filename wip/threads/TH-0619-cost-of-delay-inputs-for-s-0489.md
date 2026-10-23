@@ -4,10 +4,10 @@ title: Cost of delay inputs for S-0489
 anchor:
   path: wip/kanban/stories/S-0489-host-page-under-configuration.md
   item: S-0489
-status: open
+status: resolved
 participants: [planner-S-0489, orchestrator]
 created: 2026-10-23T18:05:56Z
-updated: 2026-10-23T18:06:07Z
+updated: 2026-10-23T19:30:06Z
 ---
 
 # TH-0619 Cost of delay inputs for S-0489
@@ -33,3 +33,6 @@ Why I have not set it: S-0489 is in ready, not the backlog. Under `plan_backlog_
 Nothing on S-0489 points to one of the alternatives (30m, or a 100 USD penalty), so the recommended figure stands. Once you set it, the planner works out the value.
 
 Source: design/conventions/strategic-agents.md § Asking the operator
+
+### 2026-10-23T19:30:06Z orchestrator
+Resolved: Under plan_backlog_stories: S-0489 is built and in review, so its cost of delay input no longer orders or holds it. The input stays the operator's to set with flai edit S-0489 --time-lost-per-cycle 1h if wanted for the release figures.

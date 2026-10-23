@@ -3,16 +3,19 @@ id: S-0489
 type: story
 nature: feature
 title: Host page under configuration
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-23T17:57:14Z
-updated: 2026-10-23T19:07:12Z
+updated: 2026-10-23T19:30:49Z
 transitions:
   - to: ready
     at: 2026-10-23T17:57:21Z
     by: alex
   - to: in-progress
     at: 2026-10-23T18:07:10Z
+    by: agent-S-0489
+  - to: review
+    at: 2026-10-23T19:25:42Z
     by: agent-S-0489
 tags: [flai, flaiover, dashboard]
 topics: [dashboard, cli]
@@ -24,38 +27,43 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3761
-  estimated: true
-  priced_by: estimate
+  seconds: 4771
+  priced_by: harness
   turns:
     - day: 2026-10-23
-      ceremony: 2
-      hand_edits: 1
-      work: 58
+      ceremony: 4
+      hand_edits: 2
+      work: 62
   models:
     - model: claude-haiku-5-5
-      input: 48
-      output: 190
-      cache_read: 1795939
-      cache_write: 132061
-      cost: 0.1352
+      input: 50
+      output: 24927
+      cache_read: 1928000
+      cache_write: 134462
+      cost: 0.1294
     - model: claude-opus-5-5
-      input: 440
-      output: 2382
-      cache_read: 25838671
-      cache_write: 894281
-      cost: 9.0319
+      input: 466
+      output: 154912
+      cache_read: 28627250
+      cache_write: 916140
+      cost: 14.2516
   strategic:
     - kind: orchestrator
-      seconds: 670
+      seconds: 1229
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 174
-          output: 2928
-          cache_read: 34107903
-          cache_write: 30426
-          cost: 7.5086
+          input: 237
+          output: 3999
+          cache_read: 50696689
+          cache_write: 43485
+          cost: 11.1601
+        - model: claude-sonnet-5-5
+          input: 7
+          output: 441
+          cache_read: 109660
+          cache_write: 27019
+          cost: 0.0945
 forecast:
   duration: 2h
   delivery: 2026-10-23T20:22:00Z
@@ -84,7 +92,7 @@ Bring back the host page and place it under configuration. In addition, add a wa
 
 ### Planning
 
-Planned by planner-S-0489 on 2026-10-23; the plan is in TH-0621, the cost of delay inputs are asked for in TH-0619.
+Planned by planner-S-0489 on 2026-10-23; the plan is in TH-0621, the cost of delay inputs were asked for in TH-0619.
 
 Touches. The story declared none, and `flai touches suggest` refuses a story with none, so the layout and the design gave the first set, and co-change the rest:
 
@@ -94,8 +102,8 @@ Touches. The story declared none, and `flai touches suggest` refuses a story wit
 - Layout, the write and the page (T-2085): `flai/internal/hostapi/settings.go` and `writes_test.go`, `flaiover/src/lib/settings.ts`, the new `HostAddresses.svelte` with its test and its examples file under `design/components/`, `flaiover/src/routes/host/+page.svelte`, `flaiover/src/routes/api/settings/+server.ts` and its test.
 - Design: `design/system/flaiover-dashboard.md` (the rail table, the Host page, the writes), `docs/users/flaiover.md`, `docs/operators/index.md` (the tunnel expectation, the security posture).
 - Co-change: `design/system/flai-cli.md`, changed by 45% of the commits that changed the files above; it describes `flai dashboard` and the host API's methods, which T-2084 and T-2085 extend. `docs/users/flai-reference.md` (23%) is generated from flags, and no flag is added, so it is left out; `design/issues/summary.md` and `design/adrs/README.md` are regenerated, not touched.
-- No folder touch: every file is named, the two new components among them.
+- No folder touch: every file is named, the two new components among them. The story's agent widened the list as it worked (an ADR, its index, and `flaiover/src/lib/server/agent.ts`).
 
-Forecast. `flai forecast` gave 1h1m from a median of 107 s per unit of size over 86 done feature stories on claude-opus-5-5 in the large band, size 34 (2 criteria, 32 touches). Set to 2h: the three layers are serial, T-2085 waits on T-2083 and T-2084 and T-2086 on T-2082 and T-2085, so little of the work overlaps, and each task carries a Go or vitest cycle of its own. Delivery is the start at 18:08Z plus 2h times the cycle factor 1.12, 20:22Z.
+Forecast. `flai forecast` gave 1h1m from a median of 107 s per unit of size over 86 done feature stories on claude-opus-5-5 in the large band, size 34 (2 criteria, 32 touches). Set to 2h: the three layers are serial, T-2085 waits on T-2083 and T-2084 and T-2086 on T-2082 and T-2085, so little of the work overlaps, and each task carries a Go or vitest cycle of its own. Delivery is the start at 18:08Z plus 2h times the cycle factor 1.12, 20:22Z. The story reached review at 19:25Z, 1h17m after it started.
 
-Cost of delay. `flai cod` refuses a value: the story has no inputs and no epic. The value is written once the operator or the orchestrator sets the inputs asked for in TH-0619.
+Cost of delay. No value: `flai cod` refuses one, since the story has no inputs and no epic, and the operator set none. TH-0619 asked for `time_lost_per_cycle: 1h` (150 USD a week at the project's hour rate) and the orchestrator resolved it with the story already in review, leaving the input to the operator. Set it with `flai edit S-0489 --time-lost-per-cycle 1h` if the release figures should carry one; the next planner run then writes the value.

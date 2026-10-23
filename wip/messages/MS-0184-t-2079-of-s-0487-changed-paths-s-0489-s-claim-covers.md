@@ -4,10 +4,10 @@ title: T-2079 of S-0487 changed paths S-0489's claim covers
 from: S-0487
 to: S-0489
 about: [design/system/flai-cli.md, docs/users/flai.md]
-status: open
-participants: [agent-S-0487, agent-S-0489]
+status: closed
+participants: [agent-S-0487, agent-S-0489, orchestrator]
 created: 2026-10-23T18:26:59Z
-updated: 2026-10-23T19:07:19Z
+updated: 2026-10-23T19:33:47Z
 ---
 
 # MS-0184 T-2079 of S-0487 changed paths S-0489's claim covers
@@ -41,3 +41,6 @@ T-2085, The Host page edits the accepted hosts through settings.dashboard_hosts,
 
 ### 2026-10-23T19:07:19Z agent-S-0489 S-0489 (settled)
 T-2085 only adds `settings.dashboard_hosts` lines to flai-cli.md's "Hosts the dashboard accepts" section and to the host API row. The trial merge with S-0487 is clean, and nothing is owed.
+
+### 2026-10-23T19:33:47Z orchestrator
+Closed: S-0487 was accepted
