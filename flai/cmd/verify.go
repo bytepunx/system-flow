@@ -63,7 +63,11 @@ reads, orchestration.permissions.accept_reviews is on, and acceptance is
 local. Each such tier the branch selects is listed after the rest as
 "queued tier <name>: left to the merge queue", the run passes without it, and
 a tier that only it covers runs. --all leaves no tier to the queue: every
-tier the branch selects runs (ADR-0174).
+tier the branch selects runs (ADR-0174). When the branch selects a tier marked
+queue but the queue cannot batch, a line before the notes and the outcome
+names those tiers and the condition that is off, such as the host action off
+for the project in the configuration this flai reads, and --json carries it as
+queue_off (S-0466).
 
 When the story's last run was at the same head and base commit, and the
 tiers, their commands, and those the branch selects are the same, the steps
@@ -191,8 +195,13 @@ func (a *app) verifyStory(cmd *cobra.Command, repo *workitem.Repo, story string,
 	}
 	opts := verify.StoryOptions{
 		Story: id, Project: repo, Worktree: worktree, Git: a.runner, Fresh: o.fresh,
-		LeaveToQueue: !o.all && !o.syncOnly && a.queueBatches(mainRootOf(repo)),
-		RunOptions:   verify.RunOptions{Max: o.max, Now: a.now},
+		RunOptions: verify.RunOptions{Max: o.max, Now: a.now},
+	}
+	if !o.all && !o.syncOnly {
+		// the report says why, when the queue cannot batch, so that a
+		// configuration without the host action is seen (S-0466)
+		opts.QueueOff = a.queueOff(mainRootOf(repo))
+		opts.LeaveToQueue = opts.QueueOff == ""
 	}
 	var rep verify.Report
 	stopped := false
@@ -302,7 +311,8 @@ func (a *app) printLastVerify(repo *workitem.Repo, story string, maxNotes int) e
 // its state, name, and duration, a tier's name after "tier", a reused tier's
 // time of the run it comes from in place of its duration, a skipped tier's
 // line naming the tier that covers it in place of a duration, a passing step's
-// note and the failing step's findings indented under it, then at most
+// note and the failing step's findings indented under it, then why the tiers
+// marked queue ran here when the merge queue cannot batch (S-0466), at most
 // maxNotes of the notes outside the story, the issues they were recorded in,
 // and last the outcome as the close-out's last line has it.
 func verifyText(rep verify.Report, recorded []recordedIssue, stopped bool, maxNotes int) string {
@@ -328,6 +338,9 @@ func verifyText(rep verify.Report, recorded []recordedIssue, stopped bool, maxNo
 			b.WriteString("    " + strings.Join(strings.Fields(s.Note), " ") + "\n")
 		}
 		b.WriteString(verify.StepFindings(s, "    "))
+	}
+	if rep.QueueOff != "" {
+		b.WriteString(strings.Join(strings.Fields(rep.QueueOff), " ") + "\n")
 	}
 	if len(rep.Notes) > 0 {
 		fmt.Fprintf(&b, "outside %s, notes that do not fail it:\n", rep.Story)
@@ -390,20 +403,35 @@ func queuedText(rep verify.Report) string {
 // is missing turns nothing on and is not created; one or a manifest that
 // cannot be read is warned of and turns nothing on, so every tier runs.
 func (a *app) queueBatches(root string) bool {
+	return a.queueOff(root) == ""
+}
+
+// queueOff is why the merge queue cannot batch for the project whose main
+// checkout is root, the condition queueBatches finds off and what turns it
+// on, so that flai verify can say why it runs the tiers marked queue
+// (S-0466); "" while the queue can batch.
+func (a *app) queueOff(root string) string {
+	path := config.ResolvePath(a.configPath)
 	on, err := a.hostActionOn(hostapi.ActionMergeQueue, root)
 	if err != nil {
 		a.logger().Warn("configuration unreadable, so no tier is left to the merge queue", "component", "verify", "err", err.Error())
-		return false
+		return fmt.Sprintf("the configuration %s cannot be read: %v", path, err)
 	}
 	if !on {
-		return false
+		return fmt.Sprintf("the %s host action is off for %s in the configuration %s; turn it on there with %s in a shell on the host, or run flai with --config naming the configuration flai serve reads", hostapi.ActionMergeQueue, root, path, hostapi.EnableCommand(hostapi.ActionMergeQueue))
 	}
 	repo, err := workitem.Open(root)
 	if err != nil {
 		a.logger().Warn("project unreadable, so no tier is left to the merge queue", "component", "verify", "root", root, "err", err.Error())
-		return false
+		return fmt.Sprintf("the project at %s cannot be read: %v", root, err)
 	}
-	return mergequeue.Batches(true, repo.Manifest)
+	switch {
+	case repo.Manifest.Acceptance.PullRequest():
+		return "acceptance.mode is pull-request, under which the merge queue does not run (ADR-0173)"
+	case !mergequeue.Batches(true, repo.Manifest):
+		return "orchestration.permissions.accept_reviews is off in the main checkout's system-flow.yaml"
+	}
+	return ""
 }
 
 // hostActionOn reports whether a host action is on for the project at root

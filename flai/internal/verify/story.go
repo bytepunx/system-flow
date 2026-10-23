@@ -72,6 +72,12 @@ type StoryOptions struct {
 	// the tiers that run. Set it while the merge queue can batch for the
 	// project and the caller did not ask for every tier (ADR-0174).
 	LeaveToQueue bool
+	// QueueOff is why the merge queue cannot batch for the project, when
+	// that alone keeps the caller from leaving tiers to it: the report's
+	// QueueOff then names the selected tiers marked Queue that the run did
+	// not leave to the queue, with it. "" when the queue can batch, or the
+	// caller asked for every tier (S-0466).
+	QueueOff string
 	// RunOptions are the tiers' run's; FS is the worktree, read for the
 	// tiers' packages, and Now times every step and stamps the report.
 	RunOptions
@@ -116,6 +122,13 @@ type Report struct {
 	// Notes are the check's findings outside the story, which do not fail
 	// it (S-0249); flai verify --record-issues records them.
 	Notes []Note `json:"notes,omitempty"`
+	// QueueOff says why the tiers marked queue that the run selected ran
+	// here rather than being left to the merge queue: it names them and the
+	// condition that keeps the queue from batching, as "tiers integration
+	// and smoke ran here, not left to the merge queue: <why>". "" when no
+	// tier ran here for that reason: the run left them to the queue,
+	// selected none, or was asked for every tier (S-0466).
+	QueueOff string `json:"queue_off,omitempty"`
 }
 
 // Step is what one step of Verify did.
@@ -360,6 +373,7 @@ func (v *storyRun) run(ctx context.Context) (Report, error) {
 		selected, queued = SelectStoryLeavingQueue(v.opts.FS, v.opts.Tiers, v.paths)
 	} else {
 		selected = SelectStory(v.opts.FS, v.opts.Tiers, v.paths)
+		rep.QueueOff = queueOffText(selected, v.opts.QueueOff)
 	}
 	rep.Fingerprint = fingerprint(v.opts.Tiers, selected, queued)
 	var runErr error
@@ -390,6 +404,29 @@ func (v *storyRun) run(ctx context.Context) (Report, error) {
 	}
 	rep.DurationMS, rep.Duration = took(v.opts.Now().Sub(start))
 	return rep, runErr
+}
+
+// queueOffText is Report's QueueOff for a run that selected these tiers and
+// left none to the merge queue, which cannot batch because of why: the tiers
+// marked Queue among them, named in list order, and why; "" when why is ""
+// or none is marked Queue (S-0466).
+func queueOffText(selected []Selected, why string) string {
+	if why == "" {
+		return ""
+	}
+	var names []string
+	for _, s := range selected {
+		if s.Tier.Queue {
+			names = append(names, s.Tier.Name)
+		}
+	}
+	switch len(names) {
+	case 0:
+		return ""
+	case 1:
+		return "tier " + names[0] + " ran here, not left to the merge queue: " + why
+	}
+	return "tiers " + strings.Join(names[:len(names)-1], ", ") + " and " + names[len(names)-1] + " ran here, not left to the merge queue: " + why
 }
 
 // queuedStep is a selected tier left to the merge queue's batch as a step:

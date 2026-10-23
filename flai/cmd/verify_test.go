@@ -724,6 +724,12 @@ func TestVerifyLeavesTheQueueTiersToTheMergeQueueWhileItCanBatch(t *testing.T) {
 		if got := stepStates(rep); got != queued || !rep.Passed || rep.Steps[4].CoveredBy != "" {
 			t.Errorf("verify %v: steps %s, want %s; unit %+v", args, got, queued, rep.Steps[4])
 		}
+		if rep.QueueOff != "" {
+			t.Errorf("verify %v: queue_off %q, want none while the queue batches", args, rep.QueueOff)
+		}
+	}
+	if strings.Contains(out, "ran here") {
+		t.Errorf("text says the queue tiers ran here while the queue batches:\n%s", out)
 	}
 
 	ran := "rebase:passed,sync:passed,narrative:passed,check:passed,tier unit:skipped,tier integration:passed,tier smoke:passed"
@@ -731,26 +737,57 @@ func TestVerifyLeavesTheQueueTiersToTheMergeQueueWhileItCanBatch(t *testing.T) {
 	if code != 0 || strings.Contains(out, "merge queue") || lastLine(out) != "verify: S-004 passed every step" {
 		t.Errorf("--all: exit %d, want 0 with every tier run\n%s%s", code, out, errOut)
 	}
-	if rep := verifyReport(t, root, 0, "S-004", "--all"); stepStates(rep) != ran {
-		t.Errorf("--all: steps %s, want %s", stepStates(rep), ran)
+	if rep := verifyReport(t, root, 0, "S-004", "--all"); stepStates(rep) != ran || rep.QueueOff != "" {
+		t.Errorf("--all: steps %s, want %s; queue_off %q, want none", stepStates(rep), ran, rep.QueueOff)
 	}
 
+	// S-0466: I-0148's cause, a configuration without the host action, runs
+	// the queue tiers; the run says so, and why, before its last line
+	ranHere := "\ntiers integration and smoke ran here, not left to the merge queue: "
 	for _, tc := range []struct {
 		name          string
 		acceptReviews bool
 		roots         func(root string) []string
+		why           func(root string) string
 	}{
-		{"the host action off", true, func(string) []string { return nil }},
-		{"the host action on for another project", true, func(string) []string { return []string{"/elsewhere"} }},
-		{"accept_reviews off", false, this},
+		{"the host action off", true, func(string) []string { return nil }, hostActionOff},
+		{"the host action on for another project", true, func(string) []string { return []string{"/elsewhere"} }, hostActionOff},
+		{"accept_reviews off", false, this, func(string) string {
+			return "orchestration.permissions.accept_reviews is off in the main checkout's system-flow.yaml"
+		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			root := queueFixture(t, tc.acceptReviews, tc.roots)
-			if rep := verifyReport(t, root, 0, "S-004"); stepStates(rep) != ran {
-				t.Errorf("steps %s, want %s", stepStates(rep), ran)
+			want := ranHere + tc.why(root) + "\n"
+			out, errOut, code := runVerify(t, root, verifyGit{}, "verify", "S-004")
+			if code != 0 || !strings.Contains(out, want) {
+				t.Errorf("exit %d, want 0 with the line %q\n%s%s", code, want, out, errOut)
+			}
+			if got := lastLine(out); got != "verify: S-004 passed every step" {
+				t.Errorf("last line %q:\n%s", got, out)
+			}
+			for _, args := range [][]string{{"S-004"}, {"S-004", "--last"}} {
+				rep := verifyReport(t, root, 0, args...)
+				if stepStates(rep) != ran {
+					t.Errorf("verify %v: steps %s, want %s", args, stepStates(rep), ran)
+				}
+				if got := "\n" + rep.QueueOff + "\n"; got != want {
+					t.Errorf("verify %v: queue_off %q, want %q", args, got, want)
+				}
+			}
+			if out, _, _ := runVerify(t, root, verifyGit{}, "verify", "S-004", "--all"); strings.Contains(out, "ran here") {
+				t.Errorf("--all says why the queue tiers ran:\n%s", out)
 			}
 		})
 	}
+}
+
+// hostActionOff is why the merge queue cannot batch for the project at root
+// whose configuration, the test's FLAI_CONFIG, lacks the merge-queue host
+// action for it (S-0466).
+func hostActionOff(root string) string {
+	return "the merge-queue host action is off for " + root + " in the configuration " + os.Getenv("FLAI_CONFIG") +
+		"; turn it on there with flai serve enable merge-queue in a shell on the host, or run flai with --config naming the configuration flai serve reads"
 }
 
 // ADR-0174: the last line names the tiers left to the merge queue before
