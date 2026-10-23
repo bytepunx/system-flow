@@ -496,6 +496,34 @@ func TestAnAgentTheMergeQueueSentBackIsToldTheQueueBatchesItAgain(t *testing.T) 
 	}
 }
 
+// ADR-0189: an agent whose story the orchestrator's acceptance sent back
+// over a rebase it could not settle is told that flai serve resolves the
+// thread once the story is back in review and the orchestrator accepts it
+// again, not that flai serve pushes the fix or the queue batches it, in its
+// last session and in a new one.
+func TestAnAgentTheOrchestratorsAcceptanceSentBackIsToldItIsAcceptedAgain(t *testing.T) {
+	r := req(&manifest.Agent{Harness: ClaudeCode})
+	r.Session = "5f0c7d0e-1b2a-4c3d-8e9f-0a1b2c3d4e5f"
+	r.SentBack = &SentBack{Thread: "TH-0012", What: "the orchestrator's acceptance found that story/S-0104 stopped rebasing onto main on conflicts in cli/x.go", Resumed: true, Acceptance: true}
+	tail := "move S-0104 to review again; flai serve resolves TH-0012 once S-0104 is back in review, and the orchestrator accepts it again."
+	for _, resumed := range []bool{true, false} {
+		r.SentBack.Resumed = resumed
+		st, err := (claudeCode{}).Start(r, Host{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		p := st.Argv[2]
+		if !strings.Contains(p, tail) {
+			t.Errorf("resumed %v: the prompt lacks %q:\n%s", resumed, tail, p)
+		}
+		for _, not := range []string{"pushes the fix", "merge queue", "at a new commit"} {
+			if strings.Contains(p, not) {
+				t.Errorf("resumed %v: the prompt says %q of a story the orchestrator's acceptance sent back:\n%s", resumed, not, p)
+			}
+		}
+	}
+}
+
 // S-0140: an agent started to commit a story's worktree is told to do that
 // and nothing else; the operator's command is told the worktree.
 func TestAnAgentStartedToCommitIsToldToDoOnlyThat(t *testing.T) {
@@ -1505,8 +1533,10 @@ func TestTheOrchestratorsPromptSaysWhatPlanBacklogStoriesDoes(t *testing.T) {
 // suite, reads flai accept --dry-run's blockers at the commit verified, and accepts with --verified and evidence for every
 // criterion, passed on standard input since it cannot write a file, logging
 // the acceptance; otherwise it leaves the story in review and says on a
-// thread what is missing. It never moves a story to done with item_move. No
-// other agent is told any of it (ADR-0093).
+// thread what is missing. It never moves a story to done with item_move. It
+// is told of dirty_main and own_thread_open, that a story flai accept sent
+// back needs nothing more of it, and that it finishes an acceptance of its
+// own that stopped (ADR-0189). No other agent is told any of it (ADR-0093).
 func TestTheOrchestratorsPromptSaysHowItAcceptsAStory(t *testing.T) {
 	p := Prompt(orchestrateReq(nil))
 	for _, w := range []string{
@@ -1525,8 +1555,17 @@ func TestTheOrchestratorsPromptSaysHowItAcceptsAStory(t *testing.T) {
 		"run flai accept <S-nnnn> --by orchestrator --verified <commit> --evidence -, passing the evidence on standard input with a heredoc in the shell, since you cannot write a file",
 		"then log the acceptance with activity_log, naming the story and the commit",
 		// what is missing
-		"Otherwise leave the story in review, open a thread on it with the flai MCP tool thread_open saying what is missing, each blocker and each criterion you could not check against the diff, and log that decision",
+		"Otherwise leave the story in review, open a thread on it with the flai MCP tool thread_open saying what is missing, each blocker and each criterion you could not check against the diff, unless a thread of yours on it says so already, and log that decision",
 		"A commit added after the verifier's run makes flai refuse: verify again",
+		// a dirty main, a thread of its own, a send back, a stopped
+		// acceptance of its own (ADR-0189)
+		"Files the main checkout has not committed stop nothing: flai leaves them out of the acceptance, and the blocker dirty_main appears only while the story's change would overwrite one of them",
+		"A thread you opened on the story or one of its tasks that nobody else wrote on is the blocker own_thread_open, apart from thread_open: once its concern is gone, resolve it with the flai MCP tool thread_resolve and a reason, then accept",
+		"You accept on flai's blockers and the story's criteria: open a thread on a story in review only for a reason not to accept it, and resolve it with thread_resolve and a reason once that reason is gone",
+		"When flai accept says it sent the story back, its rebase stopped on conflicts flai cannot settle: flai aborted the rebase, moved the story back to in-progress, and opened a thread on which flai serve starts the story's agent",
+		"Log that with activity_log and do nothing more for the story: open no thread and move nothing",
+		"When an acceptance of yours stops after its move to done, before its archive or its commit, run flai accept <S-nnnn> --by orchestrator again, with no --verified and no evidence",
+		"one whose move to done anyone else made is the operator's to finish, and flai's refusal names who made it",
 		"Never move a story to done with item_move, and never accept a story while accept_reviews is off",
 	} {
 		if !strings.Contains(p, w) {
@@ -1535,7 +1574,7 @@ func TestTheOrchestratorsPromptSaysHowItAcceptsAStory(t *testing.T) {
 	}
 	others := map[string]string{"a story's agent": Prompt(req(nil)), "an epic's planner": Prompt(planReq("E-0016", nil)), "a story's planner": Prompt(planReq("S-0208", nil))}
 	for who, o := range others {
-		for _, w := range []string{"accept_reviews", "--by orchestrator", "--verified", "--evidence"} {
+		for _, w := range []string{"accept_reviews", "--by orchestrator", "--verified", "--evidence", "own_thread_open", "dirty_main"} {
 			if strings.Contains(o, w) {
 				t.Errorf("%s's prompt says %q", who, w)
 			}
@@ -1785,6 +1824,14 @@ func TestTheOrchestratorsDefinitionSaysWhatEachPermissionDoes(t *testing.T) {
 			"`flai accept <S-nnnn> --by orchestrator --verified <commit> --dry-run`",
 			"`flai accept <S-nnnn> --by orchestrator --verified <commit> --evidence -`",
 			"open a thread on it with `thread_open` saying what is missing",
+			// a dirty main, a thread of its own, a send back, a stopped
+			// acceptance of its own (ADR-0189)
+			"lists the blocker `dirty_main` only while the story's change would overwrite one of them",
+			"that nobody else wrote on is the blocker `own_thread_open`, apart from `thread_open`: once its concern is gone, resolve it with `thread_resolve` and a reason, then accept.",
+			"open a thread on a story in review only for a reason not to accept it, and resolve it with `thread_resolve` and a reason once that reason is gone.",
+			"When `flai accept` says it sent the story back",
+			"do nothing more for the story: open no thread and move nothing.",
+			"run `flai accept <S-nnnn> --by orchestrator` again once what stopped it is cleared, with no `--verified` and no evidence, to finish it",
 			"Never move a story to done with `item_move`.",
 			"With `publish`, after each acceptance",
 			"call `release_evaluate`",

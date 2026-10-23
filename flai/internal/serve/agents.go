@@ -1103,7 +1103,7 @@ func (l *launcher) startAcceptSentBack(ctx context.Context, cfg AgentConfig, rep
 		}
 		what := fmt.Sprintf("the orchestrator's acceptance found that %s, which it cannot settle, and aborted the rebase; run flai stream sync %s in its worktree and resolve them",
 			strings.TrimPrefix(th.Title, storygit.SentBackPrefix), it.ID)
-		s := readyStory{ID: it.ID, Agent: it.Agent, SentBack: &harness.SentBack{Thread: th.ID, What: what, Queue: true}}
+		s := readyStory{ID: it.ID, Agent: it.Agent, SentBack: &harness.SentBack{Thread: th.ID, What: what, Acceptance: true}}
 		if run.Session != "" {
 			s.Resume, s.SentBack.Resumed = run, true
 		}
