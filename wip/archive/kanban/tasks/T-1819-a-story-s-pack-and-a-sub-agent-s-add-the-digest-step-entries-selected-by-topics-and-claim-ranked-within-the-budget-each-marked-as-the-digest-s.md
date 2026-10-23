@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 64
-      output: 25647
-      cache_read: 4013689
-      cache_write: 136185
-      cost: 2.1297
+      input: 55
+      output: 21450
+      cache_read: 4022408
+      cache_write: 108279
+      cost: 1.8934
 ---
 # T-1819 A story's pack and a sub-agent's add the digest step: entries selected by topics and claim, ranked within the budget, each marked as the digest's
 

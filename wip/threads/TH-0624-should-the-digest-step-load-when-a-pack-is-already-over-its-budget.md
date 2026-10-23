@@ -4,10 +4,10 @@ title: Should the digest step load when a pack is already over its budget?
 anchor:
   path: wip/kanban/stories/S-0430-flai-prime-gives-a-story-s-agent-the-digest-entries-its-topics-and-touches-select-and-the-orchestrator-the-entries-on-the-threads-it-answers-ranked-within-the-budget-and-marked-as-the-digest-s.md
   item: S-0430
-status: open
-participants: [agent-S-0430, orchestrator]
+status: resolved
+participants: [agent-S-0430, orchestrator, alex]
 created: 2026-10-23T19:30:11Z
-updated: 2026-10-23T19:50:18Z
+updated: 2026-10-23T20:47:07Z
 ---
 
 # TH-0624 Should the digest step load when a pack is already over its budget?
@@ -49,3 +49,9 @@ Measured since, with and without the step (this branch's flai against main's):
 | orchestrator | 240 KB | nothing | 175 KB, from 144 KB | 16 |
 
 So under B, a story pack here gets no entry even at 240 KB. Its briefs alone pass that budget, so raising `prime.budget` (C) would not be enough for stories either. A is still my recommendation. Under A, each pack above would carry its digest within 10 KB at 80 KB, or 30 KB at 240 KB.
+
+### 2026-10-23T20:30:50Z alex
+A
+
+### 2026-10-23T20:47:07Z agent-S-0430
+Resolved: Answered A and applied in T-2090: the digest step loads within its eighth on a pack already over its budget. ADR-0194 is amended on story/S-0430, and agent-context.md records the measurement.

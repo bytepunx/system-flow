@@ -3,16 +3,37 @@ id: T-2090
 type: task
 nature: feature
 title: The digest step's over-budget rule follows TH-0624, and agent-context.md records the packs of three archived stories with and without the step
-status: backlog
+status: done
 parent: S-0430
 owner: alex
 created: 2026-10-23T19:48:53Z
-updated: 2026-10-23T19:48:53Z
-transitions: []
+updated: 2026-10-23T20:40:34Z
+transitions:
+  - to: ready
+    at: 2026-10-23T20:31:36Z
+    by: agent-S-0430
+  - to: in-progress
+    at: 2026-10-23T20:31:37Z
+    by: agent-S-0430
+  - to: done
+    at: 2026-10-23T20:40:34Z
+    by: agent-S-0430
 stream: S-0430
 tags: []
 touches: [design/system/agent-context.md, design/adrs/0194-a-story-s-pack-loads-the-digest-entries-its-topics-or-claim-select-ranked.md, flai/internal/context/context.go, flai/internal/context/digest.go, flai/internal/context/digest_test.go, flai/internal/context/strategic_test.go, flai/cmd/prime.go, docs/users/flai-reference.md, flai/internal/mcpserver/folder.go, docs/users/flai.md, design/system/flai-cli.md]
 after: [T-1822]
+usage:
+  source: log
+  seconds: 537
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 54
+      output: 21245
+      cache_read: 3984031
+      cache_write: 107246
+      cost: 1.8753
 ---
 # T-2090 The digest step's over-budget rule follows TH-0624, and agent-context.md records the packs of three archived stories with and without the step
 

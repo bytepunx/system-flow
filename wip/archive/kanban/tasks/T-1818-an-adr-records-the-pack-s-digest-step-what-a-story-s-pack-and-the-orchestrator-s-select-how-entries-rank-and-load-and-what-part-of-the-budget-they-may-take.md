@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 13
-      output: 5150
-      cache_read: 805922
-      cache_write: 27345
-      cost: 0.4276
+      input: 11
+      output: 4307
+      cache_read: 807673
+      cache_write: 21742
+      cost: 0.3802
 ---
 # T-1818 An ADR records the pack's digest step: what a story's pack and the orchestrator's select, how entries rank and load, and what part of the budget they may take
 

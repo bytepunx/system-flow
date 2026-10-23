@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 46
-      output: 18524
-      cache_read: 2898893
-      cache_write: 98360
-      cost: 1.5382
+      input: 40
+      output: 15492
+      cache_read: 2905191
+      cache_write: 78205
+      cost: 1.3675
 ---
 # T-1820 The orchestrator's pack adds the answer and recommendation entries ranked against the threads awaiting the operator
 

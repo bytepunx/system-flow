@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1421.3539
-accrued_seconds: 1233815
-tasks_completed: 990
-last_run: 2026-10-23T20:04:59Z
+accrued_cost: 1440.3817
+accrued_seconds: 1236423
+tasks_completed: 995
+last_run: 2026-10-23T20:48:27Z
 ---
 
 # Orchestrator activity
@@ -6941,6 +6941,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0488, S-0489
 - Seconds: 238
 - Cost: 0.6752 USD, estimated
+
+### 2026-10-23T20:20:38Z
+
+- Summary: The operator accepted S-0489 by hand while it was enqueued. Under publish, judgement: not published; 13 accepted stories pending (21291.98 USD/week), and the batch still carries S-0477's guard permission change behind ADR-0186, proposed, which TH-0600 asks the operator to accept or to say publish.
+- Items: S-0489
+- Seconds: 939
+- Cost: 7.0298 USD, estimated
+
+### 2026-10-23T20:26:23Z
+
+- Summary: The operator made S-0491 and moved it to ready. Under order_ready, re-applied flai order --by throughput: S-0491 alone, with no forecast duration.
+- Items: S-0491
+- Seconds: 345
+- Cost: 7.2168 USD, estimated
+
+### 2026-10-23T20:42:19Z
+
+- Summary: Answered TH-0626, citing design/conventions/strategic-agents.md § As the planner
+- Items: S-0491
+- Seconds: 956
+- Cost: 3.0212 USD, estimated
+
+### 2026-10-23T20:42:25Z
+
+- Summary: Under plan_backlog_stories, approved and resolved planner-S-0491's TH-0626: seven tasks in five layers (manifest projects validator and editor, flai subproject, host API settings.subproject, MCP subprojects and subproject_edit, an orchestrator permission edit_subprojects off by default under an ADR, the Projects page section, docs and template), forecast 2h, value 450 USD/week from flai cod on the operator's 3h input. Noted my stake: T-2096 widens my permissions, off by default, and the story changes .claude/agents/orchestrator.md, so its acceptance is the operator's. Under order_ready re-applied throughput: S-0491 alone.
+- Items: S-0491
+- Seconds: 6
+- Cost: 0.0000 USD
+
+### 2026-10-23T20:48:27Z
+
+- Summary: Enqueued S-0430 at 8842e699, first in the queue (alone); forecast 1h3m, value 93.33 USD/week. flai verify passed at the head (integration and smoke queued). The verifier matched all six criteria within touches: ADR-0194 accepted and following the operator's answer A on TH-0624 (the digest step loads within its eighth of the budget even when the pack is over), tests for both cases, the orchestrator's pack ranking answers against threads awaiting the operator, prime and MCP, the conventions in both copies, and the measured packs. The orchestrator prompt change only adds citing a digest entry; no permission widened. To check at publish: template/template.yaml moves 1.0.107 to 1.0.110 on this branch.
+- Items: S-0430
+- Seconds: 362
+- Cost: 1.7600 USD, estimated
 
 ## Refusals
 

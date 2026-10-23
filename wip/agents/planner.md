@@ -1,9 +1,9 @@
 ---
 kind: planner
-accrued_cost: 872.2260
-accrued_seconds: 120819
-tasks_completed: 98
-last_run: 2026-10-23T18:11:26Z
+accrued_cost: 879.9341
+accrued_seconds: 121826
+tasks_completed: 99
+last_run: 2026-10-23T20:43:14Z
 ---
 
 # Planner activity
@@ -787,3 +787,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0489, T-2082, T-2083, T-2084, T-2085, T-2086
 - Seconds: 163
 - Cost: 4.0271 USD, estimated
+
+### 2026-10-23T20:43:14Z
+
+- Summary: Planned S-0491: set its touches (43 files plus `design/adrs/`, justified in `### Planning`), tags, topics, forecast 2h (raised from flai's 1h9m with the reason recorded), and cost of delay 450 USD/week from the operator's 3h/cycle input; created tasks T-2092 (manifest validator and editor), T-2093 (`flai subproject` CLI with folder creation), T-2094 (host API `settings.subproject`), T-2095 (MCP `subprojects`/`subproject_edit` and guard), T-2096 (orchestrator permission `edit_subprojects` with ADR, conventions, and template), T-2097 (dashboard Sub-projects section), and T-2098 (schema docs, template comments, CLAUDE.md, changelog) in five layers; opened TH-0626 with the plan and assumptions; `flai check --strict --story S-0491` is clean; no tasks revisited.
+- Trigger: asked
+- Items: S-0491, T-2092, T-2093, T-2094, T-2095, T-2096, T-2097, T-2098
+- Seconds: 1007
+- Cost: 7.7081 USD, estimated

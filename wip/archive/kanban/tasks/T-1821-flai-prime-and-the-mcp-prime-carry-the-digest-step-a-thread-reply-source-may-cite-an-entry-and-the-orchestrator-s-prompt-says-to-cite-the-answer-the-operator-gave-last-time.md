@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 73
-      output: 29407
-      cache_read: 4602139
-      cache_write: 156151
-      cost: 2.4419
+      input: 63
+      output: 24594
+      cache_read: 4612137
+      cache_write: 124154
+      cost: 2.171
 ---
 # T-1821 flai prime and the MCP prime carry the digest step, a thread_reply source may cite an entry, and the orchestrator's prompt says to cite the answer the operator gave last time
 

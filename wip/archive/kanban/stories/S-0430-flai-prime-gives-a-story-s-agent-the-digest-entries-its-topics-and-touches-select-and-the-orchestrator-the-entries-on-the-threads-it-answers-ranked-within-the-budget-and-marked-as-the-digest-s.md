@@ -3,11 +3,11 @@ id: S-0430
 type: story
 nature: feature
 title: flai prime gives a story's agent the digest entries its topics and touches select, and the orchestrator the entries on the threads it answers, ranked within the budget and marked as the digest's
-status: in-progress
+status: done
 parent: E-0025
 owner: alex
 created: 2026-10-16T05:58:39Z
-updated: 2026-10-23T19:49:24Z
+updated: 2026-10-23T21:00:06Z
 transitions:
   - to: ready
     at: 2026-10-23T19:11:25Z
@@ -15,6 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-10-23T19:12:05Z
     by: agent-S-0430
+  - to: review
+    at: 2026-10-23T20:47:22Z
+    by: agent-S-0430
+  - to: done
+    at: 2026-10-23T21:00:06Z
+    by: orchestrator
 tags: [cli, template]
 topics: [cli, conventions, orchestration]
 touches: [design/adrs, design/adrs/README.md, design/conventions/strategic-agents.md, design/conventions/work-management.md, design/system/agent-context.md, design/system/agent-narrative.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/prime.go, flai/cmd/prime_test.go, flai/internal/context/context.go, flai/internal/context/design.go, flai/internal/context/digest.go, flai/internal/context/digest_test.go, flai/internal/context/items.go, flai/internal/context/rank.go, flai/internal/context/story.go, flai/internal/context/strategic.go, flai/internal/context/strategic_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/prime_test.go, flai/internal/mcpserver/server_test.go, template/CHANGELOG.md, template/root/design/conventions/strategic-agents.md, template/root/design/conventions/work-management.md, template/template.yaml, flai/internal/inbox/inbox.go, flai/internal/threads/threads.go, flai/internal/mcpserver/server.go]
@@ -26,31 +32,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2362
+  seconds: 3338
   priced_by: harness
   turns:
     - day: 2026-10-23
-      ceremony: 5
-      hand_edits: 3
-      work: 61
+      ceremony: 6
+      hand_edits: 4
+      work: 86
   models:
     - model: claude-opus-5-5
-      input: 386
-      output: 155024
-      cache_read: 24260617
-      cache_write: 823164
-      cost: 12.8727
+      input: 442
+      output: 173087
+      cache_read: 32458775
+      cache_write: 873755
+      cost: 15.2786
   strategic:
     - kind: orchestrator
-      seconds: 1609
+      seconds: 1971
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 201
-          output: 3439
-          cache_read: 48073820
-          cache_write: 59932
-          cost: 10.5869
+          input: 223
+          output: 3772
+          cache_read: 55398596
+          cache_write: 73288
+          cost: 12.2008
+        - model: claude-sonnet-5-5
+          input: 10
+          output: 46
+          cache_read: 150417
+          cache_write: 61631
+          cost: 0.1461
 cost_of_delay:
   value: 93.33
   by: planner-S-0430
@@ -78,7 +90,7 @@ What a past story decided, or the operator answered, reaches the next agent that
 - [x] `flai prime --role orchestrate`, as text, `--json`, and the MCP `prime` with role `orchestrate`, includes the answer and recommendation entries ranked against the titles and first entries of the threads awaiting the operator, within the budget; a test shows an entry ranked first for a thread that asks its question again.
 - [x] A `source` on `thread_reply` may name an entry's path, and the orchestrator's prompt and the convention `strategic-agents.md` say to cite the entry when one answers the question.
 - [x] The convention `work-management.md` (template and here) and `design/system/agent-narrative.md` say an agent cites `D-nnnn` in its narrative or thread when it relies on an entry, and asks the operator only what no entry answers; `design/system/agent-context.md`, `docs/users/flai.md`, and `template/CHANGELOG.md` describe the step.
-- [ ] Measured on this repository after the seed: the pack sizes of three archived stories with and without the step, recorded in `agent-context.md`, and no pack over its budget by the step alone.
+- [x] Measured on this repository after the seed: the pack sizes of three archived stories with and without the step, recorded in `agent-context.md`, and no pack over its budget by the step alone.
 
 ## Tasks
 - T-1818 An ADR records the pack's digest step: what a story's pack and the orchestrator's select, how entries rank and load, and what part of the budget they may take
@@ -106,3 +118,18 @@ Planned again on 2026-10-23 (planner-S-0430) against the tasks of 2026-10-16 and
   - **Folder touch kept:** `design/adrs` (T-1818), because the ADR's file name is known only once `flai adr new` makes it. It is in `claims.shared`, so it holds no story.
 - **Forecast.** flai's 1h3m kept: median 107 s per unit over 85 done feature stories on claude-opus-5-5 in the large band, size 35 (6 criteria, 29 touches). The five touches added raised it from 54m; four of them are one-sentence edits, but an ADR, three code tasks with their tests, and a docs task that measures three packs fill the hour, so nothing was taken off. Delivery 2026-10-24T07:40Z is flai's play-out, 22nd in the pull order.
 - **Cost of delay.** 93.33 USD a week, flai's figure: the story's share of E-0025's 600 USD a week (`time_lost_per_cycle: 4h`, set by planner-S-0428 after the operator confirmed TH-0476), 1h3m of 6h45m forecast over the epic's 8 open stories without inputs. Not adjusted: the story's weight in the epic is its duration, and no input of its own was given.
+
+### Accepted by the orchestrator
+
+- Verified: 8842e6999e6254137f18ff03acdc3833e7a30325
+- Batch: 20261023-204831
+- Enqueued verified: 8842e6999e6254137f18ff03acdc3833e7a30325
+- At: 2026-10-23T21:00:06Z
+
+Verdict: pass. All six criteria are met and ticked, the code and ADR-0194 follow the operator's answer A on TH-0624, and nothing breaks a convention.
+- 1: design/adrs/0194-a-story-s-pack-loads-the-digest-entries-its-topics-or-claim-select-ranked.md, design/adrs/README.md
+- 2: flai/internal/context/digest.go, flai/internal/context/digest_test.go, flai/internal/context/context.go, flai/internal/context/story.go, flai/internal/context/items.go, flai/internal/context/design.go
+- 3: flai/internal/context/strategic.go, flai/internal/context/strategic_test.go, flai/internal/inbox/inbox.go, flai/internal/threads/threads.go, flai/cmd/prime.go, flai/cmd/prime_test.go, flai/internal/mcpserver/prime_test.go, flai/internal/mcpserver/server_test.go
+- 4: flai/internal/mcpserver/server.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md
+- 5: design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/agent-narrative.md, design/system/agent-context.md, docs/users/flai.md, template/CHANGELOG.md
+- 6: design/system/agent-context.md

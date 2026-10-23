@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 63
-      output: 25447
-      cache_read: 3982383
-      cache_write: 135122
-      cost: 2.1131
+      input: 54
+      output: 21282
+      cache_read: 3991034
+      cache_write: 107434
+      cost: 1.8786
 ---
 # T-1822 The conventions tell an agent to cite a digest entry it relies on and to ask only what no entry answers, and agent-context.md describes and measures the step
 
