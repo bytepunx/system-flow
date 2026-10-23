@@ -62,6 +62,51 @@ func ContinueRebase(r execx.Runner, dir string) error {
 	return err
 }
 
+// AbortRebase aborts the rebase stopped in the worktree at dir with git
+// rebase --abort and checks that it put branch back as it was before the
+// rebase: checked out at its own head, no rebase waiting, and nothing
+// uncommitted (ADR-0189). An error names what is left and how to clear it.
+func AbortRebase(r execx.Runner, dir, branch string) error {
+	if _, err := r.Run(dir, "git", "rebase", "--abort"); err != nil {
+		return fmt.Errorf("abort the rebase of %s in %s: %w; run git rebase --abort there", branch, dir, err)
+	}
+	if RebaseInProgress(r, dir) {
+		return fmt.Errorf("the rebase of %s in %s still waits after git rebase --abort; run git rebase --abort there", branch, dir)
+	}
+	head, err := r.Run(dir, "git", "symbolic-ref", "--quiet", "--short", "HEAD")
+	if head = strings.TrimSpace(head); err != nil || head != branch {
+		return fmt.Errorf("after the rebase of %s was aborted, %s has %q checked out, not %s; run git checkout %s there", branch, dir, head, branch, branch)
+	}
+	dirty, err := Uncommitted(r, dir)
+	if err != nil {
+		return fmt.Errorf("read what is uncommitted in %s after the rebase of %s was aborted: %w", dir, branch, err)
+	}
+	if len(dirty) > 0 {
+		return fmt.Errorf("after the rebase of %s was aborted, %s has uncommitted changes in %s; commit or discard them there", branch, dir, workitem.Shorten(dirty, 10))
+	}
+	return nil
+}
+
+// SentBackAuthor moves a story the orchestrator's acceptance sent back over
+// a rebase it could not settle to in-progress, and opens the thread that
+// tells its agent (ADR-0189).
+const SentBackAuthor = "flai"
+
+// SentBackPrefix begins the title of that thread, by which flai serve finds
+// it to start the story's agent and to resolve it once the story is back in
+// review (ADR-0189).
+const SentBackPrefix = "Acceptance sent back: "
+
+// SentBackTitle is that thread's title for branch, whose rebase onto base
+// stopped on conflicts in paths, at most three of them named.
+func SentBackTitle(branch, base string, paths []string) string {
+	what := fmt.Sprintf("%s stopped rebasing onto %s", branch, base)
+	if len(paths) > 0 {
+		what += " on conflicts in " + workitem.Shorten(paths, 3)
+	}
+	return SentBackPrefix + what
+}
+
 // Conflicts lists the paths left unmerged in the worktree at dir, which a
 // stopped rebase waits for an agent to resolve and git add.
 func Conflicts(r execx.Runner, dir string) []string {

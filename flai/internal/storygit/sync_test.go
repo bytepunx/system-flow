@@ -135,6 +135,69 @@ func TestContinueRebase(t *testing.T) {
 	}
 }
 
+// ADR-0189: AbortRebase puts a branch whose rebase stopped back at its own
+// head, clean, and refuses to call a worktree back that is on another
+// branch or has no rebase to abort.
+func TestAbortRebase(t *testing.T) {
+	r, dir := execx.Runner(execx.System{}), gitRepo(t)
+	git(t, dir, "checkout", "-q", "-b", "story/S-0001")
+	write(t, dir, "a.md", "story\n")
+	git(t, dir, "commit", "-q", "-am", "story")
+	head, _ := r.Run(dir, "git", "rev-parse", "HEAD")
+	git(t, dir, "checkout", "-q", "main")
+	write(t, dir, "a.md", "main\n")
+	git(t, dir, "commit", "-q", "-am", "main")
+	git(t, dir, "checkout", "-q", "story/S-0001")
+	if _, err := r.Run(dir, "git", "rebase", "main"); err == nil {
+		t.Fatal("rebase did not stop")
+	}
+
+	if err := AbortRebase(r, dir, "story/S-0001"); err != nil {
+		t.Fatalf("abort: %v", err)
+	}
+	if RebaseInProgress(r, dir) {
+		t.Error("the rebase still waits")
+	}
+	if got, _ := r.Run(dir, "git", "rev-parse", "HEAD"); got != head {
+		t.Errorf("HEAD at %s, want the branch's head %s", got, head)
+	}
+	if got, err := Uncommitted(r, dir); err != nil || len(got) != 0 {
+		t.Errorf("uncommitted after the abort: %v %v", got, err)
+	}
+	if got, _ := os.ReadFile(filepath.Join(dir, "a.md")); string(got) != "story\n" {
+		t.Errorf("a.md: %q", got)
+	}
+
+	// no rebase to abort
+	if err := AbortRebase(r, dir, "story/S-0001"); err == nil || !strings.Contains(err.Error(), "run git rebase --abort there") {
+		t.Errorf("abort with no rebase: %v", err)
+	}
+	// a stop on another branch than the one named
+	if _, err := r.Run(dir, "git", "rebase", "main"); err == nil {
+		t.Fatal("rebase did not stop again")
+	}
+	if err := AbortRebase(r, dir, "story/S-0002"); err == nil || !strings.Contains(err.Error(), `has "story/S-0001" checked out, not story/S-0002`) {
+		t.Errorf("abort of another branch: %v", err)
+	}
+}
+
+// ADR-0189: the send back's thread title names the branch, the base, and at
+// most three paths after the prefix flai serve finds it by.
+func TestSentBackTitle(t *testing.T) {
+	for _, c := range []struct {
+		paths []string
+		want  string
+	}{
+		{[]string{"a.md"}, "Acceptance sent back: story/S-0001 stopped rebasing onto main on conflicts in a.md"},
+		{[]string{"a.md", "b.md", "c.md", "d.md"}, "Acceptance sent back: story/S-0001 stopped rebasing onto main on conflicts in a.md, b.md, c.md and 1 more"},
+		{nil, "Acceptance sent back: story/S-0001 stopped rebasing onto main"},
+	} {
+		if got := SentBackTitle("story/S-0001", "main", c.paths); got != c.want || !strings.HasPrefix(got, SentBackPrefix) {
+			t.Errorf("SentBackTitle(%v) = %q, want %q", c.paths, got, c.want)
+		}
+	}
+}
+
 // syncClock dates what Sync writes.
 var syncClock = time.Date(2026, 10, 6, 9, 0, 0, 0, time.UTC)
 

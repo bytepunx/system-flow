@@ -26,6 +26,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -2916,4 +2917,171 @@ func TestAStoryTheMergeQueueSentBackIsNotStartedWhenItShouldNotBe(t *testing.T) 
 	lab.l.look(ctx, false)
 	waitFor(t, "it is started for the send back", func() bool { return lab.run(id).SentBack == th.ID })
 	waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+}
+
+// acceptSendBack opens the thread flai accept opens, by flai, when the
+// orchestrator's acceptance of story stops on a conflict in cli/x.go it
+// cannot settle (ADR-0189), at at. The story's move is the test's.
+func (lab *agentLab) acceptSendBack(story string, at time.Time) *threads.Thread {
+	lab.t.Helper()
+	th, err := threads.New(lab.repo, threads.NewOptions{Title: storygit.SentBackTitle(storygit.Branch(story), "main", []string{"cli/x.go"}), On: story, Author: storygit.SentBackAuthor,
+		Text: "The orchestrator's acceptance of " + story + " stopped on conflicts in `cli/x.go`.", Now: at})
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	return th
+}
+
+// ADR-0189: a story the orchestrator's acceptance sent back over a rebase it
+// could not settle gets its agent started once, in its last session, told the
+// thread and the paths; a second look starts no second agent. Once the story
+// is back in review, flai serve resolves the thread, so that it holds the
+// next acceptance no longer.
+func TestAStoryTheOrchestratorsAcceptanceSentBackGetsItsAgentOnce(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.cfg.Command = nil
+	lab.cfg.Harnesses = map[string]harness.Host{harness.ClaudeCode: {Program: lab.stub}}
+	lab.hold()
+	id := lab.readyWith("Sent back by the acceptance", &manifest.Agent{Harness: harness.ClaudeCode})
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs", func() bool { return lab.run(id).live() })
+	first := lab.run(id)
+	lab.move(id, workitem.InProgress)
+	lab.move(id, workitem.Review)
+	lab.release(id)
+	waitFor(t, "it ends in review", func() bool { r := lab.run(id); return !r.live() && r.Outcome == OutcomeWorked })
+	lab.endedAgo(id, 3*time.Minute)
+	_ = os.Remove(filepath.Join(lab.outDir, "release-"+id))
+
+	st, _ := lab.repo.Get(id)
+	if _, err := lab.repo.Transition(st, workitem.InProgress, storygit.SentBackAuthor, "the rebase of story/"+id+" onto main stopped on conflicts in cli/x.go", lab.now); err != nil {
+		t.Fatal(err)
+	}
+	th := lab.acceptSendBack(id, time.Now().Add(-2*time.Minute))
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs for the send back", func() bool { r := lab.run(id); return r.live() && r.SentBack == th.ID })
+	again := lab.run(id)
+	if again.Agent != first.Agent || again.Session != first.Session || again.AutoRestarts != 0 || again.Answered != "" {
+		t.Errorf("the same agent, in its session, spending no restart: %+v, first %+v", again, first)
+	}
+	out := filepath.Join(lab.outDir, id+".txt")
+	waitFor(t, "the stub was told the thread", func() bool { got, _ := os.ReadFile(out); return strings.Contains(string(got), th.ID) })
+	got, _ := os.ReadFile(out)
+	for _, want := range []string{
+		"flai sent " + id + " back from review to in-progress, on thread " + th.ID + ": the orchestrator's acceptance found that story/" + id + " stopped rebasing onto main on conflicts in cli/x.go",
+		"run flai stream sync " + id + " in its worktree and resolve them",
+		"thread_get (flai thread show " + th.ID + " on the host)",
+		"--resume " + first.Session,
+	} {
+		if !strings.Contains(string(got), want) {
+			t.Errorf("the agent was given\n%s\nwithout %q", got, want)
+		}
+	}
+
+	// a second look starts no second agent for the same send back
+	lab.l.look(ctx, false)
+	if r := lab.run(id); !r.same(again) || lab.startedCount() != 2 {
+		t.Fatalf("started twice for one send back: %+v, journal %+v", r, lab.entries())
+	}
+
+	// back in review, the thread is resolved by flai serve
+	lab.release(id)
+	waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+	st, _ = lab.repo.Get(id)
+	if _, err := lab.repo.Transition(st, workitem.Review, "builder-"+id, "", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	lab.l.look(ctx, false)
+	resolved, err := threads.Get(lab.repo, th.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entries := resolved.Entries(); resolved.Open() || entries[len(entries)-1].Author != forgeAuthor || !strings.Contains(entries[len(entries)-1].Text, id+" is back in review since") {
+		t.Errorf("the thread is resolved by flai serve once the story is back in review: %s %+v", resolved.Status, entries)
+	}
+}
+
+// ADR-0189: what the orchestrator's acceptance's send back does not start an
+// agent for.
+func TestAStoryTheOrchestratorsAcceptanceSentBackIsNotStartedWhenItShouldNotBe(t *testing.T) {
+	ctx := context.Background()
+	for _, c := range []struct {
+		name string
+		ago  time.Duration // how long before now it was sent back; its run started 2 minutes ago
+		set  func(lab *agentLab, id string, th *threads.Thread)
+	}{
+		{"its thread is resolved", time.Minute, func(lab *agentLab, _ string, th *threads.Thread) {
+			if _, err := threads.Resolve(lab.repo, th.ID, "alex", "fixed by hand", time.Now()); err != nil {
+				lab.t.Fatal(err)
+			}
+		}},
+		{"its thread is not flai's", time.Minute, func(lab *agentLab, id string, th *threads.Thread) {
+			if _, err := threads.Resolve(lab.repo, th.ID, "alex", "fixed by hand", time.Now()); err != nil {
+				lab.t.Fatal(err)
+			}
+			if _, err := threads.New(lab.repo, threads.NewOptions{Title: th.Title, On: id, Author: "alex", Text: "Is it?", Now: time.Now()}); err != nil {
+				lab.t.Fatal(err)
+			}
+		}},
+		{"its story is blocked", time.Minute, func(lab *agentLab, id string, _ *threads.Thread) {
+			st, _ := lab.repo.Get(id)
+			if err := workitem.BlockItem(st, "the CI runner", time.Now()); err != nil {
+				lab.t.Fatal(err)
+			}
+			if err := lab.repo.Save(st); err != nil {
+				lab.t.Fatal(err)
+			}
+		}},
+		{"its run started after the send back", 5 * time.Minute, nil},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			lab := newAgentLab(t)
+			id := lab.putEnded("Sent back by the acceptance", AgentRun{Outcome: OutcomeWorked})
+			lab.endedAgo(id, 2*time.Minute)
+			th := lab.acceptSendBack(id, time.Now().Add(-c.ago))
+			if c.set != nil {
+				c.set(lab, id, th)
+			}
+			lab.l.look(ctx, false)
+			if r := lab.run(id); r.Session != "earlier" || r.live() || r.SentBack != "" {
+				t.Errorf("started: %+v", r)
+			}
+			if j := lab.entries(); len(j) != 0 {
+				t.Errorf("journal: %+v", j)
+			}
+		})
+	}
+	// the control: the same story, sent back a minute ago, is started
+	lab := newAgentLab(t)
+	id := lab.putEnded("Sent back by the acceptance", AgentRun{Outcome: OutcomeWorked})
+	lab.endedAgo(id, 2*time.Minute)
+	th := lab.acceptSendBack(id, time.Now().Add(-time.Minute))
+	lab.l.look(ctx, false)
+	waitFor(t, "it is started for the send back", func() bool { return lab.run(id).SentBack == th.ID })
+	waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+}
+
+// ADR-0189: while the agent of a story the orchestrator's acceptance sent
+// back still runs, no second one is started beside it; once it ends, the
+// story's agent is started for the send back.
+func TestAStoryTheOrchestratorsAcceptanceSentBackWaitsForItsLiveRun(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.hold()
+	id := lab.ready("Sent back while its agent runs")
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs", func() bool { return lab.run(id).live() })
+	lab.move(id, workitem.InProgress)
+	// sent back in a later second than its run, still live, started
+	th := lab.acceptSendBack(id, time.Now().Add(2*time.Second))
+	lab.l.look(ctx, false)
+	if r := lab.run(id); r.SentBack != "" || lab.startedCount() != 1 {
+		t.Fatalf("started beside its live run: %+v, journal %+v", r, lab.entries())
+	}
+	lab.release(id)
+	waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+	lab.l.look(ctx, false)
+	waitFor(t, "it is started for the send back once its run ended", func() bool { return lab.run(id).SentBack == th.ID })
+	waitFor(t, "it ends again", func() bool { return !lab.run(id).live() })
 }
