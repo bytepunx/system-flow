@@ -6,7 +6,7 @@ title: task_done's answer carries every check note outside the story, so it exce
 status: backlog
 owner: alex
 created: 2026-10-23T23:38:52Z
-updated: 2026-10-23T23:38:52Z
+updated: 2026-10-23T23:39:41Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,29 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 7
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 2
+          output: 34
+          cache_read: 726055
+          cache_write: 1500
+          cost: 0.16
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 2m
     by: flai
     at: 2026-10-23T23:38:52Z
+finalized:
+  by: alex
+  at: 2026-10-23T23:39:41Z
 ---
 # S-0492 task_done's answer carries every check note outside the story, so it exceeds the 40,000 bytes it promises and overflows the tool result
 

@@ -7,6 +7,7 @@ updated: 2026-10-23T23:38:50Z
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
+| [S-0431](S-0431.md) | The curator, a strategic agent behind the curate host action, takes in what the archive and the threads gained since its last run as digest entries written through flai alone | in-progress | agent-S-0431 | 2026-10-23T23:39:47Z |
 
 ## Strategic agents
 
