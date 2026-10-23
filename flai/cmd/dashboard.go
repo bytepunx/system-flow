@@ -15,6 +15,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/dashboard"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/host"
@@ -38,6 +39,12 @@ type dashboardSettings struct {
 	// development case): the manifest's dashboard.allow_unsigned over the
 	// configuration's, which --allow-unsigned and --build turn on for a start.
 	AllowUnsigned bool
+	// AllowedHosts is the configuration's dashboard.allowed_hosts, normalized
+	// (config.NormalizeAllowedHosts), which a start gives the container as
+	// FLAIOVER_ALLOWED_HOSTS: "" for none. Read afresh for every start, a
+	// restart and an upgrade included, so that a changed setting applies on
+	// the next one (S-0489).
+	AllowedHosts string
 }
 
 // defaultBind publishes on every interface so the dashboard is reachable
@@ -45,7 +52,8 @@ type dashboardSettings struct {
 const defaultBind = "0.0.0.0"
 
 // dashboardSettings resolves image, tag, port, bind, and the allowance of
-// unsigned builds: flags, then the manifest's dashboard section, then config.
+// unsigned builds: flags, then the manifest's dashboard section, then config;
+// and the allowed hosts, from config alone.
 func (a *app) dashboardSettings(repo *workitem.Repo, image, tag string, port int, bind string) (dashboardSettings, error) {
 	cfg, _, err := a.loadConfig()
 	if err != nil {
@@ -101,6 +109,7 @@ func (a *app) dashboardSettings(repo *workitem.Repo, image, tag string, port int
 		s.Tag = "latest"
 	}
 	s.AllowUnsigned = m.Dashboard.AllowUnsignedOr(cfg.Dashboard.AllowUnsigned)
+	s.AllowedHosts = config.NormalizeAllowedHosts(cfg.Dashboard.AllowedHosts)
 	// One container serves every project the host flai serves (S-0080): its
 	// name is fixed, not derived from a project's own name any more.
 	s.Name = sharedContainerName
@@ -823,6 +832,31 @@ func (a *app) startedAllowingUnsigned(name string) bool {
 	return ok && r.Name == name && r.AllowUnsigned
 }
 
+// startedAllowedHosts is the normalized list the container recorded as name
+// was started with as allowedHostsEnv, "" when none or no record names it.
+func (a *app) startedAllowedHosts(name string) string {
+	r, ok := readDashboardRecord(string(a.serveDir()))
+	if !ok || r.Name != name {
+		return ""
+	}
+	return r.AllowedHosts
+}
+
+// describeAllowedHosts is what flai dashboard status says of the hosts a
+// running container accepts beside its own address (S-0489): the list it was
+// started with, when any, and the configuration's, when that is another,
+// which only a start gives it.
+func describeAllowedHosts(started, configured string) string {
+	out := ""
+	if started != "" {
+		out = "  allowed hosts: started with " + allowedHostsEnv + "=" + started + "\n"
+	}
+	if configured != started {
+		out += "  allowed hosts: dashboard.allowed_hosts is " + orDefault(configured, "empty") + " now; flai dashboard restart applies it\n"
+	}
+	return out
+}
+
 func newDashboardStatusCmd(a *app) *cobra.Command {
 	return &cobra.Command{
 		Use:   "status",
@@ -844,7 +878,11 @@ that verdict as serve_image. Under dashboard.allow_unsigned (S-0239) it says
 started so, and under the host flai's connection the sides it admitted
 without a release stamp: "unsigned allowed: flai", "dashboard", or "flai and
 dashboard"; a signed pair shows neither. --json gives the container's as
-allow_unsigned and the connection's sides as host_flai.unsigned.`,
+allow_unsigned and the connection's sides as host_flai.unsigned. For a
+running container it says the hosts it accepts beside its own address, as it
+was started with them (FLAIOVER_ALLOWED_HOSTS), and when dashboard.allowed_hosts
+names others now, which flai dashboard restart applies (S-0489); --json gives
+the container's list as allowed_hosts, "" for none.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.projectOrNone()
@@ -884,6 +922,10 @@ allow_unsigned and the connection's sides as host_flai.unsigned.`,
 			}
 			hostFlai := a.hostFlai(s.Root)
 			allowing := running && a.startedAllowingUnsigned(s.Name)
+			allowedHosts := ""
+			if running {
+				allowedHosts = a.startedAllowedHosts(s.Name)
+			}
 			names := make([]string, len(served))
 			for i, p := range served {
 				names[i] = p.Key
@@ -909,6 +951,9 @@ allow_unsigned and the connection's sides as host_flai.unsigned.`,
 				if allowing {
 					out["allow_unsigned"] = true
 				}
+				if running {
+					out["allowed_hosts"] = allowedHosts
+				}
 				out["host_flai"] = hostFlai
 				return a.printJSON(out)
 			}
@@ -931,6 +976,7 @@ allow_unsigned and the connection's sides as host_flai.unsigned.`,
 				if allowing && !signedPair {
 					fmt.Fprint(a.out, startedAllowingUnsignedLine)
 				}
+				fmt.Fprint(a.out, describeAllowedHosts(allowedHosts, s.AllowedHosts))
 				if len(names) > 0 {
 					fmt.Fprintf(a.out, "  serves: %s\n", strings.Join(names, ", "))
 				}

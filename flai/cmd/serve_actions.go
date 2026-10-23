@@ -1400,8 +1400,9 @@ func (a *app) hostHarnesses(cfg config.Config) map[string]any {
 }
 
 // hostSettings is the host's configuration as it applies to the project at
-// root, for the dashboard's settings page (S-0105). The tokens are not in
-// it: a rotation answers with the new one, once.
+// root, for the dashboard's settings page (S-0105) and its Host page
+// (S-0489). The tokens are not in it: a rotation answers with the new one,
+// once.
 func (a *app) hostSettings(root string) any {
 	cfg, _, err := a.loadConfig()
 	if err != nil {
@@ -1437,13 +1438,17 @@ func (a *app) hostSettings(root string) any {
 	if roots == nil {
 		roots = []string{}
 	}
+	// allowed_hosts is the hosts the dashboard is to accept beside its own
+	// address, as the configuration names them now, which the container's next
+	// start gives it (S-0489); flai dashboard status says what it runs with.
 	out := map[string]any{
 		"actions": actions,
 		"agent": map[string]any{"name": cfg.Agent.Name, "command": command,
 			"harnesses": harnesses, "providers": providers},
-		"checks":       map[string]any{"commands": checks, "timeout_minutes": timeout},
-		"import_roots": roots,
-		"projects":     a.servedView(),
+		"allowed_hosts": config.NormalizeAllowedHosts(cfg.Dashboard.AllowedHosts),
+		"checks":        map[string]any{"commands": checks, "timeout_minutes": timeout},
+		"import_roots":  roots,
+		"projects":      a.servedView(),
 	}
 	if repo, err := workitem.Open(root); err == nil {
 		out["default_agent"] = repo.Manifest.Agent

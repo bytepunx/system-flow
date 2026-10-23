@@ -112,6 +112,70 @@ func TestAllowUnsigned(t *testing.T) {
 	}
 }
 
+// S-0489: dashboard.allowed_hosts is empty on a fresh host, config set takes a
+// list of host names as written, which save and load keep, and refuses an
+// entry that is no host name with an optional port, naming it.
+func TestAllowedHosts(t *testing.T) {
+	cfg := Default()
+	if got, err := cfg.Get("dashboard.allowed_hosts"); err != nil || got != "" {
+		t.Fatalf("fresh dashboard.allowed_hosts = %v, %v; want empty", got, err)
+	}
+	const list = "Flow.Example.com, board.example.net:8443"
+	set, err := cfg.Set("dashboard.allowed_hosts", list)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, err := set.Get("dashboard.allowed_hosts"); err != nil || got != list || set.Dashboard.AllowedHosts != list {
+		t.Fatalf("after set: %v, %v, field %q", got, err, set.Dashboard.AllowedHosts)
+	}
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := Save(path, set); err != nil {
+		t.Fatal(err)
+	}
+	back, _, err := Load(path)
+	if err != nil || back.Dashboard.AllowedHosts != list {
+		t.Fatalf("save/load lost allowed_hosts: %+v, %v", back.Dashboard, err)
+	}
+	cleared, err := back.Set("dashboard.allowed_hosts", "")
+	if err != nil || cleared.Dashboard.AllowedHosts != "" {
+		t.Fatalf("after set empty: %+v, %v", cleared.Dashboard, err)
+	}
+	for _, bad := range []string{"https://flow.example.com", "flow.example.com/board", "flow example.com", "flow.example.com:http", "flow.example.com:0", "flow.example.com:70000", ":8443", "::1", "[::1", "[::1]x", "[]:80", "me@flow.example.com"} {
+		_, err := cfg.Set("dashboard.allowed_hosts", "ok.example.com, "+bad)
+		if err == nil || !strings.Contains(err.Error(), "dashboard.allowed_hosts") || !strings.Contains(err.Error(), strings.ToLower(bad)) || strings.Contains(err.Error(), `"ok.example.com"`) {
+			t.Errorf("set %q: %v; want a refusal naming that entry alone", bad, err)
+		}
+	}
+	for _, good := range []string{"localhost", "localhost:4242", "192.168.1.20:4242", "[::1]", "[::1]:4242", "board-1.example.co.uk"} {
+		if _, err := cfg.Set("dashboard.allowed_hosts", good); err != nil {
+			t.Errorf("set %q: %v; want it taken", good, err)
+		}
+	}
+	if _, err := Parse([]byte(`{"dashboard":{"allowed_hosts":"https://flow.example.com"}}`)); err == nil {
+		t.Error("a configuration file with a scheme in allowed_hosts loads")
+	}
+}
+
+// S-0489: the list flai passes the container is each entry trimmed and
+// lower-cased, the empty ones dropped, joined with commas and no spaces.
+func TestNormalizeAllowedHosts(t *testing.T) {
+	for _, c := range []struct{ raw, want string }{
+		{"", ""},
+		{" , ,", ""},
+		{"flow.example.com", "flow.example.com"},
+		{" Flow.Example.COM ", "flow.example.com"},
+		{"a.example, B.example:8443", "a.example,b.example:8443"},
+		{",a.example,, b.example ,", "a.example,b.example"},
+	} {
+		if got := NormalizeAllowedHosts(c.raw); got != c.want {
+			t.Errorf("NormalizeAllowedHosts(%q) = %q, want %q", c.raw, got, c.want)
+		}
+	}
+	if got := AllowedHostList(" , "); got != nil {
+		t.Errorf("AllowedHostList of no entry = %#v, want nil", got)
+	}
+}
+
 func TestSetRejectsBadInput(t *testing.T) {
 	cfg := Default()
 	if _, err := cfg.Set("dashboard.port", "http"); err == nil {

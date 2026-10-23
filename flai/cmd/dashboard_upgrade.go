@@ -24,20 +24,30 @@ const dashboardRefLabel = "io.bytepunx.flai.ref"
 // flai with no release stamp (release-signing.md § The development case).
 const allowUnsignedEnv = "FLAIOVER_ALLOW_UNSIGNED"
 
+// allowedHostsEnv is the variable that names the hosts, each with an optional
+// port, the dashboard accepts in a browser's Origin beside the address it is
+// published on (S-0489): a comma-separated list, lower-case, with no spaces
+// and no scheme, as config.NormalizeAllowedHosts gives it.
+const allowedHostsEnv = "FLAIOVER_ALLOWED_HOSTS"
+
 // containerArgs is the docker run argument list every dashboard container
 // shares: a port publish, the two secrets (ADR-0031), allowUnsignedEnv=1 when
-// allowUnsigned, and, off Windows, running as this user so the secrets
+// allowUnsigned, allowedHostsEnv when allowedHosts, a normalized list, names
+// any, and, off Windows, running as this user so the secrets
 // (readable by this user only) can be read. publish is a full --publish
 // value: a fixed host port for the real container, or "127.0.0.1::<port>" for
 // an upgrade's temporary one, which docker assigns an ephemeral port for. It
 // runs image, a reference or an image ID, and labels the container with ref,
 // the reference to show for it.
-func containerArgs(dir, name, publish, image, ref string, allowUnsigned bool) []string {
+func containerArgs(dir, name, publish, image, ref string, allowUnsigned bool, allowedHosts string) []string {
 	args := []string{"run", "--detach", "--rm", "--name", name, "--publish", publish}
 	args = append(args, tokenArgs(dir)...)
 	args = append(args, agentKeyArgs(dir)...)
 	if allowUnsigned {
 		args = append(args, "--env", allowUnsignedEnv+"=1")
+	}
+	if allowedHosts != "" {
+		args = append(args, "--env", allowedHostsEnv+"="+allowedHosts)
 	}
 	if runtime.GOOS != "windows" {
 		args = append(args, "--user", strconv.Itoa(os.Getuid())+":"+strconv.Itoa(os.Getgid()))
@@ -47,21 +57,22 @@ func containerArgs(dir, name, publish, image, ref string, allowUnsigned bool) []
 }
 
 // startContainer runs a dashboard container from ref, labelled with ref.
-func (a *app) startContainer(dir, name, publish, ref string, allowUnsigned bool) (string, error) {
-	return a.startContainerImage(dir, name, publish, ref, ref, allowUnsigned)
+func (a *app) startContainer(dir, name, publish, ref string, allowUnsigned bool, allowedHosts string) (string, error) {
+	return a.startContainerImage(dir, name, publish, ref, ref, allowUnsigned, allowedHosts)
 }
 
 // startContainerImage runs a dashboard container from image, labelled with
 // ref, the reference to show for it, allowing unsigned builds when
-// allowUnsigned.
-func (a *app) startContainerImage(dir, name, publish, image, ref string, allowUnsigned bool) (string, error) {
-	return a.runner.Run("", "docker", containerArgs(dir, name, publish, image, ref, allowUnsigned)...)
+// allowUnsigned and accepting the hosts allowedHosts names.
+func (a *app) startContainerImage(dir, name, publish, image, ref string, allowUnsigned bool, allowedHosts string) (string, error) {
+	return a.runner.Run("", "docker", containerArgs(dir, name, publish, image, ref, allowUnsigned, allowedHosts)...)
 }
 
 // keepAllowance is s allowing unsigned builds when the dashboard flai
 // dashboard recorded was started allowing them: a restart or an upgrade keeps
 // what the start was given, a one-start --allow-unsigned or --build included,
-// and the settings can only add to it.
+// and the settings can only add to it. The allowed hosts are not kept: s has
+// the configuration's, which a restart and an upgrade start with.
 func keepAllowance(dir string, s dashboardSettings) dashboardSettings {
 	if r, ok := readDashboardRecord(dir); ok && r.AllowUnsigned {
 		s.AllowUnsigned = true
@@ -103,7 +114,9 @@ dashboard would, a release refused starting nothing. Every project
 registered with flai serve keeps its registration: only the container's
 process restarts. It allows unsigned builds (FLAIOVER_ALLOW_UNSIGNED=1) when
 the start it repeats did, by --allow-unsigned, --build, or the setting, or
-dashboard.allow_unsigned is on now.`,
+dashboard.allow_unsigned is on now, and gives it dashboard.allowed_hosts as
+the configuration has it now (FLAIOVER_ALLOWED_HOSTS), so a changed list
+applies.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return a.runDashboardRestart(cmd.Context(), image, tag, port, bind)
@@ -346,7 +359,9 @@ one is left exactly as it was, and this reports why. Should the new image
 then fail to start at the real name, the previous image is started there
 again, and this still fails, saying so. The new container allows unsigned
 builds (FLAIOVER_ALLOW_UNSIGNED=1) when the one it replaces was started
-allowing them, or dashboard.allow_unsigned is on now.
+allowing them, or dashboard.allow_unsigned is on now, and is given
+dashboard.allowed_hosts as the configuration has it now
+(FLAIOVER_ALLOWED_HOSTS).
 
 --tag deploys that release, an earlier one included, the same way, for
 this container once: dashboard.tag is not changed, so an upgrade without a
@@ -450,7 +465,7 @@ func (a *app) runDashboardUpgrade(ctx context.Context, image, tag string, port i
 	probeName := s.Name + upgradeProbeSuffix
 	_, _ = a.runner.Run("", "docker", "rm", "-f", probeName) // a previous failed attempt may have left one behind
 	a.logger().Info("starting a temporary container to check the new image", "component", "dashboard", "container", probeName)
-	if _, err := a.startContainer(dir, probeName, fmt.Sprintf("127.0.0.1::%d", containerPort), img.Ref, s.AllowUnsigned); err != nil {
+	if _, err := a.startContainer(dir, probeName, fmt.Sprintf("127.0.0.1::%d", containerPort), img.Ref, s.AllowUnsigned, s.AllowedHosts); err != nil {
 		return fmt.Errorf("start the temporary container to check the new image: %w", err)
 	}
 	healthy, healthErr := a.waitHealthy(probeName)

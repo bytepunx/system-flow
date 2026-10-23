@@ -224,7 +224,8 @@ func TestDashboardWatchRestartsAnOlderRecordFromItsRef(t *testing.T) {
 	root := dashboardProject(t)
 	useSignedDashboardReleases(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
-	a := &app{cwd: root, runner: f}
+	// the restart reads the configuration, which it creates, saying so
+	a := &app{cwd: root, runner: f, log: slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))}
 	dir := string(a.serveDir())
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		t.Fatal(err)
@@ -346,5 +347,44 @@ func TestDashboardRestartRecordsTheTagAndTheImageID(t *testing.T) {
 	}
 	if run := lastRun(f.calls[before:]); !strings.HasSuffix(run, " sha256:old") || !strings.Contains(run, "--label "+dashboardRefLabel+"="+latest+" ") {
 		t.Errorf("the watch after a restart: %q", run)
+	}
+}
+
+// S-0489: flai host's watch starts the recorded container again from its
+// image with the allowed hosts the configuration names now, as flai dashboard
+// restart does, and records them; when the configuration cannot be read it
+// keeps the hosts the record names.
+func TestDashboardWatchRestartsWithTheConfiguredAllowedHosts(t *testing.T) {
+	root := dashboardProject(t)
+	ref := flaioverRef("0.2.0")
+	f := &fakeRunner{images: map[string]bool{"sha256:v020": true}, running: map[string]bool{}, imageIDs: map[string]string{ref: "sha256:v020"}}
+	a := &app{cwd: root, runner: f, log: slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))}
+	dir := string(a.serveDir())
+	if err := writeDashboardRecord(dir, dashboardRecord{Name: "flaiover", Ref: ref, Image: "sha256:v020", Publish: "0.0.0.0:5555:3000", AllowedHosts: "old.example"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, errOut, code := runWithApp(t, a, "config", "set", "dashboard.allowed_hosts", "New.Example, tunnel.example:8443"); code != 0 {
+		t.Fatalf("config set: %s", errOut)
+	}
+	if err := a.dashboardWatch().Restart(context.Background()); err != nil {
+		t.Fatalf("restart: %v", err)
+	}
+	const configured = "new.example,tunnel.example:8443"
+	if run := lastRun(f.calls); !strings.Contains(run, "--env "+allowedHostsEnv+"="+configured+" ") || strings.Contains(run, "old.example") || !strings.HasSuffix(run, " sha256:v020") {
+		t.Errorf("the watch starts the recorded image with the configuration's hosts: %q", run)
+	}
+	if r, _ := readDashboardRecord(dir); r.AllowedHosts != configured || r.Image != "sha256:v020" || r.Ref != ref {
+		t.Errorf("the record names the hosts it runs with now: %+v", r)
+	}
+
+	if err := os.WriteFile(os.Getenv("FLAI_CONFIG"), []byte("{not json"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	delete(f.running, "flaiover")
+	if err := a.dashboardWatch().Restart(context.Background()); err != nil {
+		t.Fatalf("restart with no configuration to read: %v", err)
+	}
+	if run := lastRun(f.calls); !strings.Contains(run, "--env "+allowedHostsEnv+"="+configured+" ") {
+		t.Errorf("with no configuration to read, the watch keeps the recorded hosts: %q", run)
 	}
 }

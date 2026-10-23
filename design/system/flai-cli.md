@@ -28,7 +28,8 @@ Source: `./flai` in this monorepo. Module `github.com/bytepunx/system-flow/flai`
     "bind": "0.0.0.0",
     "allow_unsigned": false,
     "push_key": "",
-    "push_known_hosts": ""
+    "push_known_hosts": "",
+    "allowed_hosts": ""
   },
   "cache_dir": "~/.flai/cache",
   "author": "alex",
@@ -354,6 +355,14 @@ A flaiover image is run only when a release's digest list, signed by the release
 | `flai serve status` | `unsigned allowed: <sides>` under the project | `status.connections.<root>.unsigned` |
 | `flai host status` | `<root>: unsigned allowed: <sides>` under the `serve` child | `unsigned`, `{<root>: [sides]}` |
 | `flai dashboard status` | `unsigned allowed: <sides>` under the `host flai` line; the container's `unsigned allowed: started with FLAIOVER_ALLOW_UNSIGNED=1, it serves a flai with no release stamp`, left out while this project's flai is connected as a signed pair | `allow_unsigned`, and `host_flai.unsigned` |
+
+### Hosts the dashboard accepts
+
+`dashboard.allowed_hosts` names the hosts, besides the address the dashboard is published on, that it accepts in a browser's `Origin`, so that it can be reached through a tunnel or a domain (S-0489). The dashboard's reading of it is in [flaiover-dashboard.md](flaiover-dashboard.md); the operator sets it with `flai config set dashboard.allowed_hosts`.
+
+- **The setting.** `config.Dashboard.AllowedHosts`, the key `dashboard.allowed_hosts`, a string, empty by default, among `config.Keys`: host names, each with an optional port, separated by commas, such as `flow.example.com, board.example.net:8443`. It is a fact about one machine's shared container, so it is in the configuration only, never the manifest. `config.Parse`, and so `flai config set`, refuses an entry with a scheme, a path, a space, `@`, a port that is not 1 to 65535, or an IPv6 address without brackets, naming each. `config.AllowedHostList` trims each entry, drops the empty ones, and lower-cases them; `config.NormalizeAllowedHosts` joins them with commas.
+- **flai dashboard.** `dashboardSettings.AllowedHosts` is the configuration's list, normalized, read afresh by every command, and `containerArgs` adds `--env FLAIOVER_ALLOWED_HOSTS=<list>` when it names any: a comma-separated list, lower-case, with no spaces and no scheme, the contract with the dashboard. The record (`dashboard-container.json`) keeps it as `allowed_hosts`. `restart` and `upgrade`, its temporary container included, start the container with the configuration's list as it is then, not the record's, so a changed setting applies on the next start; `flai host`'s watch does the same, and keeps the record's list only when the configuration cannot be read. A container already running keeps the list it was started with: only a start gives it one.
+- **The statuses.** `flai dashboard status` says, for a running container, `allowed hosts: started with FLAIOVER_ALLOWED_HOSTS=<list>` when the record names any, and `allowed hosts: dashboard.allowed_hosts is <list or empty> now; flai dashboard restart applies it` when the configuration names another (`describeAllowedHosts`); `--json` has `allowed_hosts`, the record's list, `""` for none, for a running container. `settings.get`'s host block (`hostSettings`) has `allowed_hosts`, the configuration's list, normalized, so that the Host page can say when the two differ.
 
 ## Design system
 

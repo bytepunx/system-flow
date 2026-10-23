@@ -1807,3 +1807,39 @@ func TestTheHostAnswersARolesStream(t *testing.T) {
 		t.Errorf("no orchestrator run: %+v", e)
 	}
 }
+
+// S-0489: settings.get's host block carries dashboard.allowed_hosts as the
+// configuration names it, normalized as the container is given it: empty
+// until it is set.
+func TestServeSettingsShowTheAllowedHosts(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	allowed := func() any {
+		t.Helper()
+		got, err := json.Marshal((&app{}).hostSettings(root))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var settings map[string]any
+		if err := json.Unmarshal(got, &settings); err != nil {
+			t.Fatal(err)
+		}
+		v, ok := settings["allowed_hosts"]
+		if !ok {
+			t.Fatalf("settings lack allowed_hosts: %s", got)
+		}
+		return v
+	}
+	if _, errOut, code := runIn(t, root, "config", "get", "dashboard.allowed_hosts"); code != 0 { // creates the config
+		t.Fatalf("config get: %s", errOut)
+	}
+	if got := allowed(); got != "" {
+		t.Errorf("allowed_hosts before it is set = %v, want empty", got)
+	}
+	if _, errOut, code := runIn(t, root, "config", "set", "dashboard.allowed_hosts", " Flow.Example.com, ,board.example.net:8443"); code != 0 {
+		t.Fatalf("config set: %s", errOut)
+	}
+	if got := allowed(); got != "flow.example.com,board.example.net:8443" {
+		t.Errorf("allowed_hosts = %v, want the normalized list", got)
+	}
+}

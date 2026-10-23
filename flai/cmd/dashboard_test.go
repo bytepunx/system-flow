@@ -1973,3 +1973,140 @@ func TestDashboardStatusSaysUnsignedAllowedWithTheSide(t *testing.T) {
 		}
 	}
 }
+
+// allowedHostsArg is what docker run is given for a container that accepts
+// hosts as the normalized list hosts (S-0489).
+func allowedHostsArg(hosts string) string { return "--env " + allowedHostsEnv + "=" + hosts }
+
+// S-0489: flai dashboard starts the container with FLAIOVER_ALLOWED_HOSTS set
+// to dashboard.allowed_hosts, normalized, and records it; status, as text and
+// --json, says what the container was started with and when the
+// configuration names other hosts now; flai dashboard restart, of the running
+// container and of the recorded one, and flai dashboard upgrade, its
+// temporary container included, start it with the configuration's list as it
+// is then; and an empty list passes no variable.
+func TestDashboardGivesTheContainerTheAllowedHosts(t *testing.T) {
+	root := dashboardProject(t)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	a := &app{cwd: root, runner: f, log: slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))}
+	dir := string(a.serveDir())
+	configure := func(list string) {
+		t.Helper()
+		if _, errOut, code := runWithApp(t, a, "config", "set", "dashboard.allowed_hosts", list); code != 0 {
+			t.Fatalf("config set %q: %s", list, errOut)
+		}
+	}
+	status := func(want string) string {
+		t.Helper()
+		js, errOut, code := runWithApp(t, a, "dashboard", "status", "--json")
+		var st map[string]any
+		if code != 0 || json.Unmarshal([]byte(js), &st) != nil {
+			t.Fatalf("status --json: %d %s %s", code, js, errOut)
+		}
+		if got, ok := st["allowed_hosts"]; !ok || got != want {
+			t.Errorf("status --json allowed_hosts = %v (present %v), want %q", got, ok, want)
+		}
+		out, errOut, code := runWithApp(t, a, "dashboard", "status")
+		if code != 0 {
+			t.Fatalf("status: %d %s", code, errOut)
+		}
+		return out
+	}
+	runsWith := func(what, hosts string) {
+		t.Helper()
+		run := lastRunOf(f)
+		if hosts == "" {
+			if strings.Contains(run, allowedHostsEnv) {
+				t.Errorf("%s passes %s for no host: %s", what, allowedHostsEnv, run)
+			}
+			return
+		}
+		if !strings.Contains(run, allowedHostsArg(hosts)+" ") || strings.Count(run, allowedHostsEnv) != 1 {
+			t.Errorf("%s: want %s once: %s", what, allowedHostsArg(hosts), run)
+		}
+		if r, _ := readDashboardRecord(dir); r.AllowedHosts != hosts {
+			t.Errorf("%s: the record keeps %q, want %q", what, r.AllowedHosts, hosts)
+		}
+	}
+
+	configure(" Flow.Example.com, ,board.example.net:8443 ")
+	if out, errOut, code := runWithApp(t, a, "config", "get", "dashboard.allowed_hosts"); code != 0 || !strings.Contains(out, "Flow.Example.com, ,board.example.net:8443") {
+		t.Errorf("config get prints it as written: %d %s %s", code, out, errOut)
+	}
+	const first = "flow.example.com,board.example.net:8443"
+	if _, errOut, code := runWithApp(t, a, "dashboard", "--tag", "0.4.0"); code != 0 {
+		t.Fatalf("start: %s", errOut)
+	}
+	runsWith("start", first)
+	if out := status(first); !strings.Contains(out, "  allowed hosts: started with "+allowedHostsEnv+"="+first+"\n") || strings.Contains(out, "restart applies") {
+		t.Errorf("status says what it was started with, and no difference:\n%s", out)
+	}
+
+	configure("other.example")
+	if out := status(first); !strings.Contains(out, "  allowed hosts: dashboard.allowed_hosts is other.example now; flai dashboard restart applies it\n") {
+		t.Errorf("status says the configuration names other hosts:\n%s", out)
+	}
+	f.calls = nil
+	if _, errOut, code := runWithApp(t, a, "dashboard", "restart"); code != 0 {
+		t.Fatalf("restart of the running container: %s", errOut)
+	}
+	runsWith("restart of the running container", "other.example")
+	if out := status("other.example"); strings.Contains(out, "restart applies") {
+		t.Errorf("after the restart, no difference:\n%s", out)
+	}
+
+	configure("third.example:4242")
+	delete(f.running, "flaiover")
+	f.calls = nil
+	if _, errOut, code := runWithApp(t, a, "dashboard", "restart"); code != 0 {
+		t.Fatalf("restart of the recorded container: %s", errOut)
+	}
+	runsWith("restart of the recorded container", "third.example:4242")
+
+	configure("fourth.example")
+	f.calls = nil
+	if _, errOut, code := runWithApp(t, a, "dashboard", "upgrade"); code != 0 {
+		t.Fatalf("upgrade: %s", errOut)
+	}
+	runs := 0
+	for _, c := range f.calls {
+		if strings.HasPrefix(c, "docker run ") {
+			runs++
+			if !strings.Contains(c, allowedHostsArg("fourth.example")+" ") {
+				t.Errorf("upgrade start without the configuration's list: %s", c)
+			}
+		}
+	}
+	if runs != 2 {
+		t.Errorf("want the temporary container and the swap, got %d runs:\n%s", runs, strings.Join(f.calls, "\n"))
+	}
+	runsWith("upgrade", "fourth.example")
+
+	configure("")
+	f.calls = nil
+	if _, errOut, code := runWithApp(t, a, "dashboard", "restart"); code != 0 {
+		t.Fatalf("restart with none: %s", errOut)
+	}
+	runsWith("restart with none", "")
+	if r, _ := readDashboardRecord(dir); r.AllowedHosts != "" {
+		t.Errorf("the record keeps hosts no longer configured: %+v", r)
+	}
+	if out := status(""); strings.Contains(out, "allowed hosts") {
+		t.Errorf("status names no allowed hosts for none:\n%s", out)
+	}
+}
+
+// S-0489: what status says of the allowed hosts: the list the container was
+// started with, when any, and the configuration's when that is another.
+func TestDescribeAllowedHosts(t *testing.T) {
+	for _, c := range []struct{ started, configured, want string }{
+		{"", "", ""},
+		{"a.example", "a.example", "  allowed hosts: started with " + allowedHostsEnv + "=a.example\n"},
+		{"a.example", "", "  allowed hosts: started with " + allowedHostsEnv + "=a.example\n  allowed hosts: dashboard.allowed_hosts is empty now; flai dashboard restart applies it\n"},
+		{"", "b.example", "  allowed hosts: dashboard.allowed_hosts is b.example now; flai dashboard restart applies it\n"},
+	} {
+		if got := describeAllowedHosts(c.started, c.configured); got != c.want {
+			t.Errorf("describeAllowedHosts(%q, %q) = %q, want %q", c.started, c.configured, got, c.want)
+		}
+	}
+}

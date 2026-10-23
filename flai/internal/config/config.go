@@ -454,6 +454,87 @@ type Dashboard struct {
 	// PushKnownHosts names the file the remote's host keys are taken from
 	// instead of this user's and the system's known_hosts.
 	PushKnownHosts string `json:"push_known_hosts"`
+	// AllowedHosts is a comma-separated list of host names, each with an
+	// optional port, that the dashboard accepts in a browser's Origin beside
+	// the address it is published on, such as a tunnel's or a domain's (S-0489).
+	// flai starts the container with it, normalized (AllowedHostList), as
+	// FLAIOVER_ALLOWED_HOSTS. Empty, the default, adds none. It is a fact about
+	// one machine's shared container, so it lives here and never in the manifest.
+	AllowedHosts string `json:"allowed_hosts"`
+}
+
+// AllowedHostList is raw, dashboard.allowed_hosts as written, as flai passes
+// it on: each comma-separated entry trimmed and lower-cased, the empty ones
+// dropped. It is nil when raw names none.
+func AllowedHostList(raw string) []string {
+	var out []string
+	for _, h := range strings.Split(raw, ",") {
+		if h = strings.ToLower(strings.TrimSpace(h)); h != "" {
+			out = append(out, h)
+		}
+	}
+	return out
+}
+
+// NormalizeAllowedHosts is AllowedHostList(raw) joined with commas, the value
+// of FLAIOVER_ALLOWED_HOSTS: "" when raw names none.
+func NormalizeAllowedHosts(raw string) string {
+	return strings.Join(AllowedHostList(raw), ",")
+}
+
+// checkAllowedHosts refuses a dashboard.allowed_hosts entry that is not a
+// host name with an optional port, naming each.
+func checkAllowedHosts(raw string) error {
+	var errs []string
+	for _, h := range AllowedHostList(raw) {
+		if why := badAllowedHost(h); why != "" {
+			errs = append(errs, fmt.Sprintf("%q %s", h, why))
+		}
+	}
+	if len(errs) > 0 {
+		return fmt.Errorf("dashboard.allowed_hosts: %s; give host names, each with an optional :port, separated by commas, such as flow.example.com, board.example.net:8443", strings.Join(errs, "; "))
+	}
+	return nil
+}
+
+// badAllowedHost is why h, an entry AllowedHostList gave, is not a host name
+// with an optional port, or "" when it is one. An IPv6 address is bracketed,
+// as an Origin writes it.
+func badAllowedHost(h string) string {
+	if strings.ContainsAny(h, " \t/@?#") {
+		return "is not a host name: write no scheme, path, or spaces"
+	}
+	var name, port string
+	var hasPort bool
+	if strings.HasPrefix(h, "[") {
+		end := strings.Index(h, "]")
+		if end < 0 {
+			return "opens a bracket it does not close"
+		}
+		rest := h[end+1:]
+		name = h[:end+1]
+		if rest != "" && !strings.HasPrefix(rest, ":") {
+			return "has something after its address that is no :port"
+		}
+		if name == "[]" {
+			return "has no address in its brackets"
+		}
+		port, hasPort = strings.CutPrefix(rest, ":")
+	} else {
+		if strings.Count(h, ":") > 1 {
+			return "is an IPv6 address without brackets"
+		}
+		name, port, hasPort = strings.Cut(h, ":")
+	}
+	if name == "" {
+		return "has no host name"
+	}
+	if hasPort {
+		if n, err := strconv.Atoi(port); err != nil || n < 1 || n > 65535 {
+			return "has a port that is not a number from 1 to 65535"
+		}
+	}
+	return ""
 }
 
 // Default returns the configuration written on first run.
@@ -511,8 +592,9 @@ func Load(path string) (cfg Config, created bool, err error) {
 
 // Parse decodes JSON into a Config, rejecting unknown keys, a negative
 // agent.auto_restarts, an agent.harnesses guard other than none, an
-// agent.providers entry that is not whole or sets a value flai refuses, and a
-// forges entry checkForges refuses.
+// agent.providers entry that is not whole or sets a value flai refuses, a
+// forges entry checkForges refuses, and a dashboard.allowed_hosts entry that
+// is not a host name with an optional port.
 func Parse(data []byte) (Config, error) {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
@@ -532,6 +614,9 @@ func Parse(data []byte) (Config, error) {
 		return Config{}, err
 	}
 	if err := checkForges(cfg.Forges); err != nil {
+		return Config{}, err
+	}
+	if err := checkAllowedHosts(cfg.Dashboard.AllowedHosts); err != nil {
 		return Config{}, err
 	}
 	return cfg, nil
@@ -580,7 +665,7 @@ func Save(path string, cfg Config) error {
 func Keys() []string {
 	return []string{
 		"template.repo", "template.ref",
-		"dashboard.image", "dashboard.tag", "dashboard.port", "dashboard.bind", "dashboard.no_restart", "dashboard.allow_unsigned", "dashboard.push_key", "dashboard.push_known_hosts",
+		"dashboard.image", "dashboard.tag", "dashboard.port", "dashboard.bind", "dashboard.no_restart", "dashboard.allow_unsigned", "dashboard.push_key", "dashboard.push_known_hosts", "dashboard.allowed_hosts",
 		"cache_dir", "author",
 		"worktrees.relative_paths",
 	}

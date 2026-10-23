@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/host"
 )
 
@@ -74,6 +75,10 @@ type dashboardRecord struct {
 
 	// AllowUnsigned: started with FLAIOVER_ALLOW_UNSIGNED=1, which a restart keeps.
 	AllowUnsigned bool `json:"allow_unsigned,omitempty"`
+	// AllowedHosts: started with FLAIOVER_ALLOWED_HOSTS set to this normalized
+	// list, "" when it was not set (S-0489). flai dashboard status reports it,
+	// so that the Host page can say when the configuration names another.
+	AllowedHosts string `json:"allowed_hosts,omitempty"`
 }
 
 const dashboardRecordFile = "dashboard-container.json"
@@ -120,11 +125,11 @@ func (a *app) startDashboard(dir string, s dashboardSettings, ref string) (strin
 // image ID the container runs, for flai host's watch to start again.
 func (a *app) startDashboardImage(dir string, s dashboardSettings, image, ref string) (string, error) {
 	publish := fmt.Sprintf("%s:%d:%d", s.Bind, s.Port, containerPort)
-	id, err := a.startContainerImage(dir, s.Name, publish, image, ref, s.AllowUnsigned)
+	id, err := a.startContainerImage(dir, s.Name, publish, image, ref, s.AllowUnsigned, s.AllowedHosts)
 	if err != nil {
 		return id, err
 	}
-	a.recordDashboard(dir, dashboardRecord{Name: s.Name, Ref: ref, Image: a.runningImageID(s.Name, image), Publish: publish, AllowUnsigned: s.AllowUnsigned})
+	a.recordDashboard(dir, dashboardRecord{Name: s.Name, Ref: ref, Image: a.runningImageID(s.Name, image), Publish: publish, AllowUnsigned: s.AllowUnsigned, AllowedHosts: s.AllowedHosts})
 	return id, nil
 }
 
@@ -179,12 +184,18 @@ func (a *app) lookDashboard(context.Context) string {
 // which a check may have pulled a newer image under (I-0116). It starts the
 // reference instead when the record has no image ID, as one an older flai
 // wrote has not, or when that image is no longer here, and then records the
-// image ID that runs.
+// image ID that runs. It gives the container the allowed hosts the
+// configuration names now, as flai dashboard restart does, or the recorded
+// ones when the configuration cannot be read, and records them.
 func (a *app) restartDashboard(ctx context.Context) error {
 	dir := string(a.serveDir())
 	r, ok := readDashboardRecord(dir)
 	if !ok {
 		return errors.New("no dashboard is recorded; flai dashboard starts one")
+	}
+	recorded := r
+	if cfg, _, err := a.loadConfig(); err == nil {
+		r.AllowedHosts = config.NormalizeAllowedHosts(cfg.Dashboard.AllowedHosts)
 	}
 	ref, err := a.pinnedRecordRef(ctx, r.Ref)
 	if err != nil {
@@ -202,11 +213,13 @@ func (a *app) restartDashboard(ctx context.Context) error {
 			a.logger().Warn("recorded dashboard image is gone, starting its reference", "component", "dashboard", "container", r.Name, "image", r.Image, "ref", r.Ref)
 		}
 	}
-	if _, err := a.startContainerImage(dir, r.Name, r.Publish, image, r.Ref, r.AllowUnsigned); err != nil {
+	if _, err := a.startContainerImage(dir, r.Name, r.Publish, image, r.Ref, r.AllowUnsigned, r.AllowedHosts); err != nil {
 		return fmt.Errorf("start %s from %s: %w", r.Name, refAndImage(r.Ref, image), err)
 	}
 	if image != r.Image {
 		r.Image = a.runningImageID(r.Name, image)
+	}
+	if r != recorded {
 		a.recordDashboard(dir, r)
 	}
 	return nil

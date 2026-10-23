@@ -194,6 +194,7 @@ flai config path
 | `dashboard.port` | `4242` | The host port the dashboard is published on |
 | `dashboard.bind` | `0.0.0.0` | The host address it is published on; `127.0.0.1` keeps it to this machine |
 | `dashboard.allow_unsigned` | `false` | `true` lets development builds of flai and the dashboard connect, and says so wherever the connection is shown ([Unsigned builds](#unsigned-builds)). A project's `system-flow.yaml` may set it over this |
+| `dashboard.allowed_hosts` | empty | Host names, each with an optional port, separated by commas, that the dashboard also accepts requests for, such as a tunnel's or a domain's: `flai config set dashboard.allowed_hosts "flow.example.com, board.example.net:8443"`. The container gets the list on its next start, by `flai dashboard`, `flai dashboard restart`, or `flai dashboard upgrade`, and `flai dashboard status` says which list it runs with. Only this configuration sets it, never a project's `system-flow.yaml` |
 | `dashboard.push_key`, `dashboard.push_known_hosts` | empty | Retired and ignored ([ADR-0031](../../design/adrs/0031-the-dashboard-s-container-holds-nothing-of-the-project-a-port-and-two-secrets.md)). They still load so an old file works, and `flai dashboard` names them when set; clear them with `flai config set dashboard.push_key ""` |
 | `cache_dir` | `~/.flai/cache`, or `FLAI_CACHE_DIR` when the file is created | Where git templates are cloned, and where the release lists keep each release's signature verdict ([What an upgrade verifies](#what-an-upgrade-verifies)) |
 | `author` | your login name | The default owner of new items and the default `--by` of transitions and acceptances |
@@ -2835,7 +2836,7 @@ When the releases cannot be reached and no list of the release is kept, `flai da
 
 `--build`, and `--image` naming another repository, such as a mirror or `flaiover` from `make flaiover-image`, run `image:tag` as given. No list names them, so `flai dashboard`, `check`, and `upgrade` report them unsigned, and `flai serve` does not dial them ([flai serve](#flai-serve-flai-on-the-host-for-the-dashboards)) unless unsigned builds are allowed ([Unsigned builds](#unsigned-builds)).
 
-With `--json`, `flai dashboard` has `image`, the reference it started, `signed`, `release`, `allow_unsigned`, and `cached_list` when the list kept was used. `status` has `digest`, `release`, and `signed`, and `allow_unsigned` for a container started allowing unsigned builds; `check` has `image`, `signed`, and `release`; `upgrade` has `signed` and `release`, and its `to` is the reference by digest.
+With `--json`, `flai dashboard` has `image`, the reference it started, `signed`, `release`, `allow_unsigned`, and `cached_list` when the list kept was used. `status` has `digest`, `release`, and `signed`, `allow_unsigned` for a container started allowing unsigned builds, and, for a running container, `allowed_hosts`, the list of `dashboard.allowed_hosts` it was started with, empty for none; `check` has `image`, `signed`, and `release`; `upgrade` has `signed` and `release`, and its `to` is the reference by digest.
 
 ### Unsigned builds
 
