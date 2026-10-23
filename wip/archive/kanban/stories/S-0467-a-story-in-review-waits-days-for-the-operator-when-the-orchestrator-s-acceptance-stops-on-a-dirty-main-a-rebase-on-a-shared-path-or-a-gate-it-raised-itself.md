@@ -3,10 +3,10 @@ id: S-0467
 type: story
 nature: improvement
 title: A story in review waits days for the operator when the orchestrator's acceptance stops on a dirty main, a rebase on a shared path, or a gate it raised itself
-status: review
+status: done
 owner: alex
 created: 2026-10-21T11:57:59Z
-updated: 2026-10-23T05:59:57Z
+updated: 2026-10-23T17:43:44Z
 transitions:
   - to: ready
     at: 2026-10-22T20:49:53Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-23T05:59:57Z
     by: agent-S-0467
+  - to: done
+    at: 2026-10-23T17:43:44Z
+    by: alex
 tags: [flai, template]
 topics: [orchestration]
 touches: [flai/cmd/accept.go, flai/cmd/accept_batch_dirty.go, flai/cmd/accept_own_thread_test.go, flai/cmd/accept_conflict_test.go, flai/internal/preview/accept.go, flai/internal/preview/orchestrator.go, flai/internal/threads/threads.go, flai/internal/threads/threads_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, design/adrs/README.md, design/system/strategic-agents.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0150-a-story-in-review-waits-days-for-the-operator-when-the-orchestrator-s-acceptance-stops-on-a-dirty-main-a-rebase-on-a-shared-path-or-a-gate-it-raised-itself.md, design/issues/summary.md, design/adrs/0189-the-orchestrator-s-acceptance-lands-on-a-dirty-main-as-the-merge-queue-s-does.md, flai/cmd/accept_orchestrator_dirty_test.go, docs/users/flai-reference.md]

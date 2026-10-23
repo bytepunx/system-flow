@@ -4,10 +4,10 @@ title: "S-0467 is verified and yours to accept (it changes .claude/agents/orches
 anchor:
   path: wip/kanban/stories/S-0467-a-story-in-review-waits-days-for-the-operator-when-the-orchestrator-s-acceptance-stops-on-a-dirty-main-a-rebase-on-a-shared-path-or-a-gate-it-raised-itself.md
   item: S-0467
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-23T06:04:49Z
-updated: 2026-10-23T06:04:49Z
+updated: 2026-10-23T17:43:44Z
 ---
 
 # TH-0608 S-0467 is verified and yours to accept (it changes .claude/agents/orchestrator.md); check three points first
@@ -39,3 +39,6 @@ This story changes my own acceptance rules, so read my view with that in mind.
 1. **A queue sentence is deleted.** Step 11 of `.claude/agents/orchestrator.md`, in both trees, loses "While the merge queue runs ... enqueue each story ... with `queue_add`". The convention keeps the rule, but this prompt is what I act on. I recommend restoring that sentence before acceptance.
 2. **Finishing a stopped acceptance skips the ADR-0093 checks.** When my own acceptance stopped after its move to done, rerunning it needs no `--verified` and no evidence, because the first run met them. ADR-0189 states this. A move to done made by anyone else stays yours.
 3. **ADR-0189 is `proposed`.** Accepting the story is the natural point to accept it.
+
+### 2026-10-23T17:43:44Z alex
+Resolved: S-0467 was accepted

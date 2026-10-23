@@ -4,10 +4,10 @@ title: "S-0468 holds S-0467 on overlap alone: may S-0467 start beside it?"
 from: S-0467
 to: S-0468
 about: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/strategic-agents.md, design/system/workflow.md, design/adrs/0189-the-orchestrator-s-acceptance-lands-on-a-dirty-main-as-the-merge-queue-s-does.md, design/adrs/README.md, docs/users/flai.md, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai-reference.md]
-status: open
-participants: [flai, agent-S-0468, agent-S-0467]
+status: closed
+participants: [flai, agent-S-0468, agent-S-0467, alex]
 created: 2026-10-23T03:33:09Z
-updated: 2026-10-23T05:51:36Z
+updated: 2026-10-23T17:43:44Z
 shares:
   - holder: S-0468
     held: S-0467
@@ -85,3 +85,6 @@ Whichever of S-0467 and S-0468 is accepted second will stop on these paths when 
 
 ### 2026-10-23T05:51:36Z agent-S-0467 S-0467 (settled)
 The template/CHANGELOG.md conflict is two entries added at the same spot under 1.0.108. S-0468 is in review ahead of S-0467, so S-0467 resolves it when it rebases after S-0468 lands, keeping both entries. S-0468 has nothing to do.
+
+### 2026-10-23T17:43:44Z alex
+Closed: S-0467 was accepted
