@@ -92,8 +92,10 @@ func TestReadPropsMapsNodesAnswerOntoEachComponent(t *testing.T) {
 	if call.dir != filepath.Join("/repo", "web") {
 		t.Errorf("ran in %q, want the sub-project's folder", call.dir)
 	}
-	if len(call.args) != 4 || call.args[0] != "node" || call.args[1] != "--input-type=module" || call.args[2] != "-e" || call.args[3] != script {
-		t.Errorf("ran %q, want node --input-type=module -e <script>", call.args[:min(3, len(call.args))])
+	if len(call.args) != 6 || call.args[0] != "node" || call.args[1] != "--input-type=module" || call.args[2] != "-e" || call.args[3] != script {
+		t.Errorf("ran %q, want node --input-type=module -e <script> <cache> <hash>", call.args[:min(3, len(call.args))])
+	} else if call.args[4] != filepath.Join("/repo", ".flai-cache", "component-props", "web") || call.args[5] != scriptHash || len(scriptHash) != 64 {
+		t.Errorf("ran the script with %q, want the sub-project's cache folder and the script's hash", call.args[4:])
 	}
 	var files []string
 	if err := json.Unmarshal([]byte(call.input), &files); err != nil || !slices.Equal(files, []string{"src/lib/A.svelte", "src/lib/Bad.svelte", "src/lib/Lost.svelte"}) {
@@ -421,6 +423,131 @@ func TestListMapsLibInASvelteKitSubProjectWhoseGeneratedTsconfigIsMissing(t *tes
 	}
 	if sk := skeletons(t, got, "src/lib/Imported.svelte"); !sameJSON(t, json.RawMessage(sk["story"]), storySkeleton) {
 		t.Errorf("story: skeleton %s, want %s", sk["story"], storySkeleton)
+	}
+}
+
+// cacheFiles are the files of the props cache of sub-project web under root.
+func cacheFiles(t *testing.T, root string) []string {
+	t.Helper()
+	files, err := filepath.Glob(filepath.Join(PropsCacheDir(root, "web"), "*.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return files
+}
+
+// editCache sets the skeleton the cache file holds for prop of component.
+func editCache(t *testing.T, file, component, prop, skeleton string) {
+	t.Helper()
+	data, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cache map[string]json.RawMessage
+	if err := json.Unmarshal(data, &cache); err != nil {
+		t.Fatal(err)
+	}
+	var sk map[string]map[string]json.RawMessage
+	if err := json.Unmarshal(cache["skeletons"], &sk); err != nil {
+		t.Fatal(err)
+	}
+	sk[component][prop] = json.RawMessage(skeleton)
+	if cache["skeletons"], err = json.Marshal(sk); err != nil {
+		t.Fatal(err)
+	}
+	if data, err = json.Marshal(cache); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(file, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// writeLater writes body to path with a modification time a minute on, so
+// that the change is seen however coarse the file system's clock.
+func writeLater(t *testing.T, path, body string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	later := time.Now().Add(time.Minute)
+	for _, p := range []string{path, filepath.Dir(path)} {
+		if err := os.Chtimes(p, later, later); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// I-0166: every run built a TypeScript program over everything the
+// components import, about two seconds for flaiover, though nothing had
+// changed since the last.
+func TestListTakesSkeletonsFromTheCacheUntilAFileTypescriptReadChanges(t *testing.T) {
+	root := fixture(t, "typed", "svelte", "typescript")
+	if _, err := List(context.Background(), System{}, root, "web", nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	files := cacheFiles(t, root)
+	if len(files) != 1 {
+		t.Fatalf("cache files %v after one run, want one", files)
+	}
+	// A skeleton no type gives shows that the next run answers from the cache.
+	editCache(t, files[0], "src/lib/Imported.svelte", "story", `"from the cache"`)
+	got, err := List(context.Background(), System{}, root, "web", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sk := skeletons(t, got, "src/lib/Imported.svelte")["story"]; sk != `"from the cache"` {
+		t.Errorf("story: skeleton %s on a run with nothing changed, want the cache's", sk)
+	}
+
+	types := filepath.Join(root, "web", "src", "lib", "types.ts")
+	body, err := os.ReadFile(types)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeLater(t, types, strings.Replace(string(body), "\tid: string;\n", "\tid: string;\n\ttitle: string;\n", 1))
+	got, err = List(context.Background(), System{}, root, "web", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `{"id": "", "title": "", "points": 0, "done": false, "size": "S", "owner": "", "due": "", "tags": [""], "pair": ["", 0], "meta": {}}`
+	if sk := skeletons(t, got, "src/lib/Imported.svelte")["story"]; !sameJSON(t, json.RawMessage(sk), want) {
+		t.Errorf("story: skeleton %s after its imported type changed, want %s", sk, want)
+	}
+}
+
+func TestListResolvesAModuleMadeAfterTheCacheMissedIt(t *testing.T) {
+	root := fixture(t, "typed", "svelte", "typescript")
+	got, err := List(context.Background(), System{}, root, "web", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sk := skeletons(t, got, "src/lib/Board.svelte")["missing"]; sk != "null" {
+		t.Fatalf("missing: skeleton %s, want null while $lib/missing does not exist", sk)
+	}
+	writeLater(t, filepath.Join(root, "web", "src", "lib", "missing.ts"), "export type Missing = { n: number };\n")
+	if got, err = List(context.Background(), System{}, root, "web", nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	if sk := skeletons(t, got, "src/lib/Board.svelte")["missing"]; !sameJSON(t, json.RawMessage(sk), `{"n": 0}`) {
+		t.Errorf("missing: skeleton %s once $lib/missing exists, want {\"n\": 0}", sk)
+	}
+}
+
+func TestListKeepsACacheForEachSetOfComponents(t *testing.T) {
+	root := fixture(t, "typed", "svelte", "typescript")
+	all, err := Find(root, "web", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	one := slices.DeleteFunc(slices.Clone(all), func(c Component) bool { return c.Path != "src/lib/Imported.svelte" })
+	for _, comps := range [][]Component{all, one} {
+		if _, err := ReadProps(context.Background(), System{}, root, comps); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if files := cacheFiles(t, root); len(files) != 2 {
+		t.Errorf("cache files %v after runs over two sets of components, want one for each", files)
 	}
 }
 

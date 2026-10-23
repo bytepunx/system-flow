@@ -1,6 +1,6 @@
 ---
 title: "Runbook: back up"
-updated: 2026-10-21
+updated: 2026-10-23
 status: active
 ---
 
@@ -25,7 +25,7 @@ What there is to keep, and how. A project's work is in git; flai keeps a little 
 | `~/.flai/serve/state.json`, `requests.json`, `serve.log`, `~/.flai/host/` | What runs now, recent requests, logs, and the host's token, remade at every start | No |
 | `~/.flai/cache`, `~/.flai/bin` | Template clones, the release lists' signature verdicts (`releases/verdicts.json`), and the binary | No: fetched again |
 | A project's `.flai-cache/merge-queue/batches/` | Each merge queue batch's and bisection step's tier output, a `<tier>.log` per tier (S-0457) | No: diagnostic, and the queue keeps only the newest 20 batches |
-| A project's `.flai-cache/` apart from worktrees | The MCP server's token, address, state, and log, agents' read markers, edit notices | No: made again; agents over HTTP are given a new token |
+| A project's `.flai-cache/` apart from worktrees | The MCP server's token, address, state, and log, agents' read markers, edit notices, the components' resolved prop skeletons (`component-props/`, S-0478) | No: made again; agents over HTTP are given a new token |
 | The flaiover container and image | Nothing of yours: no volume, no project file | No |
 
 With `FLAI_CONFIG` set, the configuration and the `serve` and `host` folders are beside the file it names instead of in `~/.flai`.

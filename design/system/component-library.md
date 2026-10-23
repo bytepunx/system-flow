@@ -1,6 +1,6 @@
 ---
 title: The component library
-updated: 2026-10-22
+updated: 2026-10-23
 status: active
 topics: [components, design, dashboard, cli]
 ---
@@ -107,7 +107,12 @@ For the skeleton, the script resolves the prop's type whole, imported types incl
 
 A sub-project without `typescript` gives every such prop the last row's value. So does a type imported from a module that does not resolve. Inside a skeleton, a property whose type cannot be resolved is `null`. For `stories: Story[]`, with `Story` imported from `$lib`, the skeleton is one story with each field empty, such as `[{"id": "", "title": "", "points": 0}]`.
 
-The program costs time. Listing flaiover's 54 components takes about 2.3 seconds, against about 0.4 seconds without it. Most of it is reading the type declarations the components' imports reach.
+The program costs time. Listing flaiover's 58 components takes about 2.7 seconds with it, against about 0.4 seconds without it. Most of it is reading the type declarations the components' imports reach. So the script keeps what it resolved in a cache (S-0478, I-0166), under the checkout's `.flai-cache/component-props/<sub-project path>/`, one file per run's key:
+
+- **Key.** The script's own hash, which flai passes it, the sub-project's folder, where its `typescript` resolves, and each typed component's scripts and the names of its props that take a skeleton. A run over other components, such as `flai check`'s examples rule beside the Components page's list, has a key of its own. The folder keeps the four files used last.
+- **Stamps.** Each path TypeScript's system looked at while it resolved them, as it was before it looked: a file by its time and size; a missing file, as most of module resolution's probes are, by its folder's time, which a file made there changes; a folder asked to exist by whether it does; a folder listed by its time; a real path by what it resolves to. `typescript` itself is stamped too.
+- **Hit.** A run whose key has a file and whose every stamp is as it was takes the skeletons from it, without loading `typescript`. Listing flaiover's components then takes about 0.45 seconds, of which checking about 6,300 stamps is a few tens of milliseconds.
+- **Miss.** Any other run resolves them as above and writes its file, through a file of its own that it renames, so that a run beside it reads one or the other. A cache that cannot be written costs only the next run's time.
 
 ### Commands
 

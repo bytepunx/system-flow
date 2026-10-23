@@ -3,7 +3,9 @@ package components
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	_ "embed"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,6 +20,20 @@ import (
 //
 //go:embed props.mjs
 var script string
+
+// scriptHash is script's SHA-256, which keys its cache, so that a flai with
+// another script resolves the skeletons again.
+var scriptHash = func() string {
+	sum := sha256.Sum256([]byte(script))
+	return hex.EncodeToString(sum[:])
+}()
+
+// PropsCacheDir is the folder where the script keeps the skeletons it
+// resolved for the sub-project at project, relative to root:
+// .flai-cache/component-props/<project>/ (S-0478).
+func PropsCacheDir(root, project string) string {
+	return filepath.Join(root, ".flai-cache", "component-props", filepath.FromSlash(project))
+}
 
 // Timeout is how long ReadProps lets node read one sub-project's props.
 const Timeout = time.Minute
@@ -114,7 +130,8 @@ func List(ctx context.Context, r Runner, root, project string, include, exclude 
 
 // ReadProps is comps with their props, read by running the embedded script
 // with node once for each sub-project, in its folder under root, within
-// Timeout. A component whose props cannot be read, such as one that does not
+// Timeout, keeping the skeletons it resolves under PropsCacheDir for the
+// next run. A component whose props cannot be read, such as one that does not
 // parse, keeps no props and carries the reason in Error. The error is for
 // what stops every component of a sub-project: node not on PATH
 // (ErrNodeMissing), svelte not installed there (ErrSvelteMissing), a svelte
@@ -170,7 +187,7 @@ func readProject(ctx context.Context, r Runner, root, project string, out []Comp
 	ctx, cancel := context.WithTimeout(ctx, Timeout)
 	defer cancel()
 	dir := filepath.Join(root, filepath.FromSlash(project))
-	stdout, stderr, err := r.Run(ctx, dir, "node", string(input), "--input-type=module", "-e", script)
+	stdout, stderr, err := r.Run(ctx, dir, "node", string(input), "--input-type=module", "-e", script, PropsCacheDir(root, project), scriptHash)
 	switch {
 	case errors.Is(ctx.Err(), context.DeadlineExceeded):
 		return fmt.Errorf("node did not finish reading the props of %d components in %s in time; run this again, or narrow the sub-project's components include", len(idx), project)

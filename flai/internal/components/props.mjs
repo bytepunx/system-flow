@@ -11,6 +11,14 @@
 // A prop of kind array, object, or unknown carries a skeleton, an empty value
 // of its type, resolved with the sub-project's own typescript when it has one
 // (S-0449). It reads each component's source; it never runs one.
+//
+// Its arguments are the cache's folder and the hash of this script.
+// Resolving the skeletons costs about two seconds for a sub-project whose
+// components import much; the cache keeps them, with a stamp of every path
+// typescript looked at, so a run whose typings, typescript, and those paths
+// are all as they were takes them from the cache without loading typescript
+// (S-0478). Without a cache folder, every run resolves them.
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -32,6 +40,13 @@ const omitted = Symbol('omitted');
 
 // maxDepth is how many objects and arrays deep a skeleton goes.
 const maxDepth = 6;
+
+// maxCached is how many runs' skeletons the cache keeps, one file each, so
+// that runs over different components, such as the components list and the
+// examples check, do not take each other's place.
+const maxCached = 4;
+
+const [cacheDir = '', scriptHash = ''] = process.argv.slice(1);
 
 const require = createRequire(path.join(process.cwd(), 'package.json'));
 const compiler = loadCompiler();
@@ -372,17 +387,50 @@ function kindOfValue(node) {
 // skeleton: an empty value of its type, or its kind's fallback when its type
 // cannot be resolved or the sub-project has no typescript.
 function addSkeletons(read) {
-	const json = (p) => Object.hasOwn(fallbacks, p.kind);
-	const typed = read.filter((r) => r.typing !== null && r.entry.props.some(json));
-	const ts = typed.length > 0 ? loadTypescript() : null;
-	const resolved = ts ? typedSkeletons(ts, typed) : new Map();
+	const typed = read.filter((r) => r.typing !== null && r.entry.props.some(isJSON));
+	const resolved = typed.length > 0 ? cachedSkeletons(typed) : {};
 	for (const r of read) {
-		const skeletonOf = resolved.get(r);
+		const skeletonOf = Object.hasOwn(resolved, r.entry.path) ? resolved[r.entry.path] : {};
 		for (const p of r.entry.props) {
-			if (!json(p)) continue;
-			const s = skeletonOf ? skeletonOf(p.name) : undefined;
-			p.skeleton = s === undefined ? fallbacks[p.kind] : s;
+			if (!isJSON(p)) continue;
+			p.skeleton = Object.hasOwn(skeletonOf, p.name) ? skeletonOf[p.name] : fallbacks[p.kind];
 		}
+	}
+}
+
+// isJSON is whether a prop is of a kind that carries a skeleton.
+function isJSON(p) {
+	return Object.hasOwn(fallbacks, p.kind);
+}
+
+// cachedSkeletons are the typed components' resolved skeletons, from the
+// cache when its key and every stamp it holds are as they are now, otherwise
+// resolved and written to the cache. The key is this script, the sub-project,
+// the typescript it resolves, and each typed component's typing and json
+// props; the stamps are those of the paths typescript looked at.
+function cachedSkeletons(typed) {
+	const tsPath = resolveTypescript();
+	const key = crypto
+		.createHash('sha256')
+		.update(JSON.stringify([scriptHash, process.cwd(), tsPath, typed.map((r) => [r.entry.path, r.typing, r.entry.props.filter(isJSON).map((p) => p.name)])]))
+		.digest('hex');
+	const hit = readCache(key);
+	if (hit) return hit;
+	const ts = tsPath ? loadTypescript() : null;
+	if (!ts) return {};
+	const watched = watch(ts);
+	const resolved = typedSkeletons(ts, typed);
+	writeCache(key, { stamps: [[['file', tsPath], stamp('file', tsPath)], ...watched()], skeletons: resolved });
+	return resolved;
+}
+
+// resolveTypescript is where the sub-project's typescript resolves, or empty
+// when it has none.
+function resolveTypescript() {
+	try {
+		return require.resolve('typescript');
+	} catch {
+		return '';
 	}
 }
 
@@ -397,9 +445,112 @@ function loadTypescript() {
 	}
 }
 
+// readCache is the skeletons the cache holds for key, or null when it holds
+// none, or a stamp has changed. A file it answers from is touched, so that
+// writeCache keeps the files in use.
+function readCache(key) {
+	if (!cacheDir) return null;
+	const file = path.join(cacheDir, key + '.json');
+	let cache;
+	try {
+		cache = JSON.parse(fs.readFileSync(file, 'utf8'));
+	} catch {
+		return null;
+	}
+	if (!cache || !Array.isArray(cache.stamps) || typeof cache.skeletons !== 'object') return null;
+	for (const [[kind, p], was] of cache.stamps) {
+		if (stamp(kind, p) !== was) return null;
+	}
+	try {
+		const now = new Date();
+		fs.utimesSync(file, now, now);
+	} catch {
+		// Untouched, it is only the first to go when the folder is full.
+	}
+	return cache.skeletons;
+}
+
+// writeCache writes cache as its key's file, through a file of this
+// process's own that it renames, so that a run beside it reads one or the
+// other, and removes all but the newest maxCached of the folder's files. A
+// cache that cannot be written is left as it was: the next run resolves the
+// skeletons again, which is all a missing cache costs.
+function writeCache(key, cache) {
+	if (!cacheDir) return;
+	const file = path.join(cacheDir, key + '.json');
+	const tmp = file + '.' + process.pid + '.tmp';
+	try {
+		fs.mkdirSync(cacheDir, { recursive: true });
+		fs.writeFileSync(tmp, JSON.stringify(cache));
+		fs.renameSync(tmp, file);
+		const kept = fs
+			.readdirSync(cacheDir)
+			.filter((n) => n.endsWith('.json'))
+			.map((n) => ({ n, at: fs.statSync(path.join(cacheDir, n)).mtimeMs }))
+			.sort((a, b) => b.at - a.at);
+		for (const { n } of kept.slice(maxCached)) fs.rmSync(path.join(cacheDir, n), { force: true });
+	} catch {
+		fs.rmSync(tmp, { force: true });
+	}
+}
+
+// watch records each path typescript's system looks at, from now on, with
+// its stamp as it was before typescript looked, and gives the function that
+// lists them, each as [[kind, path], stamp]. A file is stamped by its kind,
+// time, and size, and a file that is missing, as most of module
+// resolution's probes are, by its directory's listing instead, which a file
+// made there changes; a directory asked to exist is stamped by its kind
+// alone, and one listed by its time; a real path by what it resolves to.
+function watch(ts) {
+	const looked = new Set();
+	const seen = new Map();
+	const add = (kind, p, s) => {
+		const k = kind + '\0' + p;
+		if (!seen.has(k)) seen.set(k, [[kind, p], s === undefined ? stamp(kind, p) : s]);
+	};
+	const on = (method, kind) => {
+		const f = ts.sys[method];
+		if (typeof f !== 'function') return;
+		ts.sys[method] = function (p, ...rest) {
+			if (typeof p === 'string' && !looked.has(kind + '\0' + p)) {
+				looked.add(kind + '\0' + p);
+				const s = stamp(kind, p);
+				if (kind === 'file' && s === '-') add('list', path.dirname(p));
+				else add(kind, p, s);
+			}
+			return f.call(this, p, ...rest);
+		};
+	};
+	on('fileExists', 'file');
+	on('readFile', 'file');
+	on('getFileSize', 'file');
+	on('getModifiedTime', 'file');
+	on('directoryExists', 'dir');
+	on('getDirectories', 'list');
+	on('realpath', 'real');
+	return () => [...seen.values()];
+}
+
+// stamp is what a path is now, as kind sees it.
+function stamp(kind, p) {
+	if (kind === 'real') {
+		try {
+			return fs.realpathSync(p);
+		} catch {
+			return '-';
+		}
+	}
+	const st = fs.statSync(p, { throwIfNoEntry: false });
+	if (!st) return '-';
+	const type = st.isDirectory() ? 'd' : 'f';
+	if (kind === 'dir') return type;
+	if (kind === 'list') return type + ':' + st.mtimeMs;
+	return type + ':' + st.mtimeMs + ':' + st.size;
+}
+
 // typedSkeletons builds one program over the typed components, each as a
-// module beside its file, and gives, for each, a function from a prop's name
-// to its skeleton, or undefined when its type cannot be resolved.
+// module beside its file, and gives, by each one's path, its json props'
+// skeletons by name, leaving out a prop whose type cannot be resolved.
 function typedSkeletons(ts, typed) {
 	const cwd = process.cwd();
 	const name = (r) => posix(path.resolve(cwd, r.entry.path)) + '.__flai.ts';
@@ -407,7 +558,7 @@ function typedSkeletons(ts, typed) {
 	const options = compilerOptions(ts, cwd);
 	const program = ts.createProgram([...modules.keys()], options, compilerHost(ts, options, modules));
 	const checker = program.getTypeChecker();
-	const out = new Map();
+	const out = {};
 	// An old typescript, whose checker has no public isArrayType, gives the fallbacks.
 	if (typeof checker.isArrayType !== 'function') return out;
 	for (const r of typed) {
@@ -416,12 +567,15 @@ function typedSkeletons(ts, typed) {
 		if (!alias) continue;
 		const propsType = checker.getTypeFromTypeNode(alias.type);
 		const sk = skeletons(ts, checker, alias);
-		out.set(r, (prop) => {
-			const sym = checker.getPropertyOfType(propsType, prop);
-			if (!sym) return undefined;
+		const byName = {};
+		for (const p of r.entry.props) {
+			if (!isJSON(p)) continue;
+			const sym = checker.getPropertyOfType(propsType, p.name);
+			if (!sym) continue;
 			const s = sk(checker.getTypeOfSymbolAtLocation(sym, alias), []);
-			return s === unresolved || s === omitted ? undefined : s;
-		});
+			if (s !== unresolved && s !== omitted) byName[p.name] = s;
+		}
+		out[r.entry.path] = byName;
 	}
 	return out;
 }
