@@ -6,7 +6,7 @@ title: TestServeSettingsAreShownToTheDashboard in flai/cmd fails now and then in
 status: backlog
 owner: alex
 created: 2026-10-23T17:53:08Z
-updated: 2026-10-23T18:11:28Z
+updated: 2026-10-23T19:11:14Z
 transitions: []
 tags: [cli]
 topics: [cli]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-10-23T18:10:04Z
 forecast:
   duration: 15m
-  delivery: 2026-10-24T12:12:00Z
-  basis: "flai forecast gave 5m (131 s per unit of size over 10 done remediation stories on claude-opus-5-5 in the small band, size 2 before the touches were written); raised to 15m, since the story has a test to narrow and a reproducing case to add, then an issue close, each closed by one agent with the go-test tier between them; delivery is flai's 2026-10-24T12:02Z, 28th in the pull order, moved by the 10m added."
-  by: planner-S-0488
-  at: 2026-10-23T18:10:04Z
+  delivery: 2026-10-24T13:19:00Z
+  basis: "Its own forecast of 15m; 28th in the pull order with an in-progress limit of 5, behind S-0489, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0430, S-0431, S-0432, S-0433, S-0434, S-0435 and S-0486."
+  by: flai
+  at: 2026-10-23T19:11:14Z
 finalized:
   by: orchestrator
   at: 2026-10-23T18:11:28Z
