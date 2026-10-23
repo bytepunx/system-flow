@@ -175,7 +175,8 @@ func confirmedRecommendation(text string, recommendations []threads.Entry) *thre
 func answerTitle(title, answer string) string {
 	line, _, _ := strings.Cut(strings.TrimSpace(answer), "\n")
 	line = listMarker.ReplaceAllString(strings.ReplaceAll(line, "**", ""), "")
-	return clipOnWord(strings.TrimRight(strings.TrimSpace(title), "?.") + ": " + firstSentence(line))
+	s := strings.TrimRight(strings.TrimSpace(title), "?.") + ": " + firstSentence(line)
+	return clipOnWord(s, titleLimit)
 }
 
 // listOrEmpty is a copy of list, empty rather than nil so a candidate prints

@@ -206,7 +206,7 @@ func Causes(repo *workitem.Repo, since time.Time, lookup ItemLookup) ([]Candidat
 		out = append(out, Candidate{
 			Kind:    "cause",
 			Source:  workitem.CanonicalID(is.ID),
-			Title:   clipOnWord(strings.Join(strings.Fields(is.Title), " ")),
+			Title:   clipOnWord(strings.Join(strings.Fields(is.Title), " "), titleLimit),
 			Topics:  topicNames,
 			Paths:   paths,
 			At:      at.UTC().Format(workitem.TimeFormat),
@@ -272,7 +272,7 @@ func leadSentence(text string) string {
 	} else {
 		text = firstSentence(text)
 	}
-	return clipOnWord(strings.ReplaceAll(text, "**", ""))
+	return clipOnWord(strings.ReplaceAll(text, "**", ""), titleLimit)
 }
 
 // firstSentence is text up to and including the first full stop, question
@@ -304,18 +304,18 @@ func firstSentence(text string) string {
 	return text
 }
 
-// clipOnWord cuts a title longer than titleLimit characters at the last
-// space before the limit and ends it with an ellipsis.
-func clipOnWord(s string) string {
+// clipOnWord cuts a text longer than limit characters at the last space
+// before the limit and ends it with an ellipsis.
+func clipOnWord(s string, limit int) string {
 	runes := []rune(s)
-	if len(runes) <= titleLimit {
+	if len(runes) <= limit {
 		return s
 	}
-	cut := string(runes[:titleLimit])
-	if i := strings.LastIndex(cut, " "); i > titleLimit/2 {
+	cut := string(runes[:limit])
+	if i := strings.LastIndex(cut, " "); i > limit/2 {
 		cut = cut[:i]
 	}
-	return strings.TrimRight(cut, " ,;:-(") + "…"
+	return strings.TrimRight(cut, " \n,;:-(") + "…"
 }
 
 // remediationText is an issue's Remediation section without its Closed
