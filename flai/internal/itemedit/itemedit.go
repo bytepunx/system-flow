@@ -431,6 +431,12 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 		if err != nil {
 			return nil, invalid("%s", err)
 		}
+		if it.Type == workitem.Task {
+			// a task takes no folder touch it did not have (ADR-0188)
+			if err := repo.CheckTaskTouches(it.ID, it.Touches, touches); err != nil {
+				return nil, invalid("%s", err)
+			}
+		}
 		if !same(touches, orEmpty(it.Touches)) {
 			it.Touches = touches
 			if len(touches) == 0 {

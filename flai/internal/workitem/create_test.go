@@ -1,10 +1,14 @@
 package workitem
 
 import (
+	"errors"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 )
 
 // S-0199: a story is made a draft when it is created; nothing else is.
@@ -100,5 +104,45 @@ func TestCreateTouches(t *testing.T) {
 	}
 	if items, err := r.List(false); err != nil || len(items) != 1 {
 		t.Errorf("nothing is written for a refused touch: %d items, %v", len(items), err)
+	}
+}
+
+// S-0468: a task is created with a file, a path absent from the tree, or a
+// folder inside a shared pattern, and refused a folder of the tree holding
+// files, writing nothing, with the folder and its file count named; a story
+// keeps its folder touch (ADR-0188).
+func TestCreateRefusesATaskAFolderTouch(t *testing.T) {
+	r := newProject(t)
+	r.Manifest.Projects = []manifest.Project{{Name: "flai", Path: "flai", Tags: []string{"cli"}}}
+	writeTree(t, r.Root, "flai/cmd/a.go", "flai/cmd/b.go", "design/adrs/0001-a.md")
+	if err := os.WriteFile(filepath.Join(r.Root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\nclaims:\n  shared: [design/adrs]\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	s, err := r.Create(NewOptions{Type: Story, Title: "Story", Touches: []string{"flai/cmd"}, Now: t0})
+	if err != nil {
+		t.Fatalf("a story keeps its folder touch: %v", err)
+	}
+	for _, c := range []struct {
+		touches        []string
+		touch, message string
+	}{
+		{[]string{"flai/cmd", "flai/cmd/a.go"}, "flai/cmd", "T-0001's touch flai/cmd is a folder holding 2 files: a task takes no folder touch"},
+		{[]string{"flai/cmd/a.go", "cli"}, "cli", "T-0001's touch cli is the folder flai, holding 2 files: a task takes no folder touch"},
+	} {
+		_, err := r.Create(NewOptions{Type: Task, Title: "Folder", Parent: s.ID, Touches: c.touches, Now: t0})
+		var fe *FolderTouchError
+		if !errors.As(err, &fe) || fe.Touch != c.touch || !strings.HasPrefix(err.Error(), c.message) {
+			t.Errorf("%v: a task's folder touch must be refused naming %s: %v", c.touches, c.touch, err)
+		}
+	}
+	if items, err := r.List(false); err != nil || len(items) != 1 {
+		t.Errorf("nothing is written for a refused task: %d items, %v", len(items), err)
+	}
+	task, err := r.Create(NewOptions{Type: Task, Title: "Files", Parent: s.ID, Touches: []string{"flai/cmd/a.go", "flai/cmd/new.go", "flai/internal/new", "design/adrs"}, Now: t0})
+	if err != nil {
+		t.Fatalf("a file, a path to be made, and a shared folder are taken: %v", err)
+	}
+	if !slices.Equal(task.Touches, []string{"flai/cmd/a.go", "flai/cmd/new.go", "flai/internal/new", "design/adrs"}) {
+		t.Errorf("the task keeps its touches: %v", task.Touches)
 	}
 }

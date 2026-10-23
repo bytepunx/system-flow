@@ -206,6 +206,33 @@ func TestItemEditAndNewTakeATouchStartingWithADot(t *testing.T) {
 	}
 }
 
+// S-0468: item_new and item_edit refuse a task a folder of the tree holding
+// files, writing nothing, with the folder, its file count, and what to do
+// instead as the tool's error; a file is taken (ADR-0188).
+func TestItemNewAndEditRefuseATaskAFolderTouch(t *testing.T) {
+	f := setup(t)
+	const refusal = "touch design/system is a folder holding 1 file: a task takes no folder touch (ADR-0188); name the files the task changes, or leave the folder to the story's touches with a ### Planning note"
+	if _, failed := f.call(t, "item_new", map[string]any{"type": "task", "title": "Folder", "parent": f.story.ID, "touches": []string{"design/system"}}); !strings.Contains(failed, "T-0002's "+refusal) {
+		t.Errorf("item_new: %q", failed)
+	}
+	if items, err := f.repo.List(false); err != nil || len(items) != 3 {
+		t.Errorf("item_new wrote nothing: %d items, %v", len(items), err)
+	}
+	before, err := os.ReadFile(f.task.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, failed := f.call(t, "item_edit", map[string]any{"id": f.task.ID, "touches": []string{"design/system/plan.md", "design/system"}}); !strings.Contains(failed, f.task.ID+"'s "+refusal) {
+		t.Errorf("item_edit: %q", failed)
+	}
+	if after, _ := os.ReadFile(f.task.Path); string(after) != string(before) {
+		t.Errorf("item_edit wrote nothing:\n%s", after)
+	}
+	if ed, failed := f.call(t, "item_edit", map[string]any{"id": f.task.ID, "touches": []string{"design/system/plan.md"}}); failed != "" || strings.Join(toStrings(ed["changed"]), ",") != "touches" {
+		t.Errorf("a file is taken: %v %s", ed, failed)
+	}
+}
+
 // S-0199: item_new makes a story a draft, which item_get shows, and refuses a
 // draft of anything else; item_move refuses a draft story to ready, since
 // finalizing is the operator's, and so does item_edit's draft false.

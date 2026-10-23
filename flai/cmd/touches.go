@@ -54,9 +54,17 @@ leaving the rest; --clear empties it. With no path, the touches are shown.`,
 				if err != nil {
 					return err
 				}
-				if it.Touches, err = changedTouches(it, given, add, remove); err != nil {
+				next, err := changedTouches(it, given, add, remove)
+				if err != nil {
 					return err
 				}
+				if it.Type == workitem.Task {
+					// a task takes no folder touch it did not have (ADR-0188)
+					if err := repo.CheckTaskTouches(it.ID, before, next); err != nil {
+						return err
+					}
+				}
+				it.Touches = next
 				it.Updated = a.now().UTC().Format(workitem.TimeFormat)
 				if err := repo.Save(it); err != nil {
 					return err

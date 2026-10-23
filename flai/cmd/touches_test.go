@@ -248,3 +248,53 @@ func TestTouchesSuggestCountsFilesChangedWithTheSeeds(t *testing.T) {
 		t.Errorf("suggest with no seed commit: %d %q %s", code, out, errOut)
 	}
 }
+
+// S-0468: flai touches refuses a task a folder touch it adds, replacing or
+// with --add, writing nothing, and names the folder, its file count, and what
+// to do instead; it keeps one the task already had, takes a file and a path
+// to be made, and leaves a story's folder touch alone; flai task new
+// --touches refuses one as well (ADR-0188).
+func TestTouchesRefusesATaskAFolderTouch(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	for _, p := range []string{"flai/cmd/a.go", "flai/cmd/b.go"} {
+		if err := os.MkdirAll(filepath.Join(root, filepath.Dir(p)), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(root, p), nil, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, step := range [][]string{{"epic", "new", "E"}, {"story", "new", "S", "--epic", "E-0001", "--touches", "flai/cmd"}, {"task", "new", "T", "--story", "S-0001", "--touches", "flai/cmd/a.go"}} {
+		if _, errOut, code := runIn(t, root, step...); code != 0 {
+			t.Fatalf("%v: %s", step, errOut)
+		}
+	}
+	const refusal = "T-0001's touch flai/cmd is a folder holding 2 files: a task takes no folder touch (ADR-0188); name the files the task changes, or leave the folder to the story's touches with a ### Planning note"
+	file := filepath.Join(root, "wip/kanban/tasks/T-0001-t.md")
+	before := read(t, file)
+	for _, args := range [][]string{{"flai/cmd"}, {"--add", "flai/cmd/"}} {
+		if _, errOut, code := runIn(t, root, append([]string{"touches", "T-0001"}, args...)...); code == 0 || !strings.Contains(errOut, refusal) {
+			t.Errorf("%v: %d %s", args, code, errOut)
+		}
+	}
+	if read(t, file) != before {
+		t.Error("no refusal wrote anything")
+	}
+	if _, errOut, code := runIn(t, root, "task", "new", "U", "--story", "S-0001", "--touches", "flai/cmd"); code == 0 || !strings.Contains(errOut, "T-0002's touch flai/cmd is a folder holding 2 files") {
+		t.Errorf("task new: %d %s", code, errOut)
+	}
+	if out, errOut, code := runIn(t, root, "touches", "T-0001", "--add", "flai/cmd/b.go", "flai/new"); code != 0 || out != "T-0001 touches flai/cmd/a.go, flai/cmd/b.go, flai/new\n" {
+		t.Errorf("a file and a path to be made: %d %q %s", code, out, errOut)
+	}
+	// a task written before the rule keeps its folder touch
+	if err := os.WriteFile(file, []byte(strings.Replace(read(t, file), "touches: [flai/cmd/a.go, flai/cmd/b.go, flai/new]", "touches: [flai/cmd]", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if out, errOut, code := runIn(t, root, "touches", "T-0001", "--add", "flai/cmd/a.go"); code != 0 || out != "T-0001 touches flai/cmd, flai/cmd/a.go\n" {
+		t.Errorf("a folder touch the task had: %d %q %s", code, out, errOut)
+	}
+	if out, errOut, code := runIn(t, root, "touches", "S-0001", "flai/cmd", "flai"); code != 0 || out != "S-0001 touches flai/cmd, flai\n" {
+		t.Errorf("a story's folder touch: %d %q %s", code, out, errOut)
+	}
+}

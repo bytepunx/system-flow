@@ -590,3 +590,71 @@ func TestRepoHoldsLookInTheArchive(t *testing.T) {
 		t.Errorf("an archived cancelled story should hold: %+v", h)
 	}
 }
+
+// writeTree writes an empty file at each path below root, making its folders.
+func writeTree(t *testing.T, root string, paths ...string) {
+	t.Helper()
+	for _, p := range paths {
+		full := filepath.Join(root, filepath.FromSlash(p))
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, nil, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// S-0468: a touches entry is a folder touch when it names a folder of the
+// tree holding a file, counted at any depth, a component's name or tag read
+// as its path; a file, a path absent from the tree, an empty folder, and a
+// folder wholly inside a shared pattern are not (ADR-0188).
+func TestFolderTouchReadsTheTree(t *testing.T) {
+	root := t.TempDir()
+	writeTree(t, root, "flai/cmd/a.go", "flai/cmd/sub/b.go", "flai/go.mod", "flai/.git/HEAD", "flai/node_modules/x/y.js",
+		"docs/users/flai.md", "docs/users/img/x.png", "design/adrs/0001-a.md", "conf.d/x/y", "Makefile")
+	if err := os.MkdirAll(filepath.Join(root, "empty/inner"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	shared := manifest.Claims{Shared: []string{"design/adrs", "docs/users/*.md", "*"}}
+	for _, c := range []struct {
+		entry  string
+		files  int
+		folder bool
+	}{
+		{"flai/cmd", 2, true},
+		{"flai/cmd/", 2, true},
+		{"./flai/cmd", 2, true},
+		{"flai", 3, true}, // .git and node_modules are not counted
+		{"cli", 3, true},  // a component's tag
+		{"flaiover", 0, false},
+		{"flai/cmd/a.go", 0, false},
+		{"flai/cmd/new.go", 0, false},
+		{"flai/internal/new", 0, false},
+		{"empty", 0, false},
+		{"design/adrs", 0, false}, // inside a shared pattern
+		{"docs/users", 2, true},   // docs/users/*.md does not hold all of it
+		{"conf.d", 1, true},       // * matches conf.d, but not all of it
+		{"Makefile", 0, false},
+		{"../outside", 0, false},
+	} {
+		files, folder := FolderTouch(root, holdProjects, shared, c.entry)
+		if files != c.files || folder != c.folder {
+			t.Errorf("FolderTouch(%q) = %d, %v; want %d, %v", c.entry, files, folder, c.files, c.folder)
+		}
+	}
+}
+
+// S-0468: the refusal of a task's folder touch names the task, the touch, the
+// folder a component's name stands for, its file count, and what to do
+// instead (ADR-0188).
+func TestFolderTouchErrorSaysWhatToDo(t *testing.T) {
+	one := (&FolderTouchError{ID: "T-0012", Touch: "flai/cmd", Folder: "flai/cmd", Files: 1}).Error()
+	if want := "T-0012's touch flai/cmd is a folder holding 1 file: a task takes no folder touch (ADR-0188); name the files the task changes, or leave the folder to the story's touches with a ### Planning note"; one != want {
+		t.Errorf("got  %s\nwant %s", one, want)
+	}
+	tag := (&FolderTouchError{ID: "T-0012", Touch: "cli", Folder: "flai", Files: 42}).Error()
+	if !strings.HasPrefix(tag, "T-0012's touch cli is the folder flai, holding 42 files: ") {
+		t.Errorf("a component's tag names its folder: %s", tag)
+	}
+}

@@ -2,7 +2,11 @@ package workitem
 
 import (
 	"fmt"
+	"io/fs"
+	"os"
+	"path"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -326,13 +330,126 @@ func within(p string, entries []string) bool {
 // path is a touches entry as it is compared: a component's name or tag
 // becomes its path, and anything else is taken as it is.
 func (h *Holds) path(entry string) string {
+	return touchPath(h.projects, entry)
+}
+
+// touchPath is a touches entry read as a path, as Holds.path reads it with
+// the manifest's sub-projects.
+func touchPath(projects []manifest.Project, entry string) string {
 	e := strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(entry), "./"), "/")
-	for _, p := range h.projects {
+	for _, p := range projects {
 		if e == p.Name || contains(p.Tags, e) {
 			return strings.TrimSuffix(p.Path, "/")
 		}
 	}
 	return e
+}
+
+// notCounted are the folders whose files FolderTouch does not count, at any
+// depth: version control, flai's cache with its worktrees, and installed
+// dependencies, none of them files a story changes.
+var notCounted = map[string]bool{".git": true, ".flai-cache": true, "node_modules": true}
+
+// FolderTouch says whether a touches entry is a folder touch (ADR-0188), and
+// how many files the folder holds when it is. The entry is read as a claim
+// reads it: a sub-project's name or tag among projects is its path. It is a
+// folder touch when it names a folder of the tree at root holding at least
+// one file, counted at any depth. A path absent from the tree is a file to be
+// made, and a folder lying wholly inside a pattern of shared, by ADR-0096's
+// rule, holds nothing: neither is a folder touch.
+func FolderTouch(root string, projects []manifest.Project, shared manifest.Claims, entry string) (files int, folder bool) {
+	p := touchPath(projects, entry)
+	if p == "" || strings.HasPrefix(p, "/") || slices.Contains(strings.Split(p, "/"), "..") {
+		return 0, false
+	}
+	dir := filepath.Join(root, filepath.FromSlash(p))
+	if fi, err := os.Lstat(dir); err != nil || !fi.IsDir() {
+		return 0, false
+	}
+	if sharedFolder(shared, p) {
+		return 0, false
+	}
+	_ = filepath.WalkDir(dir, func(_ string, d fs.DirEntry, err error) error {
+		switch {
+		case err != nil, d.IsDir() && notCounted[d.Name()]:
+			// a folder that cannot be read is passed over, as one not counted
+			return filepath.SkipDir
+		case !d.IsDir():
+			files++
+		}
+		return nil
+	})
+	return files, files > 0
+}
+
+// sharedFolder says whether the folder p lies wholly inside one pattern of
+// shared. Covers reads an entry whose last segment has an extension as a
+// file, so for a folder named like one, such as conf.d, the pattern must
+// also cover a folder below it: docs/* matches docs/conf.d, but not all of it.
+func sharedFolder(shared manifest.Claims, p string) bool {
+	if _, ok := shared.Covers(p); !ok {
+		return false
+	}
+	base := path.Base(p)
+	if i := strings.LastIndex(base, "."); i <= 0 || i == len(base)-1 {
+		return true // Covers read it as a folder already
+	}
+	for _, pattern := range shared.Shared {
+		one := manifest.Claims{Shared: []string{pattern}}
+		if _, ok := one.Covers(p); !ok {
+			continue
+		}
+		if _, ok := one.Covers(p + "/x"); ok {
+			return true
+		}
+	}
+	return false
+}
+
+// FolderTouchError refuses a task's folder touch (ADR-0188). Its message is
+// the one every write path gives.
+type FolderTouchError struct {
+	ID     string // the task
+	Touch  string // the entry as given
+	Folder string // the folder it names, a sub-project's path for its name or tag
+	Files  int    // how many files the folder holds
+}
+
+// Error names the folder, its file count, and what to do instead.
+func (e *FolderTouchError) Error() string {
+	what := e.Touch + " is a folder"
+	if e.Folder != e.Touch {
+		what = e.Touch + " is the folder " + e.Folder + ","
+	}
+	return fmt.Sprintf("%s's touch %s holding %d %s: a task takes no folder touch (ADR-0188); name the files the task changes, or leave the folder to the story's touches with a ### Planning note",
+		e.ID, what, e.Files, oneOrMany(e.Files, "file", "files"))
+}
+
+// CheckTaskTouches refuses the task id a folder touch (ADR-0188): the first
+// entry of touches that before does not hold and that FolderTouch finds a
+// folder of r's checkout, as a *FolderTouchError, or nil. before is the
+// task's touches before the write, nil for a new task: an entry the task
+// already had stays, so that a task written before the rule can still be
+// edited, and a path made a folder since it was named is not refused.
+func (r *Repo) CheckTaskTouches(id string, before, touches []string) error {
+	had := map[string]bool{}
+	for _, e := range before {
+		had[touchPath(nil, e)] = true
+	}
+	var shared *manifest.Claims
+	for _, e := range touches {
+		if had[touchPath(nil, e)] {
+			continue
+		}
+		if shared == nil {
+			c := r.SharedClaims()
+			shared = &c
+		}
+		if n, ok := FolderTouch(r.Root, r.Manifest.Projects, *shared, e); ok {
+			return &FolderTouchError{ID: id, Touch: e, Folder: touchPath(r.Manifest.Projects, e), Files: n}
+		}
+	}
+	return nil
 }
 
 // Of is why story is held, or nil when it is not. Every story that holds it

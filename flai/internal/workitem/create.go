@@ -119,6 +119,11 @@ func (r *Repo) Create(opt NewOptions) (*Item, error) {
 	if err != nil {
 		return nil, err
 	}
+	if opt.Type == Task {
+		if err := r.CheckTaskTouches(id, nil, touches); err != nil {
+			return nil, err
+		}
+	}
 	it.Touches = append(it.Touches, touches...)
 	topics, err := CleanTopics(opt.Topics)
 	if err != nil {
@@ -227,7 +232,8 @@ const touchExample = "give a repository path or component name, such as flai/cmd
 
 // CleanTouches is a touches list as flai writes it (I-0071): trimmed, without
 // a trailing slash, empty entries, or repeats. It refuses an entry CheckTouch
-// refuses. Nothing given is nil.
+// refuses. Nothing given is nil. It reads only the entries' syntax; a task's
+// folder touch is refused by Repo.CheckTaskTouches, which reads the tree.
 func CleanTouches(in []string) ([]string, error) {
 	var out []string
 	seen := map[string]bool{}
