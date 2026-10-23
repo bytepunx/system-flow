@@ -7,7 +7,7 @@ count: 2
 cost: 2m
 first_reported: 2026-10-21T12:14:14Z
 last_reported: 2026-10-23T04:52:28Z
-updated: 2026-10-23T04:52:28Z
+updated: 2026-10-23T17:43:07Z
 ---
 
 # I-0182 criteria_tick is refused on another open story's narrative.state finding, which the story's own scoped check leaves out
@@ -26,3 +26,5 @@ Story: S-0466.
 criteria_tick on S-0466 was refused for markdown.MD012 in T-2042, a task of S-0467 that another agent was writing, untracked, in the main checkout. Nothing in S-0466 caused it. A retry 20 seconds later, once the file was finished, ticked both criteria.
 
 ## Remediation
+
+Story S-0486 remediates this issue, created from it at 2026-10-23T17:43:07Z.
