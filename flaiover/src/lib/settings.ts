@@ -15,6 +15,7 @@ export const SETTINGS_KINDS = [
 	'unserve',
 	'mcp_token',
 	'dashboard_token',
+	'dashboard_hosts',
 	'shared',
 	'manifest'
 ] as const;
@@ -32,7 +33,8 @@ export const HOSTWIDE: readonly SettingsKind[] = [
 	'check',
 	'checks_timeout',
 	'import',
-	'dashboard_token'
+	'dashboard_token',
+	'dashboard_hosts'
 ];
 
 export type HostAction = { name: string; means: string; here: boolean; everywhere: boolean };
@@ -205,6 +207,11 @@ export type SettingsView = {
 		shared?: string[];
 		/** The strategic agents' settings in the manifest (S-0229), present when the project opens. */
 		strategic?: StrategicSettings;
+		/**
+		 * The hosts the dashboard accepts besides its own address (S-0489, ADR-0193), the host's
+		 * dashboard.allowed_hosts, normalized and comma-separated; "" for none, absent from an older flai.
+		 */
+		allowed_hosts?: string;
 		error?: string;
 	};
 };

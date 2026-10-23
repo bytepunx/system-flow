@@ -176,6 +176,26 @@ describe('/api/settings (S-0105)', () => {
 		});
 	});
 
+	it("sets the hosts the dashboard accepts through settings.dashboard_hosts, passing flai's refusal (S-0489)", async () => {
+		script['settings.dashboard_hosts'] = {
+			data: { key: 'dashboard.allowed_hosts', value: 'flow.example.com' }
+		};
+		const r = await post({ kind: 'dashboard_hosts', hosts: 'flow.example.com' });
+		expect(r.status).toBe(200);
+		expect(await r.json()).toMatchObject({ value: 'flow.example.com', warnings: [] });
+		const call = asked.find((a) => a.method === 'settings.dashboard_hosts')!;
+		expect(call.params).toMatchObject({ hosts: 'flow.example.com' });
+		expect(call.params.request_id).toEqual(expect.any(String));
+		expect(call.params.kind).toBeUndefined();
+
+		const why =
+			'dashboard.allowed_hosts: "https://flow.example.com" is not a host name: write no scheme, path, or spaces';
+		script['settings.dashboard_hosts'] = { error: new AgentError(502, why, -32602) };
+		const bad = await post({ kind: 'dashboard_hosts', hosts: 'https://flow.example.com' });
+		expect(bad.status).toBe(400);
+		expect(await bad.json()).toMatchObject({ error: why });
+	});
+
 	it('takes a rotated dashboard token at once and keeps the asking session logged in', async () => {
 		script['settings.dashboard_token'] = {
 			data: {

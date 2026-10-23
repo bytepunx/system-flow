@@ -27,7 +27,9 @@ export const GET: RequestHandler = () => respond(() => repo().ask<SettingsView>(
  * dashboard token is taken here at once:
  * the server checks the new one from now on, and the session that asked gets a cookie with it, so
  * it stays logged in while every other session and agent must log in again. The answer carries
- * the new login link, never the token alone.
+ * the new login link, never the token alone. dashboard_hosts (S-0489) sets the hosts the dashboard
+ * accepts; it is passed through as the others are, and this container keeps the list it was
+ * started with until it is restarted.
  */
 export const POST: RequestHandler = async ({ request, url }) => {
 	const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;

@@ -106,6 +106,8 @@ var good = map[string]struct {
 	"settings.unserve":         {`{"root":"/home/me/git/blog",` + rid + `}`, "serve project remove --json -- /home/me/git/blog", ""},
 	"settings.mcp_token":       {`{` + rid + `}`, "mcp token --rotate --json", ""},
 	"settings.dashboard_token": {`{` + rid + `}`, "dashboard token --rotate --no-restart --json", ""},
+	// S-0489: the hosts the dashboard accepts, through flai config set, normalized
+	"settings.dashboard_hosts": {`{"hosts":" Flow.Example.com , ,board.example.net:8443 ",` + rid + `}`, "config set --json -- dashboard.allowed_hosts flow.example.com,board.example.net:8443", ""},
 	// S-0359: a provider on the host, under the settings action
 	"settings.provider": {`{"name":"litellm","api":"openai-chat","base_url":"http://127.0.0.1:4000","key_env":"LITELLM_API_KEY","models":{"sonnet":"anthropic/claude-sonnet-5","opus":"anthropic/claude-opus-5-5"},` + rid + `}`,
 		"serve agent provider litellm --api=openai-chat --base-url=http://127.0.0.1:4000 --key-env=LITELLM_API_KEY --model=opus=anthropic/claude-opus-5-5 --model=sonnet=anthropic/claude-sonnet-5 --json", ""},
@@ -270,6 +272,8 @@ var refused = map[string][]string{
 	"settings.unserve":         {`{"key":"blog",` + rid + `}`, `{"root":"/a\nb",` + rid + `}`, `{"root":"/a","key":"a b",` + rid + `}`},
 	"settings.mcp_token":       {`"--force"`, `{}`},
 	"settings.dashboard_token": {`"--force"`, `{}`},
+	"settings.dashboard_hosts": {`{` + rid + `}`, `{"hosts":null,` + rid + `}`, `{"hosts":["flow.example.com"],` + rid + `}`, `{"hosts":"https://flow.example.com",` + rid + `}`,
+		`{"hosts":"flow.example.com\n--help",` + rid + `}`, `{"hosts":"flow.example.com:99999",` + rid + `}`, `{"hosts":"flow.example.com"}`},
 	// S-0359: a provider's name and each value checked for its shape; reset alone
 	"settings.provider": {`{"name":"--help","api":"openai-chat",` + rid + `}`, `{"name":"Lite LLM","api":"openai-chat",` + rid + `}`, `{"api":"openai-chat",` + rid + `}`,
 		`{"name":"litellm",` + rid + `}`, `{"name":"litellm","models":{},` + rid + `}`, `{"name":"litellm","reset":true,"api":"openai-chat",` + rid + `}`,
@@ -934,7 +938,9 @@ func TestPublisherPublishesAsPublishRunDoes(t *testing.T) {
 // Nothing a dashboard can ask for changes the host's settings unless the
 // operator turned on the settings action in a shell (ADR-0029, S-0105), and
 // nothing it can ask for turns that action on or off, or reads the journal
-// or the rest of the configuration.
+// or the rest of the configuration. The one key it sets, the hosts the
+// dashboard accepts (S-0489), it sets only under the settings action on for
+// every project.
 func TestOnlySettingsTouchesTheHostConfiguration(t *testing.T) {
 	for name := range Methods("test", nil) {
 		for _, word := range []string{"config", "journal", "enable", "disable"} {
@@ -948,7 +954,11 @@ func TestOnlySettingsTouchesTheHostConfiguration(t *testing.T) {
 		if e != nil || len(args) == 0 {
 			continue
 		}
-		if args[0] == "config" {
+		// S-0489: the one key the dashboard sets, under the settings action on
+		// for every project; no method reads the configuration or sets another key
+		hosts := name == "settings.dashboard_hosts" && sp.action == ActionSettings && sp.hostwide && len(args) == 5 &&
+			strings.Join(args[:4], " ") == "config set -- dashboard.allowed_hosts"
+		if args[0] == "config" && !hosts {
 			t.Errorf("%s runs flai config", name)
 		}
 		host := args[0] == "serve" || args[0] == "agent" || (len(args) > 1 && args[1] == "token" && (args[0] == "dashboard" || args[0] == "mcp"))
@@ -1295,6 +1305,87 @@ func TestSettingsProviderSetsAndResetsThroughFlaiServeAgentProvider(t *testing.T
 	_, e = writeMethods(rec.run, time.Now, Host{Enabled: func(a, root string) bool { return a == ActionSettings && root == p.Root }})["settings.provider"](context.Background(), p, json.RawMessage(`{"name":"litellm","reset":true,"request_id":"req-00000059"}`))
 	if e == nil || e.Code != Disabled || !strings.Contains(e.Message, "flai serve enable settings --all-projects") {
 		t.Errorf("host-wide: enabled for this project only, it is refused: %+v", e)
+	}
+}
+
+// S-0489, ADR-0193: settings.dashboard_hosts sets and clears the hosts the
+// dashboard accepts through flai config set, host-wide, journalled as the
+// command it ran; an entry that is not a host name is refused before flai
+// runs, naming it, and flai's own refusal is a rule with flai's reason.
+func TestSettingsDashboardHostsSetsThroughFlaiConfigSet(t *testing.T) {
+	p := withDocs(t)
+	var journal []Entry
+	host := Host{Enabled: func(a, _ string) bool { return a == ActionSettings }, Record: func(e Entry) { journal = append(journal, e) }}
+	rec := &recorder{}
+	m := writeMethods(rec.run, time.Now, host)["settings.dashboard_hosts"]
+	call := func(params string, ran Ran) (any, *channel.Error) {
+		rec.ran = ran
+		return m(context.Background(), p, json.RawMessage(params))
+	}
+
+	set := `{"path":"/home/me/.flai/config.json","key":"dashboard.allowed_hosts","value":"flow.example.com"}`
+	res, e := call(`{"hosts":"flow.example.com","request_id":"req-00000091"}`, Ran{Stdout: []byte(set)})
+	if e != nil || string(res.(Written).Data) != set {
+		t.Fatalf("a host saved answers flai's change: %+v %+v", res, e)
+	}
+	if _, e := call(`{"hosts":" ","request_id":"req-00000092"}`, Ran{Stdout: []byte(`{}`)}); e != nil {
+		t.Fatalf("an empty list clears it: %+v", e)
+	}
+	why := "dashboard.allowed_hosts: the configuration cannot be read"
+	_, e = call(`{"hosts":"flow.example.com","request_id":"req-00000093"}`, Ran{Exit: 1, Events: []map[string]any{{"level": "FATAL", "msg": "command failed", "err": why}}})
+	if e == nil || e.Code != Rule || e.Message != why {
+		t.Errorf("flai's refusal is a rule with its reason: %+v", e)
+	}
+	ran := []string{
+		"config set --json -- dashboard.allowed_hosts flow.example.com",
+		"config set --json -- dashboard.allowed_hosts ",
+		"config set --json -- dashboard.allowed_hosts flow.example.com",
+	}
+	if len(rec.runs) != len(ran) {
+		t.Fatalf("ran %d commands, want %d", len(rec.runs), len(ran))
+	}
+	for i, want := range ran {
+		if got := strings.Join(rec.runs[i].Args, " "); got != want || rec.runs[i].Dir != p.Root {
+			t.Errorf("run %d: %q in %s, want %q in %s", i, got, rec.runs[i].Dir, want, p.Root)
+		}
+	}
+
+	for i, c := range []struct{ params, want string }{
+		{`{"hosts":"flow.example.com, https://board.example.net"`, `"https://board.example.net" is not a host name`},
+		{`{"hosts":"flow.example.com:0"`, `"flow.example.com:0" has a port that is not a number from 1 to 65535`},
+		{`{"hosts":"flow.example.com\nboard.example.net"`, "hosts holds a line break or NUL"},
+		{`{"hostnames":"flow.example.com"`, "give hosts"},
+	} {
+		_, e := call(fmt.Sprintf(`%s,"request_id":"req-%08d"}`, c.params, 94+i), Ran{Stdout: []byte(`{}`)})
+		if e == nil || e.Code != channel.CodeInvalidParams || !strings.Contains(e.Message, c.want) {
+			t.Errorf("%s: %+v, want a refusal saying %q", c.params, e, c.want)
+		}
+		if e != nil && strings.Contains(c.params, "https") && strings.Contains(e.Message, `"flow.example.com"`) {
+			t.Errorf("the refusal names an entry that is a host name: %s", e.Message)
+		}
+	}
+	if len(rec.runs) != len(ran) {
+		t.Errorf("a refused call ran: %d commands", len(rec.runs)-len(ran))
+	}
+
+	want := []struct{ outcome, detail string }{
+		{"done", "flai config set -- dashboard.allowed_hosts flow.example.com"},
+		{"done", "flai config set -- dashboard.allowed_hosts "},
+		{"failed", why},
+	}
+	if len(journal) < len(want) {
+		t.Fatalf("journal: %+v", journal)
+	}
+	for i, w := range want {
+		if got := journal[i]; got.Action != ActionSettings || got.Method != "settings.dashboard_hosts" || got.Outcome != w.outcome || got.Detail != w.detail {
+			t.Errorf("entry %d: %+v, want %+v", i, got, w)
+		}
+	}
+
+	n := len(rec.runs)
+	_, e = writeMethods(rec.run, time.Now, Host{Enabled: func(a, root string) bool { return a == ActionSettings && root == p.Root }})["settings.dashboard_hosts"](context.Background(), p, json.RawMessage(`{"hosts":"flow.example.com","request_id":"req-00000099"}`))
+	if e == nil || e.Code != Disabled || !strings.Contains(e.Message, "flai serve enable settings --all-projects") || len(rec.runs) != n {
+		t.Errorf("host-wide: enabled for this project only, it is refused and nothing runs: %+v, ran %d", e, len(rec.runs)-n)
 	}
 }
 

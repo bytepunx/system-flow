@@ -1,0 +1,15 @@
+{
+  "examples": [
+    {
+      "name": "The area at the Host page's width",
+      "width": 768,
+      "props": {}
+    },
+    {
+      "name": "The area at the Host page's width, dark",
+      "theme": "dark",
+      "width": 768,
+      "props": {}
+    }
+  ]
+}

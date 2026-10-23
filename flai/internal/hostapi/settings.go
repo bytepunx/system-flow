@@ -21,7 +21,7 @@ import (
 // are, gated by the settings host action, which only a shell turns on and
 // off. What the host's configuration keeps for every project (the agent's
 // command, the harnesses, the providers, the checks, the import folders, the
-// dashboard token) needs it on for every project; what belongs to one project (its host
+// dashboard token and accepted hosts) needs it on for every project; what belongs to one project (its host
 // actions, its default agent, its shared paths, its MCP token) needs it on for
 // that project.
 
@@ -602,7 +602,44 @@ func settingsSpecs() map[string]spec {
 			}
 			return []string{"dashboard", "token", "--rotate", "--no-restart"}, "", nil
 		}),
+
+		// settings.dashboard_hosts: the hosts the dashboard accepts in a
+		// browser's Origin besides its own address (S-0489, ADR-0193), set
+		// for every project with flai config set dashboard.allowed_hosts. The
+		// running container keeps its list until it is started again. flai
+		// exits 1 refusing the value: it is answered as a rule, with flai's
+		// reason.
+		"settings.dashboard_hosts": {action: ActionSettings, hostwide: true, exits: map[int]int{1: Rule},
+			describe: settingsDone("the dashboard's accepted hosts changed"), say: sayArgs(dashboardHosts), build: dashboardHosts},
 	}
+}
+
+// dashboardHosts is settings.dashboard_hosts' command line: flai config set
+// dashboard.allowed_hosts with the list given, normalized; an empty list
+// clears it. An entry that is not a host name with an optional port is
+// refused before flai runs, by the rule config.Parse applies, so that the
+// rule lives in one place.
+func dashboardHosts(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+	in, e := decode[struct {
+		Hosts *string `json:"hosts"`
+	}](raw)
+	if e != nil {
+		return nil, "", e
+	}
+	if in.Hosts == nil {
+		return nil, "", bad(`give hosts, host names separated by commas, such as "flow.example.com, board.example.net:8443", or "" for none`)
+	}
+	if strings.ContainsAny(*in.Hosts, "\x00\n\r") {
+		return nil, "", bad("hosts holds a line break or NUL; give one line")
+	}
+	probe, err := json.Marshal(map[string]map[string]string{"dashboard": {"allowed_hosts": *in.Hosts}})
+	if err != nil {
+		return nil, "", failed(err)
+	}
+	if _, err := config.Parse(probe); err != nil {
+		return nil, "", bad("%s", err)
+	}
+	return []string{"config", "set", "--", "dashboard.allowed_hosts", config.NormalizeAllowedHosts(*in.Hosts)}, "", nil
 }
 
 // enabledEverywhere says whether an action is on for every project.
