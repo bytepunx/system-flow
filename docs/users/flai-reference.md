@@ -61,6 +61,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [stats](#flai-stats) | Print flow metrics: throughput, cycle time, WIP, flow efficiency, time in state, tokens and cost |
 | [story](#flai-story) | Create stories (flai show prints one, flai move transitions it) |
 | [stream](#flai-stream) | Open and append to agent narratives in wip/agents |
+| [subproject](#flai-subproject) | List, add, change, and remove the sub-projects under projects in system-flow.yaml |
 | [task](#flai-task) | Create tasks (flai show prints one, flai move transitions it) |
 | [template](#flai-template) | Inspect, refresh, and switch the template source |
 | [test](#flai-test) | Run the test and lint tiers for paths or packages and answer pass or the first findings |
@@ -139,6 +140,7 @@ Subcommands:
 - [stats](#flai-stats): Print flow metrics: throughput, cycle time, WIP, flow efficiency, time in state, tokens and cost
 - [story](#flai-story): Create stories (flai show prints one, flai move transitions it)
 - [stream](#flai-stream): Open and append to agent narratives in wip/agents
+- [subproject](#flai-subproject): List, add, change, and remove the sub-projects under projects in system-flow.yaml
 - [task](#flai-task): Create tasks (flai show prints one, flai move transitions it)
 - [template](#flai-template): Inspect, refresh, and switch the template source
 - [test](#flai-test): Run the test and lint tiers for paths or packages and answer pass or the first findings
@@ -4273,6 +4275,144 @@ Then it runs the fix command of each test tier in system-flow.yaml (fix\_command
 After a clean rebase it trial-merges the branch with the branch of every other story in progress or in review (git merge-tree --write-tree, git 2.38 or newer), writing nothing to any worktree, and lists each branch it conflicts with and the conflicting paths. A pair's conflicts are the paths both branches changed since they left the main branch, not what the main branch brought since: a path where main has since changed what a branch behind it did is that story's own rebase to settle (I-0064). Generated files, issue files, and the ADR index are left out, so a pair whose only conflicts are summary.md, issue files, and design/adrs/README.md counts as clean (ADR-0157). A conflict is told to both stories in their conversation, not a thread (ADR-0121): flai messages the other story from the one that synced, about the conflicting paths, and sync names the pair's conversation. A later sync with the same paths adds nothing, and one that finds the pair merging cleanly again, or the other story no longer open, closes the conversation. The two agents agree who changes what; either asks the operator with flai message escalate only when they do not agree. A conflict thread an older flai opened is still resolved the same way, and no sync opens one. With --json each branch names its conversation, and thread names an old conflict thread it resolved. It also lists the paths the branch changed since the main branch that the story's touches, and its open tasks', do not cover, so that they are widened with flai touches.
 
 After a clean rebase it warns on each path where the rebased branch removes lines the main branch added since the branch left it, as when a revert of the story's own change is replayed cleanly over main's identical change (I-0124, ADR-0155), inside the story's claim or outside it. The warning names flai stream restore &lt;id&gt; --path &lt;path&gt;, which commits main's version of the path on the branch, and flai accept &lt;id&gt; --keep-removal &lt;path&gt; --reason "&lt;why&gt;", for the operator to keep the removal. Each such path is recorded in the main checkout's .flai-cache/undone/&lt;id&gt;.json and blocks the story's acceptance until it is restored or kept. A later sync, whose rebase starts past main's change and cannot find the path itself, warns on it from the record for as long as the branch still removes those lines. The sync still exits 0. With --json, undoes\_main lists each path with its path, lines (main's lines the branch removes), and old\_base (the branch's merge base with main before the rebase that found it).
+
+### flai subproject
+
+List, add, change, and remove the sub-projects under projects in system-flow.yaml.
+
+projects in system-flow.yaml lists the repository's sub-projects: each one's name, its folder (path, relative to the repository root), its kind, such as go or sveltekit, and its tags. These commands read and change that list, keeping every other line, the order of the keys, and the comments.
+
+add and set create the sub-project's folder when it is missing, with a README.md in it so that git carries it. remove leaves the folder alone. flai components config writes a Svelte sub-project's components key; the install key is written by hand.
+
+Examples:
+
+```bash
+flai subproject list
+flai subproject add web --kind sveltekit
+flai subproject set web --tags ui,app
+flai subproject remove web
+```
+
+Subcommands:
+
+- [add](#flai-subproject-add): Add a sub-project to projects, creating its folder when it is missing
+- [list](#flai-subproject-list): Print each sub-project: its name, path, kind, tags, and whether its folder is there
+- [remove](#flai-subproject-remove): Remove a sub-project from projects, leaving its folder alone
+- [set](#flai-subproject-set): Change a sub-project's name, path, kind, or tags, keeping the rest of its entry
+
+#### flai subproject add
+
+Add a sub-project to projects, creating its folder when it is missing.
+
+```text
+flai subproject add <name> [flags]
+```
+
+Add an entry to the end of projects in system-flow.yaml: the name given, its --path, its --kind, and its --tags. --path is relative to the repository root and defaults to the name. When the folder is missing, add creates it with a README.md naming the sub-project and its kind, so that git carries the folder, and prints each path it wrote; a folder that is there already gets no README.md. The change is committed, system-flow.yaml and that README.md alone, only with --autocommit and unless the project sets dashboard.autocommit: false.
+
+Set the rest of the entry afterwards: flai components config writes a Svelte sub-project's components key, and the install key is written by hand.
+
+The manifest is checked as it would be after the change, as flai check checks it: a name that is empty or another sub-project's, a path that is empty, the repository root, absolute, not clean, leaves the repository, is another sub-project's, or names a file, and an empty kind are refused with the field and the reason on standard output, and nothing is written, neither the manifest nor a folder; the exit status is 1, as for a workflow rule's refusal. With --json a refusal is {"refused": [{"field", "reason"}]}.
+
+--json prints {"action", "project": {"name", "path", "kind", "tags", "components", "install"}, "from", "created", "written", "commit"}: project the entry as written, or as it was for remove; from the old name after a rename; created the folder made, when one was; written the files written, relative to the repository root; and commit only with --autocommit.
+
+Examples:
+
+```bash
+flai subproject add web --kind sveltekit
+flai subproject add api --path services/api --kind go --tags backend,http
+flai subproject add web --kind sveltekit --autocommit --trailer 'Co-Authored-By: someone <s@s>'
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--autocommit` | commit system-flow.yaml and the README.md written, and nothing else, unless dashboard.autocommit is false |
+| `--kind` string | what the sub-project is, such as go, node, python, rust, sveltekit, svelte, or template |
+| `--path` string | the sub-project's folder, relative to the repository root (default the name) |
+| `--tags` strings | the sub-project's tags, separated by commas, such as ui,app |
+| `--trailer` stringArray | a trailer line for the commit (repeatable) |
+
+#### flai subproject list
+
+Print each sub-project: its name, path, kind, tags, and whether its folder is there.
+
+```text
+flai subproject list
+```
+
+Print each entry of projects in system-flow.yaml, in its order, a line each: its name, path, kind, and tags, whether its folder is present in the repository, and whether it sets components and install.
+
+--json prints {"projects": [{"name", "path", "kind", "tags", "folder", "components", "install"}]}: tags [] when there are none, folder true when the path names a folder, and components and install as the manifest has them, or null when the entry leaves them out.
+
+Examples:
+
+```bash
+flai subproject list
+flai subproject list --json
+```
+
+#### flai subproject remove
+
+Remove a sub-project from projects, leaving its folder alone.
+
+```text
+flai subproject remove <name> [flags]
+```
+
+Remove the entry of projects in system-flow.yaml that the name given names, with its components and install keys. The sub-project's folder and what is in it are left as they are; delete them yourself if you mean to. Removing the last entry leaves projects: []. A name the manifest does not have is refused, naming those it has, and nothing is written. The change is committed, system-flow.yaml alone, only with --autocommit and unless the project sets dashboard.autocommit: false.
+
+--json prints {"action", "project": {"name", "path", "kind", "tags", "components", "install"}, "from", "created", "written", "commit"}: project the entry as written, or as it was for remove; from the old name after a rename; created the folder made, when one was; written the files written, relative to the repository root; and commit only with --autocommit.
+
+Examples:
+
+```bash
+flai subproject remove web
+flai subproject remove web --autocommit --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--autocommit` | commit system-flow.yaml and the README.md written, and nothing else, unless dashboard.autocommit is false |
+| `--trailer` stringArray | a trailer line for the commit (repeatable) |
+
+#### flai subproject set
+
+Change a sub-project's name, path, kind, or tags, keeping the rest of its entry.
+
+```text
+flai subproject set <name> [flags]
+```
+
+Change the entry of projects in system-flow.yaml that the name given names: each flag given replaces its key, and every other key of the entry, its components and install among them, is kept. --name renames the entry; --tags "" removes its tags. At least one flag is needed.
+
+When the entry's folder is missing after the change, set creates it with a README.md, as flai subproject add does, so that a sub-project's folder is always there. A folder the entry named before is left as it is: set moves no files. The change is committed, system-flow.yaml and that README.md alone, only with --autocommit and unless the project sets dashboard.autocommit: false. A name the manifest does not have is refused, naming those it has.
+
+The manifest is checked as it would be after the change, as flai check checks it: a name that is empty or another sub-project's, a path that is empty, the repository root, absolute, not clean, leaves the repository, is another sub-project's, or names a file, and an empty kind are refused with the field and the reason on standard output, and nothing is written, neither the manifest nor a folder; the exit status is 1, as for a workflow rule's refusal. With --json a refusal is {"refused": [{"field", "reason"}]}.
+
+--json prints {"action", "project": {"name", "path", "kind", "tags", "components", "install"}, "from", "created", "written", "commit"}: project the entry as written, or as it was for remove; from the old name after a rename; created the folder made, when one was; written the files written, relative to the repository root; and commit only with --autocommit.
+
+Examples:
+
+```bash
+flai subproject set web --tags ui,app
+flai subproject set web --path apps/web
+flai subproject set web --name site --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--autocommit` | commit system-flow.yaml and the README.md written, and nothing else, unless dashboard.autocommit is false |
+| `--kind` string | what the sub-project is, such as go, node, python, rust, sveltekit, svelte, or template |
+| `--name` string | the sub-project's new name |
+| `--path` string | the sub-project's folder, relative to the repository root; created when missing |
+| `--tags` strings | the sub-project's tags, separated by commas, replacing those it has; "" removes them |
+| `--trailer` stringArray | a trailer line for the commit (repeatable) |
 
 ### flai task
 

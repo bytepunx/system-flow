@@ -1403,6 +1403,34 @@ A change to the design system is proposed on a story's branch, like any other ch
 
 A proposal needs no step of its own. Accepting the story merges its branch, and the project's design system becomes the proposal's. The dashboard's Design page lists the proposals, compares one with main's, and makes a story from a request ([flaiover.md § Proposals](flaiover.md#proposals)).
 
+## Manage sub-projects
+
+`projects` in `system-flow.yaml` lists the repository's sub-projects: each one's name, folder, kind, and tags. `flai subproject` reads and changes that list, so you or an agent never edit the file by hand. It keeps every other line, the order of the keys, and the comments.
+
+```bash
+flai subproject list                                   # each sub-project, and whether its folder is there
+flai subproject add web --kind sveltekit               # path defaults to the name; creates web/ when missing
+flai subproject add api --path services/api --kind go --tags backend,http
+flai subproject set web --tags ui,app                  # changes the keys given, keeps the rest
+flai subproject set web --name site --path apps/site   # renames and moves the entry, not the files
+flai subproject remove site                            # the folder stays
+```
+
+```text
+NAME  PATH  KIND       TAGS  FOLDER   COMPONENTS  INSTALL
+web   web   sveltekit  -     present  -           -
+```
+
+`add` and `set` create the sub-project's folder when it is missing. They write a `README.md` in it, naming the sub-project and its kind, so that git carries the folder, and print each path they wrote. A folder that is there already gets no `README.md`. `set` leaves the folder an entry named before as it is, and `remove` leaves the sub-project's folder alone.
+
+The manifest is checked as it would be after the change, as `flai check` checks it. A name that is empty or another sub-project's, a path that leaves the repository, is the root, is another's, or names a file, and an empty kind are refused with the field and the reason. Nothing is written, neither the manifest nor a folder, and the exit status is 1. An add or set is also refused while another entry's folder is missing; set that entry's path, or remove it, first.
+
+Nothing is committed unless you give `--autocommit` and the project leaves `dashboard.autocommit` on. The commit holds `system-flow.yaml` and the `README.md` written, and nothing else; `--trailer` adds lines to it.
+
+With `--json`, `list` prints `{"projects": [{name, path, kind, tags, folder, components, install}]}`. `add`, `set`, and `remove` print `{action, project, from, created, written, commit}`: the entry, the old name after a rename, the folder created, the files written, and the commit. A refusal prints `{"refused": [{field, reason}]}`.
+
+The command writes an entry's name, path, kind, and tags. `flai components config` writes a Svelte sub-project's `components` key ([Where flai finds them](#where-flai-finds-them)), and you write the `install` key by hand ([Accept and release](#accept-and-release)).
+
 ## List a project's components
 
 The component library is the components of your Svelte sub-projects and the props each takes ([ADR-0162](../../design/adrs/0162-the-component-library-reaches-sub-projects-of-kind-sveltekit-or-svelte-finds.md)). A sub-project is in it when its `kind` in `system-flow.yaml` is `sveltekit` or `svelte`. Its components are its `.svelte` files under `src/lib`, unless its `components` key says otherwise ([Where flai finds them](#where-flai-finds-them)). The design is in [component-library.md](../../design/system/component-library.md#the-catalogue-s-0437).
