@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-10-21
+updated: 2026-10-23
 status: active
 ---
 
@@ -587,6 +587,17 @@ It listens on this machine only by default. `--addr 0.0.0.0:4243` or another int
 
 The dashboard speaks plain HTTP and the token travels in every request. On the machine itself or a network you trust that is acceptable. Anywhere else, put a tunnel or a reverse proxy that terminates TLS in front of it and use the `https` address; never publish the dashboard's port to the internet as it is. To keep it to the host and let only the tunnel reach it, bind it to loopback: `dashboard.bind: 127.0.0.1` in `system-flow.yaml`, or `flai dashboard --bind 127.0.0.1`. The same holds for `flai mcp` over HTTP, which has its own port and token.
 
+Then admit the tunnel's or the domain's host name. The dashboard accepts a browser on the address the request comes to. A tunnel or proxy that rewrites `Host`, or serves the dashboard under another domain, needs that name in the host's configuration ([ADR-0193](../../design/adrs/0193-the-dashboard-accepts-a-browser-origin-naming-one-of-the-hosts-in-dashboard.md)):
+
+```bash
+flai config set dashboard.allowed_hosts flow.example.com
+flai dashboard restart
+```
+
+The value is host names, each with an optional port, separated by commas, such as `flow.example.com, board.example.net:8443`. A name with no port means the scheme's default, 443 for `https`. `flai config set` refuses an entry that is not a host name: one with a scheme, a path, a space, a bad port, or an IPv6 address without brackets. The key is in your flai configuration, never in `system-flow.yaml` ([settings](settings.md#flai-configuration)). The Host page's Addresses area sets the same key once `flai serve enable settings --all-projects` is on. The running container keeps the list it was started with: `flai dashboard restart` or `upgrade`, or a restart by [the dashboard's watch](#the-dashboards-watch), applies a change. `flai dashboard status` says what list the container runs with and when the configuration names another.
+
+Without the name, pages load but the live events socket, `/api/events`, answers 403 to the browser's `Origin`, and every page shows "Reconnecting…".
+
 ### How the dashboard knows whether it is served over HTTPS
 
 It matters for one thing: the browser's session cookie is marked `Secure` exactly when the page is served over HTTPS, and a browser drops a `Secure` cookie it receives over plain HTTP from anywhere but `localhost`.
@@ -668,6 +679,7 @@ The dashboard is built for one person, or a small team on a network they trust. 
 | What the token can do | Through `flai serve`, change every project the dashboard serves: moves, edits, new items and ADRs, acceptances, thread entries, all committed with your git identity. With a host action on, what that action does: push and publish with your credentials (`push`), start an agent on this host for a story moved to ready (`agent`), run the review checks (`checks`), restart or upgrade the container (`dashboard`), start and stop flai's processes (`host`), change settings (`settings`), and with `settings --all-projects`, run any command on this host as you ([the settings host action](#the-settings-host-action-changing-the-hosts-settings-from-the-dashboard-s-0105)). Every host action is off until you enable it |
 | Where it listens | Every interface of the host at port `4242` by default, so a team can reach it over a private network or VPN. `--bind 127.0.0.1` or `dashboard.bind: 127.0.0.1` keeps it to this machine |
 | On the wire | Plain HTTP; the token or the session cookie travels in clear on every request. Beyond a trusted LAN, terminate TLS in a tunnel or proxy and use the `https` address ([the tunnel expectation](#the-tunnel-expectation)) |
+| Allowed hosts | `dashboard.allowed_hosts` widens only which origins a browser may open the live events socket from. It does not change who may log in: every request still needs the token ([ADR-0193](../../design/adrs/0193-the-dashboard-accepts-a-browser-origin-naming-one-of-the-hosts-in-dashboard.md)) |
 | What the container holds | No file of any project, no git, no credential but the two secret files; it can reach the projects only by asking `flai serve` ([ADR-0031](../../design/adrs/0031-the-dashboard-s-container-holds-nothing-of-the-project-a-port-and-two-secrets.md)) |
 
 What to do:

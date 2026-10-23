@@ -564,9 +564,11 @@ Search covers `design/` and `wip/` by default and `docs/` when you tick the box.
 
 ## Host
 
-Host is the Updates page. Host in the rail's Configuration group links it, and so does the host flai badge in the top bar. It has two parts.
+Host is the Updates page. Host in the rail's Configuration group links it, and so does the host flai badge in the top bar. It has three parts.
 
 **Dashboard** shows what image and version the dashboard container is running, and, once the operator has enabled it (`flai serve enable dashboard`), Restart, Upgrade, and Stop. **Check for updates** always works and changes nothing. Restart and a successful upgrade stop the very container answering the page, so the page expects the connection to drop and shows "Reconnecting…" rather than an error, then says what came back once it does. An upgrade never touches the running container until the new image has proven itself healthy: if it does not, the page says so and nothing changed.
+
+**Addresses** lists the host names the dashboard accepts besides its own address: a tunnel's or a domain's name that reaches it, such as `flow.example.com, board.example.net:8443`. The address a request comes to is always accepted. Through any other, without its name here, live updates fail and the page keeps showing "Reconnecting…". Once the operator has run `flai serve enable settings --all-projects` on the host, the area has a field and **Save**, which sets `dashboard.allowed_hosts` on the host. flai refuses an entry that is not a host name, such as one with a scheme, a path, or a space: the reason shows under the field and nothing is written. The running dashboard keeps the list it was started with, so after a save the area says to apply it with Restart in the Dashboard area, which needs `flai serve enable dashboard`. While the running dashboard's list differs from the saved one, the area names both. Without the settings action, it shows the list, read-only, and the command that allows changing it. A name here does not let anyone in: every request still needs the dashboard's token. Setting it up from a shell is in the [operators guide](../operators/index.md#the-tunnel-expectation).
 
 **flai host** shows the flai host process (S-0106): its version and pid, and a row each for `serve` and the MCP servers. Each row gives the state, the version, and the restart count, and the MCP row lists the projects served. **Check for upgrade** always works and changes nothing. Once the operator has enabled it with `flai serve enable host`, each row has Start, Stop, and Restart, and one **Upgrade** installs the newest flai and has the host start serve and the MCP servers again from it. The dashboard reaches the host through serve, so it asks before stopping serve: only `flai host start serve` in a shell on the host brings serve back. A serve restart and an upgrade drop the page's connection, so the page shows "Reconnecting…" and then says what version came back. With no host running, the area says to start one with `flai host start`.
 
@@ -574,7 +576,7 @@ Each area has **Versions** beside its check, to go back to an earlier release or
 
 ## Settings
 
-The settings are five pages of the rail's Configuration group. Together they show how flai on the host is set up for this project and, once the operator allows it, change it. Each page has its own address:
+The settings are five pages of the rail's Configuration group, which lists [Host](#host) after them. Together they show how flai on the host is set up for this project and, once the operator allows it, change it. Each page has its own address:
 
 | Page | Address | Sections |
 |------|---------|----------|
