@@ -7,7 +7,7 @@ count: 2
 cost: 20m
 first_reported: 2026-10-23T18:27:27Z
 last_reported: 2026-10-23T19:51:37Z
-updated: 2026-10-23T19:51:37Z
+updated: 2026-10-23T20:20:26Z
 ---
 
 # I-0201 flai test runs go test with -short, so a real-git test a task adds is skipped until the integration tier runs in the merge queue's batch
@@ -26,3 +26,5 @@ Story: S-0489.
 S-0489's T-2084 changed `config.Keys` and the long help of `flai dashboard restart`, `status`, and `upgrade`, which make up `docs/users/flai-reference.md`. `flai test` on `flai/cmd` and the close-out both passed: `TestReferenceIsCurrent` skips under `-short`, and the close-out left the integration tier to the merge queue. The queue's batch 20261023-194240 then failed S-0489 at integration with "docs/users/flai-reference.md is stale: run make flai-reference" (TH-0625). That cost a send-back, a regeneration, a second close-out, and a second batch.
 
 ## Remediation
+
+Story S-0490 remediates this issue, created from it at 2026-10-23T20:20:26Z.
