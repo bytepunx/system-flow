@@ -344,8 +344,7 @@ func TestASubAgentsPackHoldsTheDigestAsBriefs(t *testing.T) {
 }
 
 // ADR-0194: the digest step never takes the pack over its budget nor its
-// items over an eighth of it, and loads nothing when the pack is over its
-// budget before it.
+// items over an eighth of it.
 func TestTheDigestStepNeverTakesThePackOverItsBudget(t *testing.T) {
 	repo, id := digestRepo(t)
 	loaded := false
@@ -359,15 +358,45 @@ func TestTheDigestStepNeverTakesThePackOverItsBudget(t *testing.T) {
 			used += len(it.Printed())
 		}
 		switch {
-		case p.Exceeded != "" && used > 0:
-			t.Errorf("budget %d, exceeded %s: digest loads %d bytes", budget, p.Exceeded, used)
-		case p.Exceeded == "" && (p.Size.Bytes > budget || used > budget/DigestShare):
-			t.Errorf("budget %d: pack %d bytes, digest %d of a share of %d", budget, p.Size.Bytes, used, budget/DigestShare)
+		case used > budget/DigestShare:
+			t.Errorf("budget %d, exceeded %q: digest %d bytes of a share of %d", budget, p.Exceeded, used, budget/DigestShare)
+		case p.Exceeded == "" && p.Size.Bytes > budget:
+			t.Errorf("budget %d: the step took the pack to %d bytes", budget, p.Size.Bytes)
 		}
 		loaded = loaded || used > 0
 	}
 	if !loaded {
 		t.Errorf("no budget loaded a digest entry")
+	}
+}
+
+// TH-0624: a pack over its budget before the step still loads digest
+// entries, best first, while they and the digest heading stay within an
+// eighth of the budget; one too large for what is left is skipped.
+func TestTheDigestLoadsWithinItsShareOnAPackOverItsBudget(t *testing.T) {
+	const budget = 16 * 1024
+	p := &Pack{Story: "S-0001", Budget: budget, Exceeded: ExceededConventions, Conventions: []Convention{{Path: "design/conventions/big.md", Text: strings.Repeat("a rule\n", budget/4)}}}
+	p.size()
+	before := p.Size.Bytes
+	entry := func(id, body string) Item {
+		return digestItem(digest.Entry{ID: id, Title: "Fact " + id, Status: "active", Path: "design/digest/" + id + "-fact.md", Body: body}, "topics: cli; rank 1", true)
+	}
+	items := []Item{entry("D-0001", "short"), entry("D-0002", strings.Repeat("long ", budget/DigestShare/5)), entry("D-0003", "also short")}
+	added := p.addDigest(items, true)
+	var ids []string
+	used := len(p.groupHead()[groupDigest])
+	for _, it := range added {
+		ids = append(ids, it.ID)
+		used += len(p.printed(it))
+	}
+	if got := strings.Join(ids, " "); got != "D-0001 D-0003" {
+		t.Errorf("added %q, want D-0001 D-0003: the long entry is skipped, the next tried", got)
+	}
+	if used > budget/DigestShare {
+		t.Errorf("the digest and its heading print %d bytes, over the share of %d", used, budget/DigestShare)
+	}
+	if p.Size.Bytes <= before || !strings.Contains(p.Body(), "Fact D-0003") {
+		t.Errorf("pack %d bytes from %d: the digest entries are not in it", p.Size.Bytes, before)
 	}
 }
 

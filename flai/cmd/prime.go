@@ -62,16 +62,17 @@ other than all, or its claim select, never an absorbed one, ranked against
 the story's title, goal, and criteria, loaded best first under a digest
 heading, each with step digest and its reason (path: <claimed path> or
 topics: <topics>, then rank n), a compacted one as a one-line brief, while
-they stay within an eighth of the budget and the pack within the budget
-(ADR-0194); then the sections ranked highest against the
+they stay within an eighth of the budget and, on a pack within its budget
+before the step, the pack within it too (ADR-0194, TH-0624); then the sections ranked highest against the
 story's title, goal, and criteria, each cut at its own heading (an ADR whole
 when it fits), in rank order, while the budget has room. Then a catalog of
 every document neither loaded nor briefed, with the outline of those loaded
 in part, and one line per convention section left out, with its topics.
 Nothing prints twice: the first reason wins and the others are listed on it.
-When the conventions alone exceed the budget the pack is the conventions and
-a catalog; when the conventions and what is named exceed it, nothing is
-ranked and no digest entry loads; the header says which. --budget sets the size, such as 80KB or 81920
+When the conventions alone exceed the budget the pack is the conventions,
+the digest entries within their eighth, and a catalog; when the conventions
+and what is named exceed it, nothing is ranked, and the digest entries still
+load within their eighth; the header says which. --budget sets the size, such as 80KB or 81920
 bytes; the project's default is prime.budget in system-flow.yaml, and
 flai's is 80KB. An archived story gets the pack it would get today.
 

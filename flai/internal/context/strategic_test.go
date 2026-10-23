@@ -381,9 +381,10 @@ func TestTheOrchestratorsPackLoadsNoDigestWithNoThreadAwaitingTheOperator(t *tes
 	}
 }
 
-// ADR-0194: the orchestrator's digest step never takes the pack over its
-// budget nor its items over an eighth of it; an entry too large for the
-// share is skipped and the next tried.
+// ADR-0194, TH-0624: the orchestrator's digest step never takes the pack
+// over its budget nor its items over an eighth of it, a pack over its budget
+// before the step still loads entries within that eighth, and an entry too
+// large for the share is skipped and the next tried.
 func TestTheOrchestratorsDigestStaysWithinItsShare(t *testing.T) {
 	repo := answersRepo(t)
 	loaded := false
@@ -397,10 +398,10 @@ func TestTheOrchestratorsDigestStaysWithinItsShare(t *testing.T) {
 			used += len(it.Printed())
 		}
 		switch {
-		case p.Exceeded != "" && used > 0:
-			t.Errorf("budget %d, exceeded %s: digest loads %d bytes", budget, p.Exceeded, used)
-		case p.Exceeded == "" && (p.Size.Bytes > budget || used > budget/DigestShare):
-			t.Errorf("budget %d: pack %d bytes, digest %d of a share of %d", budget, p.Size.Bytes, used, budget/DigestShare)
+		case used > budget/DigestShare:
+			t.Errorf("budget %d, exceeded %q: digest %d bytes of a share of %d", budget, p.Exceeded, used, budget/DigestShare)
+		case p.Exceeded == "" && p.Size.Bytes > budget:
+			t.Errorf("budget %d: the step took the pack to %d bytes", budget, p.Size.Bytes)
 		}
 		loaded = loaded || used > 0
 	}

@@ -18,7 +18,7 @@ Most entries carry broad topics such as `flai`, `cli`, `go`, and `all`, so topic
 
 ## Decision
 
-**A story's pack gains a digest step, between the briefs and the ranked sections: the digest entries its topics or its claim select, ranked by BM25 against the story's title, goal, and criteria, loaded best first while the step's share of the budget, an eighth of it, and the budget itself leave room. Each is marked as the digest's. An absorbed entry never loads. The orchestrator's pack gains the same step over the `answer` and `recommendation` entries, ranked against each thread awaiting the operator.** This refines ADR-0049's pack and ADR-0075's strategic packs; the rest of both stands.
+**A story's pack gains a digest step, between the briefs and the ranked sections: the digest entries its topics or its claim select, ranked by BM25 against the story's title, goal, and criteria, loaded best first within the step's share of the budget, an eighth of it, and within the budget itself when the pack is within it before the step. Each is marked as the digest's. An absorbed entry never loads. The orchestrator's pack gains the same step over the `answer` and `recommendation` entries, ranked against each thread awaiting the operator.** This refines ADR-0049's pack and ADR-0075's strategic packs; the rest of both stands.
 
 ### Which entries a story's pack selects
 
@@ -30,8 +30,8 @@ Most entries carry broad topics such as `flai`, `cli`, `go`, and `all`, so topic
 
 - The step runs after the briefs and before the ranked sections, so the digest is never crowded out by sections and never crowds them out of more than its share.
 - Entries are ranked by BM25 against the query the ranked step uses, over each entry's title and body. An entry whose paths meet the claim ranks before one selected by topics alone; within each, by score, then the newest date first. An entry with no word in common with the query is not loaded unless its paths meet the claim.
-- Entries load in that order while the digest items together stay within an eighth of the budget, 10 KB of 80 KB, and the pack within the budget; one that does not fit is skipped and the next is tried. The share is a constant beside `DefaultBudget`, not a manifest key.
-- When the pack is over its budget before the step, as `Exceeded` says, the step loads nothing, as the ranked step does. The step never takes a pack over its budget.
+- Entries load in that order while the digest items and their heading together stay within an eighth of the budget, 10 KB of 80 KB, and, on a pack within its budget before the step, the pack within the budget; one that does not fit is skipped and the next is tried. The share is a constant beside `DefaultBudget`, not a manifest key.
+- When the pack is over its budget before the step, as `Exceeded` says, the step still loads its entries within its share, as every brief is kept on a pack over its budget (TH-0032); the ranked step loads nothing then. A pack over its budget grows by at most the share, and a pack within its budget never goes over it because of the step. The operator chose this on TH-0624 (2026-10-23), since every pack on this repository was over its budget before the step, from its conventions at 80 KB and from its briefs at 240 KB, and none would otherwise have loaded an entry.
 
 ### How an entry loads
 
@@ -46,12 +46,12 @@ A sub-agent's pack ([ADR-0059](0059-a-story-s-agent-hands-search-test-runs-and-v
 
 ### The orchestrator's pack
 
-`flai prime --role orchestrate` selects the `active` and `compacted` entries of kind `answer` or `recommendation`, and ranks them, by BM25 over each entry's title and body, against each thread awaiting the operator (ADR-0181), by its title and first entry. It takes, round by round, each thread's best entry not yet taken, threads in ID order, while the step's share, an eighth of the budget, and the budget leave room; an entry with no word in common with a thread is not taken for it. The reason names the thread, `thread TH-nnnn; rank n`. With no thread awaiting the operator the step loads nothing. An entry's path is a valid `source` on `thread_reply`, so a recommendation cites the answer the operator gave last time.
+`flai prime --role orchestrate` selects the `active` and `compacted` entries of kind `answer` or `recommendation`, and ranks them, by BM25 over each entry's title and body, against each thread awaiting the operator (ADR-0181), by its title and first entry. It takes, round by round, each thread's best entry not yet taken, threads in ID order, within the step's share, an eighth of the budget, and the budget as a story's pack does; an entry with no word in common with a thread is not taken for it. The reason names the thread, `thread TH-nnnn; rank n`. With no thread awaiting the operator the step loads nothing. An entry's path is a valid `source` on `thread_reply`, so a recommendation cites the answer the operator gave last time.
 
 ## Consequences
 
 - What a past story decided reaches the next story that touches the same paths or shares words with its goal, without anyone writing it into a design document first.
-- Every pack spends up to an eighth of its budget on the digest, taken from what the ranked sections had. The conventions, what is named, and the briefs are never cut for it.
+- Every pack spends up to an eighth of its budget on the digest, taken from what the ranked sections had, or added to a pack already over its budget. The conventions, what is named, and the briefs are never cut for it.
 - Citing an entry's ID is what keeps it from being compacted (S-0432), so the conventions tell agents to cite what they rely on.
 - A compacted entry still reaches a story as one line, so the question it answered is known to have been asked.
 

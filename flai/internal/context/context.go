@@ -176,13 +176,16 @@ func (p *Pack) AddDesign(s *Selection, query string) { p.addDesign(s, query, nil
 
 // addDesign is AddDesign with the digest step (ADR-0194) after the briefs
 // and before the ranked sections: the digest items, best first, as
-// digestFor gives them, loaded as addDigest loads them. Like the ranked
-// step, it loads nothing when Exceeded is set.
+// digestFor gives them, loaded as addDigest loads them. Unlike the ranked
+// step, it runs when Exceeded is set too, within its share alone (TH-0624):
+// on a pack whose conventions exceed the budget, the digest items follow
+// the conventions.
 func (p *Pack) addDesign(s *Selection, query string, digest []Item) {
 	p.size()
 	if p.Size.Bytes > p.Budget {
 		p.Exceeded = ExceededConventions
 		p.Catalog.NotLoaded, p.Catalog.InPart = NewSelection(s.Docs).Catalog()
+		p.addDigest(digest, true)
 		p.size()
 		return
 	}
@@ -196,9 +199,10 @@ func (p *Pack) addDesign(s *Selection, query string, digest []Item) {
 		p.Exceeded = ExceededBriefs
 	}
 	if p.Exceeded != "" {
+		p.addDigest(digest, true)
 		return
 	}
-	digested := p.addDigest(digest)
+	digested := p.addDigest(digest, false)
 	n := 0
 	for _, c := range s.Candidates(query) {
 		wholes := []bool{false}
@@ -635,13 +639,13 @@ func (p *Pack) Header() string {
 	case p.subAgent() && p.Exceeded == ExceededConventions:
 		b.WriteString("over budget: the role's conventions and the story's goal alone exceed it, so no brief is printed; narrowing the conventions' roles or topics makes room (ADR-0059)\n")
 	case p.Exceeded == ExceededConventions:
-		b.WriteString("over budget: the conventions alone exceed it, so the pack is the conventions and a catalog; narrowing the conventions' topics makes room (ADR-0049)\n")
+		b.WriteString("over budget: the conventions alone exceed it, so the pack is the conventions, the digest entries within their share, and a catalog; narrowing the conventions' topics makes room (ADR-0049)\n")
 	case p.Exceeded == ExceededNamed && p.Item != "":
-		fmt.Fprintf(&b, "over budget: the conventions and what %s names exceed it, so nothing is ranked (ADR-0049)\n", p.Item)
+		fmt.Fprintf(&b, "over budget: the conventions and what %s names exceed it, so nothing is ranked; the digest entries still load within their share (ADR-0049, ADR-0194)\n", p.Item)
 	case p.Exceeded == ExceededNamed:
-		b.WriteString("over budget: the conventions and what the story, its epic, and its tasks name exceed it, so nothing is ranked; a story that names more than the budget holds is a story to split (ADR-0049)\n")
+		b.WriteString("over budget: the conventions and what the story, its epic, and its tasks name exceed it, so nothing is ranked and the digest entries load within their share alone; a story that names more than the budget holds is a story to split (ADR-0049)\n")
 	case p.Exceeded == ExceededBriefs:
-		b.WriteString("over budget: the conventions, what is named, and the briefs exceed it, so nothing is ranked; every brief is kept, and narrowing the conventions' topics makes room (ADR-0049, TH-0032)\n")
+		b.WriteString("over budget: the conventions, what is named, and the briefs exceed it, so nothing is ranked; every brief is kept, the digest entries load within their share, and narrowing the conventions' topics makes room (ADR-0049, TH-0032)\n")
 	}
 	b.WriteString("contents, in bytes:\n")
 	row := func(n int, what, name string) { fmt.Fprintf(&b, "  %6d  %-10s  %s\n", n, what, name) }

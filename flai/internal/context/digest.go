@@ -155,23 +155,28 @@ func digestItem(e digest.Entry, reason string, whole bool) Item {
 	return it
 }
 
-// addDigest is the digest step of a story's pack (ADR-0194), after the
-// briefs and before anything is ranked: it adds items in order while they
-// together print within the step's share of the budget and the pack within
-// the budget, skipping one that does not fit and trying the next. It
-// returns what it added.
-func (p *Pack) addDigest(items []Item) []Item {
+// addDigest is the digest step of a pack (ADR-0194), after the briefs and
+// before anything is ranked: it adds items in order while they and the
+// digest heading together print within the step's share of the budget,
+// skipping one that does not fit and trying the next. A pack within its
+// budget stays within it too; one already over it, over is true, takes the
+// share alone, as every brief is kept on a pack over its budget (TH-0032,
+// TH-0624). It returns what it added.
+func (p *Pack) addDigest(items []Item, over bool) []Item {
 	share, used := p.Budget/DigestShare, 0
 	var added []Item
 	for _, it := range items {
 		n := len(p.printed(it))
-		if used+n > share || p.Size.Bytes+n > p.Budget {
+		if len(added) == 0 {
+			n += len(p.groupHead()[groupDigest])
+		}
+		if used+n > share || !over && p.Size.Bytes+n > p.Budget {
 			continue
 		}
 		size := p.Size
 		p.Items = append(p.Items, it)
 		p.size()
-		if p.Size.Bytes > p.Budget {
+		if !over && p.Size.Bytes > p.Budget {
 			p.Items, p.Size = p.Items[:len(p.Items)-1], size
 			continue
 		}

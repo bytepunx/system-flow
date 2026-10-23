@@ -226,8 +226,8 @@ A story's pack gains a step after the briefs and before the ranked sections:
 
 - **What it selects.** An `active` or `compacted` entry that shares a topic other than `all` with the story, or whose paths meet the story's claim: the story's touches and its tasks', each path equal to the entry's, a folder holding it, or held by it. An `absorbed` entry never loads: the document its `absorbed_by` names says it now.
 - **How it ranks.** By BM25 over each entry's title and body, against the story's title, goal, and criteria, the query the ranked step uses. An entry whose paths meet the claim ranks before one its topics alone select; within each, by score, then the newest first. An entry with no word in common with the query loads only when its paths meet the claim.
-- **How much it takes.** Entries load in rank order while the digest's items stay within an eighth of the budget, 10 KB of 80 KB, and the pack within the budget. One that does not fit is skipped and the next is tried. The share is a constant beside `DefaultBudget`, not a manifest key.
-- **Over the budget.** When the pack is over its budget before the step, as `Exceeded` says, the step loads nothing, as the ranked step does.
+- **How much it takes.** Entries load in rank order while the digest's items and its heading stay within an eighth of the budget, 10 KB of 80 KB, and, on a pack within its budget before the step, the pack within the budget. One that does not fit is skipped and the next is tried. The share is a constant beside `DefaultBudget`, not a manifest key.
+- **Over the budget.** When the pack is over its budget before the step, as `Exceeded` says, the step still loads its entries within its eighth, as every brief is kept on a pack over its budget (TH-0032); the ranked step loads nothing then. The operator chose this on TH-0624, since every pack here was over its budget before the step. A pack within its budget never goes over it because of the step.
 - **How an entry loads.** Each is an item with `step: digest`, its ID `D-nnnn`, its path, title, size, and reason: `path: <the claimed path it meets>` or `topics: <the topics it shares>`, then `rank n`, and `; compacted` for a compacted entry. An active entry loads its title and body. A compacted entry loads as a one-line brief, since compaction left it no body. In text the entries print under a `digest` heading, which says they are what past stories decided and the operator answered, not the design: an agent that relies on one cites its `D-nnnn` in its narrative or thread, checks it against the design before changing what it describes, and asks the operator only what no entry answers.
 
 A sub-agent's pack selects and ranks entries as the story's does and loads each as a one-line brief, after the design and ADR briefs, while the budget has room; those left out are counted with the briefs.
@@ -236,7 +236,23 @@ The orchestrator's pack, `flai prime --role orchestrate`, takes the `active` and
 
 #### Measured
 
-Measured in S-0430 once TH-0624 is answered.
+On this repository on 2026-10-23, after S-0429's seed (383 entries), with this branch's flai against main's, which has no digest step:
+
+| Pack | Budget | Over budget before the step on | Without the step | With it | Digest entries, bytes |
+|------|--------|--------------------------------|------------------|---------|-----------------------|
+| S-0429 | 80 KB | conventions | 145,662 | 155,695 | 6, 7,793 |
+| S-0400 | 80 KB | conventions | 145,866 | 156,190 | 6, 8,122 |
+| S-0350 | 80 KB | conventions | 145,499 | 155,717 | 6, 7,960 |
+| S-0429 | 240 KB | briefs | 311,719 | 342,430 | 18, 25,273 |
+| S-0400 | 240 KB | briefs | 325,501 | 356,497 | 16, 26,157 |
+| S-0350 | 240 KB | briefs | 349,203 | 380,136 | 19, 25,217 |
+| orchestrator | 80 KB | briefs | 143,981 | 154,346 | 5 |
+| orchestrator | 240 KB | nothing | 143,982 | 174,866 | 16 |
+
+- Every pack grew by at most its eighth, the digest heading included: 10,240 bytes at 80 KB, 30,720 at 240 KB. The orchestrator's pack at 240 KB was within its budget before the step and stayed within it. No pack went over its budget because of the step alone.
+- Every story pack was over its budget before the step, from its conventions at 80 KB and from its briefs at 240 KB. Under the first rule of ADR-0194, which loaded nothing on such a pack, none of them would have carried an entry. That is why TH-0624 chose to load the digest within its share whatever `Exceeded` says.
+- Each story's first entries are those whose paths meet its claim, such as `path: docs/users/flai.md; rank 1` for S-0429.
+- A sub-agent's pack carries no entry here: the explorer's pack for S-0429 fills its 40 KB with design briefs first, and 572 briefs are left out, entries among them. Its entries come after the briefs, as ADR-0194 says.
 
 ### Delivered in parts
 
