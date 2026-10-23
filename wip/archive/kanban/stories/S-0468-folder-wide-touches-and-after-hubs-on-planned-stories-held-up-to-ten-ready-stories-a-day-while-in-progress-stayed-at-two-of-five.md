@@ -3,10 +3,10 @@ id: S-0468
 type: story
 nature: improvement
 title: Folder-wide touches and after hubs on planned stories held up to ten ready stories a day while in-progress stayed at two of five
-status: review
+status: done
 owner: alex
 created: 2026-10-21T11:58:08Z
-updated: 2026-10-23T05:13:26Z
+updated: 2026-10-23T17:53:06Z
 transitions:
   - to: ready
     at: 2026-10-22T20:51:26Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-23T05:13:26Z
     by: agent-S-0468
+  - to: done
+    at: 2026-10-23T17:53:06Z
+    by: alex
 tags: [cli, template]
 topics: [planning]
 touches: [flai/internal/workitem/create.go, flai/internal/workitem/create_test.go, flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/itemedit/itemedit.go, flai/internal/itemedit/planning_test.go, flai/internal/itemedit/folder_test.go, flai/internal/itemnew/itemnew.go, flai/internal/itemnew/itemnew_test.go, flai/cmd/touches.go, flai/cmd/touches_test.go, flai/internal/mcpserver/items_write.go, flai/internal/mcpserver/items_write_test.go, flai/internal/check/check.go, flai/internal/check/check_test.go, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/adrs, design/adrs/README.md, design/system/strategic-agents.md, design/system/workflow.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/strategic-agents.md, template/root/design/conventions/work-management.md, ".claude/agents/planner.md", template/root/.claude/agents/planner.md, template/template.yaml, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0152-folder-wide-touches-and-after-hubs-on-planned-stories-held-up-to-ten-ready-stories-a-day-while-in-progress-stayed-at-two-of-five.md, design/issues/summary.md, flai/cmd/edit.go, flai/cmd/check.go, flai/cmd/check_stats_test.go, design/issues/I-0197-testservesettingsareshowntothedashboard-in-flai-cmd-fails-now-and-then-in-the-close-out-s-go-test-tier-on-a-branch-that-does-not-touch-serve.md]

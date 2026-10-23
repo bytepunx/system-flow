@@ -3,11 +3,11 @@ id: T-1813
 type: task
 nature: feature
 title: One rule in flai/internal/digest turns a thread into its operator's answers and overruled recommendations, each a candidate entry with its topics and paths
-status: in-progress
+status: done
 parent: S-0429
 owner: alex
 created: 2026-10-16T06:03:49Z
-updated: 2026-10-23T17:37:53Z
+updated: 2026-10-23T17:47:01Z
 transitions:
   - to: ready
     at: 2026-10-23T17:37:49Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-23T17:37:53Z
     by: agent-S-0429
+  - to: done
+    at: 2026-10-23T17:47:01Z
+    by: agent-S-0429
 stream: S-0429
 tags: [cli]
 touches: [flai/internal/digest/answer.go, flai/internal/digest/answer_test.go]
+usage:
+  source: log
+  seconds: 548
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 39
+      output: 203
+      cache_read: 1346709
+      cache_write: 72205
+      cost: 0.4787
 ---
 # T-1813 One rule in flai/internal/digest turns a thread into its operator's answers and overruled recommendations, each a candidate entry with its topics and paths
 

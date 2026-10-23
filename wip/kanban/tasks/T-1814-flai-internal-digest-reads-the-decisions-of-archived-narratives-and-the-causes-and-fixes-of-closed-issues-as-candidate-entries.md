@@ -3,11 +3,11 @@ id: T-1814
 type: task
 nature: feature
 title: flai/internal/digest reads the decisions of archived narratives and the causes and fixes of closed issues as candidate entries
-status: in-progress
+status: done
 parent: S-0429
 owner: alex
 created: 2026-10-16T06:03:54Z
-updated: 2026-10-23T17:37:54Z
+updated: 2026-10-23T17:47:09Z
 transitions:
   - to: ready
     at: 2026-10-23T17:37:50Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-23T17:37:54Z
     by: agent-S-0429
+  - to: done
+    at: 2026-10-23T17:47:09Z
+    by: agent-S-0429
 stream: S-0429
 tags: [cli]
 touches: [flai/internal/digest/sources.go, flai/internal/digest/sources_test.go]
+usage:
+  source: log
+  seconds: 555
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 57
+      output: 266
+      cache_read: 2685730
+      cache_write: 133502
+      cost: 0.9511
 ---
 # T-1814 flai/internal/digest reads the decisions of archived narratives and the causes and fixes of closed issues as candidate entries
 

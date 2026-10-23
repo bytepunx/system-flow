@@ -4,10 +4,10 @@ title: "S-0468 is verified and yours to accept: it changes .claude/agents/planne
 anchor:
   path: wip/kanban/stories/S-0468-folder-wide-touches-and-after-hubs-on-planned-stories-held-up-to-ten-ready-stories-a-day-while-in-progress-stayed-at-two-of-five.md
   item: S-0468
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-23T05:20:59Z
-updated: 2026-10-23T05:20:59Z
+updated: 2026-10-23T17:53:06Z
 ---
 
 # TH-0605 S-0468 is verified and yours to accept: it changes .claude/agents/planner.md (ADR-0106); run the queue tiers first
@@ -46,3 +46,6 @@ Both criteria are met and ticked, within the touches:
 2. **I-0152 is closed** with its reason.
 
 Both convention copies agree above the baseline marker. One nit: an unrelated merge of two bullets in `strategic-agents.md`.
+
+### 2026-10-23T17:53:06Z alex
+Resolved: S-0468 was accepted
