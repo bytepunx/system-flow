@@ -101,6 +101,34 @@ func TestFixtureNumbers(t *testing.T) {
 
 // S-0166: the series over time cover the window, not the whole history, and
 // throughput has a bucket for every week of it, done or not.
+// A story sent back from ready to backlog and made ready again waits only
+// its time in ready, not the stretch in backlog (I-0153, ADR-0190).
+func TestQueueTimeLeavesOutABackToBacklog(t *testing.T) {
+	tr := func(to, at string) workitem.Transition { return workitem.Transition{To: to, At: at} }
+	it := &workitem.Item{ID: "S-0216", Type: workitem.Story, Status: workitem.InProgress, Created: "2026-10-03T20:00:00Z",
+		Transitions: []workitem.Transition{
+			tr(workitem.Ready, "2026-10-03T20:33:57Z"),
+			tr(workitem.Backlog, "2026-10-04T00:41:16Z"),
+			tr(workitem.Ready, "2026-10-07T03:29:17Z"),
+			tr(workitem.InProgress, "2026-10-07T09:18:27Z"),
+			tr(workitem.Ready, "2026-10-07T10:00:00Z"),
+			tr(workitem.InProgress, "2026-10-07T11:00:00Z"),
+		}}
+	m := Derive(it, time.Date(2026, 10, 8, 0, 0, 0, 0, time.UTC))
+	if m.Committed != "2026-10-03T20:33:57Z" || m.Started != "2026-10-07T09:18:27Z" {
+		t.Errorf("committed %s started %s", m.Committed, m.Started)
+	}
+	if m.QueueTime == nil {
+		t.Fatal("no queue time")
+	}
+	if *m.QueueTime != 14839+20950 {
+		t.Errorf("queue time %v, want %d: only the time in ready before started", *m.QueueTime, 14839+20950)
+	}
+	if m.InState[workitem.Backlog] != 2037+269281 {
+		t.Errorf("backlog %v", m.InState[workitem.Backlog])
+	}
+}
+
 func TestSeriesCoverTheWindow(t *testing.T) {
 	repo, err := workitem.Open("testdata/good")
 	if err != nil {

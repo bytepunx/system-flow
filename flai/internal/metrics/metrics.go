@@ -365,11 +365,16 @@ func Derive(it *workitem.Item, now time.Time) ItemMetrics {
 	}
 	m.Committed, m.Started, m.Completed = set(committed), set(started), set(completed)
 
-	// state intervals: backlog from created, then each transition to the next or now
+	// state intervals: backlog from created, then each transition to the next or now;
+	// queue time is the ready intervals that end at or before started (ADR-0190)
 	prevState, prevAt := workitem.Backlog, created
+	var queued time.Duration
 	for _, tr := range it.Transitions {
 		at, _ := time.Parse(workitem.TimeFormat, tr.At)
 		m.InState[prevState] += at.Sub(prevAt).Seconds()
+		if prevState == workitem.Ready && !started.IsZero() && !at.After(started) {
+			queued += at.Sub(prevAt)
+		}
 		prevState, prevAt = tr.To, at
 	}
 	if !it.Closed() {
@@ -392,7 +397,7 @@ func Derive(it *workitem.Item, now time.Time) ItemMetrics {
 		}
 	}
 	if !started.IsZero() && !committed.IsZero() && !started.Before(committed) {
-		m.QueueTime = secs(started.Sub(committed))
+		m.QueueTime = secs(queued)
 	}
 	if it.Estimate != "" {
 		if d, err := time.ParseDuration(it.Estimate); err == nil && d > 0 {
