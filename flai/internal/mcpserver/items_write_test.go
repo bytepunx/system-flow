@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -230,6 +231,56 @@ func TestItemNewAndEditRefuseATaskAFolderTouch(t *testing.T) {
 	}
 	if ed, failed := f.call(t, "item_edit", map[string]any{"id": f.task.ID, "touches": []string{"design/system/plan.md"}}); failed != "" || strings.Join(toStrings(ed["changed"]), ",") != "touches" {
 		t.Errorf("a file is taken: %v %s", ed, failed)
+	}
+}
+
+// S-0468: item_new and item_edit by an agent named planner-S-0001 refuse a
+// story a folder touch its Planning note does not name, writing nothing,
+// with the folder, its file count, and the note that admits it as the
+// tool's error; the note in the body given, or in the same call's body,
+// admits it, and a file is taken with the template's body (ADR-0188).
+func TestItemNewAndEditHoldThePlannersStoryFolderTouchToItsNote(t *testing.T) {
+	f := setupWith(t, func(o *Options) { o.Agent = "planner-S-0001" })
+	const goal = "## Goal\n\nHold the planner's folder touches to a note.\n\n## Acceptance criteria\n\n- [ ] A folder touch needs its note.\n\n## Tasks\n\n## Notes\n\n"
+	const note = "### Planning\n\n`design/system` because each design change adds a file there.\n"
+	const refusal = "touch design/system is a folder holding 1 file: the planner's folder touch on a story needs the story's Planning note to name it (ADR-0188); name the files the story changes, or name design/system under ### Planning in the story's Notes with why files may be added there"
+	story := func(touches []string, body string) map[string]any {
+		return map[string]any{"type": "story", "title": "Planned", "parent": "E-0001", "draft": true, "touches": touches, "body": body}
+	}
+	if _, failed := f.call(t, "item_new", story([]string{"design/system"}, goal+"None.\n")); !strings.Contains(failed, "S-0002's "+refusal) {
+		t.Errorf("item_new without the note: %q", failed)
+	}
+	if _, failed := f.call(t, "item_new", map[string]any{"type": "story", "title": "Template", "draft": true, "touches": []string{"design/system"}}); !strings.Contains(failed, "S-0002's "+refusal) {
+		t.Errorf("item_new with the template's body: %q", failed)
+	}
+	if items, err := f.repo.List(false); err != nil || len(items) != 3 {
+		t.Errorf("item_new wrote nothing: %d items, %v", len(items), err)
+	}
+	if _, failed := f.call(t, "item_new", map[string]any{"type": "story", "title": "Template", "draft": true, "touches": []string{"design/system/plan.md"}}); failed != "" {
+		t.Errorf("a file is taken with the template's body: %s", failed)
+	}
+	if got, failed := f.call(t, "item_new", story([]string{"design/system"}, goal+note)); failed != "" || got["id"] != "S-0003" {
+		t.Errorf("the note admits the folder: %v %s", got, failed)
+	}
+
+	before, err := os.ReadFile(f.story.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, failed := f.call(t, "item_edit", map[string]any{"id": f.story.ID, "touches": []string{"flai/internal/mcpserver", "design/system"}}); !strings.Contains(failed, f.story.ID+"'s "+refusal) {
+		t.Errorf("item_edit without the note: %q", failed)
+	}
+	if after, _ := os.ReadFile(f.story.Path); string(after) != string(before) {
+		t.Errorf("item_edit wrote nothing:\n%s", after)
+	}
+	it, err := f.repo.Get(f.story.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := it.Body[strings.Index(it.Body, "\n## ")+1:] // below the heading
+	body = strings.TrimSpace(body) + "\n\n" + note
+	if ed, failed := f.call(t, "item_edit", map[string]any{"id": f.story.ID, "body": body, "touches": []string{"flai/internal/mcpserver", "design/system"}}); failed != "" || !slices.Contains(toStrings(ed["changed"]), "touches") {
+		t.Errorf("the note in the same call admits the folder: %v %s", ed, failed)
 	}
 }
 

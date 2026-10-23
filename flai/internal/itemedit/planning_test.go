@@ -250,3 +250,75 @@ func isInvalid(err error) bool {
 	var inv *InvalidError
 	return errors.As(err, &inv)
 }
+
+// S-0468: the planner's folder touch on a story, whether its FLAI_ROLE is
+// plan or its name starts with planner-, is refused as the caller's mistake,
+// writing nothing, unless the story's Planning note names the folder, read
+// as the body will be after the edit, so the same call may add the note;
+// another author's is taken, and so are the planner's file, path to be made,
+// and shared folder (ADR-0188).
+func TestApplyHoldsThePlannersStoryFolderTouchToItsNote(t *testing.T) {
+	repo := planningRepo(t)
+	for _, p := range []string{"flai/cmd/a.go", "flai/cmd/b.go", "flai/internal/x/x.go", "design/adrs/0001-a.md"} {
+		full := filepath.Join(repo.Root, filepath.FromSlash(p))
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, nil, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(repo.Root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\nplanning:\n  currency: EUR\nclaims:\n  shared: [design/adrs]\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	at := time.Date(2026, 10, 2, 9, 0, 0, 0, time.UTC)
+	apply := func(ch Change, by, role string) (*workitem.Item, error) {
+		t.Helper()
+		_, err := Apply(repo, nil, "S-0001", ch, Options{By: by, Role: role, NoCommit: true, Now: at})
+		it, gerr := repo.Get("S-0001")
+		if gerr != nil {
+			t.Fatal(gerr)
+		}
+		return it, err
+	}
+	story, err := repo.Get("S-0001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.ReadFile(story.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const refusal = "S-0001's touch flai/cmd is a folder holding 2 files: the planner's folder touch on a story needs the story's Planning note to name it (ADR-0188); name the files the story changes, or name flai/cmd under ### Planning in the story's Notes with why files may be added there"
+	for _, w := range []struct{ by, role string }{{"planner-S-0001", ""}, {"alex", "plan"}} {
+		if _, err := apply(Change{Title: str("Renamed"), Touches: &[]string{"flai/cmd/a.go", "flai/cmd"}}, w.by, w.role); !isInvalid(err) || !strings.Contains(err.Error(), refusal) {
+			t.Errorf("%+v: the planner's folder touch without its note must be refused: %v", w, err)
+		}
+	}
+	if after, _ := os.ReadFile(story.Path); string(after) != string(before) {
+		t.Errorf("a refusal wrote the story:\n%s", after)
+	}
+
+	// a file, a path to be made, and a shared folder are the planner's to name
+	if it, err := apply(Change{Touches: &[]string{"flai/cmd/a.go", "flai/cmd/new.go", "flai/internal/new", "design/adrs"}}, "planner-S-0001", ""); err != nil || strings.Join(it.Touches, ",") != "flai/cmd/a.go,flai/cmd/new.go,flai/internal/new,design/adrs" {
+		t.Errorf("a file, a new path, and a shared folder are taken: %v %v", it.Touches, err)
+	}
+
+	// one call adds the note and the folder together
+	noted := below(story.Body) + "\n### Planning\n\n`flai/cmd` because each new command adds a file there.\n"
+	if it, err := apply(Change{Body: &noted, Touches: &[]string{"flai/cmd/a.go", "flai/cmd"}}, "planner-S-0001", ""); err != nil || strings.Join(it.Touches, ",") != "flai/cmd/a.go,flai/cmd" || !strings.Contains(it.Body, "### Planning") {
+		t.Fatalf("the note in the same call admits the folder: %v %v", it.Touches, err)
+	}
+	// the note already there admits it, and names only that folder
+	if it, err := apply(Change{Touches: &[]string{"flai/cmd"}}, "", "plan"); err != nil || strings.Join(it.Touches, ",") != "flai/cmd" {
+		t.Errorf("the note in the story admits the folder: %v %v", it.Touches, err)
+	}
+	if _, err := apply(Change{Touches: &[]string{"flai/cmd", "flai/internal"}}, "", "plan"); !isInvalid(err) || !strings.Contains(err.Error(), "S-0001's touch flai/internal is a folder holding 1 file") {
+		t.Errorf("a folder the note does not name: %v", err)
+	}
+
+	// another author's story folder touch is not the planner's
+	if it, err := apply(Change{Touches: &[]string{"flai/cmd", "flai/internal"}}, "agent-S-0001", ""); err != nil || strings.Join(it.Touches, ",") != "flai/cmd,flai/internal" {
+		t.Errorf("another author's folder touch is taken: %v %v", it.Touches, err)
+	}
+}

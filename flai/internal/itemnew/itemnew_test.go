@@ -375,3 +375,52 @@ func TestThenFailingLeavesNothing(t *testing.T) {
 		t.Errorf("nothing is committed: %v", g.calls)
 	}
 }
+
+// S-0468: a draft story the planner writes with a folder touch is refused,
+// leaving nothing, unless the body given names the folder under ### Planning
+// in its Notes; another author's is kept, and so is the planner's file
+// (ADR-0188).
+func TestThePlannersDraftStoryNeedsItsNoteForAFolderTouch(t *testing.T) {
+	now := time.Date(2026, 10, 3, 9, 0, 0, 0, time.UTC)
+	repo := planned(t, now)
+	for _, p := range []string{"flai/cmd/a.go", "flai/cmd/b.go"} {
+		full := filepath.Join(repo.Root, filepath.FromSlash(p))
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, nil, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	const goal = "## Goal\n\nHold the planner's folder touches to a note.\n\n## Acceptance criteria\n\n- [ ] A folder touch needs its note.\n\n## Tasks\n\n## Notes\n\n"
+	story := func(touches []string, notes string) workitem.NewOptions {
+		return workitem.NewOptions{Type: workitem.Story, Title: "Planned", Owner: "alex", Draft: true, Now: now, Touches: touches, Body: goal + notes}
+	}
+	stories := func() int {
+		m, _ := filepath.Glob(filepath.Join(repo.Root, "wip/kanban/stories", "*.md"))
+		return len(m)
+	}
+
+	_, err := Create(repo, nil, Options{New: story([]string{"flai/cmd/a.go", "flai/cmd"}, "None.\n"), By: "planner-E-0001"})
+	var pe *workitem.PlanningTouchError
+	if !errors.As(err, &pe) || !strings.HasPrefix(err.Error(), "S-0003's touch flai/cmd is a folder holding 2 files: the planner's folder touch on a story needs the story's Planning note to name it (ADR-0188)") {
+		t.Fatalf("the planner's folder touch without its note must be refused: %v", err)
+	}
+	if _, err := Create(repo, nil, Options{New: story([]string{"flai/cmd"}, "None.\n"), Role: "plan"}); !errors.As(err, &pe) {
+		t.Errorf("FLAI_ROLE=plan is the planner: %v", err)
+	}
+	if n := stories(); n != 2 {
+		t.Errorf("nothing is created: %d stories", n)
+	}
+
+	res, err := Create(repo, nil, Options{New: story([]string{"flai/cmd"}, "### Planning\n\n`flai/cmd` because each new command adds a file there.\n"), By: "planner-E-0001"})
+	if err != nil || strings.Join(res.Item.Touches, ",") != "flai/cmd" {
+		t.Fatalf("the note admits the folder: %v", err)
+	}
+	if _, err := Create(repo, nil, Options{New: story([]string{"flai/cmd/a.go", "flai/cmd/new.go"}, "None.\n"), By: "planner-E-0001"}); err != nil {
+		t.Errorf("the planner's files are kept: %v", err)
+	}
+	if _, err := Create(repo, nil, Options{New: story([]string{"flai/cmd"}, "None.\n"), By: "alex"}); err != nil {
+		t.Errorf("another author's folder touch is kept: %v", err)
+	}
+}

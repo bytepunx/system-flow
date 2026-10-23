@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"io"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -58,9 +59,16 @@ leaving the rest; --clear empties it. With no path, the touches are shown.`,
 				if err != nil {
 					return err
 				}
-				if it.Type == workitem.Task {
+				switch {
+				case it.Type == workitem.Task:
 					// a task takes no folder touch it did not have (ADR-0188)
 					if err := repo.CheckTaskTouches(it.ID, before, next); err != nil {
+						return err
+					}
+				case it.Type == workitem.Story && workitem.IsPlanner(os.Getenv("FLAI_ROLE"), a.writer()):
+					// the planner's folder touch on a story needs the story's
+					// Planning note (ADR-0188)
+					if err := repo.CheckStoryTouches(it.ID, it.Body, before, next); err != nil {
 						return err
 					}
 				}

@@ -1,6 +1,7 @@
 package workitem
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -655,6 +656,96 @@ func TestFolderTouchErrorSaysWhatToDo(t *testing.T) {
 	}
 	tag := (&FolderTouchError{ID: "T-0012", Touch: "cli", Folder: "flai", Files: 42}).Error()
 	if !strings.HasPrefix(tag, "T-0012's touch cli is the folder flai, holding 42 files: ") {
+		t.Errorf("a component's tag names its folder: %s", tag)
+	}
+}
+
+// S-0468: the planner is the writer whose FLAI_ROLE is plan, or else whose
+// name starts with planner- (ADR-0188).
+func TestIsPlanner(t *testing.T) {
+	for _, c := range []struct {
+		role, author string
+		want         bool
+	}{
+		{"plan", "", true},
+		{"plan", "alex", true},
+		{"", "planner-S-0001", true},
+		{"", "planner-E-0016", true},
+		{"", "agent-S-0468", false},
+		{"orchestrate", "alex", false},
+		{"", "my-planner-x", false},
+		{"", "", false},
+	} {
+		if got := IsPlanner(c.role, c.author); got != c.want {
+			t.Errorf("IsPlanner(%q, %q) = %v, want %v", c.role, c.author, got, c.want)
+		}
+	}
+}
+
+// S-0468: the Planning note is what Notes says under ### Planning, up to the
+// next heading of that level; a Planning heading outside Notes is not it.
+func TestPlanningNote(t *testing.T) {
+	body := "# S-0001 Story\n\n## Goal\n\n### Planning\n\nnot this\n\n## Notes\n\nfirst\n\n### Planning\n\n`flai/cmd` because new commands land there.\n#### Detail\nmore\n\n### Later\n\nnot this either\n"
+	if got, want := PlanningNote(body), "`flai/cmd` because new commands land there.\n#### Detail\nmore"; got != want {
+		t.Errorf("PlanningNote = %q, want %q", got, want)
+	}
+	if got := PlanningNote("## Notes\n\nnothing planned\n"); got != "" {
+		t.Errorf("no Planning heading: %q", got)
+	}
+}
+
+// S-0468: the planner's folder touch on a story is refused unless the body's
+// Planning note names the folder's path as a whole, backticked or not, or
+// the component as given; a file, a path absent from the tree, a shared
+// folder, and a folder the story already had are taken (ADR-0188).
+func TestCheckStoryTouchesReadsThePlanningNote(t *testing.T) {
+	r := newProject(t)
+	r.Manifest.Projects = []manifest.Project{{Name: "flai", Path: "flai", Tags: []string{"cli"}}}
+	writeTree(t, r.Root, "flai/cmd/a.go", "flai/cmd/b.go", "flai/c/x.go", "design/adrs/0001-a.md")
+	if err := os.WriteFile(filepath.Join(r.Root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\nclaims:\n  shared: [design/adrs]\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	planned := func(note string) string { return "## Goal\n\ng\n\n## Notes\n\n### Planning\n\n" + note + "\n" }
+	for _, c := range []struct {
+		name    string
+		body    string
+		before  []string
+		touches []string
+		refused string // the touch refused, or "" when taken
+	}{
+		{"no note", "## Notes\n\nnone\n", nil, []string{"flai/cmd/a.go", "flai/cmd"}, "flai/cmd"},
+		{"named in backticks", planned("`flai/cmd` because new commands land there"), nil, []string{"flai/cmd"}, ""},
+		{"named bare at a full stop", planned("New commands land in flai/cmd."), nil, []string{"flai/cmd/"}, ""},
+		{"named with a trailing slash", planned("flai/cmd/ takes them"), nil, []string{"flai/cmd"}, ""},
+		{"a longer path does not name it", planned("`flai/cmd` only"), nil, []string{"flai/c"}, "flai/c"},
+		{"a file inside does not name it", planned("`flai/cmd/a.go`"), nil, []string{"flai/cmd"}, "flai/cmd"},
+		{"named outside Planning", "## Notes\n\n`flai/cmd`\n\n### Planning\n\nother\n", nil, []string{"flai/cmd"}, "flai/cmd"},
+		{"a component named as given", planned("the cli, since any package may change"), nil, []string{"cli"}, ""},
+		{"a component named by its path", planned("`flai` since any package may change"), nil, []string{"cli"}, ""},
+		{"a component not named", planned("`flai/cmd`"), nil, []string{"cli"}, "cli"},
+		{"a file, a new path, a shared folder", "## Notes\n", nil, []string{"flai/cmd/a.go", "flai/new", "design/adrs"}, ""},
+		{"a folder the story had", "## Notes\n", []string{"flai/cmd/"}, []string{"flai/cmd", "flai/cmd/a.go"}, ""},
+	} {
+		err := r.CheckStoryTouches("S-0007", c.body, c.before, c.touches)
+		var pe *PlanningTouchError
+		switch {
+		case c.refused == "" && err != nil:
+			t.Errorf("%s: taken, got %v", c.name, err)
+		case c.refused != "" && (!errors.As(err, &pe) || pe.Touch != c.refused || pe.ID != "S-0007"):
+			t.Errorf("%s: %s refused, got %v", c.name, c.refused, err)
+		}
+	}
+}
+
+// S-0468: the refusal of the planner's story folder touch names the story,
+// the touch, its folder, its file count, ADR-0188, and the note that admits it.
+func TestPlanningTouchErrorSaysWhatToDo(t *testing.T) {
+	one := (&PlanningTouchError{ID: "S-0012", Touch: "flai/cmd", Folder: "flai/cmd", Files: 1}).Error()
+	if want := "S-0012's touch flai/cmd is a folder holding 1 file: the planner's folder touch on a story needs the story's Planning note to name it (ADR-0188); name the files the story changes, or name flai/cmd under ### Planning in the story's Notes with why files may be added there"; one != want {
+		t.Errorf("got  %s\nwant %s", one, want)
+	}
+	tag := (&PlanningTouchError{ID: "S-0012", Touch: "cli", Folder: "flai", Files: 42}).Error()
+	if !strings.HasPrefix(tag, "S-0012's touch cli is the folder flai, holding 42 files: ") {
 		t.Errorf("a component's tag names its folder: %s", tag)
 	}
 }

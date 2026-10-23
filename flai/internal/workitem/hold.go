@@ -432,6 +432,16 @@ func (e *FolderTouchError) Error() string {
 // already had stays, so that a task written before the rule can still be
 // edited, and a path made a folder since it was named is not refused.
 func (r *Repo) CheckTaskTouches(id string, before, touches []string) error {
+	if e, folder, n, ok := r.addedFolder(before, touches, nil); ok {
+		return &FolderTouchError{ID: id, Touch: e, Folder: folder, Files: n}
+	}
+	return nil
+}
+
+// addedFolder is the first entry of touches that before does not hold, that
+// FolderTouch finds a folder of r's checkout, and that admit, when given,
+// does not admit: the entry, the folder it names, and its file count.
+func (r *Repo) addedFolder(before, touches []string, admit func(entry, folder string) bool) (entry, folder string, files int, ok bool) {
 	had := map[string]bool{}
 	for _, e := range before {
 		had[touchPath(nil, e)] = true
@@ -445,9 +455,105 @@ func (r *Repo) CheckTaskTouches(id string, before, touches []string) error {
 			c := r.SharedClaims()
 			shared = &c
 		}
-		if n, ok := FolderTouch(r.Root, r.Manifest.Projects, *shared, e); ok {
-			return &FolderTouchError{ID: id, Touch: e, Folder: touchPath(r.Manifest.Projects, e), Files: n}
+		n, isFolder := FolderTouch(r.Root, r.Manifest.Projects, *shared, e)
+		if !isFolder {
+			continue
 		}
+		if f := touchPath(r.Manifest.Projects, e); admit == nil || !admit(e, f) {
+			return e, f, n, true
+		}
+	}
+	return "", "", 0, false
+}
+
+// rolePlan is the planner's role as flai serve sets it in FLAI_ROLE
+// (conventions.RolePlan, which imports this package).
+const rolePlan = "plan"
+
+// IsPlanner says whether the writer of an item is the planner (ADR-0188):
+// role, the writer's FLAI_ROLE, is plan, or else author's name starts with
+// planner-. Every write path that holds the planner's story touches to their
+// note asks it.
+func IsPlanner(role, author string) bool {
+	return strings.TrimSpace(role) == rolePlan || strings.HasPrefix(strings.TrimSpace(author), "planner-")
+}
+
+// PlanningNote is what a story's body says under the heading "### Planning"
+// in its "## Notes" section, up to the next heading of that level or above,
+// or "" when it has none.
+func PlanningNote(body string) string {
+	var out []string
+	inNotes, inPlanning := false, false
+	for _, l := range strings.Split(strings.ReplaceAll(body, "\r\n", "\n"), "\n") {
+		t := strings.TrimSpace(l)
+		switch {
+		case strings.HasPrefix(t, "## ") || t == "##":
+			inNotes, inPlanning = t == "## Notes", false
+			continue
+		case inNotes && strings.HasPrefix(t, "### "):
+			inPlanning = t == "### Planning"
+			continue
+		}
+		if inPlanning {
+			out = append(out, l)
+		}
+	}
+	return strings.TrimSpace(strings.Join(out, "\n"))
+}
+
+// notesName says whether note names p as a whole path: a run of path
+// characters in it, without a leading ./ or a trailing slash or full stop,
+// is p. So naming flai/cmd names neither flai/c nor flai.
+func notesName(note, p string) bool {
+	p = touchPath(nil, p)
+	if p == "" {
+		return false
+	}
+	pathChar := func(r rune) bool {
+		return r == '/' || r == '.' || r == '_' || r == '-' || (r >= '0' && r <= '9') || (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')
+	}
+	for _, tok := range strings.FieldsFunc(note, func(r rune) bool { return !pathChar(r) }) {
+		tok = strings.TrimRight(tok, ".")
+		if touchPath(nil, tok) == p {
+			return true
+		}
+	}
+	return false
+}
+
+// PlanningTouchError refuses the planner's folder touch on a story whose
+// Planning note does not name the folder (ADR-0188). Its message is the one
+// every write path gives.
+type PlanningTouchError struct {
+	ID     string // the story
+	Touch  string // the entry as given
+	Folder string // the folder it names, a sub-project's path for its name or tag
+	Files  int    // how many files the folder holds
+}
+
+// Error names the story, the folder, its file count, and what to do instead.
+func (e *PlanningTouchError) Error() string {
+	what := e.Touch + " is a folder"
+	if e.Folder != e.Touch {
+		what = e.Touch + " is the folder " + e.Folder + ","
+	}
+	return fmt.Sprintf("%s's touch %s holding %d %s: the planner's folder touch on a story needs the story's Planning note to name it (ADR-0188); name the files the story changes, or name %s under ### Planning in the story's Notes with why files may be added there",
+		e.ID, what, e.Files, oneOrMany(e.Files, "file", "files"), e.Folder)
+}
+
+// CheckStoryTouches refuses the planner's folder touch on the story id
+// (ADR-0188): the first entry of touches that before does not hold, that
+// FolderTouch finds a folder of r's checkout, and that the Planning note of
+// body names neither as given nor as its folder's path, as a
+// *PlanningTouchError, or nil. body is the story's body as it will be after
+// the write, so that one write may add the note and the touch together;
+// before is the story's touches before it, nil for a new story. Only the
+// planner's writes are held to it: the caller asks IsPlanner first.
+func (r *Repo) CheckStoryTouches(id, body string, before, touches []string) error {
+	note := PlanningNote(body)
+	admit := func(entry, folder string) bool { return notesName(note, entry) || notesName(note, folder) }
+	if e, folder, n, ok := r.addedFolder(before, touches, admit); ok {
+		return &PlanningTouchError{ID: id, Touch: e, Folder: folder, Files: n}
 	}
 	return nil
 }

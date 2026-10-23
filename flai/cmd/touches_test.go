@@ -298,3 +298,58 @@ func TestTouchesRefusesATaskAFolderTouch(t *testing.T) {
 		t.Errorf("a story's folder touch: %d %q %s", code, out, errOut)
 	}
 }
+
+// S-0468: under FLAI_ROLE=plan, flai touches and flai edit --touches refuse
+// a story a folder touch its Planning note does not name, writing nothing,
+// and take a file and a path to be made; once the note names the folder it
+// is taken; another author's story folder touch is taken (ADR-0188).
+func TestTouchesHoldsThePlannersStoryFolderTouchToItsNote(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("FLAI_AGENT", "alex")
+	t.Setenv("FLAI_ROLE", "")
+	root := tempProject(t)
+	for _, p := range []string{"flai/cmd/a.go", "flai/cmd/b.go"} {
+		if err := os.MkdirAll(filepath.Join(root, filepath.Dir(p)), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(root, p), nil, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, step := range [][]string{{"epic", "new", "E"}, {"story", "new", "S", "--epic", "E-0001"}} {
+		if _, errOut, code := runIn(t, root, step...); code != 0 {
+			t.Fatalf("%v: %s", step, errOut)
+		}
+	}
+	file := filepath.Join(root, "wip/kanban/stories/S-0001-s.md")
+	before := read(t, file)
+
+	t.Setenv("FLAI_ROLE", "plan")
+	const refusal = "S-0001's touch flai/cmd is a folder holding 2 files: the planner's folder touch on a story needs the story's Planning note to name it (ADR-0188); name the files the story changes, or name flai/cmd under ### Planning in the story's Notes with why files may be added there"
+	for _, args := range [][]string{{"touches", "S-0001", "flai/cmd"}, {"touches", "S-0001", "--add", "flai/cmd/"}, {"edit", "S-0001", "--touches", "flai/cmd"}} {
+		if _, errOut, code := runIn(t, root, args...); code == 0 || !strings.Contains(errOut, refusal) {
+			t.Errorf("%v: %d %s", args, code, errOut)
+		}
+	}
+	if read(t, file) != before {
+		t.Error("no refusal wrote anything")
+	}
+	if out, errOut, code := runIn(t, root, "touches", "S-0001", "flai/cmd/a.go", "flai/new"); code != 0 || out != "S-0001 touches flai/cmd/a.go, flai/new\n" {
+		t.Errorf("a file and a path to be made: %d %q %s", code, out, errOut)
+	}
+	noted := strings.Replace(read(t, file), "## Notes\n", "## Notes\n\n### Planning\n\n`flai/cmd` because each new command adds a file there.\n", 1)
+	if err := os.WriteFile(file, []byte(noted), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if out, errOut, code := runIn(t, root, "touches", "S-0001", "--add", "flai/cmd"); code != 0 || out != "S-0001 touches flai/cmd/a.go, flai/new, flai/cmd\n" {
+		t.Errorf("the note admits the folder: %d %q %s", code, out, errOut)
+	}
+	if out, errOut, code := runIn(t, root, "touches", "E-0001", "flai/cmd"); code != 0 || out != "E-0001 touches flai/cmd\n" {
+		t.Errorf("the planner's epic folder touch: %d %q %s", code, out, errOut)
+	}
+
+	t.Setenv("FLAI_ROLE", "")
+	if out, errOut, code := runIn(t, root, "touches", "S-0001", "flai"); code != 0 || out != "S-0001 touches flai\n" {
+		t.Errorf("another author's story folder touch: %d %q %s", code, out, errOut)
+	}
+}

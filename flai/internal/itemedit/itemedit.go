@@ -83,6 +83,10 @@ type Options struct {
 	Trailers []string
 	NoCommit bool
 	Now      time.Time
+
+	// Role is the editor's FLAI_ROLE. With By it says whether the planner
+	// edits, whose folder touch on a story needs its note (ADR-0188).
+	Role string
 }
 
 // View is an item as an editor loads it.
@@ -434,6 +438,17 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 		if it.Type == workitem.Task {
 			// a task takes no folder touch it did not have (ADR-0188)
 			if err := repo.CheckTaskTouches(it.ID, it.Touches, touches); err != nil {
+				return nil, invalid("%s", err)
+			}
+		}
+		if it.Type == workitem.Story && workitem.IsPlanner(opt.Role, opt.By) {
+			// the planner's folder touch needs the story's Planning note,
+			// read as the body will be after this edit (ADR-0188)
+			after := it.Body
+			if ch.Body != nil {
+				after = *ch.Body
+			}
+			if err := repo.CheckStoryTouches(it.ID, after, it.Touches, touches); err != nil {
 				return nil, invalid("%s", err)
 			}
 		}

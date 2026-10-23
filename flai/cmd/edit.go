@@ -218,7 +218,7 @@ the item changed.`,
 			if ch.Touches != nil {
 				watch = itemedit.WatchClaim(repo, args[0])
 			}
-			res, err := itemedit.Apply(repo, a.runner, args[0], ch, itemedit.Options{Hash: hash, By: by, Message: message, Trailers: trailers, NoCommit: !autocommit, Now: a.now()})
+			res, err := itemedit.Apply(repo, a.runner, args[0], ch, itemedit.Options{Hash: hash, By: by, Role: os.Getenv("FLAI_ROLE"), Message: message, Trailers: trailers, NoCommit: !autocommit, Now: a.now()})
 			if c, ok := docedit.IsConflict(err); ok {
 				if a.jsonOut {
 					_ = a.printJSON(map[string]any{"conflict": c})

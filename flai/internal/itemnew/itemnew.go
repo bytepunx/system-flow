@@ -33,6 +33,10 @@ type Options struct {
 	// returns the paths it wrote, absolute or relative to the repository's
 	// root, to commit with the item.
 	Then func(it *workitem.Item) ([]string, error)
+	// By and Role are who creates the item and their FLAI_ROLE: the
+	// planner's folder touch on a story needs the story's Planning note
+	// (ADR-0188).
+	By, Role string
 }
 
 // Result is the created item and what became of it.
@@ -52,6 +56,11 @@ type Result struct {
 func Create(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 	if opt.New.Now.IsZero() {
 		opt.New.Now = time.Now()
+	}
+	if opt.New.Type == workitem.Story && len(opt.New.Touches) > 0 && workitem.IsPlanner(opt.Role, opt.By) {
+		if err := plannerTouches(repo, opt.New); err != nil {
+			return nil, err
+		}
 	}
 	before, err := check.Run(repo, opt.New.Now)
 	if err != nil {
@@ -154,6 +163,28 @@ func Create(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 		res.Committed, res.Commit = true, sha
 	}
 	return res, nil
+}
+
+// plannerTouches refuses the planner's new story a folder touch its
+// Planning note does not name (ADR-0188), before anything is written: the
+// note is read in the body given, or the template's when none is, and the
+// refusal names the ID the story would get.
+func plannerTouches(repo *workitem.Repo, opt workitem.NewOptions) error {
+	touches, err := workitem.CleanTouches(opt.Touches)
+	if err != nil {
+		return err
+	}
+	body := opt.Body
+	if strings.TrimSpace(body) == "" {
+		if body, err = repo.TemplateBody(workitem.Story); err != nil {
+			return err
+		}
+	}
+	id, err := repo.NextID(workitem.Story)
+	if err != nil {
+		return err
+	}
+	return repo.CheckStoryTouches(id, body, nil, touches)
 }
 
 func relTo(root, path string) string {

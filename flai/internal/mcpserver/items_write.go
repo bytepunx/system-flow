@@ -58,14 +58,17 @@ func (s *server) itemNew(ctx context.Context, _ *mcp.CallToolRequest, in ItemNew
 	}
 	var it *workitem.Item
 	var err error
-	if len(in.After) > 0 || strings.TrimSpace(in.Body) != "" {
+	planned := in.Type == workitem.Story && len(in.Touches) > 0 && workitem.IsPlanner(s.role, s.agent)
+	if len(in.After) > 0 || strings.TrimSpace(in.Body) != "" || planned {
 		// an after: entry that names nothing, or forms a cycle, is the check's
 		// to find, so a creation that sets one is checked, as the CLI's --after
 		// is (S-0176). A body its author wrote is checked as --body-stdin is: a
 		// missing section or a lint finding refuses it and leaves nothing
-		// (S-0209). The template's own body is not, as flai story new's is not.
+		// (S-0209). The template's own body is not, as flai story new's is not,
+		// but for the planner's story with touches: itemnew refuses a folder
+		// touch its Planning note does not name before it writes (ADR-0188).
 		var res *itemnew.Result
-		if res, err = itemnew.Create(s.repo, s.runner, itemnew.Options{New: opt}); err == nil {
+		if res, err = itemnew.Create(s.repo, s.runner, itemnew.Options{New: opt, By: s.agent, Role: s.role}); err == nil {
 			it = res.Item
 		}
 	} else {
@@ -193,7 +196,7 @@ func (s *server) itemEdit(_ context.Context, _ *mcp.CallToolRequest, in ItemEdit
 	if in.Touches != nil {
 		watch = itemedit.WatchClaim(s.repo, in.ID)
 	}
-	res, err := itemedit.Apply(s.repo, s.runner, in.ID, ch, itemedit.Options{Hash: in.Hash, By: s.agent, NoCommit: true, Now: s.now()})
+	res, err := itemedit.Apply(s.repo, s.runner, in.ID, ch, itemedit.Options{Hash: in.Hash, By: s.agent, Role: s.role, NoCommit: true, Now: s.now()})
 	if err != nil {
 		return nil, ItemEditOut{}, refusal(err)
 	}
