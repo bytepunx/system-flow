@@ -136,12 +136,15 @@ func BetweenPaths(r execx.Runner, dir, from, to string) ([]string, error) {
 }
 
 // BranchPatch is the merge base of the checkout at dir's HEAD with base, and
-// the stable patch id of what HEAD changed since it: the branch's own change,
-// whatever base it sits on (ADR-0156). The patch id is "" when the checkout
-// has anything uncommitted, which the id would not cover, or when HEAD
-// changed nothing. An error says which git command failed, with what it
-// found before it.
-func BranchPatch(r execx.Runner, dir, base string) (mergeBase, patch string, err error) {
+// the stable patch id of what HEAD changed since it but for the paths leave
+// names, relative to the checkout's root: the branch's own change, whatever
+// base it sits on (ADR-0156). leave is for the files a sync's rebase writes
+// again from others (ADR-0098), which differ across a rebase though the
+// branch's own change does not. The patch id is "" when the checkout has
+// anything uncommitted, left-out paths among it, which the id would not
+// cover, or when HEAD changed nothing outside leave. An error says which git
+// command failed, with what it found before it.
+func BranchPatch(r execx.Runner, dir, base string, leave []string) (mergeBase, patch string, err error) {
 	out, err := r.Run(dir, "git", "merge-base", "HEAD", base)
 	if err != nil {
 		return "", "", fmt.Errorf("find where the checkout at %s left %s: %w", dir, base, err)
@@ -156,7 +159,15 @@ func BranchPatch(r execx.Runner, dir, base string) (mergeBase, patch string, err
 	}
 	// --full-index names a binary file's blobs in full, which is all of it
 	// that patch-id hashes
-	diff, err := r.Run(dir, "git", "diff", "--no-color", "--no-ext-diff", "--full-index", mergeBase, "HEAD")
+	args := []string{"diff", "--no-color", "--no-ext-diff", "--full-index", mergeBase, "HEAD"}
+	if len(leave) > 0 {
+		// exclude pathspecs alone leave the rest of the tree in
+		args = append(args, "--")
+		for _, p := range leave {
+			args = append(args, ":(top,exclude)"+p)
+		}
+	}
+	diff, err := r.Run(dir, "git", args...)
 	if err != nil {
 		return mergeBase, "", fmt.Errorf("diff %s from %s: %w", dir, mergeBase, err)
 	}

@@ -20,6 +20,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/check"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/gitver"
+	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -96,9 +97,10 @@ type Report struct {
 	// "" when git could not tell.
 	MergeBase string `json:"merge_base,omitempty"`
 	// Patch is the stable patch id of the branch's own change, what it
-	// changed since MergeBase; "" when the worktree had anything
-	// uncommitted, the branch changed nothing, or git could not tell
-	// (ADR-0156).
+	// changed since MergeBase but for the files a sync's rebase writes again
+	// from others, the issues summary (ADR-0098); "" when the worktree had
+	// anything uncommitted, the branch changed nothing else, or git could
+	// not tell (ADR-0156).
 	Patch string `json:"patch,omitempty"`
 	// Fingerprint hashes what selects and runs the tiers: the project's
 	// tiers, the selected ones' commands, and those left to the merge
@@ -356,13 +358,25 @@ func (v *storyRun) runSteps(rep *Report, steps []storyStep) {
 	}
 }
 
+// generated are the paths of the files a sync's rebase writes again from
+// others (ADR-0098), which the branch's patch id leaves out: the issues
+// summary, written from the issue files, which stay in the patch, and main's,
+// whose paths select the tiers main sends back (ADR-0156).
+func (v *storyRun) generated() []string {
+	var paths []string
+	for _, g := range issues.Generated(v.opts.Project, v.story, v.opts.Now) {
+		paths = append(paths, g.Path)
+	}
+	return paths
+}
+
 // run runs the steps in order and stops at the first that fails. It returns
 // ctx's error, with the report, when ctx ends during a tier.
 func (v *storyRun) run(ctx context.Context) (Report, error) {
 	start := v.opts.Now()
 	// what git cannot tell is left "", which reuses nothing across a
 	// rebase; the steps below find what is wrong with the branch
-	v.mergeBase, v.patch, _ = BranchPatch(v.opts.Git, v.worktree, v.base)
+	v.mergeBase, v.patch, _ = BranchPatch(v.opts.Git, v.worktree, v.base, v.generated())
 	rep := v.newReport(start)
 	v.runSteps(&rep, append(v.syncSteps(),
 		storyStep{StepNarrative, v.narrative},

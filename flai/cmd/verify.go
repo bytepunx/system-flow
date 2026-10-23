@@ -77,7 +77,9 @@ run that ran it, and the run goes on from the tier that failed (S-0341).
 After a clean rebase onto a newer main branch the head and base commit
 differ, but when the branch's own change has the same patch id
 (git patch-id --stable of its diff from the merge base, recorded only from a
-worktree with nothing uncommitted), the tiers are reused all the same, up to
+worktree with nothing uncommitted; it leaves out the files flai writes again
+at a sync, design/issues/summary.md, which differ after a rebase though the
+branch's own change does not), the tiers are reused all the same, up to
 the first that the paths the main branch brought in between the two merge
 bases select, but for wip paths the branch does not change; that tier runs
 again with every tier after it. A note under the first reused tier, or under

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -1105,6 +1106,67 @@ func TestVerifyReusesTheTiersWhenMainGainsOnlyWipCommits(t *testing.T) {
 	}
 }
 
+// I-0196: the branch and main each recorded an issue, so the rebase stopped
+// on the issues summary, which the sync wrote again; the branch's summary
+// differs after it, but its patch id leaves the summary out, and main's
+// issue paths select no tier, so every tier is reused.
+func TestVerifyReusesTheTiersAcrossARebaseThatWritesTheSummaryAgain(t *testing.T) {
+	f := newRebaseFixture(t)
+	record := func(root, title string) {
+		t.Helper()
+		r, err := workitem.Open(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := issues.New(r, issues.NewOptions{Title: title, Class: "defect", Now: f.proc.now}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := issues.WriteSummary(r, f.proc.now); err != nil {
+			t.Fatal(err)
+		}
+		runGit(t, root, "add", "-A")
+		runGit(t, root, "commit", "-q", "-m", "record "+title)
+	}
+	record(f.worktree, "Branch friction")
+	first := f.verify(t)
+	if !first.Passed || first.Patch == "" {
+		t.Fatalf("first run %v, patch %q", states(first), first.Patch)
+	}
+	f.proc.now = f.proc.now.Add(time.Hour)
+	record(f.root, "Main friction")
+	if _, err := f.opts.Git.Run(f.worktree, "git", "rebase", "-q", "main"); err == nil {
+		t.Fatal("the rebase did not stop on the summary")
+	}
+	// the sync writes the summary again in the story's worktree
+	wt := *f.opts.Project
+	wt.Root = f.worktree
+	for _, g := range issues.Generated(&wt, "", func() time.Time { return f.proc.now }) {
+		if err := g.Regenerate(); err != nil {
+			t.Fatal(err)
+		}
+		runGit(t, f.worktree, "add", g.Path)
+	}
+	runGit(t, f.worktree, "-c", "core.editor=true", "rebase", "--continue")
+
+	rep := f.verify(t)
+	want := []string{"unit:reused", "integration:reused", "smoke:reused"}
+	if !rep.Passed || !reflect.DeepEqual(tierStates(rep), want) || len(f.proc.ran) != 0 {
+		t.Fatalf("after a rebase that wrote the summary again, steps %v, ran %q; want tiers %v and nothing run", states(rep), f.proc.ran, want)
+	}
+	if rep.MergeBase == first.MergeBase || rep.Patch != first.Patch {
+		t.Errorf("merge base %s, patch %s after the rebase; first %s, %s", rep.MergeBase, rep.Patch, first.MergeBase, first.Patch)
+	}
+	if note := rep.Steps[4].Note; !strings.Contains(note, "reused across the rebase onto main") {
+		t.Errorf("first reused tier's note %q", note)
+	}
+}
+
+// patchDiff is the git diff BranchPatch runs for a fixture's branch from the
+// merge base mb: the issues summary left out.
+func patchDiff(mb string) string {
+	return "diff --no-color --no-ext-diff --full-index " + mb + " HEAD -- :(top,exclude)design/issues/summary.md"
+}
+
 // ADR-0156, without real git: what a run after a rebase reuses, by what git
 // answers for the branch's merge base, its patch id, and main's new paths.
 func TestVerifyAcrossARebaseReusesUpToWhatMainsNewPathsSelect(t *testing.T) {
@@ -1152,7 +1214,7 @@ func TestVerifyAcrossARebaseReusesUpToWhatMainsNewPathsSelect(t *testing.T) {
 			}
 			diff := "diff --git a/flai/internal/x/x.go b/flai/internal/x/x.go"
 			f.git.out["merge-base HEAD main"] = "mb1"
-			f.git.out["diff --no-color --no-ext-diff --full-index mb1 HEAD"] = diff
+			f.git.out[patchDiff("mb1")] = diff
 			f.git.out["patch-id --stable"] = "p1 0123abc"
 			first, err := Verify(context.Background(), f.opts)
 			if err != nil || !first.Passed || first.MergeBase != "mb1" || first.Patch != "p1" {
@@ -1162,7 +1224,7 @@ func TestVerifyAcrossARebaseReusesUpToWhatMainsNewPathsSelect(t *testing.T) {
 			f.git.out["rev-parse HEAD"] = "4567def"
 			f.git.out["rev-parse --verify --quiet main^{commit}"] = "9abcdef"
 			f.git.out["merge-base HEAD main"] = "mb2"
-			f.git.out["diff --no-color --no-ext-diff --full-index mb2 HEAD"] = diff
+			f.git.out[patchDiff("mb2")] = diff
 			f.git.out["patch-id --stable"] = "p1 4567def"
 			f.git.out["diff --no-renames --name-only mb1 mb2"] = "other/notes.txt"
 			if tc.change != nil {
@@ -1196,7 +1258,7 @@ func TestVerifyRecordsNoPatchWithAnUncommittedChange(t *testing.T) {
 	f.opts.Tiers = rebaseTiers
 	f.git.out["status --porcelain --untracked-files=all"] = "?? scratch.txt"
 	f.git.out["merge-base HEAD main"] = "mb1"
-	f.git.out["diff --no-color --no-ext-diff --full-index mb1 HEAD"] = "diff --git a/flai/internal/x/x.go b/flai/internal/x/x.go"
+	f.git.out[patchDiff("mb1")] = "diff --git a/flai/internal/x/x.go b/flai/internal/x/x.go"
 	f.git.out["patch-id --stable"] = "p1 0123abc"
 	first, err := Verify(context.Background(), f.opts)
 	if err != nil || !first.Passed || first.MergeBase != "mb1" || first.Patch != "" {
@@ -1205,7 +1267,7 @@ func TestVerifyRecordsNoPatchWithAnUncommittedChange(t *testing.T) {
 	f.git.out["status --porcelain --untracked-files=all"] = ""
 	f.git.out["rev-parse HEAD"] = "4567def"
 	f.git.out["merge-base HEAD main"] = "mb2"
-	f.git.out["diff --no-color --no-ext-diff --full-index mb2 HEAD"] = "diff --git a/flai/internal/x/x.go b/flai/internal/x/x.go"
+	f.git.out[patchDiff("mb2")] = "diff --git a/flai/internal/x/x.go b/flai/internal/x/x.go"
 	f.git.out["diff --no-renames --name-only mb1 mb2"] = "other/notes.txt"
 	f.proc.ran = nil
 	rep, err := Verify(context.Background(), f.opts)

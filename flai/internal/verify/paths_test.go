@@ -214,10 +214,17 @@ func TestBranchPatchIsTheMergeBaseAndThePatchIdOfACleanBranch(t *testing.T) {
 	const diff = "diff --no-color --no-ext-diff --full-index mb1 HEAD"
 	for _, tc := range []struct {
 		name, status, diff, patchID string
-		err                         map[string]error
-		mergeBase, patch, wantErr   string
+		// leave are the paths left out, and diffArgs the git diff that
+		// leaves them out; diff when there are none
+		leave                     []string
+		diffArgs                  string
+		err                       map[string]error
+		mergeBase, patch, wantErr string
 	}{
 		{name: "a clean branch", diff: "diff --git a/x b/x", patchID: "p1 0123abc", mergeBase: "mb1", patch: "p1"},
+		{name: "a clean branch with generated files left out", diff: "diff --git a/x b/x", patchID: "p1 0123abc",
+			leave:    []string{"design/issues/summary.md", "docs/gen.md"},
+			diffArgs: diff + " -- :(top,exclude)design/issues/summary.md :(top,exclude)docs/gen.md", mergeBase: "mb1", patch: "p1"},
 		{name: "an uncommitted change", status: "?? scratch.txt", diff: "diff --git a/x b/x", patchID: "p1 0123abc", mergeBase: "mb1"},
 		{name: "a branch that changes nothing", mergeBase: "mb1"},
 		{name: "a merge base git cannot find", err: map[string]error{"merge-base HEAD main": errors.New("no merge base")}, wantErr: "no merge base"},
@@ -225,13 +232,17 @@ func TestBranchPatchIsTheMergeBaseAndThePatchIdOfACleanBranch(t *testing.T) {
 			mergeBase: "mb1", wantErr: "take the patch id"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			diffArgs := tc.diffArgs
+			if diffArgs == "" {
+				diffArgs = diff
+			}
 			git := &fakeGit{out: map[string]string{
 				"merge-base HEAD main":                     "mb1\n",
 				"status --porcelain --untracked-files=all": tc.status,
-				diff:                tc.diff,
+				diffArgs:            tc.diff,
 				"patch-id --stable": tc.patchID,
 			}, err: tc.err}
-			mergeBase, patch, err := BranchPatch(git, "/work", "main")
+			mergeBase, patch, err := BranchPatch(git, "/work", "main", tc.leave)
 			if mergeBase != tc.mergeBase || patch != tc.patch || (err == nil) != (tc.wantErr == "") || err != nil && !strings.Contains(err.Error(), tc.wantErr) {
 				t.Errorf("BranchPatch = %q, %q, %v; want %q, %q, an error with %q", mergeBase, patch, err, tc.mergeBase, tc.patch, tc.wantErr)
 			}
@@ -249,7 +260,7 @@ func TestBranchPatchIsTheSameAcrossARebaseAndNotAfterAnotherChange(t *testing.T)
 	writeFile(t, dir, "flai/x.go", "package x // story\n")
 	runGit(t, dir, "commit", "-q", "-am", "story")
 	git := execx.System{}
-	before, patch, err := BranchPatch(git, dir, "main")
+	before, patch, err := BranchPatch(git, dir, "main", nil)
 	if err != nil || before != runGit(t, dir, "rev-parse", "main") || patch == "" {
 		t.Fatalf("BranchPatch = %q, %q, %v", before, patch, err)
 	}
@@ -259,7 +270,7 @@ func TestBranchPatchIsTheSameAcrossARebaseAndNotAfterAnotherChange(t *testing.T)
 	runGit(t, dir, "commit", "-q", "-am", "main")
 	runGit(t, dir, "checkout", "-q", "story")
 	runGit(t, dir, "rebase", "-q", "main")
-	after, rebased, err := BranchPatch(git, dir, "main")
+	after, rebased, err := BranchPatch(git, dir, "main", nil)
 	if err != nil || after == before || rebased != patch {
 		t.Errorf("after a rebase BranchPatch = %q, %q, %v; want a new merge base and the patch %q", after, rebased, err, patch)
 	}
@@ -269,12 +280,69 @@ func TestBranchPatchIsTheSameAcrossARebaseAndNotAfterAnotherChange(t *testing.T)
 	}
 
 	writeFile(t, dir, "scratch.txt", "draft\n")
-	if _, dirty, err := BranchPatch(git, dir, "main"); err != nil || dirty != "" {
+	if _, dirty, err := BranchPatch(git, dir, "main", nil); err != nil || dirty != "" {
 		t.Errorf("with an untracked file BranchPatch answered the patch %q, %v", dirty, err)
 	}
 	runGit(t, dir, "add", "scratch.txt")
 	runGit(t, dir, "commit", "-q", "-m", "more")
-	if _, other, err := BranchPatch(git, dir, "main"); err != nil || other == "" || other == patch {
+	if _, other, err := BranchPatch(git, dir, "main", nil); err != nil || other == "" || other == patch {
 		t.Errorf("after another commit BranchPatch answered the patch %q, %v; want one other than %q", other, err, patch)
+	}
+}
+
+// I-0196: a rebase that stops on the issues summary alone writes it again
+// from the issue files, so the branch's summary differs after it though the
+// branch's own change does not; the patch id that leaves the summary out is
+// the same across the rebase, and the one that keeps it is not.
+func TestBranchPatchLeavingOutTheSummaryIsTheSameAcrossARebaseThatWritesItAgain(t *testing.T) {
+	const summary = "design/issues/summary.md"
+	dir := realRepo(t)
+	writeFile(t, dir, "flai/x.go", "package x\n")
+	writeFile(t, dir, "design/issues/I-0001-a.md", "a\n")
+	writeFile(t, dir, summary, "# Issues\n\n| I-0001 | a |\n")
+	runGit(t, dir, "add", "-A")
+	runGit(t, dir, "commit", "-q", "-m", "init")
+	runGit(t, dir, "checkout", "-q", "-b", "story")
+	writeFile(t, dir, "flai/x.go", "package x // story\n")
+	writeFile(t, dir, "design/issues/I-0002-b.md", "b\n")
+	writeFile(t, dir, summary, "# Issues\n\n| I-0001 | a |\n| I-0002 | b |\n")
+	runGit(t, dir, "add", "-A")
+	runGit(t, dir, "commit", "-q", "-m", "story")
+	git := execx.System{}
+	leave := []string{summary}
+	before, patch, err := BranchPatch(git, dir, "main", leave)
+	if err != nil || patch == "" {
+		t.Fatalf("BranchPatch = %q, %q, %v", before, patch, err)
+	}
+	_, whole, err := BranchPatch(git, dir, "main", nil)
+	if err != nil || whole == "" || whole == patch {
+		t.Fatalf("BranchPatch keeping the summary = %q, %v; want one other than %q", whole, err, patch)
+	}
+
+	runGit(t, dir, "checkout", "-q", "main")
+	writeFile(t, dir, "design/issues/I-0003-c.md", "c\n")
+	writeFile(t, dir, summary, "# Issues\n\n| I-0001 | a |\n| I-0003 | c |\n")
+	runGit(t, dir, "add", "-A")
+	runGit(t, dir, "commit", "-q", "-m", "main")
+	runGit(t, dir, "checkout", "-q", "story")
+	// the rebase stops on the summary, which a sync writes again from the
+	// issue files both sides have
+	if out, err := git.Run(dir, "git", "rebase", "-q", "main"); err == nil {
+		t.Fatalf("the rebase did not stop on the summary: %s", out)
+	}
+	writeFile(t, dir, summary, "# Issues\n\n| I-0001 | a |\n| I-0002 | b |\n| I-0003 | c |\n")
+	runGit(t, dir, "add", summary)
+	runGit(t, dir, "-c", "core.editor=true", "rebase", "--continue")
+
+	after, rebased, err := BranchPatch(git, dir, "main", leave)
+	if err != nil || after == before || rebased != patch {
+		t.Errorf("after a rebase BranchPatch = %q, %q, %v; want a new merge base and the patch %q", after, rebased, err, patch)
+	}
+	if _, rewritten, err := BranchPatch(git, dir, "main", nil); err != nil || rewritten == "" || rewritten == whole {
+		t.Errorf("after a rebase BranchPatch keeping the summary = %q, %v; want one other than %q, as the summary differs", rewritten, err, whole)
+	}
+	paths, err := BetweenPaths(git, dir, before, after)
+	if want := []string{"design/issues/I-0003-c.md", summary}; err != nil || !reflect.DeepEqual(paths, want) {
+		t.Errorf("BetweenPaths = %q, %v; want %q", paths, err, want)
 	}
 }
