@@ -7,7 +7,7 @@ status: backlog
 parent: E-0025
 owner: alex
 created: 2026-10-16T06:00:41Z
-updated: 2026-10-22T22:37:19Z
+updated: 2026-10-23T06:21:15Z
 transitions: []
 tags: [cli]
 topics: [analysis, planning]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 25m
-  delivery: 2026-10-23T18:31:00Z
-  basis: "Its own forecast of 25m; 35th in the pull order with an in-progress limit of 5, behind S-0466, S-0468, S-0467, S-0469, S-0470, S-0472, S-0478, S-0481, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432, S-0433 and S-0434."
+  delivery: 2026-10-24T02:03:00Z
+  basis: "Its own forecast of 25m; 31st in the pull order with an in-progress limit of 5, behind S-0472, S-0478, S-0481, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432, S-0433 and S-0434."
   by: flai
-  at: 2026-10-22T22:37:19Z
+  at: 2026-10-23T06:21:15Z
 ---
 # S-0435 Experiment: does priming with the digest cut the threads opened to the operator per completed story on this repository, two weeks before against two weeks after
 
