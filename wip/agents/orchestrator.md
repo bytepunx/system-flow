@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1440.3817
-accrued_seconds: 1236423
-tasks_completed: 995
-last_run: 2026-10-23T20:48:27Z
+accrued_cost: 1450.9847
+accrued_seconds: 1238569
+tasks_completed: 998
+last_run: 2026-10-23T21:24:13Z
 ---
 
 # Orchestrator activity
@@ -6976,6 +6976,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0430
 - Seconds: 362
 - Cost: 1.7600 USD, estimated
+
+### 2026-10-23T21:00:23Z
+
+- Summary: S-0430 landed through the merge queue (enqueued by me). Under promote_to_ready, the only candidate is S-0241 (rank 1, 2h), still blocked, so nothing promoted. Under plan_backlog_stories, started the planner for S-0490 (I-0201: flai test runs go test with -short), first in flai plan --candidates. Under publish, judgement: not published; 14 accepted stories pending (21385.31 USD/week), with ADR-0186 still proposed (TH-0600).
+- Items: S-0430, S-0490, S-0241
+- Seconds: 716
+- Cost: 1.0436 USD, estimated
+
+### 2026-10-23T21:24:10Z
+
+- Summary: Recommended an answer on TH-0627, citing design/adrs/0174-while-the-merge-queue-can-batch-flai-verify-and-the-close-out-leave-the-test.md
+- Items: S-0490
+- Seconds: 1427
+- Cost: 9.5594 USD, estimated
+
+### 2026-10-23T21:24:13Z
+
+- Summary: On planner-S-0490's TH-0627, recommended the operator take the remedy (go-test tier without -short, skipping ^TestGateway, pinned by a test), flagging that it costs agent time (flai/cmd about a tenth more, mcpserver double) against the two red batches I-0201 caused today, and that it edits system-flow.yaml's tests block, which CLAUDE.md leaves to flai or the operator. Thread left open and S-0490 left a draft: the cost and the manifest edit are the operator's to accept.
+- Items: S-0490
+- Seconds: 3
+- Cost: 0.0000 USD
 
 ## Refusals
 

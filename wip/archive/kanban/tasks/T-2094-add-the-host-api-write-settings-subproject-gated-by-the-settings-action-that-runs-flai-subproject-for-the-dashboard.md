@@ -3,16 +3,37 @@ id: T-2094
 type: task
 nature: improvement
 title: Add the host API write settings.subproject, gated by the settings action, that runs flai subproject for the dashboard
-status: backlog
+status: done
 parent: S-0491
 owner: alex
 created: 2026-10-23T20:39:34Z
-updated: 2026-10-23T20:39:34Z
-transitions: []
+updated: 2026-10-23T21:47:28Z
+transitions:
+  - to: ready
+    at: 2026-10-23T21:27:04Z
+    by: agent-S-0491
+  - to: in-progress
+    at: 2026-10-23T21:27:05Z
+    by: agent-S-0491
+  - to: done
+    at: 2026-10-23T21:47:28Z
+    by: agent-S-0491
 stream: S-0491
 tags: [cli, dashboard]
 touches: [flai/internal/hostapi/settings.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/server/agent.ts, design/system/dashboard-host-channel.md]
 after: [T-2093]
+usage:
+  source: log
+  seconds: 1223
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 67
+      output: 27484
+      cache_read: 4114677
+      cache_write: 160122
+      cost: 2.2521
 ---
 # T-2094 Add the host API write settings.subproject, gated by the settings action, that runs flai subproject for the dashboard
 

@@ -3,16 +3,37 @@ id: T-2098
 type: task
 nature: improvement
 title: Document the projects schema and who writes it in project-manifest.md, the template's manifest comments, CLAUDE.md, and the template changelog
-status: backlog
+status: done
 parent: S-0491
 owner: alex
 created: 2026-10-23T20:41:27Z
-updated: 2026-10-23T20:41:27Z
-transitions: []
+updated: 2026-10-23T22:27:09Z
+transitions:
+  - to: ready
+    at: 2026-10-23T22:18:05Z
+    by: agent-S-0491
+  - to: in-progress
+    at: 2026-10-23T22:18:06Z
+    by: agent-S-0491
+  - to: done
+    at: 2026-10-23T22:27:09Z
+    by: agent-S-0491
 stream: S-0491
 tags: [template]
 touches: [design/system/project-manifest.md, CLAUDE.md, template/root/CLAUDE.md.tmpl, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md]
 after: [T-2093, T-2096, T-2097]
+usage:
+  source: log
+  seconds: 543
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 53
+      output: 21628
+      cache_read: 3238008
+      cache_write: 126006
+      cost: 1.7723
 ---
 # T-2098 Document the projects schema and who writes it in project-manifest.md, the template's manifest comments, CLAUDE.md, and the template changelog
 

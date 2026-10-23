@@ -3,11 +3,11 @@ id: T-2092
 type: task
 nature: improvement
 title: Validate and edit the manifest's projects list in flai's manifest package, and report manifest.projects in flai check
-status: in-progress
+status: done
 parent: S-0491
 owner: alex
 created: 2026-10-23T20:37:56Z
-updated: 2026-10-23T20:48:32Z
+updated: 2026-10-23T21:02:09Z
 transitions:
   - to: ready
     at: 2026-10-23T20:48:31Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-23T20:48:32Z
     by: agent-S-0491
+  - to: done
+    at: 2026-10-23T21:02:09Z
+    by: agent-S-0491
 stream: S-0491
 tags: [cli]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/projects.go, flai/internal/manifest/projects_test.go, flai/internal/manifest/settings.go, flai/internal/check/check.go, flai/internal/check/projects_test.go]
+usage:
+  source: log
+  seconds: 817
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 46
+      output: 18717
+      cache_read: 2802153
+      cache_write: 109045
+      cost: 1.5337
 ---
 # T-2092 Validate and edit the manifest's projects list in flai's manifest package, and report manifest.projects in flai check
 

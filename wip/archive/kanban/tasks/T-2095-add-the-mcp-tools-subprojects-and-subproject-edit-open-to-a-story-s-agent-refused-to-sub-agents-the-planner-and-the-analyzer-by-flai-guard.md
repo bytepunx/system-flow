@@ -3,16 +3,37 @@ id: T-2095
 type: task
 nature: improvement
 title: Add the MCP tools subprojects and subproject_edit, open to a story's agent, refused to sub-agents, the planner, and the analyzer by flai guard
-status: backlog
+status: done
 parent: S-0491
 owner: alex
 created: 2026-10-23T20:39:51Z
-updated: 2026-10-23T20:39:51Z
-transitions: []
+updated: 2026-10-23T21:47:13Z
+transitions:
+  - to: ready
+    at: 2026-10-23T21:27:06Z
+    by: agent-S-0491
+  - to: in-progress
+    at: 2026-10-23T21:27:06Z
+    by: agent-S-0491
+  - to: done
+    at: 2026-10-23T21:47:13Z
+    by: agent-S-0491
 stream: S-0491
 tags: [cli]
-touches: [flai/internal/mcpserver/folder.go, flai/internal/mcpserver/subproject.go, flai/internal/mcpserver/subproject_test.go, flai/internal/mcpserver/server_test.go, flai/internal/guard/guard.go, flai/internal/guard/subproject_test.go, docs/users/flai.md]
+touches: [flai/internal/mcpserver/folder.go, flai/internal/mcpserver/subproject.go, flai/internal/mcpserver/subproject_test.go, flai/internal/mcpserver/server_test.go, flai/internal/guard/guard.go, flai/internal/guard/subproject_test.go, docs/users/flai.md, flai/internal/mcpserver/folder_test.go]
 after: [T-2093]
+usage:
+  source: log
+  seconds: 1207
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 124
+      output: 50759
+      cache_read: 7599297
+      cache_write: 295725
+      cost: 4.1594
 ---
 # T-2095 Add the MCP tools subprojects and subproject_edit, open to a story's agent, refused to sub-agents, the planner, and the analyzer by flai guard
 

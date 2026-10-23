@@ -3,16 +3,37 @@ id: T-2096
 type: task
 nature: improvement
 title: Give the orchestrator subproject_edit behind a new permission edit_subprojects, off by default, recorded in an ADR, the conventions, its agent definition, and the template
-status: backlog
+status: done
 parent: S-0491
 owner: alex
 created: 2026-10-23T20:40:36Z
-updated: 2026-10-23T20:40:36Z
-transitions: []
+updated: 2026-10-23T22:17:48Z
+transitions:
+  - to: ready
+    at: 2026-10-23T21:50:49Z
+    by: agent-S-0491
+  - to: in-progress
+    at: 2026-10-23T21:50:49Z
+    by: agent-S-0491
+  - to: done
+    at: 2026-10-23T22:17:48Z
+    by: agent-S-0491
 stream: S-0491
 tags: [cli, template]
-touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/settings.go, flai/internal/guard/guard.go, flai/internal/guard/orchestrate_test.go, design/adrs/README.md, design/system/strategic-agents.md, design/conventions/strategic-agents.md, ".claude/agents/orchestrator.md", docs/operators/settings.md, docs/users/flai.md, template/root/design/conventions/strategic-agents.md, template/root/.claude/agents/orchestrator.md]
+touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/settings.go, flai/internal/guard/guard.go, flai/internal/guard/orchestrate_test.go, design/adrs/README.md, design/system/strategic-agents.md, design/conventions/strategic-agents.md, ".claude/agents/orchestrator.md", docs/operators/settings.md, docs/users/flai.md, template/root/design/conventions/strategic-agents.md, template/root/.claude/agents/orchestrator.md, flai/internal/harness/harness.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings_test.go, flai/internal/guard/guard_test.go, flai/internal/guard/subproject_test.go, flai/internal/mcpserver/subproject.go, design/adrs/0195-with-edit-subprojects-on-the-orchestrator-adds-changes-and-removes-a-sub.md]
 after: [T-2095]
+usage:
+  source: log
+  seconds: 1619
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 157
+      output: 64560
+      cache_read: 9665390
+      cache_write: 376126
+      cost: 5.2902
 ---
 # T-2096 Give the orchestrator subproject_edit behind a new permission edit_subprojects, off by default, recorded in an ADR, the conventions, its agent definition, and the template
 

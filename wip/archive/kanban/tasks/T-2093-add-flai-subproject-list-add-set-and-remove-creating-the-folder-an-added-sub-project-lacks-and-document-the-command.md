@@ -3,16 +3,37 @@ id: T-2093
 type: task
 nature: improvement
 title: Add flai subproject list, add, set, and remove, creating the folder an added sub-project lacks, and document the command
-status: backlog
+status: done
 parent: S-0491
 owner: alex
 created: 2026-10-23T20:39:00Z
-updated: 2026-10-23T20:39:00Z
-transitions: []
+updated: 2026-10-23T21:21:43Z
+transitions:
+  - to: ready
+    at: 2026-10-23T21:02:54Z
+    by: agent-S-0491
+  - to: in-progress
+    at: 2026-10-23T21:02:55Z
+    by: agent-S-0491
+  - to: done
+    at: 2026-10-23T21:21:43Z
+    by: agent-S-0491
 stream: S-0491
 tags: [cli]
 touches: [flai/cmd/root.go, flai/cmd/subproject.go, flai/cmd/subproject_test.go, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, design/system/flai-cli.md]
 after: [T-2092]
+usage:
+  source: log
+  seconds: 1128
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 66
+      output: 27173
+      cache_read: 4068151
+      cache_write: 158311
+      cost: 2.2267
 ---
 # T-2093 Add flai subproject list, add, set, and remove, creating the folder an added sub-project lacks, and document the command
 

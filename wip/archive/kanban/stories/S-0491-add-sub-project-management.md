@@ -3,10 +3,10 @@ id: S-0491
 type: story
 nature: improvement
 title: Add sub-project management
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-23T20:26:10Z
-updated: 2026-10-23T20:47:32Z
+updated: 2026-10-23T23:38:50Z
 transitions:
   - to: ready
     at: 2026-10-23T20:26:18Z
@@ -14,18 +14,36 @@ transitions:
   - to: in-progress
     at: 2026-10-23T20:47:32Z
     by: agent-S-0491
+  - to: review
+    at: 2026-10-23T23:37:24Z
+    by: agent-S-0491
+  - to: done
+    at: 2026-10-23T23:38:50Z
+    by: alex
 tags: [cli, dashboard, template]
 topics: [manifest, settings, mcp, orchestration]
-touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/projects.go, flai/internal/manifest/projects_test.go, flai/internal/manifest/settings.go, flai/internal/check/check.go, flai/internal/check/projects_test.go, flai/cmd/root.go, flai/cmd/subproject.go, flai/cmd/subproject_test.go, flai/internal/guard/guard.go, flai/internal/guard/subproject_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/subproject.go, flai/internal/mcpserver/subproject_test.go, flai/internal/mcpserver/server_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/server/agent.ts, flaiover/src/lib/settings.ts, flaiover/src/lib/settingspages.ts, flaiover/src/lib/settingspages.test.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flaiover/src/routes/api/settings/+server.ts, flaiover/src/routes/api/settings/settings.test.ts, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md, docs/operators/settings.md, design/system/flai-cli.md, design/system/project-manifest.md, design/system/dashboard-host-channel.md, design/system/flaiover-dashboard.md, design/system/strategic-agents.md, design/conventions/strategic-agents.md, design/adrs, CLAUDE.md, ".claude/agents/orchestrator.md", template/root/CLAUDE.md.tmpl, template/root/system-flow.yaml.tmpl, template/root/design/conventions/strategic-agents.md, template/root/.claude/agents/orchestrator.md, template/CHANGELOG.md]
+touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/projects.go, flai/internal/manifest/projects_test.go, flai/internal/manifest/settings.go, flai/internal/check/check.go, flai/internal/check/projects_test.go, flai/cmd/root.go, flai/cmd/subproject.go, flai/cmd/subproject_test.go, flai/internal/guard/guard.go, flai/internal/guard/subproject_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/subproject.go, flai/internal/mcpserver/subproject_test.go, flai/internal/mcpserver/server_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/server/agent.ts, flaiover/src/lib/settings.ts, flaiover/src/lib/settingspages.ts, flaiover/src/lib/settingspages.test.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flaiover/src/routes/api/settings/+server.ts, flaiover/src/routes/api/settings/settings.test.ts, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md, docs/operators/settings.md, design/system/flai-cli.md, design/system/project-manifest.md, design/system/dashboard-host-channel.md, design/system/flaiover-dashboard.md, design/system/strategic-agents.md, design/conventions/strategic-agents.md, design/adrs, CLAUDE.md, ".claude/agents/orchestrator.md", template/root/CLAUDE.md.tmpl, template/root/system-flow.yaml.tmpl, template/root/design/conventions/strategic-agents.md, template/root/.claude/agents/orchestrator.md, template/CHANGELOG.md, flai/internal/mcpserver/folder_test.go, design/issues/I-0202-task-done-s-answer-carries-every-check-note-outside-the-story-so-it-exceeds-the-40-000-bytes-it-promises-and-overflows-the-tool-result.md, design/issues/summary.md, flai/internal/guard/guard_test.go, flai/internal/guard/orchestrate_test.go, flai/internal/harness/harness.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 7133
+  priced_by: harness
+  turns:
+    - day: 2026-10-23
+      ceremony: 4
+      hand_edits: 2
+      work: 70
+  models:
+    - model: claude-opus-5-5
+      input: 752
+      output: 308545
+      cache_read: 46193046
+      cache_write: 1797592
+      cost: 25.2833
   strategic:
     - kind: planner
       seconds: 1007
@@ -75,9 +93,9 @@ forecast:
 No flai command registers a sub-project, and no document in the project or the template gives the schema of projects. The operator is expected to add the entry to system-flow.yaml by hand. flai's own messages show that an entry has name, path, and kind, but there's little else to go off.
 
 ## Acceptance criteria
-- [ ] The projects page supports sub-project management in addition to the projects themselves
-- [ ] If no sub-folder exists, creating a sub-project adds that sub-folder to the project
-- [ ] Add supporting API and MCP calls for this as well so that agents (orchestrator and story agents) can handle this directly without requiring the user to take direct steps
+- [x] The projects page supports sub-project management in addition to the projects themselves
+- [x] If no sub-folder exists, creating a sub-project adds that sub-folder to the project
+- [x] Add supporting API and MCP calls for this as well so that agents (orchestrator and story agents) can handle this directly without requiring the user to take direct steps
 
 ## Tasks
 - T-2092 Validate and edit the manifest's projects list in flai's manifest package, and report manifest.projects in flai check

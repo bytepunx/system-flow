@@ -3,16 +3,37 @@ id: T-2097
 type: task
 nature: improvement
 title: Add a Sub-projects section to the dashboard's Projects configuration page that lists, adds, edits, and removes a project's sub-projects through settings.subproject
-status: backlog
+status: done
 parent: S-0491
 owner: alex
 created: 2026-10-23T20:40:52Z
-updated: 2026-10-23T20:40:52Z
-transitions: []
+updated: 2026-10-23T22:07:02Z
+transitions:
+  - to: ready
+    at: 2026-10-23T21:50:50Z
+    by: agent-S-0491
+  - to: in-progress
+    at: 2026-10-23T21:50:51Z
+    by: agent-S-0491
+  - to: done
+    at: 2026-10-23T22:07:02Z
+    by: agent-S-0491
 stream: S-0491
 tags: [dashboard]
 touches: [flaiover/src/lib/settings.ts, flaiover/src/lib/settingspages.ts, flaiover/src/lib/settingspages.test.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flaiover/src/routes/api/settings/+server.ts, flaiover/src/routes/api/settings/settings.test.ts, docs/users/flaiover.md, design/system/flaiover-dashboard.md]
 after: [T-2094]
+usage:
+  source: log
+  seconds: 971
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 85
+      output: 34893
+      cache_read: 5223930
+      cache_write: 203288
+      cost: 2.8593
 ---
 # T-2097 Add a Sub-projects section to the dashboard's Projects configuration page that lists, adds, edits, and removes a project's sub-projects through settings.subproject
 
