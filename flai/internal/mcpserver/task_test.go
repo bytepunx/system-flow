@@ -471,7 +471,7 @@ func operatorsClose(t *testing.T) *workitem.Repo {
 	return repo
 }
 
-// ADR-0181: with the operator's threads open and none on the story,
+// I-0154, ADR-0181: with the operator's threads open and none on the story,
 // task_done's inbox lists no thread, awaiting_you 0, and no threads_omitted.
 func TestTaskDoneCarriesNoneOfTheOperatorsThreads(t *testing.T) {
 	repo := operatorsClose(t)

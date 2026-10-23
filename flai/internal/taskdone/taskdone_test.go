@@ -857,9 +857,9 @@ func operatorsThreads(t *testing.T, repo *workitem.Repo) {
 	}
 }
 
-// ADR-0181: with the 31 threads awaiting the operator open and none on the
-// story, the inbox a close answers lists no thread and counts none, awaiting
-// the agent or omitted.
+// I-0154, ADR-0181: with the 31 threads awaiting the operator open and none on
+// the story, the inbox a close answers lists no thread and counts none,
+// awaiting the agent or omitted.
 func TestRunCarriesNoneOfTheOperatorsThreads(t *testing.T) {
 	repo, _ := project(t)
 	operatorsThreads(t, repo)
