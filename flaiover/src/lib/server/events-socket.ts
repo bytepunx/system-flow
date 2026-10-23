@@ -7,6 +7,7 @@ import type { IncomingMessage } from 'node:http';
 import type { Duplex } from 'node:stream';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { withProject } from './agent';
+import { allowedHosts, allowsOrigin } from './allowed-hosts';
 import { authenticate, decide } from './auth';
 import { log } from './log';
 import { repo, type Repo } from './repo';
@@ -33,15 +34,20 @@ function headersOf(req: IncomingMessage): Headers {
 	return headers;
 }
 
-/** Whether a browser's Origin names this request's own host; a request with none is not a browser's. */
-function sameOrigin(headers: Headers): boolean {
+/**
+ * Whether a browser's Origin names this request's own host, or one of the allowed hosts a tunnel or a
+ * domain reaches the dashboard by (ADR-0193); a request with none is not a browser's.
+ */
+function sameOrigin(headers: Headers, allowed: readonly string[]): boolean {
 	const origin = headers.get('origin');
 	if (!origin) return true;
+	let url: URL;
 	try {
-		return new URL(origin).host === headers.get('host');
+		url = new URL(origin);
 	} catch {
 		return false;
 	}
+	return url.host === headers.get('host')?.toLowerCase() || allowsOrigin(url, allowed);
 }
 
 /** The upgrade of /api/events and every socket it opened, closed together when the server stops. */
@@ -50,7 +56,11 @@ export class EventsSocket {
 	private open = new Set<WebSocket>();
 	private stopping = false;
 
-	constructor(private pingMs = PING_MS) {}
+	/** allowed is the hosts an Origin may name beside the request's own, FLAIOVER_ALLOWED_HOSTS's. */
+	constructor(
+		private pingMs = PING_MS,
+		private allowed: readonly string[] = allowedHosts()
+	) {}
 
 	/** The HTTP server's 'upgrade' event for /api/events: refused on the raw socket, or opened. */
 	upgrade(req: IncomingMessage, socket: Duplex, head: Buffer): void {
@@ -65,7 +75,7 @@ export class EventsSocket {
 		if (decision.kind === 'forbidden') return refuse('403 Forbidden');
 		if (decision.kind !== 'allow') return refuse('401 Unauthorized');
 		// a browser sends the dashboard's cookie on a cross-site WebSocket too, and a GET has no CSRF rule
-		if (!sameOrigin(headers)) return refuse('403 Forbidden');
+		if (!sameOrigin(headers, this.allowed)) return refuse('403 Forbidden');
 		// the project as hooks.server.ts takes it for a request: the query parameter, else the default
 		const project = new URL(req.url ?? '/', 'http://upgrade').searchParams.get('project');
 		const r = project ? withProject(project, repo) : repo();

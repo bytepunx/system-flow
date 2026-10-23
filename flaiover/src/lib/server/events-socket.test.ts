@@ -105,6 +105,7 @@ describe('the live events socket (ADR-0182)', () => {
 		for (const key of [...knownRepos().keys()]) useRepo(null, key);
 		setToken(null);
 		resetAgent();
+		vi.unstubAllEnvs();
 		rmSync(dir, { recursive: true, force: true });
 	});
 
@@ -126,6 +127,39 @@ describe('the live events socket (ADR-0182)', () => {
 		expect(harbour.listenerCount('change')).toBe(0);
 		// the dashboard's own page, which a browser names in Origin, is let in
 		const own = await client(undefined, { ...cookie, origin: `http://${base}` });
+		expect(await own.next()).toEqual({ type: 'ready' });
+	});
+
+	it("lets in an origin FLAIOVER_ALLOWED_HOSTS names, with a Host of the container's address (ADR-0193)", async () => {
+		vi.stubEnv('FLAIOVER_ALLOWED_HOSTS', 'flow.example.com');
+		await serve();
+		const cookie = { cookie: `flaiover_session=${TOKEN}` };
+		const tunnel = await client(undefined, { ...cookie, origin: 'https://flow.example.com' });
+		expect(await tunnel.next()).toEqual({ type: 'ready' });
+		expect(await dial(url(), { ...cookie, origin: 'http://elsewhere.example' })).toEqual({
+			status: 403
+		});
+		expect(await dial(url(), { ...cookie, origin: 'https://flow.example.com:8443' })).toEqual({
+			status: 403
+		});
+	});
+
+	it('refuses the origin of a tunnel FLAIOVER_ALLOWED_HOSTS does not name 403', async () => {
+		await serve();
+		const cookie = { cookie: `flaiover_session=${TOKEN}` };
+		expect(await dial(url(), { ...cookie, origin: 'https://flow.example.com' })).toEqual({
+			status: 403
+		});
+	});
+
+	it("lets in the dashboard's own page whatever the case of the Host it was sent with", async () => {
+		await serve();
+		const port = base.split(':')[1];
+		const own = await client(undefined, {
+			cookie: `flaiover_session=${TOKEN}`,
+			host: `LocalHost:${port}`,
+			origin: `http://localhost:${port}`
+		});
 		expect(await own.next()).toEqual({ type: 'ready' });
 	});
 

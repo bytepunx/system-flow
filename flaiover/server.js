@@ -16,6 +16,12 @@ const { handler } = await import('./build/handler.js');
 const host = process.env.HOST ?? '0.0.0.0';
 const port = Number(process.env.PORT ?? 3000);
 const shutdownMs = Number(process.env.SHUTDOWN_TIMEOUT ?? 5) * 1000;
+// The hosts a browser's Origin may name beside the request's own (ADR-0193), read as
+// parseAllowedHosts in src/lib/server/allowed-hosts.ts reads them, for the start's log.
+const allowedHosts = (process.env.FLAIOVER_ALLOWED_HOSTS ?? '')
+	.split(',')
+	.map((h) => h.trim().toLowerCase())
+	.filter((h) => h !== '');
 
 const server = http.createServer((req, res) => {
 	noteScheme(req);
@@ -38,6 +44,7 @@ server.listen(port, host, () => {
 			ts: new Date().toISOString(),
 			service: 'flaiover',
 			component: 'server',
+			allowed_hosts: allowedHosts,
 			msg: `listening on http://${host}:${port}`
 		})
 	);
