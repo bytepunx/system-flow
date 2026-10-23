@@ -2,12 +2,12 @@
 id: I-0202
 title: task_done's answer carries every check note outside the story, so it exceeds the 40,000 bytes it promises and overflows the tool result
 class: efficiency
-status: open
+status: closed
 count: 1
 cost: 2m
 first_reported: 2026-10-23T21:50:41Z
 last_reported: 2026-10-23T21:50:41Z
-updated: 2026-10-23T23:38:52Z
+updated: 2026-10-23T23:59:14Z
 ---
 
 # I-0202 task_done's answer carries every check note outside the story, so it exceeds the 40,000 bytes it promises and overflows the tool result
@@ -24,3 +24,4 @@ S-0491: each of four task_done calls answered about 90,500 characters, over Clau
 ## Remediation
 
 Story S-0492 remediates this issue, created from it at 2026-10-23T23:38:52Z.
+Closed 2026-10-23T23:59:14Z: S-0492: flai task done's check step lists every finding in the story but only the first ten notes outside it, counting the rest in check.notes_omitted (ADR-0198), so a check with hundreds of notes no longer takes the answer over 40,000 bytes; TestNewCheckListsAtMostMaxNotesAndCountsTheRest reproduces S-0491's 399 notes.
