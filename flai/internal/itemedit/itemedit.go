@@ -356,7 +356,16 @@ func (u *undo) paths(repo *workitem.Repo) []string {
 	return out
 }
 
-// Apply makes the change.
+// runCheck is the check Apply runs before and after it writes: a variable so
+// that a test can bring another writer's finding between the two runs
+// (I-0182).
+var runCheck = check.Run
+
+// Apply makes the change. It runs flai check before and after the write and
+// refuses the edit, putting every file back, on a new finding inside the
+// edited item's story, the story itself or a task's parent, or on an error on
+// the item's own file; a new finding outside the story is a warning, and one
+// a check scoped to the story leaves out is neither (ADR-0197, I-0182).
 func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Options) (*Result, error) {
 	if opt.Now.IsZero() {
 		opt.Now = time.Now()
@@ -557,7 +566,7 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 	it.Updated = now
 
 	// ---- write, keeping what was there ----
-	before, err := check.Run(repo, opt.Now)
+	before, err := runCheck(repo, opt.Now)
 	if err != nil {
 		return nil, err
 	}
@@ -637,11 +646,20 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 		}
 	}
 
-	// ---- the repository's check, with the change in place ----
-	after, err := check.Run(repo, opt.Now)
+	// ---- the repository's check, with the change in place, scoped to the
+	// item's story: another writer's finding refuses nothing (ADR-0197,
+	// I-0182) ----
+	after, err := runCheck(repo, opt.Now)
 	if err != nil {
 		return fail(err)
 	}
+	files := u.paths(repo)
+	outside, err := scope(repo, it, after, files)
+	if err != nil {
+		return fail(fmt.Errorf("check the edit of %s: %w", it.ID, err))
+	}
+	// scoping drops findings and marks them, but keeps each one's rule, path,
+	// and message, which the known set matches on
 	known := map[string]bool{}
 	for _, f := range before.Findings {
 		known[f.Rule+"\x00"+strings.Replace(f.Path, filepath.Base(oldPath), filepath.Base(it.Path), 1)+"\x00"+f.Message] = true
@@ -651,6 +669,7 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 	for _, f := range after.Findings {
 		onPath := filepath.ToSlash(f.Path) == own || strings.HasSuffix(filepath.ToSlash(f.Path), "/"+filepath.Base(it.Path))
 		isNew := !known[f.Rule+"\x00"+f.Path+"\x00"+f.Message]
+		f.Outside = outside(f)
 		switch {
 		case isNew && f.Rule == "wip.overlap":
 			// touches that reach another story in progress are advisory
@@ -660,7 +679,13 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 			// a kept folder and an after hub are advisory (ADR-0188): the
 			// edit stands, and the warning says so
 			res.Warnings = append(res.Warnings, f)
-		case isNew || (onPath && f.Level == check.Error):
+		case onPath && f.Level == check.Error:
+			blocking = append(blocking, f)
+		case isNew && f.Outside:
+			// outside the item's story: another story's or another writer's,
+			// so the edit stands, and the warning says so (ADR-0197, I-0182)
+			res.Warnings = append(res.Warnings, f)
+		case isNew:
 			blocking = append(blocking, f)
 		case onPath:
 			res.Warnings = append(res.Warnings, f)
@@ -676,7 +701,7 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 	if err != nil {
 		return fail(err)
 	}
-	res.Path, res.Hash, res.Files = own, docedit.Hash(string(data)), u.paths(repo)
+	res.Path, res.Hash, res.Files = own, docedit.Hash(string(data)), files
 	note(repo, Notice{At: now, By: opt.By, ID: it.ID, Title: it.Title, Type: it.Type, Changed: changed})
 
 	if opt.NoCommit || !repo.Manifest.Autocommit() {
@@ -695,6 +720,46 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 		res.Committed, res.Commit = true, sha
 	}
 	return res, nil
+}
+
+// scope scopes res, the check run with the edit of item it in place, to its
+// story, the story itself or a task's parent, with written, the paths the
+// edit wrote, relative to the checkout, as changed (check.ScopeToStories),
+// and returns whether a finding is outside that story (ADR-0197, I-0182). An
+// epic has no story, and a task whose story does not read is held to the
+// epic's rule rather than failing the edit: a finding is outside unless it is
+// on a path the edit wrote.
+func scope(repo *workitem.Repo, it *workitem.Item, res *check.Result, written []string) (func(check.Finding) bool, error) {
+	story := ""
+	switch it.Type {
+	case workitem.Story:
+		story = it.ID
+	case workitem.Task:
+		if p, err := repo.Get(it.Parent); err == nil && p.Type == workitem.Story {
+			story = p.ID
+		}
+	}
+	if story != "" {
+		if err := check.ScopeToStories(res, repo, []string{story}, written); err != nil {
+			return nil, err
+		}
+		return func(f check.Finding) bool { return f.Outside }, nil
+	}
+	in := map[string]bool{}
+	for _, p := range written {
+		for _, r := range []string{repo.Root, repo.MainRoot} {
+			if r != "" {
+				in[filepath.Join(r, filepath.FromSlash(p))] = true
+			}
+		}
+	}
+	return func(f check.Finding) bool {
+		path := f.Path
+		if !filepath.IsAbs(path) {
+			path = filepath.Join(repo.Root, path)
+		}
+		return !in[filepath.Clean(path)]
+	}, nil
 }
 
 // followParent moves in memory the epics story left and joined, the very

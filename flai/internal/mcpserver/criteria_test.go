@@ -161,6 +161,37 @@ func TestCriteriaTickRefusesWithoutWriting(t *testing.T) {
 	}
 }
 
+// I-0182, ADR-0197: a story another agent has just started, its narrative
+// unwritten, does not refuse a tick of this story. The race the issue saw,
+// that story started between the tick's two runs of the check, needs
+// itemedit's seam between them, which its own tests use; here the started
+// story is there before the tick, as the tool meets it a moment later.
+func TestCriteriaTickStandsBesideAStoryJustStarted(t *testing.T) {
+	f, _ := criteriaFixture(t)
+	other, err := f.repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "Other", Owner: "bob", Now: t0,
+		Body: "## Goal\n\nG.\n\n## Acceptance criteria\n- [ ] it works\n\n## Tasks\n\n## Notes\n"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, st := range []string{workitem.Ready, workitem.InProgress} {
+		other, _ = f.repo.Get(other.ID)
+		if _, err := f.repo.Transition(other, st, "bob", "", t0); err != nil {
+			t.Fatal(err)
+		}
+	}
+	other, _ = f.repo.Get(other.ID)
+	if _, err := f.repo.OpenStream(other, workitem.StreamOptions{Agent: "bob", Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+	out, failed := f.call(t, "criteria_tick", map[string]any{"id": f.story.ID, "tick": []int{1}})
+	if failed != "" {
+		t.Fatalf("a story just started refused the tick: %s", failed)
+	}
+	if c := criteria(t, out); c != "1:x:one,2:x:two,3: :three" {
+		t.Errorf("criteria after: %s", c)
+	}
+}
+
 func toStringsOrNone(v any) []string {
 	if v == nil {
 		return nil
