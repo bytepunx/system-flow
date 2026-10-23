@@ -3,10 +3,13 @@ package context
 import (
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
+	"github.com/bytepunx/system-flow/flai/internal/digest"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
+	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/topics"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -38,8 +41,12 @@ var roleAgent = map[string]string{
 // for an epic or a story, given as epic or story: its topics are the item's
 // as well, and the pack loads what the item names, as a story's pack does,
 // and ranks sections against it to fill the budget. The orchestrator and the
-// analyzer are primed for the whole project and take no item. budget is a size as ParseSize reads it; empty means the
-// project's prime.budget, else DefaultBudget.
+// analyzer are primed for the whole project and take no item. The
+// orchestrator's pack adds the answers and recommendations of the digest
+// that rank highest against the threads awaiting the operator, after the
+// briefs (ADR-0194); the planner's and the analyzer's take no digest step.
+// budget is a size as ParseSize reads it; empty means the project's
+// prime.budget, else DefaultBudget.
 func ForStrategic(repo *workitem.Repo, role, epic, story, budget string) (*Pack, error) {
 	if !slices.Contains(conventions.StrategicRoles, role) {
 		return nil, fmt.Errorf("flai prime --role %s: no such role; a strategic agent's role is %s", role, strings.Join(conventions.StrategicRoles, ", "))
@@ -78,8 +85,119 @@ func ForStrategic(repo *workitem.Repo, role, epic, story, budget string) (*Pack,
 	if it != nil {
 		pack.Item = it.ID
 	}
-	pack.AddDesign(Design(pr.docs, topics.Names(packTopics), sources, BriefOver(size), nil), query)
+	var answers []Item
+	if role == conventions.RoleOrchestrate {
+		answers = orchestratorDigest(repo)
+	}
+	pack.addDesign(Design(pr.docs, topics.Names(packTopics), sources, BriefOver(size), nil), query, answers)
 	return pack, nil
+}
+
+// answerKinds are the kinds of digest entry the orchestrator's pack selects
+// (ADR-0194): what the operator answered, and the recommendations they
+// confirmed.
+var answerKinds = []string{"answer", "recommendation"}
+
+// orchestratorDigest is the digest items the orchestrator's pack tries, as
+// answersFor orders the digest's entries against the threads awaiting the
+// operator. A digest entry or a thread that does not parse is flai check's
+// to report; the pack does without the digest rather than fail, as a
+// story's does.
+func orchestratorDigest(repo *workitem.Repo) []Item {
+	entries, err := digest.List(repo)
+	if err != nil {
+		return nil
+	}
+	all, err := threads.List(repo)
+	if err != nil {
+		return nil
+	}
+	return answersFor(entries, awaitingOperator(repo, all))
+}
+
+// answersFor is the digest items the orchestrator's pack tries, best first
+// (ADR-0194): the active and compacted answers and recommendations of
+// entries, ranked for each thread of awaiting by BM25 against its title and
+// first entry, as rankDigest ranks them, and taken round by round, each
+// thread's best entry not yet taken, threads in the order given. An entry
+// with no word in common with a thread is not taken for it. An active entry
+// with a body loads it; a compacted one is a brief.
+func answersFor(entries []digest.Entry, awaiting []*threads.Thread) []Item {
+	var picks []pick
+	for _, e := range entries {
+		if (e.Status == digestActive || e.Status == digestCompacted) && slices.Contains(answerKinds, e.Kind) {
+			picks = append(picks, pick{entry: e})
+		}
+	}
+	if len(picks) == 0 {
+		return nil
+	}
+	ranked := make([][]pick, len(awaiting))
+	for i, th := range awaiting {
+		own := slices.Clone(picks)
+		scoreDigest(own, threadQuery(th))
+		ranked[i] = rankDigest(own)
+	}
+	var out []Item
+	taken := map[string]bool{}
+	next := make([]int, len(awaiting))
+	for more := true; more; {
+		more = false
+		for i, th := range awaiting {
+			for next[i] < len(ranked[i]) && taken[ranked[i][next[i]].entry.ID] {
+				next[i]++
+			}
+			if next[i] == len(ranked[i]) {
+				continue
+			}
+			p := ranked[i][next[i]]
+			next[i]++
+			taken[p.entry.ID], more = true, true
+			out = append(out, digestItem(p.entry, threadReason(th.ID, next[i], p.entry), true))
+		}
+	}
+	return out
+}
+
+// threadQuery is what the digest is ranked against for a thread: its title
+// and its first entry.
+func threadQuery(th *threads.Thread) string {
+	q := th.Title
+	if entries := th.Entries(); len(entries) > 0 {
+		q += "\n" + entries[0].Text
+	}
+	return q
+}
+
+// threadReason is the reason of an entry the orchestrator's pack takes for
+// thread id at rank n, "thread TH-nnnn; rank n"; a compacted entry's ends
+// "; compacted".
+func threadReason(id string, n int, e digest.Entry) string {
+	r := "thread " + id + "; rank " + strconv.Itoa(n)
+	if e.Status == digestCompacted {
+		r += "; " + digestCompacted
+	}
+	return r
+}
+
+// awaitingOperator is the threads of all that await the operator
+// (ADR-0181), in the order given: those open, with entries, and with a
+// recommendation pending the operator's confirmation or a last entry by
+// none of the operator's names. It is the rule inbox.Summarize gives a
+// thread its reader takes no part in; this package cannot import inbox,
+// which imports it.
+func awaitingOperator(repo *workitem.Repo, all []*threads.Thread) []*threads.Thread {
+	var out []*threads.Thread
+	for _, th := range all {
+		entries := th.Entries()
+		if !th.Open() || len(entries) == 0 {
+			continue
+		}
+		if th.PendingRecommendation() != nil || !threads.OperatorName(repo, threads.StoryOf(repo, th), entries[len(entries)-1].Author) {
+			out = append(out, th)
+		}
+	}
+	return out
 }
 
 // strategicItem is the item a strategic role is primed for: the epic or the
@@ -146,7 +264,11 @@ func withRole(list []topics.StoryTopic, role string) []topics.StoryTopic {
 // role.
 func (p *Pack) strategicLines() string {
 	if p.Item == "" {
-		return fmt.Sprintf("role: %s, %s, for the whole project: the conventions the role reads, the open issues, briefs of the design its topics select, and a catalog of the rest; doc_search and doc_get find what you need.\n", p.Role, roleAgent[p.Role])
+		answers := ""
+		if p.Role == conventions.RoleOrchestrate {
+			answers = " the answers and recommendations of the digest that rank highest against the threads awaiting the operator,"
+		}
+		return fmt.Sprintf("role: %s, %s, for the whole project: the conventions the role reads, the open issues, briefs of the design its topics select,%s and a catalog of the rest; doc_search and doc_get find what you need.\n", p.Role, roleAgent[p.Role], answers)
 	}
 	return fmt.Sprintf("item: %s %s\nrole: %s, %s, for %s: the conventions the role reads, the open issues, what the item names, briefs of the design its topics select, the sections that rank highest against it, and a catalog of the rest; doc_search and doc_get find what you need.\n", p.Item, p.Title, p.Role, roleAgent[p.Role], p.Item)
 }

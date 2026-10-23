@@ -656,6 +656,27 @@ func StoryOf(r *workitem.Repo, th *Thread) string {
 	return ""
 }
 
+// OperatorName says whether name is one of the operator's names for a thread
+// on story: the manifest's owner and the story's owner, those ADR-0097 takes
+// an answer from, or "designer" when neither is named, as the dashboard's
+// inbox.designer reads it (ADR-0181).
+func OperatorName(r *workitem.Repo, story, name string) bool {
+	owner := r.Manifest.Owner
+	if owner != "" && name == owner {
+		return true
+	}
+	storyOwner := ""
+	if story != "" {
+		if it, err := r.Get(story); err == nil {
+			storyOwner = it.Owner
+		}
+	}
+	if storyOwner != "" {
+		return name == storyOwner
+	}
+	return owner == "" && name == "designer"
+}
+
 const (
 	mirrorStart = "<!-- threads:start -->"
 	mirrorEnd   = "<!-- threads:end -->"

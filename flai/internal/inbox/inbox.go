@@ -269,8 +269,8 @@ type Reader struct {
 // that is no answer to its question until the operator confirms it
 // (ADR-0090). Any other open thread awaits the operator, "operator", while a
 // recommendation on it is pending or its last entry is by none of the
-// operator's names (operatorName), and is "other" otherwise, as is a thread
-// with no entries.
+// operator's names (threads.OperatorName), and is "other" otherwise, as is a
+// thread with no entries.
 func Summarize(repo *workitem.Repo, r Reader, th *threads.Thread) ThreadSummary {
 	if r.Agent == "" {
 		r.Agent = "agent"
@@ -289,31 +289,10 @@ func Summarize(repo *workitem.Repo, r Reader, th *threads.Thread) ThreadSummary 
 	switch {
 	case takesPart && out.LastBy != r.Agent && !asked:
 		out.Awaiting = "you"
-	case pending || !operatorName(repo, out.Story, out.LastBy):
+	case pending || !threads.OperatorName(repo, out.Story, out.LastBy):
 		out.Awaiting = "operator"
 	}
 	return out
-}
-
-// operatorName says whether name is one of the operator's names for a thread
-// on story: the manifest's owner and the story's owner, those ADR-0097 takes
-// an answer from, or "designer" when neither is named, as the dashboard's
-// inbox.designer reads it (ADR-0181).
-func operatorName(repo *workitem.Repo, story, name string) bool {
-	owner := repo.Manifest.Owner
-	if owner != "" && name == owner {
-		return true
-	}
-	storyOwner := ""
-	if story != "" {
-		if it, err := repo.Get(story); err == nil {
-			storyOwner = it.Owner
-		}
-	}
-	if storyOwner != "" {
-		return name == storyOwner
-	}
-	return owner == "" && name == "designer"
 }
 
 // ---- messages ----

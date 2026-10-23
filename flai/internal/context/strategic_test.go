@@ -1,13 +1,18 @@
 package context
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/conventions"
+	"github.com/bytepunx/system-flow/flai/internal/digest"
+	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/topics"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -216,5 +221,261 @@ func TestForStrategicRefusals(t *testing.T) {
 		if _, err := ForStrategic(repo, c.role, c.epic, c.story, ""); err == nil || !strings.Contains(err.Error(), c.want) {
 			t.Errorf("%s %s%s: %v, want %q", c.role, c.epic, c.story, err, c.want)
 		}
+	}
+}
+
+// answersRepo is strategicRepo with a digest and threads. Its digest holds
+// an entry for each way the orchestrator's pack selects one or leaves it
+// out:
+//
+//   - D-0001, an answer to the question TH-0001 asks again;
+//   - D-0002, an answer to the question TH-0002 asks;
+//   - D-0003, a decision, and D-0004, a cause, in TH-0001's words;
+//   - D-0005, an absorbed answer in TH-0001's words;
+//   - D-0006, a compacted recommendation in TH-0002's words;
+//   - D-0007, an answer in the words of TH-0003 and TH-0004 alone;
+//   - D-0008, the newest answer, sharing fewer words with TH-0001 than D-0001;
+//   - D-0009, an answer in TH-0002's words, too large for the share of a
+//     16 KB budget.
+//
+// TH-0001 and TH-0002 await the operator; the operator answered TH-0003
+// last, and TH-0004 is resolved.
+func answersRepo(t *testing.T) *workitem.Repo {
+	t.Helper()
+	repo, _, _ := strategicRepo(t)
+	entry := func(id, kind, title, status, date, body string) {
+		absorbed := `""`
+		if status == "absorbed" {
+			absorbed = "design/system/orchestration.md"
+		}
+		text := "---\nid: " + id + "\ntitle: " + title + "\nkind: " + kind + "\nsources: [TH-0099]\ntopics: [orchestration]\npaths: []\ndate: " + date + "\nstatus: " + status + "\nabsorbed_by: " + absorbed + "\nasked_again: []\ncited: []\n---\n\n# " + id + " " + title + "\n"
+		if body != "" {
+			text += "\n" + body + "\n"
+		}
+		p := filepath.Join(repo.Root, "design", "digest", id+"-"+kind+".md")
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(text), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	entry("D-0001", "answer", "Split a story whose forecast runs over five days", "active", "2026-10-01", "The operator answered: split a story whose forecast runs over five days into two stories.")
+	entry("D-0002", "answer", "The dashboard publishes on the stable release channel", "active", "2026-10-02", "Release builds of the dashboard go out on the stable channel.")
+	entry("D-0003", "decision", "Split a story whose forecast runs over five days", "active", "2026-10-03", "Split a story whose forecast runs over five days.")
+	entry("D-0004", "cause", "A story whose forecast runs over five days was split late", "active", "2026-10-04", "Split a story whose forecast runs over five days.")
+	entry("D-0005", "answer", "Split a story whose forecast runs over five days", "absorbed", "2026-10-05", "Split a story whose forecast runs over five days.")
+	entry("D-0006", "recommendation", "Release channel for dashboard builds", "compacted", "2026-10-06", "")
+	entry("D-0007", "answer", "Wombats are quokkas", "active", "2026-10-07", "Zebra wombats.")
+	entry("D-0008", "answer", "Forecasts count days", "active", "2026-10-08", "Each forecast counts days.")
+	entry("D-0009", "answer", "Stable release channel", "active", "2026-10-09", strings.TrimSpace(strings.Repeat("The stable release channel publishes dashboard builds. ", 60)))
+	now := time.Date(2026, 10, 3, 9, 0, 0, 0, time.UTC)
+	open := func(title, by, text string) *threads.Thread {
+		th, err := threads.New(repo, threads.NewOptions{Title: title, On: "design/system/orchestration.md", Author: by, Text: text, Now: now})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return th
+	}
+	open("Split a story over five days?", "agent-S-0001", "Should the planner split a story whose forecast runs over five days?")
+	open("Which channel publishes the dashboard?", "orchestrator", "Which release channel publishes the dashboard builds?")
+	answered := open("Wombats or quokkas?", "agent-S-0002", "Are wombats quokkas?")
+	if _, err := threads.Reply(repo, answered.ID, "designer", "Zebra.", now); err != nil {
+		t.Fatal(err)
+	}
+	resolved := open("Quokkas and wombats again?", "agent-S-0003", "Are quokkas wombats?")
+	if _, err := threads.Resolve(repo, resolved.ID, "agent-S-0003", "asked elsewhere", now); err != nil {
+		t.Fatal(err)
+	}
+	return repo
+}
+
+// ADR-0194, S-0430 criterion 3: the orchestrator's pack loads the answers
+// and recommendations ranked against each thread awaiting the operator,
+// round by round, threads in ID order, each with its thread and rank; the
+// answer to the question a thread asks again ranks first for it, ahead of
+// a newer answer sharing fewer of its words. Decisions, causes, absorbed
+// entries, and entries in the words of threads that do not await the
+// operator never load.
+func TestTheOrchestratorsPackLoadsTheAnswersRankedAgainstThreadsAwaitingTheOperator(t *testing.T) {
+	repo := answersRepo(t)
+	all, err := threads.List(repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	awaiting := awaitingOperator(repo, all)
+	if len(awaiting) != 2 || awaiting[0].ID != "TH-0001" || awaiting[1].ID != "TH-0002" {
+		t.Fatalf("awaiting the operator: %d threads; want TH-0001 and TH-0002", len(awaiting))
+	}
+	entries, err := digest.List(repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tried := answersFor(entries, awaiting)
+	var ids []string
+	for _, it := range tried {
+		ids = append(ids, it.ID)
+	}
+	if len(ids) < 2 || ids[0] != "D-0001" || tried[0].Reason != "thread TH-0001; rank 1" || !strings.HasPrefix(tried[1].Reason, "thread TH-0002; rank 1") {
+		t.Fatalf("tried %v, first reasons %+v; want D-0001 for TH-0001 then TH-0002's best", ids, tried)
+	}
+	if i, j := slices.Index(ids, "D-0001"), slices.Index(ids, "D-0008"); j < 0 || i > j {
+		t.Errorf("tried %v; want D-0008 after D-0001", ids)
+	}
+	for _, out := range []string{"D-0003", "D-0004", "D-0005", "D-0007"} {
+		if slices.Contains(ids, out) {
+			t.Errorf("tried %s: %v", out, ids)
+		}
+	}
+	if len(ids) != 5 {
+		t.Errorf("tried %v; want D-0001, D-0002, D-0006, D-0008, D-0009 once each", ids)
+	}
+
+	p, err := ForStrategic(repo, conventions.RoleOrchestrate, "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := digestItems(p)
+	if len(got) != 5 {
+		t.Fatalf("digest items %v; want the five tried", got)
+	}
+	if one := got["D-0001"]; one.Reason != "thread TH-0001; rank 1" || one.Text != "# D-0001 Split a story whose forecast runs over five days\n\nThe operator answered: split a story whose forecast runs over five days into two stories.\n" || one.Size != len(one.Text) {
+		t.Errorf("D-0001 %+v", one)
+	}
+	if c := got["D-0006"]; !strings.HasPrefix(c.Reason, "thread TH-0002; rank ") || !strings.HasSuffix(c.Reason, "; compacted") || c.Text != "" {
+		t.Errorf("D-0006 %+v", c)
+	}
+	if r := got["D-0008"].Reason; !strings.HasPrefix(r, "thread TH-0001; rank ") || r == "thread TH-0001; rank 1" {
+		t.Errorf("D-0008 reason %q", r)
+	}
+	body, header := p.Body(), p.Header()
+	for _, want := range []string{strategicHead[groupDigest], "reason: thread TH-0001; rank 1\n\n# D-0001 Split a story", "\n- D-0006 Release channel for dashboard builds (design/digest/D-0006-recommendation.md; " + got["D-0006"].Reason + ")\n"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("body lacks %q:\n%s", want, body)
+		}
+	}
+	for _, want := range []string{"the answers and recommendations of the digest that rank highest against the threads awaiting the operator", digestRow(5, 4)} {
+		if !strings.Contains(header, want) {
+			t.Errorf("header lacks %q:\n%s", want, header)
+		}
+	}
+}
+
+// ADR-0194: with no thread awaiting the operator, the orchestrator's pack
+// loads no digest entry, though the digest holds answers in the words of
+// threads the operator answered.
+func TestTheOrchestratorsPackLoadsNoDigestWithNoThreadAwaitingTheOperator(t *testing.T) {
+	repo := answersRepo(t)
+	now := time.Date(2026, 10, 4, 9, 0, 0, 0, time.UTC)
+	for _, id := range []string{"TH-0001", "TH-0002"} {
+		if _, err := threads.Reply(repo, id, "designer", "Split it.", now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	p, err := ForStrategic(repo, conventions.RoleOrchestrate, "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := digestItems(p); len(got) != 0 || strings.Contains(p.Body(), "\ndigest\n======\n") {
+		t.Errorf("digest items %v with no thread awaiting the operator", got)
+	}
+}
+
+// ADR-0194: the orchestrator's digest step never takes the pack over its
+// budget nor its items over an eighth of it; an entry too large for the
+// share is skipped and the next tried.
+func TestTheOrchestratorsDigestStaysWithinItsShare(t *testing.T) {
+	repo := answersRepo(t)
+	loaded := false
+	for budget := 4096; budget <= 40*1024; budget += 512 {
+		p, err := ForStrategic(repo, conventions.RoleOrchestrate, "", "", strconv.Itoa(budget))
+		if err != nil {
+			t.Fatal(err)
+		}
+		used := 0
+		for _, it := range digestItems(p) {
+			used += len(it.Printed())
+		}
+		switch {
+		case p.Exceeded != "" && used > 0:
+			t.Errorf("budget %d, exceeded %s: digest loads %d bytes", budget, p.Exceeded, used)
+		case p.Exceeded == "" && (p.Size.Bytes > budget || used > budget/DigestShare):
+			t.Errorf("budget %d: pack %d bytes, digest %d of a share of %d", budget, p.Size.Bytes, used, budget/DigestShare)
+		}
+		loaded = loaded || used > 0
+	}
+	if !loaded {
+		t.Errorf("no budget loaded a digest entry")
+	}
+	p, err := ForStrategic(repo, conventions.RoleOrchestrate, "", "", "16KB")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := digestItems(p)
+	if _, ok := got["D-0009"]; ok || got["D-0001"].ID == "" {
+		t.Errorf("16 KB: digest items %v; want D-0001 and not D-0009", got)
+	}
+}
+
+// ADR-0194: the planner's and the analyzer's packs take no digest step,
+// though threads await the operator.
+func TestThePlannerAndAnalyzerPacksLoadNoDigest(t *testing.T) {
+	repo := answersRepo(t)
+	stories, err := repo.List(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	story := ""
+	for _, it := range stories {
+		if it.Type == workitem.Story {
+			story = it.ID
+		}
+	}
+	plan, err := ForStrategic(repo, conventions.RolePlan, "", story, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	analyze, err := ForStrategic(repo, conventions.RoleAnalyze, "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range []*Pack{plan, analyze} {
+		if got := digestItems(p); len(got) != 0 || strings.Contains(p.Header(), "the answers and recommendations") {
+			t.Errorf("%s: digest items %v", p.Role, got)
+		}
+	}
+}
+
+// ADR-0194, S-0430 criterion 3: as --json prints it, each digest item of
+// the orchestrator's pack has step digest, its ID, path, reason, and size.
+func TestTheOrchestratorsDigestAsJSON(t *testing.T) {
+	repo := answersRepo(t)
+	p, err := ForStrategic(repo, conventions.RoleOrchestrate, "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := json.Marshal(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out struct {
+		Items []map[string]any `json:"items"`
+	}
+	if err := json.Unmarshal(b, &out); err != nil {
+		t.Fatal(err)
+	}
+	var first map[string]any
+	n := 0
+	for _, it := range out.Items {
+		if it["step"] == "digest" {
+			if n == 0 {
+				first = it
+			}
+			n++
+		}
+	}
+	text := "# D-0001 Split a story whose forecast runs over five days\n\nThe operator answered: split a story whose forecast runs over five days into two stories.\n"
+	if n != 5 || first["id"] != "D-0001" || first["path"] != "design/digest/D-0001-answer.md" || first["reason"] != "thread TH-0001; rank 1" || first["size"] != float64(len(text)) {
+		t.Errorf("%d digest items, first %v", n, first)
 	}
 }
