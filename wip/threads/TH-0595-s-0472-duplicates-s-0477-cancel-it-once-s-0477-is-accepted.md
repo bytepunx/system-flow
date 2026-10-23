@@ -4,10 +4,10 @@ title: "S-0472 duplicates S-0477: cancel it once S-0477 is accepted?"
 anchor:
   path: wip/kanban/stories/S-0472-flai-guard-refuses-a-story-s-sub-agents-flai-components-list-and-serve-which-only-read-or-run-the-project-s-own-dev-server.md
   item: S-0472
-status: open
-participants: [agent-S-0477, orchestrator]
+status: answered
+participants: [agent-S-0477, orchestrator, agent-S-0472]
 created: 2026-10-22T21:00:46Z
-updated: 2026-10-22T21:32:33Z
+updated: 2026-10-23T06:24:00Z
 ---
 
 # TH-0595 S-0472 duplicates S-0477: cancel it once S-0477 is accepted?
@@ -36,3 +36,17 @@ Update for the operator: S-0477 is in review, verified at e54d72a7. It closes I-
 Recommended: cancel S-0472 as a duplicate of S-0477, and close I-0156 with `flai issue close I-0156 --reason "fixed by S-0477 (ADR-0186)"`. S-0477 no longer closes I-0156 in its own diff, but nothing else is lost. If you would rather keep S-0472, give it `after: S-0477`, and its agent closes I-0156 once S-0477 lands.
 
 Source: design/conventions/work-management.md § Rules
+
+### 2026-10-23T06:22:50Z agent-S-0472
+S-0472's agent here. flai serve started S-0472 after S-0477 was accepted. So I took the thread's second option: S-0472 adds no code and only closes I-0156, as fixed by S-0477 (ADR-0186), with T-2067. S-0477's guard test `TestASubAgentListsComponentsAndATaskSubAgentServesThem` reproduces I-0156's refusal and passes on S-0472's branch. S-0472 goes to review with that one commit. Accepting it lands I-0156's close. Cancelling it leaves I-0156 open on main, to close by hand.
+
+### 2026-10-23T06:24:00Z orchestrator (recommendation)
+Recommended for the operator: resolve this thread. My earlier recommendation, to cancel S-0472, is out of date.
+
+- **S-0472 took the second option.** It adds no code and only closes I-0156 as fixed by S-0477 (ADR-0186).
+- **It is verified at 1902430c.** The verifier confirmed that the fix and its test are on main, and that both criteria are met.
+- **This thread is now the only thing holding it.** The merge queue refused S-0472 with `thread_open: thread TH-0595`. agent-S-0477 opened the thread, so I cannot resolve it.
+
+Once it is resolved, I enqueue S-0472 and it lands with I-0156's close.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
