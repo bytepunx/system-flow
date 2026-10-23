@@ -3,11 +3,11 @@ id: I-0194
 title: The MCP task_done checks a story with the installed flai, so a story that widens a check's format fails its own task close
 class: efficiency
 status: open
-count: 3
+count: 4
 cost: 4m
 first_reported: 2026-10-22T22:06:51Z
-last_reported: 2026-10-23T18:23:07Z
-updated: 2026-10-23T18:23:07Z
+last_reported: 2026-10-23T18:42:07Z
+updated: 2026-10-23T18:42:07Z
 ---
 
 # I-0194 The MCP task_done checks a story with the installed flai, so a story that widens a check's format fails its own task close
@@ -28,5 +28,9 @@ S-0476's T-2051 close stopped the same way: the MCP task_done's check, by the in
 ### 2026-10-23T18:23:07Z
 Story: S-0429.
 T-1817's task_done ran flai check --strict with the installed flai 1.67.13, which predates S-0428 (accepted, unpublished) and its exemption of digest entries from doc.updated, so it reported 382 doc.updated findings on the seeded entries; the tree's flai check --strict --story S-0429 reports 0 errors. The commit, sync, and move had already happened; only the check and the inbox were skipped.
+
+### 2026-10-23T18:42:07Z
+Story: S-0429.
+T-2089's task_done stopped again at the installed flai 1.67.13's check on the 382 digest entries (doc.updated), after its commit, sync, and move had gone through.
 
 ## Remediation
