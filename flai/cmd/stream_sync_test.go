@@ -259,7 +259,7 @@ func TestSyncConflictIsAMessageBetweenThePair(t *testing.T) {
 func TestSyncListsPathsChangedOutsideTheClaim(t *testing.T) {
 	root := syncProject(t)
 	wt := openSyncStory(t, root, 1, "docs/guide.md")
-	if _, errOut, code := runIn(t, root, "task", "new", "Design it", "--story", "S-0001", "--touches", "design"); code != 0 {
+	if _, errOut, code := runIn(t, root, "task", "new", "Design it", "--story", "S-0001", "--touches", "design/note.md"); code != 0 {
 		t.Fatal(errOut)
 	}
 	commitIn(t, wt, "docs/guide.md", "inside the story's touches\n")
