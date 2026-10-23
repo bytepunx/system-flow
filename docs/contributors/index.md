@@ -50,6 +50,14 @@ Every script in `scripts/` sources `scripts/env.sh`, which sets this environment
 | `FLAI_CACHE_DIR`, npm and pnpm caches | Under the main checkout's `.flai-cache/` |
 | `LITELLM_BASE_URL`, `LITELLM_API_KEY`, `FLAI_TEST_LITELLM_HAIKU` | From `.flai-cache/litellm/litellm.env` when `scripts/litellm.sh up` has written it and the environment does not already set them: the local LiteLLM proxy and its budgeted virtual key, for the gateway tests and the agents `flai serve` starts; `up` writes `FLAI_TEST_LITELLM_HAIKU` as `LITELLM_HAIKU_MODEL` when that is set, and the script's default otherwise |
 
+`FLAI_CONFIG` also decides which host actions the tree's flai sees, and the merge queue is one of them. While the merge queue can batch, the close-out leaves the `integration` and `smoke` tiers to the queue's batch ([ADR-0174](../../design/adrs/0174-while-the-merge-queue-can-batch-flai-verify-and-the-close-out-leave-the-test.md)). `scripts/close-out.sh` runs the tree's flai, so the host action must be on in this configuration too, not only in flai serve's. Turn it on from the main checkout:
+
+```sh
+scripts/flai.sh serve enable merge-queue
+```
+
+Without it, every close-out that changes `flai/` runs both tiers, about twelve minutes a round, which is longer than an agent's ten-minute tool call. `flai verify` then prints, before its outcome, the tiers it ran and the condition that is off (S-0466).
+
 Run `make install-tools` once, from any tree: it installs the pinned golangci-lint v2 and GoReleaser into the main checkout's `bin/`, so every story worktree lints with them. `make flai-test` names the golangci-lint it runs and stops if it is not v2.
 
 ### Gateway checks

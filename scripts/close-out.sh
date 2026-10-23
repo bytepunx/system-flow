@@ -21,7 +21,10 @@
 # on for it in the configuration flai reads, which scripts/flai.sh sets to
 # .flai-cache/config.json, accept_reviews on, acceptance local), flai verify
 # leaves the tiers marked queue: true, here integration and smoke, to the
-# queue's batch, which runs them, and lists each as queued (ADR-0174).
+# queue's batch, which runs them, and lists each as queued (ADR-0174). Turn
+# the host action on in that configuration with scripts/flai.sh serve enable
+# merge-queue: flai serve's own configuration does not count here. While it is
+# off, flai verify runs them and says why on a line before its last (S-0466).
 set -eu
 . "$(dirname "$0")/env.sh"
 cd "$ROOT"
