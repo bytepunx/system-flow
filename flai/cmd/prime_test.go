@@ -13,6 +13,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
+	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -528,6 +529,127 @@ func TestPrimeCatHasTheDesignSystemConventionOnlyWithGuidance(t *testing.T) {
 		}
 		if strings.Contains(cat, "- Design system rule.") != guidance {
 			t.Errorf("guidance %v, --cat:\n%s", guidance, cat)
+		}
+	}
+}
+
+// primeDigestProject is a project whose digest holds a decision on cli,
+// sharing words with its story S-0001 on cli, and two answers: D-0002, to
+// the question TH-0001 asks again, and D-0003, newer, sharing fewer of its
+// words. TH-0001 awaits the operator.
+func primeDigestProject(t *testing.T) string {
+	t.Helper()
+	root := tempProject(t)
+	write := func(rel, s string) {
+		p := filepath.Join(root, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(s), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("design/conventions/README.md", "# Conventions\n\n- [safety.md](safety.md)\n")
+	write("design/conventions/safety.md", "---\ntitle: Safety\nupdated: 2026-10-23\naudience: agent\norder: 10\nstatus: active\n---\n\n# Safety\n\n- Safety rule.\n\n<!-- system-flow:end-of-baseline -->\n\n## Project additions\n")
+	write("design/system/cli.md", "---\ntitle: CLI\nupdated: 2026-10-23\nstatus: active\ntopics: [cli]\n---\n\n# CLI\n\nThe command line.\n")
+	entry := func(id, slug, kind, title, topics, date, body string) {
+		write("design/digest/"+id+"-"+slug+".md", "---\nid: "+id+"\ntitle: "+title+"\nkind: "+kind+"\nsources: [TH-0099]\ntopics: ["+topics+"]\npaths: []\ndate: "+date+"\nstatus: active\nabsorbed_by: \"\"\nasked_again: []\ncited: []\n---\n\n# "+id+" "+title+"\n\n"+body+"\n")
+	}
+	entry("D-0001", "loads", "decision", "Prime loads digest entries", "cli", "2026-10-01", "The pack loads digest entries ranked against the story.")
+	entry("D-0002", "split", "answer", "Split a story whose forecast runs over five days", "orchestration", "2026-10-02", "The operator answered: split a story whose forecast runs over five days into two stories.")
+	entry("D-0003", "forecasts", "answer", "Forecasts count days", "orchestration", "2026-10-03", "Each forecast counts days.")
+	if _, errOut, code := runIn(t, root, "epic", "new", "Epic"); code != 0 {
+		t.Fatal(errOut)
+	}
+	if _, errOut, code := runIn(t, root, "story", "new", "Prime loads the digest", "--epic", "E-0001", "--topics", "cli"); code != 0 {
+		t.Fatal(errOut)
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := threads.New(repo, threads.NewOptions{Title: "Split a story over five days?", On: "design/system/cli.md", Author: "agent-S-0001", Text: "Should the planner split a story whose forecast runs over five days?", Now: time.Date(2026, 10, 23, 9, 0, 0, 0, time.UTC)}); err != nil {
+		t.Fatal(err)
+	}
+	return root
+}
+
+// packItem is an item of a context pack as --json prints it.
+type packItem struct {
+	Path   string `json:"path"`
+	ID     string `json:"id"`
+	Step   string `json:"step"`
+	Reason string `json:"reason"`
+	Size   int    `json:"size"`
+	Text   string `json:"text"`
+}
+
+// packDigest is the digest items of a pack --json printed, in order.
+func packDigest(t *testing.T, out string) []packItem {
+	t.Helper()
+	var v struct {
+		Items []packItem `json:"items"`
+	}
+	if err := json.Unmarshal([]byte(out), &v); err != nil {
+		t.Fatalf("json: %v %s", err, out)
+	}
+	var got []packItem
+	for _, it := range v.Items {
+		if it.Step == "digest" {
+			got = append(got, it)
+		}
+	}
+	return got
+}
+
+// ADR-0194, S-0430 criteria 2 and 3: flai prime --story, as text and
+// --json, loads the digest entry its topics select, marked digest with its
+// reason and size; flai prime --role orchestrate loads the answer to the
+// question a thread awaiting the operator asks again first for it, with
+// the reason thread TH-nnnn; rank 1, ahead of a newer answer sharing fewer
+// of its words.
+func TestPrimeLoadsTheDigest(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := primeDigestProject(t)
+	one := "# D-0001 Prime loads digest entries\n\nThe pack loads digest entries ranked against the story.\n"
+	out, errOut, code := runIn(t, root, "prime", "--story", "S-0001")
+	if code != 0 {
+		t.Fatalf("prime --story: %s", errOut)
+	}
+	for _, want := range []string{"1 digest entry with its body\n", "\ndigest\n======\n", "\ndesign/digest/D-0001-loads.md\n=============================\nreason: topics: cli; rank 1\n\n" + one} {
+		if !strings.Contains(out, want) {
+			t.Errorf("story pack lacks %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "D-0002") || strings.Contains(out, "over budget") {
+		t.Errorf("story pack loads an answer on orchestration, or is over budget:\n%s", out)
+	}
+	out, _, _ = runIn(t, root, "prime", "--story", "S-0001", "--json")
+	if got := packDigest(t, out); len(got) != 1 || got[0].ID != "D-0001" || got[0].Path != "design/digest/D-0001-loads.md" || got[0].Reason != "topics: cli; rank 1" || got[0].Text != one || got[0].Size != len(one) {
+		t.Errorf("story pack digest items: %+v", got)
+	}
+
+	two := "# D-0002 Split a story whose forecast runs over five days\n\nThe operator answered: split a story whose forecast runs over five days into two stories.\n"
+	out, errOut, code = runIn(t, root, "prime", "--role", "orchestrate")
+	if code != 0 {
+		t.Fatalf("prime --role orchestrate: %s", errOut)
+	}
+	for _, want := range []string{"\ndigest\n======\n", "\ndesign/digest/D-0002-split.md\n=============================\nreason: thread TH-0001; rank 1\n\n" + two} {
+		if !strings.Contains(out, want) {
+			t.Errorf("orchestrator's pack lacks %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "D-0001") || strings.Contains(out, "over budget") {
+		t.Errorf("orchestrator's pack loads a decision, or is over budget:\n%s", out)
+	}
+	out, _, _ = runIn(t, root, "prime", "--role", "orchestrate", "--json")
+	got := packDigest(t, out)
+	if len(got) == 0 || got[0].ID != "D-0002" || got[0].Path != "design/digest/D-0002-split.md" || got[0].Reason != "thread TH-0001; rank 1" || got[0].Text != two || got[0].Size != len(two) {
+		t.Fatalf("orchestrator's digest items: %+v", got)
+	}
+	for _, it := range got[1:] {
+		if it.ID != "D-0003" || it.Reason != "thread TH-0001; rank 2" {
+			t.Errorf("after D-0002: %+v", it)
 		}
 	}
 }

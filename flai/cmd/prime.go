@@ -57,7 +57,13 @@ with a line telling the agent to read it whole before building UI; a
 brief of each design/system and design/tech file its topics
 select, as its first paragraph and heading outline; the decision sentence of each ADR its topics
 select or one link step reaches (linked from a named or briefed section,
-refined by, or refining one); then the sections ranked highest against the
+refined by, or refining one); then the digest entries the story's topics,
+other than all, or its claim select, never an absorbed one, ranked against
+the story's title, goal, and criteria, loaded best first under a digest
+heading, each with step digest and its reason (path: <claimed path> or
+topics: <topics>, then rank n), a compacted one as a one-line brief, while
+they stay within an eighth of the budget and the pack within the budget
+(ADR-0194); then the sections ranked highest against the
 story's title, goal, and criteria, each cut at its own heading (an ADR whole
 when it fits), in rank order, while the budget has room. Then a catalog of
 every document neither loaded nor briefed, with the outline of those loaded
@@ -65,7 +71,7 @@ in part, and one line per convention section left out, with its topics.
 Nothing prints twice: the first reason wins and the others are listed on it.
 When the conventions alone exceed the budget the pack is the conventions and
 a catalog; when the conventions and what is named exceed it, nothing is
-ranked; the header says which. --budget sets the size, such as 80KB or 81920
+ranked and no digest entry loads; the header says which. --budget sets the size, such as 80KB or 81920
 bytes; the project's default is prime.budget in system-flow.yaml, and
 flai's is 80KB. An archived story gets the pack it would get today.
 
@@ -75,7 +81,8 @@ whose front matter roles are empty or list the role (ADR-0068),
 design-system.md only when the design system reaches the story, with the
 sections the story's topics leave out taken out; the story's goal and
 acceptance criteria; and briefs, never bodies, of what the story names,
-the design system when it reaches the story, what its topics select, and the ADRs one step reaches, each while the
+the design system when it reaches the story, what its topics select, the ADRs one step reaches,
+and the digest entries the story's pack selects, in its rank, each while the
 budget has room, with a count of those left out. No open issues, nothing
 ranked, no catalog. Its budget is half the story's agent's unless --budget
 is given.
@@ -89,8 +96,11 @@ holds the conventions whose roles are empty or list the role, with the
 sections its topics leave out taken out, and no README; the open issues;
 for the planner, what the item names, whole, as a story's pack loads it (a
 story's with its epic and tasks, an epic's alone), and the sections ranked highest against the item; briefs of the design, tech,
-and ADRs its topics select and the ADRs one step reaches; and a catalog of
-the rest. It does not get the design system. Its budget is the story's agent's, and --budget sets it.
+and ADRs its topics select and the ADRs one step reaches; for the
+orchestrator, the digest's answers and recommendations ranked against the
+title and first entry of each thread awaiting the operator, each thread's
+best not yet taken in turn, with the reason thread TH-nnnn; rank n, within an
+eighth of the budget (ADR-0194); and a catalog of the rest. It does not get the design system. Its budget is the story's agent's, and --budget sets it.
 
 --part N prints part N of the pack as the MCP prime tool returns it, as
 JSON: parts of at most 40,000 bytes each, every one carrying part and parts

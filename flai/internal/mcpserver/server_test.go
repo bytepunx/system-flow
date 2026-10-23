@@ -909,6 +909,34 @@ func TestAThreadReplyRecommendsCitingASource(t *testing.T) {
 	}
 }
 
+// ADR-0194, S-0430 criterion 4: a recommendation may cite a digest entry,
+// the answer the operator gave last time, by its path; the source is
+// recorded as that path.
+func TestAThreadReplyMayCiteADigestEntry(t *testing.T) {
+	f := setup(t)
+	entry := "design/digest/D-0001-split.md"
+	p := filepath.Join(f.repo.Root, filepath.FromSlash(entry))
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p, []byte("---\nid: D-0001\ntitle: Split a story over five days\nkind: answer\nsources: [TH-0099]\ntopics: [planning]\npaths: []\ndate: 2026-09-01\nstatus: active\nabsorbed_by: \"\"\nasked_again: []\ncited: []\n---\n\n# D-0001 Split a story over five days\n\nSplit it.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	th, err := threads.New(f.repo, threads.NewOptions{Title: "Split a story over five days?", On: f.story.ID, Author: "agent-S-0001", Text: "Should I split it?", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, failed := f.call(t, "thread_reply", map[string]any{"id": th.ID, "text": "Split it, as the operator answered in D-0001.", "recommendation": true, "source": entry})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	entries := out["entry_list"].([]any)
+	last := entries[len(entries)-1].(map[string]any)
+	if src, _ := last["source"].(map[string]any); src["path"] != entry || (src["heading"] != nil && src["heading"] != "") || last["recommendation"] != true {
+		t.Errorf("source: %v", last)
+	}
+}
+
 // S-0220: the orchestrator's thread_reply is logged in its activity
 // document, saying whether it recommended or answered and what it cited,
 // with the thread's story as its item.

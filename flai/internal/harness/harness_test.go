@@ -1445,9 +1445,11 @@ func TestTheOrchestratorsPromptSaysWhatEachPermissionDoes(t *testing.T) {
 // the operator may change it while it runs: nothing while it is off, a
 // sourced recommendation while it is recommend, and while it is autonomous
 // a sourced answer, or a recommendation escalating to the operator when no
-// source settles the question or it asks for the operator's judgement. It
-// never resolves a thread it did not open, answers its own, or confirms a
-// recommendation. No other agent is told any of it.
+// source settles the question or it asks for the operator's judgement. Its
+// pack carries the digest's answers ranked against those threads, and it
+// cites an entry that answers one as the source, by its path and its
+// D-nnnn (ADR-0194). It never resolves a thread it did not open, answers its
+// own, or confirms a recommendation. No other agent is told any of it.
 func TestTheOrchestratorsPromptSaysWhatToDoWithThreads(t *testing.T) {
 	rules := map[string][]string{
 		"each value": {
@@ -1459,6 +1461,10 @@ func TestTheOrchestratorsPromptSaysWhatToDoWithThreads(t *testing.T) {
 		"off": {"While answer_threads is off, leave them alone"},
 		"recommend": {
 			"While it is recommend, reply to each with the flai MCP tool thread_reply, recommendation true, and a source: the ADR, design section, or convention your answer rests on, as <path> or <path>#<heading>, read with doc_get first",
+		},
+		"a digest entry": {
+			"loads the digest's answers and recommendations ranked against the threads awaiting the operator (ADR-0194)",
+			"When a digest entry in your pack answers a thread's question, it is the answer the operator gave last time: cite it, with the entry's path, design/digest/D-nnnn-<slug>.md, as the source, and name its D-nnnn in the reply",
 		},
 		"autonomous": {
 			"While it is autonomous, answer with thread_reply and a source when a source settles the question",

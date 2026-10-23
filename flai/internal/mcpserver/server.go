@@ -355,7 +355,7 @@ type ThreadReplyIn struct {
 	ID             string `json:"id"`
 	Text           string `json:"text"`
 	Recommendation bool   `json:"recommendation,omitempty" jsonschema:"the reply is a recommendation: the thread keeps its status and awaits the operator, who confirms it to make it the answer; refused on a resolved thread and on a thread you opened"`
-	Source         string `json:"source,omitempty" jsonschema:"what the reply rests on: a repository path, such as an ADR, a design document, or a convention, or <path>#<heading> for a heading in it; both must exist. Written as the entry's last line, Source: <path> § <heading>"`
+	Source         string `json:"source,omitempty" jsonschema:"what the reply rests on: a repository path, such as an ADR, a design document, a convention, or a digest entry (design/digest/D-nnnn-<slug>.md, the answer the operator gave last time), or <path>#<heading> for a heading in it; both must exist. Written as the entry's last line, Source: <path> § <heading>"`
 }
 
 func (s *server) threadReply(ctx context.Context, _ *mcp.CallToolRequest, in ThreadReplyIn) (*mcp.CallToolResult, ThreadDetail, error) {
