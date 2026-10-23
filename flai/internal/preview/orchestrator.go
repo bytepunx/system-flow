@@ -34,6 +34,7 @@ const (
 	BlockCriterionUnticked    = "criterion_unticked"    // an acceptance criterion is unticked
 	BlockOutsideTouches       = "outside_touches"       // the branch changes a file under none of the touches
 	BlockThreadOpen           = "thread_open"           // a thread on the story or a task is not resolved
+	BlockOwnThreadOpen        = "own_thread_open"       // a thread the orchestrator opened and alone wrote on is not resolved (ADR-0189)
 	BlockCriterionUnevidenced = "criterion_unevidenced" // the evidence names no changed file for a criterion
 	BlockProtectedPaths       = "protected_paths"       // the branch changes a path Claude Code protects, which the operator accepts (ADR-0106)
 )
@@ -217,7 +218,9 @@ func orchestratorBlockers(r execx.Runner, repo *workitem.Repo, it *workitem.Item
 		}
 	}
 
-	// 4. no thread on the story or one of its tasks is open
+	// 4. no thread on the story or one of its tasks is open; one the
+	// orchestrator opened and nobody else wrote on is its own blocker, the
+	// orchestrator's to resolve (ADR-0189)
 	ids := []string{it.ID}
 	if items, err := repo.List(false); err != nil {
 		add(BlockThreadOpen, "cannot list the tasks of %s to check their threads: %v", it.ID, err)
@@ -236,10 +239,15 @@ func orchestratorBlockers(r execx.Runner, repo *workitem.Repo, it *workitem.Item
 			continue
 		}
 		for _, th := range ths {
-			if th.Open() && !seen[th.ID] {
-				seen[th.ID] = true
-				add(BlockThreadOpen, "thread %s on %s is %s, not resolved: %s", th.ID, id, th.Status, th.Title)
+			if !th.Open() || seen[th.ID] {
+				continue
 			}
+			seen[th.ID] = true
+			if th.OrchestratorsOwn() {
+				add(BlockOwnThreadOpen, "thread %s on %s is %s, not resolved: %s; the orchestrator opened it and nobody else wrote on it, so the orchestrator resolves it with a reason (thread_resolve, or flai thread resolve %s --reason) once its concern is gone, or leaves %s in review (ADR-0189)", th.ID, id, th.Status, th.Title, th.ID, it.ID)
+				continue
+			}
+			add(BlockThreadOpen, "thread %s on %s is %s, not resolved: %s", th.ID, id, th.Status, th.Title)
 		}
 	}
 

@@ -461,3 +461,42 @@ func TestAnOlderThreadReadsAsBefore(t *testing.T) {
 		t.Errorf("an older flai's heading pattern reads the mark into the author: %q", old)
 	}
 }
+
+// ADR-0189: a thread is the orchestrator's own while the orchestrator opened
+// it and wrote every entry on it; one entry by the operator, or a thread an
+// agent opened, is not.
+func TestAThreadIsTheOrchestratorsOwnUntilAnotherWritesOnIt(t *testing.T) {
+	r := project(t)
+	open := func(author, title string) *Thread {
+		t.Helper()
+		th, err := New(r, NewOptions{Title: title, On: "design/system/plan.md", Author: author, Text: "Is the gate built?", Now: t0})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return th
+	}
+	alone := open("orchestrator", "The gate")
+	alone, err := Reply(r, alone.ID, "orchestrator", "Still not built.", t0.Add(time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !alone.OrchestratorsOwn() {
+		t.Errorf("a thread the orchestrator alone wrote is its own: %s", alone.Body)
+	}
+
+	replied := open("orchestrator", "The flag")
+	if replied, err = Reply(r, replied.ID, "alex", "It is, in cli/feature.go.", t0.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if replied.OrchestratorsOwn() {
+		t.Errorf("a thread the operator replied on is not the orchestrator's own: %s", replied.Body)
+	}
+
+	agents := open("claude", "The shape")
+	if agents, err = Reply(r, agents.ID, "orchestrator", "Left.", t0.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if agents.OrchestratorsOwn() {
+		t.Errorf("a thread an agent opened is not the orchestrator's own: %s", agents.Body)
+	}
+}

@@ -316,6 +316,24 @@ func (th *Thread) Opener() string {
 // Open reports whether the thread still needs someone.
 func (th *Thread) Open() bool { return th.Status != "resolved" }
 
+// OrchestratorsOwn reports whether the thread is the orchestrator's alone:
+// the orchestrator opened it and wrote every entry on it. One entry by
+// anyone else, the operator or an agent, makes it a thread others take part
+// in. An open thread of the orchestrator's own still holds a story; the
+// orchestrator's acceptance names it apart, as the orchestrator's to resolve
+// (ADR-0189).
+func (th *Thread) OrchestratorsOwn() bool {
+	if !workitem.IsOrchestrator(th.Opener()) {
+		return false
+	}
+	for _, e := range th.Entries() {
+		if !workitem.IsOrchestrator(e.Author) {
+			return false
+		}
+	}
+	return true
+}
+
 // List loads every thread, sorted by ID.
 func List(r *workitem.Repo) ([]*Thread, error) {
 	matches, _ := filepath.Glob(filepath.Join(Dir(r), "TH-*.md"))
