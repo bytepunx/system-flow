@@ -3,11 +3,23 @@ id: S-0488
 type: story
 nature: remediation
 title: TestServeSettingsAreShownToTheDashboard in flai/cmd fails now and then in the close-out's go-test tier on a branch that does not touch serve
-status: backlog
+status: done
 owner: alex
 created: 2026-10-23T17:53:08Z
-updated: 2026-10-23T19:11:14Z
-transitions: []
+updated: 2026-10-23T20:04:40Z
+transitions:
+  - to: ready
+    at: 2026-10-23T19:34:00Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-23T19:34:06Z
+    by: agent-S-0488
+  - to: review
+    at: 2026-10-23T19:53:23Z
+    by: agent-S-0488
+  - to: done
+    at: 2026-10-23T20:04:40Z
+    by: orchestrator
 tags: [cli]
 topics: [cli]
 touches: [flai/cmd/serve_actions_test.go, design/issues/I-0197-testservesettingsareshowntothedashboard-in-flai-cmd-fails-now-and-then-in-the-close-out-s-go-test-tier-on-a-branch-that-does-not-touch-serve.md, design/issues/summary.md]
@@ -17,9 +29,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1167
+  priced_by: harness
+  turns:
+    - day: 2026-10-23
+      ceremony: 1
+      hand_edits: 1
+      work: 30
+  models:
+    - model: claude-opus-5-5
+      input: 66
+      output: 9523
+      cache_read: 3858627
+      cache_write: 126891
+      cost: 1.9776
   strategic:
     - kind: planner
       seconds: 163
@@ -32,15 +56,21 @@ usage:
           cache_write: 122988
           cost: 4.0271
     - kind: orchestrator
-      seconds: 97
+      seconds: 420
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 25
-          output: 295
-          cache_read: 5583119
-          cache_write: 16178
-          cost: 1.2315
+          input: 75
+          output: 1168
+          cache_read: 20357831
+          cache_write: 31610
+          cost: 4.4844
+        - model: claude-sonnet-5-5
+          input: 4
+          output: 31
+          cache_read: 12507
+          cache_write: 31783
+          cost: 0.0305
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 7m
@@ -66,8 +96,8 @@ finalized:
 This story remediates [I-0197](../../../design/issues/I-0197-testservesettingsareshowntothedashboard-in-flai-cmd-fails-now-and-then-in-the-close-out-s-go-test-tier-on-a-branch-that-does-not-touch-serve.md), "TestServeSettingsAreShownToTheDashboard in flai/cmd fails now and then in the close-out's go-test tier on a branch that does not touch serve". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0197 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0197 is closed with `flai issue close I-0197 --reason` saying what fixed it
+- [x] The cause I-0197 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0197 is closed with `flai issue close I-0197 --reason` saying what fixed it
 
 ## Tasks
 - T-2087 TestServeSettingsAreShownToTheDashboard refuses the registered entry's URL, not the bare port 4242, and a case with an import root named with 4242 proves the temp-directory path no longer fails it
@@ -90,3 +120,14 @@ Touches:
 Forecast. `flai forecast` gave 5m: 131 s per unit of size over 10 done remediation stories on claude-opus-5-5 in the small band, size 2 (2 criteria, 0 touches), delivery 2026-10-24T12:02Z as 28th in the pull order. Raised to 15m: the change is a few lines, but the agent runs the go-test tier after the test task, closes two tasks one after the other, and runs the close-out, which no 5m story has fitted. Delivery moved by the 10m added, to 2026-10-24T12:12Z.
 
 Cost of delay. `flai cod` gives 17.50 USD a week from the inputs flai set (7m per 168h cycle at 150 USD an hour), and the value stands at that: the inputs are not mine to change. They understate it a little: each occurrence costs a rerun of the go-test tier, about 6 minutes, on any branch whose close-out draws an unlucky temp directory.
+
+### Accepted by the orchestrator
+
+- Verified: 388e30037aceca7679b5e1a74938c898ad1f4424
+- Batch: 20261023-195359
+- Enqueued verified: 388e30037aceca7679b5e1a74938c898ad1f4424
+- At: 2026-10-23T20:04:40Z
+
+Verdict: pass. The test now refuses only 127.0.0.1:4242, a case with 4242 in its import root proves a temp-directory path no longer fails it, and I-0197 is closed with a reason.
+- 1: flai/cmd/serve_actions_test.go
+- 2: design/issues/I-0197-testservesettingsareshowntothedashboard-in-flai-cmd-fails-now-and-then-in-the-close-out-s-go-test-tier-on-a-branch-that-does-not-touch-serve.md, design/issues/summary.md

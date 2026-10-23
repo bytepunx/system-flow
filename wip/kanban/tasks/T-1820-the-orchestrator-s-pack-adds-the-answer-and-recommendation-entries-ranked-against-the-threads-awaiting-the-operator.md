@@ -24,16 +24,16 @@ touches: [flai/internal/context/strategic.go, flai/internal/context/strategic_te
 after: [T-1819]
 usage:
   source: log
-  seconds: 305
+  seconds: 307
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 48
-      output: 249
-      cache_read: 2838913
-      cache_write: 103091
-      cost: 0.9945
+      input: 46
+      output: 18524
+      cache_read: 2898893
+      cache_write: 98360
+      cost: 1.5382
 ---
 # T-1820 The orchestrator's pack adds the answer and recommendation entries ranked against the threads awaiting the operator
 

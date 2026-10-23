@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1406.1224
-accrued_seconds: 1231730
-tasks_completed: 983
-last_run: 2026-10-23T19:30:14Z
+accrued_cost: 1420.6787
+accrued_seconds: 1233577
+tasks_completed: 989
+last_run: 2026-10-23T20:01:01Z
 ---
 
 # Orchestrator activity
@@ -6892,6 +6892,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0489, S-0487
 - Seconds: 1118
 - Cost: 7.4918 USD, estimated
+
+### 2026-10-23T19:34:04Z
+
+- Summary: S-0487 landed through the merge queue (enqueued by me). Under promote_to_ready, moved S-0488 to ready as candidate 1 by throughput (15m, 17.50 USD/week), no longer held now that S-0489 is in review. Under order_ready, applied flai order --by throughput: S-0488 alone. Under publish, judgement: not published; 11 accepted stories pending (21274.48 USD/week), with ADR-0186 and ADR-0189 still proposed (TH-0600).
+- Items: S-0487, S-0488
+- Seconds: 230
+- Cost: 0.9626 USD, estimated
+
+### 2026-10-23T19:48:59Z
+
+- Summary: Recommended an answer on TH-0624, citing design/adrs/0049-a-story-s-context-pack-fits-a-size-budget-what-the-story-names-loads-whole-what.md § Decision
+- Items: S-0430
+- Seconds: 895
+- Cost: 9.0161 USD, estimated
+
+### 2026-10-23T19:49:09Z
+
+- Summary: Under answer_threads (autonomous), recommended A on agent-S-0430's TH-0624: the digest step loads within its own eighth of the budget whatever exceeded says, amending ADR-0194 on S-0430's branch, citing ADR-0049 § Decision (conventions, named documents and briefs are already exempt; B would leave the digest inert here at about 145 KB of conventions against 80 KB). Escalated as a recommendation because it is a decision not yet recorded. Under plan_backlog_stories, resolved TH-0609 again: planner-S-0425's closing note had reopened it, with nothing open.
+- Items: S-0430, S-0425
+- Seconds: 10
+- Cost: 0.1302 USD, estimated
+
+### 2026-10-23T19:50:28Z
+
+- Summary: Merge queue batch 20261023-194240 failed with S-0489 at integration: TestReferenceIsCurrent, docs/users/flai-reference.md stale after rebasing over S-0429 and S-0487. flai sent S-0489 back with TH-0625 and starts its agent on it; nothing for me to do until it returns to review.
+- Items: S-0489
+- Seconds: 79
+- Cost: 1.0457 USD, estimated
+
+### 2026-10-23T19:53:56Z
+
+- Summary: Enqueued S-0488 at 388e3003, first in the queue (alone); forecast 15m, value 17.50 USD/week. flai verify passed at the head (integration and smoke queued). The verifier matched both criteria within touches: serve_actions_test.go refuses only 127.0.0.1:4242, with a harbour-4242 import root case that the old check failed every run, and I-0197 closed with its reason.
+- Items: S-0488
+- Seconds: 208
+- Cost: 2.8021 USD, estimated
+
+### 2026-10-23T20:01:01Z
+
+- Summary: S-0489 back in review at c5c265c3 (rebased, reference regenerated for TestReferenceIsCurrent); flai verify passed at the head and the verifier re-checked both criteria and the two new commits within touches. queue_add refused it: thread_open on TH-0625, flai serve's send-back thread, which is not mine to resolve. Waiting for it to clear, then enqueuing again.
+- Items: S-0489
+- Seconds: 425
+- Cost: 0.5996 USD, estimated
 
 ## Refusals
 

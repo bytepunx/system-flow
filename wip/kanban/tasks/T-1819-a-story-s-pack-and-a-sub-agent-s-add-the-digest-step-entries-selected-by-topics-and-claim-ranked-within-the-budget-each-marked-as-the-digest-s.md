@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 560
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 70
-      output: 379
-      cache_read: 3905126
-      cache_write: 168249
-      cost: 1.377
+      input: 64
+      output: 25647
+      cache_read: 4013689
+      cache_write: 136185
+      cost: 2.1297
 ---
 # T-1819 A story's pack and a sub-agent's add the digest step: entries selected by topics and claim, ranked within the budget, each marked as the digest's
 

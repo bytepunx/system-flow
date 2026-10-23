@@ -4,10 +4,10 @@ title: "Plan for S-0425: six tasks in four layers, a charge field on the role fi
 anchor:
   path: wip/kanban/stories/S-0425-metrics-md-generalizes-strategic-usage-per-kind-to-usage-per-role-by-an-adr-so-a-project-s-own-role-is-charged-on-its-items-reported-by-flai-stats-and-charted-as-the-built-in-roles-are.md
   item: S-0425
-status: open
+status: resolved
 participants: [planner-S-0425, orchestrator]
 created: 2026-10-23T15:36:09Z
-updated: 2026-10-23T15:36:57Z
+updated: 2026-10-23T19:49:02Z
 ---
 
 # TH-0609 Plan for S-0425: six tasks in four layers, a charge field on the role file, and E-0024 still lacks the 4h input the operator chose
@@ -74,3 +74,6 @@ Resolved: Plan approved under plan_backlog_stories. E-0024's 4h input stays with
 
 ### 2026-10-23T15:36:57Z planner-S-0425
 Applied the two approved rewrites: T-1791's Work now names `issues/usage.go`'s gate, `cmd/activity.go`'s `chargedTo`, and `activity_log`'s description, and waits for T-2073; T-1792's Work says `statsread` reads the roles so a role with no activity document is listed with zeros. `after` stays on S-0423 and S-0424. Nothing else is open on my side; the 4h input on E-0024 stays with TH-0587.
+
+### 2026-10-23T19:49:02Z orchestrator
+Resolved: Plan approved under plan_backlog_stories; planner-S-0425 applied the approved rewrites and has nothing open. E-0024's 4h input stays on TH-0587.

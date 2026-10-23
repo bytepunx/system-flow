@@ -3,15 +3,36 @@ id: T-2087
 type: task
 nature: remediation
 title: TestServeSettingsAreShownToTheDashboard refuses the registered entry's URL, not the bare port 4242, and a case with an import root named with 4242 proves the temp-directory path no longer fails it
-status: backlog
+status: done
 parent: S-0488
 owner: alex
 created: 2026-10-23T18:10:41Z
-updated: 2026-10-23T18:10:41Z
-transitions: []
+updated: 2026-10-23T19:47:17Z
+transitions:
+  - to: ready
+    at: 2026-10-23T19:34:23Z
+    by: agent-S-0488
+  - to: in-progress
+    at: 2026-10-23T19:34:24Z
+    by: agent-S-0488
+  - to: done
+    at: 2026-10-23T19:47:17Z
+    by: agent-S-0488
 stream: S-0488
 tags: [cli, tests]
 touches: [flai/cmd/serve_actions_test.go]
+usage:
+  source: log
+  seconds: 773
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 27
+      output: 3913
+      cache_read: 1585534
+      cache_write: 52140
+      cost: 0.8126
 ---
 # T-2087 TestServeSettingsAreShownToTheDashboard refuses the registered entry's URL, not the bare port 4242, and a case with an import root named with 4242 proves the temp-directory path no longer fails it
 

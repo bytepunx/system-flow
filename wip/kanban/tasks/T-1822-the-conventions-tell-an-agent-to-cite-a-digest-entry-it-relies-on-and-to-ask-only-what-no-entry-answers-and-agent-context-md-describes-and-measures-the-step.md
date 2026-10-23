@@ -3,16 +3,37 @@ id: T-1822
 type: task
 nature: feature
 title: The conventions tell an agent to cite a digest entry it relies on and to ask only what no entry answers, and agent-context.md describes and measures the step
-status: backlog
+status: done
 parent: S-0430
 owner: alex
 created: 2026-10-16T06:05:07Z
-updated: 2026-10-23T16:50:42Z
-transitions: []
+updated: 2026-10-23T19:49:07Z
+transitions:
+  - to: ready
+    at: 2026-10-23T19:43:33Z
+    by: agent-S-0430
+  - to: in-progress
+    at: 2026-10-23T19:43:34Z
+    by: agent-S-0430
+  - to: done
+    at: 2026-10-23T19:49:07Z
+    by: agent-S-0430
 stream: S-0430
 tags: [cli, template]
 touches: [design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/agent-narrative.md, design/system/agent-context.md, design/system/flai-cli.md, docs/users/flai.md, template/CHANGELOG.md, template/template.yaml]
 after: [T-1820]
+usage:
+  source: log
+  seconds: 333
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 63
+      output: 25447
+      cache_read: 3982383
+      cache_write: 135122
+      cost: 2.1131
 ---
 # T-1822 The conventions tell an agent to cite a digest entry it relies on and to ask only what no entry answers, and agent-context.md describes and measures the step
 

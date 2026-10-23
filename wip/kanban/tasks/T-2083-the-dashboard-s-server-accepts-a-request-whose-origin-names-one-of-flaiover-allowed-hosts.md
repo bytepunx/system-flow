@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 30
-      output: 9828
-      cache_read: 1816214
-      cache_write: 58123
-      cost: 0.9042
+      input: 27
+      output: 8729
+      cache_read: 1818760
+      cache_write: 50795
+      cost: 0.8416
 ---
 # T-2083 The dashboard's server accepts a request whose Origin names one of FLAIOVER_ALLOWED_HOSTS
 

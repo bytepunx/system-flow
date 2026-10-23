@@ -6,7 +6,7 @@ title: Host page under configuration
 status: review
 owner: alex
 created: 2026-10-23T17:57:14Z
-updated: 2026-10-23T19:30:49Z
+updated: 2026-10-23T20:00:04Z
 transitions:
   - to: ready
     at: 2026-10-23T17:57:21Z
@@ -17,9 +17,15 @@ transitions:
   - to: review
     at: 2026-10-23T19:25:42Z
     by: agent-S-0489
+  - to: in-progress
+    at: 2026-10-23T19:50:23Z
+    by: flai
+  - to: review
+    at: 2026-10-23T20:00:04Z
+    by: agent-S-0489
 tags: [flai, flaiover, dashboard]
 topics: [dashboard, cli]
-touches: [flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/components/NavRail.svelte.test.ts, flaiover/src/lib/server/allowed-hosts.ts, flaiover/src/lib/server/allowed-hosts.test.ts, flaiover/src/lib/server/events-socket.ts, flaiover/src/lib/server/events-socket.test.ts, flaiover/server.js, flaiover/src/lib/settings.ts, flaiover/src/lib/components/HostAddresses.svelte, flaiover/src/lib/components/HostAddresses.svelte.test.ts, flaiover/src/routes/host/+page.svelte, flaiover/src/routes/api/settings/+server.ts, flaiover/src/routes/api/settings/settings.test.ts, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/dashboard.go, flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard_watch.go, flai/cmd/dashboard_test.go, flai/cmd/dashboard_watch_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/writes_test.go, design/components/flaiover/src/lib/components/HostAddresses.examples.json, design/system/flaiover-dashboard.md, design/system/flai-cli.md, docs/users/flaiover.md, docs/users/flai.md, docs/operators/settings.md, docs/operators/index.md, design/adrs/0193-the-dashboard-accepts-a-browser-origin-naming-one-of-the-hosts-in-dashboard.md, design/adrs/README.md, flaiover/src/lib/server/agent.ts]
+touches: [flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/components/NavRail.svelte.test.ts, flaiover/src/lib/server/allowed-hosts.ts, flaiover/src/lib/server/allowed-hosts.test.ts, flaiover/src/lib/server/events-socket.ts, flaiover/src/lib/server/events-socket.test.ts, flaiover/server.js, flaiover/src/lib/settings.ts, flaiover/src/lib/components/HostAddresses.svelte, flaiover/src/lib/components/HostAddresses.svelte.test.ts, flaiover/src/routes/host/+page.svelte, flaiover/src/routes/api/settings/+server.ts, flaiover/src/routes/api/settings/settings.test.ts, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/dashboard.go, flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard_watch.go, flai/cmd/dashboard_test.go, flai/cmd/dashboard_watch_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/writes_test.go, design/components/flaiover/src/lib/components/HostAddresses.examples.json, design/system/flaiover-dashboard.md, design/system/flai-cli.md, docs/users/flaiover.md, docs/users/flai.md, docs/operators/settings.md, docs/operators/index.md, design/adrs/0193-the-dashboard-accepts-a-browser-origin-naming-one-of-the-hosts-in-dashboard.md, design/adrs/README.md, flaiover/src/lib/server/agent.ts, design/issues/I-0201-flai-test-runs-go-test-with-short-so-a-real-git-test-a-task-adds-is-skipped-until-the-integration-tier-runs-in-the-merge-queue-s-batch.md, design/issues/summary.md, docs/users/flai-reference.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -27,13 +33,13 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 4771
+  seconds: 5361
   priced_by: harness
   turns:
     - day: 2026-10-23
       ceremony: 4
-      hand_edits: 2
-      work: 62
+      hand_edits: 3
+      work: 76
   models:
     - model: claude-haiku-5-5
       input: 50
@@ -42,28 +48,28 @@ usage:
       cache_write: 134462
       cost: 0.1294
     - model: claude-opus-5-5
-      input: 466
-      output: 154912
-      cache_read: 28627250
-      cache_write: 916140
-      cost: 14.2516
+      input: 498
+      output: 160957
+      cache_read: 33536268
+      cache_write: 936617
+      cost: 15.5183
   strategic:
     - kind: orchestrator
-      seconds: 1229
+      seconds: 1733
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 237
-          output: 3999
-          cache_read: 50696689
-          cache_write: 43485
-          cost: 11.1601
+          input: 261
+          output: 4337
+          cache_read: 57880476
+          cache_write: 51980
+          cost: 12.7419
         - model: claude-sonnet-5-5
-          input: 7
-          output: 441
-          cache_read: 109660
-          cache_write: 27019
-          cost: 0.0945
+          input: 15
+          output: 496
+          cache_read: 171591
+          cache_write: 57207
+          cost: 0.158
 forecast:
   duration: 2h
   delivery: 2026-10-23T20:22:00Z
@@ -87,6 +93,7 @@ Bring back the host page and place it under configuration. In addition, add a wa
 - T-2084 flai keeps dashboard.allowed_hosts and starts the container with FLAIOVER_ALLOWED_HOSTS, kept across restarts and reported by status and settings.get
 - T-2085 The Host page edits the accepted hosts through settings.dashboard_hosts, behind the settings host action, and says a restart applies them
 - T-2086 The guides say how a tunnel or custom domain is admitted: the Host page's Addresses area, the key, and the restart that applies it
+- T-2091 docs/users/flai-reference.md is regenerated for flai dashboard's help on the allowed hosts
 
 ## Notes
 
@@ -107,3 +114,4 @@ Touches. The story declared none, and `flai touches suggest` refuses a story wit
 Forecast. `flai forecast` gave 1h1m from a median of 107 s per unit of size over 86 done feature stories on claude-opus-5-5 in the large band, size 34 (2 criteria, 32 touches). Set to 2h: the three layers are serial, T-2085 waits on T-2083 and T-2084 and T-2086 on T-2082 and T-2085, so little of the work overlaps, and each task carries a Go or vitest cycle of its own. Delivery is the start at 18:08Z plus 2h times the cycle factor 1.12, 20:22Z. The story reached review at 19:25Z, 1h17m after it started.
 
 Cost of delay. No value: `flai cod` refuses one, since the story has no inputs and no epic, and the operator set none. TH-0619 asked for `time_lost_per_cycle: 1h` (150 USD a week at the project's hour rate) and the orchestrator resolved it with the story already in review, leaving the input to the operator. Set it with `flai edit S-0489 --time-lost-per-cycle 1h` if the release figures should carry one; the next planner run then writes the value.
+- 2026-10-23T19:50:23Z: moved to in-progress: merge queue batch 20261023-194240 fails with S-0489 at 1521ddbc2050: integration failed: flai/cmd/reference_test.go:127 TestReferenceIsCurrent: docs/users/flai-reference.md is stale: run make flai-reference
