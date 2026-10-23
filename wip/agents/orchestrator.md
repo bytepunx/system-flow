@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1309.5351
-accrued_seconds: 1187626
-tasks_completed: 926
-last_run: 2026-10-23T06:24:02Z
+accrued_cost: 1325.2852
+accrued_seconds: 1190074
+tasks_completed: 929
+last_run: 2026-10-23T07:04:50Z
 ---
 
 # Orchestrator activity
@@ -6493,6 +6493,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0472
 - Seconds: 2
 - Cost: 0.0000 USD
+
+### 2026-10-23T06:44:03Z
+
+- Summary: S-0470 landed through the merge queue (enqueued by me). Under publish, judgement: not published; pending S-0469, S-0470, S-0476, S-0477, and a release would bundle S-0477's guard change, which waits on the operator accepting ADR-0186 (TH-0600).
+- Items: S-0470
+- Seconds: 1201
+- Cost: 1.6842 USD, estimated
+
+### 2026-10-23T06:44:11Z
+
+- Summary: agent-S-0478 pulled S-0478. Under order_ready, re-applied flai order --by throughput: S-0481 alone, no forecast.
+- Items: S-0478
+- Seconds: 8
+- Cost: 0.5077 USD, estimated
+
+### 2026-10-23T07:04:50Z
+
+- Summary: S-0478 reached review at 886afe03. flai verify passed at the head (integration and smoke queued). The verifier matched both criteria within touches (a props skeleton cache under .flai-cache stamped by every path typescript reads, with tests; the backup runbook lists it; I-0166 closed). Enqueued S-0478, first in the queue (alone); no forecast, no value. Recorded I-0198 (5f192c200) for two minor cache gaps the verifier found: @sveltejs/kit presence not in the key, and malformed stamp entries throwing rather than missing.
+- Items: S-0478
+- Seconds: 1239
+- Cost: 13.5582 USD, estimated
 
 ## Refusals
 
