@@ -7,7 +7,7 @@ status: backlog
 parent: E-0025
 owner: alex
 created: 2026-10-16T06:00:41Z
-updated: 2026-10-23T07:23:39Z
+updated: 2026-10-23T17:35:05Z
 transitions: []
 tags: [cli]
 topics: [analysis, planning]
@@ -18,13 +18,32 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 442
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 109
+          output: 1908
+          cache_read: 16003435
+          cache_write: 20600
+          cost: 3.5246
 draft: true
+cost_of_delay:
+  value: 60.95
+  by: planner-S-0435
+  at: 2026-10-23T17:37:52Z
 forecast:
-  duration: 25m
-  delivery: 2026-10-24T03:06:00Z
-  basis: "Its own forecast of 25m; 28th in the pull order with an in-progress limit of 5, behind S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432, S-0433 and S-0434."
+  duration: 45m
+  delivery: 2026-10-24T14:15:00Z
+  basis: "Its own forecast of 25m; 27th in the pull order with an in-progress limit of 5, behind S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0429, S-0430, S-0431, S-0432, S-0433 and S-0434."
   by: flai
-  at: 2026-10-23T07:23:39Z
+  at: 2026-10-23T17:35:05Z
 ---
 # S-0435 Experiment: does priming with the digest cut the threads opened to the operator per completed story on this repository, two weeks before against two weeks after
 
@@ -52,9 +71,12 @@ Find out, on this repository, whether the digest does what E-0025 built it for. 
 
 ### Planning
 
-- **Touches.** The story declared none. Both tasks write the results document, named here so that no folder is claimed; T-1848 adds `design/experiments/README.md` and `design/issues/summary.md`, which `flai issue new` writes when the recommendation files a change.
-  - **From design:** `design/experiments/template.md` and the folder's README, as the documentation standard asks of an experiment story.
-  - **Co-change:** `flai touches suggest` found nothing changed often enough with `design/experiments/README.md` (one commit).
-  - **No folder touch.** The issue file a recommendation may add is in `design/issues`, which is in `claims.shared`, and the close-out commits it.
-- **Forecast.** Raised from flai's 13m to 25m. flai's figure is the median over all 236 done stories, since few experiments are done; reading two windows' stats, the manifest's history, and three threads into an argued document is more than the size, 5 criteria and 3 touches, counts. Delivery is no earlier than 14 days after S-0430's forecast delivery (2026-10-17T02:13Z), when the after window is whole, plus the duration.
-- **Cost of delay.** Not set. Neither the story nor E-0025 has inputs, so `flai cod` refuses. The epic's input is asked on TH-0476, question 1, and the value follows its answer.
+Planned again on 2026-10-23 by planner-S-0435, with S-0428 accepted (ADR-0191 and `flai digest list --json` exist) and E-0025's cost of delay input set. The two tasks of 2026-10-16 and their layers stand; their touches and `after` were checked and left as they are. The plan is on the thread this run opened on S-0435.
+
+- **Touches.** Three, all declared, all files, each a task's: T-1847 writes the results document; T-1848 writes it too and adds `design/experiments/README.md` and `design/issues/summary.md`, which `flai issue new` regenerates when the recommendation files a change.
+  - **From design:** `design/experiments/template.md` and the folder's README, as ADR-0066 and the documentation standard ask of an experiment story; `flai check` validates the document's front matter (S-0194).
+  - **Co-change, kept out:** everything `flai touches suggest` lists (issue files at 7% and below, `flai-cli.md`, `docs/users/flai.md`) co-changes with `design/issues/summary.md`, which almost every close-out touches; none of it is this story's to change.
+  - **No folder touch.** The issue file a recommendation may add goes under `design/issues`, which is in `claims.shared` and so holds nothing; its name is flai's to allocate, and the close-out commits it.
+- **Forecast.** 45m, delivery 2026-11-07T08:25Z. flai's figure was 14m (median 100 s per unit over 297 done stories, size 8), played out to 2026-10-24T13:07Z. Raised: the two experiments done here, S-0176 and S-0427, took 1h46m and 1h31m of agent time, and both built and ran a trial; this one reads its figures from `flai stats`, the manifest's history, the threads, and the entries, and argues them in one document, about half of that. The delivery is not flai's play-out, which ignores the after window: it is S-0430's forecast delivery (2026-10-24T07:40Z) plus 14 days plus the duration, and moves with S-0430's acceptance.
+- **Cost of delay.** 60.95 USD a week, flai's figure: S-0435's share of E-0025's 600 USD a week (`time_lost_per_cycle: 4h`, the answer the operator confirmed on TH-0476), 45m of 7h23m forecast over the epic's 7 open stories without inputs. Not adjusted: the story's weight in the epic is its duration.
+- **Assumption on the windows.** `flai stats` takes `--since` alone, a window that ends now, and reports `digest.weeks[]` and `waiting.weeks[]` per ISO week. The story's agent runs it once with a `--since` long enough to cover both windows (28d from S-0430's acceptance plus the days since) and takes for each window the weeks whose `start` falls inside it; a week that straddles S-0430's acceptance belongs to neither and is named in the method. This is proposed as an edit to T-1847's Work on the plan thread.

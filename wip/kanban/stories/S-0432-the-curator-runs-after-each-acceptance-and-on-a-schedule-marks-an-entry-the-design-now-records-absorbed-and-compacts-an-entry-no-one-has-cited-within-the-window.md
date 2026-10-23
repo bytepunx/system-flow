@@ -7,7 +7,7 @@ status: backlog
 parent: E-0025
 owner: alex
 created: 2026-10-16T05:59:39Z
-updated: 2026-10-23T17:11:31Z
+updated: 2026-10-23T17:35:05Z
 transitions: []
 tags: [cli, template]
 topics: [cli, planning, analysis, conventions]
@@ -39,10 +39,10 @@ cost_of_delay:
   at: 2026-10-23T17:11:07Z
 forecast:
   duration: 1h10m
-  delivery: 2026-10-24T11:11:00Z
-  basis: "flai forecast gives 1h1m: median 107 s per unit of size over 85 done feature stories on claude-opus-5-5 in the large band, times size 34 (6 criteria, 28 touches). Raised to 1h10m for the four touches the plan adds (flai/internal/check/check.go and digest_test.go for manifest.digest, flai/internal/serve/curate.go and curate_test.go for the trigger), size 38 at the same rate. Delivery is flai's play-out of 2026-10-24T11:02Z moved by the 9 minutes added, 24th in the pull order with an in-progress limit of 5, behind S-0428 to S-0431 and the E-0023 and E-0024 stories."
-  by: planner-S-0432
-  at: 2026-10-23T17:10:01Z
+  delivery: 2026-10-24T11:43:00Z
+  basis: "Its own forecast of 1h10m; 24th in the pull order with an in-progress limit of 5, behind S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0429, S-0430 and S-0431."
+  by: flai
+  at: 2026-10-23T17:35:05Z
 finalized:
   by: orchestrator
   at: 2026-10-23T17:11:31Z

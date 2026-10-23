@@ -7,7 +7,7 @@ status: backlog
 parent: E-0025
 owner: alex
 created: 2026-10-16T06:00:19Z
-updated: 2026-10-23T17:26:19Z
+updated: 2026-10-23T17:35:05Z
 transitions: []
 tags: [cli, dashboard]
 topics: [cli, dashboard, analysis]
@@ -24,32 +24,34 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 101
+      seconds: 392
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 14
-          output: 122
-          cache_read: 1868873
-          cache_write: 7430
-          cost: 0.4127
+          input: 19
+          output: 182
+          cache_read: 2552261
+          cache_write: 10221
+          cost: 0.5636
         - model: claude-sonnet-5-5
           input: 3
           output: 18
           cache_read: 41178
           cache_write: 15418
           cost: 0.039
-draft: true
 cost_of_delay:
   value: 92.98
   by: planner-S-0434
   at: 2026-10-23T17:26:19Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-24T13:23:00Z
-  basis: "flai forecast 2026-10-23: median 107 s per unit of size over 85 done feature stories on claude-opus-5-5 in the large band, times size 27 (4 criteria, 23 touches), 49m; 26th in the pull order with an in-progress limit of 5, played out to 2026-10-24T12:57Z. Raised by planner-S-0434 to 1h15m, delivery 26m later: S-0404, of the same shape (an ADR on metrics.md, a stats section, its print, a chart, the docs), was forecast 37m and took 1h14m of agent time, and this story adds a package input (digest.List) and the flaiover catalogue, explainer, and their test, which the first plan predates."
-  by: planner-S-0434
-  at: 2026-10-23T17:23:50Z
+  delivery: 2026-10-24T13:46:00Z
+  basis: "Its own forecast of 1h15m; 26th in the pull order with an in-progress limit of 5, behind S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0429, S-0430, S-0431, S-0432 and S-0433."
+  by: flai
+  at: 2026-10-23T17:35:05Z
+finalized:
+  by: orchestrator
+  at: 2026-10-23T17:35:18Z
 ---
 # S-0434 flai stats reports per week the threads opened to the operator per completed story and how many asked what a digest entry already answered, and the dashboard charts it
 

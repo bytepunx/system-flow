@@ -7,7 +7,7 @@ status: backlog
 parent: E-0025
 owner: alex
 created: 2026-10-16T05:58:39Z
-updated: 2026-10-23T16:53:02Z
+updated: 2026-10-23T17:35:05Z
 transitions: []
 tags: [cli, template]
 topics: [cli, conventions, orchestration]
@@ -39,10 +39,10 @@ cost_of_delay:
   at: 2026-10-23T16:52:11Z
 forecast:
   duration: 1h3m
-  delivery: 2026-10-24T07:40:00Z
-  basis: "flai's figure kept: median 107 s per unit over 85 done feature stories on claude-opus-5-5 in the large band, size 35 (6 criteria, 29 touches); an ADR, three code tasks with tests, and a docs task that measures three packs fill it. Delivery is flai's play-out, 22nd in the pull order with an in-progress limit of 5, behind S-0428, S-0429, and the E-0023 and E-0024 stories ahead."
-  by: planner-S-0430
-  at: 2026-10-23T16:51:19Z
+  delivery: 2026-10-24T08:27:00Z
+  basis: "Its own forecast of 1h3m; 22nd in the pull order with an in-progress limit of 5, behind S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425 and S-0429."
+  by: flai
+  at: 2026-10-23T17:35:05Z
 finalized:
   by: orchestrator
   at: 2026-10-23T16:53:02Z

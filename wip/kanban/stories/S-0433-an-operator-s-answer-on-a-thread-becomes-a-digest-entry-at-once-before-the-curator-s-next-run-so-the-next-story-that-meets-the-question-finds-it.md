@@ -7,7 +7,7 @@ status: backlog
 parent: E-0025
 owner: alex
 created: 2026-10-16T06:00:01Z
-updated: 2026-10-23T17:18:00Z
+updated: 2026-10-23T17:35:05Z
 transitions: []
 tags: [cli]
 topics: [cli, orchestration, planning]
@@ -45,10 +45,10 @@ cost_of_delay:
   at: 2026-10-23T17:17:11Z
 forecast:
   duration: 35m
-  delivery: 2026-10-24T12:00:00Z
-  basis: "flai's median of 107 s per unit of size over 85 done feature stories on claude-opus-5-5 in the large band gives 35m for size 19 (6 criteria, 13 touches); kept, since the work is one function and two call sites (the CLI's afterThread, which the dashboard's host API also runs, and the MCP threadReply) with docs in five files; delivery is flai's play-out, 25th in the pull order behind S-0428, S-0241, and the E-0023, E-0024, and earlier E-0025 stories, moved as the order ahead changes."
-  by: planner-S-0433
-  at: 2026-10-23T17:16:25Z
+  delivery: 2026-10-24T12:22:00Z
+  basis: "Its own forecast of 35m; 25th in the pull order with an in-progress limit of 5, behind S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0429, S-0430, S-0431 and S-0432."
+  by: flai
+  at: 2026-10-23T17:35:05Z
 finalized:
   by: orchestrator
   at: 2026-10-23T17:18:00Z

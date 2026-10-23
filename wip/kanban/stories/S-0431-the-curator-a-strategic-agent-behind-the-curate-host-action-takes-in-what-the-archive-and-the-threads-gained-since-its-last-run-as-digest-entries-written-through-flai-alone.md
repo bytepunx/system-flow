@@ -7,7 +7,7 @@ status: backlog
 parent: E-0025
 owner: alex
 created: 2026-10-16T05:59:25Z
-updated: 2026-10-23T17:06:47Z
+updated: 2026-10-23T17:35:05Z
 transitions: []
 tags: [cli, template]
 topics: [cli, planning, analysis, conventions, template]
@@ -39,10 +39,10 @@ cost_of_delay:
   at: 2026-10-23T17:06:20Z
 forecast:
   duration: 1h45m
-  delivery: 2026-10-24T09:54:00Z
-  basis: "flai's 2h8m (median 107 s per unit of size over 85 done feature stories on claude-opus-5-5 in the large band, size 71: 7 criteria, 64 touches) brought down to 1h45m: 19 of the touches this revisit added are one-line registrations, kind-list pins, and index rows the per-unit median overstates, and S-0223, which built the analyzer whole, took 47 min against a 2h forecast; kept above flai's 1h34m at the declared size because the eight tasks run through six layers of sub-agents and two permission_prompt waits. Delivery is flai's play-out, 23rd in the pull order behind S-0428, S-0429, S-0430 and the E-0024 and OpenCode drafts, with the shorter duration."
-  by: planner-S-0431
-  at: 2026-10-23T17:05:26Z
+  delivery: 2026-10-24T10:24:00Z
+  basis: "Its own forecast of 1h45m; 23rd in the pull order with an in-progress limit of 5, behind S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0429 and S-0430."
+  by: flai
+  at: 2026-10-23T17:35:05Z
 finalized:
   by: orchestrator
   at: 2026-10-23T17:06:47Z
