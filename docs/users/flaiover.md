@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-10-22
+updated: 2026-10-23
 status: active
 ---
 
@@ -38,7 +38,7 @@ The nav rail lists five groups. Each page is a section below.
 | Agents | Orchestration (the [Orchestrator](#orchestrator)), Planning (the [Planner](#planner)), Analysis (the [Analyzer](#analyzer)), [Activity](#activity), [Threads](#threads), [Messages](#messages) |
 | Design | System (the [Design system](#design-system)), [Components](#components) |
 | Documentation | System, Conventions, and Issues, which open those folders in [Docs](#docs); [ADRs](#adrs); [Search](#search) |
-| Configuration | [Features](#features), [Agents](#agents), [File System](#file-system), [Projects](#projects), and [Harnesses](#harnesses), the five pages of the [Settings](#settings) |
+| Configuration | [Features](#features), [Agents](#agents), [File System](#file-system), [Projects](#projects), and [Harnesses](#harnesses), the five pages of the [Settings](#settings); then [Host](#host) |
 
 Click a group to show or hide its pages. An open group's icon is coloured and a closed group's is grey. A closed group still shows its pages' numbers, so the Inbox count stands beside Flow. The page you are on is bold and coloured, and its group opens when you arrive. The browser remembers which groups you opened and closed. [License](#license) is at the foot of the rail.
 
@@ -564,7 +564,7 @@ Search covers `design/` and `wip/` by default and `docs/` when you tick the box.
 
 ## Host
 
-Host is the Updates page. The host flai badge in the top bar is its link; no group of the rail has it. It has two parts.
+Host is the Updates page. Host in the rail's Configuration group links it, and so does the host flai badge in the top bar. It has two parts.
 
 **Dashboard** shows what image and version the dashboard container is running, and, once the operator has enabled it (`flai serve enable dashboard`), Restart, Upgrade, and Stop. **Check for updates** always works and changes nothing. Restart and a successful upgrade stop the very container answering the page, so the page expects the connection to drop and shows "Reconnecting…" rather than an error, then says what came back once it does. An upgrade never touches the running container until the new image has proven itself healthy: if it does not, the page says so and nothing changed.
 
@@ -574,7 +574,7 @@ Each area has **Versions** beside its check, to go back to an earlier release or
 
 ## Settings
 
-The settings are five pages, the rail's Configuration group. Together they show how flai on the host is set up for this project and, once the operator allows it, change it. Each page has its own address:
+The settings are five pages of the rail's Configuration group. Together they show how flai on the host is set up for this project and, once the operator allows it, change it. Each page has its own address:
 
 | Page | Address | Sections |
 |------|---------|----------|

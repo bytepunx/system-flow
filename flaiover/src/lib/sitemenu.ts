@@ -24,6 +24,7 @@ import PlugIcon from '@lucide/svelte/icons/plug';
 import ScaleIcon from '@lucide/svelte/icons/scale';
 import ScrollTextIcon from '@lucide/svelte/icons/scroll-text';
 import SearchIcon from '@lucide/svelte/icons/search';
+import ServerIcon from '@lucide/svelte/icons/server';
 import SettingsIcon from '@lucide/svelte/icons/settings';
 import SquareKanbanIcon from '@lucide/svelte/icons/square-kanban';
 import SwatchBookIcon from '@lucide/svelte/icons/swatch-book';
@@ -96,7 +97,8 @@ export type PageKey =
 	| 'agents'
 	| 'file-system'
 	| 'projects'
-	| 'harnesses';
+	| 'harnesses'
+	| 'host';
 
 export const SITE_MENU: MenuGroup[] = [
 	{
@@ -262,7 +264,8 @@ export const SITE_MENU: MenuGroup[] = [
 		icon: SettingsIcon,
 		// The Configuration pages (S-0459, TH-0553), each a page of the settings below /settings; the
 		// settingspages slugs are their keys. /settings itself, which goes on to one of them, and an
-		// unknown page below it are in the group with no page.
+		// unknown page below it are in the group with no page. The Host page (S-0489) is the one page
+		// of the group that is not a settings page: it stays at /host, which the host-flai pill links.
 		pages: [
 			{
 				key: 'features',
@@ -298,7 +301,8 @@ export const SITE_MENU: MenuGroup[] = [
 				icon: PlugIcon,
 				path: '/settings/harnesses',
 				href: resolve('/settings/[page]', { page: 'harnesses' })
-			}
+			},
+			{ key: 'host', label: 'Host', icon: ServerIcon, path: '/host', href: resolve('/host') }
 		],
 		also: ['/settings']
 	}
@@ -318,9 +322,9 @@ export type Located = { group: GroupKey | null; page: PageKey | null; child: Kin
 
 /**
  * The group, page, and child a path belongs to; each is null where the rail has none for it, as for
- * Overview, Updates, and License, which the top bar and the rail's foot link to. Within a group the
- * page with the longest path that answers wins, so Components at /design/components wins below the
- * design system at /design. The child is the page's child whose href the path is or is under, so
+ * Overview and License, which the top bar and the rail's foot link to. Within a group the page with
+ * the longest path that answers wins, so Components at /design/components wins below the design
+ * system at /design. The child is the page's child whose href the path is or is under, so
  * /charts/throughput names its chart and /charts/nope none (S-0484). The path is compared with the
  * hrefs as given, as the License link is: both carry the base path, which the page paths leave out.
  */

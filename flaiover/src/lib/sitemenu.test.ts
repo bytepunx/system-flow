@@ -18,7 +18,7 @@ describe('the nav rail (S-0458)', () => {
 			['Agents', ['Orchestration', 'Planning', 'Analysis', 'Activity', 'Threads', 'Messages']],
 			['Design', ['System', 'Components']],
 			['Documentation', ['System', 'Conventions', 'ADRs', 'Issues', 'Search']],
-			['Configuration', ['Features', 'Agents', 'File System', 'Projects', 'Harnesses']]
+			['Configuration', ['Features', 'Agents', 'File System', 'Projects', 'Harnesses', 'Host']]
 		]);
 	});
 
@@ -58,7 +58,8 @@ describe('the nav rail (S-0458)', () => {
 				'/settings/agents',
 				'/settings/file-system',
 				'/settings/projects',
-				'/settings/harnesses'
+				'/settings/harnesses',
+				'/host'
 			]
 		]);
 		const workflow = SITE_MENU[0].pages[3];
@@ -188,6 +189,11 @@ describe('the nav rail (S-0458)', () => {
 			});
 	});
 
+	it('places the Host page, which is not a settings page, in Configuration (S-0489)', () => {
+		expect(locate('/host')).toEqual({ group: 'configuration', page: 'host', child: null });
+		expect(locate('/hosts')).toEqual({ group: null, page: null, child: null });
+	});
+
 	it('places /settings, which goes on to a page, and an unknown page in Configuration only', () => {
 		expect(locate('/settings')).toEqual({ group: 'configuration', page: null, child: null });
 		expect(locate('/settings/tokens')).toEqual({ group: 'configuration', page: null, child: null });
@@ -212,7 +218,6 @@ describe('the nav rail (S-0458)', () => {
 
 	it('places nothing for a page the rail does not list, nor one that only shares a prefix', () => {
 		expect(locate('/')).toEqual({ group: null, page: null, child: null });
-		expect(locate('/host')).toEqual({ group: null, page: null, child: null });
 		expect(locate('/license')).toEqual({ group: null, page: null, child: null });
 		expect(locate('/login')).toEqual({ group: null, page: null, child: null });
 		expect(locate('/boards')).toEqual({ group: null, page: null, child: null });

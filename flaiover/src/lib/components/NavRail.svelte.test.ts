@@ -124,6 +124,27 @@ describe('the nav rail (S-0458)', () => {
 		expect(current[0].getAttribute('href')).toBe('/settings/harnesses');
 	});
 
+	it('lists Host last under Configuration, a link to /host, current when open (S-0489)', () => {
+		show('/host');
+		expect(group('configuration').getAttribute('aria-expanded')).toBe('true');
+		const links = [...pages('configuration').querySelectorAll('a')];
+		expect(links.map((a) => a.textContent!.trim())).toEqual([
+			'Features',
+			'Agents',
+			'File System',
+			'Projects',
+			'Harnesses',
+			'Host'
+		]);
+		const host = pages('configuration').querySelector('[data-rail-page="host"]')!;
+		expect(host.tagName).toBe('A');
+		expect(host.getAttribute('href')).toBe('/host');
+		expect(host.querySelector('svg')).not.toBeNull();
+		const current = document.querySelectorAll('[aria-current="page"]');
+		expect(current).toHaveLength(1);
+		expect(current[0]).toBe(host);
+	});
+
 	it('expands the group of a page that belongs to it outside its pages', () => {
 		show('/items/S-0001');
 		expect(group('flow').getAttribute('aria-expanded')).toBe('true');
@@ -171,7 +192,8 @@ describe('the nav rail (S-0458)', () => {
 			'/settings/agents?project=harbour',
 			'/settings/file-system?project=harbour',
 			'/settings/projects?project=harbour',
-			'/settings/harnesses?project=harbour'
+			'/settings/harnesses?project=harbour',
+			'/host?project=harbour'
 		]);
 		expect(document.querySelector('[data-rail-license]')!.getAttribute('href')).toBe(
 			'/license?project=harbour'
