@@ -6,7 +6,7 @@ title: criteria_tick is refused on another open story's narrative.state finding,
 status: backlog
 owner: alex
 created: 2026-10-23T17:43:07Z
-updated: 2026-10-23T17:52:54Z
+updated: 2026-10-23T17:53:06Z
 transitions: []
 tags: [flai]
 topics: [cli]
@@ -42,10 +42,10 @@ cost_of_delay:
   at: 2026-10-23T17:52:54Z
 forecast:
   duration: 2h
-  delivery: 2026-10-24T13:00:00Z
-  basis: "flai's 22m at size 14 (2 criteria, 12 touches), 91 s a unit over 35 done remediation stories on claude-opus-5-5 in the large band, raised to 2h for an ADR that awaits the operator, tests that must bring a finding between two check runs in a writer flai edit and the dashboard share, and docs in three places with a generated reference; delivery flai's 2026-10-24T11:20Z, 27th in the pull order, moved by the raise."
-  by: planner-S-0486
-  at: 2026-10-23T17:52:54Z
+  delivery: 2026-10-24T13:10:00Z
+  basis: "Its own forecast of 2h; 27th in the pull order with an in-progress limit of 5, behind S-0429, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0430, S-0431, S-0432, S-0433, S-0434 and S-0435."
+  by: flai
+  at: 2026-10-23T17:53:06Z
 ---
 # S-0486 criteria_tick is refused on another open story's narrative.state finding, which the story's own scoped check leaves out
 
