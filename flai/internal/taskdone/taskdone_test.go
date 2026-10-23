@@ -827,6 +827,39 @@ func TestRunFitsTheAnswerByShorteningTheStorysThreads(t *testing.T) {
 	}
 }
 
+// I-0202, ADR-0198: S-0491's check found 399 notes outside the story, 382
+// doc.updated and 17 components.examples, and its close answered about
+// 90,500 bytes. The close lists every finding inside the story, the first
+// MaxNotes notes, and counts the rest, so the answer fits.
+func TestNewCheckListsAtMostMaxNotesAndCountsTheRest(t *testing.T) {
+	res := &check.Result{}
+	for i := range 2 {
+		res.Findings = append(res.Findings, check.Finding{Rule: "narrative.state", Level: "warning", Path: "wip/agents/S-004.md", Line: 14 + i, Message: "S-004 is in-progress and its narrative's ## Current state is empty"})
+	}
+	for i := range 399 {
+		rule, path := "doc.updated", fmt.Sprintf("design/system/document-%03d.md", i)
+		if i >= 382 {
+			rule, path = "components.examples", fmt.Sprintf("design/components/flaiover/src/lib/component-%02d.examples.json", i)
+		}
+		res.Findings = append(res.Findings, check.Finding{Rule: rule, Level: "warning", Path: path, Line: 1, Message: "updated is 2026-09-01 but the file last changed 2026-10-23 in git; bump updated to the day of the change", Outside: true})
+	}
+
+	c := newCheck(res)
+	if len(c.Findings) != 2 || len(c.Notes) != MaxNotes || c.NotesOmitted != 399-MaxNotes {
+		t.Fatalf("%d findings, %d notes, %d omitted", len(c.Findings), len(c.Notes), c.NotesOmitted)
+	}
+	if c.Notes[0].Path != "design/system/document-000.md" || c.Notes[MaxNotes-1].Path != fmt.Sprintf("design/system/document-%03d.md", MaxNotes-1) {
+		t.Errorf("the notes kept are not the check's first: %s … %s", c.Notes[0].Path, c.Notes[MaxNotes-1].Path)
+	}
+	answer := Result{Task: "T-003", Story: "S-004", Check: c, Inbox: &inbox.Inbox{}}
+	if compact, indented := jsonSizes(t, answer); compact > ctxpack.PartLimit/4 || indented > ctxpack.PartLimit/4 {
+		t.Errorf("the answer is %d bytes compact, %d indented, over a quarter of %d", compact, indented, ctxpack.PartLimit)
+	}
+	if data, err := json.Marshal(newCheck(&check.Result{})); err != nil || strings.Contains(string(data), "notes_omitted") {
+		t.Errorf("a check with no notes left out says notes_omitted: %s %v", data, err)
+	}
+}
+
 // operatorsThreads resolves the fixture's own thread on S-004 and opens the
 // 2026-10-20 measurement's 31 threads awaiting the operator, none on S-004
 // (ADR-0181): planners' questions, the orchestrator's escalations, and flai

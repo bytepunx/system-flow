@@ -2352,6 +2352,7 @@ orchestration.permissions.order_ready (boolean; default false)
 orchestration.permissions.answer_threads (choice: off, recommend, autonomous; default off)
 orchestration.permissions.accept_reviews (boolean; default false)
 orchestration.permissions.publish (boolean; default false)
+orchestration.permissions.edit_subprojects (boolean; default false)
 orchestration.policy (choice: cod, wsjf, throughput, fifo; default fifo)
 orchestration.release.policy (choice: judgement, threshold, theme; default judgement)
 orchestration.release.value (number)
@@ -4463,7 +4464,9 @@ Close a task in one call (ADR-0107). flai finds the task's story and works in th
    the main branch's version, is listed as unchanged and not added. A path
    left is never added, and no touch is removed.
 7. Check: flai check --strict scoped to the story. A finding in the story
-   stops the run; a finding outside it is a note.
+   stops the run; a finding outside it is a note. Every finding is listed,
+   but only the first 10 notes; the rest are counted in check.notes_omitted,
+   and flai check --story lists them all (ADR-0198).
 8. Inbox: the agent's inbox, as the MCP tool inbox answers it, but listing
    only the threads on the story and its tasks; the threads on other items
    are counted, and the MCP tool inbox or flai thread list lists them

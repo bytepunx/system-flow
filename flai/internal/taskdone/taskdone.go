@@ -149,12 +149,35 @@ type Touches struct {
 	Overlaps  []itemedit.Overlapping `json:"overlaps"`
 }
 
+// MaxNotes is the most of the check's notes outside the story that a Check
+// lists; it counts the rest in NotesOmitted (ADR-0198).
+const MaxNotes = 10
+
 // Check is flai check --strict scoped to the story (ADR-0085): Findings are
-// inside the story, Notes outside it.
+// inside the story, every one listed, and Notes outside it, the first
+// MaxNotes listed and the rest counted in NotesOmitted (ADR-0198).
 type Check struct {
-	Passed   bool            `json:"passed"`
-	Findings []check.Finding `json:"findings"`
-	Notes    []check.Finding `json:"notes"`
+	Passed       bool            `json:"passed"`
+	Findings     []check.Finding `json:"findings"`
+	Notes        []check.Finding `json:"notes"`
+	NotesOmitted int             `json:"notes_omitted,omitempty"`
+}
+
+// newCheck is res as the close answers it: its findings split into those
+// inside the story and the notes outside it, at most MaxNotes of them.
+func newCheck(res *check.Result) *Check {
+	c := &Check{Passed: res.OK(true), Findings: []check.Finding{}, Notes: []check.Finding{}}
+	for _, f := range res.Findings {
+		switch {
+		case !f.Outside:
+			c.Findings = append(c.Findings, f)
+		case len(c.Notes) < MaxNotes:
+			c.Notes = append(c.Notes, f)
+		default:
+			c.NotesOmitted++
+		}
+	}
+	return c
 }
 
 // ExitCode is flai task done's exit status for r (ADR-0107): 0 when every
@@ -696,14 +719,7 @@ func (r *run) check() error {
 	if err != nil {
 		return fmt.Errorf("run flai check in %s: %w", r.rel(r.wt), err)
 	}
-	c := &Check{Passed: res.OK(true), Findings: []check.Finding{}, Notes: []check.Finding{}}
-	for _, f := range res.Findings {
-		if f.Outside {
-			c.Notes = append(c.Notes, f)
-		} else {
-			c.Findings = append(c.Findings, f)
-		}
-	}
+	c := newCheck(res)
 	r.res.Check = c
 	if !c.Passed {
 		return fmt.Errorf("flai check --strict fails on %s in %s: fix them, then run %s again, which commits the fix", plural(len(c.Findings), "finding"), r.story.ID, r.again())

@@ -56,7 +56,9 @@ fails stops the run; the steps after it are not done.
    the main branch's version, is listed as unchanged and not added. A path
    left is never added, and no touch is removed.
 7. Check: flai check --strict scoped to the story. A finding in the story
-   stops the run; a finding outside it is a note.
+   stops the run; a finding outside it is a note. Every finding is listed,
+   but only the first 10 notes; the rest are counted in check.notes_omitted,
+   and flai check --story lists them all (ADR-0198).
 8. Inbox: the agent's inbox, as the MCP tool inbox answers it, but listing
    only the threads on the story and its tasks; the threads on other items
    are counted, and the MCP tool inbox or flai thread list lists them
@@ -224,8 +226,8 @@ func printTaskDoneCheck(w io.Writer, story string, c *taskdone.Check) {
 	if !c.Passed {
 		verdict = "failed with " + plural(len(c.Findings), "finding") + " in " + story
 	}
-	if len(c.Notes) > 0 {
-		verdict += fmt.Sprintf("; %s outside %s, which do not fail it", plural(len(c.Notes), "note"), story)
+	if notes := len(c.Notes) + c.NotesOmitted; notes > 0 {
+		verdict += fmt.Sprintf("; %s outside %s, which do not fail it", plural(notes, "note"), story)
 	}
 	fmt.Fprintf(w, "check: %s\n", verdict)
 	line := func(f check.Finding, suffix string) {
@@ -236,6 +238,9 @@ func printTaskDoneCheck(w io.Writer, story string, c *taskdone.Check) {
 	}
 	for _, f := range c.Notes {
 		line(f, " (outside "+story+")")
+	}
+	if c.NotesOmitted > 0 {
+		fmt.Fprintf(w, "  and %s more outside %s, left out: flai check --story %s lists them\n", plural(c.NotesOmitted, "note"), story, story)
 	}
 }
 
