@@ -622,14 +622,18 @@ func Run(ctx context.Context, o Options) error {
 			// So does the orchestrator, which starts its run again when it
 			// ends and stops it once the action is off (S-0218), and the
 			// analysis scheduler, which sees analysis.schedule come round as
-			// the replanner sees planning.schedule (S-0223).
+			// the replanner sees planning.schedule (S-0223), and the curate
+			// scheduler, which sees stories accepted, the curator's run end,
+			// and digest.schedule come round (S-0432, ADR-0199).
 			replanner := newReplanner(o, e, starter)
 			orch := newOrchestrator(o, e, starter)
 			analyst := newAnalysisScheduler(o, e, starter)
+			curation := newCurateScheduler(o, e, starter)
 			starter.look(cctx, false) // starts what is ready and has had no agent since (S-0112)
 			replanner.look(cctx)
 			orch.look(cctx)
 			analyst.look(cctx)
+			curation.look(cctx)
 			newForgePass(o, e, &forgeLooks).start(cctx)
 			// flai accept's requests to merge a pull request are taken every
 			// second, and answered behind the forge host action (S-0397)
@@ -650,6 +654,7 @@ func Run(ctx context.Context, o Options) error {
 					replanner.look(cctx)
 					orch.look(cctx)
 					analyst.look(cctx)
+					curation.look(cctx)
 				}
 			}()
 			go func() {
@@ -663,6 +668,7 @@ func Run(ctx context.Context, o Options) error {
 						replanner.look(cctx)
 						orch.look(cctx)
 						analyst.look(cctx)
+						curation.look(cctx)
 						queue.wake()
 					}
 				})

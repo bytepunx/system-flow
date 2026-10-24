@@ -20,7 +20,8 @@ import (
 )
 
 // The curator, started for a project on the operator's word (S-0431,
-// ADR-0196).
+// ADR-0196), and on its own after acceptances and on digest.schedule
+// (S-0432, ADR-0199; curate_schedule.go).
 //
 // flai curate, the host API's curate.run, which runs it, and the MCP tool
 // curate all start it through Curate: in the project's main checkout, with
@@ -36,7 +37,7 @@ import (
 // naming the entries whose files the run wrote or changed, beside the run's
 // seconds and cost. It charges no item: digest entries are not work items. It
 // is no story's agent: the in-progress limit does not count it, and it holds
-// no story back.
+// no story back. Each start is journalled with what started it, its trigger.
 
 // sinceForms are the forms a curator's since takes, as flai digest harvest
 // --since reads it: a day in UTC, or an RFC 3339 time.
@@ -153,7 +154,7 @@ func lastCurated(repo *workitem.Repo) (string, error) {
 
 // curate starts the curator with agent, taking in from since, or everything
 // when it is empty, records the run, marked with its role, with what started
-// it, trigger, journals it, and says whether it started.
+// it, trigger, journals it naming the trigger, and says whether it started.
 func (l *launcher) curate(ctx context.Context, cfg AgentConfig, agent *manifest.Agent, since, trigger string) bool {
 	now := l.now().UTC()
 	run := &AgentRun{Agent: workitem.ActivityCurator, Role: conventions.RoleCurate, Since: since, Started: now.Format(time.RFC3339), Session: newSession(), Trigger: trigger}
@@ -164,11 +165,11 @@ func (l *launcher) curate(ctx context.Context, cfg AgentConfig, agent *manifest.
 	fail := func(err error) bool {
 		run.Error, run.Ended, run.Outcome, run.Why = err.Error(), run.Started, OutcomeFailed, "could not be started: "+err.Error()
 		l.told(run)
-		entry.Outcome, entry.Detail = "failed", fmt.Sprintf("the curator, %s, could not be started: %s", sinceSaid(since), run.Error)
+		entry.Outcome, entry.Detail = "failed", fmt.Sprintf("the curator, %s, %s, could not be started: %s", sinceSaid(since), startedBy(run), run.Error)
 		if l.record != nil {
 			l.record(entry)
 		}
-		l.log("curator could not be started", "since", since, "harness", run.Harness, "err", run.Error)
+		l.log("curator could not be started", "since", since, "trigger", run.Trigger, "harness", run.Harness, "err", run.Error)
 		return false
 	}
 	name, adapter, err := harness.For(agent, cfg.host(harness.Command).Program != "")
@@ -186,7 +187,7 @@ func (l *launcher) curate(ctx context.Context, cfg AgentConfig, agent *manifest.
 		return fail(err)
 	}
 	l.told(run)
-	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s (%s) to curate, %s, as %s (pid %d); log %s", run.Command, run.Harness, sinceSaid(since), run.Agent, run.PID, run.Log)
+	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s (%s) to curate, %s, as %s (pid %d), %s; log %s", run.Command, run.Harness, sinceSaid(since), run.Agent, run.PID, startedBy(run), run.Log)
 	if l.record != nil {
 		l.record(entry)
 	}

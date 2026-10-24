@@ -1,0 +1,280 @@
+//go:build !windows
+
+package serve
+
+import (
+	"context"
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
+)
+
+// curationLab is a curateLab with a curate scheduler whose clock the test
+// sets.
+type curationLab struct {
+	*agentLab
+	s     *curateScheduler
+	clock time.Time
+}
+
+// newCurationLab is a curationLab whose manifest sets digest.schedule to
+// spec, none when it is empty, and whose scheduler starts at at.
+func newCurationLab(t *testing.T, spec string, at time.Time) *curationLab {
+	t.Helper()
+	lab := &curationLab{agentLab: curateLab(t), clock: at}
+	m := "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"
+	if spec != "" {
+		m += "digest:\n  schedule: \"" + spec + "\"\n"
+	}
+	if err := os.WriteFile(filepath.Join(lab.root, "system-flow.yaml"), []byte(m), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	o := lab.o
+	o.Now = func() time.Time { return lab.clock }
+	lab.s = newCurateScheduler(o, Entry{Key: "t", Name: "t", Root: lab.root}, lab.l)
+	return lab
+}
+
+// lookAt has the scheduler look at t.
+func (lab *curationLab) lookAt(t time.Time) {
+	lab.clock = t
+	lab.s.look(context.Background())
+}
+
+// accept makes a ready story and moves it through to done at the lab's
+// clock, as its agent and the operator would, and returns its ID.
+func (lab *curationLab) accept(title string) string {
+	lab.t.Helper()
+	id := lab.ready(title)
+	task, err := lab.repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "Work", Parent: id, Owner: "builder-" + id, Now: lab.clock})
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	for _, m := range [][2]string{{id, workitem.InProgress}, {task.ID, workitem.Ready}, {task.ID, workitem.InProgress}, {task.ID, workitem.Done}, {id, workitem.Review}, {id, workitem.Done}} {
+		it, err := lab.repo.Get(m[0])
+		if err != nil {
+			lab.t.Fatal(err)
+		}
+		if m == [2]string{id, workitem.Done} { // its criterion met
+			data, _ := os.ReadFile(it.Path)
+			if err := os.WriteFile(it.Path, []byte(strings.Replace(string(data), "- [ ] works", "- [x] works", 1)), 0o644); err != nil {
+				lab.t.Fatal(err)
+			}
+			if it, err = lab.repo.Get(id); err != nil {
+				lab.t.Fatal(err)
+			}
+		}
+		if _, err := lab.repo.Transition(it, m[1], "alex", "", lab.clock); err != nil {
+			lab.t.Fatalf("move %s to %s: %v", m[0], m[1], err)
+		}
+	}
+	return id
+}
+
+// starts are the journal entries of the curator runs started, oldest first.
+func (lab *curationLab) starts() []hostapi.Entry {
+	var out []hostapi.Entry
+	for _, e := range lab.entries() {
+		if e.Action == hostapi.ActionCurate && e.Outcome == "done" {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+// ended waits for the curator's newest run, the nth started, to end.
+func (lab *curationLab) ended(n int) {
+	lab.t.Helper()
+	waitFor(lab.t, "the curator run ended", func() bool {
+		r := lab.state().Curator
+		return len(lab.starts()) == n && r != nil && r.Ended != ""
+	})
+}
+
+// S-0432, ADR-0199: a story accepted with the curate action on and no
+// curator running starts the curator once, with the acceptance as its
+// trigger, journalled and logged as such, from the curator's last activity.
+func TestAnAcceptanceStartsTheCurator(t *testing.T) {
+	lab := newCurationLab(t, "", time.Now().UTC())
+	lab.lookAt(lab.clock)
+	if n := len(lab.starts()); n != 0 {
+		t.Fatalf("started with nothing accepted: %d", n)
+	}
+	lab.curatorRuns("Took in one entry.", runStart)
+	story := lab.accept("Accepted")
+	lab.lookAt(lab.clock.Add(time.Second))
+	starts := lab.starts()
+	if len(starts) != 1 {
+		t.Fatalf("started %d runs after one acceptance, want one", len(starts))
+	}
+	run := lab.state().Curator
+	if run.Trigger != "accepted "+story || run.Since != "" {
+		t.Errorf("run = %+v, want started by accepted %s, from its last activity", run, story)
+	}
+	if !strings.Contains(starts[0].Detail, "to curate, everything, its first run, as curator (pid ") || !strings.Contains(starts[0].Detail, "), started by accepted "+story+"; log ") {
+		t.Errorf("the journal entry does not name its trigger: %q", starts[0].Detail)
+	}
+	if !strings.Contains(lab.logText(), `msg="curator started" component=serve project=t since="" trigger="accepted `+story+`"`) {
+		t.Errorf("the start is not logged with its trigger:\n%s", lab.logText())
+	}
+	lab.ended(1)
+	lab.lookAt(lab.clock.Add(time.Minute))
+	if n := len(lab.starts()); n != 1 {
+		t.Errorf("the acceptance started the curator again: %d runs", n)
+	}
+	waitFor(t, "its activity logged with the acceptance as its trigger", func() bool {
+		doc, err := lab.repo.Activity(workitem.ActivityCurator)
+		return err == nil && len(doc.Entries) == 1 && doc.Entries[0].Trigger == "accepted "+story
+	})
+}
+
+// S-0432, ADR-0199: acceptances while the curate action is off start
+// nothing, then or once it is turned on; the next one after does.
+func TestAcceptancesWhileCurateIsOffStartNothing(t *testing.T) {
+	lab := newCurationLab(t, "", time.Now().UTC())
+	lab.cfg.Curate = false
+	lab.accept("First")
+	lab.lookAt(lab.clock.Add(time.Second))
+	lab.accept("Second")
+	lab.lookAt(lab.clock.Add(time.Second))
+	if n := len(lab.starts()); n != 0 || lab.state().Curator != nil || strings.Contains(lab.logText(), "curator not started") {
+		t.Fatalf("acceptances acted while curate is off: %d runs, %+v\n%s", n, lab.state().Curator, lab.logText())
+	}
+	lab.cfg.Curate = true
+	lab.lookAt(lab.clock.Add(time.Minute))
+	if n := len(lab.starts()); n != 0 {
+		t.Fatalf("turning curate on acted on the acceptances made while it was off: %d runs", n)
+	}
+	third := lab.accept("Third")
+	lab.lookAt(lab.clock.Add(time.Second))
+	if n := len(lab.starts()); n != 1 || lab.state().Curator.Trigger != "accepted "+third {
+		t.Errorf("an acceptance once curate is on: %d runs, %+v, want one started by accepted %s alone", n, lab.state().Curator, third)
+	}
+	lab.ended(1)
+}
+
+// S-0432, ADR-0199: acceptances seen while a curator runs start nothing
+// then, and exactly one run at the look its end brings, its trigger naming
+// every one of them in ID order.
+func TestAcceptancesDuringARunStartOneRunAfterIt(t *testing.T) {
+	lab := newCurationLab(t, "", time.Now().UTC())
+	lab.hold()
+	if !lab.curateHere("") {
+		t.Fatalf("the operator's curator did not start: %+v", lab.state().Curator)
+	}
+	first := lab.accept("First")
+	lab.lookAt(lab.clock.Add(time.Second))
+	second := lab.accept("Second")
+	lab.lookAt(lab.clock.Add(time.Second))
+	lab.lookAt(lab.clock.Add(time.Minute))
+	if n := len(lab.starts()); n != 1 || lab.state().Curator.Trigger != TriggerAsked {
+		t.Fatalf("started beside a running curator: %d runs, %+v", n, lab.state().Curator)
+	}
+	if strings.Contains(lab.logText(), "curator not started") {
+		t.Errorf("the acceptances during the run were refused rather than kept:\n%s", lab.logText())
+	}
+	lab.release("curate")
+	lab.ended(1)
+	// the look the run's end brings, as the launcher's again does
+	lab.lookAt(lab.clock.Add(time.Second))
+	starts := lab.starts()
+	want := "accepted " + first + ", " + second
+	if len(starts) != 2 || lab.state().Curator.Trigger != want {
+		t.Fatalf("after the run: %d runs, %+v, want one more started by %q", len(starts), lab.state().Curator, want)
+	}
+	if !strings.Contains(starts[1].Detail, "started by "+want+"; log ") || !strings.Contains(starts[0].Detail, "started by asked; log ") {
+		t.Errorf("the journal entries do not name their triggers: %q, %q", starts[0].Detail, starts[1].Detail)
+	}
+	lab.ended(2)
+	lab.lookAt(lab.clock.Add(time.Minute))
+	if n := len(lab.starts()); n != 2 {
+		t.Errorf("the acceptances started the curator again: %d runs", n)
+	}
+}
+
+// S-0432, ADR-0199: digest.schedule starts the curator when it comes round,
+// with the schedule as its trigger, once however many times were missed; a
+// time that comes round while a run goes starts none, is logged, and is not
+// taken again once it ends.
+func TestTheDigestScheduleStartsTheCurator(t *testing.T) {
+	lab := newCurationLab(t, "daily", time.Date(2026, 10, 6, 10, 0, 0, 0, time.UTC))
+	lab.hold()
+	lab.lookAt(lab.clock)
+	if n := len(lab.starts()); n != 0 {
+		t.Fatalf("started before the schedule came round: %d", n)
+	}
+	lab.lookAt(time.Date(2026, 10, 9, 12, 0, 0, 0, time.UTC)) // three midnights missed
+	starts := lab.starts()
+	if len(starts) != 1 {
+		t.Fatalf("started %d runs for the times missed, want one", len(starts))
+	}
+	run := lab.state().Curator
+	if run.Trigger != "schedule daily" || !strings.Contains(starts[0].Detail, "started by schedule daily; log ") {
+		t.Errorf("run = %+v, journal %q, want started by schedule daily", run, starts[0].Detail)
+	}
+	lab.lookAt(lab.clock.Add(time.Minute))
+	if n := len(lab.starts()); n != 1 {
+		t.Errorf("the missed times came round again: %d runs", n)
+	}
+	// midnight comes round while the run goes: none is started, and it is said
+	lab.lookAt(time.Date(2026, 10, 10, 0, 0, 0, 0, time.UTC))
+	if n := len(lab.starts()); n != 1 || !lab.state().Curator.same(run) {
+		t.Errorf("started beside a running curator: %d runs, %+v", n, lab.state().Curator)
+	}
+	if !strings.Contains(lab.logText(), `msg="curator not started on its own" component=serve project=t trigger="schedule daily" reason="the curator is already running for this project`) {
+		t.Errorf("the refusal is not logged:\n%s", lab.logText())
+	}
+	lab.release("curate")
+	lab.ended(1)
+	lab.lookAt(lab.clock.Add(time.Minute))
+	if n := len(lab.starts()); n != 1 {
+		t.Errorf("the time that came round during the run was taken after it: %d runs", n)
+	}
+	lab.lookAt(time.Date(2026, 10, 11, 0, 0, 0, 0, time.UTC))
+	if n := len(lab.starts()); n != 2 {
+		t.Errorf("the next midnight started %d runs in all, want two", n)
+	}
+	lab.ended(2)
+}
+
+// S-0432, ADR-0199: acceptances and the schedule coming round at one look
+// start one run, with the acceptances' trigger.
+func TestAcceptancesAndTheScheduleAtOneLookStartOneRun(t *testing.T) {
+	lab := newCurationLab(t, "daily", time.Date(2026, 10, 6, 23, 59, 0, 0, time.UTC))
+	lab.clock = time.Date(2026, 10, 7, 0, 0, 30, 0, time.UTC)
+	stories := []string{lab.accept("Later"), lab.accept("Earlier")}
+	slices.Sort(stories)
+	lab.lookAt(lab.clock)
+	want := "accepted " + strings.Join(stories, ", ")
+	if n := len(lab.starts()); n != 1 || lab.state().Curator.Trigger != want {
+		t.Fatalf("%d runs, %+v, want one started by %q", n, lab.state().Curator, want)
+	}
+	lab.ended(1)
+	lab.lookAt(lab.clock.Add(time.Minute))
+	if n := len(lab.starts()); n != 1 {
+		t.Errorf("the schedule came round again after the acceptances' run: %d runs", n)
+	}
+}
+
+// S-0432: acceptances are kept once each, in the order of their IDs, a
+// longer zero-padded ID after a shorter one; a task's or an epic's move to
+// done, and a story's to anything else, is none.
+func TestAcceptedKeepsEachStoryOnceInIDOrder(t *testing.T) {
+	changes := []workitem.Change{
+		{ID: "S-10000", Type: workitem.Story, Kind: workitem.Moved, To: workitem.Done},
+		{ID: "S-0002", Type: workitem.Story, Kind: workitem.Moved, To: workitem.Done},
+		{ID: "S-0003", Type: workitem.Story, Kind: workitem.Moved, To: workitem.Cancelled},
+		{ID: "T-0001", Type: workitem.Task, Kind: workitem.Moved, To: workitem.Done},
+		{ID: "E-0001", Type: workitem.Epic, Kind: workitem.Moved, To: workitem.Done},
+		{ID: "S-0009", Type: workitem.Story, Kind: workitem.Moved, To: workitem.Done},
+	}
+	if got := accepted([]string{"S-0009"}, changes); !slices.Equal(got, []string{"S-0002", "S-0009", "S-10000"}) {
+		t.Errorf("accepted = %v", got)
+	}
+}
