@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -453,5 +454,14 @@ func TestACuratorRunLeavesTheOrchestratorsRecordAlone(t *testing.T) {
 	}
 	if st.Running != nil || len(st.Stories) != 0 || len(st.Plans) != 0 {
 		t.Errorf("state = %+v, want the curator's run held apart from the stories' and the plans'", st)
+	}
+}
+
+// ADR-0196: an agent flai serve starts never inherits the since of a curator
+// run that started flai serve, nor any other mark of what a run is for.
+func TestAnAgentsEnvironmentCarriesNoRunsMarks(t *testing.T) {
+	env := agentEnv([]string{"PATH=/bin", "FLAI_SINCE=2026-10-01", "FLAI_FOCUS=risk", "FLAI_ROLE=curate", "FLAI_ITEM=S-0001", "FLAI_STORY=S-0002"})
+	if !slices.Equal(env, []string{"PATH=/bin"}) {
+		t.Errorf("agentEnv kept a run's marks: %q", env)
 	}
 }

@@ -1352,8 +1352,8 @@ func (r *AgentRun) awaits() string {
 // finds its own config, and a flai serve it runs does not reach the
 // operator's host. Nor does it carry what marks the session of whoever
 // started it, such as an agent that ran flai plan (S-0208): each run sets
-// FLAI_STORY, or FLAI_ROLE with FLAI_ITEM or FLAI_FOCUS (S-0223), for
-// itself, and has the others unset.
+// FLAI_STORY, or FLAI_ROLE with FLAI_ITEM, FLAI_FOCUS (S-0223), or
+// FLAI_SINCE (ADR-0196), for itself, and has the others unset.
 func agentEnv(env []string) []string {
 	return slices.DeleteFunc(slices.Clone(env), func(kv string) bool {
 		name, _, _ := strings.Cut(kv, "=")
@@ -1383,7 +1383,7 @@ func (l *launcher) withoutForgeTokens(env []string) []string {
 }
 
 // runMarks are the variables that say what a run is for.
-var runMarks = []string{"FLAI_STORY", "FLAI_ROLE", "FLAI_ITEM", "FLAI_FOCUS"}
+var runMarks = []string{"FLAI_STORY", "FLAI_ROLE", "FLAI_ITEM", "FLAI_FOCUS", "FLAI_SINCE"}
 
 // start starts an agent for story, or starts again the one that ended asking
 // in story.Asked, for story.Answer, or the one of story.Resume, for

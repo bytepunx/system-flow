@@ -1,25 +1,21 @@
 ---
 title: Strategic agents
-updated: 2026-10-23
+updated: 2026-10-24
 audience: agent
 order: 140
 status: active
 topics: [all]
-roles: [plan, orchestrate, analyze]
+roles: [plan, orchestrate, analyze, curate]
 ---
 
 # Strategic agents
 
-What the planner, the orchestrator, and the analyzer do, what they never do, how they log their activity, and how they ask the operator.
+What the planner, the orchestrator, the analyzer, and the curator do, what they never do, how they log their activity, and how they ask the operator.
 
 ## Rules
 
-- The planner, the orchestrator, and the analyzer are agents `flai serve` starts without a story of their own. Each runs behind a host action the operator turns on: `plan`, `orchestrate`, or `analyze`.
-- Prime with your role:
-  - the planner with `flai prime --role plan --epic E-nnnn` or `--story S-nnnn`
-  - the orchestrator with `flai prime --role orchestrate`
-  - the analyzer with `flai prime --role analyze`
-  - or the MCP tool `prime` with the same role.
+- The planner, the orchestrator, the analyzer, and the curator are agents `flai serve` starts without a story of their own. Each runs behind a host action the operator turns on: `plan`, `orchestrate`, `analyze`, or `curate`.
+- Prime with your role, `flai prime --role` or the MCP tool `prime`: the planner with `plan` and `--epic E-nnnn` or `--story S-nnnn`, the orchestrator with `orchestrate`, the analyzer with `analyze`, and the curator with `curate`.
 - The pack holds the conventions whose `roles` are empty or list your role, and briefs of the design your role's topic selects. A brief is not the document: read the section that bears on the work with `doc_get` before relying on it.
 - Call `inbox` when you start.
 - Work in the main checkout, through flai: the CLI or the MCP tools. Never hand-edit front matter.
@@ -90,9 +86,17 @@ What the planner, the orchestrator, and the analyzer do, what they never do, how
 - Edit nothing but your report and its entry in the index. flai writes your issues; never edit them by hand.
 - Hand wide search to the explorer.
 
+## As the curator
+
+- List what the archive and the threads gained since your last run with `flai digest harvest --since`, and read the digest with `flai digest list` and `show` before you write.
+- Keep the digest through `flai digest new` and `edit` alone: one fact per entry, citing its source. When an entry holds the fact already, merge the candidate into it with `edit` rather than write a second, and add a thread that asked what an entry answered to its `asked_again`.
+- Never write a secret's value in an entry. Say only where the operator said it lives.
+- Edit nothing else, and author no stories or work items: `flai guard` refuses you every file edit and every other write ([ADR-0196](../adrs/0196-the-curator-runs-behind-the-curate-host-action-and-takes-in-what-the-archive.md)).
+- End with a one-line summary naming the entries you wrote and those you merged, or saying you found nothing to take in.
+
 ## Logging your activity
 
-- Each kind has one activity document per project: `wip/agents/planner.md`, `wip/agents/orchestrator.md`, and `wip/agents/analyzer.md`.
+- Each kind has one activity document per project: `wip/agents/planner.md`, `wip/agents/orchestrator.md`, `wip/agents/analyzer.md`, and `wip/agents/curator.md`.
 - `flai serve` writes an entry when an activity ends: the timestamp, a one-line summary, the items touched, the duration, and the cost.
 - A run that spans activities, as the orchestrator's does, reports each one when it ends through the MCP tool `activity_log`, with its kind, its summary, and the items it touched; flai measures the duration and the cost from the run's log. When a run ends, the time since its last reported activity is logged with the run's final reply as its summary.
 - Give a summary a reader can act on: what changed, on which items, and why.
@@ -100,11 +104,7 @@ What the planner, the orchestrator, and the analyzer do, what they never do, how
 
 ## Asking the operator
 
-- Ask with `thread_open` on the item the question concerns:
-  - the planner on its epic or story
-  - the orchestrator on the item a decision concerns
-  - the analyzer on its report or issue.
-- Put your recommended answer first.
+- Ask with `thread_open` on the item the question concerns, your recommended answer first: the planner on its epic or story, the orchestrator on the item a decision concerns, the analyzer on its report or issue, and the curator on the item an entry's source comes from, and only when the entry needs the operator's judgement.
 - Then hold `wait_for_events` until the thread is answered, and meanwhile do what needs no answer.
 - Never ask in the conversation.
 - Never guess past a missing input the operator owns. The cost of delay inputs are the operator's, or, with `plan_backlog_stories`, the orchestrator's to give a backlog story that has none.

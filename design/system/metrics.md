@@ -1,6 +1,6 @@
 ---
 title: Flow metrics
-updated: 2026-10-23
+updated: 2026-10-24
 status: active
 topics: [cli, dashboard, analysis]
 ---
@@ -92,8 +92,8 @@ What the planner and the orchestrator spent on an item, and the analyzer through
 
 | Value | Definition |
 |-------|------------|
-| `items[].usage.strategic` | One entry per kind the item's `usage.strategic` lists, in its order (`planner`, `orchestrator`, `analyzer`): `kind`, `tokens`, `cost`, `seconds`, and `estimated`, `true` since every charge is apportioned. `[]` when the item's usage has no `strategic` |
-| `usage.strategic` | Over the items of the report's type that entered `done` in the window and carry `strategic`, cancelled ones left out: `items`, their count; `tokens`, `cost`, and `seconds`, the sums over every kind; `estimated`, whether any entry is; and `kinds`, the same per kind (`kind`, `items` that carry it, `tokens`, `cost`, `seconds`), in the order planner, orchestrator, analyzer, only the kinds present. Always present: zeros and `kinds: []` when no item carries any |
+| `items[].usage.strategic` | One entry per kind the item's `usage.strategic` lists, in its order (`planner`, `orchestrator`, `analyzer`, `curator`): `kind`, `tokens`, `cost`, `seconds`, and `estimated`, `true` since every charge is apportioned. `[]` when the item's usage has no `strategic` |
+| `usage.strategic` | Over the items of the report's type that entered `done` in the window and carry `strategic`, cancelled ones left out: `items`, their count; `tokens`, `cost`, and `seconds`, the sums over every kind; `estimated`, whether any entry is; and `kinds`, the same per kind (`kind`, `items` that carry it, `tokens`, `cost`, `seconds`), in the order planner, orchestrator, analyzer, curator, only the kinds present. Always present: zeros and `kinds: []` when no item carries any |
 
 An item with `usage` that carries only `strategic` has `items[].usage` with `tokens`, `cost`, and `seconds` 0 and `models: []`.
 
@@ -151,13 +151,13 @@ Since S-0358, `items[].usage` carries `priced_by` when the item names one, and l
 
 ## Strategic agents (S-0206)
 
-What the planner, the orchestrator, and the analyzer spent, from their activity documents under `wip/agents` ([agent-narrative.md](agent-narrative.md), [ADR-0079](../adrs/0079-the-planner-the-orchestrator-and-the-analyzer-each-log-their-activities-in-one.md)). A planner activity's cost is also charged to the item it planned and the items above it, and an orchestrator activity's split evenly between the work items it named and charged to each and the items above it, under their `usage.strategic` ([ADR-0083](../adrs/0083-a-planner-activity-s-usage-is-charged-to-the-item-it-planned-and-the-items.md), [ADR-0095](../adrs/0095-an-orchestrator-activity-s-usage-is-charged-evenly-to-the-work-items-it-named.md), [Strategic usage](#strategic-usage)): the activity documents and the items are two views of one spend, never added together. Since S-0227 an analyzer activity's cost is charged to the issues it named, and carried to the story made from an issue ([Strategic usage](#strategic-usage)). What of a document's totals neither the items nor the issues carry is its kind's project strategic total: the activities that named no work item or issue, the planner's with no planned item, those logged before their kind was charged, and any charge that failed. Each entry splits its totals between `items`, `issues`, and `project`, so that the three add up to the document's, to a hundredth of a cent; the project total is worked out here, not written anywhere.
+What the planner, the orchestrator, the analyzer, and the curator spent, from their activity documents under `wip/agents` ([agent-narrative.md](agent-narrative.md), [ADR-0079](../adrs/0079-the-planner-the-orchestrator-and-the-analyzer-each-log-their-activities-in-one.md)). A planner activity's cost is also charged to the item it planned and the items above it, and an orchestrator activity's split evenly between the work items it named and charged to each and the items above it, under their `usage.strategic` ([ADR-0083](../adrs/0083-a-planner-activity-s-usage-is-charged-to-the-item-it-planned-and-the-items.md), [ADR-0095](../adrs/0095-an-orchestrator-activity-s-usage-is-charged-evenly-to-the-work-items-it-named.md), [Strategic usage](#strategic-usage)): the activity documents and the items are two views of one spend, never added together. Since S-0227 an analyzer activity's cost is charged to the issues it named, and carried to the story made from an issue ([Strategic usage](#strategic-usage)). A curator activity charges nothing: its cost is all its kind's project total ([ADR-0196](../adrs/0196-the-curator-runs-behind-the-curate-host-action-and-takes-in-what-the-archive.md)). What of a document's totals neither the items nor the issues carry is its kind's project strategic total: the activities that named no work item or issue, the planner's with no planned item, those logged before their kind was charged, and any charge that failed. Each entry splits its totals between `items`, `issues`, and `project`, so that the three add up to the document's, to a hundredth of a cent; the project total is worked out here, not written anywhere.
 
-`flai stats --json` carries them under `strategic`, a list with one entry per document that exists, in the order planner, orchestrator, analyzer, and an empty list when none does. The totals are the document's front matter as written, over all time, not the window's; only `log` is windowed. `flai stats` prints the totals, one line per agent with what the items carry, what the issues carry, and the project total beside them, and nothing when there are no documents; then one line per issue that carries strategic usage, with its cost and seconds per kind and whether it counts on the issue or on its story. An unreadable document stops `flai stats` with its path and what is wrong, as an unreadable item does.
+`flai stats --json` carries them under `strategic`, a list with one entry per document that exists, in the order planner, orchestrator, analyzer, curator, and an empty list when none does. The totals are the document's front matter as written, over all time, not the window's; only `log` is windowed. `flai stats` prints the totals, one line per agent with what the items carry, what the issues carry, and the project total beside them, and nothing when there are no documents; then one line per issue that carries strategic usage, with its cost and seconds per kind and whether it counts on the issue or on its story. An unreadable document stops `flai stats` with its path and what is wrong, as an unreadable item does.
 
 | Field | Source | Precision |
 |-------|--------|-----------|
-| `kind` | `kind`: `planner`, `orchestrator`, or `analyzer` | |
+| `kind` | `kind`: `planner`, `orchestrator`, `analyzer`, or `curator` | |
 | `cost` | `accrued_cost`, in US dollars | Four decimals, as written |
 | `seconds` | `accrued_seconds`, wall-clock | Whole seconds |
 | `activities` | `tasks_completed`, the number of activities logged | |

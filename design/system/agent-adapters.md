@@ -1,6 +1,6 @@
 ---
 title: Agent adapters for LiteLLM and OpenRouter
-updated: 2026-10-22
+updated: 2026-10-24
 status: active
 topics: [cli, template]
 ---
@@ -65,7 +65,7 @@ It approves one thing: an `Edit`, `Write`, `MultiEdit`, or `NotebookEdit` of a p
 
 Unless the project's `auto-approve` host action is on, the tool opens a thread on the story, `Allow <tool> <path>?`, showing the change, and waits at most four minutes (`permissionWait`) for an answer whose first word is `allow`, `yes`, `approve`, `approved`, or `ok` from the story's owner or the project's owner ([ADR-0097](../adrs/0097-permission-prompt-takes-an-answer-from-the-story-s-owner-or-the-project-s-owner.md)). Unanswered, it refuses the write and leaves the thread open, and takes the answer when the same write is made again ([ADR-0124](../adrs/0124-permission-prompt-holds-a-write-at-most-four-minutes-then-refuses-it-and-leaves.md)). The four-minute bound exists because of Claude Code's idle timeout on an MCP call.
 
-The answer's owner is read from the thread entry's author, which is whatever the command that wrote it says: `--by`, else `FLAI_AGENT`, else the config's author. So `flai guard` refuses a story's agent, the planner, and the analyzer a `Bash` call whose `--by` or `--placed-by` names another, or that sets `FLAI_AGENT` or `FLAI_SESSION` to anything but its own or unsets either ([ADR-0143](../adrs/0143-flai-guard-refuses-a-story-s-agent-the-planner-and-the-analyzer-a-call-that.md)). A story's agent cannot answer its own permission thread as the owner.
+The answer's owner is read from the thread entry's author, which is whatever the command that wrote it says: `--by`, else `FLAI_AGENT`, else the config's author. So `flai guard` refuses a story's agent, the planner, the analyzer, and the curator a `Bash` call whose `--by` or `--placed-by` names another, or that sets `FLAI_AGENT` or `FLAI_SESSION` to anything but its own or unsets either ([ADR-0143](../adrs/0143-flai-guard-refuses-a-story-s-agent-the-planner-and-the-analyzer-a-call-that.md)). A story's agent cannot answer its own permission thread as the owner.
 
 Because a Claude Code release once changed what it accepts from the tool, `flai serve` checks each `claude` version it has not seen (`flai/internal/serve/claudecheck.go`): it reads `claude --version`, and when the version has no record in `claude-checks.json` beside its configuration, it builds a scratch project with one story in progress and auto-approve on, runs one headless `claude -p` on the model `haiku` with the adapter's own permission arguments, asks it to `Write` `.claude/flai-check.md`, and records `passed` or `failed` with Claude Code's output. Since S-0360 it runs through the provider the project's default agent names, with the environment and key a start of that agent gets, and records each version per provider, `anthropic` for none; a provider whose key's variable is unset is skipped with a log line and no thread. A failure opens a thread on `system-flow.yaml` of every served project whose agents run `claude-code` and whose default agent names the provider the check ran through.
 
@@ -78,11 +78,11 @@ Neutral already: the decision itself, which files may be written, by whom, after
 | Hook | Matcher | Runs when | Does |
 |------|---------|-----------|------|
 | `PreToolUse` | `Bash\|mcp__flai__.*` | Every session | Refuses with exit 2 and the reason on standard error; exit 0 passes |
-| `PreToolUse` | `Edit\|MultiEdit\|Write\|NotebookEdit` | `FLAI_ROLE` is `plan`, `orchestrate`, or `analyze`, or `FLAI_STORY` is set | The same |
+| `PreToolUse` | `Edit\|MultiEdit\|Write\|NotebookEdit` | `FLAI_ROLE` is `plan`, `orchestrate`, `analyze`, or `curate`, or `FLAI_STORY` is set | The same |
 | `SubagentStart` | none | `FLAI_STORY` is set | Records the sub-agent; prints nothing, exit 0 |
 | `SubagentStop` | none | `FLAI_STORY` is set | Removes it; prints nothing, exit 0 |
 
-The hook's input is Claude Code's hook JSON on standard input, read by `Event` in `flai/internal/guard/guard.go`: `hook_event_name`, `session_id`, `tool_name`, `tool_input`, `agent_id`, and `agent_type`. From `tool_input` it reads `command` for `Bash`, `file_path` and `notebook_path` for the file tools, and the fields of flai's own MCP tools, `id`, `to`, `type`, `draft`, `commit`, `recommendation`, `source`, and `cost_of_delay`. A sub-agent is recognised by one thing: `agent_id` is not empty. The story's agent, the planner, the orchestrator, and the analyzer are told apart by `FLAI_STORY` and `FLAI_ROLE` in the environment, which `flai serve` set.
+The hook's input is Claude Code's hook JSON on standard input, read by `Event` in `flai/internal/guard/guard.go`: `hook_event_name`, `session_id`, `tool_name`, `tool_input`, `agent_id`, and `agent_type`. From `tool_input` it reads `command` for `Bash`, `file_path` and `notebook_path` for the file tools, and the fields of flai's own MCP tools, `id`, `to`, `type`, `draft`, `commit`, `recommendation`, `source`, and `cost_of_delay`. A sub-agent is recognised by one thing: `agent_id` is not empty. The story's agent, the planner, the orchestrator, the analyzer, and the curator are told apart by `FLAI_STORY` and `FLAI_ROLE` in the environment, which `flai serve` set.
 
 What it keys on is Claude Code's tool vocabulary: `Bash`, `Edit`, `MultiEdit`, `Write`, `NotebookEdit`, and the MCP tool names under `MCPPrefix`, `mcp__flai__`. Within a `Bash` command it splits the shell line and judges each `git` and `flai` command by name. It refuses a sub-agent every flai MCP tool but the reads (`board`, `doc_get`, `doc_search`, `item_get`, `prime`, `thread_get`, `who_touches`, and a few more), every `git` and `flai` command that writes, a read-only sub-agent's shell command that writes a file outside the temporary folder ([ADR-0141](../adrs/0141-flai-guard-refuses-a-read-only-sub-agent-a-shell-command-that-writes-a-file.md)), and, while `auto-approve` is off, any write to a file under a `.claude/` folder ([ADR-0102](../adrs/0102-while-auto-approve-is-off-flai-guard-refuses-a-story-s-sub-agent-a-write-to-a.md)). It holds a strategic agent's own calls to its role's permissions. It records each session's running sub-agents in `.flai-cache/guard/<session_id>.json` from the `SubagentStart` and `SubagentStop` hooks and refuses the story agent's `wait_for_events` while one runs and no thread is open ([ADR-0092](../adrs/0092-a-story-s-agent-waits-for-a-sub-agent-by-launching-it-in-the-foreground-and.md)). It fails open: input it cannot read passes.
 
@@ -90,7 +90,7 @@ Neutral already: the policy, which caller may call which flai tool or command, a
 
 ### Sub-agents and strategic agents
 
-The template ships five agent definitions in `template/root/.claude/agents/`, copied to this repository's `.claude/agents/`, each a markdown file with Claude Code's sub-agent front matter, `name`, `description`, `tools`, and `model`, and the prompt as its body:
+The template ships six agent definitions in `template/root/.claude/agents/`, copied to this repository's `.claude/agents/`, each a markdown file with Claude Code's sub-agent front matter, `name`, `description`, `tools`, and `model`, and the prompt as its body:
 
 | Definition | Role | Tools | Model | Decided in |
 |------------|------|-------|-------|------------|
@@ -99,6 +99,7 @@ The template ships five agent definitions in `template/root/.claude/agents/`, co
 | `planner.md` | `plan`: plans one epic or story | Reads, `Bash`, `Agent`, and the item and thread tools | `inherit` | [ADR-0075](../adrs/0075-the-planner-the-orchestrator-and-the-analyzer-prime-by-role-plan-orchestrate-or.md), [ADR-0082](../adrs/0082-flai-serve-starts-the-planner-for-an-epic-or-a-story-behind-the-plan-host.md) |
 | `orchestrator.md` | `orchestrate`: keeps the work moving | Reads, `Bash`, `Agent`, and the orchestration tools | `inherit` | ADR-0075, [ADR-0087](../adrs/0087-flai-serve-runs-one-orchestrator-per-project-behind-the-orchestrate-host-action.md) |
 | `analyzer.md` | `analyze`: writes one report under `design/analysis/` | Reads, `Edit`, `Write`, `Bash`, `Agent`, and the thread and issue tools | `inherit` | ADR-0075, [ADR-0099](../adrs/0099-the-analyzer-runs-behind-the-analyze-host-action-and-writes-one-report-under.md) |
+| `curator.md` | `curate`: keeps the digest through `flai digest new` and `edit` | Reads, `Bash`, `Agent`, and the thread tools | `inherit` | ADR-0075, [ADR-0196](../adrs/0196-the-curator-runs-behind-the-curate-host-action-and-takes-in-what-the-archive.md) |
 
 The `tools` list is an allowlist in Claude Code's vocabulary, built-in names and `mcp__flai__*` names, and the `model` is a Claude Code alias (`haiku`, `sonnet`) or `inherit`. The explorer and verifier run as Claude Code sub-agents inside the story's session, started by the Agent tool; `flai serve` passes their definitions as `--agents` with the story's role model laid over them (ADR-0065). The three strategic agents are sessions of their own that `flai serve` starts with `--agent planner`, `--agent orchestrator`, or `--agent analyzer`, so the definition is the source of their tools and instructions (`claudeCodeStrategic` in `flai/internal/harness/adapters.go`).
 
@@ -370,7 +371,7 @@ Where each piece belongs follows how `Host` works today: the story names, the ho
 | Level | Holds | Why |
 |-------|-------|-----|
 | Host, `~/.flai/config.json` | `agent.harnesses.<name>.program` and `.args` (today); `agent.providers.<name>` with `api`, `base_url`, `key_env`, `models` (new), set with `flai serve agent provider <name>` and `settings.provider` | What runs on this host and where its network goes are the operator's; whoever edits a story in the dashboard must not choose them |
-| Manifest, `system-flow.yaml` | `agent.harness`, `agent.provider`, `agent.model`, `agent.config`, `agent.roles`; the same under `planning`, `orchestration`, `analysis` | The project's default, copied into stories ([ADR-0037](../adrs/0037-a-story-carries-its-agent-copied-from-the-project-s-default-when-it-is-made.md)) |
+| Manifest, `system-flow.yaml` | `agent.harness`, `agent.provider`, `agent.model`, `agent.config`, `agent.roles`; the same under `planning`, `orchestration`, `analysis`, `digest` | The project's default, copied into stories ([ADR-0037](../adrs/0037-a-story-carries-its-agent-copied-from-the-project-s-default-when-it-is-made.md)) |
 | Story front matter | The same fields | The story's own; changing it restarts a ready story's agent |
 
 An alternative is a `providers` map in the manifest, committed, so a clone carries it. Base URLs are host-bound (`127.0.0.1:4000`) and so is the key's variable name, which is why the host is recommended; a manifest entry would be a default the host overrides, as `agent.harnesses` has no manifest half today. **To decide** by the operator.
@@ -420,7 +421,7 @@ type Call struct {
     Session  string
     Subagent bool              // a sub-agent's call, not the session's own agent's
     ReadOnly bool              // a sub-agent granted neither Edit nor Write
-    Role     string            // FLAI_ROLE: plan, orchestrate, analyze, or empty
+    Role     string            // FLAI_ROLE: plan, orchestrate, analyze, curate, or empty
     Kind     CallKind          // Shell, FileWrite, FlaiTool
     Command  string            // Shell: the line, split and judged as today
     Path     string            // FileWrite
@@ -532,7 +533,7 @@ Recommended: tokens and attribution from the harness's reader; cost from the gat
 
 | Option | Host | Manifest and story | Also |
 |--------|------|--------------------|------|
-| All | `agent.providers.<name>.api`, `.base_url`, `.key_env`, `.models.<alias>`; `agent.harnesses.<name>.guard` | `agent.provider`, and under `planning`, `orchestration`, `analysis` | `settings.provider` in the host API; the Settings page |
+| All | `agent.providers.<name>.api`, `.base_url`, `.key_env`, `.models.<alias>`; `agent.harnesses.<name>.guard` | `agent.provider`, and under `planning`, `orchestration`, `analysis`, `digest` | `settings.provider` in the host API; the Settings page |
 | A, Claude Code over a gateway | None more | `fallback_model` and role models as provider names | |
 | B, Codex | `agent.harnesses.codex.program` (default `codex`), `.args` (default sandbox and approval policy) | `config` keys the adapter takes, such as `reasoning_effort` | `.codex/hooks.json` in the template |
 | C, OpenCode | `agent.harnesses.opencode.program`, `.args` | `config` keys | `.opencode/plugins/flai-guard.js` in the template |

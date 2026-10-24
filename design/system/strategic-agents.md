@@ -1,20 +1,20 @@
 ---
 title: Strategic agents
-updated: 2026-10-23
+updated: 2026-10-24
 status: active
 topics: [planning, orchestration, analysis]
 ---
 
 # Strategic agents
 
-The planner, the orchestrator, and the analyzer are agents that work above a story (E-0016). What each does and never does is the convention [strategic-agents.md](../conventions/strategic-agents.md). This document is how flai runs them. The planner runs when the operator asks for it and, behind the `plan` host action, on its own. The orchestrator runs, one per project, for as long as the `orchestrate` host action is on. The analyzer runs, one per project at a time, behind the `analyze` host action, when the operator asks for it and on a schedule, and writes one report under `design/analysis/`.
+The planner, the orchestrator, the analyzer, and the curator are agents that work above a story (E-0016). What each does and never does is the convention [strategic-agents.md](../conventions/strategic-agents.md). This document is how flai runs them. The planner runs when the operator asks for it and, behind the `plan` host action, on its own. The orchestrator runs, one per project, for as long as the `orchestrate` host action is on. The analyzer runs, one per project at a time, behind the `analyze` host action, when the operator asks for it and on a schedule, and writes one report under `design/analysis/`. The curator runs, one per project at a time, behind the `curate` host action, when the operator asks for it, and keeps the digest through `flai digest` alone.
 
-| Part | Planner | Orchestrator | Analyzer |
-|------|---------|--------------|----------|
-| Pack: `flai prime --role` ([ADR-0075](../adrs/0075-the-planner-the-orchestrator-and-the-analyzer-prime-by-role-plan-orchestrate-or.md)) | `plan`, with `--epic` or `--story` | `orchestrate` | `analyze` |
-| Activity document ([ADR-0079](../adrs/0079-the-planner-the-orchestrator-and-the-analyzer-each-log-their-activities-in-one.md)) | `wip/agents/planner.md` | `wip/agents/orchestrator.md` | `wip/agents/analyzer.md` |
-| Host action | `plan` | `orchestrate` | `analyze` |
-| Started by `flai serve` | on the operator's word ([ADR-0082](../adrs/0082-flai-serve-starts-the-planner-for-an-epic-or-a-story-behind-the-plan-host.md)), on the orchestrator's for an epic behind `plan_backlog_epics` (S-0219) and for a backlog story behind `plan_backlog_stories` ([ADR-0119](../adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md)), and on its own behind `plan` ([ADR-0084](../adrs/0084-flai-serve-plans-again-on-its-own-behind-the-plan-host-action-on-an-edit-when.md), [Planning again](#planning-again)) | while `orchestrate` is on, one per project, started again when it ends ([ADR-0087](../adrs/0087-flai-serve-runs-one-orchestrator-per-project-behind-the-orchestrate-host-action.md), [The orchestrator](#the-orchestrator)) | on the operator's word, and on `analysis.schedule` while `analyze` is on, one per project at a time ([ADR-0099](../adrs/0099-the-analyzer-runs-behind-the-analyze-host-action-and-writes-one-report-under.md), [The analyzer](#the-analyzer)) |
+| Part | Planner | Orchestrator | Analyzer | Curator |
+|------|---------|--------------|----------|---------|
+| Pack: `flai prime --role` ([ADR-0075](../adrs/0075-the-planner-the-orchestrator-and-the-analyzer-prime-by-role-plan-orchestrate-or.md)) | `plan`, with `--epic` or `--story` | `orchestrate` | `analyze` | `curate` |
+| Activity document ([ADR-0079](../adrs/0079-the-planner-the-orchestrator-and-the-analyzer-each-log-their-activities-in-one.md)) | `wip/agents/planner.md` | `wip/agents/orchestrator.md` | `wip/agents/analyzer.md` | `wip/agents/curator.md` |
+| Host action | `plan` | `orchestrate` | `analyze` | `curate` |
+| Started by `flai serve` | on the operator's word ([ADR-0082](../adrs/0082-flai-serve-starts-the-planner-for-an-epic-or-a-story-behind-the-plan-host.md)), on the orchestrator's for an epic behind `plan_backlog_epics` (S-0219) and for a backlog story behind `plan_backlog_stories` ([ADR-0119](../adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md)), and on its own behind `plan` ([ADR-0084](../adrs/0084-flai-serve-plans-again-on-its-own-behind-the-plan-host-action-on-an-edit-when.md), [Planning again](#planning-again)) | while `orchestrate` is on, one per project, started again when it ends ([ADR-0087](../adrs/0087-flai-serve-runs-one-orchestrator-per-project-behind-the-orchestrate-host-action.md), [The orchestrator](#the-orchestrator)) | on the operator's word, and on `analysis.schedule` while `analyze` is on, one per project at a time ([ADR-0099](../adrs/0099-the-analyzer-runs-behind-the-analyze-host-action-and-writes-one-report-under.md), [The analyzer](#the-analyzer)) | on the operator's word while `curate` is on, one per project at a time ([ADR-0196](../adrs/0196-the-curator-runs-behind-the-curate-host-action-and-takes-in-what-the-archive.md), [The curator](#the-curator)) |
 
 ## The planner
 
@@ -40,7 +40,7 @@ Each needs the host action `plan` on for the project: `flai serve enable plan`, 
 - while a planner runs for the item: one item has one planner at a time;
 - when the planner's agent names no harness and no command is set on the host.
 
-The MCP tool `plan` also refuses an agent `flai serve` started (`FLAI_STARTED_BY=flai-serve`): planning is the operator's to ask for. The orchestrator is the one exception: it may ask for an epic `flai plan --candidates` lists while the operator gives it `plan_backlog_epics`, and for a story it lists while the operator gives it `plan_backlog_stories` ([What it does with each permission](#what-it-does-with-each-permission-s-0219), [ADR-0119](../adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md)). `flai guard` refuses the tool to a sub-agent, to the planner, and to the analyzer.
+The MCP tool `plan` also refuses an agent `flai serve` started (`FLAI_STARTED_BY=flai-serve`): planning is the operator's to ask for. The orchestrator is the one exception: it may ask for an epic `flai plan --candidates` lists while the operator gives it `plan_backlog_epics`, and for a story it lists while the operator gives it `plan_backlog_stories` ([What it does with each permission](#what-it-does-with-each-permission-s-0219), [ADR-0119](../adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md)). `flai guard` refuses the tool to a sub-agent, to the planner, to the analyzer, and to the curator.
 
 ### Its agent
 
@@ -177,7 +177,7 @@ Each refusal names the rule broken and says to ask the operator on the item, or 
 
 The planner writes as itself alone ([ADR-0143](../adrs/0143-flai-guard-refuses-a-story-s-agent-the-planner-and-the-analyzer-a-call-that.md)). The guard refuses it a flai command whose `--by` or `--placed-by` names another, and any assignment of `FLAI_AGENT` or `FLAI_SESSION` other than its own, or `unset` of either, anywhere on the command line. Its own name is the hook's `FLAI_AGENT`, or `planner-<item>` from `FLAI_ITEM`; its own session is the hook's `FLAI_SESSION`. The orchestrator keeps its own `--by` rule ([Its permissions and the guard](#its-permissions-and-the-guard)).
 
-Claude Code runs a hook only for the tools its matcher names. `.claude/settings.json` has two `PreToolUse` entries: `Bash|mcp__flai__.*` runs the guard in every session; `Edit|MultiEdit|Write|NotebookEdit` runs it only when `FLAI_ROLE` is `plan`, `orchestrate` (S-0218, [Its permissions and the guard](#its-permissions-and-the-guard)), or `analyze` (S-0223, [The analyzer's guard](#the-analyzers-guard)), or when `FLAI_STORY` is set, so that a story's sub-agents write no file in a `.claude/` folder (S-0299, [ADR-0102](../adrs/0102-while-auto-approve-is-off-flai-guard-refuses-a-story-s-sub-agent-a-write-to-a.md)), and exits at once in the operator's own session. The template's file runs the installed `flai guard`; this repository's runs `scripts/flai.sh guard`.
+Claude Code runs a hook only for the tools its matcher names. `.claude/settings.json` has two `PreToolUse` entries: `Bash|mcp__flai__.*` runs the guard in every session; `Edit|MultiEdit|Write|NotebookEdit` runs it only when `FLAI_ROLE` is `plan`, `orchestrate` (S-0218, [Its permissions and the guard](#its-permissions-and-the-guard)), `analyze` (S-0223, [The analyzer's guard](#the-analyzers-guard)), or `curate` (S-0431, [The curator's guard](#the-curators-guard)), or when `FLAI_STORY` is set, so that a story's sub-agents write no file in a `.claude/` folder (S-0299, [ADR-0102](../adrs/0102-while-auto-approve-is-off-flai-guard-refuses-a-story-s-sub-agent-a-write-to-a.md)), and exits at once in the operator's own session. The template's file runs the installed `flai guard`; this repository's runs `scripts/flai.sh guard`.
 
 ### Checked creation
 
@@ -512,7 +512,7 @@ Thread calls are held by who opened the thread as well (S-0220). On a thread it 
 
 Each refusal of the orchestrator's own call is appended to `wip/agents/orchestrator.md` under `## Refusals`, after `## Log`, by `Repo.AppendRefusal`: a heading with the time to the second, `- Call:` with the call refused in one code span, and `- Needs:` with the permission, or `none`. A refusal has no seconds or cost and adds nothing to the document's totals. A refusal that cannot be logged is warned of and refused all the same. Each writer of an activity document takes a lock per activity kind in `.flai-cache`, so that flai serve logging a run and the guard logging a refusal at the same time do not lose each other's entry. The lock is an operating-system lock on the file, freed when the writer exits, so no lock is left behind and none is broken for its age (I-0140).
 
-`.claude/settings.json` runs the guard on `Edit|MultiEdit|Write|NotebookEdit` when `FLAI_ROLE` is `plan`, `orchestrate`, or `analyze` ([The guard](#the-guard)).
+`.claude/settings.json` runs the guard on `Edit|MultiEdit|Write|NotebookEdit` when `FLAI_ROLE` is `plan`, `orchestrate`, `analyze`, or `curate` ([The guard](#the-guard)).
 
 ### The run and how it ends
 
@@ -532,7 +532,7 @@ It then logs the run's activity since the last entry in `wip/agents/orchestrator
 
 Each orchestrator activity is charged to the work items its entry names, when it is logged, through `activity_log`, through `thread_reply`'s own entry, or as the run ends ([ADR-0095](../adrs/0095-an-orchestrator-activity-s-usage-is-charged-evenly-to-the-work-items-it-named.md)). The usage apportioned to its span, the same share its entry's cost is, as for the planner ([The run and how it ended](#the-run-and-how-it-ended)), is split evenly between the epics, stories, and tasks it names that exist, archived ones included, each once; a thread, an issue, or anything else named takes no share. Tokens and seconds are split in whole numbers, the remainder to the first items named, and cost by the count, so that the shares add up to the entry. Each share goes under the `orchestrator` entry of `usage.strategic` on its item and on every item above it, up to its epic, at once ([work-hierarchy.md](work-hierarchy.md)). A charge that fails leaves the entry logged and is warned of.
 
-An activity that names no work item charges no item: its cost is the orchestrator's project strategic total. That total, for every kind, is what the kind's activity document accrued that no item or issue carries: its `accrued_cost` and `accrued_seconds` less that kind's `strategic` figures on the items with no parent, which carry every charge made below them, and on the issues no story was made from. It is worked out by `flai stats`, which reports it per kind beside what the items and the issues carry ([metrics.md](metrics.md#strategic-agents-s-0206)), not written anywhere, so that the three always add up to the document. It also holds the planner's activities with no planned item, those logged before S-0225, and the analyzer's that named no issue ([What the analyzer's run costs](#what-the-analyzers-run-costs-s-0227)).
+An activity that names no work item charges no item: its cost is the orchestrator's project strategic total. That total, for every kind, is what the kind's activity document accrued that no item or issue carries: its `accrued_cost` and `accrued_seconds` less that kind's `strategic` figures on the items with no parent, which carry every charge made below them, and on the issues no story was made from. It is worked out by `flai stats`, which reports it per kind beside what the items and the issues carry ([metrics.md](metrics.md#strategic-agents-s-0206)), not written anywhere, so that the three always add up to the document. It also holds the planner's activities with no planned item, those logged before S-0225, the analyzer's that named no issue ([What the analyzer's run costs](#what-the-analyzers-run-costs-s-0227)), and every curator activity ([What the curator's run costs](#what-the-curators-run-costs)).
 
 Every start, end, failure, and stop is a journal entry with action `orchestrate` and method `serve.orchestrate`. `agent.status` carries the run as `orchestrator`, null before the first, with `held` while the operator holds it, and up to 20 earlier runs as `past_orchestrators`; `agent.stream` with `role: orchestrate`, or `orchestrator: true` as before S-0228, reads its log as it reads a story's agent's (`RoleStream`). When the run starts, cannot start, or ends, `flai serve` tells the dashboard with an `agent` notification that carries the project and `role: orchestrate`; a hold or a start made in a process of its own is told at the next look.
 
@@ -675,3 +675,87 @@ When the issue step makes a story from an issue, the story carries the issue's s
 ### The analyzer on the dashboard
 
 The documents page lists the reports under `design/analysis/` beside the folder's README and shows each as it shows any design document ([flaiover-dashboard.md](flaiover-dashboard.md)). The Settings page lists the `analyze` action with the others, to turn on and off while `settings` is on. The Analyzer page (`/workflow/analyzer`) shows the action's state; the run under way with its focus and its stream, which `agent.stream` reads with `role: analyze`; its activity log, each entry linking the report it wrote; and its runs, the newest and up to 20 before it (`past_analyzers`), with their focus, report, cost, and outcome. **Run** with a focus, or with none for all three, is `analyze.run` (S-0228). Below them is its settings panel (S-0229), `analysis.agent` and `analysis.schedule`, written through `flai manifest set` while `settings` is on.
+
+## The curator
+
+The curator keeps the digest: it takes in what the archive and the threads gained since its last run as digest entries, and ends (S-0431, [ADR-0196](../adrs/0196-the-curator-runs-behind-the-curate-host-action-and-takes-in-what-the-archive.md)). The digest is one fact per file under `design/digest/` ([ADR-0191](../adrs/0191-the-digest-is-one-markdown-file-per-entry-under-the-design-folder-s-digest.md)), and a story's pack loads the entries its topics or claim select ([agent-context.md](agent-context.md)). `flai digest seed` writes an entry for each raw candidate. The curator judges instead: it writes an entry for a fact the digest lacks, merges a candidate into the entry that holds its fact, and records a thread that asked again what an entry answered. It writes through `flai digest new` and `edit` alone, edits no file, and authors no work items.
+
+### Starting a curation
+
+| Way | For | What it runs |
+|-----|-----|--------------|
+| `flai curate [--since <day or time>] [--json]` | a shell on the host | `serve.Curate` |
+| The host API's `curate.run` `{since?}` | a dashboard | `flai curate [--since=<since>] --json`; a since in neither form is refused before anything runs |
+| The MCP tool `curate` `{since?}` | the operator's own agent | `serve.Curate`, as `flai curate` does; journalled as `mcp.curate` with the agent that asked |
+
+A since is a `YYYY-MM-DD` day in UTC or an RFC 3339 time. Each way needs the host action `curate` on for the project: `flai serve enable curate`, or the dashboard's Settings page while `settings` is on. It is off by default. A holder of the dashboard token can then start the curator whenever none runs. Nothing starts it on a schedule yet. `flai curate` starts the run itself, as `flai analyze` does, and hands the process over: the command does not wait, and the serving flai settles the run. With no `flai serve` running it says so on standard error, and the curator still runs.
+
+`serve.Curate` (`curateCheck`) refuses, saying why:
+
+- while the `curate` action is off for the project;
+- a since that is neither a `YYYY-MM-DD` day nor an RFC 3339 time;
+- while a curator runs for the project, naming its since, what started it, its PID, when it started, and its log: one curator runs per project at a time;
+- when the curator's agent names no harness and no command is set on the host.
+
+The MCP tool `curate` also refuses an agent `flai serve` started (`FLAI_STARTED_BY=flai-serve`): a curation is the operator's to ask for. `flai guard` refuses the tool and `flai curate` to a sub-agent and to the curator, and the analyzer's guard refuses them as it refuses every tool and command it does not name.
+
+### The curator's agent
+
+`digest.agent` in `system-flow.yaml`, merged over the project's `agent` as `analysis.agent` is (`Manifest.DigestAgent`), gives the curator's harness, model, config, and roles. With neither set, the host's command starts it. `flai check` reports a `digest.agent` that is not valid as `manifest.digest`. See [project-manifest.md](project-manifest.md).
+
+### How the curator runs
+
+The launcher's `curate` starts it through the harness adapter with a `harness.Request` whose `Role` is `curate` and whose `Since` is the run's since, with no `Item` and no `Story`. The since is the one it was started with; else the time of the newest entry in `wip/agents/curator.md`, in UTC (`lastCurated`); else none, on its first run, which takes in everything.
+
+- **Where.** In the project's main checkout. No branch, no worktree. Its entries are left there uncommitted.
+- **As whom.** `FLAI_AGENT` is `curator`. The environment carries `FLAI_ROLE=curate`, `FLAI_SESSION`, and `FLAI_STARTED_BY=flai-serve`, and no `FLAI_ITEM` or `FLAI_STORY`. `roleEnv` refuses a curator request that names a story or an item, or a since in neither form, and a since given to any other agent.
+- **claude-code.** The session is named `<key> curate`. It runs with `--agent curator` over the project's `.claude/agents/curator.md`, passed in `--agents` with the curator's agent's model when it names one. A project with no `curator.md` is refused, naming `flai upgrade`. Its permission handler is flai's `permission_prompt`, as for every session `flai serve` starts.
+- **The operator's command.** It gets `FLAI_ROLE`, and `FLAI_SINCE` when the run has a since, since a command has no prompt to be told it in. `{story}` is empty.
+
+### What the curator is told
+
+`harness.Prompt` gives the curator a prompt of its own (`curatePrompt`): keep the digest and do nothing else, as the convention's section "As the curator" says; prime with `--role curate`; call `inbox`. Its pack's topics are `digest` and `planning`. List the candidates with `flai digest harvest --json --since` the run's since, or with no `--since` on its first run. Read the digest with `flai digest list --json`, and an entry whole with `flai digest show`, before writing.
+
+For each candidate, decide what fact it holds. When no entry holds it, write one with `flai digest new`, with its kind, its sources, the topics and paths it bears on, and a short body that links its sources. When an entry holds it, merge the candidate into that entry with `flai digest edit`. When a thread asked what an entry answered, add it to that entry's `asked_again`. Each list flag of `flai digest edit` replaces its list, so the curator gives the entry's own with what it adds. A body goes on standard input with `--body-file -`, since the curator cannot write a file. Never write a secret's value, only where the operator said it lives: `flai digest` refuses text with the shape of a key or token. Edit nothing else, and never work around a refusal. When an entry needs the operator's judgement, ask with `thread_open` on the item the candidate comes from, the recommended answer first, curate what needs no answer meanwhile, and hold `wait_for_events` until it is answered. End with a one-line summary that names the entries written and merged, or says that nothing was found to take in.
+
+`curator.md`, which the template ships, says the same in short and lists its tools: `Read`, `Grep`, `Glob`, `Bash`, `Agent`, and flai's MCP tools `prime`, `inbox`, `board`, `item_get`, `doc_get`, `doc_search`, `thread_get`, `who_touches`, `activity_log`, `thread_open`, `thread_reply`, and `wait_for_events`. It lists no `Edit`, `Write`, or `NotebookEdit`, and no tool that writes a work item.
+
+### The curator's guard
+
+With `FLAI_ROLE=curate`, `Guard.curate` checks the session's own calls:
+
+| Kind | Passes | Refused |
+|------|--------|---------|
+| File tools | nothing | `Edit`, `MultiEdit`, `Write`, and `NotebookEdit` on every file |
+| flai MCP tools | the reads a sub-agent has; `inbox`, `activity_log`, `thread_open`, `thread_reply`, and `wait_for_events` (`guard.MCPCurates`) | every other tool, `item_new`, `item_edit`, `item_move`, `issue_new`, `issue_bump`, `curate`, `analyze`, `plan`, and `release_publish` among them |
+| flai commands | the reads, `digest list` and `show` among them; `digest harvest`, `new`, and `edit` (`cliCurates`) | `digest seed`, which writes an entry for every candidate without judging it; every other command that writes |
+| git | the reads a sub-agent has | every other git command |
+
+Each refusal says that the curator writes digest entries only with `flai digest new` and `edit`, edits no file, and authors no work item, and to ask the operator with `thread_open` when an entry needs their judgement. Other shell commands pass, as a sub-agent's do (ADR-0060), so a file written through the shell is not seen. The curator's sub-agents, the explorer among them, are held as every sub-agent is.
+
+The curator writes as itself alone, as the analyzer does ([ADR-0143](../adrs/0143-flai-guard-refuses-a-story-s-agent-the-planner-and-the-analyzer-a-call-that.md)). Its own name is the hook's `FLAI_AGENT`, or `curator`.
+
+`.claude/settings.json` runs the guard on `Edit|MultiEdit|Write|NotebookEdit` when `FLAI_ROLE` is `curate`, as for the other three roles ([The guard](#the-guard)). A project that keeps its old settings has a curator whose file edits the guard does not see; its definition lists no tool to make one.
+
+### The curator's run and how it ended
+
+The run is recorded in `serve/agents.json` under `curator`, the project's newest run alone, with no past runs kept. It has the fields a story's run has, neither `story` nor `item`, and `role` (`curate`, so that it is never taken for the orchestrator's run), `since` (empty on its first run), `trigger` (`asked`), and, once it has ended, `entries`. `Running` and `Last` never name it, the in-progress limit does not count it, and it holds no story back. Its output is in `serve/agents/<key>-curator-<start>.log`, beside the other agents' logs.
+
+When the process ends, or the next look finds it gone, flai serve settles the run (`curateEnded`). Its entries are the IDs of the entry files directly in the digest folder, `D-nnnn-<slug>.md` and the README aside, changed no earlier than the second the run started, in number order (`changedEntries`).
+
+| Outcome | When |
+|---------|------|
+| `failed` | it exited with a code other than 0, or could not be started |
+| `worked` | otherwise, whether it wrote or merged an entry or found nothing to take in, and whether its exit was seen or not |
+
+It then logs the run's activity in `wip/agents/curator.md`: the time since the last entry, the seconds and cost measured from the log, the run's trigger as the entry's `- Trigger:` line, the first line of the run's final reply as the summary, and the entries as its items. Entries that cannot be looked for are warned of, and the activity names none.
+
+Every start and failure to start is a journal entry with action `curate` and method `serve.curate`; `curate.run` and the MCP tool `curate` are journalled as well, under the same action. `agent.status` carries the run as `curator`, null before the first. When the run starts, cannot start, or ends, `flai serve` tells the dashboard with an `agent` notification that carries the project and `role: curate`.
+
+### What the curator's run costs
+
+A curator activity charges no item: digest entries are not work items. Its cost stays in the curator's project strategic total, which `flai stats` reports per kind as it reports the analyzer's ([What it costs on the items](#what-it-costs-on-the-items-s-0226), [metrics.md](metrics.md#strategic-agents-s-0206)).
+
+### The curator on the dashboard
+
+The Settings page lists the `curate` action with the others, to turn on and off while `settings` is on. A dashboard starts the curator with `curate.run`. No page shows the curator's runs yet.

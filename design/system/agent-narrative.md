@@ -1,6 +1,6 @@
 ---
 title: Agent narrative
-updated: 2026-10-23
+updated: 2026-10-24
 status: active
 topics: [all]
 ---
@@ -18,7 +18,8 @@ wip/agents/
 ├── S-0004.md         # one narrative per active story, named by story ID
 ├── planner.md        # the planner's activity document, written by flai
 ├── orchestrator.md   # the orchestrator's activity document, written by flai
-└── analyzer.md       # the analyzer's activity document, written by flai
+├── analyzer.md       # the analyzer's activity document, written by flai
+└── curator.md        # the curator's activity document, written by flai
 ```
 
 A work stream is a story. Tasks report into their story's narrative through the `stream` key. Epics have no narrative; their story narratives are enough.
@@ -70,7 +71,7 @@ An agent writes `## Current state` and `## Next steps` with `flai stream state S
 
 ## Strategic agents' activity documents
 
-The planner, the orchestrator, and the analyzer work above a story and keep no narrative. Each has one activity document per project instead: `planner.md`, `orchestrator.md`, and `analyzer.md` ([ADR-0079](../adrs/0079-the-planner-the-orchestrator-and-the-analyzer-each-log-their-activities-in-one.md)). flai writes them; no agent edits them by hand. A document exists once its agent has logged its first activity.
+The planner, the orchestrator, the analyzer, and the curator work above a story and keep no narrative. Each has one activity document per project instead: `planner.md`, `orchestrator.md`, `analyzer.md`, and `curator.md` ([ADR-0079](../adrs/0079-the-planner-the-orchestrator-and-the-analyzer-each-log-their-activities-in-one.md), [ADR-0196](../adrs/0196-the-curator-runs-behind-the-curate-host-action-and-takes-in-what-the-archive.md)). flai writes them; no agent edits them by hand. A document exists once its agent has logged its first activity.
 
 ```markdown
 ---
@@ -98,7 +99,7 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 
 | Front matter | Meaning |
 |--------------|---------|
-| `kind` | `planner`, `orchestrator`, or `analyzer`; the file's name |
+| `kind` | `planner`, `orchestrator`, `analyzer`, or `curator`; the file's name |
 | `accrued_cost` | Sum of the entries' cost, in US dollars |
 | `accrued_seconds` | Sum of the entries' wall-clock seconds |
 | `tasks_completed` | Number of activities logged |
@@ -106,7 +107,7 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 
 The front matter holds these five keys and no others; it is parsed strictly, so an unknown key is an error.
 
-Each log entry is one activity. Its heading is when the activity ended; a second entry ending in the same second gets `(2)` after the time, so no two headings are the same. The summary is one line the agent gives. `Trigger` is one line saying what started the run, written for a planner run `flai serve` started: `asked` when the operator asked for it, otherwise the replanner's triggers, separated by semicolons ([ADR-0084](../adrs/0084-flai-serve-plans-again-on-its-own-behind-the-plan-host-action-on-an-edit-when.md)). It is absent from older entries and from those an agent logs with `activity_log`. `Items` lists the items the activity touched, or `none`. `Cost` has four decimals and is marked `estimated` when it was apportioned or priced rather than reported. Appending an entry adds its cost and seconds to the totals, counts it, and moves `last_run` to its end when that is later.
+Each log entry is one activity. Its heading is when the activity ended; a second entry ending in the same second gets `(2)` after the time, so no two headings are the same. The summary is one line the agent gives. `Trigger` is one line saying what started the run, written for a planner run `flai serve` started: `asked` when the operator asked for it, otherwise the replanner's triggers, separated by semicolons ([ADR-0084](../adrs/0084-flai-serve-plans-again-on-its-own-behind-the-plan-host-action-on-an-edit-when.md)), and for an analyzer's or a curator's run, what started it. It is absent from older entries and from those an agent logs with `activity_log`. `Items` lists the items the activity touched, or `none`; a curator's lists the digest entries its run wrote or changed. `Cost` has four decimals and is marked `estimated` when it was apportioned or priced rather than reported. Appending an entry adds its cost and seconds to the totals, counts it, and moves `last_run` to its end when that is later.
 
 An activity ends in one of two ways. An agent whose run spans activities, as the orchestrator's does, reports each with the MCP tool `activity_log`, giving its kind, summary, and items; flai measures it and writes the entry. When a strategic run ends, `flai serve` logs the time since the last entry as one activity, with the first line of the run's last result as its summary, unless nothing was spent in it. No agent checked that text against the lint, so flai puts each bare URL, `www.` literal, or email address the lint's MD034 would find in it in a code span, rather than have the entry refused and the run's seconds and cost lost (I-0118). Either way the activity's seconds and cost come from the run's stream-json log, apportioned to the activity's span as a task's are to its intervals ([ADR-0051](../adrs/0051-work-items-record-the-tokens-and-cost-their-agents-spent-measured-from-the.md)).
 

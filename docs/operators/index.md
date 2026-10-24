@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-10-23
+updated: 2026-10-24
 status: active
 ---
 
@@ -159,7 +159,7 @@ flai serve disable forge       # nothing is pushed or opened again
 
 With it off, or with the mode `local`, nothing is pushed and nothing is opened. `flai forge push S-nnnn` still pushes a story on your word.
 
-**Agents never get the token.** Every agent `flai serve` starts runs without the token's variable in its environment: story agents, their sub-agents, the planner, the orchestrator, and the analyzer. It removes each forge's default variable, such as `GITHUB_TOKEN`, and any you named with `flai serve forge`, whatever the project's mode. `flai guard` refuses `flai forge push` to every agent. An agent moves its story to review and leaves the push to `flai serve`.
+**Agents never get the token.** Every agent `flai serve` starts runs without the token's variable in its environment: story agents, their sub-agents, the planner, the orchestrator, the analyzer, and the curator. It removes each forge's default variable, such as `GITHUB_TOKEN`, and any you named with `flai serve forge`, whatever the project's mode. `flai guard` refuses `flai forge push` to every agent. An agent moves its story to review and leaves the push to `flai serve`.
 
 **What it keeps.** `.flai-cache/forge/S-nnnn.json` in the project's main checkout records what flai last did for each story: the outcome and its reason, the local and remote heads, the head it last pushed, which the next lease names, and the pull request's number and URL. It never holds the token. `flai forge status` reads it. `.flai-cache/forge/status/S-nnnn.json` beside it keeps the pull request as `flai serve` last read it: its checks, its reviews, each change with its time, and each send back with its thread. `flai show`, the agents' `item_get`, and the dashboard read it, never the forge. Its pushes, its requests, each send back, and the first time it sees each failure are in the journal under the action `forge`, method `serve.forge`.
 
@@ -443,6 +443,22 @@ flai serve disable analyze     # no more runs, asked for or scheduled
 **Understand what enabling it means.** Whoever holds the dashboard token can start the analyzer whenever none runs, on your machine, as you, with the analyzer's agent (`analysis.agent` in `system-flow.yaml` over `agent`) and the harnesses and command you set with `flai serve agent`. One analyzer runs per project at a time, and it does not count against the in-progress limit, so each start spends what one agent session costs. With `analysis.schedule` set, `flai serve` starts one each time the schedule comes round, without asking you; unset, it never does. Turning the action off starts no more runs; it does not stop one under way. The analyzer runs in the project's main checkout. It reads the metrics, the design, the code, and the issues, writes one report under `design/analysis/`, and adds it to the folder's README. It files each actionable finding as an issue, or bumps the open issue that records it, through `flai issue new` and `bump`. `flai guard` refuses it every other edit, any write to a work item, making a story from an issue or closing one, and git's writes. That holds only while `.claude/settings.json` runs the guard on `Edit|MultiEdit|Write|NotebookEdit` for an analyzer's session, as the template's does, and `flai` on `PATH` has the analyzer's rules; the analyzer's definition gives it `Edit` and `Write`, so a project that keeps older settings has nothing that keeps its edits to its folder. A project whose `.claude/agents/` has no `analyzer.md` cannot start it on `claude-code`: `flai upgrade` adds it. An agent `flai serve` started cannot start the analyzer through MCP.
 
 **Where to look.** The run is kept in `serve/agents.json` under `analyzer`, with its focus, what started it, and the report it wrote; its output is in `serve/agents/<key>-analyzer-<time>.log`, and what it did and cost in `wip/agents/analyzer.md`, whose entry names the report or says none was written. `flai hostapi agent.status` shows the run as `analyzer`. A run that wrote no report is recorded as `failed`. The reports are under `design/analysis/`, which the dashboard's Docs page shows. The analyzer asks you in a thread on its report when it needs an input of yours.
+
+### The curate host action: the curator (S-0431)
+
+`flai serve` can start the curator for the project, on your machine, as you, because you asked: with `flai curate` in a shell or the MCP tool `curate` from your own agent ([ADR-0196](../../design/adrs/0196-the-curator-runs-behind-the-curate-host-action-and-takes-in-what-the-archive.md)). The host API's `curate.run` starts it for a dashboard too. It is a host action, off until you enable it:
+
+```bash
+flai serve enable curate         # for the project in the working directory; --all-projects for every project
+flai curate                      # since its last run, or everything on its first
+flai curate --since 2026-10-01   # since a day in UTC, or an RFC 3339 time
+flai serve journal               # every curator started, or that could not be
+flai serve disable curate        # no more runs
+```
+
+**Understand what enabling it means.** Whoever holds the dashboard token can start the curator whenever none runs, on your machine, as you, with the curator's agent (`digest.agent` in `system-flow.yaml` over `agent`) and the harnesses and command you set with `flai serve agent`. One curator runs per project at a time, and it does not count against the in-progress limit, so each start spends what one agent session costs. Nothing starts it on a schedule. Turning the action off starts no more runs; it does not stop one under way. The curator runs in the project's main checkout. It reads what the archive and the threads gained since its last run with `flai digest harvest`, and writes digest entries under `design/digest/` with `flai digest new` and `edit` alone, leaving them uncommitted. `flai guard` refuses it every file edit, `flai digest seed`, any write to a work item or an issue, and git's writes. That holds for file edits only while `.claude/settings.json` runs the guard on `Edit|MultiEdit|Write|NotebookEdit` for a curator's session, as the template's does, and `flai` on `PATH` has the curator's rules; the curator's definition gives it no `Edit` or `Write`. A project whose `.claude/agents/` has no `curator.md` cannot start it on `claude-code`: `flai upgrade` adds it. An agent `flai serve` started cannot start the curator through MCP.
+
+**Where to look.** The run is kept in `serve/agents.json` under `curator`, with its since, what started it, and the entries it wrote or changed; its output is in `serve/agents/<key>-curator-<time>.log`, and what it did and cost in `wip/agents/curator.md`, whose entry names those entries. `flai hostapi agent.status` shows the run as `curator`. A run that exited with an error is recorded as `failed`; one that found nothing to take in has `worked`. The curator asks you in a thread on the item an entry's source comes from when the entry needs your judgement.
 
 ### The settings host action: changing the host's settings from the dashboard (S-0105)
 
