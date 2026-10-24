@@ -437,6 +437,38 @@ Each value is counted in the ISO week that holds its event, from the window's st
 
 Not counted: hold and resume of the queue, and a dropped batch. A dropped batch's stories stay enqueued, so their wait goes on, and the next batch counts again. Before the release that writes the log, weeks show nothing, which is no evidence either way.
 
+## Digest (S-0434)
+
+Whether the digest cuts the questions that wait on the operator (I-0151, [ADR-0200](../adrs/0200-flai-stats-reports-per-week-the-threads-opened-to-the-operator-the-stories.md)): per week, the threads opened to the operator against the stories completed, and how many of those threads asked what a digest entry already answered ([ADR-0191](../adrs/0191-the-digest-is-one-markdown-file-per-entry-under-the-design-folder-s-digest.md), [ADR-0199](../adrs/0199-the-curator-runs-after-acceptances-coalesced-and-on-digest-schedule-marks.md)). The threads are counted from the threads alone, so the weeks before the digest are measured too.
+
+| Source | What is read |
+|--------|--------------|
+| Threads | Every thread under `wip/threads`, open or resolved: its first entry's author and time |
+| Stories | The stories' transitions, as `waiting.weeks[]` reads them |
+| Digest | Every entry under `design/digest`: its `status`, `date`, and `asked_again` |
+
+| Value | Definition |
+|-------|------------|
+| A thread opened to the operator | A thread whose first entry's author is neither the operator, the manifest's `owner`, nor flai itself, `flai` or `flai serve`, the authors of flai's notices such as the upgrade thread. Every other author counts: the planner, the orchestrator, a story's agent, anyone. A thread with no entry is not counted |
+| Its week | The ISO week that holds its first entry's time |
+| A repeat | A thread opened to the operator that some entry lists in `asked_again` and whose `date` is a day before the UTC day of the thread's first entry. An entry of the same day never makes a repeat. An entry of any status counts. A thread several entries list is one repeat |
+
+Each value is counted in the ISO week that holds it, from the window's start to now, as `coordination.weeks[]` is.
+
+| Value | Definition | Precision |
+|-------|------------|-----------|
+| `digest` | Present in every report. With no digest folder, every week has `asked_again` 0 and every entry count is 0. A digest flai cannot read is warned of on stderr, and the section is absent | |
+| `digest.weeks[]` | One point per ISO week: `week` and `start`, as `claims.weeks[]` has them, then `threads_to_operator`, `stories_completed`, `per_story`, and `asked_again` | `start` is `YYYY-MM-DD`, a Monday |
+| `digest.weeks[].threads_to_operator` | The threads opened to the operator in the week | Whole count |
+| `digest.weeks[].stories_completed` | The stories completed in the week, cancelled ones left out, as `waiting.weeks[].items` counts them in a report of stories. Stories whatever the report's type | Whole count |
+| `digest.weeks[].per_story` | `threads_to_operator` over `stories_completed`. Absent when `stories_completed` is 0: such a week has no rate | Not rounded |
+| `digest.weeks[].asked_again` | Those of the week's threads opened to the operator that are repeats. At most `threads_to_operator` | Whole count |
+| `digest.entries` | `active`, `compacted`, and `absorbed`: the digest's entries now with each `status`, over the whole digest, not the window | Whole counts |
+
+`flai stats` prints the section under a `digest` heading, one line per week of the window, `2026-W43  2026-10-19  threads 7 · stories 4 · 1.75 per story · asked again 2`, `per story` given to two decimals and `–` in a week with no completed story, then one line for the entries, `entries  active 120 · compacted 3 · absorbed 5`. It prints nothing when `digest` is absent.
+
+A repeat is counted only once the curator has listed the thread in an entry's `asked_again`, so this week's repeats read low until its next run. The rate counts every question to the operator, not only those an entry could have answered.
+
 ## Charts
 
 Every chart spans the window chosen ([ADR-0054](../adrs/0054-every-chart-spans-the-window-chosen-its-time-axis-runs-from-the-window-s-start.md), S-0166), save CoD by Order, which projects from now ([What the pull order costs](#what-the-pull-order-costs-s-0213)). A time axis runs from the window's start to the report's now, whatever the data: a series by the day from the day that holds the start, a series in buckets from the bucket that holds the start to the one that holds now, with half a bucket either side. A chart per item plots only the items completed in the window, and time in state groups them by the day they were completed; `items` in `flai stats --json` holds every item of the type, and the dashboard picks them.
@@ -465,6 +497,7 @@ Every chart spans the window chosen ([ADR-0054](../adrs/0054-every-chart-spans-t
 | Hold Time | Stacked bar per week of the window, `claims.weeks[].held_seconds` in hours, one series per reason: `overlap`, `after`, and `no-touches`, the empty claim | A hold with more than one reason counts under the one it is named by, so a bar's height is the time held ([ADR-0113](../adrs/0113-flai-stats-reports-held-stories-per-day-held-time-by-reason-per-week-and-the.md)) |
 | Coordination | Per week of the window, bars of the conflicts found early, `coordination.weeks[].conflicts.found`, against those met late, `met_sync` plus `met_accept`; and the conversations `opened`, `agreed`, `escalated`, and `closed_with_story`, one series each, as lines or bars | Beside it, the stories started on a share in the window and the hold time they saved, the sums of `shares.started` and `shares.held_seconds` over the weeks. Without the conflict log, `logged` false, the chart says it could not be read ([Coordination](#coordination), [ADR-0138](../adrs/0138-flai-stats-reports-per-week-the-conversations-between-agents-and-how-they-ended.md)) |
 | Merge Queue | Per week of the window, `queue.weeks[].wait_mean_seconds` and `wait_max_seconds` in hours, `batch_size_mean`, and `bisections`, one series each | Beside the agent-waiting chart. Without `queue`, the chart says the flai on the host sends none ([Merge queue](#merge-queue-s-0404), [ADR-0177](../adrs/0177-flai-stats-reports-per-week-the-stories-the-merge-queue-landed-or-sent-back.md)) |
+| Digest | Stacked bar per week of the window, the threads opened to the operator per completed story: the repeats, `digest.weeks[].asked_again` over `stories_completed`, stacked on the rest, `threads_to_operator` less `asked_again` over `stories_completed`, so a bar's height is `per_story` | Beside the agent-waiting chart. A week without `per_story` is a gap, not 0. Beside it, the entries by status, `digest.entries`. Without `digest`, the chart says the flai on the host sends none ([Digest](#digest-s-0434), [ADR-0200](../adrs/0200-flai-stats-reports-per-week-the-threads-opened-to-the-operator-the-stories.md)) |
 | Touches Drift | Stacked bar per story of `claims.drift[]` completed in the window, x its `completed` in `items[]`: `outside_count` and `unchanged_count`. On a second axis, `claims.weeks[].exact_share` per week | Cancelled stories left out. A week with no such story has no share, a gap, not 0. Without `claims.drift`, the chart says git could not be read |
 | CoD Outstanding | Stacked area per day of the window, `cost_of_delay.days[].outstanding`, one series per column in board order | Of the report's type. Beside it, the items without a value now, today's `days[].without_value` per column ([ADR-0112](../adrs/0112-flai-stats-counts-the-open-items-without-a-cost-of-delay-value-per-column-and.md)) |
 | CoD Incurred | Bar per week of the window, `cost_of_delay.weeks[].incurred`, with the running mean per week as a line: the sum from the window's first week to this one over the number of those weeks | Of the report's type. Beside it, the items without a value now, as on CoD Outstanding |
