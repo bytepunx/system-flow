@@ -1,18 +1,20 @@
 ---
 title: Active streams
-updated: 2026-10-23T23:42:59Z
+updated: 2026-10-24T00:28:42Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0431](S-0431.md) | The curator, a strategic agent behind the curate host action, takes in what the archive and the threads gained since its last run as digest entries written through flai alone | in-progress | agent-S-0431 | 2026-10-23T23:42:38Z |
+| [S-0431](S-0431.md) | The curator, a strategic agent behind the curate host action, takes in what the archive and the threads gained since its last run as digest entries written through flai alone | in-progress | agent-S-0431 | 2026-10-24T00:25:02Z |
+| [S-0486](S-0486.md) | criteria_tick is refused on another open story's narrative.state finding, which the story's own scoped check leaves out | in-progress | agent-S-0486 | 2026-10-24T00:18:51Z |
+| [S-0490](S-0490.md) | flai test runs go test with -short, so a real-git test a task adds is skipped until the integration tier runs in the merge queue's batch | review | agent-S-0490 | 2026-10-24T00:25:06Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 99 | 879.9341 USD | 121826 | 2026-10-23T20:43:14Z |
-| [orchestrator](orchestrator.md) | 1002 | 1459.6205 USD | 1246723 | 2026-10-23T23:40:15Z |
+| [orchestrator](orchestrator.md) | 1007 | 1483.5114 USD | 1249478 | 2026-10-24T00:26:10Z |
 | [analyzer](analyzer.md) | 1 | 5.0040 USD | 454 | 2026-10-15T22:49:08Z |

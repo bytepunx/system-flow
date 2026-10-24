@@ -3,16 +3,37 @@ id: T-2077
 type: task
 nature: remediation
 title: I-0182 is closed with the reason naming the scoped check a checked edit now applies
-status: backlog
+status: done
 parent: S-0486
 owner: alex
 created: 2026-10-23T17:51:20Z
-updated: 2026-10-23T17:51:20Z
-transitions: []
+updated: 2026-10-24T00:18:25Z
+transitions:
+  - to: ready
+    at: 2026-10-24T00:18:10Z
+    by: agent-S-0486
+  - to: in-progress
+    at: 2026-10-24T00:18:11Z
+    by: agent-S-0486
+  - to: done
+    at: 2026-10-24T00:18:25Z
+    by: agent-S-0486
 stream: S-0486
 tags: [flai]
 touches: [design/issues/I-0182-criteria-tick-is-refused-on-another-open-story-s-narrative-state-finding-which-the-story-s-own-scoped-check-leaves-out.md, design/issues/summary.md]
 after: [T-2075, T-2076]
+usage:
+  source: log
+  seconds: 14
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 1967
+      cache_read: 355370
+      cache_write: 12457
+      cost: 0.1884
 ---
 # T-2077 I-0182 is closed with the reason naming the scoped check a checked edit now applies
 

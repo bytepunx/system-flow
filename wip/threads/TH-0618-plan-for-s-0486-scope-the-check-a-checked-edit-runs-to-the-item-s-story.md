@@ -4,10 +4,10 @@ title: "Plan for S-0486: scope the check a checked edit runs to the item's story
 anchor:
   path: wip/kanban/stories/S-0486-criteria-tick-is-refused-on-another-open-story-s-narrative-state-finding-which-the-story-s-own-scoped-check-leaves-out.md
   item: S-0486
-status: answered
+status: resolved
 participants: [planner-S-0486, orchestrator]
 created: 2026-10-23T17:51:54Z
-updated: 2026-10-23T17:52:20Z
+updated: 2026-10-23T23:39:52Z
 ---
 
 # TH-0618 Plan for S-0486: scope the check a checked edit runs to the item's story
@@ -57,3 +57,6 @@ The plan's shape is approved. I will resolve this thread once two things are set
 **2. Revisit the 2h forecast.** `forecast.duration` is agent time: the seconds per unit of size times the size (`design/system/strategic-agents.md` § Forecast). An ADR that awaits the operator adds waiting, not agent time, so it does not justify a raise. Raising flai's 22m for the two-writer test and the docs in three places is a fair reason. Please state the raise on those grounds alone, or say why 2h still stands without the wait.
 
 Source: design/system/strategic-agents.md § Forecast
+
+### 2026-10-23T23:39:52Z orchestrator
+Resolved: Under plan_backlog_stories: the operator finalized S-0486 with its plan and its 2h forecast as they stand, which settles the open question on the raise.

@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1457.6855
-accrued_seconds: 1246648
-tasks_completed: 999
-last_run: 2026-10-23T23:39:00Z
+accrued_cost: 1483.5114
+accrued_seconds: 1249478
+tasks_completed: 1007
+last_run: 2026-10-24T00:26:10Z
 ---
 
 # Orchestrator activity
@@ -7005,6 +7005,62 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 8079
 - Cost: 6.7008 USD, estimated
 
+### 2026-10-23T23:39:21Z
+
+- Summary: Under promote_to_ready, moved S-0431 to ready as candidate 1 by throughput (1h45m, 147.54 USD/week), no longer held now that S-0430 is done and S-0491 is in review; S-0241 (rank 2, 2h) stays out, blocked. Under order_ready, applied flai order --by throughput: S-0431 alone. Under plan_backlog_stories, started the planner for S-0492, first in flai plan --candidates. S-0431 writes .claude/, so its acceptance will be the operator's.
+- Items: S-0431, S-0492, S-0241
+- Seconds: 21
+- Cost: 0.4801 USD, estimated
+
+### 2026-10-23T23:40:02Z
+
+- Summary: The operator accepted S-0491 by hand and published flai 1.68.0, flaiover 0.55.0, template 1.0.111 at a43a92d8c; resolved my TH-0600 as settled by that release. The operator finalized S-0486 and S-0490; under plan_backlog_stories resolved planner-S-0486's TH-0618 as settled by the finalization; TH-0627 on S-0490 stays open with its manifest-edit question. Under promote_to_ready, moved S-0486 to ready as candidate 2 by throughput (2h), after S-0241 (rank 1, blocked). Under order_ready, applied flai order --by throughput: S-0486 alone (S-0431 already pulled).
+- Items: S-0491, S-0486, S-0490, S-0241
+- Seconds: 41
+- Cost: 1.1272 USD, estimated
+
+### 2026-10-23T23:40:15Z
+
+- Summary: The operator moved S-0490 and S-0492 to ready. Under order_ready, re-applied flai order --by throughput: S-0490 (1h), S-0486 (2h), then S-0492 with no forecast yet (its planner is running). agent-S-0431 pulled S-0431.
+- Items: S-0490, S-0486, S-0492, S-0431
+- Seconds: 13
+- Cost: 0.3277 USD, estimated
+
+### 2026-10-23T23:44:27Z
+
+- Summary: agent-S-0486 pulled S-0486. Under order_ready, re-applied flai order --by throughput: S-0490 (1h, held on overlap with S-0431), then S-0492 with no forecast yet. TH-0631, a permission prompt for agent-S-0431's .claude/agents/curator.md write, is the operator's to answer.
+- Items: S-0486, S-0490, S-0492, S-0431
+- Seconds: 252
+- Cost: 6.6285 USD, estimated
+
+### 2026-10-24T00:06:31Z
+
+- Summary: Enqueued S-0490 at c3e46ddc, first in the queue (alone); forecast 1h, value 100 USD/week. flai verify passed at the head (integration and smoke queued). The verifier matched both criteria within touches: the go-test tier without -short and with -skip ^TestGateway, written through flai manifest set and pinned by a repository-manifest test, the docs below the conventions' marker, and I-0201 closed. Under plan_backlog_stories resolved planner-S-0490's TH-0627 as settled by the operator finalizing and readying the story with this plan.
+- Items: S-0490
+- Seconds: 1324
+- Cost: 11.2543 USD, estimated
+
+### 2026-10-24T00:07:34Z
+
+- Summary: Enqueued S-0492 at 3e336948, second in the queue behind S-0490 (batch 20261024-000635 verifying integration); no forecast or value of its own on record. flai verify passed at the head (integration and smoke queued). The verifier matched both criteria within touches: task_done lists at most ten notes outside the story and counts the rest in notes_omitted (newCheck, MaxNotes), a test reproducing I-0202's 399-note case, the CLI, MCP and docs updated, I-0202 closed; ADR-0198 proposed.
+- Items: S-0492, S-0490
+- Seconds: 63
+- Cost: 0.8470 USD, estimated
+
+### 2026-10-24T00:15:21Z
+
+- Summary: Merge queue batch 20261024-000635 failed with S-0490 at integration: TestReferenceIsCurrent, docs/users/flai-reference.md stale on main since S-0491 (accepted by hand, so its integration tier never ran) added orchestration.permissions.edit_subprojects. flai sent S-0490 back with TH-0632. S-0492, next in the queue, regenerates the reference with that line, so its batch should pass and repair main; nothing for me to do until S-0490 returns to review.
+- Items: S-0490, S-0492, S-0491
+- Seconds: 467
+- Cost: 1.2326 USD, estimated
+
+### 2026-10-24T00:26:10Z
+
+- Summary: S-0490 back in review at f4a069b2 with the reference regenerated and I-0203 recorded (a story accepted outside the queue lands without the queue tiers); flai verify passed at the head and the verifier re-checked both criteria and the two new commits within touches. queue_add refused it: thread_open on TH-0632, flai serve's send-back thread, not mine to resolve; enqueuing again once it clears.
+- Items: S-0490
+- Seconds: 649
+- Cost: 3.9285 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -7160,4 +7216,14 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-10-23T18:59:27Z
 
 - Call: `git diff --stat 5693210c story/S-0429 -- flai design docs`
+- Needs: none
+
+### 2026-10-23T23:39:33Z
+
+- Call: `git tag --sort=-creatordate`
+- Needs: none
+
+### 2026-10-24T00:25:13Z
+
+- Call: `flai queue --json 2>/dev/null`
 - Needs: none

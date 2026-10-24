@@ -3,16 +3,34 @@ id: T-1828
 type: task
 nature: feature
 title: The curator's definition lists its tools and rules, and settings.json runs flai guard on its file edits, in the template and here
-status: backlog
+status: in-progress
 parent: S-0431
 owner: alex
 created: 2026-10-16T06:06:08Z
-updated: 2026-10-16T06:06:08Z
-transitions: []
+updated: 2026-10-23T23:43:04Z
+transitions:
+  - to: ready
+    at: 2026-10-23T23:42:58Z
+    by: agent-S-0431
+  - to: in-progress
+    at: 2026-10-23T23:42:59Z
+    by: agent-S-0431
 stream: S-0431
 tags: [cli, template]
 touches: [".claude/agents/curator.md", template/root/.claude/agents/curator.md, ".claude/settings.json", template/root/.claude/settings.json]
-after: [T-1826]
+after: [T-1823]
+usage:
+  source: log
+  seconds: 2520
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 40
+      output: 259
+      cache_read: 3910996
+      cache_write: 40551
+      cost: 1.3435
 ---
 # T-1828 The curator's definition lists its tools and rules, and settings.json runs flai guard on its file edits, in the template and here
 

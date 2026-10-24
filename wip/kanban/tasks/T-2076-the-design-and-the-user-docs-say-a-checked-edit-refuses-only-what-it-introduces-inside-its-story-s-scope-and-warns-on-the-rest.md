@@ -3,16 +3,37 @@ id: T-2076
 type: task
 nature: remediation
 title: The design and the user docs say a checked edit refuses only what it introduces inside its story's scope, and warns on the rest
-status: backlog
+status: done
 parent: S-0486
 owner: alex
 created: 2026-10-23T17:50:58Z
-updated: 2026-10-23T17:50:58Z
-transitions: []
+updated: 2026-10-24T00:11:19Z
+transitions:
+  - to: ready
+    at: 2026-10-24T00:00:08Z
+    by: agent-S-0486
+  - to: in-progress
+    at: 2026-10-24T00:00:09Z
+    by: agent-S-0486
+  - to: done
+    at: 2026-10-24T00:11:18Z
+    by: agent-S-0486
 stream: S-0486
 tags: [flai]
-touches: [design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/edit.go, flai/cmd/criteria.go]
+touches: [design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/edit.go, flai/cmd/criteria.go, design/adrs/0197-a-checked-edit-of-a-work-item-refuses-only-a-new-finding-inside-its-story-s.md, docs/users/flaiover.md]
 after: [T-2075]
+usage:
+  source: log
+  seconds: 669
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 50
+      output: 15253
+      cache_read: 2756387
+      cache_write: 96623
+      cost: 1.4615
 ---
 # T-2076 The design and the user docs say a checked edit refuses only what it introduces inside its story's scope, and warns on the rest
 

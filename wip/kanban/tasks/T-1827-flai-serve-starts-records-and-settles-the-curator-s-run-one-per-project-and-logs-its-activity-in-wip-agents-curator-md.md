@@ -3,16 +3,37 @@ id: T-1827
 type: task
 nature: feature
 title: flai serve starts, records, and settles the curator's run, one per project, and logs its activity in wip/agents/curator.md
-status: backlog
+status: done
 parent: S-0431
 owner: alex
 created: 2026-10-16T06:06:02Z
-updated: 2026-10-23T17:03:48Z
-transitions: []
+updated: 2026-10-24T00:25:02Z
+transitions:
+  - to: ready
+    at: 2026-10-24T00:14:13Z
+    by: agent-S-0431
+  - to: in-progress
+    at: 2026-10-24T00:14:14Z
+    by: agent-S-0431
+  - to: done
+    at: 2026-10-24T00:25:01Z
+    by: agent-S-0431
 stream: S-0431
 tags: [cli]
-touches: [flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/agents.go, flai/internal/serve/activity.go, flai/internal/serve/claudecheck.go]
+touches: [flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/agents.go, flai/internal/serve/activity.go, flai/internal/serve/claudecheck.go, flai/internal/serve/serve.go]
 after: [T-1825]
+usage:
+  source: log
+  seconds: 645
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 89
+      output: 434
+      cache_read: 4843722
+      cache_write: 149905
+      cost: 1.6978
 ---
 # T-1827 flai serve starts, records, and settles the curator's run, one per project, and logs its activity in wip/agents/curator.md
 

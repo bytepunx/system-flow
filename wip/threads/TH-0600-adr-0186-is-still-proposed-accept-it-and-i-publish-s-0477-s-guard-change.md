@@ -3,10 +3,10 @@ id: TH-0600
 title: "ADR-0186 is still proposed: accept it, and I publish S-0477's guard change"
 anchor:
   path: design/adrs/0186-flai-guard-lets-every-agent-run-flai-components-list-and-a-story-s-task-sub.md
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-10-22T21:44:33Z
-updated: 2026-10-23T17:44:00Z
+updated: 2026-10-23T23:39:42Z
 ---
 
 # TH-0600 ADR-0186 is still proposed: accept it, and I publish S-0477's guard change
@@ -46,3 +46,6 @@ Two ADRs behind them are still `proposed`:
 - ADR-0189, for S-0467's change to my acceptance rules.
 
 Accept both (`flai adr accept 0186` and `flai adr accept 0189`) and I release the batch, or say "publish" here.
+
+### 2026-10-23T23:39:42Z orchestrator
+Resolved: The operator published the batch at a43a92d8c (flai 1.68.0, flaiover 0.55.0, template 1.0.111), S-0477's guard change with it; nothing is pending release.

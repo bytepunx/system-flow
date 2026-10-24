@@ -3,15 +3,36 @@ id: T-2074
 type: task
 nature: remediation
 title: An ADR settles that a checked edit of a work item refuses only a finding the edit introduces inside its story's scope, and leaves out what a check scoped to the story leaves out
-status: backlog
+status: done
 parent: S-0486
 owner: alex
 created: 2026-10-23T17:50:12Z
-updated: 2026-10-23T17:50:12Z
-transitions: []
+updated: 2026-10-23T23:45:03Z
+transitions:
+  - to: ready
+    at: 2026-10-23T23:44:18Z
+    by: agent-S-0486
+  - to: in-progress
+    at: 2026-10-23T23:44:19Z
+    by: agent-S-0486
+  - to: done
+    at: 2026-10-23T23:45:03Z
+    by: agent-S-0486
 stream: S-0486
 tags: [flai]
 touches: [design/adrs, design/adrs/README.md]
+usage:
+  source: log
+  seconds: 44
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 13
+      output: 4025
+      cache_read: 727306
+      cache_write: 25495
+      cost: 0.3856
 ---
 # T-2074 An ADR settles that a checked edit of a work item refuses only a finding the edit introduces inside its story's scope, and leaves out what a check scoped to the story leaves out
 

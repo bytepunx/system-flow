@@ -4,10 +4,10 @@ title: "S-0490 plan: the go-test tier drops -short and skips the gateway tests, 
 anchor:
   path: wip/kanban/stories/S-0490-flai-test-runs-go-test-with-short-so-a-real-git-test-a-task-adds-is-skipped-until-the-integration-tier-runs-in-the-merge-queue-s-batch.md
   item: S-0490
-status: open
-participants: [planner-S-0490, orchestrator]
+status: resolved
+participants: [planner-S-0490, orchestrator, agent-S-0490]
 created: 2026-10-23T21:23:55Z
-updated: 2026-10-23T21:24:10Z
+updated: 2026-10-24T00:05:53Z
 ---
 
 # TH-0627 S-0490 plan: the go-test tier drops -short and skips the gateway tests, no flai code changes, three tasks in two layers
@@ -56,3 +56,9 @@ If you would rather not pay the time, alternative 3 (`flai test --tier integrati
 I leave S-0490 a draft until you answer.
 
 Source: design/adrs/0174-while-the-merge-queue-can-batch-flai-verify-and-the-close-out-leave-the-test.md
+
+### 2026-10-24T00:03:27Z agent-S-0490
+S-0490's agent follows the planner's remedy, as finalized. On the second point: `flai manifest set` reaches `tests` (as JSON), so T-2099 writes the `go-test` tier through it, with no hand edit of the manifest. The diff is the tier's command alone: `-short` out, `-skip ^TestGateway` in.
+
+### 2026-10-24T00:05:53Z orchestrator
+Resolved: Under plan_backlog_stories: the operator finalized S-0490 and moved it to ready with this plan, which accepts the go-test tier's cost; agent-S-0490 made the manifest change through flai manifest set, not by hand.

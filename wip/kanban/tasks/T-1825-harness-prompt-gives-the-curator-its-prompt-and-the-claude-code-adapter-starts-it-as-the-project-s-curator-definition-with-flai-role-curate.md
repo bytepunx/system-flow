@@ -3,16 +3,37 @@ id: T-1825
 type: task
 nature: feature
 title: "harness.Prompt gives the curator its prompt and the claude-code adapter starts it as the project's curator definition with FLAI_ROLE=curate"
-status: backlog
+status: done
 parent: S-0431
 owner: alex
 created: 2026-10-16T06:05:44Z
-updated: 2026-10-16T06:05:44Z
-transitions: []
+updated: 2026-10-24T00:13:50Z
+transitions:
+  - to: ready
+    at: 2026-10-24T00:01:35Z
+    by: agent-S-0431
+  - to: in-progress
+    at: 2026-10-24T00:01:36Z
+    by: agent-S-0431
+  - to: done
+    at: 2026-10-24T00:13:50Z
+    by: agent-S-0431
 stream: S-0431
 tags: [cli]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go]
 after: [T-1824]
+usage:
+  source: log
+  seconds: 734
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 35
+      output: 130
+      cache_read: 1549458
+      cache_write: 107145
+      cost: 0.5632
 ---
 # T-1825 harness.Prompt gives the curator its prompt and the claude-code adapter starts it as the project's curator definition with FLAI_ROLE=curate
 

@@ -3,16 +3,37 @@ id: T-2075
 type: task
 nature: remediation
 title: itemedit.Apply refuses a new finding only inside the edited item's story's scope, so criteria_tick is no longer refused on another story's narrative.state or an untracked task file, with tests that reproduce I-0182's two instances
-status: backlog
+status: done
 parent: S-0486
 owner: alex
 created: 2026-10-23T17:50:36Z
-updated: 2026-10-23T17:50:36Z
-transitions: []
+updated: 2026-10-23T23:56:42Z
+transitions:
+  - to: ready
+    at: 2026-10-23T23:45:15Z
+    by: agent-S-0486
+  - to: in-progress
+    at: 2026-10-23T23:45:16Z
+    by: agent-S-0486
+  - to: done
+    at: 2026-10-23T23:56:42Z
+    by: agent-S-0486
 stream: S-0486
 tags: [flai]
 touches: [flai/internal/itemedit/itemedit.go, flai/internal/itemedit/criteria_test.go, flai/internal/mcpserver/criteria_test.go]
 after: [T-2074]
+usage:
+  source: log
+  seconds: 686
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 67
+      output: 20461
+      cache_read: 3697441
+      cache_write: 129611
+      cost: 1.9605
 ---
 # T-2075 itemedit.Apply refuses a new finding only inside the edited item's story's scope, so criteria_tick is no longer refused on another story's narrative.state or an untracked task file, with tests that reproduce I-0182's two instances
 

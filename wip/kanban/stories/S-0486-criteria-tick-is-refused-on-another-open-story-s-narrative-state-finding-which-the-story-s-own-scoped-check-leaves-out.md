@@ -3,34 +3,56 @@ id: S-0486
 type: story
 nature: remediation
 title: criteria_tick is refused on another open story's narrative.state finding, which the story's own scoped check leaves out
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-23T17:43:07Z
-updated: 2026-10-23T23:39:19Z
-transitions: []
+updated: 2026-10-24T00:18:52Z
+transitions:
+  - to: ready
+    at: 2026-10-23T23:39:57Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-23T23:43:15Z
+    by: agent-S-0486
 tags: [flai]
 topics: [cli]
-touches: [design/adrs, design/adrs/README.md, flai/internal/itemedit/itemedit.go, flai/internal/itemedit/criteria_test.go, flai/internal/mcpserver/criteria_test.go, flai/cmd/edit.go, flai/cmd/criteria.go, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0182-criteria-tick-is-refused-on-another-open-story-s-narrative-state-finding-which-the-story-s-own-scoped-check-leaves-out.md, design/issues/summary.md]
+touches: [design/adrs, design/adrs/README.md, flai/internal/itemedit/itemedit.go, flai/internal/itemedit/criteria_test.go, flai/internal/mcpserver/criteria_test.go, flai/cmd/edit.go, flai/cmd/criteria.go, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0182-criteria-tick-is-refused-on-another-open-story-s-narrative-state-finding-which-the-story-s-own-scoped-check-leaves-out.md, design/issues/summary.md, docs/users/flaiover.md, design/issues/I-0202-task-done-s-answer-carries-every-check-note-outside-the-story-so-it-exceeds-the-40-000-bytes-it-promises-and-overflows-the-tool-result.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2633
+  priced_by: harness
+  turns:
+    - day: 2026-10-23
+      ceremony: 2
+      hand_edits: 2
+      work: 22
+    - day: 2026-10-24
+      ceremony: 1
+      hand_edits: 1
+      work: 23
+  models:
+    - model: claude-opus-5-5
+      input: 216
+      output: 65868
+      cache_read: 11902721
+      cache_write: 417241
+      cost: 6.3111
   strategic:
     - kind: orchestrator
-      seconds: 597
+      seconds: 673
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 250
-          output: 4406
-          cache_read: 43993037
-          cache_write: 48231
-          cost: 9.6869
+          input: 275
+          output: 4798
+          cache_read: 53173589
+          cache_write: 56015
+          cost: 11.7077
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 4m
@@ -56,8 +78,8 @@ finalized:
 This story remediates [I-0182](../../../design/issues/I-0182-criteria-tick-is-refused-on-another-open-story-s-narrative-state-finding-which-the-story-s-own-scoped-check-leaves-out.md), "criteria_tick is refused on another open story's narrative.state finding, which the story's own scoped check leaves out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0182 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0182 is closed with `flai issue close I-0182 --reason` saying what fixed it
+- [x] The cause I-0182 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0182 is closed with `flai issue close I-0182 --reason` saying what fixed it
 
 ## Tasks
 - T-2074 An ADR settles that a checked edit of a work item refuses only a finding the edit introduces inside its story's scope, and leaves out what a check scoped to the story leaves out

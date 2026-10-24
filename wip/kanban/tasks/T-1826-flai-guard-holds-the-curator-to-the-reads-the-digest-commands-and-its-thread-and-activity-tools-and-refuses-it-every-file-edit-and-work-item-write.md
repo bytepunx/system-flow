@@ -3,16 +3,37 @@ id: T-1826
 type: task
 nature: feature
 title: flai guard holds the curator to the reads, the digest commands, and its thread and activity tools, and refuses it every file edit and work item write
-status: backlog
+status: done
 parent: S-0431
 owner: alex
 created: 2026-10-16T06:05:50Z
-updated: 2026-10-23T17:03:41Z
-transitions: []
+updated: 2026-10-24T00:13:55Z
+transitions:
+  - to: ready
+    at: 2026-10-24T00:01:38Z
+    by: agent-S-0431
+  - to: in-progress
+    at: 2026-10-24T00:01:39Z
+    by: agent-S-0431
+  - to: done
+    at: 2026-10-24T00:13:55Z
+    by: agent-S-0431
 stream: S-0431
 tags: [cli]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/call.go, flai/internal/guard/authors.go, flai/internal/guard/shared.go, flai/internal/guard/curate_test.go, flai/cmd/guard.go]
 after: [T-1824]
+usage:
+  source: log
+  seconds: 736
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 61
+      output: 273
+      cache_read: 2669235
+      cache_write: 236139
+      cost: 0.9878
 ---
 # T-1826 flai guard holds the curator to the reads, the digest commands, and its thread and activity tools, and refuses it every file edit and work item write
 

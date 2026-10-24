@@ -3,16 +3,37 @@ id: T-2101
 type: task
 nature: remediation
 title: Close I-0201 with the reason naming the go-test tier's change
-status: backlog
+status: done
 parent: S-0490
 owner: alex
 created: 2026-10-23T21:22:52Z
-updated: 2026-10-23T21:22:52Z
-transitions: []
+updated: 2026-10-24T00:04:45Z
+transitions:
+  - to: ready
+    at: 2026-10-24T00:03:45Z
+    by: agent-S-0490
+  - to: in-progress
+    at: 2026-10-24T00:03:47Z
+    by: agent-S-0490
+  - to: done
+    at: 2026-10-24T00:04:45Z
+    by: agent-S-0490
 stream: S-0490
 tags: [flai, issues]
 touches: [design/issues/I-0201-flai-test-runs-go-test-with-short-so-a-real-git-test-a-task-adds-is-skipped-until-the-integration-tier-runs-in-the-merge-queue-s-batch.md, design/issues/summary.md]
 after: [T-2099]
+usage:
+  source: log
+  seconds: 58
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 10
+      output: 1936
+      cache_read: 752180
+      cache_write: 15582
+      cost: 0.3138
 ---
 # T-2101 Close I-0201 with the reason naming the go-test tier's change
 

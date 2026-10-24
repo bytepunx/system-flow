@@ -3,34 +3,68 @@ id: S-0490
 type: story
 nature: remediation
 title: flai test runs go test with -short, so a real-git test a task adds is skipped until the integration tier runs in the merge queue's batch
-status: backlog
+status: review
 owner: alex
 created: 2026-10-23T20:20:26Z
-updated: 2026-10-23T23:39:23Z
-transitions: []
+updated: 2026-10-24T00:25:07Z
+transitions:
+  - to: ready
+    at: 2026-10-23T23:40:02Z
+    by: alex
+  - to: in-progress
+    at: 2026-10-24T00:01:16Z
+    by: agent-S-0490
+  - to: review
+    at: 2026-10-24T00:05:35Z
+    by: agent-S-0490
+  - to: in-progress
+    at: 2026-10-24T00:15:07Z
+    by: flai
+  - to: review
+    at: 2026-10-24T00:25:07Z
+    by: agent-S-0490
 tags: [flai, tests, manifest]
 topics: [testing, flai, cli]
-touches: [system-flow.yaml, flai/internal/verify/select_test.go, design/conventions/tooling.md, design/conventions/code-quality.md, design/system/project-manifest.md, docs/users/flai.md, scripts/README.md, scripts/flai-test.sh, design/issues/I-0201-flai-test-runs-go-test-with-short-so-a-real-git-test-a-task-adds-is-skipped-until-the-integration-tier-runs-in-the-merge-queue-s-batch.md, design/issues/summary.md]
+touches: [system-flow.yaml, flai/internal/verify/select_test.go, design/conventions/tooling.md, design/conventions/code-quality.md, design/system/project-manifest.md, docs/users/flai.md, scripts/README.md, scripts/flai-test.sh, design/issues/I-0201-flai-test-runs-go-test-with-short-so-a-real-git-test-a-task-adds-is-skipped-until-the-integration-tier-runs-in-the-merge-queue-s-batch.md, design/issues/summary.md, design/issues/I-0202-task-done-s-answer-carries-every-check-note-outside-the-story-so-it-exceeds-the-40-000-bytes-it-promises-and-overflows-the-tool-result.md, design/issues/I-0203-a-story-the-operator-accepts-outside-the-merge-queue-lands-without-the-queue-tiers-so-a-stale-generated-file-on-main-fails-every-later-batch-at-integration.md, docs/users/flai-reference.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 874
+  priced_by: harness
+  turns:
+    - day: 2026-10-24
+      ceremony: 3
+      test_runs: 2
+      hand_edits: 3
+      work: 48
+  models:
+    - model: claude-opus-5-5
+      input: 116
+      output: 22694
+      cache_read: 8819147
+      cache_write: 182692
+      cost: 3.6797
   strategic:
     - kind: orchestrator
-      seconds: 1666
+      seconds: 3903
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 131
-          output: 2332
-          cache_read: 45021714
-          cache_write: 23453
-          cost: 9.9073
+          input: 340
+          output: 5942
+          cache_read: 126201914
+          cache_write: 76552
+          cost: 27.7736
+        - model: claude-sonnet-5-5
+          input: 19
+          output: 136
+          cache_read: 173925
+          cache_write: 75098
+          cost: 0.1717
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 40m
@@ -56,13 +90,14 @@ finalized:
 This story remediates [I-0201](../../../design/issues/I-0201-flai-test-runs-go-test-with-short-so-a-real-git-test-a-task-adds-is-skipped-until-the-integration-tier-runs-in-the-merge-queue-s-batch.md), "flai test runs go test with -short, so a real-git test a task adds is skipped until the integration tier runs in the merge queue's batch". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0201 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0201 is closed with `flai issue close I-0201 --reason` saying what fixed it
+- [x] The cause I-0201 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0201 is closed with `flai issue close I-0201 --reason` saying what fixed it
 
 ## Tasks
 - T-2099 Run the go-test tier without -short on the changed packages, skipping the gateway tests, with a repository-manifest test that reproduces I-0201
 - T-2100 Document that the go-test tier runs the changed packages' tests whole, in the conventions, the manifest design, the user docs, and the scripts' README
 - T-2101 Close I-0201 with the reason naming the go-test tier's change
+- T-2104 Regenerate docs/users/flai-reference.md, stale on main since S-0491, which failed merge queue batch 20261024-000635 at integration
 
 ## Notes
 
@@ -87,3 +122,4 @@ Touches, file by file, none a folder:
 Left out of the co-change list: `template/CHANGELOG.md`, `template/root/**`, and `template/template.yaml` (the template's manifest has no `go-test` tier and its conventions do not say "short"), `design/conventions/git.md` and `work-management.md` (nothing in them changes), `flai/internal/verify/select.go`, `verify.go`, and `flai/cmd/root.go` (no code changes).
 
 Figures: cost of delay 100 USD a week, `flai cod`'s figure from the operator's input (40m lost per 168h cycle at 150 USD an hour), unchanged. Forecast: `flai forecast` gave 24m and delivery 2026-10-24T14:48:00Z (size 12, 27th in the pull order); raised to 1h and 2026-10-24T15:30:00Z, since the three tasks span ten files in six documents whose wording is read before it is changed, and the close-out's `go-test` on `verify` now runs its real-git tests.
+- 2026-10-24T00:15:07Z: moved to in-progress: merge queue batch 20261024-000635 fails with S-0490 at c3e46ddc8bef: integration failed: flai/cmd/reference_test.go:127 TestReferenceIsCurrent: docs/users/flai-reference.md is stale: run make flai-reference

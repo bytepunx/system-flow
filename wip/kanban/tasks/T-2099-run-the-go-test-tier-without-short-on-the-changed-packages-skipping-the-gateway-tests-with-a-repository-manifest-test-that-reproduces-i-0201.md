@@ -3,15 +3,36 @@ id: T-2099
 type: task
 nature: remediation
 title: Run the go-test tier without -short on the changed packages, skipping the gateway tests, with a repository-manifest test that reproduces I-0201
-status: backlog
+status: done
 parent: S-0490
 owner: alex
 created: 2026-10-23T21:22:16Z
-updated: 2026-10-23T21:22:16Z
-transitions: []
+updated: 2026-10-24T00:03:31Z
+transitions:
+  - to: ready
+    at: 2026-10-24T00:02:10Z
+    by: agent-S-0490
+  - to: in-progress
+    at: 2026-10-24T00:02:11Z
+    by: agent-S-0490
+  - to: done
+    at: 2026-10-24T00:03:31Z
+    by: agent-S-0490
 stream: S-0490
 tags: [flai, tests, manifest]
 touches: [system-flow.yaml, flai/internal/verify/select_test.go]
+usage:
+  source: log
+  seconds: 80
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 11
+      output: 2197
+      cache_read: 853741
+      cache_write: 17686
+      cost: 0.3562
 ---
 # T-2099 Run the go-test tier without -short on the changed packages, skipping the gateway tests, with a repository-manifest test that reproduces I-0201
 

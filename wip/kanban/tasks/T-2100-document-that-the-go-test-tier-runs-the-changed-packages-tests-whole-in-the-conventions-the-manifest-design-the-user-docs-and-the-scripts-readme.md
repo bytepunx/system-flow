@@ -3,16 +3,37 @@ id: T-2100
 type: task
 nature: remediation
 title: Document that the go-test tier runs the changed packages' tests whole, in the conventions, the manifest design, the user docs, and the scripts' README
-status: backlog
+status: done
 parent: S-0490
 owner: alex
 created: 2026-10-23T21:22:45Z
-updated: 2026-10-23T21:22:45Z
-transitions: []
+updated: 2026-10-24T00:04:29Z
+transitions:
+  - to: ready
+    at: 2026-10-24T00:03:43Z
+    by: agent-S-0490
+  - to: in-progress
+    at: 2026-10-24T00:03:44Z
+    by: agent-S-0490
+  - to: done
+    at: 2026-10-24T00:04:29Z
+    by: agent-S-0490
 stream: S-0490
 tags: [flai, tests, docs]
 touches: [design/conventions/tooling.md, design/conventions/code-quality.md, design/system/project-manifest.md, docs/users/flai.md, scripts/README.md, scripts/flai-test.sh]
 after: [T-2099]
+usage:
+  source: log
+  seconds: 45
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 5
+      output: 1059
+      cache_read: 411433
+      cache_write: 8523
+      cost: 0.1717
 ---
 # T-2100 Document that the go-test tier runs the changed packages' tests whole, in the conventions, the manifest design, the user docs, and the scripts' README
 

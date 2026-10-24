@@ -3,15 +3,21 @@ id: S-0431
 type: story
 nature: feature
 title: The curator, a strategic agent behind the curate host action, takes in what the archive and the threads gained since its last run as digest entries written through flai alone
-status: backlog
+status: in-progress
 parent: E-0025
 owner: alex
 created: 2026-10-16T05:59:25Z
-updated: 2026-10-23T21:00:06Z
-transitions: []
+updated: 2026-10-24T00:25:02Z
+transitions:
+  - to: ready
+    at: 2026-10-23T23:39:13Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-23T23:39:47Z
+    by: agent-S-0431
 tags: [cli, template]
 topics: [cli, planning, analysis, conventions, template]
-touches: [".claude/agents/curator.md", ".claude/settings.json", design/adrs, design/adrs/README.md, design/conventions/README.md, design/conventions/strategic-agents.md, design/system/agent-adapters.md, design/system/agent-narrative.md, design/system/flai-cli.md, design/system/project-manifest.md, design/system/strategic-agents.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flai-reference.md, docs/users/flai.md, flai/cmd/curate.go, flai/cmd/curate_test.go, flai/cmd/guard.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/cmd/root.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/context/strategic.go, flai/internal/context/strategic_test.go, flai/internal/conventions/conventions.go, flai/internal/conventions/conventions_test.go, flai/internal/guard/authors.go, flai/internal/guard/call.go, flai/internal/guard/curate_test.go, flai/internal/guard/guard.go, flai/internal/guard/shared.go, flai/internal/harness/adapters.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/mcpserver/activity.go, flai/internal/mcpserver/curate.go, flai/internal/mcpserver/curate_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/serve/activity.go, flai/internal/serve/agents.go, flai/internal/serve/claudecheck.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/usage/usage.go, flai/internal/workitem/activity.go, flai/internal/workitem/activity_test.go, flai/internal/workitem/usage_test.go, template/CHANGELOG.md, template/root/.claude/agents/curator.md, template/root/.claude/settings.json, template/root/design/conventions/README.md, template/root/design/conventions/strategic-agents.md, template/root/wip/agents/README.md, template/template.yaml, wip/agents/README.md]
+touches: [".claude/agents/curator.md", ".claude/settings.json", design/adrs, design/adrs/README.md, design/conventions/README.md, design/conventions/strategic-agents.md, design/system/agent-adapters.md, design/system/agent-narrative.md, design/system/flai-cli.md, design/system/project-manifest.md, design/system/strategic-agents.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flai-reference.md, docs/users/flai.md, flai/cmd/curate.go, flai/cmd/curate_test.go, flai/cmd/guard.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/cmd/root.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/context/strategic.go, flai/internal/context/strategic_test.go, flai/internal/conventions/conventions.go, flai/internal/conventions/conventions_test.go, flai/internal/guard/authors.go, flai/internal/guard/call.go, flai/internal/guard/curate_test.go, flai/internal/guard/guard.go, flai/internal/guard/shared.go, flai/internal/harness/adapters.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/mcpserver/activity.go, flai/internal/mcpserver/curate.go, flai/internal/mcpserver/curate_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/serve/activity.go, flai/internal/serve/agents.go, flai/internal/serve/claudecheck.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/usage/usage.go, flai/internal/workitem/activity.go, flai/internal/workitem/activity_test.go, flai/internal/workitem/usage_test.go, template/CHANGELOG.md, template/root/.claude/agents/curator.md, template/root/.claude/settings.json, template/root/design/conventions/README.md, template/root/design/conventions/strategic-agents.md, template/root/wip/agents/README.md, template/template.yaml, wip/agents/README.md, design/issues/I-0202-task-done-s-answer-carries-every-check-note-outside-the-story-so-it-exceeds-the-40-000-bytes-it-promises-and-overflows-the-tool-result.md, design/issues/summary.md, flai/internal/check/check.go, flai/internal/check/digest_agent_test.go, flai/internal/mcpserver/activity_test.go, flai/internal/serve/serve.go]
 after: [S-0430]
 agent:
   harness: claude-code
@@ -19,20 +25,34 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2716
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-23
+      hand_edits: 1
+      work: 33
+    - day: 2026-10-24
+      work: 18
+  models:
+    - model: claude-opus-5-5
+      input: 362
+      output: 1913
+      cache_read: 19957211
+      cache_write: 818397
+      cost: 7.0637
   strategic:
     - kind: orchestrator
-      seconds: 820
+      seconds: 893
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 51
-          output: 850
-          cache_read: 5629905
-          cache_write: 12112
-          cost: 1.2411
+          input: 74
+          output: 1255
+          cache_read: 14258978
+          cache_write: 17574
+          cost: 3.1401
 cost_of_delay:
   value: 147.54
   by: planner-S-0431

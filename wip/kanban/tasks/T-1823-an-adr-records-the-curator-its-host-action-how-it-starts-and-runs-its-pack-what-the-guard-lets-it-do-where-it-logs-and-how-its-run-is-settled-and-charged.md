@@ -3,15 +3,36 @@ id: T-1823
 type: task
 nature: feature
 title: "An ADR records the curator: its host action, how it starts and runs, its pack, what the guard lets it do, where it logs, and how its run is settled and charged"
-status: backlog
+status: done
 parent: S-0431
 owner: alex
 created: 2026-10-16T06:05:20Z
-updated: 2026-10-16T06:05:20Z
-transitions: []
+updated: 2026-10-23T23:42:38Z
+transitions:
+  - to: ready
+    at: 2026-10-23T23:41:25Z
+    by: agent-S-0431
+  - to: in-progress
+    at: 2026-10-23T23:41:25Z
+    by: agent-S-0431
+  - to: done
+    at: 2026-10-23T23:42:38Z
+    by: agent-S-0431
 stream: S-0431
 tags: [cli]
 touches: [design/adrs, design/adrs/README.md]
+usage:
+  source: log
+  seconds: 73
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 111
+      cache_read: 973671
+      cache_write: 11815
+      cost: 0.3351
 ---
 # T-1823 An ADR records the curator: its host action, how it starts and runs, its pack, what the guard lets it do, where it logs, and how its run is settled and charged
 
