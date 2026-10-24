@@ -3,11 +3,11 @@ id: I-0202
 title: task_done's answer carries every check note outside the story, so it exceeds the 40,000 bytes it promises and overflows the tool result
 class: efficiency
 status: closed
-count: 2
+count: 3
 cost: 2m
 first_reported: 2026-10-23T21:50:41Z
-last_reported: 2026-10-24T00:04:39Z
-updated: 2026-10-24T00:04:39Z
+last_reported: 2026-10-24T00:18:48Z
+updated: 2026-10-24T00:18:48Z
 ---
 
 # I-0202 task_done's answer carries every check note outside the story, so it exceeds the 40,000 bytes it promises and overflows the tool result
@@ -24,6 +24,10 @@ S-0491: each of four task_done calls answered about 90,500 characters, over Clau
 ### 2026-10-24T00:04:39Z
 Story: S-0490.
 S-0490's first task_done (T-2099) answered 92,534 characters, 400 check notes outside the story, so Claude Code saved it to a file and the agent read it back with jq.
+
+### 2026-10-24T00:18:48Z
+Story: S-0486.
+task_done T-2074 over MCP answered 94,567 characters, with 399 check notes outside the story, and overflowed the tool result. The commit, move, and check had gone through, which reading the saved file with jq showed. Later tasks were closed with flai task done --json on the host instead.
 
 ## Remediation
 
