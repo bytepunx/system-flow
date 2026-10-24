@@ -3,16 +3,37 @@ id: T-1848
 type: task
 nature: experiment
 title: The results document weighs what else changed, cites threads an entry answered, says whether the hypothesis holds, and recommends keeping, changing, or dropping the digest
-status: backlog
+status: done
 parent: S-0435
 owner: alex
 created: 2026-10-16T06:09:04Z
-updated: 2026-10-16T06:09:04Z
-transitions: []
+updated: 2026-10-24T23:49:12Z
+transitions:
+  - to: ready
+    at: 2026-10-24T23:48:20Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-24T23:48:20Z
+    by: system-flow
+  - to: done
+    at: 2026-10-24T23:49:12Z
+    by: agent-S-0435
 stream: S-0435
 tags: [cli]
 touches: [design/experiments/S-0435-digest-priming-and-threads-to-the-operator.md, design/experiments/README.md, design/issues/summary.md]
 after: [T-1847]
+usage:
+  source: log
+  seconds: 52
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 3673
+      cache_read: 589198
+      cache_write: 15181
+      cost: 0.3128
 ---
 # T-1848 The results document weighs what else changed, cites threads an entry answered, says whether the hypothesis holds, and recommends keeping, changing, or dropping the digest
 

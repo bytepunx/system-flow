@@ -3,10 +3,10 @@ id: E-0025
 type: epic
 nature: feature
 title: A digest of the archive, kept by an agent and decayed as the design absorbs it, primes a story's agent with what past stories decided and what the operator answered, so the same question is not asked twice
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-16T04:28:05Z
-updated: 2026-10-23T16:36:56Z
+updated: 2026-10-24T23:50:56Z
 transitions:
   - to: ready
     at: 2026-10-21T20:49:14Z
@@ -14,12 +14,18 @@ transitions:
   - to: in-progress
     at: 2026-10-23T16:36:56Z
     by: agent-S-0428
+  - to: review
+    at: 2026-10-24T23:49:56Z
+    by: system-flow
+  - to: done
+    at: 2026-10-24T23:50:56Z
+    by: orchestrator
 tags: [cli, template]
 topics: [cli, planning, analysis, conventions]
 touches: [flai/internal/context, flai/internal/serve, flai/cmd, design/system/agent-context.md, design/system/strategic-agents.md, design/system/metrics.md, design/conventions/agent-narrative.md, docs/users/flai.md, docs/operators/index.md, template]
 usage:
   source: sum
-  seconds: 28843
+  seconds: 29333
   priced_by: harness
   turns:
     - day: 2026-10-23
@@ -28,33 +34,34 @@ usage:
       hand_edits: 14
       work: 258
     - day: 2026-10-24
-      ceremony: 9
-      hand_edits: 8
-      work: 231
+      ceremony: 11
+      test_runs: 1
+      hand_edits: 11
+      work: 288
   models:
     - model: claude-opus-5-5
-      input: 3048
-      output: 1169284
-      cache_read: 198916038
-      cache_write: 7386622
-      cost: 106.5338
+      input: 3180
+      output: 1206498
+      cache_read: 205368544
+      cache_write: 7640309
+      cost: 110.5986
   strategic:
     - kind: orchestrator
-      seconds: 83790
+      seconds: 87898
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1381
-          output: 22930
-          cache_read: 253367252
-          cache_write: 510258
-          cost: 56.7807
+          input: 1477
+          output: 24368
+          cache_read: 272770189
+          cache_write: 544826
+          cost: 61.0421
         - model: claude-sonnet-5-5
-          input: 97
-          output: 1697
-          cache_read: 1451226
-          cache_write: 401041
-          cost: 1.2724
+          input: 105
+          output: 1755
+          cache_read: 1533877
+          cache_write: 441902
+          cost: 1.3569
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 4h
@@ -95,3 +102,5 @@ To be drafted by the planner. Order: the entry format and its home first, with t
 - Open to the designer: whether the digest is a folder of markdown entries, one file per topic, or front matter on the archived items themselves; whether the analyzer keeps the digest or a role of its own does; what the compaction window is.
 - Safety: an entry never carries a secret's value, only where the operator said it lives; the run's prompt says so and `flai check` refuses an entry that matches a key's shape.
 - 2026-10-23T16:36:56Z: moved to in-progress: follows S-0428, which moved to in-progress
+- 2026-10-24T23:49:56Z: moved to review: follows S-0435, which moved to review
+- 2026-10-24T23:50:56Z: moved to done: follows S-0435, which moved to done

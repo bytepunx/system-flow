@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1522.2774
-accrued_seconds: 1329042
-tasks_completed: 1033
-last_run: 2026-10-24T22:42:13Z
+accrued_cost: 1526.6233
+accrued_seconds: 1333156
+tasks_completed: 1039
+last_run: 2026-10-24T23:50:47Z
 ---
 
 # Orchestrator activity
@@ -7242,6 +7242,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0434
 - Seconds: 3816
 - Cost: 4.3464 USD, estimated
+
+### 2026-10-24T22:56:46Z
+
+- Summary: S-0434 landed through merge queue batch 20261024-224219, which I enqueued. Under publish, judgement: release_evaluate lists S-0434 alone pending (92.98 USD/week, no held_by_epic). release_publish refused: "the host action \"push\" is not enabled for this project. On the host, in the project, run: flai serve enable push". It had published at 21:38Z, so push was turned off since then. I opened a thread on S-0434 with the refusal and its fix. I will not try again until it is answered or the next acceptance.
+- Items: S-0434
+- Seconds: 873
+- Cost: 0.5139 USD, estimated
+
+### 2026-10-24T22:56:57Z
+
+- Summary: agent-S-0435 pulled S-0435, the digest-priming experiment, leaving the ready column empty, so there was nothing to order. promote --candidates still lists only S-0241, which stays blocked. The backlog drafts still wait on the operator's threads.
+- Items: S-0435
+- Seconds: 11
+- Cost: 0.1732 USD, estimated
+
+### 2026-10-24T22:57:54Z
+
+- Summary: Answered TH-0642, citing wip/kanban/tasks/T-1847-the-results-document-states-the-hypothesis-and-the-two-windows-and-gives-the-measured-figures-for-each-as-flai-stats-reports-them.md
+- Items: S-0435
+- Seconds: 57
+- Cost: 1.3151 USD, estimated
+
+### 2026-10-24T22:58:00Z
+
+- Summary: Under answer_threads (autonomous), answered agent-S-0435's TH-0642 with "block", citing T-1847's Notes: block the story until the after window is whole, rather than measure a short one. S-0435 stays blocked until 2026-11-09, when W44 and W45 have passed. It holds one in-progress slot of 5 meanwhile.
+- Items: S-0435
+- Seconds: 6
+- Cost: 0.0000 USD
+
+### 2026-10-24T23:44:08Z
+
+- Summary: S-0435 was unblocked at 23:43:59Z, about 45 minutes after agent-S-0435 blocked it on my "block" answer. The event names no author, and TH-0642 is resolved with "block" and holds no new answer. I am taking no action: an unblock is not mine to undo, and the story's agent acts on it.
+- Items: S-0435
+- Seconds: 2768
+- Cost: 0.8955 USD, estimated
+
+### 2026-10-24T23:50:47Z
+
+- Summary: Enqueued S-0435 (experiment) at 72672079, first and only in the queue. Forecast 45m. flai verify passed at the head (docs-only tiers). The verifier matched all five criteria within touches. The results document under design/experiments states that the after window is not whole (26h45m), gives "cannot tell" as a preliminary reading, and recommends keeping the digest and re-measuring after 2026-11-09 under I-0207 (the curator has never run, so asked_again reads 0). The operator's session ran it after unblocking the story, which overrides my earlier "block" answer on TH-0642. Minor wording notes from the verifier do not block.
+- Items: S-0435
+- Seconds: 399
+- Cost: 1.4482 USD, estimated
 
 ## Refusals
 

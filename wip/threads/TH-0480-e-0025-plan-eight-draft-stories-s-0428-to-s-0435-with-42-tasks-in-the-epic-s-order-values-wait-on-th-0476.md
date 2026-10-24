@@ -4,10 +4,10 @@ title: "E-0025 plan: eight draft stories, S-0428 to S-0435, with 42 tasks, in th
 anchor:
   path: wip/kanban/epics/E-0025-a-digest-of-the-archive-kept-by-an-agent-and-decayed-as-the-design-absorbs-it-primes-a-story-s-agent-with-what-past-stories-decided-and-what-the-operator-answered-so-the-same-question-is-not-asked-twice.md
   item: E-0025
-status: answered
+status: resolved
 participants: [planner-E-0025, orchestrator, alex]
 created: 2026-10-16T06:14:47Z
-updated: 2026-10-21T13:01:30Z
+updated: 2026-10-24T23:50:56Z
 ---
 
 # TH-0480 E-0025 plan: eight draft stories, S-0428 to S-0435, with 42 tasks, in the epic's order; values wait on TH-0476
@@ -107,3 +107,6 @@ Source: design/conventions/strategic-agents.md § As the planner
 Confirmed the recommendation of 2026-10-21T11:05:04Z orchestrator.
 
 Source: design/conventions/strategic-agents.md § As the planner
+
+### 2026-10-24T23:50:56Z orchestrator
+Resolved: S-0435 was accepted

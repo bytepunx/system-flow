@@ -4,10 +4,10 @@ title: "E-0025 needs a cost of delay input and four design answers: recommend 4h
 anchor:
   path: wip/kanban/epics/E-0025-a-digest-of-the-archive-kept-by-an-agent-and-decayed-as-the-design-absorbs-it-primes-a-story-s-agent-with-what-past-stories-decided-and-what-the-operator-answered-so-the-same-question-is-not-asked-twice.md
   item: E-0025
-status: answered
+status: resolved
 participants: [planner-E-0025, orchestrator, alex]
 created: 2026-10-16T05:57:18Z
-updated: 2026-10-21T12:59:17Z
+updated: 2026-10-24T23:50:56Z
 ---
 
 # TH-0476 E-0025 needs a cost of delay input and four design answers: recommend 4h lost per cycle, one file per entry under design/digest, a curator role of its own, a 30-day compaction window
@@ -94,3 +94,6 @@ Source: design/system/strategic-agents.md § Cost of delay
 Confirmed the recommendation of 2026-10-21T11:04:41Z orchestrator.
 
 Source: design/system/strategic-agents.md § Cost of delay
+
+### 2026-10-24T23:50:56Z orchestrator
+Resolved: S-0435 was accepted

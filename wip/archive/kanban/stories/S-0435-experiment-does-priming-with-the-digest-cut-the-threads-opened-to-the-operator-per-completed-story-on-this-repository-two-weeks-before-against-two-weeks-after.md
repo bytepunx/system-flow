@@ -3,11 +3,11 @@ id: S-0435
 type: story
 nature: experiment
 title: "Experiment: does priming with the digest cut the threads opened to the operator per completed story on this repository, two weeks before against two weeks after"
-status: in-progress
+status: done
 parent: E-0025
 owner: alex
 created: 2026-10-16T06:00:41Z
-updated: 2026-10-24T22:56:29Z
+updated: 2026-10-24T23:50:56Z
 transitions:
   - to: ready
     at: 2026-10-24T20:28:57Z
@@ -15,9 +15,19 @@ transitions:
   - to: in-progress
     at: 2026-10-24T22:56:29Z
     by: agent-S-0435
+  - to: review
+    at: 2026-10-24T23:49:56Z
+    by: system-flow
+  - to: done
+    at: 2026-10-24T23:50:56Z
+    by: orchestrator
+blocked:
+  - from: 2026-10-24T22:57:44Z
+    until: 2026-10-24T23:43:59Z
+    reason: "The after window is not whole: S-0430 was accepted 2026-10-23T21:00:06Z, and the after window's weeks (W44, W45) are whole only from 2026-11-09. Asked on TH-0642 whether to wait or measure now."
 tags: [cli]
 topics: [analysis, planning]
-touches: [design/experiments/README.md, design/experiments/S-0435-digest-priming-and-threads-to-the-operator.md, design/issues/summary.md]
+touches: [design/experiments/README.md, design/experiments/S-0435-digest-priming-and-threads-to-the-operator.md, design/issues/summary.md, design/issues/I-0207-the-curator-has-never-run-on-system-flow-so-no-thread-is-in-any-entry-s-asked-again-and-the-digest-s-repeat-measure-reads-0-whatever-was-asked.md]
 after: [S-0434]
 agent:
   harness: claude-code
@@ -25,20 +35,39 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 490
+  priced_by: harness
+  turns:
+    - day: 2026-10-24
+      ceremony: 2
+      test_runs: 1
+      hand_edits: 3
+      work: 57
+  models:
+    - model: claude-opus-5-5
+      input: 132
+      output: 37214
+      cache_read: 6452506
+      cache_write: 253687
+      cost: 4.0648
   strategic:
     - kind: orchestrator
-      seconds: 5023
+      seconds: 8247
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 123
-          output: 2146
-          cache_read: 18639671
-          cache_write: 31457
-          cost: 4.105
+          input: 203
+          output: 3463
+          cache_read: 34919429
+          cache_write: 54822
+          cost: 7.6793
+        - model: claude-sonnet-5-5
+          input: 8
+          output: 58
+          cache_read: 82651
+          cache_write: 40861
+          cost: 0.0845
 cost_of_delay:
   value: 60.95
   by: planner-S-0435
@@ -61,11 +90,11 @@ Find out, on this repository, whether the digest does what E-0025 built it for. 
 
 ## Acceptance criteria
 
-- [ ] The results document, `design/experiments/S-0435-digest-priming-and-threads-to-the-operator.md` from `design/experiments/template.md`, states the hypothesis, the two windows by date, and the method: `flai stats --json` with each window, the `digest.weeks[]` figures, and the waits `waiting.weeks[].threads` reports, as flai gave them.
-- [ ] It reports for each window the threads opened to the operator, the stories completed, the threads per completed story, the threads that asked what an entry already answered, and the thread waits' total and mean, in one table.
-- [ ] It names what else changed between the windows that could explain a difference (other epics accepted, the orchestrator's `answer_threads` setting, the stories' mix by nature), and says whether the result supports the hypothesis, refutes it, or cannot tell, and why.
-- [ ] It lists three threads of the after window that an entry answered and the entry each cited, or says that none did, and the entries the curator absorbed or compacted in the window.
-- [ ] It ends with a recommendation: keep the digest as it is, change it (naming what, as an issue filed with `flai issue new` and linked), or drop it; and `design/experiments/README.md` lists the document.
+- [x] The results document, `design/experiments/S-0435-digest-priming-and-threads-to-the-operator.md` from `design/experiments/template.md`, states the hypothesis, the two windows by date, and the method: `flai stats --json` with each window, the `digest.weeks[]` figures, and the waits `waiting.weeks[].threads` reports, as flai gave them.
+- [x] It reports for each window the threads opened to the operator, the stories completed, the threads per completed story, the threads that asked what an entry already answered, and the thread waits' total and mean, in one table.
+- [x] It names what else changed between the windows that could explain a difference (other epics accepted, the orchestrator's `answer_threads` setting, the stories' mix by nature), and says whether the result supports the hypothesis, refutes it, or cannot tell, and why.
+- [x] It lists three threads of the after window that an entry answered and the entry each cited, or says that none did, and the entries the curator absorbed or compacted in the window.
+- [x] It ends with a recommendation: keep the digest as it is, change it (naming what, as an issue filed with `flai issue new` and linked), or drop it; and `design/experiments/README.md` lists the document.
 
 ## Tasks
 - T-1847 The results document states the hypothesis and the two windows and gives the measured figures for each, as flai stats reports them
@@ -88,3 +117,17 @@ Planned again on 2026-10-23 by planner-S-0435, with S-0428 accepted (ADR-0191 an
 - **Forecast.** 45m, delivery 2026-11-07T08:25Z. flai's figure was 14m (median 100 s per unit over 297 done stories, size 8), played out to 2026-10-24T13:07Z. Raised: the two experiments done here, S-0176 and S-0427, took 1h46m and 1h31m of agent time, and both built and ran a trial; this one reads its figures from `flai stats`, the manifest's history, the threads, and the entries, and argues them in one document, about half of that. The delivery is not flai's play-out, which ignores the after window: it is S-0430's forecast delivery (2026-10-24T07:40Z) plus 14 days plus the duration, and moves with S-0430's acceptance.
 - **Cost of delay.** 60.95 USD a week, flai's figure: S-0435's share of E-0025's 600 USD a week (`time_lost_per_cycle: 4h`, the answer the operator confirmed on TH-0476), 45m of 7h23m forecast over the epic's 7 open stories without inputs. Not adjusted: the story's weight in the epic is its duration.
 - **Assumption on the windows.** `flai stats` takes `--since` alone, a window that ends now, and reports `digest.weeks[]` and `waiting.weeks[]` per ISO week. The story's agent runs it once with a `--since` long enough to cover both windows (28d from S-0430's acceptance plus the days since) and takes for each window the weeks whose `start` falls inside it; a week that straddles S-0430's acceptance belongs to neither and is named in the method. This is proposed as an edit to T-1847's Work on the plan thread.
+
+### Accepted by the orchestrator
+
+- Verified: 72672079fe13e6daf224926fa5381ab7531311db
+- Batch: 20261024-235048
+- Enqueued verified: 72672079fe13e6daf224926fa5381ab7531311db
+- At: 2026-10-24T23:50:56Z
+
+Verdict: S-0435 meets all five criteria at 72672079, every changed file under its touches; flai verify passed at that head. The results document states that its after window is not whole and gives "cannot tell" as a preliminary reading.
+- 1: design/experiments/S-0435-digest-priming-and-threads-to-the-operator.md
+- 2: design/experiments/S-0435-digest-priming-and-threads-to-the-operator.md
+- 3: design/experiments/S-0435-digest-priming-and-threads-to-the-operator.md
+- 4: design/experiments/S-0435-digest-priming-and-threads-to-the-operator.md
+- 5: design/experiments/S-0435-digest-priming-and-threads-to-the-operator.md, design/experiments/README.md, design/issues/I-0207-the-curator-has-never-run-on-system-flow-so-no-thread-is-in-any-entry-s-asked-again-and-the-digest-s-repeat-measure-reads-0-whatever-was-asked.md, design/issues/summary.md
