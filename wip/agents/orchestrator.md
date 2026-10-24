@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1507.5164
-accrued_seconds: 1297540
-tasks_completed: 1025
-last_run: 2026-10-24T13:57:11Z
+accrued_cost: 1507.6453
+accrued_seconds: 1297596
+tasks_completed: 1026
+last_run: 2026-10-24T13:58:07Z
 ---
 
 # Orchestrator activity
@@ -7186,6 +7186,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0494
 - Seconds: 310
 - Cost: 1.1196 USD, estimated
+
+### 2026-10-24T13:58:07Z
+
+- Summary: The operator accepted S-0494 by hand at 13:58:03Z, a minute after I enqueued it at 872bb656, so the queue's batch did not land it. Under publish, release_evaluate reports nothing pending: the operator's acceptance released it. The operator is accepting by hand this session, so S-0431, S-0493 and S-0494 reached main without the queue's integration and smoke tiers (I-0203).
+- Items: S-0494
+- Seconds: 56
+- Cost: 0.1289 USD, estimated
 
 ## Refusals
 
