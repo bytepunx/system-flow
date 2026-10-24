@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1502.4880
-accrued_seconds: 1296098
-tasks_completed: 1021
-last_run: 2026-10-24T13:33:09Z
+accrued_cost: 1507.5164
+accrued_seconds: 1297540
+tasks_completed: 1025
+last_run: 2026-10-24T13:57:11Z
 ---
 
 # Orchestrator activity
@@ -7159,6 +7159,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 797
 - Cost: 1.5896 USD, estimated
 
+### 2026-10-24T13:42:24Z
+
+- Summary: The operator accepted S-0493 by hand at 13:41:30Z, 20s after it reached review and while my verifier ran. The verifier had matched both criteria at c89d37ac, all within touches. Criterion 1 is met by the git branch -D in flai/cmd/branch.go with two real-git tests in flai/cmd/accept_test.go. Criterion 2 is met by closing I-0204. flai verify had passed at that head. Its one doc note: docs/users/flai.md says a pushed branch is removed, when only the local branch is deleted. Under publish, release_evaluate reports nothing pending, so the operator's own acceptance released S-0431 and S-0493. flai guard refused `git tag --sort=-creatordate` (I publish through release_publish only).
+- Items: S-0493, S-0431
+- Seconds: 555
+- Cost: 2.7451 USD, estimated
+
+### 2026-10-24T13:51:55Z
+
+- Summary: The operator's session (system-flow) moved S-0494, a flaiover events-socket race that fails CI, straight to ready. Under order_ready, I applied flai order --by throughput: S-0433 (35m), S-0434 (1h15m), then S-0494, last because it has no forecast duration. It is in ready rather than the backlog, so flai plan --candidates does not list it, and no planner was started.
+- Items: S-0494, S-0433, S-0434
+- Seconds: 571
+- Cost: 1.1016 USD, estimated
+
+### 2026-10-24T13:52:01Z
+
+- Summary: agent-S-0494 pulled S-0494. Under order_ready, I re-applied flai order --by throughput, leaving S-0433 (35m) then S-0434 (1h15m). Both are held by `after` behind S-0432, which is in progress.
+- Items: S-0494
+- Seconds: 6
+- Cost: 0.0621 USD, estimated
+
+### 2026-10-24T13:57:11Z
+
+- Summary: Enqueued S-0494 at 872bb656, alone in the queue. It has no forecast or value of its own on record. flai verify passed at the head (the flaiover tier covers lint and vitest). The verifier matched both criteria within touches. Criterion 1: EventsSocket.close tears each socket down, removing its Repo listeners, before sending 1001, with a test asserting zero listeners right after close() that fails every time on main. Criterion 2: I-0205 closed and summary.md regenerated. Its queue batch runs integration and smoke on a main that now holds S-0431 and S-0493, which were accepted by hand without those tiers.
+- Items: S-0494
+- Seconds: 310
+- Cost: 1.1196 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -7329,4 +7357,9 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-10-24T09:18:33Z
 
 - Call: `flai board --json 2>/dev/null`
+- Needs: none
+
+### 2026-10-24T13:42:21Z
+
+- Call: `git tag --sort=-creatordate`
 - Needs: none

@@ -3,12 +3,18 @@ id: T-1833
 type: task
 nature: feature
 title: flai digest absorb, cited, and compact mark an entry absorbed, find each entry's latest citation, and compact the entries uncited within the window
-status: backlog
+status: in-progress
 parent: S-0432
 owner: alex
 created: 2026-10-16T06:06:53Z
-updated: 2026-10-24T13:41:13Z
-transitions: []
+updated: 2026-10-24T13:42:17Z
+transitions:
+  - to: ready
+    at: 2026-10-24T13:42:16Z
+    by: agent-S-0432
+  - to: in-progress
+    at: 2026-10-24T13:42:17Z
+    by: agent-S-0432
 stream: S-0432
 tags: [cli]
 touches: [flai/internal/digest/decay.go, flai/internal/digest/decay_test.go, flai/internal/digest/digest.go, flai/internal/digest/digest_test.go, flai/cmd/digest.go, flai/cmd/digest_test.go, docs/users/flai-reference.md, docs/operators/settings.md]
