@@ -7,7 +7,7 @@ status: done
 parent: S-0431
 owner: alex
 created: 2026-10-16T06:06:02Z
-updated: 2026-10-24T00:25:02Z
+updated: 2026-10-24T01:05:52Z
 transitions:
   - to: ready
     at: 2026-10-24T00:14:13Z
@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 647
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 89
-      output: 434
-      cache_read: 4843722
-      cache_write: 149905
-      cost: 1.6988
+      input: 69
+      output: 25093
+      cache_read: 4918551
+      cache_write: 162155
+      cost: 2.4632
 ---
 # T-1827 flai serve starts, records, and settles the curator's run, one per project, and logs its activity in wip/agents/curator.md
 

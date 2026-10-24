@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 736
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 61
-      output: 273
-      cache_read: 2669235
-      cache_write: 236139
-      cost: 0.9884
+      input: 40
+      output: 14599
+      cache_read: 2861703
+      cache_write: 94345
+      cost: 1.4332
 ---
 # T-1826 flai guard holds the curator to the reads, the digest commands, and its thread and activity tools, and refuses it every file edit and work item write
 

@@ -19,9 +19,8 @@ topics: [cli, planning, analysis, conventions]
 touches: [flai/internal/context, flai/internal/serve, flai/cmd, design/system/agent-context.md, design/system/strategic-agents.md, design/system/metrics.md, design/conventions/agent-narrative.md, docs/users/flai.md, docs/operators/index.md, template]
 usage:
   source: sum
-  seconds: 14358
-  estimated: true
-  priced_by: estimate
+  seconds: 16969
+  priced_by: harness
   turns:
     - day: 2026-10-23
       ceremony: 11
@@ -29,26 +28,27 @@ usage:
       hand_edits: 14
       work: 258
     - day: 2026-10-24
-      ceremony: 2
-      work: 33
+      ceremony: 3
+      hand_edits: 1
+      work: 62
   models:
     - model: claude-opus-5-5
-      input: 1648
-      output: 499444
-      cache_read: 107381944
-      cache_write: 3637336
-      cost: 50.8936
+      input: 1898
+      output: 753903
+      cache_read: 131070018
+      cache_write: 4222306
+      cost: 66.6734
   strategic:
     - kind: orchestrator
-      seconds: 9262
+      seconds: 51049
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 797
-          output: 12923
-          cache_read: 166938512
-          cache_write: 267603
-          cost: 37.7777
+          input: 884
+          output: 14048
+          cache_read: 174147650
+          cache_write: 388209
+          cost: 39.385
         - model: claude-sonnet-5-5
           input: 48
           output: 1427

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 73
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 12
-      output: 111
-      cache_read: 973671
-      cache_write: 11815
-      cost: 0.3353
+      input: 14
+      output: 4952
+      cache_read: 970665
+      cache_write: 32001
+      cost: 0.4861
 ---
 # T-1823 An ADR records the curator: its host action, how it starts and runs, its pack, what the guard lets it do, where it logs, and how its run is settled and charged
 

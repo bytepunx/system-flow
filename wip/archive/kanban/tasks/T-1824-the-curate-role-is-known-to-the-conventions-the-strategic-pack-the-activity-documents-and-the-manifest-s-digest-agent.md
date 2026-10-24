@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 788
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 94
-      output: 518
-      cache_read: 4083152
-      cache_write: 124634
-      cost: 1.4316
+      input: 58
+      output: 21144
+      cache_read: 4144543
+      cache_write: 136638
+      cost: 2.0756
 ---
 # T-1824 The curate role is known to the conventions, the strategic pack, the activity documents, and the manifest's digest.agent
 

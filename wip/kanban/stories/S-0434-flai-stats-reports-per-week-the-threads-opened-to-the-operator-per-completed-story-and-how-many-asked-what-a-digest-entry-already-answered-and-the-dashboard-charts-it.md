@@ -3,12 +3,15 @@ id: S-0434
 type: story
 nature: feature
 title: flai stats reports per week the threads opened to the operator per completed story and how many asked what a digest entry already answered, and the dashboard charts it
-status: backlog
+status: ready
 parent: E-0025
 owner: alex
 created: 2026-10-16T06:00:19Z
-updated: 2026-10-24T00:56:22Z
-transitions: []
+updated: 2026-10-24T12:41:07Z
+transitions:
+  - to: ready
+    at: 2026-10-24T12:41:07Z
+    by: alex
 tags: [cli, dashboard]
 topics: [cli, dashboard, analysis]
 touches: [design/adrs, design/adrs/README.md, design/conventions/strategic-agents.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/system/metrics.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md, flai/cmd/check_stats_test.go, flai/cmd/stats.go, flai/cmd/stats_test.go, flai/internal/metrics/digest.go, flai/internal/metrics/digest_test.go, flai/internal/metrics/metrics.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, flaiover/src/lib/viz/catalog.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/explain.test.ts, flaiover/src/lib/viz/explain.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", template/CHANGELOG.md, template/root/design/conventions/strategic-agents.md, template/template.yaml]
@@ -24,15 +27,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 392
+      seconds: 3432
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 19
-          output: 182
-          cache_read: 2552261
-          cache_write: 10221
-          cost: 0.5636
+          input: 24
+          output: 254
+          cache_read: 3083928
+          cache_write: 13843
+          cost: 0.681
         - model: claude-sonnet-5-5
           input: 3
           output: 18

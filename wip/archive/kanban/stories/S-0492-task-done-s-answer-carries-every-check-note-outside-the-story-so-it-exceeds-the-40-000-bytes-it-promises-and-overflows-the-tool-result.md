@@ -47,16 +47,32 @@ usage:
       cache_write: 170306
       cost: 3.3757
   strategic:
+    - kind: planner
+      seconds: 442
+      estimated: true
+      models:
+        - model: claude-fable-5-1
+          input: 130
+          output: 9636
+          cache_read: 277325
+          cache_write: 116181
+          cost: 2.8761
+        - model: claude-haiku-5-5
+          input: 62
+          output: 28836
+          cache_read: 2800036
+          cache_write: 140855
+          cost: 0.2063
     - kind: orchestrator
-      seconds: 626
+      seconds: 634
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 43
-          output: 806
-          cache_read: 16248722
-          cache_write: 16370
-          cost: 3.5773
+          input: 45
+          output: 824
+          cache_read: 17097919
+          cache_write: 17417
+          cost: 3.7643
         - model: claude-sonnet-5-5
           input: 7
           output: 49

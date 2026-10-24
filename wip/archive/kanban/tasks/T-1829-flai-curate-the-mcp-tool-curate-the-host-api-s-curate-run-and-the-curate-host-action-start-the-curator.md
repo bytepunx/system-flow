@@ -24,16 +24,16 @@ touches: [flai/cmd/curate.go, flai/cmd/curate_test.go, flai/cmd/root.go, flai/cm
 after: [T-1827]
 usage:
   source: log
-  seconds: 729
+  seconds: 731
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 65
-      output: 343
-      cache_read: 3093218
-      cache_write: 238172
-      cost: 1.1334
+      input: 46
+      output: 16740
+      cache_read: 3281310
+      cache_write: 108178
+      cost: 1.6433
 ---
 # T-1829 flai curate, the MCP tool curate, the host API's curate.run, and the curate host action start the curator
 

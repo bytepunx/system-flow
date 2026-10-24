@@ -3,11 +3,11 @@ id: T-1828
 type: task
 nature: feature
 title: The curator's definition lists its tools and rules, and settings.json runs flai guard on its file edits, in the template and here
-status: in-progress
+status: done
 parent: S-0431
 owner: alex
 created: 2026-10-16T06:06:08Z
-updated: 2026-10-24T00:37:17Z
+updated: 2026-10-24T13:21:34Z
 transitions:
   - to: ready
     at: 2026-10-23T23:42:58Z
@@ -15,22 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-23T23:42:59Z
     by: agent-S-0431
+  - to: done
+    at: 2026-10-24T13:21:33Z
+    by: agent-S-0431
 stream: S-0431
 tags: [cli, template]
-touches: [".claude/agents/curator.md", template/root/.claude/agents/curator.md, ".claude/settings.json", template/root/.claude/settings.json, flai/cmd/guard_test.go, flai/internal/harness/harness_test.go]
+touches: [".claude/agents/curator.md", template/root/.claude/agents/curator.md, ".claude/settings.json", template/root/.claude/settings.json, flai/cmd/guard_test.go, flai/internal/harness/harness_test.go, flai/internal/metrics/strategic_test.go]
 after: [T-1823]
 usage:
   source: log
-  seconds: 3997
+  seconds: 5994
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 69
-      output: 425
-      cache_read: 7524772
-      cache_write: 59033
-      cost: 2.5799
+      input: 189
+      output: 68763
+      cache_read: 13478569
+      cache_write: 444363
+      cost: 6.7501
 ---
 # T-1828 The curator's definition lists its tools and rules, and settings.json runs flai guard on its file edits, in the template and here
 
