@@ -18,8 +18,8 @@ import (
 )
 
 // What the strategic agents did (S-0206, ADR-0079). flai serve keeps the log
-// of each run of the planner, the orchestrator, and the analyzer as it does a
-// story's agent's, named for the project's key, the kind, and the time it
+// of each run of the planner, the orchestrator, the analyzer, and the
+// curator as it does a story's agent's, named for the project's key, the kind, and the time it
 // started. An activity ends when the agent reports it or when its run ends;
 // its span runs from the later of the newest run's start and the document's
 // last entry to its end, and its cost is what the kind's logs say was spent,
@@ -32,7 +32,9 @@ import (
 // is split evenly between the issues its entry names and charged to each
 // (S-0227). An analyzer run's end names the report the run wrote, or says it
 // wrote none (S-0223), and names the issues that name the report, so its
-// cost is split between them (S-0227).
+// cost is split between them (S-0227). A curator's names the digest entries
+// its run wrote or changed, which are no work items, and charges nothing: its
+// cost stays in its kind's project strategic total (S-0431, ADR-0196).
 
 // ActivityLogs are the logs flai serve keeps of the runs of the strategic
 // agent kind in the project named key, oldest first.
@@ -247,9 +249,9 @@ func (m *activityMeasure) spent(s usage.Span) *usage.Usage {
 // charge charges u, what an activity in run spent, with the entry's
 // seconds, so that the items and the activity document are two views of one
 // spend: a planner's to the item it planned, an orchestrator's to the work
-// items its entry names, an analyzer's to the issues its entry names. It
-// charges nothing for a u that spent nothing. It notes what it charged on
-// logged.
+// items its entry names, an analyzer's to the issues its entry names. A
+// curator's, whose entry names digest entries, charges nothing (ADR-0196),
+// and nor does a u that spent nothing. It notes what it charged on logged.
 func (m *activityMeasure) charge(logged *Logged, run usage.Run, u *usage.Usage) error {
 	if u == nil || len(u.Models) == 0 {
 		return nil
@@ -264,6 +266,7 @@ func (m *activityMeasure) charge(logged *Logged, run usage.Run, u *usage.Usage) 
 	case workitem.ActivityAnalyzer:
 		return m.chargeIssues(logged, c)
 	}
+	// workitem.ActivityCurator: digest entries are no items to charge
 	return nil
 }
 

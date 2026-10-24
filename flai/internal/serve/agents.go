@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/config"
+	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/host"
@@ -75,6 +76,9 @@ type AgentConfig struct {
 	// Analyze is whether the analyze host action is enabled for the project:
 	// the operator may have the analyzer started for it (S-0223).
 	Analyze bool
+	// Curate is whether the curate host action is enabled for the project:
+	// the operator may have the curator started for it (S-0431, ADR-0196).
+	Curate  bool
 	Command []string
 	Name    string // FLAI_AGENT is this and the story's ID; "agent" when empty
 	// Harnesses are the program and arguments each harness runs with on this
@@ -168,13 +172,13 @@ const (
 
 // AgentRun is one agent flai serve started, or failed to: a story's agent,
 // the planner for an item (S-0208), the project's orchestrator (S-0218), or
-// its analyzer (S-0223).
+// its analyzer (S-0223), or its curator (S-0431).
 type AgentRun struct {
 	Story string `json:"story"`
 	// Item is the epic or story a planner run plans; empty on a story's
 	// agent's run, whose story is Story, and Story is empty on a planner's.
-	// Both are empty on the orchestrator's run and the analyzer's, which
-	// work the whole project.
+	// Both are empty on the orchestrator's run, the analyzer's, and the
+	// curator's, which work the whole project.
 	Item    string `json:"item,omitempty"`
 	Harness string `json:"harness,omitempty"`
 	Model   string `json:"model,omitempty"`
@@ -209,8 +213,23 @@ type AgentRun struct {
 	// Trigger is what started a planner run (ADR-0084): asked, for the
 	// operator's asking, orchestrator, for the orchestrator's (S-0219), and
 	// otherwise the replanner's triggers, separated by semicolons. It is empty on a story's agent's run and on planner runs
-	// before S-0211. An analyzer run's is what its starter said (S-0223).
+	// before S-0211. An analyzer run's and a curator run's are what its
+	// starter said (S-0223, S-0431).
 	Trigger string `json:"trigger,omitempty"`
+	// Role is the mark of a run that the fields that name its work do not
+	// tell from the orchestrator's: conventions.RoleCurate on the curator's
+	// runs (S-0431, ADR-0196), so that one is never taken for the
+	// orchestrator's run; empty on every other run.
+	Role string `json:"role,omitempty"`
+	// Since is when a curator run takes in from, as the harness was given it:
+	// the since its starter gave, else the time of the curator's last
+	// activity, and empty on its first run, which takes in everything
+	// (S-0431).
+	Since string `json:"since,omitempty"`
+	// Entries are the digest entries a curator run wrote or changed, by ID,
+	// once it has ended: those whose files under the design folder's digest/
+	// changed since it started; empty when it changed none (S-0431).
+	Entries []string `json:"entries,omitempty"`
 	// Focus is what an analyzer run looks for (S-0223): one of
 	// harness.Focuses, or harness.AllFocus when it was asked for none. It is
 	// set on the analyzer's runs alone, and tells them from the
@@ -278,12 +297,20 @@ func agentChanged(run *AgentRun, now *manifest.Agent) bool {
 }
 
 // orchestrates is the orchestrator's run: one for no story and no item, with
-// no focus.
-func (r *AgentRun) orchestrates() bool { return r.Story == "" && r.Item == "" && r.Focus == "" }
+// no focus and no role of its own.
+func (r *AgentRun) orchestrates() bool {
+	return r.Story == "" && r.Item == "" && r.Focus == "" && r.Role == ""
+}
 
 // analyzes is the analyzer's run: one for no story and no item, with a focus
-// (S-0223).
-func (r *AgentRun) analyzes() bool { return r.Story == "" && r.Item == "" && r.Focus != "" }
+// (S-0223) and no role of its own.
+func (r *AgentRun) analyzes() bool {
+	return r.Story == "" && r.Item == "" && r.Focus != "" && r.Role == ""
+}
+
+// curates is the curator's run: one marked with its role (S-0431), whatever
+// else it names.
+func (r *AgentRun) curates() bool { return r.Role == conventions.RoleCurate }
 
 // live is a run that has not ended.
 func (r *AgentRun) live() bool { return r != nil && r.Ended == "" && r.Error == "" && r.PID > 0 }
@@ -312,6 +339,9 @@ type AgentState struct {
 	// Analyzer is the project's newest analyzer run (S-0223), no story's
 	// run either.
 	Analyzer *AgentRun `json:"analyzer,omitempty"`
+	// Curator is the project's newest curator run (S-0431, ADR-0196), the
+	// newest alone, no story's run either.
+	Curator *AgentRun `json:"curator,omitempty"`
 	// PastOrchestrators and PastAnalyzers are the runs Orchestrator and
 	// Analyzer named before, newest first, at most pastRuns of each
 	// (S-0228): what the dashboard's pages list as past runs.
@@ -338,8 +368,12 @@ func keep(past []*AgentRun, was, r *AgentRun) []*AgentRun {
 }
 
 // of is the newest run recorded for what r is for: its item's planner run,
-// the orchestrator's, the analyzer's, or its story's agent's run.
+// the orchestrator's, the analyzer's, the curator's, or its story's agent's
+// run.
 func (s *AgentState) of(r *AgentRun) *AgentRun {
+	if r.curates() {
+		return s.Curator
+	}
 	if r.orchestrates() {
 		return s.Orchestrator
 	}
@@ -353,9 +387,14 @@ func (s *AgentState) of(r *AgentRun) *AgentRun {
 }
 
 // put records a run as its story's newest, and keeps Running and Last true,
-// a planner run as its item's newest, or the orchestrator's or the
-// analyzer's as the newest, the one it replaces kept among their past runs.
+// a planner run as its item's newest, the orchestrator's or the analyzer's
+// as the newest, the one it replaces kept among their past runs, or the
+// curator's as the newest alone.
 func (s *AgentState) put(r *AgentRun) {
+	if r.curates() {
+		s.Curator = r
+		return
+	}
 	if r.orchestrates() {
 		s.PastOrchestrators = keep(s.PastOrchestrators, s.Orchestrator, r)
 		s.Orchestrator = r
@@ -918,8 +957,8 @@ func startedBefore(run *AgentRun, entered time.Time) bool {
 // on the operator's word and handed them over (S-0115, S-0116). A process
 // that has the run's PID and is not the one started for it, after a reboot,
 // is gone too (S-0170). A planner's run is settled the same way, and its
-// activity logged (S-0208), and so are the orchestrator's (S-0218) and the
-// analyzer's (S-0223).
+// activity logged (S-0208), and so are the orchestrator's (S-0218), the
+// analyzer's (S-0223), and the curator's (S-0431).
 func (l *launcher) settleOrphans() {
 	st := l.dir.AgentStates()[l.entry.Root]
 	for _, run := range st.Stories {
@@ -944,6 +983,9 @@ func (l *launcher) settleOrphans() {
 	}
 	if run := st.Analyzer; run.live() && !l.waiting[run.PID] && !run.running() {
 		l.analyzeEnded(run, nil)
+	}
+	if run := st.Curator; run.live() && !l.waiting[run.PID] && !run.running() {
+		l.curateEnded(run, nil)
 	}
 }
 

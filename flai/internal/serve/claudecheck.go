@@ -174,7 +174,7 @@ func newClaudeChecker(o Options, served func() []Entry) *claudeChecker {
 // at: each provider a project names gets its own check of the same claude.
 // It never waits for the check, and starts none while one runs.
 func (c *claudeChecker) consider(ctx context.Context, root string, cfg AgentConfig) {
-	if !cfg.Enabled && !cfg.Plan && !cfg.Orchestrate && !cfg.Analyze {
+	if !cfg.Enabled && !cfg.Plan && !cfg.Orchestrate && !cfg.Analyze && !cfg.Curate {
 		return
 	}
 	host := harness.ClaudeCodeHost(cfg.host(harness.ClaudeCode))
@@ -579,7 +579,7 @@ func claudeCodeProject(root string) (provider string, uses bool) {
 	if err != nil {
 		return "", false
 	}
-	for _, a := range []*manifest.Agent{m.Agent, m.PlanningAgent(), m.AnalysisAgent(), m.OrchestrationAgent()} {
+	for _, a := range []*manifest.Agent{m.Agent, m.PlanningAgent(), m.AnalysisAgent(), m.OrchestrationAgent(), m.DigestAgent()} {
 		if a != nil && a.Harness == harness.ClaudeCode {
 			uses = true
 		}

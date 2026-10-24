@@ -1,0 +1,288 @@
+package serve
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"slices"
+	"strconv"
+	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/conventions"
+	"github.com/bytepunx/system-flow/flai/internal/digest"
+	"github.com/bytepunx/system-flow/flai/internal/harness"
+	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
+)
+
+// The curator, started for a project on the operator's word (S-0431,
+// ADR-0196).
+//
+// flai curate, the host API's curate.run, which runs it, and the MCP tool
+// curate all start it through Curate: in the project's main checkout, with
+// the project's digest agent (digest.agent over agent) and the harness's
+// curator request, as curator, with FLAI_ROLE=curate and the run's since. It
+// takes in what the archive and the threads gained since then as digest
+// entries, written through flai digest new and edit alone, and ends. One
+// runs per project at a time. Like the analyzer's, its run is recorded in
+// serve/agents.json, under curator, the newest alone, marked with its role so
+// that it is never taken for the orchestrator's, and its log beside the
+// others as the curator's (Dir.ActivityLogs). The serving flai settles the
+// run once its process is gone, and logs its activity in wip/agents/curator.md,
+// naming the entries whose files the run wrote or changed, beside the run's
+// seconds and cost. It charges no item: digest entries are not work items. It
+// is no story's agent: the in-progress limit does not count it, and it holds
+// no story back.
+
+// curateAction is the host action that starts the curator for a project, on
+// the operator's word (ADR-0196), as the journal names it.
+const curateAction = "curate"
+
+// sinceForms are the forms a curator's since takes, as flai digest harvest
+// --since reads it: a day in UTC, or an RFC 3339 time.
+var sinceForms = []string{time.DateOnly, time.RFC3339}
+
+// Curate starts the curator in project e, taking in what the archive and the
+// threads gained since since, a YYYY-MM-DD day in UTC or an RFC 3339 time,
+// or, when since is empty, since the curator's last activity, or everything
+// on its first run. It returns its run as recorded, its since the one it was
+// started with, with trigger as what started it: TriggerAsked for the
+// operator's asking, from a shell, the dashboard, or their own agent. It is
+// refused, as a *Refused, while the curate host action is off for the
+// project, for a since in neither form, while a curator runs for the
+// project, naming it, and when nothing can start it. It does not wait for
+// the curator: the serving flai settles the run once the process is gone.
+func Curate(ctx context.Context, o Options, e Entry, since, trigger string) (*AgentRun, error) {
+	cs, err := curateCheck(o, e, since)
+	if err != nil {
+		return nil, err
+	}
+	l := newLauncher(o, e)
+	l.handOver = true
+	l.curate(ctx, cs.cfg, cs.agent, cs.since, trigger)
+	run := o.Dir.AgentStates()[e.Root].Curator
+	if run == nil {
+		return nil, fmt.Errorf("the curator run was not recorded in %s", o.Dir.agents())
+	}
+	if run.Error != "" {
+		return run, errors.New(run.Why)
+	}
+	return run, nil
+}
+
+// curateStart is what the curator is started with once the checks pass: the
+// operator's say, the curator's agent, and the run's since.
+type curateStart struct {
+	cfg   AgentConfig
+	agent *manifest.Agent
+	since string
+}
+
+// curateCheck makes the checks before the curator is started in project e,
+// and returns what it is started with: since, or when it is empty the time
+// of the curator's last activity, or none on its first run. It is refused,
+// as a *Refused, while the curate host action is off, for a since that is
+// neither a YYYY-MM-DD day nor an RFC 3339 time, while a curator runs for
+// the project, and when nothing can start it; a project, or a curator's
+// activity document, that cannot be read is an error.
+func curateCheck(o Options, e Entry, since string) (curateStart, error) {
+	var cfg AgentConfig
+	if o.Agent != nil {
+		cfg = o.Agent(e.Root)
+	}
+	if !cfg.Curate {
+		return curateStart{}, refused("the curate host action is off for this project: flai serve enable curate")
+	}
+	if since != "" && !sinceReads(since) {
+		return curateStart{}, refused("the curator takes a since as a YYYY-MM-DD day in UTC or an RFC 3339 time, such as 2026-10-01 or 2026-10-01T09:00:00Z, and %q is neither", since)
+	}
+	if run := o.Dir.AgentStates()[e.Root].Curator; run.running() {
+		return curateStart{}, refused("the curator is already running for this project (%s, %s, pid %d, started %s; log %s); one curator runs per project at a time", sinceSaid(run.Since), startedBy(run), run.PID, run.Started, run.Log)
+	}
+	repo, err := workitem.Open(e.Root)
+	if err != nil {
+		return curateStart{}, err
+	}
+	agent := repo.Manifest.DigestAgent()
+	if (agent == nil || agent.Harness == "") && cfg.host(harness.Command).Program == "" {
+		return curateStart{}, refused("the curator's agent names no harness (digest.agent or agent in system-flow.yaml), and no command is set on the host (flai serve agent set -- <program> [args...])")
+	}
+	if since == "" {
+		if since, err = lastCurated(repo); err != nil {
+			return curateStart{}, err
+		}
+	}
+	return curateStart{cfg: cfg, agent: agent, since: since}, nil
+}
+
+// sinceReads says whether since is in one of sinceForms.
+func sinceReads(since string) bool {
+	return slices.ContainsFunc(sinceForms, func(form string) bool {
+		_, err := time.Parse(form, since)
+		return err == nil
+	})
+}
+
+// sinceSaid says what a curator run takes in, for its journal entry and a
+// refusal that names it.
+func sinceSaid(since string) string {
+	if since == "" {
+		return "everything, its first run"
+	}
+	return "since " + since
+}
+
+// lastCurated is the time of the newest entry in the curator's activity
+// document, as an RFC 3339 time in UTC, or "" when it has none.
+func lastCurated(repo *workitem.Repo) (string, error) {
+	doc, err := repo.Activity(workitem.ActivityCurator)
+	if err != nil {
+		return "", fmt.Errorf("cannot read when the curator last ran: %w", err)
+	}
+	var last time.Time
+	for _, en := range doc.Entries {
+		if en.At.After(last) {
+			last = en.At
+		}
+	}
+	if last.IsZero() {
+		return "", nil
+	}
+	return last.UTC().Format(time.RFC3339), nil
+}
+
+// curate starts the curator with agent, taking in from since, or everything
+// when it is empty, records the run, marked with its role, with what started
+// it, trigger, journals it, and says whether it started.
+func (l *launcher) curate(ctx context.Context, cfg AgentConfig, agent *manifest.Agent, since, trigger string) bool {
+	now := l.now().UTC()
+	run := &AgentRun{Agent: workitem.ActivityCurator, Role: conventions.RoleCurate, Since: since, Started: now.Format(time.RFC3339), Session: newSession(), Trigger: trigger}
+	if agent != nil {
+		run.Model = agent.Model
+	}
+	entry := hostapi.Entry{At: run.Started, Action: curateAction, Method: "serve.curate", Project: l.entry.Key, Root: l.entry.Root, By: "flai serve"}
+	fail := func(err error) bool {
+		run.Error, run.Ended, run.Outcome, run.Why = err.Error(), run.Started, OutcomeFailed, "could not be started: "+err.Error()
+		l.told(run)
+		entry.Outcome, entry.Detail = "failed", fmt.Sprintf("the curator, %s, could not be started: %s", sinceSaid(since), run.Error)
+		if l.record != nil {
+			l.record(entry)
+		}
+		l.log("curator could not be started", "since", since, "harness", run.Harness, "err", run.Error)
+		return false
+	}
+	name, adapter, err := harness.For(agent, cfg.host(harness.Command).Program != "")
+	run.Harness = name
+	if err != nil {
+		return fail(err)
+	}
+	spec, keys, err := l.startOf(cfg, run, adapter, name, harness.Request{Role: conventions.RoleCurate, Since: since, Root: l.entry.Root, Project: l.entry.Key, Agent: agent,
+		Name: run.Agent, Flai: cfg.Flai, Session: run.Session})
+	if err != nil {
+		return fail(err)
+	}
+	cmd, out, err := l.spawn(ctx, run, spec.Argv, workitem.ActivityCurator, now, append(spec.Env, keys...))
+	if err != nil {
+		return fail(err)
+	}
+	l.told(run)
+	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s (%s) to curate, %s, as %s (pid %d); log %s", run.Command, run.Harness, sinceSaid(since), run.Agent, run.PID, run.Log)
+	if l.record != nil {
+		l.record(entry)
+	}
+	l.log("curator started", "since", since, "trigger", run.Trigger, "harness", run.Harness, "command", run.Command, "pid", run.PID)
+	l.await(cmd, out, run.PID, func(code int) { l.curateEnded(run, &code) })
+	return true
+}
+
+// curateEnded records a curator run as ended, with its exit code when it was
+// seen, and the digest entries it wrote or changed: failed on a failed exit,
+// with why; worked otherwise, whether it wrote an entry or found nothing to
+// take in, an exit nobody saw included. It logs the run's activity in the
+// curator's activity document, with what started it, the first line of the
+// run's final text as its summary, and the entries as its items, which
+// charge nothing. Entries that cannot be looked for, and an activity that
+// cannot be logged, are warned of: the activity is logged naming no entry,
+// and the run stays recorded as it ended.
+func (l *launcher) curateEnded(run *AgentRun, exit *int) {
+	ended := *run
+	ended.Ended, ended.Exit = l.now().UTC().Format(time.RFC3339), exit
+	entries, err := changedEntries(l.entry.Root, run.Started)
+	if err != nil {
+		l.warn("curator's entries not looked for", "err", err)
+	}
+	ended.Entries = entries
+	if exit != nil && *exit != 0 {
+		ended.Outcome, ended.Why = OutcomeFailed, fmt.Sprintf("ended (exit %d)", *exit)
+	} else {
+		ended.Outcome, ended.Why = OutcomeWorked, ""
+	}
+	l.ended(&ended)
+	args := []any{"pid", run.PID, "since", run.Since, "outcome", ended.Outcome, "entries", len(entries)}
+	if exit != nil {
+		args = append(args, "exit", *exit)
+	}
+	l.log("curator ended", args...)
+	if _, err := logRunEnd(l.dir, l.entry.Root, l.entry.Key, workitem.ActivityCurator, run.Trigger, "", entries); err != nil {
+		l.warn("curator activity not logged", "err", err)
+	}
+}
+
+// entryFile is a digest entry's file name, D-nnnn-<slug>.md, its number
+// captured.
+var entryFile = regexp.MustCompile(`^D-(\d+)-.*\.md$`)
+
+// changedEntries are the IDs of the digest entries in the project at root
+// whose files changed in the second started, a curator run's start, or
+// after, in the order of their numbers: of the entry files directly in the
+// design folder's digest/, its index aside. None when none changed since, or
+// there is no folder.
+func changedEntries(root, started string) ([]string, error) {
+	repo, err := workitem.Open(root)
+	if err != nil {
+		return nil, err
+	}
+	since, err := time.Parse(time.RFC3339, started)
+	if err != nil {
+		return nil, err
+	}
+	files, err := os.ReadDir(filepath.Join(root, filepath.FromSlash(digest.Dir(repo.Manifest))))
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	type changed struct {
+		n  int
+		id string
+	}
+	var found []changed
+	for _, f := range files {
+		m := entryFile.FindStringSubmatch(f.Name())
+		if !f.Type().IsRegular() || m == nil || digest.Skipped(f.Name()) {
+			continue
+		}
+		info, err := f.Info()
+		if err != nil || info.ModTime().Before(since) {
+			continue
+		}
+		n, _ := strconv.Atoi(m[1])
+		found = append(found, changed{n: n, id: digest.CanonicalID("D-" + m[1])})
+	}
+	slices.SortFunc(found, func(a, b changed) int { return a.n - b.n })
+	ids := make([]string, 0, len(found))
+	for _, c := range found {
+		if !slices.Contains(ids, c.id) {
+			ids = append(ids, c.id)
+		}
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	return ids, nil
+}
