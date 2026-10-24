@@ -3,10 +3,10 @@ id: S-0486
 type: story
 nature: remediation
 title: criteria_tick is refused on another open story's narrative.state finding, which the story's own scoped check leaves out
-status: review
+status: done
 owner: alex
 created: 2026-10-23T17:43:07Z
-updated: 2026-10-24T00:36:55Z
+updated: 2026-10-24T00:53:30Z
 transitions:
   - to: ready
     at: 2026-10-23T23:39:57Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-24T00:36:55Z
     by: agent-S-0486
+  - to: done
+    at: 2026-10-24T00:53:30Z
+    by: orchestrator
 tags: [flai]
 topics: [cli]
 touches: [design/adrs, design/adrs/README.md, flai/internal/itemedit/itemedit.go, flai/internal/itemedit/criteria_test.go, flai/internal/mcpserver/criteria_test.go, flai/cmd/edit.go, flai/cmd/criteria.go, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0182-criteria-tick-is-refused-on-another-open-story-s-narrative-state-finding-which-the-story-s-own-scoped-check-leaves-out.md, design/issues/summary.md, docs/users/flaiover.md, design/issues/I-0202-task-done-s-answer-carries-every-check-note-outside-the-story-so-it-exceeds-the-40-000-bytes-it-promises-and-overflows-the-tool-result.md]
@@ -114,3 +117,14 @@ Cost of delay inputs set by flai from I-0182. time_lost_per_cycle 4m: 2m per occ
 - **Forecast.** flai's 22m at size 14 (2 criteria, 12 touches), 91 s a unit over 35 done remediation stories on claude-opus-5-5 in the large band, raised to 2h: an ADR that waits for the operator's agreement, tests that must bring a finding between two check runs in a writer `flai edit`, `item_edit`, and the dashboard share, and docs in three places with a generated reference are work the touch count does not weigh. Delivery flai's 2026-10-24T11:20Z, 27th in the pull order behind S-0429 and the E-0016 and digest stories, moved to 2026-10-24T13:00Z by the raise.
 - **Cost of delay.** 10.00 USD a week, flai's figure from the input flai set from I-0182: 4m lost per 168h cycle at 150 USD an hour, 1.00 cycles a week. Unchanged: two instances in two days, each a retry of a few seconds to a minute once the other file was finished.
 - **Tags and topics.** Tag `flai`, the component every touch is in; topic `cli`, which the command docs reach.
+
+### Accepted by the orchestrator
+
+- Verified: 3ba75a1dc0464d752facab4f94a1f6d1f386cbf2
+- Batch: 20261024-004046
+- Enqueued verified: 3ff68b29404373f6ddc4fc7065c37a1cae0b4c70
+- At: 2026-10-24T00:53:30Z
+
+Verdict: pass. itemedit.Apply now scopes its second check to the edited item's story, so a finding another writer brings no longer refuses a tick, and the tests reproduce both I-0182 instances.
+- 1: flai/internal/itemedit/itemedit.go, flai/internal/itemedit/criteria_test.go, flai/internal/mcpserver/criteria_test.go, design/adrs/0197-a-checked-edit-of-a-work-item-refuses-only-a-new-finding-inside-its-story-s.md, flai/cmd/edit.go, flai/cmd/criteria.go, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md, design/system/flai-cli.md
+- 2: design/issues/I-0182-criteria-tick-is-refused-on-another-open-story-s-narrative-state-finding-which-the-story-s-own-scoped-check-leaves-out.md, design/issues/summary.md

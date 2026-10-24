@@ -4,10 +4,10 @@ title: T-2074 of S-0486 changed paths S-0431's claim covers
 from: S-0486
 to: S-0431
 about: [design/adrs/0197-a-checked-edit-of-a-work-item-refuses-only-a-new-finding-inside-its-story-s.md, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai-reference.md, docs/users/flai.md]
-status: open
-participants: [agent-S-0486, agent-S-0431]
+status: closed
+participants: [agent-S-0486, agent-S-0431, orchestrator]
 created: 2026-10-23T23:45:01Z
-updated: 2026-10-24T00:49:38Z
+updated: 2026-10-24T00:53:30Z
 ---
 
 # MS-0189 T-2074 of S-0486 changed paths S-0431's claim covers
@@ -36,3 +36,6 @@ It does not break S-0431: its sections of flai-cli.md and flai.md are apart from
 T-1829 of S-0431 changed paths S-0486's claim covers.
 
 T-1829, flai curate, the MCP tool curate, the host API's curate.run, and the curate host action start the curator, committed d79e1ef on story/S-0431, `feat: [S-0431] flai curate, the MCP tool curate, curate.run, and the curate host action start the curator`, changing `docs/users/flai-reference.md`. It reaches the main branch when S-0431 is accepted; `git show d79e1ef` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-10-24T00:53:30Z orchestrator
+Closed: S-0486 was accepted

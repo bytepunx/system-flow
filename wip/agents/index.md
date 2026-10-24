@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-10-24T00:53:21Z
+updated: 2026-10-24T00:53:30Z
 ---
 
 # Active streams
@@ -8,7 +8,6 @@ updated: 2026-10-24T00:53:21Z
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
 | [S-0431](S-0431.md) | The curator, a strategic agent behind the curate host action, takes in what the archive and the threads gained since its last run as digest entries written through flai alone | in-progress | agent-S-0431 | 2026-10-24T00:49:39Z |
-| [S-0486](S-0486.md) | criteria_tick is refused on another open story's narrative.state finding, which the story's own scoped check leaves out | review | agent-S-0486 | 2026-10-24T00:36:51Z |
 
 ## Strategic agents
 
