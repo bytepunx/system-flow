@@ -12,11 +12,12 @@ import (
 // A served agent writes only as itself (S-0369, ADR-0143): a thread entry's
 // author, a move's, a tick's, or a message's, is whatever the command that
 // writes it says, --by, else FLAI_AGENT, else the config's author, so a
-// story's agent, the planner, or the analyzer that named another could answer
-// its own permission thread as the operator. The guard runs in the hook's
-// environment, which the agent's command line cannot change, and so tells the
-// agent's own name from the one a command names. The orchestrator keeps its
-// own rule (S-0220); the operator's own session is not held.
+// story's agent, the planner, the analyzer, or the curator that named another
+// could answer its own permission thread as the operator. The guard runs in
+// the hook's environment, which the agent's command line cannot change, and
+// so tells the agent's own name from the one a command names. The
+// orchestrator keeps its own rule (S-0220); the operator's own session is not
+// held.
 
 // The variables that say whom flai writes as, and in which session.
 const (
@@ -46,10 +47,10 @@ var declarers = []string{"declare", "export", "local", "readonly", "typeset"}
 const leaveIdentities = "leave FLAI_AGENT and FLAI_SESSION as flai serve set them"
 
 // authors says why a served agent's own shell call is refused, or "" when it
-// is not (S-0369, ADR-0143): a story's agent's, the planner's, or the
-// analyzer's call that names an author other than its own with --by or
-// --placed-by, or sets, empties, or unsets FLAI_AGENT or FLAI_SESSION to
-// anything but its own, in any simple command of the line.
+// is not (S-0369, ADR-0143): a story's agent's, the planner's, the
+// analyzer's, or the curator's call that names an author other than its own
+// with --by or --placed-by, or sets, empties, or unsets FLAI_AGENT or
+// FLAI_SESSION to anything but its own, in any simple command of the line.
 func (g Guard) authors(c Call) string {
 	if c.Subagent || c.Kind != Shell || !g.heldToSelf(c) {
 		return ""
@@ -64,14 +65,14 @@ func (g Guard) authors(c Call) string {
 
 // heldToSelf says whether c's session is one ADR-0143 holds to its own name:
 // a story's agent, or another session flai serve started with no role, the
-// planner, or the analyzer.
+// planner, the analyzer, or the curator.
 func (g Guard) heldToSelf(c Call) bool {
-	return c.Role == RolePlan || c.Role == RoleAnalyze || c.Role == "" && g.served(c)
+	return c.Role == RolePlan || c.Role == RoleAnalyze || c.Role == RoleCurate || c.Role == "" && g.served(c)
 }
 
 // selves are the names a served agent writes as: Agent, the hook's
 // FLAI_AGENT, and the name flai serve gives its run, agent-<Story>,
-// planner-<Item>, or analyzer.
+// planner-<Item>, analyzer, or curator.
 func (g Guard) selves(c Call) []string {
 	var run string
 	switch {
@@ -81,6 +82,8 @@ func (g Guard) selves(c Call) []string {
 		run = workitem.ActivityPlanner + "-" + workitem.CanonicalID(g.Item)
 	case c.Role == RoleAnalyze:
 		run = workitem.ActivityAnalyzer
+	case c.Role == RoleCurate:
+		run = workitem.ActivityCurator
 	}
 	var names []string
 	for _, n := range []string{g.Agent, run} {

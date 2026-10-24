@@ -92,6 +92,17 @@
 // an answer that cites its source, and it never resolves one. Confirming a
 // recommendation is the operator's alone (ADR-0090).
 //
+// A curator session, one flai serve starts with the role curate, is held to
+// the digest (S-0431, ADR-0196): its own calls may read, log its activities,
+// open and reply to threads as itself, and run flai digest harvest, new, and
+// edit, which list the candidates and write or merge an entry through flai.
+// It edits no file, with Edit, MultiEdit, Write, or NotebookEdit, and authors
+// no work item: flai digest seed, every write through flai but those, the
+// tools and commands that start a strategic agent among them, and git's
+// writes are refused it, each refusal saying that it writes entries only
+// with flai digest new and edit. Its sub-agents are held as every sub-agent
+// is.
+//
 // A story's agent, in a session flai serve starts with FLAI_STORY and no
 // role, is refused its own wait_for_events while a sub-agent of its session
 // runs and no thread on its story awaits the designer (S-0285): the call
@@ -100,8 +111,8 @@
 // harness's reports of each starting and stopping, Claude Code's
 // SubagentStart and SubagentStop hooks.
 //
-// A story's agent, the planner, and the analyzer write only as themselves
-// (S-0369, ADR-0143): an entry's author is whatever --by, else FLAI_AGENT,
+// A story's agent, the planner, the analyzer, and the curator write only as
+// themselves (S-0369, ADR-0143): an entry's author is whatever --by, else FLAI_AGENT,
 // says, and permission_prompt takes an answer by its author, so their own
 // Bash call is refused when a flai command's --by or --placed-by names
 // another, or when it sets, empties, or unsets FLAI_AGENT or FLAI_SESSION to
@@ -392,6 +403,46 @@ var analyzing = rules{
 	git: func(string) string { return "it runs only git's reads" },
 }
 
+// RoleCurate is the curator's role, as flai serve sets it in FLAI_ROLE
+// (S-0431, ADR-0196).
+const RoleCurate = "curate"
+
+// MCPCurates are flai's MCP tools the curator may call besides MCPReads.
+var MCPCurates = []string{"activity_log", "inbox", "thread_open", "thread_reply", "wait_for_events"}
+
+// cliCurates are the flai commands the curator may run besides cliReads,
+// each with the subcommands it may run: flai digest harvest lists the
+// candidates, and new and edit write an entry or merge a candidate into the
+// entry that holds it.
+var cliCurates = map[string][]string{
+	"digest": {"edit", "harvest", "new"},
+}
+
+// curator ends each of the curator's refusals: the rule the call breaks and
+// what to do instead.
+const curator = "the curator writes digest entries only with flai digest new and flai digest edit, and edits no file and authors no work item (strategic-agents.md, ADR-0196). Ask the operator with thread_open when an entry needs their judgement."
+
+// seedsUnjudged says why the curator never runs flai digest seed.
+const seedsUnjudged = "flai digest seed writes an entry for every candidate without judging whether an entry already holds it"
+
+// curating are the curator's rules: flai's reads, digest harvest, new, and
+// edit, and git's reads.
+var curating = rules{
+	flai: func(cmd, sub string, rest []string) (string, string) {
+		switch {
+		case reads(cmd, sub, rest):
+			return "", ""
+		case cmd == "digest" && sub == "seed":
+			return seedsUnjudged, ""
+		}
+		if subs, ok := cliCurates[cmd]; ok && slices.Contains(subs, sub) {
+			return "", ""
+		}
+		return "of flai's commands it runs only those that read, and digest harvest, new, and edit", ""
+	},
+	git: func(string) string { return "it runs only git's reads" },
+}
+
 // flaiValues are flai's own flags that take a value.
 var flaiValues = map[string]bool{"--config": true}
 
@@ -527,8 +578,8 @@ func (g Guard) forgePush(c Call) Verdict {
 // only when a command of its follows. Role is the session's role, from
 // FLAI_ROLE: RolePlan holds the session's own calls to planning,
 // RoleOrchestrate holds them to Permissions, the project's
-// orchestration.permissions, RoleAnalyze to its report, and any other leaves
-// them alone. Opener says
+// orchestration.permissions, RoleAnalyze to its report, RoleCurate to the
+// digest, and any other leaves them alone. Opener says
 // who opened the thread with an ID, for the orchestrator's calls on threads,
 // itself or a story's planner among others; ThreadOpener reads it from a
 // project's threads. A thread whose opener it cannot tell, or every thread
@@ -562,9 +613,9 @@ func (g Guard) forgePush(c Call) Verdict {
 // ADR-0141). A nil ReadOnly holds no sub-agent read-only.
 //
 // Agent, Session, and Item are the hook's FLAI_AGENT, FLAI_SESSION, and
-// FLAI_ITEM. A story's agent, the planner, and the analyzer write only as
-// Agent or the name flai serve gives the run, agent-<Story>, planner-<Item>,
-// or analyzer, and only in Session: their own call that names another author
+// FLAI_ITEM. A story's agent, the planner, the analyzer, and the curator
+// write only as Agent or the name flai serve gives the run, agent-<Story>,
+// planner-<Item>, analyzer, or curator, and only in Session: their own call that names another author
 // with --by or --placed-by, or sets, empties, or unsets FLAI_AGENT or
 // FLAI_SESSION to anything but these, is refused (S-0369, ADR-0143).
 type Guard struct {
@@ -1315,6 +1366,27 @@ func (g Guard) analyze(c Call) string {
 		for _, words := range commands(c.Command) {
 			if why, _ := g.refuse(words, analyzing); why != "" {
 				return fmt.Sprintf("the analyzer cannot run %q: %s; %s", strings.Join(words, " "), why, analyzer)
+			}
+		}
+	}
+	return ""
+}
+
+// curate says why the curator's own call is refused, or "" when it is not
+// (S-0431, ADR-0196).
+func (g Guard) curate(c Call) string {
+	switch c.Kind {
+	case FileWrite:
+		return fmt.Sprintf("the curator cannot use %s on %s: %s", c.Name, cmp.Or(c.Path, "no file"), curator)
+	case FlaiTool:
+		if slices.Contains(MCPReads, c.Tool) || slices.Contains(MCPCurates, c.Tool) {
+			return ""
+		}
+		return fmt.Sprintf("the curator cannot call %s: %s", c.Tool, curator)
+	case Shell:
+		for _, words := range commands(c.Command) {
+			if why, _ := g.refuse(words, curating); why != "" {
+				return fmt.Sprintf("the curator cannot run %q: %s; %s", strings.Join(words, " "), why, curator)
 			}
 		}
 	}

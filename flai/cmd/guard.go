@@ -23,7 +23,7 @@ func newGuardCmd(a *app) *cobra.Command {
 	var harness string
 	c := &cobra.Command{
 		Use:   "guard",
-		Short: "Refuse a sub-agent's writes, hold the planner to planning, the orchestrator to its permissions, and the analyzer to its report, and keep a story's agent from waiting on its sub-agents with wait_for_events, as a Claude Code hook",
+		Short: "Refuse a sub-agent's writes, hold the planner to planning, the orchestrator to its permissions, the analyzer to its report, and the curator to the digest, and keep a story's agent from waiting on its sub-agents with wait_for_events, as a Claude Code hook",
 		Long: `Reads a Claude Code PreToolUse hook's input on standard input and refuses
 the call when a sub-agent makes it (the input carries an agent_id) and it
 would change a work item, a
@@ -97,12 +97,12 @@ refused serve, since it writes a Vite config under .flai-cache and with
 --story may install the worktree's dependencies; the refusal tells it to ask
 the story's agent, or a task sub-agent, to run it. flai components config,
 which rewrites system-flow.yaml, is refused to every sub-agent. The
-planner's, the orchestrator's, and the analyzer's own calls list the
-component library but are refused serve and config.
+planner's, the orchestrator's, the analyzer's, and the curator's own calls
+list the component library but are refused serve and config.
 
-A story's agent, the planner, and the analyzer, sessions flai serve
-starts (FLAI_STORY, FLAI_STARTED_BY=flai-serve, or FLAI_ROLE plan or
-analyze), write only as themselves (S-0369, ADR-0143): their own Bash call
+A story's agent, the planner, the analyzer, and the curator, sessions flai
+serve starts (FLAI_STORY, FLAI_STARTED_BY=flai-serve, or FLAI_ROLE plan,
+analyze, or curate), write only as themselves (S-0369, ADR-0143): their own Bash call
 is refused when a flai command's --by or --placed-by names another (--by on
 order, a policy, and on stats, a grouping, names no author; an empty one
 falls back to FLAI_AGENT), or when it sets FLAI_AGENT or FLAI_SESSION to
@@ -111,7 +111,7 @@ before a command, after export, declare, typeset, local, readonly, or env,
 or unsets either with unset or env -u, or clears both with env -i, in a
 shell's -c script, an eval, or a heredoc a shell reads as well. Its own name is the hook's
 FLAI_AGENT, or the name flai serve gives the run: agent-S-nnnn,
-planner-<FLAI_ITEM>, or analyzer; its own session is the hook's
+planner-<FLAI_ITEM>, analyzer, or curator; its own session is the hook's
 FLAI_SESSION. A call its role refuses anyway is refused for the role's
 reason. The orchestrator, which writes to a thread only as itself under
 its own rule, and the operator's own session are not held to a name.
@@ -200,9 +200,20 @@ no stories; every other flai tool and command that writes, flai issue close
 among them, and git's writes are refused too. The analyzer's sub-agents are
 held as any sub-agent is.
 
-No sub-agent, planner, orchestrator, or analyzer starts the analyzer: the
-MCP tool analyze and flai analyze are refused to each, as the MCP tool plan
-is.
+In a curator session, one flai serve starts with FLAI_ROLE=curate, the
+session's own calls are held to the digest (S-0431, ADR-0196): besides what
+a sub-agent may do, the MCP tools inbox, activity_log, thread_open,
+thread_reply, and wait_for_events, and flai digest harvest, new, and edit.
+Edit, MultiEdit, Write, and NotebookEdit are refused on every file, as are
+flai digest seed, item_new, item_edit, item_move, issue_new, issue_bump, and
+every other flai tool and command that writes, curate, analyze, and plan
+among them, and git's writes; each refusal says that the curator writes
+digest entries only with flai digest new and edit. The curator's sub-agents
+are held as any sub-agent is.
+
+No sub-agent, planner, orchestrator, analyzer, or curator starts the
+analyzer or the curator: the MCP tools analyze and curate and flai analyze
+and curate are refused to each, as the MCP tool plan is.
 
 Given a SubagentStart or SubagentStop hook's input, as hook_event_name
 says, it records the sub-agent (its agent_id and agent_type, and when it
@@ -223,11 +234,12 @@ threads it cannot read let the call through.
 
 The template's .claude/settings.json runs it before Bash and flai's MCP
 tools, on SubagentStart and SubagentStop, and, in a planner's, an
-orchestrator's, an analyzer's, or a story's agent's session alone (FLAI_ROLE
-plan, orchestrate, or analyze, or FLAI_STORY set), before Edit, MultiEdit,
-Write, and NotebookEdit as well, so that a story's sub-agent's write in a
-.claude/ folder meets the refusal above (S-0299). In the operator's own
-session, where none of those is set, a file edit does not run it.`,
+orchestrator's, an analyzer's, a curator's, or a story's agent's session
+alone (FLAI_ROLE plan, orchestrate, analyze, or curate, or FLAI_STORY set),
+before Edit, MultiEdit, Write, and NotebookEdit as well, so that a story's
+sub-agent's write in a .claude/ folder meets the refusal above (S-0299). In
+the operator's own session, where none of those is set, a file edit does
+not run it.`,
 		Example: `  flai guard < hook-input.json`,
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {

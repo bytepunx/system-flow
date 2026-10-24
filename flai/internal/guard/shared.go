@@ -10,11 +10,11 @@ import (
 // The shared paths are the operator's (S-0295, ADR-0096): claims.shared in
 // the manifest decides which overlaps hold a ready story, so an agent that
 // could add to it could free its own story. Every session flai serve starts,
-// a story's agent, the planner, the orchestrator, and the analyzer, and every
-// sub-agent, is refused shared_paths_edit and flai shared add and remove,
-// whatever its role or permissions. Listing and checking them are reads, open
-// to all. The operator's own session, which flai serve did not start, changes
-// them.
+// a story's agent, the planner, the orchestrator, the analyzer, and the
+// curator, and every sub-agent, is refused shared_paths_edit and flai shared
+// add and remove, whatever its role or permissions. Listing and checking them
+// are reads, open to all. The operator's own session, which flai serve did
+// not start, changes them.
 
 // StartedByEnv is the variable flai serve sets, to StartedByServe, in each
 // session it starts.
@@ -95,6 +95,8 @@ func (g Guard) who(c Call) string {
 		return "the orchestrator"
 	case c.Role == RoleAnalyze:
 		return "the analyzer"
+	case c.Role == RoleCurate:
+		return "the curator"
 	case c.Role != "":
 		return "a session flai serve started with the role " + c.Role
 	case c.Story != "":

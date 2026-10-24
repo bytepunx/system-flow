@@ -127,7 +127,7 @@ func Decide(g Guard, c Call) Verdict {
 	if c.Subagent {
 		return g.asSubAgent(c)
 	}
-	if c.Kind == FlaiTool && c.Tool == ReleasePublish && c.Role != RoleOrchestrate && c.Role != RolePlan && c.Role != RoleAnalyze {
+	if c.Kind == FlaiTool && c.Tool == ReleasePublish && c.Role != RoleOrchestrate && c.Role != RolePlan && c.Role != RoleAnalyze && c.Role != RoleCurate {
 		return deny("only the orchestrator calls " + ReleasePublish + ": " + orchestratorPublishes)
 	}
 	var why string
@@ -136,6 +136,8 @@ func Decide(g Guard, c Call) Verdict {
 		why = g.plan(c)
 	case RoleAnalyze:
 		why = g.analyze(c)
+	case RoleCurate:
+		why = g.curate(c)
 	case RoleOrchestrate:
 		return g.orchestrate(c)
 	case "":
