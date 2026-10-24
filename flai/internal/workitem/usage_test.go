@@ -392,6 +392,7 @@ func TestStrategicUsageIsValidated(t *testing.T) {
 		{Kind: "planner", Estimated: true},
 		{Kind: "guesser", Estimated: true},
 		{Kind: "analyzer"},
+		{Kind: "curator", Estimated: true},
 	}}
 	got := strings.Join(usageErrors(u), "; ")
 	for _, want := range []string{
@@ -400,12 +401,15 @@ func TestStrategicUsageIsValidated(t *testing.T) {
 		"usage.strategic[0].models[1].model m is listed twice",
 		"usage.strategic[0].models[2].model is required",
 		"usage.strategic[1].kind planner is listed twice",
-		`usage.strategic[2].kind "guesser" must be one of planner, orchestrator, analyzer`,
+		`usage.strategic[2].kind "guesser" must be one of planner, orchestrator, analyzer, curator`,
 		"usage.strategic[3].estimated must be true",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("errors %q lack %q", got, want)
 		}
+	}
+	if strings.Contains(got, "usage.strategic[4]") {
+		t.Errorf("the curator's entry is a strategic agent's (ADR-0196): %q", got)
 	}
 }
 

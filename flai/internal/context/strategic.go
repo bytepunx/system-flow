@@ -18,11 +18,13 @@ import (
 // from its role rather than from an item.
 const FromRole = "role"
 
-// roleTopic is the topic each strategic role brings to its pack.
-var roleTopic = map[string]string{
-	conventions.RolePlan:        "planning",
-	conventions.RoleOrchestrate: "orchestration",
-	conventions.RoleAnalyze:     "analysis",
+// roleTopics are the topics each strategic role brings to its pack, in the
+// order the pack lists them.
+var roleTopics = map[string][]string{
+	conventions.RolePlan:        {"planning"},
+	conventions.RoleOrchestrate: {"orchestration"},
+	conventions.RoleAnalyze:     {"analysis"},
+	conventions.RoleCurate:      {"digest", "planning"},
 }
 
 // roleAgent names the agent in each strategic role.
@@ -30,6 +32,7 @@ var roleAgent = map[string]string{
 	conventions.RolePlan:        "the planner",
 	conventions.RoleOrchestrate: "the orchestrator",
 	conventions.RoleAnalyze:     "the analyzer",
+	conventions.RoleCurate:      "the curator",
 }
 
 // ForStrategic builds the pack for a strategic agent, one that works above
@@ -37,14 +40,16 @@ var roleAgent = map[string]string{
 // with the sections its topics leave out taken out; the open issues; and
 // briefs of the design, tech, and ADRs its topics select, with the ADRs one
 // step reaches, and a catalog of the rest. Its topics are its role's
-// (planning, orchestration, or analysis). The planner, role plan, is primed
-// for an epic or a story, given as epic or story: its topics are the item's
-// as well, and the pack loads what the item names, as a story's pack does,
-// and ranks sections against it to fill the budget. The orchestrator and the
-// analyzer are primed for the whole project and take no item. The
+// (planning, orchestration, analysis, or, for the curator, digest and
+// planning, ADR-0196). The planner, role plan, is primed for an epic or a
+// story, given as epic or story: its topics are the item's as well, and the
+// pack loads what the item names, as a story's pack does, and ranks sections
+// against it to fill the budget. The orchestrator, the analyzer, and the
+// curator are primed for the whole project and take no item. The
 // orchestrator's pack adds the answers and recommendations of the digest
 // that rank highest against the threads awaiting the operator, after the
-// briefs (ADR-0194); the planner's and the analyzer's take no digest step.
+// briefs (ADR-0194); the planner's, the analyzer's, and the curator's take no
+// digest step.
 // budget is a size as ParseSize reads it; empty means the project's
 // prime.budget, else DefaultBudget.
 func ForStrategic(repo *workitem.Repo, role, epic, story, budget string) (*Pack, error) {
@@ -246,18 +251,20 @@ func planned(repo *workitem.Repo, it *workitem.Item) ([]topics.StoryTopic, []Sou
 	return topics.OfStory(it, nil, nil, repo.Manifest.Projects), []Source{src}, nil
 }
 
-// withRole puts the role's topic first in list, or adds the role to its
-// sources when list has it already.
+// withRole puts the role's topics first in list, in their order, save one
+// list has already, which keeps its place and gains the role as a source.
 func withRole(list []topics.StoryTopic, role string) []topics.StoryTopic {
 	from := topics.Source{Kind: FromRole, Via: role}
-	for i, t := range list {
-		if t.Topic == roleTopic[role] {
-			out := slices.Clone(list)
-			out[i].Sources = append(slices.Clone(t.Sources), from)
-			return out
+	out := slices.Clone(list)
+	var front []topics.StoryTopic
+	for _, name := range roleTopics[role] {
+		if i := slices.IndexFunc(out, func(t topics.StoryTopic) bool { return t.Topic == name }); i >= 0 {
+			out[i].Sources = append(slices.Clone(out[i].Sources), from)
+			continue
 		}
+		front = append(front, topics.StoryTopic{Topic: name, Sources: []topics.Source{from}})
 	}
-	return append([]topics.StoryTopic{{Topic: roleTopic[role], Sources: []topics.Source{from}}}, list...)
+	return append(front, out...)
 }
 
 // strategicLines are the header's lines naming a strategic pack's item and

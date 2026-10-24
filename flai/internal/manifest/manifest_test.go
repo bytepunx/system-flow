@@ -761,6 +761,100 @@ func TestAnalysisAgent(t *testing.T) {
 	}
 }
 
+// ADR-0196: digest.agent reads as analysis.agent does, is checked under its
+// own name, and the curator's agent is it merged over the project's agent,
+// field by field, config key by key, and role by role, reaching no other
+// strategic agent.
+func TestDigestAgent(t *testing.T) {
+	p := filepath.Join(t.TempDir(), File)
+	body := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\n" +
+		"agent:\n  harness: claude-code\n  model: claude-opus-5-5\n  config:\n    effort: high\n    max_budget_usd: \"10\"\n  roles:\n    explore:\n      model: haiku\n" +
+		"digest:\n  agent:\n    model: claude-sonnet-5\n    provider: anthropic\n    config:\n      effort: medium\n    roles:\n      verify:\n        model: sonnet\n"
+	if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m, err := Load(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if errs := m.Digest.Errors(); len(errs) != 0 {
+		t.Errorf("valid digest.agent: %v", errs)
+	}
+	got := m.DigestAgent()
+	if s := got.String(); s != "claude-code, claude-sonnet-5, provider anthropic, effort=medium, max_budget_usd=10; explore: haiku; verify: sonnet" {
+		t.Errorf("curator's agent: %s", s)
+	}
+	if m.Agent.Model != "claude-opus-5-5" || m.Agent.Config["effort"] != "high" || len(m.Agent.Roles) != 1 {
+		t.Errorf("the project's agent was changed by the merge: %+v", m.Agent)
+	}
+	for what, a := range map[string]*Agent{"planner": m.PlanningAgent(), "orchestrator": m.OrchestrationAgent(), "analyzer": m.AnalysisAgent()} {
+		if !a.Same(m.Agent) {
+			t.Errorf("digest.agent reached the %s: %v", what, a)
+		}
+	}
+	if a := (Manifest{Agent: m.Agent}).DigestAgent(); !a.Same(m.Agent) {
+		t.Errorf("no digest.agent: %v", a)
+	}
+	if a := (Manifest{Digest: Digest{Agent: m.Digest.Agent}}).DigestAgent(); !a.Same(m.Digest.Agent) {
+		t.Errorf("no project agent: %v", a)
+	}
+	if a := (Manifest{}).DigestAgent(); a != nil {
+		t.Errorf("neither: %v", a)
+	}
+	if errs := (Digest{}).Errors(); len(errs) != 0 {
+		t.Errorf("unset digest: %v", errs)
+	}
+	for _, c := range []struct {
+		a    *Agent
+		want string
+	}{
+		{&Agent{Harness: "Claude Code"}, `digest.agent harness "Claude Code" is not a name such as claude-code`},
+		{&Agent{Model: "has space"}, `digest.agent model "has space" is not a model ID`},
+		{&Agent{Config: map[string]string{"k": "two\nlines"}}, "digest.agent config k spans lines"},
+		{&Agent{Roles: map[string]Role{"verify": {}}}, "digest.agent role verify sets nothing"},
+		{&Agent{Roles: map[string]Role{"verify": {Model: "has space"}}}, `digest.agent role verify model "has space"`},
+	} {
+		if got := strings.Join((Digest{Agent: c.a}).Errors(), "; "); !strings.Contains(got, c.want) {
+			t.Errorf("%+v: got %q, want %q", c.a, got, c.want)
+		}
+	}
+}
+
+// ADR-0196: flai manifest set writes digest.agent, which reads back as the
+// curator's agent, and refuses one that is not valid with the field and
+// the reason.
+func TestDigestAgentSetting(t *testing.T) {
+	base := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\n"
+	got, err := EditSettings([]byte(base), []Assignment{{"digest.agent", `{"model":"claude-sonnet-5"}`}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := base + "digest:\n  agent:\n    model: claude-sonnet-5\n"; string(got) != want {
+		t.Errorf("written:\n%s\nwant:\n%s", got, want)
+	}
+	m := loaded(t, got)
+	if a := m.DigestAgent(); a == nil || a.Model != "claude-sonnet-5" {
+		t.Errorf("read back %v", a)
+	}
+	var value SettingValue
+	for _, v := range m.SettingValues() {
+		if v.Key == "digest.agent" {
+			value = v
+		}
+	}
+	if a, ok := value.Value.(*Agent); !value.Set || !ok || a.Model != "claude-sonnet-5" {
+		t.Errorf("digest.agent = %+v", value)
+	}
+	_, err = EditSettings([]byte(base), []Assignment{{"digest.agent", `{"harness":"Bad Harness"}`}}, nil)
+	var refused *RefusedError
+	if !errors.As(err, &refused) {
+		t.Fatalf("want a refusal, got %v", err)
+	}
+	if i := slices.IndexFunc(refused.Problems, func(p Problem) bool { return p.Field == "digest.agent" }); i < 0 || !strings.Contains(refused.Problems[i].Reason, "is not a name such as claude-code") {
+		t.Errorf("refusal %+v", refused.Problems)
+	}
+}
+
 // S-0349: agent.provider reads in the project's agent and each strategic
 // agent's, a strategic agent's winning over the project's in the merge;
 // providers reads by name with api, base_url, and models, and survives JSON;

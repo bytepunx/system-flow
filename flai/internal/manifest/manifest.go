@@ -70,6 +70,8 @@ type Manifest struct {
 	Orchestration Orchestration `yaml:"orchestration,omitempty" json:"orchestration,omitzero"`
 	// Analysis is the analyzer's agent and schedule (S-0223).
 	Analysis Analysis `yaml:"analysis,omitempty" json:"analysis,omitzero"`
+	// Digest is the curator's agent (ADR-0196).
+	Digest Digest `yaml:"digest,omitempty" json:"digest,omitzero"`
 	// Acceptance is how a story in review is accepted: on this machine, or
 	// through a pull request on the project's forge (S-0392). Load refuses a
 	// value Acceptance.Errors finds wrong.
@@ -403,6 +405,28 @@ func (a Analysis) Errors() []string {
 // sets anything.
 func (m Manifest) AnalysisAgent() *Agent {
 	return m.Agent.With(m.Analysis.Agent)
+}
+
+// Digest is the project's say about the curator, the agent that takes in
+// what the archive and the threads gained as digest entries: the agent it
+// runs as (ADR-0196).
+type Digest struct {
+	// Agent is the curator's agent over the project's: what it sets wins,
+	// and what it leaves out is the project's agent's.
+	Agent *Agent `yaml:"agent,omitempty" json:"agent,omitempty"`
+}
+
+// Errors are what is wrong with the digest settings, one sentence each;
+// none when they are valid.
+func (d Digest) Errors() []string {
+	return d.Agent.problems("digest.agent")
+}
+
+// DigestAgent is the agent the curator is started with: digest.agent merged
+// over the project's agent, as AnalysisAgent is. Nil when neither sets
+// anything.
+func (m Manifest) DigestAgent() *Agent {
+	return m.Agent.With(m.Digest.Agent)
 }
 
 // Orchestration is the project's say about the order of the ready column and

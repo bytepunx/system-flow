@@ -18,16 +18,17 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/filelock"
 )
 
-// The strategic agents (ADR-0075) that each keep one activity document under
-// wip/agents (ADR-0079).
+// The strategic agents (ADR-0075, ADR-0196) that each keep one activity
+// document under wip/agents (ADR-0079).
 const (
 	ActivityPlanner      = "planner"
 	ActivityOrchestrator = "orchestrator"
 	ActivityAnalyzer     = "analyzer"
+	ActivityCurator      = "curator"
 )
 
 // ActivityKinds are the strategic agents' kinds, in the order flai lists them.
-var ActivityKinds = []string{ActivityPlanner, ActivityOrchestrator, ActivityAnalyzer}
+var ActivityKinds = []string{ActivityPlanner, ActivityOrchestrator, ActivityAnalyzer, ActivityCurator}
 
 // IsActivityKind reports whether kind names a strategic agent.
 func IsActivityKind(kind string) bool { return contains(ActivityKinds, kind) }

@@ -91,7 +91,7 @@ func TestRoles(t *testing.T) {
 	}
 	write("safety.md", file("Safety", 80, "roles: [explore, verify]\n"))
 	write("git.md", file("Git", 70, "roles: [verify, write]\n"))
-	write("plan.md", file("Plan", 90, "roles: [story, plan, orchestrate, analyze]\n"))
+	write("plan.md", file("Plan", 90, "roles: [story, plan, orchestrate, analyze, curate]\n"))
 	set, errs, err := Load(repo)
 	if err != nil {
 		t.Fatal(err)
@@ -122,6 +122,8 @@ func TestReadBy(t *testing.T) {
 		{nil, RolePlan, true},
 		{[]string{RolePlan, RoleAnalyze}, RoleAnalyze, true},
 		{[]string{RolePlan}, RoleOrchestrate, false},
+		{[]string{RoleAnalyze, RoleCurate}, RoleCurate, true},
+		{[]string{RoleAnalyze}, RoleCurate, false},
 	} {
 		if got := (File{Roles: c.roles}).ReadBy(c.role); got != c.want {
 			t.Errorf("roles %v read by %s: %v, want %v", c.roles, c.role, got, c.want)

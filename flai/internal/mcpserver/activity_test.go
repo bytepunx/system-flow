@@ -53,7 +53,7 @@ func TestAnActivityWithoutAKindOrASummaryIsRefused(t *testing.T) {
 			return ActivityLogged{}, nil
 		}
 	})
-	if _, failed := f.call(t, "activity_log", map[string]any{"kind": "story", "summary": "did it"}); !strings.Contains(failed, "planner, orchestrator, or analyzer") {
+	if _, failed := f.call(t, "activity_log", map[string]any{"kind": "story", "summary": "did it"}); !strings.Contains(failed, "planner, orchestrator, analyzer, or curator") {
 		t.Errorf("unknown kind: %q", failed)
 	}
 	if _, failed := f.call(t, "activity_log", map[string]any{"kind": "planner", "summary": " \n "}); !strings.Contains(failed, "needs a summary") {

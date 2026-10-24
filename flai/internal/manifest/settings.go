@@ -17,14 +17,15 @@ import (
 
 // The strategic agents' settings that flai manifest set writes (S-0229,
 // ADR-0039): what the orchestrator may do and how it orders and releases,
-// and the planner's and the analyzer's agents and schedules; the project's
-// test tiers (S-0273); how a story is accepted (S-0392); and the most
-// stories a batch of the merge queue holds (S-0399). The catalog says of
-// each its kind, its values, its default, and what it does; whether a value
-// is allowed is always the manifest's own validation (Planning.Errors,
-// Orchestration.Errors, Analysis.Errors, Acceptance.Errors,
-// MergeQueue.Errors, TestErrors) on the manifest as it would be, so flai
-// manifest set and flai check cannot disagree.
+// the planner's and the analyzer's agents and schedules, and the curator's
+// agent (ADR-0196); the project's test tiers (S-0273); how a story is
+// accepted (S-0392); and the most stories a batch of the merge queue holds
+// (S-0399). The catalog says of each its kind, its values, its default, and
+// what it does; whether a value is allowed is always the manifest's own
+// validation (Planning.Errors, Orchestration.Errors, Analysis.Errors,
+// Digest.Errors, Acceptance.Errors, MergeQueue.Errors, TestErrors) on the
+// manifest as it would be, so flai manifest set and flai check cannot
+// disagree.
 
 // Kind is what a setting's value is, and so how it is written and edited.
 type Kind string
@@ -197,6 +198,9 @@ func buildCatalog() []Setting {
 		Setting{Key: "analysis.schedule", Kind: KindCron,
 			Meaning: "When flai serve runs the analyzer, a five-field cron expression in UTC or daily; unset, it runs only when you ask.",
 			get:     func(m Manifest) (any, bool) { return text(m.Analysis.Schedule) }},
+		Setting{Key: "digest.agent", Kind: KindAgent,
+			Meaning: "The curator's agent, over the project's: what it sets wins, and what it leaves out is the project's agent's.",
+			get:     func(m Manifest) (any, bool) { return agent(m.Digest.Agent) }},
 		Setting{Key: "acceptance.mode", Kind: KindChoice, Values: AcceptanceModes, Default: AcceptLocal,
 			Meaning: "How a story in review is accepted: local merges its branch on this machine, as flai accept does, and pull-request merges it through a pull request on the project's forge.",
 			get:     func(m Manifest) (any, bool) { return text(m.Acceptance.Mode) }},
@@ -778,6 +782,7 @@ func (m Manifest) settingsProblems() []Problem {
 	msgs = append(msgs, m.Planning.Errors()...)
 	msgs = append(msgs, m.Orchestration.Errors()...)
 	msgs = append(msgs, m.Analysis.Errors()...)
+	msgs = append(msgs, m.Digest.Errors()...)
 	msgs = append(msgs, m.Acceptance.Errors()...)
 	msgs = append(msgs, m.MergeQueue.Errors()...)
 	msgs = append(msgs, m.TestErrors()...)

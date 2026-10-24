@@ -18,7 +18,7 @@ import (
 )
 
 // strategicRepo is a project with conventions read by different roles, a
-// design file for each strategic role's topic, an open issue, and an epic
+// design file for each strategic role's topics, an open issue, and an epic
 // whose story names a design file.
 func strategicRepo(t *testing.T) (*workitem.Repo, *workitem.Item, *workitem.Item) {
 	t.Helper()
@@ -44,16 +44,18 @@ func strategicRepo(t *testing.T) (*workitem.Repo, *workitem.Item, *workitem.Item
 	write("design/conventions/README.md", "# Conventions\n\n- [safety.md](safety.md)\n")
 	conv("safety.md", "Safety", "10", "")
 	conv("stream.md", "Stream", "20", "roles: [story]\n")
-	conv("strategy.md", "Strategy", "30", "roles: [plan, orchestrate, analyze]\n")
+	conv("strategy.md", "Strategy", "30", "roles: [plan, orchestrate, analyze, curate]\n")
 	conv("planning.md", "Planning", "40", "roles: [plan]\n")
 	conv("orchestration.md", "Orchestration", "50", "roles: [orchestrate]\n")
 	conv("analysis.md", "Analysis", "60", "roles: [analyze]\n")
+	conv("curation.md", "Curation", "70", "roles: [curate]\n")
 	doc := func(name, title, topic string) {
 		write("design/system/"+name+".md", "---\ntitle: "+title+"\nupdated: 2026-10-03\nstatus: active\n"+topic+"---\n\n# "+title+"\n\nThe "+name+" design.\n\n## Part\n\nThe body of the "+name+" part.\n")
 	}
 	doc("planning", "Planning", "topics: [planning]\n")
 	doc("orchestration", "Orchestration", "topics: [orchestration]\n")
 	doc("analysis", "Analysis", "topics: [analysis]\n")
+	doc("digest", "Digest", "topics: [digest]\n")
 	doc("named", "Named", "")
 	doc("epic-named", "Epic named", "")
 	write("design/issues/I-0001-slow.md", "---\nid: I-0001\ntitle: Slow\nclass: efficiency\nstatus: open\ncount: 1\ncost: 4m\nfirst_reported: 2026-10-01T08:00:00Z\nlast_reported: 2026-10-01T08:00:00Z\nupdated: 2026-10-01T08:00:00Z\n---\n\n# I-0001 Slow\n\n## Description\nSlow.\n")
@@ -101,18 +103,20 @@ func topicOf(p *Pack, name string) *topics.StoryTopic {
 	return nil
 }
 
-// E-0016, S-0207: each strategic role's pack has the conventions whose
-// roles are empty or list it, without the README, the open issues, its
-// role's topic, and briefs of the design that topic selects.
+// E-0016, S-0207, ADR-0196: each strategic role's pack has the conventions
+// whose roles are empty or list it, without the README, the open issues,
+// its role's topics, and briefs of the design those topics select. The
+// curator's topics are digest and planning.
 func TestForStrategicProjectPacks(t *testing.T) {
 	repo, _, _ := strategicRepo(t)
 	for role, want := range map[string]struct {
 		conv  []string
-		brief string
+		brief []string
 		not   []string
 	}{
-		"orchestrate": {[]string{"safety.md", "strategy.md", "orchestration.md"}, "design/system/orchestration.md", []string{"design/system/planning.md", "design/system/analysis.md"}},
-		"analyze":     {[]string{"safety.md", "strategy.md", "analysis.md"}, "design/system/analysis.md", []string{"design/system/planning.md", "design/system/orchestration.md"}},
+		"orchestrate": {[]string{"safety.md", "strategy.md", "orchestration.md"}, []string{"design/system/orchestration.md"}, []string{"design/system/planning.md", "design/system/analysis.md", "design/system/digest.md"}},
+		"analyze":     {[]string{"safety.md", "strategy.md", "analysis.md"}, []string{"design/system/analysis.md"}, []string{"design/system/planning.md", "design/system/orchestration.md", "design/system/digest.md"}},
+		"curate":      {[]string{"safety.md", "strategy.md", "curation.md"}, []string{"design/system/digest.md", "design/system/planning.md"}, []string{"design/system/orchestration.md", "design/system/analysis.md"}},
 	} {
 		p, err := ForStrategic(repo, role, "", "", "")
 		if err != nil {
@@ -125,8 +129,10 @@ func TestForStrategicProjectPacks(t *testing.T) {
 		if !slices.Equal(conv, want.conv) || p.README != nil {
 			t.Errorf("%s conventions: %v, readme %v", role, conv, p.README != nil)
 		}
-		if items[want.brief] != StepBriefed {
-			t.Errorf("%s: %s not briefed: %v", role, want.brief, items)
+		for _, b := range want.brief {
+			if items[b] != StepBriefed {
+				t.Errorf("%s: %s not briefed: %v", role, b, items)
+			}
 		}
 		for _, n := range want.not {
 			if _, ok := items[n]; ok {
@@ -138,8 +144,16 @@ func TestForStrategicProjectPacks(t *testing.T) {
 				t.Errorf("%s: %s is %s; a project pack names and ranks nothing", role, it.Path, it.Step)
 			}
 		}
-		top := topicOf(p, roleTopic[role])
-		if p.Role != role || p.Story != "" || p.Item != "" || p.OpenIssues != 1 || top == nil || top.Sources[0].Kind != FromRole || len(p.Catalog.NotLoaded) == 0 {
+		names := topics.Names(p.Topics)
+		if !slices.Equal(names, roleTopics[role]) {
+			t.Errorf("%s topics %v, want %v", role, names, roleTopics[role])
+		}
+		for _, top := range p.Topics {
+			if len(top.Sources) != 1 || top.Sources[0].Kind != FromRole || top.Sources[0].Via != role {
+				t.Errorf("%s topic %s sources %+v, want the role", role, top.Topic, top.Sources)
+			}
+		}
+		if p.Role != role || p.Story != "" || p.Item != "" || p.OpenIssues != 1 || len(p.Catalog.NotLoaded) == 0 {
 			t.Errorf("%s pack: role %q story %q item %q issues %d topics %+v catalog %v", role, p.Role, p.Story, p.Item, p.OpenIssues, p.Topics, p.Catalog)
 		}
 		if p.Budget != DefaultBudget {
@@ -204,6 +218,25 @@ func TestForStrategicPlansAStory(t *testing.T) {
 	}
 }
 
+// ADR-0196: the curator's topics go first in their order, save one the list
+// has already, which keeps its place and gains the role as a source.
+func TestWithRoleTopics(t *testing.T) {
+	own := topics.Source{Kind: topics.FromOwn}
+	got := withRole([]topics.StoryTopic{{Topic: "svelte", Sources: []topics.Source{own}}, {Topic: "planning", Sources: []topics.Source{own}}}, conventions.RoleCurate)
+	if names := topics.Names(got); !slices.Equal(names, []string{"digest", "svelte", "planning"}) {
+		t.Fatalf("topics %v", names)
+	}
+	if s := got[0].Sources; len(s) != 1 || s[0].Kind != FromRole || s[0].Via != conventions.RoleCurate {
+		t.Errorf("digest sources %+v", s)
+	}
+	if s := got[2].Sources; len(s) != 2 || s[0].Kind != topics.FromOwn || s[1].Kind != FromRole {
+		t.Errorf("planning sources %+v", s)
+	}
+	if s := got[1].Sources; len(s) != 1 || s[0].Kind != topics.FromOwn {
+		t.Errorf("svelte sources %+v", s)
+	}
+}
+
 // E-0016, S-0207: a strategic role refuses what it is not primed for.
 func TestForStrategicRefusals(t *testing.T) {
 	repo, epic, story := strategicRepo(t)
@@ -216,7 +249,9 @@ func TestForStrategicRefusals(t *testing.T) {
 		{"plan", epic.ID, story.ID, "give --epic or --story, not both"},
 		{"orchestrate", "", story.ID, "the orchestrator primes for the whole project; give no --story or --epic"},
 		{"analyze", epic.ID, "", "the analyzer primes for the whole project"},
-		{"explore", "", "", "no such role; a strategic agent's role is plan, orchestrate, analyze"},
+		{"curate", epic.ID, "", "the curator primes for the whole project; give no --story or --epic"},
+		{"curate", "", story.ID, "the curator primes for the whole project; give no --story or --epic"},
+		{"explore", "", "", "no such role; a strategic agent's role is plan, orchestrate, analyze, curate"},
 	} {
 		if _, err := ForStrategic(repo, c.role, c.epic, c.story, ""); err == nil || !strings.Contains(err.Error(), c.want) {
 			t.Errorf("%s %s%s: %v, want %q", c.role, c.epic, c.story, err, c.want)
@@ -418,8 +453,8 @@ func TestTheOrchestratorsDigestStaysWithinItsShare(t *testing.T) {
 	}
 }
 
-// ADR-0194: the planner's and the analyzer's packs take no digest step,
-// though threads await the operator.
+// ADR-0194, ADR-0196: the planner's, the analyzer's, and the curator's packs
+// take no digest step, though threads await the operator.
 func TestThePlannerAndAnalyzerPacksLoadNoDigest(t *testing.T) {
 	repo := answersRepo(t)
 	stories, err := repo.List(false)
@@ -440,7 +475,11 @@ func TestThePlannerAndAnalyzerPacksLoadNoDigest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, p := range []*Pack{plan, analyze} {
+	curate, err := ForStrategic(repo, conventions.RoleCurate, "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range []*Pack{plan, analyze, curate} {
 		if got := digestItems(p); len(got) != 0 || strings.Contains(p.Header(), "the answers and recommendations") {
 			t.Errorf("%s: digest items %v", p.Role, got)
 		}

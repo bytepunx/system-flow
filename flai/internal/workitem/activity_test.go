@@ -347,9 +347,35 @@ func TestReadActivityIsStrict(t *testing.T) {
 	}
 }
 
+// ADR-0196: the curator keeps its activity document, wip/agents/curator.md,
+// as the other strategic agents keep theirs, listed after the analyzer's.
+func TestCuratorActivity(t *testing.T) {
+	r := lintProject(t)
+	if got, want := r.ActivityPath(ActivityCurator), filepath.Join(r.Root, "wip", "agents", "curator.md"); got != want {
+		t.Errorf("path %s, want %s", got, want)
+	}
+	for _, kind := range []string{ActivityCurator, ActivityAnalyzer} {
+		if _, err := r.AppendActivity(kind, ActivityEntry{At: activityAt, Summary: "Wrote D-0012.", Items: []string{"D-0012"}, Seconds: 40, Cost: 0.2, Estimated: true}); err != nil {
+			t.Fatalf("%s: %v", kind, err)
+		}
+	}
+	data, err := os.ReadFile(r.ActivityPath(ActivityCurator))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(string(data), "---\nkind: curator\n") || !strings.Contains(string(data), "\n# Curator activity\n") {
+		t.Errorf("document:\n%s", data)
+	}
+	mustLintClean(t, r.ActivityPath(ActivityCurator))
+	list, err := r.Activities()
+	if err != nil || len(list) != 2 || list[0].Kind != ActivityAnalyzer || list[1].Kind != ActivityCurator || list[1].TasksCompleted != 1 {
+		t.Errorf("activities: %+v %v", list, err)
+	}
+}
+
 func TestIsActivityDocument(t *testing.T) {
 	for name, want := range map[string]bool{
-		"planner.md": true, "wip/agents/orchestrator.md": true, "analyzer.md": true,
+		"planner.md": true, "wip/agents/orchestrator.md": true, "analyzer.md": true, "wip/agents/curator.md": true,
 		"S-0206.md": false, "index.md": false, "README.md": false, "planner": false,
 	} {
 		if IsActivityDocument(name) != want {

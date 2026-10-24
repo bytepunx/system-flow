@@ -250,6 +250,10 @@ func (c *checker) layout() {
 		mf := filepath.Join(c.repo.Root, "system-flow.yaml")
 		c.add(Error, "manifest.analysis", mf, keyLine(mf, "analysis"), "%s", msg)
 	}
+	for _, msg := range m.Digest.Errors() {
+		mf := filepath.Join(c.repo.Root, "system-flow.yaml")
+		c.add(Error, "manifest.digest", mf, keyLine(mf, "digest"), "%s", msg)
+	}
 	for _, msg := range m.TestErrors() {
 		mf := filepath.Join(c.repo.Root, "system-flow.yaml")
 		c.add(Error, "manifest.tests", mf, keyLine(mf, "tests"), "%s", msg)

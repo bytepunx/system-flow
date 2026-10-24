@@ -113,7 +113,7 @@ type Usage struct {
 // StrategicKinds are the kinds of strategic agent whose spending an item
 // may carry, in the order it is written: workitem.ActivityKinds, which this
 // package cannot import.
-var StrategicKinds = []string{"planner", "orchestrator", "analyzer"}
+var StrategicKinds = []string{"planner", "orchestrator", "analyzer", "curator"}
 
 // Strategic is what one kind of strategic agent spent on an item: the part
 // of its activities' cost apportioned to the item, so always estimated.
