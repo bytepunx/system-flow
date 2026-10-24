@@ -25,9 +25,9 @@ verified it, and not before (work-management.md); flai criteria tick changes
 that one box and every other byte of the body stays as it was.
 
 tick and untick are an edit of the body, made as flai edit makes one: an
-archived or closed item is refused (exit 4), as is a change flai check finds
-fault with; with --hash, a change someone made meanwhile is a conflict
-(exit 3); and agents connected over MCP are told the criteria changed. A
+archived or closed item is refused (exit 4), as is a finding the change
+introduces inside the story, as flai edit says; with --hash, a change
+someone made meanwhile is a conflict (exit 3); and agents connected over MCP are told the criteria changed. A
 number there is not is refused, and nothing is written.
 
 The MCP tool criteria_tick and the dashboard tick and untick criteria the

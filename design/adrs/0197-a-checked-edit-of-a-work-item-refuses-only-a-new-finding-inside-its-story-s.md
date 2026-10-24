@@ -38,7 +38,7 @@ This refines ADR-0085, whose rule that a finding outside the story is a note now
 ## Consequences
 
 - A story's agent ticks its criteria, and edits its story and tasks, while other agents start stories and write files in the main checkout; I-0182's cause no longer occurs.
-- An edit can no longer be refused for a finding it did not bring, but neither can one that brings a finding on another story's file be refused for it: it gets a warning, which the caller shows, and the main checkout's `flai check` still reports the finding.
+- An edit can no longer be refused for a finding it did not bring, but neither can one that brings a finding on another story's file be refused for it: it gets a warning in the edit's result, which `flai edit --json` and `flai criteria --json` print, and the main checkout's `flai check` still reports the finding.
 - Each checked edit reads the story's tasks, threads, and conversations once more to build the scope.
 
 ## Alternatives considered

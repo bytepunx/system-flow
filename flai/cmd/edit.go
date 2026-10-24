@@ -72,8 +72,14 @@ block. A block that changes records who changed it (--by) and when.
 --body-stdin reads what lies below the heading; the heading is the ID and the
 title, and flai writes it. With --hash, the hash flai edit --show printed, a
 change someone made meanwhile is a conflict (exit 3) and nothing is written.
-flai check runs with the change in place: if it reports anything the change
-introduces, every file is put back and the findings are printed (exit 4).
+flai check runs with the change in place, scoped to the item's story as flai
+check --story scopes it (ADR-0197): if it reports a finding the change
+introduces inside the story, or an error on the item, every file is put back
+and the findings are printed (exit 4). A new finding outside the story, such
+as on another story's task, does not refuse the edit; --json lists it in
+warnings. One the scoped check leaves out, such as on another open story's
+narrative, is neither. An epic's edit refuses only a new finding on a file
+it wrote.
 --autocommit commits every file the edit touched in one commit, unless the
 project sets dashboard.autocommit: false. Nothing is pushed.
 
