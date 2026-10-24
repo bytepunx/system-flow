@@ -586,6 +586,39 @@ func TestOutcomes(t *testing.T) {
 	}
 }
 
+// S-0433: the dashboard's answer on a thread runs flai thread reply or
+// confirm as the owner, whose code writes the answer's digest entry, and the
+// entry it names under digest, or the warning that none could be written,
+// reaches the dashboard as flai printed it.
+func TestTheDashboardsAnswerCarriesItsDigestEntry(t *testing.T) {
+	p := withDocs(t) // owner: olive
+	written := `{"id":"TH-0001","status":"answered","digest":{"id":"D-0007","path":"design/digest/D-0007-how-deep-nine.md","action":"written"}}`
+	warned := `{"id":"TH-0001","status":"answered","digest":{"warning":"no digest entry was written for the operator's answer on TH-0001 at 2026-10-24T20:00:00Z: it has a secret's shape (rule digest.secret)"}}`
+	for _, name := range []string{"thread.reply", "thread.confirm"} {
+		for _, out := range []string{written, warned} {
+			ran := Ran{Stdout: []byte(out)}
+			if out == warned {
+				ran.Events = []map[string]any{{"level": "WARN", "msg": "operator's answer not written to the digest", "detail": "no digest entry was written"}}
+			}
+			rec := &recorder{ran: ran}
+			res, rerr := writeMethods(rec.run, time.Now, hostFor(name))[name](context.Background(), p, json.RawMessage(good[name].params))
+			if rerr != nil {
+				t.Fatalf("%s: %+v", name, rerr)
+			}
+			if args := strings.Join(rec.runs[0].Args, " "); !strings.Contains(args, "--by=olive") || !strings.Contains(args, "--json") {
+				t.Errorf("%s ran %q, not as the owner with --json", name, args)
+			}
+			w, ok := res.(Written)
+			if !ok || string(w.Data) != out {
+				t.Errorf("%s answered %#v, want flai's JSON %s", name, res, out)
+			}
+			if out == warned && (len(w.Warnings) != 1 || w.Warnings[0] != "no digest entry was written") {
+				t.Errorf("%s: the digest warning should reach the dashboard: %+v", name, w.Warnings)
+			}
+		}
+	}
+}
+
 func TestAcceptanceSendsEachStepAsProgress(t *testing.T) {
 	p := withDocs(t)
 	rec := &recorder{ran: Ran{Stdout: []byte(`{"id":"S-0001"}`), Events: []map[string]any{{"level": "INFO", "msg": "story branch merged"}, {"level": "INFO", "msg": "archived"}}}}

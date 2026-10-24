@@ -279,7 +279,7 @@ func TestThreadReplyKeepsTheAnswerWhenItsDigestEntryFails(t *testing.T) {
 	if last := view.Entries[len(view.Entries)-1]; view.Status != "answered" || last.Author != "alex" || last.Text != "The CLI." {
 		t.Errorf("the reply is not saved: %s", out)
 	}
-	if !strings.Contains(errOut, `"level":"WARN"`) || !strings.Contains(errOut, `"thread":"TH-0001"`) || !strings.Contains(errOut, `"err":"no digest entry was written`) {
+	if !strings.Contains(errOut, `"level":"WARN"`) || !strings.Contains(errOut, `"thread":"TH-0001"`) || !strings.Contains(errOut, `"detail":"no digest entry was written`) {
 		t.Errorf("no warning logged: %s", errOut)
 	}
 

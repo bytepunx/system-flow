@@ -51,7 +51,7 @@ func (a *app) afterThread(repo *workitem.Repo, th *threads.Thread) error {
 func (a *app) digestAnswer(repo *workitem.Repo, th *threads.Thread) *digest.AnswerEntry {
 	e := digest.OnAnswer(repo, a.runner, th)
 	if e != nil && e.Warning != "" {
-		a.logger().Warn("operator's answer not written to the digest", "component", "digest", "thread", th.ID, "err", e.Warning)
+		a.logger().Warn("operator's answer not written to the digest", "component", "digest", "thread", th.ID, "detail", e.Warning)
 	}
 	return e
 }
