@@ -3,16 +3,37 @@ id: T-1834
 type: task
 nature: feature
 title: flai serve starts the curator after each acceptance, coalesced, and when digest.schedule comes round, while the curate action is on
-status: backlog
+status: done
 parent: S-0432
 owner: alex
 created: 2026-10-16T06:07:04Z
-updated: 2026-10-24T13:35:11Z
-transitions: []
+updated: 2026-10-24T14:25:35Z
+transitions:
+  - to: ready
+    at: 2026-10-24T14:14:01Z
+    by: agent-S-0432
+  - to: in-progress
+    at: 2026-10-24T14:14:02Z
+    by: agent-S-0432
+  - to: done
+    at: 2026-10-24T14:25:35Z
+    by: agent-S-0432
 stream: S-0432
 tags: [cli]
 touches: [flai/internal/serve/curate_schedule.go, flai/internal/serve/curate_schedule_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/serve.go]
 after: [T-1832, T-1833]
+usage:
+  source: log
+  seconds: 693
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 50
+      output: 20017
+      cache_read: 3303036
+      cache_write: 136930
+      cost: 1.8298
 ---
 # T-1834 flai serve starts the curator after each acceptance, coalesced, and when digest.schedule comes round, while the curate action is on
 

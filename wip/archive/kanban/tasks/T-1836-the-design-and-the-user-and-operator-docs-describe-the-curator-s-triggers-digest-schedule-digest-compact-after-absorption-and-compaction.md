@@ -3,16 +3,37 @@ id: T-1836
 type: task
 nature: feature
 title: The design and the user and operator docs describe the curator's triggers, digest.schedule, digest.compact_after, absorption, and compaction
-status: backlog
+status: done
 parent: S-0432
 owner: alex
 created: 2026-10-16T06:07:18Z
-updated: 2026-10-16T06:07:18Z
-transitions: []
+updated: 2026-10-24T14:46:48Z
+transitions:
+  - to: ready
+    at: 2026-10-24T14:31:28Z
+    by: agent-S-0432
+  - to: in-progress
+    at: 2026-10-24T14:31:29Z
+    by: agent-S-0432
+  - to: done
+    at: 2026-10-24T14:46:48Z
+    by: agent-S-0432
 stream: S-0432
 tags: [cli, template]
-touches: [docs/operators/settings.md, design/system/project-manifest.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, template/CHANGELOG.md, template/template.yaml]
-after: [T-1834, T-1835]
+touches: [docs/operators/settings.md, docs/operators/index.md, design/system/project-manifest.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/guard.go, template/CHANGELOG.md, template/template.yaml, design/system/agent-adapters.md]
+after: [T-1834]
+usage:
+  source: log
+  seconds: 919
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 99
+      output: 39457
+      cache_read: 6511058
+      cache_write: 269922
+      cost: 3.6069
 ---
 # T-1836 The design and the user and operator docs describe the curator's triggers, digest.schedule, digest.compact_after, absorption, and compaction
 

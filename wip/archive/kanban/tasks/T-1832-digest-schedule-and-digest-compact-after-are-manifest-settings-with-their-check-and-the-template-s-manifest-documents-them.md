@@ -24,16 +24,16 @@ touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/settings.go
 after: [T-1831]
 usage:
   source: log
-  seconds: 282
+  seconds: 286
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 58
-      output: 368
-      cache_read: 2981730
-      cache_write: 128562
-      cost: 1.0465
+      input: 46
+      output: 18434
+      cache_read: 3041947
+      cache_write: 126107
+      cost: 1.6851
 ---
 # T-1832 digest.schedule and digest.compact_after are manifest settings with their check, and the template's manifest documents them
 

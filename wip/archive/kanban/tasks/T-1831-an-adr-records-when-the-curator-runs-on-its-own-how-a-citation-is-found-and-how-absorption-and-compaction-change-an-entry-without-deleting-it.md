@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 60
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 10
-      output: 56
-      cache_read: 885155
-      cache_write: 7228
-      cost: 0.3002
+      input: 13
+      output: 5289
+      cache_read: 872767
+      cache_write: 36181
+      cost: 0.4835
 ---
 # T-1831 An ADR records when the curator runs on its own, how a citation is found, and how absorption and compaction change an entry without deleting it
 

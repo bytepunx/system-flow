@@ -3,16 +3,37 @@ id: T-1835
 type: task
 nature: feature
 title: The curator's prompt, definition, and guard take in absorption and compaction
-status: backlog
+status: done
 parent: S-0432
 owner: alex
 created: 2026-10-16T06:07:08Z
-updated: 2026-10-24T13:35:15Z
-transitions: []
+updated: 2026-10-24T14:46:33Z
+transitions:
+  - to: ready
+    at: 2026-10-24T14:14:03Z
+    by: agent-S-0432
+  - to: in-progress
+    at: 2026-10-24T14:14:04Z
+    by: agent-S-0432
+  - to: done
+    at: 2026-10-24T14:46:33Z
+    by: agent-S-0432
 stream: S-0432
 tags: [cli, template]
-touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/guard/guard.go, flai/internal/guard/curate_test.go, ".claude/agents/curator.md", template/root/.claude/agents/curator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md]
+touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/guard/guard.go, flai/internal/guard/curate_test.go, ".claude/agents/curator.md", template/root/.claude/agents/curator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, flai/internal/guard/authors.go, flai/internal/guard/authors_test.go]
 after: [T-1833]
+usage:
+  source: log
+  seconds: 1949
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 81
+      output: 32354
+      cache_read: 5338893
+      cache_write: 221329
+      cost: 2.9576
 ---
 # T-1835 The curator's prompt, definition, and guard take in absorption and compaction
 

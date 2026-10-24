@@ -3,11 +3,11 @@ id: S-0432
 type: story
 nature: feature
 title: The curator runs after each acceptance and on a schedule, marks an entry the design now records absorbed, and compacts an entry no one has cited within the window
-status: in-progress
+status: done
 parent: E-0025
 owner: alex
 created: 2026-10-16T05:59:39Z
-updated: 2026-10-24T13:32:56Z
+updated: 2026-10-24T20:28:54Z
 transitions:
   - to: ready
     at: 2026-10-24T12:40:36Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-24T13:32:56Z
     by: agent-S-0432
+  - to: review
+    at: 2026-10-24T15:24:33Z
+    by: agent-S-0432
+  - to: done
+    at: 2026-10-24T20:28:54Z
+    by: alex
 tags: [cli, template]
 topics: [cli, planning, analysis, conventions]
-touches: [".claude/agents/curator.md", design/adrs, design/adrs/README.md, design/system/flai-cli.md, design/system/project-manifest.md, design/system/strategic-agents.md, docs/operators/settings.md, docs/users/flai-reference.md, docs/users/flai.md, flai/cmd/digest.go, flai/cmd/digest_test.go, flai/internal/check/check.go, flai/internal/check/digest_test.go, flai/internal/digest/decay.go, flai/internal/digest/decay_test.go, flai/internal/guard/curate_test.go, flai/internal/guard/guard.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/curate_schedule_test.go, flai/internal/serve/serve.go, template/CHANGELOG.md, template/root/.claude/agents/curator.md, template/root/system-flow.yaml.tmpl, template/template.yaml]
+touches: [".claude/agents/curator.md", design/adrs, design/adrs/README.md, design/system/flai-cli.md, design/system/project-manifest.md, design/system/strategic-agents.md, docs/operators/settings.md, docs/users/flai-reference.md, docs/users/flai.md, flai/cmd/digest.go, flai/cmd/digest_test.go, flai/internal/check/check.go, flai/internal/check/digest_test.go, flai/internal/digest/decay.go, flai/internal/digest/decay_test.go, flai/internal/guard/curate_test.go, flai/internal/guard/guard.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/curate_schedule_test.go, flai/internal/serve/serve.go, template/CHANGELOG.md, template/root/.claude/agents/curator.md, template/root/system-flow.yaml.tmpl, template/template.yaml, flai/internal/digest/digest.go, flai/internal/digest/digest_test.go, design/conventions/strategic-agents.md, flai/internal/guard/authors.go, flai/internal/guard/authors_test.go, template/root/design/conventions/strategic-agents.md, design/system/agent-adapters.md, docs/operators/index.md, flai/cmd/guard.go, design/issues/I-0194-the-mcp-task-done-checks-a-story-with-the-installed-flai-so-a-story-that-widens-a-check-s-format-fails-its-own-task-close.md, design/issues/summary.md]
 after: [S-0431]
 agent:
   harness: claude-code
@@ -26,37 +32,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 519
-  estimated: true
-  priced_by: estimate
+  seconds: 5260
+  priced_by: harness
   turns:
     - day: 2026-10-24
-      hand_edits: 1
-      work: 34
+      ceremony: 4
+      hand_edits: 3
+      work: 76
   models:
     - model: claude-opus-5-5
-      input: 116
-      output: 771
-      cache_read: 6933117
-      cache_write: 304422
-      cost: 2.4351
+      input: 528
+      output: 210999
+      cache_read: 34817997
+      cache_write: 1443411
+      cost: 19.2879
   strategic:
     - kind: orchestrator
-      seconds: 3471
+      seconds: 8721
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 40
-          output: 592
-          cache_read: 4525871
-          cache_write: 18493
-          cost: 0.9984
+          input: 166
+          output: 2937
+          cache_read: 23757720
+          cache_write: 42582
+          cost: 5.2203
         - model: claude-sonnet-5-5
-          input: 4
-          output: 11
-          cache_read: 68727
-          cache_write: 13659
-          cost: 0.0563
+          input: 10
+          output: 47
+          cache_read: 115650
+          cache_write: 59599
+          cost: 0.1198
 cost_of_delay:
   value: 95.02
   by: planner-S-0432
@@ -79,12 +85,12 @@ The digest stays small and true without the operator asking. With the `curate` a
 
 ## Acceptance criteria
 
-- [ ] An ADR, refining the curator's, records the triggers (each acceptance, coalesced; `digest.schedule`, read as `analysis.schedule` is), how `cited` is found (an entry's ID in a narrative, a thread, or a work item, archived ones included, with the date of the latest), absorption, and compaction, and that neither deletes anything.
-- [ ] `flai serve` starts the curator after an acceptance while `curate` is on and none runs, and once more when acceptances came during a run; `digest.schedule` starts it with the trigger `schedule <spec>`; each start is journalled with its trigger, and tests cover an acceptance, two during a run, and the schedule.
-- [ ] `flai digest absorb <D-nnnn> --by <path> [--heading]` sets `status: absorbed` and `absorbed_by`, refusing a path that does not exist; an absorbed entry never loads in a pack (S-0430) and `flai digest list` shows it with the document.
-- [ ] `flai digest cited [--json]` gives each entry its latest citation, and `flai digest compact [--dry-run] [--json]` turns each active entry uncited within `digest.compact_after` into `compacted`, its body reduced to its title, and lists what it compacted; a second run compacts nothing more; tests cover a cited entry kept and an uncited one compacted.
-- [ ] The curator's prompt and `.claude/agents/curator.md` tell it to look for absorption in every run (with `doc_search` on each active entry's title) and to run `flai digest compact`; the guard passes `flai digest absorb`, `cited`, and `compact` to it.
-- [ ] `digest.schedule` and `digest.compact_after` are manifest settings with checks (`manifest.digest`), the template's manifest documents them, and `docs/operators/settings.md`, `design/system/project-manifest.md`, `design/system/strategic-agents.md`, `docs/users/flai.md`, and `template/CHANGELOG.md` describe the triggers, absorption, and compaction.
+- [x] An ADR, refining the curator's, records the triggers (each acceptance, coalesced; `digest.schedule`, read as `analysis.schedule` is), how `cited` is found (an entry's ID in a narrative, a thread, or a work item, archived ones included, with the date of the latest), absorption, and compaction, and that neither deletes anything.
+- [x] `flai serve` starts the curator after an acceptance while `curate` is on and none runs, and once more when acceptances came during a run; `digest.schedule` starts it with the trigger `schedule <spec>`; each start is journalled with its trigger, and tests cover an acceptance, two during a run, and the schedule.
+- [x] `flai digest absorb <D-nnnn> --by <path> [--heading]` sets `status: absorbed` and `absorbed_by`, refusing a path that does not exist; an absorbed entry never loads in a pack (S-0430) and `flai digest list` shows it with the document.
+- [x] `flai digest cited [--json]` gives each entry its latest citation, and `flai digest compact [--dry-run] [--json]` turns each active entry uncited within `digest.compact_after` into `compacted`, its body reduced to its title, and lists what it compacted; a second run compacts nothing more; tests cover a cited entry kept and an uncited one compacted.
+- [x] The curator's prompt and `.claude/agents/curator.md` tell it to look for absorption in every run (with `doc_search` on each active entry's title) and to run `flai digest compact`; the guard passes `flai digest absorb`, `cited`, and `compact` to it.
+- [x] `digest.schedule` and `digest.compact_after` are manifest settings with checks (`manifest.digest`), the template's manifest documents them, and `docs/operators/settings.md`, `design/system/project-manifest.md`, `design/system/strategic-agents.md`, `docs/users/flai.md`, and `template/CHANGELOG.md` describe the triggers, absorption, and compaction.
 
 ## Tasks
 - T-1831 An ADR records when the curator runs on its own, how a citation is found, and how absorption and compaction change an entry without deleting it
