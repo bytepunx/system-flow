@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.113 - 2026-10-24
+
+- S-0431 The curator, a strategic agent behind the curate host action, takes in what the archive and the threads gained since its last run as digest entries written through flai alone (patch).
+
 ## 1.0.112 - 2026-10-24
 
 - S-0431 The curator, a fourth strategic agent, keeps the digest behind the `curate` host action (patch, ADR-0196): the template ships `.claude/agents/curator.md`, the curator's definition, which reads what `flai digest harvest` lists since its last run, writes an entry with `flai digest new` for each fact the digest lacks, merges one into the entry that holds it with `flai digest edit`, records `asked_again`, never writes a secret's value, edits no file, authors no work item, and ends with a one-line summary naming the entries it wrote and merged. `.claude/settings.json` runs `flai guard` on `Edit|MultiEdit|Write|NotebookEdit` when `FLAI_ROLE` is `curate`, as for `plan`, `orchestrate`, and `analyze`. In `strategic-agents.md`, `roles` gains `curate`, the opening, the rules, and "Asking the operator" name the curator, a new section "As the curator" says the same as its definition, and "Logging your activity" names `wip/agents/curator.md`. The conventions README's row for `strategic-agents.md` and `wip/agents/README.md` name the curator and its activity document. It needs a flai that has it, the release that carries S-0431: an older flai has no `flai curate`, no `curate` host action, no MCP tool `curate`, and no `--role curate` for `flai prime`, and its `flai check` warns `conventions.roles` on `curate`. Its guard does not know the role: it passes a curator's calls unchecked, file edits and work item writes included, save the shared-paths rules and `flai forge push`, which hold every session `flai serve` starts, and `release_publish`, which only the orchestrator may call.
