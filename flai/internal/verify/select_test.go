@@ -322,6 +322,32 @@ func TestRepositoryManifestLintsChangedFlaioverFiles(t *testing.T) {
 	}
 }
 
+// I-0201: this repository's go-test tier runs the changed packages' tests
+// whole, without -short, so a real-git or monorepo test a story adds runs in
+// flai test and the close-out rather than only in the merge queue's batch;
+// it skips the paid gateway tests, as scripts/integration.sh does. Not gated
+// under -short, so that make test catches a manifest that brings -short back.
+func TestRepositoryManifestRunsChangedGoPackagesWithoutShort(t *testing.T) {
+	root := filepath.Join("..", "..", "..")
+	if _, err := os.Stat(filepath.Join(root, "system-flow.yaml")); err != nil {
+		t.Skip("monorepo not present")
+	}
+	tiers, err := CheckoutTiers(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, s := range Select(os.DirFS(root), tiers, []string{"flai/internal/verify/select.go"}, false) {
+		if s.Tier.Name == "go-test" {
+			got = s.Argv
+		}
+	}
+	want := []string{"go", "test", "-json", "-race", "-count=1", "-skip", "^TestGateway", "./internal/verify"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("go-test runs %q, want %q", got, want)
+	}
+}
+
 // I-0128: a tier whose command holds {importers} runs on the changed
 // packages and every package of their module that imports them, where
 // {packages} names the changed ones only; with all, on ./...; with no

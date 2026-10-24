@@ -72,7 +72,7 @@ tests:
     paths: ["flai/**/*.go", "flai/**/testdata/**"]
     format: golangci-json
   - name: go-test
-    command: [go, test, "-json", "-race", "-short", "-count=1", "{packages}"]
+    command: [go, test, "-json", "-race", "-count=1", "-skip", "^TestGateway", "{packages}"]
     dir: flai
     paths: ["flai/**/*.go", "flai/**/testdata/**"]
     format: go-test-json
