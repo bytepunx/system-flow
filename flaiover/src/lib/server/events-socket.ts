@@ -53,7 +53,8 @@ function sameOrigin(headers: Headers, allowed: readonly string[]): boolean {
 /** The upgrade of /api/events and every socket it opened, closed together when the server stops. */
 export class EventsSocket {
 	private wss = new WebSocketServer({ noServer: true, maxPayload: 1024 });
-	private open = new Set<WebSocket>();
+	/** Each open socket with its teardown: its ping cleared, its Repo listeners off, and it forgotten. */
+	private open = new Map<WebSocket, () => void>();
 	private stopping = false;
 
 	/** allowed is the hosts an Origin may name beside the request's own, FLAIOVER_ALLOWED_HOSTS's. */
@@ -91,15 +92,21 @@ export class EventsSocket {
 		);
 	}
 
-	/** Close every events socket with 1001 and refuse new ones, for a server that is stopping. */
+	/**
+	 * Close every events socket with 1001 and refuse new ones, for a server that is stopping. Each is
+	 * torn down first, so that no Repo listener outlives the call whenever its close handshake ends: an
+	 * upgraded socket is detached from the HTTP server, whose close does not wait for it (I-0205).
+	 */
 	close(): void {
 		this.stopping = true;
-		for (const ws of this.open) ws.close(CLOSE_GOING_AWAY, 'server stopping');
+		for (const [ws, teardown] of [...this.open]) {
+			teardown();
+			ws.close(CLOSE_GOING_AWAY, 'server stopping');
+		}
 	}
 
 	private serve(ws: WebSocket, r: Repo, project: string | null): void {
 		if (this.stopping) return void ws.close(CLOSE_GOING_AWAY, 'server stopping');
-		this.open.add(ws);
 		const send = (m: EventMessage) => {
 			if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(m));
 		};
@@ -115,12 +122,14 @@ export class EventsSocket {
 		ws.on('error', (err) =>
 			log().debug({ component: 'events', project, err: String(err) }, 'events socket error')
 		);
-		ws.on('close', () => {
+		const teardown = () => {
 			clearInterval(ping);
 			r.off('change', change);
 			r.off('agent', agent);
 			this.open.delete(ws);
-		});
+		};
+		this.open.set(ws, teardown);
+		ws.on('close', teardown);
 		r.on('change', change);
 		r.on('agent', agent);
 		send({ type: 'ready' });
