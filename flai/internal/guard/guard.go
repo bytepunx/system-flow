@@ -95,13 +95,15 @@
 // A curator session, one flai serve starts with the role curate, is held to
 // the digest (S-0431, ADR-0196): its own calls may read, log its activities,
 // open and reply to threads as itself, and run flai digest harvest, new, and
-// edit, which list the candidates and write or merge an entry through flai.
-// It edits no file, with Edit, MultiEdit, Write, or NotebookEdit, and authors
-// no work item: flai digest seed, every write through flai but those, the
-// tools and commands that start a strategic agent among them, and git's
-// writes are refused it, each refusal saying that it writes entries only
-// with flai digest new and edit. Its sub-agents are held as every sub-agent
-// is.
+// edit, which list the candidates and write or merge an entry through flai,
+// and, since S-0432 (ADR-0199), absorb, cited, and compact, which mark an
+// entry absorbed, record each entry's citers, and compact the entries no one
+// cited within the window. It edits no file, with Edit, MultiEdit, Write, or
+// NotebookEdit, and authors no work item: flai digest seed, every write
+// through flai but those, the tools and commands that start a strategic
+// agent among them, and git's writes are refused it, each refusal saying
+// that it writes entries only with flai digest new, edit, absorb, cited, and
+// compact. Its sub-agents are held as every sub-agent is.
 //
 // A story's agent, in a session flai serve starts with FLAI_STORY and no
 // role, is refused its own wait_for_events while a sub-agent of its session
@@ -412,21 +414,23 @@ var MCPCurates = []string{"activity_log", "inbox", "thread_open", "thread_reply"
 
 // cliCurates are the flai commands the curator may run besides cliReads,
 // each with the subcommands it may run: flai digest harvest lists the
-// candidates, and new and edit write an entry or merge a candidate into the
-// entry that holds it.
+// candidates, new and edit write an entry or merge a candidate into the
+// entry that holds it, absorb marks an entry a document records, cited
+// writes each entry's citers, and compact compacts the entries uncited
+// within the window (ADR-0199).
 var cliCurates = map[string][]string{
-	"digest": {"edit", "harvest", "new"},
+	"digest": {"absorb", "cited", "compact", "edit", "harvest", "new"},
 }
 
 // curator ends each of the curator's refusals: the rule the call breaks and
 // what to do instead.
-const curator = "the curator writes digest entries only with flai digest new and flai digest edit, and edits no file and authors no work item (strategic-agents.md, ADR-0196). Ask the operator with thread_open when an entry needs their judgement."
+const curator = "the curator writes digest entries only with flai digest new, edit, absorb, cited, and compact, and edits no file and authors no work item (strategic-agents.md, ADR-0196, ADR-0199). Ask the operator with thread_open when an entry needs their judgement."
 
 // seedsUnjudged says why the curator never runs flai digest seed.
 const seedsUnjudged = "flai digest seed writes an entry for every candidate without judging whether an entry already holds it"
 
-// curating are the curator's rules: flai's reads, digest harvest, new, and
-// edit, and git's reads.
+// curating are the curator's rules: flai's reads, digest harvest, new,
+// edit, absorb, cited, and compact, and git's reads.
 var curating = rules{
 	flai: func(cmd, sub string, rest []string) (string, string) {
 		switch {
@@ -438,7 +442,7 @@ var curating = rules{
 		if subs, ok := cliCurates[cmd]; ok && slices.Contains(subs, sub) {
 			return "", ""
 		}
-		return "of flai's commands it runs only those that read, and digest harvest, new, and edit", ""
+		return "of flai's commands it runs only those that read, and digest harvest, new, edit, absorb, cited, and compact", ""
 	},
 	git: func(string) string { return "it runs only git's reads" },
 }

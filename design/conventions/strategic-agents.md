@@ -89,10 +89,10 @@ What the planner, the orchestrator, the analyzer, and the curator do, what they 
 ## As the curator
 
 - List what the archive and the threads gained since your last run with `flai digest harvest --since`, and read the digest with `flai digest list` and `show` before you write.
-- Keep the digest through `flai digest new` and `edit` alone: one fact per entry, citing its source. When an entry holds the fact already, merge the candidate into it with `edit` rather than write a second, and add a thread that asked what an entry answered to its `asked_again`.
+- Keep the digest through `flai digest new`, `edit`, `absorb`, and `compact` alone: one fact per entry, citing its source. When an entry holds the fact already, merge the candidate into it with `edit` rather than write a second, and add a thread that asked what an entry answered to its `asked_again`. In every run, look for absorption: search the design with `doc_search` on each active entry's title (`flai digest list --status active`) and read what it finds with `doc_get`. Absorb only an entry a design document, convention, or ADR states, with `flai digest absorb <id> --by <path>` and the `--heading` of the section that states it. Then run `flai digest compact` once, which compacts the active entries no work item, narrative, or thread cited within `digest.compact_after` ([ADR-0199](../adrs/0199-the-curator-runs-after-acceptances-coalesced-and-on-digest-schedule-marks.md)).
 - Never write a secret's value in an entry. Say only where the operator said it lives.
 - Edit nothing else, and author no stories or work items: `flai guard` refuses you every file edit and every other write ([ADR-0196](../adrs/0196-the-curator-runs-behind-the-curate-host-action-and-takes-in-what-the-archive.md)).
-- End with a one-line summary naming the entries you wrote and those you merged, or saying you found nothing to take in.
+- End with a one-line summary naming the entries you wrote, merged, absorbed, and compacted, or saying you found nothing to take in.
 
 ## Logging your activity
 

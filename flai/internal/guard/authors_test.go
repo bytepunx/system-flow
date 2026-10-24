@@ -103,7 +103,8 @@ func TestAServedAgentWritesOnlyAsItself(t *testing.T) {
 
 // S-0369, ADR-0143: a served agent that names itself, with --by, or with
 // FLAI_AGENT and FLAI_SESSION as flai serve set them, passes, as do --by on
-// flai order, a policy, and on flai stats, a grouping; an empty --by, which
+// flai order, a policy, on flai stats, a grouping, and on flai digest
+// absorb, a document (ADR-0199); an empty --by, which
 // falls back to FLAI_AGENT; and an assignment-shaped word that sets nothing,
 // such as a commit message's.
 func TestAServedAgentNamesItself(t *testing.T) {
@@ -125,6 +126,7 @@ func TestAServedAgentNamesItself(t *testing.T) {
 		"flai move S-0001 review && git commit -m x",
 		"flai order --by cod",
 		"flai stats --by nature",
+		"flai digest absorb D-0001 --by design/system/workflow.md",
 		"FOO=1 go test ./...",
 	} {
 		if why := storysAgent.Check(bash("", c)); why != "" {

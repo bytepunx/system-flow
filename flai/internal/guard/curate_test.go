@@ -1,6 +1,7 @@
 package guard
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -12,7 +13,7 @@ import (
 var itsCurator = Guard{Commands: append(slices.Clone(g.Commands), "analyze", "curate", "digest", "plan"), Role: RoleCurate, Agent: "curator", Session: "20261023T000000"}
 
 // writesOnlyEntries is what each of the curator's refusals says.
-const writesOnlyEntries = "the curator writes digest entries only with flai digest new and flai digest edit"
+const writesOnlyEntries = "the curator writes digest entries only with flai digest new, edit, absorb, cited, and compact"
 
 // S-0431, ADR-0196: the curator reads as a sub-agent does, logs its
 // activities, opens and replies to threads, waits on events, and lists,
@@ -36,6 +37,12 @@ func TestTheCuratorReadsAndWritesDigestEntries(t *testing.T) {
 		"FLAI_AGENT=curator flai digest edit D-0001 --topic git",
 		"FLAI_SESSION=20261023T000000 flai digest list",
 		"flai digest new --help",
+		"flai digest absorb D-0001 --by design/system/workflow.md --heading 'Pull order' --json",
+		"scripts/flai.sh digest absorb D-0002 --by design/adrs/0199-x.md",
+		"flai digest cited --json",
+		"bin/flai digest cited",
+		"flai digest compact --dry-run --json && flai digest compact",
+		"FLAI_AGENT=curator scripts/flai.sh digest compact --json",
 		"git log --oneline -5 && git status",
 		"ls design/digest",
 	} {
@@ -65,7 +72,7 @@ func TestTheCuratorEditsNoFile(t *testing.T) {
 // S-0431, ADR-0196: of flai's MCP tools the curator calls only the reads and
 // its own; every work item write, the issue tools, and the tools that start
 // a strategic agent or publish are refused it, each saying it writes digest
-// entries only with flai digest new and edit.
+// entries only with flai digest new, edit, absorb, cited, and compact.
 func TestTheCuratorCallsNoOtherFlaiToolThatWrites(t *testing.T) {
 	events := []Event{itemNew("story", true), itemOf("item_edit", "S-0001", ""), itemOf("item_move", "S-0001", "backlog")}
 	for _, tool := range []string{"issue_new", "issue_bump", "issue_story", "issue_close", "curate", "analyze", "plan", "release_publish", "thread_resolve", "criteria_tick", "adr_new", "message_get", "wait_for_work", "story_start", "agent_start", "queue_add", "task_done"} {
@@ -79,11 +86,11 @@ func TestTheCuratorCallsNoOtherFlaiToolThatWrites(t *testing.T) {
 	}
 }
 
-// S-0431, ADR-0196: of flai's commands the curator runs only the reads and
-// digest harvest, new, and edit; digest seed, every other command that
-// writes, the commands that start a strategic agent among them, and git's
-// writes are refused it, each saying it writes digest entries only with flai
-// digest new and edit.
+// S-0431, ADR-0196, ADR-0199: of flai's commands the curator runs only the
+// reads and digest harvest, new, edit, absorb, cited, and compact; digest
+// seed, every other command that writes, the commands that start a strategic
+// agent among them, and git's writes are refused it, each saying it writes
+// digest entries only with flai digest new, edit, absorb, cited, and compact.
 func TestTheCuratorRunsNoOtherCommandThatWrites(t *testing.T) {
 	for _, c := range []string{
 		"flai digest seed",
@@ -167,9 +174,42 @@ func TestTheCuratorsSubAgentIsHeldAsASubAgent(t *testing.T) {
 	if why := itsCurator.Check(bash("explorer", "flai digest list && git log -5")); why != "" {
 		t.Errorf("a sub-agent's reads refused: %s", why)
 	}
-	for _, c := range []string{"flai digest new Fact --kind answer --source TH-0001", "flai digest harvest"} {
+	for _, c := range []string{"flai digest new Fact --kind answer --source TH-0001", "flai digest harvest", "flai digest absorb D-0001 --by design/system/workflow.md", "flai digest cited", "flai digest compact --dry-run"} {
 		if why := itsCurator.Check(bash("explorer", c)); !strings.Contains(why, "a sub-agent (explorer) cannot run") {
 			t.Errorf("a sub-agent's %q: %q", c, why)
+		}
+	}
+}
+
+// S-0432, ADR-0199: flai digest absorb, cited, and compact write the digest,
+// cited the entries' citers among them, so they are the curator's alone, as
+// new and edit are: every sub-agent, read-only or not, and the planner's,
+// the orchestrator's, and the analyzer's own calls are refused them.
+func TestOnlyTheCuratorAbsorbsCitesAndCompacts(t *testing.T) {
+	cmds := append(slices.Clone(g.Commands), "digest")
+	sub := Guard{Commands: cmds, ReadOnly: func(agentType string) bool { return agentType == "verifier" || agentType == "explorer" }}
+	plan, orch := planGuard, orchestrator(allOn)
+	plan.Commands, orch.Commands = cmds, cmds
+	writes := []string{"flai digest absorb D-0001 --by design/system/workflow.md", "scripts/flai.sh digest cited --json", "bin/flai digest compact --dry-run"}
+	for _, who := range []string{"general-purpose", "verifier", "explorer"} {
+		for _, c := range writes {
+			if why := sub.Check(bash(who, c)); !strings.Contains(why, fmt.Sprintf("a sub-agent (%s) cannot run %q", who, c)) {
+				t.Errorf("%s, %q: %q", who, c, why)
+			}
+		}
+	}
+	for _, s := range []struct {
+		name string
+		gd   Guard
+	}{
+		{"planner", plan},
+		{"orchestrator", orch},
+		{"analyzer", Guard{Commands: cmds, Role: RoleAnalyze}},
+	} {
+		for _, c := range writes {
+			if why := s.gd.Check(bash("", c)); !strings.Contains(why, fmt.Sprintf("the %s cannot run %q", s.name, c)) {
+				t.Errorf("the %s, %q: %q", s.name, c, why)
+			}
 		}
 	}
 }

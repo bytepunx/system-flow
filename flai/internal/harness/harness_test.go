@@ -2054,9 +2054,13 @@ func curateReq(since string, a *manifest.Agent) Request {
 // that holds it, and a thread that asked again recorded in asked_again; no
 // secret's value; no file and no work item written; the operator asked only
 // for their judgement; and a summary naming the entries, for the run's log.
+// S-0432, ADR-0199: started after an acceptance, on the schedule, or on the
+// operator's word, it looks for absorption in every run, with doc_search on
+// each active entry's title, absorbs an entry a document states, runs flai
+// digest compact once after, and names what it absorbed and compacted.
 func TestTheCuratorsPromptKeepsTheDigest(t *testing.T) {
 	common := []string{
-		"You are curator, the curator, started by flai serve on this host because the operator asked for the digest of the project at /p/flow to be curated",
+		"You are curator, the curator, started by flai serve on this host to curate the digest of the project at /p/flow: after a story's acceptance, when the digest's schedule came round, or because the operator asked.",
 		"Keep the digest, one fact per file under design/digest, and do nothing else, as design/conventions/strategic-agents.md says under As the curator",
 		"Before anything else, prime your session with the flai MCP tool prime with role curate (flai prime --role curate on the host)",
 		"Call the flai MCP tool inbox",
@@ -2066,11 +2070,17 @@ func TestTheCuratorsPromptKeepsTheDigest(t *testing.T) {
 		"When a thread asked what an entry already answered, add the thread to that entry's asked_again with flai digest edit <id> --asked-again",
 		"Each list flag of flai digest edit replaces that list, so give the entry's own with what you add",
 		"--body-file - and a heredoc in the shell, since you cannot write a file",
+		"Then, in every run, look for absorption",
+		"List the active entries with flai digest list --status active --json",
+		"search the design with the flai MCP tool doc_search on the entry's title, and read what it finds with the flai MCP tool doc_get",
+		"When a design document, a convention, or an ADR states the entry's fact, mark the entry absorbed by it with flai digest absorb <id> --by <path>",
+		"Absorb an entry only when a document states its fact",
+		"After the absorptions, run flai digest compact once",
 		"Never write a secret's value in an entry, only where the operator said it lives",
-		"Edit nothing else: no file, and no work item; write entries only with flai digest new and flai digest edit",
+		"Edit nothing else: no file, and no work item; write entries only with flai digest new, edit, absorb, cited, and compact",
 		"flai guard refuses Edit and Write on every file, flai digest seed, and any write to a work item: never work around a refusal",
 		"When an entry would need the operator's judgement, ask with the flai MCP tool thread_open",
-		"End with a one-line summary that names by ID the entries you wrote and those you merged, or says that you found nothing to take in",
+		"End with a one-line summary that names by ID the entries you wrote, those you merged, those you absorbed, and those flai digest compact compacted, or says that you found nothing to take in",
 		"logs the run's activity in wip/agents/curator.md with it",
 	}
 	for _, c := range []struct{ since, harvest string }{

@@ -35,6 +35,11 @@ var authorFlags = []string{"--by", "--placed-by"}
 // names a policy, and stats' a grouping.
 var byNamesNoAuthor = []string{"order", "stats"}
 
+// bySubNamesNoAuthor are the flai subcommands, command and subcommand, whose
+// --by names no author: digest absorb's names the document that absorbed an
+// entry (ADR-0199).
+var bySubNamesNoAuthor = [][2]string{{"digest", "absorb"}}
+
 // authorValues are flaiValues and the author flags: flai's flags that take a
 // value before its command, as in flai --by alex thread reply.
 var authorValues = map[string]bool{"--by": true, "--config": true, "--placed-by": true}
@@ -188,17 +193,17 @@ func (g Guard) impersonatesIn(c Call, text string) string {
 }
 
 // names says why the words after flai name an author other than the agent's
-// own, or "" when they do not: --by, but on order and stats, and
-// --placed-by, each as its last occurrence gives it. An empty value falls
+// own, or "" when they do not: --by, but on order, stats, and digest
+// absorb, and --placed-by, each as its last occurrence gives it. An empty value falls
 // back to FLAI_AGENT and passes; so does a word flai that runs none of its
 // commands, or asks for help.
 func (g Guard) names(c Call, rest []string) string {
-	cmd, _ := subcommands(rest, authorValues)
+	cmd, sub := subcommands(rest, authorValues)
 	if !slices.Contains(g.Commands, cmd) || slices.Contains(rest, "--help") || slices.Contains(rest, "-h") {
 		return ""
 	}
 	for _, f := range authorFlags {
-		if f == "--by" && slices.Contains(byNamesNoAuthor, cmd) {
+		if f == "--by" && (slices.Contains(byNamesNoAuthor, cmd) || slices.Contains(bySubNamesNoAuthor, [2]string{cmd, sub})) {
 			continue
 		}
 		if v := value(rest, f); v != "" && !g.own(c, v) {

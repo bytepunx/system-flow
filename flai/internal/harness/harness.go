@@ -667,25 +667,30 @@ End with a one-line summary that names the report, %[5]s with its date: flai ser
 }
 
 // curatePrompt is what the curator is asked to do (S-0431, ADR-0196): keep
-// the digest as strategic-agents.md says under As the curator; prime with
-// role curate first and call inbox; read what the archive and the threads
-// gained since the run's since with flai digest harvest --json --since, or
-// everything on its first run, when it has none, and the digest as it is
-// with flai digest list --json and show; for each candidate write an entry
-// with flai digest new when none holds the fact, or merge it into the one
-// that does with flai digest edit, and add to that entry's asked_again a
-// thread that asked what it already answered; never write a secret's value,
-// only where the operator said it lives; edit no file and write no work
-// item, which flai guard enforces; ask the operator on a thread only when an
-// entry needs their judgement; and end with a one-line summary naming the
-// entries written and merged, or that nothing was found to take in, which
-// flai serve logs as the run's activity, as the analyzer's is (ADR-0079).
+// the digest as strategic-agents.md says under As the curator, whether flai
+// serve started it after an acceptance, on digest.schedule, or because the
+// operator asked (S-0432, ADR-0199); prime with role curate first and call
+// inbox; read what the archive and the threads gained since the run's since
+// with flai digest harvest --json --since, or everything on its first run,
+// when it has none, and the digest as it is with flai digest list --json and
+// show; for each candidate write an entry with flai digest new when none
+// holds the fact, or merge it into the one that does with flai digest edit,
+// and add to that entry's asked_again a thread that asked what it already
+// answered; in every run, look for absorption, searching the design with
+// doc_search on each active entry's title and marking absorbed with flai
+// digest absorb an entry a document states, then run flai digest compact
+// once; never write a secret's value, only where the operator said it lives;
+// edit no file and write no work item, which flai guard enforces; ask the
+// operator on a thread only when an entry needs their judgement; and end
+// with a one-line summary naming the entries written, merged, absorbed, and
+// compacted, or that nothing was found to take in, which flai serve logs as
+// the run's activity, as the analyzer's is (ADR-0079).
 func curatePrompt(r Request) string {
 	harvest := fmt.Sprintf("Take in what the archive and the threads gained since %[1]s, your last run or the time the operator gave: list the candidates with flai digest harvest --json --since %[1]s.", r.Since)
 	if r.Since == "" {
 		harvest = "This is your first run: no run of yours is logged in wip/agents/curator.md, so take in everything the archive and the threads hold: list the candidates with flai digest harvest --json, with no --since."
 	}
-	return fmt.Sprintf(`You are %[1]s, the curator, started by flai serve on this host because the operator asked for the digest of the project at %[2]s to be curated.
+	return fmt.Sprintf(`You are %[1]s, the curator, started by flai serve on this host to curate the digest of the project at %[2]s: after a story's acceptance, when the digest's schedule came round, or because the operator asked.
 
 Keep the digest, one fact per file under design/digest, and do nothing else, as design/conventions/strategic-agents.md says under As the curator. Before anything else, prime your session with the flai MCP tool prime with role curate (flai prime --role curate on the host), which prints the conventions you work by and briefs the design your role's topics select. Call the flai MCP tool inbox.
 
@@ -693,13 +698,17 @@ Keep the digest, one fact per file under design/digest, and do nothing else, as 
 
 For each candidate, decide what fact it holds. When no entry holds that fact, write one with flai digest new "<fact>" --kind <kind> --source <id>, with the topics and paths it bears on, and a body of a few sentences: what was asked or decided, the answer and its reason, and links to its sources. When an entry already holds it, merge the candidate into that entry with flai digest edit <id>, its body and its sources. When a thread asked what an entry already answered, add the thread to that entry's asked_again with flai digest edit <id> --asked-again. Each list flag of flai digest edit replaces that list, so give the entry's own with what you add. Pass a body on standard input with --body-file - and a heredoc in the shell, since you cannot write a file.
 
+Then, in every run, look for absorption: a fact the design now records need not be primed twice. List the active entries with flai digest list --status active --json. For each, search the design with the flai MCP tool doc_search on the entry's title, and read what it finds with the flai MCP tool doc_get and its heading. When a design document, a convention, or an ADR states the entry's fact, mark the entry absorbed by it with flai digest absorb <id> --by <path>, the document's path from the project root, and --heading <heading> when one section states it. Absorb an entry only when a document states its fact, not when one merely touches on it; leave it active otherwise.
+
+After the absorptions, run flai digest compact once: it records each entry's citers, as flai digest cited does, and compacts each active entry that no work item, narrative, or thread cited within digest.compact_after, keeping its title and emptying its body. It deletes nothing.
+
 Never write a secret's value in an entry, only where the operator said it lives: flai digest refuses text with the shape of a key or token, and writes nothing.
 
-Edit nothing else: no file, and no work item; write entries only with flai digest new and flai digest edit. flai guard refuses Edit and Write on every file, flai digest seed, and any write to a work item: never work around a refusal, by another tool, another command, or the shell.
+Edit nothing else: no file, and no work item; write entries only with flai digest new, edit, absorb, cited, and compact. flai guard refuses Edit and Write on every file, flai digest seed, and any write to a work item: never work around a refusal, by another tool, another command, or the shell.
 
 When an entry would need the operator's judgement, ask with the flai MCP tool thread_open on the item the candidate comes from, your recommended answer first, take in what needs no answer meanwhile, and hold the flai MCP tool wait_for_events, again each time it returns, until the thread is answered; then go on.
 
-End with a one-line summary that names by ID the entries you wrote and those you merged, or says that you found nothing to take in: flai serve logs the run's activity in wip/agents/curator.md with it, with the run's cost, so you need not log it yourself with activity_log.`, r.Name, r.Root, harvest)
+End with a one-line summary that names by ID the entries you wrote, those you merged, those you absorbed, and those flai digest compact compacted, or says that you found nothing to take in: flai serve logs the run's activity in wip/agents/curator.md with it, with the run's cost, so you need not log it yourself with activity_log.`, r.Name, r.Root, harvest)
 }
 
 // sinceForms are the forms a curator's since takes, as flai digest harvest
