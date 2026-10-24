@@ -7,7 +7,7 @@ count: 1
 cost: 10m
 first_reported: 2026-10-24T13:15:26Z
 last_reported: 2026-10-24T13:15:26Z
-updated: 2026-10-24T13:15:26Z
+updated: 2026-10-24T13:15:31Z
 ---
 
 # I-0204 flai accept fails at git branch -d when the story branch tracks a pushed upstream the acceptance rebase left behind, after the merge into main is done
@@ -26,3 +26,5 @@ Every local acceptance of a story whose branch flai serve pushed for a pull requ
 - time_lost_per_cycle: 10m
 
 ## Remediation
+
+Story S-0493 remediates this issue, created from it at 2026-10-24T13:15:31Z.
