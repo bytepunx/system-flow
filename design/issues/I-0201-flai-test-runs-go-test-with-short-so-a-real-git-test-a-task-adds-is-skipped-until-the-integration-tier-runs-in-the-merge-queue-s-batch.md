@@ -2,12 +2,12 @@
 id: I-0201
 title: flai test runs go test with -short, so a real-git test a task adds is skipped until the integration tier runs in the merge queue's batch
 class: defect
-status: open
+status: closed
 count: 2
 cost: 20m
 first_reported: 2026-10-23T18:27:27Z
 last_reported: 2026-10-23T19:51:37Z
-updated: 2026-10-23T20:20:26Z
+updated: 2026-10-24T00:04:37Z
 ---
 
 # I-0201 flai test runs go test with -short, so a real-git test a task adds is skipped until the integration tier runs in the merge queue's batch
@@ -28,3 +28,4 @@ S-0489's T-2084 changed `config.Keys` and the long help of `flai dashboard resta
 ## Remediation
 
 Story S-0490 remediates this issue, created from it at 2026-10-23T20:20:26Z.
+Closed 2026-10-24T00:04:37Z: S-0490: this repository's `go-test` tier runs `go test -json -race -count=1 -skip ^TestGateway {packages}`, without `-short`, so `flai test` and the close-out run the changed packages' real-git and monorepo tests rather than leaving them to the merge queue's batch; `TestRepositoryManifestRunsChangedGoPackagesWithoutShort` in `flai/internal/verify/select_test.go` pins the tier's arguments.
