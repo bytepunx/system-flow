@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-10-23
+updated: 2026-10-24
 status: active
 ---
 
@@ -273,6 +273,8 @@ You can ask the browser to tell you when something new arrives: tick "Desktop no
 ## Threads
 
 Threads shows every open thread in the project, whatever it is on, one at a time with the same pager, **show resolved**, reply, resolve, and **Confirm** as a story's page. An entry that recommends an answer is marked **recommendation**, and the document and heading it cites are a link under it. A recommendation is not the answer until you confirm it: under a thread whose recommendation awaits you, a line says so and, when the dashboard can write, **Confirm** makes it the answer, and the thread shows answered at once. Each thread links to the item or document it is on. A thread in the inbox that is on no item, such as one on a design issue, opens here at that thread. New threads are started on the item or document they are about, not here.
+
+Your reply on a thread someone else opened, and your **Confirm**, become a digest entry at once, so the next story's agent is primed with your answer rather than asking again; a later answer on the same thread is added to that entry ([Threads](flai.md#threads) in flai.md). When the entry cannot be written, your answer is saved all the same, and the next curator run takes it in. The page does not show the entry yet.
 
 ## Messages
 
