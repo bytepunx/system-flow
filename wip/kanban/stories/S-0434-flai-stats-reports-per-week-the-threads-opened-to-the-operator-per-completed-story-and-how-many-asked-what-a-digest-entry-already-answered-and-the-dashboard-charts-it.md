@@ -7,7 +7,7 @@ status: ready
 parent: E-0025
 owner: alex
 created: 2026-10-16T06:00:19Z
-updated: 2026-10-24T13:41:31Z
+updated: 2026-10-24T20:28:55Z
 transitions:
   - to: ready
     at: 2026-10-24T12:41:07Z
@@ -27,15 +27,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 3781
+      seconds: 8340
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 46
-          output: 605
-          cache_read: 5945718
-          cache_write: 19956
-          cost: 1.3098
+          input: 53
+          output: 737
+          cache_read: 7101206
+          cache_write: 22508
+          cost: 1.5637
         - model: claude-sonnet-5-5
           input: 6
           output: 29
@@ -48,10 +48,10 @@ cost_of_delay:
   at: 2026-10-23T17:26:19Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-24T16:58:00Z
-  basis: "Its own forecast of 1h15m; 2nd in the pull order with an in-progress limit of 5, behind S-0432 and S-0433."
+  delivery: 2026-10-24T22:36:00Z
+  basis: "Its own forecast of 1h15m; 2nd in the pull order with an in-progress limit of 5, behind S-0433."
   by: flai
-  at: 2026-10-24T13:41:31Z
+  at: 2026-10-24T20:28:55Z
 finalized:
   by: orchestrator
   at: 2026-10-23T17:35:18Z

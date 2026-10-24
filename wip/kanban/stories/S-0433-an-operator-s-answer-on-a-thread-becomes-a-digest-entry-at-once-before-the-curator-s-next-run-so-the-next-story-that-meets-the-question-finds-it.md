@@ -3,15 +3,18 @@ id: S-0433
 type: story
 nature: feature
 title: An operator's answer on a thread becomes a digest entry at once, before the curator's next run, so the next story that meets the question finds it
-status: ready
+status: in-progress
 parent: E-0025
 owner: alex
 created: 2026-10-16T06:00:01Z
-updated: 2026-10-24T13:41:31Z
+updated: 2026-10-24T20:29:13Z
 transitions:
   - to: ready
     at: 2026-10-24T12:40:58Z
     by: alex
+  - to: in-progress
+    at: 2026-10-24T20:29:13Z
+    by: agent-S-0433
 tags: [cli]
 topics: [cli, orchestration, planning]
 touches: [design/system/agent-narrative.md, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flaiover.md, flai/cmd/thread.go, flai/cmd/thread_test.go, flai/internal/digest/onanswer.go, flai/internal/digest/onanswer_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go]
@@ -27,15 +30,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 3770
+      seconds: 8329
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 78
-          output: 1205
-          cache_read: 9562132
-          cache_write: 25527
-          cost: 2.1065
+          input: 86
+          output: 1338
+          cache_read: 10717620
+          cache_write: 28080
+          cost: 2.3604
         - model: claude-sonnet-5-5
           input: 8
           output: 30
@@ -48,10 +51,10 @@ cost_of_delay:
   at: 2026-10-23T17:17:11Z
 forecast:
   duration: 35m
-  delivery: 2026-10-24T15:33:00Z
-  basis: "Its own forecast of 35m; 1st in the pull order with an in-progress limit of 5, behind S-0432."
+  delivery: 2026-10-24T21:10:00Z
+  basis: "Its own forecast of 35m; 1st in the pull order with an in-progress limit of 5, with nothing ahead of it."
   by: flai
-  at: 2026-10-24T13:41:31Z
+  at: 2026-10-24T20:28:55Z
 finalized:
   by: orchestrator
   at: 2026-10-23T17:18:00Z
