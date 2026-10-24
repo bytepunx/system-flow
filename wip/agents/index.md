@@ -7,6 +7,7 @@ updated: 2026-10-24T21:37:58Z
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
+| [S-0434](S-0434.md) | flai stats reports per week the threads opened to the operator per completed story and how many asked what a digest entry already answered, and the dashboard charts it | in-progress | agent-S-0434 | 2026-10-24T21:38:09Z |
 
 ## Strategic agents
 

@@ -8,7 +8,6 @@ wip_limits:
   review: 5
 order:
   - S-0435
-  - S-0434
 ---
 
 # Board

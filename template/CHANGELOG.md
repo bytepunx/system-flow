@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.115 - 2026-10-24
+
+- S-0432 The curator runs after each acceptance and on a schedule, marks an entry the design now records absorbed, and compacts an entry no one has cited within the window (patch).
+
 ## 1.0.114 - 2026-10-24
 
 - S-0432 The curator runs after acceptances and on `digest.schedule`, marks absorbed the entries a document now records, and compacts the entries no one cited within `digest.compact_after` (patch, ADR-0199): the curator's definition, `.claude/agents/curator.md`, says `flai serve` starts it after a story's acceptance, when `digest.schedule` comes round, or when the operator asks, and gains two steps: in every run it searches the design with `doc_search` on each active entry's title and marks absorbed with `flai digest absorb <id> --by <path>`, and `--heading`, only an entry a design document, convention, or ADR states, then runs `flai digest compact` once; its one-line summary names the entries it absorbed and compacted too. In `strategic-agents.md`, the section "As the curator" says the curator keeps the digest through `flai digest new`, `edit`, `absorb`, and `compact`, looks for absorption in every run, runs `flai digest compact` once after its absorptions, and ends naming the entries it wrote, merged, absorbed, and compacted. The template's `system-flow.yaml` gains a commented `digest:` block with `schedule` and `compact_after`, which `flai manifest set` writes. It needs a flai that has it, the release that carries S-0432: an older flai has no `flai digest absorb`, `cited`, or `compact`, and its `flai serve` starts the curator only when the operator asks. It does not know `digest.schedule` or `digest.compact_after`: its `flai manifest set` refuses both keys, and written by hand they are ignored, by its `flai check` too. Its guard refuses the curator `flai digest absorb`, `cited`, and `compact`.

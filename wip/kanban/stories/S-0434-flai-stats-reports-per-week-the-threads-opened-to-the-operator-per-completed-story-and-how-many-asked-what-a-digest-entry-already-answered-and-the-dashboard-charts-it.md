@@ -3,15 +3,18 @@ id: S-0434
 type: story
 nature: feature
 title: flai stats reports per week the threads opened to the operator per completed story and how many asked what a digest entry already answered, and the dashboard charts it
-status: ready
+status: in-progress
 parent: E-0025
 owner: alex
 created: 2026-10-16T06:00:19Z
-updated: 2026-10-24T20:28:55Z
+updated: 2026-10-24T21:38:09Z
 transitions:
   - to: ready
     at: 2026-10-24T12:41:07Z
     by: alex
+  - to: in-progress
+    at: 2026-10-24T21:38:09Z
+    by: agent-S-0434
 tags: [cli, dashboard]
 topics: [cli, dashboard, analysis]
 touches: [design/adrs, design/adrs/README.md, design/conventions/strategic-agents.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/system/metrics.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md, flai/cmd/check_stats_test.go, flai/cmd/stats.go, flai/cmd/stats_test.go, flai/internal/metrics/digest.go, flai/internal/metrics/digest_test.go, flai/internal/metrics/metrics.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, flaiover/src/lib/viz/catalog.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/explain.test.ts, flaiover/src/lib/viz/explain.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", template/CHANGELOG.md, template/root/design/conventions/strategic-agents.md, template/template.yaml]
@@ -48,10 +51,10 @@ cost_of_delay:
   at: 2026-10-23T17:26:19Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-24T22:36:00Z
-  basis: "Its own forecast of 1h15m; 2nd in the pull order with an in-progress limit of 5, behind S-0433."
+  delivery: 2026-10-24T23:05:00Z
+  basis: "Its own forecast of 1h15m; 2nd in the pull order with an in-progress limit of 5, behind S-0435."
   by: flai
-  at: 2026-10-24T20:28:55Z
+  at: 2026-10-24T21:37:58Z
 finalized:
   by: orchestrator
   at: 2026-10-23T17:35:18Z
