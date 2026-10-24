@@ -4,7 +4,8 @@
 # Go run is left out here and only its vitest half, flaiover-unit.sh, is kept.
 # Keep in step with the tiers under tests in system-flow.yaml, which flai test
 # runs for the paths a change touches: gofmt, vet, golangci-lint, vitest,
-# integration, and smoke here; go-test is test.sh's, and markdown is lint-md.sh's.
+# integration, and smoke here; go-test, integration.sh's Go run on the changed
+# packages, is held by integration, and markdown is lint-md.sh's.
 set -eu
 . "$(dirname "$0")/env.sh"
 cd "$ROOT/flai"

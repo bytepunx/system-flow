@@ -2,7 +2,7 @@
 
 Purpose-named shell scripts for common tasks. The `Makefile` calls these; CI calls the same ones. Each script runs from any directory, prints what it does, and exits non-zero on failure. POSIX sh only; the operator's interactive shell is zsh.
 
-`flai test` runs the same tests and lints by path: `system-flow.yaml`'s `tests` declare them as tiers (gofmt, vet, golangci-lint, the short Go tests, vitest, the markdown lint, and, under `flai test --all` only, `template-test.sh`, `flaiover-test.sh`, `integration.sh`, and `smoke.sh`), and `flai test <path>...` runs those the paths select, cheapest first, stopping at the first that fails. Agents use it between tasks. `flai verify <story>`, which the close-out runs, runs those a story's branch selects, the `--all` ones whose paths it selects included; the scripts and `make` targets stay for people and CI.
+`flai test` runs the same tests and lints by path: `system-flow.yaml`'s `tests` declare them as tiers (gofmt, vet, golangci-lint, the changed packages' Go tests without `-short`, vitest, the markdown lint, and, under `flai test --all` only, `template-test.sh`, `flaiover-test.sh`, `integration.sh`, and `smoke.sh`), and `flai test <path>...` runs those the paths select, cheapest first, stopping at the first that fails. Agents use it between tasks. `flai verify <story>`, which the close-out runs, runs those a story's branch selects, the `--all` ones whose paths it selects included; the scripts and `make` targets stay for people and CI.
 
 | Script | Does |
 |--------|------|

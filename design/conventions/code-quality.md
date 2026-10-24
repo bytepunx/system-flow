@@ -1,6 +1,6 @@
 ---
 title: Code quality
-updated: 2026-10-07
+updated: 2026-10-24
 audience: agent
 order: 60
 status: active
@@ -82,4 +82,4 @@ How to write maintainable code, and how it is tested.
 - Go: standard library `testing` only, no assertion framework; `go test -race ./...`; golangci-lint v2 config in `flai/.golangci.yaml`.
 - The I/O abstraction for git and docker is `flai/internal/execx.Runner`. cobra and goccy/go-yaml are used directly as the CLI and serialization layers; they are the boundary, not behind it.
 - Fixture projects live under `internal/*/testdata/`; the round-trip test in `internal/workitem` and the render test in `cmd` run against this repository and the template and must stay green.
-- Tiers here: `make test` runs `go test -race -short ./...` in `flai/` (behavior; tests that need real git or the monorepo skip under `-short`); `make integration` runs the full `go test -race ./...` including the git-clone and monorepo round-trip tests; `make smoke` runs `scripts/template-test.sh` (render the template, `flai check --strict` on the result). `flai/tests/integration/` and `tests/smoke/` are created when a test outgrows the Go layout; until then the tiers are selected by `-short` and by script. CI runs all three in `system-flow-check.yml`.
+- Tiers here: `make test` runs `go test -race -short ./...` in `flai/` (behavior; tests that need real git or the monorepo skip under `-short`); `make integration` runs the full `go test -race ./...` including the git-clone and monorepo round-trip tests; `make smoke` runs `scripts/template-test.sh` (render the template, `flai check --strict` on the result). `flai/tests/integration/` and `tests/smoke/` are created when a test outgrows the Go layout; until then the tiers are selected by `-short` and by script. CI runs all three in `system-flow-check.yml`. `flai test` and the close-out's `go-test` tier run the changed packages' tests without `-short`, skipping only `^TestGateway`, so a test gated under `-short` still runs on the packages a story changes before review, not first in the merge queue's batch (I-0201).
