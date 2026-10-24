@@ -3,16 +3,37 @@ id: T-1841
 type: task
 nature: feature
 title: The design and the user docs say that an operator's answer on a thread becomes a digest entry at once
-status: backlog
+status: done
 parent: S-0433
 owner: alex
 created: 2026-10-16T06:08:01Z
-updated: 2026-10-23T17:16:07Z
-transitions: []
+updated: 2026-10-24T21:08:53Z
+transitions:
+  - to: ready
+    at: 2026-10-24T21:05:10Z
+    by: agent-S-0433
+  - to: in-progress
+    at: 2026-10-24T21:05:11Z
+    by: agent-S-0433
+  - to: done
+    at: 2026-10-24T21:08:53Z
+    by: agent-S-0433
 stream: S-0433
 tags: [cli]
 touches: [design/system/strategic-agents.md, design/system/agent-narrative.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md]
 after: [T-1838, T-1839, T-1840]
+usage:
+  source: log
+  seconds: 222
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 64
+      output: 21593
+      cache_read: 3337182
+      cache_write: 184376
+      cost: 2.1738
 ---
 # T-1841 The design and the user docs say that an operator's answer on a thread becomes a digest entry at once
 

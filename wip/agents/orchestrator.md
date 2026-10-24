@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1511.9307
-accrued_seconds: 1302846
-tasks_completed: 1027
-last_run: 2026-10-24T15:25:37Z
+accrued_cost: 1517.2991
+accrued_seconds: 1323877
+tasks_completed: 1030
+last_run: 2026-10-24T21:16:08Z
 ---
 
 # Orchestrator activity
@@ -7200,6 +7200,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0432
 - Seconds: 5250
 - Cost: 4.2854 USD, estimated
+
+### 2026-10-24T20:29:22Z
+
+- Summary: The operator accepted S-0432 at 20:28:54Z, settling my TH-0640. Under order_ready, I applied flai order --by throughput: S-0433 (35m), S-0435 (45m, which the operator moved to ready), then S-0434 (1h15m). Under publish, judgement: not published. S-0432 is pending alone (95.02 USD/week). Unlike S-0431, S-0493 and S-0494, the acceptance did not release it, and its integration and smoke tiers never ran (I-0203). S-0433, next to start in the same epic E-0025, will run those tiers in its queue batch on a main holding S-0432. I will release the two together once it lands.
+- Items: S-0432, S-0433, S-0434, S-0435
+- Seconds: 18225
+- Cost: 0.9197 USD, estimated
+
+### 2026-10-24T20:29:30Z
+
+- Summary: agent-S-0433 pulled S-0433. Under order_ready, I re-applied flai order --by throughput: S-0435 (45m), then S-0434 (1h15m). S-0434 is held by `after` behind S-0433, and S-0435 behind S-0434.
+- Items: S-0433, S-0434, S-0435
+- Seconds: 8
+- Cost: 0.0719 USD, estimated
+
+### 2026-10-24T21:16:08Z
+
+- Summary: Enqueued S-0433 at 9bd088c3, first and only in the queue. Forecast 35m. flai verify passed at the head, with integration and smoke queued. The verifier matched all six criteria within touches: digest.OnAnswer writes or updates the entry, the CLI, MCP and host API paths name it, and a failure only warns. It also checks for secrets and updates the docs. The host API reaches the CLI through flai thread reply/confirm, so writes.go needed no change. The queue still shows batch 20261024-135715 (S-0494, dropped at 13:58:03Z when the operator accepted it by hand) with step "verifying flaiover", started 13:57:15Z. I am watching whether it gets out of S-0433's way.
+- Items: S-0433
+- Seconds: 2798
+- Cost: 4.3768 USD, estimated
 
 ## Refusals
 

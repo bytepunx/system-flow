@@ -3,16 +3,37 @@ id: T-1840
 type: task
 nature: feature
 title: flai thread reply and flai thread confirm write the operator's answer as a digest entry and name it in their result
-status: backlog
+status: done
 parent: S-0433
 owner: alex
 created: 2026-10-16T06:07:52Z
-updated: 2026-10-16T06:07:52Z
-transitions: []
+updated: 2026-10-24T20:58:12Z
+transitions:
+  - to: ready
+    at: 2026-10-24T20:35:52Z
+    by: agent-S-0433
+  - to: in-progress
+    at: 2026-10-24T20:35:52Z
+    by: agent-S-0433
+  - to: done
+    at: 2026-10-24T20:58:12Z
+    by: agent-S-0433
 stream: S-0433
 tags: [cli]
-touches: [flai/cmd/thread.go, flai/cmd/thread_test.go]
+touches: [flai/cmd/thread.go, flai/cmd/thread_test.go, docs/users/flai-reference.md]
 after: [T-1837]
+usage:
+  source: log
+  seconds: 1340
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 32
+      output: 10925
+      cache_read: 1688396
+      cache_write: 93282
+      cost: 1.0998
 ---
 # T-1840 flai thread reply and flai thread confirm write the operator's answer as a digest entry and name it in their result
 

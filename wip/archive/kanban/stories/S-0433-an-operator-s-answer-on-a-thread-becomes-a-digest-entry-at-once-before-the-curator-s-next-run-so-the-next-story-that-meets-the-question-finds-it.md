@@ -3,11 +3,11 @@ id: S-0433
 type: story
 nature: feature
 title: An operator's answer on a thread becomes a digest entry at once, before the curator's next run, so the next story that meets the question finds it
-status: in-progress
+status: done
 parent: E-0025
 owner: alex
 created: 2026-10-16T06:00:01Z
-updated: 2026-10-24T20:29:13Z
+updated: 2026-10-24T21:37:57Z
 transitions:
   - to: ready
     at: 2026-10-24T12:40:58Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-24T20:29:13Z
     by: agent-S-0433
+  - to: review
+    at: 2026-10-24T21:15:14Z
+    by: agent-S-0433
+  - to: done
+    at: 2026-10-24T21:37:57Z
+    by: orchestrator
 tags: [cli]
 topics: [cli, orchestration, planning]
-touches: [design/system/agent-narrative.md, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flaiover.md, flai/cmd/thread.go, flai/cmd/thread_test.go, flai/internal/digest/onanswer.go, flai/internal/digest/onanswer_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go]
+touches: [design/system/agent-narrative.md, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flaiover.md, flai/cmd/thread.go, flai/cmd/thread_test.go, flai/internal/digest/onanswer.go, flai/internal/digest/onanswer_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder.go, docs/users/flai-reference.md]
 after: [S-0432]
 agent:
   harness: claude-code
@@ -25,26 +31,37 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2794
+  priced_by: harness
+  turns:
+    - day: 2026-10-24
+      hand_edits: 2
+      work: 46
+  models:
+    - model: claude-opus-5-5
+      input: 276
+      output: 92853
+      cache_read: 14350495
+      cache_write: 792849
+      cost: 9.3475
   strategic:
     - kind: orchestrator
-      seconds: 8329
+      seconds: 11127
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 86
-          output: 1338
-          cache_read: 10717620
-          cache_write: 28080
-          cost: 2.3604
+          input: 200
+          output: 3430
+          cache_read: 29951186
+          cache_write: 53335
+          cost: 6.5829
         - model: claude-sonnet-5-5
-          input: 8
-          output: 30
-          cache_read: 109905
-          cache_write: 29078
-          cost: 0.0953
+          input: 20
+          output: 120
+          cache_read: 283655
+          cache_write: 80906
+          cost: 0.2496
 cost_of_delay:
   value: 46.88
   by: planner-S-0433
@@ -67,12 +84,12 @@ The question the operator just answered is not asked again while the curator wai
 
 ## Acceptance criteria
 
-- [ ] `threads.ReplyWith` and `threads.Confirm`, or the one place every answer passes, write the entry through `flai/internal/digest` when the author is the operator and the thread is not the operator's own; a thread entry that is a recommendation, an agent's reply, and the operator's reply on their own thread write none.
-- [ ] `flai thread reply`, `flai thread confirm`, the MCP `thread_reply`, and the host API's `thread.reply` and `thread.confirm` each write it, shown by a test on each path; the reply's result names the entry written or updated.
-- [ ] A second answer by the operator on the same thread edits the entry that cites the thread rather than writing another; an entry the curator has merged into another (its source moved) is not written again.
-- [ ] A failure to write the entry never refuses the answer: the answer is saved, the failure is logged as a warning, and the next `flai digest seed` or curator run picks the answer up.
-- [ ] The entry passes `digest.secret`; when the answer matches a secret's shape, no entry is written and the warning says so, and the thread is left as it is.
-- [ ] `design/system/strategic-agents.md`, `design/system/agent-narrative.md`, `docs/users/flai.md`, and `docs/users/flaiover.md` say that an operator's answer becomes an entry at once.
+- [x] `threads.ReplyWith` and `threads.Confirm`, or the one place every answer passes, write the entry through `flai/internal/digest` when the author is the operator and the thread is not the operator's own; a thread entry that is a recommendation, an agent's reply, and the operator's reply on their own thread write none.
+- [x] `flai thread reply`, `flai thread confirm`, the MCP `thread_reply`, and the host API's `thread.reply` and `thread.confirm` each write it, shown by a test on each path; the reply's result names the entry written or updated.
+- [x] A second answer by the operator on the same thread edits the entry that cites the thread rather than writing another; an entry the curator has merged into another (its source moved) is not written again.
+- [x] A failure to write the entry never refuses the answer: the answer is saved, the failure is logged as a warning, and the next `flai digest seed` or curator run picks the answer up.
+- [x] The entry passes `digest.secret`; when the answer matches a secret's shape, no entry is written and the warning says so, and the thread is left as it is.
+- [x] `design/system/strategic-agents.md`, `design/system/agent-narrative.md`, `docs/users/flai.md`, and `docs/users/flaiover.md` say that an operator's answer becomes an entry at once.
 
 ## Tasks
 - T-1837 digest.OnAnswer writes or updates the entry for an operator's answer on a thread, and never fails the answer
@@ -100,3 +117,18 @@ Revisited by planner-S-0433 on 2026-10-23, with S-0428 in progress (its `flai/in
 - **Cost of delay.** 46.88 USD a week, from `flai cod`: the story's share by forecast (35m of 7h28m) of E-0025's 600 USD a week, which the operator set on TH-0476 as 4h lost per 168h cycle at 150 USD an hour. No input of the story's own; none is needed while it shares the epic's.
 - **Who is the operator.** The manifest's `owner` (TH-0476 question 5), compared with the entry's author: the dashboard replies as `--by=<owner>`, the CLI as `--by`, else `FLAI_AGENT`, else the config author, and the MCP server as `--agent`, else `FLAI_AGENT`. An agent `flai serve` started is never the owner.
 - **Layers.** T-1837; then T-1838 and T-1840, which touch different files; then T-1839, which waits for T-1840 because the dashboard path runs the CLI's code; then T-1841.
+
+### Accepted by the orchestrator
+
+- Verified: 9bd088c3572e9ce48d516b18e78a26fcd1b7c9a2
+- Batch: 20261024-212745
+- Enqueued verified: 9bd088c3572e9ce48d516b18e78a26fcd1b7c9a2
+- At: 2026-10-24T21:37:57Z
+
+Verdict: S-0433 meets all six criteria at 9bd088c3, every changed file under its touches; flai verify passed at that head with integration and smoke left to the queue.
+- 1: flai/internal/digest/onanswer.go, flai/internal/digest/onanswer_test.go
+- 2: flai/cmd/thread.go, flai/cmd/thread_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder.go, flai/internal/hostapi/writes_test.go
+- 3: flai/internal/digest/onanswer.go, flai/internal/digest/onanswer_test.go
+- 4: flai/internal/digest/onanswer.go, flai/cmd/thread.go, flai/internal/mcpserver/server.go, flai/cmd/thread_test.go, flai/internal/mcpserver/server_test.go
+- 5: flai/internal/digest/onanswer.go, flai/internal/digest/onanswer_test.go
+- 6: design/system/strategic-agents.md, design/system/agent-narrative.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md
