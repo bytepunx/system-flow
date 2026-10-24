@@ -7,7 +7,7 @@ count: 1
 cost: 15m
 first_reported: 2026-10-24T13:51:23Z
 last_reported: 2026-10-24T13:51:23Z
-updated: 2026-10-24T13:51:23Z
+updated: 2026-10-24T13:51:34Z
 ---
 
 # I-0205 flaiover's events socket removes its Repo listeners only when the close handshake completes, so the server-stop test races and fails in CI
@@ -26,3 +26,5 @@ One CI failure on 2026-10-24 on a main push; each costs a re-run or a bisect of 
 - time_lost_per_cycle: 15m
 
 ## Remediation
+
+Story S-0494 remediates this issue, created from it at 2026-10-24T13:51:34Z.
