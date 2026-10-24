@@ -3,15 +3,18 @@ id: S-0435
 type: story
 nature: experiment
 title: "Experiment: does priming with the digest cut the threads opened to the operator per completed story on this repository, two weeks before against two weeks after"
-status: ready
+status: in-progress
 parent: E-0025
 owner: alex
 created: 2026-10-16T06:00:41Z
-updated: 2026-10-24T21:37:58Z
+updated: 2026-10-24T22:56:29Z
 transitions:
   - to: ready
     at: 2026-10-24T20:28:57Z
     by: alex
+  - to: in-progress
+    at: 2026-10-24T22:56:29Z
+    by: agent-S-0435
 tags: [cli]
 topics: [analysis, planning]
 touches: [design/experiments/README.md, design/experiments/S-0435-digest-priming-and-threads-to-the-operator.md, design/issues/summary.md]
@@ -27,25 +30,25 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 5012
+      seconds: 5023
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 119
-          output: 2132
-          cache_read: 17853523
-          cache_write: 27351
-          cost: 3.9318
+          input: 123
+          output: 2146
+          cache_read: 18639671
+          cache_write: 31457
+          cost: 4.105
 cost_of_delay:
   value: 60.95
   by: planner-S-0435
   at: 2026-10-23T17:37:52Z
 forecast:
   duration: 45m
-  delivery: 2026-10-24T22:31:00Z
+  delivery: 2026-10-24T23:50:00Z
   basis: "Its own forecast of 45m; 1st in the pull order with an in-progress limit of 5, with nothing ahead of it."
   by: flai
-  at: 2026-10-24T21:37:58Z
+  at: 2026-10-24T22:56:21Z
 finalized:
   by: orchestrator
   at: 2026-10-23T17:38:15Z
