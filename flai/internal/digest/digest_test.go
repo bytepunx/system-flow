@@ -89,6 +89,11 @@ func TestValidateAcceptsAWellFormedEntry(t *testing.T) {
 	if _, problems := Validate(goodName, absorbed, env); len(problems) != 0 {
 		t.Errorf("absorbed: %+v", problems)
 	}
+	// ADR-0199: absorbed_by may name a heading of the document, <path>#<anchor>.
+	section := strings.Replace(absorbed, "absorbed_by: design/system/digest.md", "absorbed_by: design/system/digest.md#one-file-per-entry", 1)
+	if e, problems := Validate(goodName, section, env); len(problems) != 0 || e.AbsorbedBy != "design/system/digest.md#one-file-per-entry" {
+		t.Errorf("absorbed by a heading: %q %+v", e.AbsorbedBy, problems)
+	}
 	if _, problems := Validate(goodName, strings.Replace(good, "S-0428", "S-0999", 1), Env{}); len(problems) != 0 {
 		t.Errorf("an Env without funcs checks no existence: %+v", problems)
 	}
@@ -137,6 +142,9 @@ func TestValidateReportsEachProblem(t *testing.T) {
 		{"absorbed without absorbed_by", goodName, with("status: active", "status: absorbed"), "absorbed_by", 10, RuleEntry, "absorbed_by is empty"},
 		{"absorbed_by names no file", goodName, with("status: active", "status: absorbed", `absorbed_by: ""`, "absorbed_by: design/gone.md"), "absorbed_by", 10, RuleEntry, "names no file"},
 		{"absorbed_by outside the project", goodName, with("status: active", "status: absorbed", `absorbed_by: ""`, "absorbed_by: ../elsewhere.md"), "absorbed_by", 10, RuleEntry, "not a path from the project root"},
+		{"absorbed_by a heading of no file", goodName, with("status: active", "status: absorbed", `absorbed_by: ""`, "absorbed_by: design/gone.md#rules"), "absorbed_by", 10, RuleEntry, "names no file"},
+		{"absorbed_by a heading outside the project", goodName, with("status: active", "status: absorbed", `absorbed_by: ""`, "absorbed_by: ../elsewhere.md#rules"), "absorbed_by", 10, RuleEntry, "not a path from the project root"},
+		{"absorbed_by a heading alone", goodName, with("status: active", "status: absorbed", `absorbed_by: ""`, `absorbed_by: "#rules"`), "absorbed_by", 10, RuleEntry, "not a path from the project root"},
 		{"asked_again not a thread", goodName, with("asked_again: []", "asked_again: [S-0001]"), "asked_again", 11, RuleEntry, "not a thread ID"},
 		{"cited an issue", goodName, with("cited: []", "cited: [I-0001]"), "cited", 12, RuleEntry, "not the ID of a work item"},
 		{"a secret in the body", goodName, good + "\nThe key is ghp_" + strings.Repeat("a1B2", 9) + ".\n", "", 19, RuleSecret, "never its value"},

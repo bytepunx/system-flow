@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/check"
+	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/digest"
 )
 
@@ -26,7 +27,8 @@ answer on a thread, a recommendation the operator confirmed or overruled, or
 an issue's cause and fix. flai writes and checks each entry's front matter,
 and nothing in the folder is ever deleted.`,
 	}
-	c.AddCommand(newDigestNewCmd(a), newDigestEditCmd(a), newDigestListCmd(a), newDigestShowCmd(a), newDigestHarvestCmd(a), newDigestSeedCmd(a))
+	c.AddCommand(newDigestNewCmd(a), newDigestEditCmd(a), newDigestListCmd(a), newDigestShowCmd(a), newDigestHarvestCmd(a), newDigestSeedCmd(a),
+		newDigestAbsorbCmd(a), newDigestCitedCmd(a), newDigestCompactCmd(a))
 	return c
 }
 
@@ -253,7 +255,7 @@ func newDigestListCmd(a *app) *cobra.Command {
 		Short: "List the digest's entries with their sources, topics, paths, date, and status",
 		Long: `List the entries in this checkout's digest folder, in ID order: each one's
 ID, status, kind, date, and title, and below it its sources, topics, and
-paths. --status keeps the entries in that status (` + strings.Join(digest.Statuses, ", ") + `);
+paths, and the document that absorbed it when it is absorbed. --status keeps the entries in that status (` + strings.Join(digest.Statuses, ", ") + `);
 --topic keeps those that bear on the topic. --json gives an array of the
 entries, bodies included, [] when none.`,
 		Args: cobra.NoArgs,
@@ -284,7 +286,11 @@ entries, bodies included, [] when none.`,
 			}
 			for _, e := range list {
 				fmt.Fprintf(a.out, "%-6s %-9s %-14s %-10s %s\n", e.ID, e.Status, e.Kind, e.Date, e.Title)
-				fmt.Fprintf(a.out, "       sources: %s  topics: %s  paths: %s\n", digestList(e.Sources), digestList(e.Topics), digestList(e.Paths))
+				absorbed := ""
+				if e.AbsorbedBy != "" {
+					absorbed = "  absorbed_by: " + e.AbsorbedBy
+				}
+				fmt.Fprintf(a.out, "       sources: %s  topics: %s  paths: %s%s\n", digestList(e.Sources), digestList(e.Topics), digestList(e.Paths), absorbed)
 			}
 			return nil
 		},
@@ -465,6 +471,216 @@ skipped entry is not an error: the exit code is 0 unless the seed fails.`,
 	c.Flags().StringVar(&since, "since", "", "only the candidates learned on or after this day, YYYY-MM-DD in UTC, or this RFC 3339 time")
 	c.Flags().BoolVar(&dryRun, "dry-run", false, "print what would be written and write nothing")
 	return c
+}
+
+func newDigestAbsorbCmd(a *app) *cobra.Command {
+	var by, heading string
+	c := &cobra.Command{
+		Use:   "absorb <D-nnnn> --by <path> [--heading <heading>]",
+		Short: "Mark a digest entry absorbed by the document that now records its fact",
+		Long: `Mark a digest entry absorbed, in the checkout it runs in (ADR-0199): its
+status becomes absorbed, and its absorbed_by the path, from the project root,
+of the design document, convention, or ADR that now records the fact, or
+<path>#<anchor> with --heading, which must be one of the document's
+headings. A heading is its text, a heading path such as "Rules › Go" (>
+also joins), or its anchor, as flai doc show --heading takes it. The body
+is kept. A story's pack never loads an absorbed entry. An entry absorbed
+again names the newer document, and a compacted entry may be absorbed. The
+ID may be written in any padding: D-7 is D-0007.
+
+A path that is not from the project root or names no file, and a heading
+the document does not have, are refused: nothing is written, the reason is
+printed, and the exit code is 4. --json gives the entry, as flai digest
+edit does.`,
+		Example: `  flai digest absorb D-0007 --by design/system/flai-cli.md
+  flai digest absorb D-0007 --by design/conventions/git.md --heading "Rules" --json`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if strings.TrimSpace(by) == "" {
+				return errors.New("--by is required: give the path, from the project root, of the document that now records the fact, such as --by design/system/overview.md")
+			}
+			repo, err := a.project()
+			if err != nil {
+				return err
+			}
+			res, err := digest.Absorb(repo, args[0], digest.AbsorbOptions{By: by, Heading: heading, Anchor: digestAnchor, Env: digest.EnvFor(repo)})
+			if rerr, ok := a.refusedDigest(err); ok {
+				return rerr
+			}
+			if err != nil {
+				return err
+			}
+			return a.printDigestResult(res, "absorbed by "+res.Entry.AbsorbedBy)
+		},
+	}
+	c.Flags().StringVar(&by, "by", "", "the path, from the project root, of the document that now records the fact (required)")
+	c.Flags().StringVar(&heading, "heading", "", "the heading of the document that records it: its text, a heading path, or its anchor")
+	return c
+}
+
+// digestAnchor is the anchor of the section a heading names in a document,
+// found as flai doc show --heading finds it.
+func digestAnchor(path, content, heading string) (string, error) {
+	part, err := ctxpack.Section(path, content, heading)
+	if err != nil {
+		return "", err
+	}
+	doc, err := ctxpack.ParseDoc(path, "", content)
+	if err != nil {
+		return "", err
+	}
+	for _, sec := range doc.Sections {
+		if sec.Line == part.Line {
+			return ctxpack.Slug(sec.Heading), nil
+		}
+	}
+	return "", fmt.Errorf("the heading %q of %s was found at line %d but no section starts there; this is a flai bug: report it", heading, path, part.Line)
+}
+
+func newDigestCitedCmd(a *app) *cobra.Command {
+	return &cobra.Command{
+		Use:   "cited",
+		Short: "List each digest entry's citers and latest citation, and write its cited list",
+		Long: `List every entry in this checkout's digest with the work items, stories,
+and threads that cite it and its latest citation (ADR-0199), and write each
+entry's cited front matter as its citers, in ID order, where that changed.
+
+A citation is the entry's ID, D-nnnn in any zero padding, written in a work
+item's file (an epic, story, or task, on the board or in the archive), in a
+narrative (in the agents folder or the archive), which counts as its story,
+or in a thread. Its date is the citing file's updated time. Digest entries
+citing one another do not count. A citing file whose updated time cannot be
+read is an error naming it.
+
+Each line gives the entry's ID, status, latest citation, or - when none,
+and its citers, with "written" where cited changed; the last line counts
+the entries and those written. Each write is checked as flai digest edit's
+is. --json gives an array of the entries, each with its id, title, status,
+date, path, cited, latest (empty when none), and changed, [] when none.`,
+		Example: `  flai digest cited
+  flai digest cited --json`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			repo, err := a.project()
+			if err != nil {
+				return err
+			}
+			list, err := digest.Cited(repo, digest.EnvFor(repo))
+			if rerr, ok := a.refusedDigest(err); ok {
+				return rerr
+			}
+			if err != nil {
+				return err
+			}
+			if a.jsonOut {
+				return a.printJSON(list)
+			}
+			if len(list) == 0 {
+				fmt.Fprintln(a.out, "no digest entries")
+				return nil
+			}
+			written := 0
+			for _, c := range list {
+				mark := ""
+				if c.Changed {
+					mark = "  (written)"
+					written++
+				}
+				fmt.Fprintf(a.out, "%-6s %-9s %-20s %s%s\n", c.ID, c.Status, digestLatest(c.Latest), digestList(c.Cited), mark)
+			}
+			fmt.Fprintf(a.out, "%d entries, cited written on %d\n", len(list), written)
+			return nil
+		},
+	}
+}
+
+func newDigestCompactCmd(a *app) *cobra.Command {
+	var dryRun bool
+	c := &cobra.Command{
+		Use:   "compact",
+		Short: "Compact the active digest entries no one cited within digest.compact_after to their title",
+		Long: `Compact the digest in the checkout it runs in (ADR-0199). It runs flai
+digest cited first, then turns each active entry whose latest citation, or
+its own date when that is later or it has none, is older than
+digest.compact_after (720h, 30 days, when it is not set) into compacted: its
+status becomes compacted and its body is emptied below its # D-nnnn <title>
+heading, so a story's pack loads only its title. Absorbed and compacted
+entries are left as they are, so a second run compacts nothing more.
+Nothing is deleted: git keeps every earlier text. With digest.compact_after
+0, compaction is off and nothing is done; a digest.compact_after that is
+not a duration is refused, naming it.
+
+Each entry compacted is printed with its ID, title, and its latest citation
+or its date, then the count, the time an entry had to be cited or dated
+since to be kept, and the entries whose cited was written. --dry-run prints
+what would be compacted and written, and writes nothing. --json gives the
+result: window, off, dry_run, before, cited (as flai digest cited --json
+gives it), and compacted, each with its id, title, path, latest (empty when
+none), and date.`,
+		Example: `  flai digest compact --dry-run
+  flai digest compact --json`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			repo, err := a.project()
+			if err != nil {
+				return err
+			}
+			window, err := repo.Manifest.Digest.CompactAfterDuration()
+			if err != nil {
+				return err
+			}
+			res, err := digest.Compact(repo, digest.CompactOptions{Window: window, Now: a.now(), DryRun: dryRun, Env: digest.EnvFor(repo)})
+			if rerr, ok := a.refusedDigest(err); ok {
+				return rerr
+			}
+			if err != nil {
+				return err
+			}
+			if a.jsonOut {
+				return a.printJSON(res)
+			}
+			a.printCompactResult(res)
+			return nil
+		},
+	}
+	c.Flags().BoolVar(&dryRun, "dry-run", false, "print what would be compacted and written, and write nothing")
+	return c
+}
+
+// printCompactResult prints each entry compact compacted, or would, and the
+// counts.
+func (a *app) printCompactResult(res digest.CompactResult) {
+	if res.Off {
+		fmt.Fprintln(a.out, "compaction is off: digest.compact_after is 0; nothing compacted")
+		return
+	}
+	verb, count, written := "compacted", "compacted", "written"
+	if res.DryRun {
+		verb, count, written = "would compact", "to compact", "would be written"
+	}
+	for _, c := range res.Compacted {
+		judged := "no citation, dated " + c.Date
+		if c.Latest != "" {
+			judged = "last cited " + c.Latest
+		}
+		fmt.Fprintf(a.out, "%s %s %s (%s)\n", verb, c.ID, c.Title, judged)
+	}
+	changed := 0
+	for _, c := range res.Cited {
+		if c.Changed {
+			changed++
+		}
+	}
+	fmt.Fprintf(a.out, "%d %s: not cited or dated since %s (digest.compact_after %s); cited %s on %d\n", len(res.Compacted), count, res.Before, res.Window, written, changed)
+}
+
+// digestLatest is a latest citation as the text output shows it, or - when
+// there is none.
+func digestLatest(s string) string {
+	if s == "" {
+		return "-"
+	}
+	return s
 }
 
 // printSeedResult prints each entry seed wrote, or would write, each it

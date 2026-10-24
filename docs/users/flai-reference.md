@@ -1355,12 +1355,87 @@ The digest is one markdown file per fact a story learned, D-nnnn-&lt;slug&gt;.md
 
 Subcommands:
 
+- [absorb](#flai-digest-absorb): Mark a digest entry absorbed by the document that now records its fact
+- [cited](#flai-digest-cited): List each digest entry's citers and latest citation, and write its cited list
+- [compact](#flai-digest-compact): Compact the active digest entries no one cited within digest.compact\_after to their title
 - [edit](#flai-digest-edit): Change a digest entry's body, topics, paths, sources, or asked\_again
 - [harvest](#flai-digest-harvest): List the facts the digest could record: answers, recommendations, decisions, and causes
 - [list](#flai-digest-list): List the digest's entries with their sources, topics, paths, date, and status
 - [new](#flai-digest-new): Record a digest entry: its ID, file, and front matter are supplied
 - [seed](#flai-digest-seed): Write a digest entry for each operator answer and closed issue's cause no entry records yet
 - [show](#flai-digest-show): Print a digest entry: its front matter and its body
+
+#### flai digest absorb
+
+Mark a digest entry absorbed by the document that now records its fact.
+
+```text
+flai digest absorb <D-nnnn> --by <path> [--heading <heading>] [flags]
+```
+
+Mark a digest entry absorbed, in the checkout it runs in (ADR-0199): its status becomes absorbed, and its absorbed\_by the path, from the project root, of the design document, convention, or ADR that now records the fact, or &lt;path&gt;#&lt;anchor&gt; with --heading, which must be one of the document's headings. A heading is its text, a heading path such as "Rules › Go" (&gt; also joins), or its anchor, as flai doc show --heading takes it. The body is kept. A story's pack never loads an absorbed entry. An entry absorbed again names the newer document, and a compacted entry may be absorbed. The ID may be written in any padding: D-7 is D-0007.
+
+A path that is not from the project root or names no file, and a heading the document does not have, are refused: nothing is written, the reason is printed, and the exit code is 4. --json gives the entry, as flai digest edit does.
+
+Examples:
+
+```bash
+flai digest absorb D-0007 --by design/system/flai-cli.md
+flai digest absorb D-0007 --by design/conventions/git.md --heading "Rules" --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--by` string | the path, from the project root, of the document that now records the fact (required) |
+| `--heading` string | the heading of the document that records it: its text, a heading path, or its anchor |
+
+#### flai digest cited
+
+List each digest entry's citers and latest citation, and write its cited list.
+
+```text
+flai digest cited
+```
+
+List every entry in this checkout's digest with the work items, stories, and threads that cite it and its latest citation (ADR-0199), and write each entry's cited front matter as its citers, in ID order, where that changed.
+
+A citation is the entry's ID, D-nnnn in any zero padding, written in a work item's file (an epic, story, or task, on the board or in the archive), in a narrative (in the agents folder or the archive), which counts as its story, or in a thread. Its date is the citing file's updated time. Digest entries citing one another do not count. A citing file whose updated time cannot be read is an error naming it.
+
+Each line gives the entry's ID, status, latest citation, or - when none, and its citers, with "written" where cited changed; the last line counts the entries and those written. Each write is checked as flai digest edit's is. --json gives an array of the entries, each with its id, title, status, date, path, cited, latest (empty when none), and changed, [] when none.
+
+Examples:
+
+```bash
+flai digest cited
+flai digest cited --json
+```
+
+#### flai digest compact
+
+Compact the active digest entries no one cited within digest.compact\_after to their title.
+
+```text
+flai digest compact [flags]
+```
+
+Compact the digest in the checkout it runs in (ADR-0199). It runs flai digest cited first, then turns each active entry whose latest citation, or its own date when that is later or it has none, is older than digest.compact\_after (720h, 30 days, when it is not set) into compacted: its status becomes compacted and its body is emptied below its # D-nnnn &lt;title&gt; heading, so a story's pack loads only its title. Absorbed and compacted entries are left as they are, so a second run compacts nothing more. Nothing is deleted: git keeps every earlier text. With digest.compact\_after 0, compaction is off and nothing is done; a digest.compact\_after that is not a duration is refused, naming it.
+
+Each entry compacted is printed with its ID, title, and its latest citation or its date, then the count, the time an entry had to be cited or dated since to be kept, and the entries whose cited was written. --dry-run prints what would be compacted and written, and writes nothing. --json gives the result: window, off, dry\_run, before, cited (as flai digest cited --json gives it), and compacted, each with its id, title, path, latest (empty when none), and date.
+
+Examples:
+
+```bash
+flai digest compact --dry-run
+flai digest compact --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--dry-run` | print what would be compacted and written, and write nothing |
 
 #### flai digest edit
 
@@ -1427,7 +1502,7 @@ List the digest's entries with their sources, topics, paths, date, and status.
 flai digest list [flags]
 ```
 
-List the entries in this checkout's digest folder, in ID order: each one's ID, status, kind, date, and title, and below it its sources, topics, and paths. --status keeps the entries in that status (active, absorbed, compacted); --topic keeps those that bear on the topic. --json gives an array of the entries, bodies included, [] when none.
+List the entries in this checkout's digest folder, in ID order: each one's ID, status, kind, date, and title, and below it its sources, topics, and paths, and the document that absorbed it when it is absorbed. --status keeps the entries in that status (active, absorbed, compacted); --topic keeps those that bear on the topic. --json gives an array of the entries, bodies included, [] when none.
 
 Flags:
 
@@ -2401,6 +2476,8 @@ planning.default_duration (duration; default 1h)
 analysis.agent (agent)
 analysis.schedule (cron)
 digest.agent (agent)
+digest.schedule (cron)
+digest.compact_after (duration; default 720h)
 acceptance.mode (choice: local, pull-request; default local)
 acceptance.forge (choice: github; default github)
 acceptance.merge_method (choice: merge, squash, rebase; default merge)

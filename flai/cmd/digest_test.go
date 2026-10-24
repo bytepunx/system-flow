@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/digest"
 )
@@ -222,9 +223,10 @@ func TestDigestEditRefused(t *testing.T) {
 	}
 }
 
-// S-0428 criterion 2: list prints each entry with its status, kind, date,
-// sources, topics, and paths, filtered by --status and --topic; --json is
-// an array, [] when empty.
+// S-0428 criterion 2, S-0432 criterion 3: list prints each entry with its
+// status, kind, date, sources, topics, and paths, and an absorbed entry's
+// document, filtered by --status and --topic; --json is an array, [] when
+// empty.
 func TestDigestList(t *testing.T) {
 	root := digestProject(t)
 	out, _, code := runIn(t, root, "digest", "list", "--json")
@@ -258,7 +260,7 @@ func TestDigestList(t *testing.T) {
 		t.Fatalf("digest list: %d %s", code, errOut)
 	}
 	want := "D-0001 active    decision       2026-09-15 First fact\n       sources: S-0001  topics: cli  paths: flai/cmd\n" +
-		"D-0002 absorbed  answer         2026-09-15 Second fact\n       sources: TH-0002  topics: digest  paths: -\n"
+		"D-0002 absorbed  answer         2026-09-15 Second fact\n       sources: TH-0002  topics: digest  paths: -  absorbed_by: wip/threads/TH-0002.md\n"
 	if out != want {
 		t.Errorf("list text:\n%s\nwant:\n%s", out, want)
 	}
@@ -575,5 +577,179 @@ func TestDigestSeedDryRun(t *testing.T) {
 	}
 	if files := digestFiles(t, root); files != nil {
 		t.Errorf("a dry run writes nothing: %v", files)
+	}
+}
+
+// writeFiles writes each file, from the project root, with its text.
+func writeFiles(t *testing.T, root string, files map[string]string) {
+	t.Helper()
+	for path, body := range files {
+		file := filepath.Join(root, filepath.FromSlash(path))
+		if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(file, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// ADR-0199 §5, S-0432 criterion 3: absorb sets status absorbed and
+// absorbed_by, the document or its heading's anchor, keeping the body; list
+// shows the document; a missing --by, a path that names no file, and a
+// heading the document does not have are refused, writing nothing.
+func TestDigestAbsorb(t *testing.T) {
+	root := digestProject(t)
+	writeFiles(t, root, map[string]string{"design/system/x.md": "# X\n\nThe design.\n\n## Entry rules\n\nOne rule.\n"})
+	for _, title := range []string{"First fact", "Second fact"} {
+		if out, errOut, code := runIn(t, root, "digest", "new", title, "--kind", "decision", "--source", "S-0001", "--body", "Why."); code != 0 {
+			t.Fatalf("digest new: %d %s %s", code, out, errOut)
+		}
+	}
+	out, errOut, code := runIn(t, root, "digest", "absorb", "D-1", "--by", "design/system/x.md", "--heading", "X › Entry rules", "--json")
+	if code != 0 {
+		t.Fatalf("absorb --heading: %d %s %s", code, out, errOut)
+	}
+	var res digest.Result
+	if err := json.Unmarshal([]byte(out), &res); err != nil {
+		t.Fatalf("json: %v\n%s", err, out)
+	}
+	if res.ID != "D-0001" || res.Entry.Status != "absorbed" || res.Entry.AbsorbedBy != "design/system/x.md#entry-rules" || res.Entry.Body != "Why." {
+		t.Errorf("absorbed by the heading's anchor, the body kept: %+v", res)
+	}
+
+	out, errOut, code = runIn(t, root, "digest", "absorb", "D-0002", "--by", "design/system/x.md")
+	if code != 0 || out != "D-0002 Second fact (decision, absorbed)\n  design/digest/D-0002-second-fact.md\n  absorbed by design/system/x.md\n" {
+		t.Errorf("absorb text: %d %q %s", code, out, errOut)
+	}
+	out, _, _ = runIn(t, root, "digest", "list")
+	if !strings.Contains(out, "D-0001 absorbed ") || !strings.Contains(out, "  absorbed_by: design/system/x.md#entry-rules\n") || !strings.Contains(out, "  absorbed_by: design/system/x.md\n") {
+		t.Errorf("list shows each absorbed entry's document:\n%s", out)
+	}
+
+	file := filepath.Join(root, "design", "digest", "D-0002-second-fact.md")
+	before, _ := os.ReadFile(file)
+	if _, errOut, code := runIn(t, root, "digest", "absorb", "D-0002"); code != 1 || !strings.Contains(errOut, "--by is required") {
+		t.Errorf("no --by: %d %s", code, errOut)
+	}
+	for _, c := range []struct {
+		args []string
+		says string
+	}{
+		{[]string{"--by", "design/system/gone.md"}, "design/system/gone.md names no file"},
+		{[]string{"--by", "design/system/x.md", "--heading", "Gone"}, `no heading \"Gone\" in design/system/x.md`},
+	} {
+		out, _, code := runIn(t, root, append(append([]string{"digest", "absorb", "D-0002"}, c.args...), "--json")...)
+		if code != exitDocRefused || !strings.Contains(out, `"rule": "digest.entry"`) || !strings.Contains(out, c.says) {
+			t.Errorf("%v: code %d\n%s", c.args, code, out)
+		}
+	}
+	if after, _ := os.ReadFile(file); string(after) != string(before) {
+		t.Errorf("a refused absorption writes nothing:\n%s", after)
+	}
+}
+
+// citeProject is a digest project with two entries learned 2026-09-15, D-0001
+// cited by the story S-0005, updated 2026-10-20, and by the narrative of
+// S-0006, and D-0002 cited by nothing.
+func citeProject(t *testing.T) string {
+	t.Helper()
+	root := digestProject(t)
+	for _, title := range []string{"Cited fact", "Uncited fact"} {
+		if out, errOut, code := runIn(t, root, "digest", "new", title, "--kind", "decision", "--source", "S-0001", "--body", "Why."); code != 0 {
+			t.Fatalf("digest new: %d %s %s", code, out, errOut)
+		}
+	}
+	writeFiles(t, root, map[string]string{
+		"wip/kanban/stories/S-0005-s.md": "---\nid: S-0005\nupdated: 2026-10-20T00:00:00Z\n---\n\n# S-0005 s\n\nAs D-0001 says.\n",
+		"wip/agents/S-0006.md":           "---\nstream: S-0006\nupdated: 2026-10-01T00:00:00Z\n---\n\n# S-0006\n\n## Decisions\n\n- Per D-1.\n",
+	})
+	return root
+}
+
+// ADR-0199 §4, S-0432 criterion 4: cited lists each entry's latest citation
+// and citers and writes cited where it changed; a second run writes nothing.
+func TestDigestCited(t *testing.T) {
+	root := citeProject(t)
+	out, errOut, code := runIn(t, root, "digest", "cited")
+	want := "D-0001 active    2026-10-20T00:00:00Z S-0005, S-0006  (written)\n" +
+		"D-0002 active    -                    -\n" +
+		"2 entries, cited written on 1\n"
+	if code != 0 || out != want {
+		t.Errorf("cited text: %d %s\n%s\nwant:\n%s", code, errOut, out, want)
+	}
+	data, _ := os.ReadFile(filepath.Join(root, "design", "digest", "D-0001-cited-fact.md"))
+	if !strings.Contains(string(data), "\ncited: [S-0005, S-0006]\n") {
+		t.Errorf("cited is written:\n%s", data)
+	}
+	out, errOut, code = runIn(t, root, "digest", "cited", "--json")
+	var list []digest.CitedEntry
+	if err := json.Unmarshal([]byte(out), &list); err != nil || code != 0 {
+		t.Fatalf("cited --json: %d %v %s %s", code, err, out, errOut)
+	}
+	if len(list) != 2 || list[0].Latest != "2026-10-20T00:00:00Z" || list[0].Changed || strings.Join(list[0].Cited, ",") != "S-0005,S-0006" || list[1].Latest != "" || list[1].Cited == nil {
+		t.Errorf("cited --json, nothing changed the second time: %+v", list)
+	}
+}
+
+// ADR-0199 §6, S-0432 criterion 4: compact compacts the uncited entry to its
+// title and keeps the cited one; --dry-run lists it and writes nothing; a
+// second run compacts nothing; compact_after 0 turns it off, and one that is
+// not a duration is refused.
+func TestDigestCompact(t *testing.T) {
+	root := citeProject(t)
+	at := time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC)
+	before := map[string]string{}
+	for _, f := range digestFiles(t, root) {
+		data, _ := os.ReadFile(filepath.Join(root, "design", "digest", f))
+		before[f] = string(data)
+	}
+	out, errOut, code := runInAt(t, root, at, "digest", "compact", "--dry-run")
+	want := "would compact D-0002 Uncited fact (no citation, dated 2026-09-15)\n" +
+		"1 to compact: not cited or dated since 2026-10-02T00:00:00Z (digest.compact_after 720h0m0s); cited would be written on 1\n"
+	if code != 0 || out != want {
+		t.Errorf("dry run text: %d %s\n%s\nwant:\n%s", code, errOut, out, want)
+	}
+	for f, text := range before {
+		if data, _ := os.ReadFile(filepath.Join(root, "design", "digest", f)); string(data) != text {
+			t.Errorf("a dry run writes nothing: %s\n%s", f, data)
+		}
+	}
+
+	out, errOut, code = runInAt(t, root, at, "digest", "compact", "--json")
+	var res digest.CompactResult
+	if err := json.Unmarshal([]byte(out), &res); err != nil || code != 0 {
+		t.Fatalf("compact --json: %d %v %s %s", code, err, out, errOut)
+	}
+	if len(res.Compacted) != 1 || res.Compacted[0].ID != "D-0002" || res.Compacted[0].Latest != "" || res.Off || res.DryRun || res.Window != "720h0m0s" || len(res.Cited) != 2 {
+		t.Errorf("compact --json: %+v", res)
+	}
+	data, _ := os.ReadFile(filepath.Join(root, "design", "digest", "D-0002-uncited-fact.md"))
+	if !strings.Contains(string(data), "\nstatus: compacted\n") || !strings.HasSuffix(string(data), "---\n\n# D-0002 Uncited fact\n") {
+		t.Errorf("D-0002 is compacted to its title:\n%s", data)
+	}
+	data, _ = os.ReadFile(filepath.Join(root, "design", "digest", "D-0001-cited-fact.md"))
+	if !strings.Contains(string(data), "\nstatus: active\n") || !strings.HasSuffix(string(data), "# D-0001 Cited fact\n\nWhy.\n") {
+		t.Errorf("D-0001 is kept whole:\n%s", data)
+	}
+
+	out, errOut, code = runInAt(t, root, at, "digest", "compact")
+	if code != 0 || !strings.HasPrefix(out, "0 compacted: ") || !strings.HasSuffix(out, "cited written on 0\n") {
+		t.Errorf("the second run compacts nothing: %d %s %s", code, out, errOut)
+	}
+
+	manifest := filepath.Join(root, "system-flow.yaml")
+	base, _ := os.ReadFile(manifest)
+	if err := os.WriteFile(manifest, append(base, []byte("digest:\n  compact_after: \"0\"\n")...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if out, errOut, code := runInAt(t, root, at.AddDate(1, 0, 0), "digest", "compact"); code != 0 || out != "compaction is off: digest.compact_after is 0; nothing compacted\n" {
+		t.Errorf("compaction off: %d %q %s", code, out, errOut)
+	}
+	if err := os.WriteFile(manifest, append(base, []byte("digest:\n  compact_after: soon\n")...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, errOut, code := runInAt(t, root, at, "digest", "compact"); code != 1 || !strings.Contains(errOut, "digest.compact_after") || !strings.Contains(errOut, "soon") || !strings.Contains(errOut, "is not a duration") {
+		t.Errorf("a compact_after that is no duration: %d %s", code, errOut)
 	}
 }

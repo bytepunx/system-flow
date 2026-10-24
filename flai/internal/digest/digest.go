@@ -326,14 +326,17 @@ func Validate(name, content string, env Env) (Entry, []Problem) {
 			entry("topics", at("topics"), "topic %q is not a word; a topic is letters, digits, dot, dash, or underscore, such as cli or go", t)
 		}
 	}
+	// absorbed_by names a document, or a heading in it as <path>#<anchor>;
+	// the path is what must be local and exist.
+	absorbedFile, _, _ := strings.Cut(e.AbsorbedBy, "#")
 	switch {
 	case e.AbsorbedBy != "" && e.Status != "absorbed":
 		entry("absorbed_by", at("absorbed_by"), "absorbed_by is set but status is %s; set status: absorbed, or empty absorbed_by", e.Status)
 	case e.AbsorbedBy == "" && e.Status == "absorbed":
 		entry("absorbed_by", at("absorbed_by"), "status is absorbed but absorbed_by is empty; give the path, from the project root, of the document that now records the fact")
-	case e.AbsorbedBy != "" && !filepath.IsLocal(filepath.FromSlash(e.AbsorbedBy)):
+	case e.AbsorbedBy != "" && !filepath.IsLocal(filepath.FromSlash(absorbedFile)):
 		entry("absorbed_by", at("absorbed_by"), "absorbed_by is %q, not a path from the project root; give one such as design/system/overview.md", e.AbsorbedBy)
-	case e.AbsorbedBy != "" && env.Exists != nil && !env.Exists(e.AbsorbedBy):
+	case e.AbsorbedBy != "" && env.Exists != nil && !env.Exists(absorbedFile):
 		entry("absorbed_by", at("absorbed_by"), "absorbed_by is %s, which names no file; give the path of the document that records the fact", e.AbsorbedBy)
 	}
 	for _, id := range e.AskedAgain {
