@@ -79,6 +79,9 @@ type Options struct {
 	// Analyses starts the analyzer for the project on the host for the tool
 	// analyze (S-0223); without it the tool says how to on the host.
 	Analyses AnalyzeStart
+	// Curations starts the curator for the project on the host for the tool
+	// curate (S-0431); without it the tool says how to on the host.
+	Curations CurateStart
 	// Activities logs a strategic agent's activity for the tool activity_log
 	// (S-0206); without it the tool says it cannot.
 	Activities ActivityLog
@@ -130,6 +133,8 @@ type server struct {
 	plans   PlanStart // starts the planner (S-0208)
 	// analyses starts the analyzer (S-0223)
 	analyses AnalyzeStart
+	// curations starts the curator (S-0431)
+	curations CurateStart
 	// activities logs a strategic agent's activity (S-0206)
 	activities ActivityLog
 	version    string // the running flai's, compared with the project's newest flai tag (S-0181)
@@ -154,7 +159,7 @@ type server struct {
 
 // newServer is the server for one project, with the defaults filled in.
 func newServer(opt Options, repo *workitem.Repo) *server {
-	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, analyses: opt.Analyses, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, queueBatches: opt.QueueBatches, publish: opt.Publish, relativePaths: opt.RelativePaths, logger: opt.Logger, installed: opt.Installed}
+	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, analyses: opt.Analyses, curations: opt.Curations, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, queueBatches: opt.QueueBatches, publish: opt.Publish, relativePaths: opt.RelativePaths, logger: opt.Logger, installed: opt.Installed}
 	if repo.Git == nil {
 		repo.Git = opt.Runner // item_move asks git whether a story's worktree is committed (S-0140)
 	}
@@ -725,10 +730,10 @@ func (s *server) docSearch(_ context.Context, _ *mcp.CallToolRequest, in DocSear
 // PrimeIn names the story, or the role, to prime for.
 type PrimeIn struct {
 	Project string `json:"project,omitempty" jsonschema:"the project, by key or folder: needed only when the server serves more than one"`
-	Story   string `json:"story,omitempty" jsonschema:"story ID such as S-0138 (any zero padding); an archived story gets the pack it would get today. Needed but for role orchestrate or analyze, and for role plan given an epic"`
+	Story   string `json:"story,omitempty" jsonschema:"story ID such as S-0138 (any zero padding); an archived story gets the pack it would get today. Needed but for role orchestrate, analyze, or curate, and for role plan given an epic"`
 	Epic    string `json:"epic,omitempty" jsonschema:"with role plan, the epic the planner plans, such as E-0016, instead of a story"`
 	Budget  string `json:"budget,omitempty" jsonschema:"the size the pack fits, such as 80KB; default the project's prime.budget, else 80KB, and half that with role explore or verify"`
-	Role    string `json:"role,omitempty" jsonschema:"explore or verify: the smaller pack for a sub-agent of the story's agent in that role (ADR-0059); plan, orchestrate, or analyze: the pack for a strategic agent, the planner for an epic or a story, or the orchestrator or the analyzer for the whole project; empty for the story's agent's own pack"`
+	Role    string `json:"role,omitempty" jsonschema:"explore or verify: the smaller pack for a sub-agent of the story's agent in that role (ADR-0059); plan, orchestrate, analyze, or curate: the pack for a strategic agent, the planner for an epic or a story, or the orchestrator, the analyzer, or the curator for the whole project; empty for the story's agent's own pack"`
 	Part    int    `json:"part,omitempty" jsonschema:"which part of the pack to return, from 1; default 1. Read every part, up to the parts the result gives (ADR-0104)"`
 }
 

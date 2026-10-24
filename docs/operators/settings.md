@@ -1,6 +1,6 @@
 ---
 title: Settings index
-updated: 2026-10-23
+updated: 2026-10-24
 status: active
 ---
 
@@ -441,7 +441,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--settled` | [flai message reply](../users/flai-reference.md#flai-message-reply) |
 | `--setup` | [flai components config](../users/flai-reference.md#flai-components-config) |
 | `--show` | [flai edit](../users/flai-reference.md#flai-edit) |
-| `--since` | [flai digest harvest](../users/flai-reference.md#flai-digest-harvest), [flai digest seed](../users/flai-reference.md#flai-digest-seed), [flai stats](../users/flai-reference.md#flai-stats) |
+| `--since` | [flai curate](../users/flai-reference.md#flai-curate), [flai digest harvest](../users/flai-reference.md#flai-digest-harvest), [flai digest seed](../users/flai-reference.md#flai-digest-seed), [flai stats](../users/flai-reference.md#flai-stats) |
 | `--source` | [flai digest edit](../users/flai-reference.md#flai-digest-edit), [flai digest new](../users/flai-reference.md#flai-digest-new), [flai thread reply](../users/flai-reference.md#flai-thread-reply) |
 | `--spend-key-env` | [flai serve agent provider](../users/flai-reference.md#flai-serve-agent-provider) |
 | `--status` | [flai adr new](../users/flai-reference.md#flai-adr-new), [flai digest list](../users/flai-reference.md#flai-digest-list) |

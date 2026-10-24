@@ -82,7 +82,7 @@ func TestHostActionPush(t *testing.T) {
 		t.Fatalf("disabled: %d %s", code, out)
 	}
 
-	if _, errOut, code := runIn(t, root, "serve", "enable", "pull"); code == 0 || !strings.Contains(errOut, "there are: agent, analyze, auto-approve, auto-publish, auto-upgrade, checks, components, dashboard, forge, host, merge-queue, orchestrate, plan, push") {
+	if _, errOut, code := runIn(t, root, "serve", "enable", "pull"); code == 0 || !strings.Contains(errOut, "there are: agent, analyze, auto-approve, auto-publish, auto-upgrade, checks, components, curate, dashboard, forge, host, merge-queue, orchestrate, plan, push") {
 		t.Errorf("an action there is not: %d %s", code, errOut)
 	}
 	out, _, code = runIn(t, root, "serve", "enable", "push")
@@ -349,6 +349,58 @@ func TestServeAnalyzeAction(t *testing.T) {
 	}
 	runIn(t, root, "serve", "disable", "analyze")
 	if (&app{}).agentConfig(root).Analyze {
+		t.Error("disabled, flai serve is still told it is on")
+	}
+}
+
+// S-0431: curate is off until the operator enables it, flai serve is told
+// whether it is on, and agent.status carries the project's newest curator
+// run, with its since, trigger, outcome, entries, and log, null before the
+// first, apart from the analyzer's.
+func TestServeCurateAction(t *testing.T) {
+	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfgPath)
+	root := tempProject(t)
+	if out, _, _ := runIn(t, root, "serve", "actions"); !strings.Contains(out, "curate: off everywhere") || !strings.Contains(out, "digest.agent") || !strings.Contains(out, "flai digest new and edit") {
+		t.Errorf("actions names it and what it means: %s", out)
+	}
+	if (&app{}).agentConfig(root).Curate {
+		t.Error("curate is on by default")
+	}
+	status := func() string {
+		t.Helper()
+		got, err := json.Marshal((&app{}).host().Agent(root))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(got)
+	}
+	if got := status(); !strings.Contains(got, `"curator":null`) {
+		t.Errorf("agent.status before any run: %s", got)
+	}
+	if out, errOut, code := runIn(t, root, "serve", "enable", "curate"); code != 0 || !strings.Contains(out, "curate enabled for t") {
+		t.Fatalf("enable: %d %s %s", code, out, errOut)
+	}
+	if !(&app{}).agentConfig(root).Curate {
+		t.Error("enabled, flai serve is not told")
+	}
+	run := `{"` + root + `":{"curator":{"story":"","harness":"command","command":"run-agent","agent":"curator","role":"curate","pid":42,"started":"2026-10-23T10:00:00Z","ended":"2026-10-23T10:05:00Z","log":"/l/t-curator-20261023T100000Z.log","trigger":"asked","since":"2026-10-01","entries":["D-0007"],"outcome":"worked"}}}`
+	dir := string(serve.DirFor(cfgPath))
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "agents.json"), []byte(run), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got := status()
+	for _, want := range []string{`"curator":{"story":"","harness":"command","command":"run-agent","agent":"curator"`, `"pid":42`, `"log":"/l/t-curator-20261023T100000Z.log"`,
+		`"trigger":"asked"`, `"since":"2026-10-01"`, `"entries":["D-0007"]`, `"outcome":"worked"`, `"analyzer":null`, `"orchestrator":null`, `"running":null`} {
+		if !strings.Contains(got, want) {
+			t.Errorf("agent.status with a run lacks %s: %s", want, got)
+		}
+	}
+	runIn(t, root, "serve", "disable", "curate")
+	if (&app{}).agentConfig(root).Curate {
 		t.Error("disabled, flai serve is still told it is on")
 	}
 }

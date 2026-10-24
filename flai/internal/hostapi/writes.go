@@ -378,6 +378,12 @@ const ActionOrchestrate = "orchestrate"
 // for all three focuses. One analyzer runs per project at a time.
 const ActionAnalyze = "analyze"
 
+// ActionCurate is the host action that starts the curator for a project,
+// from a since or from its last run, on the operator's word (S-0431,
+// ADR-0196): curate.run, flai curate in a shell, and the MCP tool curate.
+// One curator runs per project at a time; nothing starts it on a schedule.
+const ActionCurate = "curate"
+
 // ActionComponents is the host action under which flai serve runs a
 // sub-project's own Vite dev server, with flai's component harness, on
 // 127.0.0.1 (S-0438, ADR-0163): components.start and components.stop ask
@@ -411,6 +417,7 @@ var Actions = map[string]string{
 	ActionComponents:  "start a Svelte sub-project's own Vite dev server, from its node_modules, with its own config, plugins, and dependencies and flai's component harness, on 127.0.0.1 and a port flai picks, on this machine and as you, when the Components page asks, in the main checkout or in the worktree of a story in progress or in review, whose dependencies flai first installs by the sub-project's lock file when they are missing, and stop it; at most components.max_servers (3 by default) run at once per project; flai serve stops one that nothing asked about for components.idle (30 minutes by default), a story's once the story leaves review, and every one when it stops. A holder of the dashboard token can then run the sub-project's code, and its branch's, on this host",
 	ActionMergeQueue:  "run the merge queue in flai serve, with no model, on this machine and as you, while orchestration.permissions.accept_reviews in system-flow.yaml is on and acceptance.mode is local: it takes up to merge_queue.batch_max (4 by default) eligible stories enqueued in review, in queue order, rebases each one's branch onto the one before it from the main branch, in a worktree of its own under .flai-cache/worktrees, and verifies the batch once with the tiers flai verify runs, running the project's tests on this host; a story whose rebase stops is left out of the batch. No batch starts while flai queue hold holds the queue. Off, or under pull-request acceptance, no batch starts and enqueued stories wait",
 	ActionAnalyze:     "start the analyzer, with the project's analysis agent (analysis.agent over agent in system-flow.yaml) and the harnesses and the command you set with flai serve agent, on this machine and as you, in the project's main checkout, when you run flai analyze or call analyze.run, looking for bottlenecks, intent, or risk, or all three, and for all three each time analysis.schedule in system-flow.yaml comes round; it writes one report under design/analysis and edits nothing else, and one runs per project at a time; a holder of the dashboard token can then start it whenever none runs",
+	ActionCurate:      "start the curator, with the project's digest agent (digest.agent over agent in system-flow.yaml) and the harnesses and the command you set with flai serve agent, on this machine and as you, in the project's main checkout, when you run flai curate or call curate.run; it takes in what the archive and the threads gained since the day or time you give, or since its last run, as digest entries written through flai digest new and edit alone, edits no file, authors no work item, and leaves its entries uncommitted, and one runs per project at a time; a holder of the dashboard token can then start it whenever none runs",
 }
 
 // shellOnly are the host actions kept to the operator's shell (ADR-0067):
@@ -2250,6 +2257,24 @@ func itemSpecs() map[string]spec {
 			}
 			return []string{"analyze", "--focus=" + in.Focus}, "", nil
 		}},
+		// curate.run: the curator for the project, from a since or from its
+		// last run, on the operator's word (S-0431, ADR-0196); flai curate
+		// judges whether it may, and says why not.
+		"curate.run": {action: ActionCurate, describe: describeCurate, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				Since string `json:"since"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			if in.Since == "" {
+				return []string{"curate"}, "", nil
+			}
+			if !curateSinceReads(in.Since) {
+				return nil, "", bad("the curator takes a since as a YYYY-MM-DD day in UTC or an RFC 3339 time, such as 2026-10-01 or 2026-10-01T09:00:00Z, and %q is neither", in.Since)
+			}
+			return []string{"curate", "--since=" + in.Since}, "", nil
+		}},
 		// orchestrate.stop: the orchestrator's run ended and the orchestrator
 		// held stopped, so that flai serve does not start it again while the
 		// orchestrate action stays on, on the operator's word from its page
@@ -2311,6 +2336,37 @@ func describeAnalyze(res any, err *channel.Error) (outcome, detail string) {
 	}
 	_ = json.Unmarshal(w.Data, &said)
 	return "done", fmt.Sprintf("started %s to analyze, focus %s, as %s (pid %d)", said.Command, said.Focus, said.Agent, said.PID)
+}
+
+// curateSinceReads says whether since is a curator's since, in a form flai
+// curate takes: a YYYY-MM-DD day or an RFC 3339 time.
+func curateSinceReads(since string) bool {
+	for _, form := range []string{time.DateOnly, time.RFC3339} {
+		if _, err := time.Parse(form, since); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
+// describeCurate reads flai curate's --json shape for the journal.
+func describeCurate(res any, err *channel.Error) (outcome, detail string) {
+	if err != nil {
+		return "failed", err.Message
+	}
+	w, _ := res.(Written)
+	var said struct {
+		Since   string `json:"since"`
+		Agent   string `json:"agent"`
+		Command string `json:"command"`
+		PID     int    `json:"pid"`
+	}
+	_ = json.Unmarshal(w.Data, &said)
+	from := "everything, its first run"
+	if said.Since != "" {
+		from = "since " + said.Since
+	}
+	return "done", fmt.Sprintf("started %s to curate, %s, as %s (pid %d)", said.Command, from, said.Agent, said.PID)
 }
 
 // describePlan reads flai plan's --json shape for the journal.

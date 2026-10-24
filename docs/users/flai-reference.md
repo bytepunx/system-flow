@@ -26,6 +26,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [components](#flai-components) | List the component library: each Svelte sub-project's components and their props |
 | [config](#flai-config) | Read and write ~/.flai/config.json |
 | [criteria](#flai-criteria) | List, tick, and untick an item's acceptance criteria by their numbers |
+| [curate](#flai-curate) | Start the curator for the project: it takes in what the archive and the threads gained as digest entries, through flai digest alone |
 | [dashboard](#flai-dashboard) | Make sure the one flaiover dashboard runs and serves this project |
 | [design](#flai-design) | Write, show, and render the project's design system |
 | [digest](#flai-digest) | Record and read the digest: the facts past stories learned (ADR-0191) |
@@ -35,7 +36,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [file](#flai-file) | Read and save a text file that is not markdown |
 | [forecast](#flai-forecast) | Print a story's forecast duration and delivery, worked out from history and the pull order |
 | [forge](#flai-forge) | The project's forge, through which pull-request acceptance merges a story |
-| [guard](#flai-guard) | Refuse a sub-agent's writes, hold the planner to planning, the orchestrator to its permissions, and the analyzer to its report, and keep a story's agent from waiting on its sub-agents with wait\_for\_events, as a Claude Code hook |
+| [guard](#flai-guard) | Refuse a sub-agent's writes, hold the planner to planning, the orchestrator to its permissions, the analyzer to its report, and the curator to the digest, and keep a story's agent from waiting on its sub-agents with wait\_for\_events, as a Claude Code hook |
 | [host](#flai-host) | Run flai host: the one process per machine that keeps flai serve and the MCP servers running |
 | [hostapi](#flai-hostapi) | Answer one method of the dashboard's API for this project, as flai serve would |
 | [import](#flai-import) | Bring an existing repository under the system-flow standard |
@@ -105,6 +106,7 @@ Subcommands:
 - [components](#flai-components): List the component library: each Svelte sub-project's components and their props
 - [config](#flai-config): Read and write ~/.flai/config.json
 - [criteria](#flai-criteria): List, tick, and untick an item's acceptance criteria by their numbers
+- [curate](#flai-curate): Start the curator for the project: it takes in what the archive and the threads gained as digest entries, through flai digest alone
 - [dashboard](#flai-dashboard): Make sure the one flaiover dashboard runs and serves this project
 - [design](#flai-design): Write, show, and render the project's design system
 - [digest](#flai-digest): Record and read the digest: the facts past stories learned (ADR-0191)
@@ -114,7 +116,7 @@ Subcommands:
 - [file](#flai-file): Read and save a text file that is not markdown
 - [forecast](#flai-forecast): Print a story's forecast duration and delivery, worked out from history and the pull order
 - [forge](#flai-forge): The project's forge, through which pull-request acceptance merges a story
-- [guard](#flai-guard): Refuse a sub-agent's writes, hold the planner to planning, the orchestrator to its permissions, and the analyzer to its report, and keep a story's agent from waiting on its sub-agents with wait\_for\_events, as a Claude Code hook
+- [guard](#flai-guard): Refuse a sub-agent's writes, hold the planner to planning, the orchestrator to its permissions, the analyzer to its report, and the curator to the digest, and keep a story's agent from waiting on its sub-agents with wait\_for\_events, as a Claude Code hook
 - [host](#flai-host): Run flai host: the one process per machine that keeps flai serve and the MCP servers running
 - [hostapi](#flai-hostapi): Answer one method of the dashboard's API for this project, as flai serve would
 - [import](#flai-import): Bring an existing repository under the system-flow standard
@@ -982,6 +984,34 @@ Flags:
 | `--by` string | who ticks, as agents are told (default: FLAI\_AGENT, then the config author) |
 | `--hash` string | the hash flai criteria list --json or flai edit --show printed; a change made meanwhile is then a conflict |
 | `--trailer` stringArray | trailer line for the commit (repeatable) |
+
+### flai curate
+
+Start the curator for the project: it takes in what the archive and the threads gained as digest entries, through flai digest alone.
+
+```text
+flai curate [flags]
+```
+
+Starts the curator for the project, now, on this host and as you (S-0431, ADR-0196). It runs in the project's main checkout with the project's digest agent: digest.agent in system-flow.yaml over the project's agent, started with the harnesses and the command you set with flai serve agent. It reads flai digest harvest from --since, a YYYY-MM-DD day in UTC or an RFC 3339 time, or without one from the curator's last activity in wip/agents/curator.md, or everything on its first run. For each candidate it writes a digest entry with flai digest new, or merges it into the entry that holds the fact with flai digest edit. It edits no file and authors no work item; flai guard holds it to that.
+
+The run is recorded where flai serve tracks agents, as the curator's, the newest alone, and its output goes to a log beside flai serve's state. Once it ends, the serving flai records how (worked or failed) and logs the entries it wrote or changed and what the run cost in wip/agents/curator.md. It is no story's agent: the in-progress limit does not count it, and it holds no story back. One curator runs for a project at a time.
+
+It is a host action, off until you enable it (flai serve enable curate). It refuses, and says why, while the action is off for the project, for a --since in neither form, while a curator runs for the project, naming it, and when nothing can start it. The host API's curate.run runs this.
+
+Examples:
+
+```bash
+flai serve enable curate
+flai curate
+flai curate --since 2026-10-01 --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--since` string | take in what was gained since this YYYY-MM-DD day in UTC or RFC 3339 time; since the curator's last activity, or everything on its first run, when not given |
 
 ### flai dashboard
 
@@ -1890,7 +1920,7 @@ flai forge status S-0042 --json
 
 ### flai guard
 
-Refuse a sub-agent's writes, hold the planner to planning, the orchestrator to its permissions, and the analyzer to its report, and keep a story's agent from waiting on its sub-agents with wait\_for\_events, as a Claude Code hook.
+Refuse a sub-agent's writes, hold the planner to planning, the orchestrator to its permissions, the analyzer to its report, and the curator to the digest, and keep a story's agent from waiting on its sub-agents with wait\_for\_events, as a Claude Code hook.
 
 ```text
 flai guard [flags]
@@ -1904,9 +1934,9 @@ A sub-agent's Edit, MultiEdit, Write, or NotebookEdit of a file in a .claude/ fo
 
 A read-only sub-agent's shell command that writes a file outside the temporary folder is refused (S-0368, ADR-0141). A sub-agent is read-only when its definition in the project, .claude/agents/&lt;agent\_type&gt;.md, has a tools line naming none of Edit, MultiEdit, NotebookEdit, and Write, as the explorer's and the verifier's do, or when it is Claude Code's Explore or Plan; the definition is read on each call. A command writes through a redirection (&gt;, &gt;&gt;, &gt;|, &&gt;, N&gt;), tee, sed -i, perl -i, cp, mv, rm, touch, mkdir, rmdir, truncate, ln, install, patch, dd of=, gofmt -w, goimports -w, go fmt, prettier --write, eslint --fix, or golangci-lint --fix, and passes when each file it writes is a path written out under /tmp, the system temporary folder, or /dev, or the redirection duplicates a descriptor (2&gt;&1). A relative path, or one held in a variable, is refused. The refusal names the command and the file and tells the sub-agent to put the correction in its final message. Every other sub-agent, a task sub-agent and general-purpose among them, writes through the shell as before, as it does when the definition or the project cannot be read.
 
-Every sub-agent may run flai components list, and a sub-agent that is not read-only, a story's task sub-agent among them, may run flai components serve, with or without --story (S-0477, ADR-0186). A read-only sub-agent is refused serve, since it writes a Vite config under .flai-cache and with --story may install the worktree's dependencies; the refusal tells it to ask the story's agent, or a task sub-agent, to run it. flai components config, which rewrites system-flow.yaml, is refused to every sub-agent. The planner's, the orchestrator's, and the analyzer's own calls list the component library but are refused serve and config.
+Every sub-agent may run flai components list, and a sub-agent that is not read-only, a story's task sub-agent among them, may run flai components serve, with or without --story (S-0477, ADR-0186). A read-only sub-agent is refused serve, since it writes a Vite config under .flai-cache and with --story may install the worktree's dependencies; the refusal tells it to ask the story's agent, or a task sub-agent, to run it. flai components config, which rewrites system-flow.yaml, is refused to every sub-agent. The planner's, the orchestrator's, the analyzer's, and the curator's own calls list the component library but are refused serve and config.
 
-A story's agent, the planner, and the analyzer, sessions flai serve starts (FLAI\_STORY, FLAI\_STARTED\_BY=flai-serve, or FLAI\_ROLE plan or analyze), write only as themselves (S-0369, ADR-0143): their own Bash call is refused when a flai command's --by or --placed-by names another (--by on order, a policy, and on stats, a grouping, names no author; an empty one falls back to FLAI\_AGENT), or when it sets FLAI\_AGENT or FLAI\_SESSION to anything but its own, the empty value and one held in a variable included, before a command, after export, declare, typeset, local, readonly, or env, or unsets either with unset or env -u, or clears both with env -i, in a shell's -c script, an eval, or a heredoc a shell reads as well. Its own name is the hook's FLAI\_AGENT, or the name flai serve gives the run: agent-S-nnnn, planner-&lt;FLAI\_ITEM&gt;, or analyzer; its own session is the hook's FLAI\_SESSION. A call its role refuses anyway is refused for the role's reason. The orchestrator, which writes to a thread only as itself under its own rule, and the operator's own session are not held to a name.
+A story's agent, the planner, the analyzer, and the curator, sessions flai serve starts (FLAI\_STORY, FLAI\_STARTED\_BY=flai-serve, or FLAI\_ROLE plan, analyze, or curate), write only as themselves (S-0369, ADR-0143): their own Bash call is refused when a flai command's --by or --placed-by names another (--by on order, a policy, and on stats, a grouping, names no author; an empty one falls back to FLAI\_AGENT), or when it sets FLAI\_AGENT or FLAI\_SESSION to anything but its own, the empty value and one held in a variable included, before a command, after export, declare, typeset, local, readonly, or env, or unsets either with unset or env -u, or clears both with env -i, in a shell's -c script, an eval, or a heredoc a shell reads as well. Its own name is the hook's FLAI\_AGENT, or the name flai serve gives the run: agent-S-nnnn, planner-&lt;FLAI\_ITEM&gt;, analyzer, or curator; its own session is the hook's FLAI\_SESSION. A call its role refuses anyway is refused for the role's reason. The orchestrator, which writes to a thread only as itself under its own rule, and the operator's own session are not held to a name.
 
 No sub-agent, and no session flai serve starts (FLAI\_STARTED\_BY=flai-serve, FLAI\_ROLE, or FLAI\_STORY set), changes the manifest's shared paths: the MCP tool shared\_paths\_edit and flai shared add and remove are refused, because claims.shared decides which overlaps hold a story (ADR-0096). Only the operator's own session changes them.
 
@@ -1916,11 +1946,13 @@ In an orchestrator session, one flai serve starts with FLAI\_ROLE=orchestrate, t
 
 In an analyzer session, one flai serve starts with FLAI\_ROLE=analyze, the session's own calls are held to reads and its report (S-0223): besides what a sub-agent may do, flai stats among it, the MCP tools inbox, activity\_log, thread\_open, thread\_reply, and wait\_for\_events; and Edit, Write, and NotebookEdit on a file under the manifest's design folder's analysis/ (its report and the folder's README.md), resolved from the project's root with .. and symbolic links followed, so that neither leads out of the folder. An edit anywhere else is refused naming the folder, as is every edit when the project is unreadable. It may also file and bump the issues its findings call for (S-0224): flai issue new and bump, and the MCP tools issue\_new and issue\_bump. item\_new, item\_edit, item\_move, issue\_story, and flai issue story, story, epic, and task are refused as the analyzer authors no stories; every other flai tool and command that writes, flai issue close among them, and git's writes are refused too. The analyzer's sub-agents are held as any sub-agent is.
 
-No sub-agent, planner, orchestrator, or analyzer starts the analyzer: the MCP tool analyze and flai analyze are refused to each, as the MCP tool plan is.
+In a curator session, one flai serve starts with FLAI\_ROLE=curate, the session's own calls are held to the digest (S-0431, ADR-0196): besides what a sub-agent may do, the MCP tools inbox, activity\_log, thread\_open, thread\_reply, and wait\_for\_events, and flai digest harvest, new, and edit. Edit, MultiEdit, Write, and NotebookEdit are refused on every file, as are flai digest seed, item\_new, item\_edit, item\_move, issue\_new, issue\_bump, and every other flai tool and command that writes, curate, analyze, and plan among them, and git's writes; each refusal says that the curator writes digest entries only with flai digest new and edit. The curator's sub-agents are held as any sub-agent is.
+
+No sub-agent, planner, orchestrator, analyzer, or curator starts the analyzer or the curator: the MCP tools analyze and curate and flai analyze and curate are refused to each, as the MCP tool plan is.
 
 Given a SubagentStart or SubagentStop hook's input, as hook\_event\_name says, it records the sub-agent (its agent\_id and agent\_type, and when it started) as running in the hook's session, or no longer, in .flai-cache/guard/&lt;session\_id&gt;.json in the project's main checkout, under a lock, since a layer's sub-agents start at once. It refuses neither and says nothing; a record it cannot write is warned of. In a story's agent's session, one flai serve starts with FLAI\_STORY and no FLAI\_ROLE, it refuses the agent's own wait\_for\_events while the session's record lists a sub-agent running and no unresolved thread is on the story or one of its tasks (S-0285): wait\_for\_events reports work items and threads, not sub-agents, so it would run to its timeout. The refusal names the running sub-agents and says to wait for one by launching it with the Agent tool's run\_in\_background set to false, which returns its result as the tool's result. With a thread on the story open, the agent waits on the designer, and the call passes and returns on the answer. A project, record, or threads it cannot read let the call through.
 
-The template's .claude/settings.json runs it before Bash and flai's MCP tools, on SubagentStart and SubagentStop, and, in a planner's, an orchestrator's, an analyzer's, or a story's agent's session alone (FLAI\_ROLE plan, orchestrate, or analyze, or FLAI\_STORY set), before Edit, MultiEdit, Write, and NotebookEdit as well, so that a story's sub-agent's write in a .claude/ folder meets the refusal above (S-0299). In the operator's own session, where none of those is set, a file edit does not run it.
+The template's .claude/settings.json runs it before Bash and flai's MCP tools, on SubagentStart and SubagentStop, and, in a planner's, an orchestrator's, an analyzer's, a curator's, or a story's agent's session alone (FLAI\_ROLE plan, orchestrate, analyze, or curate, or FLAI\_STORY set), before Edit, MultiEdit, Write, and NotebookEdit as well, so that a story's sub-agent's write in a .claude/ folder meets the refusal above (S-0299). In the operator's own session, where none of those is set, a file edit does not run it.
 
 Examples:
 
@@ -2368,6 +2400,7 @@ planning.cycle (duration; default 168h)
 planning.default_duration (duration; default 1h)
 analysis.agent (agent)
 analysis.schedule (cron)
+digest.agent (agent)
 acceptance.mode (choice: local, pull-request; default local)
 acceptance.forge (choice: github; default github)
 acceptance.merge_method (choice: merge, squash, rebase; default merge)
@@ -2891,7 +2924,7 @@ List design/conventions in read order (README first, then by order) so an agent,
 
 --role explore or --role verify, with --story, prints the smaller pack for a sub-agent the story's agent hands work to (ADR-0059): the conventions whose front matter roles are empty or list the role (ADR-0068), design-system.md only when the design system reaches the story, with the sections the story's topics leave out taken out; the story's goal and acceptance criteria; and briefs, never bodies, of what the story names, the design system when it reaches the story, what its topics select, the ADRs one step reaches, and the digest entries the story's pack selects, in its rank, each while the budget has room, with a count of those left out. No open issues, nothing ranked, no catalog. Its budget is half the story's agent's unless --budget is given.
 
---role plan, orchestrate, or analyze prints the pack for a strategic agent, one that works above a story: the planner (plan), with --epic E-nnnn or --story S-nnnn, and the orchestrator (orchestrate) and the analyzer (analyze), for the whole project, with neither. Its topics are the role's, planning, orchestration, or analysis, with the planner's item's as well; it holds the conventions whose roles are empty or list the role, with the sections its topics leave out taken out, and no README; the open issues; for the planner, what the item names, whole, as a story's pack loads it (a story's with its epic and tasks, an epic's alone), and the sections ranked highest against the item; briefs of the design, tech, and ADRs its topics select and the ADRs one step reaches; for the orchestrator, the digest's answers and recommendations ranked against the title and first entry of each thread awaiting the operator, each thread's best not yet taken in turn, with the reason thread TH-nnnn; rank n, within an eighth of the budget (ADR-0194); and a catalog of the rest. It does not get the design system. Its budget is the story's agent's, and --budget sets it.
+--role plan, orchestrate, analyze, or curate prints the pack for a strategic agent, one that works above a story: the planner (plan), with --epic E-nnnn or --story S-nnnn, and the orchestrator (orchestrate), the analyzer (analyze), and the curator (curate), for the whole project, with neither. Its topics are the role's, planning, orchestration, analysis, or digest and planning, with the planner's item's as well; it holds the conventions whose roles are empty or list the role, with the sections its topics leave out taken out, and no README; the open issues; for the planner, what the item names, whole, as a story's pack loads it (a story's with its epic and tasks, an epic's alone), and the sections ranked highest against the item; briefs of the design, tech, and ADRs its topics select and the ADRs one step reaches; for the orchestrator, the digest's answers and recommendations ranked against the title and first entry of each thread awaiting the operator, each thread's best not yet taken in turn, with the reason thread TH-nnnn; rank n, within an eighth of the budget (ADR-0194); and a catalog of the rest. It does not get the design system. Its budget is the story's agent's, and --budget sets it.
 
 --part N prints part N of the pack as the MCP prime tool returns it, as JSON: parts of at most 40,000 bytes each, every one carrying part and parts (ADR-0104). --part implies --json; without it the whole pack prints.
 
@@ -2918,7 +2951,7 @@ Flags:
 | `--cat` | print file contents instead of paths |
 | `--epic` string | with --role plan, print the planner's pack for this epic |
 | `--part` int | print part N of the pack, from 1, as JSON, as the MCP prime tool returns it (ADR-0104) |
-| `--role` string | print the pack for an agent in this role: explore or verify, a sub-agent of the story's agent (ADR-0059), with --story; or plan, orchestrate, or analyze, a strategic agent |
+| `--role` string | print the pack for an agent in this role: explore or verify, a sub-agent of the story's agent (ADR-0059), with --story; or plan, orchestrate, analyze, or curate, a strategic agent |
 | `--story` string | print the context pack for this story: the conventions its agent reads, the design, tech, and ADRs it selects, and a catalog of the rest |
 
 ### flai promote

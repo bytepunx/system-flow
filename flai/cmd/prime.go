@@ -88,11 +88,12 @@ budget has room, with a count of those left out. No open issues, nothing
 ranked, no catalog. Its budget is half the story's agent's unless --budget
 is given.
 
---role plan, orchestrate, or analyze prints the pack for a strategic agent,
-one that works above a story: the planner (plan), with --epic E-nnnn or
---story S-nnnn, and the orchestrator (orchestrate) and the analyzer
-(analyze), for the whole project, with neither. Its topics are the role's,
-planning, orchestration, or analysis, with the planner's item's as well; it
+--role plan, orchestrate, analyze, or curate prints the pack for a
+strategic agent, one that works above a story: the planner (plan), with
+--epic E-nnnn or --story S-nnnn, and the orchestrator (orchestrate), the
+analyzer (analyze), and the curator (curate), for the whole project, with
+neither. Its topics are the role's, planning, orchestration, analysis, or
+digest and planning, with the planner's item's as well; it
 holds the conventions whose roles are empty or list the role, with the
 sections its topics leave out taken out, and no README; the open issues;
 for the planner, what the item names, whole, as a story's pack loads it (a
@@ -202,7 +203,7 @@ JSON: parts of at most 40,000 bytes each, every one carrying part and parts
 	c.Flags().BoolVar(&cat, "cat", false, "print file contents instead of paths")
 	c.Flags().StringVar(&story, "story", "", "print the context pack for this story: the conventions its agent reads, the design, tech, and ADRs it selects, and a catalog of the rest")
 	c.Flags().StringVar(&budget, "budget", "", "the size the context pack fits, such as 80KB (default: prime.budget in system-flow.yaml, else 80KB; half that with --role explore or verify)")
-	c.Flags().StringVar(&role, "role", "", "print the pack for an agent in this role: explore or verify, a sub-agent of the story's agent (ADR-0059), with --story; or plan, orchestrate, or analyze, a strategic agent")
+	c.Flags().StringVar(&role, "role", "", "print the pack for an agent in this role: explore or verify, a sub-agent of the story's agent (ADR-0059), with --story; or plan, orchestrate, analyze, or curate, a strategic agent")
 	c.Flags().StringVar(&epic, "epic", "", "with --role plan, print the planner's pack for this epic")
 	c.Flags().IntVar(&part, "part", 0, "print part N of the pack, from 1, as JSON, as the MCP prime tool returns it (ADR-0104)")
 	return c

@@ -56,9 +56,10 @@ func (a *app) host() hostapi.Host {
 			}
 			// the newest orchestrator run, null before the first (S-0218), with
 			// held while the operator holds it stopped (S-0228), and the newest
-			// analyzer run, its focus and report among it (S-0223)
+			// analyzer run, its focus and report among it (S-0223), and the
+			// newest curator run, its since and entries among it (S-0431)
 			return map[string]any{"command": command, "running": st.Running, "last": st.Last, "waiting": st.Waiting, "stories": serve.Activity(root, st), "plans": plans,
-				"orchestrator": st.Orchestrator, "analyzer": st.Analyzer}
+				"orchestrator": st.Orchestrator, "analyzer": st.Analyzer, "curator": st.Curator}
 		},
 		AgentStream: func(root, story string, after int64) (any, error) {
 			return serve.Stream(a.serveDir().AgentStates()[root], story, after)
@@ -578,6 +579,7 @@ func (a *app) agentConfig(root string) serve.AgentConfig {
 		Plan:           cfg.ActionEnabled(hostapi.ActionPlan, root),
 		Orchestrate:    cfg.ActionEnabled(hostapi.ActionOrchestrate, root),
 		Analyze:        cfg.ActionEnabled(hostapi.ActionAnalyze, root),
+		Curate:         cfg.ActionEnabled(hostapi.ActionCurate, root),
 		Command:        cfg.Agent.Command,
 		Harnesses:      hosts,
 		Providers:      cfg.Agent.Providers,

@@ -38,10 +38,6 @@ import (
 // is no story's agent: the in-progress limit does not count it, and it holds
 // no story back.
 
-// curateAction is the host action that starts the curator for a project, on
-// the operator's word (ADR-0196), as the journal names it.
-const curateAction = "curate"
-
 // sinceForms are the forms a curator's since takes, as flai digest harvest
 // --since reads it: a day in UTC, or an RFC 3339 time.
 var sinceForms = []string{time.DateOnly, time.RFC3339}
@@ -164,7 +160,7 @@ func (l *launcher) curate(ctx context.Context, cfg AgentConfig, agent *manifest.
 	if agent != nil {
 		run.Model = agent.Model
 	}
-	entry := hostapi.Entry{At: run.Started, Action: curateAction, Method: "serve.curate", Project: l.entry.Key, Root: l.entry.Root, By: "flai serve"}
+	entry := hostapi.Entry{At: run.Started, Action: hostapi.ActionCurate, Method: "serve.curate", Project: l.entry.Key, Root: l.entry.Root, By: "flai serve"}
 	fail := func(err error) bool {
 		run.Error, run.Ended, run.Outcome, run.Why = err.Error(), run.Started, OutcomeFailed, "could not be started: "+err.Error()
 		l.told(run)

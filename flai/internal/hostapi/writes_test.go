@@ -90,6 +90,7 @@ var good = map[string]struct {
 	"agent.stop":    {`{"id":"S-0001",` + rid + `}`, "serve agent stop S-0001 --json", ""},
 	"plan.run":      {`{"id":"E-0001",` + rid + `}`, "plan E-0001 --json", ""},
 	"analyze.run":   {`{"focus":"risk",` + rid + `}`, "analyze --focus=risk --json", ""},
+	"curate.run":    {`{"since":"2026-10-01",` + rid + `}`, "curate --since=2026-10-01 --json", ""},
 	// S-0228: the orchestrator held stopped, and started again
 	"orchestrate.stop":  {`{` + rid + `}`, "serve orchestrate stop --json", ""},
 	"orchestrate.start": {`{` + rid + `}`, "serve orchestrate start --json", ""},
@@ -257,6 +258,7 @@ var refused = map[string][]string{
 	"agent.stop":        {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
 	"plan.run":          {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"E-0001 --json",` + rid + `}`, `{"id":"E-0001"}`},
 	"analyze.run":       {`{"focus":"--help",` + rid + `}`, `{"focus":"all",` + rid + `}`, `{"focus":["risk"],` + rid + `}`, `{"focus":"risk"}`},
+	"curate.run":        {`{"since":"--help",` + rid + `}`, `{"since":"2026-10-01 --json",` + rid + `}`, `{"since":"yesterday",` + rid + `}`, `{"since":["2026-10-01"],` + rid + `}`, `{"since":"2026-10-01"}`},
 	"orchestrate.stop":  {`"--force"`, `["--force"]`, `{}`},
 	"orchestrate.start": {`"--force"`, `["--force"]`, `{}`},
 	"settings.action": {`{"action":"settings","on":true,` + rid + `}`, `{"action":"settings","on":false,` + rid + `}`, `{"action":"--all-projects","on":true,` + rid + `}`,
@@ -1807,6 +1809,51 @@ func TestAnalyzeRunNeedsTheAnalyzeAction(t *testing.T) {
 	}
 	if on, ok := enabledActions(Host{}, p.Root)[ActionAnalyze]; !ok || on {
 		t.Errorf("project.info names analyze, off by default: %v %v", on, ok)
+	}
+}
+
+// S-0431: curate.run starts the curator, from a since or from its last run,
+// only while the operator has enabled the curate action for the project,
+// says what enables it when not, refuses a since in neither form before flai
+// runs, and journals the start as what it started.
+func TestCurateRunNeedsTheCurateAction(t *testing.T) {
+	p := withDocs(t)
+	var journal []Entry
+	on := false
+	host := Host{Enabled: func(action, root string) bool { return on && action == ActionCurate && root == p.Root }, Record: func(e Entry) { journal = append(journal, e) }}
+	rec := &recorder{ran: Ran{Stdout: []byte(`{"since":"","agent":"curator","harness":"command","command":"curate-it","pid":42,"log":"/l","session":"s","started":"2026-10-23T10:00:00Z","trigger":"asked"}`)}}
+	m := writeMethods(rec.run, time.Now, host)
+	_, e := m["curate.run"](context.Background(), p, json.RawMessage(`{"request_id":"req-00000001"}`))
+	if e == nil || e.Code != Disabled || !strings.Contains(e.Message, `the host action "curate" is not enabled`) || !strings.Contains(e.Message, "flai serve enable curate") {
+		t.Fatalf("off: %+v", e)
+	}
+	on = true
+	if _, e := m["curate.run"](context.Background(), p, json.RawMessage(`{"since":"last week","request_id":"req-00000002"}`)); e == nil || e.Code != channel.CodeInvalidParams || !strings.Contains(e.Message, `the curator takes a since as a YYYY-MM-DD day in UTC or an RFC 3339 time, such as 2026-10-01 or 2026-10-01T09:00:00Z, and "last week" is neither`) {
+		t.Fatalf("a bad since: %+v", e)
+	}
+	if len(rec.runs) != 0 {
+		t.Fatalf("a refused curation ran %+v", rec.runs)
+	}
+	if _, e := m["curate.run"](context.Background(), p, json.RawMessage(`{"request_id":"req-00000003"}`)); e != nil {
+		t.Fatalf("on: %+v", e)
+	}
+	if _, e := m["curate.run"](context.Background(), p, json.RawMessage(`{"since":"2026-10-01T09:00:00Z","request_id":"req-00000004"}`)); e != nil {
+		t.Fatalf("on, with a since: %+v", e)
+	}
+	if len(rec.runs) != 2 || rec.runs[0].Dir != p.Root || strings.Join(rec.runs[0].Args, " ") != "curate --json" || strings.Join(rec.runs[1].Args, " ") != "curate --since=2026-10-01T09:00:00Z --json" {
+		t.Errorf("runs: %+v", rec.runs)
+	}
+	if len(journal) != 3 || journal[0].Outcome != "disabled" || journal[0].Action != ActionCurate || journal[0].Method != "curate.run" {
+		t.Fatalf("journal: %+v", journal)
+	}
+	if j := journal[1]; j.Outcome != "done" || j.Action != ActionCurate || j.Detail != "started curate-it to curate, everything, its first run, as curator (pid 42)" {
+		t.Errorf("started: %+v", j)
+	}
+	if !DashboardSees(ActionCurate) {
+		t.Error("the dashboard is not told of the curate action, so it cannot offer to curate")
+	}
+	if on, ok := enabledActions(Host{}, p.Root)[ActionCurate]; !ok || on {
+		t.Errorf("project.info names curate, off by default: %v %v", on, ok)
 	}
 }
 

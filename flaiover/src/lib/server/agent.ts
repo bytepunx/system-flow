@@ -203,6 +203,8 @@ export const REQUIRED_METHODS = [
 	'plan.run',
 	// S-0223: the analyzer for the project, with a focus or none, gated by the analyze host action
 	'analyze.run',
+	// S-0431: the curator for the project, with a since or none, gated by the curate host action (ADR-0196)
+	'curate.run',
 	// S-0228: the orchestrator held stopped, and let start again, gated by the orchestrate host action
 	'orchestrate.stop',
 	'orchestrate.start',
