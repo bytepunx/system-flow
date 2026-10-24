@@ -32,7 +32,7 @@ usage:
       output: 111
       cache_read: 973671
       cache_write: 11815
-      cost: 0.3351
+      cost: 0.3353
 ---
 # T-1823 An ADR records the curator: its host action, how it starts and runs, its pack, what the guard lets it do, where it logs, and how its run is settled and charged
 

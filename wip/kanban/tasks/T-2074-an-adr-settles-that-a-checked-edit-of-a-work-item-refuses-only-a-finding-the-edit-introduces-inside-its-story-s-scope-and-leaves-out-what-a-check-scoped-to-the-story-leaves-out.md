@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 13
-      output: 4025
-      cache_read: 727306
-      cache_write: 25495
-      cost: 0.3856
+      output: 3711
+      cache_read: 728133
+      cache_write: 23341
+      cost: 0.3674
 ---
 # T-2074 An ADR settles that a checked edit of a work item refuses only a finding the edit introduces inside its story's scope, and leaves out what a check scoped to the story leaves out
 

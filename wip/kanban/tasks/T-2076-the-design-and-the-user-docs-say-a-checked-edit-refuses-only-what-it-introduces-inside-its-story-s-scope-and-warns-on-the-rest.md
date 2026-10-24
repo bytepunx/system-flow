@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 50
-      output: 15253
-      cache_read: 2756387
-      cache_write: 96623
-      cost: 1.4615
+      input: 48
+      output: 14064
+      cache_read: 2759521
+      cache_write: 88458
+      cost: 1.3923
 ---
 # T-2076 The design and the user docs say a checked edit refuses only what it introduces inside its story's scope, and warns on the rest
 

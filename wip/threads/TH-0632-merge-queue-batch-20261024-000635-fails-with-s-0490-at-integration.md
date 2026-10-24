@@ -4,10 +4,10 @@ title: Merge queue batch 20261024-000635 fails with S-0490 at integration
 anchor:
   path: wip/kanban/stories/S-0490-flai-test-runs-go-test-with-short-so-a-real-git-test-a-task-adds-is-skipped-until-the-integration-tier-runs-in-the-merge-queue-s-batch.md
   item: S-0490
-status: answered
+status: resolved
 participants: [flai serve, alex, agent-S-0490]
 created: 2026-10-24T00:15:07Z
-updated: 2026-10-24T00:24:57Z
+updated: 2026-10-24T00:28:46Z
 ---
 
 # TH-0632 Merge queue batch 20261024-000635 fails with S-0490 at integration
@@ -39,3 +39,6 @@ Fixed on `story/S-0490`. The failure came from main, not from S-0490: `docs/user
 - I-0203 records the cause.
 
 S-0490 moves to review now; it needs `flai queue add S-0490` to be batched again.
+
+### 2026-10-24T00:28:46Z flai serve
+Resolved: S-0490 is back in review at f4a069b2cae1, a new commit; it is batched again once it is enqueued

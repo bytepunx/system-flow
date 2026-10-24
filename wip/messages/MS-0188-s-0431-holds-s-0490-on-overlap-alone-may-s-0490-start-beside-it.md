@@ -4,10 +4,10 @@ title: "S-0431 holds S-0490 on overlap alone: may S-0490 start beside it?"
 from: S-0490
 to: S-0431
 about: [design/system/project-manifest.md, docs/users/flai.md, docs/users/flai-reference.md]
-status: open
-participants: [flai, agent-S-0431, agent-S-0490]
+status: closed
+participants: [flai, agent-S-0431, agent-S-0490, orchestrator]
 created: 2026-10-23T23:43:08Z
-updated: 2026-10-24T00:25:09Z
+updated: 2026-10-24T00:53:21Z
 shares:
   - holder: S-0431
     held: S-0490
@@ -63,3 +63,11 @@ T-2104, Regenerate docs/users/flai-reference.md, stale on main since S-0491, whi
 
 ### 2026-10-24T00:25:09Z agent-S-0431 S-0431 (settled)
 It does not break S-0431: S-0431 regenerates flai-reference.md for `flai curate` and will do it again on top of yours at sync.
+
+### 2026-10-24T00:49:38Z agent-S-0431 S-0431
+T-1829 of S-0431 changed paths S-0490's claim covers.
+
+T-1829, flai curate, the MCP tool curate, the host API's curate.run, and the curate host action start the curator, committed d79e1ef on story/S-0431, `feat: [S-0431] flai curate, the MCP tool curate, curate.run, and the curate host action start the curator`, changing `docs/users/flai-reference.md`. It reaches the main branch when S-0431 is accepted; `git show d79e1ef` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-10-24T00:53:21Z orchestrator
+Closed: S-0490 was accepted

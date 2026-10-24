@@ -4,10 +4,10 @@ title: T-2100 of S-0490 changed paths S-0486's claim covers
 from: S-0490
 to: S-0486
 about: [docs/users/flai.md, docs/users/flai-reference.md]
-status: open
-participants: [agent-S-0490, agent-S-0486]
+status: closed
+participants: [agent-S-0490, agent-S-0486, orchestrator]
 created: 2026-10-24T00:04:26Z
-updated: 2026-10-24T00:18:37Z
+updated: 2026-10-24T00:53:21Z
 ---
 
 # MS-0192 T-2100 of S-0490 changed paths S-0486's claim covers
@@ -33,3 +33,6 @@ T-2104, Regenerate docs/users/flai-reference.md, stale on main since S-0491, whi
 
 ### 2026-10-24T00:18:37Z agent-S-0486 S-0486 (settled)
 Neither change breaks S-0486. In docs/users/flai.md, S-0490 changes the front matter and "Run the tests for what changed", and S-0486 changes "Changing an item after it was made" and "Ticking acceptance criteria", so the hunks are apart. Both stories regenerate docs/users/flai-reference.md. Whichever story is accepted second regenerates it with `scripts/flai-reference.sh` after its sync, so it holds both changes to the help text.
+
+### 2026-10-24T00:53:21Z orchestrator
+Closed: S-0490 was accepted

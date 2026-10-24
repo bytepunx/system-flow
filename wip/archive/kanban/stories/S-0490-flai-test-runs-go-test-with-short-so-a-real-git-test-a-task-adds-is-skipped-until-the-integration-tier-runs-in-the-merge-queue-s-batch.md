@@ -3,10 +3,10 @@ id: S-0490
 type: story
 nature: remediation
 title: flai test runs go test with -short, so a real-git test a task adds is skipped until the integration tier runs in the merge queue's batch
-status: review
+status: done
 owner: alex
 created: 2026-10-23T20:20:26Z
-updated: 2026-10-24T00:25:07Z
+updated: 2026-10-24T00:53:21Z
 transitions:
   - to: ready
     at: 2026-10-23T23:40:02Z
@@ -23,6 +23,9 @@ transitions:
   - to: review
     at: 2026-10-24T00:25:07Z
     by: agent-S-0490
+  - to: done
+    at: 2026-10-24T00:53:21Z
+    by: orchestrator
 tags: [flai, tests, manifest]
 topics: [testing, flai, cli]
 touches: [system-flow.yaml, flai/internal/verify/select_test.go, design/conventions/tooling.md, design/conventions/code-quality.md, design/system/project-manifest.md, docs/users/flai.md, scripts/README.md, scripts/flai-test.sh, design/issues/I-0201-flai-test-runs-go-test-with-short-so-a-real-git-test-a-task-adds-is-skipped-until-the-integration-tier-runs-in-the-merge-queue-s-batch.md, design/issues/summary.md, design/issues/I-0202-task-done-s-answer-carries-every-check-note-outside-the-story-so-it-exceeds-the-40-000-bytes-it-promises-and-overflows-the-tool-result.md, design/issues/I-0203-a-story-the-operator-accepts-outside-the-merge-queue-lands-without-the-queue-tiers-so-a-stale-generated-file-on-main-fails-every-later-batch-at-integration.md, docs/users/flai-reference.md]
@@ -50,21 +53,21 @@ usage:
       cost: 3.6797
   strategic:
     - kind: orchestrator
-      seconds: 3903
+      seconds: 4238
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 340
-          output: 5942
-          cache_read: 126201914
-          cache_write: 76552
-          cost: 27.7736
+          input: 391
+          output: 6947
+          cache_read: 147452751
+          cache_write: 88565
+          cost: 32.4502
         - model: claude-sonnet-5-5
-          input: 19
-          output: 136
-          cache_read: 173925
-          cache_write: 75098
-          cost: 0.1717
+          input: 28
+          output: 208
+          cache_read: 311559
+          cache_write: 99879
+          cost: 0.2836
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 40m
@@ -123,3 +126,14 @@ Left out of the co-change list: `template/CHANGELOG.md`, `template/root/**`, and
 
 Figures: cost of delay 100 USD a week, `flai cod`'s figure from the operator's input (40m lost per 168h cycle at 150 USD an hour), unchanged. Forecast: `flai forecast` gave 24m and delivery 2026-10-24T14:48:00Z (size 12, 27th in the pull order); raised to 1h and 2026-10-24T15:30:00Z, since the three tasks span ten files in six documents whose wording is read before it is changed, and the close-out's `go-test` on `verify` now runs its real-git tests.
 - 2026-10-24T00:15:07Z: moved to in-progress: merge queue batch 20261024-000635 fails with S-0490 at c3e46ddc8bef: integration failed: flai/cmd/reference_test.go:127 TestReferenceIsCurrent: docs/users/flai-reference.md is stale: run make flai-reference
+
+### Accepted by the orchestrator
+
+- Verified: 7d94ba365983903070de6f3ef3aa582dd649166e
+- Batch: 20261024-004046
+- Enqueued verified: f4a069b2cae1e551fa46a74f92adc512f4d6b8ab
+- At: 2026-10-24T00:53:21Z
+
+Verdict: pass. The two new commits (I-0203 recorded and the flai reference regenerated with the edit_subprojects row main lacks) stay inside the story's touches, and both criteria still hold.
+- 1: system-flow.yaml, flai/internal/verify/select_test.go, design/conventions/tooling.md, design/conventions/code-quality.md, design/system/project-manifest.md, docs/users/flai.md, scripts/README.md, scripts/flai-test.sh
+- 2: design/issues/I-0201-flai-test-runs-go-test-with-short-so-a-real-git-test-a-task-adds-is-skipped-until-the-integration-tier-runs-in-the-merge-queue-s-batch.md, design/issues/summary.md

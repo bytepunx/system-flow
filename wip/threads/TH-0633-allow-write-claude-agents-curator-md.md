@@ -4,10 +4,10 @@ title: Allow Write .claude/agents/curator.md?
 anchor:
   path: wip/kanban/stories/S-0431-the-curator-a-strategic-agent-behind-the-curate-host-action-takes-in-what-the-archive-and-the-threads-gained-since-its-last-run-as-digest-entries-written-through-flai-alone.md
   item: S-0431
-status: open
-participants: [agent-S-0431]
+status: resolved
+participants: [agent-S-0431, alex]
 created: 2026-10-24T00:25:31Z
-updated: 2026-10-24T00:25:31Z
+updated: 2026-10-24T00:49:57Z
 ---
 
 # TH-0633 Allow Write .claude/agents/curator.md?
@@ -46,3 +46,9 @@ You are the curator: the agent flai serve starts to keep this system-flow projec
 8. When an entry would need the operator's judgement, such as two sources that disagree, ask with `thread_open` on the entry or its source, your recommended answer first, and hold `wait_for_events` until it is answered, curating what needs no answer meanwhile. Never guess past it.
 9. Your final message is the summary flai serve logs for your run, with its cost, in `wip/agents/curator.md`. Make it one line that names the entries you wrote and those you merged, or says that you found nothing to take in.
 ```
+
+### 2026-10-24T00:32:25Z alex
+allow
+
+### 2026-10-24T00:49:57Z agent-S-0431
+Resolved: allowed by alex: agent-S-0431 may Write .claude/agents/curator.md

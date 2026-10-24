@@ -24,7 +24,7 @@ touches: [flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, fla
 after: [T-1825]
 usage:
   source: log
-  seconds: 645
+  seconds: 647
   estimated: true
   priced_by: estimate
   models:
@@ -33,7 +33,7 @@ usage:
       output: 434
       cache_read: 4843722
       cache_write: 149905
-      cost: 1.6978
+      cost: 1.6988
 ---
 # T-1827 flai serve starts, records, and settles the curator's run, one per project, and logs its activity in wip/agents/curator.md
 

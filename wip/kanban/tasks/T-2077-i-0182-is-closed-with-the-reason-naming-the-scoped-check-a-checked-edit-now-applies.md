@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 6
-      output: 1967
-      cache_read: 355370
-      cache_write: 12457
-      cost: 0.1884
+      output: 1813
+      cache_read: 355774
+      cache_write: 11405
+      cost: 0.1795
 ---
 # T-2077 I-0182 is closed with the reason naming the scoped check a checked edit now applies
 

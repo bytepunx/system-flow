@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 67
-      output: 20461
-      cache_read: 3697441
-      cache_write: 129611
-      cost: 1.9605
+      input: 64
+      output: 18866
+      cache_read: 3701645
+      cache_write: 118658
+      cost: 1.8677
 ---
 # T-2075 itemedit.Apply refuses a new finding only inside the edited item's story's scope, so criteria_tick is no longer refused on another story's narrative.state or an untracked task file, with tests that reproduce I-0182's two instances
 

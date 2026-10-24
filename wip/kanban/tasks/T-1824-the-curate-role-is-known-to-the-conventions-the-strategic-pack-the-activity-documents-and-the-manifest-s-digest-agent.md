@@ -33,7 +33,7 @@ usage:
       output: 518
       cache_read: 4083152
       cache_write: 124634
-      cost: 1.4307
+      cost: 1.4316
 ---
 # T-1824 The curate role is known to the conventions, the strategic pack, the activity documents, and the manifest's digest.agent
 

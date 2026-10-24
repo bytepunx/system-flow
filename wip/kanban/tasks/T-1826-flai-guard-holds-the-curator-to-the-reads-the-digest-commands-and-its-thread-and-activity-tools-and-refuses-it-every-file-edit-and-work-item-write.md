@@ -33,7 +33,7 @@ usage:
       output: 273
       cache_read: 2669235
       cache_write: 236139
-      cost: 0.9878
+      cost: 0.9884
 ---
 # T-1826 flai guard holds the curator to the reads, the digest commands, and its thread and activity tools, and refuses it every file edit and work item write
 

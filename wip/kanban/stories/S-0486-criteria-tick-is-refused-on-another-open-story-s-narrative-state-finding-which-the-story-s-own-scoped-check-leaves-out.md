@@ -3,16 +3,19 @@ id: S-0486
 type: story
 nature: remediation
 title: criteria_tick is refused on another open story's narrative.state finding, which the story's own scoped check leaves out
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-23T17:43:07Z
-updated: 2026-10-24T00:18:52Z
+updated: 2026-10-24T00:36:55Z
 transitions:
   - to: ready
     at: 2026-10-23T23:39:57Z
     by: orchestrator
   - to: in-progress
     at: 2026-10-23T23:43:15Z
+    by: agent-S-0486
+  - to: review
+    at: 2026-10-24T00:36:55Z
     by: agent-S-0486
 tags: [flai]
 topics: [cli]
@@ -24,7 +27,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2633
+  seconds: 3124
   priced_by: harness
   turns:
     - day: 2026-10-23
@@ -32,27 +35,33 @@ usage:
       hand_edits: 2
       work: 22
     - day: 2026-10-24
-      ceremony: 1
+      ceremony: 3
       hand_edits: 1
-      work: 23
+      work: 28
   models:
     - model: claude-opus-5-5
-      input: 216
-      output: 65868
-      cache_read: 11902721
-      cache_write: 417241
-      cost: 6.3111
+      input: 232
+      output: 68622
+      cache_read: 13464287
+      cache_write: 431604
+      cost: 6.7935
   strategic:
     - kind: orchestrator
-      seconds: 673
+      seconds: 1007
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 275
-          output: 4798
-          cache_read: 53173589
-          cache_write: 56015
-          cost: 11.7077
+          input: 326
+          output: 5804
+          cache_read: 74424426
+          cache_write: 68027
+          cost: 16.3843
+        - model: claude-sonnet-5-5
+          input: 9
+          output: 73
+          cache_read: 137635
+          cache_write: 24782
+          cost: 0.112
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 4m

@@ -33,7 +33,7 @@ usage:
       output: 130
       cache_read: 1549458
       cache_write: 107145
-      cost: 0.5632
+      cost: 0.5636
 ---
 # T-1825 harness.Prompt gives the curator its prompt and the claude-code adapter starts it as the project's curator definition with FLAI_ROLE=curate
 
