@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:41:28Z
-updated: 2026-10-24T00:28:42Z
+updated: 2026-10-24T00:53:21Z
 transitions: []
 tags: [cli, dashboard]
 topics: [cli, dashboard, planning, orchestration, template]
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-10-23T15:35:46Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-24T19:18:00Z
-  basis: "Its own forecast of 1h30m; 20th in the pull order with an in-progress limit of 5, behind S-0431, S-0486, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423 and S-0424."
+  delivery: 2026-10-24T19:43:00Z
+  basis: "Its own forecast of 1h30m; 20th in the pull order with an in-progress limit of 5, behind S-0431, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423 and S-0424."
   by: flai
-  at: 2026-10-24T00:28:42Z
+  at: 2026-10-24T00:53:21Z
 ---
 # S-0425 metrics.md generalizes strategic usage per kind to usage per role by an ADR, so a project's own role is charged on its items, reported by flai stats, and charted as the built-in roles are
 
