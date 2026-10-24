@@ -419,7 +419,11 @@ export function normalise(r: Report): Report {
 		digest: r.digest && {
 			...r.digest,
 			weeks: r.digest.weeks ?? [],
-			entries: { active: 0, compacted: 0, absorbed: 0, ...r.digest.entries }
+			entries: {
+				active: r.digest.entries?.active ?? 0,
+				compacted: r.digest.entries?.compacted ?? 0,
+				absorbed: r.digest.entries?.absorbed ?? 0
+			}
 		}
 	};
 }
