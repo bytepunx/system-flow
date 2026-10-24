@@ -596,7 +596,7 @@ func TestStatsReportsPlanningWaitingAndClaims(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &rep); err != nil {
 		t.Fatal(err)
 	}
-	for _, key := range []string{"forecasts", "cost_of_delay", "waiting", "claims", "strategic_days", "turns", "coordination"} {
+	for _, key := range []string{"forecasts", "cost_of_delay", "waiting", "claims", "strategic_days", "turns", "coordination", "digest"} {
 		if len(rep[key]) == 0 || string(rep[key]) == "null" {
 			t.Errorf("--json lacks %s", key)
 		}
@@ -840,7 +840,8 @@ func TestStatsReportsCoordination(t *testing.T) {
 	}
 
 	out, _, code = runInAt(t, root, at, "stats")
-	// the coordination section comes last, after the claims
+	// the coordination section comes after the claims, and before the
+	// digest, which comes last (S-0434)
 	wantText := "\ncoordination:\n" +
 		"  conflicts      found 1 (2 paths) · met at sync 1 (1 path) · met at accept 1 (1 path)\n" +
 		"  conversations  opened 1 · agreed 1 · escalated 1 · closed with story 1\n" +
@@ -848,8 +849,9 @@ func TestStatsReportsCoordination(t *testing.T) {
 		"  by week:\n" +
 		"    2026-W40 (2026-09-28)  conflicts found 1 (2 paths) · met at sync 1 (1 path) · met at accept 1 (1 path); " +
 		"conversations opened 1 · agreed 1 · escalated 1 · closed with story 1; shares started 1 · hold saved 20h\n"
-	if claims := strings.Index(out, "\nclaims:\n"); code != 0 || claims < 0 || !strings.HasSuffix(out[claims:], wantText) {
-		t.Errorf("text: %d, want it to end with %q, got %q", code, wantText, out[max(0, len(out)-len(wantText)-200):])
+	claims, digest := strings.Index(out, "\nclaims:\n"), strings.Index(out, "\ndigest:\n")
+	if code != 0 || claims < 0 || digest < claims || !strings.HasSuffix(out[claims:digest], wantText) {
+		t.Errorf("text: %d, want it to end with %q before the digest, got %q", code, wantText, out[max(0, len(out)-len(wantText)-800):])
 	}
 	// the dashboard's read answers the same
 	if _, rerr := sameAnswer(t, root, hostapi.Host{}, "stats.get", `{}`, "stats"); rerr != nil {

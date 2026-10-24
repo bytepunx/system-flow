@@ -43,11 +43,15 @@ and coordination (by the week, the conversations between stories opened,
 agreed, escalated, and closed with a story; the conflicts a trial merge found
 against those a rebase met at sync or at acceptance, from
 .flai-cache/conflicts.jsonl; and the stories started on a share with the hold
-each saved, ADR-0138), and queue (by the week, the stories the merge queue
+each saved, ADR-0138), queue (by the week, the stories the merge queue
 landed and sent back with their mean and longest queue wait, the batches it
 built with their mean and largest size, and its bisections, from
 .flai-cache/merge-queue/events.jsonl, with each item's queue_wait_seconds,
-ADR-0177; absent without that log).
+ADR-0177; absent without that log), and digest (by the week, the threads
+opened to the operator against the stories completed, per story, and those
+of them that asked what a digest entry already answered, with the digest's
+entries by status, ADR-0200; with no digest folder, no repeats and no
+entries).
 What strategic agents spent on items is reported apart from what agents did,
 under usage.strategic and each item's usage.strategic, beside the project's
 usage.cost_per_agent_hour and each item's expected_cost (ADR-0083). Each
@@ -62,7 +66,8 @@ measures from its agents' logs (S-0293).
 Touches drift and the exact touches need git; without it flai stats warns and
 leaves them out. A conflict log it cannot read is warned of too, and
 coordination.logged is false and its weeks carry no conflicts; so is a merge
-queue event log it cannot read, and queue is absent.`,
+queue event log it cannot read, and queue is absent; and so is a digest it
+cannot read, and digest is absent.`,
 		Example: `  flai stats
   flai stats --since 90d --by nature
   flai stats --type task --json
@@ -139,6 +144,29 @@ func printSummary(a *app, rep *metrics.Report, pullRequest bool) {
 	printTurns(a, rep.Turns)
 	printClaims(a, rep)
 	printCoordination(a, rep.Coordination)
+	printDigest(a, rep.Digest)
+}
+
+// printDigest prints, for each week of the window, the threads opened to
+// the operator, the stories completed, the threads per story, and the
+// repeats, then the digest's entries by status (S-0434, ADR-0200). A week
+// with no completed story has no rate, printed as an en dash. It prints
+// nothing when the digest cannot be read.
+func printDigest(a *app, d *metrics.Digest) {
+	if d == nil {
+		return
+	}
+	fmt.Fprintln(a.out, "\ndigest:")
+	for _, w := range d.Weeks {
+		rate := "–"
+		if w.PerStory != nil {
+			rate = fmt.Sprintf("%.2f", *w.PerStory)
+		}
+		fmt.Fprintf(a.out, "  %s  %s  threads %d · stories %d · %s per story · asked again %d\n",
+			w.Week, w.Start, w.ThreadsToOperator, w.StoriesCompleted, rate, w.AskedAgain)
+	}
+	e := d.Entries
+	fmt.Fprintf(a.out, "  entries  active %d · compacted %d · absorbed %d\n", e.Active, e.Compacted, e.Absorbed)
 }
 
 // printQueueStats prints, over the window, the stories the merge queue
