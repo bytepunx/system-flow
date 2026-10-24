@@ -3,11 +3,11 @@ id: I-0194
 title: The MCP task_done checks a story with the installed flai, so a story that widens a check's format fails its own task close
 class: efficiency
 status: open
-count: 4
+count: 5
 cost: 4m
 first_reported: 2026-10-22T22:06:51Z
-last_reported: 2026-10-23T18:42:07Z
-updated: 2026-10-23T18:42:07Z
+last_reported: 2026-10-24T14:47:11Z
+updated: 2026-10-24T14:47:11Z
 ---
 
 # I-0194 The MCP task_done checks a story with the installed flai, so a story that widens a check's format fails its own task close
@@ -32,5 +32,9 @@ T-1817's task_done ran flai check --strict with the installed flai 1.67.13, whic
 ### 2026-10-23T18:42:07Z
 Story: S-0429.
 T-2089's task_done stopped again at the installed flai 1.67.13's check on the 382 digest entries (doc.updated), after its commit, sync, and move had gone through.
+
+### 2026-10-24T14:47:11Z
+Story: S-0432.
+S-0432: the MCP task_done for T-1834 ran flai check --strict with the installed flai 1.68.1. That flai does not know the `curate` role S-0431 added, which is accepted but not yet published, so once the story touched design/conventions/strategic-agents.md it reported `conventions.roles` as a finding in the story. The tree's flai passed. T-1835 and T-1836 were closed with scripts/flai.sh task done instead.
 
 ## Remediation
