@@ -1,14 +1,13 @@
 ---
 title: Active streams
-updated: 2026-10-24T13:32:37Z
+updated: 2026-10-24T13:41:31Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0432](S-0432.md) | The curator runs after each acceptance and on a schedule, marks an entry the design now records absorbed, and compacts an entry no one has cited within the window | in-progress | agent-S-0432 | 2026-10-24T13:32:56Z |
-| [S-0493](S-0493.md) | flai accept fails at git branch -d when the story branch tracks a pushed upstream the acceptance rebase left behind, after the merge into main is done | in-progress | agent-S-0493 | 2026-10-24T13:27:23Z |
+| [S-0432](S-0432.md) | The curator runs after each acceptance and on a schedule, marks an entry the design now records absorbed, and compacts an entry no one has cited within the window | in-progress | agent-S-0432 | 2026-10-24T13:41:26Z |
 
 ## Strategic agents
 

@@ -7,11 +7,11 @@ status: backlog
 parent: S-0432
 owner: alex
 created: 2026-10-16T06:07:08Z
-updated: 2026-10-16T06:07:08Z
+updated: 2026-10-24T13:35:15Z
 transitions: []
 stream: S-0432
 tags: [cli, template]
-touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/guard/guard.go, flai/internal/guard/curate_test.go, ".claude/agents/curator.md", template/root/.claude/agents/curator.md]
+touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/guard/guard.go, flai/internal/guard/curate_test.go, ".claude/agents/curator.md", template/root/.claude/agents/curator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md]
 after: [T-1833]
 ---
 # T-1835 The curator's prompt, definition, and guard take in absorption and compaction

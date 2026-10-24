@@ -3,15 +3,36 @@ id: T-1831
 type: task
 nature: feature
 title: An ADR records when the curator runs on its own, how a citation is found, and how absorption and compaction change an entry without deleting it
-status: backlog
+status: done
 parent: S-0432
 owner: alex
 created: 2026-10-16T06:06:38Z
-updated: 2026-10-16T06:06:38Z
-transitions: []
+updated: 2026-10-24T13:36:19Z
+transitions:
+  - to: ready
+    at: 2026-10-24T13:35:18Z
+    by: agent-S-0432
+  - to: in-progress
+    at: 2026-10-24T13:35:19Z
+    by: agent-S-0432
+  - to: done
+    at: 2026-10-24T13:36:19Z
+    by: agent-S-0432
 stream: S-0432
 tags: [cli]
 touches: [design/adrs, design/adrs/README.md]
+usage:
+  source: log
+  seconds: 60
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 10
+      output: 56
+      cache_read: 885155
+      cache_write: 7228
+      cost: 0.3002
 ---
 # T-1831 An ADR records when the curator runs on its own, how a citation is found, and how absorption and compaction change an entry without deleting it
 

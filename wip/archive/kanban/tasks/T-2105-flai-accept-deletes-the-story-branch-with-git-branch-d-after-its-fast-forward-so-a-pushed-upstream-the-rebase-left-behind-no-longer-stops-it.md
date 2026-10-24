@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 522
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 18
-      output: 191
-      cache_read: 1350216
-      cache_write: 10819
-      cost: 0.4575
+      input: 19
+      output: 4004
+      cache_read: 1317959
+      cache_write: 43075
+      cost: 0.6883
 ---
 # T-2105 flai accept deletes the story branch with git branch -D after its fast-forward, so a pushed upstream the rebase left behind no longer stops it
 

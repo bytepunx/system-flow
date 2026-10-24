@@ -8,7 +8,6 @@ wip_limits:
   review: 5
 order:
   - S-0433
-  - S-0432
   - S-0434
 ---
 

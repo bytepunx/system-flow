@@ -24,16 +24,16 @@ touches: [design/issues/I-0204-flai-accept-fails-at-git-branch-d-when-the-story-
 after: [T-2105]
 usage:
   source: log
-  seconds: 8
+  seconds: 11
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 2
-      output: 24
-      cache_read: 163794
-      cache_write: 352
-      cost: 0.0552
+      output: 483
+      cache_read: 158951
+      cache_write: 5195
+      cost: 0.083
 ---
 # T-2106 I-0204 is closed with flai issue close naming the fix, and the story's criteria are ticked
 

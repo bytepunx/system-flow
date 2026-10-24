@@ -7,12 +7,12 @@ status: backlog
 parent: S-0432
 owner: alex
 created: 2026-10-16T06:06:53Z
-updated: 2026-10-16T06:06:53Z
+updated: 2026-10-24T13:41:13Z
 transitions: []
 stream: S-0432
 tags: [cli]
-touches: [flai/internal/digest/decay.go, flai/internal/digest/decay_test.go, flai/cmd/digest.go, flai/cmd/digest_test.go, docs/users/flai-reference.md]
-after: [T-1831]
+touches: [flai/internal/digest/decay.go, flai/internal/digest/decay_test.go, flai/internal/digest/digest.go, flai/internal/digest/digest_test.go, flai/cmd/digest.go, flai/cmd/digest_test.go, docs/users/flai-reference.md, docs/operators/settings.md]
+after: [T-1832]
 ---
 # T-1833 flai digest absorb, cited, and compact mark an entry absorbed, find each entry's latest citation, and compact the entries uncited within the window
 

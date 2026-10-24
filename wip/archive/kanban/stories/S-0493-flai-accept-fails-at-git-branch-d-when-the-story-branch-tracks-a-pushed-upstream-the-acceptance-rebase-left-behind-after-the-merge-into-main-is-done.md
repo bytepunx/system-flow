@@ -3,10 +3,10 @@ id: S-0493
 type: story
 nature: remediation
 title: flai accept fails at git branch -d when the story branch tracks a pushed upstream the acceptance rebase left behind, after the merge into main is done
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-24T13:15:31Z
-updated: 2026-10-24T13:26:57Z
+updated: 2026-10-24T13:41:30Z
 transitions:
   - to: ready
     at: 2026-10-24T13:15:54Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-24T13:16:08Z
     by: agent-S-0493
+  - to: review
+    at: 2026-10-24T13:41:10Z
+    by: agent-S-0493
+  - to: done
+    at: 2026-10-24T13:41:30Z
+    by: alex
 tags: [flai]
 topics: [cli, git]
 touches: [flai/cmd/branch.go, flai/cmd/accept.go, flai/cmd/accept_test.go, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0204-flai-accept-fails-at-git-branch-d-when-the-story-branch-tracks-a-pushed-upstream-the-acceptance-rebase-left-behind-after-the-merge-into-main-is-done.md, design/issues/summary.md]
@@ -24,32 +30,38 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 659
-  estimated: true
-  priced_by: estimate
+  seconds: 1515
+  priced_by: harness
   turns:
     - day: 2026-10-24
+      ceremony: 1
       test_runs: 1
-      hand_edits: 1
-      work: 26
+      hand_edits: 2
+      work: 33
   models:
     - model: claude-opus-5-5
-      input: 56
-      output: 515
-      cache_read: 3560699
-      cache_write: 149557
-      cost: 1.2471
+      input: 76
+      output: 16075
+      cache_read: 5291716
+      cache_write: 172951
+      cost: 2.7638
   strategic:
     - kind: orchestrator
-      seconds: 2311
+      seconds: 2470
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 94
-          output: 1518
-          cache_read: 10153951
-          cache_write: 24786
-          cost: 2.2318
+          input: 104
+          output: 1666
+          cache_read: 11343633
+          cache_write: 28139
+          cost: 2.4934
+        - model: claude-sonnet-5-5
+          input: 3
+          output: 10
+          cache_read: 68727
+          cache_write: 13659
+          cost: 0.0563
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
