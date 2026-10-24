@@ -2,12 +2,12 @@
 id: I-0205
 title: flaiover's events socket removes its Repo listeners only when the close handshake completes, so the server-stop test races and fails in CI
 class: defect
-status: open
+status: closed
 count: 1
 cost: 15m
 first_reported: 2026-10-24T13:51:23Z
 last_reported: 2026-10-24T13:51:23Z
-updated: 2026-10-24T13:51:34Z
+updated: 2026-10-24T13:54:15Z
 ---
 
 # I-0205 flaiover's events socket removes its Repo listeners only when the close handshake completes, so the server-stop test races and fails in CI
@@ -28,3 +28,4 @@ One CI failure on 2026-10-24 on a main push; each costs a re-run or a bisect of 
 ## Remediation
 
 Story S-0494 remediates this issue, created from it at 2026-10-24T13:51:34Z.
+Closed 2026-10-24T13:54:15Z: Fixed by S-0494: EventsSocket.close() runs each open socket's teardown (ping cleared, Repo listeners off, socket forgotten) before it sends 1001, instead of leaving it to the socket's close event after the handshake, so stopping leaves no listener whatever the handshake does. The server-stop test in flaiover/src/lib/server/events-socket.test.ts asserts no listener right after close(), before the client sees 1001; it fails against main's events-socket.ts.
