@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1493.3875
-accrued_seconds: 1250207
-tasks_completed: 1009
-last_run: 2026-10-24T00:38:19Z
+accrued_cost: 1495.2472
+accrued_seconds: 1251122
+tasks_completed: 1010
+last_run: 2026-10-24T00:53:38Z
 ---
 
 # Orchestrator activity
@@ -7074,6 +7074,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0486, S-0490
 - Seconds: 550
 - Cost: 8.9788 USD, estimated
+
+### 2026-10-24T00:53:38Z
+
+- Summary: S-0490 landed through the merge queue (enqueued by me). Under publish, judgement: not published yet; pending S-0490 and S-0492 (100 USD/week, one unvalued), and S-0486, enqueued and next to land, completes the batch of three close-out and task_done fixes; I release after it lands.
+- Items: S-0490, S-0492, S-0486
+- Seconds: 915
+- Cost: 1.8597 USD, estimated
 
 ## Refusals
 
