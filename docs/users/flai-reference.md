@@ -4780,6 +4780,8 @@ Makes the thread's pending recommendation the answer (ADR-0090). It adds an entr
 
 A recommendation is pending while the thread is not resolved and it is the newest entry by someone other than the opener. Confirm is refused when none is pending, and to the recommendation's own author.
 
+A confirmation by the operator (the manifest's owner) on a thread someone else opened becomes a digest entry at once, holding the recommendation's text, and the output names it under digest (S-0433).
+
 Flags:
 
 | Flag | Meaning |
@@ -4837,6 +4839,8 @@ Adds an entry to a thread. A reply from anyone but the opener marks the thread a
 With --recommend the entry is a recommendation (ADR-0090): its heading says (recommendation), the status stays as it was, and the thread awaits the operator, who makes it the answer with flai thread confirm or answers otherwise. A recommendation is refused on a resolved thread and from the thread's opener.
 
 --source cites what the reply rests on: a file in the repository, or an item ID, and after # a heading in it. Both must exist. It is written as the entry's last line, Source: &lt;path&gt; § &lt;heading&gt;.
+
+An answer by the operator (the manifest's owner) on a thread someone else opened becomes a digest entry at once, or is added to the entry citing the thread, and the output names it under digest (S-0433).
 
 Examples:
 

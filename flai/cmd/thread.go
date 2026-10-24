@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/bytepunx/system-flow/flai/internal/digest"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -39,6 +40,42 @@ func (a *app) afterThread(repo *workitem.Repo, th *threads.Thread) error {
 	if story := threads.StoryOf(repo, th); story != "" {
 		return threads.MirrorNarrative(repo, story)
 	}
+	return nil
+}
+
+// digestAnswer writes the digest entry for the operator's answer the thread
+// was just saved with, or adds it to the entry citing the thread (S-0433),
+// and logs at warn why it wrote none when it could not: the answer is saved
+// either way, and the next flai digest seed or curator run takes it in. It is
+// nil when the thread's newest entry is no answer of the operator's.
+func (a *app) digestAnswer(repo *workitem.Repo, th *threads.Thread) *digest.AnswerEntry {
+	e := digest.OnAnswer(repo, a.runner, th)
+	if e != nil && e.Warning != "" {
+		a.logger().Warn("operator's answer not written to the digest", "component", "digest", "thread", th.ID, "err", e.Warning)
+	}
+	return e
+}
+
+// printAnswered prints a thread reply or confirm saved: the thread, with
+// --json its view and under digest the entry its answer became, and the
+// entry written or updated as a line of its own otherwise.
+func (a *app) printAnswered(repo *workitem.Repo, th *threads.Thread, e *digest.AnswerEntry) error {
+	if a.jsonOut {
+		view := threadJSON(repo, th)
+		if e != nil {
+			view["digest"] = e
+		}
+		return a.printJSON(view)
+	}
+	fmt.Fprintf(a.out, "%s is %s (%d entries)\n", th.ID, th.Status, len(th.Entries()))
+	if e == nil || e.Warning != "" {
+		return nil
+	}
+	verb := "wrote"
+	if e.Action == digest.ActionUpdated {
+		verb = "updated"
+	}
+	fmt.Fprintf(a.out, "  digest: %s %s (%s)\n", verb, e.ID, e.Path)
 	return nil
 }
 
@@ -86,7 +123,9 @@ func newThreadReplyCmd(a *app) *cobra.Command {
 
 With --recommend the entry is a recommendation (ADR-0090): its heading says (recommendation), the status stays as it was, and the thread awaits the operator, who makes it the answer with flai thread confirm or answers otherwise. A recommendation is refused on a resolved thread and from the thread's opener.
 
---source cites what the reply rests on: a file in the repository, or an item ID, and after # a heading in it. Both must exist. It is written as the entry's last line, Source: <path> § <heading>.`,
+--source cites what the reply rests on: a file in the repository, or an item ID, and after # a heading in it. Both must exist. It is written as the entry's last line, Source: <path> § <heading>.
+
+An answer by the operator (the manifest's owner) on a thread someone else opened becomes a digest entry at once, or is added to the entry citing the thread, and the output names it under digest (S-0433).`,
 		Example: `  flai thread reply TH-0012 "Nine metres."
   flai thread reply TH-0012 --recommend --source "design/system/overview.md#Delivery sequence" "Build the CLI first, as the delivery sequence says."`,
 		Args: cobra.ExactArgs(2),
@@ -103,14 +142,14 @@ With --recommend the entry is a recommendation (ADR-0090): its heading says (rec
 			if err != nil {
 				return err
 			}
+			entry := a.digestAnswer(repo, th)
 			if err := a.afterThread(repo, th); err != nil {
 				return err
 			}
-			if a.jsonOut {
-				return a.printJSON(threadJSON(repo, th))
+			if err := a.printAnswered(repo, th, entry); err != nil {
+				return err
 			}
-			fmt.Fprintf(a.out, "%s is %s (%d entries)\n", th.ID, th.Status, len(th.Entries()))
-			if recommend {
+			if recommend && !a.jsonOut {
 				fmt.Fprintf(a.out, "  the recommendation awaits the operator: flai thread confirm %s\n", th.ID)
 			}
 			return nil
@@ -129,7 +168,9 @@ func newThreadConfirmCmd(a *app) *cobra.Command {
 		Short: "Make the pending recommendation the answer: an entry citing its source, and the thread answered",
 		Long: `Makes the thread's pending recommendation the answer (ADR-0090). It adds an entry by you, "Confirmed the recommendation of <time> <author>.", citing the recommendation's source, and marks the thread answered.
 
-A recommendation is pending while the thread is not resolved and it is the newest entry by someone other than the opener. Confirm is refused when none is pending, and to the recommendation's own author.`,
+A recommendation is pending while the thread is not resolved and it is the newest entry by someone other than the opener. Confirm is refused when none is pending, and to the recommendation's own author.
+
+A confirmation by the operator (the manifest's owner) on a thread someone else opened becomes a digest entry at once, holding the recommendation's text, and the output names it under digest (S-0433).`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
@@ -140,14 +181,11 @@ A recommendation is pending while the thread is not resolved and it is the newes
 			if err != nil {
 				return err
 			}
+			entry := a.digestAnswer(repo, th)
 			if err := a.afterThread(repo, th); err != nil {
 				return err
 			}
-			if a.jsonOut {
-				return a.printJSON(threadJSON(repo, th))
-			}
-			fmt.Fprintf(a.out, "%s is %s (%d entries)\n", th.ID, th.Status, len(th.Entries()))
-			return nil
+			return a.printAnswered(repo, th, entry)
 		},
 	}
 	c.Flags().StringVar(&by, "by", "", "who confirms it (default: FLAI_AGENT, then config author)")

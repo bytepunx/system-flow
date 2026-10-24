@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // S-0220, ADR-0090: flai thread reply posts a recommendation citing a
@@ -116,5 +117,174 @@ func TestAThreadEntryIsTheConfigAuthorsWithoutFLAIAGENT(t *testing.T) {
 	}
 	if got := lastAuthor("--by", "dana", "Both."); got != "dana" {
 		t.Errorf("--by wins, got %q", got)
+	}
+}
+
+// answerProject is a project owned by alex with TH-0001, "Which first?",
+// which claude opened on the manifest.
+func answerProject(t *testing.T) string {
+	t.Helper()
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("FLAI_AGENT", "")
+	root := tempProject(t)
+	if err := os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nowner: alex\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, errOut, code := runIn(t, root, "thread", "new", "--on", "system-flow.yaml", "--by", "claude", "Which first?", "The CLI or the dashboard?"); code != 0 {
+		t.Fatalf("thread new: %d %s", code, errOut)
+	}
+	return root
+}
+
+// answered is a thread reply or confirm's --json: the thread's status and
+// entries, and the digest entry its answer became, if any.
+type answered struct {
+	Status  string `json:"status"`
+	Entries []struct {
+		Author string `json:"author"`
+		Text   string `json:"text"`
+	} `json:"entries"`
+	Digest *struct {
+		ID      string `json:"id"`
+		Path    string `json:"path"`
+		Action  string `json:"action"`
+		Warning string `json:"warning"`
+	} `json:"digest"`
+}
+
+// answerAt is the clock at minute m past the thread's opening, so each
+// answer has a time of its own, as the entry citing its thread records it.
+func answerAt(m int) time.Time { return time.Date(2026, 9, 15, 21, m, 0, 0, time.UTC) }
+
+// answer runs a thread reply or confirm with --json in root at minute m, and
+// fails the test unless it exits 0 with the thread's view; raw is the output.
+func answer(t *testing.T, root string, m int, args ...string) (view answered, raw map[string]any) {
+	t.Helper()
+	out, errOut, code := runInAt(t, root, answerAt(m), append([]string{"--json"}, args...)...)
+	if code != 0 {
+		t.Fatalf("%v: %d %s", args, code, errOut)
+	}
+	if err := json.Unmarshal([]byte(out), &view); err != nil {
+		t.Fatalf("%v --json: %v\n%s", args, err, out)
+	}
+	if err := json.Unmarshal([]byte(out), &raw); err != nil {
+		t.Fatal(err)
+	}
+	return view, raw
+}
+
+// entryText is the digest entry at path, from root.
+func entryText(t *testing.T, root, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(path)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
+}
+
+// S-0433 criteria 1 to 3: the operator's reply on a thread an agent opened
+// is written as a digest entry, named under digest in --json and on a line of
+// its own in the text; a second answer updates that entry.
+func TestThreadReplyByTheOperatorWritesADigestEntry(t *testing.T) {
+	root := answerProject(t)
+	view, _ := answer(t, root, 1, "thread", "reply", "TH-0001", "--by", "alex", "--", "The CLI. It is what agents use.")
+	d := view.Digest
+	if view.Status != "answered" || d == nil || d.ID != "D-0001" || d.Action != "written" || d.Warning != "" || !strings.HasPrefix(d.Path, "design/digest/D-0001-") {
+		t.Fatalf("reply --json: %+v digest %+v", view, d)
+	}
+	text := entryText(t, root, d.Path)
+	for _, want := range []string{"kind: answer", "TH-0001", "The CLI. It is what agents use."} {
+		if !strings.Contains(text, want) {
+			t.Errorf("entry lacks %q:\n%s", want, text)
+		}
+	}
+
+	out, errOut, code := runInAt(t, root, answerAt(2), "thread", "reply", "TH-0001", "--by", "alex", "Then the dashboard.")
+	want := "TH-0001 is answered (3 entries)\n  digest: updated D-0001 (" + d.Path + ")\n"
+	if code != 0 || out != want {
+		t.Fatalf("second reply: %d %q %s, want %q", code, out, errOut, want)
+	}
+	if files := digestFiles(t, root); len(files) != 1 {
+		t.Errorf("one entry, updated: %v", files)
+	}
+	if text := entryText(t, root, d.Path); !strings.Contains(text, "Then the dashboard.") || !strings.Contains(text, "The CLI. It is what agents use.") {
+		t.Errorf("the entry does not hold both answers:\n%s", text)
+	}
+	view, _ = answer(t, root, 3, "thread", "reply", "TH-0001", "--by", "alex", "And the docs.")
+	if view.Digest == nil || view.Digest.ID != "D-0001" || view.Digest.Action != "updated" || view.Digest.Path != d.Path {
+		t.Errorf("a third answer updates D-0001: %+v", view.Digest)
+	}
+}
+
+// S-0433 criterion 2: the operator's confirmation of an agent's pending
+// recommendation writes an entry with the recommendation's text.
+func TestThreadConfirmByTheOperatorWritesADigestEntry(t *testing.T) {
+	root := answerProject(t)
+	view, raw := answer(t, root, 1, "thread", "reply", "TH-0001", "--by", "orchestrator", "--recommend", "The CLI, as the plan says.")
+	if _, ok := raw["digest"]; ok || view.Digest != nil {
+		t.Fatalf("a recommendation writes no entry: %v", raw["digest"])
+	}
+	view, _ = answer(t, root, 2, "thread", "confirm", "TH-0001", "--by", "alex")
+	d := view.Digest
+	if view.Status != "answered" || d == nil || d.ID != "D-0001" || d.Action != "written" {
+		t.Fatalf("confirm --json: %+v digest %+v", view, d)
+	}
+	if text := entryText(t, root, d.Path); !strings.Contains(text, "The CLI, as the plan says.") {
+		t.Errorf("the entry lacks the recommendation's text:\n%s", text)
+	}
+}
+
+// S-0433 criterion 1: an agent's reply, and the operator's on a thread of
+// their own, write no entry and print no digest.
+func TestThreadReplyByAnAgentWritesNoDigestEntry(t *testing.T) {
+	root := answerProject(t)
+	view, raw := answer(t, root, 1, "thread", "reply", "TH-0001", "--by", "planner", "The CLI.")
+	if _, ok := raw["digest"]; ok || view.Status != "answered" {
+		t.Errorf("an agent's reply: %v", raw)
+	}
+	if _, errOut, code := runInAt(t, root, answerAt(2), "thread", "new", "--on", "system-flow.yaml", "--by", "alex", "Mine?", "My own question."); code != 0 {
+		t.Fatalf("thread new: %d %s", code, errOut)
+	}
+	out, errOut, code := runInAt(t, root, answerAt(3), "thread", "reply", "TH-0002", "--by", "alex", "My own answer.")
+	if code != 0 || strings.Contains(out, "digest") {
+		t.Errorf("the operator on their own thread: %d %q %s", code, out, errOut)
+	}
+	if files := digestFiles(t, root); len(files) != 0 {
+		t.Errorf("no entry is written: %v", files)
+	}
+}
+
+// S-0433 criterion 4: an entry that cannot be written leaves the reply saved
+// and the command's exit 0, with the warning logged and under digest.warning.
+func TestThreadReplyKeepsTheAnswerWhenItsDigestEntryFails(t *testing.T) {
+	root := answerProject(t)
+	if err := os.MkdirAll(filepath.Join(root, "design"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "design", "digest"), []byte("not a folder\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out, errOut, code := runInAt(t, root, answerAt(1), "thread", "reply", "TH-0001", "--by", "alex", "--json", "The CLI.")
+	if code != 0 {
+		t.Fatalf("reply: %d %s", code, errOut)
+	}
+	var view answered
+	if err := json.Unmarshal([]byte(out), &view); err != nil {
+		t.Fatalf("reply --json: %v\n%s", err, out)
+	}
+	if d := view.Digest; d == nil || d.ID != "" || d.Action != "" || !strings.Contains(d.Warning, "the answer is saved on the thread") {
+		t.Errorf("digest: %+v", d)
+	}
+	if last := view.Entries[len(view.Entries)-1]; view.Status != "answered" || last.Author != "alex" || last.Text != "The CLI." {
+		t.Errorf("the reply is not saved: %s", out)
+	}
+	if !strings.Contains(errOut, `"level":"WARN"`) || !strings.Contains(errOut, `"thread":"TH-0001"`) || !strings.Contains(errOut, `"err":"no digest entry was written`) {
+		t.Errorf("no warning logged: %s", errOut)
+	}
+
+	out, errOut, code = runInAt(t, root, answerAt(2), "thread", "reply", "TH-0001", "--by", "alex", "The dashboard.")
+	if code != 0 || out != "TH-0001 is answered (3 entries)\n" || !strings.Contains(errOut, `"level":"WARN"`) {
+		t.Errorf("text reply: %d %q %s", code, out, errOut)
 	}
 }
