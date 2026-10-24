@@ -50,6 +50,7 @@ const CLAIMS = 'claims-and-touches';
 const STRATEGIC_DAYS = 'strategic-use-per-day';
 const COORDINATION = 'coordination';
 const QUEUE = 'merge-queue-(s-0404)';
+const DIGEST = 'digest-(s-0434)';
 
 /** The note every chart of spend over time carried under it. */
 const spendNote = (w: Words) =>
@@ -113,6 +114,12 @@ const EXPLAINERS: Record<Kind, (w: Words) => Explainer> = {
 		how: `From \`queue.weeks[]\` in \`flai stats --json\`, read from the queue's event log, \`.flai-cache/merge-queue/events.jsonl\`. A story's wait runs from its enqueueing, its latest \`enqueued\` event, to its \`landed\` or \`sent_back\` event: \`wait_mean_seconds\` and \`wait_max_seconds\` are the mean and the longest of the week's. \`batch_size_mean\` is the mean number of stories on the week's \`batch_built\` events, and \`bisections\` counts its \`bisected\` events, each a failed batch's bisection. Each event counts in the ISO week that holds it.`,
 		read: `A week with none landed or sent back has no wait, and one with no batch no size: a gap, not zero. Weeks before the release that writes the log show nothing.`,
 		metrics: QUEUE
+	}),
+	digest: () => ({
+		what: `One stacked bar per ISO week of the window: the threads opened to the operator per story completed that week. The threads that asked what a digest entry already answered, asked again, are stacked on the rest, so a bar's height is the week's threads per story. Beside it, the digest's entries now by status.`,
+		how: `From \`digest.weeks[]\` in \`flai stats --json\`. A thread under \`wip/threads\`, open or resolved, is opened to the operator when its first entry's author is neither the operator, the manifest's \`owner\`, nor flai itself, \`flai\` or \`flai serve\`; it counts in the ISO week that holds that entry. \`stories_completed\` counts the stories completed in the week, cancelled ones left out, whatever the type, and \`per_story\` is \`threads_to_operator\` over it. \`asked_again\` counts those threads that a digest entry of an earlier day lists in its \`asked_again\`, as the curator records them. The entries are \`digest.entries\`, \`active\`, \`compacted\`, and \`absorbed\`, over the whole digest, not the window.`,
+		read: `Lower bars mean fewer questions to the operator for each story done, and a smaller asked-again part means the digest answers what was asked before. A week with no story completed has no rate: a gap, not zero. The rate counts every question to the operator, not only those an entry could have answered, and this week's repeats read low until the curator's next run.`,
+		metrics: DIGEST
 	}),
 	'token-rate': (w) => ({
 		what: `One line per model: the tokens per minute of agent work over the ${w.types} done in each ${w.bucket} that the model worked on. ${ALL_MODELS}`,

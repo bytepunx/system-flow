@@ -194,6 +194,23 @@ export type QueueWeek = {
 };
 /** The merge queue per ISO week of the window (S-0404, metrics.md § Merge queue). */
 export type Queue = { weeks: QueueWeek[] };
+/**
+ * One ISO week of the digest section: the threads opened to the operator in it, the stories
+ * completed in it, the threads per completed story, absent in a week with none completed, which
+ * has no rate, and how many of those threads asked what a digest entry already answered.
+ */
+export type DigestWeek = {
+	week: string;
+	start: string;
+	threads_to_operator: number;
+	stories_completed: number;
+	per_story?: number;
+	asked_again: number;
+};
+/** The digest's entries now with each status, over the whole digest, not the window. */
+export type DigestEntries = { active: number; compacted: number; absorbed: number };
+/** The threads to the operator per completed story per week (S-0434, metrics.md § Digest). */
+export type Digest = { weeks: DigestWeek[]; entries: DigestEntries };
 /** The per-item error fields the planning charts read. */
 export type ErrorField =
 	'forecast_error_seconds' | 'delivery_error_seconds' | 'estimate_error_seconds';
@@ -398,7 +415,12 @@ export function normalise(r: Report): Report {
 			...r.coordination,
 			weeks: r.coordination.weeks ?? []
 		},
-		queue: r.queue && { ...r.queue, weeks: r.queue.weeks ?? [] }
+		queue: r.queue && { ...r.queue, weeks: r.queue.weeks ?? [] },
+		digest: r.digest && {
+			...r.digest,
+			weeks: r.digest.weeks ?? [],
+			entries: { active: 0, compacted: 0, absorbed: 0, ...r.digest.entries }
+		}
 	};
 }
 
@@ -428,6 +450,8 @@ export type Report = {
 	coordination?: Coordination;
 	/** Absent when the merge queue has no event log, and from a flai older than S-0404. */
 	queue?: Queue;
+	/** Absent when flai cannot read the digest, and from a flai older than S-0434. */
+	digest?: Digest;
 };
 
 /** The columns cost of delay is laid out in, in board order (S-0205). */
@@ -513,12 +537,13 @@ export const isClaimsKind = (kind: Kind): kind is ClaimsKind =>
  * The claims charts read the stories, which alone are held, by the day, the week, and the story,
  * as flai lays them out. flai lays the strategic charts out by the day over the report's type, so
  * only the type is chosen. Cost of delay takes the window alone, and so does the merge queue,
- * whose weeks flai counts from its event log, whatever the type.
+ * whose weeks flai counts from its event log, whatever the type, and the digest, whose weeks count
+ * the stories completed, whatever the type.
  */
 export function controls(kind: Kind) {
 	if ((STRATEGIC_KINDS as readonly Kind[]).includes(kind))
 		return { type: true, epic: false, bucket: false, nature: false, model: false };
-	if (isClaimsKind(kind) || kind === 'queue')
+	if (isClaimsKind(kind) || kind === 'queue' || kind === 'digest')
 		return { type: false, epic: false, bucket: false, nature: false, model: false };
 	if (isForecastKind(kind))
 		return {
@@ -1106,6 +1131,88 @@ export function queueChart(r: Report, t: Theme): Opt {
 				splitLine: { show: false }
 			})
 		],
+		series
+	});
+}
+
+/**
+ * Whether the report carries the digest section: none when flai cannot read the digest, or from a
+ * flai older than S-0434.
+ */
+export const hasDigest = (r: Report) => r.digest !== undefined;
+/**
+ * The digest chart's two series, the rest below and the repeats stacked on them, in two of the
+ * three slots that stay apart for every pair in both modes.
+ */
+const DIGEST_SERIES = {
+	rest: { name: 'other threads', slot: 6 },
+	repeats: { name: 'asked again', slot: 4 }
+} as const;
+/** A week's threads per completed story at its Monday; null, a gap, in a week with no rate. */
+type DigestBar = { value: [number, number | null]; threads: number; week: DigestWeek };
+/** threads per story as `flai stats` prints them, to two decimals. */
+const perStory = (v: number) => v.toFixed(2);
+const threadCount = (n: number) => `${n} ${n === 1 ? 'thread' : 'threads'}`;
+/**
+ * Digest (S-0434, ADR-0200): one stacked bar per ISO week of the window, the threads opened to the
+ * operator per story completed in it: the repeats, those that asked what a digest entry already
+ * answered, stacked on the rest, so that a bar's height is the week's `per_story`. A week with no
+ * story completed has no rate: a gap, not 0. flai lays out the weeks from the one that holds the
+ * window's start to the one that holds now, and the axis spans them (ADR-0054).
+ */
+export function digestChart(r: Report, t: Theme): Opt {
+	const weeks = r.digest?.weeks ?? [];
+	const rated = (wk: DigestWeek) => wk.per_story !== undefined && wk.stories_completed > 0;
+	const bar = (part: keyof typeof DIGEST_SERIES, threads: (wk: DigestWeek) => number) => ({
+		name: DIGEST_SERIES[part].name,
+		type: 'bar',
+		stack: 'digest',
+		barMaxWidth: 24,
+		itemStyle: {
+			color: t.series[DIGEST_SERIES[part].slot],
+			borderColor: t.surface,
+			borderWidth: 1
+		},
+		data: weeks.map((wk): DigestBar => {
+			const v = rated(wk) ? threads(wk) / wk.stories_completed : null;
+			return { value: [place(Date.parse(wk.start), 'week'), v], threads: threads(wk), week: wk };
+		})
+	});
+	const series =
+		weeks.length > 0
+			? [
+					bar('rest', (wk) => Math.max(0, wk.threads_to_operator - wk.asked_again)),
+					bar('repeats', (wk) => wk.asked_again)
+				]
+			: [];
+	type Hovered = { marker?: string; seriesName: string; data: DigestBar };
+	/** A part of a bar as its tooltip names it: its threads per story, and its threads. */
+	const say = ({ marker, seriesName, data }: Hovered) => {
+		const rate = `${perStory(data.value[1] ?? 0)} per story`;
+		return `${marker ?? ''}${seriesName}: ${rate} (${threadCount(data.threads)})`;
+	};
+	const tip = (ps: Hovered[]) => {
+		const list = ps.filter((p) => p?.data);
+		if (list.length === 0) return '';
+		const wk = list[0].data.week;
+		const n = wk.stories_completed;
+		const asked = `${threadCount(wk.threads_to_operator)} to the operator`;
+		const stories = `${n} ${n === 1 ? 'story' : 'stories'} completed`;
+		const head = `week of ${wk.start} (${wk.week}), ${asked}, ${stories}`;
+		if (!rated(wk)) return `${head}<br/>no story completed, so no rate`;
+		return [head, `${perStory(wk.per_story!)} per story`, ...list.map(say)].join('<br/>');
+	};
+	return base(t, {
+		...bucketAxes(
+			t,
+			r,
+			'week',
+			weeks.map((wk) => Date.parse(wk.start)),
+			true,
+			'threads per story',
+			(v) => `${Math.round(v * 100) / 100}`,
+			tip
+		),
 		series
 	});
 }
@@ -2680,6 +2787,8 @@ export function build(
 			return agentWaiting(r, t);
 		case 'queue':
 			return queueChart(r, t);
+		case 'digest':
+			return digestChart(r, t);
 		case 'token-rate':
 			return tokenRate(r, t);
 		case 'tokens-spent':

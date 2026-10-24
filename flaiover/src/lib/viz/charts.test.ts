@@ -66,6 +66,8 @@ import {
 	hasCoordination,
 	hasQueue,
 	queueChart,
+	digestChart,
+	hasDigest,
 	shareTotals,
 	hasCostOfDelay,
 	hasOrder,
@@ -77,6 +79,8 @@ import {
 	type Coordination,
 	type CoordinationWeek,
 	type CostOfDelayReport,
+	type Digest,
+	type DigestWeek,
 	type ErrorFilter,
 	type ItemMetrics,
 	type Queue,
@@ -521,6 +525,37 @@ const queueing: Report = {
 	queue
 };
 
+/** A week of the digest section as flai stats --json prints it (S-0434), in the Go side's names. */
+const digestWeek = (
+	week: string,
+	start: string,
+	threads: number,
+	stories: number,
+	askedAgain: number
+): DigestWeek => ({
+	week,
+	start,
+	threads_to_operator: threads,
+	stories_completed: stories,
+	...(stories > 0 ? { per_story: threads / stories } : {}),
+	asked_again: askedAgain
+});
+// The digest over the weeks of the main fixture's window: in W31 nothing; in W32 three threads to
+// the operator for two stories, one a repeat; in W33 seven for four, two repeats; in W34 two
+// threads and no story completed, so no rate; in W35 three stories and no thread; in W36 one each.
+const digest: Digest = {
+	weeks: [
+		digestWeek('2026-W31', '2026-07-27', 0, 0, 0),
+		digestWeek('2026-W32', '2026-08-03', 3, 2, 1),
+		digestWeek('2026-W33', '2026-08-10', 7, 4, 2),
+		digestWeek('2026-W34', '2026-08-17', 2, 0, 0),
+		digestWeek('2026-W35', '2026-08-24', 0, 3, 0),
+		digestWeek('2026-W36', '2026-08-31', 1, 1, 0)
+	],
+	entries: { active: 12, compacted: 3, absorbed: 5 }
+};
+const digesting: Report = { ...report, digest };
+
 const light = theme(false);
 const dark = theme(true);
 /**
@@ -545,7 +580,9 @@ describe('chart builders', () => {
 						? codReport
 						: k === 'queue'
 							? queueing
-							: report;
+							: k === 'digest'
+								? digesting
+								: report;
 			const o = build(k, fixture, light) as {
 				useUTC?: boolean;
 				yAxis: unknown;
@@ -2878,10 +2915,128 @@ describe('the merge queue chart (S-0404)', () => {
 		expect((build('queue', nulls, light) as Option).series).toEqual([]);
 	});
 	it('lists the merge queue under the flow charts beside agent waiting, with the window alone', () => {
-		expect(FLOW_KINDS.slice(-2)).toEqual(['agent-waiting', 'queue']);
+		expect(FLOW_KINDS.slice(-3)).toEqual(['agent-waiting', 'queue', 'digest']);
 		expect(KINDS).toContain('queue');
 		expect(titleOf('queue')).toBe('Merge Queue');
 		expect(controls('queue')).toEqual({
+			type: false,
+			epic: false,
+			bucket: false,
+			nature: false,
+			model: false
+		});
+	});
+});
+
+describe('the digest chart (S-0434)', () => {
+	type Bar = { value: [number, number | null]; threads: number; week: DigestWeek };
+	type Series = {
+		name: string;
+		type: string;
+		stack?: string;
+		yAxisIndex?: number;
+		itemStyle: { color: string };
+		data: Bar[];
+	};
+	type Option = {
+		legend: { show: boolean };
+		xAxis: { type: string; min?: number; max?: number; minInterval?: number };
+		yAxis: { name: string };
+		tooltip: { formatter: (p: unknown) => string };
+		series: Series[];
+	};
+	const day = 86400e3;
+	const mondays = ['07-27', '08-03', '08-10', '08-17', '08-24', '08-31'].map((d) =>
+		midnight(`2026-${d}`)
+	);
+	const axis = {
+		type: 'time',
+		minInterval: 7 * day,
+		min: midnight('2026-07-27') - 3.5 * day,
+		max: midnight('2026-08-31') + 3.5 * day
+	};
+
+	it('reads the digest in the names flai stats --json sends', () => {
+		const r = normalise(digesting);
+		expect(Object.keys(r.digest!.weeks[1])).toEqual([
+			'week',
+			'start',
+			'threads_to_operator',
+			'stories_completed',
+			'per_story',
+			'asked_again'
+		]);
+		// a week with no story completed has no per_story at all
+		expect(r.digest!.weeks[0]).not.toHaveProperty('per_story');
+		expect(r.digest).toEqual(digest);
+		expect(hasDigest(r)).toBe(true);
+	});
+	it('stacks the repeats per completed story on the rest, so a bar is the per_story', () => {
+		const o = digestChart(digesting, light) as Option;
+		expect(o.series.map((s) => [s.name, s.type, s.stack, s.yAxisIndex])).toEqual([
+			['other threads', 'bar', 'digest', undefined],
+			['asked again', 'bar', 'digest', undefined]
+		]);
+		// a week with no story completed, W31 and W34, is a gap in both, not 0; W35 has a rate of 0
+		expect(o.series.map((s) => [s.name, s.data.map((d) => d.value[1])])).toEqual([
+			['other threads', [null, 1, 1.25, null, 0, 1]],
+			['asked again', [null, 0.5, 0.5, null, 0, 0]]
+		]);
+		digest.weeks.forEach((wk, n) => {
+			const [rest, repeats] = o.series.map((s) => s.data[n].value[1]);
+			if (wk.per_story === undefined) expect([rest, repeats], wk.week).toEqual([null, null]);
+			else expect(rest! + repeats!, wk.week).toBeCloseTo(wk.per_story);
+		});
+		for (const s of o.series)
+			expect(
+				s.data.map((d) => d.value[0]),
+				s.name
+			).toEqual(mondays);
+		// the two series in two of the slots that stay apart in both modes
+		expect(o.series.map((s) => s.itemStyle.color)).toEqual([light.series[6], light.series[4]]);
+		const inDark = (digestChart(digesting, dark) as Option).series.map((s) => s.itemStyle.color);
+		expect(inDark).toEqual([dark.series[6], dark.series[4]]);
+		const week = (n: number) =>
+			o.tooltip.formatter(o.series.map((s) => ({ seriesName: s.name, data: s.data[n] })));
+		expect(week(2)).toBe(
+			'week of 2026-08-10 (2026-W33), 7 threads to the operator, 4 stories completed<br/>' +
+				'1.75 per story<br/>other threads: 1.25 per story (5 threads)<br/>' +
+				'asked again: 0.50 per story (2 threads)'
+		);
+		expect(week(3)).toBe(
+			'week of 2026-08-17 (2026-W34), 2 threads to the operator, 0 stories completed<br/>' +
+				'no story completed, so no rate'
+		);
+		expect(week(5)).toBe(
+			'week of 2026-08-31 (2026-W36), 1 thread to the operator, 1 story completed<br/>' +
+				'1.00 per story<br/>other threads: 1.00 per story (1 thread)<br/>' +
+				'asked again: 0.00 per story (0 threads)'
+		);
+		expect(o.tooltip.formatter([])).toBe('');
+		// from the week that holds the window's start to the one that holds now (ADR-0054)
+		expect(o.xAxis).toMatchObject(axis);
+		expect(o.yAxis.name).toBe('threads per story');
+		expect(o.legend.show).toBe(true);
+		expect((build('digest', digesting, light) as Option).series).toEqual(o.series);
+	});
+	it('draws empty over the window without a digest, and reads no weeks as none', () => {
+		expect(hasDigest(report)).toBe(false);
+		expect(normalise(report).digest).toBeUndefined();
+		const o = build('digest', report, light) as Option;
+		expect(o.series).toEqual([]);
+		expect(o.xAxis).toMatchObject(axis);
+		const nulls = normalise({ ...report, digest: { weeks: null } } as unknown as Report);
+		expect(nulls.digest).toEqual({
+			weeks: [],
+			entries: { active: 0, compacted: 0, absorbed: 0 }
+		});
+		expect((build('digest', nulls, light) as Option).series).toEqual([]);
+	});
+	it('lists the digest under the flow charts beside agent waiting, with the window alone', () => {
+		expect(FLOW_KINDS.slice(-3)).toEqual(['agent-waiting', 'queue', 'digest']);
+		expect(KINDS).toContain('digest');
+		expect(titleOf('digest')).toBe('Digest');
+		expect(controls('digest')).toEqual({
 			type: false,
 			epic: false,
 			bucket: false,

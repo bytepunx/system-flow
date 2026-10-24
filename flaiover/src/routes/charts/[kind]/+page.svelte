@@ -26,6 +26,7 @@
 		hasClaims,
 		hasCoordination,
 		hasCostOfDelay,
+		hasDigest,
 		hasOrder,
 		hasQueue,
 		hasSpend,
@@ -291,6 +292,12 @@
 			queue there has logged no event yet, or the flai is older than the dashboard. Then upgrade it
 			with <code>flai self-upgrade</code>.
 		</p>
+	{:else if kind === 'digest' && report && !hasDigest(report)}
+		<p class="mb-2 text-sm text-muted" data-testid="digest-none">
+			The flai on the host sends no digest, which this chart is drawn from: either it could not read
+			the digest there, which <code>flai stats</code> warns of, or it is older than the dashboard.
+			Then upgrade it with <code>flai self-upgrade</code>.
+		</p>
 	{:else if forecastKind && !forecastSet}
 		<p class="mb-2 text-sm text-muted" data-testid="forecast-none">
 			No story done in the window has a forecast. The planner sets one when it plans a story, or set
@@ -350,6 +357,12 @@
 			Stories started on a share in the window: {shares.started} · hold time saved: {hours(
 				shares.held_seconds
 			)}h.
+		</p>
+	{/if}
+	{#if kind === 'digest' && report?.digest}
+		{@const e = report.digest.entries}
+		<p class="mt-2 text-sm" data-testid="digest-entries">
+			Digest entries now: active {e.active} · compacted {e.compacted} · absorbed {e.absorbed}.
 		</p>
 	{/if}
 	{#if kind === 'agent-waiting' && report?.waiting}
@@ -624,6 +637,31 @@
 								<td class="pr-4">{batched ? Math.round(w.batch_size_mean * 10) / 10 : '-'}</td>
 								<td class="pr-4">{batched ? w.batch_size_max : '-'}</td>
 								<td>{w.bisections}</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			{:else if kind === 'digest' && report}
+				<table class="min-w-full" data-testid="digest-table">
+					<thead>
+						<tr class="text-left text-muted">
+							<th class="pr-4">week</th>
+							<th class="pr-4">start</th>
+							<th class="pr-4">threads to the operator</th>
+							<th class="pr-4">stories completed</th>
+							<th class="pr-4">per story</th>
+							<th>asked again</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each report.digest?.weeks ?? [] as w (w.week)}
+							<tr>
+								<td class="pr-4 font-mono">{w.week}</td>
+								<td class="pr-4 font-mono">{w.start}</td>
+								<td class="pr-4">{w.threads_to_operator}</td>
+								<td class="pr-4">{w.stories_completed}</td>
+								<td class="pr-4">{w.per_story === undefined ? '-' : w.per_story.toFixed(2)}</td>
+								<td>{w.asked_again}</td>
 							</tr>
 						{/each}
 					</tbody>

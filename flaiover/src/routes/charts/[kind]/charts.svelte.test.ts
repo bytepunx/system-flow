@@ -1359,6 +1359,91 @@ describe('the claims charts (S-0214)', () => {
 		await go('cycle-time');
 		expect(queueNotes()).toEqual([]);
 	});
+
+	// the digest as flai sends it (S-0434) over two weeks of the window: in W39 five threads to the
+	// operator for two stories completed, one a repeat; in W40 two threads and no story completed
+	const digest = {
+		weeks: [
+			{
+				week: '2026-W39',
+				start: '2026-09-21',
+				threads_to_operator: 5,
+				stories_completed: 2,
+				per_story: 2.5,
+				asked_again: 1
+			},
+			{
+				week: '2026-W40',
+				start: '2026-09-28',
+				threads_to_operator: 2,
+				stories_completed: 0,
+				asked_again: 0
+			}
+		],
+		entries: { active: 120, compacted: 3, absorbed: 5 }
+	};
+	const digestNotes = () =>
+		['digest-none', 'digest-entries'].filter(
+			(id) => document.querySelector(`[data-testid="${id}"]`) !== null
+		);
+
+	it('draws the threads per completed story with the repeats stacked, and the entries beside it (S-0434)', async () => {
+		answered = { items, digest };
+		await open('digest');
+		expect(text('h1')).toBe('Digest');
+		expect(controls()).toEqual(['window']);
+		const w39 = midnight('2026-09-21');
+		const w40 = midnight('2026-09-28');
+		expect(
+			drawn().series.map((s) => [
+				s.name,
+				(s as { stack?: string }).stack,
+				(s.data as { value: [number, number | null] }[]).map((d) => d.value)
+			])
+		).toEqual([
+			[
+				'other threads',
+				'digest',
+				[
+					[w39, 2],
+					[w40, null]
+				]
+			],
+			[
+				'asked again',
+				'digest',
+				[
+					[w39, 0.5],
+					[w40, null]
+				]
+			]
+		]);
+		expect(digestNotes()).toEqual(['digest-entries']);
+		expect(text('[data-testid="digest-entries"]')).toBe(
+			'Digest entries now: active 120 · compacted 3 · absorbed 5.'
+		);
+		expect(text('[data-testid="explainer-what"]')).toContain(
+			'the threads opened to the operator per story completed that week'
+		);
+		expect(cells('digest-table')).toEqual([
+			['2026-W39', '2026-09-21', '5', '2', '2.50', '1'],
+			['2026-W40', '2026-09-28', '2', '0', '-', '0']
+		]);
+		expectOrder('h1', chartEl(), '[data-testid="digest-entries"]', EXPLAINER, WINDOW, tableView());
+	});
+
+	it('says the flai on the host sends no digest when the report has none (S-0434)', async () => {
+		answered = { items };
+		await open('digest');
+		expect(digestNotes()).toEqual(['digest-none']);
+		expect(text('[data-testid="digest-none"]')).toContain('sends no digest');
+		expect(text('[data-testid="digest-none"]')).toContain('flai self-upgrade');
+		expect(drawn().series).toEqual([]);
+		expect(cells('digest-table')).toEqual([]);
+		// the other charts say nothing of it
+		await go('queue');
+		expect(digestNotes()).toEqual([]);
+	});
 });
 
 describe('the strategic charts (S-0216)', () => {

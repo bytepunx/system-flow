@@ -10,7 +10,8 @@ export const FLOW_KINDS = [
 	'time-in-state',
 	'throughput',
 	'agent-waiting',
-	'queue'
+	'queue',
+	'digest'
 ] as const;
 /** The charts of what agents spent (S-0143, S-0163): they need items that carry usage. */
 export const USAGE_KINDS = [
@@ -60,6 +61,7 @@ export const TITLES: Record<Kind, string> = {
 	throughput: 'Throughput',
 	'agent-waiting': 'Agent Waiting',
 	queue: 'Merge Queue',
+	digest: 'Digest',
 	'token-rate': 'Tokens / Min',
 	'tokens-spent': 'Tokens / Day',
 	'tokens-per-item': 'Tokens per item',

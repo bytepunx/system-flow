@@ -47,6 +47,9 @@ const QUEUE_LINES =
 const QUEUE_RIGHT =
 	'On the right are the mean number of stories in the batches it built, and as bars the red ' +
 	'batches it bisected.';
+const DIGEST_BARS =
+	'One stacked bar per ISO week of the window: the threads opened to the operator per story ' +
+	'completed that week.';
 
 describe('explain', () => {
 	it.each(KINDS)('gives %s every part, in plain text with balanced code spans', (kind) => {
@@ -134,6 +137,20 @@ describe('explain', () => {
 		expect(queue).toContain('from its enqueueing');
 		expect(queue).toContain('A week with none landed or sent back has no wait');
 		expect(queue).toContain(QUEUE_RIGHT);
+	});
+
+	it('explains the digest by its threads to the operator, its repeats, and its gaps (S-0434)', () => {
+		const digest = all('digest');
+		expect(digest).toContain(DIGEST_BARS);
+		expect(digest).toContain("so a bar's height is the week's threads per story");
+		expect(digest).toContain("neither the operator, the manifest's `owner`, nor flai itself");
+		expect(digest).toContain('`per_story` is `threads_to_operator` over it');
+		expect(digest).toContain('a digest entry of an earlier day lists in its `asked_again`');
+		expect(digest).toContain('A week with no story completed has no rate: a gap, not zero.');
+		expect(digest).toContain('`digest.entries`');
+		expect(explain('digest', STORY_DAY).metrics).toBe('digest-(s-0434)');
+		// the digest counts stories whatever the type chosen
+		expect(all('digest', { type: 'epic', bucket: 'week' })).toBe(digest);
 	});
 
 	it('names the type and the bucket from the context', () => {
