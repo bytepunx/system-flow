@@ -3,15 +3,18 @@ id: S-0432
 type: story
 nature: feature
 title: The curator runs after each acceptance and on a schedule, marks an entry the design now records absorbed, and compacts an entry no one has cited within the window
-status: ready
+status: in-progress
 parent: E-0025
 owner: alex
 created: 2026-10-16T05:59:39Z
-updated: 2026-10-24T12:41:02Z
+updated: 2026-10-24T13:32:56Z
 transitions:
   - to: ready
     at: 2026-10-24T12:40:36Z
     by: alex
+  - to: in-progress
+    at: 2026-10-24T13:32:56Z
+    by: agent-S-0432
 tags: [cli, template]
 topics: [cli, planning, analysis, conventions]
 touches: [".claude/agents/curator.md", design/adrs, design/adrs/README.md, design/system/flai-cli.md, design/system/project-manifest.md, design/system/strategic-agents.md, docs/operators/settings.md, docs/users/flai-reference.md, docs/users/flai.md, flai/cmd/digest.go, flai/cmd/digest_test.go, flai/internal/check/check.go, flai/internal/check/digest_test.go, flai/internal/digest/decay.go, flai/internal/digest/decay_test.go, flai/internal/guard/curate_test.go, flai/internal/guard/guard.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/curate_schedule_test.go, flai/internal/serve/serve.go, template/CHANGELOG.md, template/root/.claude/agents/curator.md, template/root/system-flow.yaml.tmpl, template/template.yaml]
@@ -27,25 +30,31 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 3311
+      seconds: 3471
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 30
-          output: 443
-          cache_read: 3336188
-          cache_write: 15139
-          cost: 0.7368
+          input: 40
+          output: 592
+          cache_read: 4525871
+          cache_write: 18493
+          cost: 0.9984
+        - model: claude-sonnet-5-5
+          input: 4
+          output: 11
+          cache_read: 68727
+          cache_write: 13659
+          cost: 0.0563
 cost_of_delay:
   value: 95.02
   by: planner-S-0432
   at: 2026-10-23T17:11:07Z
 forecast:
   duration: 1h10m
-  delivery: 2026-10-24T14:00:00Z
-  basis: "Its own forecast of 1h10m; 2nd in the pull order with an in-progress limit of 5, behind S-0431 and S-0433."
+  delivery: 2026-10-24T14:53:00Z
+  basis: "Its own forecast of 1h10m; 2nd in the pull order with an in-progress limit of 5, behind S-0493 and S-0433."
   by: flai
-  at: 2026-10-24T12:41:02Z
+  at: 2026-10-24T13:32:37Z
 finalized:
   by: orchestrator
   at: 2026-10-23T17:11:31Z
