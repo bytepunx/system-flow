@@ -348,9 +348,9 @@ func TestGuardLetsATaskSubAgentListAndServeComponents(t *testing.T) {
 // S-0208, TH-0096, S-0218, S-0299: this repository's settings and the
 // template's run the guard before Bash and flai's MCP tools in every session,
 // and before Edit, MultiEdit, Write, and NotebookEdit in a planner's, an
-// orchestrator's, an analyzer's, or a story's agent's session alone, so that
-// a story's sub-agent's write in a .claude/ folder meets the guard's refusal
-// (I-0093) while the operator's own session edits unguarded.
+// orchestrator's, an analyzer's, a curator's, or a story's agent's session
+// alone, so that a story's sub-agent's write in a .claude/ folder meets the
+// guard's refusal (I-0093) while the operator's own session edits unguarded.
 func TestTheSettingsRunTheGuardOnEditsInStrategicAndStorySessions(t *testing.T) {
 	for _, path := range []string{filepath.Join("..", "..", ".claude", "settings.json"), filepath.Join("..", "..", "template", "root", ".claude", "settings.json")} {
 		data, err := os.ReadFile(path)
@@ -363,7 +363,7 @@ func TestTheSettingsRunTheGuardOnEditsInStrategicAndStorySessions(t *testing.T) 
 
 // editGuardCondition is how the settings' file-edit hook begins: it goes on
 // to run the guard only in a session flai serve starts with one of these.
-const editGuardCondition = `[ "$FLAI_ROLE" = plan ] || [ "$FLAI_ROLE" = orchestrate ] || [ "$FLAI_ROLE" = analyze ] || [ -n "$FLAI_STORY" ] || exit 0; `
+const editGuardCondition = `[ "$FLAI_ROLE" = plan ] || [ "$FLAI_ROLE" = orchestrate ] || [ "$FLAI_ROLE" = analyze ] || [ "$FLAI_ROLE" = curate ] || [ -n "$FLAI_STORY" ] || exit 0; `
 
 // checkGuardHooks checks the PreToolUse hooks of the settings data read from
 // path, and runs its file-edit hook's condition in a shell in each kind of
@@ -410,6 +410,7 @@ func checkGuardHooks(t *testing.T, path string, data []byte) {
 		{[]string{"FLAI_ROLE=plan"}, 3},
 		{[]string{"FLAI_ROLE=orchestrate"}, 3},
 		{[]string{"FLAI_ROLE=analyze"}, 3},
+		{[]string{"FLAI_ROLE=curate"}, 3},
 		{[]string{"FLAI_STARTED_BY=flai-serve", "FLAI_STORY=S-0299"}, 3},
 	} {
 		sh := exec.Command("sh", "-c", c[:len(editGuardCondition)]+"exit 3")

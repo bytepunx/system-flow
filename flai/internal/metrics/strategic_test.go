@@ -308,3 +308,25 @@ func TestStrategicDaysAreDaysOfZerosWithNoDocuments(t *testing.T) {
 		t.Errorf("no documents should report a day of zeros from the window's start: %s", data)
 	}
 }
+
+// ADR-0196: flai stats reports the curator's document as the analyzer's, and
+// the digest entries its activities name charge nothing: its whole cost is
+// its kind's project strategic total.
+func TestStrategicReportsTheCuratorsUseAsTheProjects(t *testing.T) {
+	docs := []*workitem.Activity{
+		{Kind: workitem.ActivityCurator, AccruedCost: 0.42, AccruedSeconds: 300, TasksCompleted: 1, LastRun: "2026-08-31T18:00:00Z", Entries: []workitem.ActivityEntry{
+			{At: now.Add(-time.Hour), Summary: "Wrote D-0001, merged D-0002", Items: []string{"D-0001", "D-0002"}, Seconds: 300, Cost: 0.42},
+		}},
+	}
+	rep := Compute(nil, Options{Now: now, Activities: docs})
+	if len(rep.Strategic) != 1 {
+		t.Fatalf("strategic = %+v", rep.Strategic)
+	}
+	c := rep.Strategic[0]
+	if c.Kind != "curator" || c.Cost != 0.42 || c.Items.Cost != 0 || c.Issues.Cost != 0 || c.Project.Cost != 0.42 || c.Project.Seconds != 300 {
+		t.Errorf("curator = %+v, want its whole cost on the project", c)
+	}
+	if len(c.Log) != 1 || strings.Join(c.Log[0].Items, ",") != "D-0001,D-0002" {
+		t.Errorf("curator log = %+v", c.Log)
+	}
+}

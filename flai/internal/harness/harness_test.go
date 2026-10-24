@@ -1777,7 +1777,7 @@ func TestClaudeCodeStartsTheOrchestrator(t *testing.T) {
 
 // The template's own definitions read as --agents takes them.
 func TestTheTemplatesDefinitionsRead(t *testing.T) {
-	for _, def := range []string{"explorer", "verifier", "planner", "orchestrator", "analyzer"} {
+	for _, def := range []string{"explorer", "verifier", "planner", "orchestrator", "analyzer", "curator"} {
 		data, err := os.ReadFile(filepath.Join("..", "..", "..", "template", "root", ".claude", "agents", def+".md"))
 		if err != nil {
 			t.Fatal(err)
@@ -2270,7 +2270,7 @@ func TestTheTemplatesAnalyzerIsHeldToItsReport(t *testing.T) {
 		if h.Matcher != "Edit|MultiEdit|Write|NotebookEdit" {
 			continue
 		}
-		if c := h.Hooks[0].Command; !strings.HasPrefix(c, `[ "$FLAI_ROLE" = plan ] || [ "$FLAI_ROLE" = orchestrate ] || [ "$FLAI_ROLE" = analyze ] || [ -n "$FLAI_STORY" ] || exit 0; `) || !strings.Contains(c, "flai guard 2>&1") {
+		if c := h.Hooks[0].Command; !strings.HasPrefix(c, `[ "$FLAI_ROLE" = plan ] || [ "$FLAI_ROLE" = orchestrate ] || [ "$FLAI_ROLE" = analyze ] || [ "$FLAI_ROLE" = curate ] || [ -n "$FLAI_STORY" ] || exit 0; `) || !strings.Contains(c, "flai guard 2>&1") {
 			t.Errorf("the analyzer's file edits are not guarded: %q", c)
 		}
 		return
