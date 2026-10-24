@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/digest"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
@@ -295,6 +296,57 @@ func TestReadLoadsTheMergeQueuesEventLog(t *testing.T) {
 	}
 	if !warned {
 		t.Errorf("no warning of the bad log: %s", logged.String())
+	}
+}
+
+// digestEntryDoc is a digest entry with the ID and status given, dated
+// 2026-09-30, that lists TH-0001 in asked_again.
+func digestEntryDoc(id, status string) string {
+	return "---\nid: " + id + "\ntitle: Left it is.\nkind: answer\nsources: [TH-0001]\ntopics: []\npaths: []\n" +
+		"date: 2026-09-30\nstatus: " + status + "\nabsorbed_by:\nasked_again: [TH-0001]\ncited: []\n---\n\n# " + id + " Left it is.\n\nLeft.\n"
+}
+
+// S-0434: Read passes the manifest's owner and the digest's entries; a
+// missing digest folder is no entries and no warning, and a digest that
+// cannot be read sets DigestUnreadable and is warned of.
+func TestReadLoadsTheOwnerAndTheDigestsEntries(t *testing.T) {
+	repo := reopen(t, project(t), "owner: alex\n")
+	var logged bytes.Buffer
+	_, opt, err := Read(execx.System{}, repo, slog.New(slog.NewJSONHandler(&logged, nil)))
+	if err != nil || opt.Owner != "alex" || opt.Entries != nil || opt.DigestUnreadable {
+		t.Errorf("no digest folder: %v, owner %q, entries %v, unreadable %v", err, opt.Owner, opt.Entries, opt.DigestUnreadable)
+	}
+	for _, ev := range warnings(t, &logged) {
+		if strings.Contains(fmt.Sprint(ev["msg"]), "digest") {
+			t.Errorf("a missing digest is warned of: %v", ev)
+		}
+	}
+
+	dir := filepath.Join(repo.Root, filepath.FromSlash(digest.Dir(repo.Manifest)))
+	writeFile(t, filepath.Join(dir, "README.md"), "# Digest\n")
+	writeFile(t, filepath.Join(dir, "D-0001-left-it-is.md"), digestEntryDoc("D-0001", "active"))
+	writeFile(t, filepath.Join(dir, "D-0002-left-again.md"), digestEntryDoc("D-0002", "compacted"))
+	_, opt, err = Read(execx.System{}, repo, slog.New(slog.DiscardHandler))
+	if err != nil || opt.DigestUnreadable || len(opt.Entries) != 2 || opt.Entries[0].Status != "active" || opt.Entries[1].Status != "compacted" ||
+		opt.Entries[0].Date != "2026-09-30" || len(opt.Entries[0].AskedAgain) != 1 || opt.Entries[0].AskedAgain[0] != "TH-0001" {
+		t.Errorf("two entries: %v, unreadable %v, %+v", err, opt.DigestUnreadable, opt.Entries)
+	}
+
+	writeFile(t, filepath.Join(dir, "D-0003-bad.md"), "---\nid: [\n---\n")
+	logged.Reset()
+	_, opt, err = Read(execx.System{}, repo, slog.New(slog.NewJSONHandler(&logged, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !opt.DigestUnreadable || opt.Entries != nil {
+		t.Errorf("a bad entry: unreadable %v, %+v", opt.DigestUnreadable, opt.Entries)
+	}
+	warned := false
+	for _, ev := range warnings(t, &logged) {
+		warned = warned || (ev["level"] == "WARN" && ev["component"] == "stats" && ev["msg"] == "cannot read the digest" && ev["err"] != nil && ev["detail"] != nil)
+	}
+	if !warned {
+		t.Errorf("no warning of the bad digest: %s", logged.String())
 	}
 }
 

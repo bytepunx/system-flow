@@ -7,6 +7,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/digest"
 	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
@@ -69,6 +70,14 @@ type Options struct {
 	// Each is read by the caller (S-0404).
 	QueueEvents []mergequeue.Event
 	QueueLogged bool
+	// Owner is the manifest's owner, the operator, whose threads are not
+	// opened to the operator; Entries are the digest's entries, none without
+	// a digest folder; and DigestUnreadable says the digest could not be
+	// read, which leaves the digest section out. Each is read by the caller
+	// (S-0434).
+	Owner            string
+	Entries          []digest.Entry
+	DigestUnreadable bool
 }
 
 // ItemMetrics are the per-item derived values.
@@ -227,6 +236,11 @@ type Report struct {
 	// wait, its batches with their size, and its bisections, per week; nil
 	// when its event log is missing or cannot be read (S-0404).
 	Queue *Queue `json:"queue,omitempty"`
+	// Digest is the threads opened to the operator against the stories
+	// completed, and those that asked what a digest entry already answered,
+	// per week, with the digest's entries by status; nil when the digest
+	// cannot be read (S-0434).
+	Digest *Digest `json:"digest,omitempty"`
 }
 
 // Compute derives every metric from the items.
@@ -330,6 +344,9 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	rep.StrategicDays = strategicDays(opt.Activities, items, perItem, start, opt.Now)
 	rep.Turns = turns(all, start, opt.Now)
 	rep.Coordination = coordination(all, opt.Conversations, opt.Conflicts, !opt.ConflictsUnreadable, start, opt.Now)
+	if !opt.DigestUnreadable {
+		rep.Digest = digestSection(all, opt.Threads, opt.Entries, opt.Owner, start, opt.Now)
+	}
 	// Empty lists serialise as [] rather than null, so consumers can iterate
 	// without guarding every field (S-0045).
 	if rep.Items == nil {

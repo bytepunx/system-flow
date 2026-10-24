@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/bytepunx/system-flow/flai/internal/digest"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
@@ -29,15 +30,18 @@ import (
 // issues, the manifest's projects, the board's in-progress limit and pull
 // order, planning.default_duration, the files each story's commits
 // changed, the conversations between stories, the conflict log, the merge
-// queue's event log, and, under pull-request acceptance only, each story's
-// kept forge events. The caller sets the window and grouping. When git
-// cannot be read, Commits stays nil, which leaves claims.drift out; a
-// conversation that cannot be read is left out; a conflict log that cannot
-// be read sets ConflictsUnreadable, which leaves coordination's conflicts
-// out; a merge queue event log that cannot be read leaves QueueLogged false,
-// as a missing one does, which leaves the queue section out; and a story's
-// kept forge state that cannot be read is left out. Read logs a warning on
-// log for each; any other read that fails stops it.
+// queue's event log, the manifest's owner and the digest's entries, and,
+// under pull-request acceptance only, each story's kept forge events. The
+// caller sets the window and grouping. When git cannot be read, Commits
+// stays nil, which leaves claims.drift out; a conversation that cannot be
+// read is left out; a conflict log that cannot be read sets
+// ConflictsUnreadable, which leaves coordination's conflicts out; a merge
+// queue event log that cannot be read leaves QueueLogged false, as a missing
+// one does, which leaves the queue section out; a digest that cannot be read
+// sets DigestUnreadable, which leaves the digest section out, while a
+// missing digest folder is no entries; and a story's kept forge state that
+// cannot be read is left out. Read logs a warning on log for each; any other
+// read that fails stops it.
 func Read(r execx.Runner, repo *workitem.Repo, log *slog.Logger) ([]*workitem.Item, metrics.Options, error) {
 	var opt metrics.Options
 	items, err := repo.List(true)
@@ -75,6 +79,12 @@ func Read(r execx.Runner, repo *workitem.Repo, log *slog.Logger) ([]*workitem.It
 	}
 	opt.Conflicts, opt.ConflictsUnreadable = conflicts, err != nil
 	opt.QueueEvents, opt.QueueLogged = queueEvents(repo.CacheDir(), log)
+	opt.Owner = repo.Manifest.Owner
+	if opt.Entries, err = digest.List(repo); err != nil {
+		log.Warn("cannot read the digest", "component", "stats", "err", err.Error(),
+			"detail", "the digest section is left out; run flai check to see what is wrong with the entry the error names in "+digest.Dir(repo.Manifest))
+		opt.Entries, opt.DigestUnreadable = nil, true
+	}
 	if repo.Manifest.Acceptance.PullRequest() {
 		opt.Forge = forgeEvents(repo.CacheDir(), log)
 	}
