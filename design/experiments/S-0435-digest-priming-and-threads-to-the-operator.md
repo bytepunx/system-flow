@@ -67,3 +67,49 @@ The figures for each window come from `digest.weeks[]` (`threads_to_operator`, `
 `digest.entries` was the same in both runs: 382 active, 0 compacted, 0 absorbed. Every entry was seeded by S-0429 on 2026-10-23 (commit `1981f3001`). The entries' `date` runs from 2026-09-16 to 2026-10-23.
 
 Taking the after window out of W43 leaves 97 threads over 50 stories, 1.94 per story, for the days just before the acceptance. That is a subtraction of the two runs, not a figure flai gives.
+
+### What else changed between the windows
+
+Several other things changed between the two windows, and each could explain a difference in the rate without the digest.
+
+- **The work.** The before window completed 186 stories: 64 features, 73 improvements, 44 remediations, 4 research stories, and 1 experiment. It also accepted 8 epics: E-0015 to E-0021 and E-0026. The after window completed 10 stories: 4 features, 2 improvements, and 4 remediations. It accepted no epic. Three more epics, E-0022, E-0027, and E-0028, were accepted in the left-out days of W43.
+- **What the threads asked.** The threads' titles sort them roughly. This is a heuristic on the title, not a figure flai gives.
+
+  | Kind of thread | Before | After |
+  |----------------|-------:|------:|
+  | A plan to approve (`… plan: …`) | 137 | 2 |
+  | A cost of delay input or value | 61 | 0 |
+  | A permission prompt (`Allow Write …`, `Allow Edit …`) | 14 | 8 |
+  | A story only the operator may accept (ADR-0106) | 5 | 2 |
+  | Anything else | 123 | 2 |
+
+  Eight of the after window's 14 threads are permission prompts, opened as S-0431 and S-0432 wrote `.claude/agents/curator.md`, `.claude/settings.json`, and their template copies, and as S-0491 wrote `.claude/agents/orchestrator.md`. Two more ask the operator to accept S-0491 and S-0432, which change those protected files. No digest entry can answer a permission prompt or an acceptance. The other four are two plans (TH-0627, TH-0637), the refused release publish (TH-0641), and this story's own question of when to measure (TH-0642).
+- **When the priming arrived.** A story's agent primes through the `flai` MCP server, which runs the host's installed flai. flai 1.68.0, the first release with S-0430, was tagged at 2026-10-23T23:39:07Z. The host's auto-upgrade failed six times from 23:40:49Z, and first installed it, as 1.68.1, at 2026-10-24T01:09:37Z (`~/.flai/serve/journal.jsonl`). Eight of the after window's 14 threads, TH-0627 to TH-0635, were opened before that time. An agent that primed through MCP in those four hours got no digest entries.
+- **The orchestrator's permissions.** `orchestration.permissions.answer_threads` has been `autonomous` since 2026-10-07 (commit `9c28ced8a`), before both windows. The manifest's other changes were `analysis.agent` on 2026-10-15, `planning.agent` on 2026-10-21, a sub-project's install command (S-0483) on 2026-10-21, and the go-test tier's flags (S-0490) on 2026-10-24. None of them changes who opens a thread or who answers one.
+- **The curator.** The curator has never run on this project. The host journal shows the `curate` host action turned on only for another project, at 2026-10-24T22:41:18Z. So no thread is in any entry's `asked_again`, and the repeat count is 0 in both windows by construction, not by measurement. This is recorded as [I-0207](../issues/I-0207-the-curator-has-never-run-on-system-flow-so-no-thread-is-in-any-entry-s-asked-again-and-the-digest-s-repeat-measure-reads-0-whatever-was-asked.md).
+
+### Threads an entry answered
+
+None of the after window's threads was answered by an entry.
+
+- None of the 14 threads cites a `D-nnnn` in any entry. None is listed in any entry's `asked_again`.
+- One decision in the window did rely on an entry instead of a thread. S-0431's narrative cites D-0363, the operator's answer on TH-0476, for the curator's design (`wip/archive/agents/S-0431.md`, `## Decisions`). That is a question not asked. The measure does not count it, because it counts only threads.
+- The curator absorbed no entry and compacted none in the window: `digest.entries` is 382 active, 0 compacted, and 0 absorbed. S-0432 tried `flai digest cited` once in its worktree, which wrote `cited` into D-0001, D-0363, and D-0382. It then put the three files back from main (`wip/archive/agents/S-0432.md`, `## Decisions`).
+
+### Verdict
+
+The result cannot tell whether the digest works. The rate fell from 1.828 threads per completed story before to 1.400 after, a fall of 23%. That fall does not meet the success measure, for four reasons.
+
+1. **The fall is inside the noise.** The before window's own weeks ran from 1.225 (W42) to 2.283 (W41). An after rate of 1.400 lies between them.
+2. **The after window is too small.** It is 26 hours 45 minutes, with 10 stories and 14 threads. One thread more or less moves the rate by 0.1.
+3. **The after threads are of other kinds.** Ten of the 14 are permission prompts and acceptance asks, which no entry can answer. In the before window, plan approvals and cost of delay inputs made 198 of 340 threads. The after window had 2 plans and no cost of delay input. Its rate tracks what the work asked, not what the agents knew.
+4. **Most of the threads came without priming.** Eight of the 14 threads came before the host's flai carried S-0430's priming. The repeat count reads 0 because the curator never ran, not because no question was repeated.
+
+The thread waits point the same way, and they are weaker still. The mean wait per completed story fell from 1h51m to 1h35m. But W42's three-hour mean is what lifts the before window, and the after window holds 10 stories.
+
+## Recommendation
+
+**Adopt: keep the digest as it is, and measure it again.** Nothing here argues for changing the digest or for dropping it. The one entry relied on in the window, D-0363 in S-0431, saved a question as the digest intends. The measurement, not the digest, needs two changes before the measure can say anything:
+
+- **Turn the curator on for this project.** Without it, `asked_again` is 0 whatever is asked, and the repeat half of the hypothesis cannot be tested. This is [I-0207](../issues/I-0207-the-curator-has-never-run-on-system-flow-so-no-thread-is-in-any-entry-s-asked-again-and-the-digest-s-repeat-measure-reads-0-whatever-was-asked.md). The `curate` host action is the operator's to turn on.
+- **Run the experiment again on the planned window.** Measure once W44 and W45 are whole, from 2026-11-09, with the same commands and the same before window. Count the plan and cost of delay threads apart from the rest, since those are what a digest entry can answer. Of all the kinds in the table above, they are the ones whose rate the digest should move. I-0207 carries the re-run; the operator can make it a story from the issue at acceptance.
