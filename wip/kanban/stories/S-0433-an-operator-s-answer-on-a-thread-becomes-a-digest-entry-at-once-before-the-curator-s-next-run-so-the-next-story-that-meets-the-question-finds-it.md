@@ -3,12 +3,15 @@ id: S-0433
 type: story
 nature: feature
 title: An operator's answer on a thread becomes a digest entry at once, before the curator's next run, so the next story that meets the question finds it
-status: backlog
+status: ready
 parent: E-0025
 owner: alex
 created: 2026-10-16T06:00:01Z
-updated: 2026-10-24T00:56:22Z
-transitions: []
+updated: 2026-10-24T12:41:02Z
+transitions:
+  - to: ready
+    at: 2026-10-24T12:40:58Z
+    by: alex
 tags: [cli]
 topics: [cli, orchestration, planning]
 touches: [design/system/agent-narrative.md, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flaiover.md, flai/cmd/thread.go, flai/cmd/thread_test.go, flai/internal/digest/onanswer.go, flai/internal/digest/onanswer_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go]
@@ -24,15 +27,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 381
+      seconds: 3421
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 50
-          output: 782
-          cache_read: 6168673
-          cache_write: 15792
-          cost: 1.3603
+          input: 56
+          output: 854
+          cache_read: 6700340
+          cache_write: 19414
+          cost: 1.4777
         - model: claude-sonnet-5-5
           input: 4
           output: 19
@@ -45,10 +48,10 @@ cost_of_delay:
   at: 2026-10-23T17:17:11Z
 forecast:
   duration: 35m
-  delivery: 2026-10-24T15:44:00Z
-  basis: "Its own forecast of 35m; 22nd in the pull order with an in-progress limit of 5, behind S-0431, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425 and S-0432."
+  delivery: 2026-10-24T13:21:00Z
+  basis: "Its own forecast of 35m; 1st in the pull order with an in-progress limit of 5, behind S-0431."
   by: flai
-  at: 2026-10-24T00:56:22Z
+  at: 2026-10-24T12:41:02Z
 finalized:
   by: orchestrator
   at: 2026-10-23T17:18:00Z
