@@ -3,16 +3,37 @@ id: T-1843
 type: task
 nature: feature
 title: flai/internal/metrics computes digest.weeks and digest.entries from the threads, the completed stories, and the entries
-status: backlog
+status: done
 parent: S-0434
 owner: alex
 created: 2026-10-16T06:08:21Z
-updated: 2026-10-20T19:01:08Z
-transitions: []
+updated: 2026-10-24T21:52:16Z
+transitions:
+  - to: ready
+    at: 2026-10-24T21:41:46Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-24T21:41:46Z
+    by: system-flow
+  - to: done
+    at: 2026-10-24T21:52:16Z
+    by: agent-S-0434
 stream: S-0434
 tags: [cli]
 touches: [flai/internal/metrics/digest.go, flai/internal/metrics/digest_test.go, flai/internal/metrics/metrics.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go]
 after: [T-1842]
+usage:
+  source: log
+  seconds: 630
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 31
+      output: 10019
+      cache_read: 1677868
+      cache_write: 83371
+      cost: 1.0084
 ---
 # T-1843 flai/internal/metrics computes digest.weeks and digest.entries from the threads, the completed stories, and the entries
 

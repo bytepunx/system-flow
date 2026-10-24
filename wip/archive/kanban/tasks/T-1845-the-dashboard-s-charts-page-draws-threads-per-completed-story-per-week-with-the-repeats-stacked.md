@@ -3,16 +3,37 @@ id: T-1845
 type: task
 nature: feature
 title: The dashboard's charts page draws threads per completed story per week with the repeats stacked
-status: backlog
+status: done
 parent: S-0434
 owner: alex
 created: 2026-10-16T06:08:34Z
-updated: 2026-10-23T17:23:57Z
-transitions: []
+updated: 2026-10-24T21:52:39Z
+transitions:
+  - to: ready
+    at: 2026-10-24T21:41:47Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-24T21:41:48Z
+    by: system-flow
+  - to: done
+    at: 2026-10-24T21:52:39Z
+    by: agent-S-0434
 stream: S-0434
 tags: [dashboard]
 touches: [flaiover/src/lib/viz/catalog.ts, flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/viz/explain.ts, flaiover/src/lib/viz/explain.test.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts"]
-after: [T-1843]
+after: [T-1842]
+usage:
+  source: log
+  seconds: 651
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 124
+      output: 39821
+      cache_read: 6668684
+      cache_write: 331356
+      cost: 4.0078
 ---
 # T-1845 The dashboard's charts page draws threads per completed story per week with the repeats stacked
 

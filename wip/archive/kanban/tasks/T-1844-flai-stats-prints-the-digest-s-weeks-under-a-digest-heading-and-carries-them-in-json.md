@@ -3,16 +3,37 @@ id: T-1844
 type: task
 nature: feature
 title: flai stats prints the digest's weeks under a digest heading and carries them in --json
-status: backlog
+status: done
 parent: S-0434
 owner: alex
 created: 2026-10-16T06:08:30Z
-updated: 2026-10-20T19:01:12Z
-transitions: []
+updated: 2026-10-24T22:14:45Z
+transitions:
+  - to: ready
+    at: 2026-10-24T21:53:14Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-24T21:53:15Z
+    by: system-flow
+  - to: done
+    at: 2026-10-24T22:14:45Z
+    by: agent-S-0434
 stream: S-0434
 tags: [cli]
 touches: [flai/cmd/stats.go, flai/cmd/check_stats_test.go, flai/cmd/stats_test.go, docs/users/flai-reference.md]
 after: [T-1843]
+usage:
+  source: log
+  seconds: 1290
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 33
+      output: 10754
+      cache_read: 1801002
+      cache_write: 89489
+      cost: 1.0824
 ---
 # T-1844 flai stats prints the digest's weeks under a digest heading and carries them in --json
 

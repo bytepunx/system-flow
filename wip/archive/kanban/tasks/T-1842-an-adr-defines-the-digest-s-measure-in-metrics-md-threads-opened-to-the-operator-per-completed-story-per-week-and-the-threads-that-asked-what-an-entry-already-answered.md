@@ -3,15 +3,36 @@ id: T-1842
 type: task
 nature: feature
 title: "An ADR defines the digest's measure in metrics.md: threads opened to the operator per completed story per week, and the threads that asked what an entry already answered"
-status: backlog
+status: done
 parent: S-0434
 owner: alex
 created: 2026-10-16T06:08:12Z
-updated: 2026-10-16T06:08:12Z
-transitions: []
+updated: 2026-10-24T21:41:31Z
+transitions:
+  - to: ready
+    at: 2026-10-24T21:39:50Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-24T21:39:50Z
+    by: system-flow
+  - to: done
+    at: 2026-10-24T21:41:31Z
+    by: agent-S-0434
 stream: S-0434
 tags: [cli]
 touches: [design/adrs, design/adrs/README.md, design/system/metrics.md]
+usage:
+  source: log
+  seconds: 101
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 28
+      output: 8883
+      cache_read: 1487610
+      cache_write: 73917
+      cost: 0.894
 ---
 # T-1842 An ADR defines the digest's measure in metrics.md: threads opened to the operator per completed story per week, and the threads that asked what an entry already answered
 

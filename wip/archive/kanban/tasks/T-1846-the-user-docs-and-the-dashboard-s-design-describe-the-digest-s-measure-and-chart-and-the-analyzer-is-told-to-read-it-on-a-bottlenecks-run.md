@@ -3,16 +3,37 @@ id: T-1846
 type: task
 nature: feature
 title: The user docs and the dashboard's design describe the digest's measure and chart, and the analyzer is told to read it on a bottlenecks run
-status: backlog
+status: done
 parent: S-0434
 owner: alex
 created: 2026-10-16T06:08:45Z
-updated: 2026-10-23T17:24:04Z
-transitions: []
+updated: 2026-10-24T22:24:03Z
+transitions:
+  - to: ready
+    at: 2026-10-24T22:20:43Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-24T22:20:44Z
+    by: system-flow
+  - to: done
+    at: 2026-10-24T22:24:03Z
+    by: agent-S-0434
 stream: S-0434
 tags: [cli, dashboard, template]
 touches: [docs/users/flai.md, docs/users/flaiover.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, template/template.yaml]
 after: [T-1844, T-1845]
+usage:
+  source: log
+  seconds: 199
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 11895
+      cache_read: 1992095
+      cache_write: 98984
+      cost: 1.1972
 ---
 # T-1846 The user docs and the dashboard's design describe the digest's measure and chart, and the analyzer is told to read it on a bottlenecks run
 
