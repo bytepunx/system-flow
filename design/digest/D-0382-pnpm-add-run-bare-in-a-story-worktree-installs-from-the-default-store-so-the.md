@@ -9,7 +9,7 @@ date: 2026-10-23
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [S-0429]
+cited: []
 ---
 
 # D-0382 pnpm add run bare in a story worktree installs from the default store, so the next flaiover-install.sh aborts with ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY

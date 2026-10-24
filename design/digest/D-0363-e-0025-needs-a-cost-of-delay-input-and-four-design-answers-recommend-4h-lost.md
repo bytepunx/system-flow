@@ -9,7 +9,7 @@ date: 2026-10-21
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [S-0431, S-0432]
+cited: []
 ---
 
 # D-0363 E-0025 needs a cost of delay input and four design answers: recommend 4h lost per cycle, one file per entry under design/digest, a curator role of its own, a 30-day compaction window: Recommended…
