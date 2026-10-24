@@ -70,7 +70,8 @@ type Manifest struct {
 	Orchestration Orchestration `yaml:"orchestration,omitempty" json:"orchestration,omitzero"`
 	// Analysis is the analyzer's agent and schedule (S-0223).
 	Analysis Analysis `yaml:"analysis,omitempty" json:"analysis,omitzero"`
-	// Digest is the curator's agent (ADR-0196).
+	// Digest is the curator's agent (ADR-0196), schedule, and compaction
+	// window (ADR-0199).
 	Digest Digest `yaml:"digest,omitempty" json:"digest,omitzero"`
 	// Acceptance is how a story in review is accepted: on this machine, or
 	// through a pull request on the project's forge (S-0392). Load refuses a
@@ -409,17 +410,59 @@ func (m Manifest) AnalysisAgent() *Agent {
 
 // Digest is the project's say about the curator, the agent that takes in
 // what the archive and the threads gained as digest entries: the agent it
-// runs as (ADR-0196).
+// runs as (ADR-0196), when flai serve runs it, and how long an entry may go
+// uncited before it is compacted (ADR-0199).
 type Digest struct {
 	// Agent is the curator's agent over the project's: what it sets wins,
 	// and what it leaves out is the project's agent's.
 	Agent *Agent `yaml:"agent,omitempty" json:"agent,omitempty"`
+	// Schedule is when flai serve runs the curator: a five-field cron
+	// expression in UTC or daily; empty means no schedule.
+	Schedule string `yaml:"schedule,omitempty" json:"schedule,omitempty"`
+	// CompactAfter is how long an active entry may go with no citation
+	// before the curator compacts it, a Go duration such as 720h; empty
+	// means DefaultCompactAfter, and 0 turns compaction off.
+	CompactAfter string `yaml:"compact_after,omitempty" json:"compact_after,omitempty"`
+}
+
+// DefaultCompactAfter is how long an active digest entry may go with no
+// citation before it is compacted when digest.compact_after is not set: 30
+// days.
+const DefaultCompactAfter = 720 * time.Hour
+
+// DigestSchedule is digest.schedule parsed: nil when it is empty.
+func (d Digest) DigestSchedule() (*cron.Schedule, error) {
+	return parseSchedule("digest", d.Schedule)
+}
+
+// CompactAfterDuration is digest.compact_after as a duration:
+// DefaultCompactAfter when it is empty, and zero when compaction is off.
+func (d Digest) CompactAfterDuration() (time.Duration, error) {
+	s := strings.TrimSpace(d.CompactAfter)
+	if s == "" {
+		return DefaultCompactAfter, nil
+	}
+	dur, err := time.ParseDuration(s)
+	if err != nil {
+		return 0, fmt.Errorf("digest.compact_after %q is not a duration; write one such as 720h or 336h, or 0 to turn compaction off", d.CompactAfter)
+	}
+	if dur < 0 {
+		return 0, fmt.Errorf("digest.compact_after %q is negative; write a duration such as 720h or 336h, or 0 to turn compaction off", d.CompactAfter)
+	}
+	return dur, nil
 }
 
 // Errors are what is wrong with the digest settings, one sentence each;
 // none when they are valid.
 func (d Digest) Errors() []string {
-	return d.Agent.problems("digest.agent")
+	var errs []string
+	if _, err := d.DigestSchedule(); err != nil {
+		errs = append(errs, err.Error())
+	}
+	if _, err := d.CompactAfterDuration(); err != nil {
+		errs = append(errs, err.Error())
+	}
+	return append(errs, d.Agent.problems("digest.agent")...)
 }
 
 // DigestAgent is the agent the curator is started with: digest.agent merged

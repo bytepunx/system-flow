@@ -18,10 +18,10 @@ import (
 // The strategic agents' settings that flai manifest set writes (S-0229,
 // ADR-0039): what the orchestrator may do and how it orders and releases,
 // the planner's and the analyzer's agents and schedules, and the curator's
-// agent (ADR-0196); the project's test tiers (S-0273); how a story is
-// accepted (S-0392); and the most stories a batch of the merge queue holds
-// (S-0399). The catalog says of each its kind, its values, its default, and
-// what it does; whether a value is allowed is always the manifest's own
+// agent (ADR-0196), schedule, and compaction window (ADR-0199); the
+// project's test tiers (S-0273); how a story is accepted (S-0392); and the
+// most stories a batch of the merge queue holds (S-0399). The catalog says
+// of each its kind, its values, its default, and what it does; whether a value is allowed is always the manifest's own
 // validation (Planning.Errors, Orchestration.Errors, Analysis.Errors,
 // Digest.Errors, Acceptance.Errors, MergeQueue.Errors, TestErrors) on the
 // manifest as it would be, so flai manifest set and flai check cannot
@@ -201,6 +201,12 @@ func buildCatalog() []Setting {
 		Setting{Key: "digest.agent", Kind: KindAgent,
 			Meaning: "The curator's agent, over the project's: what it sets wins, and what it leaves out is the project's agent's.",
 			get:     func(m Manifest) (any, bool) { return agent(m.Digest.Agent) }},
+		Setting{Key: "digest.schedule", Kind: KindCron,
+			Meaning: "When flai serve runs the curator, a five-field cron expression in UTC or daily; unset, it runs only after acceptances and when you ask.",
+			get:     func(m Manifest) (any, bool) { return text(m.Digest.Schedule) }},
+		Setting{Key: "digest.compact_after", Kind: KindDuration, Default: durationText(DefaultCompactAfter),
+			Meaning: "How long an active digest entry may go with no work item, narrative, or thread citing it before the curator compacts it to its title; 0 turns compaction off.",
+			get:     func(m Manifest) (any, bool) { return text(m.Digest.CompactAfter) }},
 		Setting{Key: "acceptance.mode", Kind: KindChoice, Values: AcceptanceModes, Default: AcceptLocal,
 			Meaning: "How a story in review is accepted: local merges its branch on this machine, as flai accept does, and pull-request merges it through a pull request on the project's forge.",
 			get:     func(m Manifest) (any, bool) { return text(m.Acceptance.Mode) }},

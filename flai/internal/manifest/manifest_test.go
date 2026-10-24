@@ -820,6 +820,100 @@ func TestDigestAgent(t *testing.T) {
 	}
 }
 
+// ADR-0199: digest.schedule reads from the manifest as analysis.schedule
+// does, reaching no other schedule; unset, there is none, and one that does
+// not parse, or never comes round, is an error naming the key.
+func TestDigestSchedule(t *testing.T) {
+	p := filepath.Join(t.TempDir(), File)
+	body := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\ndigest:\n  schedule: \"0 6 * * 1\"\n"
+	if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m, err := Load(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, err := m.Digest.DigestSchedule()
+	if err != nil || s == nil || s.String() != "0 6 * * 1" {
+		t.Fatalf("schedule %v, %v", s, err)
+	}
+	at := time.Date(2026, 10, 4, 9, 10, 0, 0, time.UTC) // a Sunday
+	if next := s.Next(at); !next.Equal(time.Date(2026, 10, 5, 6, 0, 0, 0, time.UTC)) {
+		t.Errorf("next after %v: %v", at, next)
+	}
+	if errs := m.Digest.Errors(); len(errs) != 0 {
+		t.Errorf("valid digest: %v", errs)
+	}
+	if as, err := m.Analysis.AnalysisSchedule(); err != nil || as != nil {
+		t.Errorf("digest.schedule reached the analyzer: %v, %v", as, err)
+	}
+	if ps, err := m.Planning.PlanSchedule(); err != nil || ps != nil {
+		t.Errorf("digest.schedule reached the planner: %v, %v", ps, err)
+	}
+
+	for _, blank := range []string{"", "  "} {
+		if s, err := (Digest{Schedule: blank}).DigestSchedule(); err != nil || s != nil {
+			t.Errorf("schedule %q: %v, %v", blank, s, err)
+		}
+	}
+	if s, err := (Digest{Schedule: "daily"}).DigestSchedule(); err != nil || s == nil || s.String() != "daily" {
+		t.Fatalf("daily: %v, %v", s, err)
+	}
+	for _, c := range []struct {
+		d    Digest
+		want string
+	}{
+		{Digest{Schedule: "61 * * * *"}, `digest.schedule "61 * * * *": the minute "61" is outside 0-59`},
+		{Digest{Schedule: "weekly"}, `digest.schedule "weekly" has 1 fields, not five`},
+		{Digest{Schedule: "0 0 31 2 *"}, `digest.schedule "0 0 31 2 *" never comes round`},
+	} {
+		got := c.d.Errors()
+		if len(got) != 1 || !strings.Contains(got[0], c.want) {
+			t.Errorf("%+v: got %q, want one error saying %q", c.d, got, c.want)
+		}
+		if s, err := c.d.DigestSchedule(); err == nil || s != nil {
+			t.Errorf("%+v: a bad schedule is accepted: %v", c.d, s)
+		}
+	}
+}
+
+// ADR-0199: digest.compact_after is a Go duration, 30 days when unset, 0
+// turning compaction off; one that does not parse, or is negative, is an
+// error naming the key and what to write.
+func TestDigestCompactAfter(t *testing.T) {
+	if DefaultCompactAfter != 30*24*time.Hour {
+		t.Errorf("the default is %v, not 30 days", DefaultCompactAfter)
+	}
+	m := loaded(t, []byte("version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\ndigest:\n  compact_after: 336h\n"))
+	if d, err := m.Digest.CompactAfterDuration(); err != nil || d != 14*24*time.Hour {
+		t.Errorf("read: %v, %v", d, err)
+	}
+	for in, want := range map[string]time.Duration{"": DefaultCompactAfter, " ": DefaultCompactAfter, "0": 0, "0s": 0, "36h30m": 36*time.Hour + 30*time.Minute} {
+		if d, err := (Digest{CompactAfter: in}).CompactAfterDuration(); err != nil || d != want {
+			t.Errorf("%q: %v, %v, want %v", in, d, err, want)
+		}
+		if errs := (Digest{CompactAfter: in}).Errors(); len(errs) != 0 {
+			t.Errorf("%q: %v", in, errs)
+		}
+	}
+	for bad, want := range map[string]string{
+		"a month": `digest.compact_after "a month" is not a duration; write one such as 720h or 336h, or 0 to turn compaction off`,
+		"30d":     `digest.compact_after "30d" is not a duration`,
+		"-1h":     `digest.compact_after "-1h" is negative; write a duration such as 720h or 336h, or 0 to turn compaction off`,
+	} {
+		if _, err := (Digest{CompactAfter: bad}).CompactAfterDuration(); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("%q: %v, want %q", bad, err, want)
+		}
+		if errs := (Digest{CompactAfter: bad}).Errors(); len(errs) != 1 || !strings.Contains(errs[0], want) {
+			t.Errorf("%q: errors %q, want one saying %q", bad, errs, want)
+		}
+	}
+	both := (Digest{Schedule: "weekly", CompactAfter: "-1h", Agent: &Agent{Harness: "Claude Code"}}).Errors()
+	if len(both) != 3 || !strings.HasPrefix(both[0], "digest.schedule ") || !strings.HasPrefix(both[1], "digest.compact_after ") || !strings.HasPrefix(both[2], "digest.agent ") {
+		t.Errorf("the schedule's, the window's, and the agent's errors, in that order: %q", both)
+	}
+}
+
 // ADR-0196: flai manifest set writes digest.agent, which reads back as the
 // curator's agent, and refuses one that is not valid with the field and
 // the reason.

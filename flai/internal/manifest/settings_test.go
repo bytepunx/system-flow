@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 )
 
 // settingsFixture is a manifest with comments in and around the strategic
@@ -167,6 +168,9 @@ func TestEditSettingsRefusesWithTheFieldAndTheReason(t *testing.T) {
 		{"acceptance mode", []Assignment{{"acceptance.mode", "remote"}}, nil, "acceptance.mode", `"remote" is not an acceptance mode; write local`},
 		{"forge", []Assignment{{"acceptance.forge", "gitlab"}}, nil, "acceptance.forge", `"gitlab" is not a forge flai reaches; write github`},
 		{"merge method", []Assignment{{"acceptance.merge_method", "fast-forward"}}, nil, "acceptance.merge_method", `"fast-forward" is not a merge method; write merge`},
+		{"digest schedule", []Assignment{{"digest.schedule", "weekly"}}, nil, "digest.schedule", `"weekly" has 1 fields, not five`},
+		{"compaction window", []Assignment{{"digest.compact_after", "a month"}}, nil, "digest.compact_after", `"a month" is not a duration; write one such as 720h`},
+		{"negative compaction window", []Assignment{{"digest.compact_after", "-24h"}}, nil, "digest.compact_after", `"-24h" is negative`},
 		{"batch max zero", []Assignment{{"merge_queue.batch_max", "0"}}, nil, "merge_queue.batch_max", "0 is not a number of one or more; write the most enqueued stories one batch of the merge queue holds, such as 4, or remove it for 4"},
 		{"batch max negative", []Assignment{{"merge_queue.batch_max", "-3"}}, nil, "merge_queue.batch_max", "-3 is not a number of one or more"},
 		{"batch max not a number", []Assignment{{"merge_queue.batch_max", "four"}}, nil, "merge_queue.batch_max", `"four" is not a whole number; write one such as 5`},
@@ -270,6 +274,64 @@ func TestEditSettingsWritesBatchMax(t *testing.T) {
 	}
 	if !v.Set || v.Value != 6 {
 		t.Errorf("its value: %+v", v)
+	}
+}
+
+// ADR-0199: digest.schedule and digest.compact_after are written into a
+// digest block added at the end, set again in place, 0 among them, read back
+// by Load, and unset so that their defaults apply; the rest of the file is as
+// it was.
+func TestEditSettingsWritesTheDigestSettings(t *testing.T) {
+	if s, ok := SettingFor("digest.schedule"); !ok || s.Kind != KindCron || s.Default != "" {
+		t.Fatalf("digest.schedule in the catalog: %+v, %v", s, ok)
+	}
+	if s, ok := SettingFor("digest.compact_after"); !ok || s.Kind != KindDuration || s.Default != "720h" {
+		t.Fatalf("digest.compact_after in the catalog: %+v, %v", s, ok)
+	}
+	got, err := EditSettings([]byte(settingsFixture), []Assignment{{"digest.schedule", "daily"}, {"digest.compact_after", "336h"}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := settingsFixture + "digest:\n  schedule: daily\n  compact_after: 336h\n"
+	if string(got) != want {
+		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
+	}
+	m := loaded(t, got)
+	if s, err := m.Digest.DigestSchedule(); err != nil || s == nil || s.String() != "daily" {
+		t.Errorf("schedule read back: %v, %v", s, err)
+	}
+	if d, err := m.Digest.CompactAfterDuration(); err != nil || d != 336*time.Hour {
+		t.Errorf("window read back: %v, %v", d, err)
+	}
+	values := map[string]SettingValue{}
+	for _, sv := range m.SettingValues() {
+		values[sv.Key] = sv
+	}
+	if v := values["digest.schedule"]; !v.Set || v.Value != "daily" {
+		t.Errorf("digest.schedule's value: %+v", v)
+	}
+	if v := values["digest.compact_after"]; !v.Set || v.Value != "336h" {
+		t.Errorf("digest.compact_after's value: %+v", v)
+	}
+
+	off, err := EditSettings(got, []Assignment{{"digest.schedule", "0 6 * * 1"}, {"digest.compact_after", "0"}}, nil)
+	if err != nil || string(off) != settingsFixture+"digest:\n  schedule: \"0 6 * * 1\"\n  compact_after: \"0\"\n" {
+		t.Fatalf("set again: %v\n%s", err, off)
+	}
+	if d, err := loaded(t, off).Digest.CompactAfterDuration(); err != nil || d != 0 {
+		t.Errorf("0 read back: %v, %v", d, err)
+	}
+
+	unset, err := EditSettings(got, nil, []string{"digest.schedule", "digest.compact_after"})
+	if err != nil || string(unset) != settingsFixture+"digest:\n" {
+		t.Fatalf("unset: %v\n%s", err, unset)
+	}
+	m = loaded(t, unset)
+	if s, err := m.Digest.DigestSchedule(); err != nil || s != nil {
+		t.Errorf("unset schedule: %v, %v", s, err)
+	}
+	if d, err := m.Digest.CompactAfterDuration(); err != nil || d != DefaultCompactAfter {
+		t.Errorf("unset window: %v, %v", d, err)
 	}
 }
 
@@ -380,7 +442,7 @@ func TestSettingValues(t *testing.T) {
 	if a, ok := got["planning.agent"].Value.(*Agent); !ok || a.Model != "claude-sonnet-5" {
 		t.Errorf("planning.agent = %v", got["planning.agent"].Value)
 	}
-	for _, key := range []string{"orchestration.permissions.publish", "planning.hour_rate", "analysis.schedule", "analysis.agent", "acceptance.mode", "acceptance.forge", "acceptance.merge_method", "merge_queue.batch_max"} {
+	for _, key := range []string{"orchestration.permissions.publish", "planning.hour_rate", "analysis.schedule", "analysis.agent", "digest.schedule", "digest.compact_after", "acceptance.mode", "acceptance.forge", "acceptance.merge_method", "merge_queue.batch_max"} {
 		if v := got[key]; v.Set || v.Value != nil {
 			t.Errorf("%s is unset, got %v", key, v.Value)
 		}
@@ -391,7 +453,7 @@ func TestSettingValues(t *testing.T) {
 	if d := got["planning.default_duration"].Default; d != "1h" {
 		t.Errorf("planning.default_duration's default = %q, want 1h", d)
 	}
-	for key, want := range map[string]string{"acceptance.mode": AcceptLocal, "acceptance.forge": ForgeGitHub, "acceptance.merge_method": MergeMerge, "merge_queue.batch_max": "4"} {
+	for key, want := range map[string]string{"digest.compact_after": "720h", "acceptance.mode": AcceptLocal, "acceptance.forge": ForgeGitHub, "acceptance.merge_method": MergeMerge, "merge_queue.batch_max": "4"} {
 		if d := got[key].Default; d != want {
 			t.Errorf("%s's default = %q, want %q", key, d, want)
 		}

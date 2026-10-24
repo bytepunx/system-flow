@@ -53,6 +53,9 @@ tests: # the test tiers, cheapest first, that flai test runs for the paths each 
 #   merge_method: merge # or squash, rebase: how the forge merges the pull request
 # merge_queue: # the merge queue flai serve runs behind the merge-queue host action, under local acceptance only
 #   batch_max: 4 # the most enqueued stories one batch verifies together; flai manifest set writes it
+# digest: # the curator flai serve runs behind the curate host action; flai manifest set writes it
+#   schedule: daily # when the curator runs besides after acceptances: a five-field cron expression in UTC, or daily; unset, no schedule
+#   compact_after: 720h # how long an active digest entry may go uncited before the curator compacts it to its title; 0 turns compaction off
 claims:
   shared: # paths many stories change in their own sections or new files: an overlap inside one holds no story; flai shared edits them
     - {{ .layout.design }}/adrs

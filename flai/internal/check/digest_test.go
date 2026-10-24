@@ -125,3 +125,36 @@ func TestNoDigestFolderIsNotChecked(t *testing.T) {
 		}
 	}
 }
+
+// ADR-0199: a digest.schedule that does not parse and a digest.compact_after
+// that is not a duration of zero or more are errors on the digest key, each
+// saying what to write; valid ones, and none, are not reported.
+func TestDigestScheduleAndCompactAfterAreChecked(t *testing.T) {
+	for _, extra := range []string{
+		"",
+		"digest:\n  schedule: daily\n",
+		"digest:\n  schedule: \"0 6 * * 1\"\n  compact_after: 336h\n",
+		"digest:\n  compact_after: \"0\"\n",
+	} {
+		if got := findings(t, planningProject(t, extra), "manifest.digest"); len(got) != 0 {
+			t.Errorf("a valid digest block %q: %+v", extra, got)
+		}
+	}
+	got := findings(t, planningProject(t, "digest:\n  schedule: weekly\n  compact_after: a month\n"), "manifest.digest")
+	if len(got) != 2 {
+		t.Fatalf("want two errors, the schedule and the window: %+v", got)
+	}
+	for i, want := range []string{
+		`digest.schedule "weekly" has 1 fields, not five (minute, hour, day of month, month, day of week); write one such as`,
+		`digest.compact_after "a month" is not a duration; write one such as 720h or 336h, or 0 to turn compaction off`,
+	} {
+		f := got[i]
+		if f.Level != Error || f.Path != "system-flow.yaml" || f.Line != 8 || !strings.Contains(f.Message, want) {
+			t.Errorf("finding %d: %+v, want an error on line 8 saying %q", i, f, want)
+		}
+	}
+	got = findings(t, planningProject(t, "digest:\n  compact_after: -24h\n"), "manifest.digest")
+	if len(got) != 1 || !strings.Contains(got[0].Message, `digest.compact_after "-24h" is negative`) {
+		t.Errorf("want one error, a negative window: %+v", got)
+	}
+}
