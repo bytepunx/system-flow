@@ -1259,9 +1259,9 @@ The digest is what past stories learned, one fact per file in `design/digest/`, 
 
 Both run `flai check`'s digest rules on what they wrote. If they report anything, `new` removes the file, and `edit` puts the file back unless the problem was there before your edit; the problems are printed and the exit code is 4. An entry says where a secret lives, never its value: text with the shape of a key or token is refused. Each prints the entry's ID, title, kind, status, and path; `--json` gives the entry.
 
-The folder has no index: `flai digest list` is one. It prints each entry's ID, status, kind, date, and title, with its sources, topics, and paths below. `--status` (`active`, `absorbed`, or `compacted`) and `--topic` keep the entries that match; `--json` gives them with their bodies. `flai digest show` prints one entry whole. Nothing in the folder is deleted: an entry that a document now records is `absorbed`, with `absorbed_by` naming the document, and one no story cited for a while is `compacted`.
+The folder has no index: `flai digest list` is one. It prints each entry's ID, status, kind, date, and title, with its sources, topics, and paths below, and `absorbed_by` when it is absorbed. `--status` (`active`, `absorbed`, or `compacted`) and `--topic` keep the entries that match; `--json` gives them with their bodies. `flai digest show` prints one entry whole. Nothing in the folder is deleted: an entry that a document now records is `absorbed`, with `absorbed_by` naming the document, and one no story cited for a while is `compacted` ([Absorb and compact the digest](#absorb-and-compact-the-digest)).
 
-`flai check` reports `digest.entry` on an entry whose name or front matter is wrong, or whose sources or `absorbed_by` name nothing, and `digest.secret` on text with the shape of a key or token. Every agent may run `list` and `show`. `flai guard` refuses `new` and `edit` to every sub-agent and to the planner, the orchestrator, and the analyzer. The curator writes entries with them alone ([Running the curator](#running-the-curator)).
+`flai check` reports `digest.entry` on an entry whose name or front matter is wrong, or whose sources or `absorbed_by` name nothing, and `digest.secret` on text with the shape of a key or token. Every agent may run `list` and `show`. `flai guard` refuses `new`, `edit`, `absorb`, `cited`, and `compact` to every sub-agent and to the planner, the orchestrator, and the analyzer. The curator writes entries with them alone ([Running the curator](#running-the-curator)).
 
 ### Harvest and seed the digest
 
@@ -1284,6 +1284,24 @@ flai digest seed                                      # write the answers and ca
 A resolution (`Resolved.`) is not an answer, and neither is a reply to a permission prompt (`Allow <tool> <path>?`). Each candidate names its source, a story, thread, or issue, with the thread entry's time or the narrative's path, and carries the topics and paths of the item it comes from, its date, its text, and the entries that already cite its source. `--kind` keeps the kinds you name.
 
 `flai digest seed` writes an entry for each `answer`, `recommendation`, and `cause` the harvest lists, through the same path as `flai digest new`. An entry's date is the day the fact was learned, and its body quotes the question, the answer, and any recommendation it overruled, or the cause and the fix. It skips what an entry already records, so a second run writes nothing, and an entry the check refuses, such as one with a secret's shape, which it names by the rule and goes on. It never seeds decisions, which the curator judges. `--dry-run` writes nothing and lists what a seed would write. Both commands take `--json`.
+
+### Absorb and compact the digest
+
+```bash
+flai digest absorb D-0007 --by design/system/flai-cli.md                    # the document now records the fact
+flai digest absorb D-0007 --by design/conventions/git.md --heading "Rules"  # or one of its sections
+flai digest cited                                                           # who cites each entry, and when last
+flai digest compact --dry-run                                               # what a compaction would do
+flai digest compact --json
+```
+
+A story's pack loads an `active` entry whole, a `compacted` one as its title, and an `absorbed` one not at all, so these keep the digest small ([ADR-0199](../../design/adrs/0199-the-curator-runs-after-acceptances-coalesced-and-on-digest-schedule-marks.md)). The curator runs them in every run ([Running the curator](#running-the-curator)); you may run them yourself.
+
+`flai digest absorb` marks an entry `absorbed` and sets its `absorbed_by` to the design document, convention, or ADR that now records its fact, as a path from the project root. With `--heading`, which `flai doc show --heading` reads the same way, it names the section, as `<path>#<anchor>`. The body is kept. A path that names no file, or a heading the document lacks, is refused with exit code 4, and nothing is written. Absorbing an entry again names the newer document.
+
+`flai digest cited` lists each entry with what cites it and its latest citation, and writes the entry's `cited` list where that changed. A citation is the entry's ID, such as `D-0007` or `D-7`, in a work item, a narrative, which counts as its story, or a thread, on the board or in the archive. Its date is the citing file's `updated`. Entries citing one another do not count. Cite an entry in a narrative's `## Decisions` or on a thread to keep it whole.
+
+`flai digest compact` runs `cited`, then compacts each active entry whose latest citation, or its own date when that is later or it has none, is older than `digest.compact_after`: 30 days (`720h`) unless you set it, and `0` turns compaction off. A compacted entry keeps its front matter and its `# D-nnnn <title>` heading; its body is emptied. Absorbed and compacted entries are left as they are, and a compacted entry stays compacted when it is cited later. Nothing is deleted: git keeps every earlier text, so you can put a body back with `flai digest edit`. `--dry-run` lists what it would compact and writes nothing.
 
 ## Read design on demand
 
@@ -2140,7 +2158,7 @@ When it ends, `flai serve` records how: `worked` when it wrote a report, `failed
 
 #### Running the curator
 
-The curator keeps the digest ([ADR-0196](../../design/adrs/0196-the-curator-runs-behind-the-curate-host-action-and-takes-in-what-the-archive.md)). It reads what the archive and the threads gained since its last run, as `flai digest harvest` lists it, and the digest as it is. For each fact the digest does not hold yet, it writes an entry with `flai digest new`. When an entry holds the fact already, it merges the candidate into that entry with `flai digest edit`, and a thread that asked what an entry answered goes in that entry's `asked_again`. It never writes a secret's value, only where you said it lives. It edits no file and authors no work item ([Record what a story learned](#record-what-a-story-learned)).
+The curator keeps the digest ([ADR-0196](../../design/adrs/0196-the-curator-runs-behind-the-curate-host-action-and-takes-in-what-the-archive.md)). It reads what the archive and the threads gained since its last run, as `flai digest harvest` lists it, and the digest as it is. For each fact the digest does not hold yet, it writes an entry with `flai digest new`. When an entry holds the fact already, it merges the candidate into that entry with `flai digest edit`, and a thread that asked what an entry answered goes in that entry's `asked_again`. In every run it then looks for entries a design document now records and marks them absorbed with `flai digest absorb`, and runs `flai digest compact` once ([Absorb and compact the digest](#absorb-and-compact-the-digest)). It never writes a secret's value, only where you said it lives. It edits no file and authors no work item ([Record what a story learned](#record-what-a-story-learned)).
 
 It runs behind a host action that is off until you turn it on:
 
@@ -2151,17 +2169,33 @@ flai curate --since 2026-10-01 --json # or since a day or an RFC 3339 time, and 
 flai serve journal                    # every curator started, or that could not be
 ```
 
-The MCP tool `curate` from your own agent does the same, and so does the host API's `curate.run`. With no `--since`, it takes in what was gained since its last entry in `wip/agents/curator.md`, or everything on its first run. `flai curate` needs `flai serve` running to record how the run ended and log what it did; without one it says so, and the curator still runs. One curator runs per project at a time: flai refuses another while one runs, naming it. It also refuses while the `curate` action is off, for a since that is neither a day nor an RFC 3339 time, and when the curator's agent names no harness and no command is set. Nothing starts it on a schedule.
+The MCP tool `curate` from your own agent does the same, and so does the host API's `curate.run`. With no `--since`, it takes in what was gained since its last entry in `wip/agents/curator.md`, or everything on its first run. `flai curate` needs `flai serve` running to record how the run ended and log what it did; without one it says so, and the curator still runs. One curator runs per project at a time: flai refuses another while one runs, naming it. It also refuses while the `curate` action is off, for a since that is neither a day nor an RFC 3339 time, and when the curator's agent names no harness and no command is set.
+
+While `curate` is on, `flai serve` also starts the curator on its own ([ADR-0199](../../design/adrs/0199-the-curator-runs-after-acceptances-coalesced-and-on-digest-schedule-marks.md)):
+
+| When | What started it |
+|------|-----------------|
+| A story is accepted | `accepted S-0042` |
+| Stories are accepted while a curator runs | `accepted S-0042, S-0043`: one more run once it ends, for all of them |
+| `digest.schedule` comes round | `schedule daily` |
+
+```yaml
+digest:
+  schedule: daily      # five-field cron in UTC, or daily for 00:00 UTC; unset, no schedule
+  compact_after: 720h  # how long an entry may go uncited before it is compacted; 0 turns compaction off
+```
+
+Each takes in what was gained since its last run. A start flai refuses, such as a scheduled time while a curator runs, is logged in flai serve's log and not tried again; the schedule comes round again at its next time. Acceptances and scheduled times while `flai serve` was down or `curate` was off start nothing then or later. Each run starts a session you pay for, so there is no schedule until you set one; an acceptance costs one run, and a burst of them two. `flai check` reports a schedule it cannot read and a `compact_after` that is not a duration.
 
 The curator runs in the project's main checkout, as `curator`, with its agent: `digest.agent`, laid over the project's `agent` as `analysis.agent` is for the analyzer. With `claude-code` it runs as the project's `.claude/agents/curator.md`, which the template ships; `flai upgrade` adds it to an older project. A command you set with `flai serve agent set` gets `FLAI_ROLE=curate`, and `FLAI_SINCE` when the run has a since. The run does not count against the in-progress limit and holds no story back. Its entries are left uncommitted in the main checkout, for your next commit.
 
-`flai guard` holds it to the digest: it may read, run flai's reads, open and answer threads, log its activity, and run `flai digest harvest`, `new`, and `edit`. It may not use `Edit`, `Write`, or `NotebookEdit` on any file, run `flai digest seed`, create, edit, or move a work item, file an issue, start another strategic agent, commit, or run any other flai command that writes. When an entry needs your judgement, it asks in a thread on the item the entry's source comes from and waits for your answer.
+`flai guard` holds it to the digest: it may read, run flai's reads, open and answer threads, log its activity, and run `flai digest harvest`, `new`, `edit`, `absorb`, `cited`, and `compact`. It may not use `Edit`, `Write`, or `NotebookEdit` on any file, run `flai digest seed`, create, edit, or move a work item, file an issue, start another strategic agent, commit, or run any other flai command that writes. When an entry needs your judgement, it asks in a thread on the item the entry's source comes from and waits for your answer.
 
-When it ends, `flai serve` records how: `failed` when it exited with an error, `worked` otherwise, whether it wrote an entry or found nothing to take in. It logs the run in `wip/agents/curator.md`: its one-line summary, what started it (`asked`), the entries whose files the run wrote or changed, and what it cost. Its cost charges no item and stays in the curator's project total. Its output is in `serve/agents/<key>-curator-<time>.log` beside flai serve's state, and `flai hostapi agent.status` shows the newest run as `curator`, with its since and entries. [The curator](../../design/system/strategic-agents.md#the-curator) has the whole of it.
+When it ends, `flai serve` records how: `failed` when it exited with an error, `worked` otherwise, whether it wrote an entry or found nothing to take in. It logs the run in `wip/agents/curator.md`: its one-line summary, naming the entries it wrote, merged, absorbed, and compacted, what started it (`asked`, `accepted S-0042`, or `schedule daily`), the entries whose files the run wrote or changed, and what it cost. Its cost charges no item and stays in the curator's project total. Its output is in `serve/agents/<key>-curator-<time>.log` beside flai serve's state, and `flai hostapi agent.status` shows the newest run as `curator`, with its since and entries. [The curator](../../design/system/strategic-agents.md#the-curator) has the whole of it.
 
 #### Changing the strategic agents' settings
 
-`flai manifest set` writes these agents' settings in `system-flow.yaml`: what the orchestrator may do, how it orders the ready column and when a release is due, the planner's and the analyzer's agents and schedules, and the curator's agent (S-0229, [ADR-0101](../../design/adrs/0101-with-the-settings-host-action-on-the-dashboard-edits-the-strategic-agents.md)). It also writes how a story is accepted, the `acceptance` keys (S-0392). The dashboard's Orchestrator, Planner, and Analyzer pages run it for you while the `settings` host action is on ([flaiover](flaiover.md#editing-a-strategic-agents-settings)).
+`flai manifest set` writes these agents' settings in `system-flow.yaml`: what the orchestrator may do, how it orders the ready column and when a release is due, the planner's and the analyzer's agents and schedules, and the curator's agent, schedule, and compaction window (S-0229, [ADR-0101](../../design/adrs/0101-with-the-settings-host-action-on-the-dashboard-edits-the-strategic-agents.md)). It also writes how a story is accepted, the `acceptance` keys (S-0392). The dashboard's Orchestrator, Planner, and Analyzer pages run it for you while the `settings` host action is on ([flaiover](flaiover.md#editing-a-strategic-agents-settings)).
 
 ```bash
 flai manifest set orchestration.permissions.promote_to_ready=true orchestration.policy=wsjf
@@ -2181,9 +2215,10 @@ flai manifest set analysis.schedule=daily --autocommit --json
 | `orchestration.release.whole_epics` | `true` or `false`; `false` by default |
 | `planning.agent`, `analysis.agent`, `digest.agent` | An agent as JSON, such as `{"harness":"claude-code","model":"claude-sonnet-5","config":{"effort":"medium"}}`, written whole; `{}` removes it, and the agent is the project's |
 | `planning.replan` | `never`, `deterministic`, or `agent`; `deterministic` by default |
-| `planning.schedule`, `analysis.schedule` | A five-field cron expression in UTC, such as `0 6 * * 1-5`, or `daily`; none by default |
+| `planning.schedule`, `analysis.schedule`, `digest.schedule` | A five-field cron expression in UTC, such as `0 6 * * 1-5`, or `daily`; none by default |
 | `planning.hour_rate` | A number of zero or more, in the project's currency |
 | `planning.cycle`, `planning.default_duration` | A Go duration longer than zero, such as `168h`; `168h` and `1h` by default |
+| `digest.compact_after` | A Go duration, such as `720h`, or `0` for no compaction; `720h` by default |
 | `acceptance.mode` | `local` or `pull-request`; `local` by default ([Accepting through a pull request](#accepting-through-a-pull-request)) |
 | `acceptance.forge` | `github`, the default and only forge |
 | `acceptance.merge_method` | `merge`, `squash`, or `rebase`; `merge` by default |
@@ -2212,7 +2247,7 @@ An agent `flai serve` starts with `claude-code` is told to keep its own context 
 | `.claude/agents/verifier.md` | Reviews a story's diff against its acceptance criteria and the conventions, and names the criteria it meets by number. The explorer's tools and `Bash`, with which it reads the last result with `flai verify S-nnnn --last`; it runs the close-out or `flai verify` only when asked. Told not to edit, and `flai guard` refuses it a shell command that writes a file outside the temporary folder. Runs `sonnet`. |
 | `.claude/agents/planner.md` | The planner, which `flai plan` runs as its session's own agent, not a sub-agent ([Running the planner](#running-the-planner)). Writes through flai only: no `Edit` or `Write`. |
 | `.claude/agents/analyzer.md` | The analyzer, which `flai analyze` runs as its session's own agent, not a sub-agent ([Running the analyzer](#running-the-analyzer)). Has `Edit` and `Write` for its report alone, `issue_new` and `issue_bump` to file its findings as issues, and no tool that writes a work item. |
-| `.claude/agents/curator.md` | The curator, which `flai curate` runs as its session's own agent, not a sub-agent ([Running the curator](#running-the-curator)). Writes digest entries through `flai digest new` and `edit` alone: no `Edit` or `Write`, and no tool that writes a work item. |
+| `.claude/agents/curator.md` | The curator, which `flai serve` runs as its session's own agent, not a sub-agent, on `flai curate`, after acceptances, and on `digest.schedule` ([Running the curator](#running-the-curator)). Writes digest entries through `flai digest new`, `edit`, `absorb`, `cited`, and `compact` alone: no `Edit` or `Write`, and no tool that writes a work item. |
 | `.claude/settings.json` | Runs `flai guard` before every shell command and flai tool call, and, in a planner's, the orchestrator's, the analyzer's, the curator's, or a story's agent's session alone, before `Edit`, `MultiEdit`, `Write`, and `NotebookEdit`; your own session runs no guard on a file edit. In a story's agent's session (`FLAI_STORY` set) it also runs `flai guard` as each sub-agent starts and stops (`SubagentStart`, `SubagentStop`), so that the guard knows which of the session's sub-agents still run. |
 
 A story that changes one of these files ships it from its own branch: its agent, never one of its sub-agents, edits the file with `Edit` or `Write` once its sub-agents are back, you allow the write on a thread unless `auto-approve` is on, and you accept the story yourself ([Writes to protected paths](#writes-to-protected-paths)).

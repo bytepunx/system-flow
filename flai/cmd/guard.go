@@ -104,9 +104,9 @@ A story's agent, the planner, the analyzer, and the curator, sessions flai
 serve starts (FLAI_STORY, FLAI_STARTED_BY=flai-serve, or FLAI_ROLE plan,
 analyze, or curate), write only as themselves (S-0369, ADR-0143): their own Bash call
 is refused when a flai command's --by or --placed-by names another (--by on
-order, a policy, and on stats, a grouping, names no author; an empty one
-falls back to FLAI_AGENT), or when it sets FLAI_AGENT or FLAI_SESSION to
-anything but its own, the empty value and one held in a variable included,
+order, a policy, on stats, a grouping, and on digest absorb, a document,
+names no author; an empty one falls back to FLAI_AGENT), or when it sets
+FLAI_AGENT or FLAI_SESSION to anything but its own, the empty value and one held in a variable included,
 before a command, after export, declare, typeset, local, readonly, or env,
 or unsets either with unset or env -u, or clears both with env -i, in a
 shell's -c script, an eval, or a heredoc a shell reads as well. Its own name is the hook's
@@ -203,13 +203,16 @@ held as any sub-agent is.
 In a curator session, one flai serve starts with FLAI_ROLE=curate, the
 session's own calls are held to the digest (S-0431, ADR-0196): besides what
 a sub-agent may do, the MCP tools inbox, activity_log, thread_open,
-thread_reply, and wait_for_events, and flai digest harvest, new, and edit.
-Edit, MultiEdit, Write, and NotebookEdit are refused on every file, as are
-flai digest seed, item_new, item_edit, item_move, issue_new, issue_bump, and
-every other flai tool and command that writes, curate, analyze, and plan
-among them, and git's writes; each refusal says that the curator writes
-digest entries only with flai digest new and edit. The curator's sub-agents
-are held as any sub-agent is.
+thread_reply, and wait_for_events, and flai digest harvest, new, and edit,
+and absorb, cited, and compact (S-0432, ADR-0199), which mark an entry
+absorbed, record each entry's citers, and compact the entries no one cited
+within digest.compact_after. Edit, MultiEdit, Write, and NotebookEdit are
+refused on every file, as are flai digest seed, item_new, item_edit,
+item_move, issue_new, issue_bump, and every other flai tool and command
+that writes, curate, analyze, and plan among them, and git's writes; each
+refusal says that the curator writes digest entries only with flai digest
+new, edit, absorb, cited, and compact. The curator's sub-agents are held
+as any sub-agent is.
 
 No sub-agent, planner, orchestrator, analyzer, or curator starts the
 analyzer or the curator: the MCP tools analyze and curate and flai analyze

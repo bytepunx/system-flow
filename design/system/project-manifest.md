@@ -112,9 +112,11 @@ analysis:                                    # optional (S-0223): the analyzer's
   agent:                                     # the analyzer's agent, over agent above
     model: claude-sonnet-5
   schedule: "0 6 * * 1"                      # when flai serve runs the analyzer, a cron expression in UTC or daily; default none
-digest:                                      # optional (S-0431): the curator's agent
+digest:                                      # optional (S-0431): the curator's agent, schedule, and compaction window
   agent:                                     # the curator's agent, over agent above
     model: claude-sonnet-5
+  schedule: daily                            # optional (S-0432): when flai serve runs the curator besides after each acceptance, a cron expression in UTC or daily; default none
+  compact_after: 720h                        # optional (S-0432): how long an active digest entry may go uncited before it is compacted, a Go duration; default 720h, 0 off
 claims:                                      # optional (S-0295): how stories' touches claim paths
   shared:                                    # glob patterns of paths whose overlaps hold no story; flai shared edits them
     - docs/users/flai.md
@@ -230,7 +232,9 @@ Rules:
 - `analysis.schedule` is when `flai serve` runs the analyzer on its own, with no focus, while the `analyze` host action is on: a five-field cron expression in UTC, such as `0 6 * * 1`, or `daily`, which is 00:00 UTC, parsed as `planning.schedule` is. Unset, there is no schedule, and the analyzer runs only when the operator asks for it ([The analysis schedule](strategic-agents.md#the-analysis-schedule)).
 - `flai check` reports each thing wrong with `analysis` as a `manifest.analysis` error on its line: a `schedule` it cannot parse, or one that never comes round, and an `agent` that is not valid, under the name `analysis.agent`. `flai manifest set` writes both keys, and the Analyzer page's settings panel through it (S-0229, below).
 - `digest.agent` is the curator's agent (S-0431, [ADR-0196](../adrs/0196-the-curator-runs-behind-the-curate-host-action-and-takes-in-what-the-archive.md)): the same shape as `agent`, merged over it as `analysis.agent` is (`Manifest.DigestAgent`), so it names only what the curator runs differently. Unset, the curator runs on `agent`. How it runs is in [strategic-agents.md](strategic-agents.md#the-curator).
-- `flai check` reports a `digest.agent` that is not valid as a `manifest.digest` error on its line. `flai manifest set` writes it; no dashboard page has a panel for it yet.
+- `digest.schedule` is when `flai serve` runs the curator on its own, besides after each acceptance, while the `curate` host action is on: a five-field cron expression in UTC, or `daily`, parsed as `planning.schedule` is. Unset, there is no schedule (S-0432, [ADR-0199](../adrs/0199-the-curator-runs-after-acceptances-coalesced-and-on-digest-schedule-marks.md), [The curator after acceptances and on a schedule](strategic-agents.md#the-curator-after-acceptances-and-on-a-schedule)).
+- `digest.compact_after` is how long an active digest entry may go with no work item, narrative, or thread citing it before `flai digest compact` turns it into a compacted entry, its title alone: a Go duration such as `720h`. Unset, it is `720h`, 30 days; `0` turns compaction off ([Absorption and compaction](strategic-agents.md#absorption-and-compaction)).
+- `flai check` reports each thing wrong with `digest` as a `manifest.digest` error on its line: a `schedule` it cannot parse, or one that never comes round, a `compact_after` that is not a duration or is negative, and an `agent` that is not valid, under the name `digest.agent`. `flai manifest set` writes all three keys; no dashboard page has a panel for them yet.
 - `flai manifest set <key>=<value>... [--unset <key>]... [--autocommit] [--trailer ...]` writes the strategic agents' settings (S-0229, [ADR-0101](../adrs/0101-with-the-settings-host-action-on-the-dashboard-edits-the-strategic-agents.md)), the project's test tiers (S-0273), and how a story is accepted (S-0392): the keys of its catalog, `manifest.Settings`, below. The dashboard's settings panels on the Orchestrator, Planner, and Analyzer pages run it through the host API's `settings.manifest`, and `settings.get` gives each key's value with its kind, values, default, meaning, and a permission's risk from the same catalog ([flaiover-dashboard.md](flaiover-dashboard.md#strategic-agents-settings-s-0229)). The meaning and the risk below are the sentences the panels show.
 
   | Key | Kind | Default | Meaning |
@@ -259,6 +263,8 @@ Rules:
   | `analysis.agent` | agent | the project's `agent` | The analyzer's agent, over the project's: what it sets wins, and what it leaves out is the project's agent's |
   | `analysis.schedule` | cron | unset | When flai serve runs the analyzer, a five-field cron expression in UTC or daily; unset, it runs only when you ask |
   | `digest.agent` | agent | the project's `agent` | The curator's agent, over the project's: what it sets wins, and what it leaves out is the project's agent's |
+  | `digest.schedule` | cron | unset | When flai serve runs the curator, a five-field cron expression in UTC or daily; unset, it runs only after acceptances and when you ask |
+  | `digest.compact_after` | duration | `720h` | How long an active digest entry may go with no work item, narrative, or thread citing it before the curator compacts it to its title; 0 turns compaction off |
   | `tests` | tests | one `plain` tier running `scripts/test.sh`, when it exists | The project's test tiers, cheapest first, that flai test runs for the paths each selects: each a name, a command, the paths that select it, and the format of its output; unset, one plain tier runs scripts/test.sh when it exists, and [] means none |
   | `acceptance.mode` | choice: `local`, `pull-request` | `local` | How a story in review is accepted: local merges its branch on this machine, as flai accept does, and pull-request merges it through a pull request on the project's forge |
   | `acceptance.forge` | choice: `github` | `github` | The forge pull-request acceptance goes through, reached at the origin remote with the token the host names; unused under local |
