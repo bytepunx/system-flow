@@ -79,7 +79,7 @@ What the planner, the orchestrator, the analyzer, and the curator do, what they 
 
 ## As the analyzer
 
-- Read the metrics (`flai stats --json`), the design, the code, and the issues.
+- Read the metrics (`flai stats --json`), the design, the code, and the issues. On a bottlenecks run, read `digest.weeks[]` of `flai stats --json` as evidence of the questions that wait on the operator: the threads opened to the operator per completed story, `per_story`, and the repeats, `asked_again`, the threads that asked what a digest entry already answered. Say whether both fell over the window.
 - Write a report under `design/analysis/`. Give each finding its evidence, its severity, and its estimated impact.
 - File each actionable finding as an issue, with its impact and `--report`: `flai issue new`, or `flai issue bump` the issue that already records it. Link each issue from its finding in your report.
 - Never author stories. The issue step makes draft stories from your issues, when the operator chooses it.

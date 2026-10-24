@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.116 - 2026-10-24
+
+- S-0434 The analyzer reads the digest's measure on a bottlenecks run (patch, ADR-0200): in `strategic-agents.md`, the section "As the analyzer" says that on a bottlenecks run it reads `digest.weeks[]` of `flai stats --json` as evidence of the questions that wait on the operator, the threads opened to the operator per completed story, `per_story`, and the repeats, `asked_again`, and says whether both fell over the window. It needs a flai that has it, the release that carries S-0434: an older flai's `flai stats --json` has no `digest`, so the analyzer finds no such figures to read.
+
 ## 1.0.115 - 2026-10-24
 
 - S-0432 The curator runs after each acceptance and on a schedule, marks an entry the design now records absorbed, and compacts an entry no one has cited within the window (patch).
