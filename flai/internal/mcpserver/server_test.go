@@ -1,9 +1,11 @@
 package mcpserver
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -971,6 +973,120 @@ func TestTheOrchestratorsThreadRepliesAreLoggedWithTheirSource(t *testing.T) {
 	}
 	if fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Errorf("logged\n  %+v\nwant\n  %+v", got, want)
+	}
+}
+
+// ownersServer is the fixture's server as the operator's own agent runs it:
+// the manifest's owner is alex, and the server's agent is agent, logging to
+// logs.
+func ownersServer(t *testing.T, agent string, logs *bytes.Buffer) *fixture {
+	t.Helper()
+	return setupWith(t, func(o *Options) {
+		o.Repo.Manifest.Owner = "alex"
+		o.Agent = agent
+		o.Logger = slog.New(slog.NewJSONHandler(logs, nil))
+	})
+}
+
+// digestEntries is the names of the files in the fixture's digest folder.
+func (f *fixture) digestEntries(t *testing.T) []string {
+	t.Helper()
+	files, err := os.ReadDir(filepath.Join(f.repo.Root, "design/digest"))
+	if err != nil && !os.IsNotExist(err) {
+		t.Fatal(err)
+	}
+	var out []string
+	for _, e := range files {
+		out = append(out, e.Name())
+	}
+	return out
+}
+
+// S-0433 criteria 1 and 2: the operator's reply through thread_reply on a
+// thread an agent opened is written as a digest entry at once, which the
+// result names; a later answer updates that entry.
+func TestAnOperatorsReplyBecomesADigestEntry(t *testing.T) {
+	var logs bytes.Buffer
+	f := ownersServer(t, "alex", &logs)
+	th, err := threads.New(f.repo, threads.NewOptions{Title: "Which library?", On: f.story.ID, Author: "claude", Text: "SDK or hand-rolled?", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, failed := f.call(t, "thread_reply", map[string]any{"id": th.ID, "text": "The official Go SDK."})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	got, _ := out["digest"].(map[string]any)
+	files := f.digestEntries(t)
+	if len(files) != 1 || got["id"] != "D-0001" || got["path"] != "design/digest/"+files[0] || got["action"] != "written" || got["warning"] != nil {
+		t.Fatalf("digest %v, files %v", out["digest"], files)
+	}
+	if out["status"] != "answered" || len(out["entry_list"].([]any)) != 2 {
+		t.Errorf("the reply is the thread as before: %v", out)
+	}
+	*f.clock = f.clock.Add(time.Minute)
+	out, failed = f.call(t, "thread_reply", map[string]any{"id": th.ID, "text": "With its streaming transport."})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	if got, _ := out["digest"].(map[string]any); got["id"] != "D-0001" || got["action"] != "updated" || len(f.digestEntries(t)) != 1 {
+		t.Errorf("a later answer: %v, files %v", out["digest"], f.digestEntries(t))
+	}
+	if logs.Len() != 0 {
+		t.Errorf("logged:\n%s", logs.String())
+	}
+}
+
+// S-0433 criterion 1: an agent's reply, and the operator's reply on the
+// operator's own thread, write no entry, and the result has no digest.
+func TestOnlyTheOperatorsAnswerBecomesADigestEntry(t *testing.T) {
+	// the operator opens the thread: claude answers it, or alex replies on
+	// their own
+	for _, agent := range []string{"claude", "alex"} {
+		var logs bytes.Buffer
+		f := ownersServer(t, agent, &logs)
+		th, err := threads.New(f.repo, threads.NewOptions{Title: "Which library?", On: f.story.ID, Author: "alex", Text: "SDK or hand-rolled?", Now: t0})
+		if err != nil {
+			t.Fatal(err)
+		}
+		out, failed := f.call(t, "thread_reply", map[string]any{"id": th.ID, "text": "The official Go SDK."})
+		if failed != "" {
+			t.Fatal(failed)
+		}
+		if _, ok := out["digest"]; ok || len(f.digestEntries(t)) != 0 {
+			t.Errorf("%s's reply: digest %v, files %v", agent, out["digest"], f.digestEntries(t))
+		}
+	}
+}
+
+// S-0433 criteria 4 and 5: an operator's answer with a secret's shape is
+// saved on the thread and written to no entry; the result's digest carries
+// the warning, which is logged at warn with the thread.
+func TestAnOperatorsAnswerThatCannotBeWrittenOnlyWarns(t *testing.T) {
+	var logs bytes.Buffer
+	f := ownersServer(t, "alex", &logs)
+	th, err := threads.New(f.repo, threads.NewOptions{Title: "Which key?", On: f.story.ID, Author: "claude", Text: "Which key do I use?", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, failed := f.call(t, "thread_reply", map[string]any{"id": th.ID, "text": "The key is AKIAIOSFODNN7EXAMPLE."})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	got, _ := out["digest"].(map[string]any)
+	warning, _ := got["warning"].(string)
+	if !strings.Contains(warning, "digest.secret") || got["id"] != nil || len(f.digestEntries(t)) != 0 {
+		t.Fatalf("digest %v, files %v", out["digest"], f.digestEntries(t))
+	}
+	if back, _ := threads.Get(f.repo, th.ID); len(back.Entries()) != 2 || back.Status != "answered" {
+		t.Errorf("the answer is saved: %+v", back)
+	}
+	var event map[string]any
+	if err := json.Unmarshal(logs.Bytes(), &event); err != nil {
+		t.Fatalf("one event, got %q: %v", logs.String(), err)
+	}
+	if event["level"] != "WARN" || event["thread"] != th.ID || event["warning"] != warning {
+		t.Errorf("logged %v", event)
 	}
 }
 

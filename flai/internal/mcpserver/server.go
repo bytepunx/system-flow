@@ -19,6 +19,7 @@ import (
 
 	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
+	"github.com/bytepunx/system-flow/flai/internal/digest"
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/forge"
@@ -363,23 +364,44 @@ type ThreadReplyIn struct {
 	Source         string `json:"source,omitempty" jsonschema:"what the reply rests on: a repository path, such as an ADR, a design document, a convention, or a digest entry (design/digest/D-nnnn-<slug>.md, the answer the operator gave last time), or <path>#<heading> for a heading in it; both must exist. Written as the entry's last line, Source: <path> § <heading>"`
 }
 
-func (s *server) threadReply(ctx context.Context, _ *mcp.CallToolRequest, in ThreadReplyIn) (*mcp.CallToolResult, ThreadDetail, error) {
+// ThreadReplyOut is the thread a reply was added to, with the digest entry
+// an operator's answer became (S-0433).
+type ThreadReplyOut struct {
+	ThreadDetail
+	Digest *digest.AnswerEntry `json:"digest,omitempty" jsonschema:"the digest entry the operator's answer on a thread someone else opened was written to or updated in at once (S-0433): its id, its path, and action written or updated; or, when none could be, the warning saying why, the answer saved all the same; absent when the reply is no operator's answer"`
+}
+
+func (s *server) threadReply(ctx context.Context, _ *mcp.CallToolRequest, in ThreadReplyIn) (*mcp.CallToolResult, ThreadReplyOut, error) {
 	source, err := threads.ParseSource(in.Source)
 	if err != nil {
-		return nil, ThreadDetail{}, err
+		return nil, ThreadReplyOut{}, err
 	}
 	marks := threads.Marks{Recommendation: in.Recommendation, Source: source}
 	th, err := threads.ReplyWith(s.repo, in.ID, s.agent, in.Text, s.now(), marks)
 	if err != nil {
-		return nil, ThreadDetail{}, err
+		return nil, ThreadReplyOut{}, err
 	}
+	// the answer is saved: its digest entry is written before anything else
+	// can fail the call, and its failure only warns (S-0433)
+	entry := s.digestAnswer(th)
 	if err := s.mirror(th); err != nil {
-		return nil, ThreadDetail{}, err
+		return nil, ThreadReplyOut{}, err
 	}
 	if err := s.logReply(ctx, th, marks.Recommendation); err != nil {
-		return nil, ThreadDetail{}, fmt.Errorf("the reply on %s is posted, but the orchestrator's decision log did not take it: %w; log it with activity_log", th.ID, err)
+		return nil, ThreadReplyOut{}, fmt.Errorf("the reply on %s is posted, but the orchestrator's decision log did not take it: %w; log it with activity_log", th.ID, err)
 	}
-	return nil, s.detail(th), nil
+	return nil, ThreadReplyOut{ThreadDetail: s.detail(th), Digest: entry}, nil
+}
+
+// digestAnswer writes the digest entry for th's newest entry when it is the
+// operator's answer, as digest.OnAnswer says, and logs its warning when it
+// wrote none; nil when the reply is no operator's answer.
+func (s *server) digestAnswer(th *threads.Thread) *digest.AnswerEntry {
+	entry := digest.OnAnswer(s.repo, s.runner, th)
+	if entry != nil && entry.Warning != "" && s.logger != nil {
+		s.logger.Warn("digest entry not written", "component", "mcp", "agent", s.agent, "thread", th.ID, "warning", entry.Warning)
+	}
+	return entry
 }
 
 // logReply records the orchestrator's reply in its decision log, its activity
