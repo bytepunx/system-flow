@@ -2,12 +2,12 @@
 id: I-0182
 title: criteria_tick is refused on another open story's narrative.state finding, which the story's own scoped check leaves out
 class: defect
-status: open
+status: closed
 count: 2
 cost: 2m
 first_reported: 2026-10-21T12:14:14Z
 last_reported: 2026-10-23T04:52:28Z
-updated: 2026-10-23T17:43:07Z
+updated: 2026-10-24T00:18:12Z
 ---
 
 # I-0182 criteria_tick is refused on another open story's narrative.state finding, which the story's own scoped check leaves out
@@ -28,3 +28,4 @@ criteria_tick on S-0466 was refused for markdown.MD012 in T-2042, a task of S-04
 ## Remediation
 
 Story S-0486 remediates this issue, created from it at 2026-10-23T17:43:07Z.
+Closed 2026-10-24T00:18:12Z: S-0486 scopes the check a checked edit of a work item runs to the item's story (ADR-0197): itemedit.Apply scopes its second flai check run with check.ScopeToStories and the paths the edit wrote, so another open story's narrative.state, or a markdown finding on a file another agent is writing, no longer refuses criteria_tick, flai edit, item_edit, or the dashboard's edits. Tests in flai/internal/itemedit/criteria_test.go bring both instances between the two runs.
