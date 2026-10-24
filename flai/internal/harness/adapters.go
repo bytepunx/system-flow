@@ -58,8 +58,9 @@ var claudeCodeTakes = map[string]option{
 // (PermissionPromptTool), and the operator's arguments last, so the handler
 // applies with the default host arguments and with the operator's own. A
 // planner's session runs as the project's planner definition (S-0208), an
-// orchestrator's as its orchestrator definition (S-0218), and an analyzer's
-// as its analyzer definition (S-0223), each with flai guard on its file
+// orchestrator's as its orchestrator definition (S-0218), an analyzer's as
+// its analyzer definition (S-0223), and a curator's as its curator
+// definition (S-0431), each with flai guard on its file
 // edits and the same handler, which denies anything outside a story's
 // worktree. Every session whose agent names a provider calls it rather
 // than Anthropic (claudeCodeProvider).
@@ -99,8 +100,8 @@ func (claudeCode) Start(r Request, host Host) (Start, error) {
 	if err != nil {
 		return Start{}, err
 	}
-	// <key> plan <item>, <key> orchestrate, <key> analyze [<focus>], or
-	// <key> <story>
+	// <key> plan <item>, <key> orchestrate, <key> analyze [<focus>],
+	// <key> curate, or <key> <story>
 	subject := r.Story
 	if r.Role != "" {
 		subject = strings.Join(strings.Fields(r.Role+" "+r.Item+" "+r.Focus), " ")
@@ -222,18 +223,19 @@ var claudeCodeRoles = map[string]string{manifest.RoleExplore: "explorer", manife
 
 // claudeCodeStrategic are the definitions, in the project's .claude/agents/,
 // that a strategic agent's session runs as, by its role: the planner's
-// (S-0208), the orchestrator's (S-0218), and the analyzer's (S-0223).
-// roleEnv refuses any other role before they are looked up.
-var claudeCodeStrategic = map[string]string{conventions.RolePlan: "planner", conventions.RoleOrchestrate: "orchestrator", conventions.RoleAnalyze: "analyzer"}
+// (S-0208), the orchestrator's (S-0218), the analyzer's (S-0223), and the
+// curator's (S-0431). roleEnv refuses any other role before they are looked
+// up.
+var claudeCodeStrategic = map[string]string{conventions.RolePlan: "planner", conventions.RoleOrchestrate: "orchestrator", conventions.RoleAnalyze: "analyzer", conventions.RoleCurate: "curator"}
 
 // subAgents is the --agents JSON that runs each of the agent's roles on its
 // own model (S-0189): the project's definition of the role's sub-agent, its
 // front matter and its prompt, with the role's model over the definition's.
 // A session's --agents outranks the project's definitions, so the file stays
 // the source of everything but the model. For a strategic agent, the
-// planner, the orchestrator, or the analyzer, it holds that agent's
-// definition as well, with the agent's model when it names one, whatever
-// its roles (S-0208, S-0218, S-0223).
+// planner, the orchestrator, the analyzer, or the curator, it holds that
+// agent's definition as well, with the agent's model when it names one,
+// whatever its roles (S-0208, S-0218, S-0223, S-0431).
 // Empty when nothing is to be passed. A role sub-agents cannot run, because
 // it names another harness or config, or has no definition, refuses the
 // start, as a strategic agent with no definition does.
@@ -356,11 +358,12 @@ func definition(data []byte) (map[string]any, error) {
 // Started as the planner, it has FLAI_ROLE and FLAI_ITEM, and {story} is
 // empty (S-0208); started as the orchestrator, FLAI_ROLE alone (S-0218);
 // started as the analyzer, FLAI_ROLE, and FLAI_FOCUS when it was asked for
-// one (S-0223), since the command has no prompt to say it. When the agent
-// names a provider, it has FLAI_PROVIDER, its name, FLAI_PROVIDER_API,
-// FLAI_PROVIDER_BASE_URL, and FLAI_PROVIDER_KEY_ENV, the name of the
-// variable that holds its key, which the command reads itself: flai hands
-// it no key, and refuses no api (ADR-0129).
+// one (S-0223); started as the curator, FLAI_ROLE, and FLAI_SINCE when its
+// run has a since (S-0431), since the command has no prompt to say it. When
+// the agent names a provider, it has FLAI_PROVIDER, its name,
+// FLAI_PROVIDER_API, FLAI_PROVIDER_BASE_URL, and FLAI_PROVIDER_KEY_ENV, the
+// name of the variable that holds its key, which the command reads itself:
+// flai hands it no key, and refuses no api (ADR-0129).
 type command struct{}
 
 // DefaultHost is nothing: the command has no default, the operator writes it.
@@ -429,6 +432,9 @@ func (command) Start(r Request, host Host) (Start, error) {
 	env = append(env, role...)
 	if r.Focus != "" {
 		env = append(env, "FLAI_FOCUS="+r.Focus)
+	}
+	if r.Since != "" {
+		env = append(env, "FLAI_SINCE="+r.Since)
 	}
 	if p := r.Provider; p != nil {
 		env = append(env, "FLAI_PROVIDER="+r.ProviderName, "FLAI_PROVIDER_API="+p.API, "FLAI_PROVIDER_BASE_URL="+p.BaseURL, "FLAI_PROVIDER_KEY_ENV="+p.KeyEnv)

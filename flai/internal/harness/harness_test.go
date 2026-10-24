@@ -594,6 +594,7 @@ func TestAStorysAgentEndsOnAnOpenQuestion(t *testing.T) {
 	}{
 		"planner":      {planReq("E-0016", nil), "and hold the flai MCP tool wait_for_events, again each time it returns, until the thread is answered; then go on"},
 		"analyzer":     {analyzeReq("risk", nil), "and hold the flai MCP tool wait_for_events, again each time it returns, until the thread is answered; then go on"},
+		"curator":      {curateReq("", nil), "and hold the flai MCP tool wait_for_events, again each time it returns, until the thread is answered; then go on"},
 		"orchestrator": {orchestrateReq(nil), "Then hold the flai MCP tool wait_for_events, again each time it returns"},
 	} {
 		p := Prompt(c.r)
@@ -2039,6 +2040,171 @@ func TestClaudeCodeStartsTheAnalyzer(t *testing.T) {
 	}
 	if cmd, _ := (command{}).Start(analyzeReq("", nil), Host{Program: "run-agent"}); slices.ContainsFunc(cmd.Env, func(e string) bool { return strings.HasPrefix(e, "FLAI_FOCUS=") }) {
 		t.Errorf("command env with no focus: %q", cmd.Env)
+	}
+}
+
+func curateReq(since string, a *manifest.Agent) Request {
+	return Request{Role: "curate", Since: since, Root: "/p/flow", Project: "flow", Agent: a, Name: "curator", Flai: "/usr/local/bin/flai"}
+}
+
+// S-0431, ADR-0196: the curator is asked to keep the digest and nothing
+// else: primed with its role first, then its inbox; the harvest since the
+// run's since, or everything on its first run; the digest read before it
+// writes; an entry written for a fact no entry holds, merged into the one
+// that holds it, and a thread that asked again recorded in asked_again; no
+// secret's value; no file and no work item written; the operator asked only
+// for their judgement; and a summary naming the entries, for the run's log.
+func TestTheCuratorsPromptKeepsTheDigest(t *testing.T) {
+	common := []string{
+		"You are curator, the curator, started by flai serve on this host because the operator asked for the digest of the project at /p/flow to be curated",
+		"Keep the digest, one fact per file under design/digest, and do nothing else, as design/conventions/strategic-agents.md says under As the curator",
+		"Before anything else, prime your session with the flai MCP tool prime with role curate (flai prime --role curate on the host)",
+		"Call the flai MCP tool inbox",
+		"Read the digest as it is with flai digest list --json, and an entry whole with flai digest show <id>, before you write",
+		`When no entry holds that fact, write one with flai digest new "<fact>" --kind <kind> --source <id>`,
+		"When an entry already holds it, merge the candidate into that entry with flai digest edit <id>",
+		"When a thread asked what an entry already answered, add the thread to that entry's asked_again with flai digest edit <id> --asked-again",
+		"Each list flag of flai digest edit replaces that list, so give the entry's own with what you add",
+		"--body-file - and a heredoc in the shell, since you cannot write a file",
+		"Never write a secret's value in an entry, only where the operator said it lives",
+		"Edit nothing else: no file, and no work item; write entries only with flai digest new and flai digest edit",
+		"flai guard refuses Edit and Write on every file, flai digest seed, and any write to a work item: never work around a refusal",
+		"When an entry would need the operator's judgement, ask with the flai MCP tool thread_open",
+		"End with a one-line summary that names by ID the entries you wrote and those you merged, or says that you found nothing to take in",
+		"logs the run's activity in wip/agents/curator.md with it",
+	}
+	for _, c := range []struct{ since, harvest string }{
+		{"2026-10-20T08:30:00Z", "Take in what the archive and the threads gained since 2026-10-20T08:30:00Z, your last run or the time the operator gave: list the candidates with flai digest harvest --json --since 2026-10-20T08:30:00Z."},
+		{"2026-10-01", "list the candidates with flai digest harvest --json --since 2026-10-01."},
+		{"", "This is your first run: no run of yours is logged in wip/agents/curator.md, so take in everything the archive and the threads hold: list the candidates with flai digest harvest --json, with no --since."},
+	} {
+		since, harvest := c.since, c.harvest
+		p := Prompt(curateReq(since, nil))
+		for _, w := range append(common, harvest) {
+			if !strings.Contains(p, w) {
+				t.Errorf("since %q: the curator's prompt lacks %q:\n%s", since, w, p)
+			}
+		}
+		if first := strings.Contains(p, "This is your first run"); first != (since == "") {
+			t.Errorf("since %q: the prompt says it is the first run: %v\n%s", since, first, p)
+		}
+		for _, never := range []string{"flai stream open", "flai move", "worktree", "item_new", "item_edit", "As the planner", "As the analyzer", "design/analysis", "issue_new", "publish"} {
+			if strings.Contains(p, never) {
+				t.Errorf("since %q: the curator's prompt says %q:\n%s", since, never, p)
+			}
+		}
+	}
+}
+
+// S-0431, ADR-0196: claude-code runs the curator's session as the project's
+// curator definition, beside the explorer, named for the project and the
+// role, its MCP server told its name, and tells it its role alone in its
+// environment; the operator's command is told the role and the since. A
+// curator given a story, an item, a focus, or a since that does not read is
+// refused, as is a since for any other agent, and a project with no
+// curator.md is told flai upgrade adds it.
+func TestClaudeCodeStartsTheCurator(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, ".claude", "agents")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for name, def := range map[string]string{
+		"curator":  "---\nname: curator\ndescription: Keeps the digest.\ntools: Read, Bash\nmodel: inherit\n---\n\nYou are the curator.\n",
+		"explorer": "---\nname: explorer\ndescription: Searches.\ntools: Read\nmodel: haiku\n---\n\nYou are the explorer.\n",
+	} {
+		if err := os.WriteFile(filepath.Join(dir, name+".md"), []byte(def), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	r := curateReq("2026-10-20", &manifest.Agent{Harness: ClaudeCode, Model: "claude-opus-5-5", Roles: map[string]manifest.Role{"explore": {Model: "claude-haiku-4-5"}}})
+	r.Root = root
+	st, err := (claudeCode{}).Start(r, Host{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p := st.Argv[2]; !strings.Contains(p, "the curator, started by flai serve") || !strings.Contains(p, "flai digest harvest --json --since 2026-10-20") {
+		t.Errorf("prompt: %s", p)
+	}
+	for flag, want := range map[string]string{"--agent": "curator", "--model": "claude-opus-5-5", "--name": "flow curate", "--permission-prompt-tool": PermissionPromptTool} {
+		if got := after(st.Argv, flag); got != want {
+			t.Errorf("%s = %q, want %q (%q)", flag, got, want, st.Argv)
+		}
+	}
+	if mcp := after(st.Argv, "--mcp-config"); !strings.Contains(mcp, `["mcp","--agent","curator"]`) {
+		t.Errorf("--mcp-config %s", mcp)
+	}
+	var agents map[string]map[string]any
+	if err := json.Unmarshal([]byte(after(st.Argv, "--agents")), &agents); err != nil {
+		t.Fatalf("--agents: %v in %v", err, st.Argv)
+	}
+	if len(agents) != 2 || agents["curator"]["model"] != "claude-opus-5-5" || agents["explorer"]["model"] != "claude-haiku-4-5" {
+		t.Errorf("--agents %v", agents)
+	}
+	if want := []string{"FLAI_ROLE=curate"}; !slices.Equal(st.Env, want) {
+		t.Errorf("env %q, want %q", st.Env, want)
+	}
+
+	// a first run: everything, the definition alone, and the same name
+	first := curateReq("", nil)
+	first.Root = root
+	st, err = (claudeCode{}).Start(first, Host{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := after(st.Argv, "--name"); got != "flow curate" || !strings.Contains(st.Argv[2], "This is your first run") {
+		t.Errorf("--name %q, prompt %s", got, st.Argv[2])
+	}
+	if want := []string{"FLAI_ROLE=curate"}; !slices.Equal(st.Env, want) {
+		t.Errorf("env %q, want %q", st.Env, want)
+	}
+
+	missing := curateReq("", nil)
+	missing.Root = t.TempDir()
+	if _, err := (claudeCode{}).Start(missing, Host{}); err == nil || !strings.Contains(err.Error(), "the curator's session runs as the agent curator, and its definition could not be read") || !strings.Contains(err.Error(), "flai upgrade adds it") {
+		t.Errorf("a project with no curator.md: %v", err)
+	}
+	for _, c := range []struct {
+		want string
+		mod  func(*Request)
+	}{
+		{"the curator was given story S-0104 to work; it works no story of its own, so start it with none", func(r *Request) { r.Story = "S-0104" }},
+		{"the curator was given E-0025; it curates the whole project's digest, so start it with no item", func(r *Request) { r.Item = "E-0025" }},
+		{`only the analyzer takes a focus; start this agent without "risk"`, func(r *Request) { r.Focus = "risk" }},
+		{`the curator takes a since as a YYYY-MM-DD day in UTC or an RFC 3339 time, or none on its first run, and "last week" is neither`, func(r *Request) { r.Since = "last week" }},
+	} {
+		want := c.want
+		x := curateReq("", nil)
+		x.Root = root
+		c.mod(&x)
+		for name, ad := range map[string]Adapter{ClaudeCode: claudeCode{}, Command: command{}} {
+			if _, err := ad.Start(x, Host{Program: "run"}); err == nil || !strings.Contains(err.Error(), want) {
+				t.Errorf("%s %+v: %v, want %q", name, x, err, want)
+			}
+		}
+	}
+	for name, x := range map[string]Request{"story": req(nil), "analyzer": analyzeReq("risk", nil)} {
+		x.Since = "2026-10-20"
+		if _, err := (command{}).Start(x, Host{Program: "run"}); err == nil || !strings.Contains(err.Error(), `only the curator takes a since; start this agent without "2026-10-20"`) {
+			t.Errorf("a %s with a since: %v", name, err)
+		}
+	}
+
+	// the operator's command is told the role and the since, with no prompt
+	cmd, err := (command{}).Start(curateReq("2026-10-20T08:30:00Z", nil), Host{Program: "run-agent", Args: []string{"{story}"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"run-agent", ""}; !slices.Equal(cmd.Argv, want) {
+		t.Errorf("argv %q, want %q", cmd.Argv, want)
+	}
+	if !slices.Contains(cmd.Env, "FLAI_ROLE=curate") || !slices.Contains(cmd.Env, "FLAI_SINCE=2026-10-20T08:30:00Z") || slices.ContainsFunc(cmd.Env, func(e string) bool {
+		return strings.HasPrefix(e, "FLAI_ITEM=") || strings.HasPrefix(e, "FLAI_STORY=") || strings.HasPrefix(e, "FLAI_FOCUS=")
+	}) {
+		t.Errorf("command env: %q", cmd.Env)
+	}
+	if cmd, _ := (command{}).Start(curateReq("", nil), Host{Program: "run-agent"}); !slices.Contains(cmd.Env, "FLAI_ROLE=curate") || slices.ContainsFunc(cmd.Env, func(e string) bool { return strings.HasPrefix(e, "FLAI_SINCE=") }) {
+		t.Errorf("command env on a first run: %q", cmd.Env)
 	}
 }
 

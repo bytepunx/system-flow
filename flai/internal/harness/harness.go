@@ -17,6 +17,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
@@ -30,7 +31,8 @@ const Command = "command"
 // Request is what an agent is started for: a story, or, for the planner, an
 // epic or a story to plan (S-0208), or, for the orchestrator, the whole
 // project (S-0218), or, for the analyzer, the whole project with a focus
-// or none (S-0223).
+// or none (S-0223), or, for the curator, the whole project since its last
+// run or from the start (S-0431).
 type Request struct {
 	Story   string          // the story's ID, checked by the caller; empty for a strategic agent
 	Root    string          // the project's directory, where it runs
@@ -40,15 +42,22 @@ type Request struct {
 	Flai    string          // this flai's executable, the agent's MCP server
 	// Role is conventions.RolePlan when the agent is the planner,
 	// conventions.RoleOrchestrate when it is the orchestrator,
-	// conventions.RoleAnalyze when it is the analyzer, and empty when it
+	// conventions.RoleAnalyze when it is the analyzer,
+	// conventions.RoleCurate when it is the curator, and empty when it
 	// works a story.
 	Role string
 	// Item is the epic or story the planner plans, checked by the caller;
-	// empty when the agent works a story, orchestrates, or analyzes.
+	// empty when the agent works a story, orchestrates, analyzes, or curates.
 	Item string
 	// Focus is what the analyzer looks for, one of Focuses; empty for all
 	// of them, and for any other agent.
 	Focus string
+	// Since is when the curator's run takes in from, a YYYY-MM-DD day in UTC
+	// or an RFC 3339 time: the since the operator gave, or else the time of
+	// the curator's last run (S-0431, ADR-0196). It is empty on the
+	// curator's first run, which takes in everything, and for any other
+	// agent.
+	Since string
 	// Session names the harness's session, so that it can be resumed; a
 	// harness that has no sessions ignores it.
 	Session string
@@ -217,7 +226,8 @@ type Capabilities struct {
 	// model.
 	RoleModels bool
 	// StrategicAgents is that flai serve may run a strategic agent, the
-	// planner, the orchestrator, or the analyzer, from its definition.
+	// planner, the orchestrator, the analyzer, or the curator, from its
+	// definition.
 	StrategicAgents bool
 	// Cost is that the harness reports the cost of its calls, for flai to
 	// measure.
@@ -330,7 +340,8 @@ func options(harness string, config map[string]string, takes map[string]option) 
 // its story is told the share's conversation, paths, and split (ADR-0134,
 // shared). The planner is asked to plan its item instead
 // (planPrompt), the orchestrator to keep the project's work moving
-// (orchestratePrompt), and the analyzer to write a report (analyzePrompt).
+// (orchestratePrompt), the analyzer to write a report (analyzePrompt), and
+// the curator to keep the digest (curatePrompt).
 // Only the claude-code adapter sends a prompt.
 func Prompt(r Request) string {
 	switch r.Role {
@@ -340,6 +351,8 @@ func Prompt(r Request) string {
 		return orchestratePrompt(r)
 	case conventions.RoleAnalyze:
 		return analyzePrompt(r)
+	case conventions.RoleCurate:
+		return curatePrompt(r)
 	}
 	if r.Commit != "" && r.Answered == "" {
 		return fmt.Sprintf(`You are %[1]s, started by flai serve on this host because the operator asked for the work left uncommitted in story %[2]s's worktree, %[3]s, to be committed: %[2]s is in review, and it cannot be accepted until that worktree is clean.
@@ -653,22 +666,81 @@ When an input the operator owns is missing, do not guess past it: ask with the f
 End with a one-line summary that names the report, %[5]s with its date: flai serve logs the run's activity in wip/agents/analyzer.md with it, with the run's cost, so you need not log it yourself with activity_log.`, r.Name, focus, r.Root, look, report)
 }
 
+// curatePrompt is what the curator is asked to do (S-0431, ADR-0196): keep
+// the digest as strategic-agents.md says under As the curator; prime with
+// role curate first and call inbox; read what the archive and the threads
+// gained since the run's since with flai digest harvest --json --since, or
+// everything on its first run, when it has none, and the digest as it is
+// with flai digest list --json and show; for each candidate write an entry
+// with flai digest new when none holds the fact, or merge it into the one
+// that does with flai digest edit, and add to that entry's asked_again a
+// thread that asked what it already answered; never write a secret's value,
+// only where the operator said it lives; edit no file and write no work
+// item, which flai guard enforces; ask the operator on a thread only when an
+// entry needs their judgement; and end with a one-line summary naming the
+// entries written and merged, or that nothing was found to take in, which
+// flai serve logs as the run's activity, as the analyzer's is (ADR-0079).
+func curatePrompt(r Request) string {
+	harvest := fmt.Sprintf("Take in what the archive and the threads gained since %[1]s, your last run or the time the operator gave: list the candidates with flai digest harvest --json --since %[1]s.", r.Since)
+	if r.Since == "" {
+		harvest = "This is your first run: no run of yours is logged in wip/agents/curator.md, so take in everything the archive and the threads hold: list the candidates with flai digest harvest --json, with no --since."
+	}
+	return fmt.Sprintf(`You are %[1]s, the curator, started by flai serve on this host because the operator asked for the digest of the project at %[2]s to be curated.
+
+Keep the digest, one fact per file under design/digest, and do nothing else, as design/conventions/strategic-agents.md says under As the curator. Before anything else, prime your session with the flai MCP tool prime with role curate (flai prime --role curate on the host), which prints the conventions you work by and briefs the design your role's topics select. Call the flai MCP tool inbox.
+
+%[3]s Read the digest as it is with flai digest list --json, and an entry whole with flai digest show <id>, before you write.
+
+For each candidate, decide what fact it holds. When no entry holds that fact, write one with flai digest new "<fact>" --kind <kind> --source <id>, with the topics and paths it bears on, and a body of a few sentences: what was asked or decided, the answer and its reason, and links to its sources. When an entry already holds it, merge the candidate into that entry with flai digest edit <id>, its body and its sources. When a thread asked what an entry already answered, add the thread to that entry's asked_again with flai digest edit <id> --asked-again. Each list flag of flai digest edit replaces that list, so give the entry's own with what you add. Pass a body on standard input with --body-file - and a heredoc in the shell, since you cannot write a file.
+
+Never write a secret's value in an entry, only where the operator said it lives: flai digest refuses text with the shape of a key or token, and writes nothing.
+
+Edit nothing else: no file, and no work item; write entries only with flai digest new and flai digest edit. flai guard refuses Edit and Write on every file, flai digest seed, and any write to a work item: never work around a refusal, by another tool, another command, or the shell.
+
+When an entry would need the operator's judgement, ask with the flai MCP tool thread_open on the item the candidate comes from, your recommended answer first, take in what needs no answer meanwhile, and hold the flai MCP tool wait_for_events, again each time it returns, until the thread is answered; then go on.
+
+End with a one-line summary that names by ID the entries you wrote and those you merged, or says that you found nothing to take in: flai serve logs the run's activity in wip/agents/curator.md with it, with the run's cost, so you need not log it yourself with activity_log.`, r.Name, r.Root, harvest)
+}
+
+// sinceForms are the forms a curator's since takes, as flai digest harvest
+// --since reads it: a day in UTC, or an RFC 3339 time.
+var sinceForms = []string{time.DateOnly, time.RFC3339}
+
+// sinceReads says whether since is in one of sinceForms.
+func sinceReads(since string) bool {
+	return slices.ContainsFunc(sinceForms, func(form string) bool {
+		_, err := time.Parse(form, since)
+		return err == nil
+	})
+}
+
 // roleEnv tells a strategic agent's session its role, which flai guard reads
 // to hold it to its work: the planner's its item as well (S-0208), the
-// orchestrator's and the analyzer's nothing more, since each works the whole
-// project (S-0218, S-0223). Nothing for an agent working a story. A role
-// flai does not start, a strategic agent with a story of its own, a planner
-// with no epic or story to plan, an orchestrator or an analyzer given an
-// item, an analyzer with a focus it does not take, and a focus for any
-// other agent are refused.
+// orchestrator's, the analyzer's, and the curator's nothing more, since each
+// works the whole project (S-0218, S-0223, S-0431). Nothing for an agent
+// working a story. A role flai does not start, a strategic agent with a
+// story of its own, a planner with no epic or story to plan, an
+// orchestrator, an analyzer, or a curator given an item, an analyzer with a
+// focus it does not take, a curator with a since that does not read, and a
+// focus or a since for any other agent are refused.
 func roleEnv(r Request) ([]string, error) {
 	switch {
-	case r.Role == "" && r.Focus == "":
+	case r.Role == "" && r.Focus == "" && r.Since == "":
 		return nil, nil
 	case r.Role != conventions.RoleAnalyze && r.Focus != "":
 		return nil, fmt.Errorf("only the analyzer takes a focus; start this agent without %q", r.Focus)
-	case r.Role != conventions.RolePlan && r.Role != conventions.RoleOrchestrate && r.Role != conventions.RoleAnalyze:
-		return nil, fmt.Errorf("flai cannot start an agent in role %q; it starts the planner, role %s, the orchestrator, role %s, the analyzer, role %s, and an agent for a story", r.Role, conventions.RolePlan, conventions.RoleOrchestrate, conventions.RoleAnalyze)
+	case r.Role != conventions.RoleCurate && r.Since != "":
+		return nil, fmt.Errorf("only the curator takes a since; start this agent without %q", r.Since)
+	case !slices.Contains(conventions.StrategicRoles, r.Role):
+		return nil, fmt.Errorf("flai cannot start an agent in role %q; it starts the planner, role %s, the orchestrator, role %s, the analyzer, role %s, the curator, role %s, and an agent for a story", r.Role, conventions.RolePlan, conventions.RoleOrchestrate, conventions.RoleAnalyze, conventions.RoleCurate)
+	case r.Role == conventions.RoleCurate && r.Story != "":
+		return nil, fmt.Errorf("the curator was given story %s to work; it works no story of its own, so start it with none", r.Story)
+	case r.Role == conventions.RoleCurate && r.Item != "":
+		return nil, fmt.Errorf("the curator was given %s; it curates the whole project's digest, so start it with no item", r.Item)
+	case r.Role == conventions.RoleCurate && r.Since != "" && !sinceReads(r.Since):
+		return nil, fmt.Errorf("the curator takes a since as a YYYY-MM-DD day in UTC or an RFC 3339 time, or none on its first run, and %q is neither", r.Since)
+	case r.Role == conventions.RoleCurate:
+		return []string{"FLAI_ROLE=" + r.Role}, nil
 	case r.Role == conventions.RoleAnalyze && r.Story != "":
 		return nil, fmt.Errorf("the analyzer was given story %s to work; it works no story of its own, so start it with none", r.Story)
 	case r.Role == conventions.RoleAnalyze && r.Item != "":
