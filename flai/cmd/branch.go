@@ -213,8 +213,11 @@ func (a *app) mergeStoryBranch(repo *workitem.Repo, id string, keep []preview.Ke
 			return false, err
 		}
 	}
-	if _, err := a.runner.Run(repo.MainRoot, "git", "branch", "-d", branch); err != nil {
-		return false, err
+	// -D, not -d: main now holds the branch, but a branch flai serve pushed
+	// tracks an upstream the rebase left behind, which -d checks (I-0204).
+	// An acceptance run again from here fast-forwards nothing and goes on.
+	if out, err := a.runner.Run(repo.MainRoot, "git", "branch", "-D", branch); err != nil {
+		return false, fmt.Errorf("%s is fast-forwarded into the main branch, but git could not delete it (%s): delete it with git branch -D %s, then run flai accept %s again, which finds the merge and makes no second one", branch, gitSaid(out, err), branch, id)
 	}
 	a.logger().Info("story branch merged", "component", "git", "branch", branch)
 	return true, nil

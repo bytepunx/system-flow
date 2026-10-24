@@ -92,3 +92,100 @@ func TestAcceptEndToEnd(t *testing.T) {
 		t.Errorf("epic accept from backlog: %d %s %s", code, out, errOut)
 	}
 }
+
+// I-0204: a story branch flai serve pushed tracks origin's copy. The
+// acceptance rebase rewrites its commits, so git branch -d refused the branch
+// as not merged to its upstream, after main had the work and the worktree was
+// gone. The acceptance deletes it with -D and finishes.
+func TestAcceptDeletesABranchWhoseUpstreamTheRebaseLeftBehind(t *testing.T) {
+	root := pushedStoryInReview(t)
+	if _, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "alex"); code != 0 {
+		t.Fatalf("accept: %d %s", code, errOut)
+	}
+	if got := gitIn(t, root, "show", "main:design/x.md"); got != "the story's" {
+		t.Errorf("main must carry the story's work: %q", got)
+	}
+	if gitIn(t, root, "branch", "--list", "story/S-0001") != "" {
+		t.Error("an accepted story's branch is removed")
+	}
+	if b, _ := os.ReadFile(filepath.Join(root, "wip/archive/kanban/stories/S-0001-pushed.md")); !strings.Contains(string(b), "status: done") {
+		t.Error("the story is done and archived")
+	}
+}
+
+// I-0204: an acceptance that stopped after its fast-forward, with the work
+// on main, the worktree removed, and the branch left, finishes when run
+// again: it fast-forwards nothing and deletes the branch.
+func TestAcceptFinishesFromAFastForwardItAlreadyMade(t *testing.T) {
+	root := pushedStoryInReview(t)
+	wt := filepath.Join(root, ".flai-cache", "worktrees", "S-0001")
+	gitIn(t, wt, "rebase", "-q", "main")
+	gitIn(t, root, "merge", "-q", "--ff-only", "story/S-0001")
+	gitIn(t, root, "worktree", "remove", wt)
+	merged := gitIn(t, root, "rev-parse", "main")
+
+	if _, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "alex"); code != 0 {
+		t.Fatalf("accepting again must finish: %d %s", code, errOut)
+	}
+	if gitIn(t, root, "branch", "--list", "story/S-0001") != "" {
+		t.Error("the branch left behind is removed")
+	}
+	if got := gitIn(t, root, "rev-parse", "main~1"); got != merged {
+		t.Errorf("main must be the merge it had, %s, and the acceptance commit: main~1 is %s", merged, got)
+	}
+}
+
+// pushedStoryInReview makes a project with story S-0001 in review whose
+// branch commits design/x.md and is pushed to a bare origin with its
+// upstream set, as flai serve pushes it for a pull request, and main a
+// commit past the branch's base, so the acceptance rebase rewrites it.
+func pushedStoryInReview(t *testing.T) (root string) {
+	t.Helper()
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root = tempProject(t)
+	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", "design"} {
+		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
+		_ = os.WriteFile(filepath.Join(root, d, ".gitkeep"), nil, 0o644)
+	}
+	_ = os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".flai-cache/\n"), 0o644)
+	gitIn(t, root, "init", "-q", "-b", "main")
+	gitIn(t, root, "config", "user.email", "t@t")
+	gitIn(t, root, "config", "user.name", "t")
+	gitIn(t, root, "add", "-A")
+	gitIn(t, root, "commit", "-q", "-m", "init")
+	origin := filepath.Join(t.TempDir(), "origin.git")
+	gitIn(t, root, "init", "-q", "--bare", origin)
+	gitIn(t, root, "remote", "add", "origin", origin)
+	for _, args := range [][]string{{"epic", "new", "Epic"}, {"story", "new", "Pushed", "--epic", "E-0001"}} {
+		if _, errOut, code := runIn(t, root, args...); code != 0 {
+			t.Fatal(errOut)
+		}
+	}
+	storyFile := filepath.Join(root, "wip/kanban/stories/S-0001-pushed.md")
+	s, _ := os.ReadFile(storyFile)
+	_ = os.WriteFile(storyFile, []byte(strings.Replace(string(s), "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n- [x] done\n", 1)), 0o644)
+	for _, args := range [][]string{
+		{"move", "S-0001", "ready"}, {"move", "S-0001", "in-progress"}, {"stream", "open", "S-0001"},
+		{"task", "new", "Do it", "--story", "S-0001"},
+		{"move", "T-0001", "ready"}, {"move", "T-0001", "in-progress"}, {"move", "T-0001", "done"},
+	} {
+		if _, errOut, code := runIn(t, root, args...); code != 0 {
+			t.Fatalf("flai %v: %s", args, errOut)
+		}
+	}
+	wt := filepath.Join(root, ".flai-cache", "worktrees", "S-0001")
+	_ = os.WriteFile(filepath.Join(wt, "design", "x.md"), []byte("the story's\n"), 0o644)
+	gitIn(t, wt, "add", "-A")
+	gitIn(t, wt, "commit", "-q", "-m", "docs: [S-0001] x")
+	gitIn(t, wt, "push", "-q", "-u", "origin", "story/S-0001")
+	_ = os.WriteFile(filepath.Join(root, "design", "y.md"), []byte("main's\n"), 0o644)
+	gitIn(t, root, "add", "design/y.md")
+	gitIn(t, root, "commit", "-q", "-m", "docs: main's y")
+	if _, errOut, code := runIn(t, root, "move", "S-0001", "review"); code != 0 {
+		t.Fatal(errOut)
+	}
+	return root
+}
