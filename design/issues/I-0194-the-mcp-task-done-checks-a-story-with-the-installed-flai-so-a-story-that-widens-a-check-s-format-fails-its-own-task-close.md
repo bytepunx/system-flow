@@ -2,12 +2,12 @@
 id: I-0194
 title: The MCP task_done checks a story with the installed flai, so a story that widens a check's format fails its own task close
 class: efficiency
-status: open
+status: closed
 count: 5
 cost: 4m
 first_reported: 2026-10-22T22:06:51Z
 last_reported: 2026-10-24T14:47:11Z
-updated: 2026-10-24T20:28:57Z
+updated: 2026-10-25T20:56:07Z
 ---
 
 # I-0194 The MCP task_done checks a story with the installed flai, so a story that widens a check's format fails its own task close
@@ -40,3 +40,4 @@ S-0432: the MCP task_done for T-1834 ran flai check --strict with the installed 
 ## Remediation
 
 Story S-0495 remediates this issue, created from it at 2026-10-24T20:28:57Z.
+Closed 2026-10-25T20:56:07Z: S-0495 (ADR-0201): the manifest's flai.command names the program that runs the flai the tree builds, scripts/flai.sh here, and task done's check step runs its flai check --strict --story --json in the story's worktree in place of the running flai's own check, naming it in check.checked_by and stopping with its output when it prints no result; the task-done rules number goes to 2, so once this release is published an older installed flai no longer checks a branch with its own rules. TestRunChecksWithTheTreesFlaiWhenTheManifestNamesIt (taskdone) reproduces the instances: the in-process check stops on a finding the tree's flai passes, and with the key set the close passes. T-2110 closed with checked_by "scripts/flai.sh (flai dev)".
