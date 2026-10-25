@@ -9,7 +9,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
+	"runtime"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -302,6 +305,206 @@ func TestRunStopsAtAFailedCheckAfterTheMoveAndTheLog(t *testing.T) {
 	}
 	if res.Inbox != nil || !strings.Contains(res.Error, "flai task done T-003 again") {
 		t.Errorf("inbox %+v, error %s", res.Inbox, res.Error)
+	}
+}
+
+// treeFlai writes a fake of the tree's flai, a POSIX sh script, to the
+// worktree at scripts/fake-flai and names it in the worktree's manifest as
+// flai.command (ADR-0201). Asked for its version --json, it prints flai
+// 1.70.0's; asked anything else, it records its arguments and the folder it
+// ran in under the folder it returns, prints a build line to standard error
+// as scripts/flai.sh does, then output, and exits with exit.
+func treeFlai(t *testing.T, wt, output string, exit int) string {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("the fake tree's flai is a POSIX sh script")
+	}
+	rec := t.TempDir()
+	write(t, rec, "output", output)
+	script := "#!/bin/sh\nrec='" + rec + "'\n" +
+		"if [ \"$1\" = version ]; then\n" +
+		"  printf '{\\n  \"version\": \"1.70.0\",\\n  \"task_done_rules\": 2\\n}\\n'\n" +
+		"  exit 0\n" +
+		"fi\n" +
+		"printf '%s\\n' \"$@\" > \"$rec/args\"\n" +
+		"pwd -P > \"$rec/cwd\"\n" +
+		"echo 'building bin/flai' >&2\n" +
+		"cat \"$rec/output\"\n" +
+		"exit " + strconv.Itoa(exit) + "\n"
+	write(t, wt, "scripts/fake-flai", script)
+	if err := os.Chmod(filepath.Join(wt, "scripts/fake-flai"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := os.ReadFile(filepath.Join(wt, "system-flow.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	write(t, wt, "system-flow.yaml", string(manifest)+"flai:\n  command: scripts/fake-flai\n")
+	return rec
+}
+
+// checkJSON is flai check --json's result holding findings, indented as it
+// prints it.
+func checkJSON(t *testing.T, findings ...check.Finding) string {
+	t.Helper()
+	data, err := json.MarshalIndent(check.Result{Findings: findings, Items: 12}, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data) + "\n"
+}
+
+// recordedArgs is what the fake tree's flai recorded in rec: its arguments
+// and the folder it ran in, "" each when it did not run.
+func recordedArgs(t *testing.T, rec string) (args, cwd string) {
+	t.Helper()
+	read := func(name string) string {
+		data, err := os.ReadFile(filepath.Join(rec, name))
+		if errors.Is(err, os.ErrNotExist) {
+			return ""
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		return strings.TrimSpace(string(data))
+	}
+	return read("args"), read("cwd")
+}
+
+// note is a finding outside the story, a note the close lists and passes.
+var note = check.Finding{Level: "warning", Rule: "doc.updated", Path: "design/system/overview.md", Line: 1, Message: "updated is behind the file's last change", Outside: true}
+
+// I-0194, ADR-0201: the running flai's check stops on a finding the tree's
+// flai does not report, as an installed flai older than the branch's format
+// did. Once the worktree's manifest names the tree's flai as flai.command,
+// the close runs that command's check in the worktree, scoped to the story,
+// passes on its exit 0, lists its notes, and names it and its version.
+func TestRunChecksWithTheTreesFlaiWhenTheManifestNamesIt(t *testing.T) {
+	repo, wt := project(t)
+	write(t, wt, "docs/notes.md", "# Notes\n\nNo front matter.\n")
+
+	res, err := Run(context.Background(), options(repo, "docs: [S-004] T-003 notes"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != StepCheck || res.Check == nil || res.Check.Passed || res.Check.CheckedBy != "" {
+		t.Fatalf("the running flai's check: stopped at %q: %s; check %+v", res.Stopped, res.Error, res.Check)
+	}
+	if !slices.ContainsFunc(res.Check.Findings, func(f check.Finding) bool { return f.Rule == "doc.front-matter" }) {
+		t.Fatalf("the running flai's findings: %+v", res.Check.Findings)
+	}
+
+	rec := treeFlai(t, wt, checkJSON(t, note), 0)
+	res, err = Run(context.Background(), options(repo, "chore: [S-004] T-003 the tree's flai checks the story"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != "" || res.Error != "" || res.ExitCode() != 0 {
+		t.Fatalf("the tree's flai's check: stopped at %q: %s; check %+v", res.Stopped, res.Error, res.Check)
+	}
+	if res.Commit == nil || strings.Join(res.Commit.Paths, ",") != "scripts/fake-flai,system-flow.yaml" || res.Move == nil || !res.Move.Skipped {
+		t.Errorf("commit %+v, move %+v", res.Commit, res.Move)
+	}
+	c := res.Check
+	if c == nil || !c.Passed || len(c.Findings) != 0 || len(c.Notes) != 1 || !reflect.DeepEqual(c.Notes[0], note) || c.CheckedBy != "scripts/fake-flai (flai 1.70.0)" {
+		t.Fatalf("check: %+v", c)
+	}
+	args, cwd := recordedArgs(t, rec)
+	if args != "check\n--strict\n--story\nS-004\n--json" {
+		t.Errorf("the tree's flai ran with %q", args)
+	}
+	if want, err := filepath.EvalSymlinks(wt); err != nil || cwd != want {
+		t.Errorf("the tree's flai ran in %q, want %q (%v)", cwd, want, err)
+	}
+	if res.Inbox == nil {
+		t.Error("no inbox after the check passed")
+	}
+	data, err := json.Marshal(res)
+	if err != nil || !strings.Contains(string(data), `"checked_by":"scripts/fake-flai (flai 1.70.0)"`) {
+		t.Errorf("json lacks checked_by: %s %v", data, err)
+	}
+}
+
+// ADR-0201: a finding inside the story that the tree's flai reports, exiting
+// 1, stops the run at the check after the commit, the sync, and the move,
+// listing it and naming which flai checked.
+func TestRunStopsWhenTheTreesFlaiFindsAFinding(t *testing.T) {
+	repo, wt := project(t)
+	inside := check.Finding{Level: "error", Rule: "components.examples", Path: "design/components/notes.examples.json", Line: 3, Message: "unknown key answers"}
+	treeFlai(t, wt, checkJSON(t, inside, note), 1)
+	write(t, wt, "docs/README.md", "# Docs\n\nChanged.\n")
+
+	res, err := Run(context.Background(), options(repo, "docs: [S-004] T-003 docs"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != StepCheck || res.ExitCode() != 4 {
+		t.Fatalf("stopped at %q: %s", res.Stopped, res.Error)
+	}
+	if res.Commit == nil || res.Sync == nil || res.Move == nil || res.Move.State != workitem.Done || res.Log == nil {
+		t.Errorf("commit %+v, sync %+v, move %+v, log %+v", res.Commit, res.Sync, res.Move, res.Log)
+	}
+	c := res.Check
+	if c == nil || c.Passed || len(c.Findings) != 1 || !reflect.DeepEqual(c.Findings[0], inside) || len(c.Notes) != 1 || c.CheckedBy != "scripts/fake-flai (flai 1.70.0)" {
+		t.Fatalf("check: %+v", c)
+	}
+	want := "flai check --strict, run by scripts/fake-flai (flai 1.70.0), fails on 1 finding in S-004: fix them, then run flai task done T-003 again"
+	if res.Inbox != nil || !strings.Contains(res.Error, want) {
+		t.Errorf("inbox %+v, error %s", res.Inbox, res.Error)
+	}
+}
+
+// ADR-0201: a tree's flai that prints no check result, such as one whose
+// build fails, stops the run at the check with its output and what to do,
+// and no check is answered as passed.
+func TestRunStopsWhenTheTreesFlaiGivesNoResult(t *testing.T) {
+	repo, wt := project(t)
+	treeFlai(t, wt, "go: build failed\n", 2)
+
+	res, err := Run(context.Background(), options(repo, "chore: [S-004] T-003 a flai that does not build"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != StepCheck || res.ExitCode() != 4 || res.Check != nil {
+		t.Fatalf("stopped at %q: %s; check %+v", res.Stopped, res.Error, res.Check)
+	}
+	if res.Move == nil || res.Move.State != workitem.Done {
+		t.Errorf("move: %+v", res.Move)
+	}
+	for _, want := range []string{"scripts/fake-flai check --strict --story S-004 --json", "gave no check result", "exit status 2", "fix the tree's flai so that it builds and runs, then run flai task done T-003 again", "building bin/flai", "go: build failed"} {
+		if !strings.Contains(res.Error, want) {
+			t.Errorf("error lacks %q: %s", want, res.Error)
+		}
+	}
+}
+
+// checkResult finds flai check --json's indented result among build and log
+// lines, and holds no result in output without one.
+func TestCheckResultFindsTheResultAmongOtherLines(t *testing.T) {
+	result := checkJSON(t, note)
+	for _, tc := range []struct {
+		name, out string
+		want      bool
+	}{
+		{"alone", strings.TrimSpace(result), true},
+		{"after a build line and a log line", "building bin/flai\nlevel=INFO msg=\"{\"\n" + result, true},
+		{"before a log line", result + "level=WARN msg=done", true},
+		{"no findings key", "{\n  \"version\": \"1.70.0\"\n}", false},
+		{"cut short", "building bin/flai\n{\n  \"findings\": [", false},
+		{"no object", "go: build failed", false},
+		{"empty", "", false},
+	} {
+		res, ok := checkResult(tc.out)
+		if ok != tc.want {
+			t.Errorf("%s: ok %v, want %v", tc.name, ok, tc.want)
+			continue
+		}
+		if ok && (len(res.Findings) != 1 || !reflect.DeepEqual(res.Findings[0], note) || res.Items != 12) {
+			t.Errorf("%s: %+v", tc.name, res)
+		}
+	}
+	if got := outputTail(strings.Repeat("line\n", 1000)); len(got) > maxOutput+4 || !strings.HasPrefix(got, "…\nline\n") {
+		t.Errorf("tail of %d bytes: %.40q", len(got), got)
 	}
 }
 
@@ -844,7 +1047,7 @@ func TestNewCheckListsAtMostMaxNotesAndCountsTheRest(t *testing.T) {
 		res.Findings = append(res.Findings, check.Finding{Rule: rule, Level: "warning", Path: path, Line: 1, Message: "updated is 2026-09-01 but the file last changed 2026-10-23 in git; bump updated to the day of the change", Outside: true})
 	}
 
-	c := newCheck(res)
+	c := newCheck(res.Findings, res.OK(true))
 	if len(c.Findings) != 2 || len(c.Notes) != MaxNotes || c.NotesOmitted != 399-MaxNotes {
 		t.Fatalf("%d findings, %d notes, %d omitted", len(c.Findings), len(c.Notes), c.NotesOmitted)
 	}
@@ -855,7 +1058,7 @@ func TestNewCheckListsAtMostMaxNotesAndCountsTheRest(t *testing.T) {
 	if compact, indented := jsonSizes(t, answer); compact > ctxpack.PartLimit/4 || indented > ctxpack.PartLimit/4 {
 		t.Errorf("the answer is %d bytes compact, %d indented, over a quarter of %d", compact, indented, ctxpack.PartLimit)
 	}
-	if data, err := json.Marshal(newCheck(&check.Result{})); err != nil || strings.Contains(string(data), "notes_omitted") {
+	if data, err := json.Marshal(newCheck(nil, true)); err != nil || strings.Contains(string(data), "notes_omitted") {
 		t.Errorf("a check with no notes left out says notes_omitted: %s %v", data, err)
 	}
 }

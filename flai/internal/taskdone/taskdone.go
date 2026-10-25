@@ -153,21 +153,29 @@ type Touches struct {
 // lists; it counts the rest in NotesOmitted (ADR-0198).
 const MaxNotes = 10
 
-// Check is flai check --strict scoped to the story (ADR-0085): Findings are
-// inside the story, every one listed, and Notes outside it, the first
-// MaxNotes listed and the rest counted in NotesOmitted (ADR-0198).
+// Check is flai check --strict scoped to the story (ADR-0085), the running
+// flai's own or, when the manifest names flai.command, that command's
+// (ADR-0201): Findings are inside the story, every one listed, and Notes
+// outside it, the first MaxNotes listed and the rest counted in NotesOmitted
+// (ADR-0198).
 type Check struct {
 	Passed       bool            `json:"passed"`
 	Findings     []check.Finding `json:"findings"`
 	Notes        []check.Finding `json:"notes"`
 	NotesOmitted int             `json:"notes_omitted,omitempty"`
+	// CheckedBy is set only when the manifest's flai.command checked the
+	// story (ADR-0201), naming the command and the version its version --json
+	// prints, such as "scripts/flai.sh (flai 1.70.0)", or the command alone
+	// when that version cannot be read.
+	CheckedBy string `json:"checked_by,omitempty"`
 }
 
-// newCheck is res as the close answers it: its findings split into those
-// inside the story and the notes outside it, at most MaxNotes of them.
-func newCheck(res *check.Result) *Check {
-	c := &Check{Passed: res.OK(true), Findings: []check.Finding{}, Notes: []check.Finding{}}
-	for _, f := range res.Findings {
+// newCheck is a check's findings as the close answers them: split into
+// those inside the story and the notes outside it, at most MaxNotes of them,
+// with whether the check passed.
+func newCheck(findings []check.Finding, passed bool) *Check {
+	c := &Check{Passed: passed, Findings: []check.Finding{}, Notes: []check.Finding{}}
+	for _, f := range findings {
 		switch {
 		case !f.Outside:
 			c.Findings = append(c.Findings, f)
@@ -714,17 +722,133 @@ func (r *run) branchChanges() ([]string, error) {
 
 // check runs flai check --strict on the worktree, scoped to the story as the
 // close-out scopes it (ADR-0085): a finding inside the story stops the run.
+// When the worktree's manifest names flai.command, that command's flai
+// checks it, so that the branch's own rules check the branch (ADR-0201);
+// otherwise the running flai checks it in-process.
 func (r *run) check() error {
+	if command := r.wtRepo.Manifest.Flai.Command; command != "" {
+		return r.treeCheck(command)
+	}
 	res, err := check.RunScoped(r.wtRepo, r.o.Runner, r.o.Now(), r.story.ID)
 	if err != nil {
 		return fmt.Errorf("run flai check in %s: %w", r.rel(r.wt), err)
 	}
-	c := newCheck(res)
+	return r.answerCheck(newCheck(res.Findings, res.OK(true)))
+}
+
+// answerCheck records c as the check step's and stops the run when it did
+// not pass.
+func (r *run) answerCheck(c *Check) error {
 	r.res.Check = c
-	if !c.Passed {
-		return fmt.Errorf("flai check --strict fails on %s in %s: fix them, then run %s again, which commits the fix", plural(len(c.Findings), "finding"), r.story.ID, r.again())
+	if c.Passed {
+		return nil
 	}
-	return nil
+	by := ""
+	if c.CheckedBy != "" {
+		by = ", run by " + c.CheckedBy + ","
+	}
+	return fmt.Errorf("flai check --strict%s fails on %s in %s: fix them, then run %s again, which commits the fix", by, plural(len(c.Findings), "finding"), r.story.ID, r.again())
+}
+
+// maxOutput is the most of a command's output, its last bytes, that an
+// error quotes.
+const maxOutput = 2000
+
+// treeCheck runs command, the manifest's flai.command, as flai check
+// --strict --json scoped to the story in the worktree, and reads the result
+// it prints (ADR-0201): it passes when the command exits 0, and a command
+// that cannot run or prints no result stops the run with its output.
+func (r *run) treeCheck(command string) error {
+	path := filepath.Join(r.wt, filepath.FromSlash(command))
+	args := []string{"check", "--strict", "--story", r.story.ID, "--json"}
+	out, runErr := r.o.Runner.Run(r.wt, path, args...)
+	res, ok := checkResult(out)
+	if !ok {
+		why := ""
+		if runErr != nil {
+			first, _, _ := strings.Cut(runErr.Error(), "\n")
+			why = " (" + first + ")"
+		}
+		return fmt.Errorf("%s %s in %s, the manifest's flai.command (ADR-0201), gave no check result%s: fix the tree's flai so that it builds and runs, then run %s again; its output:\n%s",
+			command, strings.Join(args, " "), r.rel(r.wt), why, r.again(), outputTail(out))
+	}
+	c := newCheck(res.Findings, runErr == nil)
+	c.CheckedBy = r.checkedBy(command, path)
+	return r.answerCheck(c)
+}
+
+// checkedBy names command, run from path, and the version its version
+// --json prints; a version it cannot tell is logged, and command named
+// alone.
+func (r *run) checkedBy(command, path string) string {
+	out, err := r.o.Runner.Run(r.wt, path, "version", "--json")
+	var v struct {
+		Version string `json:"version"`
+	}
+	raw, ok := jsonObject(out)
+	if err == nil && ok {
+		err = json.Unmarshal(raw, &v)
+	}
+	if err != nil || !ok || v.Version == "" {
+		r.logger.Warn("the version of the tree's flai not read; the check names its command alone", "component", "taskdone", "task", r.task.ID, "command", command, "err", err)
+		return command
+	}
+	return fmt.Sprintf("%s (flai %s)", command, v.Version)
+}
+
+// checkResult is the flai check --json result in out, a command's combined
+// output, and whether it holds one: an object with a findings key.
+func checkResult(out string) (*check.Result, bool) {
+	raw, ok := jsonObject(out)
+	if !ok {
+		return nil, false
+	}
+	var keys map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &keys); err != nil {
+		return nil, false
+	}
+	if _, ok := keys["findings"]; !ok {
+		return nil, false
+	}
+	var res check.Result
+	if err := json.Unmarshal(raw, &res); err != nil {
+		return nil, false
+	}
+	return &res, true
+}
+
+// jsonObject is the first JSON object in out that flai's --json printed,
+// indented, so beginning on a line that is "{" alone: build and log lines
+// may come before it or after it.
+func jsonObject(out string) (json.RawMessage, bool) {
+	for offset := 0; offset < len(out); {
+		line, _, _ := strings.Cut(out[offset:], "\n")
+		if strings.TrimSuffix(line, "\r") == "{" {
+			var raw json.RawMessage
+			if err := json.NewDecoder(strings.NewReader(out[offset:])).Decode(&raw); err == nil {
+				return raw, true
+			}
+		}
+		offset += len(line) + 1
+	}
+	return nil, false
+}
+
+// outputTail is the last maxOutput bytes of out, from a line's start, or
+// "(none)" when it is empty.
+func outputTail(out string) string {
+	out = strings.TrimSpace(out)
+	if out == "" {
+		return "(none)"
+	}
+	if len(out) <= maxOutput {
+		return out
+	}
+	tail := out[len(out)-maxOutput:]
+	if i := strings.IndexByte(tail, '\n'); i >= 0 {
+		tail = tail[i+1:]
+	}
+	return "…\n" + tail
 }
 
 // inbox reads the agent's inbox as the MCP tool inbox does, advancing its
