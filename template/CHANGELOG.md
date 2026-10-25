@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.117 - 2026-10-25
+
+- S-0434 flai stats reports per week the threads opened to the operator per completed story and how many asked what a digest entry already answered, and the dashboard charts it (patch).
+
 ## 1.0.116 - 2026-10-24
 
 - S-0434 The analyzer reads the digest's measure on a bottlenecks run (patch, ADR-0200): in `strategic-agents.md`, the section "As the analyzer" says that on a bottlenecks run it reads `digest.weeks[]` of `flai stats --json` as evidence of the questions that wait on the operator, the threads opened to the operator per completed story, `per_story`, and the repeats, `asked_again`, and says whether both fell over the window. It needs a flai that has it, the release that carries S-0434: an older flai's `flai stats --json` has no `digest`, so the analyzer finds no such figures to read.
