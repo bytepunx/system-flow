@@ -3,10 +3,10 @@ id: S-0496
 type: story
 nature: research
 title: Evaluate Docker Agents
-status: review
+status: done
 owner: alex
 created: 2026-10-25T21:01:31Z
-updated: 2026-10-25T21:12:03Z
+updated: 2026-10-25T21:19:23Z
 transitions:
   - to: ready
     at: 2026-10-25T21:01:37Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-25T21:12:03Z
     by: agent-S-0496
+  - to: done
+    at: 2026-10-25T21:19:23Z
+    by: orchestrator
 tags: [cli]
 touches: [design/adrs/README.md, design/system/agent-adapters.md, design/adrs/0202-flai-gains-a-docker-agent-harness-adapter-that-runs-a-story-s-agent-as-a-docker.md]
 agent:
@@ -122,3 +125,15 @@ Touches. `flai touches suggest S-0496` refused: the story declared no touches, s
 Forecast. See the forecast's basis: it is `flai forecast`'s figure after the touches above were written, reviewed against the agent seconds of the done research stories that wrote one finding document and one ADR (S-0339 2102 s, S-0380 2466 s, S-0413 1372 s).
 
 Cost of delay. 50 USD a week, `flai cod`'s value from the operator's input `penalty_per_week: 50` and nothing else. It stands: the story has no epic and no revenue or time-lost input.
+
+### Accepted by the orchestrator
+
+- Verified: 74ca49368bfe6f0a2a31b3b706a310b2c338218f
+- Batch: 20261025-211911
+- Enqueued verified: eee90e0fa268857914b6fad7a34cf7225b12eca5
+- At: 2026-10-25T21:19:23Z
+
+Verdict: Accept S-0496: all three criteria are met, the ADR is left proposed, the touches are respected, and .claude/ is untouched.
+- 1: design/adrs/0202-flai-gains-a-docker-agent-harness-adapter-that-runs-a-story-s-agent-as-a-docker.md, design/adrs/README.md
+- 2: design/adrs/0202-flai-gains-a-docker-agent-harness-adapter-that-runs-a-story-s-agent-as-a-docker.md, design/system/agent-adapters.md
+- 3: design/adrs/0202-flai-gains-a-docker-agent-harness-adapter-that-runs-a-story-s-agent-as-a-docker.md, design/system/agent-adapters.md

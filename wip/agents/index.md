@@ -1,13 +1,12 @@
 ---
 title: Active streams
-updated: 2026-10-25T21:19:07Z
+updated: 2026-10-25T21:19:08Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0496](S-0496.md) | Evaluate Docker Agents | review | agent-S-0496 | 2026-10-25T21:11:43Z |
 
 ## Strategic agents
 
