@@ -1,17 +1,18 @@
 ---
 title: Active streams
-updated: 2026-10-24T23:50:57Z
+updated: 2026-10-25T21:19:07Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
+| [S-0496](S-0496.md) | Evaluate Docker Agents | review | agent-S-0496 | 2026-10-25T21:11:43Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
-| [planner](planner.md) | 100 | 883.0165 USD | 122268 | 2026-10-23T23:47:09Z |
-| [orchestrator](orchestrator.md) | 1042 | 1527.3722 USD | 1333199 | 2026-10-24T23:51:30Z |
+| [planner](planner.md) | 102 | 892.1600 USD | 122747 | 2026-10-25T21:06:04Z |
+| [orchestrator](orchestrator.md) | 1050 | 1531.5451 USD | 1336123 | 2026-10-25T21:12:41Z |
 | [analyzer](analyzer.md) | 1 | 5.0040 USD | 454 | 2026-10-15T22:49:08Z |

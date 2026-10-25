@@ -1,9 +1,9 @@
 ---
 kind: planner
-accrued_cost: 883.0165
-accrued_seconds: 122268
-tasks_completed: 100
-last_run: 2026-10-23T23:47:09Z
+accrued_cost: 892.1600
+accrued_seconds: 122747
+tasks_completed: 102
+last_run: 2026-10-25T21:06:04Z
 ---
 
 # Planner activity
@@ -803,3 +803,19 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0486
 - Seconds: 442
 - Cost: 3.0824 USD, estimated
+
+### 2026-10-24T13:19:41Z
+
+- Summary: Planned S-0493 (already in progress with its agent): kept its seven declared touches, set the forecast to 30m (delivery 2026-10-24T13:47Z, raised from flai's 18m for two real-git tests with a bare remote) and the cost of delay value to 25 USD a week, wrote the `### Planning` note, revisited T-2105 (the agent's, unchanged), created T-2106 (close I-0204 and tick the criteria, after T-2105), and summarised the plan on TH-0637.
+- Trigger: orchestrator
+- Items: S-0493
+- Seconds: 223
+- Cost: 5.4094 USD, estimated
+
+### 2026-10-25T21:06:04Z
+
+- Summary: The plan is complete: the check scoped to S-0496 reports only the two narrative warnings the story's agent clears, and the story carries its touches, forecast, value, three tasks in three layers, and the plan thread TH-0644. Nothing waits on an operator input: the cost of delay input was given, so no question is open and no wait is needed.
+- Trigger: asked
+- Items: S-0496, T-2113, T-2114, T-2115
+- Seconds: 256
+- Cost: 3.7341 USD, estimated

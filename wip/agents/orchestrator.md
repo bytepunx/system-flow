@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1526.6233
-accrued_seconds: 1333156
-tasks_completed: 1039
-last_run: 2026-10-24T23:50:47Z
+accrued_cost: 1531.5451
+accrued_seconds: 1336123
+tasks_completed: 1050
+last_run: 2026-10-25T21:12:41Z
 ---
 
 # Orchestrator activity
@@ -7285,6 +7285,83 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 399
 - Cost: 1.4482 USD, estimated
 
+### 2026-10-24T23:51:12Z
+
+- Summary: Answered TH-0641, citing no source
+- Items: S-0434
+- Seconds: 25
+- Cost: 0.3724 USD, estimated
+
+### 2026-10-24T23:51:15Z
+
+- Summary: S-0435 landed through merge queue batch 20261024-235048, which I enqueued, completing E-0025. Under publish, judgement: release_evaluate lists only S-0434 pending (92.98 USD/week); the experiment releases nothing. release_publish refused again: "the host action \"push\" is not enabled for this project". I added this to my TH-0641 on S-0434 and will not retry until it is answered or the next acceptance.
+- Items: S-0435, S-0434
+- Seconds: 3
+- Cost: 0.0934 USD, estimated
+
+### 2026-10-24T23:51:30Z
+
+- Summary: Under plan_backlog_stories, flai plan --candidates lists S-0495 (the MCP task_done checks a story with the installed flai): a new draft with no touches, forecast, value or tasks. plan refused: "the plan host action is off for this project: flai serve enable plan". Together with push being off (TH-0641), the operator has turned host actions off. I will not retry until it is turned back on. promote --candidates still lists only S-0241, still blocked. Nothing is in progress, ready or in review.
+- Items: S-0495
+- Seconds: 15
+- Cost: 0.2831 USD, estimated
+
+### 2026-10-25T20:24:30Z
+
+- Summary: Under plan_backlog_stories, started the planner for S-0495 (pid 189631), the only candidate in flai plan --candidates (no touches, forecast, value or tasks); the plan host action is on again. promote --candidates lists only S-0241 (rank 1, 2h), still blocked until a headless session offers forks, so not promoted. The 14 complete drafts still wait on TH-0532, TH-0533, TH-0587, TH-0583 and TH-0588. S-0434 stays unpublished: TH-0641 (push off) is unanswered and nothing new was accepted, so I do not retry release_publish.
+- Items: S-0495, S-0241
+- Seconds: 33
+- Cost: 0.2264 USD, estimated
+
+### 2026-10-25T20:34:57Z
+
+- Summary: Answered TH-0643, citing design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md
+- Items: S-0495
+- Seconds: 627
+- Cost: 0.3924 USD, estimated
+
+### 2026-10-25T20:35:15Z
+
+- Summary: Under plan_backlog_stories, approved and resolved planner-S-0495's TH-0643: five tasks in four layers, with an ADR first that settles the remedy (a flai.command manifest key so task done's check runs the tree's flai), 14 file touches, a forecast of 1h30m, and a value of 50 USD/week from flai cod. Under finalize_drafts, finalized S-0495 (complete in promote --drafts; consistent). Under promote_to_ready, moved S-0495 to ready as candidate 1 by throughput (1h30m). S-0241 (rank 2, 2h) stays out because it is blocked. Under order_ready, applied flai order --by throughput: S-0495 alone.
+- Items: S-0495
+- Seconds: 18
+- Cost: 0.1792 USD, estimated
+
+### 2026-10-25T20:59:41Z
+
+- Summary: Enqueued S-0495 at a406b120, first and only in the queue. Its forecast is 1h30m and its value 50 USD/week. flai verify passed at the head; integration and smoke are left to the queue. The verifier matched both criteria within its 15 touches, with nothing under .claude/. ADR-0201 adds flai.command, which this repository sets to scripts/flai.sh, so task done's check step runs the tree's flai. The change has a reproducing test, raises task-done-rules to 2, and closes I-0194.
+- Items: S-0495
+- Seconds: 1466
+- Cost: 1.2084 USD, estimated
+
+### 2026-10-25T21:01:42Z
+
+- Summary: The operator moved S-0496 (Evaluate Docker Agents) to ready. Under order_ready, I applied flai order --by throughput. S-0496 is alone in ready, and it has no forecast duration.
+- Items: S-0496
+- Seconds: 121
+- Cost: 0.1616 USD, estimated
+
+### 2026-10-25T21:05:59Z
+
+- Summary: Answered TH-0644, citing design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md
+- Items: S-0496
+- Seconds: 257
+- Cost: 0.4920 USD, estimated
+
+### 2026-10-25T21:06:05Z
+
+- Summary: Under plan_backlog_stories, approved and resolved planner-S-0496's TH-0644. The plan is three tasks in three layers: a finding document, design/system/docker-agents.md, and a draft ADR on Docker Agents. The design/adrs folder touch is kept only for the ADR file. The forecast is 35m and the value 50 USD/week from flai cod on the operator's penalty input. S-0496 is in progress already.
+- Items: S-0496
+- Seconds: 6
+- Cost: 0.0000 USD
+
+### 2026-10-25T21:12:41Z
+
+- Summary: Enqueued S-0496 (research) at eee90e0f, second in the queue behind S-0495, whose batch is verifying integration. Its forecast is 35m and its value 50 USD/week. flai verify passed at the head (check and markdown). The verifier matched all three criteria: ADR-0202, left proposed, proposes a docker-agent harness adapter, with trade-offs, limitations and security concerns, and the survey is in agent-adapters.md, all within touches. It noted that ADR-0202 has no topics field, which does not block.
+- Items: S-0496
+- Seconds: 396
+- Cost: 1.5129 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -7460,4 +7537,14 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-10-24T13:42:21Z
 
 - Call: `git tag --sort=-creatordate`
+- Needs: none
+
+### 2026-10-25T20:24:22Z
+
+- Call: `flai serve status --json 2>&1`
+- Needs: none
+
+### 2026-10-25T21:09:39Z
+
+- Call: `flai queue --json 2>/dev/null`
 - Needs: none

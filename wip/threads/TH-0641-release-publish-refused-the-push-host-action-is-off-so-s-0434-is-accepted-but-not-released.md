@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [orchestrator]
 created: 2026-10-24T22:56:44Z
-updated: 2026-10-24T22:56:44Z
+updated: 2026-10-24T23:51:12Z
 ---
 
 # TH-0641 release_publish refused: the push host action is off, so S-0434 is accepted but not released
@@ -34,3 +34,12 @@ release_publish publishes as publish.run does, which needs the push host action:
 ```
 
 The same call published flai 1.70.0 and template 1.0.115 at 21:38Z, so `push` was turned off after that. S-0435, the digest experiment, reads the measure S-0434 adds, so it is better measured once S-0434 is released.
+
+### 2026-10-24T23:51:12Z orchestrator
+Still refused after S-0435 landed at 23:50:56Z, which completes E-0025. The experiment releases nothing, so S-0434 is the only pending story (92.98 USD/week). release_publish gave the same answer:
+
+```text
+the host action "push" is not enabled for this project. On the host, in the project, run: flai serve enable push
+```
+
+I will not try again until you answer here or another story is accepted.
