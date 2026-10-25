@@ -1057,6 +1057,32 @@ func TestMinimumFlai(t *testing.T) {
 	}
 }
 
+// ADR-0201: flai.command is a program inside the repository, named by its
+// path from the root; unset, it is empty, and an absolute path or one that
+// leaves the repository is refused, naming the key.
+func TestFlaiCommand(t *testing.T) {
+	path := filepath.Join(t.TempDir(), File)
+	base := "version: 1\nname: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"
+	for _, c := range []struct{ yaml, want, err string }{
+		{"", "", ""},
+		{"flai:\n  command: scripts/flai.sh\n", "scripts/flai.sh", ""},
+		{"flai:\n  command: /usr/local/bin/flai\n", "", `flai.command "/usr/local/bin/flai" is an absolute path`},
+		{"flai:\n  command: ../flai.sh\n", "", `flai.command "../flai.sh" leaves the repository`},
+		{"flai:\n  command: scripts//flai.sh\n", "", `flai.command "scripts//flai.sh" is not a clean path`},
+	} {
+		if err := os.WriteFile(path, []byte(base+c.yaml), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		m, err := Load(path)
+		switch {
+		case c.err == "" && (err != nil || m.Flai.Command != c.want):
+			t.Errorf("%q: %v %+v", c.yaml, err, m.Flai)
+		case c.err != "" && (err == nil || !strings.Contains(err.Error(), c.err)):
+			t.Errorf("%q: want an error with %q, got %v", c.yaml, c.err, err)
+		}
+	}
+}
+
 func TestSetMinimum(t *testing.T) {
 	path := filepath.Join(t.TempDir(), File)
 	base := "version: 1\nname: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"

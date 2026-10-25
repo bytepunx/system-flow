@@ -1,6 +1,6 @@
 ---
 title: Settings index
-updated: 2026-10-24
+updated: 2026-10-25
 status: active
 ---
 
@@ -183,6 +183,7 @@ Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, an
 | `acceptance.merge_method` | `merge` | How the forge merges an accepted pull request: `merge` with a merge commit, `squash` into one commit, or `rebase` the commits onto the base. Allowed and unused under `local`. Changed with `flai manifest set` or by hand |
 | `merge_queue.batch_max` | `4` | The most enqueued stories the merge queue takes into one batch, verified together once, a whole number of one or more; the queue runs in `flai serve` behind the `merge-queue` host action, while `orchestration.permissions.accept_reviews` is on, under local acceptance only ([the merge-queue host action](index.md#the-merge-queue-host-action-stories-in-review-verified-as-one-batch-s-0399), [ADR-0173](../../design/adrs/0173-a-merge-queue-in-flai-serve-with-no-model-runs-behind-the-merge-queue-host.md)). Zero, a negative number, or a value that is not a whole number stops every command that reads the manifest, naming the key. Changed with `flai manifest set` or by hand |
 | `flai.minimum` | unset | The oldest flai release that may read the project, `X.Y.Z`; an older one stops before reading any item and names the version needed. Publishing a flai release that changes the front-matter fields flai reads raises it ([Keeping the host's flai current](index.md#keeping-the-hosts-flai-current)) |
+| `flai.command` | unset | The repository path of a program that runs the flai the tree builds, such as `scripts/flai.sh`. When the story's worktree sets it, `flai task done` and the MCP `task_done` check the story by running it there, in place of their own check, so a branch whose format the installed flai does not know yet closes its tasks; set it only in a project that builds flai. An absolute path, one that leaves the repository, or one that is not clean stops every command, naming the key. Changed by hand ([ADR-0201](../../design/adrs/0201-when-the-manifest-names-flai-command-task-done-s-check-step-runs-that-command-s.md)) |
 | `agent.roles.<name>.harness` | none | The harness of a sub-agent role (`explore`, `verify`); for `claude-code`, only `claude-code`, since a sub-agent runs in the story's session |
 | `agent.roles.<name>.model` | none | The model a sub-agent role runs, over the one its definition in `.claude/agents/` names, such as `haiku` or `claude-sonnet-5-5` |
 | `agent.roles.<name>.config.<name>` | none | Options for a sub-agent role; `claude-code` takes none |

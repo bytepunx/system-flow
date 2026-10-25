@@ -99,6 +99,12 @@ type Requirement struct {
 	// doing the publish, so it names only a release that can be installed
 	// (release.RaiseMinimum, I-0107).
 	Minimum string `yaml:"minimum,omitempty" json:"minimum,omitempty"`
+	// Command is the repository path of a program that runs the flai the
+	// tree builds, such as scripts/flai.sh: task done's check step runs it in
+	// a story's worktree in place of the running flai's own check, so the
+	// branch's rules check the branch (ADR-0201). Only a project that builds
+	// flai sets it.
+	Command string `yaml:"command,omitempty" json:"command,omitempty"`
 }
 
 // TooOldError is a manifest whose minimum flai is newer than the running one.
@@ -1531,6 +1537,9 @@ func Load(path string) (Manifest, error) {
 	}
 	if errs := m.MergeQueue.Errors(); len(errs) > 0 {
 		return Manifest{}, fmt.Errorf("%s: %s", path, strings.Join(errs, "; "))
+	}
+	if r := repoPathProblem(strings.TrimSpace(m.Flai.Command), "a program", "scripts/flai.sh", "scripts/flai.sh"); r != "" {
+		return Manifest{}, fmt.Errorf("%s: flai.command %q %s", path, m.Flai.Command, r)
 	}
 	if min := m.Flai.Minimum; min != "" {
 		if _, ok := buildinfo.Semver(min); !ok {
