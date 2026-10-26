@@ -6,7 +6,7 @@ status: open
 count: 1
 first_reported: 2026-10-26T04:49:22Z
 last_reported: 2026-10-26T04:49:22Z
-updated: 2026-10-26T04:49:22Z
+updated: 2026-10-26T16:01:48Z
 ---
 
 # I-0210 flai guard lets a session flai serve started run the flai serve sub-commands that write the host configuration
@@ -21,3 +21,5 @@ Story: S-0498.
 Found while building flai serve notify (T-2130). flai/internal/guard/guard.go has no rule for flai serve's own sub-commands: a story's agent, a strategic agent, or a sub-agent that flai serve started can run flai serve notify set or clear, flai serve forge, flai serve agent provider, or flai serve enable. agentEnv drops FLAI_CONFIG from a served agent, so such a call writes the operator's ~/.flai/config.json. That breaks safety.md (no agent changes the operator's global tool configuration), and ADR-0205's statement that the reminder channel is the operator's to set in a shell. The ADR-0039 settings host action is about the dashboard, not agents. A fix: guard refuses, to any session flai serve started, every flai serve sub-command that writes the host configuration or turns a host action on or off.
 
 ## Remediation
+
+Story S-0511 remediates this issue, created from it at 2026-10-26T16:01:48Z.
