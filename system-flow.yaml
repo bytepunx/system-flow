@@ -138,3 +138,6 @@ analysis:
     model: claude-fable-5-1
     config:
       effort: medium
+threads:
+  remind_after: 4h
+  remind_every: 24h
