@@ -2,12 +2,12 @@
 id: I-0184
 title: Every stats.get and flai stats runs one git log for claims drift, about 450 ms of a 900 ms warm answer
 class: efficiency
-status: open
+status: closed
 count: 1
 cost: 450ms
 first_reported: 2026-10-21T12:50:20Z
 last_reported: 2026-10-21T12:50:20Z
-updated: 2026-10-26T04:01:29Z
+updated: 2026-10-26T04:42:56Z
 ---
 
 # I-0184 Every stats.get and flai stats runs one git log for claims drift, about 450 ms of a 900 ms warm answer
@@ -24,3 +24,4 @@ S-0471 measured stats.get with since=30d, type=story, bucket=day on this reposit
 ## Remediation
 
 Story S-0500 remediates this issue, created from it at 2026-10-26T04:01:29Z.
+Closed 2026-10-26T04:42:56Z: S-0500: storygit.Committed keeps the stories' commits per repository root for the life of the process, keyed by the main branch, the wip folder, and git show-ref --heads, and reads git log again only when a branch tip moves; each call gets a deep copy. On this repository on 2026-10-26, a warm stats.get went from 1,317 ms to 648 ms with no git log in calls 2 to 6, and the claims of both binaries' reports are identical. TestCommittedReadsTheLogOnceWhileNoBranchMoves and TestReadStartsNoLogWhileNothingChanged reproduce the cause and fail without the fix. A one-shot flai stats and the first call of a process still read the log once, recorded as I-0209.
