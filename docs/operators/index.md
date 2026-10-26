@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-10-24
+updated: 2026-10-26
 status: active
 ---
 
@@ -541,6 +541,30 @@ The flai on the host serves MCP and starts agents. When a flai release is accept
 - **What an agent sees.** `flai test`, `flai verify`, and the MCP tools `test` and `verify` refuse a manifest whose test tiers this flai cannot read. When the project's history has a newer flai, the refusal says the flai is older than the project and names the upgrade, rather than asking for the manifest to be fixed (I-0141).
 - **Fields it does not know.** An older flai reads work items, threads, and issues that carry front-matter fields it does not know. It logs `front matter has fields this flai does not know`, with the file and the fields, and it keeps those fields when it writes the file. It does not act on them. `flai check` reports each one as an error.
 - **The minimum.** `flai.minimum` in `system-flow.yaml` is the oldest flai release that may read the project. A flai below it stops before it reads any item, and names the version needed and the upgrade. `flai serve` then leaves the project unserved, and `flai serve status` gives that reason. It first lets the project's requests in flight finish, for up to five minutes, and refuses new ones, saying why. A publish raises the minimum when a flai release changed the front-matter fields flai reads, but never past the flai doing the publish, so the minimum only ever names a release `flai host upgrade` can already install (S-0321). When the release that changed the fields is newer than the host's flai, the raise waits: upgrade the host, and the next publish from it raises the minimum.
+
+## Reminding the operator of what awaits them
+
+A thread that awaits you, a recommendation the orchestrator left for you to confirm or a question an agent asked, shows in the dashboard's inbox and nowhere else. `flai serve` can remind you of it off the dashboard, on your phone or your desktop (S-0498, [ADR-0205](../../design/adrs/0205-flai-serve-reminds-the-operator-of-a-thread-that-awaits-them-past-threads.md)).
+
+```bash
+flai manifest set threads.remind_after=4h threads.remind_every=12h   # in the project; writes system-flow.yaml
+flai serve notify set --command '<command>'                          # on the host, once for every project
+flai serve notify show
+flai serve notify clear                                              # flai serve then only logs reminders
+```
+
+- **When it reminds you.** `threads.remind_after` in `system-flow.yaml` is how long a thread may await you before you are reminded of it, a Go duration such as `4h`. Unset, the default, nothing is reminded. `threads.remind_every` is how often you are reminded again while it still awaits you, `24h` unless set. A new entry on the thread starts the count over, and an answer, a confirmation, or a resolution ends it. `flai serve` looks every minute and whenever a file changes, and reads the manifest each time, so a change holds without a restart. The [settings index](settings.md) has both keys.
+- **Where it reminds you.** One channel for every project on this host, kept in `~/.flai/config.json` as `notify.url` and `notify.command`. Set it yourself in a shell on the host with `flai serve notify set`. `--url` is a webhook each reminder's JSON is POSTed to; `--command` is a shell command run with the JSON on its standard input. Set either or both. What the JSON holds is in the [user guide](../users/flai.md#flai-serve-flai-on-the-host-for-the-dashboards).
+- **A push to your phone through ntfy.** Subscribe to a topic in the ntfy app, then:
+
+  ```bash
+  flai serve notify set --command 'jq -r "\"\(.project): \(.title) (\(.thread), \(.awaiting_seconds / 3600 | floor) h)\"" | curl -s -H "Title: flai" -d @- https://ntfy.sh/<your-topic>'
+  ```
+
+  Without `jq` on the host, `curl -s -H "Title: flai" -d @- https://ntfy.sh/<your-topic>` sends the JSON as it is. A topic on ntfy.sh is read by anyone who knows its name, and the reminder carries the thread's title: pick a long random name, or run your own ntfy server.
+- **A webhook.** `flai serve notify set --url https://hooks.example.com/flai` POSTs the JSON to a receiver of yours: one attempt, a five second timeout, an answer other than 2xx a failure. The body carries the `entry` the dashboard posts to `dashboard.notify_url` as well, so one receiver can take both. A service that wants a body of its own shape, such as a chat webhook, needs a `--command` that reshapes the JSON instead. The URL may carry a secret, so `flai serve` logs its host alone.
+- **What it writes.** Nothing in the repository. A reminder is not a thread entry, so it ends no agent's wait and does not change what the thread awaits. `flai serve` keeps what it sent in `reminders.json` in each project's `serve` folder, beside `upgrade-asks.json`, so a restart repeats nothing. With no channel set, it logs each reminder in `serve/serve.log` and warns once per project that no channel is set. A send that failed is logged there too.
+- **The block on an asked story.** When a story's agent ends its session on a question to you, `flai serve` blocks the story with the reason `awaiting the operator on TH-nnnn`, whether or not reminders are on. The board shows it blocked, and `flai stats` counts the wait as blocked time. Your answer starts the agent again, and `flai serve` closes the interval first. A block an agent or you wrote stays open. The story keeps its column and still counts to the in-progress limit ([Blocking](../users/flai.md#blocking)).
 
 ## The connection from flai on the host
 

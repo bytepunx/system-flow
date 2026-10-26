@@ -3,6 +3,7 @@
 ## 1.0.118 - 2026-10-26
 
 - S-0498 The manifest's `threads` block says when `flai serve` reminds the operator of a thread that awaits them (patch, ADR-0205): the template's `system-flow.yaml` gains a commented `threads:` block with `remind_after`, how long a thread may await the operator before they are reminded of it, unset by default so that nothing is reminded, and `remind_every`, how often they are reminded again while it still awaits them, `24h` when unset, both Go durations that `flai manifest set` writes. It needs a flai that has it, the release that carries S-0498: an older flai does not know `threads.remind_after` or `threads.remind_every`: its `flai manifest set` refuses both keys, and written by hand they are ignored, by its `flai check` too, and its `flai serve` reminds no one.
+- S-0498 `flai serve` blocks a story whose agent ended its session asking the operator, until the answer starts it again (patch, ADR-0205): in `work-management.md`, the rule on asking the designer says that while the agent waits on its question, `flai serve` blocks the story with the reason `awaiting the operator on TH-nnnn` and closes that interval before it starts the agent again on the answer, so the agent need not run `flai block` for the question, and that a block it wrote itself with `flai block` stays open until it runs `flai unblock`. It needs a flai that has it, the release that carries S-0498: an older `flai serve` blocks nothing, and an agent that ends on a question there leaves its story unmarked.
 
 ## 1.0.117 - 2026-10-25
 

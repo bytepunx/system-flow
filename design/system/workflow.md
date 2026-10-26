@@ -1,6 +1,6 @@
 ---
 title: Workflow and board policies
-updated: 2026-10-23
+updated: 2026-10-26
 status: active
 topics: [all]
 ---
@@ -139,9 +139,13 @@ Once a batch is verified, `flai serve` ends it in acceptances or a send-back, wi
 
 When an agent cannot proceed it appends an open `blocked` interval with a reason, writes the question in the narrative under `## Open questions`, and moves on to another task or story if one is available. When the block clears, the interval is closed. The item never leaves its column because of a block.
 
+`flai serve` writes one block itself (S-0498, [ADR-0205](../adrs/0205-flai-serve-reminds-the-operator-of-a-thread-that-awaits-them-past-threads.md)). When a story's agent ends its session asking on a thread, `flai serve` appends a blocked interval to the story with the reason `awaiting the operator on TH-nnnn`, unless the story is blocked already. It closes that interval before the answer starts the agent again. A block an agent or the operator wrote stays open. A look also closes the interval of a story whose agent no longer waits on that thread, such as one sent back to ready or restarted by hand. A run that ended awaiting only another story's reply blocks nothing. The story stays in its column and counts to the in-progress limit, and `flai stats` counts the wait as blocked time.
+
 ## Cadence
 
 There are no sprints. Flow is continuous. The dashboard's charts replace the status meeting: cycle time scatter shows whether stories are getting slower, burn-up shows scope versus completion per epic, and the state-time breakdown shows where time is spent. Reviewing those charts weekly and adjusting WIP limits or definitions is the process improvement loop.
+
+A thread that awaits the operator has a cadence of its own when the manifest sets `threads.remind_after` ([ADR-0205](../adrs/0205-flai-serve-reminds-the-operator-of-a-thread-that-awaits-them-past-threads.md)). Once its last entry is older than that, `flai serve` reminds the operator of it through the channel the host keeps, and again every `threads.remind_every`, 24 hours unless set, while it still awaits them. A new entry starts the count over. The reminder is written nowhere in the repository, so it ends no wait.
 
 ## Branches and collisions (ADR-0019)
 
