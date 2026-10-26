@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1537.9669
-accrued_seconds: 1337628
-tasks_completed: 1057
-last_run: 2026-10-25T21:37:46Z
+accrued_cost: 1558.7944
+accrued_seconds: 1363237
+tasks_completed: 1077
+last_run: 2026-10-26T04:44:35Z
 ---
 
 # Orchestrator activity
@@ -7410,6 +7410,146 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0496, S-0497
 - Seconds: 542
 - Cost: 1.1234 USD, estimated
+
+### 2026-10-26T04:01:21Z
+
+- Summary: The operator accepted S-0497 (research) by hand at 04:01Z, and its archive closed TH-0645 and TH-0647. Under publish (judgement), release_evaluate lists nothing pending (0 stories), so there is nothing to publish. In progress, ready and review are empty. promote --candidates lists only S-0241, which is blocked. The remaining drafts wait on the operator's threads.
+- Items: S-0497
+- Seconds: 23015
+- Cost: 1.1466 USD, estimated
+
+### 2026-10-26T04:01:46Z
+
+- Summary: Under plan_backlog_stories, started the planner for S-0498 (pid 1665096), first of four new backlog stories in flai plan --candidates. S-0498 is about a pending recommendation that waits a day for confirmation. S-0499, S-0500 and S-0501 follow one at a time.
+- Items: S-0498
+- Seconds: 25
+- Cost: 0.6634 USD, estimated
+
+### 2026-10-26T04:11:12Z
+
+- Summary: Answered TH-0648, citing design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md
+- Items: S-0504
+- Seconds: 566
+- Cost: 3.0174 USD, estimated
+
+### 2026-10-26T04:11:26Z
+
+- Summary: Under plan_backlog_stories, approved and resolved planner-S-0504's TH-0648: seven tasks in five layers (propose the remedy, an ADR and metrics.md, curate turned on by the operator, flai stats with a test reproducing I-0207, docs, the Digest chart, close I-0207), 23 touches, a forecast of 2h30m, and a value of 50 USD/week from flai cod. The operator had finalized S-0504. Under promote_to_ready, I moved S-0504 to ready as candidate 2 by throughput (2h30m). Candidate 1, S-0241 (2h), stays out because it is blocked. Under order_ready, I applied flai order --by throughput: S-0504 alone.
+- Items: S-0504
+- Seconds: 14
+- Cost: 0.2203 USD, estimated
+
+### 2026-10-26T04:12:36Z
+
+- Summary: Recommended an answer on TH-0649, citing design/adrs/0199-the-curator-runs-after-acceptances-coalesced-and-on-digest-schedule-marks.md § Decision
+- Items: S-0504
+- Seconds: 70
+- Cost: 0.5913 USD, estimated
+
+### 2026-10-26T04:12:43Z
+
+- Summary: Under answer_threads (autonomous), posted a recommendation on agent-S-0504's TH-0649 and escalated it to the operator, citing ADR-0199 § Decision. It recommends running flai serve enable curate and flai curate on the host, and taking the code half too. Turning on a host action is the operator's, so no source settles it for me.
+- Items: S-0504
+- Seconds: 7
+- Cost: 0.0749 USD, estimated
+
+### 2026-10-26T04:17:32Z
+
+- Summary: Answered TH-0650, citing design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md
+- Items: S-0498
+- Seconds: 289
+- Cost: 1.7588 USD, estimated
+
+### 2026-10-26T04:17:58Z
+
+- Summary: Under plan_backlog_stories, approved and resolved planner-S-0498's TH-0650. The plan is seven tasks in five layers: an ADR, then reminders through a host notify channel plus a block that flai serve writes on an asked story, remedying I-0151. It has 34 file touches, a forecast of 1h45m, and a value of 17550 USD/week from flai cod. Under finalize_drafts, finalized S-0498 (complete in promote --drafts; consistent). Under promote_to_ready, moved S-0498 to ready as candidate 1 by throughput (1h45m). Under order_ready, applied flai order: S-0498 alone. Started the planner for S-0499 (pid 1725894), next in flai plan --candidates.
+- Items: S-0498, S-0499
+- Seconds: 26
+- Cost: 0.4085 USD, estimated
+
+### 2026-10-26T04:21:30Z
+
+- Summary: Answered TH-0651, citing design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md
+- Items: S-0499
+- Seconds: 212
+- Cost: 2.0892 USD, estimated
+
+### 2026-10-26T04:21:44Z
+
+- Summary: Under plan_backlog_stories, approved and resolved planner-S-0499's TH-0651. The plan is two tasks: show that I-0181's race is the one S-0494 fixed, then close I-0181. It has five file touches, a forecast of 30m, and a value of 7.50 USD/week from flai cod. Under finalize_drafts, finalized S-0499 (complete; consistent). Not promoted: it is held on overlap with S-0504 (design/system/flaiover-dashboard.md) until S-0504 reaches review. Started the planner for S-0500 (pid 1757227), next in flai plan --candidates.
+- Items: S-0499, S-0500
+- Seconds: 14
+- Cost: 0.0863 USD, estimated
+
+### 2026-10-26T04:27:55Z
+
+- Summary: Answered TH-0652, citing design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md
+- Items: S-0500
+- Seconds: 371
+- Cost: 1.4837 USD, estimated
+
+### 2026-10-26T04:28:11Z
+
+- Summary: Under plan_backlog_stories, approved and resolved planner-S-0500's TH-0652. The plan keeps storygit.Committed's commits per root, keyed by branch tips, in three tasks. It has nine file touches, a forecast of 1h, and a value of 0.04 USD/week from flai cod. Under finalize_drafts, finalized S-0500. Under promote_to_ready, moved S-0500 to ready as candidate 1 by throughput (1h). S-0241 (2h) stays blocked, and S-0499 stays held on overlap with S-0504. Under order_ready, applied flai order: S-0500 alone. Started the planner for S-0501 (pid 1829666).
+- Items: S-0500, S-0501
+- Seconds: 16
+- Cost: 0.2705 USD, estimated
+
+### 2026-10-26T04:32:11Z
+
+- Summary: Answered TH-0653, citing design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md
+- Items: S-0501
+- Seconds: 240
+- Cost: 1.9118 USD, estimated
+
+### 2026-10-26T04:32:32Z
+
+- Summary: Under plan_backlog_stories, approved and resolved planner-S-0501's TH-0653. The plan measures the one-shot search index build, then sets a 30s timeout and closes I-0185. It has two tasks, three file touches, a forecast of 25m, and a value of 12.50 USD/week from flai cod. Under finalize_drafts, finalized S-0501. Under promote_to_ready, moved S-0501 to ready as candidate 1 by throughput (25m); S-0241 stays blocked. Under order_ready, applied flai order: S-0501 alone. Started the planner for S-0502 (pid 1880771). E-0029 is not in flai plan --candidates.
+- Items: S-0501, S-0502
+- Seconds: 21
+- Cost: 0.2804 USD, estimated
+
+### 2026-10-26T04:35:44Z
+
+- Summary: Recommended an answer on TH-0654, citing design/conventions/work-management.md § Rules
+- Items: S-0501
+- Seconds: 192
+- Cost: 1.8901 USD, estimated
+
+### 2026-10-26T04:35:50Z
+
+- Summary: Under answer_threads (autonomous), recommended "no story now" on agent-S-0501's TH-0654 and escalated it to the operator, citing work-management.md § Rules. TH-0654 asks whether to make the one-shot search index build (about 2s of CPU on the monorepo) cheaper in a story of its own. Adding a story is a change of scope, so it is the operator's. S-0501 continues with the 30s timeout.
+- Items: S-0501
+- Seconds: 6
+- Cost: 0.0960 USD, estimated
+
+### 2026-10-26T04:40:18Z
+
+- Summary: S-0501 reached review at 042d7aea. flai verify passed, including the flaiover tier, and the verifier matched both criteria within touches: a 30s timeout on the monorepo search tests and I-0185 closed. queue_add refused it with thread_open on TH-0653 and TH-0654. I resolved TH-0653, the planner's plan thread, which held only notes. TH-0654 is the operator's scope question, so I opened TH-0655 asking for its answer and left S-0501 in review. The close-out also recorded I-0208, a main test failing since ADR-0202 became rejected.
+- Items: S-0501
+- Seconds: 268
+- Cost: 1.4108 USD, estimated
+
+### 2026-10-26T04:40:52Z
+
+- Summary: Answered TH-0656, citing design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md
+- Items: S-0502
+- Seconds: 34
+- Cost: 0.5960 USD, estimated
+
+### 2026-10-26T04:40:56Z
+
+- Summary: Under plan_backlog_stories, set S-0502's cost of delay input to time_lost_per_cycle 60h, the figure planner-S-0502 recommended on TH-0656 (two design-choice waits a week at about 29h each), and resolved the thread. No reason was given for the 30h or 117h alternatives; 117h would double-count S-0498's loss. The planner writes the value.
+- Items: S-0502
+- Seconds: 4
+- Cost: 0.0999 USD, estimated
+
+### 2026-10-26T04:44:35Z
+
+- Summary: Enqueued S-0500 at 23c2a1a7, first and only in the queue. Its forecast is 1h and its value 0.04 USD/week. flai verify passed at the head; integration and smoke are left to the queue. The verifier matched both criteria within touches: storygit.Committed keeps its commits per root, keyed by show-ref --heads, with counting-runner tests, and warm stats.get went from 1317 to 648 ms. I-0184 is closed, and I-0209 records the remaining cold-start log.
+- Items: S-0500
+- Seconds: 219
+- Cost: 2.7316 USD, estimated
 
 ## Refusals
 

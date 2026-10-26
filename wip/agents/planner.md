@@ -1,9 +1,9 @@
 ---
 kind: planner
-accrued_cost: 892.1600
-accrued_seconds: 122747
-tasks_completed: 102
-last_run: 2026-10-25T21:06:04Z
+accrued_cost: 898.7343
+accrued_seconds: 123261
+tasks_completed: 104
+last_run: 2026-10-26T04:11:16Z
 ---
 
 # Planner activity
@@ -819,3 +819,19 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0496, T-2113, T-2114, T-2115
 - Seconds: 256
 - Cost: 3.7341 USD, estimated
+
+### 2026-10-26T04:01:53Z
+
+- Summary: run ended
+- Trigger: asked
+- Items: S-0497
+- Seconds: 2
+- Cost: 0.0337 USD, estimated
+
+### 2026-10-26T04:11:16Z
+
+- Summary: Planned S-0504: wrote 23 touches (folder `design/adrs` kept for the ADR), a 2h30m forecast with delivery 2026-10-26T21:00Z, a 50 USD/week cost of delay value, and a `### Planning` note; created T-2120 (propose the remedy), T-2121 (ADR and metrics.md), T-2122 (curate on and first curator run), T-2123 (flai stats with the I-0207 test), T-2124 (docs and the analyzer's convention), T-2125 (Digest chart), T-2126 (close I-0207), in five layers; no tasks revisited; plan summarised on TH-0648, which awaits the operator; `flai check --strict --story S-0504` is clean.
+- Trigger: asked
+- Items: S-0504, T-2120, T-2121, T-2122, T-2123, T-2124, T-2125, T-2126
+- Seconds: 512
+- Cost: 6.5406 USD, estimated

@@ -3,11 +3,14 @@ id: E-0029
 type: epic
 nature: feature
 title: flai runs agents in Docker containers
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-26T04:31:29Z
-updated: 2026-10-26T04:31:29Z
-transitions: []
+updated: 2026-10-26T04:46:53Z
+transitions:
+  - to: ready
+    at: 2026-10-26T04:31:36Z
+    by: alex
 tags: []
 ---
 # E-0029 flai runs agents in Docker containers
@@ -19,6 +22,12 @@ ADR 0203 was drafted through a research story to determine the feasibility and a
 The one refinement to make to the ADR as proposed is to look at creating multiple, layered docker images so the bedrock image has things like the flai CLI, git, etc. that would be in common across all images while each specialized image would contain the particular harness or, in the case of models that run locally, the tooling necessary to invoke and work with those.
 
 ## Stories
+- S-0505 Claude Code works one story of this repository inside a hand-built container from a bedrock image and a claude-code layer, and the results settle what ADR-0203 leaves open
+- S-0506 flai's HTTP MCP server serves an agent in a container as the stdio server serves one on the host: every tool, permission_prompt under auto-approve for an agent flai serve started, and a listener a container reaches
+- S-0507 pilot, a Go binary in the bedrock image, is the container's entrypoint: it reads a start request, starts the inner harness through flai's adapters, relays its log, and resumes, as an ADR records beside the layered images
+- S-0508 flai serve runs a story's agent in a container through a container harness adapter, with the worktree, the story's cache folder, and the login mounted, the keys and the MCP token by environment, and the image and network the host sets
+- S-0509 The planner, the orchestrator, the analyzer, and the curator run in a container when their harness is container, with the main checkout mounted as an ADR settles, pilot passing their role, and their activity logged as on the host
+- S-0510 A project's manifest names an image layer for its test tiers' tools, flai serve runs it, flai check warns when it is not built, and this repository's layer runs the close-out inside the container
 
 ## Notes
 
