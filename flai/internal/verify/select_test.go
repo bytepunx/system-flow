@@ -1,9 +1,12 @@
 package verify
 
 import (
+	"maps"
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
+	"slices"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -346,6 +349,95 @@ func TestRepositoryManifestRunsChangedGoPackagesWithoutShort(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("go-test runs %q, want %q", got, want)
 	}
+}
+
+// I-0199: a change to a script runs ShellCheck on it, and each script test
+// under scripts/ is run, in flai verify and the merge queue's batch, by a tier
+// that both selects it and runs it from its command, directly or through the
+// scripts that command runs. S-0481 changed scripts/flaiover-install.sh and
+// added scripts/flaiover-install-test.sh, and no tier ran the test. Not gated
+// under -short, so that make test catches a manifest, or a script test added
+// later, that opens the gap again.
+func TestRepositoryManifestRunsScriptTestsForScriptChanges(t *testing.T) {
+	root := filepath.Join("..", "..", "..")
+	if _, err := os.Stat(filepath.Join(root, "system-flow.yaml")); err != nil {
+		t.Skip("monorepo not present")
+	}
+	tiers, err := CheckoutTiers(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fsys := os.DirFS(root)
+	got := map[string][]string{}
+	for _, s := range SelectStory(fsys, tiers, []string{"scripts/flaiover-install.sh", "scripts/flaiover-install-test.sh"}) {
+		got[s.Tier.Name] = s.Argv
+	}
+	if want := []string{"scripts/shellcheck.sh", "scripts/flaiover-install-test.sh", "scripts/flaiover-install.sh"}; !reflect.DeepEqual(got["shellcheck"], want) {
+		t.Errorf("shellcheck runs %q, want %q", got["shellcheck"], want)
+	}
+	if _, ok := got["flaiover"]; !ok {
+		t.Errorf("S-0481's change selects %v, want the flaiover tier, which runs scripts/flaiover-install-test.sh", slices.Sorted(maps.Keys(got)))
+	}
+
+	// The scripts named *-test.sh that no tier runs, each with its reason.
+	notRun := map[string]string{
+		"scripts/install-published-test.sh": "needs the network and a token; CI's install-published.yml runs it",
+		"scripts/flai-test.sh":              "runs every tier, as make flai-test; it tests no script",
+	}
+	tests, err := filepath.Glob(filepath.Join(root, "scripts", "*-test.sh"))
+	if err != nil || len(tests) == 0 {
+		t.Fatalf("no scripts/*-test.sh under %s: %v", root, err)
+	}
+	for _, abs := range tests {
+		p := "scripts/" + filepath.Base(abs)
+		if _, ok := notRun[p]; ok {
+			continue
+		}
+		var by []string
+		for _, s := range SelectStory(fsys, tiers, []string{p}) {
+			if s.Tier.Name != "shellcheck" && scriptsRun(t, root, s.Argv)[p] {
+				by = append(by, s.Tier.Name)
+			}
+		}
+		if len(by) == 0 {
+			t.Errorf("%s: no tier both selects it and runs it; add it to the paths of the tier whose command runs it in system-flow.yaml (I-0199)", p)
+		}
+	}
+}
+
+// scriptName finds the scripts a command or a script names, by base name.
+var scriptName = regexp.MustCompile(`[A-Za-z0-9_.-]+\.sh\b`)
+
+// scriptsRun are the scripts/*.sh that argv runs: those it names, and those
+// each of them names outside a comment, followed in turn.
+func scriptsRun(t *testing.T, root string, argv []string) map[string]bool {
+	t.Helper()
+	seen := map[string]bool{}
+	var queue []string
+	add := func(text string) {
+		for _, name := range scriptName.FindAllString(text, -1) {
+			p := "scripts/" + name
+			if _, err := os.Stat(filepath.Join(root, p)); err == nil && !seen[p] {
+				seen[p] = true
+				queue = append(queue, p)
+			}
+		}
+	}
+	add(strings.Join(argv, " "))
+	for len(queue) > 0 {
+		p := queue[0]
+		queue = queue[1:]
+		data, err := os.ReadFile(filepath.Join(root, p))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for line := range strings.Lines(string(data)) {
+			if !strings.HasPrefix(strings.TrimSpace(line), "#") {
+				add(line)
+			}
+		}
+	}
+	return seen
 }
 
 // I-0128: a tier whose command holds {importers} runs on the changed
