@@ -22,6 +22,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/channel"
+	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/dashboard"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
@@ -239,6 +240,11 @@ type Options struct {
 	// GitHub's API when nil.
 	ForgeToken func(forge string) ForgeToken
 	NewForge   NewForge
+	// Notify is the host configuration's reminder channel (ADR-0205), asked
+	// at each look of a project's thread reminders, so that the operator's
+	// flai serve notify set is seen without a restart; nil is no channel,
+	// with which a reminder is logged instead.
+	Notify func() config.Notify
 }
 
 // allowsUnsigned is whether the allowance is in force for the project at
@@ -487,6 +493,11 @@ func Run(ctx context.Context, o Options) error {
 	// (S-0399, ADR-0173); a batch running is cancelled and waited for.
 	queues := newQueueRuns()
 	defer queues.wait()
+	// Each served project's threads that await the operator past
+	// threads.remind_after are reminded through the host's channel, off the
+	// project's loop (ADR-0205); a send in flight is waited for.
+	var reminds sync.WaitGroup
+	defer reminds.Wait()
 	if agent := o.Agent; agent != nil {
 		o.Agent = func(root string) AgentConfig {
 			cfg := agent(root)
@@ -629,11 +640,15 @@ func Run(ctx context.Context, o Options) error {
 			orch := newOrchestrator(o, e, starter)
 			analyst := newAnalysisScheduler(o, e, starter)
 			curation := newCurateScheduler(o, e, starter)
+			// The thread reminder looks on the same changes and every minute,
+			// in the background, as a send may wait seconds (ADR-0205).
+			reminding := newReminder(o, e, &reminds)
 			starter.look(cctx, false) // starts what is ready and has had no agent since (S-0112)
 			replanner.look(cctx)
 			orch.look(cctx)
 			analyst.look(cctx)
 			curation.look(cctx)
+			reminding.soon(cctx)
 			newForgePass(o, e, &forgeLooks).start(cctx)
 			// flai accept's requests to merge a pull request are taken every
 			// second, and answered behind the forge host action (S-0397)
@@ -655,6 +670,7 @@ func Run(ctx context.Context, o Options) error {
 					orch.look(cctx)
 					analyst.look(cctx)
 					curation.look(cctx)
+					reminding.soon(cctx)
 				}
 			}()
 			go func() {
@@ -669,6 +685,7 @@ func Run(ctx context.Context, o Options) error {
 						orch.look(cctx)
 						analyst.look(cctx)
 						curation.look(cctx)
+						reminding.soon(cctx)
 						queue.wake()
 					}
 				})

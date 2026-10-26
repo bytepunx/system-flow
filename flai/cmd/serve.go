@@ -76,6 +76,17 @@ func (a *app) hostAllowsUnsigned() bool {
 	return err == nil && cfg.Dashboard.AllowUnsigned
 }
 
+// serveNotify is the host configuration's reminder channel, read again at
+// each look so that flai serve notify set takes effect at the next
+// (ADR-0205); a configuration that does not load sets none.
+func (a *app) serveNotify() config.Notify {
+	cfg, _, err := a.loadConfig()
+	if err != nil {
+		return config.Notify{}
+	}
+	return cfg.Notify
+}
+
 // warnReleaseStamp logs once, at start, when a build that claims a release
 // version carries no valid release stamp; a development build is never
 // warned about (S-0235).
@@ -147,7 +158,7 @@ there does.`,
 			host, stopComponents := a.serveHost(ctx)
 			defer stopComponents()
 			return serve.Run(ctx, serve.Options{Folder: folder, Dir: a.serveDir(), Version: buildinfo.Version, Logger: a.logger(), Now: a.now, Host: host, Agent: a.agentConfig, MCP: mcp, Upgrade: hostUpgrade(mcp), Published: releasePublished(a.runner), ImportRoots: a.importRoots,
-				Images: a.serveImageLists(), Docker: a.runner, AllowUnsigned: a.hostAllowsUnsigned, ForgeToken: a.serveForgeToken})
+				Images: a.serveImageLists(), Docker: a.runner, AllowUnsigned: a.hostAllowsUnsigned, ForgeToken: a.serveForgeToken, Notify: a.serveNotify})
 		},
 	}
 	c.Flags().IntVar(&exitWith, "exit-with", 0, "stop when the process with this PID is gone")
