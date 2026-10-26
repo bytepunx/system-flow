@@ -1,6 +1,6 @@
 ---
 title: Server-side response times
-updated: 2026-10-21
+updated: 2026-10-26
 status: active
 topics: [server-side, back-end, cli, dashboard]
 ---
@@ -184,11 +184,51 @@ A first round, a few minutes earlier at a load of 10 to 30, gave the same pictur
 
 The two binaries give the same report. Their `flai stats --json`, run seconds apart, differ only in fields measured from now: `generated_at`, `window_start`, ages, times in state, cost of delay incurred and the times of its order, waits clipped to the window's start, and the blocked seconds of a story still blocked. `claims`, with its days and weeks, `coordination`, and every story's held seconds are identical in each of the four pairs compared. The six pairs of `stats.get` answers agree the same way. One of them also differs in turns and spend, because an agent's session went on between its two runs: the `flai stats --json` run between them already has the later figures.
 
-A warm answer is still about 90 times the 9.1 to 10.6 ms of 2026-09-29. Half of it is `exec.git.log`: at every call, `statsread.Read` reads the stories' commits for `claims.drift` with one `git log` (`storygit.Committed`), which S-0427 measured at about 370 ms on 2026-10-16. By the S-0471 profile, a warm call spends about 330 ms of CPU in `metrics.Compute`, about 160 ms of it in `replayHolds`, and about 170 ms in `statsread.Read`, two fifths of that reading the threads. These figures were taken under the load above.
+A warm answer is still about 90 times the 9.1 to 10.6 ms of 2026-09-29. Half of it is `exec.git.log`: at every call, `statsread.Read` reads the stories' commits for `claims.drift` with one `git log` (`storygit.Committed`), which S-0427 measured at about 370 ms on 2026-10-16. S-0500 takes that log out of a warm call ([below](#the-stories-commits-kept-between-calls-s-0500)). By the S-0471 profile, a warm call spends about 330 ms of CPU in `metrics.Compute`, about 160 ms of it in `replayHolds`, and about 170 ms in `statsread.Read`, two fifths of that reading the threads. These figures were taken under the load above.
+
+## The stories' commits kept between calls (S-0500)
+
+After S-0471, half of a warm `stats.get` was one `git log` ([I-0184](../issues/I-0184-every-stats-get-and-flai-stats-runs-one-git-log-for-claims-drift-about-450-ms-of-a-900-ms-warm-answer.md)). S-0471 measured it at 448 to 453 ms of an 894 ms warm answer.
+
+### Cause
+
+`statsread.Read` calls `storygit.Committed` for `claims.drift` at every `stats.get` and every `flai stats`. `Committed` ran one `git log --name-only` over the main branch and every `story/` branch at every call, and parsed its output. In `flai serve`'s long-running process, the charts page asks for the statistics again on every item change, so the same log ran again and again while no branch had moved.
+
+### Fix
+
+`Committed` keeps its answer per repository root for the life of the process (`flai/internal/storygit/committed.go`). The key is the main branch's name, the wip folder, and the output of `git show-ref --heads`, which names every local branch's tip. A call runs `git rev-parse --abbrev-ref HEAD` and `git show-ref --heads`. While the key is unchanged, it answers what it kept and runs no log. When any local branch's tip moves, the next call reads the whole log again: a commit on the main branch or a story branch, a story branch made or deleted, and the rebase `flai stream sync` makes. Each call gets its own deep copy of the answer, and one lock per process keeps two calls from reading the log at once.
+
+A fresh process has nothing kept. A one-shot `flai stats`, `flai hostapi --timing`, and the first `stats.get` of a `flai serve` process still run the log once, and so does the first call after a tip moved.
+
+Tests count the `git log` processes a real runner starts: a second call with nothing moved starts none, a commit on main or a story branch or a new story branch makes the next call read again, a caller who changes its answer does not change the next one, and each root keeps its own (`flai/internal/storygit/committed_test.go`, and `TestReadStartsNoLogWhileNothingChanged` in `flai/internal/statsread/statsread_test.go`).
+
+### Measured on this repository
+
+On 2026-10-26, between 04:37 and 04:39 UTC, on the operator's host (WSL2, 24 cores, Go 1.26.0), against this repository: 4878 Markdown files under `design`, `docs`, and `wip`, 4002 of them under `wip`, and 504 stories in the report. Two flai binaries were built the same hour: `main` at b458a6f90 and `story/S-0500` at db1a2f400. The story branch was `main` and one commit, so the `main` binary was built from a copy of the story's `flai` folder with `committed.go` as `main` has it; the two trees differed in nothing else but tests. Both ran from the main checkout, with `FLAI_CONFIG` and `FLAI_CACHE_DIR` as `scripts/env.sh` sets them. The method was S-0471's:
+
+- Cold is a fresh process: `flai hostapi --timing stats.get '{"since":"30d","type":"story","bucket":"day"}'`, three runs each, the binaries alternating. The figure is the median wall time; the phases are the medians from the `request answered` event.
+- Warm is a throw-away program that called the host API's method table six times in one process, with the same recorder as `--timing`, built with `go build -overlay`, which wrote nothing into the module. It ran twice for each binary, alternating. The figure is the median of calls 2 to 6 of both runs, ten calls; CPU is the process's own from `getrusage`, which leaves out git's.
+- `flai stats --json` is a fresh process, three runs each, wall time.
+
+The host was very busy: the one-minute load average was 21 to 23 during the cold runs, 24 to 27 during the warm runs, and 31 to 39 during the `flai stats --json` runs.
+
+| Request | `main` | `main`, where the time went | S-0500 | S-0500, where the time went |
+|---------|--------|-----------------------------|--------|-----------------------------|
+| `stats.get` cold | 2,374 ms (2,170 to 2,416) | `stats.compute` 2,298, of which `exec.git.log` 651; `encode` 10 | 2,494 ms (2,329 to 2,555) | `stats.compute` 2,403, of which `exec.git.log` 655 and `exec.git.show-ref` 3; `encode` 12 |
+| `stats.get` warm, calls 2 to 6 | 1,317 ms (1,205 to 1,385), 0.95 s of CPU a call | `stats.compute` 1,286, of which `exec.git.log` 648 | 648 ms (592 to 725), 0.76 s of CPU a call | `stats.compute` 603, of which `exec.git.show-ref` 3 and `exec.git.rev-parse` 3; no `exec.git.log` in any of the ten calls |
+| `flai stats --json` | 3,558 ms (2,827 to 3,858) | | 3,458 ms (3,409 to 4,330) | |
+
+A warm answer takes half the time it did. The log, about 650 ms, and the parsing of its output are gone from every call after the first while no branch moves; what is left of git is two processes of about 3 ms each. The first call of each warm run read the log, as a fresh process does: 655 and 659 ms of git log in a call of about 2,360 ms.
+
+A cold `stats.get` and a `flai stats --json` are the same within the noise, as they should be: each is a fresh process, which runs the log once. In a cold `stats.get` with S-0500, `exec.git.log` was 655 of 2,444 ms, about a quarter. `git show-ref --heads` adds about 3 ms to it.
+
+The two binaries give the same report. Their `flai stats --json`, run seconds apart, have identical `claims`: every one of the 467 entries of `claims.drift`, and its days and weeks. They differ only in fields measured from now: `generated_at`, `window_start`, ages, times in backlog and in progress, cost of delay incurred and the times and horizon of its order, the seconds waited on threads, and the blocked seconds of a story still blocked. One pair was compared.
+
+`main`'s warm answer, 1,317 ms, is longer than the 894 ms S-0471 measured for its binary on 2026-10-21, under a heavier load and a larger history (4878 Markdown files against 4160, 504 stories against 483). This round took no profile. What is left of a warm answer is `stats.compute`'s own work, about 600 ms, which S-0471's profile put in `metrics.Compute` and `statsread.Read`.
 
 ## Stories
 
-Each cause has a backlog story under [E-0012](../../wip/kanban/epics/E-0012-performance-analysis-and-improvements.md), with the cause's numbers and a proposed solution. Causes 1 to 4 are the largest share of a board load; 5 multiplies 4 and every write on hosts with a long `PATH`. S-0471 remedies a regression found later, recorded as I-0155.
+Each cause has a backlog story under [E-0012](../../wip/kanban/epics/E-0012-performance-analysis-and-improvements.md), with the cause's numbers and a proposed solution. Causes 1 to 4 are the largest share of a board load; 5 multiplies 4 and every write on hosts with a long `PATH`. S-0471 remedies a regression found later, recorded as I-0155, and S-0500 the `git log` that was left in every warm chart answer after it, recorded as I-0184.
 
 | # | Story |
 |---|-------|
@@ -200,3 +240,4 @@ Each cause has a backlog story under [E-0012](../../wip/kanban/epics/E-0012-perf
 | 6 | [S-0161](../../wip/kanban/stories/S-0161-the-dashboard-forgets-only-the-answers-a-changed-file-affects-and-gathers-changes-that-arrive-together.md) The dashboard forgets only the answers a changed file affects, and gathers changes that arrive together |
 | 7 | [S-0162](../../wip/kanban/stories/S-0162-the-items-and-documents-pages-ask-for-what-they-show-not-the-whole-archive-and-every-file-s-front-matter.md) The items and documents pages ask for what they show, not the whole archive and every file's front matter |
 | I-0155 | [S-0471](../../wip/kanban/stories/S-0471-the-chart-data-takes-about-4-s-warm-against-10-ms-measured-on-2026-09-29-almost-all-of-it-in-metrics-replayholds.md) The chart data takes about 4 s warm, against 10 ms measured on 2026-09-29, almost all of it in metrics.replayHolds |
+| I-0184 | [S-0500](../../wip/kanban/stories/S-0500-every-stats-get-and-flai-stats-runs-one-git-log-for-claims-drift-about-450-ms-of-a-900-ms-warm-answer.md) Every stats.get and flai stats runs one git log for claims drift, about 450 ms of a 900 ms warm answer |
