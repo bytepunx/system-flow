@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.118 - 2026-10-26
+
+- S-0498 The manifest's `threads` block says when `flai serve` reminds the operator of a thread that awaits them (patch, ADR-0205): the template's `system-flow.yaml` gains a commented `threads:` block with `remind_after`, how long a thread may await the operator before they are reminded of it, unset by default so that nothing is reminded, and `remind_every`, how often they are reminded again while it still awaits them, `24h` when unset, both Go durations that `flai manifest set` writes. It needs a flai that has it, the release that carries S-0498: an older flai does not know `threads.remind_after` or `threads.remind_every`: its `flai manifest set` refuses both keys, and written by hand they are ignored, by its `flai check` too, and its `flai serve` reminds no one.
+
 ## 1.0.117 - 2026-10-25
 
 - S-0434 flai stats reports per week the threads opened to the operator per completed story and how many asked what a digest entry already answered, and the dashboard charts it (patch).

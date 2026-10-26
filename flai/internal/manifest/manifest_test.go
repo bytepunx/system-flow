@@ -914,6 +914,68 @@ func TestDigestCompactAfter(t *testing.T) {
 	}
 }
 
+// ADR-0205: threads.remind_after is a Go duration, unset by default, which
+// means no reminders; threads.remind_every is a Go duration, a day when
+// unset; one that does not parse, a negative one, or a remind_every of zero
+// is an error naming the key and what to write.
+func TestThreadsReminders(t *testing.T) {
+	if DefaultRemindEvery != 24*time.Hour {
+		t.Errorf("the default is %v, not a day", DefaultRemindEvery)
+	}
+	base := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\n"
+	m := loaded(t, []byte(base))
+	if m.Threads.RemindAfter != "" {
+		t.Errorf("remind_after is set with no block: %q", m.Threads.RemindAfter)
+	}
+	if d, err := m.Threads.RemindAfterDuration(); err != nil || d != 0 {
+		t.Errorf("no block, remind_after: %v, %v", d, err)
+	}
+	if d, err := m.Threads.RemindEveryDuration(); err != nil || d != 24*time.Hour {
+		t.Errorf("no block, remind_every: %v, %v", d, err)
+	}
+	if errs := m.Threads.Errors(); len(errs) != 0 {
+		t.Errorf("no block: %v", errs)
+	}
+	m = loaded(t, []byte(base+"threads:\n  remind_after: 4h\n  remind_every: 12h\n"))
+	if d, err := m.Threads.RemindAfterDuration(); err != nil || d != 4*time.Hour {
+		t.Errorf("remind_after read: %v, %v", d, err)
+	}
+	if d, err := m.Threads.RemindEveryDuration(); err != nil || d != 12*time.Hour {
+		t.Errorf("remind_every read: %v, %v", d, err)
+	}
+	if errs := m.Threads.Errors(); len(errs) != 0 {
+		t.Errorf("valid threads: %v", errs)
+	}
+	for in, want := range map[string]time.Duration{"": 0, " ": 0, "0": 0, "90m": 90 * time.Minute} {
+		if d, err := (Threads{RemindAfter: in}).RemindAfterDuration(); err != nil || d != want {
+			t.Errorf("remind_after %q: %v, %v, want %v", in, d, err, want)
+		}
+	}
+	for in, want := range map[string]time.Duration{"": DefaultRemindEvery, " ": DefaultRemindEvery, "1h30m": 90 * time.Minute} {
+		if d, err := (Threads{RemindEvery: in}).RemindEveryDuration(); err != nil || d != want {
+			t.Errorf("remind_every %q: %v, %v, want %v", in, d, err, want)
+		}
+	}
+	for _, c := range []struct {
+		th   Threads
+		want string
+	}{
+		{Threads{RemindAfter: "soon"}, `threads.remind_after "soon" is not a duration; write one such as 4h or 90m, or unset it for no reminders`},
+		{Threads{RemindAfter: "-1h"}, `threads.remind_after "-1h" is negative; write a duration such as 4h or 90m, or unset it for no reminders`},
+		{Threads{RemindEvery: "daily"}, `threads.remind_every "daily" is not a duration; write one such as 24h or 12h, or unset it for 24h`},
+		{Threads{RemindEvery: "-12h"}, `threads.remind_every "-12h" is not more than zero`},
+		{Threads{RemindEvery: "0"}, `threads.remind_every "0" is not more than zero; write a duration such as 24h or 12h, or unset it for 24h`},
+	} {
+		if errs := c.th.Errors(); len(errs) != 1 || !strings.HasPrefix(errs[0], c.want) {
+			t.Errorf("%+v: errors %q, want one saying %q", c.th, errs, c.want)
+		}
+	}
+	both := (Threads{RemindAfter: "soon", RemindEvery: "0"}).Errors()
+	if len(both) != 2 || !strings.HasPrefix(both[0], "threads.remind_after ") || !strings.HasPrefix(both[1], "threads.remind_every ") {
+		t.Errorf("remind_after's and remind_every's errors, in that order: %q", both)
+	}
+}
+
 // ADR-0196: flai manifest set writes digest.agent, which reads back as the
 // curator's agent, and refuses one that is not valid with the field and
 // the reason.

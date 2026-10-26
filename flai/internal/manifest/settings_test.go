@@ -335,6 +335,79 @@ func TestEditSettingsWritesTheDigestSettings(t *testing.T) {
 	}
 }
 
+// ADR-0205: threads.remind_after and threads.remind_every are written into a
+// threads block added at the end, as flai manifest set writes them, read back
+// by Load, and unset so that their defaults apply; a value flai check
+// refuses is refused naming the key.
+func TestEditSettingsWritesTheThreadsSettings(t *testing.T) {
+	if s, ok := SettingFor("threads.remind_after"); !ok || s.Kind != KindDuration || s.Default != "" {
+		t.Fatalf("threads.remind_after in the catalog: %+v, %v", s, ok)
+	}
+	if s, ok := SettingFor("threads.remind_every"); !ok || s.Kind != KindDuration || s.Default != "24h" {
+		t.Fatalf("threads.remind_every in the catalog: %+v, %v", s, ok)
+	}
+	got, err := EditSettings([]byte(settingsFixture), []Assignment{{"threads.remind_after", "4h"}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := settingsFixture + "threads:\n  remind_after: 4h\n"; string(got) != want {
+		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
+	}
+	m := loaded(t, got)
+	if d, err := m.Threads.RemindAfterDuration(); err != nil || d != 4*time.Hour {
+		t.Errorf("remind_after read back: %v, %v", d, err)
+	}
+	if d, err := m.Threads.RemindEveryDuration(); err != nil || d != DefaultRemindEvery {
+		t.Errorf("remind_every unset: %v, %v", d, err)
+	}
+	values := map[string]SettingValue{}
+	for _, sv := range m.SettingValues() {
+		values[sv.Key] = sv
+	}
+	if v := values["threads.remind_after"]; !v.Set || v.Value != "4h" {
+		t.Errorf("threads.remind_after's value: %+v", v)
+	}
+	if v := values["threads.remind_every"]; v.Set {
+		t.Errorf("threads.remind_every's value: %+v", v)
+	}
+
+	every, err := EditSettings(got, []Assignment{{"threads.remind_every", "12h"}}, nil)
+	if err != nil || string(every) != settingsFixture+"threads:\n  remind_after: 4h\n  remind_every: 12h\n" {
+		t.Fatalf("remind_every: %v\n%s", err, every)
+	}
+	if d, err := loaded(t, every).Threads.RemindEveryDuration(); err != nil || d != 12*time.Hour {
+		t.Errorf("remind_every read back: %v, %v", d, err)
+	}
+
+	unset, err := EditSettings(every, nil, []string{"threads.remind_after", "threads.remind_every"})
+	if err != nil || string(unset) != settingsFixture+"threads:\n" {
+		t.Fatalf("unset: %v\n%s", err, unset)
+	}
+	m = loaded(t, unset)
+	if d, err := m.Threads.RemindAfterDuration(); err != nil || d != 0 {
+		t.Errorf("unset remind_after: %v, %v", d, err)
+	}
+	if d, err := m.Threads.RemindEveryDuration(); err != nil || d != DefaultRemindEvery {
+		t.Errorf("unset remind_every: %v, %v", d, err)
+	}
+
+	for _, c := range []struct{ key, value, reason string }{
+		{"threads.remind_after", "soon", "is not a duration"},
+		{"threads.remind_after", "-1h", "is negative"},
+		{"threads.remind_every", "0", "is not more than zero"},
+	} {
+		_, err := EditSettings([]byte(settingsFixture), []Assignment{{c.key, c.value}}, nil)
+		var refused *RefusedError
+		if !errors.As(err, &refused) {
+			t.Errorf("%s=%s: want a refusal, got %v", c.key, c.value, err)
+			continue
+		}
+		if i := slices.IndexFunc(refused.Problems, func(p Problem) bool { return p.Field == c.key }); i < 0 || !strings.Contains(refused.Problems[i].Reason, c.reason) {
+			t.Errorf("%s=%s: refusal %+v, want %q", c.key, c.value, refused.Problems, c.reason)
+		}
+	}
+}
+
 // S-0229: a block written on one line is refused rather than rewritten.
 func TestEditSettingsRefusesAFlowBlock(t *testing.T) {
 	data := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\norchestration: {policy: fifo}\n"

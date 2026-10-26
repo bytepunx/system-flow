@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-10-24
+updated: 2026-10-26
 status: active
 ---
 
@@ -2478,6 +2478,8 @@ analysis.schedule (cron)
 digest.agent (agent)
 digest.schedule (cron)
 digest.compact_after (duration; default 720h)
+threads.remind_after (duration)
+threads.remind_every (duration; default 24h)
 acceptance.mode (choice: local, pull-request; default local)
 acceptance.forge (choice: github; default github)
 acceptance.merge_method (choice: merge, squash, rebase; default merge)

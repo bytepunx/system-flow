@@ -73,6 +73,9 @@ type Manifest struct {
 	// Digest is the curator's agent (ADR-0196), schedule, and compaction
 	// window (ADR-0199).
 	Digest Digest `yaml:"digest,omitempty" json:"digest,omitzero"`
+	// Threads is when flai serve reminds the operator of a thread that
+	// awaits them (ADR-0205).
+	Threads Threads `yaml:"threads,omitempty" json:"threads,omitzero"`
 	// Acceptance is how a story in review is accepted: on this machine, or
 	// through a pull request on the project's forge (S-0392). Load refuses a
 	// value Acceptance.Errors finds wrong.
@@ -476,6 +479,72 @@ func (d Digest) Errors() []string {
 // anything.
 func (m Manifest) DigestAgent() *Agent {
 	return m.Agent.With(m.Digest.Agent)
+}
+
+// Threads is the project's say about reminding the operator of a thread
+// that awaits them (ADR-0205): how long it may await them before flai serve
+// reminds them, and how often it reminds them again.
+type Threads struct {
+	// RemindAfter is how long a thread may await the operator before they
+	// are reminded of it, a Go duration such as 4h; empty, or 0, means no
+	// reminders.
+	RemindAfter string `yaml:"remind_after,omitempty" json:"remind_after,omitempty"`
+	// RemindEvery is how often the operator is reminded again of a thread
+	// that still awaits them, a Go duration such as 12h; empty means
+	// DefaultRemindEvery.
+	RemindEvery string `yaml:"remind_every,omitempty" json:"remind_every,omitempty"`
+}
+
+// DefaultRemindEvery is how often the operator is reminded again of a
+// thread that still awaits them when threads.remind_every is not set: a
+// day.
+const DefaultRemindEvery = 24 * time.Hour
+
+// RemindAfterDuration is threads.remind_after as a duration: zero when it is
+// empty or 0, and zero means no reminders.
+func (t Threads) RemindAfterDuration() (time.Duration, error) {
+	s := strings.TrimSpace(t.RemindAfter)
+	if s == "" {
+		return 0, nil
+	}
+	d, err := time.ParseDuration(s)
+	if err != nil {
+		return 0, fmt.Errorf("threads.remind_after %q is not a duration; write one such as 4h or 90m, or unset it for no reminders", t.RemindAfter)
+	}
+	if d < 0 {
+		return 0, fmt.Errorf("threads.remind_after %q is negative; write a duration such as 4h or 90m, or unset it for no reminders", t.RemindAfter)
+	}
+	return d, nil
+}
+
+// RemindEveryDuration is threads.remind_every as a duration:
+// DefaultRemindEvery when it is empty.
+func (t Threads) RemindEveryDuration() (time.Duration, error) {
+	s := strings.TrimSpace(t.RemindEvery)
+	if s == "" {
+		return DefaultRemindEvery, nil
+	}
+	d, err := time.ParseDuration(s)
+	if err != nil {
+		return 0, fmt.Errorf("threads.remind_every %q is not a duration; write one such as 24h or 12h, or unset it for 24h", t.RemindEvery)
+	}
+	if d <= 0 {
+		return 0, fmt.Errorf("threads.remind_every %q is not more than zero; write a duration such as 24h or 12h, or unset it for 24h", t.RemindEvery)
+	}
+	return d, nil
+}
+
+// Errors are what is wrong with the threads settings, one sentence each;
+// none when they are valid.
+func (t Threads) Errors() []string {
+	var errs []string
+	if _, err := t.RemindAfterDuration(); err != nil {
+		errs = append(errs, err.Error())
+	}
+	if _, err := t.RemindEveryDuration(); err != nil {
+		errs = append(errs, err.Error())
+	}
+	return errs
 }
 
 // Orchestration is the project's say about the order of the ready column and

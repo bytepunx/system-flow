@@ -56,6 +56,9 @@ tests: # the test tiers, cheapest first, that flai test runs for the paths each 
 # digest: # the curator flai serve runs behind the curate host action; flai manifest set writes it
 #   schedule: daily # when the curator runs besides after acceptances: a five-field cron expression in UTC, or daily; unset, no schedule
 #   compact_after: 720h # how long an active digest entry may go uncited before the curator compacts it to its title; 0 turns compaction off
+# threads: # when flai serve reminds you of a thread that awaits you, through the channel flai serve notify set keeps on the host; flai manifest set writes it
+#   remind_after: 4h # how long a thread may await you before you are reminded of it; unset, no reminders
+#   remind_every: 24h # how often you are reminded again while it still awaits you; unset, 24h
 claims:
   shared: # paths many stories change in their own sections or new files: an overlap inside one holds no story; flai shared edits them
     - {{ .layout.design }}/adrs
