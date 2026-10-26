@@ -6,6 +6,7 @@ date: 2026-10-26
 supersedes: []
 superseded_by: []
 refines: [ADR-0200]
+topics: [cli, dashboard, analysis, digest]
 ---
 
 # ADR-0204 flai stats reports the curator's runs in the digest section and leaves asked_again out of a week no curator run has reached

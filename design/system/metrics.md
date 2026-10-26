@@ -1,6 +1,6 @@
 ---
 title: Flow metrics
-updated: 2026-10-24
+updated: 2026-10-26
 status: active
 topics: [cli, dashboard, analysis]
 ---
@@ -439,35 +439,40 @@ Not counted: hold and resume of the queue, and a dropped batch. A dropped batch'
 
 ## Digest (S-0434)
 
-Whether the digest cuts the questions that wait on the operator (I-0151, [ADR-0200](../adrs/0200-flai-stats-reports-per-week-the-threads-opened-to-the-operator-the-stories.md)): per week, the threads opened to the operator against the stories completed, and how many of those threads asked what a digest entry already answered ([ADR-0191](../adrs/0191-the-digest-is-one-markdown-file-per-entry-under-the-design-folder-s-digest.md), [ADR-0199](../adrs/0199-the-curator-runs-after-acceptances-coalesced-and-on-digest-schedule-marks.md)). The threads are counted from the threads alone, so the weeks before the digest are measured too.
+Whether the digest cuts the questions that wait on the operator (I-0151, [ADR-0200](../adrs/0200-flai-stats-reports-per-week-the-threads-opened-to-the-operator-the-stories.md)): per week, the threads opened to the operator against the stories completed, and how many of those threads asked what a digest entry already answered ([ADR-0191](../adrs/0191-the-digest-is-one-markdown-file-per-entry-under-the-design-folder-s-digest.md), [ADR-0199](../adrs/0199-the-curator-runs-after-acceptances-coalesced-and-on-digest-schedule-marks.md)). The threads are counted from the threads alone, so the weeks before the digest are measured too. A repeat can be counted only in a week the curator has reached, so the section reports the curator's runs beside the repeats ([ADR-0204](../adrs/0204-flai-stats-reports-the-curator-s-runs-in-the-digest-section-and-leaves-asked.md), I-0207).
 
 | Source | What is read |
 |--------|--------------|
 | Threads | Every thread under `wip/threads`, open or resolved: its first entry's author and time |
 | Stories | The stories' transitions, as `waiting.weeks[]` reads them |
 | Digest | Every entry under `design/digest`: its `status`, `date`, and `asked_again` |
+| Curator | The curator's activity document, `wip/agents/curator.md`: each entry's end time and the `last_run` in its front matter |
 
 | Value | Definition |
 |-------|------------|
 | A thread opened to the operator | A thread whose first entry's author is neither the operator, the manifest's `owner`, nor flai itself, `flai` or `flai serve`, the authors of flai's notices such as the upgrade thread. Every other author counts: the planner, the orchestrator, a story's agent, anyone. A thread with no entry is not counted |
 | Its week | The ISO week that holds its first entry's time |
 | A repeat | A thread opened to the operator that some entry lists in `asked_again` and whose `date` is a day before the UTC day of the thread's first entry. An entry of the same day never makes a repeat. An entry of any status counts. A thread several entries list is one repeat |
+| A curator run | An entry in the curator's activity document, at the time it ended. A project with no such document has no run |
+| A week a run has reached | A week whose Monday is at or before the newest curator run's end: the later of `last_run` and the newest entry's time. With no run, no week is reached |
 
 Each value is counted in the ISO week that holds it, from the window's start to now, as `coordination.weeks[]` is.
 
 | Value | Definition | Precision |
 |-------|------------|-----------|
-| `digest` | Present in every report. With no digest folder, every week has `asked_again` 0 and every entry count is 0. A digest flai cannot read is warned of on stderr, and the section is absent | |
-| `digest.weeks[]` | One point per ISO week: `week` and `start`, as `claims.weeks[]` has them, then `threads_to_operator`, `stories_completed`, `per_story`, and `asked_again` | `start` is `YYYY-MM-DD`, a Monday |
+| `digest` | Present in every report. With no digest folder, every week a run has reached has `asked_again` 0 and every entry count is 0. A digest flai cannot read is warned of on stderr, and the section is absent | |
+| `digest.weeks[]` | One point per ISO week: `week` and `start`, as `claims.weeks[]` has them, then `threads_to_operator`, `stories_completed`, `per_story`, `asked_again`, and `curator_runs` | `start` is `YYYY-MM-DD`, a Monday |
 | `digest.weeks[].threads_to_operator` | The threads opened to the operator in the week | Whole count |
 | `digest.weeks[].stories_completed` | The stories completed in the week, cancelled ones left out, as `waiting.weeks[].items` counts them in a report of stories. Stories whatever the report's type | Whole count |
 | `digest.weeks[].per_story` | `threads_to_operator` over `stories_completed`. Absent when `stories_completed` is 0: such a week has no rate | Not rounded |
-| `digest.weeks[].asked_again` | Those of the week's threads opened to the operator that are repeats. At most `threads_to_operator` | Whole count |
+| `digest.weeks[].asked_again` | Those of the week's threads opened to the operator that are repeats. At most `threads_to_operator`. Absent in a week no curator run has reached: no repeat could have been counted there, so the gap is not 0 | Whole count |
+| `digest.weeks[].curator_runs` | The curator runs that ended in the week | Whole count |
 | `digest.entries` | `active`, `compacted`, and `absorbed`: the digest's entries now with each `status`, over the whole digest, not the window | Whole counts |
+| `digest.curator` | `runs`, the curator's runs over its whole log, not the window, and `last_run`, when the newest ended, absent before the first | `last_run` is `YYYY-MM-DDTHH:MM:SSZ` |
 
-`flai stats` prints the section under a `digest` heading, one line per week of the window, `2026-W43  2026-10-19  threads 7 · stories 4 · 1.75 per story · asked again 2`, `per story` given to two decimals and `–` in a week with no completed story, then one line for the entries, `entries  active 120 · compacted 3 · absorbed 5`. It prints nothing when `digest` is absent.
+`flai stats` prints the section under a `digest` heading, one line per week of the window, `2026-W43  2026-10-19  threads 7 · stories 4 · 1.75 per story · asked again 2 · curator runs 1`, `per story` given to two decimals and `–` in a week with no completed story, `asked again` `–` in a week no curator run has reached, then one line for the entries, `entries  active 120 · compacted 3 · absorbed 5`, and one for the curator, `curator  runs 3 · last 2026-10-26T05:00:00Z`, or `curator  runs 0 · never run`. It prints nothing when `digest` is absent.
 
-A repeat is counted only once the curator has listed the thread in an entry's `asked_again`, so this week's repeats read low until its next run. The rate counts every question to the operator, not only those an entry could have answered.
+A repeat is counted only once the curator has listed the thread in an entry's `asked_again`, so this week's repeats read low until its next run, and a week no run has reached reads none at all. The rate counts every question to the operator, not only those an entry could have answered.
 
 ## Charts
 
