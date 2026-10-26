@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 48
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 10
-      output: 47
-      cache_read: 705989
-      cache_write: 10237
-      cost: 0.2423
+      input: 12
+      output: 4150
+      cache_read: 709261
+      cache_write: 21161
+      cost: 0.3469
 ---
 # T-2127 ADR: flai serve reminds the operator of a thread that awaits them past a threshold through a channel on the host, and blocks a story whose agent ended asking
 

@@ -7,24 +7,43 @@ status: backlog
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:42:51Z
-updated: 2026-10-26T04:57:43Z
+updated: 2026-10-26T12:31:23Z
 transitions: []
 tags: [cli, mcp]
 topics: [harness, docker, mcp]
-touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/mcphttp/mcphttp.go, flai/internal/mcphttp/mcphttp_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/cmd/mcp_http_test.go, flai/cmd/host.go, flai/cmd/host_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, design/adrs/README.md, design/adrs, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, docs/operators/index.md, design/system/flai-cli.md]
+touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/mcphttp/mcphttp.go, flai/internal/mcphttp/mcphttp_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/cmd/mcp_http_test.go, flai/cmd/host.go, flai/cmd/host_test.go, flai/cmd/serve_mcp.go, flai/cmd/serve_mcp_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, design/adrs/README.md, design/adrs, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, docs/operators/index.md, design/system/flai-cli.md]
 after: [S-0505]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 211
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 23
+          output: 353
+          cache_read: 7461161
+          cache_write: 9227
+          cost: 1.6378
 draft: true
+cost_of_delay:
+  value: 16.67
+  by: planner-S-0506
+  at: 2026-10-26T12:30:19Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-27T17:35:00Z
-  basis: "Its own forecast of 1h30m; 25th in the pull order with an in-progress limit of 5, behind S-0498, S-0504, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0499, S-0502, S-0503 and S-0505."
-  by: flai
-  at: 2026-10-26T04:57:43Z
+  delivery: 2026-10-28T00:57:00Z
+  basis: "flai forecast gives 54m (median 107 s per unit over 93 done feature stories on claude-opus-5-5 in the large band, size 30) and delivery 2026-10-28T00:21Z, 24th in the pull order; kept at 1h30m because the story writes an ADR, changes five packages, and checks by hand that a container reaches the listener, and the delivery is flai's playout plus the 36m the raised duration adds."
+  by: planner-S-0506
+  at: 2026-10-26T12:31:23Z
 ---
 # S-0506 flai's HTTP MCP server serves an agent in a container as the stdio server serves one on the host: every tool, permission_prompt under auto-approve for an agent flai serve started, and a listener a container reaches
 
@@ -53,13 +72,10 @@ What this story does not do: run anything in a container itself; the adapter is 
 
 ### Planning
 
-Planned by planner-E-0029 on 2026-10-26 with the epic.
+Planned by planner-S-0506 on 2026-10-26, revisiting the plan planner-E-0029 wrote with the epic the same day. The five tasks stand as written; T-2152 gains two touches and the story the same two.
 
-Touches. `flai touches suggest S-0506`, seeded with `flai/cmd/mcp_http.go`, `flai/internal/mcphttp/mcphttp.go`, and `flai/internal/mcpserver/permission.go` (24 commits), names `mcpserver/server.go`, `cmd/mcp.go`, `mcpserver/folder.go`, `folder_test.go`, `server_test.go`, `permission_test.go`, `flai-cli.md`, `docs/users/flai.md`, `settings.md`, `flai-reference.md`, `cmd/mcp_http_test.go`, `cmd/root.go`, `hostapi/writes.go`, and `serve/serve.go`; every one but `root.go`, `hostapi/writes.go`, `folder_test.go`, and `serve.go` is kept (co-change), since the story adds no command and no hostapi method. The rest are the tasks' (layout):
+Touches. `flai touches suggest S-0506` over the 25 touches declared (846 of 2427 commits) adds nothing: its co-changes (`flaiover-dashboard.md`, `docs/users/flaiover.md`, `workflow.md`, `hostapi/writes.go`, `issues/summary.md`, `template/CHANGELOG.md`, `cmd/root.go`, `mcpserver/folder_test.go`, `harness.go`) are left out, since the story adds no command to `root.go`, no hostapi method, no harness, and changes no dashboard. Every declared touch is kept, each with the source planner-E-0029 recorded: the `mcpserver`, `mcphttp`, and `cmd/mcp*` files from co-change with the three seeds; `cmd/host.go`, `config.go`, `serve_actions.go`, `serve/agents.go`, `docs/operators/index.md`, and their tests from the layout, where `hostLauncher.mcpAddr` chooses each project's address, the host settings live, `flai serve` settings are set, and `spawn` sets a run's environment. Added from the layout: `flai/cmd/serve_mcp.go` and `flai/cmd/serve_mcp_test.go`, since `mcpAddrFor` there takes the host of every project's address from `mcpDefaultAddr` and the remembered address file (`mcpAddrFile`) keeps the host as well, so `mcp.bind` is applied there and a remembered loopback address is re-hosted when the setting changes (T-2152). The folder `design/adrs` is kept (layout): `flai adr new` in T-2151 names the ADR's file by its number and the title the story's agent writes, so no task can name it; the folder is kept for that file alone, and `flai task done` widens the touches with the committed path (ADR-0144).
 
-- `flai/cmd/host.go`, `host_test.go`, `flai/internal/config/config.go`, `config_test.go`, `flai/cmd/serve_actions.go`, `serve_actions_test.go`: `hostLauncher.mcpAddr` chooses each project's address, the host setting lives in `config.go`, and `flai serve` settings are in `serve_actions.go`. T-2152.
-- `flai/internal/serve/agents.go`, `agents_test.go`: `spawn` sets the run's environment. T-2160.
-- `docs/operators/index.md`: the operator's view of the HTTP server. T-2167.
-- `design/adrs/README.md` and the folder `design/adrs` (layout, folder kept): `flai adr new` in T-2151 names the ADR's file by its number and the title the story's agent writes, so no task can name it; the folder is kept for that file alone, and `flai task done` widens the touches with the committed path (ADR-0144).
+Forecast. `flai forecast S-0506` gives 54m (median 107 s per unit over 93 done feature stories on claude-opus-5-5 in the large band; size 30: 5 criteria, 25 touches) and delivery 2026-10-28T00:21Z, 24th in the pull order by a cycle factor of 1.17. Kept at 1h30m for the reason planner-E-0029 gave: the story writes an ADR and changes five packages (cmd, config, mcpserver, mcphttp, serve) with a by-hand check that a container reaches the listener, where the band's median is set by stories whose touches are mostly documents. The delivery written, 2026-10-28T00:57Z, is flai's playout plus the 36m the raised duration adds.
 
-Forecast and cost of delay: see the second Planning paragraph, written once the figures are set.
+Cost of delay. `flai cod S-0506` gives 16.67 USD a week: the story's share of E-0029's `penalty_per_week` of 150 USD, which the operator set on TH-0657, by forecast duration, 1h30m of 13h30m over the epic's six open stories without inputs. Written as flai gives it: the story has no inputs of its own and needs none, since it delivers for the epic alone.

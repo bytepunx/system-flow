@@ -3,16 +3,37 @@ id: T-2133
 type: task
 nature: improvement
 title: This project sets threads.remind_after and threads.remind_every, the operator sets the host's channel, and I-0151 is closed naming what fixed it
-status: backlog
+status: done
 parent: S-0498
 owner: alex
 created: 2026-10-26T04:15:49Z
-updated: 2026-10-26T04:15:49Z
-transitions: []
+updated: 2026-10-26T05:14:44Z
+transitions:
+  - to: ready
+    at: 2026-10-26T05:13:47Z
+    by: agent-S-0498
+  - to: in-progress
+    at: 2026-10-26T05:13:48Z
+    by: agent-S-0498
+  - to: done
+    at: 2026-10-26T05:14:44Z
+    by: agent-S-0498
 stream: S-0498
 tags: [flai]
 touches: [system-flow.yaml, design/issues/I-0151-a-pending-recommendation-waits-a-day-or-more-for-the-operator-s-confirmation-while-its-story-idles-in-progress.md, design/issues/summary.md]
 after: [T-2131, T-2132]
+usage:
+  source: log
+  seconds: 56
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 44
+      output: 14878
+      cache_read: 2542678
+      cache_write: 75860
+      cost: 1.2435
 ---
 # T-2133 This project sets threads.remind_after and threads.remind_every, the operator sets the host's channel, and I-0151 is closed naming what fixed it
 

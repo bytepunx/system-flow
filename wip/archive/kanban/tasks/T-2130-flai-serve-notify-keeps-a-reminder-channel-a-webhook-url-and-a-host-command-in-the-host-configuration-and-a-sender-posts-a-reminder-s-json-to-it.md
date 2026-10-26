@@ -24,16 +24,16 @@ touches: [flai/internal/config/config.go, flai/internal/config/config_test.go, f
 after: [T-2128]
 usage:
   source: log
-  seconds: 490
+  seconds: 496
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 108
-      output: 569
-      cache_read: 5503416
-      cache_write: 145359
-      cost: 1.9112
+      input: 97
+      output: 32731
+      cache_read: 5593875
+      cache_write: 166892
+      cost: 2.7357
 ---
 # T-2130 flai serve notify keeps a reminder channel, a webhook URL and a host command, in the host configuration, and a sender posts a reminder's JSON to it
 

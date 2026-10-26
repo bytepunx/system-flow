@@ -7,11 +7,11 @@ status: backlog
 parent: S-0509
 owner: alex
 created: 2026-10-26T04:50:48Z
-updated: 2026-10-26T04:50:48Z
+updated: 2026-10-26T12:41:27Z
 transitions: []
 stream: S-0509
 tags: [cli, docker]
-touches: [flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go]
+touches: [flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/activity.go, flai/internal/serve/claudecheck.go]
 after: [T-2163]
 ---
 # T-2170 plan.go, orchestrate.go, analyze.go, and curate.go start their agent through the container adapter when its harness is container, the orchestrator's container stopped by name, with a test per role on a fake adapter

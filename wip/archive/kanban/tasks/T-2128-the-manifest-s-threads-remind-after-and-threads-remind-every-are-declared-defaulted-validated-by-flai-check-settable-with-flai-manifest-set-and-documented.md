@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 783
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 77
-      output: 377
-      cache_read: 3381593
-      cache_write: 225992
-      cost: 1.2206
+      input: 62
+      output: 20904
+      cache_read: 3572528
+      cache_write: 106586
+      cost: 1.7471
 ---
 # T-2128 The manifest's threads.remind_after and threads.remind_every are declared, defaulted, validated by flai check, settable with flai manifest set, and documented
 

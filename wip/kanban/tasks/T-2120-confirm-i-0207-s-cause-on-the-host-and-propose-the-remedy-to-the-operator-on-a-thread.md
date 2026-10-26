@@ -28,10 +28,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 5
-      output: 1793
-      cache_read: 259667
-      cache_write: 11160
-      cost: 0.1571
+      output: 1672
+      cache_read: 259819
+      cache_write: 10540
+      cost: 0.1514
 ---
 # T-2120 Confirm I-0207's cause on the host and propose the remedy to the operator on a thread
 

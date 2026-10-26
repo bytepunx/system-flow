@@ -7,7 +7,7 @@ status: backlog
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:46:53Z
-updated: 2026-10-26T04:57:43Z
+updated: 2026-10-26T05:08:33Z
 transitions: []
 tags: [cli, docker]
 topics: [harness, docker, manifest]
@@ -65,4 +65,6 @@ Touches. `flai touches suggest`, seeded with `flai/internal/manifest/manifest.go
 - `docs/operators/runbooks/install.md`, `design/tech/docker.md` (design, criterion 6). T-2176.
 - `design/issues/summary.md` and the folder `design/issues` (layout, folder kept): `flai issue new` in T-2176 writes issue files no task can name; the folder is kept for them alone, and `flai task done` widens the touches with the committed paths (ADR-0144).
 
-Forecast and cost of delay: see the second Planning paragraph, written once the figures are set.
+Forecast. `flai forecast S-0510` gave 56m (median 107 s per unit over 93 done feature stories on claude-opus-5-5 in the large band; size 31: 6 criteria, 25 touches) and delivery 2026-10-27T07:08Z, 29th in the pull order by a cycle factor of 1.17. Raised to 2h30m: a layer with Go, golangci-lint, Node, and pnpm takes minutes per build and is built several times, and criterion 5 runs a Go-changing story of this repository inside the container with its close-out's Go tiers, a session of its own of 30 to 60 minutes. flai's replan after S-0500's acceptance kept the 2h30m and played the delivery out again, so the forecast's basis is flai's and the reason is here.
+
+Cost of delay. `flai cod S-0510` refuses a value: the story has no inputs and E-0029 has neither inputs nor a value. Asked on TH-0657, recommending `penalty_per_week: 150` USD on the epic, which the orchestrator recommended too. The value is this story's share of the epic's by forecast duration, 2h30m of the six stories' 13h30m, about 28 USD a week at 150, and is written on the next planner run once the operator sets the input.

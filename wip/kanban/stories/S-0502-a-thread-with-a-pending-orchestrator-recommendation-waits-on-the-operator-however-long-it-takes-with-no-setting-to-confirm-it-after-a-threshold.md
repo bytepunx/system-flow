@@ -6,7 +6,7 @@ title: A thread with a pending orchestrator recommendation waits on the operator
 status: backlog
 owner: alex
 created: 2026-10-26T04:01:40Z
-updated: 2026-10-26T04:57:43Z
+updated: 2026-10-26T05:14:27Z
 transitions: []
 tags: [flai, template]
 topics: [orchestration, cli, analysis]
@@ -23,16 +23,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 48
+      seconds: 999
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 17
-          output: 191
-          cache_read: 3802593
-          cache_write: 11242
-          cost: 0.8361
-draft: true
+          input: 131
+          output: 2168
+          cache_read: 33785734
+          cache_write: 50997
+          cost: 7.4183
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 60h
@@ -47,6 +46,9 @@ forecast:
   basis: "Its own forecast of 2h; 22nd in the pull order with an in-progress limit of 5, behind S-0498, S-0504, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425 and S-0499."
   by: flai
   at: 2026-10-26T04:57:43Z
+finalized:
+  by: orchestrator
+  at: 2026-10-26T05:14:27Z
 ---
 # S-0502 A thread with a pending orchestrator recommendation waits on the operator however long it takes, with no setting to confirm it after a threshold
 

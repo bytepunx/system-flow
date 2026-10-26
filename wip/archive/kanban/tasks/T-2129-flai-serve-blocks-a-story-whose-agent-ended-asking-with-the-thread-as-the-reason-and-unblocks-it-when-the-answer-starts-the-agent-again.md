@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 816
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 97
-      output: 704
-      cache_read: 4649843
-      cache_write: 137525
-      cost: 1.6198
+      input: 82
+      output: 27740
+      cache_read: 4740842
+      cache_write: 141442
+      cost: 2.3185
 ---
 # T-2129 flai serve blocks a story whose agent ended asking, with the thread as the reason, and unblocks it when the answer starts the agent again
 

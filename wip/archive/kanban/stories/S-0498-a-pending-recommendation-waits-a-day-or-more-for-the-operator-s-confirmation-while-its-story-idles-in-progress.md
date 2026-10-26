@@ -3,10 +3,10 @@ id: S-0498
 type: story
 nature: improvement
 title: A pending recommendation waits a day or more for the operator's confirmation while its story idles in progress
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-26T04:01:18Z
-updated: 2026-10-26T04:49:22Z
+updated: 2026-10-26T16:01:44Z
 transitions:
   - to: ready
     at: 2026-10-26T04:17:53Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-26T04:17:59Z
     by: agent-S-0498
+  - to: review
+    at: 2026-10-26T05:21:58Z
+    by: agent-S-0498
+  - to: done
+    at: 2026-10-26T16:01:44Z
+    by: alex
 tags: [flai, template]
 topics: [orchestration, cli]
 touches: [design/adrs/README.md, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/check/check.go, docs/operators/settings.md, design/system/project-manifest.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, docs/users/flai-reference.md, docs/users/flai.md, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/remind.go, flai/internal/serve/remind_test.go, flai/internal/serve/notify.go, flai/internal/serve/notify_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, docs/operators/index.md, design/system/workflow.md, design/system/flai-cli.md, design/system/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/issues/I-0151-a-pending-recommendation-waits-a-day-or-more-for-the-operator-s-confirmation-while-its-story-idles-in-progress.md, design/issues/summary.md, system-flow.yaml, design/adrs/0205-flai-serve-reminds-the-operator-of-a-thread-that-awaits-them-past-threads.md, template/template.yaml, flai/cmd/serve.go, design/issues/I-0210-flai-guard-lets-a-session-flai-serve-started-run-the-flai-serve-sub-commands-that-write-the-host-configuration.md]
@@ -24,21 +30,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1889
-  estimated: true
-  priced_by: estimate
+  seconds: 3851
+  priced_by: harness
   turns:
     - day: 2026-10-26
+      ceremony: 2
       test_runs: 1
-      hand_edits: 1
-      work: 39
+      hand_edits: 2
+      work: 64
   models:
     - model: claude-opus-5-5
-      input: 322
-      output: 1921
-      cache_read: 15912516
-      cache_write: 645773
-      cost: 5.6024
+      input: 582
+      output: 195901
+      cache_read: 33480398
+      cache_write: 998881
+      cost: 16.3736
   strategic:
     - kind: planner
       seconds: 2
@@ -51,15 +57,21 @@ usage:
           cache_write: 10049
           cost: 0.0337
     - kind: orchestrator
-      seconds: 327
+      seconds: 864
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 71
-          output: 1296
-          cache_read: 11947925
-          cache_write: 31113
-          cost: 2.6265
+          input: 99
+          output: 1698
+          cache_read: 19719867
+          cache_write: 42239
+          cost: 4.3328
+        - model: claude-sonnet-5-5
+          input: 22
+          output: 88
+          cache_read: 543920
+          cache_write: 70162
+          cost: 0.4199
     - kind: analyzer
       seconds: 114
       estimated: true
@@ -101,8 +113,8 @@ finalized:
 This story remediates [I-0151](../../../design/issues/I-0151-a-pending-recommendation-waits-a-day-or-more-for-the-operator-s-confirmation-while-its-story-idles-in-progress.md), "A pending recommendation waits a day or more for the operator's confirmation while its story idles in progress", which the analysis in [2026-10-15-bottlenecks.md](../../../design/analysis/2026-10-15-bottlenecks.md) found. The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0151 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0151 is closed with `flai issue close I-0151 --reason` saying what fixed it
+- [x] The cause I-0151 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0151 is closed with `flai issue close I-0151 --reason` saying what fixed it
 
 ## Tasks
 - T-2127 ADR: flai serve reminds the operator of a thread that awaits them past a threshold through a channel on the host, and blocks a story whose agent ended asking

@@ -3,11 +3,11 @@ id: T-2131
 type: task
 nature: improvement
 title: flai serve reminds the operator of each thread awaiting them past threads.remind_after, again every threads.remind_every, through the host's channel, with its state in the serve folder and nothing written on the thread
-status: in-progress
+status: done
 parent: S-0498
 owner: alex
 created: 2026-10-26T04:15:01Z
-updated: 2026-10-26T04:57:09Z
+updated: 2026-10-26T05:05:36Z
 transitions:
   - to: ready
     at: 2026-10-26T04:57:08Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-26T04:57:09Z
     by: agent-S-0498
+  - to: done
+    at: 2026-10-26T05:05:36Z
+    by: agent-S-0498
 stream: S-0498
 tags: [flai]
-touches: [flai/internal/serve/remind.go, flai/internal/serve/remind_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go]
+touches: [flai/internal/serve/remind.go, flai/internal/serve/remind_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/cmd/serve.go]
 after: [T-2128, T-2130]
+usage:
+  source: log
+  seconds: 507
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 108
+      output: 36191
+      cache_read: 6185216
+      cache_write: 184535
+      cost: 3.0249
 ---
 # T-2131 flai serve reminds the operator of each thread awaiting them past threads.remind_after, again every threads.remind_every, through the host's channel, with its state in the serve folder and nothing written on the thread
 

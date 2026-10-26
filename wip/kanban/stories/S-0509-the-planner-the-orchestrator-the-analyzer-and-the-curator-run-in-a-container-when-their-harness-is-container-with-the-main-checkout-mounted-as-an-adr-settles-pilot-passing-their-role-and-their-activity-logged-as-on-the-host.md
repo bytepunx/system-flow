@@ -7,24 +7,43 @@ status: backlog
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:44:48Z
-updated: 2026-10-26T04:57:43Z
+updated: 2026-10-26T12:41:56Z
 transitions: []
 tags: [cli, docker]
 topics: [harness, docker, planning]
-touches: [flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/pilot/run.go, flai/internal/pilot/run_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, design/adrs/README.md, design/adrs, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, design/issues/summary.md, design/issues]
+touches: [flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/pilot/run.go, flai/internal/pilot/run_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/activity.go, flai/internal/serve/claudecheck.go, design/adrs/README.md, design/adrs, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, design/issues/summary.md, design/issues]
 after: [S-0508]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: planner
+      seconds: 190
+      estimated: true
+      models:
+        - model: claude-fable-5-1
+          input: 546
+          output: 14923
+          cache_read: 3320733
+          cache_write: 204659
+          cost: 8.1773
 draft: true
+cost_of_delay:
+  value: 22.22
+  by: planner-S-0509
+  at: 2026-10-26T12:41:56Z
 forecast:
   duration: 2h
-  delivery: 2026-10-27T23:25:00Z
-  basis: "Its own forecast of 2h; 28th in the pull order with an in-progress limit of 5, behind S-0498, S-0504, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0499, S-0502, S-0503, S-0505, S-0506, S-0507 and S-0508."
-  by: flai
-  at: 2026-10-26T04:57:43Z
+  delivery: 2026-10-28T06:53:00Z
+  basis: "Kept at 2h over flai's 49m: the ADR settles a real choice on the main checkout's mount, four start paths change with a test each, and the proof is a planner session inside a container; delivery is flai's playout, 27th in the pull order, plus the 1h11m the 2h adds."
+  by: planner-S-0509
+  at: 2026-10-26T12:41:56Z
 ---
 # S-0509 The planner, the orchestrator, the analyzer, and the curator run in a container when their harness is container, with the main checkout mounted as an ADR settles, pilot passing their role, and their activity logged as on the host
 
@@ -52,14 +71,17 @@ Waits on S-0508 for the adapter. The orchestrator is long-running: a container o
 
 ### Planning
 
-Planned by planner-E-0029 on 2026-10-26 with the epic.
+Planned again by planner-S-0509 on 2026-10-26, once the operator had set E-0029's cost of delay input (TH-0657); first planned by planner-E-0029 with the epic, whose four tasks stand.
 
-Touches. `flai touches suggest S-0509`, seeded with `flai/internal/serve/plan.go`, `orchestrate.go`, `analyze.go`, and `curate.go` (16 commits), names `serve/agents.go`, `serve/agents_test.go`, and `plan_test.go`, each kept (co-change), and `cmd/serve_actions.go`, `hostapi/writes.go`, `serve/activity.go`, `serve/serve.go`, `mcpserver/*`, and `flaiover/src/lib/server/agent.ts`, left out because the story adds no setting, no hostapi method, and no dashboard change; `activity.go`'s reader is read through the inner harness's by T-2170 without changing the file unless the task finds it must, in which case `flai task done` widens the touches. The rest are the tasks' (layout):
+Touches. Every touch declared before this run is kept. `flai touches suggest S-0509` over the declared paths (1213 of 2427 commits changed them) ranks `docs/users/flai-reference.md`, `design/system/flaiover-dashboard.md`, `docs/users/flaiover.md`, `docs/operators/settings.md`, `flai/cmd/serve_actions.go`, `flai/internal/hostapi/writes.go`, and `flai/internal/harness/harness.go` with its test highest (co-change); each is left out, since the story adds no flag, no setting, no host API method, and no dashboard change, and the adapter contract in `harness.go` is S-0507's and S-0508's to change. Where each touch stands:
 
-- `flai/internal/harness/container.go`, `container_test.go`, `flai/internal/pilot/run.go`, `run_test.go`: S-0508's and S-0507's files, which gain the role's mounts and `--agent`. T-2163.
-- `flai/internal/serve/orchestrate_test.go`, `analyze_test.go`, `curate_test.go`: the per-role tests beside their start paths. T-2170.
+- `flai/internal/harness/container.go`, `container_test.go`, `flai/internal/pilot/run.go`, `run_test.go` (layout): S-0508's and S-0507's files, not on main yet, which is why `after` names S-0508. T-2163.
+- `flai/internal/serve/plan.go`, `orchestrate.go`, `analyze.go`, `curate.go` and their `_test.go` (declared): the four start paths call `harness.For` and `startOf` today. `agents.go` and `agents_test.go` (declared, co-change): `startOf` and the stop of a run. T-2170.
+- `flai/internal/serve/activity.go` and `claudecheck.go` (layout, added on this run to T-2170 and the story): T-2170's Work names both, the reader of a container run's log and the claude probe the ADR settles; the epic's plan left them to `flai task done` to widen, but a touch declared before the work is what holds an overlap truthfully.
 - `design/system/strategic-agents.md`, `design/system/flai-cli.md`, `docs/users/flai.md`, `docs/operators/index.md` (design, criterion 5). T-2158, T-2175.
-- `design/adrs/README.md` and the folder `design/adrs` (layout, folder kept): `flai adr new` in T-2158 names the ADR's file, which no task can name; the folder is kept for that file alone.
-- `design/issues/summary.md` and the folder `design/issues` (layout, folder kept): `flai issue new` in T-2175 writes issue files no task can name; the folder is kept for them alone. `flai task done` widens the touches with the committed paths (ADR-0144).
+- `design/adrs/README.md` and the folder `design/adrs` (layout, folder kept): `flai adr new` in T-2158 names the ADR's file, which no task can name; the folder is kept for that file alone, and it is in `claims.shared`, so it holds nothing.
+- `design/issues/summary.md` and the folder `design/issues` (layout, folder kept): `flai issue new` in T-2175 writes issue files no task can name; the folder is kept for them alone, and it is in `claims.shared`. `flai task done` widens the touches with the committed paths (ADR-0144).
 
-Forecast and cost of delay: see the second Planning paragraph, written once the figures are set.
+Forecast. `flai forecast S-0509` gives 49m (median 107 s per unit over 93 done feature stories on claude-opus-5-5 in the large band; size 27: 5 criteria, 22 touches) and delivery 2026-10-28T05:42Z, 27th in the pull order with an in-progress limit of 5. Kept at 2h, as the epic's plan set it: the ADR settles a real choice on the main checkout's mount, four start paths change with a test each, and the proof is a planner session inside a container that the story's agent waits for. Delivery 2026-10-28T06:53Z: flai's playout, plus the 1h11m the 2h adds in the story's own place.
+
+Cost of delay. `flai cod S-0509` gives 22.22 USD a week: the story's share of E-0029's `penalty_per_week` of 150 USD, set by the operator on 2026-10-26 (TH-0657), 2h of the 13h30m forecast over the epic's six open stories without inputs. Written as given: nothing on the story argues for inputs of its own.

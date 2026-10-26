@@ -7,7 +7,7 @@ status: backlog
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:44:13Z
-updated: 2026-10-26T04:57:43Z
+updated: 2026-10-26T12:40:34Z
 transitions: []
 tags: [cli, docker]
 topics: [harness, docker]
@@ -18,13 +18,32 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 215
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 13
+          output: 110
+          cache_read: 4374448
+          cache_write: 13240
+          cost: 0.9619
 draft: true
+cost_of_delay:
+  value: 27.78
+  by: planner-S-0508
+  at: 2026-10-26T12:40:34Z
 forecast:
   duration: 2h30m
-  delivery: 2026-10-27T21:05:00Z
-  basis: "Its own forecast of 2h30m; 27th in the pull order with an in-progress limit of 5, behind S-0498, S-0504, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0499, S-0502, S-0503, S-0505, S-0506 and S-0507."
-  by: flai
-  at: 2026-10-26T04:57:43Z
+  delivery: 2026-10-28T04:25:00Z
+  basis: "flai's 1h1m (median 107 s per unit over 93 done feature stories on claude-opus-5-5 in the large band, size 34) raised to 2h30m for the serve start path with its stop, restart, and three refusals and for the end-to-end proof under flai serve inside a container; delivery is flai's play-out, 26th in the pull order behind S-0503 to S-0507, starting about 2026-10-28T01:55Z, plus the 2h30m."
+  by: planner-S-0508
+  at: 2026-10-26T12:40:34Z
 ---
 # S-0508 flai serve runs a story's agent in a container through a container harness adapter, with the worktree, the story's cache folder, and the login mounted, the keys and the MCP token by environment, and the image and network the host sets
 
@@ -55,14 +74,18 @@ Waits on S-0506 for the HTTP server the container reaches and the token by envir
 
 ### Planning
 
-Planned by planner-E-0029 on 2026-10-26 with the epic.
+Planned by planner-E-0029 on 2026-10-26 with the epic; revisited by planner-S-0508 on 2026-10-26 (TH-0666), which kept the five tasks, their touches, and their `after`, and wrote the cost of delay value.
 
-Touches. `flai touches suggest S-0508`, seeded with `flai/internal/harness/adapters.go`, `flai/internal/serve/agents.go`, `flai/cmd/serve_actions.go`, and `flai/internal/config/config.go` (108 commits), names `serve_actions_test.go`, `serve/agents_test.go`, `harness_test.go`, `harness.go`, `flai-cli.md`, `flai-reference.md`, `settings.md`, `docs/users/flai.md`, `config_test.go`, `serve/restart.go`, `docs/operators/index.md`, `serve/start.go`, and `start_test.go`, each kept (co-change); it also names `hostapi/writes.go`, `hostapi.go`, `settings.go`, `flaiover/src/lib/server/agent.ts`, `serve/serve.go`, `cmd/serve.go`, `mcpserver/*`, `cmd/root.go`, and `serve/plan.go`, left out because the story adds no hostapi method, no dashboard change, and no command, and the strategic paths are S-0509's. The rest are the tasks' (layout):
+Touches. The first run's `flai touches suggest S-0508`, seeded with `flai/internal/harness/adapters.go`, `flai/internal/serve/agents.go`, `flai/cmd/serve_actions.go`, and `flai/internal/config/config.go` (108 commits), named `serve_actions_test.go`, `serve/agents_test.go`, `harness_test.go`, `harness.go`, `flai-cli.md`, `flai-reference.md`, `settings.md`, `docs/users/flai.md`, `config_test.go`, `serve/restart.go`, `docs/operators/index.md`, `serve/start.go`, and `start_test.go`, each kept (co-change). Run again on the 27 touches (1284 of 2427 commits), it names only paths outside the story: `flaiover-dashboard.md`, `docs/users/flaiover.md`, `design/adrs/README.md`, `workflow.md`, `template/CHANGELOG.md`, `hostapi/writes.go`, `project-manifest.md`, `cmd/root.go`, `mcpserver/*`, `check/check.go`, and `manifest/manifest.go`; none added, since the story writes no ADR, no manifest key, no new command, no dashboard or hostapi change, and the strategic paths are S-0509's. The rest are the tasks' (layout):
 
-- `flai/internal/harness/container.go`, `container_test.go`: the new adapter, beside `adapters.go`. T-2155.
+- `flai/internal/harness/container.go`, `container_test.go`: the new adapter, beside `adapters.go`, registered in the `Adapters` map of `harness.go`, which gains `Stdin` on `Start`. T-2155. `adapters.go` itself is S-0507's and is not touched here.
 - `flai/internal/protected/protected.go`, `protected_test.go` (design, criterion 5). T-2157.
-- `flai/internal/serve/stop.go`, `stop_test.go`: the stop by container name. T-2162.
+- `flai/internal/serve/stop.go`, `stop_test.go`: the stop by container name. T-2162. `serve/usage.go` needs no change: `logReader` resolves the reader through `harness.For`, so the container adapter's `Reader()` gives the inner harness's.
 - `docs/operators/runbooks/install.md`, `design/system/agent-adapters.md`, `design/tech/docker.md` (design, criterion 7). T-2169.
 - `design/issues/summary.md` and the folder `design/issues` (layout, folder kept): `flai issue new` in T-2169 writes issue files whose numbers and slugs no task can name; the folder is kept for them alone, and `flai task done` widens the touches with the committed paths (ADR-0144).
 
-Forecast and cost of delay: see the second Planning paragraph, written once the figures are set.
+Overlaps on 2026-10-26: no story in progress touches these paths; S-0498, in review, touches `config.go`, `config_test.go`, and `settings.md`, and a story in review holds nothing (ADR-0096); its change lands before this story starts, since this one waits on S-0506 and S-0507.
+
+Forecast. `flai forecast S-0508` gives 1h1m (median 107 s per unit over 93 done feature stories on claude-opus-5-5 in the large band; size 34: 7 criteria, 27 touches) and delivery 2026-10-28T02:56Z, 26th in the pull order. Kept at 2h30m, the first run's figure: the adapter and the serve start path change flai's largest file (`serve/agents.go`) with the stop, the restart, and three refusals, and criterion 6 runs a whole story of this repository under `flai serve` inside a container, a session of its own of 30 to 60 minutes with a stop and a restart tried. The delivery written is flai's play-out start, 2026-10-28T02:56Z less its 1h1m, plus the 2h30m: 2026-10-28T04:25Z.
+
+Cost of delay. `flai cod S-0508` gives 27.78 USD a week: this story's share of E-0029's 150 USD a week (`penalty_per_week`, set by the operator on 2026-10-26T12:24Z after TH-0657), 2h30m of the 13h30m forecast over the epic's six open stories without inputs. Written as flai gives it. It moves with a sibling's forecast; the next planner run writes it again.

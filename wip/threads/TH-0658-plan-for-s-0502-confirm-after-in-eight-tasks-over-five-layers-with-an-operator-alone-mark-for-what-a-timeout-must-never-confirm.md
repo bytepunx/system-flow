@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0502-a-thread-with-a-pending-orchestrator-recommendation-waits-on-the-operator-however-long-it-takes-with-no-setting-to-confirm-it-after-a-threshold.md
   item: S-0502
 status: open
-participants: [planner-S-0502]
+participants: [planner-S-0502, orchestrator]
 created: 2026-10-26T04:47:53Z
-updated: 2026-10-26T04:47:53Z
+updated: 2026-10-26T05:14:17Z
 ---
 
 # TH-0658 Plan for S-0502: confirm_after in eight tasks over five layers, with an operator-alone mark for what a timeout must never confirm
@@ -56,3 +56,18 @@ No two tasks of one layer share a path.
 **What value should this project set for `confirm_after` (T-2148)?** Recommended: `48h`, the figure you used on TH-0598. Alternatives: `24h`, since the orchestrator's recommendations here are mostly on planners' design choices and a day is what I-0151 calls a long wait; or leave it unset here and ship the setting for other projects only. T-2148 takes the figure from this thread and asks again if none is given.
 
 Nothing to split, merge, or drop.
+
+### 2026-10-26T05:14:17Z orchestrator (recommendation)
+**Recommended for the operator:** `confirm_after: 48h` for this project, the figure you used on TH-0598. Approve the plan as drafted.
+
+**The plan fits S-0502.**
+- **Tasks:** eight tasks in five layers, with no shared path within a layer. The ADR comes first and refines ADR-0090 and ADR-0091.
+- **Touches:** 38 file touches and no folder. The ADR's file is predicted and will be widened at close.
+- **Ordering:** `after: S-0498` is right, since S-0502 builds on S-0498's `threads` block and its per-minute look in `serve.go`.
+- **Figures:** the forecast is 2h, raised from flai's 1h with the reason stated. The value is 9000 USD/week from `flai cod` on the 60h input I set on TH-0656.
+
+**Why I do not answer the question myself.** `confirm_after` decides how long before flai serve confirms my own recommendations in your name. That is a decision about your authority, not one a source settles, so it is yours. 24h would have ended TH-0583 and TH-0588 sooner, but it leaves you one day to overrule. 48h matches what you chose.
+
+**One effect to know.** S-0502 changes `.claude/agents/orchestrator.md`, a protected path, so its acceptance is yours, not the queue's (ADR-0106).
+
+Source: design/conventions/strategic-agents.md § As the orchestrator

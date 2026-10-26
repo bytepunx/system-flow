@@ -7,24 +7,45 @@ status: backlog
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:43:39Z
-updated: 2026-10-26T04:57:43Z
+updated: 2026-10-26T12:35:35Z
 transitions: []
 tags: [cli, docker]
 topics: [harness, docker]
-touches: [flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/pilot/request.go, flai/internal/pilot/request_test.go, flai/internal/pilot/run.go, flai/internal/pilot/run_test.go, flai/pilot/main.go, flai/images/bedrock/Dockerfile, flai/images/claude-code/Dockerfile, scripts/agent-image.sh, scripts/agent-container.sh, design/adrs/README.md, design/adrs, design/system/flai-cli.md, design/tech/docker.md, design/tech/go.md, docs/operators/index.md]
+touches: [flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/pilot/request.go, flai/internal/pilot/request_test.go, flai/internal/pilot/run.go, flai/internal/pilot/run_test.go, flai/pilot/main.go, flai/images/bedrock/Dockerfile, flai/images/claude-code/Dockerfile, scripts/agent-image.sh, scripts/agent-container.sh, scripts/README.md, design/adrs/README.md, design/adrs, design/system/flai-cli.md, design/tech/docker.md, design/tech/go.md, docs/operators/index.md]
 after: [S-0505]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 219
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 19
+          output: 271
+          cache_read: 6277011
+          cache_write: 14586
+          cost: 1.3793
+cost_of_delay:
+  value: 22.22
+  by: planner-S-0507
+  at: 2026-10-26T12:35:04Z
 forecast:
   duration: 2h
-  delivery: 2026-10-27T18:10:00Z
-  basis: "Its own forecast of 2h; 26th in the pull order with an in-progress limit of 5, behind S-0498, S-0504, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0499, S-0502, S-0503, S-0505 and S-0506."
-  by: flai
-  at: 2026-10-26T04:57:43Z
+  delivery: 2026-10-28T13:43:00Z
+  basis: "2h kept from the epic's plan: a new package and a second binary with process tests (relay, exit code, signals, resume), an ADR, and image rebuilds that each run a Go build and a Claude Code install, where no done feature story in the band flai's 43m rests on added a binary. Delivery is flai's 2026-10-28T00:12Z for 43m at 25th in the pull order, played out for 2h as flai's replan of 2026-10-26T04:57Z did (43m to 2h moved it 13h31m)."
+  by: planner-S-0507
+  at: 2026-10-26T12:35:04Z
+finalized:
+  by: orchestrator
+  at: 2026-10-26T12:35:35Z
 ---
 # S-0507 pilot, a Go binary in the bedrock image, is the container's entrypoint: it reads a start request, starts the inner harness through flai's adapters, relays its log, and resumes, as an ADR records beside the layered images
 
@@ -55,13 +76,17 @@ The claude-code adapter's `Start` writes a stdio MCP configuration today (`flai/
 
 ### Planning
 
-Planned by planner-E-0029 on 2026-10-26 with the epic.
+Planned by planner-E-0029 on 2026-10-26 with the epic. Revisited by planner-S-0507 on 2026-10-26 against the story's criteria and the code: the six tasks, their `after`, and their layers stand as drafted; one touch is added to T-2174 and the story; the forecast is kept at 2h; and the cost of delay value is written now that E-0029 has its input. The plan and what the code shows are on the story's plan thread.
 
-Touches. `flai touches suggest S-0507`, seeded with `flai/internal/harness/adapters.go` and `harness.go` (72 commits), names `harness_test.go` (kept, co-change) and then the template's conventions, `template/CHANGELOG.md`, `serve/agents.go`, `docs/users/flai.md`, and the guard, which this story does not change: pilot adds no command and changes no convention, and `flai serve`'s start path is S-0508's. The rest are the tasks' (layout):
+Touches. `flai touches suggest S-0507` on the declared touches (590 of 2427 commits changed them) lists `docs/users/flai.md` (50%), `design/system/flaiover-dashboard.md` (18%), `docs/users/flai-reference.md` (17%), `docs/users/flaiover.md` (16%), `docs/operators/settings.md` (12%), `template/CHANGELOG.md` (12%), and the conventions; none is added. pilot is a second binary, not a flai command, so the generated reference and the user guide do not change (the container section of `docs/users/flai.md` is S-0508's, where the user-facing path exists); it adds no setting and changes no convention or dashboard behaviour. Every other touch is declared and a task's, with these sources:
 
-- `flai/internal/pilot/request.go`, `request_test.go`, `run.go`, `run_test.go`, `flai/pilot/main.go`: the new package and the second `main` of the flai module, placed as `flai/main.go` and `flai/internal/*` are. T-2161, T-2168.
-- `flai/images/bedrock/Dockerfile`, `flai/images/claude-code/Dockerfile`, `scripts/agent-image.sh`, `scripts/agent-container.sh`: S-0505's files, which gain pilot. T-2174.
-- `design/system/flai-cli.md`, `design/tech/docker.md`, `design/tech/go.md`, `docs/operators/index.md` (design, criterion 6). T-2153, T-2178.
+- `flai/internal/harness/harness.go`, `adapters.go`, `harness_test.go` (declared, co-change: the first two changed together in 72 commits, the test with them): `Request` gains the container fields and `mcpConfig` the HTTP shape. T-2154.
+- `flai/internal/pilot/request.go`, `request_test.go`, `run.go`, `run_test.go`, `flai/pilot/main.go` (layout): the new package and the second `main` of the flai module, placed as `flai/main.go` and `flai/internal/*` are; the manifest's Go tiers select `flai/**/*.go`, so they are tested and linted without a manifest change, and `flai/.goreleaser.yaml` builds `flai` alone, so no release change. T-2161, T-2168.
+- `flai/images/bedrock/Dockerfile`, `flai/images/claude-code/Dockerfile`, `scripts/agent-image.sh`, `scripts/agent-container.sh` (layout): S-0505's files, which gain pilot; the story's `after` names S-0505 for them. The root `.dockerignore` already admits `flai/**`, so `flai/pilot` is in the build context and it is not touched. T-2174.
+- `scripts/README.md` (layout, added): T-2174 changes what `scripts/agent-container.sh` does, from starting `claude` to feeding pilot a start request, and the index of the scripts describes each one (S-0505, criterion 6), so it changes in the same task. T-2174.
+- `design/system/flai-cli.md`, `design/tech/docker.md`, `design/tech/go.md`, `docs/operators/index.md` (design, criterion 6). T-2153 (`docker.md`), T-2178.
 - `design/adrs/README.md` and the folder `design/adrs` (layout, folder kept): `flai adr new` in T-2153 names the ADR's file by its number and title, which no task can name; the folder is kept for that file alone, and `flai task done` widens the touches with the committed path (ADR-0144).
 
-Forecast and cost of delay: see the second Planning paragraph, written once the figures are set.
+Forecast. `flai forecast S-0507` gives 43m (median 107 s per unit over 93 done feature stories on claude-opus-5-5 in the large band; size 24: 6 criteria, 18 touches) and delivery 2026-10-28T00:12Z, 25th in the pull order. Kept at 2h, the epic planner's figure, for its reason: the story adds a package and a second binary with process tests (relay, exit code, signals, resume), an ADR, and image rebuilds that each run a Go build and a Claude Code install, and no story in the band added a binary. Delivery 2026-10-28T13:43Z is flai's delivery for 43m played out for 2h as flai's replan of 2026-10-26T04:57Z did (43m to 2h moved it 13h31m, from 04:39Z to 18:10Z); flai's next replan plays it out again from the pull order.
+
+Cost of delay. `flai cod S-0507` gives 22.22 USD a week: the story's share of E-0029's 150 USD a week of penalty, set by the operator on 2026-10-26 after TH-0657, 2h of the 13h30m forecast over the epic's six open stories without inputs. Written as it stands: the share by forecast duration is flai's rule, and nothing argues for inputs of the story's own, since pilot brings no revenue and loses no work per cycle apart from the epic's.

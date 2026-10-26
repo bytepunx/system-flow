@@ -7,7 +7,7 @@ status: backlog
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:42:20Z
-updated: 2026-10-26T04:57:43Z
+updated: 2026-10-26T12:28:25Z
 transitions: []
 tags: [cli, docker]
 topics: [harness, docker, experiments]
@@ -17,13 +17,34 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 259
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 26
+          output: 383
+          cache_read: 8289997
+          cache_write: 9419
+          cost: 1.8196
+cost_of_delay:
+  value: 33.33
+  by: planner-S-0505
+  at: 2026-10-26T12:27:51Z
 forecast:
   duration: 3h
-  delivery: 2026-10-27T15:50:00Z
-  basis: "Its own forecast of 3h; 24th in the pull order with an in-progress limit of 5, behind S-0498, S-0504, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0499, S-0502 and S-0503."
-  by: flai
-  at: 2026-10-26T04:57:43Z
+  delivery: 2026-10-27T23:16:00Z
+  basis: "3h kept from the epic's plan: two image builds, a whole story of this repository worked inside the container in a session of its own, and the login, the network modes, and the mount measured by hand, where the three done experiment stories flai's 1h12m rests on measured inside one process. Delivery is flai's 2026-10-27T11:14Z for 1h12m at 23rd in the pull order, played out for 3h as flai's replan did on 2026-10-26 (1h12m to 3h moved it 12h02m)."
+  by: planner-S-0505
+  at: 2026-10-26T12:27:51Z
+finalized:
+  by: orchestrator
+  at: 2026-10-26T12:28:25Z
 ---
 # S-0505 Claude Code works one story of this repository inside a hand-built container from a bedrock image and a claude-code layer, and the results settle what ADR-0203 leaves open
 
@@ -55,9 +76,9 @@ ADR-0203 § Decision, First story, names this spike; E-0029's notes refine it to
 
 ### Planning
 
-Planned by planner-E-0029 on 2026-10-26 with the epic.
+Planned by planner-E-0029 on 2026-10-26 with the epic. Revisited by planner-S-0505 on 2026-10-26 against the story's criteria: the five tasks, their touches, and their `after` stand as drafted, the forecast is kept, and the cost of delay value is written now that E-0029 has its input.
 
-Touches. `flai touches suggest S-0505` refused with no touches declared; seeded with `flaiover/Dockerfile`, `scripts/flaiover-image.sh`, and `design/experiments/README.md`, its co-change list (15 commits) names `design/tech/docker.md` and `docs/operators/index.md` among dashboard files this story does not change. Every touch is a task's (layout), with these sources:
+Touches. `flai touches suggest S-0505` on the declared touches (696 of 2427 commits changed them) lists `design/system/flai-cli.md` (8%), `docs/users/flai.md` (7%), `docs/operators/index.md` (5%), and the dashboard's design among the co-changes; none is added, since the story changes no command, setting, or dashboard behaviour. Every touch is declared and a task's (layout), with these sources:
 
 - `flai/images/bedrock/Dockerfile`, `flai/images/claude-code/Dockerfile`, `scripts/agent-image.sh`, `scripts/agent-container.sh`, `Makefile`, `scripts/README.md`, `.dockerignore` (layout): the images live under the flai sub-project because they ship flai, as `flaiover/Dockerfile` lives under flaiover; `.dockerignore` at the root is the build context's, as for flaiover. T-2149 and T-2159.
 - `design/experiments/S-0505-….md`, `design/experiments/README.md` (design): the experiment results document and its index, as `design/experiments/README.md` requires. T-2159, T-2166, T-2173, T-2177.
@@ -65,4 +86,6 @@ Touches. `flai touches suggest S-0505` refused with no touches declared; seeded 
 - `design/tech/docker.md` (co-change, design): changed with the flaiover image in 3 of 15 seed commits, and criterion 6 names it. T-2177.
 - `design/issues/summary.md` and the folder `design/issues` (layout, folder kept): `flai issue new` in T-2166 writes issue files whose numbers and slugs no task can name; the folder is kept for them alone, and `flai task done` widens the touches with the committed paths (ADR-0144).
 
-Forecast and cost of delay: see the second Planning paragraph, written once the figures are set.
+Forecast. `flai forecast S-0505` gives 1h12m (median 227 s per unit over 3 done experiment stories; size 19: 6 criteria, 13 touches) and delivery 2026-10-27T11:14Z, 23rd in the pull order. Kept at 3h, the epic planner's figure, for its reason: the spike builds two images (a Go build and a Claude Code install, minutes each, built several times), runs a whole story of this repository inside the container, a session of its own of 30 to 60 minutes on this repository's recent stories, and measures the login, the network modes, and the mount by hand, where the three experiment stories in the history measured inside one process. Delivery 2026-10-27T23:16Z is flai's delivery for 1h12m played out for 3h as flai's replan of 2026-10-26T04:57Z did (1h12m to 3h moved it 12h02m, from 03:48Z to 15:50Z); flai's next replan plays it out again from the pull order.
+
+Cost of delay. `flai cod S-0505` gives 33.33 USD a week: the story's share of E-0029's 150 USD a week of penalty, set by the operator on 2026-10-26 after TH-0657, 3h of the 13h30m forecast over the epic's six open stories without inputs. Written as it stands: the share by forecast duration is flai's rule, and nothing argues for inputs of the story's own, since the spike brings no revenue and loses no work per cycle apart from the epic's.

@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 30
-      output: 10774
-      cache_read: 1559954
-      cache_write: 67043
-      cost: 0.9435
+      input: 29
+      output: 10046
+      cache_read: 1560871
+      cache_write: 63318
+      cost: 0.9097
 ---
 # T-2123 flai stats reports the curator's runs in the digest section and leaves asked_again out of a week no run has measured, with a test that reproduces I-0207
 

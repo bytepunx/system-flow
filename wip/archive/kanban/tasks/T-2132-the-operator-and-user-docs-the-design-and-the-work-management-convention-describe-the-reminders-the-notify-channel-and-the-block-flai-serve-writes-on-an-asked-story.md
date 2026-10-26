@@ -3,11 +3,11 @@ id: T-2132
 type: task
 nature: improvement
 title: The operator and user docs, the design, and the work-management convention describe the reminders, the notify channel, and the block flai serve writes on an asked story
-status: in-progress
+status: done
 parent: S-0498
 owner: alex
 created: 2026-10-26T04:15:16Z
-updated: 2026-10-26T04:57:11Z
+updated: 2026-10-26T05:06:01Z
 transitions:
   - to: ready
     at: 2026-10-26T04:57:10Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-26T04:57:11Z
     by: agent-S-0498
+  - to: done
+    at: 2026-10-26T05:06:01Z
+    by: agent-S-0498
 stream: S-0498
 tags: [flai, template]
 touches: [docs/operators/index.md, docs/users/flai.md, design/system/workflow.md, design/system/flai-cli.md, design/system/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md]
 after: [T-2129, T-2130]
+usage:
+  source: log
+  seconds: 530
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 106
+      output: 35755
+      cache_read: 6110654
+      cache_write: 182310
+      cost: 2.9884
 ---
 # T-2132 The operator and user docs, the design, and the work-management convention describe the reminders, the notify channel, and the block flai serve writes on an asked story
 
