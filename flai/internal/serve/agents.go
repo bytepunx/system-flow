@@ -666,6 +666,133 @@ func judgeRun(root string, run *AgentRun, exit *int) {
 	}
 }
 
+// endRun judges run, a story's agent's run that has ended with exit
+// (judgeRun), records the end (ended), and then blocks its story when it
+// ended asking on a thread (blockAsked): after the end is recorded, so that
+// releaseAsked, which closes the interval of a story whose last run no
+// longer waits on its thread, never takes the run still live for one that
+// does. The other way round, a look that starts the agent again before the
+// block is written finds the block at its next look, and releases it.
+func (l *launcher) endRun(run *AgentRun, exit *int) {
+	judgeRun(l.entry.Root, run, exit)
+	l.ended(run)
+	l.blockAsked(run)
+}
+
+// awaitingOperator is the reason of the blocked interval flai serve opens on
+// a story whose agent ended asking on thread (ADR-0205); awaitingReason
+// reads the thread back out of it.
+func awaitingOperator(thread string) string {
+	return "awaiting the operator on " + thread
+}
+
+var awaitingReason = regexp.MustCompile(`^awaiting the operator on (TH-\d{4,})$`)
+
+// askedOn is the thread that the open blocked interval of it names, when it
+// is one flai serve opened as its agent ended asking (blockAsked), or "": an
+// interval an agent or the operator wrote with flai block names no thread so.
+func askedOn(it *workitem.Item) string {
+	for _, b := range it.Blocked {
+		if m := awaitingReason.FindStringSubmatch(b.Reason); b.Until == "" && m != nil {
+			return m[1]
+		}
+	}
+	return ""
+}
+
+// blockAsked blocks the story of run, which ended asking on a thread, with
+// the reason that names the thread, so that the board shows it waiting on
+// the operator and flai stats counts the wait as blocked time (ADR-0205,
+// I-0151). It leaves alone a run that ended any other way or asked on
+// conversations alone, a story not in progress, one blocked already, and a
+// question answered before the block, which resume starts again at once.
+// A failure is warned of: the run is started again on its answer as before.
+func (l *launcher) blockAsked(run *AgentRun) {
+	if run.Outcome != OutcomeAsked || run.Thread == "" {
+		return
+	}
+	err := func() error {
+		repo, err := workitem.Open(l.entry.Root)
+		if err != nil {
+			return err
+		}
+		if threadAnswered(repo, run) {
+			return nil
+		}
+		it, err := repo.Get(run.Story)
+		if err != nil {
+			return err
+		}
+		if it.Status != workitem.InProgress || it.IsBlocked() {
+			return nil
+		}
+		if err := workitem.BlockItem(it, awaitingOperator(run.Thread), l.now()); err != nil {
+			return err
+		}
+		if err := repo.Save(it); err != nil {
+			return err
+		}
+		l.log("story blocked on its agent's question", "story", run.Story, "thread", run.Thread)
+		return nil
+	}()
+	if err != nil {
+		l.warn("story not blocked on its agent's question", "story", run.Story, "thread", run.Thread, "err", err.Error())
+	}
+}
+
+// unblockAsked closes the interval blockAsked opened on story for its
+// agent's question on thread, and reports whether it did: not when the
+// story's open interval is not that one. It reads the story again just
+// before writing, as an agent may have changed it.
+func (l *launcher) unblockAsked(repo *workitem.Repo, story, thread string) (bool, error) {
+	it, err := repo.Get(story)
+	if err != nil {
+		return false, err
+	}
+	if thread == "" || askedOn(it) != thread {
+		return false, nil
+	}
+	if err := workitem.UnblockItem(it, l.now()); err != nil {
+		return false, err
+	}
+	if err := repo.Save(it); err != nil {
+		return false, fmt.Errorf("close %s's blocked interval for %s: %w", story, thread, err)
+	}
+	return true, nil
+}
+
+// releaseAsked closes the interval blockAsked opened on each story, of
+// items, the ones the look read, whose agent no longer waits on the thread
+// it names: the story left in progress, sent back to ready or backlog,
+// moved to review, or cancelled, or its last run is not the one that asked,
+// its agent having been started again otherwise than on the answer, by the
+// operator. A blocked story in ready is never started, so one sent back with
+// its question open would otherwise wait there for good. It reports whether
+// it closed any.
+func (l *launcher) releaseAsked(repo *workitem.Repo, items map[string]*workitem.Item) bool {
+	closed := false
+	for id, run := range l.dir.AgentStates()[l.entry.Root].Stories {
+		it := items[id]
+		if it == nil {
+			continue
+		}
+		thread := askedOn(it)
+		if thread == "" || (it.Status == workitem.InProgress && asked(run) && run.Thread == thread) {
+			continue
+		}
+		ok, err := l.unblockAsked(repo, id, thread)
+		if err != nil {
+			l.warn("story not unblocked from its agent's question", "story", id, "thread", thread, "err", err.Error())
+			continue
+		}
+		if ok {
+			closed = true
+			l.log("story unblocked: its agent no longer waits on its question", "story", id, "thread", thread, "status", it.Status)
+		}
+	}
+	return closed
+}
+
 // awaitingOther are story's open conversations that await the other story's
 // agent's reply; none when they cannot be read, as no question is asked when
 // threads cannot be.
@@ -759,6 +886,12 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 	stories, holds, free, review, items, err := readyStories(repo)
 	if err != nil {
 		return
+	}
+	if l.releaseAsked(repo, items) {
+		// a story it unblocked may be ready to start, or no longer held
+		if stories, holds, free, review, items, err = readyStories(repo); err != nil {
+			return
+		}
 	}
 	// The first look after flai serve starts is like any other: what keeps a
 	// restart from starting a story twice is its run in serve/agents.json,
@@ -967,8 +1100,7 @@ func (l *launcher) settleOrphans() {
 		}
 		ended := *run
 		ended.Ended = l.now().UTC().Format(time.RFC3339)
-		judgeRun(l.entry.Root, &ended, nil)
-		l.ended(&ended)
+		l.endRun(&ended, nil)
 		l.log("agent ended, seen at a look", "story", run.Story, "pid", run.PID, "outcome", ended.Outcome)
 		l.measure(run.Story)
 	}
@@ -999,7 +1131,10 @@ func (l *launcher) settleOrphans() {
 // started again only for the answer to the question it asked, not for a
 // message or a conversation that closed, which its first inbox lists once it
 // is (ADR-0154); a blocked story in ready is never started, so the look needs
-// no such rule.
+// no such rule. The interval flai serve opened when the agent ended asking
+// (blockAsked) is no such block: it is closed before the agent is started
+// again, whatever answered it, and one an agent or the operator wrote is
+// left open (ADR-0205).
 func (l *launcher) resume(ctx context.Context, cfg AgentConfig, repo *workitem.Repo) {
 	st := l.dir.AgentStates()[l.entry.Root]
 	for id, run := range st.Stories {
@@ -1014,8 +1149,18 @@ func (l *launcher) resume(ctx context.Context, cfg AgentConfig, repo *workitem.R
 		if err != nil || (it.Status != workitem.InProgress && it.Status != workitem.Review) {
 			continue
 		}
-		if it.IsBlocked() && answer != run.Thread {
+		own := run.Thread != "" && askedOn(it) == run.Thread
+		if it.IsBlocked() && !own && answer != run.Thread {
 			continue
+		}
+		if own {
+			// on a failure it is started all the same: better marked blocked
+			// than left without its agent, and the next look releases it
+			if ok, err := l.unblockAsked(repo, id, run.Thread); err != nil {
+				l.warn("story not unblocked for its agent's answer", "story", id, "thread", run.Thread, "err", err.Error())
+			} else if ok {
+				l.log("story unblocked for its agent's answer", "story", id, "thread", run.Thread, "answer", answer)
+			}
 		}
 		l.start(ctx, cfg, readyStory{ID: id, Agent: it.Agent, Asked: run, Answer: answer})
 	}
@@ -1497,8 +1642,7 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 	l.await(cmd, out, run.PID, func(code int) {
 		ended := *run
 		ended.Ended, ended.Exit = l.now().UTC().Format(time.RFC3339), &code
-		judgeRun(l.entry.Root, &ended, &code)
-		l.ended(&ended)
+		l.endRun(&ended, &code)
 		l.log("agent ended", "story", story.ID, "pid", run.PID, "exit", code, "outcome", ended.Outcome)
 		l.measureWith(story.ID, cfg.Providers)
 	})

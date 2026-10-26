@@ -3085,3 +3085,219 @@ func TestAStoryTheOrchestratorsAcceptanceSentBackWaitsForItsLiveRun(t *testing.T
 	waitFor(t, "it is started for the send back once its run ended", func() bool { return lab.run(id).SentBack == th.ID })
 	waitFor(t, "it ends again", func() bool { return !lab.run(id).live() })
 }
+
+// blocks are story's blocked intervals as it stands on disk.
+func (lab *agentLab) blocks(story string) []workitem.Block {
+	lab.t.Helper()
+	st, err := lab.repo.Get(story)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	return st.Blocked
+}
+
+// S-0498, ADR-0205, I-0151: a story whose agent ended asking on a thread is
+// blocked, the reason naming the thread, rather than idling in progress
+// unmarked; it stays blocked while the question is open, and the answer
+// closes the interval before it starts the agent again. The run that ends
+// with no question open blocks nothing.
+func TestAStoryWhoseAgentEndedAskingIsBlockedUntilTheAnswerStartsItAgain(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.hold()
+	id := lab.ready("Asks and idles")
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs", func() bool { return lab.run(id).live() })
+	lab.move(id, workitem.InProgress)
+	th, err := threads.New(lab.repo, threads.NewOptions{Title: "Which port?", On: id, Author: lab.run(id).Agent, Text: "Eight or nine?", Now: time.Now()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	lab.release(id)
+	waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+	if r := lab.run(id); r.Outcome != OutcomeAsked || r.Thread != th.ID {
+		t.Fatalf("asked: %+v", r)
+	}
+	b := lab.blocks(id)
+	if len(b) != 1 || b[0].Until != "" || b[0].Reason != "awaiting the operator on "+th.ID {
+		t.Fatalf("the story idles in progress, blocked %+v", b)
+	}
+
+	_ = os.Remove(filepath.Join(lab.outDir, "release-"+id))
+	lab.l.look(ctx, false)
+	if r, b := lab.run(id), lab.blocks(id); r.live() || len(b) != 1 || b[0].Until != "" {
+		t.Fatalf("while the question is open: run %+v, blocked %+v", r, b)
+	}
+
+	if _, err := threads.Reply(lab.repo, th.ID, "alex", "Nine.", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs again", func() bool { return lab.run(id).live() })
+	if r, b := lab.run(id), lab.blocks(id); r.Answered != th.ID || len(b) != 1 || b[0].Until == "" {
+		t.Fatalf("its agent works blocked: run %+v, blocked %+v", r, b)
+	}
+	if b, u := lab.logged("story blocked on its agent's question"), lab.logged("story unblocked for its agent's answer"); b != 1 || u != 1 {
+		t.Errorf("logged %d blocks and %d unblocks:\n%s", b, u, lab.logText())
+	}
+	lab.release(id)
+	waitFor(t, "it ends again", func() bool { return !lab.run(id).live() })
+	if r, b := lab.run(id), lab.blocks(id); r.Outcome != OutcomeFailed || len(b) != 1 || b[0].Until == "" {
+		t.Errorf("ended with no question open: run %+v, blocked %+v", r, b)
+	}
+}
+
+// S-0498, ADR-0205: a story blocked already when its agent ends asking is
+// not blocked twice, and the interval an agent or the operator wrote stays
+// open when the answer to the question starts its agent again (ADR-0108,
+// ADR-0154). Nor is a story blocked twice for the same question judged again.
+func TestAStoryBlockedAlreadyKeepsItsOwnIntervalThroughItsAgentsQuestion(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.hold()
+	id := lab.ready("Blocked and asks")
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs", func() bool { return lab.run(id).live() })
+	lab.move(id, workitem.InProgress)
+	st, _ := lab.repo.Get(id)
+	if err := workitem.BlockItem(st, "the API key", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if err := lab.repo.Save(st); err != nil {
+		t.Fatal(err)
+	}
+	th, err := threads.New(lab.repo, threads.NewOptions{Title: "Which key?", On: id, Author: lab.run(id).Agent, Text: "Staging or production?", Now: time.Now()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	lab.release(id)
+	waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+	if r, b := lab.run(id), lab.blocks(id); r.Outcome != OutcomeAsked || r.Thread != th.ID || len(b) != 1 || b[0].Reason != "the API key" || b[0].Until != "" {
+		t.Fatalf("blocked twice or not as it was: run %+v, blocked %+v", r, b)
+	}
+	again := *lab.run(id)
+	if lab.l.endRun(&again, new(int)); len(lab.blocks(id)) != 1 {
+		t.Fatalf("judged again, blocked %+v", lab.blocks(id))
+	}
+
+	_ = os.Remove(filepath.Join(lab.outDir, "release-"+id))
+	if _, err := threads.Reply(lab.repo, th.ID, "alex", "Staging.", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs again for the answer", func() bool { return lab.run(id).Answered == th.ID })
+	if b := lab.blocks(id); len(b) != 1 || b[0].Reason != "the API key" || b[0].Until != "" {
+		t.Errorf("the operator's interval was closed: %+v", b)
+	}
+	lab.release(id)
+	waitFor(t, "it ends again", func() bool { return !lab.run(id).live() })
+}
+
+// S-0498, ADR-0205: a run that ended any other way than asking on an open
+// question of its own blocks nothing: one that worked or failed, one that
+// asked on a conversation with another story's agent alone, one whose
+// question was answered before the end was judged, which is started again at
+// once, and one whose story is not in progress.
+func TestARunThatEndedWithoutAnOpenQuestionBlocksNothing(t *testing.T) {
+	lab := newAgentLab(t)
+	other := lab.inProgress("Other")
+	started := time.Now().UTC().Add(-time.Minute)
+	for _, c := range []struct {
+		name    string
+		outcome string
+		set     func(id string)
+	}{
+		{"it failed", OutcomeFailed, func(string) {}},
+		{"it worked", OutcomeWorked, func(id string) { lab.move(id, workitem.Review) }},
+		{"it asked on a conversation alone", OutcomeAsked, func(id string) {
+			if _, err := messages.Send(lab.repo, messages.SendOptions{From: id, To: other, Author: "builder-" + id, Text: "Which port do you bind?", Now: started.Add(10 * time.Second)}); err != nil {
+				t.Fatal(err)
+			}
+		}},
+		{"its question was answered before the end was judged", OutcomeAsked, func(id string) {
+			th, err := threads.New(lab.repo, threads.NewOptions{Title: "Which port?", On: id, Author: "builder-" + id, Text: "Eight or nine?", Now: started.Add(10 * time.Second)})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := threads.Reply(lab.repo, th.ID, "alex", "Nine.", time.Now()); err != nil {
+				t.Fatal(err)
+			}
+		}},
+		{"its story is in ready", OutcomeAsked, func(id string) {
+			st, _ := lab.repo.Get(id)
+			if _, err := lab.repo.Transition(st, workitem.Ready, "alex", "", lab.now); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := threads.New(lab.repo, threads.NewOptions{Title: "Which port?", On: id, Author: "builder-" + id, Text: "Eight or nine?", Now: started.Add(10 * time.Second)}); err != nil {
+				t.Fatal(err)
+			}
+		}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			id := lab.inProgress(c.name)
+			c.set(id)
+			run := AgentRun{Story: id, Agent: "builder-" + id, Started: started.Format(time.RFC3339), Ended: time.Now().UTC().Format(time.RFC3339)}
+			lab.l.endRun(&run, new(int))
+			if run.Outcome != c.outcome {
+				t.Fatalf("judged: %+v", run)
+			}
+			if b := lab.blocks(id); len(b) != 0 {
+				t.Errorf("blocked %+v", b)
+			}
+		})
+	}
+	if n := lab.logged("story blocked on its agent's question"); n != 0 {
+		t.Errorf("logged %d blocks", n)
+	}
+}
+
+// S-0498, ADR-0205: the interval flai serve opened on a story whose agent
+// ended asking is closed at the next look once the agent no longer waits on
+// its thread: its story sent back to ready, where a blocked story is never
+// started, or its agent started again otherwise than on the answer. An
+// interval an agent or the operator wrote is left alone.
+func TestAStoryNoLongerWaitingOnItsAgentsQuestionIsUnblocked(t *testing.T) {
+	ctx := context.Background()
+	for _, c := range []struct {
+		name   string
+		reason func(thread string) string
+		set    func(lab *agentLab, id string)
+		open   bool
+	}{
+		{"sent back to ready", awaitingOperator, func(lab *agentLab, id string) {
+			st, _ := lab.repo.Get(id)
+			if _, err := lab.repo.Transition(st, workitem.Ready, "alex", "not yet", lab.now); err != nil {
+				lab.t.Fatal(err)
+			}
+		}, false},
+		{"its last run did not ask", awaitingOperator, func(lab *agentLab, id string) {
+			lab.l.dir.updateAgent(lab.root, func(s *AgentState) { s.Stories[id].Outcome, s.Stories[id].Thread = OutcomeFailed, "" })
+		}, false},
+		{"still waiting in progress", awaitingOperator, func(*agentLab, string) {}, true},
+		{"blocked by the operator and sent back", func(string) string { return "the API key" }, func(lab *agentLab, id string) {
+			st, _ := lab.repo.Get(id)
+			if _, err := lab.repo.Transition(st, workitem.Ready, "alex", "not yet", lab.now); err != nil {
+				lab.t.Fatal(err)
+			}
+		}, true},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			lab := newAgentLab(t)
+			lab.cfg.Enabled = false // nothing is started: the look only releases
+			id := lab.putEnded("Asked", AgentRun{Outcome: OutcomeAsked})
+			th := lab.asksOn(id, time.Now().Add(-time.Minute))
+			st, _ := lab.repo.Get(id)
+			if err := workitem.BlockItem(st, c.reason(th.ID), time.Now()); err != nil {
+				t.Fatal(err)
+			}
+			if err := lab.repo.Save(st); err != nil {
+				t.Fatal(err)
+			}
+			c.set(lab, id)
+			lab.l.look(ctx, false)
+			if b := lab.blocks(id); len(b) != 1 || (b[0].Until == "") != c.open {
+				t.Errorf("blocked %+v, want open %v", b, c.open)
+			}
+		})
+	}
+}
