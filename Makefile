@@ -39,7 +39,7 @@ flai-snapshot: ## GoReleaser snapshot build into flai/dist
 template-test: ## Render ./template and check the result
 	scripts/template-test.sh
 
-install-tools: ## Install golangci-lint v2, GoReleaser, and pnpm into the repo
+install-tools: ## Install golangci-lint v2, GoReleaser, ShellCheck, and pnpm into the repo
 	scripts/install-tools.sh
 
 flaiover-install: ## pnpm install for flaiover

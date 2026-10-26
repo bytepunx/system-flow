@@ -1,6 +1,6 @@
 ---
 title: Technology index
-updated: 2026-10-21
+updated: 2026-10-26
 status: active
 ---
 
@@ -30,6 +30,7 @@ One file per technology. Each records the version in use, where it is used, why 
 | Docker | 29 (host), image on node:24-alpine | flaiover, flai | [docker.md](docker.md) |
 | Git | 2.47 (host), 2.54 (image); 2.38 or newer for the trial merge at sync, 2.48 or newer only for the opt-in relative worktree links | flai, flaiover image | [git.md](git.md) |
 | GitHub Actions, GHCR | n/a | monorepo | [ci.md](ci.md) |
+| ShellCheck | v0.10.0 (pinned in scripts/install-tools.sh) | monorepo scripts | [shellcheck.md](shellcheck.md) |
 | markdownlint-cli2 | 0.20.0 locally via npx (`scripts/lint-md.sh`), action v24 in CI | monorepo, template | [ci.md](ci.md) |
 | log/slog, pino, OpenTelemetry, @prometheus-io/client | slog; pino 10.3, otel sdk-node 0.222, client 0.16 | flai, flaiover | [observability.md](observability.md) |
 
