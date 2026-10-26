@@ -148,25 +148,35 @@ func printSummary(a *app, rep *metrics.Report, pullRequest bool) {
 }
 
 // printDigest prints, for each week of the window, the threads opened to
-// the operator, the stories completed, the threads per story, and the
-// repeats, then the digest's entries by status (S-0434, ADR-0200). A week
-// with no completed story has no rate, printed as an en dash. It prints
-// nothing when the digest cannot be read.
+// the operator, the stories completed, the threads per story, the repeats,
+// and the curator's runs, then the digest's entries by status and the
+// curator's runs over its whole log (S-0434, ADR-0200, ADR-0204). A week
+// with no completed story has no rate, and a week no curator run has reached
+// no repeats, each printed as an en dash. It prints nothing when the digest
+// cannot be read.
 func printDigest(a *app, d *metrics.Digest) {
 	if d == nil {
 		return
 	}
 	fmt.Fprintln(a.out, "\ndigest:")
 	for _, w := range d.Weeks {
-		rate := "–"
+		rate, again := "–", "–"
 		if w.PerStory != nil {
 			rate = fmt.Sprintf("%.2f", *w.PerStory)
 		}
-		fmt.Fprintf(a.out, "  %s  %s  threads %d · stories %d · %s per story · asked again %d\n",
-			w.Week, w.Start, w.ThreadsToOperator, w.StoriesCompleted, rate, w.AskedAgain)
+		if w.AskedAgain != nil {
+			again = fmt.Sprint(*w.AskedAgain)
+		}
+		fmt.Fprintf(a.out, "  %s  %s  threads %d · stories %d · %s per story · asked again %s · curator runs %d\n",
+			w.Week, w.Start, w.ThreadsToOperator, w.StoriesCompleted, rate, again, w.CuratorRuns)
 	}
 	e := d.Entries
 	fmt.Fprintf(a.out, "  entries  active %d · compacted %d · absorbed %d\n", e.Active, e.Compacted, e.Absorbed)
+	last := "never run"
+	if d.Curator.LastRun != "" {
+		last = "last " + d.Curator.LastRun
+	}
+	fmt.Fprintf(a.out, "  curator  runs %d · %s\n", d.Curator.Runs, last)
 }
 
 // printQueueStats prints, over the window, the stories the merge queue

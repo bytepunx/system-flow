@@ -345,7 +345,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	rep.Turns = turns(all, start, opt.Now)
 	rep.Coordination = coordination(all, opt.Conversations, opt.Conflicts, !opt.ConflictsUnreadable, start, opt.Now)
 	if !opt.DigestUnreadable {
-		rep.Digest = digestSection(all, opt.Threads, opt.Entries, opt.Owner, start, opt.Now)
+		rep.Digest = digestSection(all, opt.Threads, opt.Entries, opt.Activities, opt.Owner, start, opt.Now)
 	}
 	// Empty lists serialise as [] rather than null, so consumers can iterate
 	// without guarding every field (S-0045).

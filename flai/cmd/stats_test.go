@@ -153,10 +153,12 @@ func digestEntry(id, status, date string, askedAgain ...string) string {
 }
 
 // S-0434: flai stats prints the digest's section last, a line for each week
-// of the window and one for the entries, and --json carries it under
-// digest, per_story absent in a week with no completed story; with no
-// digest folder the section is still there, with no repeats and no
-// entries; and a digest that cannot be read is warned of and leaves it out.
+// of the window, one for the entries, and one for the curator, and --json
+// carries it under digest, per_story absent in a week with no completed
+// story and asked_again in a week no curator run has reached (ADR-0204,
+// I-0207); with no digest folder the section is still there, with no
+// repeats and no entries; and a digest that cannot be read is warned of and
+// leaves it out.
 func TestStatsReportsTheDigest(t *testing.T) {
 	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
 	t.Setenv("LOG_FORMAT", "json")
@@ -205,14 +207,32 @@ func TestStatsReportsTheDigest(t *testing.T) {
 	open("orchestrator", time.Date(2026, 9, 29, 10, 0, 0, 0, time.UTC))
 	at := time.Date(2026, 10, 3, 20, 0, 0, 0, time.UTC)
 	// the 14 days to the 3rd of October span ISO weeks 38 to 40
-	week38 := "  2026-W38  2026-09-14  threads 0 · stories 0 · – per story · asked again 0\n"
-	week40 := "  2026-W40  2026-09-28  threads 1 · stories 0 · – per story · asked again 0\n"
 
-	// no digest folder: the section, with no repeats and no entries
+	// no digest folder and no curator run (I-0207): the section, with no
+	// entries and no repeat count in any week, not 0
 	out, errOut, code := runInAt(t, root, at, "stats", "--since", "14d")
-	wantText := "\ndigest:\n" + week38 +
-		"  2026-W39  2026-09-21  threads 3 · stories 2 · 1.50 per story · asked again 0\n" + week40 +
-		"  entries  active 0 · compacted 0 · absorbed 0\n"
+	wantText := "\ndigest:\n" +
+		"  2026-W38  2026-09-14  threads 0 · stories 0 · – per story · asked again – · curator runs 0\n" +
+		"  2026-W39  2026-09-21  threads 3 · stories 2 · 1.50 per story · asked again – · curator runs 0\n" +
+		"  2026-W40  2026-09-28  threads 1 · stories 0 · – per story · asked again – · curator runs 0\n" +
+		"  entries  active 0 · compacted 0 · absorbed 0\n" +
+		"  curator  runs 0 · never run\n"
+	if code != 0 || !strings.HasSuffix(out, wantText) {
+		t.Errorf("no digest folder and no curator run: %d %s, want it to end in %q, got\n%s", code, errOut, wantText, out)
+	}
+
+	// a curator run in week 39 reaches weeks 38 and 39, not 40: with no
+	// digest folder, those read no repeats
+	if _, err := repo.AppendActivity(workitem.ActivityCurator, workitem.ActivityEntry{At: time.Date(2026, 9, 25, 5, 0, 0, 0, time.UTC), Summary: "Curated the digest"}); err != nil {
+		t.Fatal(err)
+	}
+	week38 := "  2026-W38  2026-09-14  threads 0 · stories 0 · – per story · asked again 0 · curator runs 0\n"
+	week40 := "  2026-W40  2026-09-28  threads 1 · stories 0 · – per story · asked again – · curator runs 0\n"
+	curator := "  curator  runs 1 · last 2026-09-25T05:00:00Z\n"
+	out, errOut, code = runInAt(t, root, at, "stats", "--since", "14d")
+	wantText = "\ndigest:\n" + week38 +
+		"  2026-W39  2026-09-21  threads 3 · stories 2 · 1.50 per story · asked again 0 · curator runs 1\n" + week40 +
+		"  entries  active 0 · compacted 0 · absorbed 0\n" + curator
 	if code != 0 || !strings.HasSuffix(out, wantText) {
 		t.Errorf("no digest folder: %d %s, want it to end in %q, got\n%s", code, errOut, wantText, out)
 	}
@@ -236,8 +256,8 @@ func TestStatsReportsTheDigest(t *testing.T) {
 	}
 	out, errOut, code = runInAt(t, root, at, "stats", "--since", "14d")
 	wantText = "\ndigest:\n" + week38 +
-		"  2026-W39  2026-09-21  threads 3 · stories 2 · 1.50 per story · asked again 2\n" + week40 +
-		"  entries  active 1 · compacted 1 · absorbed 1\n"
+		"  2026-W39  2026-09-21  threads 3 · stories 2 · 1.50 per story · asked again 2 · curator runs 1\n" + week40 +
+		"  entries  active 1 · compacted 1 · absorbed 1\n" + curator
 	if code != 0 || !strings.HasSuffix(out, wantText) {
 		t.Errorf("with repeats: %d %s, want it to end in %q, got\n%s", code, errOut, wantText, out)
 	}
@@ -250,6 +270,7 @@ func TestStatsReportsTheDigest(t *testing.T) {
 		Digest *struct {
 			Weeks   []map[string]any      `json:"weeks"`
 			Entries metrics.DigestEntries `json:"entries"`
+			Curator map[string]any        `json:"curator"`
 		} `json:"digest"`
 	}
 	if err := json.Unmarshal([]byte(out), &rep); err != nil {
@@ -259,9 +280,9 @@ func TestStatsReportsTheDigest(t *testing.T) {
 		t.Fatalf("digest: %+v", rep.Digest)
 	}
 	want := []map[string]any{
-		{"week": "2026-W38", "start": "2026-09-14", "threads_to_operator": 0.0, "stories_completed": 0.0, "asked_again": 0.0},
-		{"week": "2026-W39", "start": "2026-09-21", "threads_to_operator": 3.0, "stories_completed": 2.0, "per_story": 1.5, "asked_again": 2.0},
-		{"week": "2026-W40", "start": "2026-09-28", "threads_to_operator": 1.0, "stories_completed": 0.0, "asked_again": 0.0},
+		{"week": "2026-W38", "start": "2026-09-14", "threads_to_operator": 0.0, "stories_completed": 0.0, "asked_again": 0.0, "curator_runs": 0.0},
+		{"week": "2026-W39", "start": "2026-09-21", "threads_to_operator": 3.0, "stories_completed": 2.0, "per_story": 1.5, "asked_again": 2.0, "curator_runs": 1.0},
+		{"week": "2026-W40", "start": "2026-09-28", "threads_to_operator": 1.0, "stories_completed": 0.0, "curator_runs": 0.0},
 	}
 	for i, w := range want {
 		if got := rep.Digest.Weeks[i]; !reflect.DeepEqual(got, w) {
@@ -270,6 +291,9 @@ func TestStatsReportsTheDigest(t *testing.T) {
 	}
 	if want := (metrics.DigestEntries{Active: 1, Compacted: 1, Absorbed: 1}); rep.Digest.Entries != want {
 		t.Errorf("digest.entries = %+v, want %+v", rep.Digest.Entries, want)
+	}
+	if want := (map[string]any{"runs": 1.0, "last_run": "2026-09-25T05:00:00Z"}); !reflect.DeepEqual(rep.Digest.Curator, want) {
+		t.Errorf("digest.curator = %v, want %v", rep.Digest.Curator, want)
 	}
 	// the dashboard's read answers the same
 	if _, rerr := sameAnswer(t, root, hostapi.Host{}, "stats.get", `{}`, "stats"); rerr != nil {
@@ -289,8 +313,9 @@ func TestStatsReportsTheDigest(t *testing.T) {
 	}
 }
 
-// S-0434: printDigest prints nothing without a digest, and gives the rate
-// to two decimals.
+// S-0434: printDigest prints nothing without a digest, gives the rate to two
+// decimals, prints an en dash for asked again in a week no curator run has
+// reached, and the curator's runs and last run (ADR-0204).
 func TestPrintDigestRoundsTheRateAndSkipsNoDigest(t *testing.T) {
 	var out bytes.Buffer
 	printDigest(&app{out: &out}, nil)
@@ -299,18 +324,28 @@ func TestPrintDigestRoundsTheRateAndSkipsNoDigest(t *testing.T) {
 	}
 	r := 7.0 / 4
 	third := 1.0 / 3
+	two, none := 2, 0
 	printDigest(&app{out: &out}, &metrics.Digest{
 		Weeks: []metrics.DigestWeek{
-			{Week: "2026-W43", Start: "2026-10-19", ThreadsToOperator: 7, StoriesCompleted: 4, PerStory: &r, AskedAgain: 2},
+			{Week: "2026-W42", Start: "2026-10-12", ThreadsToOperator: 2, AskedAgain: &none},
+			{Week: "2026-W43", Start: "2026-10-19", ThreadsToOperator: 7, StoriesCompleted: 4, PerStory: &r, AskedAgain: &two, CuratorRuns: 1},
 			{Week: "2026-W44", Start: "2026-10-26", ThreadsToOperator: 1, StoriesCompleted: 3, PerStory: &third},
 		},
 		Entries: metrics.DigestEntries{Active: 120, Compacted: 3, Absorbed: 5},
+		Curator: metrics.DigestCurator{Runs: 3, LastRun: "2026-10-26T05:00:00Z"},
 	})
 	want := "\ndigest:\n" +
-		"  2026-W43  2026-10-19  threads 7 · stories 4 · 1.75 per story · asked again 2\n" +
-		"  2026-W44  2026-10-26  threads 1 · stories 3 · 0.33 per story · asked again 0\n" +
-		"  entries  active 120 · compacted 3 · absorbed 5\n"
+		"  2026-W42  2026-10-12  threads 2 · stories 0 · – per story · asked again 0 · curator runs 0\n" +
+		"  2026-W43  2026-10-19  threads 7 · stories 4 · 1.75 per story · asked again 2 · curator runs 1\n" +
+		"  2026-W44  2026-10-26  threads 1 · stories 3 · 0.33 per story · asked again – · curator runs 0\n" +
+		"  entries  active 120 · compacted 3 · absorbed 5\n" +
+		"  curator  runs 3 · last 2026-10-26T05:00:00Z\n"
 	if out.String() != want {
 		t.Errorf("printDigest:\n%s\nwant\n%s", out.String(), want)
+	}
+	out.Reset()
+	printDigest(&app{out: &out}, &metrics.Digest{Weeks: []metrics.DigestWeek{}})
+	if want := "\ndigest:\n  entries  active 0 · compacted 0 · absorbed 0\n  curator  runs 0 · never run\n"; out.String() != want {
+		t.Errorf("printDigest with no curator run:\n%s\nwant\n%s", out.String(), want)
 	}
 }
