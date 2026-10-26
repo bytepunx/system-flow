@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1531.5451
-accrued_seconds: 1336123
-tasks_completed: 1050
-last_run: 2026-10-25T21:12:41Z
+accrued_cost: 1537.9669
+accrued_seconds: 1337628
+tasks_completed: 1057
+last_run: 2026-10-25T21:37:46Z
 ---
 
 # Orchestrator activity
@@ -7361,6 +7361,55 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0496
 - Seconds: 396
 - Cost: 1.5129 USD, estimated
+
+### 2026-10-25T21:19:43Z
+
+- Summary: S-0495 landed through the merge queue, which I had enqueued. I published under the judgement policy. release_evaluate listed S-0434 and S-0495 pending (2 stories, 142.98 USD/week, nothing in held_by_epic). Both are complete and independent, and E-0025 is complete. Released flai 1.70.0 to 1.71.0 (minor, from S-0434; S-0495 is a patch), flaiover 0.55.2 to 0.55.3, and template 1.0.116 to 1.0.117. The tags are flai/v1.71.0 and flaiover/v0.55.3, and template v1.0.117 was pushed. Resolved my TH-0641, since push is back on. S-0496 (research) stays enqueued and will release nothing.
+- Items: S-0495, S-0434
+- Seconds: 422
+- Cost: 0.3072 USD, estimated
+
+### 2026-10-25T21:25:33Z
+
+- Summary: The operator moved S-0497 (Custom Dockerized Agents) to ready. Under order_ready, I applied flai order --by throughput. S-0497 is alone in ready, and it has no forecast duration.
+- Items: S-0497
+- Seconds: 350
+- Cost: 3.5440 USD, estimated
+
+### 2026-10-25T21:26:30Z
+
+- Summary: Recommended an answer on TH-0645, citing design/conventions/strategic-agents.md § Asking the operator
+- Items: S-0497
+- Seconds: 57
+- Cost: 0.2840 USD, estimated
+
+### 2026-10-25T21:26:35Z
+
+- Summary: On planner-S-0497's TH-0645, I recommended penalty_per_week 50 USD, the planner's figure and S-0496's input, and escalated it to the operator. S-0497 is in progress, not in the backlog, so under plan_backlog_stories its cost of delay inputs are not mine to set. The thread stays open.
+- Items: S-0497
+- Seconds: 5
+- Cost: 0.0000 USD
+
+### 2026-10-25T21:28:37Z
+
+- Summary: Answered TH-0646, citing design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md
+- Items: S-0497
+- Seconds: 122
+- Cost: 1.1632 USD, estimated
+
+### 2026-10-25T21:28:44Z
+
+- Summary: Under plan_backlog_stories, approved and resolved planner-S-0497's TH-0646. The plan is two tasks in two layers, written by the story's agent: T-2118's three-way analysis in agent-adapters.md, then T-2119's proposed ADR. The design/adrs folder touch is kept only for the ADR file. The forecast is 25m, lowered from flai's 41m on S-0496's observed time. The value waits on the operator's input on TH-0645.
+- Items: S-0497
+- Seconds: 7
+- Cost: 0.0000 USD
+
+### 2026-10-25T21:37:46Z
+
+- Summary: S-0496 (research) landed through the merge queue, which I had enqueued. release_evaluate lists nothing pending (0 stories, judgement), so there is nothing to publish. S-0497 reached review at 20c494b9. flai verify passed, and the verifier matched both criteria: ADR-0203 is left proposed, the three-way analysis is in agent-adapters.md, all within touches. queue_add refused it with thread_open, because TH-0645, the planner's cost of delay question, is open and its input is the operator's on a story past the backlog. I opened TH-0647 recommending penalty_per_week 50 and left S-0497 in review.
+- Items: S-0496, S-0497
+- Seconds: 542
+- Cost: 1.1234 USD, estimated
 
 ## Refusals
 

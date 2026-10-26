@@ -4,10 +4,10 @@ title: "release_publish refused: the push host action is off, so S-0434 is accep
 anchor:
   path: wip/archive/kanban/stories/S-0434-flai-stats-reports-per-week-the-threads-opened-to-the-operator-per-completed-story-and-how-many-asked-what-a-digest-entry-already-answered-and-the-dashboard-charts-it.md
   item: S-0434
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-10-24T22:56:44Z
-updated: 2026-10-24T23:51:12Z
+updated: 2026-10-25T21:19:40Z
 ---
 
 # TH-0641 release_publish refused: the push host action is off, so S-0434 is accepted but not released
@@ -43,3 +43,6 @@ the host action "push" is not enabled for this project. On the host, in the proj
 ```
 
 I will not try again until you answer here or another story is accepted.
+
+### 2026-10-25T21:19:40Z orchestrator
+Resolved: The push host action is on again. S-0434 was released with S-0495 as flai 1.71.0, flaiover 0.55.3, and template 1.0.117.
