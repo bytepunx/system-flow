@@ -1,8 +1,8 @@
 ---
 id: ADR-0203
 title: "flai may run a story's agent in a container from a baseline image it builds, with a harness of its own as the entrypoint, so that flai chooses the mounts, the tools, the guard, the permission prompt, and the pricing of each model call across hosted and local models"
-status: proposed
-date: 2026-10-25
+status: accepted
+date: 2026-10-26
 supersedes: []
 superseded_by: []
 refines: [ADR-0130, ADR-0131, ADR-0132]
