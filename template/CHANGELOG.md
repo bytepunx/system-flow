@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.120 - 2026-10-28
+
+- S-0504 The analyzer reads the curator's runs before the digest's repeats (patch, ADR-0204): in `strategic-agents.md`, the section "As the analyzer" says to read `digest.curator` of `flai stats --json` before `asked_again`. A week without `asked_again`, or a curator with `runs` 0, is unmeasured, not zero repeats, and is never reported as a finding that the digest works. It needs a flai that has it, the release that carries S-0504: an older flai sends `asked_again` 0 in every week and no `curator`, so the analyzer cannot tell an unmeasured week from one without repeats.
+
 ## 1.0.119 - 2026-10-28
 
 - S-0498 A pending recommendation waits a day or more for the operator's confirmation while its story idles in progress (patch).
