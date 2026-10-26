@@ -6,12 +6,32 @@ title: flai runs agents in Docker containers
 status: ready
 owner: alex
 created: 2026-10-26T04:31:29Z
-updated: 2026-10-26T04:46:53Z
+updated: 2026-10-26T12:24:54Z
 transitions:
   - to: ready
     at: 2026-10-26T04:31:36Z
     by: alex
 tags: []
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 23936
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 54
+          output: 875
+          cache_read: 16614240
+          cache_write: 34058
+          cost: 3.6498
+cost_of_delay:
+  inputs:
+    penalty_per_week: 150
+    by: alex
+    at: 2026-10-26T12:24:54Z
 ---
 # E-0029 flai runs agents in Docker containers
 
