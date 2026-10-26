@@ -88,6 +88,11 @@ tests:
     paths: ["flaiover/src/**", "flaiover/*.ts", "flaiover/*.js"]
     format: vitest-json
     all_command: ["../scripts/flaiover-unit.sh", run, "--reporter=json"]
+  - name: shellcheck
+    command: [scripts/shellcheck.sh, "{files}"]
+    paths: ["scripts/**/*.sh"]
+    format: plain
+    all_command: [scripts/shellcheck.sh]
   - name: markdown
     command: [scripts/lint-md.sh, "{files}"]
     paths: ["**/*.md", "!**/node_modules/**", "!**/testdata/**", "!bin/**", "!flaiover/build/**", "!**/.svelte-kit/**", "!.flai-cache/**"]
@@ -96,26 +101,26 @@ tests:
     fix_command: [scripts/lint-md.sh, "--fix", "{files}"]
   - name: template
     command: [scripts/template-test.sh]
-    paths: ["template/**"]
+    paths: ["template/**", "scripts/template-test.sh"]
     format: plain
     all_only: true
   - name: flaiover
     command: [scripts/flaiover-test.sh]
-    paths: ["flaiover/**", "!flaiover/node_modules/**", "!flaiover/build/**", "!flaiover/.svelte-kit/**"]
+    paths: ["flaiover/**", "!flaiover/node_modules/**", "!flaiover/build/**", "!flaiover/.svelte-kit/**", "scripts/flaiover-*.sh", "scripts/env.sh"]
     format: plain
     all_only: true
     covers: [flaiover-lint, vitest]
   - name: integration
     command: ["../scripts/integration.sh", "-json"]
     dir: flai
-    paths: ["flai/**"]
+    paths: ["flai/**", "scripts/integration.sh"]
     format: go-test-json
     all_only: true
     covers: [go-test]
     queue: true
   - name: smoke
     command: [scripts/smoke.sh]
-    paths: ["flai/**"]
+    paths: ["flai/**", "scripts/**/*.sh"]
     format: plain
     all_only: true
     queue: true
