@@ -3,10 +3,10 @@ id: S-0501
 type: story
 nature: remediation
 title: search.test.ts 'finds a body phrase across wip and design' times out at 5 s on the monorepo while other stories' close-outs run
-status: review
+status: done
 owner: alex
 created: 2026-10-26T04:01:35Z
-updated: 2026-10-26T04:39:32Z
+updated: 2026-10-26T16:03:01Z
 transitions:
   - to: ready
     at: 2026-10-26T04:32:27Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-26T04:39:32Z
     by: agent-S-0501
+  - to: done
+    at: 2026-10-26T16:03:01Z
+    by: alex
 tags: [dashboard]
 topics: [dashboard, testing]
 touches: [flaiover/src/lib/server/search.test.ts, design/issues/I-0185-search-test-ts-finds-a-body-phrase-across-wip-and-design-times-out-at-5-s-on-the-monorepo-while-other-stories-close-outs-run.md, design/issues/summary.md, design/issues/I-0208-search-test-ts-lists-adrs-with-the-supersession-chain-fails-on-main-since-adr-0202-s-status-became-rejected-a-status-outside-the-four-the-test-and-the-adr-template-name.md]

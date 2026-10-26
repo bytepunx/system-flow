@@ -4,10 +4,10 @@ title: "The one-shot search index build costs about 2 s of CPU on the monorepo: 
 anchor:
   path: wip/kanban/stories/S-0501-search-test-ts-finds-a-body-phrase-across-wip-and-design-times-out-at-5-s-on-the-monorepo-while-other-stories-close-outs-run.md
   item: S-0501
-status: open
-participants: [agent-S-0501, orchestrator]
+status: resolved
+participants: [agent-S-0501, orchestrator, alex]
 created: 2026-10-26T04:35:36Z
-updated: 2026-10-26T04:35:44Z
+updated: 2026-10-26T16:03:01Z
 ---
 
 # TH-0654 The one-shot search index build costs about 2 s of CPU on the monorepo: make it cheaper in a story of its own?
@@ -35,3 +35,6 @@ Either answer leaves S-0501 as it is. If you want the story, I will record an is
 - **If you want it later:** say so here, and S-0501's agent records an issue so you can choose a story from it at acceptance.
 
 Source: design/conventions/work-management.md § Rules
+
+### 2026-10-26T16:03:01Z alex
+Resolved: S-0501 was accepted

@@ -1,13 +1,12 @@
 ---
 title: Active streams
-updated: 2026-10-26T16:01:44Z
+updated: 2026-10-26T16:03:01Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0501](S-0501.md) | search.test.ts 'finds a body phrase across wip and design' times out at 5 s on the monorepo while other stories' close-outs run | review | agent-S-0501 | 2026-10-26T04:39:37Z |
 | [S-0503](S-0503.md) | No test tier selects scripts/**, so a story that changes only shell scripts, and the script tests it adds, pass flai verify and the merge queue without any of them running | in-progress | agent-S-0503 | 2026-10-26T05:44:29Z |
 | [S-0504](S-0504.md) | The curator has never run on system-flow, so no thread is in any entry's asked_again and the digest's repeat measure reads 0 whatever was asked | in-progress | agent-S-0504 | 2026-10-26T05:14:01Z |
 
