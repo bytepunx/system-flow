@@ -2,12 +2,12 @@
 id: I-0151
 title: A pending recommendation waits a day or more for the operator's confirmation while its story idles in progress
 class: efficiency
-status: open
+status: closed
 count: 1
 cost: 29h
 first_reported: 2026-10-15T22:48:37Z
 last_reported: 2026-10-15T22:48:37Z
-updated: 2026-10-26T04:01:18Z
+updated: 2026-10-26T05:14:22Z
 usage:
   strategic:
     - kind: analyzer
@@ -49,3 +49,4 @@ flai stats W42 threads.total_seconds 1,003,576, threads.confirmed count 4 total_
 Found by the analysis in [2026-10-15-bottlenecks.md](../analysis/2026-10-15-bottlenecks.md).
 
 Story S-0498 remediates this issue, created from it at 2026-10-26T04:01:18Z.
+Closed 2026-10-26T05:14:22Z: Fixed by S-0498 (ADR-0205). flai serve now reminds the operator of each thread that awaits them, a pending recommendation or a question, once its last entry is older than threads.remind_after, and again every threads.remind_every. The reminder goes through a channel kept on the host (flai serve notify set --url/--command), and nothing is written on the thread, so no wait ends. This project sets 4h and 24h. flai serve also blocks a story whose agent ended asking on a thread, with the reason 'awaiting the operator on TH-nnnn', until the answer starts the agent again, so the idle shows on the board and counts as blocked time. TestRemindersReachTheOperatorOfARecommendationPendingADay-style tests in flai/internal/serve/remind_test.go and TestAStoryWhoseAgentEndedAskingIsBlockedUntilTheAnswerStartsItAgain in agents_test.go reproduce the two halves. S-0502 takes the design-choice waits with orchestration.permissions.confirm_after.
