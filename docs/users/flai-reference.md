@@ -3315,6 +3315,7 @@ Subcommands:
 - [forge](#flai-serve-forge): Set the environment variable a forge's token is read from, such as GITHUB\_TOKEN for github
 - [import](#flai-serve-import): The folders whose git repositories the board offers to import into system-flow
 - [journal](#flai-serve-journal): Every host action a dashboard asked for: when, what, which project, for whom, and what became of it
+- [notify](#flai-serve-notify): The channel flai serve reminds you through of a thread that awaits you, on this host
 - [orchestrate](#flai-serve-orchestrate): Stop the project's orchestrator and hold it stopped, or start it again
 - [project](#flai-serve-project): The projects flai serve serves on the dashboard: add, remove, and list them, and why one is not showing
 - [start](#flai-serve-start): Start flai serve under flai host, starting the host if it is not running
@@ -3861,6 +3862,64 @@ Flags:
 | Flag | Meaning |
 |------|---------|
 | `-n`, `--last` int | only the last n entries |
+
+#### flai serve notify
+
+The channel flai serve reminds you through of a thread that awaits you, on this host.
+
+```text
+flai serve notify
+```
+
+flai serve reminds you of each thread that has awaited you longer than a project's threads.remind\_after, and again every threads.remind\_every, through the channel you set here, for every project it serves on this host. It writes nothing on the thread. With no channel set it only logs the reminder.
+
+--url is a webhook, http or https, that each reminder is POSTed to as JSON: one attempt, a five second timeout, an answer other than 2xx a failure. --command is run through the host's shell, sh -c, with the reminder's JSON on its standard input and a 30 second timeout. Set either or both; set changes only what you give it. The JSON holds the project, the thread, its title and item, how long it has awaited you and since when, a pending recommendation's author, first line, and source, and the dashboard's link to it, plus the entry the dashboard posts to dashboard.notify\_url, so one receiver can take both. No token and no file content is sent.
+
+Examples:
+
+```bash
+flai serve notify set --url https://ntfy.sh/<topic>
+flai serve notify set --command 'curl -s -H "Title: flai" -d @- https://ntfy.sh/<topic>'
+flai serve notify show --json
+flai serve notify clear
+```
+
+Subcommands:
+
+- [clear](#flai-serve-notify-clear): Remove the channel, so that flai serve only logs a reminder
+- [set](#flai-serve-notify-set): Set the webhook, the shell command, or both, that reminders are sent to
+- [show](#flai-serve-notify-show): Print the webhook and the shell command reminders are sent to
+
+##### flai serve notify clear
+
+Remove the channel, so that flai serve only logs a reminder.
+
+```text
+flai serve notify clear
+```
+
+##### flai serve notify set
+
+Set the webhook, the shell command, or both, that reminders are sent to.
+
+```text
+flai serve notify set [--url <url>] [--command <command>] [flags]
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--command` string | a shell command run with each reminder's JSON on its standard input |
+| `--url` string | an http or https webhook each reminder is POSTed to as JSON |
+
+##### flai serve notify show
+
+Print the webhook and the shell command reminders are sent to.
+
+```text
+flai serve notify show
+```
 
 #### flai serve orchestrate
 

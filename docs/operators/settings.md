@@ -68,6 +68,8 @@ Keys only the `flai serve` commands on the host change, or the dashboard's [Conf
 | `components.idle` | `30m` | `flai serve components idle` | How long a component dev server goes without a `components.status` before `flai serve` stops it, a Go duration such as `45m`, for every project on this host and applied without a restart ([The components host action](index.md#the-components-host-action-s-0438), [ADR-0163](../../design/adrs/0163-flai-runs-a-sub-project-s-own-vite-dev-server-on-127-0-0-1-behind-the.md)) |
 | `components.max_servers` | `3` | `flai serve components max-servers` | How many component dev servers `flai serve` runs or starts at once per project, the main checkout's and every story worktree's together; a start beyond it is refused, naming the ones running. For every project on this host, applied without a restart ([The components host action](index.md#the-components-host-action-s-0438), [ADR-0163](../../design/adrs/0163-flai-runs-a-sub-project-s-own-vite-dev-server-on-127-0-0-1-behind-the.md)) |
 | `import_roots` | none | `flai serve import add`, `flai serve import remove` | Folders whose git repositories the board offers to import, and whose repositories with a `system-flow.yaml` `flai serve` serves ([Importing repositories](index.md#importing-repositories-from-the-board-s-0098)) |
+| `notify.url` | none: a reminder is only logged | `flai serve notify set --url`, `flai serve notify clear` | An `http` or `https` webhook `flai serve` POSTs each reminder of a thread that has awaited you past a project's `threads.remind_after` to, as JSON: one attempt, a five second timeout, an answer other than 2xx a failure. For every project on this host. It may carry a secret, so `flai serve` logs its host alone ([flai serve](../users/flai.md#flai-serve-flai-on-the-host-for-the-dashboards), [ADR-0205](../../design/adrs/0205-flai-serve-reminds-the-operator-of-a-thread-that-awaits-them-past-threads.md)) |
+| `notify.command` | none | `flai serve notify set --command`, `flai serve notify clear` | A command `flai serve` runs through the host's shell, `sh -c`, with each reminder's JSON on its standard input and a 30 second timeout, such as `curl -s -d @- https://ntfy.sh/<topic>` for a push to a phone |
 
 Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, and logs, not settings; the [backup runbook](runbooks/backup.md) lists them. One of them, `serve/claude-checks.json`, records each Claude Code version flai serve checked against `permission_prompt`, keyed by version, with `checked`, `program`, `outcome` (`passed` or `failed`), and `error`; flai never checks a version with an entry again, so remove the entry to have it checked again ([Writes to protected paths](../users/flai.md#writes-to-protected-paths)).
 
@@ -353,6 +355,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--clear-tags` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--clear-topics` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--clear-touches` | [flai edit](../users/flai-reference.md#flai-edit) |
+| `--command` | [flai serve notify set](../users/flai-reference.md#flai-serve-notify-set) |
 | `--commit` | [flai adr new](../users/flai-reference.md#flai-adr-new), [flai import](../users/flai-reference.md#flai-import), [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue close](../users/flai-reference.md#flai-issue-close), [flai issue new](../users/flai-reference.md#flai-issue-new) |
 | `--config` | every command ([global flags](../users/flai-reference.md#flai)), [flai agent set](../users/flai-reference.md#flai-agent-set) |
 | `--cost` | [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue new](../users/flai-reference.md#flai-issue-new) |
@@ -479,6 +482,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--type` | [flai stats](../users/flai-reference.md#flai-stats) |
 | `--unset` | [flai agent set](../users/flai-reference.md#flai-agent-set), [flai components config](../users/flai-reference.md#flai-components-config), [flai manifest set](../users/flai-reference.md#flai-manifest-set) |
 | `--unset-role` | [flai agent set](../users/flai-reference.md#flai-agent-set), [flai edit](../users/flai-reference.md#flai-edit) |
+| `--url` | [flai serve notify set](../users/flai-reference.md#flai-serve-notify-set) |
 | `--var` | [flai import](../users/flai-reference.md#flai-import), [flai new](../users/flai-reference.md#flai-new), [flai upgrade](../users/flai-reference.md#flai-upgrade) |
 | `-v`, `--verbose` | every command ([global flags](../users/flai-reference.md#flai)) |
 | `--verified` | [flai accept](../users/flai-reference.md#flai-accept), [flai move](../users/flai-reference.md#flai-move), [flai queue add](../users/flai-reference.md#flai-queue-add) |

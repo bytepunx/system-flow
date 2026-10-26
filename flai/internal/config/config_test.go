@@ -587,3 +587,76 @@ func TestChecksRoundTrip(t *testing.T) {
 		t.Error("flai config set refuses the key, at least while nothing is named yet")
 	}
 }
+
+// S-0498 (ADR-0205): the reminder channel is unset and unwritten by default,
+// set whole and copied, round-trips through the file, is refused when its URL
+// is not http or https or its command is only white space, both by WithNotify
+// and when the file is read, and stays out of Keys().
+func TestNotify(t *testing.T) {
+	c := Default()
+	data, err := json.Marshal(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "notify") {
+		t.Errorf("unset is not written: %s", data)
+	}
+	want := Notify{URL: "https://ntfy.example/flai?auth=secret", Command: `curl -s -d @- https://ntfy.sh/flai`}
+	set, err := c.WithNotify(want)
+	if err != nil {
+		t.Fatalf("WithNotify: %v", err)
+	}
+	if c.Notify != (Notify{}) {
+		t.Errorf("WithNotify leaves the receiver alone: %+v", c.Notify)
+	}
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := Save(path, set); err != nil {
+		t.Fatal(err)
+	}
+	back, _, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if back.Notify != want {
+		t.Errorf("round trip: %+v, want %+v", back.Notify, want)
+	}
+	if file, _ := os.ReadFile(path); !strings.Contains(string(file), `"notify": {`) || !strings.Contains(string(file), `"url": "https://ntfy.example/flai?auth=secret"`) {
+		t.Errorf("written as notify.url and notify.command: %s", file)
+	}
+	cleared := back.WithoutNotify()
+	if cleared.Notify != (Notify{}) || back.Notify != want {
+		t.Errorf("WithoutNotify clears a copy: %+v, %+v", cleared.Notify, back.Notify)
+	}
+	if err := Save(path, cleared); err != nil {
+		t.Fatal(err)
+	}
+	if file, _ := os.ReadFile(path); strings.Contains(string(file), "notify") {
+		t.Errorf("a cleared channel is not written: %s", file)
+	}
+	for _, bad := range []struct {
+		n    Notify
+		want string
+	}{
+		{Notify{URL: "ftp://x"}, "notify.url's scheme is ftp, and flai posts reminders over http or https alone"},
+		{Notify{URL: "ntfy.sh/flai"}, "notify.url names no scheme"},
+		{Notify{URL: "https:///flai"}, "notify.url names no host"},
+		{Notify{URL: "http://a b/%zz"}, "notify.url is not a URL"},
+		{Notify{Command: "  \n"}, "notify.command is empty"},
+	} {
+		if _, err := c.WithNotify(bad.n); err == nil || !strings.Contains(err.Error(), bad.want) {
+			t.Errorf("WithNotify(%+v) is refused, saying %q: %v", bad.n, bad.want, err)
+		}
+		raw, _ := json.Marshal(map[string]any{"notify": bad.n})
+		if _, err := Parse(raw); err == nil || !strings.Contains(err.Error(), bad.want) {
+			t.Errorf("Parse of %s is refused, saying %q: %v", raw, bad.want, err)
+		}
+	}
+	if _, err := c.WithNotify(Notify{URL: "ftp://user:secret@x"}); err == nil || strings.Contains(err.Error(), "secret") {
+		t.Errorf("a refused URL is not repeated, since it may hold a secret: %v", err)
+	}
+	for _, k := range Keys() {
+		if strings.HasPrefix(k, "notify") {
+			t.Error("flai config set cannot reach notify: only flai serve notify does")
+		}
+	}
+}

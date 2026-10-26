@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"net/url"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -68,6 +69,69 @@ type Config struct {
 	// testing, what is in it. Absolute paths; flai serve import manages it,
 	// so it is not among Keys.
 	ImportRoots []string `json:"import_roots,omitempty"`
+	// Notify is the channel flai serve reminds the operator through of a
+	// thread that has awaited them past the manifest's threads.remind_after
+	// (ADR-0205): a webhook, a shell command, or both. Unset, a reminder is
+	// only logged. flai serve notify manages it, on the host, so it is not
+	// among Keys.
+	Notify Notify `json:"notify,omitzero"`
+}
+
+// Notify is the host's reminder channel (ADR-0205). Either may be empty,
+// and both empty means no channel.
+type Notify struct {
+	// URL is a webhook, http or https, that each reminder is POSTed to as
+	// JSON. It may carry a secret in its path or query, so flai logs its host
+	// alone.
+	URL string `json:"url,omitempty"`
+	// Command is run through the host's shell with each reminder's JSON on
+	// its standard input.
+	Command string `json:"command,omitempty"`
+}
+
+// WithNotify returns the configuration with its reminder channel set to n,
+// refusing a URL that is not an absolute http or https URL and a command
+// that is only white space. A channel that sets nothing removes the channel.
+func (c Config) WithNotify(n Notify) (Config, error) {
+	if err := checkNotify(n); err != nil {
+		return c, err
+	}
+	c.Notify = n
+	return c, nil
+}
+
+// WithoutNotify returns the configuration with no reminder channel, so that
+// flai serve logs a reminder and sends it nowhere.
+func (c Config) WithoutNotify() Config {
+	c.Notify = Notify{}
+	return c
+}
+
+// checkNotify refuses a notify.url that is not an absolute http or https URL
+// with a host and a notify.command that is only white space, with every
+// problem.
+func checkNotify(n Notify) error {
+	var errs []string
+	if n.URL != "" {
+		u, err := url.Parse(n.URL)
+		switch {
+		case err != nil:
+			errs = append(errs, "notify.url is not a URL; write an http or https webhook, such as https://ntfy.sh/<topic>, with flai serve notify set --url <url>")
+		case u.Scheme == "":
+			errs = append(errs, "notify.url names no scheme; write an absolute http or https URL, such as https://ntfy.sh/<topic>, with flai serve notify set --url <url>")
+		case u.Scheme != "http" && u.Scheme != "https":
+			errs = append(errs, fmt.Sprintf("notify.url's scheme is %s, and flai posts reminders over http or https alone; write a URL such as https://ntfy.sh/<topic> with flai serve notify set --url <url>", u.Scheme))
+		case u.Host == "":
+			errs = append(errs, "notify.url names no host; write an absolute http or https URL, such as https://ntfy.sh/<topic>, with flai serve notify set --url <url>")
+		}
+	}
+	if n.Command != "" && strings.TrimSpace(n.Command) == "" {
+		errs = append(errs, "notify.command is empty; write a shell command that reads the reminder's JSON on its standard input with flai serve notify set --command <command>, or remove it with flai serve notify clear")
+	}
+	if len(errs) > 0 {
+		return errors.New(strings.Join(errs, "; "))
+	}
+	return nil
 }
 
 // AgentStart is the command flai serve starts an agent with.
@@ -593,8 +657,9 @@ func Load(path string) (cfg Config, created bool, err error) {
 // Parse decodes JSON into a Config, rejecting unknown keys, a negative
 // agent.auto_restarts, an agent.harnesses guard other than none, an
 // agent.providers entry that is not whole or sets a value flai refuses, a
-// forges entry checkForges refuses, and a dashboard.allowed_hosts entry that
-// is not a host name with an optional port.
+// forges entry checkForges refuses, a dashboard.allowed_hosts entry that is
+// not a host name with an optional port, and a notify channel checkNotify
+// refuses.
 func Parse(data []byte) (Config, error) {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
@@ -617,6 +682,9 @@ func Parse(data []byte) (Config, error) {
 		return Config{}, err
 	}
 	if err := checkAllowedHosts(cfg.Dashboard.AllowedHosts); err != nil {
+		return Config{}, err
+	}
+	if err := checkNotify(cfg.Notify); err != nil {
 		return Config{}, err
 	}
 	return cfg, nil

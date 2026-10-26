@@ -1895,3 +1895,66 @@ func TestServeSettingsShowTheAllowedHosts(t *testing.T) {
 		t.Errorf("allowed_hosts = %v, want the normalized list", got)
 	}
 }
+
+// S-0498 (ADR-0205): flai serve notify set keeps a webhook and a shell
+// command on the host, changing only what it is given, show prints them,
+// with --json too, clear removes them, and a URL that is not http or https,
+// an empty command, and a set with neither are refused, changing nothing.
+func TestServeNotify(t *testing.T) {
+	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfgPath)
+	root := tempProject(t)
+	run := func(args ...string) (string, string, int) {
+		t.Helper()
+		return runIn(t, root, append([]string{"serve", "notify"}, args...)...)
+	}
+	saved := func() config.Notify {
+		t.Helper()
+		cfg, _, err := config.Load(cfgPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return cfg.Notify
+	}
+	if out, _, code := run("show"); code != 0 || !strings.Contains(out, "no reminder channel is set") {
+		t.Errorf("unset: %d %q", code, out)
+	}
+	if out, errOut, code := run("set", "--url", "https://ntfy.example/flai"); code != 0 || out != "url: https://ntfy.example/flai\n" {
+		t.Fatalf("set --url: %d %q %s", code, out, errOut)
+	}
+	if out, _, code := run("show"); code != 0 || out != "url: https://ntfy.example/flai\n" {
+		t.Errorf("show: %d %q", code, out)
+	}
+	const command = `curl -s -H "Title: flai" -d @- https://ntfy.sh/flai`
+	if _, errOut, code := run("set", "--command", command); code != 0 {
+		t.Fatalf("set --command: %d %s", code, errOut)
+	}
+	if got := saved(); got != (config.Notify{URL: "https://ntfy.example/flai", Command: command}) {
+		t.Errorf("set changes only what it is given: %+v", got)
+	}
+	if js, _, _ := run("show", "--json"); !strings.Contains(js, `"url": "https://ntfy.example/flai"`) || !strings.Contains(js, `"command": "curl -s -H \"Title: flai\" -d @- https://ntfy.sh/flai"`) {
+		t.Errorf("--json: %s", js)
+	}
+	for _, bad := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"set", "--url", "ftp://x"}, "notify.url's scheme is ftp, and flai posts reminders over http or https alone"},
+		{[]string{"set", "--url", ""}, "--url needs an http or https webhook"},
+		{[]string{"set", "--command", " "}, "--command needs a shell command"},
+		{[]string{"set"}, "give --url <webhook>, --command <shell command>, or both"},
+	} {
+		if _, errOut, code := run(bad.args...); code == 0 || !strings.Contains(errOut, bad.want) {
+			t.Errorf("%q is refused, saying why: %d %s", bad.args, code, errOut)
+		}
+	}
+	if got := saved(); got.URL != "https://ntfy.example/flai" || got.Command != command {
+		t.Errorf("a refused value changes nothing: %+v", got)
+	}
+	if out, _, code := run("clear"); code != 0 || !strings.Contains(out, "no reminder channel is set") || saved() != (config.Notify{}) {
+		t.Errorf("clear: %d %q %+v", code, out, saved())
+	}
+	if data, _ := os.ReadFile(cfgPath); strings.Contains(string(data), "notify") {
+		t.Errorf("a cleared channel is not written: %s", data)
+	}
+}
