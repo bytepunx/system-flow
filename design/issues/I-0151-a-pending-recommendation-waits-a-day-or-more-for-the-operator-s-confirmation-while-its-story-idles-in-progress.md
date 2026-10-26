@@ -7,7 +7,7 @@ count: 1
 cost: 29h
 first_reported: 2026-10-15T22:48:37Z
 last_reported: 2026-10-15T22:48:37Z
-updated: 2026-10-15T22:48:37Z
+updated: 2026-10-26T04:01:18Z
 usage:
   strategic:
     - kind: analyzer
@@ -47,3 +47,5 @@ flai stats W42 threads.total_seconds 1,003,576, threads.confirmed count 4 total_
 ## Remediation
 
 Found by the analysis in [2026-10-15-bottlenecks.md](../analysis/2026-10-15-bottlenecks.md).
+
+Story S-0498 remediates this issue, created from it at 2026-10-26T04:01:18Z.
