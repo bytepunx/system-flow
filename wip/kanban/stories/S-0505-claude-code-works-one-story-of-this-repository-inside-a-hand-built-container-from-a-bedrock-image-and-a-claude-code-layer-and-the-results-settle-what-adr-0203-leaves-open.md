@@ -7,7 +7,7 @@ status: backlog
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:42:20Z
-updated: 2026-10-26T12:28:25Z
+updated: 2026-10-26T16:01:45Z
 transitions: []
 tags: [cli, docker]
 topics: [harness, docker, experiments]
@@ -38,10 +38,10 @@ cost_of_delay:
   at: 2026-10-26T12:27:51Z
 forecast:
   duration: 3h
-  delivery: 2026-10-27T23:16:00Z
-  basis: "3h kept from the epic's plan: two image builds, a whole story of this repository worked inside the container in a session of its own, and the login, the network modes, and the mount measured by hand, where the three done experiment stories flai's 1h12m rests on measured inside one process. Delivery is flai's 2026-10-27T11:14Z for 1h12m at 23rd in the pull order, played out for 3h as flai's replan did on 2026-10-26 (1h12m to 3h moved it 12h02m)."
-  by: planner-S-0505
-  at: 2026-10-26T12:27:51Z
+  delivery: 2026-10-28T02:51:00Z
+  basis: "Its own forecast of 3h; 23rd in the pull order with an in-progress limit of 5, behind S-0503, S-0504, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0499 and S-0502."
+  by: flai
+  at: 2026-10-26T16:01:45Z
 finalized:
   by: orchestrator
   at: 2026-10-26T12:28:25Z
