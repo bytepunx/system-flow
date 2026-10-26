@@ -7,7 +7,7 @@ status: backlog
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:43:39Z
-updated: 2026-10-26T04:57:18Z
+updated: 2026-10-26T04:57:43Z
 transitions: []
 tags: [cli, docker]
 topics: [harness, docker]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 2h
-  delivery: 2026-10-27T06:10:00Z
-  basis: "flai forecast gave 43m (median 107 s per unit over 93 done feature stories on claude-opus-5-5 in the large band, size 24: 6 criteria, 18 touches) and delivery 2026-10-27T04:39Z, 26th in the pull order by a cycle factor of 1.17; raised to 2h because the story adds a package and a second binary with process tests (relay, exit code, signals, resume), an ADR, and image rebuilds that each run a Go build and a Claude Code install, and no story in the band added a binary; delivery is flai's start of 2026-10-27T03:49Z plus 2h times the same cycle factor."
-  by: planner-E-0029
-  at: 2026-10-26T04:57:18Z
+  delivery: 2026-10-27T18:10:00Z
+  basis: "Its own forecast of 2h; 26th in the pull order with an in-progress limit of 5, behind S-0498, S-0504, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0499, S-0502, S-0503, S-0505 and S-0506."
+  by: flai
+  at: 2026-10-26T04:57:43Z
 ---
 # S-0507 pilot, a Go binary in the bedrock image, is the container's entrypoint: it reads a start request, starts the inner harness through flai's adapters, relays its log, and resumes, as an ADR records beside the layered images
 

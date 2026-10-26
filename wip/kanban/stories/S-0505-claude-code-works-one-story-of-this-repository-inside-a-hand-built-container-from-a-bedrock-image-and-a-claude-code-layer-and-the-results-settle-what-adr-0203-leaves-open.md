@@ -7,7 +7,7 @@ status: backlog
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:42:20Z
-updated: 2026-10-26T04:57:09Z
+updated: 2026-10-26T04:57:43Z
 transitions: []
 tags: [cli, docker]
 topics: [harness, docker, experiments]
@@ -20,10 +20,10 @@ agent:
 draft: true
 forecast:
   duration: 3h
-  delivery: 2026-10-27T16:00:00Z
-  basis: "flai forecast gave 1h12m (median 227 s per unit over 3 done experiment stories, size 19: 6 criteria, 13 touches) and delivery 2026-10-27T03:48Z, 24th in the pull order by a cycle factor of 6.67; raised to 3h because the spike builds two images (a Go build and a Claude Code install, minutes each, built several times), runs a whole story of this repository inside the container, a session of its own of 30 to 60 minutes on this repository's recent stories, and measures the login, the network modes, and the mount by hand, where the three experiment stories in the history measured inside one process; delivery is flai's start of 2026-10-26T19:48Z plus 3h times the same cycle factor."
-  by: planner-E-0029
-  at: 2026-10-26T04:57:09Z
+  delivery: 2026-10-27T15:50:00Z
+  basis: "Its own forecast of 3h; 24th in the pull order with an in-progress limit of 5, behind S-0498, S-0504, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0499, S-0502 and S-0503."
+  by: flai
+  at: 2026-10-26T04:57:43Z
 ---
 # S-0505 Claude Code works one story of this repository inside a hand-built container from a bedrock image and a claude-code layer, and the results settle what ADR-0203 leaves open
 

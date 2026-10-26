@@ -7,7 +7,7 @@ status: backlog
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:44:48Z
-updated: 2026-10-26T04:57:27Z
+updated: 2026-10-26T04:57:43Z
 transitions: []
 tags: [cli, docker]
 topics: [harness, docker, planning]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 2h
-  delivery: 2026-10-27T08:25:00Z
-  basis: "flai forecast gave 49m (median 107 s per unit over 93 done feature stories on claude-opus-5-5 in the large band, size 27: 5 criteria, 22 touches) and delivery 2026-10-27T07:00Z, 28th in the pull order by a cycle factor of 1.17; raised to 2h because the ADR settles a real choice on the main checkout's mount, four start paths change with a test each, and the proof is a planner run inside a container, a session of its own; delivery is flai's start of 2026-10-27T06:03Z plus 2h times the same cycle factor."
-  by: planner-E-0029
-  at: 2026-10-26T04:57:27Z
+  delivery: 2026-10-27T23:25:00Z
+  basis: "Its own forecast of 2h; 28th in the pull order with an in-progress limit of 5, behind S-0498, S-0504, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0499, S-0502, S-0503, S-0505, S-0506, S-0507 and S-0508."
+  by: flai
+  at: 2026-10-26T04:57:43Z
 ---
 # S-0509 The planner, the orchestrator, the analyzer, and the curator run in a container when their harness is container, with the main checkout mounted as an ADR settles, pilot passing their role, and their activity logged as on the host
 

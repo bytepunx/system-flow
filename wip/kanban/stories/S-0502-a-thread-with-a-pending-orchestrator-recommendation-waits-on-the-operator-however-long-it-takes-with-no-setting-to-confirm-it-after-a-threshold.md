@@ -6,7 +6,7 @@ title: A thread with a pending orchestrator recommendation waits on the operator
 status: backlog
 owner: alex
 created: 2026-10-26T04:01:40Z
-updated: 2026-10-26T04:47:27Z
+updated: 2026-10-26T04:57:43Z
 transitions: []
 tags: [flai, template]
 topics: [orchestration, cli, analysis]
@@ -43,10 +43,10 @@ cost_of_delay:
   at: 2026-10-26T04:42:28Z
 forecast:
   duration: 2h
-  delivery: 2026-10-26T20:37:00Z
-  basis: "flai forecast's 1h (median 89 s per unit over 96 done improvement stories on claude-opus-5-5, size 40: 2 criteria, 38 touches) doubled, because the plan is eight tasks over five layers worked one after another, each closed with the serve, threads, manifest, or metrics package tests, and adds a manifest permission of a new kind, a thread entry mark across the threads package, the CLI, and the MCP server, a serve look, a metrics field by ADR, and the ADR itself; delivery is flai's 19:37Z moved by the raise, 22nd in the pull order and held in ready until S-0498 is accepted."
-  by: planner-S-0502
-  at: 2026-10-26T04:42:28Z
+  delivery: 2026-10-26T21:05:00Z
+  basis: "Its own forecast of 2h; 22nd in the pull order with an in-progress limit of 5, behind S-0498, S-0504, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425 and S-0499."
+  by: flai
+  at: 2026-10-26T04:57:43Z
 ---
 # S-0502 A thread with a pending orchestrator recommendation waits on the operator however long it takes, with no setting to confirm it after a threshold
 

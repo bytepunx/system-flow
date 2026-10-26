@@ -7,7 +7,7 @@ status: backlog
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:42:51Z
-updated: 2026-10-26T04:57:14Z
+updated: 2026-10-26T04:57:43Z
 transitions: []
 tags: [cli, mcp]
 topics: [harness, docker, mcp]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 1h30m
-  delivery: 2026-10-27T05:35:00Z
-  basis: "flai forecast gave 54m (median 107 s per unit over 93 done feature stories on claude-opus-5-5 in the large band, size 30: 5 criteria, 25 touches) and delivery 2026-10-27T04:52Z, 25th in the pull order by a cycle factor of 1.17; raised to 1h30m because the story writes an ADR and changes five packages (cmd/host, config, mcpserver, mcphttp, serve) with a by-hand check that a container reaches the listener, where the band's median is set by stories whose touches are mostly documents; delivery is flai's start of 2026-10-27T03:49Z plus 1h30m times the same cycle factor."
-  by: planner-E-0029
-  at: 2026-10-26T04:57:14Z
+  delivery: 2026-10-27T17:35:00Z
+  basis: "Its own forecast of 1h30m; 25th in the pull order with an in-progress limit of 5, behind S-0498, S-0504, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0499, S-0502, S-0503 and S-0505."
+  by: flai
+  at: 2026-10-26T04:57:43Z
 ---
 # S-0506 flai's HTTP MCP server serves an agent in a container as the stdio server serves one on the host: every tool, permission_prompt under auto-approve for an agent flai serve started, and a listener a container reaches
 

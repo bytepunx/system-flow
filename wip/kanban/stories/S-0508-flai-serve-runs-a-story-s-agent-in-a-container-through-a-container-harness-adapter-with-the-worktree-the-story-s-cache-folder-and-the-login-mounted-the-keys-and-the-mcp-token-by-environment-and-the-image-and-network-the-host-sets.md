@@ -7,7 +7,7 @@ status: backlog
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:44:13Z
-updated: 2026-10-26T04:57:23Z
+updated: 2026-10-26T04:57:43Z
 transitions: []
 tags: [cli, docker]
 topics: [harness, docker]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 2h30m
-  delivery: 2026-10-27T07:50:00Z
-  basis: "flai forecast gave 1h1m (median 107 s per unit over 93 done feature stories on claude-opus-5-5 in the large band, size 34: 7 criteria, 27 touches) and delivery 2026-10-27T06:03Z, 27th in the pull order by a cycle factor of 1.17; raised to 2h30m because the adapter and the serve start path change flai's largest file (serve/agents.go) with the stop, the restart, and three refusals, and criterion 6 runs a whole story of this repository under flai serve inside a container, a session of its own of 30 to 60 minutes with a stop and a restart tried; delivery is flai's start of 2026-10-27T04:52Z plus 2h30m times the same cycle factor."
-  by: planner-E-0029
-  at: 2026-10-26T04:57:23Z
+  delivery: 2026-10-27T21:05:00Z
+  basis: "Its own forecast of 2h30m; 27th in the pull order with an in-progress limit of 5, behind S-0498, S-0504, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0499, S-0502, S-0503, S-0505, S-0506 and S-0507."
+  by: flai
+  at: 2026-10-26T04:57:43Z
 ---
 # S-0508 flai serve runs a story's agent in a container through a container harness adapter, with the worktree, the story's cache folder, and the login mounted, the keys and the MCP token by environment, and the image and network the host sets
 

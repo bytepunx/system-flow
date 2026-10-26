@@ -6,7 +6,7 @@ title: "events-socket.test.ts 'closes every events socket with 1001 when the ser
 status: backlog
 owner: alex
 created: 2026-10-26T04:01:24Z
-updated: 2026-10-26T04:21:34Z
+updated: 2026-10-26T04:57:43Z
 transitions: []
 tags: [dashboard]
 topics: [dashboard, testing]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-10-26T04:20:24Z
 forecast:
   duration: 30m
-  delivery: 2026-10-26T18:08:00Z
-  basis: "flai forecast gave 14m (median 117 s per unit over 32 done remediation stories on claude-opus-5-5 in the medium band, size 7) and delivery 2026-10-26T17:52Z at the 21st place in the pull order; raised to 30m for the repeated vitest runs and the pre-fix reproduction, delivery moved by the same 16m."
-  by: planner-S-0499
-  at: 2026-10-26T04:20:24Z
+  delivery: 2026-10-26T18:50:00Z
+  basis: "Its own forecast of 30m; 21st in the pull order with an in-progress limit of 5, behind S-0498, S-0504, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424 and S-0425."
+  by: flai
+  at: 2026-10-26T04:57:43Z
 finalized:
   by: orchestrator
   at: 2026-10-26T04:21:34Z
