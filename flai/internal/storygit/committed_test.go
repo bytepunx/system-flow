@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -82,6 +83,127 @@ func TestCommittedKeepsToTheProjectsFolder(t *testing.T) {
 	}
 	if want := map[string][]string{"S-0001": {"cli/a.go"}}; !reflect.DeepEqual(got, want) {
 		t.Errorf("committed = %v, want %v", got, want)
+	}
+}
+
+// logCounter is the real runner, counting the git log processes it starts.
+type logCounter struct {
+	execx.System
+	logs int
+}
+
+func (c *logCounter) Run(dir, name string, args ...string) (string, error) {
+	if name == "git" && slices.Contains(args, "log") {
+		c.logs++
+	}
+	return c.System.Run(dir, name, args...)
+}
+
+// committedRepo is a repository with a commit of story S-0001 on main, and
+// the workitem.Repo that reads it.
+func committedRepo(t *testing.T) (string, *workitem.Repo) {
+	t.Helper()
+	dir := gitRepo(t)
+	commitFiles(t, dir, "feat: [S-0001] one", "cli/a.go")
+	return dir, &workitem.Repo{Root: dir, MainRoot: dir, Manifest: manifest.Manifest{Layout: map[string]string{"wip": "wip"}}}
+}
+
+// committedOnce calls Committed and reports whether it read the log.
+func committedOnce(t *testing.T, r *logCounter, repo *workitem.Repo) (map[string][]string, bool) {
+	t.Helper()
+	before := r.logs
+	got, err := Committed(r, repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return got, r.logs > before
+}
+
+// I-0184: while no branch tip moved, Committed answers what it read before
+// and starts no git log.
+func TestCommittedReadsTheLogOnceWhileNoBranchMoves(t *testing.T) {
+	_, repo := committedRepo(t)
+	r := &logCounter{}
+	first, read := committedOnce(t, r, repo)
+	if !read {
+		t.Fatal("the first call read no log")
+	}
+	again, read := committedOnce(t, r, repo)
+	if read {
+		t.Error("a second call with no branch moved read the log again")
+	}
+	if want := map[string][]string{"S-0001": {"cli/a.go"}}; !reflect.DeepEqual(first, want) || !reflect.DeepEqual(again, want) {
+		t.Errorf("committed = %v then %v, want %v both times", first, again, want)
+	}
+}
+
+// A commit on main or on a story branch, and a new story branch, are seen by
+// the next call, which reads the log again; the call after it, with nothing
+// moved, does not.
+func TestCommittedReadsTheLogAgainWhenABranchMoves(t *testing.T) {
+	dir, repo := committedRepo(t)
+	git(t, dir, "branch", "story/S-0002")
+	r := &logCounter{}
+	committedOnce(t, r, repo)
+	seen := func(after, id string, want []string) {
+		t.Helper()
+		got, read := committedOnce(t, r, repo)
+		if !read || !reflect.DeepEqual(got[id], want) {
+			t.Errorf("after %s: read the log %v, %s = %v, want %v", after, read, id, got[id], want)
+		}
+		if _, read := committedOnce(t, r, repo); read {
+			t.Errorf("after %s: the call after the one that saw it read the log again", after)
+		}
+	}
+
+	commitFiles(t, dir, "feat: [S-0001] two", "cli/b.go")
+	seen("a commit on main", "S-0001", []string{"cli/a.go", "cli/b.go"})
+
+	git(t, dir, "checkout", "-q", "story/S-0002")
+	commitFiles(t, dir, "feat: [S-0002] on its branch", "web/c.go")
+	git(t, dir, "checkout", "-q", "main")
+	seen("a commit on a story branch", "S-0002", []string{"web/c.go"})
+
+	git(t, dir, "checkout", "-q", "-b", "story/S-0003")
+	commitFiles(t, dir, "feat: [S-0003] a new branch", "web/d.go")
+	git(t, dir, "checkout", "-q", "main")
+	seen("a new story branch", "S-0003", []string{"web/d.go"})
+}
+
+// A caller who changes Committed's answer does not change the next one, which
+// is answered from what was kept.
+func TestCommittedAnswersACopy(t *testing.T) {
+	_, repo := committedRepo(t)
+	r := &logCounter{}
+	got, _ := committedOnce(t, r, repo)
+	got["S-0001"][0] = "changed.go"
+	got["S-0009"] = []string{"added.go"}
+	again, read := committedOnce(t, r, repo)
+	if read {
+		t.Error("the second call read the log again rather than answer what was kept")
+	}
+	if want := map[string][]string{"S-0001": {"cli/a.go"}}; !reflect.DeepEqual(again, want) {
+		t.Errorf("committed after the caller changed its answer = %v, want %v", again, want)
+	}
+}
+
+// Each repository root answers its own commits.
+func TestCommittedKeepsEachRootApart(t *testing.T) {
+	_, one := committedRepo(t)
+	dir := gitRepo(t)
+	commitFiles(t, dir, "feat: [S-0002] other", "web/b.go")
+	two := &workitem.Repo{Root: dir, MainRoot: dir, Manifest: manifest.Manifest{Layout: map[string]string{"wip": "wip"}}}
+	r := &logCounter{}
+	for range 2 {
+		if got, _ := committedOnce(t, r, one); !reflect.DeepEqual(got, map[string][]string{"S-0001": {"cli/a.go"}}) {
+			t.Errorf("first root = %v", got)
+		}
+		if got, _ := committedOnce(t, r, two); !reflect.DeepEqual(got, map[string][]string{"S-0002": {"web/b.go"}}) {
+			t.Errorf("second root = %v", got)
+		}
+	}
+	if r.logs != 2 {
+		t.Errorf("read the log %d times for two roots called twice each, want once per root", r.logs)
 	}
 }
 

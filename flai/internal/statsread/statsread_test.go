@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -125,6 +126,51 @@ func TestReadInARepositoryReadsTheCommits(t *testing.T) {
 	}
 	if logged.Len() != 0 {
 		t.Errorf("warned in a repository: %s", logged.String())
+	}
+}
+
+// logCounter is the real runner, counting the git log processes it starts.
+type logCounter struct {
+	execx.System
+	logs int
+}
+
+func (c *logCounter) Run(dir, name string, args ...string) (string, error) {
+	if name == "git" && slices.Contains(args, "log") {
+		c.logs++
+	}
+	return c.System.Run(dir, name, args...)
+}
+
+// I-0184: a second Read with nothing changed in git starts no git log.
+func TestReadStartsNoLogWhileNothingChanged(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration: runs real git")
+	}
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	repo := project(t)
+	r := &logCounter{}
+	for _, args := range [][]string{
+		{"init", "-q", "-b", "main"}, {"config", "user.email", "t@t"}, {"config", "user.name", "t"}, {"add", "system-flow.yaml"},
+		{"commit", "-q", "-m", "feat: [S-0001] the story"},
+	} {
+		if out, err := r.Run(repo.Root, "git", args...); err != nil {
+			t.Fatal(out, err)
+		}
+	}
+	for i := range 2 {
+		_, opt, err := Read(r, repo, slog.New(slog.DiscardHandler))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := opt.Commits["S-0001"]; len(got) != 1 || got[0] != "system-flow.yaml" {
+			t.Errorf("read %d: commits = %v, want the manifest", i+1, opt.Commits)
+		}
+	}
+	if r.logs != 1 {
+		t.Errorf("two reads with nothing changed started git log %d times, want once", r.logs)
 	}
 }
 
