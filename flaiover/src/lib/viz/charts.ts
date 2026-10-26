@@ -197,7 +197,9 @@ export type Queue = { weeks: QueueWeek[] };
 /**
  * One ISO week of the digest section: the threads opened to the operator in it, the stories
  * completed in it, the threads per completed story, absent in a week with none completed, which
- * has no rate, and how many of those threads asked what a digest entry already answered.
+ * has no rate, how many of those threads asked what a digest entry already answered, absent in a
+ * week no curator run has reached, and the curator runs that ended in it (S-0504, ADR-0204). A flai
+ * older than S-0504 sends `asked_again` 0 in every week and no `curator_runs`.
  */
 export type DigestWeek = {
 	week: string;
@@ -205,12 +207,18 @@ export type DigestWeek = {
 	threads_to_operator: number;
 	stories_completed: number;
 	per_story?: number;
-	asked_again: number;
+	asked_again?: number;
+	curator_runs?: number;
 };
 /** The digest's entries now with each status, over the whole digest, not the window. */
 export type DigestEntries = { active: number; compacted: number; absorbed: number };
-/** The threads to the operator per completed story per week (S-0434, metrics.md § Digest). */
-export type Digest = { weeks: DigestWeek[]; entries: DigestEntries };
+/** The curator's runs over its whole log, and when the newest ended, absent before the first. */
+export type DigestCurator = { runs: number; last_run?: string };
+/**
+ * The threads to the operator per completed story per week (S-0434, metrics.md § Digest). No
+ * `curator` from a flai older than S-0504: unknown, not none.
+ */
+export type Digest = { weeks: DigestWeek[]; entries: DigestEntries; curator?: DigestCurator };
 /** The per-item error fields the planning charts read. */
 export type ErrorField =
 	'forecast_error_seconds' | 'delivery_error_seconds' | 'estimate_error_seconds';
@@ -1145,14 +1153,18 @@ export function queueChart(r: Report, t: Theme): Opt {
  */
 export const hasDigest = (r: Report) => r.digest !== undefined;
 /**
- * The digest chart's two series, the rest below and the repeats stacked on them, in two of the
- * three slots that stay apart for every pair in both modes.
+ * The digest chart's three series, the rest below and the repeats stacked on them, and the
+ * curator's runs, in the three slots that stay apart for every pair in both modes.
  */
 const DIGEST_SERIES = {
 	rest: { name: 'other threads', slot: 6 },
-	repeats: { name: 'asked again', slot: 4 }
+	repeats: { name: 'asked again', slot: 4 },
+	runs: { name: 'curator runs', slot: 5 }
 } as const;
-/** A week's threads per completed story at its Monday; null, a gap, in a week with no rate. */
+/**
+ * A week's threads per completed story at its Monday, or its curator runs; null, a gap, in a week
+ * with no rate, and for the repeats in a week no curator run has reached.
+ */
 type DigestBar = { value: [number, number | null]; threads: number; week: DigestWeek };
 /** threads per story as `flai stats` prints them, to two decimals. */
 const perStory = (v: number) => v.toFixed(2);
@@ -1161,13 +1173,20 @@ const threadCount = (n: number) => `${n} ${n === 1 ? 'thread' : 'threads'}`;
  * Digest (S-0434, ADR-0200): one stacked bar per ISO week of the window, the threads opened to the
  * operator per story completed in it: the repeats, those that asked what a digest entry already
  * answered, stacked on the rest, so that a bar's height is the week's `per_story`. A week with no
- * story completed has no rate: a gap, not 0. flai lays out the weeks from the one that holds the
- * window's start to the one that holds now, and the axis spans them (ADR-0054).
+ * story completed has no rate: a gap, not 0. A week no curator run has reached has no repeats
+ * counted, so its repeats are a gap too and its whole bar is the rest (S-0504, ADR-0204). On a
+ * second axis, the curator runs that ended in each week, drawn only when flai sends the curator: a
+ * flai older than S-0504 sends none, and the chart is drawn as before. flai lays out the weeks from
+ * the one that holds the window's start to the one that holds now, and the axis spans them
+ * (ADR-0054).
  */
 export function digestChart(r: Report, t: Theme): Opt {
 	const weeks = r.digest?.weeks ?? [];
 	const rated = (wk: DigestWeek) => wk.per_story !== undefined && wk.stories_completed > 0;
-	const bar = (part: keyof typeof DIGEST_SERIES, threads: (wk: DigestWeek) => number) => ({
+	/** Whether a curator run has reached the week, so that its repeats were counted. */
+	const reached = (wk: DigestWeek) => wk.asked_again !== undefined;
+	const at = (wk: DigestWeek) => place(Date.parse(wk.start), 'week');
+	const bar = (part: 'rest' | 'repeats', threads: (wk: DigestWeek) => number | null) => ({
 		name: DIGEST_SERIES[part].name,
 		type: 'bar',
 		stack: 'digest',
@@ -1178,15 +1197,29 @@ export function digestChart(r: Report, t: Theme): Opt {
 			borderWidth: 1
 		},
 		data: weeks.map((wk): DigestBar => {
-			const v = rated(wk) ? threads(wk) / wk.stories_completed : null;
-			return { value: [place(Date.parse(wk.start), 'week'), v], threads: threads(wk), week: wk };
+			const n = threads(wk);
+			const v = rated(wk) && n !== null ? n / wk.stories_completed : null;
+			return { value: [at(wk), v], threads: n ?? 0, week: wk };
 		})
 	});
+	const curated = r.digest?.curator !== undefined;
+	const runs = {
+		...line(t, DIGEST_SERIES.runs.name, t.series[DIGEST_SERIES.runs.slot], 'rect', []),
+		showSymbol: true,
+		connectNulls: false,
+		yAxisIndex: 1,
+		data: weeks.map((wk): DigestBar => ({
+			value: [at(wk), wk.curator_runs ?? null],
+			threads: 0,
+			week: wk
+		}))
+	};
 	const series =
 		weeks.length > 0
 			? [
-					bar('rest', (wk) => Math.max(0, wk.threads_to_operator - wk.asked_again)),
-					bar('repeats', (wk) => wk.asked_again)
+					bar('rest', (wk) => Math.max(0, wk.threads_to_operator - (wk.asked_again ?? 0))),
+					bar('repeats', (wk) => wk.asked_again ?? null),
+					...(curated ? [runs] : [])
 				]
 			: [];
 	type Hovered = { marker?: string; seriesName: string; data: DigestBar };
@@ -1203,20 +1236,43 @@ export function digestChart(r: Report, t: Theme): Opt {
 		const asked = `${threadCount(wk.threads_to_operator)} to the operator`;
 		const stories = `${n} ${n === 1 ? 'story' : 'stories'} completed`;
 		const head = `week of ${wk.start} (${wk.week}), ${asked}, ${stories}`;
-		if (!rated(wk)) return `${head}<br/>no story completed, so no rate`;
-		return [head, `${perStory(wk.per_story!)} per story`, ...list.map(say)].join('<br/>');
+		const isRuns = (p: Hovered) => p.seriesName === DIGEST_SERIES.runs.name;
+		const ran = list
+			.filter((p) => isRuns(p) && p.data.value[1] !== null)
+			.map((p) => `${p.marker ?? ''}${p.seriesName}: ${p.data.value[1]}`);
+		const unmeasured = 'asked again: not measured, no curator run has reached it';
+		const tail = [...(reached(wk) ? [] : [unmeasured]), ...ran];
+		if (!rated(wk)) return [head, 'no story completed, so no rate', ...tail].join('<br/>');
+		// a repeat bar is a gap, so left out, in a week no curator run has reached
+		const bars = list.filter((p) => !isRuns(p) && p.data.value[1] !== null);
+		return [head, `${perStory(wk.per_story!)} per story`, ...bars.map(say), ...tail].join('<br/>');
 	};
+	const axes = bucketAxes(
+		t,
+		r,
+		'week',
+		weeks.map((wk) => Date.parse(wk.start)),
+		true,
+		'threads per story',
+		(v) => `${Math.round(v * 100) / 100}`,
+		tip
+	);
+	if (!curated) return base(t, { ...axes, series });
 	return base(t, {
-		...bucketAxes(
-			t,
-			r,
-			'week',
-			weeks.map((wk) => Date.parse(wk.start)),
-			true,
-			'threads per story',
-			(v) => `${Math.round(v * 100) / 100}`,
-			tip
-		),
+		...axes,
+		// room for the runs' labels on the right
+		grid: { ...axes.grid, right: 56 },
+		yAxis: [
+			axes.yAxis,
+			axisY(t, {
+				type: 'value',
+				name: 'curator runs',
+				min: 0,
+				minInterval: 1,
+				nameTextStyle: { color: t.textSecondary, align: 'right' },
+				splitLine: { show: false }
+			})
+		],
 		series
 	});
 }

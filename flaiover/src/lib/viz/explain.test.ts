@@ -148,6 +148,15 @@ describe('explain', () => {
 		expect(digest).toContain('a digest entry of an earlier day lists in its `asked_again`');
 		expect(digest).toContain('A week with no story completed has no rate: a gap, not zero.');
 		expect(digest).toContain('`digest.entries`');
+		// the curator's runs, and the weeks it has not reached, which have no repeat count (S-0504)
+		expect(explain('digest', STORY_DAY).what).toContain(
+			"On the right, the curator's runs each week."
+		);
+		expect(digest).toContain("`curator_runs` counts the curator's runs that ended in the week");
+		expect(digest).toContain(
+			'A week the curator has not reached, after its newest run or with none at all, has no repeat count'
+		);
+		expect(digest).toContain('its asked-again part is a gap, not zero');
 		expect(explain('digest', STORY_DAY).metrics).toBe('digest-(s-0434)');
 		// the digest counts stories whatever the type chosen
 		expect(all('digest', { type: 'epic', bucket: 'week' })).toBe(digest);

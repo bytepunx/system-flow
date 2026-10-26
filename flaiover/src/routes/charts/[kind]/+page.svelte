@@ -364,6 +364,12 @@
 		<p class="mt-2 text-sm" data-testid="digest-entries">
 			Digest entries now: active {e.active} · compacted {e.compacted} · absorbed {e.absorbed}.
 		</p>
+		{#if report.digest.curator?.runs === 0}
+			<p class="mt-2 text-sm text-muted" data-testid="digest-never-curated">
+				The curator has never run, so no repeat was measured: curate is off on the host, or its
+				first run is still to come.
+			</p>
+		{/if}
 	{/if}
 	{#if kind === 'agent-waiting' && report?.waiting}
 		<h2 class="mt-6 mb-2 text-base font-medium">Longest waits</h2>
@@ -650,7 +656,8 @@
 							<th class="pr-4">threads to the operator</th>
 							<th class="pr-4">stories completed</th>
 							<th class="pr-4">per story</th>
-							<th>asked again</th>
+							<th class="pr-4">asked again</th>
+							<th>curator runs</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -661,7 +668,8 @@
 								<td class="pr-4">{w.threads_to_operator}</td>
 								<td class="pr-4">{w.stories_completed}</td>
 								<td class="pr-4">{w.per_story === undefined ? '-' : w.per_story.toFixed(2)}</td>
-								<td>{w.asked_again}</td>
+								<td class="pr-4">{w.asked_again ?? '-'}</td>
+								<td>{w.curator_runs ?? '-'}</td>
 							</tr>
 						{/each}
 					</tbody>

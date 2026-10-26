@@ -1383,7 +1383,7 @@ describe('the claims charts (S-0214)', () => {
 		entries: { active: 120, compacted: 3, absorbed: 5 }
 	};
 	const digestNotes = () =>
-		['digest-none', 'digest-entries'].filter(
+		['digest-none', 'digest-entries', 'digest-never-curated'].filter(
 			(id) => document.querySelector(`[data-testid="${id}"]`) !== null
 		);
 
@@ -1425,9 +1425,10 @@ describe('the claims charts (S-0214)', () => {
 		expect(text('[data-testid="explainer-what"]')).toContain(
 			'the threads opened to the operator per story completed that week'
 		);
+		// a flai older than S-0504 sends no curator runs, and asked_again 0 where it counted none
 		expect(cells('digest-table')).toEqual([
-			['2026-W39', '2026-09-21', '5', '2', '2.50', '1'],
-			['2026-W40', '2026-09-28', '2', '0', '-', '0']
+			['2026-W39', '2026-09-21', '5', '2', '2.50', '1', '-'],
+			['2026-W40', '2026-09-28', '2', '0', '-', '0', '-']
 		]);
 		expectOrder('h1', chartEl(), '[data-testid="digest-entries"]', EXPLAINER, WINDOW, tableView());
 	});
@@ -1443,6 +1444,59 @@ describe('the claims charts (S-0214)', () => {
 		// the other charts say nothing of it
 		await go('queue');
 		expect(digestNotes()).toEqual([]);
+	});
+
+	it('draws the curator runs, and marks a week no run has reached as unmeasured (S-0504)', async () => {
+		// one curator run in W39, the newest, so W40 is a week no run has reached
+		const curated = {
+			...digest,
+			weeks: [
+				{ ...digest.weeks[0], curator_runs: 1 },
+				{ ...digest.weeks[1], asked_again: undefined, curator_runs: 0 }
+			],
+			curator: { runs: 1, last_run: '2026-09-23T05:00:00Z' }
+		};
+		answered = { items, digest: curated };
+		await open('digest');
+		expect(drawn().series.map((s) => s.name)).toEqual([
+			'other threads',
+			'asked again',
+			'curator runs'
+		]);
+		expect(digestNotes()).toEqual(['digest-entries']);
+		expect(text('[data-testid="explainer-what"]')).toContain("the curator's runs each week");
+		expect(cells('digest-table')).toEqual([
+			['2026-W39', '2026-09-21', '5', '2', '2.50', '1', '1'],
+			['2026-W40', '2026-09-28', '2', '0', '-', '-', '0']
+		]);
+	});
+
+	it('says the curator has never run, so no repeat was measured (S-0504, I-0207)', async () => {
+		const never = {
+			...digest,
+			weeks: digest.weeks.map((wk) => ({ ...wk, asked_again: undefined, curator_runs: 0 })),
+			curator: { runs: 0 }
+		};
+		answered = { items, digest: never };
+		await open('digest');
+		expect(digestNotes()).toEqual(['digest-entries', 'digest-never-curated']);
+		expect(text('[data-testid="digest-never-curated"]')).toBe(
+			'The curator has never run, so no repeat was measured: curate is off on the host, or its ' +
+				'first run is still to come.'
+		);
+		expect(cells('digest-table')).toEqual([
+			['2026-W39', '2026-09-21', '5', '2', '2.50', '-', '0'],
+			['2026-W40', '2026-09-28', '2', '0', '-', '-', '0']
+		]);
+		expectOrder(
+			'h1',
+			chartEl(),
+			'[data-testid="digest-entries"]',
+			'[data-testid="digest-never-curated"]',
+			EXPLAINER,
+			WINDOW,
+			tableView()
+		);
 	});
 });
 

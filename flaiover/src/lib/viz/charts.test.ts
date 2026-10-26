@@ -3019,6 +3019,85 @@ describe('the digest chart (S-0434)', () => {
 		expect(o.legend.show).toBe(true);
 		expect((build('digest', digesting, light) as Option).series).toEqual(o.series);
 	});
+	// the curator as flai sends it since S-0504 (ADR-0204): one run in W32 and one in W33, the
+	// newest, so W34 to W36 are weeks no run has reached and carry no asked_again
+	const runsPerWeek = [0, 1, 1, 0, 0, 0];
+	/** A week as flai sends it with its curator runs, without asked_again when no run reached it. */
+	const ran = (wk: DigestWeek, runs: number, reached: boolean): DigestWeek => {
+		const w: DigestWeek = { ...wk, curator_runs: runs };
+		if (!reached) delete w.asked_again;
+		return w;
+	};
+	const curated: Report = {
+		...report,
+		digest: {
+			...digest,
+			weeks: digest.weeks.map((wk, n) => ran(wk, runsPerWeek[n], n < 3)),
+			curator: { runs: 2, last_run: '2026-08-12T05:00:00Z' }
+		}
+	};
+	it('leaves the repeats a gap in a week no curator run has reached, and draws the runs (S-0504)', () => {
+		const r = normalise(curated);
+		expect(r.digest).toEqual(curated.digest);
+		expect(r.digest!.weeks[3]).not.toHaveProperty('asked_again');
+		expect(r.digest!.weeks.map((wk) => wk.curator_runs)).toEqual(runsPerWeek);
+		const o = digestChart(curated, light) as Option;
+		expect(o.series.map((s) => [s.name, s.type, s.stack, s.yAxisIndex])).toEqual([
+			['other threads', 'bar', 'digest', undefined],
+			['asked again', 'bar', 'digest', undefined],
+			['curator runs', 'line', undefined, 1]
+		]);
+		// W35 and W36 have a rate but no repeats counted: a gap, not 0, and the whole bar the rest
+		expect(o.series.map((s) => [s.name, s.data.map((d) => d.value[1])])).toEqual([
+			['other threads', [null, 1, 1.25, null, 0, 1]],
+			['asked again', [null, 0.5, 0.5, null, null, null]],
+			['curator runs', runsPerWeek]
+		]);
+		expect((o.series[2] as unknown as { lineStyle: { color: string } }).lineStyle.color).toBe(
+			light.series[5]
+		);
+		const axes = o.yAxis as unknown as { name: string; minInterval?: number }[];
+		expect(axes.map((a) => a.name)).toEqual(['threads per story', 'curator runs']);
+		expect(axes[1].minInterval).toBe(1);
+		const week = (n: number) =>
+			o.tooltip.formatter(o.series.map((s) => ({ seriesName: s.name, data: s.data[n] })));
+		expect(week(1)).toBe(
+			'week of 2026-08-03 (2026-W32), 3 threads to the operator, 2 stories completed<br/>' +
+				'1.50 per story<br/>other threads: 1.00 per story (2 threads)<br/>' +
+				'asked again: 0.50 per story (1 thread)<br/>curator runs: 1'
+		);
+		expect(week(3)).toBe(
+			'week of 2026-08-17 (2026-W34), 2 threads to the operator, 0 stories completed<br/>' +
+				'no story completed, so no rate<br/>' +
+				'asked again: not measured, no curator run has reached it<br/>curator runs: 0'
+		);
+		expect(week(5)).toBe(
+			'week of 2026-08-31 (2026-W36), 1 thread to the operator, 1 story completed<br/>' +
+				'1.00 per story<br/>other threads: 1.00 per story (1 thread)<br/>' +
+				'asked again: not measured, no curator run has reached it<br/>curator runs: 0'
+		);
+	});
+	it('draws the curator never run as runs of 0 and every week unmeasured (S-0504, I-0207)', () => {
+		const never: Report = {
+			...report,
+			digest: {
+				...digest,
+				weeks: digest.weeks.map((wk) => ran(wk, 0, false)),
+				curator: { runs: 0 }
+			}
+		};
+		const o = digestChart(never, light) as Option;
+		// no repeat drawn as 0 in any week: before ADR-0204 flai sent 0, which read as a measurement
+		expect(o.series[1].data.map((d) => d.value[1])).toEqual([null, null, null, null, null, null]);
+		expect(o.series[0].data.map((d) => d.value[1])).toEqual([null, 1.5, 1.75, null, 0, 1]);
+		expect(o.series[2].data.map((d) => d.value[1])).toEqual([0, 0, 0, 0, 0, 0]);
+	});
+	it('draws the digest as before from a flai older than S-0504, which sends no curator', () => {
+		expect(digesting.digest!.curator).toBeUndefined();
+		const o = digestChart(digesting, light) as Option;
+		expect(o.series.map((s) => s.name)).toEqual(['other threads', 'asked again']);
+		expect(Array.isArray(o.yAxis)).toBe(false);
+	});
 	it('draws empty over the window without a digest, and reads no weeks as none', () => {
 		expect(hasDigest(report)).toBe(false);
 		expect(normalise(report).digest).toBeUndefined();
