@@ -67,7 +67,9 @@ describe('search, as flai answers it', () => {
 	});
 });
 
-describe('adrs on the monorepo', () => {
+// Each call is a one-shot flai that builds the search index of the whole repository: about 2 s of
+// CPU, and 4.8 to 6.1 s with 24 at once on a 24-core host, over the 5 s default (S-0501, I-0185).
+describe('adrs on the monorepo', { timeout: 30000 }, () => {
 	it('lists ADRs with the supersession chain', async () => {
 		const list = await adrs(new Repo(monorepo, flaiAsk(monorepo)));
 		expect(list.length).toBeGreaterThanOrEqual(15);
@@ -75,9 +77,10 @@ describe('adrs on the monorepo', () => {
 		expect(list.find((a) => a.id === 'ADR-0002')?.supersededBy).toEqual([]);
 		expect(list.find((a) => a.id === 'ADR-0018')?.refines).toEqual(['ADR-0016']);
 		expect(list.find((a) => a.id === 'ADR-0002')?.refines).toEqual([]);
-		// a real repository holds proposed and superseded ADRs as well as accepted ones
+		// a real repository holds proposed, superseded, and rejected ADRs as well as accepted ones
+		// (ADR-0202 was rejected in favour of ADR-0203)
 		expect(list.find((a) => a.id === 'ADR-0001')?.status).toBe('accepted');
-		const statuses = ['proposed', 'accepted', 'superseded', 'deprecated'];
+		const statuses = ['proposed', 'accepted', 'superseded', 'deprecated', 'rejected'];
 		expect(list.filter((a) => !statuses.includes(a.status))).toEqual([]);
 		expect(list.every((a) => /^\d{4}-\d{2}-\d{2}$/.test(a.date))).toBe(true);
 	});
