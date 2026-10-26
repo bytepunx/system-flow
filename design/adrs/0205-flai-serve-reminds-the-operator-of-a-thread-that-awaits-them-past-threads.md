@@ -6,6 +6,7 @@ date: 2026-10-26
 supersedes: []
 superseded_by: []
 refines: [ADR-0090, ADR-0091, ADR-0108, ADR-0154, ADR-0158]
+topics: [cli, orchestration]
 ---
 
 # ADR-0205 flai serve reminds the operator of a thread that awaits them past threads.remind_after through a channel kept on the host, writing nothing on the thread, and blocks a story whose agent ended asking until the answer starts it again
