@@ -103,6 +103,7 @@ EOT
   # The defaults this script has retired. A host whose admin.env recorded one
   # before S-0455 kept it on every up; dropping it lets HAIKU_DEFAULT apply.
   #   nemotron-3-super: OpenRouter retired its free model, a 404 upstream (I-0171)
+  # shellcheck disable=SC2041 # a list of retired models, one so far, not a command
   for old in 'openrouter-messages/nvidia/nemotron-3-super-120b-a12b:free'; do
     if [ "$(readvar LITELLM_HAIKU_MODEL "$ADMIN")" = "$old" ]; then
       tmp="$ADMIN.tmp"
@@ -226,11 +227,13 @@ keyfile() {
   if [ -n "$key" ] && [ -z "$rotate" ] && api GET "/key/info?key=$key" >/dev/null 2>&1; then
     say "keeping the virtual key in $KEYFILE"
   else
-    if [ -n "$key" ]; then
-      api POST /key/delete "{\"keys\":[\"$key\"]}" >/dev/null 2>&1 && say "deleted the old virtual key" || true
+    if [ -n "$key" ] && api POST /key/delete "{\"keys\":[\"$key\"]}" >/dev/null 2>&1; then
+      say "deleted the old virtual key"
     fi
     key="$(api POST /key/generate "{\"key_alias\":\"$ALIAS-$(date -u +%Y%m%dT%H%M%SZ)\",\"max_budget\":$MAX_BUDGET,\"budget_duration\":\"30d\",\"metadata\":{\"project\":\"system-flow\",\"made_by\":\"scripts/litellm.sh\"}}" | jq -r .key)"
-    [ -n "$key" ] && [ "$key" != null ] || die "no key in the proxy's answer to /key/generate"
+    if [ -z "$key" ] || [ "$key" = null ]; then
+      die "no key in the proxy's answer to /key/generate"
+    fi
     say "issued a virtual key with a budget of $MAX_BUDGET USD per 30 days"
   fi
   ( umask 077; cat > "$KEYFILE" <<EOT

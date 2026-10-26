@@ -1,13 +1,15 @@
 #!/usr/bin/env sh
-# Lint plus all three test tiers in order of cost. Needs golangci-lint v2 (scripts/install-tools.sh).
+# Lint plus all three test tiers in order of cost. Needs ShellCheck and
+# golangci-lint v2 (scripts/install-tools.sh).
 # The full Go run in integration.sh holds every short test, so test.sh's short
 # Go run is left out here and only its vitest half, flaiover-unit.sh, is kept.
 # Keep in step with the tiers under tests in system-flow.yaml, which flai test
-# runs for the paths a change touches: gofmt, vet, golangci-lint, vitest,
-# integration, and smoke here; go-test, integration.sh's Go run on the changed
-# packages, is held by integration, and markdown is lint-md.sh's.
+# runs for the paths a change touches: shellcheck, gofmt, vet, golangci-lint,
+# vitest, integration, and smoke here; go-test, integration.sh's Go run on the
+# changed packages, is held by integration, and markdown is lint-md.sh's.
 set -eu
 . "$(dirname "$0")/env.sh"
+"$ROOT/scripts/shellcheck.sh"
 cd "$ROOT/flai"
 echo "gofmt"; test -z "$(gofmt -l .)" || { gofmt -l .; echo "gofmt: files need formatting"; exit 1; }
 echo "go vet"; go vet ./...

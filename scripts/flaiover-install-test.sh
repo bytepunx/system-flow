@@ -34,9 +34,9 @@ if ! grep -q "\"storeDir\": \"$tmp/.flai-cache/pnpm-store/" node_modules/.module
   echo "flaiover-install-test: the install is not on env.sh's store $tmp/.flai-cache/pnpm-store"
   exit 1
 fi
-[ -d node_modules/dep ] && [ -d node_modules/dep2 ] || {
+if [ ! -d node_modules/dep ] || [ ! -d node_modules/dep2 ]; then
   ls node_modules
   echo "flaiover-install-test: the install lacks the lockfile's packages"
   exit 1
-}
+fi
 echo "flaiover-install-test: an install from another store is made again from env.sh's store"

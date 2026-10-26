@@ -48,6 +48,7 @@ record_issue() {
   tail_out=$(tr '\r' '\n' <"$LOG" | tr -cd '\11\12\40-\176' | tr '\t' ' ' \
     | sed -e 's/[[:space:]]*$//' -e "s/\`\`\`/'''/g" | grep -v '^$' | tail -n 20)
   [ -n "$tail_out" ] || tail_out="(no output)"
+  # shellcheck disable=SC2016 # the backticks are a markdown code fence, printed as they stand
   note=$(printf 'Step "%s" of scripts/install-published-test.sh failed with exit status %s on %s. The last lines of its output:\n\n```text\n%s\n```' \
     "$1" "$2" "$(uname -n)" "$tail_out")
   id=$(open_issue_id) || return 1

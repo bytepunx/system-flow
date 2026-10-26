@@ -114,6 +114,7 @@ for pat in 'flai/v*' 'flaiover/v*'; do
   fi
 done
 policies=$(list_policies | LC_ALL=C sort)
+# shellcheck disable=SC2001 # indents every line; ${var//} cannot anchor at each line's start
 sed 's/^/     /' <<<"$policies"
 [ "$policies" = "$(printf 'tag flai/v*\ntag flaiover/v*')" ] \
   || die "the environment admits more than the two release tag patterns; remove the others in Settings > Environments > $ENV_NAME"
@@ -121,6 +122,7 @@ sed 's/^/     /' <<<"$policies"
 gh secret set COSIGN_PRIVATE_KEY --env "$ENV_NAME" -R "$REPO" < cosign.key
 printf '%s' "$COSIGN_PASSWORD" | gh secret set COSIGN_PASSWORD --env "$ENV_NAME" -R "$REPO"
 secrets=$(gh secret list --env "$ENV_NAME" -R "$REPO")
+# shellcheck disable=SC2001 # indents every line; ${var//} cannot anchor at each line's start
 sed 's/^/     /' <<<"$secrets"
 for s in COSIGN_PRIVATE_KEY COSIGN_PASSWORD; do
   awk '{print $1}' <<<"$secrets" | grep -qxF "$s" || die "secret $s is missing"

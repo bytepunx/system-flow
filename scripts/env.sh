@@ -28,6 +28,7 @@ mkdir -p "$CACHE_ROOT/.flai-cache" "$ROOT/bin"
 # gateway tests, flai serve, and the agents it starts read LITELLM_BASE_URL and
 # LITELLM_API_KEY from it. An environment that already names the proxy wins.
 if [ -z "${LITELLM_BASE_URL:-}" ] && [ -f "$CACHE_ROOT/.flai-cache/litellm/litellm.env" ]; then
+  # shellcheck source=/dev/null # written at run time by scripts/litellm.sh up, absent until then
   . "$CACHE_ROOT/.flai-cache/litellm/litellm.env"
 fi
 # First run: create the config with the cache inside the repo, not under ~/.flai.
