@@ -1,7 +1,7 @@
 ---
 id: ADR-0202
 title: "flai gains a docker-agent harness adapter that runs a story's agent as a Docker Agent team mixing a Claude subscription, through its claude-code harness, with local models through Docker Model Runner or Ollama, under ADR-0130's contracts"
-status: proposed
+status: rejected
 date: 2026-10-25
 supersedes: []
 superseded_by: []
