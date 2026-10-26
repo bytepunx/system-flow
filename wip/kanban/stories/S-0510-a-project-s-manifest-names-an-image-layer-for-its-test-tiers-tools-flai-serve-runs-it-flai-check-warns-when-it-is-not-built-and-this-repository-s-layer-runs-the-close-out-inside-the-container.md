@@ -7,7 +7,7 @@ status: backlog
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:46:53Z
-updated: 2026-10-26T16:01:45Z
+updated: 2026-10-26T16:03:52Z
 transitions: []
 tags: [cli, docker]
 topics: [harness, docker, manifest]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 2h30m
-  delivery: 2026-10-28T11:02:00Z
+  delivery: 2026-10-28T11:04:00Z
   basis: "Its own forecast of 2h30m; 28th in the pull order with an in-progress limit of 5, behind S-0503, S-0504, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0499, S-0502, S-0505, S-0506, S-0507, S-0508 and S-0509."
   by: flai
-  at: 2026-10-26T16:01:45Z
+  at: 2026-10-26T16:03:52Z
 ---
 # S-0510 A project's manifest names an image layer for its test tiers' tools, flai serve runs it, flai check warns when it is not built, and this repository's layer runs the close-out inside the container
 
