@@ -2,11 +2,11 @@
 id: I-0199
 title: "No test tier selects scripts/**, so a story that changes only shell scripts, and the script tests it adds, pass flai verify and the merge queue without any of them running"
 class: efficiency
-status: open
+status: closed
 count: 1
 first_reported: 2026-10-23T07:23:24Z
 last_reported: 2026-10-23T07:23:24Z
-updated: 2026-10-26T04:01:45Z
+updated: 2026-10-26T05:39:24Z
 ---
 
 # I-0199 No test tier selects scripts/**, so a story that changes only shell scripts, and the script tests it adds, pass flai verify and the merge queue without any of them running
@@ -22,3 +22,4 @@ Seen on S-0481 (verified at cbd98d1d, enqueued by the orchestrator): it changed 
 ## Remediation
 
 Story S-0503 remediates this issue, created from it at 2026-10-26T04:01:45Z.
+Closed 2026-10-26T05:39:24Z: S-0503: system-flow.yaml gains a shellcheck tier on scripts/**/*.sh (scripts/shellcheck.sh, with a pinned ShellCheck from scripts/install-tools.sh), and the all_only tiers select the scripts they run: template scripts/template-test.sh, flaiover scripts/flaiover-*.sh and scripts/env.sh, integration scripts/integration.sh, and smoke scripts/**/*.sh, so flai verify and the merge queue's batch run them for a story that changes only scripts. TestRepositoryManifestRunsScriptTestsForScriptChanges in flai/internal/verify/select_test.go reproduces S-0481's instance and fails for any scripts/*-test.sh that no tier both selects and runs; it fails against the manifest before the fix.
