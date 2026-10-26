@@ -6,7 +6,7 @@ title: The curator has never run on system-flow, so no thread is in any entry's 
 status: backlog
 owner: alex
 created: 2026-10-26T04:01:51Z
-updated: 2026-10-26T04:01:51Z
+updated: 2026-10-26T04:02:38Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m
     by: flai
     at: 2026-10-26T04:01:51Z
+finalized:
+  by: alex
+  at: 2026-10-26T04:02:38Z
 ---
 # S-0504 The curator has never run on system-flow, so no thread is in any entry's asked_again and the digest's repeat measure reads 0 whatever was asked
 
