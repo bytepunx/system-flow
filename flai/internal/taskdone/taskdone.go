@@ -255,6 +255,11 @@ func start(o Options) (*run, error) {
 	if o.Repo == nil || o.Runner == nil {
 		return nil, errors.New("taskdone needs a project and a runner")
 	}
+	// the close writes wip/ on the main checkout, which a worktree mounted
+	// alone does not have (I-0219)
+	if err := o.Repo.RequireMain("flai task done"); err != nil {
+		return nil, err
+	}
 	if o.Agent == "" {
 		o.Agent = "agent"
 	}

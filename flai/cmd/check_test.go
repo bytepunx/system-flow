@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"errors"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -28,6 +29,53 @@ func scopeFixture(t *testing.T) string {
 		t.Fatal(err)
 	}
 	return root
+}
+
+// absentMainWorktree is S-004's worktree mounted without its main checkout,
+// as in an agent container (I-0219): the good fixture in a folder S-004
+// whose .git file names a main checkout's git directory that is not there.
+// It returns the worktree and the absent main checkout.
+func absentMainWorktree(t *testing.T) (worktree, main string) {
+	t.Helper()
+	dir := t.TempDir()
+	worktree, main = filepath.Join(dir, "S-004"), filepath.Join(dir, "main")
+	if err := os.CopyFS(worktree, os.DirFS("../internal/metrics/testdata/good")); err != nil {
+		t.Fatal(err)
+	}
+	files := map[string]string{
+		".gitignore": ".flai-cache/\n",
+		".git":       "gitdir: " + filepath.Join(main, ".git", "worktrees", "S-004") + "\n",
+	}
+	for name, body := range files {
+		if err := os.WriteFile(filepath.Join(worktree, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return worktree, main
+}
+
+// I-0219: flai check in a worktree whose main checkout is absent refuses,
+// naming the main checkout and the host, and reads and writes nothing,
+// rather than checking the worktree's tracked wip/ for the board's.
+func TestCheckRefusesAWorktreeWhoseMainCheckoutIsAbsent(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	worktree, main := absentMainWorktree(t)
+	before := treeOf(t, worktree)
+	for _, args := range [][]string{
+		{"check", "--strict"},
+		{"check", "--story", "S-004", "--record-issues"},
+		{"check", worktree},
+	} {
+		out, errOut, code := runIn(t, worktree, args...)
+		// the whole error, one line, as the command boundary logs it
+		want := `"err":"flai check needs the main checkout ` + main + ", whose wip/ is the board, which is not here: " + worktree + ` is a story worktree mounted without it, as in an agent container; run flai check on the host, or call the MCP tool verify, which runs it there"}`
+		if code == 0 || out != "" || !strings.Contains(errOut, want) {
+			t.Errorf("%v: exit %d\nout %q\nerr %q, want %q", args, code, out, errOut, want)
+		}
+	}
+	if after := treeOf(t, worktree); !maps.Equal(before, after) {
+		t.Error("a refused check changed the worktree")
+	}
 }
 
 // S-0249: --story S-nnnn passes over the findings outside the story, says

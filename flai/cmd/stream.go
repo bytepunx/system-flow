@@ -264,6 +264,9 @@ rebase that found it).`,
 			if err != nil {
 				return err
 			}
+			if err := repo.RequireMain("flai stream sync"); err != nil {
+				return err
+			}
 			it, err := repo.Get(args[0])
 			if err != nil {
 				return err

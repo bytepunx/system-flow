@@ -456,6 +456,33 @@ func TestVerifyRefusesAStoryWithNoWorktree(t *testing.T) {
 	}
 }
 
+// I-0219: in an agent container only the story's worktree is mounted, so
+// flai opened there took the worktree for the project and looked for the
+// story's worktree inside it, at <worktree>/.flai-cache/worktrees/S-004.
+// With the main checkout's files absent, flai verify refuses, naming the
+// main checkout and the MCP tool verify, and stores no report.
+func TestVerifyRefusesAWorktreeWhoseMainCheckoutIsAbsent(t *testing.T) {
+	root, worktree := verifyFixture(t, "exit 0")
+	for _, p := range []string{"system-flow.yaml", "wip"} {
+		if err := os.RemoveAll(filepath.Join(root, p)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want := "flai verify needs the main checkout " + root + ", which is not here: " + worktree + " is a story worktree mounted without it, as in an agent container; run it on the host, or call the MCP tool verify"
+	for _, args := range [][]string{{"verify", "S-004"}, {"verify", "S-004", "--last"}, {"verify", "S-004", "--sync-only"}} {
+		out, errOut, code := runVerify(t, worktree, verifyGit{}, args...)
+		if code != exitVerifyUnusable || out != "" || !strings.Contains(errOut, want) {
+			t.Errorf("%v: exit %d, want %d\nout %q\nerr %q, want %q", args, code, exitVerifyUnusable, out, errOut, want)
+		}
+		if doubled := filepath.Join(".flai-cache", "worktrees", "S-004", ".flai-cache"); strings.Contains(errOut, doubled) {
+			t.Errorf("%v: the refusal names the worktree inside itself, %s: %q", args, doubled, errOut)
+		}
+	}
+	if _, err := os.Stat(verify.ReportPath(openProject(t, worktree), "S-004")); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("a refused run should store no report: %v", err)
+	}
+}
+
 // I-0119, ADR-0135: the close-out's last check, flai verify --sync-only,
 // passes over commits flai made on main's wip/ while the close-out ran, and
 // says so under the sync step; a commit outside wip/ still fails it, naming

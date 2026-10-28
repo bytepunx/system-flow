@@ -149,6 +149,11 @@ it finished.`,
 			if err != nil {
 				return &exitError{code: exitVerifyUnusable, msg: err.Error()}
 			}
+			// the story's worktree, its stored result, and wip/ are the main
+			// checkout's; a worktree mounted alone has none of them (I-0219)
+			if err := repo.RequireMain("flai verify"); err != nil {
+				return &exitError{code: exitVerifyUnusable, msg: err.Error()}
+			}
 			if last {
 				return a.printLastVerify(repo, args[0], maxFindings)
 			}

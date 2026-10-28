@@ -536,6 +536,35 @@ func TestRunRefusesWhatItCannotStart(t *testing.T) {
 	}
 }
 
+// I-0219: in S-004's worktree mounted without its main checkout, as in an
+// agent container, flai task done refuses before any step, naming the main
+// checkout and the MCP tool task_done, and the task stays where it was.
+func TestRunRefusesAWorktreeWhoseMainCheckoutIsAbsent(t *testing.T) {
+	dir := t.TempDir()
+	wt, main := filepath.Join(dir, "S-004"), filepath.Join(dir, "main")
+	if err := os.CopyFS(wt, os.DirFS(fixture)); err != nil {
+		t.Fatal(err)
+	}
+	write(t, wt, ".gitignore", ".flai-cache/\n")
+	write(t, wt, ".git", "gitdir: "+filepath.Join(main, ".git", "worktrees", "S-004")+"\n")
+	repo, err := workitem.Open(wt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before := narrative(t, repo)
+	res, err := Run(context.Background(), options(repo, "fix: [S-004] m"))
+	want := "flai task done needs the main checkout " + main + ", which is not here: " + wt + " is a story worktree mounted without it, as in an agent container; run it on the host, or call the MCP tool verify, task_done, or stream_sync"
+	if err == nil || !strings.Contains(err.Error(), want) {
+		t.Fatalf("%v, want %q", err, want)
+	}
+	if res.Stopped != "" || res.Commit != nil {
+		t.Errorf("a step ran: %+v", res)
+	}
+	if get(t, repo, "T-003").Status != workitem.InProgress || narrative(t, repo) != before {
+		t.Error("the refused close changed T-003 or the narrative")
+	}
+}
+
 // ADR-0107's exit statuses: 3 for the sync, 4 for the check, 1 for any other
 // step, and 0 when every step ran.
 func TestExitCode(t *testing.T) {

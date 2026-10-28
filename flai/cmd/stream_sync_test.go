@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -412,6 +413,24 @@ func TestSyncRefusesUncommittedChanges(t *testing.T) {
 		if got, _ := os.ReadFile(filepath.Join(wt, rel)); string(got) != want {
 			t.Errorf("%s is %q", rel, got)
 		}
+	}
+}
+
+// I-0219: in S-004's worktree mounted without its main checkout, as in an
+// agent container, flai stream sync refuses before it reads the base branch
+// from the main checkout, naming it and the MCP tool stream_sync, and
+// changes nothing.
+func TestSyncRefusesAWorktreeWhoseMainCheckoutIsAbsent(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	worktree, main := absentMainWorktree(t)
+	before := treeOf(t, worktree)
+	out, errOut, code := runIn(t, worktree, "stream", "sync", "S-004")
+	want := "flai stream sync needs the main checkout " + main + ", which is not here: " + worktree + " is a story worktree mounted without it, as in an agent container; run it on the host, or call the MCP tool verify, task_done, or stream_sync"
+	if code == 0 || out != "" || !strings.Contains(errOut, want) {
+		t.Errorf("exit %d\nout %q\nerr %q, want %q", code, out, errOut, want)
+	}
+	if after := treeOf(t, worktree); !maps.Equal(before, after) {
+		t.Error("a refused sync changed the worktree")
 	}
 }
 

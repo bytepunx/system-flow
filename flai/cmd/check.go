@@ -91,6 +91,11 @@ batch records none.`,
 			if err != nil {
 				return err
 			}
+			if repo.MainAbsent != "" {
+				// the board is the main checkout's wip/, not the worktree's
+				// tracked copy (I-0219); check has no MCP tool of its own
+				return fmt.Errorf("flai check needs the main checkout %s, whose wip/ is the board, which is not here: %s is a story worktree mounted without it, as in an agent container; run flai check on the host, or call the MCP tool verify, which runs it there", repo.MainAbsent, repo.Root)
+			}
 			ids := make([]string, 0, len(stories))
 			for _, story := range stories {
 				it, err := repo.Get(story)
