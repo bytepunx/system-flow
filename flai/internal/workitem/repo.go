@@ -27,6 +27,11 @@ type Repo struct {
 	// (a story branch under .flai-cache/worktrees, ADR-0019), else Root.
 	// wip/ always lives in the main checkout so the board stays live.
 	MainRoot string
+	// MainAbsent is the main checkout a linked worktree's .git file names
+	// when that checkout's system-flow.yaml is not here, as in an agent
+	// container that mounts the worktree alone (I-0219); MainRoot is then
+	// Root. Empty otherwise.
+	MainAbsent string
 	// Git runs git for the rules that ask it: a story goes to review only
 	// with its worktree committed (S-0140). Nil skips them.
 	Git execx.Runner
@@ -43,46 +48,61 @@ func Open(start string) (*Repo, error) {
 		return nil, err
 	}
 	root := filepath.Dir(path)
-	return &Repo{Root: root, Manifest: m, MainRoot: mainCheckout(root)}, nil
+	main, absent := mainCheckout(root)
+	return &Repo{Root: root, Manifest: m, MainRoot: main, MainAbsent: absent}, nil
 }
 
 // mainCheckout resolves a linked worktree's main checkout from its .git
 // file ("gitdir: <main>/.git/worktrees/<name>"); a normal checkout returns
-// itself.
-func mainCheckout(root string) string {
+// itself. When the main checkout it names has no system-flow.yaml, it
+// returns root and, as absent, the main checkout's path.
+func mainCheckout(root string) (main, absent string) {
 	data, err := os.ReadFile(filepath.Join(root, ".git"))
 	if err != nil {
-		return root
+		return root, ""
 	}
 	line := strings.TrimSpace(string(data))
 	gitdir, ok := strings.CutPrefix(line, "gitdir: ")
 	if !ok {
-		return root
+		return root, ""
 	}
 	gitdir = filepath.Clean(gitdir)
 	marker := string(filepath.Separator) + ".git" + string(filepath.Separator) + "worktrees" + string(filepath.Separator)
 	i := strings.Index(gitdir, marker)
 	if i < 0 {
-		return root
+		return root, ""
 	}
-	main := gitdir[:i]
+	main = gitdir[:i]
 	if !filepath.IsAbs(main) {
 		main = filepath.Join(root, main)
 	}
 	if _, err := os.Stat(filepath.Join(main, "system-flow.yaml")); err != nil {
-		return root
+		return root, main
 	}
-	return main
+	return main, ""
 }
 
 // IsWorktree reports whether Root is a linked worktree of MainRoot.
 func (r *Repo) IsWorktree() bool { return r.MainRoot != "" && r.MainRoot != r.Root }
 
+// RequireMain returns an error naming the command what when Root is a story
+// worktree whose main checkout is not here, and nil otherwise.
+func (r *Repo) RequireMain(what string) error {
+	if r.MainAbsent == "" {
+		return nil
+	}
+	return fmt.Errorf("%s needs the main checkout %s, which is not here: %s is a story worktree mounted without it, as in an agent container; run it on the host, or call the MCP tool verify, task_done, or stream_sync, which run there", what, r.MainAbsent, r.Root)
+}
+
 // CacheDir is .flai-cache in the main checkout: token, worktrees, tool caches.
 func (r *Repo) CacheDir() string { return filepath.Join(r.mainRoot(), ".flai-cache") }
 
-// WorktreePath is where a story's branch is checked out.
+// WorktreePath is where a story's branch is checked out: Root itself when
+// Root is that story's worktree and its main checkout is not here.
 func (r *Repo) WorktreePath(storyID string) string {
+	if r.MainAbsent != "" && filepath.Base(r.Root) == storyID {
+		return r.Root
+	}
 	return filepath.Join(r.CacheDir(), "worktrees", storyID)
 }
 
