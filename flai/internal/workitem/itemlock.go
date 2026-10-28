@@ -80,6 +80,32 @@ func mergeSaved(it *Item) (string, error) {
 	return it.Marshal(), nil
 }
 
+// raiseUpdated sets its updated to the later of its created and its last
+// transition's at when it is before either, so that what Save writes keeps
+// flai check's item.chronology however stale the writer's clock (I-0183), and
+// reports whether it did. A stamp that does not parse is left for Validate.
+func raiseUpdated(it *Item) bool {
+	updated, err := time.Parse(TimeFormat, it.Updated)
+	if err != nil {
+		return false
+	}
+	floor := []string{it.Created}
+	if n := len(it.Transitions); n > 0 {
+		floor = append(floor, it.Transitions[n-1].At)
+	}
+	raised := updated
+	for _, s := range floor {
+		if at, err := time.Parse(TimeFormat, s); err == nil && at.After(raised) {
+			raised = at
+		}
+	}
+	if raised.Equal(updated) {
+		return false
+	}
+	it.Updated = raised.UTC().Format(TimeFormat)
+	return true
+}
+
 // Restore takes a write out of the work item file at path, under the items
 // lock: wrote is what the write left there and before what it replaced. The
 // file is given before when no other writer changed it since, or it is

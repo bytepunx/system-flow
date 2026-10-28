@@ -83,6 +83,87 @@ func TestSaveKeepsAMoveSavedSinceTheCopyWasRead(t *testing.T) {
 	}
 }
 
+// assertUpdatedInOrder fails unless the file's updated is at or after its
+// created and its last transition's at, as flai check's item.chronology asks.
+func assertUpdatedInOrder(t *testing.T, it *Item, want string) {
+	t.Helper()
+	got := onDisk(t, it.Path)
+	if got.Updated != want {
+		t.Errorf("updated %s, want %s", got.Updated, want)
+	}
+	if got.Updated < got.Created {
+		t.Errorf("updated %s is before created %s", got.Updated, got.Created)
+	}
+	if n := len(got.Transitions); n > 0 && got.Updated < got.Transitions[n-1].At {
+		t.Errorf("updated %s is before the last transition's %s", got.Updated, got.Transitions[n-1].At)
+	}
+	if it.Marshal() != got.Marshal() {
+		t.Errorf("the saved copy is not what was written: updated %s", it.Updated)
+	}
+}
+
+// I-0183: a writer whose clock was read before a move it then read the item
+// after saved an updated earlier than the move's transition.
+func TestSaveKeepsUpdatedAtTheLastTransitionWhenTheWriterStampIsEarlier(t *testing.T) {
+	r := newProject(t)
+	readyStory(t, r)
+	mover := copies(t, r, 1)[0]
+	if _, err := r.TransitionAll(mover, InProgress, "agent", "", t0.Add(time.Minute), false); err != nil {
+		t.Fatal(err)
+	}
+	planner := copies(t, r, 1)[0]
+	planner.Forecast = &Forecast{Duration: "4h", Basis: "three stories like it", By: "planner", At: stamp(30 * time.Second)}
+	planner.Updated = stamp(30 * time.Second)
+	if err := r.Save(planner); err != nil {
+		t.Fatalf("the forecast write was refused: %v", err)
+	}
+	assertUpdatedInOrder(t, planner, stamp(time.Minute))
+}
+
+// A move in the same second as the copy's base leaves updated as base had it,
+// so the merge takes the writer's earlier stamp, the only side that changed it.
+func TestSaveKeepsUpdatedAtTheLastTransitionAfterAMergeOfASameSecondMove(t *testing.T) {
+	r := newProject(t)
+	readyStory(t, r)
+	s := copies(t, r, 1)[0]
+	s.Touches = []string{"a.go"}
+	s.Updated = stamp(time.Minute)
+	if err := r.Save(s); err != nil {
+		t.Fatal(err)
+	}
+	c := copies(t, r, 2)
+	mover, planner := c[0], c[1]
+	if _, err := r.TransitionAll(mover, InProgress, "agent", "", t0.Add(time.Minute+500*time.Millisecond), false); err != nil {
+		t.Fatal(err)
+	}
+	if got := onDisk(t, mover.Path).Updated; got != stamp(time.Minute) {
+		t.Fatalf("the move's updated %s, want the base's %s", got, stamp(time.Minute))
+	}
+	planner.Forecast = &Forecast{Duration: "4h", Basis: "three stories like it", By: "planner", At: stamp(30 * time.Second)}
+	planner.Updated = stamp(30 * time.Second)
+	if err := r.Save(planner); err != nil {
+		t.Fatalf("the forecast write was refused: %v", err)
+	}
+	if got := onDisk(t, planner.Path); got.Status != InProgress || got.Forecast.IsZero() {
+		t.Errorf("the merge lost a change: status %s, forecast %+v", got.Status, got.Forecast)
+	}
+	assertUpdatedInOrder(t, planner, stamp(time.Minute))
+}
+
+func TestSaveKeepsUpdatedAtCreated(t *testing.T) {
+	r := newProject(t)
+	s := mustCreate(t, r, Story, "Stamped early", "")
+	if len(s.Transitions) != 0 {
+		t.Fatalf("a new story has transitions %+v", s.Transitions)
+	}
+	s.Touches = []string{"a.go"}
+	s.Updated = stamp(-time.Minute)
+	if err := r.Save(s); err != nil {
+		t.Fatal(err)
+	}
+	assertUpdatedInOrder(t, s, stamp(0))
+}
+
 func TestSaveRefusesAKeyBothChanged(t *testing.T) {
 	r := newProject(t)
 	readyStory(t, r)
