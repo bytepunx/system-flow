@@ -7,7 +7,7 @@ status: backlog
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:44:13Z
-updated: 2026-10-28T12:44:51Z
+updated: 2026-10-28T12:54:28Z
 transitions: []
 tags: [cli, docker]
 topics: [harness, docker]
@@ -33,7 +33,6 @@ usage:
           cache_read: 4374448
           cache_write: 13240
           cost: 0.9619
-draft: true
 cost_of_delay:
   value: 27.78
   by: planner-S-0508
@@ -44,6 +43,9 @@ forecast:
   basis: "Its own forecast of 2h30m; 25th in the pull order with an in-progress limit of 5, behind S-0499, S-0502, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0506 and S-0507."
   by: flai
   at: 2026-10-28T12:44:51Z
+finalized:
+  by: alex
+  at: 2026-10-28T12:54:28Z
 ---
 # S-0508 flai serve runs a story's agent in a container through a container harness adapter, with the worktree, the story's cache folder, and the login mounted, the keys and the MCP token by environment, and the image and network the host sets
 
