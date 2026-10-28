@@ -2315,7 +2315,7 @@ func TestTheTemplatesAnalyzerIsHeldToItsReport(t *testing.T) {
 		if h.Matcher != "Edit|MultiEdit|Write|NotebookEdit" {
 			continue
 		}
-		if c := h.Hooks[0].Command; !strings.HasPrefix(c, `[ "$FLAI_ROLE" = plan ] || [ "$FLAI_ROLE" = orchestrate ] || [ "$FLAI_ROLE" = analyze ] || [ "$FLAI_ROLE" = curate ] || [ -n "$FLAI_STORY" ] || exit 0; `) || !strings.Contains(c, "flai guard 2>&1") {
+		if c := h.Hooks[0].Command; !strings.HasPrefix(c, `[ -n "$FLAI_ROLE" ] || [ -n "$FLAI_STORY" ] || exit 0; `) || !strings.Contains(c, "flai guard 2>&1") {
 			t.Errorf("the analyzer's file edits are not guarded: %q", c)
 		}
 		return
