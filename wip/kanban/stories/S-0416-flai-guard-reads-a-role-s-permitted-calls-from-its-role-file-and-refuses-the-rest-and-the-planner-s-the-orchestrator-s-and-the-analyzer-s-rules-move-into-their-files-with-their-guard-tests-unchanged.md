@@ -3,12 +3,15 @@ id: S-0416
 type: story
 nature: feature
 title: flai guard reads a role's permitted calls from its role file and refuses the rest, and the planner's, the orchestrator's, and the analyzer's rules move into their files with their guard tests unchanged
-status: backlog
+status: ready
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:39:46Z
-updated: 2026-10-28T13:02:59Z
-transitions: []
+updated: 2026-10-28T13:03:54Z
+transitions:
+  - to: ready
+    at: 2026-10-28T13:03:54Z
+    by: alex
 tags: [cli, template]
 topics: [cli, planning, orchestration, template]
 touches: [".claude/settings.json", template/root/.claude/settings.json, design/workflows/roles/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/analyzer.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/analyzer.md, design/adrs, design/adrs/README.md, design/system/agent-adapters.md, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, template/CHANGELOG.md, flai/cmd/guard.go, flai/cmd/guard_test.go, flai/internal/guard/authors.go, flai/internal/guard/authors_test.go, flai/internal/guard/call.go, flai/internal/guard/guard.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/guard/shared.go, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/harness/harness_test.go]
@@ -24,25 +27,25 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 1511
+      seconds: 1516
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 67
-          output: 1162
-          cache_read: 8560656
-          cache_write: 20404
-          cost: 1.8949
+          input: 68
+          output: 1165
+          cache_read: 8708262
+          cache_write: 23876
+          cost: 1.9281
 cost_of_delay:
   value: 59.07
   by: planner-S-0416
   at: 2026-10-21T11:41:58Z
 forecast:
   duration: 1h10m
-  delivery: 2026-10-28T18:55:00Z
-  basis: "Its own forecast of 1h10m; 11th in the pull order with an in-progress limit of 5, behind S-0499, S-0502, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414 and S-0415."
+  delivery: 2026-10-28T17:35:00Z
+  basis: "Its own forecast of 1h10m; 11th in the pull order with an in-progress limit of 5, behind S-0502, S-0415, S-0414, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411 and S-0412."
   by: flai
-  at: 2026-10-28T12:52:31Z
+  at: 2026-10-28T13:02:30Z
 finalized:
   by: alex
   at: 2026-10-28T13:02:59Z

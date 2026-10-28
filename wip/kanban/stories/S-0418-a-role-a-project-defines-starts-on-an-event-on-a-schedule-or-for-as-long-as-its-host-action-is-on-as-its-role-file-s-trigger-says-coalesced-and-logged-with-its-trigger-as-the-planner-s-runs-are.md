@@ -3,12 +3,15 @@ id: S-0418
 type: story
 nature: feature
 title: A role a project defines starts on an event, on a schedule, or for as long as its host action is on, as its role file's trigger says, coalesced and logged with its trigger as the planner's runs are
-status: backlog
+status: ready
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:11Z
-updated: 2026-10-28T13:04:27Z
-transitions: []
+updated: 2026-10-28T13:04:42Z
+transitions:
+  - to: ready
+    at: 2026-10-28T13:04:42Z
+    by: alex
 tags: [cli, template]
 topics: [cli, planning, orchestration]
 touches: [design/system/strategic-agents.md, design/system/dashboard-host-channel.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/role.go, flai/cmd/role_test.go, flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/serve/activity.go, flai/internal/serve/agents.go, flai/internal/serve/role_continuous.go, flai/internal/serve/role_continuous_test.go, flai/internal/serve/role_events.go, flai/internal/serve/role_events_test.go, flai/internal/serve/role.go, flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go, flai/internal/serve/role_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flaiover/src/lib/server/agent.ts, template/CHANGELOG.md, design/system/flai-cli.md]
@@ -24,15 +27,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 226
+      seconds: 230
       estimated: true
       models:
         - model: claude-opus-5-5
           input: 76
-          output: 1154
-          cache_read: 12813704
-          cache_write: 18415
-          cost: 2.8335
+          output: 1156
+          cache_read: 12961309
+          cache_write: 21887
+          cost: 2.8667
 cost_of_delay:
   value: 49.26
   by: planner-S-0418
