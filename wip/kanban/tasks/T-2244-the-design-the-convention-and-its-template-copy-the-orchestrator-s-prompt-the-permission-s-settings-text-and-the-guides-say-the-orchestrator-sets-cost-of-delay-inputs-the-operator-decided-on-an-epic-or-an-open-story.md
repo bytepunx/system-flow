@@ -1,0 +1,40 @@
+---
+id: T-2244
+type: task
+nature: improvement
+title: The design, the convention and its template copy, the orchestrator's prompt, the permission's settings text, and the guides say the orchestrator sets cost of delay inputs the operator decided on an epic or an open story
+status: backlog
+parent: S-0523
+owner: alex
+created: 2026-10-28T14:32:46Z
+updated: 2026-10-28T14:32:46Z
+transitions: []
+stream: S-0523
+tags: [docs, conventions, orchestrator, cost-of-delay]
+touches: [design/system/strategic-agents.md, design/system/flai-cli.md, design/system/project-manifest.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/manifest/settings.go, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md, docs/operators/settings.md, docs/operators/index.md]
+after: [T-2242, T-2243]
+---
+# T-2244 The design, the convention and its template copy, the orchestrator's prompt, the permission's settings text, and the guides say the orchestrator sets cost of delay inputs the operator decided on an epic or an open story
+
+## Work
+
+Third layer: waits for T-2242 and T-2243, since it describes the behaviour they build and names their refusal texts.
+
+Design, `design/system/strategic-agents.md`: in What it does with each permission (S-0219), the `plan_backlog_stories` row's "It writes" and "flai also refuses" cells, and the paragraph below the table that says flai lets the orchestrator add inputs only to a backlog story when neither it nor its epic has any; in A story planner's threads (S-0328), say that a figure the operator decides on any thread, an answer or a confirmed recommendation, is the orchestrator's to set on the epic or story it concerns; in Its permissions and the guard, the row that says the guard admits a story alone. Link the new ADR. `design/system/flai-cli.md`: the `flai edit` row's clause on `plan_backlog_stories` ("a story in the backlog, whose epic has none either, its first inputs") and the `flai mcp` row where it names `item_edit`'s rule. `design/system/project-manifest.md`: the permission's row and its risk.
+
+Convention, `design/conventions/strategic-agents.md`, and the same text in `template/root/design/conventions/strategic-agents.md`: under As the orchestrator, the `plan_backlog_stories` bullet's cost of delay sentence, and the `autonomous` bullet's money exception; under Asking the operator, "the orchestrator's to give a backlog story that has none" becomes: the orchestrator's to set, under `plan_backlog_stories`, on an epic or an open story, for a figure the operator decided on a thread or the planner recommended on a story planner's thread for a backlog story without any; it never sets a value and never changes an input on its own judgement. Add the entry to `template/CHANGELOG.md` under a new patch version, as the entries for S-0498 and S-0504 are written: what changed in the convention, and that it needs the flai release that carries S-0523, since an older flai still refuses the orchestrator an epic and a started story.
+
+Prompt: in `flai/internal/harness/harness.go`, the orchestrator's prompt says it gives "its story cost of delay inputs with item_edit" under `plan_backlog_stories` and excepts "the cost of delay inputs a story's planner asks for" from the money rule; say what it may now set and when, and change the expectations `flai/internal/harness/harness_test.go` pins at the same lines.
+
+Settings text: in `flai/internal/manifest/settings.go`, the permission's description and risk (the risk reads "sets cost of delay inputs, money decisions, without you"); say it sets them on an epic or an open story the operator decided on. Run `make flai-reference`, which regenerates `docs/users/flai-reference.md` from it, and copy the same words to the permission tables in `docs/operators/settings.md`, `docs/operators/index.md`, and `docs/users/flaiover.md`. In `docs/users/flai.md`, When the orchestrator plans stories, rewrite the paragraph "It sets cost of delay inputs alone ... only on a backlog story when neither the story nor its epic has any", and the `plan_backlog_stories` row of the permissions table.
+
+## Done when
+
+- Each document above says the orchestrator, under `plan_backlog_stories`, sets cost of delay inputs on an epic or a story that is not done or cancelled, inputs only, for a figure the operator decided on a thread or the planner recommended for a backlog story without any, and none still says "a backlog story alone" or "when neither it nor its epic has any".
+- `design/system/strategic-agents.md` links the new ADR, and its `updated` date and the conventions' are bumped.
+- `go test ./internal/harness/... ./internal/manifest/...` passes in `flai/`, and `docs/users/flai-reference.md` matches `make flai-reference`'s output.
+- `template/CHANGELOG.md` has the entry, and `scripts/flai.sh test` on the changed paths is clean, the markdown lint among its tiers.
+
+## Notes
+
+Drafted by planner-S-0523. The agent definitions `.claude/agents/orchestrator.md` and `template/root/.claude/agents/orchestrator.md` say "giving the story cost of delay inputs" and are left out: a write under `.claude/` needs the operator's permission prompt, and the sentence stays true. Widen the touches and ask on the plan thread if the story's agent judges them worth the prompt.

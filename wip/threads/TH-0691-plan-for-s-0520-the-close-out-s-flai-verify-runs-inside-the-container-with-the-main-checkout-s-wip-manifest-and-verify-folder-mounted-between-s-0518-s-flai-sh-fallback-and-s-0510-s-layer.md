@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0520-scripts-close-out-sh-stops-at-its-first-step-inside-the-agent-container-since-scripts-flai-sh-builds-flai-with-go-which-the-image-lacks.md
   item: S-0520
 status: open
-participants: [planner-S-0520]
+participants: [planner-S-0520, orchestrator]
 created: 2026-10-28T13:58:40Z
-updated: 2026-10-28T13:58:40Z
+updated: 2026-10-28T14:07:34Z
 ---
 
 # TH-0691 Plan for S-0520: the close-out's flai verify runs inside the container with the main checkout's wip, manifest, and verify folder mounted, between S-0518's flai.sh fallback and S-0510's layer
@@ -43,3 +43,28 @@ Assumptions, each a decision you may overturn here:
 6. Criterion 1 is met when the close-out's first step inside the image built from the branch runs `flai verify` past its own steps to the tiers; a tier stopping for want of a tool is S-0510's, and T-2236 records which, and runs with S-0510's layer too when it is on main by then.
 
 Overlaps: `scripts/agent-container.sh`, the runbook, and `docs/users/flai.md` are claimed by S-0521 in progress, and `docs/users/flai.md` by S-0414 and S-0502; `after` orders S-0517, S-0518, and S-0521 before this story, and S-0507 (T-2174) shares the script, left to the pull order.
+
+### 2026-10-28T14:07:34Z orchestrator (recommendation)
+**Recommended for the operator:** keep S-0520 (assumption 1) and approve the plan with its selective mounts (assumption 2) and T-2232's ADR refining ADR-0203. Answer TH-0687 on S-0517 first, since this plan builds on its two git mounts.
+
+## The plan fits
+
+- **Tasks:** five tasks in three layers. T-2232, the ADR, comes first. T-2233 (lint fallback and stripped-root test), T-2234 (the mounts helper and the adapter) and T-2235 (the script and runbook) share no path. T-2236 documents them, runs the close-out once inside the image, and closes I-0218.
+- **Figures:** 16 file touches plus `design/adrs`, forecast 1h15m over flai's 4m, value 25 USD a week from `flai cod`.
+- **`after: S-0517, S-0518, S-0521`:** each is a change this story builds on. No `after` on S-0510 is right.
+
+## Why it is yours
+
+ADR-0203 § Decision lists the container's mounts and excludes "no main checkout, no `wip/`" by name. This plan mounts the main checkout's `wip/` and `system-flow.yaml` read-only and `.flai-cache/verify/` read-write, so it reverses part of an accepted decision. It also leans on S-0517's `.git` mount, which waits on you on TH-0687.
+
+## Why I recommend it
+
+- **Selective, not whole:** the main checkout mounted whole would put `.flai-cache` in the container, with the config, the MCP token, the LiteLLM key file and other stories' folders. The plan mounts only what `flai verify` reads, and writes only to its own report folder.
+- **Read-only where it reads:** `wip/` and the manifest are read-only, so the container still changes no work item; those writes stay on the host through MCP.
+- **Assumption 4, the commit step:** keeping `.git/objects` read-only means the close-out stops at `commit` inside the container, and the agent commits through `task_done`. I recommend keeping that rule, the one S-0517's plan keeps, rather than making refs writable.
+
+**The alternative:** cancel S-0520 and let S-0510's agent find the mounts under its criterion 5. I do not recommend it: no other story names what `flai verify` needs.
+
+The thread stays open for your answer. S-0520 stays a draft.
+
+Source: design/adrs/0203-flai-may-run-a-story-s-agent-in-a-container-from-a-baseline-image-it-builds.md § Decision

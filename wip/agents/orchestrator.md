@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1651.7953
-accrued_seconds: 1413481
-tasks_completed: 1163
-last_run: 2026-10-28T13:59:57Z
+accrued_cost: 1672.4170
+accrued_seconds: 1416163
+tasks_completed: 1179
+last_run: 2026-10-28T14:44:39Z
 ---
 
 # Orchestrator activity
@@ -8152,6 +8152,118 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0515, S-0241
 - Seconds: 15
 - Cost: 0.0000 USD
+
+### 2026-10-28T14:06:15Z
+
+- Summary: S-0521 landed through the merge queue, which I had enqueued. Under publish (judgement), not publishing yet. release_evaluate lists S-0499 and S-0521 pending (2 stories, 20 USD/week, no held_by_epic). S-0414 is enqueued behind it and starts E-0024, so I publish the three together once it lands, as ADR-0032 makes publishing a batched step.
+- Items: S-0521, S-0499, S-0414
+- Seconds: 378
+- Cost: 0.4093 USD, estimated
+
+### 2026-10-28T14:07:34Z
+
+- Summary: Recommended an answer on TH-0691, citing design/adrs/0203-flai-may-run-a-story-s-agent-in-a-container-from-a-baseline-image-it-builds.md § Decision
+- Items: S-0520
+- Seconds: 79
+- Cost: 1.9257 USD, estimated
+
+### 2026-10-28T14:07:46Z
+
+- Summary: Under plan_backlog_stories, on planner-S-0520's TH-0691: the plan fits (five tasks in three layers, forecast 1h15m, value 25 USD/week, after S-0517, S-0518 and S-0521). It mounts the main checkout's wip/, system-flow.yaml and .flai-cache/verify/ into the container, which ADR-0203 excludes by name, so I recommended keeping the story with its selective mounts and ADR and escalated, after TH-0687 on S-0517. The thread stays open.
+- Items: S-0520
+- Seconds: 12
+- Cost: 0.0000 USD
+
+### 2026-10-28T14:08:03Z
+
+- Summary: Under plan_backlog_stories, started the planner for S-0522, next of the 9 stories flai plan --candidates lists (S-0522 to S-0531).
+- Items: S-0522
+- Seconds: 17
+- Cost: 0.1404 USD, estimated
+
+### 2026-10-28T14:16:16Z
+
+- Summary: Answered TH-0692, citing design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+- Items: S-0522
+- Seconds: 493
+- Cost: 2.2611 USD, estimated
+
+### 2026-10-28T14:16:23Z
+
+- Summary: Under plan_backlog_stories, on planner-S-0522's TH-0692: set S-0522's cost of delay input to time_lost_per_cycle 15m, the planner's recommendation (no reason given for 5m or 1h), and resolved the thread. The planner writes the value, and its plan comes on its own thread.
+- Items: S-0522
+- Seconds: 7
+- Cost: 0.1420 USD, estimated
+
+### 2026-10-28T14:23:53Z
+
+- Summary: Answered TH-0693, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0522
+- Seconds: 450
+- Cost: 1.7158 USD, estimated
+
+### 2026-10-28T14:23:59Z
+
+- Summary: Under plan_backlog_stories, approved and resolved planner-S-0522's TH-0693: four tasks in two layers, forecast 45m, value 37.50 USD/week. Repo.Save keeps updated at or after the last transition, the rule flai check already enforces as item.chronology, so no recorded decision is reversed. The operator had finalized S-0522.
+- Items: S-0522
+- Seconds: 6
+- Cost: 0.0000 USD
+
+### 2026-10-28T14:24:27Z
+
+- Summary: Under promote_to_ready, moved S-0522 to ready as candidate 2 by throughput (45m). Candidate 1, S-0515 (45m), stays out until the operator answers its security question on TH-0683, and S-0241 is blocked. Under order_ready, applied flai order --by throughput, which placed S-0522 second; the ready column is full at 10. Under plan_backlog_stories, started the planner for S-0523, next of the 8 stories flai plan --candidates lists.
+- Items: S-0522, S-0515, S-0523
+- Seconds: 28
+- Cost: 0.5805 USD, estimated
+
+### 2026-10-28T14:34:37Z
+
+- Summary: Recommended an answer on TH-0694, citing design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+- Items: S-0523
+- Seconds: 610
+- Cost: 8.1035 USD, estimated
+
+### 2026-10-28T14:34:51Z
+
+- Summary: Under plan_backlog_stories, on planner-S-0523's TH-0694: set S-0523's cost of delay input to time_lost_per_cycle 30m, the planner's recommendation (no reason given for 15m or 1h). The plan fits (five tasks in four layers, forecast 1h15m). It widens the orchestrator's own cost of delay writes to every open epic and story, a decision not yet recorded that touches money and my own powers, so I recommended a separate permission, set_cost_of_delay, off by default, and escalated. The thread stays open.
+- Items: S-0523
+- Seconds: 14
+- Cost: 0.0000 USD
+
+### 2026-10-28T14:35:15Z
+
+- Summary: Under plan_backlog_stories, started the planner for S-0524, next of the 7 stories flai plan --candidates lists (S-0524 to S-0531). S-0523's planner is writing its value from the 30m input.
+- Items: S-0524
+- Seconds: 24
+- Cost: 0.3026 USD, estimated
+
+### 2026-10-28T14:42:15Z
+
+- Summary: Under accept_reviews, enqueued S-0522 at eaa9d4f5 (place 2 of 2, behind S-0414, whose batch is verifying integration). flai verify passed at that head, with integration and smoke left to the queue. The verifier met criterion 1: raiseUpdated in Repo.Save uses only recorded times, three writers read their clock after the item, with tests and ADR-0208. It met criterion 2: I-0183 closed. Throughput: forecast 45m, value 37.50 USD/week.
+- Items: S-0522
+- Seconds: 420
+- Cost: 3.9522 USD, estimated
+
+### 2026-10-28T14:44:20Z
+
+- Summary: Recommended an answer on TH-0695, citing design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+- Items: S-0524
+- Seconds: 125
+- Cost: 0.7752 USD, estimated
+
+### 2026-10-28T14:44:27Z
+
+- Summary: Under plan_backlog_stories, on planner-S-0524's TH-0695: set S-0524's cost of delay input to time_lost_per_cycle 30m, the planner's recommendation (matching S-0523; no reason given for 15m or 1h). The plan fits (five tasks in four layers, forecast 1h15m). Its remedy, a third kind of plan candidate after an operator entry, widens when the orchestrator may start the planner and spend money, so I recommended it with its one-run-per-entry bound and escalated. The thread stays open.
+- Items: S-0524
+- Seconds: 7
+- Cost: 0.1560 USD, estimated
+
+### 2026-10-28T14:44:39Z
+
+- Summary: Under plan_backlog_stories, started the planner for S-0525, next of the 6 stories flai plan --candidates lists (S-0525 to S-0531).
+- Items: S-0525
+- Seconds: 12
+- Cost: 0.1574 USD, estimated
 
 ## Refusals
 

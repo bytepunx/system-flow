@@ -21,16 +21,16 @@ touches: [system-flow.yaml, design/issues/I-0195-a-thread-with-a-pending-orchest
 after: [T-2147]
 usage:
   source: log
-  seconds: 91
+  seconds: 107
   estimated: true
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 13317
-      cache_read: 2617792
-      cache_write: 84543
-      cost: 1.301
+      input: 49
+      output: 16848
+      cache_read: 3445777
+      cache_write: 106696
+      cost: 1.6719
 ---
 # T-2148 This project sets orchestration.permissions.confirm_after, the acceptance criteria are verified and ticked, and I-0195 is closed naming what fixed it
 

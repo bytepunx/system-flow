@@ -3,11 +3,11 @@ id: S-0414
 type: story
 nature: feature
 title: A strategic role is a markdown file under design/workflows/roles that flai reads and flai check validates, and the template ships the planner, the orchestrator, and the analyzer as baseline role files
-status: review
+status: done
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:39:25Z
-updated: 2026-10-28T13:58:28Z
+updated: 2026-10-28T14:47:43Z
 transitions:
   - to: ready
     at: 2026-10-28T13:01:57Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-10-28T13:58:28Z
     by: agent-S-0414
+  - to: done
+    at: 2026-10-28T14:47:43Z
+    by: orchestrator
 tags: [cli, template]
 topics: [cli, planning, orchestration, template, conventions]
 touches: [design/adrs, design/adrs/README.md, design/conventions/strategic-agents.md, design/workflows/roles/analyzer.md, design/workflows/roles/orchestrator.md, design/workflows/roles/planner.md, design/workflows/roles/README.md, design/system/repository-layout.md, design/system/strategic-agents.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/role.go, flai/cmd/role_test.go, flai/cmd/root.go, flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/upgrade/upgrade.go, flai/internal/upgrade/upgrade_test.go, template/CHANGELOG.md, template/root/design/conventions/strategic-agents.md, template/root/design/workflows/roles/analyzer.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/README.md, template/template.yaml, design/system/flai-cli.md, design/system/project-manifest.md, design/README.md, template/root/design/README.md.tmpl, CLAUDE.md, template/root/CLAUDE.md.tmpl, design/workflows/README.md, template/root/design/workflows/README.md, design/workflows/roles/curator.md, template/root/design/workflows/roles/curator.md]
@@ -44,15 +47,15 @@ usage:
       cost: 18.1828
   strategic:
     - kind: orchestrator
-      seconds: 965
+      seconds: 1091
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 77
-          output: 956
-          cache_read: 12706075
-          cache_write: 61772
-          cost: 2.8083
+          input: 79
+          output: 970
+          cache_read: 13326378
+          cache_write: 63013
+          cost: 2.9447
         - model: claude-sonnet-5-5
           input: 14
           output: 74
@@ -122,3 +125,18 @@ A project can say what a strategic role is in a file, not in Go. A role file und
   - 4h lost per cycle at `planning.hour_rate` 150 over the default 168h cycle gives E-0024 600 USD a week.
   - S-0414 takes the share its 1h17m is of the 11h32m forecast for E-0024's twelve open stories: 77 / 692 × 600.
   - Once the input is on E-0024, `flai cod S-0414` gives the same figure while the forecasts stand.
+
+### Accepted by the orchestrator
+
+- Verified: 01cb0113e3079595707a63d8cb509c8946d5db78
+- Batch: 20261028-143411
+- Enqueued verified: 1c9b9243079248990553af4c66df7cbf42f25b81
+- At: 2026-10-28T14:47:43Z
+
+Verdict: pass at 1c9b9243079248990553af4c66df7cbf42f25b81
+- 1: design/adrs/0207-a-strategic-role-is-a-markdown-file-under-design-workflows-roles-whose-front.md, design/adrs/README.md
+- 2: flai/internal/roles/roles.go, flai/internal/roles/conditions.go, flai/internal/roles/roles_test.go, flai/internal/roles/conditions_test.go, flai/cmd/role.go, flai/cmd/role_test.go, flai/cmd/root.go
+- 3: flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/internal/roles/roles.go
+- 4: design/workflows/roles/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/analyzer.md, design/workflows/roles/README.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/analyzer.md, template/root/design/workflows/roles/README.md
+- 5: flai/internal/upgrade/upgrade_test.go
+- 6: design/system/strategic-agents.md, design/system/repository-layout.md, design/README.md, template/root/design/README.md.tmpl, CLAUDE.md, template/root/CLAUDE.md.tmpl, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, template/CHANGELOG.md
