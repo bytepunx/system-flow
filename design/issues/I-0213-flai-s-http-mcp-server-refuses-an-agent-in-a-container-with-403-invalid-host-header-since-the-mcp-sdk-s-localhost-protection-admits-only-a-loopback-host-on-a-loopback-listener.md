@@ -1,0 +1,24 @@
+---
+id: I-0213
+title: flai's HTTP MCP server refuses an agent in a container with 403 invalid Host header, since the MCP SDK's localhost protection admits only a loopback Host on a loopback listener
+class: blocker
+status: open
+count: 1
+cost: 20m
+first_reported: 2026-10-28T12:22:29Z
+last_reported: 2026-10-28T12:22:29Z
+updated: 2026-10-28T12:22:29Z
+---
+
+# I-0213 flai's HTTP MCP server refuses an agent in a container with 403 invalid Host header, since the MCP SDK's localhost protection admits only a loopback Host on a loopback listener
+
+## Description
+flai's HTTP MCP server refuses an agent in a container with 403 invalid Host header, since the MCP SDK's localhost protection admits only a loopback Host on a loopback listener
+
+## Instances
+
+### 2026-10-28T12:22:29Z
+Story: S-0505.
+S-0505 T-2159: Claude Code in flai-agent-claude-code:local on Docker Desktop (WSL2 mirrored networking) reaches the project's HTTP MCP server at 127.0.0.1:4243 through host.docker.internal (192.168.65.254, the host gateway): without a token the server answers 401, so TCP gets through. With the token the go-sdk v1.8.0 StreamableHTTPHandler answers 403 `Forbidden: invalid Host header "host.docker.internal:4243"`: it refuses as DNS rebinding a request on a loopback listener whose Host is not loopback, and flai/internal/mcphttp does not set DisableLocalhostProtection or take an allowed-hosts list. --network host fails on Docker Desktop (its host network is the VM's, connection refused). The spike gets through only by sending `"Host": "127.0.0.1:4243"` in mcp.json's headers, which Claude Code 2.1.312 honours and Node's fetch does not. Remediation: let flai's HTTP MCP server accept the hosts a container dials (an allowed-hosts list, as dashboard.allowed_hosts does for the dashboard, or the token as the only gate), carried by S-0506, the HTTP MCP server for containers.
+
+## Remediation
