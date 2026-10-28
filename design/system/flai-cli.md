@@ -462,6 +462,7 @@ The template's `repo_url` defaults to the `origin` remote made a web address (`w
 ```text
 flai/
 ├── main.go
+├── pilot/               # main.go: pilot, the second binary, the agent images' entrypoint (S-0507, ADR-0212)
 ├── cmd/                 # one file per cobra command
 ├── internal/
 │   ├── config/          # ~/.flai/config.json
@@ -500,6 +501,7 @@ flai/
 │   ├── protected/       # the paths flai protects, per harness, Claude Code's the only list; Path and Changed answer for every list; read by permission_prompt, flai guard, and the acceptance preview (S-0286, ADR-0106, S-0354, ADR-0130)
 │   ├── cron/            # planning.schedule: a five-field cron expression in UTC or daily, and its next time (S-0211)
 │   ├── harness/         # a story's agent, or the planner, as a command to start: claude-code, the operator's command (S-0104, S-0208); each adapter's capabilities and usage reader (S-0352, ADR-0130)
+│   ├── pilot/           # pilot's start request read and checked, and its run: the inner harness started through its adapter, its output relayed, its session resumed (S-0507, ADR-0212)
 │   ├── usage/           # what agents spent, their empty wakes, and their turns, measured from a harness's log read into neutral events; Claude Code's reader of stream-json (S-0143, S-0352); the spend readers of OpenRouter and a LiteLLM proxy, what a gateway charged for a run (S-0357, ADR-0132)
 │   └── ui/              # prompts and tables
 └── testdata/
@@ -518,3 +520,32 @@ Work items, `board.md`, narratives and their index, and threads (with the block 
 A process keeps the work items it has parsed (S-0156). `workitem.Repo.List` and `Repo.Get` go through a process-wide store in `flai/internal/workitem/store.go`, keyed by file path, because `flai serve`'s methods open a `Repo` per request. Each list walks the item folders and stats each file; a file is parsed again only when it is new, or is not the same file (`os.SameFile`: renamed over, as git and editors do), or its modification time or size changed, and a file gone from the walk leaves the store. A file read within two seconds of its modification time is read again on every list until it is older, so that a same-size write in the same timestamp tick is never missed (the racy-git rule). Each caller gets its own deep copy of every item, so that one that changes an item changes nothing another sees. One caller at a time refreshes a folder, so that lists at once share one read. On this repository a warm list of every item, archive included, takes 3 to 5 ms against 105 to 120 ms before. A short-lived command pays one stat per file, and a second list in the same command is cheaper.
 
 Front matter is parsed with goccy/go-yaml but written by a small purpose-built emitter, so timestamps stay unquoted, sequences stay indented, and a `flai` edit never rewrites lines it did not change. Item bodies come from the template's `items/` when the project's template is in the cache, else from copies embedded in the binary.
+
+### pilot, the agent images' entrypoint (S-0507)
+
+pilot is the module's second binary, `flai/pilot` over `flai/internal/pilot`. It is the entrypoint of the agent images, `tini -- pilot`. Why it is a binary of its own, not a flai subcommand, is in [ADR-0212](../adrs/0212-the-agent-images-are-layered-a-bedrock-layer-and-one-layer-per-inner-harness.md). The container harness it serves is in [agent-adapters.md](agent-adapters.md#a-container-harness-of-flais-own); the images are in [docker.md](../tech/docker.md). GoReleaser builds `flai` alone, so an installed flai has no pilot. `scripts/agent-container.sh S-nnnn` feeds it a start request by hand.
+
+**The start request.** pilot reads one JSON object on standard input: a `harness.Request` (`flai/internal/harness/harness.go`), its fields by their Go names (`Story`, `Root`, `Name`, `Session`, `Agent`, `Role`), plus these:
+
+| Field | Holds | Required |
+|-------|-------|----------|
+| `inner` | The harness pilot runs: one of `harness.Adapters`, not `container` | Yes |
+| `cache` | The absolute path of the mounted folder where the harness keeps its configuration, its sessions, and its MCP file | Yes |
+| `mcp_url_env` | The name of the variable that holds the host's HTTP MCP server's URL | Yes |
+| `mcp_token_env` | The name of the variable that holds the agent's bearer token for it | Yes |
+| `mcp_host_env` | The name of the variable that holds the Host the server listens under, when the container dials another address, such as `host.docker.internal` | No |
+
+The request names variables, never their values. `Resume` is never read from it.
+
+**The refusals.** pilot exits 2 (`pilot.ExitUsage`) with one line on standard error, prefixed `pilot:`, for: empty input; anything but one JSON object; a field `harness.Request` does not have; no `inner`, `inner` `container` (pilot runs in a container and cannot start another), or one no adapter has; no `cache`, a relative one, or one that is not a folder; no `mcp_url_env` or `mcp_token_env`; a named variable unset or empty in pilot's environment. The line names the field and the variable, never a value. A harness that cannot start, its program not on `PATH` or a file it reads not writable, also exits 2.
+
+**The run.** pilot calls the inner adapter's `Start` and writes the files `Start.Files` names. For `claude-code`:
+
+- `<cache>/mcp.json`, named in `--mcp-config` with `--strict-mcp-config`: the HTTP server, its URL, bearer token, and Host each `${VAR}` of the named variable, which claude expands as it reads the file, so no token is written; `X-Flai-Agent` is the agent's name.
+- `CLAUDE_CONFIG_DIR=<cache>/claude`, and `--agent <definition>` for a strategic role.
+
+The harness's environment is pilot's, then the adapter's, then `FLAI_AGENT`, `FLAI_SESSION`, and `FLAI_STORY` from the request's `Name`, `Session`, and `Story`. pilot starts the program from `PATH`.
+
+**The resume.** pilot records each session it starts as an empty file `<cache>/pilot/sessions/<session>`. A request whose `Session` is recorded there sets `Resume`, and the adapter resumes it: `--resume` for `claude-code`. A session's name is letters, digits, `.`, `_`, and `-`.
+
+**The relay.** pilot copies the harness's standard output to its own byte for byte, line by line, so `flai serve`'s readers stay per harness ([ADR-0130](../adrs/0130-every-harness-meets-flai-through-neutral-contracts-an-adapter-s-capabilities-a.md)). The harness's standard error passes through. Beside a failure's one line, pilot writes two lines of its own on standard error, prefixed `pilot:`: a start line, new or resuming, and an end line with the exit code. It never writes a value, the session, or the argv. It forwards SIGTERM and SIGINT to the harness and exits with its code, or 128 plus the signal's number when a signal ended it.

@@ -637,6 +637,19 @@ It listens on this machine only by default. `--addr 0.0.0.0:4243` or another int
 
 **The dashboard's `/mcp` is gone.** Until flaiover 0.22 the dashboard served MCP itself (ADR-0024, superseded). Any request to `/mcp` now answers 410 with a message naming `flai mcp start`, so an agent configured for the old address is told what to do. `FLAIOVER_MCP_MAX_SESSIONS` and `FLAIOVER_MCP_IDLE_MINUTES` no longer mean anything.
 
+### An agent in a container: pilot (S-0507)
+
+An agent in one of flai's agent images reaches this server over HTTP. The images are built locally, in system-flow's own repository, and nothing publishes them yet ([docker.md](../../design/tech/docker.md)). Their entrypoint is pilot, a second program built from flai's source and shipped only in the images: an installed flai has no pilot. pilot reads one start request on standard input, which names the story, the agent, the harness to run, and the variables that hold this server's URL, token, and Host, and runs that harness. How it works is in [flai-cli.md](../../design/system/flai-cli.md#pilot-the-agent-images-entrypoint-s-0507).
+
+| | |
+|-|-|
+| What pilot reads | The start request and the environment variables the container is given. No file of yours |
+| What pilot writes | Only in the cache folder mounted into the container: the harness's MCP file and a record of each session it started, so that a later run resumes it |
+| The token | Never written to a file or a log. The MCP file names the variable that holds it, and the harness reads the variable. Pass it with `docker run -e NAME`, which copies it from your environment, not as an argument |
+| Its own output | One line as it starts the harness and one as the harness ends, prefixed `pilot:`, on standard error. It never prints a value, the session, or the command it runs |
+
+In this repository, `scripts/agent-container.sh S-nnnn` runs a story's agent this way. It asks the installed flai for the URL and token (`flai mcp status`, `flai mcp token`) and passes them by name.
+
 ### The tunnel expectation
 
 The dashboard speaks plain HTTP and the token travels in every request. On the machine itself or a network you trust that is acceptable. Anywhere else, put a tunnel or a reverse proxy that terminates TLS in front of it and use the `https` address; never publish the dashboard's port to the internet as it is. To keep it to the host and let only the tunnel reach it, bind it to loopback: `dashboard.bind: 127.0.0.1` in `system-flow.yaml`, or `flai dashboard --bind 127.0.0.1`. The same holds for `flai mcp` over HTTP, which has its own port and token.

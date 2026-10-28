@@ -1,6 +1,6 @@
 ---
 title: Go
-updated: 2026-09-15
+updated: 2026-10-28
 status: active
 topics: [go]
 ---
@@ -11,6 +11,7 @@ topics: [go]
 |-|-|
 | Version | 1.26 (toolchain pinned in `flai/go.mod`) |
 | Used in | `flai` |
+| Binaries | Two from the one module. `flai`, built from `flai/` and released by GoReleaser. `pilot`, the agent images' entrypoint, built from `flai/pilot` with `go build ./pilot` in `flai/`, only into the bedrock image (`flai/images/bedrock/Dockerfile`), never by GoReleaser ([ADR-0212](../adrs/0212-the-agent-images-are-layered-a-bedrock-layer-and-one-layer-per-inner-harness.md), S-0507) |
 | Decision | [ADR 0006](../adrs/0006-go-for-the-cli.md) |
 
 ## Why
