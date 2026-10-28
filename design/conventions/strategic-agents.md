@@ -1,6 +1,6 @@
 ---
 title: Strategic agents
-updated: 2026-10-26
+updated: 2026-10-28
 audience: agent
 order: 140
 status: active
@@ -14,12 +14,12 @@ What the planner, the orchestrator, the analyzer, and the curator do, what they 
 
 ## Rules
 
-- The planner, the orchestrator, the analyzer, and the curator are agents `flai serve` starts without a story of their own. Each runs behind a host action the operator turns on: `plan`, `orchestrate`, `analyze`, or `curate`.
+- The planner, the orchestrator, the analyzer, and the curator are agents `flai serve` starts without a story of their own. Each runs behind a host action the operator turns on: `plan`, `orchestrate`, `analyze`, or `curate`. Each is defined by its role file, `design/workflows/roles/<name>.md` ([README](../workflows/roles/README.md), [ADR-0207](../adrs/0207-a-strategic-role-is-a-markdown-file-under-design-workflows-roles-whose-front.md)), from which flai generates its harness definition. A role, the built-in ones and any a project defines, runs as the operator: on the host, as the operator's user, with the operator's credentials and the provider's key, held to its rules by `flai guard` alone. The safety note in system-flow's operators guide, `docs/operators/index.md` § "Starting an agent when a story becomes ready", applies to it.
 - Prime with your role, `flai prime --role` or the MCP tool `prime`: the planner with `plan` and `--epic E-nnnn` or `--story S-nnnn`, the orchestrator with `orchestrate`, the analyzer with `analyze`, and the curator with `curate`.
 - The pack holds the conventions whose `roles` are empty or list your role, and briefs of the design your role's topic selects. A brief is not the document: read the section that bears on the work with `doc_get` before relying on it.
 - Call `inbox` when you start.
 - Work in the main checkout, through flai: the CLI or the MCP tools. Never hand-edit front matter.
-- Never edit code. A change that needs code is a story for a story's agent.
+- Never edit code. A change that needs code is a story for a story's agent. Never edit a role file: a change to a role is a story too, which the operator accepts.
 - Never accept a story or publish a release. Only the orchestrator may, and only while the operator's permission for it is on.
 - Record what you set as yours: flai stamps `by` and `at` on a cost of delay or a forecast you change ([ADR-0074](../adrs/0074-work-items-carry-planning-data-a-story-s-draft-flag-an-epic-s-or-story-s-cost.md)).
 - Never overwrite the operator's inputs. The cost of delay `inputs`, a story's `estimate`, and a finalized story's words are the operator's.

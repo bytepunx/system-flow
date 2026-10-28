@@ -27,6 +27,7 @@ Precedence when rules conflict: an explicit instruction from the operator in thi
 | `design/analysis/` | What the analyzer found, one report per run, indexed in `README.md` | Read them. Only the analyzer writes here. |
 | `design/digest/` | What past stories learned, one fact per file, `D-nnnn-<slug>.md`; `flai digest list` is its index | Read them. Write only with `flai digest`. |
 | `design/components/` | Supporting files for components: one `*.examples.json` per component, its named sets of props | Keep the examples of a component you change in step with its props; `flai check` reports `components.examples`. |
+| `design/workflows/` | What flai runs as data: `roles/`, one file per strategic role, from which flai generates its harness definition (ADR-0207) | Read them. Change a role through a story; `flai check` validates them. |
 | `docs/<audience>/` | Outward-facing documentation per audience | Edit whenever user-facing behaviour changes. |
 | `wip/kanban/` | Work items: `epics/`, `stories/`, `tasks/`, `board.md` | Create and transition items with `flai`. |
 | `wip/agents/` | Your narrative, one file per story | Keep `## Current state` and `## Next steps` true. |

@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-10-26
+updated: 2026-10-28
 status: active
 ---
 
@@ -459,6 +459,20 @@ flai serve disable curate        # no more runs
 **Understand what enabling it means.** Whoever holds the dashboard token can start the curator whenever none runs, on your machine, as you, with the curator's agent (`digest.agent` in `system-flow.yaml` over `agent`) and the harnesses and command you set with `flai serve agent`. One curator runs per project at a time, and it does not count against the in-progress limit, so each start spends what one agent session costs: an acceptance costs one run, and a burst of acceptances two. A start refused, such as while a curator runs, is logged in flai serve's log and not tried again. Acceptances while the action is off start nothing, then or later. Turning the action off starts no more runs; it does not stop one under way. The curator runs in the project's main checkout. It reads what the archive and the threads gained since its last run with `flai digest harvest`, and writes digest entries under `design/digest/` with `flai digest new` and `edit`. In every run it marks absorbed, with `flai digest absorb`, the entries a design document now records, and runs `flai digest compact`, which compacts to their title the entries no work item, narrative, or thread cited within `digest.compact_after`, 30 days unless you set it. It deletes nothing, and leaves what it wrote uncommitted ([Absorb and compact the digest](../users/flai.md#absorb-and-compact-the-digest)). `flai guard` refuses it every file edit, `flai digest seed`, any write to a work item or an issue, and git's writes. That holds for file edits only while `.claude/settings.json` runs the guard on `Edit|MultiEdit|Write|NotebookEdit` for a curator's session, as the template's does, and `flai` on `PATH` has the curator's rules; the curator's definition gives it no `Edit` or `Write`. A project whose `.claude/agents/` has no `curator.md` cannot start it on `claude-code`: `flai upgrade` adds it. An agent `flai serve` started cannot start the curator through MCP.
 
 **Where to look.** The run is kept in `serve/agents.json` under `curator`, with its since, what started it (`asked`, `accepted S-0042`, or `schedule daily`), and the entries it wrote or changed; its output is in `serve/agents/<key>-curator-<time>.log`, and what it did and cost in `wip/agents/curator.md`, whose entry names those entries. `flai hostapi agent.status` shows the run as `curator`. A run that exited with an error is recorded as `failed`; one that found nothing to take in has `worked`. The curator asks you in a thread on the item an entry's source comes from when the entry needs your judgement.
+
+### Defining a role (S-0414)
+
+The planner, the orchestrator, the analyzer, and the curator are each written down as a role file, `design/workflows/roles/<name>.md`, which the template ships ([ADR-0207](../../design/adrs/0207-a-strategic-role-is-a-markdown-file-under-design-workflows-roles-whose-front.md)). A role you define is a file of your own there, in a story you accept. Its front matter names the role, the host action that gates it, what starts it, the items a run takes, its topics, the calls `flai guard` allows it, the calls only your settings allow, each under the setting that allows it, and the fields flai generates its harness definition from; its body is the definition's prompt. ADR-0207 lists every field, condition, and gated call, and the folder's `README.md` lists the roles.
+
+```bash
+flai role list            # every role, its action, triggers, calls, and permissions
+flai role show <name>     # one role, with its harness definition and its prompt
+flai check                # roles.file, roles.grant, and roles.definition on a file that falls short
+```
+
+**Understand what a role file means.** A defined role runs as you, as the built-in roles do: on your machine, as your user, with your git and forge credentials, the provider's key, and every file you can read ([Starting an agent when a story becomes ready](#starting-an-agent-when-a-story-becomes-ready) says what that environment holds). `flai guard` holds it to its file for flai's MCP tools, flai and git command lines, and file edits. It does not judge another program the session runs through `Bash`, so a role given `Bash` has your shell. A role file is code you run: review a change to one as you would a script's, and let it reach main only through a story you accept. No role may edit `design/workflows/`, so a role cannot widen itself. `flai check` refuses a file that grants an acceptance, a publish, a move past backlog, finalizing a draft, or cost of delay inputs outside the permission that gates it.
+
+In this release the role files are data. `flai serve` still starts only the four built-in roles, behind their host actions, and flai decides what each may do from its own code; `.claude/agents/` still holds their harness definitions. Starting a role you define arrives with S-0417, its triggers with S-0418, and its own `roles.<name>` settings in the manifest with S-0416 and S-0417.
 
 ### The settings host action: changing the host's settings from the dashboard (S-0105)
 
