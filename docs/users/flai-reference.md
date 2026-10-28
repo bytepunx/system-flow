@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-10-26
+updated: 2026-10-28
 status: active
 ---
 
@@ -55,6 +55,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [push](#flai-push) | Push an acceptance that was made and not pushed |
 | [queue](#flai-queue) | List the stories in review the merge queue would batch, and why each other would not |
 | [release](#flai-release) | Compute a release for one item, publish everything accepted since the last release, or say whether a release is due |
+| [role](#flai-role) | Read the project's strategic roles: one file each under design/workflows/roles (ADR-0207) |
 | [self-upgrade](#flai-self-upgrade) | Install the latest flai release over this binary, or list the published ones |
 | [serve](#flai-serve) | Run flai on the host for the dashboards: it dials each registered project's dashboard and answers it |
 | [shared](#flai-shared) | List, check, add, and remove the shared paths, whose overlaps hold no story |
@@ -135,6 +136,7 @@ Subcommands:
 - [push](#flai-push): Push an acceptance that was made and not pushed
 - [queue](#flai-queue): List the stories in review the merge queue would batch, and why each other would not
 - [release](#flai-release): Compute a release for one item, publish everything accepted since the last release, or say whether a release is due
+- [role](#flai-role): Read the project's strategic roles: one file each under design/workflows/roles (ADR-0207)
 - [self-upgrade](#flai-self-upgrade): Install the latest flai release over this binary, or list the published ones
 - [serve](#flai-serve): Run flai on the host for the dashboards: it dials each registered project's dashboard and answers it
 - [shared](#flai-shared): List, check, add, and remove the shared paths, whose overlaps hold no story
@@ -3244,6 +3246,37 @@ Flags:
 | `--dry-run` | print the plan only, or with --pending what would publish |
 | `--evaluate` | say whether orchestration.release is met, with its figures; changes nothing |
 | `--pending` | publish everything merged and unreleased since each component's last tag |
+
+### flai role
+
+Read the project's strategic roles: one file each under design/workflows/roles (ADR-0207).
+
+A strategic role is one markdown file, &lt;name&gt;.md, in the design folder's workflows/roles (ADR-0207). Its front matter names the role, its harness definition, its host action, its triggers, the items it takes, its topics, how its usage is charged, and the calls flai guard allows it, each plain or under a named condition, with each call only the operator may allow inside a permissions entry naming the operator's setting. Its body is its harness definition's prompt. flai check reports a file that falls short as roles.file, roles.grant, or roles.definition.
+
+Subcommands:
+
+- [list](#flai-role-list): List the project's roles with their action, triggers, items, topics, charge, calls, and permissions
+- [show](#flai-role-show): Print a role: its front matter, its harness definition, and its body
+
+#### flai role list
+
+List the project's roles with their action, triggers, items, topics, charge, calls, and permissions.
+
+```text
+flai role list
+```
+
+List the roles in this checkout's design folder's workflows/roles, in file order: each one's name, role verb, and file, and below it its action, triggers, item kinds, topics, charge, the MCP tools, commands, and folders it may use, and each permission's setting with the calls it allows. A call under a condition is shown as call (when condition). A role file that does not load is left out and said on stderr; flai check reports it. --json gives an array of the roles, [] when none.
+
+#### flai role show
+
+Print a role: its front matter, its harness definition, and its body.
+
+```text
+flai role show <name>
+```
+
+Print one role by its name: what flai role list prints of it, then its title, status, updated, works\_story, its harness definition's description, tools, and model, and the body, its definition's prompt. --json gives the role.
 
 ### flai self-upgrade
 

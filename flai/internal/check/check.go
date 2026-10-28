@@ -26,10 +26,12 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/digest"
 	"github.com/bytepunx/system-flow/flai/internal/experiment"
+	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mdlint"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
+	"github.com/bytepunx/system-flow/flai/internal/roles"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/topics"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -120,6 +122,7 @@ func Run(repo *workitem.Repo, now time.Time) (*Result, error) {
 	c.documentation()
 	c.adrIndex()
 	c.conventions()
+	c.roles()
 	c.issues()
 	c.experiments()
 	c.analysis()
@@ -1227,6 +1230,30 @@ func (c *checker) conventions() {
 			continue
 		}
 		c.topicWords(path, doc)
+	}
+}
+
+// RolesVocabulary is what flai check holds role files' names to (ADR-0207):
+// the reads every agent has, from the guard. Tools and Commands are nil, so
+// the check of an entry's MCP tool or command name is skipped: the MCP
+// server and the command tree import this package, and a check that read
+// them in one caller and not another would differ where it runs. A test in
+// cmd holds the shipped role files' names to both.
+func RolesVocabulary() roles.Vocabulary {
+	return roles.Vocabulary{Reads: guard.MCPReads}
+}
+
+// roles validates the design folder's role files (ADR-0207): each problem
+// roles.Load or roles.Validate finds is an error under its code, on its line.
+func (c *checker) roles() {
+	design := c.repo.Manifest.Layout["design"]
+	list, problems, err := roles.Load(c.repo.Root, design)
+	if err != nil {
+		c.add(Error, roles.CodeFile, filepath.Join(c.repo.Root, filepath.FromSlash(roles.Dir(design))), 1, "%v", err)
+		return
+	}
+	for _, p := range append(problems, roles.Validate(list, design, RolesVocabulary())...) {
+		c.add(Error, p.Code, filepath.Join(c.repo.Root, filepath.FromSlash(p.Path)), p.Line, "%s", p.Message)
 	}
 }
 
