@@ -6,7 +6,7 @@ title: flai's HTTP MCP server refuses an agent in a container with 403 invalid H
 status: backlog
 owner: alex
 created: 2026-10-28T12:52:34Z
-updated: 2026-10-28T12:52:34Z
+updated: 2026-10-28T12:57:10Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m
     by: flai
     at: 2026-10-28T12:52:34Z
+finalized:
+  by: alex
+  at: 2026-10-28T12:57:10Z
 ---
 # S-0515 flai's HTTP MCP server refuses an agent in a container with 403 invalid Host header, since the MCP SDK's localhost protection admits only a loopback Host on a loopback listener
 
