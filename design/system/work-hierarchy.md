@@ -1,6 +1,6 @@
 ---
 title: Work item hierarchy and schema
-updated: 2026-10-21
+updated: 2026-10-28
 status: active
 topics: [all]
 ---
@@ -212,6 +212,7 @@ Rules:
 - `created`, `updated`, and every `at` are UTC ISO 8601 timestamps.
 - Titles and other free text that contain a colon followed by a space, or start with a YAML-special character, are double-quoted. `flai` writes them that way; hand edits must too.
 - `transitions` is the source of truth for state. `status` must equal the `to` of the last transition; `flai check` enforces this. Creation implies `backlog` and is not recorded as a transition; a later move back to `backlog` is ([ADR-0055](../adrs/0055-a-story-moves-back-one-column-from-ready-in-progress-review-or-cancelled-and.md)).
+- `updated` is never before the last transition's `at` or before `created` (S-0522, [ADR-0208](../adrs/0208-repo-save-never-leaves-a-work-item-s-updated-before-its-last-transition-or-its.md)). A writer takes its clock after it reads the item it stamps. `Repo.Save` raises `updated` to the later of the two when a writer's clock is earlier, under the items lock and after the merge. So a write that races a move keeps the move's order. `flai check` reports `item.chronology` on a file a hand edit left otherwise.
 - `started` and `completed` are not stored. They are derived as the first `in-progress` transition and the last transition while the item is `done` or `cancelled`. See [metrics.md](metrics.md).
 - An epic cannot be `done` while any child story is not `done` or `cancelled`. A story cannot be `done` while any child task is not `done` or `cancelled`.
 - An epic follows its stories (S-0200, [ADR-0076](../adrs/0076-an-epic-follows-its-stories-to-ready-and-in-progress-with-the-first-to-review.md)): a story's move, cancellation, or change of epic moves its epic in the same write, toward the state its stories put it in and only in the direction the story moved, one allowed transition at a time, each recorded in the epic's `transitions` with the story's actor and time. It reaches done only with the acceptance of its last open story, which archives it. The rule is in [workflow.md](workflow.md#an-epic-follows-its-stories); `flai check` warns (`epic.lags-stories`) about an open epic behind its stories.
