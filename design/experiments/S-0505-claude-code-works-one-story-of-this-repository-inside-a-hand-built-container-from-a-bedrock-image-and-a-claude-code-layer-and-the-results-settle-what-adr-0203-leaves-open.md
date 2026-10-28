@@ -115,7 +115,19 @@ What did not hold:
 
 The login held through both runs. `.credentials.json` in the cache folder stayed a link to the read-only mount, and the operator's file kept its size and modification time, so no OAuth refresh happened in the runs of T-2159 and T-2166.
 
-T-2173 adds the bind mount's speed below.
+### The bind mount's speed
+
+T-2173 timed three commands in S-0505's worktree, on the host and inside `flai-agent-claude-code:local` with the worktree bind-mounted at its host path as `scripts/agent-container.sh` mounts it, plus the main checkout's `.git` (`FLAI_AGENT_GIT_MOUNT=1`), which `git status` needs. Each command ran once to warm up, then three times. The whole set ran twice on each side, alternating, so each median is of six runs. The worktree is on the WSL2 distribution's own ext4 filesystem (`/dev/sdd`), not a Windows path, and Docker Desktop's storage driver is `overlayfs`. `flai` is the tree's build on both sides: `bin/flai` on the host, `/usr/local/bin/flai` in the image. The file walk is `find . -type f | wc -l`, 6,688 files.
+
+| Command | Host median | Container median | Container over host |
+|---------|-------------|------------------|---------------------|
+| `git status` | 27 ms | 27 ms | 1.0 |
+| `flai check --strict` | 2.79 s | 3.01 s | 1.08 |
+| file walk | 19 ms | 57 ms | 3.0 |
+
+Inside the container, `flai check --strict` reads the worktree as the project, since the main checkout is not mounted, and checks 2,725 items against the host's 2,738. Its work is close to the host's, not the same ([I-0219](../issues/I-0219-flai-verify-inside-the-agent-container-takes-the-story-s-worktree-for-the-project-root-since-the-main-checkout-is-not-mounted-and-writes-a-config-under-the-container-s-home.md)).
+
+Metadata-heavy work pays about three times the host's cost, through Docker Desktop's file sharing into its VM. Commands that read files and compute pay under a tenth more. The bind mount at the host path is fast enough for a Go test suite on this host, whose cost is compile and run rather than directory walks, and the clone path ADR-0203 holds in reserve is not needed from the start. A worktree on a Windows path was not measured.
 
 ## Recommendation
 
