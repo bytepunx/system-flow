@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:41:11Z
-updated: 2026-10-28T13:05:47Z
+updated: 2026-10-28T13:11:43Z
 transitions: []
 tags: [cli, template]
 topics: [cli, orchestration, template, conventions]
@@ -49,17 +49,19 @@ usage:
           cache_read: 62996281
           cache_write: 40349
           cost: 13.9187
-draft: true
 cost_of_delay:
   value: 44.67
   by: planner-S-0423
   at: 2026-10-21T13:13:04Z
 forecast:
   duration: 1h
-  delivery: 2026-10-28T22:04:00Z
-  basis: "Its own forecast of 1h; 19th in the pull order with an in-progress limit of 5, behind S-0502, S-0526, S-0415, S-0419, S-0418, S-0416, S-0414, S-0420, S-0417, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0421 and S-0422."
+  delivery: 2026-10-28T21:19:00Z
+  basis: "Its own forecast of 1h; 17th in the pull order with an in-progress limit of 5, behind S-0414, S-0502, S-0521, S-0415, S-0419, S-0418, S-0421, S-0416, S-0420, S-0417, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412 and S-0422."
   by: flai
-  at: 2026-10-28T13:05:47Z
+  at: 2026-10-28T13:10:56Z
+finalized:
+  by: alex
+  at: 2026-10-28T13:11:43Z
 ---
 # S-0423 The template ships a baseline publish formula that fetches, evaluates orchestration.release, and publishes what is pending, the orchestrator starts it in place of calling release_publish, and it is run once here
 
