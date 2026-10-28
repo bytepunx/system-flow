@@ -1,6 +1,6 @@
 ---
 title: Server-side response times
-updated: 2026-10-26
+updated: 2026-10-28
 status: active
 topics: [server-side, back-end, cli, dashboard]
 ---
@@ -198,7 +198,7 @@ After S-0471, half of a warm `stats.get` was one `git log` ([I-0184](../issues/I
 
 `Committed` keeps its answer per repository root for the life of the process (`flai/internal/storygit/committed.go`). The key is the main branch's name, the wip folder, and the output of `git show-ref --heads`, which names every local branch's tip. A call runs `git rev-parse --abbrev-ref HEAD` and `git show-ref --heads`. While the key is unchanged, it answers what it kept and runs no log. When any local branch's tip moves, the next call reads the whole log again: a commit on the main branch or a story branch, a story branch made or deleted, and the rebase `flai stream sync` makes. Each call gets its own deep copy of the answer, and one lock per process keeps two calls from reading the log at once.
 
-A fresh process has nothing kept. A one-shot `flai stats`, `flai hostapi --timing`, and the first `stats.get` of a `flai serve` process still run the log once, and so does the first call after a tip moved.
+With S-0500 alone, a fresh process had nothing kept. A one-shot `flai stats`, `flai hostapi --timing`, and the first `stats.get` of a `flai serve` process still ran the log once, and so did the first call after a tip moved. S-0531 keeps the answer between processes ([below](#the-stories-commits-kept-between-processes-s-0531)).
 
 Tests count the `git log` processes a real runner starts: a second call with nothing moved starts none, a commit on main or a story branch or a new story branch makes the next call read again, a caller who changes its answer does not change the next one, and each root keeps its own (`flai/internal/storygit/committed_test.go`, and `TestReadStartsNoLogWhileNothingChanged` in `flai/internal/statsread/statsread_test.go`).
 
@@ -226,9 +226,48 @@ The two binaries give the same report. Their `flai stats --json`, run seconds ap
 
 `main`'s warm answer, 1,317 ms, is longer than the 894 ms S-0471 measured for its binary on 2026-10-21, under a heavier load and a larger history (4878 Markdown files against 4160, 504 stories against 483). This round took no profile. What is left of a warm answer is `stats.compute`'s own work, about 600 ms, which S-0471's profile put in `metrics.Compute` and `statsread.Read`.
 
+## The stories' commits kept between processes (S-0531)
+
+After S-0500, a fresh process still ran the log once ([I-0209](../issues/I-0209-a-one-shot-flai-stats-and-the-first-stats-get-of-a-flai-serve-process-still-run-one-git-log-for-claims-drift-about-a-quarter-of-a-cold-answer.md)). S-0500 measured it at 655 of 2,444 ms in a cold `stats.get`, about a quarter.
+
+### Cause
+
+`storygit.Committed` kept its answer in memory only. Every one-shot `flai stats`, every `flai hostapi --timing`, and the first `stats.get` of each `flai serve` process started with nothing kept, so each ran one `git log` over the main branch and every `story/` branch, even when no branch had moved since the last process read it.
+
+### Fix
+
+`Committed` also keeps its answer in `.flai-cache/stories-commits.json` in the main checkout (`flai/internal/storygit/committed.go`). The file holds the repository root, the key, and the answer. The key is S-0500's: the main branch's name, the wip folder, and the output of `git show-ref --heads`. A process with nothing in memory reads the file. When the root and the key match, it answers from the file and runs no log. A file that is missing, cannot be parsed, or names another root or another key is a miss: the process reads the log, answers what it read, and writes the file again. It writes a file beside it and renames it over the old one, so a reader finds the old answer or the new one whole. A write that fails never fails the call; it costs the next process a read of the log.
+
+What still reads the log is the first call after any local branch's tip moved, in whichever process makes it. That call writes the file again, so the processes after it read none.
+
+Tests run the log in one process and count the `git log` processes the next one starts: none while nothing moved, a new read after a branch moved, a read over a damaged file or one for another root or key, and an answer when the cache folder cannot be written (`flai/internal/storygit/committed_test.go`). `TestReadStartsNoLogInANewProcessWhileNothingChanged` in `flai/internal/statsread/statsread_test.go` starts the test binary again as a new process and finds that its `statsread.Read` starts no log.
+
+### Measured on this repository
+
+On 2026-10-28, between 18:33 and 18:34 UTC, on the operator's host (WSL2, 24 cores, Go 1.26.0), against this repository: 5161 Markdown files under `design`, `docs`, and `wip`, 4233 of them under `wip`, and 531 stories in the report. Two flai binaries were built at 18:32 UTC: `main` at c26ac99b0 and `story/S-0531` at 9e9eb49af. The story branch was `main` and one commit, which changed `committed.go` and two test files; the `main` binary was built from a copy of the story's `flai` folder with those three files as `main` has them. Both ran from the main checkout, with `FLAI_CONFIG` and `FLAI_CACHE_DIR` as `scripts/env.sh` sets them. The method was S-0500's, for the fresh processes only:
+
+- Cold is a fresh process: `flai hostapi --timing stats.get '{"since":"30d","type":"story","bucket":"day"}'`, three runs each, the binaries alternating. The figure is the median wall time; the phases are the medians from the `request answered` event.
+- `flai stats --json` is a fresh process, three runs each, alternating, wall time.
+- Before the rounds, the kept file did not exist. One S-0531 `stats.get` ran first and wrote it. It is shown on its own: a miss, the path the first call after a tip moved takes.
+- The local branch tips were hashed before and after each run. No tip moved during the 13 runs, and the kept file was written once, by the first run.
+
+The host was busy: the one-minute load average was 18 to 22.
+
+| Request | `main` | `main`, where the time went | S-0531 | S-0531, where the time went |
+|---------|--------|-----------------------------|--------|-----------------------------|
+| `stats.get` cold, no kept file | | | 2,278 ms, one run | `stats.compute` 2,206, of which `exec.git.log` 553, `exec.git.rev-parse` 2.8 and `exec.git.show-ref` 2.6; `encode` 10.2 |
+| `stats.get` cold | 2,154 ms (2,148 to 2,514) | `stats.compute` 2,079, of which `exec.git.log` 552, `exec.git.rev-parse` 3.0 and `exec.git.show-ref` 2.9; `encode` 11.5 | 1,751 ms (1,666 to 1,823) | `stats.compute` 1,672, of which `exec.git.rev-parse` 3.5 and `exec.git.show-ref` 3.1; `encode` 12.6; no `exec.git.log` in any of the three runs |
+| `flai stats --json` | 2,248 ms (2,242 to 2,277) | | 1,591 ms (1,553 to 1,628) | |
+
+A fresh process no longer reads the log while no branch moves. A cold `stats.get` takes 403 ms less, about a fifth, and a `flai stats --json` 657 ms less, about three tenths. `main`'s log took 552 ms of each cold call. What is left of git is the two processes S-0500 left in a warm call, about 3 ms each. The first call with no kept file costs what `main`'s does: it reads the log, 553 ms, and writes the file, 490 KB.
+
+`main`'s median `stats.compute` less its median log was 1,527 ms; S-0531's median `stats.compute` was 1,672 ms. The difference includes reading and parsing the kept file, and is within the spread of S-0531's three runs, 1,590 to 1,753 ms. This round took no profile to split it.
+
+The two binaries give the same report. In each of the six pairs compared, three of `stats.get` and three of `flai stats --json`, run about two seconds apart, `claims.drift`, all 491 entries, and `claims.days` are identical. `claims.weeks` differs only in the current week's held seconds, `after` and `overlap`, by 1 to 14 seconds, which grow with now while a story is held: `main` ran first in each pair, and S-0531's figures are the larger.
+
 ## Stories
 
-Each cause has a backlog story under [E-0012](../../wip/kanban/epics/E-0012-performance-analysis-and-improvements.md), with the cause's numbers and a proposed solution. Causes 1 to 4 are the largest share of a board load; 5 multiplies 4 and every write on hosts with a long `PATH`. S-0471 remedies a regression found later, recorded as I-0155, and S-0500 the `git log` that was left in every warm chart answer after it, recorded as I-0184.
+Each cause has a backlog story under [E-0012](../../wip/kanban/epics/E-0012-performance-analysis-and-improvements.md), with the cause's numbers and a proposed solution. Causes 1 to 4 are the largest share of a board load; 5 multiplies 4 and every write on hosts with a long `PATH`. S-0471 remedies a regression found later, recorded as I-0155, and S-0500 the `git log` that was left in every warm chart answer after it, recorded as I-0184, and S-0531 the one left in every cold answer, recorded as I-0209.
 
 | # | Story |
 |---|-------|
@@ -241,3 +280,4 @@ Each cause has a backlog story under [E-0012](../../wip/kanban/epics/E-0012-perf
 | 7 | [S-0162](../../wip/kanban/stories/S-0162-the-items-and-documents-pages-ask-for-what-they-show-not-the-whole-archive-and-every-file-s-front-matter.md) The items and documents pages ask for what they show, not the whole archive and every file's front matter |
 | I-0155 | [S-0471](../../wip/kanban/stories/S-0471-the-chart-data-takes-about-4-s-warm-against-10-ms-measured-on-2026-09-29-almost-all-of-it-in-metrics-replayholds.md) The chart data takes about 4 s warm, against 10 ms measured on 2026-09-29, almost all of it in metrics.replayHolds |
 | I-0184 | [S-0500](../../wip/kanban/stories/S-0500-every-stats-get-and-flai-stats-runs-one-git-log-for-claims-drift-about-450-ms-of-a-900-ms-warm-answer.md) Every stats.get and flai stats runs one git log for claims drift, about 450 ms of a 900 ms warm answer |
+| I-0209 | [S-0531](../../wip/kanban/stories/S-0531-a-one-shot-flai-stats-and-the-first-stats-get-of-a-flai-serve-process-still-run-one-git-log-for-claims-drift-about-a-quarter-of-a-cold-answer.md) A one-shot flai stats, and the first stats.get of a flai serve process, still run one git log for claims drift, about a quarter of a cold answer |
