@@ -2004,6 +2004,19 @@ The MCP tool `prime` takes the same `role`, with `epic` or `story` for the plann
 
 The header names the role and, for the planner, the item. `--json` gives the planner's epic or story as `item`, and has no `story`. The orchestrator, the analyzer, and the curator refuse `--epic` and `--story`. The planner needs one of them, not both, and refuses a task, or an ID of the other type than its flag. `--epic` without `--role plan` is refused.
 
+#### A role your project defines
+
+A role you define in a role file under `design/workflows/roles/` ([ADR-0207](../../design/adrs/0207-a-strategic-role-is-a-markdown-file-under-design-workflows-roles-whose-front.md)) primes the same way, by the file's `role`:
+
+```bash
+flai prime --role review --story S-0207   # a role whose file says item: [story]
+flai prime --role audit --part 1          # a role whose file says item: none
+```
+
+Its pack takes its topics from the file's `topics`, holds the conventions whose `roles` are empty or list the role, and, when the file's `item` names `epic` or `story`, what the item you give names, then the sections ranked highest against it. The header calls its agent "the" and the file's `name`. List the role in a convention's `roles` to give it that convention: `flai check` accepts every role your role files define. A role file for `plan`, `orchestrate`, `analyze`, or `curate` sets that role's topics and item kinds in place of flai's own.
+
+flai refuses a role no file defines, naming the roles your project has; an `--epic` or `--story` the file's `item` does not take, naming what it does; and, while a role file does not parse, every role but `explore` and `verify`, naming the file and what is wrong with it. `flai check` reports the same finding.
+
 #### Running the planner
 
 The planner plans one epic or one story and ends ([ADR-0082](../../design/adrs/0082-flai-serve-starts-the-planner-for-an-epic-or-a-story-behind-the-plan-host.md)). For an epic with no stories it drafts the stories that deliver its outcome, enriches each one as it would a story, and drafts each one's tasks (S-0300). For a story it adds the paths it will touch, a forecast, and a cost of delay value worked out from your inputs. For an epic with stories it revisits each one not done or cancelled and enriches it again (S-0209), and drafts the tasks of each story it adds and of each draft it revisits that has none (S-0300). Every story it creates is a draft in the backlog, for you to read and finalize; flai refuses it a story that is not one. A task carries no draft flag: the tasks of a draft story are drafts because their story is one, and the story's agent reviews them when it pulls the story.

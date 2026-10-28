@@ -339,6 +339,17 @@ The planner, the orchestrator, and the analyzer (E-0016) work above a story, so 
 
 In the baseline the planner reads `strategic-agents`, `work-management`, and the conventions without roles; the orchestrator the same and `decisions`; the analyzer `strategic-agents`, `continuous-improvement`, `code-quality`, `telemetry`, and the conventions without roles. `metrics.md` carries the topic `analysis`; `work-hierarchy.md` and `workflow.md` are `[all]` and so are briefed in every pack.
 
+#### A role a project defines
+
+A role a project defines in a role file under `design/workflows/roles/` ([ADR-0207](../adrs/0207-a-strategic-role-is-a-markdown-file-under-design-workflows-roles-whose-front.md), S-0415) primes the same way, by its `role` verb: `flai prime --role <role>`, or `role` on the MCP `prime` tool. Its pack takes from the file what the Go code gave the built-in roles:
+
+- Its topics: the file's `topics`, first, with source kind `role`, then its item's.
+- Its item: the file's `item` names the kinds it is primed for. `[epic, story]`, as the planner's file says, takes `--epic` or `--story`; `none`, as the orchestrator's, the analyzer's, and the curator's say, takes neither and primes for the whole project. A flag for a kind the file does not take is refused, naming the kinds it does.
+- Its conventions: those whose `roles` are empty or list its verb.
+- Its agent's name, in the header: "the" and the file's `name`, as "the reviewer".
+
+A role file for `plan`, `orchestrate`, `analyze`, or `curate` gives that built-in role its topics and item kinds; with no file for it, as in a project made before role files, the built-in role keeps the ones flai holds, so its pack is byte for byte what it was. Only the orchestrator's pack takes the digest step. A role no file defines is refused, naming the strategic roles the project has: the four built-in ones, then the defined ones, sorted. A role file that does not parse refuses every role but `explore` and `verify`, naming the file, its line, and its finding, rather than leave its role out of the pack it would define.
+
 ### Measured
 
 Read on 2026-10-01 at 09:18Z (S-0188) from the logs `flai serve` kept, with ADR-0051's reading: assistant events deduplicated by message ID, and each run's final `result` for its cost and turns. A sub-agent's calls are those whose events carry `parent_tool_use_id`. `result.usage` counts the story's agent only, while `modelUsage` and `total_cost_usd` include the sub-agents, so a sub-agent's share of the cost is estimated from its share of the run's input and cache tokens, as ADR-0051 apportions a task. Minutes run from a log's first event to its last. Every run S-0188 read is claude-opus-5-5 on the same host, and every sub-agent in them ran on the same model. Size is the story's commits outside `wip/` and lockfiles: distinct files, and lines added and removed summed over the commits. Two logs, S-0117's and S-0173's first, failed at their first call with an API error and are left out.
