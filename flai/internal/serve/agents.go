@@ -893,6 +893,9 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 			return
 		}
 	}
+	// before the return on an empty ready column, which is the column at its
+	// most drained (ADR-0211 §1)
+	l.noteReadyEmpty(repo, len(stories), free)
 	// The first look after flai serve starts is like any other: what keeps a
 	// restart from starting a story twice is its run in serve/agents.json,
 	// not what happened to be ready when flai serve began (S-0112).
