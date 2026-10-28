@@ -6,7 +6,7 @@ title: flai plan --candidates lists no epic or story planned before, so the orch
 status: backlog
 owner: alex
 created: 2026-10-28T12:53:50Z
-updated: 2026-10-28T12:53:50Z
+updated: 2026-10-28T12:59:03Z
 transitions: []
 tags: []
 agent:
@@ -14,7 +14,9 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+finalized:
+  by: alex
+  at: 2026-10-28T12:59:03Z
 ---
 # S-0524 flai plan --candidates lists no epic or story planned before, so the orchestrator cannot ask the planner to plan one again
 
