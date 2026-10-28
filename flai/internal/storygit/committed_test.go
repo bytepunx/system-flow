@@ -112,13 +112,17 @@ func (c *logCounter) Run(dir, name string, args ...string) (string, error) {
 	return c.System.Run(dir, name, args...)
 }
 
-// committedRepo is a repository with a commit of story S-0001 on main, and
-// the workitem.Repo that reads it.
+// committedRepo is a repository with a commit of story S-0001 on main and a
+// cache folder, and the workitem.Repo that reads it.
 func committedRepo(t *testing.T) (string, *workitem.Repo) {
 	t.Helper()
 	dir := gitRepo(t)
 	commitFiles(t, dir, "feat: [S-0001] one", "cli/a.go")
-	return dir, &workitem.Repo{Root: dir, MainRoot: dir, Manifest: manifest.Manifest{Layout: map[string]string{"wip": "wip"}}}
+	repo := &workitem.Repo{Root: dir, MainRoot: dir, Manifest: manifest.Manifest{Layout: map[string]string{"wip": "wip"}}}
+	if err := os.MkdirAll(repo.CacheDir(), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return dir, repo
 }
 
 // committedOnce calls Committed and reports whether it read the log.
@@ -325,6 +329,9 @@ func TestCommittedReadsTheLogOverAFileThatIsNoAnswer(t *testing.T) {
 // the log, never the answer.
 func TestCommittedAnswersWhenTheCacheCannotBeWritten(t *testing.T) {
 	dir, repo := committedRepo(t)
+	if err := os.Remove(repo.CacheDir()); err != nil {
+		t.Fatal(err)
+	}
 	write(t, dir, ".flai-cache", "a file where the cache folder goes\n")
 	r := &logCounter{}
 	want := map[string][]string{"S-0001": {"cli/a.go"}}
@@ -333,6 +340,26 @@ func TestCommittedAnswersWhenTheCacheCannotBeWritten(t *testing.T) {
 		if !read || !reflect.DeepEqual(got, want) {
 			t.Errorf("new process %d: read the log %v and answered %v, want a read and %v", i+1, read, got, want)
 		}
+	}
+}
+
+// A project with no cache folder gains none, since flai check reports a
+// .flai-cache that no .gitignore ignores (layout.gitignore): each new process
+// reads the log, as before I-0209.
+func TestCommittedMakesNoCacheFolder(t *testing.T) {
+	_, repo := committedRepo(t)
+	if err := os.Remove(repo.CacheDir()); err != nil {
+		t.Fatal(err)
+	}
+	r := &logCounter{}
+	want := map[string][]string{"S-0001": {"cli/a.go"}}
+	for i := range 2 {
+		if got, read := freshOnce(t, r, repo); !read || !reflect.DeepEqual(got, want) {
+			t.Errorf("new process %d: read the log %v and answered %v, want a read and %v", i+1, read, got, want)
+		}
+	}
+	if _, err := os.Stat(repo.CacheDir()); !os.IsNotExist(err) {
+		t.Errorf("Committed made the cache folder %s (%v), want none", repo.CacheDir(), err)
 	}
 }
 

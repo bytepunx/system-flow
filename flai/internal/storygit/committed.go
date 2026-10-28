@@ -42,9 +42,9 @@ var keptCommitted = struct {
 // checkout, once per change of a branch tip, keeping the result per
 // repository root in memory for the life of the process (I-0184) and in
 // CommittedPath of the main checkout's cache folder between processes
-// (I-0209): a call while no tip moved costs two git processes, rev-parse and
-// show-ref, and no log, in a new process as in one that read it before. Each
-// call returns a copy of its own. It fails when git or the repository cannot
+// (I-0209), when that folder exists: a call while no tip moved costs two git
+// processes, rev-parse and show-ref, and no log, in a new process as in one
+// that read it before. Each call returns a copy of its own. It fails when git or the repository cannot
 // be read.
 func Committed(r execx.Runner, repo *workitem.Repo) (map[string][]string, error) {
 	root := repo.MainRoot
@@ -117,17 +117,16 @@ func readKeptCommitted(path, root, key string) (map[string][]string, bool) {
 }
 
 // writeKeptCommitted writes kept to path through a file beside it renamed
-// over it, so that a reader finds the old answer or the new one whole, and
-// makes the folder first when it is missing.
+// over it, so that a reader finds the old answer or the new one whole. It
+// never makes the cache folder: a project without one, such as one with no
+// .gitignore to ignore it, keeps nothing rather than gain a folder that
+// flai check would report (layout.gitignore).
 func writeKeptCommitted(path string, kept keptCommittedFile) error {
 	data, err := json.Marshal(kept)
 	if err != nil {
 		return fmt.Errorf("encode the stories' commits for %s: %w", path, err)
 	}
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return fmt.Errorf("make the cache folder %s for the stories' commits: %w", dir, err)
-	}
 	tmp, err := os.CreateTemp(dir, ".stories-commits-*")
 	if err != nil {
 		return fmt.Errorf("write the stories' commits in %s: %w", dir, err)
