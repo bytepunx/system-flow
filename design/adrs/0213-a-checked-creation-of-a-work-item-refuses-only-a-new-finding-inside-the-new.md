@@ -6,6 +6,7 @@ date: 2026-10-28
 supersedes: []
 superseded_by: []
 refines: [ADR-0197]
+topics: [cli]
 ---
 
 # ADR-0213 A checked creation of a work item refuses only a new finding inside the new item's story, as a checked edit does
