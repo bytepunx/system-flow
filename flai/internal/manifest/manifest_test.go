@@ -388,9 +388,9 @@ func TestOrchestrationPermissions(t *testing.T) {
 		return m
 	}
 	all := "orchestration:\n  policy: cod\n  permissions:\n    plan_backlog_epics: true\n    plan_backlog_stories: true\n    finalize_drafts: true\n    promote_to_ready: true\n" +
-		"    order_ready: true\n    answer_threads: autonomous\n    accept_reviews: true\n    publish: true\n    edit_subprojects: true\n"
+		"    order_ready: true\n    answer_threads: autonomous\n    confirm_after: 48h\n    accept_reviews: true\n    publish: true\n    edit_subprojects: true\n"
 	o := load(t, all).Orchestration
-	want := Permissions{PlanBacklogEpics: true, PlanBacklogStories: true, FinalizeDrafts: true, PromoteToReady: true, OrderReady: true, AnswerThreads: AnswerAutonomous, AcceptReviews: true, Publish: true, EditSubprojects: true}
+	want := Permissions{PlanBacklogEpics: true, PlanBacklogStories: true, FinalizeDrafts: true, PromoteToReady: true, OrderReady: true, AnswerThreads: AnswerAutonomous, ConfirmAfter: "48h", AcceptReviews: true, Publish: true, EditSubprojects: true}
 	if !reflect.DeepEqual(o.Permissions, want) {
 		t.Errorf("read %+v, want %+v", o.Permissions, want)
 	}
@@ -403,7 +403,7 @@ func TestOrchestrationPermissions(t *testing.T) {
 		}
 	}
 
-	for _, block := range []string{"", "orchestration:\n  policy: cod\n", "orchestration:\n  permissions: {}\n"} {
+	for _, block := range []string{"", "orchestration:\n  policy: cod\n", "orchestration:\n  permissions: {}\n", "orchestration:\n  permissions:\n    confirm_after: \"0\"\n"} {
 		o := load(t, block).Orchestration
 		if o.Permissions.AnswerMode() != AnswerOff || len(o.Errors()) != 0 {
 			t.Errorf("%q: answer mode %q, %v", block, o.Permissions.AnswerMode(), o.Errors())
@@ -439,6 +439,43 @@ func TestOrchestrationPermissions(t *testing.T) {
 		if len(got) != 1 || !strings.Contains(got[0], `orchestration.permissions.answer_threads "`+bad+`" is not a way of answering threads; write off`) {
 			t.Errorf("%q: %q", bad, got)
 		}
+	}
+}
+
+// S-0502: orchestration.permissions.confirm_after is a duration, off unset or
+// 0; a value that is not a duration, or a negative one, is an error naming the
+// key and an example; and it is a permission, not a key that names none
+// (ADR-0206).
+func TestConfirmAfter(t *testing.T) {
+	for in, want := range map[string]time.Duration{"": 0, "0": 0, "0s": 0, "48h": 48 * time.Hour, "90m": 90 * time.Minute} {
+		p := Permissions{ConfirmAfter: in}
+		d, err := p.ConfirmAfterDuration()
+		if err != nil || d != want || p.Allows(PermitConfirmAfter) != (want > 0) || len((Orchestration{Permissions: p}).Errors()) != 0 {
+			t.Errorf("%q: %v, %v, allowed %v, %v", in, d, err, p.Allows(PermitConfirmAfter), (Orchestration{Permissions: p}).Errors())
+		}
+	}
+	for in, want := range map[string]string{
+		"soon": `orchestration.permissions.confirm_after "soon" is not a duration; write one such as 48h`,
+		"-1h":  `orchestration.permissions.confirm_after "-1h" is negative; write a duration such as 48h`,
+	} {
+		p := Permissions{ConfirmAfter: in}
+		if _, err := p.ConfirmAfterDuration(); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("%q: %v, want %q", in, err, want)
+		}
+		if p.Allows(PermitConfirmAfter) {
+			t.Errorf("%q is allowed", in)
+		}
+		if got := (Orchestration{Permissions: p}).Errors(); len(got) != 1 || !strings.Contains(got[0], want) {
+			t.Errorf("%q: %q, want one error saying %q", in, got, want)
+		}
+	}
+
+	var m Manifest
+	if err := yaml.Unmarshal([]byte("orchestration:\n  permissions:\n    confirm_after: 48h\n"), &m); err != nil {
+		t.Fatal(err)
+	}
+	if m.Orchestration.Permissions.ConfirmAfter != "48h" || len(m.Orchestration.Errors()) != 0 {
+		t.Errorf("read %+v, %q", m.Orchestration.Permissions, m.Orchestration.Errors())
 	}
 }
 

@@ -54,3 +54,23 @@ func TestOrchestrationPermissionsAndAgentAreChecked(t *testing.T) {
 		}
 	}
 }
+
+// S-0502: orchestration.permissions.confirm_after set to a duration is a
+// permission, not a key that names none; one that is not a duration, or is
+// negative, is an error on the orchestration key (ADR-0206).
+func TestOrchestrationConfirmAfterIsChecked(t *testing.T) {
+	for _, value := range []string{"48h", `"0"`} {
+		if got := findings(t, planningProject(t, "orchestration:\n  permissions:\n    confirm_after: "+value+"\n"), "manifest.orchestration"); len(got) != 0 {
+			t.Errorf("confirm_after %s: %+v", value, got)
+		}
+	}
+	for value, want := range map[string]string{
+		"soon": `orchestration.permissions.confirm_after "soon" is not a duration`,
+		"-1h":  `orchestration.permissions.confirm_after "-1h" is negative`,
+	} {
+		got := findings(t, planningProject(t, "orchestration:\n  permissions:\n    confirm_after: "+value+"\n"), "manifest.orchestration")
+		if len(got) != 1 || got[0].Level != Error || got[0].Path != "system-flow.yaml" || got[0].Line != 8 || !strings.Contains(got[0].Message, want) {
+			t.Errorf("confirm_after %s: %+v, want one error on line 8 saying %q", value, got, want)
+		}
+	}
+}

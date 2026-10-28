@@ -408,6 +408,68 @@ func TestEditSettingsWritesTheThreadsSettings(t *testing.T) {
 	}
 }
 
+// S-0502: orchestration.permissions.confirm_after is a duration, unset by
+// default, that flai manifest set writes among the permissions, Load reads
+// back, and unset turns off; a value flai check refuses is refused naming the
+// key (ADR-0206).
+func TestEditSettingsWritesConfirmAfter(t *testing.T) {
+	const key = "orchestration.permissions.confirm_after"
+	s, ok := SettingFor(key)
+	if !ok || s.Kind != KindDuration || s.Default != "" || len(s.Values) != 0 || s.Meaning == "" || s.Risk == "" {
+		t.Fatalf("%s in the catalog: %+v, %v", key, s, ok)
+	}
+	keys := settingKeys()
+	if i := slices.Index(keys, key); i < 1 || keys[i-1] != "orchestration.permissions.answer_threads" {
+		t.Errorf("%s is not listed after answer_threads: %v", key, keys)
+	}
+	got, err := EditSettings([]byte(settingsFixture), []Assignment{{key, "48h"}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := replaced(t, "    promote_to_ready: true\n", "    promote_to_ready: true\n    confirm_after: 48h\n"); string(got) != want {
+		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
+	}
+	m := loaded(t, got)
+	if d, err := m.Orchestration.Permissions.ConfirmAfterDuration(); err != nil || d != 48*time.Hour || !m.Orchestration.Permissions.Allows(PermitConfirmAfter) {
+		t.Errorf("confirm_after read back: %v, %v, allowed %v", d, err, m.Orchestration.Permissions.Allows(PermitConfirmAfter))
+	}
+	values := map[string]SettingValue{}
+	for _, sv := range m.SettingValues() {
+		values[sv.Key] = sv
+	}
+	if v := values[key]; !v.Set || v.Value != "48h" {
+		t.Errorf("%s's value: %+v", key, v)
+	}
+	for _, v := range loaded(t, []byte(settingsFixture)).SettingValues() {
+		if v.Key == key && (v.Set || v.Value != nil) {
+			t.Errorf("%s unset: %+v", key, v)
+		}
+	}
+
+	unset, err := EditSettings(got, nil, []string{key})
+	if err != nil || string(unset) != settingsFixture {
+		t.Fatalf("unset: %v\n%s", err, unset)
+	}
+	if loaded(t, unset).Orchestration.Permissions.Allows(PermitConfirmAfter) {
+		t.Error("confirm_after is on unset")
+	}
+
+	for _, c := range []struct{ value, reason string }{
+		{"soon", "is not a duration; write one such as 48h"},
+		{"-1h", "is negative; write a duration such as 48h"},
+	} {
+		_, err := EditSettings([]byte(settingsFixture), []Assignment{{key, c.value}}, nil)
+		var refused *RefusedError
+		if !errors.As(err, &refused) {
+			t.Errorf("%s=%s: want a refusal, got %v", key, c.value, err)
+			continue
+		}
+		if i := slices.IndexFunc(refused.Problems, func(p Problem) bool { return p.Field == key }); i < 0 || !strings.Contains(refused.Problems[i].Reason, c.reason) {
+			t.Errorf("%s=%s: refusal %+v, want %q", key, c.value, refused.Problems, c.reason)
+		}
+	}
+}
+
 // S-0229: a block written on one line is refused rather than rewritten.
 func TestEditSettingsRefusesAFlowBlock(t *testing.T) {
 	data := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\norchestration: {policy: fifo}\n"

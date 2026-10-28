@@ -1,6 +1,6 @@
 ---
 title: Project manifest
-updated: 2026-10-26
+updated: 2026-10-28
 status: active
 topics: [cli, template]
 ---
@@ -106,6 +106,7 @@ orchestration:                               # optional (S-0217): how the ready 
   permissions:                               # optional (S-0218): what the orchestrator may do without the operator; each off when unset
     promote_to_ready: true                   # also plan_backlog_epics, plan_backlog_stories, finalize_drafts, order_ready, accept_reviews, publish
     answer_threads: recommend                # off, recommend, or autonomous; default off
+    confirm_after: 48h                       # optional (S-0502): how long a recommendation of the orchestrator's may await the operator before flai serve confirms it, a Go duration; default unset, none confirmed
   agent:                                     # optional (S-0218): the orchestrator's agent, over agent above
     model: claude-sonnet-5
 analysis:                                    # optional (S-0223): the analyzer's agent and schedule
@@ -228,11 +229,12 @@ Rules:
   | `promote_to_ready` | `true`, `false` | `false` | move a story to `ready` |
   | `order_ready` | `true`, `false` | `false` | write the order of the ready column, `flai order` |
   | `answer_threads` | `off`, `recommend`, `autonomous` | `off` | reply on threads: `recommend` with a recommendation for the operator, `autonomous` with an answer of its own; the guard lets it reply with either |
+  | `confirm_after` | a Go duration, such as `48h` | unset | have `flai serve` confirm, in the operator's absence, a pending recommendation of its own that has waited this long on an open thread a story's agent or a planner opened, with no entry by the operator since and not marked for the operator alone; unset, or `0`, nothing is confirmed. The one permission that is a duration: `Permissions.ConfirmAfterDuration` reads it, and `Allows` reports it on when it is more than zero (S-0502, [ADR-0206](../adrs/0206-flai-serve-confirms-an-orchestrator-recommendation-the-operator-left-unanswered.md)) |
   | `accept_reviews` | `true`, `false` | `false` | accept a story in review, `flai accept` |
   | `publish` | `true`, `false` | `false` | release and push accepted work, `flai release --pending` and `flai push` |
 
 - `orchestration.agent` is the orchestrator's agent (S-0218): the same shape as `agent`, merged over it as `planning.agent` is (`Manifest.OrchestrationAgent`), so it names only what the orchestrator runs differently. Unset, the orchestrator runs on `agent`. How it runs is in [strategic-agents.md](strategic-agents.md#the-orchestrator).
-- `flai check` reports each thing wrong with `orchestration` as a `manifest.orchestration` error on its line: a policy or release policy outside its list, a threshold with neither figure or a negative one, a theme with neither or both of `epic` and `tag`, a key under `permissions` that names no permission, an `answer_threads` that is not `off`, `recommend`, or `autonomous`, and an `agent` that is not valid, under the name `orchestration.agent`. `flai manifest set` writes every `orchestration` key but `agent`, and the Orchestrator page's settings panel through it (S-0229, below); `orchestration.agent` is set by hand.
+- `flai check` reports each thing wrong with `orchestration` as a `manifest.orchestration` error on its line: a policy or release policy outside its list, a threshold with neither figure or a negative one, a theme with neither or both of `epic` and `tag`, a key under `permissions` that names no permission, an `answer_threads` that is not `off`, `recommend`, or `autonomous`, a `confirm_after` that is not a duration or is negative, and an `agent` that is not valid, under the name `orchestration.agent`. `flai manifest set` writes every `orchestration` key but `agent`, and the Orchestrator page's settings panel through it (S-0229, below); `orchestration.agent` is set by hand.
 - `analysis.agent` is the analyzer's agent (S-0223, [ADR-0099](../adrs/0099-the-analyzer-runs-behind-the-analyze-host-action-and-writes-one-report-under.md)): the same shape as `agent`, merged over it as `planning.agent` is (`Manifest.AnalysisAgent`), so it names only what the analyzer runs differently. Unset, the analyzer runs on `agent`. How it runs is in [strategic-agents.md](strategic-agents.md#the-analyzer).
 - `analysis.schedule` is when `flai serve` runs the analyzer on its own, with no focus, while the `analyze` host action is on: a five-field cron expression in UTC, such as `0 6 * * 1`, or `daily`, which is 00:00 UTC, parsed as `planning.schedule` is. Unset, there is no schedule, and the analyzer runs only when the operator asks for it ([The analysis schedule](strategic-agents.md#the-analysis-schedule)).
 - `flai check` reports each thing wrong with `analysis` as a `manifest.analysis` error on its line: a `schedule` it cannot parse, or one that never comes round, and an `agent` that is not valid, under the name `analysis.agent`. `flai manifest set` writes both keys, and the Analyzer page's settings panel through it (S-0229, below).
@@ -250,6 +252,7 @@ Rules:
   | `orchestration.permissions.promote_to_ready` | boolean | `false` | Lets the orchestrator move a story to ready. Risk: agents may pull, work, and spend on a story you have not chosen to start |
   | `orchestration.permissions.order_ready` | boolean | `false` | Lets the orchestrator write the order of the ready column by `orchestration.policy`. Risk: it replaces the order you set on the board, so the next story pulled is the policy's choice, not yours |
   | `orchestration.permissions.answer_threads` | choice: `off`, `recommend`, `autonomous` | `off` | How the orchestrator answers threads: off leaves them to you, recommend replies with a recommendation for you, and autonomous answers them itself. Risk: with autonomous, agents act on answers you did not give; with recommend, the decision stays yours |
+  | `orchestration.permissions.confirm_after` | duration | unset | How long a recommendation of the orchestrator's on a story's agent's or a planner's thread may await your answer before flai serve confirms it for you; unset or 0, it never does, and it never confirms one marked for you alone. Risk: an agent acts on a recommendation you did not read, and you overrule it afterwards by answering on the thread |
   | `orchestration.permissions.accept_reviews` | boolean | `false` | Lets the orchestrator accept a story in review, as `flai accept` does. Risk: work is merged to the main branch without your review, and a story accepted wrongly has to be undone by hand |
   | `orchestration.permissions.publish` | boolean | `false` | Lets the orchestrator release and push accepted work, as `flai release --pending` and `flai push` do. Risk: a release reaches everyone who pulls or installs the project, and a published release cannot be taken back |
   | `orchestration.policy` | choice: `cod`, `wsjf`, `throughput`, `fifo` | `fifo` | How the ready column is ordered: cod by cost of delay, wsjf by cost of delay over forecast duration, throughput shortest first, and fifo leaves your order alone |

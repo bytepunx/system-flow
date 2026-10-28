@@ -1,6 +1,6 @@
 ---
 title: Settings index
-updated: 2026-10-26
+updated: 2026-10-28
 status: active
 ---
 
@@ -151,6 +151,7 @@ Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, an
 | `orchestration.permissions.promote_to_ready` | `false` | The orchestrator may move a story `flai promote --candidates` lists to `ready`, while ready is under its WIP limit. Changed on the [Orchestrator page](../users/flaiover.md#orchestrator) or with `flai manifest set` |
 | `orchestration.permissions.order_ready` | `false` | The orchestrator may write the ready column's order, `flai order --by <policy> --apply`, which keeps a story placed by hand in the last day; it never places a story by hand. Changed on the [Orchestrator page](../users/flaiover.md#orchestrator) or with `flai manifest set` |
 | `orchestration.permissions.answer_threads` | `off` | How the orchestrator replies on threads: `off` never; `recommend` with a recommendation for the operator; `autonomous` with an answer of its own. `flai guard` lets it reply with either of the last two; its prompt says which. Changed on the [Orchestrator page](../users/flaiover.md#orchestrator) or with `flai manifest set` |
+| `orchestration.permissions.confirm_after` | unset | How long a recommendation of the orchestrator's may await you, on a thread a story's agent or a planner opened, before `flai serve` confirms it in your absence: a Go duration such as `48h`. Unset, or `0`, nothing is confirmed. It never confirms a thread you wrote on since the recommendation, a permission prompt, or a recommendation the orchestrator marked for you alone, and only while the `orchestrate` host action is on. A value that is not a duration, or a negative one, is a `manifest.orchestration` error ([ADR-0206](../../design/adrs/0206-flai-serve-confirms-an-orchestrator-recommendation-the-operator-left-unanswered.md)). Changed on the [Orchestrator page](../users/flaiover.md#orchestrator) or with `flai manifest set` |
 | `orchestration.permissions.accept_reviews` | `false` | The orchestrator may accept a story in review, `flai accept --by orchestrator`, once its verifier passed and nothing blocks it; the `orchestrate` host action must be on too ([When the orchestrator accepts](../users/flai.md#when-the-orchestrator-accepts)). A ready story waiting on that acceptance, by `after:` or a full review column, then starts without you ([What waits on an acceptance](../../design/system/workflow.md#what-waits-on-an-acceptance-s-0296)). The merge queue runs only while it is on, whether or not `orchestrate` is ([the merge-queue host action](index.md#the-merge-queue-host-action-stories-in-review-verified-as-one-batch-s-0399)). Changed on the [Orchestrator page](../users/flaiover.md#orchestrator) or with `flai manifest set` |
 | `orchestration.permissions.publish` | `false` | The orchestrator may publish what is accepted and not yet released, through the MCP tool `release_publish` alone, when `orchestration.release` allows it; the `push` host action must be on too ([When the orchestrator publishes](../users/flai.md#when-the-orchestrator-publishes)). Changed on the [Orchestrator page](../users/flaiover.md#orchestrator) or with `flai manifest set` |
 | `orchestration.permissions.edit_subprojects` | `false` | The orchestrator may add, change, or remove a sub-project, an entry of `projects`, when a story or a thread asks for it, with `flai subproject add`, `set`, or `remove` and `--autocommit`, committed on the main branch without your review; adding one creates its folder ([Running the orchestrator](../users/flai.md#running-the-orchestrator), [ADR-0195](../../design/adrs/0195-with-edit-subprojects-on-the-orchestrator-adds-changes-and-removes-a-sub.md)). Changed on the [Orchestrator page](../users/flaiover.md#orchestrator) or with `flai manifest set` |
@@ -419,6 +420,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--note` | [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue new](../users/flai-reference.md#flai-issue-new) |
 | `--on` | [flai thread list](../users/flai-reference.md#flai-thread-list), [flai thread new](../users/flai-reference.md#flai-thread-new) |
 | `--open` | [flai dashboard](../users/flai-reference.md#flai-dashboard) |
+| `--operator-only` | [flai thread reply](../users/flai-reference.md#flai-thread-reply) |
 | `--owner` | [flai epic new](../users/flai-reference.md#flai-epic-new), [flai issue story](../users/flai-reference.md#flai-issue-story), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new) |
 | `--parent` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--part` | [flai prime](../users/flai-reference.md#flai-prime) |

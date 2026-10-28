@@ -123,6 +123,10 @@ var permissionText = map[string][2]string{
 		"How the orchestrator answers threads: off leaves them to you, recommend replies with a recommendation for you, and autonomous answers them itself.",
 		"With autonomous, agents act on answers you did not give; with recommend, the decision stays yours.",
 	},
+	PermitConfirmAfter: {
+		"How long a recommendation of the orchestrator's on a story's agent's or a planner's thread may await your answer before flai serve confirms it for you; unset or 0, it never does, and it never confirms one marked for you alone.",
+		"An agent acts on a recommendation you did not read, and you overrule it afterwards by answering on the thread.",
+	},
 	PermitAcceptReviews: {
 		"Lets the orchestrator accept a story in review, as flai accept does.",
 		"Work is merged to the main branch without your review, and a story accepted wrongly has to be undone by hand.",
@@ -149,6 +153,10 @@ func buildCatalog() []Setting {
 		if name == PermitAnswerThreads {
 			s.Kind, s.Values, s.Default = KindChoice, AnswerModes, AnswerOff
 			s.get = func(m Manifest) (any, bool) { return text(m.Orchestration.Permissions.AnswerThreads) }
+		}
+		if name == PermitConfirmAfter {
+			s.Kind, s.Values, s.Default = KindDuration, nil, ""
+			s.get = func(m Manifest) (any, bool) { return text(m.Orchestration.Permissions.ConfirmAfter) }
 		}
 		out = append(out, s)
 	}

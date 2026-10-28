@@ -584,6 +584,11 @@ type Permissions struct {
 	// AnswerThreads is how it answers threads: one of AnswerModes; empty
 	// means AnswerOff.
 	AnswerThreads string `yaml:"answer_threads,omitempty" json:"answer_threads,omitempty"`
+	// ConfirmAfter is how long a recommendation of the orchestrator's may
+	// await the operator before flai serve confirms it (ADR-0206), a Go
+	// duration such as 48h; empty, or 0, means it never does. It is the one
+	// permission that is a duration.
+	ConfirmAfter string `yaml:"confirm_after,omitempty" json:"confirm_after,omitempty"`
 	// AcceptReviews lets it accept a story in review.
 	AcceptReviews bool `yaml:"accept_reviews,omitempty" json:"accept_reviews,omitempty"`
 	// Publish lets it release and push accepted work.
@@ -605,6 +610,7 @@ const (
 	PermitPromoteToReady     = "promote_to_ready"
 	PermitOrderReady         = "order_ready"
 	PermitAnswerThreads      = "answer_threads"
+	PermitConfirmAfter       = "confirm_after"
 	PermitAcceptReviews      = "accept_reviews"
 	PermitPublish            = "publish"
 	PermitEditSubprojects    = "edit_subprojects"
@@ -612,7 +618,7 @@ const (
 
 // PermissionNames are the keys of orchestration.permissions, in the order
 // they are listed to the operator.
-var PermissionNames = []string{PermitPlanBacklogEpics, PermitPlanBacklogStories, PermitFinalizeDrafts, PermitPromoteToReady, PermitOrderReady, PermitAnswerThreads, PermitAcceptReviews, PermitPublish, PermitEditSubprojects}
+var PermissionNames = []string{PermitPlanBacklogEpics, PermitPlanBacklogStories, PermitFinalizeDrafts, PermitPromoteToReady, PermitOrderReady, PermitAnswerThreads, PermitConfirmAfter, PermitAcceptReviews, PermitPublish, PermitEditSubprojects}
 
 // The values of orchestration.permissions.answer_threads.
 const (
@@ -656,9 +662,29 @@ func (p Permissions) AnswerMode() string {
 	return AnswerOff
 }
 
+// ConfirmAfterDuration is orchestration.permissions.confirm_after as a
+// duration: zero when it is empty or 0, and zero means flai serve confirms no
+// recommendation.
+func (p Permissions) ConfirmAfterDuration() (time.Duration, error) {
+	s := strings.TrimSpace(p.ConfirmAfter)
+	if s == "" {
+		return 0, nil
+	}
+	d, err := time.ParseDuration(s)
+	if err != nil {
+		return 0, fmt.Errorf("orchestration.permissions.confirm_after %q is not a duration; write one such as 48h or 90m, or unset it for none confirmed", p.ConfirmAfter)
+	}
+	if d < 0 {
+		return 0, fmt.Errorf("orchestration.permissions.confirm_after %q is negative; write a duration such as 48h or 90m, or unset it for none confirmed", p.ConfirmAfter)
+	}
+	return d, nil
+}
+
 // Allows reports whether the permission name, one of PermissionNames, is on:
-// a boolean set true, or answer_threads set to recommend or autonomous
-// (AnswerMode tells them apart). A name that is no permission is off.
+// a boolean set true, answer_threads set to recommend or autonomous
+// (AnswerMode tells them apart), or confirm_after set to a duration of more
+// than zero (ConfirmAfterDuration says how long). A name that is no
+// permission is off.
 func (p Permissions) Allows(name string) bool {
 	switch name {
 	case PermitPlanBacklogEpics:
@@ -674,6 +700,9 @@ func (p Permissions) Allows(name string) bool {
 	case PermitAnswerThreads:
 		m := p.AnswerMode()
 		return m == AnswerRecommend || m == AnswerAutonomous
+	case PermitConfirmAfter:
+		d, err := p.ConfirmAfterDuration()
+		return err == nil && d > 0
 	case PermitAcceptReviews:
 		return p.AcceptReviews
 	case PermitPublish:
@@ -691,6 +720,9 @@ func (p Permissions) errors() []string {
 	}
 	if m := p.AnswerMode(); !slices.Contains(AnswerModes, m) {
 		errs = append(errs, fmt.Sprintf("orchestration.permissions.answer_threads %q is not a way of answering threads; write off (leave them to the operator), recommend (reply with a recommendation), or autonomous (answer them), or remove it for off", p.AnswerThreads))
+	}
+	if _, err := p.ConfirmAfterDuration(); err != nil {
+		errs = append(errs, err.Error())
 	}
 	return errs
 }
