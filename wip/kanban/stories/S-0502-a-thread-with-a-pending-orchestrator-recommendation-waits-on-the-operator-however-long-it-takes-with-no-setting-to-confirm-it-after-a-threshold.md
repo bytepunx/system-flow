@@ -3,11 +3,17 @@ id: S-0502
 type: story
 nature: improvement
 title: A thread with a pending orchestrator recommendation waits on the operator however long it takes, with no setting to confirm it after a threshold
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-26T04:01:40Z
-updated: 2026-10-28T12:40:13Z
-transitions: []
+updated: 2026-10-28T12:44:59Z
+transitions:
+  - to: ready
+    at: 2026-10-28T12:43:49Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-28T12:44:59Z
+    by: agent-S-0502
 tags: [flai, template]
 topics: [orchestration, cli, analysis]
 touches: [design/adrs/0206-flai-serve-confirms-a-recommendation-the-operator-left-unanswered-past-confirm-after.md, design/adrs/README.md, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/check/orchestration_test.go, docs/operators/settings.md, design/system/project-manifest.md, flai/internal/threads/threads.go, flai/internal/threads/threads_test.go, flai/cmd/thread.go, flai/cmd/thread_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, flai/internal/serve/confirm.go, flai/internal/serve/confirm_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/internal/metrics/waiting.go, flai/internal/metrics/waiting_test.go, design/system/metrics.md, flaiover/src/lib/viz/charts.ts, design/system/strategic-agents.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md, template/CHANGELOG.md, system-flow.yaml, design/issues/I-0195-a-thread-with-a-pending-orchestrator-recommendation-waits-on-the-operator-however-long-it-takes-with-no-setting-to-confirm-it-after-a-threshold.md, design/issues/summary.md]
@@ -23,15 +29,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 999
+      seconds: 1040
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 131
-          output: 2168
-          cache_read: 33785734
-          cache_write: 50997
-          cost: 7.4183
+          input: 150
+          output: 2450
+          cache_read: 36826218
+          cache_write: 60844
+          cost: 8.088
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 60h
@@ -42,10 +48,10 @@ cost_of_delay:
   at: 2026-10-26T04:42:28Z
 forecast:
   duration: 2h
-  delivery: 2026-10-29T04:49:00Z
-  basis: "Its own forecast of 2h; 22nd in the pull order with an in-progress limit of 5, behind S-0503, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425 and S-0499."
+  delivery: 2026-10-28T15:15:00Z
+  basis: "Its own forecast of 2h; 2nd in the pull order with an in-progress limit of 5, behind S-0499."
   by: flai
-  at: 2026-10-28T12:40:13Z
+  at: 2026-10-28T12:44:51Z
 finalized:
   by: orchestrator
   at: 2026-10-26T05:14:27Z

@@ -3,11 +3,17 @@ id: S-0499
 type: story
 nature: remediation
 title: "events-socket.test.ts 'closes every events socket with 1001 when the server stops' fails now and then: a change listener is still attached when the server has closed"
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-26T04:01:24Z
-updated: 2026-10-28T12:40:13Z
-transitions: []
+updated: 2026-10-28T12:44:57Z
+transitions:
+  - to: ready
+    at: 2026-10-28T12:43:48Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-28T12:44:57Z
+    by: agent-S-0499
 tags: [dashboard]
 topics: [dashboard, testing]
 touches: [flaiover/src/lib/server/events-socket.ts, flaiover/src/lib/server/events-socket.test.ts, design/issues/I-0181-events-socket-test-ts-closes-every-events-socket-with-1001-when-the-server-stops-fails-now-and-then-a-change-listener-is-still-attached-when-the-server-has-closed.md, design/issues/summary.md, design/system/flaiover-dashboard.md]
@@ -22,15 +28,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 232
+      seconds: 274
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 56
-          output: 971
-          cache_read: 10635111
-          cache_write: 22634
-          cost: 2.3366
+          input: 75
+          output: 1254
+          cache_read: 13675596
+          cache_write: 32482
+          cost: 3.0063
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 3m
@@ -41,10 +47,10 @@ cost_of_delay:
   at: 2026-10-26T04:20:24Z
 forecast:
   duration: 30m
-  delivery: 2026-10-29T02:33:00Z
-  basis: "Its own forecast of 30m; 21st in the pull order with an in-progress limit of 5, behind S-0503, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424 and S-0425."
+  delivery: 2026-10-28T13:24:00Z
+  basis: "Its own forecast of 30m; 1st in the pull order with an in-progress limit of 5, with nothing ahead of it."
   by: flai
-  at: 2026-10-28T12:40:13Z
+  at: 2026-10-28T12:44:51Z
 finalized:
   by: orchestrator
   at: 2026-10-26T04:21:34Z
