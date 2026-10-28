@@ -1,8 +1,11 @@
 package storygit
 
 import (
+	"encoding/json"
 	"fmt"
 	"maps"
+	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -37,8 +40,10 @@ var keptCommitted = struct {
 // project's root, sorted and without repeats; a story none of whose commits
 // changed a file outside wip has no entry. It reads git log, in the main
 // checkout, once per change of a branch tip, keeping the result per
-// repository root for the life of the process (I-0184): a call while no tip
-// moved costs two git processes, rev-parse and show-ref, and no log. Each
+// repository root in memory for the life of the process (I-0184) and in
+// CommittedPath of the main checkout's cache folder between processes
+// (I-0209): a call while no tip moved costs two git processes, rev-parse and
+// show-ref, and no log, in a new process as in one that read it before. Each
 // call returns a copy of its own. It fails when git or the repository cannot
 // be read.
 func Committed(r execx.Runner, repo *workitem.Repo) (map[string][]string, error) {
@@ -66,12 +71,82 @@ func Committed(r execx.Runner, repo *workitem.Repo) (map[string][]string, error)
 	if prev, ok := keptCommitted.roots[root]; ok && prev.key == key {
 		return copyCommitted(prev.committed), nil
 	}
+	path := CommittedPath(repo.CacheDir())
+	if committed, ok := readKeptCommitted(path, root, key); ok {
+		keptCommitted.roots[root] = committedRead{key: key, committed: committed}
+		return copyCommitted(committed), nil
+	}
 	committed, err := readCommitted(r, root, main, wip)
 	if err != nil {
 		return nil, err
 	}
 	keptCommitted.roots[root] = committedRead{key: key, committed: committed}
+	// A file not written costs the next process a read of the log, never a
+	// wrong answer, so the call answers all the same.
+	_ = writeKeptCommitted(path, keptCommittedFile{Root: root, Key: key, Committed: committed})
 	return copyCommitted(committed), nil
+}
+
+// CommittedPath is where Committed keeps its last read between processes in
+// the cache folder cacheDir.
+func CommittedPath(cacheDir string) string {
+	return filepath.Join(cacheDir, "stories-commits.json")
+}
+
+// keptCommittedFile is what CommittedPath holds: Committed's last read, the
+// repository root it read it in, and the key it read it at.
+type keptCommittedFile struct {
+	Root      string              `json:"root"`
+	Key       string              `json:"key"` // the main branch, the wip folder, and git show-ref --heads
+	Committed map[string][]string `json:"committed"`
+}
+
+// readKeptCommitted is the answer kept at path when it was read in root at
+// key. A file that is missing, cannot be read or parsed, or was read in
+// another root or at another key, holds none.
+func readKeptCommitted(path, root, key string) (map[string][]string, bool) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, false
+	}
+	var kept keptCommittedFile
+	if err := json.Unmarshal(data, &kept); err != nil || kept.Root != root || kept.Key != key || kept.Committed == nil {
+		return nil, false
+	}
+	return kept.Committed, true
+}
+
+// writeKeptCommitted writes kept to path through a file beside it renamed
+// over it, so that a reader finds the old answer or the new one whole, and
+// makes the folder first when it is missing.
+func writeKeptCommitted(path string, kept keptCommittedFile) error {
+	data, err := json.Marshal(kept)
+	if err != nil {
+		return fmt.Errorf("encode the stories' commits for %s: %w", path, err)
+	}
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("make the cache folder %s for the stories' commits: %w", dir, err)
+	}
+	tmp, err := os.CreateTemp(dir, ".stories-commits-*")
+	if err != nil {
+		return fmt.Errorf("write the stories' commits in %s: %w", dir, err)
+	}
+	name := tmp.Name()
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		_ = os.Remove(name)
+		return fmt.Errorf("write the stories' commits to %s: %w", name, err)
+	}
+	if err := tmp.Close(); err != nil {
+		_ = os.Remove(name)
+		return fmt.Errorf("close the stories' commits in %s: %w", name, err)
+	}
+	if err := os.Rename(name, path); err != nil {
+		_ = os.Remove(name)
+		return fmt.Errorf("keep the stories' commits at %s: %w", path, err)
+	}
+	return nil
 }
 
 // readCommitted reads Committed's answer from git log in root, the main

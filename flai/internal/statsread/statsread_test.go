@@ -174,6 +174,65 @@ func TestReadStartsNoLogWhileNothingChanged(t *testing.T) {
 	}
 }
 
+// freshRootEnv names the project TestReadInANewProcess reads.
+const freshRootEnv = "FLAI_STATSREAD_FRESH_ROOT"
+
+// I-0209: a Read in a new process, with nothing changed in git since one
+// before it read the log, starts no git log. The new process is this test
+// binary again, running TestReadInANewProcess alone.
+func TestReadStartsNoLogInANewProcessWhileNothingChanged(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration: runs real git")
+	}
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	repo := project(t)
+	for _, args := range [][]string{
+		{"init", "-q", "-b", "main"}, {"config", "user.email", "t@t"}, {"config", "user.name", "t"}, {"add", "system-flow.yaml"},
+		{"commit", "-q", "-m", "feat: [S-0001] the story"},
+	} {
+		if out, err := (execx.System{}).Run(repo.Root, "git", args...); err != nil {
+			t.Fatal(out, err)
+		}
+	}
+	if _, _, err := Read(execx.System{}, repo, slog.New(slog.DiscardHandler)); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command(os.Args[0], "-test.run=^TestReadInANewProcess$", "-test.count=1", "-test.v")
+	cmd.Env = append(os.Environ(), freshRootEnv+"="+repo.Root)
+	out, err := cmd.CombinedOutput()
+	if err != nil || !strings.Contains(string(out), "--- PASS: TestReadInANewProcess") {
+		t.Errorf("the new process did not pass (%v):\n%s", err, out)
+	}
+}
+
+// TestReadInANewProcess is the new process of
+// TestReadStartsNoLogInANewProcessWhileNothingChanged: it reads the project
+// that names, with nothing kept in memory, and wants the story's commits
+// answered without a git log.
+func TestReadInANewProcess(t *testing.T) {
+	root := os.Getenv(freshRootEnv)
+	if root == "" {
+		t.Skip("the new process of TestReadStartsNoLogInANewProcessWhileNothingChanged")
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := &logCounter{}
+	_, opt, err := Read(r, repo, slog.New(slog.DiscardHandler))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := opt.Commits["S-0001"]; len(got) != 1 || got[0] != "system-flow.yaml" {
+		t.Errorf("commits = %v, want the manifest", opt.Commits)
+	}
+	if r.logs != 0 {
+		t.Errorf("a new process with nothing changed started git log %d times, want none", r.logs)
+	}
+}
+
 // reopen rewrites the project's manifest with a planning section and its
 // board with a pull order, and opens it again.
 func reopen(t *testing.T, repo *workitem.Repo, planning string) *workitem.Repo {

@@ -1,6 +1,7 @@
 package storygit
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -13,9 +14,21 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-// commitFiles writes each file and commits them with the subject.
+// commitFiles writes each file and commits them with the subject, leaving
+// out the cache folders Committed keeps its answer in, as a project's
+// .gitignore does.
 func commitFiles(t *testing.T, dir, subject string, files ...string) {
 	t.Helper()
+	exclude, err := (execx.System{}).Run(dir, "git", "rev-parse", "--path-format=absolute", "--git-path", "info/exclude")
+	if err != nil {
+		t.Fatal(exclude, err)
+	}
+	if err := os.MkdirAll(filepath.Dir(exclude), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(exclude, []byte(".flai-cache\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	for _, f := range files {
 		if err := os.MkdirAll(filepath.Join(dir, filepath.Dir(f)), 0o755); err != nil {
 			t.Fatal(err)
@@ -204,6 +217,122 @@ func TestCommittedKeepsEachRootApart(t *testing.T) {
 	}
 	if r.logs != 2 {
 		t.Errorf("read the log %d times for two roots called twice each, want once per root", r.logs)
+	}
+}
+
+// forgetKept drops what Committed keeps in memory for repo, as a new process
+// starts with none.
+func forgetKept(repo *workitem.Repo) {
+	keptCommitted.Lock()
+	defer keptCommitted.Unlock()
+	delete(keptCommitted.roots, repo.MainRoot)
+}
+
+// freshOnce calls Committed as a new process's first call, with nothing kept
+// in memory, and reports whether it read the log.
+func freshOnce(t *testing.T, r *logCounter, repo *workitem.Repo) (map[string][]string, bool) {
+	t.Helper()
+	forgetKept(repo)
+	return committedOnce(t, r, repo)
+}
+
+// I-0209: a new process with no branch moved answers from the file the last
+// read was kept in, and starts no git log.
+func TestCommittedAnswersANewProcessFromTheKeptFile(t *testing.T) {
+	_, repo := committedRepo(t)
+	r := &logCounter{}
+	first, read := committedOnce(t, r, repo)
+	if !read {
+		t.Fatal("the first call read no log")
+	}
+	if _, err := os.Stat(CommittedPath(repo.CacheDir())); err != nil {
+		t.Fatalf("the first call kept no file: %v", err)
+	}
+	again, read := freshOnce(t, r, repo)
+	if read {
+		t.Error("a new process with no branch moved read the log rather than the kept file")
+	}
+	if want := map[string][]string{"S-0001": {"cli/a.go"}}; !reflect.DeepEqual(first, want) || !reflect.DeepEqual(again, want) {
+		t.Errorf("committed = %v then %v, want %v both times", first, again, want)
+	}
+	again["S-0001"][0] = "changed.go"
+	if got, _ := committedOnce(t, r, repo); !reflect.DeepEqual(got, map[string][]string{"S-0001": {"cli/a.go"}}) {
+		t.Errorf("committed after the caller changed the answer read from the file = %v", got)
+	}
+}
+
+// After a branch tip moves, a new process reads the log again and keeps what
+// it read, so that the process after it reads none.
+func TestCommittedRewritesTheKeptFileWhenABranchMoves(t *testing.T) {
+	dir, repo := committedRepo(t)
+	r := &logCounter{}
+	committedOnce(t, r, repo)
+	commitFiles(t, dir, "feat: [S-0001] two", "cli/b.go")
+	want := map[string][]string{"S-0001": {"cli/a.go", "cli/b.go"}}
+	if got, read := freshOnce(t, r, repo); !read || !reflect.DeepEqual(got, want) {
+		t.Errorf("after a commit on main, a new process read the log %v and answered %v, want a read and %v", read, got, want)
+	}
+	if got, read := freshOnce(t, r, repo); read || !reflect.DeepEqual(got, want) {
+		t.Errorf("the next new process read the log %v and answered %v, want no read and %v", read, got, want)
+	}
+}
+
+// A kept file that is damaged, or was read in another root or at another
+// key, is no answer: a new process reads the log, answers what it read, and
+// keeps it in place of the file.
+func TestCommittedReadsTheLogOverAFileThatIsNoAnswer(t *testing.T) {
+	_, repo := committedRepo(t)
+	r := &logCounter{}
+	committedOnce(t, r, repo)
+	path := CommittedPath(repo.CacheDir())
+	good, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var kept keptCommittedFile
+	if err := json.Unmarshal(good, &kept); err != nil {
+		t.Fatal(err)
+	}
+	changed := func(change func(*keptCommittedFile)) string {
+		k := kept
+		k.Committed = map[string][]string{"S-0009": {"wrong.go"}}
+		change(&k)
+		data, err := json.Marshal(k)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(data)
+	}
+	want := map[string][]string{"S-0001": {"cli/a.go"}}
+	for name, content := range map[string]string{
+		"garbage":       "\x00not json{",
+		"another shape": `["S-0001"]`,
+		"no answer":     changed(func(k *keptCommittedFile) { k.Committed = nil }),
+		"another key":   changed(func(k *keptCommittedFile) { k.Key += "x" }),
+		"another root":  changed(func(k *keptCommittedFile) { k.Root += "x" }),
+	} {
+		write(t, repo.CacheDir(), filepath.Base(path), content)
+		if got, read := freshOnce(t, r, repo); !read || !reflect.DeepEqual(got, want) {
+			t.Errorf("%s: a new process read the log %v and answered %v, want a read and %v", name, read, got, want)
+		}
+		if got, read := freshOnce(t, r, repo); read || !reflect.DeepEqual(got, want) {
+			t.Errorf("%s: the next new process read the log %v and answered %v, want the rewritten file's %v", name, read, got, want)
+		}
+	}
+}
+
+// A cache folder that cannot be written costs each new process a read of
+// the log, never the answer.
+func TestCommittedAnswersWhenTheCacheCannotBeWritten(t *testing.T) {
+	dir, repo := committedRepo(t)
+	write(t, dir, ".flai-cache", "a file where the cache folder goes\n")
+	r := &logCounter{}
+	want := map[string][]string{"S-0001": {"cli/a.go"}}
+	for i := range 2 {
+		got, read := freshOnce(t, r, repo)
+		if !read || !reflect.DeepEqual(got, want) {
+			t.Errorf("new process %d: read the log %v and answered %v, want a read and %v", i+1, read, got, want)
+		}
 	}
 }
 
