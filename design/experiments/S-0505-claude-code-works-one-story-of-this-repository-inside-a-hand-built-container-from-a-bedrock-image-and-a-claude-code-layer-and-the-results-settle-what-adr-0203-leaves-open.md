@@ -21,7 +21,7 @@ T-2177 fills this section.
 
 ### The images
 
-T-2149 built `flai-agent-bedrock:local` and `flai-agent-claude-code:local` with [`scripts/agent-image.sh`](../../scripts/agent-image.sh): Alpine 3.24 with `git`, `tini`, and `flai` from the tree, then Node 24 and Claude Code 2.1.312. The image's user is 65532, `HOME` is `/home/agent` (mode 1777), and `DISABLE_AUTOUPDATER=1`.
+T-2149 built `flai-agent-bedrock:local` and `flai-agent-claude-code:local` with [`scripts/agent-image.sh`](../../scripts/agent-image.sh): Alpine 3.24 with `git`, `tini`, and `flai` from the tree, then Node 24, `bash` (which T-2166 found Claude Code's Bash tool needs), and Claude Code 2.1.312. The image's user is 65532, `HOME` is `/home/agent` (mode 1777), and `DISABLE_AUTOUPDATER=1`.
 
 ### The container, started by hand
 
@@ -80,7 +80,42 @@ The prompt was "Call the flai MCP tool inbox and reply with only the number awai
 
 ## Results
 
-T-2166 and T-2173 fill this section.
+### A story worked inside the container
+
+T-2166 ran S-0513, the operator's choice on TH-0676: a documentation-only story under E-0029 that adds an operators' runbook for the agent images. agent-S-0505 started it on the host with `flai story start`, and `scripts/agent-container.sh S-0513` ran its agent with `FLAI_AGENT_GIT_MOUNT=1` and `claude-opus-5-5`. The prompt had the shape of `flai serve`'s, and asked for three probes, each once: `wait_for_events`, a protected write, and the guard hook.
+
+The first run stopped at its first Bash call: `No suitable shell found. Claude CLI requires a Posix shell environment.` Alpine's busybox `sh` is not a shell Claude Code's Bash tool accepts. It was stopped after its reads, and the claude-code image gained `bash` and `SHELL=/bin/bash`. The second run worked S-0513 from its first task to review in 3 minutes 42 seconds, 38 turns, and 1.70 USD, with one commit on `story/S-0513`.
+
+Every flai MCP tool the agent called over HTTP answered as the stdio server answers an agent on the host, under the agent name `agent-S-0513` that the `X-Flai-Agent` header gave:
+
+| Tool | Calls | Outcome |
+|------|-------|---------|
+| `inbox` | 2 | As on stdio |
+| `prime` | 5 | As on stdio, parts 1 to 5 |
+| `item_get` | 2 | As on stdio |
+| `wait_for_events` | 1 | `timed_out: true` after 20 s, no events, `end: false` |
+| `item_new` | 2 | The first refused by `flai check` for a task body without `## Notes`, as on stdio; the second made T-2196 |
+| `item_move` | 3 | As on stdio: T-2196 to ready and in-progress, S-0513 to review |
+| `stream_state` | 3 | As on stdio |
+| `task_done` | 1 | As on stdio: committed on `story/S-0513`, synced, moved, logged, and checked on the host (`checked_by: scripts/flai.sh`) |
+| `test` | 1 | Passed, run on the host in S-0513's worktree |
+| `criteria_tick` | 1 | As on stdio |
+| `verify` | 1 | Passed every step, run on the host |
+| `permission_prompt` | 1 | Opened TH-0677 to the operator and held the write; Claude Code timed out first (below) |
+
+What did not hold:
+
+- **The guard.** `flai guard` did not run on any call. This repository's hook runs `scripts/flai.sh guard`, which builds `flai` with `go`, absent from the image. The guard exited 127 on every call, and the hook passes on only exit 2, so every call went through unchecked and the agent saw no error ([I-0216](../issues/I-0216-flai-guard-does-not-run-as-the-hook-inside-the-agent-container-and-the-hook-lets-every-call-through-when-the-guard-cannot-start.md)).
+- **The permission prompt.** The probe's Write of `.claude/s0513-probe.md` reached `permission_prompt`, which opened TH-0677 to the operator and held the write. Claude Code answered `Error calling tool (Write): The operation timed out.` before the hold's four minutes ended. Nothing was written, and the thread stayed open with no agent waiting on it ([I-0217](../issues/I-0217-permission-prompt-over-the-http-mcp-server-outlives-claude-code-s-tool-call-timeout-so-an-agent-in-a-container-sees-its-protected-write-time-out-while-the-thread-to-the-operator-stays-open.md)).
+- **The close-out.** `scripts/close-out.sh S-0513` stopped at its first step, `flai verify` through `scripts/flai.sh`, with `go: not found`. Its last line was `close-out: S-0513 stopped at flai verify (exit 127)`. No tier ran inside, so the tiers that lack a tool are read from the manifest: `gofmt`, `vet`, `golangci-lint`, and `go-test` need `go` and `golangci-lint`; `flaiover-lint`, `vitest`, and `svelte-check` need `pnpm` and flaiover's `node_modules`; `markdown` needs `markdownlint-cli2`; and `integration` and `smoke` need `go`. Only `node` is in the image ([I-0218](../issues/I-0218-scripts-close-out-sh-stops-at-its-first-step-inside-the-agent-container-since-scripts-flai-sh-builds-flai-with-go-which-the-image-lacks.md)).
+- **flai inside the container.** The image's own `flai verify S-0513` took the worktree for the project root, since the main checkout's files are not mounted, and failed with `it has no worktree at <root>/.flai-cache/worktrees/S-0513/.flai-cache/worktrees/S-0513`. It also wrote `/home/agent/.flai/config.json` in the container ([I-0219](../issues/I-0219-flai-verify-inside-the-agent-container-takes-the-story-s-worktree-for-the-project-root-since-the-main-checkout-is-not-mounted-and-writes-a-config-under-the-container-s-home.md)). The agent closed out with the MCP `verify` tool instead, which runs on the host, and it passed.
+- **Git.** It worked only with the main checkout's `.git` mounted read-write ([I-0215](../issues/I-0215-a-story-s-worktree-mounted-alone-into-a-container-is-not-a-git-repository-since-its-git-file-names-the-main-checkout-s-git-worktrees-folder.md)).
+- **The listener.** It was reached only with a loopback `Host` header ([I-0213](../issues/I-0213-flai-s-http-mcp-server-refuses-an-agent-in-a-container-with-403-invalid-host-header-since-the-mcp-sdk-s-localhost-protection-admits-only-a-loopback-host-on-a-loopback-listener.md)).
+- **flai serve.** It started a host agent for S-0513 within a second of `flai story start`, though the story's notes said it was the container's. That agent read the notes, stood down without a change, and messaged S-0505 (MS-0200). Nothing on a story tells `flai serve` that its agent runs elsewhere ([I-0214](../issues/I-0214-flai-serve-starts-a-host-agent-for-a-story-meant-to-be-worked-in-a-container-since-nothing-on-a-story-or-the-host-says-its-agent-runs-elsewhere.md)).
+
+The login held through both runs. `.credentials.json` in the cache folder stayed a link to the read-only mount, and the operator's file kept its size and modification time, so no OAuth refresh happened in the runs of T-2159 and T-2166.
+
+T-2173 adds the bind mount's speed below.
 
 ## Recommendation
 
