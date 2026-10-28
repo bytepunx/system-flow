@@ -319,9 +319,47 @@ func TestRepositoryManifestLintsChangedFlaioverFiles(t *testing.T) {
 	want := []string{
 		"flaiover-lint ../scripts/flaiover-lint.sh package.json src/routes/+page.svelte",
 		"vitest ../scripts/flaiover-unit.sh related --run --reporter=json src/routes/+page.svelte",
+		"svelte-check ../scripts/flaiover-check.sh",
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("selected %q, want %q", got, want)
+	}
+}
+
+// I-0206: this repository's manifest has flai test type-check flaiover with
+// svelte-check, outside --all, when a script, component, or configuration
+// changes, and not for a change svelte-check cannot see, such as the README.
+// svelte-check takes no file list, so it ran only in the --all flaiover tier,
+// and a type error the flaiover-lint and vitest tiers passed over first showed
+// in the close-out. Not gated under -short, so that make test catches a
+// manifest that drops the tier.
+func TestRepositoryManifestTypeChecksChangedFlaioverFiles(t *testing.T) {
+	root := filepath.Join("..", "..", "..")
+	if _, err := os.Stat(filepath.Join(root, "system-flow.yaml")); err != nil {
+		t.Skip("monorepo not present")
+	}
+	tiers, err := CheckoutTiers(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const changed = "flaiover/src/lib/age.ts"
+	if _, err := os.Stat(filepath.Join(root, changed)); err != nil {
+		t.Fatalf("%s: %v; name another flaiover/src/lib file", changed, err)
+	}
+	argv := func(path string) ([]string, bool) {
+		for _, s := range Select(os.DirFS(root), tiers, []string{path}, false) {
+			if s.Tier.Name == "svelte-check" {
+				return s.Argv, true
+			}
+		}
+		return nil, false
+	}
+	got, ok := argv(changed)
+	if want := []string{"../scripts/flaiover-check.sh"}; !ok || !reflect.DeepEqual(got, want) {
+		t.Errorf("%s: svelte-check runs %q (selected %v), want %q", changed, got, ok, want)
+	}
+	if got, ok := argv("flaiover/README.md"); ok {
+		t.Errorf("flaiover/README.md selects svelte-check, running %q; want no svelte-check tier", got)
 	}
 }
 

@@ -88,6 +88,11 @@ tests:
     paths: ["flaiover/src/**", "flaiover/*.ts", "flaiover/*.js"]
     format: vitest-json
     all_command: ["../scripts/flaiover-unit.sh", run, "--reporter=json"]
+  - name: svelte-check
+    command: ["../scripts/flaiover-check.sh"]
+    dir: flaiover
+    paths: ["flaiover/src/**/*.ts", "flaiover/src/**/*.js", "flaiover/src/**/*.svelte", "flaiover/*.ts", "flaiover/*.js", "flaiover/tsconfig.json", "flaiover/package.json", "scripts/flaiover-check.sh"]
+    format: plain
   - name: shellcheck
     command: [scripts/shellcheck.sh, "{files}"]
     paths: ["scripts/**/*.sh"]
@@ -109,7 +114,7 @@ tests:
     paths: ["flaiover/**", "!flaiover/node_modules/**", "!flaiover/build/**", "!flaiover/.svelte-kit/**", "scripts/flaiover-*.sh", "scripts/env.sh"]
     format: plain
     all_only: true
-    covers: [flaiover-lint, vitest]
+    covers: [flaiover-lint, vitest, svelte-check]
   - name: integration
     command: ["../scripts/integration.sh", "-json"]
     dir: flai
