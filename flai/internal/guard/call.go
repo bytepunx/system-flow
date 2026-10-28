@@ -114,7 +114,7 @@ func deny(why string) Verdict {
 
 // Decide decides on c under g's policy: the shared paths and flai forge push
 // for every caller, then the rules of a sub-agent, or of the session's own
-// role, a built-in one's in Go and a defined one's from its role file, and
+// role, the orchestrator's in Go and every other's from its role file, and
 // the author a served agent writes as. A story's own agent's write to a path
 // flai protects in its worktree, which they would allow, is put to the
 // story's owner (Ask) while auto-approve is off.
@@ -128,23 +128,17 @@ func Decide(g Guard, c Call) Verdict {
 	if c.Subagent {
 		return g.asSubAgent(c)
 	}
-	if DefinedRole(c.Role) {
+	if HeldByFile(c.Role) {
 		if v := g.asRole(c); v.Outcome != Allow {
 			return v
 		}
 		return deny(g.authors(c))
 	}
-	if c.Kind == FlaiTool && c.Tool == ReleasePublish && c.Role != RoleOrchestrate && c.Role != RolePlan && c.Role != RoleAnalyze && c.Role != RoleCurate {
+	if c.Kind == FlaiTool && c.Tool == ReleasePublish && c.Role != RoleOrchestrate {
 		return deny("only the orchestrator calls " + ReleasePublish + ": " + orchestratorPublishes)
 	}
 	var why string
 	switch c.Role {
-	case RolePlan:
-		why = g.plan(c)
-	case RoleAnalyze:
-		why = g.analyze(c)
-	case RoleCurate:
-		why = g.curate(c)
 	case RoleOrchestrate:
 		return g.orchestrate(c)
 	case "":

@@ -282,14 +282,7 @@ not run it.`,
 					g.Opener = guard.ThreadOpener(repo)
 				}
 			}
-			if g.Role == guard.RoleAnalyze && !call.Subagent {
-				if p, err := a.guardProject(); err != nil {
-					a.logger().Warn("project unreadable, the analyzer may edit no file", "component", "guard", "err", err.Error())
-				} else {
-					g.Root, g.Reports = p.Root, analysis.Dir(p.Manifest)
-				}
-			}
-			if guard.DefinedRole(g.Role) && !call.Subagent {
+			if guard.HeldByFile(g.Role) && !call.Subagent {
 				a.guardRole(&g, cmd.Root())
 			}
 			if _, ok := guard.ProtectedWrite(call); ok && (call.Subagent || g.Role == "" && g.Story != "") {
@@ -331,13 +324,17 @@ func (a *app) guardProject() (*workitem.Repo, error) {
 	return workitem.Open(start)
 }
 
-// guardRole gives g what it needs to hold a session whose role a role file
-// defines to that file (S-0416, ADR-0207): flai's subcommands from root's
-// tree and, from the project the hook runs in, its root and design folder,
-// the threads' openers, the file whose role is g.Role, and the manifest's
-// roles.<name>.permissions of it. A project or folder it cannot read, or no
-// file that holds the role, sets RoleProblem, naming the file or the folder
-// and flai check, and the guard fails closed.
+// guardRole gives g what it needs to hold a session to its role file
+// (S-0416, ADR-0207): flai's subcommands from root's tree and, from the
+// project the hook runs in, its root and design folder, the analyzer's
+// reports folder, the threads' openers, the file whose role is g.Role, and
+// the manifest's roles.<name>.permissions of it. For a role a project
+// defines, a project or folder it cannot read, or no file that holds the
+// role, sets RoleProblem, naming the file or the folder and flai check, and
+// the guard fails closed. A built-in role with no file of its own in the
+// project is held to flai's baseline file of it, with no root when the
+// project cannot be read, so that it edits no file; its own <name>.md that
+// does not parse, or a folder it cannot read, fails it closed too.
 func (a *app) guardRole(g *guard.Guard, root *cobra.Command) {
 	g.Subcommands = map[string][]string{}
 	for _, c := range root.Commands() {
@@ -345,14 +342,27 @@ func (a *app) guardRole(g *guard.Guard, root *cobra.Command) {
 			g.Subcommands[c.Name()] = append(g.Subcommands[c.Name()], sub.Name())
 		}
 	}
+	builtIn := guard.BuiltInFromFile(g.Role)
 	repo, err := a.guardProject()
 	if err != nil {
+		switch {
+		case g.Role == guard.RoleAnalyze:
+			// the one built-in role that edits a file is told it may not
+			a.logger().Warn("project unreadable, the analyzer may edit no file", "component", "guard", "err", err.Error())
+			return
+		case builtIn:
+			a.logger().Debug("project unreadable, the role is held to flai's baseline file", "component", "guard", "role", g.Role, "err", err.Error())
+			return
+		}
 		g.RoleProblem = fmt.Sprintf("the project could not be read for the role file of %s (%v); run flai check in it", g.Role, err)
 		a.logger().Warn("project unreadable, the role is refused every write", "component", "guard", "role", g.Role, "err", err.Error())
 		return
 	}
 	design := repo.Manifest.Layout["design"]
 	g.Root, g.Design, g.Opener = repo.Root, design, guard.ThreadOpener(repo)
+	if g.Role == guard.RoleAnalyze {
+		g.Reports = analysis.Dir(repo.Manifest)
+	}
 	all, problems, err := roles.Load(repo.Root, design)
 	if err != nil {
 		g.RoleProblem = fmt.Sprintf("%v; run flai check", err)
@@ -364,11 +374,18 @@ func (a *app) guardRole(g *guard.Guard, root *cobra.Command) {
 			return
 		}
 	}
+	base, _ := roles.BaselineFor(design, g.Role)
 	var why []string
 	for _, p := range problems {
-		why = append(why, fmt.Sprintf("%s does not parse: %s", p.Path, p.Message))
+		if !builtIn || p.Path == base.Path {
+			why = append(why, fmt.Sprintf("%s does not parse: %s", p.Path, p.Message))
+		}
 	}
-	if len(why) == 0 {
+	switch {
+	case len(why) > 0:
+	case builtIn:
+		return
+	default:
 		why = append(why, fmt.Sprintf("no role file under %s has role %s", roles.Dir(design), g.Role))
 	}
 	g.RoleProblem = strings.Join(why, "; ") + "; run flai check"

@@ -43,8 +43,12 @@
 // to backlog, but not edit files with Edit, MultiEdit, Write, or
 // NotebookEdit, move an item further, accept, publish, work a story, or
 // change the repository's history. A story it creates is a draft for the
-// operator to finalize (S-0209). Its sub-agents are held as every sub-agent
-// is.
+// operator to finalize (S-0209). Since S-0416 (ADR-0207) these rules are read
+// from its role file, planner.md under the design folder's workflows/roles,
+// or from flai's baseline copy of it when the project has none: it edits an
+// item only with an edit that neither finalizes a draft nor sets a cost of
+// delay input (ungated-edit), and a refusal the rules below would make is
+// worded as they word it. Its sub-agents are held as every sub-agent is.
 //
 // An orchestrator session, one flai serve starts with the role orchestrate,
 // is held to the permissions the operator gives it in the manifest's
@@ -79,8 +83,11 @@
 // stories:
 // item_new, item_edit, item_move, issue_story, and flai issue story, story,
 // epic, and task are refused it, as is every other write through flai, flai
-// issue close among them, and git's. Its sub-agents, the explorer it hands
-// search to among them, are held as every sub-agent is.
+// issue close among them, and git's. These rules are read from its role
+// file, analyzer.md, or flai's baseline copy of it, as the planner's are
+// (S-0416), with its files entry's {design} the design folder. Its
+// sub-agents, the explorer it hands search to among them, are held as every
+// sub-agent is.
 //
 // Its calls on threads are held by who opened the thread and by
 // answer_threads (S-0220): on a thread it opened it follows up and resolves,
@@ -103,7 +110,9 @@
 // through flai but those, the tools and commands that start a strategic
 // agent among them, and git's writes are refused it, each refusal saying
 // that it writes entries only with flai digest new, edit, absorb, cited, and
-// compact. Its sub-agents are held as every sub-agent is.
+// compact. These rules are read from its role file, curator.md, or flai's
+// baseline copy of it, as the planner's are (S-0416). Its sub-agents are held
+// as every sub-agent is.
 //
 // A session flai serve starts with a role a project's role file defines,
 // under the design folder's workflows/roles (S-0416, ADR-0207), is held to
@@ -290,13 +299,14 @@ const RolePlan = "plan"
 // Backlog is the one state the planner may move an item to.
 const Backlog = "backlog"
 
-// MCPPlans are flai's MCP tools the planner may call besides MCPReads;
-// item_move it may call only to move an item to backlog.
+// MCPPlans are flai's MCP tools the planner's baseline role file lists
+// besides MCPReads, which word its refusals; item_move it may call only to
+// move an item to backlog.
 var MCPPlans = []string{"activity_log", "inbox", "item_edit", "item_new", "thread_open", "thread_reply", "wait_for_events"}
 
-// cliPlans are the flai commands the planner may run besides cliReads, in
-// the form cliReads has; flai move it may run only to move an item to
-// backlog.
+// cliPlans are the flai commands the planner's baseline role file lists
+// besides cliReads, in the form cliReads has, which word its refusals; flai
+// move it may run only to move an item to backlog.
 var cliPlans = map[string][]string{
 	"edit":    nil,
 	"epic":    {"new"},
@@ -368,18 +378,18 @@ const orchestratorPublishes = "it is the orchestrator's alone, while orchestrati
 // (S-0223).
 const RoleAnalyze = "analyze"
 
-// MCPAnalyzes are flai's MCP tools the analyzer may call besides MCPReads:
-// issue_new and issue_bump file and bump an issue for a finding of its
-// report (S-0224).
+// MCPAnalyzes are flai's MCP tools the analyzer's baseline role file lists
+// besides MCPReads, which word its refusals: issue_new and issue_bump file
+// and bump an issue for a finding of its report (S-0224).
 var MCPAnalyzes = []string{"activity_log", "inbox", "issue_bump", "issue_new", "thread_open", "thread_reply", "wait_for_events"}
 
 // itemWrites are flai's MCP tools that write a work item, issue_story's
 // draft story among them, which the analyzer never calls.
 var itemWrites = []string{"issue_story", "item_edit", "item_move", "item_new"}
 
-// cliAnalyzes are the flai commands the analyzer may run besides cliReads,
-// each with the subcommands it may run: it files and bumps the issues its
-// findings call for (S-0224).
+// cliAnalyzes are the flai commands the analyzer's baseline role file lists
+// besides cliReads, each with its subcommands, which word its refusals: it
+// files and bumps the issues its findings call for (S-0224).
 var cliAnalyzes = map[string][]string{
 	"issue": {"new", "bump"},
 }
@@ -422,15 +432,16 @@ var analyzing = rules{
 // (S-0431, ADR-0196).
 const RoleCurate = "curate"
 
-// MCPCurates are flai's MCP tools the curator may call besides MCPReads.
+// MCPCurates are flai's MCP tools the curator's baseline role file lists
+// besides MCPReads, which word its refusals.
 var MCPCurates = []string{"activity_log", "inbox", "thread_open", "thread_reply", "wait_for_events"}
 
-// cliCurates are the flai commands the curator may run besides cliReads,
-// each with the subcommands it may run: flai digest harvest lists the
-// candidates, new and edit write an entry or merge a candidate into the
-// entry that holds it, absorb marks an entry a document records, cited
-// writes each entry's citers, and compact compacts the entries uncited
-// within the window (ADR-0199).
+// cliCurates are the flai commands the curator's baseline role file lists
+// besides cliReads, each with its subcommands, which word its refusals:
+// flai digest harvest lists the candidates, new and edit write an entry or
+// merge a candidate into the entry that holds it, absorb marks an entry a
+// document records, cited writes each entry's citers, and compact compacts
+// the entries uncited within the window (ADR-0199).
 var cliCurates = map[string][]string{
 	"digest": {"absorb", "cited", "compact", "edit", "harvest", "new"},
 }
@@ -642,11 +653,15 @@ func (g Guard) forgePush(c Call) Verdict {
 // ADR-0207). RoleProblem says why the file could not be read, missing or not
 // parsing, naming the file or its folder and flai check; while it is set, or
 // RoleFile is nil, the session reads and is refused every other call.
+// RolePlan, RoleAnalyze, and RoleCurate hold them to RoleFile too, the
+// project's file of the role, or, while it is nil, flai's baseline file of
+// it; RoleProblem fails them closed as it does a defined role.
 // RolePermissions are the manifest's roles.<name>.permissions of the role;
 // the orchestrator's stay in Permissions. Subcommands are each flai command's
 // subcommands, from the command tree, which a role file's command entries
 // are matched against; nil when not given. Design is the design folder,
-// relative to Root and slash separated, for {design} in the file's files.
+// relative to Root and slash separated, for {design} in the file's files;
+// while it is "", the parent of Reports stands for it when Reports is given.
 type Guard struct {
 	Commands        []string
 	Role            string
@@ -1348,7 +1363,9 @@ func nevers(why string) string {
 	return "the orchestrator never does it, whatever its permissions: " + why
 }
 
-// plan says why the planner's own call is refused, or "" when it is not.
+// plan words the refusal of the planner's own call that its role file
+// refuses as the planner was refused before the file held it, or is "" when
+// that rule allows the call.
 func (g Guard) plan(c Call) string {
 	switch c.Kind {
 	case FileWrite:
@@ -1375,8 +1392,9 @@ func (g Guard) plan(c Call) string {
 	return ""
 }
 
-// analyze says why the analyzer's own call is refused, or "" when it is not
-// (S-0223).
+// analyze words the refusal of the analyzer's own call that its role file
+// refuses as the analyzer was refused before the file held it (S-0223), or
+// is "" when that rule allows the call.
 func (g Guard) analyze(c Call) string {
 	switch c.Kind {
 	case FileWrite:
@@ -1406,8 +1424,9 @@ func (g Guard) analyze(c Call) string {
 	return ""
 }
 
-// curate says why the curator's own call is refused, or "" when it is not
-// (S-0431, ADR-0196).
+// curate words the refusal of the curator's own call that its role file
+// refuses as the curator was refused before the file held it (S-0431,
+// ADR-0196), or is "" when that rule allows the call.
 func (g Guard) curate(c Call) string {
 	switch c.Kind {
 	case FileWrite:

@@ -343,3 +343,168 @@ func TestUngatedEditLeavesOutOnlyAFinalizingAndTheCostInputs(t *testing.T) {
 		}
 	}
 }
+
+// builtInFile is flai's baseline role file of name, as the project's file
+// at design/workflows/roles/<name>.md, with each of edits, old and new in
+// turn, made to it.
+func builtInFile(t *testing.T, name string, edits ...string) *roles.Role {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("..", "roles", "baseline", name+".md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := string(data)
+	for i := 0; i+1 < len(edits); i += 2 {
+		if !strings.Contains(content, edits[i]) {
+			t.Fatalf("%s.md has no %q", name, edits[i])
+		}
+		content = strings.Replace(content, edits[i], edits[i+1], 1)
+	}
+	r, problem := roles.Parse("design/workflows/roles/"+name+".md", content)
+	if problem != nil {
+		t.Fatal(problem)
+	}
+	return &r
+}
+
+// S-0416, ADR-0207: the planner is held to its role file, the project's
+// when there is one: a call the file leaves out is refused it with the
+// file's reason, where its rule in Go allowed it, and a call the file adds
+// passes, where its rule in Go refused it.
+func TestThePlannerIsHeldToItsRoleFile(t *testing.T) {
+	narrower := Guard{Commands: g.Commands, Role: RolePlan, Design: "design", RoleFile: builtInFile(t, "planner", "  - thread_reply\n", "")}
+	reply := Call{Role: RolePlan, Kind: FlaiTool, Tool: "thread_reply", Args: Args{ID: "TH-0001"}}
+	v := Decide(narrower, reply)
+	want := "the role planner cannot call thread_reply: its role file lists no such call. Ask the operator with thread_open on the item if it needs doing (design/workflows/roles/planner.md, ADR-0207)."
+	if v.Outcome != Deny || v.Reason != want || v.Call != "thread_reply TH-0001" {
+		t.Errorf("thread_reply left out of the file: %+v", v)
+	}
+	if v := Decide(planGuard, reply); v.Outcome != Allow {
+		t.Errorf("thread_reply under the baseline file: %+v", v)
+	}
+
+	wider := Guard{Commands: g.Commands, Role: RolePlan, Design: "design", RoleFile: builtInFile(t, "planner", "  - inbox\n", "  - inbox\n  - issue_new\n")}
+	file := Call{Role: RolePlan, Kind: FlaiTool, Tool: "issue_new"}
+	if v := Decide(wider, file); v.Outcome != Allow {
+		t.Errorf("issue_new added to the file: %+v", v)
+	}
+	if v := Decide(planGuard, file); v.Outcome != Deny || !strings.HasPrefix(v.Reason, "the planner cannot call issue_new: ") {
+		t.Errorf("issue_new under the baseline file: %+v", v)
+	}
+}
+
+// S-0416, ADR-0207: with no file of its own, the planner is held to flai's
+// baseline file: ungated-edit refuses an edit that finalizes a draft or sets
+// a cost of delay input, which its rule in Go allowed by MCP, with the
+// file's reason; a refusal its rule in Go makes too keeps its wording; and
+// the commands it lists match with no command tree.
+func TestThePlannerIsHeldToTheBaselineFile(t *testing.T) {
+	input := map[string]json.RawMessage{"revenue_per_week": json.RawMessage("500")}
+	for _, in := range []Args{
+		{ID: "S-0001", Fields: []string{"draft", "id"}},
+		{ID: "S-0001", Fields: []string{"cost_of_delay", "id"}, CostOfDelay: input},
+	} {
+		v := Decide(planGuard, Call{Role: RolePlan, Kind: FlaiTool, Tool: "item_edit", Args: in})
+		if v.Outcome != Deny || !strings.HasPrefix(v.Reason, "the role planner cannot call item_edit: it may make it only under ungated-edit") || !strings.Contains(v.Reason, "workflows/roles/planner.md, ADR-0207") {
+			t.Errorf("item_edit %v: %+v", in.Fields, v)
+		}
+	}
+	if v := Decide(planGuard, Call{Role: RolePlan, Kind: Shell, Command: "flai edit S-0001 --revenue-per-week 500"}); v.Outcome != Deny || !strings.Contains(v.Reason, "ungated-edit") {
+		t.Errorf("flai edit with a cost of delay input: %+v", v)
+	}
+	for c, want := range map[string]string{
+		"flai edit S-0001 --no-draft": "finalizing a draft is the operator's",
+		"flai story new x":            drafts,
+		"flai move S-0001 ready":      "it moves an item to backlog and no further",
+	} {
+		if v := Decide(planGuard, Call{Role: RolePlan, Kind: Shell, Command: c}); v.Outcome != Deny || !strings.HasPrefix(v.Reason, "the planner cannot run") || !strings.Contains(v.Reason, want) || v.Call != "" {
+			t.Errorf("%s: %+v", c, v)
+		}
+	}
+	if v := Decide(planGuard, Call{Role: RolePlan, Kind: FlaiTool, Tool: "item_new", Args: Args{Type: "story"}}); v.Outcome != Deny || !strings.HasPrefix(v.Reason, "the planner cannot create a story that is not a draft") {
+		t.Errorf("item_new of a story that is not a draft: %+v", v)
+	}
+	for _, c := range []string{
+		"flai touches S-0001 --add flai/x.go", "flai touches suggest S-0001", "flai edit S-0001 --title x",
+		"flai move S-0001 backlog", "flai story new x --draft", "flai epic new x", "flai task new --story S-0001 x",
+		"flai thread new S-0001 x", "flai thread reply TH-0001 x", "flai issue new x", "flai issue bump I-0001",
+	} {
+		if v := Decide(planGuard, Call{Role: RolePlan, Kind: Shell, Command: c}); v.Outcome != Allow {
+			t.Errorf("%s refused: %s", c, v.Reason)
+		}
+	}
+}
+
+// S-0416: the analyzer and the curator are held to their role files too,
+// the analyzer's files entry under the design folder its reports folder
+// lies in when no design folder is given, and their refusals keep the
+// wording of their rules in Go where those refuse the call too.
+func TestTheAnalyzerAndTheCuratorAreHeldToTheirRoleFiles(t *testing.T) {
+	root := t.TempDir()
+	elsewhere := Guard{Commands: g.Commands, Role: RoleAnalyze, Root: root, Design: "design", RoleFile: builtInFile(t, "analyzer", `["{design}/analysis/"]`, `["{design}/findings/"]`)}
+	write := func(file string) Call {
+		return Call{Role: RoleAnalyze, Kind: FileWrite, Name: "Write", Path: filepath.Join(root, file)}
+	}
+	if v := Decide(elsewhere, write("design/findings/r.md")); v.Outcome != Allow {
+		t.Errorf("a write under the file's folder: %+v", v)
+	}
+	// its rule in Go, given no reports folder, refuses the write too, and
+	// words the refusal
+	if v := Decide(elsewhere, write("design/analysis/r.md")); v.Outcome != Deny || !strings.HasPrefix(v.Reason, "the analyzer cannot use Write on ") {
+		t.Errorf("a write under analysis/ the file leaves out: %+v", v)
+	}
+	elsewhere.Reports = "design/analysis"
+	if v := Decide(elsewhere, write("design/analysis/r.md")); v.Outcome != Deny || !strings.Contains(v.Reason, "it edits only a file under design/findings/") {
+		t.Errorf("a write under the reports folder the file leaves out: %+v", v)
+	}
+	reports := Guard{Commands: g.Commands, Role: RoleAnalyze, Root: root, Reports: "design/analysis"}
+	if v := Decide(reports, write("design/analysis/r.md")); v.Outcome != Allow {
+		t.Errorf("a write under the reports folder: %+v", v)
+	}
+	analyzer := Guard{Commands: g.Commands, Role: RoleAnalyze}
+	for _, c := range []string{"flai issue new x --class defect", "flai issue bump I-0001"} {
+		if v := Decide(analyzer, Call{Role: RoleAnalyze, Kind: Shell, Command: c}); v.Outcome != Allow {
+			t.Errorf("%s refused: %s", c, v.Reason)
+		}
+	}
+	if v := Decide(analyzer, Call{Role: RoleAnalyze, Kind: Shell, Command: "flai issue story I-0001"}); v.Outcome != Deny || !strings.Contains(v.Reason, authorsNoStories) {
+		t.Errorf("flai issue story: %+v", v)
+	}
+
+	curator := Guard{Commands: append(slices.Clone(g.Commands), "digest"), Role: RoleCurate}
+	for _, sub := range []string{"harvest", "new x", "edit D-0001", "absorb D-0001 --by design/system/x.md", "cited", "compact"} {
+		if v := Decide(curator, Call{Role: RoleCurate, Kind: Shell, Command: "flai digest " + sub}); v.Outcome != Allow {
+			t.Errorf("flai digest %s refused: %s", sub, v.Reason)
+		}
+	}
+	if v := Decide(curator, Call{Role: RoleCurate, Kind: Shell, Command: "flai digest seed"}); v.Outcome != Deny || !strings.Contains(v.Reason, seedsUnjudged) {
+		t.Errorf("flai digest seed: %+v", v)
+	}
+	curator.RoleFile = builtInFile(t, "curator", "  - flai digest compact\n", "")
+	if v := Decide(curator, Call{Role: RoleCurate, Kind: Shell, Command: "flai digest compact"}); v.Outcome != Deny || !strings.HasPrefix(v.Reason, `the role curator cannot run "flai digest compact": its role file lists no such call.`) {
+		t.Errorf("flai digest compact left out of the file: %+v", v)
+	}
+}
+
+// S-0416: a built-in role whose project file does not parse reads and is
+// refused every other call, naming the file and flai check, rather than
+// falling back on the baseline file.
+func TestABuiltInRoleWhoseFileDoesNotParseFailsClosed(t *testing.T) {
+	problem := "design/workflows/roles/planner.md does not parse: front matter does not parse; run flai check"
+	broken := Guard{Commands: g.Commands, Role: RolePlan, Design: "design", RoleProblem: problem}
+	for _, c := range []Call{{Role: RolePlan, Kind: FlaiTool, Tool: "board"}, {Role: RolePlan, Kind: Shell, Command: "flai board && git status"}} {
+		if v := Decide(broken, c); v.Outcome != Allow {
+			t.Errorf("read %+v refused: %s", c, v.Reason)
+		}
+	}
+	for _, c := range []Call{
+		{Role: RolePlan, Kind: FlaiTool, Tool: "thread_open", Args: Args{ID: "S-0001"}},
+		{Role: RolePlan, Kind: FlaiTool, Tool: "item_new", Args: Args{Type: "story", Draft: true}},
+		{Role: RolePlan, Kind: Shell, Command: "flai story new x --draft"},
+	} {
+		v := Decide(broken, c)
+		if v.Outcome != Deny || !strings.HasPrefix(v.Reason, "the role planner cannot ") || !strings.Contains(v.Reason, ": "+problem+". ") {
+			t.Errorf("%+v: %+v", c, v)
+		}
+	}
+}

@@ -21,10 +21,14 @@ import (
 // reports as roles.grant, such as one that reaches a call no setting allows,
 // is never granted. A role whose file is missing or does not parse reads and
 // is refused the rest.
+//
+// The planner, the analyzer, and the curator are held to their role files
+// the same way, or, when the project has none, to flai's baseline copy of
+// it; their rules in Go only word a refusal as before the files held them.
 
-// DefinedRole says whether role is one a role file defines, which the guard
-// holds to the file: neither "", nor a built-in role it holds in Go, nor the
-// verb of the story's agent or its sub-agents, which no role file takes.
+// DefinedRole says whether role is one a project's role file defines, which
+// the guard holds to the file: neither "", nor a built-in role, nor the verb
+// of the story's agent or its sub-agents, which no role file takes.
 func DefinedRole(role string) bool {
 	switch role {
 	case "", RolePlan, RoleOrchestrate, RoleAnalyze, RoleCurate:
@@ -32,6 +36,26 @@ func DefinedRole(role string) bool {
 	}
 	return !slices.Contains(roles.ReservedRoles, role)
 }
+
+// explains are the built-in roles held to their role file, each with the
+// rule in Go that words a refusal of the file's as the role was refused
+// before the file held it, "" when that rule would allow the call.
+var explains = map[string]func(Guard, Call) string{
+	RolePlan:    Guard.plan,
+	RoleAnalyze: Guard.analyze,
+	RoleCurate:  Guard.curate,
+}
+
+// BuiltInFromFile says whether role is a built-in role the guard holds to its
+// role file: the planner's, the analyzer's, or the curator's.
+func BuiltInFromFile(role string) bool {
+	_, ok := explains[role]
+	return ok
+}
+
+// HeldByFile says whether the guard holds role's own calls to a role file:
+// a defined role's or a built-in one's.
+func HeldByFile(role string) bool { return DefinedRole(role) || BuiltInFromFile(role) }
 
 // costFlags are the flags of flai edit that set or clear a cost of delay
 // input, which ungated-edit leaves out; a value it lets through.
@@ -54,16 +78,26 @@ type held struct {
 	problem string
 }
 
-// roleHeld is the role, by its verb, as g holds it: from RoleFile, or, while
-// RoleProblem is set or RoleFile is nil, a file that lists nothing.
+// roleHeld is the role, by its verb, as g holds it: from RoleFile, else, for
+// a built-in role, from flai's baseline file of it, or, while RoleProblem is
+// set or there is no file, a file that lists nothing, named after the role.
 func (g Guard) roleHeld(role string) held {
+	g.Design = g.designFolder()
+	file := g.RoleFile
 	h := held{g: g, file: roles.Role{Name: role, Role: role}, problem: g.RoleProblem}
+	if BuiltInFromFile(role) {
+		base, _ := roles.BaselineFor(g.Design, role)
+		h.file.Name = base.Name
+		if file == nil {
+			file = &base
+		}
+	}
 	switch {
 	case h.problem != "":
-	case g.RoleFile == nil:
+	case file == nil:
 		h.problem = fmt.Sprintf("no role file defines the role %s; run flai check", role)
 	default:
-		h.file, h.banned = *g.RoleFile, map[int]bool{}
+		h.file, h.banned = *file, map[int]bool{}
 		for _, p := range roles.Validate([]roles.Role{h.file}, g.Design, roles.Vocabulary{}) {
 			if p.Code == roles.CodeGrant {
 				h.banned[p.Line] = true
@@ -73,8 +107,20 @@ func (g Guard) roleHeld(role string) held {
 	return h
 }
 
+// designFolder is the design folder, for {design} in a role file's files:
+// Design, else the parent of Reports, the analyzer's reports folder, the
+// design folder's analysis/, when it is given; "" when neither is.
+func (g Guard) designFolder() string {
+	if g.Design != "" || g.Reports == "" {
+		return g.Design
+	}
+	return path.Dir(strings.TrimSuffix(g.Reports, "/"))
+}
+
 // asRole decides on the own call of a session whose role a role file
-// defines.
+// defines, or of a built-in role's, held to its file: a refusal of the
+// file's is worded by the built-in role's rule in Go when that rule refuses
+// the call too, as a plain refusal, and by the file otherwise.
 func (g Guard) asRole(c Call) Verdict {
 	h := g.roleHeld(c.Role)
 	var call, what, why, needs string
@@ -100,6 +146,11 @@ func (g Guard) asRole(c Call) Verdict {
 	}
 	if why == "" {
 		return Verdict{}
+	}
+	if explain, ok := explains[c.Role]; ok && h.problem == "" {
+		if reason := explain(g, c); reason != "" {
+			return deny(reason)
+		}
 	}
 	return h.refused(call, what, why, needs)
 }
