@@ -7,7 +7,7 @@ status: backlog
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:46:53Z
-updated: 2026-10-28T08:07:13Z
+updated: 2026-10-28T12:40:13Z
 transitions: []
 tags: [cli, docker]
 topics: [harness, docker, manifest]
@@ -39,10 +39,10 @@ cost_of_delay:
   at: 2026-10-28T08:06:14Z
 forecast:
   duration: 2h30m
-  delivery: 2026-10-30T02:47:00Z
-  basis: "flai forecast gives 56m (median 107 s per unit over 93 done feature stories on claude-opus-5-5, large band; size 31: 6 criteria, 25 touches) and delivery 2026-10-30T01:13Z, 28th in the pull order behind S-0508 and S-0509. Raised to 2h30m: the layer with Go, golangci-lint, Node, and pnpm is built several times at minutes each, and criterion 5 works a Go-changing story of this repository inside the container with its close-out's Go tiers, a session of 30 to 60 minutes. Delivery is flai's play-out start, 2026-10-30T00:17Z, plus 2h30m."
-  by: planner-S-0510
-  at: 2026-10-28T08:06:14Z
+  delivery: 2026-10-29T12:35:00Z
+  basis: "Its own forecast of 2h30m; 27th in the pull order with an in-progress limit of 5, behind S-0503, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0499, S-0502, S-0506, S-0507, S-0508 and S-0509."
+  by: flai
+  at: 2026-10-28T12:40:13Z
 finalized:
   by: orchestrator
   at: 2026-10-28T08:07:13Z
