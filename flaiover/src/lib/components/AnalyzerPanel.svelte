@@ -16,9 +16,19 @@
 		type AnalyzerStarted,
 		type AnalyzerView
 	} from '$lib/strategic';
+	import type { Snippet } from 'svelte';
 	import StrategicAgentPanel, { enableCommand } from './StrategicAgentPanel.svelte';
 
-	let { view, onchanged }: { view: AnalyzerView; onchanged?: () => void } = $props();
+	let {
+		view,
+		onchanged,
+		settings
+	}: {
+		view: AnalyzerView;
+		onchanged?: () => void;
+		/** The analyzer's settings, shown under Run (S-0533). */
+		settings?: Snippet;
+	} = $props();
 
 	/** The focus asked for; '' asks for all of them. */
 	let focus = $state('');
@@ -160,6 +170,7 @@
 	runs={view.runs}
 	stream={() => ({ story: 'analyzer', role: 'analyze' })}
 	actions={controls}
+	{settings}
 	currentFields={currentFocus}
 	{runHead}
 	{runCells}

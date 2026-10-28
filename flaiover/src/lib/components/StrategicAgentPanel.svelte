@@ -15,8 +15,9 @@
 	// host action is on, with the command that turns it on, the run under way with its stream, the
 	// agent's activity document with its totals and its log newest first, and each past run with what
 	// its log entries say it cost and how it went. Each page adds what is its own through snippets:
-	// the state and the actions of its host action, the fields of its runs, what an entry shows besides
-	// its items, duration, and cost, and sections before the log and after the runs.
+	// the state and the actions of its host action, its settings right under them so the operator
+	// reaches them without scrolling past what changes (S-0533), the fields of its runs, what an entry
+	// shows besides its items, duration, and cost, and sections before the log and after the runs.
 	import type { Snippet } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { localTime } from '$lib/localtime';
@@ -43,6 +44,7 @@
 		stream,
 		actionState,
 		actions,
+		settings,
 		currentFields,
 		runHead,
 		runCells,
@@ -67,6 +69,8 @@
 		actionState?: Snippet;
 		/** What the operator can have flai do, under the action's state. */
 		actions?: Snippet;
+		/** The agent's settings, between the host action and the run under way. */
+		settings?: Snippet;
 		/** dt/dd pairs of the run under way, before its agent and when it started. */
 		currentFields?: Snippet<[R]>;
 		/** th cells of the runs table, before when each run started. */
@@ -112,6 +116,12 @@
 		{/if}
 		{@render actions?.()}
 	</section>
+
+	{#if settings}
+		<div class="rounded border border-line bg-surface p-4" data-testid="{kind}-settings">
+			{@render settings()}
+		</div>
+	{/if}
 
 	<section class="rounded border border-line bg-surface p-4" data-testid="{kind}-current">
 		<h2 class="font-semibold text-ink">Running now</h2>

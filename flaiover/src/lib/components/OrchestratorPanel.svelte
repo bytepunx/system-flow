@@ -13,9 +13,19 @@
 		type OrchestratorRun,
 		type OrchestratorView
 	} from '$lib/strategic';
+	import type { Snippet } from 'svelte';
 	import StrategicAgentPanel, { enableCommand } from './StrategicAgentPanel.svelte';
 
-	let { view, onchanged }: { view: OrchestratorView; onchanged?: () => void } = $props();
+	let {
+		view,
+		onchanged,
+		settings
+	}: {
+		view: OrchestratorView;
+		onchanged?: () => void;
+		/** The orchestrator's settings, shown under Stop and Start (S-0533). */
+		settings?: Snippet;
+	} = $props();
 
 	/** How many of the newest entries are shown as its last decisions. */
 	const DECISIONS = 5;
@@ -125,5 +135,6 @@
 	stream={() => ({ story: 'orchestrator', role: 'orchestrate' })}
 	actionState={view.held ? held : undefined}
 	actions={controls}
+	{settings}
 	beforeActivity={lastDecisions}
 />

@@ -2,9 +2,9 @@
 // turns it on, or held after a Stop; the run under way with its stream read by role; its last
 // decisions with their reasons above its whole log; its runs with their cost and outcome; and Stop
 // and Start through /api/orchestrator, each saying what flai answered, both disabled while the
-// action is off.
+// action is off. S-0533: the settings it is given come under the host action, before the run.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { flushSync, mount, unmount } from 'svelte';
+import { createRawSnippet, flushSync, mount, unmount } from 'svelte';
 import type { ActivityEntry, OrchestratorRun, OrchestratorView } from '$lib/strategic';
 
 const api = vi.fn();
@@ -218,6 +218,34 @@ describe('the orchestrator panel (S-0228)', () => {
 		);
 		expect(all('orchestrator-entry')).toHaveLength(7);
 		expect(text(all('orchestrator-entry-details')[0])).toBe('items S-0252; took 1m; cost $1.50');
+	});
+
+	// S-0533: the settings come first, under the host action, so the operator reaches them without
+	// scrolling past the run, the decisions, the log, and the runs.
+	it('shows its settings under the host action, before the run, the decisions, the log, and the runs', async () => {
+		const settings = createRawSnippet(() => ({
+			render: () => '<p data-testid="the-settings">orchestration.permissions</p>'
+		}));
+		c = mount(OrchestratorPanel, { target: document.body, props: { view: view(), settings } });
+		await settle();
+		const order = [
+			'orchestrator-action',
+			'orchestrator-settings',
+			'orchestrator-current',
+			'orchestrator-decisions',
+			'orchestrator-activity',
+			'orchestrator-runs'
+		].map((id) => one(id)!);
+		for (let i = 1; i < order.length; i++)
+			expect(
+				order[i - 1].compareDocumentPosition(order[i]) & Node.DOCUMENT_POSITION_FOLLOWING
+			).toBeTruthy();
+		expect(one('orchestrator-settings')!.contains(one('the-settings'))).toBe(true);
+	});
+
+	it('shows no settings box when it is given none', async () => {
+		await show(view());
+		expect(one('orchestrator-settings')).toBeNull();
 	});
 
 	it('says when it has decided nothing', async () => {

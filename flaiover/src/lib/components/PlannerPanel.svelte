@@ -10,9 +10,19 @@
 	import { api } from '$lib/api';
 	import type { PlanRun } from '$lib/activity';
 	import type { PlannerView } from '$lib/planner';
+	import type { Snippet } from 'svelte';
 	import StrategicAgentPanel, { enableCommand } from './StrategicAgentPanel.svelte';
 
-	let { view, onplanned }: { view: PlannerView; onplanned?: () => void } = $props();
+	let {
+		view,
+		onplanned,
+		settings
+	}: {
+		view: PlannerView;
+		onplanned?: () => void;
+		/** The planner's settings, shown under the plan host action (S-0533). */
+		settings?: Snippet;
+	} = $props();
 
 	let id = $state('');
 	let said = $state<string | null>(null);
@@ -68,6 +78,7 @@
 	activity={view.activity}
 	runs={view.runs}
 	stream={(run) => ({ story: run.item, plan: true })}
+	{settings}
 	currentFields={item}
 	runHead={itemHead}
 	runCells={itemCell}
