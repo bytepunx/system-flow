@@ -315,8 +315,39 @@ describe('the planner page (S-0259)', () => {
 			delete old.host!.strategic;
 			api.mockImplementation(async (url: string) => answer(url === '/api/settings' ? old : view()));
 			await show();
-			expect(q('strategic-absent')).not.toBeNull();
+			// where the panel is, under the action (S-0533)
+			expect(q('planner-settings')!.contains(q('strategic-absent'))).toBe(true);
 			expect(q('strategic-planning')).toBeNull();
+		});
+
+		// S-0533: the settings come first, under the plan host action, and the run, the activity log,
+		// the runs, and the form follow.
+		it('shows them first, under the host action', async () => {
+			backend(view());
+			await show();
+			expect(q('planner-settings')!.contains(q('strategic-planning'))).toBe(true);
+			const order = [
+				'planner-action',
+				'planner-settings',
+				'planner-current',
+				'planner-activity',
+				'planner-runs',
+				'planner-ask'
+			].map((id) => q(id)!);
+			for (let i = 1; i < order.length; i++)
+				expect(
+					order[i - 1].compareDocumentPosition(order[i]) & Node.DOCUMENT_POSITION_FOLLOWING
+				).toBeTruthy();
+		});
+
+		it('shows them under the error when the planner cannot be read', async () => {
+			api.mockImplementation(async (url: string) =>
+				url === '/api/settings' ? answer(settingsGet()) : refused('flai is away')
+			);
+			await show();
+			expect(document.querySelector('[role="alert"]')!.textContent).toContain('flai is away');
+			expect(q('planner-action')).toBeNull();
+			expect(q('strategic-planning')).not.toBeNull();
 		});
 	});
 });

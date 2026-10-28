@@ -137,7 +137,9 @@ describe('the analyzer page (S-0228)', () => {
 		await settle();
 	};
 
-	it('loads the analyzer and shows it above its settings', async () => {
+	// S-0533: the settings come first, under the action's state and Run, and the run, the activity
+	// log, and the runs follow.
+	it('loads the analyzer and shows its settings first, under the action', async () => {
 		backend(view({ enabled: false }));
 		await show();
 		expect(api).toHaveBeenCalledWith('/api/analyzer');
@@ -146,10 +148,39 @@ describe('the analyzer page (S-0228)', () => {
 		expect(document.body.textContent).not.toContain('will be shown here');
 		expect(q('analyzer-action-off')).not.toBeNull();
 		expect(q('analyzer-current-none')).not.toBeNull();
-		const settings = q('strategic-analysis')!;
-		expect(
-			q('analyzer-runs')!.compareDocumentPosition(settings) & Node.DOCUMENT_POSITION_FOLLOWING
-		).toBeTruthy();
+		expect(q('analyzer-settings')!.contains(q('strategic-analysis'))).toBe(true);
+		const order = [
+			'analyzer-action',
+			'analyzer-settings',
+			'analyzer-current',
+			'analyzer-activity',
+			'analyzer-runs'
+		].map((id) => q(id)!);
+		for (let i = 1; i < order.length; i++)
+			expect(
+				order[i - 1].compareDocumentPosition(order[i]) & Node.DOCUMENT_POSITION_FOLLOWING
+			).toBeTruthy();
+	});
+
+	it('shows its settings under the error when the analyzer cannot be read', async () => {
+		api.mockImplementation(async (url: string) =>
+			url === '/api/analyzer' ? answer(502, { error: 'flai is away' }) : answer(200, settingsGet())
+		);
+		await show();
+		expect(document.querySelector('[role="alert"]')!.textContent).toContain('flai is away');
+		expect(q('analyzer-action')).toBeNull();
+		expect(q('strategic-analysis')).not.toBeNull();
+	});
+
+	it('says so where the settings are when flai gives none', async () => {
+		const old = settingsGet();
+		delete old.host!.strategic;
+		api.mockImplementation(async (url: string) =>
+			answer(200, url === '/api/analyzer' ? view() : old)
+		);
+		await show();
+		expect(q('analyzer-settings')!.contains(q('strategic-absent'))).toBe(true);
+		expect(q('strategic-analysis')).toBeNull();
 	});
 
 	it("loads again when the analyzer's document changes, and not for another narrative", async () => {
