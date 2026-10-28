@@ -6,7 +6,7 @@ title: flai guard lets a session flai serve started run the flai serve sub-comma
 status: backlog
 owner: alex
 created: 2026-10-26T16:01:48Z
-updated: 2026-10-28T12:52:31Z
+updated: 2026-10-28T12:56:42Z
 transitions: []
 tags: [cli, guard]
 topics: [cli]
@@ -31,7 +31,6 @@ usage:
           cache_read: 2782157
           cache_write: 13945
           cost: 0.614
-draft: true
 cost_of_delay:
   inputs:
     penalty_per_week: 500
@@ -46,6 +45,9 @@ forecast:
   basis: "Its own forecast of 45m; 26th in the pull order with an in-progress limit of 5, behind S-0499, S-0502, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0506, S-0507, S-0508, S-0509 and S-0510."
   by: flai
   at: 2026-10-28T12:52:31Z
+finalized:
+  by: alex
+  at: 2026-10-28T12:56:42Z
 ---
 # S-0511 flai guard lets a session flai serve started run the flai serve sub-commands that write the host configuration
 
