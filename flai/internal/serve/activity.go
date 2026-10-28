@@ -190,6 +190,11 @@ func readActivity(d Dir, root, key, kind string) (*activityMeasure, error) {
 		m.logs = []string{}
 	}
 	for _, e := range doc.Entries {
+		// flai serve's confirmation by timeout is no activity of the run's:
+		// the run's next span starts at its own last entry (ADR-0206)
+		if e.Trigger == ConfirmTrigger {
+			continue
+		}
 		if e.At.After(m.last) {
 			m.last = e.At
 		}

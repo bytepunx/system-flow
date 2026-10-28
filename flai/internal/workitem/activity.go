@@ -66,7 +66,8 @@ type ActivityEntry struct {
 	Summary string `json:"summary"`
 	// Trigger is one line saying what started the activity, written for a
 	// planner run flai serve started (ADR-0084): asked, or the replanner's
-	// triggers, separated by semicolons. It is empty on older entries and on
+	// triggers, separated by semicolons, or for flai serve's confirmation by
+	// timeout (ADR-0206). It is empty on older entries and on
 	// those an agent logs itself.
 	Trigger string `json:"trigger,omitempty"`
 	// Items are the IDs of the items the activity touched.

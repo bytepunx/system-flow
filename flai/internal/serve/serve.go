@@ -643,11 +643,18 @@ func Run(ctx context.Context, o Options) error {
 			// The thread reminder looks on the same changes and every minute,
 			// in the background, as a send may wait seconds (ADR-0205).
 			reminding := newReminder(o, e, &reminds)
+			// The confirmer looks on the same changes and every minute, in
+			// the loop, as it only writes the project's files, and before the
+			// reminder, which then reminds of no thread it confirmed; a
+			// confirmation is a change under threads, on which the launcher
+			// starts the asking agent again (ADR-0206).
+			confirming := newConfirmer(o, e)
 			starter.look(cctx, false) // starts what is ready and has had no agent since (S-0112)
 			replanner.look(cctx)
 			orch.look(cctx)
 			analyst.look(cctx)
 			curation.look(cctx)
+			confirming.look(cctx)
 			reminding.soon(cctx)
 			newForgePass(o, e, &forgeLooks).start(cctx)
 			// flai accept's requests to merge a pull request are taken every
@@ -670,6 +677,7 @@ func Run(ctx context.Context, o Options) error {
 					orch.look(cctx)
 					analyst.look(cctx)
 					curation.look(cctx)
+					confirming.look(cctx)
 					reminding.soon(cctx)
 				}
 			}()
@@ -685,6 +693,7 @@ func Run(ctx context.Context, o Options) error {
 						orch.look(cctx)
 						analyst.look(cctx)
 						curation.look(cctx)
+						confirming.look(cctx)
 						reminding.soon(cctx)
 						queue.wake()
 					}

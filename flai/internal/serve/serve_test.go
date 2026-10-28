@@ -19,6 +19,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/channel/channeltest"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -792,5 +793,77 @@ func TestASignedPairWithTheAllowanceShowsNothing(t *testing.T) {
 	}
 	if said := lab.unsignedWarns(); len(said) != 0 {
 		t.Errorf("a signed pair logged %v", said)
+	}
+}
+
+// ADR-0206: flai serve's look at a served project confirms a recommendation
+// of the orchestrator's that waited past confirm_after while orchestrate is
+// on, as the confirmer's own tests show it doing.
+func TestServeConfirmsARecommendationPastConfirmAfter(t *testing.T) {
+	dash := channeltest.New(t, "s3cret")
+	dir := DirFor(filepath.Join(t.TempDir(), "config.json"))
+	root, keyFile := scratchProject(t, "harbour")
+	if err := os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: harbour\nkey: harbour\nowner: alex\n"+
+		"layout:\n  design: design\n  docs: docs\n  wip: wip\norchestration:\n  permissions:\n    answer_threads: recommend\n    confirm_after: 1h\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "design", "docs"} {
+		if err := os.MkdirAll(filepath.Join(root, d), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	asked := time.Now().UTC().Add(-3 * time.Hour)
+	epic, err := repo.Create(workitem.NewOptions{Type: workitem.Epic, Title: "Lights", Owner: "alex", Now: asked})
+	if err != nil {
+		t.Fatal(err)
+	}
+	story, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "Harbour lights", Parent: epic.ID, Owner: "alex", Now: asked})
+	if err != nil {
+		t.Fatal(err)
+	}
+	th, err := threads.New(repo, threads.NewOptions{Title: "Which port?", On: story.ID, Author: "planner-" + story.ID, Text: "Eight or nine?", Now: asked})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := threads.ReplyWith(repo, th.ID, "orchestrator", "Nine.", asked.Add(time.Minute),
+		threads.Marks{Recommendation: true, Source: threads.Source{Path: "design"}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := dir.Register(Entry{Key: "harbour", Name: "harbour", Root: root, URL: dash.URL, KeyFile: keyFile}); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		done <- Run(ctx, Options{Dir: dir, Version: "test", Every: 20 * time.Millisecond, WatchEvery: 20 * time.Millisecond,
+			Logger: slog.New(slog.DiscardHandler),
+			Agent:  func(string) AgentConfig { return AgentConfig{Orchestrate: true} },
+			NewClient: func(e Entry, key []byte) *channel.Client {
+				return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
+					Methods: hostapi.Methods("test", nil), Version: "test", PingEvery: time.Hour, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, ReleaseKeys: dash.Keys}
+			}})
+	}()
+	t.Cleanup(func() {
+		cancel()
+		if err := <-done; err != nil {
+			t.Errorf("Run: %v", err)
+		}
+	})
+	for deadline := time.Now().Add(5 * time.Second); ; {
+		got, err := threads.Get(repo, th.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if es := got.Entries(); got.Status == "answered" && es[len(es)-1].ConfirmsByTimeout() {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("flai serve did not confirm the recommendation:\n%s", got.Marshal())
+		}
+		time.Sleep(20 * time.Millisecond)
 	}
 }
