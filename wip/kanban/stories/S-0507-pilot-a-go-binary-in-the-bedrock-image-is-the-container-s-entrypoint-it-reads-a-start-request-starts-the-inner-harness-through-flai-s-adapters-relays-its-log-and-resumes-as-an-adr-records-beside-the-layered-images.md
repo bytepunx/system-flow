@@ -3,12 +3,18 @@ id: S-0507
 type: story
 nature: feature
 title: "pilot, a Go binary in the bedrock image, is the container's entrypoint: it reads a start request, starts the inner harness through flai's adapters, relays its log, and resumes, as an ADR records beside the layered images"
-status: backlog
+status: in-progress
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:43:39Z
-updated: 2026-10-28T22:23:22Z
-transitions: []
+updated: 2026-10-28T22:52:24Z
+transitions:
+  - to: ready
+    at: 2026-10-28T22:51:54Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-28T22:52:00Z
+    by: agent-S-0507
 tags: [cli, docker]
 topics: [harness, docker]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/pilot/request.go, flai/internal/pilot/request_test.go, flai/internal/pilot/run.go, flai/internal/pilot/run_test.go, flai/pilot/main.go, flai/images/bedrock/Dockerfile, flai/images/claude-code/Dockerfile, scripts/agent-image.sh, scripts/agent-container.sh, scripts/README.md, design/adrs/README.md, design/adrs, design/system/flai-cli.md, design/tech/docker.md, design/tech/go.md, docs/operators/index.md]
@@ -24,25 +30,25 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 228
+      seconds: 251
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 21
-          output: 284
-          cache_read: 6625262
-          cache_write: 19897
-          cost: 1.4569
+          input: 29
+          output: 325
+          cache_read: 8286815
+          cache_write: 24201
+          cost: 1.8234
 cost_of_delay:
   value: 22.22
   by: planner-S-0507
   at: 2026-10-26T12:35:04Z
 forecast:
   duration: 2h
-  delivery: 2026-10-29T10:25:00Z
-  basis: "Its own forecast of 2h; 17th in the pull order with an in-progress limit of 5, behind S-0416, S-0532, S-0535, S-0537, S-0534, S-0536, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425 and S-0506."
+  delivery: 2026-10-29T04:50:00Z
+  basis: "Its own forecast of 2h; 6th in the pull order with an in-progress limit of 5, behind S-0535, S-0532, S-0537, S-0534, S-0536 and S-0525."
   by: flai
-  at: 2026-10-28T22:23:22Z
+  at: 2026-10-28T22:52:24Z
 finalized:
   by: orchestrator
   at: 2026-10-26T12:35:35Z

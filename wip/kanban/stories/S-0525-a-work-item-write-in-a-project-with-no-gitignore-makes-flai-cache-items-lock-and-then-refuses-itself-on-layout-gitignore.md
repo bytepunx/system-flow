@@ -3,11 +3,17 @@ id: S-0525
 type: story
 nature: remediation
 title: A work item write in a project with no .gitignore makes .flai-cache/items.lock and then refuses itself on layout.gitignore
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-28T12:53:57Z
-updated: 2026-10-28T22:24:29Z
-transitions: []
+updated: 2026-10-28T22:52:18Z
+transitions:
+  - to: ready
+    at: 2026-10-28T22:51:53Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-28T22:52:00Z
+    by: agent-S-0525
 tags: [flai, check, cli]
 topics: [cli, testing]
 touches: [flai/internal/itemnew/itemnew.go, flai/internal/itemnew/itemnew_test.go, flai/internal/itemedit/itemedit.go, flai/internal/check/scope.go, design/adrs, design/adrs/README.md, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, design/issues/I-0191-a-work-item-write-in-a-project-with-no-gitignore-makes-flai-cache-items-lock-and-then-refuses-itself-on-layout-gitignore.md, design/issues/summary.md]
@@ -22,15 +28,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 157
+      seconds: 182
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 34
-          output: 582
-          cache_read: 12537273
-          cache_write: 13570
-          cost: 2.7553
+          input: 42
+          output: 624
+          cache_read: 14198828
+          cache_write: 17875
+          cost: 3.1218
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -41,10 +47,10 @@ cost_of_delay:
   at: 2026-10-28T14:53:26Z
 forecast:
   duration: 45m
-  delivery: 2026-10-29T16:12:00Z
-  basis: "Its own forecast of 45m; 32nd in the pull order with an in-progress limit of 5, behind S-0416, S-0532, S-0535, S-0537, S-0534, S-0536, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0507, S-0508, S-0509, S-0510, S-0511, S-0512, S-0514, S-0515, S-0516, S-0517, S-0518, S-0519, S-0520, S-0523 and S-0524."
+  delivery: 2026-10-29T02:44:00Z
+  basis: "Its own forecast of 45m; 5th in the pull order with an in-progress limit of 5, behind S-0535, S-0532, S-0537, S-0534 and S-0536."
   by: flai
-  at: 2026-10-28T22:24:29Z
+  at: 2026-10-28T22:52:18Z
 finalized:
   by: alex
   at: 2026-10-28T12:58:59Z
