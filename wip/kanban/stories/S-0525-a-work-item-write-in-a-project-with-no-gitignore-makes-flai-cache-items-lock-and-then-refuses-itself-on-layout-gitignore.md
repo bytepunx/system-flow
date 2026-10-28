@@ -6,7 +6,7 @@ title: A work item write in a project with no .gitignore makes .flai-cache/items
 status: backlog
 owner: alex
 created: 2026-10-28T12:53:57Z
-updated: 2026-10-28T12:53:57Z
+updated: 2026-10-28T12:58:59Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
     by: flai
     at: 2026-10-28T12:53:57Z
+finalized:
+  by: alex
+  at: 2026-10-28T12:58:59Z
 ---
 # S-0525 A work item write in a project with no .gitignore makes .flai-cache/items.lock and then refuses itself on layout.gitignore
 
