@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1595.9166
-accrued_seconds: 1392104
-tasks_completed: 1107
-last_run: 2026-10-28T08:03:40Z
+accrued_cost: 1605.5376
+accrued_seconds: 1408451
+tasks_completed: 1123
+last_run: 2026-10-28T12:36:07Z
 ---
 
 # Orchestrator activity
@@ -7761,6 +7761,118 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 78
 - Cost: 0.3289 USD, estimated
 
+### 2026-10-28T08:04:31Z
+
+- Summary: Under publish (judgement), released S-0498, S-0500 and S-0501 (3 stories, 17562.54 USD/week, nothing in held_by_epic, no warnings): flai 1.71.0 to 1.71.1 (patch, flai/v1.71.1), flaiover 0.55.3 to 0.55.4 (patch, flaiover/v0.55.4), template 1.0.118 to 1.0.119 (v1.0.119, aa64674), pushed. Reason: each is accepted, complete and independent, none is near review to batch with, and S-0498's value is lost each week it waits.
+- Items: S-0498, S-0500, S-0501
+- Seconds: 51
+- Cost: 0.3377 USD, estimated
+
+### 2026-10-28T08:06:57Z
+
+- Summary: Answered TH-0673, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0510
+- Seconds: 146
+- Cost: 0.2775 USD, estimated
+
+### 2026-10-28T08:07:21Z
+
+- Summary: Under plan_backlog_stories, approved and resolved planner-S-0510's TH-0673 (five tasks in three layers, file-level touches, forecast 2h30m, value 27.78 USD/week). Under finalize_drafts, finalized S-0510 (complete in promote --drafts, 17th by throughput at 2h30m; consistent); it stays held behind S-0508 by after. Started the planner for S-0511, next in flai plan --candidates (no touches, forecast, value or tasks); S-0512 follows.
+- Items: S-0510, S-0511
+- Seconds: 24
+- Cost: 0.1243 USD, estimated
+
+### 2026-10-28T08:21:40Z
+
+- Summary: Recommended an answer on TH-0674, citing design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+- Items: S-0511
+- Seconds: 859
+- Cost: 0.5078 USD, estimated
+
+### 2026-10-28T08:21:50Z
+
+- Summary: Under plan_backlog_stories, on planner-S-0511's TH-0674: set S-0511's cost of delay input to penalty_per_week 500, the planner's recommended figure (no reason given for 1000 or 20m a cycle); the planner writes the value next run. The plan fits (five tasks in three layers, file touches, forecast 45m), but adding flai config set and flai template use to the rule widens the story beyond I-0210's flai serve scope, so I recommended including them and escalated; the thread stays open.
+- Items: S-0511
+- Seconds: 10
+- Cost: 0.0440 USD, estimated
+
+### 2026-10-28T08:22:57Z
+
+- Summary: Started the planner for S-0512 under plan_backlog_stories, the last story in flai plan --candidates (no touches, forecast, value or tasks), after S-0511's planner wrote its value of 500 USD/week. S-0511 stays a draft until the operator answers TH-0674's scope question.
+- Items: S-0512
+- Seconds: 67
+- Cost: 0.3172 USD, estimated
+
+### 2026-10-28T08:29:26Z
+
+- Summary: Recommended an answer on TH-0675, citing design/conventions/decisions.md § Rules
+- Items: S-0512
+- Seconds: 389
+- Cost: 1.0682 USD, estimated
+
+### 2026-10-28T08:29:35Z
+
+- Summary: Under plan_backlog_stories, on planner-S-0512's TH-0675: the plan fits (seven tasks in four layers, 16 file touches, forecast 1h, value 12.50 USD/week from its 5m input), but making rejected a fifth, immutable ADR status that flai check enforces is a decision not yet recorded, so I recommended approving it as written and escalated; the thread stays open and S-0512 stays a draft. flai plan --candidates is now empty.
+- Items: S-0512
+- Seconds: 9
+- Cost: 0.0482 USD, estimated
+
+### 2026-10-28T12:04:24Z
+
+- Summary: Under accept_reviews, enqueued S-0503 in the merge queue at f4a53a52 (place 1 of 1). flai verify passed at that head, with integration and smoke left to the queue. The verifier matched criterion 1 (the shellcheck tier, tiers selecting their scripts, the select_test.go reproduction) and criterion 2 (I-0199 closed). Throughput: forecast 1h, value 12.50 USD/week.
+- Items: S-0503
+- Seconds: 12889
+- Cost: 0.9740 USD, estimated
+
+### 2026-10-28T12:04:45Z
+
+- Summary: Under promote_to_ready, moved S-0505 to ready. It is candidate 2 by throughput (3h, value 33.33 USD/week), free now that S-0503 is in review and no longer holds the Makefile. Candidate 1, S-0241 (2h), stays out because it is blocked. Under order_ready, applied flai order --by throughput: S-0505 alone. flai guard refused the form with --json and 2>&1, so I ran the plain form.
+- Items: S-0505
+- Seconds: 21
+- Cost: 0.2668 USD, estimated
+
+### 2026-10-28T12:05:33Z
+
+- Summary: Recommended an answer on TH-0676, citing design/conventions/work-management.md § Rules
+- Items: S-0505
+- Seconds: 48
+- Cost: 0.2175 USD, estimated
+
+### 2026-10-28T12:05:42Z
+
+- Summary: Under answer_threads (autonomous), recommended on agent-S-0505's TH-0676 and escalated to the operator. Recommended answer: "as recommended", a documentation-only runbook story under E-0029 for the in-container run. Criterion 3 says the story is chosen with the operator, the run spends a subscription session, and a new story is a change of scope.
+- Items: S-0505
+- Seconds: 9
+- Cost: 0.0550 USD, estimated
+
+### 2026-10-28T12:22:53Z
+
+- Summary: S-0513 (the runbook story agent-S-0505 created on TH-0676's confirmed answer) moved to ready. Under order_ready, I ran flai order --by throughput --apply, which found no ready stories to order: S-0513 had already left ready. S-0503's merge queue batch is verifying the flaiover tier.
+- Items: S-0513, S-0503
+- Seconds: 1031
+- Cost: 1.9944 USD, estimated
+
+### 2026-10-28T12:31:23Z
+
+- Summary: Under accept_reviews, verified S-0513 at a9e16aa6. flai verify passed, and the verifier met criteria 1 to 3 in docs/operators/runbooks/agent-container.md and README.md. queue_add refused it with thread_open: TH-0677, agent-S-0513's permission prompt to write .claude/s0513-probe.md, is open and only the owner can answer it. I opened TH-0678 on S-0513 recommending a refusal. S-0513 stays in review. Decided: no release carries S-0513 until S-0505 lands, because the runbook links S-0505's results document.
+- Items: S-0513
+- Seconds: 510
+- Cost: 1.6444 USD, estimated
+
+### 2026-10-28T12:33:06Z
+
+- Summary: The merge queue sent S-0503 back to in-progress: batch 20261028-122130 failed with it at integration (TH-0679). flai serve starts its agent on that thread. Nothing to do from me: no thread, no move. Nothing was accepted, so I made no release evaluation.
+- Items: S-0503
+- Seconds: 103
+- Cost: 0.4927 USD, estimated
+
+### 2026-10-28T12:36:07Z
+
+- Summary: Under accept_reviews, verified S-0505 (experiment) at bf48cc78. flai verify passed with integration and smoke left to the queue, and the verifier met all six criteria (images, container script, the S-0513 run, results document, issues I-0213 to I-0219, docs). queue_add refused it with thread_open: agent-S-0505's TH-0676 is answered but not resolved, and I may not resolve it. I opened a thread on S-0505 recommending the operator resolve TH-0676. S-0505 stays in review. Throughput: forecast 3h, value 33.33 USD/week.
+- Items: S-0505
+- Seconds: 181
+- Cost: 1.2513 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -7951,4 +8063,9 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-10-26T12:16:28Z
 
 - Call: `thread_reply TH-0657`
+- Needs: none
+
+### 2026-10-28T12:04:38Z
+
+- Call: `flai order --by throughput --apply --json 2>&1`
 - Needs: none

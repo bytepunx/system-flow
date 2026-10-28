@@ -3,16 +3,37 @@ id: T-2126
 type: task
 nature: remediation
 title: I-0207 is closed with the reason that fixed it, once stats measures the repeats and the curator has run here
-status: backlog
+status: done
 parent: S-0504
 owner: alex
 created: 2026-10-26T04:10:42Z
-updated: 2026-10-26T04:10:42Z
-transitions: []
+updated: 2026-10-28T12:15:03Z
+transitions:
+  - to: ready
+    at: 2026-10-28T12:13:52Z
+    by: agent-S-0504
+  - to: in-progress
+    at: 2026-10-28T12:13:53Z
+    by: agent-S-0504
+  - to: done
+    at: 2026-10-28T12:15:03Z
+    by: agent-S-0504
 stream: S-0504
 tags: [issues, digest]
 touches: [design/issues/I-0207-the-curator-has-never-run-on-system-flow-so-no-thread-is-in-any-entry-s-asked-again-and-the-digest-s-repeat-measure-reads-0-whatever-was-asked.md, design/issues/summary.md]
 after: [T-2122, T-2124, T-2125]
+usage:
+  source: log
+  seconds: 70
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 27
+      output: 7856
+      cache_read: 2038877
+      cache_write: 63979
+      cost: 1.0064
 ---
 # T-2126 I-0207 is closed with the reason that fixed it, once stats measures the repeats and the curator has run here
 

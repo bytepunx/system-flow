@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 10
-      output: 3587
-      cache_read: 557268
-      cache_write: 22606
-      cost: 0.3248
+      input: 7
+      output: 2146
+      cache_read: 556983
+      cache_write: 17478
+      cost: 0.2749
 ---
 # T-2121 An ADR and metrics.md define the curator's runs in the digest section and leave asked_again out of a week no run has measured
 

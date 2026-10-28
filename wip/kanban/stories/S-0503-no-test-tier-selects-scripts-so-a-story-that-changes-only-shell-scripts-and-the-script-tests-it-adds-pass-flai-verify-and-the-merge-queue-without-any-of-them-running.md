@@ -6,7 +6,7 @@ title: "No test tier selects scripts/**, so a story that changes only shell scri
 status: in-progress
 owner: alex
 created: 2026-10-26T04:01:45Z
-updated: 2026-10-26T05:43:18Z
+updated: 2026-10-28T12:35:32Z
 transitions:
   - to: ready
     at: 2026-10-26T05:26:43Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-10-26T05:26:59Z
     by: agent-S-0503
+  - to: review
+    at: 2026-10-28T12:03:36Z
+    by: agent-S-0503
+  - to: in-progress
+    at: 2026-10-28T12:33:01Z
+    by: flai
 tags: []
 topics: [cli, code]
-touches: [system-flow.yaml, scripts/install-tools.sh, scripts/shellcheck.sh, scripts/flai-test.sh, scripts/README.md, scripts/flaiover-install-test.sh, scripts/install-published-test.sh, scripts/litellm.sh, scripts/release-key-setup.sh, Makefile, design/tech/shellcheck.md, design/tech/README.md, design/conventions/tooling.md, design/system/project-manifest.md, flai/internal/verify/select_test.go, design/issues/I-0199-no-test-tier-selects-scripts-so-a-story-that-changes-only-shell-scripts-and-the-script-tests-it-adds-pass-flai-verify-and-the-merge-queue-without-any-of-them-running.md, design/issues/summary.md, scripts/env.sh, design/issues/I-0211-adr-0202-s-status-rejected-is-not-an-adr-status-flaiover-s-search-test-allows-so-the-flaiover-tier-fails-on-main-for-every-story-that-selects-it.md]
+touches: [system-flow.yaml, scripts/install-tools.sh, scripts/shellcheck.sh, scripts/flai-test.sh, scripts/README.md, scripts/flaiover-install-test.sh, scripts/install-published-test.sh, scripts/litellm.sh, scripts/release-key-setup.sh, Makefile, design/tech/shellcheck.md, design/tech/README.md, design/conventions/tooling.md, design/system/project-manifest.md, flai/internal/verify/select_test.go, design/issues/I-0199-no-test-tier-selects-scripts-so-a-story-that-changes-only-shell-scripts-and-the-script-tests-it-adds-pass-flai-verify-and-the-merge-queue-without-any-of-them-running.md, design/issues/summary.md, scripts/env.sh, design/issues/I-0211-adr-0202-s-status-rejected-is-not-an-adr-status-flaiover-s-search-test-allows-so-the-flaiover-tier-fails-on-main-for-every-story-that-selects-it.md, design/issues/I-0220-testastorywhoseagentendedaskingisblockeduntiltheanswerstartsitagain-reads-the-story-s-blocks-once-the-run-reads-as-ended-before-endrun-writes-the-block-so-it-fails-now-and-then.md, flai/internal/serve/agents_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,20 +30,24 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1059
-  priced_by: harness
+  seconds: 1484
+  estimated: true
+  priced_by: estimate
   turns:
     - day: 2026-10-26
       test_runs: 6
       hand_edits: 3
       work: 50
+    - day: 2026-10-28
+      ceremony: 4
+      work: 24
   models:
     - model: claude-opus-5-5
-      input: 244
-      output: 76141
-      cache_read: 13872547
-      cache_write: 415021
-      cost: 7.0347
+      input: 308
+      output: 80058
+      cache_read: 16109476
+      cache_write: 520063
+      cost: 8.631
   strategic:
     - kind: planner
       seconds: 29
@@ -50,15 +60,21 @@ usage:
           cache_write: 110471
           cost: 1.2694
     - kind: orchestrator
-      seconds: 1233
+      seconds: 14740
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 106
-          output: 1781
-          cache_read: 30964663
-          cache_write: 37727
-          cost: 6.7968
+          input: 195
+          output: 3069
+          cache_read: 42035734
+          cache_write: 64007
+          cost: 9.2332
+        - model: claude-sonnet-5-5
+          input: 4
+          output: 37
+          cache_read: 13176
+          cache_write: 26971
+          cost: 0.0275
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -93,6 +109,7 @@ This story remediates [I-0199](../../../design/issues/I-0199-no-test-tier-select
 - T-2181 system-flow.yaml gains a shellcheck tier for scripts/**/*.sh, and its flaiover, template, and smoke tiers select the scripts they run
 - T-2182 A test in flai/internal/verify asserts this repository's manifest runs shellcheck and the script tests for a change under scripts/
 - T-2183 I-0199 is closed with the reason that fixed it, and the story's criteria are ticked
+- T-2197 TestAStoryWhoseAgentEndedAskingIsBlockedUntilTheAnswerStartsItAgain waits for the block endRun writes after the end, so the merge queue's integration tier passes
 
 ## Notes
 
@@ -112,3 +129,4 @@ Forecast: `flai forecast` gave 29m (median 89 s per unit over 96 done improvemen
 Cost of delay: the story had no inputs and no epic to take a share of; the orchestrator set `time_lost_per_cycle: 5m` on TH-0661, the figure recommended there. `flai cod` gives 12.50 USD a week (5m lost per 168h cycle at 150 USD an hour, one cycle a week), written as the value unchanged.
 
 Assumptions: ShellCheck is pinned at v0.10.0, the host's version; `scripts/**/*.sh` selects `scripts/flai.sh` as `flai/**/*.go` selects `flai/main.go` (T-2181 checks); the template's scripts stay out of the default shellcheck set.
+- 2026-10-28T12:33:01Z: moved to in-progress: merge queue batch 20261028-122130 fails with S-0503 at 947ecb0aed0a: integration failed: flai/internal/serve/agents_test.go:3123 TestAStoryWhoseAgentEndedAskingIsBlockedUntilTheAnswerStartsItAgain: the story idles in progress, blocked []

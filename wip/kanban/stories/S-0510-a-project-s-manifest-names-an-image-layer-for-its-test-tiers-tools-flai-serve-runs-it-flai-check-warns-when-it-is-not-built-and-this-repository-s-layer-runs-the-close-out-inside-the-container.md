@@ -7,7 +7,7 @@ status: backlog
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:46:53Z
-updated: 2026-10-26T16:03:52Z
+updated: 2026-10-28T08:07:13Z
 transitions: []
 tags: [cli, docker]
 topics: [harness, docker, manifest]
@@ -24,22 +24,28 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 19
+      seconds: 177
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 4
-          output: 12
-          cache_read: 266094
-          cache_write: 5331
-          cost: 0.0596
-draft: true
+          input: 21
+          output: 219
+          cache_read: 1803760
+          cache_write: 14687
+          cost: 0.3993
+cost_of_delay:
+  value: 27.78
+  by: planner-S-0510
+  at: 2026-10-28T08:06:14Z
 forecast:
   duration: 2h30m
-  delivery: 2026-10-28T11:04:00Z
-  basis: "Its own forecast of 2h30m; 28th in the pull order with an in-progress limit of 5, behind S-0503, S-0504, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0499, S-0502, S-0505, S-0506, S-0507, S-0508 and S-0509."
-  by: flai
-  at: 2026-10-26T16:03:52Z
+  delivery: 2026-10-30T02:47:00Z
+  basis: "flai forecast gives 56m (median 107 s per unit over 93 done feature stories on claude-opus-5-5, large band; size 31: 6 criteria, 25 touches) and delivery 2026-10-30T01:13Z, 28th in the pull order behind S-0508 and S-0509. Raised to 2h30m: the layer with Go, golangci-lint, Node, and pnpm is built several times at minutes each, and criterion 5 works a Go-changing story of this repository inside the container with its close-out's Go tiers, a session of 30 to 60 minutes. Delivery is flai's play-out start, 2026-10-30T00:17Z, plus 2h30m."
+  by: planner-S-0510
+  at: 2026-10-28T08:06:14Z
+finalized:
+  by: orchestrator
+  at: 2026-10-28T08:07:13Z
 ---
 # S-0510 A project's manifest names an image layer for its test tiers' tools, flai serve runs it, flai check warns when it is not built, and this repository's layer runs the close-out inside the container
 
@@ -69,17 +75,19 @@ Waits on S-0508 for the adapter that runs the image. The layer is the project's 
 
 ### Planning
 
-Planned by planner-E-0029 on 2026-10-26 with the epic.
+Planned by planner-E-0029 on 2026-10-26 with the epic; revisited by planner-S-0510 on 2026-10-28, which kept the five tasks, their touches, and their `after`, and wrote the cost of delay value from the operator's input on E-0029.
 
-Touches. `flai touches suggest`, seeded with `flai/internal/manifest/manifest.go` and `flai/internal/check/check.go` (89 commits), names `manifest_test.go`, `settings.md`, `docs/users/flai.md`, `flai-cli.md`, `project-manifest.md`, and `docs/operators/index.md`, each kept (co-change), and `check_test.go`, `manifest/settings.go`, `cmd/root.go`, `flaiover-dashboard.md`, `workitem/item.go`, `flai-reference.md`, and `mcpserver/server.go`, left out because the key is not settable from the dashboard, no command changes, and the check has its own file and test. The rest are the tasks' (layout):
+Touches. The first run's `flai touches suggest`, seeded with `flai/internal/manifest/manifest.go` and `flai/internal/check/check.go` (89 commits), named `manifest_test.go`, `settings.md`, `docs/users/flai.md`, `flai-cli.md`, `project-manifest.md`, and `docs/operators/index.md`, each kept (co-change). Run again on the 25 touches (1255 of 2440 commits), it names only paths outside the story: `docs/users/flai-reference.md` (generated from the command help, and no command changes), `flaiover-dashboard.md` and `docs/users/flaiover.md` (the key is not settable from the dashboard), `design/adrs/README.md` (no ADR: the layer is ADR-0203's), `workflow.md`, the conventions, `template/template.yaml` (its version is bumped at release, not by the story), `cmd/serve_actions.go` and `harness.go` (S-0508's: the host's image setting stays as it is, the layer only wins over it), and `hostapi`, `mcpserver`, `cmd/root.go`; none added. `settings.md` is checked by `TestSettingsIndexIsComplete` in `flai/cmd/settings_doc_test.go`, which walks the `Manifest` struct's yaml tags, so T-2164's row is enough and `manifest/settings.go`, the `flai manifest set` catalog, needs no entry. `scope.go` needs no change: the `agent.image` findings fall on `system-flow.yaml`, which the generic scope rule marks inside or outside by the branch's diff. The rest are the tasks' (layout):
 
-- `flai/internal/check/image.go`, `image_test.go`: the new check, one file per check as the folder has them. T-2171.
+- `flai/internal/check/image.go`, `image_test.go`: the new check beside `design.go` and `gitcompat.go`, registered in `check.go`. T-2171.
 - `flai/internal/harness/container.go`, `container_test.go`, `flai/internal/serve/agents.go`, `agents_test.go`: S-0508's files, which gain the layer's image. T-2172.
-- `scripts/agent-image.sh`, `Makefile`, `scripts/README.md`, `flai/images/system-flow/Dockerfile`, `system-flow.yaml`: the build and this repository's layer. T-2165.
+- `scripts/agent-image.sh`, `Makefile`, `scripts/README.md` (S-0505's and S-0507's, which gain `--layer`), `flai/images/system-flow/Dockerfile`, `system-flow.yaml`: the build and this repository's layer. T-2165. The manifest reader ignores keys it does not know, so naming `agent.image.layer` in `system-flow.yaml` before T-2164 lands breaks nothing.
 - `template/root/system-flow.yaml.tmpl`, `template/CHANGELOG.md` (design, criterion 1): the template's manifest comment and its changelog. T-2164.
 - `docs/operators/runbooks/install.md`, `design/tech/docker.md` (design, criterion 6). T-2176.
-- `design/issues/summary.md` and the folder `design/issues` (layout, folder kept): `flai issue new` in T-2176 writes issue files no task can name; the folder is kept for them alone, and `flai task done` widens the touches with the committed paths (ADR-0144).
+- `design/issues/summary.md` and the folder `design/issues` (layout, folder kept): `flai issue new` in T-2176 writes issue files whose numbers and slugs no task can name; the folder is kept for them alone, and `flai task done` widens the touches with the committed paths (ADR-0144).
 
-Forecast. `flai forecast S-0510` gave 56m (median 107 s per unit over 93 done feature stories on claude-opus-5-5 in the large band; size 31: 6 criteria, 25 touches) and delivery 2026-10-27T07:08Z, 29th in the pull order by a cycle factor of 1.17. Raised to 2h30m: a layer with Go, golangci-lint, Node, and pnpm takes minutes per build and is built several times, and criterion 5 runs a Go-changing story of this repository inside the container with its close-out's Go tiers, a session of its own of 30 to 60 minutes. flai's replan after S-0500's acceptance kept the 2h30m and played the delivery out again, so the forecast's basis is flai's and the reason is here.
+Overlaps on 2026-10-28: no story is in progress or in review. S-0508 and S-0509 share `container.go`, `container_test.go`, `agents.go`, and `agents_test.go` with this story, and S-0505, S-0507, and S-0508 share `agent-image.sh`, `Makefile`, `scripts/README.md`, `docker.md`, and the docs; `after` names S-0508, which waits on S-0507 and so on S-0505, so each lands before this story starts, and the pull order holds the rest.
 
-Cost of delay. `flai cod S-0510` refuses a value: the story has no inputs and E-0029 has neither inputs nor a value. Asked on TH-0657, recommending `penalty_per_week: 150` USD on the epic, which the orchestrator recommended too. The value is this story's share of the epic's by forecast duration, 2h30m of the six stories' 13h30m, about 28 USD a week at 150, and is written on the next planner run once the operator sets the input.
+Forecast. `flai forecast S-0510` gives 56m (median 107 s per unit over 93 done feature stories on claude-opus-5-5 in the large band; size 31: 6 criteria, 25 touches) and delivery 2026-10-30T01:13Z, 28th in the pull order. Kept at 2h30m, the first run's figure: a layer with Go, golangci-lint, Node, and pnpm takes minutes per build and is built several times while the Dockerfile is worked out, and criterion 5 works a Go-changing story of this repository inside the container with its close-out's Go tiers, a session of its own of 30 to 60 minutes. The delivery written is flai's play-out start, 2026-10-30T01:13Z less its 56m, plus the 2h30m: 2026-10-30T02:47Z.
+
+Cost of delay. `flai cod S-0510` gives 27.78 USD a week: this story's share of E-0029's 150 USD a week (`penalty_per_week`, set by the operator on 2026-10-26T12:24Z after TH-0657), 2h30m of the 13h30m forecast over the epic's six open stories without inputs. Written as flai gives it. It moves with a sibling's forecast; the next planner run writes it again.

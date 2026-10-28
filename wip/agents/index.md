@@ -1,19 +1,20 @@
 ---
 title: Active streams
-updated: 2026-10-28T08:03:28Z
+updated: 2026-10-28T12:40:12Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0503](S-0503.md) | No test tier selects scripts/**, so a story that changes only shell scripts, and the script tests it adds, pass flai verify and the merge queue without any of them running | in-progress | agent-S-0503 | 2026-10-26T05:44:29Z |
-| [S-0504](S-0504.md) | The curator has never run on system-flow, so no thread is in any entry's asked_again and the digest's repeat measure reads 0 whatever was asked | in-progress | agent-S-0504 | 2026-10-26T05:14:01Z |
+| [S-0503](S-0503.md) | No test tier selects scripts/**, so a story that changes only shell scripts, and the script tests it adds, pass flai verify and the merge queue without any of them running | in-progress | agent-S-0503 | 2026-10-28T12:35:32Z |
+| [S-0505](S-0505.md) | Claude Code works one story of this repository inside a hand-built container from a bedrock image and a claude-code layer, and the results settle what ADR-0203 leaves open | review | agent-S-0505 | 2026-10-28T12:34:53Z |
+| [S-0513](S-0513.md) | docs/operators/runbooks gains a runbook for building the agent images and running a story's agent in a container by hand | review | agent-S-0513 | 2026-10-28T12:30:02Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 106 | 908.1810 USD | 123480 | 2026-10-26T12:42:38Z |
-| [orchestrator](orchestrator.md) | 1106 | 1595.5877 USD | 1392026 | 2026-10-28T08:02:22Z |
+| [orchestrator](orchestrator.md) | 1123 | 1605.5376 USD | 1408451 | 2026-10-28T12:36:07Z |
 | [analyzer](analyzer.md) | 1 | 5.0040 USD | 454 | 2026-10-15T22:49:08Z |

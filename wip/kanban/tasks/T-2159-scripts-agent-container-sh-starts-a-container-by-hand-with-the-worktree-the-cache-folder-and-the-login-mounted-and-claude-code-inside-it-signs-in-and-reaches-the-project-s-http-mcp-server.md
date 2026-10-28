@@ -3,16 +3,37 @@ id: T-2159
 type: task
 nature: feature
 title: scripts/agent-container.sh starts a container by hand with the worktree, the cache folder, and the login mounted, and Claude Code inside it signs in and reaches the project's HTTP MCP server
-status: backlog
+status: done
 parent: S-0505
 owner: alex
 created: 2026-10-26T04:48:54Z
-updated: 2026-10-26T04:48:54Z
-transitions: []
+updated: 2026-10-28T12:21:45Z
+transitions:
+  - to: ready
+    at: 2026-10-28T12:15:25Z
+    by: agent-S-0505
+  - to: in-progress
+    at: 2026-10-28T12:15:26Z
+    by: agent-S-0505
+  - to: done
+    at: 2026-10-28T12:21:45Z
+    by: agent-S-0505
 stream: S-0505
 tags: [cli, docker]
 touches: [scripts/agent-container.sh, scripts/README.md, design/experiments/S-0505-claude-code-works-one-story-of-this-repository-inside-a-hand-built-container-from-a-bedrock-image-and-a-claude-code-layer-and-the-results-settle-what-adr-0203-leaves-open.md]
 after: [T-2149]
+usage:
+  source: log
+  seconds: 379
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 59
+      output: 19190
+      cache_read: 3626285
+      cache_write: 81566
+      cost: 1.6759
 ---
 # T-2159 scripts/agent-container.sh starts a container by hand with the worktree, the cache folder, and the login mounted, and Claude Code inside it signs in and reaches the project's HTTP MCP server
 

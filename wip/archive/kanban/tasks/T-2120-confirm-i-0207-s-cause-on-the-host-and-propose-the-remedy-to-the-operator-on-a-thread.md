@@ -27,11 +27,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 5
-      output: 1672
-      cache_read: 259819
-      cache_write: 10540
-      cost: 0.1514
+      input: 3
+      output: 1001
+      cache_read: 259686
+      cache_write: 8149
+      cost: 0.1282
 ---
 # T-2120 Confirm I-0207's cause on the host and propose the remedy to the operator on a thread
 

@@ -3,10 +3,10 @@ id: S-0504
 type: story
 nature: remediation
 title: The curator has never run on system-flow, so no thread is in any entry's asked_again and the digest's repeat measure reads 0 whatever was asked
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-26T04:01:51Z
-updated: 2026-10-26T04:25:41Z
+updated: 2026-10-28T12:40:12Z
 transitions:
   - to: ready
     at: 2026-10-26T04:11:21Z
@@ -14,9 +14,19 @@ transitions:
   - to: in-progress
     at: 2026-10-26T04:11:31Z
     by: agent-S-0504
+  - to: review
+    at: 2026-10-28T12:37:42Z
+    by: agent-S-0504
+  - to: done
+    at: 2026-10-28T12:40:12Z
+    by: alex
+blocked:
+  - from: 2026-10-28T12:03:53Z
+    until: 2026-10-28T12:13:40Z
+    reason: awaiting the operator on TH-0649
 tags: [flai, flaiover, digest, metrics]
 topics: [digest, metrics]
-touches: [design/adrs, design/adrs/README.md, design/system/metrics.md, flai/internal/metrics/digest.go, flai/internal/metrics/digest_test.go, flai/internal/metrics/metrics.go, flai/cmd/stats.go, flai/cmd/stats_test.go, flai/cmd/check_stats_test.go, flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/viz/explain.ts, flaiover/src/lib/viz/explain.test.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", design/system/flaiover-dashboard.md, docs/users/flaiover.md, docs/users/flai.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, design/issues/I-0207-the-curator-has-never-run-on-system-flow-so-no-thread-is-in-any-entry-s-asked-again-and-the-digest-s-repeat-measure-reads-0-whatever-was-asked.md, design/issues/summary.md, template/template.yaml]
+touches: [design/adrs, design/adrs/README.md, design/system/metrics.md, flai/internal/metrics/digest.go, flai/internal/metrics/digest_test.go, flai/internal/metrics/metrics.go, flai/cmd/stats.go, flai/cmd/stats_test.go, flai/cmd/check_stats_test.go, flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/viz/explain.ts, flaiover/src/lib/viz/explain.test.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", design/system/flaiover-dashboard.md, docs/users/flaiover.md, docs/users/flai.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, design/issues/I-0207-the-curator-has-never-run-on-system-flow-so-no-thread-is-in-any-entry-s-asked-again-and-the-digest-s-repeat-measure-reads-0-whatever-was-asked.md, design/issues/summary.md, template/template.yaml, design/issues/I-0212-a-curator-run-that-ends-on-the-harness-s-usage-limit-is-recorded-failed-logs-no-activity-and-is-not-started-again-until-the-next-acceptance-or-schedule.md, design/system/flai-cli.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,20 +34,24 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2256
+  seconds: 3801
   priced_by: harness
   turns:
     - day: 2026-10-26
       ceremony: 7
       hand_edits: 1
       work: 44
+    - day: 2026-10-28
+      ceremony: 4
+      hand_edits: 2
+      work: 42
   models:
     - model: claude-opus-5-5
-      input: 238
-      output: 83517
-      cache_read: 12976304
-      cache_write: 526391
-      cost: 7.5628
+      input: 352
+      output: 102060
+      cache_read: 26488336
+      cache_write: 831196
+      cost: 13.075
   strategic:
     - kind: planner
       seconds: 512
@@ -90,8 +104,8 @@ finalized:
 This story remediates [I-0207](../../../design/issues/I-0207-the-curator-has-never-run-on-system-flow-so-no-thread-is-in-any-entry-s-asked-again-and-the-digest-s-repeat-measure-reads-0-whatever-was-asked.md), "The curator has never run on system-flow, so no thread is in any entry's asked_again and the digest's repeat measure reads 0 whatever was asked". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0207 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0207 is closed with `flai issue close I-0207 --reason` saying what fixed it
+- [x] The cause I-0207 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0207 is closed with `flai issue close I-0207 --reason` saying what fixed it
 
 ## Tasks
 - T-2120 Confirm I-0207's cause on the host and propose the remedy to the operator on a thread

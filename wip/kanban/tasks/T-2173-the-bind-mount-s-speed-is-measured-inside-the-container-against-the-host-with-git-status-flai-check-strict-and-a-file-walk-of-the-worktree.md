@@ -3,16 +3,37 @@ id: T-2173
 type: task
 nature: research
 title: The bind mount's speed is measured inside the container against the host with git status, flai check --strict, and a file walk of the worktree
-status: backlog
+status: done
 parent: S-0505
 owner: alex
 created: 2026-10-26T04:51:25Z
-updated: 2026-10-26T04:51:25Z
-transitions: []
+updated: 2026-10-28T12:33:39Z
+transitions:
+  - to: ready
+    at: 2026-10-28T12:32:12Z
+    by: agent-S-0505
+  - to: in-progress
+    at: 2026-10-28T12:32:13Z
+    by: agent-S-0505
+  - to: done
+    at: 2026-10-28T12:33:39Z
+    by: agent-S-0505
 stream: S-0505
 tags: [cli, docker]
 touches: [design/experiments/S-0505-claude-code-works-one-story-of-this-repository-inside-a-hand-built-container-from-a-bedrock-image-and-a-claude-code-layer-and-the-results-settle-what-adr-0203-leaves-open.md]
 after: [T-2166]
+usage:
+  source: log
+  seconds: 86
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 16
+      output: 5354
+      cache_read: 1011642
+      cache_write: 22755
+      cost: 0.4675
 ---
 # T-2173 The bind mount's speed is measured inside the container against the host with git status, flai check --strict, and a file walk of the worktree
 

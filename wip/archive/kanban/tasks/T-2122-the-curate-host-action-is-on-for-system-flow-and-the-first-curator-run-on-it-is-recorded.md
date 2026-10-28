@@ -3,15 +3,36 @@ id: T-2122
 type: task
 nature: remediation
 title: The curate host action is on for system-flow and the first curator run on it is recorded
-status: backlog
+status: done
 parent: S-0504
 owner: alex
 created: 2026-10-26T04:09:24Z
-updated: 2026-10-26T04:09:24Z
-transitions: []
+updated: 2026-10-28T12:14:35Z
+transitions:
+  - to: ready
+    at: 2026-10-28T12:13:49Z
+    by: agent-S-0504
+  - to: in-progress
+    at: 2026-10-28T12:13:50Z
+    by: agent-S-0504
+  - to: done
+    at: 2026-10-28T12:14:35Z
+    by: agent-S-0504
 stream: S-0504
 tags: [digest, curator]
 after: [T-2120]
+usage:
+  source: log
+  seconds: 45
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 16
+      output: 4613
+      cache_read: 1197312
+      cache_write: 37571
+      cost: 0.591
 ---
 # T-2122 The curate host action is on for system-flow and the first curator run on it is recorded
 

@@ -3,15 +3,36 @@ id: T-2149
 type: task
 nature: feature
 title: The bedrock and claude-code images build locally from Dockerfiles under flai/images with scripts/agent-image.sh and make agent-images
-status: backlog
+status: done
 parent: S-0505
 owner: alex
 created: 2026-10-26T04:47:03Z
-updated: 2026-10-26T04:47:03Z
-transitions: []
+updated: 2026-10-28T12:13:45Z
+transitions:
+  - to: ready
+    at: 2026-10-28T12:05:22Z
+    by: agent-S-0505
+  - to: in-progress
+    at: 2026-10-28T12:05:23Z
+    by: agent-S-0505
+  - to: done
+    at: 2026-10-28T12:13:45Z
+    by: agent-S-0505
 stream: S-0505
 tags: [cli, docker]
 touches: [flai/images/bedrock/Dockerfile, flai/images/claude-code/Dockerfile, scripts/agent-image.sh, Makefile, scripts/README.md, ".dockerignore"]
+usage:
+  source: log
+  seconds: 502
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 30
+      output: 9877
+      cache_read: 1866401
+      cache_write: 41981
+      cost: 0.8626
 ---
 # T-2149 The bedrock and claude-code images build locally from Dockerfiles under flai/images with scripts/agent-image.sh and make agent-images
 

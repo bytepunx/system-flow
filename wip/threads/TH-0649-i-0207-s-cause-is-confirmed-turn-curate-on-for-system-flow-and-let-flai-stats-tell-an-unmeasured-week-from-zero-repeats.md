@@ -4,10 +4,10 @@ title: "I-0207's cause is confirmed: turn curate on for system-flow, and let fla
 anchor:
   path: wip/kanban/tasks/T-2120-confirm-i-0207-s-cause-on-the-host-and-propose-the-remedy-to-the-operator-on-a-thread.md
   item: T-2120
-status: open
-participants: [agent-S-0504, orchestrator]
+status: resolved
+participants: [agent-S-0504, orchestrator, alex]
 created: 2026-10-26T04:12:27Z
-updated: 2026-10-26T04:12:36Z
+updated: 2026-10-28T12:14:56Z
 ---
 
 # TH-0649 I-0207's cause is confirmed: turn curate on for system-flow, and let flai stats tell an unmeasured week from zero repeats
@@ -52,3 +52,22 @@ Then reply here once the curator has run.
 The story builds item 2 meanwhile. Only T-2122 and T-2126 wait on your reply.
 
 Source: design/adrs/0199-the-curator-runs-after-acceptances-coalesced-and-on-digest-schedule-marks.md § Decision
+
+### 2026-10-28T12:02:08Z alex
+Confirmed the recommendation of 2026-10-26T04:12:36Z orchestrator.
+
+Source: design/adrs/0199-the-curator-runs-after-acceptances-coalesced-and-on-digest-schedule-marks.md § Decision
+
+### 2026-10-28T12:03:34Z agent-S-0504
+Thank you. `curate` is now on for system-flow. **The curator has not yet completed a run here, so please run `flai curate` once** in the system-flow checkout and reply here.
+
+- **What happened.** Accepting S-0498 and S-0501 started the curator at 2026-10-26T16:03:52Z. Claude Code refused it at once: `429 usage_limit_reached`, "You've hit your weekly limit · resets Oct 28, 2am". `serve/agents.json` records the run `failed (exit 1)`. It used no tokens, so it logged nothing in `wip/agents/curator.md`. Nothing started it again after the reset. I recorded this as I-0212.
+- **Why I can't start it.** The MCP tool `curate` refuses an agent that flai serve started.
+- **The code half works on this repository.** This branch's `flai stats` reads W40 to W44 as `asked again –` and `curator  runs 0 · never run`. Before, it read 0 in every week.
+- **Once you reply:** I check that `wip/agents/curator.md` has its first entry and that `flai stats` shows `curator  runs 1` with the current week measured. Then I close I-0207, run the close-out, and move S-0504 to review. If you would rather let the next acceptance start the curator, say so: I will then close I-0207 on the code half and leave the first run to I-0212.
+
+### 2026-10-28T12:13:40Z alex
+let the next acceptance trigger the curator
+
+### 2026-10-28T12:14:56Z agent-S-0504
+Resolved: The operator turned curate on and chose to let the next acceptance start the curator's first run. S-0504 closed I-0207 on ADR-0204's measure, and I-0212 records the run that failed on the usage limit.

@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 18
-      output: 6314
-      cache_read: 980962
-      cache_write: 39793
-      cost: 0.5717
+      input: 13
+      output: 3778
+      cache_read: 980460
+      cache_write: 30767
+      cost: 0.484
 ---
 # T-2124 The user docs, the analyzer's convention, and its template copy read the curator's runs beside the digest's repeats
 

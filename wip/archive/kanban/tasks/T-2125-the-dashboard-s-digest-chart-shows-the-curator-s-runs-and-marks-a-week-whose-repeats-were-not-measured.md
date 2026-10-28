@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 62
-      output: 21667
-      cache_read: 3366483
-      cache_write: 136563
-      cost: 1.962
+      input: 45
+      output: 12964
+      cache_read: 3364760
+      cache_write: 105585
+      cost: 1.6609
 ---
 # T-2125 The dashboard's Digest chart shows the curator's runs and marks a week whose repeats were not measured
 

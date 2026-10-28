@@ -3,18 +3,59 @@ id: S-0513
 type: story
 nature: improvement
 title: docs/operators/runbooks gains a runbook for building the agent images and running a story's agent in a container by hand
-status: backlog
+status: review
 parent: E-0029
 owner: alex
 created: 2026-10-28T12:14:47Z
-updated: 2026-10-28T12:14:47Z
-transitions: []
+updated: 2026-10-28T12:30:04Z
+transitions:
+  - to: ready
+    at: 2026-10-28T12:22:45Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-28T12:22:46Z
+    by: system-flow
+  - to: review
+    at: 2026-10-28T12:30:04Z
+    by: agent-S-0513
 tags: [docker]
+touches: [docs/operators/runbooks/agent-container.md, docs/operators/runbooks/README.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 62
+  priced_by: harness
+  turns:
+    - day: 2026-10-28
+      work: 18
+  models:
+    - model: claude-opus-5-5
+      input: 56
+      output: 5688
+      cache_read: 1058407
+      cache_write: 89895
+      cost: 1.0448
+  strategic:
+    - kind: orchestrator
+      seconds: 1026
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 87
+          output: 1266
+          cache_read: 11528428
+          cache_write: 20238
+          cost: 2.5355
+        - model: claude-sonnet-5-5
+          input: 10
+          output: 49
+          cache_read: 112797
+          cache_write: 42378
+          cost: 0.1061
 ---
 # S-0513 docs/operators/runbooks gains a runbook for building the agent images and running a story's agent in a container by hand
 
@@ -24,11 +65,12 @@ An operator can build the two agent images and run a story's agent in a containe
 
 ## Acceptance criteria
 
-- [ ] `docs/operators/runbooks/agent-container.md`, with the runbooks' front matter, says what the agent images are (local, unsigned, E-0029), how to build them with `make agent-images`, what `scripts/agent-container.sh S-nnnn` mounts (the worktree, `.flai-cache/agents/S-nnnn`, the Claude login read-only) and never mounts (the Docker socket), what it needs on the host (Docker, `flai host` with the project's HTTP MCP server, `flai mcp token`), and how to remove the images and the story's cache folder afterwards
-- [ ] The runbook names the limitations S-0505's results record and links the results document under `design/experiments/` rather than copying them
-- [ ] `docs/operators/runbooks/README.md` indexes the runbook, and the markdown lint and `flai check --strict` pass
+- [x] `docs/operators/runbooks/agent-container.md`, with the runbooks' front matter, says what the agent images are (local, unsigned, E-0029), how to build them with `make agent-images`, what `scripts/agent-container.sh S-nnnn` mounts (the worktree, `.flai-cache/agents/S-nnnn`, the Claude login read-only) and never mounts (the Docker socket), what it needs on the host (Docker, `flai host` with the project's HTTP MCP server, `flai mcp token`), and how to remove the images and the story's cache folder afterwards
+- [x] The runbook names the limitations S-0505's results record and links the results document under `design/experiments/` rather than copying them
+- [x] `docs/operators/runbooks/README.md` indexes the runbook, and the markdown lint and `flai check --strict` pass
 
 ## Tasks
+- T-2196 docs/operators/runbooks/agent-container.md describes building the agent images and running a story's agent in a container by hand, and the runbooks README indexes it
 
 ## Notes
 

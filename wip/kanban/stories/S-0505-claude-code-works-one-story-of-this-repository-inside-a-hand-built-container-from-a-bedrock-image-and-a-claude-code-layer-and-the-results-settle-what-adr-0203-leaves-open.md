@@ -3,12 +3,21 @@ id: S-0505
 type: story
 nature: experiment
 title: Claude Code works one story of this repository inside a hand-built container from a bedrock image and a claude-code layer, and the results settle what ADR-0203 leaves open
-status: backlog
+status: review
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:42:20Z
-updated: 2026-10-26T16:03:52Z
-transitions: []
+updated: 2026-10-28T12:35:04Z
+transitions:
+  - to: ready
+    at: 2026-10-28T12:04:36Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-28T12:04:42Z
+    by: agent-S-0505
+  - to: review
+    at: 2026-10-28T12:35:04Z
+    by: system-flow
 tags: [cli, docker]
 topics: [harness, docker, experiments]
 touches: [flai/images/bedrock/Dockerfile, flai/images/claude-code/Dockerfile, scripts/agent-image.sh, scripts/agent-container.sh, Makefile, scripts/README.md, ".dockerignore", design/experiments/S-0505-claude-code-works-one-story-of-this-repository-inside-a-hand-built-container-from-a-bedrock-image-and-a-claude-code-layer-and-the-results-settle-what-adr-0203-leaves-open.md, design/experiments/README.md, design/system/agent-adapters.md, design/tech/docker.md, design/issues/summary.md, design/issues]
@@ -18,20 +27,38 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1933
+  priced_by: harness
+  turns:
+    - day: 2026-10-28
+      ceremony: 1
+      hand_edits: 2
+      work: 74
+  models:
+    - model: claude-opus-5-5
+      input: 316
+      output: 103571
+      cache_read: 19571374
+      cache_write: 440221
+      cost: 9.0449
   strategic:
     - kind: orchestrator
-      seconds: 259
+      seconds: 518
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 26
-          output: 383
-          cache_read: 8289997
-          cache_write: 9419
-          cost: 1.8196
+          input: 82
+          output: 1109
+          cache_read: 15863357
+          cache_write: 34312
+          cost: 3.4878
+        - model: claude-sonnet-5-5
+          input: 10
+          output: 59
+          cache_read: 127995
+          cache_write: 51021
+          cost: 0.1224
 cost_of_delay:
   value: 33.33
   by: planner-S-0505
@@ -56,12 +83,12 @@ The results document settles, each by measurement, what [ADR-0203](../../../desi
 
 ## Acceptance criteria
 
-- [ ] `scripts/agent-image.sh` builds, from this tree and locally, `flai-agent-bedrock:local` from `flai/images/bedrock/Dockerfile` (a small Linux base, `git`, and the `flai` binary built from the tree, as `flaiover/Dockerfile` builds it) and `flai-agent-claude-code:local` from `flai/images/claude-code/Dockerfile` on top of it (Node and Claude Code), `make agent-images` runs it, and no GitHub workflow builds or publishes either image
-- [ ] `scripts/agent-container.sh S-nnnn` starts a container from the claude-code image by hand, with the story's worktree mounted read-write at its host path, `.flai-cache/agents/S-nnnn` mounted as the writable `CLAUDE_CONFIG_DIR`, the operator's Claude login mounted read-only, `--user` the operator's uid and gid, no other mount and never the Docker socket, and Claude Code inside it reaching the project's HTTP MCP server on the host with `--mcp-config` naming a file in the mounted cache folder, the token from `flai mcp token`, and `X-Flai-Agent`
-- [ ] One story of this repository, chosen with the operator, is worked inside that container from its first task to its move to review, each task closed with `task_done` over HTTP, and the results record each tool that answered as the stdio server does, each that did not, and whether `flai guard` ran as the hook on the agent's calls
-- [ ] The results document under `design/experiments/`, written from its template, records each measurement: the login (what `claude` read and wrote, and where), the bind mount's speed as the time of `git status`, `flai check --strict`, and a file walk of the worktree inside the container against the same commands on the host, the network mode by which the container reached the host's listener and the modes that failed, and each test tier of `scripts/close-out.sh` that could not run inside the container for want of a tool, with the tool named
-- [ ] Each limitation found that needs a change in flai is recorded as an issue with `flai issue new`, linked from the results, and the results' recommendation names adopt, adapt, or drop for the container harness and the story of E-0029 that carries each limitation on
-- [ ] `design/system/agent-adapters.md` § A container harness of flai's own records in one paragraph what the spike settled, linking the results document, `design/tech/docker.md` lists the two images, and `scripts/README.md` names the two scripts
+- [x] `scripts/agent-image.sh` builds, from this tree and locally, `flai-agent-bedrock:local` from `flai/images/bedrock/Dockerfile` (a small Linux base, `git`, and the `flai` binary built from the tree, as `flaiover/Dockerfile` builds it) and `flai-agent-claude-code:local` from `flai/images/claude-code/Dockerfile` on top of it (Node and Claude Code), `make agent-images` runs it, and no GitHub workflow builds or publishes either image
+- [x] `scripts/agent-container.sh S-nnnn` starts a container from the claude-code image by hand, with the story's worktree mounted read-write at its host path, `.flai-cache/agents/S-nnnn` mounted as the writable `CLAUDE_CONFIG_DIR`, the operator's Claude login mounted read-only, `--user` the operator's uid and gid, no other mount and never the Docker socket, and Claude Code inside it reaching the project's HTTP MCP server on the host with `--mcp-config` naming a file in the mounted cache folder, the token from `flai mcp token`, and `X-Flai-Agent`
+- [x] One story of this repository, chosen with the operator, is worked inside that container from its first task to its move to review, each task closed with `task_done` over HTTP, and the results record each tool that answered as the stdio server does, each that did not, and whether `flai guard` ran as the hook on the agent's calls
+- [x] The results document under `design/experiments/`, written from its template, records each measurement: the login (what `claude` read and wrote, and where), the bind mount's speed as the time of `git status`, `flai check --strict`, and a file walk of the worktree inside the container against the same commands on the host, the network mode by which the container reached the host's listener and the modes that failed, and each test tier of `scripts/close-out.sh` that could not run inside the container for want of a tool, with the tool named
+- [x] Each limitation found that needs a change in flai is recorded as an issue with `flai issue new`, linked from the results, and the results' recommendation names adopt, adapt, or drop for the container harness and the story of E-0029 that carries each limitation on
+- [x] `design/system/agent-adapters.md` § A container harness of flai's own records in one paragraph what the spike settled, linking the results document, `design/tech/docker.md` lists the two images, and `scripts/README.md` names the two scripts
 
 ## Tasks
 - T-2149 The bedrock and claude-code images build locally from Dockerfiles under flai/images with scripts/agent-image.sh and make agent-images

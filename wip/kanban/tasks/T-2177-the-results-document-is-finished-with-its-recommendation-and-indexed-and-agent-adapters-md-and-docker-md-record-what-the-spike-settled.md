@@ -3,16 +3,37 @@ id: T-2177
 type: task
 nature: research
 title: The results document is finished with its recommendation and indexed, and agent-adapters.md and docker.md record what the spike settled
-status: backlog
+status: done
 parent: S-0505
 owner: alex
 created: 2026-10-26T04:52:14Z
-updated: 2026-10-26T04:52:14Z
-transitions: []
+updated: 2026-10-28T12:34:42Z
+transitions:
+  - to: ready
+    at: 2026-10-28T12:33:50Z
+    by: agent-S-0505
+  - to: in-progress
+    at: 2026-10-28T12:33:52Z
+    by: agent-S-0505
+  - to: done
+    at: 2026-10-28T12:34:42Z
+    by: agent-S-0505
 stream: S-0505
 tags: [cli, docker]
 touches: [design/experiments/S-0505-claude-code-works-one-story-of-this-repository-inside-a-hand-built-container-from-a-bedrock-image-and-a-claude-code-layer-and-the-results-settle-what-adr-0203-leaves-open.md, design/experiments/README.md, design/system/agent-adapters.md, design/tech/docker.md]
 after: [T-2173]
+usage:
+  source: log
+  seconds: 50
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 17
+      output: 5686
+      cache_read: 1074392
+      cache_write: 24166
+      cost: 0.4965
 ---
 # T-2177 The results document is finished with its recommendation and indexed, and agent-adapters.md and docker.md record what the spike settled
 
