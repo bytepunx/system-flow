@@ -9,7 +9,7 @@ date: 2026-10-08
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0530, TH-0702]
 ---
 
 # D-0244 flai test never runs flaiover's prettier, eslint, or svelte-check, so formatting faults surface only at the close-out

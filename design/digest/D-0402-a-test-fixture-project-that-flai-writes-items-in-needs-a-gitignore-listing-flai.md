@@ -9,7 +9,7 @@ date: 2026-10-28
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-0696]
 ---
 
 # D-0402 A test fixture project that flai writes items in needs a .gitignore listing .flai-cache/, since the items lock lives there and the write check refuses a project without it
