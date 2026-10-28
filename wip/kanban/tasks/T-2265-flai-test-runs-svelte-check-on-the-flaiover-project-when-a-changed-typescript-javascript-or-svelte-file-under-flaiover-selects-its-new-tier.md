@@ -3,12 +3,18 @@ id: T-2265
 type: task
 nature: improvement
 title: flai test runs svelte-check on the flaiover project when a changed TypeScript, JavaScript, or Svelte file under flaiover selects its new tier
-status: backlog
+status: in-progress
 parent: S-0530
 owner: alex
 created: 2026-10-28T18:20:37Z
-updated: 2026-10-28T18:20:37Z
-transitions: []
+updated: 2026-10-28T20:50:03Z
+transitions:
+  - to: ready
+    at: 2026-10-28T20:50:02Z
+    by: agent-S-0530
+  - to: in-progress
+    at: 2026-10-28T20:50:03Z
+    by: agent-S-0530
 stream: S-0530
 tags: [flaiover, testing, scripts]
 touches: [system-flow.yaml, scripts/flaiover-check.sh, scripts/flaiover-lint.sh, scripts/README.md, flai/internal/verify/select_test.go]

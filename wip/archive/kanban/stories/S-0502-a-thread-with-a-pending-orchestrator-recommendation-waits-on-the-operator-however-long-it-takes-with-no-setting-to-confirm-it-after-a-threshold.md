@@ -3,10 +3,10 @@ id: S-0502
 type: story
 nature: improvement
 title: A thread with a pending orchestrator recommendation waits on the operator however long it takes, with no setting to confirm it after a threshold
-status: review
+status: done
 owner: alex
 created: 2026-10-26T04:01:40Z
-updated: 2026-10-28T20:48:23Z
+updated: 2026-10-28T20:50:09Z
 transitions:
   - to: ready
     at: 2026-10-28T12:43:49Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-28T20:48:23Z
     by: agent-S-0502
+  - to: done
+    at: 2026-10-28T20:50:09Z
+    by: alex
 blocked:
   - from: 2026-10-28T13:45:03Z
     until: 2026-10-28T13:45:07Z
