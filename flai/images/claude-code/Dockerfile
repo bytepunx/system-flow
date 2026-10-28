@@ -1,7 +1,8 @@
 # flai-agent-claude-code: Claude Code on flai-agent-bedrock (E-0029). Build after the bedrock image:
 #   docker build -f flai/images/claude-code/Dockerfile -t flai-agent-claude-code:local .
 # scripts/agent-image.sh builds both in order. No login state and no key: the agent's credentials
-# reach the container when it runs, never the image.
+# reach the container when it runs, never the image. It keeps bedrock's entrypoint, pilot, which
+# starts claude through flai's claude-code adapter.
 
 ARG BASE=flai-agent-bedrock:local
 FROM ${BASE}

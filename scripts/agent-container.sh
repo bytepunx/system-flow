@@ -1,17 +1,24 @@
 #!/usr/bin/env sh
-# Run Claude Code headless for one story in flai-agent-claude-code:local, started by hand (S-0505).
-#   scripts/agent-container.sh S-nnnn [prompt-file]     the prompt from the file, or from stdin
-#   scripts/agent-container.sh S-nnnn -- cmd [arg]...   cmd instead of claude, in the same mounts
+# Run a story's agent headless in flai-agent-claude-code:local, started by hand (S-0505, S-0507).
+#   scripts/agent-container.sh S-nnnn                  pilot, the image's entrypoint, starts claude
+#   scripts/agent-container.sh S-nnnn -- cmd [arg]...  cmd instead of pilot, in the same mounts
+# Feeds pilot a start request on standard input (ADR-0212): the story, its worktree, the agent's
+# name and session, inner claude-code, the cache folder, and the names of the variables holding the
+# project's HTTP MCP server's URL, token, and Host. pilot writes the MCP file, which names those
+# variables and holds no token, and starts claude with the argv flai serve gives on the host, the
+# prompt included; its log is claude's stream-json, as on the host.
 # Mounts the story's worktree read-write at its host path (the working directory),
-# .flai-cache/agents/S-nnnn read-write at its host path as CLAUDE_CONFIG_DIR, and the operator's
-# Claude login (FLAI_CLAUDE_LOGIN, default ~/.claude) read-only at /run/claude-login; nothing else,
-# never the Docker socket. The agent reaches the project's HTTP MCP server, the one `flai mcp
-# status` names, with the token from `flai mcp token`, through .flai-cache/agents/S-nnnn/mcp.json.
+# .flai-cache/agents/S-nnnn read-write at its host path as the cache (claude's configuration in its
+# claude folder), and the operator's Claude login (FLAI_CLAUDE_LOGIN, default ~/.claude) read-only
+# at /run/claude-login; nothing else, never the Docker socket. The server is the one `flai mcp
+# status` names, with the token from `flai mcp token`, passed by environment, never in an argument.
 # The container's flai keeps its config and cache under .flai-cache/agents/S-nnnn/flai (FLAI_CONFIG,
 # FLAI_CACHE_DIR), so nothing is written under the container's home.
 # FLAI_BIN       the flai that answers mcp status and token (default: the flai on PATH, installed)
 # FLAI_AGENT_NETWORK  bridge (default: host.docker.internal by host-gateway) or host
-# FLAI_AGENT_MODEL    claude's --model, such as haiku (default: claude's own)
+# FLAI_AGENT_MODEL    the agent's model, such as haiku (default: claude's own)
+# FLAI_AGENT_MAX_BUDGET_USD  the agent's max_budget_usd, such as 0.05, for a trial run
+# FLAI_AGENT_SESSION  the session; a second run with the same one resumes it (default: a new one)
 # FLAI_AGENT_GIT_MOUNT=1  also mounts the main checkout's .git at its host path, for git inside
 set -eu
 # The installed flai, before env.sh puts this tree's bin/ first on PATH.
@@ -22,20 +29,13 @@ LOGIN_IN="/run/claude-login"
 STORY="${1:-}"
 case "$STORY" in
   S-[0-9][0-9][0-9][0-9]) shift ;;
-  *) echo "usage: $0 S-nnnn [prompt-file | -- cmd [arg]...]" >&2; exit 2 ;;
+  *) echo "usage: $0 S-nnnn [-- cmd [arg]...]" >&2; exit 2 ;;
 esac
-PROMPT=""
 if [ "${1:-}" = "--" ]; then
   shift
   [ "$#" -gt 0 ] || { echo "nothing to run after --" >&2; exit 2; }
-elif [ "$#" -gt 1 ]; then
-  echo "usage: $0 S-nnnn [prompt-file | -- cmd [arg]...]" >&2; exit 2
-elif [ "$#" -eq 1 ]; then
-  PROMPT="$1"
-  [ -f "$PROMPT" ] || { echo "no prompt file $PROMPT" >&2; exit 2; }
-  set --
-elif [ -t 0 ]; then
-  echo "no prompt: name a prompt file, or pipe the prompt on stdin" >&2; exit 2
+elif [ "$#" -gt 0 ]; then
+  echo "usage: $0 S-nnnn [-- cmd [arg]...]" >&2; exit 2
 fi
 WORKTREE="$CACHE_ROOT/.flai-cache/worktrees/$STORY"
 AGENT_DIR="$CACHE_ROOT/.flai-cache/agents/$STORY"
@@ -64,33 +64,51 @@ case "$NETWORK" in
   *) echo "FLAI_AGENT_NETWORK is bridge or host, not $NETWORK" >&2; exit 2 ;;
 esac
 AGENT="agent-$STORY"
-SESSION="${FLAI_SESSION:-$(cat /proc/sys/kernel/random/uuid 2>/dev/null || date +%s)}"
-mkdir -p "$AGENT_DIR/flai"
+SESSION="${FLAI_AGENT_SESSION:-$(cat /proc/sys/kernel/random/uuid 2>/dev/null || date +%s)}"
+case "$WORKTREE$AGENT_DIR" in
+  *[\\\"]*) echo "the worktree or cache path holds a quote or a backslash, which the start request cannot carry" >&2; exit 2 ;;
+esac
+mkdir -p "$AGENT_DIR/flai" "$AGENT_DIR/claude"
 chmod 700 "$AGENT_DIR"
-# Claude Code finds its login in CLAUDE_CONFIG_DIR: a link to the read-only mount, not a copy.
-ln -sfn "$LOGIN_IN/.credentials.json" "$AGENT_DIR/.credentials.json"
-( umask 077 && printf '{"mcpServers":{"flai":{"type":"http","url":"%s","headers":{"Authorization":"Bearer %s","Host":"%s","X-Flai-Agent":"%s"}}}}\n' \
-  "$URL" "$TOKEN" "$HOST_HEADER" "$AGENT" > "$AGENT_DIR/mcp.json" )
+# Claude Code finds its login in CLAUDE_CONFIG_DIR, the cache's claude folder: a link to the
+# read-only mount, not a copy.
+ln -sfn "$LOGIN_IN/.credentials.json" "$AGENT_DIR/claude/.credentials.json"
+AGENT_JSON=""
+[ -z "${FLAI_AGENT_MODEL:-}" ] || AGENT_JSON="\"model\":\"$FLAI_AGENT_MODEL\""
+if [ -n "${FLAI_AGENT_MAX_BUDGET_USD:-}" ]; then
+  [ -z "$AGENT_JSON" ] || AGENT_JSON="$AGENT_JSON,"
+  AGENT_JSON="$AGENT_JSON\"config\":{\"max_budget_usd\":\"$FLAI_AGENT_MAX_BUDGET_USD\"}"
+fi
+case "$AGENT_JSON" in
+  *[\\]*) echo "FLAI_AGENT_MODEL or FLAI_AGENT_MAX_BUDGET_USD holds a backslash" >&2; exit 2 ;;
+esac
+PROJECT="$(sed -n 's/^key: *//p' "$ROOT/system-flow.yaml" | head -n 1)"
+REQUEST="$(printf '{"Story":"%s","Root":"%s","Project":"%s","Name":"%s","Session":"%s","Agent":{%s},"inner":"claude-code","mcp_url_env":"FLAI_MCP_URL","mcp_token_env":"FLAI_MCP_TOKEN","mcp_host_env":"FLAI_MCP_HOST","cache":"%s"}' \
+  "$STORY" "$WORKTREE" "$PROJECT" "$AGENT" "$SESSION" "$AGENT_JSON" "$AGENT_DIR")"
 GIT_ARGS=""
 if [ "${FLAI_AGENT_GIT_MOUNT:-0}" = 1 ]; then
   GIT_ARGS="-v $CACHE_ROOT/.git:$CACHE_ROOT/.git"
 fi
-if [ "$#" -eq 0 ]; then
-  # As flai serve starts it (flai/internal/harness/adapters.go), with the server over HTTP.
-  set -- claude -p --output-format stream-json --verbose \
-    --mcp-config "$AGENT_DIR/mcp.json" --strict-mcp-config \
-    --permission-prompt-tool mcp__flai__permission_prompt \
-    --permission-mode acceptEdits --allowedTools "Bash,mcp__flai"
-  [ -z "${FLAI_AGENT_MODEL:-}" ] || set -- "$@" --model "$FLAI_AGENT_MODEL"
-fi
-echo "running $STORY in $IMAGE on the $NETWORK network: $1" >&2
+# docker run -e NAME, with no value, copies NAME from this environment: the token stays out of
+# every argument.
+FLAI_MCP_URL="$URL" FLAI_MCP_TOKEN="$TOKEN" FLAI_MCP_HOST="$HOST_HEADER"
+export FLAI_MCP_URL FLAI_MCP_TOKEN FLAI_MCP_HOST
 # NET_ARGS and GIT_ARGS split on spaces by design: neither holds a path with one.
-# shellcheck disable=SC2086
-docker run --rm -i --user "$(id -u):$(id -g)" $NET_ARGS \
-  -v "$WORKTREE:$WORKTREE" -w "$WORKTREE" \
-  -v "$AGENT_DIR:$AGENT_DIR" \
-  -v "$LOGIN:$LOGIN_IN:ro" $GIT_ARGS \
-  -e "CLAUDE_CONFIG_DIR=$AGENT_DIR" -e "FLAI_AGENT=$AGENT" -e "FLAI_SESSION=$SESSION" \
-  -e "FLAI_STORY=$STORY" \
-  -e "FLAI_CONFIG=$AGENT_DIR/flai/config.json" -e "FLAI_CACHE_DIR=$AGENT_DIR/flai/cache" \
-  "$IMAGE" "$@" < "${PROMPT:-/dev/stdin}"
+run() {
+  # shellcheck disable=SC2086
+  docker run --rm -i --user "$(id -u):$(id -g)" $NET_ARGS \
+    -v "$WORKTREE:$WORKTREE" -w "$WORKTREE" \
+    -v "$AGENT_DIR:$AGENT_DIR" \
+    -v "$LOGIN:$LOGIN_IN:ro" $GIT_ARGS \
+    -e FLAI_MCP_URL -e FLAI_MCP_TOKEN -e FLAI_MCP_HOST \
+    -e "FLAI_CONFIG=$AGENT_DIR/flai/config.json" -e "FLAI_CACHE_DIR=$AGENT_DIR/flai/cache" \
+    "$@"
+}
+if [ "$#" -gt 0 ]; then
+  echo "running $STORY in $IMAGE on the $NETWORK network: $1" >&2
+  run -e "CLAUDE_CONFIG_DIR=$AGENT_DIR/claude" -e "FLAI_AGENT=$AGENT" -e "FLAI_SESSION=$SESSION" \
+    -e "FLAI_STORY=$STORY" --entrypoint /sbin/tini "$IMAGE" -- "$@"
+else
+  echo "running $STORY in $IMAGE on the $NETWORK network: pilot, session $SESSION" >&2
+  printf '%s\n' "$REQUEST" | run "$IMAGE"
+fi
