@@ -294,14 +294,10 @@ When `flai serve` started an agent for the story, the card also shows the agent'
 
 ## Planner
 
-Planner shows the agent that plans epics and stories: what it is doing, what it has done, and what that cost, and below that its settings. Find it in the rail's Agents group as Planning, after Orchestration.
+Planner shows the agent that plans epics and stories: its settings, then what it is doing, what it has done, and what that cost. Find it in the rail's Agents group as Planning, after Orchestration.
 
 - **The plan host action** says whether `flai serve` starts the planner here. While it is off, the page gives the command that turns it on, to run on the host in the project: `flai serve enable plan`.
-- **Running now** shows the planner run under way, if there is one: the epic or story it plans, the agent, when it started, and why (`asked`, or what changed to start it again). Its stream window shows what it is saying and doing, as the Activity page does for a story's agent.
-- **Activity** is the planner's activity document, `wip/agents/planner.md`. It shows the totals (what the planner has cost, how long it has worked, how many activities it has logged, and when it last ran), then each activity, newest first, with what it did, why it started, the items it changed, how long it took, and what it cost.
-- **Runs** lists the newest planner run for each epic or story it has planned, newest first. Each shows when it started and ended, how it went, and what it cost: the activities logged while it ran. A run that failed says why.
-- **Plan an epic or a story** takes an ID, such as `E-0016` or `S-0259`, and starts the planner for it, as **Plan** on the item's page and the card's menu do. The page says what flai answered: the run it started, or why it refused, such as a planner already running for the item. While the plan host action is off, the form is disabled and says so.
-- **The planner's settings** are the `planning` keys of `system-flow.yaml` but `currency`, edited here as [Editing a strategic agent's settings](#editing-a-strategic-agents-settings) says:
+- **The planner's settings**, under the host action, are the `planning` keys of `system-flow.yaml` but `currency`, edited here as [Editing a strategic agent's settings](#editing-a-strategic-agents-settings) says:
 
   | Setting | What it does |
   |---------|--------------|
@@ -313,15 +309,20 @@ Planner shows the agent that plans epics and stories: what it is doing, what it 
   | `default_duration` | The work a story is forecast to take when there is too little history to forecast it from; `1h` by default |
 
   `agent` and `schedule` start planner sessions you pay for without asking each time, and `replan` set to `agent` does too. The currency is set by hand in `system-flow.yaml`, since changing it would re-denominate every amount on the items.
+- **Running now** shows the planner run under way, if there is one: the epic or story it plans, the agent, when it started, and why (`asked`, or what changed to start it again). Its stream window shows what it is saying and doing, as the Activity page does for a story's agent.
+- **Activity** is the planner's activity document, `wip/agents/planner.md`. It shows the totals (what the planner has cost, how long it has worked, how many activities it has logged, and when it last ran), then each activity, newest first, with what it did, why it started, the items it changed, how long it took, and what it cost.
+- **Runs** lists the newest planner run for each epic or story it has planned, newest first. Each shows when it started and ended, how it went, and what it cost: the activities logged while it ran. A run that failed says why.
+- **Plan an epic or a story** takes an ID, such as `E-0016` or `S-0259`, and starts the planner for it, as **Plan** on the item's page and the card's menu do. The page says what flai answered: the run it started, or why it refused, such as a planner already running for the item. While the plan host action is off, the form is disabled and says so.
 
 The page follows the planner as it works: it reads itself again when the planner's document or a work item changes, and when a planner run starts or ends. It reads its settings again after a save and when `system-flow.yaml` changes, never on a timer, so a form you are typing in is not refilled under you.
 
 ## Orchestrator
 
-Orchestrator shows the agent that keeps the project's work moving: whether it runs, what it is doing, what it has decided, and what that cost, and below that its settings. Find it first in the rail's Agents group, as Orchestration. The orchestrator runs while the operator has the `orchestrate` host action on ([Running the orchestrator](flai.md#running-the-orchestrator)).
+Orchestrator shows the agent that keeps the project's work moving: whether it runs, its settings, then what it is doing, what it has decided, and what that cost. Find it first in the rail's Agents group, as Orchestration. The orchestrator runs while the operator has the `orchestrate` host action on ([Running the orchestrator](flai.md#running-the-orchestrator)).
 
 - **The orchestrate host action** says whether `flai serve` runs the orchestrator: on; off, with the command that turns it on, `flai serve enable orchestrate`; or held, because you stopped it.
 - **Stop** ends the orchestrator's run and holds it stopped. While the action is on, `flai serve` starts the orchestrator again whenever a run ends; while it is held, it does not. **Start** lifts the hold and starts it at once. Stop shows while the orchestrator is not held, and Start while it is. Both need the `orchestrate` host action on, and are disabled, saying so, while it is off. The page says what flai did, or why it refused, such as an orchestrator already held. The run you stopped logs its activity as `stopped: stopped from the dashboard`. Turning the action off and on again lifts the hold too. On the host, `flai serve orchestrate stop` and `flai serve orchestrate start` do the same.
+- **Settings** come next, under Stop and Start, so you reach the permissions and the policy without scrolling past the run, the decisions, and the log. They are described below.
 - **Running now** shows the run under way, with its agent, when it started, and its stream window, as the Planner page does.
 - **Last decisions** are the five newest entries of its activity: what it did and why, with the policy figure behind it.
 - **Activity** is `wip/agents/orchestrator.md`: its totals, then every decision, newest first, as the Planner page shows the planner's.
@@ -359,10 +360,11 @@ The orchestrator's own agent is set by hand in `system-flow.yaml`, under `orches
 
 ## Analyzer
 
-Analyzer shows the agent that looks at the whole project and writes a report under `design/analysis/` ([Running the analyzer](flai.md#running-the-analyzer)): whether it may run, what it is doing, what it has found, and what that cost, and below that its settings. Find it in the rail's Agents group as Analysis, after Planning. Its reports are on the [Docs](#docs) page.
+Analyzer shows the agent that looks at the whole project and writes a report under `design/analysis/` ([Running the analyzer](flai.md#running-the-analyzer)): whether it may run, its settings, then what it is doing, what it has found, and what that cost. Find it in the rail's Agents group as Analysis, after Planning. Its reports are on the [Docs](#docs) page.
 
 - **The analyze host action** says whether `flai serve` may start the analyzer here. While it is off, the page gives the command that turns it on: `flai serve enable analyze`.
 - **Run** starts the analyzer now, looking for the **Focus** you choose: `bottlenecks`, `intent`, `risk`, or all three, the default. The page says what flai answered: the run it started, or why it refused. One analyzer runs at a time, so Run is disabled while one runs, and while the host action is off. The page says which.
+- **Settings** come next, under Run, before the run under way. They are described below.
 - **Running now** shows the run under way: its focus, its agent, when it started, why it started, and its stream window.
 - **Activity** is `wip/agents/analyzer.md`: its totals, then each run's entry, newest first, with a link to the report it wrote, or `no report`.
 - **Runs** lists its runs, newest first, the newest and up to 20 before it. Each shows its focus, its report, when it started and ended, how it went, what it cost, and why it failed.
