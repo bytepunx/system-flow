@@ -1,6 +1,6 @@
 ---
 title: Tooling
-updated: 2026-10-26
+updated: 2026-10-28
 audience: agent
 order: 90
 status: active
@@ -41,6 +41,6 @@ Use the project's tools for the project's data. The tools keep the standard true
 
 ## Project additions
 - `make check`, `make flai`, `make test`, `make integration`, `make smoke`, `make flai-test` (all tiers plus lint), `make flai-snapshot`, and `make install-tools` call the scripts in `scripts/`.
-- `flai test`, run as `scripts/flai.sh test` or `bin/flai test`, runs the tiers in `system-flow.yaml`'s `tests` for the paths given: gofmt, vet, golangci-lint, the changed packages' Go tests without `-short` (all but the paid gateway tests), prettier and eslint on the changed flaiover files (`flaiover-lint`), vitest, ShellCheck on the changed scripts (`shellcheck`), and the markdown lint, then, under `--all` only, svelte-check with the whole `flaiover` tier, integration, and smoke. Use it between tasks; the whole run stays `make flai-test` and the close-out. The `--all` tiers select the scripts they run too, so `flai verify` and the merge queue's batch run them for a story that changes only those scripts: `template` its `template-test.sh`, `flaiover` the `flaiover-*.sh` scripts and `env.sh`, `integration` its `integration.sh`, and `smoke` every script (I-0199).
+- `flai test`, run as `scripts/flai.sh test` or `bin/flai test`, runs the tiers in `system-flow.yaml`'s `tests` for the paths given: gofmt, vet, golangci-lint, the changed packages' Go tests without `-short` (all but the paid gateway tests), prettier and eslint on the changed flaiover files (`flaiover-lint`), vitest, svelte-check on the whole flaiover project when a changed TypeScript, JavaScript, Svelte, or configuration file under `flaiover` selects it (`svelte-check`, I-0206), ShellCheck on the changed scripts (`shellcheck`), and the markdown lint, then, under `--all` only, the whole `flaiover` tier, which covers `flaiover-lint`, `vitest`, and `svelte-check`, integration, and smoke. Use it between tasks; the whole run stays `make flai-test` and the close-out. The `--all` tiers select the scripts they run too, so `flai verify` and the merge queue's batch run them for a story that changes only those scripts: `template` its `template-test.sh`, `flaiover` the `flaiover-*.sh` scripts and `env.sh`, `integration` its `integration.sh`, and `smoke` every script (I-0199).
 - No cluster: flaiover runs as a single Docker container via `flai dashboard`; k3d and `bytepunx/kluster` are not used here.
 - The dashboard does not exist yet (E-0003); until then `flai board` and `flai stats` are the views.
