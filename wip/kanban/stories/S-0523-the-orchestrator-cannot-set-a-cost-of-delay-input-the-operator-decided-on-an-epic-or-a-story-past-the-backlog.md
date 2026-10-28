@@ -6,7 +6,7 @@ title: The orchestrator cannot set a cost of delay input the operator decided on
 status: backlog
 owner: alex
 created: 2026-10-28T12:53:43Z
-updated: 2026-10-28T12:53:43Z
+updated: 2026-10-28T12:59:11Z
 transitions: []
 tags: []
 agent:
@@ -14,7 +14,9 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+finalized:
+  by: alex
+  at: 2026-10-28T12:59:11Z
 ---
 # S-0523 The orchestrator cannot set a cost of delay input the operator decided on an epic or a story past the backlog
 
