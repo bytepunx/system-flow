@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 8
-      output: 2791
-      cache_read: 720434
-      cache_write: 23679
-      cost: 0.3573
+      input: 7
+      output: 2475
+      cache_read: 717549
+      cache_write: 24812
+      cost: 0.366
 ---
 # T-2141 ADR: flai serve confirms an orchestrator recommendation the operator left unanswered past orchestration.permissions.confirm_after, never one marked for the operator alone
 

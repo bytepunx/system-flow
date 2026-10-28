@@ -3,11 +3,11 @@ id: S-0415
 type: story
 nature: feature
 title: flai prime --role gives a role a project defines its pack within the budget, from the topics and the item kind its role file names, and the three built-in roles prime from their files unchanged
-status: in-progress
+status: done
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:39:36Z
-updated: 2026-10-28T15:11:24Z
+updated: 2026-10-28T20:49:37Z
 transitions:
   - to: ready
     at: 2026-10-28T13:02:21Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-28T14:51:22Z
     by: agent-S-0415
+  - to: review
+    at: 2026-10-28T20:38:03Z
+    by: agent-S-0415
+  - to: done
+    at: 2026-10-28T20:49:37Z
+    by: alex
 tags: [cli, template]
 topics: [cli, planning, orchestration, conventions]
-touches: [design/system/agent-context.md, design/system/conventions.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/prime.go, flai/cmd/prime_test.go, flai/internal/context/strategic.go, flai/internal/context/strategic_test.go, flai/internal/context/story.go, flai/internal/conventions/conventions.go, flai/internal/conventions/conventions_test.go, flai/internal/check/check.go, flai/internal/mcpserver/prime_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, design/system/flai-cli.md, flai/internal/context/context.go]
+touches: [design/system/agent-context.md, design/system/conventions.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/prime.go, flai/cmd/prime_test.go, flai/internal/context/strategic.go, flai/internal/context/strategic_test.go, flai/internal/context/story.go, flai/internal/conventions/conventions.go, flai/internal/conventions/conventions_test.go, flai/internal/check/check.go, flai/internal/mcpserver/prime_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, design/system/flai-cli.md, flai/internal/context/context.go, flai/internal/check/roles_test.go]
 after: [S-0414]
 agent:
   harness: claude-code
@@ -26,30 +32,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1245
+  seconds: 2596
   priced_by: harness
   turns:
     - day: 2026-10-28
+      ceremony: 2
       hand_edits: 1
-      work: 30
+      work: 72
   models:
     - model: claude-opus-5-5
-      input: 142
-      output: 47420
-      cache_read: 7594519
-      cache_write: 435928
-      cost: 5.29
+      input: 238
+      output: 73699
+      cache_read: 13205701
+      cache_write: 607338
+      cost: 8.3095
   strategic:
     - kind: orchestrator
-      seconds: 523
+      seconds: 1122
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 186
-          output: 2966
-          cache_read: 37263062
-          cache_write: 40315
-          cost: 8.2077
+          input: 240
+          output: 3936
+          cache_read: 46470103
+          cache_write: 56897
+          cost: 10.2336
+        - model: claude-sonnet-5-5
+          input: 10
+          output: 57
+          cache_read: 125045
+          cache_write: 56784
+          cost: 0.1249
 cost_of_delay:
   value: 32.52
   by: planner-S-0415
@@ -72,11 +85,11 @@ A role a project defines primes as the planner, the orchestrator, and the analyz
 
 ## Acceptance criteria
 
-- [ ] `flai prime --role <role>` and the MCP tool `prime` with that role give a defined role its pack: its topics from its role file, the conventions whose `roles` are empty or list it, what its item names when its file takes one (`--epic`, `--story`, or none), the ranked sections and briefs, and a catalog, within `--budget` and in parts.
-- [ ] `plan`, `orchestrate`, and `analyze` take their topics and item kinds from their role files, and their packs are byte for byte what they were: the existing tests in `flai/internal/context/strategic_test.go`, `flai/cmd/prime_test.go`, and the MCP prime tests pass unchanged.
-- [ ] A role no file defines, an item kind its file does not take, and a project whose role file does not parse are refused, naming the defined roles or the file's finding.
-- [ ] `flai check` accepts in a convention's `roles` every role a project defines beside `story`, `explore`, and `verify`, and warns `conventions.roles` for any other, as ADR-0075 does today.
-- [ ] `design/system/agent-context.md` § Strategic packs, `design/system/conventions.md` § Roles, `docs/users/flai.md`, and the regenerated `flai-reference.md` say how a defined role primes.
+- [x] `flai prime --role <role>` and the MCP tool `prime` with that role give a defined role its pack: its topics from its role file, the conventions whose `roles` are empty or list it, what its item names when its file takes one (`--epic`, `--story`, or none), the ranked sections and briefs, and a catalog, within `--budget` and in parts.
+- [x] `plan`, `orchestrate`, and `analyze` take their topics and item kinds from their role files, and their packs are byte for byte what they were: the existing tests in `flai/internal/context/strategic_test.go`, `flai/cmd/prime_test.go`, and the MCP prime tests pass unchanged.
+- [x] A role no file defines, an item kind its file does not take, and a project whose role file does not parse are refused, naming the defined roles or the file's finding.
+- [x] `flai check` accepts in a convention's `roles` every role a project defines beside `story`, `explore`, and `verify`, and warns `conventions.roles` for any other, as ADR-0075 does today.
+- [x] `design/system/agent-context.md` § Strategic packs, `design/system/conventions.md` § Roles, `docs/users/flai.md`, and the regenerated `flai-reference.md` say how a defined role primes.
 
 ## Tasks
 - T-1725 The strategic pack takes a role's topics and item kind from its role file in place of the Go map, with the three built-in packs unchanged

@@ -3,11 +3,11 @@ id: T-2145
 type: task
 nature: improvement
 title: The orchestrator's prompt and its agent definition tell it to mark a recommendation on money or a host change for the operator alone, and that flai serve confirms the rest after confirm_after
-status: in-progress
+status: done
 parent: S-0502
 owner: alex
 created: 2026-10-26T04:45:16Z
-updated: 2026-10-28T14:50:58Z
+updated: 2026-10-28T20:35:49Z
 transitions:
   - to: ready
     at: 2026-10-28T13:05:50Z
@@ -15,22 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-28T13:05:51Z
     by: agent-S-0502
+  - to: done
+    at: 2026-10-28T20:35:49Z
+    by: agent-S-0502
 stream: S-0502
 tags: [flai, template]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md]
 after: [T-2143]
 usage:
   source: log
-  seconds: 2633
+  seconds: 3082
   estimated: true
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 206
-      output: 67601
-      cache_read: 17449499
-      cache_write: 573535
-      cost: 8.6532
+      input: 250
+      output: 83656
+      cache_read: 24254893
+      cache_write: 838692
+      cost: 12.3718
 ---
 # T-2145 The orchestrator's prompt and its agent definition tell it to mark a recommendation on money or a host change for the operator alone, and that flai serve confirms the rest after confirm_after
 

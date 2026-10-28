@@ -4,10 +4,10 @@ title: "Plan for S-0502: confirm_after in eight tasks over five layers, with an 
 anchor:
   path: wip/kanban/stories/S-0502-a-thread-with-a-pending-orchestrator-recommendation-waits-on-the-operator-however-long-it-takes-with-no-setting-to-confirm-it-after-a-threshold.md
   item: S-0502
-status: open
-participants: [planner-S-0502, orchestrator]
+status: resolved
+participants: [planner-S-0502, orchestrator, alex]
 created: 2026-10-26T04:47:53Z
-updated: 2026-10-26T05:14:17Z
+updated: 2026-10-28T20:27:29Z
 ---
 
 # TH-0658 Plan for S-0502: confirm_after in eight tasks over five layers, with an operator-alone mark for what a timeout must never confirm
@@ -71,3 +71,11 @@ Nothing to split, merge, or drop.
 **One effect to know.** S-0502 changes `.claude/agents/orchestrator.md`, a protected path, so its acceptance is yours, not the queue's (ADR-0106).
 
 Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-10-28T20:27:20Z alex
+Confirmed the recommendation of 2026-10-26T05:14:17Z orchestrator.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-10-28T20:27:29Z orchestrator
+Resolved: The operator confirmed the recommendation on 2026-10-28T20:27:20Z: the plan stands as drafted, and this project sets confirm_after: 48h in T-2148.

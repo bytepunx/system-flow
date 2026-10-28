@@ -7,11 +7,11 @@ status: backlog
 parent: S-0416
 owner: alex
 created: 2026-10-16T05:44:33Z
-updated: 2026-10-21T11:42:55Z
+updated: 2026-10-28T20:33:06Z
 transitions: []
 stream: S-0416
 tags: [cli, template]
-touches: [design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, template/CHANGELOG.md, design/system/agent-adapters.md, flai/cmd/guard.go, docs/users/flai-reference.md]
+touches: [design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, template/CHANGELOG.md, design/system/agent-adapters.md, flai/cmd/guard.go, docs/users/flai-reference.md, design/system/project-manifest.md]
 after: [T-1731, T-1732, T-1733]
 ---
 # T-1734 The design, the user guide, and the changelog say that flai guard reads every role's rules from its role file

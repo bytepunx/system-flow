@@ -3,11 +3,11 @@ id: T-1726
 type: task
 nature: feature
 title: flai check accepts in a convention's roles every role a project defines and warns conventions.roles for any other
-status: in-progress
+status: done
 parent: S-0415
 owner: alex
 created: 2026-10-16T05:43:42Z
-updated: 2026-10-28T15:11:47Z
+updated: 2026-10-28T20:17:09Z
 transitions:
   - to: ready
     at: 2026-10-28T15:11:46Z
@@ -15,22 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-28T15:11:47Z
     by: agent-S-0415
+  - to: done
+    at: 2026-10-28T20:17:09Z
+    by: agent-S-0415
 stream: S-0415
 tags: [cli]
-touches: [flai/internal/conventions/conventions.go, flai/internal/conventions/conventions_test.go, flai/internal/check/check.go]
+touches: [flai/internal/conventions/conventions.go, flai/internal/conventions/conventions_test.go, flai/internal/check/check.go, flai/internal/check/roles_test.go]
 after: [T-1725]
 usage:
   source: log
-  seconds: 15
+  seconds: 103
   estimated: true
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 1371
-      cache_read: 219519
-      cache_write: 12600
-      cost: 0.1529
+      input: 19
+      output: 5348
+      cache_read: 1068726
+      cache_write: 38542
+      cost: 0.6099
 ---
 # T-1726 flai check accepts in a convention's roles every role a project defines and warns conventions.roles for any other
 

@@ -3,11 +3,17 @@ id: S-0530
 type: story
 nature: improvement
 title: flai test on flaiover paths runs no svelte-check, so a type error a task's tests passed over first shows in the close-out
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-28T12:54:31Z
-updated: 2026-10-28T19:19:26Z
-transitions: []
+updated: 2026-10-28T20:49:08Z
+transitions:
+  - to: ready
+    at: 2026-10-28T20:48:59Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-28T20:49:08Z
+    by: agent-S-0530
 tags: [flaiover, testing, scripts]
 topics: [testing]
 touches: [system-flow.yaml, scripts/flaiover-check.sh, scripts/flaiover-lint.sh, scripts/README.md, flai/internal/verify/select_test.go, design/conventions/tooling.md, design/system/devex.md, design/issues/I-0206-flai-test-on-flaiover-paths-runs-no-svelte-check-so-a-type-error-a-task-s-tests-passed-over-first-shows-in-the-close-out.md, design/issues/summary.md]
@@ -22,15 +28,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 215
+      seconds: 224
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 25
-          output: 430
-          cache_read: 2500970
-          cache_write: 12642
-          cost: 0.5523
+          input: 28
+          output: 446
+          cache_read: 3053350
+          cache_write: 14423
+          cost: 0.674
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -41,10 +47,10 @@ cost_of_delay:
   at: 2026-10-28T18:21:32Z
 forecast:
   duration: 25m
-  delivery: 2026-10-29T09:39:00Z
-  basis: "Its own forecast of 25m; 38th in the pull order with an in-progress limit of 5, behind S-0415, S-0502, S-0419, S-0423, S-0418, S-0421, S-0416, S-0422, S-0420, S-0417, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0507, S-0508, S-0509, S-0510, S-0511, S-0512, S-0514, S-0515, S-0516, S-0517, S-0518, S-0519, S-0520, S-0523, S-0524, S-0525, S-0527 and S-0529."
+  delivery: 2026-10-28T21:19:00Z
+  basis: "Its own forecast of 25m; 1st in the pull order with an in-progress limit of 5, behind S-0416."
   by: flai
-  at: 2026-10-28T19:19:26Z
+  at: 2026-10-28T20:49:02Z
 finalized:
   by: alex
   at: 2026-10-28T12:56:09Z

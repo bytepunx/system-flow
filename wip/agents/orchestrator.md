@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1694.7108
-accrued_seconds: 1421517
-tasks_completed: 1201
-last_run: 2026-10-28T19:03:03Z
+accrued_cost: 1703.6191
+accrued_seconds: 1427878
+tasks_completed: 1209
+last_run: 2026-10-28T20:49:04Z
 ---
 
 # Orchestrator activity
@@ -8418,6 +8418,62 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0531
 - Seconds: 1026
 - Cost: 1.7885 USD, estimated
+
+### 2026-10-28T19:16:51Z
+
+- Summary: S-0531 landed through the merge queue, which I had enqueued. Under publish (judgement), released S-0528 and S-0531 (2 stories, 12.54 USD/week, nothing in held_by_epic, no warnings): flai 1.71.4 to 1.71.5 (patch, flai/v1.71.5), pushed.
+- Items: S-0528, S-0531
+- Seconds: 828
+- Cost: 0.2479 USD, estimated
+
+### 2026-10-28T19:17:36Z
+
+- Summary: Under finalize_drafts, finalized S-0519. It is complete in flai promote --drafts, with forecast 1h and value 25 USD/week, and its criteria, file touches (one ADR folder named in its Planning note), forecast and value are consistent. Its plan thread TH-0690 is settled, and the HTTP bound is put to the operator on T-2227's thread inside the story. It stays held on overlap with S-0415 and S-0502. The other nine complete drafts wait on threads to the operator: TH-0532 (S-0406), TH-0533 (S-0412), TH-0587 and TH-0588 (S-0424, S-0425), TH-0664 (S-0506), TH-0675 (S-0512), TH-0685 (S-0516), TH-0688 (S-0518), and TH-0691 (S-0520).
+- Items: S-0519
+- Seconds: 45
+- Cost: 0.5827 USD, estimated
+
+### 2026-10-28T20:27:30Z
+
+- Summary: Under plan_backlog_stories, resolved planner-S-0502's TH-0658 after the operator confirmed my recommendation: S-0502's plan stands as drafted, and T-2148 sets confirm_after: 48h for this project.
+- Items: S-0502
+- Seconds: 4194
+- Cost: 3.9524 USD, estimated
+
+### 2026-10-28T20:29:24Z
+
+- Summary: S-0416 started from ready on a share with S-0502. Under order_ready, applied flai order --by throughput to the 7 stories left in ready (S-0419 first, 1h). promote --candidates still lists only S-0515 and S-0529, both waiting on the operator (TH-0683, TH-0701).
+- Items: S-0416
+- Seconds: 114
+- Cost: 1.0931 USD, estimated
+
+### 2026-10-28T20:39:23Z
+
+- Summary: Under accept_reviews, verified S-0415 at 414e06fb: flai verify passed (integration and smoke left to the queue), and the verifier matched all five criteria to its 18 changed files. queue_add refused it with thread_open, because flai serve's restart notice TH-0698 is still open on it. Its concern is gone, but it is not mine to resolve, so I opened a thread on S-0415 asking the operator to resolve TH-0698. I enqueue S-0415 once it is. Throughput: forecast 38m, value 32.52 USD/week.
+- Items: S-0415
+- Seconds: 599
+- Cost: 2.1508 USD, estimated
+
+### 2026-10-28T20:39:41Z
+
+- Summary: Under promote_to_ready, promoted nothing. promote --candidates lists S-0515 (45m), S-0529 (1h30m), and S-0241 (2h). S-0515 and S-0529 wait on the operator's answers on TH-0683 and TH-0701. S-0241 is still blocked since 2026-10-08 ("No candidate solutions yet").
+- Items: S-0515, S-0529, S-0241
+- Seconds: 18
+- Cost: 0.3172 USD, estimated
+
+### 2026-10-28T20:48:47Z
+
+- Summary: Under accept_reviews, S-0502 reached review. flai verify passed at f79230c4, but flai accept --dry-run blocks it: it changes .claude/agents/orchestrator.md in both copies, which only the operator accepts (ADR-0106), and two role files lie outside its touches. I opened a thread on S-0502 recommending the operator accept it after the touches are widened. Throughput: forecast 2h, value 9000 USD/week.
+- Items: S-0502
+- Seconds: 546
+- Cost: 0.3208 USD, estimated
+
+### 2026-10-28T20:49:04Z
+
+- Summary: Under promote_to_ready, moved S-0530 to ready as candidate 1 by throughput (25m), freed by S-0502's move to review. S-0527 (candidate 2, 40m) stays out while its scope question waits on TH-0697, and so do S-0515 and S-0529 on TH-0683 and TH-0701. S-0241 is blocked. Under order_ready, applied flai order --by throughput: S-0530 first of 8.
+- Items: S-0530, S-0527
+- Seconds: 17
+- Cost: 0.2434 USD, estimated
 
 ## Refusals
 

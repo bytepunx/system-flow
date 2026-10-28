@@ -3,16 +3,19 @@ id: S-0502
 type: story
 nature: improvement
 title: A thread with a pending orchestrator recommendation waits on the operator however long it takes, with no setting to confirm it after a threshold
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-26T04:01:40Z
-updated: 2026-10-28T19:01:09Z
+updated: 2026-10-28T20:48:23Z
 transitions:
   - to: ready
     at: 2026-10-28T12:43:49Z
     by: orchestrator
   - to: in-progress
     at: 2026-10-28T12:44:59Z
+    by: agent-S-0502
+  - to: review
+    at: 2026-10-28T20:48:23Z
     by: agent-S-0502
 blocked:
   - from: 2026-10-28T13:45:03Z
@@ -31,7 +34,11 @@ blocked:
     until: 2026-10-28T19:00:50Z
     reason: awaiting the operator on TH-0686
   - from: 2026-10-28T19:01:09Z
+    until: 2026-10-28T20:27:56Z
     reason: awaiting the operator on TH-0686
+  - from: 2026-10-28T20:33:54Z
+    until: 2026-10-28T20:33:54Z
+    reason: awaiting the operator on TH-0689
 tags: [flai, template]
 topics: [orchestration, cli, analysis]
 touches: [design/adrs/0206-flai-serve-confirms-a-recommendation-the-operator-left-unanswered-past-confirm-after.md, design/adrs/README.md, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/check/orchestration_test.go, docs/operators/settings.md, design/system/project-manifest.md, flai/internal/threads/threads.go, flai/internal/threads/threads_test.go, flai/cmd/thread.go, flai/cmd/thread_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, flai/internal/serve/confirm.go, flai/internal/serve/confirm_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/internal/metrics/waiting.go, flai/internal/metrics/waiting_test.go, design/system/metrics.md, flaiover/src/lib/viz/charts.ts, design/system/strategic-agents.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md, template/CHANGELOG.md, system-flow.yaml, design/issues/I-0195-a-thread-with-a-pending-orchestrator-recommendation-waits-on-the-operator-however-long-it-takes-with-no-setting-to-confirm-it-after-a-threshold.md, design/issues/summary.md, design/adrs/0206-flai-serve-confirms-an-orchestrator-recommendation-the-operator-left-unanswered.md, flai/internal/mcpserver/folder.go, flai/internal/serve/activity.go, flai/internal/workitem/activity.go, template/template.yaml]
@@ -43,31 +50,31 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3888
+  seconds: 5100
   priced_by: harness
   turns:
     - day: 2026-10-28
       ceremony: 6
       hand_edits: 3
-      work: 112
+      work: 136
   models:
     - model: claude-opus-5-5
-      input: 598
-      output: 196368
-      cache_read: 50687245
-      cache_write: 1666002
-      cost: 25.1357
+      input: 654
+      output: 219067
+      cache_read: 63515711
+      cache_write: 2196264
+      cost: 32.3977
   strategic:
     - kind: orchestrator
-      seconds: 1040
+      seconds: 5780
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 150
-          output: 2450
-          cache_read: 36826218
-          cache_write: 60844
-          cost: 8.088
+          input: 272
+          output: 4538
+          cache_read: 56257600
+          cache_write: 84164
+          cost: 12.3612
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 60h

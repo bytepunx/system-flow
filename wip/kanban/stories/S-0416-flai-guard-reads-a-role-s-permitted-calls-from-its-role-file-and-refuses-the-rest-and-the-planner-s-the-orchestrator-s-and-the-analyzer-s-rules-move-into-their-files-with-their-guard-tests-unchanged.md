@@ -3,15 +3,18 @@ id: S-0416
 type: story
 nature: feature
 title: flai guard reads a role's permitted calls from its role file and refuses the rest, and the planner's, the orchestrator's, and the analyzer's rules move into their files with their guard tests unchanged
-status: ready
+status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:39:46Z
-updated: 2026-10-28T19:16:52Z
+updated: 2026-10-28T20:29:14Z
 transitions:
   - to: ready
     at: 2026-10-28T13:03:54Z
     by: alex
+  - to: in-progress
+    at: 2026-10-28T20:29:14Z
+    by: agent-S-0416
 tags: [cli, template]
 topics: [cli, planning, orchestration, template]
 touches: [".claude/settings.json", template/root/.claude/settings.json, design/workflows/roles/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/analyzer.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/analyzer.md, design/adrs, design/adrs/README.md, design/system/agent-adapters.md, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, template/CHANGELOG.md, flai/cmd/guard.go, flai/cmd/guard_test.go, flai/internal/guard/authors.go, flai/internal/guard/authors_test.go, flai/internal/guard/call.go, flai/internal/guard/guard.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/guard/shared.go, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/harness/harness_test.go]
@@ -27,15 +30,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 1516
+      seconds: 1630
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 68
-          output: 1165
-          cache_read: 8708262
-          cache_write: 23876
-          cost: 1.9281
+          input: 98
+          output: 1640
+          cache_read: 13675017
+          cache_write: 33886
+          cost: 3.0212
 cost_of_delay:
   value: 59.07
   by: planner-S-0416

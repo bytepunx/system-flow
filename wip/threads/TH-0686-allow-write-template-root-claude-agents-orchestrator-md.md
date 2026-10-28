@@ -4,10 +4,10 @@ title: Allow Write template/root/.claude/agents/orchestrator.md?
 anchor:
   path: wip/kanban/stories/S-0502-a-thread-with-a-pending-orchestrator-recommendation-waits-on-the-operator-however-long-it-takes-with-no-setting-to-confirm-it-after-a-threshold.md
   item: S-0502
-status: open
-participants: [agent-S-0502]
+status: resolved
+participants: [agent-S-0502, alex]
 created: 2026-10-28T13:15:58Z
-updated: 2026-10-28T13:15:58Z
+updated: 2026-10-28T20:34:42Z
 ---
 
 # TH-0686 Allow Write template/root/.claude/agents/orchestrator.md?
@@ -52,3 +52,9 @@ You are the orchestrator: the agent flai serve runs to keep the work of this sys
 17. Write only through flai: its MCP tools, or the flai CLI with the shell. Never edit code or documents. Hand wide search to the explorer.
 18. flai guard refuses a call outside your permissions and names the permission it needs. Never work around a refusal. A refusal from flai guard or from flai ends that attempt: log it with the refusal, and do not retry it until something changes. When a decision needs the operator, ask with `thread_open` on the item it concerns, your recommended answer first, and do what needs no answer meanwhile.
 ```
+
+### 2026-10-28T20:33:39Z alex
+allow
+
+### 2026-10-28T20:34:42Z agent-S-0502
+Resolved: allowed by alex: agent-S-0502 may Write template/root/.claude/agents/orchestrator.md
