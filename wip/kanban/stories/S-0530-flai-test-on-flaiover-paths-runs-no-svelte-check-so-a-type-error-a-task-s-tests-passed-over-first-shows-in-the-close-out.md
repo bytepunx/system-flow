@@ -6,7 +6,7 @@ title: flai test on flaiover paths runs no svelte-check, so a type error a task'
 status: backlog
 owner: alex
 created: 2026-10-28T12:54:31Z
-updated: 2026-10-28T18:28:33Z
+updated: 2026-10-28T19:19:26Z
 transitions: []
 tags: [flaiover, testing, scripts]
 topics: [testing]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-10-28T18:21:32Z
 forecast:
   duration: 25m
-  delivery: 2026-10-29T09:17:00Z
-  basis: "Its own forecast of 25m; 39th in the pull order with an in-progress limit of 5, behind S-0415, S-0502, S-0531, S-0419, S-0423, S-0418, S-0421, S-0416, S-0422, S-0420, S-0417, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0507, S-0508, S-0509, S-0510, S-0511, S-0512, S-0514, S-0515, S-0516, S-0517, S-0518, S-0519, S-0520, S-0523, S-0524, S-0525, S-0527 and S-0529."
+  delivery: 2026-10-29T09:39:00Z
+  basis: "Its own forecast of 25m; 38th in the pull order with an in-progress limit of 5, behind S-0415, S-0502, S-0419, S-0423, S-0418, S-0421, S-0416, S-0422, S-0420, S-0417, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0507, S-0508, S-0509, S-0510, S-0511, S-0512, S-0514, S-0515, S-0516, S-0517, S-0518, S-0519, S-0520, S-0523, S-0524, S-0525, S-0527 and S-0529."
   by: flai
-  at: 2026-10-28T18:28:33Z
+  at: 2026-10-28T19:19:26Z
 finalized:
   by: alex
   at: 2026-10-28T12:56:09Z
