@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-10-28T13:04:27Z
+updated: 2026-10-28T13:02:30Z
 ---
 
 # Active streams
@@ -8,13 +8,13 @@ updated: 2026-10-28T13:04:27Z
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
 | [S-0499](S-0499.md) | events-socket.test.ts 'closes every events socket with 1001 when the server stops' fails now and then: a change listener is still attached when the server has closed | review | agent-S-0499 | 2026-10-28T13:00:30Z |
-| [S-0502](S-0502.md) | A thread with a pending orchestrator recommendation waits on the operator however long it takes, with no setting to confirm it after a threshold | in-progress | agent-S-0502 | 2026-10-28T12:47:39Z |
+| [S-0502](S-0502.md) | A thread with a pending orchestrator recommendation waits on the operator however long it takes, with no setting to confirm it after a threshold | in-progress | agent-S-0502 | 2026-10-28T13:05:09Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 106 | 908.1810 USD | 123480 | 2026-10-26T12:42:38Z |
-| [orchestrator](orchestrator.md) | 1134 | 1621.4979 USD | 1410092 | 2026-10-28T13:03:28Z |
+| [orchestrator](orchestrator.md) | 1138 | 1622.9325 USD | 1410186 | 2026-10-28T13:05:02Z |
 | [analyzer](analyzer.md) | 1 | 5.0040 USD | 454 | 2026-10-15T22:49:08Z |
-| [curator](curator.md) | 1 | 9.5910 USD | 1164 | 2026-10-28T13:02:01Z |
+| [curator](curator.md) | 2 | 11.3955 USD | 1317 | 2026-10-28T13:04:39Z |

@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:19Z
-updated: 2026-10-28T12:52:31Z
+updated: 2026-10-28T13:05:08Z
 transitions: []
 tags: [cli, template]
 topics: [cli, planning, orchestration, template]
@@ -43,17 +43,19 @@ usage:
           cache_read: 23734706
           cache_write: 175728
           cost: 5.2796
-draft: true
 cost_of_delay:
   value: 48.45
   by: planner-S-0419
   at: 2026-10-21T12:15:14Z
 forecast:
   duration: 1h
-  delivery: 2026-10-28T23:15:00Z
-  basis: "Its own forecast of 1h; 14th in the pull order with an in-progress limit of 5, behind S-0499, S-0502, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417 and S-0418."
+  delivery: 2026-10-28T21:55:00Z
+  basis: "Its own forecast of 1h; 14th in the pull order with an in-progress limit of 5, behind S-0502, S-0415, S-0414, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0416, S-0417 and S-0418."
   by: flai
-  at: 2026-10-28T12:52:31Z
+  at: 2026-10-28T13:02:30Z
+finalized:
+  by: alex
+  at: 2026-10-28T13:05:08Z
 ---
 # S-0419 The planner, the orchestrator, and the analyzer start through the path a defined role takes, with their prompts read from their role files, and behave exactly as today
 
