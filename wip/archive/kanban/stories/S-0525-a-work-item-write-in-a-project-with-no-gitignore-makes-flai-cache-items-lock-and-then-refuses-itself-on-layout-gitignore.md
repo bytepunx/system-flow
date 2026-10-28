@@ -3,10 +3,10 @@ id: S-0525
 type: story
 nature: remediation
 title: A work item write in a project with no .gitignore makes .flai-cache/items.lock and then refuses itself on layout.gitignore
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-28T12:53:57Z
-updated: 2026-10-28T22:52:18Z
+updated: 2026-10-28T23:11:58Z
 transitions:
   - to: ready
     at: 2026-10-28T22:51:53Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-28T22:52:00Z
     by: agent-S-0525
+  - to: review
+    at: 2026-10-28T23:00:00Z
+    by: agent-S-0525
+  - to: done
+    at: 2026-10-28T23:11:58Z
+    by: alex
 tags: [flai, check, cli]
 topics: [cli, testing]
 touches: [flai/internal/itemnew/itemnew.go, flai/internal/itemnew/itemnew_test.go, flai/internal/itemedit/itemedit.go, flai/internal/check/scope.go, design/adrs, design/adrs/README.md, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, design/issues/I-0191-a-work-item-write-in-a-project-with-no-gitignore-makes-flai-cache-items-lock-and-then-refuses-itself-on-layout-gitignore.md, design/issues/summary.md]
@@ -23,20 +29,39 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 493
+  priced_by: harness
+  turns:
+    - day: 2026-10-28
+      ceremony: 2
+      test_runs: 2
+      hand_edits: 1
+      work: 39
+  models:
+    - model: claude-opus-5-5
+      input: 96
+      output: 24023
+      cache_read: 7087010
+      cache_write: 221119
+      cost: 3.6672
   strategic:
     - kind: orchestrator
-      seconds: 182
+      seconds: 685
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 42
-          output: 624
-          cache_read: 14198828
-          cache_write: 17875
-          cost: 3.1218
+          input: 254
+          output: 4521
+          cache_read: 60275862
+          cache_write: 50253
+          cost: 13.2675
+        - model: claude-sonnet-5-5
+          input: 8
+          output: 59
+          cache_read: 75074
+          cache_write: 32687
+          cost: 0.0743
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -62,8 +87,8 @@ finalized:
 This story remediates [I-0191](../../../design/issues/I-0191-a-work-item-write-in-a-project-with-no-gitignore-makes-flai-cache-items-lock-and-then-refuses-itself-on-layout-gitignore.md), "A work item write in a project with no .gitignore makes .flai-cache/items.lock and then refuses itself on layout.gitignore". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0191 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0191 is closed with `flai issue close I-0191 --reason` saying what fixed it
+- [x] The cause I-0191 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0191 is closed with `flai issue close I-0191 --reason` saying what fixed it
 
 ## Tasks
 - T-2251 A checked creation refuses only a new finding inside the new item's story, with a test that reproduces I-0191

@@ -3,15 +3,36 @@ id: T-2154
 type: task
 nature: feature
 title: harness.Request gains the container fields and the claude-code adapter writes an HTTP MCP client configuration beside the stdio one
-status: backlog
+status: done
 parent: S-0507
 owner: alex
 created: 2026-10-26T04:47:49Z
-updated: 2026-10-26T04:47:49Z
-transitions: []
+updated: 2026-10-28T22:57:21Z
+transitions:
+  - to: ready
+    at: 2026-10-28T22:53:25Z
+    by: agent-S-0507
+  - to: in-progress
+    at: 2026-10-28T22:53:27Z
+    by: agent-S-0507
+  - to: done
+    at: 2026-10-28T22:57:21Z
+    by: agent-S-0507
 stream: S-0507
 tags: [cli, docker]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go]
+usage:
+  source: log
+  seconds: 234
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 162
+      cache_read: 1296184
+      cache_write: 91099
+      cost: 0.4723
 ---
 # T-2154 harness.Request gains the container fields and the claude-code adapter writes an HTTP MCP client configuration beside the stdio one
 

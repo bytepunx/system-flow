@@ -3,16 +3,37 @@ id: T-2254
 type: task
 nature: remediation
 title: I-0191 is closed with the reason that names the fix
-status: backlog
+status: done
 parent: S-0525
 owner: alex
 created: 2026-10-28T14:53:03Z
-updated: 2026-10-28T14:53:03Z
-transitions: []
+updated: 2026-10-28T22:58:47Z
+transitions:
+  - to: ready
+    at: 2026-10-28T22:58:05Z
+    by: agent-S-0525
+  - to: in-progress
+    at: 2026-10-28T22:58:06Z
+    by: agent-S-0525
+  - to: done
+    at: 2026-10-28T22:58:47Z
+    by: agent-S-0525
 stream: S-0525
 tags: [flai, issues]
 touches: [design/issues/I-0191-a-work-item-write-in-a-project-with-no-gitignore-makes-flai-cache-items-lock-and-then-refuses-itself-on-layout-gitignore.md, design/issues/summary.md]
 after: [T-2251]
+usage:
+  source: log
+  seconds: 41
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 11
+      output: 2727
+      cache_read: 804353
+      cache_write: 25096
+      cost: 0.4162
 ---
 # T-2254 I-0191 is closed with the reason that names the fix
 

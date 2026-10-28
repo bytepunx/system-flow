@@ -3,12 +3,18 @@ id: T-2178
 type: task
 nature: feature
 title: flai-cli.md, docker.md, go.md, and the operators' index describe pilot, the flai/internal/pilot package, and the layered images
-status: backlog
+status: in-progress
 parent: S-0507
 owner: alex
 created: 2026-10-26T04:52:20Z
-updated: 2026-10-26T04:52:20Z
-transitions: []
+updated: 2026-10-28T23:11:18Z
+transitions:
+  - to: ready
+    at: 2026-10-28T23:11:17Z
+    by: agent-S-0507
+  - to: in-progress
+    at: 2026-10-28T23:11:18Z
+    by: agent-S-0507
 stream: S-0507
 tags: [cli, docker]
 touches: [design/system/flai-cli.md, design/tech/docker.md, design/tech/go.md, docs/operators/index.md]

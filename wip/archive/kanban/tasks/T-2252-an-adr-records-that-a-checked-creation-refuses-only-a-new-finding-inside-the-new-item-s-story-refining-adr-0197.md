@@ -3,15 +3,36 @@ id: T-2252
 type: task
 nature: remediation
 title: An ADR records that a checked creation refuses only a new finding inside the new item's story, refining ADR-0197
-status: backlog
+status: done
 parent: S-0525
 owner: alex
 created: 2026-10-28T14:52:37Z
-updated: 2026-10-28T14:52:37Z
-transitions: []
+updated: 2026-10-28T22:57:51Z
+transitions:
+  - to: ready
+    at: 2026-10-28T22:53:07Z
+    by: agent-S-0525
+  - to: in-progress
+    at: 2026-10-28T22:53:08Z
+    by: agent-S-0525
+  - to: done
+    at: 2026-10-28T22:57:50Z
+    by: agent-S-0525
 stream: S-0525
 tags: [flai, adr]
-touches: [design/adrs/README.md]
+touches: [design/adrs/README.md, design/adrs/0213-a-checked-creation-of-a-work-item-refuses-only-a-new-finding-inside-the-new.md]
+usage:
+  source: log
+  seconds: 282
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 29
+      output: 7196
+      cache_read: 2122758
+      cache_write: 66231
+      cost: 1.0984
 ---
 # T-2252 An ADR records that a checked creation refuses only a new finding inside the new item's story, refining ADR-0197
 

@@ -3,16 +3,37 @@ id: T-1734
 type: task
 nature: feature
 title: The design, the user guide, and the changelog say that flai guard reads every role's rules from its role file
-status: backlog
+status: done
 parent: S-0416
 owner: alex
 created: 2026-10-16T05:44:33Z
-updated: 2026-10-28T20:33:06Z
-transitions: []
+updated: 2026-10-28T22:27:19Z
+transitions:
+  - to: ready
+    at: 2026-10-28T22:13:47Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-28T22:13:48Z
+    by: system-flow
+  - to: done
+    at: 2026-10-28T22:27:19Z
+    by: agent-S-0416
 stream: S-0416
 tags: [cli, template]
-touches: [design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, template/CHANGELOG.md, design/system/agent-adapters.md, flai/cmd/guard.go, docs/users/flai-reference.md, design/system/project-manifest.md]
-after: [T-1731, T-1732, T-1733]
+touches: [design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, template/CHANGELOG.md, design/system/agent-adapters.md, flai/cmd/guard.go, docs/users/flai-reference.md, design/system/project-manifest.md, template/template.yaml]
+after: [T-1731, T-1732]
+usage:
+  source: log
+  seconds: 811
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 83
+      output: 32992
+      cache_read: 6967893
+      cache_write: 321429
+      cost: 3.8095
 ---
 # T-1734 The design, the user guide, and the changelog say that flai guard reads every role's rules from its role file
 

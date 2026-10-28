@@ -3,11 +3,11 @@ id: T-1730
 type: task
 nature: feature
 title: The planner's and the analyzer's guard rules are read from planner.md and analyzer.md through the role path, with their guard tests unchanged
-status: in-progress
+status: done
 parent: S-0416
 owner: alex
 created: 2026-10-16T05:44:09Z
-updated: 2026-10-28T21:06:21Z
+updated: 2026-10-28T22:27:34Z
 transitions:
   - to: ready
     at: 2026-10-28T21:05:56Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-28T21:05:57Z
     by: system-flow
+  - to: done
+    at: 2026-10-28T21:40:33Z
+    by: agent-S-0416
 stream: S-0416
 tags: [cli, template]
-touches: [flai/internal/guard/guard.go, design/workflows/roles/planner.md, design/workflows/roles/analyzer.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/analyzer.md, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/guard/call.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/cmd/guard.go]
+touches: [flai/internal/guard/guard.go, design/workflows/roles/planner.md, design/workflows/roles/analyzer.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/analyzer.md, flai/internal/guard/call.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/cmd/guard.go, docs/operators/settings.md]
 after: [T-1729]
+usage:
+  source: log
+  seconds: 2076
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 68
+      output: 26973
+      cache_read: 5696638
+      cache_write: 262786
+      cost: 3.1145
 ---
 # T-1730 The planner's and the analyzer's guard rules are read from planner.md and analyzer.md through the role path, with their guard tests unchanged
 

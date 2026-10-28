@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:43:39Z
-updated: 2026-10-28T22:52:24Z
+updated: 2026-10-28T23:11:10Z
 transitions:
   - to: ready
     at: 2026-10-28T22:51:54Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0507
 tags: [cli, docker]
 topics: [harness, docker]
-touches: [flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/pilot/request.go, flai/internal/pilot/request_test.go, flai/internal/pilot/run.go, flai/internal/pilot/run_test.go, flai/pilot/main.go, flai/images/bedrock/Dockerfile, flai/images/claude-code/Dockerfile, scripts/agent-image.sh, scripts/agent-container.sh, scripts/README.md, design/adrs/README.md, design/adrs, design/system/flai-cli.md, design/tech/docker.md, design/tech/go.md, docs/operators/index.md]
+touches: [flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/pilot/request.go, flai/internal/pilot/request_test.go, flai/internal/pilot/run.go, flai/internal/pilot/run_test.go, flai/pilot/main.go, flai/images/bedrock/Dockerfile, flai/images/claude-code/Dockerfile, scripts/agent-image.sh, scripts/agent-container.sh, scripts/README.md, design/adrs/README.md, design/adrs, design/system/flai-cli.md, design/tech/docker.md, design/tech/go.md, docs/operators/index.md, design/issues/I-0224-scripts-agent-container-sh-can-run-only-a-story-s-own-agent-under-the-story-s-own-name-so-a-trial-run-of-the-image-acts-on-the-live-story.md, design/issues/summary.md]
 after: [S-0505]
 agent:
   harness: claude-code
@@ -25,9 +25,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1140
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-28
+      hand_edits: 3
+      work: 37
+  models:
+    - model: claude-opus-5-5
+      input: 200
+      output: 962
+      cache_read: 10325944
+      cache_write: 526108
+      cost: 3.6944
   strategic:
     - kind: orchestrator
       seconds: 251
@@ -61,11 +73,11 @@ E-0029 names the common tooling inside the container `pilot`: a second Go binary
 
 ## Acceptance criteria
 
-- [ ] An ADR refining ADR-0203 records the layered images (bedrock: a small Linux base, `git`, `flai`, and `pilot`; one layer per inner harness, `claude-code` first), pilot as the container's entrypoint in place of `flai agent run`, that the images are built locally by `scripts/agent-image.sh` within E-0029 with the signed, published image left to a later story, and that pilot relays the inner harness's log unchanged so flai's readers stay per harness
-- [ ] `go build ./pilot` in `flai/` builds the `pilot` binary from `flai/pilot/main.go` and `flai/internal/pilot`, `flai/images/bedrock/Dockerfile` builds it beside `flai` and sets it as the image's `ENTRYPOINT`, the claude-code layer keeps that entrypoint, and `scripts/agent-image.sh` still builds both images
-- [ ] pilot reads one JSON start request on standard input, `harness.Request` plus `inner` (the harness to run), `mcp_url_env` and `mcp_token_env` (the variables holding the host's MCP URL and token), and `cache` (the mounted folder), refuses a malformed request or an unknown inner harness with one line on standard error and exit code 2, and never writes the environment or a token to any log
-- [ ] For `inner: claude-code`, pilot writes an MCP client configuration under the cache folder naming the HTTP server with the bearer token and `X-Flai-Agent`, sets `CLAUDE_CONFIG_DIR` to a folder under the cache, and starts `claude` with the argv the claude-code adapter's `Start` gives for the request, `--mcp-config` and `--strict-mcp-config` naming the file, `--session-id` on a first start and `--resume` on a later one with the same session, and `--agent` for a strategic role, so that a run of this repository's planner or a story's agent inside the image is driven as `flai serve` drives it on the host
-- [ ] pilot copies the inner harness's standard output to its own line by line unchanged, writes its own diagnostics to standard error prefixed `pilot:`, forwards `SIGTERM` to the inner harness, and exits with its exit code; a test with a fake inner harness checks the relay, the exit code, the resume, and the refusals
+- [x] An ADR refining ADR-0203 records the layered images (bedrock: a small Linux base, `git`, `flai`, and `pilot`; one layer per inner harness, `claude-code` first), pilot as the container's entrypoint in place of `flai agent run`, that the images are built locally by `scripts/agent-image.sh` within E-0029 with the signed, published image left to a later story, and that pilot relays the inner harness's log unchanged so flai's readers stay per harness
+- [x] `go build ./pilot` in `flai/` builds the `pilot` binary from `flai/pilot/main.go` and `flai/internal/pilot`, `flai/images/bedrock/Dockerfile` builds it beside `flai` and sets it as the image's `ENTRYPOINT`, the claude-code layer keeps that entrypoint, and `scripts/agent-image.sh` still builds both images
+- [x] pilot reads one JSON start request on standard input, `harness.Request` plus `inner` (the harness to run), `mcp_url_env` and `mcp_token_env` (the variables holding the host's MCP URL and token), and `cache` (the mounted folder), refuses a malformed request or an unknown inner harness with one line on standard error and exit code 2, and never writes the environment or a token to any log
+- [x] For `inner: claude-code`, pilot writes an MCP client configuration under the cache folder naming the HTTP server with the bearer token and `X-Flai-Agent`, sets `CLAUDE_CONFIG_DIR` to a folder under the cache, and starts `claude` with the argv the claude-code adapter's `Start` gives for the request, `--mcp-config` and `--strict-mcp-config` naming the file, `--session-id` on a first start and `--resume` on a later one with the same session, and `--agent` for a strategic role, so that a run of this repository's planner or a story's agent inside the image is driven as `flai serve` drives it on the host
+- [x] pilot copies the inner harness's standard output to its own line by line unchanged, writes its own diagnostics to standard error prefixed `pilot:`, forwards `SIGTERM` to the inner harness, and exits with its exit code; a test with a fake inner harness checks the relay, the exit code, the resume, and the refusals
 - [ ] `design/system/flai-cli.md` names the `pilot` binary and the `flai/internal/pilot` package, `design/tech/docker.md` lists the layered images and the entrypoint, `design/tech/go.md` names the second binary, and `docs/operators/index.md` says what pilot is and that it reads no file of the operator's
 
 ## Tasks

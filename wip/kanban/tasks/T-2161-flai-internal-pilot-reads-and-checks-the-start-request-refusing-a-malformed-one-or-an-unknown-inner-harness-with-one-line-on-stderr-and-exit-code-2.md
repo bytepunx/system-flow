@@ -3,16 +3,37 @@ id: T-2161
 type: task
 nature: feature
 title: flai/internal/pilot reads and checks the start request, refusing a malformed one or an unknown inner harness with one line on stderr and exit code 2
-status: backlog
+status: done
 parent: S-0507
 owner: alex
 created: 2026-10-26T04:49:12Z
-updated: 2026-10-26T04:49:12Z
-transitions: []
+updated: 2026-10-28T23:00:21Z
+transitions:
+  - to: ready
+    at: 2026-10-28T22:57:33Z
+    by: agent-S-0507
+  - to: in-progress
+    at: 2026-10-28T22:57:34Z
+    by: agent-S-0507
+  - to: done
+    at: 2026-10-28T23:00:21Z
+    by: agent-S-0507
 stream: S-0507
 tags: [cli, docker]
 touches: [flai/internal/pilot/request.go, flai/internal/pilot/request_test.go]
 after: [T-2154]
+usage:
+  source: log
+  seconds: 167
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 28
+      output: 109
+      cache_read: 982591
+      cache_write: 58017
+      cost: 0.3543
 ---
 # T-2161 flai/internal/pilot reads and checks the start request, refusing a malformed one or an unknown inner harness with one line on stderr and exit code 2
 

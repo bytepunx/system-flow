@@ -3,16 +3,37 @@ id: T-2174
 type: task
 nature: feature
 title: The bedrock image builds pilot beside flai and sets it as the entrypoint, the claude-code layer keeps it, and a container started with a request on stdin runs Claude Code through pilot
-status: backlog
+status: done
 parent: S-0507
 owner: alex
 created: 2026-10-26T04:51:35Z
-updated: 2026-10-26T12:35:08Z
-transitions: []
+updated: 2026-10-28T23:11:02Z
+transitions:
+  - to: ready
+    at: 2026-10-28T23:06:40Z
+    by: agent-S-0507
+  - to: in-progress
+    at: 2026-10-28T23:06:41Z
+    by: agent-S-0507
+  - to: done
+    at: 2026-10-28T23:11:02Z
+    by: agent-S-0507
 stream: S-0507
 tags: [cli, docker]
 touches: [flai/images/bedrock/Dockerfile, flai/images/claude-code/Dockerfile, scripts/agent-image.sh, scripts/agent-container.sh, scripts/README.md]
 after: [T-2168]
+usage:
+  source: log
+  seconds: 257
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 26
+      output: 120
+      cache_read: 3301250
+      cache_write: 28540
+      cost: 1.1335
 ---
 # T-2174 The bedrock image builds pilot beside flai and sets it as the entrypoint, the claude-code layer keeps it, and a container started with a request on stdin runs Claude Code through pilot
 

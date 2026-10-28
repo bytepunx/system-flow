@@ -3,16 +3,37 @@ id: T-2168
 type: task
 nature: feature
 title: pilot starts the inner harness through its adapter with the MCP file, CLAUDE_CONFIG_DIR, session and resume, relays its stdout unchanged, forwards SIGTERM, and exits with its code
-status: backlog
+status: done
 parent: S-0507
 owner: alex
 created: 2026-10-26T04:50:27Z
-updated: 2026-10-26T04:50:27Z
-transitions: []
+updated: 2026-10-28T23:06:14Z
+transitions:
+  - to: ready
+    at: 2026-10-28T23:00:29Z
+    by: agent-S-0507
+  - to: in-progress
+    at: 2026-10-28T23:00:31Z
+    by: agent-S-0507
+  - to: done
+    at: 2026-10-28T23:06:14Z
+    by: agent-S-0507
 stream: S-0507
 tags: [cli, docker]
-touches: [flai/internal/pilot/run.go, flai/internal/pilot/run_test.go, flai/pilot/main.go]
+touches: [flai/internal/pilot/run.go, flai/internal/pilot/run_test.go, flai/pilot/main.go, flai/internal/harness/adapters.go]
 after: [T-2161]
+usage:
+  source: log
+  seconds: 343
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 52
+      output: 209
+      cache_read: 2372908
+      cache_write: 106167
+      cost: 0.844
 ---
 # T-2168 pilot starts the inner harness through its adapter with the MCP file, CLAUDE_CONFIG_DIR, session and resume, relays its stdout unchanged, forwards SIGTERM, and exits with its code
 

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1879
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 176
-      output: 955
-      cache_read: 17367504
-      cache_write: 818866
-      cost: 6.1738
+      input: 211
+      output: 83558
+      cache_read: 17647148
+      cache_write: 814064
+      cost: 9.648
 ---
 # T-1729 flai guard decides a defined role's own calls from its role file: tools, commands, and file edits under their conditions, gated by the manifest's permissions at each call
 

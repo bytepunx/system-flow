@@ -3,16 +3,37 @@ id: T-1731
 type: task
 nature: feature
 title: The orchestrator's guard rules, its permissions and its thread rules, are read from orchestrator.md through the role path, with its permission tests unchanged
-status: backlog
+status: done
 parent: S-0416
 owner: alex
 created: 2026-10-16T05:44:15Z
-updated: 2026-10-21T11:40:18Z
-transitions: []
+updated: 2026-10-28T22:27:34Z
+transitions:
+  - to: ready
+    at: 2026-10-28T21:41:02Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-28T21:41:03Z
+    by: system-flow
+  - to: done
+    at: 2026-10-28T22:05:27Z
+    by: agent-S-0416
 stream: S-0416
 tags: [cli, template]
-touches: [flai/internal/guard/guard.go, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go]
+touches: [flai/internal/guard/guard.go, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/guard/call.go, flai/cmd/guard.go, flai/internal/roles/baseline/orchestrator.md]
 after: [T-1730]
+usage:
+  source: log
+  seconds: 1464
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 72
+      output: 28519
+      cache_read: 6023084
+      cache_write: 277845
+      cost: 3.2929
 ---
 # T-1731 The orchestrator's guard rules, its permissions and its thread rules, are read from orchestrator.md through the role path, with its permission tests unchanged
 

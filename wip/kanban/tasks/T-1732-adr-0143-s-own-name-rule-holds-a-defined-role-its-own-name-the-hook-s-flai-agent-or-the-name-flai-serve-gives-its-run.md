@@ -3,11 +3,11 @@ id: T-1732
 type: task
 nature: feature
 title: ADR-0143's own-name rule holds a defined role, its own name the hook's FLAI_AGENT or the name flai serve gives its run
-status: in-progress
+status: done
 parent: S-0416
 owner: alex
 created: 2026-10-16T05:44:19Z
-updated: 2026-10-28T21:06:00Z
+updated: 2026-10-28T21:40:46Z
 transitions:
   - to: ready
     at: 2026-10-28T21:05:58Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-28T21:06:00Z
     by: system-flow
+  - to: done
+    at: 2026-10-28T21:40:46Z
+    by: agent-S-0416
 stream: S-0416
 tags: [cli]
 touches: [flai/internal/guard/authors.go, flai/internal/guard/authors_test.go, flai/internal/guard/shared.go, design/adrs, design/adrs/README.md]
 after: [T-1729]
+usage:
+  source: log
+  seconds: 2086
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 44
+      output: 17460
+      cache_read: 3687579
+      cache_write: 170108
+      cost: 2.0161
 ---
 # T-1732 ADR-0143's own-name rule holds a defined role, its own name the hook's FLAI_AGENT or the name flai serve gives its run
 

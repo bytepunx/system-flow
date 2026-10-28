@@ -3,15 +3,36 @@ id: T-2251
 type: task
 nature: remediation
 title: A checked creation refuses only a new finding inside the new item's story, with a test that reproduces I-0191
-status: backlog
+status: done
 parent: S-0525
 owner: alex
 created: 2026-10-28T14:52:28Z
-updated: 2026-10-28T14:52:28Z
-transitions: []
+updated: 2026-10-28T22:56:55Z
+transitions:
+  - to: ready
+    at: 2026-10-28T22:53:04Z
+    by: agent-S-0525
+  - to: in-progress
+    at: 2026-10-28T22:53:05Z
+    by: agent-S-0525
+  - to: done
+    at: 2026-10-28T22:56:55Z
+    by: agent-S-0525
 stream: S-0525
 tags: [flai, check]
 touches: [flai/internal/itemnew/itemnew.go, flai/internal/itemnew/itemnew_test.go, flai/internal/itemedit/itemedit.go, flai/internal/check/scope.go]
+usage:
+  source: log
+  seconds: 230
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 15
+      output: 3645
+      cache_read: 1075188
+      cache_write: 33547
+      cost: 0.5564
 ---
 # T-2251 A checked creation refuses only a new finding inside the new item's story, with a test that reproduces I-0191
 

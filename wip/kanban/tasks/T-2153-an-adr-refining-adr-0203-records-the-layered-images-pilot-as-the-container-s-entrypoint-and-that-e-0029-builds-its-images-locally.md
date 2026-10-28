@@ -3,15 +3,36 @@ id: T-2153
 type: task
 nature: feature
 title: An ADR refining ADR-0203 records the layered images, pilot as the container's entrypoint, and that E-0029 builds its images locally
-status: backlog
+status: done
 parent: S-0507
 owner: alex
 created: 2026-10-26T04:47:38Z
-updated: 2026-10-26T04:47:38Z
-transitions: []
+updated: 2026-10-28T22:57:11Z
+transitions:
+  - to: ready
+    at: 2026-10-28T22:53:23Z
+    by: agent-S-0507
+  - to: in-progress
+    at: 2026-10-28T22:53:24Z
+    by: agent-S-0507
+  - to: done
+    at: 2026-10-28T22:57:11Z
+    by: agent-S-0507
 stream: S-0507
 tags: [cli, docker]
-touches: [design/adrs/README.md, design/tech/docker.md]
+touches: [design/adrs/README.md, design/tech/docker.md, design/adrs/0212-the-agent-images-are-layered-a-bedrock-layer-and-one-layer-per-inner-harness.md]
+usage:
+  source: log
+  seconds: 227
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 24
+      output: 94
+      cache_read: 690407
+      cache_write: 73248
+      cost: 0.26
 ---
 # T-2153 An ADR refining ADR-0203 records the layered images, pilot as the container's entrypoint, and that E-0029 builds its images locally
 

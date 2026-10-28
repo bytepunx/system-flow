@@ -3,38 +3,54 @@ id: S-0535
 type: story
 nature: feature
 title: "flai emits the events the orchestrator's trigger names: planned, ready-empty, release-due, a thread coming to await an agent, and the conditions awaits-orchestrator, draft-changed, and to-review"
-status: ready
+status: in-progress
 parent: E-0030
 owner: alex
 created: 2026-10-28T21:02:24Z
-updated: 2026-10-28T22:22:16Z
+updated: 2026-10-28T22:45:19Z
 transitions:
   - to: ready
     at: 2026-10-28T22:21:19Z
     by: alex
+  - to: in-progress
+    at: 2026-10-28T22:28:24Z
+    by: agent-S-0535
 tags: [flai, serve, events]
 topics: [orchestration, cli, mcp, template]
-touches: [flai/internal/serve, flai/internal/mcpserver, flai/internal/workitem, design/system/flai-cli.md, design/workflows/roles/README.md, design/adrs, design/adrs/README.md, flai/internal/inbox/events.go, flai/internal/inbox/events_test.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/inbox/threadevents.go, flai/internal/inbox/threadevents_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/check/roles_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/readyempty.go, flai/internal/serve/readyempty_test.go, flai/internal/serve/agents.go, flai/cmd/accept.go, flai/cmd/accept_release_due_test.go, flai/internal/release/evaluate.go, flai/internal/release/evaluate_test.go, template/root/design/workflows/roles/README.md, template/CHANGELOG.md, design/system/agent-narrative.md, docs/users/flai.md]
+touches: [flai/internal/serve, flai/internal/mcpserver, design/system/flai-cli.md, design/workflows/roles/README.md, design/adrs, design/adrs/README.md, flai/internal/inbox/events.go, flai/internal/inbox/events_test.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/inbox/threadevents.go, flai/internal/inbox/threadevents_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/check/roles_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/readyempty.go, flai/internal/serve/readyempty_test.go, flai/internal/serve/agents.go, flai/cmd/accept.go, flai/cmd/accept_release_due_test.go, flai/internal/release/evaluate.go, flai/internal/release/evaluate_test.go, template/root/design/workflows/roles/README.md, template/CHANGELOG.md, design/system/agent-narrative.md, docs/users/flai.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 987
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-28
+      ceremony: 2
+      hand_edits: 2
+      work: 33
+  models:
+    - model: claude-opus-5-5
+      input: 164
+      output: 888
+      cache_read: 8614820
+      cache_write: 486131
+      cost: 3.0943
   strategic:
     - kind: orchestrator
-      seconds: 415
+      seconds: 1581
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 166
-          output: 2890
-          cache_read: 24000557
-          cache_write: 34813
-          cost: 5.2889
+          input: 400
+          output: 7114
+          cache_read: 67997825
+          cache_write: 71433
+          cost: 14.978
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -60,7 +76,7 @@ ADR-0209 §1 lists the reasons the orchestrator is started for in ADR-0207's tri
 - [ ] `planned` is an event, with the item planned and the IDs written, emitted when a planner's run ends with its items written, and reported by `wait_for_events` and `inbox`
 - [ ] `ready-empty` is an event emitted when the ready column drains below the in-progress limit's room, once per draining
 - [ ] `release-due` is an event emitted when an acceptance changes what `flai release --evaluate` would answer
-- [ ] `awaits-orchestrator`, `draft-changed`, and `to-review` are conditions `flai check` accepts on `thread`, `edited`, and `moved` triggers, each implemented and tested
+- [x] `awaits-orchestrator`, `draft-changed`, and `to-review` are conditions `flai check` accepts on `thread`, `edited`, and `moved` triggers, each implemented and tested
 - [ ] A `thread` event exists for a thread coming to await an agent, with the thread and whom it awaits, under ADR-0181's rule
 - [ ] The design (`flai-cli.md`'s event table, `design/workflows/roles/README.md`'s trigger table) and the MCP descriptions name each event and condition
 
@@ -69,7 +85,7 @@ ADR-0209 §1 lists the reasons the orchestrator is started for in ADR-0207's tri
 - T-2292 flai appends the events it emits to a log under .flai-cache, and inbox.CatchUp reads them back once, described, under the 50-event cap, waking wait_for_events
 - T-2293 roles knows the events moved, thread, planned, ready-empty, and release-due, and the trigger conditions awaits-orchestrator, draft-changed, and to-review, each matching an event, which flai check accepts on their triggers
 - T-2294 A planner's run that ends with items written appends a planned event naming the item planned and the IDs written
-- T-2295 flai serve appends one ready-empty event when the ready column empties while the in-progress limit has room, and not again until ready refills
+- T-2295 flai serve appends one ready-empty event when the ready column drains below the in-progress limit's room, and not again until ready reaches the room
 - T-2296 flai accept appends a release-due event when the acceptance changes what flai release --evaluate answers
 - T-2297 inbox.CatchUp reports a thread event when a thread comes to await the reader, or for the orchestrator the operator, naming the thread, its item, and whom it awaits under ADR-0181
 - T-2298 The wait_for_events and inbox descriptions and the server's instructions name planned, ready-empty, release-due, and thread, and a test reads each back through both tools

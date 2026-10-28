@@ -3,16 +3,37 @@ id: T-2253
 type: task
 nature: remediation
 title: The design and the user documentation say a checked creation is scoped to the new item's story as a checked edit is
-status: backlog
+status: done
 parent: S-0525
 owner: alex
 created: 2026-10-28T14:52:55Z
-updated: 2026-10-28T14:52:55Z
-transitions: []
+updated: 2026-10-28T22:58:34Z
+transitions:
+  - to: ready
+    at: 2026-10-28T22:58:03Z
+    by: agent-S-0525
+  - to: in-progress
+    at: 2026-10-28T22:58:04Z
+    by: agent-S-0525
+  - to: done
+    at: 2026-10-28T22:58:34Z
+    by: agent-S-0525
 stream: S-0525
 tags: [flai, docs]
 touches: [design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md]
 after: [T-2251, T-2252]
+usage:
+  source: log
+  seconds: 30
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 5
+      output: 1330
+      cache_read: 392345
+      cache_write: 12241
+      cost: 0.203
 ---
 # T-2253 The design and the user documentation say a checked creation is scoped to the new item's story as a checked edit is
 

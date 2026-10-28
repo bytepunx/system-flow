@@ -25,21 +25,20 @@ topics: [cli, orchestration, planning, template, conventions]
 touches: [flai/internal/serve, flai/internal/guard, flai/internal/context, flai/internal/hostapi, flai/cmd, flaiover/src, design/system/strategic-agents.md, design/system/metrics.md, design/conventions/strategic-agents.md, ".claude/agents", docs/operators/index.md, docs/users/flai.md, template]
 usage:
   source: sum
-  seconds: 7908
-  estimated: true
-  priced_by: estimate
+  seconds: 14144
+  priced_by: harness
   turns:
     - day: 2026-10-28
-      ceremony: 8
-      hand_edits: 6
-      work: 145
+      ceremony: 9
+      hand_edits: 7
+      work: 188
   models:
     - model: claude-opus-5-5
-      input: 1004
-      output: 328609
-      cache_read: 65063263
-      cache_write: 2908444
-      cost: 34.3115
+      input: 1440
+      output: 594108
+      cache_read: 99426368
+      cache_write: 4464831
+      cost: 57.3015
   strategic:
     - kind: planner
       seconds: 1866
@@ -64,21 +63,21 @@ usage:
           cache_write: 294016
           cost: 1.282
     - kind: orchestrator
-      seconds: 11381
+      seconds: 12619
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1772
-          output: 28030
-          cache_read: 415041772
-          cache_write: 735025
-          cost: 93.6141
+          input: 1830
+          output: 28907
+          cache_read: 426330620
+          cache_write: 759799
+          cost: 96.1035
         - model: claude-sonnet-5-5
-          input: 24
-          output: 131
-          cache_read: 327754
-          cache_write: 114800
-          cost: 0.3031
+          input: 44
+          output: 199
+          cache_read: 791923
+          cache_write: 190371
+          cost: 0.6752
 ---
 # E-0024 Workflows as data: a project defines a strategic role or a repeatable formula of steps in files flai runs, and the built-in roles are expressed the same way, so a new role or a release process needs no flai release
 
