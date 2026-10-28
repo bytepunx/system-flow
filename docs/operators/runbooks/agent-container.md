@@ -52,17 +52,27 @@ Before the run it writes two things to `.flai-cache/agents/S-nnnn/`, which is gi
 
 - `mcp.json`, mode 600, naming the HTTP MCP server with the token. It holds a secret: do not copy it or commit it.
 - `.credentials.json`, a symbolic link to `/run/claude-login/.credentials.json`, the login inside the container. It does not resolve on the host, and nothing from the login is copied.
+- `flai/`, an empty folder for the container's flai. On its first run that flai writes its config there, `flai/config.json`, and keeps its cache in `flai/cache`.
 
 ### What it mounts
 
 | Host path | In the container | Mode | For |
 |-----------|------------------|------|-----|
 | `.flai-cache/worktrees/S-nnnn` | the same path, the working directory | read-write | the story's worktree |
-| `.flai-cache/agents/S-nnnn` | the same path, as `CLAUDE_CONFIG_DIR` | read-write | Claude Code's state: settings, transcript, caches |
+| `.flai-cache/agents/S-nnnn` | the same path, as `CLAUDE_CONFIG_DIR` | read-write | Claude Code's state: settings, transcript, caches; and in `flai/`, the container's flai config and cache |
 | `~/.claude` (`FLAI_CLAUDE_LOGIN`) | `/run/claude-login` | read-only | the login; only `.credentials.json` is read |
 | `.git` of the main checkout, only with `FLAI_AGENT_GIT_MOUNT=1` | the same path | read-write | git in the worktree, whose `.git` file points there |
 
 Nothing else is mounted. The Docker socket is never mounted, so the agent cannot start containers or reach the host's Docker. Without `FLAI_AGENT_GIT_MOUNT=1`, git in the worktree fails with `not a git repository`, and the agent cannot commit or close a task.
+
+The script sets two variables in the container so that its flai writes nothing under the container's home, `/home/agent`:
+
+| Variable | Points at | For |
+|----------|-----------|-----|
+| `FLAI_CONFIG` | `.flai-cache/agents/S-nnnn/flai/config.json` | the config file the container's flai reads, and writes with defaults on its first run |
+| `FLAI_CACHE_DIR` | `.flai-cache/agents/S-nnnn/flai/cache` | the `cache_dir` that first run writes into that config |
+
+Both are host paths, the same inside the container, in the mounted agent folder. They do not touch the host's flai config: the script's own `flai mcp status` and `flai mcp token` run on the host, with the `FLAI_CONFIG` that `scripts/env.sh` sets there.
 
 ### Settings
 

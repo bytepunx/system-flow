@@ -7,6 +7,8 @@
 # Claude login (FLAI_CLAUDE_LOGIN, default ~/.claude) read-only at /run/claude-login; nothing else,
 # never the Docker socket. The agent reaches the project's HTTP MCP server, the one `flai mcp
 # status` names, with the token from `flai mcp token`, through .flai-cache/agents/S-nnnn/mcp.json.
+# The container's flai keeps its config and cache under .flai-cache/agents/S-nnnn/flai (FLAI_CONFIG,
+# FLAI_CACHE_DIR), so nothing is written under the container's home.
 # FLAI_BIN       the flai that answers mcp status and token (default: the flai on PATH, installed)
 # FLAI_AGENT_NETWORK  bridge (default: host.docker.internal by host-gateway) or host
 # FLAI_AGENT_MODEL    claude's --model, such as haiku (default: claude's own)
@@ -63,7 +65,7 @@ case "$NETWORK" in
 esac
 AGENT="agent-$STORY"
 SESSION="${FLAI_SESSION:-$(cat /proc/sys/kernel/random/uuid 2>/dev/null || date +%s)}"
-mkdir -p "$AGENT_DIR"
+mkdir -p "$AGENT_DIR/flai"
 chmod 700 "$AGENT_DIR"
 # Claude Code finds its login in CLAUDE_CONFIG_DIR: a link to the read-only mount, not a copy.
 ln -sfn "$LOGIN_IN/.credentials.json" "$AGENT_DIR/.credentials.json"
@@ -90,4 +92,5 @@ docker run --rm -i --user "$(id -u):$(id -g)" $NET_ARGS \
   -v "$LOGIN:$LOGIN_IN:ro" $GIT_ARGS \
   -e "CLAUDE_CONFIG_DIR=$AGENT_DIR" -e "FLAI_AGENT=$AGENT" -e "FLAI_SESSION=$SESSION" \
   -e "FLAI_STORY=$STORY" \
+  -e "FLAI_CONFIG=$AGENT_DIR/flai/config.json" -e "FLAI_CACHE_DIR=$AGENT_DIR/flai/cache" \
   "$IMAGE" "$@" < "${PROMPT:-/dev/stdin}"
