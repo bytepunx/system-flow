@@ -306,7 +306,10 @@ func TestRequestMergeIsAnsweredByFlaiServesMergePass(t *testing.T) {
 	if e := h.last(); e.Outcome != "done" || !strings.Contains(e.Detail, "by squash") {
 		t.Errorf("the journal: %+v", e)
 	}
-	if s := h.logs.String(); !strings.Contains(s, "pull request merged") || !strings.Contains(s, "story="+lab.story) || strings.Contains(s, lab.token) {
+	// The log line follows the journal entry, so a loaded host can still be
+	// writing it (S-0507, TH-0724).
+	waitFor(t, "the merge logged", func() bool { return strings.Contains(h.logs.String(), "pull request merged") })
+	if s := h.logs.String(); !strings.Contains(s, "story="+lab.story) || strings.Contains(s, lab.token) {
 		t.Errorf("the log of the merge, which must not hold the token:\n%s", s)
 	}
 }

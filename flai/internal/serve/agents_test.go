@@ -2678,8 +2678,17 @@ func TestAStorySentBackIsStartedAfreshOrBeforeARestart(t *testing.T) {
 		if strings.Contains(string(got), "--resume") || strings.Contains(string(got), "story_start") {
 			t.Errorf("a new session resumed, or was told to start the story:\n%s", got)
 		}
-		if j := lab.entries(); len(j) != 1 || !strings.Contains(j[0].Detail, "in a new session, flai having sent it back from review on "+th.ID) {
+		// One start. The stub ends with the story in progress, so flai serve
+		// may journal the thread it opens for that as soon as it ends; that
+		// entry is not a second start (S-0507, TH-0724).
+		j := lab.entries()
+		if len(j) == 0 || !strings.Contains(j[0].Detail, "in a new session, flai having sent it back from review on "+th.ID) {
 			t.Errorf("journal: %+v", j)
+		}
+		for _, e := range j[min(1, len(j)):] {
+			if strings.HasPrefix(e.Detail, "started ") {
+				t.Errorf("started twice: %+v", j)
+			}
 		}
 	})
 	t.Run("a failed run from before the send back", func(t *testing.T) {
