@@ -112,6 +112,41 @@ func TestValidRoleFilesAreClean(t *testing.T) {
 	}
 }
 
+// S-0535 (ADR-0211): a trigger naming each new event, and each new trigger
+// condition on its event, passes flai check, and to-backlog still qualifies
+// item_move beside the {event: moved} it now qualifies.
+func TestNewTriggerEventsAndConditionsAreClean(t *testing.T) {
+	repo := rolesProject(t, map[string]string{"reviewer.md": roleFile("reviewer", map[string]string{
+		"trigger": "trigger: [asked, {event: moved}, {event: thread}, {event: planned}, {event: ready-empty}, {event: release-due}, " +
+			"{event: moved, when: to-review}, {event: moved, when: to-backlog}, {event: edited, when: draft-changed}, {event: thread, when: awaits-orchestrator}]",
+		"  tools": "  tools: [Read, Grep, Write, mcp__flai__board, mcp__flai__inbox, mcp__flai__issue_new, mcp__flai__item_move]",
+		"tools":   "tools: [inbox, issue_new, {call: item_move, when: to-backlog}]",
+	})})
+	if got := roleFindings(repo); len(got) != 0 {
+		t.Errorf("the new events and conditions: %+v", got)
+	}
+	if got := findings(t, repo, roles.CodeFile); len(got) != 0 {
+		t.Errorf("flai check on the new events and conditions: %+v", got)
+	}
+}
+
+// S-0535 (ADR-0211): each new trigger condition on an event it does not
+// qualify is roles.file on the trigger's line.
+func TestNewTriggerConditionsOnTheWrongEvent(t *testing.T) {
+	for _, tc := range []struct{ trigger, says string }{
+		{"{event: edited, when: to-review}", "it qualifies an {event} entry for moved"},
+		{"{event: accepted, when: to-backlog}", "it qualifies an {event} entry for moved"},
+		{"{event: moved, when: draft-changed}", "it qualifies an {event} entry for edited"},
+		{"{event: thread-opened, when: awaits-orchestrator}", "it qualifies an {event} entry for thread"},
+	} {
+		repo := rolesProject(t, map[string]string{"reviewer.md": roleFile("reviewer", map[string]string{"trigger": "trigger: [asked, " + tc.trigger + "]"})})
+		got := roleFindings(repo)
+		if len(got) != 1 || got[0].Level != Error || got[0].Rule != roles.CodeFile || got[0].Line != 11 || !strings.Contains(got[0].Message, tc.says) {
+			t.Errorf("%s: %+v, want one roles.file error on line 11 saying %q", tc.trigger, got, tc.says)
+		}
+	}
+}
+
 // S-0414: flai check reports roles.file, roles.grant, and roles.definition as
 // errors on the line of the field each is about, in the role file.
 func TestRoleFileProblemsAreErrorsOnTheirLine(t *testing.T) {

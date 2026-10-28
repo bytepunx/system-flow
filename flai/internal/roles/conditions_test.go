@@ -15,14 +15,13 @@ func TestConditionsTableIsWellFormed(t *testing.T) {
 		if !kebab.MatchString(c.Name) || c.Allows == "" {
 			t.Errorf("condition %+v needs a kebab-case name and what it allows", c)
 		}
-		targets := 0
-		for _, has := range []bool{len(c.Calls) > 0, c.OnTrigger(), c.Files} {
-			if has {
-				targets++
-			}
+		// A condition qualifies calls, triggers, or both (ADR-0211 §3), or
+		// else each files entry and nothing more.
+		if c.Files == (c.OnCall() || c.OnTrigger()) {
+			t.Errorf("condition %s qualifies calls %v, a trigger %v, files %v; want calls or a trigger, or files alone", c.Name, c.OnCall(), c.OnTrigger(), c.Files)
 		}
-		if targets != 1 {
-			t.Errorf("condition %s qualifies %d kinds of entry, want one", c.Name, targets)
+		if c.Schedule && len(c.Events) > 0 {
+			t.Errorf("condition %s qualifies both a schedule and events", c.Name)
 		}
 		if c.Permission != "" && !slices.Contains(Permissions, c.Permission) {
 			t.Errorf("condition %s is gated by unknown permission %s", c.Name, c.Permission)
@@ -45,6 +44,11 @@ func TestConditionsTableIsWellFormed(t *testing.T) {
 			t.Errorf("gate %+v names a condition that does not qualify its call under its permission", g)
 		}
 	}
+	for name := range matches {
+		if c, ok := Condition(name); !ok || len(c.Events) == 0 {
+			t.Errorf("match %s is for no condition that qualifies an event", name)
+		}
+	}
 	for _, f := range Never {
 		for _, w := range f.Unless {
 			if _, ok := Condition(w); !ok {
@@ -58,6 +62,16 @@ func TestCondition(t *testing.T) {
 	c, ok := Condition("to-ready")
 	if !ok || c.Permission != PromoteToReady || !c.Qualifies("flai move") || c.Qualifies("item_new") {
 		t.Errorf("Condition(to-ready) = %+v, %v", c, ok)
+	}
+	back, ok := Condition("to-backlog")
+	if !ok || !back.OnCall() || !back.OnTrigger() || !back.Qualifies("item_move") || !back.QualifiesTrigger(Trigger{Kind: TriggerEvent, Event: "moved"}) {
+		t.Errorf("Condition(to-backlog) = %+v, %v; want it on item_move and on {event: moved}", back, ok)
+	}
+	for name, event := range map[string]string{"to-review": "moved", "draft-changed": "edited", "awaits-orchestrator": "thread"} {
+		c, ok := Condition(name)
+		if !ok || c.OnCall() || !c.OnTrigger() || !c.QualifiesTrigger(Trigger{Kind: TriggerEvent, Event: event}) || c.Allows == "" {
+			t.Errorf("Condition(%s) = %+v, %v; want a trigger condition on {event: %s}", name, c, ok, event)
+		}
 	}
 	if _, ok := Condition("anything-goes"); ok {
 		t.Error("Condition(anything-goes) found a condition")
@@ -79,10 +93,64 @@ func TestQualifiesTrigger(t *testing.T) {
 		{each, Trigger{Kind: TriggerSchedule, Schedule: "planning.schedule"}, true},
 		{each, Trigger{Kind: TriggerAsked}, false},
 		{draft, Trigger{Kind: TriggerEvent, Event: "edited"}, false},
+		{cond(t, "to-review"), Trigger{Kind: TriggerEvent, Event: "moved"}, true},
+		{cond(t, "to-review"), Trigger{Kind: TriggerEvent, Event: "review"}, false},
+		{cond(t, "to-backlog"), Trigger{Kind: TriggerEvent, Event: "moved"}, true},
+		{cond(t, "to-backlog"), Trigger{Kind: TriggerEvent, Event: "edited"}, false},
+		{cond(t, "draft-changed"), Trigger{Kind: TriggerEvent, Event: "edited"}, true},
+		{cond(t, "draft-changed"), Trigger{Kind: TriggerEvent, Event: "moved"}, false},
+		{cond(t, "awaits-orchestrator"), Trigger{Kind: TriggerEvent, Event: "thread"}, true},
+		{cond(t, "awaits-orchestrator"), Trigger{Kind: TriggerEvent, Event: "thread-opened"}, false},
 	}
 	for _, tc := range cases {
 		if got := tc.cond.QualifiesTrigger(tc.t); got != tc.want {
 			t.Errorf("%s.QualifiesTrigger(%+v) = %v, want %v", tc.cond.Name, tc.t, got, tc.want)
+		}
+	}
+}
+
+// cond is the condition named name, failing the test when there is none.
+func cond(t *testing.T, name string) Cond {
+	t.Helper()
+	c, ok := Condition(name)
+	if !ok {
+		t.Fatalf("no condition %s", name)
+	}
+	return c
+}
+
+// ADR-0211 §3: each trigger condition with a match holds on an occurrence of
+// its event that matches, and not on one that does not, nor on another event.
+func TestMatches(t *testing.T) {
+	cases := []struct {
+		name string
+		o    Occurrence
+		want bool
+	}{
+		{"to-review", Occurrence{Event: "moved", To: "review"}, true},
+		{"to-review", Occurrence{Event: "moved", To: "done"}, false},
+		{"to-review", Occurrence{Event: "edited", To: "review"}, false},
+		{"to-backlog", Occurrence{Event: "moved", To: "backlog"}, true},
+		{"to-backlog", Occurrence{Event: "moved", To: "ready"}, false},
+		{"to-backlog", Occurrence{Event: "cancelled", To: "backlog"}, false},
+		{"draft-changed", Occurrence{Event: "edited", Draft: true}, true},
+		{"draft-changed", Occurrence{Event: "edited"}, false},
+		{"draft-changed", Occurrence{Event: "moved", Draft: true}, false},
+		{"awaits-orchestrator", Occurrence{Event: "thread", Awaits: "you"}, true},
+		{"awaits-orchestrator", Occurrence{Event: "thread", Awaits: "operator"}, true},
+		{"awaits-orchestrator", Occurrence{Event: "thread", Awaits: "planner-S-0001"}, false},
+		{"awaits-orchestrator", Occurrence{Event: "thread"}, false},
+		{"awaits-orchestrator", Occurrence{Event: "thread-opened", Awaits: "you"}, false},
+	}
+	for _, tc := range cases {
+		holds, implemented := cond(t, tc.name).Matches(tc.o)
+		if !implemented || holds != tc.want {
+			t.Errorf("%s.Matches(%+v) = %v, %v; want %v, true", tc.name, tc.o, holds, implemented, tc.want)
+		}
+	}
+	for _, name := range []string{"stale-figures", "replan-agent", "each-ready-story", "draft-only", "under-folder"} {
+		if holds, implemented := cond(t, name).Matches(Occurrence{Event: "edited", Draft: true}); holds || implemented {
+			t.Errorf("%s.Matches = %v, %v; want no match implemented", name, holds, implemented)
 		}
 	}
 }

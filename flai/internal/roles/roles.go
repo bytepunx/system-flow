@@ -61,8 +61,9 @@ var (
 	Charges = []string{"item", "named", "issues", "none"}
 	// ItemKinds are the item kinds a run takes.
 	ItemKinds = []string{"epic", "story"}
-	// Events are what an event trigger names.
-	Events = []string{"accepted", "cancelled", "ready", "review", "edited", "reordered", "thread-opened"}
+	// Events are what an event trigger names: ADR-0207 §3's seven, then
+	// ADR-0211 §1's five.
+	Events = []string{"accepted", "cancelled", "ready", "review", "edited", "reordered", "thread-opened", "moved", "thread", "planned", "ready-empty", "release-due"}
 	// Schedules are the manifest settings a schedule trigger names besides
 	// roles.<name>.schedule.
 	Schedules = []string{"planning.schedule", "analysis.schedule", "digest.schedule"}
@@ -629,7 +630,7 @@ func (c *checker) call(r Role, e Call, field, p string) {
 		case !ok:
 			at(CodeFile, "condition %q is not one flai implements; use one of %s, or ask for a new one", e.When, strings.Join(ConditionNames(), ", "))
 			return
-		case cond.OnTrigger():
+		case cond.OnTrigger() && !cond.OnCall():
 			at(CodeFile, "condition %s qualifies a trigger, not a call; remove it from %s", e.When, e.Call)
 			return
 		case !cond.Qualifies(e.Call):

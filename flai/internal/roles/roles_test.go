@@ -354,12 +354,17 @@ func TestValidateReportsEachProblem(t *testing.T) {
 		{"continuous not alone", "orchestrator.md", orchestratorFile, "trigger: [continuous]", "trigger: [continuous, asked]", CodeFile, 12, "only trigger"},
 		{"trigger condition on wrong trigger", "planner.md", plannerFile, "{event: edited, when: stale-figures}", "{event: accepted, when: stale-figures}", CodeFile, 13, "does not qualify this trigger"},
 		{"call condition on a trigger", "planner.md", plannerFile, "{event: edited, when: stale-figures}", "{event: edited, when: draft-only}", CodeFile, 13, "qualifies a call"},
+		{"to-review on another event", "planner.md", plannerFile, "{event: edited, when: stale-figures}", "{event: edited, when: to-review}", CodeFile, 13, "does not qualify this trigger; it qualifies an {event} entry for moved"},
+		{"to-backlog on another event", "planner.md", plannerFile, "{event: edited, when: stale-figures}", "{event: review, when: to-backlog}", CodeFile, 13, "does not qualify this trigger; it qualifies an {event} entry for moved"},
+		{"draft-changed on another event", "planner.md", plannerFile, "{event: edited, when: stale-figures}", "{event: moved, when: draft-changed}", CodeFile, 13, "does not qualify this trigger; it qualifies an {event} entry for edited"},
+		{"awaits-orchestrator on another event", "planner.md", plannerFile, "{event: edited, when: stale-figures}", "{event: thread-opened, when: awaits-orchestrator}", CodeFile, 13, "does not qualify this trigger; it qualifies an {event} entry for thread"},
 		{"unknown item kind", "planner.md", plannerFile, "item: [epic, story]", "item: [epic, task]", CodeFile, 18, "item kind \"task\""},
 		{"bad topic", "planner.md", plannerFile, "topics: [planning]", "topics: [\"two words\"]", CodeFile, 19, "not a word"},
 		{"bad charge", "planner.md", plannerFile, "charge: item", "charge: everyone", CodeFile, 20, "charge is \"everyone\""},
 		{"unknown condition", "planner.md", plannerFile, "{call: item_new, when: draft-only}", "{call: item_new, when: drafts-only}", CodeFile, 24, "condition \"drafts-only\" is not one"},
 		{"condition on wrong call", "planner.md", plannerFile, "{call: item_move, when: to-backlog}", "{call: item_move, when: draft-only}", CodeFile, 26, "does not qualify item_move"},
 		{"trigger condition on a call", "planner.md", plannerFile, "{call: item_move, when: to-backlog}", "{call: item_move, when: stale-figures}", CodeFile, 26, "qualifies a trigger"},
+		{"trigger-only condition on a call", "planner.md", plannerFile, "{call: item_move, when: to-backlog}", "{call: item_move, when: to-review}", CodeFile, 26, "qualifies a trigger, not a call"},
 		{"under-folder on a call", "planner.md", plannerFile, "{call: item_move, when: to-backlog}", "{call: item_move, when: under-folder}", CodeFile, 26, "each files entry"},
 		{"unknown tool", "planner.md", plannerFile, "  - wait_for_events\n", "  - wait_for_ever\n", CodeFile, 29, "not one of flai's MCP tools"},
 		{"command under tools", "planner.md", plannerFile, "  - wait_for_events\n", "  - flai issue new\n", CodeFile, 29, "list it under commands"},
@@ -414,6 +419,35 @@ func TestValidateReportsEachProblem(t *testing.T) {
 				t.Errorf("problem = %s, want %s at line %d containing %q", p, tc.code, tc.line, tc.want)
 			}
 		})
+	}
+}
+
+// ADR-0211: a trigger may name each event it adds, and each trigger
+// condition on its event, while to-backlog still qualifies item_move and
+// flai move.
+func TestNewEventsAndConditionsValidate(t *testing.T) {
+	for _, e := range []string{"moved", "thread", "planned", "ready-empty", "release-due", "review", "thread-opened"} {
+		if !slices.Contains(Events, e) {
+			t.Errorf("Events lacks %s", e)
+		}
+	}
+	f := edit(t, plannerFile, "  - asked\n", `  - asked
+  - {event: moved}
+  - {event: thread}
+  - {event: planned}
+  - {event: ready-empty}
+  - {event: release-due}
+  - {event: moved, when: to-review}
+  - {event: moved, when: to-backlog}
+  - {event: edited, when: draft-changed}
+  - {event: thread, when: awaits-orchestrator}
+`)
+	rs, problems := load(t, map[string]string{"planner.md": f})
+	if len(problems) != 0 {
+		t.Fatalf("load problems: %v", problems)
+	}
+	if got := Validate(rs, "design", vocab); len(got) != 0 {
+		t.Errorf("Validate = %v, want none", got)
 	}
 }
 
