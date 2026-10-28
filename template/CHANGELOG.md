@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.121 - 2026-10-28
+
+- S-0504 The curator has never run on system-flow, so no thread is in any entry's asked_again and the digest's repeat measure reads 0 whatever was asked (patch).
+
 ## 1.0.120 - 2026-10-28
 
 - S-0504 The analyzer reads the curator's runs before the digest's repeats (patch, ADR-0204): in `strategic-agents.md`, the section "As the analyzer" says to read `digest.curator` of `flai stats --json` before `asked_again`. A week without `asked_again`, or a curator with `runs` 0, is unmeasured, not zero repeats, and is never reported as a finding that the digest works. It needs a flai that has it, the release that carries S-0504: an older flai sends `asked_again` 0 in every week and no `curator`, so the analyzer cannot tell an unmeasured week from one without repeats.
