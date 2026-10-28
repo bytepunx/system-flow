@@ -57,12 +57,15 @@ type Thread struct {
 // Entry is one dated contribution parsed from the body. Text is the entry as
 // written, its source line included. Recommendation and Source are the marks
 // of ADR-0090: a recommendation awaits the operator's confirmation, and the
-// source is what the entry cites.
+// source is what the entry cites. OperatorOnly is ADR-0206's mark: the
+// recommendation is the operator's alone to confirm, so flai serve never
+// confirms it after orchestration.permissions.confirm_after.
 type Entry struct {
 	At             string  `json:"at"`
 	Author         string  `json:"author"`
 	Text           string  `json:"text"`
 	Recommendation bool    `json:"recommendation"`
+	OperatorOnly   bool    `json:"operator_only,omitempty"`
 	Source         *Source `json:"source,omitempty"`
 }
 
@@ -89,14 +92,22 @@ func ParseSource(v string) (Source, error) {
 	return Source{Path: path, Heading: strings.TrimSpace(heading)}, nil
 }
 
-// Marks are the optional marks of a reply: that it is a recommendation, and
-// the source it cites. The zero value is a plain reply.
+// Marks are the optional marks of a reply: that it is a recommendation, that
+// the recommendation is the operator's alone (ADR-0206), and the source it
+// cites. The zero value is a plain reply.
 type Marks struct {
 	Recommendation bool
+	// OperatorOnly marks a recommendation on money or a host change as the
+	// operator's alone to confirm; it needs Recommendation.
+	OperatorOnly bool
 	// Source is a repository path or item ID, validated as an anchor is; an
 	// empty Path cites nothing.
 	Source Source
 }
+
+// TimeoutAuthor is the author of the confirmation ConfirmByTimeout writes
+// (ADR-0206).
+const TimeoutAuthor = "flai serve"
 
 const (
 	// recommendationMark ends the heading of a recommendation entry.
@@ -105,12 +116,18 @@ const (
 	sourcePrefix = "Source: "
 	// sourceHeading separates a source's path from its heading.
 	sourceHeading = " § "
-	// confirmPrefix starts the entry Confirm writes.
+	// confirmPrefix starts the entry Confirm and ConfirmByTimeout write.
 	confirmPrefix = "Confirmed the recommendation of "
+	// operatorOnlyPrefix starts the paragraph that marks a recommendation for
+	// the operator alone (ADR-0206).
+	operatorOnlyPrefix = "For the operator alone: "
+	// operatorOnlyLine is that paragraph, written above the source line.
+	operatorOnlyLine = operatorOnlyPrefix + "flai serve does not confirm this after orchestration.permissions.confirm_after."
 )
 
 var (
 	idPattern    = regexp.MustCompile(`^TH-\d{4,}$`)
+	storyAgent   = regexp.MustCompile(`^agent-S-\d+$`)
 	looseID      = regexp.MustCompile(`^(?i:th)-?0*(\d+)$`)
 	entryHeading = regexp.MustCompile(`(?m)^### (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z) (.+)$`)
 )
@@ -230,10 +247,21 @@ func (th *Thread) Entries() []Entry {
 		}
 		e := Entry{At: th.Body[loc[2]:loc[3]], Text: strings.TrimSpace(th.Body[loc[1]:end])}
 		e.Author, e.Recommendation = strings.CutSuffix(th.Body[loc[4]:loc[5]], recommendationMark)
+		e.OperatorOnly = e.Recommendation && hasLine(e.Text, operatorOnlyPrefix)
 		e.Source = sourceOf(e.Text)
 		out = append(out, e)
 	}
 	return out
+}
+
+// hasLine reports whether a line of text starts with prefix.
+func hasLine(text, prefix string) bool {
+	for _, line := range strings.Split(text, "\n") {
+		if strings.HasPrefix(line, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 // sourceOf reads the source an entry's text cites in its last paragraph,
@@ -262,15 +290,38 @@ func sourceLine(s Source) string {
 	return sourcePrefix + s.Path + sourceHeading + s.Heading
 }
 
-// Confirms reports whether the entry is a confirmation Confirm wrote, alone
-// or joined with another entry of its author's in the same second.
-func (e Entry) Confirms() bool {
-	for _, line := range strings.Split(e.Text, "\n") {
-		if strings.HasPrefix(line, confirmPrefix) {
+// Confirms reports whether the entry is a confirmation Confirm or
+// ConfirmByTimeout wrote, alone or joined with another entry of its author's
+// in the same second.
+func (e Entry) Confirms() bool { return hasLine(e.Text, confirmPrefix) }
+
+// ConfirmsByTimeout reports whether the entry is the confirmation flai serve
+// wrote with ConfirmByTimeout in the operator's absence (ADR-0206).
+func (e Entry) ConfirmsByTimeout() bool { return e.Author == TimeoutAuthor && e.Confirms() }
+
+// WroteSince reports whether an entry after the given one, in the thread's
+// order, is by an author that by accepts, such as OperatorName for the
+// thread's story. It is false when the thread has no entry of after's time
+// and author.
+func (th *Thread) WroteSince(after Entry, by func(author string) bool) bool {
+	seen := false
+	for _, e := range th.Entries() {
+		switch {
+		case seen && by(e.Author):
 			return true
+		case e.At == after.At && e.Author == after.Author:
+			seen = true
 		}
 	}
 	return false
+}
+
+// OpenedByAgent reports whether the thread's opener is a story's agent
+// (agent-S-nnnn) or a planner (planner-…), the openers whose threads flai
+// serve may confirm a recommendation on (ADR-0206).
+func (th *Thread) OpenedByAgent() bool {
+	opener := th.Opener()
+	return storyAgent.MatchString(opener) || workitem.IsPlanner("", opener)
 }
 
 // PendingRecommendation is the recommendation awaiting the operator's
@@ -509,8 +560,9 @@ func Reply(r *workitem.Repo, id, author, text string, now time.Time) (*Thread, e
 // without a source, sets the status as Reply does. A recommendation leaves
 // the status as it was, so the thread still awaits the operator, who makes it
 // the answer with Confirm; it is refused on a resolved thread and from the
-// thread's opener. A source must exist in the repository, and its heading in
-// it, as an anchor must.
+// thread's opener. The operator-alone mark, which needs a recommendation, is
+// written as its own paragraph above the source line (ADR-0206). A source
+// must exist in the repository, and its heading in it, as an anchor must.
 func ReplyWith(r *workitem.Repo, id, author, text string, now time.Time, marks Marks) (*Thread, error) {
 	if strings.TrimSpace(text) == "" {
 		return nil, fmt.Errorf("a reply needs text")
@@ -518,9 +570,16 @@ func ReplyWith(r *workitem.Repo, id, author, text string, now time.Time, marks M
 	if strings.TrimSpace(author) == "" {
 		return nil, fmt.Errorf("an author is required")
 	}
+	if marks.OperatorOnly && !marks.Recommendation {
+		return nil, fmt.Errorf("only a recommendation is marked for the operator alone: mark the reply a recommendation too, or drop the operator-alone mark")
+	}
 	th, err := Get(r, id)
 	if err != nil {
 		return nil, err
+	}
+	text = strings.TrimSpace(text)
+	if marks.OperatorOnly {
+		text += "\n\n" + operatorOnlyLine
 	}
 	if marks.Source.Path != "" {
 		a, err := ResolveAnchor(r, marks.Source.Path, marks.Source.Heading)
@@ -528,7 +587,7 @@ func ReplyWith(r *workitem.Repo, id, author, text string, now time.Time, marks M
 			return nil, fmt.Errorf("the source of a reply on %s: %w", th.ID, err)
 		}
 		marks.Source = Source{Path: a.Path, Heading: a.Heading}
-		text = strings.TrimSpace(text) + "\n\n" + sourceLine(marks.Source)
+		text += "\n\n" + sourceLine(marks.Source)
 	}
 	heading := author
 	if marks.Recommendation {
@@ -566,6 +625,64 @@ func Confirm(r *workitem.Repo, id, author string, now time.Time) (*Thread, error
 	if strings.TrimSpace(author) == "" {
 		return nil, fmt.Errorf("an author is required")
 	}
+	return confirm(r, id, author, now, func(th *Thread, p *Entry) (string, error) {
+		if p.Author == author {
+			return "", fmt.Errorf("%s made the recommendation on %s and cannot confirm it: the operator confirms it", author, th.ID)
+		}
+		return "", nil
+	})
+}
+
+// ConfirmByTimeout is flai serve's confirmation of the pending
+// recommendation in the operator's absence (ADR-0206): an entry by
+// TimeoutAuthor, written as Confirm writes the operator's and saying it came
+// after the given confirm_after with no answer from the operator, with the
+// status answered. It is refused when no recommendation is pending, when it
+// is marked for the operator alone, when it was written less than after
+// before now, and when the operator, the manifest's owner or the story's
+// owner, wrote on the thread since it. Which threads it is asked for is the
+// caller's.
+func ConfirmByTimeout(r *workitem.Repo, id string, after time.Duration, now time.Time) (*Thread, error) {
+	if after <= 0 {
+		return nil, fmt.Errorf("confirming by timeout needs orchestration.permissions.confirm_after longer than zero, not %s: unset, nothing is confirmed", after)
+	}
+	return confirm(r, id, TimeoutAuthor, now, func(th *Thread, p *Entry) (string, error) {
+		if p.OperatorOnly {
+			return "", fmt.Errorf("the recommendation of %s %s on %s is marked for the operator alone: only the operator confirms it", p.At, p.Author, th.ID)
+		}
+		at, err := time.Parse(workitem.TimeFormat, p.At)
+		if err != nil {
+			return "", fmt.Errorf("the recommendation on %s has no readable time %q: %w", th.ID, p.At, err)
+		}
+		if waited := now.Sub(at); waited < after {
+			return "", fmt.Errorf("the recommendation of %s %s on %s has waited %s, less than confirm_after %s: it is not confirmed yet", p.At, p.Author, th.ID, readableDuration(waited.Truncate(time.Second)), readableDuration(after))
+		}
+		story := StoryOf(r, th)
+		if th.WroteSince(*p, func(name string) bool { return OperatorName(r, story, name) }) {
+			return "", fmt.Errorf("the operator wrote on %s after the recommendation of %s %s: it is theirs to confirm", th.ID, p.At, p.Author)
+		}
+		return " after " + readableDuration(after) + " with no answer from the operator (orchestration.permissions.confirm_after)", nil
+	})
+}
+
+// readableDuration writes d as Go does without its zero trailing units:
+// 48h0m0s is 48h, 1h30m0s is 1h30m.
+func readableDuration(d time.Duration) string {
+	s := d.String()
+	if strings.HasSuffix(s, "m0s") {
+		s = strings.TrimSuffix(s, "0s")
+	}
+	if strings.HasSuffix(s, "h0m") {
+		s = strings.TrimSuffix(s, "0m")
+	}
+	return s
+}
+
+// confirm appends a confirmation of the pending recommendation by author:
+// check refuses it with an error or returns what the confirmation says after
+// the recommendation's time and author. The entry cites the recommendation's
+// source, and the status becomes answered.
+func confirm(r *workitem.Repo, id, author string, now time.Time, check func(th *Thread, p *Entry) (string, error)) (*Thread, error) {
 	th, err := Get(r, id)
 	if err != nil {
 		return nil, err
@@ -574,10 +691,11 @@ func Confirm(r *workitem.Repo, id, author string, now time.Time) (*Thread, error
 	if p == nil {
 		return nil, fmt.Errorf("%s has no recommendation awaiting confirmation: confirm one that is the newest reply by someone other than the opener", th.ID)
 	}
-	if p.Author == author {
-		return nil, fmt.Errorf("%s made the recommendation on %s and cannot confirm it: the operator confirms it", author, th.ID)
+	more, err := check(th, p)
+	if err != nil {
+		return nil, err
 	}
-	text := fmt.Sprintf("%s%s %s.", confirmPrefix, p.At, p.Author)
+	text := fmt.Sprintf("%s%s %s%s.", confirmPrefix, p.At, p.Author, more)
 	if p.Source != nil {
 		text += "\n\n" + sourceLine(*p.Source)
 	}

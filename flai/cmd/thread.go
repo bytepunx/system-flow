@@ -115,7 +115,7 @@ func newThreadNewCmd(a *app) *cobra.Command {
 
 func newThreadReplyCmd(a *app) *cobra.Command {
 	var by, source string
-	var recommend bool
+	var recommend, operatorOnly bool
 	c := &cobra.Command{
 		Use:   "reply <id> \"<text>\"",
 		Short: "Add an entry; answered when someone other than the opener replies, unless it is a recommendation",
@@ -123,13 +123,19 @@ func newThreadReplyCmd(a *app) *cobra.Command {
 
 With --recommend the entry is a recommendation (ADR-0090): its heading says (recommendation), the status stays as it was, and the thread awaits the operator, who makes it the answer with flai thread confirm or answers otherwise. A recommendation is refused on a resolved thread and from the thread's opener.
 
+--operator-only, with --recommend, marks a recommendation on money or a host change as the operator's alone (ADR-0206): it writes the paragraph "For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after." above the source line, and flai serve never confirms it in the operator's absence.
+
 --source cites what the reply rests on: a file in the repository, or an item ID, and after # a heading in it. Both must exist. It is written as the entry's last line, Source: <path> § <heading>.
 
 An answer by the operator (the manifest's owner) on a thread someone else opened becomes a digest entry at once, or is added to the entry citing the thread, and the output names it under digest (S-0433).`,
 		Example: `  flai thread reply TH-0012 "Nine metres."
-  flai thread reply TH-0012 --recommend --source "design/system/overview.md#Delivery sequence" "Build the CLI first, as the delivery sequence says."`,
+  flai thread reply TH-0012 --recommend --source "design/system/overview.md#Delivery sequence" "Build the CLI first, as the delivery sequence says."
+  flai thread reply TH-0013 --recommend --operator-only "Buy the second host."`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if operatorOnly && !recommend {
+				return fmt.Errorf("--operator-only marks a recommendation for the operator alone: give --recommend with it")
+			}
 			repo, err := a.project()
 			if err != nil {
 				return err
@@ -138,7 +144,7 @@ An answer by the operator (the manifest's owner) on a thread someone else opened
 			if err != nil {
 				return err
 			}
-			th, err := threads.ReplyWith(repo, args[0], a.threadAuthor(by), args[1], a.now(), threads.Marks{Recommendation: recommend, Source: src})
+			th, err := threads.ReplyWith(repo, args[0], a.threadAuthor(by), args[1], a.now(), threads.Marks{Recommendation: recommend, OperatorOnly: operatorOnly, Source: src})
 			if err != nil {
 				return err
 			}
@@ -157,6 +163,7 @@ An answer by the operator (the manifest's owner) on a thread someone else opened
 	}
 	c.Flags().StringVar(&by, "by", "", "author (default: FLAI_AGENT, then config author)")
 	c.Flags().BoolVar(&recommend, "recommend", false, "post a recommendation: the status stays and the thread awaits the operator's confirmation (ADR-0090)")
+	c.Flags().BoolVar(&operatorOnly, "operator-only", false, "with --recommend: the recommendation, on money or a host change, is the operator's alone, and flai serve never confirms it after orchestration.permissions.confirm_after (ADR-0206)")
 	c.Flags().StringVar(&source, "source", "", "what the reply rests on, <path>[#<heading>]: a file in the repository and a heading in it")
 	return c
 }

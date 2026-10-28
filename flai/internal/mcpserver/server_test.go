@@ -939,6 +939,39 @@ func TestAThreadReplyMayCiteADigestEntry(t *testing.T) {
 	}
 }
 
+// ADR-0206: thread_reply's operator_only marks a recommendation for the
+// operator alone, which shows on the entry and the pending recommendation;
+// without recommendation it is refused, writing nothing.
+func TestAThreadReplyMarksARecommendationForTheOperatorAlone(t *testing.T) {
+	f := setup(t)
+	th, err := threads.New(f.repo, threads.NewOptions{Title: "Buy a second host?", On: f.story.ID, Author: "agent-S-0001", Text: "Should I?", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, failed := f.call(t, "thread_reply", map[string]any{"id": th.ID, "text": "Buy it.", "operator_only": true}); !strings.Contains(failed, "only a recommendation") {
+		t.Errorf("operator_only without recommendation: %q", failed)
+	}
+	if back, _ := threads.Get(f.repo, th.ID); len(back.Entries()) != 1 {
+		t.Errorf("the refused reply wrote:\n%s", back.Body)
+	}
+	out, failed := f.call(t, "thread_reply", map[string]any{"id": th.ID, "text": "Buy it.", "recommendation": true, "operator_only": true, "source": "design/system/plan.md#Shape"})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	entries := out["entry_list"].([]any)
+	last := entries[len(entries)-1].(map[string]any)
+	pending, _ := out["pending_recommendation"].(map[string]any)
+	if last["operator_only"] != true || last["recommendation"] != true || pending["operator_only"] != true {
+		t.Errorf("marked for the operator alone: %v", out)
+	}
+	if src, _ := last["source"].(map[string]any); src["path"] != "design/system/plan.md" || !strings.Contains(last["text"].(string), "For the operator alone: flai serve does not confirm this") {
+		t.Errorf("entry: %v", last)
+	}
+	if _, ok := entries[0].(map[string]any)["operator_only"]; ok {
+		t.Errorf("an unmarked entry has no operator_only: %v", entries[0])
+	}
+}
+
 // S-0220: the orchestrator's thread_reply is logged in its activity
 // document, saying whether it recommended or answered and what it cited,
 // with the thread's story as its item.

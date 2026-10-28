@@ -81,6 +81,58 @@ func TestAThreadRecommendationIsPostedWithItsSourceAndConfirmed(t *testing.T) {
 	}
 }
 
+// ADR-0206: flai thread reply --recommend --operator-only marks the
+// recommendation for the operator alone, written above its source line and
+// shown as operator_only in --json; --operator-only without --recommend is
+// refused, writing nothing.
+func TestAThreadRecommendationIsMarkedForTheOperatorAlone(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("FLAI_AGENT", "")
+	root := tempProject(t)
+	if err := os.MkdirAll(filepath.Join(root, "design", "system"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "design", "system", "plan.md"), []byte("---\ntitle: Plan\n---\n\n# Plan\n\n## Hosts\n\nOne host.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, errOut, code := runIn(t, root, "thread", "new", "--on", "design/system/plan.md", "--by", "planner-S-0001", "Which host?", "Buy a second host?"); code != 0 {
+		t.Fatalf("thread new: %d %s", code, errOut)
+	}
+	if _, errOut, code := runIn(t, root, "thread", "reply", "TH-0001", "--by", "orchestrator", "--operator-only", "Buy it."); code == 0 || !strings.Contains(errOut, "give --recommend with it") {
+		t.Errorf("--operator-only without --recommend: exit %d, %q", code, errOut)
+	}
+	out, errOut, code := runIn(t, root, "thread", "reply", "TH-0001", "--by", "orchestrator", "--recommend", "--operator-only", "--source", "design/system/plan.md#Hosts", "Buy it.", "--json")
+	if code != 0 {
+		t.Fatalf("reply: %d %s", code, errOut)
+	}
+	var view struct {
+		Entries []struct {
+			Text           string `json:"text"`
+			Recommendation bool   `json:"recommendation"`
+			OperatorOnly   bool   `json:"operator_only"`
+			Source         *struct {
+				Path string `json:"path"`
+			} `json:"source"`
+		} `json:"entries"`
+		Pending *struct {
+			OperatorOnly bool `json:"operator_only"`
+		} `json:"pending_recommendation"`
+	}
+	if err := json.Unmarshal([]byte(out), &view); err != nil {
+		t.Fatalf("reply --json: %v\n%s", err, out)
+	}
+	if len(view.Entries) != 2 {
+		t.Fatalf("entries: %s", out)
+	}
+	last := view.Entries[1]
+	if !last.Recommendation || !last.OperatorOnly || last.Source == nil || last.Source.Path != "design/system/plan.md" || view.Pending == nil || !view.Pending.OperatorOnly {
+		t.Errorf("marked: %s", out)
+	}
+	if want := "Buy it.\n\nFor the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.\n\nSource: design/system/plan.md § Hosts"; last.Text != want {
+		t.Errorf("text %q, want %q", last.Text, want)
+	}
+}
+
 // S-0369: a thread entry without --by is FLAI_AGENT's when it is set, else
 // the config's author, so the operator's own shell answers as the operator.
 func TestAThreadEntryIsTheConfigAuthorsWithoutFLAIAGENT(t *testing.T) {

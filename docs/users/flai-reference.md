@@ -2459,6 +2459,7 @@ orchestration.permissions.finalize_drafts (boolean; default false)
 orchestration.permissions.promote_to_ready (boolean; default false)
 orchestration.permissions.order_ready (boolean; default false)
 orchestration.permissions.answer_threads (choice: off, recommend, autonomous; default off)
+orchestration.permissions.confirm_after (duration)
 orchestration.permissions.accept_reviews (boolean; default false)
 orchestration.permissions.publish (boolean; default false)
 orchestration.permissions.edit_subprojects (boolean; default false)
@@ -4934,6 +4935,8 @@ Adds an entry to a thread. A reply from anyone but the opener marks the thread a
 
 With --recommend the entry is a recommendation (ADR-0090): its heading says (recommendation), the status stays as it was, and the thread awaits the operator, who makes it the answer with flai thread confirm or answers otherwise. A recommendation is refused on a resolved thread and from the thread's opener.
 
+--operator-only, with --recommend, marks a recommendation on money or a host change as the operator's alone (ADR-0206): it writes the paragraph "For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm\_after." above the source line, and flai serve never confirms it in the operator's absence.
+
 --source cites what the reply rests on: a file in the repository, or an item ID, and after # a heading in it. Both must exist. It is written as the entry's last line, Source: &lt;path&gt; § &lt;heading&gt;.
 
 An answer by the operator (the manifest's owner) on a thread someone else opened becomes a digest entry at once, or is added to the entry citing the thread, and the output names it under digest (S-0433).
@@ -4943,6 +4946,7 @@ Examples:
 ```bash
 flai thread reply TH-0012 "Nine metres."
 flai thread reply TH-0012 --recommend --source "design/system/overview.md#Delivery sequence" "Build the CLI first, as the delivery sequence says."
+flai thread reply TH-0013 --recommend --operator-only "Buy the second host."
 ```
 
 Flags:
@@ -4950,6 +4954,7 @@ Flags:
 | Flag | Meaning |
 |------|---------|
 | `--by` string | author (default: FLAI\_AGENT, then config author) |
+| `--operator-only` | with --recommend: the recommendation, on money or a host change, is the operator's alone, and flai serve never confirms it after orchestration.permissions.confirm\_after (ADR-0206) |
 | `--recommend` | post a recommendation: the status stays and the thread awaits the operator's confirmation (ADR-0090) |
 | `--source` string | what the reply rests on, &lt;path&gt;[#&lt;heading&gt;]: a file in the repository and a heading in it |
 

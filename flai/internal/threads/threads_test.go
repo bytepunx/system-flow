@@ -500,3 +500,192 @@ func TestAThreadIsTheOrchestratorsOwnUntilAnotherWritesOnIt(t *testing.T) {
 		t.Errorf("a thread an agent opened is not the orchestrator's own: %s", agents.Body)
 	}
 }
+
+// ADR-0206: a recommendation marked for the operator alone carries the mark's
+// paragraph above its source line, and reads back with both; the mark needs
+// a recommendation.
+func TestARecommendationMarkedForTheOperatorAloneReadsBack(t *testing.T) {
+	r := project(t)
+	wipLint(t, r)
+	if _, err := New(r, NewOptions{Title: "Which host", On: "design/system/plan.md", Author: "agent-S-0001", Text: "Buy a second host?", Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ReplyWith(r, "TH-0001", "orchestrator", "Buy it.", t0.Add(time.Minute), Marks{OperatorOnly: true}); err == nil || !strings.Contains(err.Error(), "only a recommendation") {
+		t.Errorf("the mark without a recommendation is refused: %v", err)
+	}
+	th, err := ReplyWith(r, "TH-0001", "orchestrator", "Buy it.", t0.Add(time.Minute), Marks{Recommendation: true, OperatorOnly: true, Source: Source{Path: "design/system/plan.md", Heading: "Shape"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(th.Body, "\n### 2026-09-17T21:01:00Z orchestrator (recommendation)\nBuy it.\n\nFor the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.\n\nSource: design/system/plan.md § Shape\n") {
+		t.Errorf("on disk:\n%s", th.Body)
+	}
+	lintClean(t, r, th)
+	back, err := Read(th.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := back.Entries()
+	if len(e) != 2 || !e[1].OperatorOnly || !e[1].Recommendation || e[1].Source == nil || *e[1].Source != (Source{Path: "design/system/plan.md", Heading: "Shape"}) || e[0].OperatorOnly {
+		t.Fatalf("entries: %+v", e)
+	}
+	if p := back.PendingRecommendation(); p == nil || !p.OperatorOnly {
+		t.Errorf("the pending recommendation carries the mark: %+v", p)
+	}
+
+	// without a source the mark is the last paragraph, and still read
+	th, err = ReplyWith(r, "TH-0001", "orchestrator", "Or lease one.", t0.Add(2*time.Minute), Marks{Recommendation: true, OperatorOnly: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := th.Entries(); !e[2].OperatorOnly || e[2].Source != nil {
+		t.Errorf("the mark without a source: %+v", e[2])
+	}
+	// a plain recommendation, and a plain entry quoting the words, carry none
+	if _, err := ReplyWith(r, "TH-0001", "orchestrator", "Lease one.", t0.Add(3*time.Minute), Marks{Recommendation: true}); err != nil {
+		t.Fatal(err)
+	}
+	th, err = Reply(r, "TH-0001", "agent-S-0001", "For the operator alone: I would ask.", t0.Add(4*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := th.Entries(); e[3].OperatorOnly || e[4].OperatorOnly {
+		t.Errorf("unmarked entries: %+v", e[3:])
+	}
+}
+
+// ADR-0206: WroteSince tells whether an author the predicate accepts wrote
+// after an entry, an entry of the same second by another author included.
+func TestWroteSinceLooksAfterTheEntry(t *testing.T) {
+	r := project(t)
+	if _, err := New(r, NewOptions{Title: "Which shape", On: "design/system/plan.md", Author: "alex", Text: "Left or right?", Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+	th, err := ReplyWith(r, "TH-0001", "orchestrator", "Left.", t0.Add(time.Minute), Marks{Recommendation: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	isAlex := func(name string) bool { return name == "alex" }
+	rec := th.Entries()[1]
+	if th.WroteSince(rec, isAlex) {
+		t.Error("nothing follows the recommendation")
+	}
+	if !th.WroteSince(th.Entries()[0], func(name string) bool { return name == "orchestrator" }) {
+		t.Error("the orchestrator wrote after the opening entry")
+	}
+	if th, err = Reply(r, "TH-0001", "alex", "Hm.", t0.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if !th.WroteSince(rec, isAlex) {
+		t.Errorf("alex wrote after the recommendation, in the same second:\n%s", th.Body)
+	}
+	if th.WroteSince(Entry{At: "2026-09-17T21:09:00Z", Author: "nobody"}, isAlex) {
+		t.Error("an entry the thread lacks has nothing after it")
+	}
+}
+
+// ADR-0206, I-0195: flai serve confirms a recommendation left unanswered past
+// confirm_after with an entry of its own, which ends the pending
+// recommendation and reads as a confirmation by timeout; it is refused with
+// none pending, before confirm_after, on one marked for the operator alone,
+// and when the operator wrote since.
+func TestConfirmByTimeoutConfirmsAnUnansweredRecommendation(t *testing.T) {
+	r := project(t)
+	wipLint(t, r)
+	after := 48 * time.Hour
+	if _, err := New(r, NewOptions{Title: "Which shape", On: "design/system/plan.md", Author: "planner-S-0001", Text: "Left or right?", Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ConfirmByTimeout(r, "TH-0001", after, t0.Add(after)); err == nil || !strings.Contains(err.Error(), "no recommendation") {
+		t.Errorf("with none pending it is refused: %v", err)
+	}
+	rec := t0.Add(time.Minute)
+	if _, err := ReplyWith(r, "TH-0001", "orchestrator", "Left.", rec, Marks{Recommendation: true, Source: Source{Path: "design/system/plan.md", Heading: "Shape"}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ConfirmByTimeout(r, "TH-0001", after, rec.Add(after-time.Second)); err == nil || !strings.Contains(err.Error(), "has waited 47h59m59s, less than confirm_after 48h") {
+		t.Errorf("before confirm_after it is refused: %v", err)
+	}
+	if _, err := ConfirmByTimeout(r, "TH-0001", 0, rec.Add(after)); err == nil || !strings.Contains(err.Error(), "longer than zero") {
+		t.Errorf("a zero confirm_after is refused: %v", err)
+	}
+	th, err := ConfirmByTimeout(r, "th-1", after, rec.Add(after))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if th.Status != "answered" || th.PendingRecommendation() != nil || !contains(th.Participants, TimeoutAuthor) {
+		t.Fatalf("confirmed: %s %+v %v", th.Status, th.PendingRecommendation(), th.Participants)
+	}
+	e := th.Entries()
+	last := e[len(e)-1]
+	if len(e) != 3 || last.Author != "flai serve" || last.Text != "Confirmed the recommendation of 2026-09-17T21:01:00Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).\n\nSource: design/system/plan.md § Shape" || last.Source == nil {
+		t.Fatalf("confirming entry: %+v", e)
+	}
+	if !last.Confirms() || !last.ConfirmsByTimeout() || e[1].ConfirmsByTimeout() {
+		t.Errorf("a confirmation by timeout: %+v", last)
+	}
+	lintClean(t, r, th)
+	if _, err := ConfirmByTimeout(r, "TH-0001", after, rec.Add(2*after)); err == nil {
+		t.Error("a confirmed recommendation is not confirmed twice")
+	}
+	// the operator's confirmation is no confirmation by timeout
+	if _, err := ReplyWith(r, "TH-0001", "orchestrator", "Right, then.", rec.Add(3*after), Marks{Recommendation: true}); err != nil {
+		t.Fatal(err)
+	}
+	if th, err = Confirm(r, "TH-0001", "designer", rec.Add(3*after+time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if e := th.Entries(); !e[len(e)-1].Confirms() || e[len(e)-1].ConfirmsByTimeout() {
+		t.Errorf("the operator's confirmation: %+v", e[len(e)-1])
+	}
+
+	// marked for the operator alone: refused, writing nothing
+	if _, err := New(r, NewOptions{Title: "Which host", On: "design/system/plan.md", Author: "agent-S-0001", Text: "Buy one?", Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+	th, err = ReplyWith(r, "TH-0002", "orchestrator", "Buy it.", rec, Marks{Recommendation: true, OperatorOnly: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	was, _ := os.ReadFile(th.Path)
+	if _, err := ConfirmByTimeout(r, "TH-0002", after, rec.Add(after)); err == nil || !strings.Contains(err.Error(), "operator alone") {
+		t.Errorf("one marked for the operator alone is refused: %v", err)
+	}
+	if got, _ := os.ReadFile(th.Path); string(got) != string(was) {
+		t.Error("a refused confirmation leaves the thread as it was")
+	}
+
+	// the operator, here the opener, wrote after the recommendation: refused
+	if _, err := New(r, NewOptions{Title: "Which risk", On: "design/system/plan.md", Author: "designer", Text: "Which?", Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ReplyWith(r, "TH-0003", "orchestrator", "The first.", rec, Marks{Recommendation: true}); err != nil {
+		t.Fatal(err)
+	}
+	th, err = Reply(r, "TH-0003", "designer", "Let me think.", rec.Add(time.Hour))
+	if err != nil || th.PendingRecommendation() == nil {
+		t.Fatalf("the opener's follow-up leaves it pending: %v", err)
+	}
+	if _, err := ConfirmByTimeout(r, "TH-0003", after, rec.Add(after)); err == nil || !strings.Contains(err.Error(), "the operator wrote on TH-0003") {
+		t.Errorf("after the operator wrote it is refused: %v", err)
+	}
+}
+
+func TestReadableDurationDropsZeroUnits(t *testing.T) {
+	for d, want := range map[time.Duration]string{48 * time.Hour: "48h", 90 * time.Minute: "1h30m", 30 * time.Minute: "30m", 90 * time.Second: "1m30s", 2*time.Hour + 10*time.Minute: "2h10m", time.Hour + 5*time.Second: "1h0m5s"} {
+		if got := readableDuration(d); got != want {
+			t.Errorf("%s: %q, want %q", d, got, want)
+		}
+	}
+}
+
+// ADR-0206: the openers flai serve may confirm on are a story's agent and a
+// planner.
+func TestOpenedByAgentIsAStorysAgentOrAPlanner(t *testing.T) {
+	for opener, want := range map[string]bool{"agent-S-0001": true, "planner-S-0002": true, "planner-E-0003": true, "alex": false, "orchestrator": false, "flai serve": false, "agent": false, "agent-S-0001-x": false, "planner": false} {
+		th := &Thread{Body: "\n## Entries\n\n### 2026-09-17T21:00:00Z " + opener + "\nWhich?\n"}
+		if got := th.OpenedByAgent(); got != want {
+			t.Errorf("opened by %q: %v, want %v", opener, got, want)
+		}
+	}
+}

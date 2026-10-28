@@ -361,6 +361,7 @@ type ThreadReplyIn struct {
 	ID             string `json:"id"`
 	Text           string `json:"text"`
 	Recommendation bool   `json:"recommendation,omitempty" jsonschema:"the reply is a recommendation: the thread keeps its status and awaits the operator, who confirms it to make it the answer; refused on a resolved thread and on a thread you opened"`
+	OperatorOnly   bool   `json:"operator_only,omitempty" jsonschema:"marks a recommendation on money or a host change as the operator's alone, so flai serve never confirms it after orchestration.permissions.confirm_after (ADR-0206); written as the paragraph For the operator alone: above the source line; needs recommendation"`
 	Source         string `json:"source,omitempty" jsonschema:"what the reply rests on: a repository path, such as an ADR, a design document, a convention, or a digest entry (design/digest/D-nnnn-<slug>.md, the answer the operator gave last time), or <path>#<heading> for a heading in it; both must exist. Written as the entry's last line, Source: <path> § <heading>"`
 }
 
@@ -376,7 +377,7 @@ func (s *server) threadReply(ctx context.Context, _ *mcp.CallToolRequest, in Thr
 	if err != nil {
 		return nil, ThreadReplyOut{}, err
 	}
-	marks := threads.Marks{Recommendation: in.Recommendation, Source: source}
+	marks := threads.Marks{Recommendation: in.Recommendation, OperatorOnly: in.OperatorOnly, Source: source}
 	th, err := threads.ReplyWith(s.repo, in.ID, s.agent, in.Text, s.now(), marks)
 	if err != nil {
 		return nil, ThreadReplyOut{}, err
