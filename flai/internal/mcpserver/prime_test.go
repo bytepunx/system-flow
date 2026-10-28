@@ -215,6 +215,60 @@ func TestPrimeWithARole(t *testing.T) {
 	}
 }
 
+// ADR-0207, S-0415 criteria 1 and 3: prime takes a role the project defines
+// in a role file, primed for the item kind its file names, with the
+// conventions that list it; it refuses an item kind the file does not take,
+// names the defined roles for a role no file defines, and refuses a role
+// file that does not parse with its finding.
+func TestPrimeForARoleTheProjectDefines(t *testing.T) {
+	f := setup(t)
+	write := func(rel, s string) {
+		p := filepath.Join(f.repo.Root, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(s), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("design/conventions/README.md", "# Conventions\n\n- [review.md](review.md)\n")
+	write("design/conventions/review.md", "---\ntitle: Review\nupdated: 2026-10-28\naudience: agent\norder: 30\nstatus: active\nroles: [review]\n---\n\n# Review\n\n- Review rule.\n")
+	write("design/conventions/stream.md", "---\ntitle: Stream\nupdated: 2026-10-28\naudience: agent\norder: 20\nstatus: active\nroles: [story]\n---\n\n# Stream\n\n- Sync at every task.\n")
+	role := "design/workflows/roles/reviewer.md"
+	write(role, "---\ntitle: Reviewer\nupdated: 2026-10-28\nstatus: active\nname: reviewer\nrole: review\nitem: [story]\ntopics: [review]\n---\n\nYou are the reviewer.\n")
+	out, failed := f.call(t, "prime", map[string]any{"role": "review", "story": f.story.ID})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	convs, _ := out["conventions"].([]any)
+	if out["role"] != "review" || out["item"] != f.story.ID || out["story"] != nil || len(convs) != 1 || convs[0].(map[string]any)["path"] != "design/conventions/review.md" {
+		t.Errorf("pack: %v", out)
+	}
+	for _, c := range []struct {
+		in   map[string]any
+		want string
+	}{
+		{map[string]any{"role": "review", "epic": f.story.Parent}, "the reviewer takes a story, not an epic; give --story S-nnnn"},
+		{map[string]any{"role": "review"}, "give --story S-nnnn"},
+		{map[string]any{"role": "write"}, "give story, or role plan, orchestrate, analyze, curate, review"},
+		{map[string]any{"role": "write", "story": f.story.ID}, "no such role; a sub-agent's role is explore or verify, and a strategic agent's plan, orchestrate, analyze, curate, review"},
+		{map[string]any{}, "give story, or role plan, orchestrate, analyze, curate, review"},
+	} {
+		if _, failed := f.call(t, "prime", c.in); !strings.Contains(failed, c.want) {
+			t.Errorf("%v: %q, want %q", c.in, failed, c.want)
+		}
+	}
+	write(role, "---\ntitle: Reviewer\nrole: [\n---\n")
+	for _, r := range []string{"review", "plan"} {
+		if _, failed := f.call(t, "prime", map[string]any{"role": r}); !strings.Contains(failed, "role file "+role) {
+			t.Errorf("role %s with a role file that does not parse: %q", r, failed)
+		}
+	}
+	if _, failed := f.call(t, "prime", map[string]any{"story": f.story.ID, "role": "explore"}); failed != "" {
+		t.Errorf("explore with a role file that does not parse: %q", failed)
+	}
+}
+
 // E-0016, S-0207: prime with a strategic role returns the planner's pack for
 // an epic or a story, and the orchestrator's and the analyzer's for the
 // whole project, with the conventions whose roles are empty or list it.

@@ -341,6 +341,76 @@ func TestPrimeStoryDesign(t *testing.T) {
 // its role reads, the story's goal and criteria, and briefs, in half the
 // budget; the story's own pack has the conventions the story's agent reads,
 // and --cat every convention.
+// ADR-0207, S-0415 criteria 1 and 3: flai prime --role takes a role the
+// project defines in a role file, with the item flag its file takes, in
+// parts; it refuses an item kind the file does not take, names the defined
+// roles for a role no file defines, and refuses a role file that does not
+// parse with its finding.
+func TestPrimeForARoleTheProjectDefines(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	write := func(rel, s string) {
+		p := filepath.Join(root, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(s), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("design/conventions/README.md", "# Conventions\n\n- [review.md](review.md)\n- [stream.md](stream.md)\n")
+	write("design/conventions/review.md", "---\ntitle: Review\nupdated: 2026-10-28\naudience: agent\norder: 30\nstatus: active\nroles: [review]\n---\n\n# Review\n\n- Review rule.\n")
+	write("design/conventions/stream.md", "---\ntitle: Stream\nupdated: 2026-10-28\naudience: agent\norder: 20\nstatus: active\nroles: [story]\n---\n\n# Stream\n\n- Sync at every task.\n")
+	role := "design/workflows/roles/reviewer.md"
+	write(role, "---\ntitle: Reviewer\nupdated: 2026-10-28\nstatus: active\nname: reviewer\nrole: review\nitem: [epic]\ntopics: [review]\n---\n\nYou are the reviewer.\n")
+	if _, errOut, code := runIn(t, root, "epic", "new", "Epic"); code != 0 {
+		t.Fatal(errOut)
+	}
+	if _, errOut, code := runIn(t, root, "story", "new", "Slice", "--epic", "E-0001"); code != 0 {
+		t.Fatal(errOut)
+	}
+	out, errOut, code := runIn(t, root, "prime", "--role", "review", "--epic", "E-0001", "--part", "1")
+	if code != 0 {
+		t.Fatal(errOut)
+	}
+	var v struct {
+		Role, Item, Story string
+		Part, Parts       int
+		Conventions       []struct{ Path string }
+	}
+	if err := json.Unmarshal([]byte(out), &v); err != nil {
+		t.Fatalf("%v: %s", err, out)
+	}
+	if v.Role != "review" || v.Item != "E-0001" || v.Story != "" || v.Part != 1 || v.Parts < 1 || len(v.Conventions) != 1 || v.Conventions[0].Path != "design/conventions/review.md" {
+		t.Errorf("pack: %+v", v)
+	}
+	if out, _, _ = runIn(t, root, "prime", "--role", "review", "--epic", "E-0001", "--budget", "1KB"); !strings.Contains(out, "; budget 1024 bytes\n") {
+		t.Errorf("--budget 1KB:\n%s", out)
+	}
+	for _, c := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"prime", "--role", "review", "--story", "S-0001"}, "the reviewer takes an epic, not a story; give --epic E-nnnn"},
+		{[]string{"prime", "--role", "review"}, "give --epic E-nnnn"},
+		{[]string{"prime", "--role", "write"}, "give a strategic role: plan, orchestrate, analyze, curate, review"},
+		{[]string{"prime", "--role", "write", "--story", "S-0001"}, "a strategic agent's plan, orchestrate, analyze, curate, review"},
+	} {
+		if _, errOut, code := runIn(t, root, c.args...); code == 0 || !strings.Contains(errOut, c.want) {
+			t.Errorf("%v: code %d, %s", c.args, code, errOut)
+		}
+	}
+	write(role, "---\ntitle: Reviewer\nrole: [\n---\n")
+	for _, r := range []string{"review", "orchestrate"} {
+		if _, errOut, code := runIn(t, root, "prime", "--role", r); code == 0 || !strings.Contains(errOut, "role file "+role) {
+			t.Errorf("--role %s with a role file that does not parse: code %d, %s", r, code, errOut)
+		}
+	}
+	if _, errOut, code := runIn(t, root, "prime", "--role", "explore", "--story", "S-0001"); code != 0 {
+		t.Errorf("--role explore with a role file that does not parse: %s", errOut)
+	}
+}
+
 func TestPrimeStoryRole(t *testing.T) {
 	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)

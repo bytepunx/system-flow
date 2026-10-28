@@ -753,9 +753,9 @@ func (s *server) docSearch(_ context.Context, _ *mcp.CallToolRequest, in DocSear
 type PrimeIn struct {
 	Project string `json:"project,omitempty" jsonschema:"the project, by key or folder: needed only when the server serves more than one"`
 	Story   string `json:"story,omitempty" jsonschema:"story ID such as S-0138 (any zero padding); an archived story gets the pack it would get today. Needed but for role orchestrate, analyze, or curate, and for role plan given an epic"`
-	Epic    string `json:"epic,omitempty" jsonschema:"with role plan, the epic the planner plans, such as E-0016, instead of a story"`
+	Epic    string `json:"epic,omitempty" jsonschema:"with role plan, or a role whose role file takes an epic, the epic it is primed for, such as E-0016, instead of a story"`
 	Budget  string `json:"budget,omitempty" jsonschema:"the size the pack fits, such as 80KB; default the project's prime.budget, else 80KB, and half that with role explore or verify"`
-	Role    string `json:"role,omitempty" jsonschema:"explore or verify: the smaller pack for a sub-agent of the story's agent in that role (ADR-0059); plan, orchestrate, analyze, or curate: the pack for a strategic agent, the planner for an epic or a story, or the orchestrator, the analyzer, or the curator for the whole project; empty for the story's agent's own pack"`
+	Role    string `json:"role,omitempty" jsonschema:"explore or verify: the smaller pack for a sub-agent of the story's agent in that role (ADR-0059); plan, orchestrate, analyze, or curate: the pack for a strategic agent, the planner for an epic or a story, or the orchestrator, the analyzer, or the curator for the whole project; or any role a role file under design/workflows/roles defines (ADR-0207), primed for the item kind its file takes; empty for the story's agent's own pack"`
 	Part    int    `json:"part,omitempty" jsonschema:"which part of the pack to return, from 1; default 1. Read every part, up to the parts the result gives (ADR-0104)"`
 }
 
@@ -776,14 +776,22 @@ func (s *server) prime(_ context.Context, _ *mcp.CallToolRequest, in PrimeIn) (*
 
 // pack is the whole pack in names: a strategic agent's, a sub-agent's, or
 // the story's agent's.
+// A strategic role is any the project defines (ADR-0207); a role file that
+// does not parse takes every role but a sub-agent's as strategic, so that
+// ctxpack.ForStrategic refuses it with the file's finding.
 func (s *server) pack(in PrimeIn) (*ctxpack.Pack, error) {
+	strategicRoles, err := ctxpack.StrategicRoles(s.repo)
+	strategic := in.Role != "" && !slices.Contains(conventions.SubAgentRoles, in.Role) && (err != nil || slices.Contains(strategicRoles, in.Role))
+	if err != nil {
+		strategicRoles = conventions.StrategicRoles
+	}
 	switch {
-	case in.Epic != "" && in.Role != conventions.RolePlan:
+	case in.Epic != "" && !strategic:
 		return nil, fmt.Errorf("prime: epic primes the planner for an epic; give role plan too")
-	case slices.Contains(conventions.StrategicRoles, in.Role):
+	case strategic:
 		return ctxpack.ForStrategic(s.repo, in.Role, in.Epic, in.Story, in.Budget)
 	case in.Story == "":
-		return nil, fmt.Errorf("prime: give story, or role %s", strings.Join(conventions.StrategicRoles, ", "))
+		return nil, fmt.Errorf("prime: give story, or role %s", strings.Join(strategicRoles, ", "))
 	case in.Role != "":
 		return ctxpack.ForRole(s.repo, in.Story, in.Role, in.Budget)
 	}

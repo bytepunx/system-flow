@@ -104,6 +104,16 @@ title and first entry of each thread awaiting the operator, each thread's
 best not yet taken in turn, with the reason thread TH-nnnn; rank n, within an
 eighth of the budget (ADR-0194); and a catalog of the rest. It does not get the design system. Its budget is the story's agent's, and --budget sets it.
 
+--role takes as well any role a project defines in a role file under
+design/workflows/roles (ADR-0207), by its role: its pack is built as a
+built-in role's is, from the topics its file names, the conventions whose
+roles are empty or list it, and, when its file's item names epic or story,
+the item given with --epic or --story; with item none, neither. A role
+file for plan, orchestrate, analyze, or curate gives that role its topics
+and item kinds in place of flai's own. A role no file defines, an item
+kind its file does not take, and a role file that does not parse are
+refused, naming the roles the project defines or the file's finding.
+
 --part N prints part N of the pack as the MCP prime tool returns it, as
 JSON: parts of at most 40,000 bytes each, every one carrying part and parts
 (ADR-0104). --part implies --json; without it the whole pack prints.`,
@@ -148,22 +158,22 @@ JSON: parts of at most 40,000 bytes each, every one carrying part and parts
 			for rel, e := range errs {
 				a.logger().Warn("convention file unreadable", "component", "conventions", "path", rel, "err", e.Error())
 			}
-			strategic := slices.Contains(conventions.StrategicRoles, role)
+			strategicRoles, strategic := strategicRole(repo, role)
 			switch {
 			case cmd.Flags().Changed("part") && cat:
 				return fmt.Errorf("--part prints a part of a context pack; --cat prints the conventions, give one of them")
 			case cmd.Flags().Changed("part") && part < 1:
 				return fmt.Errorf("--part %d: parts count from 1", part)
 			case cmd.Flags().Changed("part") && story == "" && !strategic:
-				return fmt.Errorf("--part prints a part of a context pack; give --story, or --role %s", strings.Join(conventions.StrategicRoles, ", "))
-			case epic != "" && role != conventions.RolePlan:
+				return fmt.Errorf("--part prints a part of a context pack; give --story, or --role %s", strings.Join(strategicRoles, ", "))
+			case epic != "" && !strategic:
 				return fmt.Errorf("--epic primes the planner for an epic; give --role plan too")
 			case strategic:
 				return a.primeStrategic(repo, role, epic, story, budget, part)
 			case budget != "" && story == "":
 				return fmt.Errorf("--budget sizes a story's context pack; give --story too")
 			case role != "" && story == "":
-				return fmt.Errorf("--role %s primes a sub-agent working a story; give --story too, or give a strategic role: %s", role, strings.Join(conventions.StrategicRoles, ", "))
+				return fmt.Errorf("--role %s primes a sub-agent working a story; give --story too, or give a strategic role: %s", role, strings.Join(strategicRoles, ", "))
 			}
 			if story != "" {
 				return a.primeStory(repo, story, role, budget, part)
@@ -203,10 +213,26 @@ JSON: parts of at most 40,000 bytes each, every one carrying part and parts
 	c.Flags().BoolVar(&cat, "cat", false, "print file contents instead of paths")
 	c.Flags().StringVar(&story, "story", "", "print the context pack for this story: the conventions its agent reads, the design, tech, and ADRs it selects, and a catalog of the rest")
 	c.Flags().StringVar(&budget, "budget", "", "the size the context pack fits, such as 80KB (default: prime.budget in system-flow.yaml, else 80KB; half that with --role explore or verify)")
-	c.Flags().StringVar(&role, "role", "", "print the pack for an agent in this role: explore or verify, a sub-agent of the story's agent (ADR-0059), with --story; or plan, orchestrate, analyze, or curate, a strategic agent")
-	c.Flags().StringVar(&epic, "epic", "", "with --role plan, print the planner's pack for this epic")
+	c.Flags().StringVar(&role, "role", "", "print the pack for an agent in this role: explore or verify, a sub-agent of the story's agent (ADR-0059), with --story; or plan, orchestrate, analyze, curate, or a role a role file defines, a strategic agent")
+	c.Flags().StringVar(&epic, "epic", "", "with --role plan, or a role whose role file takes an epic, print its pack for this epic")
 	c.Flags().IntVar(&part, "part", 0, "print part N of the pack, from 1, as JSON, as the MCP prime tool returns it (ADR-0104)")
 	return c
+}
+
+// strategicRole is the strategic roles the project defines (ADR-0207), as
+// ctxpack.StrategicRoles lists them, and whether role is one of them. A role
+// file that does not parse leaves the built-in roles listed, and takes every
+// role but a sub-agent's as strategic, so that ctxpack.ForStrategic refuses
+// it with the file's finding.
+func strategicRole(repo *workitem.Repo, role string) ([]string, bool) {
+	list, err := ctxpack.StrategicRoles(repo)
+	if err != nil {
+		list = conventions.StrategicRoles
+	}
+	if role == "" || slices.Contains(conventions.SubAgentRoles, role) {
+		return list, false
+	}
+	return list, err != nil || slices.Contains(list, role)
 }
 
 // primeStory prints the context pack for a story (ADR-0047, ADR-0049), as
