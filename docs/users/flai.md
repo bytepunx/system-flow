@@ -1,6 +1,6 @@
 ---
 title: flai CLI
-updated: 2026-10-26
+updated: 2026-10-28
 status: active
 ---
 
@@ -171,7 +171,7 @@ go tool pprof 'http://127.0.0.1:6060/debug/pprof/profile?seconds=30'
 }
 ```
 
-A key flai does not know is refused when the file is read, so a typo is an error rather than a silent default. `flai host` and `flai serve` keep their state, tokens, and logs in the folders `host` and `serve` beside this file, so a different `FLAI_CONFIG` gives them a separate home too.
+A key flai does not know is refused when the file is read, so a typo is an error rather than a silent default. `flai host` and `flai serve` keep their state, tokens, and logs in the folders `host` and `serve` beside this file, so a different `FLAI_CONFIG` gives them a separate home too. An agent container's flai gets `FLAI_CONFIG` and `FLAI_CACHE_DIR`, both pointing into the story's agent folder, so it writes nothing under the container's home ([Run a story's agent in a container](../operators/runbooks/agent-container.md#what-it-mounts)).
 
 Read and change it by dotted key:
 
@@ -676,6 +676,8 @@ flai stream restore S-0037 --path scripts/flai-snapshot.sh   # commit main's ver
 ```
 
 Each story is worked on its own branch, checked out in a worktree under `.flai-cache/worktrees/`. Code, design, and docs changes land there; `wip/` is always written in the main checkout, so the board and the dashboard stay current whatever branches exist. `flai stream sync` rebases the branch onto the main branch, and is the only way a story's agent rebases it: agents never start a `git rebase` or `git merge` by hand. `flai accept` rebases, fast-forwards the branch into main, and removes the worktree and branch, a branch pushed to a remote included, whose upstream the rebase left behind. An acceptance that stopped after the fast-forward finishes when you run it again.
+
+Run in a worktree, flai finds the main checkout from the worktree's `.git` file, and keeps `wip/` and `.flai-cache` there. When that main checkout is not there, as in an agent container that mounts the worktree alone, `flai verify`, `flai stream sync`, `flai task done`, and `flai check` refuse in one line that names it ([I-0219](../../design/issues/I-0219-flai-verify-inside-the-agent-container-takes-the-story-s-worktree-for-the-project-root-since-the-main-checkout-is-not-mounted-and-writes-a-config-under-the-container-s-home.md)). Run them on the host, or call the MCP tools `verify`, `task_done`, and `stream_sync`, which run there; `flai check` has no tool of its own, and `verify` runs it. Other commands work as before.
 
 A story's agent starts a ready story with `flai story start`, which moves it to in-progress, opens its narrative and its branch in its worktree, primes it, and reads the inbox in one call ([Starting a story](#starting-a-story)). `flai stream open` on a ready story starts it the same way, short of the prime and the inbox: it moves the story to in-progress as `FLAI_AGENT`, its epic following, or refuses it with exit 4 and changes nothing when the board holds it, and says `S-0037 → in-progress` before the narrative (`--json`: `moved`). A story in any other state it opens unmoved ([ADR-0153](../../design/adrs/0153-flai-stream-open-starts-a-ready-story-as-flai-story-start-does-moving-it-to-in.md)). It works through its tasks one at a time, and keeps the branch close to main as it goes. When a task is done, it closes it with `flai task done`, from the story's worktree ([Closing a task](#closing-a-task)). That commits the task's changes on `story/S-0037`, syncs, and checks. Then it runs the tests for what the task changed with `flai test` on the paths it changed ([Run the tests for what changed](#run-the-tests-for-what-changed)), and closes any fix they need by calling `flai task done` again.
 
