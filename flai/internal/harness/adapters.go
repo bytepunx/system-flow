@@ -13,6 +13,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/mcphttp"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 )
 
@@ -63,7 +64,10 @@ var claudeCodeTakes = map[string]option{
 // definition (S-0431), each with flai guard on its file
 // edits and the same handler, which denies anything outside a story's
 // worktree. Every session whose agent names a provider calls it rather
-// than Anthropic (claudeCodeProvider).
+// than Anthropic (claudeCodeProvider). Started by pilot in a container, it
+// reaches the host's HTTP MCP server through a file the Start's Files hold,
+// and keeps its configuration and sessions under the request's cache
+// (S-0507).
 func (claudeCode) Start(r Request, host Host) (Start, error) {
 	var model string
 	var config map[string]string
@@ -84,21 +88,15 @@ func (claudeCode) Start(r Request, host Host) (Start, error) {
 		return Start{}, err
 	}
 	host = ClaudeCodeHost(host)
-	// The agent reaches flai through this flai's own MCP server on stdio,
-	// whatever the project's .mcp.json says, which a headless session would
-	// not have approved, and no other: not the operator's own connectors and
-	// plugins, which S-0104's trial found loaded otherwise. The operator adds
-	// others with --mcp-config in the harness's arguments. The server is told
-	// the agent's name as an argument: the harness's own settings can put a
-	// FLAI_AGENT of their own into the servers it starts, which made every
-	// agent flai serve started one name (S-0114, I-0037).
-	args := []string{"mcp"}
-	if r.Name != "" {
-		args = append(args, "--agent", r.Name)
-	}
-	mcp, err := mcpConfig(r.Flai, args)
+	mcp, files, err := claudeCodeMCP(r)
 	if err != nil {
 		return Start{}, err
+	}
+	// In a container, claude keeps its configuration and its sessions in the
+	// mounted cache, so that a later container resumes the session; the
+	// folder is the starter's to make, as pilot does (S-0507).
+	if r.Cache != "" {
+		env = append(env, "CLAUDE_CONFIG_DIR="+filepath.Join(r.Cache, "claude"))
 	}
 	// <key> plan <item>, <key> orchestrate, <key> analyze [<focus>],
 	// <key> curate, or <key> <story>
@@ -130,7 +128,81 @@ func (claudeCode) Start(r Request, host Host) (Start, error) {
 		argv = append(argv, "--agent", claudeCodeStrategic[r.Role])
 	}
 	argv = append(argv, permissionArgs(host)...)
-	return Start{Harness: ClaudeCode, Argv: argv, Env: env, EnvFrom: from}, nil
+	return Start{Harness: ClaudeCode, Argv: argv, Env: env, EnvFrom: from, Files: files}, nil
+}
+
+// claudeCodeMCP is the --mcp-config of r's session, and the files it needs
+// written. The agent reaches flai through flai's MCP server alone, whatever
+// the project's .mcp.json says, which a headless session would not have
+// approved: not the operator's own connectors and plugins, which S-0104's
+// trial found loaded otherwise. The operator adds others with --mcp-config
+// in the harness's arguments. On the host the server is this flai's own on
+// stdio, told the agent's name as an argument: the harness's own settings
+// can put a FLAI_AGENT of their own into the servers it starts, which made
+// every agent flai serve started one name (S-0114, I-0037). In a container,
+// where MCPURLEnv is set, it is the host's HTTP server, named in a file
+// under the cache that the starter writes, pilot (S-0507).
+func claudeCodeMCP(r Request) (string, []File, error) {
+	if r.MCPURLEnv == "" {
+		args := []string{"mcp"}
+		if r.Name != "" {
+			args = append(args, "--agent", r.Name)
+		}
+		mcp, err := mcpConfig(r.Flai, args)
+		return mcp, nil, err
+	}
+	if err := checkContainer(r); err != nil {
+		return "", nil, err
+	}
+	data, err := httpMCPConfig(r)
+	if err != nil {
+		return "", nil, err
+	}
+	path := filepath.Join(r.Cache, "mcp.json")
+	return path, []File{{Path: path, Data: data, Mode: 0o600}}, nil
+}
+
+// envName is the name of an environment variable, as ${NAME} names it.
+var envName = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+
+// checkContainer refuses a container start that cannot reach the host's
+// HTTP MCP server: one that names no token's variable or no cache, or a
+// variable that is not a variable's name.
+func checkContainer(r Request) error {
+	switch {
+	case r.MCPTokenEnv == "":
+		return fmt.Errorf("the start request names the MCP URL's variable %s but not its token's; set mcp_token_env to the variable that holds the HTTP server's bearer token", r.MCPURLEnv)
+	case r.Cache == "":
+		return fmt.Errorf("the start request names the MCP URL's variable %s but no cache; set cache to the mounted folder that keeps the harness's configuration and sessions", r.MCPURLEnv)
+	case !filepath.IsAbs(r.Cache):
+		return fmt.Errorf("the start request's cache %q is not an absolute path; set cache to the mounted folder's absolute path", r.Cache)
+	}
+	for _, v := range []struct{ field, name string }{{"mcp_url_env", r.MCPURLEnv}, {"mcp_token_env", r.MCPTokenEnv}, {"mcp_host_env", r.MCPHostEnv}} {
+		if v.name != "" && !envName.MatchString(v.name) {
+			return fmt.Errorf("the start request's %s %q is not a variable's name; name the variable with letters, digits, and underscores", v.field, v.name)
+		}
+	}
+	return nil
+}
+
+// httpMCPConfig is the MCP file that names the host's HTTP server as the
+// server named flai: its URL, its bearer token, and the Host it listens
+// under each as ${NAME} of the variable r names, which claude expands as it
+// reads the file, so that no token is ever written; and the agent's name in
+// X-Flai-Agent, which the server names the session by.
+func httpMCPConfig(r Request) ([]byte, error) {
+	headers := map[string]string{"Authorization": "Bearer ${" + r.MCPTokenEnv + "}"}
+	if r.Name != "" {
+		headers[mcphttp.AgentHeader] = r.Name
+	}
+	if r.MCPHostEnv != "" {
+		headers["Host"] = "${" + r.MCPHostEnv + "}"
+	}
+	mcp, err := json.Marshal(map[string]any{"mcpServers": map[string]any{"flai": map[string]any{"type": "http", "url": "${" + r.MCPURLEnv + "}", "headers": headers}}})
+	if err != nil {
+		return nil, fmt.Errorf("the MCP configuration for the host's HTTP server: %w", err)
+	}
+	return mcp, nil
 }
 
 // claudeCodeModels are the variables that set what claude's model aliases
@@ -363,7 +435,8 @@ func definition(data []byte) (map[string]any, error) {
 // the agent names a provider, it has FLAI_PROVIDER, its name,
 // FLAI_PROVIDER_API, FLAI_PROVIDER_BASE_URL, and FLAI_PROVIDER_KEY_ENV, the
 // name of the variable that holds its key, which the command reads itself:
-// flai hands it no key, and refuses no api (ADR-0129).
+// flai hands it no key, and refuses no api (ADR-0129). It takes no part in
+// a container's start, and ignores the request's container fields (S-0507).
 type command struct{}
 
 // DefaultHost is nothing: the command has no default, the operator writes it.

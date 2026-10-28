@@ -2,6 +2,7 @@ package harness
 
 import (
 	"encoding/json"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -2499,6 +2500,165 @@ func TestTheOperatorsCommandGetsTheProvider(t *testing.T) {
 	for _, s := range append(slices.Clone(st.Argv), st.Env...) {
 		if strings.Contains(s, "sk-sentinel") {
 			t.Fatalf("the key is in the start: %q", s)
+		}
+	}
+}
+
+// containerReq is a story's request as pilot reads it in a container: the
+// host's HTTP MCP server by its variables' names, and the mounted cache.
+func containerReq(a *manifest.Agent) Request {
+	r := req(a)
+	r.Inner, r.MCPURLEnv, r.MCPTokenEnv, r.Cache = ClaudeCode, "FLAI_MCP_URL", "FLAI_MCP_TOKEN", "/cache"
+	return r
+}
+
+// S-0507: in a container, claude-code reaches the host's HTTP MCP server
+// through a file under the cache that the starter writes, naming the URL and
+// the token by their variables, so that no token is ever in the start, and
+// keeps its configuration in the cache; on the host nothing changes.
+func TestClaudeCodeInAContainerReachesTheHostsHTTPServer(t *testing.T) {
+	t.Setenv("FLAI_MCP_TOKEN", "tok-sentinel-never-in-a-start")
+	t.Setenv("FLAI_MCP_URL", "http://host.docker.internal:4242/mcp")
+	a := &manifest.Agent{Harness: ClaudeCode, Model: "claude-opus-5-5"}
+	host, err := (claudeCode{}).Start(req(a), Host{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if host.Files != nil || slices.ContainsFunc(host.Env, func(e string) bool { return strings.HasPrefix(e, "CLAUDE_CONFIG_DIR=") }) {
+		t.Fatalf("a start on the host writes no file and keeps claude's own configuration: %v %q", host.Files, host.Env)
+	}
+	for _, mcpHost := range []string{"", "FLAI_MCP_HOST"} {
+		r := containerReq(a)
+		r.MCPHostEnv = mcpHost
+		st, err := (claudeCode{}).Start(r, Host{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := after(st.Argv, "--mcp-config"); got != "/cache/mcp.json" || !slices.Contains(st.Argv, "--strict-mcp-config") {
+			t.Errorf("--mcp-config = %q: %q", got, st.Argv)
+		}
+		// past the MCP configuration, the argv is the host's
+		i, j := slices.Index(st.Argv, "--mcp-config"), slices.Index(host.Argv, "--mcp-config")
+		if !slices.Equal(st.Argv[:i], host.Argv[:j]) || !slices.Equal(st.Argv[i+2:], host.Argv[j+2:]) {
+			t.Errorf("container argv %q\nhost argv %q", st.Argv, host.Argv)
+		}
+		if !slices.Contains(st.Env, "CLAUDE_CONFIG_DIR=/cache/claude") {
+			t.Errorf("env lacks CLAUDE_CONFIG_DIR: %q", st.Env)
+		}
+		if len(st.Files) != 1 || st.Files[0].Path != "/cache/mcp.json" || st.Files[0].Mode != 0o600 {
+			t.Fatalf("files %+v", st.Files)
+		}
+		var mcp struct {
+			MCPServers map[string]struct {
+				Type    string            `json:"type"`
+				URL     string            `json:"url"`
+				Headers map[string]string `json:"headers"`
+			} `json:"mcpServers"`
+		}
+		if err := json.Unmarshal(st.Files[0].Data, &mcp); err != nil || len(mcp.MCPServers) != 1 {
+			t.Fatalf("mcp file %s: %v", st.Files[0].Data, err)
+		}
+		flai := mcp.MCPServers["flai"]
+		want := map[string]string{"Authorization": "Bearer ${FLAI_MCP_TOKEN}", "X-Flai-Agent": "agent-S-0104"}
+		if mcpHost != "" {
+			want["Host"] = "${FLAI_MCP_HOST}"
+		}
+		if flai.Type != "http" || flai.URL != "${FLAI_MCP_URL}" || !maps.Equal(flai.Headers, want) {
+			t.Errorf("host env %q: server %+v, want headers %v", mcpHost, flai, want)
+		}
+		for _, s := range append(append(slices.Clone(st.Argv), st.Env...), string(st.Files[0].Data)) {
+			if strings.Contains(s, "tok-sentinel") || strings.Contains(s, "host.docker.internal") {
+				t.Fatalf("a variable's value is in the start: %q", s)
+			}
+		}
+	}
+	// no agent's name, no X-Flai-Agent
+	r := containerReq(a)
+	r.Name = ""
+	st, err := (claudeCode{}).Start(r, Host{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(st.Files[0].Data), "X-Flai-Agent") {
+		t.Errorf("X-Flai-Agent with no name: %s", st.Files[0].Data)
+	}
+	// the operator's command ignores the container fields
+	cmdHost, _ := (command{}).Start(req(a), Host{Program: "run-agent"})
+	cmd, _ := (command{}).Start(containerReq(a), Host{Program: "run-agent"})
+	if !slices.Equal(cmd.Argv, cmdHost.Argv) || !slices.Equal(cmd.Env, cmdHost.Env) || cmd.Files != nil {
+		t.Errorf("command in a container %+v, on the host %+v", cmd, cmdHost)
+	}
+}
+
+// S-0507: pilot resumes the session its cache records, and starts it anew
+// otherwise; Resume without a session starts none.
+func TestPilotResumesTheSessionItsCacheRecords(t *testing.T) {
+	r := containerReq(&manifest.Agent{Harness: ClaudeCode})
+	r.Session = "5f0c7d0e-1b2a-4c3d-8e9f-0a1b2c3d4e5f"
+	st, _ := (claudeCode{}).Start(r, Host{})
+	if after(st.Argv, "--session-id") != r.Session || slices.Contains(st.Argv, "--resume") {
+		t.Fatalf("first start: %q", st.Argv)
+	}
+	r.Resume = true
+	st, _ = (claudeCode{}).Start(r, Host{})
+	if after(st.Argv, "--resume") != r.Session || slices.Contains(st.Argv, "--session-id") {
+		t.Fatalf("resumed: %q", st.Argv)
+	}
+	r.Session = ""
+	st, _ = (claudeCode{}).Start(r, Host{})
+	if slices.Contains(st.Argv, "--resume") || slices.Contains(st.Argv, "--session-id") {
+		t.Fatalf("no session: %q", st.Argv)
+	}
+}
+
+// S-0507: a container start that cannot reach the host's server is refused
+// with what to set.
+func TestClaudeCodeRefusesAContainerStartItCannotConnect(t *testing.T) {
+	for name, c := range map[string]struct {
+		change func(*Request)
+		want   string
+	}{
+		"no token":       {func(r *Request) { r.MCPTokenEnv = "" }, "set mcp_token_env"},
+		"no cache":       {func(r *Request) { r.Cache = "" }, "set cache"},
+		"relative cache": {func(r *Request) { r.Cache = "cache" }, "absolute path"},
+		"not a variable": {func(r *Request) { r.MCPHostEnv = "HOST}" }, "mcp_host_env"},
+	} {
+		r := containerReq(&manifest.Agent{Harness: ClaudeCode})
+		c.change(&r)
+		_, err := (claudeCode{}).Start(r, Host{})
+		if err == nil || !strings.Contains(err.Error(), c.want) || strings.Contains(err.Error(), "\n") {
+			t.Errorf("%s: %v, want one line with %q", name, err, c.want)
+		}
+	}
+}
+
+// S-0507: pilot's start request is a Request, its container fields under
+// their own names; Resume is pilot's to set, never the request's.
+func TestAStartRequestDecodesTheContainerFields(t *testing.T) {
+	in := `{"Story":"S-0104","Name":"agent-S-0104","inner":"claude-code","mcp_url_env":"FLAI_MCP_URL","mcp_token_env":"FLAI_MCP_TOKEN","mcp_host_env":"FLAI_MCP_HOST","cache":"/cache","Resume":true}`
+	var r Request
+	if err := json.Unmarshal([]byte(in), &r); err != nil {
+		t.Fatal(err)
+	}
+	if r.Story != "S-0104" || r.Name != "agent-S-0104" || r.Inner != ClaudeCode || r.MCPURLEnv != "FLAI_MCP_URL" || r.MCPTokenEnv != "FLAI_MCP_TOKEN" || r.MCPHostEnv != "FLAI_MCP_HOST" || r.Cache != "/cache" || r.Resume {
+		t.Fatalf("decoded %+v", r)
+	}
+	out, err := json.Marshal(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var back Request
+	if err := json.Unmarshal(out, &back); err != nil || back.Inner != r.Inner || back.MCPURLEnv != r.MCPURLEnv || back.MCPTokenEnv != r.MCPTokenEnv || back.MCPHostEnv != r.MCPHostEnv || back.Cache != r.Cache {
+		t.Fatalf("round trip %s: %+v %v", out, back, err)
+	}
+	if strings.Contains(string(out), "Resume") {
+		t.Errorf("Resume is encoded: %s", out)
+	}
+	// a host request encodes none of them
+	host, _ := json.Marshal(req(nil))
+	for _, k := range []string{"inner", "mcp_url_env", "mcp_token_env", "mcp_host_env", "cache"} {
+		if strings.Contains(string(host), `"`+k+`"`) {
+			t.Errorf("a host request encodes %s: %s", k, host)
 		}
 	}
 }

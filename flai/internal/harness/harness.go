@@ -13,6 +13,7 @@ package harness
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"slices"
 	"sort"
@@ -107,6 +108,31 @@ type Request struct {
 	// story it has verified rather than accepting it (S-0403). It is unset
 	// for any other agent.
 	Queue bool
+	// Inner is the harness pilot runs inside a container, one of Adapters,
+	// as pilot's start request names it (S-0507); empty for a start on the
+	// host, which is every start flai serve makes today.
+	Inner string `json:"inner,omitempty"`
+	// MCPURLEnv names the variable that holds the URL of the host's HTTP MCP
+	// server, for an agent in a container, which cannot start flai's server
+	// on stdio (S-0507). Set, the adapter configures the HTTP server by the
+	// variable's name, and never by its value; empty, the stdio server.
+	MCPURLEnv string `json:"mcp_url_env,omitempty"`
+	// MCPTokenEnv names the variable that holds the HTTP server's bearer
+	// token; required with MCPURLEnv.
+	MCPTokenEnv string `json:"mcp_token_env,omitempty"`
+	// MCPHostEnv names the variable that holds the Host header the HTTP
+	// server listens under, when it is not the URL's: the server's MCP SDK
+	// refuses a Host that is not loopback as DNS rebinding, and a container
+	// dials host.docker.internal. Optional.
+	MCPHostEnv string `json:"mcp_host_env,omitempty"`
+	// Cache is the folder mounted in the container where the harness keeps
+	// its configuration, its sessions, and its MCP file, so that a later
+	// container resumes the session (S-0507); empty on the host.
+	Cache string `json:"cache,omitempty"`
+	// Resume is set by pilot when its cache records Session already, so that
+	// the harness goes on in it rather than start it again (S-0507); never
+	// read from a start request.
+	Resume bool `json:"-"`
 }
 
 // SentBack is a send back of a story from review to in-progress, which flai
@@ -140,9 +166,10 @@ func (b *SentBack) then(story string) string {
 }
 
 // resumes says whether r goes on in a session an earlier run had: after an
-// answer, or after a send back with its last run's session.
+// answer, after a send back with its last run's session, or when pilot's
+// cache records the session already (S-0507).
 func (r Request) resumes() bool {
-	return r.Session != "" && (r.Answered != "" || r.SentBack != nil && r.SentBack.Resumed)
+	return r.Session != "" && (r.Resume || r.Answered != "" || r.SentBack != nil && r.SentBack.Resumed)
 }
 
 // Share is the sharing of paths that cleared a hold on the story an agent is
@@ -206,9 +233,21 @@ type Start struct {
 	// EnvFrom maps a variable of the child's to the name of a variable of
 	// flai serve's own environment, whose value flai serve copies into it as
 	// it spawns the child: a provider's key (ADR-0129). An adapter never
-	// reads a key, and neither Argv nor Env ever carries one, so a Start can
-	// be logged and recorded whole.
+	// reads a key, and neither Argv, Env, nor Files ever carries one, so a
+	// Start can be logged and recorded whole.
 	EnvFrom map[string]string
+	// Files are what the starter writes before it spawns the child: the MCP
+	// file of an agent in a container, which pilot writes (S-0507). None for
+	// a start on the host.
+	Files []File
+}
+
+// File is a file a Start needs written before its child is spawned: where,
+// what it holds, and its permissions.
+type File struct {
+	Path string
+	Data []byte
+	Mode os.FileMode
 }
 
 // Capabilities are what flai serve may count on a harness to do (ADR-0130).
