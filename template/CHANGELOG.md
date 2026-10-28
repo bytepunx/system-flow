@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.2 - 2026-10-28
+
+- S-0502 A thread with a pending orchestrator recommendation waits on the operator however long it takes, with no setting to confirm it after a threshold (patch).
+
 ## 1.1.1 - 2026-10-28
 
 - S-0502 The orchestrator marks a recommendation on money or a change to the host for the operator alone, and `flai serve` confirms its other recommendations after `orchestration.permissions.confirm_after` (patch, ADR-0206): in `strategic-agents.md`, the section "As the orchestrator" says that wherever it posts a recommendation, under `answer_threads` or `plan_backlog_stories`, it gives `thread_reply` `operator_only: true` with one about money (spend, a paid service, a price) or a change to the host (installing or upgrading software, configuration outside the repository, credentials), that while `confirm_after` is set `flai serve` confirms its other recommendations on a thread a story's agent or a planner opened once they have waited that long with no answer from the operator, and that it recommends there only an answer it would stand behind as the answer. The section "Asking the operator" says that on a planner's thread such a confirmation is the answer, as the operator's confirmation is. The orchestrator's definition, `.claude/agents/orchestrator.md`, says the same. It needs a flai that has it, the release that carries S-0502: an older flai does not know `orchestration.permissions.confirm_after`, so its `flai check` reports it as a permission it does not know and its `flai serve` confirms nothing, and its `thread_reply` has no `operator_only`.
