@@ -3,16 +3,37 @@ id: T-1724
 type: task
 nature: feature
 title: The design, the convention, and the user and operator docs say what a role file holds, where it lives, and that a defined role runs as the operator
-status: backlog
+status: done
 parent: S-0414
 owner: alex
 created: 2026-10-16T05:43:18Z
-updated: 2026-10-21T11:12:01Z
-transitions: []
+updated: 2026-10-28T13:50:35Z
+transitions:
+  - to: ready
+    at: 2026-10-28T13:45:46Z
+    by: agent-S-0414
+  - to: in-progress
+    at: 2026-10-28T13:45:47Z
+    by: agent-S-0414
+  - to: done
+    at: 2026-10-28T13:50:35Z
+    by: agent-S-0414
 stream: S-0414
 tags: [cli, template]
 touches: [design/system/strategic-agents.md, design/system/repository-layout.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, docs/users/flai.md, docs/operators/index.md, template/CHANGELOG.md, design/system/flai-cli.md, design/system/project-manifest.md, design/README.md, template/root/design/README.md.tmpl, CLAUDE.md, template/root/CLAUDE.md.tmpl]
 after: [T-1723]
+usage:
+  source: log
+  seconds: 288
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 115
+      output: 55099
+      cache_read: 6489680
+      cache_write: 273323
+      cost: 3.9508
 ---
 # T-1724 The design, the convention, and the user and operator docs say what a role file holds, where it lives, and that a defined role runs as the operator
 

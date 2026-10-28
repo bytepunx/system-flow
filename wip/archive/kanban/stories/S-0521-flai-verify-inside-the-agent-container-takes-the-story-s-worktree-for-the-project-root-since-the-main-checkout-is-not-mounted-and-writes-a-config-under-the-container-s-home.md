@@ -3,10 +3,10 @@ id: S-0521
 type: story
 nature: remediation
 title: flai verify inside the agent container takes the story's worktree for the project root, since the main checkout is not mounted, and writes a config under the container's home
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-28T12:53:27Z
-updated: 2026-10-28T13:06:59Z
+updated: 2026-10-28T14:05:53Z
 transitions:
   - to: ready
     at: 2026-10-28T13:06:32Z
@@ -14,29 +14,53 @@ transitions:
   - to: in-progress
     at: 2026-10-28T13:06:59Z
     by: agent-S-0521
+  - to: review
+    at: 2026-10-28T13:49:56Z
+    by: agent-S-0521
+  - to: done
+    at: 2026-10-28T14:05:53Z
+    by: orchestrator
 tags: [cli, docker]
 topics: [harness, docker]
-touches: [flai/internal/workitem/repo.go, flai/internal/workitem/worktree_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/check.go, flai/cmd/check_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, scripts/agent-container.sh, docs/operators/runbooks/agent-container.md, docs/users/flai.md, design/system/flai-cli.md, design/issues/I-0219-flai-verify-inside-the-agent-container-takes-the-story-s-worktree-for-the-project-root-since-the-main-checkout-is-not-mounted-and-writes-a-config-under-the-container-s-home.md, design/issues/summary.md]
+touches: [flai/internal/workitem/repo.go, flai/internal/workitem/worktree_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/check.go, flai/cmd/check_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, scripts/agent-container.sh, docs/operators/runbooks/agent-container.md, docs/users/flai.md, design/system/flai-cli.md, design/issues/I-0219-flai-verify-inside-the-agent-container-takes-the-story-s-worktree-for-the-project-root-since-the-main-checkout-is-not-mounted-and-writes-a-config-under-the-container-s-home.md, design/issues/summary.md, flai/cmd/stream.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2596
+  priced_by: harness
+  turns:
+    - day: 2026-10-28
+      ceremony: 2
+      hand_edits: 1
+      work: 40
+  models:
+    - model: claude-opus-5-5
+      input: 224
+      output: 56734
+      cache_read: 10398773
+      cache_write: 597399
+      cost: 6.8987
   strategic:
     - kind: orchestrator
-      seconds: 57
+      seconds: 249
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 25
-          output: 313
-          cache_read: 5305632
-          cache_write: 20709
-          cost: 1.1694
+          input: 37
+          output: 473
+          cache_read: 8895760
+          cache_write: 24719
+          cost: 1.9584
+        - model: claude-sonnet-5-5
+          input: 10
+          output: 69
+          cache_read: 110523
+          cache_write: 38085
+          cost: 0.1016
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -62,8 +86,8 @@ finalized:
 This story remediates [I-0219](../../../design/issues/I-0219-flai-verify-inside-the-agent-container-takes-the-story-s-worktree-for-the-project-root-since-the-main-checkout-is-not-mounted-and-writes-a-config-under-the-container-s-home.md), "flai verify inside the agent container takes the story's worktree for the project root, since the main checkout is not mounted, and writes a config under the container's home". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0219 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0219 is closed with `flai issue close I-0219 --reason` saying what fixed it
+- [x] The cause I-0219 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0219 is closed with `flai issue close I-0219 --reason` saying what fixed it
 
 ## Tasks
 - T-2207 A Repo opened from a linked worktree whose main checkout is absent records the main checkout the .git file names and that it is not here, in place of taking the worktree for the project
@@ -96,3 +120,14 @@ No folder touch is kept. No `after`: the story needs no other story's change on 
 Forecast. `flai forecast S-0521` gives 5m (median 131 s per unit over 12 done remediation stories on claude-opus-5-5 in the small band; size 2: 2 criteria, 0 touches) and delivery 2026-10-29T08:42Z, 35th in the pull order. Raised to 1h: the size flai measured had no touches, and with 16 the band's median alone gives about 40m; the story changes `Repo` and four commands, writes a fixture with a worktree whose main checkout is absent, and checks the fix by hand inside `flai-agent-claude-code:local` (`scripts/agent-container.sh S-nnnn -- flai verify S-nnnn`), which needs the image built with the tree's flai. The delivery written is flai's play-out start, 2026-10-29T08:42Z less 5m, plus 1h: 2026-10-29T09:37Z.
 
 Cost of delay. `flai cod S-0521` gives 12.50 USD a week: 5m lost per 168h cycle at 150 USD an hour, from the input flai set from I-0219. Written as flai gives it: the issue has one instance, and nothing argues for another input.
+
+### Accepted by the orchestrator
+
+- Verified: 5221dd99983adbc34dd89a46a53bcee5455ffc46
+- Batch: 20261028-135048
+- Enqueued verified: 5221dd99983adbc34dd89a46a53bcee5455ffc46
+- At: 2026-10-28T14:05:53Z
+
+Verdict: pass at 5221dd99983adbc34dd89a46a53bcee5455ffc46
+- 1: flai/internal/workitem/repo.go, flai/internal/workitem/worktree_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/cmd/check.go, flai/cmd/check_test.go, flai/cmd/stream.go, flai/cmd/stream_sync_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, scripts/agent-container.sh
+- 2: design/issues/I-0219-flai-verify-inside-the-agent-container-takes-the-story-s-worktree-for-the-project-root-since-the-main-checkout-is-not-mounted-and-writes-a-config-under-the-container-s-home.md, design/issues/summary.md

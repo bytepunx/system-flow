@@ -3,16 +3,34 @@ id: T-2148
 type: task
 nature: improvement
 title: This project sets orchestration.permissions.confirm_after, the acceptance criteria are verified and ticked, and I-0195 is closed naming what fixed it
-status: backlog
+status: in-progress
 parent: S-0502
 owner: alex
 created: 2026-10-26T04:46:39Z
-updated: 2026-10-26T04:46:39Z
-transitions: []
+updated: 2026-10-28T13:44:03Z
+transitions:
+  - to: ready
+    at: 2026-10-28T13:44:02Z
+    by: agent-S-0502
+  - to: in-progress
+    at: 2026-10-28T13:44:03Z
+    by: agent-S-0502
 stream: S-0502
 tags: [flai]
 touches: [system-flow.yaml, design/issues/I-0195-a-thread-with-a-pending-orchestrator-recommendation-waits-on-the-operator-however-long-it-takes-with-no-setting-to-confirm-it-after-a-threshold.md, design/issues/summary.md]
 after: [T-2147]
+usage:
+  source: log
+  seconds: 91
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 13317
+      cache_read: 2617792
+      cache_write: 84543
+      cost: 1.301
 ---
 # T-2148 This project sets orchestration.permissions.confirm_after, the acceptance criteria are verified and ticked, and I-0195 is closed naming what fixed it
 

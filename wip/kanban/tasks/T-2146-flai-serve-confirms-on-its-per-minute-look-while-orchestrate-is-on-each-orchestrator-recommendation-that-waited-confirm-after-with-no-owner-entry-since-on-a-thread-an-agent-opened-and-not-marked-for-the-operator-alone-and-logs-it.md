@@ -3,11 +3,11 @@ id: T-2146
 type: task
 nature: improvement
 title: flai serve confirms, on its per-minute look while orchestrate is on, each orchestrator recommendation that waited confirm_after with no owner entry since, on a thread an agent opened and not marked for the operator alone, and logs it
-status: in-progress
+status: done
 parent: S-0502
 owner: alex
 created: 2026-10-26T04:45:44Z
-updated: 2026-10-28T13:05:55Z
+updated: 2026-10-28T13:23:35Z
 transitions:
   - to: ready
     at: 2026-10-28T13:05:54Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-28T13:05:55Z
     by: agent-S-0502
+  - to: done
+    at: 2026-10-28T13:23:35Z
+    by: agent-S-0502
 stream: S-0502
 tags: [flai]
-touches: [flai/internal/serve/confirm.go, flai/internal/serve/confirm_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go]
+touches: [flai/internal/serve/confirm.go, flai/internal/serve/confirm_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/internal/serve/activity.go, flai/internal/workitem/activity.go]
 after: [T-2142, T-2143]
+usage:
+  source: log
+  seconds: 1060
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 65
+      output: 22450
+      cache_read: 4413266
+      cache_write: 142529
+      cost: 2.1933
 ---
 # T-2146 flai serve confirms, on its per-minute look while orchestrate is on, each orchestrator recommendation that waited confirm_after with no owner entry since, on a thread an agent opened and not marked for the operator alone, and logs it
 

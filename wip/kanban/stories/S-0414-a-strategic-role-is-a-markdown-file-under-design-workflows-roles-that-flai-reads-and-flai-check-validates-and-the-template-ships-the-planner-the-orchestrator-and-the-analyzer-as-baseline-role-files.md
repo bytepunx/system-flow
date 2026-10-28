@@ -3,17 +3,20 @@ id: S-0414
 type: story
 nature: feature
 title: A strategic role is a markdown file under design/workflows/roles that flai reads and flai check validates, and the template ships the planner, the orchestrator, and the analyzer as baseline role files
-status: in-progress
+status: review
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:39:25Z
-updated: 2026-10-28T13:07:25Z
+updated: 2026-10-28T13:58:28Z
 transitions:
   - to: ready
     at: 2026-10-28T13:01:57Z
     by: alex
   - to: in-progress
     at: 2026-10-28T13:05:49Z
+    by: agent-S-0414
+  - to: review
+    at: 2026-10-28T13:58:28Z
     by: agent-S-0414
 tags: [cli, template]
 topics: [cli, planning, orchestration, template, conventions]
@@ -24,20 +27,38 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 3172
+  priced_by: harness
+  turns:
+    - day: 2026-10-28
+      ceremony: 3
+      hand_edits: 3
+      work: 34
+  models:
+    - model: claude-opus-5-5
+      input: 528
+      output: 253583
+      cache_read: 29867708
+      cache_write: 1257927
+      cost: 18.1828
   strategic:
     - kind: orchestrator
-      seconds: 435
+      seconds: 965
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 51
-          output: 617
-          cache_read: 4799603
-          cache_write: 44222
-          cost: 1.0687
+          input: 77
+          output: 956
+          cache_read: 12706075
+          cache_write: 61772
+          cost: 2.8083
+        - model: claude-sonnet-5-5
+          input: 14
+          output: 74
+          cache_read: 202709
+          cache_write: 58016
+          cost: 0.1782
 cost_of_delay:
   value: 66.76
   by: planner-S-0414
@@ -60,12 +81,12 @@ A project can say what a strategic role is in a file, not in Go. A role file und
 
 ## Acceptance criteria
 
-- [ ] An ADR records the role file: where it lives (`design/workflows/roles/<name>.md`, in a `design/workflows/` folder the ADR adds to the layout, as TH-0471 settled), its front matter fields and their meaning, which of them flai generates the role's harness definition from and how that definition reaches Claude Code without a hand-written `.claude/agents` file (TH-0471, answer 6), its body as the harness prompt, the baseline marker, and how a rule that is not a plain allow-list (a story created only as a draft, a move only to backlog, an edit only inside one folder, a thread reply as the orchestrator's `answer_threads` allows) is named as a condition flai implements and the file references.
-- [ ] `flai/internal/roles` reads every role file of a project, defaults and all, and `flai role list [--json]` and `flai role show <name> [--json]` print each role with its source file, action, trigger, item kind, topics, permissions, and calls.
-- [ ] `flai check` reports `roles.file` for a role file that does not parse, misses a field, or names an unknown condition, trigger, or item kind; `roles.grant` for a role that grants itself, outside any permission it declares, a call that only the operator's permissions may allow (an acceptance, a publish, a move past backlog, finalizing a draft, setting cost of delay inputs); and `roles.definition` for a role whose harness definition fields are missing or list a tool its rules refuse.
-- [ ] `design/workflows/roles/planner.md`, `orchestrator.md`, and `analyzer.md` in the template and in this repository state the three roles' rules as `design/system/strategic-agents.md` and ADR-0082, ADR-0087, ADR-0099, and ADR-0143 describe them, with a `README.md` for the folder, and `flai check --strict` reports nothing on them here.
-- [ ] `flai upgrade` brings a baseline role file a project lacks and leaves what a project wrote below the marker of one it has, shown by a test.
-- [ ] `design/system/strategic-agents.md`, `design/system/repository-layout.md`, `design/README.md` and `CLAUDE.md` (template and here), the convention `strategic-agents.md` (template and here), `docs/users/flai.md` with `flai-reference.md` regenerated, `docs/operators/index.md`, and `template/CHANGELOG.md` say what a role file holds, where it lives, and that flai generates its harness definition; the convention says a defined role runs as the operator, as the epic's Notes ask.
+- [x] An ADR records the role file: where it lives (`design/workflows/roles/<name>.md`, in a `design/workflows/` folder the ADR adds to the layout, as TH-0471 settled), its front matter fields and their meaning, which of them flai generates the role's harness definition from and how that definition reaches Claude Code without a hand-written `.claude/agents` file (TH-0471, answer 6), its body as the harness prompt, the baseline marker, and how a rule that is not a plain allow-list (a story created only as a draft, a move only to backlog, an edit only inside one folder, a thread reply as the orchestrator's `answer_threads` allows) is named as a condition flai implements and the file references.
+- [x] `flai/internal/roles` reads every role file of a project, defaults and all, and `flai role list [--json]` and `flai role show <name> [--json]` print each role with its source file, action, trigger, item kind, topics, permissions, and calls.
+- [x] `flai check` reports `roles.file` for a role file that does not parse, misses a field, or names an unknown condition, trigger, or item kind; `roles.grant` for a role that grants itself, outside any permission it declares, a call that only the operator's permissions may allow (an acceptance, a publish, a move past backlog, finalizing a draft, setting cost of delay inputs); and `roles.definition` for a role whose harness definition fields are missing or list a tool its rules refuse.
+- [x] `design/workflows/roles/planner.md`, `orchestrator.md`, and `analyzer.md` in the template and in this repository state the three roles' rules as `design/system/strategic-agents.md` and ADR-0082, ADR-0087, ADR-0099, and ADR-0143 describe them, with a `README.md` for the folder, and `flai check --strict` reports nothing on them here.
+- [x] `flai upgrade` brings a baseline role file a project lacks and leaves what a project wrote below the marker of one it has, shown by a test.
+- [x] `design/system/strategic-agents.md`, `design/system/repository-layout.md`, `design/README.md` and `CLAUDE.md` (template and here), the convention `strategic-agents.md` (template and here), `docs/users/flai.md` with `flai-reference.md` regenerated, `docs/operators/index.md`, and `template/CHANGELOG.md` say what a role file holds, where it lives, and that flai generates its harness definition; the convention says a defined role runs as the operator, as the epic's Notes ask.
 
 ## Tasks
 - T-1720 An ADR records the role file: where it lives, its front matter, its body as the prompt, the marker, and the named conditions it may reference

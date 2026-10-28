@@ -3,12 +3,15 @@ id: S-0422
 type: story
 nature: feature
 title: A story's agent works a formula's instance on its branch, a role step runs its role charged to the instance, a failed step asks on a thread, and a formula starts from its schedule or a role
-status: backlog
+status: ready
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:50Z
-updated: 2026-10-28T13:11:21Z
-transitions: []
+updated: 2026-10-28T13:11:31Z
+transitions:
+  - to: ready
+    at: 2026-10-28T13:11:31Z
+    by: alex
 tags: [cli, template]
 topics: [cli, orchestration, conventions, template]
 touches: [design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, template/CHANGELOG.md, flai/cmd/accept.go, flai/cmd/accept_formula_test.go, flai/cmd/formula.go, flai/cmd/formula_test.go, flai/cmd/role.go, flai/cmd/role_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/check/check.go, flai/internal/check/formulas_test.go, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/mcpserver/role.go, flai/internal/mcpserver/role_test.go, flai/internal/preview/orchestrator.go, flai/internal/preview/accept_test.go, flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, flai/internal/serve/agents.go, flai/internal/serve/formula_schedule.go, flai/internal/serve/formula_schedule_test.go, flai/internal/serve/role.go, flai/internal/serve/role_test.go, flai/internal/serve/serve.go]
@@ -24,15 +27,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 612
+      seconds: 653
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 194
-          output: 3439
-          cache_read: 55675456
-          cache_write: 38642
-          cost: 12.302
+          input: 220
+          output: 3855
+          cache_read: 62361394
+          cache_write: 43217
+          cost: 13.7708
 cost_of_delay:
   value: 64.07
   by: planner-S-0422

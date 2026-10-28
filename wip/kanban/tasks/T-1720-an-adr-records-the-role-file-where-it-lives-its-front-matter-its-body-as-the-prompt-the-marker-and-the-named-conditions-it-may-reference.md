@@ -3,11 +3,11 @@ id: T-1720
 type: task
 nature: feature
 title: "An ADR records the role file: where it lives, its front matter, its body as the prompt, the marker, and the named conditions it may reference"
-status: in-progress
+status: done
 parent: S-0414
 owner: alex
 created: 2026-10-16T05:42:52Z
-updated: 2026-10-28T13:07:27Z
+updated: 2026-10-28T13:18:36Z
 transitions:
   - to: ready
     at: 2026-10-28T13:07:25Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-28T13:07:27Z
     by: agent-S-0414
+  - to: done
+    at: 2026-10-28T13:18:36Z
+    by: agent-S-0414
 stream: S-0414
 tags: [cli]
 touches: [design/adrs, design/adrs/README.md]
+usage:
+  source: log
+  seconds: 669
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 120
+      output: 57570
+      cache_read: 6780782
+      cache_write: 285584
+      cost: 4.128
 ---
 # T-1720 An ADR records the role file: where it lives, its front matter, its body as the prompt, the marker, and the named conditions it may reference
 

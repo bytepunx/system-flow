@@ -3,16 +3,37 @@ id: T-2147
 type: task
 nature: improvement
 title: The design, the strategic-agents convention in both copies, the user docs, the command reference, and the changelog describe confirm_after, the operator-alone mark, and flai serve's confirmation by timeout
-status: backlog
+status: done
 parent: S-0502
 owner: alex
 created: 2026-10-26T04:46:19Z
-updated: 2026-10-26T04:46:19Z
-transitions: []
+updated: 2026-10-28T13:34:08Z
+transitions:
+  - to: ready
+    at: 2026-10-28T13:28:22Z
+    by: agent-S-0502
+  - to: in-progress
+    at: 2026-10-28T13:28:23Z
+    by: agent-S-0502
+  - to: done
+    at: 2026-10-28T13:34:08Z
+    by: agent-S-0502
 stream: S-0502
 tags: [flai, template]
-touches: [design/system/strategic-agents.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md, template/CHANGELOG.md]
+touches: [design/system/strategic-agents.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md, template/CHANGELOG.md, template/template.yaml]
 after: [T-2144, T-2145, T-2146]
+usage:
+  source: log
+  seconds: 345
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 64
+      output: 22146
+      cache_read: 4353430
+      cache_write: 140596
+      cost: 2.1636
 ---
 # T-2147 The design, the strategic-agents convention in both copies, the user docs, the command reference, and the changelog describe confirm_after, the operator-alone mark, and flai serve's confirmation by timeout
 

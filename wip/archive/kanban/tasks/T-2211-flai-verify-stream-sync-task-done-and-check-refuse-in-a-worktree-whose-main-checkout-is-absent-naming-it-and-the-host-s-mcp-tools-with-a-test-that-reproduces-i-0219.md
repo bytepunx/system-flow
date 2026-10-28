@@ -3,16 +3,37 @@ id: T-2211
 type: task
 nature: remediation
 title: flai verify, stream sync, task done, and check refuse in a worktree whose main checkout is absent, naming it and the host's MCP tools, with a test that reproduces I-0219
-status: backlog
+status: done
 parent: S-0521
 owner: alex
 created: 2026-10-28T13:03:13Z
-updated: 2026-10-28T13:03:13Z
-transitions: []
+updated: 2026-10-28T13:31:09Z
+transitions:
+  - to: ready
+    at: 2026-10-28T13:12:02Z
+    by: agent-S-0521
+  - to: in-progress
+    at: 2026-10-28T13:12:03Z
+    by: agent-S-0521
+  - to: done
+    at: 2026-10-28T13:31:09Z
+    by: agent-S-0521
 stream: S-0521
 tags: [cli, docker]
-touches: [flai/cmd/verify.go, flai/cmd/verify_test.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/check.go, flai/cmd/check_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go]
+touches: [flai/cmd/verify.go, flai/cmd/verify_test.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/check.go, flai/cmd/check_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/stream.go]
 after: [T-2207]
+usage:
+  source: log
+  seconds: 1146
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 57
+      output: 14375
+      cache_read: 2634821
+      cache_write: 151368
+      cost: 1.748
 ---
 # T-2211 flai verify, stream sync, task done, and check refuse in a worktree whose main checkout is absent, naming it and the host's MCP tools, with a test that reproduces I-0219
 

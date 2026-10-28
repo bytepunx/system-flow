@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1625.2072
-accrued_seconds: 1410321
-tasks_completed: 1144
-last_run: 2026-10-28T13:07:17Z
+accrued_cost: 1651.7953
+accrued_seconds: 1413481
+tasks_completed: 1163
+last_run: 2026-10-28T13:59:57Z
 ---
 
 # Orchestrator activity
@@ -8019,6 +8019,139 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0499
 - Seconds: 17
 - Cost: 0.3238 USD, estimated
+
+### 2026-10-28T13:08:22Z
+
+- Summary: The operator accepted S-0526 (docs, no release bump) at 13:08:13Z. Under publish (judgement), still not publishing. release_evaluate lists S-0499 alone pending (1 story, 7.5 USD/week). S-0502 (2h, in progress) and S-0521 (1h) carry code, so I batch with them and evaluate again at the next acceptance.
+- Items: S-0526, S-0499
+- Seconds: 65
+- Cost: 1.7446 USD, estimated
+
+### 2026-10-28T13:10:58Z
+
+- Summary: The operator finalized S-0421 and moved it to ready. Under order_ready, I applied flai order --by throughput, which placed S-0421 fourth at 1h3m. The ready column holds 7 stories against a limit of 10.
+- Items: S-0421
+- Seconds: 156
+- Cost: 4.4442 USD, estimated
+
+### 2026-10-28T13:11:39Z
+
+- Summary: The operator finalized S-0422 and moved it to ready. Under order_ready, I applied flai order --by throughput, which placed S-0422 sixth at 1h25m. The ready column holds 8 stories against a limit of 10.
+- Items: S-0422
+- Seconds: 41
+- Cost: 1.4688 USD, estimated
+
+### 2026-10-28T13:12:24Z
+
+- Summary: The operator finalized S-0423 and moved it to ready. Under order_ready, I applied flai order --by throughput, which placed S-0423 third at 1h. The ready column holds 9 stories against a limit of 10. S-0423's plan thread TH-0583 still carries my pending recommendation; the operator finalized the story regardless.
+- Items: S-0423
+- Seconds: 45
+- Cost: 1.3686 USD, estimated
+
+### 2026-10-28T13:15:10Z
+
+- Summary: Recommended an answer on TH-0685, citing design/conventions/decisions.md § Rules
+- Items: S-0516
+- Seconds: 166
+- Cost: 2.4259 USD, estimated
+
+### 2026-10-28T13:15:22Z
+
+- Summary: Under plan_backlog_stories, on planner-S-0516's TH-0685: the plan fits (five tasks in four layers, 17 file touches, forecast 1h, value 40 USD/week). Its remediation, a reserved harness name none that flai serve honours, changes the contract of a story's agent.harness and no decision records it yet, so I recommended approving it with T-2213's ADR and escalated. The thread stays open, and S-0516 stays a draft for the operator.
+- Items: S-0516
+- Seconds: 12
+- Cost: 0.1177 USD, estimated
+
+### 2026-10-28T13:16:08Z
+
+- Summary: Under plan_backlog_stories, started the planner for S-0517, next of the 13 stories flai plan --candidates lists (S-0517 to S-0531). S-0516's planner posted TH-0685, which waits on the operator.
+- Items: S-0517
+- Seconds: 46
+- Cost: 0.2359 USD, estimated
+
+### 2026-10-28T13:21:52Z
+
+- Summary: Recommended an answer on TH-0687, citing design/adrs/0203-flai-may-run-a-story-s-agent-in-a-container-from-a-baseline-image-it-builds.md § Decision
+- Items: S-0517
+- Seconds: 344
+- Cost: 2.1386 USD, estimated
+
+### 2026-10-28T13:22:00Z
+
+- Summary: Under plan_backlog_stories, on planner-S-0517's TH-0687: the plan fits (five tasks in four layers, forecast 1h15m, value 37.50 USD/week, after S-0508). It mounts the main checkout's .git read-only into the container, which reverses ADR-0203's explicit "no .git of the main checkout", so I recommended approving it with its refining ADR and escalated. The thread stays open.
+- Items: S-0517
+- Seconds: 8
+- Cost: 0.0000 USD
+
+### 2026-10-28T13:22:18Z
+
+- Summary: Under plan_backlog_stories, started the planner for S-0518, next of the 12 stories flai plan --candidates lists (S-0518 to S-0531).
+- Items: S-0518
+- Seconds: 18
+- Cost: 0.2435 USD, estimated
+
+### 2026-10-28T13:35:21Z
+
+- Summary: Recommended an answer on TH-0688, citing design/adrs/0060-a-claude-code-pretooluse-hook-flai-guard-refuses-any-sub-agent-s-call-that.md § Decision
+- Items: S-0518
+- Seconds: 783
+- Cost: 4.0748 USD, estimated
+
+### 2026-10-28T13:35:28Z
+
+- Summary: Under plan_backlog_stories, on planner-S-0518's TH-0688: the plan fits (four tasks in three layers, forecast 1h15m, value 37.50 USD/week). It makes the guard hook refuse a call when flai guard cannot start (exit 126 or 127), reversing part of ADR-0060's fail-open rule for a safety control, so I recommended approving it with its ADR and escalated. The thread stays open, and S-0518 stays a draft.
+- Items: S-0518
+- Seconds: 7
+- Cost: 0.0000 USD
+
+### 2026-10-28T13:35:44Z
+
+- Summary: Under plan_backlog_stories, started the planner for S-0519, next of the 11 stories flai plan --candidates lists (S-0519 to S-0531).
+- Items: S-0519
+- Seconds: 16
+- Cost: 0.2539 USD, estimated
+
+### 2026-10-28T13:47:22Z
+
+- Summary: Answered TH-0690, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0519
+- Seconds: 698
+- Cost: 5.1320 USD, estimated
+
+### 2026-10-28T13:47:28Z
+
+- Summary: Under plan_backlog_stories, approved and resolved planner-S-0519's TH-0690: five tasks in four layers, 16 touches, forecast 1h, value 25 USD/week. The bound on permission_prompt over HTTP is put to the operator on T-2227's own thread after it is measured, so approving the plan decides nothing. S-0519 stays a draft for the operator.
+- Items: S-0519
+- Seconds: 6
+- Cost: 0.0000 USD
+
+### 2026-10-28T13:47:40Z
+
+- Summary: Under plan_backlog_stories, started the planner for S-0520, next of the 10 stories flai plan --candidates lists (S-0520 to S-0531).
+- Items: S-0520
+- Seconds: 12
+- Cost: 0.1312 USD, estimated
+
+### 2026-10-28T13:50:52Z
+
+- Summary: Under accept_reviews, enqueued S-0521 at 5221dd99 (place 1 of 1). flai verify passed at that head, with integration and smoke left to the queue. The verifier met criterion 1: Repo.MainAbsent and RequireMain, the refusals in verify, check, stream sync and task done, five reproducing tests, and FLAI_CONFIG and FLAI_CACHE_DIR in agent-container.sh. It met criterion 2: I-0219 closed. Throughput: forecast 1h, value 12.50 USD/week.
+- Items: S-0521
+- Seconds: 192
+- Cost: 0.8906 USD, estimated
+
+### 2026-10-28T13:59:42Z
+
+- Summary: Under accept_reviews, enqueued S-0414 at 1c9b9243 (place 2 of 2, behind S-0521, whose batch is verifying integration). flai verify passed at that head, with integration and smoke left to the queue. The verifier met all six criteria: ADR-0207, flai/internal/roles with flai role list and show, the roles.* checks, the role files in both copies, the upgrade test, and the docs. Throughput: forecast 1h17m.
+- Items: S-0414
+- Seconds: 530
+- Cost: 1.9178 USD, estimated
+
+### 2026-10-28T13:59:57Z
+
+- Summary: Under promote_to_ready, promote --candidates lists S-0515 (rank 1, 45m) and S-0241 (rank 2, 2h, blocked). I did not promote S-0515: its plan turns off the MCP SDK's localhost Host check, and the operator has not answered that security decision on TH-0683. Started now, its agent would build the change before the operator decides. I promote it once TH-0683 is answered. The ready column holds 9 stories against a limit of 10.
+- Items: S-0515, S-0241
+- Seconds: 15
+- Cost: 0.0000 USD
 
 ## Refusals
 

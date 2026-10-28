@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 11.3955
-accrued_seconds: 1317
-tasks_completed: 2
-last_run: 2026-10-28T13:04:39Z
+accrued_cost: 12.6340
+accrued_seconds: 1390
+tasks_completed: 3
+last_run: 2026-10-28T13:10:40Z
 ---
 
 # Curator activity
@@ -27,3 +27,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0167, D-0168, D-0385, D-0386, D-0406
 - Seconds: 153
 - Cost: 1.8045 USD, estimated
+
+### 2026-10-28T13:10:40Z
+
+- Summary: I merged S-0499 and I-0181 into D-0406 and then absorbed D-0406 into design/system/flaiover-dashboard.md; I wrote no new entries, and `flai digest compact` compacted none. The digest now has 234 active entries, 147 absorbed and 25 compacted. None of it is committed in the main checkout.
+- Trigger: accepted S-0499, S-0526
+- Items: D-0362, D-0406
+- Seconds: 73
+- Cost: 1.2385 USD, estimated

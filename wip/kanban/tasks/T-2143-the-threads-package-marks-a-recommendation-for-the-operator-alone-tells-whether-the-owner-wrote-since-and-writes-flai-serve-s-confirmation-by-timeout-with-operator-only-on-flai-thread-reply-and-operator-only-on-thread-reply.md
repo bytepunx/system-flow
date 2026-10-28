@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1039
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 74
-      output: 402
-      cache_read: 3642731
-      cache_write: 224684
-      cost: 1.3084
+      input: 56
+      output: 19374
+      cache_read: 3808477
+      cache_write: 122997
+      cost: 1.8928
 ---
 # T-2143 The threads package marks a recommendation for the operator alone, tells whether the owner wrote since, and writes flai serve's confirmation by timeout, with --operator-only on flai thread reply and operator_only on thread_reply
 

@@ -3,16 +3,37 @@ id: T-1721
 type: task
 nature: feature
 title: flai/internal/roles reads and validates a project's role files into roles with their fields, conditions, and definitions
-status: backlog
+status: done
 parent: S-0414
 owner: alex
 created: 2026-10-16T05:42:59Z
-updated: 2026-10-21T11:09:08Z
-transitions: []
+updated: 2026-10-28T13:32:12Z
+transitions:
+  - to: ready
+    at: 2026-10-28T13:18:47Z
+    by: agent-S-0414
+  - to: in-progress
+    at: 2026-10-28T13:18:48Z
+    by: agent-S-0414
+  - to: done
+    at: 2026-10-28T13:32:12Z
+    by: agent-S-0414
 stream: S-0414
 tags: [cli]
 touches: [flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go]
 after: [T-1720]
+usage:
+  source: log
+  seconds: 804
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 50
+      output: 23945
+      cache_read: 2820279
+      cache_write: 118781
+      cost: 1.7169
 ---
 # T-1721 flai/internal/roles reads and validates a project's role files into roles with their fields, conditions, and definitions
 

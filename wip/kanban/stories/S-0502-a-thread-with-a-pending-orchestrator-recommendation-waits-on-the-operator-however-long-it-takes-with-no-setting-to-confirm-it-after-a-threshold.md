@@ -6,7 +6,7 @@ title: A thread with a pending orchestrator recommendation waits on the operator
 status: in-progress
 owner: alex
 created: 2026-10-26T04:01:40Z
-updated: 2026-10-28T13:05:09Z
+updated: 2026-10-28T13:45:50Z
 transitions:
   - to: ready
     at: 2026-10-28T12:43:49Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-10-28T12:44:59Z
     by: agent-S-0502
+blocked:
+  - from: 2026-10-28T13:45:03Z
+    until: 2026-10-28T13:45:07Z
+    reason: awaiting the operator on TH-0686
+  - from: 2026-10-28T13:45:50Z
+    reason: awaiting the operator on TH-0686
 tags: [flai, template]
 topics: [orchestration, cli, analysis]
-touches: [design/adrs/0206-flai-serve-confirms-a-recommendation-the-operator-left-unanswered-past-confirm-after.md, design/adrs/README.md, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/check/orchestration_test.go, docs/operators/settings.md, design/system/project-manifest.md, flai/internal/threads/threads.go, flai/internal/threads/threads_test.go, flai/cmd/thread.go, flai/cmd/thread_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, flai/internal/serve/confirm.go, flai/internal/serve/confirm_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/internal/metrics/waiting.go, flai/internal/metrics/waiting_test.go, design/system/metrics.md, flaiover/src/lib/viz/charts.ts, design/system/strategic-agents.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md, template/CHANGELOG.md, system-flow.yaml, design/issues/I-0195-a-thread-with-a-pending-orchestrator-recommendation-waits-on-the-operator-however-long-it-takes-with-no-setting-to-confirm-it-after-a-threshold.md, design/issues/summary.md, design/adrs/0206-flai-serve-confirms-an-orchestrator-recommendation-the-operator-left-unanswered.md, flai/internal/mcpserver/folder.go]
+touches: [design/adrs/0206-flai-serve-confirms-a-recommendation-the-operator-left-unanswered-past-confirm-after.md, design/adrs/README.md, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/check/orchestration_test.go, docs/operators/settings.md, design/system/project-manifest.md, flai/internal/threads/threads.go, flai/internal/threads/threads_test.go, flai/cmd/thread.go, flai/cmd/thread_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, flai/internal/serve/confirm.go, flai/internal/serve/confirm_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/internal/metrics/waiting.go, flai/internal/metrics/waiting_test.go, design/system/metrics.md, flaiover/src/lib/viz/charts.ts, design/system/strategic-agents.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md, template/CHANGELOG.md, system-flow.yaml, design/issues/I-0195-a-thread-with-a-pending-orchestrator-recommendation-waits-on-the-operator-however-long-it-takes-with-no-setting-to-confirm-it-after-a-threshold.md, design/issues/summary.md, design/adrs/0206-flai-serve-confirms-an-orchestrator-recommendation-the-operator-left-unanswered.md, flai/internal/mcpserver/folder.go, flai/internal/serve/activity.go, flai/internal/workitem/activity.go, template/template.yaml]
 after: [S-0498]
 agent:
   harness: claude-code
@@ -25,21 +31,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1238
-  estimated: true
-  priced_by: estimate
+  seconds: 3638
+  priced_by: harness
   turns:
     - day: 2026-10-28
-      ceremony: 1
-      hand_edits: 1
-      work: 37
+      ceremony: 4
+      hand_edits: 2
+      work: 85
   models:
     - model: claude-opus-5-5
-      input: 200
-      output: 1385
-      cache_read: 10642475
-      cache_write: 617188
-      cost: 3.8094
+      input: 524
+      output: 181942
+      cache_read: 35765900
+      cache_write: 1155078
+      cost: 17.7753
   strategic:
     - kind: orchestrator
       seconds: 1040
@@ -76,8 +81,8 @@ finalized:
 This story remediates [I-0195](../../../design/issues/I-0195-a-thread-with-a-pending-orchestrator-recommendation-waits-on-the-operator-however-long-it-takes-with-no-setting-to-confirm-it-after-a-threshold.md), "A thread with a pending orchestrator recommendation waits on the operator however long it takes, with no setting to confirm it after a threshold". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0195 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0195 is closed with `flai issue close I-0195 --reason` saying what fixed it
+- [x] The cause I-0195 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0195 is closed with `flai issue close I-0195 --reason` saying what fixed it
 
 ## Tasks
 - T-2141 ADR: flai serve confirms an orchestrator recommendation the operator left unanswered past orchestration.permissions.confirm_after, never one marked for the operator alone

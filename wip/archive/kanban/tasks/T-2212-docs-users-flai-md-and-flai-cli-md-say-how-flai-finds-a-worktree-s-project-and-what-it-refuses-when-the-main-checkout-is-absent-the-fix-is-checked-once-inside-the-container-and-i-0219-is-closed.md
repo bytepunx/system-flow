@@ -3,16 +3,37 @@ id: T-2212
 type: task
 nature: remediation
 title: docs/users/flai.md and flai-cli.md say how flai finds a worktree's project and what it refuses when the main checkout is absent, the fix is checked once inside the container, and I-0219 is closed
-status: backlog
+status: done
 parent: S-0521
 owner: alex
 created: 2026-10-28T13:03:41Z
-updated: 2026-10-28T13:03:41Z
-transitions: []
+updated: 2026-10-28T13:42:18Z
+transitions:
+  - to: ready
+    at: 2026-10-28T13:38:57Z
+    by: agent-S-0521
+  - to: in-progress
+    at: 2026-10-28T13:38:58Z
+    by: agent-S-0521
+  - to: done
+    at: 2026-10-28T13:42:18Z
+    by: agent-S-0521
 stream: S-0521
 tags: [cli, docker, docs]
 touches: [docs/users/flai.md, design/system/flai-cli.md, design/issues/I-0219-flai-verify-inside-the-agent-container-takes-the-story-s-worktree-for-the-project-root-since-the-main-checkout-is-not-mounted-and-writes-a-config-under-the-container-s-home.md, design/issues/summary.md]
 after: [T-2209, T-2211]
+usage:
+  source: log
+  seconds: 200
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 44
+      output: 11208
+      cache_read: 2054304
+      cache_write: 118018
+      cost: 1.3629
 ---
 # T-2212 docs/users/flai.md and flai-cli.md say how flai finds a worktree's project and what it refuses when the main checkout is absent, the fix is checked once inside the container, and I-0219 is closed
 

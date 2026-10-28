@@ -3,16 +3,37 @@ id: T-1722
 type: task
 nature: feature
 title: The template and this repository ship design/workflows/roles with planner.md, orchestrator.md, and analyzer.md stating today's rules, and flai upgrade brings them
-status: backlog
+status: done
 parent: S-0414
 owner: alex
 created: 2026-10-16T05:43:05Z
-updated: 2026-10-28T13:07:25Z
-transitions: []
+updated: 2026-10-28T13:32:21Z
+transitions:
+  - to: ready
+    at: 2026-10-28T13:18:49Z
+    by: agent-S-0414
+  - to: in-progress
+    at: 2026-10-28T13:18:50Z
+    by: agent-S-0414
+  - to: done
+    at: 2026-10-28T13:32:21Z
+    by: agent-S-0414
 stream: S-0414
 tags: [template]
 touches: [template/root/design/workflows/roles/README.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/analyzer.md, design/workflows/roles/README.md, design/workflows/roles/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/analyzer.md, template/template.yaml, flai/internal/upgrade/upgrade.go, flai/internal/upgrade/upgrade_test.go, design/workflows/README.md, template/root/design/workflows/README.md, design/workflows/roles/curator.md, template/root/design/workflows/roles/curator.md]
 after: [T-1720]
+usage:
+  source: log
+  seconds: 811
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 89
+      output: 42527
+      cache_read: 5008949
+      cache_write: 210960
+      cost: 3.0493
 ---
 # T-1722 The template and this repository ship design/workflows/roles with planner.md, orchestrator.md, and analyzer.md stating today's rules, and flai upgrade brings them
 

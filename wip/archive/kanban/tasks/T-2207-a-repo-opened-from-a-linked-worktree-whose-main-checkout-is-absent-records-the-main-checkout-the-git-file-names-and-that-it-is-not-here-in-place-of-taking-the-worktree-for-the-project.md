@@ -3,11 +3,11 @@ id: T-2207
 type: task
 nature: remediation
 title: A Repo opened from a linked worktree whose main checkout is absent records the main checkout the .git file names and that it is not here, in place of taking the worktree for the project
-status: in-progress
+status: done
 parent: S-0521
 owner: alex
 created: 2026-10-28T13:02:35Z
-updated: 2026-10-28T13:08:10Z
+updated: 2026-10-28T13:10:38Z
 transitions:
   - to: ready
     at: 2026-10-28T13:08:07Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-28T13:08:10Z
     by: agent-S-0521
+  - to: done
+    at: 2026-10-28T13:10:38Z
+    by: agent-S-0521
 stream: S-0521
 tags: [cli, docker]
 touches: [flai/internal/workitem/repo.go, flai/internal/workitem/worktree_test.go]
+usage:
+  source: log
+  seconds: 148
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 10
+      output: 2624
+      cache_read: 480884
+      cache_write: 27626
+      cost: 0.319
 ---
 # T-2207 A Repo opened from a linked worktree whose main checkout is absent records the main checkout the .git file names and that it is not here, in place of taking the worktree for the project
 
