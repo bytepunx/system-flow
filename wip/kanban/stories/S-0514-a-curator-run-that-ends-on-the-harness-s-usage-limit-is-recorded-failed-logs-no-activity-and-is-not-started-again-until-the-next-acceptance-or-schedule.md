@@ -6,7 +6,7 @@ title: A curator run that ends on the harness's usage limit is recorded failed, 
 status: backlog
 owner: alex
 created: 2026-10-28T12:40:16Z
-updated: 2026-10-28T12:52:31Z
+updated: 2026-10-28T12:56:56Z
 transitions: []
 tags: [flai, serve, curator, usage]
 topics: [planning, digest]
@@ -31,7 +31,6 @@ usage:
           cache_read: 307271
           cache_write: 2134
           cost: 0.0679
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30m
@@ -46,6 +45,9 @@ forecast:
   basis: "Its own forecast of 2h30m; 28th in the pull order with an in-progress limit of 5, behind S-0499, S-0502, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0506, S-0507, S-0508, S-0509, S-0510, S-0511 and S-0512."
   by: flai
   at: 2026-10-28T12:52:31Z
+finalized:
+  by: alex
+  at: 2026-10-28T12:56:56Z
 ---
 # S-0514 A curator run that ends on the harness's usage limit is recorded failed, logs no activity, and is not started again until the next acceptance or schedule
 
