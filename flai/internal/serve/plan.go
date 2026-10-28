@@ -11,6 +11,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -184,7 +185,10 @@ func (l *launcher) plan(ctx context.Context, cfg AgentConfig, item string, agent
 // activity document (ADR-0079), naming the items it planned and what started
 // the run (ADR-0084). An activity that cannot be logged is warned of, and
 // the run stays recorded as it ended; items that cannot be read are warned
-// of, and the activity names the planned item alone.
+// of, and the activity names the planned item alone. A run that wrote items
+// beyond the item it planned appends a planned event naming them to the event
+// log (ADR-0211 §1); one that cannot be appended is warned of, and the run is
+// handled as it would be otherwise.
 func (l *launcher) planEnded(run *AgentRun, exit *int) {
 	ended := *run
 	ended.Ended, ended.Exit = l.now().UTC().Format(time.RFC3339), exit
@@ -205,6 +209,26 @@ func (l *launcher) planEnded(run *AgentRun, exit *int) {
 	if _, err := logRunEnd(l.dir, l.entry.Root, l.entry.Key, workitem.ActivityPlanner, run.Trigger, "", items); err != nil {
 		l.warn("planner activity not logged", "item", run.Item, "err", err)
 	}
+	if len(items) > 1 {
+		if err := appendPlanned(l.entry.Root, run.Item, run.Agent, items[1:]); err != nil {
+			l.warn("planned event not logged", "item", run.Item, "err", err)
+		}
+	}
+}
+
+// appendPlanned appends to the event log of the project at root the planned
+// event of agent's run on item, which wrote the items written beyond it
+// (ADR-0211 §1).
+func appendPlanned(root, item, agent string, written []string) error {
+	repo, err := workitem.Open(root)
+	if err != nil {
+		return err
+	}
+	it, err := repo.Get(item)
+	if err != nil {
+		return fmt.Errorf("reading the item planned: %w", err)
+	}
+	return inbox.AppendEvent(repo, inbox.PlannedEvent(it.ID, it.Type, it.Title, agent, written))
 }
 
 // plannedItems are the items a planner run on item, started at since, is

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -310,6 +311,55 @@ func TestAPlannerRunOnAStoryNamesItsTasks(t *testing.T) {
 	want := strings.Join([]string{story.ID, made.ID, edited.ID}, ",")
 	if e := doc.Entries[0]; strings.Join(e.Items, ",") != want || e.Cost != 0.5 {
 		t.Errorf("entry = %+v, want items %s (not %s or %s) and the run's 0.5 USD", e, want, left.ID, elsewhere.ID)
+	}
+}
+
+// S-0535: a planner run that wrote a story's tasks appends one planned event
+// naming the story, the tasks it wrote, and the planner; a run that wrote
+// nothing beyond its item appends none.
+func TestAPlannerRunThatWroteItemsLogsAPlannedEvent(t *testing.T) {
+	lab := planLab(t)
+	before, during := runStart.Add(-time.Hour), runStart.Add(30*time.Second)
+	item := func(typ, parent, title string, at time.Time) *workitem.Item {
+		t.Helper()
+		it, err := lab.repo.Create(workitem.NewOptions{Type: typ, Title: title, Parent: parent, Owner: "alex", Now: at})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return it
+	}
+	idle := item(workitem.Story, lab.epic.ID, "Left as it was", before)
+	item(workitem.Task, idle.ID, "Untouched", before)
+	zero := 0
+	end := func(id string) {
+		lab.l.planEnded(&AgentRun{Item: id, Agent: "planner-" + id, Started: runStart.Format(time.RFC3339), Session: "s"}, &zero)
+	}
+	// the lab's looks may log a ready-empty event: only planned ones count
+	planned := func() []inbox.LoggedEvent {
+		var out []inbox.LoggedEvent
+		for _, e := range inbox.LoggedEvents(lab.repo) {
+			if e.Kind == inbox.Planned {
+				out = append(out, e)
+			}
+		}
+		return out
+	}
+	end(idle.ID)
+	if got := planned(); len(got) != 0 {
+		t.Fatalf("events after a run that wrote nothing = %+v, want none", got)
+	}
+	story := item(workitem.Story, lab.epic.ID, "Planned", before)
+	first := item(workitem.Task, story.ID, "First", during)
+	second := item(workitem.Task, story.ID, "Second", during)
+	end(story.ID)
+	got := planned()
+	if len(got) != 1 {
+		t.Fatalf("events = %+v, want one planned event", got)
+	}
+	e := got[0]
+	if e.Kind != inbox.Planned || e.ID != story.ID || e.Type != workitem.Story || e.Title != "Planned" ||
+		e.To != first.ID+","+second.ID || e.By != "planner-"+story.ID || e.At == "" {
+		t.Errorf("event = %+v, want planned on %s by planner-%s writing %s,%s, stamped", e, story.ID, story.ID, first.ID, second.ID)
 	}
 }
 

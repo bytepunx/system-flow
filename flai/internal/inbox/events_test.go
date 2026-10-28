@@ -18,7 +18,7 @@ func (f *fixture) catchUp(t *testing.T, agent string) ([]Event, int) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	events, omitted, err := CatchUp(f.repo, agent, "", f.clock, items)
+	events, omitted, err := CatchUp(f.repo, Reader{Agent: agent}, "", false, f.clock, items)
 	if err != nil {
 		t.Fatal(err)
 	}
