@@ -97,6 +97,8 @@ func (g Guard) who(c Call) string {
 		return "the analyzer"
 	case c.Role == RoleCurate:
 		return "the curator"
+	case DefinedRole(c.Role) && g.RoleFile != nil && g.RoleFile.Name != "":
+		return "the role " + g.RoleFile.Name
 	case c.Role != "":
 		return "a session flai serve started with the role " + c.Role
 	case c.Story != "":
