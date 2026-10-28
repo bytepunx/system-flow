@@ -6,7 +6,7 @@ title: "flai check finds `item.chronology` outside the story at close-out"
 status: backlog
 owner: alex
 created: 2026-10-28T12:53:36Z
-updated: 2026-10-28T12:53:36Z
+updated: 2026-10-28T13:01:26Z
 transitions: []
 tags: []
 agent:
@@ -14,7 +14,9 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+finalized:
+  by: alex
+  at: 2026-10-28T13:01:26Z
 ---
 # S-0522 flai check finds `item.chronology` outside the story at close-out
 
