@@ -2,12 +2,12 @@
 id: I-0191
 title: A work item write in a project with no .gitignore makes .flai-cache/items.lock and then refuses itself on layout.gitignore
 class: defect
-status: open
+status: closed
 count: 1
 cost: 15m
 first_reported: 2026-10-22T20:40:04Z
 last_reported: 2026-10-22T20:40:04Z
-updated: 2026-10-28T12:53:57Z
+updated: 2026-10-28T22:58:42Z
 ---
 
 # I-0191 A work item write in a project with no .gitignore makes .flai-cache/items.lock and then refuses itself on layout.gitignore
@@ -24,3 +24,4 @@ S-0479's items lock (ADR-0184) creates .flai-cache/items.lock on every work item
 ## Remediation
 
 Story S-0525 remediates this issue, created from it at 2026-10-28T12:53:57Z.
+Closed 2026-10-28T22:58:42Z: Fixed by S-0525 (ADR-0213): a checked creation (itemnew.Create, behind story/task/epic new with --body-stdin, --after, or --autocommit, item_new with a body or after, and flai issue story) scopes its second check run to the new item's story through check.ScopeToItem, as ADR-0197 scopes a checked edit, so the layout.gitignore that making .flai-cache/items.lock brings in a project with no .gitignore is a warning outside the story and the item stands. TestTheFirstCreationInAProjectWithNoGitignoreIsKeptWithAWarning (itemnew) reproduces it and fails on the code before the fix.
