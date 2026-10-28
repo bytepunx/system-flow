@@ -11,11 +11,13 @@ The results of S-0505, an `experiment` story run from 2026-10-28. It starts Clau
 
 ## Hypothesis
 
-T-2177 fills this section.
+[ADR-0203](../adrs/0203-flai-may-run-a-story-s-agent-in-a-container-from-a-baseline-image-it-builds.md)'s container harness is workable with Claude Code baked in. A story's agent in a container that flai's images build, with the worktree and one cache folder mounted, can do four things. It can sign in from the operator's login mounted read-only. It can work at the speed it works on the host. It can reach every flai tool it needs over the project's HTTP MCP server. And it can run under the guard and the permission prompt, as an agent on the host does.
 
 ## Success measure
 
-T-2177 fills this section.
+- One story of this repository goes from its first task to review inside the container, with each task closed with `task_done` over HTTP.
+- Each fact ADR-0203 and [agent-adapters.md § A container harness of flai's own](../system/agent-adapters.md#a-container-harness-of-flais-own) leave open has a measurement: the login, the bind mount's speed, the HTTP server's tools, the guard, the network mode, and the close-out's tiers.
+- A limitation is acceptable when a story of E-0029 can carry it. The hypothesis fails if the subscription cannot run in a container at all, or if the bind mount is too slow for a test suite.
 
 ## What was done
 
@@ -131,4 +133,28 @@ Metadata-heavy work pays about three times the host's cost, through Docker Deskt
 
 ## Recommendation
 
-T-2177 fills this section with adopt, adapt, or drop.
+**Adapt.** Build the container harness, and carry each limitation the spike found on the story of E-0029 named below. The core held:
+
+- The operator's subscription signed in from a login mounted read-only, with no browser.
+- The bind mount costs nothing that matters to a test suite on this host.
+- Every flai tool a story's agent called answered over HTTP as on stdio.
+- S-0513 reached review from inside the container in under four minutes.
+
+What does not hold yet needs code, not a different design:
+
+| Limitation | Issue | Carried by |
+|------------|-------|------------|
+| The HTTP MCP server refuses a container's `Host` | [I-0213](../issues/I-0213-flai-s-http-mcp-server-refuses-an-agent-in-a-container-with-403-invalid-host-header-since-the-mcp-sdk-s-localhost-protection-admits-only-a-loopback-host-on-a-loopback-listener.md) | S-0506, the HTTP MCP server for containers |
+| `permission_prompt`'s hold outlives Claude Code's tool timeout over HTTP | [I-0217](../issues/I-0217-permission-prompt-over-the-http-mcp-server-outlives-claude-code-s-tool-call-timeout-so-an-agent-in-a-container-sees-its-protected-write-time-out-while-the-thread-to-the-operator-stays-open.md) | S-0506 |
+| The guard does not run in the container, and its hook lets every call through when it cannot start | [I-0216](../issues/I-0216-flai-guard-does-not-run-as-the-hook-inside-the-agent-container-and-the-hook-lets-every-call-through-when-the-guard-cannot-start.md) | S-0507, pilot as the entrypoint that runs flai's guard, and S-0508 |
+| `flai serve` starts a host agent for a story worked in a container | [I-0214](../issues/I-0214-flai-serve-starts-a-host-agent-for-a-story-meant-to-be-worked-in-a-container-since-nothing-on-a-story-or-the-host-says-its-agent-runs-elsewhere.md) | S-0508, the container adapter |
+| Git needs the main checkout's `.git` mounted read-write | [I-0215](../issues/I-0215-a-story-s-worktree-mounted-alone-into-a-container-is-not-a-git-repository-since-its-git-file-names-the-main-checkout-s-git-worktrees-folder.md) | S-0508 |
+| `flai` inside the container takes the worktree for the project | [I-0219](../issues/I-0219-flai-verify-inside-the-agent-container-takes-the-story-s-worktree-for-the-project-root-since-the-main-checkout-is-not-mounted-and-writes-a-config-under-the-container-s-home.md) | S-0508 |
+| The close-out cannot run for want of `go`, `golangci-lint`, `pnpm`, and `markdownlint-cli2` | [I-0218](../issues/I-0218-scripts-close-out-sh-stops-at-its-first-step-inside-the-agent-container-since-scripts-flai-sh-builds-flai-with-go-which-the-image-lacks.md) | S-0510, the project's image layer |
+
+Settled here with no code change in flai: the claude-code image carries `bash`, which Claude Code's Bash tool needs. Two facts stay open for S-0508 to measure:
+
+- What an OAuth refresh does through the read-only login.
+- What Anthropic's terms say of a login the operator makes once and a container reuses.
+
+The local-model questions of agent-adapters.md were outside this spike.

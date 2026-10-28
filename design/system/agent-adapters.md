@@ -1,6 +1,6 @@
 ---
 title: Agent adapters for LiteLLM and OpenRouter
-updated: 2026-10-25
+updated: 2026-10-28
 status: active
 topics: [cli, template]
 ---
@@ -352,6 +352,8 @@ What a spike would settle, before either is built:
 - Whether `flai mcp start` over HTTP carries `task_done`, `stream_sync`, and `permission_prompt` as the stdio server does, with the agent named by header, and how a container reaches the host's listener under each network mode.
 - What a local model answers as `usage` on its OpenAI-compatible endpoint, and whether a 7B or 14B model holds the explorer's tool calls at all, which ADR-0202's consequences doubt for a task sub-agent.
 - A middle path worth one measurement: Docker Agent as the inner loop of flai's container, which gives the mounts, the tools, and the telemetry switch without writing a loop, and keeps every limitation of the loop itself.
+
+What the spike settled. S-0505 ran Claude Code 2.1.312 by hand in two images built locally from this tree, `flai-agent-bedrock:local` and `flai-agent-claude-code:local`, with the worktree, the story's `.flai-cache/agents/S-nnnn` as `CLAUDE_CONFIG_DIR`, and the operator's login mounted read-only. In that container it worked S-0513 to review over the project's HTTP MCP server ([results](../experiments/S-0505-claude-code-works-one-story-of-this-repository-inside-a-hand-built-container-from-a-bedrock-image-and-a-claude-code-layer-and-the-results-settle-what-adr-0203-leaves-open.md)). Claude Code signed in from the login, linked rather than copied into the cache folder, with no browser. The bind mount on WSL2's ext4 under Docker Desktop costs `git status` nothing and `flai check --strict` 8 percent, and three times the host's cost on a bare file walk, so the clone path is not needed from the start. Every flai tool the agent called answered over HTTP as on stdio, `task_done` among them. Seven limitations came with that, each an issue carried by a story of E-0029. The HTTP server refuses a container's `Host` header, and `permission_prompt`'s hold outlives Claude Code's tool timeout over HTTP (S-0506). This repository's guard hook could not start in the image and let every call through (S-0507, S-0508). `flai serve` started a host agent for the story the container was working, git needs the main checkout's `.git` mounted, and `flai` in the container takes the worktree for the project (S-0508). The close-out stops for want of the tiers' tools (S-0510). Bridge networking with `host.docker.internal` reached the host's loopback listener; Docker Desktop's host network did not. Still open: what an OAuth refresh does through the read-only login, and the local-model questions above.
 
 ### Harnesses against the concerns
 
