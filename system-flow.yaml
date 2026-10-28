@@ -134,6 +134,7 @@ orchestration:
     promote_to_ready: true
     publish: true
     plan_backlog_stories: true
+    confirm_after: 48h
   policy: throughput
   release:
     value: 1000
