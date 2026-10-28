@@ -6,7 +6,7 @@ title: scripts/close-out.sh stops at its first step inside the agent container, 
 status: backlog
 owner: alex
 created: 2026-10-28T12:53:17Z
-updated: 2026-10-28T13:58:16Z
+updated: 2026-10-28T14:05:54Z
 transitions: []
 tags: [cli, docker]
 topics: [harness, docker]
@@ -23,15 +23,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 12
+      seconds: 91
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 42
-          cache_read: 591888
-          cache_write: 5608
-          cost: 0.1312
+          input: 30
+          output: 498
+          cache_read: 9353698
+          cache_write: 15539
+          cost: 2.0569
 draft: true
 cost_of_delay:
   inputs:
@@ -43,10 +43,10 @@ cost_of_delay:
   at: 2026-10-28T13:56:47Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-29T04:00:00Z
-  basis: "flai forecast S-0520 gives 4m from size 2 (2 criteria, no touches; median 119 s per unit over 13 done remediation stories on claude-opus-5-5, small band); with 17 touches the median alone gives about 38m, raised to 1h15m for an ADR, a storygit and container-adapter change with tests, a verify fixture test, a check fallback, the hand-start script, docs in three places, a check by hand inside flai-agent-claude-code:local built from the tree, and the issue close; delivery is flai's play-out start, 2026-10-29T02:49Z less 4m, plus 1h15m, which the after on S-0517, S-0518, and S-0521 may move."
-  by: planner-S-0520
-  at: 2026-10-28T13:56:47Z
+  delivery: 2026-10-29T04:57:00Z
+  basis: "Its own forecast of 1h15m; 33rd in the pull order with an in-progress limit of 5, behind S-0502, S-0415, S-0419, S-0423, S-0418, S-0421, S-0416, S-0422, S-0420, S-0417, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0507, S-0508, S-0509, S-0510, S-0511, S-0512, S-0514, S-0515, S-0516, S-0517, S-0518 and S-0519."
+  by: flai
+  at: 2026-10-28T14:05:54Z
 ---
 # S-0520 scripts/close-out.sh stops at its first step inside the agent container, since scripts/flai.sh builds flai with go, which the image lacks
 

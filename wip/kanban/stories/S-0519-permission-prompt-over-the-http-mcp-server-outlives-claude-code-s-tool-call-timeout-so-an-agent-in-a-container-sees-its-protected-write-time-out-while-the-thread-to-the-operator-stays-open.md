@@ -6,7 +6,7 @@ title: permission_prompt over the HTTP MCP server outlives Claude Code's tool-ca
 status: backlog
 owner: alex
 created: 2026-10-28T12:53:05Z
-updated: 2026-10-28T13:46:59Z
+updated: 2026-10-28T14:05:54Z
 transitions: []
 tags: [cli, mcp]
 topics: [mcp, harness]
@@ -42,10 +42,10 @@ cost_of_delay:
   at: 2026-10-28T13:46:59Z
 forecast:
   duration: 1h
-  delivery: 2026-10-29T02:46:00Z
-  basis: "flai forecast gives 29m (median 95 s per unit over 38 done remediation stories on claude-opus-5-5 in the large band, size 18); raised to 1h because T-2227 runs three or four probes that each wait up to the timeout, one of them in the container, and T-2228 writes an ADR; delivery is flai's play-out start, 2026-10-29T01:46Z, plus 1h."
-  by: planner-S-0519
-  at: 2026-10-28T13:46:59Z
+  delivery: 2026-10-29T02:49:00Z
+  basis: "Its own forecast of 1h; 32nd in the pull order with an in-progress limit of 5, behind S-0502, S-0415, S-0419, S-0423, S-0418, S-0421, S-0416, S-0422, S-0420, S-0417, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0507, S-0508, S-0509, S-0510, S-0511, S-0512, S-0514, S-0515, S-0516, S-0517 and S-0518."
+  by: flai
+  at: 2026-10-28T14:05:54Z
 ---
 # S-0519 permission_prompt over the HTTP MCP server outlives Claude Code's tool-call timeout, so an agent in a container sees its protected write time out while the thread to the operator stays open
 

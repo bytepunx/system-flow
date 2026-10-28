@@ -6,7 +6,7 @@ title: flai guard lets a session flai serve started run the flai serve sub-comma
 status: backlog
 owner: alex
 created: 2026-10-26T16:01:48Z
-updated: 2026-10-28T13:10:56Z
+updated: 2026-10-28T14:05:54Z
 transitions: []
 tags: [cli, guard]
 topics: [cli]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-10-28T08:22:46Z
 forecast:
   duration: 45m
-  delivery: 2026-10-28T23:55:00Z
-  basis: "Its own forecast of 45m; 25th in the pull order with an in-progress limit of 5, behind S-0414, S-0502, S-0521, S-0415, S-0419, S-0418, S-0421, S-0416, S-0420, S-0417, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0422, S-0423, S-0424, S-0425, S-0506, S-0507, S-0508, S-0509 and S-0510."
+  delivery: 2026-10-28T23:01:00Z
+  basis: "Its own forecast of 45m; 25th in the pull order with an in-progress limit of 5, behind S-0502, S-0415, S-0419, S-0423, S-0418, S-0421, S-0416, S-0422, S-0420, S-0417, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0507, S-0508, S-0509 and S-0510."
   by: flai
-  at: 2026-10-28T13:10:56Z
+  at: 2026-10-28T14:05:54Z
 finalized:
   by: alex
   at: 2026-10-28T12:56:42Z
