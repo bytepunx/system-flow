@@ -163,7 +163,7 @@ func TestWaitingByTheWeek(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	none := `"orchestrator":{"count":0,"total_seconds":0},"confirmed":{"count":0,"total_seconds":0}`
+	none := `"orchestrator":{"count":0,"total_seconds":0},"confirmed":{"count":0,"total_seconds":0},"timeout":{"count":0,"total_seconds":0}`
 	// ADR-0168: without kept forge state the checks and reviewers are 0
 	noPull, noPullMean := `"checks":{"total_seconds":0},"reviewers":{"total_seconds":0}`,
 		`"checks":{"total_seconds":0,"mean_seconds":0},"reviewers":{"total_seconds":0,"mean_seconds":0}`
@@ -329,12 +329,46 @@ func TestWaitsTheOrchestratorEndedAreCountedApart(t *testing.T) {
 	}
 	week := `{"week":"2026-W35","start":"2026-08-24","items":2,"empty_wakes":0,` +
 		`"threads":{"total_seconds":43200,"mean_seconds":21600,` +
-		`"orchestrator":{"count":2,"total_seconds":5400},"confirmed":{"count":1,"total_seconds":10800}},` +
+		`"orchestrator":{"count":2,"total_seconds":5400},"confirmed":{"count":1,"total_seconds":10800},` +
+		`"timeout":{"count":0,"total_seconds":0}},` +
 		`"review":{"total_seconds":0,"mean_seconds":0},` +
 		`"checks":{"total_seconds":0,"mean_seconds":0},"reviewers":{"total_seconds":0,"mean_seconds":0}}`
 	if string(data) != week {
 		t.Errorf("week =\n%s\nwant\n%s", data, week)
 	}
+}
+
+// ADR-0206: a wait that flai serve's confirmation by timeout ended counts
+// under timeout, not confirmed, and the longest waits name flai serve as
+// awaited; the operator's confirmation still counts under confirmed (I-0195).
+func TestWaitsAConfirmationByTimeoutEndedAreCountedApart(t *testing.T) {
+	const asked, source = "Which way?", "Source: design/system/workflow.md"
+	operator := threadOf("S-0021", "answered", "2026-08-25T04:00:00Z", "2026-08-25T07:00:00Z",
+		"2026-08-25T04:00:00Z", "agent", asked,
+		"2026-08-25T05:00:00Z", "orchestrator (recommendation)", "This way.\n\n"+source,
+		"2026-08-25T07:00:00Z", "alex", "Confirmed the recommendation of 2026-08-25T05:00:00Z orchestrator.\n\n"+source)
+	timeout := threadOf("S-0021", "answered", "2026-08-25T08:00:00Z", "2026-08-25T13:00:00Z",
+		"2026-08-25T08:00:00Z", "agent", asked,
+		"2026-08-25T09:00:00Z", "orchestrator (recommendation)", "That way.\n\n"+source,
+		"2026-08-25T13:00:00Z", threads.TimeoutAuthor, "Confirmed the recommendation of 2026-08-25T09:00:00Z orchestrator"+
+			" after 4h with no answer from the operator (orchestration.permissions.confirm_after).\n\n"+source)
+	operator.ID, timeout.ID = "TH-0001", "TH-0002"
+	rep := Compute(orchestratedItems(), Options{Now: now, Since: tenDays, Threads: []*threads.Thread{operator, timeout}})
+	th := rep.Waiting.Weeks[1].Threads
+	if th.Confirmed != (WaitCount{Count: 1, Total: 10800}) || th.Timeout != (WaitCount{Count: 1, Total: 18000}) || th.Orchestrator != (WaitCount{}) {
+		t.Errorf("the week's thread waits = %+v; want confirmed 1 of 10800, timeout 1 of 18000, orchestrator none", th)
+	}
+	data, err := json.Marshal(th)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if key := `"confirmed":{"count":1,"total_seconds":10800},"timeout":{"count":1,"total_seconds":18000}`; !strings.Contains(string(data), key) {
+		t.Errorf("threads json lacks %s: %s", key, data)
+	}
+	sameWaits(t, rep.Waiting.Longest, []LongWait{
+		{Item: "S-0021", Kind: "thread", Thread: "TH-0002", Started: "2026-08-25T08:00:00Z", Ended: "2026-08-25T13:00:00Z", Seconds: 18000, Awaited: "flai serve"},
+		{Item: "S-0021", Kind: "thread", Thread: "TH-0001", Started: "2026-08-25T04:00:00Z", Ended: "2026-08-25T07:00:00Z", Seconds: 10800, Awaited: "alex"},
+	})
 }
 
 // sameWaits reports where got differs from want, wait by wait.

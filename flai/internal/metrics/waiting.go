@@ -85,12 +85,14 @@ type WaitTotal struct {
 }
 
 // ThreadWaitTotal is the seconds waited on threads over a week's items, and
-// the waits among them the orchestrator ended and those the operator's
-// confirmation of a recommendation ended (S-0220).
+// the waits among them the orchestrator ended, those the operator's
+// confirmation of a recommendation ended (S-0220), and those flai serve's
+// confirmation by timeout ended (ADR-0206).
 type ThreadWaitTotal struct {
 	WaitTotal
 	Orchestrator WaitCount `json:"orchestrator"`
 	Confirmed    WaitCount `json:"confirmed"`
+	Timeout      WaitCount `json:"timeout"`
 }
 
 // WaitCount is how many of a week's thread waits one kind of entry ended,
@@ -110,8 +112,12 @@ type ender int
 const (
 	// byOrchestrator is an entry of the orchestrator's.
 	byOrchestrator ender = iota + 1
-	// byConfirmation is an entry confirming a recommendation (ADR-0090).
+	// byConfirmation is an entry confirming a recommendation (ADR-0090), the
+	// operator's.
 	byConfirmation
+	// byTimeout is flai serve's confirmation of a recommendation the operator
+	// left unanswered past confirm_after (ADR-0206).
+	byTimeout
 )
 
 // wait is a thread's wait, or a review, checks, or reviewers wait without a
@@ -169,8 +175,9 @@ func threadWaits(all []*workitem.Item, ths []*threads.Thread, now time.Time) map
 // without entries, to the first later entry by another author that is not a
 // recommendation; without one, to updated once resolved and to now while
 // open. It is ended by the orchestrator when that entry is the
-// orchestrator's, and by a confirmation when it confirms a recommendation.
-// It is false when the thread's start cannot be read.
+// orchestrator's, by a timeout when it is flai serve's confirmation in the
+// operator's absence, and by a confirmation when it confirms a recommendation
+// otherwise. It is false when the thread's start cannot be read.
 func threadWait(th *threads.Thread, now time.Time) (wait, bool) {
 	entries := th.Entries()
 	at, opener := th.Created, ""
@@ -195,6 +202,8 @@ func threadWait(th *threads.Thread, now time.Time) (wait, bool) {
 		switch {
 		case workitem.IsOrchestrator(e.Author):
 			w.by = byOrchestrator
+		case e.ConfirmsByTimeout():
+			w.by = byTimeout
 		case e.Confirms():
 			w.by = byConfirmation
 		}
@@ -333,6 +342,7 @@ func waiting(items []*workitem.Item, per map[string]ItemMetrics, waits map[strin
 		ws := waits[workitem.CanonicalID(it.ID)]
 		b.Threads.Orchestrator.add(it, ws, byOrchestrator, now)
 		b.Threads.Confirmed.add(it, ws, byConfirmation, now)
+		b.Threads.Timeout.add(it, ws, byTimeout, now)
 	}
 	for i := range out.Weeks {
 		b := &out.Weeks[i]

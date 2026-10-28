@@ -320,7 +320,7 @@ export type UsageReport = {
 		kinds: (StrategicSpend & { kind: string })[];
 	};
 };
-/** The thread waits of a week that the orchestrator, or a confirmation, ended (ADR-0091). */
+/** The thread waits of a week that the orchestrator, a confirmation, or a timeout ended (ADR-0091, ADR-0206). */
 export type WaitShare = { count: number; total_seconds: number };
 /** A wait of a week summed over its items, and over their number, absent with none. */
 export type WaitTotal = { total_seconds: number; mean_seconds?: number };
@@ -339,6 +339,8 @@ export type WaitWeek = {
 		mean_seconds?: number;
 		orchestrator: WaitShare;
 		confirmed: WaitShare;
+		/** The waits flai serve's confirmation by timeout ended (ADR-0206); absent from a flai older than S-0502. */
+		timeout?: WaitShare;
 	};
 	review: WaitTotal;
 	/** Absent from a flai older than S-0396. */
