@@ -6,7 +6,7 @@ title: component-library.md still says the main checkout is never installed into
 status: backlog
 owner: alex
 created: 2026-10-28T12:54:04Z
-updated: 2026-10-28T12:54:04Z
+updated: 2026-10-28T12:58:19Z
 transitions: []
 tags: []
 agent:
@@ -14,7 +14,9 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+finalized:
+  by: alex
+  at: 2026-10-28T12:58:19Z
 ---
 # S-0526 component-library.md still says the main checkout is never installed into, though flai accept now installs there by ADR-0185
 
