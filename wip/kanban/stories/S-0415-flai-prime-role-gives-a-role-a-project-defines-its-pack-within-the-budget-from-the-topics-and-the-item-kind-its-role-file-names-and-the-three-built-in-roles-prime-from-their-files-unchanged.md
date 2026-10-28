@@ -3,18 +3,21 @@ id: S-0415
 type: story
 nature: feature
 title: flai prime --role gives a role a project defines its pack within the budget, from the topics and the item kind its role file names, and the three built-in roles prime from their files unchanged
-status: ready
+status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:39:36Z
-updated: 2026-10-28T14:47:44Z
+updated: 2026-10-28T15:11:24Z
 transitions:
   - to: ready
     at: 2026-10-28T13:02:21Z
     by: alex
+  - to: in-progress
+    at: 2026-10-28T14:51:22Z
+    by: agent-S-0415
 tags: [cli, template]
 topics: [cli, planning, orchestration, conventions]
-touches: [design/system/agent-context.md, design/system/conventions.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/prime.go, flai/cmd/prime_test.go, flai/internal/context/strategic.go, flai/internal/context/strategic_test.go, flai/internal/context/story.go, flai/internal/conventions/conventions.go, flai/internal/conventions/conventions_test.go, flai/internal/check/check.go, flai/internal/mcpserver/prime_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, design/system/flai-cli.md]
+touches: [design/system/agent-context.md, design/system/conventions.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/prime.go, flai/cmd/prime_test.go, flai/internal/context/strategic.go, flai/internal/context/strategic_test.go, flai/internal/context/story.go, flai/internal/conventions/conventions.go, flai/internal/conventions/conventions_test.go, flai/internal/check/check.go, flai/internal/mcpserver/prime_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, design/system/flai-cli.md, flai/internal/context/context.go]
 after: [S-0414]
 agent:
   harness: claude-code
@@ -22,20 +25,31 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1245
+  priced_by: harness
+  turns:
+    - day: 2026-10-28
+      hand_edits: 1
+      work: 30
+  models:
+    - model: claude-opus-5-5
+      input: 142
+      output: 47420
+      cache_read: 7594519
+      cache_write: 435928
+      cost: 5.29
   strategic:
     - kind: orchestrator
-      seconds: 338
+      seconds: 523
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 124
-          output: 1974
-          cache_read: 14623674
-          cache_write: 25261
-          cost: 3.2343
+          input: 186
+          output: 2966
+          cache_read: 37263062
+          cache_write: 40315
+          cost: 8.2077
 cost_of_delay:
   value: 32.52
   by: planner-S-0415

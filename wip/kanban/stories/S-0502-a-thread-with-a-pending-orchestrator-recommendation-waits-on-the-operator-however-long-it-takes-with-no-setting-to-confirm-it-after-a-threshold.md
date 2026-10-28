@@ -6,7 +6,7 @@ title: A thread with a pending orchestrator recommendation waits on the operator
 status: in-progress
 owner: alex
 created: 2026-10-26T04:01:40Z
-updated: 2026-10-28T14:38:58Z
+updated: 2026-10-28T14:52:08Z
 transitions:
   - to: ready
     at: 2026-10-28T12:43:49Z
@@ -22,6 +22,9 @@ blocked:
     until: 2026-10-28T14:38:29Z
     reason: awaiting the operator on TH-0686
   - from: 2026-10-28T14:38:58Z
+    until: 2026-10-28T14:48:33Z
+    reason: awaiting the operator on TH-0686
+  - from: 2026-10-28T14:52:08Z
     reason: awaiting the operator on TH-0686
 tags: [flai, template]
 topics: [orchestration, cli, analysis]
@@ -34,20 +37,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3654
+  seconds: 3862
   priced_by: harness
   turns:
     - day: 2026-10-28
-      ceremony: 4
-      hand_edits: 2
-      work: 88
+      ceremony: 6
+      hand_edits: 3
+      work: 106
   models:
     - model: claude-opus-5-5
-      input: 532
-      output: 183060
-      cache_read: 37439316
-      cache_write: 1159285
-      cost: 18.166
+      input: 580
+      output: 194228
+      cache_read: 47374674
+      cache_write: 1205539
+      cost: 20.7466
   strategic:
     - kind: orchestrator
       seconds: 1040

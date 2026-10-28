@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 41
-      output: 14011
-      cache_read: 2865499
-      cache_write: 88728
-      cost: 1.3904
+      input: 35
+      output: 11773
+      cache_read: 2871583
+      cache_write: 73073
+      cost: 1.2575
 ---
 # T-2144 flai stats tells a wait that flai serve's confirmation by timeout ended from one the operator confirmed, as waiting.weeks[].threads.timeout and awaited flai serve, by the ADR's change to metrics.md, and the dashboard's types follow
 

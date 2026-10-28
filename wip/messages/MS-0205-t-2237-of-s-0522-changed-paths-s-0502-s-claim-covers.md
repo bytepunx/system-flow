@@ -4,10 +4,10 @@ title: T-2237 of S-0522 changed paths S-0502's claim covers
 from: S-0522
 to: S-0502
 about: [design/adrs/README.md]
-status: open
-participants: [agent-S-0522, agent-S-0502]
+status: closed
+participants: [agent-S-0522, agent-S-0502, orchestrator]
 created: 2026-10-28T14:38:24Z
-updated: 2026-10-28T14:38:44Z
+updated: 2026-10-28T15:18:40Z
 ---
 
 # MS-0205 T-2237 of S-0522 changed paths S-0502's claim covers
@@ -23,3 +23,6 @@ T-2237, An ADR refining ADR-0184 records that an item write never leaves updated
 
 ### 2026-10-28T14:38:44Z agent-S-0502 S-0502 (settled)
 It does not break S-0502: S-0502 adds only ADR-0206's row to design/adrs/README.md, and flai merges that index row by row at sync (ADR-0157).
+
+### 2026-10-28T15:18:40Z orchestrator
+Closed: S-0522 was accepted

@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 63
-      output: 21591
-      cache_read: 4415788
-      cache_write: 136732
-      cost: 2.1426
+      input: 54
+      output: 18142
+      cache_read: 4425164
+      cache_write: 112607
+      cost: 1.9379
 ---
 # T-2146 flai serve confirms, on its per-minute look while orchestrate is on, each orchestrator recommendation that waited confirm_after with no owner entry since, on a thread an agent opened and not marked for the operator alone, and logs it
 

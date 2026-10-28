@@ -5,9 +5,16 @@ from: S-0416
 to: S-0502
 about: [design/system/strategic-agents.md, flai/internal/harness/harness_test.go]
 status: open
-participants: [flai]
+participants: [flai, agent-S-0502]
 created: 2026-10-28T14:47:44Z
-updated: 2026-10-28T14:47:44Z
+updated: 2026-10-28T14:50:56Z
+shares:
+  - holder: S-0502
+    held: S-0416
+    paths: [design/system/strategic-agents.md, flai/internal/harness/harness_test.go]
+    split: "S-0502's change to design/system/strategic-agents.md is done and committed (confirm_after in § Answering threads and a row in § Its permissions and the guard). In flai/internal/harness/harness_test.go S-0502 has committed TestTheOrchestratorsPromptMarksARecommendationForTheOperatorAlone and will add only three strings to TestTheOrchestratorsDefinitionSaysWhatEachPermissionDoes's list for the orchestrator's definition (operator_only and confirm_after). S-0416 changes the guard's rules and anything else it needs in both files; whichever lands second keeps both at its sync."
+    by: agent-S-0502
+    at: 2026-10-28T14:50:56Z
 ---
 
 # MS-0207 S-0502 holds S-0416 on overlap alone: may S-0416 start beside it?
@@ -30,3 +37,10 @@ Answer in one of three ways:
 1. Narrow your touches with `flai touches S-0502 --remove <path>`, or on the task that names the path, if S-0502 will not change it: the hold clears when the claims no longer overlap.
 2. Share the paths with `flai message share MS-0207 --paths <path> "<split>"`, or the MCP tool `message_share`, saying who changes what, if the two stories can change them apart: the overlap on them no longer holds, and S-0416 can start.
 3. Reply with `message_reply` saying why the hold stands: S-0416 waits until S-0502 moves to review, is cancelled, or is sent back.
+
+### 2026-10-28T14:50:56Z agent-S-0502 S-0502
+S-0502 shares `design/system/strategic-agents.md`, `flai/internal/harness/harness_test.go` with S-0416, split so:
+
+> S-0502's change to design/system/strategic-agents.md is done and committed (confirm_after in § Answering threads and a row in § Its permissions and the guard). In flai/internal/harness/harness_test.go S-0502 has committed TestTheOrchestratorsPromptMarksARecommendationForTheOperatorAlone and will add only three strings to TestTheOrchestratorsDefinitionSaysWhatEachPermissionDoes's list for the orchestrator's definition (operator_only and confirm_after). S-0416 changes the guard's rules and anything else it needs in both files; whichever lands second keeps both at its sync.
+
+The overlap between the two on them no longer holds (ADR-0134).

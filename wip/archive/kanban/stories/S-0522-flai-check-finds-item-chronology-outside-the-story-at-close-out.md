@@ -3,10 +3,10 @@ id: S-0522
 type: story
 nature: improvement
 title: "flai check finds `item.chronology` outside the story at close-out"
-status: review
+status: done
 owner: alex
 created: 2026-10-28T12:53:36Z
-updated: 2026-10-28T14:41:18Z
+updated: 2026-10-28T15:18:40Z
 transitions:
   - to: ready
     at: 2026-10-28T14:24:16Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-28T14:41:18Z
     by: agent-S-0522
+  - to: done
+    at: 2026-10-28T15:18:40Z
+    by: orchestrator
 tags: [cli]
 touches: [design/adrs, design/adrs/README.md, design/system/work-hierarchy.md, flai/internal/workitem/repo.go, flai/internal/workitem/itemlock.go, flai/internal/workitem/itemlock_test.go, flai/internal/serve/replan.go, flai/internal/serve/replan_test.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/bisect_test.go, flai/internal/itemedit/widen.go, flai/internal/itemedit/widen_test.go, design/issues/I-0183-flai-check-finds-item-chronology-outside-the-story-at-close-out.md, design/issues/summary.md]
 agent:
@@ -114,3 +117,14 @@ Overlaps on 2026-10-28: `flai/internal/serve/replan.go` is touched by S-0419 (re
 Forecast. `flai forecast S-0522` gave 3m with no touches (size 2) and gives 23m with them (size 15: 2 criteria, 13 touches; median 89 s per unit over 98 done improvement stories on claude-opus-5-5, large band), delivery 2026-10-29T03:35Z, 34th in the pull order. Raised to 45m: the story writes an ADR, seven tests with controlled clocks across three packages, serve's among them, and its close-out of a flai/** change runs the integration and smoke tiers in full. The delivery written is flai's play-out start, 03:35Z less 23m, plus 45m: 2026-10-29T03:57Z.
 
 Cost of delay. `flai cod S-0522` gives 37.50 USD a week: 15m lost per 168h cycle at 150 USD an hour, from the input the orchestrator set on TH-0692 at my recommendation. Written as flai gives it: the issue has one instance, and the input is the operator's to raise if a stale stamp ever blocks an acceptance.
+
+### Accepted by the orchestrator
+
+- Verified: 79975cf6f9455b0b7d6df31a31e15fbd50f6e46b
+- Batch: 20261028-150510
+- Enqueued verified: eaa9d4f5086a1e69318d10a3d862a37b5391341e
+- At: 2026-10-28T15:18:40Z
+
+Verdict: pass at eaa9d4f5086a1e69318d10a3d862a37b5391341e
+- 1: flai/internal/workitem/itemlock.go, flai/internal/workitem/repo.go, flai/internal/workitem/itemlock_test.go, flai/internal/serve/replan.go, flai/internal/serve/replan_test.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/bisect_test.go, flai/internal/itemedit/widen.go, flai/internal/itemedit/widen_test.go, design/system/work-hierarchy.md
+- 2: design/issues/I-0183-flai-check-finds-item-chronology-outside-the-story-at-close-out.md, design/issues/summary.md
