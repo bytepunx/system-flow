@@ -3,19 +3,34 @@ id: E-0029
 type: epic
 nature: feature
 title: flai runs agents in Docker containers
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-26T04:31:29Z
-updated: 2026-10-26T12:24:54Z
+updated: 2026-10-28T12:14:47Z
 transitions:
   - to: ready
     at: 2026-10-26T04:31:36Z
     by: alex
+  - to: in-progress
+    at: 2026-10-28T12:04:42Z
+    by: agent-S-0505
 tags: []
 usage:
   source: sum
-  seconds: 0
-  models: []
+  seconds: 542
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-28
+      hand_edits: 1
+      work: 15
+  models:
+    - model: claude-opus-5-5
+      input: 82
+      output: 465
+      cache_read: 2659490
+      cache_write: 209312
+      cost: 0.9694
   strategic:
     - kind: planner
       seconds: 190
@@ -28,15 +43,15 @@ usage:
           cache_write: 204659
           cost: 8.1773
     - kind: orchestrator
-      seconds: 25044
+      seconds: 25280
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 178
-          output: 2331
-          cache_read: 46753459
-          cache_write: 212816
-          cost: 10.2974
+          input: 215
+          output: 2689
+          cache_read: 50732066
+          cache_write: 237634
+          cost: 11.1764
 cost_of_delay:
   inputs:
     penalty_per_week: 150
@@ -58,6 +73,7 @@ The one refinement to make to the ADR as proposed is to look at creating multipl
 - S-0508 flai serve runs a story's agent in a container through a container harness adapter, with the worktree, the story's cache folder, and the login mounted, the keys and the MCP token by environment, and the image and network the host sets
 - S-0509 The planner, the orchestrator, the analyzer, and the curator run in a container when their harness is container, with the main checkout mounted as an ADR settles, pilot passing their role, and their activity logged as on the host
 - S-0510 A project's manifest names an image layer for its test tiers' tools, flai serve runs it, flai check warns when it is not built, and this repository's layer runs the close-out inside the container
+- S-0513 docs/operators/runbooks gains a runbook for building the agent images and running a story's agent in a container by hand
 
 ## Notes
 
@@ -68,3 +84,4 @@ The one refinement to make to the ADR as proposed is to look at creating multipl
 - if common functionality is required across target harness/model/agent approaches, this should be built as a separate Go binary that ships in the container - we can call that binary "pilot"
 - each of the docker images should be built locally for the scope of this epic and skip making changes to github CI/CD
 - eagerly look at research or experiment stories where feasible to address anticipated limitations or issues in the ADR
+- 2026-10-28T12:04:42Z: moved to in-progress: follows S-0505, which moved to in-progress
