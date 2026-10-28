@@ -3,11 +3,11 @@ id: S-0533
 type: story
 nature: improvement
 title: The orchestration page shows its settings panel first, above the action's state, the run, the last decisions, and the activity log, so the operator reaches the permissions and the policy without scrolling past them
-status: review
+status: done
 parent: E-0030
 owner: alex
 created: 2026-10-28T21:01:22Z
-updated: 2026-10-28T21:27:35Z
+updated: 2026-10-28T21:33:32Z
 transitions:
   - to: ready
     at: 2026-10-28T21:16:58Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-10-28T21:27:35Z
     by: system-flow
+  - to: done
+    at: 2026-10-28T21:33:32Z
+    by: orchestrator
 tags: [flaiover, orchestrator, settings]
 topics: [dashboard]
 touches: [flaiover/src/routes/workflow/orchestrator, flaiover/src/lib/components, design/system/flaiover-dashboard.md, docs, flaiover/src/lib/components/StrategicAgentPanel.svelte, flaiover/src/lib/components/OrchestratorPanel.svelte, flaiover/src/lib/components/PlannerPanel.svelte, flaiover/src/lib/components/AnalyzerPanel.svelte, flaiover/src/lib/components/OrchestratorPanel.svelte.test.ts, flaiover/src/routes/workflow/orchestrator/+page.svelte, flaiover/src/routes/workflow/orchestrator/orchestrator.svelte.test.ts, flaiover/src/routes/workflow/planner/+page.svelte, flaiover/src/routes/workflow/planner/planner.svelte.test.ts, flaiover/src/routes/workflow/analyzer/+page.svelte, flaiover/src/routes/workflow/analyzer/analyzer.svelte.test.ts, docs/users/flaiover.md]
@@ -44,15 +47,15 @@ usage:
       cost: 4.0589
   strategic:
     - kind: orchestrator
-      seconds: 966
+      seconds: 971
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 101
-          output: 1741
-          cache_read: 11042080
-          cache_write: 34692
-          cost: 2.4375
+          input: 103
+          output: 1747
+          cache_read: 11228580
+          cache_write: 36564
+          cost: 2.479
         - model: claude-sonnet-5-5
           input: 8
           output: 59
@@ -119,3 +122,16 @@ Overlap: S-0420 (ready, held on S-0419) replaces these three pages with one role
 Forecast: 30m, delivery 2026-10-29T11:52:00Z, as `flai forecast` gives it (size 20: 4 criteria, 16 touches). It stands. The three declared folders double-count files already named, which overstates the size by 3. The four tasks, each closed with its own test run, and three page tests to reorder make up for that.
 
 Cost of delay: 12.5 USD a week, as `flai cod` works it out from `time_lost_per_cycle: 5m` (set by the orchestrator on TH-0708, as recommended) at 150 USD an hour over a 168h cycle. It stands: a page layout with no revenue or penalty.
+
+### Accepted by the orchestrator
+
+- Verified: 2c8baf8f159e82d5874ccd33aff81b3b936e2a69
+- Batch: 20261028-212920
+- Enqueued verified: fd9ba3c72f9eefd355f8d8b6b8149cd44a2df286
+- At: 2026-10-28T21:33:32Z
+
+Verdict: meets all criteria
+- 1: flaiover/src/lib/components/StrategicAgentPanel.svelte, flaiover/src/lib/components/OrchestratorPanel.svelte, flaiover/src/lib/components/OrchestratorPanel.svelte.test.ts, flaiover/src/routes/workflow/orchestrator/+page.svelte, flaiover/src/routes/workflow/orchestrator/orchestrator.svelte.test.ts
+- 2: flaiover/src/lib/components/PlannerPanel.svelte, flaiover/src/lib/components/AnalyzerPanel.svelte, flaiover/src/routes/workflow/planner/+page.svelte, flaiover/src/routes/workflow/planner/planner.svelte.test.ts, flaiover/src/routes/workflow/analyzer/+page.svelte, flaiover/src/routes/workflow/analyzer/analyzer.svelte.test.ts
+- 3: flaiover/src/routes/workflow/orchestrator/+page.svelte, flaiover/src/routes/workflow/planner/+page.svelte, flaiover/src/routes/workflow/analyzer/+page.svelte, flaiover/src/routes/workflow/orchestrator/orchestrator.svelte.test.ts, flaiover/src/routes/workflow/planner/planner.svelte.test.ts, flaiover/src/routes/workflow/analyzer/analyzer.svelte.test.ts
+- 4: design/system/flaiover-dashboard.md, docs/users/flaiover.md

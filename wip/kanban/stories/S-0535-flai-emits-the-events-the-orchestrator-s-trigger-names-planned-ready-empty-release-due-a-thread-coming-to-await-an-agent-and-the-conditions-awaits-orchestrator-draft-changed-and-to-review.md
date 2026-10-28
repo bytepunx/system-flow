@@ -17,6 +17,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 5
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 1
+          output: 5
+          cache_read: 186500
+          cache_write: 1871
+          cost: 0.0415
 ---
 # S-0535 flai emits the events the orchestrator's trigger names: planned, ready-empty, release-due, a thread coming to await an agent, and the conditions awaits-orchestrator, draft-changed, and to-review
 

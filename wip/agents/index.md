@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-10-28T21:33:16Z
+updated: 2026-10-28T21:33:32Z
 ---
 
 # Active streams
@@ -8,7 +8,6 @@ updated: 2026-10-28T21:33:16Z
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
 | [S-0416](S-0416.md) | flai guard reads a role's permitted calls from its role file and refuses the rest, and the planner's, the orchestrator's, and the analyzer's rules move into their files with their guard tests unchanged | in-progress | agent-S-0416 | 2026-10-28T21:06:07Z |
-| [S-0533](S-0533.md) | The orchestration page shows its settings panel first, above the action's state, the run, the last decisions, and the activity log, so the operator reaches the permissions and the policy without scrolling past them | review | agent-S-0533 | 2026-10-28T21:27:30Z |
 
 ## Strategic agents
 
