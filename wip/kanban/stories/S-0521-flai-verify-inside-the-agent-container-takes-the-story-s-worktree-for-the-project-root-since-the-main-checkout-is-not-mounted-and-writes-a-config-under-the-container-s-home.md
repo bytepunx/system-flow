@@ -6,7 +6,7 @@ title: flai verify inside the agent container takes the story's worktree for the
 status: backlog
 owner: alex
 created: 2026-10-28T12:53:27Z
-updated: 2026-10-28T12:53:27Z
+updated: 2026-10-28T12:53:59Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
     by: flai
     at: 2026-10-28T12:53:27Z
+finalized:
+  by: alex
+  at: 2026-10-28T12:53:59Z
 ---
 # S-0521 flai verify inside the agent container takes the story's worktree for the project root, since the main checkout is not mounted, and writes a config under the container's home
 
