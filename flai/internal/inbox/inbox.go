@@ -3,7 +3,10 @@
 // since it last looked, read and advanced through the agent's cursor. The MCP
 // tool inbox and flai task done answer the same inbox from it (ADR-0107). It
 // lists the open conversations of the agent's story too, and reports a
-// message to that story once, as an event (ADR-0120, S-0331).
+// message to that story once, as an event (ADR-0120, S-0331). The events
+// that happen in flai serve and flai accept, planned, ready-empty, and
+// release-due, are appended to a log of their own, which it reads back with
+// the rest (ADR-0211).
 package inbox
 
 import (
@@ -445,11 +448,14 @@ const MaxPaths = 10
 type Event struct {
 	workitem.Change
 	Summary string `json:"summary" jsonschema:"the change in words"`
-	Project string `json:"project,omitempty" jsonschema:"the project it happened in, when the server serves more than one"`
+	// Fields are a logged event's own (ADR-0211), under the Field keys.
+	Fields  map[string]string `json:"fields,omitempty" jsonschema:"the event's own figures, by name, for the kinds flai serve and flai accept log: ready-empty's room and limit (the ready count is in to), release-due's before and after, what flai release --evaluate answered before the acceptance and answers after it; absent for other kinds"`
+	Project string            `json:"project,omitempty" jsonschema:"the project it happened in, when the server serves more than one"`
 }
 
 // CatchUp returns what others than agent changed since its cursor, among
-// items listed archive included, and the messages to story, the agent's own,
+// items listed archive included, the events flai serve and flai accept logged
+// (ADR-0211), whoever caused them, and the messages to story, the agent's own,
 // when it is given, the newest MaxEvents of them, and how many older ones it
 // left out, and advances the cursor past all of them: what a look leaves out
 // never comes back in a later one. A first look, with no cursor, is told of
@@ -479,7 +485,8 @@ func CatchUp(repo *workitem.Repo, agent, story string, now time.Time, items []*w
 	// They are not in the items' front matter, which is strict and shared
 	// with older flai; flai edit notes them beside the cursors.
 	since := cur.since(now).UTC().Truncate(time.Second)
-	noticed := func(c workitem.Change, summary string) {
+	noticed := func(e Event) {
+		c := e.Change
 		at, err := time.Parse(workitem.TimeFormat, c.At)
 		news := at.After(since) || (at.Equal(since) && !cur.Keys[c.Key()])
 		if err != nil || !news {
@@ -491,13 +498,20 @@ func CatchUp(repo *workitem.Repo, agent, story string, now time.Time, items []*w
 		if !cur.known && c.Type == workitem.Task {
 			return
 		}
-		events = append(events, Event{Change: c, Summary: summary})
+		events = append(events, e)
 	}
 	for _, n := range itemedit.Notices(repo) {
 		if n.By != agent {
 			c := workitem.Change{ID: n.ID, Type: n.Type, Title: n.Title, Kind: Edited, To: strings.Join(n.Changed, ","), By: n.By, At: n.At}
-			noticed(c, Describe(c))
+			noticed(Event{Change: c, Summary: Describe(c)})
 		}
+	}
+	// What happened in flai serve and flai accept (ADR-0211): news to every
+	// reader, whoever caused it, the orchestrator its acceptance's release-due
+	// too.
+	for _, l := range LoggedEvents(repo) {
+		c := l.Change()
+		noticed(Event{Change: c, Summary: describeLogged(c, l.Fields), Fields: l.Fields})
 	}
 	// Open stories that an acceptance changed paths under (S-0132), and
 	// stories in progress whose claims a write grew to overlap (I-0059): the
@@ -510,7 +524,7 @@ func CatchUp(repo *workitem.Repo, agent, story string, now time.Time, items []*w
 		if o.Accepted == "" {
 			summary = describeGrown(c, o.Grew, o.Reached)
 		}
-		noticed(c, summary)
+		noticed(Event{Change: c, Summary: summary})
 	}
 	// Messages to the agent's story (S-0331): one change for each open
 	// conversation whose newest entry by the other story is news, so that a
@@ -524,7 +538,7 @@ func CatchUp(repo *workitem.Repo, agent, story string, now time.Time, items []*w
 			if e, ok := lastFromOther(c, workitem.CanonicalID(story), agent); ok {
 				if closed, _ := c.Closed(repo); !closed {
 					m := workitem.Change{ID: c.ID, Type: Message, Title: c.Title, Kind: Message, To: strings.Join(c.About, ","), By: e.Author, Cause: e.Story, At: e.At}
-					noticed(m, describeMessage(m, e.Settled))
+					noticed(Event{Change: m, Summary: describeMessage(m, e.Settled)})
 				}
 			}
 		}
@@ -576,6 +590,8 @@ func Describe(c workitem.Change) string {
 		return c.Cause + " was accepted" + who + " and changed " + namePaths(c.To) + ", which " + c.ID + " " + c.Title + " claims. Run flai stream sync " + c.ID + " and the tests before you go on"
 	case Message:
 		return describeMessage(c, false)
+	case Planned, ReadyEmpty, ReleaseDue:
+		return describeLogged(c, nil)
 	}
 	return c.ID + " " + c.Kind
 }

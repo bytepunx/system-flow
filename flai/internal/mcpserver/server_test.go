@@ -17,6 +17,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/bytepunx/system-flow/flai/internal/forge"
+	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
@@ -838,6 +839,48 @@ func TestAnOverlapAtAcceptanceReachesTheAgent(t *testing.T) {
 		events := w["events"].([]any)
 		if w["timed_out"] == true || len(events) != 1 || events[0].(map[string]any)["cause"] != "S-0098" {
 			t.Errorf("wait: %v", w)
+		}
+		for _, p := range w["changed"].([]any) {
+			if strings.Contains(p.(string), ".flai-cache") {
+				t.Errorf("the log wakes the agent and is not shown to it as a path: %v", w["changed"])
+			}
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("wait_for_events never returned")
+	}
+}
+
+// ADR-0211 §4: an event flai serve or flai accept appends to the log wakes a
+// waiting agent, arrives with its fields, and the log is not shown to it as a
+// path.
+func TestALoggedEventWakesWaitForEvents(t *testing.T) {
+	f := setup(t)
+	if out, _ := f.call(t, "inbox", map[string]any{}); out == nil {
+		t.Fatal("first look")
+	}
+	*f.clock = f.clock.Add(time.Minute)
+	stamp := f.clock.Format(workitem.TimeFormat)
+	done := make(chan map[string]any, 1)
+	go func() {
+		out, _ := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 3})
+		done <- out
+	}()
+	time.Sleep(150 * time.Millisecond)
+	e := inbox.ReadyEmptyEvent(1, 3, 5, "flai serve")
+	e.At = stamp
+	if err := inbox.AppendEvent(f.repo, e); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case w := <-done:
+		events := w["events"].([]any)
+		if w["timed_out"] == true || len(events) != 1 {
+			t.Fatalf("wait: %v", w)
+		}
+		got := events[0].(map[string]any)
+		fields, _ := got["fields"].(map[string]any)
+		if got["kind"] != inbox.ReadyEmpty || got["to"] != "1" || fields[inbox.FieldRoom] != "3" || fields[inbox.FieldLimit] != "5" || !strings.Contains(got["summary"].(string), "the ready column holds 1 story") {
+			t.Errorf("the event: %v", got)
 		}
 		for _, p := range w["changed"].([]any) {
 			if strings.Contains(p.(string), ".flai-cache") {

@@ -866,8 +866,8 @@ func (s *server) snapshot() map[string]string {
 			return nil
 		})
 	}
-	// an edit's notice is written after its files, and an overlap's has no
-	// file of its own: a waiting agent wakes for them too
+	// an edit's notice is written after its files, and an overlap and a
+	// logged event have no file of their own: a waiting agent wakes for them too
 	for _, log := range noticeLogs(s.repo) {
 		if info, err := os.Stat(log); err == nil {
 			out[log] = fmt.Sprintf("%d/%d", info.ModTime().UnixNano(), info.Size())
@@ -877,9 +877,10 @@ func (s *server) snapshot() map[string]string {
 }
 
 // noticeLogs are the logs under .flai-cache whose lines arrive as events:
-// edits (S-0085) and overlaps at acceptance (S-0132).
+// edits (S-0085), overlaps at acceptance (S-0132), and the events flai serve
+// and flai accept log, planned, ready-empty, and release-due (ADR-0211).
 func noticeLogs(repo *workitem.Repo) []string {
-	return []string{itemedit.NoticesPath(repo), itemedit.OverlapsPath(repo)}
+	return []string{itemedit.NoticesPath(repo), itemedit.OverlapsPath(repo), inbox.EventsPath(repo)}
 }
 
 func diff(before, after map[string]string) []string {
