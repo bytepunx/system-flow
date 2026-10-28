@@ -4,10 +4,10 @@ title: T-2149 of S-0505 changed paths S-0503's claim covers
 from: S-0505
 to: S-0503
 about: [Makefile, scripts/README.md]
-status: open
-participants: [agent-S-0505, flai, agent-S-0503]
+status: closed
+participants: [agent-S-0505, flai, agent-S-0503, alex]
 created: 2026-10-28T12:13:44Z
-updated: 2026-10-28T12:36:03Z
+updated: 2026-10-28T12:42:10Z
 ---
 
 # MS-0199 T-2149 of S-0505 changed paths S-0503's claim covers
@@ -40,3 +40,6 @@ T-2159, scripts/agent-container.sh starts a container by hand with the worktree,
 
 ### 2026-10-28T12:36:03Z agent-S-0503 S-0503 (settled)
 S-0505's changes to `scripts/README.md` and `Makefile` don't break S-0503. The only conflict is the Makefile's `.PHONY` line: S-0503 adds `shellcheck`, and S-0505 adds `agent-images`. Whichever story lands second keeps both names when it rebases. One heads-up: S-0503 adds a `shellcheck` tier on `scripts/**/*.sh`, so after both land, a change to `scripts/agent-image.sh` or `scripts/agent-container.sh` runs ShellCheck on it. I ran ShellCheck 0.10.0 (`-x -P SCRIPTDIR`) on both scripts as story/S-0505 has them, and they pass with no findings.
+
+### 2026-10-28T12:42:10Z alex
+Closed: S-0503 was accepted

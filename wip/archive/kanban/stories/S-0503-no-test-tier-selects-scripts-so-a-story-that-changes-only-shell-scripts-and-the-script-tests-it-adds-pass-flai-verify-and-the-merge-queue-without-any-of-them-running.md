@@ -3,10 +3,10 @@ id: S-0503
 type: story
 nature: improvement
 title: "No test tier selects scripts/**, so a story that changes only shell scripts, and the script tests it adds, pass flai verify and the merge queue without any of them running"
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-26T04:01:45Z
-updated: 2026-10-28T12:35:32Z
+updated: 2026-10-28T12:42:10Z
 transitions:
   - to: ready
     at: 2026-10-26T05:26:43Z
@@ -20,6 +20,12 @@ transitions:
   - to: in-progress
     at: 2026-10-28T12:33:01Z
     by: flai
+  - to: review
+    at: 2026-10-28T12:40:26Z
+    by: agent-S-0503
+  - to: done
+    at: 2026-10-28T12:42:10Z
+    by: alex
 tags: []
 topics: [cli, code]
 touches: [system-flow.yaml, scripts/install-tools.sh, scripts/shellcheck.sh, scripts/flai-test.sh, scripts/README.md, scripts/flaiover-install-test.sh, scripts/install-published-test.sh, scripts/litellm.sh, scripts/release-key-setup.sh, Makefile, design/tech/shellcheck.md, design/tech/README.md, design/conventions/tooling.md, design/system/project-manifest.md, flai/internal/verify/select_test.go, design/issues/I-0199-no-test-tier-selects-scripts-so-a-story-that-changes-only-shell-scripts-and-the-script-tests-it-adds-pass-flai-verify-and-the-merge-queue-without-any-of-them-running.md, design/issues/summary.md, scripts/env.sh, design/issues/I-0211-adr-0202-s-status-rejected-is-not-an-adr-status-flaiover-s-search-test-allows-so-the-flaiover-tier-fails-on-main-for-every-story-that-selects-it.md, design/issues/I-0220-testastorywhoseagentendedaskingisblockeduntiltheanswerstartsitagain-reads-the-story-s-blocks-once-the-run-reads-as-ended-before-endrun-writes-the-block-so-it-fails-now-and-then.md, flai/internal/serve/agents_test.go]
