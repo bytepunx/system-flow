@@ -6,7 +6,7 @@ title: "events-socket.test.ts 'closes every events socket with 1001 when the ser
 status: in-progress
 owner: alex
 created: 2026-10-26T04:01:24Z
-updated: 2026-10-28T12:44:57Z
+updated: 2026-10-28T12:49:49Z
 transitions:
   - to: ready
     at: 2026-10-28T12:43:48Z
@@ -23,9 +23,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 283
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-28
+      work: 16
+  models:
+    - model: claude-opus-5-5
+      input: 36
+      output: 282
+      cache_read: 1780185
+      cache_write: 135489
+      cost: 0.6479
   strategic:
     - kind: orchestrator
       seconds: 274
@@ -62,8 +73,8 @@ finalized:
 This story remediates [I-0181](../../../design/issues/I-0181-events-socket-test-ts-closes-every-events-socket-with-1001-when-the-server-stops-fails-now-and-then-a-change-listener-is-still-attached-when-the-server-has-closed.md), "events-socket.test.ts 'closes every events socket with 1001 when the server stops' fails now and then: a change listener is still attached when the server has closed". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0181 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0181 is closed with `flai issue close I-0181 --reason` saying what fixed it
+- [x] The cause I-0181 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0181 is closed with `flai issue close I-0181 --reason` saying what fixed it
 
 ## Tasks
 - T-2134 Show that I-0181's race is the one S-0494 removed: the pre-fix module fails the server-stop test and the current one holds under repeated runs

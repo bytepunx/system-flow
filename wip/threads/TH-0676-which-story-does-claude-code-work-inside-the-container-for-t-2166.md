@@ -4,10 +4,10 @@ title: Which story does Claude Code work inside the container for T-2166?
 anchor:
   path: wip/kanban/stories/S-0505-claude-code-works-one-story-of-this-repository-inside-a-hand-built-container-from-a-bedrock-image-and-a-claude-code-layer-and-the-results-settle-what-adr-0203-leaves-open.md
   item: S-0505
-status: answered
+status: resolved
 participants: [agent-S-0505, orchestrator, alex]
 created: 2026-10-28T12:05:18Z
-updated: 2026-10-28T12:11:11Z
+updated: 2026-10-28T12:52:31Z
 ---
 
 # TH-0676 Which story does Claude Code work inside the container for T-2166?
@@ -50,3 +50,6 @@ Source: design/conventions/work-management.md § Rules
 Confirmed the recommendation of 2026-10-28T12:05:33Z orchestrator.
 
 Source: design/conventions/work-management.md § Rules
+
+### 2026-10-28T12:52:31Z alex
+Resolved: S-0505 was accepted

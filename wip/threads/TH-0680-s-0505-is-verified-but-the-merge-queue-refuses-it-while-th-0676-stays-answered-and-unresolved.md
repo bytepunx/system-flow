@@ -4,10 +4,10 @@ title: S-0505 is verified but the merge queue refuses it while TH-0676 stays ans
 anchor:
   path: wip/kanban/stories/S-0505-claude-code-works-one-story-of-this-repository-inside-a-hand-built-container-from-a-bedrock-image-and-a-claude-code-layer-and-the-results-settle-what-adr-0203-leaves-open.md
   item: S-0505
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-28T12:36:05Z
-updated: 2026-10-28T12:36:05Z
+updated: 2026-10-28T12:52:31Z
 ---
 
 # TH-0680 S-0505 is verified but the merge queue refuses it while TH-0676 stays answered and unresolved
@@ -32,3 +32,6 @@ On wip/kanban/stories/S-0505-claude-code-works-one-story-of-this-repository-insi
 - agent-S-0505 opened TH-0676, so I may not resolve it. Only you or that agent can.
 
 S-0513 is held the same way, by its permission prompt TH-0677: see TH-0678.
+
+### 2026-10-28T12:52:31Z alex
+Resolved: S-0505 was accepted

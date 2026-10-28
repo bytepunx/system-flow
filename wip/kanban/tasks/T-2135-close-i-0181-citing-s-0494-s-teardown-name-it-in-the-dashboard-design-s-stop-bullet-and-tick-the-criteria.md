@@ -3,16 +3,37 @@ id: T-2135
 type: task
 nature: remediation
 title: Close I-0181 citing S-0494's teardown, name it in the dashboard design's stop bullet, and tick the criteria
-status: backlog
+status: done
 parent: S-0499
 owner: alex
 created: 2026-10-26T04:21:10Z
-updated: 2026-10-26T04:21:10Z
-transitions: []
+updated: 2026-10-28T12:49:41Z
+transitions:
+  - to: ready
+    at: 2026-10-28T12:49:28Z
+    by: agent-S-0499
+  - to: in-progress
+    at: 2026-10-28T12:49:29Z
+    by: agent-S-0499
+  - to: done
+    at: 2026-10-28T12:49:41Z
+    by: agent-S-0499
 stream: S-0499
 tags: [dashboard, issues]
 touches: [design/issues/I-0181-events-socket-test-ts-closes-every-events-socket-with-1001-when-the-server-stops-fails-now-and-then-a-change-listener-is-still-attached-when-the-server-has-closed.md, design/issues/summary.md, design/system/flaiover-dashboard.md]
 after: [T-2134]
+usage:
+  source: log
+  seconds: 9
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 32
+      cache_read: 297285
+      cache_write: 2164
+      cost: 0.1013
 ---
 # T-2135 Close I-0181 citing S-0494's teardown, name it in the dashboard design's stop bullet, and tick the criteria
 

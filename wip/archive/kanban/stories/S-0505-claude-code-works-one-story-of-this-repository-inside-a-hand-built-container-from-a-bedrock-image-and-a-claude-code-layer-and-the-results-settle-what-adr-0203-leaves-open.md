@@ -3,11 +3,11 @@ id: S-0505
 type: story
 nature: experiment
 title: Claude Code works one story of this repository inside a hand-built container from a bedrock image and a claude-code layer, and the results settle what ADR-0203 leaves open
-status: review
+status: done
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:42:20Z
-updated: 2026-10-28T12:35:04Z
+updated: 2026-10-28T12:52:31Z
 transitions:
   - to: ready
     at: 2026-10-28T12:04:36Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-10-28T12:35:04Z
     by: system-flow
+  - to: done
+    at: 2026-10-28T12:52:31Z
+    by: alex
 tags: [cli, docker]
 topics: [harness, docker, experiments]
 touches: [flai/images/bedrock/Dockerfile, flai/images/claude-code/Dockerfile, scripts/agent-image.sh, scripts/agent-container.sh, Makefile, scripts/README.md, ".dockerignore", design/experiments/S-0505-claude-code-works-one-story-of-this-repository-inside-a-hand-built-container-from-a-bedrock-image-and-a-claude-code-layer-and-the-results-settle-what-adr-0203-leaves-open.md, design/experiments/README.md, design/system/agent-adapters.md, design/tech/docker.md, design/issues/summary.md, design/issues]
@@ -28,31 +31,31 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1933
+  seconds: 2014
   priced_by: harness
   turns:
     - day: 2026-10-28
-      ceremony: 1
+      ceremony: 4
       hand_edits: 2
-      work: 74
+      work: 85
   models:
     - model: claude-opus-5-5
-      input: 316
-      output: 103571
-      cache_read: 19571374
-      cache_write: 440221
-      cost: 9.0449
+      input: 346
+      output: 109490
+      cache_read: 20250852
+      cache_write: 481642
+      cost: 9.6306
   strategic:
     - kind: orchestrator
-      seconds: 518
+      seconds: 630
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 82
-          output: 1109
-          cache_read: 15863357
-          cache_write: 34312
-          cost: 3.4878
+          input: 88
+          output: 1170
+          cache_read: 16753733
+          cache_write: 37433
+          cost: 3.684
         - model: claude-sonnet-5-5
           input: 10
           output: 59

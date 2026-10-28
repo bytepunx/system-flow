@@ -3,15 +3,36 @@ id: T-2134
 type: task
 nature: remediation
 title: "Show that I-0181's race is the one S-0494 removed: the pre-fix module fails the server-stop test and the current one holds under repeated runs"
-status: backlog
+status: done
 parent: S-0499
 owner: alex
 created: 2026-10-26T04:20:54Z
-updated: 2026-10-26T04:20:54Z
-transitions: []
+updated: 2026-10-28T12:49:14Z
+transitions:
+  - to: ready
+    at: 2026-10-28T12:45:25Z
+    by: agent-S-0499
+  - to: in-progress
+    at: 2026-10-28T12:45:26Z
+    by: agent-S-0499
+  - to: done
+    at: 2026-10-28T12:49:14Z
+    by: agent-S-0499
 stream: S-0499
 tags: [dashboard, tests]
 touches: [flaiover/src/lib/server/events-socket.test.ts, flaiover/src/lib/server/events-socket.ts]
+usage:
+  source: log
+  seconds: 228
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 61
+      cache_read: 674418
+      cache_write: 5272
+      cost: 0.2299
 ---
 # T-2134 Show that I-0181's race is the one S-0494 removed: the pre-fix module fails the server-stop test and the current one holds under repeated runs
 

@@ -3,15 +3,36 @@ id: T-2141
 type: task
 nature: improvement
 title: "ADR: flai serve confirms an orchestrator recommendation the operator left unanswered past orchestration.permissions.confirm_after, never one marked for the operator alone"
-status: backlog
+status: done
 parent: S-0502
 owner: alex
 created: 2026-10-26T04:42:52Z
-updated: 2026-10-26T04:42:52Z
-transitions: []
+updated: 2026-10-28T12:47:20Z
+transitions:
+  - to: ready
+    at: 2026-10-28T12:46:33Z
+    by: agent-S-0502
+  - to: in-progress
+    at: 2026-10-28T12:46:34Z
+    by: agent-S-0502
+  - to: done
+    at: 2026-10-28T12:47:20Z
+    by: agent-S-0502
 stream: S-0502
 tags: [flai]
-touches: [design/adrs/0206-flai-serve-confirms-a-recommendation-the-operator-left-unanswered-past-confirm-after.md, design/adrs/README.md]
+touches: [design/adrs/0206-flai-serve-confirms-a-recommendation-the-operator-left-unanswered-past-confirm-after.md, design/adrs/README.md, design/adrs/0206-flai-serve-confirms-an-orchestrator-recommendation-the-operator-left-unanswered.md]
+usage:
+  source: log
+  seconds: 43
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 8
+      output: 38
+      cache_read: 730536
+      cache_write: 5029
+      cost: 0.2487
 ---
 # T-2141 ADR: flai serve confirms an orchestrator recommendation the operator left unanswered past orchestration.permissions.confirm_after, never one marked for the operator alone
 
