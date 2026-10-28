@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 9
-      output: 2978
-      cache_read: 726303
-      cache_write: 18482
-      cost: 0.3181
+      output: 2881
+      cache_read: 719922
+      cache_write: 24516
+      cost: 0.3644
 ---
 # T-2141 ADR: flai serve confirms an orchestrator recommendation the operator left unanswered past orchestration.permissions.confirm_after, never one marked for the operator alone
 

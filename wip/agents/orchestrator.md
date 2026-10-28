@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1684.0511
-accrued_seconds: 1417799
-tasks_completed: 1186
-last_run: 2026-10-28T15:11:55Z
+accrued_cost: 1687.5072
+accrued_seconds: 1419272
+tasks_completed: 1199
+last_run: 2026-10-28T18:25:38Z
 ---
 
 # Orchestrator activity
@@ -8314,6 +8314,97 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 7
 - Cost: 0.0000 USD
 
+### 2026-10-28T18:02:08Z
+
+- Summary: Under publish (judgement), released S-0522 (1 story, 37.5 USD/week, nothing in held_by_epic, no warnings): flai 1.71.3 to 1.71.4 (patch, flai/v1.71.4), pushed. It is a complete remediation on its own.
+- Items: S-0522
+- Seconds: 63
+- Cost: 0.2261 USD, estimated
+
+### 2026-10-28T18:02:17Z
+
+- Summary: Under plan_backlog_stories, started the planner for S-0528, first of the 4 stories flai plan --candidates lists (S-0528 to S-0531). Under promote_to_ready, left S-0515 (candidate 1, 45m by throughput) in the backlog while its security question awaits the operator on TH-0683; ready holds 8 of 10, every one held.
+- Items: S-0528, S-0515
+- Seconds: 9
+- Cost: 0.0307 USD, estimated
+
+### 2026-10-28T18:03:16Z
+
+- Summary: Answered TH-0699, citing design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md
+- Items: S-0528
+- Seconds: 59
+- Cost: 0.0621 USD, estimated
+
+### 2026-10-28T18:03:26Z
+
+- Summary: Under plan_backlog_stories, on planner-S-0528's TH-0699: set S-0528's cost of delay input to time_lost_per_cycle 5m, the planner's recommendation (no reason given for 10m or 2m), and resolved the thread. The planner writes the value, and its plan comes on its own thread.
+- Items: S-0528
+- Seconds: 10
+- Cost: 0.0629 USD, estimated
+
+### 2026-10-28T18:04:51Z
+
+- Summary: Answered TH-0700, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0528
+- Seconds: 85
+- Cost: 0.3229 USD, estimated
+
+### 2026-10-28T18:05:34Z
+
+- Summary: Under plan_backlog_stories, approved and resolved planner-S-0528's TH-0700: two tasks in two layers, file touches, forecast 40m, value 12.50 USD/week. Under promote_to_ready, moved S-0528 to ready as candidate 1 by throughput (40m); its agent started it at once. S-0515 (candidate 2, 45m) stays out while TH-0683 awaits the operator. Under order_ready, applied flai order --by throughput to the 8 stories in ready (S-0419 first, 1h). The guard refused the order call twice with a shell redirect (2>&1), as its Refusals log shows before; the plain call passed. Under plan_backlog_stories, started the planner for S-0529, next of the 3 stories flai plan --candidates lists (S-0529 to S-0531).
+- Items: S-0528, S-0515, S-0529
+- Seconds: 43
+- Cost: 0.3248 USD, estimated
+
+### 2026-10-28T18:16:04Z
+
+- Summary: Under accept_reviews, enqueued S-0528 at 80f8ff53 (place 1 of 1). flai verify passed at that head, with integration and smoke left to the queue. The verifier met criterion 1: props.mjs keys its cache by the SvelteKit answer and takes malformed stamps as a miss, with two tests in props_test.go and component-library.md updated. It met criterion 2: I-0198 is closed with a reason. Throughput: forecast 40m, value 12.50 USD/week.
+- Items: S-0528
+- Seconds: 630
+- Cost: 0.6484 USD, estimated
+
+### 2026-10-28T18:18:24Z
+
+- Summary: Recommended an answer on TH-0701, citing design/adrs/0174-while-the-merge-queue-can-batch-flai-verify-and-the-close-out-leave-the-test.md § Consequences
+- Items: S-0529
+- Seconds: 140
+- Cost: 0.4884 USD, estimated
+
+### 2026-10-28T18:18:36Z
+
+- Summary: Under plan_backlog_stories, on planner-S-0529's TH-0701: the plan fits (four tasks in three layers, forecast 1h30m, value 37.50 USD/week). Its fix refuses the operator's own hand acceptance while the queue can batch until the queue tiers ran, which reverses ADR-0174's recorded consequence. That is a decision not yet recorded, so I recommended it with its override flag and escalated, and named the proposed bisect story as a scope question. The thread stays open. Then started the planner for S-0530, next of the 2 stories flai plan --candidates lists (S-0530, S-0531).
+- Items: S-0529, S-0530
+- Seconds: 12
+- Cost: 0.0861 USD, estimated
+
+### 2026-10-28T18:21:59Z
+
+- Summary: Answered TH-0702, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0530
+- Seconds: 203
+- Cost: 0.4861 USD, estimated
+
+### 2026-10-28T18:22:11Z
+
+- Summary: Under plan_backlog_stories, approved and resolved planner-S-0530's TH-0702: two tasks in two layers, file touches, forecast 25m, value 25 USD/week. A svelte-check tier follows S-0319's flaiover-lint fix, so no recorded decision changes. S-0530 is held on system-flow.yaml with S-0502, so it is not a promote candidate. Then started the planner for S-0531, the last story flai plan --candidates lists.
+- Items: S-0530, S-0531
+- Seconds: 12
+- Cost: 0.0461 USD, estimated
+
+### 2026-10-28T18:25:24Z
+
+- Summary: Answered TH-0703, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0531
+- Seconds: 193
+- Cost: 0.5179 USD, estimated
+
+### 2026-10-28T18:25:38Z
+
+- Summary: Under plan_backlog_stories, approved and resolved planner-S-0531's TH-0703: four tasks in three layers, file touches, forecast 30m, value 0.04 USD/week. Under promote_to_ready, moved S-0531 to ready as candidate 1 by throughput (30m). S-0515 (candidate 2, 45m) and S-0529 (candidate 3, 1h30m) stay in the backlog while their fixes await the operator on TH-0683 and TH-0701. Under order_ready, applied flai order --by throughput: S-0531 first of 9. flai plan --candidates now lists nothing.
+- Items: S-0531, S-0515, S-0529
+- Seconds: 14
+- Cost: 0.1536 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -8514,4 +8605,14 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-10-28T12:43:18Z
 
 - Call: `git worktree list`
+- Needs: none
+
+### 2026-10-28T18:05:05Z
+
+- Call: `flai order --by throughput --apply --json 2>&1`
+- Needs: none
+
+### 2026-10-28T18:05:14Z
+
+- Call: `flai order --by throughput --apply --json 2>&1`
 - Needs: none

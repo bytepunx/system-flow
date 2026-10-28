@@ -6,7 +6,7 @@ title: A one-shot flai stats, and the first stats.get of a flai serve process, s
 status: in-progress
 owner: alex
 created: 2026-10-28T12:54:38Z
-updated: 2026-10-28T18:25:43Z
+updated: 2026-10-28T18:36:47Z
 transitions:
   - to: ready
     at: 2026-10-28T18:25:33Z
@@ -23,9 +23,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 673
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-28
+      hand_edits: 1
+      work: 21
+  models:
+    - model: claude-opus-5-5
+      input: 142
+      output: 752
+      cache_read: 5329176
+      cache_write: 355167
+      cost: 1.9247
   strategic:
     - kind: planner
       seconds: 188
@@ -72,8 +84,8 @@ finalized:
 This story remediates [I-0209](../../../design/issues/I-0209-a-one-shot-flai-stats-and-the-first-stats-get-of-a-flai-serve-process-still-run-one-git-log-for-claims-drift-about-a-quarter-of-a-cold-answer.md), "A one-shot flai stats, and the first stats.get of a flai serve process, still run one git log for claims drift, about a quarter of a cold answer". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0209 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0209 is closed with `flai issue close I-0209 --reason` saying what fixed it
+- [x] The cause I-0209 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0209 is closed with `flai issue close I-0209 --reason` saying what fixed it
 
 ## Tasks
 - T-2267 storygit.Committed keeps the stories' commits in a file under .flai-cache with its branch-tip key, so a fresh process whose key matches reads no git log

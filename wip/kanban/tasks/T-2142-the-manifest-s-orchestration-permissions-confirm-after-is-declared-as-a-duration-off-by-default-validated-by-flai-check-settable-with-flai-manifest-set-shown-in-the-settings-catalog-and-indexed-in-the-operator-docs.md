@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 36
-      output: 11941
-      cache_read: 2912479
-      cache_write: 74114
-      cost: 1.2755
+      input: 35
+      output: 11554
+      cache_read: 2886891
+      cache_write: 98309
+      cost: 1.4614
 ---
 # T-2142 The manifest's orchestration.permissions.confirm_after is declared as a duration, off by default, validated by flai check, settable with flai manifest set, shown in the settings catalog, and indexed in the operator docs
 

@@ -21,16 +21,16 @@ touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.g
 after: [T-2143]
 usage:
   source: log
-  seconds: 2607
+  seconds: 2620
   estimated: true
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 193
-      output: 64486
-      cache_read: 15728903
-      cache_write: 400252
-      cost: 6.8881
+      input: 200
+      output: 66078
+      cache_read: 16510062
+      cache_write: 562227
+      cost: 8.3577
 ---
 # T-2145 The orchestrator's prompt and its agent definition tell it to mark a recommendation on money or a host change for the operator alone, and that flai serve confirms the rest after confirm_after
 

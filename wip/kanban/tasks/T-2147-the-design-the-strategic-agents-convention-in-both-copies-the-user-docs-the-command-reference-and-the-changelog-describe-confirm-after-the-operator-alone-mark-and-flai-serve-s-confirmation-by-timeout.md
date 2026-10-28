@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 53
-      output: 17896
-      cache_read: 4365166
-      cache_write: 111080
-      cost: 1.9116
+      input: 52
+      output: 17317
+      cache_read: 4326815
+      cache_write: 147344
+      cost: 2.1903
 ---
 # T-2147 The design, the strategic-agents convention in both copies, the user docs, the command reference, and the changelog describe confirm_after, the operator-alone mark, and flai serve's confirmation by timeout
 
