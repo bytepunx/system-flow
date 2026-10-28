@@ -123,6 +123,75 @@ func TestComputeClassesAndApply(t *testing.T) {
 	}
 }
 
+// role is a role file as ADR-0207 shapes it, cut short: front matter with
+// its topics and charge, its body, the baseline marker, and the additions.
+func role(name, topics, charge, body, additions string) string {
+	return "---\ntitle: " + name + "\nupdated: 2026-10-28\nstatus: active\nname: " + name + "\nrole: plan\n" +
+		"definition:\n  description: Plans.\n  tools: [Read, mcp__flai__item_new]\n  model: inherit\n" +
+		"action: plan\ntrigger: [asked]\nitem: [epic, story]\ntopics: [" + topics + "]\ncharge: " + charge + "\n" +
+		"tools:\n  - {call: item_new, when: draft-only}\n---\n\n" + body + "\n\n<!-- system-flow:end-of-baseline -->\n\n## Project additions\n" + additions
+}
+
+// S-0414: flai upgrade adds a baseline role file the project lacks, and
+// merges one it has as it merges a convention: the template's front matter
+// and baseline, the project's text from the marker on, and the project's
+// topics (ADR-0207).
+func TestUpgradeAddsAndMergesBaselineRoleFiles(t *testing.T) {
+	root, lk := render(t)
+	const planner, analyzer = "design/workflows/roles/planner.md", "design/workflows/roles/analyzer.md"
+	// the project's planner from an older template: topics of its own,
+	// another field changed, and a rule of its own below the marker
+	mine := filepath.Join(root, filepath.FromSlash(planner))
+	if err := os.MkdirAll(filepath.Dir(mine), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(mine, []byte(role("planner", "planning, cli", "none", "You are the planner, v1.", "- Plan the CLI first.\n")), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	lk.Topics = map[string][]string{planner: {"planning"}}
+
+	nt := newer(t)
+	roles := filepath.Join(nt, "root", "design", "workflows", "roles")
+	tpl := map[string]string{
+		"planner.md":  role("planner", "planning", "item", "You are the planner, v2.", ""),
+		"analyzer.md": role("analyzer", "analysis", "issues", "You are the analyzer.", ""),
+	}
+	if err := os.MkdirAll(roles, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for f, body := range tpl {
+		if err := os.WriteFile(filepath.Join(roles, f), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	m, _ := template.LoadManifest(nt)
+	src := template.Source{Repo: nt, Local: true, Dir: nt}
+	plan, err := Compute(root, m, src, template.Options{Vars: vars(), Source: src}, lk, "9.9.9")
+	if err != nil {
+		t.Fatal(err)
+	}
+	classes := map[string]string{}
+	for _, c := range plan.Changes {
+		classes[c.Path] = c.Class
+	}
+	if classes[planner] != Merge || classes[analyzer] != Add {
+		t.Fatalf("planner %q, analyzer %q: want merge and add", classes[planner], classes[analyzer])
+	}
+	if _, err := Apply(root, plan, Policy{}); err != nil {
+		t.Fatal(err)
+	}
+	want := role("planner", "planning, cli", "item", "You are the planner, v2.", "- Plan the CLI first.\n")
+	if b, _ := os.ReadFile(mine); string(b) != want {
+		t.Errorf("planner after the upgrade:\n%s\nwant:\n%s", b, want)
+	}
+	if b, _ := os.ReadFile(filepath.Join(root, filepath.FromSlash(analyzer))); string(b) != tpl["analyzer.md"] {
+		t.Errorf("analyzer was not added as the template ships it:\n%s", b)
+	}
+	if nl := NewLock(plan, src, m.Version, time.Now()); strings.Join(nl.Topics[planner], ",") != "planning" {
+		t.Errorf("the new lock must record the template's topics for the planner: %v", nl.Topics[planner])
+	}
+}
+
 func TestNoLockMakesEveryDifferenceAConflict(t *testing.T) {
 	root, _ := render(t)
 	_ = os.Remove(filepath.Join(root, lock.File))
