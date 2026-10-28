@@ -195,7 +195,7 @@ Claude Code runs a hook only for the tools its matcher names. `.claude/settings.
 
 ### Checked creation
 
-A story the planner writes through `item_new` with a body is checked as `flai story new --body-stdin` is (S-0209): `itemnew.Create` writes it, runs `flai check` with it in place and the markdown lint on it, and a finding it introduces, such as a missing template section like `## Tasks` or `## Notes`, refuses it and leaves nothing. A creation with `after` was already checked this way (S-0176). An `item_new` with neither gets the template's own body and is not checked.
+A story the planner writes through `item_new` with a body is checked as `flai story new --body-stdin` is (S-0209): `itemnew.Create` writes it, runs `flai check` with it in place and the markdown lint on it, and a finding it introduces inside the new item's story, such as a missing template section like `## Tasks` or `## Notes`, refuses it and leaves nothing. A new finding outside that story is a warning and the item stands, as for a checked edit ([ADR-0213](../adrs/0213-a-checked-creation-of-a-work-item-refuses-only-a-new-finding-inside-the-new.md)). A creation with `after` was already checked this way (S-0176). An `item_new` with neither gets the template's own body and is not checked.
 
 ### The run and how it ended
 
