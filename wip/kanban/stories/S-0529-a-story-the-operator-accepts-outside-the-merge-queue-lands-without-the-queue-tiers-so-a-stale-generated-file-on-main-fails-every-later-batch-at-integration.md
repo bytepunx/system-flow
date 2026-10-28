@@ -6,7 +6,7 @@ title: A story the operator accepts outside the merge queue lands without the qu
 status: backlog
 owner: alex
 created: 2026-10-28T12:54:24Z
-updated: 2026-10-28T12:54:24Z
+updated: 2026-10-28T12:57:38Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
     by: flai
     at: 2026-10-28T12:54:24Z
+finalized:
+  by: alex
+  at: 2026-10-28T12:57:38Z
 ---
 # S-0529 A story the operator accepts outside the merge queue lands without the queue tiers, so a stale generated file on main fails every later batch at integration
 
