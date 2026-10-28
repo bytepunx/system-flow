@@ -6,11 +6,11 @@ title: The orchestrator cannot set a cost of delay input the operator decided on
 status: backlog
 owner: alex
 created: 2026-10-28T12:53:43Z
-updated: 2026-10-28T14:35:47Z
+updated: 2026-10-28T14:47:44Z
 transitions: []
 tags: [flai, orchestrator, cost-of-delay, guard]
 topics: [orchestration, planning]
-touches: [design/adrs, design/adrs/README.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/system/project-manifest.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md, docs/operators/settings.md, docs/operators/index.md, flai/internal/manifest/settings.go, flai/internal/guard/guard.go, flai/internal/guard/orchestrate_test.go, flai/internal/guard/guard_test.go, flai/internal/workitem/promotable.go, flai/internal/mcpserver/items_write.go, flai/internal/mcpserver/items_write_test.go, flai/cmd/edit.go, flai/cmd/edit_test.go, flai/cmd/orchestrate_permissions_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/issues/I-0187-the-orchestrator-cannot-set-a-cost-of-delay-input-the-operator-decided-on-an-epic-or-a-story-past-the-backlog.md, design/issues/summary.md]
+touches: [design/adrs, design/adrs/README.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/system/project-manifest.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md, docs/operators/settings.md, docs/operators/index.md, flai/internal/manifest/settings.go, flai/internal/guard/guard.go, flai/internal/guard/orchestrate_test.go, flai/internal/guard/guard_test.go, flai/internal/workitem/promotable.go, flai/internal/mcpserver/items_write.go, flai/internal/mcpserver/items_write_test.go, flai/cmd/edit.go, flai/cmd/edit_test.go, flai/cmd/orchestrate_permissions_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/issues/I-0187-the-orchestrator-cannot-set-a-cost-of-delay-input-the-operator-decided-on-an-epic-or-a-story-past-the-backlog.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-10-28T14:35:47Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-29T04:43:00Z
-  basis: "flai forecast gave 44m (median 89 s per unit over 98 done improvement stories on claude-opus-5-5, size 29); raised to 1h15m because the five tasks run in four serial layers, two of them rewrite pinned tests in three packages, and the third rewrites fourteen documents including the generated reference and the template changelog; delivery is flai's 2026-10-29T04:12Z, 34th in the pull order, moved by the 31m added."
-  by: planner-S-0523
-  at: 2026-10-28T14:35:47Z
+  delivery: 2026-10-29T05:06:00Z
+  basis: "Its own forecast of 1h15m; 34th in the pull order with an in-progress limit of 5, behind S-0502, S-0415, S-0419, S-0423, S-0418, S-0421, S-0416, S-0422, S-0420, S-0417, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0507, S-0508, S-0509, S-0510, S-0511, S-0512, S-0514, S-0515, S-0516, S-0517, S-0518, S-0519 and S-0520."
+  by: flai
+  at: 2026-10-28T14:47:44Z
 finalized:
   by: alex
   at: 2026-10-28T12:59:11Z
@@ -80,12 +80,12 @@ Planned by planner-S-0523 on 2026-10-28; the plan is on TH-0694. The story decla
 - Layout, flai's own rule (T-2242): `flai/internal/workitem/promotable.go` (`OrchestratorSetsCostOfDelay`), `flai/internal/mcpserver/items_write.go` and `items_write_test.go` (`TestTheOrchestratorGivesABacklogStoryItsFirstCostOfDelayInputs` asserts the in-progress and epic refusals), `flai/cmd/edit.go` (`orchestratorSetsCostOfDelay`), `flai/cmd/edit_test.go`, `flai/cmd/orchestrate_permissions_test.go` (`S-0008 is ready, not in the backlog`).
 - Layout, the permission's description (T-2244): `flai/internal/manifest/settings.go` (the risk text), `docs/users/flai-reference.md` (generated from it by `make flai-reference`).
 - Design (T-2241, T-2244): `design/system/strategic-agents.md` (What it does with each permission, A story planner's threads, Its permissions and the guard), `design/system/flai-cli.md` (the `flai edit` and `flai mcp` rows), `design/system/project-manifest.md` (the permission's row), `design/adrs/README.md` (the index of the new ADR), `design/adrs` (see the folder touch below).
-- Design, the convention and the prompt (T-2244): `design/conventions/strategic-agents.md` and `template/root/design/conventions/strategic-agents.md` (the cost of delay rules under As the orchestrator and Asking the operator), `template/CHANGELOG.md` (the convention change), `flai/internal/harness/harness.go` (the orchestrator's prompt names what it may set) and `harness_test.go`.
+- Design, the convention and the prompt (T-2244): `design/conventions/strategic-agents.md` and `template/root/design/conventions/strategic-agents.md` (the cost of delay rules under As the orchestrator and Asking the operator), `design/workflows/roles/orchestrator.md` and `template/root/design/workflows/roles/orchestrator.md` (the orchestrator's prompt as S-0414 placed it, rules 3 and 10, added after S-0414's acceptance during this plan), `template/CHANGELOG.md` (the convention and role file change), `flai/internal/harness/harness.go` (the same prompt text until S-0419 reads it from the role file) and `harness_test.go`.
 - Design, the guides (T-2244): `docs/users/flai.md` (When the orchestrator plans stories), `docs/users/flaiover.md`, `docs/operators/settings.md`, `docs/operators/index.md` (the permission tables).
 - Declared by the criteria (T-2245): `design/issues/I-0187-the-orchestrator-cannot-set-a-cost-of-delay-input-the-operator-decided-on-an-epic-or-a-story-past-the-backlog.md` and `design/issues/summary.md`, which `flai issue close` rewrites.
 
 **Folder touch kept.** `design/adrs`: the story adds one ADR, whose number `flai adr new` allots when the story's agent runs it, so no task can name the file yet. Ready stories S-0416, S-0421, and S-0423 keep the same folder touch for the same reason.
 
-**Forecast.** `flai forecast` gave 44m: the median 89 s per unit of size over 98 done improvement stories on claude-opus-5-5 in the large band, times size 29 (2 criteria, 27 touches). Raised to 1h15m: the five tasks run in four serial layers, T-2242 and T-2243 rewrite pinned tests in three packages, and T-2244 rewrites fourteen documents, the generated reference and the template changelog among them. Delivery is flai's 2026-10-29T04:12Z, 34th in the pull order behind the E-0024, E-0025, and E-0029 stories, moved by the 31m added.
+**Forecast.** `flai forecast` gave 44m: the median 89 s per unit of size over 98 done improvement stories on claude-opus-5-5 in the large band, times size 29 (2 criteria, 27 touches). Raised to 1h15m: the five tasks run in four serial layers, T-2242 and T-2243 rewrite pinned tests in three packages, and T-2244 rewrites sixteen documents, the generated reference, the two role files, and the template changelog among them. Delivery is flai's 2026-10-29T04:12Z, 34th in the pull order behind the E-0024, E-0025, and E-0029 stories, moved by the 31m added.
 
 **Cost of delay.** 75.00 USD a week, as `flai cod` works it out from the orchestrator's input on TH-0694, `time_lost_per_cycle: 30m` at 150 USD an hour, one 168h cycle a week. The figure stands: each input decided on an epic or a started story goes back to the operator to run by hand, and the epic's drafts stay incomplete meanwhile.
