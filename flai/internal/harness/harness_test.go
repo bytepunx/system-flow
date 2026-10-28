@@ -1856,6 +1856,10 @@ func TestTheOrchestratorsDefinitionSaysWhatEachPermissionDoes(t *testing.T) {
 			"Log each with `activity_log`.",
 			"save the cost of delay inputs a story's planner asks for under `plan_backlog_stories`",
 			"Never resolve a thread you did not open, but a story planner's under `plan_backlog_stories`",
+			// the operator-alone mark and the confirmation by timeout (ADR-0206)
+			"give `thread_reply` `operator_only: true` with it when it is about money (spend, a paid service, a price) or a change to the host (installing or upgrading software, configuration outside the repository, credentials)",
+			"While `orchestration.permissions.confirm_after` is set, flai serve confirms your other recommendations on a thread a story's agent or a planner opened once they have waited that long with no answer from the operator.",
+			"Recommend there only an answer you would stand behind as the answer.",
 			"mcp__flai__thread_reply, mcp__flai__thread_resolve",
 			"With `finalize_drafts`, run `flai promote --drafts`",
 			"with `item_edit` giving only its id and `draft: false`",
