@@ -2,11 +2,11 @@
 id: I-0195
 title: A thread with a pending orchestrator recommendation waits on the operator however long it takes, with no setting to confirm it after a threshold
 class: efficiency
-status: open
+status: closed
 count: 1
 first_reported: 2026-10-23T04:56:41Z
 last_reported: 2026-10-23T04:56:41Z
-updated: 2026-10-26T04:01:40Z
+updated: 2026-10-28T13:44:12Z
 ---
 
 # I-0195 A thread with a pending orchestrator recommendation waits on the operator however long it takes, with no setting to confirm it after a threshold
@@ -22,3 +22,4 @@ On TH-0598 (2026-10-23T04:56:05Z) the operator confirmed this as its own story: 
 ## Remediation
 
 Story S-0502 remediates this issue, created from it at 2026-10-26T04:01:40Z.
+Closed 2026-10-28T13:44:12Z: Fixed by S-0502 (ADR-0206): orchestration.permissions.confirm_after, a duration off by default, lets flai serve confirm, while the orchestrate host action is on, the orchestrator's pending recommendation on a thread a story's agent or a planner opened once it has waited that long with no answer from the operator; never a permission prompt's thread, one the operator wrote on since, or one the orchestrator marked operator_only for money or a host change. flai stats counts those waits as waiting.weeks[].threads.timeout. TestARecommendationLeftUnansweredPastConfirmAfterIsConfirmedByFlaiServe in flai/internal/serve/confirm_test.go reproduces TH-0583's wait and shows it ended at confirm_after; TestNoRecommendationIsConfirmedThatDoesNotQualify covers each exclusion.
