@@ -28,15 +28,15 @@ usage:
           cache_write: 204659
           cost: 8.1773
     - kind: orchestrator
-      seconds: 24898
+      seconds: 25044
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 140
-          output: 2054
-          cache_read: 44602972
-          cache_write: 81844
-          cost: 9.7964
+          input: 178
+          output: 2331
+          cache_read: 46753459
+          cache_write: 212816
+          cost: 10.2974
 cost_of_delay:
   inputs:
     penalty_per_week: 150

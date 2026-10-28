@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1595.2512
-accrued_seconds: 1391919
-tasks_completed: 1103
-last_run: 2026-10-26T12:42:37Z
+accrued_cost: 1595.9166
+accrued_seconds: 1392104
+tasks_completed: 1107
+last_run: 2026-10-28T08:03:40Z
 ---
 
 # Orchestrator activity
@@ -7732,6 +7732,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 198
 - Cost: 1.6939 USD, estimated
+
+### 2026-10-28T08:01:53Z
+
+- Summary: Answered TH-0667, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0509
+- Seconds: 78
+- Cost: 0.2480 USD, estimated
+
+### 2026-10-28T08:02:03Z
+
+- Summary: Approved and resolved TH-0667, planner-S-0509's plan for S-0509 (four tasks in four layers, forecast 2h, value 22.22 USD/week), under plan_backlog_stories.
+- Items: S-0509
+- Seconds: 10
+- Cost: 0.0289 USD, estimated
+
+### 2026-10-28T08:02:22Z
+
+- Summary: Started the planner for S-0510 under plan_backlog_stories: flai plan --candidates lists it first (no cost of delay value); S-0511 and S-0512 follow one at a time.
+- Items: S-0510
+- Seconds: 19
+- Cost: 0.0596 USD, estimated
+
+### 2026-10-28T08:03:40Z
+
+- Summary: Under finalize_drafts, finalized S-0509: complete in flai promote --drafts (16th by throughput, 2h), criteria, file touches, forecast 2h and value 22.22 USD/week consistent, plan thread TH-0667 settled; it stays held behind S-0508 by after. Other complete drafts still wait on TH-0532, TH-0533, TH-0587, TH-0583, TH-0588, TH-0664, TH-0666. promote --candidates lists only S-0241 (rank 1, 2h), which is blocked, so nothing promoted and the ready column is unchanged.
+- Items: S-0509, S-0241
+- Seconds: 78
+- Cost: 0.3289 USD, estimated
 
 ## Refusals
 
