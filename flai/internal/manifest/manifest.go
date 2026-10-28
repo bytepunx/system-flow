@@ -746,9 +746,6 @@ func (m Manifest) RoleErrors() []string {
 	for _, name := range slices.Sorted(maps.Keys(m.Roles)) {
 		errs = append(errs, m.Roles[name].Permissions.errors("roles."+name+".permissions")...)
 	}
-	if _, err := p.ConfirmAfterDuration(); err != nil {
-		errs = append(errs, err.Error())
-	}
 	return errs
 }
 
@@ -844,6 +841,9 @@ func (o Orchestration) Errors() []string {
 	}
 	errs = append(errs, o.Release.errors()...)
 	errs = append(errs, o.Permissions.errors("orchestration.permissions")...)
+	if _, err := o.Permissions.ConfirmAfterDuration(); err != nil {
+		errs = append(errs, err.Error())
+	}
 	return append(errs, o.Agent.problems("orchestration.agent")...)
 }
 
