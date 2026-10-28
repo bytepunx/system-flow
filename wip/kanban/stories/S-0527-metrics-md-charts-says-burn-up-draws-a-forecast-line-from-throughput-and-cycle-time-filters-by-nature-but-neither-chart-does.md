@@ -6,7 +6,7 @@ title: "metrics.md § Charts says Burn-up draws a forecast line from throughput 
 status: backlog
 owner: alex
 created: 2026-10-28T12:54:11Z
-updated: 2026-10-28T15:02:38Z
+updated: 2026-10-28T18:28:23Z
 transitions: []
 tags: [design, metrics, flaiover]
 topics: [dashboard]
@@ -57,10 +57,10 @@ cost_of_delay:
   at: 2026-10-28T14:59:56Z
 forecast:
   duration: 40m
-  delivery: 2026-10-29T05:46:00Z
-  basis: "Planner's 40m over flai's 16m (median 118 s per unit over 33 done remediation stories on claude-opus-5-5 in the medium band, size 8): four serial layers, an ADR, the metrics.md § Charts rewrite, a vitest test, and the issue close; 36th in the pull order with an in-progress limit of 5, delivery from flai's play-out start plus 40m times the cycle factor 1.35."
-  by: planner-S-0527
-  at: 2026-10-28T14:59:56Z
+  delivery: 2026-10-29T09:12:00Z
+  basis: "Its own forecast of 40m; 37th in the pull order with an in-progress limit of 5, behind S-0415, S-0502, S-0531, S-0419, S-0423, S-0418, S-0421, S-0416, S-0422, S-0420, S-0417, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0507, S-0508, S-0509, S-0510, S-0511, S-0512, S-0514, S-0515, S-0516, S-0517, S-0518, S-0519, S-0520, S-0523, S-0524 and S-0525."
+  by: flai
+  at: 2026-10-28T18:28:23Z
 finalized:
   by: alex
   at: 2026-10-28T12:57:57Z
