@@ -7,7 +7,7 @@ status: backlog
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:44:13Z
-updated: 2026-10-28T12:54:28Z
+updated: 2026-10-28T12:52:31Z
 transitions: []
 tags: [cli, docker]
 topics: [harness, docker]
@@ -39,10 +39,10 @@ cost_of_delay:
   at: 2026-10-26T12:40:34Z
 forecast:
   duration: 2h30m
-  delivery: 2026-10-29T08:46:00Z
-  basis: "Its own forecast of 2h30m; 25th in the pull order with an in-progress limit of 5, behind S-0499, S-0502, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0506 and S-0507."
+  delivery: 2026-10-29T08:54:00Z
+  basis: "Its own forecast of 2h30m; 23rd in the pull order with an in-progress limit of 5, behind S-0499, S-0502, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0506 and S-0507."
   by: flai
-  at: 2026-10-28T12:44:51Z
+  at: 2026-10-28T12:52:31Z
 finalized:
   by: alex
   at: 2026-10-28T12:54:28Z

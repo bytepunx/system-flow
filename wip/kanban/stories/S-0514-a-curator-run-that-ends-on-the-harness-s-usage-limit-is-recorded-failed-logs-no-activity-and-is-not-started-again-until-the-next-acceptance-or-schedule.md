@@ -6,7 +6,7 @@ title: A curator run that ends on the harness's usage limit is recorded failed, 
 status: backlog
 owner: alex
 created: 2026-10-28T12:40:16Z
-updated: 2026-10-28T12:51:54Z
+updated: 2026-10-28T12:52:31Z
 transitions: []
 tags: [flai, serve, curator, usage]
 topics: [planning, digest]
@@ -42,10 +42,10 @@ cost_of_delay:
   at: 2026-10-28T12:51:54Z
 forecast:
   duration: 2h30m
-  delivery: 2026-10-29T10:45:00Z
-  basis: "flai forecast gave 34m (median 95 s per unit of size over 38 done remediation stories on claude-opus-5-5, size 21); raised to 2h30m because the fix spans an ADR, a usage-reader extension with its own tests, a scheduler change with timed tests, a thread to the operator, and docs in three files, which is more than the median remediation; delivery is flai's 2026-10-29T08:46Z moved by the added duration, 28th in the pull order behind 27 stories."
-  by: planner-S-0514
-  at: 2026-10-28T12:51:54Z
+  delivery: 2026-10-29T10:58:00Z
+  basis: "Its own forecast of 2h30m; 28th in the pull order with an in-progress limit of 5, behind S-0499, S-0502, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0506, S-0507, S-0508, S-0509, S-0510, S-0511 and S-0512."
+  by: flai
+  at: 2026-10-28T12:52:31Z
 ---
 # S-0514 A curator run that ends on the harness's usage limit is recorded failed, logs no activity, and is not started again until the next acceptance or schedule
 
@@ -58,6 +58,12 @@ This story remediates [I-0212](../../../design/issues/I-0212-a-curator-run-that-
 - [ ] I-0212 is closed with `flai issue close I-0212 --reason` saying what fixed it
 
 ## Tasks
+- T-2198 The usage reader reads a run that ended on the harness's usage limit, with its reset time, from Claude Code's stream-json
+- T-2199 An ADR records that a curator run that ends on the harness's usage limit is recorded as such, started again once the limit resets, and raised on a thread when that fails
+- T-2200 curateEnded records a run that ended on the harness's usage limit as failed on the limit, with the reset time, from its log
+- T-2201 The curate scheduler holds its triggers while the last run's usage limit has not reset, and starts the curator again once it has
+- T-2202 flai serve raises on a thread a curator retry that ends on the usage limit again, or a limit whose reset time it cannot read
+- T-2203 The design and the docs say how a curator run on the usage limit is recorded, retried, and raised, and I-0212 is closed
 
 ## Notes
 
