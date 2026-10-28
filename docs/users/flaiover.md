@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-10-26
+updated: 2026-10-28
 status: active
 ---
 
@@ -339,6 +339,7 @@ Its settings are the `orchestration` keys of `system-flow.yaml` but `agent`, edi
 | `promote_to_ready` | Move a story to ready | Agents may pull, work, and spend on a story you have not chosen to start |
 | `order_ready` | Write the order of the ready column by its policy | It replaces the order you set on the board, so the next story pulled is the policy's choice, not yours |
 | `answer_threads` | Answer threads: `off` leaves them to you, `recommend` replies with a recommendation for you, and `autonomous` answers them itself | With `autonomous`, agents act on answers you did not give; with `recommend`, the decision stays yours |
+| `confirm_after` | A duration, such as `48h`, empty by default. How long a recommendation of the orchestrator's on a story's agent's or a planner's thread may await your answer before `flai serve` confirms it for you; empty or `0`, it never does, and it never confirms one marked for you alone ([Threads](flai.md#threads)) | An agent acts on a recommendation you did not read, and you overrule it afterwards by answering on the thread |
 | `accept_reviews` | Accept a story in review, as `flai accept` does | Work is merged to the main branch without your review, and a story accepted wrongly has to be undone by hand |
 | `publish` | Release and push accepted work, as `flai release --pending` and `flai push` do | A release reaches everyone who pulls or installs the project, and a published release cannot be taken back |
 
