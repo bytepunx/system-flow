@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:39:46Z
-updated: 2026-10-28T12:52:31Z
+updated: 2026-10-28T13:02:59Z
 transitions: []
 tags: [cli, template]
 topics: [cli, planning, orchestration, template]
@@ -33,7 +33,6 @@ usage:
           cache_read: 8560656
           cache_write: 20404
           cost: 1.8949
-draft: true
 cost_of_delay:
   value: 59.07
   by: planner-S-0416
@@ -44,6 +43,9 @@ forecast:
   basis: "Its own forecast of 1h10m; 11th in the pull order with an in-progress limit of 5, behind S-0499, S-0502, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414 and S-0415."
   by: flai
   at: 2026-10-28T12:52:31Z
+finalized:
+  by: alex
+  at: 2026-10-28T13:02:59Z
 ---
 # S-0416 flai guard reads a role's permitted calls from its role file and refuses the rest, and the planner's, the orchestrator's, and the analyzer's rules move into their files with their guard tests unchanged
 
