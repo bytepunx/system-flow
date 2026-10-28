@@ -7,7 +7,7 @@ count: 2
 cost: 8m
 first_reported: 2026-10-28T12:27:00Z
 last_reported: 2026-10-28T12:32:02Z
-updated: 2026-10-28T12:32:02Z
+updated: 2026-10-28T12:52:40Z
 ---
 
 # I-0214 flai serve starts a host agent for a story meant to be worked in a container, since nothing on a story or the host says its agent runs elsewhere
@@ -26,3 +26,5 @@ Story: S-0505.
 S-0505 T-2166: the first host agent for S-0513 ended (exit 0) with the story in progress, and flai serve started a second as automatic restart 1 of 2 (ADR-0108) at about 12:26Z, while the container agent was working the story. It too stood down without a change (MS-0200). A third would have been asked of the operator; the container agent's move to review at 12:30:04Z ended the restarts.
 
 ## Remediation
+
+Story S-0516 remediates this issue, created from it at 2026-10-28T12:52:40Z.
