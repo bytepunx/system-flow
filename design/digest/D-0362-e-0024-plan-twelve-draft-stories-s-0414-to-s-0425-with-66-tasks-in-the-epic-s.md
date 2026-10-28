@@ -9,7 +9,7 @@ date: 2026-10-21
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0414]
 ---
 
 # D-0362 E-0024 plan: twelve draft stories, S-0414 to S-0425, with 66 tasks, in the epic's order; values wait on TH-0471: Recommended: approve the plan, with your TH-0471 answers applied story by story…
