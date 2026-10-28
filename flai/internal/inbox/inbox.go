@@ -6,7 +6,8 @@
 // message to that story once, as an event (ADR-0120, S-0331). The events
 // that happen in flai serve and flai accept, planned, ready-empty, and
 // release-due, are appended to a log of their own, which it reads back with
-// the rest (ADR-0211).
+// the rest; that a thread came to await the agent it works out from the
+// thread files (ADR-0211).
 package inbox
 
 import (
@@ -142,15 +143,33 @@ func Read(ctx context.Context, opt Options) (Inbox, error) {
 			return Inbox{}, err
 		}
 	}
-	// the inbox lists the story's conversations as they stand, as it lists
-	// threads, so its changes are the work items' only: no story for CatchUp
+	// the inbox lists the story's conversations as they stand, so it gives
+	// CatchUp no story for messages; the reader's own story still says whom
+	// a thread awaits (ADR-0181)
 	done = perf.Track(ctx, "changes.read")
-	out.Changes, out.Omitted, err = CatchUp(opt.Repo, opt.Agent, "", opt.Now(), items)
+	out.Changes, out.Omitted, err = CatchUp(opt.Repo, reader, "", opt.Operator, opt.Now(), items)
 	done()
 	if err != nil {
 		return Inbox{}, err
 	}
+	if opt.Story != "" {
+		out.Changes = onStory(out.Changes, story)
+	}
 	return out, nil
+}
+
+// onStory is changes without the thread changes on threads of other stories
+// than story: a story's inbox counts those threads in ThreadsOmitted rather
+// than lists them (ADR-0179), and does not list them as changes either.
+func onStory(changes []Event, story string) []Event {
+	kept := changes[:0:0]
+	for _, e := range changes {
+		if e.Kind == Thread && workitem.CanonicalID(e.Cause) != story {
+			continue
+		}
+		kept = append(kept, e)
+	}
+	return kept
 }
 
 // ShortEntry is the most bytes of a listed thread's last entry, and of its
@@ -448,20 +467,26 @@ const MaxPaths = 10
 type Event struct {
 	workitem.Change
 	Summary string `json:"summary" jsonschema:"the change in words"`
-	// Fields are a logged event's own (ADR-0211), under the Field keys.
-	Fields  map[string]string `json:"fields,omitempty" jsonschema:"the event's own figures, by name, for the kinds flai serve and flai accept log: ready-empty's room and limit (the ready count is in to), release-due's before and after, what flai release --evaluate answered before the acceptance and answers after it; absent for other kinds"`
+	// Fields are a logged event's own, and a thread change's (ADR-0211),
+	// under the Field keys.
+	Fields  map[string]string `json:"fields,omitempty" jsonschema:"the event's own figures, by name, for the kinds flai serve and flai accept log, and for thread: ready-empty's room and limit (the ready count is in to), release-due's before and after, what flai release --evaluate answered before the acceptance and answers after it; thread's awaits, whom the thread awaits by name (your agent name, or operator), and on, the item it is anchored to or its path; absent for other kinds"`
 	Project string            `json:"project,omitempty" jsonschema:"the project it happened in, when the server serves more than one"`
 }
 
-// CatchUp returns what others than agent changed since its cursor, among
+// CatchUp returns what others than r's agent changed since its cursor, among
 // items listed archive included, the events flai serve and flai accept logged
-// (ADR-0211), whoever caused them, and the messages to story, the agent's own,
-// when it is given, the newest MaxEvents of them, and how many older ones it
-// left out, and advances the cursor past all of them: what a look leaves out
-// never comes back in a later one. A first look, with no cursor, is told of
-// stories and epics only; a day of task transitions is history to an agent
-// that has just arrived, not news.
-func CatchUp(repo *workitem.Repo, agent, story string, now time.Time, items []*workitem.Item) ([]Event, int, error) {
+// (ADR-0211), whoever caused them, the messages to story, the agent's own,
+// when it is given, and the threads whose newest entry makes them await r, or,
+// with operator, as the orchestrator's role reads them, the operator
+// (ADR-0181, ADR-0211 §5); the newest MaxEvents of them, and how many older
+// ones it left out. It advances the cursor past all of them: what a look
+// leaves out never comes back in a later one. A first look, with no cursor, is
+// told of stories and epics only; a day of task transitions is history to an
+// agent that has just arrived, not news. r's Own says whom a thread awaits
+// whether or not story is given, as the inbox lists the story's messages
+// rather than reports them.
+func CatchUp(repo *workitem.Repo, r Reader, story string, operator bool, now time.Time, items []*workitem.Item) ([]Event, int, error) {
+	agent := r.Agent
 	board, err := repo.LoadBoard()
 	if err != nil {
 		return nil, 0, err
@@ -543,6 +568,15 @@ func CatchUp(repo *workitem.Repo, agent, story string, now time.Time, items []*w
 			}
 		}
 	}
+	// Threads whose newest entry makes them await the reader, or the
+	// operator for the orchestrator (ADR-0211 §5): no log, the thread files.
+	awaiting, err := threadEvents(repo, r, operator, now)
+	if err != nil {
+		return nil, 0, err
+	}
+	for _, e := range awaiting {
+		noticed(e)
+	}
 	sort.SliceStable(events, func(i, j int) bool { return events[i].At < events[j].At })
 	omitted := 0
 	if len(events) > MaxEvents {
@@ -592,6 +626,8 @@ func Describe(c workitem.Change) string {
 		return describeMessage(c, false)
 	case Planned, ReadyEmpty, ReleaseDue:
 		return describeLogged(c, nil)
+	case Thread:
+		return describeThread(c)
 	}
 	return c.ID + " " + c.Kind
 }

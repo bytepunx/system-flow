@@ -332,7 +332,7 @@ func TestAChangeIsReportedOnceAcrossCalls(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	again, omitted, err := CatchUp(f.repo, "claude", "", f.clock, items)
+	again, omitted, err := CatchUp(f.repo, Reader{Agent: "claude"}, "", false, f.clock, items)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -405,7 +405,7 @@ func TestAMessageToTheStoryIsToldOnce(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		events, _, err := CatchUp(f.repo, "claude", story, f.clock, items)
+		events, _, err := CatchUp(f.repo, Reader{Agent: "claude", Own: story}, story, false, f.clock, items)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -468,7 +468,7 @@ func TestASettledConversationAwaitsNeitherStory(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		events, _, err := CatchUp(f.repo, "claude", f.story.ID, f.clock, items)
+		events, _, err := CatchUp(f.repo, Reader{Agent: "claude", Own: f.story.ID}, f.story.ID, false, f.clock, items)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -545,6 +545,30 @@ func TestAStoryScopedReadCountsTheThreadsOnOtherItems(t *testing.T) {
 	}
 	if strings.Contains(string(b), "threads_omitted") || strings.Contains(string(b), "entries_shortened") {
 		t.Errorf("the standalone inbox's JSON is as before: %s", b)
+	}
+}
+
+// ADR-0179, ADR-0211 §5: a story's inbox reports as a change only a thread on
+// that story coming to await the agent; one on another item is counted among
+// the threads, not listed as a change either.
+func TestAStoryScopedReadReportsOnlyItsStorysThreadChanges(t *testing.T) {
+	f := setup(t)
+	other := f.storyIn(t, "Other", []string{"docs/other"})
+	f.read(t, Options{Agent: "claude", Own: f.story.ID}) // a cursor
+	own := f.openAt(t, "Which way?", f.story.ID, "alex", t0.Add(time.Minute))
+	there := f.openAt(t, "Shall I?", other.ID, "claude", t0.Add(time.Minute))
+	f.replyAt(t, there.ID, "alex", t0.Add(2*time.Minute))
+	f.clock = t0.Add(3 * time.Minute)
+
+	in := f.read(t, Options{Agent: "claude", Story: f.story.ID, Own: f.story.ID})
+	var got []string
+	for _, e := range in.Changes {
+		if e.Kind == Thread {
+			got = append(got, e.ID)
+		}
+	}
+	if len(got) != 1 || got[0] != own.ID || in.ThreadsOmitted != 1 {
+		t.Errorf("only the story's thread is a change, the other counted: %v, omitted %d", got, in.ThreadsOmitted)
 	}
 }
 

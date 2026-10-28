@@ -1327,13 +1327,21 @@ func TestWaitForEventsHoldsAStorysAgentWithATaskInProgress(t *testing.T) {
 	f.holds(t, d)
 }
 
-// An answered question awaits nothing: the agent holds rather than end on
-// the answer it waited for, and so does it once the thread is resolved.
+// An answered question awaits nothing: the agent is told of the answer once,
+// as a thread change (ADR-0211 §5), rather than told to end, then holds, and
+// so does it once the thread is resolved.
 func TestWaitForEventsHoldsOnceTheQuestionIsAnswered(t *testing.T) {
 	f, d := storysAgent(t)
 	th := f.ask(t, f.story.ID)
 	if _, err := threads.Reply(f.repo, th.ID, "alex", "B.", t0.Add(time.Minute)); err != nil {
 		t.Fatal(err)
+	}
+	out, failed := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 60})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	if out["end"] == true || !strings.Contains(fmt.Sprint(out["events"]), th.ID) {
+		t.Fatalf("the answer comes once, as a thread event, without end: %v", out)
 	}
 	f.holds(t, d)
 	if _, err := threads.Resolve(f.repo, th.ID, "alex", "B it is", t0.Add(2*time.Minute)); err != nil {
