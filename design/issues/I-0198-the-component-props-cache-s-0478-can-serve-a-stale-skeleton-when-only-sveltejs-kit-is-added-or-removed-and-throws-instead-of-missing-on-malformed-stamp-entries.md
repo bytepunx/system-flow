@@ -2,11 +2,11 @@
 id: I-0198
 title: The component props cache (S-0478) can serve a stale skeleton when only @sveltejs/kit is added or removed, and throws instead of missing on malformed stamp entries
 class: defect
-status: open
+status: closed
 count: 1
 first_reported: 2026-10-23T07:04:46Z
 last_reported: 2026-10-23T07:04:46Z
-updated: 2026-10-28T12:54:18Z
+updated: 2026-10-28T18:13:52Z
 ---
 
 # I-0198 The component props cache (S-0478) can serve a stale skeleton when only @sveltejs/kit is added or removed, and throws instead of missing on malformed stamp entries
@@ -22,3 +22,4 @@ Found by the orchestrator's verifier reviewing S-0478 at 886afe03 (accepted thro
 ## Remediation
 
 Story S-0528 remediates this issue, created from it at 2026-10-28T12:54:18Z.
+Closed 2026-10-28T18:13:52Z: Fixed by S-0528 (T-2259): props.mjs now puts whether the sub-project is SvelteKit, the answer of isSvelteKit() it reads from package.json outside the stamps, in the cache key, so adding or removing @sveltejs/kit alone gives a key of its own while a version bump does not; and readCache checks each stamp is [[kind, path], stamp] of strings, inside a try, so a cache file with malformed stamps, or a path stat refuses, is a miss rather than an error. TestListMapsLibOnceSvelteKitIsAddedToACachedSubProject and TestListTakesACacheFileWithMalformedStampsAsAMiss in flai/internal/components/props_test.go reproduce the two causes.
