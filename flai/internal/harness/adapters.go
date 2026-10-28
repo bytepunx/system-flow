@@ -93,8 +93,9 @@ func (claudeCode) Start(r Request, host Host) (Start, error) {
 		return Start{}, err
 	}
 	// In a container, claude keeps its configuration and its sessions in the
-	// mounted cache, so that a later container resumes the session; the
-	// folder is the starter's to make, as pilot does (S-0507).
+	// mounted cache, so that a later container resumes the session; claude
+	// makes the folder when it is missing, and what starts the container
+	// links the login into it (S-0507).
 	if r.Cache != "" {
 		env = append(env, "CLAUDE_CONFIG_DIR="+filepath.Join(r.Cache, "claude"))
 	}
