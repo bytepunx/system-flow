@@ -7,7 +7,7 @@ status: backlog
 parent: E-0030
 owner: alex
 created: 2026-10-28T21:00:58Z
-updated: 2026-10-28T21:10:53Z
+updated: 2026-10-28T21:33:08Z
 transitions: []
 tags: [flai, serve, events]
 topics: [orchestration, cli]
@@ -43,10 +43,10 @@ cost_of_delay:
   at: 2026-10-28T21:10:53Z
 forecast:
   duration: 3h
-  delivery: 2026-10-29T14:04:00Z
-  basis: "flai forecast's 15m (size 10) raised to 3h for seven tasks across inbox, five serve run paths, the MCP tools, and five documents; delivery is flai's 2026-10-29T11:19Z moved by the added 2h45m."
-  by: planner-S-0532
-  at: 2026-10-28T21:10:53Z
+  delivery: 2026-10-29T15:13:00Z
+  basis: "Its own forecast of 3h; 37th in the pull order with an in-progress limit of 5, behind S-0416, S-0419, S-0423, S-0418, S-0421, S-0422, S-0420, S-0417, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0507, S-0508, S-0509, S-0510, S-0511, S-0512, S-0514, S-0515, S-0516, S-0517, S-0518, S-0519, S-0520, S-0523, S-0524, S-0525, S-0527 and S-0529."
+  by: flai
+  at: 2026-10-28T21:33:08Z
 ---
 # S-0532 Starts, ends, and failures of a role's run and of a story's agent are events of kind agent that wait_for_events and inbox report, and the thread flai serve opens after auto_restarts cites them
 
