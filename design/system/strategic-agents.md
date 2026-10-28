@@ -28,7 +28,13 @@ Each role is also written down as data: one file, `design/workflows/roles/<name>
 - **Checks.** `flai check` reports, as errors, `roles.file` for a file that does not parse, misses a field, or names an unknown condition, trigger, event, setting, item kind, tool, or command; `roles.grant` for a call outside the permission that gates it, or one no setting allows; and `roles.definition` for a `definition` missing its description or tools, or listing a tool the role's rules refuse.
 - **Commands.** `flai role list [--json]` prints every role with its file, action, triggers, item kinds, topics, charge, calls, and permissions; `flai role show <name> [--json]` adds its definition and its body ([flai-cli.md § Commands](flai-cli.md#commands)).
 - **Upgrade.** `flai upgrade` merges a baseline role file as it merges a convention: the front matter and the body above the marker come from the template, the project's text from the marker on stays, and so do its `topics` when it changed them. A baseline file the project lacks is added.
-- **No behaviour changes yet.** In this release the files are data. flai still decides from its Go what each built-in role may do and when it starts, and `flai serve` starts only the four built-in roles, until S-0415 (packs), S-0416 (the guard), S-0417 and S-0418 (starts and triggers), and S-0419 (the generated definitions) read the files. The sections below describe that behaviour.
+- **The guard (S-0416).** `flai guard` decides every strategic role's own calls from its role file ([ADR-0207](../adrs/0207-a-strategic-role-is-a-markdown-file-under-design-workflows-roles-whose-front.md) §5): the planner's, the orchestrator's, the analyzer's, the curator's, and those of any role a project defines, whose session has `FLAI_ROLE` set to the file's `role`. The reads every agent has pass. Each MCP tool, flai command, and file edit the file lists passes, under its condition when it names one; a `files` entry is a folder, under which the role may edit (`under-folder`). An entry inside a `permissions` entry passes only while the operator has its setting on: `orchestration.permissions.<p>` for the orchestrator, `roles.<name>.permissions.<p>` for any other role ([project-manifest.md](project-manifest.md)). The guard reads the setting from the manifest at each call. An entry `flai check` reports as `roles.grant` is never granted. Everything else is refused, naming the role, the rule, and the file, and saying to ask the operator with `thread_open` on the item: `the role <name> cannot <call>: <rule>. Ask the operator with thread_open on the item if it needs doing (<file>, ADR-0207).`
+  - A built-in role with no file in the project is held to flai's baseline copy of it (`flai/internal/roles/baseline/`). A defined role with no file, or any role whose own file does not parse, fails closed: its reads pass, and every write is refused, naming the file and `flai check`.
+  - The built-in roles' rules in Go (`Guard.plan`, `Guard.orchestrate`, `Guard.analyze`, `Guard.curate`) only word a refusal the file makes, so their messages are as before. The sections below give each role's rules as its baseline file lists them.
+  - Thread conditions (`own-thread`, `planner-thread`, `answer-threads`) pass only a `--by` that names the role itself. The orchestrator's own name is `orchestrator` alone.
+  - A defined role writes as itself alone, as the planner does ([ADR-0210](../adrs/0210-flai-guard-holds-a-role-a-role-file-defines-to-its-own-name-and-session-as-adr.md)): a `--by`, `--placed-by`, `FLAI_AGENT`, or `FLAI_SESSION` naming another is refused. Its own name is the hook's `FLAI_AGENT`, or the name `flai serve` gives its run, `<name>` or `<name>-<item>`. Its refusals name it `the role <name>`.
+  - `.claude/settings.json` runs the guard on `Edit|MultiEdit|Write|NotebookEdit` for any non-empty `FLAI_ROLE`, so a defined role's file edits are held too ([The guard](#the-guard)).
+- **What reads them.** S-0415 builds a role's pack from its file, and S-0416 has the guard hold a role to it. flai still decides from its Go when each built-in role starts, and `flai serve` starts only the four built-in roles, until S-0417 and S-0418 (starts and triggers) and S-0419 (the generated definitions) read the files.
 
 ## The planner
 
@@ -178,12 +184,12 @@ The planner writes `after` on a story only for a story whose accepted change it 
 
 ### The guard
 
-`flai guard` reads `FLAI_ROLE` from the hook's environment. With `plan`, it checks the session's own calls, which carry no agent ID, against the planner's rules ([flai-cli.md](flai-cli.md#commands), `flai guard`):
+`flai guard` reads `FLAI_ROLE` from the hook's environment. With `plan`, it checks the session's own calls, which carry no agent ID, against the planner's role file, `design/workflows/roles/planner.md`, or flai's baseline copy when the project has none ([Role files](#role-files-s-0414), [flai-cli.md](flai-cli.md#commands), `flai guard`). The baseline file lists these:
 
 | Kind | Passes | Refused |
 |------|--------|---------|
-| flai MCP tools | the reads a sub-agent has; `inbox`, `item_new` (of a story only with `draft: true`), `item_edit`, `thread_open`, `thread_reply`, `activity_log`, `wait_for_events`; `item_move` to `backlog` | every other tool; `item_new` of a story without `draft: true`; `item_move` to any other state |
-| flai commands | the reads, `forecast`, `cod`, and `touches suggest` among them; `story new` with `--draft`, `epic new`, `task new`, `edit` without `--no-draft`, `touches`, `thread new` and `reply`, `issue new` and `bump`, `move` to `backlog` | every other command that writes; `story new` without `--draft` (S-0209), since the planner's stories are drafts for the operator to finalize; `edit --no-draft`, since finalizing is the operator's |
+| flai MCP tools | the reads a sub-agent has; `inbox`, `item_new` (of a story only with `draft: true`), `item_edit` (`ungated-edit`: not `draft: false`, not a cost of delay input or `clear_cost_of_delay`; a value passes), `thread_open`, `thread_reply`, `activity_log`, `wait_for_events`; `item_move` to `backlog` | every other tool; `item_new` of a story without `draft: true`; `item_edit` that finalizes a draft or sets or clears a cost of delay input; `item_move` to any other state |
+| flai commands | the reads, `forecast`, `cod`, and `touches suggest` among them; `story new` with `--draft`, `epic new`, `task new`, `edit` without `--no-draft` and without a cost of delay input flag or `--clear-cost-of-delay`, `touches`, `thread new` and `reply`, `issue new` and `bump`, `move` to `backlog` | every other command that writes; `story new` without `--draft` (S-0209), since the planner's stories are drafts for the operator to finalize; `edit --no-draft`, since finalizing is the operator's; `edit` with `--revenue-per-week`, `--penalty-per-week`, `--time-lost-per-cycle`, or `--clear-cost-of-delay`, since the inputs are the operator's (S-0416) |
 | git | the reads a sub-agent has | every other git command |
 | File tools | | `Edit`, `Write`, `NotebookEdit` |
 
@@ -191,7 +197,7 @@ Each refusal names the rule broken and says to ask the operator on the item, or 
 
 The planner writes as itself alone ([ADR-0143](../adrs/0143-flai-guard-refuses-a-story-s-agent-the-planner-and-the-analyzer-a-call-that.md)). The guard refuses it a flai command whose `--by` or `--placed-by` names another, and any assignment of `FLAI_AGENT` or `FLAI_SESSION` other than its own, or `unset` of either, anywhere on the command line. Its own name is the hook's `FLAI_AGENT`, or `planner-<item>` from `FLAI_ITEM`; its own session is the hook's `FLAI_SESSION`. The orchestrator keeps its own `--by` rule ([Its permissions and the guard](#its-permissions-and-the-guard)).
 
-Claude Code runs a hook only for the tools its matcher names. `.claude/settings.json` has two `PreToolUse` entries: `Bash|mcp__flai__.*` runs the guard in every session; `Edit|MultiEdit|Write|NotebookEdit` runs it only when `FLAI_ROLE` is `plan`, `orchestrate` (S-0218, [Its permissions and the guard](#its-permissions-and-the-guard)), `analyze` (S-0223, [The analyzer's guard](#the-analyzers-guard)), or `curate` (S-0431, [The curator's guard](#the-curators-guard)), or when `FLAI_STORY` is set, so that a story's sub-agents write no file in a `.claude/` folder (S-0299, [ADR-0102](../adrs/0102-while-auto-approve-is-off-flai-guard-refuses-a-story-s-sub-agent-a-write-to-a.md)), and exits at once in the operator's own session. The template's file runs the installed `flai guard`; this repository's runs `scripts/flai.sh guard`.
+Claude Code runs a hook only for the tools its matcher names. `.claude/settings.json` has two `PreToolUse` entries: `Bash|mcp__flai__.*` runs the guard in every session; `Edit|MultiEdit|Write|NotebookEdit` runs it only when `FLAI_ROLE` is set, to any role, or `FLAI_STORY` is set: `[ -n "$FLAI_ROLE" ] || [ -n "$FLAI_STORY" ] || exit 0`. Until S-0416 it named the roles, `plan`, `orchestrate` (S-0218, [Its permissions and the guard](#its-permissions-and-the-guard)), `analyze` (S-0223, [The analyzer's guard](#the-analyzers-guard)), and `curate` (S-0431, [The curator's guard](#the-curators-guard)); any `FLAI_ROLE` now runs it, so a role a project defines has its file edits held ([Role files](#role-files-s-0414)). `FLAI_STORY` runs it so that a story's sub-agents write no file in a `.claude/` folder (S-0299, [ADR-0102](../adrs/0102-while-auto-approve-is-off-flai-guard-refuses-a-story-s-sub-agent-a-write-to-a.md)). In the operator's own session, with neither set, the entry exits at once. The template's file runs the installed `flai guard`; this repository's runs `scripts/flai.sh guard`.
 
 ### Checked creation
 
@@ -515,7 +521,7 @@ After a refusal it does not try again until that thread is answered or the next 
 
 `orchestration.permissions` in `system-flow.yaml` says what the orchestrator may do without the operator. Each is off when unset. `flai check` reports an unknown key or a bad value as `manifest.orchestration`, so that a misspelt permission is not silently off ([project-manifest.md](project-manifest.md)).
 
-`flai guard` reads `FLAI_ROLE` from the hook's environment. With `orchestrate`, it reads the permissions from the manifest of the project the hook runs in, at each call, and checks the session's own calls, which carry no agent ID (`Guard.orchestrate`). A manifest it cannot read leaves every permission off, with a warning. The orchestrator's sub-agents are held as every sub-agent is.
+`flai guard` reads `FLAI_ROLE` from the hook's environment. With `orchestrate`, it reads the permissions from the manifest of the project the hook runs in, at each call, and checks the session's own calls, which carry no agent ID, against the orchestrator's role file, `design/workflows/roles/orchestrator.md`, or flai's baseline copy when the project has none: each call it lists under a `permissions` entry passes while that permission is on ([Role files](#role-files-s-0414)). `Guard.orchestrate` words the refusal and names the permission it needs. The table below is what the baseline file lists. A manifest it cannot read leaves every permission off, with a warning. The orchestrator's sub-agents are held as every sub-agent is.
 
 The permissions may change while the orchestrator runs: the operator edits them on the Orchestrator page's settings panel, with `flai manifest set`, or by hand (S-0229, [ADR-0101](../adrs/0101-with-the-settings-host-action-on-the-dashboard-edits-the-strategic-agents.md)). A change does not restart it. Because the guard reads the manifest at each call, a permission turned on or off holds from the orchestrator's next call, whatever the orchestrator last read; `cmd/guard_permissions_change_test.go` turns one on and off between two calls of one session. Its prompt tells it to read its permissions, policy, and release policy again before each decision, and that the guard's verdict holds, as its section What it is told says above.
 
@@ -539,7 +545,7 @@ Thread calls are held by who opened the thread as well (S-0220). On a thread it 
 
 Each refusal of the orchestrator's own call is appended to `wip/agents/orchestrator.md` under `## Refusals`, after `## Log`, by `Repo.AppendRefusal`: a heading with the time to the second, `- Call:` with the call refused in one code span, and `- Needs:` with the permission, or `none`. A refusal has no seconds or cost and adds nothing to the document's totals. A refusal that cannot be logged is warned of and refused all the same. Each writer of an activity document takes a lock per activity kind in `.flai-cache`, so that flai serve logging a run and the guard logging a refusal at the same time do not lose each other's entry. The lock is an operating-system lock on the file, freed when the writer exits, so no lock is left behind and none is broken for its age (I-0140).
 
-`.claude/settings.json` runs the guard on `Edit|MultiEdit|Write|NotebookEdit` when `FLAI_ROLE` is `plan`, `orchestrate`, `analyze`, or `curate` ([The guard](#the-guard)).
+`.claude/settings.json` runs the guard on `Edit|MultiEdit|Write|NotebookEdit` whenever `FLAI_ROLE` is set, `orchestrate` among them ([The guard](#the-guard)).
 
 ### The run and how it ends
 
@@ -657,7 +663,7 @@ The analyzer writes its issues through flai alone, never by editing a file under
 
 ### The analyzer's guard
 
-`flai guard` reads `FLAI_ROLE` from the hook's environment. With `analyze`, the command opens the project from the working directory and sets the guard's `Root` and `Reports`, the reports folder, and `Guard.analyze` checks the session's own calls, which carry no agent ID:
+`flai guard` reads `FLAI_ROLE` from the hook's environment. With `analyze`, the command opens the project from the working directory and sets the guard's `Root` and `Reports`, the reports folder, and checks the session's own calls, which carry no agent ID, against the analyzer's role file, `design/workflows/roles/analyzer.md`, or flai's baseline copy when the project has none ([Role files](#role-files-s-0414)); `Guard.analyze` words the refusal. The baseline file lists these, its `files` entry being `{design}/analysis/`:
 
 | Kind | Passes | Refused |
 |------|--------|---------|
@@ -670,7 +676,7 @@ A file's path is taken from the project's root when it is relative, cleaned, and
 
 The analyzer writes as itself alone, as the planner does ([The guard](#the-guard), [ADR-0143](../adrs/0143-flai-guard-refuses-a-story-s-agent-the-planner-and-the-analyzer-a-call-that.md)): a `--by` or `--placed-by` naming another, an assignment of `FLAI_AGENT` or `FLAI_SESSION` other than its own, and `unset` of either are refused. Its own name is the hook's `FLAI_AGENT`, or `analyzer`.
 
-`.claude/settings.json` runs the guard on `Edit|MultiEdit|Write|NotebookEdit` when `FLAI_ROLE` is `analyze`, as for `plan` and `orchestrate` ([The guard](#the-guard)). A project that keeps its old settings has an analyzer whose file edits the guard does not see.
+`.claude/settings.json` runs the guard on `Edit|MultiEdit|Write|NotebookEdit` whenever `FLAI_ROLE` is set, `analyze` among them ([The guard](#the-guard)). A project that keeps its old settings has an analyzer whose file edits the guard does not see.
 
 ### The analysis schedule
 
@@ -753,7 +759,7 @@ Then, in every run, whatever started it, look for absorption: list the active en
 
 ### The curator's guard
 
-With `FLAI_ROLE=curate`, `Guard.curate` checks the session's own calls:
+With `FLAI_ROLE=curate`, the guard checks the session's own calls against the curator's role file, `design/workflows/roles/curator.md`, or flai's baseline copy when the project has none ([Role files](#role-files-s-0414)); `Guard.curate` words the refusal. The baseline file lists these:
 
 | Kind | Passes | Refused |
 |------|--------|---------|
@@ -766,7 +772,7 @@ Each refusal says that the curator writes digest entries only with `flai digest 
 
 The curator writes as itself alone, as the analyzer does ([ADR-0143](../adrs/0143-flai-guard-refuses-a-story-s-agent-the-planner-and-the-analyzer-a-call-that.md)). Its own name is the hook's `FLAI_AGENT`, or `curator`. `--by` on `flai digest absorb` names a document, not an author, so the guard does not read it as one, for the curator or any other session (`bySubNamesNoAuthor`).
 
-`.claude/settings.json` runs the guard on `Edit|MultiEdit|Write|NotebookEdit` when `FLAI_ROLE` is `curate`, as for the other three roles ([The guard](#the-guard)). A project that keeps its old settings has a curator whose file edits the guard does not see; its definition lists no tool to make one.
+`.claude/settings.json` runs the guard on `Edit|MultiEdit|Write|NotebookEdit` whenever `FLAI_ROLE` is set, `curate` among them ([The guard](#the-guard)). A project that keeps its old settings has a curator whose file edits the guard does not see; its definition lists no tool to make one.
 
 ### The curator after acceptances and on a schedule
 

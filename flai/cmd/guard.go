@@ -25,7 +25,7 @@ func newGuardCmd(a *app) *cobra.Command {
 	var harness string
 	c := &cobra.Command{
 		Use:   "guard",
-		Short: "Refuse a sub-agent's writes, hold the planner to planning, the orchestrator to its permissions, the analyzer to its report, and the curator to the digest, and keep a story's agent from waiting on its sub-agents with wait_for_events, as a Claude Code hook",
+		Short: "Refuse a sub-agent's writes, hold every strategic role, the planner, the orchestrator, the analyzer, the curator, and any a project defines, to its role file, and keep a story's agent from waiting on its sub-agents with wait_for_events, as a Claude Code hook",
 		Long: `Reads a Claude Code PreToolUse hook's input on standard input and refuses
 the call when a sub-agent makes it (the input carries an agent_id) and it
 would change a work item, a
@@ -102,9 +102,10 @@ which rewrites system-flow.yaml, is refused to every sub-agent. The
 planner's, the orchestrator's, the analyzer's, and the curator's own calls
 list the component library but are refused serve and config.
 
-A story's agent, the planner, the analyzer, and the curator, sessions flai
-serve starts (FLAI_STORY, FLAI_STARTED_BY=flai-serve, or FLAI_ROLE plan,
-analyze, or curate), write only as themselves (S-0369, ADR-0143): their own Bash call
+A story's agent, the planner, the analyzer, the curator, and a role a
+project defines, sessions flai serve starts (FLAI_STORY,
+FLAI_STARTED_BY=flai-serve, or FLAI_ROLE set to any role but orchestrate),
+write only as themselves (S-0369, ADR-0143, ADR-0210): their own Bash call
 is refused when a flai command's --by or --placed-by names another (--by on
 order, a policy, on stats, a grouping, and on digest absorb, a document,
 names no author; an empty one falls back to FLAI_AGENT), or when it sets
@@ -113,7 +114,8 @@ before a command, after export, declare, typeset, local, readonly, or env,
 or unsets either with unset or env -u, or clears both with env -i, in a
 shell's -c script, an eval, or a heredoc a shell reads as well. Its own name is the hook's
 FLAI_AGENT, or the name flai serve gives the run: agent-S-nnnn,
-planner-<FLAI_ITEM>, analyzer, or curator; its own session is the hook's
+planner-<FLAI_ITEM>, analyzer, curator, or a defined role's <name> or
+<name>-<FLAI_ITEM>, its role file's name; its own session is the hook's
 FLAI_SESSION. A call its role refuses anyway is refused for the role's
 reason. The orchestrator, which writes to a thread only as itself under
 its own rule, and the operator's own session are not held to a name.
@@ -124,22 +126,47 @@ tool shared_paths_edit and flai shared add and remove are refused, because
 claims.shared decides which overlaps hold a story (ADR-0096). Only the
 operator's own session changes them.
 
+With FLAI_ROLE set, the session's own calls, which carry no agent_id, are
+held to its role's file under the design folder's workflows/roles/, the
+one whose role is FLAI_ROLE (S-0416, ADR-0207): the planner's, the
+orchestrator's, the analyzer's, the curator's, and any role a project
+defines. The reads a sub-agent has pass. Each flai MCP tool, flai command,
+and file edit (files, a folder it may edit under) the file lists passes,
+under the condition an entry names; one inside a permissions entry passes
+only while its setting is on in the system-flow.yaml of the project the
+hook runs in, read at each call: orchestration.permissions.<p> for the
+orchestrator, roles.<name>.permissions.<p> for any other role. An entry
+flai check reports as roles.grant is never granted. Everything else is
+refused, naming the role, the rule, and the file, and telling it to ask the
+operator with thread_open on the item. A built-in role with no file in the
+project is held to flai's baseline copy of it. A defined role with no file
+or whose project cannot be read, and any role whose own file does not
+parse, fail closed: reads pass, and every write is refused, naming the file
+and flai check. A thread condition passes only a --by naming the role
+itself. A refusal of a built-in role's is worded as before the files held
+it. The role's sub-agents are held as any sub-agent is. The paragraphs
+below are what the baseline files list.
+
 In a planner session, one flai serve starts with FLAI_ROLE=plan, the
-session's own calls are held to planning too (strategic-agents.md): besides
-what a sub-agent may do, the MCP tools inbox, item_new, item_edit,
+session's own calls are held to planning (planner.md, strategic-agents.md):
+besides what a sub-agent may do, the MCP tools inbox, item_new, item_edit,
 thread_open, thread_reply, activity_log, wait_for_events, and item_move to
-backlog; the commands story new, epic new, task new, edit (but not
---no-draft), touches, thread new and reply, issue new and bump, and move to
-backlog. A story the planner creates is a draft for the operator to
+backlog; the commands story new, epic new, task new, edit, touches, thread
+new and reply, issue new and bump, and move to backlog. item_edit and edit
+may not finalize a draft (draft false, --no-draft) nor set or clear a cost
+of delay input (--revenue-per-week, --penalty-per-week,
+--time-lost-per-cycle, --clear-cost-of-delay), which are the operator's; a
+value passes. A story the planner creates is a draft for the operator to
 finalize: item_new of a story needs draft true, and story new needs
 --draft. It refuses the planner every other flai tool and command, git's
 writes, and the Edit, Write, and NotebookEdit tools. The planner's
 sub-agents are held as any sub-agent is.
 
 In an orchestrator session, one flai serve starts with
-FLAI_ROLE=orchestrate, the session's own calls are held to
-orchestration.permissions in the system-flow.yaml of the project the hook
-runs in (S-0218), each off when unset or when the manifest is unreadable.
+FLAI_ROLE=orchestrate, the session's own calls are held to orchestrator.md,
+whose permissions entries name orchestration.permissions in the
+system-flow.yaml of the project the hook runs in (S-0218), each off when
+unset or when the manifest is unreadable.
 Whatever its permissions it may do what a sub-agent may, call inbox,
 activity_log, wait_for_events, and thread_open, and run thread new and
 issue new and bump. Each permission allows more: plan_backlog_epics the
@@ -187,7 +214,8 @@ logged is warned of and refused all the same. The orchestrator's
 sub-agents are held as any sub-agent is.
 
 In an analyzer session, one flai serve starts with FLAI_ROLE=analyze, the
-session's own calls are held to reads and its report (S-0223): besides what
+session's own calls are held to reads and its report (S-0223, analyzer.md,
+whose files entry is {design}/analysis/): besides what
 a sub-agent may do, flai stats among it, the MCP tools inbox, activity_log,
 thread_open, thread_reply, and wait_for_events; and Edit, Write, and
 NotebookEdit on a file under the manifest's design folder's analysis/ (its
@@ -203,7 +231,8 @@ among them, and git's writes are refused too. The analyzer's sub-agents are
 held as any sub-agent is.
 
 In a curator session, one flai serve starts with FLAI_ROLE=curate, the
-session's own calls are held to the digest (S-0431, ADR-0196): besides what
+session's own calls are held to the digest (S-0431, ADR-0196, curator.md):
+besides what
 a sub-agent may do, the MCP tools inbox, activity_log, thread_open,
 thread_reply, and wait_for_events, and flai digest harvest, new, and edit,
 and absorb, cited, and compact (S-0432, ADR-0199), which mark an entry
@@ -238,13 +267,16 @@ and the call passes and returns on the answer. A project, record, or
 threads it cannot read let the call through.
 
 The template's .claude/settings.json runs it before Bash and flai's MCP
-tools, on SubagentStart and SubagentStop, and, in a planner's, an
-orchestrator's, an analyzer's, a curator's, or a story's agent's session
-alone (FLAI_ROLE plan, orchestrate, analyze, or curate, or FLAI_STORY set),
-before Edit, MultiEdit, Write, and NotebookEdit as well, so that a story's
-sub-agent's write in a .claude/ folder meets the refusal above (S-0299). In
-the operator's own session, where none of those is set, a file edit does
-not run it.`,
+tools, on SubagentStart and SubagentStop, and, in a strategic role's or a
+story's agent's session alone, before Edit, MultiEdit, Write, and
+NotebookEdit as well, behind the condition
+
+  [ -n "$FLAI_ROLE" ] || [ -n "$FLAI_STORY" ] || exit 0;
+
+so that a role's file edits, a defined role's among them (S-0416), are held
+to its role file, and a story's sub-agent's write in a .claude/ folder
+meets the refusal above (S-0299). In the operator's own session, where
+neither is set, a file edit does not run it.`,
 		Example: `  flai guard < hook-input.json`,
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
