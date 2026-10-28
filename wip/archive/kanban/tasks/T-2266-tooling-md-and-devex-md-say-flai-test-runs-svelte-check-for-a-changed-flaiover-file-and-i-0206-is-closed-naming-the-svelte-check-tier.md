@@ -3,16 +3,37 @@ id: T-2266
 type: task
 nature: improvement
 title: tooling.md and devex.md say flai test runs svelte-check for a changed flaiover file, and I-0206 is closed naming the svelte-check tier
-status: backlog
+status: done
 parent: S-0530
 owner: alex
 created: 2026-10-28T18:20:49Z
-updated: 2026-10-28T18:20:49Z
-transitions: []
+updated: 2026-10-28T21:03:16Z
+transitions:
+  - to: ready
+    at: 2026-10-28T21:02:50Z
+    by: agent-S-0530
+  - to: in-progress
+    at: 2026-10-28T21:02:52Z
+    by: agent-S-0530
+  - to: done
+    at: 2026-10-28T21:03:16Z
+    by: agent-S-0530
 stream: S-0530
 tags: [flaiover, testing, docs]
 touches: [design/conventions/tooling.md, design/system/devex.md, design/issues/I-0206-flai-test-on-flaiover-paths-runs-no-svelte-check-so-a-type-error-a-task-s-tests-passed-over-first-shows-in-the-close-out.md, design/issues/summary.md]
 after: [T-2265]
+usage:
+  source: log
+  seconds: 24
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 14
+      output: 3049
+      cache_read: 608336
+      cache_write: 31426
+      cost: 0.4066
 ---
 # T-2266 tooling.md and devex.md say flai test runs svelte-check for a changed flaiover file, and I-0206 is closed naming the svelte-check tier
 

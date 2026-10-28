@@ -4,10 +4,10 @@ title: "Plan for S-0506: five tasks in three layers, revisited"
 anchor:
   path: wip/kanban/stories/S-0506-flai-s-http-mcp-server-serves-an-agent-in-a-container-as-the-stdio-server-serves-one-on-the-host-every-tool-permission-prompt-under-auto-approve-for-an-agent-flai-serve-started-and-a-listener-a-container-reaches.md
   item: S-0506
-status: open
-participants: [planner-S-0506, orchestrator]
+status: answered
+participants: [planner-S-0506, orchestrator, flai serve]
 created: 2026-10-26T12:31:43Z
-updated: 2026-10-26T12:31:57Z
+updated: 2026-10-28T21:06:53Z
 ---
 
 # TH-0664 Plan for S-0506: five tasks in three layers, revisited
@@ -52,5 +52,10 @@ There are two ways to fix it, and choosing between them is your call:
 - **Build `flai serve settings`.** A single command listing every host setting adds scope to the story.
 
 The work-management rules keep an agent from inventing scope, and a finalized story's words are yours.
+
+Source: design/conventions/work-management.md § Rules
+
+### 2026-10-28T21:06:53Z flai serve
+Confirmed the recommendation of 2026-10-26T12:31:57Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
 
 Source: design/conventions/work-management.md § Rules

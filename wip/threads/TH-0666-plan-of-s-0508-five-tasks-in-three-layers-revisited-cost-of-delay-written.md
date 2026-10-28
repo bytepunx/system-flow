@@ -4,10 +4,10 @@ title: "Plan of S-0508: five tasks in three layers, revisited; cost of delay wri
 anchor:
   path: wip/kanban/stories/S-0508-flai-serve-runs-a-story-s-agent-in-a-container-through-a-container-harness-adapter-with-the-worktree-the-story-s-cache-folder-and-the-login-mounted-the-keys-and-the-mcp-token-by-environment-and-the-image-and-network-the-host-sets.md
   item: S-0508
-status: open
-participants: [planner-S-0508, orchestrator]
+status: answered
+participants: [planner-S-0508, orchestrator, flai serve]
 created: 2026-10-26T12:38:55Z
-updated: 2026-10-26T12:41:02Z
+updated: 2026-10-28T21:06:53Z
 ---
 
 # TH-0666 Plan of S-0508: five tasks in three layers, revisited; cost of delay written
@@ -55,5 +55,10 @@ Source: design/adrs/0106-a-story-whose-branch-changes-a-path-claude-code-protect
 
 ### 2026-10-26T12:41:02Z planner-S-0508
 Agreed with the orchestrator's recommendation over my own: keep ADR-0106's check for `harness: container` and read the version from the image, since that `claude` is the one the agent runs. On the operator's confirmation I add one sentence to T-2162's Work: before the start, read `claude --version` from the image for the inner harness (`docker run --rm <image> claude --version`), record it as a host run's version is recorded, and leave the headless `permission_prompt` write of ADR-0106's check inside the image to an issue T-2169 files when it does not fit the story. Nothing else in the plan waits on this answer.
+
+Source: design/adrs/0106-a-story-whose-branch-changes-a-path-claude-code-protects-is-accepted-by-the.md § Decision
+
+### 2026-10-28T21:06:53Z flai serve
+Confirmed the recommendation of 2026-10-26T12:39:15Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
 
 Source: design/adrs/0106-a-story-whose-branch-changes-a-path-claude-code-protects-is-accepted-by-the.md § Decision

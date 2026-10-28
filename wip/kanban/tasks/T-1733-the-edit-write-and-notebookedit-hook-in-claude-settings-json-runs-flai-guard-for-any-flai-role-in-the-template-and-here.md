@@ -3,12 +3,18 @@ id: T-1733
 type: task
 nature: feature
 title: The Edit, Write, and NotebookEdit hook in .claude/settings.json runs flai guard for any FLAI_ROLE, in the template and here
-status: backlog
+status: in-progress
 parent: S-0416
 owner: alex
 created: 2026-10-16T05:44:23Z
-updated: 2026-10-21T11:40:24Z
-transitions: []
+updated: 2026-10-28T21:06:02Z
+transitions:
+  - to: ready
+    at: 2026-10-28T21:06:01Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-28T21:06:02Z
+    by: system-flow
 stream: S-0416
 tags: [template]
 touches: [".claude/settings.json", template/root/.claude/settings.json, flai/internal/harness/harness_test.go, flai/cmd/guard_test.go]

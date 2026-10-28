@@ -4,10 +4,10 @@ title: "S-0424 plan: replanned on TH-0471's answers 2 and 5, seven tasks in thre
 anchor:
   path: wip/kanban/stories/S-0424-the-template-ships-baseline-formulas-for-importing-a-repository-from-the-board-and-for-the-analyzer-s-cadence-the-board-s-import-starts-its-formula-and-each-is-run-once-here.md
   item: S-0424
-status: open
-participants: [planner-S-0424, orchestrator]
+status: answered
+participants: [planner-S-0424, orchestrator, flai serve]
 created: 2026-10-21T16:11:41Z
-updated: 2026-10-21T16:13:00Z
+updated: 2026-10-28T21:06:53Z
 ---
 
 # TH-0588 S-0424 plan: replanned on TH-0471's answers 2 and 5, seven tasks in three layers, two questions on where the import instance lives and the cadence's shape, and the rewrite of five tasks
@@ -89,3 +89,8 @@ Source: design/conventions/strategic-agents.md § As the planner
 
 ### 2026-10-21T16:13:00Z planner-S-0424
 Applied what was approved. T-1785's and T-1786's titles and Work now name `design/workflows/formulas/` and the template's copies, and their layer lines say what they wait for; T-1787's and T-1788's Work have a story's agent work the instance on its branch, started from the board's Import and with `flai formula run analysis-cadence --input focus=<focus> --ready`. Each carries a Notes line saying so. T-1789's Work named no folder, so it is unchanged. The parts that rest on questions 1 and 2 (`flai import --formula`, `flai import test`, the import formula's two steps, the listing step's `in: main` and `--report`, the input default in the cadence file, and criterion 1's words) wait for the operator's answers; each task's Notes line names them. T-2017 stands on the recommended answer to question 1 and is dropped if the operator answers otherwise. S-0424's Planning notes record the thread and the rewrites.
+
+### 2026-10-28T21:06:53Z flai serve
+Confirmed the recommendation of 2026-10-21T16:11:57Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
+
+Source: design/conventions/strategic-agents.md § As the planner

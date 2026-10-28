@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 17.7167
-accrued_seconds: 1818
-tasks_completed: 7
-last_run: 2026-10-28T19:20:56Z
+accrued_cost: 19.1923
+accrued_seconds: 1963
+tasks_completed: 8
+last_run: 2026-10-28T20:54:50Z
 ---
 
 # Curator activity
@@ -67,3 +67,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0402
 - Seconds: 81
 - Cost: 1.4891 USD, estimated
+
+### 2026-10-28T20:54:50Z
+
+- Summary: I wrote D-0410 and D-0411, merged into D-0396 and D-0409, and absorbed D-0373 and D-0374 into ADR-0206; `flai digest compact` compacted nothing. D-0410: when two stories add a template changelog entry under one version, the one accepted second takes the next version. D-0411: until S-0419, a strategic agent's prompt changes in both `.claude/agents` and `design/workflows/roles`. D-0396 gained S-0502 as a source, and D-0409 now states the operator's `confirm_after: 48h`. The other 15 candidates, from S-0415 and S-0502, were already stated in `docs/users/flai.md` or ADR-0206, or were progress notes.
+- Trigger: accepted S-0415, S-0502
+- Items: D-0373, D-0374, D-0396, D-0409, D-0410, D-0411
+- Seconds: 145
+- Cost: 1.4756 USD, estimated

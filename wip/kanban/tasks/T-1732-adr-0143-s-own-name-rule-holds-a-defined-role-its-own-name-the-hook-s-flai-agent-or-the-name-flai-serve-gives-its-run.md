@@ -3,12 +3,18 @@ id: T-1732
 type: task
 nature: feature
 title: ADR-0143's own-name rule holds a defined role, its own name the hook's FLAI_AGENT or the name flai serve gives its run
-status: backlog
+status: in-progress
 parent: S-0416
 owner: alex
 created: 2026-10-16T05:44:19Z
-updated: 2026-10-21T11:42:48Z
-transitions: []
+updated: 2026-10-28T21:06:00Z
+transitions:
+  - to: ready
+    at: 2026-10-28T21:05:58Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-28T21:06:00Z
+    by: system-flow
 stream: S-0416
 tags: [cli]
 touches: [flai/internal/guard/authors.go, flai/internal/guard/authors_test.go, flai/internal/guard/shared.go, design/adrs, design/adrs/README.md]

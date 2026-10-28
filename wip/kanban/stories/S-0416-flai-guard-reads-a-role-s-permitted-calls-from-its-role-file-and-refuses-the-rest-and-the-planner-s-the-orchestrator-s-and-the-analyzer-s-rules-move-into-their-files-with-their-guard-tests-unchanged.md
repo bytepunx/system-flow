@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:39:46Z
-updated: 2026-10-28T20:29:14Z
+updated: 2026-10-28T21:05:51Z
 transitions:
   - to: ready
     at: 2026-10-28T13:03:54Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0416
 tags: [cli, template]
 topics: [cli, planning, orchestration, template]
-touches: [".claude/settings.json", template/root/.claude/settings.json, design/workflows/roles/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/analyzer.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/analyzer.md, design/adrs, design/adrs/README.md, design/system/agent-adapters.md, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, template/CHANGELOG.md, flai/cmd/guard.go, flai/cmd/guard_test.go, flai/internal/guard/authors.go, flai/internal/guard/authors_test.go, flai/internal/guard/call.go, flai/internal/guard/guard.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/guard/shared.go, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/harness/harness_test.go]
+touches: [".claude/settings.json", template/root/.claude/settings.json, design/workflows/roles/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/analyzer.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/analyzer.md, design/adrs, design/adrs/README.md, design/system/agent-adapters.md, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, template/CHANGELOG.md, flai/cmd/guard.go, flai/cmd/guard_test.go, flai/internal/guard/authors.go, flai/internal/guard/authors_test.go, flai/internal/guard/call.go, flai/internal/guard/guard.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/guard/shared.go, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/harness/harness_test.go, flai/internal/manifest/manifest.go, docs/operators/settings.md, flai/cmd/guard_roles_test.go, flai/internal/check/check.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/roles/baseline.go, flai/internal/roles/baseline/analyzer.md, flai/internal/roles/baseline/curator.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/roles/baseline/planner.md, flai/internal/roles/baseline_test.go, flai/internal/roles/roles.go]
 after: [S-0414]
 agent:
   harness: claude-code
@@ -25,9 +25,22 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2140
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-28
+      ceremony: 3
+      hand_edits: 2
+      work: 39
+  models:
+    - model: claude-opus-5-5
+      input: 238
+      output: 1327
+      cache_read: 21989854
+      cache_write: 1043179
+      cost: 7.8192
   strategic:
     - kind: orchestrator
       seconds: 1630
@@ -61,10 +74,10 @@ The guard holds a role a project defines as it holds the three built-in roles to
 
 ## Acceptance criteria
 
-- [ ] With `FLAI_ROLE` naming a defined role, `flai guard` decides the session's own calls from its role file: the reads every sub-agent has pass; each MCP tool, flai command, and file edit the file lists passes under its conditions and, when it names one, while the operator's permission for it is on in the manifest; every other write is refused with the role's name, the rule broken, and the advice to ask the operator with `thread_open`.
+- [x] With `FLAI_ROLE` naming a defined role, `flai guard` decides the session's own calls from its role file: the reads every sub-agent has pass; each MCP tool, flai command, and file edit the file lists passes under its conditions and, when it names one, while the operator's permission for it is on in the manifest; every other write is refused with the role's name, the rule broken, and the advice to ask the operator with `thread_open`.
 - [ ] The planner's, the orchestrator's, and the analyzer's rules are read from `design/workflows/roles/planner.md`, `orchestrator.md`, and `analyzer.md`, and `flai/internal/guard/guard_test.go`, `orchestrate_test.go`, `thread_test.go`, `authors_test.go`, `flai/cmd/guard_test.go`, `guard_permissions_change_test.go`, and `orchestrate_permissions_test.go` pass unchanged, but for the hook condition `flai/cmd/guard_test.go` holds, which changes with criterion 5.
 - [ ] ADR-0143's own-name rule holds a defined role as it holds the planner and the analyzer: a `--by`, `--placed-by`, `FLAI_AGENT`, or `FLAI_SESSION` naming another is refused, its own name being the hook's `FLAI_AGENT` or the name `flai serve` gives the role's run.
-- [ ] A role whose file is missing or does not parse is refused every write, naming the file and `flai check`; the guard fails closed.
+- [x] A role whose file is missing or does not parse is refused every write, naming the file and `flai check`; the guard fails closed.
 - [ ] The `Edit|MultiEdit|Write|NotebookEdit` entry of `.claude/settings.json`, in the template and here, runs the guard for any `FLAI_ROLE`, not only `plan`, `orchestrate`, and `analyze`, so a defined role's file edits are held.
 - [ ] `design/system/strategic-agents.md` § The guard, `design/system/flai-cli.md`, `docs/users/flai.md`, and `template/CHANGELOG.md` say that the guard reads a role's rules from its file.
 

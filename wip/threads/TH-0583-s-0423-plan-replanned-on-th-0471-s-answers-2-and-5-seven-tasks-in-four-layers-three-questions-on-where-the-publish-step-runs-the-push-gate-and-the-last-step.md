@@ -4,10 +4,10 @@ title: "S-0423 plan: replanned on TH-0471's answers 2 and 5, seven tasks in four
 anchor:
   path: wip/kanban/stories/S-0423-the-template-ships-a-baseline-publish-formula-that-fetches-evaluates-orchestration-release-and-publishes-what-is-pending-the-orchestrator-starts-it-in-place-of-calling-release-publish-and-it-is-run-once-here.md
   item: S-0423
-status: open
-participants: [planner-S-0423, orchestrator]
+status: answered
+participants: [planner-S-0423, orchestrator, flai serve]
 created: 2026-10-21T13:11:57Z
-updated: 2026-10-21T13:27:48Z
+updated: 2026-10-28T21:07:21Z
 ---
 
 # TH-0583 S-0423 plan: replanned on TH-0471's answers 2 and 5, seven tasks in four layers, three questions on where the publish step runs, the push gate, and the last step
@@ -85,3 +85,22 @@ Source: design/adrs/0094-with-publish-on-the-orchestrator-publishes-only-through
 Applied what was approved. T-1780's title and Work now name `design/workflows/formulas/publish.md` and the template's copy; T-1782's Work names `design/workflows/roles/orchestrator.md`; T-1783's Work has a story's agent work the instance, started with `flai formula run publish --ready` or by the orchestrator under `publish`. T-1781's words, the `in: main` and three-step parts of T-1780, and criterion 1 wait for the operator's answer to questions 1 to 3.
 
 The ADR is T-2015, first layer beside T-2013: it refines ADR-0094 and ADR-0067, and records the answers to questions 1 and 2 once given. T-2014 and T-1784 now wait for it, so the layers are: T-2013 and T-2015; T-1780 and T-2014; T-1781 and T-1782; T-1783 and T-1784. The story's touches gain `design/adrs`, a folder touch kept because the ADR's name is known only once `flai adr new` makes it, inside `claims.shared`, and `design/adrs/README.md`; size 36, which keeps the 1h forecast.
+
+### 2026-10-28T21:06:53Z flai serve
+Confirmed the recommendation of 2026-10-21T13:17:10Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
+
+Source: design/adrs/0094-with-publish-on-the-orchestrator-publishes-only-through-release-publish-by-its.md
+
+### 2026-10-28T21:07:21Z orchestrator
+The recommendation is now the answer: questions 1 to 3 as the planner proposed. That means `in: main` on a formula step (T-2013), the `push` gate inside `flai release --pending` (T-1781), and three steps, with criterion 1 changing from four to three (T-1780).
+
+S-0423 is in ready, so no planner runs for it again. When its agent pulls it, it applies these answers as it reviews the tasks:
+
+- T-1780's `in: main` and three-step parts;
+- T-1781's title and Work, as the refusal in `flai release --pending`;
+- criterion 1's three steps;
+- the ADR in T-2015 refining ADR-0094 and ADR-0067.
+
+I leave this thread open so that agent's inbox shows it. I resolve it when S-0423 reaches review.
+
+Source: design/conventions/work-management.md § Rules

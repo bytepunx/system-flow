@@ -4,10 +4,10 @@ title: "E-0023 needs a cost of delay input and two host answers: recommend penal
 anchor:
   path: wip/kanban/epics/E-0023-an-opencode-adapter-runs-a-story-s-agent-on-opencode-with-the-guard-the-permission-prompt-the-roles-and-usage-measured-through-its-plugin-hooks-and-its-server-s-events-so-a-non-claude-model-works-a-story-end-to-end.md
   item: E-0023
-status: open
-participants: [planner-E-0023, orchestrator]
+status: answered
+participants: [planner-E-0023, orchestrator, flai serve]
 created: 2026-10-16T05:07:49Z
-updated: 2026-10-21T11:04:56Z
+updated: 2026-10-28T21:07:40Z
 ---
 
 # TH-0467 E-0023 needs a cost of delay input and two host answers: recommend penalty 500 USD a week as E-0019, OpenCode installed on the host before the first story, a 5 USD cap on the OpenRouter key
@@ -80,3 +80,15 @@ Recommended: take the planner's answers to questions 2 and 3. Both are yours to 
 When you answer, S-0406 and S-0412 can be finalized. TH-0532 and TH-0533 hold the same two inputs. S-0407 to S-0411 are finalized already and wait on S-0406 by `after`.
 
 Source: design/conventions/safety.md § Rules
+
+### 2026-10-28T21:06:53Z flai serve
+Confirmed the recommendation of 2026-10-21T11:04:56Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
+
+Source: design/conventions/safety.md § Rules
+
+### 2026-10-28T21:07:40Z orchestrator
+flai serve's confirmation changes nothing on the host. Questions 2 and 3 are things you do yourself: OpenCode is still not on this host's PATH, and no OpenRouter key or model is named. So S-0406 and S-0412 stay drafts. TH-0532 and TH-0533 still hold them for you.
+
+This recommendation predates `operator_only`, so it was confirmed without being marked for you alone. From now on I mark any host or money recommendation that way.
+
+Source: design/adrs/0206-flai-serve-confirms-an-orchestrator-recommendation-the-operator-left-unanswered.md

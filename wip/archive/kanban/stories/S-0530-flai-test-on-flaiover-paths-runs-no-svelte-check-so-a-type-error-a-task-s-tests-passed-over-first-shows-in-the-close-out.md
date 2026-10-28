@@ -3,10 +3,10 @@ id: S-0530
 type: story
 nature: improvement
 title: flai test on flaiover paths runs no svelte-check, so a type error a task's tests passed over first shows in the close-out
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-28T12:54:31Z
-updated: 2026-10-28T20:49:08Z
+updated: 2026-10-28T21:29:13Z
 transitions:
   - to: ready
     at: 2026-10-28T20:48:59Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-28T20:49:08Z
     by: agent-S-0530
+  - to: review
+    at: 2026-10-28T21:07:50Z
+    by: agent-S-0530
+  - to: done
+    at: 2026-10-28T21:29:13Z
+    by: orchestrator
 tags: [flaiover, testing, scripts]
 topics: [testing]
 touches: [system-flow.yaml, scripts/flaiover-check.sh, scripts/flaiover-lint.sh, scripts/README.md, flai/internal/verify/select_test.go, design/conventions/tooling.md, design/system/devex.md, design/issues/I-0206-flai-test-on-flaiover-paths-runs-no-svelte-check-so-a-type-error-a-task-s-tests-passed-over-first-shows-in-the-close-out.md, design/issues/summary.md]
@@ -23,20 +29,39 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1135
+  priced_by: harness
+  turns:
+    - day: 2026-10-28
+      ceremony: 2
+      test_runs: 1
+      hand_edits: 1
+      work: 19
+  models:
+    - model: claude-opus-5-5
+      input: 106
+      output: 22411
+      cache_read: 4471222
+      cache_write: 230980
+      cost: 2.9888
   strategic:
     - kind: orchestrator
-      seconds: 224
+      seconds: 266
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 28
-          output: 446
-          cache_read: 3053350
-          cache_write: 14423
-          cost: 0.674
+          input: 36
+          output: 526
+          cache_read: 3759537
+          cache_write: 21441
+          cost: 0.8309
+        - model: claude-sonnet-5-5
+          input: 4
+          output: 40
+          cache_read: 12921
+          cache_write: 29652
+          cost: 0.0294
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -62,8 +87,8 @@ finalized:
 This story remediates [I-0206](../../../design/issues/I-0206-flai-test-on-flaiover-paths-runs-no-svelte-check-so-a-type-error-a-task-s-tests-passed-over-first-shows-in-the-close-out.md), "flai test on flaiover paths runs no svelte-check, so a type error a task's tests passed over first shows in the close-out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0206 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0206 is closed with `flai issue close I-0206 --reason` saying what fixed it
+- [x] The cause I-0206 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0206 is closed with `flai issue close I-0206 --reason` saying what fixed it
 
 ## Tasks
 - T-2265 flai test runs svelte-check on the flaiover project when a changed TypeScript, JavaScript, or Svelte file under flaiover selects its new tier
@@ -98,3 +123,14 @@ Figures:
 
 - Forecast: `flai forecast` gave 16m (size 11 at 86 s per unit). It is raised to 25m because S-0319, the like change, took 1267 s (21m), and T-2265 also times the new tier. The delivery moves the same 9m, to 2026-10-29T08:40Z.
 - Cost of delay: `flai cod` gives 25.00 USD a week, from the 10m `time_lost_per_cycle` input at 150 USD an hour. It stands as given.
+
+### Accepted by the orchestrator
+
+- Verified: 01fa007fde9671f4ac4a42f64493e3f3a9f56e87
+- Batch: 20261028-210833
+- Enqueued verified: 01fa007fde9671f4ac4a42f64493e3f3a9f56e87
+- At: 2026-10-28T21:29:13Z
+
+Verdict: meets all criteria
+- 1: system-flow.yaml, scripts/flaiover-check.sh, scripts/flaiover-lint.sh, scripts/README.md, flai/internal/verify/select_test.go, design/conventions/tooling.md, design/system/devex.md
+- 2: design/issues/I-0206-flai-test-on-flaiover-paths-runs-no-svelte-check-so-a-type-error-a-task-s-tests-passed-over-first-shows-in-the-close-out.md, design/issues/summary.md

@@ -3,15 +3,21 @@ id: T-1730
 type: task
 nature: feature
 title: The planner's and the analyzer's guard rules are read from planner.md and analyzer.md through the role path, with their guard tests unchanged
-status: backlog
+status: in-progress
 parent: S-0416
 owner: alex
 created: 2026-10-16T05:44:09Z
-updated: 2026-10-21T11:40:11Z
-transitions: []
+updated: 2026-10-28T21:06:21Z
+transitions:
+  - to: ready
+    at: 2026-10-28T21:05:56Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-28T21:05:57Z
+    by: system-flow
 stream: S-0416
 tags: [cli, template]
-touches: [flai/internal/guard/guard.go, design/workflows/roles/planner.md, design/workflows/roles/analyzer.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/analyzer.md, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go]
+touches: [flai/internal/guard/guard.go, design/workflows/roles/planner.md, design/workflows/roles/analyzer.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/analyzer.md, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/guard/call.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/cmd/guard.go]
 after: [T-1729]
 ---
 # T-1730 The planner's and the analyzer's guard rules are read from planner.md and analyzer.md through the role path, with their guard tests unchanged

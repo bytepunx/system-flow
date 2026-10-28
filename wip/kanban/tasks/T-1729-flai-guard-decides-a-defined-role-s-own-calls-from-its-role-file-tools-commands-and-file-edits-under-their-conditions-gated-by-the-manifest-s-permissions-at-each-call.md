@@ -3,11 +3,11 @@ id: T-1729
 type: task
 nature: feature
 title: "flai guard decides a defined role's own calls from its role file: tools, commands, and file edits under their conditions, gated by the manifest's permissions at each call"
-status: in-progress
+status: done
 parent: S-0416
 owner: alex
 created: 2026-10-16T05:44:01Z
-updated: 2026-10-28T20:33:33Z
+updated: 2026-10-28T21:04:52Z
 transitions:
   - to: ready
     at: 2026-10-28T20:33:32Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-28T20:33:33Z
     by: system-flow
+  - to: done
+    at: 2026-10-28T21:04:52Z
+    by: agent-S-0416
 stream: S-0416
 tags: [cli]
 touches: [flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/guard/call.go, flai/internal/guard/guard.go, flai/cmd/guard.go, flai/internal/roles/baseline.go, flai/internal/roles/baseline_test.go, flai/internal/roles/baseline/planner.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/roles/baseline/analyzer.md, flai/internal/roles/baseline/curator.md, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, docs/operators/settings.md, flai/cmd/guard_roles_test.go]
+usage:
+  source: log
+  seconds: 1879
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 176
+      output: 955
+      cache_read: 17367504
+      cache_write: 818866
+      cost: 6.1738
 ---
 # T-1729 flai guard decides a defined role's own calls from its role file: tools, commands, and file edits under their conditions, gated by the manifest's permissions at each call
 
