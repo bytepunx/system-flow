@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:39:25Z
-updated: 2026-10-28T13:05:49Z
+updated: 2026-10-28T13:07:25Z
 transitions:
   - to: ready
     at: 2026-10-28T13:01:57Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0414
 tags: [cli, template]
 topics: [cli, planning, orchestration, template, conventions]
-touches: [design/adrs, design/adrs/README.md, design/conventions/strategic-agents.md, design/workflows/roles/analyzer.md, design/workflows/roles/orchestrator.md, design/workflows/roles/planner.md, design/workflows/roles/README.md, design/system/repository-layout.md, design/system/strategic-agents.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/role.go, flai/cmd/role_test.go, flai/cmd/root.go, flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/upgrade/upgrade.go, flai/internal/upgrade/upgrade_test.go, template/CHANGELOG.md, template/root/design/conventions/strategic-agents.md, template/root/design/workflows/roles/analyzer.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/README.md, template/template.yaml, design/system/flai-cli.md, design/system/project-manifest.md, design/README.md, template/root/design/README.md.tmpl, CLAUDE.md, template/root/CLAUDE.md.tmpl]
+touches: [design/adrs, design/adrs/README.md, design/conventions/strategic-agents.md, design/workflows/roles/analyzer.md, design/workflows/roles/orchestrator.md, design/workflows/roles/planner.md, design/workflows/roles/README.md, design/system/repository-layout.md, design/system/strategic-agents.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/role.go, flai/cmd/role_test.go, flai/cmd/root.go, flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/upgrade/upgrade.go, flai/internal/upgrade/upgrade_test.go, template/CHANGELOG.md, template/root/design/conventions/strategic-agents.md, template/root/design/workflows/roles/analyzer.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/README.md, template/template.yaml, design/system/flai-cli.md, design/system/project-manifest.md, design/README.md, template/root/design/README.md.tmpl, CLAUDE.md, template/root/CLAUDE.md.tmpl, design/workflows/README.md, template/root/design/workflows/README.md, design/workflows/roles/curator.md, template/root/design/workflows/roles/curator.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5

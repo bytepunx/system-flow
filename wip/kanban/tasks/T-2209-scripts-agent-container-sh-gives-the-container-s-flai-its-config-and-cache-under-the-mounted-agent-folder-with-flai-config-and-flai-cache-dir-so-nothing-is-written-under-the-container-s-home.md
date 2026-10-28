@@ -3,12 +3,18 @@ id: T-2209
 type: task
 nature: remediation
 title: scripts/agent-container.sh gives the container's flai its config and cache under the mounted agent folder with FLAI_CONFIG and FLAI_CACHE_DIR, so nothing is written under the container's home
-status: backlog
+status: in-progress
 parent: S-0521
 owner: alex
 created: 2026-10-28T13:02:47Z
-updated: 2026-10-28T13:02:47Z
-transitions: []
+updated: 2026-10-28T13:08:15Z
+transitions:
+  - to: ready
+    at: 2026-10-28T13:08:13Z
+    by: agent-S-0521
+  - to: in-progress
+    at: 2026-10-28T13:08:15Z
+    by: agent-S-0521
 stream: S-0521
 tags: [docker, scripts]
 touches: [scripts/agent-container.sh, docs/operators/runbooks/agent-container.md]

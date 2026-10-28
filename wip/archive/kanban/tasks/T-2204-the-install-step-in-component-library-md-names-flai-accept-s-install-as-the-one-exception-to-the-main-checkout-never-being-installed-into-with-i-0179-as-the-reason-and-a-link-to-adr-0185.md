@@ -23,16 +23,16 @@ tags: [design, components]
 touches: [design/system/component-library.md]
 usage:
   source: log
-  seconds: 18
+  seconds: 22
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 12
-      output: 61
-      cache_read: 667385
-      cache_write: 7128
-      cost: 0.2282
+      output: 1675
+      cache_read: 635823
+      cache_write: 38690
+      cost: 0.4702
 ---
 # T-2204 The install step in component-library.md names flai accept's install as the one exception to the main checkout never being installed into, with I-0179 as the reason and a link to ADR-0185
 

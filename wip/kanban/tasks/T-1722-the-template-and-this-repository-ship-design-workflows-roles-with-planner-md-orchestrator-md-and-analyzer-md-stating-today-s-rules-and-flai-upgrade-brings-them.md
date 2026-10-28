@@ -7,11 +7,11 @@ status: backlog
 parent: S-0414
 owner: alex
 created: 2026-10-16T05:43:05Z
-updated: 2026-10-21T11:11:48Z
+updated: 2026-10-28T13:07:25Z
 transitions: []
 stream: S-0414
 tags: [template]
-touches: [template/root/design/workflows/roles/README.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/analyzer.md, design/workflows/roles/README.md, design/workflows/roles/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/analyzer.md, template/template.yaml, flai/internal/upgrade/upgrade.go, flai/internal/upgrade/upgrade_test.go]
+touches: [template/root/design/workflows/roles/README.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/analyzer.md, design/workflows/roles/README.md, design/workflows/roles/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/analyzer.md, template/template.yaml, flai/internal/upgrade/upgrade.go, flai/internal/upgrade/upgrade_test.go, design/workflows/README.md, template/root/design/workflows/README.md, design/workflows/roles/curator.md, template/root/design/workflows/roles/curator.md]
 after: [T-1720]
 ---
 # T-1722 The template and this repository ship design/workflows/roles with planner.md, orchestrator.md, and analyzer.md stating today's rules, and flai upgrade brings them

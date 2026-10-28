@@ -3,12 +3,18 @@ id: T-1720
 type: task
 nature: feature
 title: "An ADR records the role file: where it lives, its front matter, its body as the prompt, the marker, and the named conditions it may reference"
-status: backlog
+status: in-progress
 parent: S-0414
 owner: alex
 created: 2026-10-16T05:42:52Z
-updated: 2026-10-21T11:11:41Z
-transitions: []
+updated: 2026-10-28T13:07:27Z
+transitions:
+  - to: ready
+    at: 2026-10-28T13:07:25Z
+    by: agent-S-0414
+  - to: in-progress
+    at: 2026-10-28T13:07:27Z
+    by: agent-S-0414
 stream: S-0414
 tags: [cli]
 touches: [design/adrs, design/adrs/README.md]

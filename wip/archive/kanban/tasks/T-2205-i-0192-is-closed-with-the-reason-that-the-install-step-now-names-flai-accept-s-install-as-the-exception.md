@@ -22,6 +22,18 @@ stream: S-0526
 tags: [issues]
 touches: [design/issues/I-0192-component-library-md-still-says-the-main-checkout-is-never-installed-into-though-flai-accept-now-installs-there-by-adr-0185.md, design/issues/summary.md]
 after: [T-2204]
+usage:
+  source: log
+  seconds: 10
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 5
+      output: 739
+      cache_read: 280372
+      cache_write: 17061
+      cost: 0.2074
 ---
 # T-2205 I-0192 is closed with the reason that the install step now names flai accept's install as the exception
 
