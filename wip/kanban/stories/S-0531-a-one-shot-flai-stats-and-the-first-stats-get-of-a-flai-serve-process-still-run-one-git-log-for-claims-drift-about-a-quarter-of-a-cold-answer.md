@@ -6,7 +6,7 @@ title: A one-shot flai stats, and the first stats.get of a flai serve process, s
 status: backlog
 owner: alex
 created: 2026-10-28T12:54:38Z
-updated: 2026-10-28T12:54:38Z
+updated: 2026-10-28T12:56:13Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1s
     by: flai
     at: 2026-10-28T12:54:38Z
+finalized:
+  by: alex
+  at: 2026-10-28T12:56:13Z
 ---
 # S-0531 A one-shot flai stats, and the first stats.get of a flai serve process, still run one git log for claims drift, about a quarter of a cold answer
 
