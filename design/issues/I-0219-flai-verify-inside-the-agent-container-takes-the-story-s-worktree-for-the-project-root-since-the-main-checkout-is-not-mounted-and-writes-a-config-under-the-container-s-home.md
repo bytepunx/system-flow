@@ -2,12 +2,12 @@
 id: I-0219
 title: flai verify inside the agent container takes the story's worktree for the project root, since the main checkout is not mounted, and writes a config under the container's home
 class: defect
-status: open
+status: closed
 count: 1
 cost: 5m
 first_reported: 2026-10-28T12:31:04Z
 last_reported: 2026-10-28T12:31:04Z
-updated: 2026-10-28T12:53:27Z
+updated: 2026-10-28T13:42:07Z
 ---
 
 # I-0219 flai verify inside the agent container takes the story's worktree for the project root, since the main checkout is not mounted, and writes a config under the container's home
@@ -24,3 +24,4 @@ S-0505 T-2166: agent-S-0513 ran the image's flai (1.71.1 from the tree) as `flai
 ## Remediation
 
 Story S-0521 remediates this issue, created from it at 2026-10-28T12:53:27Z.
+Closed 2026-10-28T13:42:07Z: Fixed by S-0521. T-2207: workitem.Open in a story worktree whose main checkout is not here records it in Repo.MainAbsent, and WorktreePath of the worktree's own story is the worktree, never <worktree>/.flai-cache/worktrees/S-nnnn. T-2211: flai verify, stream sync, task done, and check refuse there in one line naming the main checkout and the host's MCP tools (verify, task_done, stream_sync), in place of taking the worktree for the project; TestVerifyRefusesAWorktreeWhoseMainCheckoutIsAbsent reproduces the instance, and each other command has a refusal test. T-2209: scripts/agent-container.sh passes FLAI_CONFIG and FLAI_CACHE_DIR under .flai-cache/agents/S-nnnn/flai, so the container's flai writes nothing under /home/agent. Checked in an image built from the branch with the worktree and the main .git mounted alone: verify, check, and stream sync refused naming /home/alex/git/bytepunx/system-flow, and the home stayed empty.
