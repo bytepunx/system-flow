@@ -3,12 +3,15 @@ id: S-0423
 type: story
 nature: improvement
 title: The template ships a baseline publish formula that fetches, evaluates orchestration.release, and publishes what is pending, the orchestrator starts it in place of calling release_publish, and it is run once here
-status: backlog
+status: ready
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:41:11Z
-updated: 2026-10-28T13:11:43Z
-transitions: []
+updated: 2026-10-28T13:11:59Z
+transitions:
+  - to: ready
+    at: 2026-10-28T13:11:59Z
+    by: alex
 tags: [cli, template]
 topics: [cli, orchestration, template, conventions]
 touches: [design/adrs, design/adrs/README.md, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, template/template.yaml, template/CHANGELOG.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/release.go, flai/cmd/release_evaluate_test.go, flai/cmd/release_push_action_test.go, flai/cmd/orchestrate_permissions_test.go, flai/cmd/formula.go, flai/cmd/formula_test.go, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/check/check.go, flai/internal/check/formulas_test.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/mcpserver/orchestrate.go, flai/internal/mcpserver/orchestrate_test.go]
@@ -40,15 +43,15 @@ usage:
           cache_write: 109701
           cost: 0.123
     - kind: orchestrator
-      seconds: 785
+      seconds: 830
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 192
-          output: 3232
-          cache_read: 62996281
-          cache_write: 40349
-          cost: 13.9187
+          input: 216
+          output: 3634
+          cache_read: 69225276
+          cache_write: 45322
+          cost: 15.2873
 cost_of_delay:
   value: 44.67
   by: planner-S-0423

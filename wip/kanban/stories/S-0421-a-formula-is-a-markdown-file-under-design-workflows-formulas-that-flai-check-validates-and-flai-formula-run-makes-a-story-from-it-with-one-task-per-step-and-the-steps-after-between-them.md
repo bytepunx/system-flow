@@ -3,12 +3,15 @@ id: S-0421
 type: story
 nature: feature
 title: A formula is a markdown file under design/workflows/formulas that flai check validates, and flai formula run makes a story from it with one task per step and the steps' after between them
-status: backlog
+status: ready
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:40Z
-updated: 2026-10-28T13:10:45Z
-transitions: []
+updated: 2026-10-28T13:10:56Z
+transitions:
+  - to: ready
+    at: 2026-10-28T13:10:51Z
+    by: alex
 tags: [cli, template]
 topics: [cli, orchestration, template, conventions]
 touches: [design/adrs, design/adrs/README.md, design/conventions/strategic-agents.md, design/workflows/formulas/README.md, design/workflows/README.md, design/system/repository-layout.md, design/system/strategic-agents.md, design/system/work-hierarchy.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/formula.go, flai/cmd/formula_test.go, flai/cmd/root.go, flai/internal/check/check.go, flai/internal/check/formulas_test.go, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/workitem/fields_test.go, flai/internal/workitem/front-matter-fields.txt, flai/internal/workitem/item.go, template/CHANGELOG.md, template/root/design/conventions/strategic-agents.md, template/root/design/workflows/formulas/README.md, template/root/design/workflows/README.md, template/template.yaml, design/system/flai-cli.md, design/system/project-manifest.md]
@@ -24,25 +27,25 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 214
+      seconds: 370
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 31
-          output: 552
-          cache_read: 8211952
-          cache_write: 12727
-          cost: 1.8161
+          input: 111
+          output: 1979
+          cache_read: 28442382
+          cache_write: 25704
+          cost: 6.2603
 cost_of_delay:
   value: 48.09
   by: planner-S-0421
   at: 2026-10-21T12:39:49Z
 forecast:
   duration: 1h3m
-  delivery: 2026-10-28T19:09:00Z
-  basis: "Its own forecast of 1h3m; 17th in the pull order with an in-progress limit of 5, behind S-0502, S-0526, S-0415, S-0419, S-0418, S-0416, S-0414, S-0420, S-0417, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411 and S-0412."
+  delivery: 2026-10-28T15:25:00Z
+  basis: "Its own forecast of 1h3m; 4th in the pull order with an in-progress limit of 5, behind S-0414, S-0502, S-0521, S-0415, S-0419 and S-0418."
   by: flai
-  at: 2026-10-28T13:05:47Z
+  at: 2026-10-28T13:10:56Z
 finalized:
   by: alex
   at: 2026-10-28T13:10:45Z
