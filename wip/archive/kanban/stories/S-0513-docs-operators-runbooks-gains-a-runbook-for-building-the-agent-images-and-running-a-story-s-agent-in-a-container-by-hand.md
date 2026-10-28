@@ -3,11 +3,11 @@ id: S-0513
 type: story
 nature: improvement
 title: docs/operators/runbooks gains a runbook for building the agent images and running a story's agent in a container by hand
-status: review
+status: done
 parent: E-0029
 owner: alex
 created: 2026-10-28T12:14:47Z
-updated: 2026-10-28T12:30:04Z
+updated: 2026-10-28T12:43:01Z
 transitions:
   - to: ready
     at: 2026-10-28T12:22:45Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-10-28T12:30:04Z
     by: agent-S-0513
+  - to: done
+    at: 2026-10-28T12:43:01Z
+    by: alex
 tags: [docker]
 touches: [docs/operators/runbooks/agent-container.md, docs/operators/runbooks/README.md]
 agent:

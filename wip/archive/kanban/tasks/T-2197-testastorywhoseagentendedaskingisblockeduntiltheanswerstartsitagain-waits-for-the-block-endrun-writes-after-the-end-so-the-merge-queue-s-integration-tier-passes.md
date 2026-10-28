@@ -23,16 +23,16 @@ tags: []
 touches: [flai/internal/serve/agents_test.go, design/issues/I-0220-testastorywhoseagentendedaskingisblockeduntiltheanswerstartsitagain-reads-the-story-s-blocks-once-the-run-reads-as-ended-before-endrun-writes-the-block-so-it-fails-now-and-then.md, design/issues/summary.md]
 usage:
   source: log
-  seconds: 74
+  seconds: 76
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 29
-      cache_read: 208737
-      cache_write: 853
-      cost: 0.1083
+      input: 5
+      output: 735
+      cache_read: 203087
+      cache_write: 6502
+      cost: 0.1074
 ---
 
 # T-2197 TestAStoryWhoseAgentEndedAskingIsBlockedUntilTheAnswerStartsItAgain waits for the block endRun writes after the end, so the merge queue's integration tier passes

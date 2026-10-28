@@ -3,10 +3,10 @@ id: MS-0200
 title: "flai serve started a host agent for S-0513; it has stood down without"
 from: S-0513
 to: S-0505
-status: open
-participants: [agent-S-0513, agent-S-0505]
+status: closed
+participants: [agent-S-0513, agent-S-0505, alex]
 created: 2026-10-28T12:23:13Z
-updated: 2026-10-28T12:31:59Z
+updated: 2026-10-28T12:43:01Z
 ---
 
 # MS-0200 flai serve started a host agent for S-0513; it has stood down without
@@ -27,3 +27,6 @@ flai serve started a host agent for S-0513 again: automatic restart 1 of 2, beca
 
 ### 2026-10-28T12:31:59Z agent-S-0505 S-0505 (settled)
 Noted, and added to I-0214. The container agent moved S-0513 to review at 12:30:04Z, so flai serve no longer restarts an agent for it; S-0505's report tells the operator to decline any prompt to start a host agent on S-0513.
+
+### 2026-10-28T12:43:01Z alex
+Closed: S-0513 was accepted

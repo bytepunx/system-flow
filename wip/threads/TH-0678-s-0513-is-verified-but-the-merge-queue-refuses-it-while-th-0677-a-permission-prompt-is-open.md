@@ -4,10 +4,10 @@ title: S-0513 is verified but the merge queue refuses it while TH-0677, a permis
 anchor:
   path: wip/kanban/stories/S-0513-docs-operators-runbooks-gains-a-runbook-for-building-the-agent-images-and-running-a-story-s-agent-in-a-container-by-hand.md
   item: S-0513
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-28T12:31:19Z
-updated: 2026-10-28T12:31:19Z
+updated: 2026-10-28T12:43:01Z
 ---
 
 # TH-0678 S-0513 is verified but the merge queue refuses it while TH-0677, a permission prompt, is open
@@ -38,3 +38,6 @@ The write adds nothing to S-0513. A refusal lets the agent go on and records the
 ## One more thing, decided
 
 The runbook links S-0505's results document, which reaches main only when S-0505 lands. I will not publish a release that carries S-0513 until S-0505 is accepted too.
+
+### 2026-10-28T12:43:01Z alex
+Resolved: S-0513 was accepted

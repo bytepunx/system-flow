@@ -26,7 +26,7 @@ usage:
   source: log
   seconds: 189
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 35
