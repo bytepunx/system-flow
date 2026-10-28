@@ -2,12 +2,12 @@
 id: I-0207
 title: The curator has never run on system-flow, so no thread is in any entry's asked_again and the digest's repeat measure reads 0 whatever was asked
 class: blocker
-status: open
+status: closed
 count: 1
 cost: 20m
 first_reported: 2026-10-24T23:48:27Z
 last_reported: 2026-10-24T23:48:27Z
-updated: 2026-10-26T04:01:51Z
+updated: 2026-10-28T12:14:54Z
 ---
 
 # I-0207 The curator has never run on system-flow, so no thread is in any entry's asked_again and the digest's repeat measure reads 0 whatever was asked
@@ -24,3 +24,7 @@ S-0435 measured the digest's effect on 2026-10-24. flai stats reports asked_agai
 ## Remediation
 
 Story S-0504 remediates this issue, created from it at 2026-10-26T04:01:51Z.
+Closed 2026-10-28T12:14:54Z: S-0504 fixes both halves of the cause.
+
+1. **Measure (ADR-0204).** `flai stats` reads the curator's activity document and reports `digest.curator` (`runs`, `last_run`) and `digest.weeks[].curator_runs`. `asked_again` is left out of any week no curator run has reached, so a project whose curator never ran no longer reads 0 repeats as a measurement. The Digest chart leaves those weeks a gap and notes when the curator has never run. The analyzer reads `digest.curator` before `asked_again`. `TestDigestLeavesAskedAgainOutWithoutACuratorRunOfI0207` reproduces the bug. On this repository, the branch's `flai stats` reads W40 to W44 as `asked again –` and `curator  runs 0 · never run`.
+2. **Operation.** The operator turned `curate` on for system-flow (TH-0649). Its first run, started by the acceptances of S-0498 and S-0501, failed on Claude Code's usage limit and logged nothing; I-0212 records that. The operator chose on TH-0649 to let the next acceptance start the first run.
