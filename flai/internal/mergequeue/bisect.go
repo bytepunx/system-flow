@@ -267,7 +267,7 @@ func SendBack(d Deps, repo *workitem.Repo) (bool, error) {
 		return false, nil
 	}
 	bs := batch.Bisect
-	story, now := bs.Failing, d.Now().UTC()
+	story := bs.Failing
 	head, _ := batch.HeadOf(story)
 	var failed Result
 	if bs.Result != nil {
@@ -279,6 +279,9 @@ func SendBack(d Deps, repo *workitem.Repo) (bool, error) {
 	if err != nil && !errors.Is(err, workitem.ErrNotFound) {
 		return false, fmt.Errorf("send %s back to in-progress, as merge queue batch %s fails with it: read it: %w; fix the story's file, and flai serve sends it back at its next look", story, batch.ID, err)
 	}
+	// read after the story, so that its move is not stamped before one it
+	// was read with (I-0183)
+	now := d.Now().UTC()
 	moved := err == nil && it.Type == workitem.Story && it.Status == workitem.Review
 	detail := fmt.Sprintf("sent back to in-progress: merge queue batch %s fails with it at %s", batch.ID, tier)
 	if moved {

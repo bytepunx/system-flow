@@ -16,9 +16,10 @@ import (
 // the files they wrote (S-0275).
 
 // Widen adds to item id's touches the paths among paths they do not cover,
-// stamped by by at now with the edit notice flai touches leaves, and returns
-// the paths added, none when they cover every path.
-func Widen(repo *workitem.Repo, id string, paths []string, by string, now time.Time) ([]string, error) {
+// stamped by by at now, read once the item is (I-0183), with the edit notice
+// flai touches leaves, and returns the paths added, none when they cover
+// every path.
+func Widen(repo *workitem.Repo, id string, paths []string, by string, now func() time.Time) ([]string, error) {
 	it, err := repo.Get(id)
 	if err != nil {
 		return nil, fmt.Errorf("read %s to widen its touches: %w", id, err)
@@ -38,7 +39,7 @@ func Widen(repo *workitem.Repo, id string, paths []string, by string, now time.T
 		return []string{}, nil
 	}
 	it.Touches = append(slices.Clone(it.Touches), add...)
-	it.Updated = now.UTC().Format(workitem.TimeFormat)
+	it.Updated = now().UTC().Format(workitem.TimeFormat)
 	if err := repo.Save(it); err != nil {
 		return nil, fmt.Errorf("save %s's widened touches: %w", id, err)
 	}
@@ -94,13 +95,13 @@ func WidenStory(o WidenOptions) (Widened, error) {
 	}
 	watch := WatchClaim(o.Repo, o.Story)
 	if o.Task != "" {
-		added, err := Widen(o.Repo, o.Task, paths, o.By, o.Now())
+		added, err := Widen(o.Repo, o.Task, paths, o.By, o.Now)
 		if err != nil {
 			return w, err
 		}
 		w.Task = added
 	}
-	added, err := Widen(o.Repo, o.Story, paths, o.By, o.Now())
+	added, err := Widen(o.Repo, o.Story, paths, o.By, o.Now)
 	if err != nil {
 		return w, err
 	}

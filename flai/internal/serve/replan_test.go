@@ -420,6 +420,47 @@ func TestAStoryAcceptedReplansTheForecastsBehindIt(t *testing.T) {
 	}
 }
 
+// S-0522, I-0183: a story moved after the replanner's look began, and read
+// moved by it, gets a forecast stamped no earlier than its move: each
+// forecast is stamped from the clock read at its write, not at the look's
+// start.
+func TestAStoryMovedAfterTheLookBeganIsForecastNoEarlierThanItsMove(t *testing.T) {
+	lab := newReplanLab(t, "")
+	ctx := context.Background()
+	lab.limit(1)
+	ahead, later := lab.ready("Ahead"), lab.backlog("Later", nil)
+	stale := "2026-01-01T00:00:00Z"
+	lab.forecast(ahead, "8h", stale)
+	lab.forecast(later, "1h", stale)
+	lab.accept(ahead)
+	lab.clock = lab.clock.Add(time.Minute)
+	began := false
+	lab.r.o.Now = func() time.Time {
+		if began {
+			return lab.clock
+		}
+		// the look's first reading; the story moves a minute later, before
+		// the look reads the project
+		began = true
+		start := lab.clock
+		lab.clock = lab.clock.Add(time.Minute)
+		if _, err := lab.repo.Transition(lab.item(later), workitem.Ready, "alex", "", lab.clock); err != nil {
+			t.Errorf("move %s to ready: %v", later, err)
+		}
+		return start
+	}
+	lab.r.look(ctx)
+	it := lab.item(later)
+	move := it.Transitions[len(it.Transitions)-1]
+	f := it.Forecast
+	if it.Status != workitem.Ready || move.To != workitem.Ready || f.By != "flai" || f.Delivery == stale {
+		t.Fatalf("%s is %s, moved %+v, forecast %+v; want it moved to ready and replanned by flai", later, it.Status, move, f)
+	}
+	if f.At < move.At {
+		t.Errorf("%s's forecast is stamped %s, before its move to ready at %s", later, f.At, move.At)
+	}
+}
+
 // S-0211: a change of the pull order moves the forecasts it changes, in a
 // commit that says so.
 func TestAReorderingReplansTheForecasts(t *testing.T) {

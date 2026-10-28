@@ -1,7 +1,10 @@
 package itemedit
 
 import (
+	"os"
+	"path/filepath"
 	"reflect"
+	"slices"
 	"testing"
 	"time"
 
@@ -17,7 +20,7 @@ func TestWidenAddsWhatTheTouchesDoNotCover(t *testing.T) {
 	s := story("Mine", workitem.InProgress, "design", "README.md", "cli")
 	later := at.Add(time.Hour)
 
-	added, err := Widen(repo, s.ID, []string{"design/issues/I-0001.md", "README.md", "flai/cmd/x.go", "docs/a.md"}, "claude", later)
+	added, err := Widen(repo, s.ID, []string{"design/issues/I-0001.md", "README.md", "flai/cmd/x.go", "docs/a.md"}, "claude", func() time.Time { return later })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,15 +42,65 @@ func TestWidenAddsWhatTheTouchesDoNotCover(t *testing.T) {
 		t.Errorf("notices %+v", notices)
 	}
 
-	added, err = Widen(repo, s.ID, []string{"docs/a.md", "design/x.md"}, "claude", later.Add(time.Hour))
+	added, err = Widen(repo, s.ID, []string{"docs/a.md", "design/x.md"}, "claude", func() time.Time { return later.Add(time.Hour) })
 	if err != nil || added == nil || len(added) != 0 {
 		t.Fatalf("nothing to add: %v %v", added, err)
 	}
 	if got, _ := repo.Get(s.ID); got.Updated != later.Format(workitem.TimeFormat) || len(Notices(repo)) != 1 {
 		t.Errorf("an edit with nothing to add was written: updated %s, %d notices", got.Updated, len(Notices(repo)))
 	}
-	if _, err := Widen(repo, "S-0099", []string{"a.md"}, "claude", later); err == nil {
+	if _, err := Widen(repo, "S-0099", []string{"a.md"}, "claude", func() time.Time { return later }); err == nil {
 		t.Error("no item to widen is not an error")
+	}
+}
+
+// S-0522, I-0183: WidenStory reads the clock it stamps the task and the
+// story with after it reads each, so that a move made before the read is not
+// stamped over by an earlier time. The clock here takes away the file of the
+// item it is read for, so a widening that read the clock before the item
+// finds nothing to widen; each stamp is the reading taken for its item.
+func TestWidenStoryReadsEachItemBeforeItsClock(t *testing.T) {
+	at := time.Date(2026, 10, 7, 9, 0, 0, 0, time.UTC)
+	repo, story := claimRepo(t, at)
+	mine := story("Mine", workitem.InProgress, "design")
+	task, err := repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "Work", Parent: mine.ID, Owner: "alex", Touches: []string{"docs/a.md"}, Now: at})
+	if err != nil {
+		t.Fatal(err)
+	}
+	stamped := []*workitem.Item{task, mine} // in the order WidenStory widens them
+	aside := t.TempDir()
+	readings := 0
+	clock := func() time.Time {
+		if readings < len(stamped) {
+			p := stamped[readings].Path
+			if err := os.Rename(p, filepath.Join(aside, filepath.Base(p))); err != nil {
+				t.Fatal(err)
+			}
+		}
+		readings++
+		return at.Add(time.Duration(readings) * time.Minute)
+	}
+
+	w, err := WidenStory(WidenOptions{Repo: repo, Story: mine.ID, Task: task.ID, By: "claude", Now: clock, Paths: []string{"flai/cmd/x.go"}})
+	if err != nil {
+		t.Fatalf("a widening read its clock before the item it stamps: %v", err)
+	}
+	if !reflect.DeepEqual(w.Task, []string{"flai/cmd/x.go"}) || !reflect.DeepEqual(w.Story, []string{"flai/cmd/x.go"}) {
+		t.Errorf("added %+v, want flai/cmd/x.go to the task and the story", w)
+	}
+	notices := Notices(repo)
+	for i, it := range stamped {
+		got, err := repo.Get(it.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := at.Add(time.Duration(i+1) * time.Minute).Format(workitem.TimeFormat)
+		if got.Updated != want || !slices.Contains(got.Touches, "flai/cmd/x.go") {
+			t.Errorf("%s updated %s, touches %v; want stamped %s with flai/cmd/x.go", it.ID, got.Updated, got.Touches, want)
+		}
+		if len(notices) != len(stamped) || notices[i].ID != it.ID || notices[i].At != want {
+			t.Errorf("notices %+v; want %s's at %s", notices, it.ID, want)
+		}
 	}
 }
 

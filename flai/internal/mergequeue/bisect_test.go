@@ -473,6 +473,79 @@ func TestTheFailingStoryIsSentBackOnceWithAThread(t *testing.T) {
 	}
 }
 
+// S-0522, I-0183: a failing story moved by hand after the send-back began,
+// back to in-progress and to review again, is never sent back stamped before
+// those moves: the send-back reads its clock after it reads the story, so a
+// move that lands before the read comes before its stamp, and one that lands
+// after the read is refused as another writer's change, for the next look to
+// send it back.
+func TestASendBackIsNeverStampedBeforeAMoveItRead(t *testing.T) {
+	repo, _, failing := bisected(t)
+	clock := t2
+	began := false
+	d := Deps{Runner: scriptedGit{}, Now: func() time.Time {
+		if began {
+			return clock
+		}
+		// the send-back's first reading; its agent reworks the story and
+		// sends it to review again in the minutes after
+		began = true
+		it, err := repo.Get(failing)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, to := range []string{workitem.InProgress, workitem.Review} {
+			clock = clock.Add(time.Minute)
+			if _, err := repo.Transition(it, to, "alex", "rework", clock); err != nil {
+				t.Fatalf("move %s to %s: %v", failing, to, err)
+			}
+		}
+		clock = clock.Add(time.Minute)
+		return t2
+	}}
+
+	sent, err := SendBack(d, repo)
+	var conflict *workitem.ConflictError
+	if err != nil && !errors.As(err, &conflict) {
+		t.Fatalf("sent %v, %v; want it sent back or refused as another writer's change", sent, err)
+	}
+	inOrder(t, repo, failing)
+	if !sent {
+		// flai serve's next look
+		if sent, err = SendBack(d, repo); !sent || err != nil {
+			t.Fatalf("sent again %v, %v; want %s sent back", sent, err, failing)
+		}
+		inOrder(t, repo, failing)
+	}
+	it, err := repo.Get(failing)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if last := it.Transitions[len(it.Transitions)-1]; it.Status != workitem.InProgress || last.By != sendBackBy {
+		t.Errorf("%s is %s, last moved %+v; want it sent back to in-progress", failing, it.Status, last)
+	}
+}
+
+// inOrder fails t unless story's transitions are each at or after the one
+// before, and its updated at or after the last.
+func inOrder(t *testing.T, repo *workitem.Repo, story string) {
+	t.Helper()
+	it, err := repo.Get(story)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prev := it.Created
+	for _, tr := range it.Transitions {
+		if tr.At < prev {
+			t.Errorf("%s moved to %s by %s at %s, before %s", story, tr.To, tr.By, tr.At, prev)
+		}
+		prev = tr.At
+	}
+	if it.Updated < prev {
+		t.Errorf("%s updated %s, before its last move at %s", story, it.Updated, prev)
+	}
+}
+
 // I-0172: a batch that fails a plain tier, whose output begins with a
 // heading and names its failure further down, sends its failing story back
 // with a thread that quotes the tier's findings in full, as flai verify

@@ -186,10 +186,10 @@ func (r *replanner) schedule(plan manifest.Planning, now time.Time) *cron.Schedu
 }
 
 // replan plays the board out again after triggers as planning.replan says:
-// it writes the forecast deliveries that moved, commits them in one commit
-// unless autocommit is off, and under agent queues the planner for each
-// story it wrote. A policy that is not valid is warned of once, and nothing
-// is done.
+// it writes the forecast deliveries that moved as at now, each stamped at its
+// write (I-0183), commits them in one commit unless autocommit is off, and
+// under agent queues the planner for each story it wrote. A policy that is
+// not valid is warned of once, and nothing is done.
 func (r *replanner) replan(repo *workitem.Repo, items []*workitem.Item, board *workitem.Board, now time.Time, triggers []string) {
 	policy, err := repo.Manifest.Planning.ReplanPolicy()
 	if err != nil {
@@ -207,7 +207,7 @@ func (r *replanner) replan(repo *workitem.Repo, items []*workitem.Item, board *w
 	for _, m := range moves {
 		delivery, basis := m.delivery, m.basis
 		res, err := itemedit.Apply(repo, gitOf(r.o), m.id, itemedit.Change{Forecast: &itemedit.ForecastEdit{Delivery: &delivery, Basis: &basis}},
-			itemedit.Options{By: "flai", NoCommit: true, Now: now})
+			itemedit.Options{By: "flai", NoCommit: true, Now: r.o.Now().UTC()})
 		if err != nil {
 			r.starter.warn("forecast not replanned", "item", m.id, "err", err)
 			continue
