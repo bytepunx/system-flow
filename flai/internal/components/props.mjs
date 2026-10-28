@@ -406,20 +406,22 @@ function isJSON(p) {
 // cachedSkeletons are the typed components' resolved skeletons, from the
 // cache when its key and every stamp it holds are as they are now, otherwise
 // resolved and written to the cache. The key is this script, the sub-project,
-// the typescript it resolves, and each typed component's typing and json
-// props; the stamps are those of the paths typescript looked at.
+// the typescript it resolves, whether the sub-project is SvelteKit, which
+// its package.json says outside the stamps, and each typed component's typing
+// and json props; the stamps are those of the paths typescript looked at.
 function cachedSkeletons(typed) {
 	const tsPath = resolveTypescript();
+	const kit = isSvelteKit();
 	const key = crypto
 		.createHash('sha256')
-		.update(JSON.stringify([scriptHash, process.cwd(), tsPath, typed.map((r) => [r.entry.path, r.typing, r.entry.props.filter(isJSON).map((p) => p.name)])]))
+		.update(JSON.stringify([scriptHash, process.cwd(), tsPath, kit, typed.map((r) => [r.entry.path, r.typing, r.entry.props.filter(isJSON).map((p) => p.name)])]))
 		.digest('hex');
 	const hit = readCache(key);
 	if (hit) return hit;
 	const ts = tsPath ? loadTypescript() : null;
 	if (!ts) return {};
 	const watched = watch(ts);
-	const resolved = typedSkeletons(ts, typed);
+	const resolved = typedSkeletons(ts, typed, kit);
 	writeCache(key, { stamps: [[['file', tsPath], stamp('file', tsPath)], ...watched()], skeletons: resolved });
 	return resolved;
 }
@@ -446,8 +448,8 @@ function loadTypescript() {
 }
 
 // readCache is the skeletons the cache holds for key, or null when it holds
-// none, or a stamp has changed. A file it answers from is touched, so that
-// writeCache keeps the files in use.
+// none, a stamp is not [[kind, path], stamp], or a stamp has changed. A file
+// it answers from is touched, so that writeCache keeps the files in use.
 function readCache(key) {
 	if (!cacheDir) return null;
 	const file = path.join(cacheDir, key + '.json');
@@ -458,8 +460,13 @@ function readCache(key) {
 		return null;
 	}
 	if (!cache || !Array.isArray(cache.stamps) || typeof cache.skeletons !== 'object') return null;
-	for (const [[kind, p], was] of cache.stamps) {
-		if (stamp(kind, p) !== was) return null;
+	try {
+		for (const entry of cache.stamps) {
+			if (!isStamp(entry) || stamp(entry[0][0], entry[0][1]) !== entry[1]) return null;
+		}
+	} catch {
+		// A path stat refuses, such as one holding a NUL, is a miss too.
+		return null;
 	}
 	try {
 		const now = new Date();
@@ -468,6 +475,20 @@ function readCache(key) {
 		// Untouched, it is only the first to go when the folder is full.
 	}
 	return cache.skeletons;
+}
+
+// isStamp is whether entry is as watch lists a stamp: [[kind, path], stamp],
+// each a string.
+function isStamp(entry) {
+	return (
+		Array.isArray(entry) &&
+		entry.length === 2 &&
+		Array.isArray(entry[0]) &&
+		entry[0].length === 2 &&
+		typeof entry[0][0] === 'string' &&
+		typeof entry[0][1] === 'string' &&
+		typeof entry[1] === 'string'
+	);
 }
 
 // writeCache writes cache as its key's file, through a file of this
@@ -550,12 +571,13 @@ function stamp(kind, p) {
 
 // typedSkeletons builds one program over the typed components, each as a
 // module beside its file, and gives, by each one's path, its json props'
-// skeletons by name, leaving out a prop whose type cannot be resolved.
-function typedSkeletons(ts, typed) {
+// skeletons by name, leaving out a prop whose type cannot be resolved. kit is
+// whether the sub-project is SvelteKit.
+function typedSkeletons(ts, typed, kit) {
 	const cwd = process.cwd();
 	const name = (r) => posix(path.resolve(cwd, r.entry.path)) + '.__flai.ts';
 	const modules = new Map(typed.map((r) => [name(r), r.typing]));
-	const options = compilerOptions(ts, cwd);
+	const options = compilerOptions(ts, cwd, kit);
 	const program = ts.createProgram([...modules.keys()], options, compilerHost(ts, options, modules));
 	const checker = program.getTypeChecker();
 	const out = {};
@@ -585,23 +607,25 @@ function posix(p) {
 }
 
 // compilerOptions are the sub-project's tsconfig.json's, when it has one,
-// for emitting nothing. A SvelteKit sub-project whose options do not map
-// $lib, as when .svelte-kit/tsconfig.json, which it extends, is not generated
-// yet, maps it to src/lib, as SvelteKit does.
-function compilerOptions(ts, cwd) {
+// for emitting nothing. A SvelteKit sub-project, as kit says, whose options
+// do not map $lib, as when .svelte-kit/tsconfig.json, which it extends, is not
+// generated yet, maps it to src/lib, as SvelteKit does.
+function compilerOptions(ts, cwd, kit) {
 	let options = {};
 	const config = path.join(cwd, 'tsconfig.json');
 	if (ts.sys.fileExists(config)) {
 		const read = ts.readConfigFile(config, ts.sys.readFile);
 		if (!read.error) options = ts.parseJsonConfigFileContent(read.config, ts.sys, cwd, undefined, config).options;
 	}
-	if (!(options.paths && options.paths.$lib) && isSvelteKit()) {
+	if (!(options.paths && options.paths.$lib) && kit) {
 		const lib = posix(path.join(cwd, 'src', 'lib'));
 		options.paths = { ...options.paths, $lib: [lib], '$lib/*': [lib + '/*'] };
 	}
 	return { ...options, noEmit: true, skipLibCheck: true };
 }
 
+// isSvelteKit is whether the sub-project's package.json depends on
+// @sveltejs/kit.
 function isSvelteKit() {
 	try {
 		const pkg = require('./package.json');

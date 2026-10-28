@@ -534,6 +534,93 @@ func TestListResolvesAModuleMadeAfterTheCacheMissedIt(t *testing.T) {
 	}
 }
 
+// I-0198: whether the sub-project is SvelteKit, read from its package.json
+// outside the stamps, decides whether $lib is mapped, but was not in the key.
+func TestListMapsLibOnceSvelteKitIsAddedToACachedSubProject(t *testing.T) {
+	root := fixture(t, "typed", "svelte", "typescript")
+	web := filepath.Join(root, "web")
+	// The two package.json differ in one dependency's name alone, of the
+	// same length, so that a stamp of the file would not tell them apart.
+	pkg := func(dep string) string {
+		return `{"name": "kit", "private": true, "type": "module", "devDependencies": {"` + dep + `": "^2.0.0"}}`
+	}
+	files := map[string]string{
+		"tsconfig.json": `{"extends": "./.svelte-kit/tsconfig.json", "compilerOptions": {"strict": true}}`,
+		"package.json":  pkg("@sveltejs/pkg"),
+	}
+	for name, body := range files {
+		if err := os.WriteFile(filepath.Join(web, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, err := List(context.Background(), System{}, root, "web", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sk := skeletons(t, got, "src/lib/Imported.svelte")["story"]; sk != "null" {
+		t.Fatalf("story: skeleton %s, want null while nothing maps $lib", sk)
+	}
+	manifest := filepath.Join(web, "package.json")
+	was, err := os.Stat(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(manifest, []byte(pkg("@sveltejs/kit")), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chtimes(manifest, was.ModTime(), was.ModTime()); err != nil {
+		t.Fatal(err)
+	}
+	if got, err = List(context.Background(), System{}, root, "web", nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	if sk := skeletons(t, got, "src/lib/Imported.svelte")["story"]; !sameJSON(t, json.RawMessage(sk), storySkeleton) {
+		t.Errorf("story: skeleton %s once @sveltejs/kit is a dependency, want %s", sk, storySkeleton)
+	}
+}
+
+// I-0198: a cache file that is JSON but whose stamps are not
+// [[kind, path], stamp] failed the run.
+func TestListTakesACacheFileWithMalformedStampsAsAMiss(t *testing.T) {
+	root := fixture(t, "typed", "svelte", "typescript")
+	if _, err := List(context.Background(), System{}, root, "web", nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	files := cacheFiles(t, root)
+	if len(files) != 1 {
+		t.Fatalf("cache files %v after one run, want one", files)
+	}
+	// A skeleton no type gives shows whether the next run answers from the cache.
+	editCache(t, files[0], "src/lib/Imported.svelte", "story", `"from the cache"`)
+	data, err := os.ReadFile(files[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cache map[string]json.RawMessage
+	if err := json.Unmarshal(data, &cache); err != nil {
+		t.Fatal(err)
+	}
+	for _, stamps := range []string{`[1, [], [[null]]]`, `{"0": 1}`} {
+		t.Run(stamps, func(t *testing.T) {
+			cache["stamps"] = json.RawMessage(stamps)
+			out, err := json.Marshal(cache)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(files[0], out, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			got, err := List(context.Background(), System{}, root, "web", nil, nil)
+			if err != nil {
+				t.Fatalf("err %v on a cache file with stamps %s, want a miss", err, stamps)
+			}
+			if sk := skeletons(t, got, "src/lib/Imported.svelte")["story"]; !sameJSON(t, json.RawMessage(sk), storySkeleton) {
+				t.Errorf("story: skeleton %s, want %s resolved again", sk, storySkeleton)
+			}
+		})
+	}
+}
+
 func TestListKeepsACacheForEachSetOfComponents(t *testing.T) {
 	root := fixture(t, "typed", "svelte", "typescript")
 	all, err := Find(root, "web", nil, nil)
