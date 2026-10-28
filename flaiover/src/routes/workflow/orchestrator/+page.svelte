@@ -74,24 +74,8 @@
 
 <svelte:head><title>Orchestrator · flaiover</title></svelte:head>
 
-<h1 class="mb-1 text-2xl font-semibold">Orchestrator</h1>
-<p class="mb-4 text-sm text-muted">
-	Read from <code>wip/agents/orchestrator.md</code> and from what flai serve knows of the orchestrator's
-	runs.
-</p>
-<!-- a reload that fails says so above what was last shown rather than in its place (S-0178) -->
-{#if error}
-	<p class="mb-4 rounded border border-danger bg-danger-soft p-3 text-sm text-danger" role="alert">
-		{error}
-	</p>
-{/if}
-{#if view === null}
-	{#if !error}<p class="text-sm text-muted">Loading…</p>{/if}
-{:else}
-	<OrchestratorPanel {view} onchanged={() => void load()} />
-{/if}
-
-<div class="mt-8 border-t border-line pt-4">
+<!-- its settings come first, under the host action, so they are reached without scrolling (S-0533) -->
+{#snippet settings()}
 	{#if settingsError}
 		<p
 			class="mb-4 rounded border border-danger bg-danger-soft p-3 text-sm text-danger"
@@ -108,4 +92,21 @@
 			may be older than this dashboard.
 		</p>
 	{/if}
-</div>
+{/snippet}
+
+<h1 class="mb-1 text-2xl font-semibold">Orchestrator</h1>
+<p class="mb-4 text-sm text-muted">
+	Read from <code>wip/agents/orchestrator.md</code> and from what flai serve knows of the orchestrator's
+	runs.
+</p>
+<!-- a reload that fails says so above what was last shown rather than in its place (S-0178) -->
+{#if error}
+	<p class="mb-4 rounded border border-danger bg-danger-soft p-3 text-sm text-danger" role="alert">
+		{error}
+	</p>
+{/if}
+{#if view === null}
+	{#if !error}<p class="text-sm text-muted">Loading…</p>{:else}{@render settings()}{/if}
+{:else}
+	<OrchestratorPanel {view} onchanged={() => void load()} {settings} />
+{/if}

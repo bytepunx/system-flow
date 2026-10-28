@@ -211,7 +211,9 @@ describe('the orchestrator page (S-0228)', () => {
 		await settle();
 	};
 
-	it('loads the orchestrator and shows it above its settings', async () => {
+	// S-0533: the settings come first, under the action's state and Stop and Start, and the run, the
+	// last decisions, the activity log, and the runs follow.
+	it('loads the orchestrator and shows its settings first, under the action', async () => {
 		backend(view({ held: true }));
 		await show();
 		expect(api).toHaveBeenCalledWith('/api/orchestrator');
@@ -220,10 +222,31 @@ describe('the orchestrator page (S-0228)', () => {
 		expect(document.body.textContent).not.toContain('will be shown here');
 		expect(q('orchestrator-action-held')).not.toBeNull();
 		expect(q('orchestrator-current-none')).not.toBeNull();
-		const settings = q('strategic-orchestration')!;
-		expect(
-			q('orchestrator-runs')!.compareDocumentPosition(settings) & Node.DOCUMENT_POSITION_FOLLOWING
-		).toBeTruthy();
+		expect(q('orchestrator-settings')!.contains(q('strategic-orchestration'))).toBe(true);
+		const order = [
+			'orchestrator-action',
+			'orchestrator-settings',
+			'orchestrator-current',
+			'orchestrator-decisions',
+			'orchestrator-activity',
+			'orchestrator-runs'
+		].map((id) => q(id)!);
+		for (let i = 1; i < order.length; i++)
+			expect(
+				order[i - 1].compareDocumentPosition(order[i]) & Node.DOCUMENT_POSITION_FOLLOWING
+			).toBeTruthy();
+	});
+
+	it('shows its settings under the error when the orchestrator cannot be read', async () => {
+		api.mockImplementation(async (url: string) =>
+			url === '/api/orchestrator'
+				? answer(502, { error: 'flai is away' })
+				: answer(200, settingsGet(true))
+		);
+		await show();
+		expect(document.querySelector('[role="alert"]')!.textContent).toContain('flai is away');
+		expect(q('orchestrator-action')).toBeNull();
+		expect(q('strategic-orchestration')).not.toBeNull();
 	});
 
 	it("loads again when the orchestrator's document changes, and not for another narrative", async () => {
@@ -380,7 +403,8 @@ describe('the orchestrator page (S-0228)', () => {
 		delete old.host!.strategic;
 		backend(view(), old);
 		await show();
-		expect(q('strategic-absent')).not.toBeNull();
+		// where the panel is, under the action (S-0533)
+		expect(q('orchestrator-settings')!.contains(q('strategic-absent'))).toBe(true);
 		expect(q('strategic-orchestration')).toBeNull();
 
 		unmount(c!);
