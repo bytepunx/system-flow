@@ -6,8 +6,8 @@ sources: [I-0128]
 topics: [testing, flai, cli, go, code, all]
 paths: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/verify/importers.go, flai/internal/verify/importers_test.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/verify/verify.go, system-flow.yaml, design/system/project-manifest.md, design/system/flai-cli.md, docs/operators/settings.md, docs/users/flai.md, design/issues/I-0128-flai-test-vets-and-tests-only-the-changed-go-packages-so-a-change-that-breaks-a-package-importing-them-is-found-only-by-the-integration-tier.md, design/issues/summary.md]
 date: 2026-10-12
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/project-manifest.md#project-manifest"
 asked_again: []
 cited: []
 ---

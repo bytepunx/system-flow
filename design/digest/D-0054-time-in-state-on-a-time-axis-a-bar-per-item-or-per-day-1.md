@@ -6,8 +6,8 @@ sources: [TH-0039]
 topics: [client-side-charts, front-end, flaiover, dashboard, sveltekit, code, all]
 paths: [flaiover/src, design/adrs/0056-time-in-state-is-one-stacked-bar-per-day-of-the-window-the-mean-hours-per-state.md, design/adrs/README.md, design/system/flaiover-dashboard.md, design/system/metrics.md, docs/users/flaiover.md]
 date: 2026-09-30
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0056-time-in-state-is-one-stacked-bar-per-day-of-the-window-the-mean-hours-per-state.md#decision"
 asked_again: []
 cited: []
 ---

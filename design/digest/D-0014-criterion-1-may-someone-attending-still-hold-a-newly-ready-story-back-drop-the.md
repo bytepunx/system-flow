@@ -6,8 +6,8 @@ sources: [TH-0010]
 topics: [flai, cli, go, flaiover, dashboard, sveltekit, code, all]
 paths: [flaiover/src, flai/cmd, flai/internal/serve, flai/internal/hostapi, flai/internal/harness, flai/internal/config, flai/internal/manifest, flai/internal/itemedit, design/adrs, design/system, design/issues, docs/operators, docs/users]
 date: 2026-09-24
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0043-flai-serve-starts-a-ready-story-s-agent-whenever-the-in-progress-limit-has-room.md#decision"
 asked_again: []
 cited: []
 ---

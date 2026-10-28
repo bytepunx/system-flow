@@ -6,8 +6,8 @@ sources: [I-0051]
 topics: [flai, cli, go, flaiover, dashboard, sveltekit, code, all]
 paths: [flai/internal/workitem, flai/internal/threads, flai/internal/issues, flai/internal/manifest, flai/internal/serve, flai/internal/mcpserver, flai/internal/check, flai/internal/hostapi, flai/internal/release, flai/internal/buildinfo, flai/cmd, flaiover/src, design/system/flai-cli.md, design/system/work-hierarchy.md, design/system/project-manifest.md, design/issues, docs/operators, docs/users/flai.md, system-flow.yaml]
 date: 2026-10-01
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/work-hierarchy.md#fields-an-older-flai-does-not-know"
 asked_again: []
 cited: []
 ---

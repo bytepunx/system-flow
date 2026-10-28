@@ -6,8 +6,8 @@ sources: [TH-0072]
 topics: [flai, cli, go, template, conventions, code, all]
 paths: [flai/internal/storygit, flai/cmd/stream.go, flai/cmd/branch.go, flai/cmd/stream_sync_test.go, flai/internal/harness, scripts/close-out.sh, template, design/conventions/git.md, design/conventions/work-management.md, design/conventions/delegation.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, docs/users/flai-reference.md]
 date: 2026-10-03
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/workflow.md#branches-and-collisions-adr-0019"
 asked_again: []
 cited: []
 ---

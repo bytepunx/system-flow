@@ -6,8 +6,8 @@ sources: [TH-0081]
 topics: [orchestration, planning, analysis, flai, cli, go, template, conventions, code, all]
 paths: [design/conventions, template/root/design/conventions, flai/internal/conventions, flai/internal/context, flai/cmd/prime.go, flai/internal/mcpserver, docs/operators/settings.md, docs/users/flai-reference.md, template/CHANGELOG.md, template/template.yaml, design/system/conventions.md, design/system/agent-context.md, design/system/flai-cli.md, design/system/metrics.md, design/adrs, docs/users/flai.md, docs/users/conventions.md, design/issues]
 date: 2026-10-03
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0075-the-planner-the-orchestrator-and-the-analyzer-prime-by-role-plan-orchestrate-or.md#decision"
 asked_again: []
 cited: []
 ---

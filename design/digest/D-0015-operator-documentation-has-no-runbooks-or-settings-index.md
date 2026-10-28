@@ -6,8 +6,8 @@ sources: [I-0005]
 topics: [flai, cli, go, code, all]
 paths: [docs/operators, flai/cmd, scripts, Makefile, design/system, design/conventions, design/issues]
 date: 2026-09-24
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/conventions/documentation.md#project-additions"
 asked_again: []
 cited: []
 ---

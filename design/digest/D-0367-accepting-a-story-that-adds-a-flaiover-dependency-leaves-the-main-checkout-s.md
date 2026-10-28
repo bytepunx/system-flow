@@ -6,8 +6,8 @@ sources: [I-0179]
 topics: [release, testing, flai, cli, go, code, all]
 paths: [design/adrs/README.md, design/system/project-manifest.md, design/system/flai-cli.md, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, system-flow.yaml, docs/operators/settings.md, flai/cmd/accept.go, flai/cmd/accept_install.go, flai/cmd/accept_install_test.go, docs/users/flai.md, design/system/devex.md, design/issues/I-0179-accepting-a-story-that-adds-a-flaiover-dependency-leaves-the-main-checkout-s-flaiover-node-modules-without-it-so-every-close-out-s-integration-tier-fails-testeverylistedflaiovercomponentcompilesintheharness-until-someone-installs.md, design/issues/summary.md, design/adrs/0185-flai-accept-runs-a-sub-project-s-install-command-in-the-main-checkout-when-the.md, flai/internal/check/check.go, flai/internal/check/install_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/shared.go]
 date: 2026-10-21
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0185-flai-accept-runs-a-sub-project-s-install-command-in-the-main-checkout-when-the.md#decision"
 asked_again: []
 cited: []
 ---

@@ -6,8 +6,8 @@ sources: [TH-0516]
 topics: [orchestration, cli, analysis, flai, go, flaiover, dashboard, sveltekit, code, all]
 paths: [design/adrs, design/system/workflow.md, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test.go, flai/cmd/queue.go, flai/cmd/queue_test.go, flai/cmd/root.go, flai/cmd/board.go, flai/cmd/board_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/reads_test.go, flaiover/src/routes/board/+page.svelte, flaiover/src/lib/components/BoardCard.svelte, flaiover/src/lib/components/BoardCard.svelte.test.ts, flaiover/src/lib/components/MergeQueue.svelte, flaiover/src/lib/components/MergeQueue.svelte.test.ts, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md, flai/internal/mcpserver/folder.go, design/components/flaiover/src/lib/components/BoardCard.examples.json, design/components/flaiover/src/lib/components/MergeQueue.examples.json, flaiover/src/lib/server/board.ts, design/issues/I-0167-task-done-and-story-start-answers-exceed-claude-code-s-tool-output-limit-because-the-inbox-they-carry-lists-every-thread-awaiting-the-operator.md, design/issues/summary.md]
 date: 2026-10-19
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0173-a-merge-queue-in-flai-serve-with-no-model-runs-behind-the-merge-queue-host.md#decision"
 asked_again: []
 cited: []
 ---

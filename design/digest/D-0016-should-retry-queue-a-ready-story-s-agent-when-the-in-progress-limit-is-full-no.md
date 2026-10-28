@@ -6,8 +6,8 @@ sources: [TH-0011]
 topics: [flai, cli, go, flaiover, dashboard, sveltekit, code, all]
 paths: [flaiover/src, flai/cmd]
 date: 2026-09-26
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0044-a-retry-of-a-failed-agent-on-a-ready-story-with-the-in-progress-limit-full-is.md#decision"
 asked_again: []
 cited: []
 ---

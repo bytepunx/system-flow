@@ -6,8 +6,8 @@ sources: [TH-0083]
 topics: [orchestration, planning, analysis, flai, cli, go, flaiover, dashboard, sveltekit, code, all]
 paths: [flaiover/src/routes/items, flaiover/src/lib/components/BoardCard.svelte, flaiover/src/routes/api/items, flai/internal/hostapi, flai/internal/search, flai/internal/workitem, flai/internal/itemedit, flai/cmd/edit.go, flai/cmd/items.go, flai/cmd/planning.go, flai/cmd/planning_test.go, flaiover/src/lib/components/BoardCard.svelte.test.ts, flaiover/src/lib/components/ItemEditor.svelte, flaiover/src/lib/components/ItemEditor.svelte.test.ts, flaiover/src/lib/server/board.ts, flaiover/src/lib/server/repo-channel.test.ts, flaiover/src/lib/server/search.ts, flaiover/src/lib/server/search.test.ts, flaiover/src/lib/server/agent.ts, flaiover/src/routes/search, docs/users/flai-reference.md, docs/users/flai.md, docs/users/flaiover.md, design/adrs, design/issues, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/system/work-hierarchy.md]
 date: 2026-10-03
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0077-a-story-that-was-a-draft-records-who-finalized-it-and-when-and-the-dashboard.md#decision"
 asked_again: []
 cited: []
 ---

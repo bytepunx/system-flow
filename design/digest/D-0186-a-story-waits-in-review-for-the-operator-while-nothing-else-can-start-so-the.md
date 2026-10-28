@@ -6,8 +6,8 @@ sources: [I-0088]
 topics: [orchestration, planning, analysis, flai, cli, go, flaiover, dashboard, sveltekit, template, conventions, code, all]
 paths: [flai/internal/harness, flai/internal/hostapi, flai/internal/preview, flai/internal/mcpserver, design/adrs, flai/cmd/accept.go, flai/internal/guard, flaiover/src/lib/components/Review.svelte, flaiover/src/routes/items, design/system/workflow.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flaiover.md, flai/cmd/accept_orchestrator_test.go, flai/cmd/guard.go, flaiover/src/lib/components/Review.svelte.test.ts, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, template/template.yaml, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai-reference.md, docs/operators/settings.md]
 date: 2026-10-06
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/workflow.md#what-waits-on-an-acceptance-s-0296"
 asked_again: []
 cited: []
 ---

@@ -3,11 +3,11 @@ id: T-2143
 type: task
 nature: improvement
 title: The threads package marks a recommendation for the operator alone, tells whether the owner wrote since, and writes flai serve's confirmation by timeout, with --operator-only on flai thread reply and operator_only on thread_reply
-status: in-progress
+status: done
 parent: S-0502
 owner: alex
 created: 2026-10-26T04:43:57Z
-updated: 2026-10-28T12:47:50Z
+updated: 2026-10-28T13:05:09Z
 transitions:
   - to: ready
     at: 2026-10-28T12:47:49Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-28T12:47:50Z
     by: agent-S-0502
+  - to: done
+    at: 2026-10-28T13:05:09Z
+    by: agent-S-0502
 stream: S-0502
 tags: [flai]
-touches: [flai/internal/threads/threads.go, flai/internal/threads/threads_test.go, flai/cmd/thread.go, flai/cmd/thread_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go]
+touches: [flai/internal/threads/threads.go, flai/internal/threads/threads_test.go, flai/cmd/thread.go, flai/cmd/thread_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder.go, docs/users/flai-reference.md]
 after: [T-2141]
+usage:
+  source: log
+  seconds: 1039
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 74
+      output: 402
+      cache_read: 3642731
+      cache_write: 224684
+      cost: 1.3084
 ---
 # T-2143 The threads package marks a recommendation for the operator alone, tells whether the owner wrote since, and writes flai serve's confirmation by timeout, with --operator-only on flai thread reply and operator_only on thread_reply
 

@@ -3,11 +3,11 @@ id: T-2142
 type: task
 nature: improvement
 title: The manifest's orchestration.permissions.confirm_after is declared as a duration, off by default, validated by flai check, settable with flai manifest set, shown in the settings catalog, and indexed in the operator docs
-status: in-progress
+status: done
 parent: S-0502
 owner: alex
 created: 2026-10-26T04:43:18Z
-updated: 2026-10-28T12:47:48Z
+updated: 2026-10-28T13:04:49Z
 transitions:
   - to: ready
     at: 2026-10-28T12:47:47Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-28T12:47:48Z
     by: agent-S-0502
+  - to: done
+    at: 2026-10-28T13:04:49Z
+    by: agent-S-0502
 stream: S-0502
 tags: [flai]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/check/orchestration_test.go, docs/operators/settings.md, design/system/project-manifest.md]
 after: [T-2141]
+usage:
+  source: log
+  seconds: 1021
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 62
+      output: 455
+      cache_read: 2750706
+      cache_write: 198889
+      cost: 0.998
 ---
 # T-2142 The manifest's orchestration.permissions.confirm_after is declared as a duration, off by default, validated by flai check, settable with flai manifest set, shown in the settings catalog, and indexed in the operator docs
 

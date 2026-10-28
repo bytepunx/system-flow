@@ -6,8 +6,8 @@ sources: [TH-0368]
 topics: [cli, template, all]
 paths: [design/system/agent-adapters.md, design/system/README.md, design/adrs, design/adrs/README.md, design/issues/I-0123-flai-check-finds-board-wip-limit-outside-the-story-at-close-out.md, design/issues/summary.md]
 date: 2026-10-08
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0129-a-story-s-agent-names-a-provider-beside-its-harness-and-model-and-the-providers.md#decision"
 asked_again: []
 cited: []
 ---

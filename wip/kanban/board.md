@@ -6,7 +6,13 @@ wip_limits:
   ready: 10
   in-progress: 5
   review: 5
-order: []
+order:
+  - S-0415
+  - S-0419
+  - S-0418
+  - S-0416
+  - S-0420
+  - S-0417
 ---
 
 # Board

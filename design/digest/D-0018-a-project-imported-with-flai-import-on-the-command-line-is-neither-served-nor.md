@@ -6,8 +6,8 @@ sources: [I-0047]
 topics: [flai, cli, go, code, all]
 paths: [flai/cmd/import.go, flai/cmd/import_serve.go, flai/cmd/new.go, flai/cmd/repo_url.go, flai/cmd/serve.go, flai/cmd/serve_import.go, flai/cmd/serve_status_below.go, flai/cmd/dashboard_agent.go, flai/internal/serve, design/adrs, docs/users/flai.md, docs/operators, design/system/flai-cli.md]
 date: 2026-09-26
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0045-a-system-flow-repository-under-a-folder-named-for-import-is-served-whether-or.md#decision"
 asked_again: []
 cited: []
 ---

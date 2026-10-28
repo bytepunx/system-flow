@@ -6,8 +6,8 @@ sources: [TH-0040]
 topics: [server-side, client-side, flai, cli, go, flaiover, dashboard, sveltekit, code, all]
 paths: [flaiover/src, flai/cmd, flai/internal/metrics, design/system, design/adrs, docs/users]
 date: 2026-09-30
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0057-the-dashboard-charts-agent-time-and-cost-per-item-per-model-over-time-instead.md#decision"
 asked_again: []
 cited: []
 ---

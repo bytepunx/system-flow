@@ -6,8 +6,8 @@ sources: [TH-0162]
 topics: [flai, cli, go, flaiover, dashboard, sveltekit, template, conventions, code, all]
 paths: [flai/cmd, flai/internal/itemedit, flai/internal/workitem, flai/internal/guard, flai/internal/mcpserver, flai/internal/hostapi, flai/internal/harness, "flaiover/src/routes/api/items/[id]/criteria", flaiover/src/lib/server/agent.ts, design/adrs, design/system/flai-cli.md, design/system/workflow.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flai-reference.md, design/conventions/work-management.md, design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/root/design/conventions/delegation.md, template/CHANGELOG.md, docs/operators/settings.md, docs/users/conventions.md, template/template.yaml]
 date: 2026-10-06
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0089-acceptance-criteria-are-ticked-through-flai-by-number-by-the-story-s-agent-once.md#decision"
 asked_again: []
 cited: []
 ---

@@ -6,8 +6,8 @@ sources: [I-0072]
 topics: [cli, go, flai, code, all]
 paths: [flai/internal/mdlint, design/system/flai-cli.md, docs/users/flai.md, design/issues]
 date: 2026-10-05
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/flai-cli.md#commands"
 asked_again: []
 cited: []
 ---

@@ -6,8 +6,8 @@ sources: [TH-0429]
 topics: [agents, testing, cli, flai, go, code, all]
 paths: [flai/internal/serve/gateway_test.go, scripts/gateway-smoke.sh, docs/contributors/index.md, docs/operators/index.md, design/system/agent-adapters.md, design/issues/I-0144-the-local-litellm-proxy-s-upstream-anthropic-key-is-a-placeholder-so-a-gateway-check-through-it-reaches-no-model.md, design/issues/summary.md, design/issues/I-0125-a-settled-conversation-between-two-stories-agents-keeps-waking-each-in-turn-because-every-reply-awaits-the-other.md, scripts/litellm.sh]
 date: 2026-10-13
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/agent-adapters.md#checked-against-litellm"
 asked_again: []
 cited: []
 ---

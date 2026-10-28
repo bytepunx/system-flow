@@ -6,8 +6,8 @@ sources: [TH-0128]
 topics: [flai, cli, go, code, all]
 paths: [flai/internal/mcpserver, flai/internal/harness, flai/internal/hostapi, flai/cmd/mcp.go, flai/cmd/mcp_test.go, design/adrs, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, design/conventions/delegation.md, design/issues, flai/cmd/serve_actions_test.go]
 date: 2026-10-05
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0086-flai-serve-gives-a-claude-code-agent-flai-s-permission-prompt-as-its-permission.md#decision"
 asked_again: []
 cited: []
 ---

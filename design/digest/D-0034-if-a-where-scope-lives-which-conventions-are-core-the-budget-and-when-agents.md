@@ -6,8 +6,8 @@ sources: [TH-0021]
 topics: [flai, cli, go, code, all]
 paths: [flai/cmd]
 date: 2026-09-26
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0047-an-agent-is-primed-with-what-its-story-s-topics-claim-and-links-select.md#topics-on-documents"
 asked_again: []
 cited: []
 ---

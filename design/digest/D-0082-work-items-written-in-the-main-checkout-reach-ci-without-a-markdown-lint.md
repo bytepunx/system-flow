@@ -6,8 +6,8 @@ sources: [I-0027]
 topics: [flai, cli, go, template, conventions, code, all]
 paths: [flai/internal/threads, flai/internal/check, flai/internal/workitem, flai/internal/itemnew, flai/internal/itemedit, flai/internal/mcpserver/items_write.go, flai/internal/mdlint, scripts/mdlint-fixtures.sh, scripts/README.md, Makefile, design/system/flai-cli.md, design/adrs, design/conventions/tooling.md, template/root/design/conventions/tooling.md, template/template.yaml, template/CHANGELOG.md, docs/users/flai.md, design/issues, wip/archive/agents]
 date: 2026-10-01
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0061-flai-lints-the-markdown-it-writes-in-wip-with-its-own-implementation-of-the.md#decision"
 asked_again: []
 cited: []
 ---

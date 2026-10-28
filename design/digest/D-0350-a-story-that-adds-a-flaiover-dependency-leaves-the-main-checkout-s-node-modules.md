@@ -6,8 +6,8 @@ sources: [I-0178]
 topics: [flai, cli, go, code, all]
 paths: [scripts/integration.sh, scripts/README.md, design/system/devex.md, flai/internal/components/integration_test.go, design/issues/I-0178-a-story-that-adds-a-flaiover-dependency-leaves-the-main-checkout-s-node-modules-without-it-so-every-other-close-out-fails-testeverylistedflaiovercomponentcompilesintheharness.md, design/issues/summary.md]
 date: 2026-10-21
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/devex.md#used-by-this-monorepo"
 asked_again: []
 cited: []
 ---

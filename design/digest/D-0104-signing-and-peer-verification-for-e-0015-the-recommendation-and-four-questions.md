@@ -6,8 +6,8 @@ sources: [TH-0065]
 topics: [release, security, releases, flai, cli, go, flaiover, dashboard, sveltekit, code, all]
 paths: [flaiover/src, flai/cmd, design/system/release-signing.md, design/system/README.md, design/adrs, design/issues/I-0055-a-story-made-from-the-dashboard-reached-main-with-a-markdown-lint-error-flai-task-new-would-have-refused.md, design/issues/summary.md]
 date: 2026-10-02
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0070-releases-are-signed-with-a-cosign-key-pair-verified-before-they-are-installed.md#decision"
 asked_again: []
 cited: []
 ---

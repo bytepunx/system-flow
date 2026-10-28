@@ -6,8 +6,8 @@ sources: [I-0095]
 topics: [cli, flai, go, code, all]
 paths: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, design/system/workflow.md, docs/users/flai.md, design/issues/I-0095-an-agent-that-ended-to-wait-for-an-answer-is-recorded-as-failed-and-never-started-again-when-the-answer-comes-before-flai-serve-s-next-look.md, design/issues/summary.md, design/issues/I-0079-testroundtriprepositoryitems-reads-the-live-main-checkout-and-fails-a-close-out-when-another-agent-edits-a-story-mid-run.md]
 date: 2026-10-08
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/workflow.md#branches-and-collisions-adr-0019"
 asked_again: []
 cited: []
 ---

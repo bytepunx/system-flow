@@ -6,8 +6,8 @@ sources: [I-0057]
 topics: [cli, conventions, template, flai, go, code, all]
 paths: [flai/internal/check, flai/cmd/check.go, flai/cmd/check_test.go, flai/internal/issues, flai/internal/storygit, scripts/close-out.sh, scripts/check.sh, scripts/README.md, template/root/scripts/close-out.sh, template/root/scripts/check.sh, template/root/scripts/README.md, template/CHANGELOG.md, template/template.yaml, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/flai-cli.md, design/system/continuous-improvement.md, design/adrs, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, design/issues/I-0057-flai-check-strict-stops-a-story-s-close-out-on-wip-findings-outside-the-story.md, design/issues/summary.md, design/issues]
 date: 2026-10-05
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0085-a-close-out-s-flai-check-reports-findings-outside-the-story-as-notes-and.md#decision"
 asked_again: []
 cited: []
 ---

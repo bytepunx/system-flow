@@ -6,8 +6,8 @@ sources: [I-0068]
 topics: [cli, conventions, flai, go, code, all]
 paths: [flai/internal/context, flai/internal/mcpserver, flai/cmd/prime.go, flai/cmd/prime_test.go, design/adrs, design/system/agent-context.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, design/issues/I-0068-the-mcp-prime-pack-for-a-story-is-larger-than-claude-code-s-tool-result-limit-so-the-agent-reads-it-back-from-a-saved-file.md, design/issues/summary.md]
 date: 2026-10-06
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0104-the-mcp-prime-tool-returns-a-context-pack-in-parts-of-at-most-40-000-bytes-of.md#decision"
 asked_again: []
 cited: []
 ---

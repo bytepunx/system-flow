@@ -6,8 +6,8 @@ sources: [I-0162]
 topics: [flai, cli, go, code, all]
 paths: [flai/internal/components/devserver.go, flai/internal/components/devserver_test.go, design/system/component-library.md, design/issues/I-0162-the-components-dev-server-test-picks-a-free-port-and-closes-it-before-the-fake-vite-binds-it-so-a-concurrent-test-run-on-the-host-can-take-the-port-and-fail-the-integration-tier.md, design/issues/summary.md, design/issues/I-0157-the-host-s-installed-flai-is-again-behind-the-project-s-releases-after-i-0149-closed-so-the-mcp-task-done-refuses-every-close.md]
 date: 2026-10-18
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/component-library.md#the-dev-server"
 asked_again: []
 cited: []
 ---

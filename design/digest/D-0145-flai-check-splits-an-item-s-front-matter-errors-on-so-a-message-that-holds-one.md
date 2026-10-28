@@ -6,8 +6,8 @@ sources: [I-0061]
 topics: [flai, cli, go, code, all]
 paths: [design/issues/I-0057-flai-check-strict-stops-a-story-s-close-out-on-wip-findings-outside-the-story.md, design/issues/I-0061-flai-check-splits-an-item-s-front-matter-errors-on-so-a-message-that-holds-one-becomes-two-findings-the-second-on-line-1.md, design/issues/summary.md, design/system/flai-cli.md, flai/internal/check/check.go, flai/internal/check/planning_test.go, flai/internal/manifest/agent.go, flai/internal/workitem/item.go]
 date: 2026-10-04
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/flai-cli.md#commands"
 asked_again: []
 cited: []
 ---

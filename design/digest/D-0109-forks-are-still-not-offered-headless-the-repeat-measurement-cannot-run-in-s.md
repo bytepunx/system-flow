@@ -6,8 +6,8 @@ sources: [TH-0069]
 topics: [flai, cli, go, flaiover, dashboard, sveltekit, template, conventions, code, all]
 paths: [flai/internal/usage, flai/internal/serve, flai/internal/harness, flai/cmd, design/conventions, template, design/adrs, design/issues, design/system, docs]
 date: 2026-10-02
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/agent-context.md#forks-are-not-offered-headless"
 asked_again: []
 cited: []
 ---

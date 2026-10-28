@@ -6,8 +6,8 @@ sources: [I-0071]
 topics: [flai, cli, go, code, all]
 paths: [flai/internal/workitem/create.go, flai/internal/workitem/create_test.go, flai/internal/itemedit/itemedit.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/mcpserver/items_write_test.go, flai/cmd/edit_test.go, flai/cmd/touches.go, flai/cmd/touches_test.go, design/system/work-hierarchy.md, design/issues, docs/users/flai.md]
 date: 2026-10-05
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/work-hierarchy.md#identifiers"
 asked_again: []
 cited: []
 ---

@@ -6,8 +6,8 @@ sources: [I-0153]
 topics: [flai, cli, go, code, all]
 paths: [design/adrs/0190-an-item-s-queue-time-is-the-seconds-it-spent-in-ready-before-it-started-so-a.md, design/adrs/README.md, design/system/metrics.md, flai/internal/metrics/metrics.go, flai/internal/metrics/metrics_test.go, design/issues/I-0153-ready-stories-waited-up-to-3-5-days-unheld-with-in-progress-lanes-free-and-review-under-its-limit.md, design/issues/summary.md]
 date: 2026-10-23
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0190-an-item-s-queue-time-is-the-seconds-it-spent-in-ready-before-it-started-so-a.md#context"
 asked_again: []
 cited: []
 ---

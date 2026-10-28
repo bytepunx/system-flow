@@ -6,10 +6,10 @@ sources: [TH-0476]
 topics: [cli, planning, analysis, conventions, flai, go, template, code, all]
 paths: [flai/internal/context, flai/internal/serve, flai/cmd, design/system/agent-context.md, design/system/strategic-agents.md, design/system/metrics.md, design/conventions/agent-narrative.md, docs/users/flai.md, docs/operators/index.md, template]
 date: 2026-10-21
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0191-the-digest-is-one-markdown-file-per-entry-under-the-design-folder-s-digest.md#decision"
 asked_again: []
-cited: []
+cited: [S-0431, S-0432]
 ---
 
 # D-0363 E-0025 needs a cost of delay input and four design answers: recommend 4h lost per cycle, one file per entry under design/digest, a curator role of its own, a 30-day compaction window: Recommended…

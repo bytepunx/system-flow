@@ -6,8 +6,8 @@ sources: [TH-0599]
 topics: [planning, flai, cli, go, template, conventions, code, all]
 paths: [flai/internal/workitem/create.go, flai/internal/workitem/create_test.go, flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/itemedit/itemedit.go, flai/internal/itemedit/planning_test.go, flai/internal/itemedit/folder_test.go, flai/internal/itemnew/itemnew.go, flai/internal/itemnew/itemnew_test.go, flai/cmd/touches.go, flai/cmd/touches_test.go, flai/internal/mcpserver/items_write.go, flai/internal/mcpserver/items_write_test.go, flai/internal/check/check.go, flai/internal/check/check_test.go, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/adrs, design/adrs/README.md, design/system/strategic-agents.md, design/system/workflow.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/strategic-agents.md, template/root/design/conventions/work-management.md, ".claude/agents/planner.md", template/root/.claude/agents/planner.md, template/template.yaml, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0152-folder-wide-touches-and-after-hubs-on-planned-stories-held-up-to-ten-ready-stories-a-day-while-in-progress-stayed-at-two-of-five.md, design/issues/summary.md, flai/cmd/edit.go, flai/cmd/check.go, flai/cmd/check_stats_test.go, design/issues/I-0197-testservesettingsareshowntothedashboard-in-flai-cmd-fails-now-and-then-in-the-close-out-s-go-test-tier-on-a-branch-that-does-not-touch-serve.md]
 date: 2026-10-23
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0188-a-task-takes-no-folder-touch-the-planner-s-folder-touch-on-a-story-needs-the.md#decision"
 asked_again: []
 cited: []
 ---

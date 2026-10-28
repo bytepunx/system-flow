@@ -6,8 +6,8 @@ sources: [TH-0070]
 topics: [release, flai, cli, go, flaiover, dashboard, sveltekit, code, all]
 paths: [flai/internal/mcpserver, flai/cmd, flai/internal/harness, flai/internal/hostapi, flaiover/src, flai/internal/workitem/boardview.go, flai/internal/workitem/boardview_test.go, flai/internal/release/remote.go, flai/internal/release/remote_test.go, flai/internal/preview, design/system, docs, design/conventions/git.md]
 date: 2026-10-02
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0067-accepted-work-reaches-the-remote-only-when-it-is-published-and-agents-publish.md#decision"
 asked_again: []
 cited: []
 ---

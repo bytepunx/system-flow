@@ -6,8 +6,8 @@ sources: [TH-0056]
 topics: []
 paths: []
 date: 2026-10-01
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0085-a-close-out-s-flai-check-reports-findings-outside-the-story-as-notes-and.md#decision"
 asked_again: []
 cited: []
 ---

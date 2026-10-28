@@ -6,8 +6,8 @@ sources: [I-0070]
 topics: [flai, cli, go, code, all]
 paths: [flai/internal/mdlint, design/issues, design/system/flai-cli.md]
 date: 2026-10-05
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/flai-cli.md#internal-structure"
 asked_again: []
 cited: []
 ---

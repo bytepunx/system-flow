@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 228
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 12
-      output: 61
-      cache_read: 674418
-      cache_write: 5272
-      cost: 0.2299
+      input: 11
+      output: 1661
+      cache_read: 650717
+      cache_write: 28974
+      cost: 0.3952
 ---
 # T-2134 Show that I-0181's race is the one S-0494 removed: the pre-fix module fails the server-stop test and the current one holds under repeated runs
 

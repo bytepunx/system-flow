@@ -6,8 +6,8 @@ sources: [I-0116]
 topics: [flai, cli, go, flaiover, dashboard, sveltekit, code, all]
 paths: [flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard.go, flai/cmd/dashboard_test.go, flai/cmd/dashboard_watch.go, flai/cmd/dashboard_watch_test.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/index.md, design/system/flai-cli.md, design/issues/I-0116-flai-dashboard-restart-starts-the-container-s-tag-again-so-a-newer-image-a-check-pulled-under-a-floating-tag-is-started-without-an-upgrade.md, design/issues/summary.md]
 date: 2026-10-08
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/flai-cli.md#listing-and-installing-a-published-release"
 asked_again: []
 cited: []
 ---

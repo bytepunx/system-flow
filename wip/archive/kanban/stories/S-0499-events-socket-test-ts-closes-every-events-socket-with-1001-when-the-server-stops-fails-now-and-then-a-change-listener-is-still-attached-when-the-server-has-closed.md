@@ -3,10 +3,10 @@ id: S-0499
 type: story
 nature: remediation
 title: "events-socket.test.ts 'closes every events socket with 1001 when the server stops' fails now and then: a change listener is still attached when the server has closed"
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-26T04:01:24Z
-updated: 2026-10-28T12:49:49Z
+updated: 2026-10-28T13:06:58Z
 transitions:
   - to: ready
     at: 2026-10-28T12:43:48Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-28T12:44:57Z
     by: agent-S-0499
+  - to: review
+    at: 2026-10-28T13:00:33Z
+    by: agent-S-0499
+  - to: done
+    at: 2026-10-28T13:06:58Z
+    by: alex
 tags: [dashboard]
 topics: [dashboard, testing]
 touches: [flaiover/src/lib/server/events-socket.ts, flaiover/src/lib/server/events-socket.test.ts, design/issues/I-0181-events-socket-test-ts-closes-every-events-socket-with-1001-when-the-server-stops-fails-now-and-then-a-change-listener-is-still-attached-when-the-server-has-closed.md, design/issues/summary.md, design/system/flaiover-dashboard.md]
@@ -24,30 +30,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 283
-  estimated: true
-  priced_by: estimate
+  seconds: 945
+  priced_by: harness
   turns:
     - day: 2026-10-28
-      work: 16
+      ceremony: 1
+      hand_edits: 1
+      work: 24
   models:
     - model: claude-opus-5-5
-      input: 36
-      output: 282
-      cache_read: 1780185
-      cache_write: 135489
-      cost: 0.6479
+      input: 60
+      output: 8930
+      cache_read: 3498481
+      cache_write: 155773
+      cost: 2.1247
   strategic:
     - kind: orchestrator
-      seconds: 274
+      seconds: 428
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 75
-          output: 1254
-          cache_read: 13675596
-          cache_write: 32482
-          cost: 3.0063
+          input: 99
+          output: 1609
+          cache_read: 18412384
+          cache_write: 38318
+          cost: 4.0475
+        - model: claude-sonnet-5-5
+          input: 6
+          output: 48
+          cache_read: 39904
+          cache_write: 34384
+          cost: 0.0508
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 3m

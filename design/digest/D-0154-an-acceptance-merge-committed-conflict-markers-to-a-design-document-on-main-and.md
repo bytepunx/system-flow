@@ -6,8 +6,8 @@ sources: [I-0066]
 topics: [flai, cli, go, code, all]
 paths: [flai/internal/conflictmark, flai/internal/check, flai/cmd/branch.go, flai/cmd/accept_conflict_test.go, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md]
 date: 2026-10-05
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/workflow.md#branches-and-collisions-adr-0019"
 asked_again: []
 cited: []
 ---

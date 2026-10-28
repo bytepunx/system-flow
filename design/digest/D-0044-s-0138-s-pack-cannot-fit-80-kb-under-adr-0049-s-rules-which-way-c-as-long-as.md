@@ -6,8 +6,8 @@ sources: [TH-0032]
 topics: [context, flai, cli, go, template, conventions, code, all]
 paths: [flai/cmd, flai/internal/context, flai/internal/mcpserver/folder.go, design/adrs, design/system/agent-context.md, design/system/flai-cli.md, docs/users, CLAUDE.md, design/conventions/session-start.md, template]
 date: 2026-09-29
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0050-a-document-a-story-names-only-by-its-path-written-out-is-briefed-when-it-is.md#decision"
 asked_again: []
 cited: []
 ---

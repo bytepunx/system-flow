@@ -3,12 +3,18 @@ id: T-2146
 type: task
 nature: improvement
 title: flai serve confirms, on its per-minute look while orchestrate is on, each orchestrator recommendation that waited confirm_after with no owner entry since, on a thread an agent opened and not marked for the operator alone, and logs it
-status: backlog
+status: in-progress
 parent: S-0502
 owner: alex
 created: 2026-10-26T04:45:44Z
-updated: 2026-10-26T04:45:44Z
-transitions: []
+updated: 2026-10-28T13:05:55Z
+transitions:
+  - to: ready
+    at: 2026-10-28T13:05:54Z
+    by: agent-S-0502
+  - to: in-progress
+    at: 2026-10-28T13:05:55Z
+    by: agent-S-0502
 stream: S-0502
 tags: [flai]
 touches: [flai/internal/serve/confirm.go, flai/internal/serve/confirm_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go]

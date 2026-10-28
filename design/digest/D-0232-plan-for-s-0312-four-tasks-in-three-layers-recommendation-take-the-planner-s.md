@@ -6,8 +6,8 @@ sources: [TH-0337]
 topics: [flai, cli, go, template, conventions, code, all]
 paths: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, docs/users/flai-reference.md, design/conventions/git.md, template/root/design/conventions/git.md, template/CHANGELOG.md, design/issues/I-0104-flai-task-done-commits-everything-in-the-worktree-so-two-tasks-of-one-layer-cannot-be-closed-apart.md, design/issues/summary.md]
 date: 2026-10-08
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0128-flai-task-done-commits-the-paths-the-closing-task-covers-and-those-no-other.md#decision"
 asked_again: []
 cited: []
 ---

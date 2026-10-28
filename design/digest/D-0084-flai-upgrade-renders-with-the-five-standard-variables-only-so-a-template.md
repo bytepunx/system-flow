@@ -6,8 +6,8 @@ sources: [I-0040]
 topics: [flai, cli, go, template, conventions, code, all]
 paths: [flai/cmd/new.go, flai/cmd/upgrade.go, flai/cmd/import.go, flai/cmd/new_test.go, flai/cmd/upgrade_test.go, flai/cmd/import_test.go, flai/internal/template, flai/internal/manifest, flai/internal/lock, flai/internal/upgrade, docs/contributors/template.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, design/system/template.md, design/system/project-manifest.md, design/system/flai-cli.md, design/system/repository-layout.md, design/issues]
 date: 2026-10-01
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/template.md#variables"
 asked_again: []
 cited: []
 ---

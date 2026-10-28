@@ -6,8 +6,8 @@ sources: [TH-0256]
 topics: []
 paths: []
 date: 2026-10-07
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0094-with-publish-on-the-orchestrator-publishes-only-through-release-publish-by-its.md#decision"
 asked_again: []
 cited: []
 ---

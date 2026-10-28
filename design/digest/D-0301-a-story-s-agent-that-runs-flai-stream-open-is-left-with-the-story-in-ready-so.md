@@ -6,8 +6,8 @@ sources: [I-0097]
 topics: [flai, cli, go, code, all]
 paths: [design/adrs/0153-flai-stream-open-starts-a-ready-story-as-flai-story-start-does-moving-it-to-in.md, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai-reference.md, docs/users/flai.md, flai/cmd/move_cancel_test.go, flai/cmd/stream.go, flai/cmd/stream_open_test.go, flai/internal/storystart/start.go, design/issues/I-0147-the-mcp-server-s-flai-lags-a-fresh-publish-so-task-done-refuses-and-a-story-s-agent-falls-back-to-the-tree-s-cli.md, design/issues/summary.md, design/issues/I-0097-a-story-s-agent-that-runs-flai-stream-open-is-left-with-the-story-in-ready-so-permission-prompt-refuses-its-claude-write-until-it-moves-the-story-itself.md]
 date: 2026-10-14
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0153-flai-stream-open-starts-a-ready-story-as-flai-story-start-does-moving-it-to-in.md#decision"
 asked_again: []
 cited: []
 ---

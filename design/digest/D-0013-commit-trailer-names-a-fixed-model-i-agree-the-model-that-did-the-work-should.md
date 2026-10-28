@@ -6,8 +6,8 @@ sources: [TH-0009]
 topics: []
 paths: []
 date: 2026-09-24
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/conventions/git.md#rules"
 asked_again: []
 cited: []
 ---

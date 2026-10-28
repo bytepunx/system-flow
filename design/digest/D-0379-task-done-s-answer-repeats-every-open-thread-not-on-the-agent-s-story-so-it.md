@@ -6,8 +6,8 @@ sources: [I-0154]
 topics: [flai, cli, go, code, all]
 paths: [flai/internal/mcpserver/task_test.go, flai/internal/taskdone/taskdone_test.go, design/issues/I-0154-task-done-s-answer-repeats-every-open-thread-not-on-the-agent-s-story-so-it-overflows-a-tool-result.md, design/issues/summary.md]
 date: 2026-10-23
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0179-task-done-and-story-start-carry-an-inbox-that-lists-the-story-s-threads-and.md#decision"
 asked_again: []
 cited: []
 ---

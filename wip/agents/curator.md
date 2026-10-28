@@ -1,0 +1,29 @@
+---
+kind: curator
+accrued_cost: 11.3955
+accrued_seconds: 1317
+tasks_completed: 2
+last_run: 2026-10-28T13:04:39Z
+---
+
+# Curator activity
+
+flai writes this document, one entry per activity, newest last; do not edit it by hand.
+
+## Log
+
+### 2026-10-28T13:02:01Z
+
+- Summary: Curated the digest: wrote D-0387–D-0405 (19 entries); merged into D-0073, D-0121 (asked_again TH-0095), D-0002, D-0088, D-0208, D-0217, D-0288 and D-0382; absorbed D-0008 D-0013 D-0014 D-0015 D-0016 D-0018 D-0026 D-0028 D-0029 D-0031 D-0032 D-0033 D-0034 D-0040 D-0041 D-0044 D-0054 D-0055 D-0059 D-0064 D-0068 D-0071 D-0079 D-0082 D-0084 D-0085 D-0087 D-0090 D-0091 D-0094 D-0095 D-0096 D-0104 D-0108 D-0109 D-0110 D-0111 D-0117 D-0118 D-0120 D-0122 D-0123 D-0124 D-0125 D-0126 D-0127 D-0128 D-0129 D-0131 D-0136 D-0142 D-0144 D-0145 D-0147 D-0151 D-0154 D-0155 D-0158 D-0159 D-0160 D-0162 D-0172 D-0174 D-0178 D-0183 D-0184 D-0185 D-0186 D-0190 D-0191 D-0194 D-0198 D-0201 D-0203 D-0204 D-0205 D-0209 D-0210 D-0211 D-0216 D-0227 D-0228 D-0229 D-0230 D-0232 D-0235 D-0236 D-0245 D-0248 D-0252 D-0256 D-0257 D-0258 D-0260 D-0263 D-0266 D-0267 D-0268 D-0271 D-0276 D-0282 D-0285 D-0286 D-0289 D-0291 D-0293 D-0294 D-0295 D-0296 D-0298 D-0299 D-0301 D-0302 D-0303 D-0304 D-0305 D-0307 D-0318 D-0319 D-0320 D-0321 D-0322 D-0323 D-0325 D-0327 D-0336 D-0337 D-0340 D-0343 D-0344 D-0349 D-0350 D-0352 D-0354 D-0359 D-0360 D-0361 D-0363 D-0367 D-0369 D-0372 D-0375 D-0376 D-0378 D-0379 D-0381 (146; 27 left active because the ADR that states them is still proposed); flai digest compact compacted D-0002 D-0003 D-0004 D-0005 D-0006 D-0007 D-0009 D-0010 D-0011 D-0012 D-0017 D-0019 D-0020 D-0021 D-0022 D-0023 D-0024 D-0025 D-0027 D-0030 D-0035 D-0036 D-0037 D-0038 D-0039 (25); digest now 234 active, 146 absorbed, 25 compacted, all uncommitted in the main checkout; explorers reviewed the 2,472 narrative decisions that cite no ADR and the absorption candidates, and the 312 that cite one were left out unread.
+- Trigger: accepted S-0503, S-0504
+- Items: D-0001, D-0002, D-0003, D-0004, D-0005, D-0006, D-0007, D-0008, D-0009, D-0010, D-0011, D-0012, D-0013, D-0014, D-0015, D-0016, D-0017, D-0018, D-0019, D-0020, D-0021, D-0022, D-0023, D-0024, D-0025, D-0026, D-0027, D-0028, D-0029, D-0030, D-0031, D-0032, D-0033, D-0034, D-0035, D-0036, D-0037, D-0038, D-0039, D-0040, D-0041, D-0044, D-0054, D-0055, D-0059, D-0064, D-0068, D-0071, D-0073, D-0079, D-0082, D-0084, D-0085, D-0087, D-0088, D-0090, D-0091, D-0094, D-0095, D-0096, D-0104, D-0108, D-0109, D-0110, D-0111, D-0117, D-0118, D-0120, D-0121, D-0122, D-0123, D-0124, D-0125, D-0126, D-0127, D-0128, D-0129, D-0131, D-0136, D-0142, D-0144, D-0145, D-0147, D-0151, D-0154, D-0155, D-0158, D-0159, D-0160, D-0162, D-0172, D-0174, D-0178, D-0183, D-0184, D-0185, D-0186, D-0190, D-0191, D-0194, D-0198, D-0201, D-0203, D-0204, D-0205, D-0208, D-0209, D-0210, D-0211, D-0216, D-0217, D-0227, D-0228, D-0229, D-0230, D-0232, D-0235, D-0236, D-0245, D-0248, D-0252, D-0256, D-0257, D-0258, D-0260, D-0263, D-0266, D-0267, D-0268, D-0271, D-0276, D-0282, D-0285, D-0286, D-0288, D-0289, D-0291, D-0293, D-0294, D-0295, D-0296, D-0298, D-0299, D-0301, D-0302, D-0303, D-0304, D-0305, D-0307, D-0318, D-0319, D-0320, D-0321, D-0322, D-0323, D-0325, D-0327, D-0330, D-0336, D-0337, D-0340, D-0343, D-0344, D-0349, D-0350, D-0352, D-0354, D-0359, D-0360, D-0361, D-0363, D-0367, D-0369, D-0372, D-0375, D-0376, D-0378, D-0379, D-0381, D-0382, D-0387, D-0388, D-0389, D-0390, D-0391, D-0392, D-0393, D-0394, D-0395, D-0396, D-0397, D-0398, D-0399, D-0400, D-0401, D-0402, D-0403, D-0404, D-0405
+- Seconds: 1164
+- Cost: 9.5910 USD, estimated
+
+### 2026-10-28T13:04:39Z
+
+- Summary: Wrote D-0406 (cause from I-0205/S-0494: flaiover's events socket must tear its listeners down in close() before sending 1001); merged S-0505 into D-0386 and S-0504 into D-0385 with each answer's outcome; absorbed none, since no design change after the 13:02Z run states an active entry; `flai digest compact` compacted none (digest now 235 active, 146 absorbed, 25 compacted, uncommitted in the main checkout).
+- Trigger: accepted S-0505, S-0513
+- Items: D-0167, D-0168, D-0385, D-0386, D-0406
+- Seconds: 153
+- Cost: 1.8045 USD, estimated

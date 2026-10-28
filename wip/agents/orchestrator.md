@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1607.7295
-accrued_seconds: 1408992
-tasks_completed: 1126
-last_run: 2026-10-28T12:45:08Z
+accrued_cost: 1624.5618
+accrued_seconds: 1410282
+tasks_completed: 1142
+last_run: 2026-10-28T13:06:38Z
 ---
 
 # Orchestrator activity
@@ -7893,6 +7893,118 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0499, S-0502
 - Seconds: 69
 - Cost: 1.2035 USD, estimated
+
+### 2026-10-28T12:52:58Z
+
+- Summary: The operator accepted S-0505 at 12:52Z, which puts its results document on main, so S-0513's runbook link now resolves. Under publish (judgement), released S-0503 and S-0504 (2 stories, 62.5 USD/week, nothing in held_by_epic, no warnings): flai 1.71.1 to 1.71.2 (patch, flai/v1.71.2), flaiover 0.55.4 to 0.55.5 (patch, flaiover/v0.55.5), template 1.0.120 to 1.0.121 (v1.0.121, e16d81e), pushed. S-0505 (experiment) and S-0513 (docs) carry no bump.
+- Items: S-0503, S-0504, S-0505, S-0513
+- Seconds: 470
+- Cost: 5.3281 USD, estimated
+
+### 2026-10-28T12:53:16Z
+
+- Summary: Under promote_to_ready, promote --candidates lists only S-0241 (rank 1, 2h), still blocked, so nothing was promoted. S-0507, freed by S-0505's acceptance, is held on overlap with S-0502 (harness.go). The issue step made drafts S-0515 to S-0518 from S-0505's issues. They are planned one at a time once S-0514's planner ends.
+- Items: S-0241, S-0507
+- Seconds: 18
+- Cost: 0.1552 USD, estimated
+
+### 2026-10-28T12:58:37Z
+
+- Summary: S-0514's planner finished: 19 file touches, forecast 2h30m, value 75 USD/week, and four tasks. The operator finalized S-0514, and it is held on overlap with S-0502. Under plan_backlog_stories, I started the planner for S-0515, first of the 16 stories flai plan --candidates lists (S-0515 to S-0531, all made from issues). A planner for S-0521 already runs, which I did not start.
+- Items: S-0514, S-0515
+- Seconds: 321
+- Cost: 4.9223 USD, estimated
+
+### 2026-10-28T13:01:11Z
+
+- Summary: Under accept_reviews, enqueued S-0499 at 04b2c597 (place 1 of 1). flai verify passed at that head (check, markdown, flaiover). The verifier met criterion 1: the race was removed by S-0494's d207daaf3, whose test asserts no listener remains after close. It met criterion 2: I-0181 is closed with the reason. Throughput: forecast 30m.
+- Items: S-0499
+- Seconds: 154
+- Cost: 1.0920 USD, estimated
+
+### 2026-10-28T13:02:08Z
+
+- Summary: Answered TH-0682, citing design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+- Items: S-0526
+- Seconds: 57
+- Cost: 0.6207 USD, estimated
+
+### 2026-10-28T13:02:16Z
+
+- Summary: Under plan_backlog_stories, on planner-S-0526's TH-0682: set S-0526's cost of delay input to time_lost_per_cycle 5m, the planner's recommendation (no reason given for 2m or 15m). Approved the plan (two tasks in two layers, three file touches, forecast 20m) and resolved the thread. The planner writes the value on its next run.
+- Items: S-0526
+- Seconds: 8
+- Cost: 0.0894 USD, estimated
+
+### 2026-10-28T13:02:33Z
+
+- Summary: The operator finalized S-0414 and S-0415 and moved them to ready. Under order_ready, I applied flai order --by throughput: S-0415 (38m), then S-0414 (1h17m). S-0415 waits for S-0414 by after, so the order does not change which starts first.
+- Items: S-0414, S-0415
+- Seconds: 17
+- Cost: 0.1814 USD, estimated
+
+### 2026-10-28T13:03:28Z
+
+- Summary: Under promote_to_ready, moved S-0526 to ready, candidate 1 by throughput at 20m. Candidate 2, S-0521 (1h), waits until its running planner (pid 4001219) settles its plan. Candidate 3, S-0241, stays out because it is blocked. Under order_ready, applied flai order --by throughput: S-0526 (20m), S-0415 (38m), S-0414 (1h17m).
+- Items: S-0526, S-0521
+- Seconds: 55
+- Cost: 1.3793 USD, estimated
+
+### 2026-10-28T13:04:26Z
+
+- Summary: Answered TH-0681, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0514
+- Seconds: 58
+- Cost: 1.2379 USD, estimated
+
+### 2026-10-28T13:04:40Z
+
+- Summary: Recommended an answer on TH-0683, citing design/adrs/0030-mcp-is-served-by-flai-on-the-host-over-stdio-and-http-and-the-dashboard-s-api.md § Decision
+- Items: S-0515
+- Seconds: 14
+- Cost: 0.0972 USD, estimated
+
+### 2026-10-28T13:04:48Z
+
+- Summary: Under plan_backlog_stories, approved and resolved planner-S-0514's TH-0681 (six tasks in five layers, forecast 2h30m, value 75 USD/week; the operator had finalized S-0514). On planner-S-0515's TH-0683, the plan fits (three tasks in two layers, forecast 45m, value 50 USD/week). It turns off the MCP SDK's localhost Host check, a security posture no decision records yet, so I recommended approving it with its ADR, citing ADR-0030's Origin and token gates, and escalated. The thread stays open.
+- Items: S-0514, S-0515
+- Seconds: 8
+- Cost: 0.0000 USD
+
+### 2026-10-28T13:05:02Z
+
+- Summary: The operator finalized S-0416, S-0417 and S-0418 and moved them to ready. Under order_ready, I applied flai order --by throughput: S-0526 (20m), S-0415 (38m), S-0418 (1h1m), S-0416 (1h10m), S-0414 (1h17m), S-0417 (1h37m). The E-0024 stories still start in their after order, because flai holds each behind the one it names.
+- Items: S-0416, S-0417, S-0418
+- Seconds: 14
+- Cost: 0.0995 USD, estimated
+
+### 2026-10-28T13:05:25Z
+
+- Summary: The operator finalized S-0419 and moved it to ready. Under order_ready, I applied flai order --by throughput, which placed S-0419 third at 1h. The ready column holds 7 stories against a limit of 10.
+- Items: S-0419
+- Seconds: 23
+- Cost: 0.6030 USD, estimated
+
+### 2026-10-28T13:05:50Z
+
+- Summary: The operator moved S-0420 to ready. Under order_ready, I applied flai order --by throughput, which placed S-0420 seventh at 1h35m. The ready column holds 8 stories against a limit of 10.
+- Items: S-0420
+- Seconds: 25
+- Cost: 0.4045 USD, estimated
+
+### 2026-10-28T13:06:10Z
+
+- Summary: Answered TH-0684, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0521
+- Seconds: 20
+- Cost: 0.4086 USD, estimated
+
+### 2026-10-28T13:06:38Z
+
+- Summary: S-0414 and S-0526 started. Under plan_backlog_stories, approved and resolved planner-S-0521's TH-0684 (four tasks in three layers, 16 file touches, forecast 1h, value 12.50 USD/week). Under promote_to_ready, moved S-0521 to ready, candidate 1 by throughput at 1h; S-0241 stays out because it is blocked. Under order_ready, applied flai order: S-0415, S-0419, S-0521, S-0418, S-0416, S-0420, S-0417.
+- Items: S-0521, S-0414, S-0526
+- Seconds: 28
+- Cost: 0.2132 USD, estimated
 
 ## Refusals
 

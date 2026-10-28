@@ -6,8 +6,8 @@ sources: [I-0080]
 topics: [all]
 paths: [scripts/flaiover-install.sh, scripts/flaiover-test.sh, scripts/flaiover-unit.sh, scripts/README.md, design/system/devex.md, docs/operators/index.md, design/issues/I-0080-a-story-worktree-has-no-flaiover-node-modules-so-the-close-out-stops-at-the-flaiover-step-until-flaiover-install-runs-there.md, design/issues/summary.md]
 date: 2026-10-07
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/devex.md#used-by-this-monorepo"
 asked_again: []
 cited: []
 ---

@@ -6,8 +6,8 @@ sources: [I-0121]
 topics: [touches, flai, cli, go, code, all]
 paths: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/internal/mcpserver/task.go, docs/users/flai-reference.md, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0121-flai-task-done-widens-touches-with-a-path-the-commit-reverted-to-main-re-growing-a-claim-the-story-narrowed.md, design/issues/summary.md, design/adrs/0144-flai-task-done-widens-touches-only-with-the-committed-paths-the-story-s-branch.md]
 date: 2026-10-12
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0144-flai-task-done-widens-touches-only-with-the-committed-paths-the-story-s-branch.md#decision"
 asked_again: []
 cited: []
 ---

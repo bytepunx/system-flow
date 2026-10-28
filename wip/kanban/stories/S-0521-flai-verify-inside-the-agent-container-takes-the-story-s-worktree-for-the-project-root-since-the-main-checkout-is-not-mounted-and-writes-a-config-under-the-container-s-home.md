@@ -3,11 +3,17 @@ id: S-0521
 type: story
 nature: remediation
 title: flai verify inside the agent container takes the story's worktree for the project root, since the main checkout is not mounted, and writes a config under the container's home
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-28T12:53:27Z
-updated: 2026-10-28T13:02:30Z
-transitions: []
+updated: 2026-10-28T13:06:59Z
+transitions:
+  - to: ready
+    at: 2026-10-28T13:06:32Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-28T13:06:59Z
+    by: agent-S-0521
 tags: [cli, docker]
 topics: [harness, docker]
 touches: [flai/internal/workitem/repo.go, flai/internal/workitem/worktree_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/check.go, flai/cmd/check_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, scripts/agent-container.sh, docs/operators/runbooks/agent-container.md, docs/users/flai.md, design/system/flai-cli.md, design/issues/I-0219-flai-verify-inside-the-agent-container-takes-the-story-s-worktree-for-the-project-root-since-the-main-checkout-is-not-mounted-and-writes-a-config-under-the-container-s-home.md, design/issues/summary.md]
@@ -22,15 +28,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 27
+      seconds: 57
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 15
-          output: 233
-          cache_read: 3133592
-          cache_write: 7797
-          cost: 0.6897
+          input: 25
+          output: 313
+          cache_read: 5305632
+          cache_write: 20709
+          cost: 1.1694
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m

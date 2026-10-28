@@ -6,8 +6,8 @@ sources: [TH-0080]
 topics: [orchestration, planning, analysis, flai, cli, go, flaiover, dashboard, sveltekit, template, conventions, code, all]
 paths: [flai/internal/workitem, flai/internal/itemedit, flai/internal/itemnew, flai/internal/check, flai/internal/mcpserver, flai/internal/hostapi, flai/internal/manifest, flai/internal/metrics/cascade_test.go, flai/cmd, flaiover/src, docs/operators/settings.md, design/adrs, design/system/work-hierarchy.md, design/system/project-manifest.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, template/template.yaml, docs/users/flai-reference.md, design/issues/summary.md, design/system/flaiover-dashboard.md, design/issues/I-0061-flai-check-splits-an-item-s-front-matter-errors-on-so-a-message-that-holds-one-becomes-two-findings-the-second-on-line-1.md, design/issues/I-0057-flai-check-strict-stops-a-story-s-close-out-on-wip-findings-outside-the-story.md]
 date: 2026-10-03
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/metrics.md#forecasts-and-estimates"
 asked_again: []
 cited: []
 ---

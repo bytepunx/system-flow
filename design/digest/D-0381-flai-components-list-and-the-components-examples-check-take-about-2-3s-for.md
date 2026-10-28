@@ -6,8 +6,8 @@ sources: [I-0166]
 topics: [flai, cli, go, code, all]
 paths: [design/system/component-library.md, docs/operators/runbooks/backup.md, flai/internal/components/props.go, flai/internal/components/props.mjs, flai/internal/components/props_test.go, design/issues/I-0166-flai-components-list-and-the-components-examples-check-take-about-2-3s-for-flaiover-since-props-mjs-resolves-json-props-types-with-typescript-up-from-0-4s.md, design/issues/summary.md]
 date: 2026-10-23
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/component-library.md#skeletons-s-0449"
 asked_again: []
 cited: []
 ---

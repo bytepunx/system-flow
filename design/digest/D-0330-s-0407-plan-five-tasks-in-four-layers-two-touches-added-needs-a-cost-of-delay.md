@@ -9,7 +9,7 @@ date: 2026-10-20
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-0657]
 ---
 
 # D-0330 S-0407 plan: five tasks in four layers, two touches added; needs a cost of delay input (recommend penalty 500 USD a week on E-0023): Recommendation: answer TH-0467 question 1 with `penalty_per_week…

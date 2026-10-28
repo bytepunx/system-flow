@@ -3,12 +3,18 @@ id: T-2145
 type: task
 nature: improvement
 title: The orchestrator's prompt and its agent definition tell it to mark a recommendation on money or a host change for the operator alone, and that flai serve confirms the rest after confirm_after
-status: backlog
+status: in-progress
 parent: S-0502
 owner: alex
 created: 2026-10-26T04:45:16Z
-updated: 2026-10-26T04:45:16Z
-transitions: []
+updated: 2026-10-28T13:05:51Z
+transitions:
+  - to: ready
+    at: 2026-10-28T13:05:50Z
+    by: agent-S-0502
+  - to: in-progress
+    at: 2026-10-28T13:05:51Z
+    by: agent-S-0502
 stream: S-0502
 tags: [flai, template]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md]

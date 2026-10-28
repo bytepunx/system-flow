@@ -6,8 +6,8 @@ sources: [I-0016]
 topics: [flai, cli, go, code, all]
 paths: [flai/internal/issues, flai/internal/release]
 date: 2026-09-19
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/conventions/git.md#project-additions"
 asked_again: []
 cited: []
 ---

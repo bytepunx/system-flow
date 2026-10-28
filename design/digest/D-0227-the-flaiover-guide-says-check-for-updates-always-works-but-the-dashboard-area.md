@@ -6,8 +6,8 @@ sources: [I-0115]
 topics: [flaiover, dashboard, sveltekit, code, all]
 paths: [flaiover/src/lib/components/HostPanel.svelte, flaiover/src/lib/components/HostPanel.svelte.test.ts, design/system/flaiover-dashboard.md, design/issues/I-0115-the-flaiover-guide-says-check-for-updates-always-works-but-the-dashboard-area-hides-it-while-the-dashboard-host-action-is-off.md, design/issues/summary.md, design/issues/I-0104-flai-task-done-commits-everything-in-the-worktree-so-two-tasks-of-one-layer-cannot-be-closed-apart.md]
 date: 2026-10-07
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/flaiover-dashboard.md#writes-s-0075-adr-0029"
 asked_again: []
 cited: []
 ---

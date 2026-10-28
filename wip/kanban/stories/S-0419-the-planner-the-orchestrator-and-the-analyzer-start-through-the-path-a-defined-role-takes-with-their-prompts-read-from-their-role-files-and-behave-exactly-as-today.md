@@ -3,12 +3,15 @@ id: S-0419
 type: story
 nature: improvement
 title: The planner, the orchestrator, and the analyzer start through the path a defined role takes, with their prompts read from their role files, and behave exactly as today
-status: backlog
+status: ready
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:19Z
-updated: 2026-10-28T13:05:08Z
-transitions: []
+updated: 2026-10-28T13:05:47Z
+transitions:
+  - to: ready
+    at: 2026-10-28T13:05:18Z
+    by: alex
 tags: [cli, template]
 topics: [cli, planning, orchestration, template]
 touches: [design/conventions/strategic-agents.md, design/workflows/roles/analyzer.md, design/workflows/roles/orchestrator.md, design/workflows/roles/planner.md, design/system/strategic-agents.md, flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/roles/baseline.go, flai/internal/roles/baseline_test.go, flai/internal/roles/baseline/planner.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/roles/baseline/analyzer.md, flai/internal/serve/agents.go, flai/internal/serve/analysis_schedule.go, flai/internal/serve/analyze.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_hold.go, flai/internal/serve/plan.go, flai/internal/serve/replan.go, flai/internal/serve/role_continuous.go, flai/internal/serve/role.go, flai/internal/serve/role_test.go, flai/internal/serve/serve.go, template/CHANGELOG.md, template/root/design/conventions/strategic-agents.md, template/root/design/workflows/roles/analyzer.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/planner.md]
@@ -34,25 +37,25 @@ usage:
           cache_write: 294016
           cost: 1.282
     - kind: orchestrator
-      seconds: 579
+      seconds: 602
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 136
-          output: 1628
-          cache_read: 23734706
-          cache_write: 175728
-          cost: 5.2796
+          input: 148
+          output: 1788
+          cache_read: 26475438
+          cache_write: 181750
+          cost: 5.8826
 cost_of_delay:
   value: 48.45
   by: planner-S-0419
   at: 2026-10-21T12:15:14Z
 forecast:
   duration: 1h
-  delivery: 2026-10-28T21:55:00Z
-  basis: "Its own forecast of 1h; 14th in the pull order with an in-progress limit of 5, behind S-0502, S-0415, S-0414, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0416, S-0417 and S-0418."
+  delivery: 2026-10-28T14:21:00Z
+  basis: "Its own forecast of 1h; 3rd in the pull order with an in-progress limit of 5, behind S-0502, S-0526 and S-0415."
   by: flai
-  at: 2026-10-28T13:02:30Z
+  at: 2026-10-28T13:05:47Z
 finalized:
   by: alex
   at: 2026-10-28T13:05:08Z

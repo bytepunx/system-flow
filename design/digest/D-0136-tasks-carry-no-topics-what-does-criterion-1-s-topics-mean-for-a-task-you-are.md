@@ -6,8 +6,8 @@ sources: [TH-0098]
 topics: [planner-agent, orchestration, planning, analysis, flai, cli, go, template, conventions, code, all]
 paths: [flai/internal/harness, flai/internal/guard, flai/cmd/guard.go, flai/internal/itemnew, flai/internal/mcpserver/items_write_test.go, flai/internal/serve/plan_test.go, design/conventions, template, design/system/strategic-agents.md, docs/users/flai.md, design/system/flai-cli.md, docs/users/flai-reference.md, docs/users/flaiover.md, flai/cmd/plan.go, design/system/work-hierarchy.md, design/system/workflow.md, design/issues/I-0057-flai-check-strict-stops-a-story-s-close-out-on-wip-findings-outside-the-story.md, design/issues/summary.md]
 date: 2026-10-04
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/work-hierarchy.md#identifiers"
 asked_again: []
 cited: []
 ---

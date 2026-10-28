@@ -9,7 +9,7 @@ date: 2026-10-05
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-0682]
 ---
 
 # D-0167 S-0254 has no cost of delay inputs: 2m

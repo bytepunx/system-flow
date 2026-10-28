@@ -24,16 +24,16 @@ touches: [design/issues/I-0181-events-socket-test-ts-closes-every-events-socket-
 after: [T-2134]
 usage:
   source: log
-  seconds: 9
+  seconds: 12
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 32
-      cache_read: 297285
-      cache_write: 2164
-      cost: 0.1013
+      input: 5
+      output: 732
+      cache_read: 286683
+      cache_write: 12765
+      cost: 0.1741
 ---
 # T-2135 Close I-0181 citing S-0494's teardown, name it in the dashboard design's stop bullet, and tick the criteria
 

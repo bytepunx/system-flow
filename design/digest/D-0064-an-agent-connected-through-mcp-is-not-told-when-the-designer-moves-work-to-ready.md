@@ -6,8 +6,8 @@ sources: [I-0020]
 topics: [flai, cli, go, template, conventions, code, all]
 paths: [flai/internal/mcpserver, design/conventions, template]
 date: 2026-10-01
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/agent-narrative.md#what-an-agent-is-told-through-mcp"
 asked_again: []
 cited: []
 ---

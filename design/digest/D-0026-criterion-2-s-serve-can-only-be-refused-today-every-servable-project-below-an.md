@@ -6,8 +6,8 @@ sources: [TH-0016]
 topics: [flai, cli, go, flaiover, dashboard, sveltekit, code, all]
 paths: [flaiover, flai/internal/hostapi]
 date: 2026-09-26
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0045-a-system-flow-repository-under-a-folder-named-for-import-is-served-whether-or.md#decision"
 asked_again: []
 cited: []
 ---

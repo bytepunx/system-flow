@@ -6,8 +6,8 @@ sources: [TH-0096]
 topics: [orchestration, planning, analysis, flai, cli, go, flaiover, dashboard, sveltekit, template, conventions, code, all]
 paths: [flai/internal/serve, flai/internal/harness, flai/internal/hostapi, flai/cmd, flai/internal/mcpserver, flai/internal/manifest, flai/internal/guard, flaiover/src, ".claude/agents", template, design/issues, design/system, design/adrs, docs/users, docs/operators, ".claude/settings.json"]
 date: 2026-10-04
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0082-flai-serve-starts-the-planner-for-an-epic-or-a-story-behind-the-plan-host.md#decision"
 asked_again: []
 cited: []
 ---

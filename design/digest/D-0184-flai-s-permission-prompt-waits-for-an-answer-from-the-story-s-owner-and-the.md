@@ -6,8 +6,8 @@ sources: [I-0081]
 topics: [cli, flai, go, code, all]
 paths: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, design/adrs, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0081-flai-s-permission-prompt-waits-for-an-answer-from-the-story-s-owner-and-the-operator-s-thread-replies-carry-another-name-so-their-allow-is-never-seen-and-the-write-times-out.md, design/issues/summary.md, design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md]
 date: 2026-10-06
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0097-permission-prompt-takes-an-answer-from-the-story-s-owner-or-the-project-s-owner.md#decision"
 asked_again: []
 cited: []
 ---

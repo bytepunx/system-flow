@@ -3,12 +3,15 @@ id: S-0420
 type: story
 nature: feature
 title: The dashboard's Planner, Orchestrator, and Analyzer pages become one role page per defined role, with its settings panel, its activity document, and its runs, and agent.status carries every role by name
-status: backlog
+status: ready
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:31Z
-updated: 2026-10-28T13:03:39Z
-transitions: []
+updated: 2026-10-28T13:05:47Z
+transitions:
+  - to: ready
+    at: 2026-10-28T13:05:34Z
+    by: alex
 tags: [dashboard, cli]
 topics: [dashboard, planning, orchestration]
 touches: [design/system/flaiover-dashboard.md, docs/users/flaiover.md, flai/internal/hostapi/contract_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/serve/agents.go, flai/internal/serve/stream.go, flai/internal/serve/stream_test.go, flaiover/src/lib/components/RolePage.svelte, flaiover/src/lib/components/RolePage.svelte.test.ts, flaiover/src/lib/components/StrategicAgentPanel.svelte, flaiover/src/lib/components/StrategicSettings.svelte, flaiover/src/lib/components/StrategicSettings.svelte.test.ts, flaiover/src/lib/roles.test.ts, flaiover/src/lib/roles.ts, flaiover/src/lib/settings.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/sitemenu.ts, "flaiover/src/routes/api/roles/[name]/roles.test.ts", "flaiover/src/routes/api/roles/[name]/+server.ts", flaiover/src/routes/workflow/analyzer/analyzer.svelte.test.ts, flaiover/src/routes/workflow/analyzer/+page.svelte, flaiover/src/routes/workflow/orchestrator/orchestrator.svelte.test.ts, flaiover/src/routes/workflow/orchestrator/+page.svelte, flaiover/src/routes/workflow/planner/+page.svelte, flaiover/src/routes/workflow/planner/planner.svelte.test.ts, "flaiover/src/routes/workflow/[role]/+page.svelte", flai/internal/serve/agents_test.go, flaiover/src/lib/server/agent.ts, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go, docs/operators/settings.md, flaiover/src/lib/strategic.ts, flaiover/src/lib/strategic.test.ts, "flaiover/src/routes/api/agent-stream/[story]/+server.ts", "flaiover/src/routes/api/agent-stream/[story]/agent-stream.test.ts", flaiover/src/lib/components/NavRail.svelte, flaiover/src/lib/components/NavRail.svelte.test.ts, flaiover/src/routes/+layout.svelte, flaiover/src/routes/layout.svelte.test.ts, design/system/project-manifest.md, design/system/flai-cli.md]
@@ -24,25 +27,25 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 302
+      seconds: 327
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 109
-          output: 1938
-          cache_read: 26318370
-          cache_write: 25326
-          cost: 5.8168
+          input: 117
+          output: 2019
+          cache_read: 28158906
+          cache_write: 27505
+          cost: 6.2213
 cost_of_delay:
   value: 73.64
   by: planner-S-0420
   at: 2026-10-21T12:28:25Z
 forecast:
   duration: 1h35m
-  delivery: 2026-10-28T23:46:00Z
-  basis: "Its own forecast of 1h35m; 15th in the pull order with an in-progress limit of 5, behind S-0502, S-0415, S-0414, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0416, S-0417, S-0418 and S-0419."
+  delivery: 2026-10-28T16:12:00Z
+  basis: "Its own forecast of 1h35m; 7th in the pull order with an in-progress limit of 5, behind S-0502, S-0526, S-0415, S-0419, S-0418, S-0416 and S-0414."
   by: flai
-  at: 2026-10-28T13:02:30Z
+  at: 2026-10-28T13:05:47Z
 finalized:
   by: alex
   at: 2026-10-28T13:03:39Z

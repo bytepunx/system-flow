@@ -3,15 +3,18 @@ id: S-0414
 type: story
 nature: feature
 title: A strategic role is a markdown file under design/workflows/roles that flai reads and flai check validates, and the template ships the planner, the orchestrator, and the analyzer as baseline role files
-status: ready
+status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:39:25Z
-updated: 2026-10-28T13:02:30Z
+updated: 2026-10-28T13:05:49Z
 transitions:
   - to: ready
     at: 2026-10-28T13:01:57Z
     by: alex
+  - to: in-progress
+    at: 2026-10-28T13:05:49Z
+    by: agent-S-0414
 tags: [cli, template]
 topics: [cli, planning, orchestration, template, conventions]
 touches: [design/adrs, design/adrs/README.md, design/conventions/strategic-agents.md, design/workflows/roles/analyzer.md, design/workflows/roles/orchestrator.md, design/workflows/roles/planner.md, design/workflows/roles/README.md, design/system/repository-layout.md, design/system/strategic-agents.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/role.go, flai/cmd/role_test.go, flai/cmd/root.go, flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/upgrade/upgrade.go, flai/internal/upgrade/upgrade_test.go, template/CHANGELOG.md, template/root/design/conventions/strategic-agents.md, template/root/design/workflows/roles/analyzer.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/README.md, template/template.yaml, design/system/flai-cli.md, design/system/project-manifest.md, design/README.md, template/root/design/README.md.tmpl, CLAUDE.md, template/root/CLAUDE.md.tmpl]
@@ -26,15 +29,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 426
+      seconds: 435
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 50
-          output: 604
-          cache_read: 4481519
-          cache_write: 38554
-          cost: 0.9976
+          input: 51
+          output: 617
+          cache_read: 4799603
+          cache_write: 44222
+          cost: 1.0687
 cost_of_delay:
   value: 66.76
   by: planner-S-0414

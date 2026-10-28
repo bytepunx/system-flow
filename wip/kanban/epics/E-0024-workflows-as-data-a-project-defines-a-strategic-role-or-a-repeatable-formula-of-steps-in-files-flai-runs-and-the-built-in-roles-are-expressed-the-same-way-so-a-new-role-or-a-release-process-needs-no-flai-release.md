@@ -3,10 +3,10 @@ id: E-0024
 type: epic
 nature: feature
 title: "Workflows as data: a project defines a strategic role or a repeatable formula of steps in files flai runs, and the built-in roles are expressed the same way, so a new role or a release process needs no flai release"
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-16T04:28:02Z
-updated: 2026-10-21T12:56:59Z
+updated: 2026-10-28T13:05:49Z
 transitions:
   - to: ready
     at: 2026-10-20T19:01:17Z
@@ -14,6 +14,12 @@ transitions:
   - to: backlog
     at: 2026-10-21T05:57:42Z
     by: alex
+  - to: ready
+    at: 2026-10-28T13:01:57Z
+    by: alex
+  - to: in-progress
+    at: 2026-10-28T13:05:49Z
+    by: agent-S-0414
 tags: [cli, dashboard, template]
 topics: [cli, orchestration, planning, template, conventions]
 touches: [flai/internal/serve, flai/internal/guard, flai/internal/context, flai/internal/hostapi, flai/cmd, flaiover/src, design/system/strategic-agents.md, design/system/metrics.md, design/conventions/strategic-agents.md, ".claude/agents", docs/operators/index.md, docs/users/flai.md, template]
@@ -45,15 +51,15 @@ usage:
           cache_write: 294016
           cost: 1.282
     - kind: orchestrator
-      seconds: 9338
+      seconds: 9426
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1395
-          output: 22039
-          cache_read: 321629404
-          cache_write: 605358
-          cost: 73.0759
+          input: 1422
+          output: 22341
+          cache_read: 327791361
+          cache_write: 636175
+          cost: 74.4355
 ---
 # E-0024 Workflows as data: a project defines a strategic role or a repeatable formula of steps in files flai runs, and the built-in roles are expressed the same way, so a new role or a release process needs no flai release
 
@@ -92,3 +98,5 @@ To be drafted by the planner. Order: the role file format and its validation fir
 - The planner reads first: `design/system/strategic-agents.md`; `design/conventions/strategic-agents.md`; `.claude/agents/*.md`, which stay the definitions' source for the harness (ADR-0130); ADR-0075, ADR-0079, ADR-0082, ADR-0084, ADR-0087, ADR-0099, ADR-0143; `flai/internal/serve` where each role is started; `flai/internal/guard/guard.go`.
 - Open to the designer: where role and formula files live, since the layout allows no new top-level folder and `design/conventions` is for norms; whether a formula's instance is a story of nature `improvement` or a nature of its own; whether a role may be given a model and provider apart from the project's default agent, as a story's roles are.
 - A role defined by a project runs as the operator, as every agent does: the safety note under `docs/operators/index.md` § Starting an agent when a story becomes ready applies to it, and the convention says so.
+- 2026-10-28T13:01:57Z: moved to ready: follows S-0414, which moved to ready
+- 2026-10-28T13:05:49Z: moved to in-progress: follows S-0414, which moved to in-progress

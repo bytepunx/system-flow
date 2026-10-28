@@ -6,8 +6,8 @@ sources: [TH-0082]
 topics: [orchestration, planning, analysis, flai, cli, go, flaiover, dashboard, sveltekit, template, conventions, code, all]
 paths: [flai/internal/workitem, flai/internal/itemedit, flai/internal/release, flai/cmd/release.go, flai/cmd/move.go, flai/cmd/move_cancel.go, flai/cmd/accept.go, flai/cmd/edit.go, flai/cmd/check.go, flai/cmd/accept_epic_test.go, flai/cmd/release_pending_test.go, flai/cmd/accept_research_test.go, flai/cmd/accept_test.go, flai/cmd/stream_diff_test.go, flai/cmd/workitems_test.go, flai/cmd/check_stats_test.go, flai/internal/mcpserver, design/system/workflow.md, flai/cmd/edit_test.go, flai/cmd/hostapi_reads_test.go, flai/cmd/move_cancel_test.go, flai/internal/preview, flai/internal/check, design/system/work-hierarchy.md, design/system/flai-cli.md, design/adrs, docs/users, design/conventions/git.md, template/root/design/conventions/git.md, template/template.yaml, template/CHANGELOG.md, design/tech/ci.md, design/issues/summary.md, design/issues/I-0057-flai-check-strict-stops-a-story-s-close-out-on-wip-findings-outside-the-story.md, design/issues/I-0062-flai-adr-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-adr-number.md]
 date: 2026-10-03
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0078-an-accepted-epic-contributes-no-release-bump-of-its-own-its-stories-carry-theirs.md#decision"
 asked_again: []
 cited: []
 ---

@@ -6,8 +6,8 @@ sources: [TH-0019]
 topics: [flai, cli, go, code, all]
 paths: [flai/cmd]
 date: 2026-09-26
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0046-a-ready-story-whose-claim-overlaps-an-open-story-s-is-held-yellow-and-with-its.md#decision"
 asked_again: []
 cited: []
 ---

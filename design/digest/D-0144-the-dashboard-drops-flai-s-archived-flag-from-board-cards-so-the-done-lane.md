@@ -6,8 +6,8 @@ sources: [I-0060]
 topics: [flaiover, dashboard, sveltekit, code, all]
 paths: [design/issues/I-0060-the-dashboard-drops-flai-s-archived-flag-from-board-cards-so-the-done-lane-shows-archived-items-it-should-hide-while-the-clone-lags-its-remote-s-tags.md, design/issues/summary.md, flaiover/src/lib/server/board.ts, flaiover/src/lib/server/repo-channel.test.ts, design/issues/I-0057-flai-check-strict-stops-a-story-s-close-out-on-wip-findings-outside-the-story.md]
 date: 2026-10-04
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/flaiover-dashboard.md#writes-s-0075-adr-0029"
 asked_again: []
 cited: []
 ---

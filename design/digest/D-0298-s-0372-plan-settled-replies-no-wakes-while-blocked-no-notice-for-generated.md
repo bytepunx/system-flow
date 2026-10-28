@@ -6,8 +6,8 @@ sources: [TH-0422]
 topics: [cli, conventions, flai, go, template, code, all]
 paths: [design/adrs/README.md, design/system/agent-coordination.md, design/system/workflow.md, design/system/agent-narrative.md, design/system/flai-cli.md, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/cmd/message.go, flai/cmd/message_test.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/messages_test.go, flai/internal/mcpserver/folder.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0125-a-settled-conversation-between-two-stories-agents-keeps-waking-each-in-turn-because-every-reply-awaits-the-other.md, design/issues/summary.md, design/adrs/0154-a-reply-may-settle-a-conversation-which-then-awaits-neither-story-and-flai.md, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, docs/operators/settings.md, design/issues/I-0147-the-mcp-server-s-flai-lags-a-fresh-publish-so-task-done-refuses-and-a-story-s-agent-falls-back-to-the-tree-s-cli.md]
 date: 2026-10-14
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0154-a-reply-may-settle-a-conversation-which-then-awaits-neither-story-and-flai.md#decision"
 asked_again: []
 cited: []
 ---

@@ -6,8 +6,8 @@ sources: [I-0099]
 topics: [flai, cli, go, code, all]
 paths: [design/adrs/0157-flai-stream-sync-and-flai-accept-merge-design-adrs-readme-md-s-index-row-by-row.md, flai/internal/adrindex/adrindex.go, flai/internal/adrindex/adrindex_test.go, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, flai/cmd/stream_sync.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, design/issues/I-0099-two-stories-that-each-add-an-adr-conflict-in-design-adrs-readme-md-whose-index-both-append-a-row-to-and-flai-opens-a-thread-for-each-sync-that-finds-it.md, design/issues/summary.md, docs/users/flai-reference.md, flai/cmd/stream.go, flai/cmd/stream_sync_test.go, flai/internal/issues/generated.go, design/issues/I-0148-a-close-out-whose-run-main-outruns-takes-two-rounds-of-the-integration-and-smoke-tiers-about-24-minutes-past-the-bash-tool-s-10-minute-limit-so-the-agent-s-call-is-killed-mid-round.md]
 date: 2026-10-14
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0157-flai-stream-sync-and-flai-accept-merge-design-adrs-readme-md-s-index-row-by-row.md#decision"
 asked_again: []
 cited: []
 ---

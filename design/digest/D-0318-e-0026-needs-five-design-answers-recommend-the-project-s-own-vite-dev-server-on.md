@@ -6,8 +6,8 @@ sources: [TH-0483]
 topics: [all]
 paths: []
 date: 2026-10-16
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0163-flai-runs-a-sub-project-s-own-vite-dev-server-on-127-0-0-1-behind-the.md#decision"
 asked_again: []
 cited: []
 ---

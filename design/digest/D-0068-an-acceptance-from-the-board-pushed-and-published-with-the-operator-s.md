@@ -6,8 +6,8 @@ sources: [I-0028]
 topics: [flai, cli, go, flaiover, dashboard, sveltekit, code, all]
 paths: [flai/cmd, flai/internal, flaiover/src, design/system, docs/operators]
 date: 2026-10-01
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/pushing-from-the-board.md#pushing-an-acceptance-made-from-the-board"
 asked_again: []
 cited: []
 ---

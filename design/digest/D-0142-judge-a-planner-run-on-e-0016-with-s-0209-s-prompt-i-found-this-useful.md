@@ -6,8 +6,8 @@ sources: [TH-0103]
 topics: [orchestration, planning, analysis, flai, cli, go, template, conventions, code, all]
 paths: [flai/internal/harness, flai/internal/guard, flai/internal/mcpserver, flai/internal/serve, flai/cmd/guard.go, ".claude/agents/planner.md", template, design/conventions/strategic-agents.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users, design/issues/I-0058-flai-guard-refuses-a-sub-agent-s-shell-command-whose-heredoc-text-reads-like-a-flai-write.md, design/issues/summary.md, design/issues/I-0069-a-story-agent-started-by-flai-serve-cannot-edit-claude-settings-json-so-a-story-that-changes-the-guard-hook-s-matcher-cannot-ship-it.md, design/issues/I-0071-item-edit-refuses-a-touch-that-starts-with-a-dot-though-flai-touches-accepts-it.md, design/issues/I-0065-flai-issue-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-issue-number.md]
 date: 2026-10-04
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/strategic-agents.md#measured-on-e-0016-s-0209"
 asked_again: []
 cited: []
 ---

@@ -6,8 +6,8 @@ sources: [I-0084]
 topics: [cli, conventions, flai, go, template, code, all]
 paths: [flai/internal/harness, flai/internal/mcpserver, flai/internal/guard, flai/cmd/guard.go, design/conventions/delegation.md, template, ".claude/settings.json", design/system/flai-cli.md, design/system/agent-context.md, docs/users, docs/operators, design/issues, design/adrs, flai/cmd/guard_test.go]
 date: 2026-10-07
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/agent-context.md#waiting-for-a-sub-agent"
 asked_again: []
 cited: []
 ---

@@ -1,20 +1,22 @@
 ---
 title: Active streams
-updated: 2026-10-28T13:02:30Z
+updated: 2026-10-28T13:07:01Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0499](S-0499.md) | events-socket.test.ts 'closes every events socket with 1001 when the server stops' fails now and then: a change listener is still attached when the server has closed | review | agent-S-0499 | 2026-10-28T13:00:30Z |
+| [S-0414](S-0414.md) | A strategic role is a markdown file under design/workflows/roles that flai reads and flai check validates, and the template ships the planner, the orchestrator, and the analyzer as baseline role files | in-progress | agent-S-0414 | 2026-10-28T13:05:49Z |
 | [S-0502](S-0502.md) | A thread with a pending orchestrator recommendation waits on the operator however long it takes, with no setting to confirm it after a threshold | in-progress | agent-S-0502 | 2026-10-28T13:05:09Z |
+| [S-0521](S-0521.md) | flai verify inside the agent container takes the story's worktree for the project root, since the main checkout is not mounted, and writes a config under the container's home | in-progress | agent-S-0521 | 2026-10-28T13:06:59Z |
+| [S-0526](S-0526.md) | component-library.md still says the main checkout is never installed into, though flai accept now installs there by ADR-0185 | in-progress | agent-S-0526 | 2026-10-28T13:07:01Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
-| [planner](planner.md) | 106 | 908.1810 USD | 123480 | 2026-10-26T12:42:38Z |
-| [orchestrator](orchestrator.md) | 1138 | 1622.9325 USD | 1410186 | 2026-10-28T13:05:02Z |
+| [planner](planner.md) | 107 | 919.7895 USD | 123793 | 2026-10-28T13:03:51Z |
+| [orchestrator](orchestrator.md) | 1142 | 1624.5618 USD | 1410282 | 2026-10-28T13:06:38Z |
 | [analyzer](analyzer.md) | 1 | 5.0040 USD | 454 | 2026-10-15T22:49:08Z |
 | [curator](curator.md) | 2 | 11.3955 USD | 1317 | 2026-10-28T13:04:39Z |

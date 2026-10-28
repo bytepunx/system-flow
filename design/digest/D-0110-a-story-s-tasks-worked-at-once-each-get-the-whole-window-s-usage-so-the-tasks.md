@@ -6,8 +6,8 @@ sources: [I-0054]
 topics: [flai, cli, go, flaiover, dashboard, sveltekit, template, conventions, code, all]
 paths: [flai/internal/usage, flai/internal/serve, flai/internal/harness, flai/cmd, design/conventions, template, design/adrs, design/issues, design/system, docs]
 date: 2026-10-02
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0071-a-task-s-usage-is-the-calls-of-the-sub-agents-started-for-it-and-an-even-share.md#decision"
 asked_again: []
 cited: []
 ---

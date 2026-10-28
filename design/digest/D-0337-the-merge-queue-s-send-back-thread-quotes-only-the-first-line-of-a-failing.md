@@ -6,8 +6,8 @@ sources: [I-0172]
 topics: [cli, flai, go, code, all]
 paths: [flai/internal/verify/text.go, flai/internal/verify/text_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/verify/run.go, flai/internal/verify/run_test.go, flai/internal/verify/story.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/state.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/bisect_test.go, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, docs/operators/runbooks/backup.md, design/issues/I-0172-the-merge-queue-s-send-back-thread-quotes-only-the-first-line-of-a-failing-plain-tier-s-finding-and-keeps-no-log-of-the-batch-so-the-step-that-failed-cannot-be-told.md, design/issues/summary.md, flai/internal/verify/verify.go, flai/internal/mergequeue/land_test.go, flai/internal/serve/mergequeue_test.go]
 date: 2026-10-21
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/flai-cli.md#the-merge-queue-pass"
 asked_again: []
 cited: []
 ---

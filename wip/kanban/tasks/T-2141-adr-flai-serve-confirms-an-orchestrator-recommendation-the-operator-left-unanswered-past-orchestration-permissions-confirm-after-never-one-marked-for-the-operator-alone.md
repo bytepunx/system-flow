@@ -23,7 +23,7 @@ tags: [flai]
 touches: [design/adrs/0206-flai-serve-confirms-a-recommendation-the-operator-left-unanswered-past-confirm-after.md, design/adrs/README.md, design/adrs/0206-flai-serve-confirms-an-orchestrator-recommendation-the-operator-left-unanswered.md]
 usage:
   source: log
-  seconds: 43
+  seconds: 46
   estimated: true
   priced_by: estimate
   models:
@@ -32,7 +32,7 @@ usage:
       output: 38
       cache_read: 730536
       cache_write: 5029
-      cost: 0.2487
+      cost: 0.2488
 ---
 # T-2141 ADR: flai serve confirms an orchestrator recommendation the operator left unanswered past orchestration.permissions.confirm_after, never one marked for the operator alone
 

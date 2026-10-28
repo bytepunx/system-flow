@@ -1,9 +1,9 @@
 ---
 kind: planner
-accrued_cost: 908.1810
-accrued_seconds: 123480
-tasks_completed: 106
-last_run: 2026-10-26T12:42:38Z
+accrued_cost: 919.7895
+accrued_seconds: 123793
+tasks_completed: 107
+last_run: 2026-10-28T13:03:51Z
 ---
 
 # Planner activity
@@ -851,3 +851,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0506, T-2152
 - Seconds: 190
 - Cost: 8.1773 USD, estimated
+
+### 2026-10-28T13:03:51Z
+
+- Summary: Planned S-0515: wrote its touches (11 paths, `design/adrs` folder kept for the ADR's file), forecast 45m (flai gave 5m) with delivery 2026-10-29T09:03Z, cost of delay 50 USD/week from the operator's input, tags, topics, and a `### Planning` note; created T-2206 (SDK localhost protection off, reproducing test, help), T-2208 (ADR refining ADR-0030), and T-2210 (docs and `flai issue close I-0213`, after the first two) in two layers; opened TH-0683 proposing the token as the only gate over an allowed-hosts list; no tasks revisited, and `flai check --strict` reports nothing on the story or its tasks.
+- Trigger: asked
+- Items: S-0521, T-2207, T-2209, T-2211, T-2212
+- Seconds: 313
+- Cost: 11.6085 USD, estimated

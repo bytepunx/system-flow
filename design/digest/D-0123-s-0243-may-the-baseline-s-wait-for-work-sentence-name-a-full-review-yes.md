@@ -6,8 +6,8 @@ sources: [TH-0079]
 topics: []
 paths: []
 date: 2026-10-03
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0073-a-full-review-holds-the-pull-and-flai-check-strict-passes-over-review-over-its.md#decision"
 asked_again: []
 cited: []
 ---

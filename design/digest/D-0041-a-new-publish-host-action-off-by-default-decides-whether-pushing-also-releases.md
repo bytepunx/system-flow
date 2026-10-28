@@ -6,8 +6,8 @@ sources: [TH-0031]
 topics: [flai, cli, go, code, all]
 paths: [flai/cmd/push.go, flai/cmd/push_test.go, flai/cmd/release.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/writes.go, flai/internal/pending, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/conventions/git.md, design/adrs, design/issues, docs/operators/index.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md]
 date: 2026-09-29
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0048-pushing-accepted-work-releases-nothing-unless-the-auto-publish-host-action-is-enabled.md#decision"
 asked_again: []
 cited: []
 ---

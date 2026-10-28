@@ -6,8 +6,8 @@ sources: [I-0140]
 topics: [flai, cli, go, code, all]
 paths: [flai/internal/filelock/filelock.go, flai/internal/filelock/filelock_unix.go, flai/internal/filelock/filelock_windows.go, flai/internal/filelock/filelock_test.go, flai/go.mod, design/tech/go-libraries.md, flai/internal/workitem/activity.go, flai/internal/workitem/activity_test.go, flai/internal/guard/subagents.go, flai/internal/guard/subagents_test.go, flai/internal/serve/restart.go, flai/internal/serve/restart_test.go, design/system/strategic-agents.md, design/issues/I-0140-testactivitywriterstaketurns-fails-about-one-run-in-three-two-writers-that-both-find-the-activity-lock-stale-can-both-take-it-and-an-entry-is-lost.md, design/issues/summary.md, flai/cmd/guard_test.go, flai/cmd/promote_test.go]
 date: 2026-10-13
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/tech/go-libraries.md#go-libraries-used-by-flai"
 asked_again: []
 cited: []
 ---

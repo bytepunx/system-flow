@@ -3,12 +3,18 @@ id: T-2144
 type: task
 nature: improvement
 title: "flai stats tells a wait that flai serve's confirmation by timeout ended from one the operator confirmed, as waiting.weeks[].threads.timeout and awaited flai serve, by the ADR's change to metrics.md, and the dashboard's types follow"
-status: backlog
+status: in-progress
 parent: S-0502
 owner: alex
 created: 2026-10-26T04:45:09Z
-updated: 2026-10-26T04:45:09Z
-transitions: []
+updated: 2026-10-28T13:05:48Z
+transitions:
+  - to: ready
+    at: 2026-10-28T13:05:46Z
+    by: agent-S-0502
+  - to: in-progress
+    at: 2026-10-28T13:05:48Z
+    by: agent-S-0502
 stream: S-0502
 tags: [flai, flaiover]
 touches: [flai/internal/metrics/waiting.go, flai/internal/metrics/waiting_test.go, design/system/metrics.md, flaiover/src/lib/viz/charts.ts]

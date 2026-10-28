@@ -6,8 +6,8 @@ sources: [I-0103]
 topics: [cli, agents, flai, go, code, all]
 paths: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/delegation.md, docs/users/flai.md, design/system/flai-cli.md, design/adrs, design/adrs/README.md, design/issues/I-0103-a-story-agent-s-claude-write-waits-thirty-minutes-on-an-unanswered-permission-thread-then-fails-on-claude-code-s-mcp-idle-timeout.md, design/issues/summary.md, design/issues/I-0108-flai-task-done-commits-every-uncommitted-file-in-the-story-worktree-so-closing-one-task-of-a-layer-sweeps-its-siblings-work-into-its-commit.md]
 date: 2026-10-08
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0124-permission-prompt-holds-a-write-at-most-four-minutes-then-refuses-it-and-leaves.md#decision"
 asked_again: []
 cited: []
 ---

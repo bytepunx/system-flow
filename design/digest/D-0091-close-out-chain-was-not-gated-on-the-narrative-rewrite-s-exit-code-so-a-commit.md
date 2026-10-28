@@ -6,8 +6,8 @@ sources: [I-0012]
 topics: [conventions, template, all]
 paths: [design/conventions, template, scripts, design/system/conventions.md, design/system/repository-layout.md, Makefile, design/issues/I-0006-shell-is-zsh.md, design/issues/I-0012-close-out-chain-was-not-gated-on-the-narrative-rewrite-s-exit-code-so-a-commit-went-out-with-an-empty-narrative.md, design/issues/summary.md]
 date: 2026-10-01
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/conventions/tooling.md#rules"
 asked_again: []
 cited: []
 ---

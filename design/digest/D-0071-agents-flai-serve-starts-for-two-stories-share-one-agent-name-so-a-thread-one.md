@@ -6,8 +6,8 @@ sources: [I-0037]
 topics: [flai, cli, go, code, all]
 paths: [flai/cmd, flai/internal/serve, flai/internal/harness, design/adrs, design/system, docs/users, docs/operators]
 date: 2026-10-01
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/flai-cli.md#commands"
 asked_again: []
 cited: []
 ---

@@ -6,8 +6,8 @@ sources: [I-0065]
 topics: [cli, flai, go, code, all]
 paths: [flai/internal/storygit, flai/internal/issues, flai/cmd/issue.go, flai/cmd/issue_test.go, flai/internal/mcpserver/issues_test.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/continuous-improvement.md, design/issues/I-0065-flai-issue-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-issue-number.md, design/issues/summary.md, design/issues/I-0057-flai-check-strict-stops-a-story-s-close-out-on-wip-findings-outside-the-story.md]
 date: 2026-10-05
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/continuous-improvement.md#cadence"
 asked_again: []
 cited: []
 ---
