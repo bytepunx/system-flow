@@ -802,6 +802,7 @@ func (m Manifest) settingsProblems() []Problem {
 	}
 	msgs = append(msgs, m.Planning.Errors()...)
 	msgs = append(msgs, m.Orchestration.Errors()...)
+	msgs = append(msgs, m.RoleErrors()...)
 	msgs = append(msgs, m.Analysis.Errors()...)
 	msgs = append(msgs, m.Digest.Errors()...)
 	msgs = append(msgs, m.Threads.Errors()...)

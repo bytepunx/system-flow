@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/analysis"
 	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/roles"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -287,6 +289,9 @@ not run it.`,
 					g.Root, g.Reports = p.Root, analysis.Dir(p.Manifest)
 				}
 			}
+			if guard.DefinedRole(g.Role) && !call.Subagent {
+				a.guardRole(&g, cmd.Root())
+			}
 			if _, ok := guard.ProtectedWrite(call); ok && (call.Subagent || g.Role == "" && g.Story != "") {
 				g.AutoApprove = a.guardAutoApprove()
 			}
@@ -324,6 +329,49 @@ func (a *app) guardProject() (*workitem.Repo, error) {
 		}
 	}
 	return workitem.Open(start)
+}
+
+// guardRole gives g what it needs to hold a session whose role a role file
+// defines to that file (S-0416, ADR-0207): flai's subcommands from root's
+// tree and, from the project the hook runs in, its root and design folder,
+// the threads' openers, the file whose role is g.Role, and the manifest's
+// roles.<name>.permissions of it. A project or folder it cannot read, or no
+// file that holds the role, sets RoleProblem, naming the file or the folder
+// and flai check, and the guard fails closed.
+func (a *app) guardRole(g *guard.Guard, root *cobra.Command) {
+	g.Subcommands = map[string][]string{}
+	for _, c := range root.Commands() {
+		for _, sub := range c.Commands() {
+			g.Subcommands[c.Name()] = append(g.Subcommands[c.Name()], sub.Name())
+		}
+	}
+	repo, err := a.guardProject()
+	if err != nil {
+		g.RoleProblem = fmt.Sprintf("the project could not be read for the role file of %s (%v); run flai check in it", g.Role, err)
+		a.logger().Warn("project unreadable, the role is refused every write", "component", "guard", "role", g.Role, "err", err.Error())
+		return
+	}
+	design := repo.Manifest.Layout["design"]
+	g.Root, g.Design, g.Opener = repo.Root, design, guard.ThreadOpener(repo)
+	all, problems, err := roles.Load(repo.Root, design)
+	if err != nil {
+		g.RoleProblem = fmt.Sprintf("%v; run flai check", err)
+		return
+	}
+	for _, r := range all {
+		if r.Role == g.Role {
+			g.RoleFile, g.RolePermissions = &r, repo.Manifest.Roles[r.Name].Permissions
+			return
+		}
+	}
+	var why []string
+	for _, p := range problems {
+		why = append(why, fmt.Sprintf("%s does not parse: %s", p.Path, p.Message))
+	}
+	if len(why) == 0 {
+		why = append(why, fmt.Sprintf("no role file under %s has role %s", roles.Dir(design), g.Role))
+	}
+	g.RoleProblem = strings.Join(why, "; ") + "; run flai check"
 }
 
 // guardAutoApprove reports whether the operator enabled auto-approve for the

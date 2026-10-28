@@ -105,6 +105,18 @@
 // that it writes entries only with flai digest new, edit, absorb, cited, and
 // compact. Its sub-agents are held as every sub-agent is.
 //
+// A session flai serve starts with a role a project's role file defines,
+// under the design folder's workflows/roles (S-0416, ADR-0207), is held to
+// that file: its own calls may make the reads every sub-agent has, and each
+// MCP tool, flai command, and file edit the file lists, under the condition
+// an entry names and, for an entry under a permission, while the operator's
+// setting for it is on, roles.<name>.permissions.<p> for the role itself. An
+// entry flai check reports as roles.grant is never granted. Every other call
+// is refused, naming the role, the rule it breaks, and the operator to ask
+// with thread_open; a role whose file is missing or does not parse is refused
+// every call but a read, naming the file and flai check. Its sub-agents are
+// held as every sub-agent is.
+//
 // A story's agent, in a session flai serve starts with FLAI_STORY and no
 // role, is refused its own wait_for_events while a sub-agent of its session
 // runs and no thread on its story awaits the designer (S-0285): the call
@@ -154,6 +166,7 @@ import (
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/roles"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -622,22 +635,39 @@ func (g Guard) forgePush(c Call) Verdict {
 // planner-<Item>, analyzer, or curator, and only in Session: their own call that names another author
 // with --by or --placed-by, or sets, empties, or unsets FLAI_AGENT or
 // FLAI_SESSION to anything but these, is refused (S-0369, ADR-0143).
+//
+// A Role that a project's role file defines, any but the four above and the
+// story's agent's and its sub-agents' verbs, holds the session's own calls to
+// RoleFile, the role file of that role, nil when none was read (S-0416,
+// ADR-0207). RoleProblem says why the file could not be read, missing or not
+// parsing, naming the file or its folder and flai check; while it is set, or
+// RoleFile is nil, the session reads and is refused every other call.
+// RolePermissions are the manifest's roles.<name>.permissions of the role;
+// the orchestrator's stay in Permissions. Subcommands are each flai command's
+// subcommands, from the command tree, which a role file's command entries
+// are matched against; nil when not given. Design is the design folder,
+// relative to Root and slash separated, for {design} in the file's files.
 type Guard struct {
-	Commands    []string
-	Role        string
-	Served      bool
-	Permissions manifest.Permissions
-	Opener      func(id string) (string, error)
-	Root        string
-	Reports     string
-	Story       string
-	Running     func() ([]SubAgent, error)
-	ThreadOpen  func() (bool, error)
-	AutoApprove bool
-	ReadOnly    func(agentType string) bool
-	Agent       string
-	Session     string
-	Item        string
+	Commands        []string
+	Role            string
+	Served          bool
+	Permissions     manifest.Permissions
+	Opener          func(id string) (string, error)
+	Root            string
+	Reports         string
+	Story           string
+	Running         func() ([]SubAgent, error)
+	ThreadOpen      func() (bool, error)
+	AutoApprove     bool
+	ReadOnly        func(agentType string) bool
+	Agent           string
+	Session         string
+	Item            string
+	RoleFile        *roles.Role
+	RoleProblem     string
+	RolePermissions manifest.Permissions
+	Subcommands     map[string][]string
+	Design          string
 }
 
 // ThreadOpener says who opened the thread with an ID in r's wip/threads, in
@@ -1397,19 +1427,25 @@ func (g Guard) curate(c Call) string {
 	return ""
 }
 
-// inReports says whether file, as a FileWrite call names it, is
-// under the reports folder: taken from Root when it is relative, cleaned, and
-// with the symbolic links along the part of it that exists resolved, as the
-// folder's are, so that neither .. nor a link leads out of it.
-func (g Guard) inReports(file string) bool {
-	if g.Root == "" || g.Reports == "" || file == "" {
+// inReports says whether file, as a FileWrite call names it, is under the
+// reports folder, as under says.
+func (g Guard) inReports(file string) bool { return g.under(g.Reports, file) }
+
+// under says whether file, as a FileWrite call names it, is under dir, a
+// folder relative to Root and slash separated: taken from Root when it is
+// relative, cleaned, and with the symbolic links along the part of it that
+// exists resolved, as the folder's are, so that neither .. nor a link leads
+// out of it. The folder itself is not under it, and with Root, dir, or file
+// "" nothing is.
+func (g Guard) under(dir, file string) bool {
+	if g.Root == "" || dir == "" || file == "" {
 		return false
 	}
 	if !filepath.IsAbs(file) {
 		file = filepath.Join(g.Root, file)
 	}
-	dir := resolved(filepath.Join(g.Root, filepath.FromSlash(g.Reports)))
-	rel, err := filepath.Rel(dir, resolved(filepath.Clean(file)))
+	folder := resolved(filepath.Join(g.Root, filepath.FromSlash(dir)))
+	rel, err := filepath.Rel(folder, resolved(filepath.Clean(file)))
 	return err == nil && rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 

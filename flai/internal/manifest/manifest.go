@@ -76,6 +76,10 @@ type Manifest struct {
 	// Threads is when flai serve reminds the operator of a thread that
 	// awaits them (ADR-0205).
 	Threads Threads `yaml:"threads,omitempty" json:"threads,omitzero"`
+	// Roles are the operator's settings for each role a role file defines, by
+	// the role's name (ADR-0207); flai guard reads a role's permissions from
+	// it at each call (S-0416). The orchestrator's stay in Orchestration.
+	Roles map[string]RoleSettings `yaml:"roles,omitempty" json:"roles,omitempty"`
 	// Acceptance is how a story in review is accepted: on this machine, or
 	// through a pull request on the project's forge (S-0392). Load refuses a
 	// value Acceptance.Errors finds wrong.
@@ -713,13 +717,34 @@ func (p Permissions) Allows(name string) bool {
 	return false
 }
 
-func (p Permissions) errors() []string {
+// errors are what is wrong with the permissions under the manifest key key,
+// such as orchestration.permissions, one sentence each.
+func (p Permissions) errors(key string) []string {
 	var errs []string
 	for _, k := range p.unknown {
-		errs = append(errs, fmt.Sprintf("orchestration.permissions has no permission %q; write one of %s, or remove it", k, strings.Join(PermissionNames, ", ")))
+		errs = append(errs, fmt.Sprintf("%s has no permission %q; write one of %s, or remove it", key, k, strings.Join(PermissionNames, ", ")))
 	}
 	if m := p.AnswerMode(); !slices.Contains(AnswerModes, m) {
-		errs = append(errs, fmt.Sprintf("orchestration.permissions.answer_threads %q is not a way of answering threads; write off (leave them to the operator), recommend (reply with a recommendation), or autonomous (answer them), or remove it for off", p.AnswerThreads))
+		errs = append(errs, fmt.Sprintf("%s.answer_threads %q is not a way of answering threads; write off (leave them to the operator), recommend (reply with a recommendation), or autonomous (answer them), or remove it for off", key, p.AnswerThreads))
+	}
+	return errs
+}
+
+// RoleSettings are the operator's settings for one role a role file defines,
+// roles.<name> in the manifest (ADR-0207 §5).
+type RoleSettings struct {
+	// Permissions are what the role may do without the operator, each off
+	// when unset, as its role file's permissions entries name them under
+	// roles.<name>.permissions.<p>.
+	Permissions Permissions `yaml:"permissions,omitempty" json:"permissions,omitzero"`
+}
+
+// RoleErrors are what is wrong with the roles' settings, one sentence each,
+// by role name; none when they are valid.
+func (m Manifest) RoleErrors() []string {
+	var errs []string
+	for _, name := range slices.Sorted(maps.Keys(m.Roles)) {
+		errs = append(errs, m.Roles[name].Permissions.errors("roles."+name+".permissions")...)
 	}
 	if _, err := p.ConfirmAfterDuration(); err != nil {
 		errs = append(errs, err.Error())
@@ -818,7 +843,7 @@ func (o Orchestration) Errors() []string {
 		errs = append(errs, fmt.Sprintf("orchestration.policy %q is not an order policy; write cod (cost of delay), wsjf (cost of delay by duration), throughput (shortest first), or fifo (the operator's order), or remove it for fifo", o.Policy))
 	}
 	errs = append(errs, o.Release.errors()...)
-	errs = append(errs, o.Permissions.errors()...)
+	errs = append(errs, o.Permissions.errors("orchestration.permissions")...)
 	return append(errs, o.Agent.problems("orchestration.agent")...)
 }
 

@@ -786,7 +786,7 @@ func (c *checker) permission(r Role, p Permission) {
 	if len(p.Tools) == 0 && len(p.Commands) == 0 {
 		at(CodeFile, "permissions entry %s allows nothing; give it tools, commands, or both", p.Setting)
 	}
-	perm, owner, ok := parseSetting(p.Setting)
+	perm, owner, ok := ParseSetting(p.Setting)
 	switch {
 	case p.Setting == "":
 		at(CodeFile, "permissions entry needs setting, the operator's switch, such as %s", settingFor(r, Publish))
@@ -808,10 +808,10 @@ func (c *checker) permission(r Role, p Permission) {
 	}
 }
 
-// parseSetting reads a permission setting's <p> and the role it belongs to:
+// ParseSetting reads a permission setting's <p> and the role it belongs to:
 // the orchestrator for orchestration.permissions.<p>, <name> for
 // roles.<name>.permissions.<p>.
-func parseSetting(s string) (perm, owner string, ok bool) {
+func ParseSetting(s string) (perm, owner string, ok bool) {
 	if p, found := strings.CutPrefix(s, "orchestration.permissions."); found {
 		return p, Orchestrator, p != ""
 	}

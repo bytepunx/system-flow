@@ -479,6 +479,45 @@ func TestConfirmAfter(t *testing.T) {
 	}
 }
 
+// S-0416, ADR-0207: roles.<name>.permissions read from the manifest for each
+// role, each off when unset and no role's but its own; and a key that names
+// no permission, or an answer_threads outside its values, is an error naming
+// the role's key and what to write.
+func TestRolePermissions(t *testing.T) {
+	p := filepath.Join(t.TempDir(), File)
+	body := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\n" +
+		"roles:\n  reviewer:\n    permissions:\n      promote_to_ready: true\n      answer_threads: recommend\n  scout: {}\n"
+	if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m, err := Load(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reviewer := m.Roles["reviewer"].Permissions
+	if !reviewer.Allows(PermitPromoteToReady) || reviewer.AnswerMode() != AnswerRecommend || reviewer.Allows(PermitPublish) {
+		t.Errorf("reviewer: %+v", reviewer)
+	}
+	for _, name := range PermissionNames {
+		if m.Roles["scout"].Permissions.Allows(name) || m.Roles["absent"].Permissions.Allows(name) || m.Orchestration.Permissions.Allows(name) {
+			t.Errorf("%s is on unset, or another role's", name)
+		}
+	}
+	if errs := m.RoleErrors(); len(errs) != 0 {
+		t.Errorf("valid roles: %v", errs)
+	}
+
+	m.Roles = map[string]RoleSettings{"scout": {Permissions: Permissions{AnswerThreads: "always", unknown: []string{"publsh"}}}}
+	got := m.RoleErrors()
+	if len(got) != 2 || !strings.HasPrefix(got[0], `roles.scout.permissions has no permission "publsh"; write one of plan_backlog_epics,`) ||
+		!strings.HasPrefix(got[1], `roles.scout.permissions.answer_threads "always" is not a way of answering threads; write off`) {
+		t.Errorf("errors: %q", got)
+	}
+	if errs := (Manifest{}).RoleErrors(); len(errs) != 0 {
+		t.Errorf("no roles: %v", errs)
+	}
+}
+
 // S-0392: a manifest without acceptance loads with each key at its default
 // and marshals without the block; each value of each key loads, a forge and a
 // merge method under local among them; and a value outside a key's values is
