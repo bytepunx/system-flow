@@ -13,4 +13,6 @@ if [ "$CACHE_ROOT" != "$ROOT" ]; then
 fi
 cd "$ROOT/flai"
 echo "integration tests (go test, full)"
-go test -race -count=1 -skip '^TestGateway' "$@" ./...
+# 20 minutes a package, not go test's 10: flai/internal/mcpserver's suite takes 8 to 10 minutes
+# under -race, and crossed 10 in merge queue batch 20261028-231632 (S-0507, I-0225).
+go test -race -count=1 -timeout 20m -skip '^TestGateway' "$@" ./...
