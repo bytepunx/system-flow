@@ -53,10 +53,16 @@ func ForStory(repo *workitem.Repo, id, budget string) (*Pack, error) {
 // topics select, and the ADRs one step reaches, in the order Items gives
 // them, then the digest entries the story's would load, ranked as its are
 // (ADR-0194), each while the budget has room. budget is a size as
-// ParseSize reads it; empty means half the story's agent's.
+// ParseSize reads it; empty means half the story's agent's. A role that is
+// not a sub-agent's is refused with the sub-agents' roles and the project's
+// strategic ones, as StrategicRoles lists them.
 func ForRole(repo *workitem.Repo, id, role, budget string) (*Pack, error) {
 	if !slices.Contains(conventions.SubAgentRoles, role) {
-		return nil, fmt.Errorf("flai prime --role %s: no such role; a sub-agent's role is %s, and a strategic agent's %s", role, strings.Join(conventions.SubAgentRoles, " or "), strings.Join(conventions.StrategicRoles, ", "))
+		strategic, err := StrategicRoles(repo)
+		if err != nil {
+			strategic = conventions.StrategicRoles
+		}
+		return nil, fmt.Errorf("flai prime --role %s: no such role; a sub-agent's role is %s, and a strategic agent's %s", role, strings.Join(conventions.SubAgentRoles, " or "), strings.Join(strategic, ", "))
 	}
 	size, err := Budget(budget, repo.Manifest.Prime.Budget)
 	if err != nil {

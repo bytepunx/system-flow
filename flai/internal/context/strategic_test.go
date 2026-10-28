@@ -519,3 +519,215 @@ func TestTheOrchestratorsDigestAsJSON(t *testing.T) {
 		t.Errorf("%d digest items, first %v", n, first)
 	}
 }
+
+// writeRepo writes s to the file at rel, slash separated, under the
+// project's root.
+func writeRepo(t *testing.T, repo *workitem.Repo, rel, s string) {
+	t.Helper()
+	p := filepath.Join(repo.Root, filepath.FromSlash(rel))
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p, []byte(s), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// roleFile is a role file (ADR-0207) with the front matter flai prime
+// --role reads: its name, its role, its item kinds, and its topics.
+func roleFile(name, role, item, list string) string {
+	return "---\ntitle: " + name + "\nupdated: 2026-10-28\nstatus: active\nname: " + name + "\nrole: " + role + "\nitem: " + item + "\ntopics: " + list + "\n---\n\nYou are the " + name + ".\n"
+}
+
+// reviewerRepo is strategicRepo with a role the project defines: the
+// reviewer, role review, primed for a story, with topic review, a
+// convention only it reads, and a design file its topic selects.
+func reviewerRepo(t *testing.T) (*workitem.Repo, *workitem.Item, *workitem.Item) {
+	t.Helper()
+	repo, epic, story := strategicRepo(t)
+	writeRepo(t, repo, "design/workflows/roles/reviewer.md", roleFile("reviewer", "review", "[story]", "[review]"))
+	writeRepo(t, repo, "design/conventions/review.md", "---\ntitle: Review\nupdated: 2026-10-28\naudience: agent\norder: 80\nstatus: active\nroles: [review]\n---\n\n# Review\n\n## Rules\n\n- Review rule.\n\n<!-- system-flow:end-of-baseline -->\n\n## Project additions\n")
+	writeRepo(t, repo, "design/system/review.md", "---\ntitle: Review\nupdated: 2026-10-28\nstatus: active\ntopics: [review]\n---\n\n# Review\n\nThe review design.\n\n## Part\n\nThe body of the review part.\n")
+	return repo, epic, story
+}
+
+// ADR-0207, S-0415 criterion 1: a role the project defines in a role file
+// is primed for the item kind its file names, with its file's topics first,
+// the conventions whose roles are empty or list it, and briefs of what its
+// topics select, under its file's name.
+func TestForStrategicPrimesARoleTheProjectDefines(t *testing.T) {
+	repo, _, story := reviewerRepo(t)
+	p, err := ForStrategic(repo, "review", "", story.ID, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	conv, items := paths(p)
+	if strings.Join(conv, ",") != "design/conventions/safety.md,design/conventions/review.md" || p.README != nil {
+		t.Errorf("conventions: %v", conv)
+	}
+	if items["design/system/review.md"] == "" || items["design/system/named.md"] != StepNamed {
+		t.Errorf("items: %v", items)
+	}
+	if top := p.Topics[0]; top.Topic != "review" || len(top.Sources) != 1 || top.Sources[0].Kind != FromRole || top.Sources[0].Via != "review" {
+		t.Errorf("first topic %+v, want review from the role", top)
+	}
+	if p.Role != "review" || p.Item != story.ID || p.Story != "" || topicOf(p, "planning") == nil {
+		t.Errorf("pack: role %q item %q story %q topics %+v", p.Role, p.Item, p.Story, p.Topics)
+	}
+	out := p.Header() + p.Body()
+	for _, w := range []string{story.ID + " context pack for the review role\n", "item: " + story.ID + " Roles prime\n", "role: review, the reviewer, for " + story.ID + ":", "- Review rule."} {
+		if !strings.Contains(out, w) {
+			t.Errorf("missing %q:\n%s", w, out)
+		}
+	}
+	for _, gone := range []string{"Stream rule", "Planning rule", "Strategy rule", "a sub-agent of the story's agent"} {
+		if strings.Contains(out, gone) {
+			t.Errorf("printed %q", gone)
+		}
+	}
+}
+
+// ADR-0207, S-0415 criterion 1: a role the project defines with no item
+// kinds is primed for the whole project: its file's topics alone, and
+// briefs of the design they select and nothing else.
+func TestForStrategicPrimesADefinedRoleForTheWholeProject(t *testing.T) {
+	repo, _, story := reviewerRepo(t)
+	writeRepo(t, repo, "design/workflows/roles/inspector.md", roleFile("inspector", "inspect", "none", "[review]"))
+	p, err := ForStrategic(repo, "inspect", "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	conv, items := paths(p)
+	if strings.Join(conv, ",") != "design/conventions/safety.md" {
+		t.Errorf("conventions: %v", conv)
+	}
+	if items["design/system/review.md"] != StepBriefed || len(items) != 1 {
+		t.Errorf("items %v, want the review design briefed alone", items)
+	}
+	if names := topics.Names(p.Topics); !slices.Equal(names, []string{"review"}) || p.Topics[0].Sources[0].Via != "inspect" {
+		t.Errorf("topics %+v", p.Topics)
+	}
+	if out := p.Header(); !strings.Contains(out, "Project context pack for the inspect role\n") || !strings.Contains(out, "role: inspect, the inspector, for the whole project:") {
+		t.Errorf("header:\n%s", out)
+	}
+	if _, err := ForStrategic(repo, "inspect", "", story.ID, ""); err == nil || !strings.Contains(err.Error(), "the inspector primes for the whole project; give no --story or --epic") {
+		t.Errorf("inspector for a story: %v", err)
+	}
+}
+
+// ADR-0207, S-0415 criterion 3: a role the project defines refuses an item
+// kind its file does not name and no item, an unknown role is refused with
+// the project's strategic roles, and a role file that does not parse is
+// refused with where it is.
+func TestForStrategicRefusesWhatARoleFileDoesNotAllow(t *testing.T) {
+	repo, epic, story := reviewerRepo(t)
+	for _, c := range []struct{ role, epic, story, want string }{
+		{"review", epic.ID, "", "flai prime --role review --epic " + epic.ID + ": the reviewer takes a story, not an epic; give --story S-nnnn"},
+		{"review", epic.ID, story.ID, "the reviewer takes a story, not an epic"},
+		{"review", "", "", "flai prime --role review: the reviewer primes for a story; give --story S-nnnn"},
+		{"review", "", epic.ID, "--story " + epic.ID + ": " + epic.ID + " is epic; give --story S-nnnn"},
+		{"audit", "", "", "flai prime --role audit: no such role; a strategic agent's role is plan, orchestrate, analyze, curate, review"},
+	} {
+		if _, err := ForStrategic(repo, c.role, c.epic, c.story, ""); err == nil || !strings.Contains(err.Error(), c.want) {
+			t.Errorf("%s %s%s: %v, want %q", c.role, c.epic, c.story, err, c.want)
+		}
+	}
+	if _, err := ForRole(repo, story.ID, "audit", ""); err == nil || !strings.Contains(err.Error(), "no such role; a sub-agent's role is explore or verify, and a strategic agent's plan, orchestrate, analyze, curate, review") {
+		t.Errorf("ForRole audit: %v", err)
+	}
+	writeRepo(t, repo, "design/workflows/roles/broken.md", "no front matter\n")
+	for _, role := range []string{"review", "plan", "audit"} {
+		if _, err := ForStrategic(repo, role, "", story.ID, ""); err == nil || !strings.Contains(err.Error(), "flai prime --role "+role+": role file design/workflows/roles/broken.md:1: ") || !strings.Contains(err.Error(), "; fix it, as flai check reports it") {
+			t.Errorf("%s with a broken role file: %v", role, err)
+		}
+	}
+	if _, err := StrategicRoles(repo); err == nil || !strings.Contains(err.Error(), "design/workflows/roles/broken.md:1: ") {
+		t.Errorf("StrategicRoles with a broken role file: %v", err)
+	}
+}
+
+// ADR-0207, S-0415 criterion 2: a built-in role takes its topics and its
+// item kinds from the project's role file for it.
+func TestABuiltInRoleTakesItsTopicsAndItemsFromItsRoleFile(t *testing.T) {
+	repo, epic, story := strategicRepo(t)
+	writeRepo(t, repo, "design/workflows/roles/planner.md", roleFile("planner", "plan", "[epic, story]", "[planning, roadmap]"))
+	writeRepo(t, repo, "design/workflows/roles/curator.md", roleFile("curator", "curate", "[epic]", "[digest]"))
+	p, err := ForStrategic(repo, "plan", epic.ID, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if names := topics.Names(p.Topics); len(names) < 2 || names[0] != "planning" || names[1] != "roadmap" || p.Topics[1].Sources[0].Via != "plan" {
+		t.Errorf("planner topics %+v, want planning and roadmap from its file first", p.Topics)
+	}
+	if out := p.Header(); !strings.Contains(out, "role: plan, the planner, for "+epic.ID) {
+		t.Errorf("header:\n%s", out)
+	}
+	c, err := ForStrategic(repo, "curate", epic.ID, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Item != epic.ID || topicOf(c, "digest") == nil || topicOf(c, "planning") != nil {
+		t.Errorf("curator pack: item %q topics %+v, want the epic and digest alone", c.Item, c.Topics)
+	}
+	if _, err := ForStrategic(repo, "curate", "", story.ID, ""); err == nil || !strings.Contains(err.Error(), "the curator takes an epic, not a story; give --epic E-nnnn") {
+		t.Errorf("curator for a story: %v", err)
+	}
+}
+
+// ADR-0207, S-0415 criterion 2: role files that give the built-in roles
+// what they had before role files leave their packs byte for byte as they
+// were, as text and as JSON.
+func TestBuiltInRoleFilesLeaveThePacksAsTheyWere(t *testing.T) {
+	repo, epic, story := strategicRepo(t)
+	type run struct{ role, epic, story string }
+	runs := []run{{"plan", epic.ID, ""}, {"plan", "", story.ID}, {"orchestrate", "", ""}, {"analyze", "", ""}, {"curate", "", ""}}
+	printed := func() []string {
+		var out []string
+		for _, r := range runs {
+			p, err := ForStrategic(repo, r.role, r.epic, r.story, "")
+			if err != nil {
+				t.Fatalf("%s: %v", r.role, err)
+			}
+			b, err := json.Marshal(p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			out = append(out, p.Header()+p.Body(), string(b))
+		}
+		return out
+	}
+	before := printed()
+	writeRepo(t, repo, "design/workflows/roles/README.md", "# Roles\n")
+	writeRepo(t, repo, "design/workflows/roles/planner.md", roleFile("planner", "plan", "[epic, story]", "[planning]"))
+	writeRepo(t, repo, "design/workflows/roles/orchestrator.md", roleFile("orchestrator", "orchestrate", "none", "[orchestration]"))
+	writeRepo(t, repo, "design/workflows/roles/analyzer.md", roleFile("analyzer", "analyze", "none", "[analysis]"))
+	writeRepo(t, repo, "design/workflows/roles/curator.md", roleFile("curator", "curate", "none", "[digest, planning]"))
+	after := printed()
+	for i := range before {
+		if before[i] != after[i] {
+			t.Errorf("%s: the pack changed with role files:\nbefore:\n%s\nafter:\n%s", runs[i/2].role, before[i], after[i])
+		}
+	}
+}
+
+// ADR-0207: StrategicRoles is the built-in roles in their order, then the
+// verbs of the role files that are not built-in, sorted, leaving out a
+// verb the story's agent or a sub-agent has.
+func TestStrategicRolesListsTheProjectsRoles(t *testing.T) {
+	repo, _, _ := strategicRepo(t)
+	got, err := StrategicRoles(repo)
+	if err != nil || !slices.Equal(got, conventions.StrategicRoles) {
+		t.Fatalf("no role files: %v %v", got, err)
+	}
+	writeRepo(t, repo, "design/workflows/roles/zeta.md", roleFile("zeta", "zap", "none", "[analysis]"))
+	writeRepo(t, repo, "design/workflows/roles/reviewer.md", roleFile("reviewer", "review", "[story]", "[review]"))
+	writeRepo(t, repo, "design/workflows/roles/planner.md", roleFile("planner", "plan", "[epic, story]", "[planning]"))
+	writeRepo(t, repo, "design/workflows/roles/explorer.md", roleFile("explorer", "explore", "none", "[analysis]"))
+	got, err = StrategicRoles(repo)
+	if err != nil || !slices.Equal(got, []string{"plan", "orchestrate", "analyze", "curate", "review", "zap"}) {
+		t.Errorf("role files: %v %v", got, err)
+	}
+	if _, err := ForStrategic(repo, "explore", "", "", ""); err == nil || !strings.Contains(err.Error(), "no such role; a strategic agent's role is plan, orchestrate, analyze, curate, review, zap") {
+		t.Errorf("explore with a role file for it: %v", err)
+	}
+}

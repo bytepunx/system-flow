@@ -85,6 +85,9 @@ type Pack struct {
 	Catalog     Catalog             `json:"catalog"`
 	// BriefsLeftOut counts the briefs a role pack had no room for.
 	BriefsLeftOut int `json:"briefs_left_out,omitempty"`
+	// agent names a strategic pack's agent, such as "the planner", as its
+	// role resolves (ADR-0207); empty on any other pack.
+	agent string
 }
 
 // Catalog is every design, tech, and ADR document the pack does not print
