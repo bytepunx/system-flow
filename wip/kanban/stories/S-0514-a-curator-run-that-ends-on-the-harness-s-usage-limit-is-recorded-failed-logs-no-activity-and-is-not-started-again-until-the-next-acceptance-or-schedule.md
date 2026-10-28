@@ -6,7 +6,7 @@ title: A curator run that ends on the harness's usage limit is recorded failed, 
 status: backlog
 owner: alex
 created: 2026-10-28T12:40:16Z
-updated: 2026-10-28T21:35:50Z
+updated: 2026-10-28T22:23:48Z
 transitions: []
 tags: [flai, serve, curator, usage]
 topics: [planning, digest]
@@ -22,15 +22,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 226
+      seconds: 242
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 88
-          output: 1364
-          cache_read: 17127925
-          cache_write: 30767
-          cost: 3.7669
+          input: 91
+          output: 1404
+          cache_read: 17778943
+          cache_write: 31786
+          cost: 3.9104
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30m
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-10-28T12:51:54Z
 forecast:
   duration: 2h30m
-  delivery: 2026-10-29T08:29:00Z
-  basis: "Its own forecast of 2h30m; 25th in the pull order with an in-progress limit of 5, behind S-0416, S-0419, S-0423, S-0418, S-0421, S-0422, S-0420, S-0417, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0507, S-0508, S-0509, S-0510, S-0511 and S-0512."
+  delivery: 2026-10-29T13:33:00Z
+  basis: "Its own forecast of 2h30m; 23rd in the pull order with an in-progress limit of 5, behind S-0416, S-0532, S-0535, S-0537, S-0534, S-0536, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0507, S-0508, S-0509, S-0510, S-0511 and S-0512."
   by: flai
-  at: 2026-10-28T21:35:50Z
+  at: 2026-10-28T22:23:48Z
 finalized:
   by: alex
   at: 2026-10-28T12:56:56Z

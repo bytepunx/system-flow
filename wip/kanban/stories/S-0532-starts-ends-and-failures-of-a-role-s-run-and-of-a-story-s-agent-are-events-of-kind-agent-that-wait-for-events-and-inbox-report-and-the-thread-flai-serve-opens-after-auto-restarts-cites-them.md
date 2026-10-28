@@ -3,12 +3,15 @@ id: S-0532
 type: story
 nature: improvement
 title: Starts, ends, and failures of a role's run and of a story's agent are events of kind agent that wait_for_events and inbox report, and the thread flai serve opens after auto_restarts cites them
-status: backlog
+status: ready
 parent: E-0030
 owner: alex
 created: 2026-10-28T21:00:58Z
-updated: 2026-10-28T21:36:58Z
-transitions: []
+updated: 2026-10-28T22:22:11Z
+transitions:
+  - to: ready
+    at: 2026-10-28T22:21:04Z
+    by: alex
 tags: [flai, serve, events]
 topics: [orchestration, cli]
 touches: [flai/internal/serve, flai/internal/mcpserver, design/system/flai-cli.md, design/system/strategic-agents.md, docs, flai/internal/inbox/agentevents.go, flai/internal/inbox/agentevents_test.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/serve/agent_events.go, flai/internal/serve/agent_events_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/stop.go, flai/internal/serve/stop_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/limit.go, flai/internal/serve/limit_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, design/system/agent-narrative.md, docs/users/flai.md, docs/operators/settings.md]
@@ -24,15 +27,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 422
+      seconds: 439
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 55
-          output: 835
-          cache_read: 4547428
-          cache_write: 20603
-          cost: 1.0052
+          input: 59
+          output: 876
+          cache_read: 5198446
+          cache_write: 21623
+          cost: 1.1487
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -43,10 +46,10 @@ cost_of_delay:
   at: 2026-10-28T21:10:53Z
 forecast:
   duration: 3h
-  delivery: 2026-10-29T15:22:00Z
-  basis: "Its own forecast of 3h; 37th in the pull order with an in-progress limit of 5, behind S-0416, S-0419, S-0423, S-0418, S-0421, S-0422, S-0420, S-0417, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0507, S-0508, S-0509, S-0510, S-0511, S-0512, S-0514, S-0515, S-0516, S-0517, S-0518, S-0519, S-0520, S-0523, S-0524, S-0525, S-0527 and S-0529."
+  delivery: 2026-10-29T02:24:00Z
+  basis: "Its own forecast of 3h; 1st in the pull order with an in-progress limit of 5, behind S-0416."
   by: flai
-  at: 2026-10-28T21:36:58Z
+  at: 2026-10-28T22:22:11Z
 ---
 # S-0532 Starts, ends, and failures of a role's run and of a story's agent are events of kind agent that wait_for_events and inbox report, and the thread flai serve opens after auto_restarts cites them
 

@@ -6,7 +6,7 @@ title: A story's worktree mounted alone into a container is not a git repository
 status: backlog
 owner: alex
 created: 2026-10-28T12:52:47Z
-updated: 2026-10-28T21:36:08Z
+updated: 2026-10-28T22:24:02Z
 transitions: []
 tags: [cli, docker]
 topics: [harness, docker]
@@ -42,10 +42,10 @@ cost_of_delay:
   at: 2026-10-28T13:19:45Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-29T10:16:00Z
-  basis: "Its own forecast of 1h15m; 28th in the pull order with an in-progress limit of 5, behind S-0416, S-0419, S-0423, S-0418, S-0421, S-0422, S-0420, S-0417, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0507, S-0508, S-0509, S-0510, S-0511, S-0512, S-0514, S-0515 and S-0516."
+  delivery: 2026-10-29T14:46:00Z
+  basis: "Its own forecast of 1h15m; 26th in the pull order with an in-progress limit of 5, behind S-0416, S-0532, S-0535, S-0537, S-0534, S-0536, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0507, S-0508, S-0509, S-0510, S-0511, S-0512, S-0514, S-0515 and S-0516."
   by: flai
-  at: 2026-10-28T21:36:08Z
+  at: 2026-10-28T22:24:02Z
 finalized:
   by: alex
   at: 2026-10-28T12:53:25Z
