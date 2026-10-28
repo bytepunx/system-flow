@@ -39,8 +39,9 @@ const (
 	RoleCurate      = "curate"
 )
 
-// Roles are the roles a convention may list; flai check warns about any
-// other (ADR-0068).
+// Roles are the roles a convention may list in any project; flai check
+// warns about any other but those the project's role files define
+// (ADR-0068, ADR-0207).
 var Roles = []string{RoleStory, RoleExplore, RoleVerify, RolePlan, RoleOrchestrate, RoleAnalyze, RoleCurate}
 
 // SubAgentRoles are the roles flai prime --role takes with --story: the
@@ -191,8 +192,16 @@ type Finding struct {
 	Level, Rule, Path, Message string
 }
 
-// Validate checks the set against conventions.md.
-func (s *Set) Validate(errs map[string]error) []Finding {
+// Validate checks the set against conventions.md. defined are the roles the
+// project's role files define (ADR-0207), which a convention's roles may
+// list beside Roles.
+func (s *Set) Validate(errs map[string]error, defined ...string) []Finding {
+	known := slices.Clone(Roles)
+	for _, r := range defined {
+		if !slices.Contains(known, r) {
+			known = append(known, r)
+		}
+	}
 	var out []Finding
 	add := func(level, rule, path, msg string, args ...any) {
 		out = append(out, Finding{level, rule, path, fmt.Sprintf(msg, args...)})
@@ -236,8 +245,8 @@ func (s *Set) Validate(errs map[string]error) []Finding {
 			add("error", "conventions.marker", f.Path, "marker appears %d times; exactly one", f.Markers)
 		}
 		for _, r := range f.Roles {
-			if !slices.Contains(Roles, r) {
-				add("warning", "conventions.roles", f.Path, "role %q is not one flai knows; roles are %s", r, strings.Join(Roles, ", "))
+			if !slices.Contains(known, r) {
+				add("warning", "conventions.roles", f.Path, "role %q is not one flai knows; roles are %s", r, strings.Join(known, ", "))
 			}
 		}
 		if f.Lines > MaxLines {

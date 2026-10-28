@@ -80,6 +80,21 @@ func roleFindings(repo *workitem.Repo) []Finding {
 	return c.res.Findings
 }
 
+// S-0415: the roles a convention may list beside flai's own are the verbs
+// the project's role files define; files that do not parse define none.
+func TestDefinedRolesAreTheRoleFilesVerbs(t *testing.T) {
+	repo := rolesProject(t, map[string]string{"auditor.md": roleFile("auditor", nil)})
+	c := &checker{repo: repo, res: &Result{}}
+	if got := strings.Join(c.definedRoles(), ","); got != "review" {
+		t.Errorf("defined roles: %q", got)
+	}
+	broken := rolesProject(t, map[string]string{"reviewer.md": "---\nrole: [\n---\n"})
+	c = &checker{repo: broken, res: &Result{}}
+	if got := c.definedRoles(); len(got) != 0 {
+		t.Errorf("defined roles of a file that does not parse: %q", got)
+	}
+}
+
 // S-0414: valid role files, and the index beside them, are not reported, a
 // definition's flai MCP read tool among them, and flai check runs the rule.
 func TestValidRoleFilesAreClean(t *testing.T) {

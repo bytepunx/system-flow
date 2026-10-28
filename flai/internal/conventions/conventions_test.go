@@ -103,6 +103,21 @@ func TestRoles(t *testing.T) {
 	if len(got) != 1 || got[0].Rule != "conventions.roles" || got[0].Level != "warning" || !strings.Contains(got[0].Message, `"write"`) {
 		t.Errorf("findings: %+v", got)
 	}
+	// ADR-0207: a role the project's role files define is accepted too, and
+	// named among the roles in the warning for any other.
+	write("plan.md", file("Plan", 90, "roles: [story, plan, release]\n"))
+	set, errs, err = Load(repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got = set.Validate(errs, "release", "plan")
+	if len(got) != 1 || !strings.Contains(got[0].Message, `"write"`) || !strings.HasSuffix(got[0].Message, "curate, release") {
+		t.Errorf("findings with release defined: %+v", got)
+	}
+	got = set.Validate(errs)
+	if len(got) != 2 || !strings.Contains(got[1].Message, `"release"`) && !strings.Contains(got[0].Message, `"release"`) {
+		t.Errorf("findings without release defined: %+v", got)
+	}
 }
 
 // ADR-0068: a convention without roles is read by every agent, one with

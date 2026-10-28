@@ -1207,7 +1207,7 @@ func (c *checker) conventions() {
 		c.add(Error, "conventions.read", conventions.Dir(c.repo), 1, "%v", err)
 		return
 	}
-	for _, f := range set.Validate(errs) {
+	for _, f := range set.Validate(errs, c.definedRoles()...) {
 		path := filepath.Join(c.repo.Root, f.Path)
 		line := 1
 		switch f.Rule {
@@ -1231,6 +1231,23 @@ func (c *checker) conventions() {
 		}
 		c.topicWords(path, doc)
 	}
+}
+
+// definedRoles are the roles the project's role files define (ADR-0207),
+// which a convention's roles may list. A file that does not parse defines
+// none; c.roles reports it.
+func (c *checker) definedRoles() []string {
+	list, _, err := roles.Load(c.repo.Root, c.repo.Manifest.Layout["design"])
+	if err != nil {
+		return nil
+	}
+	var out []string
+	for _, r := range list {
+		if r.Role != "" {
+			out = append(out, r.Role)
+		}
+	}
+	return out
 }
 
 // RolesVocabulary is what flai check holds role files' names to (ADR-0207):
