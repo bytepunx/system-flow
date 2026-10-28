@@ -3118,10 +3118,12 @@ func TestAStoryWhoseAgentEndedAskingIsBlockedUntilTheAnswerStartsItAgain(t *test
 	if r := lab.run(id); r.Outcome != OutcomeAsked || r.Thread != th.ID {
 		t.Fatalf("asked: %+v", r)
 	}
-	b := lab.blocks(id)
-	if len(b) != 1 || b[0].Until != "" || b[0].Reason != "awaiting the operator on "+th.ID {
-		t.Fatalf("the story idles in progress, blocked %+v", b)
-	}
+	// endRun records the end before it writes the block (blockAsked), so the
+	// run reads as ended a moment before the story reads as blocked (I-0220).
+	waitFor(t, "the story is blocked on "+th.ID+" rather than idling in progress", func() bool {
+		b := lab.blocks(id)
+		return len(b) == 1 && b[0].Until == "" && b[0].Reason == "awaiting the operator on "+th.ID
+	})
 
 	_ = os.Remove(filepath.Join(lab.outDir, "release-"+id))
 	lab.l.look(ctx, false)
