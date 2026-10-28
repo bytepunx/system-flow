@@ -1,0 +1,24 @@
+---
+id: I-0222
+title: "flai adr topics rewrites an ADR's front matter with < and > in its title escaped as < and >"
+class: defect
+status: open
+count: 1
+cost: 10m
+first_reported: 2026-10-28T21:41:05Z
+last_reported: 2026-10-28T21:41:05Z
+updated: 2026-10-28T21:41:05Z
+---
+
+# I-0222 flai adr topics rewrites an ADR's front matter with < and > in its title escaped as < and >
+
+## Description
+flai adr topics rewrites an ADR's front matter with < and > in its title escaped as < and >
+
+## Instances
+
+### 2026-10-28T21:41:05Z
+Story: S-0416.
+S-0416 (T-1732): an ADR recorded with flai adr new whose title held `<name>-<item>` came out of flai adr topics with the angle brackets written as < and > in its front matter. The task sub-agent deleted the uncommitted file and its index row and recorded the ADR again with a title without angle brackets (ADR-0210).
+
+## Remediation
