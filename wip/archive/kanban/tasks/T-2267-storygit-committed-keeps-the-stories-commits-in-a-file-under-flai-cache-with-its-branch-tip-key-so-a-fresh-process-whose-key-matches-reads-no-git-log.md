@@ -7,7 +7,7 @@ status: done
 parent: S-0531
 owner: alex
 created: 2026-10-28T18:24:28Z
-updated: 2026-10-28T18:31:03Z
+updated: 2026-10-28T19:00:49Z
 transitions:
   - to: ready
     at: 2026-10-28T18:26:33Z
@@ -20,19 +20,19 @@ transitions:
     by: agent-S-0531
 stream: S-0531
 tags: [flai]
-touches: [flai/internal/storygit/committed.go, flai/internal/storygit/committed_test.go, flai/internal/statsread/statsread_test.go]
+touches: [flai/internal/storygit/committed.go, flai/internal/storygit/committed_test.go, flai/internal/statsread/statsread_test.go, design/system/flai-cli.md, design/system/server-performance.md]
 usage:
   source: log
   seconds: 266
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 42
-      output: 210
-      cache_read: 1488899
-      cache_write: 82677
-      cost: 0.5321
+      input: 27
+      output: 9461
+      cache_read: 1538224
+      cache_write: 59651
+      cost: 0.902
 ---
 # T-2267 storygit.Committed keeps the stories' commits in a file under .flai-cache with its branch-tip key, so a fresh process whose key matches reads no git log
 

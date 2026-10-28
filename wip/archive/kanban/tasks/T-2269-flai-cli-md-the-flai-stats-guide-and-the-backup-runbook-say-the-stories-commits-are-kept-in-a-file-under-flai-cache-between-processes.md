@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 311
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 14
-      output: 82
-      cache_read: 610944
-      cache_write: 44615
-      cost: 0.222
+      input: 11
+      output: 3947
+      cache_read: 641640
+      cache_write: 24882
+      cost: 0.3763
 ---
 # T-2269 flai-cli.md, the flai stats guide, and the backup runbook say the stories' commits are kept in a file under .flai-cache between processes
 

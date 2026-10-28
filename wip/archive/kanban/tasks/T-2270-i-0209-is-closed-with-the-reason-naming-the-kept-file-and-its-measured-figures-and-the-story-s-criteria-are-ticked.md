@@ -24,16 +24,16 @@ touches: [design/issues/I-0209-a-one-shot-flai-stats-and-the-first-stats-get-of-
 after: [T-2268, T-2269]
 usage:
   source: log
-  seconds: 12
+  seconds: 15
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 59
-      cache_read: 397885
-      cache_write: 4171
-      cost: 0.1361
+      input: 7
+      output: 2420
+      cache_read: 393517
+      cache_write: 15260
+      cost: 0.2308
 ---
 # T-2270 I-0209 is closed with the reason naming the kept file and its measured figures, and the story's criteria are ticked
 

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 299
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 56
-      output: 270
-      cache_read: 1686403
-      cache_write: 75115
-      cost: 0.5965
+      input: 31
+      output: 10605
+      cache_read: 1724141
+      cache_write: 66861
+      cost: 1.0111
 ---
 # T-2268 A cold stats.get and flai stats --json are measured again on this repository with the kept file, and server-performance.md records the figures
 

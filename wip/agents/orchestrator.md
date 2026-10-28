@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1687.5072
-accrued_seconds: 1419272
-tasks_completed: 1199
-last_run: 2026-10-28T18:25:38Z
+accrued_cost: 1694.7108
+accrued_seconds: 1421517
+tasks_completed: 1201
+last_run: 2026-10-28T19:03:03Z
 ---
 
 # Orchestrator activity
@@ -8404,6 +8404,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0531, S-0515, S-0529
 - Seconds: 14
 - Cost: 0.1536 USD, estimated
+
+### 2026-10-28T18:45:57Z
+
+- Summary: S-0528 landed through merge queue batch 20261028-181904, which I had enqueued. Under publish (judgement), did not publish yet: release_evaluate gives 1 story pending, S-0528, 12.5 USD/week, nothing held. S-0531 (0.04 USD/week) is closing out now, so I wait to publish both small remediations together once it lands.
+- Items: S-0528, S-0531
+- Seconds: 1219
+- Cost: 5.4151 USD, estimated
+
+### 2026-10-28T19:03:03Z
+
+- Summary: Under accept_reviews, enqueued S-0531 at 6459e775 (place 1 of 1). flai verify passed at that head, with integration and smoke left to the queue. The verifier met criterion 1: storygit.Committed keeps its answer in .flai-cache/stories-commits.json under S-0500's key, a fresh process reads no git log, every miss falls back to a full read, with tests in committed_test.go and statsread_test.go, and the docs and backup runbook updated. It met criterion 2: I-0209 is closed with a reason. Throughput: forecast 30m, value 0.04 USD/week.
+- Items: S-0531
+- Seconds: 1026
+- Cost: 1.7885 USD, estimated
 
 ## Refusals
 

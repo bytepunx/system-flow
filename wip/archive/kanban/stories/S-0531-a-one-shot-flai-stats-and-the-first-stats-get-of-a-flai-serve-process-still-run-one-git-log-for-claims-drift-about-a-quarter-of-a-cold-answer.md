@@ -3,10 +3,10 @@ id: S-0531
 type: story
 nature: improvement
 title: A one-shot flai stats, and the first stats.get of a flai serve process, still run one git log for claims drift, about a quarter of a cold answer
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-28T12:54:38Z
-updated: 2026-10-28T18:36:47Z
+updated: 2026-10-28T19:16:31Z
 transitions:
   - to: ready
     at: 2026-10-28T18:25:33Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-10-28T18:25:43Z
     by: agent-S-0531
+  - to: review
+    at: 2026-10-28T19:01:55Z
+    by: agent-S-0531
+  - to: done
+    at: 2026-10-28T19:16:31Z
+    by: orchestrator
 tags: [flai]
 topics: [metrics, performance, cli]
-touches: [flai/internal/storygit/committed.go, flai/internal/storygit/committed_test.go, flai/internal/statsread/statsread_test.go, design/system/server-performance.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/runbooks/backup.md, design/issues/I-0209-a-one-shot-flai-stats-and-the-first-stats-get-of-a-flai-serve-process-still-run-one-git-log-for-claims-drift-about-a-quarter-of-a-cold-answer.md, design/issues/summary.md]
+touches: [flai/internal/storygit/committed.go, flai/internal/storygit/committed_test.go, flai/internal/statsread/statsread_test.go, design/system/server-performance.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/runbooks/backup.md, design/issues/I-0209-a-one-shot-flai-stats-and-the-first-stats-get-of-a-flai-serve-process-still-run-one-git-log-for-claims-drift-about-a-quarter-of-a-cold-answer.md, design/issues/summary.md, design/issues/I-0221-the-close-out-s-go-test-tier-runs-only-the-changed-packages-so-a-change-that-breaks-a-caller-package-s-tests-passes-before-review.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,20 +30,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 673
-  estimated: true
-  priced_by: estimate
+  seconds: 2191
+  priced_by: harness
   turns:
     - day: 2026-10-28
-      hand_edits: 1
-      work: 21
+      ceremony: 2
+      hand_edits: 2
+      work: 40
   models:
     - model: claude-opus-5-5
-      input: 142
-      output: 752
-      cache_read: 5329176
-      cache_write: 355167
-      cost: 1.9247
+      input: 194
+      output: 66872
+      cache_read: 10872072
+      cache_write: 421610
+      cost: 6.3755
   strategic:
     - kind: planner
       seconds: 188
@@ -50,15 +56,21 @@ usage:
           cache_write: 132791
           cost: 0.6592
     - kind: orchestrator
-      seconds: 204
+      seconds: 1839
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 25
-          output: 438
-          cache_read: 2678948
-          cache_write: 16822
-          cost: 0.5922
+          input: 180
+          output: 3275
+          cache_read: 22536675
+          cache_write: 44221
+          cost: 4.9601
+        - model: claude-sonnet-5-5
+          input: 10
+          output: 56
+          cache_read: 134086
+          cache_write: 52479
+          cost: 0.1282
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1s
@@ -119,3 +131,14 @@ Touches, file by file, no folders:
 Forecast: flai gives 3m, size 2 with no touches counted. Raised to 30m: S-0500, the same code, tests, measurement, and documents, took 16m in progress, and a kept file adds its format, an atomic write, and tests for a missing, stale, and damaged file. Delivery is flai's 2026-10-29T08:29Z plus the 27m added.
 
 Cost of delay: 0.04 USD a week stands, flai's value from the operator's input of 1s lost per 168h cycle at 150 USD an hour. Nothing in the story gives a reason to change it.
+
+### Accepted by the orchestrator
+
+- Verified: 6459e7750b6bd8ba2f5d1e663608a26079cf764f
+- Batch: 20261028-190311
+- Enqueued verified: 6459e7750b6bd8ba2f5d1e663608a26079cf764f
+- At: 2026-10-28T19:16:31Z
+
+Verdict: pass — a fresh process whose key matches answers from .flai-cache/stories-commits.json and runs no git log, tests reproduce that, and I-0209 is closed with a reason.
+- 1: flai/internal/storygit/committed.go, flai/internal/storygit/committed_test.go, flai/internal/statsread/statsread_test.go, design/system/server-performance.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/runbooks/backup.md
+- 2: design/issues/I-0209-a-one-shot-flai-stats-and-the-first-stats-get-of-a-flai-serve-process-still-run-one-git-log-for-claims-drift-about-a-quarter-of-a-cold-answer.md, design/issues/summary.md
