@@ -6,7 +6,7 @@ title: "metrics.md § Charts says Burn-up draws a forecast line from throughput 
 status: backlog
 owner: alex
 created: 2026-10-28T12:54:11Z
-updated: 2026-10-28T12:54:11Z
+updated: 2026-10-28T12:57:57Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
     by: flai
     at: 2026-10-28T12:54:11Z
+finalized:
+  by: alex
+  at: 2026-10-28T12:57:57Z
 ---
 # S-0527 metrics.md § Charts says Burn-up draws a forecast line from throughput and Cycle Time filters by nature, but neither chart does
 
