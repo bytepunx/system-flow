@@ -6,7 +6,7 @@ title: A story's worktree mounted alone into a container is not a git repository
 status: backlog
 owner: alex
 created: 2026-10-28T12:52:47Z
-updated: 2026-10-28T12:52:47Z
+updated: 2026-10-28T12:53:25Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
     by: flai
     at: 2026-10-28T12:52:47Z
+finalized:
+  by: alex
+  at: 2026-10-28T12:53:25Z
 ---
 # S-0517 A story's worktree mounted alone into a container is not a git repository, since its .git file names the main checkout's .git/worktrees folder
 
