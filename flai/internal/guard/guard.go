@@ -69,8 +69,13 @@
 // placed by hand in the pull order, it never makes. With publish it
 // publishes through release_publish alone, and never with flai release,
 // flai push, git push, or git tag, whatever its permissions (S-0222); no
-// other session calls release_publish. Its sub-agents are held as every
-// sub-agent is.
+// session with no role, nor a story's or a verifier's, calls
+// release_publish. These rules are read from its role file, orchestrator.md,
+// or flai's baseline copy of it, as the planner's are (S-0416), each
+// permission entry's setting from orchestration.permissions at each call; a
+// refusal names the call and the permission that would allow it, so that
+// flai guard logs it in the orchestrator's activity document. Its sub-agents
+// are held as every sub-agent is.
 //
 // An analyzer session, one flai serve starts with the role analyze, is held
 // to its report (S-0223): its own calls may read, flai stats among them, log
@@ -125,6 +130,12 @@
 // with thread_open; a role whose file is missing or does not parse is refused
 // every call but a read, naming the file and flai check. Its sub-agents are
 // held as every sub-agent is.
+//
+// Every role, the orchestrator included, is so held to its role file: the
+// file decides, and the rules in Go of the planner, the orchestrator, the
+// analyzer, and the curator only word a refusal of the file's that they
+// make too. A call on a thread under own-thread, planner-thread, or
+// answer-threads names no author with --by but the role itself.
 //
 // A story's agent, in a session flai serve starts with FLAI_STORY and no
 // role, is refused its own wait_for_events while a sub-agent of its session
@@ -607,7 +618,8 @@ func (g Guard) forgePush(c Call) Verdict {
 // FLAI_ROLE: RolePlan holds the session's own calls to planning,
 // RoleOrchestrate holds them to Permissions, the project's
 // orchestration.permissions, RoleAnalyze to its report, RoleCurate to the
-// digest, and any other leaves them alone. Opener says
+// digest, each through its role file, a defined role to its role file, and
+// any other leaves them alone. Opener says
 // who opened the thread with an ID, for the orchestrator's calls on threads,
 // itself or a story's planner among others; ThreadOpener reads it from a
 // project's threads. A thread whose opener it cannot tell, or every thread
@@ -643,9 +655,13 @@ func (g Guard) forgePush(c Call) Verdict {
 // Agent, Session, and Item are the hook's FLAI_AGENT, FLAI_SESSION, and
 // FLAI_ITEM. A story's agent, the planner, the analyzer, and the curator
 // write only as Agent or the name flai serve gives the run, agent-<Story>,
-// planner-<Item>, analyzer, or curator, and only in Session: their own call that names another author
-// with --by or --placed-by, or sets, empties, or unsets FLAI_AGENT or
-// FLAI_SESSION to anything but these, is refused (S-0369, ADR-0143).
+// planner-<Item>, analyzer, or curator, and only in Session: their own call
+// that names another author with --by or --placed-by, or sets, empties, or
+// unsets FLAI_AGENT or FLAI_SESSION to anything but these, is refused
+// (S-0369, ADR-0143). A defined role writes only as Agent or its run name,
+// its file's name, or <name>-<Item> on an item, and only in Session, so held
+// too (ADR-0210). The orchestrator writes to a thread, accepts, and enqueues
+// only as orchestrator, under its role file's conditions (S-0220, ADR-0093).
 //
 // A Role that a project's role file defines, any but the four above and the
 // story's agent's and its sub-agents' verbs, holds the session's own calls to
@@ -653,11 +669,13 @@ func (g Guard) forgePush(c Call) Verdict {
 // ADR-0207). RoleProblem says why the file could not be read, missing or not
 // parsing, naming the file or its folder and flai check; while it is set, or
 // RoleFile is nil, the session reads and is refused every other call.
-// RolePlan, RoleAnalyze, and RoleCurate hold them to RoleFile too, the
-// project's file of the role, or, while it is nil, flai's baseline file of
-// it; RoleProblem fails them closed as it does a defined role.
-// RolePermissions are the manifest's roles.<name>.permissions of the role;
-// the orchestrator's stay in Permissions. Subcommands are each flai command's
+// RolePlan, RoleOrchestrate, RoleAnalyze, and RoleCurate hold them to
+// RoleFile too, the project's file of the role, or, while it is nil, flai's
+// baseline file of it; RoleProblem fails them closed as it does a defined
+// role. Every role is so held to its role file; the rules in Go of the four
+// only word its refusals. RolePermissions are the manifest's
+// roles.<name>.permissions of the role; the orchestrator's stay in
+// Permissions. Subcommands are each flai command's
 // subcommands, from the command tree, which a role file's command entries
 // are matched against; nil when not given. Design is the design folder,
 // relative to Root and slash separated, for {design} in the file's files;
@@ -1254,7 +1272,10 @@ func (g Guard) wait(c Call) string {
 	return fmt.Sprintf("the story's agent cannot call wait_for_events while its sub-agents run (%s) and no thread on %s awaits the designer: %s", strings.Join(names, ", "), c.Story, waitsOnSubAgents)
 }
 
-// orchestrate decides on the orchestrator's own call under its permissions.
+// orchestrate words the refusal of the orchestrator's own call that its role
+// file refuses as the orchestrator was refused under its permissions before
+// the file held it, naming the call and the permission that would allow it,
+// or is the zero Verdict when that rule allows the call.
 func (g Guard) orchestrate(c Call) Verdict {
 	switch c.Kind {
 	case FileWrite:

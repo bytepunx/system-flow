@@ -508,3 +508,142 @@ func TestABuiltInRoleWhoseFileDoesNotParseFailsClosed(t *testing.T) {
 		}
 	}
 }
+
+// orchestrating is a guard in an orchestrator session under permissions p,
+// held to file, flai's baseline file when nil, its threads told apart by
+// orchestratorOpeners.
+func orchestrating(p manifest.Permissions, file *roles.Role) Guard {
+	return Guard{Commands: append(slices.Clone(g.Commands), "plan", "queue", "subproject"), Role: RoleOrchestrate, Permissions: p,
+		Design: "design", RoleFile: file, Opener: orchestratorOpeners, Agent: "system-flow"}
+}
+
+// orchestratorOpeners knows TH-0001, which the orchestrator opened, TH-0002,
+// a story's planner's, and TH-0003, which the session named by the hook's
+// FLAI_AGENT, system-flow, opened.
+func orchestratorOpeners(id string) (string, error) {
+	switch id {
+	case "TH-0001":
+		return "orchestrator", nil
+	case "TH-0002":
+		return "planner-S-0002", nil
+	case "TH-0003":
+		return "system-flow", nil
+	}
+	return "", errors.New("no such thread")
+}
+
+// S-0416, ADR-0207: the orchestrator is held to its role file: a call its
+// rule in Go allowed is refused when the file leaves it out, with the file's
+// reason, the call, and, when an entry under a setting that is off would
+// allow it, that setting; and a call the file adds passes, where its rule in
+// Go refused it.
+func TestTheOrchestratorIsHeldToItsRoleFile(t *testing.T) {
+	publish := Call{Role: RoleOrchestrate, Kind: FlaiTool, Tool: ReleasePublish}
+	noPublish := orchestrating(allOn, builtInFile(t, "orchestrator", "  - setting: orchestration.permissions.publish\n    tools: [release_publish]\n", ""))
+	want := "the role orchestrator cannot call release_publish: its role file lists no such call. Ask the operator with thread_open on the item if it needs doing (design/workflows/roles/orchestrator.md, ADR-0207)."
+	if v := Decide(noPublish, publish); v.Outcome != Deny || v.Reason != want || v.Call != ReleasePublish || v.Needs != "" {
+		t.Errorf("release_publish left out of the file, publish on: %+v", v)
+	}
+	if v := Decide(orchestrating(allOn, nil), publish); v.Outcome != Allow {
+		t.Errorf("release_publish under the baseline file, publish on: %+v", v)
+	}
+
+	open := Call{Role: RoleOrchestrate, Kind: FlaiTool, Tool: "thread_open"}
+	noOpen := orchestrating(allOn, builtInFile(t, "orchestrator", "  - thread_open\n", ""))
+	if v := Decide(noOpen, open); v.Outcome != Deny || !strings.HasPrefix(v.Reason, "the role orchestrator cannot call thread_open: its role file lists no such call.") || v.Call != "thread_open" {
+		t.Errorf("thread_open left out of the file: %+v", v)
+	}
+	gated := builtInFile(t, "orchestrator", "  - thread_open\n", "", "    tools: [release_publish]\n", "    tools: [release_publish, thread_open]\n")
+	v := Decide(orchestrating(except(manifest.PermitPublish), gated), open)
+	if v.Outcome != Deny || !strings.Contains(v.Reason, "cannot call thread_open: it needs orchestration.permissions.publish, which is off.") || v.Call != "thread_open" || v.Needs != "orchestration.permissions.publish" {
+		t.Errorf("thread_open under publish, publish off: %+v", v)
+	}
+	if v := Decide(orchestrating(allOn, gated), open); v.Outcome != Allow {
+		t.Errorf("thread_open under publish, publish on: %+v", v)
+	}
+
+	issue := Call{Role: RoleOrchestrate, Kind: FlaiTool, Tool: "issue_new"}
+	if v := Decide(orchestrating(allOn, nil), issue); v.Outcome != Deny || !strings.HasPrefix(v.Reason, "the orchestrator cannot call issue_new: the orchestrator never does it") || v.Call != "issue_new" {
+		t.Errorf("issue_new under the baseline file: %+v", v)
+	}
+	if v := Decide(orchestrating(manifest.Permissions{}, builtInFile(t, "orchestrator", "  - inbox\n", "  - inbox\n  - issue_new\n")), issue); v.Outcome != Allow {
+		t.Errorf("issue_new added to the file: %+v", v)
+	}
+}
+
+// S-0416: under flai's baseline file, the orchestrator makes each call the
+// file lists while its setting is on, as its rules in Go allowed.
+func TestTheOrchestratorsBaselineFileAllowsWhatItLists(t *testing.T) {
+	input := map[string]json.RawMessage{"revenue_per_week": json.RawMessage("500")}
+	tools := []Call{
+		{Tool: "activity_log"}, {Tool: "inbox"}, {Tool: "thread_open"}, {Tool: "wait_for_events"},
+		{Tool: "thread_reply", Args: Args{ID: "TH-0001"}}, {Tool: "thread_resolve", Args: Args{ID: "TH-0001"}},
+		{Tool: "plan", Args: Args{ID: "E-0001"}}, {Tool: "plan", Args: Args{ID: "S-0001"}},
+		{Tool: "item_edit", Args: Args{ID: "S-0001", Fields: []string{"cost_of_delay", "id"}, CostOfDelay: input}},
+		{Tool: "thread_reply", Args: Args{ID: "TH-0002", Source: "design/x.md"}}, {Tool: "thread_resolve", Args: Args{ID: "TH-0002"}},
+		{Tool: "item_edit", Args: Args{ID: "S-0001", Fields: []string{"draft", "id"}}},
+		{Tool: "item_move", Args: Args{ID: "S-0001", To: Ready}},
+		{Tool: "thread_reply", Args: Args{ID: "TH-0003", Recommendation: true}},
+		{Tool: QueueAdd, Args: Args{Story: "S-0001"}}, {Tool: ReleasePublish}, {Tool: SubprojectEdit},
+	}
+	commands := []string{
+		"flai issue new x", "flai issue bump I-0001", "flai queue", "flai thread new S-0001 x",
+		"flai thread reply TH-0001 x --by orchestrator", "flai thread resolve TH-0001", "flai plan E-0001", "flai plan S-0001",
+		"flai edit S-0001 --revenue-per-week 500", "flai thread reply TH-0002 x", "flai edit S-0001 --no-draft",
+		"flai move S-0001 ready", "flai order --by wsjf --apply", "flai thread reply TH-0003 x --recommend",
+		"flai accept S-0001 --by orchestrator", "flai move S-0001 done --by orchestrator", "flai queue add S-0001 --by orchestrator",
+		"flai subproject add web --kind go --autocommit",
+	}
+	for _, gr := range []Guard{orchestrating(allOn, nil), orchestrating(allOn, builtInFile(t, "orchestrator"))} {
+		for _, c := range tools {
+			c.Role, c.Kind = RoleOrchestrate, FlaiTool
+			if v := Decide(gr, c); v.Outcome != Allow {
+				t.Errorf("%s %+v refused: %s", c.Tool, c.Args, v.Reason)
+			}
+		}
+		for _, c := range commands {
+			if v := Decide(gr, Call{Role: RoleOrchestrate, Kind: Shell, Command: c}); v.Outcome != Allow {
+				t.Errorf("%s refused: %s", c, v.Reason)
+			}
+		}
+	}
+}
+
+// S-0416, S-0220, ADR-0093: the orchestrator's own name under its role file
+// is orchestrator alone, not the hook's FLAI_AGENT: a thread that name opened
+// is another's, and it neither accepts, enqueues, nor writes to a thread
+// naming it.
+func TestTheOrchestratorsOwnNameIsOrchestratorAlone(t *testing.T) {
+	gr := orchestrating(allOn, nil)
+	for c, want := range map[string]string{
+		"flai accept S-0001 --by system-flow":          acceptsAsSelf,
+		"flai move S-0001 done --by system-flow":       acceptsAsSelf,
+		"flai queue add S-0001 --by system-flow":       enqueuesAsSelf,
+		"flai thread reply TH-0001 x --by system-flow": writesAsSelf,
+		"flai thread resolve TH-0003":                  resolvesOwn,
+	} {
+		if v := Decide(gr, Call{Role: RoleOrchestrate, Kind: Shell, Command: c}); v.Outcome != Deny || !strings.Contains(v.Reason, want) || v.Call == "" {
+			t.Errorf("%s: %+v", c, v)
+		}
+	}
+}
+
+// S-0416: a defined role's call on a thread under own-thread names no author
+// with --by but the role itself; the file refuses another, before ADR-0210's
+// rule is reached.
+func TestADefinedRolesThreadConditionsHoldItToItsOwnName(t *testing.T) {
+	r, problem := roles.Parse(reviewerPath, strings.Replace(reviewerFile, "  - flai issue new\n", "  - flai issue new\n  - {call: flai thread reply, when: own-thread}\n", 1))
+	if problem != nil {
+		t.Fatal(problem)
+	}
+	gr := reviewer(t, t.TempDir(), manifest.Permissions{})
+	gr.RoleFile = &r
+	for _, c := range []string{"flai thread reply TH-0001 x", "flai thread reply TH-0001 x --by reviewer"} {
+		if v := Decide(gr, roleShell(c)); v.Outcome != Allow {
+			t.Errorf("%s refused: %s", c, v.Reason)
+		}
+	}
+	if v := Decide(gr, roleShell("flai thread reply TH-0001 x --by alex")); v.Outcome != Deny || !strings.Contains(v.Reason, "only under own-thread") || strings.Contains(v.Reason, "ADR-0143") {
+		t.Errorf("a reply on its own thread naming another: %+v", v)
+	}
+}

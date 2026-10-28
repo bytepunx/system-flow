@@ -273,13 +273,14 @@ not run it.`,
 				return nil
 			}
 			call := h.Call
+			// the orchestrator's permissions, and the activity document its
+			// refusals are logged in; guardRole gives it its role file
 			var repo *workitem.Repo
 			if g.Role == guard.RoleOrchestrate && !call.Subagent {
 				if repo, err = a.guardProject(); err != nil {
 					a.logger().Warn("project unreadable, the orchestrator's permissions are taken as off", "component", "guard", "err", err.Error())
 				} else {
 					g.Permissions = repo.Manifest.Orchestration.Permissions
-					g.Opener = guard.ThreadOpener(repo)
 				}
 			}
 			if guard.HeldByFile(g.Role) && !call.Subagent {
@@ -328,7 +329,8 @@ func (a *app) guardProject() (*workitem.Repo, error) {
 // (S-0416, ADR-0207): flai's subcommands from root's tree and, from the
 // project the hook runs in, its root and design folder, the analyzer's
 // reports folder, the threads' openers, the file whose role is g.Role, and
-// the manifest's roles.<name>.permissions of it. For a role a project
+// the manifest's roles.<name>.permissions of it; the orchestrator's stay in
+// orchestration.permissions, which the caller reads. For a role a project
 // defines, a project or folder it cannot read, or no file that holds the
 // role, sets RoleProblem, naming the file or the folder and flai check, and
 // the guard fails closed. A built-in role with no file of its own in the

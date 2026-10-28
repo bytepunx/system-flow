@@ -22,9 +22,10 @@ import (
 // is never granted. A role whose file is missing or does not parse reads and
 // is refused the rest.
 //
-// The planner, the analyzer, and the curator are held to their role files
-// the same way, or, when the project has none, to flai's baseline copy of
-// it; their rules in Go only word a refusal as before the files held them.
+// The planner, the orchestrator, the analyzer, and the curator are held to
+// their role files the same way, or, when the project has none, to flai's
+// baseline copy of it; their rules in Go only word a refusal as before the
+// files held them.
 
 // DefinedRole says whether role is one a project's role file defines, which
 // the guard holds to the file: neither "", nor a built-in role, nor the verb
@@ -39,15 +40,25 @@ func DefinedRole(role string) bool {
 
 // explains are the built-in roles held to their role file, each with the
 // rule in Go that words a refusal of the file's as the role was refused
-// before the file held it, "" when that rule would allow the call.
-var explains = map[string]func(Guard, Call) string{
-	RolePlan:    Guard.plan,
-	RoleAnalyze: Guard.analyze,
-	RoleCurate:  Guard.curate,
+// before the file held it, the zero Verdict when that rule would allow the
+// call. The orchestrator's names the call and the permission that would
+// allow it, which flai guard logs in its activity document.
+var explains = map[string]func(Guard, Call) Verdict{
+	RolePlan:        worded(Guard.plan),
+	RoleOrchestrate: Guard.orchestrate,
+	RoleAnalyze:     worded(Guard.analyze),
+	RoleCurate:      worded(Guard.curate),
+}
+
+// worded is a rule that words a refusal as a plain one, a Verdict that names
+// no call.
+func worded(rule func(Guard, Call) string) func(Guard, Call) Verdict {
+	return func(g Guard, c Call) Verdict { return deny(rule(g, c)) }
 }
 
 // BuiltInFromFile says whether role is a built-in role the guard holds to its
-// role file: the planner's, the analyzer's, or the curator's.
+// role file: the planner's, the orchestrator's, the analyzer's, or the
+// curator's.
 func BuiltInFromFile(role string) bool {
 	_, ok := explains[role]
 	return ok
@@ -120,7 +131,8 @@ func (g Guard) designFolder() string {
 // asRole decides on the own call of a session whose role a role file
 // defines, or of a built-in role's, held to its file: a refusal of the
 // file's is worded by the built-in role's rule in Go when that rule refuses
-// the call too, as a plain refusal, and by the file otherwise.
+// the call too, and by the file otherwise, naming the call and the setting
+// that would allow it.
 func (g Guard) asRole(c Call) Verdict {
 	h := g.roleHeld(c.Role)
 	var call, what, why, needs string
@@ -148,8 +160,8 @@ func (g Guard) asRole(c Call) Verdict {
 		return Verdict{}
 	}
 	if explain, ok := explains[c.Role]; ok && h.problem == "" {
-		if reason := explain(g, c); reason != "" {
-			return deny(reason)
+		if v := explain(g, c); v.Outcome != Allow {
+			return v
 		}
 	}
 	return h.refused(call, what, why, needs)
@@ -309,12 +321,8 @@ func (h held) toolHolds(cond string, p manifest.Permissions, tool string, in Arg
 		finalizing := slices.Contains(in.Fields, "draft") && !in.Draft
 		inputs := slices.ContainsFunc(costInputs, func(k string) bool { _, ok := in.CostOfDelay[k]; return ok })
 		return !finalizing && !inputs && !slices.Contains(in.Fields, "clear_cost_of_delay")
-	case "own-thread":
-		return h.ownThread(tc)
-	case "planner-thread":
-		return storyPlanner(h.g.opener(tc.id))
-	case "answer-threads":
-		return tc.verb == "reply" && h.answers(tc, p)
+	case "own-thread", "planner-thread", "answer-threads":
+		return h.threadHolds(cond, p, tc)
 	case "plan-epic":
 		return isEpic(in.ID)
 	case "plan-story":
@@ -419,12 +427,8 @@ func (h held) commandHolds(cond string, p manifest.Permissions, cmd, sub string,
 		return moveTo == Ready
 	case "ungated-edit":
 		return !slices.ContainsFunc(rest, finalizes) && !slices.ContainsFunc(costFlags, func(f string) bool { return named(rest, f) })
-	case "own-thread":
-		return h.ownThread(cliThread(sub, rest))
-	case "planner-thread":
-		return storyPlanner(h.g.opener(cliThread(sub, rest).id))
-	case "answer-threads":
-		return sub == "reply" && h.answers(cliThread(sub, rest), p)
+	case "own-thread", "planner-thread", "answer-threads":
+		return h.threadHolds(cond, p, cliThread(sub, rest))
 	case "plan-epic":
 		return len(plans) > 1 && isEpic(plans[1])
 	case "plan-story":
@@ -444,6 +448,26 @@ func (h held) commandHolds(cond string, p manifest.Permissions, cmd, sub string,
 	return false
 }
 
+// threadHolds says whether the thread condition named cond holds for a call
+// on a thread, under p: the call names no author with --by but the role
+// itself, and own-thread is on a thread it opened, a follow-up or a resolve;
+// planner-thread on one a story's planner opened; and answer-threads a reply
+// on another's that the setting's answer mode allows.
+func (h held) threadHolds(cond string, p manifest.Permissions, tc threadCall) bool {
+	if tc.by != "" && !h.self(tc.by) {
+		return false
+	}
+	switch cond {
+	case "own-thread":
+		return h.ownThread(tc)
+	case "planner-thread":
+		return storyPlanner(h.g.opener(tc.id))
+	case "answer-threads":
+		return tc.verb == "reply" && h.answers(tc, p)
+	}
+	return false
+}
+
 // ownThread says whether a thread call is on a thread the role opened and,
 // for a reply, is neither a recommendation nor sourced: a follow-up.
 func (h held) ownThread(tc threadCall) bool {
@@ -459,10 +483,15 @@ func (h held) answers(tc threadCall, p manifest.Permissions) bool {
 
 // self says whether name is one of the role's own: its name, the name flai
 // serve gives its run on an item, <name>-<Item>, or the hook's FLAI_AGENT;
-// "" never is.
+// "" never is. The orchestrator's own is its name alone, orchestrator, which
+// an acceptance and its threads are told by whatever FLAI_AGENT says
+// (S-0220, ADR-0093).
 func (h held) self(name string) bool {
 	if name == "" {
 		return false
+	}
+	if h.file.Role == RoleOrchestrate {
+		return workitem.IsOrchestrator(name)
 	}
 	names := []string{h.file.Name, h.g.Agent}
 	if h.g.Item != "" {

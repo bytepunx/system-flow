@@ -92,9 +92,10 @@ const (
 )
 
 // Verdict is the guard's decision on a call: its Outcome, and for Deny and
-// Ask the Reason. For the orchestrator's own refusals Call is the call
-// refused, in one line, and Needs the permission that would allow it, as
-// orchestration.permissions.<name>, or "" when none would. The zero Verdict
+// Ask the Reason. For the orchestrator's own refusals, and a role file's that
+// no rule in Go words, Call is the call refused, in one line, and Needs the
+// setting that would allow it, as orchestration.permissions.<name> or
+// roles.<name>.permissions.<p>, or "" when none would. The zero Verdict
 // allows the call.
 type Verdict struct {
 	Outcome Outcome
@@ -114,10 +115,11 @@ func deny(why string) Verdict {
 
 // Decide decides on c under g's policy: the shared paths and flai forge push
 // for every caller, then the rules of a sub-agent, or of the session's own
-// role, the orchestrator's in Go and every other's from its role file, and
-// the author a served agent writes as. A story's own agent's write to a path
-// flai protects in its worktree, which they would allow, is put to the
-// story's owner (Ask) while auto-approve is off.
+// role, each role's from its role file, and the author a served agent writes
+// as. A session with no role, or a story's or a verifier's, never publishes.
+// A story's own agent's write to a path flai protects in its worktree, which
+// they would allow, is put to the story's owner (Ask) while auto-approve is
+// off.
 func Decide(g Guard, c Call) Verdict {
 	if v := g.shared(c); v.Outcome != Allow {
 		return v
@@ -134,14 +136,11 @@ func Decide(g Guard, c Call) Verdict {
 		}
 		return deny(g.authors(c))
 	}
-	if c.Kind == FlaiTool && c.Tool == ReleasePublish && c.Role != RoleOrchestrate {
+	if c.Kind == FlaiTool && c.Tool == ReleasePublish {
 		return deny("only the orchestrator calls " + ReleasePublish + ": " + orchestratorPublishes)
 	}
 	var why string
-	switch c.Role {
-	case RoleOrchestrate:
-		return g.orchestrate(c)
-	case "":
+	if c.Role == "" {
 		why = g.wait(c)
 	}
 	// a call its role refuses whoever it names is refused for the role's
