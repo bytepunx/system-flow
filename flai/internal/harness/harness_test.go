@@ -1493,6 +1493,36 @@ func TestTheOrchestratorsPromptSaysWhatToDoWithThreads(t *testing.T) {
 	}
 }
 
+// ADR-0206, I-0195: the orchestrator marks a recommendation on money or a
+// change to the host operator_only, and is told that while
+// orchestration.permissions.confirm_after is set flai serve confirms its
+// other recommendations on a thread a story's agent or a planner opened, so
+// it recommends there only what it would stand behind as the answer. The
+// paragraph is there whatever the permissions, which the orchestrator reads
+// afresh. No other agent is told it.
+func TestTheOrchestratorsPromptMarksARecommendationForTheOperatorAlone(t *testing.T) {
+	wants := []string{
+		"Wherever you post a recommendation, under answer_threads or plan_backlog_stories, give thread_reply operator_only true with it when it is about money, such as spend, a paid service, or a price, or about a change to the host, such as installing or upgrading software, configuration outside the repository, or credentials: that answer is the operator's alone.",
+		"While orchestration.permissions.confirm_after is set, flai serve confirms your other recommendations on a thread a story's agent or a planner opened once they have waited that long with no answer from the operator.",
+		"Recommend there only an answer you would stand behind as the answer (ADR-0206).",
+	}
+	queued := orchestrateReq(nil)
+	queued.Queue = true
+	for name, r := range map[string]Request{"plain": orchestrateReq(nil), "with the merge queue": queued} {
+		p := Prompt(r)
+		for _, w := range wants {
+			if !strings.Contains(p, w) {
+				t.Errorf("%s: the orchestrator's prompt lacks %q:\n%s", name, w, p)
+			}
+		}
+	}
+	for who, o := range map[string]string{"a story's agent": Prompt(req(nil)), "an epic's planner": Prompt(planReq("E-0016", nil)), "a story's planner": Prompt(planReq("S-0208", nil))} {
+		if strings.Contains(o, "operator_only") || strings.Contains(o, "confirm_after") {
+			t.Errorf("%s's prompt names operator_only or confirm_after:\n%s", who, o)
+		}
+	}
+}
+
 // S-0328, ADR-0119: while plan_backlog_stories is on, the orchestrator starts
 // the planner, after the epics, for each story flai plan --candidates lists,
 // one at a time, and settles the threads a story's planner opens whatever
