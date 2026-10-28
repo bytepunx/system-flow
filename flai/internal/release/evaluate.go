@@ -198,6 +198,58 @@ func (ev *Evaluation) pendingPhrase() string {
 	return fmt.Sprintf("%d accepted stories not yet released, worth %s", ev.Count, ev.Amount(ev.Value))
 }
 
+// Answer is the evaluation's answer on one line, as the release-due event
+// carries it (ADR-0211): met or not met, then the pending stories' count and
+// value, and, when the policy reads them, how many of the theme's stories are
+// not yet accepted and how many pending stories whole_epics holds back. For
+// example "not met: 2 accepted stories not yet released, worth 75 USD/week".
+func (ev *Evaluation) Answer() string {
+	verdict := "not met"
+	if ev.Met {
+		verdict = "met"
+	}
+	parts := []string{verdict + ": " + ev.pendingPhrase()}
+	if ev.Policy == manifest.ReleaseTheme && len(ev.Theme) > 0 {
+		parts = append(parts, fmt.Sprintf("%d of the %d stories of the theme not yet accepted", len(ev.NotAccepted), len(ev.Theme)))
+	}
+	if n := len(ev.HeldByEpic); n > 0 {
+		parts = append(parts, fmt.Sprintf("%d of them held back by whole_epics", n))
+	}
+	return strings.Join(parts, "; ")
+}
+
+// SameAnswer says whether ev and o answer alike (ADR-0211): the same policy,
+// met or not alike, and the same figures it reads, which are the pending
+// stories' count and their value to the cent, the theme's stories not yet
+// accepted, and the pending stories whole_epics holds back. The reason's
+// words, the titles, and the statuses beyond those are left out, being no
+// part of the answer; nothing compared changes with the clock alone.
+func (ev *Evaluation) SameAnswer(o *Evaluation) bool {
+	return ev.Policy == o.Policy && ev.Met == o.Met && ev.Count == o.Count &&
+		math.Round(ev.Value*100) == math.Round(o.Value*100) &&
+		sameIDs(ev.NotAccepted, o.NotAccepted) && sameIDs(heldIDs(ev.HeldByEpic), heldIDs(o.HeldByEpic))
+}
+
+// heldIDs are the IDs of held.
+func heldIDs(held []HeldStory) []string {
+	ids := make([]string, len(held))
+	for i, h := range held {
+		ids[i] = h.ID
+	}
+	return ids
+}
+
+// sameIDs says whether a and b hold the same IDs, in whatever order.
+func sameIDs(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	a, b = slices.Clone(a), slices.Clone(b)
+	slices.Sort(a)
+	slices.Sort(b)
+	return slices.Equal(a, b)
+}
+
 // Amount writes v as a cost of delay per week in the evaluation's currency.
 func (ev *Evaluation) Amount(v float64) string {
 	return strconv.FormatFloat(math.Round(v*100)/100, 'f', -1, 64) + " " + ev.Currency + "/week"

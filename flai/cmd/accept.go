@@ -16,11 +16,13 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/guard"
+	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/preview"
+	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -93,7 +95,11 @@ here. Steps 1 to 4 are as under local acceptance.
 Acceptance computes no release, creates no tag, and pushes nothing (S-0087):
 that is a deliberate step of its own, run when the operator chooses to
 publish what has accumulated on main, not tied to any one item. See flai
-release --pending.
+release --pending. A story's acceptance evaluates the release policy before
+step 1 and again after step 3's commit, as flai release --evaluate does, and
+when the answer changed, met or not or the figures it reads, appends one
+release-due event with both answers to .flai-cache/events.jsonl, which the
+inbox reports (ADR-0211); an evaluation that fails is only warned of.
 
 flai move <story> done from review runs exactly this. An item that is already
 done but was never archived (an older flai, a hand edit) is completed from
@@ -310,7 +316,7 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		}
 	}
 	if res.CommitOnly {
-		return a.finishCommit(repo, it, acc, o)
+		return a.finishCommit(repo, it, acc, o, a.answerRelease(repo, it, useGit))
 	}
 
 	// 0. bring the story branch into the main branch (ADR-0019): under
@@ -357,6 +363,10 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	if it.Type == workitem.Story {
 		a.leaveQueue(repo, it.ID, o.batch, res.By)
 	}
+	// 0b. what flai release --evaluate answers before the acceptance, after
+	// the merge, which brings no acceptance of its own, nor, under
+	// pull-request acceptance, the ones origin's main brought (ADR-0211)
+	answered := a.answerRelease(repo, it, useGit)
 
 	// 1. done (epics: walk through review if needed)
 	items, err := repo.List(false)
@@ -438,6 +448,9 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	if err := a.commitAcceptance(repo, it, res, o.trailers); err != nil {
 		return nil, err
 	}
+	// 3a. say so when the acceptance changed what flai release --evaluate
+	// answers (ADR-0211)
+	a.releaseDue(repo, it, answered, res.By)
 	// 4. tell the stories still open what changed under their claim (S-0132)
 	a.tellAccepted(repo, it, res, orDefault(o.by, a.author()), changed)
 	// 5. bring the main checkout's installs up to what it changed (ADR-0185)
@@ -585,8 +598,9 @@ func sentBackText(story, branch string, stop *syncStopped) string {
 
 // finishCommit completes the acceptance of it, done and archived, whose
 // commit failed (I-0100): steps 3 to 5 only, with no merge, no transition,
-// and no archive, since those happened.
-func (a *app) finishCommit(repo *workitem.Repo, it *workitem.Item, acc *accepted, o acceptOptions) (*accepted, error) {
+// and no archive, since those happened. answered is what flai release
+// --evaluate answered before the commit, nil when it was not evaluated.
+func (a *app) finishCommit(repo *workitem.Repo, it *workitem.Item, acc *accepted, o acceptOptions, answered *release.Evaluation) (*accepted, error) {
 	res := acc.Acceptance
 	// the threads and conversations the run that archived left open: an
 	// older flai's, or one whose resolving or closing failed
@@ -604,6 +618,7 @@ func (a *app) finishCommit(repo *workitem.Repo, it *workitem.Item, acc *accepted
 	if err := a.commitAcceptance(repo, it, res, o.trailers); err != nil {
 		return nil, err
 	}
+	a.releaseDue(repo, it, answered, res.By)
 	// The merge is behind this run, so what it changed cannot be read from
 	// the head before it as step 0 reads it. The paths are taken from the
 	// story's commits instead, outside the wip folder: what its branch
@@ -764,6 +779,44 @@ func (a *app) commitAcceptance(repo *workitem.Repo, it *workitem.Item, res *prev
 	}
 	a.acceptStep(it, "committed", firstLine(msg))
 	return nil
+}
+
+// answerRelease is what flai release --evaluate answers in the checkout of
+// repo now, for the acceptance of it, a story, to tell afterwards whether it
+// changed the answer (ADR-0211). It is nil, evaluating nothing, for an epic,
+// whose acceptance adds no pending story, and outside git; and nil, warned
+// of, when the evaluation fails, which never fails the acceptance.
+func (a *app) answerRelease(repo *workitem.Repo, it *workitem.Item, useGit bool) *release.Evaluation {
+	if it.Type != workitem.Story || !useGit {
+		return nil
+	}
+	ev, err := release.EvaluateRepo(a.runner, repo.Root, repo.Manifest, repo)
+	if err != nil {
+		a.logger().Warn("release not evaluated, so no release-due event", "component", "accept", "item", it.ID, "err", err)
+		return nil
+	}
+	return &ev
+}
+
+// releaseDue is step 3a: once the acceptance of it by by is committed, it
+// evaluates the release again and, when the answer differs from before,
+// appends one release-due event with both answers to the event log
+// (ADR-0211). Nothing is evaluated when before is nil; an evaluation or an
+// append that fails is warned of, and the acceptance stands as it is.
+func (a *app) releaseDue(repo *workitem.Repo, it *workitem.Item, before *release.Evaluation, by string) {
+	if before == nil {
+		return
+	}
+	after := a.answerRelease(repo, it, true)
+	if after == nil || before.SameAnswer(after) {
+		return
+	}
+	e := inbox.ReleaseDueEvent(it.ID, it.Title, by, before.Answer(), after.Answer())
+	if err := inbox.AppendEvent(repo, e); err != nil {
+		a.logger().Warn("release-due event not logged", "component", "accept", "item", it.ID, "err", err)
+		return
+	}
+	a.acceptStep(it, "release-due", "flai release --evaluate answered "+before.Answer()+" and now answers "+after.Answer())
 }
 
 // acceptSubject is the subject of the acceptance commit of id, naming the

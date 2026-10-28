@@ -21,6 +21,8 @@ func TestAcceptEndToEnd(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\nprojects:\n  - name: cli\n    path: cli\n    kind: go\n    tags: [command]\n"), 0o644)
 	_ = os.MkdirAll(filepath.Join(root, "cli"), 0o755)
 	_ = os.WriteFile(filepath.Join(root, "cli", "main.go"), []byte("package main\n"), 0o644)
+	// flai keeps its cache, the event log among it, out of git (ADR-0211 §4)
+	_ = os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".flai-cache/\n"), 0o644)
 	r := execx.System{}
 	for _, args := range [][]string{{"init", "-q", "-b", "main"}, {"config", "user.email", "t@t"}, {"config", "user.name", "t"}, {"add", "-A"}, {"commit", "-q", "-m", "init"}} {
 		if _, err := r.Run(root, "git", args...); err != nil {

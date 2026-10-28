@@ -286,3 +286,72 @@ func TestEvaluateWholeEpicsNamesEachEpic(t *testing.T) {
 		t.Errorf("held_by_epic is in the JSON, each with its epic and status: %s", data)
 	}
 }
+
+// ADR-0211: the answer on one line is the verdict and the pending figures,
+// with what the theme and whole_epics read when the policy reads them.
+func TestEvaluationAnswer(t *testing.T) {
+	items, pending := thresholdItems()
+	ev := Evaluate(withRelease(manifest.Release{Policy: manifest.ReleaseThreshold, Value: ptr(300.0)}), items, pending)
+	if got, want := ev.Answer(), "met: 3 accepted stories not yet released, worth 300 USD/week"; got != want {
+		t.Errorf("a threshold met:\n got %s\nwant %s", got, want)
+	}
+	ev = Evaluate(withRelease(manifest.Release{Policy: manifest.ReleaseThreshold, Count: ptr(1)}), items, nil)
+	if got, want := ev.Answer(), "not met: no accepted story waiting for a release"; got != want {
+		t.Errorf("nothing pending:\n got %s\nwant %s", got, want)
+	}
+	ev = Evaluate(withRelease(manifest.Release{Policy: manifest.ReleaseTheme, Epic: "E-0003"}), themeItems(), map[string]bool{"S-0005": true})
+	if got, want := ev.Answer(), "not met: 1 accepted story not yet released, worth 0 USD/week; 1 of the 2 stories of the theme not yet accepted"; got != want {
+		t.Errorf("a theme with a story not accepted:\n got %s\nwant %s", got, want)
+	}
+	ev = Evaluate(withRelease(manifest.Release{Policy: manifest.ReleaseJudgement, WholeEpics: true}), wholeEpicItems(), map[string]bool{"S-0001": true, "S-0002": true})
+	if got, want := ev.Answer(), "not met: 2 accepted stories not yet released, worth 300 USD/week; 1 of them held back by whole_epics"; got != want {
+		t.Errorf("whole_epics holding one back:\n got %s\nwant %s", got, want)
+	}
+}
+
+// ADR-0211: two evaluations answer alike while the verdict and the figures
+// the policy reads are the same, whatever else differs.
+func TestEvaluationSameAnswer(t *testing.T) {
+	items, pending := thresholdItems()
+	threshold := withRelease(manifest.Release{Policy: manifest.ReleaseThreshold, Count: ptr(4)})
+	base := Evaluate(threshold, items, pending)
+
+	same := Evaluate(threshold, items, pending)
+	same.Reason, same.Pending = "other words", nil
+	same.Value += 0.001
+	if !base.SameAnswer(&same) {
+		t.Errorf("the reason's words, the stories listed, and less than a cent are no part of the answer: %+v vs %+v", base, same)
+	}
+
+	differ := map[string]func(*Evaluation){
+		"met":          func(ev *Evaluation) { ev.Met = true },
+		"count":        func(ev *Evaluation) { ev.Count++ },
+		"value":        func(ev *Evaluation) { ev.Value += 0.01 },
+		"policy":       func(ev *Evaluation) { ev.Policy = manifest.ReleaseJudgement },
+		"not accepted": func(ev *Evaluation) { ev.NotAccepted = []string{"S-0009"} },
+		"held":         func(ev *Evaluation) { ev.HeldByEpic = []HeldStory{{ID: "S-0001"}} },
+	}
+	for name, change := range differ {
+		other := Evaluate(threshold, items, pending)
+		change(&other)
+		if base.SameAnswer(&other) || other.SameAnswer(&base) {
+			t.Errorf("a different %s is a different answer", name)
+		}
+	}
+
+	// a theme's stories not accepted compare as a set
+	a := Evaluation{Policy: manifest.ReleaseTheme, NotAccepted: []string{"S-0001", "S-0002"}}
+	b := Evaluation{Policy: manifest.ReleaseTheme, NotAccepted: []string{"S-0002", "S-0001"}}
+	if !a.SameAnswer(&b) || !slices.Equal(a.NotAccepted, []string{"S-0001", "S-0002"}) {
+		t.Errorf("the same stories in another order are the same answer, and neither is reordered: %v %v", a.NotAccepted, b.NotAccepted)
+	}
+
+	// under judgement, never met, an acceptance adding a pending story
+	// changes the figures, so the answer
+	judgement := withRelease(manifest.Release{Policy: manifest.ReleaseJudgement})
+	before := Evaluate(judgement, items, map[string]bool{"S-0001": true})
+	after := Evaluate(judgement, items, map[string]bool{"S-0001": true, "S-0002": true})
+	if before.SameAnswer(&after) {
+		t.Errorf("one more pending story is a different answer under judgement: %s vs %s", before.Answer(), after.Answer())
+	}
+}
