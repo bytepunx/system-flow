@@ -95,7 +95,7 @@ export class EventsSocket {
 	/**
 	 * Close every events socket with 1001 and refuse new ones, for a server that is stopping. Each is
 	 * torn down first, so that no Repo listener outlives the call whenever its close handshake ends: an
-	 * upgraded socket is detached from the HTTP server, whose close does not wait for it (I-0205).
+	 * upgraded socket is detached from the HTTP server, whose close does not wait for it (I-0181, I-0205).
 	 */
 	close(): void {
 		this.stopping = true;

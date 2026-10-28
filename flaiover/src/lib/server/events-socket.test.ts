@@ -223,7 +223,7 @@ describe('the live events socket (ADR-0182)', () => {
 		expect(harbour.listenerCount('change')).toBe(1);
 		const stopped = new Promise((r) => server.close(r));
 		globalThis.__flaioverAgentUpgrade?.close();
-		// torn down at once, before the close handshake, which an upgraded socket's server does not wait for (I-0205)
+		// torn down at once, before the close handshake, which an upgraded socket's server does not wait for (I-0181, I-0205)
 		expect(harbour.listenerCount('change')).toBe(0);
 		expect(harbour.listenerCount('agent')).toBe(0);
 		expect(await c.closed).toBe(CLOSE_GOING_AWAY);
