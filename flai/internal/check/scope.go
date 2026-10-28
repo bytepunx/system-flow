@@ -160,6 +160,47 @@ func ScopeToStories(res *Result, repo *workitem.Repo, stories []string, changed 
 	return nil
 }
 
+// ScopeToItem scopes res, a check run with a write of item it in place, to
+// the item's story, the story itself or a task's parent, with written, the
+// paths the write made, relative to the checkout, as changed (ScopeToStories),
+// and returns whether a finding is outside that story: what a checked edit
+// and a checked creation refuse on and what they only warn of (ADR-0197,
+// I-0182, I-0191). An epic has no story, and a task whose story does not read
+// is held to the epic's rule: a finding is outside unless it is on a path
+// written.
+func ScopeToItem(res *Result, repo *workitem.Repo, it *workitem.Item, written []string) (func(Finding) bool, error) {
+	story := ""
+	switch it.Type {
+	case workitem.Story:
+		story = it.ID
+	case workitem.Task:
+		if p, err := repo.Get(it.Parent); err == nil && p.Type == workitem.Story {
+			story = p.ID
+		}
+	}
+	if story != "" {
+		if err := ScopeToStories(res, repo, []string{story}, written); err != nil {
+			return nil, err
+		}
+		return func(f Finding) bool { return f.Outside }, nil
+	}
+	in := map[string]bool{}
+	for _, p := range written {
+		for _, r := range []string{repo.Root, repo.MainRoot} {
+			if r != "" {
+				in[filepath.Join(r, filepath.FromSlash(p))] = true
+			}
+		}
+	}
+	return func(f Finding) bool {
+		path := f.Path
+		if !filepath.IsAbs(path) {
+			path = filepath.Join(repo.Root, path)
+		}
+		return !in[filepath.Clean(path)]
+	}, nil
+}
+
 // namesStory reports whether f, a wip.overlap, a touches.folder, or a
 // wip.after-hub, names any of stories in its Stories (ADR-0115, ADR-0188);
 // the message is never read.

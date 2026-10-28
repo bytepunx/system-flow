@@ -445,3 +445,58 @@ func TestTheThirdStoryAfterAHubIsKeptWithAWarning(t *testing.T) {
 		t.Errorf("the third story warns wip.after-hub: %+v", res.Warnings)
 	}
 }
+
+// I-0191: in a project with no .gitignore and no .flai-cache, the first
+// checked creation makes .flai-cache/items.lock, which brings the check's
+// layout.gitignore on the repository's root between its two runs. The finding
+// is outside the new item's story, so the epic, a story under it, and a task
+// of that story are each kept, with layout.gitignore among the first one's
+// warnings, while a finding inside the story still refuses it (ADR-0197).
+func TestTheFirstCreationInAProjectWithNoGitignoreIsKeptWithAWarning(t *testing.T) {
+	repo := project(t)
+	if err := os.Remove(filepath.Join(repo.Root, ".gitignore")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(repo.CacheDir()); !os.IsNotExist(err) {
+		t.Fatalf("the project starts with no .flai-cache: %v", err)
+	}
+	now := time.Date(2026, 10, 22, 20, 40, 4, 0, time.UTC)
+	res, err := Create(repo, nil, Options{New: workitem.NewOptions{Type: workitem.Epic, Title: "First epic", Owner: "alex", Now: now}})
+	if refused, ok := docedit.IsRefused(err); ok {
+		t.Fatalf("the first epic is kept, not refused on %+v", refused.Findings)
+	}
+	if err != nil {
+		t.Fatalf("the first epic is kept: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(repo.CacheDir(), "items.lock")); err != nil {
+		t.Fatalf("the creation made the items lock: %v", err)
+	}
+	var gitignore bool
+	for _, f := range res.Warnings {
+		if f.Rule == "layout.gitignore" {
+			gitignore = true
+			if !f.Outside {
+				t.Errorf("layout.gitignore is outside the new epic: %+v", f)
+			}
+		}
+	}
+	if !gitignore {
+		t.Errorf("layout.gitignore comes back as a warning: %+v", res.Warnings)
+	}
+	story := func(body string) workitem.NewOptions {
+		return workitem.NewOptions{Type: workitem.Story, Title: "First story", Nature: "feature", Parent: res.Item.ID, Owner: "alex", Now: now, Body: body}
+	}
+	const body = "## Goal\n\nA first story.\n\n## Acceptance criteria\n\n- [ ] It is kept.\n\n## Tasks\n\n## Notes\n\nNone.\n"
+	_, err = Create(repo, nil, Options{New: story(strings.ReplaceAll(body, "\n- ", "\n - "))})
+	if refused, ok := docedit.IsRefused(err); !ok || len(refused.Findings) == 0 || refused.Findings[0].Rule != "markdown.MD007" {
+		t.Fatalf("a finding on the new story still refuses it: %v", err)
+	}
+	if _, err := Create(repo, nil, Options{New: story(body)}); err != nil {
+		t.Fatalf("a story under it is kept: %v", err)
+	}
+	task := plannedTask(now)
+	task.After = nil
+	if _, err := Create(repo, nil, Options{New: task}); err != nil {
+		t.Fatalf("a task of the story is kept: %v", err)
+	}
+}

@@ -654,7 +654,7 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 		return fail(err)
 	}
 	files := u.paths(repo)
-	outside, err := scope(repo, it, after, files)
+	outside, err := check.ScopeToItem(after, repo, it, files)
 	if err != nil {
 		return fail(fmt.Errorf("check the edit of %s: %w", it.ID, err))
 	}
@@ -720,46 +720,6 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 		res.Committed, res.Commit = true, sha
 	}
 	return res, nil
-}
-
-// scope scopes res, the check run with the edit of item it in place, to its
-// story, the story itself or a task's parent, with written, the paths the
-// edit wrote, relative to the checkout, as changed (check.ScopeToStories),
-// and returns whether a finding is outside that story (ADR-0197, I-0182). An
-// epic has no story, and a task whose story does not read is held to the
-// epic's rule rather than failing the edit: a finding is outside unless it is
-// on a path the edit wrote.
-func scope(repo *workitem.Repo, it *workitem.Item, res *check.Result, written []string) (func(check.Finding) bool, error) {
-	story := ""
-	switch it.Type {
-	case workitem.Story:
-		story = it.ID
-	case workitem.Task:
-		if p, err := repo.Get(it.Parent); err == nil && p.Type == workitem.Story {
-			story = p.ID
-		}
-	}
-	if story != "" {
-		if err := check.ScopeToStories(res, repo, []string{story}, written); err != nil {
-			return nil, err
-		}
-		return func(f check.Finding) bool { return f.Outside }, nil
-	}
-	in := map[string]bool{}
-	for _, p := range written {
-		for _, r := range []string{repo.Root, repo.MainRoot} {
-			if r != "" {
-				in[filepath.Join(r, filepath.FromSlash(p))] = true
-			}
-		}
-	}
-	return func(f check.Finding) bool {
-		path := f.Path
-		if !filepath.IsAbs(path) {
-			path = filepath.Join(repo.Root, path)
-		}
-		return !in[filepath.Clean(path)]
-	}, nil
 }
 
 // followParent moves in memory the epics story left and joined, the very

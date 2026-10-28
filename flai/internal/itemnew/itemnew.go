@@ -1,7 +1,8 @@
 // Package itemnew creates a work item whose body its author has already
 // written, as one step that happens or does not (S-0059): the item is made
 // from the project's template, flai check runs with it in place, anything it
-// introduces refuses it and leaves nothing behind, and what is kept is
+// introduces inside the item's story refuses it and leaves nothing behind
+// (ADR-0197, I-0191), and what is kept is
 // committed on its own. It is what the dashboard's "new" form calls, and the
 // same from a script: flai story new --body-stdin.
 package itemnew
@@ -11,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -49,9 +51,11 @@ type Result struct {
 	CommitError string          `json:"commit_error,omitempty"`
 }
 
-// Create makes the item, checks the repository with it in place, and keeps
-// it only when the check reports nothing new but a wip.overlap, which is
-// advisory (ADR-0019) and comes back in Warnings (I-0169). A refusal is a
+// Create makes the item, checks the repository with it in place, scoped to
+// the item's story, and keeps it only when the check reports nothing new
+// inside that story but a wip.overlap, a touches.folder, or a wip.after-hub,
+// which are advisory (ADR-0019, ADR-0188) and come back in Warnings (I-0169),
+// as does a new finding outside the story (I-0191). A refusal is a
 // *docedit.RefusedError carrying the findings, as for a refused save.
 func Create(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 	if opt.New.Now.IsZero() {
@@ -97,16 +101,38 @@ func Create(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 		_ = undo()
 		return nil, err
 	}
+	rel := relTo(repo.Root, it.Path)
+	// the second run is scoped to the new item's story, as a checked edit's
+	// is: a finding the write did not bring, such as layout.gitignore once
+	// the items lock made .flai-cache, refuses nothing (ADR-0197, I-0191)
+	written := []string{rel}
+	if parentPath != "" {
+		written = append(written, relTo(repo.Root, parentPath))
+	}
+	key := func(f check.Finding) string { return f.Rule + "\x00" + f.Path + "\x00" + f.Message }
+	all := slices.Clone(after.Findings)
+	outside, err := check.ScopeToItem(after, repo, it, written)
+	if err != nil {
+		_ = undo()
+		return nil, fmt.Errorf("check the new %s %s: %w", it.Type, it.ID, err)
+	}
+	// scoping drops findings and marks the rest, keeping each one's rule,
+	// path, and message, which the known set matches on
+	scoped := map[string]bool{}
+	for _, f := range after.Findings {
+		scoped[key(f)] = outside(f)
+	}
 	known := map[string]bool{}
 	for _, f := range before.Findings {
-		known[f.Rule+"\x00"+f.Path+"\x00"+f.Message] = true
+		known[key(f)] = true
 	}
-	rel := relTo(repo.Root, it.Path)
 	res := &Result{Item: it, Path: rel, Warnings: []check.Finding{}}
 	var blocking []check.Finding
-	for _, f := range after.Findings {
+	for _, f := range all {
+		out, kept := scoped[key(f)]
+		f.Outside = out
 		switch {
-		case known[f.Rule+"\x00"+f.Path+"\x00"+f.Message]:
+		case known[key(f)]:
 		case f.Rule == "wip.overlap":
 			// touches that reach another story in progress are advisory
 			// (ADR-0019): the item stands, and the warning says so (I-0169)
@@ -114,6 +140,13 @@ func Create(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 		case f.Rule == "touches.folder" || f.Rule == "wip.after-hub":
 			// a kept folder and an after hub are advisory (ADR-0188): the
 			// item stands, and the warning says so
+			res.Warnings = append(res.Warnings, f)
+		case !kept:
+			// one a check scoped to the story leaves out, such as a finding
+			// on another open story's narrative, is neither (ADR-0197)
+		case f.Outside:
+			// outside the new item's story: another writer's, or the
+			// repository's own, so the item stands, and the warning says so
 			res.Warnings = append(res.Warnings, f)
 		default:
 			blocking = append(blocking, f)
