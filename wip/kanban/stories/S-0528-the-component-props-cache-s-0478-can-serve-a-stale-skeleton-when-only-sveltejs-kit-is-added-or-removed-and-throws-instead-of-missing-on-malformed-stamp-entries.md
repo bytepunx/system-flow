@@ -6,7 +6,7 @@ title: The component props cache (S-0478) can serve a stale skeleton when only @
 status: backlog
 owner: alex
 created: 2026-10-28T12:54:18Z
-updated: 2026-10-28T12:54:18Z
+updated: 2026-10-28T12:57:41Z
 transitions: []
 tags: []
 agent:
@@ -14,7 +14,9 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+finalized:
+  by: alex
+  at: 2026-10-28T12:57:41Z
 ---
 # S-0528 The component props cache (S-0478) can serve a stale skeleton when only @sveltejs/kit is added or removed, and throws instead of missing on malformed stamp entries
 
