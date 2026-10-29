@@ -472,7 +472,26 @@ flai check                # roles.file, roles.grant, and roles.definition on a f
 
 **Understand what a role file means.** A defined role runs as you, as the built-in roles do: on your machine, as your user, with your git and forge credentials, the provider's key, and every file you can read ([Starting an agent when a story becomes ready](#starting-an-agent-when-a-story-becomes-ready) says what that environment holds). `flai guard` holds it to its file for flai's MCP tools, flai and git command lines, and file edits. It does not judge another program the session runs through `Bash`, so a role given `Bash` has your shell. A role file is code you run: review a change to one as you would a script's, and let it reach main only through a story you accept. No role may edit `design/workflows/`, so a role cannot widen itself. `flai check` refuses a file that grants an acceptance, a publish, a move past backlog, finalizing a draft, or cost of delay inputs outside the permission that gates it.
 
-In this release the role files are data. `flai serve` still starts only the four built-in roles, behind their host actions, and flai decides what each may do from its own code; `.claude/agents/` still holds their harness definitions. Starting a role you define arrives with S-0417, its triggers with S-0418, and its own `roles.<name>` settings in the manifest with S-0416 and S-0417.
+`flai guard` reads each role's rules from its file (S-0416), and `flai serve` starts a role you define when you ask for it (S-0417, below). flai still decides from its own code when each of the four built-in roles starts, and `.claude/agents/` still holds their harness definitions. Starting a role you define on the events and schedules its file's `trigger` names arrives with S-0418.
+
+### The host action a role names: running a role you define (S-0417)
+
+`flai serve` can start a role you define in a role file, on your machine, as you, because you asked: `flai role run <name> [<item>]` in a shell, or the MCP tool `role_run` from your own agent ([ADR-0207](../../design/adrs/0207-a-strategic-role-is-a-markdown-file-under-design-workflows-roles-whose-front.md)). The host API's `role.run` starts it for a dashboard too. It runs behind the host action its file names, such as `review`, off until you enable it:
+
+```bash
+flai role list                            # every role, each with its action
+flai serve enable review                  # for the project in the working directory; --all-projects for every project
+flai role run reviewer S-0042             # on an item, for a role whose file takes one
+flai role run auditor --input focus=docs  # on none, with an input its prompt names
+flai serve journal                        # every run started, ended, or that could not start
+flai serve disable review                 # no more runs; works after the role's file is gone
+```
+
+`flai serve actions` lists each action your project's role files name beside flai's own, and the dashboard's Settings page turns it on and off while `settings` is on. `flai check` refuses a role file that names one of flai's own actions, or a built-in role's.
+
+**Understand what enabling it means.** Whoever holds the dashboard token can start the role, on any item its file takes, or on none when it takes none, on your machine, as you, with the role's agent (`roles.<name>.agent` in `system-flow.yaml` over `agent`) and the harnesses and command you set with `flai serve agent`. One run of the role goes per item at a time, or one for the project when it takes no item, and it does not count against the in-progress limit, so each start spends what one agent session costs. Turning the action off starts no more runs; it does not stop one under way. The role runs in the project's main checkout, as its name, or `<name>-<item>` on an item, with `FLAI_ROLE` set to its file's `role`, so `flai guard` holds it to its file ([Defining a role](#defining-a-role-s-0414) says what that holds and what it does not). That holds for file edits only while `.claude/settings.json` runs the guard on `Edit|MultiEdit|Write|NotebookEdit` for any `FLAI_ROLE`, as the template's does since S-0416, and `flai` on `PATH` holds roles to their files, as releases from S-0416 on do. On `claude-code` it runs as a definition flai generates from its file and passes on the command line; nothing is written to `.claude/`. An agent `flai serve` started cannot start a role through MCP.
+
+**Where to look.** The run is kept in `serve/agents.json` under `roles`, by the role's name and then its item, `""` for none, with its action and what started it, `asked`. Its output is in `serve/agents/<key>-<name>-<time>.log`, and what it did and cost in `wip/agents/<name>.md`, its activity document, which `wip/agents/index.md` lists and `flai check` validates; its cost charges no item and stays in the role's project total. `flai hostapi agent.status` shows the runs as `roles`. Each start, end, and failure is in `flai serve journal` under the role's action. A run that exited with an error is recorded as `failed`. A role asks you in a thread on its item, or for a run on none on the item its question concerns, and waits for the answer; one that ended before you answered is recorded as `asked` and is not started again by the answer: ask for another run.
 
 ### The settings host action: changing the host's settings from the dashboard (S-0105)
 

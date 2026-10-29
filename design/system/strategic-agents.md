@@ -7,7 +7,7 @@ topics: [planning, orchestration, analysis]
 
 # Strategic agents
 
-The planner, the orchestrator, the analyzer, and the curator are agents that work above a story (E-0016). What each does and never does is the convention [strategic-agents.md](../conventions/strategic-agents.md). This document is how flai runs them. The planner runs when the operator asks for it and, behind the `plan` host action, on its own. The orchestrator runs, one per project, for as long as the `orchestrate` host action is on. The analyzer runs, one per project at a time, behind the `analyze` host action, when the operator asks for it and on a schedule, and writes one report under `design/analysis/`. The curator runs, one per project at a time, behind the `curate` host action, when the operator asks for it, after each acceptance, and on a schedule, and keeps the digest through `flai digest` alone.
+The planner, the orchestrator, the analyzer, and the curator are agents that work above a story (E-0016). What each does and never does is the convention [strategic-agents.md](../conventions/strategic-agents.md). This document is how flai runs them. The planner runs when the operator asks for it and, behind the `plan` host action, on its own. The orchestrator runs, one per project, for as long as the `orchestrate` host action is on. The analyzer runs, one per project at a time, behind the `analyze` host action, when the operator asks for it and on a schedule, and writes one report under `design/analysis/`. The curator runs, one per project at a time, behind the `curate` host action, when the operator asks for it, after each acceptance, and on a schedule, and keeps the digest through `flai digest` alone. A role a project defines in a role file of its own runs, one run per item at a time, behind the host action its file names, when the operator asks for it ([A role a project defines](#a-role-a-project-defines-s-0417)).
 
 | Part | Planner | Orchestrator | Analyzer | Curator |
 |------|---------|--------------|----------|---------|
@@ -23,7 +23,7 @@ Each role is also written down as data: one file, `design/workflows/roles/<name>
 - **Where.** The template ships `planner.md`, `orchestrator.md`, `analyzer.md`, and `curator.md`, and the folder's `README.md`, which lists them. A role file the template does not ship is the project's own. `roles.Load` in `flai/internal/roles` reads every `*.md` in the folder but `README.md`.
 - **What it holds.** The front matter names the role (`name`, `role`), the fields of its harness definition (`definition`: `description`, `tools`, `model`), the host action that gates it (`action`), what starts it (`trigger`), the items a run takes (`item`), its `topics`, whether it may work a story (`works_story`), how its usage is charged (`charge`), and the calls the guard allows it beyond the reads every agent has: flai's MCP tools (`tools`), flai's commands (`commands`), the folders it may edit (`files`), and `permissions`. The body is the definition's prompt, with the baseline marker; a project adds its own below it.
 - **Conditions and permissions.** A call is named plainly, or as `{call, when}` under a condition flai implements in `flai/internal/roles/conditions.go`, such as `draft-only` or `to-backlog`. A file names a condition; it cannot define one. A call only the operator's settings may allow, such as an acceptance, a publish, or a move past backlog, sits only inside a `permissions` entry naming the setting: `orchestration.permissions.<p>` in the orchestrator's file, `roles.<name>.permissions.<p>` in any other. Some calls no file may name: `flai push`, git's writes, `flai accept --batch`, a move to done with `item_move`.
-- **Its harness definition.** flai generates it from `name`, `definition`, the role's agent's model, and the body, and `flai serve` passes it in `--agents` and selects it with `--agent <name>`, writing nothing under `.claude/`. S-0419 generates it. Until then the hand-written `.claude/agents/*.md` stay the definitions.
+- **Its harness definition.** flai generates it from `name`, `definition`, the role's agent's model, and the body, and `flai serve` passes it in `--agents` and selects it with `--agent <name>`, writing nothing under `.claude/`. For a role a project defines, flai generates it when it starts the role (S-0417, [How a defined role runs](#how-a-defined-role-runs)). For the four built-in roles S-0419 generates it; until then the hand-written `.claude/agents/*.md` stay theirs.
 - **It runs as the operator.** A defined role's session runs on the host, as the built-in roles' do: as the operator's user, with the operator's git and forge credentials and the provider's key. `flai guard` holds it to its file for flai's MCP tools, flai and git command lines, and file edits; a role given `Bash` has the operator's shell for anything else. A role file is code the operator runs, so it changes only through a story the operator accepts, and no role's `files` may include `design/workflows/` (ADR-0207 §7).
 - **Checks.** `flai check` reports, as errors, `roles.file` for a file that does not parse, misses a field, or names an unknown condition, trigger, event, setting, item kind, tool, or command; `roles.grant` for a call outside the permission that gates it, or one no setting allows; and `roles.definition` for a `definition` missing its description or tools, or listing a tool the role's rules refuse.
 - **Commands.** `flai role list [--json]` prints every role with its file, action, triggers, item kinds, topics, charge, calls, and permissions; `flai role show <name> [--json]` adds its definition and its body ([flai-cli.md § Commands](flai-cli.md#commands)).
@@ -34,7 +34,67 @@ Each role is also written down as data: one file, `design/workflows/roles/<name>
   - Thread conditions (`own-thread`, `planner-thread`, `answer-threads`) pass only a `--by` that names the role itself. The orchestrator's own name is `orchestrator` alone.
   - A defined role writes as itself alone, as the planner does ([ADR-0210](../adrs/0210-flai-guard-holds-a-role-a-role-file-defines-to-its-own-name-and-session-as-adr.md)): a `--by`, `--placed-by`, `FLAI_AGENT`, or `FLAI_SESSION` naming another is refused. Its own name is the hook's `FLAI_AGENT`, or the name `flai serve` gives its run, `<name>` or `<name>-<item>`. Its refusals name it `the role <name>`.
   - `.claude/settings.json` runs the guard on `Edit|MultiEdit|Write|NotebookEdit` for any non-empty `FLAI_ROLE`, so a defined role's file edits are held too ([The guard](#the-guard)).
-- **What reads them.** S-0415 builds a role's pack from its file, and S-0416 has the guard hold a role to it. flai still decides from its Go when each built-in role starts, and `flai serve` starts only the four built-in roles, until S-0417 and S-0418 (starts and triggers) and S-0419 (the generated definitions) read the files.
+- **What reads them.** S-0415 builds a role's pack from its file, S-0416 has the guard hold a role to it, and S-0417 has `flai serve` start a role a project defines from its file when the operator asks ([A role a project defines](#a-role-a-project-defines-s-0417)). flai still decides from its Go when each built-in role starts, and starts a defined role only when asked, until S-0418 (triggers) and S-0419 (the built-in roles' generated definitions) read the files.
+
+## A role a project defines (S-0417)
+
+A role file the template does not ship defines a role of the project's own ([Role files](#role-files-s-0414), [ADR-0207](../adrs/0207-a-strategic-role-is-a-markdown-file-under-design-workflows-roles-whose-front.md)). `flai serve` starts it from its file when the operator asks, behind the host action its file names, on an item its file takes or on none. It works no story: the in-progress limit does not count it, and it holds no story back. Starting it on an event, a schedule, or continuously, as its file's `trigger` says, is S-0418's; until then `asked` is the only trigger that starts it.
+
+### Starting a defined role
+
+| Way | For | What it runs |
+|-----|-----|--------------|
+| `flai role run <name> [<item>] [--input name=value]... [--json]` | a shell on the host | `serve.RunRole` |
+| The host API's `role.run` `{name, item?, inputs?}`, each input `{name, value}` | a dashboard | `flai role run <name> [<item>] --input=<name>=<value>... --json`, gated and journalled under the action the role's file names |
+| The MCP tool `role_run` `{name, item?, inputs?}` | the operator's own agent | `serve.RunRole`, as `flai role run` does; journalled under the role's action as `mcp.role_run` with the agent that asked |
+
+Each needs the host action the role's file names on for the project: `flai serve enable <action>`, or the dashboard's Settings page while `settings` is on. It is off by default. A holder of the dashboard token can then start the role on any item its file takes. `flai serve enable` and `disable`, `flai serve actions`, `project.info`'s `host_actions`, `settings.get`, and `settings.action` take each action a defined role's file names beside flai's own (`hostapi.DefinedActions`); `flai check` refuses a file that names one of flai's own (`roles.file`). `flai serve disable` still turns off an action whose role file is gone. `role.run` refuses a name that is not kebab-case, an input name that is not one word, and an input value with a line break before flai runs.
+
+`serve.RunRole` refuses, saying why:
+
+- a built-in role's name: `planner`, `orchestrator`, `analyzer`, and `curator` keep their own commands, which the refusal names;
+- a name no role file gives, naming the roles the project defines, and a file of that name that does not load, naming the problem `flai check` reports;
+- while the host action the file names is off for the project, naming `flai serve enable <action>`;
+- an item when the file's `item` is `none`; no item when it names `epic` or `story`; an item of a kind it does not take; an item that is archived, done, or cancelled;
+- while a run of the role on the same item, or on none, runs: one item has one run of a role at a time;
+- when the role's agent names no harness and no command is set on the host.
+
+The MCP tool `role_run` also refuses an agent `flai serve` started (`FLAI_STARTED_BY=flai-serve`), as `plan` does: running a role is the operator's to ask for. `flai guard` refuses it to a sub-agent and to every role whose file does not list it.
+
+### A defined role's agent
+
+`roles.<name>.agent` in `system-flow.yaml`, merged over the project's `agent` field by field, config key by config key, and role by role (`Manifest.RoleAgent`), gives the role's harness, model, config, and roles. With neither set, the host's command starts it. A built-in role's agent stays in its own block: `roles.planner.agent`, `roles.orchestrator.agent`, `roles.analyzer.agent`, and `roles.curator.agent` are `manifest.roles` errors naming `planning.agent`, `orchestration.agent`, `analysis.agent`, and `digest.agent`. See [project-manifest.md](project-manifest.md).
+
+### How a defined role runs
+
+`serve.RunRole` starts the role through the harness adapter with a `harness.Request` whose `Role` is the file's `role`, whose `RoleFile` is the file, whose `Item` is the item or empty, and whose `Inputs` are the `--input` pairs in the order given. It hands the process over, as `serve.Plan` does: the command does not wait, and the serving flai settles the run.
+
+- **Where.** In the project's main checkout. No branch, no worktree.
+- **As whom.** `FLAI_AGENT` is the role's name, or `<name>-<item>` on an item, such as `reviewer-S-0042` (`harness.RoleAgent`). The environment carries `FLAI_ROLE` set to the file's `role`, `FLAI_ITEM` when the run has an item, `FLAI_SESSION`, and `FLAI_STARTED_BY=flai-serve`, and no `FLAI_STORY`. `flai guard` holds the session to its file by `FLAI_ROLE` ([Role files](#role-files-s-0414)).
+- **claude-code.** The session is named `<key> <name>`, or `<key> <name> <item>`. It runs with `--agent <name>` over the definition flai generates from the file (`roleDefinition`): `definition.description` and `definition.tools`, the body without the marker's line as the prompt, and the model the role's agent names, else the file's `definition.model`, left out when that is `inherit` so that the session's holds. It is passed in `--agents` beside the explorer and the verifier. Nothing is read or written under `.claude/` for it (TH-0471). A file whose definition lacks a description or tools, or whose body is empty, is refused, naming `flai check`.
+- **The operator's command.** It gets `FLAI_ROLE`, `FLAI_ITEM` when there is an item, and `FLAI_INPUTS`, the inputs as a JSON array of `{name, value}`, when there are any; `{story}` is empty.
+
+### What a defined role is told
+
+`harness.Prompt` gives it `definedPrompt`: who it is and the file that defines it; the file's body, without the marker's line; the item, to read with `item_get` with what it links, or that the run is on no item; the inputs, one line each in the order given, or that it has none. It primes with `flai prime --role <role>`, with `--epic` or `--story` and the item when it has one, and calls `inbox`. It works in the main checkout, never works around a refusal of `flai guard`, asks the operator with `thread_open` on its item for an input they own and holds `wait_for_events` until the answer, and ends with a one-line summary, which becomes the run's activity entry.
+
+### A defined role's run and how it ended
+
+The run is recorded in `serve/agents.json` under `roles`, by the role's name and then by its item, `""` for a run on none: the newest run of each. It has the fields a planner run has, with `role` the file's verb, `role_name` its name, `action` the host action its file names, and `trigger` `asked`. `Running` and `Last` never name it. Its output is in `serve/agents/<key>-<name>-<start>.log`; each run gets a log of its own, at the first free second from its start.
+
+When the process ends, or the next look finds it gone (`settleOrphans`), flai serve settles the run (`roleEnded`), judged as a planner run is (`judgeRole`):
+
+| Outcome | When |
+|---------|------|
+| `asked` | a thread is open and its last entry is the role's: on its item, or anywhere in the project for a run on none; `thread` names it |
+| `failed` | it exited with a code other than 0, or the project or its threads could not be read |
+| `worked` | otherwise, an exit nobody saw included |
+
+An `asked` run is not started again when the thread is answered; the operator asks for another run.
+
+It then logs the activity in the role's own activity document, `wip/agents/<name>.md`, with `serve.LogRunEnd`, as a planner run is: the time since the last entry, the run's final reply as the summary, `- Trigger: asked`, the run's item, when it has one, as the entry's item, and the seconds and cost measured from the log ([agent-narrative.md](agent-narrative.md#strategic-agents-activity-documents)). The role may log activities within its run with `activity_log`, or `flai activity log <name> "<summary>" [--item ID]...`, its name as the kind. Neither charges an item: the cost stays in the kind's project strategic total until S-0425 charges a defined role's usage on its items. `Repo.ActivityKinds` gives the kinds: the four built-in ones, then each role file's name under the design folder's `workflows/roles`, so `activity_log`, `flai activity log`, `wip/agents/index.md`, and `flai check`'s `activity.*` rules take a defined role's document as they take the built-in ones'.
+
+The start, a failure to start, and the end are each a journal entry under the action the role's file names, with method `serve.role`; an end that `failed` is journalled as failed, with why. `agent.status` carries the runs as `roles`. When a run starts, cannot start, or ends, `flai serve` tells the dashboard with an `agent` notification `{project, role, name, item?}`: `role` the file's verb, `name` the role's name, and `item` when the run has one.
 
 ## The planner
 
