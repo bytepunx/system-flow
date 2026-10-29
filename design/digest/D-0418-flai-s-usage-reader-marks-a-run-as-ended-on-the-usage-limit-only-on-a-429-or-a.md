@@ -6,8 +6,8 @@ sources: [S-0514, T-2198]
 topics: [planning, digest, flai, go]
 paths: [flai/internal/usage/claudecode.go, flai/internal/usage/event.go, flai/internal/serve/limit.go]
 date: 2026-10-29
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/flai-cli.md#the-hosts-budget-state"
 asked_again: []
 cited: [S-0534]
 ---
