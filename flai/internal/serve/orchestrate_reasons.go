@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/cron"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/roles"
@@ -133,6 +134,59 @@ func reasonLines(rs []orchestrateReason) []string {
 	out := make([]string, len(rs))
 	for i, r := range rs {
 		out[i] = r.line()
+	}
+	return out
+}
+
+// prime is the reason in the form flai prime --reason and MCP prime's
+// reasons take (ADR-0217 §1, §6), built from ctxpack's kinds: a story's move
+// to review is review:S-nnnn; a story's move to backlog and a story's edit,
+// which the trigger takes only for a draft, are draft:S-nnnn; a plan is
+// planned:<id>; a thread is thread:TH-nnnn; a release due is release; the
+// ready column draining and the order changing are ready. It is "" for a
+// reason with no form: asked and schedule, which look at the whole project,
+// any other event a project's trigger may name, and a form flai prime would
+// refuse, such as a move of an epic, so that the run primes with the general
+// pack rather than be refused.
+func (r orchestrateReason) prime() string {
+	var p ctxpack.Reason
+	switch {
+	case r.Kind == workitem.Moved && r.Type == workitem.Story && r.To == workitem.Review:
+		p = ctxpack.Reason{Kind: ctxpack.ReasonReview, ID: r.ID}
+	case r.Kind == workitem.Moved && r.Type == workitem.Story && r.To == workitem.Backlog,
+		r.Kind == inbox.Edited && r.Type == workitem.Story:
+		p = ctxpack.Reason{Kind: ctxpack.ReasonDraft, ID: r.ID}
+	case r.Kind == inbox.Planned:
+		p = ctxpack.Reason{Kind: ctxpack.ReasonPlanned, ID: r.ID}
+	case r.Kind == inbox.Thread:
+		p = ctxpack.Reason{Kind: ctxpack.ReasonThread, ID: r.ID}
+	case r.Kind == inbox.ReleaseDue:
+		p = ctxpack.Reason{Kind: ctxpack.ReasonRelease}
+	case r.Kind == inbox.ReadyEmpty, r.Kind == reordered:
+		p = ctxpack.Reason{Kind: ctxpack.ReasonReady}
+	default:
+		return ""
+	}
+	if _, err := ctxpack.ParseReasons([]string{p.String()}); err != nil {
+		return ""
+	}
+	return p.String()
+}
+
+// primeReasons are the reasons' forms for prime, one for each reason in
+// turn, so that the start prompt writes each beside its line, and the
+// harness drops a form given twice when it names them as flags. They are
+// nil when any reason has no form, since such a run looks at the whole
+// project and primes with the general pack (ADR-0217 §6).
+func primeReasons(rs []orchestrateReason) []string {
+	if len(rs) == 0 {
+		return nil
+	}
+	out := make([]string, len(rs))
+	for i, r := range rs {
+		if out[i] = r.prime(); out[i] == "" {
+			return nil
+		}
 	}
 	return out
 }

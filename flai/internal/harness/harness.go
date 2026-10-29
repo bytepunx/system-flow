@@ -132,6 +132,13 @@ type Request struct {
 	// such as "moved S-0123 to review: <title>" (ADR-0209 §2): its session
 	// reads them in FLAI_REASONS, one a line. None for any other agent.
 	Reasons []string
+	// PrimeReasons are the form flai prime --reason takes of each of Reasons,
+	// in turn, such as "review:S-0123" (ADR-0217 §6): the start prompt writes
+	// each beside its line and tells the orchestrator to prime with them,
+	// each once. flai serve sets them only when every reason has a form; none
+	// when one has not, such as asked or schedule, or for a run by hand, and
+	// the orchestrator primes with the general pack. None for any other agent.
+	PrimeReasons []string
 	// Inner is the harness pilot runs inside a container, one of Adapters,
 	// as pilot's start request names it (S-0507); empty for a start on the
 	// host, which is every start flai serve makes today.
@@ -629,7 +636,15 @@ When an input the operator owns is missing, do not guess past it: ask with the f
 // item, and it acts on each, logs each action, then ends, since flai serve
 // starts it again when there are more and wait_for_events answers it end
 // once its reasons are done; a run with none, by hand, looks at the inbox
-// and the board once, then ends (ADR-0209 §3, §4). It is told what to do with each of plan_backlog_epics,
+// and the board once, then ends (ADR-0209 §3, §4). When flai serve gives each
+// reason its form for prime, r.PrimeReasons, one for each line, each line
+// names its form, and it is told to prime with flai prime --role orchestrate
+// and a --reason for each form, or MCP prime with role orchestrate and those
+// reasons, each once, reading every part of a pack that holds the conventions
+// those reasons need and what each reason needs, with no design briefs, so
+// that it finds the rest with doc_search; otherwise, by hand or for a reason
+// with no form, it primes with role orchestrate alone, for the general pack,
+// which briefs the design its role's topic selects (ADR-0217 §6). It is told what to do with each of plan_backlog_epics,
 // finalize_drafts, promote_to_ready, and order_ready, and by which command
 // (S-0219), and what to do with the threads awaiting the operator, those
 // inbox marks awaiting "operator" and lists in its role without all
@@ -681,13 +696,22 @@ func orchestratePrompt(r Request) string {
 	}
 	why, act := fmt.Sprintf("You are %s, the orchestrator, started on this host for the project at %s with no reasons, as a run by hand is: look at the inbox and the board once, act on what they show, and then end.", r.Name, r.Root),
 		"Act on what the inbox and the board show, once"
+	prime := "Prime your session with flai prime --role orchestrate (or the flai MCP tool prime with role orchestrate), which prints the conventions you work by, briefs the design your role's topic selects, and loads the digest's answers and recommendations ranked against the threads awaiting the operator (ADR-0194). A brief is not the document: read the section that bears on a decision with the flai MCP tool doc_get and its heading before relying on it, and find sections by their words with doc_search."
 	if len(r.Reasons) > 0 {
-		why = fmt.Sprintf("You are %s, the orchestrator, started by flai serve on this host for the project at %s, while the orchestrate host action is on, for the reasons listed here:\n\n- %s", r.Name, r.Root, strings.Join(r.Reasons, "\n- "))
+		lines, listed := r.Reasons, "listed here"
+		if len(r.PrimeReasons) == len(r.Reasons) {
+			lines, listed = make([]string, len(r.Reasons)), "listed here, each with the form flai prime takes it in"
+			for i, l := range r.Reasons {
+				lines[i] = l + " (prime: " + r.PrimeReasons[i] + ")"
+			}
+			prime = primeReasonsSentence(r.PrimeReasons)
+		}
+		why = fmt.Sprintf("You are %s, the orchestrator, started by flai serve on this host for the project at %s, while the orchestrate host action is on, for the reasons %s:\n\n- %s", r.Name, r.Root, listed, strings.Join(lines, "\n- "))
 		act = "Act on each reason listed above"
 	}
 	return fmt.Sprintf(`%[3]s
 
-Keep the project's work moving, and do nothing else, as design/conventions/strategic-agents.md says under As the orchestrator. Prime your session with flai prime --role orchestrate (or the flai MCP tool prime with role orchestrate), which prints the conventions you work by, briefs the design your role's topic selects, and loads the digest's answers and recommendations ranked against the threads awaiting the operator (ADR-0194). A brief is not the document: read the section that bears on a decision with the flai MCP tool doc_get and its heading before relying on it, and find sections by their words with doc_search. Call the flai MCP tool inbox, and read the board with the flai MCP tool board. Hand wide search to the explorer with the Agent tool.
+Keep the project's work moving, and do nothing else, as design/conventions/strategic-agents.md says under As the orchestrator. %[5]s Call the flai MCP tool inbox, and read the board with the flai MCP tool board. Hand wide search to the explorer with the Agent tool.
 
 Act only within the permissions the operator sets in system-flow.yaml under orchestration.permissions, each off by default, and by its policy, orchestration.policy. Ask the planner to plan a backlog epic, with the flai MCP tool plan, only while plan_backlog_epics is on; ask it to plan a backlog story, with plan, and settle the threads a story's planner opens, giving its story cost of delay inputs with item_edit, only while plan_backlog_stories is on; finalize a draft only while finalize_drafts is on; promote a story to ready only while promote_to_ready is on; order the ready column only while order_ready is on; answer a thread, or recommend an answer, only as answer_threads says; accept a story only while accept_reviews is on; publish a release only while publish is on; add, change, or remove a sub-project a story or a thread asks for only while edit_subprojects is on. Do none of it while its permission is off, and if a permission is unclear, ask; do not act. The operator may change your permissions, your policy, and the release policy, orchestration.release, while you run: read them again in system-flow.yaml in the main checkout before each decision rather than keep what you read at the start, and when flai guard's verdict on a call differs from what you read, the guard's verdict holds.
 
@@ -709,7 +733,25 @@ While edit_subprojects is on, add, change, or remove a sub-project, an entry of 
 
 Log each action when you have taken it with the flai MCP tool activity_log, kind orchestrator: what you did, to which item, why, and the policy figure that justified it, as flai gave it: the story's value, its value over its duration, its forecast, or the candidate's rank. %[4]s, log each action, then end: flai serve starts you again when there is more. The flai MCP tool wait_for_events answers you end: true, why: reasons done, once your reasons are done: end then.
 
-Work in the main checkout and write only through flai: the flai MCP tools, or the flai CLI. Never edit code or documents, and never work a story yourself. flai guard refuses a call outside your permissions and names the permission it needs: never work around a refusal, by another tool, another command, or the shell. A refusal from flai guard or from flai ends that attempt: log it with activity_log, with the refusal, and do not try it again until something it depends on changes. When a decision needs the operator, ask with the flai MCP tool thread_open on the item it concerns, your recommended answer first, and do what needs no answer meanwhile.`, r.Root, queue, why, act)
+Work in the main checkout and write only through flai: the flai MCP tools, or the flai CLI. Never edit code or documents, and never work a story yourself. flai guard refuses a call outside your permissions and names the permission it needs: never work around a refusal, by another tool, another command, or the shell. A refusal from flai guard or from flai ends that attempt: log it with activity_log, with the refusal, and do not try it again until something it depends on changes. When a decision needs the operator, ask with the flai MCP tool thread_open on the item it concerns, your recommended answer first, and do what needs no answer meanwhile.`, r.Root, queue, why, act, prime)
+}
+
+// primeReasonsSentence tells the orchestrator to prime with its reasons'
+// forms, each once in the order first given, as flai prime --reason flags
+// and as MCP prime's reasons, reading every part of a pack that holds only
+// what those reasons need (ADR-0217).
+func primeReasonsSentence(forms []string) string {
+	var once []string
+	for _, f := range forms {
+		if !slices.Contains(once, f) {
+			once = append(once, f)
+		}
+	}
+	flags, quoted := make([]string, len(once)), make([]string, len(once))
+	for i, f := range once {
+		flags[i], quoted[i] = "--reason "+f, `"`+f+`"`
+	}
+	return fmt.Sprintf("Prime your session with flai prime --role orchestrate %s (or the flai MCP tool prime with role orchestrate and reasons [%s]), reading every part. It prints the conventions you work by, with the sections those reasons do not need left out, and per reason what it needs: the thread and its item, the story in review and its last flai verify result, the plan, the draft, the release figures, or the board, with the digest's answers and recommendations ranked against the reasons' threads (ADR-0217). It briefs no design: find the section that bears on a decision by its words with the flai MCP tool doc_search, and read it with doc_get and its heading before relying on it.", strings.Join(flags, " "), strings.Join(quoted, ", "))
 }
 
 // Focuses are what the analyzer can be asked to look for (S-0223):
@@ -905,10 +947,15 @@ const ReasonsEnv = "FLAI_REASONS"
 // focus or a since for any other agent are refused, as are inputs for any
 // agent but a role the project defines. A role the project defines has its
 // own (definedEnv). The orchestrator's reasons are FLAI_REASONS, one a
-// line, and reasons for any other agent are refused (ADR-0209).
+// line, and reasons for any other agent are refused (ADR-0209), as are forms
+// for prime that are not one for each reason (ADR-0217 §6): the prompt
+// carries the forms, and the environment does not.
 func roleEnv(r Request) ([]string, error) {
 	if len(r.Reasons) > 0 && (r.RoleFile != nil || r.Role != conventions.RoleOrchestrate) {
 		return nil, fmt.Errorf("only the orchestrator is started for reasons; start this agent without them")
+	}
+	if len(r.PrimeReasons) > 0 && len(r.PrimeReasons) != len(r.Reasons) {
+		return nil, fmt.Errorf("the orchestrator was given %d forms for prime for %d reasons; give one for each reason, or none", len(r.PrimeReasons), len(r.Reasons))
 	}
 	if r.RoleFile != nil {
 		return definedEnv(r)

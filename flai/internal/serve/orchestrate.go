@@ -491,7 +491,7 @@ func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *mani
 		return refuse(err)
 	}
 	spec, keys, err := l.startOf(cfg, run, adapter, name, harness.Request{Role: conventions.RoleOrchestrate, Root: l.entry.Root, Project: l.entry.Key, Agent: agent,
-		Name: run.Agent, Flai: cfg.Flai, Session: run.Session, Queue: queue, Reasons: reasonLines(reasons)})
+		Name: run.Agent, Flai: cfg.Flai, Session: run.Session, Queue: queue, Reasons: reasonLines(reasons), PrimeReasons: primeReasons(reasons)})
 	if err != nil {
 		return refuse(err)
 	}

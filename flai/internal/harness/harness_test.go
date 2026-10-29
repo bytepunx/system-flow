@@ -1447,6 +1447,63 @@ func TestTheOrchestratorsPromptListsItsReasonsAndEnds(t *testing.T) {
 	}
 }
 
+// ADR-0217 §6: when flai serve gives each reason the form prime takes, the
+// orchestrator's prompt writes each beside its line and tells it to prime
+// with them, each once, as flai prime --reason flags and as MCP prime's
+// reasons, reading every part, in place of the general pack's sentence.
+func TestTheOrchestratorsPromptPrimesWithItsReasons(t *testing.T) {
+	r := orchestrateReq(nil)
+	r.Reasons = []string{"thread TH-0007 awaits the orchestrator: A question", "moved S-0123 to review: Add the thing", "ready-empty: the ready column holds 1, below the in-progress room", "reordered: the pull order changed"}
+	r.PrimeReasons = []string{"thread:TH-0007", "review:S-0123", "ready", "ready"}
+	p := Prompt(r)
+	for _, w := range []string{
+		"for the reasons listed here, each with the form flai prime takes it in:\n\n- thread TH-0007 awaits the orchestrator: A question (prime: thread:TH-0007)\n- moved S-0123 to review: Add the thing (prime: review:S-0123)\n- ready-empty: the ready column holds 1, below the in-progress room (prime: ready)\n- reordered: the pull order changed (prime: ready)\n\nKeep the project's work moving",
+		`Prime your session with flai prime --role orchestrate --reason thread:TH-0007 --reason review:S-0123 --reason ready (or the flai MCP tool prime with role orchestrate and reasons ["thread:TH-0007", "review:S-0123", "ready"]), reading every part.`,
+		"with the sections those reasons do not need left out, and per reason what it needs: the thread and its item, the story in review and its last flai verify result, the plan, the draft, the release figures, or the board",
+		"ranked against the reasons' threads (ADR-0217)",
+		"doc_search", "doc_get and its heading",
+		"Act on each reason listed above",
+	} {
+		if !strings.Contains(p, w) {
+			t.Errorf("the orchestrator's prompt lacks %q:\n%s", w, p)
+		}
+	}
+	for _, never := range []string{"flai prime --role orchestrate (or", "briefs the design your role's topic selects", "--reason ready --reason ready"} {
+		if strings.Contains(p, never) {
+			t.Errorf("the orchestrator's prompt for reasons with forms says %q:\n%s", never, p)
+		}
+	}
+	// a reason with no form, asked here, and so no forms: the general pack
+	r.Reasons, r.PrimeReasons = []string{"moved S-0123 to review: Add the thing", "asked: the operator asked"}, nil
+	p = Prompt(r)
+	for _, w := range []string{
+		"for the reasons listed here:\n\n- moved S-0123 to review: Add the thing\n- asked: the operator asked\n\n",
+		"Prime your session with flai prime --role orchestrate (or the flai MCP tool prime with role orchestrate), which prints the conventions you work by, briefs the design your role's topic selects",
+	} {
+		if !strings.Contains(p, w) {
+			t.Errorf("without forms, the orchestrator's prompt lacks %q:\n%s", w, p)
+		}
+	}
+	if strings.Contains(p, "--reason") || strings.Contains(p, "(prime: ") {
+		t.Errorf("without forms, the orchestrator's prompt names some:\n%s", p)
+	}
+}
+
+// ADR-0217 §6: forms for prime that are not one for each reason are
+// refused, since the prompt writes each beside its line.
+func TestTheOrchestratorTakesOneFormForEachReason(t *testing.T) {
+	r := orchestrateReq(nil)
+	r.Reasons, r.PrimeReasons = []string{"moved S-0123 to review: Add the thing", "reordered: the pull order changed"}, []string{"review:S-0123"}
+	if _, err := roleEnv(r); err == nil || !strings.Contains(err.Error(), "1 forms for prime for 2 reasons") {
+		t.Errorf("roleEnv with 1 form for 2 reasons: %v", err)
+	}
+	r.PrimeReasons = []string{"review:S-0123", "ready"}
+	env, err := roleEnv(r)
+	if err != nil || !slices.Contains(env, ReasonsEnv+"=moved S-0123 to review: Add the thing\nreordered: the pull order changed") {
+		t.Errorf("roleEnv with a form for each reason: %q, %v", env, err)
+	}
+}
+
 // S-0229: the orchestrator is told that the operator may change its
 // permissions, policy, and release policy while it runs, that it reads them
 // again before each decision, and that the guard's verdict on a call holds.

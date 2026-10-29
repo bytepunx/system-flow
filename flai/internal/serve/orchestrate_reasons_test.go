@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/cron"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
@@ -499,5 +500,66 @@ func TestReasonsSaidCountsTheRest(t *testing.T) {
 	}
 	if got := reasonsSaid([]orchestrateReason{scheduleReason(&sched, time.Now())}); got != "1 reason: schedule daily came round" {
 		t.Errorf("said %q", got)
+	}
+}
+
+// ADR-0217 §6: each reason flai serve starts the orchestrator for has the
+// form prime takes, and asked, schedule, and an event with no form, none;
+// every form serve writes is one flai prime --reason takes.
+func TestEachReasonHasTheFormPrimeTakes(t *testing.T) {
+	sched, err := cron.Parse("daily")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct {
+		r    orchestrateReason
+		want string
+	}{
+		{orchestrateReason{Kind: workitem.Moved, ID: "S-0123", Type: workitem.Story, To: workitem.Review}, "review:S-0123"},
+		{orchestrateReason{Kind: workitem.Moved, ID: "S-0123", Type: workitem.Story, To: workitem.Backlog}, "draft:S-0123"},
+		{orchestrateReason{Kind: inbox.Edited, ID: "S-0123", Type: workitem.Story, To: "criteria,touches"}, "draft:S-0123"},
+		{orchestrateReason{Kind: inbox.Planned, ID: "E-0016", Type: workitem.Epic, To: "S-0200,S-0201"}, "planned:E-0016"},
+		{orchestrateReason{Kind: inbox.Planned, ID: "S-0208", Type: workitem.Story}, "planned:S-0208"},
+		{orchestrateReason{Kind: inbox.Thread, ID: "TH-0007", Type: inbox.Thread, To: "you"}, "thread:TH-0007"},
+		{orchestrateReason{Kind: inbox.Thread, ID: "TH-0008", Type: inbox.Thread, To: "operator"}, "thread:TH-0008"},
+		{orchestrateReason{Kind: inbox.ReleaseDue, ID: "S-0123", Type: workitem.Story}, "release"},
+		{orchestrateReason{Kind: inbox.ReadyEmpty, ID: "board", Type: "board", To: "1"}, "ready"},
+		{orchestrateReason{Kind: reordered, ID: "board"}, "ready"},
+		{askedReason(askedOperator, time.Now()), ""},
+		{scheduleReason(&sched, time.Now()), ""},
+		{orchestrateReason{Kind: workitem.Moved, ID: "S-0123", Type: workitem.Story, To: workitem.Done}, ""},
+		{orchestrateReason{Kind: workitem.Moved, ID: "E-0016", Type: workitem.Epic, To: workitem.Review}, ""},
+		{orchestrateReason{Kind: inbox.Edited, ID: "E-0016", Type: workitem.Epic, To: "title"}, ""},
+		{orchestrateReason{Kind: "agent", ID: "S-0123"}, ""},
+	} {
+		got := c.r.prime()
+		if got != c.want {
+			t.Errorf("%s: prime %q, want %q", c.r.line(), got, c.want)
+		}
+		if got == "" {
+			continue
+		}
+		parsed, err := ctxpack.ParseReasons([]string{got})
+		if err != nil || len(parsed) != 1 || parsed[0].String() != got {
+			t.Errorf("%s: flai prime --reason %s reads %+v, %v", c.r.line(), got, parsed, err)
+		}
+	}
+}
+
+// ADR-0217 §6: a run's forms for prime are one for each reason, in turn,
+// a form given twice kept for its line, and none when any reason has no
+// form, so that the run primes with the general pack.
+func TestPrimeReasonsAreNoneWhenAnyReasonHasNoForm(t *testing.T) {
+	review := orchestrateReason{Kind: workitem.Moved, ID: "S-0123", Type: workitem.Story, To: workitem.Review}
+	empty := orchestrateReason{Kind: inbox.ReadyEmpty, ID: "board", Type: "board", To: "1"}
+	order := orchestrateReason{Kind: reordered, ID: "board"}
+	if got, want := primeReasons([]orchestrateReason{review, empty, order}), []string{"review:S-0123", "ready", "ready"}; !slices.Equal(got, want) {
+		t.Errorf("primeReasons %q, want %q", got, want)
+	}
+	if got := primeReasons([]orchestrateReason{review, askedReason(askedTurnedOn, time.Now())}); got != nil {
+		t.Errorf("with asked, primeReasons %q, want none", got)
+	}
+	if got := primeReasons(nil); got != nil {
+		t.Errorf("with no reasons, primeReasons %q, want none", got)
 	}
 }

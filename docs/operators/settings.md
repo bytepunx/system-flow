@@ -461,7 +461,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--publish` | [flai push](../users/flai-reference.md#flai-push) |
 | `--published` | [flai dashboard upgrade](../users/flai-reference.md#flai-dashboard-upgrade) |
 | `--pull` | [flai dashboard](../users/flai-reference.md#flai-dashboard) |
-| `--reason` | [flai accept](../users/flai-reference.md#flai-accept), [flai block](../users/flai-reference.md#flai-block), [flai issue close](../users/flai-reference.md#flai-issue-close), [flai move](../users/flai-reference.md#flai-move), [flai thread resolve](../users/flai-reference.md#flai-thread-resolve) |
+| `--reason` | [flai accept](../users/flai-reference.md#flai-accept), [flai block](../users/flai-reference.md#flai-block), [flai issue close](../users/flai-reference.md#flai-issue-close), [flai move](../users/flai-reference.md#flai-move), [flai prime](../users/flai-reference.md#flai-prime), [flai thread resolve](../users/flai-reference.md#flai-thread-resolve) |
 | `--recommend` | [flai thread reply](../users/flai-reference.md#flai-thread-reply) |
 | `--record-issues` | [flai check](../users/flai-reference.md#flai-check), [flai verify](../users/flai-reference.md#flai-verify) |
 | `--ref` | [flai import](../users/flai-reference.md#flai-import), [flai new](../users/flai-reference.md#flai-new), [flai template push](../users/flai-reference.md#flai-template-push), [flai template show](../users/flai-reference.md#flai-template-show), [flai template use](../users/flai-reference.md#flai-template-use), [flai upgrade](../users/flai-reference.md#flai-upgrade) |
