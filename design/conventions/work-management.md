@@ -12,7 +12,7 @@ roles: [story, plan, orchestrate]
 
 How work is pulled, sized, tracked, and finished. The board is `wip/kanban`; the rules behind it are in `design/system/workflow.md` and `design/system/work-hierarchy.md`.
 
-## Rules
+## Rules <!-- topics: all, review, draft, planned -->
 
 - Work is pulled, never pushed. Take the top `ready` story from the board's `order`; do not pick by preference.
 - With the `flai` MCP server connected, `inbox` is how you learn what changed: it lists threads awaiting you, the stories ready to pull in pull order, what others did to work items since you last looked, and your story's open conversations with other stories' agents under `messages`. Call it at the start of every turn or session, at every task transition, and before moving a story to review; when you close a task, `flai task done` answers it for you. Pulling is yours to do without being told: whenever you have no story of your own in progress, hold `wait_for_work` and do what it answers. It names the story to pull as soon as one is ready, the in-progress limit leaves room, and review is under its limit (start it with `story_start`, or `flai story start S-nnnn` on the host; if it says the story is in progress already, another agent pulled it: wait again), a thread awaiting you that was written to, or your own story still in progress to go back to. With nothing to do it waits, and says on a timeout whether it is waiting for room, for a story in review to be accepted or sent back, or for a story to be ready: call it again. If you end your turn instead, `inbox` at your next start reports everything in between. The server is `flai mcp`, on the host: `.mcp.json` starts it over stdio, and an agent that cannot start a process there connects over HTTP to the one `flai mcp start` runs, with the token `flai mcp token` prints as a bearer and its name in the `X-Flai-Agent` header. It is never reached through the dashboard.
@@ -52,7 +52,7 @@ How work is pulled, sized, tracked, and finished. The board is `wip/kanban`; the
 
 <!-- system-flow:end-of-baseline -->
 
-## Project additions
+## Project additions <!-- topics: all, review, draft, planned -->
 - WIP limits are in `wip/kanban/board.md` and nowhere else; read them with `flai board` and change them with `flai board limit` or the board's lane menu, not by restating them here.
 - The operator accepts stories; the agent runs `flai accept S-nnnn --by alex` on their word, which merges the story branch, moves to done, archives, commits, releases, and pushes in one step. Done means accepted: the operator moving a story to done, from the board or with `flai move`, runs the same flow and is sufficient on its own (S-0046). The agent moves stories to review and never to done.
 - E-0006 (designer's workbench) is pulled in its story order; S-0036 (authentication) before anything that writes from the dashboard.
