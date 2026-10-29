@@ -214,6 +214,23 @@ func Slug(s string) string {
 	return strings.Trim(s, "-")
 }
 
+// SlugMax is the most bytes of a slug in a file name, so that the name plus a
+// tool's temporary suffix, such as Claude Code Edit's ".tmp.<pid>.<hex>" of
+// about 25 to 30 bytes, stays under the 255-byte file name limit (I-0231).
+const SlugMax = 80
+
+// CutSlug cuts a slug to at most max bytes, at a word where one ends past half of max.
+func CutSlug(slug string, max int) string {
+	if len(slug) <= max {
+		return slug
+	}
+	cut := slug[:max]
+	if i := strings.LastIndex(cut, "-"); i > max/2 {
+		cut = cut[:i]
+	}
+	return strings.TrimRight(cut, "-")
+}
+
 // Initials returns the first letter of each word, lowercased: "system-flow" is "sf".
 func Initials(s string) string {
 	var b strings.Builder

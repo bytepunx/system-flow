@@ -43,6 +43,22 @@ func TestHelpers(t *testing.T) {
 	}
 }
 
+// I-0231: a slug is cut at a word, or at the limit when no word ends past half of it.
+func TestCutSlug(t *testing.T) {
+	for _, c := range []struct{ name, slug, want string }{
+		{"under the limit", "short-slug", "short-slug"},
+		{"at the limit", "abcde-ghij", "abcde-ghij"},
+		{"cut on a word", "abcdef-hijklmnop", "abcdef"},
+		{"cut before a word cut short", "ab-defghi-klmnop", "ab-defghi"},
+		{"no word past half, cut at the limit", "ab-defghijklmnop", "ab-defghij"},
+		{"trailing dash trimmed", "abcdef--ijklmnop", "abcdef"},
+	} {
+		if got := CutSlug(c.slug, 10); got != c.want {
+			t.Errorf("%s: CutSlug(%q, 10) = %q, want %q", c.name, c.slug, got, c.want)
+		}
+	}
+}
+
 func TestEvalDefault(t *testing.T) {
 	m, _ := LoadManifest(mini)
 	data := Data(m, Options{Vars: map[string]any{"project_name": "system-flow"}})

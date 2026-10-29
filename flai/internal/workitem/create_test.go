@@ -146,3 +146,28 @@ func TestCreateRefusesATaskAFolderTouch(t *testing.T) {
 		t.Errorf("the task keeps its touches: %v", task.Touches)
 	}
 }
+
+// I-0231: S-0536's title made a file name of 240 bytes, which Claude Code's
+// Edit could not write, since its temporary file adds ".tmp.<pid>.<hex>" and
+// passes the 255-byte limit; the slug is now cut at 80 bytes on a word.
+func TestCreateCutsALongTitlesFileName(t *testing.T) {
+	r := newProject(t)
+	title := "The orchestrator runs for a reason and ends: its trigger names events, flai check rejects continuous, flai serve coalesces the reasons into one run naming them, wait_for_events ends the run when they are done, and ADR-0209 is accepted"
+	s, err := r.Create(NewOptions{Type: Story, Title: title, Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := filepath.Base(s.Path)
+	if max := len(s.ID) + 1 + 80 + len(".md"); len(base) > max {
+		t.Errorf("the file name is %d bytes, more than %d: %s", len(base), max, base)
+	}
+	if tmp := base + ".tmp.12345.0123456789abcdef"; len(tmp) > 255 {
+		t.Errorf("a temporary file beside it is %d bytes, more than 255: %s", len(tmp), tmp)
+	}
+	if !strings.HasPrefix(base, s.ID+"-the-orchestrator-runs-") || strings.HasSuffix(strings.TrimSuffix(base, ".md"), "-") {
+		t.Errorf("the slug is cut on a word: %s", base)
+	}
+	if got, err := r.Get(s.ID); err != nil || got.Title != title {
+		t.Errorf("the item keeps its whole title: %v", err)
+	}
+}

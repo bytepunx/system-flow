@@ -259,9 +259,9 @@ func (r *Repo) NextID(typ string) (string, error) {
 	return fmt.Sprintf("%s%0*d", prefix, IDWidth, max+1), nil
 }
 
-// FileName is <ID>-<slug>.md.
+// FileName is <ID>-<slug>.md, its slug cut at template.SlugMax bytes on a word.
 func FileName(id, title string) string {
-	slug := template.Slug(title)
+	slug := template.CutSlug(template.Slug(title), template.SlugMax)
 	if slug == "" {
 		return id + ".md"
 	}
