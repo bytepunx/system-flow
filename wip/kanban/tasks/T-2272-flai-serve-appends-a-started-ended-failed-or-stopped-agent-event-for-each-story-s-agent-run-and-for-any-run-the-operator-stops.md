@@ -7,12 +7,12 @@ status: backlog
 parent: S-0532
 owner: alex
 created: 2026-10-28T21:08:56Z
-updated: 2026-10-28T21:08:56Z
+updated: 2026-10-29T02:00:35Z
 transitions: []
 stream: S-0532
 tags: [flai, serve, events]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/stop.go, flai/internal/serve/stop_test.go]
-after: [T-2271]
+after: [T-2274]
 ---
 # T-2272 flai serve appends a started, ended, failed, or stopped agent event for each story's agent run and for any run the operator stops
 

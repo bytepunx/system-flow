@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1777.7048
-accrued_seconds: 1444727
-tasks_completed: 1283
-last_run: 2026-10-29T01:41:41Z
+accrued_cost: 1780.0405
+accrued_seconds: 1445759
+tasks_completed: 1286
+last_run: 2026-10-29T02:00:11Z
 ---
 
 # Orchestrator activity
@@ -8999,6 +8999,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 2024
 - Cost: 4.0049 USD, estimated
 
+### 2026-10-29T01:56:26Z
+
+- Summary: S-0514 landed through the merge queue, which I had enqueued. Under publish (judgement), I released it: 1 story, 75 USD/week, nothing in held_by_epic, no warnings. It is a complete remediation of I-0212 with ADR-0214, and no other acceptance is near. Release: flai 1.74.0 to 1.74.1, patch (flai/v1.74.1), pushed. S-0532 no longer waits on S-0514 by after, but it is still held on overlap with S-0519 (flai/internal/mcpserver/server.go).
+- Items: S-0514, S-0532
+- Seconds: 885
+- Cost: 0.2697 USD, estimated
+
+### 2026-10-29T01:57:46Z
+
+- Summary: I'm still holding `wait_for_events`. Since the last update only flai's forecast refreshes have come in, and none needs a decision.
+- Items: none
+- Seconds: 80
+- Cost: 1.5530 USD, estimated
+
+### 2026-10-29T02:00:11Z
+
+- Summary: Woke on S-0532's start and TH-0726's confirmation, which S-0519's agent then resolved. Under order_ready, flai guard refused `flai order --by throughput --apply --json` ("the orchestrator never does it, whatever its permissions"), although earlier runs ran it. The ready column already stands in the throughput order: S-0537 (4h), S-0534 (4h30m), S-0536 (5h), all held. I will not retry until something changes. Under promote_to_ready, the candidates are S-0527 (40m, rank 1) and S-0241 (2h, rank 2). I promoted neither: S-0527's scope question still awaits the operator on TH-0697, and S-0241 is blocked. Under finalize_drafts, the 9 complete drafts are unchanged from my last run, and their threads are still open. flai plan --candidates is empty. S-0416 still awaits the operator's acceptance on TH-0722.
+- Items: S-0532, S-0519, S-0527
+- Seconds: 67
+- Cost: 0.5130 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -9212,6 +9233,21 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Needs: none
 
 ### 2026-10-28T21:16:59Z
+
+- Call: `flai order --by throughput --apply --json 2>&1`
+- Needs: none
+
+### 2026-10-29T02:00:02Z
+
+- Call: `flai order --by throughput --apply --json 2>&1`
+- Needs: none
+
+### 2026-10-29T02:00:04Z
+
+- Call: `flai order --by throughput --apply --json 2>&1`
+- Needs: none
+
+### 2026-10-29T02:00:06Z
 
 - Call: `flai order --by throughput --apply --json 2>&1`
 - Needs: none

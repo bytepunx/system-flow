@@ -3,11 +3,11 @@ id: T-2227
 type: task
 nature: research
 title: Claude Code's tool-call timeout over flai's HTTP MCP server is measured on the host and in the container, with MCP_TOOL_TIMEOUT unset and set, and the remedy is proposed on a thread
-status: in-progress
+status: done
 parent: S-0519
 owner: alex
 created: 2026-10-28T13:44:42Z
-updated: 2026-10-29T00:40:07Z
+updated: 2026-10-29T01:59:26Z
 transitions:
   - to: ready
     at: 2026-10-29T00:40:05Z
@@ -15,20 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-29T00:40:07Z
     by: agent-S-0519
+  - to: done
+    at: 2026-10-29T01:59:26Z
+    by: agent-S-0519
 stream: S-0519
 tags: [cli, mcp, docker]
 usage:
   source: log
-  seconds: 1047
+  seconds: 1063
   estimated: true
-  priced_by: harness
+  priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 111
-      output: 30705
-      cache_read: 5113339
-      cache_write: 324463
-      cost: 3.7012
+      input: 128
+      output: 32308
+      cache_read: 6540190
+      cache_write: 345158
+      cost: 4.3857
 ---
 # T-2227 Claude Code's tool-call timeout over flai's HTTP MCP server is measured on the host and in the container, with MCP_TOOL_TIMEOUT unset and set, and the remedy is proposed on a thread
 

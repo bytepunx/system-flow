@@ -3,11 +3,11 @@ id: S-0416
 type: story
 nature: feature
 title: flai guard reads a role's permitted calls from its role file and refuses the rest, and the planner's, the orchestrator's, and the analyzer's rules move into their files with their guard tests unchanged
-status: review
+status: done
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:39:46Z
-updated: 2026-10-28T22:48:35Z
+updated: 2026-10-29T02:01:33Z
 transitions:
   - to: ready
     at: 2026-10-28T13:03:54Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-10-28T22:48:35Z
     by: system-flow
+  - to: done
+    at: 2026-10-29T02:01:33Z
+    by: alex
 tags: [cli, template]
 topics: [cli, planning, orchestration, template]
 touches: [".claude/settings.json", template/root/.claude/settings.json, design/workflows/roles/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/analyzer.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/analyzer.md, design/adrs, design/adrs/README.md, design/system/agent-adapters.md, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, template/CHANGELOG.md, flai/cmd/guard.go, flai/cmd/guard_test.go, flai/internal/guard/authors.go, flai/internal/guard/authors_test.go, flai/internal/guard/call.go, flai/internal/guard/guard.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/guard/shared.go, flai/internal/harness/harness_test.go, flai/internal/manifest/manifest.go, docs/operators/settings.md, flai/cmd/guard_roles_test.go, flai/internal/check/check.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/roles/baseline.go, flai/internal/roles/baseline/analyzer.md, flai/internal/roles/baseline/curator.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/roles/baseline/planner.md, flai/internal/roles/baseline_test.go, flai/internal/roles/roles.go, design/issues/I-0222-flai-adr-topics-rewrites-an-adr-s-front-matter-with-and-in-its-title-escaped-as-and.md, design/issues/summary.md, design/system/project-manifest.md, template/template.yaml, design/issues/I-0223-an-edit-whose-old-and-new-strings-end-in-a-space-drops-the-space-so-a-protected-claude-settings-json-write-needs-a-second-permission-round-to-fix.md]

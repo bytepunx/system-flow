@@ -7,12 +7,12 @@ status: backlog
 parent: S-0532
 owner: alex
 created: 2026-10-28T21:09:33Z
-updated: 2026-10-28T21:09:33Z
+updated: 2026-10-29T02:00:45Z
 transitions: []
 stream: S-0532
 tags: [flai, serve, events]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go]
-after: [T-2272]
+after: [T-2273]
 ---
 # T-2276 The thread flai serve opens after agent.auto_restarts lists the agent events of the runs it counted
 

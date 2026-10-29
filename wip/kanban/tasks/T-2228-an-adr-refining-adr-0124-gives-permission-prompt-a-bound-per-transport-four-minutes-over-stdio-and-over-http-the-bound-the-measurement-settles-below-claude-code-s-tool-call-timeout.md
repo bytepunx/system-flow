@@ -3,16 +3,37 @@ id: T-2228
 type: task
 nature: remediation
 title: "An ADR refining ADR-0124 gives permission_prompt a bound per transport: four minutes over stdio and, over HTTP, the bound the measurement settles below Claude Code's tool-call timeout"
-status: backlog
+status: done
 parent: S-0519
 owner: alex
 created: 2026-10-28T13:44:51Z
-updated: 2026-10-28T13:45:25Z
-transitions: []
+updated: 2026-10-29T02:00:22Z
+transitions:
+  - to: ready
+    at: 2026-10-29T01:59:46Z
+    by: agent-S-0519
+  - to: in-progress
+    at: 2026-10-29T01:59:48Z
+    by: agent-S-0519
+  - to: done
+    at: 2026-10-29T02:00:22Z
+    by: agent-S-0519
 stream: S-0519
 tags: [cli, mcp]
-touches: [design/adrs/README.md]
+touches: [design/adrs/README.md, design/adrs/0215-permission-prompt-holds-a-write-at-most-four-minutes-over-stdio-and-at-most-45.md]
 after: [T-2227]
+usage:
+  source: log
+  seconds: 31
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 20
+      cache_read: 696790
+      cache_write: 4791
+      cost: 0.4448
 ---
 # T-2228 An ADR refining ADR-0124 gives permission_prompt a bound per transport: four minutes over stdio and, over HTTP, the bound the measurement settles below Claude Code's tool-call timeout
 

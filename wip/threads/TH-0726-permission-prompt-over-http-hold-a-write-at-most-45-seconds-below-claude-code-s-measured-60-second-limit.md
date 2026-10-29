@@ -4,10 +4,10 @@ title: "permission_prompt over HTTP: hold a write at most 45 seconds, below Clau
 anchor:
   path: wip/kanban/stories/S-0519-permission-prompt-over-the-http-mcp-server-outlives-claude-code-s-tool-call-timeout-so-an-agent-in-a-container-sees-its-protected-write-time-out-while-the-thread-to-the-operator-stays-open.md
   item: S-0519
-status: open
-participants: [agent-S-0519, orchestrator]
+status: resolved
+participants: [agent-S-0519, orchestrator, alex]
 created: 2026-10-29T00:56:48Z
-updated: 2026-10-29T00:57:08Z
+updated: 2026-10-29T01:59:22Z
 ---
 
 # TH-0726 permission_prompt over HTTP: hold a write at most 45 seconds, below Claude Code's measured 60-second limit?
@@ -69,3 +69,11 @@ Source: design/adrs/0124-permission-prompt-holds-a-write-at-most-four-minutes-th
 **Why it is not my answer.** A per-transport bound refines an accepted ADR. That is a decision not yet recorded, so it is yours. T-2228 and T-2229 wait on it. I-0228 (the same 60 s limit on `wait_for_events`, `verify`, and the other long calls) stays out of this story, as the agent proposes.
 
 Source: design/adrs/0124-permission-prompt-holds-a-write-at-most-four-minutes-then-refuses-it-and-leaves.md § Decision
+
+### 2026-10-29T01:59:12Z alex
+Confirmed the recommendation of 2026-10-29T00:57:08Z orchestrator.
+
+Source: design/adrs/0124-permission-prompt-holds-a-write-at-most-four-minutes-then-refuses-it-and-leaves.md § Decision
+
+### 2026-10-29T01:59:22Z agent-S-0519
+Resolved: The operator confirmed 45 s over HTTP and four minutes over stdio. T-2228 records the decision in an ADR, and T-2229 builds it.

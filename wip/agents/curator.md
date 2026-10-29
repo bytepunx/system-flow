@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 25.9622
-accrued_seconds: 2371
-tasks_completed: 13
-last_run: 2026-10-29T01:11:40Z
+accrued_cost: 26.8755
+accrued_seconds: 2436
+tasks_completed: 14
+last_run: 2026-10-29T02:00:01Z
 ---
 
 # Curator activity
@@ -115,3 +115,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0412, D-0416
 - Seconds: 83
 - Cost: 1.4626 USD, estimated
+
+### 2026-10-29T02:00:01Z
+
+- Summary: I wrote D-0418 (from S-0514/T-2198: a 529 is not a usage limit), merged none, absorbed none, and `flai digest compact` compacted none; I-0212 and S-0514's other decisions are already in ADR-0214, `design/system/strategic-agents.md`, and the docs, or are progress notes.
+- Trigger: accepted S-0514
+- Items: D-0417, D-0418
+- Seconds: 65
+- Cost: 0.9133 USD, estimated

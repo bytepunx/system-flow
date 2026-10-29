@@ -3,12 +3,18 @@ id: T-2229
 type: task
 nature: remediation
 title: The HTTP MCP server's permission_prompt holds a write at most the HTTP bound and answers before Claude Code's tool-call timeout, with a test that reproduces I-0217
-status: backlog
+status: in-progress
 parent: S-0519
 owner: alex
 created: 2026-10-28T13:45:00Z
-updated: 2026-10-28T13:45:31Z
-transitions: []
+updated: 2026-10-29T02:00:31Z
+transitions:
+  - to: ready
+    at: 2026-10-29T02:00:30Z
+    by: agent-S-0519
+  - to: in-progress
+    at: 2026-10-29T02:00:31Z
+    by: agent-S-0519
 stream: S-0519
 tags: [cli, mcp]
 touches: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/mcpserver/server.go, flai/cmd/mcp_http.go, flai/cmd/mcp_http_test.go, flai/internal/ask/ask.go, flai/internal/ask/ask_test.go]

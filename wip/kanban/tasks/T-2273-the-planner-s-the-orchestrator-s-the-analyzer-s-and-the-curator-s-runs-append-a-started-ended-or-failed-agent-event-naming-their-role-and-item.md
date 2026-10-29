@@ -7,12 +7,12 @@ status: backlog
 parent: S-0532
 owner: alex
 created: 2026-10-28T21:09:04Z
-updated: 2026-10-28T21:09:04Z
+updated: 2026-10-29T02:00:40Z
 transitions: []
 stream: S-0532
 tags: [flai, serve, events]
 touches: [flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go]
-after: [T-2271]
+after: [T-2272]
 ---
 # T-2273 The planner's, the orchestrator's, the analyzer's, and the curator's runs append a started, ended, or failed agent event naming their role and item
 
