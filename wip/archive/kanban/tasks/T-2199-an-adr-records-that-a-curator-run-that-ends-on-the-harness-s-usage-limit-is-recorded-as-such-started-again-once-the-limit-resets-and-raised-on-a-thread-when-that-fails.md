@@ -23,16 +23,16 @@ tags: [design, adr, curator]
 touches: [design/adrs/README.md]
 usage:
   source: log
-  seconds: 232
+  seconds: 245
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 36
-      output: 197
-      cache_read: 1136698
-      cache_write: 73381
-      cost: 0.4119
+      input: 27
+      output: 9737
+      cache_read: 1383001
+      cache_write: 51258
+      cost: 0.7778
 ---
 # T-2199 An ADR records that a curator run that ends on the harness's usage limit is recorded as such, started again once the limit resets, and raised on a thread when that fails
 

@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1772.5953
-accrued_seconds: 1442081
-tasks_completed: 1281
-last_run: 2026-10-29T00:57:35Z
+accrued_cost: 1777.7048
+accrued_seconds: 1444727
+tasks_completed: 1283
+last_run: 2026-10-29T01:41:41Z
 ---
 
 # Orchestrator activity
@@ -8984,6 +8984,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0514
 - Seconds: 15
 - Cost: 0.1141 USD, estimated
+
+### 2026-10-29T01:07:57Z
+
+- Summary: S-0535 landed through the merge queue, which I had enqueued. Under publish (judgement), I released it: 1 story, 37.5 USD/week, nothing in held_by_epic, no warnings. The new events and trigger conditions are complete and documented in ADR-0211, and no other acceptance is near. Releases: flai 1.73.0 to 1.74.0, minor (flai/v1.74.0), and template 1.1.2 to 1.1.3, patch (v1.1.3, published to system-flow-template), both pushed. S-0514 and S-0519 got the overlapped notice to sync.
+- Items: S-0535
+- Seconds: 622
+- Cost: 1.1046 USD, estimated
+
+### 2026-10-29T01:41:41Z
+
+- Summary: Under accept_reviews, I enqueued S-0514 at 2df58857, place 1 of 1. flai verify passed at that head, with integration and smoke left to the queue. The verifier met criterion 1: the usage reader's Limit, curateEnded recording a failed run, a scheduler hold with a retry, and a thread when a retry fails again, all with tests and ADR-0214. It met criterion 2: I-0212 is closed. It noted a wip.overlap with S-0519 on docs/operators/index.md. Throughput: forecast 2h30m. S-0532 waits on S-0514.
+- Items: S-0514
+- Seconds: 2024
+- Cost: 4.0049 USD, estimated
 
 ## Refusals
 

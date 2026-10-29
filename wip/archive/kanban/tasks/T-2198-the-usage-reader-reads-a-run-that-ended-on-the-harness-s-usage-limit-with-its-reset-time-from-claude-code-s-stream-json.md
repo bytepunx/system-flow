@@ -23,16 +23,16 @@ tags: [flai, usage]
 touches: [flai/internal/usage/event.go, flai/internal/usage/claudecode.go, flai/internal/usage/claudecode_test.go, flai/internal/usage/log.go, flai/internal/usage/log_test.go, design/adrs/0214-a-curator-run-that-ends-on-the-harness-s-usage-limit-is-recorded-failed-with.md]
 usage:
   source: log
-  seconds: 235
+  seconds: 237
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 46
-      output: 214
-      cache_read: 1663693
-      cache_write: 94329
-      cost: 0.5984
+      input: 34
+      output: 12255
+      cache_read: 1740660
+      cache_write: 64513
+      cost: 0.979
 ---
 # T-2198 The usage reader reads a run that ended on the harness's usage limit, with its reset time, from Claude Code's stream-json
 

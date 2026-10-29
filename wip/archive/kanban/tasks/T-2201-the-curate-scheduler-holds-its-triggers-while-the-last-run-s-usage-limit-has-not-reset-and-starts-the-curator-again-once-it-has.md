@@ -3,16 +3,37 @@ id: T-2201
 type: task
 nature: remediation
 title: The curate scheduler holds its triggers while the last run's usage limit has not reset, and starts the curator again once it has
-status: backlog
+status: done
 parent: S-0514
 owner: alex
 created: 2026-10-28T12:53:51Z
-updated: 2026-10-28T12:53:51Z
-transitions: []
+updated: 2026-10-29T01:14:17Z
+transitions:
+  - to: ready
+    at: 2026-10-29T01:08:57Z
+    by: agent-S-0514
+  - to: in-progress
+    at: 2026-10-29T01:08:58Z
+    by: agent-S-0514
+  - to: done
+    at: 2026-10-29T01:14:17Z
+    by: agent-S-0514
 stream: S-0514
 tags: [flai, serve, curator]
 touches: [flai/internal/serve/curate_schedule.go, flai/internal/serve/curate_schedule_test.go, flai/internal/serve/curate.go]
 after: [T-2200]
+usage:
+  source: log
+  seconds: 319
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 33
+      output: 11974
+      cache_read: 1700758
+      cache_write: 63035
+      cost: 0.9565
 ---
 # T-2201 The curate scheduler holds its triggers while the last run's usage limit has not reset, and starts the curator again once it has
 

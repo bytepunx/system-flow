@@ -6,7 +6,7 @@ title: permission_prompt over the HTTP MCP server outlives Claude Code's tool-ca
 status: in-progress
 owner: alex
 created: 2026-10-28T12:53:05Z
-updated: 2026-10-29T01:02:23Z
+updated: 2026-10-29T01:26:04Z
 transitions:
   - to: ready
     at: 2026-10-29T00:38:32Z
@@ -25,6 +25,9 @@ blocked:
     until: 2026-10-29T01:02:14Z
     reason: awaiting the operator on TH-0726
   - from: 2026-10-29T01:02:23Z
+    until: 2026-10-29T01:25:53Z
+    reason: awaiting the operator on TH-0726
+  - from: 2026-10-29T01:26:04Z
     reason: awaiting the operator on TH-0726
 tags: [cli, mcp]
 topics: [mcp, harness]
@@ -36,20 +39,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1131
+  seconds: 1138
   priced_by: harness
   turns:
     - day: 2026-10-29
       ceremony: 3
       hand_edits: 1
-      work: 23
+      work: 26
   models:
     - model: claude-opus-5-5
-      input: 130
-      output: 37999
-      cache_read: 5673534
-      cache_write: 403786
-      cost: 4.4538
+      input: 140
+      output: 38788
+      cache_read: 6459358
+      cache_write: 409874
+      cost: 4.6755
   strategic:
     - kind: orchestrator
       seconds: 1879

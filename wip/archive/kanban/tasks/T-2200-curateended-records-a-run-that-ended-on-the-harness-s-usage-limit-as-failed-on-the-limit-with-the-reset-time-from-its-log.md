@@ -22,6 +22,18 @@ stream: S-0514
 tags: [flai, serve, curator]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/limit.go, flai/internal/serve/limit_test.go]
 after: [T-2198, T-2199]
+usage:
+  source: log
+  seconds: 312
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 75
+      output: 27363
+      cache_read: 3886596
+      cache_write: 144048
+      cost: 2.1859
 ---
 # T-2200 curateEnded records a run that ended on the harness's usage limit as failed on the limit, with the reset time, from its log
 

@@ -19,16 +19,16 @@ stream: S-0519
 tags: [cli, mcp, docker]
 usage:
   source: log
-  seconds: 1040
+  seconds: 1047
   estimated: true
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 99
-      output: 29035
-      cache_read: 4335094
-      cache_write: 308529
-      cost: 3.4031
+      input: 111
+      output: 30705
+      cache_read: 5113339
+      cache_write: 324463
+      cost: 3.7012
 ---
 # T-2227 Claude Code's tool-call timeout over flai's HTTP MCP server is measured on the host and in the container, with MCP_TOOL_TIMEOUT unset and set, and the remedy is proposed on a thread
 

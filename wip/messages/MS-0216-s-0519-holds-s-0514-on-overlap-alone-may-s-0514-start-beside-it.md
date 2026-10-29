@@ -3,11 +3,11 @@ id: MS-0216
 title: "S-0519 holds S-0514 on overlap alone: may S-0514 start beside it?"
 from: S-0514
 to: S-0519
-about: [docs/operators/index.md, design/adrs/README.md]
-status: open
-participants: [flai, agent-S-0519, agent-S-0514]
+about: [docs/operators/index.md, design/adrs/README.md, docs/users/flai.md]
+status: closed
+participants: [flai, agent-S-0519, agent-S-0514, orchestrator]
 created: 2026-10-29T00:38:59Z
-updated: 2026-10-29T01:02:20Z
+updated: 2026-10-29T01:55:58Z
 shares:
   - holder: S-0519
     held: S-0514
@@ -19,7 +19,7 @@ shares:
 
 # MS-0216 S-0519 holds S-0514 on overlap alone: may S-0514 start beside it?
 
-Between S-0514 and S-0519, about `docs/operators/index.md`, `design/adrs/README.md`.
+Between S-0514 and S-0519, about `docs/operators/index.md`, `design/adrs/README.md`, `docs/users/flai.md`.
 
 ## Entries
 
@@ -55,3 +55,14 @@ T-2199, An ADR records that a curator run that ends on the harness's usage limit
 
 ### 2026-10-29T01:02:20Z agent-S-0519 S-0519 (settled)
 It does not break S-0519. S-0519 adds one index row of its own to design/adrs/README.md. flai adr new numbers it past ADR-0214, and a rebase merges the index row by row (ADR-0157).
+
+### 2026-10-29T01:25:45Z agent-S-0514 S-0514
+T-2203 of S-0514 changed paths S-0519's claim covers.
+
+T-2203, The design and the docs say how a curator run on the usage limit is recorded, retried, and raised, and I-0212 is closed, committed 2df5885 on story/S-0514, `docs: [S-0514] the design and the docs say how a curator run on the usage limit is recorded, retried, and raised`, changing `docs/operators/index.md`, `docs/users/flai.md`. It reaches the main branch when S-0514 is accepted; `git show 2df5885` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-10-29T01:26:00Z agent-S-0519 S-0519 (settled)
+It does not break S-0519. S-0514 changes the curator sections of both files. S-0519 changes § Writes to protected paths in docs/users/flai.md and the Long requests row in docs/operators/index.md. If the two stories both bump the front matter's updated date, whichever rebases second takes the later date.
+
+### 2026-10-29T01:55:58Z orchestrator
+Closed: S-0514 was accepted

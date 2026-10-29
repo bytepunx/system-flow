@@ -3,16 +3,37 @@ id: T-2203
 type: task
 nature: remediation
 title: The design and the docs say how a curator run on the usage limit is recorded, retried, and raised, and I-0212 is closed
-status: backlog
+status: done
 parent: S-0514
 owner: alex
 created: 2026-10-28T12:54:40Z
-updated: 2026-10-28T12:54:40Z
-transitions: []
+updated: 2026-10-29T01:25:48Z
+transitions:
+  - to: ready
+    at: 2026-10-29T01:22:48Z
+    by: agent-S-0514
+  - to: in-progress
+    at: 2026-10-29T01:22:49Z
+    by: agent-S-0514
+  - to: done
+    at: 2026-10-29T01:25:48Z
+    by: agent-S-0514
 stream: S-0514
 tags: [docs, design, curator]
-touches: [design/system/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, design/issues/I-0212-a-curator-run-that-ends-on-the-harness-s-usage-limit-is-recorded-failed-logs-no-activity-and-is-not-started-again-until-the-next-acceptance-or-schedule.md, design/issues/summary.md]
+touches: [design/system/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, design/issues/I-0212-a-curator-run-that-ends-on-the-harness-s-usage-limit-is-recorded-failed-logs-no-activity-and-is-not-started-again-until-the-next-acceptance-or-schedule.md, design/issues/summary.md, flai/cmd/curate.go]
 after: [T-2202]
+usage:
+  source: log
+  seconds: 179
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 76
+      output: 27541
+      cache_read: 3911795
+      cache_write: 144982
+      cost: 2.2001
 ---
 # T-2203 The design and the docs say how a curator run on the usage limit is recorded, retried, and raised, and I-0212 is closed
 

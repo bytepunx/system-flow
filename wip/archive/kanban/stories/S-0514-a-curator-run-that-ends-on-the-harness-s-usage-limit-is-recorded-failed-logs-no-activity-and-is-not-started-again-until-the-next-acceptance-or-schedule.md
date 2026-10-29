@@ -3,10 +3,10 @@ id: S-0514
 type: story
 nature: remediation
 title: A curator run that ends on the harness's usage limit is recorded failed, logs no activity, and is not started again until the next acceptance or schedule
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-28T12:40:16Z
-updated: 2026-10-29T01:02:03Z
+updated: 2026-10-29T01:55:58Z
 transitions:
   - to: ready
     at: 2026-10-29T00:38:32Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-10-29T00:57:22Z
     by: agent-S-0514
+  - to: review
+    at: 2026-10-29T01:40:51Z
+    by: agent-S-0514
+  - to: done
+    at: 2026-10-29T01:55:58Z
+    by: orchestrator
 tags: [flai, serve, curator, usage]
 topics: [planning, digest]
-touches: [flai/internal/usage/event.go, flai/internal/usage/claudecode.go, flai/internal/usage/claudecode_test.go, flai/internal/usage/log.go, flai/internal/usage/log_test.go, flai/internal/serve/agents.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/curate_schedule_test.go, flai/internal/serve/limit.go, flai/internal/serve/limit_test.go, design/adrs/README.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, design/issues/I-0212-a-curator-run-that-ends-on-the-harness-s-usage-limit-is-recorded-failed-logs-no-activity-and-is-not-started-again-until-the-next-acceptance-or-schedule.md, design/issues/summary.md, design/adrs/0214-a-curator-run-that-ends-on-the-harness-s-usage-limit-is-recorded-failed-with.md]
+touches: [flai/internal/usage/event.go, flai/internal/usage/claudecode.go, flai/internal/usage/claudecode_test.go, flai/internal/usage/log.go, flai/internal/usage/log_test.go, flai/internal/serve/agents.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/curate_schedule_test.go, flai/internal/serve/limit.go, flai/internal/serve/limit_test.go, design/adrs/README.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, design/issues/I-0212-a-curator-run-that-ends-on-the-harness-s-usage-limit-is-recorded-failed-logs-no-activity-and-is-not-started-again-until-the-next-acceptance-or-schedule.md, design/issues/summary.md, design/adrs/0214-a-curator-run-that-ends-on-the-harness-s-usage-limit-is-recorded-failed-with.md, flai/cmd/curate.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,31 +30,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 281
-  estimated: true
-  priced_by: estimate
+  seconds: 2621
+  priced_by: harness
   turns:
     - day: 2026-10-29
-      hand_edits: 1
-      work: 22
+      ceremony: 5
+      hand_edits: 2
+      work: 48
   models:
     - model: claude-opus-5-5
-      input: 118
-      output: 773
-      cache_read: 4551589
-      cache_write: 309184
-      cost: 1.6547
+      input: 436
+      output: 159036
+      cache_read: 22589070
+      cache_write: 837211
+      cost: 12.7046
   strategic:
     - kind: orchestrator
-      seconds: 268
+      seconds: 2292
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 98
-          output: 1483
-          cache_read: 18602472
-          cache_write: 41162
-          cost: 4.0938
+          input: 222
+          output: 3695
+          cache_read: 36006127
+          cache_write: 68356
+          cost: 7.9317
+        - model: claude-sonnet-5-5
+          input: 12
+          output: 68
+          cache_read: 184790
+          cache_write: 56513
+          cost: 0.167
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30m
@@ -74,8 +86,8 @@ finalized:
 This story remediates [I-0212](../../../design/issues/I-0212-a-curator-run-that-ends-on-the-harness-s-usage-limit-is-recorded-failed-logs-no-activity-and-is-not-started-again-until-the-next-acceptance-or-schedule.md), "A curator run that ends on the harness's usage limit is recorded failed, logs no activity, and is not started again until the next acceptance or schedule". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0212 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0212 is closed with `flai issue close I-0212 --reason` saying what fixed it
+- [x] The cause I-0212 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0212 is closed with `flai issue close I-0212 --reason` saying what fixed it
 
 ## Tasks
 - T-2198 The usage reader reads a run that ended on the harness's usage limit, with its reset time, from Claude Code's stream-json
@@ -112,3 +124,14 @@ No folder touch is kept.
 Forecast: `flai forecast` gave 34m (median 95 s per unit of size over 38 done remediation stories on claude-opus-5-5, size 21: 2 criteria, 19 touches). Raised to 2h30m: the fix spans an ADR, a usage-reader extension with its own tests, a scheduler change with timed tests, a thread to the operator, and docs in three files, more than the median remediation. Delivery is flai's 2026-10-29T08:46Z moved by the added duration, 28th in the pull order with an in-progress limit of 5.
 
 Cost of delay: `flai cod` gave 75.00 USD a week from the inputs flai set from I-0212 (30m of time lost per 168h cycle at 150 USD an hour, 1.00 cycles a week). The value stands as computed; the inputs are not changed.
+
+### Accepted by the orchestrator
+
+- Verified: 2df58857bc74ccc90e99befdd28b106d7a1a8a8b
+- Batch: 20261029-014149
+- Enqueued verified: 2df58857bc74ccc90e99befdd28b106d7a1a8a8b
+- At: 2026-10-29T01:55:58Z
+
+Verdict: meets both criteria at 2df58857; flai verify passed, with integration and smoke left to the queue; no convention findings and no file outside the touches.
+- 1: flai/internal/usage/event.go, flai/internal/usage/claudecode.go, flai/internal/usage/log.go, flai/internal/usage/claudecode_test.go, flai/internal/usage/log_test.go, flai/internal/serve/limit.go, flai/internal/serve/limit_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/curate_schedule_test.go, flai/cmd/curate.go, design/adrs/README.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md
+- 2: design/issues/summary.md

@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 24.4996
-accrued_seconds: 2288
-tasks_completed: 12
-last_run: 2026-10-29T00:10:56Z
+accrued_cost: 25.9622
+accrued_seconds: 2371
+tasks_completed: 13
+last_run: 2026-10-29T01:11:40Z
 ---
 
 # Curator activity
@@ -107,3 +107,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0042, D-0043, D-0045, D-0046, D-0047, D-0048, D-0049, D-0050, D-0051, D-0052, D-0053, D-0413, D-0414, D-0415
 - Seconds: 110
 - Cost: 1.7944 USD, estimated
+
+### 2026-10-29T01:11:40Z
+
+- Summary: Wrote D-0416 (flai test's go-test tier can time out on `flai/internal/mcpserver` under `-race` on a loaded host with no test hung, I-0227); merged S-0535 into D-0412, which no longer claims `ready-empty` fires only on an empty ready column; absorbed D-0412 by ADR-0211 § Decision; checked for absorption only against the four design and docs files S-0535 changed, not all 228 active entries; `flai digest compact` compacted none and left S-0535's other eight decisions out as already in ADR-0211 and `design/system/flai-cli.md`, or as progress.
+- Trigger: accepted S-0535
+- Items: D-0412, D-0416
+- Seconds: 83
+- Cost: 1.4626 USD, estimated

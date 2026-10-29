@@ -3,16 +3,37 @@ id: T-2202
 type: task
 nature: remediation
 title: flai serve raises on a thread a curator retry that ends on the usage limit again, or a limit whose reset time it cannot read
-status: backlog
+status: done
 parent: S-0514
 owner: alex
 created: 2026-10-28T12:54:11Z
-updated: 2026-10-28T12:54:11Z
-transitions: []
+updated: 2026-10-29T01:21:48Z
+transitions:
+  - to: ready
+    at: 2026-10-29T01:14:26Z
+    by: agent-S-0514
+  - to: in-progress
+    at: 2026-10-29T01:14:27Z
+    by: agent-S-0514
+  - to: done
+    at: 2026-10-29T01:21:48Z
+    by: agent-S-0514
 stream: S-0514
 tags: [flai, serve, curator]
-touches: [flai/internal/serve/curate.go, flai/internal/serve/curate_test.go]
+touches: [flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/limit.go, flai/internal/serve/limit_test.go]
 after: [T-2201]
+usage:
+  source: log
+  seconds: 441
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 92
+      output: 33675
+      cache_read: 4783073
+      cache_write: 177273
+      cost: 2.6901
 ---
 # T-2202 flai serve raises on a thread a curator retry that ends on the usage limit again, or a limit whose reset time it cannot read
 
