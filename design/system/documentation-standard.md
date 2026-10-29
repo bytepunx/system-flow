@@ -1,6 +1,6 @@
 ---
 title: Documentation standard
-updated: 2026-10-17
+updated: 2026-10-29
 status: active
 topics: [all]
 ---
@@ -37,6 +37,7 @@ status: active             # active | draft | deprecated
 - Files and folders are lowercase kebab-case: `repository-layout.md`.
 - ADRs are numbered with four digits and a slug: `0003-work-item-hierarchy.md`. `flai adr new` gives the number (one past the highest ADR in the checkout, the main checkout, every story's worktree, the main branch, and every story branch, so parallel stories do not take the same number; gaps are not filled), the slug, the front matter (`id`, `title`, `status`, `date`, `supersedes`, `superseded_by`, and `refines` when given), and the row in `design/adrs/README.md`; the status is `proposed` until `flai adr accept` or `--status accepted`. `flai check` warns with `adr.index` when the files and the index disagree.
 - Work items are named by ID and slug: `S-0004-cli-scaffold-and-config.md`. The ID is the stable handle; the slug may change.
+- A file name flai makes from a title cuts the title's slug at 80 bytes on a word: back to the last dash when it lies past 40 bytes, else at 80. This holds for work items (made or retitled), issues, threads, conversations, ADRs, and digest entries. So the name and a tool's temporary file beside it, such as Claude Code's `<name>.tmp.<pid>.<hex>`, stay under the 255-byte file name limit ([I-0231](../issues/I-0231-claude-code-s-edit-tool-cannot-write-a-work-item-whose-file-name-is-near-the-255-byte-limit-since-its-temporary-file-name-adds-about-25-bytes.md)). A name made before keeps its slug: `flai check` asks only that a name start with its ID.
 - Each folder that a reader might land in has a `README.md` that says what the folder is for.
 
 ## Content rules

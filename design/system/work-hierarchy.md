@@ -1,6 +1,6 @@
 ---
 title: Work item hierarchy and schema
-updated: 2026-10-28
+updated: 2026-10-29
 status: active
 topics: [all]
 ---
@@ -42,7 +42,7 @@ Natures are a closed list. Adding one requires an ADR because the dashboard grou
 
 IDs are a type letter, a dash, and a sequence zero-padded to four digits: `E-0001`, `S-0012`, `T-0134`. Sequences are per type and per repo and never reused. `flai` allocates the next ID by scanning `kanban/` and `archive/`; the next number is one more than the highest existing number whatever its width. Repositories created before ADR-0017 carry three-digit IDs; those stay valid side by side with four-digit ones, sorting is numeric, and commands accept an ID with any zero padding or none, so a two, three, or four digit spelling of the same number names the same item. Issues under `design/issues` follow the same width (`I-0012`). `flai migrate ids` widens an existing repository in one step: it renames every item, narrative, and issue with `git mv` and rewrites every reference under `design/`, `docs/`, `wip/`, the root markdown and yaml files, and each project's root markdown files. Run it with `--dry-run` first.
 
-File name: `<ID>-<slug>.md` in `wip/kanban/<epics|stories|tasks>/`.
+File name: `<ID>-<slug>.md` in `wip/kanban/<epics|stories|tasks>/`, the slug from the title cut at 80 bytes on a word ([Naming](documentation-standard.md#naming)).
 
 Stories and tasks may carry `touches`, a list of repository paths or component names the work is expected to change (ADR-0019, S-0037; set with `--touches` on `new` or `flai touches`). It is advisory: `flai check` warns when the claims of two stories in progress overlap, and the dashboard shows it. Since S-0128 it is also a claim that holds a ready story ([workflow.md](workflow.md#branches-and-collisions-adr-0019)). Every way of setting it applies one rule, `workitem.CleanTouches` (S-0260, I-0071): `flai touches`, `flai edit --touches`, `flai story new` and `flai task new --touches`, MCP's `item_new` and `item_edit`, and the dashboard's create and edit. Each entry is trimmed, a trailing slash is dropped, and an empty entry or a repeat is left out. An entry may start with a dot, as `.claude/agents` and `.github/workflows` do. An entry is refused, with nothing written, when it holds a comma (it would split in the front matter), starts with a dash (it would read as a flag), is absolute, has a `..` segment (it would name a path outside the repository), or holds a control character. Tags keep their own, narrower rule: a letter or digit first.
 
