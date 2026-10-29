@@ -3,11 +3,11 @@ id: I-0227
 title: flai test's go-test tier runs the mcpserver package with -race into go test's 10-minute default timeout on a loaded host, and names only the package, so a story that changes mcpserver cannot pass its tests
 class: defect
 status: open
-count: 2
-cost: 30m
+count: 3
+cost: 24m
 first_reported: 2026-10-29T00:08:41Z
-last_reported: 2026-10-29T04:20:50Z
-updated: 2026-10-29T04:20:50Z
+last_reported: 2026-10-29T05:14:13Z
+updated: 2026-10-29T05:14:13Z
 ---
 
 # I-0227 flai test's go-test tier runs the mcpserver package with -race into go test's 10-minute default timeout on a loaded host, and names only the package, so a story that changes mcpserver cannot pass its tests
@@ -24,5 +24,9 @@ S-0535 changed flai/internal/mcpserver. `flai test` on its paths failed go-test 
 ### 2026-10-29T04:20:50Z
 Story: S-0539.
 S-0539 changed only permission.go and its test in flai/internal/mcpserver. flai test's go-test tier on the package took 9m58.6s and passed with 1.4 s to spare under Go's 10-minute default. In the close-out it took 9m44.7s, which pushed the close-out past Claude Code's 600-second Bash limit, so the run had to go on in the background and be waited for.
+
+### 2026-10-29T05:14:13Z
+Story: S-0417.
+S-0417: flai test on mcpserver, serve, and workitem together (load average about 10) failed the go-test tier after 10m13s, naming only flai/internal/mcpserver. Run alone, the same package passed in 9m20s.
 
 ## Remediation
