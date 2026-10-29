@@ -43,6 +43,10 @@ func TestAppendAgentEventWritesOneEventOnTheRunsItemOrRole(t *testing.T) {
 		{&AgentRun{Agent: workitem.ActivityAnalyzer, Focus: harness.AllFocus}, inbox.AgentStopped, "stopped by the operator", workitem.ActivityAnalyzer, inbox.RoleType, workitem.ActivityAnalyzer, workitem.ActivityAnalyzer, conventions.RoleAnalyze},
 		{&AgentRun{Agent: workitem.ActivityCurator, Role: conventions.RoleCurate}, inbox.AgentStarted, "", workitem.ActivityCurator, inbox.RoleType, workitem.ActivityCurator, workitem.ActivityCurator, conventions.RoleCurate},
 		{&AgentRun{Agent: "reviewer-1", Role: "reviewer"}, inbox.AgentEnded, "exit 0", "reviewer", inbox.RoleType, "reviewer", "reviewer-1", "reviewer"},
+		// a role a project defines (S-0417): on its item, or on its name
+		{&AgentRun{Item: lab.epic.ID, Agent: "auditor-" + lab.epic.ID, Role: "audit", RoleName: "auditor"}, inbox.AgentStarted, "the operator asked for it", lab.epic.ID, workitem.Epic, "Epic", "auditor-" + lab.epic.ID, "audit"},
+		{&AgentRun{Agent: "auditor", Role: "audit", RoleName: "auditor"}, inbox.AgentFailed, "exit 1", "auditor", inbox.RoleType, "auditor", "auditor", "audit"},
+		{&AgentRun{Agent: "curator-two", Role: conventions.RoleCurate, RoleName: "curator-two"}, inbox.AgentEnded, "exit 0", "curator-two", inbox.RoleType, "curator-two", "curator-two", conventions.RoleCurate},
 		// an item that cannot be read is named by its ID, its type from it
 		{&AgentRun{Story: "S-9999", Agent: "agent-S-9999"}, inbox.AgentFailed, "exit 2", "S-9999", workitem.Story, "", "agent-S-9999", conventions.RoleStory},
 	} {

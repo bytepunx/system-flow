@@ -11,6 +11,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/roles"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
@@ -207,6 +208,7 @@ func (l *launcher) role(ctx context.Context, cfg AgentConfig, f roles.Role, item
 			l.record(entry)
 		}
 		l.log("role could not be started", "role", f.Name, "item", item, "harness", run.Harness, "err", run.Error)
+		appendAgentEvent(l.entry.Root, run, inbox.AgentFailed, run.Why, l.warn)
 		return false
 	}
 	name, adapter, err := harness.For(agent, cfg.host(harness.Command).Program != "")
@@ -229,6 +231,7 @@ func (l *launcher) role(ctx context.Context, cfg AgentConfig, f roles.Role, item
 		l.record(entry)
 	}
 	l.log("role started", "role", f.Name, "item", item, "harness", run.Harness, "command", run.Command, "pid", run.PID)
+	appendAgentEvent(l.entry.Root, run, inbox.AgentStarted, triggerWhy(run), l.warn)
 	l.await(cmd, out, run.PID, func(code int) { l.roleEnded(run, &code) })
 	return true
 }
@@ -238,12 +241,15 @@ func (l *launcher) role(ctx context.Context, cfg AgentConfig, f roles.Role, item
 // action, and logs its activity in the role's activity document,
 // wip/agents/<name>.md, naming its item when it ran on one and what started
 // it, which charges nothing. An activity that cannot be logged is warned of,
-// and the run stays recorded as it ended.
+// and the run stays recorded as it ended. The end that recorded the run as
+// ended first appends its agent event, as a planner run's does (S-0532).
 func (l *launcher) roleEnded(run *AgentRun, exit *int) {
 	ended := *run
 	ended.Ended, ended.Exit = l.now().UTC().Format(time.RFC3339), exit
 	ended.Outcome, ended.Why, ended.Thread = judgeRole(l.entry.Root, run, exit)
-	l.ended(&ended)
+	if l.ended(&ended) {
+		appendAgentEnd(l.entry.Root, &ended, l.warn)
+	}
 	args := []any{"role", run.RoleName, "item", run.Item, "pid", run.PID, "outcome", ended.Outcome}
 	if exit != nil {
 		args = append(args, "exit", *exit)

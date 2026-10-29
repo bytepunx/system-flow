@@ -13,11 +13,16 @@ import (
 // story's agent's run is on its story, role story; a planner's on the item it
 // plans, role plan; the orchestrator's, the analyzer's, and the curator's on
 // no item, each by its role's name, roles orchestrate, analyze, and curate;
-// and a project role's on no item, by the role it is marked with, the role
-// its name. typ is inbox.RoleType for a run on no item, and empty for an
-// item, whose type its ID tells.
+// a role a project defines on the item it runs on, or on no item by its
+// name, its role its file's verb (S-0417); and a project role's on no item,
+// by the role it is marked with, the role its name. typ is inbox.RoleType
+// for a run on no item, and empty for an item, whose type its ID tells.
 func runConcerns(run *AgentRun) (id, typ, role string) {
 	switch {
+	case run.RoleName != "" && run.Item != "":
+		return run.Item, "", run.Role
+	case run.RoleName != "":
+		return run.RoleName, inbox.RoleType, run.Role
 	case run.curates():
 		return workitem.ActivityCurator, inbox.RoleType, conventions.RoleCurate
 	case run.Story != "":

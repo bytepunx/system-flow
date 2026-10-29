@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/harness"
+	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -343,6 +344,18 @@ func TestADefinedRoleRunThatEndsIsRecordedAndItsActivityLogged(t *testing.T) {
 	waitFor(t, "its end journalled", func() bool { return len(lab.entries()) == 2 })
 	if e := lab.entries()[1]; e.Action != "review" || e.Method != MethodRole || e.Outcome != "done" || !strings.Contains(e.Detail, "the role reviewer on "+story+", as "+agent+" (pid ") || !strings.HasSuffix(e.Detail, "ended, worked") {
 		t.Errorf("end entry = %+v", e)
+	}
+	// its start and its end are agent events on its story, in its verb, as a
+	// planner run's are (S-0532)
+	var tos []string
+	for _, e := range agentEvents(lab.repo) {
+		if e.ID != story || e.By != agent || e.Fields[inbox.FieldRole] != "review" {
+			t.Errorf("agent event = %+v, want on %s by %s in role review", e, story, agent)
+		}
+		tos = append(tos, e.To)
+	}
+	if strings.Join(tos, ",") != inbox.AgentStarted+","+inbox.AgentEnded {
+		t.Errorf("agent events = %v, want started, ended", tos)
 	}
 }
 
