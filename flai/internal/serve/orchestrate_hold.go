@@ -10,13 +10,14 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-// The orchestrator stopped and held stopped, and started again, on the
-// operator's word (S-0228): flai serve orchestrate stop and start, which the
+// The orchestrator stopped and held stopped, and started, on the operator's
+// word (S-0228): flai serve orchestrate stop and start, which the
 // dashboard's orchestrate.stop and orchestrate.start run. flai serve starts
-// the orchestrator again whenever its run ends while the orchestrate action
-// is on (S-0218), so a stop alone would be undone at the next look: the stop
-// holds it stopped, on its run in serve/agents.json, and the start lifts the
-// hold. Turning the action off lifts it too (orchestrator.look).
+// the orchestrator for the reasons it queues while the orchestrate action is
+// on (ADR-0209), so a stop alone would be undone at the next look that finds
+// one: the stop holds it stopped, on its run in serve/agents.json, and the
+// start lifts the hold. Turning the action off lifts it too
+// (orchestrator.look).
 
 // orchestrateSettle is how long OrchestratorStop waits, once the run's
 // process is gone, for the serving flai that waits for it to record its end,
@@ -126,30 +127,32 @@ func settled(o Options, e Entry, run *AgentRun) bool {
 	}
 }
 
-// OrchestratorStart lifts the operator's hold on the orchestrator of project
-// e and starts it, as flai serve does when the orchestrate action is turned
-// on: in the project's main checkout, with its orchestration agent, the run
-// handed over to the serving flai, which settles it once its process is gone
-// and starts it again whenever it ends. Recording the new run lifts the hold;
-// so does a start that fails, which flai serve tries again a minute later, as
-// it does after any failure. It returns the run as recorded, and an error
-// saying why when the orchestrator could not be started.
+// OrchestratorStart queues the operator's asked reason for the orchestrator
+// of project e and starts it at once, for that reason and every other
+// queued, as flai serve does when the orchestrate action is turned on: in
+// the project's main checkout, with its orchestration agent, the run handed
+// over to the serving flai, which settles it once its process is gone. A
+// start clears the reasons it took. Recording the new run lifts the
+// operator's hold, when there is one; so does a start that fails, which keeps
+// the reasons, and which flai serve tries again a minute later, as it does
+// after any failure. It returns the run as recorded, and an error saying why
+// when the orchestrator could not be started.
 //
 // It is refused, as a *Refused, while the orchestrate action is off for the
-// project, when the orchestrator is not held stopped, which flai serve runs
-// by itself, while the run it was held on is still being stopped, and while
-// the budget state of its provider holds its start, naming the provider and
-// until (S-0534): nothing is recorded, and it stays held stopped.
+// project, while a run is going, while the run it was held on is still
+// being stopped, and while the budget state of its provider holds its start,
+// naming the provider and until (S-0534): nothing is recorded or queued, and
+// a held orchestrator stays held stopped.
 func OrchestratorStart(ctx context.Context, o Options, e Entry) (*AgentRun, error) {
 	if err := orchestrateOn(o, e, "start"); err != nil {
 		return nil, err
 	}
 	run := o.Dir.AgentStates()[e.Root].Orchestrator
 	switch {
-	case run == nil || !run.Held:
-		return nil, refused("the orchestrator is not held stopped: flai serve runs it for as long as orchestrate is on, and starts it again when it ends")
-	case run.running():
+	case run.running() && (run.Held || run.Stopped != ""):
 		return nil, refused("the orchestrator is still being stopped (pid %d); start it once it has ended", run.PID)
+	case run.live():
+		return nil, refused("the orchestrator is running (pid %d): flai serve starts it again for what comes meanwhile once it has ended", run.PID)
 	}
 	repo, err := workitem.Open(e.Root)
 	if err != nil {
@@ -161,13 +164,27 @@ func OrchestratorStart(ctx context.Context, o Options, e Entry) (*AgentRun, erro
 	if err := l.budgetRefusal(cfg, agent); err != nil {
 		return nil, err
 	}
-	if _, held := l.orchestrate(ctx, cfg, agent, "", queueBatches(o, e, repo.Manifest)); held != nil {
+	now := o.Now
+	if now == nil {
+		now = time.Now
+	}
+	q, err := o.Dir.updateReasonQueue(e.Root, func(q *reasonQueue) { q.add(now(), askedReason(askedOperator, now())) })
+	if err != nil {
+		return nil, err
+	}
+	_, held, started := l.orchestrate(ctx, cfg, agent, "", queueBatches(o, e, repo.Manifest), q.Reasons)
+	if held != nil {
 		return nil, l.budgetRefused(*held)
+	}
+	if started {
+		if _, err := o.Dir.updateReasonQueue(e.Root, func(q2 *reasonQueue) { q2.remove(q.Reasons) }); err != nil {
+			l.warn("orchestrator reasons not kept", "err", err)
+		}
 	}
 	out := o.Dir.AgentStates()[e.Root].Orchestrator
 	switch {
-	case out == nil || out.Session == run.Session:
-		return nil, fmt.Errorf("the orchestrator's new run was not recorded in %s; it is still held stopped", o.Dir.agents())
+	case out == nil || (run != nil && out.Session == run.Session):
+		return nil, fmt.Errorf("the orchestrator's new run was not recorded in %s; it was not started", o.Dir.agents())
 	case out.Error != "":
 		return out, errors.New(out.Why)
 	}

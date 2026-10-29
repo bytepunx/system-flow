@@ -1855,7 +1855,9 @@ func TestServeOrchestrateHoldsTheOrchestratorStopped(t *testing.T) {
 	if _, errOut, code := runIn(t, root, "serve", "enable", "orchestrate"); code != 0 {
 		t.Fatal(errOut)
 	}
-	if _, errOut, code := runIn(t, root, "serve", "orchestrate", "start"); code == 0 || !strings.Contains(errOut, "rule: the orchestrator is not held stopped") {
+	// with no hold and no run going, start starts a run for asked (ADR-0209),
+	// which this project, with no harness, cannot make
+	if _, errOut, code := runIn(t, root, "serve", "orchestrate", "start"); code == 0 || !strings.Contains(errOut, "names no harness") {
 		t.Errorf("start with no hold: %d %s", code, errOut)
 	}
 	failed := &serve.AgentRun{Agent: "orchestrator", Harness: "command", Started: "2026-09-15T20:59:00Z", Ended: "2026-09-15T20:59:00Z", Session: "s1",

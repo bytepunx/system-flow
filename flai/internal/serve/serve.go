@@ -85,6 +85,54 @@ func (d Dir) Log() string { return filepath.Join(string(d), "serve.log") }
 // Journal is where every host action asked for is written, one JSON object a line.
 func (d Dir) Journal() string { return filepath.Join(string(d), "journal.jsonl") }
 
+// orchestrateQueues is where the orchestrator's reason queue of every
+// project is kept, by project root, beside agents.json (ADR-0209 §2), so
+// that a flai serve started again loses none.
+func (d Dir) orchestrateQueues() string { return filepath.Join(string(d), "orchestrate-reasons.json") }
+
+var orchestrateQueuesMu sync.Mutex
+
+// reasonQueue reads the orchestrator's reason queue of the project at root;
+// none when it has none, or the file cannot be read.
+func (d Dir) reasonQueue(root string) reasonQueue {
+	orchestrateQueuesMu.Lock()
+	defer orchestrateQueuesMu.Unlock()
+	return d.reasonQueues()[root]
+}
+
+func (d Dir) reasonQueues() map[string]reasonQueue {
+	out := map[string]reasonQueue{}
+	if data, err := os.ReadFile(d.orchestrateQueues()); err == nil {
+		_ = json.Unmarshal(data, &out)
+	}
+	return out
+}
+
+// updateReasonQueue changes the orchestrator's reason queue of the project
+// at root with change, writes it when it changed, and returns it as written.
+// flai serve orchestrate start writes here from a process of its own.
+func (d Dir) updateReasonQueue(root string, change func(*reasonQueue)) (reasonQueue, error) {
+	orchestrateQueuesMu.Lock()
+	defer orchestrateQueuesMu.Unlock()
+	defer lockFile(d.orchestrateQueues() + ".lock")()
+	all := d.reasonQueues()
+	before, _ := json.Marshal(all[root])
+	q := all[root]
+	change(&q)
+	if after, _ := json.Marshal(q); string(after) == string(before) {
+		return q, nil
+	}
+	if q.On || len(q.Reasons) > 0 {
+		all[root] = q
+	} else {
+		delete(all, root)
+	}
+	if err := d.write(d.orchestrateQueues(), all); err != nil {
+		return q, fmt.Errorf("write the orchestrator's reasons for %s to %s: %w", root, d.orchestrateQueues(), err)
+	}
+	return q, nil
+}
+
 // Projects reads the registry; none is an empty list.
 func (d Dir) Projects() ([]Entry, error) {
 	data, err := os.ReadFile(d.registry())
@@ -622,8 +670,10 @@ func Run(ctx context.Context, o Options) error {
 			// The replanner looks after each look of the launcher: on the same
 			// changes, when an agent ends and its queue can move on, and every
 			// minute, which is when the schedule is seen to come round (S-0211).
-			// So does the orchestrator, which starts its run again when it
-			// ends and stops it once the action is off (S-0218), and the
+			// So does the orchestrator, which queues the reasons the changes
+			// give and starts a run for them, and stops it once the action is
+			// off (S-0218, ADR-0209), and looks again when the reasons it
+			// holds come due between looks; and the
 			// analysis scheduler, which sees analysis.schedule come round as
 			// the replanner sees planning.schedule (S-0223), and the curate
 			// scheduler, which sees stories accepted, the curator's run end,
@@ -661,6 +711,8 @@ func Run(ctx context.Context, o Options) error {
 						return
 					case <-starter.again:
 						starter.look(cctx, true)
+					case <-orch.wake:
+						// the orchestrator's queued reasons came due
 					case <-time.After(time.Minute):
 						// an agent that outlived an earlier flai serve is not waited for
 						starter.look(cctx, false)

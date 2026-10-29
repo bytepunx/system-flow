@@ -344,6 +344,58 @@ func TestAChangeIsReportedOnceAcrossCalls(t *testing.T) {
 	}
 }
 
+// ADR-0209: a reader's Cursor names a cursor of its own, so that flai serve
+// reads as the orchestrator without moving the orchestrator's cursor: each of
+// the two advances on its own, and each hears of a change once.
+func TestTwoCursorsOnOneReaderAdvanceEachOnItsOwn(t *testing.T) {
+	f := setup(t)
+	items := func() []*workitem.Item {
+		t.Helper()
+		items, err := f.repo.List(true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return items
+	}
+	own := Reader{Agent: "orchestrator"}
+	serve := Reader{Agent: "orchestrator", Cursor: "flai-serve-orchestrator"}
+	for _, r := range []Reader{own, serve} { // the first looks set the cursors
+		if _, _, err := CatchUp(f.repo, r, "", true, f.clock, items()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	f.clock = t0.Add(10 * time.Minute)
+	moved := f.storyIn(t, "Moved", []string{"docs/moved"})
+	if _, err := f.repo.Transition(moved, workitem.Ready, "alex", "", t0.Add(5*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	hears := func(r Reader) []Event {
+		t.Helper()
+		got, _, err := CatchUp(f.repo, r, "", true, f.clock, items())
+		if err != nil {
+			t.Fatal(err)
+		}
+		return got
+	}
+	if got := hears(serve); len(got) != 1 || got[0].ID != moved.ID {
+		t.Fatalf("serve's cursor: %+v, want the move", got)
+	}
+	if got := hears(serve); len(got) != 0 {
+		t.Errorf("serve's cursor heard the move again: %+v", got)
+	}
+	if got := hears(own); len(got) != 1 || got[0].ID != moved.ID {
+		t.Fatalf("the orchestrator's own cursor: %+v, want the move, which serve's reads did not take from it", got)
+	}
+	if got := hears(own); len(got) != 0 {
+		t.Errorf("the orchestrator's own cursor heard the move again: %+v", got)
+	}
+	for _, name := range []string{"orchestrator", "flai-serve-orchestrator"} {
+		if _, err := os.Stat(filepath.Join(f.repo.CacheDir(), "mcp", name+".json")); err != nil {
+			t.Errorf("cursor %s: %v", name, err)
+		}
+	}
+}
+
 // send starts a conversation from one story to another, by from's agent.
 func (f *fixture) send(t *testing.T, from, to *workitem.Item, text string, at time.Time) *messages.Conversation {
 	t.Helper()

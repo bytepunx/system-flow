@@ -1918,17 +1918,17 @@ orchestrator is already held stopped.`,
 		},
 		&cobra.Command{
 			Use:   "start",
-			Short: "Lift the hold on the orchestrator and start it",
-			Long: `Lifts the hold flai serve orchestrate stop put on the orchestrator and starts
-it, as flai serve does when orchestrate is turned on: in the project's main
-checkout, with its orchestration agent and the harnesses and the command set
-with flai serve agent. flai serve settles the run once it ends and starts it
-again, as it does any orchestrator run. A start that fails lifts the hold as
-well, and flai serve tries again a minute later.
+			Short: "Start the orchestrator now, lifting a hold on it",
+			Long: `Starts an orchestrator run at once, for the reason asked, with any reasons
+flai serve has queued for it (ADR-0209): in the project's main checkout, with
+its orchestration agent and the harnesses and the command set with flai serve
+agent. It lifts the hold flai serve orchestrate stop put on the orchestrator,
+if there is one. The run acts on its reasons and ends, and flai serve starts
+the next when another reason comes. A start that fails lifts the hold as
+well, keeps the reasons, and flai serve tries again a minute later.
 
 It refuses, and says why, while the orchestrate action is off for the
-project, when the orchestrator is not held stopped, and while the run it was
-held on is still being stopped.`,
+project, and while an orchestrator run is going or still being stopped.`,
 			Args: cobra.NoArgs,
 			RunE: func(*cobra.Command, []string) error { return a.orchestrateNow(true) },
 		},

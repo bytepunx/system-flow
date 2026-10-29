@@ -153,7 +153,7 @@ func TestTheOperatorStopsTheOrchestratorAndItStaysStopped(t *testing.T) {
 // S-0228: the operator's start lifts the hold and starts the orchestrator as
 // turning the action on does, handed over to the serving flai, which starts
 // no other beside it and tells the dashboard of it at its next look; it is
-// refused while the action is off and while the orchestrator is not held.
+// refused while the action is off and while a run is going (ADR-0209).
 func TestTheOperatorStartsTheHeldOrchestrator(t *testing.T) {
 	lab := newOrchestrateLab(t)
 	tl := (&told{}).of(lab)
@@ -161,8 +161,8 @@ func TestTheOperatorStartsTheHeldOrchestrator(t *testing.T) {
 		t.Fatalf("off: %v", err)
 	}
 	run := lab.orchestrating()
-	if _, err := OrchestratorStart(context.Background(), lab.o, lab.entry()); !strings.HasPrefix(refusal(err), "the orchestrator is not held stopped: flai serve runs it") {
-		t.Fatalf("not held: %v", err)
+	if _, err := OrchestratorStart(context.Background(), lab.o, lab.entry()); refusal(err) != "the orchestrator is running (pid "+strconv.Itoa(run.PID)+"): flai serve starts it again for what comes meanwhile once it has ended" {
+		t.Fatalf("running: %v", err)
 	}
 	if _, err := OrchestratorStop(lab.o, lab.entry()); err != nil {
 		t.Fatal(err)
@@ -180,7 +180,7 @@ func TestTheOperatorStartsTheHeldOrchestrator(t *testing.T) {
 	if r := lab.orchestrator(); r.Session != got.Session || r.Held {
 		t.Errorf("recorded %+v, want the new run, not held", r)
 	}
-	if given := lab.given(got.PID); !strings.Contains(given, "role: orchestrate\n") || !strings.Contains(given, "agent: orchestrator\n") {
+	if given := lab.given(got.PID); !strings.Contains(given, "role: orchestrate\n") || !strings.Contains(given, "agent: orchestrator\n") || !strings.Contains(given, "reasons: asked: the operator asked\n") {
 		t.Errorf("the orchestrator was given\n%s", given)
 	}
 	lab.l.mu.Lock()
@@ -289,7 +289,7 @@ func (lab *orchestrateLab) entry() Entry { return Entry{Key: "t", Name: "t", Roo
 // orchestrator is a started event saying so; a failed run held as it is
 // appends nothing more.
 func TestTheOperatorsStopOfTheOrchestratorIsOneStoppedAgentEvent(t *testing.T) {
-	started := [2]string{inbox.AgentStarted, "started while orchestrate is on"}
+	started := [2]string{inbox.AgentStarted, turnedOn}
 	t.Run("a run the serving flai waits for", func(t *testing.T) {
 		lab := newOrchestrateLab(t)
 		run := lab.orchestrating()
@@ -311,7 +311,7 @@ func TestTheOperatorsStopOfTheOrchestratorIsOneStoppedAgentEvent(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		lab.orchestratorEventsAre(started, stopped, [2]string{inbox.AgentStarted, "the operator started it again, held stopped until now"})
+		lab.orchestratorEventsAre(started, stopped, [2]string{inbox.AgentStarted, "the operator started it again, held stopped until now, for 1 reason: asked: the operator asked"})
 		lab.release("orchestrator")
 		reap(again.PID)
 	})
@@ -366,4 +366,40 @@ func TestStartingTheOrchestratorIsRefusedWhileTheBudgetStateHoldsIt(t *testing.T
 		t.Fatalf("once the state cleared: %+v, %v", got, err)
 	}
 	reap(got.PID)
+}
+
+// ADR-0209: the operator's start starts an orchestrator neither held nor
+// running, one that ended by itself, at once and for their asked reason,
+// with the reasons queued beside it, which it takes; and it is refused while
+// that run goes.
+func TestTheOperatorStartsAnOrchestratorThatEndedByItself(t *testing.T) {
+	lab := newOrchestrateLab(t)
+	lab.hold()
+	lab.cfg.Orchestrate = true
+	lab.look()
+	first := lab.orchestrator()
+	lab.release("orchestrator")
+	lab.ended(first.Session)
+	if err := os.Remove(filepath.Join(lab.outDir, "release-orchestrator")); err != nil {
+		t.Fatal(err)
+	}
+	lab.queueReason(reviewReason, time.Now())
+	got, err := OrchestratorStart(context.Background(), lab.o, lab.entry())
+	if err != nil {
+		t.Fatal(err)
+	}
+	reap(got.PID)
+	if got.Session == first.Session || got.Held || !got.live() {
+		t.Fatalf("started %+v, want a new run", got)
+	}
+	if reasons := lab.reasonsGiven(got.PID); len(reasons) != 2 || reasons[0] != "moved S-0001 to review: Reviewed" || reasons[1] != "asked: the operator asked" {
+		t.Errorf("the run's reasons = %q, want the queued one and the operator's", reasons)
+	}
+	if q := lab.o.Dir.reasonQueue(lab.root); len(q.Reasons) != 0 {
+		t.Errorf("the start left its reasons queued: %+v", q)
+	}
+	if _, err := OrchestratorStart(context.Background(), lab.o, lab.entry()); !strings.HasPrefix(refusal(err), "the orchestrator is running (pid "+strconv.Itoa(got.PID)+")") {
+		t.Errorf("a start while it runs: %v", err)
+	}
+	lab.release("orchestrator")
 }

@@ -128,6 +128,10 @@ type Request struct {
 	// story it has verified rather than accepting it (S-0403). It is unset
 	// for any other agent.
 	Queue bool
+	// Reasons are why flai serve started the orchestrator, one line each,
+	// such as "moved S-0123 to review: <title>" (ADR-0209 §2): its session
+	// reads them in FLAI_REASONS, one a line. None for any other agent.
+	Reasons []string
 	// Inner is the harness pilot runs inside a container, one of Adapters,
 	// as pilot's start request names it (S-0507); empty for a start on the
 	// host, which is every start flai serve makes today.
@@ -877,6 +881,10 @@ func sinceReads(since string) bool {
 	})
 }
 
+// ReasonsEnv is the variable that holds why flai serve started the
+// orchestrator, one reason a line (ADR-0209).
+const ReasonsEnv = "FLAI_REASONS"
+
 // roleEnv tells a strategic agent's session its role, which flai guard reads
 // to hold it to its work: the planner's its item as well (S-0208), the
 // orchestrator's, the analyzer's, and the curator's nothing more, since each
@@ -887,8 +895,12 @@ func sinceReads(since string) bool {
 // focus it does not take, a curator with a since that does not read, and a
 // focus or a since for any other agent are refused, as are inputs for any
 // agent but a role the project defines. A role the project defines has its
-// own (definedEnv).
+// own (definedEnv). The orchestrator's reasons are FLAI_REASONS, one a
+// line, and reasons for any other agent are refused (ADR-0209).
 func roleEnv(r Request) ([]string, error) {
+	if len(r.Reasons) > 0 && (r.RoleFile != nil || r.Role != conventions.RoleOrchestrate) {
+		return nil, fmt.Errorf("only the orchestrator is started for reasons; start this agent without them")
+	}
 	if r.RoleFile != nil {
 		return definedEnv(r)
 	}
@@ -923,6 +935,8 @@ func roleEnv(r Request) ([]string, error) {
 		return nil, fmt.Errorf("the orchestrator was given story %s to work; it works no story of its own, so start it with none", r.Story)
 	case r.Role == conventions.RoleOrchestrate && r.Item != "":
 		return nil, fmt.Errorf("the orchestrator was given %s; it works the whole project, so start it with no item", r.Item)
+	case r.Role == conventions.RoleOrchestrate && len(r.Reasons) > 0:
+		return []string{"FLAI_ROLE=" + r.Role, ReasonsEnv + "=" + strings.Join(r.Reasons, "\n")}, nil
 	case r.Role == conventions.RoleOrchestrate:
 		return []string{"FLAI_ROLE=" + r.Role}, nil
 	case r.Story != "":

@@ -305,6 +305,10 @@ type ThreadSummary struct {
 type Reader struct {
 	Agent string // the reader's name; "agent" when empty
 	Own   string // the reader's own story, in any zero padding; "" for none
+	// Cursor names the cursor CatchUp reads and advances, in place of
+	// Agent's, so that flai serve can read as an agent without moving that
+	// agent's own cursor (ADR-0209); "" for Agent's.
+	Cursor string
 }
 
 // Summarize is th as r sees it (ADR-0181). It awaits r, "you", when r takes
@@ -516,7 +520,11 @@ func CatchUp(repo *workitem.Repo, r Reader, story string, operator bool, now tim
 		return nil, 0, err
 	}
 	now = now.UTC().Truncate(time.Second)
-	path := cursorPath(repo, agent)
+	name := agent
+	if r.Cursor != "" {
+		name = r.Cursor
+	}
+	path := cursorPath(repo, name)
 	cur := loadCursor(path)
 	events := []Event{}
 	next := cursor{Seen: now.Format(workitem.TimeFormat), Keys: map[string]bool{}, Order: board.Order}

@@ -6,6 +6,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -43,7 +44,7 @@ func newOrchestrateLab(t *testing.T) *orchestrateLab {
 	script := "#!/bin/sh\n" +
 		"trap 'touch \"" + d + "/ended-$$\"; exit 143' TERM\n" +
 		"[ -f \"" + d + "/stream-orchestrator\" ] && cat \"" + d + "/stream-orchestrator\"\n" +
-		"{ echo \"args: $*\"; echo \"dir: $(pwd)\"; echo \"agent: $FLAI_AGENT\"; echo \"story: ${FLAI_STORY-unset}\"; echo \"role: $FLAI_ROLE\"; echo \"item: ${FLAI_ITEM-unset}\"; echo \"session: $FLAI_SESSION\"; echo \"by: $FLAI_STARTED_BY\"; } > \"" + d + "/orchestrator-$$.txt\"\n" +
+		"{ echo \"args: $*\"; echo \"dir: $(pwd)\"; echo \"agent: $FLAI_AGENT\"; echo \"story: ${FLAI_STORY-unset}\"; echo \"role: $FLAI_ROLE\"; echo \"item: ${FLAI_ITEM-unset}\"; echo \"session: $FLAI_SESSION\"; echo \"reasons: ${FLAI_REASONS-unset}\"; echo \"by: $FLAI_STARTED_BY\"; } > \"" + d + "/orchestrator-$$.txt\"\n" +
 		"while [ -f \"" + d + "/hold\" ] && [ ! -f \"" + d + "/release-orchestrator\" ]; do sleep 0.05; done\n" +
 		"touch \"" + d + "/ended-$$\"\n" +
 		"[ -f \"" + d + "/exit-orchestrator\" ] && exit \"$(cat \"" + d + "/exit-orchestrator\")\"\n" +
@@ -127,7 +128,7 @@ func TestTheOrchestratorRunsWhileTheActionIsOn(t *testing.T) {
 	}
 	got := lab.given(run.PID)
 	real, _ := filepath.EvalSymlinks(lab.root)
-	for _, want := range []string{"args: story=\n", "dir: " + real + "\n", "agent: orchestrator\n", "story: unset\n", "role: orchestrate\n", "item: unset\n", "session: 2", "by: flai-serve\n"} {
+	for _, want := range []string{"args: story=\n", "dir: " + real + "\n", "agent: orchestrator\n", "story: unset\n", "role: orchestrate\n", "item: unset\n", "session: 2", "reasons: asked: orchestrate turned on\n", "by: flai-serve\n"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("the orchestrator was given\n%s\nwithout %q", got, want)
 		}
@@ -139,7 +140,8 @@ func TestTheOrchestratorRunsWhileTheActionIsOn(t *testing.T) {
 		t.Errorf("state = %+v, want the run under orchestrator alone", st)
 	}
 	j := lab.orchestrateEntries()
-	if len(j) != 1 || j[0].Method != "serve.orchestrate" || j[0].Outcome != "done" || !strings.Contains(j[0].Detail, "started orch-agent (command) as orchestrator (pid ") {
+	if len(j) != 1 || j[0].Method != "serve.orchestrate" || j[0].Outcome != "done" || !strings.Contains(j[0].Detail, "started orch-agent (command) as orchestrator (pid ") ||
+		!strings.Contains(j[0].Detail, ") for 1 reason: asked: orchestrate turned on; log ") {
 		t.Errorf("journal: %+v", j)
 	}
 	lab.look()
@@ -155,10 +157,30 @@ func TestTheOrchestratorRunsWhileTheActionIsOn(t *testing.T) {
 	lab.release("orchestrator")
 }
 
-// S-0218: a run that ends while the action is on is started again at the
-// next look, and, when it failed, no sooner than a minute after it ended;
-// each end is journalled.
-func TestTheOrchestratorIsStartedAgainWhenItEnds(t *testing.T) {
+// turnedOn is why the orchestrator's first run is started: the action
+// turned on (ADR-0209).
+const turnedOn = "started for 1 reason: asked: orchestrate turned on"
+
+// queueReason queues r for the lab's orchestrator at, as a look that saw it
+// would.
+func (lab *orchestrateLab) queueReason(r orchestrateReason, at time.Time) {
+	lab.t.Helper()
+	if _, err := lab.o.Dir.updateReasonQueue(lab.root, func(q *reasonQueue) { q.add(at, r) }); err != nil {
+		lab.t.Fatal(err)
+	}
+}
+
+// reviewReason and threadReason are reasons as a look queues them.
+var (
+	reviewReason = orchestrateReason{Kind: workitem.Moved, ID: "S-0001", Type: workitem.Story, Title: "Reviewed", To: workitem.Review, Summary: "S-0001 Reviewed moved to review by builder"}
+	threadReason = orchestrateReason{Kind: inbox.Thread, ID: "TH-0001", Type: inbox.Thread, Title: "Which way", To: "operator", Summary: "TH-0001 Which way awaits the operator"}
+)
+
+// S-0218, ADR-0209: a run that ends while the action is on is not started
+// again with nothing queued; a reason queued starts the next, and, after a
+// run that failed, no sooner than a minute after it ended; each end is
+// journalled.
+func TestAnEndedOrchestratorIsStartedAgainOnlyForAReason(t *testing.T) {
 	lab := newOrchestrateLab(t)
 	lab.hold()
 	lab.cfg.Orchestrate = true
@@ -168,17 +190,27 @@ func TestTheOrchestratorIsStartedAgainWhenItEnds(t *testing.T) {
 	if r := lab.ended(first.Session); r.Outcome != OutcomeWorked || r.Exit == nil || *r.Exit != 0 {
 		t.Fatalf("first = %+v, want worked with exit 0", r)
 	}
+	lab.look()
+	if r := lab.orchestrator(); r.Session != first.Session {
+		t.Fatalf("started again with nothing queued: %+v", r)
+	}
 	if err := os.WriteFile(filepath.Join(lab.outDir, "exit-orchestrator"), []byte("3"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	now := time.Now().UTC().Truncate(time.Second)
+	lab.queueReason(reviewReason, now)
+	lab.at = now.Add(manifest.DefaultCoalesce)
 	lab.look()
 	second := lab.orchestrator()
 	if second.Session == first.Session || second.Started == "" {
-		t.Fatalf("not started again after it worked: %+v", second)
+		t.Fatalf("not started for the reason queued: %+v", second)
 	}
 	failed := lab.ended(second.Session)
 	if failed.Outcome != OutcomeFailed || failed.Exit == nil || *failed.Exit != 3 || failed.Why != "ended (exit 3)" {
 		t.Fatalf("second = %+v, want failed with exit 3", failed)
+	}
+	if q := lab.o.Dir.reasonQueue(lab.root); len(q.Reasons) != 0 {
+		t.Errorf("the start left its reasons queued: %+v", q)
 	}
 	// the looks around the retry take their time from the recorded end, which
 	// is to the second, not from the host's clock, so neither depends on how
@@ -187,6 +219,7 @@ func TestTheOrchestratorIsStartedAgainWhenItEnds(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the failed run's end %q: %v", failed.Ended, err)
 	}
+	lab.queueReason(threadReason, ended)
 	lab.at = ended
 	lab.look()
 	lab.at = ended.Add(orchestrateRetry - time.Second)
@@ -199,6 +232,9 @@ func TestTheOrchestratorIsStartedAgainWhenItEnds(t *testing.T) {
 	third := lab.orchestrator()
 	if third.Session == second.Session {
 		t.Fatalf("not started again a minute after a failure: %+v", third)
+	}
+	if got := lab.reasonsGiven(third.PID); len(got) == 0 || got[0] != "thread TH-0001 awaits the operator: Which way" || slices.Contains(got, "moved S-0001 to review: Reviewed") {
+		t.Errorf("the third run's reasons = %q, want the thread's, and not the move the second run took", got)
 	}
 	lab.ended(third.Session)
 	var ends []hostapi.Entry
@@ -249,7 +285,7 @@ func TestTheOrchestratorIsStoppedWhenTheActionIsTurnedOff(t *testing.T) {
 				t.Errorf("not recorded as stopped: %+v", stopped)
 			}
 			// S-0532: and its stop is one stopped agent event
-			lab.orchestratorEventsAre([2]string{inbox.AgentStarted, "started while orchestrate is on"}, [2]string{inbox.AgentStopped, stopped.Why})
+			lab.orchestratorEventsAre([2]string{inbox.AgentStarted, turnedOn}, [2]string{inbox.AgentStopped, stopped.Why})
 			waitFor(t, "its activity logged", func() bool {
 				doc, err := lab.repo.Activity(workitem.ActivityOrchestrator)
 				return err == nil && len(doc.Entries) == 1
@@ -364,9 +400,10 @@ func (lab *orchestrateLab) orchestratorEventsAre(want ...[2]string) {
 }
 
 // S-0532: each orchestrator run appends one agent event on the orchestrator's
-// role at its start, saying why it was started, and one at its end, ended for
-// a run that worked and failed for one that did not, so that a run that fails
-// and is retried every minute writes one failed and one started per attempt.
+// role at its start, saying why it was started and for which reasons, and
+// one at its end, ended for a run that worked and failed for one that did
+// not, so that a run that fails and is started again for a reason a minute
+// later writes one failed and one started per attempt.
 func TestAnOrchestratorRunAppendsAnAgentEventAtEachStartAndEnd(t *testing.T) {
 	lab := newOrchestrateLab(t)
 	lab.hold()
@@ -375,15 +412,19 @@ func TestAnOrchestratorRunAppendsAnAgentEventAtEachStartAndEnd(t *testing.T) {
 	first := lab.orchestrator()
 	lab.release("orchestrator")
 	lab.ended(first.Session)
-	started := [2]string{inbox.AgentStarted, "started while orchestrate is on"}
+	started := [2]string{inbox.AgentStarted, turnedOn}
 	worked := [2]string{inbox.AgentEnded, "ended with its work done"}
 	lab.orchestratorEventsAre(started, worked)
 	if err := os.WriteFile(filepath.Join(lab.outDir, "exit-orchestrator"), []byte("3"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	want := [][2]string{started, worked, {inbox.AgentStarted, "started again while orchestrate is on: its last run ended, worked"}}
+	review := "moved S-0001 to review: Reviewed"
+	want := [][2]string{started, worked, {inbox.AgentStarted, "started for 1 reason: " + review}}
 	failed := [2]string{inbox.AgentFailed, "ended (exit 3)"}
-	retried := [2]string{inbox.AgentStarted, "started again after its last run failed: ended (exit 3)"}
+	retried := [2]string{inbox.AgentStarted, "started again after its last run failed (ended (exit 3)), for 1 reason: " + review}
+	now := time.Now().UTC().Truncate(time.Second)
+	lab.queueReason(reviewReason, now)
+	lab.at = now.Add(manifest.DefaultCoalesce)
 	lab.look()
 	for attempt := range 3 {
 		run := lab.ended(lab.orchestrator().Session)
@@ -396,6 +437,7 @@ func TestAnOrchestratorRunAppendsAnAgentEventAtEachStartAndEnd(t *testing.T) {
 		if err != nil {
 			t.Fatalf("the failed run's end %q: %v", run.Ended, err)
 		}
+		lab.queueReason(reviewReason, ended)
 		lab.at = ended.Add(orchestrateRetry - time.Second)
 		lab.look()
 		lab.orchestratorEventsAre(want...)
