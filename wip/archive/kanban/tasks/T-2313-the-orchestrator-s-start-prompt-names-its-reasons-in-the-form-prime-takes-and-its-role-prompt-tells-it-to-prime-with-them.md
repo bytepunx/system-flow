@@ -3,16 +3,37 @@ id: T-2313
 type: task
 nature: improvement
 title: The orchestrator's start prompt names its reasons in the form prime takes, and its role prompt tells it to prime with them
-status: backlog
+status: done
 parent: S-0537
 owner: alex
 created: 2026-10-28T22:08:01Z
-updated: 2026-10-29T15:24:14Z
-transitions: []
+updated: 2026-10-29T16:26:44Z
+transitions:
+  - to: ready
+    at: 2026-10-29T16:12:25Z
+    by: agent-S-0537
+  - to: in-progress
+    at: 2026-10-29T16:12:26Z
+    by: agent-S-0537
+  - to: done
+    at: 2026-10-29T16:26:44Z
+    by: agent-S-0537
 stream: S-0537
 tags: [flai, orchestrator, template]
-touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/orchestrate_reasons_test.go, flai/internal/serve/orchestrate.go, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md]
+touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/orchestrate_reasons_test.go, flai/internal/serve/orchestrate.go, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, docs/operators/settings.md]
 after: [T-2311, T-2312]
+usage:
+  source: log
+  seconds: 858
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 24
+      output: 8968
+      cache_read: 1792159
+      cache_write: 57908
+      cost: 0.867
 ---
 # T-2313 The orchestrator's start prompt names its reasons in the form prime takes, and its role prompt tells it to prime with them
 

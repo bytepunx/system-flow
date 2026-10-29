@@ -3,11 +3,11 @@ id: S-0537
 type: story
 nature: improvement
 title: flai prime --role orchestrate takes the run's reasons and primes for them, the role's conventions once and per reason what it needs, instead of the general pack
-status: in-progress
+status: done
 parent: E-0030
 owner: alex
 created: 2026-10-28T21:02:39Z
-updated: 2026-10-29T15:41:20Z
+updated: 2026-10-29T17:25:36Z
 transitions:
   - to: ready
     at: 2026-10-28T22:21:29Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-29T15:17:38Z
     by: agent-S-0537
+  - to: review
+    at: 2026-10-29T17:21:54Z
+    by: agent-S-0537
+  - to: done
+    at: 2026-10-29T17:25:36Z
+    by: alex
 tags: [flai, prime, orchestrator]
 topics: [orchestration, cli, conventions, template, mcp]
-touches: [flai/internal/context, flai/internal/mcpserver, flai/cmd, design/system/flai-cli.md, design/system/strategic-agents.md, design/adrs, docs, flai/internal/context/reasons.go, flai/internal/context/reasons_test.go, flai/internal/context/reasons_figures.go, flai/internal/context/reasons_figures_test.go, flai/internal/context/strategic.go, flai/internal/context/strategic_test.go, flai/internal/context/context.go, flai/cmd/prime.go, flai/cmd/prime_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/prime_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, template/root/.claude/agents/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/agent-context.md, docs/users/flai.md, docs/users/flai-reference.md, template/CHANGELOG.md, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/orchestrate_reasons_test.go, flai/internal/serve/orchestrate.go, design/system/conventions.md, ".claude/agents/orchestrator.md", flai/internal/check/check.go, flai/internal/check/vocabulary_test.go, design/conventions/tooling.md, flai/internal/check/check_test.go]
+touches: [flai/internal/context, flai/internal/mcpserver, flai/cmd, design/system/flai-cli.md, design/system/strategic-agents.md, design/adrs, docs, flai/internal/context/reasons.go, flai/internal/context/reasons_test.go, flai/internal/context/reasons_figures.go, flai/internal/context/reasons_figures_test.go, flai/internal/context/strategic.go, flai/internal/context/strategic_test.go, flai/internal/context/context.go, flai/cmd/prime.go, flai/cmd/prime_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/prime_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, template/root/.claude/agents/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/agent-context.md, docs/users/flai.md, docs/users/flai-reference.md, template/CHANGELOG.md, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/orchestrate_reasons_test.go, flai/internal/serve/orchestrate.go, design/system/conventions.md, ".claude/agents/orchestrator.md", flai/internal/check/check.go, flai/internal/check/vocabulary_test.go, design/conventions/tooling.md, flai/internal/check/check_test.go, design/issues/I-0233-testachangedfilereachesthedashboardasanotification-fails-its-temp-folder-s-cleanup-with-directory-not-empty-as-i-0048-s-serve-tests-did.md, design/issues/summary.md]
 after: [S-0536]
 agent:
   harness: claude-code
@@ -26,21 +32,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2078
-  estimated: true
-  priced_by: estimate
+  seconds: 7470
+  priced_by: harness
   turns:
     - day: 2026-10-29
-      ceremony: 3
-      hand_edits: 2
-      work: 66
+      ceremony: 8
+      hand_edits: 5
+      work: 109
   models:
     - model: claude-opus-5-5
-      input: 350
-      output: 1743
-      cache_read: 24668519
-      cache_write: 671457
-      cost: 8.7063
+      input: 832
+      output: 308393
+      cache_read: 61626000
+      cache_write: 1991263
+      cost: 29.8134
   strategic:
     - kind: planner
       seconds: 1252
@@ -59,15 +64,15 @@ usage:
           cache_write: 151451
           cost: 1.1061
     - kind: orchestrator
-      seconds: 1261
+      seconds: 1385
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 47
-          output: 738
-          cache_read: 8515425
-          cache_write: 23282
-          cost: 1.8793
+          input: 103
+          output: 1049
+          cache_read: 10077081
+          cache_write: 267033
+          cost: 2.2784
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1h
@@ -90,11 +95,10 @@ forecast:
 ADR-0209 §3. The orchestrator's general pack is three to four parts of some 35k characters each, loaded at every start and again after every compaction, whatever the run is for. With a run started for named reasons, the pack can be primed for them. `flai prime --role orchestrate --reason <reason>...` and MCP `prime` with `reasons` load the role's conventions once and, per reason, what it needs: for a thread, the thread, its item, and the conventions on threads; for a story in review, the story, its last `verify` result, and the acceptance rules; for a plan, the planner's thread and the items it wrote; for a release, `release_evaluate`'s figures; for a draft, the draft and the finalizing rules; for the ready column, the board and `promote_candidates`. The general pack is not loaded. flai serve's start prompt names the reasons in the form `prime` takes, and the digest's answers ranked against the reasons' threads (ADR-0194) stay within the budget's eighth.
 
 ## Acceptance criteria
-- [ ] `flai prime --role orchestrate --reason` and MCP `prime` with `reasons` accept each reason the trigger names, load what the goal lists for it, and refuse an unknown reason naming the known ones, with a test per reason
-- [ ] A pack primed for one thread is under a quarter of the general pack's size, measured in the test
-- [ ] The orchestrator's start prompt names its reasons in the form `prime` takes, and the role's prompt tells it to prime with them
-- [ ] `flai-cli.md`, `strategic-agents.md`, and the agent docs describe the reason-primed pack
-- [ ] The orchestrator in this repository runs a day on reason-primed packs, and the narrative records the context tokens per action from `flai stats` beside the previous story's figure
+- [x] `flai prime --role orchestrate --reason` and MCP `prime` with `reasons` accept each reason the trigger names, load what the goal lists for it, and refuse an unknown reason naming the known ones, with a test per reason
+- [x] A pack primed for one thread is under a quarter of the general pack's size, measured in the test
+- [x] The orchestrator's start prompt names its reasons in the form `prime` takes, and the role's prompt tells it to prime with them
+- [x] `flai-cli.md`, `strategic-agents.md`, and the agent docs describe the reason-primed pack
 
 ## Tasks
 - T-2308 The context package primes the orchestrator for named reasons: it parses them, refuses an unknown one naming the known ones, and loads the role's conventions once and, for a thread, a draft, and a plan, their items and threads
@@ -107,10 +111,15 @@ ADR-0209 §3. The orchestrator's general pack is three to four parts of some 35k
 - T-2315 The orchestrator in this repository runs a day on reason-primed packs, and the narrative records the context tokens per action from flai stats beside S-0536's figure
 - T-2337 flai check accepts the reason kinds and the built-in strategic roles' topics on a convention's heading, so the baseline's section topics check clean in a project made from the template
 - T-2338 The two .claude/agents/orchestrator.md definitions tell the orchestrator to prime with the reasons its start prompt names, as its role file says
+- T-2339 A thread reason loads its item as its title, status, goal, and criteria, a reason pack's digest is capped at a sixteenth of the budget, and the quarter test measures a real thread
 
 ## Notes
 
 A reason the trigger gains later needs its pack rule here; the refusal naming the known reasons makes a missing one visible at once.
+
+On TH-0719 the operator confirmed the orchestrator's recommendation at 2026-10-29T16:27Z: the day of runs on reason-primed packs moves out of this story into the follow-up story under E-0030 that S-0536's notes record. It records a day of runs once S-0536 and S-0537 are published, with the context tokens per action from the session logs beside the cost and activities from `flai stats`. This story's fifth criterion, that run, is removed, and T-2315 is cancelled.
+
+Criterion 2, after TH-0753 and ADR-0218: the test measures copies of TH-0750 (4.9 KB, larger than four in five of the repository's 754 threads) and S-0542. Its pack is 23.5% of the general pack. Packs for longer threads are over a quarter: TH-0719 (7.0 KB) is 25.2%, and TH-0717 (8.9 KB, 97th percentile) is 27.0%. A thread of up to about 6.5 KB comes in under. Review packs (45%) and draft packs (36%) are left to S-0536's follow-up, as the orchestrator recommended on TH-0753.
 
 ### Planning
 

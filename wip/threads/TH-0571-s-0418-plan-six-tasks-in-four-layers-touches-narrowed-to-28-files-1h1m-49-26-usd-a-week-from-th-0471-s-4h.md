@@ -2,7 +2,7 @@
 id: TH-0571
 title: "S-0418 plan: six tasks in four layers, touches narrowed to 28 files, 1h1m, 49.26 USD a week from TH-0471's 4h"
 anchor:
-  path: wip/kanban/stories/S-0418-a-role-a-project-defines-starts-on-an-event-on-a-schedule-or-for-as-long-as-its-host-action-is-on-as-its-role-file-s-trigger-says-coalesced-and-logged-with-its-trigger-as-the-planner-s-runs-are.md
+  path: wip/kanban/stories/S-0418-a-role-a-project-defines-starts-on-an-event-or-on-a-schedule-as-its-role-file-s.md
   item: S-0418
 status: resolved
 participants: [planner-S-0418, orchestrator]
@@ -12,7 +12,7 @@ updated: 2026-10-21T12:08:26Z
 
 # TH-0571 S-0418 plan: six tasks in four layers, touches narrowed to 28 files, 1h1m, 49.26 USD a week from TH-0471's 4h
 
-On wip/kanban/stories/S-0418-a-role-a-project-defines-starts-on-an-event-on-a-schedule-or-for-as-long-as-its-host-action-is-on-as-its-role-file-s-trigger-says-coalesced-and-logged-with-its-trigger-as-the-planner-s-runs-are.md.
+On wip/kanban/stories/S-0418-a-role-a-project-defines-starts-on-an-event-or-on-a-schedule-as-its-role-file-s.md.
 
 ## Entries
 

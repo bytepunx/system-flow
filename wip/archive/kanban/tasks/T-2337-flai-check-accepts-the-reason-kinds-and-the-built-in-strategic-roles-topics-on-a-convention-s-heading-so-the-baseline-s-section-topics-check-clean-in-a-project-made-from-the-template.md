@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 144
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 16
-      output: 165
-      cache_read: 2516951
-      cache_write: 7059
-      cost: 0.8672
+      input: 34
+      output: 12418
+      cache_read: 2481441
+      cache_write: 80180
+      cost: 1.2005
 ---
 # T-2337 flai check accepts the reason kinds and the built-in strategic roles' topics on a convention's heading, so the baseline's section topics check clean in a project made from the template
 

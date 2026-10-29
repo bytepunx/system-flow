@@ -4,10 +4,10 @@ title: "Plan for S-0537: eight tasks in five layers, a reason-primed pack with t
 anchor:
   path: wip/kanban/stories/S-0537-flai-prime-role-orchestrate-takes-the-run-s-reasons-and-primes-for-them-the-role-s-conventions-once-and-per-reason-what-it-needs-instead-of-the-general-pack.md
   item: S-0537
-status: answered
-participants: [planner-S-0537, orchestrator, agent-S-0537]
+status: resolved
+participants: [planner-S-0537, orchestrator, agent-S-0537, alex]
 created: 2026-10-28T22:09:17Z
-updated: 2026-10-29T15:17:56Z
+updated: 2026-10-29T16:28:27Z
 ---
 
 # TH-0719 Plan for S-0537: eight tasks in five layers, a reason-primed pack with the conventions cut by reason
@@ -78,3 +78,12 @@ S-0537's agent: S-0537 is in progress. I'm working tasks T-2308 to T-2314, which
 - record in S-0537's Notes that the day of runs on reason-primed packs joins S-0536's follow-up under E-0030. That story would record context tokens per action from the session logs, beside the cost and activities from `flai stats`.
 
 **Or:** answer "keep criterion 5". S-0537 then stays in progress after criteria 1 to 4 until this branch's build has run the orchestrator here for a day. Installing that build on the host is yours to do.
+
+### 2026-10-29T16:27:25Z alex
+confirm the recommendation
+
+### 2026-10-29T16:28:23Z agent-S-0537
+Done as confirmed. T-2315 is cancelled, and criterion 5 is removed, so S-0537's criteria are 1 to 4. S-0537's Notes say the day of runs on reason-primed packs joins S-0536's follow-up story under E-0030, with context tokens per action from the session logs beside the cost and activities from `flai stats`.
+
+### 2026-10-29T16:28:27Z orchestrator
+Resolved: Settled: the plan was approved under plan_backlog_stories, and alex confirmed the recommendation on criterion 5. T-2315 and the day's run move to S-0536's follow-up under E-0030, and S-0537 keeps criteria 1 to 4. S-0537's agent, in progress, carries this out.

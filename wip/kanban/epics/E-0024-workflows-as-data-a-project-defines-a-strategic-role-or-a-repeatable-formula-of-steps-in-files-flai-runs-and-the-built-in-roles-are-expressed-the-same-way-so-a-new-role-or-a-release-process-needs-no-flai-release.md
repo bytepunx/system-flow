@@ -6,7 +6,7 @@ title: "Workflows as data: a project defines a strategic role or a repeatable fo
 status: in-progress
 owner: alex
 created: 2026-10-16T04:28:02Z
-updated: 2026-10-28T13:05:49Z
+updated: 2026-10-29T16:37:06Z
 transitions:
   - to: ready
     at: 2026-10-20T19:01:17Z
@@ -25,24 +25,25 @@ topics: [cli, orchestration, planning, template, conventions]
 touches: [flai/internal/serve, flai/internal/guard, flai/internal/context, flai/internal/hostapi, flai/cmd, flaiover/src, design/system/strategic-agents.md, design/system/metrics.md, design/conventions/strategic-agents.md, ".claude/agents", docs/operators/index.md, docs/users/flai.md, template]
 usage:
   source: sum
-  seconds: 24079
-  priced_by: harness
+  seconds: 26296
+  estimated: true
+  priced_by: estimate
   turns:
     - day: 2026-10-28
       ceremony: 9
       hand_edits: 7
       work: 188
     - day: 2026-10-29
-      ceremony: 10
-      hand_edits: 3
-      work: 119
+      ceremony: 15
+      hand_edits: 6
+      work: 193
   models:
     - model: claude-opus-5-5
-      input: 2538
-      output: 960336
-      cache_read: 185865623
-      cache_write: 7770070
-      cost: 100.2039
+      input: 2890
+      output: 975055
+      cache_read: 210513863
+      cache_write: 8576632
+      cost: 110.3243
   strategic:
     - kind: planner
       seconds: 1866
@@ -67,15 +68,15 @@ usage:
           cache_write: 294016
           cost: 1.282
     - kind: orchestrator
-      seconds: 15483
+      seconds: 15499
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2167
-          output: 34650
-          cache_read: 505835277
-          cache_write: 858597
-          cost: 113.658
+          input: 2175
+          output: 34679
+          cache_read: 506009116
+          cache_write: 901482
+          cost: 113.7059
         - model: claude-sonnet-5-5
           input: 72
           output: 309
@@ -105,7 +106,7 @@ To be drafted by the planner. Order: the role file format and its validation fir
 - S-0415 flai prime --role gives a role a project defines its pack within the budget, from the topics and the item kind its role file names, and the three built-in roles prime from their files unchanged
 - S-0416 flai guard reads a role's permitted calls from its role file and refuses the rest, and the planner's, the orchestrator's, and the analyzer's rules move into their files with their guard tests unchanged
 - S-0417 flai serve starts a role a project defines on the operator's word, behind the host action its file names, with an activity document under wip/agents and the same journal entries as the built-in roles
-- S-0418 A role a project defines starts on an event, on a schedule, or for as long as its host action is on, as its role file's trigger says, coalesced and logged with its trigger as the planner's runs are
+- S-0418 A role a project defines starts on an event or on a schedule, as its role file's trigger says, coalesced and logged with its trigger as the planner's runs are
 - S-0419 The planner, the orchestrator, and the analyzer start through the path a defined role takes, with their prompts read from their role files, and behave exactly as today
 - S-0420 The dashboard's Planner, Orchestrator, and Analyzer pages become one role page per defined role, with its settings panel, its activity document, and its runs, and agent.status carries every role by name
 - S-0421 A formula is a markdown file under design/workflows/formulas that flai check validates, and flai formula run makes a story from it with one task per step and the steps' after between them

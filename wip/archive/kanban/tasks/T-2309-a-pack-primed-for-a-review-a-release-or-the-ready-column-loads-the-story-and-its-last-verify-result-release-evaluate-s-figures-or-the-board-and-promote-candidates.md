@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 576
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 92
-      output: 413
-      cache_read: 5056221
-      cache_write: 136700
-      cost: 1.7842
+      input: 69
+      output: 25549
+      cache_read: 5105397
+      cache_write: 164966
+      cost: 2.4699
 ---
 # T-2309 A pack primed for a review, a release, or the ready column loads the story and its last verify result, release_evaluate's figures, or the board and promote_candidates
 

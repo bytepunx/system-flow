@@ -3,12 +3,15 @@ id: T-2315
 type: task
 nature: research
 title: The orchestrator in this repository runs a day on reason-primed packs, and the narrative records the context tokens per action from flai stats beside S-0536's figure
-status: backlog
+status: cancelled
 parent: S-0537
 owner: alex
 created: 2026-10-28T22:08:20Z
-updated: 2026-10-28T22:08:20Z
-transitions: []
+updated: 2026-10-29T16:27:59Z
+transitions:
+  - to: cancelled
+    at: 2026-10-29T16:27:59Z
+    by: agent-S-0537
 stream: S-0537
 tags: [orchestrator, measurement]
 after: [T-2313, T-2314]
@@ -33,3 +36,4 @@ Waits for T-2313 and T-2314: the prompt must prime with the reasons, and the doc
 - Any reason the day refused is either fixed in the story or recorded as an issue.
 
 ## Notes
+- 2026-10-29T16:27:59Z: moved to cancelled: TH-0719: the operator confirmed moving the day of runs on reason-primed packs to S-0536's follow-up story under E-0030

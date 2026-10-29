@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 853
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 94
-      output: 435
-      cache_read: 6576124
-      cache_write: 185647
-      cost: 2.3232
+      input: 90
+      output: 33267
+      cache_read: 6647775
+      cache_write: 214803
+      cost: 3.2161
 ---
 # T-2308 The context package primes the orchestrator for named reasons: it parses them, refuses an unknown one naming the known ones, and loads the role's conventions once and, for a thread, a draft, and a plan, their items and threads
 

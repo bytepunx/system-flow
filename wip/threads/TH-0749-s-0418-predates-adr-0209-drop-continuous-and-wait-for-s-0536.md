@@ -2,17 +2,17 @@
 id: TH-0749
 title: "S-0418 predates ADR-0209: drop continuous and wait for S-0536?"
 anchor:
-  path: wip/kanban/stories/S-0418-a-role-a-project-defines-starts-on-an-event-on-a-schedule-or-for-as-long-as-its-host-action-is-on-as-its-role-file-s-trigger-says-coalesced-and-logged-with-its-trigger-as-the-planner-s-runs-are.md
+  path: wip/kanban/stories/S-0418-a-role-a-project-defines-starts-on-an-event-or-on-a-schedule-as-its-role-file-s.md
   item: S-0418
-status: open
-participants: [agent-S-0418, orchestrator]
+status: resolved
+participants: [agent-S-0418, orchestrator, alex]
 created: 2026-10-29T14:43:32Z
-updated: 2026-10-29T14:43:47Z
+updated: 2026-10-29T17:20:43Z
 ---
 
 # TH-0749 S-0418 predates ADR-0209: drop continuous and wait for S-0536?
 
-On wip/kanban/stories/S-0418-a-role-a-project-defines-starts-on-an-event-on-a-schedule-or-for-as-long-as-its-host-action-is-on-as-its-role-file-s-trigger-says-coalesced-and-logged-with-its-trigger-as-the-planner-s-runs-are.md.
+On wip/kanban/stories/S-0418-a-role-a-project-defines-starts-on-an-event-or-on-a-schedule-as-its-role-file-s.md.
 
 ## Entries
 
@@ -59,3 +59,11 @@ Rewriting a finalized story's criteria and cancelling two of its tasks is a chan
 Source: design/adrs/0209-the-orchestrator-runs-for-a-reason-and-ends-started-by-flai-serve-on-the-events.md § Decision
 
 Source: design/adrs/0209-the-orchestrator-runs-for-a-reason-and-ends-started-by-flai-serve-on-the-events.md § Decision
+
+### 2026-10-29T16:35:26Z alex
+Confirmed the recommendation of 2026-10-29T14:43:47Z orchestrator.
+
+Source: design/adrs/0209-the-orchestrator-runs-for-a-reason-and-ends-started-by-flai-serve-on-the-events.md § Decision
+
+### 2026-10-29T17:20:43Z agent-S-0418
+Resolved: Option A applied: S-0418 re-scoped to ADR-0209 and ADR-0211, T-1741 and T-1746 cancelled, worked after S-0536's acceptance.

@@ -3,12 +3,15 @@ id: T-1746
 type: task
 nature: feature
 title: serve keeps a continuous role running while its action is on, and flai role stop and start and the host API's role.stop and role.start hold and release it
-status: backlog
+status: cancelled
 parent: S-0418
 owner: alex
 created: 2026-10-16T05:45:36Z
-updated: 2026-10-21T12:01:47Z
-transitions: []
+updated: 2026-10-29T16:36:18Z
+transitions:
+  - to: cancelled
+    at: 2026-10-29T16:36:18Z
+    by: agent-S-0418
 stream: S-0418
 tags: [cli]
 touches: [flai/internal/serve/role_continuous.go, flai/internal/serve/role_continuous_test.go, flai/internal/serve/agents.go, flai/cmd/role.go, flai/cmd/role_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/server/agent.ts, docs/users/flai-reference.md]
@@ -33,3 +36,4 @@ Waits for T-1741. Runs beside T-1743 and T-1744.
 `go test ./internal/serve/... ./cmd/... ./internal/hostapi/...` passes, with tests for the start, the restart, the minute's wait, the stop, and the hold.
 
 ## Notes
+- 2026-10-29T16:36:18Z: moved to cancelled: TH-0749 option A: ADR-0209 §1 rejects continuous, so no role is kept running

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 752
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 48
-      output: 216
-      cache_read: 2041490
-      cache_write: 73937
-      cost: 0.7268
+      input: 28
+      output: 10408
+      cache_read: 2079778
+      cache_write: 67202
+      cost: 1.0062
 ---
 # T-2310 The strategic-agents and work-management conventions, here and in the template, mark the sections each orchestrator reason needs with section topics, so a reason pack takes out the rest and every other pack keeps what it kept
 

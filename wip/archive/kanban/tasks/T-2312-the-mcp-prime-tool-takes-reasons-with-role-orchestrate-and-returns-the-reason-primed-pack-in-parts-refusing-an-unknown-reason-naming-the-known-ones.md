@@ -3,11 +3,11 @@ id: T-2312
 type: task
 nature: improvement
 title: The MCP prime tool takes reasons with role orchestrate and returns the reason-primed pack in parts, refusing an unknown reason naming the known ones
-status: in-progress
+status: done
 parent: S-0537
 owner: alex
 created: 2026-10-28T22:07:35Z
-updated: 2026-10-29T15:52:20Z
+updated: 2026-10-29T16:12:12Z
 transitions:
   - to: ready
     at: 2026-10-29T15:52:19Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-29T15:52:20Z
     by: agent-S-0537
+  - to: done
+    at: 2026-10-29T16:12:12Z
+    by: agent-S-0537
 stream: S-0537
 tags: [flai, mcp, prime]
 touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/prime_test.go]
 after: [T-2308, T-2309]
+usage:
+  source: log
+  seconds: 1192
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 14117
+      cache_read: 2821002
+      cache_write: 91152
+      cost: 1.3647
 ---
 # T-2312 The MCP prime tool takes reasons with role orchestrate and returns the reason-primed pack in parts, refusing an unknown reason naming the known ones
 

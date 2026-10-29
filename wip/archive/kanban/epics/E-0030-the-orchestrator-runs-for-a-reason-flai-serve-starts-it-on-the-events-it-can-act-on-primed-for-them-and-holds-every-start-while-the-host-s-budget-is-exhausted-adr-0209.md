@@ -3,10 +3,10 @@ id: E-0030
 type: epic
 nature: improvement
 title: "The orchestrator runs for a reason: flai serve starts it on the events it can act on, primed for them, and holds every start while the host's budget is exhausted (ADR-0209)"
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-28T20:59:30Z
-updated: 2026-10-28T21:17:05Z
+updated: 2026-10-29T17:25:36Z
 transitions:
   - to: ready
     at: 2026-10-28T21:16:58Z
@@ -14,13 +14,18 @@ transitions:
   - to: in-progress
     at: 2026-10-28T21:17:05Z
     by: agent-S-0533
+  - to: review
+    at: 2026-10-29T17:21:54Z
+    by: agent-S-0537
+  - to: done
+    at: 2026-10-29T17:25:36Z
+    by: alex
 tags: [flai, orchestrator, serve, budget]
 topics: [orchestration, cli, dashboard]
 usage:
   source: sum
-  seconds: 27614
-  estimated: true
-  priced_by: estimate
+  seconds: 33006
+  priced_by: harness
   turns:
     - day: 2026-10-28
       ceremony: 4
@@ -28,17 +33,17 @@ usage:
       hand_edits: 3
       work: 109
     - day: 2026-10-29
-      ceremony: 18
+      ceremony: 23
       test_runs: 16
-      hand_edits: 15
-      work: 341
+      hand_edits: 18
+      work: 384
   models:
     - model: claude-opus-5-5
-      input: 3464
-      output: 1174711
-      cache_read: 238468455
-      cache_write: 8238311
-      cost: 119.3734
+      input: 3946
+      output: 1481361
+      cache_read: 275425936
+      cache_write: 9558117
+      cost: 140.4805
   strategic:
     - kind: planner
       seconds: 1976
@@ -57,15 +62,15 @@ usage:
           cache_write: 372766
           cost: 2.0487
     - kind: orchestrator
-      seconds: 35885
+      seconds: 36009
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1609
-          output: 27261
-          cache_read: 308992251
-          cache_write: 460765
-          cost: 68.1832
+          input: 1665
+          output: 27572
+          cache_read: 310553907
+          cache_write: 704516
+          cost: 68.5823
         - model: claude-sonnet-5-5
           input: 76
           output: 427
@@ -96,3 +101,5 @@ The ADR is in the design folder as proposed; the story that changes the orchestr
 Evidence and figures: ADR-0209's context section. The session logs are under `~/.flai/serve/agents/<key>-orchestrator-<start>.log` on the host.
 - 2026-10-28T21:16:58Z: moved to ready: follows S-0533, which moved to ready
 - 2026-10-28T21:17:05Z: moved to in-progress: follows S-0533, which moved to in-progress
+- 2026-10-29T17:21:54Z: moved to review: follows S-0537, which moved to review
+- 2026-10-29T17:25:36Z: moved to done: follows S-0537, which moved to done

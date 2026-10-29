@@ -3,16 +3,37 @@ id: T-2338
 type: task
 nature: improvement
 title: The two .claude/agents/orchestrator.md definitions tell the orchestrator to prime with the reasons its start prompt names, as its role file says
-status: backlog
+status: done
 parent: S-0537
 owner: alex
 created: 2026-10-29T15:24:29Z
-updated: 2026-10-29T15:24:45Z
-transitions: []
+updated: 2026-10-29T16:27:47Z
+transitions:
+  - to: ready
+    at: 2026-10-29T16:27:10Z
+    by: agent-S-0537
+  - to: in-progress
+    at: 2026-10-29T16:27:11Z
+    by: agent-S-0537
+  - to: done
+    at: 2026-10-29T16:27:47Z
+    by: agent-S-0537
 stream: S-0537
 tags: []
 touches: [".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md]
 after: [T-2313]
+usage:
+  source: log
+  seconds: 36
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 20
+      output: 7526
+      cache_read: 1503983
+      cache_write: 48597
+      cost: 0.7276
 ---
 # T-2338 The two .claude/agents/orchestrator.md definitions tell the orchestrator to prime with the reasons its start prompt names, as its role file says
 
