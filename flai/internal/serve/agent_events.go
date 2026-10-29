@@ -1,6 +1,9 @@
 package serve
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -62,4 +65,78 @@ func appendAgentEvent(root string, run *AgentRun, to, why string, warn func(msg 
 	if err := inbox.AppendEvent(repo, e); err != nil {
 		warn("agent event not logged", "id", e.ID, "agent", run.Agent, "to", to, "err", err)
 	}
+}
+
+// appendAgentEnd appends to the event log of the project at root the agent
+// event of run, which has ended, as endEvent says it: the one call a run path
+// makes at a run's end, as it calls appendAgentEvent with
+// inbox.AgentStarted at its start (S-0532).
+func appendAgentEnd(root string, run *AgentRun, warn func(msg string, args ...any)) {
+	to, why := endEvent(run, warn)
+	appendAgentEvent(root, run, to, why, warn)
+}
+
+// endEvent is what the agent event of run, which has ended, came to, and why
+// (S-0532). A run the operator stopped is stopped, for its own why. A run
+// whose log ends on the harness's usage limit failed, whatever else it was
+// judged, for limitWhy's words, which name the limit and when it resets, or
+// that the harness named no reset time, followed by the run's own why when
+// it says more, and its exit. Otherwise a run that failed failed, for its own
+// why with its exit beside it, and a run that worked or asked ended, for its
+// own why, or a phrase that names its outcome when it has none. A log that
+// cannot be read is told to warn, and read as ending on no limit.
+func endEvent(run *AgentRun, warn func(msg string, args ...any)) (to, why string) {
+	if run.Outcome == OutcomeStopped {
+		if run.Why == "" {
+			return inbox.AgentStopped, "stopped by the operator"
+		}
+		return inbox.AgentStopped, run.Why
+	}
+	if lim, _ := runLimit(run, warn); lim != nil {
+		why = limitWhy(lim)
+		// the curator's run says the limit as its why already
+		if run.Why != "" && run.Why != why {
+			why += "; " + run.Why
+		}
+		return inbox.AgentFailed, withExit(why, run.Exit)
+	}
+	switch run.Outcome {
+	case OutcomeFailed:
+		return inbox.AgentFailed, withExit(run.Why, run.Exit)
+	case OutcomeAsked:
+		if run.Why == "" {
+			return inbox.AgentEnded, "ended waiting for an answer"
+		}
+	case OutcomeWorked:
+		if run.Why == "" {
+			return inbox.AgentEnded, "ended with its work done"
+		}
+	}
+	if run.Why == "" {
+		return inbox.AgentEnded, "ended"
+	}
+	return inbox.AgentEnded, run.Why
+}
+
+// withExit is why with exit beside it, in the words of flai serve's
+// journal: why itself when it names the exit already, as the journal's
+// "ended (exit 1) with S-0001 in in-progress" does, "ended (exit 1)" for no
+// why, and why followed by "(exit 1)" otherwise. An exit nobody saw is
+// left out of a why, and is the why, "ended (an exit code nobody saw)", when
+// there is none.
+func withExit(why string, exit *int) string {
+	if exit == nil {
+		if why == "" {
+			return "ended (an exit code nobody saw)"
+		}
+		return why
+	}
+	code := fmt.Sprintf("(exit %d)", *exit)
+	switch {
+	case why == "":
+		return "ended " + code
+	case strings.Contains(why, code):
+		return why
+	}
+	return why + " " + code
 }
