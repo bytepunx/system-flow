@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-10-29T01:56:15Z
+updated: 2026-10-29T01:58:47Z
 ---
 
 # Active streams
@@ -8,13 +8,13 @@ updated: 2026-10-29T01:56:15Z
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
 | [S-0416](S-0416.md) | flai guard reads a role's permitted calls from its role file and refuses the rest, and the planner's, the orchestrator's, and the analyzer's rules move into their files with their guard tests unchanged | review | agent-S-0416 | 2026-10-28T22:40:40Z |
-| [S-0519](S-0519.md) | permission_prompt over the HTTP MCP server outlives Claude Code's tool-call timeout, so an agent in a container sees its protected write time out while the thread to the operator stays open | in-progress | agent-S-0519 | 2026-10-29T00:57:22Z |
+| [S-0519](S-0519.md) | permission_prompt over the HTTP MCP server outlives Claude Code's tool-call timeout, so an agent in a container sees its protected write time out while the thread to the operator stays open | in-progress | agent-S-0519 | 2026-10-29T01:56:36Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 113 | 931.9312 USD | 126486 | 2026-10-28T22:09:33Z |
-| [orchestrator](orchestrator.md) | 1283 | 1777.7048 USD | 1444727 | 2026-10-29T01:41:41Z |
+| [orchestrator](orchestrator.md) | 1284 | 1777.9745 USD | 1445612 | 2026-10-29T01:56:26Z |
 | [analyzer](analyzer.md) | 1 | 5.0040 USD | 454 | 2026-10-15T22:49:08Z |
 | [curator](curator.md) | 13 | 25.9622 USD | 2371 | 2026-10-29T01:11:40Z |
