@@ -1,5 +1,6 @@
 import { repo, RepoError } from '$lib/server/repo';
 import { respond } from '$lib/server/respond';
+import { version } from '$lib/server/metrics';
 import type { RequestHandler } from './$types';
 
 /** What flai dashboard status --json reports (S-0081), asked as dashboard.status, a read. */
@@ -17,7 +18,8 @@ type Action = (typeof ACTIONS)[number];
 /**
  * GET: what the dashboard container is running, and whether the operator has enabled the
  * dashboard host action (S-0081), which gates restart, upgrade, and stop. No flai connected reads
- * as not running, not an error: the host flai banner already says why.
+ * as not running, not an error: the host flai banner already says why. `version` is this
+ * dashboard's own (S-0544): the one answering is the one running, whatever tag its image names.
  */
 export const GET: RequestHandler = () =>
 	respond(async () => {
@@ -27,10 +29,10 @@ export const GET: RequestHandler = () =>
 				{},
 				{ timeoutMs: 15000 }
 			);
-			return { ...data, dashboard_enabled: await dashboardEnabled() };
+			return { ...data, version, dashboard_enabled: await dashboardEnabled() };
 		} catch (e) {
 			if (e instanceof RepoError && e.status === 503) {
-				return { container: 'flaiover', running: false, dashboard_enabled: false };
+				return { container: 'flaiover', running: false, version, dashboard_enabled: false };
 			}
 			throw e;
 		}
@@ -47,7 +49,8 @@ async function dashboardEnabled(): Promise<boolean> {
 
 /**
  * POST {action, tag}: check reports whether a newer image is available, changing nothing (a read
- * that pulls — S-0081), and versions lists the published releases (S-0298), a read; restart,
+ * that pulls — S-0081), with `version`, this dashboard's own, beside flai's `release`, the one
+ * available, so the page names both (S-0544); versions lists the published releases (S-0298), a read; restart,
  * upgrade, and stop are the dashboard host action, gated the same way Publish is (flai serve
  * enable dashboard). Upgrade swaps to the configured tag, or once to the one tag names, which flai
  * on the host checks is a published X.Y.Z (ADR-0117).
@@ -66,7 +69,7 @@ export const POST: RequestHandler = ({ request }) =>
 		}
 		if (action === 'check') {
 			const { data } = await repo().run('dashboard.check', {}, { timeoutMs: 120000 });
-			return data as Record<string, unknown>;
+			return { ...(data as Record<string, unknown>), version };
 		}
 		if (action === 'versions') {
 			const { data } = await repo().run('dashboard.versions', {}, { timeoutMs: 120000 });

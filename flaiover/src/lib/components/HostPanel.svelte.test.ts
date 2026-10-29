@@ -99,6 +99,60 @@ describe('HostPanel', () => {
 		);
 	});
 
+	// S-0544: the status line names the dashboard's own version, and a check names the version
+	// running and the one available, the release flai resolved, or the image where it has none.
+	it('shows the version of the dashboard running beside its image', async () => {
+		api.mockResolvedValueOnce(
+			status({ image: 'ghcr.io/bytepunx/flaiover:latest', version: '1.40.0' })
+		);
+		c = mount(HostPanel, { target: document.body });
+		flushSync();
+		await settle();
+		const text = document.querySelector('[data-testid="host-panel-status"]')!.textContent!;
+		expect(text).toContain('ghcr.io/bytepunx/flaiover:latest');
+		expect(text).toContain('(dashboard 1.40.0)');
+	});
+
+	const checked = async (body: Record<string, unknown>) => {
+		api.mockResolvedValueOnce(status({ version: '1.40.0' }));
+		c = mount(HostPanel, { target: document.body });
+		flushSync();
+		await settle();
+		api.mockResolvedValueOnce(answer(body));
+		document.querySelector<HTMLButtonElement>('[data-testid="host-panel-check"]')!.click();
+		await settle();
+		return document.querySelector('[data-testid="host-panel-check-result"]')!.textContent!.trim();
+	};
+
+	it('names the version running and the release available when a check finds one', async () => {
+		expect(
+			await checked({
+				running: true,
+				upgrade_available: true,
+				release: '1.41.0',
+				image: 'ghcr.io/bytepunx/flaiover:latest',
+				version: '1.40.0'
+			})
+		).toBe('Dashboard 1.40.0 is running; 1.41.0 is available.');
+	});
+
+	it('names the image available when the check knows no release, and the running version from the status', async () => {
+		expect(
+			await checked({ running: true, upgrade_available: true, image: 'example/flaiover:edge' })
+		).toBe('Dashboard 1.40.0 is running; example/flaiover:edge is available.');
+	});
+
+	it('names the version running when a check finds it the latest', async () => {
+		expect(
+			await checked({
+				running: true,
+				upgrade_available: false,
+				release: '1.40.0',
+				version: '1.40.0'
+			})
+		).toBe('Dashboard 1.40.0 is the latest.');
+	});
+
 	it('shows a plain refusal when a check fails outright', async () => {
 		api.mockResolvedValueOnce(status());
 		c = mount(HostPanel, { target: document.body });

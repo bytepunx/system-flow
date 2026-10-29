@@ -9,7 +9,8 @@
 	// resolve cleanly. Versions (S-0298) lists the published releases, a read, and deploys a chosen
 	// one as Upgrade does, with its tag: once, on this container, not pinned (ADR-0117, ADR-0118).
 	// A release with no digest list the host's flai can verify is listed as not deployable, with
-	// no deploy (S-0236).
+	// no deploy (S-0236). The status line names the dashboard's own version, and a check names the
+	// version running and the one available, not only that one is (S-0544).
 	import { api } from '$lib/api';
 	import { onMount } from 'svelte';
 
@@ -19,7 +20,19 @@
 		image?: string;
 		url?: string;
 		serves?: string[];
+		/** This dashboard's own version, the one running. */
+		version?: string;
 		dashboard_enabled: boolean;
+	};
+	/** What dashboard.check answers, with the route's version of the dashboard running. */
+	type Check = {
+		running?: boolean;
+		upgrade_available?: boolean;
+		/** The signed release the configured tag resolves to; absent for an unsigned image. */
+		release?: string;
+		/** The image reference checked against. */
+		image?: string;
+		version?: string;
 	};
 	/** One published dashboard release as dashboard.versions lists it, newest first. */
 	type Release = {
@@ -52,7 +65,7 @@
 	let busy = $state<'check' | 'versions' | 'restart' | 'upgrade' | 'stop' | null>(null);
 	let reconnecting = $state(false);
 	let message = $state<string | null>(null);
-	let checkResult = $state<{ running?: boolean; upgrade_available?: boolean } | null>(null);
+	let checkResult = $state<Check | null>(null);
 	let releases = $state<Release[] | null>(null);
 	let chosen = $state<Release | null>(null);
 	let failed = $state<string | null>(null);
@@ -60,6 +73,20 @@
 	// ADR-0118: how long a release chosen here lasts, said with the result of deploying one.
 	const LASTS =
 		'It keeps running through restarts until the next Upgrade, which goes to the configured tag, or a start after a stop.';
+
+	// What a check found, naming the version running and the one available where they are known.
+	function checkText(c: Check): string {
+		if (c.running === false) return 'Not running; Restart starts it.';
+		const running = c.version ?? status?.version;
+		const available = c.release ?? c.image;
+		if (c.upgrade_available) {
+			if (!available) return 'An update is available.';
+			return running
+				? `Dashboard ${running} is running; ${available} is available.`
+				: `${available} is available.`;
+		}
+		return running ? `Dashboard ${running} is the latest.` : 'Already running the latest.';
+	}
 
 	async function load(): Promise<boolean> {
 		try {
@@ -212,6 +239,10 @@
 			{#if status.running}
 				<span class="font-mono">{status.container}</span> running
 				{#if status.image}<span class="font-mono">{status.image}</span>{/if}
+				{#if status.version}(dashboard <span
+						class="font-mono"
+						data-testid="host-panel-version-running">{status.version}</span
+					>){/if}
 				{#if status.serves?.length}, serving {status.serves.join(', ')}{/if}.
 			{:else}
 				<span class="font-mono">{status.container}</span> is not running.
@@ -228,11 +259,7 @@
 			{/if}
 			{#if checkResult}
 				<p class="mt-2" data-testid="host-panel-check-result">
-					{checkResult.running === false
-						? 'Not running; Restart starts it.'
-						: checkResult.upgrade_available
-							? 'An update is available.'
-							: 'Already running the latest.'}
+					{checkText(checkResult)}
 				</p>
 			{/if}
 			{#if failed}

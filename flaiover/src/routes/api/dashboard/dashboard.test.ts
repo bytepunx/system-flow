@@ -73,6 +73,25 @@ describe('/api/dashboard (S-0081)', () => {
 		expect(asked[0]).toEqual({ method: 'dashboard.check', params: {} });
 	});
 
+	// S-0544: the dashboard answering is the one running, so its own version is the running one.
+	it('answers the version of the dashboard running, and with a check beside the release available', async () => {
+		const { version } = await import('$lib/server/metrics');
+		script['dashboard.status'] = {
+			data: { container: 'flaiover', running: true, image: 'ghcr.io/bytepunx/flaiover:latest' }
+		};
+		script['project.info'] = { data: { host_actions: {} } };
+		expect(await (await GET({} as never)).json()).toMatchObject({ version });
+		script['dashboard.check'] = {
+			data: { container: 'flaiover', running: true, upgrade_available: true, release: '9.9.9' }
+		};
+		expect(await (await post('check')).json()).toMatchObject({
+			upgrade_available: true,
+			release: '9.9.9',
+			version
+		});
+		expect(version).not.toBe('');
+	});
+
 	it('restarts, sending a request_id', async () => {
 		script['dashboard.restart'] = {
 			data: { container: 'flaiover', was_running: true, ref: 'ghcr.io/bytepunx/flaiover:latest' }
