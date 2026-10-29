@@ -5,6 +5,7 @@ package serve
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -373,6 +374,57 @@ func TestTheReasonQueue(t *testing.T) {
 // The orchestrator's triggers are its role file's, unless it has none, or
 // it still says continuous, when they are ADR-0209 §1's; only the events a
 // trigger matches are reasons, a task's never.
+// ADR-0209 §5: the reasons a run took wait for it to end. A run that fails,
+// on the usage limit or otherwise, gives them back as they were queued, so
+// that the next run takes them; any other end drops them, and the end of a
+// run that took none, or of another session, settles nothing.
+func TestARunThatFailsGivesItsReasonsBack(t *testing.T) {
+	t0 := time.Date(2030, 1, 1, 9, 0, 0, 0, time.UTC)
+	review := orchestrateReason{Kind: workitem.Moved, ID: "S-0001", To: workitem.Review}
+	planned := orchestrateReason{Kind: "planned", ID: "E-0001"}
+	later := orchestrateReason{Kind: workitem.Moved, ID: "S-0002", To: workitem.Review}
+	for _, c := range []struct {
+		name    string
+		session string
+		failed  bool
+		given   int
+		left    []string
+	}{
+		{"failed", "s1", true, 2, []string{"S-0001", "E-0001", "S-0002"}},
+		{"worked", "s1", false, 0, []string{"S-0002"}},
+		{"another session", "s2", true, 0, []string{"S-0002"}},
+	} {
+		var q reasonQueue
+		q.add(t0, review, planned)
+		took := slices.Clone(q.Reasons)
+		q.take("s1", took)
+		q.add(t0.Add(time.Minute), later)
+		if len(q.Reasons) != 1 || len(q.Taken) != 2 || q.Session != "s1" {
+			t.Fatalf("%s: after the start %+v, want two taken and the later one queued", c.name, q)
+		}
+		if n := q.settle(c.session, c.failed); n != c.given {
+			t.Errorf("%s: gave back %d, want %d", c.name, n, c.given)
+		}
+		var left []string
+		for _, r := range q.Reasons {
+			left = append(left, r.ID)
+		}
+		if !slices.Equal(left, c.left) {
+			t.Errorf("%s: queued %v, want %v", c.name, left, c.left)
+		}
+		if c.session == "s1" && (len(q.Taken) != 0 || q.Session != "") {
+			t.Errorf("%s: still taken %+v", c.name, q)
+		}
+		if c.failed && c.session == "s1" && q.First != t0.Format(time.RFC3339) {
+			t.Errorf("%s: first = %s, want the given back ones' queued time, so that they are due at once", c.name, q.First)
+		}
+	}
+	var q reasonQueue
+	if n := q.settle("", true); n != 0 {
+		t.Errorf("a run that took nothing gave back %d", n)
+	}
+}
+
 func TestTheRoleFilesTriggersChooseTheReasons(t *testing.T) {
 	file := roles.Role{Name: roles.Orchestrator, Trigger: []roles.Trigger{{Kind: roles.TriggerEvent, Event: workitem.Moved, When: "to-review"}}}
 	if got := orchestratorTriggers(nil); len(got) != len(builtinTriggers) {

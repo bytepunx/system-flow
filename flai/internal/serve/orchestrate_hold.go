@@ -132,7 +132,8 @@ func settled(o Options, e Entry, run *AgentRun) bool {
 // queued, as flai serve does when the orchestrate action is turned on: in
 // the project's main checkout, with its orchestration agent, the run handed
 // over to the serving flai, which settles it once its process is gone. A
-// start clears the reasons it took. Recording the new run lifts the
+// start takes the reasons it was given, and a run that fails gives them
+// back (reasonQueue.settle). Recording the new run lifts the
 // operator's hold, when there is one; so does a start that fails, which keeps
 // the reasons, and which flai serve tries again a minute later, as it does
 // after any failure. It returns the run as recorded, and an error saying why
@@ -176,12 +177,12 @@ func OrchestratorStart(ctx context.Context, o Options, e Entry) (*AgentRun, erro
 	if held != nil {
 		return nil, l.budgetRefused(*held)
 	}
-	if started {
-		if _, err := o.Dir.updateReasonQueue(e.Root, func(q2 *reasonQueue) { q2.remove(q.Reasons) }); err != nil {
+	out := o.Dir.AgentStates()[e.Root].Orchestrator
+	if started && out != nil {
+		if _, err := o.Dir.updateReasonQueue(e.Root, func(q2 *reasonQueue) { q2.take(out.Session, q.Reasons) }); err != nil {
 			l.warn("orchestrator reasons not kept", "err", err)
 		}
 	}
-	out := o.Dir.AgentStates()[e.Root].Orchestrator
 	switch {
 	case out == nil || (run != nil && out.Session == run.Session):
 		return nil, fmt.Errorf("the orchestrator's new run was not recorded in %s; it was not started", o.Dir.agents())

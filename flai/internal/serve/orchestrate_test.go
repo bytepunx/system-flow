@@ -6,7 +6,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -209,8 +208,9 @@ func TestAnEndedOrchestratorIsStartedAgainOnlyForAReason(t *testing.T) {
 	if failed.Outcome != OutcomeFailed || failed.Exit == nil || *failed.Exit != 3 || failed.Why != "ended (exit 3)" {
 		t.Fatalf("second = %+v, want failed with exit 3", failed)
 	}
-	if q := lab.o.Dir.reasonQueue(lab.root); len(q.Reasons) != 0 {
-		t.Errorf("the start left its reasons queued: %+v", q)
+	// the failed run gives its reason back, to wait for the next (ADR-0209 §5)
+	if q := lab.o.Dir.reasonQueue(lab.root); len(q.Reasons) != 1 || q.Reasons[0].ID != "S-0001" || len(q.Taken) != 0 {
+		t.Errorf("the failed run did not give its reason back: %+v", q)
 	}
 	// the looks around the retry take their time from the recorded end, which
 	// is to the second, not from the host's clock, so neither depends on how
@@ -233,8 +233,8 @@ func TestAnEndedOrchestratorIsStartedAgainOnlyForAReason(t *testing.T) {
 	if third.Session == second.Session {
 		t.Fatalf("not started again a minute after a failure: %+v", third)
 	}
-	if got := lab.reasonsGiven(third.PID); len(got) == 0 || got[0] != "thread TH-0001 awaits the operator: Which way" || slices.Contains(got, "moved S-0001 to review: Reviewed") {
-		t.Errorf("the third run's reasons = %q, want the thread's, and not the move the second run took", got)
+	if got := lab.reasonsGiven(third.PID); len(got) < 2 || got[0] != "moved S-0001 to review: Reviewed" || got[1] != "thread TH-0001 awaits the operator: Which way" {
+		t.Errorf("the third run's reasons = %q, want the move the failed run gave back first, then the thread's", got)
 	}
 	lab.ended(third.Session)
 	var ends []hostapi.Entry

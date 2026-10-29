@@ -35,8 +35,9 @@ import (
 // asked, with every reason queued, in the project's main checkout with the
 // project's orchestration agent (orchestration.agent over agent) and the
 // harness's orchestrator request, as orchestrator, with FLAI_ROLE=orchestrate
-// and the reasons in FLAI_REASONS. A start clears the reasons it took; one
-// refused keeps them, and after a failed run the next is started no sooner
+// and the reasons in FLAI_REASONS. A start takes the reasons it was given
+// out of the queue, and a run that fails gives them back; one refused keeps
+// them, and after a failed run the next is started no sooner
 // than orchestrateRetry later, so that a run that fails at once does not
 // spin. Reasons that come while a run goes wait for its end, and start the
 // next run at the first look after it. With nothing queued, nothing starts:
@@ -125,7 +126,8 @@ func queueBatches(o Options, e Entry, m manifest.Manifest) bool {
 // due (reasonQueue.due) and no run is going, unless the operator holds it
 // stopped (S-0228), the last run ended on the harness's usage limit and its
 // provider's budget state holds (S-0534), or the last run failed otherwise
-// less than orchestrateRetry ago. A start clears the reasons it took; while
+// less than orchestrateRetry ago. A start takes the reasons it was given,
+// and a run that fails gives them back (reasonQueue.settle); while
 // the budget state holds, they stay queued (ADR-0209 §5). A last run on the
 // usage limit waits for the budget state alone, not orchestrateRetry: the
 // first look once the state no longer holds starts the next. A start the
@@ -193,10 +195,11 @@ func (r *orchestrator) look(ctx context.Context) {
 	defer r.starter.mu.Unlock()
 	var started bool
 	r.said, _, started = r.starter.orchestrate(ctx, cfg, repo.Manifest.OrchestrationAgent(), r.said, queueBatches(r.o, r.e, repo.Manifest), q.Reasons)
-	if started {
-		r.took(q.Reasons)
+	run = r.o.Dir.AgentStates()[r.e.Root].Orchestrator
+	if started && run != nil {
+		r.took(run.Session, q.Reasons)
 	}
-	r.seen = seenAs(r.o.Dir.AgentStates()[r.e.Root].Orchestrator) // told as it was recorded
+	r.seen = seenAs(run) // told as it was recorded
 }
 
 // gather reads the events since the last look as the orchestrator, under
@@ -283,9 +286,10 @@ func (r *orchestrator) schedule(o manifest.Orchestration, now time.Time) *cron.S
 	return sched
 }
 
-// took takes the reasons a run was started with out of the queue.
-func (r *orchestrator) took(reasons []orchestrateReason) {
-	if _, err := r.o.Dir.updateReasonQueue(r.e.Root, func(q *reasonQueue) { q.remove(reasons) }); err != nil {
+// took takes the reasons the run of session was started with out of the
+// queue, kept as taken until it ends (reasonQueue.take).
+func (r *orchestrator) took(session string, reasons []orchestrateReason) {
+	if _, err := r.o.Dir.updateReasonQueue(r.e.Root, func(q *reasonQueue) { q.take(session, reasons) }); err != nil {
 		r.starter.warn("orchestrator reasons not kept", "err", err)
 	}
 }
@@ -552,6 +556,7 @@ func (l *launcher) orchestrateEnded(run *AgentRun, exit *int) {
 		appendAgentEnd(l.entry.Root, &ended, l.warn)
 	}
 	l.budgetEnd(&ended, lim, first)
+	l.settleReasons(&ended)
 	args := []any{"pid", run.PID, "outcome", ended.Outcome}
 	if exit != nil {
 		args = append(args, "exit", *exit)
@@ -594,4 +599,17 @@ func orchestrateWhy(last *AgentRun, reasons []orchestrateReason) string {
 		why = "started again after its last run failed (" + last.Why + "),"
 	}
 	return why + " for " + reasonsSaid(reasons)
+}
+
+// settleReasons lets go of the reasons run took, now that it has ended: a
+// run that failed, on the usage limit or otherwise, gives them back to the
+// queue, so that the next run takes them (reasonQueue.settle, ADR-0209 §5).
+func (l *launcher) settleReasons(run *AgentRun) {
+	given := 0
+	if _, err := l.dir.updateReasonQueue(l.entry.Root, func(q *reasonQueue) { given = q.settle(run.Session, run.Outcome == OutcomeFailed) }); err != nil {
+		l.warn("orchestrator reasons not kept", "err", err)
+	}
+	if given > 0 {
+		l.log("orchestrator reasons given back", "pid", run.PID, "reasons", given)
+	}
 }

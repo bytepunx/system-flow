@@ -170,6 +170,11 @@ type reasonQueue struct {
 	First string `json:"first,omitempty"`
 	// Reasons wait for a run, oldest first.
 	Reasons []orchestrateReason `json:"reasons,omitempty"`
+	// Taken are the reasons the run of Session was started for, kept until
+	// it ends: a run that fails gives them back, so that they wait for the
+	// next (ADR-0209 §5).
+	Taken   []orchestrateReason `json:"taken,omitempty"`
+	Session string              `json:"session,omitempty"`
 }
 
 // add queues each reason the queue does not hold yet, stamped queued at
@@ -197,8 +202,40 @@ func (q *reasonQueue) remove(done []orchestrateReason) {
 	q.first()
 }
 
-// clear empties the queue.
-func (q *reasonQueue) clear() { q.Reasons, q.First = nil, "" }
+// clear empties the queue, the reasons taken included.
+func (q *reasonQueue) clear() { q.Reasons, q.First, q.Taken, q.Session = nil, "", nil, "" }
+
+// take takes the reasons the run of session was started with out of the
+// queue and keeps them as taken until it ends; those queued since stay, for
+// the next run.
+func (q *reasonQueue) take(session string, rs []orchestrateReason) {
+	q.remove(rs)
+	q.Taken, q.Session = slices.Clone(rs), session
+}
+
+// settle lets go of the reasons the run of session took, now that it has
+// ended: a run that failed gives them back to the queue, as they were
+// queued, so that they are due at once, and settle returns how many; any
+// other end drops them. A run that took none, or another session, settles
+// nothing.
+func (q *reasonQueue) settle(session string, failed bool) int {
+	if session == "" || q.Session != session {
+		return 0
+	}
+	var given []orchestrateReason
+	if failed {
+		for _, r := range q.Taken {
+			if !slices.ContainsFunc(q.Reasons, func(o orchestrateReason) bool { return o.key() == r.key() }) {
+				given = append(given, r)
+			}
+		}
+		// queued before any waiting now, so first, oldest first
+		q.Reasons = append(given, q.Reasons...)
+		q.first()
+	}
+	q.Taken, q.Session = nil, ""
+	return len(given)
+}
 
 // first sets First from the reasons queued.
 func (q *reasonQueue) first() {
