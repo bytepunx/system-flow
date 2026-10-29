@@ -549,6 +549,12 @@ func Run(ctx context.Context, o Options) error {
 	// project's loop (ADR-0205); a send in flight is waited for.
 	var reminds sync.WaitGroup
 	defer reminds.Wait()
+	// Each served project's loop of looks, and its watcher, whose looks run
+	// in its callback, are waited for, so that a look under way when the
+	// context ends finishes its writes under the project's .flai-cache
+	// before Run returns, and a test's temporary folder can be removed.
+	var looks sync.WaitGroup
+	defer looks.Wait()
 	if agent := o.Agent; agent != nil {
 		o.Agent = func(root string) AgentConfig {
 			cfg := agent(root)
@@ -704,7 +710,9 @@ func Run(ctx context.Context, o Options) error {
 			newMergePass(o, e, &forgeLooks).start(cctx)
 			queue := newQueuePass(o, e, queues)
 			queue.start(cctx)
+			looks.Add(1)
 			go func() {
+				defer looks.Done()
 				for {
 					select {
 					case <-cctx.Done():
@@ -725,23 +733,27 @@ func Run(ctx context.Context, o Options) error {
 					reminding.soon(cctx)
 				}
 			}()
+			looks.Add(1) // for the watcher's goroutine below
 			go func() {
 				// The dashboard hears of each changed file; what it shows comes from asking again.
-				go watcher.Run(cctx, func(rel string) {
-					r.client.Notify("change", map[string]string{"project": e.Key, "path": rel})
-					// a story's state is in its file under kanban, and the pull order in the
-					// board; an answer to an agent's question is in its thread
-					if slashed := filepath.ToSlash(rel); strings.Contains(slashed, "/kanban/") || strings.Contains(slashed, "/threads/") {
-						starter.look(cctx, false)
-						replanner.look(cctx)
-						orch.look(cctx)
-						analyst.look(cctx)
-						curation.look(cctx)
-						confirming.look(cctx)
-						reminding.soon(cctx)
-						queue.wake()
-					}
-				})
+				go func() {
+					defer looks.Done()
+					watcher.Run(cctx, func(rel string) {
+						r.client.Notify("change", map[string]string{"project": e.Key, "path": rel})
+						// a story's state is in its file under kanban, and the pull order in the
+						// board; an answer to an agent's question is in its thread
+						if slashed := filepath.ToSlash(rel); strings.Contains(slashed, "/kanban/") || strings.Contains(slashed, "/threads/") {
+							starter.look(cctx, false)
+							replanner.look(cctx)
+							orch.look(cctx)
+							analyst.look(cctx)
+							curation.look(cctx)
+							confirming.look(cctx)
+							reminding.soon(cctx)
+							queue.wake()
+						}
+					})
+				}()
 				r.client.Run(clientCtx)
 				close(r.done)
 			}()

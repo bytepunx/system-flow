@@ -25,25 +25,25 @@ topics: [cli, orchestration, planning, template, conventions]
 touches: [flai/internal/serve, flai/internal/guard, flai/internal/context, flai/internal/hostapi, flai/cmd, flaiover/src, design/system/strategic-agents.md, design/system/metrics.md, design/conventions/strategic-agents.md, ".claude/agents", docs/operators/index.md, docs/users/flai.md, template]
 usage:
   source: sum
-  seconds: 26296
-  estimated: true
-  priced_by: estimate
+  seconds: 28518
+  priced_by: harness
   turns:
     - day: 2026-10-28
       ceremony: 9
       hand_edits: 7
       work: 188
     - day: 2026-10-29
-      ceremony: 15
-      hand_edits: 6
-      work: 193
+      ceremony: 16
+      test_runs: 1
+      hand_edits: 7
+      work: 225
   models:
     - model: claude-opus-5-5
-      input: 2890
-      output: 975055
-      cache_read: 210513863
-      cache_write: 8576632
-      cost: 110.3243
+      input: 3062
+      output: 1173023
+      cache_read: 227007190
+      cache_write: 8769352
+      cost: 118.8177
   strategic:
     - kind: planner
       seconds: 1866
@@ -68,21 +68,21 @@ usage:
           cache_write: 294016
           cost: 1.282
     - kind: orchestrator
-      seconds: 15499
+      seconds: 15583
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2175
-          output: 34679
-          cache_read: 506009116
-          cache_write: 901482
-          cost: 113.7059
+          input: 2191
+          output: 34789
+          cache_read: 506484413
+          cache_write: 959460
+          cost: 113.8242
         - model: claude-sonnet-5-5
-          input: 72
-          output: 309
-          cache_read: 1530070
-          cache_write: 267350
-          cost: 1.237
+          input: 84
+          output: 369
+          cache_read: 1727950
+          cache_write: 331343
+          cost: 1.4174
 ---
 # E-0024 Workflows as data: a project defines a strategic role or a repeatable formula of steps in files flai runs, and the built-in roles are expressed the same way, so a new role or a release process needs no flai release
 

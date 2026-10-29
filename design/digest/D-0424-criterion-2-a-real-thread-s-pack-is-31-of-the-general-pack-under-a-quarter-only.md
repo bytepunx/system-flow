@@ -2,14 +2,14 @@
 id: D-0424
 title: "Criterion 2: a real thread's pack is 31% of the general pack, under a quarter only for the test's small fixture thread: Recommended: trim the pack as S-0537's agent proposes, and tick criterion 2 on…"
 kind: answer
-sources: [TH-0753]
+sources: [TH-0753, S-0537]
 topics: [orchestration, cli, conventions, template, mcp, dashboard, flai, go, code, all]
 paths: [flai/internal/context, flai/internal/mcpserver, flai/cmd, design/system/flai-cli.md, design/system/strategic-agents.md, design/adrs, docs, flai/internal/context/reasons.go, flai/internal/context/reasons_test.go, flai/internal/context/reasons_figures.go, flai/internal/context/reasons_figures_test.go, flai/internal/context/strategic.go, flai/internal/context/strategic_test.go, flai/internal/context/context.go, flai/cmd/prime.go, flai/cmd/prime_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/prime_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, template/root/.claude/agents/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/agent-context.md, docs/users/flai.md, docs/users/flai-reference.md, template/CHANGELOG.md, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/orchestrate_reasons_test.go, flai/internal/serve/orchestrate.go, design/system/conventions.md, ".claude/agents/orchestrator.md", flai/internal/check/check.go, flai/internal/check/vocabulary_test.go, design/conventions/tooling.md, flai/internal/check/check_test.go]
 date: 2026-10-29
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0218-a-thread-reason-loads-the-work-item-it-is-on-as-its-title-status-goal-and.md#decision"
 asked_again: []
-cited: []
+cited: [TH-0755]
 ---
 
 # D-0424 Criterion 2: a real thread's pack is 31% of the general pack, under a quarter only for the test's small fixture thread: Recommended: trim the pack as S-0537's agent proposes, and tick criterion 2 on…
@@ -41,4 +41,6 @@ The review pack, at 45%, is not criterion 2's concern. It can go to S-0536's fol
 Source: design/adrs/0209-the-orchestrator-runs-for-a-reason-and-ends-started-by-flai-serve-on-the-events.md § Decision
 ```
 
-Source: TH-0753.
+S-0537 carried it out in T-2339, as its narrative records: "A thread's item loads as its title, status, goal, and criteria, not whole. A reason pack's digest is capped at a sixteenth of the budget. The test measures a copy of a real thread of this repository on its story. A new ADR refines ADR-0217 §3 and §4." That ADR is ADR-0218. The review pack, at 45%, was left to S-0536's follow-up. S-0537 was accepted on 2026-10-29.
+
+Source: TH-0753; S-0537 (wip/archive/agents/S-0537.md, Decisions).

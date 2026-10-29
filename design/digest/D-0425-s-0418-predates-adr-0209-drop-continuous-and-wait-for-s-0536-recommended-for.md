@@ -9,7 +9,7 @@ date: 2026-10-29
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-0755]
 ---
 
 # D-0425 S-0418 predates ADR-0209: drop continuous and wait for S-0536: Recommended for the operator: answer A

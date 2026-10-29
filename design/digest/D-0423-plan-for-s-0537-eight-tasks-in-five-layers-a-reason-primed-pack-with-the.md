@@ -2,14 +2,14 @@
 id: D-0423
 title: "Plan for S-0537: eight tasks in five layers, a reason-primed pack with the conventions cut by reason: confirm the recommendation"
 kind: recommendation
-sources: [TH-0719]
+sources: [TH-0719, S-0537]
 topics: [orchestration, cli, conventions, template, mcp, dashboard, flai, go, code, all]
 paths: [flai/internal/context, flai/internal/mcpserver, flai/cmd, design/system/flai-cli.md, design/system/strategic-agents.md, design/adrs, docs, flai/internal/context/reasons.go, flai/internal/context/reasons_test.go, flai/internal/context/reasons_figures.go, flai/internal/context/reasons_figures_test.go, flai/internal/context/strategic.go, flai/internal/context/strategic_test.go, flai/internal/context/context.go, flai/cmd/prime.go, flai/cmd/prime_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/prime_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, template/root/.claude/agents/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/agent-context.md, docs/users/flai.md, docs/users/flai-reference.md, template/CHANGELOG.md, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/orchestrate_reasons_test.go, flai/internal/serve/orchestrate.go, design/system/conventions.md, ".claude/agents/orchestrator.md", flai/internal/check/check.go, flai/internal/check/vocabulary_test.go, design/conventions/tooling.md, flai/internal/check/check_test.go]
 date: 2026-10-29
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-0755]
 ---
 
 # D-0423 Plan for S-0537: eight tasks in five layers, a reason-primed pack with the conventions cut by reason: confirm the recommendation
@@ -44,4 +44,6 @@ The operator's answer:
 confirm the recommendation
 ```
 
-Source: TH-0719.
+The answer applies D-0422, the operator's answer on TH-0717 for S-0536's criterion 6, which the recommendation named: a criterion that needs the host's flai serve to run the story's own change moves to a follow-up story. S-0537's narrative records the outcome: "T-2315 is cancelled. Criterion 5 is removed. The day of runs joins S-0536's follow-up under E-0030."
+
+Source: TH-0719; S-0537 (wip/archive/agents/S-0537.md, Decisions).

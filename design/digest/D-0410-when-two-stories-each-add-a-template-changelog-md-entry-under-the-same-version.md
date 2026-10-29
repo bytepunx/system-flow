@@ -9,7 +9,7 @@ date: 2026-10-28
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [S-0418]
+cited: [S-0418, T-1751, TH-0755]
 ---
 
 # D-0410 When two stories each add a template/CHANGELOG.md entry under the same version, the one accepted second renumbers its heading to the next version at its sync and keeps both entries

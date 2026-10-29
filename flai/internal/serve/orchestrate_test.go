@@ -237,12 +237,18 @@ func TestAnEndedOrchestratorIsStartedAgainOnlyForAReason(t *testing.T) {
 		t.Errorf("the third run's reasons = %q, want the move the failed run gave back first, then the thread's", got)
 	}
 	lab.ended(third.Session)
+	// the run is recorded as ended before its end is journalled
+	// (orchestrateEnded), so the journal is waited for
 	var ends []hostapi.Entry
-	for _, e := range lab.orchestrateEntries() {
-		if strings.Contains(e.Detail, ") ended, ") {
-			ends = append(ends, e)
+	waitFor(t, "the third end journalled", func() bool {
+		ends = ends[:0]
+		for _, e := range lab.orchestrateEntries() {
+			if strings.Contains(e.Detail, ") ended, ") {
+				ends = append(ends, e)
+			}
 		}
-	}
+		return len(ends) == 3
+	})
 	if len(ends) != 3 || ends[0].Outcome != "done" || !strings.HasSuffix(ends[0].Detail, "ended, worked") ||
 		ends[1].Outcome != "failed" || !strings.HasSuffix(ends[1].Detail, "ended, failed: ended (exit 3)") {
 		t.Errorf("ends journalled: %+v", ends)

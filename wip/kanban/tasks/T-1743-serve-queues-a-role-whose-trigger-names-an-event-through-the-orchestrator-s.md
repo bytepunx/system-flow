@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1120
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 94
-      output: 526
-      cache_read: 5995239
-      cache_write: 186560
-      cost: 2.5521
+      input: 81
+      output: 33262
+      cache_read: 6167550
+      cache_write: 161449
+      cost: 2.8801
 ---
 # T-1743 serve queues a role whose trigger names an event through the orchestrator's reason queue, coalesced into one run per role and item
 

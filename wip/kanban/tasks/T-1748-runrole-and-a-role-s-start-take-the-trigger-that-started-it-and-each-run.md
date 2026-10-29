@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 165
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 14
-      output: 83
-      cache_read: 1398044
-      cache_write: 13381
-      cost: 0.5827
+      input: 19
+      output: 7594
+      cache_read: 1408167
+      cache_write: 36862
+      cost: 0.6576
 ---
 # T-1748 RunRole and a role's start take the trigger that started it, and each run records it in agents.json and in its activity entry's Trigger line
 

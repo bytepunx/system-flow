@@ -9,7 +9,7 @@ date: 2026-10-29
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0418, T-1748]
 ---
 
 # D-0421 A refusal of a hand start in flai serve sits in the exported start function, not its Check function, since the replanner and the schedules call the Check functions too and a refusal there would drop their item

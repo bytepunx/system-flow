@@ -24,16 +24,16 @@ touches: [flai/internal/serve/serve.go, flai/internal/serve/serve_test.go]
 after: [T-1743, T-1744]
 usage:
   source: log
-  seconds: 376
+  seconds: 378
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 46
-      output: 213
-      cache_read: 2804323
-      cache_write: 127516
-      cost: 1.2104
+      input: 39
+      output: 15775
+      cache_read: 2925088
+      cache_write: 76570
+      cost: 1.366
 ---
 # T-2340 The serve loop looks at each defined role's event queue and schedule on every look of the project
 

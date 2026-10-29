@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1139
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 84
-      output: 480
-      cache_read: 4670459
-      cache_write: 254928
-      cost: 2.0334
+      input: 65
+      output: 26502
+      cache_read: 4914041
+      cache_write: 128635
+      cost: 2.2947
 ---
 # T-1744 A role's schedule is roles.<name>.schedule in the manifest, checked, and serve starts the role each time it comes round through cadence
 

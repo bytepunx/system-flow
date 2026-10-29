@@ -3,11 +3,11 @@ id: T-1751
 type: task
 nature: feature
 title: The design and the user and operator docs say how each trigger starts a role
-status: in-progress
+status: done
 parent: S-0418
 owner: alex
 created: 2026-10-16T05:45:58Z
-updated: 2026-10-29T17:20:52Z
+updated: 2026-10-29T17:35:37Z
 transitions:
   - to: ready
     at: 2026-10-29T17:20:50Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-29T17:20:52Z
     by: agent-S-0418
+  - to: done
+    at: 2026-10-29T17:35:37Z
+    by: agent-S-0418
 stream: S-0418
 tags: [cli, template]
-touches: [design/system/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, docs/operators/settings.md, template/CHANGELOG.md, design/system/flai-cli.md]
+touches: [design/system/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, docs/operators/settings.md, template/CHANGELOG.md, design/system/flai-cli.md, flai/cmd/role.go, design/system/project-manifest.md, docs/operators/runbooks/backup.md]
 after: [T-2340]
+usage:
+  source: log
+  seconds: 885
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 113
+      output: 46251
+      cache_read: 8576024
+      cache_write: 224496
+      cost: 4.0048
 ---
 # T-1751 The design and the user and operator docs say how each trigger starts a role
 

@@ -2,14 +2,14 @@
 id: D-0411
 title: "Until S-0419 generates the strategic agents' definitions from their role files, a change to a strategic agent's prompt is made in both .claude/agents/<name>.md and design/workflows/roles/<name>.md, and in their template copies"
 kind: decision
-sources: [S-0502, S-0536]
+sources: [S-0502, S-0536, S-0537]
 topics: [orchestration, planning, analysis, template, conventions]
 paths: [".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md]
 date: 2026-10-28
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [S-0537, T-2313, T-2330, T-2338]
+cited: [S-0537, T-2313, T-2330, T-2338, TH-0755]
 ---
 
 # D-0411 Until S-0419 generates the strategic agents' definitions from their role files, a change to a strategic agent's prompt is made in both .claude/agents/<name>.md and design/workflows/roles/<name>.md, and in their template copies
@@ -20,4 +20,6 @@ So until S-0419 lands, a story that changes a planner's, orchestrator's, analyze
 
 S-0536 changed the orchestrator's prompt the same way and put the protected pair in a task of its own, so the rest could close while the write waited on the operator: "The `.claude/agents/orchestrator.md` pair moved from T-2303 to its own task, T-2330. T-2303's code and role files could then close while the protected write waits on TH-0737." The operator answered TH-0737, and T-2330 wrote both copies.
 
-Source: S-0502 (wip/archive/agents/S-0502.md, Decisions); S-0536 (wip/archive/agents/S-0536.md, Decisions).
+S-0537 did the same for the orchestrator's priming step: "The protected `.claude/agents/orchestrator.md` pair is T-2338, a task of its own after T-2313 (D-0411), so that the rest can close while the write waits on the operator."
+
+Source: S-0502 (wip/archive/agents/S-0502.md, Decisions); S-0536 (wip/archive/agents/S-0536.md, Decisions); S-0537 (wip/archive/agents/S-0537.md, Decisions).

@@ -3,11 +3,11 @@ id: S-0418
 type: story
 nature: feature
 title: A role a project defines starts on an event or on a schedule, as its role file's trigger says, coalesced and logged with its trigger as the planner's runs are
-status: in-progress
+status: review
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:11Z
-updated: 2026-10-29T17:20:36Z
+updated: 2026-10-29T17:57:15Z
 transitions:
   - to: ready
     at: 2026-10-28T13:04:42Z
@@ -26,6 +26,9 @@ transitions:
     by: agent-S-0418
   - to: in-progress
     at: 2026-10-29T16:46:12Z
+    by: agent-S-0418
+  - to: review
+    at: 2026-10-29T17:57:15Z
     by: agent-S-0418
 blocked:
   - from: 2026-10-29T14:43:49Z
@@ -57,7 +60,7 @@ blocked:
     reason: awaiting the operator on TH-0749
 tags: [cli, template]
 topics: [cli, planning, orchestration]
-touches: [design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/serve/activity.go, flai/internal/serve/agents.go, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/role_events.go, flai/internal/serve/role_events_test.go, flai/internal/serve/role.go, flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go, flai/internal/serve/role_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, template/CHANGELOG.md, design/issues/I-0232-flai-serve-wakes-a-story-s-agent-that-is-paused-on-a-thread-for-every-task-done-message-from-another-story-each-needing-only-a-settled-reply.md, design/issues/summary.md, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go]
+touches: [design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/serve/activity.go, flai/internal/serve/agents.go, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/role_events.go, flai/internal/serve/role_events_test.go, flai/internal/serve/role.go, flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go, flai/internal/serve/role_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, template/CHANGELOG.md, design/issues/I-0232-flai-serve-wakes-a-story-s-agent-that-is-paused-on-a-thread-for-every-task-done-message-from-another-story-each-needing-only-a-settled-reply.md, design/issues/summary.md, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, design/issues/I-0233-testachangedfilereachesthedashboardasanotification-fails-its-temp-folder-s-cleanup-with-directory-not-empty-as-i-0048-s-serve-tests-did.md, design/system/project-manifest.md, docs/operators/runbooks/backup.md, flai/cmd/role.go]
 after: [S-0417, S-0536]
 agent:
   harness: claude-code
@@ -66,32 +69,38 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2396
-  estimated: true
-  priced_by: estimate
+  seconds: 4618
+  priced_by: harness
   turns:
     - day: 2026-10-29
-      ceremony: 7
-      hand_edits: 3
-      work: 109
+      ceremony: 8
+      test_runs: 1
+      hand_edits: 4
+      work: 141
   models:
     - model: claude-opus-5-5
-      input: 448
-      output: 32652
-      cache_read: 31658639
-      cache_write: 1008702
-      cost: 13.4986
+      input: 620
+      output: 230620
+      cache_read: 48151966
+      cache_write: 1201422
+      cost: 21.992
   strategic:
     - kind: orchestrator
-      seconds: 371
+      seconds: 455
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 157
-          output: 2405
-          cache_read: 39585881
-          cache_write: 84893
-          cost: 8.7518
+          input: 173
+          output: 2515
+          cache_read: 40061178
+          cache_write: 142871
+          cost: 8.8701
+        - model: claude-sonnet-5-5
+          input: 12
+          output: 60
+          cache_read: 197880
+          cache_write: 63993
+          cost: 0.1804
 cost_of_delay:
   value: 49.26
   by: planner-S-0418
@@ -118,7 +127,7 @@ A role starts when its file says, not only when the operator asks. A role file's
 - [x] A role whose trigger is a schedule setting, such as `roles.<name>.schedule`, a five-field cron expression in UTC or `daily` in the manifest, is started each time the schedule comes round while its action is on, through the `cadence` the replanner and the analysis scheduler share, and a start refused then is logged and not tried again until the schedule next comes round.
 - [x] Each run records its trigger in `serve/agents.json` and in its activity entry's `- Trigger:` line, as `asked`, `<event> <ID>`, or `schedule <spec>`, joined by semicolons when coalesced.
 - [x] `flai check` reports `roles.file` for a trigger it cannot read, an unknown event or condition, and reports a `roles.<name>.schedule` value that does not parse or never comes round.
-- [ ] `design/system/strategic-agents.md`, `docs/users/flai.md` with `flai-reference.md`, `docs/operators/index.md` with `settings.md`, and `template/CHANGELOG.md` say how each trigger starts a role.
+- [x] `design/system/strategic-agents.md`, `docs/users/flai.md` with `flai-reference.md`, `docs/operators/index.md` with `settings.md`, and `template/CHANGELOG.md` say how each trigger starts a role.
 
 ## Tasks
 - T-1741 A role file's trigger is read and checked: events, a schedule, or continuous, with roles.file findings for one flai cannot read
@@ -128,6 +137,7 @@ A role starts when its file says, not only when the operator asks. A role file's
 - T-1748 RunRole and a role's start take the trigger that started it, and each run records it in agents.json and in its activity entry's Trigger line
 - T-1751 The design and the user and operator docs say how each trigger starts a role
 - T-2340 The serve loop looks at each defined role's event queue and schedule on every look of the project
+- T-2343 flai serve waits for a served project's looks before it stops, so that no look writes after it, which failed the new loop test's cleanup
 
 ## Notes
 
