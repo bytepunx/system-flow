@@ -453,6 +453,20 @@ func TestAwaitingOtherAndToSince(t *testing.T) {
 	}
 }
 
+// I-0231: a file name's slug is cut at 80 bytes on a word, so that a tool's
+// temporary suffix keeps the name under the 255-byte limit. A conversation's
+// title keeps at most 72 runes, so the cut guards a longer title given to it.
+func TestOrSlugCutsALongTitle(t *testing.T) {
+	title := "Claude Code's Edit tool cannot write a work item whose file name is near the 255-byte limit, since its temporary file name adds about 25 bytes"
+	got := orSlug(title)
+	if len(got) > 80 || !strings.HasPrefix(got, "claude-code-s-edit-") || strings.HasSuffix(got, "-") {
+		t.Errorf("orSlug is %d bytes, want at most 80 on a word: %s", len(got), got)
+	}
+	if got := orSlug("..."); got != "message" {
+		t.Errorf("orSlug of no words = %q, want message", got)
+	}
+}
+
 // ADR-0154, I-0125: a settled reply leaves the conversation open and awaiting
 // neither story, so that an agreement wakes no one; its mark is in the
 // heading, after the story, and is read back from the file.

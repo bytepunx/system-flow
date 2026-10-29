@@ -137,6 +137,24 @@ func TestAnIssueWithAnUnknownFieldIsListedAndKept(t *testing.T) {
 	}
 }
 
+// I-0231: a long title made a file name that Claude Code's Edit could not
+// write once its temporary suffix was added; the slug is cut at 80 bytes.
+func TestNewCutsALongTitlesFileName(t *testing.T) {
+	r := repo(t)
+	title := "Claude Code's Edit tool cannot write a work item whose file name is near the 255-byte limit, since its temporary file name adds about 25 bytes"
+	is, err := New(r, NewOptions{Title: title, Class: "defect", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := filepath.Base(is.Path)
+	if max := len(is.ID) + 1 + 80 + len(".md"); len(base) > max || !strings.HasPrefix(base, is.ID+"-claude-code-s-edit-") || !strings.HasSuffix(base, ".md") {
+		t.Errorf("the file name is %d bytes, want at most %d on a word: %s", len(base), max, base)
+	}
+	if back, err := Read(is.Path); err != nil || back.Title != title {
+		t.Errorf("the issue keeps its whole title: %v", err)
+	}
+}
+
 // A project in git with no story branches numbers past what main holds and
 // what its own checkout holds uncommitted.
 // SummaryPath follows layout.design, and names the file WriteSummary writes.

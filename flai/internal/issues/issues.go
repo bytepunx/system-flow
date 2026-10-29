@@ -303,7 +303,7 @@ func New(r *workitem.Repo, opt NewOptions) (*Issue, error) {
 	}
 	is := &Issue{ID: id, Title: opt.Title, Class: opt.Class, Status: "open", Count: 1, Cost: normalise(opt.Cost),
 		FirstReported: now, LastReported: now, Updated: now,
-		Path: filepath.Join(Dir(r), id+"-"+template.Slug(opt.Title)+".md"),
+		Path: filepath.Join(Dir(r), id+"-"+template.CutSlug(template.Slug(opt.Title), template.SlugMax)+".md"),
 		Body: fmt.Sprintf("\n# %s %s\n\n## Description\n%s\n\n## Instances\n\n### %s\n%s%s%s\n\n## Remediation\n", id, opt.Title, opt.Title, now, storyLine(story), reportLine(report), note)}
 	if !opt.Impact.IsZero() {
 		is.Body = setImpact(is.Body, opt.Impact)

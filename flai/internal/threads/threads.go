@@ -864,7 +864,7 @@ func num(id string) int {
 }
 
 func orSlug(title string) string {
-	if s := template.Slug(title); s != "" {
+	if s := template.CutSlug(template.Slug(title), template.SlugMax); s != "" {
 		return s
 	}
 	return "thread"

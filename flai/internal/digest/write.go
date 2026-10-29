@@ -92,16 +92,9 @@ func NextNumber(repo *workitem.Repo, r execx.Runner) (int, error) {
 	return next, nil
 }
 
-// slug is a title's slug for a file name, cut at 80 characters on a word.
+// slug is a title's slug for a file name, cut at template.SlugMax bytes on a word.
 func slug(title string) string {
-	s := template.Slug(title)
-	if len(s) > 80 {
-		cut := s[:80]
-		if i := strings.LastIndex(cut, "-"); i > 40 {
-			cut = cut[:i]
-		}
-		s = strings.TrimRight(cut, "-")
-	}
+	s := template.CutSlug(template.Slug(title), template.SlugMax)
 	if s == "" {
 		return "entry"
 	}

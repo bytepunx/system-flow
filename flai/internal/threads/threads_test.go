@@ -120,6 +120,27 @@ func TestItemAnchorsAndNarrativeMirror(t *testing.T) {
 	}
 }
 
+// I-0231: a long title made a file name that Claude Code's Edit could not
+// write once its temporary suffix was added; the slug is cut at 80 bytes.
+func TestNewCutsALongTitlesFileName(t *testing.T) {
+	r := project(t)
+	title := "Claude Code's Edit tool cannot write a work item whose file name is near the 255-byte limit, since its temporary file name adds about 25 bytes"
+	th, err := New(r, NewOptions{Title: title, On: "design/system/plan.md", Author: "alex", Text: "Why?", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := filepath.Base(th.Path)
+	if max := len(th.ID) + 1 + 80 + len(".md"); len(base) > max || !strings.HasPrefix(base, th.ID+"-claude-code-s-edit-") || !strings.HasSuffix(base, ".md") {
+		t.Errorf("the file name is %d bytes, want at most %d on a word: %s", len(base), max, base)
+	}
+	if _, err := os.Stat(th.Path); err != nil {
+		t.Fatal(err)
+	}
+	if back, err := Read(th.Path); err != nil || back.Title != title {
+		t.Errorf("the thread keeps its whole title: %v", err)
+	}
+}
+
 // I-0043: a reply and a resolution in one second by one author share the
 // entry's heading; another author in that second gets a heading of its own.
 func TestSameSecondEntriesShareAHeading(t *testing.T) {
