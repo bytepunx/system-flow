@@ -175,6 +175,8 @@ func describeLogged(c workitem.Change, fields map[string]string) string {
 			answer = ": it answered " + orNothing(fields[FieldBefore]) + " and now answers " + after
 		}
 		return c.ID + " " + c.Title + "'s acceptance" + who + " changed what flai release --evaluate answers" + answer + letPass
+	case Agent:
+		return describeAgent(c, fields)
 	}
 	return c.ID + " " + c.Kind
 }

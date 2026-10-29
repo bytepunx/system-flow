@@ -4,10 +4,11 @@
 // tool inbox and flai task done answer the same inbox from it (ADR-0107). It
 // lists the open conversations of the agent's story too, and reports a
 // message to that story once, as an event (ADR-0120, S-0331). The events
-// that happen in flai serve and flai accept, planned, ready-empty, and
-// release-due, are appended to a log of their own, which it reads back with
-// the rest; that a thread came to await the agent it works out from the
-// thread files (ADR-0211).
+// that happen in flai serve and flai accept, planned, ready-empty,
+// release-due, and an agent's run started, ended, failed, or stopped, are
+// appended to a log of their own, which it reads back with the rest; that a
+// thread came to await the agent it works out from the thread files
+// (ADR-0211).
 package inbox
 
 import (
@@ -469,13 +470,14 @@ type Event struct {
 	Summary string `json:"summary" jsonschema:"the change in words"`
 	// Fields are a logged event's own, and a thread change's (ADR-0211),
 	// under the Field keys.
-	Fields  map[string]string `json:"fields,omitempty" jsonschema:"the event's own figures, by name, for the kinds flai serve and flai accept log, and for thread: ready-empty's room and limit (the ready count is in to), release-due's before and after, what flai release --evaluate answered before the acceptance and answers after it; thread's awaits, whom the thread awaits by name (your agent name, or operator), and on, the item it is anchored to or its path; absent for other kinds"`
+	Fields  map[string]string `json:"fields,omitempty" jsonschema:"the event's own figures, by name, for the kinds flai serve and flai accept log, and for thread: ready-empty's room and limit (the ready count is in to), release-due's before and after, what flai release --evaluate answered before the acceptance and answers after it; agent's role, the run's kind (story, plan, orchestrate, analyze, curate, or a project role's name), and why, why it came to what to says (started, ended, failed, stopped); thread's awaits, whom the thread awaits by name (your agent name, or operator), and on, the item it is anchored to or its path; absent for other kinds"`
 	Project string            `json:"project,omitempty" jsonschema:"the project it happened in, when the server serves more than one"`
 }
 
 // CatchUp returns what others than r's agent changed since its cursor, among
 // items listed archive included, the events flai serve and flai accept logged
-// (ADR-0211), whoever caused them, the messages to story, the agent's own,
+// (ADR-0211), whoever caused them, save the agent events of r's agent's own
+// runs (S-0532), the messages to story, the agent's own,
 // when it is given, and the threads whose newest entry makes them await r, or,
 // with operator, as the orchestrator's role reads them, the operator
 // (ADR-0181, ADR-0211 §5); the newest MaxEvents of them, and how many older
@@ -533,8 +535,12 @@ func CatchUp(repo *workitem.Repo, r Reader, story string, operator bool, now tim
 	}
 	// What happened in flai serve and flai accept (ADR-0211): news to every
 	// reader, whoever caused it, the orchestrator its acceptance's release-due
-	// too.
+	// too; but an agent is not told of its own runs (S-0532), as it is not of
+	// its own moves.
 	for _, l := range LoggedEvents(repo) {
+		if l.Kind == Agent && l.By == agent {
+			continue
+		}
 		c := l.Change()
 		noticed(Event{Change: c, Summary: describeLogged(c, l.Fields), Fields: l.Fields})
 	}
@@ -624,7 +630,7 @@ func Describe(c workitem.Change) string {
 		return c.Cause + " was accepted" + who + " and changed " + namePaths(c.To) + ", which " + c.ID + " " + c.Title + " claims. Run flai stream sync " + c.ID + " and the tests before you go on"
 	case Message:
 		return describeMessage(c, false)
-	case Planned, ReadyEmpty, ReleaseDue:
+	case Planned, ReadyEmpty, ReleaseDue, Agent:
 		return describeLogged(c, nil)
 	case Thread:
 		return describeThread(c)
