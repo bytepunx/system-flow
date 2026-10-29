@@ -410,11 +410,11 @@ The host action `orchestrate`, off by default, turns it on for a project: `flai 
 
 The events are [ADR-0211](../adrs/0211-the-orchestrator-s-trigger-vocabulary-gains-the-events-moved-thread-planned.md)'s. An event no trigger matches is none: a file change with no event, a task's move, an epic's move following its story, an item cancelled with its parent, and the replan's forecast edits start nothing. When the role file is missing, does not parse, or still says `continuous`, the baseline's triggers above are used (`builtinTriggers`). The queue is kept per project in `serve/orchestrate-reasons.json`, so a `flai serve` started again loses none; a reason already queued is not queued twice.
 
-Turning the action on, or `flai serve` finding it on at its first look with no queue kept, queues one `asked` reason. Events from before are not acted on: while the action is off, the cursor and the schedule keep up and nothing is queued.
+Turning the action on, or `flai serve` finding it on at its first look with no queue kept, queues one `asked` reason. Events from before are not acted on: that look takes the catch-up's events since the last as history. While the action is off, the schedule keeps up, nothing is queued, and nothing is written in the project.
 
 | At a look | What `flai serve` does |
 |-----------|------------------------|
-| The action is on, reasons are queued, and no run is going | Starts one run once `orchestration.coalesce` (`30s` by default) has passed since the first reason was queued, or at once for `asked`, with every reason queued. The start takes them out of the queue |
+| The action is on, reasons are queued, and no run is going | Starts one run once `orchestration.coalesce` (`30s` by default) has passed since the first reason was queued, or at once for `asked`, with every reason queued. The start takes them out of the queue, and a run that fails, on the usage limit or otherwise, gives them back ahead of those queued since ([ADR-0209](../adrs/0209-the-orchestrator-runs-for-a-reason-and-ends-started-by-flai-serve-on-the-events.md) §5) |
 | The action is on and nothing is queued | Nothing. A run that ends is not started again by itself |
 | The action is on and the operator holds it stopped | Nothing until they start it |
 | The action is on and the last run failed less than a minute ago | Nothing until the minute has passed, so that a run that fails at once does not spin; the reasons stay queued |

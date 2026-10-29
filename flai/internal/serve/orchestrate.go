@@ -47,9 +47,10 @@ import (
 //
 // The action turned on, or found on at flai serve's first look with no
 // queue kept, queues one asked reason, and none of the catch-up's history.
-// While it is off the cursor and the schedule keep up and nothing is
-// queued, so that turning it on does not act on the past; and a run going
-// is stopped as Stop stops a story's agent.
+// While it is off the schedule keeps up, nothing is queued, and nothing is
+// written in the project; the look that finds it turned on takes the events
+// since as history, so that turning it on does not act on the past; and a
+// run going is stopped as Stop stops a story's agent.
 //
 // Like the planner's, the run is recorded in serve/agents.json, under
 // orchestrator, the newest alone; its log is the orchestrator's
@@ -233,11 +234,12 @@ func (r *orchestrator) gather(repo *workitem.Repo, now time.Time) reasonQueue {
 	return q
 }
 
-// keepUp reads the events since the last look, while the action is off, so
-// that turned on the orchestrator does not act on them, marks the schedule
-// as come round, and empties the queue, the action off.
+// keepUp, while the action is off, marks the schedule as come round and
+// empties the queue. It reads no events and writes nothing in the project:
+// the look that finds the action turned on takes the catch-up's events since
+// as history and queues asked in their place (gather), so that turned on the
+// orchestrator does not act on the past.
 func (r *orchestrator) keepUp(repo *workitem.Repo, now time.Time) {
-	r.catchUp(repo, now)
 	r.cadence.see(repo.Manifest.Orchestration.Schedule, now)
 	r.cadence.mark = now
 	if _, err := r.o.Dir.updateReasonQueue(r.e.Root, func(q *reasonQueue) { q.On = false; q.clear() }); err != nil {

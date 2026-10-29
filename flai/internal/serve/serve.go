@@ -122,7 +122,7 @@ func (d Dir) updateReasonQueue(root string, change func(*reasonQueue)) (reasonQu
 	if after, _ := json.Marshal(q); string(after) == string(before) {
 		return q, nil
 	}
-	if q.On || len(q.Reasons) > 0 {
+	if q.On || len(q.Reasons) > 0 || len(q.Taken) > 0 {
 		all[root] = q
 	} else {
 		delete(all, root)
