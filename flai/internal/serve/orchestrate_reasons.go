@@ -357,21 +357,39 @@ func scheduled(triggers []roles.Trigger) bool {
 // (ADR-0209 §1). items are the project's, for whether an edited story
 // is a draft.
 func reasonsOf(events []inbox.Event, triggers []roles.Trigger, items []*workitem.Item) []orchestrateReason {
+	byID := itemsByID(items)
+	orchestrator := func(awaits string) bool { return awaits == workitem.ActivityOrchestrator }
+	var out []orchestrateReason
+	for _, e := range events {
+		if r, ok := reasonOf(e, triggers, byID, orchestrator); ok {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+// itemsByID are items by their IDs.
+func itemsByID(items []*workitem.Item) map[string]*workitem.Item {
 	byID := map[string]*workitem.Item{}
 	for _, it := range items {
 		byID[it.ID] = it
 	}
-	var out []orchestrateReason
-	for _, e := range events {
-		if e.Type == workitem.Task || e.Follows != "" || (e.Kind == workitem.Moved && e.Cause != "") {
-			continue
-		}
-		if !matched(triggers, e, occurrenceOf(e, byID)) {
-			continue
-		}
-		out = append(out, orchestrateReason{Kind: e.Kind, ID: e.ID, Type: e.Type, Title: oneLine(e.Title), To: e.To, Summary: oneLine(e.Summary), At: e.At})
+	return byID
+}
+
+// reasonOf is e as a reason, and whether a trigger among triggers matches
+// it, read by the reader you says a thread's awaits names; reasonsOf says
+// which events are never reasons. byID are the project's items, for whether
+// an edited story is a draft. A defined role's events are matched here too,
+// with its own agents as the reader (S-0418).
+func reasonOf(e inbox.Event, triggers []roles.Trigger, byID map[string]*workitem.Item, you func(awaits string) bool) (orchestrateReason, bool) {
+	if e.Type == workitem.Task || e.Follows != "" || (e.Kind == workitem.Moved && e.Cause != "") {
+		return orchestrateReason{}, false
 	}
-	return out
+	if !matched(triggers, e, occurrenceOf(e, byID, you)) {
+		return orchestrateReason{}, false
+	}
+	return orchestrateReason{Kind: e.Kind, ID: e.ID, Type: e.Type, Title: oneLine(e.Title), To: e.To, Summary: oneLine(e.Summary), At: e.At}, true
 }
 
 // matched says whether a trigger among triggers matches e, as o, under any
@@ -411,8 +429,9 @@ const replanBy = "flai"
 
 // occurrenceOf is e in roles' terms, without its event's name: the state a
 // move went to, whether an edited item is a story that is a draft after the
-// edit, and whom a thread awaits, "you" for the orchestrator or "operator".
-func occurrenceOf(e inbox.Event, byID map[string]*workitem.Item) roles.Occurrence {
+// edit, and whom a thread awaits, "you" for the reader, whose names you
+// says, or "operator".
+func occurrenceOf(e inbox.Event, byID map[string]*workitem.Item, you func(awaits string) bool) roles.Occurrence {
 	var o roles.Occurrence
 	switch e.Kind {
 	case workitem.Moved:
@@ -421,11 +440,11 @@ func occurrenceOf(e inbox.Event, byID map[string]*workitem.Item) roles.Occurrenc
 		it := byID[e.ID]
 		o.Draft = it != nil && it.Type == workitem.Story && it.Draft && (e.By != replanBy || e.To != "forecast")
 	case inbox.Thread:
-		switch e.Fields[inbox.FieldAwaits] {
-		case workitem.ActivityOrchestrator:
-			o.Awaits = "you"
-		case "operator":
+		switch awaits := e.Fields[inbox.FieldAwaits]; {
+		case awaits == "operator":
 			o.Awaits = "operator"
+		case awaits != "" && you(awaits):
+			o.Awaits = "you"
 		}
 	}
 	return o
