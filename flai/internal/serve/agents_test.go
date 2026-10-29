@@ -19,10 +19,12 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/config"
+	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
@@ -3310,5 +3312,146 @@ func TestAStoryNoLongerWaitingOnItsAgentsQuestionIsUnblocked(t *testing.T) {
 				t.Errorf("blocked %+v, want open %v", b, c.open)
 			}
 		})
+	}
+}
+
+// storyEvents are the agent events in the project's event log on story.
+func (lab *agentLab) storyEvents(story string) []inbox.LoggedEvent {
+	return inbox.AgentEventsOf(lab.repo, story, time.Time{})
+}
+
+// eventsAre says that the agent events on story, the one titled title,
+// are one per change, to and why as want, in turn, each by the story's
+// agent and of its role (S-0532). The launcher appends a run's end just
+// after it records it, so they are waited for.
+func (lab *agentLab) eventsAre(story, title string, want ...[2]string) {
+	lab.t.Helper()
+	var got []inbox.LoggedEvent
+	waitFor(lab.t, fmt.Sprintf("%d agent events on %s", len(want), story), func() bool {
+		got = lab.storyEvents(story)
+		return len(got) >= len(want)
+	})
+	if len(got) != len(want) {
+		lab.t.Fatalf("%d agent events on %s, want %d: %+v", len(got), story, len(want), got)
+	}
+	for i, e := range got {
+		if e.ID != story || e.Type != workitem.Story || e.Title != title || e.By != "builder-"+story || e.Fields[inbox.FieldRole] != conventions.RoleStory ||
+			e.To != want[i][0] || e.Fields[inbox.FieldWhy] != want[i][1] {
+			lab.t.Errorf("event %d: %+v, want %s %q by builder-%s for %q", i+1, e, story, title, story, want[i])
+		}
+	}
+}
+
+// S-0532: a story's agent's run appends one agent event at its start and
+// one at its end, ended for a run that worked or asked and failed for one
+// that did not, each for the words its journal or judgement gives; a run
+// judged again appends nothing more.
+func TestAStorysAgentAppendsAnAgentEventAtItsStartAndItsEnd(t *testing.T) {
+	ctx := context.Background()
+	started := [2]string{inbox.AgentStarted, "it entered ready"}
+	t.Run("worked is ended", func(t *testing.T) {
+		lab := newAgentLab(t)
+		lab.hold()
+		id := lab.ready("Works")
+		lab.l.look(ctx, false)
+		waitFor(t, "it runs", func() bool { return lab.run(id).live() })
+		lab.eventsAre(id, "Works", started)
+		lab.move(id, workitem.InProgress)
+		lab.move(id, workitem.Review)
+		lab.release(id)
+		waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+		lab.eventsAre(id, "Works", started, [2]string{inbox.AgentEnded, "ended with its work done"})
+		// judged again, as a second end of the same run would
+		again := *lab.run(id)
+		lab.l.endRun(&again, again.Exit)
+		lab.l.look(ctx, false)
+		lab.eventsAre(id, "Works", started, [2]string{inbox.AgentEnded, "ended with its work done"})
+	})
+	t.Run("asked is ended", func(t *testing.T) {
+		lab := newAgentLab(t)
+		lab.hold()
+		id := lab.ready("Asks")
+		lab.l.look(ctx, false)
+		waitFor(t, "it runs", func() bool { return lab.run(id).live() })
+		lab.move(id, workitem.InProgress)
+		th, err := threads.New(lab.repo, threads.NewOptions{Title: "Which port?", On: id, Author: lab.run(id).Agent, Text: "Eight or nine?", Now: time.Now()})
+		if err != nil {
+			t.Fatal(err)
+		}
+		lab.release(id)
+		waitFor(t, "it ends asking", func() bool { return lab.run(id).Outcome == OutcomeAsked })
+		lab.eventsAre(id, "Asks", started, [2]string{inbox.AgentEnded, "waiting for an answer to " + th.ID + ": Which port?"})
+	})
+	t.Run("ended with its story where it was is failed", func(t *testing.T) {
+		lab := newAgentLab(t)
+		id := lab.ready("Drops")
+		lab.l.look(ctx, false)
+		waitFor(t, "it ends", func() bool { r := lab.run(id); return r != nil && r.Ended != "" })
+		lab.eventsAre(id, "Drops", started, [2]string{inbox.AgentFailed, "ended (exit 0) with " + id + " in ready"})
+	})
+	t.Run("a start that could not be made is failed", func(t *testing.T) {
+		lab := newAgentLab(t)
+		lab.cfg.Command = []string{filepath.Join(lab.outDir, "no-such-program"), "{story}"}
+		id := lab.ready("Cannot")
+		lab.l.look(ctx, false)
+		r := lab.run(id)
+		if r == nil || r.Error == "" || !strings.HasPrefix(r.Why, "could not be started: ") {
+			t.Fatalf("not recorded as failed to start: %+v", r)
+		}
+		lab.eventsAre(id, "Cannot", [2]string{inbox.AgentFailed, r.Why})
+	})
+}
+
+// S-0532: a run whose process was gone when flai serve looked is settled as
+// it ends, with one agent event; the next look appends nothing more.
+func TestAnOrphanedRunSettledAtALookAppendsItsEndOnce(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	id := lab.ready("Orphan")
+	lab.move(id, workitem.InProgress)
+	gone := exec.Command("true")
+	if err := gone.Run(); err != nil {
+		t.Fatal(err)
+	}
+	// started by a flai serve that was restarted while it ran
+	lab.l.dir.updateAgent(lab.root, func(s *AgentState) {
+		s.put(&AgentRun{Story: id, Agent: "builder-" + id, Started: time.Now().UTC().Format(time.RFC3339), PID: gone.Process.Pid, Session: "earlier"})
+	})
+	lab.l.look(ctx, false)
+	if r := lab.run(id); r.live() || r.Outcome != OutcomeFailed {
+		t.Fatalf("not settled: %+v", r)
+	}
+	want := [2]string{inbox.AgentFailed, "ended (an exit code nobody saw) with " + id + " in in-progress"}
+	lab.eventsAre(id, "Orphan", want)
+	lab.l.look(ctx, false)
+	lab.eventsAre(id, "Orphan", want)
+}
+
+// S-0532: the started event says why the agent was started, in a short form
+// of its journal entry's words, the reason that wins in the journal winning.
+func TestAStartedEventSaysWhyTheAgentWasStarted(t *testing.T) {
+	begun := &harness.Begun{By: "alex", At: "2026-10-28T09:00:00Z", Host: "elsewhere"}
+	for _, c := range []struct {
+		name  string
+		story readyStory
+		run   AgentRun
+		want  string
+	}{
+		{"ready", readyStory{}, AgentRun{}, "it entered ready"},
+		{"the operator's start", readyStory{Started: true}, AgentRun{}, "the operator started it"},
+		{"past a hold", readyStory{Started: true, Past: []string{"S-0002 holds docs/a", "the limit is full"}}, AgentRun{}, "the operator started it, past S-0002 holds docs/a; the limit is full"},
+		{"begun elsewhere", readyStory{Begun: begun}, AgentRun{}, "the operator started it here, begun by alex, who moved it to in-progress at 2026-10-28T09:00:00Z, on the host elsewhere"},
+		{"the operator's restart", readyStory{Restart: "ended (exit 1) with S-0001 in in-progress"}, AgentRun{}, "the operator restarted it: its last agent ended (exit 1) with S-0001 in in-progress"},
+		{"an automatic restart", readyStory{AutoRestarts: 1, Restart: "ended (exit 0) with S-0001 in in-progress"}, AgentRun{},
+			"flai serve started it again on its own, automatic restart 1 of 2: its last agent ended (exit 0) with S-0001 in in-progress"},
+		{"an answer", readyStory{}, AgentRun{Answered: "TH-0007"}, "started again in its session, TH-0007 answered"},
+		{"a message", readyStory{}, AgentRun{Answered: "MS-0003"}, "started again in its session, for a message on MS-0003"},
+		{"sent back, resumed", readyStory{Resume: &AgentRun{}}, AgentRun{SentBack: "TH-0009"}, "started again in its session, flai having sent it back from review on TH-0009"},
+		{"sent back, new session", readyStory{}, AgentRun{SentBack: "TH-0009"}, "started again in a new session, flai having sent it back from review on TH-0009"},
+		{"to commit", readyStory{Started: true, Commit: "/w/S-0001"}, AgentRun{}, "the operator started it to commit what its worktree holds"},
+	} {
+		if got := startWhy(c.story, &c.run, 2); got != c.want {
+			t.Errorf("%s: %q, want %q", c.name, got, c.want)
+		}
 	}
 }

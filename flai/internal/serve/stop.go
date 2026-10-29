@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -21,6 +22,11 @@ import (
 // only recorded as stopped. Stop is refused, saying why, for a story flai
 // serve started no agent for, and for one whose agent is not running and not
 // waiting for an answer.
+//
+// The stop is appended to the event log as a stopped agent event, for the
+// run's why, which names the operator's stop and when (S-0532), once: when
+// the serving flai recorded the process's end after the run was marked,
+// it recorded the end as this stop and told it, and Stop tells it no more.
 func Stop(o Options, e Entry, story string) (*AgentRun, error) {
 	if !StoryID.MatchString(story) {
 		return nil, refused("%q is not a story's ID", story)
@@ -71,11 +77,14 @@ func Stop(o Options, e Entry, story string) (*AgentRun, error) {
 		}
 	}
 	var out *AgentRun
+	told := false
 	o.Dir.updateAgent(e.Root, func(s *AgentState) {
 		cur := s.Stories[it.ID]
 		if !cur.same(run) {
 			return // another agent was started for the story meanwhile
 		}
+		// the serving flai recorded the end as this stop, and told it
+		told = cur.Outcome == OutcomeStopped
 		ended := *cur
 		ended.Stopped = at
 		if ended.Ended == "" {
@@ -102,6 +111,9 @@ func Stop(o Options, e Entry, story string) (*AgentRun, error) {
 			Outcome: "done", Detail: fmt.Sprintf("stopped %s's agent %s: %s", it.ID, run.Agent, what)})
 	}
 	l.log("agent stopped", "story", it.ID, "pid", run.PID, "signalled", signalled, "killed", killed)
+	if !told {
+		appendAgentEvent(e.Root, out, inbox.AgentStopped, out.Why, l.warn)
+	}
 	l.measure(it.ID)
 	return out, nil
 }

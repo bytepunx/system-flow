@@ -22,6 +22,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
@@ -512,14 +513,19 @@ func (l *launcher) told(run *AgentRun) {
 // ended records a run as ended, as the operator's stop when they stopped it
 // (S-0170): Stop marks the run before it signals the process, so the end
 // the process makes is theirs, not a failure. A hold on the orchestrator
-// stays on the run that ended (S-0228).
-func (l *launcher) ended(run *AgentRun) {
+// stays on the run that ended (S-0228). It says whether the run was still
+// recorded as going until now, so that its end is told once (S-0532): a run
+// that Stop, or another look, recorded as ended first is recorded again, and
+// told by whoever ended it.
+func (l *launcher) ended(run *AgentRun) (first bool) {
+	first = true
 	l.dir.updateAgent(l.entry.Root, func(s *AgentState) {
 		cur := s.of(run)
 		if !cur.same(run) {
 			s.put(run)
 			return
 		}
+		first = cur.Ended == ""
 		if cur.Stopped != "" {
 			run.Stopped = cur.Stopped
 			run.stopped()
@@ -530,6 +536,7 @@ func (l *launcher) ended(run *AgentRun) {
 	if l.changed != nil {
 		l.changed(run)
 	}
+	return first
 }
 
 func newLauncher(o Options, e Entry) *launcher {
@@ -679,10 +686,15 @@ func judgeRun(root string, run *AgentRun, exit *int) {
 // releaseAsked, which closes the interval of a story whose last run no
 // longer waits on its thread, never takes the run still live for one that
 // does. The other way round, a look that starts the agent again before the
-// block is written finds the block at its next look, and releases it.
+// block is written finds the block at its next look, and releases it. The
+// end is appended to the event log once, by the end that recorded the run
+// as ended first (S-0532): a run Stop recorded as stopped before its
+// process ended was told by Stop, and one judged again tells nothing more.
 func (l *launcher) endRun(run *AgentRun, exit *int) {
 	judgeRun(l.entry.Root, run, exit)
-	l.ended(run)
+	if l.ended(run) {
+		appendAgentEnd(l.entry.Root, run, l.warn)
+	}
 	l.blockAsked(run)
 }
 
@@ -1582,6 +1594,7 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 			l.record(entry)
 		}
 		l.log("agent could not be started", "story", story.ID, "harness", run.Harness, "err", run.Error)
+		appendAgentEvent(l.entry.Root, run, inbox.AgentFailed, run.Why, l.warn)
 		return false
 	}
 	if !StoryID.MatchString(story.ID) {
@@ -1649,6 +1662,7 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 		l.record(entry)
 	}
 	l.log("agent started", said...)
+	appendAgentEvent(l.entry.Root, run, inbox.AgentStarted, startWhy(story, run, cfg.AutoRestarts), l.warn)
 	l.await(cmd, out, run.PID, func(code int) {
 		ended := *run
 		ended.Ended, ended.Exit = l.now().UTC().Format(time.RFC3339), &code
@@ -1657,6 +1671,45 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 		l.measureWith(story.ID, cfg.Providers)
 	})
 	return true
+}
+
+// startWhy is why story's agent, run, was started, for its started agent
+// event (S-0532): the start's reason in a short form of the words its
+// journal entry, or the agent's prompt, gives it, the one that wins in the
+// journal winning here; limit is how many automatic restarts in a row the
+// project allows.
+func startWhy(story readyStory, run *AgentRun, limit int) string {
+	last := func(why string) string {
+		if story.Restart == "" {
+			return why
+		}
+		return why + ": its last agent " + story.Restart
+	}
+	switch {
+	case story.AutoRestarts > 0:
+		return last(fmt.Sprintf("flai serve started it again on its own, automatic restart %d of %d", story.AutoRestarts, limit))
+	case story.Begun != nil:
+		return "the operator started it here, begun " + story.Begun.Said()
+	case story.Started && len(story.Past) > 0:
+		return "the operator started it, past " + strings.Join(story.Past, "; ")
+	case story.Commit != "":
+		return "the operator started it to commit what its worktree holds"
+	case run.SentBack != "":
+		how := "in a new session"
+		if story.Resume != nil {
+			how = "in its session"
+		}
+		return fmt.Sprintf("started again %s, flai having sent it back from review on %s", how, run.SentBack)
+	case strings.HasPrefix(run.Answered, "MS-"):
+		return "started again in its session, for a message on " + run.Answered
+	case run.Answered != "":
+		return "started again in its session, " + run.Answered + " answered"
+	case story.Restart != "":
+		return last("the operator restarted it")
+	case story.Started:
+		return "the operator started it"
+	}
+	return "it entered ready"
 }
 
 // startOf is what adapter starts for req, the run of the harness name, with

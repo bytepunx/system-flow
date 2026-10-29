@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -249,5 +250,74 @@ func TestTheOperatorStopsAStorysAgent(t *testing.T) {
 		if _, err := stop(lab, done); err == nil || len(lab.entries()) != n {
 			t.Errorf("a refused stop was journalled: %+v", lab.entries())
 		}
+	})
+}
+
+// S-0532: the operator's stop appends one stopped agent event for the run,
+// for its why, which names the stop and when, whoever records the end: Stop,
+// or the launcher that saw the process end once Stop had marked the run. A
+// run that ended asking has its end told, then its stop.
+func TestTheOperatorsStopIsOneStoppedAgentEvent(t *testing.T) {
+	ctx := context.Background()
+	started := [2]string{inbox.AgentStarted, "it entered ready"}
+	stop := func(lab *agentLab, id string) *AgentRun {
+		t.Helper()
+		run, err := Stop(lab.o, Entry{Key: "t", Name: "t", Root: lab.root}, id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return run
+	}
+	t.Run("a running agent", func(t *testing.T) {
+		lab := newAgentLab(t)
+		lab.hold()
+		id := lab.ready("Runs")
+		lab.l.look(ctx, false)
+		lab.trapped(t, id)
+		pid := lab.run(id).PID
+		lab.move(id, workitem.InProgress)
+		run := stop(lab, id)
+		waitFor(t, "the launcher saw it end", func() bool {
+			lab.l.mu.Lock()
+			defer lab.l.mu.Unlock()
+			return !lab.l.waiting[pid]
+		})
+		if !strings.HasPrefix(run.Why, "stopped by the operator at ") {
+			t.Fatalf("not stopped: %+v", run)
+		}
+		lab.eventsAre(id, "Runs", started, [2]string{inbox.AgentStopped, run.Why})
+	})
+	t.Run("an agent whose end the launcher records after the stop was marked", func(t *testing.T) {
+		lab := newAgentLab(t)
+		lab.hold()
+		id := lab.ready("Marked")
+		lab.l.look(ctx, false)
+		waitFor(t, "it runs", func() bool { return lab.run(id).live() })
+		at := time.Now().UTC().Format(time.RFC3339)
+		// what Stop marks before it signals the process
+		lab.l.dir.updateAgent(lab.root, func(s *AgentState) {
+			marked := *s.Stories[id]
+			marked.Stopped = at
+			s.put(&marked)
+		})
+		lab.release(id)
+		waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+		lab.eventsAre(id, "Marked", started, [2]string{inbox.AgentStopped, "stopped by the operator at " + at})
+	})
+	t.Run("an agent waiting for an answer", func(t *testing.T) {
+		lab := newAgentLab(t)
+		lab.hold()
+		id := lab.ready("Asks")
+		lab.l.look(ctx, false)
+		waitFor(t, "it runs", func() bool { return lab.run(id).live() })
+		lab.move(id, workitem.InProgress)
+		th, err := threads.New(lab.repo, threads.NewOptions{Title: "Which port?", On: id, Author: lab.run(id).Agent, Text: "Eight or nine?", Now: time.Now()})
+		if err != nil {
+			t.Fatal(err)
+		}
+		lab.release(id)
+		waitFor(t, "it ends asking", func() bool { return lab.run(id).Outcome == OutcomeAsked })
+		run := stop(lab, id)
+		lab.eventsAre(id, "Asks", started, [2]string{inbox.AgentEnded, "waiting for an answer to " + th.ID + ": Which port?"}, [2]string{inbox.AgentStopped, run.Why})
 	})
 }
