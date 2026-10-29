@@ -30,7 +30,8 @@ a named condition, with each call only the operator may allow inside a
 permissions entry naming the operator's setting. Its body is its harness
 definition's prompt. flai check reports a file that falls short as
 roles.file, roles.grant, or roles.definition. flai role run starts a role
-the project defines, behind the host action its file names.`,
+the project defines, behind the host action its file names, and flai serve
+starts it on the events and the schedules its trigger names (S-0418).`,
 	}
 	c.AddCommand(newRoleListCmd(a), newRoleShowCmd(a), newRoleRunCmd(a))
 	return c
@@ -145,7 +146,16 @@ file gives, while the action is off for the project, for an item when its
 file takes none, without one when it takes some, for an item of a kind it
 does not take or that is archived, done, or cancelled, while a run of the
 role on the same item, or on none, runs, and when its agent names no harness
-and no command is set on the host. The host API's role.run runs this.`,
+and no command is set on the host. The host API's role.run runs this.
+
+This is the role's asked trigger, which its run records as asked. While
+the action is on, flai serve also starts the role on the other triggers its
+file names (S-0418): on an event, {event: <event>, when: <condition>}, once
+orchestration.coalesce has passed since the first, with every event seen
+meanwhile, one run per item for a role that takes items; and on a schedule,
+{schedule: roles.<name>.schedule}, a cron expression in UTC or daily in
+system-flow.yaml, on no item. The run records what started it: asked,
+<event> <ID>, or schedule <spec>, joined by semicolons when coalesced.`,
 		Example: `  flai role list
   flai serve enable review
   flai role run reviewer S-0042

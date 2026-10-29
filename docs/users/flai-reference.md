@@ -3306,7 +3306,7 @@ Flags:
 
 Read the project's strategic roles: one file each under design/workflows/roles (ADR-0207).
 
-A strategic role is one markdown file, &lt;name&gt;.md, in the design folder's workflows/roles (ADR-0207). Its front matter names the role, its harness definition, its host action, its triggers, the items it takes, its topics, how its usage is charged, and the calls flai guard allows it, each plain or under a named condition, with each call only the operator may allow inside a permissions entry naming the operator's setting. Its body is its harness definition's prompt. flai check reports a file that falls short as roles.file, roles.grant, or roles.definition. flai role run starts a role the project defines, behind the host action its file names.
+A strategic role is one markdown file, &lt;name&gt;.md, in the design folder's workflows/roles (ADR-0207). Its front matter names the role, its harness definition, its host action, its triggers, the items it takes, its topics, how its usage is charged, and the calls flai guard allows it, each plain or under a named condition, with each call only the operator may allow inside a permissions entry naming the operator's setting. Its body is its harness definition's prompt. flai check reports a file that falls short as roles.file, roles.grant, or roles.definition. flai role run starts a role the project defines, behind the host action its file names, and flai serve starts it on the events and the schedules its trigger names (S-0418).
 
 Subcommands:
 
@@ -3337,6 +3337,8 @@ Starts a role the project defines in its role file under the design folder's wor
 The run is recorded where flai serve tracks agents, under roles by the role's name and item, and its output goes to a log beside flai serve's state. Once it ends, the serving flai records how (worked, asked, or failed), journals it under the role's action, and logs its activity in wip/agents/&lt;name&gt;.md, which charges nothing. It is no story's agent: the in-progress limit does not count it, and it holds no story back.
 
 It is behind the host action its file names, off until you enable it (flai serve enable &lt;action&gt;). It refuses, and says why, for a built-in role (flai plan, flai analyze, and flai curate start those) and a name no role file gives, while the action is off for the project, for an item when its file takes none, without one when it takes some, for an item of a kind it does not take or that is archived, done, or cancelled, while a run of the role on the same item, or on none, runs, and when its agent names no harness and no command is set on the host. The host API's role.run runs this.
+
+This is the role's asked trigger, which its run records as asked. While the action is on, flai serve also starts the role on the other triggers its file names (S-0418): on an event, {event: &lt;event&gt;, when: &lt;condition&gt;}, once orchestration.coalesce has passed since the first, with every event seen meanwhile, one run per item for a role that takes items; and on a schedule, {schedule: roles.&lt;name&gt;.schedule}, a cron expression in UTC or daily in system-flow.yaml, on no item. The run records what started it: asked, &lt;event&gt; &lt;ID&gt;, or schedule &lt;spec&gt;, joined by semicolons when coalesced.
 
 Examples:
 

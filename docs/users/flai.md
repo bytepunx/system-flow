@@ -2343,11 +2343,11 @@ roles:
 
 A built-in role your project has no file for is held to flai's own copy of it. A role your project defines with no file, or any role whose own file does not parse, is refused every write until you fix the file; the refusal names it and `flai check`. A role writes as itself alone: the guard refuses it a `--by` or `--placed-by` naming another, and setting `FLAI_AGENT` or `FLAI_SESSION` to anything but its own ([ADR-0210](../../design/adrs/0210-flai-guard-holds-a-role-a-role-file-defines-to-its-own-name-and-session-as-adr.md)). Its own name is its `FLAI_AGENT`, or its file's `name`, or `<name>-<item>` for a run on an item.
 
-In this release flai still decides from its own code when each of the four agents starts, and `.claude/agents/` still holds their harness definitions. Later releases read the files for those too, and start a role your project defines on the events and schedules its file's `trigger` names.
+In this release flai still decides from its own code when each of the four agents starts, and `.claude/agents/` still holds their harness definitions. A later release reads the files for those too. A role your project defines starts on its file's `trigger` since S-0418 ([What starts a role your project defines](#what-starts-a-role-your-project-defines)).
 
 #### Running a role your project defines
 
-You start a role your project defines when you want it, behind the host action its file names, which is off until you turn it on (S-0417, [ADR-0207](../../design/adrs/0207-a-strategic-role-is-a-markdown-file-under-design-workflows-roles-whose-front.md)):
+You start a role your project defines when you want it, behind the host action its file names, which is off until you turn it on (S-0417, [ADR-0207](../../design/adrs/0207-a-strategic-role-is-a-markdown-file-under-design-workflows-roles-whose-front.md)). `flai serve` also starts it on the events and schedules its file names ([What starts a role your project defines](#what-starts-a-role-your-project-defines)).
 
 ```bash
 flai role list                                   # the roles, each with its action and the items it takes
@@ -2382,12 +2382,41 @@ When it ends, `flai serve` records how: `worked`, `asked` (it ended with its que
 
 | What | Where |
 |------|-------|
-| What it did and cost: its last line as the summary, `- Trigger: asked`, its item | `wip/agents/<name>.md`, its activity document ([What they did: activity documents](#what-they-did-activity-documents)). Its cost charges no item and stays in the role's project total |
+| What it did and cost: its last line as the summary, `- Trigger:` with what started it, its item | `wip/agents/<name>.md`, its activity document ([What they did: activity documents](#what-they-did-activity-documents)). Its cost charges no item and stays in the role's project total |
 | Its output | `serve/agents/<key>-<name>-<time>.log` beside flai serve's state |
-| The run: its item, agent, PID, log, and outcome | `serve/agents.json` under `roles`, by the role's name and item; `flai hostapi agent.status` shows it under `roles` |
-| Its starts, ends, and failures | `flai serve journal`, under the action its file names |
+| The run: its item, agent, PID, log, trigger, and outcome | `serve/agents.json` under `roles`, by the role's name and item; `flai hostapi agent.status` shows it under `roles` |
+| Its starts, each saying `started by <trigger>`, its ends, and its failures | `flai serve journal`, under the action its file names |
 
 [A role a project defines](../../design/system/strategic-agents.md#a-role-a-project-defines-s-0417) has the whole of it.
+
+#### What starts a role your project defines
+
+A role file's `trigger` lists what starts the role (S-0418, [ADR-0207](../../design/adrs/0207-a-strategic-role-is-a-markdown-file-under-design-workflows-roles-whose-front.md)). Each needs the host action its file names on, and each run's trigger is recorded wherever the run is ([above](#running-a-role-your-project-defines)).
+
+| Trigger | What starts the role | On | The run's trigger |
+|---------|----------------------|----|-------------------|
+| `asked` | You: `flai role run`, the MCP tool `role_run`, or the host API's `role.run` | The item you name, or none | `asked` |
+| `{event: <event>, when?: <condition>}` | `flai serve`, when an event the entry matches happens | For a role that takes items, the event's item, or the item a thread is on; none for a role that takes none | `<event> <ID>`, such as `moved S-0012` |
+| `{schedule: <setting>}` | `flai serve`, each time the setting comes round | None | `schedule <spec>`, such as `schedule daily` |
+
+```yaml
+# design/workflows/roles/auditor.md, in its front matter
+item: none
+trigger:
+  - asked
+  - {event: moved, when: to-review}
+  - {schedule: roles.auditor.schedule}
+```
+
+```bash
+flai manifest set roles.auditor.schedule=daily  # or a five-field cron expression in UTC, such as '0 6 * * 1'
+```
+
+- **Events.** The events and conditions are those the roles' [README](../../design/workflows/roles/README.md#triggers) lists. A `thread` event is the role's when a thread awaits it, or, for a role that takes items, its run on the thread's item. `flai serve` waits `orchestration.coalesce` (`30s` by default) from the first event and starts one run for all that came meanwhile: one per item for a role that takes items, one in all for a role that takes none. Its trigger names each, joined by semicolons, such as `moved S-0012; thread TH-0040`. Events that come while a run goes start the next run when it ends. What happened while the action was off starts nothing.
+- **Schedules.** The setting is the role's own `roles.<name>.schedule`, or one of `planning.schedule`, `analysis.schedule`, `digest.schedule`, and `orchestration.schedule`, shared with that built-in role. A schedule starts a role that takes no item only. `flai check` reports a `roles.<name>.schedule` that does not parse or never comes round, and one on a built-in role, as `manifest.roles`.
+- **Refused or held.** A start flai refuses, for the reasons [above](#running-a-role-your-project-defines), is logged by `flai serve` and not tried again: the next event the entry matches, or the schedule's next time, starts the next run. While the role's provider is out of budget, the start waits until the limit resets.
+
+[On an event or a schedule](../../design/system/strategic-agents.md#on-an-event-or-a-schedule-s-0418) has the whole of it.
 
 ## Sub-agents
 
