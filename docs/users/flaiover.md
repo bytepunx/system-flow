@@ -194,7 +194,7 @@ Below them, a list of the page's sections sits at the left, and the page shows o
 | Tasks (an epic's Stories) | The children, with their states, and a story's task plan |
 | Questions and threads (Threads off a story) | On a story, its narrative's open questions, each answerable there when the dashboard can write; then the threads on the item. Its entry counts those still open. A link from the inbox to a thread or a question opens this section, with that one outlined and scrolled to |
 | Messages | A story's conversations with other stories' agents ([Messages](#messages)). A board card's link to a conversation opens this section |
-| Agent | What the story's agent is doing, and its pull request when `flai serve` has read one ([below](#a-storys-pull-request)) |
+| Agent | What the story's agent is doing and, once it has started, what it is saying and doing, as on the [Activity](#activity) page (the stream opens by itself while the agent works or waits), and its pull request when `flai serve` has read one ([below](#a-storys-pull-request)) |
 | History | Every transition with when and by whom, and the intervals the item was blocked with their reasons |
 | Files | The item's file, which opens in the explorer, and a story's narrative, with a box to add a log entry to it |
 | Planning and usage | The usage, the cost of delay, the forecast, the expected cost, and the owner, estimate, tags, topics, touches, and agent from the front matter |
