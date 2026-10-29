@@ -26,7 +26,8 @@ import (
 // dashboard.notify_url, project and entry, extended with the thread's own
 // fields, so that one receiver can take both. It holds no token and no file
 // content: a thread's title, the first line of a pending recommendation, and
-// where things are.
+// where things are. A change of the host's budget state goes through the
+// same channel as a BudgetNotice (S-0534).
 
 const (
 	// NotifyURLTimeout bounds the one POST of a reminder to the webhook.
@@ -113,6 +114,84 @@ func ReminderHref(item, thread string) string {
 	return "/threads?thread=" + url.QueryEscape(thread)
 }
 
+// BudgetHref is the dashboard's link a budget notice carries: its root, as
+// the budget state's banner is on every page.
+const BudgetHref = "/"
+
+// BudgetNotice is what flai serve sends of a change of one provider's budget
+// state (S-0534, ADR-0209 §5) through the reminder's channel: once per
+// change, for the host, not per project. Its JSON has kind budget, which a
+// thread's reminder has not, and flaiover's entry, of kind budget, as a
+// reminder's has of kind thread, so that one receiver can take both. It holds
+// no token and no file content.
+type BudgetNotice struct {
+	// State is the change: set, extended, or cleared.
+	State string `json:"state"`
+	// Provider is the provider the state is kept under, or the runs'
+	// harness when they named none.
+	Provider string `json:"provider"`
+	// Limit is the error the harness named, such as usage_limit_reached, and
+	// Status its HTTP status; each empty when it named none.
+	Limit  string `json:"limit"`
+	Status int    `json:"status,omitempty"`
+	// Since is when the state was set, and Until when its hold ends: for a
+	// clear, as they were.
+	Since time.Time `json:"since"`
+	Until time.Time `json:"until"`
+	// At is when the state changed.
+	At time.Time `json:"at"`
+	// Projects are the names of the projects the host serves, each of which
+	// the state holds.
+	Projects []string `json:"projects"`
+	// Href is the dashboard's root, BudgetHref.
+	Href string `json:"href"`
+}
+
+// budgetNoticeTitles are what each change says, by state, of provider, in
+// flaiover's entry.
+var budgetNoticeTitles = map[string]string{
+	budgetSet:      "%s is out of budget: every start on it waits until %s",
+	budgetExtended: "%s is still out of budget: every start on it waits until %s",
+	budgetCleared:  "%s has budget again: starts on it go again, the hold that was until %s over",
+}
+
+// MarshalJSON writes the notice with kind budget, its times in UTC to the
+// second, and flaiover's entry, kind budget and keyed budget:<provider>.
+func (n BudgetNotice) MarshalJSON() ([]byte, error) {
+	type plain BudgetNotice
+	at := func(t time.Time) string {
+		if t.IsZero() {
+			return ""
+		}
+		return t.UTC().Format(time.RFC3339)
+	}
+	projects := n.Projects
+	if projects == nil {
+		projects = []string{}
+	}
+	title := n.Provider + " budget " + n.State
+	if f, ok := budgetNoticeTitles[n.State]; ok {
+		title = fmt.Sprintf(f, n.Provider, at(n.Until))
+	}
+	return json.Marshal(struct {
+		Kind string `json:"kind"`
+		plain
+		Since    string        `json:"since"`
+		Until    string        `json:"until"`
+		At       string        `json:"at"`
+		Projects []string      `json:"projects"`
+		Entry    reminderEntry `json:"entry"`
+	}{
+		Kind:     "budget",
+		plain:    plain(n),
+		Since:    at(n.Since),
+		Until:    at(n.Until),
+		At:       at(n.At),
+		Projects: projects,
+		Entry:    reminderEntry{Key: "budget:" + n.Provider, Kind: "budget", Title: title, Href: n.Href, At: at(n.At)},
+	})
+}
+
 // Send sends r through the channel ch: a POST of its JSON to ch.URL, one
 // attempt within NotifyURLTimeout, an answer other than 2xx being an error,
 // and a run of ch.Command through the host's shell, sh -c, or cmd /C on
@@ -122,7 +201,18 @@ func ReminderHref(item, thread string) string {
 // nil. An error names the webhook's host alone, never its URL, which may
 // carry a secret, nor the command, which may too.
 func Send(ctx context.Context, ch config.Notify, r Reminder) error {
-	return notifier{client: http.DefaultClient, shell: runShell, urlTimeout: NotifyURLTimeout, commandTimeout: NotifyCommandTimeout}.send(ctx, ch, r)
+	return defaultNotifier().send(ctx, ch, "the reminder of "+r.Thread, r)
+}
+
+// SendBudget sends n through the channel ch, as Send sends a reminder.
+func SendBudget(ctx context.Context, ch config.Notify, n BudgetNotice) error {
+	return defaultNotifier().send(ctx, ch, "the budget notice of "+n.Provider, n)
+}
+
+// defaultNotifier is the notifier of Send: the network, the host's shell,
+// and the reminder's timeouts.
+func defaultNotifier() notifier {
+	return notifier{client: http.DefaultClient, shell: runShell, urlTimeout: NotifyURLTimeout, commandTimeout: NotifyCommandTimeout}
 }
 
 // shellRunner runs command through the host's shell with stdin on its
@@ -139,32 +229,34 @@ type notifier struct {
 	commandTimeout time.Duration
 }
 
-func (n notifier) send(ctx context.Context, ch config.Notify, r Reminder) error {
+// send sends v's JSON through ch, as Send does; about names what v is, such
+// as "the reminder of TH-0001", for its errors.
+func (n notifier) send(ctx context.Context, ch config.Notify, about string, v any) error {
 	if ch.URL == "" && strings.TrimSpace(ch.Command) == "" {
 		return nil
 	}
-	body, err := json.Marshal(r)
+	body, err := json.Marshal(v)
 	if err != nil {
-		return fmt.Errorf("encode the reminder of %s: %w", r.Thread, err)
+		return fmt.Errorf("encode %s: %w", about, err)
 	}
 	var errs []error
 	if ch.URL != "" {
-		errs = append(errs, n.post(ctx, ch.URL, r.Thread, body))
+		errs = append(errs, n.post(ctx, ch.URL, about, body))
 	}
 	if strings.TrimSpace(ch.Command) != "" {
-		errs = append(errs, n.run(ctx, ch.Command, r.Thread, append(body, '\n')))
+		errs = append(errs, n.run(ctx, ch.Command, about, append(body, '\n')))
 	}
 	return errors.Join(errs...)
 }
 
-// post POSTs body to target once, within n.urlTimeout.
-func (n notifier) post(ctx context.Context, target, thread string, body []byte) error {
+// post POSTs body, which is about, to target once, within n.urlTimeout.
+func (n notifier) post(ctx context.Context, target, about string, body []byte) error {
 	host := "an unreadable URL"
 	if u, err := url.Parse(target); err == nil {
 		host = u.Host
 	}
 	fail := func(what string) error {
-		return fmt.Errorf("post the reminder of %s to the webhook at %s: %s; check that it answers, or change it with flai serve notify set --url <url>", thread, host, what)
+		return fmt.Errorf("post %s to the webhook at %s: %s; check that it answers, or change it with flai serve notify set --url <url>", about, host, what)
 	}
 	ctx, cancel := context.WithTimeout(ctx, n.urlTimeout)
 	defer cancel()
@@ -194,8 +286,9 @@ func (n notifier) post(ctx context.Context, target, thread string, body []byte) 
 	return nil
 }
 
-// run runs command through the shell with stdin, within n.commandTimeout.
-func (n notifier) run(ctx context.Context, command, thread string, stdin []byte) error {
+// run runs command through the shell with stdin, which is about, within
+// n.commandTimeout.
+func (n notifier) run(ctx context.Context, command, about string, stdin []byte) error {
 	ctx, cancel := context.WithTimeout(ctx, n.commandTimeout)
 	defer cancel()
 	out, err := n.shell(ctx, command, stdin)
@@ -212,7 +305,7 @@ func (n notifier) run(ctx context.Context, command, thread string, stdin []byte)
 		}
 		what += ": " + said
 	}
-	return fmt.Errorf("run the notify command for the reminder of %s: %s; try it in a shell with the reminder's JSON on its standard input, or change it with flai serve notify set --command <command>", thread, what)
+	return fmt.Errorf("run the notify command for %s: %s; try it in a shell with its JSON on its standard input, or change it with flai serve notify set --command <command>", about, what)
 }
 
 // runShell is the shellRunner that runs command through sh -c, or cmd /C on

@@ -444,6 +444,9 @@ func Run(ctx context.Context, o Options) error {
 	if o.Logger == nil {
 		o.Logger = slog.New(slog.DiscardHandler)
 	}
+	// A change of the host's budget state is sent through the reminder
+	// channel, read at each change (S-0534, ADR-0205).
+	o.Dir.notifyBudget(o.Notify)
 	if o.DrainGrace <= 0 {
 		o.DrainGrace = DefaultDrainGrace
 	}

@@ -2,15 +2,21 @@ package serve
 
 import (
 	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 )
@@ -21,8 +27,10 @@ type budgetLab struct {
 	t       *testing.T
 	dir     Dir
 	at      time.Time
+	mu      sync.Mutex // guards journal, which launchers of two projects append to at once
 	journal []hostapi.Entry
 	logs    bytes.Buffer
+	o       Options
 	l       *launcher
 }
 
@@ -36,9 +44,13 @@ var (
 func newBudgetLab(t *testing.T) *budgetLab {
 	t.Helper()
 	lab := &budgetLab{t: t, dir: Dir(filepath.Join(t.TempDir(), "serve")), at: budgetAt}
-	o := Options{Dir: lab.dir, Logger: slog.New(slog.NewTextHandler(&lab.logs, nil)), Now: func() time.Time { return lab.at },
-		Host: hostapi.Host{Record: func(e hostapi.Entry) { lab.journal = append(lab.journal, e) }}}
-	lab.l = newLauncher(o, Entry{Key: "t", Name: "t", Root: "/srv/t"})
+	lab.o = Options{Dir: lab.dir, Logger: slog.New(slog.NewTextHandler(&lab.logs, nil)), Now: func() time.Time { return lab.at },
+		Host: hostapi.Host{Record: func(e hostapi.Entry) {
+			lab.mu.Lock()
+			defer lab.mu.Unlock()
+			lab.journal = append(lab.journal, e)
+		}}}
+	lab.l = newLauncher(lab.o, Entry{Key: "t", Name: "t", Root: "/srv/t"})
 	return lab
 }
 
@@ -356,5 +368,189 @@ func TestEachChangeIsJournalledOnce(t *testing.T) {
 	}
 	if n := strings.Count(lab.logs.String(), `msg="budget state `); n != len(want) {
 		t.Errorf("logged %d changes, want %d:\n%s", n, len(want), lab.logs.String())
+	}
+}
+
+// noticeBox is a fake sender of a serve folder's budget notices: what it was
+// sent, in order.
+type noticeBox struct {
+	mu   sync.Mutex
+	sent []BudgetNotice
+}
+
+// notices has the lab's serve folder send its budget notices to a fake
+// through ch, until the test ends, and registers two projects in it.
+func (lab *budgetLab) notices(ch config.Notify) *noticeBox {
+	lab.t.Helper()
+	for _, e := range []Entry{{Key: "t", Name: "system-flow", Root: "/srv/t"}, {Key: "u", Root: "/srv/u"}} {
+		e.URL, e.KeyFile = "ws://127.0.0.1:1/"+e.Key, "/srv/"+e.Key+".key"
+		if err := lab.dir.Register(e); err != nil {
+			lab.t.Fatal(err)
+		}
+	}
+	box := &noticeBox{}
+	lab.dir.notifyBudgetWith(budgetNotifier{channel: func() config.Notify { return ch }, send: func(_ context.Context, got config.Notify, n BudgetNotice) error {
+		if got != ch {
+			lab.t.Errorf("sent through %+v, want %+v", got, ch)
+		}
+		box.mu.Lock()
+		defer box.mu.Unlock()
+		box.sent = append(box.sent, n)
+		return nil
+	}})
+	lab.t.Cleanup(func() { lab.dir.notifyBudget(nil) })
+	return box
+}
+
+// states are the states of the notices sent, in order.
+func (box *noticeBox) states() []string {
+	box.mu.Lock()
+	defer box.mu.Unlock()
+	out := []string{}
+	for _, n := range box.sent {
+		out = append(out, n.State)
+	}
+	return out
+}
+
+// S-0534 (ADR-0209 §5): a set, an extension after a refused probe, and a clear
+// each send one notice of kind budget with the provider, the limit, until, the
+// projects the host serves, and the dashboard's root; a probe's start, a start
+// held, and a probe freed send none.
+func TestEachSetExtensionAndClearSendsOneNotice(t *testing.T) {
+	lab := newBudgetLab(t)
+	box := lab.notices(config.Notify{URL: "https://push.example/flai"})
+	lab.l.budgetEnded(lab.run("S-0001", "anthropic"), limited(time.Time{}))
+	lab.l.budgetStart(lab.run("S-0002", "anthropic"))
+	lab.at = lab.at.Add(budgetBackoffFirst)
+	refused := lab.run("S-0003", "anthropic")
+	lab.l.budgetStart(refused)
+	lab.l.budgetEnded(refused, limited(time.Time{}))
+	lab.at = lab.at.Add(2 * budgetBackoffFirst)
+	released := lab.run("S-0004", "anthropic")
+	lab.l.budgetStart(released)
+	lab.l.budgetRelease(released)
+	clean := lab.run("S-0005", "anthropic")
+	lab.l.budgetStart(clean)
+	lab.l.budgetEnded(clean, nil)
+
+	until1, until2 := budgetAt.Add(budgetBackoffFirst), budgetAt.Add(3*budgetBackoffFirst)
+	want := []struct {
+		state string
+		until time.Time
+		at    time.Time
+	}{{"set", until1, budgetAt}, {"extended", until2, until1}, {"cleared", until2, until2}}
+	if len(box.sent) != len(want) {
+		t.Fatalf("sent %v, want one notice each of set, extended, and cleared", box.states())
+	}
+	for i, w := range want {
+		n := box.sent[i]
+		if n.State != w.state || n.Provider != "anthropic" || n.Limit != "usage_limit_reached" || n.Status != 429 || !n.Until.Equal(w.until) ||
+			!n.Since.Equal(budgetAt) || !n.At.Equal(w.at) || n.Href != "/" || !slices.Equal(n.Projects, []string{"system-flow", "u"}) {
+			t.Errorf("notice %d = %+v, want %s until %s at %s", i, n, w.state, w.until, w.at)
+		}
+		data, err := json.Marshal(n)
+		if err != nil || !strings.Contains(string(data), `"kind":"budget"`) {
+			t.Errorf("notice %d is not of kind budget: %s, %v", i, data, err)
+		}
+	}
+	if n := strings.Count(lab.logs.String(), `msg="budget notice sent"`); n != len(want) {
+		t.Errorf("logged %d notices sent, want %d:\n%s", n, len(want), lab.logs.String())
+	}
+}
+
+// The budget state is the host's: launchers of two projects under one serve
+// folder, ending and starting runs at once, send one notice per change, not
+// one per project.
+func TestTwoProjectsUnderOneServeFolderSendOneNoticePerChange(t *testing.T) {
+	lab := newBudgetLab(t)
+	box := lab.notices(config.Notify{Command: "notify-send flai"})
+	launchers := []*launcher{lab.l, newLauncher(lab.o, Entry{Key: "u", Name: "u", Root: "/srv/u"})}
+	runs := make([]*AgentRun, len(launchers))
+	gates := make([]budgetGate, len(launchers))
+	// both runs each launcher's do at once, on its own run of story-<i>
+	both := func(story string, do func(l *launcher, run *AgentRun) budgetGate) {
+		var wg sync.WaitGroup
+		for i, l := range launchers {
+			runs[i] = lab.run(fmt.Sprintf("%s-%d", story, i), "anthropic")
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				gates[i] = do(l, runs[i])
+			}()
+		}
+		wg.Wait()
+	}
+	end := func(lim *usage.Limit) func(*launcher, *AgentRun) budgetGate {
+		return func(l *launcher, run *AgentRun) budgetGate { l.budgetEnded(run, lim); return budgetGate{} }
+	}
+	start := func(l *launcher, run *AgentRun) budgetGate { return l.budgetStart(run) }
+	// probe is the index of the one start of both that probes
+	probe := func() int {
+		t.Helper()
+		if gates[0].Probe == gates[1].Probe {
+			t.Fatalf("starts at once = %+v, want one probe", gates)
+		}
+		if gates[0].Probe {
+			return 0
+		}
+		return 1
+	}
+
+	both("S-0001", end(limited(time.Time{})))
+	lab.at = lab.at.Add(budgetBackoffFirst)
+	both("S-0002", start)
+	p := probe()
+	launchers[p].budgetEnded(runs[p], limited(time.Time{}))
+	both("S-0003", end(limited(time.Time{})))
+	b, _ := lab.held("anthropic")
+	lab.at = b.Until
+	both("S-0004", start)
+	p = probe()
+	launchers[p].budgetEnded(runs[p], nil)
+
+	if got := box.states(); !slices.Equal(got, []string{"set", "extended", "cleared"}) {
+		t.Errorf("sent %v, want one notice each of set, extended, and cleared", got)
+	}
+	if n := len(lab.journal); n != 5 {
+		t.Errorf("journal has %d entries, want the set, two probes, the extension, and the clear: %+v", n, lab.journal)
+	}
+}
+
+// With no channel set, or none registered for the serve folder, no notice is
+// sent, each change is logged, and that no channel is set is warned of once
+// in the run, whichever project's launcher made the change.
+func TestNoChannelSendsNothingAndWarnsOnce(t *testing.T) {
+	for _, registered := range []bool{true, false} {
+		lab := newBudgetLab(t)
+		box := &noticeBox{}
+		if registered {
+			box = lab.notices(config.Notify{Command: "  "})
+		}
+		other := newLauncher(lab.o, Entry{Key: "u", Name: "u", Root: "/srv/u"})
+		lab.l.budgetEnded(lab.run("S-0001", "anthropic"), limited(time.Time{}))
+		lab.at = lab.at.Add(budgetBackoffFirst)
+		refused := lab.run("S-0002", "anthropic")
+		other.budgetStart(refused)
+		other.budgetEnded(refused, limited(time.Time{}))
+		lab.at = lab.at.Add(2 * budgetBackoffFirst)
+		clean := lab.run("S-0003", "anthropic")
+		lab.l.budgetStart(clean)
+		lab.l.budgetEnded(clean, nil)
+		logs := lab.logs.String()
+		if len(box.sent) != 0 {
+			t.Errorf("registered %v: sent %v with no channel set", registered, box.states())
+		}
+		if n := strings.Count(logs, `msg="budget notices have no channel"`); n != 1 {
+			t.Errorf("registered %v: warned %d times that no channel is set, want once:\n%s", registered, n, logs)
+		}
+		for _, kind := range []string{"set", "extended", "cleared"} {
+			if !strings.Contains(logs, `msg="budget state `+kind+`" `) {
+				t.Errorf("registered %v: the %s is not logged:\n%s", registered, kind, logs)
+			}
+		}
+		if strings.Contains(logs, "budget notice sent") {
+			t.Errorf("registered %v: a notice is logged as sent:\n%s", registered, logs)
+		}
 	}
 }

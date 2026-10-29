@@ -2,15 +2,18 @@ package serve
 
 import (
 	"cmp"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 )
@@ -28,7 +31,9 @@ import (
 //
 // Every project's launcher in one flai serve reads and writes the file under
 // budgetMu; the MCP server and the host API read it, from other processes,
-// with Budgets. A change is announced in one place, launcher.budgetChanged.
+// with Budgets. A change is announced in one place, launcher.budgetChanged,
+// which journals it, logs it, and sends a set, an extension, or a clear to
+// the operator through the channel of ADR-0205 as a BudgetNotice.
 
 const (
 	// budgetBackoffFirst is how long a limit with no reset time holds its
@@ -390,7 +395,8 @@ func (ch budgetChange) detail() string {
 	return fmt.Sprintf("cleared the budget state: %s; starts on %s go again; it was %s", ch.Why, ch.State.Provider, budgetSaid(ch.State))
 }
 
-// budgetChanged announces ch: it journals it and logs it. Nothing when ch
+// budgetChanged announces ch: it journals it, logs it, and, for a set, an
+// extension, or a clear, sends its notice (budgetNotice). Nothing when ch
 // changed nothing.
 func (l *launcher) budgetChanged(ch budgetChange) {
 	if ch.Kind == "" {
@@ -402,6 +408,111 @@ func (l *launcher) budgetChanged(ch budgetChange) {
 	}
 	l.log("budget state "+ch.Kind, "provider", ch.State.Provider, "limit", ch.State.Limit, "status", ch.State.Status,
 		"until", ch.State.Until.UTC().Format(time.RFC3339), "backoff", ch.State.Backoff, "run", ch.Run.Work, "started", ch.Run.Started)
+	l.budgetNotice(ch)
+}
+
+// budgetNotifier is how one serve folder's budget notices are sent: the
+// channel of ADR-0205, read at each change so that the operator's flai serve
+// notify set is seen without a restart, nil being no channel, and the
+// sender. The notice is the host's, so the notifier is the serve folder's,
+// not a project's: the flai serve of the folder sets it once with
+// Dir.notifyBudget, and whichever project's launcher makes a change sends
+// through it.
+type budgetNotifier struct {
+	channel func() config.Notify
+	send    func(ctx context.Context, ch config.Notify, n BudgetNotice) error
+}
+
+// budgetNotifiers are the notifiers set in this process, by serve folder,
+// and budgetUnchannelled the serve folders whose budget notices this process
+// has warned have no channel, so that it warns once per run.
+var (
+	budgetNotifiersMu  sync.Mutex
+	budgetNotifiers    = map[Dir]budgetNotifier{}
+	budgetUnchannelled = map[Dir]bool{}
+)
+
+// notifyBudget has d's budget notices sent through channel with SendBudget;
+// nil sends none, and they are logged instead.
+func (d Dir) notifyBudget(channel func() config.Notify) {
+	d.notifyBudgetWith(budgetNotifier{channel: channel, send: SendBudget})
+}
+
+// notifyBudgetWith has d's budget notices sent by n; a nil channel sends
+// none.
+func (d Dir) notifyBudgetWith(n budgetNotifier) {
+	budgetNotifiersMu.Lock()
+	defer budgetNotifiersMu.Unlock()
+	if n.channel == nil {
+		delete(budgetNotifiers, d)
+		return
+	}
+	budgetNotifiers[d] = n
+}
+
+// budgetChannel is d's notifier and the channel it reads now, and, when the
+// channel is not set, whether this is the first time this process finds so.
+func (d Dir) budgetChannel() (n budgetNotifier, ch config.Notify, firstUnset bool) {
+	budgetNotifiersMu.Lock()
+	n, ok := budgetNotifiers[d]
+	budgetNotifiersMu.Unlock()
+	if ok {
+		ch = n.channel()
+	}
+	if ch.URL != "" || strings.TrimSpace(ch.Command) != "" {
+		return n, ch, false
+	}
+	budgetNotifiersMu.Lock()
+	defer budgetNotifiersMu.Unlock()
+	firstUnset = !budgetUnchannelled[d]
+	budgetUnchannelled[d] = true
+	return n, ch, firstUnset
+}
+
+// budgetNoticeStates are the changes a notice is sent of; a probe's start
+// and its release are not.
+var budgetNoticeStates = map[string]bool{budgetSet: true, budgetExtended: true, budgetCleared: true}
+
+// budgetNotice sends the notice of ch, a set, an extension, or a clear,
+// through the serve folder's channel, once: the one launcher whose run made
+// the change sends it, whichever project it serves. One attempt within the
+// reminder's timeouts, its failure warned of. With no channel set the change
+// is logged (budgetChanged) and that none is set is warned of once per run.
+func (l *launcher) budgetNotice(ch budgetChange) {
+	if !budgetNoticeStates[ch.Kind] {
+		return
+	}
+	n, channel, firstUnset := l.dir.budgetChannel()
+	if channel.URL == "" && strings.TrimSpace(channel.Command) == "" {
+		if firstUnset {
+			l.warn("budget notices have no channel", "hint", "set one in a shell on the host with flai serve notify set --url <webhook> or --command <command>")
+		}
+		return
+	}
+	notice := BudgetNotice{State: ch.Kind, Provider: ch.State.Provider, Limit: ch.State.Limit, Status: ch.State.Status,
+		Since: ch.State.Since, Until: ch.State.Until, At: l.now(), Projects: l.budgetProjects(), Href: BudgetHref}
+	attrs := []any{"state", notice.State, "provider", notice.Provider, "until", notice.Until.UTC().Format(time.RFC3339)}
+	if err := n.send(context.Background(), channel, notice); err != nil {
+		l.warn("budget notice not sent", append(attrs, "err", err.Error())...)
+		return
+	}
+	l.log("budget notice sent", attrs...)
+}
+
+// budgetProjects are the names of the projects in the serve folder's
+// registry, by key when one has none; none when it cannot be read, which is
+// warned of.
+func (l *launcher) budgetProjects() []string {
+	all, err := l.dir.Projects()
+	if err != nil {
+		l.warn("budget notice names no project: the registry is not read", "err", err)
+		return nil
+	}
+	out := make([]string, 0, len(all))
+	for _, e := range all {
+		out = append(out, cmp.Or(e.Name, e.Key))
+	}
+	return out
 }
 
 // budgetStart is the gate run's start passes once its harness and provider

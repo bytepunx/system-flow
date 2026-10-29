@@ -3,6 +3,7 @@ package serve
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -157,7 +158,7 @@ func TestSendGivesUpOnASlowWebhook(t *testing.T) {
 	t.Cleanup(srv.Close)
 	t.Cleanup(func() { close(release) })
 	n := notifier{client: http.DefaultClient, shell: runShell, urlTimeout: 50 * time.Millisecond, commandTimeout: time.Second}
-	err := n.send(context.Background(), config.Notify{URL: srv.URL + "/?token=secret"}, testReminder())
+	err := n.send(context.Background(), config.Notify{URL: srv.URL + "/?token=secret"}, "the reminder of TH-0324", testReminder())
 	if err == nil || !strings.Contains(err.Error(), "it gave no answer within 50ms") || strings.Contains(err.Error(), "secret") {
 		t.Errorf("a slow webhook is an error without its URL: %v", err)
 	}
@@ -190,7 +191,7 @@ func TestSendStopsASlowCommand(t *testing.T) {
 	}
 	n := notifier{client: http.DefaultClient, shell: runShell, urlTimeout: time.Second, commandTimeout: 100 * time.Millisecond}
 	start := time.Now()
-	err := n.send(context.Background(), config.Notify{Command: "sleep 10"}, testReminder())
+	err := n.send(context.Background(), config.Notify{Command: "sleep 10"}, "the reminder of TH-0324", testReminder())
 	if err == nil || !strings.Contains(err.Error(), "it did not end within 100ms") {
 		t.Errorf("a slow command is an error: %v", err)
 	}
@@ -226,7 +227,7 @@ func TestSendBothAndNeither(t *testing.T) {
 		called = true
 		return nil, nil
 	}, urlTimeout: time.Second, commandTimeout: time.Second}
-	if err := n.send(context.Background(), config.Notify{}, testReminder()); err != nil || called {
+	if err := n.send(context.Background(), config.Notify{}, "the reminder of TH-0324", testReminder()); err != nil || called {
 		t.Errorf("with no channel nothing is sent: %v, command run %v", err, called)
 	}
 }
@@ -249,5 +250,90 @@ func TestReminderWithoutRecommendation(t *testing.T) {
 	}
 	if got["href"] != "/threads?thread=TH-0001" || got["item"] != "" {
 		t.Errorf("a thread on a document: %s", data)
+	}
+}
+
+// testBudgetNotice is a provider's budget state set until a reset, as a
+// notice carries it.
+func testBudgetNotice() BudgetNotice {
+	cest := time.FixedZone("CEST", 2*3600)
+	return BudgetNotice{State: "set", Provider: "anthropic", Limit: "usage_limit_reached", Status: 429,
+		Since: time.Date(2026, 10, 28, 9, 0, 0, 0, cest), Until: time.Date(2026, 10, 28, 10, 0, 0, 0, cest), At: time.Date(2026, 10, 28, 9, 0, 0, 500, cest),
+		Projects: []string{"system-flow", "demo"}, Href: BudgetHref}
+}
+
+// wantBudgetBody is testBudgetNotice's JSON as a receiver decodes it.
+var wantBudgetBody = map[string]any{
+	"kind":     "budget",
+	"state":    "set",
+	"provider": "anthropic",
+	"limit":    "usage_limit_reached",
+	"status":   float64(429),
+	"since":    "2026-10-28T07:00:00Z",
+	"until":    "2026-10-28T08:00:00Z",
+	"at":       "2026-10-28T07:00:00Z",
+	"projects": []any{"system-flow", "demo"},
+	"href":     "/",
+	"entry": map[string]any{
+		"key":   "budget:anthropic",
+		"kind":  "budget",
+		"title": "anthropic is out of budget: every start on it waits until 2026-10-28T08:00:00Z",
+		"href":  "/",
+		"at":    "2026-10-28T07:00:00Z",
+	},
+}
+
+// S-0534 (ADR-0209 §5): a budget notice goes through the reminder's channel,
+// one POST to the webhook and its JSON on the command's standard input, with
+// kind budget, which a reminder has not, and flaiover's entry of kind budget;
+// a failure names the provider and never the URL.
+func TestSendBudgetSendsTheNoticeThroughTheChannel(t *testing.T) {
+	srv, got := webhook(t, http.StatusOK)
+	out := filepath.Join(t.TempDir(), "budget.json")
+	if err := SendBudget(context.Background(), config.Notify{URL: srv.URL + "/flai?auth=secret", Command: stdinTo(t, out)}, testBudgetNotice()); err != nil {
+		t.Fatalf("SendBudget: %v", err)
+	}
+	posts := got()
+	if len(posts) != 1 || posts[0].contentType != "application/json" {
+		t.Fatalf("one POST of JSON, got %+v", posts)
+	}
+	if !reflect.DeepEqual(posts[0].body, wantBudgetBody) {
+		t.Errorf("body:\n got %v\nwant %v", posts[0].body, wantBudgetBody)
+	}
+	if stdin := readJSON(t, out); !reflect.DeepEqual(stdin, wantBudgetBody) {
+		t.Errorf("stdin:\n got %v\nwant %v", stdin, wantBudgetBody)
+	}
+	if _, has := wantBody["kind"]; has {
+		t.Error("a reminder carries a kind of its own; a receiver could not tell it from a notice by kind alone")
+	}
+
+	failing, tried := webhook(t, http.StatusServiceUnavailable)
+	err := SendBudget(context.Background(), config.Notify{URL: failing.URL + "/flai?auth=secret"}, testBudgetNotice())
+	if err == nil || !strings.Contains(err.Error(), "the budget notice of anthropic") || !strings.Contains(err.Error(), "503") || strings.Contains(err.Error(), "secret") {
+		t.Errorf("a 503 is an error naming the provider, not the URL: %v", err)
+	}
+	if n := len(tried()); n != 1 {
+		t.Errorf("one attempt, no retry: %d", n)
+	}
+}
+
+// A clear says so, and a notice with no project names none as an empty list.
+func TestABudgetNoticeOfAClear(t *testing.T) {
+	n := testBudgetNotice()
+	n.State, n.Projects = "cleared", nil
+	data, err := json.Marshal(n)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatal(err)
+	}
+	entry, _ := got["entry"].(map[string]any)
+	if got["state"] != "cleared" || !strings.HasPrefix(fmt.Sprint(entry["title"]), "anthropic has budget again") {
+		t.Errorf("a clear: %s", data)
+	}
+	if projects, ok := got["projects"].([]any); !ok || len(projects) != 0 {
+		t.Errorf("no project is an empty list: %s", data)
 	}
 }
