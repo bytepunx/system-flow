@@ -81,7 +81,7 @@ func (p *Pack) cut(limit, count int) []*Pack {
 // catalog yet.
 func (c *cutter) open() {
 	p := c.pack
-	q := &Pack{Story: p.Story, Item: p.Item, Title: p.Title, Role: p.Role, Topics: []topics.StoryTopic{}, Omitted: []string{}}
+	q := &Pack{Story: p.Story, Item: p.Item, Title: p.Title, Role: p.Role, Reasons: p.Reasons, Topics: []topics.StoryTopic{}, Omitted: []string{}}
 	if len(c.parts) == 0 {
 		h := *p
 		q = &h

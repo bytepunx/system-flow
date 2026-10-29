@@ -402,6 +402,9 @@ func withTopics(list []topics.StoryTopic, role string, names []string) []topics.
 // strategicLines are the header's lines naming a strategic pack's item and
 // role.
 func (p *Pack) strategicLines() string {
+	if len(p.Reasons) > 0 {
+		return p.reasonLines()
+	}
 	if p.Item == "" {
 		answers := ""
 		if p.Role == conventions.RoleOrchestrate {

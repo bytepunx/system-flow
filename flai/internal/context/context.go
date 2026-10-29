@@ -83,6 +83,10 @@ type Pack struct {
 	Omitted     []string            `json:"left_out"` // one line per outermost section left out
 	Items       []Item              `json:"items"`    // the design, tech, ADRs, and digest entries chosen, in the order chosen
 	Catalog     Catalog             `json:"catalog"`
+	// Reasons are the reasons the orchestrator's pack is primed for, in the
+	// form ForReasons reads them, such as thread:TH-0001 (ADR-0217); empty on
+	// any other pack.
+	Reasons []string `json:"reasons,omitempty"`
 	// BriefsLeftOut counts the briefs a role pack had no room for.
 	BriefsLeftOut int `json:"briefs_left_out,omitempty"`
 	// agent names a strategic pack's agent, such as "the planner", as its
@@ -103,6 +107,14 @@ type Catalog struct {
 // conventions.
 func Build(root, story, title string, storyTopics []topics.StoryTopic, set *conventions.Set, issues string, budget int) (*Pack, error) {
 	names := topics.Names(storyTopics)
+	return build(root, story, title, storyTopics, set, issues, budget, func(section []string) bool { return Matches(section, names) })
+}
+
+// build is Build with keep saying which sections of the conventions the
+// pack keeps, given their effective topics: Matches for the pack's topics
+// in every pack but one primed for reasons, which keeps what
+// MatchesReasons does (ADR-0217).
+func build(root, story, title string, storyTopics []topics.StoryTopic, set *conventions.Set, issues string, budget int, keep func(section []string) bool) (*Pack, error) {
 	p := &Pack{Story: story, Title: title, Topics: storyTopics, Budget: budget, Issues: issues, Conventions: []Convention{}, Omitted: []string{}, Items: []Item{},
 		Catalog: Catalog{NotLoaded: []Entry{}, InPart: []Entry{}}}
 	if set.README != "" {
@@ -110,7 +122,7 @@ func Build(root, story, title string, storyTopics []topics.StoryTopic, set *conv
 		if err != nil {
 			return nil, err
 		}
-		c, err := Filter(filepath.ToSlash(rel), set.README, names)
+		c, err := filter(filepath.ToSlash(rel), set.README, keep)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", rel, err)
 		}
@@ -118,7 +130,7 @@ func Build(root, story, title string, storyTopics []topics.StoryTopic, set *conv
 		p.README = c
 	}
 	for _, f := range set.Files {
-		c, err := Filter(filepath.ToSlash(f.Path), f.Raw, names)
+		c, err := filter(filepath.ToSlash(f.Path), f.Raw, keep)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", f.Path, err)
 		}
@@ -308,6 +320,12 @@ func Matches(section, story []string) bool {
 // line of a left-out section that encloses a kept one, the baseline marker,
 // and the "## Project additions" heading. A file without topics is [all].
 func Filter(path, content string, story []string) (*Convention, error) {
+	return filter(path, content, func(section []string) bool { return Matches(section, story) })
+}
+
+// filter is Filter with keep saying, from a section's effective topics,
+// whether the section is kept.
+func filter(path, content string, keep func(section []string) bool) (*Convention, error) {
 	doc, err := topics.Parse(content, []string{topics.All})
 	if err != nil {
 		return nil, err
@@ -353,7 +371,7 @@ func Filter(path, content string, story []string) (*Convention, error) {
 			stack = append(stack, cur)
 		}
 		piece := Piece{Heading: s.Heading, Path: s.Path, Line: s.Line, Topics: s.Topics, outer: !under}
-		if Matches(s.Topics, story) {
+		if keep(s.Topics) {
 			if s.Level > 0 {
 				ancestors()
 			}
@@ -480,6 +498,8 @@ func (p *Pack) groupHead() map[string]string {
 	switch {
 	case p.subAgent():
 		return roleHead
+	case len(p.Reasons) > 0:
+		return reasonsHead
 	case p.strategic():
 		return strategicHead
 	}
@@ -639,6 +659,10 @@ func (p *Pack) Header() string {
 	}
 	fmt.Fprintf(&b, "size: %d bytes, %d lines, this header included; budget %d bytes\n", p.Size.Bytes, p.Size.Lines, p.Budget)
 	switch {
+	case len(p.Reasons) > 0 && p.Exceeded == ExceededConventions:
+		b.WriteString("over budget: the role's conventions alone exceed it; what the reasons load is still loaded, and the digest entries within their share; tagging the conventions' sections with all and the reasons that need them makes room (ADR-0217)\n")
+	case len(p.Reasons) > 0 && p.Exceeded == ExceededNamed:
+		b.WriteString("over budget: the conventions and what the reasons load exceed it; everything the reasons load is kept, and the digest entries load within their share (ADR-0217, ADR-0194)\n")
 	case p.subAgent() && p.Exceeded == ExceededConventions:
 		b.WriteString("over budget: the role's conventions and the story's goal alone exceed it, so no brief is printed; narrowing the conventions' roles or topics makes room (ADR-0059)\n")
 	case p.Exceeded == ExceededConventions:
