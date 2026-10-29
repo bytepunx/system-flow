@@ -6,8 +6,8 @@ sources: [I-0076]
 topics: [cli, conventions, template, flai, go, code, all]
 paths: [design/adrs, flai/internal/check/check.go, flai/internal/check/check_test.go, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, design/system/workflow.md, design/system/agent-coordination.md, design/system/continuous-improvement.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0076-flai-check-finds-wip-overlap-outside-the-story-at-close-out.md, design/issues/summary.md, design/system/work-hierarchy.md]
 date: 2026-10-07
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/flai-cli.md#commands"
 asked_again: []
 cited: []
 ---

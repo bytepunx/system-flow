@@ -6,8 +6,8 @@ sources: [I-0143]
 topics: [agents, cli, flai, go, code, all]
 paths: [flai/internal/guard/call.go, flai/internal/guard/call_test.go, flai/internal/guard/claudecode.go, flai/internal/guard/claudecode_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/internal/guard/shared.go, flai/internal/guard/shared_test.go, flai/internal/guard/subagents.go, flai/internal/guard/subagents_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, docs/operators/settings.md, docs/users/flai-reference.md, design/system/flai-cli.md, flai/internal/guard/authors.go, flai/internal/guard/authors_test.go]
 date: 2026-10-21
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/workflow.md#the-pull-order-s-0057"
 asked_again: []
 cited: []
 ---

@@ -6,8 +6,8 @@ sources: [I-0147]
 topics: [mcp, release, host, flai, cli, go, code, all]
 paths: [design/adrs/README.md, design/system/flai-cli.md, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, flai/internal/mcpserver/installed.go, flai/internal/mcpserver/installed_test.go, flai/internal/mcpserver/server.go, docs/users/flai.md, docs/operators/index.md, design/system/agent-narrative.md, design/issues/I-0147-the-mcp-server-s-flai-lags-a-fresh-publish-so-task-done-refuses-and-a-story-s-agent-falls-back-to-the-tree-s-cli.md, design/issues/summary.md, design/adrs/0160-an-outdated-mcp-server-s-task-done-closes-the-task-with-the-installed-flai-once.md, flai/cmd/mcp.go, flai/cmd/mcp_http.go]
 date: 2026-10-15
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/flai-cli.md#versions-the-hosts-flai-and-the-tree"
 asked_again: []
 cited: []
 ---

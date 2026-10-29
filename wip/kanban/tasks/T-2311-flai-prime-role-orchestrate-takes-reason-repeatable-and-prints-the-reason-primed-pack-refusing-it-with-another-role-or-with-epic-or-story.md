@@ -3,12 +3,18 @@ id: T-2311
 type: task
 nature: improvement
 title: flai prime --role orchestrate takes --reason, repeatable, and prints the reason-primed pack, refusing it with another role or with --epic or --story
-status: backlog
+status: in-progress
 parent: S-0537
 owner: alex
 created: 2026-10-28T22:07:30Z
-updated: 2026-10-28T22:07:30Z
-transitions: []
+updated: 2026-10-29T15:52:17Z
+transitions:
+  - to: ready
+    at: 2026-10-29T15:52:16Z
+    by: agent-S-0537
+  - to: in-progress
+    at: 2026-10-29T15:52:17Z
+    by: agent-S-0537
 stream: S-0537
 tags: [flai, cli, prime]
 touches: [flai/cmd/prime.go, flai/cmd/prime_test.go]

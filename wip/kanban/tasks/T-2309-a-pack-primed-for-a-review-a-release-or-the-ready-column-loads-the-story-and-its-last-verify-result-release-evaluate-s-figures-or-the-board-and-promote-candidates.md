@@ -3,11 +3,11 @@ id: T-2309
 type: task
 nature: improvement
 title: A pack primed for a review, a release, or the ready column loads the story and its last verify result, release_evaluate's figures, or the board and promote_candidates
-status: in-progress
+status: done
 parent: S-0537
 owner: alex
 created: 2026-10-28T22:06:55Z
-updated: 2026-10-29T15:42:21Z
+updated: 2026-10-29T15:51:57Z
 transitions:
   - to: ready
     at: 2026-10-29T15:42:20Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-29T15:42:21Z
     by: agent-S-0537
+  - to: done
+    at: 2026-10-29T15:51:57Z
+    by: agent-S-0537
 stream: S-0537
 tags: [flai, prime, orchestrator]
-touches: [flai/internal/context/reasons_figures.go, flai/internal/context/reasons_figures_test.go]
+touches: [flai/internal/context/reasons_figures.go, flai/internal/context/reasons_figures_test.go, flai/internal/context/reasons.go, flai/internal/context/reasons_test.go]
 after: [T-2308]
+usage:
+  source: log
+  seconds: 576
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 92
+      output: 413
+      cache_read: 5056221
+      cache_write: 136700
+      cost: 1.7842
 ---
 # T-2309 A pack primed for a review, a release, or the ready column loads the story and its last verify result, release_evaluate's figures, or the board and promote_candidates
 

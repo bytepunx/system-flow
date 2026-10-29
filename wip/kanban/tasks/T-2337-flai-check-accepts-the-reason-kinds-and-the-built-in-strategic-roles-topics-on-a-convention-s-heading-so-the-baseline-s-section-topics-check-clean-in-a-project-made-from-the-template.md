@@ -24,7 +24,7 @@ touches: [flai/internal/check/check.go, flai/internal/check/vocabulary_test.go, 
 after: [T-2308]
 usage:
   source: log
-  seconds: 142
+  seconds: 144
   estimated: true
   priced_by: estimate
   models:
@@ -33,7 +33,7 @@ usage:
       output: 165
       cache_read: 2516951
       cache_write: 7059
-      cost: 0.8671
+      cost: 0.8672
 ---
 # T-2337 flai check accepts the reason kinds and the built-in strategic roles' topics on a convention's heading, so the baseline's section topics check clean in a project made from the template
 

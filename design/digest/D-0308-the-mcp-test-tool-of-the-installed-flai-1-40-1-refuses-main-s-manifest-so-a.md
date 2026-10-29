@@ -6,8 +6,8 @@ sources: [I-0141]
 topics: [release, cli, mcp, host, flai, go, code, all]
 paths: [design/adrs/0153-flai-serve-upgrades-the-host-s-flai-when-the-project-s-history-has-a-newer-published-release-behind-auto-upgrade.md, design/adrs/README.md, design/system/flai-cli.md, flai/internal/serve/upgrade.go, flai/internal/serve/upgrade_test.go, flai/internal/serve/serve.go, flai/internal/serve/outdated_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/verify/manifest.go, flai/internal/verify/manifest_test.go, flai/internal/mcpserver/test.go, flai/internal/mcpserver/test_test.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go, docs/operators/index.md, docs/operators/settings.md, docs/operators/runbooks/update.md, docs/users/flai.md, design/issues/I-0141-the-mcp-test-tool-of-the-installed-flai-1-40-1-refuses-main-s-manifest-so-a-story-s-agent-runs-flai-test-from-the-tree.md, design/issues/summary.md, design/adrs/0158-flai-serve-checks-each-served-project-for-a-newer-flai-release-every-minute.md, flai/cmd/test.go, flai/cmd/test_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/cmd/serve.go]
 date: 2026-10-15
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/flai-cli.md#versions-the-hosts-flai-and-the-tree"
 asked_again: []
 cited: []
 ---

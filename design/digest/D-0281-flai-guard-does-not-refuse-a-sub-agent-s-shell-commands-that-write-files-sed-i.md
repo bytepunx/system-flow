@@ -6,8 +6,8 @@ sources: [I-0052]
 topics: [cli, conventions, flai, go, code, all]
 paths: [design/adrs/README.md, design/system/agent-adapters.md, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/internal/guard/writes.go, flai/internal/guard/writes_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, docs/users/flai-reference.md, docs/users/flai.md, design/issues/I-0052-flai-guard-does-not-refuse-a-sub-agent-s-shell-commands-that-write-files-sed-i-perl-i-tee-redirection.md, design/issues/summary.md, design/adrs/0141-flai-guard-refuses-a-read-only-sub-agent-a-shell-command-that-writes-a-file.md]
 date: 2026-10-12
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/agent-adapters.md#sub-agents-and-strategic-agents"
 asked_again: []
 cited: []
 ---

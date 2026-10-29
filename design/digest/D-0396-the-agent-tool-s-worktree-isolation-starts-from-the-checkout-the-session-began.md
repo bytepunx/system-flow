@@ -6,8 +6,8 @@ sources: [S-0176, S-0502, S-0417, S-0534]
 topics: [orchestration, git, conventions]
 paths: [design/conventions/delegation.md]
 date: 2026-10-28
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/agent-context.md#one-worktree-or-one-per-task"
 asked_again: []
 cited: []
 ---

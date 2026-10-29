@@ -6,8 +6,8 @@ sources: [I-0134]
 topics: [flai, cli, go, template, conventions, code, all]
 paths: [design/adrs, design/adrs/README.md, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, docs/users/flai.md, design/system/flai-cli.md, design/system/continuous-improvement.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/issues/I-0134-flai-check-finds-issues-no-story-outside-the-story-at-close-out.md, design/issues/summary.md]
 date: 2026-10-12
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/flai-cli.md#commands"
 asked_again: []
 cited: []
 ---

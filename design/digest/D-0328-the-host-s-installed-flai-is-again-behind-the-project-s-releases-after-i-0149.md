@@ -6,8 +6,8 @@ sources: [I-0157]
 topics: [flai, cli, go, code, all]
 paths: [design/adrs/README.md, flai/internal/buildinfo/buildinfo.go, flai/internal/buildinfo/buildinfo_test.go, flai/cmd/version.go, flai/cmd/version_test.go, flai/internal/release/outdated.go, flai/internal/release/outdated_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/installed.go, flai/internal/mcpserver/installed_test.go, design/system/flai-cli.md, design/system/agent-narrative.md, docs/users/flai.md, docs/operators/index.md, docs/operators/runbooks/update.md, design/issues/I-0157-the-host-s-installed-flai-is-again-behind-the-project-s-releases-after-i-0149-closed-so-the-mcp-task-done-refuses-every-close.md, design/issues/summary.md, design/adrs/0180-flai-task-done-refuses-an-older-flai-only-when-the-newest-flai-release-raised.md, flai/internal/buildinfo/task-done-rules.txt, docs/users/flai-reference.md, flai/cmd/task_done.go]
 date: 2026-10-20
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/flai-cli.md#versions-the-hosts-flai-and-the-tree"
 asked_again: []
 cited: []
 ---

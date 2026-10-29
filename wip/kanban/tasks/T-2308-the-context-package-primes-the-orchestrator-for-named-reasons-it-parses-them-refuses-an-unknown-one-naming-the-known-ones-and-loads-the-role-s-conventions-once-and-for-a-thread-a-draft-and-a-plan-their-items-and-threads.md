@@ -32,7 +32,7 @@ usage:
       output: 435
       cache_read: 6576124
       cache_write: 185647
-      cost: 2.323
+      cost: 2.3232
 ---
 # T-2308 The context package primes the orchestrator for named reasons: it parses them, refuses an unknown one naming the known ones, and loads the role's conventions once and, for a thread, a draft, and a plan, their items and threads
 
