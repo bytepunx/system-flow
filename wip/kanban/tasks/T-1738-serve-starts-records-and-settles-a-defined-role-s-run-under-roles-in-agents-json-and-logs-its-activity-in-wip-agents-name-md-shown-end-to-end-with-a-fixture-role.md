@@ -3,11 +3,11 @@ id: T-1738
 type: task
 nature: feature
 title: serve starts, records, and settles a defined role's run under roles in agents.json and logs its activity in wip/agents/name.md, shown end to end with a fixture role
-status: in-progress
+status: done
 parent: S-0417
 owner: alex
 created: 2026-10-16T05:45:01Z
-updated: 2026-10-29T03:50:18Z
+updated: 2026-10-29T04:00:04Z
 transitions:
   - to: ready
     at: 2026-10-29T03:50:17Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-29T03:50:18Z
     by: agent-S-0417
+  - to: done
+    at: 2026-10-29T04:00:04Z
+    by: agent-S-0417
 stream: S-0417
 tags: [cli]
 touches: [flai/internal/serve/role.go, flai/internal/serve/role_test.go, flai/internal/serve/agents.go, flai/internal/serve/activity.go, flai/internal/serve/serve.go]
 after: [T-1735, T-1736, T-1737]
+usage:
+  source: log
+  seconds: 583
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 116
+      output: 645
+      cache_read: 7561848
+      cache_write: 205846
+      cost: 2.6517
 ---
 # T-1738 serve starts, records, and settles a defined role's run under roles in agents.json and logs its activity in wip/agents/name.md, shown end to end with a fixture role
 

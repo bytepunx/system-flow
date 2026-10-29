@@ -3,15 +3,21 @@ id: T-1739
 type: task
 nature: feature
 title: flai role run, the MCP tool role_run, and the host API's role.run start a defined role, flai serve enable takes its action, and agent.status carries roles
-status: backlog
+status: in-progress
 parent: S-0417
 owner: alex
 created: 2026-10-16T05:45:09Z
-updated: 2026-10-29T03:49:53Z
-transitions: []
+updated: 2026-10-29T04:00:27Z
+transitions:
+  - to: ready
+    at: 2026-10-29T04:00:23Z
+    by: agent-S-0417
+  - to: in-progress
+    at: 2026-10-29T04:00:24Z
+    by: agent-S-0417
 stream: S-0417
 tags: [cli]
-touches: [flai/cmd/role.go, flai/cmd/role_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/internal/mcpserver/role.go, flai/internal/mcpserver/role_test.go, flai/internal/mcpserver/folder.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flaiover/src/lib/server/agent.ts, docs/users/flai-reference.md, flai/cmd/activity.go]
+touches: [flai/cmd/role.go, flai/cmd/role_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/internal/mcpserver/role.go, flai/internal/mcpserver/role_test.go, flai/internal/mcpserver/folder.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flaiover/src/lib/server/agent.ts, docs/users/flai-reference.md, flai/cmd/activity.go, flai/internal/serve/projects.go, flai/cmd/root.go, docs/operators/settings.md]
 after: [T-1738]
 ---
 # T-1739 flai role run, the MCP tool role_run, and the host API's role.run start a defined role, flai serve enable takes its action, and agent.status carries roles

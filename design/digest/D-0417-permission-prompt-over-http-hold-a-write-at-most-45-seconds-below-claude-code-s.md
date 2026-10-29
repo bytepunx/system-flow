@@ -2,12 +2,12 @@
 id: D-0417
 title: "permission_prompt over HTTP: hold a write at most 45 seconds, below Claude Code's measured 60-second limit: Recommended for the operator: answer \"as recommended\""
 kind: answer
-sources: [TH-0726]
+sources: [TH-0726, S-0519, I-0217]
 topics: [mcp, harness, flai, cli, go, code, all]
-paths: [design/adrs, design/adrs/README.md, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/mcpserver/server.go, flai/cmd/mcp_http.go, flai/cmd/mcp_http_test.go, flai/internal/ask/ask.go, flai/internal/ask/ask_test.go, docs/users/flai.md, docs/operators/index.md, design/system/agent-adapters.md, design/system/flai-cli.md, design/conventions/delegation.md, design/issues/I-0217-permission-prompt-over-the-http-mcp-server-outlives-claude-code-s-tool-call-timeout-so-an-agent-in-a-container-sees-its-protected-write-time-out-while-the-thread-to-the-operator-stays-open.md, design/issues/summary.md, design/issues/I-0228-claude-code-drops-any-call-to-flai-s-http-mcp-server-that-answers-after-60-seconds-so-wait-for-events-wait-for-work-verify-and-a-slow-task-done-fail-for-an-agent-in-a-container.md]
+paths: [design/adrs, design/adrs/README.md, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/mcpserver/server.go, flai/cmd/mcp_http.go, flai/cmd/mcp_http_test.go, flai/internal/ask/ask.go, flai/internal/ask/ask_test.go, docs/users/flai.md, docs/operators/index.md, design/system/agent-adapters.md, design/system/flai-cli.md, design/conventions/delegation.md, design/issues/I-0217-permission-prompt-over-the-http-mcp-server-outlives-claude-code-s-tool-call-timeout-so-an-agent-in-a-container-sees-its-protected-write-time-out-while-the-thread-to-the-operator-stays-open.md, design/issues/summary.md, design/issues/I-0228-claude-code-drops-any-call-to-flai-s-http-mcp-server-that-answers-after-60-seconds-so-wait-for-events-wait-for-work-verify-and-a-slow-task-done-fail-for-an-agent-in-a-container.md, flai/internal/mcpserver/folder.go]
 date: 2026-10-29
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0215-permission-prompt-holds-a-write-at-most-four-minutes-over-stdio-and-at-most-45.md#decision"
 asked_again: []
 cited: []
 ---
@@ -39,3 +39,7 @@ Source: design/adrs/0124-permission-prompt-holds-a-write-at-most-four-minutes-th
 ```
 
 Source: TH-0726.
+
+S-0519 built it and was accepted on 2026-10-29, fixing I-0217. Its narrative, `wip/archive/agents/S-0519.md`, records the operator's decision: "over HTTP `permission_prompt` holds a write at most 45 s; over stdio it keeps four minutes. I-0228 stays out of this story." I-0217's fix gives the cause: Claude Code drops an MCP call over HTTP after 60 seconds (2.1.311 on the host, 2.1.312 in the container), and flai's HTTP server answers as JSON, so no progress reaches it meanwhile. The bound is `mcpserver.HTTPPermissionHold`, set by the HTTP server's options; `Options.PermissionHold` of zero means four minutes, so stdio is unchanged. ADR-0215 records the decision. The same 60-second limit on `wait_for_events`, `wait_for_work`, `verify`, and a slow `task_done` is I-0228, still open; S-0519 left `design/system/agent-narrative.md` and the `timing.go` comment, which still say "5 over HTTP", to its fix.
+
+Sources: TH-0726, S-0519, I-0217.

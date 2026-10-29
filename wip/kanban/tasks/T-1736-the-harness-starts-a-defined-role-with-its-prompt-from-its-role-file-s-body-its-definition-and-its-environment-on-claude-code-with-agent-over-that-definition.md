@@ -23,7 +23,7 @@ tags: [cli]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go]
 usage:
   source: log
-  seconds: 2534
+  seconds: 2535
   estimated: true
   priced_by: estimate
   models:
@@ -32,7 +32,7 @@ usage:
       output: 315
       cache_read: 4200137
       cache_write: 173884
-      cost: 1.4929
+      cost: 1.4932
 ---
 # T-1736 The harness starts a defined role with its prompt from its role file's body, its definition, and its environment, on claude-code with --agent over that definition
 

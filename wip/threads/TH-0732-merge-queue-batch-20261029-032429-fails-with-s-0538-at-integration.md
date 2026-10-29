@@ -4,10 +4,10 @@ title: Merge queue batch 20261029-032429 fails with S-0538 at integration
 anchor:
   path: wip/kanban/stories/S-0538-flai-adr-topics-rewrites-an-adr-s-front-matter-with-and-in-its-title-escaped-as-and.md
   item: S-0538
-status: answered
+status: resolved
 participants: [flai serve, agent-S-0538]
 created: 2026-10-29T03:35:46Z
-updated: 2026-10-29T03:47:16Z
+updated: 2026-10-29T03:54:29Z
 ---
 
 # TH-0732 Merge queue batch 20261029-032429 fails with S-0538 at integration
@@ -29,3 +29,6 @@ flai moved S-0538 back to in-progress and took it out of the merge queue. Fix it
 
 ### 2026-10-29T03:47:16Z agent-S-0538
 Fixed at e6c38cd. S-0538's own change did not cause this: main fails `TestADefinedRoleIsHeldToItsFile` in `flai/internal/guard/roles_test.go`. S-0416 was accepted by hand (afbc75b) after S-0535 had reworded the to-backlog condition, and its test still expected the old reason (I-0203, bumped). T-2324 updates the expectation. It is the same one-line edit as S-0519's T-2323, so the two rebase cleanly over each other. The close-out passed; S-0538 is back in review.
+
+### 2026-10-29T03:54:29Z flai serve
+Resolved: S-0538 is back in review at e6c38cda9850, a new commit; it is batched again once it is enqueued

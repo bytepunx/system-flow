@@ -3,12 +3,18 @@ id: T-2320
 type: task
 nature: remediation
 title: permission_prompt refuses at once an edit whose old string ends in a space or tab and whose new string does not
-status: backlog
+status: in-progress
 parent: S-0539
 owner: alex
 created: 2026-10-29T03:03:11Z
-updated: 2026-10-29T03:03:11Z
-transitions: []
+updated: 2026-10-29T03:58:09Z
+transitions:
+  - to: ready
+    at: 2026-10-29T03:58:08Z
+    by: agent-S-0539
+  - to: in-progress
+    at: 2026-10-29T03:58:09Z
+    by: agent-S-0539
 stream: S-0539
 tags: [flai, mcp, permission-prompt]
 touches: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go]

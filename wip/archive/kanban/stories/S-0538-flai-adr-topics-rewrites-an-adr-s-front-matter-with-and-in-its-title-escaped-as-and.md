@@ -3,10 +3,10 @@ id: S-0538
 type: story
 nature: remediation
 title: "flai adr topics rewrites an ADR's front matter with < and > in its title escaped as < and >"
-status: review
+status: done
 owner: alex
 created: 2026-10-29T02:01:36Z
-updated: 2026-10-29T03:47:10Z
+updated: 2026-10-29T04:03:42Z
 transitions:
   - to: ready
     at: 2026-10-29T02:59:03Z
@@ -23,6 +23,9 @@ transitions:
   - to: review
     at: 2026-10-29T03:47:10Z
     by: system-flow
+  - to: done
+    at: 2026-10-29T04:03:42Z
+    by: alex
 tags: [flai]
 touches: [flai/internal/adr/adr.go, flai/internal/adr/adr_test.go, flai/cmd/adr_test.go, design/issues/I-0222-flai-adr-topics-rewrites-an-adr-s-front-matter-with-and-in-its-title-escaped-as-and.md, design/issues/summary.md, design/issues/I-0203-a-story-the-operator-accepts-outside-the-merge-queue-lands-without-the-queue-tiers-so-a-stale-generated-file-on-main-fails-every-later-batch-at-integration.md, flai/internal/guard/roles_test.go]
 agent:
@@ -48,15 +51,15 @@ usage:
       cost: 3.6391
   strategic:
     - kind: orchestrator
-      seconds: 1680
+      seconds: 1691
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 148
-          output: 2430
-          cache_read: 21231474
-          cache_write: 52378
-          cost: 4.6937
+          input: 152
+          output: 2450
+          cache_read: 21968236
+          cache_write: 55914
+          cost: 4.8569
         - model: claude-sonnet-5-5
           input: 6
           output: 49

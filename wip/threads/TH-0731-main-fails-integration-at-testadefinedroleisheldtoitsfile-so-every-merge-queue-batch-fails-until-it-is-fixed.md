@@ -3,10 +3,10 @@ id: TH-0731
 title: Main fails integration at TestADefinedRoleIsHeldToItsFile, so every merge-queue batch fails until it is fixed
 anchor:
   path: flai/internal/guard/roles_test.go
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-10-29T03:25:12Z
-updated: 2026-10-29T03:25:12Z
+updated: 2026-10-29T03:54:36Z
 ---
 
 # TH-0731 Main fails integration at TestADefinedRoleIsHeldToItsFile, so every merge-queue batch fails until it is fixed
@@ -41,3 +41,6 @@ The test expects the prefix `to-backlog (a move to backlog and nowhere else)`.
 - The fix needs a story, which I cannot create. S-0519's agent, started on TH-0730, may also take it as a task on its own branch if you prefer. It is outside S-0519's touches.
 
 I take no other action on the queue: holding and dequeuing are yours.
+
+### 2026-10-29T03:54:36Z orchestrator
+Resolved: Fixed on main: S-0519 landed through the merge queue with T-2323. That updates TestADefinedRoleIsHeldToItsFile to S-0535's to-backlog wording (I-0229), and its batch passed integration and smoke.

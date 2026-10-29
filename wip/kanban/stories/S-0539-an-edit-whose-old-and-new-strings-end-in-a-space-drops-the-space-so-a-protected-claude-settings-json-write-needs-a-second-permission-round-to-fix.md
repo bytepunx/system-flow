@@ -3,14 +3,17 @@ id: S-0539
 type: story
 nature: improvement
 title: An Edit whose old and new strings end in a space drops the space, so a protected .claude/settings.json write needs a second permission round to fix
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-29T02:01:44Z
-updated: 2026-10-29T03:57:15Z
+updated: 2026-10-29T03:57:27Z
 transitions:
   - to: ready
     at: 2026-10-29T03:56:58Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-10-29T03:57:27Z
+    by: agent-S-0539
 tags: [flai, mcp, permission-prompt]
 touches: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, docs/users/flai.md, design/system/agent-adapters.md, design/issues/I-0223-an-edit-whose-old-and-new-strings-end-in-a-space-drops-the-space-so-a-protected-claude-settings-json-write-needs-a-second-permission-round-to-fix.md, design/issues/summary.md]
 agent:

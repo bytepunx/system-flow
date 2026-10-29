@@ -23,16 +23,16 @@ tags: [cli]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/check/check.go, docs/operators/settings.md]
 usage:
   source: log
-  seconds: 2537
+  seconds: 2560
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 101
-      output: 480
-      cache_read: 4576845
-      cache_write: 314299
-      cost: 1.6694
+      input: 104
+      output: 508
+      cache_read: 4944452
+      cache_write: 327178
+      cost: 1.7996
 ---
 # T-1735 The manifest takes roles.name.agent and roles.name.permissions, merged and validated as planning.agent and orchestration.permissions are, and flai manifest set writes them
 
