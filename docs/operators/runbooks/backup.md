@@ -1,6 +1,6 @@
 ---
 title: "Runbook: back up"
-updated: 2026-10-28
+updated: 2026-10-29
 status: active
 ---
 
@@ -22,6 +22,7 @@ What there is to keep, and how. A project's work is in git; flai keeps a little 
 | `~/.flai/serve/dashboard-container.json` | The dashboard container `flai dashboard` last started (name, image, published address), which flai host restarts it from ([the dashboard's watch](../index.md#the-dashboards-watch)) | On the same machine only; without it nothing is restarted until the next `flai dashboard` |
 | `~/.flai/serve/projects.json`, `removed.json`, `dashboards.json` | Which projects `flai serve` serves, which it does not serve from below a folder because you removed them, and where their dashboards are, by absolute path | On the same machine only |
 | `~/.flai/serve/claude-checks.json` | Each Claude Code version checked against `permission_prompt`, and its outcome (S-0286) | Optional; without it each version is checked again |
+| `~/.flai/serve/budget.json` | Each provider `flai serve` holds every agent start on after a run ended on its usage limit, until when, and the probe running (S-0534, [what it holds](../index.md#when-a-provider-is-out-of-budget-s-0534)) | Optional; without it starts go again, and the next run on the limit sets it again |
 | `~/.flai/serve/state.json`, `requests.json`, `serve.log`, `~/.flai/host/` | What runs now, recent requests, logs, and the host's token, remade at every start | No |
 | `~/.flai/cache`, `~/.flai/bin` | Template clones, the release lists' signature verdicts (`releases/verdicts.json`), and the binary | No: fetched again |
 | A project's `.flai-cache/merge-queue/batches/` | Each merge queue batch's and bisection step's tier output, a `<tier>.log` per tier (S-0457) | No: diagnostic, and the queue keeps only the newest 20 batches |

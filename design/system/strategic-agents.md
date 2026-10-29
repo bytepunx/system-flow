@@ -57,7 +57,8 @@ Each needs the host action the role's file names on for the project: `flai serve
 - while the host action the file names is off for the project, naming `flai serve enable <action>`;
 - an item when the file's `item` is `none`; no item when it names `epic` or `story`; an item of a kind it does not take; an item that is archived, done, or cancelled;
 - while a run of the role on the same item, or on none, runs: one item has one run of a role at a time;
-- when the role's agent names no harness and no command is set on the host.
+- when the role's agent names no harness and no command is set on the host;
+- while the host's budget state holds the agent's provider, after a run on it ended on the usage limit: `held: <provider> usage limit (<limit>) until <until>; flai serve starts it when the limit resets`, with nothing recorded (S-0534, [flai-cli.md](flai-cli.md#the-hosts-budget-state)).
 
 The MCP tool `role_run` also refuses an agent `flai serve` started (`FLAI_STARTED_BY=flai-serve`), as `plan` does: running a role is the operator's to ask for. `flai guard` refuses it to a sub-agent and to every role whose file does not list it.
 
@@ -87,10 +88,11 @@ When the process ends, or the next look finds it gone (`settleOrphans`), flai se
 | Outcome | When |
 |---------|------|
 | `asked` | a thread is open and its last entry is the role's: on its item, or anywhere in the project for a run on none; `thread` names it |
+| `failed` | its log ends on the harness's usage limit (`runLimit`) and it did not ask, whether its exit was seen or not; `why` names the limit and its reset time, and `usage_limited` is set (S-0534) |
 | `failed` | it exited with a code other than 0, or the project or its threads could not be read |
 | `worked` | otherwise, an exit nobody saw included |
 
-An `asked` run is not started again when the thread is answered; the operator asks for another run.
+An `asked` run is not started again when the thread is answered; the operator asks for another run. A run on the usage limit is not started again either: its end sets or extends its provider's budget state, and the operator asks again once the state clears ([flai-cli.md](flai-cli.md#the-hosts-budget-state)).
 
 It then logs the activity in the role's own activity document, `wip/agents/<name>.md`, with `serve.LogRunEnd`, as a planner run is: the time since the last entry, the run's final reply as the summary, `- Trigger: asked`, the run's item, when it has one, as the entry's item, and the seconds and cost measured from the log ([agent-narrative.md](agent-narrative.md#strategic-agents-activity-documents)). The role may log activities within its run with `activity_log`, or `flai activity log <name> "<summary>" [--item ID]...`, its name as the kind. Neither charges an item: the cost stays in the kind's project strategic total until S-0425 charges a defined role's usage on its items. `Repo.ActivityKinds` gives the kinds: the four built-in ones, then each role file's name under the design folder's `workflows/roles`, so `activity_log`, `flai activity log`, `wip/agents/index.md`, and `flai check`'s `activity.*` rules take a defined role's document as they take the built-in ones'.
 
@@ -118,7 +120,8 @@ Each needs the host action `plan` on for the project: `flai serve enable plan`, 
 - a task, or an ID that is neither an epic's nor a story's;
 - an item that is archived, done, or cancelled;
 - while a planner runs for the item: one item has one planner at a time;
-- when the planner's agent names no harness and no command is set on the host.
+- when the planner's agent names no harness and no command is set on the host;
+- while the host's budget state holds the agent's provider, after a run on it ended on the usage limit: `held: <provider> usage limit (<limit>) until <until>; flai serve starts it when the limit resets`, with nothing recorded (S-0534, [flai-cli.md](flai-cli.md#the-hosts-budget-state)).
 
 The MCP tool `plan` also refuses an agent `flai serve` started (`FLAI_STARTED_BY=flai-serve`): planning is the operator's to ask for. The orchestrator is the one exception: it may ask for an epic `flai plan --candidates` lists while the operator gives it `plan_backlog_epics`, and for a story it lists while the operator gives it `plan_backlog_stories` ([What it does with each permission](#what-it-does-with-each-permission-s-0219), [ADR-0119](../adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md)). `flai guard` refuses the tool to a sub-agent, to the planner, to the analyzer, and to the curator.
 
@@ -272,12 +275,13 @@ When the process ends, or the next look finds it gone, flai serve settles the ru
 | Outcome | When |
 |---------|------|
 | `asked` | a thread on the item is open and its last entry is the planner's; `thread` names it |
+| `failed` | its log ends on the harness's usage limit (`runLimit`) and it did not ask, whether its exit was seen or not; `why` names the limit and its reset time, and `usage_limited` is set (S-0534) |
 | `failed` | it exited with a code other than 0, or the project or its threads could not be read |
 | `worked` | otherwise, an exit nobody saw included |
 
 It then logs the activity in `wip/agents/planner.md` with `serve.LogRunEnd`: the time since the last entry, the run's final reply as the summary, the run's trigger as the entry's `- Trigger:` line ([agent-narrative.md](agent-narrative.md#strategic-agents-activity-documents)), the items it planned, and the seconds and cost measured from the log ([metrics.md](metrics.md#strategic-agents-s-0206)).
 
-The items are named in this order (`plannedItems`, S-0209): the planned item; then the items under it created since the run started; then those under it created before and changed (`updated`) since. Under an epic are its stories and their tasks; under a story, its tasks. Archived items are left out, and each group is in ID order. When the items cannot be read, flai warns and the entry names the planned item alone. An `asked` planner is not started again when the thread is answered; the operator asks for another run.
+The items are named in this order (`plannedItems`, S-0209): the planned item; then the items under it created since the run started; then those under it created before and changed (`updated`) since. Under an epic are its stories and their tasks; under a story, its tasks. Archived items are left out, and each group is in ID order. When the items cannot be read, flai warns and the entry names the planned item alone. An `asked` planner is not started again when the thread is answered; the operator asks for another run. A run on the usage limit is not started again: its end sets or extends its provider's budget state, and the replanner's queue waits for the state to clear ([The queue](#the-queue), [flai-cli.md](flai-cli.md#the-hosts-budget-state)).
 
 The usage apportioned to the activity's span, the same share the entry's cost is, is also charged to the item the run was started for and to every item above it, under `usage.strategic` as the planner's entry, with the entry's seconds (S-0225, [ADR-0083](../adrs/0083-a-planner-activity-s-usage-is-charged-to-the-item-it-planned-and-the-items.md), [work-hierarchy.md](work-hierarchy.md)). An activity the planner logs with `activity_log` during the run is charged the same way, its own span's share. flai serve finds the item by the run's log: the item whose newest run under `plans` kept its log in the run being measured. A planner a person runs by hand, a run that a newer run for its item has replaced, and an activity outside any run charge nothing. The charge on the items and the entry in `planner.md` are two views of one spend; nothing adds them together. A charge that fails leaves the entry logged and is warned of. Measuring a story from its agents' logs keeps what the planner spent on it.
 
@@ -317,7 +321,7 @@ The replanner sees the schedule come round at the next look after its time, so a
 
 #### The queue
 
-The queue holds a story once: a trigger for a story already queued is added to its entry, not queued again. flai serve drains it one planner at a time per project, with its own launcher, so it sees the run end at once and starts the next. It passes over an entry whose item has a planner running, such as one the operator asked for, and comes back to it. It drops an entry whose story its agent works, whatever queued it: the story is in progress or in review, or the story's agent run is still running, such as a ready story whose agent flai serve has started. The drop is logged at info as `queued planner dropped`, with the reason (I-0098). Each other entry goes through `planCheck`, the checks `serve.Plan` makes ([Starting it](#starting-it)); an entry they refuse, such as a story accepted meanwhile, is dropped and logged at info as `queued planner dropped`, with the reason. A run the operator asks for is not queued.
+The queue holds a story once: a trigger for a story already queued is added to its entry, not queued again. flai serve drains it one planner at a time per project, with its own launcher, so it sees the run end at once and starts the next. It passes over an entry whose item has a planner running, such as one the operator asked for, and comes back to it. It drops an entry whose story its agent works, whatever queued it: the story is in progress or in review, or the story's agent run is still running, such as a ready story whose agent flai serve has started. The drop is logged at info as `queued planner dropped`, with the reason (I-0098). Each other entry goes through `planCheck`, the checks `serve.Plan` makes ([Starting it](#starting-it)); an entry they refuse, such as a story accepted meanwhile, is dropped and logged at info as `queued planner dropped`, with the reason. A run the operator asks for is not queued. While the host's budget state holds the planner's provider, the entry keeps its place, and every entry after it waits too; the next look tries it again, and the hold is logged once per state (S-0534, [flai-cli.md](flai-cli.md#the-hosts-budget-state)).
 
 #### What a run records
 
@@ -394,13 +398,14 @@ The host action `orchestrate`, off by default, turns it on for a project: `flai 
 | The action is on and no run is going | Starts the orchestrator |
 | The action is on and the operator holds it stopped | Nothing until they start it |
 | The action is on and the last run failed less than a minute ago | Nothing until the minute has passed, so that a run that fails at once does not spin |
+| The action is on and the host's budget state holds the orchestrator's provider | Nothing, and nothing recorded; the minute's retry does not apply. The first look once the state no longer holds starts it (S-0534, [flai-cli.md](flai-cli.md#the-hosts-budget-state)) |
 | The action is on and a run is going | Nothing |
 | The action is off and a run is going | Stops it as `flai serve agent stop` stops a story's agent: marks it stopped, ends its process group, and kills the group once the grace has passed. The stop is journalled, and the run's activity is logged with the summary `stopped: orchestrate turned off` |
 | The action is off and the operator holds it stopped | Lifts the hold, so that turned on again the orchestrator starts |
 
 A run that ends while the action is on is started again at the next look, unless the operator holds it stopped. The orchestrator does not end by itself, so a run ends when it fails, when it is stopped, or when its harness ends it.
 
-The operator stops it and holds it stopped with **Stop** on the Orchestrator page, the write `orchestrate.stop`, or `flai serve orchestrate stop` (S-0228). The run is stopped as the action turned off stops it, and its activity is logged with the summary `stopped: stopped from the dashboard`. The hold is `held` on its run in `serve/agents.json`, kept on the run that ended. **Start**, `orchestrate.start`, or `flai serve orchestrate start` lifts the hold and starts the orchestrator at once, in the main checkout, as a look would; a start that fails lifts the hold too, and the next look tries again after the minute. Both are refused while the action is off. A stop is refused when `flai serve` has started no orchestrator for the project and when it is already held; a start, when it is not held and while the run it was held on is still being stopped. A run that failed and waits to be started again is held as it is. Each is journalled under `orchestrate`.
+The operator stops it and holds it stopped with **Stop** on the Orchestrator page, the write `orchestrate.stop`, or `flai serve orchestrate stop` (S-0228). The run is stopped as the action turned off stops it, and its activity is logged with the summary `stopped: stopped from the dashboard`. The hold is `held` on its run in `serve/agents.json`, kept on the run that ended. **Start**, `orchestrate.start`, or `flai serve orchestrate start` lifts the hold and starts the orchestrator at once, in the main checkout, as a look would; a start that fails lifts the hold too, and the next look tries again after the minute. Both are refused while the action is off. A stop is refused when `flai serve` has started no orchestrator for the project and when it is already held; a start, when it is not held and while the run it was held on is still being stopped. A run that failed and waits to be started again is held as it is. A start while the host's budget state holds the orchestrator's provider is refused as `held: <provider> usage limit (<limit>) until <until>; …`, with nothing recorded, and the orchestrator stays held stopped. Each is journalled under `orchestrate`.
 
 A start is refused when the orchestrator's agent names no harness and no command is set on the host, and when the harness refuses it, as `claude-code` does in a project with no `.claude/agents/orchestrator.md`, naming `flai upgrade`. A refusal is recorded as a failed run and journalled once: the same refusal at the next looks is not recorded again until a start gets past it or the action is turned off.
 
@@ -616,10 +621,13 @@ When the process ends, or the next look finds it gone, flai serve settles the ru
 | Outcome | When |
 |---------|------|
 | `stopped` | the `orchestrate` action was turned off and flai serve stopped it, or the operator stopped it |
+| `failed` | its log ends on the harness's usage limit (`runLimit`), whether its exit was seen or not; `why` names the limit and its reset time, and `usage_limited` is set (S-0534) |
 | `failed` | it exited with a code other than 0, or could not be started |
 | `worked` | otherwise, an exit nobody saw included |
 
 It then logs the run's activity since the last entry in `wip/agents/orchestrator.md` with `serve.LogRunEnd`: the run's final reply as the summary, or `stopped: orchestrate turned off`, or `stopped: stopped from the dashboard` when the operator stopped it, and the seconds and cost measured from the log. Each decision the orchestrator logs with `activity_log` during the run covers its own span, so the end logs only what came after the last one.
+
+A run on the usage limit is not started again after the minute: its end sets or extends its provider's budget state, and the first look once the state no longer holds starts the next run ([ADR-0209](../adrs/0209-the-orchestrator-runs-for-a-reason-and-ends-started-by-flai-serve-on-the-events.md) §5, [flai-cli.md](flai-cli.md#the-hosts-budget-state)).
 
 Since S-0532 ([ADR-0209](../adrs/0209-the-orchestrator-runs-for-a-reason-and-ends-started-by-flai-serve-on-the-events.md) §6) each run's start and end is an `agent` event with `id` and `title` `orchestrator`, `type` `role`, and `fields.role` `orchestrate`: `started`, each retry too, with a `why` that names how the last run ended, then `ended`, `failed` with its exit, or `stopped` when the operator stopped it or turned `orchestrate` off. The analyzer and the operator see it in `inbox` and `wait_for_events`; the orchestrator is not told of its own runs ([flai-cli.md](flai-cli.md#the-events-wait_for_events-and-inbox-report)).
 
@@ -655,7 +663,8 @@ Each needs the host action `analyze` on for the project: `flai serve enable anal
 - while the `analyze` action is off for the project;
 - a focus that is none of `bottlenecks`, `intent`, and `risk`;
 - while an analyzer runs for the project, naming its focus, what started it, its PID, when it started, and its log: one analyzer runs per project at a time;
-- when the analyzer's agent names no harness and no command is set on the host.
+- when the analyzer's agent names no harness and no command is set on the host;
+- while the host's budget state holds the agent's provider, after a run on it ended on the usage limit: `held: <provider> usage limit (<limit>) until <until>; flai serve starts it when the limit resets`, with nothing recorded (S-0534, [flai-cli.md](flai-cli.md#the-hosts-budget-state)).
 
 The MCP tool `analyze` also refuses an agent `flai serve` started (`FLAI_STARTED_BY=flai-serve`): an analysis is the operator's to ask for, or the schedule's. `flai guard` refuses the tool and `flai analyze` to a sub-agent, the planner, the orchestrator, and the analyzer.
 
@@ -742,7 +751,7 @@ The analyzer writes as itself alone, as the planner does ([The guard](#the-guard
 
 ### The analysis schedule
 
-`analysis.schedule` in `system-flow.yaml` is a five-field cron expression in UTC, or `daily`, read as `planning.schedule` is ([The schedule](#the-schedule)); unset, there is none. An analysis scheduler per served project (`internal/serve/analysis_schedule.go`) looks whenever the project's launcher does: when its work items or threads change, when an agent ends, and every minute, so it sees the schedule come round at most a minute late. Each time the schedule comes round with the `analyze` action on, it starts the analyzer with no focus and the trigger `schedule <spec>`, the schedule as written, such as `schedule daily`, after the checks `serve.Analyze` makes. A start they refuse, such as while an analyzer runs, is logged at info as `scheduled analyzer not started` with the reason, and is not tried again until the schedule next comes round.
+`analysis.schedule` in `system-flow.yaml` is a five-field cron expression in UTC, or `daily`, read as `planning.schedule` is ([The schedule](#the-schedule)); unset, there is none. An analysis scheduler per served project (`internal/serve/analysis_schedule.go`) looks whenever the project's launcher does: when its work items or threads change, when an agent ends, and every minute, so it sees the schedule come round at most a minute late. Each time the schedule comes round with the `analyze` action on, it starts the analyzer with no focus and the trigger `schedule <spec>`, the schedule as written, such as `schedule daily`, after the checks `serve.Analyze` makes. A start they refuse, such as while an analyzer runs, is logged at info as `scheduled analyzer not started` with the reason, and is not tried again until the schedule next comes round. A start the host's budget state holds is not lost: the run stays due, each look tries it again until it starts, and the hold is logged once per state (S-0534, [flai-cli.md](flai-cli.md#the-hosts-budget-state)).
 
 Times missed between two looks come round once. A schedule set or changed comes round first at its next time from then. What the scheduler has seen is kept in memory: a time that passed while `flai serve` was down does not come round. While `analyze` is off it starts nothing and keeps up with the schedule, so turning the action on does not act on the past. A schedule that is not valid is warned of once in flai serve's log, and nothing is started for it until it is fixed. The scheduler follows its schedule as the replanner follows `planning.schedule` (`cadence`).
 
@@ -754,8 +763,11 @@ When the process ends, or the next look finds it gone, flai serve settles the ru
 
 | Outcome | When |
 |---------|------|
+| `failed` | its log ends on the harness's usage limit (`runLimit`), whether its exit was seen or not; `why` names the limit and its reset time, and `usage_limited` is set (S-0534) |
 | `failed` | it exited with a code other than 0, or could not be started; or it ended without writing a report, which `why` says, naming the folder |
 | `worked` | otherwise: it wrote a report, whether its exit was seen or not |
+
+A run on the usage limit is not started again: the operator asks again, or the schedule comes round, once its provider's budget state clears ([flai-cli.md](flai-cli.md#the-hosts-budget-state)).
 
 It then logs the run's activity in `wip/agents/analyzer.md` with `logRunEndSaying`: the time since the last entry, the seconds and cost measured from the log, and the run's trigger as the entry's `- Trigger:` line. The summary is the first line of the run's final reply, the one-line summary its prompt asks for: as it is when it names the report, with `(report <path>)` added when it does not, and with `(no report written under design/analysis)` added when there is no report. The entry's items are the issues that name the report, open or closed, in ID order (`issues.NamingReport`): those an instance names with its `Report:` line, and those whose `## Remediation` links the report. When there is no report, or the issues cannot be read, which is warned of, the entry names none.
 
@@ -792,7 +804,8 @@ A since is a `YYYY-MM-DD` day in UTC or an RFC 3339 time. Each way needs the hos
 - while the `curate` action is off for the project;
 - a since that is neither a `YYYY-MM-DD` day nor an RFC 3339 time;
 - while a curator runs for the project, naming its since, what started it, its PID, when it started, and its log: one curator runs per project at a time;
-- when the curator's agent names no harness and no command is set on the host.
+- when the curator's agent names no harness and no command is set on the host;
+- while the host's budget state holds the agent's provider, after a run on it ended on the usage limit: `held: <provider> usage limit (<limit>) until <until>; flai serve starts it when the limit resets`, with nothing recorded (S-0534, [flai-cli.md](flai-cli.md#the-hosts-budget-state)).
 
 The MCP tool `curate` also refuses an agent `flai serve` started (`FLAI_STARTED_BY=flai-serve`): a curation is the operator's to ask for, or an acceptance's or the schedule's. `flai guard` refuses the tool and `flai curate` to a sub-agent and to the curator, and the analyzer's guard refuses them as it refuses every tool and command it does not name.
 
@@ -847,7 +860,7 @@ A curate scheduler per served project (`internal/serve/curate_schedule.go`) look
 | `schedule <spec>` | `digest.schedule` comes round, such as `schedule daily` | one run; when acceptances are due at the same look, one run with the acceptances' trigger |
 | the retried run's trigger, with the acceptances held meanwhile joined | the first look at or after the `resets_at` of a run that ended on the usage limit | one run, from that run's since, marked `retry` ([The usage limit](#the-usage-limit-s-0514)) |
 
-`digest.schedule` is read as `analysis.schedule` is: a five-field cron expression in UTC, or `daily`; unset, there is none. Each start goes through the checks `serve.Curate` makes, with no since, so it takes in from the curator's last activity. A start they refuse is logged at info as `curator not started on its own`, with the trigger and the reason, and is not tried again: for the schedule, until it next comes round. Times missed between two looks come round once, and a schedule set or changed comes round first at its next time from then. What the scheduler has seen is kept in memory only: acceptances and times that passed while `flai serve` was down do not count. The hold and the retry on the usage limit are the exception: they are read from the curator's run in `serve/agents.json`. While `curate` is off it keeps up with the acceptances and the schedule, so turning the action on does not act on the past. A schedule that is not valid is warned of once in flai serve's log.
+`digest.schedule` is read as `analysis.schedule` is: a five-field cron expression in UTC, or `daily`; unset, there is none. Each start goes through the checks `serve.Curate` makes, with no since, so it takes in from the curator's last activity. A start they refuse is logged at info as `curator not started on its own`, with the trigger and the reason, and is not tried again: for the schedule, until it next comes round. Times missed between two looks come round once, and a schedule set or changed comes round first at its next time from then. What the scheduler has seen is kept in memory only: acceptances and times that passed while `flai serve` was down do not count. The hold and the retry on the usage limit are the exception: they are read from the curator's run in `serve/agents.json`. A start the host's budget state holds uses nothing up: the acceptances stay queued, the retry stays untried, and a time come round stays due, each tried again at the next look until the state lets the start go (S-0534, [flai-cli.md](flai-cli.md#the-hosts-budget-state)). While `curate` is off it keeps up with the acceptances and the schedule, so turning the action on does not act on the past. A schedule that is not valid is warned of once in flai serve's log.
 
 #### The usage limit (S-0514)
 
@@ -858,9 +871,9 @@ A curator run whose log ends on the harness's usage limit is recorded `failed` w
 - **Not retried.** A retry that ends on the limit again, and a run whose limit names no reset time, are raised on a thread instead. After a retry on the limit, the scheduler still holds until its reset; then acceptances held meanwhile start a run as any acceptances do. A retry the checks refuse is logged as any refused start is, and not tried again while that scheduler lives.
 - **Across a restart.** The state is the run in `serve/agents.json`. A `flai serve` started during the hold still holds, and retries at its first look after the reset.
 - **Behind the action.** While `curate` is off, nothing is retried and no acceptance is held. Turned on again after the reset, the first look retries, since the last run still ended on the limit.
-- **Not the operator's.** `flai curate`, `curate.run`, and the MCP tool `curate` do not go through the scheduler and are not held. A run they start that ends on the limit is the last run, and the hold and the retry follow from it.
+- **Not the operator's.** `flai curate`, `curate.run`, and the MCP tool `curate` do not go through the scheduler and are not held by it; the host's budget state refuses them while it holds the curator's provider. A run they start that ends on the limit is the last run, and the hold and the retry follow from it.
 
-This is the curator's part of [ADR-0209](../adrs/0209-the-orchestrator-runs-for-a-reason-and-ends-started-by-flai-serve-on-the-events.md) §5, built ahead of the host-wide budget state (S-0534). The analyzer, the planner, and the orchestrator still fail on the limit as before.
+This is the curator's part of [ADR-0209](../adrs/0209-the-orchestrator-runs-for-a-reason-and-ends-started-by-flai-serve-on-the-events.md) §5, built ahead of the host-wide budget state. Since S-0534 that state holds every role's start on the provider too ([flai-cli.md](flai-cli.md#the-hosts-budget-state)). The two stand together: the scheduler waits for the run's `resets_at`, and the budget state for its `until`, so the retry starts at the first look both allow.
 
 ### Answers written at once (S-0433)
 

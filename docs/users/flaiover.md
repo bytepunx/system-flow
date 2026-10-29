@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-10-28
+updated: 2026-10-29
 status: active
 ---
 
@@ -80,9 +80,19 @@ The host lets it through on purpose, with dashboard.allow_unsigned; a release of
 
 For this dashboard's own build, the heading is `unsigned allowed: dashboard` and the second line "This dashboard is a development build, with no release stamp." With both, the heading is `unsigned allowed: flai and dashboard` and both lines show. A released flai and a released dashboard show no banner, whatever the host allows.
 
+### Out of budget
+
+When an agent's run ends on its provider's usage limit, `flai serve` starts no agent on that provider, on any project, until the limit resets (S-0534, [ADR-0209](../../design/adrs/0209-the-orchestrator-runs-for-a-reason-and-ends-started-by-flai-serve-on-the-events.md) §5). While it holds one, a banner under the header says so on every page, one line per provider, with the time in your zone:
+
+```text
+claude-code is out of budget (usage_limit_reached) until 2026-10-29 04:00 EDT; flai serve holds every agent start on it until then.
+```
+
+Once the time has passed, `flai serve` starts one run to learn whether the limit has reset, and the line adds "A probe is running to learn whether the limit has reset." The banner has no X: it goes by itself once the hold ends. Meanwhile **Start agent**, **Retry**, **Plan**, and the other starts are refused with the provider and the time. The [operators guide](../operators/index.md#when-a-provider-is-out-of-budget-s-0534) says what waits and how it ends.
+
 ## Notices
 
-What an action did is said in a banner on the page: a move on the board, a ticked criterion or a save on an item's page, an accepted ADR, a saved document, a publish. The banner stays until your next action there, or until you dismiss it with the X at its right. Banners that say how things stand, such as flai not being connected, an acceptance not yet pushed, or what is ready to publish, have no X: they go when what they say stops being true.
+What an action did is said in a banner on the page: a move on the board, a ticked criterion or a save on an item's page, an accepted ADR, a saved document, a publish. The banner stays until your next action there, or until you dismiss it with the X at its right. Banners that say how things stand, such as flai not being connected, a provider out of budget, an acceptance not yet pushed, or what is ready to publish, have no X: they go when what they say stops being true.
 
 ## More than one project
 
