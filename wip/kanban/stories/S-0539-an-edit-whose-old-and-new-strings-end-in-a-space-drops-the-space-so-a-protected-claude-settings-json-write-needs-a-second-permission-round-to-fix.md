@@ -3,11 +3,14 @@ id: S-0539
 type: story
 nature: improvement
 title: An Edit whose old and new strings end in a space drops the space, so a protected .claude/settings.json write needs a second permission round to fix
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-29T02:01:44Z
-updated: 2026-10-29T03:08:05Z
-transitions: []
+updated: 2026-10-29T03:57:15Z
+transitions:
+  - to: ready
+    at: 2026-10-29T03:56:58Z
+    by: orchestrator
 tags: [flai, mcp, permission-prompt]
 touches: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, docs/users/flai.md, design/system/agent-adapters.md, design/issues/I-0223-an-edit-whose-old-and-new-strings-end-in-a-space-drops-the-space-so-a-protected-claude-settings-json-write-needs-a-second-permission-round-to-fix.md, design/issues/summary.md]
 agent:
@@ -21,16 +24,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 72
+      seconds: 192
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 51
-          output: 763
-          cache_read: 6347254
-          cache_write: 10409
-          cost: 1.4021
-draft: true
+          input: 113
+          output: 1845
+          cache_read: 18194130
+          cache_write: 31829
+          cost: 4.0193
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -41,10 +43,13 @@ cost_of_delay:
   at: 2026-10-29T03:02:42Z
 forecast:
   duration: 1h
-  delivery: 2026-10-29T19:52:00Z
-  basis: "Its own forecast of 1h; 36th in the pull order with an in-progress limit of 5, behind S-0538, S-0417, S-0537, S-0534, S-0536, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0508, S-0509, S-0510, S-0511, S-0512, S-0515, S-0516, S-0517, S-0518, S-0520, S-0523, S-0524, S-0527, S-0529, S-0418, S-0419, S-0420, S-0421, S-0422 and S-0423."
+  delivery: 2026-10-29T20:27:00Z
+  basis: "Its own forecast of 1h; 35th in the pull order with an in-progress limit of 5, behind S-0417, S-0537, S-0534, S-0536, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0508, S-0509, S-0510, S-0511, S-0512, S-0515, S-0516, S-0517, S-0518, S-0520, S-0523, S-0524, S-0527, S-0529, S-0418, S-0419, S-0420, S-0421, S-0422 and S-0423."
   by: flai
-  at: 2026-10-29T03:08:05Z
+  at: 2026-10-29T03:57:15Z
+finalized:
+  by: orchestrator
+  at: 2026-10-29T03:56:46Z
 ---
 # S-0539 An Edit whose old and new strings end in a space drops the space, so a protected .claude/settings.json write needs a second permission round to fix
 

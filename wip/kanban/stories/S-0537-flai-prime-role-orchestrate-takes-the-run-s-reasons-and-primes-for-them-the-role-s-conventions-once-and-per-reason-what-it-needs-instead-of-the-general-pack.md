@@ -7,7 +7,7 @@ status: ready
 parent: E-0030
 owner: alex
 created: 2026-10-28T21:02:39Z
-updated: 2026-10-29T03:04:43Z
+updated: 2026-10-29T03:54:24Z
 transitions:
   - to: ready
     at: 2026-10-28T22:21:29Z
@@ -62,10 +62,10 @@ cost_of_delay:
   at: 2026-10-28T22:08:55Z
 forecast:
   duration: 4h
-  delivery: 2026-10-29T08:27:00Z
-  basis: "Its own forecast of 4h; 2nd in the pull order with an in-progress limit of 5, behind S-0538 and S-0417."
+  delivery: 2026-10-29T09:17:00Z
+  basis: "Its own forecast of 4h; 1st in the pull order with an in-progress limit of 5, behind S-0417."
   by: flai
-  at: 2026-10-29T03:04:43Z
+  at: 2026-10-29T03:54:24Z
 ---
 # S-0537 flai prime --role orchestrate takes the run's reasons and primes for them, the role's conventions once and per reason what it needs, instead of the general pack
 
