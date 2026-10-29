@@ -2,12 +2,12 @@
 id: I-0213
 title: flai's HTTP MCP server refuses an agent in a container with 403 invalid Host header, since the MCP SDK's localhost protection admits only a loopback Host on a loopback listener
 class: blocker
-status: open
+status: closed
 count: 1
 cost: 20m
 first_reported: 2026-10-28T12:22:29Z
 last_reported: 2026-10-28T12:22:29Z
-updated: 2026-10-28T12:52:34Z
+updated: 2026-10-29T07:57:04Z
 ---
 
 # I-0213 flai's HTTP MCP server refuses an agent in a container with 403 invalid Host header, since the MCP SDK's localhost protection admits only a loopback Host on a loopback listener
@@ -24,3 +24,4 @@ S-0505 T-2159: Claude Code in flai-agent-claude-code:local on Docker Desktop (WS
 ## Remediation
 
 Story S-0515 remediates this issue, created from it at 2026-10-28T12:52:34Z.
+Closed 2026-10-29T07:57:04Z: Fixed by S-0515 (ADR-0216): both of the go-sdk handlers in flai/internal/mcphttp are built with DisableLocalhostProtection, so a request that reaches the loopback listener naming host.docker.internal, or any Host, is served once it carries the bearer token and no Origin; the token and the Origin refusal stay the gates. TestAForeignHostWithTheTokenIsServed reproduces the 403 invalid Host header against main's handler and passes with the fix.
