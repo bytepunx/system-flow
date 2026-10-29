@@ -3,15 +3,36 @@ id: T-2199
 type: task
 nature: remediation
 title: An ADR records that a curator run that ends on the harness's usage limit is recorded as such, started again once the limit resets, and raised on a thread when that fails
-status: backlog
+status: done
 parent: S-0514
 owner: alex
 created: 2026-10-28T12:52:56Z
-updated: 2026-10-28T12:52:56Z
-transitions: []
+updated: 2026-10-29T01:02:14Z
+transitions:
+  - to: ready
+    at: 2026-10-29T00:58:07Z
+    by: agent-S-0514
+  - to: in-progress
+    at: 2026-10-29T00:58:09Z
+    by: agent-S-0514
+  - to: done
+    at: 2026-10-29T01:02:14Z
+    by: agent-S-0514
 stream: S-0514
 tags: [design, adr, curator]
 touches: [design/adrs/README.md]
+usage:
+  source: log
+  seconds: 232
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 36
+      output: 197
+      cache_read: 1136698
+      cache_write: 73381
+      cost: 0.4119
 ---
 # T-2199 An ADR records that a curator run that ends on the harness's usage limit is recorded as such, started again once the limit resets, and raised on a thread when that fails
 

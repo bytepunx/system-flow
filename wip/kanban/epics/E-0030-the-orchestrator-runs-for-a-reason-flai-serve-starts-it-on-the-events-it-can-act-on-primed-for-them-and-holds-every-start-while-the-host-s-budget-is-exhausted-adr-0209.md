@@ -18,24 +18,29 @@ tags: [flai, orchestrator, serve, budget]
 topics: [orchestration, cli, dashboard]
 usage:
   source: sum
-  seconds: 3928
-  estimated: true
-  priced_by: estimate
+  seconds: 8381
+  priced_by: harness
   turns:
     - day: 2026-10-28
       ceremony: 4
+      test_runs: 3
       hand_edits: 3
-      work: 96
+      work: 109
+    - day: 2026-10-29
+      ceremony: 1
+      test_runs: 1
+      hand_edits: 1
+      work: 21
   models:
     - model: claude-opus-5-5
-      input: 562
-      output: 27214
-      cache_read: 32179931
-      cache_write: 1642299
-      cost: 12.5606
+      input: 794
+      output: 259034
+      cache_read: 52480324
+      cache_write: 2171056
+      cost: 28.4351
   strategic:
     - kind: planner
-      seconds: 1964
+      seconds: 1976
       estimated: true
       models:
         - model: claude-haiku-5-5
@@ -45,27 +50,27 @@ usage:
           cache_write: 388530
           cost: 0.8668
         - model: claude-opus-5-5
-          input: 107
-          output: 1920
-          cache_read: 7015818
-          cache_write: 361105
-          cost: 1.8496
+          input: 112
+          output: 4343
+          cache_read: 7302628
+          cache_write: 372766
+          cost: 2.0487
     - kind: orchestrator
-      seconds: 4941
+      seconds: 6414
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 765
-          output: 13119
-          cache_read: 114475684
-          cache_write: 198927
-          cost: 25.2335
+          input: 807
+          output: 13702
+          cache_read: 118506977
+          cache_write: 220375
+          cost: 26.1258
         - model: claude-sonnet-5-5
-          input: 8
-          output: 59
-          cache_read: 80282
-          cache_write: 42924
-          cost: 0.085
+          input: 26
+          output: 153
+          cache_read: 465381
+          cache_write: 112926
+          cost: 0.3999
 ---
 # E-0030 The orchestrator runs for a reason: flai serve starts it on the events it can act on, primed for them, and holds every start while the host's budget is exhausted (ADR-0209)
 

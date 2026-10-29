@@ -24,16 +24,16 @@ touches: [flai/cmd/accept.go, flai/cmd/accept_release_due_test.go, flai/internal
 after: [T-2292]
 usage:
   source: log
-  seconds: 2257
+  seconds: 2279
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 96
-      output: 586
-      cache_read: 4919904
-      cache_write: 257308
-      cost: 1.7636
+      input: 84
+      output: 28363
+      cache_read: 5306940
+      cache_write: 234972
+      cost: 2.9504
 ---
 # T-2296 flai accept appends a release-due event when the acceptance changes what flai release --evaluate answers
 

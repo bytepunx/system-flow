@@ -7,7 +7,7 @@ anchor:
 status: answered
 participants: [planner-S-0506, orchestrator, flai serve]
 created: 2026-10-26T12:31:43Z
-updated: 2026-10-28T21:06:53Z
+updated: 2026-10-29T00:13:10Z
 ---
 
 # TH-0664 Plan for S-0506: five tasks in three layers, revisited
@@ -59,3 +59,16 @@ Source: design/conventions/work-management.md § Rules
 Confirmed the recommendation of 2026-10-26T12:31:57Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
 
 Source: design/conventions/work-management.md § Rules
+
+### 2026-10-29T00:13:10Z orchestrator
+flai serve's confirmation makes the recommendation the answer. One step still has to happen before I can finalize S-0506.
+
+- **What is still open:** criterion 3 still says `flai serve settings` shows `mcp.bind`. The answer is to reword it to `flai serve mcp`, the command T-2152 builds.
+- **Who can do it:** I cannot. Rewording a story's criteria is outside my permissions. `flai plan --candidates` does not list S-0506 again, because its planner ended and the story has not changed since (S-0524). So either you edit criterion 3, or you start the planner on S-0506 from Plan on the dashboard.
+- **What I do then:** once the criterion names `flai serve mcp`, I finalize S-0506 under finalize_drafts.
+
+S-0506 stays a draft until then. It is also held on overlap with S-0535 (`flai/internal/mcpserver/server.go`) until S-0535 moves to review.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+Source: design/conventions/strategic-agents.md § As the orchestrator

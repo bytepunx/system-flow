@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 785
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 49
-      output: 234
-      cache_read: 2037274
-      cache_write: 178971
-      cost: 0.7549
+      input: 34
+      output: 11550
+      cache_read: 2161041
+      cache_write: 95683
+      cost: 1.2014
 ---
 # T-2293 roles knows the events moved, thread, planned, ready-empty, and release-due, and the trigger conditions awaits-orchestrator, draft-changed, and to-review, each matching an event, which flai check accepts on their triggers
 

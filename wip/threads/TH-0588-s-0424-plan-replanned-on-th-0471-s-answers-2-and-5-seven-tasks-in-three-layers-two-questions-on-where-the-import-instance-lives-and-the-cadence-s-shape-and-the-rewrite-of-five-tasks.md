@@ -7,7 +7,7 @@ anchor:
 status: answered
 participants: [planner-S-0424, orchestrator, flai serve]
 created: 2026-10-21T16:11:41Z
-updated: 2026-10-28T21:06:53Z
+updated: 2026-10-29T00:13:26Z
 ---
 
 # TH-0588 S-0424 plan: replanned on TH-0471's answers 2 and 5, seven tasks in three layers, two questions on where the import instance lives and the cadence's shape, and the rewrite of five tasks
@@ -94,3 +94,24 @@ Applied what was approved. T-1785's and T-1786's titles and Work now name `desig
 Confirmed the recommendation of 2026-10-21T16:11:57Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
 
 Source: design/conventions/strategic-agents.md § As the planner
+
+### 2026-10-29T00:13:26Z orchestrator
+flai serve's confirmation makes the recommendation the answer to questions 1 and 2:
+
+1. The import instance lives in the imported repository, through `flai import --formula` (T-2017).
+2. The cadence is a role step with `focus` defaulting to all three, then `flai issue list --report`, `in: main`, with `analysis.formula` in the manifest.
+
+**Still to be applied before S-0424 is consistent:**
+- criterion 1's words;
+- the parts of T-1785, T-1786, and T-1789 that the planner left in Notes lines: `--formula`, `flai import test`, the two import steps, `in: main` and `--report`, and the input default.
+
+**Why I do not finalize it yet:**
+- Criterion 1 still describes the import as it was before answer 1. I cannot reword a story's criteria.
+- `flai plan --candidates` does not list S-0424 again (S-0524).
+- E-0024 still has no cost of delay input (TH-0587), so its 50.85 USD a week was worked out by hand.
+
+**What you can do:** start the planner on S-0424 from Plan on the dashboard, and it applies all of this. I finalize S-0424 once its criteria match these answers.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+Source: design/conventions/strategic-agents.md § As the orchestrator

@@ -3,37 +3,52 @@ id: S-0514
 type: story
 nature: remediation
 title: A curator run that ends on the harness's usage limit is recorded failed, logs no activity, and is not started again until the next acceptance or schedule
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-28T12:40:16Z
-updated: 2026-10-29T00:42:27Z
+updated: 2026-10-29T01:02:03Z
 transitions:
   - to: ready
     at: 2026-10-29T00:38:32Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-10-29T00:57:22Z
+    by: agent-S-0514
 tags: [flai, serve, curator, usage]
 topics: [planning, digest]
-touches: [flai/internal/usage/event.go, flai/internal/usage/claudecode.go, flai/internal/usage/claudecode_test.go, flai/internal/usage/log.go, flai/internal/usage/log_test.go, flai/internal/serve/agents.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/curate_schedule_test.go, flai/internal/serve/limit.go, flai/internal/serve/limit_test.go, design/adrs/README.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, design/issues/I-0212-a-curator-run-that-ends-on-the-harness-s-usage-limit-is-recorded-failed-logs-no-activity-and-is-not-started-again-until-the-next-acceptance-or-schedule.md, design/issues/summary.md]
+touches: [flai/internal/usage/event.go, flai/internal/usage/claudecode.go, flai/internal/usage/claudecode_test.go, flai/internal/usage/log.go, flai/internal/usage/log_test.go, flai/internal/serve/agents.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/curate_schedule_test.go, flai/internal/serve/limit.go, flai/internal/serve/limit_test.go, design/adrs/README.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, design/issues/I-0212-a-curator-run-that-ends-on-the-harness-s-usage-limit-is-recorded-failed-logs-no-activity-and-is-not-started-again-until-the-next-acceptance-or-schedule.md, design/issues/summary.md, design/adrs/0214-a-curator-run-that-ends-on-the-harness-s-usage-limit-is-recorded-failed-with.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 281
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-29
+      hand_edits: 1
+      work: 22
+  models:
+    - model: claude-opus-5-5
+      input: 118
+      output: 773
+      cache_read: 4551589
+      cache_write: 309184
+      cost: 1.6547
   strategic:
     - kind: orchestrator
-      seconds: 253
+      seconds: 268
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 94
-          output: 1451
-          cache_read: 18090614
-          cache_write: 34820
-          cost: 3.9797
+          input: 98
+          output: 1483
+          cache_read: 18602472
+          cache_write: 41162
+          cost: 4.0938
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30m

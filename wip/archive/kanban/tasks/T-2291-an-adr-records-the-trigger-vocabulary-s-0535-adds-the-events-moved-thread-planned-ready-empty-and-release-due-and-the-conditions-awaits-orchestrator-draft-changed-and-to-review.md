@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 4
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 2
-      output: 25
-      cache_read: 206510
-      cache_write: 1405
-      cost: 0.0708
+      input: 3
+      output: 1084
+      cache_read: 202734
+      cache_write: 8976
+      cost: 0.1127
 ---
 # T-2291 An ADR records the trigger vocabulary S-0535 adds: the events moved, thread, planned, ready-empty, and release-due, and the conditions awaits-orchestrator, draft-changed, and to-review
 

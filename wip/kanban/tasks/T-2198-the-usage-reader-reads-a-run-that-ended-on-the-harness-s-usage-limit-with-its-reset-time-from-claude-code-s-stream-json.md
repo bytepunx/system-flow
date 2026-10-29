@@ -3,15 +3,36 @@ id: T-2198
 type: task
 nature: remediation
 title: The usage reader reads a run that ended on the harness's usage limit, with its reset time, from Claude Code's stream-json
-status: backlog
+status: done
 parent: S-0514
 owner: alex
 created: 2026-10-28T12:52:46Z
-updated: 2026-10-28T12:52:46Z
-transitions: []
+updated: 2026-10-29T01:02:03Z
+transitions:
+  - to: ready
+    at: 2026-10-29T00:58:05Z
+    by: agent-S-0514
+  - to: in-progress
+    at: 2026-10-29T00:58:06Z
+    by: agent-S-0514
+  - to: done
+    at: 2026-10-29T01:02:03Z
+    by: agent-S-0514
 stream: S-0514
 tags: [flai, usage]
-touches: [flai/internal/usage/event.go, flai/internal/usage/claudecode.go, flai/internal/usage/claudecode_test.go, flai/internal/usage/log.go, flai/internal/usage/log_test.go]
+touches: [flai/internal/usage/event.go, flai/internal/usage/claudecode.go, flai/internal/usage/claudecode_test.go, flai/internal/usage/log.go, flai/internal/usage/log_test.go, design/adrs/0214-a-curator-run-that-ends-on-the-harness-s-usage-limit-is-recorded-failed-with.md]
+usage:
+  source: log
+  seconds: 235
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 46
+      output: 214
+      cache_read: 1663693
+      cache_write: 94329
+      cost: 0.5984
 ---
 # T-2198 The usage reader reads a run that ended on the harness's usage limit, with its reset time, from Claude Code's stream-json
 

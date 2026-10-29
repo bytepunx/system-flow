@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 2262
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 36
-      output: 146
-      cache_read: 1479333
-      cache_write: 56282
-      cost: 0.5231
+      input: 24
+      output: 8003
+      cache_read: 1497355
+      cache_write: 66297
+      cost: 0.8325
 ---
 # T-2294 A planner's run that ends with items written appends a planned event naming the item planned and the IDs written
 

@@ -24,16 +24,16 @@ touches: [flai/internal/inbox/threadevents.go, flai/internal/inbox/threadevents_
 after: [T-2292]
 usage:
   source: log
-  seconds: 2254
+  seconds: 2287
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 98
-      output: 481
-      cache_read: 4384096
-      cache_write: 500059
-      cost: 1.6637
+      input: 84
+      output: 28542
+      cache_read: 5340332
+      cache_write: 236451
+      cost: 2.969
 ---
 # T-2297 inbox.CatchUp reports a thread event when a thread comes to await the reader, or for the orchestrator the operator, naming the thread, its item, and whom it awaits under ADR-0181
 

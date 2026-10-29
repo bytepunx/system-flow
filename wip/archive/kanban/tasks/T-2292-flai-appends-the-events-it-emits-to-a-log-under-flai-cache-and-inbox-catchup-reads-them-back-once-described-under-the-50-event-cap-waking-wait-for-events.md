@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 777
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 47
-      output: 285
-      cache_read: 1910186
-      cache_write: 108138
-      cost: 0.6875
+      input: 31
+      output: 10518
+      cache_read: 1968052
+      cache_write: 87138
+      cost: 1.0941
 ---
 # T-2292 flai appends the events it emits to a log under .flai-cache, and inbox.CatchUp reads them back once, described, under the 50-event cap, waking wait_for_events
 

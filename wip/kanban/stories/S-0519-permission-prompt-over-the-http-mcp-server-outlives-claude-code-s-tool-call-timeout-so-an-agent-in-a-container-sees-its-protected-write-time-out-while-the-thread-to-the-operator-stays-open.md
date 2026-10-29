@@ -6,7 +6,7 @@ title: permission_prompt over the HTTP MCP server outlives Claude Code's tool-ca
 status: in-progress
 owner: alex
 created: 2026-10-28T12:53:05Z
-updated: 2026-10-29T00:38:58Z
+updated: 2026-10-29T01:02:23Z
 transitions:
   - to: ready
     at: 2026-10-29T00:38:32Z
@@ -14,29 +14,53 @@ transitions:
   - to: in-progress
     at: 2026-10-29T00:38:38Z
     by: agent-S-0519
+blocked:
+  - from: 2026-10-29T00:57:08Z
+    until: 2026-10-29T00:57:09Z
+    reason: awaiting the operator on TH-0726
+  - from: 2026-10-29T00:57:26Z
+    until: 2026-10-29T00:57:31Z
+    reason: awaiting the operator on TH-0726
+  - from: 2026-10-29T00:57:37Z
+    until: 2026-10-29T01:02:14Z
+    reason: awaiting the operator on TH-0726
+  - from: 2026-10-29T01:02:23Z
+    reason: awaiting the operator on TH-0726
 tags: [cli, mcp]
 topics: [mcp, harness]
-touches: [design/adrs, design/adrs/README.md, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/mcpserver/server.go, flai/cmd/mcp_http.go, flai/cmd/mcp_http_test.go, flai/internal/ask/ask.go, flai/internal/ask/ask_test.go, docs/users/flai.md, docs/operators/index.md, design/system/agent-adapters.md, design/system/flai-cli.md, design/conventions/delegation.md, design/issues/I-0217-permission-prompt-over-the-http-mcp-server-outlives-claude-code-s-tool-call-timeout-so-an-agent-in-a-container-sees-its-protected-write-time-out-while-the-thread-to-the-operator-stays-open.md, design/issues/summary.md]
+touches: [design/adrs, design/adrs/README.md, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/mcpserver/server.go, flai/cmd/mcp_http.go, flai/cmd/mcp_http_test.go, flai/internal/ask/ask.go, flai/internal/ask/ask_test.go, docs/users/flai.md, docs/operators/index.md, design/system/agent-adapters.md, design/system/flai-cli.md, design/conventions/delegation.md, design/issues/I-0217-permission-prompt-over-the-http-mcp-server-outlives-claude-code-s-tool-call-timeout-so-an-agent-in-a-container-sees-its-protected-write-time-out-while-the-thread-to-the-operator-stays-open.md, design/issues/summary.md, design/issues/I-0228-claude-code-drops-any-call-to-flai-s-http-mcp-server-that-answers-after-60-seconds-so-wait-for-events-wait-for-work-verify-and-a-slow-task-done-fail-for-an-agent-in-a-container.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1131
+  priced_by: harness
+  turns:
+    - day: 2026-10-29
+      ceremony: 3
+      hand_edits: 1
+      work: 23
+  models:
+    - model: claude-opus-5-5
+      input: 130
+      output: 37999
+      cache_read: 5673534
+      cache_write: 403786
+      cost: 4.4538
   strategic:
     - kind: orchestrator
-      seconds: 770
+      seconds: 1879
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 105
-          output: 1564
-          cache_read: 27456741
-          cache_write: 44238
-          cost: 6.0379
+          input: 371
+          output: 6241
+          cache_read: 58230630
+          cache_write: 87615
+          cost: 12.8233
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m

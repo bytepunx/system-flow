@@ -24,16 +24,16 @@ touches: [flai/internal/serve/readyempty.go, flai/internal/serve/readyempty_test
 after: [T-2292]
 usage:
   source: log
-  seconds: 2259
+  seconds: 2270
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 94
-      output: 389
-      cache_read: 3653964
-      cache_write: 99245
-      cost: 1.2785
+      input: 59
+      output: 20105
+      cache_read: 3761792
+      cache_write: 166559
+      cost: 2.0914
 ---
 # T-2295 flai serve appends one ready-empty event when the ready column drains below the in-progress limit's room, and not again until ready reaches the room
 

@@ -3,11 +3,11 @@ id: S-0535
 type: story
 nature: feature
 title: "flai emits the events the orchestrator's trigger names: planned, ready-empty, release-due, a thread coming to await an agent, and the conditions awaits-orchestrator, draft-changed, and to-review"
-status: in-progress
+status: done
 parent: E-0030
 owner: alex
 created: 2026-10-28T21:02:24Z
-updated: 2026-10-28T23:23:30Z
+updated: 2026-10-29T01:07:13Z
 transitions:
   - to: ready
     at: 2026-10-28T22:21:19Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-28T22:28:24Z
     by: agent-S-0535
+  - to: review
+    at: 2026-10-29T00:37:08Z
+    by: system-flow
+  - to: done
+    at: 2026-10-29T01:07:13Z
+    by: orchestrator
 tags: [flai, serve, events]
 topics: [orchestration, cli, mcp, template]
-touches: [flai/internal/serve, flai/internal/mcpserver, design/system/flai-cli.md, design/workflows/roles/README.md, design/adrs, design/adrs/README.md, flai/internal/inbox/events.go, flai/internal/inbox/events_test.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/inbox/threadevents.go, flai/internal/inbox/threadevents_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/check/roles_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/readyempty.go, flai/internal/serve/readyempty_test.go, flai/internal/serve/agents.go, flai/cmd/accept.go, flai/cmd/accept_release_due_test.go, flai/internal/release/evaluate.go, flai/internal/release/evaluate_test.go, template/root/design/workflows/roles/README.md, template/CHANGELOG.md, design/system/agent-narrative.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/accept_test.go]
+touches: [flai/internal/serve, flai/internal/mcpserver, design/system/flai-cli.md, design/workflows/roles/README.md, design/adrs, design/adrs/README.md, flai/internal/inbox/events.go, flai/internal/inbox/events_test.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/inbox/threadevents.go, flai/internal/inbox/threadevents_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/check/roles_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/readyempty.go, flai/internal/serve/readyempty_test.go, flai/internal/serve/agents.go, flai/cmd/accept.go, flai/cmd/accept_release_due_test.go, flai/internal/release/evaluate.go, flai/internal/release/evaluate_test.go, template/root/design/workflows/roles/README.md, template/CHANGELOG.md, design/system/agent-narrative.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/accept_test.go, design/issues/I-0227-flai-test-s-go-test-tier-runs-the-mcpserver-package-with-race-into-go-test-s-10-minute-default-timeout-on-a-loaded-host-and-names-only-the-package-so-a-story-that-changes-mcpserver-cannot-pass-its-tests.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -25,32 +31,43 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3286
-  estimated: true
-  priced_by: estimate
+  seconds: 7739
+  priced_by: harness
   turns:
     - day: 2026-10-28
       ceremony: 2
+      test_runs: 3
       hand_edits: 2
-      work: 51
+      work: 64
+    - day: 2026-10-29
+      ceremony: 1
+      test_runs: 1
+      hand_edits: 1
+      work: 21
   models:
     - model: claude-opus-5-5
-      input: 460
-      output: 2517
-      cache_read: 23545643
-      cache_write: 1412587
-      cost: 8.5017
+      input: 692
+      output: 234337
+      cache_read: 43846036
+      cache_write: 1941344
+      cost: 24.3762
   strategic:
     - kind: orchestrator
-      seconds: 1581
+      seconds: 3054
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 400
-          output: 7114
-          cache_read: 67997825
-          cache_write: 71433
-          cost: 14.978
+          input: 442
+          output: 7697
+          cache_read: 72029118
+          cache_write: 92881
+          cost: 15.8703
+        - model: claude-sonnet-5-5
+          input: 18
+          output: 94
+          cache_read: 385099
+          cache_write: 70002
+          cost: 0.3149
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -73,12 +90,12 @@ forecast:
 ADR-0209 §1 lists the reasons the orchestrator is started for in ADR-0207's trigger vocabulary. Some are events flai emits today with a condition to name (`moved` to review, `edited` on a draft, `reordered`, `accepted`); others are not events at all: a planner's run ending with its items written, the ready column draining below the in-progress limit, the release policy's figures changing with an acceptance, a thread coming to await the orchestrator or the operator (ADR-0181). This story defines each as an event or a named condition flai implements (ADR-0207 §3), emits it from where it happens, and reports it through `wait_for_events` and `inbox` like the others, so that the following story can name them in `orchestrator.md`'s `trigger` and flai serve can queue them.
 
 ## Acceptance criteria
-- [ ] `planned` is an event, with the item planned and the IDs written, emitted when a planner's run ends with its items written, and reported by `wait_for_events` and `inbox`
-- [ ] `ready-empty` is an event emitted when the ready column drains below the in-progress limit's room, once per draining
-- [ ] `release-due` is an event emitted when an acceptance changes what `flai release --evaluate` would answer
+- [x] `planned` is an event, with the item planned and the IDs written, emitted when a planner's run ends with its items written, and reported by `wait_for_events` and `inbox`
+- [x] `ready-empty` is an event emitted when the ready column drains below the in-progress limit's room, once per draining
+- [x] `release-due` is an event emitted when an acceptance changes what `flai release --evaluate` would answer
 - [x] `awaits-orchestrator`, `draft-changed`, and `to-review` are conditions `flai check` accepts on `thread`, `edited`, and `moved` triggers, each implemented and tested
-- [ ] A `thread` event exists for a thread coming to await an agent, with the thread and whom it awaits, under ADR-0181's rule
-- [ ] The design (`flai-cli.md`'s event table, `design/workflows/roles/README.md`'s trigger table) and the MCP descriptions name each event and condition
+- [x] A `thread` event exists for a thread coming to await an agent, with the thread and whom it awaits, under ADR-0181's rule
+- [x] The design (`flai-cli.md`'s event table, `design/workflows/roles/README.md`'s trigger table) and the MCP descriptions name each event and condition
 
 ## Tasks
 - T-2291 An ADR records the trigger vocabulary S-0535 adds: the events moved, thread, planned, ready-empty, and release-due, and the conditions awaits-orchestrator, draft-changed, and to-review
@@ -121,3 +138,18 @@ Touches, and where each came from:
 Forecast: `flai forecast` gave 32m (median 159 s per unit of size over 4 done feature stories on claude-opus-5-5, size 12: 6 criteria, 6 touches). Raised to 4h: nine tasks in five layers across the inbox, roles and check, three writers in serve and accept, the MCP tools, an ADR, and five documents, beside S-0532's 3h for seven tasks of a similar spread. Delivery is flai's 2026-10-29T13:57Z moved by the added 3h28m, 39th in the pull order with an in-progress limit of 5.
 
 Cost of delay: `flai cod` gave 37.50 USD a week from the input the orchestrator set on TH-0714 (15m of time lost per 168h cycle at 150 USD an hour, 1.00 cycles a week). The value stands as computed; the input is not changed.
+
+### Accepted by the orchestrator
+
+- Verified: cfd998e467399780aa040f64c7ab027eabd71d67
+- Batch: 20261029-005305
+- Enqueued verified: d3b740cc839d38ce149806d2d8e9aaa26f706635
+- At: 2026-10-29T01:07:13Z
+
+Verdict: meets all six criteria at d3b740cc; flai verify passed, with integration and smoke left to the queue; no convention findings and no file outside the touches.
+- 1: flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/inbox/events.go, flai/internal/inbox/events_test.go, flai/internal/inbox/inbox.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go
+- 2: flai/internal/serve/readyempty.go, flai/internal/serve/readyempty_test.go, flai/internal/serve/agents.go
+- 3: flai/cmd/accept.go, flai/cmd/accept_release_due_test.go, flai/cmd/accept_test.go, flai/internal/release/evaluate.go, flai/internal/release/evaluate_test.go
+- 4: flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/check/roles_test.go
+- 5: flai/internal/inbox/threadevents.go, flai/internal/inbox/threadevents_test.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/mcpserver/cursor.go, flai/internal/mcpserver/server_test.go
+- 6: design/system/flai-cli.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, template/CHANGELOG.md, design/system/agent-narrative.md, docs/users/flai.md, docs/users/flai-reference.md, flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go

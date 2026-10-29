@@ -3,16 +3,37 @@ id: T-2299
 type: task
 nature: feature
 title: flai-cli.md gains an event table, the roles README and its template copy list the new trigger events and conditions, and the agent and user docs name the new event kinds
-status: backlog
+status: done
 parent: S-0535
 owner: alex
 created: 2026-10-28T21:39:08Z
-updated: 2026-10-28T21:39:08Z
-transitions: []
+updated: 2026-10-29T00:26:44Z
+transitions:
+  - to: ready
+    at: 2026-10-29T00:23:01Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-29T00:23:03Z
+    by: system-flow
+  - to: done
+    at: 2026-10-29T00:26:44Z
+    by: agent-S-0535
 stream: S-0535
 tags: [flai, events, docs, template]
 touches: [design/system/flai-cli.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, template/CHANGELOG.md, design/system/agent-narrative.md, docs/users/flai.md]
 after: [T-2293, T-2298]
+usage:
+  source: log
+  seconds: 221
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 63
+      output: 21281
+      cache_read: 3981780
+      cache_write: 176299
+      cost: 2.2137
 ---
 # T-2299 flai-cli.md gains an event table, the roles README and its template copy list the new trigger events and conditions, and the agent and user docs name the new event kinds
 

@@ -3,11 +3,11 @@ id: MS-0210
 title: "S-0416 holds S-0535 on overlap alone: may S-0535 start beside it?"
 from: S-0535
 to: S-0416
-about: [flai/internal/roles/roles.go, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, docs/users/flai-reference.md]
-status: open
-participants: [flai, agent-S-0416, agent-S-0535]
+about: [flai/internal/roles/roles.go, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, docs/users/flai-reference.md, design/system/flai-cli.md, docs/users/flai.md, template/CHANGELOG.md]
+status: closed
+participants: [flai, agent-S-0416, agent-S-0535, orchestrator]
 created: 2026-10-28T22:21:21Z
-updated: 2026-10-28T23:23:30Z
+updated: 2026-10-29T01:07:13Z
 shares:
   - holder: S-0416
     held: S-0535
@@ -19,7 +19,7 @@ shares:
 
 # MS-0210 S-0416 holds S-0535 on overlap alone: may S-0535 start beside it?
 
-Between S-0535 and S-0416, about `flai/internal/roles/roles.go`, `flai/internal/roles/conditions.go`, `flai/internal/roles/conditions_test.go`, `docs/users/flai-reference.md`.
+Between S-0535 and S-0416, about `flai/internal/roles/roles.go`, `flai/internal/roles/conditions.go`, `flai/internal/roles/conditions_test.go`, `docs/users/flai-reference.md`, `design/system/flai-cli.md`, `docs/users/flai.md`, `template/CHANGELOG.md`.
 
 ## Entries
 
@@ -57,3 +57,23 @@ T-2293, roles knows the events moved, thread, planned, ready-empty, and release-
 T-2296 of S-0535 changed paths S-0416's claim covers.
 
 T-2296, flai accept appends a release-due event when the acceptance changes what flai release --evaluate answers, committed 3ff9634 on story/S-0535, `feat: [S-0535] flai accept appends a release-due event when the acceptance changes the release answer`, changing `docs/users/flai-reference.md`. It reaches the main branch when S-0535 is accepted; `git show 3ff9634` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-10-29T00:26:40Z agent-S-0535 S-0535
+T-2299 of S-0535 changed paths S-0416's claim covers.
+
+T-2299, flai-cli.md gains an event table, the roles README and its template copy list the new trigger events and conditions, and the agent and user docs name the new event kinds, committed d3b740c on story/S-0535, `docs: [S-0535] the design, the roles README, and the agent and user docs name the new events and trigger conditions`, changing `design/system/flai-cli.md`, `docs/users/flai.md`, `template/CHANGELOG.md`. It reaches the main branch when S-0535 is accepted; `git show d3b740c` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-10-29T00:26:40Z flai S-0535
+story/S-0416 and story/S-0535 conflict when merged.
+
+A trial merge of the two at flai stream sync conflicts in:
+
+- `template/CHANGELOG.md`
+
+Whichever of S-0416 and S-0535 is accepted second will stop on these paths when it rebases. Agree here who changes what: one narrows its change, or names the other in `after:` and waits for it. The next sync that finds the two merging cleanly closes this conversation. When you do not agree, either of you asks the operator with `flai message escalate` on this conversation, or the MCP tool `message_escalate`, saying what you could not agree.
+
+### 2026-10-29T00:26:52Z agent-S-0535 S-0535 (settled)
+S-0535 takes this one. Both stories add a top entry to template/CHANGELOG.md; S-0416 is in review and likely lands first. When S-0535 syncs after it, S-0535 keeps S-0416's entry and puts its own above it under the next version. Nothing for S-0416 to change.
+
+### 2026-10-29T01:07:13Z orchestrator
+Closed: S-0535 was accepted
