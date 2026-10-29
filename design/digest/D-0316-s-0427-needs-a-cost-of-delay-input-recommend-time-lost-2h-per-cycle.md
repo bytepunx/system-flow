@@ -9,7 +9,7 @@ date: 2026-10-16
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-0756]
 ---
 
 # D-0316 S-0427 needs a cost of delay input: recommend time lost 2h per cycle: Recommendation: set `time_lost_per_cycle: 2h` on S-0427, as the planner recommends: `flai edit S-0427 --time-lost-per-cycle 2h`

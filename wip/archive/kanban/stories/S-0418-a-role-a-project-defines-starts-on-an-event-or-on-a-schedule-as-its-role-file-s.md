@@ -3,11 +3,11 @@ id: S-0418
 type: story
 nature: feature
 title: A role a project defines starts on an event or on a schedule, as its role file's trigger says, coalesced and logged with its trigger as the planner's runs are
-status: review
+status: done
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:11Z
-updated: 2026-10-29T17:57:15Z
+updated: 2026-10-29T18:11:13Z
 transitions:
   - to: ready
     at: 2026-10-28T13:04:42Z
@@ -30,6 +30,9 @@ transitions:
   - to: review
     at: 2026-10-29T17:57:15Z
     by: agent-S-0418
+  - to: done
+    at: 2026-10-29T18:11:13Z
+    by: alex
 blocked:
   - from: 2026-10-29T14:43:49Z
     until: 2026-10-29T15:17:18Z
