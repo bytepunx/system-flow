@@ -32,7 +32,9 @@ var orchestrateSettle = 2 * time.Second
 // orchestrateHeld; when none has within orchestrateSettle, it is recorded
 // here. A run that is not going, one that failed and waits to be started
 // again, is held as it is. The stop is journalled, and the run returned as
-// recorded.
+// recorded. A run going is told as one stopped agent event, by whichever of
+// the serving flai and this records its end first (S-0532); one held as it
+// is told its end already.
 //
 // It is refused, as a *Refused, while the orchestrate action is off for the
 // project, when flai serve has started no orchestrator for it, and when the

@@ -12,7 +12,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/conventions"
+	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -387,4 +390,49 @@ func TestAnAnalyzerActivityNamesItsReport(t *testing.T) {
 			t.Errorf("reportSaid(%q, %q) = %q, want %q", c.final, c.report, got, c.want)
 		}
 	}
+}
+
+// S-0532: an analyzer run appends one agent event on the analyzer's role at
+// its start, saying what started it and its focus, and one at its end, ended
+// for a run that wrote its report and failed for one that wrote none, for
+// the words its record gives; a start that could not be made is failed, for
+// its error.
+func TestAnAnalyzerRunAppendsAnAgentEventAtItsStartAndItsEnd(t *testing.T) {
+	role := func(lab *agentLab, want ...[2]string) {
+		t.Helper()
+		lab.agentEventsAre(workitem.ActivityAnalyzer, inbox.RoleType, workitem.ActivityAnalyzer, workitem.ActivityAnalyzer, conventions.RoleAnalyze, want...)
+	}
+	t.Run("a report is ended", func(t *testing.T) {
+		lab := analyzeLab(t)
+		lab.analyzerRuns("2026-10-06-risk.md", "Wrote the risk report.", runStart)
+		if !lab.analyzeHere("risk") {
+			t.Fatalf("not started: %+v", lab.state().Analyzer)
+		}
+		role(lab, [2]string{inbox.AgentStarted, "the operator asked for it, focus risk"}, [2]string{inbox.AgentEnded, "ended with its work done"})
+	})
+	t.Run("no report is failed", func(t *testing.T) {
+		lab := analyzeLab(t)
+		lab.analyzerRuns("", "Found nothing.", runStart)
+		if !lab.analyzeHere("") {
+			t.Fatalf("not started: %+v", lab.state().Analyzer)
+		}
+		waitFor(t, "the analyzer run ended", func() bool { r := lab.state().Analyzer; return r != nil && r.Ended != "" })
+		r := lab.state().Analyzer
+		if r.Outcome != OutcomeFailed || !strings.Contains(r.Why, "(exit 0) without writing a report") {
+			t.Fatalf("run = %+v, want failed without a report", r)
+		}
+		role(lab, [2]string{inbox.AgentStarted, "the operator asked for it, focus " + harness.AllFocus}, [2]string{inbox.AgentFailed, r.Why})
+	})
+	t.Run("a start that could not be made is failed", func(t *testing.T) {
+		lab := analyzeLab(t)
+		lab.cfg.Command = []string{filepath.Join(lab.outDir, "no-such-program")}
+		if lab.analyzeHere("risk") {
+			t.Fatalf("started: %+v", lab.state().Analyzer)
+		}
+		r := lab.state().Analyzer
+		if r == nil || !strings.HasPrefix(r.Why, "could not be started: ") {
+			t.Fatalf("not recorded as failed to start: %+v", r)
+		}
+		role(lab, [2]string{inbox.AgentFailed, r.Why})
+	})
 }

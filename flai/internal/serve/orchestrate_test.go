@@ -11,7 +11,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -245,6 +247,8 @@ func TestTheOrchestratorIsStoppedWhenTheActionIsTurnedOff(t *testing.T) {
 			if stopped.Outcome != OutcomeStopped || stopped.Stopped == "" || stopped.live() {
 				t.Errorf("not recorded as stopped: %+v", stopped)
 			}
+			// S-0532: and its stop is one stopped agent event
+			lab.orchestratorEventsAre([2]string{inbox.AgentStarted, "started while orchestrate is on"}, [2]string{inbox.AgentStopped, stopped.Why})
 			waitFor(t, "its activity logged", func() bool {
 				doc, err := lab.repo.Activity(workitem.ActivityOrchestrator)
 				return err == nil && len(doc.Entries) == 1
@@ -349,4 +353,73 @@ func TestTheOrchestratorIsToldTheQueueRunsOnlyWhileItBatches(t *testing.T) {
 	if queueBatches(Options{}, e, manifest.Manifest{}) {
 		t.Error("queueBatches with no host = true, want false")
 	}
+}
+
+// orchestratorEventsAre says that the agent events on the orchestrator's
+// role are one per change, to and why as want, in turn (S-0532).
+func (lab *orchestrateLab) orchestratorEventsAre(want ...[2]string) {
+	lab.t.Helper()
+	lab.agentEventsAre(workitem.ActivityOrchestrator, inbox.RoleType, workitem.ActivityOrchestrator, workitem.ActivityOrchestrator, conventions.RoleOrchestrate, want...)
+}
+
+// S-0532: each orchestrator run appends one agent event on the orchestrator's
+// role at its start, saying why it was started, and one at its end, ended for
+// a run that worked and failed for one that did not, so that a run that fails
+// and is retried every minute writes one failed and one started per attempt.
+func TestAnOrchestratorRunAppendsAnAgentEventAtEachStartAndEnd(t *testing.T) {
+	lab := newOrchestrateLab(t)
+	lab.hold()
+	lab.cfg.Orchestrate = true
+	lab.look()
+	first := lab.orchestrator()
+	lab.release("orchestrator")
+	lab.ended(first.Session)
+	started := [2]string{inbox.AgentStarted, "started while orchestrate is on"}
+	worked := [2]string{inbox.AgentEnded, "ended with its work done"}
+	lab.orchestratorEventsAre(started, worked)
+	if err := os.WriteFile(filepath.Join(lab.outDir, "exit-orchestrator"), []byte("3"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	want := [][2]string{started, worked, {inbox.AgentStarted, "started again while orchestrate is on: its last run ended, worked"}}
+	failed := [2]string{inbox.AgentFailed, "ended (exit 3)"}
+	retried := [2]string{inbox.AgentStarted, "started again after its last run failed: ended (exit 3)"}
+	lab.look()
+	for attempt := range 3 {
+		run := lab.ended(lab.orchestrator().Session)
+		want = append(want, failed)
+		lab.orchestratorEventsAre(want...)
+		if attempt == 2 {
+			break
+		}
+		ended, err := time.Parse(time.RFC3339, run.Ended)
+		if err != nil {
+			t.Fatalf("the failed run's end %q: %v", run.Ended, err)
+		}
+		lab.at = ended.Add(orchestrateRetry - time.Second)
+		lab.look()
+		lab.orchestratorEventsAre(want...)
+		lab.at = ended.Add(orchestrateRetry)
+		lab.look()
+		if r := lab.orchestrator(); r.Session == run.Session {
+			t.Fatalf("attempt %d: not started again a minute after a failure: %+v", attempt+1, r)
+		}
+		want = append(want, retried)
+	}
+}
+
+// S-0532: an orchestrator start that could not be made is one failed agent
+// event, for its error, as it is journalled once and not at every look.
+func TestAnOrchestratorStartThatCouldNotBeMadeIsOneFailedAgentEvent(t *testing.T) {
+	lab := newOrchestrateLab(t)
+	lab.cfg.Command, lab.cfg.Orchestrate = nil, true
+	lab.look()
+	run := lab.orchestrator()
+	if run == nil || !strings.HasPrefix(run.Why, "could not be started: ") {
+		t.Fatalf("not recorded as failed to start: %+v", run)
+	}
+	for _, shift := range []time.Duration{0, 2 * orchestrateRetry, 4 * orchestrateRetry} {
+		lab.shift = shift
+		lab.look()
+	}
+	lab.orchestratorEventsAre([2]string{inbox.AgentFailed, run.Why})
 }

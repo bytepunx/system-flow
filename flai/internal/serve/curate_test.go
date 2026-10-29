@@ -13,9 +13,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/digest"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -683,4 +685,45 @@ func TestAnAgentsEnvironmentCarriesNoRunsMarks(t *testing.T) {
 	if !slices.Equal(env, []string{"PATH=/bin"}) {
 		t.Errorf("agentEnv kept a run's marks: %q", env)
 	}
+}
+
+// S-0532: a curator run appends one agent event on the curator's role at its
+// start, saying what started it, what it takes in, and, for a retry, the
+// reset it waited for, and one at its end, ended for a run that worked and
+// failed for one on the usage limit, for the limit's words and its exit; a
+// start that could not be made is failed, for its error.
+func TestACuratorRunAppendsAnAgentEventAtItsStartAndItsEnd(t *testing.T) {
+	role := func(lab *agentLab, want ...[2]string) {
+		t.Helper()
+		lab.agentEventsAre(workitem.ActivityCurator, inbox.RoleType, workitem.ActivityCurator, workitem.ActivityCurator, conventions.RoleCurate, want...)
+	}
+	asked := [2]string{inbox.AgentStarted, "the operator asked for it, to curate everything, its first run"}
+	t.Run("worked is ended", func(t *testing.T) {
+		lab := curateLab(t)
+		lab.curatorRuns("Took in nothing new.", runStart)
+		if !lab.curateHere("") {
+			t.Fatalf("not started: %+v", lab.state().Curator)
+		}
+		role(lab, asked, [2]string{inbox.AgentEnded, "ended with its work done"})
+	})
+	t.Run("the usage limit is failed, and so is its retry", func(t *testing.T) {
+		lab := curateLab(t)
+		lab.curatorLimited()
+		lab.curatorEnded("")
+		lab.curatorEnded(limitResetsAt)
+		limited := [2]string{inbox.AgentFailed, limitWhyText + " (exit 1)"}
+		role(lab, asked, limited, [2]string{inbox.AgentStarted, asked[1] + "; started again after the usage limit reset at " + limitResetsAt}, limited)
+	})
+	t.Run("a start that could not be made is failed", func(t *testing.T) {
+		lab := curateLab(t)
+		lab.cfg.Command = []string{filepath.Join(lab.outDir, "no-such-program")}
+		if lab.curateHere("") {
+			t.Fatalf("started: %+v", lab.state().Curator)
+		}
+		r := lab.state().Curator
+		if r == nil || !strings.HasPrefix(r.Why, "could not be started: ") {
+			t.Fatalf("not recorded as failed to start: %+v", r)
+		}
+		role(lab, [2]string{inbox.AgentFailed, r.Why})
+	})
 }

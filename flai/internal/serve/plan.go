@@ -138,7 +138,8 @@ func planCheck(o Options, e Entry, item string) (planStart, error) {
 }
 
 // plan starts the planner for item with agent, records the run with what
-// started it, trigger, journals it, and says whether it started.
+// started it, trigger, journals it, and says whether it started. Its start,
+// or the start it could not make, is an agent event on item (S-0532).
 func (l *launcher) plan(ctx context.Context, cfg AgentConfig, item string, agent *manifest.Agent, trigger string) bool {
 	now := l.now().UTC()
 	run := &AgentRun{Item: item, Agent: workitem.ActivityPlanner + "-" + item, Started: now.Format(time.RFC3339), Session: newSession(), Trigger: trigger}
@@ -154,6 +155,7 @@ func (l *launcher) plan(ctx context.Context, cfg AgentConfig, item string, agent
 			l.record(entry)
 		}
 		l.log("planner could not be started", "item", item, "harness", run.Harness, "err", run.Error)
+		appendAgentEvent(l.entry.Root, run, inbox.AgentFailed, run.Why, l.warn)
 		return false
 	}
 	name, adapter, err := harness.For(agent, cfg.host(harness.Command).Program != "")
@@ -176,6 +178,7 @@ func (l *launcher) plan(ctx context.Context, cfg AgentConfig, item string, agent
 		l.record(entry)
 	}
 	l.log("planner started", "item", item, "harness", run.Harness, "command", run.Command, "pid", run.PID)
+	appendAgentEvent(l.entry.Root, run, inbox.AgentStarted, triggerWhy(run), l.warn)
 	l.await(cmd, out, run.PID, func(code int) { l.planEnded(run, &code) })
 	return true
 }
@@ -188,12 +191,16 @@ func (l *launcher) plan(ctx context.Context, cfg AgentConfig, item string, agent
 // of, and the activity names the planned item alone. A run that wrote items
 // beyond the item it planned appends a planned event naming them to the event
 // log (ADR-0211 §1); one that cannot be appended is warned of, and the run is
-// handled as it would be otherwise.
+// handled as it would be otherwise. The end, as judgePlan judges it, is an
+// agent event on the item, appended once, by the end that recorded the run
+// as ended first (S-0532).
 func (l *launcher) planEnded(run *AgentRun, exit *int) {
 	ended := *run
 	ended.Ended, ended.Exit = l.now().UTC().Format(time.RFC3339), exit
 	ended.Outcome, ended.Why, ended.Thread = judgePlan(l.entry.Root, run.Item, run.Agent, exit)
-	l.ended(&ended)
+	if l.ended(&ended) {
+		appendAgentEnd(l.entry.Root, &ended, l.warn)
+	}
 	args := []any{"item", run.Item, "pid", run.PID, "outcome", ended.Outcome}
 	if exit != nil {
 		args = append(args, "exit", *exit)
@@ -214,6 +221,21 @@ func (l *launcher) planEnded(run *AgentRun, exit *int) {
 			l.warn("planned event not logged", "item", run.Item, "err", err)
 		}
 	}
+}
+
+// triggerWhy is why a strategic role's run was started, for its started
+// agent event (S-0532), in a short form of the words its journal entry gives
+// its trigger: the operator's asking and the orchestrator's said as theirs,
+// and any other trigger, a schedule's, an acceptance's, or an edit's, as
+// startedBy says it.
+func triggerWhy(run *AgentRun) string {
+	switch run.Trigger {
+	case TriggerAsked:
+		return "the operator asked for it"
+	case TriggerOrchestrator:
+		return "the orchestrator asked for it"
+	}
+	return startedBy(run)
 }
 
 // appendPlanned appends to the event log of the project at root the planned

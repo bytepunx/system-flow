@@ -10,6 +10,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -233,9 +234,13 @@ func (r *orchestrator) stop(run *AgentRun) {
 // said, the one returned last time, is not recorded, journalled, or logged
 // again. queue says the merge queue batches for the project, which the
 // orchestrator's prompt then says, so that it enqueues the stories it has
-// verified instead of accepting them (S-0403).
+// verified instead of accepting them (S-0403). Its start, each retry's
+// included, is an agent event on the orchestrator's role, saying why it was
+// started, and so is a start it could not make, once as it is journalled
+// (S-0532).
 func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *manifest.Agent, said string, queue bool) string {
 	now := l.now().UTC()
+	last := l.dir.AgentStates()[l.entry.Root].Orchestrator
 	run := &AgentRun{Agent: workitem.ActivityOrchestrator, Started: now.Format(time.RFC3339), Session: newSession()}
 	if agent != nil {
 		run.Model = agent.Model
@@ -249,6 +254,7 @@ func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *mani
 			l.record(entry)
 		}
 		l.warn("orchestrator could not be started", "harness", run.Harness, "err", run.Error)
+		appendAgentEvent(l.entry.Root, run, inbox.AgentFailed, run.Why, l.warn)
 	}
 	refuse := func(err error) string {
 		if err.Error() != said {
@@ -281,6 +287,7 @@ func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *mani
 		l.record(entry)
 	}
 	l.log("orchestrator started", "harness", run.Harness, "command", run.Command, "pid", run.PID)
+	appendAgentEvent(l.entry.Root, run, inbox.AgentStarted, orchestrateWhy(last), l.warn)
 	l.await(cmd, out, run.PID, func(code int) { l.orchestrateEnded(run, &code) })
 	return ""
 }
@@ -292,7 +299,10 @@ func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *mani
 // the last entry in the orchestrator's activity document, with its final
 // reply as the summary, or, when it was stopped, orchestrateHeld when the
 // operator held it stopped and orchestrateOff otherwise. An activity that
-// cannot be logged is warned of, and the run stays recorded as it ended.
+// cannot be logged is warned of, and the run stays recorded as it ended. The
+// end, a stop's included, is an agent event on the orchestrator's role,
+// appended once, by the end that recorded the run as ended first (S-0532):
+// a stop settled here and by the launcher that waits for it is told once.
 func (l *launcher) orchestrateEnded(run *AgentRun, exit *int) {
 	ended := *run
 	ended.Ended, ended.Exit = l.now().UTC().Format(time.RFC3339), exit
@@ -300,7 +310,9 @@ func (l *launcher) orchestrateEnded(run *AgentRun, exit *int) {
 	if exit != nil && *exit != 0 {
 		ended.Outcome, ended.Why = OutcomeFailed, fmt.Sprintf("ended (exit %d)", *exit)
 	}
-	l.ended(&ended)
+	if l.ended(&ended) {
+		appendAgentEnd(l.entry.Root, &ended, l.warn)
+	}
 	args := []any{"pid", run.PID, "outcome", ended.Outcome}
 	if exit != nil {
 		args = append(args, "exit", *exit)
@@ -323,4 +335,21 @@ func (l *launcher) orchestrateEnded(run *AgentRun, exit *int) {
 	if _, err := logRunEnd(l.dir, l.entry.Root, l.entry.Key, workitem.ActivityOrchestrator, "", summary, nil); err != nil {
 		l.warn("orchestrator activity not logged", "err", err)
 	}
+}
+
+// orchestrateWhy is why the orchestrator was started, for its started agent
+// event (S-0532), told by last, the run recorded before it: the first while
+// orchestrate is on, the operator's start of one they held stopped, a retry
+// after a run that failed, saying how it failed, and a start again after one
+// that ended otherwise.
+func orchestrateWhy(last *AgentRun) string {
+	switch {
+	case last == nil:
+		return "started while orchestrate is on"
+	case last.Held:
+		return "the operator started it again, held stopped until now"
+	case last.Outcome == OutcomeFailed && last.Why != "":
+		return "started again after its last run failed: " + last.Why
+	}
+	return "started again while orchestrate is on: its last run ended, " + outcomeOf(last)
 }

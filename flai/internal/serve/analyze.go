@@ -15,6 +15,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -114,7 +115,8 @@ func startedBy(run *AgentRun) string {
 
 // analyze starts the analyzer with agent, looking for focus, or for all of
 // it when focus is empty, records the run with what started it, trigger,
-// journals it, and says whether it started.
+// journals it, and says whether it started. Its start, or the start it could
+// not make, is an agent event on the analyzer's role (S-0532).
 func (l *launcher) analyze(ctx context.Context, cfg AgentConfig, agent *manifest.Agent, focus, trigger string) bool {
 	now := l.now().UTC()
 	run := &AgentRun{Agent: workitem.ActivityAnalyzer, Focus: focus, Started: now.Format(time.RFC3339), Session: newSession(), Trigger: trigger}
@@ -133,6 +135,7 @@ func (l *launcher) analyze(ctx context.Context, cfg AgentConfig, agent *manifest
 			l.record(entry)
 		}
 		l.log("analyzer could not be started", "focus", run.Focus, "harness", run.Harness, "err", run.Error)
+		appendAgentEvent(l.entry.Root, run, inbox.AgentFailed, run.Why, l.warn)
 		return false
 	}
 	name, adapter, err := harness.For(agent, cfg.host(harness.Command).Program != "")
@@ -155,6 +158,7 @@ func (l *launcher) analyze(ctx context.Context, cfg AgentConfig, agent *manifest
 		l.record(entry)
 	}
 	l.log("analyzer started", "focus", run.Focus, "trigger", run.Trigger, "harness", run.Harness, "command", run.Command, "pid", run.PID)
+	appendAgentEvent(l.entry.Root, run, inbox.AgentStarted, triggerWhy(run)+", focus "+run.Focus, l.warn)
 	l.await(cmd, out, run.PID, func(code int) { l.analyzeEnded(run, &code) })
 	return true
 }
@@ -168,7 +172,8 @@ func (l *launcher) analyze(ctx context.Context, cfg AgentConfig, agent *manifest
 // is split evenly between them (S-0227). A report, or issues naming it, that
 // cannot be looked for, and an activity that cannot be logged, are warned
 // of: the activity is logged naming no issue, and the run stays recorded as
-// it ended.
+// it ended. The end is an agent event on the analyzer's role, appended once,
+// by the end that recorded the run as ended first (S-0532).
 func (l *launcher) analyzeEnded(run *AgentRun, exit *int) {
 	ended := *run
 	ended.Ended, ended.Exit = l.now().UTC().Format(time.RFC3339), exit
@@ -189,7 +194,9 @@ func (l *launcher) analyzeEnded(run *AgentRun, exit *int) {
 	default:
 		ended.Outcome, ended.Why = OutcomeWorked, ""
 	}
-	l.ended(&ended)
+	if l.ended(&ended) {
+		appendAgentEnd(l.entry.Root, &ended, l.warn)
+	}
 	args := []any{"pid", run.PID, "focus", run.Focus, "outcome", ended.Outcome, "report", report}
 	if exit != nil {
 		args = append(args, "exit", *exit)

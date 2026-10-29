@@ -16,6 +16,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/digest"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -159,7 +160,9 @@ func lastCurated(repo *workitem.Repo) (string, error) {
 // it, trigger, journals it naming the trigger, and says whether it started.
 // With resetAt, when the usage limit the run before it ended on reset, the
 // run starts that one again: it is marked a retry, and its journal entry says
-// so (ADR-0214); resetAt is empty for every other start.
+// so (ADR-0214); resetAt is empty for every other start. Its start, or the
+// start it could not make, is an agent event on the curator's role, the start
+// saying what started it, what it takes in, and a retry's reset (S-0532).
 func (l *launcher) curate(ctx context.Context, cfg AgentConfig, agent *manifest.Agent, since, trigger, resetAt string) bool {
 	now := l.now().UTC()
 	run := &AgentRun{Agent: workitem.ActivityCurator, Role: conventions.RoleCurate, Since: since, Started: now.Format(time.RFC3339), Session: newSession(), Trigger: trigger, Retry: resetAt != ""}
@@ -179,6 +182,7 @@ func (l *launcher) curate(ctx context.Context, cfg AgentConfig, agent *manifest.
 			l.record(entry)
 		}
 		l.log("curator could not be started", "since", since, "trigger", run.Trigger, "harness", run.Harness, "err", run.Error)
+		appendAgentEvent(l.entry.Root, run, inbox.AgentFailed, run.Why, l.warn)
 		return false
 	}
 	name, adapter, err := harness.For(agent, cfg.host(harness.Command).Program != "")
@@ -201,6 +205,11 @@ func (l *launcher) curate(ctx context.Context, cfg AgentConfig, agent *manifest.
 		l.record(entry)
 	}
 	l.log("curator started", "since", since, "trigger", run.Trigger, "harness", run.Harness, "command", run.Command, "pid", run.PID)
+	why := triggerWhy(run) + ", to curate " + sinceSaid(since)
+	if run.Retry {
+		why += "; started again after the usage limit reset at " + resetAt
+	}
+	appendAgentEvent(l.entry.Root, run, inbox.AgentStarted, why, l.warn)
 	l.await(cmd, out, run.PID, func(code int) { l.curateEnded(run, &code) })
 	return true
 }
@@ -217,7 +226,9 @@ func (l *launcher) curate(ctx context.Context, cfg AgentConfig, agent *manifest.
 // started it, the first line of the run's final text as its summary, and the
 // entries as its items, which charge nothing. Entries that cannot be looked
 // for, and an activity that cannot be logged, are warned of: the activity is
-// logged naming no entry, and the run stays recorded as it ended.
+// logged naming no entry, and the run stays recorded as it ended. The end is
+// an agent event on the curator's role, appended once, by the end that
+// recorded the run as ended first (S-0532).
 func (l *launcher) curateEnded(run *AgentRun, exit *int) {
 	ended := *run
 	ended.Ended, ended.Exit = l.now().UTC().Format(time.RFC3339), exit
@@ -238,7 +249,9 @@ func (l *launcher) curateEnded(run *AgentRun, exit *int) {
 	default:
 		ended.Outcome, ended.Why = OutcomeWorked, ""
 	}
-	l.ended(&ended)
+	if l.ended(&ended) {
+		appendAgentEnd(l.entry.Root, &ended, l.warn)
+	}
 	args := []any{"pid", run.PID, "since", run.Since, "outcome", ended.Outcome, "entries", len(entries)}
 	if exit != nil {
 		args = append(args, "exit", *exit)

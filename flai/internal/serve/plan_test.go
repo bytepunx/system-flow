@@ -5,6 +5,7 @@ package serve
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
@@ -475,5 +477,90 @@ func TestAgentStatesReadWithAndWithoutPlans(t *testing.T) {
 	st = d.AgentStates()["/p"]
 	if st.Plans["E-0001"] == nil || len(st.Stories) != 1 || st.Last != nil {
 		t.Errorf("with a planner run = %+v, want it by item and the story's run untouched", st)
+	}
+}
+
+// agentEventsAre says that the agent events on id are one per change, to and
+// why as want, in turn, each of type typ, titled title, by by, and of role
+// (S-0532). The launcher appends a run's end just after it records it, so
+// they are waited for.
+func (lab *agentLab) agentEventsAre(id, typ, title, by, role string, want ...[2]string) {
+	lab.t.Helper()
+	var got []inbox.LoggedEvent
+	waitFor(lab.t, fmt.Sprintf("%d agent events on %s", len(want), id), func() bool {
+		got = inbox.AgentEventsOf(lab.repo, id, time.Time{})
+		return len(got) >= len(want)
+	})
+	if len(got) != len(want) {
+		lab.t.Fatalf("%d agent events on %s, want %d: %+v", len(got), id, len(want), got)
+	}
+	for i, e := range got {
+		if e.ID != id || e.Type != typ || e.Title != title || e.By != by || e.Fields[inbox.FieldRole] != role ||
+			e.To != want[i][0] || e.Fields[inbox.FieldWhy] != want[i][1] {
+			lab.t.Errorf("event %d: %+v, want %s %s %q by %s of role %s for %q", i+1, e, typ, id, title, by, role, want[i])
+		}
+	}
+}
+
+// S-0532: a planner run appends one agent event on the item it plans at its
+// start, saying what started it, and one at its end, ended for a run that
+// worked or asked and failed for one that did not, for the words judgePlan
+// gives it; a start that could not be made is failed, for its error, and a
+// run settled again appends nothing more.
+func TestAPlannerRunAppendsAnAgentEventAtItsStartAndItsEnd(t *testing.T) {
+	asked := [2]string{inbox.AgentStarted, "the operator asked for it"}
+	t.Run("worked is ended", func(t *testing.T) {
+		lab := planLab(t)
+		id := lab.epic.ID
+		if !lab.planHere(id) {
+			t.Fatalf("not started: %+v", lab.planRun(id))
+		}
+		waitFor(t, "the planner run ended", func() bool { r := lab.planRun(id); return r != nil && r.Ended != "" })
+		want := [][2]string{asked, {inbox.AgentEnded, "ended with its work done"}}
+		lab.agentEventsAre(id, workitem.Epic, lab.epic.Title, "planner-"+id, conventions.RolePlan, want...)
+		again := *lab.planRun(id)
+		lab.l.planEnded(&again, again.Exit)
+		lab.agentEventsAre(id, workitem.Epic, lab.epic.Title, "planner-"+id, conventions.RolePlan, want...)
+	})
+	t.Run("a failed exit is failed", func(t *testing.T) {
+		lab := planLab(t)
+		id := lab.backlog("Fails", nil)
+		if err := os.WriteFile(filepath.Join(lab.outDir, "exit-"+id), []byte("3"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if !lab.planHere(id) {
+			t.Fatalf("not started: %+v", lab.planRun(id))
+		}
+		lab.agentEventsAre(id, workitem.Story, "Fails", "planner-"+id, conventions.RolePlan, asked, [2]string{inbox.AgentFailed, "ended (exit 3) planning " + id})
+	})
+	t.Run("a start that could not be made is failed", func(t *testing.T) {
+		lab := planLab(t)
+		lab.cfg.Command = []string{filepath.Join(lab.outDir, "no-such-program")}
+		id := lab.epic.ID
+		if lab.planHere(id) {
+			t.Fatalf("started: %+v", lab.planRun(id))
+		}
+		r := lab.planRun(id)
+		if r == nil || !strings.HasPrefix(r.Why, "could not be started: ") {
+			t.Fatalf("not recorded as failed to start: %+v", r)
+		}
+		lab.agentEventsAre(id, workitem.Epic, lab.epic.Title, "planner-"+id, conventions.RolePlan, [2]string{inbox.AgentFailed, r.Why})
+	})
+}
+
+// S-0532: a strategic role's started event says what started it, in a short
+// form of its journal entry's words.
+func TestAStartedEventSaysWhatStartedTheRole(t *testing.T) {
+	for trigger, want := range map[string]string{
+		TriggerAsked:           "the operator asked for it",
+		TriggerOrchestrator:    "the orchestrator asked for it",
+		"schedule daily":       "started by schedule daily",
+		"accepted S-0001":      "started by accepted S-0001",
+		"edited title by alex": "started by edited title by alex",
+		"":                     "trigger not recorded",
+	} {
+		if got := triggerWhy(&AgentRun{Trigger: trigger}); got != want {
+			t.Errorf("%q: %q, want %q", trigger, got, want)
+		}
 	}
 }

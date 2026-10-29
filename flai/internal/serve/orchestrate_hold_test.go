@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -280,3 +281,61 @@ func TestTheOperatorStopsARunNobodyWaitsForAndAFailedOne(t *testing.T) {
 }
 
 func (lab *orchestrateLab) entry() Entry { return Entry{Key: "t", Name: "t", Root: lab.root} }
+
+// S-0532: the operator's stop of the orchestrator is one stopped agent event,
+// for its why, whoever records the end: the serving flai that waits for the
+// run, or the stop itself for a run nobody waits for. Their start of the held
+// orchestrator is a started event saying so; a failed run held as it is
+// appends nothing more.
+func TestTheOperatorsStopOfTheOrchestratorIsOneStoppedAgentEvent(t *testing.T) {
+	started := [2]string{inbox.AgentStarted, "started while orchestrate is on"}
+	t.Run("a run the serving flai waits for", func(t *testing.T) {
+		lab := newOrchestrateLab(t)
+		run := lab.orchestrating()
+		got, err := OrchestratorStop(lab.o, lab.entry())
+		if err != nil {
+			t.Fatal(err)
+		}
+		waitFor(t, "the launcher saw it end", func() bool {
+			lab.l.mu.Lock()
+			defer lab.l.mu.Unlock()
+			return !lab.l.waiting[run.PID]
+		})
+		if !strings.HasPrefix(got.Why, "stopped by the operator at ") {
+			t.Fatalf("not stopped: %+v", got)
+		}
+		stopped := [2]string{inbox.AgentStopped, got.Why}
+		lab.orchestratorEventsAre(started, stopped)
+		again, err := OrchestratorStart(context.Background(), lab.o, lab.entry())
+		if err != nil {
+			t.Fatal(err)
+		}
+		lab.orchestratorEventsAre(started, stopped, [2]string{inbox.AgentStarted, "the operator started it again, held stopped until now"})
+		lab.release("orchestrator")
+		reap(again.PID)
+	})
+	t.Run("a run nobody waits for", func(t *testing.T) {
+		was := orchestrateSettle
+		orchestrateSettle = 200 * time.Millisecond
+		t.Cleanup(func() { orchestrateSettle = was })
+		lab := newOrchestrateLab(t)
+		lab.l.handOver = true
+		run := lab.orchestrating()
+		reap(run.PID)
+		got, err := OrchestratorStop(lab.o, lab.entry())
+		if err != nil {
+			t.Fatal(err)
+		}
+		lab.orchestratorEventsAre(started, [2]string{inbox.AgentStopped, got.Why})
+	})
+	t.Run("a failed run held as it is", func(t *testing.T) {
+		lab := newOrchestrateLab(t)
+		lab.cfg.Command, lab.cfg.Orchestrate = nil, true
+		lab.look()
+		failed := lab.orchestrator()
+		if _, err := OrchestratorStop(lab.o, lab.entry()); err != nil {
+			t.Fatal(err)
+		}
+		lab.orchestratorEventsAre([2]string{inbox.AgentFailed, failed.Why})
+	})
+}
