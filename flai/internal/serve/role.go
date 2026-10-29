@@ -71,7 +71,7 @@ func RunRole(ctx context.Context, o Options, e Entry, name, item string, inputs 
 	if err := l.budgetRefusal(rs.cfg, rs.agent); err != nil {
 		return nil, err
 	}
-	if _, held := l.role(ctx, rs.cfg, rs.file, rs.item, rs.agent, inputs); held != nil {
+	if _, held := l.role(ctx, rs.cfg, rs.file, rs.item, rs.agent, inputs, TriggerAsked); held != nil {
 		return nil, l.budgetRefused(*held)
 	}
 	run := o.Dir.AgentStates()[e.Root].Roles[rs.file.Name][rs.item]
@@ -82,6 +82,22 @@ func RunRole(ctx context.Context, o Options, e Entry, name, item string, inputs 
 		return run, errors.New(run.Why)
 	}
 	return run, nil
+}
+
+// startRole starts name, a role project e defines, on item, or on none,
+// with trigger, what started it, through l, the project's launcher, whose
+// lock the caller holds: the start an event or a schedule takes (S-0418).
+// roleCheck's refusal is a *Refused, as for RunRole. A start the budget state
+// of its provider holds is not made and nothing is recorded: held is that
+// state, which the caller keeps the start for, to try again at a later look,
+// rather than refuse it as RunRole does a start asked by hand (D-0421).
+func startRole(ctx context.Context, o Options, e Entry, l *launcher, name, item, trigger string) (started bool, held *Budget, err error) {
+	rs, err := roleCheck(o, e, name, item)
+	if err != nil {
+		return false, nil, err
+	}
+	started, held = l.role(ctx, rs.cfg, rs.file, rs.item, rs.agent, nil, trigger)
+	return started, held, nil
 }
 
 // roleStart is what a defined role is started with once the checks pass:
@@ -197,15 +213,17 @@ func roleItem(repo *workitem.Repo, f roles.Role, item string) (string, error) {
 	return it.ID, nil
 }
 
-// role starts the role f on item with agent and inputs, records the run as
-// asked, journals it under f's action, and says whether it started. A start
+// role starts the role f on item with agent and inputs, records the run
+// with trigger, what started it (asked, "<event> <ID>", or "schedule
+// <spec>", joined by semicolons when coalesced), journals it under f's
+// action, and says whether it started. A start
 // the budget state of its provider holds is not made and nothing is
 // recorded: held is that state, nil when it was not held (spawnGated,
 // S-0534).
-func (l *launcher) role(ctx context.Context, cfg AgentConfig, f roles.Role, item string, agent *manifest.Agent, inputs []harness.Input) (started bool, held *Budget) {
+func (l *launcher) role(ctx context.Context, cfg AgentConfig, f roles.Role, item string, agent *manifest.Agent, inputs []harness.Input, trigger string) (started bool, held *Budget) {
 	now := l.now().UTC()
 	run := &AgentRun{Item: item, Agent: harness.RoleAgent(f.Name, item), Role: f.Role, RoleName: f.Name, Action: f.Action,
-		Started: now.Format(time.RFC3339), Session: newSession(), Trigger: TriggerAsked}
+		Started: now.Format(time.RFC3339), Session: newSession(), Trigger: trigger}
 	if agent != nil {
 		run.Model = agent.Model
 	}
@@ -217,7 +235,7 @@ func (l *launcher) role(ctx context.Context, cfg AgentConfig, f roles.Role, item
 		if l.record != nil {
 			l.record(entry)
 		}
-		l.log("role could not be started", "role", f.Name, "item", item, "harness", run.Harness, "err", run.Error)
+		l.log("role could not be started", "role", f.Name, "item", item, "trigger", run.Trigger, "harness", run.Harness, "err", run.Error)
 		appendAgentEvent(l.entry.Root, run, inbox.AgentFailed, run.Why, l.warn)
 		return false, nil
 	}
@@ -239,11 +257,11 @@ func (l *launcher) role(ctx context.Context, cfg AgentConfig, f roles.Role, item
 		return fail(err)
 	}
 	l.told(run)
-	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s (%s) to run the role %s %s as %s (pid %d), asked; log %s", run.Command, run.Harness, f.Name, onItem(item), run.Agent, run.PID, run.Log)
+	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s (%s) to run the role %s %s as %s (pid %d), started by %s; log %s", run.Command, run.Harness, f.Name, onItem(item), run.Agent, run.PID, run.Trigger, run.Log)
 	if l.record != nil {
 		l.record(entry)
 	}
-	l.log("role started", "role", f.Name, "item", item, "harness", run.Harness, "command", run.Command, "pid", run.PID)
+	l.log("role started", "role", f.Name, "item", item, "trigger", run.Trigger, "harness", run.Harness, "command", run.Command, "pid", run.PID)
 	appendAgentEvent(l.entry.Root, run, inbox.AgentStarted, triggerWhy(run), l.warn)
 	l.await(cmd, out, run.PID, func(code int) { l.roleEnded(run, &code) })
 	return true, nil

@@ -130,6 +130,13 @@ func (lab *agentLab) runRole(name, item string, inputs ...harness.Input) (*Agent
 // operator asked, and wait for it, as a serving flai would.
 func (lab *agentLab) roleHere(name, item string) bool {
 	lab.t.Helper()
+	return lab.roleHereBy(name, item, TriggerAsked)
+}
+
+// roleHereBy has the lab's launcher start the role name on item with
+// trigger, and wait for it, as a serving flai would.
+func (lab *agentLab) roleHereBy(name, item, trigger string) bool {
+	lab.t.Helper()
 	repo, err := workitem.Open(lab.root)
 	if err != nil {
 		lab.t.Fatal(err)
@@ -140,7 +147,7 @@ func (lab *agentLab) roleHere(name, item string) bool {
 	}
 	lab.l.mu.Lock()
 	defer lab.l.mu.Unlock()
-	started, _ := lab.l.role(context.Background(), lab.cfg, f, item, repo.Manifest.RoleAgent(name), nil)
+	started, _ := lab.l.role(context.Background(), lab.cfg, f, item, repo.Manifest.RoleAgent(name), nil, trigger)
 	return started
 }
 
@@ -307,6 +314,46 @@ func TestADefinedRolesPromptIsItsFilesBody(t *testing.T) {
 	}
 	if strings.Contains(got, "end-of-baseline") {
 		t.Errorf("the prompt holds the marker:\n%s", got)
+	}
+}
+
+// S-0418: a role started by an event or a schedule records that trigger,
+// as given, on its run in serve/agents.json and on its activity entry's
+// Trigger line, and startRole refuses what RunRole's checks refuse.
+func TestADefinedRoleRunRecordsTheTriggerThatStartedIt(t *testing.T) {
+	lab := roleLab(t)
+	story := lab.backlog("Reviewed", nil)
+	agent := "reviewer-" + story
+	stream := strings.Join([]string{streamCall("s", "m1", runStart, 999), streamFinal("Reviewed "+story+".", 2000, 0.5)}, "\n") + "\n"
+	if err := os.WriteFile(filepath.Join(lab.outDir, "stream-"+agent), []byte(stream), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	trigger := "moved " + story + "; thread TH-0001"
+	e := Entry{Key: "t", Name: "t", Root: lab.root}
+	lab.l.mu.Lock()
+	started, held, err := startRole(context.Background(), lab.o, e, lab.l, "reviewer", story, trigger)
+	lab.l.mu.Unlock()
+	if err != nil || held != nil || !started {
+		t.Fatalf("startRole = %t, %v, %v; want started", started, held, err)
+	}
+	waitFor(t, "the role's run ended", func() bool { r := lab.roleRun("reviewer", story); return r != nil && r.Ended != "" })
+	if run := lab.roleRun("reviewer", story); run.Trigger != trigger {
+		t.Errorf("run's trigger = %q, want %q", run.Trigger, trigger)
+	}
+	waitFor(t, "its activity logged", func() bool {
+		doc, err := lab.repo.Activity("reviewer")
+		return err == nil && len(doc.Entries) == 1
+	})
+	if doc, _ := lab.repo.Activity("reviewer"); doc.Entries[0].Trigger != trigger {
+		t.Errorf("activity's trigger = %q, want %q", doc.Entries[0].Trigger, trigger)
+	}
+	lab.cfg.RoleActions = map[string]bool{"audit": true}
+	lab.l.mu.Lock()
+	started, _, err = startRole(context.Background(), lab.o, e, lab.l, "reviewer", story, "schedule daily")
+	lab.l.mu.Unlock()
+	var no *Refused
+	if started || !errors.As(err, &no) || !strings.Contains(no.Why, "review host action") {
+		t.Errorf("startRole with review off = %t, %v; want refused naming the action", started, err)
 	}
 }
 
