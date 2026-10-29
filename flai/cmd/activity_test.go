@@ -95,6 +95,64 @@ func TestTheMCPServerLogsAStrategicAgentsActivity(t *testing.T) {
 	}
 }
 
+// S-0417, ADR-0207: a role the project defines logs its activity through
+// activity_log by its name, measured from its own runs' logs in the serve
+// folder and written in wip/agents/<name>.md, charged to no item; a kind no
+// role file defines is refused, naming the defined ones.
+func TestTheMCPServerLogsADefinedRolesActivity(t *testing.T) {
+	cfg := filepath.Join(t.TempDir(), "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfg)
+	root := tempProject(t)
+	roles := filepath.Join(root, "design", "workflows", "roles")
+	if err := os.MkdirAll(roles, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	role := "---\ntitle: Reviewer\nupdated: 2026-10-03\nstatus: active\nname: reviewer\nrole: review\naction: review\nitem: none\n---\n\nReviews what is in review.\n"
+	if err := os.WriteFile(filepath.Join(roles, "reviewer.md"), []byte(role), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	start := time.Date(2026, 10, 3, 10, 0, 0, 0, time.UTC)
+	call := func(id string, at time.Time) string {
+		return fmt.Sprintf(`{"type":"assistant","timestamp":%q,"session_id":"s","message":{"id":%q,"model":"claude-opus-5-5","content":[],"usage":{"input_tokens":1,"output_tokens":1,"cache_read_input_tokens":999,"cache_creation_input_tokens":0}}}`, at.Format(time.RFC3339Nano), id)
+	}
+	lines := []string{
+		call("m1", start), call("m2", start.Add(2*time.Minute)),
+		`{"type":"result","subtype":"success","session_id":"s","modelUsage":{"claude-opus-5-5":{"inputTokens":2,"outputTokens":2,"cacheReadInputTokens":1998,"cacheCreationInputTokens":0,"costUSD":0.5}}}`,
+	}
+	logs := filepath.Join(filepath.Dir(cfg), "serve", "agents")
+	if err := os.MkdirAll(logs, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(logs, "t-reviewer-20261003T100000Z.log"), []byte(strings.Join(lines, "\n")+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	now := start.Add(90 * time.Second)
+	var out, errOut bytes.Buffer
+	a := &app{out: &out, errOut: &errOut, cwd: root, clock: func() time.Time { return now }}
+	ctx := context.Background()
+
+	got, err := a.mcpActivity(ctx, root, "reviewer", "Reviewed S-0001", []string{"S-0001"}, "reviewer")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := got.Entry; e.Seconds != 90 || e.Cost <= 0 || e.Cost >= 0.5 || strings.Join(e.Items, ",") != "S-0001" {
+		t.Errorf("entry, measured from the reviewer's run: %+v", e)
+	}
+	if got.Activity.Kind != "reviewer" || got.Activity.TasksCompleted != 1 || got.ChargedTo != nil || got.Charge != "charged to no item: left in the reviewer's project strategic total" {
+		t.Errorf("logged: %+v", got)
+	}
+	doc, err := workitem.ReadActivity(filepath.Join(root, "wip", "agents", "reviewer.md"))
+	if err != nil || len(doc.Entries) != 1 || doc.Entries[0].Summary != "Reviewed S-0001" {
+		t.Errorf("document: %+v %v", doc, err)
+	}
+	if _, err := a.mcpActivity(ctx, root, "builder", "Built it", nil, "builder"); err == nil || !strings.Contains(err.Error(), "planner, orchestrator, analyzer, curator, reviewer") {
+		t.Errorf("a kind no role file defines: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "wip", "agents", "builder.md")); !os.IsNotExist(err) {
+		t.Errorf("builder's document was written: %v", err)
+	}
+}
+
 // ADR-0083, ADR-0095, S-0227: activity_log says what an activity's cost was
 // charged to: the item a planner planned, the items an orchestrator named,
 // the issues an analyzer named, or the kind's project strategic total.

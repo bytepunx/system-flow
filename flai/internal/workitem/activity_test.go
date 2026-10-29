@@ -445,3 +445,115 @@ func TestIndexListsAnUnreadableActivityDocument(t *testing.T) {
 	}
 	mustLintClean(t, filepath.Join(r.AgentsDir(), "index.md"))
 }
+
+// defineRoles writes a role file for each name under the project's
+// design/workflows/roles, beside its README.md; the kinds read only their
+// names.
+func defineRoles(t *testing.T, r *Repo, names ...string) {
+	t.Helper()
+	dir := filepath.Join(r.Root, "design", "workflows", "roles")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte("# Roles\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range names {
+		doc := fmt.Sprintf("---\ntitle: %s\nupdated: 2026-10-03\nstatus: active\nname: %s\nrole: %s\naction: %s\nitem: none\n---\n\nReview.\n", name, name, name, name)
+		if err := os.WriteFile(filepath.Join(dir, name+".md"), []byte(doc), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// S-0417, ADR-0207: a role the project defines keeps its activity document,
+// wip/agents/<name>.md, as the built-in agents keep theirs, listed after
+// them in the index; any other kind is still refused, naming the defined
+// ones.
+func TestADefinedRoleKeepsAnActivityDocument(t *testing.T) {
+	r := lintProject(t)
+	defineRoles(t, r, "reviewer", ActivityPlanner, "index", "Not-Kebab")
+	kinds, err := r.ActivityKinds()
+	if want := "planner,orchestrator,analyzer,curator,reviewer"; err != nil || strings.Join(kinds, ",") != want {
+		t.Fatalf("kinds %v %v, want %s: the built-ins first, then each defined role once, not README, index, or a name not kebab-case", kinds, err, want)
+	}
+	if _, err := r.AppendActivity("reviewer", ActivityEntry{At: activityAt, Summary: "Reviewed S-0001.", Items: []string{"S-0001"}, Seconds: 60, Cost: 0.5}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.AppendActivity(ActivityPlanner, ActivityEntry{At: activityAt, Summary: "Planned E-0001.", Seconds: 90, Cost: 0.25}); err != nil {
+		t.Fatal(err)
+	}
+	path := r.ActivityPath("reviewer")
+	if want := filepath.Join(r.Root, "wip", "agents", "reviewer.md"); path != want {
+		t.Errorf("path %s, want %s", path, want)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(string(data), "---\nkind: reviewer\n") || !strings.Contains(string(data), "\n# Reviewer activity\n") {
+		t.Errorf("document:\n%s", data)
+	}
+	mustLintClean(t, path)
+	if a, err := r.Activity("reviewer"); err != nil || a.TasksCompleted != 1 || a.AccruedCost != 0.5 {
+		t.Errorf("read back: %+v %v", a, err)
+	}
+	list, err := r.Activities()
+	if err != nil || len(list) != 2 || list[0].Kind != ActivityPlanner || list[1].Kind != "reviewer" {
+		t.Errorf("activities: %+v %v", list, err)
+	}
+
+	if err := r.WriteIndex(nil, activityAt); err != nil {
+		t.Fatal(err)
+	}
+	index := filepath.Join(r.AgentsDir(), "index.md")
+	data, _ = os.ReadFile(index)
+	want := "| [planner](planner.md) | 1 | 0.2500 USD | 90 | 2026-10-03T18:00:00Z |\n" +
+		"| [reviewer](reviewer.md) | 1 | 0.5000 USD | 60 | 2026-10-03T18:00:00Z |\n"
+	if !strings.HasSuffix(string(data), want) {
+		t.Errorf("index:\n%s", data)
+	}
+	mustLintClean(t, index)
+
+	for _, kind := range []string{"designer", "index", "Not-Kebab"} {
+		if _, err := r.AppendActivity(kind, ActivityEntry{At: activityAt, Summary: "x"}); err == nil || !strings.Contains(err.Error(), "use one of planner, orchestrator, analyzer, curator, reviewer") {
+			t.Errorf("%s: want refused naming the defined roles, got %v", kind, err)
+		}
+	}
+	if _, err := r.AppendRefusal("designer", ActivityRefusal{At: activityAt, Call: "flai accept S-0001"}); err == nil {
+		t.Error("a refusal of an unknown kind is refused")
+	}
+}
+
+// A role file read from the main checkout: a story worktree's role files
+// do not decide which of the main checkout's documents are activity
+// documents.
+func TestDefinedRolesAreTheMainCheckouts(t *testing.T) {
+	main := lintProject(t)
+	defineRoles(t, main, "reviewer")
+	worktree := lintProject(t)
+	defineRoles(t, worktree, "auditor")
+	worktree.MainRoot = main.Root
+	kinds, err := worktree.ActivityKinds()
+	if want := "planner,orchestrator,analyzer,curator,reviewer"; err != nil || strings.Join(kinds, ",") != want {
+		t.Errorf("kinds %v %v, want %s", kinds, err, want)
+	}
+}
+
+// A role folder that cannot be read is an error naming it, not a project
+// with no roles.
+func TestAnUnreadableRolesFolderIsAnError(t *testing.T) {
+	r := lintProject(t)
+	if err := os.MkdirAll(filepath.Join(r.Root, "design", "workflows"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(r.Root, "design", "workflows", "roles"), []byte("not a folder\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.ActivityKinds(); err == nil || !strings.Contains(err.Error(), filepath.Join("workflows", "roles")) {
+		t.Errorf("want an error naming the folder, got %v", err)
+	}
+	if err := r.WriteIndex(nil, activityAt); err == nil {
+		t.Error("the index is written without knowing the kinds")
+	}
+}

@@ -640,8 +640,13 @@ func (r *Repo) ActiveNarratives() (narratives []*Narrative, unreadable []string)
 }
 
 // WriteIndex regenerates wip/agents/index.md from the active narratives and,
-// under a heading of their own, the strategic agents' activity documents.
+// under a heading of their own, the strategic agents' activity documents, in
+// the order of the project's ActivityKinds.
 func (r *Repo) WriteIndex(items []*Item, now time.Time) error {
+	kinds, err := r.ActivityKinds()
+	if err != nil {
+		return err
+	}
 	narratives, unreadable := r.ActiveNarratives()
 	status := map[string]string{}
 	for _, it := range items {
@@ -669,7 +674,7 @@ func (r *Repo) WriteIndex(items []*Item, now time.Time) error {
 	// An activity document that does not parse is listed as such rather than
 	// failing the index, which every move rewrites; flai check names the fault.
 	var rows []string
-	for _, kind := range ActivityKinds {
+	for _, kind := range kinds {
 		a, err := ReadActivity(r.ActivityPath(kind))
 		switch {
 		case errors.Is(err, os.ErrNotExist):

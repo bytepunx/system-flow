@@ -3,10 +3,12 @@ package check
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/roles"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -157,5 +159,59 @@ func TestActivityCostTolerance(t *testing.T) {
 	_ = os.WriteFile(path, []byte(strings.Replace(doc, "accrued_cost: 0.3235\n", "accrued_cost: 0.32354\n", 1)), 0o644)
 	if got := activityFindings(runCheck(t, root)); len(got) != 0 {
 		t.Errorf("a drift within rounding is reported: %+v", got)
+	}
+}
+
+// reviewerRole is a role file defining the role reviewer (ADR-0207).
+const reviewerRole = "---\ntitle: Reviewer\nupdated: 2026-09-01\nstatus: active\nname: reviewer\nrole: review\naction: review\nitem: none\n---\n\nReviews what is in review.\n"
+
+// S-0417: a defined role's activity document, wip/agents/<name>.md, is
+// validated as the built-in agents' are; with no role file defining it, it
+// is a stray file, not an activity document.
+func TestADefinedRolesActivityDocumentIsValidated(t *testing.T) {
+	root, _ := activityRepo(t)
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(root, "design", "workflows", "roles")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "reviewer.md"), []byte(reviewerRole), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// the kinds are the role files' names as roles.Load reads them
+	defined, _, err := roles.Load(root, "design")
+	if err != nil || len(defined) != 1 {
+		t.Fatalf("role files: %+v %v", defined, err)
+	}
+	kinds, err := repo.ActivityKinds()
+	if err != nil || !slices.Contains(kinds, defined[0].Name) {
+		t.Fatalf("kinds %v %v hold no %s", kinds, err, defined[0].Name)
+	}
+	if _, err := repo.AppendActivity(defined[0].Name, workitem.ActivityEntry{At: now.Add(-time.Hour), Summary: "Reviewed", Items: []string{"S-0001"}, Seconds: 60, Cost: 0.5}); err != nil {
+		t.Fatal(err)
+	}
+	if got := activityFindings(runCheck(t, root)); len(got) != 0 {
+		t.Errorf("a valid document has findings: %+v", got)
+	}
+	path := filepath.Join(root, "wip", "agents", "reviewer.md")
+	doc, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(strings.Replace(string(doc), "tasks_completed: 1\n", "tasks_completed: 2\n", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got := activityFindings(runCheck(t, root))
+	if len(got) != 1 || got[0].Rule != "activity.totals" || got[0].Path != filepath.Join("wip", "agents", "reviewer.md") || !strings.Contains(got[0].Message, "tasks_completed is 2 but the log has 1 entries") {
+		t.Errorf("want the totals reported on reviewer.md: %+v", got)
+	}
+	if err := os.Remove(filepath.Join(dir, "reviewer.md")); err != nil {
+		t.Fatal(err)
+	}
+	if got := activityFindings(runCheck(t, root)); len(got) != 0 {
+		t.Errorf("an undefined role's document is checked: %+v", got)
 	}
 }

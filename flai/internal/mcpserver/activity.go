@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -12,8 +13,8 @@ import (
 )
 
 // A strategic agent's activities (S-0206, ADR-0079): the planner, the
-// orchestrator, the analyzer, or the curator reports each activity it
-// finishes, and flai measures it from the run's log and appends it to the
+// orchestrator, the analyzer, the curator, or a role the project defines
+// (ADR-0207) reports each activity it finishes, and flai measures it from the run's log and appends it to the
 // kind's document under wip/agents. flai guard refuses the tool to a
 // sub-agent, as it refuses every tool that is not a read (ADR-0060).
 
@@ -56,19 +57,23 @@ type ActivityTotals struct {
 // ActivityIn is the activity a strategic agent reports.
 type ActivityIn struct {
 	Project string   `json:"project,omitempty" jsonschema:"the project, by key or folder: needed only when the server serves more than one"`
-	Kind    string   `json:"kind" jsonschema:"the strategic agent: planner, orchestrator, analyzer, or curator"`
+	Kind    string   `json:"kind" jsonschema:"the strategic agent: planner, orchestrator, analyzer, curator, or the name of a role the project defines under its design folder's workflows/roles"`
 	Summary string   `json:"summary" jsonschema:"one line saying what the activity did"`
 	Items   []string `json:"items,omitempty" jsonschema:"the IDs of the items the activity touched, such as S-0230 (optional); an orchestrator's cost is split evenly between the epics, stories, and tasks named"`
 }
 
 func (in ActivityIn) project() string { return in.Project }
 
-const activityLogDescription = "Log an activity of a strategic agent, the planner, the orchestrator, the analyzer, or the curator, in its activity document, wip/agents/<kind>.md in the main checkout (S-0206, ADR-0079). Call it at the end of each activity, such as an item planned, the board ordered, an analysis written, or digest entries written, with your kind, a one-line summary of what you did, and the IDs of the items you touched. flai measures the activity's wall-clock seconds and cost from your run's log, from the later of the run's start and the last entry to now, appends the entry, and adds it to the document's totals; the cost is the run's apportioned to the activity, marked estimated when it is. The cost is also charged under usage.strategic: a planner's to the item its run planned, an orchestrator's split evenly between the epics, stories, and tasks you named (a thread, an issue, or anything else takes no share), each summed up to its epic; what no item takes is left in the kind's project strategic total. An activity outside a run flai serve logged is logged with no seconds and no cost. A run that ends logs the time since the last entry by itself, so an agent that does one thing and ends need not call it. Returns the entry, the document's totals, and what the cost was charged to. Not for a story's agent, whose usage is written on its story. Nothing is committed."
+const activityLogDescription = "Log an activity of a strategic agent, the planner, the orchestrator, the analyzer, the curator, or a role the project defines under its design folder's workflows/roles (ADR-0207), in its activity document, wip/agents/<kind>.md in the main checkout (S-0206, ADR-0079). Call it at the end of each activity, such as an item planned, the board ordered, an analysis written, or digest entries written, with your kind (a defined role's is its name), a one-line summary of what you did, and the IDs of the items you touched. flai measures the activity's wall-clock seconds and cost from your run's log, from the later of the run's start and the last entry to now, appends the entry, and adds it to the document's totals; the cost is the run's apportioned to the activity, marked estimated when it is. The cost is also charged under usage.strategic: a planner's to the item its run planned, an orchestrator's split evenly between the epics, stories, and tasks you named (a thread, an issue, or anything else takes no share), each summed up to its epic; what no item takes is left in the kind's project strategic total. An activity outside a run flai serve logged is logged with no seconds and no cost. A run that ends logs the time since the last entry by itself, so an agent that does one thing and ends need not call it. Returns the entry, the document's totals, and what the cost was charged to. Not for a story's agent, whose usage is written on its story. Nothing is committed."
 
 func (s *server) activityLog(ctx context.Context, _ *mcp.CallToolRequest, in ActivityIn) (*mcp.CallToolResult, ActivityLogged, error) {
 	kind := strings.TrimSpace(in.Kind)
-	if !workitem.IsActivityKind(kind) {
-		return nil, ActivityLogged{}, fmt.Errorf("kind %q is not a strategic agent: give planner, orchestrator, analyzer, or curator", in.Kind)
+	kinds, err := s.repo.ActivityKinds()
+	if err != nil {
+		return nil, ActivityLogged{}, err
+	}
+	if !slices.Contains(kinds, kind) {
+		return nil, ActivityLogged{}, fmt.Errorf("kind %q is not a strategic agent: give %s", in.Kind, orList(kinds))
 	}
 	summary := strings.Join(strings.Fields(in.Summary), " ")
 	if summary == "" {
@@ -86,4 +91,12 @@ func (s *server) activityLog(ctx context.Context, _ *mcp.CallToolRequest, in Act
 		return nil, ActivityLogged{}, err
 	}
 	return nil, out, nil
+}
+
+// orList joins words as a sentence lists them: "a, b, or c".
+func orList(words []string) string {
+	if len(words) < 2 {
+		return strings.Join(words, "")
+	}
+	return strings.Join(words[:len(words)-1], ", ") + ", or " + words[len(words)-1]
 }

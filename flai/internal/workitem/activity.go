@@ -27,17 +27,69 @@ const (
 	ActivityCurator      = "curator"
 )
 
-// ActivityKinds are the strategic agents' kinds, in the order flai lists them.
+// ActivityKinds are the built-in strategic agents' kinds, in the order flai
+// lists them; Repo.ActivityKinds adds the roles a project defines.
 var ActivityKinds = []string{ActivityPlanner, ActivityOrchestrator, ActivityAnalyzer, ActivityCurator}
 
-// IsActivityKind reports whether kind names a strategic agent.
+// IsActivityKind reports whether kind names a built-in strategic agent.
 func IsActivityKind(kind string) bool { return contains(ActivityKinds, kind) }
 
 // IsActivityDocument reports whether a file under wip/agents, by its name or
-// path, is a strategic agent's activity document rather than a narrative.
+// path, is a built-in strategic agent's activity document rather than a
+// narrative.
 func IsActivityDocument(name string) bool {
 	base := filepath.Base(name)
 	return strings.HasSuffix(base, ".md") && IsActivityKind(strings.TrimSuffix(base, ".md"))
+}
+
+// rolesFolder is where a project defines its roles, a file each, inside its
+// design folder (ADR-0207): roles.Folder, which workitem names itself since
+// the roles package imports it.
+var rolesFolder = filepath.Join("workflows", "roles")
+
+// roleName is a role's name as flai check holds a role file's name to be:
+// kebab-case.
+var roleName = regexp.MustCompile(`^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$`)
+
+// ActivityKinds are the project's strategic agents' kinds, in the order flai
+// lists them: the built-in ActivityKinds, then each other role the project
+// defines under its design folder's workflows/roles, by name (ADR-0207),
+// each keeping its activity document as they do. A role is named for its
+// file, as flai check holds it to be, read from the main checkout, whose
+// wip/agents holds the documents. A file whose name is not kebab-case, such
+// as README.md, names no role, and nor does index.md, whose name is wip/
+// agents' index's.
+func (r *Repo) ActivityKinds() ([]string, error) {
+	kinds := slices.Clone(ActivityKinds)
+	dir := filepath.Join(r.Manifest.Dir(r.mainRoot(), "design"), rolesFolder)
+	entries, err := os.ReadDir(dir)
+	if errors.Is(err, os.ErrNotExist) {
+		return kinds, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("reading the role files' folder %s for the strategic agents' kinds: %w", dir, err)
+	}
+	for _, e := range entries {
+		name, ok := strings.CutSuffix(e.Name(), ".md")
+		if e.IsDir() || !ok || !roleName.MatchString(name) || name == "index" || slices.Contains(kinds, name) {
+			continue
+		}
+		kinds = append(kinds, name)
+	}
+	return kinds, nil
+}
+
+// requireActivityKind returns nil when kind is one of the project's
+// strategic agents' kinds, and otherwise an error naming them.
+func (r *Repo) requireActivityKind(kind string) error {
+	kinds, err := r.ActivityKinds()
+	if err != nil {
+		return err
+	}
+	if !slices.Contains(kinds, kind) {
+		return fmt.Errorf("unknown strategic agent %q: use one of %s", kind, strings.Join(kinds, ", "))
+	}
+	return nil
 }
 
 // Activity is a strategic agent's activity document, wip/agents/<kind>.md:
@@ -101,8 +153,8 @@ func (r *Repo) ActivityPath(kind string) string {
 // does not exist yet it returns an empty one, with no entries and zero
 // totals, for that kind and path.
 func (r *Repo) Activity(kind string) (*Activity, error) {
-	if !IsActivityKind(kind) {
-		return nil, unknownActivityKind(kind)
+	if err := r.requireActivityKind(kind); err != nil {
+		return nil, err
 	}
 	path := r.ActivityPath(kind)
 	a, err := ReadActivity(path)
@@ -112,10 +164,15 @@ func (r *Repo) Activity(kind string) (*Activity, error) {
 	return a, err
 }
 
-// Activities loads the activity documents that exist, in ActivityKinds order.
+// Activities loads the activity documents that exist, in the order of the
+// project's ActivityKinds.
 func (r *Repo) Activities() ([]*Activity, error) {
+	kinds, err := r.ActivityKinds()
+	if err != nil {
+		return nil, err
+	}
 	var out []*Activity
-	for _, kind := range ActivityKinds {
+	for _, kind := range kinds {
 		a, err := ReadActivity(r.ActivityPath(kind))
 		if errors.Is(err, os.ErrNotExist) {
 			continue
@@ -130,7 +187,8 @@ func (r *Repo) Activities() ([]*Activity, error) {
 
 // ReadActivity loads and validates an activity document: its front matter is
 // parsed strictly, its kind must be its file's name, and its log is parsed
-// back into entries.
+// back into entries. Whether its kind is one of the project's strategic
+// agents is the caller's to ask, of Repo.ActivityKinds.
 func ReadActivity(path string) (*Activity, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -155,9 +213,6 @@ func parseActivity(doc string) (*Activity, error) {
 	var a Activity
 	if err := yaml.UnmarshalWithOptions([]byte(fm), &a, yaml.Strict()); err != nil {
 		return nil, fmt.Errorf("front matter must hold only kind, accrued_cost, accrued_seconds, tasks_completed, and last_run: %w", err)
-	}
-	if !IsActivityKind(a.Kind) {
-		return nil, unknownActivityKind(a.Kind)
 	}
 	if a.LastRun != "" {
 		if _, err := time.Parse(TimeFormat, a.LastRun); err != nil {
@@ -389,8 +444,8 @@ func heading(count map[string]int, at time.Time) string {
 // seconds to the totals, counts it, moves last_run to its end when that is
 // later, and writes the document atomically.
 func (r *Repo) AppendActivity(kind string, e ActivityEntry) (*Activity, error) {
-	if !IsActivityKind(kind) {
-		return nil, unknownActivityKind(kind)
+	if err := r.requireActivityKind(kind); err != nil {
+		return nil, err
 	}
 	e, err := cleanActivityEntry(kind, e)
 	if err != nil {
@@ -412,8 +467,8 @@ func (r *Repo) AppendActivity(kind string, e ActivityEntry) (*Activity, error) {
 // the refusal last, leaves the totals alone, and writes the document
 // atomically.
 func (r *Repo) AppendRefusal(kind string, f ActivityRefusal) (*Activity, error) {
-	if !IsActivityKind(kind) {
-		return nil, unknownActivityKind(kind)
+	if err := r.requireActivityKind(kind); err != nil {
+		return nil, err
 	}
 	f.Call = strings.ReplaceAll(strings.Join(strings.Fields(f.Call), " "), "`", "'")
 	f.Needs = strings.TrimSpace(f.Needs)
@@ -506,10 +561,6 @@ func cleanActivityEntry(kind string, e ActivityEntry) (ActivityEntry, error) {
 // behind and none is broken for its age.
 func (r *Repo) lockActivity(kind string) (unlock func(), err error) {
 	return filelock.Lock(filepath.Join(r.CacheDir(), "activity-"+kind+".lock"), 0)
-}
-
-func unknownActivityKind(kind string) error {
-	return fmt.Errorf("unknown strategic agent %q: use one of %s", kind, strings.Join(ActivityKinds, ", "))
 }
 
 func roundCost(c float64) float64 { return math.Round(c*1e4) / 1e4 }

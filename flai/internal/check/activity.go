@@ -15,10 +15,16 @@ import (
 const costTolerance = 0.00005
 
 // activities validates the strategic agents' activity documents that exist
-// (ADR-0079). They are not narratives: narratives() reads only S-*.md, so
-// they are checked here and nowhere else, save the markdown lint of wip.
+// (ADR-0079): the built-in agents' and each defined role's (ADR-0207). They
+// are not narratives: narratives() reads only S-*.md, so they are checked
+// here and nowhere else, save the markdown lint of wip.
 func (c *checker) activities() {
-	for _, kind := range workitem.ActivityKinds {
+	kinds, err := c.repo.ActivityKinds()
+	if err != nil {
+		c.add(Error, "activity.document", c.repo.AgentsDir(), 1, "%v; make the folder readable so flai can tell which roles keep an activity document", err)
+		return
+	}
+	for _, kind := range kinds {
 		path := c.repo.ActivityPath(kind)
 		a, err := workitem.ReadActivity(path)
 		switch {

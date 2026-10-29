@@ -1855,12 +1855,13 @@ func sharedWith(root, story string) []harness.Share {
 }
 
 // openLog opens the log of a run for subject, a story or a strategic
-// agent's kind, started at: beside the others in serve/agents, named for the
-// project's key, the subject, and the time, which Dir.AgentLogs and
-// Dir.ActivityLogs read by. A story's runs append to the log of the second
-// they started in. A strategic agent's runs, whose logs only the time tells
-// apart, each get a log of their own (S-0208): named for the first second
-// from their start that no other run's log is, within a minute.
+// agent's kind, a built-in's or a defined role's, started at: beside the
+// others in serve/agents, named for the project's key, the subject, and the
+// time, which Dir.AgentLogs and Dir.ActivityLogs read by. A story's runs
+// append to the log of the second they started in. A strategic agent's runs,
+// whose logs only the time tells apart, each get a log of their own
+// (S-0208): named for the first second from their start that no other run's
+// log is, within a minute.
 func (l *launcher) openLog(subject string, at time.Time) (*os.File, error) {
 	dir := filepath.Join(string(l.dir), "agents")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
@@ -1869,7 +1870,7 @@ func (l *launcher) openLog(subject string, at time.Time) (*os.File, error) {
 	name := func(t time.Time) string {
 		return filepath.Join(dir, fmt.Sprintf("%s-%s-%s.log", l.entry.Key, subject, t.Format("20060102T150405Z")))
 	}
-	if !workitem.IsActivityKind(subject) {
+	if workitem.TypeOfID(subject) == workitem.Story {
 		return os.OpenFile(name(at), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
 	}
 	for i := 0; ; i++ {

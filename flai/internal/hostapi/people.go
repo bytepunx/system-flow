@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -225,9 +226,10 @@ func peopleMethods(now func() time.Time) map[string]channel.Method {
 			return map[string]any{"streams": streams}, nil
 		},
 
-		// activity.document: a strategic agent's activity document,
-		// wip/agents/<kind>.md, its totals and its entries, oldest first; empty,
-		// with zero totals, before its first activity (S-0259).
+		// activity.document: a strategic agent's activity document, a
+		// built-in's or a defined role's, wip/agents/<kind>.md, its totals and
+		// its entries, oldest first; empty, with zero totals, before its first
+		// activity (S-0259).
 		"activity.document": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			var in struct {
 				Kind string `json:"kind"`
@@ -235,14 +237,18 @@ func peopleMethods(now func() time.Time) map[string]channel.Method {
 			if e := params(raw, &in); e != nil {
 				return nil, e
 			}
-			if !workitem.IsActivityKind(in.Kind) {
-				return nil, bad("kind must be a strategic agent, one of %s, not %q", strings.Join(workitem.ActivityKinds, ", "), in.Kind)
-			}
 			done := perf.Track(ctx, "repo.open")
 			repo, err := workitem.Open(p.Root)
 			done()
 			if err != nil {
 				return nil, failed(err)
+			}
+			kinds, err := repo.ActivityKinds()
+			if err != nil {
+				return nil, failed(err)
+			}
+			if !slices.Contains(kinds, in.Kind) {
+				return nil, bad("kind must be a strategic agent, one of %s, not %q", strings.Join(kinds, ", "), in.Kind)
 			}
 			done = perf.Track(ctx, "narratives.read")
 			a, err := repo.Activity(in.Kind)

@@ -2,6 +2,8 @@ package mcpserver
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -68,5 +70,38 @@ func TestAServerThatCannotLogActivitiesSaysSo(t *testing.T) {
 	f := setup(t)
 	if _, failed := f.call(t, "activity_log", map[string]any{"kind": "planner", "summary": "Planned S-0001"}); !strings.Contains(failed, "cannot log activities") {
 		t.Errorf("without a logger: %q", failed)
+	}
+}
+
+// S-0417, ADR-0207: activity_log takes a role the project defines, by its
+// name, as its kind, and refuses any other, naming the defined ones.
+func TestActivityLogTakesADefinedRolesName(t *testing.T) {
+	var kinds []string
+	f := setupWith(t, func(o *Options) {
+		o.Activities = func(_ context.Context, _, kind, summary string, items []string, _ string) (ActivityLogged, error) {
+			kinds = append(kinds, kind)
+			return ActivityLogged{Entry: ActivityEntry{Summary: summary, Items: items}, Activity: ActivityTotals{Kind: kind, TasksCompleted: 1}}, nil
+		}
+	})
+	dir := filepath.Join(projectRoot(f.repo), "design", "workflows", "roles")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	role := "---\ntitle: Reviewer\nupdated: 2026-09-01\nstatus: active\nname: reviewer\nrole: review\naction: review\nitem: none\n---\n\nReviews what is in review.\n"
+	if err := os.WriteFile(filepath.Join(dir, "reviewer.md"), []byte(role), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out, failed := f.call(t, "activity_log", map[string]any{"kind": " reviewer ", "summary": "Reviewed S-0001", "items": []string{"S-0001"}})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	if totals, _ := out["activity"].(map[string]any); totals["kind"] != "reviewer" {
+		t.Errorf("totals: %v", out["activity"])
+	}
+	if _, failed := f.call(t, "activity_log", map[string]any{"kind": "builder", "summary": "Built it"}); !strings.Contains(failed, `kind "builder" is not a strategic agent: give planner, orchestrator, analyzer, curator, or reviewer`) {
+		t.Errorf("unknown kind: %q", failed)
+	}
+	if strings.Join(kinds, ",") != "reviewer" {
+		t.Errorf("reached the host: %v, want reviewer's alone", kinds)
 	}
 }

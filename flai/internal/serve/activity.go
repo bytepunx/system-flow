@@ -18,8 +18,8 @@ import (
 )
 
 // What the strategic agents did (S-0206, ADR-0079). flai serve keeps the log
-// of each run of the planner, the orchestrator, the analyzer, and the
-// curator as it does a story's agent's, named for the project's key, the kind, and the time it
+// of each run of the planner, the orchestrator, the analyzer, the curator,
+// and each role the project defines (ADR-0207) as it does a story's agent's, named for the project's key, the kind, and the time it
 // started. An activity ends when the agent reports it or when its run ends;
 // its span runs from the later of the newest run's start and the document's
 // last entry to its end, and its cost is what the kind's logs say was spent,
@@ -34,14 +34,24 @@ import (
 // wrote none (S-0223), and names the issues that name the report, so its
 // cost is split between them (S-0227). A curator's names the digest entries
 // its run wrote or changed, which are no work items, and charges nothing: its
-// cost stays in its kind's project strategic total (S-0431, ADR-0196).
+// cost stays in its kind's project strategic total (S-0431, ADR-0196), as a
+// defined role's does.
 
-// ActivityLogs are the logs flai serve keeps of the runs of the strategic
-// agent kind in the project named key, oldest first.
+// ActivityLogs are the logs flai serve keeps of the runs of the built-in
+// strategic agent kind in the project named key, oldest first. A role the
+// project defines is known only from the project, so LogActivity and
+// LogRunEnd read its logs once the project names it.
 func (d Dir) ActivityLogs(key, kind string) ([]string, error) {
 	if !workitem.IsActivityKind(kind) {
 		return nil, fmt.Errorf("%q is not a strategic agent: use one of %s", kind, strings.Join(workitem.ActivityKinds, ", "))
 	}
+	return d.activityLogs(key, kind)
+}
+
+// activityLogs are the logs of the runs of kind, which the caller has found
+// to be one of the project's strategic agents' kinds, in the project named
+// key, oldest first.
+func (d Dir) activityLogs(key, kind string) ([]string, error) {
 	// the start time follows the kind, so a project whose key ends in a kind
 	// does not lend its stories' logs
 	paths, err := filepath.Glob(filepath.Join(string(d), "agents", key+"-"+kind+"-[0-9]*.log"))
@@ -173,11 +183,18 @@ type activityMeasure struct {
 }
 
 func readActivity(d Dir, root, key, kind string) (*activityMeasure, error) {
-	logs, err := d.ActivityLogs(key, kind)
+	repo, err := workitem.Open(root)
 	if err != nil {
 		return nil, err
 	}
-	repo, err := workitem.Open(root)
+	kinds, err := repo.ActivityKinds()
+	if err != nil {
+		return nil, err
+	}
+	if !slices.Contains(kinds, kind) {
+		return nil, fmt.Errorf("%q is not a strategic agent: use one of %s", kind, strings.Join(kinds, ", "))
+	}
+	logs, err := d.activityLogs(key, kind)
 	if err != nil {
 		return nil, err
 	}
@@ -256,7 +273,8 @@ func (m *activityMeasure) spent(s usage.Span) *usage.Usage {
 // spend: a planner's to the item it planned, an orchestrator's to the work
 // items its entry names, an analyzer's to the issues its entry names. A
 // curator's, whose entry names digest entries, charges nothing (ADR-0196),
-// and nor does a u that spent nothing. It notes what it charged on logged.
+// nor does a role's the project defines, and nor does a u that spent
+// nothing. It notes what it charged on logged.
 func (m *activityMeasure) charge(logged *Logged, run usage.Run, u *usage.Usage) error {
 	if u == nil || len(u.Models) == 0 {
 		return nil
@@ -271,7 +289,8 @@ func (m *activityMeasure) charge(logged *Logged, run usage.Run, u *usage.Usage) 
 	case workitem.ActivityAnalyzer:
 		return m.chargeIssues(logged, c)
 	}
-	// workitem.ActivityCurator: digest entries are no items to charge
+	// workitem.ActivityCurator: digest entries are no items to charge; nor
+	// does a defined role's activity name any
 	return nil
 }
 
