@@ -2,12 +2,12 @@
 id: I-0217
 title: permission_prompt over the HTTP MCP server outlives Claude Code's tool-call timeout, so an agent in a container sees its protected write time out while the thread to the operator stays open
 class: defect
-status: open
+status: closed
 count: 1
 cost: 10m
 first_reported: 2026-10-28T12:30:56Z
 last_reported: 2026-10-28T12:30:56Z
-updated: 2026-10-28T12:53:05Z
+updated: 2026-10-29T02:44:28Z
 ---
 
 # I-0217 permission_prompt over the HTTP MCP server outlives Claude Code's tool-call timeout, so an agent in a container sees its protected write time out while the thread to the operator stays open
@@ -24,3 +24,4 @@ S-0505 T-2166: agent-S-0513, in flai-agent-claude-code:local with --permission-p
 ## Remediation
 
 Story S-0519 remediates this issue, created from it at 2026-10-28T12:53:05Z.
+Closed 2026-10-29T02:44:28Z: Fixed by S-0519 (ADR-0215). The cause: Claude Code drops an MCP call over HTTP after 60 seconds, measured on the host (2.1.311) and in the container (2.1.312), and flai's HTTP server answers as JSON, so no progress reaches it meanwhile. The four-minute hold could never answer there. permission_prompt now holds a write at most 45 seconds over HTTP (mcpserver.HTTPPermissionHold, set by the HTTP server's options) and four minutes over stdio, then refuses it naming the open thread, and the retry takes the answer. The tool's description and the refusal state the bound in force. TestMCPOverHTTPRefusesAnUnansweredWriteBeforeClaudeCodeGivesUp in flai/cmd/mcp_http_test.go reproduces I-0217. The same 60-second limit on the other long calls over HTTP is I-0228.
