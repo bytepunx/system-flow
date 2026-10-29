@@ -1,6 +1,6 @@
 ---
 title: Priming an agent with the documentation its story needs
-updated: 2026-10-23
+updated: 2026-10-29
 status: active
 topics: [cli, conventions]
 ---
@@ -232,7 +232,7 @@ A story's pack gains a step after the briefs and before the ranked sections:
 
 A sub-agent's pack selects and ranks entries as the story's does and loads each as a one-line brief, after the design and ADR briefs, while the budget has room; those left out are counted with the briefs.
 
-The orchestrator's pack, `flai prime --role orchestrate`, takes the `active` and `compacted` entries of kind `answer` or `recommendation`. It ranks them against each thread awaiting the operator ([ADR-0181](../adrs/0181-a-thread-awaits-an-agent-only-when-the-agent-takes-part-in-it-or-it-is-on-the.md)), by the thread's title and first entry, and takes each thread's best entry not yet taken, round by round, threads in ID order, within the same eighth of the budget. An entry with no word in common with a thread is not taken for it. The reason is `thread TH-nnnn; rank n`. With no thread awaiting the operator the step loads nothing. An entry's path is a valid `source` on `thread_reply`, so the orchestrator cites the answer the operator gave last time. The planner's and the analyzer's packs take no digest step; they find entries with `doc_search`.
+The orchestrator's pack, `flai prime --role orchestrate`, takes the `active` and `compacted` entries of kind `answer` or `recommendation`. It ranks them against each thread awaiting the operator ([ADR-0181](../adrs/0181-a-thread-awaits-an-agent-only-when-the-agent-takes-part-in-it-or-it-is-on-the.md)), by the thread's title and first entry, and takes each thread's best entry not yet taken, round by round, threads in ID order, within the same eighth of the budget. An entry with no word in common with a thread is not taken for it. The reason is `thread TH-nnnn; rank n`. With no thread awaiting the operator the step loads nothing. An entry's path is a valid `source` on `thread_reply`, so the orchestrator cites the answer the operator gave last time. A pack primed for the orchestrator's reasons ranks the same entries against the reasons' threads instead ([Primed for the orchestrator's reasons](#primed-for-the-orchestrators-reasons)). The planner's and the analyzer's packs take no digest step; they find entries with `doc_search`.
 
 #### Measured
 
@@ -349,6 +349,30 @@ A role a project defines in a role file under `design/workflows/roles/` ([ADR-02
 - Its agent's name, in the header: "the" and the file's `name`, as "the reviewer".
 
 A role file for `plan`, `orchestrate`, `analyze`, or `curate` gives that built-in role its topics and item kinds; with no file for it, as in a project made before role files, the built-in role keeps the ones flai holds, so its pack is byte for byte what it was. Only the orchestrator's pack takes the digest step. A role no file defines is refused, naming the strategic roles the project has: the four built-in ones, then the defined ones, sorted. A role file that does not parse refuses every role but `explore` and `verify`, naming the file, its line, and its finding, rather than leave its role out of the pack it would define.
+
+#### Primed for the orchestrator's reasons
+
+`flai serve` starts the orchestrator for reasons ([ADR-0209](../adrs/0209-the-orchestrator-runs-for-a-reason-and-ends-started-by-flai-serve-on-the-events.md)), and a run for one thread does not need the whole project. [ADR-0217](../adrs/0217-a-pack-primed-for-the-orchestrator-s-reasons-loads-the-role-s-conventions-with.md) (S-0537) primes it for them: `flai prime --role orchestrate --reason <reason>`, repeatable, or `reasons` on the MCP `prime` tool. A reason is `thread:TH-nnnn`, `review:S-nnnn`, `planned:E-nnnn` or `planned:S-nnnn`, `draft:S-nnnn`, `release`, or `ready`. The start prompt names each run's ([strategic-agents.md](strategic-agents.md#primed-for-its-reasons-s-0537)). The pack, in the same budget, holds:
+
+1. The conventions the orchestrator reads, once, cut by the section rule below. No README and no open issues.
+2. Per reason, what it needs, each item once however many reasons name it: a thread with its entries and the item it is on; a review's story and its last `flai verify` result; the planned item, the items the planner wrote under it, and the planner's open thread on it; the draft; `release_evaluate`'s figures; or the board and `promote_candidates`' figures.
+3. The digest's `answer` and `recommendation` entries ranked against the reasons' threads, those of `thread` reasons and the planner threads `planned` loads, as the general pack ranks them against the threads awaiting the operator ([The digest](#the-digest)), within an eighth of the budget.
+
+It holds no design or tech briefs, no ranked sections, and no catalog: `doc_search` and `doc_get` find the rest.
+
+**The section rule.** A heading's topics narrow a section for every pack that reads the file, and `work-management.md` is read by every story's agent. So a reason pack reads a word beside `all`. A section whose effective topics are `all` alone is kept, as in every pack. A section tagged `all` and other words is kept only when one of them is a kind of the run's reasons or `orchestration`, the role's topic. Every other pack keeps it as before, since `all` matches every pack. The baseline tags "As the planner" `all, planning, planned`, the orchestrator's "Drafts and the ready column" `all, draft, ready` and "Accepting a story" `all, review`, "As the analyzer" `all, analysis`, "As the curator" `all, digest`, and `work-management.md`'s "Rules" `all, review, draft, planned`. `flai check` accepts these words on a heading ([conventions.md](conventions.md#topics)).
+
+Measured on this repository on 2026-10-29 with this branch's flai, at the default 80 KB budget, against the general orchestrate pack's 176,359 bytes:
+
+| Reasons | Pack, bytes | Of the general pack | Conventions | What the reasons load | Digest |
+|---------|-------------|---------------------|-------------|-----------------------|--------|
+| `thread:TH-0750` | 54,638 | 31% | 27,398 | 13,882 | 8,532 |
+| `review:S-0536` | 80,217 | 45% | 55,619 | 21,789 | 0 |
+| `draft:S-0542` | 63,025 | 36% | 51,628 | 9,009 | 0 |
+| `ready` | 47,432 | 27% | 28,172 | 17,178 | 0 |
+| `release` | 29,817 | 17% | 27,398 | 298 | 0 |
+
+A `review` or `draft` pack keeps `work-management.md`'s "Rules", about 24 KB. A run for a real thread is near a third of the general pack: the thread, its story, and the digest add 22 KB to the conventions. S-0537's test measures a thread with one entry on a story of three lines, and that pack is under a quarter.
 
 ### Measured
 

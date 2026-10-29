@@ -3056,6 +3056,8 @@ List design/conventions in read order (README first, then by order) so an agent,
 
 --role plan, orchestrate, analyze, or curate prints the pack for a strategic agent, one that works above a story: the planner (plan), with --epic E-nnnn or --story S-nnnn, and the orchestrator (orchestrate), the analyzer (analyze), and the curator (curate), for the whole project, with neither. Its topics are the role's, planning, orchestration, analysis, or digest and planning, with the planner's item's as well; it holds the conventions whose roles are empty or list the role, with the sections its topics leave out taken out, and no README; the open issues; for the planner, what the item names, whole, as a story's pack loads it (a story's with its epic and tasks, an epic's alone), and the sections ranked highest against the item; briefs of the design, tech, and ADRs its topics select and the ADRs one step reaches; for the orchestrator, the digest's answers and recommendations ranked against the title and first entry of each thread awaiting the operator, each thread's best not yet taken in turn, with the reason thread TH-nnnn; rank n, within an eighth of the budget (ADR-0194); and a catalog of the rest. It does not get the design system. Its budget is the story's agent's, and --budget sets it.
 
+--role orchestrate --reason, repeatable, primes the orchestrator for its run's reasons (ADR-0217) in place of the whole project. A reason is one of thread:TH-nnnn, review:S-nnnn, planned:E-nnnn or planned:S-nnnn, draft:S-nnnn, release, or ready. The pack loads the role's conventions once, with the sections those reasons do not need left out: a section tagged all and other words stays only when one of them is a reason's kind or the role's topic. Then, per reason, what it needs, each item once however many reasons name it: for a thread, the thread with its entries and the item it is on; for a review, the story and its last flai verify result; for planned, the item, the items under it, and the planner's open thread on it; for a draft, the draft; for release, release\_evaluate's figures; for ready, the board and the promotion candidates. Then the digest's answers and recommendations ranked against the reasons' threads, within an eighth of the budget. It loads no briefs, no ranked sections, no open issues, and no catalog. --reason is refused with another role and with --epic or --story, and an unknown reason is refused naming the forms.
+
 --role takes as well any role a project defines in a role file under design/workflows/roles (ADR-0207), by its role: its pack is built as a built-in role's is, from the topics its file names, the conventions whose roles are empty or list it, and, when its file's item names epic or story, the item given with --epic or --story; with item none, neither. A role file for plan, orchestrate, analyze, or curate gives that role its topics and item kinds in place of flai's own. A role no file defines, an item kind its file does not take, and a role file that does not parse are refused, naming the roles the project defines or the file's finding.
 
 --part N prints part N of the pack as the MCP prime tool returns it, as JSON: parts of at most 40,000 bytes each, every one carrying part and parts (ADR-0104). --part implies --json; without it the whole pack prints.
@@ -3073,6 +3075,7 @@ flai prime --story S-0136 --role verify
 flai prime --story S-0136 --part 2
 flai prime --role plan --epic E-0016
 flai prime --role orchestrate --json
+flai prime --role orchestrate --reason thread:TH-0719 --reason review:S-0536
 ```
 
 Flags:
@@ -3083,6 +3086,7 @@ Flags:
 | `--cat` | print file contents instead of paths |
 | `--epic` string | with --role plan, or a role whose role file takes an epic, print its pack for this epic |
 | `--part` int | print part N of the pack, from 1, as JSON, as the MCP prime tool returns it (ADR-0104) |
+| `--reason` stringArray | with --role orchestrate, prime the orchestrator for this reason of its run (ADR-0217): thread:TH-nnnn, review:S-nnnn, planned:E-nnnn or planned:S-nnnn, draft:S-nnnn, release, or ready; repeatable |
 | `--role` string | print the pack for an agent in this role: explore or verify, a sub-agent of the story's agent (ADR-0059), with --story; or plan, orchestrate, analyze, curate, or a role a role file defines, a strategic agent |
 | `--story` string | print the context pack for this story: the conventions its agent reads, the design, tech, and ADRs it selects, and a catalog of the rest |
 

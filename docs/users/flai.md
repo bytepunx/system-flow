@@ -1125,7 +1125,7 @@ Started in a folder that is not itself a project, such as `~/git`, `flai mcp` se
 | `commit` on `issue_new`, `issue_bump`, `issue_close`, and `adr_new` | Record from a story in one call, as `--commit` does (S-0275): the files the tool wrote, and only those, are committed on `story/S-nnnn` in the story's worktree as `docs: [S-nnnn] ...`, with `trailers` (such as `Co-Authored-By:` lines) ending the message, and added to the story's touches. The answer gains `commit` (`hash`, `subject`, `paths`) and `touches_added`. Refused, with nothing written, when no story resolves, the story has no worktree, its worktree is not on its branch, or a rebase is unfinished there |
 | `doc_get` | A markdown document under the design, docs, or wip folders; nothing else in the repository is served. With `heading`, only that section and the sections below it, with its heading path and line ([Read design on demand](#read-design-on-demand)) |
 | `doc_search` | The sections of the design and docs folders, the conventions among them, that rank highest against `query`: at most 20 (`limit` for fewer), each with its path, the document's title, its heading path, line, first lines, and size ([Read design on demand](#read-design-on-demand)) |
-| `prime` | A story's context pack, as `flai prime --story <id> --json` prints it, in parts of at most 40,000 bytes, `part` choosing one (default 1) and each result giving `part` and `parts` ([Reading the pack in parts](#reading-the-pack-in-parts)), fitted to `budget` (default the project's `prime.budget`, else 80 KB): its topics, the conventions with the sections those topics leave out taken out, what the story names whole (a large document it names only by a path written out as a brief), briefs of the design and tech files and the ADRs its topics and one link step select, ranked sections to fill the budget, each with its reason and size, and a catalog of the rest, to read with `doc_get` and a `heading` when needed; with `role` (`explore` or `verify`), the smaller pack for a sub-agent ([Sub-agents](#sub-agents)); with `role` `plan` and `epic` or `story`, or `role` `orchestrate` or `analyze`, a strategic agent's pack ([The planner, the orchestrator, and the analyzer](#the-planner-the-orchestrator-and-the-analyzer)) ([Prime a session](#prime-a-session)) |
+| `prime` | A story's context pack, as `flai prime --story <id> --json` prints it, in parts of at most 40,000 bytes, `part` choosing one (default 1) and each result giving `part` and `parts` ([Reading the pack in parts](#reading-the-pack-in-parts)), fitted to `budget` (default the project's `prime.budget`, else 80 KB): its topics, the conventions with the sections those topics leave out taken out, what the story names whole (a large document it names only by a path written out as a brief), briefs of the design and tech files and the ADRs its topics and one link step select, ranked sections to fill the budget, each with its reason and size, and a catalog of the rest, to read with `doc_get` and a `heading` when needed; with `role` (`explore` or `verify`), the smaller pack for a sub-agent ([Sub-agents](#sub-agents)); with `role` `plan` and `epic` or `story`, or `role` `orchestrate` or `analyze`, a strategic agent's pack ([The planner, the orchestrator, and the analyzer](#the-planner-the-orchestrator-and-the-analyzer)); with `role` `orchestrate` and `reasons`, the orchestrator's pack for its run's reasons ([Primed for its reasons](#primed-for-its-reasons)) ([Prime a session](#prime-a-session)) |
 | `who_touches` | In-progress and in-review items whose `touches` cover a path |
 | `shared_paths` | The shared paths, `claims.shared` in `system-flow.yaml`, as `shared`, and as `invalid` each pattern that is not valid, with the reason. Given `paths` (paths or touches entries) or `story` (a story's ID, whose claim is checked entry by entry), `entries` says of each whether it lies inside a pattern and which, as `flai shared check` does. A read, open to every agent ([Shared paths](#shared-paths)) |
 | `shared_paths_edit` | Remove the patterns in `remove`, then add those in `add`, as `flai shared remove` and `add` do, and return `added`, `removed`, and `shared`, the list after the change. Nothing is committed. Yours alone: `flai guard` refuses it to every sub-agent and every session `flai serve` starts, and tells the agent to ask you on a thread ([Shared paths](#shared-paths)) |
@@ -1940,6 +1940,7 @@ flai prime --story S-0137 --role verify   # the pack for a verifier sub-agent
 flai prime --role plan --epic E-0016      # the planner's pack for an epic
 flai prime --role plan --story S-0207     # the planner's pack for a story
 flai prime --role orchestrate             # the orchestrator's pack
+flai prime --role orchestrate --reason thread:TH-0719 --reason review:S-0536   # its pack for a run's reasons
 flai prime --role analyze --json          # the analyzer's pack, as data
 ```
 
@@ -1994,6 +1995,7 @@ These agents work above a story ([ADR-0075](../../design/adrs/0075-the-planner-t
 |-------|---------|------------|
 | The planner | `flai prime --role plan --epic E-nnnn` or `--story S-nnnn` | The epic or story it plans |
 | The orchestrator | `flai prime --role orchestrate` | The whole project |
+| The orchestrator, for a run's reasons | `flai prime --role orchestrate --reason <reason>`, repeatable | What those reasons need ([Primed for its reasons](#primed-for-its-reasons)) |
 | The analyzer | `flai prime --role analyze` | The whole project |
 | The curator | `flai prime --role curate` | The whole project |
 
@@ -2007,6 +2009,21 @@ The MCP tool `prime` takes the same `role`, with `epic` or `story` for the plann
 6. The catalog.
 
 The header names the role and, for the planner, the item. `--json` gives the planner's epic or story as `item`, and has no `story`. The orchestrator, the analyzer, and the curator refuse `--epic` and `--story`. The planner needs one of them, not both, and refuses a task, or an ID of the other type than its flag. `--epic` without `--role plan` is refused.
+
+#### Primed for its reasons
+
+`flai serve` starts the orchestrator for reasons, and its start prompt gives each the form `--reason` takes ([ADR-0217](../../design/adrs/0217-a-pack-primed-for-the-orchestrator-s-reasons-loads-the-role-s-conventions-with.md)). The orchestrator primes with them, with the MCP tool `prime`, role `orchestrate`, and `reasons`, in place of the pack for the whole project:
+
+| Reason | What its pack loads |
+|--------|---------------------|
+| `thread:TH-nnnn` | The thread with its entries, and the item it is on |
+| `review:S-nnnn` | The story and its last `flai verify` result |
+| `planned:E-nnnn` or `planned:S-nnnn` | The item, the items the planner wrote under it, and the planner's open thread on it |
+| `draft:S-nnnn` | The draft story |
+| `release` | The release policy's figures, as `release_evaluate` gives them |
+| `ready` | The board, and the backlog stories that could go to ready |
+
+The pack holds the conventions the orchestrator reads, with the sections those reasons do not need left out: a heading tagged `all` and other words, such as `<!-- topics: all, review -->`, is kept only when one of the words is a reason's kind or `orchestration`. Every other pack keeps it. Then what each reason loads, each item once, and the digest's answers ranked against the reasons' threads. It holds no briefs and no catalog: find the rest with `doc_search` and `doc_get`. `--reason` is refused with another role, with `--epic` or `--story`, and in a form it does not know, naming the forms. A run started for `asked` or the schedule primes with the general pack, as a run by hand does.
 
 #### A role your project defines
 
