@@ -60,7 +60,7 @@ func Curate(ctx context.Context, o Options, e Entry, since, trigger string) (*Ag
 	}
 	l := newLauncher(o, e)
 	l.handOver = true
-	l.curate(ctx, cs.cfg, cs.agent, cs.since, trigger)
+	l.curate(ctx, cs.cfg, cs.agent, cs.since, trigger, "")
 	run := o.Dir.AgentStates()[e.Root].Curator
 	if run == nil {
 		return nil, fmt.Errorf("the curator run was not recorded in %s", o.Dir.agents())
@@ -155,9 +155,16 @@ func lastCurated(repo *workitem.Repo) (string, error) {
 // curate starts the curator with agent, taking in from since, or everything
 // when it is empty, records the run, marked with its role, with what started
 // it, trigger, journals it naming the trigger, and says whether it started.
-func (l *launcher) curate(ctx context.Context, cfg AgentConfig, agent *manifest.Agent, since, trigger string) bool {
+// With resetAt, when the usage limit the run before it ended on reset, the
+// run starts that one again: it is marked a retry, and its journal entry says
+// so (ADR-0214); resetAt is empty for every other start.
+func (l *launcher) curate(ctx context.Context, cfg AgentConfig, agent *manifest.Agent, since, trigger, resetAt string) bool {
 	now := l.now().UTC()
-	run := &AgentRun{Agent: workitem.ActivityCurator, Role: conventions.RoleCurate, Since: since, Started: now.Format(time.RFC3339), Session: newSession(), Trigger: trigger}
+	run := &AgentRun{Agent: workitem.ActivityCurator, Role: conventions.RoleCurate, Since: since, Started: now.Format(time.RFC3339), Session: newSession(), Trigger: trigger, Retry: resetAt != ""}
+	by := startedBy(run)
+	if run.Retry {
+		by += "; started again after the usage limit reset at " + resetAt
+	}
 	if agent != nil {
 		run.Model = agent.Model
 	}
@@ -165,7 +172,7 @@ func (l *launcher) curate(ctx context.Context, cfg AgentConfig, agent *manifest.
 	fail := func(err error) bool {
 		run.Error, run.Ended, run.Outcome, run.Why = err.Error(), run.Started, OutcomeFailed, "could not be started: "+err.Error()
 		l.told(run)
-		entry.Outcome, entry.Detail = "failed", fmt.Sprintf("the curator, %s, %s, could not be started: %s", sinceSaid(since), startedBy(run), run.Error)
+		entry.Outcome, entry.Detail = "failed", fmt.Sprintf("the curator, %s, %s, could not be started: %s", sinceSaid(since), by, run.Error)
 		if l.record != nil {
 			l.record(entry)
 		}
@@ -187,7 +194,7 @@ func (l *launcher) curate(ctx context.Context, cfg AgentConfig, agent *manifest.
 		return fail(err)
 	}
 	l.told(run)
-	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s (%s) to curate, %s, as %s (pid %d), %s; log %s", run.Command, run.Harness, sinceSaid(since), run.Agent, run.PID, startedBy(run), run.Log)
+	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s (%s) to curate, %s, as %s (pid %d), %s; log %s", run.Command, run.Harness, sinceSaid(since), run.Agent, run.PID, by, run.Log)
 	if l.record != nil {
 		l.record(entry)
 	}

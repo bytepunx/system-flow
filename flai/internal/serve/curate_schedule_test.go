@@ -278,3 +278,168 @@ func TestAcceptedKeepsEachStoryOnceInIDOrder(t *testing.T) {
 		t.Errorf("accepted = %v", got)
 	}
 }
+
+// limitedAt is when I-0212's curator run started, on the harness's usage
+// limit, and limitReset when that limit reset.
+var (
+	limitedAt  = time.Date(2026, 10, 26, 16, 3, 52, 0, time.UTC)
+	limitReset = time.Date(2026, 10, 28, 8, 0, 0, 0, time.UTC)
+)
+
+// limited records in serve/agents.json the curator's last run as I-0212's
+// was: started by trigger at limitedAt, from since, and ended two seconds
+// later failed on the usage limit, resetting at limitReset; retry marks it
+// a retry itself. With reset false, the harness named no reset time.
+func (lab *curationLab) limited(trigger, since string, retry, reset bool) {
+	exit := 1
+	run := &AgentRun{Agent: workitem.ActivityCurator, Role: "curate", Started: limitedAt.Format(time.RFC3339), Ended: limitedAt.Add(2 * time.Second).Format(time.RFC3339),
+		Exit: &exit, Session: "s", Trigger: trigger, Since: since, Outcome: OutcomeFailed, Why: limitWhyText, ResetsAt: limitResetsAt, Retry: retry}
+	if !reset {
+		run.Why, run.ResetsAt = "ended on the harness's usage limit (usage_limit_reached, 429); it named no reset time", ""
+	}
+	lab.o.Dir.updateAgent(lab.root, func(s *AgentState) { s.put(run) })
+}
+
+// restart makes the lab's scheduler again, at the lab's clock, as a flai
+// serve started again would: with nothing in memory.
+func (lab *curationLab) restart() {
+	o := lab.o
+	o.Now = func() time.Time { return lab.clock }
+	lab.s = newCurateScheduler(o, Entry{Key: "t", Name: "t", Root: lab.root}, lab.l)
+}
+
+// I-0212, S-0514, ADR-0214: while the curator's last run ended on the usage
+// limit and it has not reset, an acceptance and the schedule coming round
+// start nothing; at the first look once it has reset, the run starts again,
+// once, from its since, its trigger naming its stories and the one accepted
+// meanwhile, marked a retry and journalled as one. The next time the
+// schedule comes round starts a run as before.
+func TestARunOnTheUsageLimitIsStartedAgainOnceItResets(t *testing.T) {
+	lab := newCurationLab(t, "daily", limitedAt.Add(time.Minute))
+	lab.limited("accepted S-0498, S-0501", "2026-10-20T09:00:00Z", false, true)
+	lab.lookAt(lab.clock.Add(time.Minute))
+	lab.clock = time.Date(2026, 10, 27, 10, 0, 0, 0, time.UTC)
+	story := lab.accept("Accepted meanwhile")
+	lab.lookAt(lab.clock.Add(time.Second))
+	lab.lookAt(time.Date(2026, 10, 28, 0, 0, 30, 0, time.UTC)) // midnight came round
+	lab.lookAt(limitReset.Add(-time.Second))
+	if n := len(lab.starts()); n != 0 || lab.state().Curator.Ended == "" {
+		t.Fatalf("started before the limit reset: %d runs, %+v", n, lab.state().Curator)
+	}
+	if strings.Contains(lab.logText(), "curator not started") {
+		t.Errorf("the held starts were tried and refused rather than held:\n%s", lab.logText())
+	}
+	lab.lookAt(limitReset)
+	starts := lab.starts()
+	stories := []string{story, "S-0498", "S-0501"}
+	slices.Sort(stories)
+	want := "accepted " + strings.Join(stories, ", ")
+	run := lab.state().Curator
+	if len(starts) != 1 || run.Trigger != want || !run.Retry || run.Since != "2026-10-20T09:00:00Z" {
+		t.Fatalf("at the reset: %d runs, %+v, want one retry started by %q from the retried run's since", len(starts), run, want)
+	}
+	if !strings.Contains(starts[0].Detail, "started by "+want+"; started again after the usage limit reset at "+limitResetsAt+"; log ") {
+		t.Errorf("the journal entry does not say it is a retry: %q", starts[0].Detail)
+	}
+	lab.ended(1)
+	lab.lookAt(lab.clock.Add(time.Minute))
+	if n := len(lab.starts()); n != 1 {
+		t.Errorf("started again after the retry: %d runs", n)
+	}
+	lab.lookAt(time.Date(2026, 10, 29, 0, 0, 30, 0, time.UTC))
+	if run := lab.state().Curator; len(lab.starts()) != 2 || run.Trigger != "schedule daily" || run.Retry {
+		t.Errorf("the next midnight: %d runs, %+v, want a second started by schedule daily, no retry", len(lab.starts()), run)
+	}
+	lab.ended(2)
+}
+
+// I-0212, S-0514, ADR-0214: a flai serve started after the reset retries at
+// its first look, from the run in serve/agents.json, with its trigger.
+func TestARunOnTheUsageLimitIsStartedAgainByASchedulerMadeAfterTheReset(t *testing.T) {
+	lab := newCurationLab(t, "", limitedAt.Add(time.Minute))
+	lab.limited("accepted S-0498, S-0501", "", false, true)
+	lab.lookAt(lab.clock.Add(time.Minute))
+	lab.clock = limitReset.Add(26 * time.Hour)
+	lab.restart()
+	lab.lookAt(lab.clock)
+	if run := lab.state().Curator; len(lab.starts()) != 1 || run.Trigger != "accepted S-0498, S-0501" || !run.Retry {
+		t.Fatalf("first look after the reset: %d runs, %+v, want one retry started by accepted S-0498, S-0501", len(lab.starts()), run)
+	}
+	lab.ended(1)
+}
+
+// S-0514, ADR-0214: while curate is off, a run on the usage limit is not
+// retried; at the first look once it is on again, it is.
+func TestARunOnTheUsageLimitIsNotStartedAgainWhileCurateIsOff(t *testing.T) {
+	lab := newCurationLab(t, "", limitedAt.Add(time.Minute))
+	lab.limited(TriggerAsked, "", false, true)
+	lab.cfg.Curate = false
+	lab.lookAt(limitReset.Add(time.Minute))
+	if n := len(lab.starts()); n != 0 || strings.Contains(lab.logText(), "curator not started") {
+		t.Fatalf("retried while curate is off: %d runs\n%s", n, lab.logText())
+	}
+	lab.cfg.Curate = true
+	lab.lookAt(lab.clock.Add(time.Minute))
+	if run := lab.state().Curator; len(lab.starts()) != 1 || run.Trigger != TriggerAsked || !run.Retry {
+		t.Fatalf("once curate is on: %d runs, %+v, want one retry started by asked", len(lab.starts()), run)
+	}
+	lab.ended(1)
+}
+
+// S-0514, ADR-0214: a run that failed with no usage limit, a run on a limit
+// that named no reset time, and a retry that ended on the limit again are
+// not started again; an acceptance after them starts a run of its own.
+func TestRunsNotStartedAgain(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		put  func(lab *curationLab)
+	}{
+		{"failed with no limit", func(lab *curationLab) {
+			exit := 1
+			lab.o.Dir.updateAgent(lab.root, func(s *AgentState) {
+				s.put(&AgentRun{Agent: workitem.ActivityCurator, Role: "curate", Started: limitedAt.Format(time.RFC3339), Ended: limitedAt.Add(time.Minute).Format(time.RFC3339),
+					Exit: &exit, Trigger: "accepted S-0498", Outcome: OutcomeFailed, Why: "ended (exit 1)"})
+			})
+		}},
+		{"a limit with no reset time", func(lab *curationLab) { lab.limited("accepted S-0498", "", false, false) }},
+		{"a retry on the limit again", func(lab *curationLab) { lab.limited("accepted S-0498", "", true, true) }},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			lab := newCurationLab(t, "", limitedAt.Add(time.Minute))
+			c.put(lab)
+			lab.lookAt(limitReset.Add(time.Minute))
+			lab.lookAt(lab.clock.Add(time.Hour))
+			if n := len(lab.starts()); n != 0 {
+				t.Fatalf("started again: %d runs, %+v", n, lab.state().Curator)
+			}
+			story := lab.accept("Accepted after")
+			lab.lookAt(lab.clock.Add(time.Second))
+			if run := lab.state().Curator; len(lab.starts()) != 1 || run.Trigger != "accepted "+story || run.Retry || strings.Contains(lab.starts()[0].Detail, "started again") {
+				t.Fatalf("the acceptance after: %d runs, %+v, want one started by accepted %s alone, no retry", len(lab.starts()), run, story)
+			}
+			lab.ended(1)
+		})
+	}
+}
+
+// S-0514, ADR-0214: a retry's trigger is the retried run's with the
+// acceptances held meanwhile joined: beside an acceptances' trigger's own,
+// in ID order, in place of a schedule's, and after the operator's asked.
+func TestRetryTriggerJoinsTheHeldAcceptances(t *testing.T) {
+	for _, c := range []struct {
+		trigger string
+		pending []string
+		want    string
+	}{
+		{"accepted S-0498, S-0501", nil, "accepted S-0498, S-0501"},
+		{"accepted S-0498, S-0501", []string{"S-0499", "S-0501", "S-10000"}, "accepted S-0498, S-0499, S-0501, S-10000"},
+		{"schedule daily", nil, "schedule daily"},
+		{"schedule daily", []string{"S-0510"}, "accepted S-0510"},
+		{TriggerAsked, nil, TriggerAsked},
+		{TriggerAsked, []string{"S-0510", "S-0511"}, "asked; accepted S-0510, S-0511"},
+	} {
+		if got := retryTrigger(c.trigger, c.pending); got != c.want {
+			t.Errorf("retryTrigger(%q, %v) = %q, want %q", c.trigger, c.pending, got, c.want)
+		}
+	}
+}
