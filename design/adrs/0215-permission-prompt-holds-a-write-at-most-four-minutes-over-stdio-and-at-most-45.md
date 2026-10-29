@@ -6,6 +6,7 @@ date: 2026-10-29
 supersedes: []
 superseded_by: []
 refines: [ADR-0124, ADR-0130]
+topics: [mcp, harness]
 ---
 
 # ADR-0215 permission_prompt holds a write at most four minutes over stdio and at most 45 seconds over HTTP, below Claude Code's tool-call timeout on each transport
