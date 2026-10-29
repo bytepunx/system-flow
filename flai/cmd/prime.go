@@ -18,12 +18,13 @@ import (
 
 func newPrimeCmd(a *app) *cobra.Command {
 	var (
-		cat    bool
-		story  string
-		budget string
-		role   string
-		epic   string
-		part   int
+		cat     bool
+		story   string
+		budget  string
+		role    string
+		epic    string
+		part    int
+		reasons []string
 	)
 	c := &cobra.Command{
 		Use:   "prime",
@@ -104,6 +105,23 @@ title and first entry of each thread awaiting the operator, each thread's
 best not yet taken in turn, with the reason thread TH-nnnn; rank n, within an
 eighth of the budget (ADR-0194); and a catalog of the rest. It does not get the design system. Its budget is the story's agent's, and --budget sets it.
 
+--role orchestrate --reason, repeatable, primes the orchestrator for its
+run's reasons (ADR-0217) in place of the whole project. A reason is one of
+` + ctxpack.ReasonForms() + `.
+The pack loads the role's conventions once, with the sections those
+reasons do not need left out: a section tagged all and other words stays
+only when one of them is a reason's kind or the role's topic. Then, per
+reason, what it needs, each item once however many reasons name it: for a
+thread, the thread with its entries and the item it is on; for a review,
+the story and its last flai verify result; for planned, the item, the
+items under it, and the planner's open thread on it; for a draft, the
+draft; for release, release_evaluate's figures; for ready, the board and
+the promotion candidates. Then the digest's answers and recommendations
+ranked against the reasons' threads, within an eighth of the budget. It
+loads no briefs, no ranked sections, no open issues, and no catalog.
+--reason is refused with another role and with --epic or --story, and an
+unknown reason is refused naming the forms.
+
 --role takes as well any role a project defines in a role file under
 design/workflows/roles (ADR-0207), by its role: its pack is built as a
 built-in role's is, from the topics its file names, the conventions whose
@@ -126,7 +144,8 @@ JSON: parts of at most 40,000 bytes each, every one carrying part and parts
   flai prime --story S-0136 --role verify
   flai prime --story S-0136 --part 2
   flai prime --role plan --epic E-0016
-  flai prime --role orchestrate --json`,
+  flai prime --role orchestrate --json
+  flai prime --role orchestrate --reason thread:TH-0719 --reason review:S-0536`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
@@ -159,6 +178,7 @@ JSON: parts of at most 40,000 bytes each, every one carrying part and parts
 				a.logger().Warn("convention file unreadable", "component", "conventions", "path", rel, "err", e.Error())
 			}
 			strategicRoles, strategic := strategicRole(repo, role)
+			withReasons := cmd.Flags().Changed("reason")
 			switch {
 			case cmd.Flags().Changed("part") && cat:
 				return fmt.Errorf("--part prints a part of a context pack; --cat prints the conventions, give one of them")
@@ -166,10 +186,18 @@ JSON: parts of at most 40,000 bytes each, every one carrying part and parts
 				return fmt.Errorf("--part %d: parts count from 1", part)
 			case cmd.Flags().Changed("part") && story == "" && !strategic:
 				return fmt.Errorf("--part prints a part of a context pack; give --story, or --role %s", strings.Join(strategicRoles, ", "))
+			case withReasons && role != conventions.RoleOrchestrate:
+				given := "no --role"
+				if role != "" {
+					given = "--role " + role
+				}
+				return fmt.Errorf("--reason primes the orchestrator for its run's reasons, and %s is not the orchestrator; give --role orchestrate and no --story or --epic", given)
+			case withReasons && (story != "" || epic != ""):
+				return fmt.Errorf("--reason primes the orchestrator for its run's reasons, which looks at the whole project, not one item; give --role orchestrate and no --story or --epic")
 			case epic != "" && !strategic:
 				return fmt.Errorf("--epic primes the planner for an epic; give --role plan too")
 			case strategic:
-				return a.primeStrategic(repo, role, epic, story, budget, part)
+				return a.primeStrategic(repo, role, epic, story, budget, reasons, part)
 			case budget != "" && story == "":
 				return fmt.Errorf("--budget sizes a story's context pack; give --story too")
 			case role != "" && story == "":
@@ -215,6 +243,7 @@ JSON: parts of at most 40,000 bytes each, every one carrying part and parts
 	c.Flags().StringVar(&budget, "budget", "", "the size the context pack fits, such as 80KB (default: prime.budget in system-flow.yaml, else 80KB; half that with --role explore or verify)")
 	c.Flags().StringVar(&role, "role", "", "print the pack for an agent in this role: explore or verify, a sub-agent of the story's agent (ADR-0059), with --story; or plan, orchestrate, analyze, curate, or a role a role file defines, a strategic agent")
 	c.Flags().StringVar(&epic, "epic", "", "with --role plan, or a role whose role file takes an epic, print its pack for this epic")
+	c.Flags().StringArrayVar(&reasons, "reason", nil, "with --role orchestrate, prime the orchestrator for this reason of its run (ADR-0217): "+ctxpack.ReasonForms()+"; repeatable")
 	c.Flags().IntVar(&part, "part", 0, "print part N of the pack, from 1, as JSON, as the MCP prime tool returns it (ADR-0104)")
 	return c
 }
@@ -254,9 +283,17 @@ func (a *app) primeStory(repo *workitem.Repo, id, role, budget string, part int)
 
 // primeStrategic prints the pack for a strategic agent in role, for the
 // planner's epic or story or, with neither, the whole project, as
-// ctxpack.ForStrategic builds it; with part, only that part of it.
-func (a *app) primeStrategic(repo *workitem.Repo, role, epic, story, budget string, part int) error {
-	pack, err := ctxpack.ForStrategic(repo, role, epic, story, budget)
+// ctxpack.ForStrategic builds it, or, with reasons, the orchestrator's pack
+// primed for them, as ctxpack.ForReasons builds it (ADR-0217); with part,
+// only that part of it.
+func (a *app) primeStrategic(repo *workitem.Repo, role, epic, story, budget string, reasons []string, part int) error {
+	var pack *ctxpack.Pack
+	var err error
+	if len(reasons) > 0 {
+		pack, err = ctxpack.ForReasons(repo, reasons, budget)
+	} else {
+		pack, err = ctxpack.ForStrategic(repo, role, epic, story, budget)
+	}
 	if err != nil {
 		return err
 	}

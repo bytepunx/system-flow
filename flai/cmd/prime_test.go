@@ -723,3 +723,237 @@ func TestPrimeLoadsTheDigest(t *testing.T) {
 		}
 	}
 }
+
+// primeReasonsProject is a project whose orchestrator's convention tags its
+// sections by reason (ADR-0217 §2), with a design document a general pack
+// briefs, an epic E-0001 with stories S-0001 and S-0002, a stored flai
+// verify result for S-0001, TH-0001 on S-0001 from its agent, and the
+// planner's open TH-0002 on E-0001.
+func primeReasonsProject(t *testing.T) string {
+	t.Helper()
+	root := tempProject(t)
+	write := func(rel, s string) {
+		p := filepath.Join(root, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(s), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("design/conventions/README.md", "# Conventions\n\n- [orchestration.md](orchestration.md)\n")
+	write("design/conventions/orchestration.md", "---\ntitle: Orchestration\nupdated: 2026-10-29\naudience: agent\norder: 50\nstatus: active\nroles: [orchestrate]\n---\n\n# Orchestration\n\n"+
+		"## Every run\n\n- Every run rule.\n\n"+
+		"## Reviews <!-- topics: all, review -->\n\n- Review rule.\n\n"+
+		"## Threads <!-- topics: all, thread -->\n\n- Thread rule.\n\n"+
+		"## Analysis <!-- topics: all, analysis -->\n\n- Analysis rule.\n\n"+
+		"<!-- system-flow:end-of-baseline -->\n\n## Project additions\n")
+	write("design/system/orchestration.md", "---\ntitle: Orchestration design\nupdated: 2026-10-29\nstatus: active\ntopics: [orchestration]\n---\n\n# Orchestration design\n\nHow the orchestrator runs.\n")
+	write(".flai-cache/verify/S-0001.json", "{\"story\": \"S-0001\", \"passed\": true}\n")
+	if _, errOut, code := runIn(t, root, "epic", "new", "Epic"); code != 0 {
+		t.Fatal(errOut)
+	}
+	for _, title := range []string{"Slice", "Second slice"} {
+		if _, errOut, code := runIn(t, root, "story", "new", title, "--epic", "E-0001"); code != 0 {
+			t.Fatal(errOut)
+		}
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 10, 29, 9, 0, 0, 0, time.UTC)
+	for _, th := range []threads.NewOptions{
+		{Title: "Which way round?", On: "S-0001", Author: "agent-S-0001", Text: "Which way round should the slice go?", Now: now},
+		{Title: "Split the epic?", On: "E-0001", Author: "planner-E-0001", Text: "Should the epic split in two?", Now: now},
+	} {
+		if _, err := threads.New(repo, th); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return root
+}
+
+// reasonPack is a pack primed for reasons as --json prints it.
+type reasonPack struct {
+	Role        string   `json:"role"`
+	Reasons     []string `json:"reasons"`
+	Part        int      `json:"part"`
+	Parts       int      `json:"parts"`
+	OpenIssues  int      `json:"open_issues"`
+	Conventions []struct {
+		Path    string                     `json:"path"`
+		Kept    []struct{ Heading string } `json:"kept"`
+		LeftOut []struct{ Heading string } `json:"left_out"`
+	} `json:"conventions"`
+	Items   []packItem `json:"items"`
+	Catalog struct {
+		NotLoaded []struct{ Path string } `json:"not_loaded"`
+		InPart    []struct{ Path string } `json:"in_part"`
+	} `json:"catalog"`
+}
+
+// ADR-0217 §1, §3, §5, S-0537 criterion 1: flai prime --role orchestrate
+// --reason primes the orchestrator for each kind of reason, loading what it
+// needs, each with step reason and the reason, and keeping the convention
+// sections its kind names; it loads no brief and no catalog, as --json, as
+// text, and in parts. The general pack is printed without --reason as
+// before.
+func TestPrimeForTheOrchestratorsReasons(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := primeReasonsProject(t)
+	story := func(id string) string {
+		m, err := filepath.Glob(filepath.Join(root, "wip", "kanban", "stories", id+"-*.md"))
+		if err != nil || len(m) != 1 {
+			t.Fatal(m, err)
+		}
+		return "wip/kanban/stories/" + filepath.Base(m[0])
+	}
+	epic, err := filepath.Glob(filepath.Join(root, "wip", "kanban", "epics", "E-0001-*.md"))
+	if err != nil || len(epic) != 1 {
+		t.Fatal(epic, err)
+	}
+	thread := func(id string) string {
+		m, err := filepath.Glob(filepath.Join(root, "wip", "threads", id+"-*.md"))
+		if err != nil || len(m) != 1 {
+			t.Fatalf("%s: %v %v", id, m, err)
+		}
+		return "wip/threads/" + filepath.Base(m[0])
+	}
+	for _, c := range []struct {
+		reason, canon string
+		paths         []string // what the reason loads, in order
+		kept          string   // the tagged section it keeps beside Every run
+	}{
+		{"thread:th-1", "thread:TH-0001", []string{thread("TH-0001"), story("S-0001")}, "Threads"},
+		{"review:S-1", "review:S-0001", []string{story("S-0001"), ".flai-cache/verify/S-0001.json"}, "Reviews"},
+		{"planned:E-0001", "planned:E-0001", []string{"wip/kanban/epics/" + filepath.Base(epic[0]), story("S-0001"), story("S-0002"), thread("TH-0002")}, ""},
+		{"draft:S-0002", "draft:S-0002", []string{story("S-0002")}, ""},
+		{"release", "release", []string{"release_evaluate"}, ""},
+		{"ready", "ready", []string{"board", "promote_candidates"}, ""},
+	} {
+		out, errOut, code := runIn(t, root, "prime", "--role", "orchestrate", "--reason", c.reason, "--json")
+		if code != 0 {
+			t.Fatalf("--reason %s: %s", c.reason, errOut)
+		}
+		var v reasonPack
+		if err := json.Unmarshal([]byte(out), &v); err != nil {
+			t.Fatalf("--reason %s: %v %s", c.reason, err, out)
+		}
+		if v.Role != "orchestrate" || len(v.Reasons) != 1 || v.Reasons[0] != c.canon || v.OpenIssues != 0 || len(v.Catalog.NotLoaded)+len(v.Catalog.InPart) != 0 {
+			t.Errorf("--reason %s: role %q, reasons %v, open issues %d, catalog %+v", c.reason, v.Role, v.Reasons, v.OpenIssues, v.Catalog)
+		}
+		var paths []string
+		for _, it := range v.Items {
+			if it.Step == "digest" {
+				continue
+			}
+			if it.Step != "reason" || it.Reason != c.canon {
+				t.Errorf("--reason %s loaded %s as %s, %q", c.reason, it.Path, it.Step, it.Reason)
+			}
+			paths = append(paths, it.Path)
+		}
+		if strings.Join(paths, " ") != strings.Join(c.paths, " ") {
+			t.Errorf("--reason %s loaded %v; want %v", c.reason, paths, c.paths)
+		}
+		want := "Orchestration Every run"
+		if c.kept != "" {
+			want += " " + c.kept
+		}
+		if len(v.Conventions) != 1 {
+			t.Fatalf("--reason %s: conventions %+v", c.reason, v.Conventions)
+		}
+		var kept []string
+		for _, k := range v.Conventions[0].Kept {
+			if k.Heading != "Project additions" && k.Heading != "" {
+				kept = append(kept, k.Heading)
+			}
+		}
+		if strings.Join(kept, " ") != want {
+			t.Errorf("--reason %s kept %v; want %s", c.reason, kept, want)
+		}
+	}
+
+	both := []string{"prime", "--role", "orchestrate", "--reason", "thread:TH-0001", "--reason", "review:S-0001"}
+	out, errOut, code := runIn(t, root, both...)
+	if code != 0 {
+		t.Fatalf("%v: %s", both, errOut)
+	}
+	for _, want := range []string{"primed for thread:TH-0001, review:S-0001 (ADR-0217)", "- Thread rule.", "- Review rule.", "\n.flai-cache/verify/S-0001.json\n", "Which way round should the slice go?"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("text lacks %q:\n%s", want, out)
+		}
+	}
+	for _, gone := range []string{"- Analysis rule.", "\nbriefs\n", "\ncatalog\n", "How the orchestrator runs.", "design/system/orchestration.md"} {
+		if strings.Contains(out, gone) {
+			t.Errorf("text has %q:\n%s", gone, out)
+		}
+	}
+	if !strings.Contains(out, fmt.Sprintf("size: %d bytes, %d lines, this header included", len(out), strings.Count(out, "\n"))) {
+		t.Errorf("size is not the pack's (%d bytes):\n%s", len(out), out)
+	}
+	if strings.Count(out, "\n"+story("S-0001")+"\n") != 1 {
+		t.Errorf("the story two reasons load printed other than once:\n%s", out)
+	}
+
+	out, errOut, code = runIn(t, root, append(both, "--part", "1")...)
+	if code != 0 {
+		t.Fatalf("--part 1: %s", errOut)
+	}
+	var v reasonPack
+	if err := json.Unmarshal([]byte(out), &v); err != nil || v.Part != 1 || v.Parts != 1 || v.Role != "orchestrate" || strings.Join(v.Reasons, " ") != "thread:TH-0001 review:S-0001" || len(v.Items) < 3 {
+		t.Errorf("--part 1: %v %+v %s", err, v, out)
+	}
+	if _, errOut, code = runIn(t, root, append(both, "--part", "2")...); code == 0 || !strings.Contains(errOut, "part 2 of a pack in 1 part") {
+		t.Errorf("--part 2: %d %s", code, errOut)
+	}
+	if out, _, _ = runIn(t, root, append(both, "--budget", "1")...); !strings.Contains(out, "; budget 1 bytes\nover budget: the role's conventions alone exceed it; what the reasons load is still loaded") || !strings.Contains(out, "Which way round should the slice go?") {
+		t.Errorf("--budget 1:\n%s", out)
+	}
+
+	out, errOut, code = runIn(t, root, "prime", "--role", "orchestrate")
+	if code != 0 {
+		t.Fatalf("--role orchestrate: %s", errOut)
+	}
+	for _, want := range []string{"for the whole project", "- Analysis rule.", "design/system/orchestration.md"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("the general pack lacks %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "primed for") || strings.Contains(out, "Which way round should the slice go?") {
+		t.Errorf("the general pack is primed for reasons:\n%s", out)
+	}
+}
+
+// ADR-0217 §1: --reason is refused with another role, without a role, and
+// with --story or --epic, each saying to give --role orchestrate alone; an
+// unknown reason, and one without the ID it needs, are refused naming every
+// form a reason takes.
+func TestPrimeRefusesReasonsOutsideTheOrchestrator(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := primeReasonsProject(t)
+	forms := "thread:TH-nnnn, review:S-nnnn, planned:E-nnnn or planned:S-nnnn, draft:S-nnnn, release, or ready"
+	for _, c := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"prime", "--role", "plan", "--epic", "E-0001", "--reason", "release"}, "--reason primes the orchestrator for its run's reasons, and --role plan is not the orchestrator; give --role orchestrate and no --story or --epic"},
+		{[]string{"prime", "--role", "analyze", "--reason", "ready"}, "--role analyze is not the orchestrator; give --role orchestrate"},
+		{[]string{"prime", "--role", "verify", "--story", "S-0001", "--reason", "ready"}, "--role verify is not the orchestrator"},
+		{[]string{"prime", "--reason", "ready"}, "no --role is not the orchestrator; give --role orchestrate"},
+		{[]string{"prime", "--story", "S-0001", "--reason", "review:S-0001"}, "no --role is not the orchestrator"},
+		{[]string{"prime", "--role", "orchestrate", "--story", "S-0001", "--reason", "review:S-0001"}, "not one item; give --role orchestrate and no --story or --epic"},
+		{[]string{"prime", "--role", "orchestrate", "--epic", "E-0001", "--reason", "planned:E-0001"}, "not one item; give --role orchestrate and no --story or --epic"},
+		{[]string{"prime", "--role", "orchestrate", "--reason", "ready", "--reason", "merge:S-0001"}, "flai prime --reason merge:S-0001: no such kind of reason"},
+		{[]string{"prime", "--role", "orchestrate", "--reason", "review", "--json"}, "review needs the ID of a story (S-nnnn); a reason is " + forms},
+		{[]string{"prime", "--role", "orchestrate", "--reason", "thread:TH-0099"}, "TH-0099"},
+	} {
+		out, errOut, code := runIn(t, root, c.args...)
+		if code == 0 || !strings.Contains(errOut, c.want) || out != "" {
+			t.Errorf("%v: code %d, out %q, %s; want %q", c.args, code, out, errOut, c.want)
+		}
+	}
+	if _, errOut, code := runIn(t, root, "prime", "--role", "orchestrate", "--reason", "merge:S-0001"); code == 0 || !strings.Contains(errOut, "; a reason is "+forms) {
+		t.Errorf("an unknown reason does not name the forms: code %d, %s", code, errOut)
+	}
+}
