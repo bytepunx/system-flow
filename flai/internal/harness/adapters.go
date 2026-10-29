@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mcphttp"
+	"github.com/bytepunx/system-flow/flai/internal/roles"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 )
 
@@ -60,8 +62,10 @@ var claudeCodeTakes = map[string]option{
 // applies with the default host arguments and with the operator's own. A
 // planner's session runs as the project's planner definition (S-0208), an
 // orchestrator's as its orchestrator definition (S-0218), an analyzer's as
-// its analyzer definition (S-0223), and a curator's as its curator
-// definition (S-0431), each with flai guard on its file
+// its analyzer definition (S-0223), a curator's as its curator
+// definition (S-0431), and a defined role's as the definition flai
+// generates from its role file, passed in --agents under its name (S-0417),
+// each with flai guard on its file
 // edits and the same handler, which denies anything outside a story's
 // worktree. Every session whose agent names a provider calls it rather
 // than Anthropic (claudeCodeProvider). Started by pilot in a container, it
@@ -100,9 +104,12 @@ func (claudeCode) Start(r Request, host Host) (Start, error) {
 		env = append(env, "CLAUDE_CONFIG_DIR="+filepath.Join(r.Cache, "claude"))
 	}
 	// <key> plan <item>, <key> orchestrate, <key> analyze [<focus>],
-	// <key> curate, or <key> <story>
+	// <key> curate, <key> <name> [<item>] for a defined role, or <key> <story>
 	subject := r.Story
-	if r.Role != "" {
+	switch {
+	case r.RoleFile != nil:
+		subject = strings.TrimSpace(r.RoleFile.Name + " " + r.Item)
+	case r.Role != "":
 		subject = strings.Join(strings.Fields(r.Role+" "+r.Item+" "+r.Focus), " ")
 	}
 	argv := append(headless(host.Program, Prompt(r), mcp), "--name", strings.TrimSpace(r.Project+" "+subject))
@@ -125,7 +132,10 @@ func (claudeCode) Start(r Request, host Host) (Start, error) {
 	if agents != "" {
 		argv = append(argv, "--agents", agents)
 	}
-	if r.Role != "" {
+	switch {
+	case r.RoleFile != nil:
+		argv = append(argv, "--agent", r.RoleFile.Name)
+	case r.Role != "":
 		argv = append(argv, "--agent", claudeCodeStrategic[r.Role])
 	}
 	argv = append(argv, permissionArgs(host)...)
@@ -308,13 +318,23 @@ var claudeCodeStrategic = map[string]string{conventions.RolePlan: "planner", con
 // the source of everything but the model. For a strategic agent, the
 // planner, the orchestrator, the analyzer, or the curator, it holds that
 // agent's definition as well, with the agent's model when it names one,
-// whatever its roles (S-0208, S-0218, S-0223, S-0431).
+// whatever its roles (S-0208, S-0218, S-0223, S-0431). For a role the
+// project defines, it holds the definition flai generates from the role's
+// file under its name (roleDefinition), and nothing is read from or written
+// under .claude/ for it (S-0417, ADR-0207 §4).
 // Empty when nothing is to be passed. A role sub-agents cannot run, because
 // it names another harness or config, or has no definition, refuses the
 // start, as a strategic agent with no definition does.
 func subAgents(r Request) (string, error) {
 	out := map[string]map[string]any{}
-	if r.Role != "" {
+	switch {
+	case r.RoleFile != nil:
+		agent, err := roleDefinition(r.RoleFile, r.Agent)
+		if err != nil {
+			return "", err
+		}
+		out[r.RoleFile.Name] = agent
+	case r.Role != "":
 		def := claudeCodeStrategic[r.Role]
 		agent, err := readDefinition(r.Root, def)
 		if err != nil {
@@ -354,6 +374,43 @@ func subAgents(r Request) (string, error) {
 		return "", err
 	}
 	return string(js), nil
+}
+
+// inherit is a definition's model when it takes the session's.
+const inherit = "inherit"
+
+// roleDefinition is the definition flai generates from a role file, as
+// --agents takes one (ADR-0207 §4): its definition's description and tools,
+// its body without the marker's line as its prompt, and its model, the
+// agent's when it names one, else the file's, left out when that is
+// inherit, so that the session's holds. A file whose definition has no
+// description or no tools, or whose body is empty, is refused, naming flai
+// check, which reports it.
+func roleDefinition(f *roles.Role, a *manifest.Agent) (map[string]any, error) {
+	d := f.Definition
+	prompt := roleBody(f.Body)
+	var lacks []string
+	if strings.TrimSpace(d.Description) == "" {
+		lacks = append(lacks, "definition.description")
+	}
+	if len(d.Tools) == 0 {
+		lacks = append(lacks, "definition.tools")
+	}
+	if prompt == "" {
+		lacks = append(lacks, "body")
+	}
+	if len(lacks) > 0 {
+		return nil, fmt.Errorf("the role %s runs as the agent %s, which flai generates from its file %s, and the file has no %s; flai check reports what it lacks", f.Name, f.Name, f.Path, strings.Join(lacks, " and no "))
+	}
+	agent := map[string]any{"description": d.Description, "tools": slices.Clone(d.Tools), "prompt": prompt}
+	model := d.Model
+	if a != nil && a.Model != "" {
+		model = a.Model
+	}
+	if model != "" && model != inherit {
+		agent["model"] = model
+	}
+	return agent, nil
 }
 
 // readDefinition reads the project's .claude/agents/<def>.md as --agents
@@ -432,7 +489,10 @@ func definition(data []byte) (map[string]any, error) {
 // empty (S-0208); started as the orchestrator, FLAI_ROLE alone (S-0218);
 // started as the analyzer, FLAI_ROLE, and FLAI_FOCUS when it was asked for
 // one (S-0223); started as the curator, FLAI_ROLE, and FLAI_SINCE when its
-// run has a since (S-0431), since the command has no prompt to say it. When
+// run has a since (S-0431); started as a role a project defines, FLAI_AGENT,
+// FLAI_ROLE, FLAI_ITEM when its run has an item, and FLAI_INPUTS, a JSON
+// array of the run's inputs in order, each {name, value}, when it has any
+// (S-0417), since the command has no prompt to say it. When
 // the agent names a provider, it has FLAI_PROVIDER, its name,
 // FLAI_PROVIDER_API, FLAI_PROVIDER_BASE_URL, and FLAI_PROVIDER_KEY_ENV, the
 // name of the variable that holds its key, which the command reads itself:
@@ -509,6 +569,13 @@ func (command) Start(r Request, host Host) (Start, error) {
 	}
 	if r.Since != "" {
 		env = append(env, "FLAI_SINCE="+r.Since)
+	}
+	if len(r.Inputs) > 0 {
+		inputs, err := json.Marshal(r.Inputs)
+		if err != nil {
+			return Start{}, err
+		}
+		env = append(env, "FLAI_INPUTS="+string(inputs))
 	}
 	if p := r.Provider; p != nil {
 		env = append(env, "FLAI_PROVIDER="+r.ProviderName, "FLAI_PROVIDER_API="+p.API, "FLAI_PROVIDER_BASE_URL="+p.BaseURL, "FLAI_PROVIDER_KEY_ENV="+p.KeyEnv)

@@ -5,11 +5,13 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/roles"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 )
 
@@ -2659,6 +2661,275 @@ func TestAStartRequestDecodesTheContainerFields(t *testing.T) {
 	for _, k := range []string{"inner", "mcp_url_env", "mcp_token_env", "mcp_host_env", "cache"} {
 		if strings.Contains(string(host), `"`+k+`"`) {
 			t.Errorf("a host request encodes %s: %s", k, host)
+		}
+	}
+}
+
+// reviewerFile is a role a project defines (ADR-0207): reviewer, in role
+// review, on a story, with a baseline and the project's additions.
+const reviewerFile = `---
+title: Reviewer
+updated: 2026-10-28
+status: active
+name: reviewer
+role: review
+definition:
+  description: Reviews a story against the conventions, for flai serve.
+  tools: [Read, Grep, mcp__flai__item_get]
+  model: inherit
+action: review
+trigger:
+  - asked
+item: [story]
+topics: [planning]
+works_story: false
+charge: none
+tools: []
+commands: []
+files: []
+permissions: []
+---
+
+You are the reviewer: read the story and say what it lacks.
+
+<!-- system-flow:end-of-baseline -->
+
+## Project additions
+
+Review its touches too.
+`
+
+// reviewerBody is reviewerFile's body as its definition's prompt: the
+// baseline and the additions, without the marker's line.
+const reviewerBody = "You are the reviewer: read the story and say what it lacks.\n\n## Project additions\n\nReview its touches too."
+
+// reviewer is reviewerFile, read as flai reads a role file.
+func reviewer(t *testing.T) *roles.Role {
+	t.Helper()
+	f, p := roles.Parse("design/workflows/roles/reviewer.md", reviewerFile)
+	if p != nil {
+		t.Fatal(p)
+	}
+	return &f
+}
+
+// reviewReq starts reviewer on item, with two inputs.
+func reviewReq(t *testing.T, item string, a *manifest.Agent) Request {
+	return Request{Role: "review", RoleFile: reviewer(t), Item: item, Root: "/p/flow", Project: "flow", Agent: a, Name: RoleAgent("reviewer", item), Flai: "/usr/local/bin/flai",
+		Inputs: []Input{{Name: "depth", Value: "thorough"}, {Name: "scope", Value: "touches\n  and criteria"}}}
+}
+
+// S-0417, ADR-0207 §2: a defined role's run works under its name, or
+// <name>-<item> on an item.
+func TestADefinedRoleWorksUnderItsNameAndItem(t *testing.T) {
+	if got := RoleAgent("reviewer", "S-0001"); got != "reviewer-S-0001" {
+		t.Errorf("on an item: %q", got)
+	}
+	if got := RoleAgent("reviewer", ""); got != "reviewer" {
+		t.Errorf("on none: %q", got)
+	}
+}
+
+// S-0417, ADR-0207 §4: a defined role's prompt is its file's body, without
+// the marker's line, with its item, read with item_get, and the run's inputs
+// in the order given; it primes with its verb and its item, keeps to what
+// its file allows, asks on a thread, and ends with a summary for its
+// activity document. On no item it primes with its verb alone.
+func TestADefinedRolesPromptIsItsBodyWithItsItemAndInputs(t *testing.T) {
+	p := Prompt(reviewReq(t, "S-0001", nil))
+	for _, w := range []string{
+		"You are reviewer-S-0001, the reviewer role this project defines in design/workflows/roles/reviewer.md, started by flai serve on this host because the operator asked for a run of it on S-0001, in the project at /p/flow.",
+		reviewerBody,
+		"This run is on S-0001: read it with the flai MCP tool item_get",
+		"Prime your session with flai prime --role review --story S-0001 (or the flai MCP tool prime with role review and story S-0001), which prints the conventions you work by and what S-0001 names whole",
+		"Call the flai MCP tool inbox",
+		"The run's inputs, in the order given:\n\n- depth: thorough\n- scope: touches and criteria",
+		"flai guard holds every call you make to what your role file allows: never work around a refusal",
+		"ask with the flai MCP tool thread_open on S-0001, your recommended answer first",
+		"End with a one-line summary of what you did: flai serve logs the run's activity in wip/agents/reviewer.md with it",
+	} {
+		if !strings.Contains(p, w) {
+			t.Errorf("the reviewer's prompt lacks %q:\n%s", w, p)
+		}
+	}
+	for _, never := range []string{roles.Marker, "story_start", "flai stream open", "worktree", "As the planner", "close-out"} {
+		if strings.Contains(p, never) {
+			t.Errorf("the reviewer's prompt says %q:\n%s", never, p)
+		}
+	}
+
+	none := reviewReq(t, "", nil)
+	none.Inputs = nil
+	p = Prompt(none)
+	for _, w := range []string{
+		"You are reviewer, the reviewer role this project defines in design/workflows/roles/reviewer.md, started by flai serve on this host because the operator asked for a run of it, in the project at /p/flow.",
+		"This run is on no item",
+		"Prime your session with flai prime --role review (or the flai MCP tool prime with role review), which prints the conventions you work by, and briefs",
+		"The run has no inputs.",
+		"thread_open on the item it concerns",
+	} {
+		if !strings.Contains(p, w) {
+			t.Errorf("on no item, the reviewer's prompt lacks %q:\n%s", w, p)
+		}
+	}
+}
+
+// S-0417, ADR-0207 §4, TH-0471 answer 6: claude-code runs a defined role's
+// session as the definition flai generates from its file, passed in
+// --agents under its name beside the sub-agents' and selected with
+// --agent, named for the project, the role, and the item, its MCP server
+// told its name; its environment is its name, its verb, and its item. It
+// reads and writes nothing under .claude/ for it: a project with no .claude
+// folder starts it, and is left without one.
+func TestClaudeCodeStartsADefinedRole(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, ".claude", "agents")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "explorer.md"), []byte("---\nname: explorer\ndescription: Searches.\ntools: Read\nmodel: haiku\n---\n\nYou are the explorer.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	r := reviewReq(t, "S-0001", &manifest.Agent{Harness: ClaudeCode, Model: "claude-opus-5-5", Roles: map[string]manifest.Role{"explore": {Model: "claude-haiku-4-5"}}})
+	r.Root = root
+	st, err := (claudeCode{}).Start(r, Host{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p := st.Argv[2]; !strings.Contains(p, "You are reviewer-S-0001, the reviewer role") || !strings.Contains(p, reviewerBody) {
+		t.Errorf("prompt: %s", p)
+	}
+	for flag, want := range map[string]string{"--agent": "reviewer", "--model": "claude-opus-5-5", "--name": "flow reviewer S-0001", "--permission-prompt-tool": PermissionPromptTool} {
+		if got := after(st.Argv, flag); got != want {
+			t.Errorf("%s = %q, want %q (%q)", flag, got, want, st.Argv)
+		}
+	}
+	if mcp := after(st.Argv, "--mcp-config"); !strings.Contains(mcp, `["mcp","--agent","reviewer-S-0001"]`) {
+		t.Errorf("--mcp-config %s", mcp)
+	}
+	var agents map[string]map[string]any
+	if err := json.Unmarshal([]byte(after(st.Argv, "--agents")), &agents); err != nil {
+		t.Fatalf("--agents: %v in %v", err, st.Argv)
+	}
+	want := map[string]any{"description": "Reviews a story against the conventions, for flai serve.", "tools": []any{"Read", "Grep", "mcp__flai__item_get"}, "prompt": reviewerBody, "model": "claude-opus-5-5"}
+	if len(agents) != 2 || agents["explorer"]["model"] != "claude-haiku-4-5" || !reflect.DeepEqual(agents["reviewer"], want) {
+		t.Errorf("--agents %v, want reviewer %v", agents, want)
+	}
+	if want := []string{"FLAI_AGENT=reviewer-S-0001", "FLAI_ROLE=review", "FLAI_ITEM=S-0001"}; !slices.Equal(st.Env, want) {
+		t.Errorf("env %q, want %q", st.Env, want)
+	}
+
+	// no .claude folder, no item, and no model of the agent's: the file's
+	// inherit leaves the model to the session, and nothing is written
+	bare := reviewReq(t, "", nil)
+	bare.Root = t.TempDir()
+	st, err = (claudeCode{}).Start(bare, Host{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	agents = nil
+	if err := json.Unmarshal([]byte(after(st.Argv, "--agents")), &agents); err != nil {
+		t.Fatalf("--agents: %v in %v", err, st.Argv)
+	}
+	if _, ok := agents["reviewer"]["model"]; len(agents) != 1 || ok || slices.Contains(st.Argv, "--model") {
+		t.Errorf("an inherited model: --agents %v, argv %q", agents, st.Argv)
+	}
+	if got := after(st.Argv, "--name"); got != "flow reviewer" || after(st.Argv, "--agent") != "reviewer" {
+		t.Errorf("--name %q, argv %q", got, st.Argv)
+	}
+	if want := []string{"FLAI_AGENT=reviewer", "FLAI_ROLE=review"}; !slices.Equal(st.Env, want) {
+		t.Errorf("env %q, want %q", st.Env, want)
+	}
+	if _, err := os.Stat(filepath.Join(bare.Root, ".claude")); !os.IsNotExist(err) {
+		t.Errorf("a .claude folder was made: %v", err)
+	}
+
+	// the file's own model holds when the agent names none
+	sonnet := reviewReq(t, "S-0001", nil)
+	sonnet.RoleFile.Definition.Model = "sonnet"
+	if def, err := roleDefinition(sonnet.RoleFile, sonnet.Agent); err != nil || def["model"] != "sonnet" {
+		t.Errorf("the file's model: %v, %v", def, err)
+	}
+
+	// the operator's command is told its name, its verb, its item, and its
+	// inputs, with no prompt
+	cmd, err := (command{}).Start(reviewReq(t, "S-0001", nil), Host{Program: "run-agent", Args: []string{"{story}"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"run-agent", ""}; !slices.Equal(cmd.Argv, want) {
+		t.Errorf("argv %q, want %q", cmd.Argv, want)
+	}
+	for _, w := range []string{"FLAI_AGENT=reviewer-S-0001", "FLAI_ROLE=review", "FLAI_ITEM=S-0001", `FLAI_INPUTS=[{"name":"depth","value":"thorough"},{"name":"scope","value":"touches\n  and criteria"}]`} {
+		if !slices.Contains(cmd.Env, w) {
+			t.Errorf("command env %q lacks %q", cmd.Env, w)
+		}
+	}
+}
+
+// S-0417: a defined role is refused a story to work, an item its file does
+// not take, a run in another role or under another name, a focus, a since,
+// and a sub-agent's name or verb; claude-code refuses one whose definition
+// lacks a description, tools, or a body, naming flai check. Inputs are
+// refused to every other agent.
+func TestADefinedRoleIsRefusedWhatItsFileDoesNotTake(t *testing.T) {
+	for _, c := range []struct {
+		want   string
+		claude bool // claude-code alone refuses it
+		mod    func(*Request)
+	}{
+		{"the role reviewer was given story S-0104 to work; flai starts a role a project defines on its item, never to work a story", false, func(r *Request) { r.Story = "S-0104" }},
+		{`the role reviewer takes story, as its file design/workflows/roles/reviewer.md says, and "E-0001" is none`, false, func(r *Request) { r.Item, r.Name = "E-0001", "reviewer-E-0001" }},
+		{"the role reviewer was given S-0001, and its file design/workflows/roles/reviewer.md says it takes no item", false, func(r *Request) { r.RoleFile.Item = roles.Kinds{} }},
+		{`the role reviewer runs in role review, as its file design/workflows/roles/reviewer.md says, and was started in role "plan"`, false, func(r *Request) { r.Role = "plan" }},
+		{`the role reviewer's run works under the name reviewer-S-0001, and was started as "reviewer"; start it as reviewer-S-0001`, false, func(r *Request) { r.Name = "reviewer" }},
+		{`only the analyzer takes a focus; start this agent without "risk"`, false, func(r *Request) { r.Focus = "risk" }},
+		{`only the curator takes a since; start this agent without "2026-10-20"`, false, func(r *Request) { r.Since = "2026-10-20" }},
+		{"is named explorer, a sub-agent's definition", false, func(r *Request) { r.RoleFile.Name, r.Name = "explorer", "explorer-S-0001" }},
+		{`gives reviewer no role of its own, "verify"`, false, func(r *Request) { r.RoleFile.Role, r.Role = "verify", "verify" }},
+		{"the role reviewer runs as the agent reviewer, which flai generates from its file design/workflows/roles/reviewer.md, and the file has no definition.description; flai check reports what it lacks", true, func(r *Request) { r.RoleFile.Definition.Description = " " }},
+		{"and the file has no definition.tools; flai check", true, func(r *Request) { r.RoleFile.Definition.Tools = []string{} }},
+		{"and the file has no definition.description and no definition.tools and no body", true, func(r *Request) {
+			r.RoleFile.Definition = roles.Definition{Model: "inherit"}
+			r.RoleFile.Body = "\n" + roles.Marker + "\n"
+		}},
+	} {
+		x := reviewReq(t, "S-0001", nil)
+		x.Root = t.TempDir()
+		c.mod(&x)
+		if _, err := (claudeCode{}).Start(x, Host{}); err == nil || !strings.Contains(err.Error(), c.want) {
+			t.Errorf("claude-code: %v, want %q", err, c.want)
+		}
+		_, err := (command{}).Start(x, Host{Program: "run"})
+		if c.claude && err != nil {
+			t.Errorf("command: %v, want none", err)
+		}
+		if !c.claude && (err == nil || !strings.Contains(err.Error(), c.want)) {
+			t.Errorf("command: %v, want %q", err, c.want)
+		}
+	}
+	for name, x := range map[string]Request{"story": req(nil), "planner": planReq("E-0016", nil)} {
+		x.Inputs = []Input{{Name: "depth", Value: "thorough"}}
+		for an, ad := range map[string]Adapter{ClaudeCode: claudeCode{}, Command: command{}} {
+			if _, err := ad.Start(x, Host{Program: "run"}); err == nil || !strings.Contains(err.Error(), "only a role a project defines takes inputs") {
+				t.Errorf("%s: a %s with inputs: %v", an, name, err)
+			}
+		}
+	}
+}
+
+// ADR-0207 §4: a role file's body is its definition's prompt without the
+// marker's line and the blank lines after it; a body with no marker is
+// itself, trimmed.
+func TestARoleFilesBodyIsItsPromptWithoutTheMarker(t *testing.T) {
+	for _, c := range []struct{ body, want string }{
+		{"\nBaseline.\n\n" + roles.Marker + "\n\n## Project additions\n\nMore.\n", "Baseline.\n\n## Project additions\n\nMore."},
+		{"\r\nBaseline.\r\n" + roles.Marker + "\r\n## Project additions\r\n", "Baseline.\n## Project additions"},
+		{"\nNo marker.\n\n", "No marker."},
+	} {
+		body, want := c.body, c.want
+		if got := roleBody(body); got != want {
+			t.Errorf("roleBody(%q) = %q, want %q", body, got, want)
 		}
 	}
 }

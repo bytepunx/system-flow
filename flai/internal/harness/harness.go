@@ -22,6 +22,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/roles"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -33,7 +34,8 @@ const Command = "command"
 // epic or a story to plan (S-0208), or, for the orchestrator, the whole
 // project (S-0218), or, for the analyzer, the whole project with a focus
 // or none (S-0223), or, for the curator, the whole project since its last
-// run or from the start (S-0431).
+// run or from the start (S-0431), or, for a role a project defines, its
+// item or none, with the run's inputs (S-0417).
 type Request struct {
 	Story   string          // the story's ID, checked by the caller; empty for a strategic agent
 	Root    string          // the project's directory, where it runs
@@ -44,11 +46,24 @@ type Request struct {
 	// Role is conventions.RolePlan when the agent is the planner,
 	// conventions.RoleOrchestrate when it is the orchestrator,
 	// conventions.RoleAnalyze when it is the analyzer,
-	// conventions.RoleCurate when it is the curator, and empty when it
+	// conventions.RoleCurate when it is the curator, the verb its file's
+	// role names when it is a role the project defines, and empty when it
 	// works a story.
 	Role string
-	// Item is the epic or story the planner plans, checked by the caller;
-	// empty when the agent works a story, orchestrates, analyzes, or curates.
+	// RoleFile is the role file of a role the project defines (ADR-0207),
+	// when the agent runs as one: its name, its verb, the items it takes,
+	// its harness definition, and its body (S-0417). Name is then RoleAgent
+	// of its name and Item. Nil for the built-in roles, which run as their
+	// own definitions, and for an agent working a story. Never read from a
+	// start request.
+	RoleFile *roles.Role `json:"-"`
+	// Inputs are a defined role's run's inputs, in the order given, which
+	// its prompt names (S-0417); none for any other agent. Never read from a
+	// start request.
+	Inputs []Input `json:"-"`
+	// Item is the epic or story the planner plans, or a defined role runs
+	// on, checked by the caller; empty when the agent works a story,
+	// orchestrates, analyzes, or curates, or a defined role runs on none.
 	Item string
 	// Focus is what the analyzer looks for, one of Focuses; empty for all
 	// of them, and for any other agent.
@@ -133,6 +148,21 @@ type Request struct {
 	// the harness goes on in it rather than start it again (S-0507); never
 	// read from a start request.
 	Resume bool `json:"-"`
+}
+
+// Input is one of a defined role's run's inputs: its name and its value.
+type Input struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+// RoleAgent is the FLAI_AGENT a defined role's run works under (ADR-0207
+// §2): the role's name, or <name>-<item> for a run on an item.
+func RoleAgent(name, item string) string {
+	if item == "" {
+		return name
+	}
+	return name + "-" + item
 }
 
 // SentBack is a send back of a story from review to in-progress, which flai
@@ -379,10 +409,15 @@ func options(harness string, config map[string]string, takes map[string]option) 
 // its story is told the share's conversation, paths, and split (ADR-0134,
 // shared). The planner is asked to plan its item instead
 // (planPrompt), the orchestrator to keep the project's work moving
-// (orchestratePrompt), the analyzer to write a report (analyzePrompt), and
-// the curator to keep the digest (curatePrompt).
+// (orchestratePrompt), the analyzer to write a report (analyzePrompt), the
+// curator to keep the digest (curatePrompt), and a role the project defines
+// to do what its file's body says, on its item, with its run's inputs
+// (definedPrompt).
 // Only the claude-code adapter sends a prompt.
 func Prompt(r Request) string {
+	if r.RoleFile != nil {
+		return definedPrompt(r)
+	}
 	switch r.Role {
 	case conventions.RolePlan:
 		return planPrompt(r)
@@ -758,6 +793,71 @@ When an entry would need the operator's judgement, ask with the flai MCP tool th
 End with a one-line summary that names by ID the entries you wrote, those you merged, those you absorbed, and those flai digest compact compacted, or says that you found nothing to take in: flai serve logs the run's activity in wip/agents/curator.md with it, with the run's cost, so you need not log it yourself with activity_log.`, r.Name, r.Root, harvest)
 }
 
+// definedPrompt is what a role the project defines is asked to do (S-0417,
+// ADR-0207 §4): what its file's body says, which is its definition's prompt
+// too, on the run's item when it has one, read with item_get, with the run's
+// inputs in the order given; prime with its verb, and its item when it has
+// one, and call inbox; keep to what its file allows, as flai guard holds it;
+// ask the operator on a thread for an input they own that is missing; and
+// end with a one-line summary, which flai serve logs as the run's activity
+// in wip/agents/<name>.md, as the planner's is (ADR-0079).
+func definedPrompt(r Request) string {
+	f := r.RoleFile
+	on, item, prime, names := "", "This run is on no item: it works the project as your role file says.", fmt.Sprintf("flai prime --role %[1]s (or the flai MCP tool prime with role %[1]s)", f.Role), ""
+	ask := "the item it concerns"
+	if r.Item != "" {
+		kind := workitem.TypeOfID(r.Item)
+		on = " on " + r.Item
+		item = fmt.Sprintf("This run is on %[1]s: read it with the flai MCP tool item_get, and what it links with item_get and doc_get.", r.Item)
+		prime = fmt.Sprintf("flai prime --role %[1]s --%[2]s %[3]s (or the flai MCP tool prime with role %[1]s and %[2]s %[3]s)", f.Role, kind, r.Item)
+		names = fmt.Sprintf(" and what %s names whole", r.Item)
+		ask = r.Item
+	}
+	inputs := "The run has no inputs."
+	if len(r.Inputs) > 0 {
+		each := make([]string, len(r.Inputs))
+		for i, in := range r.Inputs {
+			each[i] = fmt.Sprintf("- %s: %s", in.Name, strings.Join(strings.Fields(in.Value), " "))
+		}
+		inputs = "The run's inputs, in the order given:\n\n" + strings.Join(each, "\n")
+	}
+	return fmt.Sprintf(`You are %[1]s, the %[2]s role this project defines in %[3]s, started by flai serve on this host because the operator asked for a run of it%[4]s, in the project at %[5]s. Your role file says what you are and what you do:
+
+%[6]s
+
+%[7]s Prime your session with %[8]s, which prints the conventions you work by%[9]s, and briefs the design your role's topics select. A brief is not the document: read the section that bears on your work with the flai MCP tool doc_get and its heading before relying on it, and find sections by their words with doc_search. Call the flai MCP tool inbox.
+
+%[10]s
+
+Work in the main checkout. flai guard holds every call you make to what your role file allows: never work around a refusal, by another tool, another command, or the shell. A refusal from flai guard or from flai ends that attempt.
+
+When an input the operator owns is missing, do not guess past it: ask with the flai MCP tool thread_open on %[11]s, your recommended answer first, do what needs no answer meanwhile, and hold the flai MCP tool wait_for_events, again each time it returns, until the thread is answered; then go on.
+
+End with a one-line summary of what you did: flai serve logs the run's activity in wip/agents/%[2]s.md with it, with the run's cost, so you need not log it yourself with activity_log.`,
+		r.Name, f.Name, f.Path, on, r.Root, roleBody(f.Body), item, prime, names, inputs, ask)
+}
+
+// roleBody is a role file's body as its definition's prompt (ADR-0207 §4):
+// the baseline text and the project's additions, without the marker's line
+// and the blank lines that followed it.
+func roleBody(body string) string {
+	var out []string
+	skip := false
+	for _, l := range strings.Split(strings.ReplaceAll(body, "\r\n", "\n"), "\n") {
+		blank := strings.TrimSpace(l) == ""
+		switch {
+		case strings.TrimSpace(l) == roles.Marker:
+			skip = len(out) > 0 && strings.TrimSpace(out[len(out)-1]) == ""
+			continue
+		case skip && blank:
+			continue
+		}
+		skip = false
+		out = append(out, l)
+	}
+	return strings.TrimSpace(strings.Join(out, "\n"))
+}
+
 // sinceForms are the forms a curator's since takes, as flai digest harvest
 // --since reads it: a day in UTC, or an RFC 3339 time.
 var sinceForms = []string{time.DateOnly, time.RFC3339}
@@ -778,17 +878,24 @@ func sinceReads(since string) bool {
 // story of its own, a planner with no epic or story to plan, an
 // orchestrator, an analyzer, or a curator given an item, an analyzer with a
 // focus it does not take, a curator with a since that does not read, and a
-// focus or a since for any other agent are refused.
+// focus or a since for any other agent are refused, as are inputs for any
+// agent but a role the project defines. A role the project defines has its
+// own (definedEnv).
 func roleEnv(r Request) ([]string, error) {
+	if r.RoleFile != nil {
+		return definedEnv(r)
+	}
 	switch {
-	case r.Role == "" && r.Focus == "" && r.Since == "":
+	case r.Role == "" && r.Focus == "" && r.Since == "" && len(r.Inputs) == 0:
 		return nil, nil
+	case len(r.Inputs) > 0:
+		return nil, fmt.Errorf("only a role a project defines takes inputs; start this agent without them")
 	case r.Role != conventions.RoleAnalyze && r.Focus != "":
 		return nil, fmt.Errorf("only the analyzer takes a focus; start this agent without %q", r.Focus)
 	case r.Role != conventions.RoleCurate && r.Since != "":
 		return nil, fmt.Errorf("only the curator takes a since; start this agent without %q", r.Since)
 	case !slices.Contains(conventions.StrategicRoles, r.Role):
-		return nil, fmt.Errorf("flai cannot start an agent in role %q; it starts the planner, role %s, the orchestrator, role %s, the analyzer, role %s, the curator, role %s, and an agent for a story", r.Role, conventions.RolePlan, conventions.RoleOrchestrate, conventions.RoleAnalyze, conventions.RoleCurate)
+		return nil, fmt.Errorf("flai cannot start an agent in role %q; it starts the planner, role %s, the orchestrator, role %s, the analyzer, role %s, the curator, role %s, a role a project defines, from its role file, and an agent for a story", r.Role, conventions.RolePlan, conventions.RoleOrchestrate, conventions.RoleAnalyze, conventions.RoleCurate)
 	case r.Role == conventions.RoleCurate && r.Story != "":
 		return nil, fmt.Errorf("the curator was given story %s to work; it works no story of its own, so start it with none", r.Story)
 	case r.Role == conventions.RoleCurate && r.Item != "":
@@ -818,6 +925,47 @@ func roleEnv(r Request) ([]string, error) {
 		return nil, fmt.Errorf("the planner plans an epic or a story, and %q is neither; give it an E-nnnn or an S-nnnn", r.Item)
 	}
 	return []string{"FLAI_ROLE=" + r.Role, "FLAI_ITEM=" + r.Item}, nil
+}
+
+// definedEnv tells the session of a role the project defines, which flai
+// guard reads to hold it to its file, who it is, FLAI_AGENT, RoleAgent of its
+// name and item; its verb, FLAI_ROLE; and its item, FLAI_ITEM, when the run
+// has one (S-0417, ADR-0207 §2). A file with no name, or a sub-agent's name,
+// or with no verb, or the story's agent's or a sub-agent's; a run in another
+// role than its file's verb; one under another name than RoleAgent's; one
+// given a story to work, which flai starts no defined role for; one on an
+// item its file does not take; and a focus or a since are refused.
+func definedEnv(r Request) ([]string, error) {
+	f := r.RoleFile
+	agent := RoleAgent(f.Name, r.Item)
+	kind := workitem.TypeOfID(r.Item)
+	switch {
+	case f.Name == "":
+		return nil, fmt.Errorf("the role file %s names no role; give it a name, as flai check says", f.Path)
+	case slices.Contains(roles.ReservedNames, f.Name):
+		return nil, fmt.Errorf("the role file %s is named %s, a sub-agent's definition; give the role another name, as flai check says", f.Path, f.Name)
+	case f.Role == "" || slices.Contains(roles.ReservedRoles, f.Role):
+		return nil, fmt.Errorf("the role file %s gives %s no role of its own, %q; give it a verb that is not %s, as flai check says", f.Path, f.Name, f.Role, strings.Join(roles.ReservedRoles, ", "))
+	case r.Role != f.Role:
+		return nil, fmt.Errorf("the role %s runs in role %s, as its file %s says, and was started in role %q; start it in its own", f.Name, f.Role, f.Path, r.Role)
+	case r.Focus != "":
+		return nil, fmt.Errorf("only the analyzer takes a focus; start this agent without %q", r.Focus)
+	case r.Since != "":
+		return nil, fmt.Errorf("only the curator takes a since; start this agent without %q", r.Since)
+	case r.Story != "":
+		return nil, fmt.Errorf("the role %s was given story %s to work; flai starts a role a project defines on its item, never to work a story, so start it with none, or with the story as its item when its file takes one", f.Name, r.Story)
+	case r.Item != "" && len(f.Item) == 0:
+		return nil, fmt.Errorf("the role %s was given %s, and its file %s says it takes no item; start it with none", f.Name, r.Item, f.Path)
+	case r.Item != "" && !slices.Contains(f.Item, kind):
+		return nil, fmt.Errorf("the role %s takes %s, as its file %s says, and %q is none; give it an item of that kind", f.Name, strings.Join(f.Item, " or "), f.Path, r.Item)
+	case r.Name != agent:
+		return nil, fmt.Errorf("the role %s's run works under the name %s, and was started as %q; start it as %s", f.Name, agent, r.Name, agent)
+	}
+	env := []string{"FLAI_AGENT=" + agent, "FLAI_ROLE=" + f.Role}
+	if r.Item != "" {
+		env = append(env, "FLAI_ITEM="+r.Item)
+	}
+	return env, nil
 }
 
 // answeredSince asks the agent to read the threads written to since its
