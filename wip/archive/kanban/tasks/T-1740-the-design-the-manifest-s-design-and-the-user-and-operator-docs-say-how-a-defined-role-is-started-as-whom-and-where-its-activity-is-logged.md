@@ -3,11 +3,11 @@ id: T-1740
 type: task
 nature: feature
 title: The design, the manifest's design, and the user and operator docs say how a defined role is started, as whom, and where its activity is logged
-status: in-progress
+status: done
 parent: S-0417
 owner: alex
 created: 2026-10-16T05:45:15Z
-updated: 2026-10-29T05:14:19Z
+updated: 2026-10-29T05:30:25Z
 transitions:
   - to: ready
     at: 2026-10-29T05:14:17Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-29T05:14:19Z
     by: agent-S-0417
+  - to: done
+    at: 2026-10-29T05:30:25Z
+    by: agent-S-0417
 stream: S-0417
 tags: [cli, template]
 touches: [design/system/strategic-agents.md, design/system/project-manifest.md, docs/users/flai.md, docs/operators/index.md, docs/operators/settings.md, template/CHANGELOG.md, design/system/flai-cli.md, design/system/agent-narrative.md, docs/users/flai-reference.md]
 after: [T-1739]
+usage:
+  source: log
+  seconds: 966
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 197
+      output: 68348
+      cache_read: 15586807
+      cache_write: 608940
+      cost: 7.7561
 ---
 # T-1740 The design, the manifest's design, and the user and operator docs say how a defined role is started, as whom, and where its activity is logged
 

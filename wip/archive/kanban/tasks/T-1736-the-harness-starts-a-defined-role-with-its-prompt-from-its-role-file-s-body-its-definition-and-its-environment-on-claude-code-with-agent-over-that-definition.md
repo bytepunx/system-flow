@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 2535
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 79
-      output: 315
-      cache_read: 4200137
-      cache_write: 173884
-      cost: 1.4935
+      input: 54
+      output: 18758
+      cache_read: 4277787
+      cache_write: 167123
+      cost: 2.1286
 ---
 # T-1736 The harness starts a defined role with its prompt from its role file's body, its definition, and its environment, on claude-code with --agent over that definition
 

@@ -3,15 +3,18 @@ id: S-0534
 type: story
 nature: improvement
 title: A usage-limit refusal sets a budget state on the host that holds every start on that provider until the reset or a backoff, probes once, and reaches every inbox, the journal, the dashboard, and the ADR-0205 channel
-status: ready
+status: in-progress
 parent: E-0030
 owner: alex
 created: 2026-10-28T21:02:16Z
-updated: 2026-10-29T05:16:39Z
+updated: 2026-10-29T05:47:10Z
 transitions:
   - to: ready
     at: 2026-10-28T22:21:09Z
     by: alex
+  - to: in-progress
+    at: 2026-10-29T05:47:10Z
+    by: agent-S-0534
 tags: [flai, serve, budget, rate-limit]
 topics: [orchestration, cli, dashboard]
 touches: [flai/internal/serve, flai/internal/mcpserver, flaiover/src, design/system/flai-cli.md, design/system/project-manifest.md, design/system/flaiover-dashboard.md, docs, flai/internal/serve/budget.go, flai/internal/serve/budget_test.go, flai/internal/serve/serve.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/testdata/usage-limit-result.jsonl, flai/internal/serve/start.go, flai/internal/serve/start_test.go, flai/internal/serve/restart.go, flai/internal/serve/restart_test.go, flai/internal/serve/replan.go, flai/internal/serve/replan_test.go, flai/internal/serve/orchestrate_hold.go, flai/internal/serve/orchestrate_hold_test.go, flai/internal/serve/analysis_schedule.go, flai/internal/serve/analysis_schedule_test.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/curate_schedule_test.go, flai/internal/serve/notify.go, flai/internal/serve/notify_test.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/inbox_test.go, flai/cmd/mcp.go, flai/cmd/mcp_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/contract_test.go, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/agent.test.ts, flaiover/src/routes/api/agent/+server.ts, flaiover/src/routes/api/agent/agent.test.ts, flaiover/src/lib/hostflai.svelte.ts, flaiover/src/lib/components/BudgetBanner.svelte, flaiover/src/lib/components/BudgetBanner.svelte.test.ts, flaiover/src/routes/+layout.svelte, flaiover/src/routes/layout.svelte.test.ts, design/system/strategic-agents.md, design/system/agent-narrative.md, docs/operators/index.md, docs/operators/runbooks/backup.md, docs/users/flai.md, docs/users/flaiover.md]
@@ -22,9 +25,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 553
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-29
+      hand_edits: 1
+      work: 21
+  models:
+    - model: claude-opus-5-5
+      input: 88
+      output: 503
+      cache_read: 4434790
+      cache_write: 308986
+      cost: 1.622
   strategic:
     - kind: planner
       seconds: 724

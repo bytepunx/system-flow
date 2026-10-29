@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 586
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 116
-      output: 645
-      cache_read: 7561848
-      cache_write: 205846
-      cost: 2.6522
+      input: 96
+      output: 33312
+      cache_read: 7596781
+      cache_write: 296788
+      cost: 3.7802
 ---
 # T-1738 serve starts, records, and settles a defined role's run under roles in agents.json and logs its activity in wip/agents/name.md, shown end to end with a fixture role
 

@@ -3,11 +3,11 @@ id: S-0417
 type: story
 nature: feature
 title: flai serve starts a role a project defines on the operator's word, behind the host action its file names, with an activity document under wip/agents and the same journal entries as the built-in roles
-status: in-progress
+status: done
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:01Z
-updated: 2026-10-29T05:14:13Z
+updated: 2026-10-29T05:59:38Z
 transitions:
   - to: ready
     at: 2026-10-28T13:04:05Z
@@ -21,9 +21,15 @@ transitions:
   - to: in-progress
     at: 2026-10-29T03:04:41Z
     by: agent-S-0417
+  - to: review
+    at: 2026-10-29T05:47:03Z
+    by: agent-S-0417
+  - to: done
+    at: 2026-10-29T05:59:38Z
+    by: alex
 tags: [cli, template]
 topics: [cli, planning, orchestration]
-touches: [design/system/project-manifest.md, design/system/strategic-agents.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/activity.go, flai/cmd/activity_test.go, flai/cmd/role.go, flai/cmd/role_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/check/activity.go, flai/internal/check/activity_test.go, flai/internal/check/check.go, flai/internal/harness/adapters.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/mcpserver/activity.go, flai/internal/mcpserver/activity_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/role.go, flai/internal/mcpserver/role_test.go, flai/internal/serve/activity.go, flai/internal/serve/agents.go, flai/internal/serve/role.go, flai/internal/serve/role_test.go, flai/internal/workitem/activity.go, flai/internal/workitem/activity_test.go, flai/internal/workitem/narrative.go, template/CHANGELOG.md, design/system/flai-cli.md, design/system/agent-narrative.md, flai/internal/serve/serve.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, flai/internal/hostapi/people.go, flaiover/src/lib/server/agent.ts, flai/internal/mcpserver/server.go, flai/cmd/root.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server_test.go, flai/internal/serve/projects.go, design/issues/I-0227-flai-test-s-go-test-tier-runs-the-mcpserver-package-with-race-into-go-test-s-10-minute-default-timeout-on-a-loaded-host-and-names-only-the-package-so-a-story-that-changes-mcpserver-cannot-pass-its-tests.md, design/issues/summary.md]
+touches: [design/system/project-manifest.md, design/system/strategic-agents.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/activity.go, flai/cmd/activity_test.go, flai/cmd/role.go, flai/cmd/role_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/check/activity.go, flai/internal/check/activity_test.go, flai/internal/check/check.go, flai/internal/harness/adapters.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/mcpserver/activity.go, flai/internal/mcpserver/activity_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/role.go, flai/internal/mcpserver/role_test.go, flai/internal/serve/activity.go, flai/internal/serve/agents.go, flai/internal/serve/role.go, flai/internal/serve/role_test.go, flai/internal/workitem/activity.go, flai/internal/workitem/activity_test.go, flai/internal/workitem/narrative.go, template/CHANGELOG.md, design/system/flai-cli.md, design/system/agent-narrative.md, flai/internal/serve/serve.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, flai/internal/hostapi/people.go, flaiover/src/lib/server/agent.ts, flai/internal/mcpserver/server.go, flai/cmd/root.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server_test.go, flai/internal/serve/projects.go, design/issues/I-0227-flai-test-s-go-test-tier-runs-the-mcpserver-package-with-race-into-go-test-s-10-minute-default-timeout-on-a-loaded-host-and-names-only-the-package-so-a-story-that-changes-mcpserver-cannot-pass-its-tests.md, design/issues/summary.md, flai/internal/serve/agent_events.go, flai/internal/serve/agent_events_test.go]
 after: [S-0415, S-0416]
 agent:
   harness: claude-code
@@ -32,32 +38,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 6530
-  estimated: true
-  priced_by: estimate
+  seconds: 9756
+  priced_by: harness
   turns:
     - day: 2026-10-29
-      ceremony: 4
-      hand_edits: 1
-      work: 51
+      ceremony: 8
+      hand_edits: 3
+      work: 84
   models:
     - model: claude-opus-5-5
-      input: 736
-      output: 3890
-      cache_read: 49109756
-      cache_write: 2408678
-      cost: 17.5905
+      input: 1002
+      output: 348295
+      cache_read: 79428856
+      cache_write: 3103099
+      cost: 39.5242
   strategic:
     - kind: orchestrator
-      seconds: 532
+      seconds: 2477
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 76
-          output: 1135
-          cache_read: 11013517
-          cache_write: 30853
-          cost: 2.4384
+          input: 252
+          output: 4246
+          cache_read: 51791528
+          cache_write: 78875
+          cost: 11.4415
+        - model: claude-sonnet-5-5
+          input: 28
+          output: 110
+          cache_read: 738147
+          cache_write: 76979
+          cost: 0.5618
 cost_of_delay:
   value: 79.4
   by: planner-S-0417
@@ -80,12 +91,12 @@ A role a project defines runs. `flai role run <name> [<item>]`, the MCP tool `ro
 
 ## Acceptance criteria
 
-- [ ] `flai role run <name> [<item>] [--json]`, the MCP tool `role_run` `{name, item?}`, and the host API's `role.run` start a defined role through `serve`, and each is refused, saying why, while the host action its file names is off, for an item its file does not take or one archived, done, or cancelled, while a run of the role for the same item runs, and when its agent names no harness and no command is set on the host. `flai serve enable <action>` and the Settings page accept a defined role's action. The MCP tool is refused to an agent `flai serve` started, as `plan` is.
-- [ ] The run starts in the main checkout through the harness adapter with the role's verb as `Role`, `FLAI_AGENT` set to `<name>` or `<name>-<item>`, `FLAI_ROLE`, `FLAI_ITEM` when it has one, `FLAI_SESSION`, and `FLAI_STARTED_BY=flai-serve`; its prompt is its role file's body with the item and the run's inputs; on `claude-code` it runs with `--agent <name>` over the definition flai generates from its role file and passes in `--agents`, writing nothing under `.claude/` (TH-0471, answer 6); its agent is `roles.<name>.agent` in the manifest merged over the project's `agent`, as `planning.agent` is.
-- [ ] The run is recorded in `serve/agents.json` under `roles`, by name and item, with its log `<key>-<name>-<start>.log`, and settled `asked`, `failed`, or `worked` as a planner run is; `serve.LogRunEnd` logs its activity in `wip/agents/<name>.md`, which `wip/agents/index.md` lists and `flai check` validates; `activity_log` and `flai activity log` take the role's name as `kind`.
-- [ ] Every start, failure, and end is a journal entry with the role's action, `agent.status` carries the runs under `roles` by name, and an `agent` notification names the role.
-- [ ] A serve test starts a fixture role, `reviewer`, from a role file and a fake harness, and shows its environment, its prompt, its record, its activity entry, and each refusal.
-- [ ] `design/system/strategic-agents.md`, `design/system/project-manifest.md` (`roles.<name>.agent`), `docs/users/flai.md` with `flai-reference.md`, `docs/operators/index.md` and `docs/operators/settings.md`, and `template/CHANGELOG.md` say how a defined role is started and where its activity is logged.
+- [x] `flai role run <name> [<item>] [--json]`, the MCP tool `role_run` `{name, item?}`, and the host API's `role.run` start a defined role through `serve`, and each is refused, saying why, while the host action its file names is off, for an item its file does not take or one archived, done, or cancelled, while a run of the role for the same item runs, and when its agent names no harness and no command is set on the host. `flai serve enable <action>` and the Settings page accept a defined role's action. The MCP tool is refused to an agent `flai serve` started, as `plan` is.
+- [x] The run starts in the main checkout through the harness adapter with the role's verb as `Role`, `FLAI_AGENT` set to `<name>` or `<name>-<item>`, `FLAI_ROLE`, `FLAI_ITEM` when it has one, `FLAI_SESSION`, and `FLAI_STARTED_BY=flai-serve`; its prompt is its role file's body with the item and the run's inputs; on `claude-code` it runs with `--agent <name>` over the definition flai generates from its role file and passes in `--agents`, writing nothing under `.claude/` (TH-0471, answer 6); its agent is `roles.<name>.agent` in the manifest merged over the project's `agent`, as `planning.agent` is.
+- [x] The run is recorded in `serve/agents.json` under `roles`, by name and item, with its log `<key>-<name>-<start>.log`, and settled `asked`, `failed`, or `worked` as a planner run is; `serve.LogRunEnd` logs its activity in `wip/agents/<name>.md`, which `wip/agents/index.md` lists and `flai check` validates; `activity_log` and `flai activity log` take the role's name as `kind`.
+- [x] Every start, failure, and end is a journal entry with the role's action, `agent.status` carries the runs under `roles` by name, and an `agent` notification names the role.
+- [x] A serve test starts a fixture role, `reviewer`, from a role file and a fake harness, and shows its environment, its prompt, its record, its activity entry, and each refusal.
+- [x] `design/system/strategic-agents.md`, `design/system/project-manifest.md` (`roles.<name>.agent`), `docs/users/flai.md` with `flai-reference.md`, `docs/operators/index.md` and `docs/operators/settings.md`, and `template/CHANGELOG.md` say how a defined role is started and where its activity is logged.
 
 ## Tasks
 - T-1735 The manifest takes roles.name.agent and roles.name.permissions, merged and validated as planning.agent and orchestration.permissions are, and flai manifest set writes them
@@ -95,6 +106,7 @@ A role a project defines runs. `flai role run <name> [<item>]`, the MCP tool `ro
 - T-1739 flai role run, the MCP tool role_run, and the host API's role.run start a defined role, flai serve enable takes its action, and agent.status carries roles
 - T-1740 The design, the manifest's design, and the user and operator docs say how a defined role is started, as whom, and where its activity is logged
 - T-1983 flai guard gates a defined role's permission-bound calls on roles.name.permissions in the manifest, read at each call
+- T-2325 A defined role's start, failure, and end are agent events on its item or its name, as the built-in roles' are since S-0532
 
 ## Notes
 

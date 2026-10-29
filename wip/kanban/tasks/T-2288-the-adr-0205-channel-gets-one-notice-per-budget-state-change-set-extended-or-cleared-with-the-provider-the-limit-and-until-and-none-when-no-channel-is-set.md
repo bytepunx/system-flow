@@ -3,12 +3,18 @@ id: T-2288
 type: task
 nature: improvement
 title: The ADR-0205 channel gets one notice per budget state change, set, extended, or cleared, with the provider, the limit, and until, and none when no channel is set
-status: backlog
+status: in-progress
 parent: S-0534
 owner: alex
 created: 2026-10-28T21:26:53Z
-updated: 2026-10-28T21:26:53Z
-transitions: []
+updated: 2026-10-29T05:56:40Z
+transitions:
+  - to: ready
+    at: 2026-10-29T05:56:39Z
+    by: agent-S-0534
+  - to: in-progress
+    at: 2026-10-29T05:56:40Z
+    by: agent-S-0534
 stream: S-0534
 tags: [flai, serve, notify, budget]
 touches: [flai/internal/serve/notify.go, flai/internal/serve/notify_test.go, flai/internal/serve/budget.go, flai/internal/serve/budget_test.go]

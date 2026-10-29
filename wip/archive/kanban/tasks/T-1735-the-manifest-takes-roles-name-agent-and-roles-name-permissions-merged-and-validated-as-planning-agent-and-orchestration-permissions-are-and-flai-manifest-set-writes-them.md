@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 2560
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 104
-      output: 508
-      cache_read: 4944452
-      cache_write: 327178
-      cost: 1.8
+      input: 65
+      output: 22608
+      cache_read: 5155657
+      cache_write: 201419
+      cost: 2.5655
 ---
 # T-1735 The manifest takes roles.name.agent and roles.name.permissions, merged and validated as planning.agent and orchestration.permissions are, and flai manifest set writes them
 

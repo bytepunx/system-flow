@@ -3,15 +3,36 @@ id: T-2282
 type: task
 nature: improvement
 title: "flai serve keeps a budget state per provider in budget.json in the serve folder: set from a usage limit, held, probed once, cleared, or extended, each change journaled"
-status: backlog
+status: done
 parent: S-0534
 owner: alex
 created: 2026-10-28T21:25:24Z
-updated: 2026-10-28T21:25:24Z
-transitions: []
+updated: 2026-10-29T05:56:22Z
+transitions:
+  - to: ready
+    at: 2026-10-29T05:48:34Z
+    by: agent-S-0534
+  - to: in-progress
+    at: 2026-10-29T05:48:35Z
+    by: agent-S-0534
+  - to: done
+    at: 2026-10-29T05:56:22Z
+    by: agent-S-0534
 stream: S-0534
 tags: [flai, serve, budget]
 touches: [flai/internal/serve/budget.go, flai/internal/serve/budget_test.go, flai/internal/serve/serve.go]
+usage:
+  source: log
+  seconds: 467
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 50
+      output: 274
+      cache_read: 2100384
+      cache_write: 125633
+      cost: 0.7611
 ---
 # T-2282 flai serve keeps a budget state per provider in budget.json in the serve folder: set from a usage limit, held, probed once, cleared, or extended, each change journaled
 

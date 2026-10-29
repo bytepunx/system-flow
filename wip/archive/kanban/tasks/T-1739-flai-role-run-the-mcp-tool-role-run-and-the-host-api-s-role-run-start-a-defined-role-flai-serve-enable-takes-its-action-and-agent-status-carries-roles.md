@@ -24,16 +24,16 @@ touches: [flai/cmd/role.go, flai/cmd/role_test.go, flai/cmd/mcp.go, flai/cmd/mcp
 after: [T-1738]
 usage:
   source: log
-  seconds: 3185
+  seconds: 3191
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 278
-      output: 1434
-      cache_read: 21879287
-      cache_write: 1023054
-      cost: 7.8197
+      input: 283
+      output: 98217
+      cache_read: 22398358
+      cache_write: 875051
+      cost: 11.1455
 ---
 # T-1739 flai role run, the MCP tool role_run, and the host API's role.run start a defined role, flai serve enable takes its action, and agent.status carries roles
 

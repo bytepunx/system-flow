@@ -25,25 +25,24 @@ topics: [cli, orchestration, planning, template, conventions]
 touches: [flai/internal/serve, flai/internal/guard, flai/internal/context, flai/internal/hostapi, flai/cmd, flaiover/src, design/system/strategic-agents.md, design/system/metrics.md, design/conventions/strategic-agents.md, ".claude/agents", docs/operators/index.md, docs/users/flai.md, template]
 usage:
   source: sum
-  seconds: 20674
-  estimated: true
-  priced_by: estimate
+  seconds: 23900
+  priced_by: harness
   turns:
     - day: 2026-10-28
       ceremony: 9
       hand_edits: 7
       work: 188
     - day: 2026-10-29
-      ceremony: 4
-      hand_edits: 1
-      work: 51
+      ceremony: 8
+      hand_edits: 3
+      work: 84
   models:
     - model: claude-opus-5-5
-      input: 2176
-      output: 597998
-      cache_read: 148536124
-      cache_write: 6873509
-      cost: 74.892
+      input: 2442
+      output: 942403
+      cache_read: 178855224
+      cache_write: 7567930
+      cost: 96.8257
   strategic:
     - kind: planner
       seconds: 1866
@@ -68,21 +67,21 @@ usage:
           cache_write: 294016
           cost: 1.282
     - kind: orchestrator
-      seconds: 12769
+      seconds: 14714
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1890
-          output: 29854
-          cache_read: 431605655
-          cache_write: 784826
-          cost: 97.2725
+          input: 2066
+          output: 32965
+          cache_read: 472383666
+          cache_write: 832848
+          cost: 106.2756
         - model: claude-sonnet-5-5
-          input: 44
-          output: 199
-          cache_read: 791923
-          cache_write: 190371
-          cost: 0.6752
+          input: 72
+          output: 309
+          cache_read: 1530070
+          cache_write: 267350
+          cost: 1.237
 ---
 # E-0024 Workflows as data: a project defines a strategic role or a repeatable formula of steps in files flai runs, and the built-in roles are expressed the same way, so a new role or a release process needs no flai release
 

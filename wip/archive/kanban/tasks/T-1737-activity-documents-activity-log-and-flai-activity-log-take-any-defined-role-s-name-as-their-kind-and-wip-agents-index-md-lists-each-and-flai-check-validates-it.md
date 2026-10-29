@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 2544
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 118
-      output: 620
-      cache_read: 6209015
-      cache_write: 499713
-      cost: 2.2907
+      input: 83
+      output: 28770
+      cache_read: 6561127
+      cache_write: 256328
+      cost: 3.2648
 ---
 # T-1737 Activity documents, activity_log, and flai activity log take any defined role's name as their kind, and wip/agents/index.md lists each and flai check validates it
 
