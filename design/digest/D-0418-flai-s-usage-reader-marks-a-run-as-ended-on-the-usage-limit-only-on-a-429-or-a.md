@@ -9,7 +9,7 @@ date: 2026-10-29
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0534]
 ---
 
 # D-0418 flai's usage reader marks a run as ended on the usage limit only on a 429 or a rejecting rate_limit_event, so another API error, such as a 529, is not taken for a usage limit

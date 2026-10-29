@@ -3,11 +3,11 @@ id: S-0534
 type: story
 nature: improvement
 title: A usage-limit refusal sets a budget state on the host that holds every start on that provider until the reset or a backoff, probes once, and reaches every inbox, the journal, the dashboard, and the ADR-0205 channel
-status: in-progress
+status: done
 parent: E-0030
 owner: alex
 created: 2026-10-28T21:02:16Z
-updated: 2026-10-29T05:47:10Z
+updated: 2026-10-29T07:25:47Z
 transitions:
   - to: ready
     at: 2026-10-28T22:21:09Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-29T05:47:10Z
     by: agent-S-0534
+  - to: review
+    at: 2026-10-29T07:18:51Z
+    by: agent-S-0534
+  - to: done
+    at: 2026-10-29T07:25:47Z
+    by: alex
 tags: [flai, serve, budget, rate-limit]
 topics: [orchestration, cli, dashboard]
-touches: [flai/internal/serve, flai/internal/mcpserver, flaiover/src, design/system/flai-cli.md, design/system/project-manifest.md, design/system/flaiover-dashboard.md, docs, flai/internal/serve/budget.go, flai/internal/serve/budget_test.go, flai/internal/serve/serve.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/testdata/usage-limit-result.jsonl, flai/internal/serve/start.go, flai/internal/serve/start_test.go, flai/internal/serve/restart.go, flai/internal/serve/restart_test.go, flai/internal/serve/replan.go, flai/internal/serve/replan_test.go, flai/internal/serve/orchestrate_hold.go, flai/internal/serve/orchestrate_hold_test.go, flai/internal/serve/analysis_schedule.go, flai/internal/serve/analysis_schedule_test.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/curate_schedule_test.go, flai/internal/serve/notify.go, flai/internal/serve/notify_test.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/inbox_test.go, flai/cmd/mcp.go, flai/cmd/mcp_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/contract_test.go, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/agent.test.ts, flaiover/src/routes/api/agent/+server.ts, flaiover/src/routes/api/agent/agent.test.ts, flaiover/src/lib/hostflai.svelte.ts, flaiover/src/lib/components/BudgetBanner.svelte, flaiover/src/lib/components/BudgetBanner.svelte.test.ts, flaiover/src/routes/+layout.svelte, flaiover/src/routes/layout.svelte.test.ts, design/system/strategic-agents.md, design/system/agent-narrative.md, docs/operators/index.md, docs/operators/runbooks/backup.md, docs/users/flai.md, docs/users/flaiover.md]
+touches: [flai/internal/serve, flai/internal/mcpserver, flaiover/src, design/system/flai-cli.md, design/system/project-manifest.md, design/system/flaiover-dashboard.md, docs, flai/internal/serve/budget.go, flai/internal/serve/budget_test.go, flai/internal/serve/serve.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/testdata/usage-limit-result.jsonl, flai/internal/serve/start.go, flai/internal/serve/start_test.go, flai/internal/serve/restart.go, flai/internal/serve/restart_test.go, flai/internal/serve/replan.go, flai/internal/serve/replan_test.go, flai/internal/serve/orchestrate_hold.go, flai/internal/serve/orchestrate_hold_test.go, flai/internal/serve/analysis_schedule.go, flai/internal/serve/analysis_schedule_test.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/curate_schedule_test.go, flai/internal/serve/notify.go, flai/internal/serve/notify_test.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/inbox_test.go, flai/cmd/mcp.go, flai/cmd/mcp_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/contract_test.go, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/agent.test.ts, flaiover/src/routes/api/agent/+server.ts, flaiover/src/routes/api/agent/agent.test.ts, flaiover/src/lib/hostflai.svelte.ts, flaiover/src/lib/components/BudgetBanner.svelte, flaiover/src/lib/components/BudgetBanner.svelte.test.ts, flaiover/src/routes/+layout.svelte, flaiover/src/routes/layout.svelte.test.ts, design/system/strategic-agents.md, design/system/agent-narrative.md, docs/operators/index.md, docs/operators/runbooks/backup.md, docs/users/flai.md, docs/users/flaiover.md, flai/cmd/mcp_http.go, flai/internal/storystart/start.go, flai/internal/taskdone/taskdone.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/cmd/serve.go]
 after: [S-0532]
 agent:
   harness: claude-code
@@ -26,20 +32,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 553
-  estimated: true
-  priced_by: estimate
+  seconds: 5514
+  priced_by: harness
   turns:
     - day: 2026-10-29
-      hand_edits: 1
-      work: 21
+      ceremony: 5
+      test_runs: 6
+      hand_edits: 2
+      work: 76
   models:
     - model: claude-opus-5-5
-      input: 88
-      output: 503
-      cache_read: 4434790
-      cache_write: 308986
-      cost: 1.622
+      input: 924
+      output: 417193
+      cache_read: 62188711
+      cache_write: 2096908
+      cost: 32.402
   strategic:
     - kind: planner
       seconds: 724
@@ -58,15 +65,21 @@ usage:
           cache_write: 221315
           cost: 0.9426
     - kind: orchestrator
-      seconds: 101
+      seconds: 4911
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 23
-          output: 283
-          cache_read: 2909882
-          cache_write: 18986
-          cost: 0.6446
+          input: 227
+          output: 3927
+          cache_read: 55994655
+          cache_write: 60608
+          cost: 12.3601
+        - model: claude-sonnet-5-5
+          input: 14
+          output: 80
+          cache_read: 244868
+          cache_write: 63456
+          cost: 0.2125
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1h
@@ -89,12 +102,12 @@ forecast:
 ADR-0209 §5. When the API refuses a run with the account's usage limit, the run ends with exit 1 and flai serve starts it again a minute later (`orchestrateRetry`, ADR-0087 §1), or up to `agent.auto_restarts` times for a story's agent (ADR-0108), with no backoff and no knowledge of why. Each of the five projects the host serves learns of the limit by failing in turn, and nothing tells the planner, the curator, the analyzer, or the operator. This story gives flai serve one budget state per provider on the host, kept in the serve folder beside `upgrade-asks.json`: set on a usage-limit refusal (Claude Code's `api_error: usage_limit_reached`, with the reset time it reports, or a backoff doubling from `5m` to `1h` when it reports none), it holds every start of any role and any story's agent on that provider across every project the host serves, counts none of them as a failed run, starts one probe at the reset time or after the backoff, clears on the probe's success and extends on its refusal, and is a journal entry, a `budget` field in every agent's `inbox` with the reset time, a banner on the dashboard, and a reminder through the ADR-0205 channel when one is set. Reasons queued for the orchestrator (the following story) and stories' agents wait where they are.
 
 ## Acceptance criteria
-- [ ] A run ending with the usage-limit refusal sets the provider's budget state with the reset time the API reported, or the backoff, and `flai serve journal` records it; a test reproduces the refusal from a recorded Claude Code result line
-- [ ] While the state is set, no role's run and no story's agent is started on that provider on any served project, none counts against `auto_restarts` or `orchestrateRetry`, and a start the operator asks for by hand says why it is held
-- [ ] One probe run starts at the reset time or after the backoff; success clears the state and starts what waited; refusal doubles the backoff up to `1h`
-- [ ] `inbox` carries `budget` with the provider and the reset time while the state is set, and the MCP instructions tell an agent to hold rather than retry
-- [ ] The dashboard shows a banner on every page naming the provider and the reset time, and the ADR-0205 channel gets one reminder per state change
-- [ ] The design (`flai-cli.md`, `project-manifest.md`, `flaiover-dashboard.md`), the serve docs, and the operator docs describe the state, its file, and the probe
+- [x] A run ending with the usage-limit refusal sets the provider's budget state with the reset time the API reported, or the backoff, and `flai serve journal` records it; a test reproduces the refusal from a recorded Claude Code result line
+- [x] While the state is set, no role's run and no story's agent is started on that provider on any served project, none counts against `auto_restarts` or `orchestrateRetry`, and a start the operator asks for by hand says why it is held
+- [x] One probe run starts at the reset time or after the backoff; success clears the state and starts what waited; refusal doubles the backoff up to `1h`
+- [x] `inbox` carries `budget` with the provider and the reset time while the state is set, and the MCP instructions tell an agent to hold rather than retry
+- [x] The dashboard shows a banner on every page naming the provider and the reset time, and the ADR-0205 channel gets one reminder per state change
+- [x] The design (`flai-cli.md`, `project-manifest.md`, `flaiover-dashboard.md`), the serve docs, and the operator docs describe the state, its file, and the probe
 
 ## Tasks
 - T-2282 flai serve keeps a budget state per provider in budget.json in the serve folder: set from a usage limit, held, probed once, cleared, or extended, each change journaled

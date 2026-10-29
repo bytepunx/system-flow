@@ -3,11 +3,11 @@ id: T-2288
 type: task
 nature: improvement
 title: The ADR-0205 channel gets one notice per budget state change, set, extended, or cleared, with the provider, the limit, and until, and none when no channel is set
-status: in-progress
+status: done
 parent: S-0534
 owner: alex
 created: 2026-10-28T21:26:53Z
-updated: 2026-10-29T05:56:40Z
+updated: 2026-10-29T06:33:09Z
 transitions:
   - to: ready
     at: 2026-10-29T05:56:39Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-29T05:56:40Z
     by: agent-S-0534
+  - to: done
+    at: 2026-10-29T06:33:09Z
+    by: agent-S-0534
 stream: S-0534
 tags: [flai, serve, notify, budget]
-touches: [flai/internal/serve/notify.go, flai/internal/serve/notify_test.go, flai/internal/serve/budget.go, flai/internal/serve/budget_test.go]
+touches: [flai/internal/serve/notify.go, flai/internal/serve/notify_test.go, flai/internal/serve/budget.go, flai/internal/serve/budget_test.go, flai/internal/serve/serve.go]
 after: [T-2282]
+usage:
+  source: log
+  seconds: 2189
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 56
+      output: 25383
+      cache_read: 3783752
+      cache_write: 127582
+      cost: 1.9714
 ---
 # T-2288 The ADR-0205 channel gets one notice per budget state change, set, extended, or cleared, with the provider, the limit, and until, and none when no channel is set
 

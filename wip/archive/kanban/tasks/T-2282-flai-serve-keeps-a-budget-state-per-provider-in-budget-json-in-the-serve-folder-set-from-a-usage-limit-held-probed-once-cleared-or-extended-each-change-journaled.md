@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 467
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 50
-      output: 274
-      cache_read: 2100384
-      cache_write: 125633
-      cost: 0.7611
+      input: 33
+      output: 14749
+      cache_read: 2198528
+      cache_write: 74131
+      cost: 1.1455
 ---
 # T-2282 flai serve keeps a budget state per provider in budget.json in the serve folder: set from a usage limit, held, probed once, cleared, or extended, each change journaled
 

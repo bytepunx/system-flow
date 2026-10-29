@@ -3,15 +3,36 @@ id: T-2301
 type: task
 nature: feature
 title: orchestration.coalesce, orchestration.run_timeout, and orchestration.schedule are manifest keys flai check validates and flai manifest set sets, with ADR-0209's defaults
-status: backlog
+status: done
 parent: S-0536
 owner: alex
 created: 2026-10-28T21:45:17Z
-updated: 2026-10-28T21:45:17Z
-transitions: []
+updated: 2026-10-29T07:24:58Z
+transitions:
+  - to: ready
+    at: 2026-10-29T07:21:04Z
+    by: agent-S-0536
+  - to: in-progress
+    at: 2026-10-29T07:21:05Z
+    by: agent-S-0536
+  - to: done
+    at: 2026-10-29T07:24:58Z
+    by: agent-S-0536
 stream: S-0536
 tags: [flai, manifest, orchestrator]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, docs/operators/settings.md]
+usage:
+  source: log
+  seconds: 229
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 72
+      output: 428
+      cache_read: 3781608
+      cache_write: 148593
+      cost: 1.3454
 ---
 # T-2301 orchestration.coalesce, orchestration.run_timeout, and orchestration.schedule are manifest keys flai check validates and flai manifest set sets, with ADR-0209's defaults
 

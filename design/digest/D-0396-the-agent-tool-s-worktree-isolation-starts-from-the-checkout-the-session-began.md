@@ -2,7 +2,7 @@
 id: D-0396
 title: The Agent tool's worktree isolation starts from the checkout the session began in, not the story branch, so a task worktree is made by hand from story/S-nnnn
 kind: decision
-sources: [S-0176, S-0502]
+sources: [S-0176, S-0502, S-0417]
 topics: [orchestration, git, conventions]
 paths: [design/conventions/delegation.md]
 date: 2026-10-28
@@ -18,4 +18,6 @@ S-0176 made each layer's task worktree with `git worktree add -b task/T-nnnn ...
 
 S-0502 did the same for its layers 2 and 3: "Layers 2 and 3 ran in task worktrees (`git worktree add -b task/T-nnnn`) beside the story's, since `cmd` and `mcpserver` build `manifest` and `serve` builds `threads`; I applied each diff to the story worktree after review" (wip/archive/agents/S-0502.md, Decisions). Task worktrees also keep one task's half-done package from failing a sibling's build.
 
-Sources: S-0176, S-0502.
+S-0417 ran its first layer the same way and for the same reason: "Layer 1 runs at once, each task in its own worktree from `story/S-0417` (`.flai-cache/worktrees/T-nnnn`): the harness and the activity code import the manifest, so a half-done edit in one would fail the others' tests. Their files are copied back to the story's worktree before each close" (wip/archive/agents/S-0417.md, Decisions).
+
+Sources: S-0176, S-0502, S-0417.

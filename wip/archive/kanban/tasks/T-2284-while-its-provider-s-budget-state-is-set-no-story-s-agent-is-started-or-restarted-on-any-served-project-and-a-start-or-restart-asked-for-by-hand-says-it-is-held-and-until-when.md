@@ -3,16 +3,37 @@ id: T-2284
 type: task
 nature: improvement
 title: While its provider's budget state is set, no story's agent is started or restarted on any served project, and a start or restart asked for by hand says it is held and until when
-status: backlog
+status: done
 parent: S-0534
 owner: alex
 created: 2026-10-28T21:26:06Z
-updated: 2026-10-28T21:26:06Z
-transitions: []
+updated: 2026-10-29T07:01:03Z
+transitions:
+  - to: ready
+    at: 2026-10-29T06:43:14Z
+    by: agent-S-0534
+  - to: in-progress
+    at: 2026-10-29T06:43:15Z
+    by: agent-S-0534
+  - to: done
+    at: 2026-10-29T07:01:03Z
+    by: agent-S-0534
 stream: S-0534
 tags: [flai, serve, budget]
-touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/start.go, flai/internal/serve/start_test.go, flai/internal/serve/restart.go, flai/internal/serve/restart_test.go]
+touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/start.go, flai/internal/serve/start_test.go, flai/internal/serve/restart.go, flai/internal/serve/restart_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go]
 after: [T-2283]
+usage:
+  source: log
+  seconds: 1068
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 108
+      output: 48658
+      cache_read: 7253116
+      cache_write: 244564
+      cost: 3.7791
 ---
 # T-2284 While its provider's budget state is set, no story's agent is started or restarted on any served project, and a start or restart asked for by hand says it is held and until when
 

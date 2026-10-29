@@ -3,11 +3,11 @@ id: T-2287
 type: task
 nature: improvement
 title: The host API's agent.status and flai serve status carry each provider's budget state, with its limit, until, and probe
-status: in-progress
+status: done
 parent: S-0534
 owner: alex
 created: 2026-10-28T21:26:43Z
-updated: 2026-10-29T05:56:37Z
+updated: 2026-10-29T06:34:06Z
 transitions:
   - to: ready
     at: 2026-10-29T05:56:36Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-29T05:56:37Z
     by: agent-S-0534
+  - to: done
+    at: 2026-10-29T06:34:06Z
+    by: agent-S-0534
 stream: S-0534
 tags: [flai, hostapi, budget]
-touches: [flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/contract_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go]
+touches: [flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/contract_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/cmd/serve.go]
 after: [T-2282]
+usage:
+  source: log
+  seconds: 2249
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 75
+      output: 33769
+      cache_read: 5033784
+      cache_write: 169731
+      cost: 2.6227
 ---
 # T-2287 The host API's agent.status and flai serve status carry each provider's budget state, with its limit, until, and probe
 

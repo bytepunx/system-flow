@@ -3,16 +3,37 @@ id: T-2289
 type: task
 nature: improvement
 title: The dashboard shows a banner on every page while a provider's budget state is set, naming the provider, the limit, and the reset time in the viewer's time
-status: backlog
+status: done
 parent: S-0534
 owner: alex
 created: 2026-10-28T21:27:16Z
-updated: 2026-10-28T21:27:16Z
-transitions: []
+updated: 2026-10-29T07:01:20Z
+transitions:
+  - to: ready
+    at: 2026-10-29T06:43:19Z
+    by: agent-S-0534
+  - to: in-progress
+    at: 2026-10-29T06:43:20Z
+    by: agent-S-0534
+  - to: done
+    at: 2026-10-29T07:01:20Z
+    by: agent-S-0534
 stream: S-0534
 tags: [flaiover, dashboard, budget]
 touches: [flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/agent.test.ts, flaiover/src/routes/api/agent/+server.ts, flaiover/src/routes/api/agent/agent.test.ts, flaiover/src/lib/hostflai.svelte.ts, flaiover/src/lib/components/BudgetBanner.svelte, flaiover/src/lib/components/BudgetBanner.svelte.test.ts, flaiover/src/routes/+layout.svelte, flaiover/src/routes/layout.svelte.test.ts]
 after: [T-2287]
+usage:
+  source: log
+  seconds: 1080
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 92
+      output: 41559
+      cache_read: 6195009
+      cache_write: 208886
+      cost: 3.2278
 ---
 # T-2289 The dashboard shows a banner on every page while a provider's budget state is set, naming the provider, the limit, and the reset time in the viewer's time
 

@@ -3,16 +3,37 @@ id: T-2290
 type: task
 nature: improvement
 title: The design, the serve docs, and the operator docs describe the budget state, budget.json, the hold, the probe, the inbox field, the banner, and the notice
-status: backlog
+status: done
 parent: S-0534
 owner: alex
 created: 2026-10-28T21:27:35Z
-updated: 2026-10-28T21:27:35Z
-transitions: []
+updated: 2026-10-29T07:07:29Z
+transitions:
+  - to: ready
+    at: 2026-10-29T07:01:33Z
+    by: agent-S-0534
+  - to: in-progress
+    at: 2026-10-29T07:01:34Z
+    by: agent-S-0534
+  - to: done
+    at: 2026-10-29T07:07:29Z
+    by: agent-S-0534
 stream: S-0534
 tags: [docs, design, budget]
 touches: [design/system/flai-cli.md, design/system/project-manifest.md, design/system/flaiover-dashboard.md, design/system/strategic-agents.md, design/system/agent-narrative.md, docs/operators/index.md, docs/operators/runbooks/backup.md, docs/users/flai.md, docs/users/flaiover.md]
 after: [T-2284, T-2285, T-2286, T-2288, T-2289]
+usage:
+  source: log
+  seconds: 355
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 108
+      output: 48701
+      cache_read: 7259567
+      cache_write: 244781
+      cost: 3.7824
 ---
 # T-2290 The design, the serve docs, and the operator docs describe the budget state, budget.json, the hold, the probe, the inbox field, the banner, and the notice
 

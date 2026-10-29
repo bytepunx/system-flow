@@ -4,10 +4,10 @@ title: "Plan for S-0534: nine tasks in four layers"
 anchor:
   path: wip/kanban/stories/S-0534-a-usage-limit-refusal-sets-a-budget-state-on-the-host-that-holds-every-start-on-that-provider-until-the-reset-or-a-backoff-probes-once-and-reaches-every-inbox-the-journal-the-dashboard-and-the-adr-0205-channel.md
   item: S-0534
-status: answered
-participants: [planner-S-0534, orchestrator]
+status: resolved
+participants: [planner-S-0534, orchestrator, alex]
 created: 2026-10-28T21:28:52Z
-updated: 2026-10-28T21:29:09Z
+updated: 2026-10-29T07:25:47Z
 ---
 
 # TH-0711 Plan for S-0534: nine tasks in four layers
@@ -71,3 +71,6 @@ Source: design/conventions/strategic-agents.md § As the planner
 **Or:** name either one here, and the planner adds it to S-0534 as a task.
 
 Source: design/adrs/0209-the-orchestrator-runs-for-a-reason-and-ends-started-by-flai-serve-on-the-events.md
+
+### 2026-10-29T07:25:47Z alex
+Resolved: S-0534 was accepted

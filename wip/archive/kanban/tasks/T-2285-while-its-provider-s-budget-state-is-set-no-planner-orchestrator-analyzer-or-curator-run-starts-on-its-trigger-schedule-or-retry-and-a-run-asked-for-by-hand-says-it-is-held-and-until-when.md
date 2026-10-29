@@ -3,16 +3,37 @@ id: T-2285
 type: task
 nature: improvement
 title: While its provider's budget state is set, no planner, orchestrator, analyzer, or curator run starts, on its trigger, schedule, or retry, and a run asked for by hand says it is held and until when
-status: backlog
+status: done
 parent: S-0534
 owner: alex
 created: 2026-10-28T21:26:16Z
-updated: 2026-10-28T21:26:16Z
-transitions: []
+updated: 2026-10-29T07:01:14Z
+transitions:
+  - to: ready
+    at: 2026-10-29T06:43:17Z
+    by: agent-S-0534
+  - to: in-progress
+    at: 2026-10-29T06:43:18Z
+    by: agent-S-0534
+  - to: done
+    at: 2026-10-29T07:01:14Z
+    by: agent-S-0534
 stream: S-0534
 tags: [flai, serve, budget]
-touches: [flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/replan.go, flai/internal/serve/replan_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/orchestrate_hold.go, flai/internal/serve/orchestrate_hold_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/analysis_schedule.go, flai/internal/serve/analysis_schedule_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/curate_schedule_test.go]
+touches: [flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/replan.go, flai/internal/serve/replan_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/orchestrate_hold.go, flai/internal/serve/orchestrate_hold_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/analysis_schedule.go, flai/internal/serve/analysis_schedule_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/curate_schedule_test.go, flai/internal/serve/role.go, flai/internal/serve/role_test.go]
 after: [T-2283]
+usage:
+  source: log
+  seconds: 1076
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 154
+      output: 69440
+      cache_read: 10351107
+      cache_write: 349023
+      cost: 5.3932
 ---
 # T-2285 While its provider's budget state is set, no planner, orchestrator, analyzer, or curator run starts, on its trigger, schedule, or retry, and a run asked for by hand says it is held and until when
 

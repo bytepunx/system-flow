@@ -3,11 +3,11 @@ id: T-2286
 type: task
 nature: improvement
 title: inbox carries budget with the provider, the limit, and the reset time while a provider's budget state is set, and the MCP instructions tell an agent to hold rather than retry
-status: in-progress
+status: done
 parent: S-0534
 owner: alex
 created: 2026-10-28T21:26:36Z
-updated: 2026-10-29T05:56:35Z
+updated: 2026-10-29T06:33:15Z
 transitions:
   - to: ready
     at: 2026-10-29T05:56:34Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-29T05:56:35Z
     by: agent-S-0534
+  - to: done
+    at: 2026-10-29T06:33:15Z
+    by: agent-S-0534
 stream: S-0534
 tags: [flai, mcp, inbox, budget]
-touches: [flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/inbox_test.go, flai/cmd/mcp.go, flai/cmd/mcp_test.go]
+touches: [flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/inbox_test.go, flai/cmd/mcp.go, flai/cmd/mcp_test.go, flai/cmd/mcp_http.go, flai/internal/taskdone/taskdone.go, flai/internal/storystart/start.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/story_start.go]
 after: [T-2282]
+usage:
+  source: log
+  seconds: 2200
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 60
+      output: 27039
+      cache_read: 4030499
+      cache_write: 135902
+      cost: 2.1
 ---
 # T-2286 inbox carries budget with the provider, the limit, and the reset time while a provider's budget state is set, and the MCP instructions tell an agent to hold rather than retry
 

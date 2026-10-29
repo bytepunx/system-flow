@@ -2,7 +2,7 @@
 id: D-0416
 title: flai test's go-test tier can hit go test's 10-minute timeout on flai/internal/mcpserver under -race on a loaded host with no test hung, naming only the package (I-0227)
 kind: cause
-sources: [S-0535, I-0227]
+sources: [S-0535, I-0227, S-0417]
 topics: [flai, go, mcp, code]
 paths: [flai/internal/mcpserver, system-flow.yaml]
 date: 2026-10-29
@@ -18,6 +18,8 @@ S-0535 changed `flai/internal/mcpserver`. `flai test` on its paths failed the go
 
 The agent recorded a deviation in its narrative: it ran `go test` by hand three times, "one test with `-run`; the `mcpserver` package with `-timeout 560s`; it and main's copy without `-race`". "That showed no test hangs or slowed." The host's load average was about 13 on 24 cores. Without `-race` the package took 130s on the branch against 76s for main's copy; the gap is `TestPrimeOnThisRepository` and `TestPrimeComesInPartsOnThisRepository`, which prime the real repository.
 
+S-0417 met it again and bumped I-0227: "the `mcpserver` tests ran into Go's 10-minute timeout when three packages ran together; alone they passed in 9m20s" (wip/archive/agents/S-0417.md, Decisions). So the package sits just under the limit on its own, and other packages running beside it push it over.
+
 So a later story that changes `mcpserver` and sees this timeout should suspect load, not a hang, and check that before chasing a test. [I-0227](../issues/I-0227-flai-test-s-go-test-tier-runs-the-mcpserver-package-with-race-into-go-test-s-10-minute-default-timeout-on-a-loaded-host-and-names-only-the-package-so-a-story-that-changes-mcpserver-cannot-pass-its-tests.md) is open and lists the remedies: a longer `-timeout` on the tier, naming the tests still running when the timeout fires, or keeping the two prime tests out of `-race`. Running the tests by hand is still a deviation from `tooling.md`, and has to be recorded as one.
 
-Source: S-0535's narrative (`wip/archive/agents/S-0535.md`), § Decisions, and I-0227.
+Sources: S-0535's narrative (`wip/archive/agents/S-0535.md`), § Decisions; S-0417's narrative (`wip/archive/agents/S-0417.md`), § Decisions; and I-0227.

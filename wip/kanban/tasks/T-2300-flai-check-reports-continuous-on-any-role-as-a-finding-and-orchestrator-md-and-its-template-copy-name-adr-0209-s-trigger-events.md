@@ -3,12 +3,18 @@ id: T-2300
 type: task
 nature: feature
 title: flai check reports continuous on any role as a finding, and orchestrator.md and its template copy name ADR-0209's trigger events
-status: backlog
+status: in-progress
 parent: S-0536
 owner: alex
 created: 2026-10-28T21:44:58Z
-updated: 2026-10-28T21:45:32Z
-transitions: []
+updated: 2026-10-29T07:25:40Z
+transitions:
+  - to: ready
+    at: 2026-10-29T07:25:39Z
+    by: agent-S-0536
+  - to: in-progress
+    at: 2026-10-29T07:25:40Z
+    by: agent-S-0536
 stream: S-0536
 tags: [flai, roles, orchestrator]
 touches: [flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/check/roles_test.go, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md]

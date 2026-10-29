@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 33.1072
-accrued_seconds: 2918
-tasks_completed: 19
-last_run: 2026-10-29T05:21:01Z
+accrued_cost: 34.6917
+accrued_seconds: 2986
+tasks_completed: 20
+last_run: 2026-10-29T06:03:59Z
 ---
 
 # Curator activity
@@ -163,3 +163,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 59
 - Cost: 0.6279 USD, estimated
+
+### 2026-10-29T06:03:59Z
+
+- Summary: I wrote no new entries and merged two candidates from S-0417: one into D-0396 (task worktrees made by hand from the story branch) and one into D-0416 (`mcpserver` tests near go test's 10-minute timeout, I-0227). I absorbed none, and `flai digest compact` compacted none. S-0417's other seven decisions were progress notes, or facts `design/system/strategic-agents.md` § A role a project defines (S-0417) already states. I checked for absorption only against the entries tied to the design files S-0417 changed, not against all 227 active entries.
+- Trigger: accepted S-0417
+- Items: D-0396, D-0416, D-0418
+- Seconds: 68
+- Cost: 1.5845 USD, estimated

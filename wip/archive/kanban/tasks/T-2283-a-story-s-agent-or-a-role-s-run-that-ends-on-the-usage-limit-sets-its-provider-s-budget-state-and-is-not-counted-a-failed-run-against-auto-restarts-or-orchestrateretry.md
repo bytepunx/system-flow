@@ -3,11 +3,11 @@ id: T-2283
 type: task
 nature: improvement
 title: A story's agent or a role's run that ends on the usage limit sets its provider's budget state and is not counted a failed run against auto_restarts or orchestrateRetry
-status: in-progress
+status: done
 parent: S-0534
 owner: alex
 created: 2026-10-28T21:25:49Z
-updated: 2026-10-29T05:56:33Z
+updated: 2026-10-29T06:33:02Z
 transitions:
   - to: ready
     at: 2026-10-29T05:56:32Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-29T05:56:33Z
     by: agent-S-0534
+  - to: done
+    at: 2026-10-29T06:33:02Z
+    by: agent-S-0534
 stream: S-0534
 tags: [flai, serve, budget]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/testdata/usage-limit-result.jsonl]
 after: [T-2282]
+usage:
+  source: log
+  seconds: 2189
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 109
+      output: 49073
+      cache_read: 7314987
+      cache_write: 246650
+      cost: 3.8113
 ---
 # T-2283 A story's agent or a role's run that ends on the usage limit sets its provider's budget state and is not counted a failed run against auto_restarts or orchestrateRetry
 
