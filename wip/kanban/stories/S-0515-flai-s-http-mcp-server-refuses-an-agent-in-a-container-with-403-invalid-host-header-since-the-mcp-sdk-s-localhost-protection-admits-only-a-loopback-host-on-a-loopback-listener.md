@@ -6,7 +6,7 @@ title: flai's HTTP MCP server refuses an agent in a container with 403 invalid H
 status: ready
 owner: alex
 created: 2026-10-28T12:52:34Z
-updated: 2026-10-29T07:28:28Z
+updated: 2026-10-29T07:33:10Z
 transitions:
   - to: ready
     at: 2026-10-29T07:27:15Z
@@ -35,15 +35,15 @@ usage:
           cache_write: 394452
           cost: 11.6085
     - kind: orchestrator
-      seconds: 228
+      seconds: 241
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 85
-          output: 1164
-          cache_read: 14186680
-          cache_write: 69510
-          cost: 3.1303
+          input: 91
+          output: 1228
+          cache_read: 15870105
+          cache_write: 79787
+          cost: 3.5038
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m
@@ -54,10 +54,10 @@ cost_of_delay:
   at: 2026-10-28T13:03:21Z
 forecast:
   duration: 45m
-  delivery: 2026-10-29T08:22:00Z
-  basis: "Its own forecast of 45m; 2nd in the pull order with an in-progress limit of 5, behind S-0536 and S-0537."
+  delivery: 2026-10-29T08:27:00Z
+  basis: "Its own forecast of 45m; 1st in the pull order with an in-progress limit of 5, behind S-0536."
   by: flai
-  at: 2026-10-29T07:28:28Z
+  at: 2026-10-29T07:33:10Z
 finalized:
   by: alex
   at: 2026-10-28T12:57:10Z
