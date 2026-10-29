@@ -32,7 +32,7 @@ usage:
       output: 620
       cache_read: 6209015
       cache_write: 499713
-      cost: 2.2902
+      cost: 2.2907
 ---
 # T-1737 Activity documents, activity_log, and flai activity log take any defined role's name as their kind, and wip/agents/index.md lists each and flai check validates it
 

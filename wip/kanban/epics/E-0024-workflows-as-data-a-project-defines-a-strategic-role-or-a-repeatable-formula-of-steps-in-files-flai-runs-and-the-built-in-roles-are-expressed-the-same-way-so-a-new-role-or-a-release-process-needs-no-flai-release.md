@@ -25,7 +25,7 @@ topics: [cli, orchestration, planning, template, conventions]
 touches: [flai/internal/serve, flai/internal/guard, flai/internal/context, flai/internal/hostapi, flai/cmd, flaiover/src, design/system/strategic-agents.md, design/system/metrics.md, design/conventions/strategic-agents.md, ".claude/agents", docs/operators/index.md, docs/users/flai.md, template]
 usage:
   source: sum
-  seconds: 17466
+  seconds: 20674
   estimated: true
   priced_by: estimate
   turns:
@@ -34,16 +34,16 @@ usage:
       hand_edits: 7
       work: 188
     - day: 2026-10-29
-      ceremony: 3
+      ceremony: 4
       hand_edits: 1
-      work: 43
+      work: 51
   models:
     - model: claude-opus-5-5
-      input: 1896
-      output: 596556
-      cache_read: 126377974
-      cache_write: 5837654
-      cost: 66.9708
+      input: 2176
+      output: 597998
+      cache_read: 148536124
+      cache_write: 6873509
+      cost: 74.892
   strategic:
     - kind: planner
       seconds: 1866

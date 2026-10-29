@@ -24,16 +24,16 @@ touches: [docs/users/flai.md, design/system/agent-adapters.md]
 after: [T-2320]
 usage:
   source: log
-  seconds: 23
+  seconds: 29
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 3
-      output: 38
-      cache_read: 274728
-      cache_write: 1662
-      cost: 0.0944
+      input: 4
+      output: 645
+      cache_read: 268259
+      cache_write: 8129
+      cost: 0.1316
 ---
 # T-2321 Document permission_prompt's refusal of an edit whose new string lost the old string's trailing space
 

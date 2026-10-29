@@ -32,7 +32,7 @@ usage:
       output: 315
       cache_read: 4200137
       cache_write: 173884
-      cost: 1.4932
+      cost: 1.4935
 ---
 # T-1736 The harness starts a defined role with its prompt from its role file's body, its definition, and its environment, on claude-code with --agent over that definition
 

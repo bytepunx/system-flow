@@ -32,7 +32,7 @@ usage:
       output: 508
       cache_read: 4944452
       cache_write: 327178
-      cost: 1.7996
+      cost: 1.8
 ---
 # T-1735 The manifest takes roles.name.agent and roles.name.permissions, merged and validated as planning.agent and orchestration.permissions are, and flai manifest set writes them
 

@@ -3,10 +3,10 @@ id: S-0539
 type: story
 nature: improvement
 title: An Edit whose old and new strings end in a space drops the space, so a protected .claude/settings.json write needs a second permission round to fix
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-29T02:01:44Z
-updated: 2026-10-29T04:20:50Z
+updated: 2026-10-29T05:16:30Z
 transitions:
   - to: ready
     at: 2026-10-29T03:56:58Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-29T03:57:27Z
     by: agent-S-0539
+  - to: review
+    at: 2026-10-29T04:58:57Z
+    by: agent-S-0539
+  - to: done
+    at: 2026-10-29T05:16:30Z
+    by: orchestrator
 tags: [flai, mcp, permission-prompt]
 touches: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, docs/users/flai.md, design/system/agent-adapters.md, design/issues/I-0223-an-edit-whose-old-and-new-strings-end-in-a-space-drops-the-space-so-a-protected-claude-settings-json-write-needs-a-second-permission-round-to-fix.md, design/issues/summary.md, design/issues/I-0227-flai-test-s-go-test-tier-runs-the-mcpserver-package-with-race-into-go-test-s-10-minute-default-timeout-on-a-loaded-host-and-names-only-the-package-so-a-story-that-changes-mcpserver-cannot-pass-its-tests.md]
 agent:
@@ -23,31 +29,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 744
-  estimated: true
-  priced_by: estimate
+  seconds: 3700
+  priced_by: harness
   turns:
     - day: 2026-10-29
-      ceremony: 1
-      work: 21
+      ceremony: 2
+      hand_edits: 1
+      work: 40
   models:
     - model: claude-opus-5-5
-      input: 48
-      output: 296
-      cache_read: 2825730
-      cache_write: 185721
-      cost: 1.0281
+      input: 96
+      output: 17624
+      cache_read: 7327653
+      cache_write: 222057
+      cost: 3.5949
   strategic:
     - kind: orchestrator
-      seconds: 192
+      seconds: 2286
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 113
-          output: 1845
-          cache_read: 18194130
-          cache_write: 31829
-          cost: 4.0193
+          input: 147
+          output: 2418
+          cache_read: 25562765
+          cache_write: 43190
+          cost: 5.6468
+        - model: claude-sonnet-5-5
+          input: 12
+          output: 76
+          cache_read: 140024
+          cache_write: 47412
+          cost: 0.1292
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -73,8 +85,8 @@ finalized:
 This story remediates [I-0223](../../../design/issues/I-0223-an-edit-whose-old-and-new-strings-end-in-a-space-drops-the-space-so-a-protected-claude-settings-json-write-needs-a-second-permission-round-to-fix.md), "An Edit whose old and new strings end in a space drops the space, so a protected .claude/settings.json write needs a second permission round to fix". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0223 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0223 is closed with `flai issue close I-0223 --reason` saying what fixed it
+- [x] The cause I-0223 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0223 is closed with `flai issue close I-0223 --reason` saying what fixed it
 
 ## Tasks
 - T-2320 permission_prompt refuses at once an edit whose old string ends in a space or tab and whose new string does not
@@ -107,3 +119,14 @@ Figures:
 
 - Forecast: `flai forecast` gave 3m from size 2 (2 criteria, 0 touches) at 80 s a unit over 13 small improvement stories. That figure was taken before any touches were written. It is raised to 1h for one Go check with its tests, two documents, the issue's close, and the close-out's test tiers. The delivery stays at flai's 2026-10-29T22:24:00Z, which the 36 stories ahead in the pull order set more than this story's own time does.
 - Cost of delay: `flai cod` gives 37.50 USD a week, from the input flai set from I-0223: 15m lost per 168h cycle at 150 USD an hour. It stands, since the issue has one instance.
+
+### Accepted by the orchestrator
+
+- Verified: 58c1387f8080596f44cb8d2724f3b9aef3e2cd89
+- Batch: 20261029-045945
+- Enqueued verified: 58c1387f8080596f44cb8d2724f3b9aef3e2cd89
+- At: 2026-10-29T05:16:30Z
+
+Verdict: S-0539 meets both criteria at 58c1387f; flai verify passed with integration and smoke left to the queue, and every changed file is under the story's touches.
+- 1: flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, docs/users/flai.md, design/system/agent-adapters.md
+- 2: design/issues/I-0223-an-edit-whose-old-and-new-strings-end-in-a-space-drops-the-space-so-a-protected-claude-settings-json-write-needs-a-second-permission-round-to-fix.md, design/issues/summary.md

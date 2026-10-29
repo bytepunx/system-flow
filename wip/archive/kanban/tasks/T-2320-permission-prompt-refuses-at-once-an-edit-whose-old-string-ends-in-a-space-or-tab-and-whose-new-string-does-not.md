@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 653
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 10
-      output: 94
-      cache_read: 764219
-      cache_write: 4821
-      cost: 0.2626
+      output: 1795
+      cache_read: 746421
+      cache_write: 22620
+      cost: 0.3662
 ---
 # T-2320 permission_prompt refuses at once an edit whose old string ends in a space or tab and whose new string does not
 

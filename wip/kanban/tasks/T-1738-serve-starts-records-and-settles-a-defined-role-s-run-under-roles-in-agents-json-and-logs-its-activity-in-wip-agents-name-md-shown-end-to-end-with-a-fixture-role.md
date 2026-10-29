@@ -24,7 +24,7 @@ touches: [flai/internal/serve/role.go, flai/internal/serve/role_test.go, flai/in
 after: [T-1735, T-1736, T-1737]
 usage:
   source: log
-  seconds: 583
+  seconds: 586
   estimated: true
   priced_by: estimate
   models:
@@ -33,7 +33,7 @@ usage:
       output: 645
       cache_read: 7561848
       cache_write: 205846
-      cost: 2.6517
+      cost: 2.6522
 ---
 # T-1738 serve starts, records, and settles a defined role's run under roles in agents.json and logs its activity in wip/agents/name.md, shown end to end with a fixture role
 

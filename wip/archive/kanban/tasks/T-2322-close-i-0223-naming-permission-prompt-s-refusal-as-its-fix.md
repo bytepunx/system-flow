@@ -24,16 +24,16 @@ touches: [design/issues/I-0223-an-edit-whose-old-and-new-strings-end-in-a-space-
 after: [T-2320]
 usage:
   source: log
-  seconds: 20
+  seconds: 39
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 3
-      output: 38
-      cache_read: 274728
-      cache_write: 1662
-      cost: 0.0944
+      input: 8
+      output: 1538
+      cache_read: 639597
+      cache_write: 19382
+      cost: 0.3138
 ---
 # T-2322 Close I-0223 naming permission_prompt's refusal as its fix
 

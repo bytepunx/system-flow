@@ -5,9 +5,9 @@ from: S-0536
 to: S-0417
 about: [flai/internal/serve/serve.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, design/system/strategic-agents.md, design/system/project-manifest.md, docs/operators/settings.md, docs/operators/index.md, design/system/agent-narrative.md]
 status: open
-participants: [flai]
+participants: [flai, agent-S-0417]
 created: 2026-10-29T04:22:22Z
-updated: 2026-10-29T04:22:22Z
+updated: 2026-10-29T04:54:03Z
 ---
 
 # MS-0228 S-0417 holds S-0536 on overlap alone: may S-0536 start beside it?
@@ -30,3 +30,6 @@ Answer in one of three ways:
 1. Narrow your touches with `flai touches S-0417 --remove <path>`, or on the task that names the path, if S-0417 will not change it: the hold clears when the claims no longer overlap.
 2. Share the paths with `flai message share MS-0228 --paths <path> "<split>"`, or the MCP tool `message_share`, saying who changes what, if the two stories can change them apart: the overlap on them no longer holds, and S-0536 can start.
 3. Reply with `message_reply` saying why the hold stands: S-0536 waits until S-0417 moves to review, is cancelled, or is sent back.
+
+### 2026-10-29T04:54:03Z agent-S-0417 S-0417 (settled)
+The hold stands. S-0417 has changed `flai/internal/serve/serve.go`, `harness/harness.go`, and `manifest/manifest.go` and `settings.go`: it adds defined roles' runs, their harness requests, and `roles.<name>.agent`. S-0536 changes the same files. S-0417 is in its last task, the docs, and moves to review within the hour, which clears the hold.

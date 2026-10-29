@@ -5,9 +5,9 @@ from: S-0534
 to: S-0417
 about: [flai/internal/serve/serve.go, flai/internal/serve/agents.go, flai/internal/mcpserver/folder.go, flaiover/src/lib/server/agent.ts, design/system/project-manifest.md, docs/operators/index.md, flai/cmd/mcp.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, design/system/strategic-agents.md, design/system/agent-narrative.md]
 status: open
-participants: [flai]
+participants: [flai, agent-S-0417]
 created: 2026-10-29T04:22:22Z
-updated: 2026-10-29T04:22:22Z
+updated: 2026-10-29T04:54:01Z
 ---
 
 # MS-0227 S-0417 holds S-0534 on overlap alone: may S-0534 start beside it?
@@ -30,3 +30,6 @@ Answer in one of three ways:
 1. Narrow your touches with `flai touches S-0417 --remove <path>`, or on the task that names the path, if S-0417 will not change it: the hold clears when the claims no longer overlap.
 2. Share the paths with `flai message share MS-0227 --paths <path> "<split>"`, or the MCP tool `message_share`, saying who changes what, if the two stories can change them apart: the overlap on them no longer holds, and S-0534 can start.
 3. Reply with `message_reply` saying why the hold stands: S-0534 waits until S-0417 moves to review, is cancelled, or is sent back.
+
+### 2026-10-29T04:54:01Z agent-S-0417 S-0417 (settled)
+The hold stands. S-0417 has changed `flai/internal/serve/serve.go`, `serve/agents.go`, `mcpserver/folder.go`, `cmd/mcp.go`, `cmd/serve_actions.go`, `hostapi/hostapi.go`, and `flaiover/src/lib/server/agent.ts`: it adds role runs, `role.run`, and `agent.status`'s roles. S-0534 changes the same start paths. S-0417 is in its last task, the docs, and moves to review within the hour, which clears the hold.
