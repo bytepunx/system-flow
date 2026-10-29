@@ -76,6 +76,24 @@ const (
 		`"canonicalModel":"claude-opus-5-5","provider":"firstParty","costBasis":"list"},"claude-haiku-4-5-20251001":{"inputTokens":853006,` +
 		`"outputTokens":55817,"cacheReadInputTokens":3654023,"cacheCreationInputTokens":260277,"webSearchRequests":24,"costUSD":2.06283955}},` +
 		`"permission_denials":[],"terminal_reason":"completed","result":"S-0298 is accepted.\n\nNext: S-0280."}`
+	// a run that ends on the usage limit (I-0212): the rate_limit_event that
+	// rejects it, and its result
+	ccLimitSession = "1441b203-a736-430d-a0da-597f87cc4f63"
+	ccLimitText    = "You've hit your weekly limit · resets Oct 28, 2am (America/Denver)"
+	ccLimitEvent   = `{"type":"rate_limit_event","rate_limit_info":{"status":"rejected","resetsAt":1793174400,"rateLimitType":"seven_day",` +
+		`"overageStatus":"rejected","overageDisabledReason":"org_level_disabled","isUsingOverage":false,"unifiedWindows":{"five_hour":` +
+		`{"utilization":0.21,"resetsAt":1793033400,"status":"allowed"},"seven_day":{"utilization":1,"resetsAt":1793174400,"status":"rejected",` +
+		`"surpassedThreshold":1}}},"uuid":"2132f9f6-9747-4763-94b0-eb399bbc28fd","session_id":"1441b203-a736-430d-a0da-597f87cc4f63"}`
+	ccLimitResult = `{"duration_api_ms":0,"stop_reason":"stop_sequence","session_id":"1441b203-a736-430d-a0da-597f87cc4f63","total_cost_usd":0,` +
+		`"usage":{"output_tokens_details":{"thinking_tokens":0},"input_tokens":0,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,` +
+		`"output_tokens":0,"service_tier":"standard","inference_geo":"","iterations":[],"speed":"standard","fallback_credit":null},"modelUsage":{},` +
+		`"permission_denials":[],"terminal_reason":"api_error","fast_mode_state":"off","safety_stops":0,"is_error":true,"num_turns":1,` +
+		`"subtype":"success","api_error_status":429,"api_error_origin":"first_party","api_error":"usage_limit_reached",` +
+		`"result":"You've hit your weekly limit · resets Oct 28, 2am (America/Denver)","type":"result","duration_ms":412,` +
+		`"uuid":"08775fa3-fee4-4409-9d86-9783aa52ef89","queued_turn_count":0,"result_index":0,"model_usage_since_last_result":{}}`
+	// a rate_limit_event that lets the run go on
+	ccAllowedEvent = `{"type":"rate_limit_event","rate_limit_info":{"status":"allowed_warning","resetsAt":1793174400,"rateLimitType":"seven_day",` +
+		`"utilization":0.9},"session_id":"1441b203-a736-430d-a0da-597f87cc4f63"}`
 )
 
 func ccAt(t *testing.T, s string) time.Time {
@@ -247,14 +265,71 @@ func TestClaudeCodePassesOverLinesThatHoldNoEvent(t *testing.T) {
 		`not json: a line the harness wrote to stderr`,
 		`{"type":"assistant","message":`,
 		`{"type":"system","subtype":"thinking_tokens","estimated_tokens":50,"estimated_tokens_delta":50,"session_id":"s"}`,
-		`{"type":"rate_limit_event","rate_limit_info":{"status":"allowed_warning","rateLimitType":"seven_day","utilization":0.33},"session_id":"s"}`,
 		`{"type":"system","subtype":"session_title_changed","title":"sf S-0339","session_id":"s"}`,
 	} {
 		if events, ok := r.Read([]byte(l)); ok || events != nil {
 			t.Errorf("Read(%q) = %+v, %v; want nothing, not a record read", l, events, ok)
 		}
 	}
-	if events, ok := r.Read([]byte(ccSubPrompt)); !ok || len(events) != 0 {
-		t.Errorf("a prompt = %+v, %v; want read, no event", events, ok)
+	for _, l := range []string{ccSubPrompt, ccLimitEvent, ccAllowedEvent} {
+		if events, ok := r.Read([]byte(l)); !ok || len(events) != 0 {
+			t.Errorf("Read(%.60q) = %+v, %v; want read, no event", l, events, ok)
+		}
+	}
+}
+
+// limitEnd is the End of I-0212's result, on the usage limit with the reset
+// time given.
+func limitEnd(resets time.Time) Event {
+	cost := 0.0
+	return Event{Kind: End, Session: ccLimitSession, CostUSD: &cost, Tokens: &Tokens{}, Result: ccLimitText,
+		Limit: &Limit{Error: "usage_limit_reached", Status: 429, Resets: resets}}
+}
+
+// A run that ends on the usage limit, as I-0212's log ends: the
+// rate_limit_event that rejects it gives the End's reset time, and the result
+// its error and status.
+func TestClaudeCodeReadsARunsEndOnTheUsageLimit(t *testing.T) {
+	resets := time.Date(2026, 10, 28, 8, 0, 0, 0, time.UTC)
+	checkEvents(t, readLines(t, ClaudeCode(), ccLimitEvent, ccLimitResult), []Event{limitEnd(resets)})
+}
+
+// A result that is no error ends on no limit, even after a rate_limit_event
+// rejected the run.
+func TestClaudeCodeReadsNoLimitOnAResultThatIsNoError(t *testing.T) {
+	got := readLines(t, ClaudeCode(), ccLimitEvent, ccResult)
+	if len(got) != 1 || got[0].Limit != nil {
+		t.Errorf("events = %+v, want one End on no limit", got)
+	}
+}
+
+// A result on the limit with no rejecting rate_limit_event before it, in the
+// run or since the run's last End, carries its error with no reset time: as
+// does one after an event that allows the run.
+func TestClaudeCodeReadsNoResetTimeWithoutARejectingRateLimitEvent(t *testing.T) {
+	for name, lines := range map[string][]string{
+		"no event":                {ccLimitResult},
+		"an allowing event":       {ccAllowedEvent, ccLimitResult},
+		"allowed after rejected":  {ccLimitEvent, ccAllowedEvent, ccLimitResult},
+		"rejected in a past run":  {ccLimitEvent, ccInit, ccLimitResult},
+		"rejected before the End": {ccLimitEvent, ccLimitResult, ccLimitResult},
+	} {
+		got := readLines(t, ClaudeCode(), lines...)
+		if want := limitEnd(time.Time{}); !reflect.DeepEqual(got[len(got)-1], want) {
+			t.Errorf("%s: End = %+v %+v, want %+v %+v", name, got[len(got)-1], got[len(got)-1].Limit, want, want.Limit)
+		}
+	}
+}
+
+// A result that is an error on no limit, one on another status that no
+// rate_limit_event rejected, ends on none.
+func TestClaudeCodeReadsNoLimitOnAnotherError(t *testing.T) {
+	for _, l := range []string{
+		`{"type":"result","subtype":"success","is_error":true,"api_error_status":529,"api_error":"overloaded_error","session_id":"s"}`,
+		`{"type":"result","subtype":"error_max_turns","is_error":true,"session_id":"s"}`,
+	} {
+		if got := readLines(t, ClaudeCode(), ccAllowedEvent, l); len(got) != 1 || got[0].Limit != nil {
+			t.Errorf("%s: events = %+v, want one End on no limit", l, got)
+		}
 	}
 }

@@ -9,7 +9,7 @@ import (
 )
 
 // Claude Code's stream-json, one JSON record per line, read into events
-// (S-0352, ADR-0130). Four kinds of record hold them; every other line is
+// (S-0352, ADR-0130). Five kinds of record hold them; every other line is
 // passed over unread:
 //
 //   - system with subtype init is a SessionStart, with the session's model.
@@ -22,7 +22,13 @@ import (
 //     answers and is_error; the text of the result only for the tools whose
 //     result usage reads, as only those are decoded.
 //   - result is an End, with the run's final text, total_cost_usd, usage,
-//     and modelUsage: each model's tokens and costUSD.
+//     and modelUsage: each model's tokens and costUSD. One with is_error
+//     ends on the usage limit when its api_error_status is 429, or when a
+//     rate_limit_event rejected the run before it: its Limit is the
+//     api_error, the status, and the time that event said the limit resets.
+//   - rate_limit_event holds no event: its rate_limit_info, with status
+//     rejected, says the run is on the usage limit until resetsAt, in Unix
+//     seconds, for the result after it; with any other status, it is not.
 //
 // Each line's timestamp, session_id, parent_tool_use_id, and task_description
 // are on every event it holds.
@@ -38,13 +44,23 @@ var claudeCodeEnd = []byte(`"type":"result"`)
 
 // claudeCodeRecords mark the records that hold events, so that no other line
 // is decoded.
-var claudeCodeRecords = [][]byte{[]byte(`"type":"assistant"`), []byte(`"type":"user"`), claudeCodeEnd, []byte(`"subtype":"init"`)}
+var claudeCodeRecords = [][]byte{
+	[]byte(`"type":"assistant"`), []byte(`"type":"user"`), claudeCodeEnd, []byte(`"subtype":"init"`), []byte(`"type":"rate_limit_event"`),
+}
+
+// limitStatus is a 429, Too Many Requests: the status of an error on a limit.
+const limitStatus = 429
 
 // claudeCodeReader reads one measurement's Claude Code logs, in order: it
 // keeps the IDs of the calls whose result it reads, as a result's line does
-// not name its tool.
+// not name its tool, and the limit a rate_limit_event put the run on, as
+// the result after it does not say when the limit resets.
 type claudeCodeReader struct {
 	reads map[string]bool
+	// limit is the limit a rejecting rate_limit_event put the run on, with
+	// its reset time; nil when none has since the run's start or its last
+	// End, or the newest said the run is not on a limit.
+	limit *Limit
 }
 
 // ClaudeCode is a Reader of Claude Code's stream-json, for the logs of one
@@ -106,6 +122,15 @@ type ccLine struct {
 	} `json:"modelUsage"`
 	CostUSD *float64 `json:"total_cost_usd"`
 	Usage   *ccUsage `json:"usage"`
+	// IsError, APIError, and APIErrorStatus are a result's error: apart
+	// from a tool_result's is_error, which is in the message's content.
+	IsError        bool   `json:"is_error"`
+	APIError       string `json:"api_error"`
+	APIErrorStatus int    `json:"api_error_status"`
+	RateLimitInfo  *struct {
+		Status   string `json:"status"`
+		ResetsAt int64  `json:"resetsAt"`
+	} `json:"rate_limit_info"`
 }
 
 // Read is the events of one line of Claude Code's stream-json.
@@ -123,6 +148,7 @@ func (r *claudeCodeReader) Read(line []byte) ([]Event, bool) {
 	}
 	switch {
 	case l.Type == "system" && l.Subtype == "init":
+		r.limit = nil
 		base.Kind, base.Model = SessionStart, l.Model
 		return []Event{base}, true
 	case l.Type == "assistant":
@@ -130,9 +156,41 @@ func (r *claudeCodeReader) Read(line []byte) ([]Event, bool) {
 	case l.Type == "user":
 		return r.results(l, base, line), true
 	case l.Type == "result":
-		return []Event{end(l, base)}, true
+		e := end(l, base)
+		e.Limit, r.limit = r.ended(l), nil
+		return []Event{e}, true
+	case l.Type == "rate_limit_event":
+		r.limit = rateLimit(l)
+		return nil, true
 	}
 	return nil, false
+}
+
+// rateLimit is the limit a rate_limit_event puts the run on: its reset
+// time when it rejected the run; nil when it did not.
+func rateLimit(l ccLine) *Limit {
+	if l.RateLimitInfo == nil || l.RateLimitInfo.Status != "rejected" {
+		return nil
+	}
+	lim := &Limit{}
+	if l.RateLimitInfo.ResetsAt > 0 {
+		lim.Resets = time.Unix(l.RateLimitInfo.ResetsAt, 0).UTC()
+	}
+	return lim
+}
+
+// ended is the limit a result line ended the run on: its error and status,
+// with the reset time of the rate_limit_event that rejected the run before
+// it; nil for a result that is no error, or an error on no limit.
+func (r *claudeCodeReader) ended(l ccLine) *Limit {
+	if !l.IsError || (l.APIErrorStatus != limitStatus && r.limit == nil) {
+		return nil
+	}
+	lim := Limit{Error: l.APIError, Status: l.APIErrorStatus}
+	if r.limit != nil {
+		lim.Resets = r.limit.Resets
+	}
+	return &lim
 }
 
 // MayEnd says a line may be a result record, the one that holds an End.

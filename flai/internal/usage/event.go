@@ -35,9 +35,23 @@ const (
 	ToolCall Kind = "tool_call"
 	// ToolResult is the result of a tool's call, by the call's ID.
 	ToolResult Kind = "tool_result"
-	// End is the end of a run, with what the harness reports it spent.
+	// End is the end of a run, with what the harness reports it spent, and
+	// the usage limit it ended on, if it did.
 	End Kind = "end"
 )
+
+// Limit is a run's end on the harness's usage limit: the error the harness
+// reports, its HTTP status, and when the limit resets.
+type Limit struct {
+	// Error is the error the harness names, such as usage_limit_reached;
+	// empty when it names none.
+	Error string `json:"error,omitempty"`
+	// Status is the error's HTTP status, such as 429; zero when the harness
+	// names none.
+	Status int `json:"status,omitempty"`
+	// Resets is when the limit resets; zero when the harness names no time.
+	Resets time.Time `json:"resets,omitzero"`
+}
 
 // Tokens are the tokens of a call, or of a run.
 type Tokens struct {
@@ -92,4 +106,7 @@ type Event struct {
 	// Result is the text of a ToolResult, for the tools whose result usage
 	// reads (wait_for_events), or the final text of the run on an End.
 	Result string
+	// Limit is the usage limit an End's run ended on; nil when it ended
+	// otherwise.
+	Limit *Limit
 }

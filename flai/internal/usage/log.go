@@ -90,6 +90,10 @@ type Run struct {
 	// Result is the final text of the run's newest End; empty when it has
 	// none or that End carries no text.
 	Result string `json:"result,omitempty"`
+	// Limit is the usage limit the run's newest End ended on, with the reset
+	// time the harness gave before it; nil when it has no End or that End
+	// ended on none.
+	Limit *Limit `json:"limit,omitempty"`
 	// Sessions are the harness session IDs its log holds, in the order they
 	// first appear.
 	Sessions []string `json:"sessions,omitempty"`
@@ -201,7 +205,7 @@ func (rec *Record) read(r Reader, path string, byID map[string]int) error {
 			case ToolResult:
 				rec.addWake(e)
 			case End:
-				run.Result = e.Result
+				run.Result, run.Limit = e.Result, e.Limit
 				rec.addResult(e, model)
 			}
 		}

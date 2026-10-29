@@ -279,6 +279,53 @@ func TestARunKeepsItsNewestResultsText(t *testing.T) {
 	}
 }
 
+// I-0212's log, a curator run that ends on the usage limit, with its init
+// and its synthetic message cut short.
+var limitRun = []string{
+	`{"type":"system","subtype":"session_title_changed","title":"sf curate","uuid":"c64ec637-da4a-43ca-9a5f-c5c32cb2fe12",` +
+		`"session_id":"1441b203-a736-430d-a0da-597f87cc4f63"}`,
+	`{"type":"system","subtype":"init","cwd":"/home/alex/git/bytepunx/system-flow","session_id":"1441b203-a736-430d-a0da-597f87cc4f63",` +
+		`"tools":["Read","Bash","Task","mcp__flai__prime"],"model":"claude-opus-5-5","permissionMode":"acceptEdits","claude_code_version":"2.1.310"}`,
+	ccLimitEvent,
+	`{"type":"assistant","message":{"id":"0524a12d-830e-40ad-a6b5-d047f3d66543","model":"<synthetic>","role":"assistant",` +
+		`"stop_reason":"stop_sequence","type":"message","usage":{"input_tokens":0,"output_tokens":0,"cache_creation_input_tokens":0,` +
+		`"cache_read_input_tokens":0},"content":[{"type":"text","text":"You've hit your weekly limit · resets Oct 28, 2am (America/Denver)"}]},` +
+		`"parent_tool_use_id":null,"session_id":"1441b203-a736-430d-a0da-597f87cc4f63","uuid":"131b6d79-7075-4ad8-a033-867a47b53203",` +
+		`"timestamp":"2026-10-26T16:03:54.269Z","error":"rate_limit","is_api_error_message":true,"api_error_status":429,` +
+		`"api_error":"usage_limit_reached","api_error_origin":"first_party"}`,
+	ccLimitResult,
+}
+
+// A run whose log ends on the usage limit carries the limit, with the reset
+// time; one whose newest End is on none, or that has no End, carries none.
+func TestARunCarriesTheUsageLimitItsLogEndsOn(t *testing.T) {
+	limited := writeLog(t, "limited.log", limitRun...)
+	worked := writeLog(t, "worked.log", run1...)
+	resumed := writeLog(t, "resumed.log", append(slices.Clone(limitRun),
+		assistant(ccLimitSession, "m9", opus, "2026-10-28T09:00:00Z", 1, 1, 10, 0),
+		`{"type":"result","subtype":"success","is_error":false,"session_id":"`+ccLimitSession+`","result":"Curated."}`)...)
+	going := writeLog(t, "going.log", limitRun[:4]...)
+	rec, err := Read(ClaudeCode(), limited, worked, resumed, going)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rec.Runs) != 4 {
+		t.Fatalf("runs = %+v, want four", rec.Runs)
+	}
+	want := Limit{Error: "usage_limit_reached", Status: 429, Resets: time.Date(2026, 10, 28, 8, 0, 0, 0, time.UTC)}
+	if got := rec.Runs[0].Limit; got == nil || *got != want {
+		t.Errorf("limited run's limit = %+v, want %+v", got, want)
+	}
+	if rec.Runs[0].Result != ccLimitText {
+		t.Errorf("limited run's result = %q, want %q", rec.Runs[0].Result, ccLimitText)
+	}
+	for i, name := range []string{"worked", "resumed", "going"} {
+		if got := rec.Runs[i+1].Limit; got != nil {
+			t.Errorf("%s run's limit = %+v, want none", name, got)
+		}
+	}
+}
+
 func TestSumAddsModelByModel(t *testing.T) {
 	a := &Usage{Source: SourceLog, Seconds: 10, Models: []Model{{Model: opus, Input: 1, Cost: 0.5}}}
 	b := &Usage{Source: SourceLog, Seconds: 5, Estimated: true, Models: []Model{{Model: haiku, Output: 3, Cost: 0.25}, {Model: opus, Input: 2, Cost: 0.25}}}
