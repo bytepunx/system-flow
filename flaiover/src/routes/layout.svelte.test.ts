@@ -1,7 +1,8 @@
 // S-0458: the layout's top bar and nav rail. The top bar holds the flaiover name, the project
 // picker, the theme setting, and the status pills, in that order, and no site-menu rows; the rail is
 // docked beside the page from md, and below it a drawer the menu button opens, which Escape or
-// choosing a page closes, returning focus to the button. The login page has neither.
+// choosing a page closes, returning focus to the button. The login page has neither. Since S-0534
+// every other page names a provider out of budget under the header.
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRawSnippet, flushSync, mount, unmount } from 'svelte';
 import { inboxState } from '$lib/inbox.svelte';
@@ -189,5 +190,31 @@ describe('the layout’s top bar and nav rail (S-0458)', () => {
 		expect(q('[data-top-name]')).not.toBeNull();
 		expect(q('[data-top-theme]')).not.toBeNull();
 		expect(q('[data-testid="page"]')).not.toBeNull();
+	});
+
+	// S-0534: a provider out of budget is named under the header on every page while signed in, and
+	// the banner goes once flai serve holds none.
+	const held = {
+		provider: 'claude-code',
+		limit: 'usage_limit_reached',
+		since: '2026-10-28T05:30:00Z',
+		until: '2026-10-28T09:00:00Z'
+	};
+
+	it.each(['/board', '/', '/threads'])('names a provider out of budget on %s', (path) => {
+		hostFlai.status = { ...hostFlai.status!, budget: [held] };
+		show(path);
+		const banner = q('[data-budget-banner]')!;
+		expect(banner.closest('header')).toBeNull();
+		expect(banner.textContent).toContain('claude-code is out of budget (usage_limit_reached)');
+		hostFlai.status = { ...hostFlai.status, budget: undefined };
+		flushSync();
+		expect(q('[data-budget-banner]')).toBeNull();
+	});
+
+	it('shows no budget banner on the login page', () => {
+		hostFlai.status = { ...hostFlai.status!, budget: [held] };
+		show('/login');
+		expect(q('[data-budget-banner]')).toBeNull();
 	});
 });

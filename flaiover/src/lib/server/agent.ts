@@ -35,6 +35,7 @@ import {
 	type UnsignedSide
 } from './release';
 import type { PlanRun } from '$lib/activity';
+import type { BudgetHold } from '$lib/hostflai.svelte';
 import type { AnalyzerRun, OrchestratorRun } from '$lib/strategic';
 
 export const AGENT_PATH = '/agent';
@@ -232,6 +233,27 @@ export type StrategicStatus = {
 		past_analyzers?: AnalyzerRun[] | null;
 	};
 };
+
+/**
+ * The providers flai serve holds every agent start on (S-0534, ADR-0209 §5), from agent.status's
+ * state.budget: the host's own, the same for every project. None when it holds none, and none when
+ * flai does not answer, since the budget only adds to a page that project.info already decides.
+ */
+export async function heldBudget(
+	hub: Pick<AgentHub, 'ask'>,
+	timeoutMs: number
+): Promise<BudgetHold[] | undefined> {
+	try {
+		const status = await hub.ask<{ state?: { budget?: BudgetHold[] | null } }>(
+			'agent.status',
+			{},
+			timeoutMs
+		);
+		return status.state?.budget?.length ? status.state.budget : undefined;
+	} catch {
+		return undefined;
+	}
+}
 
 /** Why the dashboard last closed a flai for a project with CLOSE_UNSIGNED (S-0237), kept after it went. */
 export type Refusal = {

@@ -9,9 +9,11 @@ import WebSocket from 'ws';
 import {
 	AgentError,
 	AgentRegistry,
+	type AgentHub,
 	ANALYZER,
 	CLOSE_HELD,
 	CLOSE_UNSIGNED,
+	heldBudget,
 	ORCHESTRATOR,
 	PROTOCOL,
 	proof,
@@ -902,5 +904,41 @@ describe('the registry under FLAIOVER_ALLOW_UNSIGNED', () => {
 	it('lets an explicit option win over the variable', async () => {
 		const { url } = await start('1', { allowUnsigned: false });
 		expect((await sayHello(url, {})).code).toBe(CLOSE_UNSIGNED);
+	});
+});
+
+// S-0534: the providers flai serve holds every agent start on, read from agent.status's state.budget.
+describe('heldBudget', () => {
+	const hold = {
+		provider: 'claude-code',
+		limit: 'usage_limit_reached',
+		status: 429,
+		since: '2026-10-28T05:30:00Z',
+		until: '2026-10-28T09:00:00Z'
+	};
+	const hub = (answer: () => Promise<unknown>) => ({ ask: vi.fn(answer) as AgentHub['ask'] });
+	const answering = (status: unknown) => hub(async () => status);
+
+	it('asks agent.status and returns its budget', async () => {
+		const h = answering({ enabled: true, state: { command: 'claude', budget: [hold] } });
+		expect(await heldBudget(h, 1500)).toEqual([hold]);
+		expect(h.ask).toHaveBeenCalledWith('agent.status', {}, 1500);
+	});
+
+	it('returns none while agent.status holds none', async () => {
+		const answers = [
+			{ enabled: false },
+			{ enabled: true, state: { command: 'claude' } },
+			{ enabled: true, state: { budget: null } },
+			{ enabled: true, state: { budget: [] } }
+		];
+		for (const answer of answers) expect(await heldBudget(answering(answer), 1500)).toBeUndefined();
+	});
+
+	it('returns none when flai does not answer', async () => {
+		const h = hub(async () => {
+			throw new AgentError(504, 'the host flai did not answer agent.status in time');
+		});
+		expect(await heldBudget(h, 1500)).toBeUndefined();
 	});
 });

@@ -9,6 +9,7 @@
 	import HostFlai from '$lib/components/HostFlai.svelte';
 	import HostFlaiBanner from '$lib/components/HostFlaiBanner.svelte';
 	import UnsignedBanner from '$lib/components/UnsignedBanner.svelte';
+	import BudgetBanner from '$lib/components/BudgetBanner.svelte';
 	import { hostFlai } from '$lib/hostflai.svelte';
 	import { projectState } from '$lib/project.svelte';
 	import ProjectSwitcher from '$lib/components/ProjectSwitcher.svelte';
@@ -163,7 +164,7 @@ sit beside it; the column is min-w-0 so a wide page cannot push the window sidew
 				{#if signedIn}<span class="ml-auto" data-top-pills><HostFlai /></span>{/if}
 			</div>
 		</header>
-		{#if signedIn}<HostFlaiBanner /><UnsignedBanner />{/if}
+		{#if signedIn}<HostFlaiBanner /><UnsignedBanner /><BudgetBanner />{/if}
 		<main class="mx-auto px-4 py-6 {wide ? '' : 'max-w-6xl'}">
 			{#key projectState.current}
 				{#if projectState.project?.candidate}

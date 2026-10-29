@@ -1,5 +1,6 @@
 // S-0098: /api/agent asks a connected project's flai for project.info, to say it answers. A
 // repository offered for import has none to give, by design, and is not reported as failing.
+// S-0534: it carries agent.status's budget beside the connection.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 describe('GET /api/agent', () => {
@@ -34,6 +35,55 @@ describe('GET /api/agent', () => {
 		const ask = vi.fn(async () => ({ name: 'Harbour' }));
 		const { body } = await answerFor({ configured: true, connected: true, missing: [] }, ask);
 		expect(ask).toHaveBeenCalledWith('project.info', {}, 2000);
+		expect(body.info).toEqual({ name: 'Harbour' });
+	});
+
+	// S-0534: beside the connection, the providers flai serve holds every agent start on, from
+	// agent.status's state.budget; none while it holds none, and a failed ask costs the page nothing.
+	const budget = [
+		{
+			provider: 'claude-code',
+			limit: 'usage_limit_reached',
+			status: 429,
+			since: '2026-10-28T05:30:00Z',
+			until: '2026-10-28T09:00:00Z'
+		},
+		{
+			provider: 'codex',
+			since: '2026-10-28T07:55:00Z',
+			until: '2026-10-28T08:00:00Z',
+			probing: true
+		}
+	];
+	const connected = { configured: true, connected: true, missing: [] };
+	const answering = (state: Record<string, unknown> | Error) =>
+		vi.fn(async (method: string) => {
+			if (method === 'project.info') return { name: 'Harbour' };
+			if (state instanceof Error) throw state;
+			return { enabled: true, state };
+		});
+
+	it('returns the budget agent.status holds', async () => {
+		const { body, ask } = await answerFor(connected, answering({ command: 'claude', budget }));
+		expect(ask).toHaveBeenCalledWith('agent.status', {}, 2000);
+		expect(body.info).toEqual({ name: 'Harbour' });
+		expect(body.budget).toEqual(budget);
+		expect(body.error).toBeUndefined();
+	});
+
+	it.each([
+		['no budget', { command: 'claude' }],
+		['an empty budget', { command: 'claude', budget: [] }]
+	])('returns no budget while agent.status holds %s', async (_, state) => {
+		const { body } = await answerFor(connected, answering(state));
+		expect(body.budget).toBeUndefined();
+		expect(body.info).toEqual({ name: 'Harbour' });
+	});
+
+	it('returns no budget, and no error, when agent.status is not answered', async () => {
+		const { body } = await answerFor(connected, answering(new Error('did not answer in time')));
+		expect(body.budget).toBeUndefined();
+		expect(body.error).toBeUndefined();
 		expect(body.info).toEqual({ name: 'Harbour' });
 	});
 
