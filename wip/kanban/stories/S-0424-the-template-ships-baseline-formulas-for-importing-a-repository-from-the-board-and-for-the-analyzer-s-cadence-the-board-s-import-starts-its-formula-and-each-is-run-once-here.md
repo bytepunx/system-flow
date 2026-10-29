@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:41:19Z
-updated: 2026-10-29T00:06:07Z
+updated: 2026-10-29T00:40:07Z
 transitions: []
 tags: [cli, template, dashboard]
 topics: [cli, orchestration, template, conventions]
@@ -24,15 +24,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 734
+      seconds: 738
       estimated: true
       models:
         - model: claude-opus-5-5
           input: 100
-          output: 1498
-          cache_read: 24183926
-          cache_write: 39724
-          cost: 5.3487
+          output: 1500
+          cache_read: 24225640
+          cache_write: 43672
+          cost: 5.3588
 draft: true
 cost_of_delay:
   value: 50.85
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-10-21T16:11:12Z
 forecast:
   duration: 1h10m
-  delivery: 2026-10-29T09:41:00Z
-  basis: "Its own forecast of 1h10m; 13th in the pull order with an in-progress limit of 5, behind S-0535, S-0532, S-0537, S-0534, S-0536, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411 and S-0412."
+  delivery: 2026-10-29T10:44:00Z
+  basis: "Its own forecast of 1h10m; 15th in the pull order with an in-progress limit of 5, behind S-0532, S-0537, S-0534, S-0536, S-0519, S-0514, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411 and S-0412."
   by: flai
-  at: 2026-10-29T00:06:07Z
+  at: 2026-10-29T00:40:07Z
 ---
 # S-0424 The template ships baseline formulas for importing a repository from the board and for the analyzer's cadence, the board's import starts its formula, and each is run once here
 

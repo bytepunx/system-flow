@@ -3,11 +3,17 @@ id: S-0519
 type: story
 nature: remediation
 title: permission_prompt over the HTTP MCP server outlives Claude Code's tool-call timeout, so an agent in a container sees its protected write time out while the thread to the operator stays open
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-28T12:53:05Z
-updated: 2026-10-29T00:07:38Z
-transitions: []
+updated: 2026-10-29T00:38:58Z
+transitions:
+  - to: ready
+    at: 2026-10-29T00:38:32Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-29T00:38:38Z
+    by: agent-S-0519
 tags: [cli, mcp]
 topics: [mcp, harness]
 touches: [design/adrs, design/adrs/README.md, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/mcpserver/server.go, flai/cmd/mcp_http.go, flai/cmd/mcp_http_test.go, flai/internal/ask/ask.go, flai/internal/ask/ask_test.go, docs/users/flai.md, docs/operators/index.md, design/system/agent-adapters.md, design/system/flai-cli.md, design/conventions/delegation.md, design/issues/I-0217-permission-prompt-over-the-http-mcp-server-outlives-claude-code-s-tool-call-timeout-so-an-agent-in-a-container-sees-its-protected-write-time-out-while-the-thread-to-the-operator-stays-open.md, design/issues/summary.md]
@@ -22,15 +28,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 759
+      seconds: 770
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 102
-          output: 1517
-          cache_read: 27145069
-          cache_write: 41203
-          cost: 5.9686
+          input: 105
+          output: 1564
+          cache_read: 27456741
+          cache_write: 44238
+          cost: 6.0379
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -41,10 +47,10 @@ cost_of_delay:
   at: 2026-10-28T13:46:59Z
 forecast:
   duration: 1h
-  delivery: 2026-10-29T15:02:00Z
-  basis: "Its own forecast of 1h; 26th in the pull order with an in-progress limit of 5, behind S-0535, S-0532, S-0537, S-0534, S-0536, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0508, S-0509, S-0510, S-0511, S-0512, S-0514, S-0515, S-0516, S-0517 and S-0518."
+  delivery: 2026-10-29T01:49:00Z
+  basis: "Its own forecast of 1h; 5th in the pull order with an in-progress limit of 5, behind S-0532, S-0537, S-0534 and S-0536."
   by: flai
-  at: 2026-10-29T00:07:38Z
+  at: 2026-10-29T00:38:58Z
 finalized:
   by: orchestrator
   at: 2026-10-28T19:17:28Z

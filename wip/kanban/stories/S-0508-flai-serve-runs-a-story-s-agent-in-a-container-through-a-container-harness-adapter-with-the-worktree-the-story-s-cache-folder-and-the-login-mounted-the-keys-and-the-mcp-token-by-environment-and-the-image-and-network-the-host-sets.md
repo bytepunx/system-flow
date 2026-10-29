@@ -7,7 +7,7 @@ status: backlog
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:44:13Z
-updated: 2026-10-29T00:06:26Z
+updated: 2026-10-29T00:40:35Z
 transitions: []
 tags: [cli, docker]
 topics: [harness, docker]
@@ -24,25 +24,25 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 215
+      seconds: 220
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 13
-          output: 110
-          cache_read: 4374448
-          cache_write: 13240
-          cost: 0.9619
+          input: 14
+          output: 112
+          cache_read: 4416162
+          cache_write: 17188
+          cost: 0.972
 cost_of_delay:
   value: 27.78
   by: planner-S-0508
   at: 2026-10-26T12:40:34Z
 forecast:
   duration: 2h30m
-  delivery: 2026-10-29T13:41:00Z
-  basis: "Its own forecast of 2h30m; 16th in the pull order with an in-progress limit of 5, behind S-0535, S-0532, S-0537, S-0534, S-0536, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425 and S-0506."
+  delivery: 2026-10-29T14:29:00Z
+  basis: "Its own forecast of 2h30m; 18th in the pull order with an in-progress limit of 5, behind S-0532, S-0537, S-0534, S-0536, S-0519, S-0514, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425 and S-0506."
   by: flai
-  at: 2026-10-29T00:06:26Z
+  at: 2026-10-29T00:40:35Z
 finalized:
   by: alex
   at: 2026-10-28T12:54:28Z

@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:41:28Z
-updated: 2026-10-29T00:06:15Z
+updated: 2026-10-29T00:40:18Z
 transitions: []
 tags: [cli, dashboard]
 topics: [cli, dashboard, planning, orchestration, template]
@@ -24,15 +24,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 2240
+      seconds: 2244
       estimated: true
       models:
         - model: claude-opus-5-5
           input: 67
-          output: 733
-          cache_read: 4664388
-          cache_write: 96627
-          cost: 1.0472
+          output: 735
+          cache_read: 4706101
+          cache_write: 100574
+          cost: 1.0572
 draft: true
 cost_of_delay:
   value: 62.36
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-10-23T15:35:46Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-29T11:29:00Z
-  basis: "Its own forecast of 1h30m; 14th in the pull order with an in-progress limit of 5, behind S-0535, S-0532, S-0537, S-0534, S-0536, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412 and S-0424."
+  delivery: 2026-10-29T12:32:00Z
+  basis: "Its own forecast of 1h30m; 16th in the pull order with an in-progress limit of 5, behind S-0532, S-0537, S-0534, S-0536, S-0519, S-0514, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412 and S-0424."
   by: flai
-  at: 2026-10-29T00:06:15Z
+  at: 2026-10-29T00:40:18Z
 ---
 # S-0425 metrics.md generalizes strategic usage per kind to usage per role by an ADR, so a project's own role is charged on its items, reported by flai stats, and charted as the built-in roles are
 

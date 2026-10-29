@@ -3,11 +3,14 @@ id: S-0514
 type: story
 nature: remediation
 title: A curator run that ends on the harness's usage limit is recorded failed, logs no activity, and is not started again until the next acceptance or schedule
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-28T12:40:16Z
-updated: 2026-10-29T00:07:03Z
-transitions: []
+updated: 2026-10-29T00:39:03Z
+transitions:
+  - to: ready
+    at: 2026-10-29T00:38:32Z
+    by: orchestrator
 tags: [flai, serve, curator, usage]
 topics: [planning, digest]
 touches: [flai/internal/usage/event.go, flai/internal/usage/claudecode.go, flai/internal/usage/claudecode_test.go, flai/internal/usage/log.go, flai/internal/usage/log_test.go, flai/internal/serve/agents.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/curate_schedule_test.go, flai/internal/serve/limit.go, flai/internal/serve/limit_test.go, design/adrs/README.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, design/issues/I-0212-a-curator-run-that-ends-on-the-harness-s-usage-limit-is-recorded-failed-logs-no-activity-and-is-not-started-again-until-the-next-acceptance-or-schedule.md, design/issues/summary.md]
@@ -22,15 +25,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 242
+      seconds: 253
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 91
-          output: 1404
-          cache_read: 17778943
-          cache_write: 31786
-          cost: 3.9104
+          input: 94
+          output: 1451
+          cache_read: 18090614
+          cache_write: 34820
+          cost: 3.9797
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30m
@@ -41,10 +44,10 @@ cost_of_delay:
   at: 2026-10-28T12:51:54Z
 forecast:
   duration: 2h30m
-  delivery: 2026-10-29T14:05:00Z
-  basis: "Its own forecast of 2h30m; 21st in the pull order with an in-progress limit of 5, behind S-0535, S-0532, S-0537, S-0534, S-0536, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0508, S-0509, S-0510, S-0511 and S-0512."
+  delivery: 2026-10-29T04:33:00Z
+  basis: "Its own forecast of 2h30m; 6th in the pull order with an in-progress limit of 5, behind S-0532, S-0537, S-0534, S-0536 and S-0519."
   by: flai
-  at: 2026-10-29T00:07:03Z
+  at: 2026-10-29T00:39:03Z
 finalized:
   by: alex
   at: 2026-10-28T12:56:56Z
