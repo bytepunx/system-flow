@@ -1117,9 +1117,14 @@ const Code = topics.Code
 
 // Vocabulary is every topic a story can have: all, code, each sub-project's
 // name, tags, and kind (ADR-0047), and the topics that the stories and epics
-// among items declare (S-0135).
+// among items declare (S-0135); and the words a pack primed for the
+// orchestrator's reasons reads on a heading beside all, the kinds of reason
+// and the built-in strategic roles' topics (ADR-0217).
 func Vocabulary(repo *workitem.Repo, items []*workitem.Item) map[string]bool {
 	v := map[string]bool{topics.All: true, Code: true}
+	for _, w := range ctxpack.SectionWords() {
+		v[w] = true
+	}
 	for _, it := range items {
 		for _, t := range it.Topics {
 			v[t] = true

@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
@@ -907,8 +908,8 @@ func TestVocabularyIsTheManifestsWords(t *testing.T) {
 			t.Errorf("%s is a topic here", w)
 		}
 	}
-	if len(v) != 10 {
-		t.Errorf("vocabulary = %v", v)
+	if want := 10 + len(ctxpack.SectionWords()); len(v) != want {
+		t.Errorf("vocabulary = %v, want %d words: the manifest's and the reason pack's (ADR-0217)", v, want)
 	}
 }
 
