@@ -549,12 +549,6 @@ func Run(ctx context.Context, o Options) error {
 	// project's loop (ADR-0205); a send in flight is waited for.
 	var reminds sync.WaitGroup
 	defer reminds.Wait()
-	// Each served project's loop of looks, and its watcher, whose looks run
-	// in its callback, are waited for, so that a look under way when the
-	// context ends finishes its writes under the project's .flai-cache
-	// before Run returns, and a test's temporary folder can be removed.
-	var looks sync.WaitGroup
-	defer looks.Wait()
 	if agent := o.Agent; agent != nil {
 		o.Agent = func(root string) AgentConfig {
 			cfg := agent(root)
@@ -719,7 +713,11 @@ func Run(ctx context.Context, o Options) error {
 			newMergePass(o, e, &forgeLooks).start(cctx)
 			queue := newQueuePass(o, e, queues)
 			queue.start(cctx)
-			looks.Add(1)
+			// The project's loop and its watcher's looks are waited for once its
+			// client has stopped, before it is done, so that no look still writes
+			// to the project or the serve folder after (I-0233).
+			var looks sync.WaitGroup
+			looks.Add(2)
 			go func() {
 				defer looks.Done()
 				for {
@@ -746,7 +744,6 @@ func Run(ctx context.Context, o Options) error {
 					reminding.soon(cctx)
 				}
 			}()
-			looks.Add(1) // for the watcher's goroutine below
 			go func() {
 				// The dashboard hears of each changed file; what it shows comes from asking again.
 				go func() {
@@ -770,6 +767,8 @@ func Run(ctx context.Context, o Options) error {
 					})
 				}()
 				r.client.Run(clientCtx)
+				stopLooks()
+				looks.Wait()
 				close(r.done)
 			}()
 			o.Logger.Info("project served", "component", "serve", "root", root, "key", e.Key, "dashboard", e.URL)
