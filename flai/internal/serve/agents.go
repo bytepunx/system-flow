@@ -28,6 +28,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -290,10 +291,16 @@ type AgentRun struct {
 	// run ended at the limit of automatic restarts, so that it opens one
 	// (S-0294, ADR-0108).
 	LimitThread string `json:"limit_thread,omitempty"`
-	// ResetsAt is when the harness's usage limit a curator run ended on
-	// resets, as an RFC 3339 time in UTC; empty when it ended on no limit, or
-	// the harness named no reset time (S-0514, ADR-0214).
+	// ResetsAt is when the harness's usage limit a run ended on resets, as an
+	// RFC 3339 time in UTC; empty when it ended on no limit, or the harness
+	// named no reset time (S-0514, ADR-0214): a curator run's since S-0514,
+	// every run's since S-0534.
 	ResetsAt string `json:"resets_at,omitempty"`
+	// UsageLimited marks a run whose log ends on the harness's usage limit
+	// (S-0534, ADR-0209 §5): its end set or extended its provider's budget
+	// state, and it is no failed run that flai serve restarts on its own
+	// (agent.auto_restarts) or starts again after orchestrateRetry.
+	UsageLimited bool `json:"usage_limited,omitempty"`
 	// Retry marks a run started again after the run before it ended on the
 	// usage limit (S-0514, ADR-0214).
 	Retry bool `json:"retry,omitempty"`
@@ -303,6 +310,28 @@ type AgentRun struct {
 // process.
 func (r *AgentRun) same(o *AgentRun) bool {
 	return r != nil && o != nil && r.Story == o.Story && r.Item == o.Item && r.Started == o.Started && r.PID == o.PID
+}
+
+// limitEnded marks r, a run that ended on lim, the harness's usage limit, as
+// such (S-0534): UsageLimited, and ResetsAt when the harness named a reset
+// time. Nothing when lim is nil.
+func (r *AgentRun) limitEnded(lim *usage.Limit) {
+	if lim != nil {
+		r.UsageLimited, r.ResetsAt = true, limitResets(lim)
+	}
+}
+
+// budgetEnd feeds the end of run, on lim, the usage limit its log ends on,
+// or nil for none, into its provider's budget state (budgetEnded), when
+// first, the end that recorded the run as ended first (ended), so that a run
+// settled twice is fed once (S-0534). Every end is fed, not only one on the
+// limit, so that the probe's clean end clears the state. A run the operator
+// stopped is not: its end says nothing of the API, and a probe stopped is
+// claimed over once its process is gone.
+func (l *launcher) budgetEnd(run *AgentRun, lim *usage.Limit, first bool) {
+	if first && run.Outcome != OutcomeStopped {
+		l.budgetEnded(run, lim)
+	}
 }
 
 // stopped makes an ended run read as the operator's stop, when they stopped
@@ -725,11 +754,22 @@ func judgeRun(root string, run *AgentRun, exit *int) {
 // end is appended to the event log once, by the end that recorded the run
 // as ended first (S-0532): a run Stop recorded as stopped before its
 // process ended was told by Stop, and one judged again tells nothing more.
+// A run whose log ends on the harness's usage limit is marked so
+// (limitEnded), and one judged failed says the limit as its why, as the
+// curator's does; that end feeds its provider's budget state, once, as every
+// end does (budgetEnd), and restartEnded does not restart it (S-0534).
 func (l *launcher) endRun(run *AgentRun, exit *int) {
 	judgeRun(l.entry.Root, run, exit)
-	if l.ended(run) {
+	lim, _ := runLimit(run, l.warn)
+	run.limitEnded(lim)
+	if lim != nil && run.Outcome == OutcomeFailed {
+		run.Why = limitWhy(lim)
+	}
+	first := l.ended(run)
+	if first {
 		appendAgentEnd(l.entry.Root, run, l.warn)
 	}
+	l.budgetEnd(run, lim, first)
 	l.blockAsked(run)
 }
 
@@ -1435,7 +1475,9 @@ func sentBackFor(repo *workitem.Repo, story string) (forge.SendBack, string, boo
 // how the last one ended and that flai serve started it on its own. It does
 // so up to cfg.AutoRestarts times in a row; a run that ends at the limit gets
 // one thread to the operator instead (S-0294, ADR-0108). A story that nothing
-// can start, which flai serve agent restart refuses, is left alone.
+// can start, which flai serve agent restart refuses, is left alone, and so
+// is one whose run ended on the harness's usage limit (endedEarly): it
+// spends no restart, and its count stays as it was (S-0534).
 func (l *launcher) restartEnded(ctx context.Context, cfg AgentConfig, repo *workitem.Repo) {
 	st := l.dir.AgentStates()[l.entry.Root]
 	for _, id := range slices.Sorted(maps.Keys(st.Stories)) {
@@ -1470,10 +1512,12 @@ func autoRestart(n, limit int) string {
 }
 
 // endedEarly says whether run is one flai serve restarts on its own: it
-// started, ended failed rather than asking or stopped by the operator, and
-// has had no thread opened for it at the limit.
+// started, ended failed rather than asking or stopped by the operator, not
+// on the harness's usage limit, which its provider's budget state holds
+// rather than a restart spent on it (S-0534), and has had no thread opened
+// for it at the limit.
 func endedEarly(run *AgentRun) bool {
-	return run != nil && run.Started != "" && !run.live() && run.Error == "" && run.Outcome == OutcomeFailed && run.Stopped == "" && run.LimitThread == ""
+	return run != nil && run.Started != "" && !run.live() && run.Error == "" && run.Outcome == OutcomeFailed && run.Stopped == "" && !run.UsageLimited && run.LimitThread == ""
 }
 
 // limitAuthor is who the thread flai serve opens at the limit of automatic

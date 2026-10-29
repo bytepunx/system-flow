@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
+	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
@@ -562,5 +563,35 @@ func TestAStartedEventSaysWhatStartedTheRole(t *testing.T) {
 		if got := triggerWhy(&AgentRun{Trigger: trigger}); got != want {
 			t.Errorf("%q: %q, want %q", trigger, got, want)
 		}
+	}
+}
+
+// S-0534: a planner run whose log ends on the recorded usage-limit refusal
+// with no reset time, settled with its exit unseen, is failed on the limit
+// and sets the budget state for the first backoff; the probe that starts
+// once the backoff has passed and ends clean clears it.
+func TestAPlannerRunOnTheUsageLimitSetsTheBudgetStateForTheBackoff(t *testing.T) {
+	lab := newAgentLab(t)
+	at := limitReset.Add(-time.Hour)
+	lab.budgetClock(&at)
+	item := lab.epic.ID
+	run := &AgentRun{Item: item, Agent: "planner-" + item, Harness: harness.ClaudeCode, Trigger: TriggerAsked, Started: at.Format(time.RFC3339), Log: limitResult(t, false)}
+	lab.l.planEnded(run, nil)
+	lab.heldUntil(at.Add(budgetBackoffFirst), false, "5m0s")
+	want := "ended on the harness's usage limit (usage_limit_reached, 429); it named no reset time"
+	if r := lab.planRun(item); r.Outcome != OutcomeFailed || !r.UsageLimited || r.ResetsAt != "" || r.Why != want {
+		t.Errorf("planner run = %+v; want failed on the limit, %q", r, want)
+	}
+
+	at = at.Add(budgetBackoffFirst)
+	probe := &AgentRun{Item: item, Agent: "planner-" + item, Harness: harness.ClaudeCode, Trigger: TriggerAsked, Started: at.Format(time.RFC3339), Log: cleanResult(t)}
+	lab.probing(probe)
+	zero := 0
+	lab.l.planEnded(probe, &zero)
+	if b, held := lab.budget(); held || b.Provider != "" {
+		t.Errorf("budget state after the probe's clean end = %+v, held %v; want none", b, held)
+	}
+	if r := lab.planRun(item); r.Outcome != OutcomeWorked || r.UsageLimited {
+		t.Errorf("probe = %+v; want worked, on no limit", r)
 	}
 }

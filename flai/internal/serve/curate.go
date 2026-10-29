@@ -228,7 +228,10 @@ func (l *launcher) curate(ctx context.Context, cfg AgentConfig, agent *manifest.
 // for, and an activity that cannot be logged, are warned of: the activity is
 // logged naming no entry, and the run stays recorded as it ended. The end is
 // an agent event on the curator's role, appended once, by the end that
-// recorded the run as ended first (S-0532).
+// recorded the run as ended first (S-0532). A run on the limit is marked so
+// (limitEnded), and every end feeds its provider's budget state once
+// (budgetEnd, S-0534); the scheduler's retry at the reset stays, as the
+// curator's next start.
 func (l *launcher) curateEnded(run *AgentRun, exit *int) {
 	ended := *run
 	ended.Ended, ended.Exit = l.now().UTC().Format(time.RFC3339), exit
@@ -238,9 +241,10 @@ func (l *launcher) curateEnded(run *AgentRun, exit *int) {
 	}
 	ended.Entries = entries
 	lim, said := runLimit(run, l.warn)
+	ended.limitEnded(lim)
 	switch {
 	case lim != nil:
-		ended.Outcome, ended.Why, ended.ResetsAt = OutcomeFailed, limitWhy(lim), limitResets(lim)
+		ended.Outcome, ended.Why = OutcomeFailed, limitWhy(lim)
 		if run.Retry || ended.ResetsAt == "" {
 			ended.LimitThread = l.raiseCurateLimit(&ended, said)
 		}
@@ -249,9 +253,11 @@ func (l *launcher) curateEnded(run *AgentRun, exit *int) {
 	default:
 		ended.Outcome, ended.Why = OutcomeWorked, ""
 	}
-	if l.ended(&ended) {
+	first := l.ended(&ended)
+	if first {
 		appendAgentEnd(l.entry.Root, &ended, l.warn)
 	}
+	l.budgetEnd(&ended, lim, first)
 	args := []any{"pid", run.PID, "since", run.Since, "outcome", ended.Outcome, "entries", len(entries)}
 	if exit != nil {
 		args = append(args, "exit", *exit)

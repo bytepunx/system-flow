@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
+	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
@@ -422,4 +423,41 @@ func TestAnOrchestratorStartThatCouldNotBeMadeIsOneFailedAgentEvent(t *testing.T
 		lab.look()
 	}
 	lab.orchestratorEventsAre([2]string{inbox.AgentFailed, run.Why})
+}
+
+// S-0534: an orchestrator run whose log ends on the recorded usage-limit
+// refusal is failed on the limit and sets the budget state until the reset
+// the API reported; orchestrateRetry passing starts no other run while the
+// state holds, and the first look once its hold has passed does.
+func TestAnOrchestratorRunOnTheUsageLimitWaitsForTheBudgetStateNotOrchestrateRetry(t *testing.T) {
+	lab := newOrchestrateLab(t)
+	lab.at = limitReset.Add(-time.Hour)
+	lab.budgetClock(&lab.at)
+	lab.cfg.Orchestrate = true
+	one := 1
+	run := &AgentRun{Agent: "orchestrator", Harness: harness.ClaudeCode, Session: "limited", Started: lab.at.Format(time.RFC3339), Log: limitResult(t, true)}
+	lab.l.orchestrateEnded(run, &one)
+	lab.heldUntil(limitReset, true, "5m0s")
+	if r := lab.orchestrator(); r.Outcome != OutcomeFailed || !r.UsageLimited || r.ResetsAt != limitResetsAt || r.Why != limitWhyText {
+		t.Errorf("orchestrator run = %+v; want failed on the limit", r)
+	}
+	ended := false
+	for _, e := range lab.entries() {
+		ended = ended || (e.Action == hostapi.ActionOrchestrate && e.Outcome == "failed" && strings.HasSuffix(e.Detail, "ended, failed: "+limitWhyText))
+	}
+	if !ended {
+		t.Errorf("journal: %+v; want the end failed on the limit", lab.entries())
+	}
+
+	lab.at = lab.at.Add(2 * orchestrateRetry)
+	lab.look()
+	lab.look()
+	if r := lab.orchestrator(); r.Session != "limited" || r.live() || lab.startedCount() != 0 {
+		t.Errorf("started while the budget state holds: %+v", r)
+	}
+
+	lab.at = limitReset
+	lab.look()
+	waitFor(t, "the orchestrator is started once the hold has passed", func() bool { return lab.orchestrator().Session != "limited" })
+	lab.settle()
 }

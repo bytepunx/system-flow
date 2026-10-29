@@ -585,8 +585,12 @@ func TestACuratorRunOnTheUsageLimitIsRecordedFailedOnIt(t *testing.T) {
 	if strings.Contains(logged, "curator activity not logged") || strings.Contains(logged, "run's log not read") {
 		t.Errorf("warned:\n%s", logged)
 	}
-	if ths := lab.allThreads(); len(ths) != 0 || r.LimitThread != "" || len(lab.entries()) != 1 {
+	if ths := lab.allThreads(); len(ths) != 0 || r.LimitThread != "" || len(lab.curateEntries()) != 1 {
 		t.Errorf("threads = %+v, limit_thread %q, journal %+v; want none raised", ths, r.LimitThread, lab.entries())
+	}
+	// S-0534: the end sets the budget state, journalled beside the start
+	if got := lab.budgetChanges(); !slices.Equal(got, []string{"set the budget state"}) {
+		t.Errorf("budget changes journalled: %q", got)
 	}
 }
 
@@ -726,4 +730,41 @@ func TestACuratorRunAppendsAnAgentEventAtItsStartAndItsEnd(t *testing.T) {
 		}
 		role(lab, [2]string{inbox.AgentFailed, r.Why})
 	})
+}
+
+// S-0534: a curator run whose log ends on the recorded usage-limit refusal
+// sets the budget state until the reset the API reported, and is recorded
+// with that reset, as the scheduler's retry at the reset reads it (ADR-0214),
+// raising nothing; one on a refusal with no reset time sets the state for
+// the first backoff, and is raised as before.
+func TestACuratorRunOnTheUsageLimitSetsTheBudgetState(t *testing.T) {
+	for _, c := range []struct {
+		name    string
+		reset   bool
+		until   time.Duration
+		threads int
+	}{
+		{"reset reported", true, time.Hour, 0},
+		{"no reset time", false, budgetBackoffFirst, 1},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			lab := newAgentLab(t)
+			at := limitReset.Add(-time.Hour)
+			lab.budgetClock(&at)
+			one := 1
+			run := &AgentRun{Agent: workitem.ActivityCurator, Role: conventions.RoleCurate, Harness: "claude-code", Trigger: TriggerAsked, Started: at.Format(time.RFC3339), Log: limitResult(t, c.reset)}
+			lab.l.curateEnded(run, &one)
+			lab.heldUntil(at.Add(c.until), c.reset, "5m0s")
+			r := lab.state().Curator
+			if r.Outcome != OutcomeFailed || !r.UsageLimited || (r.ResetsAt == limitResetsAt) != c.reset {
+				t.Errorf("curator run = %+v; want failed on the limit", r)
+			}
+			if got := limitResetAt(r); c.reset != got.Equal(limitReset) {
+				t.Errorf("the scheduler reads the reset as %s", got)
+			}
+			if ths := lab.allThreads(); len(ths) != c.threads {
+				t.Errorf("%d threads raised, want %d", len(ths), c.threads)
+			}
+		})
+	}
 }

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -435,4 +436,30 @@ func TestAnAnalyzerRunAppendsAnAgentEventAtItsStartAndItsEnd(t *testing.T) {
 		}
 		role(lab, [2]string{inbox.AgentFailed, r.Why})
 	})
+}
+
+// S-0534: an analyzer run whose log ends on the recorded usage-limit refusal
+// is failed on the limit and sets the budget state until the reset the API
+// reported; the probe that starts at the reset and ends on the limit again
+// extends it, doubling the backoff, the reset being past.
+func TestAnAnalyzerRunOnTheUsageLimitSetsTheBudgetStateAndAProbeOnItExtendsIt(t *testing.T) {
+	lab := newAgentLab(t)
+	at := limitReset.Add(-time.Hour)
+	lab.budgetClock(&at)
+	one := 1
+	run := &AgentRun{Agent: "analyzer", Harness: harness.ClaudeCode, Focus: harness.AllFocus, Trigger: TriggerAsked, Started: at.Format(time.RFC3339), Log: limitResult(t, true)}
+	lab.l.analyzeEnded(run, &one)
+	lab.heldUntil(limitReset, true, "5m0s")
+	if r := lab.state().Analyzer; r.Outcome != OutcomeFailed || !r.UsageLimited || r.ResetsAt != limitResetsAt || r.Why != limitWhyText {
+		t.Errorf("analyzer run = %+v; want failed on the limit", r)
+	}
+
+	at = limitReset
+	probe := &AgentRun{Agent: "analyzer", Harness: harness.ClaudeCode, Focus: harness.AllFocus, Trigger: TriggerAsked, Started: at.Format(time.RFC3339), Log: limitResult(t, true)}
+	lab.probing(probe)
+	lab.l.analyzeEnded(probe, &one)
+	lab.heldUntil(limitReset.Add(2*budgetBackoffFirst), false, "10m0s")
+	if got := lab.budgetChanges(); !slices.Equal(got, []string{"set the budget state", "started a probe of the budget state", "extended the budget state"}) {
+		t.Errorf("budget changes journalled: %q", got)
+	}
 }

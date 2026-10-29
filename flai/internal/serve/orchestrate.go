@@ -87,9 +87,10 @@ func queueBatches(o Options, e Entry, m manifest.Manifest) bool {
 }
 
 // look starts the orchestrator while the action is on and no run is going,
-// unless the operator holds it stopped (S-0228) or the last run failed less
-// than orchestrateRetry ago, and stops the run going while the action is
-// off, which also lifts the hold.
+// unless the operator holds it stopped (S-0228), the last run ended on the
+// harness's usage limit and its provider's budget state holds (S-0534), or
+// the last run failed otherwise less than orchestrateRetry ago, and stops
+// the run going while the action is off, which also lifts the hold.
 func (r *orchestrator) look(ctx context.Context) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -111,6 +112,10 @@ func (r *orchestrator) look(ctx context.Context) {
 		return
 	case run != nil && run.Held:
 		return
+	case run != nil && run.UsageLimited:
+		if r.budgetHolds(run) {
+			return
+		}
 	case run != nil && run.Outcome == OutcomeFailed && !r.due(run):
 		return
 	}
@@ -170,6 +175,20 @@ func (r *orchestrator) unhold() {
 	if r.starter.changed != nil {
 		r.starter.changed(lifted)
 	}
+}
+
+// budgetHolds says whether the budget state of the provider of run, which
+// ended on the harness's usage limit, holds a start at the orchestrator's
+// clock (S-0534): until the state clears, or its hold passes, the next run
+// waits, and orchestrateRetry does not count. A state that cannot be read is
+// warned of and holds nothing, as at a start (launcher.budgetStart).
+func (r *orchestrator) budgetHolds(run *AgentRun) bool {
+	_, held, err := r.o.Dir.budgetHeld(budgetKey(run.Provider, run.Harness), r.o.Now())
+	if err != nil {
+		r.starter.warn("budget state not read before the orchestrator's start; it goes", "err", err)
+		return false
+	}
+	return held
 }
 
 // due says whether orchestrateRetry has passed since run ended; a run whose
@@ -303,16 +322,28 @@ func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *mani
 // end, a stop's included, is an agent event on the orchestrator's role,
 // appended once, by the end that recorded the run as ended first (S-0532):
 // a stop settled here and by the launcher that waits for it is told once.
+// A run whose log ends on the harness's usage limit is failed on it, with
+// why naming the limit, whether its exit was seen or not, and marked so
+// (limitEnded), so that look holds the next start on its provider's budget
+// state rather than orchestrateRetry; every end feeds that state once
+// (budgetEnd, S-0534).
 func (l *launcher) orchestrateEnded(run *AgentRun, exit *int) {
 	ended := *run
 	ended.Ended, ended.Exit = l.now().UTC().Format(time.RFC3339), exit
 	ended.Outcome, ended.Why = OutcomeWorked, ""
-	if exit != nil && *exit != 0 {
+	lim, _ := runLimit(run, l.warn)
+	ended.limitEnded(lim)
+	switch {
+	case lim != nil:
+		ended.Outcome, ended.Why = OutcomeFailed, limitWhy(lim)
+	case exit != nil && *exit != 0:
 		ended.Outcome, ended.Why = OutcomeFailed, fmt.Sprintf("ended (exit %d)", *exit)
 	}
-	if l.ended(&ended) {
+	first := l.ended(&ended)
+	if first {
 		appendAgentEnd(l.entry.Root, &ended, l.warn)
 	}
+	l.budgetEnd(&ended, lim, first)
 	args := []any{"pid", run.PID, "outcome", ended.Outcome}
 	if exit != nil {
 		args = append(args, "exit", *exit)

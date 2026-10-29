@@ -173,7 +173,10 @@ func (l *launcher) analyze(ctx context.Context, cfg AgentConfig, agent *manifest
 // cannot be looked for, and an activity that cannot be logged, are warned
 // of: the activity is logged naming no issue, and the run stays recorded as
 // it ended. The end is an agent event on the analyzer's role, appended once,
-// by the end that recorded the run as ended first (S-0532).
+// by the end that recorded the run as ended first (S-0532). A run whose log
+// ends on the harness's usage limit is failed on it, with why naming the
+// limit, whether its exit was seen or not, and marked so (limitEnded); every
+// end feeds its provider's budget state once (budgetEnd, S-0534).
 func (l *launcher) analyzeEnded(run *AgentRun, exit *int) {
 	ended := *run
 	ended.Ended, ended.Exit = l.now().UTC().Format(time.RFC3339), exit
@@ -186,7 +189,11 @@ func (l *launcher) analyzeEnded(run *AgentRun, exit *int) {
 		l.warn("analyzer's report not looked for", "err", err)
 	}
 	ended.Report = report
+	lim, _ := runLimit(run, l.warn)
+	ended.limitEnded(lim)
 	switch {
+	case lim != nil:
+		ended.Outcome, ended.Why = OutcomeFailed, limitWhy(lim)
 	case exit != nil && *exit != 0:
 		ended.Outcome, ended.Why = OutcomeFailed, fmt.Sprintf("ended (%s)", code)
 	case report == "":
@@ -194,9 +201,11 @@ func (l *launcher) analyzeEnded(run *AgentRun, exit *int) {
 	default:
 		ended.Outcome, ended.Why = OutcomeWorked, ""
 	}
-	if l.ended(&ended) {
+	first := l.ended(&ended)
+	if first {
 		appendAgentEnd(l.entry.Root, &ended, l.warn)
 	}
+	l.budgetEnd(&ended, lim, first)
 	args := []any{"pid", run.PID, "focus", run.Focus, "outcome", ended.Outcome, "report", report}
 	if exit != nil {
 		args = append(args, "exit", *exit)

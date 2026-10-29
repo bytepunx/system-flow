@@ -3529,3 +3529,140 @@ func TestAStartedEventSaysWhyTheAgentWasStarted(t *testing.T) {
 		}
 	}
 }
+
+// usageLimitResult is Claude Code's recorded end of a run the API refused on
+// the account's usage limit, I-0212's log cut short: its rate_limit_event,
+// resetting at limitResetsAt, and its result on usage_limit_reached with
+// status 429.
+const usageLimitResult = "testdata/usage-limit-result.jsonl"
+
+// limitResult is the log of a run that ended on the recorded refusal; with
+// reset false its rate_limit_event is left out, so that the refusal names no
+// reset time.
+func limitResult(t *testing.T, reset bool) string {
+	t.Helper()
+	data, err := os.ReadFile(usageLimitResult)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var lines []string
+	for _, line := range strings.Split(strings.TrimSpace(string(data)), "\n") {
+		if reset || !strings.Contains(line, `"type":"rate_limit_event"`) {
+			lines = append(lines, line)
+		}
+	}
+	return limitLog(t, lines...)
+}
+
+// cleanResult is the log of a run that ended on no limit.
+func cleanResult(t *testing.T) string {
+	t.Helper()
+	return limitLog(t, streamCall("s", "m1", runStart, 999), streamFinal("Done.", 2000, 0.5))
+}
+
+// budgetClock pins the clock of the lab's launcher to *at, which the test
+// moves, so that the recorded reset is still ahead of it.
+func (lab *agentLab) budgetClock(at *time.Time) { lab.l.now = func() time.Time { return *at } }
+
+// budget is the budget state of the runs on harness claude-code, which name
+// no provider, at the launcher's clock, and whether it holds a start.
+func (lab *agentLab) budget() (Budget, bool) {
+	lab.t.Helper()
+	b, held, err := lab.l.dir.budgetHeld(harness.ClaudeCode, lab.l.now())
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	return b, held
+}
+
+// budgetChanges are the kinds of the changes to the budget state the
+// journal recorded, in order.
+func (lab *agentLab) budgetChanges() []string {
+	var kinds []string
+	for _, e := range lab.entries() {
+		if e.Method == "serve.budget" {
+			kind, _, _ := strings.Cut(e.Detail, ":")
+			kinds = append(kinds, kind)
+		}
+	}
+	return kinds
+}
+
+// probing has run, on claude-code, go through as the budget state's probe,
+// as the first start once its hold has passed does.
+func (lab *agentLab) probing(run *AgentRun) {
+	lab.t.Helper()
+	if gate := lab.l.budgetStart(run); !gate.Go || !gate.Probe {
+		lab.t.Fatalf("%s did not go as the probe: %+v", probeOf(lab.root, run).Work, gate)
+	}
+}
+
+// heldUntil fails the test unless the budget state holds until until, for
+// the reset the API reported when reset, else for backoff.
+func (lab *agentLab) heldUntil(until time.Time, reset bool, backoff string) {
+	lab.t.Helper()
+	b, held := lab.budget()
+	wantReset := time.Time{}
+	if reset {
+		wantReset = until
+	}
+	if !held || !b.Until.Equal(until) || !b.Reset.Equal(wantReset) || b.Backoff != backoff || b.Limit != "usage_limit_reached" || b.Status != 429 || b.Probe != nil {
+		lab.t.Errorf("budget state %+v, held %v; want held until %s, reset %v, backoff %s", b, held, until, reset, backoff)
+	}
+}
+
+// S-0534: a story's agent whose log ends on the recorded usage-limit refusal
+// sets the budget state until the reset the API reported, once however often
+// its end is settled, is recorded failed on the limit, and is not restarted
+// on its own, its count of automatic restarts unchanged; one that failed
+// otherwise is restarted as before. A probe that ends clean clears the state.
+func TestAStorysAgentOnTheUsageLimitSetsTheBudgetStateAndIsNotRestarted(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	at := limitReset.Add(-time.Hour)
+	lab.budgetClock(&at)
+	lab.cfg.AutoRestarts = 2
+	id := lab.ready("Limited")
+	lab.move(id, workitem.InProgress)
+	one := 1
+	run := AgentRun{Story: id, Agent: "builder-" + id, Harness: harness.ClaudeCode, Session: "limited", Started: at.Format(time.RFC3339), AutoRestarts: 1, Log: limitResult(t, true)}
+	again := run
+	lab.l.endRun(&run, &one)
+	lab.l.endRun(&again, &one) // seen again, as at a look
+	lab.heldUntil(limitReset, true, "5m0s")
+	if got := lab.budgetChanges(); !slices.Equal(got, []string{"set the budget state"}) {
+		t.Errorf("budget changes journalled: %q", got)
+	}
+	r := lab.run(id)
+	if r.Outcome != OutcomeFailed || !r.UsageLimited || r.ResetsAt != limitResetsAt || r.Why != limitWhyText || r.AutoRestarts != 1 {
+		t.Errorf("run = %+v; want failed on the limit, its count 1", r)
+	}
+	other := lab.putEnded("Failed otherwise", AgentRun{Outcome: OutcomeFailed, AutoRestarts: 1})
+
+	at = at.Add(2 * time.Minute)
+	lab.l.look(ctx, false)
+	lab.l.look(ctx, false)
+	if r := lab.run(id); r.Session != "limited" || r.live() || r.AutoRestarts != 1 || r.LimitThread != "" {
+		t.Errorf("the limited story's run = %+v; want it left as it ended, its count 1", r)
+	}
+	if ths := lab.limitThreads(id); len(ths) != 0 {
+		t.Errorf("%d threads at the restart limit opened", len(ths))
+	}
+	waitFor(t, "the other story's agent is restarted", func() bool { return lab.run(other).Session != "earlier" })
+	if r := lab.run(other); r.AutoRestarts != 2 {
+		t.Errorf("the other story's restart = %+v; want automatic restart 2", r)
+	}
+	lab.settle()
+
+	at = limitReset
+	probe := AgentRun{Story: id, Agent: "builder-" + id, Harness: harness.ClaudeCode, Session: "probe", Started: at.Format(time.RFC3339), Log: cleanResult(t)}
+	lab.probing(&probe)
+	zero := 0
+	lab.l.endRun(&probe, &zero)
+	if b, held := lab.budget(); held || b.Provider != "" {
+		t.Errorf("budget state after the probe's clean end = %+v, held %v; want none", b, held)
+	}
+	if got := lab.budgetChanges(); !slices.Equal(got, []string{"set the budget state", "started a probe of the budget state", "cleared the budget state"}) {
+		t.Errorf("budget changes journalled: %q", got)
+	}
+}

@@ -193,14 +193,24 @@ func (l *launcher) plan(ctx context.Context, cfg AgentConfig, item string, agent
 // log (ADR-0211 §1); one that cannot be appended is warned of, and the run is
 // handled as it would be otherwise. The end, as judgePlan judges it, is an
 // agent event on the item, appended once, by the end that recorded the run
-// as ended first (S-0532).
+// as ended first (S-0532). A run whose log ends on the harness's usage limit
+// and that asked nothing is failed on it, with why naming the limit, whether
+// its exit was seen or not, and marked so (limitEnded); every end feeds its
+// provider's budget state once (budgetEnd, S-0534).
 func (l *launcher) planEnded(run *AgentRun, exit *int) {
 	ended := *run
 	ended.Ended, ended.Exit = l.now().UTC().Format(time.RFC3339), exit
 	ended.Outcome, ended.Why, ended.Thread = judgePlan(l.entry.Root, run.Item, run.Agent, exit)
-	if l.ended(&ended) {
+	lim, _ := runLimit(run, l.warn)
+	ended.limitEnded(lim)
+	if lim != nil && ended.Outcome != OutcomeAsked {
+		ended.Outcome, ended.Why = OutcomeFailed, limitWhy(lim)
+	}
+	first := l.ended(&ended)
+	if first {
 		appendAgentEnd(l.entry.Root, &ended, l.warn)
 	}
+	l.budgetEnd(&ended, lim, first)
 	args := []any{"item", run.Item, "pid", run.PID, "outcome", ended.Outcome}
 	if exit != nil {
 		args = append(args, "exit", *exit)
