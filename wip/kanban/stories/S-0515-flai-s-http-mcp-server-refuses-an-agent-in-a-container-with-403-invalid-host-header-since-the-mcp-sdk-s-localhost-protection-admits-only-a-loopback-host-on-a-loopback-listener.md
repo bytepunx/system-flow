@@ -6,7 +6,7 @@ title: flai's HTTP MCP server refuses an agent in a container with 403 invalid H
 status: backlog
 owner: alex
 created: 2026-10-28T12:52:34Z
-updated: 2026-10-29T02:03:10Z
+updated: 2026-10-29T03:00:46Z
 transitions: []
 tags: [cli, mcp]
 topics: [mcp, docker]
@@ -32,15 +32,15 @@ usage:
           cache_write: 394452
           cost: 11.6085
     - kind: orchestrator
-      seconds: 224
+      seconds: 228
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 84
-          output: 1149
-          cache_read: 14099191
-          cache_write: 67713
-          cost: 3.1106
+          input: 85
+          output: 1164
+          cache_read: 14186680
+          cache_write: 69510
+          cost: 3.1303
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m
@@ -51,10 +51,10 @@ cost_of_delay:
   at: 2026-10-28T13:03:21Z
 forecast:
   duration: 45m
-  delivery: 2026-10-29T13:28:00Z
-  basis: "Its own forecast of 45m; 20th in the pull order with an in-progress limit of 5, behind S-0519, S-0532, S-0537, S-0534, S-0536, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0508, S-0509, S-0510, S-0511 and S-0512."
+  delivery: 2026-10-29T14:05:00Z
+  basis: "Its own forecast of 45m; 21st in the pull order with an in-progress limit of 5, behind S-0532, S-0538, S-0537, S-0534, S-0536, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0508, S-0509, S-0510, S-0511 and S-0512."
   by: flai
-  at: 2026-10-29T02:03:10Z
+  at: 2026-10-29T03:00:46Z
 finalized:
   by: alex
   at: 2026-10-28T12:57:10Z

@@ -6,7 +6,7 @@ title: A story the operator accepts outside the merge queue lands without the qu
 status: backlog
 owner: alex
 created: 2026-10-28T12:54:24Z
-updated: 2026-10-29T02:03:50Z
+updated: 2026-10-29T03:01:32Z
 transitions: []
 tags: [cli]
 topics: [orchestration, testing]
@@ -22,15 +22,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 182
+      seconds: 185
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 43
-          output: 571
-          cache_read: 3918940
-          cache_write: 62939
-          cost: 0.8748
+          input: 44
+          output: 586
+          cache_read: 4006429
+          cache_write: 64735
+          cost: 0.8945
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-10-28T18:16:03Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-29T19:02:00Z
-  basis: "Its own forecast of 1h30m; 28th in the pull order with an in-progress limit of 5, behind S-0519, S-0532, S-0537, S-0534, S-0536, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0508, S-0509, S-0510, S-0511, S-0512, S-0515, S-0516, S-0517, S-0518, S-0520, S-0523, S-0524 and S-0527."
+  delivery: 2026-10-29T19:36:00Z
+  basis: "Its own forecast of 1h30m; 29th in the pull order with an in-progress limit of 5, behind S-0532, S-0538, S-0537, S-0534, S-0536, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0508, S-0509, S-0510, S-0511, S-0512, S-0515, S-0516, S-0517, S-0518, S-0520, S-0523, S-0524 and S-0527."
   by: flai
-  at: 2026-10-29T02:03:50Z
+  at: 2026-10-29T03:01:32Z
 finalized:
   by: alex
   at: 2026-10-28T12:57:38Z
