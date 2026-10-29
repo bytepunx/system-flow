@@ -1276,6 +1276,29 @@ func (c *checker) roles() {
 	for _, p := range append(problems, roles.Validate(list, design, RolesVocabulary())...) {
 		c.add(Error, p.Code, filepath.Join(c.repo.Root, filepath.FromSlash(p.Path)), p.Line, "%s", p.Message)
 	}
+	if len(problems) > 0 {
+		return // a file that does not parse defines no role, so the manifest's roles cannot be held to them
+	}
+	mf := filepath.Join(c.repo.Root, manifest.File)
+	for _, msg := range c.repo.Manifest.UndeclaredRoleSettings(declaredPermissions(list)) {
+		c.add(Warning, "manifest.roles", mf, keyLine(mf, "roles"), "%s", msg)
+	}
+}
+
+// declaredPermissions are, by the name of each role the files define, the
+// permissions its entries name as roles.<name>.permissions.<p>.
+func declaredPermissions(list []roles.Role) map[string][]string {
+	out := map[string][]string{}
+	for _, r := range list {
+		perms := out[r.Name]
+		for _, p := range r.Permissions {
+			if perm, owner, ok := roles.ParseSetting(p.Setting); ok && owner == r.Name && strings.HasPrefix(p.Setting, "roles.") {
+				perms = append(perms, perm)
+			}
+		}
+		out[r.Name] = perms
+	}
+	return out
 }
 
 // unknownFields reports each front-matter field this flai does not know: the

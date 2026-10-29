@@ -292,13 +292,34 @@ func Settings() []Setting {
 }
 
 // SettingFor is the setting key names, and whether flai manifest set writes
-// it.
+// it: a key in the catalog, or roles.<name>.agent for a role's kebab-case
+// name (S-0417).
 func SettingFor(key string) (Setting, bool) {
 	i := slices.IndexFunc(catalog, func(s Setting) bool { return s.Key == key })
-	if i < 0 {
+	if i >= 0 {
+		return catalog[i], true
+	}
+	return roleAgentSetting(key)
+}
+
+// roleAgentKey is the pattern of the key a role's agent is set under, as
+// flai manifest set lists it.
+const roleAgentKey = "roles.<name>.agent"
+
+// roleAgentSetting is the setting roles.<name>.agent, for a role's name in
+// kebab-case, and whether key is one.
+func roleAgentSetting(key string) (Setting, bool) {
+	rest, ok := strings.CutPrefix(key, "roles.")
+	if !ok {
 		return Setting{}, false
 	}
-	return catalog[i], true
+	name, ok := strings.CutSuffix(rest, ".agent")
+	if !ok || !roleName.MatchString(name) {
+		return Setting{}, false
+	}
+	return Setting{Key: key, Kind: KindAgent,
+		Meaning: "The agent of the role " + name + ", one a role file defines, over the project's: what it sets wins, and what it leaves out is the project's agent's.",
+		get:     func(m Manifest) (any, bool) { return agent(m.Roles[name].Agent) }}, true
 }
 
 // SettingValues are the settings with their values in m, in catalog order.
@@ -593,11 +614,11 @@ func parseEdits(set []Assignment, unset []string) ([]write, []Problem) {
 }
 
 func settingKeys() []string {
-	keys := make([]string, len(catalog))
+	keys := make([]string, len(catalog), len(catalog)+1)
 	for i, s := range catalog {
 		keys[i] = s.Key
 	}
-	return keys
+	return append(keys, roleAgentKey+" (<name> a role's name in kebab-case)")
 }
 
 // parse reads a value given for the setting, or says why it is not one of
@@ -828,7 +849,7 @@ func (m Manifest) settingsProblems() []Problem {
 // is not ..., or tests[1].format "junit" is not ....
 func splitProblem(msg string) Problem {
 	field, reason, ok := strings.Cut(msg, " ")
-	if !ok || strings.Trim(field, "abcdefghijklmnopqrstuvwxyz_.[]0123456789") != "" {
+	if !ok || strings.Trim(field, "abcdefghijklmnopqrstuvwxyz_.[]0123456789-") != "" {
 		return Problem{Reason: msg}
 	}
 	return Problem{Field: field, Reason: reason}

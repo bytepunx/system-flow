@@ -737,16 +737,92 @@ type RoleSettings struct {
 	// when unset, as its role file's permissions entries name them under
 	// roles.<name>.permissions.<p>.
 	Permissions Permissions `yaml:"permissions,omitempty" json:"permissions,omitzero"`
+	// Agent is the role's agent over the project's, roles.<name>.agent: what
+	// it sets wins, and what it leaves out is the project's agent's (S-0417).
+	Agent *Agent `yaml:"agent,omitempty" json:"agent,omitempty"`
 }
+
+// builtinAgent is where a built-in role's agent is set instead of
+// roles.<name>.agent: the manifest key, and the agent it gives.
+type builtinAgent struct {
+	key   string
+	agent func(Manifest) *Agent
+}
+
+// builtinAgents are the built-in roles' agents, by role name.
+var builtinAgents = map[string]builtinAgent{
+	"planner":      {"planning.agent", Manifest.PlanningAgent},
+	"orchestrator": {"orchestration.agent", Manifest.OrchestrationAgent},
+	"analyzer":     {"analysis.agent", Manifest.AnalysisAgent},
+	"curator":      {"digest.agent", Manifest.DigestAgent},
+}
+
+// roleName is a role's name as its role file writes it: kebab-case.
+var roleName = regexp.MustCompile(`^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$`)
 
 // RoleErrors are what is wrong with the roles' settings, one sentence each,
 // by role name; none when they are valid.
 func (m Manifest) RoleErrors() []string {
 	var errs []string
 	for _, name := range slices.Sorted(maps.Keys(m.Roles)) {
-		errs = append(errs, m.Roles[name].Permissions.errors("roles."+name+".permissions")...)
+		key := "roles." + name
+		if !roleName.MatchString(name) {
+			errs = append(errs, fmt.Sprintf("%s is not a role's name such as reviewer (lower case letters and digits, joined by single hyphens); write the name its role file gives", key))
+			continue
+		}
+		r := m.Roles[name]
+		errs = append(errs, r.Permissions.errors(key+".permissions")...)
+		if b, builtin := builtinAgents[name]; builtin && r.Agent != nil {
+			errs = append(errs, fmt.Sprintf("%s.agent is not read: the %s's agent is %s; set that instead, and remove this", key, name, b.key))
+			continue
+		}
+		errs = append(errs, r.Agent.problems(key+".agent")...)
 	}
 	return errs
+}
+
+// RoleAgent is the agent the role name is started with: roles.<name>.agent
+// merged over the project's agent, as PlanningAgent is; for a built-in role,
+// the agent its own block gives, such as PlanningAgent for the planner. Nil
+// when neither sets anything.
+func (m Manifest) RoleAgent(name string) *Agent {
+	if b, builtin := builtinAgents[name]; builtin {
+		return b.agent(m)
+	}
+	return m.Agent.With(m.Roles[name].Agent)
+}
+
+// UndeclaredRoleSettings are the roles' settings that nothing reads, one
+// sentence each, by role name: a role no role file defines, a permission of
+// the orchestrator's turned on here rather than under
+// orchestration.permissions, and a permission turned on that its role file
+// declares no permissions entry for. declared
+// holds, by the name of each role a role file defines, the permissions its
+// file's entries name as roles.<name>.permissions.<p>.
+func (m Manifest) UndeclaredRoleSettings(declared map[string][]string) []string {
+	var out []string
+	for _, name := range slices.Sorted(maps.Keys(m.Roles)) {
+		key := "roles." + name
+		perms, defined := declared[name]
+		switch {
+		case !roleName.MatchString(name):
+			continue // RoleErrors reports it
+		case !defined:
+			out = append(out, fmt.Sprintf("%s names no role a role file defines, so nothing reads it; give the role a file under workflows/roles in the design folder, or remove it", key))
+			continue
+		}
+		p := m.Roles[name].Permissions
+		for _, perm := range PermissionNames {
+			switch {
+			case !p.Allows(perm):
+			case name == "orchestrator":
+				out = append(out, fmt.Sprintf("%s.permissions.%s is not read: the orchestrator's permissions are orchestration.permissions; set orchestration.permissions.%s instead, and remove this", key, perm, perm))
+			case !slices.Contains(perms, perm):
+				out = append(out, fmt.Sprintf("%s.permissions.%s is on, but the role's file has no permissions entry for it, so it allows nothing; add one with setting %s.permissions.%s to the file, or remove it", key, perm, key, perm))
+			}
+		}
+	}
+	return out
 }
 
 // OrchestrationAgent is the agent the orchestrator is started with:

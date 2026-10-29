@@ -506,6 +506,69 @@ func TestEditSettingsUnsets(t *testing.T) {
 	}
 }
 
+// S-0417: roles.<name>.agent, for a role's kebab-case name, is written into a
+// roles block added at the end, read back as the role's agent merged over the
+// project's, set again in place, and unset; a name not in kebab-case is no
+// setting, and a built-in role's, or an agent flai check refuses, is refused
+// naming the key.
+func TestEditSettingsWritesARolesAgent(t *testing.T) {
+	const key = "roles.code-reviewer.agent"
+	if s, ok := SettingFor(key); !ok || s.Key != key || s.Kind != KindAgent || s.Default != "" || !strings.Contains(s.Meaning, "code-reviewer") {
+		t.Fatalf("%s: %+v, %v", key, s, ok)
+	}
+	for _, k := range []string{"roles.Reviewer.agent", "roles..agent", "roles.a.b.agent", "roles.reviewer.permissions", "roles.reviewer"} {
+		if _, ok := SettingFor(k); ok {
+			t.Errorf("%s is a setting", k)
+		}
+	}
+	if keys := settingKeys(); !strings.HasPrefix(keys[len(keys)-1], "roles.<name>.agent") {
+		t.Errorf("roles.<name>.agent is not listed last: %v", keys)
+	}
+	got, err := EditSettings([]byte(settingsFixture), []Assignment{{key, `{"model":"claude-sonnet-5","config":{"effort":"low"}}`}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := settingsFixture + "roles:\n  code-reviewer:\n    agent:\n      model: claude-sonnet-5\n      config:\n        effort: low\n"
+	if string(got) != want {
+		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
+	}
+	m := loaded(t, got)
+	if a := m.RoleAgent("code-reviewer"); a.Model != "claude-sonnet-5" || a.Config["effort"] != "low" {
+		t.Errorf("read back: %v", a)
+	}
+
+	again, err := EditSettings(got, []Assignment{{key, `{"harness":"claude-code"}`}}, nil)
+	if err != nil || string(again) != settingsFixture+"roles:\n  code-reviewer:\n    agent:\n      harness: claude-code\n" {
+		t.Fatalf("set again: %v\n%s", err, again)
+	}
+	unset, err := EditSettings(got, nil, []string{key})
+	if err != nil || string(unset) != settingsFixture+"roles:\n  code-reviewer:\n" {
+		t.Fatalf("unset: %v\n%s", err, unset)
+	}
+	if a := loaded(t, unset).Roles["code-reviewer"].Agent; a != nil {
+		t.Errorf("unset agent still reads: %v", a)
+	}
+
+	for _, c := range []struct{ set, field, reason string }{
+		{`roles.Reviewer.agent={"model":"x"}`, "roles.Reviewer.agent", "is not a setting flai manifest set writes"},
+		{`roles.planner.agent={"model":"claude-sonnet-5"}`, "roles.planner.agent", "is not read: the planner's agent is planning.agent; set that instead"},
+		{`roles.code-reviewer.agent={"harness":"Bad Harness"}`, "roles.code-reviewer.agent", `harness "Bad Harness" is not a name such as claude-code`},
+		{`roles.code-reviewer.agent=claude`, "roles.code-reviewer.agent", "is not an agent"},
+	} {
+		k, v, _ := strings.Cut(c.set, "=")
+		_, err := EditSettings([]byte(settingsFixture), []Assignment{{k, v}}, nil)
+		var refused *RefusedError
+		if !errors.As(err, &refused) {
+			t.Errorf("%s: want a refusal, got %v", c.set, err)
+			continue
+		}
+		i := slices.IndexFunc(refused.Problems, func(p Problem) bool { return p.Field == c.field })
+		if i < 0 || !strings.Contains(refused.Problems[i].Reason, c.reason) {
+			t.Errorf("%s: want %s: ...%s..., got %+v", c.set, c.field, c.reason, refused.Problems)
+		}
+	}
+}
+
 // S-0229: every value the catalog lists for a choice or a boolean, and every
 // default, is one flai check accepts, and a value outside the list is one it
 // refuses: the catalog and the validation cannot disagree.

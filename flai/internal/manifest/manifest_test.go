@@ -518,6 +518,95 @@ func TestRolePermissions(t *testing.T) {
 	}
 }
 
+// S-0417: roles.<name>.agent reads as agent does, a defined role's agent is it
+// merged over the project's agent as the planner's is, and a built-in role's
+// agent is its own block's, whatever roles.<name>.agent says.
+func TestRoleAgent(t *testing.T) {
+	body := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\n" +
+		"agent:\n  harness: claude-code\n  model: claude-opus-5-5\n  config:\n    effort: high\n    max_budget_usd: \"10\"\n  roles:\n    explore:\n      model: haiku\n" +
+		"planning:\n  agent:\n    model: claude-haiku-5\n" +
+		"roles:\n  reviewer:\n    agent:\n      model: claude-sonnet-5\n      config:\n        effort: medium\n      roles:\n        verify:\n          model: sonnet\n  scout:\n    permissions:\n      publish: true\n"
+	m := loaded(t, []byte(body))
+	if errs := m.RoleErrors(); len(errs) != 0 {
+		t.Errorf("valid roles: %v", errs)
+	}
+	if s := m.RoleAgent("reviewer").String(); s != "claude-code, claude-sonnet-5, effort=medium, max_budget_usd=10; explore: haiku; verify: sonnet" {
+		t.Errorf("reviewer's agent: %s", s)
+	}
+	if m.Agent.Model != "claude-opus-5-5" || m.Agent.Config["effort"] != "high" || len(m.Agent.Roles) != 1 {
+		t.Errorf("the project's agent was changed by the merge: %+v", m.Agent)
+	}
+	for _, name := range []string{"scout", "absent"} {
+		if a := m.RoleAgent(name); !a.Same(m.Agent) {
+			t.Errorf("%s, with no agent of its own: %v", name, a)
+		}
+	}
+	if a := (Manifest{Roles: m.Roles}).RoleAgent("reviewer"); !a.Same(m.Roles["reviewer"].Agent) {
+		t.Errorf("no project agent: %v", a)
+	}
+	if a := (Manifest{}).RoleAgent("reviewer"); a != nil {
+		t.Errorf("neither: %v", a)
+	}
+
+	m.Roles = map[string]RoleSettings{}
+	for name := range builtinAgents {
+		m.Roles[name] = RoleSettings{Agent: &Agent{Model: "claude-sonnet-5"}}
+	}
+	for name, want := range map[string]*Agent{"planner": m.PlanningAgent(), "orchestrator": m.OrchestrationAgent(), "analyzer": m.AnalysisAgent(), "curator": m.DigestAgent()} {
+		if a := m.RoleAgent(name); !a.Same(want) || a.Model == "claude-sonnet-5" {
+			t.Errorf("%s's agent: %v, want %v", name, a, want)
+		}
+	}
+	if got := strings.Join(m.RoleErrors(), "; "); !strings.Contains(got, "roles.planner.agent is not read: the planner's agent is planning.agent; set that instead") ||
+		!strings.Contains(got, "roles.curator.agent is not read: the curator's agent is digest.agent") || len(m.RoleErrors()) != 4 {
+		t.Errorf("built-in roles' agents: %q", got)
+	}
+
+	for _, c := range []struct {
+		a    *Agent
+		want string
+	}{
+		{&Agent{Harness: "Claude Code"}, `roles.reviewer.agent harness "Claude Code" is not a name such as claude-code`},
+		{&Agent{Model: "has space"}, `roles.reviewer.agent model "has space" is not a model ID`},
+		{&Agent{Config: map[string]string{"k": "two\nlines"}}, "roles.reviewer.agent config k spans lines"},
+		{&Agent{Roles: map[string]Role{"verify": {}}}, "roles.reviewer.agent role verify sets nothing"},
+	} {
+		got := strings.Join((Manifest{Roles: map[string]RoleSettings{"reviewer": {Agent: c.a}}}).RoleErrors(), "; ")
+		if !strings.Contains(got, c.want) {
+			t.Errorf("%+v: got %q, want %q", c.a, got, c.want)
+		}
+	}
+	got := (Manifest{Roles: map[string]RoleSettings{"Review_er": {Agent: &Agent{Model: "has space"}}}}).RoleErrors()
+	if len(got) != 1 || !strings.HasPrefix(got[0], "roles.Review_er is not a role's name such as reviewer") {
+		t.Errorf("a name not in kebab-case: %q", got)
+	}
+}
+
+// S-0417: a role no role file defines, and a permission turned on that its
+// role's file has no entry for, are named; a permission its file declares,
+// and one left off, are not.
+func TestUndeclaredRoleSettings(t *testing.T) {
+	m := Manifest{Roles: map[string]RoleSettings{
+		"reviewer":     {Permissions: Permissions{PromoteToReady: true, Publish: true, AnswerThreads: AnswerOff}},
+		"scout":        {Agent: &Agent{Model: "claude-sonnet-5"}},
+		"ghost":        {Agent: &Agent{Model: "claude-sonnet-5"}},
+		"orchestrator": {Permissions: Permissions{OrderReady: true}},
+		"Bad_Name":     {},
+	}}
+	declared := map[string][]string{"reviewer": {PermitPromoteToReady}, "scout": nil, "orchestrator": nil}
+	want := []string{
+		"roles.ghost names no role a role file defines, so nothing reads it; give the role a file under workflows/roles in the design folder, or remove it",
+		"roles.orchestrator.permissions.order_ready is not read: the orchestrator's permissions are orchestration.permissions; set orchestration.permissions.order_ready instead, and remove this",
+		"roles.reviewer.permissions.publish is on, but the role's file has no permissions entry for it, so it allows nothing; add one with setting roles.reviewer.permissions.publish to the file, or remove it",
+	}
+	if got := m.UndeclaredRoleSettings(declared); !slices.Equal(got, want) {
+		t.Errorf("got %q\nwant %q", got, want)
+	}
+	if got := (Manifest{}).UndeclaredRoleSettings(declared); len(got) != 0 {
+		t.Errorf("no roles: %q", got)
+	}
+}
+
 // S-0392: a manifest without acceptance loads with each key at its default
 // and marshals without the block; each value of each key loads, a forge and a
 // merge method under local among them; and a value outside a key's values is
