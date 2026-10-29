@@ -40,7 +40,9 @@ import (
 // than orchestrateRetry later, so that a run that fails at once does not
 // spin. Reasons that come while a run goes wait for its end, and start the
 // next run at the first look after it. With nothing queued, nothing starts:
-// a run that ends is not started again by itself.
+// a run that ends is not started again by itself. A run going past
+// orchestration.run_timeout is stopped at the next look, journalled and
+// logged, and recorded stopped, which is no failure (orchestrate_timeout.go).
 //
 // The action turned on, or found on at flai serve's first look with no
 // queue kept, queues one asked reason, and none of the catch-up's history.
@@ -129,7 +131,8 @@ func queueBatches(o Options, e Entry, m manifest.Manifest) bool {
 // first look once the state no longer holds starts the next. A start the
 // budget state holds otherwise, as when another role's run set it, records
 // nothing, so it is not a failure orchestrateRetry counts, and the next look
-// tries again. While the action is off it keeps up with the events and the
+// tries again. A run going past orchestration.run_timeout is stopped
+// (stopOverdue). While the action is off it keeps up with the events and the
 // schedule and queues nothing, and stops the run going, which also lifts the
 // hold.
 func (r *orchestrator) look(ctx context.Context) {
@@ -163,6 +166,7 @@ func (r *orchestrator) look(ctx context.Context) {
 	q := r.gather(repo, now)
 	switch {
 	case run.live():
+		r.stopOverdue(repo.Manifest.Orchestration, run, now)
 		return
 	case run != nil && run.Held:
 		return
@@ -364,28 +368,41 @@ func (r *orchestrator) due(run *AgentRun) bool {
 }
 
 // stop ends run, the orchestrator's, because the action was turned off, as
-// Stop ends a story's agent: it is marked stopped first, its process group
-// is asked to end while it is still the one flai started, and made to once
-// o.StopGrace has passed. The launcher waiting for it settles its end; when
-// none does, it is settled here. The stop is journalled.
+// halt does, marked stopped, and journals and logs the stop.
 func (r *orchestrator) stop(run *AgentRun) {
+	h := r.halt(run, func(marked *AgentRun, at string) { marked.Stopped = at })
+	r.journalStop(h.at, fmt.Sprintf("stopped the orchestrator %s, since orchestrate was turned off: %s", run.Agent, h.what))
+	r.starter.log("orchestrator stopped", "pid", run.PID, "signalled", h.signalled, "killed", h.killed)
+}
+
+// halted is what halt did to a run: when it marked it, what it did in the
+// journal's words, and whether it signalled and killed its process group.
+type halted struct {
+	at, what          string
+	signalled, killed bool
+}
+
+// halt ends run, the orchestrator's, as Stop ends a story's agent: mark
+// marks it first, at the time given, so that whoever settles it records why
+// it was stopped and not a failure, its process group is asked to end while
+// it is still the one flai started, and made to once o.StopGrace has passed.
+// The launcher waiting for it settles its end; when none does, it is settled
+// here. Its caller journals and logs the stop.
+func (r *orchestrator) halt(run *AgentRun, mark func(marked *AgentRun, at string)) halted {
 	l := r.starter
-	at := r.o.Now().UTC().Format(time.RFC3339)
-	// Marked before the signal, so that whoever settles the run records the
-	// stop and not a failure.
+	h := halted{at: r.o.Now().UTC().Format(time.RFC3339)}
 	r.o.Dir.updateAgent(r.e.Root, func(s *AgentState) {
 		if cur := s.Orchestrator; cur.same(run) && cur.live() {
 			marked := *cur
-			marked.Stopped = at
+			mark(&marked, h.at)
 			s.put(&marked)
 		}
 	})
-	signalled, killed := false, false
 	if run.running() {
-		signalled = true
+		h.signalled = true
 		_ = TerminateGroup(run.PID)
 		if !gone(run.PID, r.o.stopGrace()) {
-			killed = true
+			h.killed = true
 			_ = KillGroup(run.PID)
 			gone(run.PID, 2*time.Second)
 		}
@@ -395,18 +412,23 @@ func (r *orchestrator) stop(run *AgentRun) {
 		l.orchestrateEnded(cur, nil)
 	}
 	l.mu.Unlock()
-	what := fmt.Sprintf("recorded it as stopped: pid %d is no longer the orchestrator flai started", run.PID)
 	switch {
-	case killed:
-		what = fmt.Sprintf("killed its process group (pid %d), which had not ended %s after it was asked to", run.PID, r.o.stopGrace())
-	case signalled:
-		what = fmt.Sprintf("ended its process group (pid %d)", run.PID)
+	case h.killed:
+		h.what = fmt.Sprintf("killed its process group (pid %d), which had not ended %s after it was asked to", run.PID, r.o.stopGrace())
+	case h.signalled:
+		h.what = fmt.Sprintf("ended its process group (pid %d)", run.PID)
+	default:
+		h.what = fmt.Sprintf("recorded it as stopped: pid %d is no longer the orchestrator flai started", run.PID)
 	}
-	if l.record != nil {
+	return h
+}
+
+// journalStop journals a stop of the orchestrator made at, saying detail.
+func (r *orchestrator) journalStop(at, detail string) {
+	if l := r.starter; l.record != nil {
 		l.record(hostapi.Entry{At: at, Action: hostapi.ActionOrchestrate, Method: "serve.orchestrate", Project: r.e.Key, Root: r.e.Root, By: "flai serve",
-			Outcome: "done", Detail: fmt.Sprintf("stopped the orchestrator %s, since orchestrate was turned off: %s", run.Agent, what)})
+			Outcome: "done", Detail: detail})
 	}
-	l.log("orchestrator stopped", "pid", run.PID, "signalled", signalled, "killed", killed)
 }
 
 // orchestrate starts the orchestrator with agent for reasons, records the
@@ -496,7 +518,10 @@ func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *mani
 // save a stop's, which the stop journals, and logs the run's activity since
 // the last entry in the orchestrator's activity document, with its final
 // reply as the summary, or, when it was stopped, orchestrateHeld when the
-// operator held it stopped and orchestrateOff otherwise. An activity that
+// operator held it stopped, the why stopOverdue marked it with when it ran
+// past orchestration.run_timeout, and orchestrateOff otherwise. A run
+// stopOverdue marked is stopped, for that why, whatever its exit, and its
+// stop is no failure (overdueWhy). An activity that
 // cannot be logged is warned of, and the run stays recorded as it ended. The
 // end, a stop's included, is an agent event on the orchestrator's role,
 // appended once, by the end that recorded the run as ended first (S-0532):
@@ -518,6 +543,10 @@ func (l *launcher) orchestrateEnded(run *AgentRun, exit *int) {
 	case exit != nil && *exit != 0:
 		ended.Outcome, ended.Why = OutcomeFailed, fmt.Sprintf("ended (exit %d)", *exit)
 	}
+	overdue := overdueWhy(l.dir.AgentStates()[l.entry.Root].Orchestrator, run)
+	if overdue != "" {
+		ended.Outcome, ended.Why = OutcomeStopped, overdue
+	}
 	first := l.ended(&ended)
 	if first {
 		appendAgentEnd(l.entry.Root, &ended, l.warn)
@@ -530,9 +559,13 @@ func (l *launcher) orchestrateEnded(run *AgentRun, exit *int) {
 	l.log("orchestrator ended", args...)
 	summary := ""
 	if ended.Outcome == OutcomeStopped {
-		summary = orchestrateOff
-		if ended.Held {
+		switch {
+		case ended.Held:
 			summary = orchestrateHeld
+		case overdue != "":
+			summary = overdue
+		default:
+			summary = orchestrateOff
 		}
 	} else if l.record != nil {
 		e := hostapi.Entry{At: ended.Ended, Action: hostapi.ActionOrchestrate, Method: "serve.orchestrate", Project: l.entry.Key, Root: l.entry.Root, By: "flai serve",
