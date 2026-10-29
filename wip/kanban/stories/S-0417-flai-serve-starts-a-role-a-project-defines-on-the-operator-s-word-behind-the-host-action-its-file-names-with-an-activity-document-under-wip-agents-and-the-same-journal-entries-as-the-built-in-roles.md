@@ -3,11 +3,11 @@ id: S-0417
 type: story
 nature: feature
 title: flai serve starts a role a project defines on the operator's word, behind the host action its file names, with an activity document under wip/agents and the same journal entries as the built-in roles
-status: backlog
+status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:01Z
-updated: 2026-10-29T03:01:38Z
+updated: 2026-10-29T03:04:41Z
 transitions:
   - to: ready
     at: 2026-10-28T13:04:05Z
@@ -15,6 +15,12 @@ transitions:
   - to: backlog
     at: 2026-10-28T22:20:51Z
     by: alex
+  - to: ready
+    at: 2026-10-29T03:04:35Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-29T03:04:41Z
+    by: agent-S-0417
 tags: [cli, template]
 topics: [cli, planning, orchestration]
 touches: [design/system/project-manifest.md, design/system/strategic-agents.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/activity.go, flai/cmd/activity_test.go, flai/cmd/role.go, flai/cmd/role_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/check/activity.go, flai/internal/check/activity_test.go, flai/internal/check/check.go, flai/internal/harness/adapters.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/mcpserver/activity.go, flai/internal/mcpserver/activity_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/role.go, flai/internal/mcpserver/role_test.go, flai/internal/serve/activity.go, flai/internal/serve/agents.go, flai/internal/serve/role.go, flai/internal/serve/role_test.go, flai/internal/workitem/activity.go, flai/internal/workitem/activity_test.go, flai/internal/workitem/narrative.go, template/CHANGELOG.md, design/system/flai-cli.md, design/system/agent-narrative.md, flai/internal/serve/serve.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, flai/internal/hostapi/people.go, flaiover/src/lib/server/agent.ts, flai/cmd/guard.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go]
@@ -30,25 +36,25 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 512
+      seconds: 532
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 70
-          output: 1103
-          cache_read: 10156692
-          cache_write: 25609
-          cost: 2.2483
+          input: 76
+          output: 1135
+          cache_read: 11013517
+          cache_write: 30853
+          cost: 2.4384
 cost_of_delay:
   value: 79.4
   by: planner-S-0417
   at: 2026-10-21T11:53:36Z
 forecast:
   duration: 1h37m
-  delivery: 2026-10-29T20:06:00Z
-  basis: "Its own forecast of 1h37m; 30th in the pull order with an in-progress limit of 5, behind S-0532, S-0538, S-0537, S-0534, S-0536, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0508, S-0509, S-0510, S-0511, S-0512, S-0515, S-0516, S-0517, S-0518, S-0520, S-0523, S-0524, S-0527 and S-0529."
+  delivery: 2026-10-29T05:04:00Z
+  basis: "Its own forecast of 1h37m; 1st in the pull order with an in-progress limit of 5, behind S-0538."
   by: flai
-  at: 2026-10-29T03:01:38Z
+  at: 2026-10-29T03:04:37Z
 finalized:
   by: alex
   at: 2026-10-28T13:03:25Z
