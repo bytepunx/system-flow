@@ -3,15 +3,36 @@ id: T-2208
 type: task
 nature: remediation
 title: An ADR records that the bearer token and the Origin refusal are the HTTP MCP server's gates and the SDK's localhost Host check is off, refining ADR-0030
-status: backlog
+status: done
 parent: S-0515
 owner: alex
 created: 2026-10-28T13:02:35Z
-updated: 2026-10-28T13:02:35Z
-transitions: []
+updated: 2026-10-29T07:56:20Z
+transitions:
+  - to: ready
+    at: 2026-10-29T07:45:36Z
+    by: agent-S-0515
+  - to: in-progress
+    at: 2026-10-29T07:45:37Z
+    by: agent-S-0515
+  - to: done
+    at: 2026-10-29T07:56:20Z
+    by: agent-S-0515
 stream: S-0515
 tags: [design, mcp]
 touches: [design/adrs/README.md]
+usage:
+  source: log
+  seconds: 643
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 17
+      output: 3605
+      cache_read: 1207298
+      cache_write: 32909
+      cost: 0.5769
 ---
 # T-2208 An ADR records that the bearer token and the Origin refusal are the HTTP MCP server's gates and the SDK's localhost Host check is off, refining ADR-0030
 

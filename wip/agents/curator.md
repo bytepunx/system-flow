@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 34.6917
-accrued_seconds: 2986
-tasks_completed: 20
-last_run: 2026-10-29T06:03:59Z
+accrued_cost: 35.9177
+accrued_seconds: 3224
+tasks_completed: 21
+last_run: 2026-10-29T07:32:29Z
 ---
 
 # Curator activity
@@ -171,3 +171,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0396, D-0416, D-0418
 - Seconds: 68
 - Cost: 1.5845 USD, estimated
+
+### 2026-10-29T07:32:29Z
+
+- Summary: I wrote D-0420 and D-0421, merged S-0534 into D-0396, absorbed D-0418 into `design/system/flai-cli.md` § The host's budget state, and `flai digest compact` compacted nothing.
+- Trigger: accepted S-0534
+- Items: D-0396, D-0418, D-0420, D-0421
+- Seconds: 238
+- Cost: 1.2260 USD, estimated

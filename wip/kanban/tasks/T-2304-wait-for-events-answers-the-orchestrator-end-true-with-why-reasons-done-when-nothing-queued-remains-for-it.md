@@ -3,16 +3,37 @@ id: T-2304
 type: task
 nature: feature
 title: wait_for_events answers the orchestrator end true with why reasons done when nothing queued remains for it
-status: backlog
+status: done
 parent: S-0536
 owner: alex
 created: 2026-10-28T21:46:09Z
-updated: 2026-10-28T21:46:09Z
-transitions: []
+updated: 2026-10-29T08:01:33Z
+transitions:
+  - to: ready
+    at: 2026-10-29T07:46:25Z
+    by: agent-S-0536
+  - to: in-progress
+    at: 2026-10-29T07:46:26Z
+    by: agent-S-0536
+  - to: done
+    at: 2026-10-29T08:01:33Z
+    by: agent-S-0536
 stream: S-0536
 tags: [flai, mcp, orchestrator]
 touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/orchestrator_end_test.go]
 after: [T-2302]
+usage:
+  source: log
+  seconds: 907
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 18
+      output: 6805
+      cache_read: 1317925
+      cache_write: 41887
+      cost: 0.6365
 ---
 # T-2304 wait_for_events answers the orchestrator end true with why reasons done when nothing queued remains for it
 

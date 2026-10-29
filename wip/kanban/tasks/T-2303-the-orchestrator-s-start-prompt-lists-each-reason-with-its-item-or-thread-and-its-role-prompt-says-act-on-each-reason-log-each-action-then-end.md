@@ -3,16 +3,37 @@ id: T-2303
 type: task
 nature: feature
 title: The orchestrator's start prompt lists each reason with its item or thread, and its role prompt says act on each reason, log each action, then end
-status: backlog
+status: done
 parent: S-0536
 owner: alex
 created: 2026-10-28T21:46:04Z
-updated: 2026-10-28T21:46:04Z
-transitions: []
+updated: 2026-10-29T08:02:12Z
+transitions:
+  - to: ready
+    at: 2026-10-29T07:46:23Z
+    by: agent-S-0536
+  - to: in-progress
+    at: 2026-10-29T07:46:24Z
+    by: agent-S-0536
+  - to: done
+    at: 2026-10-29T08:02:12Z
+    by: agent-S-0536
 stream: S-0536
 tags: [flai, harness, orchestrator, template]
-touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md]
+touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md]
 after: [T-2300, T-2302]
+usage:
+  source: log
+  seconds: 948
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 67
+      output: 25257
+      cache_read: 4891523
+      cache_write: 155467
+      cost: 2.3623
 ---
 # T-2303 The orchestrator's start prompt lists each reason with its item or thread, and its role prompt says act on each reason, log each action, then end
 

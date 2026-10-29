@@ -3,11 +3,11 @@ id: T-2300
 type: task
 nature: feature
 title: flai check reports continuous on any role as a finding, and orchestrator.md and its template copy name ADR-0209's trigger events
-status: in-progress
+status: done
 parent: S-0536
 owner: alex
 created: 2026-10-28T21:44:58Z
-updated: 2026-10-29T07:25:40Z
+updated: 2026-10-29T07:43:11Z
 transitions:
   - to: ready
     at: 2026-10-29T07:25:39Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-29T07:25:40Z
     by: agent-S-0536
+  - to: done
+    at: 2026-10-29T07:43:11Z
+    by: agent-S-0536
 stream: S-0536
 tags: [flai, roles, orchestrator]
-touches: [flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/check/roles_test.go, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md]
+touches: [flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/check/roles_test.go, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md]
 after: [T-2301]
+usage:
+  source: log
+  seconds: 1051
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 35
+      output: 13283
+      cache_read: 2572452
+      cache_write: 81760
+      cost: 1.2423
 ---
 # T-2300 flai check reports continuous on any role as a finding, and orchestrator.md and its template copy name ADR-0209's trigger events
 

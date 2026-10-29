@@ -4,10 +4,10 @@ title: "Plan for S-0536: eight tasks in five layers, and two questions on criter
 anchor:
   path: wip/kanban/stories/S-0536-the-orchestrator-runs-for-a-reason-and-ends-its-trigger-names-events-flai-check-rejects-continuous-flai-serve-coalesces-the-reasons-into-one-run-naming-them-wait-for-events-ends-the-run-when-they-are-done-and-adr-0209-is-accepted.md
   item: S-0536
-status: answered
-participants: [planner-S-0536, orchestrator]
+status: resolved
+participants: [planner-S-0536, orchestrator, agent-S-0536, alex]
 created: 2026-10-28T21:48:09Z
-updated: 2026-10-28T21:48:27Z
+updated: 2026-10-29T13:55:05Z
 ---
 
 # TH-0717 Plan for S-0536: eight tasks in five layers, and two questions on criterion 6
@@ -74,3 +74,26 @@ Source: design/conventions/strategic-agents.md § As the planner
 **Or:** keep criterion 6 as written and run the branch's build on the host for a day before review. Say so here, and T-2307 stays as drafted.
 
 Source: design/conventions/work-management.md § Rules
+
+### 2026-10-29T08:42:11Z agent-S-0536
+S-0536's agent: where the story stands, and what waits on you here.
+
+- **Proposal 1 is done.** `design/adrs` is off S-0536's touches. That was S-0536's own claim to narrow.
+- **Built and tested:** criteria 1 to 4. Criterion 5 waits only on T-2330, the two `.claude/agents/orchestrator.md` writes, which are asked on TH-0737.
+- **Criterion 6 is yours.** ADR-0209 is accepted, so that half is met. The day-long run can only happen once this branch is installed on the host.
+
+**Recommended:** confirm the orchestrator's recommendation above. I then cancel T-2307, rewrite criterion 6 to ADR-0209's status alone, and tick it. The day-long run, with its reasons, cost from `flai stats`, and context tokens from the session logs, becomes a follow-up story under E-0030, which you choose to make at acceptance.
+
+**Or:** answer "keep criterion 6". S-0536 then stays in progress until the branch's build has run the orchestrator here for a day. That build would need installing on the host, which is yours to do.
+
+### 2026-10-29T13:52:32Z alex
+confirm recommendation
+
+### 2026-10-29T13:52:41Z orchestrator
+Resolved: The operator confirmed the recommendation at 13:52Z. S-0536 keeps criterion 6 to ADR-0209's status: its agent cancels T-2307, rewrites the criterion, and ticks it. The day-long run becomes a follow-up story under E-0030. design/adrs is already off S-0536's touches.
+
+### 2026-10-29T13:55:00Z agent-S-0536
+Done as confirmed. T-2307 is cancelled, and criterion 6 now reads "ADR-0209's status is accepted", which it is, so it is ticked. S-0536's Notes record the follow-up: a story under E-0030 for a day of runs under the new trigger once S-0536 is installed. It records the reasons from the journal, cost and activities from `flai stats`, and context tokens per action from the session logs.
+
+### 2026-10-29T13:55:05Z orchestrator
+Resolved: Done as confirmed: T-2307 is cancelled, criterion 6 reads "ADR-0209's status is accepted" and is ticked, and the follow-up for a day of runs is recorded in S-0536's Notes.

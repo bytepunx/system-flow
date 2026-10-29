@@ -3,16 +3,37 @@ id: T-2210
 type: task
 nature: remediation
 title: The user, operator, and design documents say the token is the HTTP MCP server's gate whatever Host a request names, and I-0213 is closed
-status: backlog
+status: done
 parent: S-0515
 owner: alex
 created: 2026-10-28T13:02:53Z
-updated: 2026-10-28T13:02:53Z
-transitions: []
+updated: 2026-10-29T07:57:14Z
+transitions:
+  - to: ready
+    at: 2026-10-29T07:56:30Z
+    by: agent-S-0515
+  - to: in-progress
+    at: 2026-10-29T07:56:31Z
+    by: agent-S-0515
+  - to: done
+    at: 2026-10-29T07:57:14Z
+    by: agent-S-0515
 stream: S-0515
 tags: [docs, mcp]
 touches: [docs/users/flai.md, docs/operators/index.md, design/system/flai-cli.md, design/issues/I-0213-flai-s-http-mcp-server-refuses-an-agent-in-a-container-with-403-invalid-host-header-since-the-mcp-sdk-s-localhost-protection-admits-only-a-loopback-host-on-a-loopback-listener.md, design/issues/summary.md]
 after: [T-2206, T-2208]
+usage:
+  source: log
+  seconds: 43
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 23
+      output: 4923
+      cache_read: 1648691
+      cache_write: 44941
+      cost: 0.7878
 ---
 # T-2210 The user, operator, and design documents say the token is the HTTP MCP server's gate whatever Host a request names, and I-0213 is closed
 

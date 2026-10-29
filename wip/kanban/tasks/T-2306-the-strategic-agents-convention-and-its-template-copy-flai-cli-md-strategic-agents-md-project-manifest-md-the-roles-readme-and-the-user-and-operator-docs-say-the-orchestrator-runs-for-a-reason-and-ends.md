@@ -3,16 +3,37 @@ id: T-2306
 type: task
 nature: feature
 title: The strategic-agents convention and its template copy, flai-cli.md, strategic-agents.md, project-manifest.md, the roles README, and the user and operator docs say the orchestrator runs for a reason and ends
-status: backlog
+status: done
 parent: S-0536
 owner: alex
 created: 2026-10-28T21:46:34Z
-updated: 2026-10-28T21:46:34Z
-transitions: []
+updated: 2026-10-29T08:30:23Z
+transitions:
+  - to: ready
+    at: 2026-10-29T08:02:28Z
+    by: agent-S-0536
+  - to: in-progress
+    at: 2026-10-29T08:02:29Z
+    by: agent-S-0536
+  - to: done
+    at: 2026-10-29T08:30:23Z
+    by: agent-S-0536
 stream: S-0536
 tags: [docs, conventions, template, orchestrator]
-touches: [design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/flai-cli.md, design/system/strategic-agents.md, design/system/project-manifest.md, design/system/agent-narrative.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/users/flai.md, docs/operators/index.md, template/CHANGELOG.md]
+touches: [design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/flai-cli.md, design/system/strategic-agents.md, design/system/project-manifest.md, design/system/agent-narrative.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/users/flai.md, docs/operators/index.md, template/CHANGELOG.md, docs/users/flai-reference.md, docs/users/conventions.md, flai/cmd/role.go, docs/users/flaiover.md, docs/operators/settings.md]
 after: [T-2303, T-2304, T-2305]
+usage:
+  source: log
+  seconds: 1674
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 259
+      output: 97826
+      cache_read: 18946092
+      cache_write: 602161
+      cost: 9.1497
 ---
 # T-2306 The strategic-agents convention and its template copy, flai-cli.md, strategic-agents.md, project-manifest.md, the roles README, and the user and operator docs say the orchestrator runs for a reason and ends
 

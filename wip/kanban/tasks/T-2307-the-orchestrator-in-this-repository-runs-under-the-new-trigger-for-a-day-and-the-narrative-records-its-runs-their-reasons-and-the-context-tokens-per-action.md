@@ -3,12 +3,15 @@ id: T-2307
 type: task
 nature: research
 title: The orchestrator in this repository runs under the new trigger for a day, and the narrative records its runs, their reasons, and the context tokens per action
-status: backlog
+status: cancelled
 parent: S-0536
 owner: alex
 created: 2026-10-28T21:46:49Z
-updated: 2026-10-28T21:46:49Z
-transitions: []
+updated: 2026-10-29T13:52:45Z
+transitions:
+  - to: cancelled
+    at: 2026-10-29T13:52:45Z
+    by: agent-S-0536
 stream: S-0536
 tags: [orchestrator, measurement]
 after: [T-2306]
@@ -33,3 +36,4 @@ Waits for T-2306: the day measures the story as built and documented.
 - Criterion 6 is ticked, or, if the day could not be run before review, left unticked with the reason in the story's notes.
 
 ## Notes
+- 2026-10-29T13:52:45Z: moved to cancelled: The operator confirmed on TH-0717: the day-long run under the new trigger moves to a follow-up story under E-0030, since it can only run once S-0536 is installed on the host; criterion 6 keeps ADR-0209's status alone.

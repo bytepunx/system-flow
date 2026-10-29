@@ -3,11 +3,11 @@ id: T-2302
 type: task
 nature: feature
 title: flai serve queues the orchestrator's reasons per project and starts one run per batch after orchestration.coalesce, naming the reasons in its journal entry, and the next run for reasons that came meanwhile
-status: in-progress
+status: done
 parent: S-0536
 owner: alex
 created: 2026-10-28T21:45:42Z
-updated: 2026-10-29T07:25:42Z
+updated: 2026-10-29T08:30:02Z
 transitions:
   - to: ready
     at: 2026-10-29T07:25:41Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-29T07:25:42Z
     by: agent-S-0536
+  - to: done
+    at: 2026-10-29T07:44:18Z
+    by: agent-S-0536
 stream: S-0536
 tags: [flai, serve, orchestrator]
-touches: [flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/orchestrate_reasons_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/orchestrate_hold.go, flai/internal/serve/orchestrate_hold_test.go, flai/internal/serve/serve.go, flai/internal/harness/harness.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go]
+touches: [flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/orchestrate_reasons_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/orchestrate_hold.go, flai/internal/serve/orchestrate_hold_test.go, flai/internal/serve/serve.go, flai/internal/harness/harness.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/mcpserver/server.go]
 after: [T-2301]
+usage:
+  source: log
+  seconds: 1116
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 195
+      output: 73621
+      cache_read: 14258345
+      cache_write: 453171
+      cost: 6.8859
 ---
 # T-2302 flai serve queues the orchestrator's reasons per project and starts one run per batch after orchestration.coalesce, naming the reasons in its journal entry, and the next run for reasons that came meanwhile
 

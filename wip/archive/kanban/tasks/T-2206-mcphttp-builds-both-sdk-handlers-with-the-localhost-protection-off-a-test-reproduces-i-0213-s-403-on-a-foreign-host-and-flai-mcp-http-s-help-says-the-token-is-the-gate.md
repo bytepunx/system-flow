@@ -3,15 +3,36 @@ id: T-2206
 type: task
 nature: remediation
 title: mcphttp builds both SDK handlers with the localhost protection off, a test reproduces I-0213's 403 on a foreign Host, and flai mcp http's help says the token is the gate
-status: backlog
+status: done
 parent: S-0515
 owner: alex
 created: 2026-10-28T13:02:26Z
-updated: 2026-10-28T13:02:26Z
-transitions: []
+updated: 2026-10-29T07:56:07Z
+transitions:
+  - to: ready
+    at: 2026-10-29T07:45:34Z
+    by: agent-S-0515
+  - to: in-progress
+    at: 2026-10-29T07:45:35Z
+    by: agent-S-0515
+  - to: done
+    at: 2026-10-29T07:56:07Z
+    by: agent-S-0515
 stream: S-0515
 tags: [cli, mcp]
-touches: [flai/internal/mcphttp/mcphttp.go, flai/internal/mcphttp/mcphttp_test.go, flai/cmd/mcp_http.go, docs/users/flai-reference.md]
+touches: [flai/internal/mcphttp/mcphttp.go, flai/internal/mcphttp/mcphttp_test.go, flai/cmd/mcp_http.go, docs/users/flai-reference.md, design/adrs/0216-the-http-mcp-server-s-gates-are-the-bearer-token-and-the-origin-refusal.md]
+usage:
+  source: log
+  seconds: 632
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 14
+      output: 3090
+      cache_read: 1034707
+      cache_write: 28205
+      cost: 0.4944
 ---
 # T-2206 mcphttp builds both SDK handlers with the localhost protection off, a test reproduces I-0213's 403 on a foreign Host, and flai mcp http's help says the token is the gate
 

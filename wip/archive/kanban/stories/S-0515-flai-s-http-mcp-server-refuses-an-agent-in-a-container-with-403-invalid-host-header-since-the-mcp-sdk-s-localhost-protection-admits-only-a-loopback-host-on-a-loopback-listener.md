@@ -3,13 +3,22 @@ id: S-0515
 type: story
 nature: remediation
 title: flai's HTTP MCP server refuses an agent in a container with 403 invalid Host header, since the MCP SDK's localhost protection admits only a loopback Host on a loopback listener
-status: ready
+status: done
 owner: alex
 created: 2026-10-28T12:52:34Z
-updated: 2026-10-29T07:33:10Z
+updated: 2026-10-29T13:55:19Z
 transitions:
   - to: ready
     at: 2026-10-29T07:27:15Z
+    by: alex
+  - to: in-progress
+    at: 2026-10-29T07:44:28Z
+    by: agent-S-0515
+  - to: review
+    at: 2026-10-29T08:04:53Z
+    by: agent-S-0515
+  - to: done
+    at: 2026-10-29T13:55:19Z
     by: alex
 tags: [cli, mcp]
 topics: [mcp, docker]
@@ -20,9 +29,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1246
+  priced_by: harness
+  turns:
+    - day: 2026-10-29
+      ceremony: 1
+      hand_edits: 2
+      work: 40
+  models:
+    - model: claude-opus-5-5
+      input: 94
+      output: 20447
+      cache_read: 6847822
+      cache_write: 186663
+      cost: 3.2722
   strategic:
     - kind: planner
       seconds: 313
@@ -35,15 +56,21 @@ usage:
           cache_write: 394452
           cost: 11.6085
     - kind: orchestrator
-      seconds: 241
+      seconds: 2607
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 91
-          output: 1228
-          cache_read: 15870105
-          cache_write: 79787
-          cost: 3.5038
+          input: 211
+          output: 3317
+          cache_read: 52667332
+          cache_write: 115192
+          cost: 11.6261
+        - model: claude-sonnet-5-5
+          input: 12
+          output: 73
+          cache_read: 149452
+          cache_write: 42240
+          cost: 0.1321
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m
@@ -69,8 +96,8 @@ finalized:
 This story remediates [I-0213](../../../design/issues/I-0213-flai-s-http-mcp-server-refuses-an-agent-in-a-container-with-403-invalid-host-header-since-the-mcp-sdk-s-localhost-protection-admits-only-a-loopback-host-on-a-loopback-listener.md), "flai's HTTP MCP server refuses an agent in a container with 403 invalid Host header, since the MCP SDK's localhost protection admits only a loopback Host on a loopback listener". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0213 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0213 is closed with `flai issue close I-0213 --reason` saying what fixed it
+- [x] The cause I-0213 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0213 is closed with `flai issue close I-0213 --reason` saying what fixed it
 
 ## Tasks
 - T-2206 mcphttp builds both SDK handlers with the localhost protection off, a test reproduces I-0213's 403 on a foreign Host, and flai mcp http's help says the token is the gate

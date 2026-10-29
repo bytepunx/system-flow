@@ -18,7 +18,7 @@ tags: [flai, orchestrator, serve, budget]
 topics: [orchestration, cli, dashboard]
 usage:
   source: sum
-  seconds: 18957
+  seconds: 23755
   estimated: true
   priced_by: estimate
   turns:
@@ -28,17 +28,17 @@ usage:
       hand_edits: 3
       work: 109
     - day: 2026-10-29
-      ceremony: 11
-      test_runs: 9
-      hand_edits: 7
-      work: 199
+      ceremony: 14
+      test_runs: 15
+      hand_edits: 12
+      work: 257
   models:
     - model: claude-opus-5-5
-      input: 2400
-      output: 862067
-      cache_read: 150532767
-      cache_write: 5658803
-      cost: 79.1085
+      input: 3070
+      output: 1155141
+      cache_read: 204211655
+      cache_write: 7529806
+      cost: 106.0548
   strategic:
     - kind: planner
       seconds: 1976
@@ -57,15 +57,15 @@ usage:
           cache_write: 372766
           cost: 2.0487
     - kind: orchestrator
-      seconds: 14850
+      seconds: 34183
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1408
-          output: 24185
-          cache_read: 236562298
-          cache_write: 406366
-          cost: 52.1993
+          input: 1448
+          output: 24831
+          cache_read: 249284426
+          cache_write: 412697
+          cost: 55.0061
         - model: claude-sonnet-5-5
           input: 60
           output: 337

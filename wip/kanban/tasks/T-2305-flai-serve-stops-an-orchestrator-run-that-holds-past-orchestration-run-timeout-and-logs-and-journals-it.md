@@ -3,16 +3,37 @@ id: T-2305
 type: task
 nature: feature
 title: flai serve stops an orchestrator run that holds past orchestration.run_timeout and logs and journals it
-status: backlog
+status: done
 parent: S-0536
 owner: alex
 created: 2026-10-28T21:46:15Z
-updated: 2026-10-28T21:46:15Z
-transitions: []
+updated: 2026-10-29T08:01:38Z
+transitions:
+  - to: ready
+    at: 2026-10-29T07:46:28Z
+    by: agent-S-0536
+  - to: in-progress
+    at: 2026-10-29T07:46:29Z
+    by: agent-S-0536
+  - to: done
+    at: 2026-10-29T08:01:38Z
+    by: agent-S-0536
 stream: S-0536
 tags: [flai, serve, orchestrator]
 touches: [flai/internal/serve/orchestrate_timeout.go, flai/internal/serve/orchestrate_timeout_test.go, flai/internal/serve/orchestrate.go]
 after: [T-2302]
+usage:
+  source: log
+  seconds: 909
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 39
+      output: 14653
+      cache_read: 2837932
+      cache_write: 90198
+      cost: 1.3705
 ---
 # T-2305 flai serve stops an orchestrator run that holds past orchestration.run_timeout and logs and journals it
 

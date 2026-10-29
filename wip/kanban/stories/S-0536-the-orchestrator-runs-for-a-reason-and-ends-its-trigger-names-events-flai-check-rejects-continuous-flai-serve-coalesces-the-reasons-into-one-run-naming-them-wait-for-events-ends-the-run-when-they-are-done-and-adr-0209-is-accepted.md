@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0030
 owner: alex
 created: 2026-10-28T21:02:32Z
-updated: 2026-10-29T07:25:33Z
+updated: 2026-10-29T13:54:55Z
 transitions:
   - to: ready
     at: 2026-10-28T22:21:22Z
@@ -15,9 +15,13 @@ transitions:
   - to: in-progress
     at: 2026-10-29T07:18:58Z
     by: agent-S-0536
+blocked:
+  - from: 2026-10-29T08:42:48Z
+    until: 2026-10-29T13:52:33Z
+    reason: awaiting the operator on TH-0717
 tags: [flai, serve, orchestrator]
 topics: [orchestration, cli, template, conventions, mcp]
-touches: [flai/internal/serve, flai/internal/mcpserver, flai/internal/harness, flai/internal/manifest, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/flai-cli.md, design/system/strategic-agents.md, design/system/project-manifest.md, docs, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/check/roles_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, docs/operators/settings.md, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/orchestrate_reasons_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/orchestrate_hold.go, flai/internal/serve/orchestrate_hold_test.go, flai/internal/serve/orchestrate_timeout.go, flai/internal/serve/orchestrate_timeout_test.go, flai/internal/serve/serve.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, flai/internal/mcpserver/server.go, flai/internal/mcpserver/orchestrator_end_test.go, design/system/agent-narrative.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/users/flai.md, docs/operators/index.md, template/CHANGELOG.md, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go]
+touches: [flai/internal/serve, flai/internal/mcpserver, flai/internal/harness, flai/internal/manifest, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/flai-cli.md, design/system/strategic-agents.md, design/system/project-manifest.md, docs, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/check/roles_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, docs/operators/settings.md, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/orchestrate_reasons_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/orchestrate_hold.go, flai/internal/serve/orchestrate_hold_test.go, flai/internal/serve/orchestrate_timeout.go, flai/internal/serve/orchestrate_timeout_test.go, flai/internal/serve/serve.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, flai/internal/mcpserver/server.go, flai/internal/mcpserver/orchestrator_end_test.go, design/system/agent-narrative.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/users/flai.md, docs/operators/index.md, template/CHANGELOG.md, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/roles/baseline/orchestrator.md, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/cmd/role.go]
 after: [S-0532, S-0535]
 agent:
   harness: claude-code
@@ -26,32 +30,33 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 358
+  seconds: 5156
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-10-29
-      ceremony: 1
-      hand_edits: 1
-      work: 29
+      ceremony: 4
+      test_runs: 6
+      hand_edits: 6
+      work: 87
   models:
     - model: claude-opus-5-5
-      input: 130
-      output: 804
-      cache_read: 7252669
-      cache_write: 350161
-      cost: 2.6026
+      input: 800
+      output: 293878
+      cache_read: 60931557
+      cache_write: 2221164
+      cost: 29.5489
   strategic:
     - kind: orchestrator
-      seconds: 464
+      seconds: 19797
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 59
-          output: 954
-          cache_read: 9373220
-          cache_write: 18876
-          cost: 2.0666
+          input: 99
+          output: 1600
+          cache_read: 22095348
+          cache_write: 25207
+          cost: 4.8734
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 2h
@@ -74,12 +79,12 @@ forecast:
 ADR-0209 §1, §2, §4, and §7. The orchestrator is the one role with `trigger: [continuous]`: it primes, decides, holds `wait_for_events`, and decides again without ending, and every wake re-reads a transcript of about 450k tokens, 75 to 80 percent of the time to wait again. This story makes it run for a reason and end, like the planner and the curator. `orchestrator.md`, here and in the template, names the events of the previous story as its trigger; `flai check` rejects `continuous` on any role. flai serve keeps a reason queue per project, starts one run no sooner than `orchestration.coalesce` (a Go duration, `30s` by default) after the first queued reason with every reason seen meanwhile, queues reasons that arrive during a run for the next, and stops a run that holds past `orchestration.run_timeout` (`20m` by default). The start prompt lists each reason with its item or thread; the role's prompt step 15 becomes: act on each reason, log each action, then end. `wait_for_events` answers the orchestrator `end: true`, `why: reasons done` when nothing queued remains for it, as it answers a story's agent that asked (ADR-0154). The guard's hold, the permissions, the activity log and its charge, the orchestrator's own thread, `flai serve orchestrate stop|start`, and the `orchestrate` host action stay as ADR-0087 and ADR-0189 have them. The ADR, drafted as proposed on 2026-10-28, is accepted in this story, and the living design, the convention and its template copy, and the docs change with it.
 
 ## Acceptance criteria
-- [ ] `orchestrator.md` and its template copy name the trigger events; `flai check` reports `continuous` on any role as a finding, with a test
-- [ ] flai serve queues the reasons a project's events give, starts one run per batch after `orchestration.coalesce`, with the reasons in the prompt and the journal entry, and starts the next run for reasons that arrived meanwhile when the run ends; a test drives three events inside one window into one run
-- [ ] `wait_for_events` answers the orchestrator `end: true` with `why: reasons done` when nothing queued remains, and a run past `orchestration.run_timeout` is stopped and logged
+- [x] `orchestrator.md` and its template copy name the trigger events; `flai check` reports `continuous` on any role as a finding, with a test
+- [x] flai serve queues the reasons a project's events give, starts one run per batch after `orchestration.coalesce`, with the reasons in the prompt and the journal entry, and starts the next run for reasons that arrived meanwhile when the run ends; a test drives three events inside one window into one run
+- [x] `wait_for_events` answers the orchestrator `end: true` with `why: reasons done` when nothing queued remains, and a run past `orchestration.run_timeout` is stopped and logged
 - [x] `orchestration.coalesce`, `orchestration.run_timeout`, and `orchestration.schedule` are manifest keys `flai check` validates and `flai manifest set` sets, with the defaults the ADR gives
-- [ ] The orchestrator's prompt, the strategic-agents convention and its template copy, `flai-cli.md`, `strategic-agents.md`, `project-manifest.md`, and the user docs say the orchestrator runs for a reason and ends
-- [ ] ADR-0209's status is accepted, and the orchestrator in this repository runs under the new trigger for a day with its runs and reasons in the journal, recorded in the narrative with the context tokens per action from `flai stats`
+- [x] The orchestrator's prompt, the strategic-agents convention and its template copy, `flai-cli.md`, `strategic-agents.md`, `project-manifest.md`, and the user docs say the orchestrator runs for a reason and ends
+- [x] ADR-0209's status is accepted
 
 ## Tasks
 - T-2300 flai check reports continuous on any role as a finding, and orchestrator.md and its template copy name ADR-0209's trigger events
@@ -90,10 +95,13 @@ ADR-0209 §1, §2, §4, and §7. The orchestrator is the one role with `trigger:
 - T-2305 flai serve stops an orchestrator run that holds past orchestration.run_timeout and logs and journals it
 - T-2306 The strategic-agents convention and its template copy, flai-cli.md, strategic-agents.md, project-manifest.md, the roles README, and the user and operator docs say the orchestrator runs for a reason and ends
 - T-2307 The orchestrator in this repository runs under the new trigger for a day, and the narrative records its runs, their reasons, and the context tokens per action
+- T-2330 Both .claude/agents/orchestrator.md copies say the orchestrator runs for its reasons and ends, as its role file does
 
 ## Notes
 
 Evidence: ADR-0209's context section. The budget hold is the second story of E-0030; reasons queued while it is set wait. The reason-specific pack is the next story: until it lands, a run primes the general `orchestrate` pack as today, which the per-action figure will show.
+
+Criterion 6 was narrowed to ADR-0209's status on TH-0717, which the operator confirmed on 2026-10-29. The day-long run under the new trigger can only happen once this story is installed on the host. It moves to a follow-up story under E-0030: a day of runs with their reasons in the journal, the cost and activities from `flai stats`, and the context tokens per action from the session logs. T-2307 is cancelled for it.
 
 ### Planning
 

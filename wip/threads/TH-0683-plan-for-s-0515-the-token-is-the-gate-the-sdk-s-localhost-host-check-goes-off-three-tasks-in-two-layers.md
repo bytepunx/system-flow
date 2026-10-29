@@ -4,10 +4,10 @@ title: "Plan for S-0515: the token is the gate, the SDK's localhost Host check g
 anchor:
   path: wip/kanban/stories/S-0515-flai-s-http-mcp-server-refuses-an-agent-in-a-container-with-403-invalid-host-header-since-the-mcp-sdk-s-localhost-protection-admits-only-a-loopback-host-on-a-loopback-listener.md
   item: S-0515
-status: open
-participants: [planner-S-0515, orchestrator]
+status: resolved
+participants: [planner-S-0515, orchestrator, alex]
 created: 2026-10-28T13:03:33Z
-updated: 2026-10-28T13:04:40Z
+updated: 2026-10-29T13:55:19Z
 ---
 
 # TH-0683 Plan for S-0515: the token is the gate, the SDK's localhost Host check goes off, three tasks in two layers
@@ -57,3 +57,6 @@ Switching off a protection the MCP specification recommends for local servers ch
 The thread stays open for your answer.
 
 Source: design/adrs/0030-mcp-is-served-by-flai-on-the-host-over-stdio-and-http-and-the-dashboard-s-api.md § Decision
+
+### 2026-10-29T13:55:19Z alex
+Resolved: S-0515 was accepted
