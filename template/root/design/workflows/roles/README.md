@@ -9,13 +9,15 @@ The template ships four baseline roles. A role file the template does not ship i
 | File | Role | Action | Trigger |
 |------|------|--------|---------|
 | [planner.md](planner.md) | `plan` | `plan` | Asked; an edit that makes a story's figures stale; an acceptance, cancellation, or reorder while `planning.replan` is `agent`; `planning.schedule`, for every ready story |
-| [orchestrator.md](orchestrator.md) | `orchestrate` | `orchestrate` | Continuous while the action is on |
+| [orchestrator.md](orchestrator.md) | `orchestrate` | `orchestrate` | Asked; a thread that awaits it or the operator; a move to review or to backlog; an edit of a draft; a planner's run that wrote items; `release-due`; `ready-empty`; a reorder; `orchestration.schedule`. Each run acts on its reasons and ends |
 | [analyzer.md](analyzer.md) | `analyze` | `analyze` | Asked; `analysis.schedule` |
 | [curator.md](curator.md) | `curate` | `curate` | Asked; an acceptance; `digest.schedule` |
 
 ## Triggers
 
-A `trigger` entry is `asked`, `continuous`, `{event: <event>, when?: <condition>}`, or `{schedule: <setting>, when?: <condition>}`. Each event is a change flai's `inbox` and `wait_for_events` report, or one kind of it, such as a move to done.
+A `trigger` entry is `asked`, `{event: <event>, when?: <condition>}`, or `{schedule: <setting>, when?: <condition>}`. Each event is a change flai's `inbox` and `wait_for_events` report, or one kind of it, such as a move to done. A schedule names the manifest setting that holds it: `planning.schedule`, `analysis.schedule`, `digest.schedule`, `orchestration.schedule`, or the role's own `roles.<name>.schedule`.
+
+`continuous` is no trigger since [ADR-0209](../../adrs/0209-the-orchestrator-runs-for-a-reason-and-ends-started-by-flai-serve-on-the-events.md): every role runs for a reason and ends. `flai check` reports it on any role as `roles.file`.
 
 | Event | Happens when |
 |-------|--------------|

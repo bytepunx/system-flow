@@ -326,8 +326,9 @@ func (a *app) printRole(r roles.Role) {
 	}
 }
 
-// roleTrigger is a trigger entry as flai role prints it: asked, continuous,
-// event <event>, or schedule <setting>, then (when <condition>).
+// roleTrigger is a trigger entry as flai role prints it: asked, event
+// <event>, or schedule <setting>, then (when <condition>). Another word, such
+// as continuous, which flai check reports (ADR-0209 §1), is printed as it is.
 func roleTrigger(t roles.Trigger) string {
 	s := t.Kind
 	switch t.Kind {

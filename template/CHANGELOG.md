@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.6 - 2026-10-29
+
+- S-0536 The orchestrator runs for a reason and ends (patch, ADR-0209): `design/workflows/roles/orchestrator.md` names under `trigger` the events it acts on, `asked`, `{event: thread, when: awaits-orchestrator}`, `{event: moved, when: to-review}`, `{event: moved, when: to-backlog}`, `{event: edited, when: draft-changed}`, `{event: planned}`, `{event: release-due}`, `{event: ready-empty}`, `{event: reordered}`, and `{schedule: orchestration.schedule}`, in place of `continuous`, which `flai check` now reports on any role as `roles.file`. Its prompt says to act on each reason the start prompt lists, log each action, then end, and that `wait_for_events` answers `end: true`, `why: reasons done`, once they are done. In `strategic-agents.md`, the section "As the orchestrator" says the same and no longer says to wait on `wait_for_events` between decisions, and "Asking the operator" says the orchestrator ends rather than hold for an answer. `design/workflows/roles/README.md` drops `continuous` from the trigger vocabulary and lists `orchestration.schedule` among the schedules a trigger may name. It needs a flai that has it, the release that carries S-0536: an older flai's `flai check` reports `orchestration.schedule` in a trigger as `roles.file`, and its `flai serve` starts the orchestrator again whenever a run ends.
+
 ## 1.1.5 - 2026-10-29
 
 - S-0417 flai serve starts a role a project defines on the operator's word, behind the host action its file names, with an activity document under wip/agents and the same journal entries as the built-in roles (patch).

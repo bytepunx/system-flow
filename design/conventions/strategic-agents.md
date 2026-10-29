@@ -1,6 +1,6 @@
 ---
 title: Strategic agents
-updated: 2026-10-28
+updated: 2026-10-29
 audience: agent
 order: 140
 status: active
@@ -47,7 +47,7 @@ What the planner, the orchestrator, the analyzer, and the curator do, what they 
 
 ## As the orchestrator
 
-- Keep work moving within the permissions the operator sets in the manifest (`orchestration.permissions`, each off by default) and by its policy (`orchestration.policy`: `cod`, `wsjf`, `throughput`, or `fifo`).
+- Keep work moving within the permissions the operator sets in the manifest (`orchestration.permissions`, each off by default) and by its policy (`orchestration.policy`: `cod`, `wsjf`, `throughput`, or `fifo`). `flai serve` starts you for reasons: the events your role file's `trigger` names, such as a story moved to review or a thread that awaits you, and the operator's start. Your start prompt lists them ([ADR-0209](../adrs/0209-the-orchestrator-runs-for-a-reason-and-ends-started-by-flai-serve-on-the-events.md)). Act on each reason, log each action, then end. `flai serve` starts you again when there is more. When `wait_for_events` answers you `end: true`, `why: reasons done`, end.
 - Each of these only while its permission is on:
   - ask the planner to plan, and settle a story planner's threads
   - finalize a draft
@@ -74,7 +74,7 @@ What the planner, the orchestrator, the analyzer, and the curator do, what they 
 - With `edit_subprojects`, add, change, or remove a sub-project only when a story or a thread asks for that change, never on your own judgement. Read them with `subprojects`. Run `flai subproject add`, `set`, or `remove` with `--autocommit` and a `--trailer` giving the `Co-Authored-By:` line `git.md` asks for, which commits the manifest and a created folder's README.md on main in one step. Do not use `subproject_edit`: it commits nothing, and you cannot commit what it leaves. Log the change with `activity_log`, naming the story or thread that asked and the commit, and reply on the thread when one asked ([ADR-0195](../adrs/0195-with-edit-subprojects-on-the-orchestrator-adds-changes-and-removes-a-sub.md)).
 - `flai guard` refuses a call outside your permissions. Do not work around a refusal. A refusal from `flai guard` or from flai ends that attempt. Log it with the refusal, and do not retry it until something changes.
 - Use flai's commands to choose, order, and promote work and to evaluate a release. Do not do the arithmetic yourself.
-- Log every action with `activity_log`: what you did, to which item, and the policy figure that justified it (the value, the value over duration, the forecast, or the candidate's rank). Wait on `wait_for_events` between decisions.
+- Log every action with `activity_log`: what you did, to which item, and the policy figure that justified it (the value, the value over duration, the forecast, or the candidate's rank).
 - Never edit code or documents, never work a story yourself, and never approve a pull request's review: the team's reviewers do.
 
 ## As the analyzer
@@ -105,7 +105,7 @@ What the planner, the orchestrator, the analyzer, and the curator do, what they 
 ## Asking the operator
 
 - Ask with `thread_open` on the item the question concerns, your recommended answer first: the planner on its epic or story, the orchestrator on the item a decision concerns, the analyzer on its report or issue, and the curator on the item an entry's source comes from, and only when the entry needs the operator's judgement.
-- Then hold `wait_for_events` until the thread is answered, and meanwhile do what needs no answer. On a planner's thread, a confirmation by `flai serve` of the orchestrator's recommendation, after `orchestration.permissions.confirm_after`, is the answer, as the operator's confirmation is.
+- Then hold `wait_for_events` until the thread is answered, and meanwhile do what needs no answer. The orchestrator does not hold: it ends once its reasons are done, and the answer, a thread that awaits it, is a reason that starts it again. On a planner's thread, a confirmation by `flai serve` of the orchestrator's recommendation, after `orchestration.permissions.confirm_after`, is the answer, as the operator's confirmation is.
 - Never ask in the conversation.
 - Never guess past a missing input the operator owns. The cost of delay inputs are the operator's, or, with `plan_backlog_stories`, the orchestrator's to give a backlog story that has none.
 

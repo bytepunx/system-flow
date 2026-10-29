@@ -2515,6 +2515,9 @@ orchestration.release.count (number, whole)
 orchestration.release.epic (text)
 orchestration.release.tag (text)
 orchestration.release.whole_epics (boolean; default false)
+orchestration.coalesce (duration; default 30s)
+orchestration.run_timeout (duration; default 20m)
+orchestration.schedule (cron)
 planning.agent (agent)
 planning.replan (choice: never, deterministic, agent; default deterministic)
 planning.schedule (cron)
@@ -4047,20 +4050,20 @@ flai serve orchestrate start
 
 Subcommands:
 
-- [start](#flai-serve-orchestrate-start): Lift the hold on the orchestrator and start it
+- [start](#flai-serve-orchestrate-start): Start the orchestrator now, lifting a hold on it
 - [stop](#flai-serve-orchestrate-stop): End the orchestrator's run and hold it stopped while orchestrate stays on
 
 ##### flai serve orchestrate start
 
-Lift the hold on the orchestrator and start it.
+Start the orchestrator now, lifting a hold on it.
 
 ```text
 flai serve orchestrate start
 ```
 
-Lifts the hold flai serve orchestrate stop put on the orchestrator and starts it, as flai serve does when orchestrate is turned on: in the project's main checkout, with its orchestration agent and the harnesses and the command set with flai serve agent. flai serve settles the run once it ends and starts it again, as it does any orchestrator run. A start that fails lifts the hold as well, and flai serve tries again a minute later.
+Starts an orchestrator run at once, for the reason asked, with any reasons flai serve has queued for it (ADR-0209): in the project's main checkout, with its orchestration agent and the harnesses and the command set with flai serve agent. It lifts the hold flai serve orchestrate stop put on the orchestrator, if there is one. The run acts on its reasons and ends, and flai serve starts the next when another reason comes. A start that fails lifts the hold as well, keeps the reasons, and flai serve tries again a minute later.
 
-It refuses, and says why, while the orchestrate action is off for the project, when the orchestrator is not held stopped, and while the run it was held on is still being stopped.
+It refuses, and says why, while the orchestrate action is off for the project, and while an orchestrator run is going or still being stopped.
 
 ##### flai serve orchestrate stop
 
