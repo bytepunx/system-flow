@@ -2,12 +2,12 @@
 id: D-0425
 title: "S-0418 predates ADR-0209: drop continuous and wait for S-0536: Recommended for the operator: answer A"
 kind: answer
-sources: [TH-0749]
+sources: [TH-0749, S-0418]
 topics: [cli, planning, orchestration, template, conventions, flai, go, flaiover, dashboard, sveltekit, code, all]
 paths: [design/system/strategic-agents.md, design/system/dashboard-host-channel.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/role.go, flai/cmd/role_test.go, flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/serve/activity.go, flai/internal/serve/agents.go, flai/internal/serve/role_continuous.go, flai/internal/serve/role_continuous_test.go, flai/internal/serve/role_events.go, flai/internal/serve/role_events_test.go, flai/internal/serve/role.go, flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go, flai/internal/serve/role_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flaiover/src/lib/server/agent.ts, template/CHANGELOG.md, design/system/flai-cli.md, design/issues/I-0232-flai-serve-wakes-a-story-s-agent-that-is-paused-on-a-thread-for-every-task-done-message-from-another-story-each-needing-only-a-settled-reply.md, design/issues/summary.md]
 date: 2026-10-29
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0209-the-orchestrator-runs-for-a-reason-and-ends-started-by-flai-serve-on-the-events.md#decision"
 asked_again: []
 cited: [TH-0755]
 ---
@@ -39,8 +39,8 @@ The answer:
 Rewriting a finalized story's criteria and cancelling two of its tasks is a change of scope. I promoted S-0418 at 14:42Z after S-0536's move to review freed its hold, before this conflict was known.
 
 Source: design/adrs/0209-the-orchestrator-runs-for-a-reason-and-ends-started-by-flai-serve-on-the-events.md § Decision
-
-Source: design/adrs/0209-the-orchestrator-runs-for-a-reason-and-ends-started-by-flai-serve-on-the-events.md § Decision
 ```
 
-Source: TH-0749.
+S-0418 applied it, as its narrative records (wip/archive/agents/S-0418.md, Decisions): "The `continuous` criterion is dropped, since ADR-0209 §1 rejects it. T-1741 is cancelled because S-0414 and S-0536 already read and check triggers. T-1746 is cancelled because no role is kept running." No role is kept running: a project's role starts on its trigger's events or schedule and ends, as `design/system/strategic-agents.md` § On an event or a schedule (S-0418) describes.
+
+Sources: TH-0749, S-0418.

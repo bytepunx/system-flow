@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 45.2807
-accrued_seconds: 4213
-tasks_completed: 26
-last_run: 2026-10-29T18:06:02Z
+accrued_cost: 47.0186
+accrued_seconds: 4320
+tasks_completed: 27
+last_run: 2026-10-29T18:15:31Z
 ---
 
 # Curator activity
@@ -219,3 +219,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0316
 - Seconds: 71
 - Cost: 1.1763 USD, estimated
+
+### 2026-10-29T18:15:31Z
+
+- Summary: I wrote D-0427, merged S-0418 into D-0425, D-0421, D-0410 and D-0396, absorbed D-0425 by ADR-0209 § Decision, and `flai digest compact` compacted none.
+- Trigger: accepted S-0418
+- Items: D-0396, D-0410, D-0421, D-0425, D-0427
+- Seconds: 107
+- Cost: 1.7379 USD, estimated

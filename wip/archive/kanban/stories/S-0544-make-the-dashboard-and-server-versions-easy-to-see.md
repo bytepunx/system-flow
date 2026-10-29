@@ -20,7 +20,7 @@ transitions:
   - to: done
     at: 2026-10-29T18:02:07Z
     by: alex
-tags: []
+tags: [flaiover]
 touches: [flaiover/src, flaiover/src/lib/components/NavRail.svelte, flaiover/src/lib/components/NavRail.svelte.test.ts, flaiover/src/lib/hostflai.svelte.ts, flaiover/src/routes/api/agent/+server.ts, flaiover/src/routes/api/agent/agent.test.ts, flaiover/src/lib/components/HostPanel.svelte, flaiover/src/lib/components/HostPanel.svelte.test.ts, flaiover/src/routes/api/dashboard/+server.ts, flaiover/src/routes/api/dashboard/dashboard.test.ts, docs/users/flaiover.md, design/system/flaiover-dashboard.md]
 agent:
   harness: claude-code
@@ -61,15 +61,15 @@ usage:
           cache_write: 91543
           cost: 2.0487
     - kind: orchestrator
-      seconds: 200
+      seconds: 250
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 70
-          output: 479
-          cache_read: 1745102
-          cache_write: 206216
-          cost: 0.4326
+          input: 98
+          output: 633
+          cache_read: 2440207
+          cache_write: 286809
+          cost: 0.6048
         - model: claude-sonnet-5-5
           input: 12
           output: 105

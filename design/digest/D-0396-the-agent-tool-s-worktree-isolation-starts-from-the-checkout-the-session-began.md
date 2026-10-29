@@ -2,7 +2,7 @@
 id: D-0396
 title: The Agent tool's worktree isolation starts from the checkout the session began in, not the story branch, so a task worktree is made by hand from story/S-nnnn
 kind: decision
-sources: [S-0176, S-0502, S-0417, S-0534]
+sources: [S-0176, S-0502, S-0417, S-0534, S-0418]
 topics: [orchestration, git, conventions]
 paths: [design/conventions/delegation.md]
 date: 2026-10-28
