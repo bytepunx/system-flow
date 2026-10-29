@@ -444,3 +444,41 @@ func TestASingleProjectServerRefusesAnotherProject(t *testing.T) {
 		t.Errorf("its own key: %v %s", out, failed)
 	}
 }
+
+// S-0534: in the folder form, inbox carries the host's budget state once, at
+// the top, for every project here, while it is set, and leaves it out once
+// it clears; no project's own inbox repeats it, and the instructions tell an
+// agent to hold rather than retry.
+func TestAFolderInboxCarriesTheHostsBudgetOnce(t *testing.T) {
+	root := t.TempDir()
+	makeProject(t, filepath.Join(root, "alpha"), "alpha")
+	makeProject(t, filepath.Join(root, "beta"), "beta")
+	state := anthropicOut
+	f := folderSetupWith(t, root, func(o *Options) { o.Budgets = budgetState(&state) })
+	out, failed := f.call(t, "inbox", map[string]any{})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	if wrong := budgetWrong(out["budget"]); wrong != "" {
+		t.Errorf("budget, %s: %v", wrong, out["budget"])
+	}
+	projects := out["projects"].([]any)
+	if len(projects) != 2 {
+		t.Fatalf("projects: %v", projectKeys(out))
+	}
+	for _, p := range projects {
+		if b, ok := p.(map[string]any)["budget"]; ok {
+			t.Errorf("a project's inbox repeats the host's budget: %v", b)
+		}
+	}
+	state = nil
+	if out, failed = f.call(t, "inbox", map[string]any{}); failed != "" {
+		t.Fatal(failed)
+	}
+	if _, ok := out["budget"]; ok {
+		t.Errorf("a cleared state leaves budget out: %v", out["budget"])
+	}
+	if in := f.cs.InitializeResult().Instructions; !strings.Contains(in, budgetInstructions) {
+		t.Errorf("the folder's instructions name budget and say to hold rather than retry: %s", in)
+	}
+}

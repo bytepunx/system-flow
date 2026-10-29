@@ -53,6 +53,22 @@ type Options struct {
 	// without one the inbox says nothing of either.
 	Runner  execx.Runner
 	Version string // the running flai's, compared with the newest flai release
+	// Budget reads the host's budget state, each provider's that is set
+	// (S-0534, ADR-0209 §5); nil, or none read, leaves the inbox without one.
+	Budget func() []Budget
+}
+
+// Budget is one provider's budget state as an agent's inbox carries it
+// (S-0534, ADR-0209 §5): flai serve set it when a run ended on the provider's
+// usage limit, and starts no agent on the provider while it holds. Times are
+// in TimeFormat, UTC.
+type Budget struct {
+	Provider string `json:"provider" jsonschema:"the provider the state is kept under, or the harness, such as claude-code, when the runs named no provider"`
+	Limit    string `json:"limit,omitempty" jsonschema:"the error the harness named, such as usage_limit_reached; absent when it named none"`
+	Status   int    `json:"status,omitempty" jsonschema:"the HTTP status of the refusal, such as 429; absent when the harness named none"`
+	Since    string `json:"since" jsonschema:"when the state was set"`
+	Until    string `json:"until" jsonschema:"when the limit resets, as the API reported it or a backoff guessed it, and flai serve may start a run on the provider again"`
+	Probing  bool   `json:"probing,omitempty" jsonschema:"a run flai serve started once until passed runs now, to learn whether the limit has reset; the state clears when it ends on anything but the limit"`
 }
 
 // Inbox is the agent's inbox, as the MCP tool inbox answers it.
@@ -62,8 +78,11 @@ type Inbox struct {
 	// FlaiOutdated is set while this flai is older than the newest flai
 	// release in the project's history (S-0181).
 	FlaiOutdated *release.Outdated `json:"flai_outdated,omitempty" jsonschema:"this MCP server's flai is older than the newest flai release tagged in the project's history, so it may lack rules and fields the project uses; listed on every call while it is true: tell the designer, who upgrades the host with the command named"`
-	AwaitingYou  int               `json:"awaiting_you" jsonschema:"threads awaiting you, those with awaiting 'you' (ADR-0181); threads awaiting the operator or another never count here, nor do messages"`
-	Threads      []ThreadSummary   `json:"threads"`
+	// Budget is the host's budget state, one entry per provider whose state
+	// is set (S-0534); absent when none is.
+	Budget      []Budget        `json:"budget,omitempty" jsonschema:"the providers this host is out of budget on, each with its limit and until, the reset time: while yours is listed, do not retry or start work that calls the model in a loop; write your narrative's state and end, and flai serve starts you again once the limit resets (ADR-0209 §5). Absent when no provider's state is set"`
+	AwaitingYou int             `json:"awaiting_you" jsonschema:"threads awaiting you, those with awaiting 'you' (ADR-0181); threads awaiting the operator or another never count here, nor do messages"`
+	Threads     []ThreadSummary `json:"threads"`
 	// ThreadsOmitted counts the open threads on other items that a
 	// story-scoped read leaves out of Threads where it would have listed them
 	// (ADR-0179): without All, only those awaiting the agent (ADR-0181), and
@@ -155,6 +174,9 @@ func Read(ctx context.Context, opt Options) (Inbox, error) {
 	}
 	if opt.Story != "" {
 		out.Changes = onStory(out.Changes, story)
+	}
+	if opt.Budget != nil {
+		out.Budget = opt.Budget()
 	}
 	return out, nil
 }

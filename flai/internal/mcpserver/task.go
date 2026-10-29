@@ -38,7 +38,7 @@ type TaskDoneOut = taskdone.Result
 func (s *server) taskDone(ctx context.Context, _ *mcp.CallToolRequest, in TaskDoneIn) (*mcp.CallToolResult, TaskDoneOut, error) {
 	res, err := taskdone.Run(ctx, taskdone.Options{
 		Repo: s.repo, Runner: s.runner, Task: in.Task, Message: in.Message, LogEntry: in.Log,
-		Agent: s.agent, Session: s.session, Now: s.now, Version: s.version, Logger: s.logger,
+		Agent: s.agent, Session: s.session, Now: s.now, Version: s.version, Logger: s.logger, HostBudget: s.budgets,
 	})
 	var outdated *taskdone.OutdatedError
 	if errors.As(err, &outdated) {

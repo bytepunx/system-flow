@@ -66,7 +66,10 @@ type Options struct {
 	Session string
 	Now     func() time.Time // time.Now when nil
 	Version string           // the running flai's, for the inbox
-	Logger  *slog.Logger     // nil discards
+	// HostBudget reads the host's budget state for the inbox (S-0534); nil
+	// leaves it out.
+	HostBudget func() []inbox.Budget
+	Logger     *slog.Logger // nil discards
 	// Rules is the running flai's task-done rules number (ADR-0180);
 	// buildinfo.TaskDoneRules when 0.
 	Rules int
@@ -860,7 +863,7 @@ func outputTail(out string) string {
 // cursor, but listing only the threads on the story and its tasks and
 // counting the rest (ADR-0179), and fits the result to ctxpack.PartLimit.
 func (r *run) inbox(ctx context.Context) error {
-	in, err := inbox.Read(ctx, inbox.Options{Repo: r.o.Repo, Agent: r.o.Agent, Story: r.story.ID, Own: r.story.ID, Now: r.o.Now, Runner: r.o.Runner, Version: r.o.Version})
+	in, err := inbox.Read(ctx, inbox.Options{Repo: r.o.Repo, Agent: r.o.Agent, Story: r.story.ID, Own: r.story.ID, Now: r.o.Now, Runner: r.o.Runner, Version: r.o.Version, Budget: r.o.HostBudget})
 	if err != nil {
 		return fmt.Errorf("read %s's inbox: %w", r.o.Agent, err)
 	}

@@ -2,13 +2,16 @@ package cmd
 
 import (
 	"os"
+	"sync"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 func newMCPCmd(a *app) *cobra.Command {
@@ -49,7 +52,7 @@ configuration looks like, and flai mcp token prints its bearer token.`,
 				return err
 			}
 			agent := mcpAgent(agentFlag)
-			opt := mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Analyses: a.mcpAnalyze, Curations: a.mcpCurate, Roles: a.mcpRoleRun, Activities: a.mcpActivity, AutoApprove: a.mcpAutoApprove, QueueBatches: a.queueBatches, Publish: a.mcpPublisher(), RelativePaths: a.relativeWorktrees, Installed: a.mcpInstalled()}
+			opt := mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Analyses: a.mcpAnalyze, Curations: a.mcpCurate, Roles: a.mcpRoleRun, Activities: a.mcpActivity, AutoApprove: a.mcpAutoApprove, QueueBatches: a.queueBatches, Publish: a.mcpPublisher(), RelativePaths: a.relativeWorktrees, Installed: a.mcpInstalled(), Budgets: a.mcpBudgets()}
 			if repo == nil {
 				// Not in a project (S-0101): every project in this folder and below it.
 				if opt.Folder, err = a.workingDir(); err != nil {
@@ -113,4 +116,29 @@ func (a *app) mcpAutoApprove(root string) bool {
 		return false
 	}
 	return cfg.ActionEnabled(hostapi.ActionAutoApprove, root)
+}
+
+// mcpBudgets reads, for every inbox, the host's budget state from budget.json
+// in flai serve's folder beside the configuration that --config, then
+// FLAI_CONFIG, then ~/.flai/config.json names, as flai serve finds it
+// (S-0534). It never writes it. A missing folder or file is no budget; one
+// it cannot read is none either, and is logged at warn the first time only,
+// so that an inbox called every turn does not repeat it.
+func (a *app) mcpBudgets() mcpserver.BudgetRead {
+	dir := a.serveDir()
+	var warned sync.Once
+	return func() []inbox.Budget {
+		all, err := dir.Budgets()
+		if err != nil {
+			warned.Do(func() {
+				a.logger().Warn("budget: cannot read the host's budget state, so the inbox carries none", "component", "mcp", "dir", string(dir), "error", err)
+			})
+			return nil
+		}
+		out := make([]inbox.Budget, 0, len(all))
+		for _, b := range all {
+			out = append(out, inbox.Budget{Provider: b.Provider, Limit: b.Limit, Status: b.Status, Since: b.Since.UTC().Format(workitem.TimeFormat), Until: b.Until.UTC().Format(workitem.TimeFormat), Probing: b.Probe != nil})
+		}
+		return out
+	}
 }

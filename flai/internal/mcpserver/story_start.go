@@ -32,7 +32,7 @@ type StoryStartOut = storystart.Result
 func (s *server) storyStart(ctx context.Context, _ *mcp.CallToolRequest, in StoryStartIn) (*mcp.CallToolResult, StoryStartOut, error) {
 	res, err := storystart.Start(ctx, storystart.Options{
 		Repo: s.repo, Runner: s.runner, Story: in.Story, Agent: s.agent, Session: s.session, Budget: in.Budget,
-		Now: s.now, Version: s.version, RelativePaths: s.relativePaths, Log: s.logger,
+		Now: s.now, Version: s.version, RelativePaths: s.relativePaths, Log: s.logger, HostBudget: s.budgets,
 	})
 	var refused *storystart.Refused
 	var step *storystart.StepError

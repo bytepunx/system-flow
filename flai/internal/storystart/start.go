@@ -40,6 +40,9 @@ type Options struct {
 	Budget  string
 	Now     func() time.Time // time.Now when nil
 	Version string           // the running flai's, for the inbox
+	// HostBudget reads the host's budget state for the inbox (S-0534); nil
+	// leaves it out.
+	HostBudget func() []inbox.Budget
 	// RelativePaths reports whether to link a new worktree with relative
 	// paths, as storygit.OpenOptions has it; nil links an ordinary one.
 	RelativePaths func() bool
@@ -139,7 +142,7 @@ func Start(ctx context.Context, o Options) (Result, error) {
 		return res, &StepError{Story: story.ID, Step: StepPrime, Finish: "flai prime --story " + story.ID, Err: err}
 	}
 	// the story's threads listed, the others counted (ADR-0179)
-	in, err := inbox.Read(ctx, inbox.Options{Repo: o.Repo, Agent: o.Agent, Story: story.ID, Own: story.ID, Now: o.Now, Runner: o.Runner, Version: o.Version})
+	in, err := inbox.Read(ctx, inbox.Options{Repo: o.Repo, Agent: o.Agent, Story: story.ID, Own: story.ID, Now: o.Now, Runner: o.Runner, Version: o.Version, Budget: o.HostBudget})
 	if err != nil {
 		return res, &StepError{Story: story.ID, Step: StepInbox, Finish: "the MCP tool inbox", Err: fmt.Errorf("read %s's inbox: %w", o.Agent, err)}
 	}

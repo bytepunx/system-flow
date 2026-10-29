@@ -117,7 +117,20 @@ type Options struct {
 	// serves over stdio, and HTTPPermissionHold over HTTP; below zero it
 	// refuses at once, naming the thread.
 	PermissionHold time.Duration
+	// Budgets reads the host's budget state, beside its configuration, at
+	// every inbox (S-0534); nil, as a test or a server with no host has it,
+	// reads none.
+	Budgets BudgetRead
 }
+
+// BudgetRead is the host's budget state, one entry per provider whose state
+// is set (S-0534, ADR-0209 §5), sorted by provider: none when the host has
+// none, or its state cannot be read. It only reads.
+type BudgetRead func() []inbox.Budget
+
+// budgetInstructions tells an agent what the inbox's budget asks of it
+// (S-0534, ADR-0209 §5).
+const budgetInstructions = "When inbox carries budget for your provider, the host is out of budget on it until its until, the reset time: do not retry, or start work that calls the model in a loop; write your narrative's Current state and Next steps with stream_state, if you work a story, and end the session, and flai serve starts you again once the limit resets."
 
 type server struct {
 	repo   *workitem.Repo
@@ -164,6 +177,8 @@ type server struct {
 	installed string
 	// permissionHold bounds permission_prompt's wait for an answer (ADR-0215)
 	permissionHold time.Duration
+	// budgets reads the host's budget state for the inbox (S-0534)
+	budgets BudgetRead
 
 	// when wait_for_work last answered: a thread written to since then wakes it
 	workMu    sync.Mutex
@@ -172,7 +187,7 @@ type server struct {
 
 // newServer is the server for one project, with the defaults filled in.
 func newServer(opt Options, repo *workitem.Repo) *server {
-	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, analyses: opt.Analyses, curations: opt.Curations, roles: opt.Roles, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, queueBatches: opt.QueueBatches, publish: opt.Publish, relativePaths: opt.RelativePaths, logger: opt.Logger, installed: opt.Installed, permissionHold: permissionHoldOf(opt)}
+	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, analyses: opt.Analyses, curations: opt.Curations, roles: opt.Roles, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, queueBatches: opt.QueueBatches, publish: opt.Publish, relativePaths: opt.RelativePaths, logger: opt.Logger, installed: opt.Installed, permissionHold: permissionHoldOf(opt), budgets: opt.Budgets}
 	if repo.Git == nil {
 		repo.Git = opt.Runner // item_move asks git whether a story's worktree is committed (S-0140)
 	}
@@ -232,7 +247,7 @@ func New(opt Options) *mcp.Server {
 	s := newServer(opt, opt.Repo)
 	one := single{s}
 	srv := mcp.NewServer(&mcp.Implementation{Name: "flai", Title: "system-flow repository", Version: opt.Version}, &mcp.ServerOptions{
-		Instructions: "This server is the agent's view of a system-flow repository. Call inbox at the start of every turn or session and before moving a story to review: it lists threads awaiting you, those you take part in or on your own story (ADR-0181), and in the orchestrator's role those awaiting the operator too, the stories ready to pull in pull order, and what others changed since you last looked (at most 50 changes, the newest; changes_omitted counts older ones that are not reported again; your first look covers the last 24 hours of stories and epics only, so use board and item_get for how things stand). Stories are yours to pull without being told. Whenever you have no story of your own in progress, call wait_for_work and do what it answers: pull the story it names with story_start, which moves it to in-progress, opens its narrative, branch, and worktree, primes it, and answers your inbox in one call (if story_start says the story is in progress already, another agent pulled it first: call wait_for_work again), answer the threads it names, or go back to your own story. It answers as soon as a story is ready, the in-progress limit leaves room, and review is under its limit, and waits otherwise; when it times out, call it again, so that an idle agent is always waiting for the next story rather than stopping. An agent that ends its turn instead calls inbox when it starts again, and nothing in between is lost; wait_for_events reports every change, for an agent that wants the changes themselves. A story's agent that flai serve started, whose story has a question of its own open to the designer or a conversation awaiting another story's reply, no message it owes a reply, and no task in progress, gets end and why from wait_for_events at once instead of a wait: write the narrative's Current state and Next steps with stream_state and end the session, and flai serve starts it again when the question is answered, the reply comes, or a new message to its story comes. Reply to threads with thread_reply and ask the designer questions with thread_open. " + primeInstructions + " " + taskDoneInstructions + " Commit everything in a story's worktree before you move it to review: item_move refuses a story whose worktree has uncommitted changes, because the operator cannot accept it. Stories are accepted by the operator only: item_move refuses to move a story or epic to done. A change of kind edited means someone changed an item's own words with flai edit or from the dashboard, and to names what (title, nature, tags, topics, touches, after, agent, parent, draft, cost_of_delay, forecast, goal, criteria, notes, body): if it is your story, read it again with item_get before you go on, because its criteria or its title may no longer be what you are working to. A change that says an epic moved following a story means that story's move took its epic along: nothing to do. A change that says an item was cancelled with a parent means the parent was cancelled and took it along: if it is your story or one of its tasks, stop work on it, log that in the narrative, and leave its branch and worktree alone. A change of kind overlapped means a story was accepted (cause) and changed paths (to) that an open story claims: if it is your story, run flai stream sync on it and the tests before you go on. " + overlapInstructions + " " + eventKindsDescription + " Publishing is the operator's: accepted work reaches the remote only when it is published (git fetch, then flai release --pending, or the board's Publish), and you publish only when the operator asks (ADR-0067); inbox's unpublished lists what is accepted and not yet published, for that. When inbox reports flai_outdated, the flai serving you is older than the newest flai release in the project's history and may lack rules the project relies on: tell the designer, who upgrades the host with the command it names, and go on.",
+		Instructions: "This server is the agent's view of a system-flow repository. Call inbox at the start of every turn or session and before moving a story to review: it lists threads awaiting you, those you take part in or on your own story (ADR-0181), and in the orchestrator's role those awaiting the operator too, the stories ready to pull in pull order, and what others changed since you last looked (at most 50 changes, the newest; changes_omitted counts older ones that are not reported again; your first look covers the last 24 hours of stories and epics only, so use board and item_get for how things stand). Stories are yours to pull without being told. Whenever you have no story of your own in progress, call wait_for_work and do what it answers: pull the story it names with story_start, which moves it to in-progress, opens its narrative, branch, and worktree, primes it, and answers your inbox in one call (if story_start says the story is in progress already, another agent pulled it first: call wait_for_work again), answer the threads it names, or go back to your own story. It answers as soon as a story is ready, the in-progress limit leaves room, and review is under its limit, and waits otherwise; when it times out, call it again, so that an idle agent is always waiting for the next story rather than stopping. An agent that ends its turn instead calls inbox when it starts again, and nothing in between is lost; wait_for_events reports every change, for an agent that wants the changes themselves. A story's agent that flai serve started, whose story has a question of its own open to the designer or a conversation awaiting another story's reply, no message it owes a reply, and no task in progress, gets end and why from wait_for_events at once instead of a wait: write the narrative's Current state and Next steps with stream_state and end the session, and flai serve starts it again when the question is answered, the reply comes, or a new message to its story comes. Reply to threads with thread_reply and ask the designer questions with thread_open. " + primeInstructions + " " + taskDoneInstructions + " Commit everything in a story's worktree before you move it to review: item_move refuses a story whose worktree has uncommitted changes, because the operator cannot accept it. Stories are accepted by the operator only: item_move refuses to move a story or epic to done. A change of kind edited means someone changed an item's own words with flai edit or from the dashboard, and to names what (title, nature, tags, topics, touches, after, agent, parent, draft, cost_of_delay, forecast, goal, criteria, notes, body): if it is your story, read it again with item_get before you go on, because its criteria or its title may no longer be what you are working to. A change that says an epic moved following a story means that story's move took its epic along: nothing to do. A change that says an item was cancelled with a parent means the parent was cancelled and took it along: if it is your story or one of its tasks, stop work on it, log that in the narrative, and leave its branch and worktree alone. A change of kind overlapped means a story was accepted (cause) and changed paths (to) that an open story claims: if it is your story, run flai stream sync on it and the tests before you go on. " + overlapInstructions + " " + eventKindsDescription + " Publishing is the operator's: accepted work reaches the remote only when it is published (git fetch, then flai release --pending, or the board's Publish), and you publish only when the operator asks (ADR-0067); inbox's unpublished lists what is accepted and not yet published, for that. When inbox reports flai_outdated, the flai serving you is older than the newest flai release in the project's history and may lack rules the project relies on: tell the designer, who upgrades the host with the command it names, and go on. " + budgetInstructions,
 	})
 	srv.AddReceivingMiddleware(timing(opt.Logger, nil, opt.Slow))
 	mcp.AddTool(srv, &mcp.Tool{Name: "inbox", Description: inboxDescription}, route(one, (*server).inbox))
@@ -289,14 +304,21 @@ type InboxIn struct {
 type InboxOut = inbox.Inbox
 
 func (s *server) inbox(ctx context.Context, _ *mcp.CallToolRequest, in InboxIn) (*mcp.CallToolResult, InboxOut, error) {
-	// messages are the open conversations of this session's own story, as
-	// the message tools resolve it (S-0331), and its threads await the agent;
-	// the orchestrator's role lists those awaiting the operator (ADR-0181)
-	out, err := inbox.Read(ctx, inbox.Options{Repo: s.repo, Agent: s.agent, Story: in.Story, All: in.All, Operator: s.orchestrator(), Own: s.recordingStory(""), Now: s.now, Runner: s.runner, Version: s.version})
+	out, err := s.readInbox(ctx, in, s.budgets)
 	if err != nil {
 		return nil, InboxOut{}, err
 	}
 	return nil, out, nil
+}
+
+// readInbox is the agent's inbox in this project, with the host's budget
+// state that budgets reads; a nil budgets leaves it out, as a folder's
+// server, which answers it once for every project, has it (S-0534).
+func (s *server) readInbox(ctx context.Context, in InboxIn, budgets BudgetRead) (InboxOut, error) {
+	// messages are the open conversations of this session's own story, as
+	// the message tools resolve it (S-0331), and its threads await the agent;
+	// the orchestrator's role lists those awaiting the operator (ADR-0181)
+	return inbox.Read(ctx, inbox.Options{Repo: s.repo, Agent: s.agent, Story: in.Story, All: in.All, Operator: s.orchestrator(), Own: s.recordingStory(""), Now: s.now, Runner: s.runner, Version: s.version, Budget: budgets})
 }
 
 func (s *server) boardView(ctx context.Context, all bool) (workitem.BoardView, error) {

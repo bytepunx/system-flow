@@ -12,6 +12,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -235,7 +236,7 @@ func newFolderServer(opt Options) *mcp.Server {
 	}
 	fw := &folderWaits{f: f, poll: poll, maxWait: maxWait, after: after, beat: beat, now: now, closing: opt.Closing}
 	srv := mcp.NewServer(&mcp.Implementation{Name: "flai", Title: "system-flow projects in " + f.root, Version: opt.Version}, &mcp.ServerOptions{
-		Instructions: "This server is the agent's view of every system-flow project in " + f.root + " and the folders below it (S-0101): it was started in a folder that is not itself a project. inbox, wait_for_work, and wait_for_events cover every project and say which one each thing is in; every other tool takes project, a key inbox lists (or the project's folder), and needs it whenever there is more than one project. Projects created or imported below the folder join within seconds. Call inbox at the start of every turn or session and before moving a story to review. Stories are yours to pull without being told. Whenever you have no story of your own in progress, call wait_for_work and do what it answers: pull the story it names in the project it names with story_start and that project, which moves it to in-progress, opens its narrative, branch, and worktree, primes it, and answers your inbox in that project in one call (if story_start says the story is in progress already, another agent pulled it first: call wait_for_work again), answer the threads it names, or go back to your own story. It answers as soon as a story is ready in some project whose in-progress limit leaves room and whose review is under its limit, and waits otherwise; when it times out, call it again. Reply to threads with thread_reply and ask the designer questions with thread_open. " + primeInstructions + " " + taskDoneInstructions + " Commit everything in a story's worktree before you move it to review: item_move refuses a story whose worktree has uncommitted changes, because the operator cannot accept it. Stories are accepted by the operator only: item_move refuses to move a story or epic to done. A change of kind edited means someone changed an item's own words: if it is your story, read it again with item_get before you go on. A change that says an item was cancelled with a parent means the parent was cancelled and took it along: if it is your story or one of its tasks, stop work on it, log that in the narrative, and leave its branch and worktree alone. A change of kind overlapped means a story was accepted (cause) and changed paths (to) that an open story claims: if it is your story, run flai stream sync on it and the tests before you go on. " + overlapInstructions + " " + eventKindsDescription + " Publishing is the operator's: a project's accepted work reaches its remote only when it is published (git fetch, then flai release --pending in that project's folder, or the board's Publish), and you publish only when the operator asks (ADR-0067); each project's unpublished in inbox lists what is accepted there and not yet published, for that.",
+		Instructions: "This server is the agent's view of every system-flow project in " + f.root + " and the folders below it (S-0101): it was started in a folder that is not itself a project. inbox, wait_for_work, and wait_for_events cover every project and say which one each thing is in; every other tool takes project, a key inbox lists (or the project's folder), and needs it whenever there is more than one project. Projects created or imported below the folder join within seconds. Call inbox at the start of every turn or session and before moving a story to review. Stories are yours to pull without being told. Whenever you have no story of your own in progress, call wait_for_work and do what it answers: pull the story it names in the project it names with story_start and that project, which moves it to in-progress, opens its narrative, branch, and worktree, primes it, and answers your inbox in that project in one call (if story_start says the story is in progress already, another agent pulled it first: call wait_for_work again), answer the threads it names, or go back to your own story. It answers as soon as a story is ready in some project whose in-progress limit leaves room and whose review is under its limit, and waits otherwise; when it times out, call it again. Reply to threads with thread_reply and ask the designer questions with thread_open. " + primeInstructions + " " + taskDoneInstructions + " Commit everything in a story's worktree before you move it to review: item_move refuses a story whose worktree has uncommitted changes, because the operator cannot accept it. Stories are accepted by the operator only: item_move refuses to move a story or epic to done. A change of kind edited means someone changed an item's own words: if it is your story, read it again with item_get before you go on. A change that says an item was cancelled with a parent means the parent was cancelled and took it along: if it is your story or one of its tasks, stop work on it, log that in the narrative, and leave its branch and worktree alone. A change of kind overlapped means a story was accepted (cause) and changed paths (to) that an open story claims: if it is your story, run flai stream sync on it and the tests before you go on. " + overlapInstructions + " " + eventKindsDescription + " Publishing is the operator's: a project's accepted work reaches its remote only when it is published (git fetch, then flai release --pending in that project's folder, or the board's Publish), and you publish only when the operator asks (ADR-0067); each project's unpublished in inbox lists what is accepted there and not yet published, for that. " + budgetInstructions,
 	})
 	srv.AddReceivingMiddleware(timing(opt.Logger, nil, opt.Slow))
 	mcp.AddTool(srv, &mcp.Tool{Name: "inbox", Description: "What needs this agent in every project here, one entry per project with its key, name, and folder: " + inboxDescription + " Name project to see only that one; story needs project when there is more than one."}, fw.inbox)
@@ -266,13 +267,16 @@ type ProjectInbox struct {
 
 // FolderInboxOut is the agent's inbox across every project in a folder.
 type FolderInboxOut struct {
-	Agent       string         `json:"agent"`
-	Folder      string         `json:"folder"`
-	AwaitingYou int            `json:"awaiting_you" jsonschema:"threads with awaiting 'you', in every project"`
-	Projects    []ProjectInbox `json:"projects"`
+	Agent       string `json:"agent"`
+	Folder      string `json:"folder"`
+	AwaitingYou int    `json:"awaiting_you" jsonschema:"threads with awaiting 'you', in every project"`
+	// Budget is the host's budget state, once for every project, which share
+	// the host (S-0534); a project's own inbox leaves it out.
+	Budget   []inbox.Budget `json:"budget,omitempty" jsonschema:"the providers this host is out of budget on, for every project here, each with its limit and until, the reset time: while yours is listed, do not retry or start work that calls the model in a loop; write your narrative's state and end, and flai serve starts you again once the limit resets (ADR-0209 §5). Absent when no provider's state is set"`
+	Projects []ProjectInbox `json:"projects"`
 }
 
-func (fw *folderWaits) inbox(ctx context.Context, req *mcp.CallToolRequest, in InboxIn) (*mcp.CallToolResult, FolderInboxOut, error) {
+func (fw *folderWaits) inbox(ctx context.Context, _ *mcp.CallToolRequest, in InboxIn) (*mcp.CallToolResult, FolderInboxOut, error) {
 	list := fw.f.all()
 	out := FolderInboxOut{Agent: fw.agent(), Folder: fw.f.root, Projects: []ProjectInbox{}}
 	if in.Project != "" {
@@ -285,7 +289,7 @@ func (fw *folderWaits) inbox(ctx context.Context, req *mcp.CallToolRequest, in I
 		return nil, FolderInboxOut{}, fmt.Errorf("a story ID is one project's: name the project too (%s)", fw.f.names(list))
 	}
 	for _, s := range list {
-		_, one, err := s.inbox(ctx, req, in)
+		one, err := s.readInbox(ctx, in, nil)
 		if err != nil {
 			return nil, FolderInboxOut{}, fmt.Errorf("%s: %w", s.key, err)
 		}
@@ -300,6 +304,9 @@ func (fw *folderWaits) inbox(ctx context.Context, req *mcp.CallToolRequest, in I
 		}
 		out.AwaitingYou += one.AwaitingYou
 		out.Projects = append(out.Projects, ProjectInbox{Project: s.key, Name: s.repo.Manifest.Name, Folder: fw.f.rel(projectRoot(s.repo)), InboxOut: one})
+	}
+	if read := fw.f.opt.Budgets; read != nil {
+		out.Budget = read()
 	}
 	return nil, out, nil
 }

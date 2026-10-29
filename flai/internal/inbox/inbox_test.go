@@ -695,3 +695,35 @@ func TestFitShortensEntriesOnlyWhenTheChangesAreNotEnough(t *testing.T) {
 		t.Errorf("it is cut as far as it goes: %d changes, %d shortened", len(tiny.Changes), tiny.EntriesShortened)
 	}
 }
+
+// S-0534: the inbox carries the host's budget state that Options.Budget
+// reads, read afresh at each call, and says nothing of it, not even the key,
+// once none is set or with no reader.
+func TestTheInboxCarriesTheHostsBudgetWhileItIsSet(t *testing.T) {
+	f := setup(t)
+	if in := f.read(t, Options{Agent: "claude"}); in.Budget != nil {
+		t.Errorf("no reader, no budget: %+v", in.Budget)
+	}
+	set := []Budget{{Provider: "anthropic", Limit: "usage_limit_reached", Status: 429, Since: "2026-09-18T09:00:00Z", Until: "2026-09-18T14:00:00Z"}}
+	state := set
+	read := func() []Budget { return state }
+	in := f.read(t, Options{Agent: "claude", Budget: read})
+	if len(in.Budget) != 1 || in.Budget[0] != set[0] {
+		t.Fatalf("the state set: %+v", in.Budget)
+	}
+	data, err := json.Marshal(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `"budget":[{"provider":"anthropic","limit":"usage_limit_reached","status":429,"since":"2026-09-18T09:00:00Z","until":"2026-09-18T14:00:00Z"}]`; !strings.Contains(string(data), want) {
+		t.Errorf("the JSON shape, %s, in %s", want, data)
+	}
+	state = nil
+	in = f.read(t, Options{Agent: "claude", Budget: read})
+	if data, err = json.Marshal(in); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), `"budget"`) {
+		t.Errorf("a cleared state leaves budget out: %s", data)
+	}
+}
