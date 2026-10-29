@@ -3,11 +3,14 @@ id: S-0515
 type: story
 nature: remediation
 title: flai's HTTP MCP server refuses an agent in a container with 403 invalid Host header, since the MCP SDK's localhost protection admits only a loopback Host on a loopback listener
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-28T12:52:34Z
-updated: 2026-10-29T06:01:28Z
-transitions: []
+updated: 2026-10-29T07:27:15Z
+transitions:
+  - to: ready
+    at: 2026-10-29T07:27:15Z
+    by: alex
 tags: [cli, mcp]
 topics: [mcp, docker]
 touches: [flai/internal/mcphttp/mcphttp.go, flai/internal/mcphttp/mcphttp_test.go, flai/cmd/mcp_http.go, docs/users/flai-reference.md, design/adrs/README.md, design/adrs, docs/users/flai.md, docs/operators/index.md, design/system/flai-cli.md, design/issues/I-0213-flai-s-http-mcp-server-refuses-an-agent-in-a-container-with-403-invalid-host-header-since-the-mcp-sdk-s-localhost-protection-admits-only-a-loopback-host-on-a-loopback-listener.md, design/issues/summary.md]
@@ -51,10 +54,10 @@ cost_of_delay:
   at: 2026-10-28T13:03:21Z
 forecast:
   duration: 45m
-  delivery: 2026-10-29T14:16:00Z
-  basis: "Its own forecast of 45m; 19th in the pull order with an in-progress limit of 5, behind S-0534, S-0537, S-0536, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0508, S-0509, S-0510, S-0511 and S-0512."
+  delivery: 2026-10-29T18:02:00Z
+  basis: "Its own forecast of 45m; 18th in the pull order with an in-progress limit of 5, behind S-0536, S-0537, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0508, S-0509, S-0510, S-0511 and S-0512."
   by: flai
-  at: 2026-10-29T06:01:28Z
+  at: 2026-10-29T07:27:14Z
 finalized:
   by: alex
   at: 2026-10-28T12:57:10Z
