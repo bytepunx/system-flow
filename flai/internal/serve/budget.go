@@ -14,7 +14,9 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/config"
+	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 )
 
@@ -558,4 +560,55 @@ func (l *launcher) budgetEnded(run *AgentRun, lim *usage.Limit) {
 		return
 	}
 	l.budgetChanged(ch)
+}
+
+// budgetKeyFor is the key a start of agent under cfg is held by (budgetKey):
+// the provider agent names, or the harness it would run on, as harness.For
+// picks it; "" when no harness can start it, which the start refuses on its
+// own.
+func budgetKeyFor(cfg AgentConfig, agent *manifest.Agent) string {
+	name, _, err := harness.For(agent, cfg.host(harness.Command).Program != "")
+	if err != nil {
+		return ""
+	}
+	provider := ""
+	if agent != nil {
+		provider = agent.Provider
+	}
+	return budgetKey(provider, name)
+}
+
+// budgetHolds is the budget state of key, and whether it holds a start at
+// the launcher's clock; a state that cannot be read is warned of and holds
+// nothing, as at a start (budgetStart), and an empty key holds nothing.
+func (l *launcher) budgetHolds(key string) (Budget, bool) {
+	if key == "" {
+		return Budget{}, false
+	}
+	b, held, err := l.dir.budgetHeld(key, l.now())
+	if err != nil {
+		l.warn("budget state not read before a start; it goes", "provider", key, "err", err)
+		return Budget{}, false
+	}
+	return b, held
+}
+
+// budgetHeldWhy says why a start on b's provider is held, as a start the
+// operator asks for by hand is refused and a held start is logged: such as
+// "held: claude-code usage limit (usage_limit_reached) until
+// 2026-10-28T09:00:00Z; flai serve starts it when the limit resets", or,
+// once until has passed, that the probe runs.
+func budgetHeldWhy(b Budget, now time.Time) string {
+	limit := b.Limit
+	if limit == "" && b.Status != 0 {
+		limit = fmt.Sprintf("HTTP %d", b.Status)
+	}
+	if limit != "" {
+		limit = " (" + limit + ")"
+	}
+	until := b.Until.UTC().Format(time.RFC3339)
+	if !now.Before(b.Until) {
+		return fmt.Sprintf("held: %s usage limit%s, a probe running since %s to learn whether it has reset; flai serve starts it when the probe ends clean", b.Provider, limit, until)
+	}
+	return fmt.Sprintf("held: %s usage limit%s until %s; flai serve starts it when the limit resets", b.Provider, limit, until)
 }
