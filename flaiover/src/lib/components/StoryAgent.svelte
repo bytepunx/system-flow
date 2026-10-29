@@ -12,7 +12,8 @@
 	// story in progress that this host has had no agent for, begun on another host or outside flai
 	// serve, it says by whom, where, and when, and Start agent has flai restart it here (S-0177). An agent
 	// that waits on other stories' agents' replies rather than the operator names those stories, linked
-	// (S-0335).
+	// (S-0335). Once the agent has started, its stream, as the Activity page shows it, is below, open
+	// while the agent runs (S-0541).
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api';
 	import { follow, listen } from '$lib/events';
@@ -31,6 +32,7 @@
 		type StoryActivity
 	} from '$lib/activity';
 	import AgentDot from './AgentDot.svelte';
+	import AgentStream from './AgentStream.svelte';
 
 	let {
 		story,
@@ -91,6 +93,7 @@
 	});
 	// A held story's run is flai's stand-in when it never had an agent: it has not started.
 	const started = $derived(!!activity?.run.started);
+	const live = $derived(activity?.state === 'working' || activity?.state === 'waiting');
 	// The rules are the card menu's too (S-0202); Retry hides once pressed for that run.
 	const canRetry = $derived(
 		retryable(activity, !!status?.enabled, storyStatus, writable) &&
@@ -205,6 +208,9 @@
 		{/if}
 		{#if actError?.action === 'start'}
 			<p class="mt-1 text-xs text-warn" data-testid="story-agent-start-error">{actError.message}</p>
+		{/if}
+		{#if started}
+			<AgentStream {story} started={activity.run.started} open={live} />
 		{/if}
 	</section>
 {:else if canStart || actError?.action === 'start'}

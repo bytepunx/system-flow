@@ -559,4 +559,51 @@ describe('StoryAgent (S-0104)', () => {
 			expect(button()).toBeNull();
 		});
 	});
+
+	describe('its stream (S-0541)', () => {
+		const stream = () => document.querySelector<HTMLDetailsElement>('[data-testid="agent-stream"]');
+		const serve = (stories: unknown) =>
+			api.mockImplementation(async (path: string) =>
+				path.startsWith('/api/agent-stream/')
+					? answer({
+							story: 'S-0104',
+							started: run.started,
+							from: 0,
+							next: 1,
+							running: true,
+							more: false,
+							entries: [{ kind: 'text', text: 'reading the story' }]
+						})
+					: answer({ enabled: true, state: { command: '', stories } })
+			);
+		const showStream = async (stories: unknown) => {
+			serve(stories);
+			c = mount(StoryAgent, { target: document.body, props: { story: 'S-0104' } });
+			await settle();
+		};
+
+		it('follows the agent below its status, open while it works', async () => {
+			await showStream({ 'S-0104': { state: 'working', run } });
+			expect(stream()!.open).toBe(true);
+			expect(stream()!.textContent).toContain('reading the story');
+			expect(api).toHaveBeenCalledWith('/api/agent-stream/S-0104');
+		});
+
+		it('leaves the stream closed for an agent that has ended, and shows none for a held story', async () => {
+			await showStream({
+				'S-0104': { state: 'ended', run: { ...run, ended: '2026-09-23T18:30:00Z' } }
+			});
+			expect(stream()!.open).toBe(false);
+			unmount(c!);
+			c = undefined;
+			await showStream({
+				'S-0104': {
+					state: 'held',
+					hold: { reason: 'held by S-0001', code: 'overlap' },
+					run: { story: 'S-0104' }
+				}
+			});
+			expect(stream()).toBeNull();
+		});
+	});
 });
