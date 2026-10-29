@@ -6,7 +6,7 @@ title: flai serve starts a host agent for a story meant to be worked in a contai
 status: backlog
 owner: alex
 created: 2026-10-28T12:52:40Z
-updated: 2026-10-29T15:51:10Z
+updated: 2026-10-29T17:26:55Z
 transitions: []
 tags: [cli, serve]
 topics: [harness]
@@ -42,10 +42,10 @@ cost_of_delay:
   at: 2026-10-28T13:12:42Z
 forecast:
   duration: 1h
-  delivery: 2026-10-30T00:18:00Z
-  basis: "Its own forecast of 1h; 17th in the pull order with an in-progress limit of 5, behind S-0418, S-0537, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0508, S-0509, S-0510, S-0511 and S-0512."
+  delivery: 2026-10-30T01:44:00Z
+  basis: "Its own forecast of 1h; 17th in the pull order with an in-progress limit of 5, behind S-0418, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0508, S-0509, S-0510, S-0511 and S-0512."
   by: flai
-  at: 2026-10-29T15:51:10Z
+  at: 2026-10-29T17:26:55Z
 ---
 # S-0516 flai serve starts a host agent for a story meant to be worked in a container, since nothing on a story or the host says its agent runs elsewhere
 
