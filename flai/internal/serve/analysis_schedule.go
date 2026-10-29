@@ -21,8 +21,10 @@ import (
 // all three focuses, with the schedule as its trigger ("schedule daily"),
 // through the checks Analyze makes; a start they refuse, as while an
 // analyzer runs, is logged and not tried again until the schedule next
-// comes round. Times missed between two looks come round once, and a
-// schedule set or changed comes round first at its next time from then.
+// comes round. A start the budget state of the analyzer's provider holds is
+// not lost: each look tries it again until it starts (S-0534). Times missed
+// between two looks come round once, and a schedule set or changed comes
+// round first at its next time from then.
 //
 // What it has seen is kept in memory only: times that passed while flai
 // serve was down do not come round. While the analyze host action is off it
@@ -39,7 +41,11 @@ type analysisScheduler struct {
 	mu sync.Mutex
 	// cadence follows analysis.schedule.
 	cadence cadence
-	said    map[string]bool // the manifest's refusals warned of
+	// heldDue is the trigger of the scheduled run the budget state of the
+	// analyzer's provider held, which each look tries again until it starts
+	// (S-0534); "" when none waits.
+	heldDue string
+	said    map[string]bool // the manifest's refusals warned of, and the holds logged (heldOnce)
 }
 
 // newAnalysisScheduler is the analysis scheduler for project e, starting
@@ -54,8 +60,10 @@ func newAnalysisScheduler(o Options, e Entry, starter *launcher) *analysisSchedu
 }
 
 // look starts the analyzer for all three focuses when analysis.schedule has
-// come round since the last look and the analyze host action is on, unless
-// the checks refuse it.
+// come round since the last look, or a run it came round for was held by the
+// budget state, and the analyze host action is on, unless the checks refuse
+// it. A start the budget state holds is kept for the next look, and logged
+// once per state.
 func (s *analysisScheduler) look(ctx context.Context) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -67,13 +75,17 @@ func (s *analysisScheduler) look(ctx context.Context) {
 	}
 	sched := s.schedule(repo.Manifest.Analysis, now)
 	if s.o.Agent == nil || !s.o.Agent(s.e.Root).Analyze {
-		s.cadence.mark = now
+		s.cadence.mark, s.heldDue = now, ""
 		return
 	}
-	if !s.cadence.due(sched, now) {
+	trigger := s.heldDue
+	if s.cadence.due(sched, now) {
+		trigger = scheduleTrigger(sched)
+	}
+	if trigger == "" {
 		return
 	}
-	trigger := scheduleTrigger(sched)
+	s.heldDue = ""
 	as, err := analyzeCheck(s.o, s.e, "")
 	var no *Refused
 	switch {
@@ -86,7 +98,10 @@ func (s *analysisScheduler) look(ctx context.Context) {
 	}
 	s.starter.mu.Lock()
 	defer s.starter.mu.Unlock()
-	s.starter.analyze(ctx, as.cfg, as.agent, "", trigger)
+	if _, held := s.starter.analyze(ctx, as.cfg, as.agent, "", trigger); held != nil {
+		s.heldDue = trigger
+		s.starter.heldOnce(s.said, "scheduled analyzer held", *held, "trigger", trigger)
+	}
 }
 
 // schedule is analysis.schedule parsed, nil when it is unset or cannot be

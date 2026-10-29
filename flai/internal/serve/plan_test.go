@@ -54,7 +54,8 @@ func (lab *agentLab) plan(id string) (*AgentRun, error) {
 func (lab *agentLab) planHere(id string) bool {
 	lab.l.mu.Lock()
 	defer lab.l.mu.Unlock()
-	return lab.l.plan(context.Background(), lab.cfg, id, nil, TriggerAsked)
+	started, _ := lab.l.plan(context.Background(), lab.cfg, id, nil, TriggerAsked)
+	return started
 }
 
 func (lab *agentLab) planRun(id string) *AgentRun { return lab.state().Plans[id] }
@@ -198,7 +199,7 @@ func TestAPlannerRunTheOrchestratorAskedForSaysSo(t *testing.T) {
 	}
 	lab.release(story)
 	lab.l.mu.Lock()
-	started := lab.l.plan(context.Background(), lab.cfg, story, nil, TriggerOrchestrator)
+	started, _ := lab.l.plan(context.Background(), lab.cfg, story, nil, TriggerOrchestrator)
 	lab.l.mu.Unlock()
 	if !started {
 		t.Fatalf("not started: %+v", lab.planRun(story))
@@ -593,5 +594,102 @@ func TestAPlannerRunOnTheUsageLimitSetsTheBudgetStateForTheBackoff(t *testing.T)
 	}
 	if r := lab.planRun(item); r.Outcome != OutcomeWorked || r.UsageLimited {
 		t.Errorf("probe = %+v; want worked, on no limit", r)
+	}
+}
+
+// budgetHeldOn sets the budget state of key, held until until, the reset
+// the API reported, as a run that ended on the usage limit sets it.
+func (lab *agentLab) budgetHeldOn(key string, until time.Time) {
+	lab.t.Helper()
+	all, err := lab.o.Dir.budgets()
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	until = until.UTC()
+	all[key] = Budget{Provider: key, Limit: "usage_limit_reached", Status: 429, Since: until.Add(-time.Hour), Until: until, Reset: until, Backoff: budgetBackoffFirst.String()}
+	if err := lab.o.Dir.write(lab.o.Dir.budgetFile(), all); err != nil {
+		lab.t.Fatal(err)
+	}
+}
+
+// budgetCleared clears the budget state of the stub's harness, command, as
+// its probe's clean end does.
+func (lab *agentLab) budgetCleared() {
+	lab.t.Helper()
+	all, err := lab.o.Dir.budgets()
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	delete(all, harness.Command)
+	if err := lab.o.Dir.write(lab.o.Dir.budgetFile(), all); err != nil {
+		lab.t.Fatal(err)
+	}
+}
+
+// heldFor is the refusal of a start on the stub's harness, command, while
+// budgetHeldOn holds it until until.
+func heldFor(until time.Time) string {
+	return "held: command usage limit (usage_limit_reached) until " + until.UTC().Format(time.RFC3339) + "; flai serve starts it when the limit resets"
+}
+
+// anHour is a time an hour from now, to the second, which a budget state
+// set until it holds a start at the launcher's clock.
+func anHour() time.Time { return time.Now().Add(time.Hour).UTC().Truncate(time.Second) }
+
+// S-0534: flai plan, and the orchestrator's asking, is refused while the
+// budget state of the planner's provider holds, naming the provider and
+// until, with no run recorded and nothing journalled; a state on another
+// provider holds nothing, and once until has passed the start goes as the
+// provider's probe, recorded with its process.
+func TestAPlanIsRefusedWhileTheBudgetStateHoldsItsProvider(t *testing.T) {
+	lab := planLab(t)
+	lab.hold()
+	until := anHour()
+	lab.budgetHeldOn(harness.Command, until)
+	id := lab.epic.ID
+	for name, start := range map[string]func(context.Context, Options, Entry, string) (*AgentRun, error){"flai plan": Plan, "the orchestrator's asking": PlanForOrchestrator} {
+		if _, err := start(context.Background(), lab.o, Entry{Key: "t", Name: "t", Root: lab.root}, id); refusal(err) != heldFor(until) {
+			t.Errorf("%s: %v; want refused with %q", name, err, heldFor(until))
+		}
+	}
+	if r := lab.planRun(id); r != nil || len(lab.entries()) != 0 || lab.startedCount() != 0 {
+		t.Fatalf("a held start recorded %+v, journalled %+v", r, lab.entries())
+	}
+
+	lab.budgetCleared()
+	lab.budgetHeldOn("gateway", until)
+	if _, err := lab.plan(id); err != nil {
+		t.Fatalf("held by another provider's state: %v", err)
+	}
+	lab.release(id)
+
+	lab.budgetHeldOn(harness.Command, time.Now().Add(-time.Minute))
+	story := lab.ready("Probed")
+	run, err := lab.plan(story)
+	if err != nil {
+		t.Fatalf("once until has passed: %v", err)
+	}
+	b, held, err := lab.o.Dir.budgetHeld(harness.Command, time.Now())
+	if err != nil || !held || b.Probe == nil || b.Probe.Work != story || b.Probe.PID != run.PID || b.Probe.Started != run.Started {
+		t.Errorf("budget state %+v, held %v (%v); want %s's run the probe, with its process", b, held, err, story)
+	}
+	lab.release(story)
+}
+
+// S-0534: a start flai serve makes on its own that the budget state of its
+// provider holds is not made and records nothing: the launcher says it was
+// held, and by what.
+func TestAPlannerStartTheBudgetStateHoldsRecordsNothing(t *testing.T) {
+	lab := planLab(t)
+	until := anHour()
+	lab.budgetHeldOn(harness.Command, until)
+	lab.l.mu.Lock()
+	started, held := lab.l.plan(context.Background(), lab.cfg, lab.epic.ID, nil, TriggerAsked)
+	lab.l.mu.Unlock()
+	if started || held == nil || held.Provider != harness.Command || !held.Until.Equal(until) {
+		t.Errorf("started %v, held %+v; want held by command's state until %s", started, held, until)
+	}
+	if r := lab.planRun(lab.epic.ID); r != nil || len(lab.entries()) != 0 || lab.startedCount() != 0 {
+		t.Errorf("a held start recorded %+v, journalled %+v", r, lab.entries())
 	}
 }

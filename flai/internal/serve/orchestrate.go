@@ -62,9 +62,9 @@ type orchestrator struct {
 	starter *launcher
 
 	mu sync.Mutex
-	// said is the refusal to start last recorded, so that a look every
-	// minute does not record it again; "" when the last start was not
-	// refused.
+	// said is the refusal to start last recorded, or why the budget state
+	// held the last start, as logged, so that a look every minute does not
+	// record or log it again; "" when the last start was neither.
 	said string
 	// seen is the run as the last look left it, its session and whether it
 	// was held, so that a run started or held by a process of its own (flai
@@ -90,7 +90,12 @@ func queueBatches(o Options, e Entry, m manifest.Manifest) bool {
 // unless the operator holds it stopped (S-0228), the last run ended on the
 // harness's usage limit and its provider's budget state holds (S-0534), or
 // the last run failed otherwise less than orchestrateRetry ago, and stops
-// the run going while the action is off, which also lifts the hold.
+// the run going while the action is off, which also lifts the hold. A last
+// run on the usage limit waits for the budget state alone, not
+// orchestrateRetry: the first look once the state no longer holds starts the
+// next. A start the budget state holds otherwise, as when another role's run
+// set it, records nothing, so it is not a failure orchestrateRetry counts,
+// and the next look tries again.
 func (r *orchestrator) look(ctx context.Context) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -113,7 +118,7 @@ func (r *orchestrator) look(ctx context.Context) {
 	case run != nil && run.Held:
 		return
 	case run != nil && run.UsageLimited:
-		if r.budgetHolds(run) {
+		if _, held := r.starter.budgetHolds(budgetKey(run.Provider, run.Harness)); held {
 			return
 		}
 	case run != nil && run.Outcome == OutcomeFailed && !r.due(run):
@@ -125,7 +130,7 @@ func (r *orchestrator) look(ctx context.Context) {
 	}
 	r.starter.mu.Lock()
 	defer r.starter.mu.Unlock()
-	r.said = r.starter.orchestrate(ctx, cfg, repo.Manifest.OrchestrationAgent(), r.said, queueBatches(r.o, r.e, repo.Manifest))
+	r.said, _ = r.starter.orchestrate(ctx, cfg, repo.Manifest.OrchestrationAgent(), r.said, queueBatches(r.o, r.e, repo.Manifest))
 	r.seen = seenAs(r.o.Dir.AgentStates()[r.e.Root].Orchestrator) // told as it was recorded
 }
 
@@ -175,20 +180,6 @@ func (r *orchestrator) unhold() {
 	if r.starter.changed != nil {
 		r.starter.changed(lifted)
 	}
-}
-
-// budgetHolds says whether the budget state of the provider of run, which
-// ended on the harness's usage limit, holds a start at the orchestrator's
-// clock (S-0534): until the state clears, or its hold passes, the next run
-// waits, and orchestrateRetry does not count. A state that cannot be read is
-// warned of and holds nothing, as at a start (launcher.budgetStart).
-func (r *orchestrator) budgetHolds(run *AgentRun) bool {
-	_, held, err := r.o.Dir.budgetHeld(budgetKey(run.Provider, run.Harness), r.o.Now())
-	if err != nil {
-		r.starter.warn("budget state not read before the orchestrator's start; it goes", "err", err)
-		return false
-	}
-	return held
 }
 
 // due says whether orchestrateRetry has passed since run ended; a run whose
@@ -256,8 +247,11 @@ func (r *orchestrator) stop(run *AgentRun) {
 // verified instead of accepting them (S-0403). Its start, each retry's
 // included, is an agent event on the orchestrator's role, saying why it was
 // started, and so is a start it could not make, once as it is journalled
-// (S-0532).
-func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *manifest.Agent, said string, queue bool) string {
+// (S-0532). A start the budget state of its provider holds is not made and
+// nothing is recorded (spawnGated, S-0534): held is that state, nil when it
+// was not held, and why it is held is returned as said, logged when it is
+// not the one said last, so that a hold is logged once per state.
+func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *manifest.Agent, said string, queue bool) (string, *Budget) {
 	now := l.now().UTC()
 	last := l.dir.AgentStates()[l.entry.Root].Orchestrator
 	run := &AgentRun{Agent: workitem.ActivityOrchestrator, Started: now.Format(time.RFC3339), Session: newSession()}
@@ -275,11 +269,11 @@ func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *mani
 		l.warn("orchestrator could not be started", "harness", run.Harness, "err", run.Error)
 		appendAgentEvent(l.entry.Root, run, inbox.AgentFailed, run.Why, l.warn)
 	}
-	refuse := func(err error) string {
+	refuse := func(err error) (string, *Budget) {
 		if err.Error() != said {
 			fail(err)
 		}
-		return err.Error()
+		return err.Error(), nil
 	}
 	commandSet := cfg.host(harness.Command).Program != ""
 	if (agent == nil || agent.Harness == "") && !commandSet {
@@ -295,10 +289,17 @@ func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *mani
 	if err != nil {
 		return refuse(err)
 	}
-	cmd, out, err := l.spawn(ctx, run, spec.Argv, workitem.ActivityOrchestrator, now, append(spec.Env, keys...))
+	cmd, out, held, err := l.spawnGated(ctx, run, spec.Argv, workitem.ActivityOrchestrator, now, append(spec.Env, keys...))
+	if held != nil {
+		why := budgetHeldWhy(*held, now)
+		if why != said {
+			l.log("orchestrator start held", "provider", held.Provider, "until", held.Until.UTC().Format(time.RFC3339), "reason", why)
+		}
+		return why, held
+	}
 	if err != nil {
 		fail(err)
-		return ""
+		return "", nil
 	}
 	l.told(run)
 	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s (%s) as %s (pid %d); log %s", run.Command, run.Harness, run.Agent, run.PID, run.Log)
@@ -308,7 +309,7 @@ func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *mani
 	l.log("orchestrator started", "harness", run.Harness, "command", run.Command, "pid", run.PID)
 	appendAgentEvent(l.entry.Root, run, inbox.AgentStarted, orchestrateWhy(last), l.warn)
 	l.await(cmd, out, run.PID, func(code int) { l.orchestrateEnded(run, &code) })
-	return ""
+	return "", nil
 }
 
 // orchestrateEnded records an orchestrator run as ended, with its exit code

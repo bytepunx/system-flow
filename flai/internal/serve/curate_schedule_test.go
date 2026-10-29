@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -442,4 +443,64 @@ func TestRetryTriggerJoinsTheHeldAcceptances(t *testing.T) {
 			t.Errorf("retryTrigger(%q, %v) = %q, want %q", c.trigger, c.pending, got, c.want)
 		}
 	}
+}
+
+// S-0534: while the budget state of the curator's provider holds, an
+// acceptance and the schedule coming round start nothing and record
+// nothing, logged once; the first look once the state clears starts one run
+// with the acceptances' trigger, and nothing after it.
+func TestAcceptancesWaitWhileTheBudgetStateHoldsTheCurator(t *testing.T) {
+	lab := newCurationLab(t, "daily", time.Date(2026, 10, 6, 10, 0, 0, 0, time.UTC))
+	lab.budgetHeldOn(harness.Command, anHour())
+	story := lab.accept("Accepted while held")
+	lab.lookAt(lab.clock.Add(time.Second))
+	lab.lookAt(time.Date(2026, 10, 7, 0, 0, 30, 0, time.UTC)) // midnight came round
+	lab.lookAt(lab.clock.Add(time.Minute))
+	if n := len(lab.starts()); n != 0 || lab.state().Curator != nil || len(lab.entries()) != 0 {
+		t.Fatalf("started while held: %d runs, %+v", n, lab.state().Curator)
+	}
+	if !slices.Equal(lab.s.pending, []string{story}) {
+		t.Errorf("pending = %v, want %s kept", lab.s.pending, story)
+	}
+	if n := strings.Count(lab.logText(), `msg="curator held on its own"`); n != 1 {
+		t.Errorf("the hold was logged %d times, want once:\n%s", n, lab.logText())
+	}
+	lab.budgetCleared()
+	lab.lookAt(lab.clock.Add(time.Minute))
+	if run := lab.state().Curator; len(lab.starts()) != 1 || run == nil || run.Trigger != "accepted "+story {
+		t.Fatalf("once the state cleared: %d runs, %+v; want one started by the acceptance", len(lab.starts()), run)
+	}
+	lab.ended(1)
+	lab.lookAt(lab.clock.Add(time.Minute))
+	if n := len(lab.starts()); n != 1 {
+		t.Errorf("the time folded into the acceptances started another run: %d runs", n)
+	}
+}
+
+// S-0534, ADR-0214: a retry the budget state holds at the reset is not used
+// up: the acceptances held for it stay, and the first look once the state
+// clears starts it, marked a retry, with them.
+func TestARetryTheBudgetStateHoldsIsNotUsedUp(t *testing.T) {
+	lab := newCurationLab(t, "", limitedAt.Add(time.Minute))
+	lab.limited("accepted S-0498", "", false, true)
+	lab.lookAt(lab.clock.Add(time.Minute))
+	lab.clock = time.Date(2026, 10, 27, 10, 0, 0, 0, time.UTC)
+	story := lab.accept("Accepted meanwhile")
+	lab.lookAt(lab.clock.Add(time.Second))
+	lab.budgetHeldOn(harness.Command, anHour())
+	lab.lookAt(limitReset)
+	lab.lookAt(limitReset.Add(time.Minute))
+	if n := len(lab.starts()); n != 0 || lab.state().Curator.Session != "s" {
+		t.Fatalf("started while held: %d runs, %+v", n, lab.state().Curator)
+	}
+	if !slices.Equal(lab.s.pending, []string{story}) || lab.s.retried != "" {
+		t.Errorf("pending %v, retried %q; want %s kept and the retry untried", lab.s.pending, lab.s.retried, story)
+	}
+	lab.budgetCleared()
+	lab.lookAt(limitReset.Add(2 * time.Minute))
+	want := acceptedTrigger(inIDOrder([]string{story, "S-0498"}))
+	if run := lab.state().Curator; len(lab.starts()) != 1 || !run.Retry || run.Trigger != want {
+		t.Fatalf("once the state cleared: %d runs, %+v; want the retry started by %q", len(lab.starts()), run, want)
+	}
+	lab.ended(1)
 }

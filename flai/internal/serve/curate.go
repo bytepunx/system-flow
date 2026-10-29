@@ -54,8 +54,10 @@ var sinceForms = []string{time.DateOnly, time.RFC3339}
 // operator's asking, from a shell, the dashboard, or their own agent. It is
 // refused, as a *Refused, while the curate host action is off for the
 // project, for a since in neither form, while a curator runs for the
-// project, naming it, and when nothing can start it. It does not wait for
-// the curator: the serving flai settles the run once the process is gone.
+// project, naming it, when nothing can start it, and while the budget state
+// of the curator's provider holds its start, naming the provider and until,
+// with nothing recorded (S-0534). It does not wait for the curator: the
+// serving flai settles the run once the process is gone.
 func Curate(ctx context.Context, o Options, e Entry, since, trigger string) (*AgentRun, error) {
 	cs, err := curateCheck(o, e, since)
 	if err != nil {
@@ -63,7 +65,12 @@ func Curate(ctx context.Context, o Options, e Entry, since, trigger string) (*Ag
 	}
 	l := newLauncher(o, e)
 	l.handOver = true
-	l.curate(ctx, cs.cfg, cs.agent, cs.since, trigger, "")
+	if err := l.budgetRefusal(cs.cfg, cs.agent); err != nil {
+		return nil, err
+	}
+	if _, held := l.curate(ctx, cs.cfg, cs.agent, cs.since, trigger, ""); held != nil {
+		return nil, l.budgetRefused(*held)
+	}
 	run := o.Dir.AgentStates()[e.Root].Curator
 	if run == nil {
 		return nil, fmt.Errorf("the curator run was not recorded in %s", o.Dir.agents())
@@ -162,8 +169,11 @@ func lastCurated(repo *workitem.Repo) (string, error) {
 // run starts that one again: it is marked a retry, and its journal entry says
 // so (ADR-0214); resetAt is empty for every other start. Its start, or the
 // start it could not make, is an agent event on the curator's role, the start
-// saying what started it, what it takes in, and a retry's reset (S-0532).
-func (l *launcher) curate(ctx context.Context, cfg AgentConfig, agent *manifest.Agent, since, trigger, resetAt string) bool {
+// saying what started it, what it takes in, and a retry's reset (S-0532). A
+// start the budget state of its provider holds is not made and nothing is
+// recorded: held is that state, nil when it was not held (spawnGated,
+// S-0534).
+func (l *launcher) curate(ctx context.Context, cfg AgentConfig, agent *manifest.Agent, since, trigger, resetAt string) (started bool, held *Budget) {
 	now := l.now().UTC()
 	run := &AgentRun{Agent: workitem.ActivityCurator, Role: conventions.RoleCurate, Since: since, Started: now.Format(time.RFC3339), Session: newSession(), Trigger: trigger, Retry: resetAt != ""}
 	by := startedBy(run)
@@ -174,7 +184,7 @@ func (l *launcher) curate(ctx context.Context, cfg AgentConfig, agent *manifest.
 		run.Model = agent.Model
 	}
 	entry := hostapi.Entry{At: run.Started, Action: hostapi.ActionCurate, Method: "serve.curate", Project: l.entry.Key, Root: l.entry.Root, By: "flai serve"}
-	fail := func(err error) bool {
+	fail := func(err error) (bool, *Budget) {
 		run.Error, run.Ended, run.Outcome, run.Why = err.Error(), run.Started, OutcomeFailed, "could not be started: "+err.Error()
 		l.told(run)
 		entry.Outcome, entry.Detail = "failed", fmt.Sprintf("the curator, %s, %s, could not be started: %s", sinceSaid(since), by, run.Error)
@@ -183,7 +193,7 @@ func (l *launcher) curate(ctx context.Context, cfg AgentConfig, agent *manifest.
 		}
 		l.log("curator could not be started", "since", since, "trigger", run.Trigger, "harness", run.Harness, "err", run.Error)
 		appendAgentEvent(l.entry.Root, run, inbox.AgentFailed, run.Why, l.warn)
-		return false
+		return false, nil
 	}
 	name, adapter, err := harness.For(agent, cfg.host(harness.Command).Program != "")
 	run.Harness = name
@@ -195,7 +205,10 @@ func (l *launcher) curate(ctx context.Context, cfg AgentConfig, agent *manifest.
 	if err != nil {
 		return fail(err)
 	}
-	cmd, out, err := l.spawn(ctx, run, spec.Argv, workitem.ActivityCurator, now, append(spec.Env, keys...))
+	cmd, out, held, err := l.spawnGated(ctx, run, spec.Argv, workitem.ActivityCurator, now, append(spec.Env, keys...))
+	if held != nil {
+		return false, held
+	}
 	if err != nil {
 		return fail(err)
 	}
@@ -211,7 +224,7 @@ func (l *launcher) curate(ctx context.Context, cfg AgentConfig, agent *manifest.
 	}
 	appendAgentEvent(l.entry.Root, run, inbox.AgentStarted, why, l.warn)
 	l.await(cmd, out, run.PID, func(code int) { l.curateEnded(run, &code) })
-	return true
+	return true, nil
 }
 
 // curateEnded records a curator run as ended, with its exit code when it was

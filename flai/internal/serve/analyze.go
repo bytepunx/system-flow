@@ -47,8 +47,10 @@ import (
 // the schedule's own for a scheduled run. It is refused, as a *Refused,
 // while the analyze host action is off for the project, for a focus the
 // analyzer does not take, while an analyzer runs for the project, naming
-// it, and when nothing can start it. It does not wait for the analyzer: the
-// serving flai settles the run once the process is gone.
+// it, when nothing can start it, and while the budget state of the
+// analyzer's provider holds its start, naming the provider and until, with
+// nothing recorded (S-0534). It does not wait for the analyzer: the serving
+// flai settles the run once the process is gone.
 func Analyze(ctx context.Context, o Options, e Entry, focus, trigger string) (*AgentRun, error) {
 	as, err := analyzeCheck(o, e, focus)
 	if err != nil {
@@ -56,7 +58,12 @@ func Analyze(ctx context.Context, o Options, e Entry, focus, trigger string) (*A
 	}
 	l := newLauncher(o, e)
 	l.handOver = true
-	l.analyze(ctx, as.cfg, as.agent, focus, trigger)
+	if err := l.budgetRefusal(as.cfg, as.agent); err != nil {
+		return nil, err
+	}
+	if _, held := l.analyze(ctx, as.cfg, as.agent, focus, trigger); held != nil {
+		return nil, l.budgetRefused(*held)
+	}
 	run := o.Dir.AgentStates()[e.Root].Analyzer
 	if run == nil {
 		return nil, fmt.Errorf("the analyzer run was not recorded in %s", o.Dir.agents())
@@ -116,8 +123,10 @@ func startedBy(run *AgentRun) string {
 // analyze starts the analyzer with agent, looking for focus, or for all of
 // it when focus is empty, records the run with what started it, trigger,
 // journals it, and says whether it started. Its start, or the start it could
-// not make, is an agent event on the analyzer's role (S-0532).
-func (l *launcher) analyze(ctx context.Context, cfg AgentConfig, agent *manifest.Agent, focus, trigger string) bool {
+// not make, is an agent event on the analyzer's role (S-0532). A start the
+// budget state of its provider holds is not made and nothing is recorded:
+// held is that state, nil when it was not held (spawnGated, S-0534).
+func (l *launcher) analyze(ctx context.Context, cfg AgentConfig, agent *manifest.Agent, focus, trigger string) (started bool, held *Budget) {
 	now := l.now().UTC()
 	run := &AgentRun{Agent: workitem.ActivityAnalyzer, Focus: focus, Started: now.Format(time.RFC3339), Session: newSession(), Trigger: trigger}
 	if run.Focus == "" {
@@ -127,7 +136,7 @@ func (l *launcher) analyze(ctx context.Context, cfg AgentConfig, agent *manifest
 		run.Model = agent.Model
 	}
 	entry := hostapi.Entry{At: run.Started, Action: hostapi.ActionAnalyze, Method: "serve.analyze", Project: l.entry.Key, Root: l.entry.Root, By: "flai serve"}
-	fail := func(err error) bool {
+	fail := func(err error) (bool, *Budget) {
 		run.Error, run.Ended, run.Outcome, run.Why = err.Error(), run.Started, OutcomeFailed, "could not be started: "+err.Error()
 		l.told(run)
 		entry.Outcome, entry.Detail = "failed", fmt.Sprintf("the analyzer, focus %s, could not be started: %s", run.Focus, run.Error)
@@ -136,7 +145,7 @@ func (l *launcher) analyze(ctx context.Context, cfg AgentConfig, agent *manifest
 		}
 		l.log("analyzer could not be started", "focus", run.Focus, "harness", run.Harness, "err", run.Error)
 		appendAgentEvent(l.entry.Root, run, inbox.AgentFailed, run.Why, l.warn)
-		return false
+		return false, nil
 	}
 	name, adapter, err := harness.For(agent, cfg.host(harness.Command).Program != "")
 	run.Harness = name
@@ -148,7 +157,10 @@ func (l *launcher) analyze(ctx context.Context, cfg AgentConfig, agent *manifest
 	if err != nil {
 		return fail(err)
 	}
-	cmd, out, err := l.spawn(ctx, run, spec.Argv, workitem.ActivityAnalyzer, now, append(spec.Env, keys...))
+	cmd, out, held, err := l.spawnGated(ctx, run, spec.Argv, workitem.ActivityAnalyzer, now, append(spec.Env, keys...))
+	if held != nil {
+		return false, held
+	}
 	if err != nil {
 		return fail(err)
 	}
@@ -160,7 +172,7 @@ func (l *launcher) analyze(ctx context.Context, cfg AgentConfig, agent *manifest
 	l.log("analyzer started", "focus", run.Focus, "trigger", run.Trigger, "harness", run.Harness, "command", run.Command, "pid", run.PID)
 	appendAgentEvent(l.entry.Root, run, inbox.AgentStarted, triggerWhy(run)+", focus "+run.Focus, l.warn)
 	l.await(cmd, out, run.PID, func(code int) { l.analyzeEnded(run, &code) })
-	return true
+	return true, nil
 }
 
 // analyzeEnded records an analyzer run as ended, with its exit code when it

@@ -57,7 +57,8 @@ func (lab *agentLab) analyze(focus, trigger string) (*AgentRun, error) {
 func (lab *agentLab) analyzeHere(focus string) bool {
 	lab.l.mu.Lock()
 	defer lab.l.mu.Unlock()
-	return lab.l.analyze(context.Background(), lab.cfg, nil, focus, TriggerAsked)
+	started, _ := lab.l.analyze(context.Background(), lab.cfg, nil, focus, TriggerAsked)
+	return started
 }
 
 // analyzerGiven is what the analyzer stub was given, once it has written it.
@@ -461,5 +462,24 @@ func TestAnAnalyzerRunOnTheUsageLimitSetsTheBudgetStateAndAProbeOnItExtendsIt(t 
 	lab.heldUntil(limitReset.Add(2*budgetBackoffFirst), false, "10m0s")
 	if got := lab.budgetChanges(); !slices.Equal(got, []string{"set the budget state", "started a probe of the budget state", "extended the budget state"}) {
 		t.Errorf("budget changes journalled: %q", got)
+	}
+}
+
+// S-0534: flai analyze is refused while the budget state of the analyzer's
+// provider holds, naming the provider and until, with no run recorded and
+// nothing journalled; cleared, it starts.
+func TestAnAnalyzeIsRefusedWhileTheBudgetStateHoldsItsProvider(t *testing.T) {
+	lab := analyzeLab(t)
+	until := anHour()
+	lab.budgetHeldOn(harness.Command, until)
+	if _, err := lab.analyze("", TriggerAsked); refusal(err) != heldFor(until) {
+		t.Errorf("analyze: %v; want refused with %q", err, heldFor(until))
+	}
+	if r := lab.state().Analyzer; r != nil || len(lab.entries()) != 0 {
+		t.Fatalf("a held start recorded %+v, journalled %+v", r, lab.entries())
+	}
+	lab.budgetCleared()
+	if _, err := lab.analyze("", TriggerAsked); err != nil {
+		t.Errorf("once the state cleared: %v", err)
 	}
 }

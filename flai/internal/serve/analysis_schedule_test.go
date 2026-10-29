@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -173,4 +174,32 @@ func TestAChangedAnalysisScheduleComesRoundFirstAtItsNextTime(t *testing.T) {
 		t.Errorf("the changed schedule did not come round at its next time: %d runs, %+v", n, lab.state().Analyzer)
 	}
 	lab.ended()
+}
+
+// S-0534: a time analysis.schedule comes round at while the budget state of
+// the analyzer's provider holds starts nothing and records nothing, logged
+// once, and is not lost: the first look once the state clears starts it,
+// with the schedule as its trigger, once.
+func TestAScheduledAnalyzerWaitsWhileTheBudgetStateHoldsIt(t *testing.T) {
+	lab := newScheduleLab(t, "daily", time.Date(2026, 10, 6, 10, 0, 0, 0, time.UTC))
+	lab.budgetHeldOn(harness.Command, anHour())
+	lab.lookAt(time.Date(2026, 10, 7, 0, 0, 30, 0, time.UTC)) // midnight came round
+	lab.lookAt(lab.clock.Add(time.Minute))
+	lab.lookAt(lab.clock.Add(time.Minute))
+	if n := lab.starts(); n != 0 || lab.state().Analyzer != nil || len(lab.entries()) != 0 {
+		t.Fatalf("started while held: %d runs, %+v", n, lab.state().Analyzer)
+	}
+	if n := strings.Count(lab.logText(), `msg="scheduled analyzer held"`); n != 1 {
+		t.Errorf("the hold was logged %d times, want once:\n%s", n, lab.logText())
+	}
+	lab.budgetCleared()
+	lab.lookAt(lab.clock.Add(time.Minute))
+	if run := lab.state().Analyzer; lab.starts() != 1 || run == nil || run.Trigger != "schedule daily" {
+		t.Fatalf("once the state cleared: %d runs, %+v; want one started by schedule daily", lab.starts(), run)
+	}
+	lab.ended()
+	lab.lookAt(lab.clock.Add(time.Minute))
+	if n := lab.starts(); n != 1 {
+		t.Errorf("the held time started %d runs, want one", n)
+	}
 }

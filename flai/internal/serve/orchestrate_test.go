@@ -461,3 +461,38 @@ func TestAnOrchestratorRunOnTheUsageLimitWaitsForTheBudgetStateNotOrchestrateRet
 	waitFor(t, "the orchestrator is started once the hold has passed", func() bool { return lab.orchestrator().Session != "limited" })
 	lab.settle()
 }
+
+// S-0534: while the budget state of the orchestrator's provider holds, as
+// another role's run on the limit set it, no look starts the orchestrator,
+// nothing is recorded or journalled, and the hold is logged once; a run
+// that failed otherwise before it is not started again as orchestrateRetry
+// passes, and the first look once the state clears starts it.
+func TestTheOrchestratorWaitsWhileTheBudgetStateHoldsItsProvider(t *testing.T) {
+	lab := newOrchestrateLab(t)
+	lab.cfg.Orchestrate = true
+	lab.budgetHeldOn(harness.Command, anHour())
+	lab.look()
+	lab.look()
+	if r := lab.orchestrator(); r != nil || len(lab.orchestrateEntries()) != 0 {
+		t.Fatalf("started while held: %+v, journalled %+v", r, lab.orchestrateEntries())
+	}
+	lab.o.Dir.updateAgent(lab.root, func(s *AgentState) {
+		s.put(&AgentRun{Agent: workitem.ActivityOrchestrator, Session: "failed", Started: "2026-10-28T08:00:00Z", Ended: "2026-10-28T08:00:05Z", Outcome: OutcomeFailed, Why: "ended (exit 3)"})
+	})
+	lab.at = time.Date(2026, 10, 28, 8, 0, 5, 0, time.UTC).Add(2 * orchestrateRetry)
+	lab.look()
+	lab.at = lab.at.Add(orchestrateRetry)
+	lab.look()
+	if r := lab.orchestrator(); r.Session != "failed" || len(lab.orchestrateEntries()) != 0 {
+		t.Fatalf("started again after orchestrateRetry while held: %+v", r)
+	}
+	if n := strings.Count(lab.logText(), `msg="orchestrator start held"`); n != 1 {
+		t.Errorf("the hold was logged %d times, want once:\n%s", n, lab.logText())
+	}
+	lab.budgetCleared()
+	lab.look()
+	if r := lab.orchestrator(); r.Session == "failed" || r.Started == "" {
+		t.Fatalf("not started at the first look once the state cleared: %+v", r)
+	}
+	lab.settle()
+}

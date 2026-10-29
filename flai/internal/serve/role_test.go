@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -139,7 +140,8 @@ func (lab *agentLab) roleHere(name, item string) bool {
 	}
 	lab.l.mu.Lock()
 	defer lab.l.mu.Unlock()
-	return lab.l.role(context.Background(), lab.cfg, f, item, repo.Manifest.RoleAgent(name), nil)
+	started, _ := lab.l.role(context.Background(), lab.cfg, f, item, repo.Manifest.RoleAgent(name), nil)
+	return started
 }
 
 func (lab *agentLab) roleRun(name, item string) *AgentRun { return lab.state().Roles[name][item] }
@@ -533,5 +535,56 @@ func TestAgentStatesKeepDefinedRolesApart(t *testing.T) {
 	run := st.Roles["reviewer"]["S-0001"]
 	if !st.of(run).same(run) {
 		t.Errorf("of = %+v, want the run", st.of(run))
+	}
+}
+
+// S-0534: a defined role's run is refused while the budget state of its
+// agent's provider holds, naming the provider and until, with no run
+// recorded and nothing journalled; cleared, it starts.
+func TestADefinedRoleIsRefusedWhileTheBudgetStateHoldsItsProvider(t *testing.T) {
+	lab := roleLab(t)
+	until := anHour()
+	lab.budgetHeldOn(harness.Command, until)
+	if _, err := lab.runRole("auditor", ""); refusal(err) != heldFor(until) {
+		t.Errorf("role run: %v; want refused with %q", err, heldFor(until))
+	}
+	if r := lab.roleRun("auditor", ""); r != nil || len(lab.entries()) != 0 {
+		t.Fatalf("a held start recorded %+v, journalled %+v", r, lab.entries())
+	}
+	lab.budgetCleared()
+	if _, err := lab.runRole("auditor", ""); err != nil {
+		t.Errorf("once the state cleared: %v", err)
+	}
+}
+
+// S-0534: a defined role's run whose log ends on the recorded usage-limit
+// refusal is failed on the limit, marked so, and sets the budget state until
+// the reset the API reported, once however often its end is settled; the
+// probe's clean end clears it.
+func TestADefinedRoleRunOnTheUsageLimitSetsTheBudgetState(t *testing.T) {
+	lab := roleLab(t)
+	at := limitReset.Add(-time.Hour)
+	lab.budgetClock(&at)
+	one := 1
+	run := &AgentRun{Agent: harness.RoleAgent("auditor", ""), Role: "audit", RoleName: "auditor", Action: "audit", Harness: harness.ClaudeCode, Trigger: TriggerAsked,
+		Started: at.Format(time.RFC3339), Log: limitResult(t, true)}
+	again := *run
+	lab.l.roleEnded(run, &one)
+	lab.l.roleEnded(&again, &one) // seen again, as at a look
+	lab.heldUntil(limitReset, true, "5m0s")
+	if r := lab.roleRun("auditor", ""); r.Outcome != OutcomeFailed || !r.UsageLimited || r.ResetsAt != limitResetsAt || r.Why != limitWhyText {
+		t.Errorf("role run = %+v; want failed on the limit", r)
+	}
+
+	at = limitReset
+	probe := &AgentRun{Agent: run.Agent, Role: "audit", RoleName: "auditor", Action: "audit", Harness: harness.ClaudeCode, Trigger: TriggerAsked,
+		Started: at.Format(time.RFC3339), Log: cleanResult(t)}
+	lab.probing(probe)
+	lab.l.roleEnded(probe, nil)
+	if b, held := lab.budget(); held || b.Provider != "" {
+		t.Errorf("budget state %+v, held %v; want cleared by the probe's clean end", b, held)
+	}
+	if got := lab.budgetChanges(); !slices.Equal(got, []string{"set the budget state", "started a probe of the budget state", "cleared the budget state"}) {
+		t.Errorf("budget changes journalled: %q", got)
 	}
 }

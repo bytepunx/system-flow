@@ -17,6 +17,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/cron"
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/planning"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -662,4 +663,38 @@ func TestTheScheduleQueuesTheReadyStories(t *testing.T) {
 	}
 	lab.release(first)
 	lab.release(second)
+}
+
+// S-0534: while the budget state of the planner's provider holds, the queue
+// keeps every entry, in its order, records no run, and logs the hold once;
+// at the first look once the state clears, the first entry's planner starts
+// with its triggers.
+func TestTheQueueWaitsWhileTheBudgetStateHoldsThePlanner(t *testing.T) {
+	lab := newReplanLab(t, "")
+	ctx := context.Background()
+	lab.hold()
+	first, second := lab.ready("First"), lab.ready("Second")
+	lab.budgetHeldOn(harness.Command, anHour())
+	lab.r.queue = []queued{{item: first, triggers: []string{"reordered"}}, {item: second, triggers: []string{"schedule daily"}}}
+	lab.r.drain(ctx, lab.byID())
+	lab.r.drain(ctx, lab.byID())
+	if len(lab.r.queue) != 2 || lab.r.queue[0].item != first || lab.r.queue[1].item != second || lab.r.started != "" {
+		t.Fatalf("queue = %+v, started %q; want both kept in order", lab.r.queue, lab.r.started)
+	}
+	if lab.planRun(first) != nil || lab.planRun(second) != nil || lab.startedCount() != 0 {
+		t.Fatalf("a planner was recorded while held: %+v", lab.state().Plans)
+	}
+	if n := strings.Count(lab.logText(), `msg="queued planner held"`); n != 1 {
+		t.Errorf("the hold was logged %d times, want once:\n%s", n, lab.logText())
+	}
+
+	lab.budgetCleared()
+	lab.r.drain(ctx, lab.byID())
+	if run := lab.planRun(first); run == nil || run.Trigger != "reordered" || lab.r.started != first {
+		t.Fatalf("not started once the state cleared: %+v", run)
+	}
+	if len(lab.r.queue) != 1 || lab.r.queue[0].item != second {
+		t.Errorf("queue = %+v, want %s still queued", lab.r.queue, second)
+	}
+	lab.release(first)
 }

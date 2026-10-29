@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -338,4 +339,31 @@ func TestTheOperatorsStopOfTheOrchestratorIsOneStoppedAgentEvent(t *testing.T) {
 		}
 		lab.orchestratorEventsAre([2]string{inbox.AgentFailed, failed.Why})
 	})
+}
+
+// S-0534: flai serve orchestrate start is refused while the budget state of
+// the orchestrator's provider holds, naming the provider and until: nothing
+// is recorded or journalled, and the orchestrator stays held stopped; once
+// the state clears, it starts.
+func TestStartingTheOrchestratorIsRefusedWhileTheBudgetStateHoldsIt(t *testing.T) {
+	lab := newOrchestrateLab(t)
+	lab.cfg.Orchestrate = true
+	lab.o.Dir.updateAgent(lab.root, func(s *AgentState) {
+		s.put(&AgentRun{Agent: workitem.ActivityOrchestrator, Session: "held", Started: "2026-10-28T08:00:00Z", Ended: "2026-10-28T08:01:00Z", Outcome: OutcomeStopped, Held: true})
+	})
+	journalled := len(lab.entries())
+	until := anHour()
+	lab.budgetHeldOn(harness.Command, until)
+	if _, err := OrchestratorStart(context.Background(), lab.o, lab.entry()); refusal(err) != heldFor(until) {
+		t.Errorf("start: %v; want refused with %q", err, heldFor(until))
+	}
+	if r := lab.orchestrator(); r.Session != "held" || !r.Held || len(lab.entries()) != journalled {
+		t.Fatalf("a held start recorded %+v, journalled %+v", r, lab.entries())
+	}
+	lab.budgetCleared()
+	got, err := OrchestratorStart(context.Background(), lab.o, lab.entry())
+	if err != nil || got.Session == "held" || got.Held {
+		t.Fatalf("once the state cleared: %+v, %v", got, err)
+	}
+	reap(got.PID)
 }

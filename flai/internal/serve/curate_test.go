@@ -16,6 +16,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/digest"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
@@ -57,7 +58,8 @@ func (lab *agentLab) curate(since string) (*AgentRun, error) {
 func (lab *agentLab) curateHere(since string) bool {
 	lab.l.mu.Lock()
 	defer lab.l.mu.Unlock()
-	return lab.l.curate(context.Background(), lab.cfg, nil, since, TriggerAsked, "")
+	started, _ := lab.l.curate(context.Background(), lab.cfg, nil, since, TriggerAsked, "")
+	return started
 }
 
 // curatorGiven is what the curator stub was given, once it has written it.
@@ -111,7 +113,7 @@ func (lab *agentLab) curatorLimitedOn(stream []string) {
 func (lab *agentLab) curatorEnded(resetAt string) *AgentRun {
 	lab.t.Helper()
 	lab.l.mu.Lock()
-	started := lab.l.curate(context.Background(), lab.cfg, nil, "", TriggerAsked, resetAt)
+	started, _ := lab.l.curate(context.Background(), lab.cfg, nil, "", TriggerAsked, resetAt)
 	lab.l.mu.Unlock()
 	if !started {
 		lab.t.Fatalf("not started: %+v", lab.state().Curator)
@@ -714,6 +716,10 @@ func TestACuratorRunAppendsAnAgentEventAtItsStartAndItsEnd(t *testing.T) {
 		lab := curateLab(t)
 		lab.curatorLimited()
 		lab.curatorEnded("")
+		// the retry starts once the budget state the run set has passed, as
+		// its probe (S-0534)
+		at := time.Now().Add(budgetBackoffFirst + time.Minute)
+		lab.budgetClock(&at)
 		lab.curatorEnded(limitResetsAt)
 		limited := [2]string{inbox.AgentFailed, limitWhyText + " (exit 1)"}
 		role(lab, asked, limited, [2]string{inbox.AgentStarted, asked[1] + "; started again after the usage limit reset at " + limitResetsAt}, limited)
@@ -766,5 +772,24 @@ func TestACuratorRunOnTheUsageLimitSetsTheBudgetState(t *testing.T) {
 				t.Errorf("%d threads raised, want %d", len(ths), c.threads)
 			}
 		})
+	}
+}
+
+// S-0534: flai curate is refused while the budget state of the curator's
+// provider holds, naming the provider and until, with no run recorded and
+// nothing journalled; cleared, it starts.
+func TestACurateIsRefusedWhileTheBudgetStateHoldsItsProvider(t *testing.T) {
+	lab := curateLab(t)
+	until := anHour()
+	lab.budgetHeldOn(harness.Command, until)
+	if _, err := lab.curate(""); refusal(err) != heldFor(until) {
+		t.Errorf("curate: %v; want refused with %q", err, heldFor(until))
+	}
+	if r := lab.state().Curator; r != nil || len(lab.entries()) != 0 {
+		t.Fatalf("a held start recorded %+v, journalled %+v", r, lab.entries())
+	}
+	lab.budgetCleared()
+	if _, err := lab.curate(""); err != nil {
+		t.Errorf("once the state cleared: %v", err)
 	}
 }

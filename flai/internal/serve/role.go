@@ -56,9 +56,11 @@ var builtinRoles = map[string]string{
 // the project; for an item when the file takes none, without one when it
 // takes some, and for an item of a kind it does not take or that is
 // archived, done, or cancelled; while a run of the role on the same item, or
-// on none, runs; and when its agent names no harness and no command is set
-// on the host. It does not wait for the run: the serving flai settles it
-// once the process is gone.
+// on none, runs; when its agent names no harness and no command is set on
+// the host; and while the budget state of its agent's provider holds its
+// start, naming the provider and until, with nothing recorded (S-0534). It
+// does not wait for the run: the serving flai settles it once the process is
+// gone.
 func RunRole(ctx context.Context, o Options, e Entry, name, item string, inputs []harness.Input) (*AgentRun, error) {
 	rs, err := roleCheck(o, e, name, item)
 	if err != nil {
@@ -66,7 +68,12 @@ func RunRole(ctx context.Context, o Options, e Entry, name, item string, inputs 
 	}
 	l := newLauncher(o, e)
 	l.handOver = true
-	l.role(ctx, rs.cfg, rs.file, rs.item, rs.agent, inputs)
+	if err := l.budgetRefusal(rs.cfg, rs.agent); err != nil {
+		return nil, err
+	}
+	if _, held := l.role(ctx, rs.cfg, rs.file, rs.item, rs.agent, inputs); held != nil {
+		return nil, l.budgetRefused(*held)
+	}
 	run := o.Dir.AgentStates()[e.Root].Roles[rs.file.Name][rs.item]
 	if run == nil {
 		return nil, fmt.Errorf("the run of the role %s was not recorded in %s", rs.file.Name, o.Dir.agents())
@@ -191,8 +198,11 @@ func roleItem(repo *workitem.Repo, f roles.Role, item string) (string, error) {
 }
 
 // role starts the role f on item with agent and inputs, records the run as
-// asked, journals it under f's action, and says whether it started.
-func (l *launcher) role(ctx context.Context, cfg AgentConfig, f roles.Role, item string, agent *manifest.Agent, inputs []harness.Input) bool {
+// asked, journals it under f's action, and says whether it started. A start
+// the budget state of its provider holds is not made and nothing is
+// recorded: held is that state, nil when it was not held (spawnGated,
+// S-0534).
+func (l *launcher) role(ctx context.Context, cfg AgentConfig, f roles.Role, item string, agent *manifest.Agent, inputs []harness.Input) (started bool, held *Budget) {
 	now := l.now().UTC()
 	run := &AgentRun{Item: item, Agent: harness.RoleAgent(f.Name, item), Role: f.Role, RoleName: f.Name, Action: f.Action,
 		Started: now.Format(time.RFC3339), Session: newSession(), Trigger: TriggerAsked}
@@ -200,7 +210,7 @@ func (l *launcher) role(ctx context.Context, cfg AgentConfig, f roles.Role, item
 		run.Model = agent.Model
 	}
 	entry := hostapi.Entry{At: run.Started, Action: f.Action, Method: MethodRole, Project: l.entry.Key, Root: l.entry.Root, By: "flai serve"}
-	fail := func(err error) bool {
+	fail := func(err error) (bool, *Budget) {
 		run.Error, run.Ended, run.Outcome, run.Why = err.Error(), run.Started, OutcomeFailed, "could not be started: "+err.Error()
 		l.told(run)
 		entry.Outcome, entry.Detail = "failed", fmt.Sprintf("the role %s %s could not be started: %s", f.Name, onItem(item), run.Error)
@@ -209,7 +219,7 @@ func (l *launcher) role(ctx context.Context, cfg AgentConfig, f roles.Role, item
 		}
 		l.log("role could not be started", "role", f.Name, "item", item, "harness", run.Harness, "err", run.Error)
 		appendAgentEvent(l.entry.Root, run, inbox.AgentFailed, run.Why, l.warn)
-		return false
+		return false, nil
 	}
 	name, adapter, err := harness.For(agent, cfg.host(harness.Command).Program != "")
 	run.Harness = name
@@ -221,7 +231,10 @@ func (l *launcher) role(ctx context.Context, cfg AgentConfig, f roles.Role, item
 	if err != nil {
 		return fail(err)
 	}
-	cmd, out, err := l.spawn(ctx, run, spec.Argv, f.Name, now, append(spec.Env, keys...))
+	cmd, out, held, err := l.spawnGated(ctx, run, spec.Argv, f.Name, now, append(spec.Env, keys...))
+	if held != nil {
+		return false, held
+	}
 	if err != nil {
 		return fail(err)
 	}
@@ -233,7 +246,7 @@ func (l *launcher) role(ctx context.Context, cfg AgentConfig, f roles.Role, item
 	l.log("role started", "role", f.Name, "item", item, "harness", run.Harness, "command", run.Command, "pid", run.PID)
 	appendAgentEvent(l.entry.Root, run, inbox.AgentStarted, triggerWhy(run), l.warn)
 	l.await(cmd, out, run.PID, func(code int) { l.roleEnded(run, &code) })
-	return true
+	return true, nil
 }
 
 // roleEnded records a defined role's run as ended, with its exit code when
@@ -242,14 +255,25 @@ func (l *launcher) role(ctx context.Context, cfg AgentConfig, f roles.Role, item
 // wip/agents/<name>.md, naming its item when it ran on one and what started
 // it, which charges nothing. An activity that cannot be logged is warned of,
 // and the run stays recorded as it ended. The end that recorded the run as
-// ended first appends its agent event, as a planner run's does (S-0532).
+// ended first appends its agent event, as a planner run's does (S-0532). A
+// run whose log ends on the harness's usage limit and that asked nothing is
+// failed on it, with why naming the limit, whether its exit was seen or not,
+// and marked so (limitEnded); every end feeds its provider's budget state
+// once (budgetEnd, S-0534), as a planner run's does.
 func (l *launcher) roleEnded(run *AgentRun, exit *int) {
 	ended := *run
 	ended.Ended, ended.Exit = l.now().UTC().Format(time.RFC3339), exit
 	ended.Outcome, ended.Why, ended.Thread = judgeRole(l.entry.Root, run, exit)
-	if l.ended(&ended) {
+	lim, _ := runLimit(run, l.warn)
+	ended.limitEnded(lim)
+	if lim != nil && ended.Outcome != OutcomeAsked {
+		ended.Outcome, ended.Why = OutcomeFailed, limitWhy(lim)
+	}
+	first := l.ended(&ended)
+	if first {
 		appendAgentEnd(l.entry.Root, &ended, l.warn)
 	}
+	l.budgetEnd(&ended, lim, first)
 	args := []any{"role", run.RoleName, "item", run.Item, "pid", run.PID, "outcome", ended.Outcome}
 	if exit != nil {
 		args = append(args, "exit", *exit)

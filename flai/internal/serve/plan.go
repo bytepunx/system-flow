@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"os/exec"
 	"regexp"
 	"strings"
 	"time"
@@ -47,9 +49,11 @@ const TriggerOrchestrator = "orchestrator"
 // returns its run as recorded. It is refused while the plan host action is
 // off for the project, for an ID that is not an epic's or a story's, for an
 // item that is archived, done, or cancelled, while a planner runs for the
-// item, and when nothing can start it. It does not wait for the planner:
-// the serving flai settles the run once the process is gone. The run's
-// trigger is asked (ADR-0084).
+// item, when nothing can start it, and while the budget state of the
+// planner's provider holds its start, naming the provider and until, with
+// nothing recorded (S-0534). It does not wait for the planner: the serving
+// flai settles the run once the process is gone. The run's trigger is asked
+// (ADR-0084).
 func Plan(ctx context.Context, o Options, e Entry, item string) (*AgentRun, error) {
 	return planFor(ctx, o, e, item, TriggerAsked)
 }
@@ -65,7 +69,8 @@ func PlanForOrchestrator(ctx context.Context, o Options, e Entry, item string) (
 
 // planFor is Plan for a run started by trigger, what the run records and its
 // activity entry says started it (ADR-0084): asked for the operator's,
-// orchestrator for the orchestrator's, the replanner's triggers otherwise. It is refused as Plan is.
+// orchestrator for the orchestrator's, the replanner's triggers otherwise. It
+// is refused as Plan is.
 func planFor(ctx context.Context, o Options, e Entry, item, trigger string) (*AgentRun, error) {
 	ps, err := planCheck(o, e, item)
 	if err != nil {
@@ -73,7 +78,12 @@ func planFor(ctx context.Context, o Options, e Entry, item, trigger string) (*Ag
 	}
 	l := newLauncher(o, e)
 	l.handOver = true
-	l.plan(ctx, ps.cfg, ps.item, ps.agent, trigger)
+	if err := l.budgetRefusal(ps.cfg, ps.agent); err != nil {
+		return nil, err
+	}
+	if _, held := l.plan(ctx, ps.cfg, ps.item, ps.agent, trigger); held != nil {
+		return nil, l.budgetRefused(*held)
+	}
 	run := o.Dir.AgentStates()[e.Root].Plans[ps.item]
 	if run == nil {
 		return nil, fmt.Errorf("the planner run for %s was not recorded in %s", ps.item, o.Dir.agents())
@@ -139,15 +149,18 @@ func planCheck(o Options, e Entry, item string) (planStart, error) {
 
 // plan starts the planner for item with agent, records the run with what
 // started it, trigger, journals it, and says whether it started. Its start,
-// or the start it could not make, is an agent event on item (S-0532).
-func (l *launcher) plan(ctx context.Context, cfg AgentConfig, item string, agent *manifest.Agent, trigger string) bool {
+// or the start it could not make, is an agent event on item (S-0532). A
+// start the budget state of its provider holds is not made and nothing is
+// recorded: held is that state, nil when it was not held (spawnGated,
+// S-0534).
+func (l *launcher) plan(ctx context.Context, cfg AgentConfig, item string, agent *manifest.Agent, trigger string) (started bool, held *Budget) {
 	now := l.now().UTC()
 	run := &AgentRun{Item: item, Agent: workitem.ActivityPlanner + "-" + item, Started: now.Format(time.RFC3339), Session: newSession(), Trigger: trigger}
 	if agent != nil {
 		run.Model = agent.Model
 	}
 	entry := hostapi.Entry{At: run.Started, Action: hostapi.ActionPlan, Method: "serve.plan", Project: l.entry.Key, Root: l.entry.Root, By: "flai serve"}
-	fail := func(err error) bool {
+	fail := func(err error) (bool, *Budget) {
 		run.Error, run.Ended, run.Outcome, run.Why = err.Error(), run.Started, OutcomeFailed, "could not be started: "+err.Error()
 		l.told(run)
 		entry.Outcome, entry.Detail = "failed", fmt.Sprintf("the planner for %s could not be started: %s", item, run.Error)
@@ -156,7 +169,7 @@ func (l *launcher) plan(ctx context.Context, cfg AgentConfig, item string, agent
 		}
 		l.log("planner could not be started", "item", item, "harness", run.Harness, "err", run.Error)
 		appendAgentEvent(l.entry.Root, run, inbox.AgentFailed, run.Why, l.warn)
-		return false
+		return false, nil
 	}
 	name, adapter, err := harness.For(agent, cfg.host(harness.Command).Program != "")
 	run.Harness = name
@@ -168,7 +181,10 @@ func (l *launcher) plan(ctx context.Context, cfg AgentConfig, item string, agent
 	if err != nil {
 		return fail(err)
 	}
-	cmd, out, err := l.spawn(ctx, run, spec.Argv, workitem.ActivityPlanner, now, append(spec.Env, keys...))
+	cmd, out, held, err := l.spawnGated(ctx, run, spec.Argv, workitem.ActivityPlanner, now, append(spec.Env, keys...))
+	if held != nil {
+		return false, held
+	}
 	if err != nil {
 		return fail(err)
 	}
@@ -180,7 +196,7 @@ func (l *launcher) plan(ctx context.Context, cfg AgentConfig, item string, agent
 	l.log("planner started", "item", item, "harness", run.Harness, "command", run.Command, "pid", run.PID)
 	appendAgentEvent(l.entry.Root, run, inbox.AgentStarted, triggerWhy(run), l.warn)
 	l.await(cmd, out, run.PID, func(code int) { l.planEnded(run, &code) })
-	return true
+	return true, nil
 }
 
 // planEnded records a planner run as ended, with its exit code when it was
@@ -230,6 +246,57 @@ func (l *launcher) planEnded(run *AgentRun, exit *int) {
 		if err := appendPlanned(l.entry.Root, run.Item, run.Agent, items[1:]); err != nil {
 			l.warn("planned event not logged", "item", run.Item, "err", err)
 		}
+	}
+}
+
+// spawnGated is spawn behind the budget gate (budgetStart, S-0534), for a
+// strategic role's run whose harness and provider are resolved: a start the
+// budget state of its provider holds is not spawned, and held is that state,
+// nil when it went. The probe's spawn that fails frees the probe for the next
+// start, and the one that succeeds is recorded with its process.
+func (l *launcher) spawnGated(ctx context.Context, run *AgentRun, argv []string, subject string, at time.Time, env []string) (cmd *exec.Cmd, out *os.File, held *Budget, err error) {
+	gate := l.budgetStart(run)
+	if !gate.Go {
+		return nil, nil, &gate.State, nil
+	}
+	cmd, out, err = l.spawn(ctx, run, argv, subject, at, env)
+	switch {
+	case !gate.Probe:
+	case err != nil:
+		l.budgetRelease(run)
+	default:
+		l.budgetSpawned(run)
+	}
+	return cmd, out, nil, err
+}
+
+// budgetRefusal refuses a strategic role's start that the operator asked for
+// by hand, with agent under cfg, while the budget state of its provider holds
+// it (budgetRefused); nil when none does. It is checked before any run is
+// recorded.
+func (l *launcher) budgetRefusal(cfg AgentConfig, agent *manifest.Agent) error {
+	if b, held := l.budgetHolds(budgetKeyFor(cfg, agent)); held {
+		return l.budgetRefused(b)
+	}
+	return nil
+}
+
+// budgetRefused is the refusal, as a *Refused, of a start the operator asked
+// for by hand that the budget state b holds, naming its provider and until
+// (budgetHeldWhy).
+func (l *launcher) budgetRefused(b Budget) error {
+	return refused("%s", budgetHeldWhy(b, l.now()))
+}
+
+// heldOnce logs msg, with args, of a start l makes on its own that the
+// budget state b holds, once per state: said remembers what was logged, so
+// that a start held at every look is logged when it is first held and when
+// the state it is held by changes, not at every look.
+func (l *launcher) heldOnce(said map[string]bool, msg string, b Budget, args ...any) {
+	why := budgetHeldWhy(b, l.now())
+	if key := msg + "\x00" + why; !said[key] {
+		said[key] = true
+		l.log(msg, append(args, "provider", b.Provider, "until", b.Until.UTC().Format(time.RFC3339), "reason", why)...)
 	}
 }
 

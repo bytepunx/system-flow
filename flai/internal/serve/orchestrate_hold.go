@@ -137,7 +137,9 @@ func settled(o Options, e Entry, run *AgentRun) bool {
 //
 // It is refused, as a *Refused, while the orchestrate action is off for the
 // project, when the orchestrator is not held stopped, which flai serve runs
-// by itself, and while the run it was held on is still being stopped.
+// by itself, while the run it was held on is still being stopped, and while
+// the budget state of its provider holds its start, naming the provider and
+// until (S-0534): nothing is recorded, and it stays held stopped.
 func OrchestratorStart(ctx context.Context, o Options, e Entry) (*AgentRun, error) {
 	if err := orchestrateOn(o, e, "start"); err != nil {
 		return nil, err
@@ -153,9 +155,15 @@ func OrchestratorStart(ctx context.Context, o Options, e Entry) (*AgentRun, erro
 	if err != nil {
 		return nil, err
 	}
+	cfg, agent := o.Agent(e.Root), repo.Manifest.OrchestrationAgent()
 	l := newLauncher(o, e)
 	l.handOver = true
-	l.orchestrate(ctx, o.Agent(e.Root), repo.Manifest.OrchestrationAgent(), "", queueBatches(o, e, repo.Manifest))
+	if err := l.budgetRefusal(cfg, agent); err != nil {
+		return nil, err
+	}
+	if _, held := l.orchestrate(ctx, cfg, agent, "", queueBatches(o, e, repo.Manifest)); held != nil {
+		return nil, l.budgetRefused(*held)
+	}
 	out := o.Dir.AgentStates()[e.Root].Orchestrator
 	switch {
 	case out == nil || out.Session == run.Session:

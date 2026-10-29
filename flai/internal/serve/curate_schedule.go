@@ -45,6 +45,11 @@ import (
 // retried, nor is a run on a limit that named no reset time. A retry the
 // checks refuse is logged and not tried again while this scheduler lives.
 //
+// A start the budget state of the curator's provider holds (S-0534) is not
+// made, and nothing is used up: the acceptances stay queued, the retry stays
+// untried, and a schedule time that came round stays due, each tried again
+// at the next look until the state lets the start go.
+//
 // What it has seen is kept in memory only: acceptances and times that
 // passed while flai serve was down do not count. The hold and the retry are
 // read from the curator's last run in serve/agents.json, so a flai serve
@@ -74,7 +79,11 @@ type curateScheduler struct {
 	// retried is the start of the run on the usage limit a retry was tried
 	// for, so that one the checks refuse is not tried at every look.
 	retried string
-	said    map[string]bool // the manifest's refusals warned of
+	// heldDue is the trigger of the scheduled run the budget state of the
+	// curator's provider held, which each look tries again until it starts
+	// (S-0534); "" when none waits.
+	heldDue string
+	said    map[string]bool // the manifest's refusals warned of, and the holds logged (heldOnce)
 }
 
 // newCurateScheduler is the curate scheduler for project e, starting the
@@ -94,7 +103,10 @@ func newCurateScheduler(o Options, e Entry, starter *launcher) *curateScheduler 
 // runs now, or when digest.schedule has come round, unless the checks refuse
 // it. While the curator's last run ended on the harness's usage limit and the
 // limit has not reset, it starts nothing and holds both; once it has reset,
-// it starts that run again, with the held acceptances, once.
+// it starts that run again, with the held acceptances, once. A start the
+// budget state of the curator's provider holds keeps the acceptances, the
+// retry, and the time come round for the next look, and is logged once per
+// state (S-0534).
 func (s *curateScheduler) look(ctx context.Context) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -113,11 +125,14 @@ func (s *curateScheduler) look(ctx context.Context) {
 	changes, _, s.since, s.seen = news(items, nil, s.since, s.seen, now)
 	sched := s.schedule(repo.Manifest.Digest, now)
 	if s.o.Agent == nil || !s.o.Agent(s.e.Root).Curate {
-		s.pending, s.cadence.mark = nil, now
+		s.pending, s.cadence.mark, s.heldDue = nil, now, ""
 		return
 	}
 	s.pending = accepted(s.pending, changes)
-	due := s.cadence.due(sched, now)
+	due := s.heldDue
+	if s.cadence.due(sched, now) {
+		due = scheduleTrigger(sched)
+	}
 	last := s.o.Dir.AgentStates()[s.e.Root].Curator
 	resets := limitResetAt(last)
 	if now.Before(resets) {
@@ -125,6 +140,7 @@ func (s *curateScheduler) look(ctx context.Context) {
 	}
 	retry := !resets.IsZero() && !last.Retry && s.retried != last.Started
 	var trigger, since, resetAt string
+	pending, retried := s.pending, s.retried
 	switch {
 	case len(s.pending) > 0 && last.running():
 		return // the look its end brings starts the run
@@ -132,12 +148,12 @@ func (s *curateScheduler) look(ctx context.Context) {
 		trigger, since, resetAt, s.retried = retryTrigger(last.Trigger, s.pending), last.Since, last.ResetsAt, last.Started
 	case len(s.pending) > 0:
 		trigger = acceptedTrigger(s.pending)
-	case due:
-		trigger = scheduleTrigger(sched)
+	case due != "":
+		trigger = due
 	default:
 		return
 	}
-	s.pending = nil
+	s.pending, s.heldDue = nil, ""
 	cs, err := curateCheck(s.o, s.e, since)
 	var no *Refused
 	switch {
@@ -150,7 +166,12 @@ func (s *curateScheduler) look(ctx context.Context) {
 	}
 	s.starter.mu.Lock()
 	defer s.starter.mu.Unlock()
-	s.starter.curate(ctx, cs.cfg, cs.agent, cs.since, trigger, resetAt)
+	if _, held := s.starter.curate(ctx, cs.cfg, cs.agent, cs.since, trigger, resetAt); held != nil {
+		// Nothing was started: the acceptances, the retry, and the time come
+		// round all wait for the next look.
+		s.pending, s.retried, s.heldDue = pending, retried, due
+		s.starter.heldOnce(s.said, "curator held on its own", *held, "trigger", trigger)
+	}
 }
 
 // limitResetAt is when the usage limit run ended on resets, when run ended

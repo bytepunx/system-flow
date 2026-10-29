@@ -44,8 +44,10 @@ import (
 // launcher of flai serve, so that the run's end is seen at once, through the
 // checks Plan makes; an entry they refuse is dropped, as is one for a story
 // its agent works: in progress or in review, or with its agent running
-// (I-0098). The run records its triggers, joined by semicolons, and its
-// activity entry says them.
+// (I-0098). One whose start the budget state of the planner's provider holds
+// stays queued, in its place, until the state lets it start (S-0534). The
+// run records its triggers, joined by semicolons, and its activity entry
+// says them.
 //
 // What it has seen is kept in memory only: edits, moves, and scheduled times
 // from its start are acted on, and none that passed while flai serve was
@@ -93,7 +95,7 @@ type replanner struct {
 	queue   []queued
 	// started is the item of the planner run this replanner last started.
 	started string
-	said    map[string]bool // the manifest's refusals warned of
+	said    map[string]bool // the manifest's refusals warned of, and the holds logged (heldOnce)
 }
 
 // newReplanner is the replanner for project e, starting planners with
@@ -243,7 +245,9 @@ func (r *replanner) replan(repo *workitem.Repo, items []*workitem.Item, board *w
 // running, unless a planner this replanner started still runs. An entry for
 // a story its agent works, by byID and the story's newest run, or one the
 // checks refuse, is dropped and logged, and the next one tried; one that
-// cannot be read is dropped and warned of.
+// cannot be read is dropped and warned of. One whose start the budget state
+// of the planner's provider holds keeps its place, as does every entry after
+// it, and the next look tries it again (S-0534); it is logged once per state.
 func (r *replanner) drain(ctx context.Context, byID map[string]*workitem.Item) {
 	st := r.o.Dir.AgentStates()[r.e.Root]
 	if r.started != "" && st.Plans[r.started].running() {
@@ -273,8 +277,13 @@ func (r *replanner) drain(ctx context.Context, byID map[string]*workitem.Item) {
 			continue
 		}
 		r.starter.mu.Lock()
-		r.starter.plan(ctx, ps.cfg, ps.item, ps.agent, trigger)
+		_, held := r.starter.plan(ctx, ps.cfg, ps.item, ps.agent, trigger)
 		r.starter.mu.Unlock()
+		if held != nil {
+			r.queue = slices.Insert(r.queue, i, q)
+			r.starter.heldOnce(r.said, "queued planner held", *held, "item", q.item, "trigger", trigger)
+			return
+		}
 		r.started = ps.item
 		return
 	}
