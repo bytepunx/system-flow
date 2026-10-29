@@ -54,7 +54,7 @@ func permissionPromptText(hold time.Duration) string {
 	if hold <= 0 {
 		asks = "refuses the write at once, naming the thread, which stays open; the same write made again takes the operator's reply given on it since: allow lets the write through, anything else refuses it with the operator's words as the reason"
 	}
-	return "Claude Code calls this tool itself, through --permission-prompt-tool mcp__flai__permission_prompt, when a tool call would otherwise ask a person: the model need not call it. It approves only an Edit, Write, MultiEdit, or NotebookEdit of a path Claude Code protects inside an in-progress story's worktree, such as a file in a .claude/ folder or .mcp.json, which Claude Code refuses without a person's approval; it never approves a path in .git. Unless the host auto-approves such writes, it opens a thread on the story showing the change and " + asks + ". Everything else is refused at once. It answers {\"behavior\":\"allow\",\"updatedInput\":...} or {\"behavior\":\"deny\",\"message\":...} as Claude Code expects."
+	return "Claude Code calls this tool itself, through --permission-prompt-tool mcp__flai__permission_prompt, when a tool call would otherwise ask a person: the model need not call it. It approves only an Edit, Write, MultiEdit, or NotebookEdit of a path Claude Code protects inside an in-progress story's worktree, such as a file in a .claude/ folder or .mcp.json, which Claude Code refuses without a person's approval; it never approves a path in .git, nor an Edit, or an edit of a MultiEdit, whose old string ends in a space or a tab and whose new string does not, since Claude Code drops that space from the new string: end both strings on another character. Unless the host auto-approves such writes, it opens a thread on the story showing the change and " + asks + ". Everything else is refused at once. It answers {\"behavior\":\"allow\",\"updatedInput\":...} or {\"behavior\":\"deny\",\"message\":...} as Claude Code expects."
 }
 
 // permissionScope is what every refusal of a request outside the tool's remit says.
@@ -203,6 +203,9 @@ func (s *server) permissionPrompt(ctx context.Context, in PermissionIn) Permissi
 	if escapes(s.repo.WorktreePath(it.ID), path) {
 		return deny("%s leaves %s's worktree through a symbolic link: %s", path, it.ID, permissionScope)
 	}
+	if which, ok := trimmedEdit(in); ok {
+		return deny("%s's new string ends without the space or tab its old string ends with, which Claude Code drops from the end of a new string, so the write would lose it (I-0223): make the edit again with both strings ending on a character that is not a space or a tab, such as the next word", which)
+	}
 	if s.autoApprove != nil && s.autoApprove(projectRoot(s.repo)) {
 		if s.logger != nil {
 			s.logger.Info("permission allowed without asking", "component", "mcp", "agent", s.agent, "tool", in.ToolName, "path", path, "story", it.ID)
@@ -210,6 +213,32 @@ func (s *server) permissionPrompt(ctx context.Context, in PermissionIn) Permissi
 		return allow(in.Input)
 	}
 	return s.askOperator(ctx, it, in, shown)
+}
+
+// trimmedEdit names the edit of an Edit or MultiEdit whose old string ends in
+// a space or a tab and whose new string does not: Claude Code drops trailing
+// whitespace from a new string before the call reaches flai, so allowing it
+// writes text the agent did not mean (I-0223).
+func trimmedEdit(in PermissionIn) (string, bool) {
+	switch in.ToolName {
+	case "Edit":
+		return "the Edit", lostTrailingSpace(in.Input)
+	case "MultiEdit":
+		edits, _ := in.Input["edits"].([]any)
+		for i, e := range edits {
+			if m, _ := e.(map[string]any); lostTrailingSpace(m) {
+				return fmt.Sprintf("edit %d of the MultiEdit", i+1), true
+			}
+		}
+	}
+	return "", false
+}
+
+// lostTrailingSpace reports whether an edit's old string ends in a space or a
+// tab and its new string does not.
+func lostTrailingSpace(m map[string]any) bool {
+	endsBlank := func(s string) bool { return strings.HasSuffix(s, " ") || strings.HasSuffix(s, "\t") }
+	return endsBlank(str(m, "old_string")) && !endsBlank(str(m, "new_string"))
 }
 
 // escapes reports whether the deepest existing folder of path, symbolic

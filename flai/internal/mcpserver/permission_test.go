@@ -229,6 +229,59 @@ func TestPermissionPromptAutoApprovesWithoutAThread(t *testing.T) {
 	noThreads(t, f.repo)
 }
 
+// I-0223: Claude Code drops trailing whitespace from an Edit's new string, so
+// S-0416's agent, editing the guard hook's condition in .claude/settings.json
+// with both strings ending in "exit 0; ", was asked to allow a new string
+// ending in "exit 0;" (TH-0712), and the written file read "exit 0;out=...".
+// permission_prompt refuses such an edit at once, under auto-approve too,
+// telling the agent to end both strings on another character.
+func TestPermissionPromptRefusesAtOnceAnEditWhoseNewStringLostTheTrailingSpace(t *testing.T) {
+	f := setupWith(t, func(o *Options) { o.AutoApprove = func(string) bool { return true } })
+	settings := f.worktreeFile(".claude/settings.json")
+	const (
+		oldHook = `"[ -n \"$FLAI_ROLE\" ] || [ -n \"$FLAI_STORY\" ] || exit 0; `
+		newHook = `"[ \"$FLAI_ROLE\" = plan ] || [ -n \"$FLAI_STORY\" ] || exit 0;`
+	)
+	edit := func(oldS, newS string) map[string]any {
+		return map[string]any{"old_string": oldS, "new_string": newS}
+	}
+	for _, c := range []struct {
+		name, tool string
+		input      map[string]any
+		which      string
+	}{
+		{"S-0416's Edit", "Edit", map[string]any{"file_path": settings, "old_string": oldHook, "new_string": newHook}, "the Edit's new string"},
+		{"a tab dropped", "Edit", map[string]any{"file_path": settings, "old_string": "a\t", "new_string": "b"}, "the Edit's new string"},
+		{"the second edit of a MultiEdit", "MultiEdit", map[string]any{"file_path": settings, "edits": []any{edit("a", "b"), edit(oldHook, newHook)}}, "edit 2 of the MultiEdit's new string"},
+	} {
+		out := f.askPermission(t, context.Background(), c.tool, c.input)
+		if out.Behavior != "deny" || !strings.Contains(out.Message, c.which) || !strings.Contains(out.Message, "ending on a character that is not a space or a tab") || out.UpdatedInput != nil {
+			t.Errorf("%s: %+v, want a refusal naming %q and telling the agent to end both strings on another character", c.name, out, c.which)
+		}
+	}
+	for _, c := range []struct {
+		name, tool string
+		input      map[string]any
+	}{
+		{"both strings end in a space", "Edit", map[string]any{"file_path": settings, "old_string": "exit 0; ", "new_string": "exit 1; "}},
+		{"both strings end on a word", "Edit", map[string]any{"file_path": settings, "old_string": "exit 0; out", "new_string": "exit 1; out"}},
+		{"only the new string ends in a space", "Edit", map[string]any{"file_path": settings, "old_string": "a", "new_string": "b "}},
+		{"a MultiEdit whose edits keep their spaces", "MultiEdit", map[string]any{"file_path": settings, "edits": []any{edit("a ", "b\t"), edit("c", "d")}}},
+	} {
+		if out := f.askPermission(t, context.Background(), c.tool, c.input); out.Behavior != "allow" || !reflect.DeepEqual(out.UpdatedInput, c.input) {
+			t.Errorf("%s: %+v, want it allowed with the input unchanged", c.name, out)
+		}
+	}
+	noThreads(t, f.repo)
+
+	asking := setup(t)
+	out := asking.askPermission(t, context.Background(), "Edit", map[string]any{"file_path": asking.worktreeFile(".claude/settings.json"), "old_string": oldHook, "new_string": newHook})
+	if out.Behavior != "deny" || !strings.Contains(out.Message, "the Edit's new string") {
+		t.Errorf("without auto-approve: %+v, want the same refusal at once", out)
+	}
+	noThreads(t, asking.repo)
+}
+
 // ADR-0106: every path Claude Code protects in the story's worktree is
 // approved, not only .claude/, while .git, the main checkout, and every path
 // outside the worktree stay refused, auto-approve or not.
