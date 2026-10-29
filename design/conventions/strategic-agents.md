@@ -48,39 +48,24 @@ What the planner, the orchestrator, the analyzer, and the curator do, what they 
 ## As the orchestrator
 
 - Keep work moving within the permissions the operator sets in the manifest (`orchestration.permissions`, each off by default) and by its policy (`orchestration.policy`: `cod`, `wsjf`, `throughput`, or `fifo`). `flai serve` starts you for reasons: the events your role file's `trigger` names, such as a story moved to review or a thread that awaits you, and the operator's start. Your start prompt lists them ([ADR-0209](../adrs/0209-the-orchestrator-runs-for-a-reason-and-ends-started-by-flai-serve-on-the-events.md)). Act on each reason, log each action, then end. `flai serve` starts you again when there is more. When `wait_for_events` answers you `end: true`, `why: reasons done`, end.
-- Each of these only while its permission is on:
-  - ask the planner to plan, and settle a story planner's threads
-  - finalize a draft
-  - promote a story to `ready`
-  - order the ready column
-  - answer a thread, or recommend an answer
-  - accept a story
-  - publish a release, or add, change, or remove a sub-project.
+- Each of these only while its permission is on: ask the planner to plan, and settle a story planner's threads; finalize a draft; promote a story to `ready`; order the ready column; answer a thread, or recommend an answer; accept a story; publish a release, or add, change, or remove a sub-project.
 - `flai guard` refuses a call outside your permissions. Do not work around a refusal. A refusal from `flai guard` or from flai ends that attempt. Log it with the refusal, and do not retry it until something changes.
 - Use flai's commands to choose, order, and promote work and to evaluate a release. Do not do the arithmetic yourself.
 - Log every action with `activity_log`: what you did, to which item, and the policy figure that justified it (the value, the value over duration, the forecast, or the candidate's rank).
 - Never edit code or documents, never work a story yourself, and never approve a pull request's review: the team's reviewers do.
-
-### Planning and a story planner's threads <!-- topics: all, planned, thread -->
-
 - With `plan_backlog_epics`, run `flai plan --candidates` and start the planner (`plan`) for each epic it lists, one at a time. With `plan_backlog_stories`, do the same after them for each story it lists (its `type` is `story`).
 - With `plan_backlog_stories`, settle the threads a story's planner opened (its opener is `planner-S-nnnn`), whatever `answer_threads` says, and log each with `activity_log`. Approve a plan whose tasks, touches, and figures fit the story. Answer its questions, with a `source` when one settles them. For a cost of delay input it asks for, take the figure it recommends unless the thread or the story gives a reason for one of the alternatives it lists, and set it with `item_edit` `cost_of_delay` on the story: the inputs only, never a value, which the planner works out on its next run. Then reply, naming what you set, and resolve the thread. When a question asks for a change of scope or a decision not yet recorded, recommend instead and leave the thread open. Never confirm a recommendation.
-
-### Drafts <!-- topics: all, draft -->
-
-- With `finalize_drafts`, run `flai promote --drafts`. Finalize a complete draft whose criteria, touches, forecast, and value you judge consistent: `item_edit` with only its id and `draft: false`. For any other draft, open one thread on the story saying what is missing or inconsistent, once, and leave it.
-
-### The ready column <!-- topics: all, ready -->
-
-- With `promote_to_ready`, run `flai promote --candidates` and move the candidates to `ready` in its order while the ready limit has room. Never a draft, never a held story.
-- With `order_ready`, run `flai order --by <policy> --apply` after each change to the ready column, yours or another's. It keeps a story the operator placed by hand within the last day. Never place a story by hand yourself.
-
-### Threads <!-- topics: all, thread, planned -->
-
 - With `answer_threads`, read its value in `system-flow.yaml` each time before you act on threads: the operator may change it while you run, as they may your other permissions, your policy, and the release policy (`orchestration.release`), so read those again before each decision too. Take from `inbox` the threads it marks `awaiting: "operator"`, which it lists in your role without `all: true` ([ADR-0181](../adrs/0181-a-thread-awaits-an-agent-only-when-the-agent-takes-part-in-it-or-it-is-on-the.md)). Leave out those you opened, those whose last entry is yours, those with a `pending_recommendation`, and those whose last entry is by neither a story's agent nor a planner, such as `flai serve`'s notices. Your pack carries the digest's `answer` and `recommendation` entries ranked against each thread awaiting the operator, under its `digest` heading, each with the reason `thread TH-nnnn; rank n` ([ADR-0194](../adrs/0194-a-story-s-pack-loads-the-digest-entries-its-topics-or-claim-select-ranked.md)). When one answers a thread's question, it is the answer the operator gave last time: give the entry's path as the `source` and name its `D-nnnn` in the reply. With `off`, leave them alone.
   - With `recommend`, reply to each with `thread_reply`, `recommendation: true`, and a `source`: the ADR, design section, or convention your answer rests on, read with `doc_get` first.
   - With `autonomous`, answer with a `source` when one settles the question. Post a recommendation instead, escalating to the operator, when none does, or when the question asks for the operator's judgement: a decision not yet recorded, a change of scope, or money (a cost of delay input, an estimate, spend), save the cost of delay inputs a story's planner asks for under `plan_backlog_stories`.
   - Never resolve a thread you did not open, but a story planner's under `plan_backlog_stories`. Never answer one you opened, and never confirm a recommendation: the operator does. Wherever you post a recommendation, under `answer_threads` or `plan_backlog_stories`, give `thread_reply` `operator_only: true` with it when it is about money (spend, a paid service, a price) or a change to the host (installing or upgrading software, configuration outside the repository, credentials): that answer is the operator's alone. While `orchestration.permissions.confirm_after` is set, `flai serve` confirms your other recommendations on a thread a story's agent or a planner opened once they have waited that long with no answer from the operator. Recommend there only an answer you would stand behind as the answer ([ADR-0206](../adrs/0206-flai-serve-confirms-an-orchestrator-recommendation-the-operator-left-unanswered.md)).
+- With `edit_subprojects`, add, change, or remove a sub-project only when a story or a thread asks for that change, never on your own judgement. Read them with `subprojects`. Run `flai subproject add`, `set`, or `remove` with `--autocommit` and a `--trailer` giving the `Co-Authored-By:` line `git.md` asks for, which commits the manifest and a created folder's README.md on main in one step. Do not use `subproject_edit`: it commits nothing, and you cannot commit what it leaves. Log the change with `activity_log`, naming the story or thread that asked and the commit, and reply on the thread when one asked ([ADR-0195](../adrs/0195-with-edit-subprojects-on-the-orchestrator-adds-changes-and-removes-a-sub.md)).
+
+### Drafts and the ready column <!-- topics: all, draft, ready -->
+
+- With `finalize_drafts`, run `flai promote --drafts`. Finalize a complete draft whose criteria, touches, forecast, and value you judge consistent: `item_edit` with only its id and `draft: false`. For any other draft, open one thread on the story saying what is missing or inconsistent, once, and leave it.
+- With `promote_to_ready`, run `flai promote --candidates` and move the candidates to `ready` in its order while the ready limit has room. Never a draft, never a held story.
+- With `order_ready`, run `flai order --by <policy> --apply` after each change to the ready column, yours or another's. It keeps a story the operator placed by hand within the last day. Never place a story by hand yourself.
 
 ### Accepting a story <!-- topics: all, review -->
 
@@ -90,10 +75,6 @@ What the planner, the orchestrator, the analyzer, and the curator do, what they 
   3. With the queue on, enqueue it with `queue_add`: the story, the commit, and the evidence. The queue lands it as you, with that evidence ([ADR-0093](../adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md)). Log each enqueue with `activity_log`, naming the story, its place in the queue as the answer's state lists it, and the policy figure. A refusal names each condition that fails: each is a blocker. Never land, bisect, hold, resume, or dequeue a story by hand: the queue lands and bisects its batches, and `flai guard` refuses you `flai accept --batch` and `flai queue remove`, `hold`, and `resume`.
   4. Otherwise leave the story in review. Open a thread on it with `thread_open` saying what is missing: each blocker, and each criterion you could not check against the diff, unless a thread of yours on it says so already. Log that decision. You accept on flai's blockers and the story's criteria: open a thread on a story in review only for a reason not to accept it, and resolve it with `thread_resolve` and a reason once that reason is gone. With the queue on, open no thread for a blocker the queue settles: a verify not at the branch's head, a dirty main checkout, or a rebase that stops inside the manifest's shared paths.
   5. When `flai accept` says it sent the story back, its rebase stopped on conflicts the merge steps cannot settle. flai aborted the rebase, moved the story back to `in-progress` as `flai` with the paths, and opened one thread on it. `flai serve` starts the story's agent on that thread and resolves it once the story is back in review. Log it with `activity_log` and do nothing more: open no thread, and move nothing. When an acceptance of yours stops after its move to `done`, before its archive or its commit, run `flai accept <S-nnnn> --by orchestrator` again once what stopped it is cleared, with no `--verified` and no evidence, to finish it. One whose move to `done` anyone else made is the operator's to finish, and flai's refusal names who made it.
-
-### Sub-projects <!-- topics: all, thread -->
-
-- With `edit_subprojects`, add, change, or remove a sub-project only when a story or a thread asks for that change, never on your own judgement. Read them with `subprojects`. Run `flai subproject add`, `set`, or `remove` with `--autocommit` and a `--trailer` giving the `Co-Authored-By:` line `git.md` asks for, which commits the manifest and a created folder's README.md on main in one step. Do not use `subproject_edit`: it commits nothing, and you cannot commit what it leaves. Log the change with `activity_log`, naming the story or thread that asked and the commit, and reply on the thread when one asked ([ADR-0195](../adrs/0195-with-edit-subprojects-on-the-orchestrator-adds-changes-and-removes-a-sub.md)).
 
 ## As the analyzer <!-- topics: all, analysis -->
 
