@@ -79,9 +79,14 @@ type AgentConfig struct {
 	Analyze bool
 	// Curate is whether the curate host action is enabled for the project:
 	// the operator may have the curator started for it (S-0431, ADR-0196).
-	Curate  bool
-	Command []string
-	Name    string // FLAI_AGENT is this and the story's ID; "agent" when empty
+	Curate bool
+	// RoleActions are whether each host action that a role the project
+	// defines names in its file is enabled for the project, by action: the
+	// operator may have the role started while its action is (S-0417,
+	// ADR-0207). An action not here is off.
+	RoleActions map[string]bool
+	Command     []string
+	Name        string // FLAI_AGENT is this and the story's ID; "agent" when empty
 	// Harnesses are the program and arguments each harness runs with on this
 	// host, the command among them when one is set (S-0104).
 	Harnesses map[string]harness.Host
@@ -220,8 +225,16 @@ type AgentRun struct {
 	// Role is the mark of a run that the fields that name its work do not
 	// tell from the orchestrator's: conventions.RoleCurate on the curator's
 	// runs (S-0431, ADR-0196), so that one is never taken for the
-	// orchestrator's run; empty on every other run.
+	// orchestrator's run, and the verb its file gives on a run of a role the
+	// project defines (S-0417); empty on every other run.
 	Role string `json:"role,omitempty"`
+	// RoleName is the name of the role the project defines whose run this
+	// is, as its file under the design folder's workflows/roles gives it,
+	// and Action the host action its file names, which its start and its
+	// end are journalled under (S-0417, ADR-0207). Both are empty on every
+	// other run.
+	RoleName string `json:"role_name,omitempty"`
+	Action   string `json:"action,omitempty"`
 	// Since is when a curator run takes in from, as the harness was given it:
 	// the since its starter gave, else the time of the curator's last
 	// activity, and empty on its first run, which takes in everything
@@ -317,8 +330,12 @@ func (r *AgentRun) analyzes() bool {
 }
 
 // curates is the curator's run: one marked with its role (S-0431), whatever
-// else it names.
-func (r *AgentRun) curates() bool { return r.Role == conventions.RoleCurate }
+// else it names, and no role the project defines.
+func (r *AgentRun) curates() bool { return r.Role == conventions.RoleCurate && r.RoleName == "" }
+
+// defined is a run of a role the project defines (S-0417), whatever else it
+// names.
+func (r *AgentRun) defined() bool { return r.RoleName != "" }
 
 // live is a run that has not ended.
 func (r *AgentRun) live() bool { return r != nil && r.Ended == "" && r.Error == "" && r.PID > 0 }
@@ -350,6 +367,10 @@ type AgentState struct {
 	// Curator is the project's newest curator run (S-0431, ADR-0196), the
 	// newest alone, no story's run either.
 	Curator *AgentRun `json:"curator,omitempty"`
+	// Roles are the newest run of each role the project defines, by the
+	// role's name, then by the item it ran on, "" for a run on none (S-0417,
+	// ADR-0207). They are no story's runs either.
+	Roles map[string]map[string]*AgentRun `json:"roles,omitempty"`
 	// PastOrchestrators and PastAnalyzers are the runs Orchestrator and
 	// Analyzer named before, newest first, at most pastRuns of each
 	// (S-0228): what the dashboard's pages list as past runs.
@@ -375,10 +396,13 @@ func keep(past []*AgentRun, was, r *AgentRun) []*AgentRun {
 	return out
 }
 
-// of is the newest run recorded for what r is for: its item's planner run,
-// the orchestrator's, the analyzer's, the curator's, or its story's agent's
-// run.
+// of is the newest run recorded for what r is for: its role's on its item,
+// for a role the project defines, its item's planner run, the
+// orchestrator's, the analyzer's, the curator's, or its story's agent's run.
 func (s *AgentState) of(r *AgentRun) *AgentRun {
+	if r.defined() {
+		return s.Roles[r.RoleName][r.Item]
+	}
 	if r.curates() {
 		return s.Curator
 	}
@@ -396,9 +420,20 @@ func (s *AgentState) of(r *AgentRun) *AgentRun {
 
 // put records a run as its story's newest, and keeps Running and Last true,
 // a planner run as its item's newest, the orchestrator's or the analyzer's
-// as the newest, the one it replaces kept among their past runs, or the
-// curator's as the newest alone.
+// as the newest, the one it replaces kept among their past runs, the
+// curator's as the newest alone, or a defined role's as its newest on its
+// item.
 func (s *AgentState) put(r *AgentRun) {
+	if r.defined() {
+		if s.Roles == nil {
+			s.Roles = map[string]map[string]*AgentRun{}
+		}
+		if s.Roles[r.RoleName] == nil {
+			s.Roles[r.RoleName] = map[string]*AgentRun{}
+		}
+		s.Roles[r.RoleName][r.Item] = r
+		return
+	}
 	if r.curates() {
 		s.Curator = r
 		return
@@ -1113,7 +1148,8 @@ func startedBefore(run *AgentRun, entered time.Time) bool {
 // that has the run's PID and is not the one started for it, after a reboot,
 // is gone too (S-0170). A planner's run is settled the same way, and its
 // activity logged (S-0208), and so are the orchestrator's (S-0218), the
-// analyzer's (S-0223), and the curator's (S-0431).
+// analyzer's (S-0223), the curator's (S-0431), and each defined role's
+// (S-0417).
 func (l *launcher) settleOrphans() {
 	st := l.dir.AgentStates()[l.entry.Root]
 	for _, run := range st.Stories {
@@ -1140,6 +1176,13 @@ func (l *launcher) settleOrphans() {
 	}
 	if run := st.Curator; run.live() && !l.waiting[run.PID] && !run.running() {
 		l.curateEnded(run, nil)
+	}
+	for _, runs := range st.Roles {
+		for _, run := range runs {
+			if run.live() && !l.waiting[run.PID] && !run.running() {
+				l.roleEnded(run, nil)
+			}
+		}
 	}
 }
 

@@ -612,21 +612,10 @@ func Run(ctx context.Context, o Options) error {
 			// so that a story page shows it at once (S-0154), a planner's
 			// item page, with the item in place of the story (S-0208), and
 			// the orchestrator's run, with its role (S-0218), the analyzer's,
-			// with its (S-0223), and the curator's, with its (ADR-0196).
-			starter.changed = func(run *AgentRun) {
-				about := map[string]string{"project": e.Key, "story": run.Story}
-				switch {
-				case run.Item != "":
-					about = map[string]string{"project": e.Key, "item": run.Item}
-				case run.orchestrates():
-					about = map[string]string{"project": e.Key, "role": conventions.RoleOrchestrate}
-				case run.analyzes():
-					about = map[string]string{"project": e.Key, "role": conventions.RoleAnalyze}
-				case run.curates():
-					about = map[string]string{"project": e.Key, "role": conventions.RoleCurate}
-				}
-				r.client.Notify(AgentChanged, about)
-			}
+			// with its (S-0223), the curator's, with its (ADR-0196), and a
+			// defined role's, with its verb and name (S-0417), as agentAbout
+			// says.
+			starter.changed = func(run *AgentRun) { r.client.Notify(AgentChanged, agentAbout(e.Key, run)) }
 			// The replanner looks after each look of the launcher: on the same
 			// changes, when an agent ends and its queue can move on, and every
 			// minute, which is when the schedule is seen to come round (S-0211).
@@ -758,6 +747,31 @@ func Run(ctx context.Context, o Options) error {
 		case <-tick.C:
 		}
 	}
+}
+
+// agentAbout is what the agent notification of run, in the project named
+// key, says it is about: the project, then a defined role's verb as role,
+// its name as name, and its item when it ran on one (S-0417); a planner's
+// item (S-0208); the orchestrator's, the analyzer's, or the curator's role
+// (S-0218, S-0223, ADR-0196); or a story's agent's story (S-0154).
+func agentAbout(key string, run *AgentRun) map[string]string {
+	switch {
+	case run.defined():
+		about := map[string]string{"project": key, "role": run.Role, "name": run.RoleName}
+		if run.Item != "" {
+			about["item"] = run.Item
+		}
+		return about
+	case run.Item != "":
+		return map[string]string{"project": key, "item": run.Item}
+	case run.orchestrates():
+		return map[string]string{"project": key, "role": conventions.RoleOrchestrate}
+	case run.analyzes():
+		return map[string]string{"project": key, "role": conventions.RoleAnalyze}
+	case run.curates():
+		return map[string]string{"project": key, "role": conventions.RoleCurate}
+	}
+	return map[string]string{"project": key, "story": run.Story}
 }
 
 // defaultClient is the client for one project when the options name no
