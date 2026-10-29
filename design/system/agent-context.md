@@ -355,24 +355,26 @@ A role file for `plan`, `orchestrate`, `analyze`, or `curate` gives that built-i
 `flai serve` starts the orchestrator for reasons ([ADR-0209](../adrs/0209-the-orchestrator-runs-for-a-reason-and-ends-started-by-flai-serve-on-the-events.md)), and a run for one thread does not need the whole project. [ADR-0217](../adrs/0217-a-pack-primed-for-the-orchestrator-s-reasons-loads-the-role-s-conventions-with.md) (S-0537) primes it for them: `flai prime --role orchestrate --reason <reason>`, repeatable, or `reasons` on the MCP `prime` tool. A reason is `thread:TH-nnnn`, `review:S-nnnn`, `planned:E-nnnn` or `planned:S-nnnn`, `draft:S-nnnn`, `release`, or `ready`. The start prompt names each run's ([strategic-agents.md](strategic-agents.md#primed-for-its-reasons-s-0537)). The pack, in the same budget, holds:
 
 1. The conventions the orchestrator reads, once, cut by the section rule below. No README and no open issues.
-2. Per reason, what it needs, each item once however many reasons name it: a thread with its entries and the item it is on; a review's story and its last `flai verify` result; the planned item, the items the planner wrote under it, and the planner's open thread on it; the draft; `release_evaluate`'s figures; or the board and `promote_candidates`' figures.
-3. The digest's `answer` and `recommendation` entries ranked against the reasons' threads, those of `thread` reasons and the planner threads `planned` loads, as the general pack ranks them against the threads awaiting the operator ([The digest](#the-digest)), within an eighth of the budget.
+2. Per reason, what it needs, each item once however many reasons name it, whole when any of them loads it whole: a thread with its entries and the item it is on, as its ID, title, type, and status, its `## Goal` and `## Acceptance criteria` verbatim, and a line saying its notes, tasks, and planning are left out and `item_get` gives it whole ([ADR-0218](../adrs/0218-a-thread-reason-loads-the-work-item-it-is-on-as-its-title-status-goal-and.md) §1); a review's story and its last `flai verify` result; the planned item, the items the planner wrote under it, and the planner's open thread on it; the draft; `release_evaluate`'s figures; or the board and `promote_candidates`' figures.
+3. The digest's `answer` and `recommendation` entries ranked against the reasons' threads, those of `thread` reasons and the planner threads `planned` loads, as the general pack ranks them against the threads awaiting the operator ([The digest](#the-digest)), within a sixteenth of the budget, 5 KB of 80 KB (ADR-0218 §2). Every other pack keeps the eighth.
 
 It holds no design or tech briefs, no ranked sections, and no catalog: `doc_search` and `doc_get` find the rest.
 
 **The section rule.** A heading's topics narrow a section for every pack that reads the file, and `work-management.md` is read by every story's agent. So a reason pack reads a word beside `all`. A section whose effective topics are `all` alone is kept, as in every pack. A section tagged `all` and other words is kept only when one of them is a kind of the run's reasons or `orchestration`, the role's topic. Every other pack keeps it as before, since `all` matches every pack. The baseline tags "As the planner" `all, planning, planned`, the orchestrator's "Drafts and the ready column" `all, draft, ready` and "Accepting a story" `all, review`, "As the analyzer" `all, analysis`, "As the curator" `all, digest`, and `work-management.md`'s "Rules" `all, review, draft, planned`. `flai check` accepts these words on a heading ([conventions.md](conventions.md#topics)).
 
-Measured on this repository on 2026-10-29 with this branch's flai, at the default 80 KB budget, against the general orchestrate pack's 176,359 bytes:
+Measured on this repository on 2026-10-29 with this branch's flai, at the default 80 KB budget, against the general orchestrate pack's 177,226 bytes, after ADR-0218 trimmed a thread's item and capped the digest at a sixteenth. What the reasons load and the digest are the bytes of their text; the pack's size adds each item's heading and the header.
 
 | Reasons | Pack, bytes | Of the general pack | Conventions | What the reasons load | Digest |
 |---------|-------------|---------------------|-------------|-----------------------|--------|
-| `thread:TH-0750` | 54,638 | 31% | 27,398 | 13,882 | 8,532 |
-| `review:S-0536` | 80,217 | 45% | 55,619 | 21,789 | 0 |
-| `draft:S-0542` | 63,025 | 36% | 51,628 | 9,009 | 0 |
-| `ready` | 47,432 | 27% | 28,172 | 17,178 | 0 |
-| `release` | 29,817 | 17% | 27,398 | 298 | 0 |
+| `thread:TH-0717` | 47,787 | 27.0% | 27,655 | 11,926 | 3,911 |
+| `thread:TH-0719` | 44,614 | 25.2% | 27,655 | 8,927 | 3,911 |
+| `thread:TH-0750` | 41,708 | 23.5% | 27,655 | 5,828 | 3,838 |
+| `review:S-0536` | 80,474 | 45.4% | 55,876 | 21,789 | 0 |
+| `draft:S-0542` | 63,282 | 35.7% | 51,885 | 9,009 | 0 |
+| `ready` | 47,666 | 26.9% | 28,429 | 17,155 | 0 |
+| `release` | 30,074 | 17.0% | 27,655 | 298 | 0 |
 
-A `review` or `draft` pack keeps `work-management.md`'s "Rules", about 24 KB. A run for a real thread is near a third of the general pack: the thread, its story, and the digest add 22 KB to the conventions. S-0537's test measures a thread with one entry on a story of three lines, and that pack is under a quarter.
+Before ADR-0218 the three thread packs were 62,808, 59,537, and 54,895 bytes, 31 to 35% of the general pack, with each story whole and up to 8,532 bytes of digest. The trimmed story is 955 to 3,014 bytes, and the digest prints within 5,120. A `review` or `draft` pack keeps `work-management.md`'s "Rules", about 24 KB. A quarter of the general pack is 44,306 bytes. A thread's pack is the conventions' 27,655 bytes, about 4 KB of header and item headings, the digest, the item trimmed, and the thread whole, which is what varies most: TH-0750's 4,873-byte thread is under the quarter, TH-0719's 7,046 bytes 308 over, and TH-0717's 8,912 bytes 3,481 over. Of the repository's 754 threads on 2026-10-29, the median is 2.8 KB, four in five are under 5 KB, and nine in ten are under 6 KB. A thread of up to about 6.5 KB primes under a quarter. S-0537's test measures copies of TH-0750 and S-0542, kept under `flai/internal/context/testdata/thread` (ADR-0218 §3). TH-0750 is larger than four in five of the threads.
 
 ### Measured
 

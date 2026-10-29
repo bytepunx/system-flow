@@ -112,12 +112,13 @@ The pack loads the role's conventions once, with the sections those
 reasons do not need left out: a section tagged all and other words stays
 only when one of them is a reason's kind or the role's topic. Then, per
 reason, what it needs, each item once however many reasons name it: for a
-thread, the thread with its entries and the item it is on; for a review,
+thread, the thread with its entries and the item it is on, as its title,
+status, goal, and acceptance criteria (ADR-0218); for a review,
 the story and its last flai verify result; for planned, the item, the
 items under it, and the planner's open thread on it; for a draft, the
 draft; for release, release_evaluate's figures; for ready, the board and
 the promotion candidates. Then the digest's answers and recommendations
-ranked against the reasons' threads, within an eighth of the budget. It
+ranked against the reasons' threads, within a sixteenth of the budget. It
 loads no briefs, no ranked sections, no open issues, and no catalog.
 --reason is refused with another role and with --epic or --story, and an
 unknown reason is refused naming the forms.

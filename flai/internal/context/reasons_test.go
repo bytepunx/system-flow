@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -218,8 +219,9 @@ func TestAReasonPackKeepsTheSectionsItsReasonsName(t *testing.T) {
 	}
 }
 
-// ADR-0217 §3, S-0537 criterion 1: a thread loads the thread with its
-// entries and the work item it is on, whole; a thread on a document loads
+// ADR-0217 §3, ADR-0218 §1, S-0537 criterion 1: a thread loads the thread
+// with its entries and the work item it is on, trimmed to its ID, title,
+// type, status, goal, and acceptance criteria; a thread on a document loads
 // the thread alone. The pack is the orchestrator's conventions without the
 // README, and holds no briefs, no ranked sections, no issues, and no
 // catalog.
@@ -236,9 +238,10 @@ func TestAThreadReasonLoadsTheThreadAndItsItem(t *testing.T) {
 	if it := got[thPath]; it.Text != string(raw) || it.ID != "TH-0001" || it.Reason != "thread:TH-0001" || it.Size != len(raw) || !strings.Contains(it.Text, "Which way round? Asked in full.") {
 		t.Errorf("thread item %+v", it)
 	}
-	raw, _ = os.ReadFile(story.Path)
-	if it := got[storyPath]; it.Text != string(raw) || it.ID != story.ID || it.Reason != "thread:TH-0001" {
-		t.Errorf("story item %+v", it)
+	trimmed := "---\nid: " + story.ID + "\ntitle: \"Roles prime\"\ntype: story\nstatus: " + story.Status + "\n---\n\n## Goal\n\nKeep to [named](../../../design/system/named.md).\n\n## Acceptance criteria\n\n- [ ] it primes\n\n" +
+		story.ID + "'s notes, tasks, and planning are left out of this pack (ADR-0218); item_get gives it whole.\n"
+	if it := got[storyPath]; it.Text != trimmed || it.ID != story.ID || it.Reason != "thread:TH-0001" || it.Size != len(trimmed) {
+		t.Errorf("story item %+v; want text %q", it, trimmed)
 	}
 	if len(got) != 2 || len(p.Items) != 2 || p.Items[0].Path != thPath {
 		t.Errorf("items %+v; want the thread then its story", p.Items)
@@ -353,6 +356,121 @@ func TestAnItemTwoReasonsNameLoadsOnce(t *testing.T) {
 	}
 }
 
+// ADR-0218 §1: a thread's item holds its ID, title, type, and status, and its
+// goal and acceptance criteria verbatim, in that order, then the line that
+// names what is left out; not its tasks nor its notes. An item without a
+// goal, such as an epic with other headings, holds what it has of the two.
+func TestAThreadsItemHoldsItsGoalAndCriteriaButNotItsNotes(t *testing.T) {
+	repo, epic, _ := reasonsRepo(t)
+	now := time.Date(2026, 10, 29, 9, 0, 0, 0, time.UTC)
+	goal := "The orchestrator primes for one thread.\n\n- It reads less."
+	criteria := "1. [ ] A pack for one thread is small.\n2. [x] It says what is left out."
+	story, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: `A "quoted" story: with a colon`, Parent: epic.ID, Owner: "alex", Now: now,
+		Body: "## Notes\n\nNotes before the goal.\n\n## Goal\n\n" + goal + "\n\n## Acceptance criteria\n\n" + criteria + "\n\n## Tasks\n\n- T-0009 a task line\n\n## Notes on planning\n\nThe planner's notes.\n"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	other, err := repo.Create(workitem.NewOptions{Type: workitem.Epic, Title: "An epic with an outcome", Owner: "alex", Now: now,
+		Body: "## Outcome\n\nThe outcome.\n\n## Acceptance criteria\n\n- [ ] Epic criterion.\n"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, it := range []*workitem.Item{story, other} {
+		if _, err := threads.New(repo, threads.NewOptions{Title: "About " + it.ID, On: it.ID, Author: "agent-S-0001", Text: "Asked.", Now: now}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// TH-0006 on the story, TH-0007 on the epic.
+	p := mustReasons(t, repo, "thread:TH-0006")
+	it := reasonItems(p)[fixturePath(t, repo, story.Path)]
+	want := "---\nid: " + story.ID + "\ntitle: " + strconv.Quote(story.Title) + "\ntype: story\nstatus: " + story.Status + "\n---\n\n## Goal\n\n" + goal + "\n\n## Acceptance criteria\n\n" + criteria + "\n\n" +
+		story.ID + "'s notes, tasks, and planning are left out of this pack (ADR-0218); item_get gives it whole.\n"
+	if it.Text != want || it.ID != story.ID || it.Title != story.Title {
+		t.Errorf("story item %+v;\nwant text %q", it, want)
+	}
+	for _, not := range []string{"Notes before the goal", "T-0009", "The planner's notes", "## Tasks", "transitions:"} {
+		if strings.Contains(it.Text, not) {
+			t.Errorf("the thread's item holds %q", not)
+		}
+	}
+	p = mustReasons(t, repo, "thread:TH-0007")
+	it = reasonItems(p)[fixturePath(t, repo, other.Path)]
+	want = "---\nid: " + other.ID + "\ntitle: \"An epic with an outcome\"\ntype: epic\nstatus: " + other.Status + "\n---\n\n## Acceptance criteria\n\n- [ ] Epic criterion.\n\n" +
+		other.ID + "'s notes, tasks, and planning are left out of this pack (ADR-0218); item_get gives it whole.\n"
+	if it.Text != want {
+		t.Errorf("epic item %q; want %q", it.Text, want)
+	}
+}
+
+// ADR-0218 §1, ADR-0217 §3: the item a thread and a review of the same story
+// both name loads once, whole, in either order: the review's whole story
+// takes the place of the thread's trimmed one, and the thread's trimmed one
+// does not take the place of the review's whole one.
+func TestTheItemAThreadAndAReviewNameLoadsOnceWhole(t *testing.T) {
+	repo, _, story := reasonsRepo(t)
+	raw, err := os.ReadFile(story.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := fixturePath(t, repo, story.Path)
+	for _, reasons := range [][]string{{"thread:TH-0001", "review:" + story.ID}, {"review:" + story.ID, "thread:TH-0001"}} {
+		p := mustReasons(t, repo, reasons...)
+		var held []Item
+		for _, it := range p.Items {
+			if it.Path == path {
+				held = append(held, it)
+			}
+		}
+		if len(held) != 1 {
+			t.Errorf("%v: the story loads %d times", reasons, len(held))
+			continue
+		}
+		if it := held[0]; it.Text != string(raw) || it.Size != len(raw) || it.Reason != reasons[0] || !slices.Equal(it.Also, reasons[1:]) {
+			t.Errorf("%v: story item reason %q, also %v, %d bytes; want it whole, %d bytes, for both", reasons, it.Reason, it.Also, it.Size, len(raw))
+		}
+	}
+}
+
+// ADR-0218 §2: a reason pack's digest prints within a sixteenth of the
+// budget, at every budget, while the general orchestrate pack's still takes
+// up to an eighth: at some budget it prints more than the sixteenth, which
+// the reason pack never does.
+func TestAReasonPacksDigestStaysWithinASixteenth(t *testing.T) {
+	repo := answersRepo(t)
+	used := func(p *Pack) int {
+		n := 0
+		for _, it := range digestItems(p) {
+			n += len(it.Printed())
+		}
+		return n
+	}
+	reasonLoaded, generalWider := false, false
+	for budget := 4096; budget <= 64*1024; budget += 512 {
+		size := strconv.Itoa(budget)
+		p, err := ForReasons(repo, []string{"thread:TH-0002"}, size)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if n := used(p); n > budget/ReasonDigestShare {
+			t.Errorf("budget %d: the reason pack's digest prints %d bytes, over a sixteenth, %d", budget, n, budget/ReasonDigestShare)
+		} else if n > 0 {
+			reasonLoaded = true
+		}
+		general, err := ForStrategic(repo, conventions.RoleOrchestrate, "", "", size)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if n := used(general); n > budget/DigestShare {
+			t.Errorf("budget %d: the general pack's digest prints %d bytes, over an eighth, %d", budget, n, budget/DigestShare)
+		} else if n > budget/ReasonDigestShare {
+			generalWider = true
+		}
+	}
+	if !reasonLoaded || !generalWider {
+		t.Errorf("reason pack loaded a digest entry %v, general pack's digest over a sixteenth at some budget %v; want both", reasonLoaded, generalWider)
+	}
+}
+
 // ADR-0217 §4: the digest's answers are ranked against the reasons'
 // threads, not against every thread awaiting the operator.
 func TestAReasonPackRanksTheDigestAgainstItsThreads(t *testing.T) {
@@ -373,14 +491,27 @@ func TestAReasonPackRanksTheDigestAgainstItsThreads(t *testing.T) {
 	}
 }
 
-// S-0537 criterion 2: a pack primed for one thread is under a quarter of
-// the general orchestrate pack over this repository's conventions and
-// design. The general pack is built over this repository as it stands; the
-// thread pack over a copy of its manifest and design, with a story and a
-// thread on it, so that nothing is written into this repository.
+// threadFixture is the folder of the copies of a real thread of this
+// repository, TH-0750, and the story it is on, S-0542, as they stood when
+// S-0542 was accepted (ADR-0218 §3). At 4.9 KB the thread is larger than four
+// in five of the repository's 754 threads on 2026-10-29, whose median is
+// 2.8 KB: a pack for a thread of the 94th percentile or more, such as TH-0717
+// at 8.9 KB, is over a quarter, at 27%.
+const threadFixture = "testdata/thread"
+
+// S-0537 criterion 2, ADR-0218 §3: a pack primed for one thread is under a
+// quarter of the general orchestrate pack over this repository's
+// conventions and design. The general pack is built over this repository
+// as it stands; the thread pack over a copy of its manifest and design,
+// with the copies of a real thread and the archived story it is on, so that
+// nothing is written into this repository.
 func TestAThreadPackIsUnderAQuarterOfTheGeneralPack(t *testing.T) {
 	if testing.Short() {
 		t.Skip("integration: reads this repository's design")
+	}
+	fixtures, err := os.ReadDir(threadFixture)
+	if err != nil || len(fixtures) != 2 {
+		t.Skipf("the copies of a real thread and its story are not in %s: %v", threadFixture, err)
 	}
 	here, err := workitem.Open(".")
 	if err != nil {
@@ -393,31 +524,23 @@ func TestAThreadPackIsUnderAQuarterOfTheGeneralPack(t *testing.T) {
 	root := t.TempDir()
 	copyTree(t, filepath.Join(here.Root, "system-flow.yaml"), filepath.Join(root, "system-flow.yaml"))
 	copyTree(t, filepath.Join(here.Root, "design"), filepath.Join(root, "design"))
-	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/threads"} {
+	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/threads", "wip/archive/kanban/stories"} {
 		if err := os.MkdirAll(filepath.Join(root, d), 0o755); err != nil {
 			t.Fatal(err)
 		}
+	}
+	for _, f := range fixtures {
+		dir := "wip/threads"
+		if strings.HasPrefix(f.Name(), "S-") {
+			dir = "wip/archive/kanban/stories"
+		}
+		copyTree(t, filepath.Join(threadFixture, f.Name()), filepath.Join(root, dir, f.Name()))
 	}
 	repo, err := workitem.Open(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	now := time.Date(2026, 10, 29, 9, 0, 0, 0, time.UTC)
-	epic, err := repo.Create(workitem.NewOptions{Type: workitem.Epic, Title: "Orchestration", Owner: "alex", Now: now})
-	if err != nil {
-		t.Fatal(err)
-	}
-	story, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "The orchestrator primes for its reasons", Parent: epic.ID, Owner: "alex", Now: now,
-		Body: "## Goal\n\nThe orchestrator primes for the reasons of its run.\n\n## Acceptance criteria\n\n- [ ] A pack for one thread is under a quarter of the general pack.\n"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	th, err := threads.New(repo, threads.NewOptions{Title: "Which pack does a thread run read?", On: story.ID, Author: "agent-" + story.ID, Now: now,
-		Text: "Should a run for one thread read the general pack or one primed for the thread?"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	p, err := ForReasons(repo, []string{"thread:" + th.ID}, "")
+	p, err := ForReasons(repo, []string{"thread:TH-0750"}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -425,7 +548,22 @@ func TestAThreadPackIsUnderAQuarterOfTheGeneralPack(t *testing.T) {
 	for _, c := range p.Conventions {
 		conventionBytes += c.Size
 	}
-	t.Logf("general orchestrate pack %d bytes; pack for thread:%s %d bytes (%d of conventions, %d items), %.1f%% of it", general.Size.Bytes, th.ID, p.Size.Bytes, conventionBytes, len(p.Items), 100*float64(p.Size.Bytes)/float64(general.Size.Bytes))
+	part := map[string]int{}
+	for _, it := range p.Items {
+		switch {
+		case it.Step == StepDigest:
+			part["digest"] += len(it.Printed())
+		case it.ID == "TH-0750":
+			part["thread"] += it.Size
+		case it.ID == "S-0542":
+			part["item"] += it.Size
+		}
+	}
+	if part["thread"] == 0 || part["item"] == 0 {
+		t.Fatalf("the pack for thread:TH-0750 holds thread %d bytes, item %d; want both", part["thread"], part["item"])
+	}
+	t.Logf("general orchestrate pack %d bytes; pack for thread:TH-0750 %d bytes, %.1f%% of it: conventions %d, thread %d, item %d, digest %d as printed (of a share of %d)",
+		general.Size.Bytes, p.Size.Bytes, 100*float64(p.Size.Bytes)/float64(general.Size.Bytes), conventionBytes, part["thread"], part["item"], part["digest"], p.Budget/ReasonDigestShare)
 	if p.Size.Bytes*4 >= general.Size.Bytes {
 		t.Errorf("the pack for one thread is %d bytes, %d of them conventions; want under a quarter of the general pack's %d, %d", p.Size.Bytes, conventionBytes, general.Size.Bytes, general.Size.Bytes/4)
 	}

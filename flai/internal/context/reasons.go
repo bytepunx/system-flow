@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
@@ -184,8 +185,8 @@ func MatchesReasons(section, words, pack []string) bool {
 // MatchesReasons leaves out taken out; then, per reason, what it needs, as
 // reasonLoaders loads it, each item once however many reasons name it; and
 // the digest's answers and recommendations ranked against the reasons'
-// threads, within an eighth of the budget, as answersFor takes them for the
-// general pack (ADR-0194). It holds no design or tech briefs, no ranked
+// threads, as answersFor takes them for the general pack (ADR-0194), within
+// a sixteenth of the budget rather than an eighth (ADR-0218 §2). It holds no design or tech briefs, no ranked
 // sections, no open issues, and no catalog: doc_search and doc_get find the
 // rest. What the reasons load is kept when it takes the pack over the
 // budget, as what a story names is. budget is a size as ParseSize reads
@@ -243,7 +244,7 @@ func ForReasons(repo *workitem.Repo, reasons []string, budget string) (*Pack, er
 	if pack.Exceeded == "" && pack.Size.Bytes > pack.Budget {
 		pack.Exceeded = ExceededNamed
 	}
-	pack.addDigest(l.answers(), pack.Exceeded != "")
+	pack.addDigestWithin(l.answers(), pack.Exceeded != "", pack.Budget/ReasonDigestShare)
 	pack.size()
 	return pack, nil
 }
@@ -273,16 +274,36 @@ type reasonLoad struct {
 	items   []Item
 	threads []*threads.Thread
 	all     []*workitem.Item // the items outside the archive, read once when a loader first needs them
+	trimmed map[string]bool  // the paths of the items loaded trimmed, as a thread's item is (ADR-0218 §1)
 }
 
 // add puts it in the pack for reason, or, when an earlier reason loaded the
 // same file, adds reason to that item's.
 func (l *reasonLoad) add(it Item, reason Reason) {
+	l.put(it, reason, false)
+}
+
+// put is add for an item loaded whole or, with trimmed, cut as a thread's
+// item is (ADR-0218 §1). The pack holds a file once, whole when any of its
+// reasons loads it whole: a whole item an earlier reason loaded trimmed
+// takes the trimmed one's text, in its place, and a trimmed one an earlier
+// reason loaded whole adds its reason alone.
+func (l *reasonLoad) put(it Item, reason Reason, trimmed bool) {
 	if i := slices.IndexFunc(l.items, func(o Item) bool { return o.Path == it.Path }); i >= 0 {
+		if l.trimmed[it.Path] && !trimmed {
+			l.items[i].Text, l.items[i].Size = it.Text, len(it.Text)
+			delete(l.trimmed, it.Path)
+		}
 		if l.items[i].Reason != reason.String() {
 			l.items[i].Also = appendNew(l.items[i].Also, reason.String())
 		}
 		return
+	}
+	if trimmed {
+		if l.trimmed == nil {
+			l.trimmed = map[string]bool{}
+		}
+		l.trimmed[it.Path] = true
 	}
 	it.Step, it.Reason, it.Size = StepReason, reason.String(), len(it.Text)
 	l.items = append(l.items, it)
@@ -295,11 +316,55 @@ func (l *reasonLoad) file(path, id, title string, reason Reason) (Item, error) {
 	if err != nil {
 		return Item{}, fmt.Errorf("%s --reason %s: reading %s: %w", l.cmd, reason, path, err)
 	}
+	return Item{Path: l.rel(path), ID: id, Title: title, Text: string(data)}, nil
+}
+
+// rel is path relative to the main checkout, which holds the work items and
+// the threads, with forward slashes, as a reason's item names it.
+func (l *reasonLoad) rel(path string) string {
 	root := l.repo.MainRoot
 	if root == "" {
 		root = l.repo.Root
 	}
-	return Item{Path: filepath.ToSlash(rel(root, path)), ID: id, Title: title, Text: string(data)}, nil
+	return filepath.ToSlash(rel(root, path))
+}
+
+// threadItemSections is the sections of a work item a thread on it loads,
+// in this order (ADR-0218 §1).
+var threadItemSections = []string{"Goal", "Acceptance criteria"}
+
+// threadItem loads the work item id as a thread on it needs it (ADR-0218
+// §1): trimmed, as trimItem cuts it, under the item's own path, so that a
+// reason that loads it whole takes its place.
+func (l *reasonLoad) threadItem(id string, reason Reason) error {
+	it, err := l.repo.Get(id)
+	if err != nil {
+		return fmt.Errorf("%s --reason %s: %w; give a reason for an item that exists", l.cmd, reason, err)
+	}
+	l.put(Item{Path: l.rel(it.Path), ID: it.ID, Title: it.Title, Text: trimItem(it)}, reason, true)
+	return nil
+}
+
+// trimItem is it as a thread on it loads it (ADR-0218 §1): a front matter
+// of its ID, title, type, and status; its Goal and Acceptance criteria
+// sections, those of them it has, each under its heading with what is under
+// it verbatim; and a line saying what is left out and that item_get gives
+// it whole.
+func trimItem(it *workitem.Item) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "---\nid: %s\ntitle: %s\ntype: %s\nstatus: %s\n---\n", it.ID, strconv.Quote(it.Title), it.Type, it.Status)
+	for _, name := range threadItemSections {
+		s, ok := workitem.NarrativeSection(it.Body, name)
+		if !ok {
+			continue
+		}
+		fmt.Fprintf(&b, "\n## %s\n", name)
+		if s.Text != "" {
+			fmt.Fprintf(&b, "\n%s\n", s.Text)
+		}
+	}
+	fmt.Fprintf(&b, "\n%s's notes, tasks, and planning are left out of this pack (ADR-0218); item_get gives it whole.\n", it.ID)
+	return b.String()
 }
 
 // item loads the work item id whole for reason.
@@ -339,9 +404,10 @@ func (l *reasonLoad) thread(th *threads.Thread, reason Reason) error {
 }
 
 // loadThread loads a thread reason: the thread with its entries and, when
-// it is on a work item, that item whole. A thread on a document names its
-// path in its anchor and its first line, which is all the pack gives of it;
-// doc_get reads the document.
+// it is on a work item, that item's ID, title, type, status, goal, and
+// acceptance criteria, as threadItem loads it (ADR-0218 §1). A thread on a
+// document names its path in its anchor and its first line, which is all
+// the pack gives of it; doc_get reads the document.
 func loadThread(l *reasonLoad, r Reason) error {
 	th, err := threads.Get(l.repo, r.ID)
 	if err != nil {
@@ -353,8 +419,7 @@ func loadThread(l *reasonLoad, r Reason) error {
 	if th.Anchor.Item == "" {
 		return nil
 	}
-	_, err = l.item(th.Anchor.Item, r)
-	return err
+	return l.threadItem(th.Anchor.Item, r)
 }
 
 // loadDraft loads a draft reason: the story whole.
@@ -420,7 +485,7 @@ func (l *reasonLoad) answers() []Item {
 // operator.
 var reasonsHead = func() map[string]string {
 	m := maps.Clone(strategicHead)
-	m[groupDigest] = "\ndigest\n======\n\nThe answers and recommendations of the digest that rank highest against each thread the reasons load (reason: thread TH-nnnn; rank n), within an eighth of the budget (ADR-0194, ADR-0217): each with its body, or as one line when it is compacted. They are what the operator answered and confirmed before, not the design. When one answers a thread, cite its D-nnnn and give its path as a source on thread_reply; ask the operator only what no entry answers. Read one whole with the MCP doc_get and its path, or flai doc show <path>.\n"
+	m[groupDigest] = "\ndigest\n======\n\nThe answers and recommendations of the digest that rank highest against each thread the reasons load (reason: thread TH-nnnn; rank n), within a sixteenth of the budget (ADR-0194, ADR-0218): each with its body, or as one line when it is compacted. They are what the operator answered and confirmed before, not the design. When one answers a thread, cite its D-nnnn and give its path as a source on thread_reply; ask the operator only what no entry answers. Read one whole with the MCP doc_get and its path, or flai doc show <path>.\n"
 	return m
 }()
 

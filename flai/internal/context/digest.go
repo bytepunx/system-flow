@@ -17,6 +17,11 @@ import (
 // (ADR-0194).
 const DigestShare = 8
 
+// ReasonDigestShare is DigestShare for a pack primed for the orchestrator's
+// reasons: its digest prints within Budget/ReasonDigestShare bytes, 5 KB of
+// 80 KB (ADR-0218 §2). Every other pack keeps DigestShare.
+const ReasonDigestShare = 16
+
 // The statuses of the digest entries a pack selects: an active entry loads
 // its body, a compacted one its title only. An absorbed entry is never
 // selected; the document that absorbed it says it now.
@@ -163,7 +168,13 @@ func digestItem(e digest.Entry, reason string, whole bool) Item {
 // share alone, as every brief is kept on a pack over its budget (TH-0032,
 // TH-0624). It returns what it added.
 func (p *Pack) addDigest(items []Item, over bool) []Item {
-	share, used := p.Budget/DigestShare, 0
+	return p.addDigestWithin(items, over, p.Budget/DigestShare)
+}
+
+// addDigestWithin is addDigest within share bytes rather than the eighth of
+// the budget, as a reason pack takes its sixteenth (ADR-0218 §2).
+func (p *Pack) addDigestWithin(items []Item, over bool, share int) []Item {
+	used := 0
 	var added []Item
 	for _, it := range items {
 		n := len(p.printed(it))

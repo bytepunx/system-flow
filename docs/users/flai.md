@@ -2016,14 +2016,14 @@ The header names the role and, for the planner, the item. `--json` gives the pla
 
 | Reason | What its pack loads |
 |--------|---------------------|
-| `thread:TH-nnnn` | The thread with its entries, and the item it is on |
+| `thread:TH-nnnn` | The thread with its entries, and the item it is on: its ID, title, type, status, goal, and acceptance criteria, not its notes, tasks, or planning, which `item_get` gives |
 | `review:S-nnnn` | The story and its last `flai verify` result |
 | `planned:E-nnnn` or `planned:S-nnnn` | The item, the items the planner wrote under it, and the planner's open thread on it |
 | `draft:S-nnnn` | The draft story |
 | `release` | The release policy's figures, as `release_evaluate` gives them |
 | `ready` | The board, and the backlog stories that could go to ready |
 
-The pack holds the conventions the orchestrator reads, with the sections those reasons do not need left out: a heading tagged `all` and other words, such as `<!-- topics: all, review -->`, is kept only when one of the words is a reason's kind or `orchestration`. Every other pack keeps it. Then what each reason loads, each item once, and the digest's answers ranked against the reasons' threads. It holds no briefs and no catalog: find the rest with `doc_search` and `doc_get`. `--reason` is refused with another role, with `--epic` or `--story`, and in a form it does not know, naming the forms. A run started for `asked` or the schedule primes with the general pack, as a run by hand does.
+The pack holds the conventions the orchestrator reads, with the sections those reasons do not need left out: a heading tagged `all` and other words, such as `<!-- topics: all, review -->`, is kept only when one of the words is a reason's kind or `orchestration`. Every other pack keeps it. Then what each reason loads, each item once, whole when any reason loads it whole, and the digest's answers ranked against the reasons' threads, within a sixteenth of the budget, 5 KB of 80 KB, where every other pack takes an eighth ([ADR-0218](../../design/adrs/0218-a-thread-reason-loads-the-work-item-it-is-on-as-its-title-status-goal-and.md)). It holds no briefs and no catalog: find the rest with `doc_search` and `doc_get`. `--reason` is refused with another role, with `--epic` or `--story`, and in a form it does not know, naming the forms. A run started for `asked` or the schedule primes with the general pack, as a run by hand does.
 
 #### A role your project defines
 
