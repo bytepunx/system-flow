@@ -611,8 +611,8 @@ func TestEditSettingsWritesARolesAgent(t *testing.T) {
 			t.Errorf("%s is a setting", k)
 		}
 	}
-	if keys := settingKeys(); !strings.HasPrefix(keys[len(keys)-1], "roles.<name>.agent") {
-		t.Errorf("roles.<name>.agent is not listed last: %v", keys)
+	if keys := settingKeys(); !strings.HasPrefix(keys[len(keys)-2], "roles.<name>.agent") {
+		t.Errorf("roles.<name>.agent is not listed before roles.<name>.schedule, last: %v", keys)
 	}
 	got, err := EditSettings([]byte(settingsFixture), []Assignment{{key, `{"model":"claude-sonnet-5","config":{"effort":"low"}}`}}, nil)
 	if err != nil {
@@ -655,6 +655,54 @@ func TestEditSettingsWritesARolesAgent(t *testing.T) {
 		i := slices.IndexFunc(refused.Problems, func(p Problem) bool { return p.Field == c.field })
 		if i < 0 || !strings.Contains(refused.Problems[i].Reason, c.reason) {
 			t.Errorf("%s: want %s: ...%s..., got %+v", c.set, c.field, c.reason, refused.Problems)
+		}
+	}
+}
+
+// S-0418: roles.<name>.schedule, for a role's kebab-case name, is a cron
+// setting written into a roles block, read back as the role's schedule, and
+// unset; it is listed last, and a value flai check refuses, as one that
+// never comes round or a built-in role's, is refused naming the key.
+func TestEditSettingsWritesARolesSchedule(t *testing.T) {
+	const key = "roles.code-reviewer.schedule"
+	if s, ok := SettingFor(key); !ok || s.Key != key || s.Kind != KindCron || !strings.Contains(s.Meaning, "code-reviewer") {
+		t.Fatalf("%s: %+v, %v", key, s, ok)
+	}
+	for _, k := range []string{"roles.Reviewer.schedule", "roles..schedule", "roles.a.b.schedule"} {
+		if _, ok := SettingFor(k); ok {
+			t.Errorf("%s is a setting", k)
+		}
+	}
+	if keys := settingKeys(); keys[len(keys)-1] != "roles.<name>.schedule" {
+		t.Errorf("roles.<name>.schedule is not listed last: %v", keys)
+	}
+	got, err := EditSettings([]byte(settingsFixture), []Assignment{{key, "0 6 * * 1"}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sched, err := loaded(t, got).RoleSchedule("code-reviewer"); err != nil || sched == nil || sched.String() != "0 6 * * 1" {
+		t.Errorf("read back: %v, %v\n%s", sched, err, got)
+	}
+	unset, err := EditSettings(got, nil, []string{key})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v := loaded(t, unset).Roles["code-reviewer"].Schedule; v != "" {
+		t.Errorf("unset schedule still reads: %q", v)
+	}
+	for _, c := range []struct{ set, reason string }{
+		{"roles.code-reviewer.schedule=0 0 31 2 *", "never comes round"},
+		{"roles.planner.schedule=daily", "is not read"},
+	} {
+		k, v, _ := strings.Cut(c.set, "=")
+		_, err := EditSettings([]byte(settingsFixture), []Assignment{{k, v}}, nil)
+		var refused *RefusedError
+		if !errors.As(err, &refused) {
+			t.Errorf("%s: want a refusal, got %v", c.set, err)
+			continue
+		}
+		if i := slices.IndexFunc(refused.Problems, func(p Problem) bool { return p.Field == k }); i < 0 || !strings.Contains(refused.Problems[i].Reason, c.reason) {
+			t.Errorf("%s: want %s: ...%s..., got %+v", c.set, k, c.reason, refused.Problems)
 		}
 	}
 }

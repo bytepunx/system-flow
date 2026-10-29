@@ -301,14 +301,17 @@ func Settings() []Setting {
 }
 
 // SettingFor is the setting key names, and whether flai manifest set writes
-// it: a key in the catalog, or roles.<name>.agent for a role's kebab-case
-// name (S-0417).
+// it: a key in the catalog, roles.<name>.agent for a role's kebab-case name
+// (S-0417), or roles.<name>.schedule (S-0418).
 func SettingFor(key string) (Setting, bool) {
 	i := slices.IndexFunc(catalog, func(s Setting) bool { return s.Key == key })
 	if i >= 0 {
 		return catalog[i], true
 	}
-	return roleAgentSetting(key)
+	if s, ok := roleAgentSetting(key); ok {
+		return s, true
+	}
+	return roleScheduleSetting(key)
 }
 
 // roleAgentKey is the pattern of the key a role's agent is set under, as
@@ -329,6 +332,26 @@ func roleAgentSetting(key string) (Setting, bool) {
 	return Setting{Key: key, Kind: KindAgent,
 		Meaning: "The agent of the role " + name + ", one a role file defines, over the project's: what it sets wins, and what it leaves out is the project's agent's.",
 		get:     func(m Manifest) (any, bool) { return agent(m.Roles[name].Agent) }}, true
+}
+
+// roleScheduleKey is the pattern of the key a role's schedule is set under,
+// as flai manifest set lists it.
+const roleScheduleKey = "roles.<name>.schedule"
+
+// roleScheduleSetting is the setting roles.<name>.schedule, for a role's
+// name in kebab-case, and whether key is one.
+func roleScheduleSetting(key string) (Setting, bool) {
+	rest, ok := strings.CutPrefix(key, "roles.")
+	if !ok {
+		return Setting{}, false
+	}
+	name, ok := strings.CutSuffix(rest, ".schedule")
+	if !ok || !roleName.MatchString(name) {
+		return Setting{}, false
+	}
+	return Setting{Key: key, Kind: KindCron,
+		Meaning: "When the role " + name + ", one a role file defines, is started on its schedule, as a five-field cron expression in UTC or daily, when its file's trigger names this setting; empty for no schedule.",
+		get:     func(m Manifest) (any, bool) { v := m.Roles[name].Schedule; return v, v != "" }}, true
 }
 
 // SettingValues are the settings with their values in m, in catalog order.
@@ -623,11 +646,11 @@ func parseEdits(set []Assignment, unset []string) ([]write, []Problem) {
 }
 
 func settingKeys() []string {
-	keys := make([]string, len(catalog), len(catalog)+1)
+	keys := make([]string, len(catalog), len(catalog)+2)
 	for i, s := range catalog {
 		keys[i] = s.Key
 	}
-	return append(keys, roleAgentKey+" (<name> a role's name in kebab-case)")
+	return append(keys, roleAgentKey+" (<name> a role's name in kebab-case)", roleScheduleKey)
 }
 
 // parse reads a value given for the setting, or says why it is not one of

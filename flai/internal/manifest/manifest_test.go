@@ -582,6 +582,70 @@ func TestRoleAgent(t *testing.T) {
 	}
 }
 
+// S-0418: roles.<name>.schedule reads as analysis.schedule does, a
+// schedule setting resolves to the block that holds it, and a value that
+// does not parse or never comes round, and one set on a built-in role, are
+// errors naming the key.
+func TestRoleSchedule(t *testing.T) {
+	body := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\n" +
+		"analysis:\n  schedule: daily\nroles:\n  reviewer:\n    schedule: \"0 6 * * 1\"\n  scout:\n    agent:\n      model: claude-sonnet-5\n"
+	m := loaded(t, []byte(body))
+	if errs := m.RoleErrors(); len(errs) != 0 {
+		t.Errorf("valid roles: %v", errs)
+	}
+	s, err := m.RoleSchedule("reviewer")
+	if err != nil || s == nil || s.String() != "0 6 * * 1" {
+		t.Fatalf("reviewer's schedule %v, %v", s, err)
+	}
+	for _, name := range []string{"scout", "absent"} {
+		if s, err := m.RoleSchedule(name); err != nil || s != nil {
+			t.Errorf("%s, with no schedule: %v, %v", name, s, err)
+		}
+	}
+	for setting, want := range map[string]string{"roles.reviewer.schedule": "0 6 * * 1", "analysis.schedule": "daily", "planning.schedule": "", "roles.scout.schedule": ""} {
+		spec, s, err := m.ScheduleSetting(setting)
+		if err != nil || spec != want || (want == "") != (s == nil) || (s != nil && s.String() != want) {
+			t.Errorf("%s: %q, %v, %v; want %q", setting, spec, s, err, want)
+		}
+	}
+	for _, setting := range []string{"agent", "roles.Bad_Name.schedule", "roles.reviewer.agent"} {
+		if _, _, err := m.ScheduleSetting(setting); err == nil || !strings.Contains(err.Error(), "is no manifest setting that holds a schedule") {
+			t.Errorf("%s: %v", setting, err)
+		}
+	}
+
+	for _, c := range []struct {
+		spec, want string
+	}{
+		{"61 * * * *", `roles.reviewer.schedule "61 * * * *": the minute "61" is outside 0-59`},
+		{"weekly", `roles.reviewer.schedule "weekly" has 1 fields, not five`},
+		{"0 0 31 2 *", `roles.reviewer.schedule "0 0 31 2 *" never comes round`},
+	} {
+		bad := Manifest{Roles: map[string]RoleSettings{"reviewer": {Schedule: c.spec}}}
+		got := bad.RoleErrors()
+		if len(got) != 1 || !strings.Contains(got[0], c.want) {
+			t.Errorf("%q: got %q, want one error saying %q", c.spec, got, c.want)
+		}
+		if s, err := bad.RoleSchedule("reviewer"); err == nil || s != nil {
+			t.Errorf("%q parsed: %v", c.spec, s)
+		}
+	}
+
+	builtin := Manifest{Roles: map[string]RoleSettings{}}
+	for name := range builtinAgents {
+		builtin.Roles[name] = RoleSettings{Schedule: "daily"}
+	}
+	want := []string{
+		"roles.analyzer.schedule is not read: the analyzer's schedule is analysis.schedule; set that instead, and remove this",
+		"roles.curator.schedule is not read: the curator's schedule is digest.schedule; set that instead, and remove this",
+		"roles.orchestrator.schedule is not read: the orchestrator's schedule is orchestration.schedule; set that instead, and remove this",
+		"roles.planner.schedule is not read: the planner's schedule is planning.schedule; set that instead, and remove this",
+	}
+	if got := builtin.RoleErrors(); !slices.Equal(got, want) {
+		t.Errorf("built-in roles' schedules:\n got %q\nwant %q", got, want)
+	}
+}
+
 // S-0417: a role no role file defines, and a permission turned on that its
 // role's file has no entry for, are named; a permission its file declares,
 // and one left off, are not.

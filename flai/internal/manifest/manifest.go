@@ -800,21 +800,27 @@ type RoleSettings struct {
 	// Agent is the role's agent over the project's, roles.<name>.agent: what
 	// it sets wins, and what it leaves out is the project's agent's (S-0417).
 	Agent *Agent `yaml:"agent,omitempty" json:"agent,omitempty"`
+	// Schedule is when flai serve starts the role, roles.<name>.schedule,
+	// for a role file whose trigger names it: a five-field cron expression
+	// in UTC or daily; empty means no schedule (S-0418).
+	Schedule string `yaml:"schedule,omitempty" json:"schedule,omitempty"`
 }
 
-// builtinAgent is where a built-in role's agent is set instead of
-// roles.<name>.agent: the manifest key, and the agent it gives.
+// builtinAgent is where a built-in role's agent and schedule are set
+// instead of roles.<name>.agent and roles.<name>.schedule: the manifest
+// keys, and the agent the first gives.
 type builtinAgent struct {
-	key   string
-	agent func(Manifest) *Agent
+	key      string
+	agent    func(Manifest) *Agent
+	schedule string
 }
 
-// builtinAgents are the built-in roles' agents, by role name.
+// builtinAgents are the built-in roles' agents and schedules, by role name.
 var builtinAgents = map[string]builtinAgent{
-	"planner":      {"planning.agent", Manifest.PlanningAgent},
-	"orchestrator": {"orchestration.agent", Manifest.OrchestrationAgent},
-	"analyzer":     {"analysis.agent", Manifest.AnalysisAgent},
-	"curator":      {"digest.agent", Manifest.DigestAgent},
+	"planner":      {"planning.agent", Manifest.PlanningAgent, "planning.schedule"},
+	"orchestrator": {"orchestration.agent", Manifest.OrchestrationAgent, "orchestration.schedule"},
+	"analyzer":     {"analysis.agent", Manifest.AnalysisAgent, "analysis.schedule"},
+	"curator":      {"digest.agent", Manifest.DigestAgent, "digest.schedule"},
 }
 
 // roleName is a role's name as its role file writes it: kebab-case.
@@ -832,13 +838,55 @@ func (m Manifest) RoleErrors() []string {
 		}
 		r := m.Roles[name]
 		errs = append(errs, r.Permissions.errors(key+".permissions")...)
-		if b, builtin := builtinAgents[name]; builtin && r.Agent != nil {
+		b, builtin := builtinAgents[name]
+		if builtin && r.Agent != nil {
 			errs = append(errs, fmt.Sprintf("%s.agent is not read: the %s's agent is %s; set that instead, and remove this", key, name, b.key))
-			continue
+		} else {
+			errs = append(errs, r.Agent.problems(key+".agent")...)
 		}
-		errs = append(errs, r.Agent.problems(key+".agent")...)
+		if builtin && strings.TrimSpace(r.Schedule) != "" {
+			errs = append(errs, fmt.Sprintf("%s.schedule is not read: the %s's schedule is %s; set that instead, and remove this", key, name, b.schedule))
+		} else if _, err := m.RoleSchedule(name); err != nil {
+			errs = append(errs, err.Error())
+		}
 	}
 	return errs
+}
+
+// RoleSchedule is roles.<name>.schedule parsed: nil when it is empty. It is
+// read for a role a role file defines, not for a built-in role, whose
+// schedule is its own block's (RoleErrors).
+func (m Manifest) RoleSchedule(name string) (*cron.Schedule, error) {
+	return parseSchedule("roles."+name, m.Roles[name].Schedule)
+}
+
+// ScheduleSetting is the schedule the manifest setting named holds, as a
+// role file's {schedule: <setting>} trigger names it: the value as written
+// and parsed, nil when it is empty. The setting is roles.<name>.schedule or
+// one of planning.schedule, analysis.schedule, digest.schedule, and
+// orchestration.schedule; any other is an error.
+func (m Manifest) ScheduleSetting(setting string) (string, *cron.Schedule, error) {
+	switch setting {
+	case "planning.schedule":
+		s, err := m.Planning.PlanSchedule()
+		return m.Planning.Schedule, s, err
+	case "analysis.schedule":
+		s, err := m.Analysis.AnalysisSchedule()
+		return m.Analysis.Schedule, s, err
+	case "digest.schedule":
+		s, err := m.Digest.DigestSchedule()
+		return m.Digest.Schedule, s, err
+	case "orchestration.schedule":
+		s, err := m.Orchestration.OrchestrationSchedule()
+		return m.Orchestration.Schedule, s, err
+	}
+	rest, ok := strings.CutPrefix(setting, "roles.")
+	name, isRole := strings.CutSuffix(rest, ".schedule")
+	if !ok || !isRole || !roleName.MatchString(name) {
+		return "", nil, fmt.Errorf("%s is no manifest setting that holds a schedule; name roles.<name>.schedule, planning.schedule, analysis.schedule, digest.schedule, or orchestration.schedule", setting)
+	}
+	s, err := m.RoleSchedule(name)
+	return m.Roles[name].Schedule, s, err
 }
 
 // RoleAgent is the agent the role name is started with: roles.<name>.agent
