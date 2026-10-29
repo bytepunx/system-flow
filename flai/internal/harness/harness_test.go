@@ -569,8 +569,9 @@ func TestAnAgentStartedToCommitIsToldToDoOnlyThat(t *testing.T) {
 // S-0272: a story's agent, started, answered, or committing, asks on a
 // thread, writes the narrative's state, and ends rather than holding
 // wait_for_events for the answer, and ends when wait_for_events answers end;
-// flai serve starts it again on the answer. The planner, the orchestrator, and
-// the analyzer, whom flai serve does not start again, still hold.
+// flai serve starts it again on the answer. The planner, the analyzer, and
+// the curator, whom flai serve does not start again, still hold. The
+// orchestrator holds neither: it ends when its reasons are done (ADR-0209).
 func TestAStorysAgentEndsOnAnOpenQuestion(t *testing.T) {
 	ends := []string{
 		"write the narrative's Current state and Next steps with flai stream state, saying what you asked",
@@ -614,11 +615,11 @@ func TestAStorysAgentEndsOnAnOpenQuestion(t *testing.T) {
 		"planner":      {planReq("E-0016", nil), "and hold the flai MCP tool wait_for_events, again each time it returns, until the thread is answered; then go on"},
 		"analyzer":     {analyzeReq("risk", nil), "and hold the flai MCP tool wait_for_events, again each time it returns, until the thread is answered; then go on"},
 		"curator":      {curateReq("", nil), "and hold the flai MCP tool wait_for_events, again each time it returns, until the thread is answered; then go on"},
-		"orchestrator": {orchestrateReq(nil), "Then hold the flai MCP tool wait_for_events, again each time it returns"},
+		"orchestrator": {orchestrateReq(nil), "log each action, then end: flai serve starts you again when there is more"},
 	} {
 		p := Prompt(c.r)
 		if !strings.Contains(p, c.hold) {
-			t.Errorf("the %s's prompt no longer holds wait_for_events:\n%s", name, p)
+			t.Errorf("the %s's prompt lacks %q:\n%s", name, c.hold, p)
 		}
 		for _, w := range ends {
 			if strings.Contains(p, w) {
@@ -1372,13 +1373,12 @@ func orchestrateReq(a *manifest.Agent) Request {
 }
 
 // S-0218: the orchestrator is asked to keep the project's work moving within
-// the operator's permissions, with flai's figures, logging each decision and
-// waiting on events between them without ending; never to edit a file, work
-// a story, or work around flai guard.
+// the operator's permissions, with flai's figures, logging each decision;
+// never to edit a file, work a story, or work around flai guard.
 func TestTheOrchestratorsPromptKeepsWorkMovingWithinItsPermissions(t *testing.T) {
 	p := Prompt(orchestrateReq(nil))
 	for _, w := range []string{
-		"You are orchestrator, the orchestrator, started by flai serve on this host because the operator turned on the orchestrate host action for the project at /p/flow",
+		"You are orchestrator, the orchestrator, started on this host for the project at /p/flow with no reasons",
 		"as design/conventions/strategic-agents.md says under As the orchestrator",
 		"flai prime --role orchestrate (or the flai MCP tool prime with role orchestrate)",
 		"A brief is not the document", "doc_get and its heading", "doc_search",
@@ -1391,8 +1391,6 @@ func TestTheOrchestratorsPromptKeepsWorkMovingWithinItsPermissions(t *testing.T)
 		"never do the arithmetic yourself",
 		"flai order --by (the flai MCP tool order_by_policy)", "flai promote --candidates (promote_candidates)", "flai release --evaluate (release_evaluate)",
 		"Log each action when you have taken it with the flai MCP tool activity_log, kind orchestrator: what you did, to which item, why, and the policy figure that justified it",
-		"Then hold the flai MCP tool wait_for_events, again each time it returns",
-		"Repeat without ending",
 		"write only through flai",
 		"Never edit code or documents, and never work a story yourself",
 		"flai guard refuses a call outside your permissions and names the permission it needs: never work around a refusal",
@@ -1407,6 +1405,45 @@ func TestTheOrchestratorsPromptKeepsWorkMovingWithinItsPermissions(t *testing.T)
 		if strings.Contains(p, never) {
 			t.Errorf("the orchestrator's prompt says %q:\n%s", never, p)
 		}
+	}
+}
+
+// ADR-0209 §3, §4: the orchestrator's prompt says flai serve started it for
+// the reasons it lists, one a markdown list item, while the orchestrate host
+// action is on, and tells it to act on each, log each action, and end, as
+// wait_for_events tells it once its reasons are done; with no reasons, a run
+// by hand, it looks at the inbox and the board once and ends. It is no
+// longer told to hold wait_for_events and run without ending.
+func TestTheOrchestratorsPromptListsItsReasonsAndEnds(t *testing.T) {
+	r := orchestrateReq(nil)
+	r.Reasons = []string{"moved S-0123 to review: Add the thing", "asked: the operator asked"}
+	withNone := Prompt(orchestrateReq(nil))
+	for name, c := range map[string]struct {
+		p    string
+		want []string
+	}{
+		"with reasons": {Prompt(r), []string{
+			"You are orchestrator, the orchestrator, started by flai serve on this host for the project at /p/flow, while the orchestrate host action is on, for the reasons listed here:\n\n- moved S-0123 to review: Add the thing\n- asked: the operator asked\n\nKeep the project's work moving",
+			"Act on each reason listed above, log each action, then end: flai serve starts you again when there is more.",
+		}},
+		"with none": {withNone, []string{
+			"started on this host for the project at /p/flow with no reasons, as a run by hand is: look at the inbox and the board once, act on what they show, and then end.\n\nKeep the project's work moving",
+			"Act on what the inbox and the board show, once, log each action, then end: flai serve starts you again when there is more.",
+		}},
+	} {
+		for _, w := range append(c.want, "The flai MCP tool wait_for_events answers you end: true, why: reasons done, once your reasons are done: end then.") {
+			if !strings.Contains(c.p, w) {
+				t.Errorf("%s: the orchestrator's prompt lacks %q:\n%s", name, w, c.p)
+			}
+		}
+		for _, never := range []string{"Repeat without ending", "Then hold the flai MCP tool wait_for_events", "for as long as the orchestrate host action is on", "because the operator turned on the orchestrate host action"} {
+			if strings.Contains(c.p, never) {
+				t.Errorf("%s: the orchestrator's prompt still says %q:\n%s", name, never, c.p)
+			}
+		}
+	}
+	if strings.Contains(withNone, "started by flai serve") || strings.Contains(withNone, "reasons listed here") {
+		t.Errorf("a run with no reasons is told it has some:\n%s", withNone)
 	}
 }
 
@@ -1744,6 +1781,7 @@ func TestClaudeCodeStartsTheOrchestrator(t *testing.T) {
 		"verify":  {Model: "claude-sonnet-5"},
 	}})
 	r.Root = root
+	r.Reasons = []string{"asked: the operator asked"}
 	st, err := (claudeCode{}).Start(r, Host{})
 	if err != nil {
 		t.Fatal(err)
@@ -1771,7 +1809,7 @@ func TestClaudeCodeStartsTheOrchestrator(t *testing.T) {
 	if got := after(st.Argv, "--permission-prompt-tool"); got != PermissionPromptTool {
 		t.Errorf("orchestrator: --permission-prompt-tool = %q (%v)", got, st.Argv)
 	}
-	if want := []string{"FLAI_ROLE=orchestrate"}; !slices.Equal(st.Env, want) {
+	if want := []string{"FLAI_ROLE=orchestrate", "FLAI_REASONS=asked: the operator asked"}; !slices.Equal(st.Env, want) {
 		t.Errorf("env %q, want %q", st.Env, want)
 	}
 
