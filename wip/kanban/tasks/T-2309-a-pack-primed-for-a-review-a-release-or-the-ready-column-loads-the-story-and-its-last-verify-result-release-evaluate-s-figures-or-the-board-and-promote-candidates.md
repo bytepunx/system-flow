@@ -3,12 +3,18 @@ id: T-2309
 type: task
 nature: improvement
 title: A pack primed for a review, a release, or the ready column loads the story and its last verify result, release_evaluate's figures, or the board and promote_candidates
-status: backlog
+status: in-progress
 parent: S-0537
 owner: alex
 created: 2026-10-28T22:06:55Z
-updated: 2026-10-28T22:06:55Z
-transitions: []
+updated: 2026-10-29T15:42:21Z
+transitions:
+  - to: ready
+    at: 2026-10-29T15:42:20Z
+    by: agent-S-0537
+  - to: in-progress
+    at: 2026-10-29T15:42:21Z
+    by: agent-S-0537
 stream: S-0537
 tags: [flai, prime, orchestrator]
 touches: [flai/internal/context/reasons_figures.go, flai/internal/context/reasons_figures_test.go]

@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:11Z
-updated: 2026-10-29T15:18:01Z
+updated: 2026-10-29T15:42:43Z
 transitions:
   - to: ready
     at: 2026-10-28T13:04:42Z
@@ -29,10 +29,25 @@ blocked:
     until: 2026-10-29T15:17:50Z
     reason: awaiting the operator on TH-0749
   - from: 2026-10-29T15:18:01Z
+    until: 2026-10-29T15:24:32Z
+    reason: awaiting the operator on TH-0749
+  - from: 2026-10-29T15:24:45Z
+    until: 2026-10-29T15:31:50Z
+    reason: awaiting the operator on TH-0749
+  - from: 2026-10-29T15:32:01Z
+    until: 2026-10-29T15:38:13Z
+    reason: awaiting the operator on TH-0749
+  - from: 2026-10-29T15:38:26Z
+    until: 2026-10-29T15:39:31Z
+    reason: awaiting the operator on TH-0749
+  - from: 2026-10-29T15:39:44Z
+    until: 2026-10-29T15:42:15Z
+    reason: awaiting the operator on TH-0749
+  - from: 2026-10-29T15:42:43Z
     reason: awaiting the operator on TH-0749
 tags: [cli, template]
 topics: [cli, planning, orchestration]
-touches: [design/system/strategic-agents.md, design/system/dashboard-host-channel.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/role.go, flai/cmd/role_test.go, flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/serve/activity.go, flai/internal/serve/agents.go, flai/internal/serve/role_continuous.go, flai/internal/serve/role_continuous_test.go, flai/internal/serve/role_events.go, flai/internal/serve/role_events_test.go, flai/internal/serve/role.go, flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go, flai/internal/serve/role_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flaiover/src/lib/server/agent.ts, template/CHANGELOG.md, design/system/flai-cli.md]
+touches: [design/system/strategic-agents.md, design/system/dashboard-host-channel.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/role.go, flai/cmd/role_test.go, flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/serve/activity.go, flai/internal/serve/agents.go, flai/internal/serve/role_continuous.go, flai/internal/serve/role_continuous_test.go, flai/internal/serve/role_events.go, flai/internal/serve/role_events_test.go, flai/internal/serve/role.go, flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go, flai/internal/serve/role_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flaiover/src/lib/server/agent.ts, template/CHANGELOG.md, design/system/flai-cli.md, design/issues/I-0232-flai-serve-wakes-a-story-s-agent-that-is-paused-on-a-thread-for-every-task-done-message-from-another-story-each-needing-only-a-settled-reply.md, design/issues/summary.md]
 after: [S-0417]
 agent:
   harness: claude-code
@@ -41,30 +56,30 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 124
+  seconds: 179
   priced_by: harness
   turns:
     - day: 2026-10-29
       ceremony: 2
-      work: 23
+      work: 35
   models:
     - model: claude-opus-5-5
-      input: 62
-      output: 11637
-      cache_read: 3644060
-      cache_write: 168824
-      cost: 2.3124
+      input: 96
+      output: 17933
+      cache_read: 7010399
+      cache_write: 202140
+      cost: 3.3782
   strategic:
     - kind: orchestrator
-      seconds: 348
+      seconds: 355
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 147
-          output: 2364
-          cache_read: 38640828
-          cache_write: 38811
-          cost: 8.5331
+          input: 149
+          output: 2376
+          cache_read: 39412042
+          cache_write: 42008
+          cost: 8.7039
 cost_of_delay:
   value: 49.26
   by: planner-S-0418

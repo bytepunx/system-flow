@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0030
 owner: alex
 created: 2026-10-28T21:02:39Z
-updated: 2026-10-29T15:17:38Z
+updated: 2026-10-29T15:41:20Z
 transitions:
   - to: ready
     at: 2026-10-28T22:21:29Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0537
 tags: [flai, prime, orchestrator]
 topics: [orchestration, cli, conventions, template, mcp]
-touches: [flai/internal/context, flai/internal/mcpserver, flai/cmd, design/system/flai-cli.md, design/system/strategic-agents.md, design/adrs, docs, flai/internal/context/reasons.go, flai/internal/context/reasons_test.go, flai/internal/context/reasons_figures.go, flai/internal/context/reasons_figures_test.go, flai/internal/context/strategic.go, flai/internal/context/strategic_test.go, flai/internal/context/context.go, flai/cmd/prime.go, flai/cmd/prime_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/prime_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/agent-context.md, docs/users/flai.md, docs/users/flai-reference.md, template/CHANGELOG.md]
+touches: [flai/internal/context, flai/internal/mcpserver, flai/cmd, design/system/flai-cli.md, design/system/strategic-agents.md, design/adrs, docs, flai/internal/context/reasons.go, flai/internal/context/reasons_test.go, flai/internal/context/reasons_figures.go, flai/internal/context/reasons_figures_test.go, flai/internal/context/strategic.go, flai/internal/context/strategic_test.go, flai/internal/context/context.go, flai/cmd/prime.go, flai/cmd/prime_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/prime_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, template/root/.claude/agents/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/agent-context.md, docs/users/flai.md, docs/users/flai-reference.md, template/CHANGELOG.md, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/orchestrate_reasons_test.go, flai/internal/serve/orchestrate.go, design/system/conventions.md, ".claude/agents/orchestrator.md", flai/internal/check/check.go, flai/internal/check/vocabulary_test.go, design/conventions/tooling.md, flai/internal/check/check_test.go]
 after: [S-0536]
 agent:
   harness: claude-code
@@ -25,9 +25,22 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1472
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-29
+      ceremony: 3
+      hand_edits: 1
+      work: 62
+  models:
+    - model: claude-opus-5-5
+      input: 254
+      output: 1316
+      cache_read: 18958440
+      cache_write: 514374
+      cost: 6.6898
   strategic:
     - kind: planner
       seconds: 1252
@@ -46,15 +59,15 @@ usage:
           cache_write: 151451
           cost: 1.1061
     - kind: orchestrator
-      seconds: 1254
+      seconds: 1261
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 45
-          output: 726
-          cache_read: 7744210
-          cache_write: 20084
-          cost: 1.7085
+          input: 47
+          output: 738
+          cache_read: 8515425
+          cache_write: 23282
+          cost: 1.8793
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1h
@@ -92,6 +105,8 @@ ADR-0209 §3. The orchestrator's general pack is three to four parts of some 35k
 - T-2313 The orchestrator's start prompt names its reasons in the form prime takes, and its role prompt tells it to prime with them
 - T-2314 flai-cli.md, strategic-agents.md, agent-context.md, the strategic-agents convention and its template copy, and the user docs describe the reason-primed pack
 - T-2315 The orchestrator in this repository runs a day on reason-primed packs, and the narrative records the context tokens per action from flai stats beside S-0536's figure
+- T-2337 flai check accepts the reason kinds and the built-in strategic roles' topics on a convention's heading, so the baseline's section topics check clean in a project made from the template
+- T-2338 The two .claude/agents/orchestrator.md definitions tell the orchestrator to prime with the reasons its start prompt names, as its role file says
 
 ## Notes
 
