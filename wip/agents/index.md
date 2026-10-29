@@ -1,13 +1,14 @@
 ---
 title: Active streams
-updated: 2026-10-29T15:17:13Z
+updated: 2026-10-29T15:17:58Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0418](S-0418.md) | A role a project defines starts on an event, on a schedule, or for as long as its host action is on, as its role file's trigger says, coalesced and logged with its trigger as the planner's runs are | in-progress | agent-S-0418 | 2026-10-29T14:43:42Z |
+| [S-0418](S-0418.md) | A role a project defines starts on an event, on a schedule, or for as long as its host action is on, as its role file's trigger says, coalesced and logged with its trigger as the planner's runs are | in-progress | agent-S-0418 | 2026-10-29T15:17:57Z |
+| [S-0537](S-0537.md) | flai prime --role orchestrate takes the run's reasons and primes for them, the role's conventions once and per reason what it needs, instead of the general pack | in-progress | agent-S-0537 | 2026-10-29T15:17:38Z |
 
 ## Strategic agents
 

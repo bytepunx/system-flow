@@ -3,15 +3,18 @@ id: S-0537
 type: story
 nature: improvement
 title: flai prime --role orchestrate takes the run's reasons and primes for them, the role's conventions once and per reason what it needs, instead of the general pack
-status: ready
+status: in-progress
 parent: E-0030
 owner: alex
 created: 2026-10-28T21:02:39Z
-updated: 2026-10-29T15:14:46Z
+updated: 2026-10-29T15:17:38Z
 transitions:
   - to: ready
     at: 2026-10-28T22:21:29Z
     by: alex
+  - to: in-progress
+    at: 2026-10-29T15:17:38Z
+    by: agent-S-0537
 tags: [flai, prime, orchestrator]
 topics: [orchestration, cli, conventions, template, mcp]
 touches: [flai/internal/context, flai/internal/mcpserver, flai/cmd, design/system/flai-cli.md, design/system/strategic-agents.md, design/adrs, docs, flai/internal/context/reasons.go, flai/internal/context/reasons_test.go, flai/internal/context/reasons_figures.go, flai/internal/context/reasons_figures_test.go, flai/internal/context/strategic.go, flai/internal/context/strategic_test.go, flai/internal/context/context.go, flai/cmd/prime.go, flai/cmd/prime_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/prime_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/agent-context.md, docs/users/flai.md, docs/users/flai-reference.md, template/CHANGELOG.md]

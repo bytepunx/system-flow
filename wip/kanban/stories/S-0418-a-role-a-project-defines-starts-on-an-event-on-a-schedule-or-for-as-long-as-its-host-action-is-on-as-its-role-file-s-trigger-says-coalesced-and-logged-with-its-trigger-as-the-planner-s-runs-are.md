@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:11Z
-updated: 2026-10-29T14:43:49Z
+updated: 2026-10-29T15:18:01Z
 transitions:
   - to: ready
     at: 2026-10-28T13:04:42Z
@@ -23,6 +23,12 @@ transitions:
     by: agent-S-0418
 blocked:
   - from: 2026-10-29T14:43:49Z
+    until: 2026-10-29T15:17:18Z
+    reason: awaiting the operator on TH-0749
+  - from: 2026-10-29T15:17:46Z
+    until: 2026-10-29T15:17:50Z
+    reason: awaiting the operator on TH-0749
+  - from: 2026-10-29T15:18:01Z
     reason: awaiting the operator on TH-0749
 tags: [cli, template]
 topics: [cli, planning, orchestration]
@@ -35,19 +41,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 94
+  seconds: 124
   priced_by: harness
   turns:
     - day: 2026-10-29
-      ceremony: 1
-      work: 16
+      ceremony: 2
+      work: 23
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 8393
-      cache_read: 1942650
-      cache_write: 148177
-      cost: 1.742
+      input: 62
+      output: 11637
+      cache_read: 3644060
+      cache_write: 168824
+      cost: 2.3124
   strategic:
     - kind: orchestrator
       seconds: 348

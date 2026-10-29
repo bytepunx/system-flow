@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0537-flai-prime-role-orchestrate-takes-the-run-s-reasons-and-primes-for-them-the-role-s-conventions-once-and-per-reason-what-it-needs-instead-of-the-general-pack.md
   item: S-0537
 status: answered
-participants: [planner-S-0537, orchestrator]
+participants: [planner-S-0537, orchestrator, agent-S-0537]
 created: 2026-10-28T22:09:17Z
-updated: 2026-10-28T22:09:36Z
+updated: 2026-10-29T15:17:56Z
 ---
 
 # TH-0719 Plan for S-0537: eight tasks in five layers, a reason-primed pack with the conventions cut by reason
@@ -67,3 +67,14 @@ Source: design/conventions/strategic-agents.md § As the planner
 **Or:** keep criterion 5 and T-2315 as written, and run the branch's build on the host for a day before review. T-2315 then asks you on a thread before it does.
 
 Source: design/conventions/work-management.md § Rules
+
+### 2026-10-29T15:17:56Z agent-S-0537
+S-0537's agent: S-0537 is in progress. I'm working tasks T-2308 to T-2314, which cover criteria 1 to 4.
+
+**Recommended:** confirm the orchestrator's recommendation above, as you confirmed it for S-0536's criterion 6 on TH-0717 at 13:52Z. I would then:
+
+- cancel T-2315;
+- rewrite criterion 5 so it no longer requires the day-long run before review;
+- record in S-0537's Notes that the day of runs on reason-primed packs joins S-0536's follow-up under E-0030. That story would record context tokens per action from the session logs, beside the cost and activities from `flai stats`.
+
+**Or:** answer "keep criterion 5". S-0537 then stays in progress after criteria 1 to 4 until this branch's build has run the orchestrator here for a day. Installing that build on the host is yours to do.

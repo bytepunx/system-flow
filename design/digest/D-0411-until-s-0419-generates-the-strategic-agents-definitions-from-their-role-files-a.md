@@ -2,7 +2,7 @@
 id: D-0411
 title: "Until S-0419 generates the strategic agents' definitions from their role files, a change to a strategic agent's prompt is made in both .claude/agents/<name>.md and design/workflows/roles/<name>.md, and in their template copies"
 kind: decision
-sources: [S-0502]
+sources: [S-0502, S-0536]
 topics: [orchestration, planning, analysis, template, conventions]
 paths: [".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md]
 date: 2026-10-28
@@ -18,4 +18,6 @@ S-0414's acceptance (ADR-0207) put each strategic agent's definition prompt into
 
 So until S-0419 lands, a story that changes a planner's, orchestrator's, analyzer's, or curator's prompt changes four files: the `.claude/agents/<name>.md` pair, which is protected and asked of the operator (ADR-0106), and the `design/workflows/roles/<name>.md` pair. It also noted that a permission which gates no call of the role, such as `confirm_after`, is not named in the role file's permissions list.
 
-Source: S-0502 (wip/archive/agents/S-0502.md, Decisions).
+S-0536 changed the orchestrator's prompt the same way and put the protected pair in a task of its own, so the rest could close while the write waited on the operator: "The `.claude/agents/orchestrator.md` pair moved from T-2303 to its own task, T-2330. T-2303's code and role files could then close while the protected write waits on TH-0737." The operator answered TH-0737, and T-2330 wrote both copies.
+
+Source: S-0502 (wip/archive/agents/S-0502.md, Decisions); S-0536 (wip/archive/agents/S-0536.md, Decisions).
