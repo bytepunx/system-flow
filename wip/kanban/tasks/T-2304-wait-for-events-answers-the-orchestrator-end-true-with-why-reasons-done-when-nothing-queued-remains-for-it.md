@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 907
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 18
-      output: 6805
-      cache_read: 1317925
-      cache_write: 41887
-      cost: 0.6365
+      input: 16
+      output: 5805
+      cache_read: 1313299
+      cache_write: 42055
+      cost: 0.6362
 ---
 # T-2304 wait_for_events answers the orchestrator end true with why reasons done when nothing queued remains for it
 

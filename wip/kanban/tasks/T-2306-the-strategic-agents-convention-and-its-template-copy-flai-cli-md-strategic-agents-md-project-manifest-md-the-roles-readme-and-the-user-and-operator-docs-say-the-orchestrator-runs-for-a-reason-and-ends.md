@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1674
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 259
-      output: 97826
-      cache_read: 18946092
-      cache_write: 602161
-      cost: 9.1497
+      input: 226
+      output: 83450
+      cache_read: 18879597
+      cache_write: 604569
+      cost: 9.1456
 ---
 # T-2306 The strategic-agents convention and its template copy, flai-cli.md, strategic-agents.md, project-manifest.md, the roles README, and the user and operator docs say the orchestrator runs for a reason and ends
 

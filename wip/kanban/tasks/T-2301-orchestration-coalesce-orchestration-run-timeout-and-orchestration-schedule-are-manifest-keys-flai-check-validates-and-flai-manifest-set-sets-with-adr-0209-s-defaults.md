@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 233
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 53
-      output: 20002
-      cache_read: 3873896
-      cache_write: 123124
-      cost: 1.8708
+      input: 46
+      output: 17063
+      cache_read: 3860299
+      cache_write: 123616
+      cost: 1.87
 ---
 # T-2301 orchestration.coalesce, orchestration.run_timeout, and orchestration.schedule are manifest keys flai check validates and flai manifest set sets, with ADR-0209's defaults
 

@@ -3,11 +3,11 @@ id: S-0536
 type: story
 nature: feature
 title: "The orchestrator runs for a reason and ends: its trigger names events, flai check rejects continuous, flai serve coalesces the reasons into one run naming them, wait_for_events ends the run when they are done, and ADR-0209 is accepted"
-status: in-progress
+status: review
 parent: E-0030
 owner: alex
 created: 2026-10-28T21:02:32Z
-updated: 2026-10-29T13:54:55Z
+updated: 2026-10-29T14:24:06Z
 transitions:
   - to: ready
     at: 2026-10-28T22:21:22Z
@@ -15,13 +15,16 @@ transitions:
   - to: in-progress
     at: 2026-10-29T07:18:58Z
     by: agent-S-0536
+  - to: review
+    at: 2026-10-29T14:24:06Z
+    by: system-flow
 blocked:
   - from: 2026-10-29T08:42:48Z
     until: 2026-10-29T13:52:33Z
     reason: awaiting the operator on TH-0717
 tags: [flai, serve, orchestrator]
 topics: [orchestration, cli, template, conventions, mcp]
-touches: [flai/internal/serve, flai/internal/mcpserver, flai/internal/harness, flai/internal/manifest, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/flai-cli.md, design/system/strategic-agents.md, design/system/project-manifest.md, docs, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/check/roles_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, docs/operators/settings.md, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/orchestrate_reasons_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/orchestrate_hold.go, flai/internal/serve/orchestrate_hold_test.go, flai/internal/serve/orchestrate_timeout.go, flai/internal/serve/orchestrate_timeout_test.go, flai/internal/serve/serve.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, flai/internal/mcpserver/server.go, flai/internal/mcpserver/orchestrator_end_test.go, design/system/agent-narrative.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/users/flai.md, docs/operators/index.md, template/CHANGELOG.md, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/roles/baseline/orchestrator.md, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/cmd/role.go]
+touches: [flai/internal/serve, flai/internal/mcpserver, flai/internal/harness, flai/internal/manifest, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/flai-cli.md, design/system/strategic-agents.md, design/system/project-manifest.md, docs, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/check/roles_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, docs/operators/settings.md, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/orchestrate_reasons_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/orchestrate_hold.go, flai/internal/serve/orchestrate_hold_test.go, flai/internal/serve/orchestrate_timeout.go, flai/internal/serve/orchestrate_timeout_test.go, flai/internal/serve/serve.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, flai/internal/mcpserver/server.go, flai/internal/mcpserver/orchestrator_end_test.go, design/system/agent-narrative.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/users/flai.md, docs/operators/index.md, template/CHANGELOG.md, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/roles/baseline/orchestrator.md, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/cmd/role.go, design/issues/I-0231-claude-code-s-edit-tool-cannot-write-a-work-item-whose-file-name-is-near-the-255-byte-limit-since-its-temporary-file-name-adds-about-25-bytes.md, design/issues/summary.md]
 after: [S-0532, S-0535]
 agent:
   harness: claude-code
@@ -30,33 +33,38 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 5156
-  estimated: true
-  priced_by: estimate
+  seconds: 6937
+  priced_by: harness
   turns:
     - day: 2026-10-29
-      ceremony: 4
-      test_runs: 6
-      hand_edits: 6
-      work: 87
+      ceremony: 5
+      test_runs: 7
+      hand_edits: 7
+      work: 105
   models:
     - model: claude-opus-5-5
-      input: 800
-      output: 293878
-      cache_read: 60931557
-      cache_write: 2221164
-      cost: 29.5489
+      input: 844
+      output: 311705
+      cache_read: 70519838
+      cache_write: 2258212
+      cost: 34.1612
   strategic:
     - kind: orchestrator
-      seconds: 19797
+      seconds: 21038
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 99
-          output: 1600
-          cache_read: 22095348
-          cache_write: 25207
-          cost: 4.8734
+          input: 144
+          output: 2022
+          cache_read: 37912847
+          cache_write: 50504
+          cost: 8.3669
+        - model: claude-sonnet-5-5
+          input: 16
+          output: 90
+          cache_read: 314707
+          cache_write: 59013
+          cost: 0.2576
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 2h

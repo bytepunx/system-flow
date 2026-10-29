@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 909
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 39
-      output: 14653
-      cache_read: 2837932
-      cache_write: 90198
-      cost: 1.3705
+      input: 34
+      output: 12500
+      cache_read: 2827972
+      cache_write: 90558
+      cost: 1.3699
 ---
 # T-2305 flai serve stops an orchestrator run that holds past orchestration.run_timeout and logs and journals it
 

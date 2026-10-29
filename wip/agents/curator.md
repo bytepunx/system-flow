@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 35.9177
-accrued_seconds: 3224
-tasks_completed: 21
-last_run: 2026-10-29T07:32:29Z
+accrued_cost: 37.3095
+accrued_seconds: 3304
+tasks_completed: 22
+last_run: 2026-10-29T13:59:26Z
 ---
 
 # Curator activity
@@ -179,3 +179,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0396, D-0418, D-0420, D-0421
 - Seconds: 238
 - Cost: 1.2260 USD, estimated
+
+### 2026-10-29T13:59:26Z
+
+- Summary: I merged TH-0717 into D-0422, wrote no new entries, absorbed none, and `flai digest compact` compacted none. The other six candidates were already in ADR-0216 (I-0213) or were S-0515 progress notes, and absorption was checked only against the files S-0515 changed and D-0422, not all 229 active entries.
+- Trigger: accepted S-0515
+- Items: D-0411, D-0422
+- Seconds: 80
+- Cost: 1.3918 USD, estimated

@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-10-29T14:44:52Z
+updated: 2026-10-29T15:12:10Z
 ---
 
 # Active streams
@@ -9,7 +9,6 @@ updated: 2026-10-29T14:44:52Z
 |--------|-------|--------|------------|---------|
 | [S-0418](S-0418.md) | A role a project defines starts on an event, on a schedule, or for as long as its host action is on, as its role file's trigger says, coalesced and logged with its trigger as the planner's runs are | in-progress | agent-S-0418 | 2026-10-29T14:43:42Z |
 | [S-0536](S-0536.md) | The orchestrator runs for a reason and ends: its trigger names events, flai check rejects continuous, flai serve coalesces the reasons into one run naming them, wait_for_events ends the run when they are done, and ADR-0209 is accepted | review | agent-S-0536 | 2026-10-29T14:24:17Z |
-| [S-0541](S-0541.md) | Show Activity for the Story’s Agent | review | agent-S-0541 | 2026-10-29T14:17:31Z |
 
 ## Strategic agents
 

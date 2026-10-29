@@ -18,9 +18,8 @@ tags: [flai, orchestrator, serve, budget]
 topics: [orchestration, cli, dashboard]
 usage:
   source: sum
-  seconds: 23755
-  estimated: true
-  priced_by: estimate
+  seconds: 25536
+  priced_by: harness
   turns:
     - day: 2026-10-28
       ceremony: 4
@@ -28,17 +27,17 @@ usage:
       hand_edits: 3
       work: 109
     - day: 2026-10-29
-      ceremony: 14
-      test_runs: 15
-      hand_edits: 12
-      work: 257
+      ceremony: 15
+      test_runs: 16
+      hand_edits: 13
+      work: 275
   models:
     - model: claude-opus-5-5
-      input: 3070
-      output: 1155141
-      cache_read: 204211655
-      cache_write: 7529806
-      cost: 106.0548
+      input: 3114
+      output: 1172968
+      cache_read: 213799936
+      cache_write: 7566854
+      cost: 110.6671
   strategic:
     - kind: planner
       seconds: 1976
@@ -57,21 +56,21 @@ usage:
           cache_write: 372766
           cost: 2.0487
     - kind: orchestrator
-      seconds: 34183
+      seconds: 35424
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1448
-          output: 24831
-          cache_read: 249284426
-          cache_write: 412697
-          cost: 55.0061
+          input: 1493
+          output: 25253
+          cache_read: 265101925
+          cache_write: 437994
+          cost: 58.4997
         - model: claude-sonnet-5-5
-          input: 60
-          output: 337
-          cache_read: 1022500
-          cache_write: 252546
-          cost: 0.8802
+          input: 76
+          output: 427
+          cache_read: 1337207
+          cache_write: 311559
+          cost: 1.1378
 ---
 # E-0030 The orchestrator runs for a reason: flai serve starts it on the events it can act on, primed for them, and holds every start while the host's budget is exhausted (ADR-0209)
 

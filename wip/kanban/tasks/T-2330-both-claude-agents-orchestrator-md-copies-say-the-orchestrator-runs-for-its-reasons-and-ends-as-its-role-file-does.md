@@ -24,16 +24,16 @@ touches: [".claude/agents/orchestrator.md", template/root/.claude/agents/orchest
 after: [T-2303]
 usage:
   source: log
-  seconds: 4
+  seconds: 9
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 2
-      output: 24
-      cache_read: 413066
-      cache_write: 334
-      cost: 0.1925
+      input: 5
+      output: 1795
+      cache_read: 406042
+      cache_write: 13002
+      cost: 0.1967
 ---
 # T-2330 Both .claude/agents/orchestrator.md copies say the orchestrator runs for its reasons and ends, as its role file does
 

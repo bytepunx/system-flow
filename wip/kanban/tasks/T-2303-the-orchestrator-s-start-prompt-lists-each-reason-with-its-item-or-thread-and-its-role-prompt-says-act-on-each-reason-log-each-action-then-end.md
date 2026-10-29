@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 948
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 67
-      output: 25257
-      cache_read: 4891523
-      cache_write: 155467
-      cost: 2.3623
+      input: 58
+      output: 21545
+      cache_read: 4874355
+      cache_write: 156088
+      cost: 2.3612
 ---
 # T-2303 The orchestrator's start prompt lists each reason with its item or thread, and its role prompt says act on each reason, log each action, then end
 

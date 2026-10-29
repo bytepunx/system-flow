@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1051
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 35
-      output: 13283
-      cache_read: 2572452
-      cache_write: 81760
-      cost: 1.2423
+      input: 31
+      output: 11331
+      cache_read: 2563424
+      cache_write: 82087
+      cost: 1.2418
 ---
 # T-2300 flai check reports continuous on any role as a finding, and orchestrator.md and its template copy name ADR-0209's trigger events
 
