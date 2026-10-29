@@ -1822,6 +1822,8 @@ func TestAgentRestartsStopAtTheLimitWithOneThread(t *testing.T) {
 	lab.release(id) // every agent for it ends at once
 	for n := 1; n <= 2; n++ {
 		waitFor(t, "it ends", func() bool { r := lab.run(id); return !r.live() && r.Outcome == OutcomeFailed })
+		// its end is appended just after it is recorded: in the log before the next start
+		waitFor(t, "its end is in the event log", func() bool { return len(lab.storyEvents(id)) == 2*n })
 		was := lab.run(id).Session
 		lab.l.look(ctx, false)
 		waitFor(t, "it is restarted", func() bool { return lab.run(id).Session != was })
@@ -1830,6 +1832,12 @@ func TestAgentRestartsStopAtTheLimitWithOneThread(t *testing.T) {
 		}
 	}
 	waitFor(t, "it ends a third time", func() bool { r := lab.run(id); return !r.live() && r.Outcome == OutcomeFailed })
+	failed := [2]string{inbox.AgentFailed, "ended (exit 0) with " + id + " in in-progress"}
+	restarted := func(n int) [2]string {
+		return [2]string{inbox.AgentStarted, fmt.Sprintf("flai serve started it again on its own, automatic restart %d of 2: its last agent ended (exit 0) with %s in in-progress", n, id)}
+	}
+	lab.eventsAre(id, "Ends every time", [2]string{inbox.AgentStarted, "it entered ready"}, failed, restarted(1), failed, restarted(2), failed)
+	events := lab.storyEvents(id)
 	last := lab.run(id)
 	lab.l.look(ctx, false)
 	lab.l.look(ctx, false)
@@ -1850,6 +1858,17 @@ func TestAgentRestartsStopAtTheLimitWithOneThread(t *testing.T) {
 		if !strings.Contains(text, want) {
 			t.Errorf("the thread says\n%s\nwithout %q", text, want)
 		}
+	}
+	// S-0532: between its first paragraph and its advice, the agent events of
+	// the three runs it counts, each start and end with its time and why
+	list := "Its agent events since the first of those runs, oldest first:\n\n"
+	for _, e := range events {
+		list += "- " + e.At + " " + e.To + ": `" + e.Fields[inbox.FieldWhy] + "`\n"
+	}
+	want := id + "'s agent has ended 3 times in a row with " + id + " in progress, and flai serve has restarted it on its own 2 times, as many as agent.auto_restarts allows on this host, and restarts it no more: the story has no agent now. Its last run ended (exit 0) with " + id + " in in-progress.\n\n" +
+		list + "\n" + limitAdvice(id)
+	if text != want {
+		t.Errorf("the thread says\n%s\nwant\n%s", text, want)
 	}
 	started := 0
 	for _, e := range lab.entries() {
@@ -1884,6 +1903,56 @@ func TestAgentRestartsStopAtTheLimitWithOneThread(t *testing.T) {
 	waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
 }
 
+// limitAdvice is the last paragraph of the thread flai serve opens on story
+// at the limit of automatic restarts, word for word.
+func limitAdvice(story string) string {
+	return "flai serve agent restart " + story + ", or Retry on the story's page, starts it again, and its count again from 0. flai serve agent set --auto-restarts <n> changes how many times flai serve restarts a story's agent on its own."
+}
+
+// S-0532: the thread at the limit lists the agent events of the story's last
+// ends runs, from the ends-th last started event on, oldest first; what a
+// log holds of fewer runs, all of it; and nothing for a log with none. A why
+// is one line in a code span, whatever markdown it holds.
+func TestTheThreadAtTheLimitListsTheAgentEventsOfTheRunsItCounts(t *testing.T) {
+	lab := newAgentLab(t)
+	id, other := lab.ready("Counted"), lab.ready("Elsewhere")
+	if got := countedRuns(lab.repo, id, 2); got != "" {
+		t.Fatalf("with no events: %q", got)
+	}
+	t0 := time.Date(2026, 10, 28, 9, 0, 0, 0, time.UTC)
+	logEvent := func(story string, minute int, to, why string) {
+		e := inbox.AgentEvent(story, workitem.Story, "Counted", to, "builder-"+story, conventions.RoleStory, why)
+		e.At = t0.Add(time.Duration(minute) * time.Minute).Format(workitem.TimeFormat)
+		if err := inbox.AppendEvent(lab.repo, e); err != nil {
+			t.Fatal(err)
+		}
+	}
+	logEvent(id, 0, inbox.AgentStarted, "it entered ready")
+	logEvent(id, 1, inbox.AgentEnded, "ended with its work done")
+	logEvent(id, 2, inbox.AgentStarted, "the operator restarted it")
+	logEvent(other, 3, inbox.AgentStarted, "it entered ready")
+	logEvent(id, 4, inbox.AgentFailed, "ended (exit 1) with *two*\nlines and `ticks`")
+	logEvent(id, 5, inbox.AgentStarted, "flai serve started it again on its own, automatic restart 1 of 1")
+	logEvent(id, 6, inbox.AgentFailed, "ended (exit 0) with "+id+" in in-progress")
+	head := "Its agent events since the first of those runs, oldest first:\n\n"
+	last := "- 2026-10-28T09:02:00Z started: `the operator restarted it`\n" +
+		"- 2026-10-28T09:04:00Z failed: `` ended (exit 1) with *two* lines and `ticks` ``\n" +
+		"- 2026-10-28T09:05:00Z started: `flai serve started it again on its own, automatic restart 1 of 1`\n" +
+		"- 2026-10-28T09:06:00Z failed: `ended (exit 0) with " + id + " in in-progress`\n"
+	all := "- 2026-10-28T09:00:00Z started: `it entered ready`\n" +
+		"- 2026-10-28T09:01:00Z ended: `ended with its work done`\n" + last
+	for ends, want := range map[int]string{
+		1: head + "- 2026-10-28T09:05:00Z started: `flai serve started it again on its own, automatic restart 1 of 1`\n- 2026-10-28T09:06:00Z failed: `ended (exit 0) with " + id + " in in-progress`\n\n",
+		2: head + last + "\n",
+		3: head + all + "\n",
+		5: head + all + "\n",
+	} {
+		if got := countedRuns(lab.repo, id, ends); got != want {
+			t.Errorf("ends %d:\n%s\nwant\n%s", ends, got, want)
+		}
+	}
+}
+
 // putEnded makes a story in progress whose agent's run ended as run says,
 // with its story, agent, and times filled in.
 func (lab *agentLab) putEnded(title string, run AgentRun) string {
@@ -1915,6 +1984,11 @@ func TestAgentRestartsOffOpensTheThreadAtTheFirstEnd(t *testing.T) {
 	}
 	if text := ths[0].Entries()[0].Text; !strings.Contains(text, "ended once in a row") || !strings.Contains(text, "agent.auto_restarts is 0") {
 		t.Errorf("the thread says\n%s", text)
+	}
+	// S-0532: with no agent events of the story in the log, it lists none
+	want := id + "'s agent has ended once in a row with " + id + " in progress, and flai serve does not restart a story's agent on its own on this host (agent.auto_restarts is 0): the story has no agent now. Its last run ended (exit 0) with " + id + " in in-progress.\n\n" + limitAdvice(id)
+	if text := ths[0].Entries()[0].Text; text != want {
+		t.Errorf("the thread says\n%s\nwant\n%s", text, want)
 	}
 	if j := lab.entries(); len(j) != 1 || j[0].Outcome != "done" || !strings.Contains(j[0].Detail, "opened "+ths[0].ID) {
 		t.Errorf("journal: %+v", j)

@@ -1456,8 +1456,8 @@ func (l *launcher) stopRestarting(repo *workitem.Repo, cfg AgentConfig, run *Age
 		limit = fmt.Sprintf("flai serve has restarted it on its own %d %s, as many as agent.auto_restarts allows on this host, and restarts it no more", cfg.AutoRestarts, oneOrMany(cfg.AutoRestarts, "time", "times"))
 	}
 	text := fmt.Sprintf("%[1]s's agent has ended %[2]s in a row with %[1]s in progress, and %[3]s: the story has no agent now. Its last run %[4]s.\n\n"+
-		"flai serve agent restart %[1]s, or Retry on the story's page, starts it again, and its count again from 0. flai serve agent set --auto-restarts <n> changes how many times flai serve restarts a story's agent on its own.",
-		run.Story, times, limit, restartWhy(run))
+		"%[5]sflai serve agent restart %[1]s, or Retry on the story's page, starts it again, and its count again from 0. flai serve agent set --auto-restarts <n> changes how many times flai serve restarts a story's agent on its own.",
+		run.Story, times, limit, restartWhy(run), countedRuns(repo, run.Story, ends))
 	at := l.now().UTC()
 	entry := hostapi.Entry{At: at.Format(time.RFC3339), Action: hostapi.ActionAgent, Method: "serve.agent", Project: l.entry.Key, Root: l.entry.Root, By: limitAuthor}
 	th, err := threads.New(repo, threads.NewOptions{Title: fmt.Sprintf("%s's agent ended %s with the story in progress; restart it when it should go on", run.Story, times), On: run.Story, Author: limitAuthor, Text: text, Now: at})
@@ -1485,6 +1485,38 @@ func (l *launcher) stopRestarting(repo *workitem.Repo, cfg AgentConfig, run *Age
 		l.record(entry)
 	}
 	l.log("agent not restarted: at the limit", "story", run.Story, "ended", ends, "thread", th.ID)
+}
+
+// countedRuns is the paragraph of the thread at the limit of automatic
+// restarts that lists the agent events of story's last ends runs, the runs
+// the thread counts, oldest first, from the ends-th last started event on,
+// one list line each with its time, what the run came to, and why in a code
+// span (S-0532): a started event and its end make two lines, so the operator
+// reads each restart and how it ended. Fewer started events than ends, as a
+// log that lost some has, list what there is; none leave the paragraph out,
+// as an empty string, and the thread reads as it did before the event log.
+func countedRuns(repo *workitem.Repo, story string, ends int) string {
+	events := inbox.AgentEventsOf(repo, story, time.Time{})
+	from, seen := -1, 0
+	for i := len(events) - 1; i >= 0 && seen < ends; i-- {
+		if events[i].To == inbox.AgentStarted {
+			from, seen = i, seen+1
+		}
+	}
+	if from < 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString("Its agent events since the first of those runs, oldest first:\n\n")
+	for _, e := range events[from:] {
+		b.WriteString("- " + e.At + " " + e.To)
+		if why := strings.Join(strings.Fields(e.Fields[inbox.FieldWhy]), " "); why != "" {
+			b.WriteString(": " + codeSpan(why))
+		}
+		b.WriteString("\n")
+	}
+	b.WriteString("\n")
+	return b.String()
 }
 
 // asked says whether run ended asking: a question on a thread, or on a
