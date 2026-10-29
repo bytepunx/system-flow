@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-10-28
+updated: 2026-10-29
 status: active
 ---
 
@@ -998,6 +998,8 @@ flai curate [flags]
 Starts the curator for the project, now, on this host and as you (S-0431, ADR-0196). It runs in the project's main checkout with the project's digest agent: digest.agent in system-flow.yaml over the project's agent, started with the harnesses and the command you set with flai serve agent. It reads flai digest harvest from --since, a YYYY-MM-DD day in UTC or an RFC 3339 time, or without one from the curator's last activity in wip/agents/curator.md, or everything on its first run. For each candidate it writes a digest entry with flai digest new, or merges it into the entry that holds the fact with flai digest edit. It edits no file and authors no work item; flai guard holds it to that.
 
 The run is recorded where flai serve tracks agents, as the curator's, the newest alone, and its output goes to a log beside flai serve's state. Once it ends, the serving flai records how (worked or failed) and logs the entries it wrote or changed and what the run cost in wip/agents/curator.md. It is no story's agent: the in-progress limit does not count it, and it holds no story back. One curator runs for a project at a time.
+
+A run whose log ends on the harness's usage limit is recorded failed, with the limit and when it resets, and logs no activity (ADR-0214). Until the reset flai serve starts no curator on its own and holds the acceptances that come meanwhile; at its first look after the reset it starts that run again, once, with them. A retry that ends on the limit again, or a limit with no reset time, is raised on a thread on system-flow.yaml instead. This command is never held.
 
 It is a host action, off until you enable it (flai serve enable curate). It refuses, and says why, while the action is off for the project, for a --since in neither form, while a curator runs for the project, naming it, and when nothing can start it. The host API's curate.run runs this.
 

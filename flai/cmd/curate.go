@@ -40,6 +40,14 @@ entries it wrote or changed and what the run cost in wip/agents/curator.md.
 It is no story's agent: the in-progress limit does not count it, and it
 holds no story back. One curator runs for a project at a time.
 
+A run whose log ends on the harness's usage limit is recorded failed, with
+the limit and when it resets, and logs no activity (ADR-0214). Until the
+reset flai serve starts no curator on its own and holds the acceptances
+that come meanwhile; at its first look after the reset it starts that run
+again, once, with them. A retry that ends on the limit again, or a limit
+with no reset time, is raised on a thread on system-flow.yaml instead.
+This command is never held.
+
 It is a host action, off until you enable it (flai serve enable curate).
 It refuses, and says why, while the action is off for the project, for a
 --since in neither form, while a curator runs for the project, naming it,

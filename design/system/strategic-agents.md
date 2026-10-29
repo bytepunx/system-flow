@@ -1,6 +1,6 @@
 ---
 title: Strategic agents
-updated: 2026-10-28
+updated: 2026-10-29
 status: active
 topics: [planning, orchestration, analysis]
 ---
@@ -777,8 +777,22 @@ A curate scheduler per served project (`internal/serve/curate_schedule.go`) look
 | `accepted S-nnnn` | a story is seen moved to `done` | one run; stories accepted at one look start one run, naming them all in ID order |
 | `accepted S-nnnn, S-nnnn` | stories were accepted while a curator ran | one run once it ends, at the look its end brings, naming every one, however many |
 | `schedule <spec>` | `digest.schedule` comes round, such as `schedule daily` | one run; when acceptances are due at the same look, one run with the acceptances' trigger |
+| the retried run's trigger, with the acceptances held meanwhile joined | the first look at or after the `resets_at` of a run that ended on the usage limit | one run, from that run's since, marked `retry` ([The usage limit](#the-usage-limit-s-0514)) |
 
-`digest.schedule` is read as `analysis.schedule` is: a five-field cron expression in UTC, or `daily`; unset, there is none. Each start goes through the checks `serve.Curate` makes, with no since, so it takes in from the curator's last activity. A start they refuse is logged at info as `curator not started on its own`, with the trigger and the reason, and is not tried again: for the schedule, until it next comes round. Times missed between two looks come round once, and a schedule set or changed comes round first at its next time from then. What the scheduler has seen is kept in memory only: acceptances and times that passed while `flai serve` was down do not count. While `curate` is off it keeps up with the acceptances and the schedule, so turning the action on does not act on the past. A schedule that is not valid is warned of once in flai serve's log.
+`digest.schedule` is read as `analysis.schedule` is: a five-field cron expression in UTC, or `daily`; unset, there is none. Each start goes through the checks `serve.Curate` makes, with no since, so it takes in from the curator's last activity. A start they refuse is logged at info as `curator not started on its own`, with the trigger and the reason, and is not tried again: for the schedule, until it next comes round. Times missed between two looks come round once, and a schedule set or changed comes round first at its next time from then. What the scheduler has seen is kept in memory only: acceptances and times that passed while `flai serve` was down do not count. The hold and the retry on the usage limit are the exception: they are read from the curator's run in `serve/agents.json`. While `curate` is off it keeps up with the acceptances and the schedule, so turning the action on does not act on the past. A schedule that is not valid is warned of once in flai serve's log.
+
+#### The usage limit (S-0514)
+
+A curator run whose log ends on the harness's usage limit is recorded `failed` with its `resets_at` ([The curator's run and how it ended](#the-curators-run-and-how-it-ended), [ADR-0214](../adrs/0214-a-curator-run-that-ends-on-the-harness-s-usage-limit-is-recorded-failed-with.md)). The scheduler reads that run at each look (`limitResetAt`):
+
+- **Held.** While the curator's last run ended on the limit and its `resets_at` is ahead, the scheduler starts nothing. Acceptances seen meanwhile are held. A schedule time that comes round meanwhile is taken as seen; the retry stands for it.
+- **Retried once.** At the first look at or after `resets_at`, it starts that run again, from the run's since, marked `retry: true`. The journal entry's detail adds `started again after the usage limit reset at <time>`. The trigger is the retried one with the held acceptances joined (`retryTrigger`): `accepted S-0498, S-0501` with S-0510 held gives `accepted S-0498, S-0501, S-0510`, in ID order; a `schedule <spec>` trigger gives way to the acceptances' trigger; `asked` is kept, with `; accepted S-nnnn` after it. With none held, the trigger is the retried one.
+- **Not retried.** A retry that ends on the limit again, and a run whose limit names no reset time, are raised on a thread instead. After a retry on the limit, the scheduler still holds until its reset; then acceptances held meanwhile start a run as any acceptances do. A retry the checks refuse is logged as any refused start is, and not tried again while that scheduler lives.
+- **Across a restart.** The state is the run in `serve/agents.json`. A `flai serve` started during the hold still holds, and retries at its first look after the reset.
+- **Behind the action.** While `curate` is off, nothing is retried and no acceptance is held. Turned on again after the reset, the first look retries, since the last run still ended on the limit.
+- **Not the operator's.** `flai curate`, `curate.run`, and the MCP tool `curate` do not go through the scheduler and are not held. A run they start that ends on the limit is the last run, and the hold and the retry follow from it.
+
+This is the curator's part of [ADR-0209](../adrs/0209-the-orchestrator-runs-for-a-reason-and-ends-started-by-flai-serve-on-the-events.md) §5, built ahead of the host-wide budget state (S-0534). The analyzer, the planner, and the orchestrator still fail on the limit as before.
 
 ### Answers written at once (S-0433)
 
@@ -818,10 +832,15 @@ When the process ends, or the next look finds it gone, flai serve settles the ru
 
 | Outcome | When |
 |---------|------|
+| `failed` | its log ends on the harness's usage limit (`runLimit`), whether its exit was seen or not; `why` names the limit and its reset time, such as `ended on the harness's usage limit (usage_limit_reached, 429); it resets at 2026-10-28T08:00:00Z`, or ends `it named no reset time` |
 | `failed` | it exited with a code other than 0, or could not be started |
 | `worked` | otherwise, whether it wrote or merged an entry or found nothing to take in, and whether its exit was seen or not |
 
-It then logs the run's activity in `wip/agents/curator.md`: the time since the last entry, the seconds and cost measured from the log, the run's trigger as the entry's `- Trigger:` line, the first line of the run's final reply as the summary, and the entries as its items. Entries that cannot be looked for are warned of, and the activity names none.
+A run on the usage limit also has `resets_at`, an RFC 3339 time in UTC, when the harness named one ([ADR-0214](../adrs/0214-a-curator-run-that-ends-on-the-harness-s-usage-limit-is-recorded-failed-with.md)). A run the scheduler started again at the reset has `retry: true` ([The usage limit](#the-usage-limit-s-0514)). flai serve's log line `curator ended` adds the limit, its status, and `resets_at`.
+
+It then logs the run's activity in `wip/agents/curator.md`: the time since the last entry, the seconds and cost measured from the log, the run's trigger as the entry's `- Trigger:` line, the first line of the run's final reply as the summary, and the entries as its items. Entries that cannot be looked for are warned of, and the activity names none. A run on the usage limit spent nothing and logs no activity, so the next run's since stays at the last activity, and it takes in what this run never did.
+
+A retry that ends on the limit again, or a run whose limit names no reset time, is raised to the operator (`raiseCurateLimit`). `flai serve` opens one thread on `system-flow.yaml`, by `flai serve`, titled `The curator ended on the harness's usage limit twice; start it when the limit allows`, or `... with no reset time; start it when the limit allows`. It names the run, its trigger, its `why`, and its log, quotes the harness's text at the end of the run, and says that `flai curate` starts the curator at any time, and the next acceptance or `digest.schedule` once the limit resets. The thread's ID is the run's `limit_thread`, so it is opened once. The opening is journalled under `curate`. One that cannot be opened is warned of and journalled `failed`. No retry follows either way.
 
 Every start and failure to start is a journal entry with action `curate` and method `serve.curate`, whose detail names the trigger; `curate.run` and the MCP tool `curate` are journalled as well, under the same action. `agent.status` carries the run as `curator`, null before the first. When the run starts, cannot start, or ends, `flai serve` tells the dashboard with an `agent` notification that carries the project and `role: curate`.
 
