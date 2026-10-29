@@ -55,9 +55,12 @@ func send(t *testing.T, method, url, body string, headers map[string]string) rep
 	req.Header.Set("Accept", "application/json, text/event-stream")
 	req.Header.Set("Authorization", "Bearer "+token)
 	for k, v := range headers {
-		if v == "" {
+		switch {
+		case k == "Host":
+			req.Host = v // net/http sends req.Host, never a Host header
+		case v == "":
 			req.Header.Del(k)
-		} else {
+		default:
 			req.Header.Set(k, v)
 		}
 	}
@@ -154,6 +157,46 @@ func TestRefusals(t *testing.T) {
 	}
 }
 
+// I-0213: an agent in a container dials the host by a name such as
+// host.docker.internal, which reaches a loopback listener with a Host that is
+// not loopback. The SDK refused it with 403 invalid Host header; the token is
+// the gate, so it is served in both revisions, and refused without the token.
+func TestAForeignHostWithTheTokenIsServed(t *testing.T) {
+	srv := lab(t, Options{})
+	foreign := "host.docker.internal:4243"
+	r := send(t, "POST", srv.URL, initialize("x"), map[string]string{"Host": foreign})
+	sid := r.header.Get(sessionHeader)
+	if r.status != 200 || sid == "" {
+		t.Fatalf("a session opens whatever Host the request names: %d %s", r.status, r.body)
+	}
+	if r := send(t, "POST", srv.URL, initialized, map[string]string{"Host": foreign, sessionHeader: sid}); r.status != 202 {
+		t.Fatalf("initialized: %d %s", r.status, r.body)
+	}
+	if r := send(t, "POST", srv.URL, whoami, map[string]string{"Host": foreign, sessionHeader: sid}); r.status != 200 || !strings.Contains(r.body, `"x"`) {
+		t.Errorf("a call in the session is served: %d %s", r.status, r.body)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	client := mcp.NewClient(&mcp.Implementation{Name: "sdk client", Version: "1"}, nil)
+	transport := &mcp.StreamableClientTransport{Endpoint: srv.URL, HTTPClient: &http.Client{Transport: bearer{agent: "boxed", host: foreign}}, DisableStandaloneSSE: true}
+	cs, err := client.Connect(ctx, transport, nil)
+	if err != nil {
+		t.Fatalf("the revision with no sessions connects: %v", err)
+	}
+	defer func() { _ = cs.Close() }()
+	if res, err := cs.CallTool(ctx, &mcp.CallToolParams{Name: "whoami"}); err != nil {
+		t.Errorf("a request with no session is served: %v", err)
+	} else if text, _ := res.Content[0].(*mcp.TextContent); text == nil || text.Text != "boxed" {
+		t.Errorf("agent: %+v", res.Content[0])
+	}
+	if r := send(t, "POST", srv.URL, initialize("x"), map[string]string{"Host": foreign, "Authorization": ""}); r.status != 401 {
+		t.Errorf("without the token it is refused still: %d %s", r.status, r.body)
+	}
+	if r := send(t, "POST", srv.URL, initialize("x"), map[string]string{"Host": foreign, "Origin": "http://" + foreign}); r.status != 403 || !strings.Contains(r.body, "agents") {
+		t.Errorf("a browser is refused still, by flai: %d %s", r.status, r.body)
+	}
+}
+
 func TestSessionCapAndIdle(t *testing.T) {
 	srv := lab(t, Options{MaxSessions: 2, Idle: 300 * time.Millisecond})
 	a := open(t, srv.URL, "a", nil)
@@ -211,14 +254,18 @@ func TestInFlightCap(t *testing.T) {
 	}
 }
 
-// bearer adds what an agent's configuration adds: the token and its name.
-type bearer struct{ agent string }
+// bearer adds what an agent's configuration adds: the token and its name,
+// and, for an agent in a container, the name it dials the host by.
+type bearer struct{ agent, host string }
 
 func (b bearer) RoundTrip(r *http.Request) (*http.Response, error) {
 	r = r.Clone(r.Context())
 	r.Header.Set("Authorization", "Bearer "+token)
 	if b.agent != "" {
 		r.Header.Set(AgentHeader, b.agent)
+	}
+	if b.host != "" {
+		r.Host = b.host
 	}
 	return http.DefaultTransport.RoundTrip(r)
 }
@@ -242,7 +289,7 @@ func TestBothRevisionsWithTheSDKClient(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			client := mcp.NewClient(&mcp.Implementation{Name: "sdk client", Version: "1"}, nil)
-			transport := &mcp.StreamableClientTransport{Endpoint: srv.URL, HTTPClient: &http.Client{Transport: bearer{c.agent}}, DisableStandaloneSSE: true}
+			transport := &mcp.StreamableClientTransport{Endpoint: srv.URL, HTTPClient: &http.Client{Transport: bearer{agent: c.agent}}, DisableStandaloneSSE: true}
 			cs, err := client.Connect(ctx, transport, &mcp.ClientSessionOptions{ProtocolVersion: c.version})
 			if err != nil {
 				t.Fatal(err)

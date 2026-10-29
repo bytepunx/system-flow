@@ -312,8 +312,10 @@ func newMCPHTTPCmds(a *app) []*cobra.Command {
 a process here (ADR-0030). It listens on ` + mcpDefaultAddr + ` unless --addr says
 otherwise, and that address is remembered for this project. Every request
 carries the token in .flai-cache/mcp.token as a bearer header; a request from
-a browser (one with an Origin header) is refused. The agent is named by the
-X-Flai-Agent header, else by the client's own name.
+a browser (one with an Origin header) is refused. The token is the gate,
+whatever Host a request names, so an agent in a container may dial
+host.docker.internal (ADR-0216). The agent is named by the X-Flai-Agent
+header, else by the client's own name.
 
 An address beyond this machine is allowed and warned about: the token travels
 in every request, and TLS is a proxy's or a tunnel's job, not flai's.`,

@@ -138,9 +138,13 @@ func Handler(opt Options) http.Handler {
 		}
 	}
 	// JSON answers, not event streams: nothing is sent while a call runs, and
-	// a plain body is what a proxy and curl expect.
-	h.sessions = mcp.NewStreamableHTTPHandler(pick(h.stateful), &mcp.StreamableHTTPOptions{JSONResponse: true, SessionTimeout: opt.Idle, Logger: opt.Logger})
-	h.alone = mcp.NewStreamableHTTPHandler(pick(h.stateless), &mcp.StreamableHTTPOptions{JSONResponse: true, Stateless: true, Logger: opt.Logger})
+	// a plain body is what a proxy and curl expect. The SDK's localhost
+	// protection is off (ADR-0216): it refuses a loopback listener any Host
+	// that is not loopback, such as host.docker.internal from a container,
+	// and the page it guards against sends an Origin and has no token, which
+	// ServeHTTP refuses before the SDK sees the request.
+	h.sessions = mcp.NewStreamableHTTPHandler(pick(h.stateful), &mcp.StreamableHTTPOptions{JSONResponse: true, SessionTimeout: opt.Idle, Logger: opt.Logger, DisableLocalhostProtection: true})
+	h.alone = mcp.NewStreamableHTTPHandler(pick(h.stateless), &mcp.StreamableHTTPOptions{JSONResponse: true, Stateless: true, Logger: opt.Logger, DisableLocalhostProtection: true})
 	return h
 }
 
