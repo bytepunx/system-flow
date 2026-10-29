@@ -14,32 +14,24 @@ cited: []
 
 # D-0422 Plan for S-0536: eight tasks in five layers, and two questions on criterion 6: confirm recommendation
 
-The operator, alex, answered TH-0717 at 2026-10-29T13:52:32Z.
+The operator, alex, confirmed the planner's recommendation on TH-0717 at 2026-10-29T13:52:32Z ("confirm recommendation"). It was not overruled.
 
-What was asked:
+What was decided for S-0536, and why:
+
+1. A story's acceptance criterion that needs the host's flai serve to run the story's own change, such as a day-long run of the orchestrator under a new trigger, cannot be verified before review. The host's flai serve runs the installed release, not the story branch's build, so the change reaches the host only once the story is accepted and published. Such a run moves to a follow-up story after the story, and the criterion keeps only what the agent can verify on the branch (here, ADR-0209's status).
+2. A folder touch on `design/adrs` is dropped when no task writes an ADR: while the story is in progress it claims every ADR and holds any ready story that adds one (ADR-0096).
+3. `flai stats` does not report context tokens per action. A measurement that needs them takes the cost and activities from `flai stats` and the tokens from the session logs, and says which came from where. Adding the figure to `flai stats` changes `metrics.md`, which needs an ADR.
+
+The recommendation the operator confirmed:
 
 ```text
-S-0536 is planned: eight tasks in five layers, with touches, a forecast of 5h, and a cost of delay of 300.00 USD a week (the 2h input set on TH-0716).
-```
-
-The recommendation it overruled:
-
-```text
-**Recommended:** take all three proposals.
-
-1. **Drop `design/adrs` from S-0536's touches.** No task writes an ADR, since ADR-0209 is already accepted. While the story is in progress, the folder touch claims every ADR and holds S-0537 and any story that adds one (ADR-0096).
-2. **Keep criterion 6 to ADR-0209's status, and move the day-long run into a follow-up story after S-0536.** The host's flai serve runs the installed release, not the branch's build. So the new trigger can only run here once S-0536 is accepted and published, and a criterion the story's agent cannot verify before review would block its acceptance. The follow-up is one story under E-0030: a day of runs, with the reasons, the cost, and the context tokens recorded.
-3. **T-2307, or its follow-up, takes cost and activities from `flai stats` and the context tokens from the session logs, saying which came from where.** Adding tokens per action to `flai stats` changes `metrics.md`, which needs an ADR, and that is beyond this story.
-
-**Or:** keep criterion 6 as written and run the branch's build on the host for a day before review. Say so here, and T-2307 stays as drafted.
+1. Drop `design/adrs` from S-0536's touches. No task writes an ADR, since ADR-0209 is already accepted.
+2. Keep criterion 6 to ADR-0209's status, and move the day-long run into a follow-up story after S-0536. The host's flai serve runs the installed release, not the branch's build. So the new trigger can only run here once S-0536 is accepted and published, and a criterion the story's agent cannot verify before review would block its acceptance.
+3. T-2307, or its follow-up, takes cost and activities from `flai stats` and the context tokens from the session logs, saying which came from where.
 
 Source: design/conventions/work-management.md § Rules
 ```
 
-The operator's answer:
-
-```text
-confirm recommendation
-```
+S-0536's agent then cancelled T-2307, the day-long run.
 
 Source: TH-0717.

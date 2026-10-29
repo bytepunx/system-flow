@@ -9,7 +9,7 @@ date: 2026-10-28
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [T-2330]
 ---
 
 # D-0411 Until S-0419 generates the strategic agents' definitions from their role files, a change to a strategic agent's prompt is made in both .claude/agents/<name>.md and design/workflows/roles/<name>.md, and in their template copies
