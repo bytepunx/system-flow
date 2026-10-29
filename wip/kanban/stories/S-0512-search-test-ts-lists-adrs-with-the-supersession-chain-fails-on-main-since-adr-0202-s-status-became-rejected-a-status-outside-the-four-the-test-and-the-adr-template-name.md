@@ -6,7 +6,7 @@ title: search.test.ts 'lists ADRs with the supersession chain' fails on main sin
 status: backlog
 owner: alex
 created: 2026-10-26T16:03:03Z
-updated: 2026-10-29T13:56:45Z
+updated: 2026-10-29T14:43:43Z
 transitions: []
 tags: [cli, template, dashboard]
 topics: [cli, template, dashboard]
@@ -42,10 +42,10 @@ cost_of_delay:
   at: 2026-10-28T08:27:18Z
 forecast:
   duration: 1h
-  delivery: 2026-10-29T22:11:00Z
-  basis: "Its own forecast of 1h; 17th in the pull order with an in-progress limit of 5, behind S-0536, S-0537, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0508, S-0509, S-0510 and S-0511."
+  delivery: 2026-10-29T22:58:00Z
+  basis: "Its own forecast of 1h; 18th in the pull order with an in-progress limit of 5, behind S-0418, S-0537, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0508, S-0509, S-0510 and S-0511."
   by: flai
-  at: 2026-10-29T13:56:45Z
+  at: 2026-10-29T14:43:43Z
 ---
 # S-0512 search.test.ts 'lists ADRs with the supersession chain' fails on main since ADR-0202's status became rejected, a status outside the four the test and the ADR template name
 

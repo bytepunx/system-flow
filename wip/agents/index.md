@@ -1,19 +1,21 @@
 ---
 title: Active streams
-updated: 2026-10-29T13:57:56Z
+updated: 2026-10-29T14:44:52Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0536](S-0536.md) | The orchestrator runs for a reason and ends: its trigger names events, flai check rejects continuous, flai serve coalesces the reasons into one run naming them, wait_for_events ends the run when they are done, and ADR-0209 is accepted | in-progress | agent-S-0536 | 2026-10-29T13:55:06Z |
+| [S-0418](S-0418.md) | A role a project defines starts on an event, on a schedule, or for as long as its host action is on, as its role file's trigger says, coalesced and logged with its trigger as the planner's runs are | in-progress | agent-S-0418 | 2026-10-29T14:43:42Z |
+| [S-0536](S-0536.md) | The orchestrator runs for a reason and ends: its trigger names events, flai check rejects continuous, flai serve coalesces the reasons into one run naming them, wait_for_events ends the run when they are done, and ADR-0209 is accepted | review | agent-S-0536 | 2026-10-29T14:24:17Z |
+| [S-0541](S-0541.md) | Show Activity for the Story’s Agent | review | agent-S-0541 | 2026-10-29T14:17:31Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
-| [planner](planner.md) | 113 | 931.9312 USD | 126486 | 2026-10-28T22:09:33Z |
-| [orchestrator](orchestrator.md) | 1322 | 1865.9139 USD | 1488711 | 2026-10-29T13:56:03Z |
+| [planner](planner.md) | 114 | 934.3866 USD | 126633 | 2026-10-29T14:16:12Z |
+| [orchestrator](orchestrator.md) | 1331 | 1888.5994 USD | 1491586 | 2026-10-29T14:43:58Z |
 | [analyzer](analyzer.md) | 1 | 5.0040 USD | 454 | 2026-10-15T22:49:08Z |
-| [curator](curator.md) | 21 | 35.9177 USD | 3224 | 2026-10-29T07:32:29Z |
+| [curator](curator.md) | 22 | 37.3095 USD | 3304 | 2026-10-29T13:59:26Z |

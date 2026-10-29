@@ -3,11 +3,11 @@ id: S-0418
 type: story
 nature: feature
 title: A role a project defines starts on an event, on a schedule, or for as long as its host action is on, as its role file's trigger says, coalesced and logged with its trigger as the planner's runs are
-status: backlog
+status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:11Z
-updated: 2026-10-29T13:57:27Z
+updated: 2026-10-29T14:43:49Z
 transitions:
   - to: ready
     at: 2026-10-28T13:04:42Z
@@ -15,6 +15,15 @@ transitions:
   - to: backlog
     at: 2026-10-28T22:20:39Z
     by: alex
+  - to: ready
+    at: 2026-10-29T14:42:10Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-29T14:42:16Z
+    by: agent-S-0418
+blocked:
+  - from: 2026-10-29T14:43:49Z
+    reason: awaiting the operator on TH-0749
 tags: [cli, template]
 topics: [cli, planning, orchestration]
 touches: [design/system/strategic-agents.md, design/system/dashboard-host-channel.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/role.go, flai/cmd/role_test.go, flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/serve/activity.go, flai/internal/serve/agents.go, flai/internal/serve/role_continuous.go, flai/internal/serve/role_continuous_test.go, flai/internal/serve/role_events.go, flai/internal/serve/role_events_test.go, flai/internal/serve/role.go, flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go, flai/internal/serve/role_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flaiover/src/lib/server/agent.ts, template/CHANGELOG.md, design/system/flai-cli.md]
@@ -25,30 +34,41 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 94
+  priced_by: harness
+  turns:
+    - day: 2026-10-29
+      ceremony: 1
+      work: 16
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 8393
+      cache_read: 1942650
+      cache_write: 148177
+      cost: 1.742
   strategic:
     - kind: orchestrator
-      seconds: 230
+      seconds: 348
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 76
-          output: 1156
-          cache_read: 12961309
-          cache_write: 21887
-          cost: 2.8667
+          input: 147
+          output: 2364
+          cache_read: 38640828
+          cache_write: 38811
+          cost: 8.5331
 cost_of_delay:
   value: 49.26
   by: planner-S-0418
   at: 2026-10-21T12:03:24Z
 forecast:
   duration: 1h1m
-  delivery: 2026-10-30T03:13:00Z
-  basis: "Its own forecast of 1h1m; 26th in the pull order with an in-progress limit of 5, behind S-0536, S-0537, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0508, S-0509, S-0510, S-0511, S-0512, S-0516, S-0517, S-0518, S-0520, S-0523, S-0524, S-0527 and S-0529."
+  delivery: 2026-10-29T15:58:00Z
+  basis: "Its own forecast of 1h1m; 1st in the pull order with an in-progress limit of 5, with nothing ahead of it."
   by: flai
-  at: 2026-10-29T13:57:27Z
+  at: 2026-10-29T14:42:13Z
 finalized:
   by: alex
   at: 2026-10-28T13:04:27Z
