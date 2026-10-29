@@ -369,6 +369,55 @@ func TestWaitForEventsAcrossAFolder(t *testing.T) {
 	}
 }
 
+// ADR-0211: across a folder, each kind flai serve, flai accept, and the
+// threads add is read back through wait_for_events and through the inbox of
+// the project it happened in, with its fields, and in no other project.
+func TestTheNewEventKindsReachWaitForEventsAndInboxAcrossAFolder(t *testing.T) {
+	for _, c := range eventKindCases {
+		t.Run(c.name, func(t *testing.T) {
+			t.Setenv("FLAI_STORY", "")
+			t.Setenv("FLAI_ROLE", c.role)
+			root := t.TempDir()
+			makeProject(t, filepath.Join(root, "alpha"), "alpha")
+			beta := makeProject(t, filepath.Join(root, "beta"), "beta")
+			story := backlogStoryIn(t, beta, "Beta work", t0)
+			clock := t0.Add(time.Minute)
+			f := folderSetupWith(t, root, func(o *Options) { o.Now = func() time.Time { return clock } })
+			if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
+				t.Fatal(failed)
+			}
+			for _, tool := range []string{"wait_for_events", "inbox"} {
+				clock = clock.Add(time.Minute)
+				id := c.write(t, beta, story.ID, clock)
+				out, failed := f.call(t, tool, map[string]any{})
+				if failed != "" {
+					t.Fatal(failed)
+				}
+				events := eventsOf(tool, out)
+				if tool == "inbox" {
+					events = nil
+					for _, p := range out["projects"].([]any) {
+						events = append(events, eventsOf(tool, p.(map[string]any))...)
+					}
+				}
+				e, wrong := ofKind(events, c.kind)
+				switch {
+				case wrong != "":
+				case e["project"] != "beta":
+					wrong = "the event is beta's"
+				case e["id"] != id:
+					wrong = "the event is on " + id
+				default:
+					wrong = c.wrong(e, id, story.ID)
+				}
+				if wrong != "" {
+					t.Errorf("%s: %s: %v", tool, wrong, out)
+				}
+			}
+		})
+	}
+}
+
 // An empty folder is served too: nothing to show, and it says why.
 func TestAnEmptyFolderIsServed(t *testing.T) {
 	f := folderSetup(t, t.TempDir())

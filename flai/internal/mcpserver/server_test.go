@@ -17,6 +17,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/bytepunx/system-flow/flai/internal/forge"
+	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
@@ -889,6 +890,201 @@ func TestALoggedEventWakesWaitForEvents(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("wait_for_events never returned")
+	}
+}
+
+// An eventKindCase writes one of the kinds ADR-0211 adds the way its writer
+// does, and says what the tools must report of it.
+type eventKindCase struct {
+	name string
+	kind string
+	role string // FLAI_ROLE for the server: the orchestrator's sees threads awaiting the operator
+	// write writes the event at at, about story, and answers the ID it is reported on
+	write func(t *testing.T, repo *workitem.Repo, story string, at time.Time) string
+	// wrong says what is wrong with the event reported on id about story, or nothing
+	wrong func(e map[string]any, id, story string) string
+}
+
+// eventKindCases are the kinds flai serve and flai accept log, through
+// inbox.AppendEvent and their constructors, and the thread kind, through the
+// threads package: one awaiting the agent, one awaiting the operator for the
+// orchestrator. Each write is a new event, so that a second look hears it.
+var eventKindCases = []eventKindCase{
+	{
+		name: "planned", kind: inbox.Planned,
+		write: func(t *testing.T, repo *workitem.Repo, story string, at time.Time) string {
+			appendAt(t, repo, inbox.PlannedEvent(story, workitem.Story, "Story", "planner-"+story, []string{"T-0101", "T-0102"}), at)
+			return story
+		},
+		wrong: func(e map[string]any, id, story string) string {
+			if e["type"] != workitem.Story || e["to"] != "T-0101,T-0102" || e["by"] != "planner-"+story || !strings.Contains(e["summary"].(string), "was planned by planner-"+story+": wrote T-0101, T-0102. A story's agent may let it pass") {
+				return "the item planned, the IDs written, and the planner"
+			}
+			return ""
+		},
+	},
+	{
+		name: "ready-empty", kind: inbox.ReadyEmpty,
+		write: func(t *testing.T, repo *workitem.Repo, _ string, at time.Time) string {
+			appendAt(t, repo, inbox.ReadyEmptyEvent(1, 3, 5, "flai serve"), at)
+			return "board"
+		},
+		wrong: func(e map[string]any, _, _ string) string {
+			fields, _ := e["fields"].(map[string]any)
+			if e["to"] != "1" || e["by"] != "flai serve" || fields[inbox.FieldRoom] != "3" || fields[inbox.FieldLimit] != "5" || !strings.Contains(e["summary"].(string), "the ready column holds 1 story, below the in-progress room of 3 (limit 5)") {
+				return "the ready count, the room, and the limit"
+			}
+			return ""
+		},
+	},
+	{
+		name: "release-due", kind: inbox.ReleaseDue,
+		write: func(t *testing.T, repo *workitem.Repo, story string, at time.Time) string {
+			appendAt(t, repo, inbox.ReleaseDueEvent(story, "Story", "alex", "not met: 1 story pending", "met: 2 stories pending"), at)
+			return story
+		},
+		wrong: func(e map[string]any, _, _ string) string {
+			fields, _ := e["fields"].(map[string]any)
+			if e["type"] != workitem.Story || e["by"] != "alex" || fields[inbox.FieldBefore] != "not met: 1 story pending" || fields[inbox.FieldAfter] != "met: 2 stories pending" || !strings.Contains(e["summary"].(string), "changed what flai release --evaluate answers") {
+				return "the story accepted, the acceptor, and both answers"
+			}
+			return ""
+		},
+	},
+	{
+		name: "thread awaiting the agent", kind: inbox.Thread,
+		write: func(t *testing.T, repo *workitem.Repo, story string, at time.Time) string {
+			th, err := threads.New(repo, threads.NewOptions{Title: "Which way?", On: story, Author: "claude", Text: "A or B?", Now: at})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := threads.Reply(repo, th.ID, "alex", "B.", at); err != nil {
+				t.Fatal(err)
+			}
+			return th.ID
+		},
+		wrong: func(e map[string]any, _, story string) string {
+			fields, _ := e["fields"].(map[string]any)
+			if e["to"] != "you" || e["by"] != "alex" || e["cause"] != story || fields[inbox.FieldAwaits] != "claude" || fields[inbox.FieldOn] != story || !strings.Contains(e["summary"].(string), "awaits you: alex wrote on "+story) {
+				return "the thread, its story, the reply's author, and the agent it awaits"
+			}
+			return ""
+		},
+	},
+	{
+		name: "thread awaiting the operator", kind: inbox.Thread, role: guard.RoleOrchestrate,
+		write: func(t *testing.T, repo *workitem.Repo, story string, at time.Time) string {
+			th, err := threads.New(repo, threads.NewOptions{Title: "Plan this?", On: story, Author: "planner-" + story, Text: "Split it?", Now: at})
+			if err != nil {
+				t.Fatal(err)
+			}
+			return th.ID
+		},
+		wrong: func(e map[string]any, _, story string) string {
+			fields, _ := e["fields"].(map[string]any)
+			if e["to"] != "operator" || e["by"] != "planner-"+story || e["cause"] != story || fields[inbox.FieldAwaits] != "operator" || fields[inbox.FieldOn] != story || !strings.Contains(e["summary"].(string), "awaits the operator") {
+				return "the thread, its story, its author, and the operator it awaits"
+			}
+			return ""
+		},
+	},
+}
+
+// appendAt appends e to the event log as its writer does, stamped at, the
+// server's now, where a writer leaves the stamp to AppendEvent.
+func appendAt(t *testing.T, repo *workitem.Repo, e inbox.LoggedEvent, at time.Time) {
+	t.Helper()
+	e.At = at.Format(workitem.TimeFormat)
+	if err := inbox.AppendEvent(repo, e); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// ofKind is the one event of kind among events, or what is wrong.
+func ofKind(events []any, kind string) (map[string]any, string) {
+	var got []map[string]any
+	for _, e := range events {
+		if m := e.(map[string]any); m["kind"] == kind {
+			got = append(got, m)
+		}
+	}
+	if len(got) != 1 {
+		return nil, fmt.Sprintf("one event of kind %s, got %d among %v", kind, len(got), events)
+	}
+	return got[0], ""
+}
+
+// eventsOf are the events a tool answered: wait_for_events's events, or the
+// inbox's changes.
+func eventsOf(tool string, out map[string]any) []any {
+	if tool == "inbox" {
+		events, _ := out["changes"].([]any)
+		return events
+	}
+	events, _ := out["events"].([]any)
+	return events
+}
+
+// ADR-0211: each kind flai serve, flai accept, and the threads add is read
+// back through wait_for_events and through inbox, with its fields.
+func TestTheNewEventKindsReachWaitForEventsAndInbox(t *testing.T) {
+	for _, c := range eventKindCases {
+		t.Run(c.name, func(t *testing.T) {
+			t.Setenv("FLAI_STORY", "")
+			t.Setenv("FLAI_ROLE", c.role)
+			f := setup(t)
+			if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
+				t.Fatal(failed)
+			}
+			for _, tool := range []string{"wait_for_events", "inbox"} {
+				*f.clock = f.clock.Add(time.Minute)
+				id := c.write(t, f.repo, f.story.ID, *f.clock)
+				out, failed := f.call(t, tool, map[string]any{})
+				if failed != "" {
+					t.Fatal(failed)
+				}
+				e, wrong := ofKind(eventsOf(tool, out), c.kind)
+				if wrong == "" && e["id"] != id {
+					wrong = "the event is on " + id
+				}
+				if wrong == "" {
+					wrong = c.wrong(e, id, f.story.ID)
+				}
+				if wrong != "" {
+					t.Errorf("%s: %s: %v", tool, wrong, out)
+				}
+			}
+		})
+	}
+}
+
+// ADR-0211: the instructions and the inbox's and wait_for_events's
+// descriptions name each kind it adds and its fields, in both modes.
+func TestTheNewEventKindsAreDescribed(t *testing.T) {
+	root := t.TempDir()
+	makeProject(t, filepath.Join(root, "alpha"), "alpha")
+	wants := []string{"kind planned", "kind ready-empty", "fields room", "kind release-due", "fields before and after", "a story's agent may let them pass", "kind thread means a thread now awaits you, or, in the orchestrator's role, the operator", "awaits (your agent name, or operator) and on", "the conditions to-review and to-backlog qualify moved, draft-changed edited, and awaits-orchestrator thread"}
+	for name, cs := range map[string]*mcp.ClientSession{"project": setup(t).cs, "folder": folderSetup(t, root).cs} {
+		texts := map[string]string{"instructions": cs.InitializeResult().Instructions}
+		res, err := cs.ListTools(context.Background(), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, tool := range res.Tools {
+			if tool.Name == "inbox" || tool.Name == "wait_for_events" {
+				texts[tool.Name] = tool.Description
+			}
+		}
+		if len(texts) != 3 {
+			t.Fatalf("the %s server lacks inbox or wait_for_events: %v", name, texts)
+		}
+		for what, text := range texts {
+			for _, want := range wants {
+				if !strings.Contains(text, want) {
+					t.Errorf("the %s %s do not say %q: %s", name, what, want, text)
+				}
+			}
+		}
 	}
 }
 
