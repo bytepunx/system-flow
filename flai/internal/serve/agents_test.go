@@ -2410,7 +2410,8 @@ func TestThePlannersProviderIsResolvedAsAStorysAgentsIs(t *testing.T) {
 	start := func(id string) bool {
 		lab.l.mu.Lock()
 		defer lab.l.mu.Unlock()
-		return lab.l.plan(context.Background(), lab.cfg, id, agent, TriggerAsked)
+		started, _ := lab.l.plan(context.Background(), lab.cfg, id, agent, TriggerAsked)
+		return started
 	}
 	id := lab.epic.ID
 	if start(id) {
@@ -3622,7 +3623,8 @@ func TestAStorysAgentOnTheUsageLimitSetsTheBudgetStateAndIsNotRestarted(t *testi
 	at := limitReset.Add(-time.Hour)
 	lab.budgetClock(&at)
 	lab.cfg.AutoRestarts = 2
-	id := lab.ready("Limited")
+	lab.claudeStub()
+	id := lab.readyWith("Limited", &manifest.Agent{Harness: harness.ClaudeCode}) // on the provider the state holds
 	lab.move(id, workitem.InProgress)
 	one := 1
 	run := AgentRun{Story: id, Agent: "builder-" + id, Harness: harness.ClaudeCode, Session: "limited", Started: at.Format(time.RFC3339), AutoRestarts: 1, Log: limitResult(t, true)}
@@ -3665,4 +3667,280 @@ func TestAStorysAgentOnTheUsageLimitSetsTheBudgetStateAndIsNotRestarted(t *testi
 	if got := lab.budgetChanges(); !slices.Equal(got, []string{"set the budget state", "started a probe of the budget state", "cleared the budget state"}) {
 		t.Errorf("budget changes journalled: %q", got)
 	}
+}
+
+// claudeStub has the lab's stories that name claude-code run the stub as
+// their harness's program, beside the command the others run.
+func (lab *agentLab) claudeStub() {
+	lab.cfg.Harnesses = map[string]harness.Host{harness.ClaudeCode: {Program: lab.stub}}
+}
+
+// holdBudget sets the budget state of claude-code, as a run that ended on
+// its usage limit does, held until until, with no probe.
+func (lab *agentLab) holdBudget(until time.Time) {
+	lab.t.Helper()
+	b := Budget{Provider: harness.ClaudeCode, Limit: "usage_limit_reached", Status: 429, Since: until.Add(-time.Hour).UTC(), Until: until.UTC(), Backoff: budgetBackoffFirst.String()}
+	if err := lab.l.dir.write(lab.l.dir.budgetFile(), map[string]Budget{harness.ClaudeCode: b}); err != nil {
+		lab.t.Fatal(err)
+	}
+}
+
+// clearBudget clears every budget state, as the probe's clean end does.
+func (lab *agentLab) clearBudget() {
+	lab.t.Helper()
+	if err := lab.l.dir.write(lab.l.dir.budgetFile(), map[string]Budget{}); err != nil {
+		lab.t.Fatal(err)
+	}
+}
+
+// failedStarts are the journal's entries for a start that could not be made.
+func (lab *agentLab) failedStarts() []hostapi.Entry {
+	var out []hostapi.Entry
+	for _, e := range lab.entries() {
+		if e.Outcome == "failed" {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+// S-0534, ADR-0209 §5: while the budget state holds claude-code, no ready
+// story's agent on it is started, nor one that ended in progress, failed or
+// on the limit: their runs stay as they ended, nothing is recorded or counted
+// against agent.auto_restarts, the ready one waits saying why, and two looks
+// log the held ones once; a story on another harness starts as before. Once
+// the state clears, each is started at the next look: the one that ended on
+// the limit spending no restart, its count as it was, and saying so.
+func TestAHeldProviderStartsNoStorysAgentUntilItClears(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.claudeStub()
+	lab.cfg.AutoRestarts = 2
+	lab.limit(10)
+	lab.hold()
+	claude := &manifest.Agent{Harness: harness.ClaudeCode}
+	lab.holdBudget(time.Now().Add(time.Hour))
+	ready := lab.readyWith("Ready on claude", claude)
+	other := lab.ready("Ready on the command")
+	early := lab.putEnded("Ended early", AgentRun{Outcome: OutcomeFailed, AutoRestarts: 1})
+	lab.setAgent(early, claude)
+	limited := lab.putEnded("Ended on the limit", AgentRun{Outcome: OutcomeFailed, AutoRestarts: 1, UsageLimited: true, Why: "ended on the usage limit (usage_limit_reached, 429)"})
+	lab.setAgent(limited, claude)
+
+	lab.l.look(ctx, false)
+	lab.l.look(ctx, false)
+	waitFor(t, "the story on the command is started", func() bool { return lab.run(other).live() })
+	if r := lab.run(ready); r != nil {
+		t.Errorf("the ready story on the held provider has a run: %+v", r)
+	}
+	for _, id := range []string{early, limited} {
+		if r := lab.run(id); r.Session != "earlier" || r.AutoRestarts != 1 || r.LimitThread != "" || r.Error != "" {
+			t.Errorf("%s's run = %+v; want it left as it ended, its count 1", id, r)
+		}
+		if ths := lab.limitThreads(id); len(ths) != 0 {
+			t.Errorf("%d threads at the restart limit opened on %s", len(ths), id)
+		}
+	}
+	if w := lab.state().Waiting; !strings.Contains(w, "held: claude-code usage limit (usage_limit_reached) until ") || !strings.Contains(w, "; it holds "+ready) {
+		t.Errorf("waiting = %q; want the hold and the ready story it holds", w)
+	}
+	if f := lab.failedStarts(); len(f) != 0 || lab.startedCount() != 1 {
+		t.Errorf("journal: %+v; want the command's story's start alone", lab.entries())
+	}
+	if n := lab.logged("agents not started: the budget state holds them"); n != 1 {
+		t.Errorf("the held stories outside ready were logged %d times over two looks, want 1:\n%s", n, lab.logText())
+	}
+	if n := lab.said(ready); n != 1 {
+		t.Errorf("the held ready story was logged %d times over two looks, want 1", n)
+	}
+
+	lab.clearBudget()
+	lab.l.look(ctx, false)
+	waitFor(t, "each held story's agent is started", func() bool {
+		return lab.run(ready).live() && lab.run(early).live() && lab.run(limited).live()
+	})
+	if r := lab.run(early); r.AutoRestarts != 2 || r.Retry {
+		t.Errorf("the early end's restart = %+v; want automatic restart 2", r)
+	}
+	if r := lab.run(limited); r.AutoRestarts != 1 || !r.Retry || r.Session == "earlier" {
+		t.Errorf("the limited story's start = %+v; want a new session, its count 1, a retry", r)
+	}
+	var detail string
+	for _, e := range lab.entries() {
+		if strings.Contains(e.Detail, "again for "+limited) {
+			detail = e.Detail
+		}
+	}
+	if !strings.Contains(detail, "again for "+limited+" as builder-"+limited+" on its own, its last agent having ended on the usage limit, which no longer holds claude-code; no automatic restart spent (pid ") {
+		t.Errorf("the limited story's start was journalled as %q", detail)
+	}
+	events := lab.storyEvents(limited)
+	if len(events) == 0 || events[len(events)-1].To != inbox.AgentStarted ||
+		events[len(events)-1].Fields[inbox.FieldWhy] != "flai serve started it again on its own once the usage limit no longer held it, spending no automatic restart: its last agent ended on the usage limit (usage_limit_reached, 429)" {
+		t.Errorf("the limited story's agent events: %+v", events)
+	}
+	if f := lab.failedStarts(); len(f) != 0 {
+		t.Errorf("failed starts: %+v", f)
+	}
+	for _, id := range []string{ready, other, early, limited} {
+		lab.release(id)
+	}
+}
+
+// S-0534: a story in progress whose agent's question was answered, and one
+// flai sent back from review, wait while the budget state holds their
+// provider, with nothing recorded, and are started for the answer and the
+// send back once it clears.
+func TestAnAnsweredOrSentBackStoryWaitsForAHeldProvider(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.claudeStub()
+	lab.hold()
+	claude := &manifest.Agent{Harness: harness.ClaudeCode}
+	lab.holdBudget(time.Now().Add(time.Hour))
+	asked := lab.putEnded("Asked", AgentRun{Outcome: OutcomeAsked})
+	lab.setAgent(asked, claude)
+	th, err := threads.New(lab.repo, threads.NewOptions{Title: "Which port?", On: asked, Author: "builder-" + asked, Text: "Eight or nine?", Now: time.Now()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := threads.Reply(lab.repo, th.ID, "alex", "Nine.", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	lab.l.dir.updateAgent(lab.root, func(s *AgentState) {
+		r := *s.Stories[asked]
+		r.Thread = th.ID
+		s.put(&r)
+	})
+	back := lab.putEnded("Sent back", AgentRun{Outcome: OutcomeWorked})
+	lab.setAgent(back, claude)
+	lab.endedAgo(back, 3*time.Minute)
+	sent := lab.sendBack(back, "abc1234def5678", time.Now().Add(-2*time.Minute))
+
+	lab.l.look(ctx, false)
+	lab.l.look(ctx, false)
+	if r := lab.run(asked); r.Session != "earlier" || r.Outcome != OutcomeAsked || r.Answered != "" {
+		t.Errorf("the answered story's run = %+v; want it left asking", r)
+	}
+	if r := lab.run(back); r.Session != "earlier" || r.SentBack != "" {
+		t.Errorf("the sent back story's run = %+v; want it left as it ended", r)
+	}
+	if len(lab.entries()) != 0 {
+		t.Errorf("journal: %+v; want nothing", lab.entries())
+	}
+	if n := lab.logged("agents not started: the budget state holds them"); n != 1 || !strings.Contains(lab.logText(), "stories=\""+asked+", "+back+"\"") {
+		t.Errorf("the held stories were logged %d times, want once with both:\n%s", n, lab.logText())
+	}
+
+	lab.clearBudget()
+	lab.l.look(ctx, false)
+	waitFor(t, "both are started", func() bool { return lab.run(asked).live() && lab.run(back).live() })
+	if r := lab.run(asked); r.Answered != th.ID || r.Session != "earlier" {
+		t.Errorf("the answered story's start = %+v; want in its session, for %s", r, th.ID)
+	}
+	if r := lab.run(back); r.SentBack != sent.ID || r.Session != "earlier" {
+		t.Errorf("the sent back story's start = %+v; want in its session, for %s", r, sent.ID)
+	}
+	lab.release(asked)
+	lab.release(back)
+}
+
+// S-0534, ADR-0209 §5: once the hold has passed, the look starts exactly one
+// story's agent on the provider, as the probe, its process recorded on it,
+// and the others wait while it runs, saying so; its clean end clears the
+// state, and the next look starts the rest.
+func TestOnceTheHoldPassesOneStoryProbesAndTheRestWaitForIt(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.claudeStub()
+	lab.limit(10)
+	lab.hold()
+	claude := &manifest.Agent{Harness: harness.ClaudeCode}
+	lab.holdBudget(time.Now().Add(-time.Minute))
+	first := lab.readyWith("First", claude)
+	second := lab.readyWith("Second", claude)
+
+	lab.l.look(ctx, false)
+	lab.l.look(ctx, false)
+	waitFor(t, "the first is started", func() bool { return lab.run(first).live() })
+	if r := lab.run(second); r != nil {
+		t.Fatalf("a second story was started beside the probe: %+v", r)
+	}
+	b, held := lab.budget()
+	if r := lab.run(first); !held || b.Probe == nil || b.Probe.Work != first || b.Probe.PID != r.PID || b.Probe.Started != r.Started {
+		t.Errorf("budget state %+v, held %v; want the first's run as its probe, its process recorded", b, held)
+	}
+	if w := lab.state().Waiting; !strings.Contains(w, "held: claude-code usage limit (usage_limit_reached), a probe running since ") || !strings.Contains(w, "; it holds "+second) {
+		t.Errorf("waiting = %q; want the probe and the story it holds", w)
+	}
+	if got := lab.budgetChanges(); !slices.Equal(got, []string{"started a probe of the budget state"}) {
+		t.Errorf("budget changes journalled: %q", got)
+	}
+	probed := false
+	for _, e := range lab.entries() {
+		probed = probed || strings.HasPrefix(e.Detail, "started ") && strings.Contains(e.Detail, "for "+first+" as builder-"+first) && strings.HasSuffix(e.Detail, "; the probe of the budget state of claude-code")
+	}
+	if !probed {
+		t.Errorf("the probe's start does not say it probes: %+v", lab.entries())
+	}
+	starts := 0
+	for _, e := range lab.entries() {
+		if e.Method == "serve.agent" && strings.HasPrefix(e.Detail, "started ") {
+			starts++
+		}
+	}
+	if starts != 1 || len(lab.failedStarts()) != 0 {
+		t.Errorf("journal: %+v; want the probe's start alone", lab.entries())
+	}
+
+	lab.release(first)
+	waitFor(t, "the probe's clean end clears the state", func() bool { b, held := lab.budget(); return !held && b.Provider == "" })
+	lab.l.look(ctx, false)
+	waitFor(t, "the second is started", func() bool { return lab.run(second).live() })
+	lab.release(second)
+}
+
+// S-0534: every project one flai serve serves reads the one budget state: a
+// story's agent in one project that ends on the usage limit holds both
+// projects' stories on its provider at their next look, and its clear starts
+// both.
+func TestTwoProjectsUnderOneServeFolderHoldOnOneState(t *testing.T) {
+	one, two := newAgentLab(t), newAgentLab(t)
+	ctx := context.Background()
+	two.l.dir = one.l.dir
+	claude := &manifest.Agent{Harness: harness.ClaudeCode}
+	for _, lab := range []*agentLab{one, two} {
+		lab.claudeStub()
+		lab.limit(10)
+		lab.hold()
+	}
+	limited := one.inProgress("Limited")
+	one.setAgent(limited, claude)
+	exit := 1
+	run := AgentRun{Story: limited, Agent: "builder-" + limited, Harness: harness.ClaudeCode, Session: "limited", Started: time.Now().UTC().Format(time.RFC3339), Log: limitResult(t, false)}
+	one.l.endRun(&run, &exit)
+	if _, held := one.budget(); !held {
+		t.Fatal("the run on the limit set no budget state")
+	}
+	inOne, inTwo := one.readyWith("Ready in one", claude), two.readyWith("Ready in two", claude)
+	one.l.look(ctx, false)
+	two.l.look(ctx, false)
+	if one.run(inOne) != nil || two.run(inTwo) != nil || one.run(limited).Session != "limited" {
+		t.Fatalf("started on the held provider: one %+v, two %+v, the limited story %+v", one.run(inOne), two.run(inTwo), one.run(limited))
+	}
+	for _, lab := range []*agentLab{one, two} {
+		if w := lab.state().Waiting; !strings.Contains(w, "held: claude-code usage limit (usage_limit_reached) until ") {
+			t.Errorf("waiting = %q; want the hold", w)
+		}
+	}
+
+	one.clearBudget()
+	one.l.look(ctx, false)
+	two.l.look(ctx, false)
+	waitFor(t, "both projects' stories are started", func() bool {
+		return one.run(inOne).live() && two.run(inTwo).live() && one.run(limited).live()
+	})
+	one.release(inOne)
+	one.release(limited)
+	two.release(inTwo)
 }

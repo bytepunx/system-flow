@@ -9,6 +9,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/filelock"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -43,7 +44,9 @@ func StartNow(ctx context.Context, o Options, e Entry, story, restart string) (*
 	return startNow(ctx, o, e, readyStory{ID: story, Restart: restart})
 }
 
-// startNow is StartNow for what want says, its agent read from the story.
+// startNow is StartNow for what want says, its agent read from the story. A
+// start the host's budget state holds is refused, with nothing recorded
+// (S-0534).
 func startNow(ctx context.Context, o Options, e Entry, want readyStory) (*AgentRun, error) {
 	if !StoryID.MatchString(want.ID) {
 		return nil, refused("%q is not a story's ID", want.ID)
@@ -59,7 +62,11 @@ func startNow(ctx context.Context, o Options, e Entry, want readyStory) (*AgentR
 	want.ID, want.Agent = it.ID, it.Agent
 	l := newLauncher(o, e)
 	l.handOver = true
-	l.start(ctx, o.Agent(e.Root), want)
+	if !l.start(ctx, o.Agent(e.Root), want) {
+		if b, held := l.holding[it.ID]; held {
+			return nil, heldRefusal(it.ID, b, l.now())
+		}
+	}
 	run := o.Dir.AgentStates()[e.Root].Stories[it.ID]
 	if run == nil {
 		return nil, fmt.Errorf("the run for %s was not recorded in %s", it.ID, o.Dir.agents())
@@ -68,6 +75,26 @@ func startNow(ctx context.Context, o Options, e Entry, want readyStory) (*AgentR
 		return run, errors.New(run.Why)
 	}
 	return run, nil
+}
+
+// heldStart refuses the operator's start of story's agent, agent its
+// story's, that the host's budget state holds now (S-0534), naming the
+// provider and until when, before anything is recorded or queued; nil when
+// nothing holds it. The start's own gate (launcher.start) refuses one the
+// state comes to hold after this, as a probe claimed meanwhile does.
+func heldStart(o Options, e Entry, cfg AgentConfig, story string, agent *manifest.Agent) error {
+	l := newLauncher(o, e)
+	b, held := l.budgetHolds(budgetKeyFor(cfg, agent))
+	if !held {
+		return nil
+	}
+	return heldRefusal(story, b, l.now())
+}
+
+// heldRefusal is the refusal of a start of story's agent the budget state b
+// holds at now.
+func heldRefusal(story string, b Budget, now time.Time) error {
+	return refused("%s's agent is not started: %s", story, budgetHeldWhy(b, now))
 }
 
 // Restart starts a new agent, in a new session, for a story in ready or in
@@ -80,7 +107,8 @@ func startNow(ctx context.Context, o Options, e Entry, want readyStory) (*AgentR
 // room, as it starts a story that enters ready (S-0118). It is refused while
 // the agent action is off for the project, when the story is in another
 // state, while its agent runs or waits for an answer, when one is already
-// queued, and when nothing can start it.
+// queued, when nothing can start it, and while the host's budget state holds
+// its provider (S-0534), with nothing queued.
 func Restart(ctx context.Context, o Options, e Entry, story string) (*AgentRun, error) {
 	cfg := o.Agent(e.Root)
 	if !cfg.Enabled {
@@ -116,6 +144,9 @@ func Restart(ctx context.Context, o Options, e Entry, story string) (*AgentRun, 
 	}
 	if (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
 		return nil, refused("%s names no harness, and no command is set on the host (flai serve agent set -- <program> [args...])", it.ID)
+	}
+	if err := heldStart(o, e, cfg, it.ID, it.Agent); err != nil {
+		return nil, err
 	}
 	if it.Status == workitem.Ready {
 		// held, like no room, queues it: flai serve starts it once it is clear (S-0128)

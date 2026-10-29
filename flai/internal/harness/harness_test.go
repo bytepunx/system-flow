@@ -293,6 +293,22 @@ func TestARestartedAgentIsToldHowTheLastOneEnded(t *testing.T) {
 	}
 }
 
+// S-0534: an agent flai serve started again once the usage limit no longer
+// held its provider is told so, and not that the operator restarted it.
+func TestAnAgentStartedAgainAfterTheUsageLimitIsToldSo(t *testing.T) {
+	r := req(nil)
+	r.Restart, r.AfterLimit = "ended on the harness's usage limit (usage_limit_reached, 429); it resets at 2026-10-28T08:00:00Z", true
+	p := Prompt(r)
+	for _, want := range []string{"because its last agent ended on the harness's usage limit", "started it again on its own once the host's usage limit no longer held its provider, spending no automatic restart", "rather than starting over"} {
+		if !strings.Contains(p, want) {
+			t.Errorf("the prompt after the usage limit lacks %q:\n%s", want, p)
+		}
+	}
+	if strings.Contains(p, "the operator restarted it") {
+		t.Errorf("the prompt after the usage limit says the operator restarted it:\n%s", p)
+	}
+}
+
 // S-0177, ADR-0064: an agent started for a story begun on another host is
 // told where, when, and by whom, to reconcile rather than start over, and
 // which threads to read.

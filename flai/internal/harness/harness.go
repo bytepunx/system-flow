@@ -94,6 +94,11 @@ type Request struct {
 	// last one ended with its story in progress (S-0294, ADR-0108); empty
 	// otherwise.
 	AutoRestart string
+	// AfterLimit is set when flai serve started the agent again on its own
+	// because its last one ended on the harness's usage limit and the host's
+	// budget state no longer holds its provider, spending no automatic
+	// restart (S-0534, ADR-0209 §5); Restart says how the last one ended.
+	AfterLimit bool
 	// Commit is the story's worktree, when the operator has had an agent
 	// started to commit what it holds and nothing else (S-0140); empty
 	// otherwise.
@@ -467,6 +472,8 @@ If a change cannot be committed without the designer deciding something, ask wit
 		why = fmt.Sprintf("because the operator started it here, and this host has had no agent for it: it was begun %[1]s. Its branch and worktree may not be on this host, and what was not committed and pushed there is not here. Reconcile before you do anything else: run flai stream open %[2]s, which keeps the narrative and checks out story/%[2]s from this clone, else from the remote, else new from the main branch, and says which; read the narrative's Current state, Next steps, and log, and the story's tasks; compare them with what is committed on the branch; and go on from what is committed rather than starting over, doing again what the narrative says was done and is not there. Log what you found with flai stream log %[2]s.%[3]s", r.Begun.Said(), r.Story, answeredSince(r.Begun))
 	case r.Restart != "" && r.AutoRestart != "":
 		why = fmt.Sprintf("because its last agent %s, and flai serve started it again on its own, automatic restart %s; at the limit it asks the operator instead. The story is in progress, with a narrative, a branch, and a worktree: read the narrative's Current state and Next steps, reconcile them with git status in the worktree, and go on from there rather than starting over.", r.Restart, r.AutoRestart)
+	case r.Restart != "" && r.AfterLimit:
+		why = fmt.Sprintf("because its last agent %s, and flai serve started it again on its own once the host's usage limit no longer held its provider, spending no automatic restart. The story may already be in progress, with a narrative, a branch, and a worktree: if so, read the narrative's Current state and Next steps, reconcile them with git status in the worktree, and go on from there rather than starting over.", r.Restart)
 	case r.Restart != "":
 		why = fmt.Sprintf("because the operator restarted it: its last agent %s. The story may already be in progress, with a narrative, a branch, and a worktree: if so, read the narrative's Current state and Next steps, reconcile them with git status in the worktree, and go on from there rather than starting over.", r.Restart)
 	case r.Started && len(r.Past) > 0:

@@ -285,7 +285,8 @@ type AgentRun struct {
 	Held bool `json:"held,omitempty"`
 	// AutoRestarts is how many automatic restarts in a row led to this run
 	// (S-0294, ADR-0108): flai serve's restart on its own carries its last
-	// run's count and one more, and any other start begins again at 0.
+	// run's count and one more, its start after the usage limit its last
+	// run's count as it was (S-0534), and any other start begins again at 0.
 	AutoRestarts int `json:"auto_restarts,omitempty"`
 	// LimitThread is the thread flai serve opened to the operator when this
 	// run ended at the limit of automatic restarts, so that it opens one
@@ -564,6 +565,13 @@ type launcher struct {
 	// last look, by held and holding story, with the error: warned of once
 	// until the error changes, not at every look (ADR-0134).
 	unasked map[string]string
+	// holding are the stories whose agent's start the host's budget state
+	// held since the look began, by ID, with the state that held it
+	// (S-0534); heldSaid is what the last look logged of those it held
+	// outside the ready column, so that a look every minute while a limit
+	// holds does not repeat it.
+	holding  map[string]Budget
+	heldSaid string
 }
 
 // told records a run in the host's state and tells changed.
@@ -646,9 +654,15 @@ type readyStory struct {
 	Begun *harness.Begun
 	// AutoRestarts is how many automatic restarts in a row this start makes,
 	// counting it, when flai serve restarts the story's agent on its own
-	// (S-0294, ADR-0108); 0 for any other start.
+	// (S-0294, ADR-0108), or, with AfterLimit, how many its last run had; 0
+	// for any other start.
 	AutoRestarts int
-	item         *workitem.Item
+	// AfterLimit is set when flai serve starts the agent again because its
+	// last run ended on the harness's usage limit, once its provider's
+	// budget state no longer holds it (S-0534): the start spends no
+	// automatic restart, and the run keeps its last run's count.
+	AfterLimit bool
+	item       *workitem.Item
 }
 
 // readyStories are the ready stories in pull order, the claims of the open
@@ -996,6 +1010,8 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 	l.settleOrphans()
 	l.measureDone(l.dir.AgentStates()[l.entry.Root])
 	l.resolveAcceptSentBack(repo)
+	l.holding = nil
+	defer l.sayHeld()
 	cfg := l.config(l.entry.Root)
 	if cfg.Enabled {
 		l.resume(ctx, cfg, repo)
@@ -1020,6 +1036,7 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 	}
 	commandSet := cfg.host(harness.Command).Program != ""
 	var todo, nothing, noRoom, reviewFull []readyStory
+	byLimit := map[string][]readyStory{} // held by the budget state, by why
 	reserved := 0
 	for _, s := range stories {
 		run := st.Stories[s.ID]
@@ -1038,6 +1055,12 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 			// session, but, unlike resume, only when nothing holds it and
 			// the limit has room (S-0182)
 			s.Asked, s.Answer = run, answer
+			todo = append(todo, s)
+		case afterLimit(run) && (s.Agent != nil && s.Agent.Harness != "" || commandSet):
+			// its last agent ended on the usage limit before it pulled the
+			// story: started again once the limit no longer holds its
+			// provider, which the start's gate says, spending no restart
+			s.AfterLimit, s.AutoRestarts, s.Restart = true, run.AutoRestarts, restartWhy(run)
 			todo = append(todo, s)
 		case run != nil && run.Queued == "" && !startedBefore(run, s.Entered) && !agentChanged(run, s.Agent):
 			sk.add(tried(s.ID, run), s)
@@ -1066,7 +1089,17 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 		case l.start(ctx, cfg, s):
 			reserved++
 			holds.Open(s.item, agentStarted)
+		default:
+			if b, ok := l.holding[s.ID]; ok {
+				// said with the ready stories that wait, not apart (sayHeld)
+				delete(l.holding, s.ID)
+				why := budgetHeldWhy(b, l.now())
+				byLimit[why] = append(byLimit[why], s)
+			}
 		}
+	}
+	for _, why := range slices.Sorted(maps.Keys(byLimit)) {
+		sk.add(why+"; it holds "+strings.Join(ids(byLimit[why]), ", "), byLimit[why]...)
 	}
 	if len(noRoom) > 0 {
 		sk.add("the in-progress limit leaves no room for "+strings.Join(ids(noRoom), ", "), noRoom...)
@@ -1310,8 +1343,9 @@ func (l *launcher) startSentBack(ctx context.Context, cfg AgentConfig, repo *wor
 		if run.Session != "" {
 			s.Resume, s.SentBack.Resumed = run, true
 		}
-		l.log("agent started for a send back", "story", it.ID, "thread", b.Thread, "resumed", s.SentBack.Resumed)
-		l.start(ctx, cfg, s)
+		if l.start(ctx, cfg, s) {
+			l.log("agent started for a send back", "story", it.ID, "thread", b.Thread, "resumed", s.SentBack.Resumed)
+		}
 	}
 	l.startQueueSentBack(ctx, cfg, repo, st)
 	l.startAcceptSentBack(ctx, cfg, repo, st)
@@ -1350,8 +1384,9 @@ func (l *launcher) startQueueSentBack(ctx context.Context, cfg AgentConfig, repo
 		if run.Session != "" {
 			s.Resume, s.SentBack.Resumed = run, true
 		}
-		l.log("agent started for a send back", "story", it.ID, "thread", thread, "resumed", s.SentBack.Resumed)
-		l.start(ctx, cfg, s)
+		if l.start(ctx, cfg, s) {
+			l.log("agent started for a send back", "story", it.ID, "thread", thread, "resumed", s.SentBack.Resumed)
+		}
 	}
 }
 
@@ -1399,8 +1434,9 @@ func (l *launcher) startAcceptSentBack(ctx context.Context, cfg AgentConfig, rep
 		if run.Session != "" {
 			s.Resume, s.SentBack.Resumed = run, true
 		}
-		l.log("agent started for a send back", "story", it.ID, "thread", th.ID, "resumed", s.SentBack.Resumed)
-		l.start(ctx, cfg, s)
+		if l.start(ctx, cfg, s) {
+			l.log("agent started for a send back", "story", it.ID, "thread", th.ID, "resumed", s.SentBack.Resumed)
+		}
 	}
 }
 
@@ -1475,14 +1511,19 @@ func sentBackFor(repo *workitem.Repo, story string) (forge.SendBack, string, boo
 // how the last one ended and that flai serve started it on its own. It does
 // so up to cfg.AutoRestarts times in a row; a run that ends at the limit gets
 // one thread to the operator instead (S-0294, ADR-0108). A story that nothing
-// can start, which flai serve agent restart refuses, is left alone, and so
-// is one whose run ended on the harness's usage limit (endedEarly): it
-// spends no restart, and its count stays as it was (S-0534).
+// can start, which flai serve agent restart refuses, is left alone. One
+// whose run ended on the harness's usage limit (afterLimit) is no such
+// failure: it is started again once its provider's budget state no longer
+// holds it, which the start's gate says, as the probe when the hold has just
+// passed, spending no restart, its count as it was (S-0534). Every start
+// here goes through that gate, so a story on a held provider waits where it
+// is, and is counted nothing.
 func (l *launcher) restartEnded(ctx context.Context, cfg AgentConfig, repo *workitem.Repo) {
 	st := l.dir.AgentStates()[l.entry.Root]
 	for _, id := range slices.Sorted(maps.Keys(st.Stories)) {
 		run := st.Stories[id]
-		if !endedEarly(run) {
+		again := afterLimit(run)
+		if !again && !endedEarly(run) {
 			continue
 		}
 		it, err := repo.Get(id)
@@ -1492,14 +1533,27 @@ func (l *launcher) restartEnded(ctx context.Context, cfg AgentConfig, repo *work
 		if (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
 			continue
 		}
+		if again {
+			l.start(ctx, cfg, readyStory{ID: id, Agent: it.Agent, AutoRestarts: run.AutoRestarts, AfterLimit: true, Restart: restartWhy(run)})
+			continue
+		}
 		if run.AutoRestarts >= cfg.AutoRestarts {
 			l.stopRestarting(repo, cfg, run)
 			continue
 		}
 		n := run.AutoRestarts + 1
-		l.log("agent restarted on its own", "story", id, "restart", n, "limit", cfg.AutoRestarts)
-		l.start(ctx, cfg, readyStory{ID: id, Agent: it.Agent, AutoRestarts: n, Restart: restartWhy(run)})
+		if l.start(ctx, cfg, readyStory{ID: id, Agent: it.Agent, AutoRestarts: n, Restart: restartWhy(run)}) {
+			l.log("agent restarted on its own", "story", id, "restart", n, "limit", cfg.AutoRestarts)
+		}
 	}
+}
+
+// afterLimit says whether run is one whose story's agent flai serve starts
+// again once its provider's budget state no longer holds it (S-0534): it
+// started, and ended failed on the harness's usage limit, not asking,
+// stopped by the operator, or queued for their retry.
+func afterLimit(run *AgentRun) bool {
+	return run != nil && run.Started != "" && !run.live() && run.Error == "" && run.Outcome == OutcomeFailed && run.Stopped == "" && run.Queued == "" && run.UsageLimited
 }
 
 // autoRestart is which automatic restart n is of limit, as the agent's
@@ -1675,7 +1729,12 @@ var runMarks = []string{"FLAI_STORY", "FLAI_ROLE", "FLAI_ITEM", "FLAI_FOCUS", "F
 // in story.Asked, for story.Answer, or the one of story.Resume, for
 // story.SentBack, and says whether it did. What its
 // harness cannot do refuses it as startAllowed says (ADR-0131), as any
-// failed start is refused.
+// failed start is refused. Every start of a story's agent comes here, and
+// passes the host's budget state's gate once its harness and provider are
+// known (S-0534): a start the gate holds records nothing, no run and no
+// failure, and is kept in holding for its caller to say; one it lets through
+// as the probe has its process recorded on the probe once spawned, and frees
+// the probe when it cannot be made.
 func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory) bool {
 	now := l.now().UTC()
 	name := cfg.Name
@@ -1700,8 +1759,13 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 		run.Model = story.Agent.Model
 		run.StoryAgent = story.Agent
 	}
+	run.Retry = story.AfterLimit
 	entry := hostapi.Entry{At: run.Started, Action: hostapi.ActionAgent, Method: "serve.agent", Project: l.entry.Key, Root: l.entry.Root, By: "flai serve"}
+	probe := false // the budget state's gate let this start through as its probe
 	fail := func(err error) bool {
+		if probe {
+			l.budgetRelease(run)
+		}
 		run.Error, run.Ended, run.Outcome, run.Why = err.Error(), run.Started, OutcomeFailed, "could not be started: "+err.Error()
 		l.told(run)
 		what := run.Command
@@ -1724,6 +1788,18 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 	if err != nil {
 		return fail(err)
 	}
+	// The budget state holds a start on its provider before anything is
+	// recorded (S-0534): a held start is no failed run, and its story waits
+	// where it is. provide records the same provider once the gate is passed.
+	if story.Agent != nil {
+		run.Provider = story.Agent.Provider
+	}
+	gate := l.budgetStart(run)
+	if !gate.Go {
+		l.holdStart(story.ID, gate.State)
+		return false
+	}
+	probe = gate.Probe
 	unguarded, err := startAllowed(name, adapter.Capabilities(), story.Agent, cfg)
 	if err != nil {
 		return fail(err)
@@ -1732,8 +1808,12 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 	if story.Asked == nil && story.Resume == nil && story.Commit == "" {
 		shares = sharedWith(l.entry.Root, story.ID) // a resumed session knows them; a commit needs none
 	}
+	auto := autoRestart(story.AutoRestarts, cfg.AutoRestarts)
+	if story.AfterLimit {
+		auto = "" // the count it carries is its last run's, and this start is none of them
+	}
 	spec, keys, err := l.startOf(cfg, run, adapter, name, harness.Request{Story: story.ID, Root: l.entry.Root, Project: l.entry.Key, Agent: story.Agent, Name: run.Agent, Flai: cfg.Flai,
-		Session: run.Session, Answered: run.Answered, SentBack: story.SentBack, Restart: story.Restart, AutoRestart: autoRestart(story.AutoRestarts, cfg.AutoRestarts), Commit: story.Commit, Started: story.Started, Past: story.Past, Begun: story.Begun,
+		Session: run.Session, Answered: run.Answered, SentBack: story.SentBack, Restart: story.Restart, AutoRestart: auto, AfterLimit: story.AfterLimit, Commit: story.Commit, Started: story.Started, Past: story.Past, Begun: story.Begun,
 		Shares: shares})
 	if err != nil {
 		return fail(err)
@@ -1742,6 +1822,9 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 	cmd, out, err := l.spawn(ctx, run, spec.Argv, story.ID, now, slices.Concat([]string{"FLAI_STORY=" + story.ID}, spec.Env, keys))
 	if err != nil {
 		return fail(err)
+	}
+	if probe {
+		l.budgetSpawned(run)
 	}
 	l.keepSpend(run, spend)
 	l.told(run)
@@ -1769,8 +1852,14 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 	if story.Begun != nil {
 		entry.Detail = fmt.Sprintf("started %s (%s) for %s as %s on the operator's word, begun %s (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, story.Begun.Said(), run.PID, run.Log)
 	}
-	if story.AutoRestarts > 0 {
+	switch {
+	case story.AfterLimit:
+		entry.Detail = fmt.Sprintf("started %s (%s) again for %s as %s on its own, its last agent having ended on the usage limit, which no longer holds %s; no automatic restart spent (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, budgetKey(run.Provider, run.Harness), run.PID, run.Log)
+	case story.AutoRestarts > 0:
 		entry.Detail = fmt.Sprintf("started %s (%s) again for %s as %s on its own, automatic restart %d of %d, its last agent having ended in progress (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, story.AutoRestarts, cfg.AutoRestarts, run.PID, run.Log)
+	}
+	if probe {
+		entry.Detail += "; the probe of the budget state of " + budgetKey(run.Provider, run.Harness)
 	}
 	said := []any{"story", story.ID, "harness", run.Harness, "command", run.Command, "pid", run.PID}
 	if unguarded != "" {
@@ -1792,6 +1881,34 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 	return true
 }
 
+// holdStart keeps story, whose agent's start the budget state b held, in
+// holding (S-0534).
+func (l *launcher) holdStart(story string, b Budget) {
+	if l.holding == nil {
+		l.holding = map[string]Budget{}
+	}
+	l.holding[story] = b
+}
+
+// sayHeld logs, in one line, the stories whose agent's start the budget
+// state held at this look outside the ready column, resumed, sent back, or
+// started again, and why, when they are not those the last look logged; the
+// ready column's are said with its other waits (say).
+func (l *launcher) sayHeld() {
+	stories := slices.Sorted(maps.Keys(l.holding))
+	var whys []string
+	for _, id := range stories {
+		if why := budgetHeldWhy(l.holding[id], l.now()); !slices.Contains(whys, why) {
+			whys = append(whys, why)
+		}
+	}
+	said := strings.Join(stories, ", ")
+	if said != "" && said != l.heldSaid {
+		l.log("agents not started: the budget state holds them", "stories", said, "why", strings.Join(whys, "; "))
+	}
+	l.heldSaid = said
+}
+
 // startWhy is why story's agent, run, was started, for its started agent
 // event (S-0532): the start's reason in a short form of the words its
 // journal entry, or the agent's prompt, gives it, the one that wins in the
@@ -1805,6 +1922,8 @@ func startWhy(story readyStory, run *AgentRun, limit int) string {
 		return why + ": its last agent " + story.Restart
 	}
 	switch {
+	case story.AfterLimit:
+		return last("flai serve started it again on its own once the usage limit no longer held it, spending no automatic restart")
 	case story.AutoRestarts > 0:
 		return last(fmt.Sprintf("flai serve started it again on its own, automatic restart %d of %d", story.AutoRestarts, limit))
 	case story.Begun != nil:

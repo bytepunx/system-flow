@@ -15,8 +15,9 @@ import (
 // rules about when: whether the story was ready before flai serve began,
 // whether it had an agent since it entered ready, and whoever is attending.
 // It is refused while the agent action is off for the project, when the
-// story is not in ready, while its agent runs or waits for an answer, and
-// when nothing can start it. A full in-progress limit does not refuse it,
+// story is not in ready, while its agent runs or waits for an answer, when
+// nothing can start it, and while the host's budget state holds its
+// provider, with nothing recorded (S-0534). A full in-progress limit does not refuse it,
 // nor a full review (S-0243), nor a hold (S-0128): the operator's word goes
 // past each, as a move does, with a warning, and the agent and the journal
 // are told what it went past, so that neither takes it for flai serve's own
@@ -56,6 +57,9 @@ func Start(ctx context.Context, o Options, e Entry, story string) (*AgentRun, er
 	}
 	if (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
 		return nil, refused("%s names no harness, and no command is set on the host (flai serve agent set -- <program> [args...])", it.ID)
+	}
+	if err := heldStart(o, e, cfg, it.ID, it.Agent); err != nil {
+		return nil, err
 	}
 	ok, review, hold, err := room(repo, st, it.ID)
 	if err != nil {

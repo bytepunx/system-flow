@@ -244,3 +244,60 @@ func TestAReadyStorysAgentIsStartedOnTheOperatorsWord(t *testing.T) {
 		}
 	})
 }
+
+// S-0534, ADR-0209 §5: a start the operator asks for by hand, flai serve
+// agent start or restart, from a shell, the host API, or the MCP tools, is
+// refused while the budget state holds the story's provider, naming the
+// provider and until when, with no run recorded and nothing queued, whether
+// the state holds before the start is asked for or comes to hold before its
+// gate; a story on another harness starts as before.
+func TestAStartTheBudgetStateHoldsIsRefusedWithNothingRecorded(t *testing.T) {
+	ctx := context.Background()
+	lab := newAgentLab(t)
+	lab.claudeStub()
+	lab.hold()
+	entry := Entry{Key: "t", Name: "t", Root: lab.root}
+	claude := &manifest.Agent{Harness: harness.ClaudeCode}
+	until := time.Now().Add(time.Hour).UTC()
+	lab.holdBudget(until)
+	want := "'s agent is not started: held: claude-code usage limit (usage_limit_reached) until " + until.Format(time.RFC3339) + "; flai serve starts it when the limit resets"
+	refusedWith := func(what string, err error, id string) {
+		t.Helper()
+		var no *Refused
+		if !errors.As(err, &no) || no.Why != id+want {
+			t.Errorf("%s %s: %v, want refused with %q", what, id, err, id+want)
+		}
+	}
+	ready := lab.readyWith("Ready", claude)
+	_, err := Start(ctx, lab.o, entry, ready)
+	refusedWith("start", err, ready)
+	_, err = Restart(ctx, lab.o, entry, ready)
+	refusedWith("restart", err, ready)
+	_, err = startNow(ctx, lab.o, entry, readyStory{ID: ready, Started: true}) // past the check before it: the start's gate
+	refusedWith("the start's gate on", err, ready)
+	// with the in-progress limit full, a restart is refused, not queued
+	lab.limit(1)
+	busy := lab.ready("Busy")
+	lab.move(busy, workitem.InProgress)
+	_, err = Restart(ctx, lab.o, entry, ready)
+	refusedWith("restart with the limit full", err, ready)
+	if r := lab.run(ready); r != nil {
+		t.Errorf("a refused start left a run: %+v", r)
+	}
+	ended := lab.putEnded("Ended", AgentRun{Outcome: OutcomeFailed, AutoRestarts: 1})
+	lab.setAgent(ended, claude)
+	_, err = Restart(ctx, lab.o, entry, ended)
+	refusedWith("restart", err, ended)
+	if r := lab.run(ended); r.Session != "earlier" || r.AutoRestarts != 1 || r.Error != "" {
+		t.Errorf("a refused restart changed the run: %+v", r)
+	}
+	if len(lab.entries()) != 0 {
+		t.Errorf("journal: %+v; want nothing", lab.entries())
+	}
+	lab.limit(5)
+	other := lab.ready("On the command")
+	if run, err := Start(ctx, lab.o, entry, other); err != nil || !run.live() {
+		t.Errorf("a start on the command harness: %+v, %v", run, err)
+	}
+	lab.release(other)
+}
