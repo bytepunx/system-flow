@@ -332,6 +332,32 @@ func TestAdrTopics(t *testing.T) {
 	}
 }
 
+// I-0222: a title holding <, >, or & is written as itself, not as JSON's
+// HTML escapes, and adr topics prints it as written.
+func TestAdrNewWritesAngleBracketsAndAmpersandsAsThemselves(t *testing.T) {
+	root := adrProject(t)
+	title := "Titles keep < and > & more"
+	out, errOut, code := runIn(t, root, "adr", "new", title, "--json")
+	if code != 0 {
+		t.Fatalf("adr new: %d %s", code, errOut)
+	}
+	var res struct{ Title, Path string }
+	if err := json.Unmarshal([]byte(out), &res); err != nil {
+		t.Fatalf("json: %v\n%s", err, out)
+	}
+	if res.Title != title {
+		t.Errorf("adr new answers the title: %q", res.Title)
+	}
+	out, errOut, code = runIn(t, root, "adr", "topics", "8", "code")
+	if code != 0 || !strings.Contains(out, "ADR-0008 "+title+" (proposed)") {
+		t.Fatalf("adr topics prints the title as written: %d %s %s", code, out, errOut)
+	}
+	data, _ := os.ReadFile(filepath.Join(root, res.Path))
+	if text := string(data); !strings.Contains(text, "\ntitle: \""+title+"\"\n") || strings.Contains(text, `\u00`) {
+		t.Errorf("the front matter holds the title, no escapes:\n%s", text)
+	}
+}
+
 // A save of an accepted ADR goes through when its topics are all it changes.
 func TestDocSaveTakesTopicsAloneOnAnAcceptedAdr(t *testing.T) {
 	root := adrProject(t)

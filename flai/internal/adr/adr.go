@@ -148,11 +148,15 @@ func TemplateBody(repo *workitem.Repo) string {
 func adrID(n int) string { return fmt.Sprintf("ADR-%04d", n) }
 func num4(n int) string  { return fmt.Sprintf("%04d", n) }
 
-// yamlString quotes a title only when YAML would read it as something else.
+// yamlString quotes a title only when YAML would read it as something else,
+// writing <, >, and & as themselves rather than as JSON's HTML escapes (I-0222).
 func yamlString(s string) string {
 	if s == "" || strings.ContainsAny(s, ":#[]{}&*!|>'\"%@`,") || strings.HasPrefix(s, "-") || strings.HasPrefix(s, "?") || s != strings.TrimSpace(s) {
-		b, _ := json.Marshal(s)
-		return string(b)
+		var b strings.Builder
+		enc := json.NewEncoder(&b)
+		enc.SetEscapeHTML(false)
+		_ = enc.Encode(s)
+		return strings.TrimSuffix(b.String(), "\n")
 	}
 	return s
 }
@@ -507,10 +511,17 @@ func SetTopics(repo *workitem.Repo, r execx.Runner, n int, list []string, opt Op
 	return res, nil
 }
 
+// titleOf is the title the front matter gives, a double-quoted one with its
+// escapes read as YAML reads them, so an escape written by hand is not printed.
 func titleOf(fm string) string {
 	for _, l := range strings.Split(fm, "\n") {
 		if strings.HasPrefix(l, "title:") {
-			return strings.Trim(strings.TrimSpace(strings.TrimPrefix(l, "title:")), `"`)
+			v := strings.TrimSpace(strings.TrimPrefix(l, "title:"))
+			var s string
+			if strings.HasPrefix(v, `"`) && json.Unmarshal([]byte(v), &s) == nil {
+				return s
+			}
+			return strings.Trim(v, `"`)
 		}
 	}
 	return ""
