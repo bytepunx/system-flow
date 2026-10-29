@@ -183,7 +183,7 @@ func TestHoldRefusesUnansweredWithinTheBoundAndLeavesTheThreadOpen(t *testing.T)
 	ok, why := f.asker.Hold(context.Background(), f.req, bound)
 	took := time.Since(start)
 	th := f.waitForThread(t)
-	if ok || !strings.HasPrefix(why, "No answer on "+th.ID+" yet, so .claude/settings.json was not written. The thread stays open") {
+	if ok || !strings.HasPrefix(why, "No answer on "+th.ID+" yet, so .claude/settings.json was not written: a write is held at most 100ms for one. The thread stays open") {
 		t.Errorf("an unanswered write is refused naming the thread: %v %q", ok, why)
 	}
 	if took < bound || took > bound+3*time.Second {
@@ -191,6 +191,39 @@ func TestHoldRefusesUnansweredWithinTheBoundAndLeavesTheThreadOpen(t *testing.T)
 	}
 	if !th.Open() {
 		t.Errorf("the thread stays open for the answer: %s", th.Status)
+	}
+}
+
+// ADR-0215: a bound of zero refuses at once, naming the thread it opens and
+// leaves open, and takes an answer already given on it.
+func TestHoldWithABoundOfZeroRefusesAtOnce(t *testing.T) {
+	f := setup(t, "alex", "")
+	start := time.Now()
+	ok, why := f.asker.Hold(context.Background(), f.req, 0)
+	took := time.Since(start)
+	th := f.waitForThread(t)
+	if ok || !strings.HasPrefix(why, "No answer on "+th.ID+" yet, so .claude/settings.json was not written: a write is refused at once here, not held for one. The thread stays open") {
+		t.Errorf("an unanswered write is refused naming the thread: %v %q", ok, why)
+	}
+	if took > time.Second {
+		t.Errorf("a bound of zero does not wait: held %s", took)
+	}
+	if !th.Open() {
+		t.Errorf("the thread stays open for the answer: %s", th.Status)
+	}
+	f.reply(t, th.ID, "alex", "allow", 2*time.Minute)
+	f.clock.set(t0.Add(3 * time.Minute))
+	if ok, why := f.asker.Hold(context.Background(), f.req, 0); !ok {
+		t.Errorf("the answer already given lets the same request through: %q", why)
+	}
+	f.settled(t, th.ID, "allowed by alex")
+}
+
+func TestSpokenSaysTheBound(t *testing.T) {
+	for d, want := range map[time.Duration]string{4 * time.Minute: "four minutes", 45 * time.Second: "45 seconds", time.Minute: "one minute", 30 * time.Minute: "30 minutes", 90 * time.Second: "90 seconds", 200 * time.Millisecond: "200ms"} {
+		if got := Spoken(d); got != want {
+			t.Errorf("Spoken(%s) = %q, want %q", d, got, want)
+		}
 	}
 }
 

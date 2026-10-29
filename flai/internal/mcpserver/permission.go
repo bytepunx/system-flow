@@ -29,7 +29,33 @@ import (
 // allow a write to a protected path without asking the operator.
 type AutoApprove func(root string) bool
 
-const permissionPromptDescription = "Claude Code calls this tool itself, through --permission-prompt-tool mcp__flai__permission_prompt, when a tool call would otherwise ask a person: the model need not call it. It approves only an Edit, Write, MultiEdit, or NotebookEdit of a path Claude Code protects inside an in-progress story's worktree, such as a file in a .claude/ folder or .mcp.json, which Claude Code refuses without a person's approval; it never approves a path in .git. Unless the host auto-approves such writes, it opens a thread on the story showing the change and waits at most four minutes for the operator's reply: allow lets the write through, anything else refuses it with the operator's words as the reason. Unanswered by then, it refuses the write naming the thread, which stays open; the same write made again takes the answer given on it since, or waits again. Everything else is refused at once. It answers {\"behavior\":\"allow\",\"updatedInput\":...} or {\"behavior\":\"deny\",\"message\":...} as Claude Code expects."
+// StdioPermissionHold is the longest permission_prompt holds a write for the
+// operator's answer over stdio (ADR-0215): below Claude Code's 30-minute
+// idle timeout for an MCP call there (I-0103).
+const StdioPermissionHold = 4 * time.Minute
+
+// HTTPPermissionHold is the longest permission_prompt holds a write for the
+// operator's answer over HTTP (ADR-0215): 15 seconds below the 60 after which
+// Claude Code drops an MCP call there (I-0217).
+const HTTPPermissionHold = 45 * time.Second
+
+// permissionHoldOf is the bound a server built with opt holds a write for.
+func permissionHoldOf(opt Options) time.Duration {
+	if opt.PermissionHold == 0 {
+		return StdioPermissionHold
+	}
+	return opt.PermissionHold
+}
+
+// permissionPromptText is the tool's description on a server that holds a
+// write at most hold for the operator's answer.
+func permissionPromptText(hold time.Duration) string {
+	asks := "waits at most " + ask.Spoken(hold) + " for the operator's reply: allow lets the write through, anything else refuses it with the operator's words as the reason. Unanswered by then, it refuses the write naming the thread, which stays open; the same write made again takes the answer given on it since, or waits again"
+	if hold <= 0 {
+		asks = "refuses the write at once, naming the thread, which stays open; the same write made again takes the operator's reply given on it since: allow lets the write through, anything else refuses it with the operator's words as the reason"
+	}
+	return "Claude Code calls this tool itself, through --permission-prompt-tool mcp__flai__permission_prompt, when a tool call would otherwise ask a person: the model need not call it. It approves only an Edit, Write, MultiEdit, or NotebookEdit of a path Claude Code protects inside an in-progress story's worktree, such as a file in a .claude/ folder or .mcp.json, which Claude Code refuses without a person's approval; it never approves a path in .git. Unless the host auto-approves such writes, it opens a thread on the story showing the change and " + asks + ". Everything else is refused at once. It answers {\"behavior\":\"allow\",\"updatedInput\":...} or {\"behavior\":\"deny\",\"message\":...} as Claude Code expects."
+}
 
 // permissionScope is what every refusal of a request outside the tool's remit says.
 const permissionScope = "permission_prompt approves only an Edit, Write, MultiEdit, or NotebookEdit of a path Claude Code protects, other than .git, inside an in-progress story's worktree; anything else the session's permissions do not allow is refused, as before"
@@ -37,11 +63,6 @@ const permissionScope = "permission_prompt approves only an Edit, Write, MultiEd
 // permissionPoll is how often a held permission_prompt reads its thread for
 // the operator's answer; tests shorten it.
 var permissionPoll = time.Second
-
-// permissionWait is the longest a permission_prompt call waits for an answer
-// (ADR-0124): below Claude Code's idle timeout for an MCP call, 30 minutes
-// over stdio and 5 over HTTP (I-0103). Tests shorten it.
-var permissionWait = 4 * time.Minute
 
 // PermissionIn is Claude Code's permission request.
 type PermissionIn struct {
@@ -219,10 +240,11 @@ func orQuoted(name string) string {
 }
 
 // askOperator maps Claude Code's request onto the hold-and-ask (ADR-0130),
-// bounded by permissionWait, and its answer onto Claude Code's decision.
+// bounded by the server's permissionHold (ADR-0215), and its answer onto
+// Claude Code's decision.
 func (s *server) askOperator(ctx context.Context, story *workitem.Item, in PermissionIn, rel string) PermissionOut {
 	asker := ask.Asker{Repo: s.repo, Now: s.now, Poll: permissionPoll, Closing: s.closing, Logger: s.logger}
-	if ok, why := asker.Hold(ctx, permissionRequest(s.agent, story, in, rel), permissionWait); !ok {
+	if ok, why := asker.Hold(ctx, permissionRequest(s.agent, story, in, rel), s.permissionHold); !ok {
 		return deny("%s", why)
 	}
 	return allow(in.Input)

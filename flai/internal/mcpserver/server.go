@@ -109,6 +109,11 @@ type Options struct {
 	// outdated and that one has caught up (ADR-0160); empty when none is
 	// known.
 	Installed string
+	// PermissionHold is the longest permission_prompt holds a write for the
+	// operator's answer (ADR-0215): StdioPermissionHold when zero, as flai mcp
+	// serves over stdio, and HTTPPermissionHold over HTTP; below zero it
+	// refuses at once, naming the thread.
+	PermissionHold time.Duration
 }
 
 type server struct {
@@ -152,6 +157,8 @@ type server struct {
 	// installed is the flai binary this server was started from, which
 	// task_done closes with while this one is outdated (ADR-0160)
 	installed string
+	// permissionHold bounds permission_prompt's wait for an answer (ADR-0215)
+	permissionHold time.Duration
 
 	// when wait_for_work last answered: a thread written to since then wakes it
 	workMu    sync.Mutex
@@ -160,7 +167,7 @@ type server struct {
 
 // newServer is the server for one project, with the defaults filled in.
 func newServer(opt Options, repo *workitem.Repo) *server {
-	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, analyses: opt.Analyses, curations: opt.Curations, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, queueBatches: opt.QueueBatches, publish: opt.Publish, relativePaths: opt.RelativePaths, logger: opt.Logger, installed: opt.Installed}
+	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, analyses: opt.Analyses, curations: opt.Curations, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, queueBatches: opt.QueueBatches, publish: opt.Publish, relativePaths: opt.RelativePaths, logger: opt.Logger, installed: opt.Installed, permissionHold: permissionHoldOf(opt)}
 	if repo.Git == nil {
 		repo.Git = opt.Runner // item_move asks git whether a story's worktree is committed (S-0140)
 	}

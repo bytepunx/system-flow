@@ -29,11 +29,16 @@ type projects interface {
 	// pick is the project a tool call names: by key or folder, or none when
 	// there is only one.
 	pick(name string) (*server, error)
+	// permissionHold is how long permission_prompt holds a write for an
+	// answer (ADR-0215).
+	permissionHold() time.Duration
 }
 
 type single struct{ s *server }
 
 func (o single) all() []*server { return []*server{o.s} }
+
+func (o single) permissionHold() time.Duration { return o.s.permissionHold }
 
 func (o single) pick(name string) (*server, error) {
 	if name == "" || name == o.s.key || name == projectRoot(o.s.repo) {
@@ -92,7 +97,7 @@ func addProjectTools(srv *mcp.Server, p projects) {
 	mcp.AddTool(srv, &mcp.Tool{Name: "analyze", Description: analyzeDescription}, route(p, (*server).analyze))
 	mcp.AddTool(srv, &mcp.Tool{Name: "curate", Description: curateDescription}, route(p, (*server).curate))
 	mcp.AddTool(srv, &mcp.Tool{Name: "activity_log", Description: activityLogDescription}, route(p, (*server).activityLog))
-	srv.AddTool(&mcp.Tool{Name: "permission_prompt", Description: permissionPromptDescription, InputSchema: permissionInputSchema}, permissionRoute(p))
+	srv.AddTool(&mcp.Tool{Name: "permission_prompt", Description: permissionPromptText(p.permissionHold()), InputSchema: permissionInputSchema}, permissionRoute(p))
 	mcp.AddTool(srv, &mcp.Tool{Name: "board", Description: "The kanban board as flai board --json prints it: cards per column, WIP limits, the pull order, and limit breaches; a ready story whose touches overlap a story in progress or in review, or that names in after a story not yet done, carries held with the reason and what clears it; and queue, the merge queue as flai queue --json gives it: the eligible stories in review in order, the reasons of the others, and the batch and its step, or off with the reason under pull-request acceptance. Stories only unless all is set."}, route(p, (*server).board))
 	mcp.AddTool(srv, &mcp.Tool{Name: "test", Description: testDescription}, route(p, (*server).test))
 	mcp.AddTool(srv, &mcp.Tool{Name: "versions", Description: versionsDescription}, route(p, (*server).versions))
@@ -121,6 +126,8 @@ type folder struct {
 	workMu    sync.Mutex
 	workSince time.Time
 }
+
+func (f *folder) permissionHold() time.Duration { return permissionHoldOf(f.opt) }
 
 func (f *folder) all() []*server {
 	f.mu.Lock()

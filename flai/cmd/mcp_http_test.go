@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,6 +16,12 @@ import (
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"github.com/bytepunx/system-flow/flai/internal/ask"
+	"github.com/bytepunx/system-flow/flai/internal/mcphttp"
+	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
+	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 type mcpBearer struct{ token, agent string }
@@ -206,5 +213,63 @@ func TestARotatedServerKeepsWhatItWentWith(t *testing.T) {
 	st.ExitWith = gone.Process.Pid
 	if got := strings.Join(restartArgs(st, ""), " "); strings.Contains(got, "--exit-with") {
 		t.Errorf("a flai serve that has gone is not waited on: %s", got)
+	}
+}
+
+// claudeCodeHTTPTimeout is how long Claude Code waits for an MCP call over
+// HTTP before it drops the call, as S-0519 measured it (ADR-0215).
+const claudeCodeHTTPTimeout = 60 * time.Second
+
+// I-0217: over HTTP, permission_prompt held an unanswered write four minutes,
+// so Claude Code dropped the call after 60 seconds and the agent saw the
+// write time out while its thread stayed open with nobody waiting on it. The
+// server an agent reaches over HTTP now holds a write less than Claude Code
+// waits: with both scaled down alike, a client that gives up when Claude Code
+// does gets the refusal naming the open thread.
+func TestMCPOverHTTPRefusesAnUnansweredWriteBeforeClaudeCodeGivesUp(t *testing.T) {
+	root := heldProject(t) // S-0001 in progress
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out, errOut bytes.Buffer
+	a := &app{out: &out, errOut: &errOut, cwd: root}
+	opt := a.mcpHTTPOptions(repo, "claude", nil, "")
+	if opt.PermissionHold <= 0 || opt.PermissionHold >= claudeCodeHTTPTimeout {
+		t.Errorf("over HTTP permission_prompt holds a write for %s, not less than the %s Claude Code waits", opt.PermissionHold, claudeCodeHTTPTimeout)
+	}
+	const scale = 20
+	opt.PermissionHold /= scale
+	srv := httptest.NewServer(mcphttp.Handler(mcphttp.Options{Token: "token", NewServer: func(string) *mcp.Server { return mcpserver.New(opt) }}))
+	defer srv.Close()
+	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "1"}, nil)
+	cs, err := client.Connect(context.Background(), &mcp.StreamableClientTransport{Endpoint: srv.URL, HTTPClient: &http.Client{Transport: mcpBearer{"token", "claude"}}, DisableStandaloneSSE: true}, &mcp.ClientSessionOptions{ProtocolVersion: "2025-11-25"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = cs.Close() }()
+	tools, err := cs.ListTools(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tool := range tools.Tools {
+		if want := "waits at most " + ask.Spoken(opt.PermissionHold); tool.Name == "permission_prompt" && !strings.Contains(tool.Description, want) {
+			t.Errorf("permission_prompt's description states the bound in force, %q: %s", want, tool.Description)
+		}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), claudeCodeHTTPTimeout/scale)
+	defer cancel()
+	path := filepath.Join(repo.WorktreePath("S-0001"), ".claude", "settings.json")
+	res, err := cs.CallTool(ctx, &mcp.CallToolParams{Name: "permission_prompt", Arguments: map[string]any{"tool_name": "Write", "input": map[string]any{"file_path": path, "content": "{}"}}})
+	if err != nil {
+		t.Fatalf("the call outlives the client's %s, as it outlived Claude Code's %s: %v", claudeCodeHTTPTimeout/scale, claudeCodeHTTPTimeout, err)
+	}
+	all, err := threads.List(repo)
+	if err != nil || len(all) != 1 || !all[0].Open() {
+		t.Fatalf("the write is asked on one thread, left open: %v %+v", err, all)
+	}
+	text, _ := res.Content[0].(*mcp.TextContent)
+	if text == nil || !strings.Contains(text.Text, `"behavior":"deny"`) || !strings.Contains(text.Text, "No answer on "+all[0].ID+" yet") {
+		t.Errorf("the unanswered write is refused naming the open thread: %+v", res.Content)
 	}
 }

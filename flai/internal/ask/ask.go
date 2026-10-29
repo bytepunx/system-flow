@@ -1,7 +1,8 @@
 // Package ask is the guard's hold-and-ask of ADR-0130, which ADR-0086,
-// ADR-0097, and ADR-0124 describe for permission_prompt: it holds a write
-// to a protected path, asks the story's owner or the project's owner on a
-// thread on the story, and answers allow or deny within the caller's bound.
+// ADR-0097, ADR-0124, and ADR-0215 describe for permission_prompt: it holds
+// a write to a protected path, asks the story's owner or the project's owner
+// on a thread on the story, and answers allow or deny within the caller's
+// bound.
 // Any harness's permission handling, or the guard's own hold, calls it.
 package ask
 
@@ -10,6 +11,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -110,7 +112,8 @@ type Asker struct {
 // asked the same request before, and opens one only when there is none, so
 // an answer given after an earlier call stopped waiting is taken (ADR-0124).
 // Unanswered within bound, or when ctx or Closing ends the wait, it refuses
-// the write and leaves the thread open.
+// the write and leaves the thread open; a bound of zero or less takes an
+// answer already given and otherwise refuses at once (ADR-0215).
 func (a Asker) Hold(ctx context.Context, req Request, bound time.Duration) (allowed bool, reason string) {
 	text := req.Text(a.Repo.Manifest.Owner)
 	th, asked, err := a.askedBefore(req.Story, req.Agent, text)
@@ -135,7 +138,7 @@ func (a Asker) Hold(ctx context.Context, req Request, bound time.Duration) (allo
 	}
 	answer, ok := a.await(ctx, th.ID, asked, req.Agent, Answerers(req.Owner, a.Repo.Manifest.Owner), bound)
 	if !ok {
-		return false, fmt.Sprintf("No answer on %s yet, so %s was not written. The thread stays open, and the owner's answer is taken when you make the same write again. Go on with work that does not need this write. When nothing else is left, write your narrative's Current state and Next steps naming %s, and end: flai serve starts you again when it is answered.", th.ID, req.Path, th.ID)
+		return false, fmt.Sprintf("No answer on %s yet, so %s was not written: %s. The thread stays open, and the owner's answer is taken when you make the same write again. Go on with work that does not need this write. When nothing else is left, write your narrative's Current state and Next steps naming %s, and end: flai serve starts you again when it is answered.", th.ID, req.Path, heldFor(bound), th.ID)
 	}
 	if Allowed(answer.Text) {
 		a.settle(th.ID, req.Agent, fmt.Sprintf("allowed by %s: %s may %s %s", answer.Author, req.Agent, req.Tool, req.Path))
@@ -143,6 +146,40 @@ func (a Asker) Hold(ctx context.Context, req Request, bound time.Duration) (allo
 	}
 	a.settle(th.ID, req.Agent, fmt.Sprintf("refused by %s: %s was not written", answer.Author, req.Path))
 	return false, "the operator refused: " + answer.Text
+}
+
+// heldFor says how long a write is held for an answer, as the refusal does.
+func heldFor(bound time.Duration) string {
+	if bound <= 0 {
+		return "a write is refused at once here, not held for one"
+	}
+	return "a write is held at most " + Spoken(bound) + " for one"
+}
+
+// smallNumbers are the counts Spoken writes as words.
+var smallNumbers = []string{"zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"}
+
+// Spoken is a bound as a refusal or a tool's description says it, such as
+// four minutes or 45 seconds; one of no whole seconds as Go prints it.
+func Spoken(bound time.Duration) string {
+	var n int64
+	var unit string
+	switch {
+	case bound >= time.Minute && bound%time.Minute == 0:
+		n, unit = int64(bound/time.Minute), "minute"
+	case bound >= time.Second && bound%time.Second == 0:
+		n, unit = int64(bound/time.Second), "second"
+	default:
+		return bound.String()
+	}
+	count := strconv.FormatInt(n, 10)
+	if n < int64(len(smallNumbers)) {
+		count = smallNumbers[n]
+	}
+	if n != 1 {
+		unit += "s"
+	}
+	return count + " " + unit
 }
 
 func (a Asker) now() time.Time {
@@ -196,8 +233,12 @@ func sameEntries(x, y []threads.Entry) bool {
 
 // await reads the thread, at once and then every Poll, until an entry after
 // the first asked ones is by one of who, never the agent (by anyone but the
-// agent when who is empty), ctx or Closing ends, or bound passes.
+// agent when who is empty), ctx or Closing ends, or bound passes; with a
+// bound of zero or less it reads it once.
 func (a Asker) await(ctx context.Context, id string, asked int, agent string, who []string, bound time.Duration) (threads.Entry, bool) {
+	if bound <= 0 {
+		return a.answered(id, asked, agent, who)
+	}
 	poll := a.Poll
 	if poll <= 0 {
 		poll = time.Second
@@ -207,12 +248,8 @@ func (a Asker) await(ctx context.Context, id string, asked int, agent string, wh
 	tick := time.NewTicker(poll)
 	defer tick.Stop()
 	for {
-		// An error is the thread being written, or gone for a moment: it is
-		// read again on the next tick.
-		if th, err := threads.Get(a.Repo, id); err == nil {
-			if answer, ok := answerOn(th, asked, agent, who); ok {
-				return answer, true
-			}
+		if answer, ok := a.answered(id, asked, agent, who); ok {
+			return answer, true
 		}
 		select {
 		case <-ctx.Done():
@@ -224,6 +261,17 @@ func (a Asker) await(ctx context.Context, id string, asked int, agent string, wh
 		case <-tick.C:
 		}
 	}
+}
+
+// answered reads the thread once for an answer, as answerOn finds it. An
+// error is the thread being written, or gone for a moment: a held request
+// reads it again on the next tick.
+func (a Asker) answered(id string, asked int, agent string, who []string) (threads.Entry, bool) {
+	th, err := threads.Get(a.Repo, id)
+	if err != nil {
+		return threads.Entry{}, false
+	}
+	return answerOn(th, asked, agent, who)
 }
 
 // answerOn is the first entry after the first asked ones by one of who, never

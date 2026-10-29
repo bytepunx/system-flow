@@ -132,6 +132,13 @@ func mcpURL(addr net.Addr) string {
 	return "http://" + net.JoinHostPort(host, port) + mcpPath
 }
 
+// mcpHTTPOptions are the options of the server an agent reaches over HTTP:
+// permission_prompt holds a write at most mcpserver.HTTPPermissionHold, below
+// the 60 seconds after which Claude Code drops a call there (ADR-0215).
+func (a *app) mcpHTTPOptions(repo *workitem.Repo, agent string, closing <-chan struct{}, installed string) mcpserver.Options {
+	return mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Closing: closing, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Analyses: a.mcpAnalyze, Curations: a.mcpCurate, Activities: a.mcpActivity, QueueBatches: a.queueBatches, Publish: a.mcpPublisher(), RelativePaths: a.relativeWorktrees, Installed: installed, PermissionHold: mcpserver.HTTPPermissionHold}
+}
+
 // serveMCPHTTP runs the server until ctx ends.
 func (a *app) serveMCPHTTP(ctx context.Context, repo *workitem.Repo, addr string, maxSessions int, idle time.Duration, exitWith int) error {
 	if st, alive := readMCPState(repo, time.Now()); alive {
@@ -155,7 +162,7 @@ func (a *app) serveMCPHTTP(ctx context.Context, repo *workitem.Repo, addr string
 		Token: token, ProjectKey: repo.Manifest.Key, ProjectName: repo.Manifest.Name,
 		MaxSessions: maxSessions, Idle: idle, Logger: log,
 		NewServer: func(agent string) *mcp.Server {
-			return mcpserver.New(mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Closing: closing, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Analyses: a.mcpAnalyze, Curations: a.mcpCurate, Activities: a.mcpActivity, QueueBatches: a.queueBatches, Publish: a.mcpPublisher(), RelativePaths: a.relativeWorktrees, Installed: installed})
+			return mcpserver.New(a.mcpHTTPOptions(repo, agent, closing, installed))
 		},
 	})
 	mux := http.NewServeMux()

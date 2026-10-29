@@ -27,12 +27,9 @@ func fastPermissionPoll(t *testing.T) {
 	t.Cleanup(func() { permissionPoll = was })
 }
 
-// shortPermissionWait bounds a held permission_prompt at d.
-func shortPermissionWait(t *testing.T, d time.Duration) {
-	t.Helper()
-	was := permissionWait
-	permissionWait = d
-	t.Cleanup(func() { permissionWait = was })
+// permissionHeld bounds the server's held permission_prompt at d.
+func permissionHeld(d time.Duration) func(*Options) {
+	return func(o *Options) { o.PermissionHold = d }
 }
 
 // askPermission calls permission_prompt as Claude Code does and decodes the
@@ -558,21 +555,55 @@ func unanswered(t *testing.T, out PermissionOut, id string) {
 
 // I-0103: nobody answered, Claude Code ended the held call after 1800 s, and
 // the thread was settled as refused, so a later answer would be lost. The
-// call now refuses within permissionWait, naming the thread it leaves open.
+// call now refuses within the server's bound, naming the thread it leaves
+// open, and says the bound.
 func TestPermissionPromptRefusesUnansweredWithinTheBoundAndLeavesTheThreadOpen(t *testing.T) {
 	fastPermissionPoll(t)
-	shortPermissionWait(t, 200*time.Millisecond)
-	f := setup(t)
+	hold := 200 * time.Millisecond
+	f := setupWith(t, permissionHeld(hold))
 	start := time.Now()
 	out := f.askPermission(t, context.Background(), "Write", map[string]any{"file_path": f.worktreeFile(".claude/settings.json"), "content": heldContent})
 	took := time.Since(start)
 	th := onlyThread(t, f.repo)
 	unanswered(t, out, th.ID)
-	if took < permissionWait || took > permissionWait+3*time.Second {
-		t.Errorf("the call is held for the bound, %s, then refused: held %s", permissionWait, took)
+	if !strings.Contains(out.Message, "a write is held at most 200ms for one") {
+		t.Errorf("the refusal does not say the bound in force: %s", out.Message)
+	}
+	if took < hold || took > hold+3*time.Second {
+		t.Errorf("the call is held for the bound, %s, then refused: held %s", hold, took)
 	}
 	if !th.Open() {
 		t.Errorf("the thread stays open for the answer: %s", th.Status)
+	}
+}
+
+// ADR-0215: a server built with no bound holds a write four minutes, as flai
+// mcp over stdio does; one below zero refuses at once, naming the thread it
+// leaves open; and the description says the bound in force.
+func TestPermissionPromptHoldsTheBoundItWasBuiltWith(t *testing.T) {
+	f := setup(t)
+	if s := newServer(Options{Repo: f.repo}, f.repo); s.permissionHold != StdioPermissionHold || StdioPermissionHold != 4*time.Minute {
+		t.Errorf("a server built with no bound holds %s, want four minutes", s.permissionHold)
+	}
+	if HTTPPermissionHold != 45*time.Second {
+		t.Errorf("over HTTP the bound is %s, want 45 seconds", HTTPPermissionHold)
+	}
+	start := time.Now()
+	s := newServer(Options{Repo: f.repo, Agent: "claude", Now: func() time.Time { return t0.Add(time.Minute) }, PermissionHold: -1}, f.repo)
+	out := s.permissionPrompt(context.Background(), PermissionIn{ToolName: "Write", Input: map[string]any{"file_path": f.worktreeFile(".claude/settings.json"), "content": heldContent}})
+	took := time.Since(start)
+	th := onlyThread(t, f.repo)
+	unanswered(t, out, th.ID)
+	if !strings.Contains(out.Message, "a write is refused at once here, not held for one") || took > time.Second {
+		t.Errorf("a bound below zero refuses at once and says so: %s, after %s", out.Message, took)
+	}
+	if !th.Open() {
+		t.Errorf("the thread stays open for the answer: %s", th.Status)
+	}
+	for hold, want := range map[time.Duration]string{StdioPermissionHold: "waits at most four minutes for the operator's reply", HTTPPermissionHold: "waits at most 45 seconds for the operator's reply", -1: "refuses the write at once, naming the thread, which stays open"} {
+		if text := permissionPromptText(hold); !strings.Contains(text, want) {
+			t.Errorf("the description for a bound of %s does not say %q: %s", hold, want, text)
+		}
 	}
 }
 
@@ -587,18 +618,18 @@ func TestPermissionPromptTakesTheAnswerOnARetryOfTheSameWrite(t *testing.T) {
 	} {
 		t.Run(c.behavior, func(t *testing.T) {
 			fastPermissionPoll(t)
-			shortPermissionWait(t, 50*time.Millisecond)
-			f := setup(t)
+			f := setupWith(t, permissionHeld(50*time.Millisecond))
 			input := map[string]any{"file_path": f.worktreeFile(".claude/settings.json"), "content": heldContent}
 			th := onlyThreadAfter(t, f, input)
 			if _, err := threads.Reply(f.repo, th.ID, "alex", c.answer, t0.Add(2*time.Minute)); err != nil {
 				t.Fatal(err)
 			}
 			*f.clock = t0.Add(3 * time.Minute)
-			permissionWait = time.Hour // an answer already given is taken without waiting
+			// an answer already given is taken without waiting
+			retry := newServer(Options{Repo: f.repo, Agent: "claude", Now: func() time.Time { return *f.clock }, PermissionHold: time.Hour}, f.repo)
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
-			out := f.askPermission(t, ctx, "Write", input)
+			out := retry.permissionPrompt(ctx, PermissionIn{ToolName: "Write", Input: input})
 			if out.Behavior != c.behavior || out.Message != c.message {
 				t.Errorf("the retry is decided by the answer: %+v, want %s %q", out, c.behavior, c.message)
 			}
@@ -627,8 +658,8 @@ func onlyThreadAfter(t *testing.T, f *fixture, input map[string]any) *threads.Th
 // thread, bounded the same way, and refused again.
 func TestPermissionPromptHoldsARetryAgainUntilTheBound(t *testing.T) {
 	fastPermissionPoll(t)
-	shortPermissionWait(t, 200*time.Millisecond)
-	f := setup(t)
+	hold := 200 * time.Millisecond
+	f := setupWith(t, permissionHeld(hold))
 	input := map[string]any{"file_path": f.worktreeFile(".claude/settings.json"), "content": heldContent}
 	th := onlyThreadAfter(t, f, input)
 	if _, err := threads.Reply(f.repo, th.ID, "agent-S-0999", "allow", t0.Add(2*time.Minute)); err != nil {
@@ -639,8 +670,8 @@ func TestPermissionPromptHoldsARetryAgainUntilTheBound(t *testing.T) {
 	took := time.Since(start)
 	back := onlyThread(t, f.repo)
 	unanswered(t, out, th.ID)
-	if took < permissionWait || took > permissionWait+3*time.Second {
-		t.Errorf("the retry is held for the bound, %s, again: held %s", permissionWait, took)
+	if took < hold || took > hold+3*time.Second {
+		t.Errorf("the retry is held for the bound, %s, again: held %s", hold, took)
 	}
 	if back.ID != th.ID || !back.Open() {
 		t.Errorf("the retry asks on the same thread and leaves it open: %s %s", back.ID, back.Status)
@@ -651,12 +682,11 @@ func TestPermissionPromptHoldsARetryAgainUntilTheBound(t *testing.T) {
 // on a thread of its own; the first stays open with what it showed.
 func TestPermissionPromptAsksOtherInputOnAThreadOfItsOwn(t *testing.T) {
 	fastPermissionPoll(t)
-	shortPermissionWait(t, 50*time.Millisecond)
-	f := setup(t)
+	f := setupWith(t, permissionHeld(50*time.Millisecond))
 	path := f.worktreeFile(".claude/settings.json")
 	first := onlyThreadAfter(t, f, map[string]any{"file_path": path, "content": "{}"})
 	out := f.askPermission(t, context.Background(), "Write", map[string]any{"file_path": path, "content": "{\"hooks\": {}}"})
-	other := newServer(Options{Repo: f.repo, Agent: "agent-S-0999", Now: func() time.Time { return t0.Add(time.Minute) }}, f.repo)
+	other := newServer(Options{Repo: f.repo, Agent: "agent-S-0999", Now: func() time.Time { return t0.Add(time.Minute) }, PermissionHold: 50 * time.Millisecond}, f.repo)
 	byOther := other.permissionPrompt(context.Background(), PermissionIn{ToolName: "Write", Input: map[string]any{"file_path": path, "content": "{}"}})
 	all, err := threads.List(f.repo)
 	if err != nil {
