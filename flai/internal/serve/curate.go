@@ -197,14 +197,16 @@ func (l *launcher) curate(ctx context.Context, cfg AgentConfig, agent *manifest.
 }
 
 // curateEnded records a curator run as ended, with its exit code when it was
-// seen, and the digest entries it wrote or changed: failed on a failed exit,
-// with why; worked otherwise, whether it wrote an entry or found nothing to
-// take in, an exit nobody saw included. It logs the run's activity in the
-// curator's activity document, with what started it, the first line of the
-// run's final text as its summary, and the entries as its items, which
-// charge nothing. Entries that cannot be looked for, and an activity that
-// cannot be logged, are warned of: the activity is logged naming no entry,
-// and the run stays recorded as it ended.
+// seen, and the digest entries it wrote or changed: failed on the harness's
+// usage limit when its log ends on it, with why naming the limit and its
+// reset time, and the reset time recorded, whether its exit was seen or not
+// (ADR-0214); failed on a failed exit, with why; worked otherwise, whether it
+// wrote an entry or found nothing to take in, an exit nobody saw included.
+// It logs the run's activity in the curator's activity document, with what
+// started it, the first line of the run's final text as its summary, and the
+// entries as its items, which charge nothing. Entries that cannot be looked
+// for, and an activity that cannot be logged, are warned of: the activity is
+// logged naming no entry, and the run stays recorded as it ended.
 func (l *launcher) curateEnded(run *AgentRun, exit *int) {
 	ended := *run
 	ended.Ended, ended.Exit = l.now().UTC().Format(time.RFC3339), exit
@@ -213,9 +215,13 @@ func (l *launcher) curateEnded(run *AgentRun, exit *int) {
 		l.warn("curator's entries not looked for", "err", err)
 	}
 	ended.Entries = entries
-	if exit != nil && *exit != 0 {
+	lim := runLimit(run, l.warn)
+	switch {
+	case lim != nil:
+		ended.Outcome, ended.Why, ended.ResetsAt = OutcomeFailed, limitWhy(lim), limitResets(lim)
+	case exit != nil && *exit != 0:
 		ended.Outcome, ended.Why = OutcomeFailed, fmt.Sprintf("ended (exit %d)", *exit)
-	} else {
+	default:
 		ended.Outcome, ended.Why = OutcomeWorked, ""
 	}
 	l.ended(&ended)
@@ -223,7 +229,13 @@ func (l *launcher) curateEnded(run *AgentRun, exit *int) {
 	if exit != nil {
 		args = append(args, "exit", *exit)
 	}
+	if lim != nil {
+		args = append(args, "limit", lim.Error, "status", lim.Status, "resets_at", ended.ResetsAt)
+	}
 	l.log("curator ended", args...)
+	// A run on the usage limit spent nothing, so logRunEnd logs no activity
+	// for it, and the next run's since keeps pointing at the last activity:
+	// the acceptances it never took in are taken in by the next (ADR-0214).
 	if _, err := logRunEnd(l.dir, l.entry.Root, l.entry.Key, workitem.ActivityCurator, run.Trigger, "", entries); err != nil {
 		l.warn("curator activity not logged", "err", err)
 	}

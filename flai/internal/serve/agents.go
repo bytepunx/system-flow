@@ -276,6 +276,13 @@ type AgentRun struct {
 	// run ended at the limit of automatic restarts, so that it opens one
 	// (S-0294, ADR-0108).
 	LimitThread string `json:"limit_thread,omitempty"`
+	// ResetsAt is when the harness's usage limit a curator run ended on
+	// resets, as an RFC 3339 time in UTC; empty when it ended on no limit, or
+	// the harness named no reset time (S-0514, ADR-0214).
+	ResetsAt string `json:"resets_at,omitempty"`
+	// Retry marks a run started again after the run before it ended on the
+	// usage limit (S-0514, ADR-0214).
+	Retry bool `json:"retry,omitempty"`
 }
 
 // same says whether r and o are one run: the same start of the same

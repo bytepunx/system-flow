@@ -81,6 +81,18 @@ func (lab *agentLab) curatorRuns(final string, at time.Time) {
 	}
 }
 
+// curatorLimited has the stub print I-0212's stream, a run the harness
+// refused on its usage limit, and exit 1, as that run did.
+func (lab *agentLab) curatorLimited() {
+	lab.t.Helper()
+	if err := os.WriteFile(filepath.Join(lab.outDir, "stream-curate"), []byte(strings.Join(limitStream, "\n")+"\n"), 0o644); err != nil {
+		lab.t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(lab.outDir, "exit-curate"), []byte("1"), 0o644); err != nil {
+		lab.t.Fatal(err)
+	}
+}
+
 // curatorActivity is the curator's activity document once it holds n entries.
 func (lab *agentLab) curatorActivity(n int) *workitem.Activity {
 	lab.t.Helper()
@@ -398,6 +410,75 @@ func TestACuratorRunThatFailsIsRecordedAsFailed(t *testing.T) {
 	}
 	if e := lab.curatorActivity(1).Entries[0]; e.Summary != "Gave up." || strings.Join(e.Items, " ") != res.ID {
 		t.Errorf("activity = %+v, want the run's last word and %s", e, res.ID)
+	}
+}
+
+// I-0212, ADR-0214: a curator run that exits 1 on the harness's usage limit
+// is recorded failed on the limit, with its reset time, and logs no
+// activity, so the next run's since is still the last activity.
+func TestACuratorRunOnTheUsageLimitIsRecordedFailedOnIt(t *testing.T) {
+	lab := curateLab(t)
+	last := runStart.Add(time.Hour)
+	if _, err := lab.repo.AppendActivity(workitem.ActivityCurator, workitem.ActivityEntry{At: last, Summary: "Took in two entries."}); err != nil {
+		t.Fatal(err)
+	}
+	lab.curatorLimited()
+	if !lab.curateHere("") {
+		t.Fatalf("not started: %+v", lab.state().Curator)
+	}
+	waitFor(t, "the curator run ended", func() bool { r := lab.state().Curator; return r != nil && r.Ended != "" })
+	lab.settle() // its activity is logged, or not, once the launcher no longer waits for it
+	r := lab.state().Curator
+	if r.Outcome != OutcomeFailed || r.Exit == nil || *r.Exit != 1 || r.Why != limitWhyText || r.ResetsAt != limitResetsAt || r.Retry {
+		t.Errorf("run = %+v, want failed on the limit, exit 1, resetting at %s", r, limitResetsAt)
+	}
+	if data, err := os.ReadFile(lab.o.Dir.agents()); err != nil || !strings.Contains(string(data), `"resets_at": "`+limitResetsAt+`"`) {
+		t.Errorf("serve/agents.json does not record the reset time (%v):\n%s", err, data)
+	}
+	if doc, err := lab.repo.Activity(workitem.ActivityCurator); err != nil || len(doc.Entries) != 1 {
+		t.Errorf("activity = %+v (%v), want the one entry before the run alone", doc, err)
+	}
+	if since, err := lastCurated(lab.repo); err != nil || since != last.Format(time.RFC3339) {
+		t.Errorf("the next run's since = %q (%v), want the last activity's %s", since, err, last.Format(time.RFC3339))
+	}
+	logged := lab.logText()
+	if !strings.Contains(logged, `msg="curator ended"`) || !strings.Contains(logged, "outcome=failed") || !strings.Contains(logged, "limit=usage_limit_reached status=429 resets_at="+limitResetsAt) {
+		t.Errorf("the end does not name the limit and its reset time:\n%s", logged)
+	}
+	if strings.Contains(logged, "curator activity not logged") || strings.Contains(logged, "run's log not read") {
+		t.Errorf("warned:\n%s", logged)
+	}
+}
+
+// I-0212, ADR-0214: a curator run whose process is gone while no launcher
+// waits for it, and whose log ends on the usage limit, is settled at a look
+// failed on the limit, with its reset time, not worked.
+func TestACuratorRunGoneOnTheUsageLimitIsSettledFailedOnIt(t *testing.T) {
+	lab := curateLab(t)
+	gone := exec.Command("true")
+	if err := gone.Run(); err != nil {
+		t.Fatal(err)
+	}
+	logs := filepath.Join(string(lab.o.Dir), "agents")
+	if err := os.MkdirAll(logs, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	log := filepath.Join(logs, "t-curator-20261026T160352Z.log")
+	if err := os.WriteFile(log, []byte(strings.Join(limitStream, "\n")+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	lab.o.Dir.updateAgent(lab.root, func(s *AgentState) {
+		s.put(&AgentRun{Agent: "curator", Role: "curate", PID: gone.Process.Pid, Started: "2026-10-26T16:03:52Z", Log: log, Session: "s", Trigger: "accepted S-0498, S-0501"})
+	})
+	lab.l.look(context.Background(), false)
+	if r := lab.state().Curator; r.Ended == "" || r.Outcome != OutcomeFailed || r.Exit != nil || r.Why != limitWhyText || r.ResetsAt != limitResetsAt {
+		t.Errorf("settled = %+v, want failed on the limit, resetting at %s, with no exit seen", r, limitResetsAt)
+	}
+	if doc, err := lab.repo.Activity(workitem.ActivityCurator); err != nil || len(doc.Entries) != 0 {
+		t.Errorf("activity = %+v (%v), want none", doc, err)
+	}
+	if logged := lab.logText(); !strings.Contains(logged, "resets_at="+limitResetsAt) {
+		t.Errorf("the end does not name the reset time:\n%s", logged)
 	}
 }
 
