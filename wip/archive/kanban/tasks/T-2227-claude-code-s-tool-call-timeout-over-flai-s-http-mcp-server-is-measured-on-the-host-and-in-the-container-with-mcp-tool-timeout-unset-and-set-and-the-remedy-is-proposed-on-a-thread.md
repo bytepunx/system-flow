@@ -24,14 +24,14 @@ usage:
   source: log
   seconds: 1063
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 128
-      output: 32308
-      cache_read: 6540190
-      cache_write: 345158
-      cost: 4.3857
+      input: 94
+      output: 30269
+      cache_read: 6629644
+      cache_write: 269998
+      cost: 3.529
 ---
 # T-2227 Claude Code's tool-call timeout over flai's HTTP MCP server is measured on the host and in the container, with MCP_TOOL_TIMEOUT unset and set, and the remedy is proposed on a thread
 

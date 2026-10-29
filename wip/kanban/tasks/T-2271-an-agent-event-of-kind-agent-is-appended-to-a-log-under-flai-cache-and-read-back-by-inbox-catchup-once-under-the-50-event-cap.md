@@ -3,11 +3,11 @@ id: T-2271
 type: task
 nature: improvement
 title: An agent event of kind agent is appended to a log under .flai-cache and read back by inbox.CatchUp, once, under the 50-event cap
-status: in-progress
+status: done
 parent: S-0532
 owner: alex
 created: 2026-10-28T21:08:40Z
-updated: 2026-10-29T02:01:25Z
+updated: 2026-10-29T02:08:03Z
 transitions:
   - to: ready
     at: 2026-10-29T02:01:24Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-29T02:01:25Z
     by: agent-S-0532
+  - to: done
+    at: 2026-10-29T02:08:03Z
+    by: agent-S-0532
 stream: S-0532
 tags: [flai, events, inbox]
 touches: [flai/internal/inbox/agentevents.go, flai/internal/inbox/agentevents_test.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/serve/agent_events.go, flai/internal/serve/agent_events_test.go, flai/internal/inbox/events.go, flai/internal/inbox/events_test.go]
+usage:
+  source: log
+  seconds: 398
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 47
+      output: 16055
+      cache_read: 2496953
+      cache_write: 89104
+      cost: 1.347
 ---
 # T-2271 An agent event of kind agent is appended to a log under .flai-cache and read back by inbox.CatchUp, once, under the 50-event cap
 

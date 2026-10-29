@@ -3,16 +3,37 @@ id: T-2273
 type: task
 nature: improvement
 title: The planner's, the orchestrator's, the analyzer's, and the curator's runs append a started, ended, or failed agent event naming their role and item
-status: backlog
+status: done
 parent: S-0532
 owner: alex
 created: 2026-10-28T21:09:04Z
-updated: 2026-10-29T02:00:40Z
-transitions: []
+updated: 2026-10-29T02:43:15Z
+transitions:
+  - to: ready
+    at: 2026-10-29T02:36:53Z
+    by: agent-S-0532
+  - to: in-progress
+    at: 2026-10-29T02:36:54Z
+    by: agent-S-0532
+  - to: done
+    at: 2026-10-29T02:43:15Z
+    by: agent-S-0532
 stream: S-0532
 tags: [flai, serve, events]
-touches: [flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go]
+touches: [flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/orchestrate_hold.go, flai/internal/serve/orchestrate_hold_test.go]
 after: [T-2272]
+usage:
+  source: log
+  seconds: 381
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 79
+      output: 27057
+      cache_read: 4207913
+      cache_write: 150159
+      cost: 2.27
 ---
 # T-2273 The planner's, the orchestrator's, the analyzer's, and the curator's runs append a started, ended, or failed agent event naming their role and item
 

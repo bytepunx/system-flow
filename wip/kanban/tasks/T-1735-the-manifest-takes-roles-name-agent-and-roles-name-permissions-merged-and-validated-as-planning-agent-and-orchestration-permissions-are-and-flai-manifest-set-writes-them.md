@@ -3,15 +3,36 @@ id: T-1735
 type: task
 nature: feature
 title: The manifest takes roles.name.agent and roles.name.permissions, merged and validated as planning.agent and orchestration.permissions are, and flai manifest set writes them
-status: backlog
+status: done
 parent: S-0417
 owner: alex
 created: 2026-10-16T05:44:41Z
-updated: 2026-10-21T11:58:02Z
-transitions: []
+updated: 2026-10-29T03:49:39Z
+transitions:
+  - to: ready
+    at: 2026-10-29T03:06:58Z
+    by: agent-S-0417
+  - to: in-progress
+    at: 2026-10-29T03:06:59Z
+    by: agent-S-0417
+  - to: done
+    at: 2026-10-29T03:49:39Z
+    by: agent-S-0417
 stream: S-0417
 tags: [cli]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/check/check.go, docs/operators/settings.md]
+usage:
+  source: log
+  seconds: 2537
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 101
+      output: 480
+      cache_read: 4576845
+      cache_write: 314299
+      cost: 1.6694
 ---
 # T-1735 The manifest takes roles.name.agent and roles.name.permissions, merged and validated as planning.agent and orchestration.permissions are, and flai manifest set writes them
 

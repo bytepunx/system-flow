@@ -3,15 +3,36 @@ id: T-1736
 type: task
 nature: feature
 title: The harness starts a defined role with its prompt from its role file's body, its definition, and its environment, on claude-code with --agent over that definition
-status: backlog
+status: done
 parent: S-0417
 owner: alex
 created: 2026-10-16T05:44:46Z
-updated: 2026-10-21T11:57:54Z
-transitions: []
+updated: 2026-10-29T03:49:17Z
+transitions:
+  - to: ready
+    at: 2026-10-29T03:07:00Z
+    by: agent-S-0417
+  - to: in-progress
+    at: 2026-10-29T03:07:02Z
+    by: agent-S-0417
+  - to: done
+    at: 2026-10-29T03:49:17Z
+    by: agent-S-0417
 stream: S-0417
 tags: [cli]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go]
+usage:
+  source: log
+  seconds: 2534
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 79
+      output: 315
+      cache_read: 4200137
+      cache_write: 173884
+      cost: 1.4929
 ---
 # T-1736 The harness starts a defined role with its prompt from its role file's body, its definition, and its environment, on claude-code with --agent over that definition
 

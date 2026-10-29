@@ -3,10 +3,10 @@ id: S-0538
 type: story
 nature: remediation
 title: "flai adr topics rewrites an ADR's front matter with < and > in its title escaped as < and >"
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-29T02:01:36Z
-updated: 2026-10-29T02:59:08Z
+updated: 2026-10-29T03:47:10Z
 transitions:
   - to: ready
     at: 2026-10-29T02:59:03Z
@@ -14,28 +14,55 @@ transitions:
   - to: in-progress
     at: 2026-10-29T02:59:08Z
     by: agent-S-0538
+  - to: review
+    at: 2026-10-29T03:18:22Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-29T03:35:46Z
+    by: flai
+  - to: review
+    at: 2026-10-29T03:47:10Z
+    by: system-flow
 tags: [flai]
-touches: [flai/internal/adr/adr.go, flai/internal/adr/adr_test.go, flai/cmd/adr_test.go, design/issues/I-0222-flai-adr-topics-rewrites-an-adr-s-front-matter-with-and-in-its-title-escaped-as-and.md, design/issues/summary.md]
+touches: [flai/internal/adr/adr.go, flai/internal/adr/adr_test.go, flai/cmd/adr_test.go, design/issues/I-0222-flai-adr-topics-rewrites-an-adr-s-front-matter-with-and-in-its-title-escaped-as-and.md, design/issues/summary.md, design/issues/I-0203-a-story-the-operator-accepts-outside-the-merge-queue-lands-without-the-queue-tiers-so-a-stale-generated-file-on-main-fails-every-later-batch-at-integration.md, flai/internal/guard/roles_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1982
+  priced_by: harness
+  turns:
+    - day: 2026-10-29
+      ceremony: 3
+      hand_edits: 4
+      work: 40
+  models:
+    - model: claude-opus-5-5
+      input: 106
+      output: 21200
+      cache_read: 7786820
+      cache_write: 207159
+      cost: 3.6391
   strategic:
     - kind: orchestrator
-      seconds: 258
+      seconds: 1680
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 47
-          output: 716
-          cache_read: 5365393
-          cache_write: 24177
-          cost: 1.1886
+          input: 148
+          output: 2430
+          cache_read: 21231474
+          cache_write: 52378
+          cost: 4.6937
+        - model: claude-sonnet-5-5
+          input: 6
+          output: 49
+          cache_read: 34277
+          cache_write: 29448
+          cost: 0.044
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -61,12 +88,13 @@ finalized:
 This story remediates [I-0222](../../../design/issues/I-0222-flai-adr-topics-rewrites-an-adr-s-front-matter-with-and-in-its-title-escaped-as-and.md), "flai adr topics rewrites an ADR's front matter with < and > in its title escaped as < and >". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0222 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0222 is closed with `flai issue close I-0222 --reason` saying what fixed it
+- [x] The cause I-0222 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0222 is closed with `flai issue close I-0222 --reason` saying what fixed it
 
 ## Tasks
 - T-2318 flai adr new writes <, >, and & in an ADR's title as themselves, and the title flai prints is the title
 - T-2319 Close I-0222 with the reason that flai adr new now quotes a title without HTML escapes
+- T-2324 TestADefinedRoleIsHeldToItsFile expects the to-backlog condition's wording since S-0535, so main's integration tier passes again
 
 ## Notes
 
@@ -94,3 +122,4 @@ Figures:
 
 - Forecast: flai forecast gave 14m from 34 done medium remediation stories. Raised to 30m: the change is one function, but each task close and the close-out run the `flai/cmd` test package and the lint tiers, which alone take longer than 14m here. Delivery is flai's (36th in the pull order), moved by the 16m added.
 - Cost of delay: 25.00 USD a week, flai cod's figure from the input flai set from I-0222 (10m lost per 168h cycle at 150 USD an hour). It stands: one occurrence, and the workaround is to leave angle brackets out of a title.
+- 2026-10-29T03:35:46Z: moved to in-progress: merge queue batch 20261029-032429 fails with S-0538 at 2a955340bc1e: integration failed: flai/internal/guard/roles_test.go:139 TestADefinedRoleIsHeldToItsFile: {Session: Subagent:false Agent: Role:review Story: Kind:3 Name: Command: Path: Tool:item_move Args:{ID:S-0001 Story: To:review Type: Draft:false Commit:false Recommendation:false Source: Fields:[] CostOfDelay:map[]}}: {Outcome:1 Reason:the role reviewer cannot move S-0001 to review: it may make it only under to-backlog (on a call, a move to backlog and nowhere else; on a trigger, only a move to backlog), or to-ready (a move to ready and nowhere else). Ask the operator with thread_open on the item if it …

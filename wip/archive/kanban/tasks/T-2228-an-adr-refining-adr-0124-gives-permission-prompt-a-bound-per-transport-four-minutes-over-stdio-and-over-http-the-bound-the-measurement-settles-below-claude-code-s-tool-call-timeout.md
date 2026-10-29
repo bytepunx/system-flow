@@ -24,16 +24,16 @@ touches: [design/adrs/README.md, design/adrs/0215-permission-prompt-holds-a-writ
 after: [T-2227]
 usage:
   source: log
-  seconds: 31
+  seconds: 34
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 6
-      output: 20
-      cache_read: 696790
-      cache_write: 4791
-      cost: 0.4448
+      input: 10
+      output: 3115
+      cache_read: 682165
+      cache_write: 27782
+      cost: 0.3631
 ---
 # T-2228 An ADR refining ADR-0124 gives permission_prompt a bound per transport: four minutes over stdio and, over HTTP, the bound the measurement settles below Claude Code's tool-call timeout
 

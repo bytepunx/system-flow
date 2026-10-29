@@ -7,11 +7,11 @@ status: backlog
 parent: S-0417
 owner: alex
 created: 2026-10-16T05:45:09Z
-updated: 2026-10-21T11:51:13Z
+updated: 2026-10-29T03:49:53Z
 transitions: []
 stream: S-0417
 tags: [cli]
-touches: [flai/cmd/role.go, flai/cmd/role_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/internal/mcpserver/role.go, flai/internal/mcpserver/role_test.go, flai/internal/mcpserver/folder.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flaiover/src/lib/server/agent.ts, docs/users/flai-reference.md]
+touches: [flai/cmd/role.go, flai/cmd/role_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/internal/mcpserver/role.go, flai/internal/mcpserver/role_test.go, flai/internal/mcpserver/folder.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flaiover/src/lib/server/agent.ts, docs/users/flai-reference.md, flai/cmd/activity.go]
 after: [T-1738]
 ---
 # T-1739 flai role run, the MCP tool role_run, and the host API's role.run start a defined role, flai serve enable takes its action, and agent.status carries roles

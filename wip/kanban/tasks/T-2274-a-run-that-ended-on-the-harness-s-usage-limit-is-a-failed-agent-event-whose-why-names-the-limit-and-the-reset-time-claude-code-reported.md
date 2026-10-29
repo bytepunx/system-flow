@@ -3,16 +3,37 @@ id: T-2274
 type: task
 nature: improvement
 title: A run that ended on the harness's usage limit is a failed agent event whose why names the limit and the reset time Claude Code reported
-status: backlog
+status: done
 parent: S-0532
 owner: alex
 created: 2026-10-28T21:09:11Z
-updated: 2026-10-28T21:09:11Z
-transitions: []
+updated: 2026-10-29T02:21:03Z
+transitions:
+  - to: ready
+    at: 2026-10-29T02:09:46Z
+    by: agent-S-0532
+  - to: in-progress
+    at: 2026-10-29T02:09:47Z
+    by: agent-S-0532
+  - to: done
+    at: 2026-10-29T02:21:03Z
+    by: agent-S-0532
 stream: S-0532
 tags: [flai, serve, events, usage]
 touches: [flai/internal/serve/agent_events.go, flai/internal/serve/agent_events_test.go, flai/internal/serve/limit.go, flai/internal/serve/limit_test.go]
 after: [T-2271]
+usage:
+  source: log
+  seconds: 676
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 21
+      output: 7053
+      cache_read: 1096891
+      cache_write: 39143
+      cost: 0.5917
 ---
 # T-2274 A run that ended on the harness's usage limit is a failed agent event whose why names the limit and the reset time Claude Code reported
 

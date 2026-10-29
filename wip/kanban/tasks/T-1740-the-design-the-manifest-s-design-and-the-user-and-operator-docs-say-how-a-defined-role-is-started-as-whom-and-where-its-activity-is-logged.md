@@ -7,12 +7,12 @@ status: backlog
 parent: S-0417
 owner: alex
 created: 2026-10-16T05:45:15Z
-updated: 2026-10-21T11:58:26Z
+updated: 2026-10-29T03:06:52Z
 transitions: []
 stream: S-0417
 tags: [cli, template]
 touches: [design/system/strategic-agents.md, design/system/project-manifest.md, docs/users/flai.md, docs/operators/index.md, docs/operators/settings.md, template/CHANGELOG.md, design/system/flai-cli.md, design/system/agent-narrative.md]
-after: [T-1739, T-1983]
+after: [T-1739]
 ---
 # T-1740 The design, the manifest's design, and the user and operator docs say how a defined role is started, as whom, and where its activity is logged
 

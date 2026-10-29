@@ -3,16 +3,37 @@ id: T-2277
 type: task
 nature: improvement
 title: The design, the user docs, and the agent docs name the agent event kind, its fields, its log, and what the auto_restarts thread lists
-status: backlog
+status: done
 parent: S-0532
 owner: alex
 created: 2026-10-28T21:09:49Z
-updated: 2026-10-29T02:01:09Z
-transitions: []
+updated: 2026-10-29T02:51:57Z
+transitions:
+  - to: ready
+    at: 2026-10-29T02:48:45Z
+    by: agent-S-0532
+  - to: in-progress
+    at: 2026-10-29T02:48:46Z
+    by: agent-S-0532
+  - to: done
+    at: 2026-10-29T02:51:57Z
+    by: agent-S-0532
 stream: S-0532
 tags: [flai, docs, events]
-touches: [design/system/flai-cli.md, design/system/strategic-agents.md, design/system/agent-narrative.md, docs/users/flai.md, docs/operators/settings.md]
+touches: [design/system/flai-cli.md, design/system/strategic-agents.md, design/system/agent-narrative.md, docs/users/flai.md, docs/operators/settings.md, flai/internal/mcpserver/server.go]
 after: [T-2276]
+usage:
+  source: log
+  seconds: 191
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 71
+      output: 24233
+      cache_read: 3768708
+      cache_write: 134486
+      cost: 2.0331
 ---
 # T-2277 The design, the user docs, and the agent docs name the agent event kind, its fields, its log, and what the auto_restarts thread lists
 

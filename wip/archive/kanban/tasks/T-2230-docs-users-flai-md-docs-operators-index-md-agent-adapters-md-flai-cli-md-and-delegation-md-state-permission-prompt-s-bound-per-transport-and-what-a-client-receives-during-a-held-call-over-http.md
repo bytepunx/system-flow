@@ -3,16 +3,37 @@ id: T-2230
 type: task
 nature: improvement
 title: docs/users/flai.md, docs/operators/index.md, agent-adapters.md, flai-cli.md, and delegation.md state permission_prompt's bound per transport and what a client receives during a held call over HTTP
-status: backlog
+status: done
 parent: S-0519
 owner: alex
 created: 2026-10-28T13:45:08Z
-updated: 2026-10-28T13:45:36Z
-transitions: []
+updated: 2026-10-29T02:44:20Z
+transitions:
+  - to: ready
+    at: 2026-10-29T02:41:06Z
+    by: agent-S-0519
+  - to: in-progress
+    at: 2026-10-29T02:41:07Z
+    by: agent-S-0519
+  - to: done
+    at: 2026-10-29T02:44:20Z
+    by: agent-S-0519
 stream: S-0519
 tags: [docs, mcp]
 touches: [docs/users/flai.md, docs/operators/index.md, design/system/agent-adapters.md, design/system/flai-cli.md, design/conventions/delegation.md]
 after: [T-2229]
+usage:
+  source: log
+  seconds: 193
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 32
+      output: 10218
+      cache_read: 2238040
+      cache_write: 91146
+      cost: 1.1913
 ---
 # T-2230 docs/users/flai.md, docs/operators/index.md, agent-adapters.md, flai-cli.md, and delegation.md state permission_prompt's bound per transport and what a client receives during a held call over HTTP
 

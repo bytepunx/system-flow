@@ -3,15 +3,36 @@ id: T-1737
 type: task
 nature: feature
 title: Activity documents, activity_log, and flai activity log take any defined role's name as their kind, and wip/agents/index.md lists each and flai check validates it
-status: backlog
+status: done
 parent: S-0417
 owner: alex
 created: 2026-10-16T05:44:51Z
-updated: 2026-10-21T11:50:59Z
-transitions: []
+updated: 2026-10-29T03:49:28Z
+transitions:
+  - to: ready
+    at: 2026-10-29T03:07:03Z
+    by: agent-S-0417
+  - to: in-progress
+    at: 2026-10-29T03:07:04Z
+    by: agent-S-0417
+  - to: done
+    at: 2026-10-29T03:49:28Z
+    by: agent-S-0417
 stream: S-0417
 tags: [cli]
 touches: [flai/internal/workitem/activity.go, flai/internal/workitem/activity_test.go, flai/internal/workitem/narrative.go, flai/internal/check/activity.go, flai/internal/check/activity_test.go, flai/internal/mcpserver/activity.go, flai/internal/mcpserver/activity_test.go, flai/cmd/activity.go, flai/cmd/activity_test.go, flai/internal/serve/activity.go, flai/internal/serve/agents.go, flai/internal/hostapi/people.go]
+usage:
+  source: log
+  seconds: 2532
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 117
+      output: 616
+      cache_read: 6091052
+      cache_write: 492854
+      cost: 2.2472
 ---
 # T-1737 Activity documents, activity_log, and flai activity log take any defined role's name as their kind, and wip/agents/index.md lists each and flai check validates it
 

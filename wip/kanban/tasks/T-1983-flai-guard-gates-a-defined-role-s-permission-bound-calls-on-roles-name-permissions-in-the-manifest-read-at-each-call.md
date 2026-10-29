@@ -3,12 +3,15 @@ id: T-1983
 type: task
 nature: feature
 title: flai guard gates a defined role's permission-bound calls on roles.name.permissions in the manifest, read at each call
-status: backlog
+status: cancelled
 parent: S-0417
 owner: alex
 created: 2026-10-21T11:58:10Z
-updated: 2026-10-21T11:58:10Z
-transitions: []
+updated: 2026-10-29T03:06:50Z
+transitions:
+  - to: cancelled
+    at: 2026-10-29T03:06:50Z
+    by: agent-S-0417
 stream: S-0417
 tags: [cli]
 touches: [flai/cmd/guard.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go]
@@ -34,3 +37,4 @@ Waits for T-1735, which adds `roles.<name>.permissions` and its reader. Runs bes
 ## Notes
 
 - Added by planner-S-0417 on TH-0570's approval: without it, the key T-1735 adds does nothing.
+- 2026-10-29T03:06:50Z: moved to cancelled: S-0416 delivered it: cmd/guard.go guardRole reads repo.Manifest.Roles[name].Permissions at each call and internal/guard/roles_test.go covers on, off, and fail-closed

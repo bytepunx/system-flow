@@ -3,11 +3,11 @@ id: S-0532
 type: story
 nature: improvement
 title: Starts, ends, and failures of a role's run and of a story's agent are events of kind agent that wait_for_events and inbox report, and the thread flai serve opens after auto_restarts cites them
-status: in-progress
+status: review
 parent: E-0030
 owner: alex
 created: 2026-10-28T21:00:58Z
-updated: 2026-10-29T01:59:05Z
+updated: 2026-10-29T03:03:16Z
 transitions:
   - to: ready
     at: 2026-10-28T22:21:04Z
@@ -15,9 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-10-29T01:59:05Z
     by: agent-S-0532
+  - to: review
+    at: 2026-10-29T03:03:16Z
+    by: agent-S-0532
 tags: [flai, serve, events]
 topics: [orchestration, cli]
-touches: [flai/internal/serve, flai/internal/mcpserver, design/system/flai-cli.md, design/system/strategic-agents.md, docs, flai/internal/inbox/agentevents.go, flai/internal/inbox/agentevents_test.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/serve/agent_events.go, flai/internal/serve/agent_events_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/stop.go, flai/internal/serve/stop_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/limit.go, flai/internal/serve/limit_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, design/system/agent-narrative.md, docs/users/flai.md, docs/operators/settings.md]
+touches: [flai/internal/serve, flai/internal/mcpserver, design/system/flai-cli.md, design/system/strategic-agents.md, docs, flai/internal/inbox/agentevents.go, flai/internal/inbox/agentevents_test.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/serve/agent_events.go, flai/internal/serve/agent_events_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/stop.go, flai/internal/serve/stop_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/limit.go, flai/internal/serve/limit_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, design/system/agent-narrative.md, docs/users/flai.md, docs/operators/settings.md, flai/internal/inbox/events.go]
 after: [S-0514]
 agent:
   harness: claude-code
@@ -25,20 +28,38 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 3864
+  priced_by: harness
+  turns:
+    - day: 2026-10-29
+      ceremony: 1
+      hand_edits: 3
+      work: 64
+  models:
+    - model: claude-opus-5-5
+      input: 522
+      output: 179232
+      cache_read: 27874217
+      cache_write: 994690
+      cost: 15.0373
   strategic:
     - kind: orchestrator
-      seconds: 904
+      seconds: 1701
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 76
-          output: 973
-          cache_read: 6529214
-          cache_write: 78733
-          cost: 1.4546
+          input: 262
+          output: 4368
+          cache_read: 32488905
+          cache_write: 125438
+          cost: 7.19
+        - model: claude-sonnet-5-5
+          input: 20
+          output: 104
+          cache_read: 312251
+          cache_write: 76164
+          cost: 0.2678
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -61,11 +82,11 @@ forecast:
 ADR-0209 §6. Today an agent that restarts three times is visible only in the serve journal and in the thread flai serve opens after `agent.auto_restarts` (ADR-0108). The orchestrator, the analyzer, and the operator reading the inbox see nothing of it, and nothing tells a running agent why a run around it ended. This story makes each start, end, and failure of a role's run (planner, orchestrator, analyzer, curator, a project's own role) and of a story's agent an event of kind `agent`, with `to` one of `started`, `ended`, `failed`, `stopped`, the item or role it concerns, and `why` as the journal words it (the exit, the usage-limit refusal, the operator's stop, the auto-restart count), reported by `wait_for_events` and `inbox` as the other events are, under the 50-event cap, and cited by the ADR-0108 thread.
 
 ## Acceptance criteria
-- [ ] A role's run and a story's agent starting, ending, failing, or being stopped produces one event of kind `agent` with its item or role, `to`, and `why`, read back through `wait_for_events` and `inbox`, with a test for each kind
-- [ ] A usage-limit refusal is a `failed` event whose `why` names the limit and the reset time Claude Code reports
-- [ ] The thread ADR-0108 opens after `auto_restarts` lists the `agent` events of those runs
-- [ ] The MCP tool descriptions, the design (`flai-cli.md`, `strategic-agents.md`), and the agent docs name the event kind and its fields
-- [ ] `flai check --strict` is clean
+- [x] A role's run and a story's agent starting, ending, failing, or being stopped produces one event of kind `agent` with its item or role, `to`, and `why`, read back through `wait_for_events` and `inbox`, with a test for each kind
+- [x] A usage-limit refusal is a `failed` event whose `why` names the limit and the reset time Claude Code reports
+- [x] The thread ADR-0108 opens after `auto_restarts` lists the `agent` events of those runs
+- [x] The MCP tool descriptions, the design (`flai-cli.md`, `strategic-agents.md`), and the agent docs name the event kind and its fields
+- [x] `flai check --strict` is clean
 
 ## Tasks
 - T-2271 An agent event of kind agent is appended to a log under .flai-cache and read back by inbox.CatchUp, once, under the 50-event cap

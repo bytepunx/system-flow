@@ -3,16 +3,37 @@ id: T-2276
 type: task
 nature: improvement
 title: The thread flai serve opens after agent.auto_restarts lists the agent events of the runs it counted
-status: backlog
+status: done
 parent: S-0532
 owner: alex
 created: 2026-10-28T21:09:33Z
-updated: 2026-10-29T02:00:45Z
-transitions: []
+updated: 2026-10-29T02:47:43Z
+transitions:
+  - to: ready
+    at: 2026-10-29T02:44:07Z
+    by: agent-S-0532
+  - to: in-progress
+    at: 2026-10-29T02:44:09Z
+    by: agent-S-0532
+  - to: done
+    at: 2026-10-29T02:47:43Z
+    by: agent-S-0532
 stream: S-0532
 tags: [flai, serve, events]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go]
 after: [T-2273]
+usage:
+  source: log
+  seconds: 214
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 32
+      output: 10944
+      cache_read: 1702090
+      cache_write: 60739
+      cost: 0.9182
 ---
 # T-2276 The thread flai serve opens after agent.auto_restarts lists the agent events of the runs it counted
 

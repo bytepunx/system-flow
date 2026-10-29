@@ -3,16 +3,37 @@ id: T-2272
 type: task
 nature: improvement
 title: flai serve appends a started, ended, failed, or stopped agent event for each story's agent run and for any run the operator stops
-status: backlog
+status: done
 parent: S-0532
 owner: alex
 created: 2026-10-28T21:08:56Z
-updated: 2026-10-29T02:00:35Z
-transitions: []
+updated: 2026-10-29T02:36:42Z
+transitions:
+  - to: ready
+    at: 2026-10-29T02:29:30Z
+    by: agent-S-0532
+  - to: in-progress
+    at: 2026-10-29T02:29:31Z
+    by: agent-S-0532
+  - to: done
+    at: 2026-10-29T02:36:42Z
+    by: agent-S-0532
 stream: S-0532
 tags: [flai, serve, events]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/stop.go, flai/internal/serve/stop_test.go]
 after: [T-2274]
+usage:
+  source: log
+  seconds: 431
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 63
+      output: 21605
+      cache_read: 3360009
+      cache_write: 119902
+      cost: 1.8126
 ---
 # T-2272 flai serve appends a started, ended, failed, or stopped agent event for each story's agent run and for any run the operator stops
 
