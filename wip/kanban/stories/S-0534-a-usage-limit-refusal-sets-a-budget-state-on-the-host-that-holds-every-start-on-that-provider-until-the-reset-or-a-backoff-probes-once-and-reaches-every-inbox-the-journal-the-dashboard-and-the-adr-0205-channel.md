@@ -7,7 +7,7 @@ status: ready
 parent: E-0030
 owner: alex
 created: 2026-10-28T21:02:16Z
-updated: 2026-10-29T00:38:46Z
+updated: 2026-10-29T00:42:42Z
 transitions:
   - to: ready
     at: 2026-10-28T22:21:09Z
@@ -62,10 +62,10 @@ cost_of_delay:
   at: 2026-10-28T21:28:34Z
 forecast:
   duration: 4h30m
-  delivery: 2026-10-29T10:42:00Z
-  basis: "Its own forecast of 4h30m; 3rd in the pull order with an in-progress limit of 5, behind S-0532 and S-0537."
+  delivery: 2026-10-29T13:40:00Z
+  basis: "Its own forecast of 4h30m; 4th in the pull order with an in-progress limit of 5, behind S-0519, S-0514, S-0532 and S-0537."
   by: flai
-  at: 2026-10-29T00:38:46Z
+  at: 2026-10-29T00:42:42Z
 ---
 # S-0534 A usage-limit refusal sets a budget state on the host that holds every start on that provider until the reset or a backoff, probes once, and reaches every inbox, the journal, the dashboard, and the ADR-0205 channel
 

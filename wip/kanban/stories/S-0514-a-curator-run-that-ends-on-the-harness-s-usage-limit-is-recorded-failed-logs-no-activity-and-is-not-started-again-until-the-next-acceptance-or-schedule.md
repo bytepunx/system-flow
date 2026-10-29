@@ -6,7 +6,7 @@ title: A curator run that ends on the harness's usage limit is recorded failed, 
 status: ready
 owner: alex
 created: 2026-10-28T12:40:16Z
-updated: 2026-10-29T00:39:03Z
+updated: 2026-10-29T00:42:27Z
 transitions:
   - to: ready
     at: 2026-10-29T00:38:32Z
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-10-28T12:51:54Z
 forecast:
   duration: 2h30m
-  delivery: 2026-10-29T04:33:00Z
-  basis: "Its own forecast of 2h30m; 6th in the pull order with an in-progress limit of 5, behind S-0532, S-0537, S-0534, S-0536 and S-0519."
+  delivery: 2026-10-29T03:37:00Z
+  basis: "Its own forecast of 2h30m; 1st in the pull order with an in-progress limit of 5, behind S-0519."
   by: flai
-  at: 2026-10-29T00:39:03Z
+  at: 2026-10-29T00:42:27Z
 finalized:
   by: alex
   at: 2026-10-28T12:56:56Z
