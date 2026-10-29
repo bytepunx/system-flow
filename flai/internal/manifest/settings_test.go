@@ -408,6 +408,96 @@ func TestEditSettingsWritesTheThreadsSettings(t *testing.T) {
 	}
 }
 
+// ADR-0209: orchestration.coalesce, orchestration.run_timeout, and
+// orchestration.schedule are written into the orchestration block, read back
+// by Load, and unset so that their defaults apply; a value flai check refuses
+// is refused naming the key.
+func TestEditSettingsWritesTheOrchestrationRunSettings(t *testing.T) {
+	for key, want := range map[string]struct {
+		kind Kind
+		def  string
+	}{
+		"orchestration.coalesce":    {KindDuration, "30s"},
+		"orchestration.run_timeout": {KindDuration, "20m"},
+		"orchestration.schedule":    {KindCron, ""},
+	} {
+		if s, ok := SettingFor(key); !ok || s.Kind != want.kind || s.Default != want.def || s.Meaning == "" || s.Risk != "" {
+			t.Errorf("%s in the catalog: %+v, %v", key, s, ok)
+		}
+	}
+	got, err := EditSettings([]byte(settingsFixture), []Assignment{
+		{"orchestration.coalesce", "2m"},
+		{"orchestration.run_timeout", "1h"},
+		{"orchestration.schedule", "0 * * * *"},
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := replaced(t, "    promote_to_ready: true\n", "    promote_to_ready: true\n  coalesce: 2m\n  run_timeout: 1h\n  schedule: \"0 * * * *\"\n")
+	if string(got) != want {
+		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
+	}
+	m := loaded(t, got)
+	if d, err := m.Orchestration.CoalesceDuration(); err != nil || d != 2*time.Minute {
+		t.Errorf("coalesce read back: %v, %v", d, err)
+	}
+	if d, err := m.Orchestration.RunTimeoutDuration(); err != nil || d != time.Hour {
+		t.Errorf("run_timeout read back: %v, %v", d, err)
+	}
+	if s, err := m.Orchestration.OrchestrationSchedule(); err != nil || s == nil || s.String() != "0 * * * *" {
+		t.Errorf("schedule read back: %v, %v", s, err)
+	}
+	values := map[string]SettingValue{}
+	for _, sv := range m.SettingValues() {
+		values[sv.Key] = sv
+	}
+	for key, want := range map[string]string{"orchestration.coalesce": "2m", "orchestration.run_timeout": "1h", "orchestration.schedule": "0 * * * *"} {
+		if v := values[key]; !v.Set || v.Value != want {
+			t.Errorf("%s's value: %+v", key, v)
+		}
+	}
+	keys := []string{"orchestration.coalesce", "orchestration.run_timeout", "orchestration.schedule"}
+	for _, v := range loaded(t, []byte(settingsFixture)).SettingValues() {
+		if slices.Contains(keys, v.Key) && (v.Set || v.Value != nil) {
+			t.Errorf("%s unset: %+v", v.Key, v)
+		}
+	}
+
+	unset, err := EditSettings(got, nil, keys)
+	if err != nil || string(unset) != settingsFixture {
+		t.Fatalf("unset: %v\n%s", err, unset)
+	}
+	m = loaded(t, unset)
+	if d, err := m.Orchestration.CoalesceDuration(); err != nil || d != DefaultCoalesce {
+		t.Errorf("unset coalesce: %v, %v", d, err)
+	}
+	if d, err := m.Orchestration.RunTimeoutDuration(); err != nil || d != DefaultRunTimeout {
+		t.Errorf("unset run_timeout: %v, %v", d, err)
+	}
+	if s, err := m.Orchestration.OrchestrationSchedule(); err != nil || s != nil {
+		t.Errorf("unset schedule: %v, %v", s, err)
+	}
+
+	for _, c := range []struct{ key, value, reason string }{
+		{"orchestration.coalesce", "soon", "is not a duration; write one such as 30s"},
+		{"orchestration.coalesce", "0", "is not more than zero"},
+		{"orchestration.coalesce", "-1m", "is not more than zero"},
+		{"orchestration.run_timeout", "an hour", "is not a duration; write one such as 20m"},
+		{"orchestration.run_timeout", "0s", "is not more than zero"},
+		{"orchestration.schedule", "hourly", `"hourly" has 1 fields, not five`},
+	} {
+		_, err := EditSettings([]byte(settingsFixture), []Assignment{{c.key, c.value}}, nil)
+		var refused *RefusedError
+		if !errors.As(err, &refused) {
+			t.Errorf("%s=%s: want a refusal, got %v", c.key, c.value, err)
+			continue
+		}
+		if i := slices.IndexFunc(refused.Problems, func(p Problem) bool { return p.Field == c.key }); i < 0 || !strings.Contains(refused.Problems[i].Reason, c.reason) {
+			t.Errorf("%s=%s: refusal %+v, want %q", c.key, c.value, refused.Problems, c.reason)
+		}
+	}
+}
+
 // S-0502: orchestration.permissions.confirm_after is a duration, unset by
 // default, that flai manifest set writes among the permissions, Load reads
 // back, and unset turns off; a value flai check refuses is refused naming the

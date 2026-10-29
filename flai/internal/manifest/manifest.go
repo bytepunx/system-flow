@@ -552,8 +552,9 @@ func (t Threads) Errors() []string {
 }
 
 // Orchestration is the project's say about the order of the ready column and
-// when accepted work is released (S-0217), and about what the orchestrator
-// may do and the agent it runs as (S-0218).
+// when accepted work is released (S-0217), about what the orchestrator may do
+// and the agent it runs as (S-0218), and about when flai serve starts and
+// stops its runs (ADR-0209).
 type Orchestration struct {
 	// Policy orders the ready column: one of OrderPolicies, the names flai
 	// order --by takes; empty means OrderFIFO, which leaves the operator's
@@ -566,6 +567,65 @@ type Orchestration struct {
 	// Agent is the orchestrator's agent over the project's: what it sets
 	// wins, and what it leaves out is the project's agent's.
 	Agent *Agent `yaml:"agent,omitempty" json:"agent,omitempty"`
+	// Coalesce is how long after the first queued reason flai serve starts
+	// an orchestrator run, with every reason seen meanwhile, a Go duration
+	// such as 30s; empty means DefaultCoalesce.
+	Coalesce string `yaml:"coalesce,omitempty" json:"coalesce,omitempty"`
+	// RunTimeout is how long an orchestrator run may hold before flai serve
+	// stops it, a Go duration such as 20m; empty means DefaultRunTimeout.
+	RunTimeout string `yaml:"run_timeout,omitempty" json:"run_timeout,omitempty"`
+	// Schedule is when flai serve starts an orchestrator run for a periodic
+	// look: a five-field cron expression in UTC or daily; empty means no
+	// schedule.
+	Schedule string `yaml:"schedule,omitempty" json:"schedule,omitempty"`
+}
+
+// DefaultCoalesce is how long after the first queued reason flai serve starts
+// an orchestrator run when orchestration.coalesce is not set: 30 seconds.
+const DefaultCoalesce = 30 * time.Second
+
+// DefaultRunTimeout is how long an orchestrator run may hold before flai
+// serve stops it when orchestration.run_timeout is not set: 20 minutes.
+const DefaultRunTimeout = 20 * time.Minute
+
+// CoalesceDuration is orchestration.coalesce as a duration: DefaultCoalesce
+// when it is empty.
+func (o Orchestration) CoalesceDuration() (time.Duration, error) {
+	s := strings.TrimSpace(o.Coalesce)
+	if s == "" {
+		return DefaultCoalesce, nil
+	}
+	d, err := time.ParseDuration(s)
+	if err != nil {
+		return 0, fmt.Errorf("orchestration.coalesce %q is not a duration; write one such as 30s or 2m, or unset it for 30s", o.Coalesce)
+	}
+	if d <= 0 {
+		return 0, fmt.Errorf("orchestration.coalesce %q is not more than zero; write a duration such as 30s or 2m, or unset it for 30s", o.Coalesce)
+	}
+	return d, nil
+}
+
+// RunTimeoutDuration is orchestration.run_timeout as a duration:
+// DefaultRunTimeout when it is empty.
+func (o Orchestration) RunTimeoutDuration() (time.Duration, error) {
+	s := strings.TrimSpace(o.RunTimeout)
+	if s == "" {
+		return DefaultRunTimeout, nil
+	}
+	d, err := time.ParseDuration(s)
+	if err != nil {
+		return 0, fmt.Errorf("orchestration.run_timeout %q is not a duration; write one such as 20m or 1h, or unset it for 20m", o.RunTimeout)
+	}
+	if d <= 0 {
+		return 0, fmt.Errorf("orchestration.run_timeout %q is not more than zero; write a duration such as 20m or 1h, or unset it for 20m", o.RunTimeout)
+	}
+	return d, nil
+}
+
+// OrchestrationSchedule is orchestration.schedule parsed: nil when it is
+// empty.
+func (o Orchestration) OrchestrationSchedule() (*cron.Schedule, error) {
+	return parseSchedule("orchestration", o.Schedule)
 }
 
 // Permissions are what the orchestrator may do without the operator, each
@@ -918,6 +978,15 @@ func (o Orchestration) Errors() []string {
 	errs = append(errs, o.Release.errors()...)
 	errs = append(errs, o.Permissions.errors("orchestration.permissions")...)
 	if _, err := o.Permissions.ConfirmAfterDuration(); err != nil {
+		errs = append(errs, err.Error())
+	}
+	if _, err := o.CoalesceDuration(); err != nil {
+		errs = append(errs, err.Error())
+	}
+	if _, err := o.RunTimeoutDuration(); err != nil {
+		errs = append(errs, err.Error())
+	}
+	if _, err := o.OrchestrationSchedule(); err != nil {
 		errs = append(errs, err.Error())
 	}
 	return append(errs, o.Agent.problems("orchestration.agent")...)

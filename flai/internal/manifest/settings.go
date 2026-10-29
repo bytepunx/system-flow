@@ -16,8 +16,8 @@ import (
 )
 
 // The strategic agents' settings that flai manifest set writes (S-0229,
-// ADR-0039): what the orchestrator may do and how it orders and releases,
-// the planner's and the analyzer's agents and schedules, and the curator's
+// ADR-0039): what the orchestrator may do, how it orders and releases, and
+// when flai serve starts and stops its runs (ADR-0209), the planner's and the analyzer's agents and schedules, and the curator's
 // agent (ADR-0196), schedule, and compaction window (ADR-0199); when the
 // operator is reminded of a thread that awaits them (ADR-0205); the
 // project's test tiers (S-0273); how a story is accepted (S-0392); and the
@@ -183,6 +183,15 @@ func buildCatalog() []Setting {
 		Setting{Key: "orchestration.release.whole_epics", Kind: KindBoolean, Values: []string{"true", "false"}, Default: "false",
 			Meaning: "Under every policy, holds a release back while a story accepted and not yet released belongs to an epic in neither review nor done.",
 			get:     func(m Manifest) (any, bool) { on := rel(m).WholeEpics; return on, on }},
+		Setting{Key: "orchestration.coalesce", Kind: KindDuration, Default: durationText(DefaultCoalesce),
+			Meaning: "How long after the first event it can act on flai serve starts an orchestrator run, with every event seen meanwhile; more than zero.",
+			get:     func(m Manifest) (any, bool) { return text(m.Orchestration.Coalesce) }},
+		Setting{Key: "orchestration.run_timeout", Kind: KindDuration, Default: durationText(DefaultRunTimeout),
+			Meaning: "How long an orchestrator run may hold before flai serve stops it and logs that it did; more than zero.",
+			get:     func(m Manifest) (any, bool) { return text(m.Orchestration.RunTimeout) }},
+		Setting{Key: "orchestration.schedule", Kind: KindCron,
+			Meaning: "When flai serve starts an orchestrator run for a periodic look, a five-field cron expression in UTC or daily; unset, it runs only for the events it can act on.",
+			get:     func(m Manifest) (any, bool) { return text(m.Orchestration.Schedule) }},
 		Setting{Key: "planning.agent", Kind: KindAgent,
 			Meaning: "The planner's agent, over the project's: what it sets wins, and what it leaves out is the project's agent's.",
 			get:     func(m Manifest) (any, bool) { return agent(m.Planning.Agent) }},

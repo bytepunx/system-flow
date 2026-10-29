@@ -1141,6 +1141,91 @@ func TestThreadsReminders(t *testing.T) {
 	}
 }
 
+// ADR-0209: orchestration.coalesce and orchestration.run_timeout are Go
+// durations, 30s and 20m when unset, and orchestration.schedule is a schedule,
+// none when unset; a duration that does not parse or is not more than zero,
+// and a schedule that does not parse, is an error naming the key and what to
+// write.
+func TestOrchestrationRunSettings(t *testing.T) {
+	if DefaultCoalesce != 30*time.Second || DefaultRunTimeout != 20*time.Minute {
+		t.Errorf("the defaults are %v and %v, not 30s and 20m", DefaultCoalesce, DefaultRunTimeout)
+	}
+	base := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\n"
+	m := loaded(t, []byte(base))
+	if d, err := m.Orchestration.CoalesceDuration(); err != nil || d != 30*time.Second {
+		t.Errorf("no block, coalesce: %v, %v", d, err)
+	}
+	if d, err := m.Orchestration.RunTimeoutDuration(); err != nil || d != 20*time.Minute {
+		t.Errorf("no block, run_timeout: %v, %v", d, err)
+	}
+	if s, err := m.Orchestration.OrchestrationSchedule(); err != nil || s != nil {
+		t.Errorf("no block, schedule: %v, %v", s, err)
+	}
+	if errs := m.Orchestration.Errors(); len(errs) != 0 {
+		t.Errorf("no block: %v", errs)
+	}
+
+	m = loaded(t, []byte(base+"orchestration:\n  coalesce: 2m\n  run_timeout: 1h\n  schedule: \"0 * * * *\"\n"))
+	if d, err := m.Orchestration.CoalesceDuration(); err != nil || d != 2*time.Minute {
+		t.Errorf("coalesce read: %v, %v", d, err)
+	}
+	if d, err := m.Orchestration.RunTimeoutDuration(); err != nil || d != time.Hour {
+		t.Errorf("run_timeout read: %v, %v", d, err)
+	}
+	s, err := m.Orchestration.OrchestrationSchedule()
+	if err != nil || s == nil || s.String() != "0 * * * *" {
+		t.Fatalf("schedule read: %v, %v", s, err)
+	}
+	at := time.Date(2026, 10, 29, 9, 10, 0, 0, time.UTC)
+	if next := s.Next(at); !next.Equal(time.Date(2026, 10, 29, 10, 0, 0, 0, time.UTC)) {
+		t.Errorf("next after %v: %v", at, next)
+	}
+	if errs := m.Orchestration.Errors(); len(errs) != 0 {
+		t.Errorf("valid orchestration: %v", errs)
+	}
+	if ps, err := m.Planning.PlanSchedule(); err != nil || ps != nil {
+		t.Errorf("orchestration.schedule reached the planner: %v, %v", ps, err)
+	}
+	if ds, err := m.Digest.DigestSchedule(); err != nil || ds != nil {
+		t.Errorf("orchestration.schedule reached the curator: %v, %v", ds, err)
+	}
+
+	for in, want := range map[string]time.Duration{"": DefaultCoalesce, " ": DefaultCoalesce, "1m30s": 90 * time.Second} {
+		if d, err := (Orchestration{Coalesce: in}).CoalesceDuration(); err != nil || d != want {
+			t.Errorf("coalesce %q: %v, %v, want %v", in, d, err, want)
+		}
+	}
+	for in, want := range map[string]time.Duration{"": DefaultRunTimeout, " ": DefaultRunTimeout, "45m": 45 * time.Minute} {
+		if d, err := (Orchestration{RunTimeout: in}).RunTimeoutDuration(); err != nil || d != want {
+			t.Errorf("run_timeout %q: %v, %v, want %v", in, d, err, want)
+		}
+	}
+	if s, err := (Orchestration{Schedule: "daily"}).OrchestrationSchedule(); err != nil || s == nil || s.String() != "daily" {
+		t.Errorf("daily: %v, %v", s, err)
+	}
+	for _, c := range []struct {
+		o    Orchestration
+		want string
+	}{
+		{Orchestration{Coalesce: "soon"}, `orchestration.coalesce "soon" is not a duration; write one such as 30s or 2m, or unset it for 30s`},
+		{Orchestration{Coalesce: "0"}, `orchestration.coalesce "0" is not more than zero; write a duration such as 30s or 2m, or unset it for 30s`},
+		{Orchestration{Coalesce: "-30s"}, `orchestration.coalesce "-30s" is not more than zero`},
+		{Orchestration{RunTimeout: "an hour"}, `orchestration.run_timeout "an hour" is not a duration; write one such as 20m or 1h, or unset it for 20m`},
+		{Orchestration{RunTimeout: "0s"}, `orchestration.run_timeout "0s" is not more than zero; write a duration such as 20m or 1h, or unset it for 20m`},
+		{Orchestration{RunTimeout: "-20m"}, `orchestration.run_timeout "-20m" is not more than zero`},
+		{Orchestration{Schedule: "hourly"}, `orchestration.schedule "hourly" has 1 fields, not five`},
+		{Orchestration{Schedule: "61 * * * *"}, `orchestration.schedule "61 * * * *": the minute "61" is outside 0-59`},
+	} {
+		if errs := c.o.Errors(); len(errs) != 1 || !strings.HasPrefix(errs[0], c.want) {
+			t.Errorf("%+v: errors %q, want one saying %q", c.o, errs, c.want)
+		}
+	}
+	all := (Orchestration{Coalesce: "0", RunTimeout: "soon", Schedule: "hourly"}).Errors()
+	if len(all) != 3 || !strings.HasPrefix(all[0], "orchestration.coalesce ") || !strings.HasPrefix(all[1], "orchestration.run_timeout ") || !strings.HasPrefix(all[2], "orchestration.schedule ") {
+		t.Errorf("coalesce's, run_timeout's, and schedule's errors, in that order: %q", all)
+	}
+}
+
 // ADR-0196: flai manifest set writes digest.agent, which reads back as the
 // curator's agent, and refuses one that is not valid with the field and
 // the reason.
