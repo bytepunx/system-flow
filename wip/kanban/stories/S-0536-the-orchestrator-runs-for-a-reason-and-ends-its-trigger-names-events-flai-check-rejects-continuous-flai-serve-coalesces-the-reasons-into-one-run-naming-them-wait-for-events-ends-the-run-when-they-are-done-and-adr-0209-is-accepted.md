@@ -7,7 +7,7 @@ status: ready
 parent: E-0030
 owner: alex
 created: 2026-10-28T21:02:32Z
-updated: 2026-10-29T04:22:38Z
+updated: 2026-10-29T05:16:45Z
 transitions:
   - to: ready
     at: 2026-10-28T22:21:22Z
@@ -46,10 +46,10 @@ cost_of_delay:
   at: 2026-10-28T21:47:43Z
 forecast:
   duration: 5h
-  delivery: 2026-10-29T10:32:00Z
-  basis: "Its own forecast of 5h; 3rd in the pull order with an in-progress limit of 5, behind S-0417, S-0539, S-0537 and S-0534."
+  delivery: 2026-10-29T11:26:00Z
+  basis: "Its own forecast of 5h; 3rd in the pull order with an in-progress limit of 5, behind S-0417, S-0537 and S-0534."
   by: flai
-  at: 2026-10-29T04:22:38Z
+  at: 2026-10-29T05:16:45Z
 ---
 # S-0536 The orchestrator runs for a reason and ends: its trigger names events, flai check rejects continuous, flai serve coalesces the reasons into one run naming them, wait_for_events ends the run when they are done, and ADR-0209 is accepted
 
