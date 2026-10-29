@@ -173,14 +173,18 @@ func undoesMain(r execx.Runner, repo *workitem.Repo, story string) []string {
 }
 
 // enabledActions says which host actions the operator enabled for a project,
-// of those a dashboard sees. It is told to the dashboard so that it can say
-// what will happen; nothing the dashboard can ask for changes it.
+// of those a dashboard sees, those the roles the project defines name among
+// them (S-0417). It is told to the dashboard so that it can say what will
+// happen; nothing the dashboard can ask for changes it.
 func enabledActions(host Host, root string) map[string]bool {
 	out := map[string]bool{}
 	for name := range Actions {
 		if DashboardSees(name) {
 			out[name] = host.enabled(name, root)
 		}
+	}
+	for name := range DefinedActions(root) {
+		out[name] = host.enabled(name, root)
 	}
 	return out
 }
@@ -223,8 +227,9 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 		},
 
 		// agent.status: whether flai serve starts an agent when a story becomes
-		// ready here (S-0079), what it started, and why a ready story waits. It
-		// is read-only, like everything about host actions: the dashboard shows
+		// ready here (S-0079), what it started, and why a ready story waits;
+		// the runs of the roles the project defines among it, under roles by
+		// name and item (S-0417). It is read-only, like everything about host actions: the dashboard shows
 		// it, and cannot start, stop, or configure anything.
 		// settings.get: the host's settings as they apply to this project, and
 		// whether the dashboard may change them here and host-wide (S-0105).

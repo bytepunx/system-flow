@@ -54,12 +54,18 @@ func (a *app) host() hostapi.Host {
 			if plans == nil {
 				plans = map[string]*serve.AgentRun{}
 			}
+			// the newest run of each role the project defines, by its name and
+			// then its item, "" for none (S-0417)
+			defined := st.Roles
+			if defined == nil {
+				defined = map[string]map[string]*serve.AgentRun{}
+			}
 			// the newest orchestrator run, null before the first (S-0218), with
 			// held while the operator holds it stopped (S-0228), and the newest
 			// analyzer run, its focus and report among it (S-0223), and the
 			// newest curator run, its since and entries among it (S-0431)
 			return map[string]any{"command": command, "running": st.Running, "last": st.Last, "waiting": st.Waiting, "stories": serve.Activity(root, st), "plans": plans,
-				"orchestrator": st.Orchestrator, "analyzer": st.Analyzer, "curator": st.Curator}
+				"orchestrator": st.Orchestrator, "analyzer": st.Analyzer, "curator": st.Curator, "roles": defined}
 		},
 		AgentStream: func(root, story string, after int64) (any, error) {
 			return serve.Stream(a.serveDir().AgentStates()[root], story, after)
@@ -139,25 +145,59 @@ func releasePublished(r execx.Runner) serve.ReleasePublished {
 	}
 }
 
-func knownAction(name string) error {
-	if _, ok := hostapi.Actions[name]; ok {
+// hostActions are the host actions there are for the projects at roots,
+// each with what it lets a dashboard do or has flai do: hostapi.Actions, and
+// those the roles each project defines name (S-0417).
+func hostActions(roots ...string) map[string]string {
+	out := maps.Clone(hostapi.Actions)
+	for _, root := range roots {
+		for n, means := range hostapi.DefinedActions(root) {
+			out[n] = means
+		}
+	}
+	return out
+}
+
+func knownAction(name string, actions map[string]string) error {
+	if _, ok := actions[name]; ok {
 		return nil
 	}
-	names := make([]string, 0, len(hostapi.Actions))
-	for n := range hostapi.Actions {
-		names = append(names, n)
-	}
-	sort.Strings(names)
+	names := slices.Sorted(maps.Keys(actions))
 	return fmt.Errorf("there is no host action %q; there %s: %s", name, oneOrMany(len(names), "is", "are"), strings.Join(names, ", "))
 }
 
-// actionMeans says what the host action n does once enabled: what it lets a
-// dashboard do, or, for one no dashboard sees, what it has flai do.
-func actionMeans(n string) string {
-	if hostapi.DashboardSees(n) {
-		return "lets a dashboard " + hostapi.Actions[n]
+// actionMeans says what the host action n of actions does once enabled:
+// what it lets a dashboard do, or, for one no dashboard sees, what it has
+// flai do.
+func actionMeans(n string, actions map[string]string) string {
+	if dashboardSees(n) {
+		return "lets a dashboard " + actions[n]
 	}
-	return hostapi.Actions[n]
+	return actions[n]
+}
+
+// dashboardSees reports whether a dashboard is told of the host action n:
+// one of hostapi.Actions it sees, or one a role names, which role.run asks
+// for (S-0417).
+func dashboardSees(n string) bool {
+	_, fixed := hostapi.Actions[n]
+	return !fixed || hostapi.DashboardSees(n)
+}
+
+// servedRoots are the projects flai serve serves on this host, by their
+// main checkouts, and the one in the working directory when there is one,
+// whose role files name the host actions --all-projects may turn on
+// (S-0417). A registry that cannot be read names none.
+func (a *app) servedRoots() []string {
+	var roots []string
+	if repo, err := a.project(); err == nil {
+		roots = append(roots, mainRootOf(repo))
+	}
+	served, _ := a.serveDir().Projects()
+	for _, e := range served {
+		roots = append(roots, e.Root)
+	}
+	return roots
 }
 
 func oneOrMany(n int, one, many string) string {
@@ -189,19 +229,28 @@ to the project in the working directory, or to every project with
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			action := args[0]
-			if err := knownAction(action); err != nil {
-				return err
-			}
 			root, where := config.AllProjects, "every project"
-			if !all {
+			var roots []string
+			if all {
+				roots = a.servedRoots()
+			} else {
 				repo, err := a.project()
 				if err != nil {
+					if unknown := knownAction(action, hostActions()); unknown != nil {
+						return unknown
+					}
 					return fmt.Errorf("%w; or name every project with --all-projects", err)
 				}
 				root, where = mainRootOf(repo), repo.Manifest.Name
+				roots = []string{root}
 			}
 			cfg, path, err := a.loadConfig()
 			if err != nil {
+				return err
+			}
+			// an action a role named before its file went is still turned off
+			actions := hostActions(roots...)
+			if err := knownAction(action, actions); err != nil && (on || len(cfg.HostActions[action]) == 0) {
 				return err
 			}
 			next := cfg.WithAction(action, root, on)
@@ -214,8 +263,8 @@ to the project in the working directory, or to every project with
 			}
 			switch {
 			case on:
-				fmt.Fprintf(a.out, "%s enabled for %s\n  it %s\n", action, where, actionMeans(action))
-				if hostapi.DashboardSees(action) {
+				fmt.Fprintf(a.out, "%s enabled for %s\n  it %s\n", action, where, actionMeans(action, actions))
+				if dashboardSees(action) {
 					fmt.Fprintln(a.out, "  every use is journalled: flai serve journal")
 				}
 				fmt.Fprintf(a.out, "  turn it off with: flai serve disable %s\n", action)
@@ -245,11 +294,11 @@ func newServeActionsCmd(a *app) *cobra.Command {
 			if repo, err := a.project(); err == nil {
 				here = mainRootOf(repo)
 			}
-			names := make([]string, 0, len(hostapi.Actions))
-			for n := range hostapi.Actions {
-				names = append(names, n)
+			actions := hostActions()
+			if here != "" {
+				actions = hostActions(here) // and those the roles it defines name (S-0417)
 			}
-			sort.Strings(names)
+			names := slices.Sorted(maps.Keys(actions))
 			if a.jsonOut {
 				out := []map[string]any{}
 				for _, n := range names {
@@ -257,7 +306,7 @@ func newServeActionsCmd(a *app) *cobra.Command {
 					if roots == nil {
 						roots = []string{}
 					}
-					out = append(out, map[string]any{"action": n, "means": hostapi.Actions[n], "enabled_for": roots, "enabled_here": here != "" && cfg.ActionEnabled(n, here)})
+					out = append(out, map[string]any{"action": n, "means": actions[n], "enabled_for": roots, "enabled_here": here != "" && cfg.ActionEnabled(n, here)})
 				}
 				return a.printJSON(out)
 			}
@@ -266,7 +315,7 @@ func newServeActionsCmd(a *app) *cobra.Command {
 				if roots := cfg.HostActions[n]; len(roots) > 0 {
 					state = "on for " + strings.ReplaceAll(strings.Join(roots, ", "), config.AllProjects, "every project")
 				}
-				fmt.Fprintf(a.out, "%s: %s\n  %s\n", n, state, actionMeans(n))
+				fmt.Fprintf(a.out, "%s: %s\n  %s\n", n, state, actionMeans(n, actions))
 				if here != "" {
 					if cfg.ActionEnabled(n, here) {
 						fmt.Fprintf(a.out, "  on for this project; flai serve disable %s turns it off\n", n)
@@ -572,6 +621,11 @@ func (a *app) agentConfig(root string) serve.AgentConfig {
 	for _, f := range config.KnownForges() {
 		forgeTokens = append(forgeTokens, cfg.ForgeTokenEnv(f))
 	}
+	// whether each host action a role the project defines names is on (S-0417)
+	defined := map[string]bool{}
+	for action := range hostapi.DefinedActions(root) {
+		defined[action] = cfg.ActionEnabled(action, root)
+	}
 	self, _ := os.Executable()
 	return serve.AgentConfig{
 		Flai:           self,
@@ -588,6 +642,7 @@ func (a *app) agentConfig(root string) serve.AgentConfig {
 		Lifts:          lifts,
 		AutoApprove:    cfg.ActionEnabled(hostapi.ActionAutoApprove, root),
 		ForgeTokenEnvs: forgeTokens,
+		RoleActions:    defined,
 	}
 }
 
@@ -1524,16 +1579,17 @@ func (a *app) hostSettings(root string) any {
 	if err != nil {
 		return map[string]any{"error": err.Error()}
 	}
-	names := make([]string, 0, len(hostapi.Actions))
-	for n := range hostapi.Actions {
-		if hostapi.DashboardSees(n) {
+	all := hostActions(root) // those the roles the project defines name among them (S-0417)
+	names := make([]string, 0, len(all))
+	for n := range all {
+		if dashboardSees(n) {
 			names = append(names, n)
 		}
 	}
 	sort.Strings(names)
 	actions := make([]map[string]any, 0, len(names))
 	for _, n := range names {
-		actions = append(actions, map[string]any{"name": n, "means": hostapi.Actions[n],
+		actions = append(actions, map[string]any{"name": n, "means": all[n],
 			"here": cfg.ActionEnabled(n, root), "everywhere": cfg.ActionEnabled(n, config.AllProjects)})
 	}
 	providers := hostProviders(cfg.Agent.Providers, os.LookupEnv)

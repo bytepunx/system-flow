@@ -29,6 +29,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
+	"github.com/bytepunx/system-flow/flai/internal/roles"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -430,6 +431,97 @@ func DashboardSees(name string) bool {
 	return ok && !shellOnly[name]
 }
 
+// DefinedActions are the host actions the roles the project at root defines
+// name in their files under the design folder's workflows/roles (S-0417,
+// ADR-0207), each with what it lets a dashboard do: start the roles that
+// name it, through role.run or flai role run. A built-in role's file, a file
+// that does not load, and an action that is one of Actions name none; a
+// project whose manifest or role files cannot be read defines none.
+func DefinedActions(root string) map[string]string {
+	byAction := map[string][]roles.Role{}
+	var order []string
+	for _, f := range definedRoles(root) {
+		if len(byAction[f.Action]) == 0 {
+			order = append(order, f.Action)
+		}
+		byAction[f.Action] = append(byAction[f.Action], f)
+	}
+	out := map[string]string{}
+	for _, action := range order {
+		each := make([]string, 0, len(byAction[action]))
+		for _, f := range byAction[action] {
+			each = append(each, fmt.Sprintf("start the role %[1]s, which %[2]s defines, with its agent (roles.%[1]s.agent over agent in system-flow.yaml) and the harnesses and the command you set with flai serve agent, on this machine and as you, in the project's main checkout, when you run flai role run %[1]s or call role.run, %[3]s; one run of it %[4]s at a time; a holder of the dashboard token can then start it", f.Name, f.Path, roleTakes(f), roleRunsOn(f)))
+		}
+		out[action] = strings.Join(each, "; and ")
+	}
+	return out
+}
+
+// definedRoles are the roles the project at root defines in role files that
+// load, the built-in roles' files and those naming an action of Actions, or
+// none, left out.
+func definedRoles(root string) []roles.Role {
+	m, err := manifest.Load(filepath.Join(root, manifest.File))
+	if err != nil {
+		return nil
+	}
+	all, _, err := roles.Load(root, m.Layout["design"])
+	if err != nil {
+		return nil
+	}
+	var out []roles.Role
+	for _, f := range all {
+		if _, fixed := Actions[f.Action]; f.Action == "" || fixed || builtinRole(f.Name) {
+			continue
+		}
+		out = append(out, f)
+	}
+	return out
+}
+
+// builtinRole reports whether name is a built-in role's, which flai starts
+// by commands of its own.
+func builtinRole(name string) bool {
+	for _, n := range roles.BuiltinActions {
+		if n == name {
+			return true
+		}
+	}
+	return false
+}
+
+// roleAction is the host action the role name's file names in the project
+// at root, which role.run is behind (S-0417), or "" when the project
+// defines no role name: flai role run then refuses it in its own words.
+func roleAction(p channel.Project, raw json.RawMessage) string {
+	var in struct {
+		Name string `json:"name"`
+	}
+	_ = json.Unmarshal(raw, &in)
+	for _, f := range definedRoles(p.Root) {
+		if f.Name == in.Name {
+			return f.Action
+		}
+	}
+	return ""
+}
+
+// roleTakes says what a role's run is on, as its file says.
+func roleTakes(f roles.Role) string {
+	if len(f.Item) == 0 {
+		return "on no item"
+	}
+	return "on a " + strings.Join(f.Item, " or ") + " not archived, done, or cancelled"
+}
+
+// roleRunsOn says how many runs of a role go at once: one per item, or one.
+func roleRunsOn(f roles.Role) string {
+	if len(f.Item) == 0 {
+		return "for the project"
+	}
+	return "per item"
+}
+
 // Host is what the host decides and records about host actions (ADR-0029).
 // The zero value enables nothing and records nothing.
 type Host struct {
@@ -493,6 +585,13 @@ type spec struct {
 	// action names the host action this method is: asked for while the
 	// operator has not enabled it, it is refused and says what enables it.
 	action string
+	// actionOf, when set, is the host action a call is, read from its
+	// params, where it is not the same for every call: role.run's is the
+	// one the file of the role it names names (S-0417). The call is gated
+	// and journalled under it as under action; "" gates nothing and
+	// journals nothing, leaving the call to its command's refusal. Asked
+	// once build has accepted the params.
+	actionOf func(p channel.Project, raw json.RawMessage) string
 	// needs, when set, names the host action a call is in the project it is
 	// asked of, or "" for none, where action would gate every call:
 	// accept.run under pull-request acceptance merges on the forge
@@ -2275,6 +2374,11 @@ func itemSpecs() map[string]spec {
 			}
 			return []string{"curate", "--since=" + in.Since}, "", nil
 		}},
+		// role.run: a role the project defines (S-0417, ADR-0207), on an item
+		// its file takes or on none, with inputs, on the operator's word,
+		// behind the host action its file names; flai role run judges
+		// whether it may, and says why not.
+		"role.run": {actionOf: roleAction, describe: describeRole, build: roleRunArgs},
 		// orchestrate.stop: the orchestrator's run ended and the orchestrator
 		// held stopped, so that flai serve does not start it again while the
 		// orchestrate action stays on, on the operator's word from its page
@@ -2383,6 +2487,67 @@ func describePlan(res any, err *channel.Error) (outcome, detail string) {
 	}
 	_ = json.Unmarshal(w.Data, &said)
 	return "done", fmt.Sprintf("started %s to plan %s as %s (pid %d)", said.Command, said.Item, said.Agent, said.PID)
+}
+
+// roleName is a role's name as a role file gives it, in kebab case.
+var roleName = regexp.MustCompile(`^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$`)
+
+// roleRunArgs is role.run's command line: flai role run with the role's
+// name, its item when one is given, and each input as --input=name=value in
+// the order given. An input's name is one word and its value one line.
+func roleRunArgs(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+	in, e := decode[struct {
+		Name   string `json:"name"`
+		Item   string `json:"item"`
+		Inputs []struct {
+			Name  string `json:"name"`
+			Value string `json:"value"`
+		} `json:"inputs"`
+	}](raw)
+	if e != nil {
+		return nil, "", e
+	}
+	if !roleName.MatchString(in.Name) {
+		return nil, "", bad("%q is not a role's name: a role file names it in kebab case, such as reviewer", in.Name)
+	}
+	args := []string{"role", "run", in.Name}
+	if in.Item != "" {
+		if e := needID(in.Item); e != nil {
+			return nil, "", e
+		}
+		args = append(args, in.Item)
+	}
+	for _, input := range in.Inputs {
+		if !listValue.MatchString(input.Name) {
+			return nil, "", bad("input %q is not an input's name: one word, such as focus, without = or a leading dash", input.Name)
+		}
+		if strings.ContainsAny(input.Value, "\x00\n\r") {
+			return nil, "", bad("the value of input %s holds a line break or NUL: give it on one line", input.Name)
+		}
+		args = append(args, "--input="+input.Name+"="+input.Value)
+	}
+	return args, "", nil
+}
+
+// describeRole reads flai role run's --json shape for the journal.
+func describeRole(res any, err *channel.Error) (outcome, detail string) {
+	if err != nil {
+		return "failed", err.Message
+	}
+	w, _ := res.(Written)
+	var said struct {
+		Role    string `json:"role"`
+		Item    string `json:"item"`
+		Agent   string `json:"agent"`
+		Command string `json:"command"`
+		PID     int    `json:"pid"`
+	}
+	_ = json.Unmarshal(w.Data, &said)
+	on := "on no item"
+	if said.Item != "" {
+		on = "on " + said.Item
+	}
+	return "done", fmt.Sprintf("started %s to run the role %s %s as %s (pid %d)", said.Command, said.Role, on, said.Agent, said.PID)
 }
 
 // agentNow is the write that runs flai serve agent <verb> for a story, gated
@@ -3028,7 +3193,11 @@ func methodsFrom(table map[string]spec, run Runner, now func() time.Time, host H
 				entry.Project, entry.Root = sp.about(raw)
 				which = entry.Root
 			}
-			action := sp.action
+			is := sp.action
+			if sp.actionOf != nil {
+				is = sp.actionOf(p, raw)
+			}
+			action := is
 			if action == "" && sp.needs != nil {
 				action = sp.needs(p)
 			}
@@ -3109,7 +3278,7 @@ func methodsFrom(table map[string]spec, run Runner, now func() time.Time, host H
 			} else if key != "" && ctx.Err() == nil {
 				j.put(key, res, rerr)
 			}
-			if entry.Action = sp.action; entry.Action == "" && sp.uses != "" && host.enabled(sp.uses, p.Root) {
+			if entry.Action = is; entry.Action == "" && sp.uses != "" && host.enabled(sp.uses, p.Root) {
 				entry.Action = sp.uses
 			}
 			if entry.Action == "" {

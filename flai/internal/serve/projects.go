@@ -19,7 +19,10 @@ const Removed = "removed"
 // story's agent is recorded as started, not started, or ended (S-0154),
 // which changes no file of the project, with the project and the story; for
 // a planner's run, with the project and the item it plans (S-0208); for the
-// orchestrator's, with the project and role, orchestrate (S-0218).
+// orchestrator's, with the project and role, orchestrate (S-0218); and for
+// a run of a role the project defines, with the project, role, its verb,
+// name, its name, and item, the item it runs on, when it runs on one
+// (S-0417).
 const AgentChanged = "agent"
 
 // Unavailable says why a registered project cannot be served (S-0121): its

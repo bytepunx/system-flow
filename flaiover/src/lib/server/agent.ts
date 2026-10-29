@@ -205,6 +205,8 @@ export const REQUIRED_METHODS = [
 	'analyze.run',
 	// S-0431: the curator for the project, with a since or none, gated by the curate host action (ADR-0196)
 	'curate.run',
+	// S-0417: a role the project defines, on an item its file takes or on none, gated by the host action its file names
+	'role.run',
 	// S-0228: the orchestrator held stopped, and let start again, gated by the orchestrate host action
 	'orchestrate.stop',
 	'orchestrate.start',

@@ -1958,3 +1958,63 @@ func TestServeNotify(t *testing.T) {
 		t.Errorf("a cleared channel is not written: %s", data)
 	}
 }
+
+// S-0417: the host action a role the project defines names is one flai
+// serve enable and disable take for the project, flai serve actions and the
+// settings page list it, flai serve is told whether it is on, and
+// agent.status carries the role's runs under roles, by name and item.
+func TestServeEnableTakesADefinedRolesAction(t *testing.T) {
+	root := rolesProject(t, map[string]string{"reviewer.md": reviewerRole})
+	cfgPath := os.Getenv("FLAI_CONFIG")
+	if out, _, _ := runIn(t, root, "serve", "actions"); !strings.Contains(out, "review: off everywhere\n  lets a dashboard start the role reviewer, which design/workflows/roles/reviewer.md defines") {
+		t.Errorf("actions names it and what it means: %s", out)
+	}
+	if (&app{}).agentConfig(root).RoleActions["review"] {
+		t.Error("review is on by default")
+	}
+	status := func() string {
+		t.Helper()
+		got, err := json.Marshal((&app{}).host().Agent(root))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(got)
+	}
+	if got := status(); !strings.Contains(got, `"roles":{}`) {
+		t.Errorf("agent.status before any run: %s", got)
+	}
+	if _, errOut, code := runIn(t, root, "serve", "enable", "audit"); code == 0 || !strings.Contains(errOut, `there is no host action \"audit\"`) || !strings.Contains(errOut, ", review, ") {
+		t.Errorf("an action no role names: %d %s", code, errOut)
+	}
+	if out, errOut, code := runIn(t, root, "serve", "enable", "review"); code != 0 || !strings.Contains(out, "review enabled for t\n  it lets a dashboard start the role reviewer") || !strings.Contains(out, "every use is journalled") {
+		t.Fatalf("enable: %d %s %s", code, out, errOut)
+	}
+	if !(&app{}).agentConfig(root).RoleActions["review"] {
+		t.Error("enabled, flai serve is not told")
+	}
+	settings, err := json.Marshal((&app{}).hostSettings(root))
+	if err != nil || !strings.Contains(string(settings), `"here":true,"means":"start the role reviewer`) || !strings.Contains(string(settings), `"name":"review"`) {
+		t.Errorf("the settings page does not list review on: %s %v", settings, err)
+	}
+	run := `{"` + root + `":{"roles":{"reviewer":{"S-0001":{"story":"","item":"S-0001","role":"review","role_name":"reviewer","action":"review","harness":"command","command":"run-agent","agent":"reviewer-S-0001","pid":42,"started":"2026-10-28T10:00:00Z","session":"s","log":"/l/t-reviewer-20261028T100000Z.log"}}}}}`
+	dir := string(serve.DirFor(cfgPath))
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "agents.json"), []byte(run), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if got := status(); !strings.Contains(got, `"roles":{"reviewer":{"S-0001":{`) || !strings.Contains(got, `"role_name":"reviewer"`) || !strings.Contains(got, `"agent":"reviewer-S-0001"`) {
+		t.Errorf("agent.status with a run: %s", got)
+	}
+	// a role file gone, its action is still turned off
+	if err := os.Remove(filepath.Join(root, "design", "workflows", "roles", "reviewer.md")); err != nil {
+		t.Fatal(err)
+	}
+	if out, errOut, code := runIn(t, root, "serve", "disable", "review"); code != 0 || !strings.Contains(out, "review disabled for t") {
+		t.Errorf("disable once its role is gone: %d %s %s", code, out, errOut)
+	}
+	if _, errOut, code := runIn(t, root, "serve", "enable", "review"); code == 0 || !strings.Contains(errOut, `there is no host action \"review\"`) {
+		t.Errorf("enable once its role is gone: %d %s", code, errOut)
+	}
+}

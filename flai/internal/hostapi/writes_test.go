@@ -124,6 +124,8 @@ var good = map[string]struct {
 	"issue.new":   {`{"title":" --json  is my title ","class":"defect","story":"S-0212","cost":" 20m ","note":"  seen\n again ",` + rid + `}`, "issue new --class=defect --story=S-0212 --cost=20m --note=seen again --autocommit --trailer=" + Trailer + " --json -- --json is my title", ""},
 	"issue.bump":  {`{"id":"I-0007","story":"S-0212","cost":"5m","note":"--again",` + rid + `}`, "issue bump I-0007 --story=S-0212 --cost=5m --note=--again --autocommit --trailer=" + Trailer + " --json", ""},
 	"issue.close": {`{"id":"I-0007","reason":" fixed by\n S-0275 ",` + rid + `}`, "issue close I-0007 --reason=fixed by S-0275 --autocommit --trailer=" + Trailer + " --json", ""},
+	// S-0417: a role the project defines, with its item and its inputs in order
+	"role.run": {`{"name":"reviewer","item":"S-0001","inputs":[{"name":"focus","value":"docs --only"},{"name":"depth","value":"2"}],` + rid + `}`, "role run reviewer S-0001 --input=focus=docs --only --input=depth=2 --json", ""},
 }
 
 // manifestSave is a save of the strategic agents' settings: a value of every
@@ -315,6 +317,13 @@ var refused = map[string][]string{
 	"issue.close": {
 		`{"id":"--help","reason":"r",` + rid + `}`, `{"id":"I-1; ls","reason":"r",` + rid + `}`, `{"id":"S-0001","reason":"r",` + rid + `}`,
 		`{"id":"I-0001",` + rid + `}`, `{"id":"I-0001","reason":" \n ",` + rid + `}`, `{"id":"I-0001","reason":["r"],` + rid + `}`, `{"id":"I-0001","reason":"r"}`,
+	},
+	// S-0417: a role's name in kebab case, an item's ID, each input's name one word and its value one line, inputs in a list
+	"role.run": {
+		`{"name":"--help",` + rid + `}`, `{"name":"Reviewer",` + rid + `}`, `{"item":"S-0001",` + rid + `}`, `{"name":"reviewer","item":"--help",` + rid + `}`,
+		`{"name":"reviewer","item":"S-0001 --json",` + rid + `}`, `{"name":"reviewer","inputs":[{"name":"--x","value":"v"}],` + rid + `}`,
+		`{"name":"reviewer","inputs":[{"name":"a=b","value":"v"}],` + rid + `}`, `{"name":"reviewer","inputs":[{"name":"focus","value":"a\n--help"}],` + rid + `}`,
+		`{"name":"reviewer","inputs":{"focus":"docs"},` + rid + `}`, `{"name":"reviewer"}`,
 	},
 }
 
@@ -3668,5 +3677,118 @@ func TestQueueHoldHoldsAndResumesTheQueue(t *testing.T) {
 		if got := e.Outcome + " " + e.Detail; got != want[i] {
 			t.Errorf("journal entry %d: %q, want %q", i, got, want[i])
 		}
+	}
+}
+
+// reviewerRole is a role the project defines (ADR-0207): reviewer, behind
+// the review host action, on a story.
+const reviewerRole = `---
+title: Reviewer
+updated: 2026-10-28
+status: active
+name: reviewer
+role: review
+definition:
+  description: Reviews a story against the conventions, for flai serve.
+  tools: [Read, Grep, mcp__flai__item_get]
+  model: inherit
+action: review
+trigger:
+  - asked
+item: [story]
+topics: [planning]
+works_story: false
+charge: none
+tools: []
+commands: []
+files: []
+permissions: []
+---
+
+You are the reviewer: read the story and say what it lacks.
+`
+
+// withRoles is p with role files in its design folder's workflows/roles:
+// reviewer, and pusher, a role naming push, which is a host action already.
+func withRoles(t *testing.T, p channel.Project) channel.Project {
+	t.Helper()
+	dir := filepath.Join(p.Root, "design", "workflows", "roles")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	pusher := strings.NewReplacer("name: reviewer", "name: pusher", "role: review", "role: push", "action: review", "action: push").Replace(reviewerRole)
+	for name, content := range map[string]string{"reviewer.md": reviewerRole, "pusher.md": pusher} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return p
+}
+
+// S-0417: role.run starts a role the project defines only while the
+// operator has enabled the host action its file names for the project, says
+// what enables it when not, and journals both under that action; a name no
+// role file gives is left to flai role run to refuse, gated by nothing.
+func TestRoleRunNeedsTheActionItsFileNames(t *testing.T) {
+	p := withRoles(t, withDocs(t))
+	var journal []Entry
+	on := false
+	host := Host{Enabled: func(action, root string) bool { return on && action == "review" && root == p.Root }, Record: func(e Entry) { journal = append(journal, e) }}
+	rec := &recorder{ran: Ran{Stdout: []byte(`{"role":"reviewer","item":"S-0001","agent":"reviewer-S-0001","harness":"command","command":"run-it","pid":42}`)}}
+	m := writeMethods(rec.run, time.Now, host)
+	_, e := m["role.run"](context.Background(), p, json.RawMessage(`{"name":"reviewer","item":"S-0001","request_id":"req-00000001"}`))
+	if e == nil || e.Code != Disabled || !strings.Contains(e.Message, `the host action "review" is not enabled`) || !strings.Contains(e.Message, "flai serve enable review") {
+		t.Fatalf("off: %+v", e)
+	}
+	if len(rec.runs) != 0 {
+		t.Fatalf("a refused role ran %+v", rec.runs)
+	}
+	on = true
+	if _, e := m["role.run"](context.Background(), p, json.RawMessage(`{"name":"reviewer","item":"S-0001","request_id":"req-00000002"}`)); e != nil {
+		t.Fatalf("on: %+v", e)
+	}
+	if len(rec.runs) != 1 || rec.runs[0].Dir != p.Root || strings.Join(rec.runs[0].Args, " ") != "role run reviewer S-0001 --json" {
+		t.Errorf("runs: %+v", rec.runs)
+	}
+	if len(journal) != 2 || journal[0].Outcome != "disabled" || journal[0].Action != "review" || journal[0].Method != "role.run" {
+		t.Fatalf("journal: %+v", journal)
+	}
+	if j := journal[1]; j.Outcome != "done" || j.Action != "review" || j.Detail != "started run-it to run the role reviewer on S-0001 as reviewer-S-0001 (pid 42)" {
+		t.Errorf("started: %+v", j)
+	}
+	on, journal = false, nil
+	if _, e := m["role.run"](context.Background(), p, json.RawMessage(`{"name":"auditor","request_id":"req-00000003"}`)); e != nil || len(rec.runs) != 2 || len(journal) != 0 {
+		t.Errorf("a role no file gives is flai role run's to refuse: %+v %d runs, journal %+v", e, len(rec.runs), journal)
+	}
+}
+
+// S-0417: the host actions the roles a project defines name are told to its
+// dashboard, in project.info, and settings.action turns them on and off;
+// one that is a host action already, or a built-in role's, is not another.
+func TestTheActionsARoleNamesAreTheProjectsToo(t *testing.T) {
+	p := withRoles(t, withDocs(t))
+	defined := DefinedActions(p.Root)
+	if len(defined) != 1 || !strings.HasPrefix(defined["review"], "start the role reviewer, which design/workflows/roles/reviewer.md defines,") || !strings.Contains(defined["review"], "on a story not archived, done, or cancelled; one run of it per item at a time") {
+		t.Errorf("defined actions = %v", defined)
+	}
+	if got := DefinedActions(t.TempDir()); len(got) != 0 {
+		t.Errorf("a folder with no project defines %v", got)
+	}
+	var journal []Entry
+	host := Host{Enabled: func(action, root string) bool { return action == ActionSettings || action == "review" }, Record: func(e Entry) { journal = append(journal, e) }}
+	info, e := MethodsFor("test", time.Now, host)["project.info"](context.Background(), p, json.RawMessage(`{}`))
+	if e != nil || !info.(ProjectInfo).HostActions["review"] {
+		t.Errorf("project.info does not tell the review action on: %+v %+v", info, e)
+	}
+	rec := &recorder{ran: Ran{Stdout: []byte(`{}`)}}
+	m := writeMethods(rec.run, time.Now, host)
+	if _, e := m["settings.action"](context.Background(), p, json.RawMessage(`{"action":"review","on":false,`+rid+`}`)); e != nil || len(rec.runs) != 1 || strings.Join(rec.runs[0].Args, " ") != "serve disable review --json" {
+		t.Fatalf("settings.action, review: %+v %+v", e, rec.runs)
+	}
+	if len(journal) != 1 || journal[0].Detail != "flai serve disable review" {
+		t.Errorf("journal: %+v", journal)
+	}
+	if _, e := m["settings.action"](context.Background(), withDocs(t), json.RawMessage(`{"action":"review","on":true,`+rid+`}`)); e == nil || e.Code != channel.CodeInvalidParams {
+		t.Errorf("settings.action, review, where no role names it: %+v", e)
 	}
 }

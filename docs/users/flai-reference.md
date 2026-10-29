@@ -13,6 +13,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | Command | What it does |
 |---------|--------------|
 | [accept](#flai-accept) | Accept an item: merge its branch, move to done, archive, commit |
+| [activity](#flai-activity) | Log a strategic agent's activity in its activity document under wip/agents |
 | [adr](#flai-adr) | Record architecture decisions |
 | [agent](#flai-agent) | The project's default agent: the harness, model, and options every new story gets |
 | [analyze](#flai-analyze) | Start the analyzer for the project: it looks for bottlenecks, intent, or risk and writes one report under design/analysis |
@@ -94,6 +95,7 @@ Global flags, accepted by every command:
 Subcommands:
 
 - [accept](#flai-accept): Accept an item: merge its branch, move to done, archive, commit
+- [activity](#flai-activity): Log a strategic agent's activity in its activity document under wip/agents
 - [adr](#flai-adr): Record architecture decisions
 - [agent](#flai-agent): The project's default agent: the harness, model, and options every new story gets
 - [analyze](#flai-analyze): Start the analyzer for the project: it looks for bottlenecks, intent, or risk and writes one report under design/analysis
@@ -222,6 +224,39 @@ Flags:
 | `--reason` stringArray | with --keep-removal: why the removal is kept, one per --keep-removal in order or one for all (repeatable) |
 | `--trailer` stringArray | line appended to the commit message (repeatable) |
 | `--verified` string | with --by orchestrator: the commit its verifier passed, the story branch's head |
+
+### flai activity
+
+Log a strategic agent's activity in its activity document under wip/agents.
+
+A strategic agent, the planner, the orchestrator, the analyzer, the curator, or a role the project defines under its design folder's workflows/roles (ADR-0207), keeps an activity document, wip/agents/&lt;kind&gt;.md in the main checkout, with one entry per activity it finishes and their totals in its front matter (S-0206, ADR-0079). flai serve logs a run's activity by itself when the run ends.
+
+Subcommands:
+
+- [log](#flai-activity-log): Log an activity of a strategic agent, measured from its run's log and charged as the MCP tool activity\_log charges it
+
+#### flai activity log
+
+Log an activity of a strategic agent, measured from its run's log and charged as the MCP tool activity\_log charges it.
+
+```text
+flai activity log <kind> <summary> [flags]
+```
+
+Logs an activity of the strategic agent kind, the planner, the orchestrator, the analyzer, the curator, or a role the project defines (its name), in its activity document, wip/agents/&lt;kind&gt;.md in the main checkout, as the MCP tool activity\_log does (S-0417): flai measures its wall-clock seconds and cost from the kind's run log, from the later of the run's start and the last entry to now, appends the entry with the summary and each --item, and adds it to the document's totals. The cost is charged under usage.strategic as activity\_log charges it; what no item takes is left in the kind's project strategic total. An activity outside a run flai serve logged is logged with no seconds and no cost. A kind that is none of these is refused, naming those there are. Nothing is committed.
+
+Examples:
+
+```bash
+flai activity log reviewer "reviewed S-0042 against its criteria" --item S-0042
+flai activity log planner "planned E-0016" --item E-0016 --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--item` stringArray | the ID of an item the activity touched, such as S-0042; give it once for each |
 
 ### flai adr
 
@@ -3264,11 +3299,12 @@ Flags:
 
 Read the project's strategic roles: one file each under design/workflows/roles (ADR-0207).
 
-A strategic role is one markdown file, &lt;name&gt;.md, in the design folder's workflows/roles (ADR-0207). Its front matter names the role, its harness definition, its host action, its triggers, the items it takes, its topics, how its usage is charged, and the calls flai guard allows it, each plain or under a named condition, with each call only the operator may allow inside a permissions entry naming the operator's setting. Its body is its harness definition's prompt. flai check reports a file that falls short as roles.file, roles.grant, or roles.definition.
+A strategic role is one markdown file, &lt;name&gt;.md, in the design folder's workflows/roles (ADR-0207). Its front matter names the role, its harness definition, its host action, its triggers, the items it takes, its topics, how its usage is charged, and the calls flai guard allows it, each plain or under a named condition, with each call only the operator may allow inside a permissions entry naming the operator's setting. Its body is its harness definition's prompt. flai check reports a file that falls short as roles.file, roles.grant, or roles.definition. flai role run starts a role the project defines, behind the host action its file names.
 
 Subcommands:
 
 - [list](#flai-role-list): List the project's roles with their action, triggers, items, topics, charge, calls, and permissions
+- [run](#flai-role-run): Start a role the project defines, on an item its file takes or on none, behind the host action its file names
 - [show](#flai-role-show): Print a role: its front matter, its harness definition, and its body
 
 #### flai role list
@@ -3280,6 +3316,35 @@ flai role list
 ```
 
 List the roles in this checkout's design folder's workflows/roles, in file order: each one's name, role verb, and file, and below it its action, triggers, item kinds, topics, charge, the MCP tools, commands, and folders it may use, and each permission's setting with the calls it allows. A call under a condition is shown as call (when condition). A role file that does not load is left out and said on stderr; flai check reports it. --json gives an array of the roles, [] when none.
+
+#### flai role run
+
+Start a role the project defines, on an item its file takes or on none, behind the host action its file names.
+
+```text
+flai role run <name> [<item>] [flags]
+```
+
+Starts a role the project defines in its role file under the design folder's workflows/roles, now, on this host and as you (S-0417, ADR-0207). It runs in the project's main checkout with the role's agent: roles.&lt;name&gt;.agent in system-flow.yaml over the project's agent, started with the harnesses and the command you set with flai serve agent, as the role file's harness definition, its body the prompt. A role whose file's item names epic or story runs on one such item, given as &lt;item&gt;; one whose file takes none runs on none. Each --input, name=value, is one of the run's inputs, in the order given, which its prompt names.
+
+The run is recorded where flai serve tracks agents, under roles by the role's name and item, and its output goes to a log beside flai serve's state. Once it ends, the serving flai records how (worked, asked, or failed), journals it under the role's action, and logs its activity in wip/agents/&lt;name&gt;.md, which charges nothing. It is no story's agent: the in-progress limit does not count it, and it holds no story back.
+
+It is behind the host action its file names, off until you enable it (flai serve enable &lt;action&gt;). It refuses, and says why, for a built-in role (flai plan, flai analyze, and flai curate start those) and a name no role file gives, while the action is off for the project, for an item when its file takes none, without one when it takes some, for an item of a kind it does not take or that is archived, done, or cancelled, while a run of the role on the same item, or on none, runs, and when its agent names no harness and no command is set on the host. The host API's role.run runs this.
+
+Examples:
+
+```bash
+flai role list
+flai serve enable review
+flai role run reviewer S-0042
+flai role run auditor --input focus=docs --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--input` stringArray | one of the run's inputs, as name=value, which its prompt names; give it once for each, in order |
 
 #### flai role show
 

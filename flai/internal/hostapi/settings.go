@@ -413,32 +413,11 @@ func settingsSpecs() map[string]spec {
 		return spec{action: ActionSettings, hostwide: true, describe: settingsDone(what), say: sayArgs(b), build: b}
 	}
 	return map[string]spec{
-		// settings.action: another host action on or off for this project.
-		"settings.action": project("a host action turned on or off", func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
-			in, e := decode[struct {
-				Action string `json:"action"`
-				On     *bool  `json:"on"`
-			}](raw)
-			if e != nil {
-				return nil, "", e
-			}
-			if _, ok := Actions[in.Action]; !ok {
-				return nil, "", bad("%q is not a host action", in.Action)
-			}
-			if in.Action == ActionSettings {
-				return nil, "", bad("the settings action is turned on and off in a shell on the host, and nowhere else")
-			}
-			if shellOnly[in.Action] {
-				return nil, "", bad("the %s action is the operator's shell tool, outside the workflow (ADR-0067), and no dashboard turns it on or off: run %s or flai serve disable %s in a shell on the host", in.Action, EnableCommand(in.Action), in.Action)
-			}
-			if in.On == nil {
-				return nil, "", bad("say on: true or on: false")
-			}
-			if *in.On {
-				return []string{"serve", "enable", in.Action}, "", nil
-			}
-			return []string{"serve", "disable", in.Action}, "", nil
-		}),
+		// settings.action: another host action on or off for this project,
+		// one the roles the project defines name among them (S-0417). Its
+		// journal line is the command it ran, read from what was asked, since
+		// whether the action is one is the project's to say.
+		"settings.action": {action: ActionSettings, describe: settingsDone("a host action turned on or off"), say: sayToggle, build: toggleAction},
 
 		// settings.default_agent: the project's default agent, replaced whole,
 		// or removed with null; committed as the dashboard's writes are.
@@ -745,6 +724,49 @@ func dashboardHosts(_ channel.Project, raw json.RawMessage) ([]string, string, *
 
 // enabledEverywhere says whether an action is on for every project.
 func (h Host) enabledEverywhere(action string) bool { return h.enabled(action, config.AllProjects) }
+
+// toggleAction is settings.action's command line: flai serve enable or
+// disable a host action the dashboard sees, of Actions or of those the
+// roles the project defines name (S-0417).
+func toggleAction(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+	in, e := decode[struct {
+		Action string `json:"action"`
+		On     *bool  `json:"on"`
+	}](raw)
+	if e != nil {
+		return nil, "", e
+	}
+	if _, ok := Actions[in.Action]; !ok && DefinedActions(p.Root)[in.Action] == "" {
+		return nil, "", bad("%q is not a host action", in.Action)
+	}
+	if in.Action == ActionSettings {
+		return nil, "", bad("the settings action is turned on and off in a shell on the host, and nowhere else")
+	}
+	if shellOnly[in.Action] {
+		return nil, "", bad("the %s action is the operator's shell tool, outside the workflow (ADR-0067), and no dashboard turns it on or off: run %s or flai serve disable %s in a shell on the host", in.Action, EnableCommand(in.Action), in.Action)
+	}
+	if in.On == nil {
+		return nil, "", bad("say on: true or on: false")
+	}
+	if *in.On {
+		return []string{"serve", "enable", in.Action}, "", nil
+	}
+	return []string{"serve", "disable", in.Action}, "", nil
+}
+
+// sayToggle journals settings.action as the command it ran, flai serve
+// enable or disable the action asked for, once toggleAction accepted it.
+func sayToggle(raw json.RawMessage) string {
+	in, _ := decode[struct {
+		Action string `json:"action"`
+		On     *bool  `json:"on"`
+	}](raw)
+	verb := "disable"
+	if in.On != nil && *in.On {
+		verb = "enable"
+	}
+	return "flai serve " + verb + " " + in.Action
+}
 
 // sayArgs journals a settings change as the flai command it ran, which says
 // exactly what became what: "flai serve enable push", "flai serve import add

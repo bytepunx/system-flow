@@ -96,6 +96,7 @@ func addProjectTools(srv *mcp.Server, p projects) {
 	mcp.AddTool(srv, &mcp.Tool{Name: "plan", Description: planDescription}, route(p, (*server).plan))
 	mcp.AddTool(srv, &mcp.Tool{Name: "analyze", Description: analyzeDescription}, route(p, (*server).analyze))
 	mcp.AddTool(srv, &mcp.Tool{Name: "curate", Description: curateDescription}, route(p, (*server).curate))
+	mcp.AddTool(srv, &mcp.Tool{Name: "role_run", Description: roleRunDescription}, route(p, (*server).roleRun))
 	mcp.AddTool(srv, &mcp.Tool{Name: "activity_log", Description: activityLogDescription}, route(p, (*server).activityLog))
 	srv.AddTool(&mcp.Tool{Name: "permission_prompt", Description: permissionPromptText(p.permissionHold()), InputSchema: permissionInputSchema}, permissionRoute(p))
 	mcp.AddTool(srv, &mcp.Tool{Name: "board", Description: "The kanban board as flai board --json prints it: cards per column, WIP limits, the pull order, and limit breaches; a ready story whose touches overlap a story in progress or in review, or that names in after a story not yet done, carries held with the reason and what clears it; and queue, the merge queue as flai queue --json gives it: the eligible stories in review in order, the reasons of the others, and the batch and its step, or off with the reason under pull-request acceptance. Stories only unless all is set."}, route(p, (*server).board))

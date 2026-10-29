@@ -136,7 +136,7 @@ func mcpURL(addr net.Addr) string {
 // permission_prompt holds a write at most mcpserver.HTTPPermissionHold, below
 // the 60 seconds after which Claude Code drops a call there (ADR-0215).
 func (a *app) mcpHTTPOptions(repo *workitem.Repo, agent string, closing <-chan struct{}, installed string) mcpserver.Options {
-	return mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Closing: closing, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Analyses: a.mcpAnalyze, Curations: a.mcpCurate, Activities: a.mcpActivity, QueueBatches: a.queueBatches, Publish: a.mcpPublisher(), RelativePaths: a.relativeWorktrees, Installed: installed, PermissionHold: mcpserver.HTTPPermissionHold}
+	return mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Closing: closing, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Analyses: a.mcpAnalyze, Curations: a.mcpCurate, Roles: a.mcpRoleRun, Activities: a.mcpActivity, QueueBatches: a.queueBatches, Publish: a.mcpPublisher(), RelativePaths: a.relativeWorktrees, Installed: installed, PermissionHold: mcpserver.HTTPPermissionHold}
 }
 
 // serveMCPHTTP runs the server until ctx ends.

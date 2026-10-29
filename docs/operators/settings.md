@@ -407,6 +407,8 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--idle` | [flai mcp http](../users/flai-reference.md#flai-mcp-http), [flai mcp start](../users/flai-reference.md#flai-mcp-start) |
 | `--image` | [flai dashboard](../users/flai-reference.md#flai-dashboard), [flai dashboard check](../users/flai-reference.md#flai-dashboard-check), [flai dashboard restart](../users/flai-reference.md#flai-dashboard-restart), [flai dashboard upgrade](../users/flai-reference.md#flai-dashboard-upgrade) |
 | `--include` | [flai components config](../users/flai-reference.md#flai-components-config) |
+| `--input` | [flai role run](../users/flai-reference.md#flai-role-run) |
+| `--item` | [flai activity log](../users/flai-reference.md#flai-activity-log) |
 | `--json` | every command ([global flags](../users/flai-reference.md#flai)) |
 | `--keep-all` | [flai upgrade](../users/flai-reference.md#flai-upgrade) |
 | `--keep-placed` | [flai order](../users/flai-reference.md#flai-order) |
