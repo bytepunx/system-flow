@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 167
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 28
-      output: 109
-      cache_read: 982591
-      cache_write: 58017
-      cost: 0.3543
+      input: 14
+      output: 5644
+      cache_read: 1027176
+      cache_write: 28485
+      cost: 0.5039
 ---
 # T-2161 flai/internal/pilot reads and checks the start request, refusing a malformed one or an unknown inner harness with one line on stderr and exit code 2
 

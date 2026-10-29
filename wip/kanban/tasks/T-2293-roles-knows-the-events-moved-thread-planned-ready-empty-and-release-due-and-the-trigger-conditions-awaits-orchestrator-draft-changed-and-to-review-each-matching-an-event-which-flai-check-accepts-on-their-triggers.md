@@ -24,16 +24,16 @@ touches: [flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/
 after: [T-2291]
 usage:
   source: log
-  seconds: 774
+  seconds: 785
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 47
-      output: 210
-      cache_read: 1794263
-      cache_write: 171458
-      cost: 0.6683
+      input: 49
+      output: 234
+      cache_read: 2037274
+      cache_write: 178971
+      cost: 0.7549
 ---
 # T-2293 roles knows the events moved, thread, planned, ready-empty, and release-due, and the trigger conditions awaits-orchestrator, draft-changed, and to-review, each matching an event, which flai check accepts on their triggers
 

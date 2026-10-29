@@ -24,16 +24,16 @@ touches: [flai/images/bedrock/Dockerfile, flai/images/claude-code/Dockerfile, sc
 after: [T-2168]
 usage:
   source: log
-  seconds: 257
+  seconds: 261
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 26
-      output: 120
-      cache_read: 3301250
-      cache_write: 28540
-      cost: 1.1335
+      input: 44
+      output: 18059
+      cache_read: 3286748
+      cache_write: 91145
+      cost: 1.6125
 ---
 # T-2174 The bedrock image builds pilot beside flai and sets it as the entrypoint, the claude-code layer keeps it, and a container started with a request on stdin runs Claude Code through pilot
 

@@ -3,11 +3,11 @@ id: T-2296
 type: task
 nature: feature
 title: flai accept appends a release-due event when the acceptance changes what flai release --evaluate answers
-status: in-progress
+status: done
 parent: S-0535
 owner: alex
 created: 2026-10-28T21:38:22Z
-updated: 2026-10-28T22:45:31Z
+updated: 2026-10-28T23:23:30Z
 transitions:
   - to: ready
     at: 2026-10-28T22:45:30Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-28T22:45:31Z
     by: system-flow
+  - to: done
+    at: 2026-10-28T23:23:30Z
+    by: agent-S-0535
 stream: S-0535
 tags: [flai, events, release, accept]
-touches: [flai/cmd/accept.go, flai/cmd/accept_release_due_test.go, flai/internal/release/evaluate.go, flai/internal/release/evaluate_test.go]
+touches: [flai/cmd/accept.go, flai/cmd/accept_release_due_test.go, flai/internal/release/evaluate.go, flai/internal/release/evaluate_test.go, flai/cmd/accept_test.go, docs/users/flai-reference.md]
 after: [T-2292]
+usage:
+  source: log
+  seconds: 2257
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 96
+      output: 586
+      cache_read: 4919904
+      cache_write: 257308
+      cost: 1.7636
 ---
 # T-2296 flai accept appends a release-due event when the acceptance changes what flai release --evaluate answers
 

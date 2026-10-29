@@ -3,11 +3,11 @@ id: S-0507
 type: story
 nature: feature
 title: "pilot, a Go binary in the bedrock image, is the container's entrypoint: it reads a start request, starts the inner harness through flai's adapters, relays its log, and resumes, as an ADR records beside the layered images"
-status: in-progress
+status: done
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:43:39Z
-updated: 2026-10-28T23:11:10Z
+updated: 2026-10-29T00:04:47Z
 transitions:
   - to: ready
     at: 2026-10-28T22:51:54Z
@@ -15,9 +15,27 @@ transitions:
   - to: in-progress
     at: 2026-10-28T22:52:00Z
     by: agent-S-0507
+  - to: review
+    at: 2026-10-28T23:15:25Z
+    by: agent-S-0507
+  - to: in-progress
+    at: 2026-10-28T23:27:42Z
+    by: flai
+  - to: review
+    at: 2026-10-28T23:29:26Z
+    by: agent-S-0507
+  - to: in-progress
+    at: 2026-10-28T23:41:14Z
+    by: flai
+  - to: review
+    at: 2026-10-28T23:46:36Z
+    by: agent-S-0507
+  - to: done
+    at: 2026-10-29T00:04:47Z
+    by: agent-S-0507
 tags: [cli, docker]
 topics: [harness, docker]
-touches: [flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/pilot/request.go, flai/internal/pilot/request_test.go, flai/internal/pilot/run.go, flai/internal/pilot/run_test.go, flai/pilot/main.go, flai/images/bedrock/Dockerfile, flai/images/claude-code/Dockerfile, scripts/agent-image.sh, scripts/agent-container.sh, scripts/README.md, design/adrs/README.md, design/adrs, design/system/flai-cli.md, design/tech/docker.md, design/tech/go.md, docs/operators/index.md, design/issues/I-0224-scripts-agent-container-sh-can-run-only-a-story-s-own-agent-under-the-story-s-own-name-so-a-trial-run-of-the-image-acts-on-the-live-story.md, design/issues/summary.md]
+touches: [flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/pilot/request.go, flai/internal/pilot/request_test.go, flai/internal/pilot/run.go, flai/internal/pilot/run_test.go, flai/pilot/main.go, flai/images/bedrock/Dockerfile, flai/images/claude-code/Dockerfile, scripts/agent-image.sh, scripts/agent-container.sh, scripts/README.md, design/adrs/README.md, design/adrs, design/system/flai-cli.md, design/tech/docker.md, design/tech/go.md, docs/operators/index.md, design/issues/I-0224-scripts-agent-container-sh-can-run-only-a-story-s-own-agent-under-the-story-s-own-name-so-a-trial-run-of-the-image-acts-on-the-live-story.md, design/issues/summary.md, design/system/agent-adapters.md, design/issues/I-0225-flai-internal-mcpserver-s-tests-take-8-to-10-minutes-under-race-at-go-s-10-minute-default-timeout-so-the-integration-tier-fails-a-merge-queue-batch-on-time-alone.md, scripts/integration.sh, design/issues/I-0226-two-flai-serve-tests-check-before-what-they-wait-for-has-happened-and-fail-a-loaded-merge-queue-batch-on-timing.md, flai/internal/serve/agents_test.go, flai/internal/serve/forgemerge_test.go]
 after: [S-0505]
 agent:
   harness: claude-code
@@ -26,31 +44,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1140
-  estimated: true
-  priced_by: estimate
+  seconds: 1847
+  priced_by: harness
   turns:
     - day: 2026-10-28
-      hand_edits: 3
-      work: 37
+      ceremony: 1
+      hand_edits: 7
+      work: 71
   models:
     - model: claude-opus-5-5
-      input: 200
-      output: 962
-      cache_read: 10325944
-      cache_write: 526108
-      cost: 3.6944
+      input: 348
+      output: 142456
+      cache_read: 25926428
+      cache_write: 718967
+      cost: 12.7198
   strategic:
     - kind: orchestrator
-      seconds: 251
+      seconds: 2361
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 29
-          output: 325
-          cache_read: 8286815
-          cache_write: 24201
-          cost: 1.8234
+          input: 245
+          output: 4024
+          cache_read: 60910363
+          cache_write: 83789
+          cost: 13.4154
+        - model: claude-sonnet-5-5
+          input: 30
+          output: 185
+          cache_read: 426263
+          cache_write: 142946
+          cost: 0.3926
 cost_of_delay:
   value: 22.22
   by: planner-S-0507
@@ -78,7 +102,7 @@ E-0029 names the common tooling inside the container `pilot`: a second Go binary
 - [x] pilot reads one JSON start request on standard input, `harness.Request` plus `inner` (the harness to run), `mcp_url_env` and `mcp_token_env` (the variables holding the host's MCP URL and token), and `cache` (the mounted folder), refuses a malformed request or an unknown inner harness with one line on standard error and exit code 2, and never writes the environment or a token to any log
 - [x] For `inner: claude-code`, pilot writes an MCP client configuration under the cache folder naming the HTTP server with the bearer token and `X-Flai-Agent`, sets `CLAUDE_CONFIG_DIR` to a folder under the cache, and starts `claude` with the argv the claude-code adapter's `Start` gives for the request, `--mcp-config` and `--strict-mcp-config` naming the file, `--session-id` on a first start and `--resume` on a later one with the same session, and `--agent` for a strategic role, so that a run of this repository's planner or a story's agent inside the image is driven as `flai serve` drives it on the host
 - [x] pilot copies the inner harness's standard output to its own line by line unchanged, writes its own diagnostics to standard error prefixed `pilot:`, forwards `SIGTERM` to the inner harness, and exits with its exit code; a test with a fake inner harness checks the relay, the exit code, the resume, and the refusals
-- [ ] `design/system/flai-cli.md` names the `pilot` binary and the `flai/internal/pilot` package, `design/tech/docker.md` lists the layered images and the entrypoint, `design/tech/go.md` names the second binary, and `docs/operators/index.md` says what pilot is and that it reads no file of the operator's
+- [x] `design/system/flai-cli.md` names the `pilot` binary and the `flai/internal/pilot` package, `design/tech/docker.md` lists the layered images and the entrypoint, `design/tech/go.md` names the second binary, and `docs/operators/index.md` says what pilot is and that it reads no file of the operator's
 
 ## Tasks
 - T-2153 An ADR refining ADR-0203 records the layered images, pilot as the container's entrypoint, and that E-0029 builds its images locally
@@ -87,6 +111,8 @@ E-0029 names the common tooling inside the container `pilot`: a second Go binary
 - T-2168 pilot starts the inner harness through its adapter with the MCP file, CLAUDE_CONFIG_DIR, session and resume, relays its stdout unchanged, forwards SIGTERM, and exits with its code
 - T-2174 The bedrock image builds pilot beside flai and sets it as the entrypoint, the claude-code layer keeps it, and a container started with a request on stdin runs Claude Code through pilot
 - T-2178 flai-cli.md, docker.md, go.md, and the operators' index describe pilot, the flai/internal/pilot package, and the layered images
+- T-2316 integration.sh gives go test a 20-minute timeout per package, so the mcpserver suite, which takes 8 to 10 minutes, does not fail a batch at Go's 10-minute default
+- T-2317 Two flai serve tests wait for what they check, so a merge queue batch under load no longer fails them on timing
 
 ## Notes
 
@@ -108,3 +134,5 @@ Touches. `flai touches suggest S-0507` on the declared touches (590 of 2427 comm
 Forecast. `flai forecast S-0507` gives 43m (median 107 s per unit over 93 done feature stories on claude-opus-5-5 in the large band; size 24: 6 criteria, 18 touches) and delivery 2026-10-28T00:12Z, 25th in the pull order. Kept at 2h, the epic planner's figure, for its reason: the story adds a package and a second binary with process tests (relay, exit code, signals, resume), an ADR, and image rebuilds that each run a Go build and a Claude Code install, and no story in the band added a binary. Delivery 2026-10-28T13:43Z is flai's delivery for 43m played out for 2h as flai's replan of 2026-10-26T04:57Z did (43m to 2h moved it 13h31m, from 04:39Z to 18:10Z); flai's next replan plays it out again from the pull order.
 
 Cost of delay. `flai cod S-0507` gives 22.22 USD a week: the story's share of E-0029's 150 USD a week of penalty, set by the operator on 2026-10-26 after TH-0657, 2h of the 13h30m forecast over the epic's six open stories without inputs. Written as it stands: the share by forecast duration is flai's rule, and nothing argues for inputs of the story's own, since pilot brings no revenue and loses no work per cycle apart from the epic's.
+- 2026-10-28T23:27:42Z: moved to in-progress: merge queue batch 20261028-231632 fails with S-0507 at a9624ec96d96: integration failed: flai/internal/mcpserver github.com/bytepunx/system-flow/flai/internal/mcpserver
+- 2026-10-28T23:41:14Z: moved to in-progress: merge queue batch 20261028-232929 fails with S-0507 at 0be963c7433f: integration failed: flai/internal/serve/agents_test.go:2682 TestAStorySentBackIsStartedAfreshOrBeforeARestart/no_run,_then_a_run_without_a_session: journal: [{At:2026-10-28T23:30:20Z Action:agent Method:serve.agent Project:t Root:/tmp/TestAStorySentBackIsStartedAfreshOrBeforeARestartno_run,_then_a1171893710/001 By:flai serve RequestID: Outcome:done Detail:started stub-agent (claude-code) again for S-0001 as builder-S-0001 in a new session, flai having sent it back from review on TH-0001 (pid 3607048); log /tmp/TestAStorySentBackIsStartedAfreshOrBeforeARestartno_run,_then_a1171893710/003/serve…

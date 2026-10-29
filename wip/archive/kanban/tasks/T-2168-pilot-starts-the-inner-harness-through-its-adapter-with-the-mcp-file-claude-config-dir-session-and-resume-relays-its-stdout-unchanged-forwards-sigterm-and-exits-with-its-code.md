@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 343
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 52
-      output: 209
-      cache_read: 2372908
-      cache_write: 106167
-      cost: 0.844
+      input: 33
+      output: 13446
+      cache_read: 2447062
+      cache_write: 67860
+      cost: 1.2006
 ---
 # T-2168 pilot starts the inner harness through its adapter with the MCP file, CLAUDE_CONFIG_DIR, session and resume, relays its stdout unchanged, forwards SIGTERM, and exits with its code
 

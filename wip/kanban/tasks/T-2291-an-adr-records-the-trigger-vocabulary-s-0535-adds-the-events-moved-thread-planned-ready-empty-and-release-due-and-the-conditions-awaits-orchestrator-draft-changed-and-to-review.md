@@ -32,7 +32,7 @@ usage:
       output: 25
       cache_read: 206510
       cache_write: 1405
-      cost: 0.0707
+      cost: 0.0708
 ---
 # T-2291 An ADR records the trigger vocabulary S-0535 adds: the events moved, thread, planned, ready-empty, and release-due, and the conditions awaits-orchestrator, draft-changed, and to-review
 

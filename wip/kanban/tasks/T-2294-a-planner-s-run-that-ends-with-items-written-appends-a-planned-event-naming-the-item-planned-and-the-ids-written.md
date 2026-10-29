@@ -3,11 +3,11 @@ id: T-2294
 type: task
 nature: feature
 title: A planner's run that ends with items written appends a planned event naming the item planned and the IDs written
-status: in-progress
+status: done
 parent: S-0535
 owner: alex
 created: 2026-10-28T21:38:09Z
-updated: 2026-10-28T22:45:26Z
+updated: 2026-10-28T23:23:09Z
 transitions:
   - to: ready
     at: 2026-10-28T22:45:25Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-28T22:45:26Z
     by: system-flow
+  - to: done
+    at: 2026-10-28T23:23:08Z
+    by: agent-S-0535
 stream: S-0535
 tags: [flai, events, serve, planner]
-touches: [flai/internal/serve/plan.go, flai/internal/serve/plan_test.go]
+touches: [flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/inbox/events_test.go]
 after: [T-2292]
+usage:
+  source: log
+  seconds: 2262
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 36
+      output: 146
+      cache_read: 1479333
+      cache_write: 56282
+      cost: 0.5231
 ---
 # T-2294 A planner's run that ends with items written appends a planned event naming the item planned and the IDs written
 

@@ -3,11 +3,11 @@ id: T-2297
 type: task
 nature: feature
 title: inbox.CatchUp reports a thread event when a thread comes to await the reader, or for the orchestrator the operator, naming the thread, its item, and whom it awaits under ADR-0181
-status: in-progress
+status: done
 parent: S-0535
 owner: alex
 created: 2026-10-28T21:38:39Z
-updated: 2026-10-28T22:45:34Z
+updated: 2026-10-28T23:23:41Z
 transitions:
   - to: ready
     at: 2026-10-28T22:45:33Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-28T22:45:34Z
     by: system-flow
+  - to: done
+    at: 2026-10-28T23:23:41Z
+    by: agent-S-0535
 stream: S-0535
 tags: [flai, events, inbox, threads]
-touches: [flai/internal/inbox/threadevents.go, flai/internal/inbox/threadevents_test.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/mcpserver/cursor.go]
+touches: [flai/internal/inbox/threadevents.go, flai/internal/inbox/threadevents_test.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/mcpserver/cursor.go, flai/internal/mcpserver/server_test.go]
 after: [T-2292]
+usage:
+  source: log
+  seconds: 2254
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 98
+      output: 481
+      cache_read: 4384096
+      cache_write: 500059
+      cost: 1.6637
 ---
 # T-2297 inbox.CatchUp reports a thread event when a thread comes to await the reader, or for the orchestrator the operator, naming the thread, its item, and whom it awaits under ADR-0181
 

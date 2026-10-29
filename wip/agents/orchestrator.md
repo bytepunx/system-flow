@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1748.3343
-accrued_seconds: 1435347
-tasks_completed: 1264
-last_run: 2026-10-28T23:00:35Z
+accrued_cost: 1762.5479
+accrued_seconds: 1438158
+tasks_completed: 1270
+last_run: 2026-10-28T23:47:26Z
 ---
 
 # Orchestrator activity
@@ -8865,6 +8865,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0525
 - Seconds: 503
 - Cost: 10.2200 USD, estimated
+
+### 2026-10-28T23:12:16Z
+
+- Summary: The operator accepted S-0525 by hand. Under publish (judgement), I did not publish yet: release_evaluate gives 1 story pending, S-0525, at 37.5 USD/week, with nothing held. S-0416 awaits the operator's acceptance on TH-0722 and S-0507 is on its last task, so I will release with the next acceptance.
+- Items: S-0525
+- Seconds: 701
+- Cost: 2.2290 USD, estimated
+
+### 2026-10-28T23:16:23Z
+
+- Summary: Under accept_reviews, I enqueued S-0507 at 6db6b58f, place 1 of 1, after the S-0525 batch, which the operator's hand acceptance had dropped. flai verify passed at that head, with integration and smoke left to the queue. The verifier matched all six criteria to the 21 changed files: ADR-0212, pilot and its request, the bedrock entrypoint, the HTTP MCP config, the relay and signals, and the docs. It found the live run recorded in the narrative. Throughput: forecast 2h.
+- Items: S-0507
+- Seconds: 247
+- Cost: 7.0443 USD, estimated
+
+### 2026-10-28T23:27:48Z
+
+- Summary: Merge queue batch 20261028-231632 failed S-0507 at integration, in flai/internal/mcpserver. flai moved it back to in-progress and opened TH-0723 for its agent. I take no other action on it. I verify it again when it returns to review.
+- Items: S-0507
+- Seconds: 685
+- Cost: 1.4196 USD, estimated
+
+### 2026-10-28T23:30:06Z
+
+- Summary: Under accept_reviews, I re-verified S-0507 at 0be963c7. flai verify passed, and the verifier confirmed all six criteria still met, plus T-2316's sound 20-minute timeout in scripts/integration.sh. queue_add returned changed false: S-0507's agent had enqueued it first, and batch 20261028-232929 is verifying integration. Throughput: forecast 2h.
+- Items: S-0507
+- Seconds: 138
+- Cost: 1.7236 USD, estimated
+
+### 2026-10-28T23:41:23Z
+
+- Summary: Merge queue batch 20261028-232929 failed S-0507 again at integration, now in flai/internal/serve TestAStorySentBackIsStartedAfreshOrBeforeARestart, a test S-0507 does not change and possibly flaky on main. flai moved S-0507 back to in-progress and opened TH-0724 for its agent. I take no other action. I verify it again when it returns to review.
+- Items: S-0507
+- Seconds: 677
+- Cost: 0.2263 USD, estimated
+
+### 2026-10-28T23:47:26Z
+
+- Summary: Under accept_reviews, I re-verified S-0507 at b1cb2776. flai verify passed, and the verifier confirmed all six criteria on the same files. T-2317's two serve test changes only wait for timing and keep their assertions. queue_add returned changed false: the agent had enqueued it again, and batch 20261028-234640 is verifying integration.
+- Items: S-0507
+- Seconds: 363
+- Cost: 1.5708 USD, estimated
 
 ## Refusals
 

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 227
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 24
-      output: 94
-      cache_read: 690407
-      cache_write: 73248
-      cost: 0.26
+      input: 10
+      output: 4142
+      cache_read: 753800
+      cache_write: 20904
+      cost: 0.3698
 ---
 # T-2153 An ADR refining ADR-0203 records the layered images, pilot as the container's entrypoint, and that E-0029 builds its images locally
 

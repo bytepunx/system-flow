@@ -3,11 +3,11 @@ id: T-2295
 type: task
 nature: feature
 title: flai serve appends one ready-empty event when the ready column drains below the in-progress limit's room, and not again until ready reaches the room
-status: in-progress
+status: done
 parent: S-0535
 owner: alex
 created: 2026-10-28T21:38:16Z
-updated: 2026-10-28T22:45:29Z
+updated: 2026-10-28T23:23:19Z
 transitions:
   - to: ready
     at: 2026-10-28T22:45:27Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-28T22:45:29Z
     by: system-flow
+  - to: done
+    at: 2026-10-28T23:23:19Z
+    by: agent-S-0535
 stream: S-0535
 tags: [flai, events, serve, board]
 touches: [flai/internal/serve/readyempty.go, flai/internal/serve/readyempty_test.go, flai/internal/serve/agents.go]
 after: [T-2292]
+usage:
+  source: log
+  seconds: 2259
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 94
+      output: 389
+      cache_read: 3653964
+      cache_write: 99245
+      cost: 1.2785
 ---
 # T-2295 flai serve appends one ready-empty event when the ready column drains below the in-progress limit's room, and not again until ready reaches the room
 

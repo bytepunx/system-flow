@@ -3,11 +3,11 @@ id: T-2178
 type: task
 nature: feature
 title: flai-cli.md, docker.md, go.md, and the operators' index describe pilot, the flai/internal/pilot package, and the layered images
-status: in-progress
+status: done
 parent: S-0507
 owner: alex
 created: 2026-10-26T04:52:20Z
-updated: 2026-10-28T23:11:18Z
+updated: 2026-10-28T23:14:41Z
 transitions:
   - to: ready
     at: 2026-10-28T23:11:17Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-28T23:11:18Z
     by: agent-S-0507
+  - to: done
+    at: 2026-10-28T23:14:41Z
+    by: agent-S-0507
 stream: S-0507
 tags: [cli, docker]
-touches: [design/system/flai-cli.md, design/tech/docker.md, design/tech/go.md, docs/operators/index.md]
+touches: [design/system/flai-cli.md, design/tech/docker.md, design/tech/go.md, docs/operators/index.md, design/system/agent-adapters.md]
 after: [T-2153, T-2174]
+usage:
+  source: log
+  seconds: 203
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 39
+      output: 15911
+      cache_read: 2895828
+      cache_write: 80304
+      cost: 1.4207
 ---
 # T-2178 flai-cli.md, docker.md, go.md, and the operators' index describe pilot, the flai/internal/pilot package, and the layered images
 

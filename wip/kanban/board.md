@@ -1,6 +1,6 @@
 ---
 title: Board
-updated: 2026-10-28
+updated: 2026-10-29
 status: active
 wip_limits:
   ready: 10

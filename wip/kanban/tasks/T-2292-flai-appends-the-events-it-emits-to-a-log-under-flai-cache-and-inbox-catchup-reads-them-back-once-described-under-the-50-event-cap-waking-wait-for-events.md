@@ -24,7 +24,7 @@ touches: [flai/internal/inbox/events.go, flai/internal/inbox/events_test.go, fla
 after: [T-2291]
 usage:
   source: log
-  seconds: 776
+  seconds: 777
   estimated: true
   priced_by: estimate
   models:
@@ -33,7 +33,7 @@ usage:
       output: 285
       cache_read: 1910186
       cache_write: 108138
-      cost: 0.6863
+      cost: 0.6875
 ---
 # T-2292 flai appends the events it emits to a log under .flai-cache, and inbox.CatchUp reads them back once, described, under the 50-event cap, waking wait_for_events
 

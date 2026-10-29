@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 234
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 162
-      cache_read: 1296184
-      cache_write: 91099
-      cost: 0.4723
+      input: 18
+      output: 7524
+      cache_read: 1369375
+      cache_write: 37974
+      cost: 0.6718
 ---
 # T-2154 harness.Request gains the container fields and the claude-code adapter writes an HTTP MCP client configuration beside the stdio one
 
