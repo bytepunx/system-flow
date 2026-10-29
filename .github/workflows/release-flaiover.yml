@@ -139,7 +139,7 @@ jobs:
       # name. On main the stamp's outputs are empty, and the image has no stamp.
       - name: Build and push
         id: build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: flaiover/Dockerfile
