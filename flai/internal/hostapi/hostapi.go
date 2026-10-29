@@ -92,6 +92,29 @@ type ItemCount struct {
 	Archived int `json:"archived"`
 }
 
+// Budget is one provider's budget state as agent.status's state and flai
+// serve status carry it (S-0534, ADR-0209 §5): set when a run ended on the
+// harness's usage limit, and kept until a probe clears it. While it is set,
+// flai serve starts no agent on that provider on any project it serves, so
+// every project's dashboard is told the same entries.
+type Budget struct {
+	// Provider is what the state is kept under: the provider the runs named,
+	// or their harness, such as claude-code, when they named none.
+	Provider string `json:"provider"`
+	// Limit is the error the harness named, such as usage_limit_reached,
+	// and Status its HTTP status, such as 429; each left out when it named
+	// none.
+	Limit  string `json:"limit,omitempty"`
+	Status int    `json:"status,omitempty"`
+	// Since is when the state was set, and Until when the hold ends and the
+	// next start goes through as the probe: the reset the API reported, or
+	// else the end of the backoff. Both are RFC 3339 in UTC.
+	Since string `json:"since"`
+	Until string `json:"until"`
+	// Probing is set while a start that went through as the probe runs.
+	Probing bool `json:"probing,omitempty"`
+}
+
 var (
 	itemID   = regexp.MustCompile(`(?i)^[EST]-?\d{1,6}$`)
 	itemType = map[string]bool{"": true, workitem.Epic: true, workitem.Story: true, workitem.Task: true}
@@ -229,7 +252,9 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 		// agent.status: whether flai serve starts an agent when a story becomes
 		// ready here (S-0079), what it started, and why a ready story waits;
 		// the runs of the roles the project defines among it, under roles by
-		// name and item (S-0417). It is read-only, like everything about host actions: the dashboard shows
+		// name and item (S-0417); and, in its state's budget, each provider
+		// the host holds out of budget (S-0534), as Budget entries, left out
+		// when none is. It is read-only, like everything about host actions: the dashboard shows
 		// it, and cannot start, stop, or configure anything.
 		// settings.get: the host's settings as they apply to this project, and
 		// whether the dashboard may change them here and host-wide (S-0105).

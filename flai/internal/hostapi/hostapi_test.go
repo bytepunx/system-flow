@@ -583,3 +583,26 @@ func TestBoardAndItemCarryWhatAStoryUndoesOfMain(t *testing.T) {
 		}
 	}
 }
+
+// S-0534: a provider's budget state, as agent.status's state carries it to
+// the dashboard's banner, names the provider, the limit, since, and until,
+// and leaves out a limit, a status, and probing the state does not have.
+func TestBudgetIsTheShapeTheDashboardReads(t *testing.T) {
+	for _, c := range []struct {
+		b    Budget
+		want string
+	}{
+		{Budget{Provider: "claude-code", Limit: "usage_limit_reached", Status: 429, Since: "2026-10-28T05:30:00Z", Until: "2026-10-28T09:00:00Z", Probing: true},
+			`{"provider":"claude-code","limit":"usage_limit_reached","status":429,"since":"2026-10-28T05:30:00Z","until":"2026-10-28T09:00:00Z","probing":true}`},
+		{Budget{Provider: "codex", Since: "2026-10-28T07:55:00Z", Until: "2026-10-28T08:00:00Z"},
+			`{"provider":"codex","since":"2026-10-28T07:55:00Z","until":"2026-10-28T08:00:00Z"}`},
+	} {
+		got, err := json.Marshal(c.b)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(got) != c.want {
+			t.Errorf("budget:\n got %s\nwant %s", got, c.want)
+		}
+	}
+}

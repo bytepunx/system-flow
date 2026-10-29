@@ -19,6 +19,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/dashboard"
 	"github.com/bytepunx/system-flow/flai/internal/host"
+	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -239,6 +240,9 @@ type serveStatus struct {
 	// Unavailable are the registered projects that cannot be served, by
 	// root, and why (S-0121).
 	Unavailable map[string]string `json:"unavailable,omitempty"`
+	// Budget is each provider the host holds out of budget, as agent.status
+	// carries it (S-0534, ADR-0209 §5).
+	Budget []hostapi.Budget `json:"budget,omitempty"`
 }
 
 func (a *app) readServeStatus() (serveStatus, error) {
@@ -250,7 +254,7 @@ func (a *app) readServeStatus() (serveStatus, error) {
 	if projects == nil {
 		projects = []serve.Entry{}
 	}
-	out := serveStatus{Projects: projects, Dir: string(dir)}
+	out := serveStatus{Projects: projects, Dir: string(dir), Budget: a.hostBudget()}
 	if st, alive := dir.ReadStatus(time.Now()); alive {
 		out.Running, out.Status = true, &st
 	}
@@ -290,6 +294,9 @@ func (a *app) printServeStatus() error {
 		fmt.Fprintln(a.out, "flai serve is not running (flai serve start, or flai host start, or flai dashboard in a project)")
 	} else {
 		fmt.Fprintf(a.out, "flai serve %s running since %s (pid %d)\n", st.Status.Version, st.Status.Started, st.Status.PID)
+	}
+	for _, b := range st.Budget {
+		fmt.Fprintln(a.out, budgetLine(b, time.Now()))
 	}
 	sort.Slice(st.Projects, func(i, j int) bool { return st.Projects[i].Key < st.Projects[j].Key })
 	for _, p := range st.Projects {

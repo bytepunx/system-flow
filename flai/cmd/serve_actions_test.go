@@ -242,6 +242,83 @@ func TestServeOrchestrateAction(t *testing.T) {
 	}
 }
 
+// S-0534, ADR-0209 §5: agent.status's state carries the host's budget state,
+// one entry per provider held, read from budget.json in the serve folder,
+// and leaves it out once the state is cleared or the file cannot be read.
+func TestAgentStatusCarriesTheHostsBudget(t *testing.T) {
+	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfgPath)
+	root := tempProject(t)
+	dir := string(serve.DirFor(cfgPath))
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	write := func(state string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(dir, "budget.json"), []byte(state), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var warned bytes.Buffer
+	status := func() map[string]any {
+		t.Helper()
+		out, ok := (&app{errOut: &warned}).host().Agent(root).(map[string]any)
+		if !ok {
+			t.Fatal("agent.status's state is not a map")
+		}
+		return out
+	}
+	if got, ok := status()["budget"]; ok {
+		t.Errorf("budget with no budget.json: %v", got)
+	}
+	write(`{"codex":{"provider":"codex","since":"2026-10-28T07:55:00Z","until":"2026-10-28T08:00:00Z","backoff":"5m0s",
+"probe":{"root":"/r","work":"S-0001","started":"2026-10-28T08:01:00Z","claimed":"2026-10-28T08:01:00Z"}},
+"claude-code":{"provider":"claude-code","limit":"usage_limit_reached","status":429,"since":"2026-10-28T06:30:00+01:00","until":"2026-10-28T09:00:00Z","reset":"2026-10-28T09:00:00Z","backoff":"5m0s"}}`)
+	got, err := json.Marshal(status()["budget"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `[{"provider":"claude-code","limit":"usage_limit_reached","status":429,"since":"2026-10-28T05:30:00Z","until":"2026-10-28T09:00:00Z"},` +
+		`{"provider":"codex","since":"2026-10-28T07:55:00Z","until":"2026-10-28T08:00:00Z","probing":true}]`
+	if string(got) != want {
+		t.Errorf("budget while held:\n got %s\nwant %s", got, want)
+	}
+	write(`{}`)
+	if got, ok := status()["budget"]; ok {
+		t.Errorf("budget once cleared: %v", got)
+	}
+	write(`not json`)
+	if st := status(); st["budget"] != nil || st["command"] == nil {
+		t.Errorf("an unreadable budget.json is none, and the rest of the state stands: %v", st)
+	}
+	if !strings.Contains(warned.String(), "budget state not read") {
+		t.Errorf("an unreadable budget.json is not warned of: %s", warned.String())
+	}
+}
+
+// S-0534: flai serve status names each held provider with its limit and
+// until, says when a probe runs, and when until has passed with none.
+func TestBudgetLine(t *testing.T) {
+	now := time.Date(2026, 10, 28, 8, 30, 0, 0, time.UTC)
+	for _, c := range []struct {
+		b    hostapi.Budget
+		want string
+	}{
+		{hostapi.Budget{Provider: "claude-code", Limit: "usage_limit_reached", Status: 429, Until: "2026-10-28T09:00:00Z"},
+			"budget: claude-code held (usage_limit_reached) until 2026-10-28T09:00:00Z"},
+		{hostapi.Budget{Provider: "codex", Status: 429, Until: "2026-10-28T09:00:00Z"},
+			"budget: codex held (HTTP 429) until 2026-10-28T09:00:00Z"},
+		{hostapi.Budget{Provider: "codex", Until: "2026-10-28T08:00:00Z", Probing: true},
+			"budget: codex held until 2026-10-28T08:00:00Z, probing"},
+		{hostapi.Budget{Provider: "codex", Until: "2026-10-28T08:00:00Z"},
+			"budget: codex held until 2026-10-28T08:00:00Z, passed; the next start probes"},
+	} {
+		if got := budgetLine(c.b, now); got != c.want {
+			t.Errorf("budgetLine(%+v):\n got %s\nwant %s", c.b, got, c.want)
+		}
+	}
+}
+
 // S-0399, ADR-0173: merge-queue is off until the operator enables it, flai
 // serve actions names it and what it means, the dashboard's settings page
 // lists it, and enable and disable turn it on and off for the project.
@@ -2016,5 +2093,30 @@ func TestServeEnableTakesADefinedRolesAction(t *testing.T) {
 	}
 	if _, errOut, code := runIn(t, root, "serve", "enable", "review"); code == 0 || !strings.Contains(errOut, `there is no host action \"review\"`) {
 		t.Errorf("enable once its role is gone: %d %s", code, errOut)
+	}
+}
+
+// S-0534: flai serve status prints a line per provider the host holds out of
+// budget, and its --json carries the same entries as agent.status.
+func TestServeStatusShowsEachHeldProvider(t *testing.T) {
+	home := t.TempDir()
+	cfgPath := filepath.Join(home, "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfgPath)
+	dir := string(serve.DirFor(cfgPath))
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	state := `{"claude-code":{"provider":"claude-code","limit":"usage_limit_reached","status":429,"since":"2099-10-28T05:30:00Z","until":"2099-10-28T09:00:00Z","backoff":"5m0s"}}`
+	if err := os.WriteFile(filepath.Join(dir, "budget.json"), []byte(state), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	out, _, _ := runIn(t, home, "serve", "status")
+	if want := "budget: claude-code held (usage_limit_reached) until 2099-10-28T09:00:00Z\n"; !strings.Contains(out, want) {
+		t.Errorf("missing %q in:\n%s", want, out)
+	}
+	js, _, _ := runIn(t, home, "serve", "status", "--json")
+	var st serveStatus
+	if err := json.Unmarshal([]byte(js), &st); err != nil || len(st.Budget) != 1 || st.Budget[0].Provider != "claude-code" || st.Budget[0].Until != "2099-10-28T09:00:00Z" {
+		t.Errorf("json: %v %s", err, js)
 	}
 }

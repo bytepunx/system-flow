@@ -64,8 +64,12 @@ func (a *app) host() hostapi.Host {
 			// held while the operator holds it stopped (S-0228), and the newest
 			// analyzer run, its focus and report among it (S-0223), and the
 			// newest curator run, its since and entries among it (S-0431)
-			return map[string]any{"command": command, "running": st.Running, "last": st.Last, "waiting": st.Waiting, "stories": serve.Activity(root, st), "plans": plans,
+			out := map[string]any{"command": command, "running": st.Running, "last": st.Last, "waiting": st.Waiting, "stories": serve.Activity(root, st), "plans": plans,
 				"orchestrator": st.Orchestrator, "analyzer": st.Analyzer, "curator": st.Curator, "roles": defined}
+			if budget := a.hostBudget(); len(budget) > 0 {
+				out["budget"] = budget // the host's, the same for every project (S-0534)
+			}
+			return out
 		},
 		AgentStream: func(root, story string, after int64) (any, error) {
 			return serve.Stream(a.serveDir().AgentStates()[root], story, after)
@@ -85,6 +89,45 @@ func (a *app) host() hostapi.Host {
 			a.logger().Info("host action", "component", "serve", "action", e.Action, "method", e.Method, "project", e.Project, "by", e.By, "outcome", e.Outcome, "detail", e.Detail)
 		},
 	}
+}
+
+// hostBudget is the host's budget state (S-0534, ADR-0209 §5), read from
+// budget.json in the serve folder: one entry per provider whose state is
+// set, by provider, none when no file is there. A file that cannot be read
+// is warned of and taken as none, so that the rest of the answer stands.
+func (a *app) hostBudget() []hostapi.Budget {
+	states, err := a.serveDir().Budgets()
+	if err != nil {
+		a.logger().Warn("the host's budget state not read; taken as none", "component", "serve", "err", err.Error())
+		return nil
+	}
+	out := make([]hostapi.Budget, 0, len(states))
+	for _, b := range states {
+		out = append(out, hostapi.Budget{Provider: b.Provider, Limit: b.Limit, Status: b.Status,
+			Since: b.Since.UTC().Format(time.RFC3339), Until: b.Until.UTC().Format(time.RFC3339), Probing: b.Probe != nil})
+	}
+	return out
+}
+
+// budgetLine is how flai serve status names a provider's budget state at
+// now: held, with the limit the harness named, until when; and, once until
+// has passed, that a probe runs, or that the next start probes.
+func budgetLine(b hostapi.Budget, now time.Time) string {
+	line := "budget: " + b.Provider + " held"
+	switch {
+	case b.Limit != "":
+		line += " (" + b.Limit + ")"
+	case b.Status != 0:
+		line += " (HTTP " + strconv.Itoa(b.Status) + ")"
+	}
+	line += " until " + b.Until
+	if b.Probing {
+		return line + ", probing"
+	}
+	if until, err := time.Parse(time.RFC3339, b.Until); err == nil && !now.Before(until) {
+		return line + ", passed; the next start probes"
+	}
+	return line
 }
 
 func (a *app) journal(e hostapi.Entry) error {
