@@ -6,7 +6,7 @@ title: An Edit whose old and new strings end in a space drops the space, so a pr
 status: in-progress
 owner: alex
 created: 2026-10-29T02:01:44Z
-updated: 2026-10-29T03:57:27Z
+updated: 2026-10-29T04:20:50Z
 transitions:
   - to: ready
     at: 2026-10-29T03:56:58Z
@@ -15,16 +15,28 @@ transitions:
     at: 2026-10-29T03:57:27Z
     by: agent-S-0539
 tags: [flai, mcp, permission-prompt]
-touches: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, docs/users/flai.md, design/system/agent-adapters.md, design/issues/I-0223-an-edit-whose-old-and-new-strings-end-in-a-space-drops-the-space-so-a-protected-claude-settings-json-write-needs-a-second-permission-round-to-fix.md, design/issues/summary.md]
+touches: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, docs/users/flai.md, design/system/agent-adapters.md, design/issues/I-0223-an-edit-whose-old-and-new-strings-end-in-a-space-drops-the-space-so-a-protected-claude-settings-json-write-needs-a-second-permission-round-to-fix.md, design/issues/summary.md, design/issues/I-0227-flai-test-s-go-test-tier-runs-the-mcpserver-package-with-race-into-go-test-s-10-minute-default-timeout-on-a-loaded-host-and-names-only-the-package-so-a-story-that-changes-mcpserver-cannot-pass-its-tests.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 744
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-29
+      ceremony: 1
+      work: 21
+  models:
+    - model: claude-opus-5-5
+      input: 48
+      output: 296
+      cache_read: 2825730
+      cache_write: 185721
+      cost: 1.0281
   strategic:
     - kind: orchestrator
       seconds: 192

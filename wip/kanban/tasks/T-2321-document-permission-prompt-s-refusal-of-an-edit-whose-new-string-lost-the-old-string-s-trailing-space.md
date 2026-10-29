@@ -3,16 +3,37 @@ id: T-2321
 type: task
 nature: improvement
 title: Document permission_prompt's refusal of an edit whose new string lost the old string's trailing space
-status: backlog
+status: done
 parent: S-0539
 owner: alex
 created: 2026-10-29T03:03:22Z
-updated: 2026-10-29T03:03:22Z
-transitions: []
+updated: 2026-10-29T04:09:55Z
+transitions:
+  - to: ready
+    at: 2026-10-29T04:09:25Z
+    by: agent-S-0539
+  - to: in-progress
+    at: 2026-10-29T04:09:26Z
+    by: agent-S-0539
+  - to: done
+    at: 2026-10-29T04:09:55Z
+    by: agent-S-0539
 stream: S-0539
 tags: [docs, permission-prompt]
 touches: [docs/users/flai.md, design/system/agent-adapters.md]
 after: [T-2320]
+usage:
+  source: log
+  seconds: 23
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 3
+      output: 38
+      cache_read: 274728
+      cache_write: 1662
+      cost: 0.0944
 ---
 # T-2321 Document permission_prompt's refusal of an edit whose new string lost the old string's trailing space
 

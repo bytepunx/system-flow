@@ -3,11 +3,11 @@ id: S-0532
 type: story
 nature: improvement
 title: Starts, ends, and failures of a role's run and of a story's agent are events of kind agent that wait_for_events and inbox report, and the thread flai serve opens after auto_restarts cites them
-status: review
+status: done
 parent: E-0030
 owner: alex
 created: 2026-10-28T21:00:58Z
-updated: 2026-10-29T03:03:16Z
+updated: 2026-10-29T04:22:21Z
 transitions:
   - to: ready
     at: 2026-10-28T22:21:04Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-10-29T03:03:16Z
     by: agent-S-0532
+  - to: done
+    at: 2026-10-29T04:22:21Z
+    by: alex
 tags: [flai, serve, events]
 topics: [orchestration, cli]
 touches: [flai/internal/serve, flai/internal/mcpserver, design/system/flai-cli.md, design/system/strategic-agents.md, docs, flai/internal/inbox/agentevents.go, flai/internal/inbox/agentevents_test.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/serve/agent_events.go, flai/internal/serve/agent_events_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/stop.go, flai/internal/serve/stop_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/limit.go, flai/internal/serve/limit_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, design/system/agent-narrative.md, docs/users/flai.md, docs/operators/settings.md, flai/internal/inbox/events.go]
