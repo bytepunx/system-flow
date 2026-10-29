@@ -3,17 +3,20 @@ id: T-2200
 type: task
 nature: remediation
 title: curateEnded records a run that ended on the harness's usage limit as failed on the limit, with the reset time, from its log
-status: in-progress
+status: done
 parent: S-0514
 owner: alex
 created: 2026-10-28T12:53:20Z
-updated: 2026-10-29T01:02:21Z
+updated: 2026-10-29T01:07:33Z
 transitions:
   - to: ready
     at: 2026-10-29T01:02:20Z
     by: agent-S-0514
   - to: in-progress
     at: 2026-10-29T01:02:21Z
+    by: agent-S-0514
+  - to: done
+    at: 2026-10-29T01:07:33Z
     by: agent-S-0514
 stream: S-0514
 tags: [flai, serve, curator]

@@ -2,6 +2,7 @@
 
 ## 1.1.3 - 2026-10-29
 
+- S-0535 flai emits the events the orchestrator's trigger names: planned, ready-empty, release-due, a thread coming to await an agent, and the conditions awaits-orchestrator, draft-changed, and to-review (patch).
 - S-0535 The roles README lists the trigger events and conditions (patch, ADR-0211): `design/workflows/roles/README.md` gains a section, "Triggers", with a table of every event a role file's `trigger` may name, `moved`, `thread`, `planned`, `ready-empty`, and `release-due` among them, and a table of every trigger condition, with the event it qualifies and when it holds, `to-review`, `to-backlog`, `draft-changed`, and `awaits-orchestrator` among them. No role file changes. It needs a flai that has it, the release that carries S-0535: an older flai's `flai check` reports a role file that names a new event or condition as `roles.file`.
 
 ## 1.1.2 - 2026-10-28
