@@ -216,7 +216,7 @@ func projectRoot(repo *workitem.Repo) string {
 // and wait_for_events's descriptions, the kinds flai serve and flai accept
 // log and the thread kind the inbox derives from the thread files, with their
 // fields, and the trigger conditions a role file puts on them (ADR-0211).
-const eventKindsDescription = "A change of kind planned means a planner's run on id wrote the items to names; of kind ready-empty, that the ready column's count, to, fell below the in-progress room, with fields room (the in-progress limit less the stories in progress) and limit; of kind release-due, that accepting the story id changed what flai release --evaluate answers, with fields before and after. flai serve and flai accept log these three, and a story's agent may let them pass. A change of kind thread means a thread now awaits you, or, in the orchestrator's role, the operator: id and title are the thread's, to says whom (you or operator), by wrote its newest entry, cause is its story or path, and fields hold awaits (your agent name, or operator) and on (the item or path it is anchored to); read it with thread_get and answer it with thread_reply. A role file's trigger names these, and moved, as events; the conditions to-review and to-backlog qualify moved, draft-changed edited, and awaits-orchestrator thread (ADR-0211)."
+const eventKindsDescription = "A change of kind planned means a planner's run on id wrote the items to names; of kind ready-empty, that the ready column's count, to, fell below the in-progress room, with fields room (the in-progress limit less the stories in progress) and limit; of kind release-due, that accepting the story id changed what flai release --evaluate answers, with fields before and after; of kind agent, that the run of an agent flai serve runs came to to: started, ended (on its own, its work done or waiting for an answer), failed (it could not be started, or ended without its work done), or stopped (by the operator), id and title being the item the run is on, a story for a story's agent and the item planned for a planner, or, for a run on no item (the orchestrator's, the analyzer's, the curator's, or a project role's), the role's name with type role, by the agent, and fields role (the run's kind: story, plan, orchestrate, analyze, curate, or a project role's name) and why (in the serve journal's words: the exit, the usage-limit refusal and its reset time, the operator's stop, or the auto-restart count); it lets you see an agent start, fail, stop, or restart without reading the serve journal, nothing is owed on it, and you are not told of your own runs. flai serve and flai accept log these four, and a story's agent may let them pass. A change of kind thread means a thread now awaits you, or, in the orchestrator's role, the operator: id and title are the thread's, to says whom (you or operator), by wrote its newest entry, cause is its story or path, and fields hold awaits (your agent name, or operator) and on (the item or path it is anchored to); read it with thread_get and answer it with thread_reply. A role file's trigger names these, and moved, as events; the conditions to-review and to-backlog qualify moved, draft-changed edited, and awaits-orchestrator thread (ADR-0211)."
 
 // New builds the MCP server with its tools and resources: for one project,
 // or, with Options.Folder and no Repo, for every project in a folder (S-0101).
@@ -843,7 +843,7 @@ type WaitIn struct {
 
 // WaitOut reports what changed.
 type WaitOut struct {
-	Events   []Event  `json:"events" jsonschema:"what others changed to work items since this agent last looked, the messages to this session's story, each of kind message, the events flai serve and flai accept log, of kind planned, ready-empty, or release-due, and the threads now awaiting this agent, or in the orchestrator's role the operator, of kind thread; newest kept, at most 50"`
+	Events   []Event  `json:"events" jsonschema:"what others changed to work items since this agent last looked, the messages to this session's story, each of kind message, the events flai serve and flai accept log, of kind planned, ready-empty, release-due, or agent, and the threads now awaiting this agent, or in the orchestrator's role the operator, of kind thread; newest kept, at most 50"`
 	Omitted  int      `json:"events_omitted" jsonschema:"how many older events were left out because of the cap; they are not reported later"`
 	Changed  []string `json:"changed" jsonschema:"repository paths that were added, modified, or removed while waiting"`
 	TimedOut bool     `json:"timed_out"`
@@ -891,7 +891,7 @@ func (s *server) snapshot() map[string]string {
 
 // noticeLogs are the logs under .flai-cache whose lines arrive as events:
 // edits (S-0085), overlaps at acceptance (S-0132), and the events flai serve
-// and flai accept log, planned, ready-empty, and release-due (ADR-0211).
+// and flai accept log, planned, ready-empty, release-due, and agent (ADR-0211).
 func noticeLogs(repo *workitem.Repo) []string {
 	return []string{itemedit.NoticesPath(repo), itemedit.OverlapsPath(repo), inbox.EventsPath(repo)}
 }

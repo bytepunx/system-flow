@@ -371,7 +371,8 @@ func TestWaitForEventsAcrossAFolder(t *testing.T) {
 
 // ADR-0211: across a folder, each kind flai serve, flai accept, and the
 // threads add is read back through wait_for_events and through the inbox of
-// the project it happened in, with its fields, and in no other project.
+// the project it happened in, with its fields, and in no other project: an
+// agent event of each to among them (S-0532).
 func TestTheNewEventKindsReachWaitForEventsAndInboxAcrossAFolder(t *testing.T) {
 	for _, c := range eventKindCases {
 		t.Run(c.name, func(t *testing.T) {

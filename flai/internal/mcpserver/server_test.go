@@ -16,6 +16,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
@@ -906,7 +907,8 @@ type eventKindCase struct {
 }
 
 // eventKindCases are the kinds flai serve and flai accept log, through
-// inbox.AppendEvent and their constructors, and the thread kind, through the
+// inbox.AppendEvent and their constructors, with an agent event for each to
+// by another agent than the reader (S-0532), and the thread kind, through the
 // threads package: one awaiting the agent, one awaiting the operator for the
 // orchestrator. Each write is a new event, so that a second look hears it.
 var eventKindCases = []eventKindCase{
@@ -952,6 +954,46 @@ var eventKindCases = []eventKindCase{
 		},
 	},
 	{
+		name: "agent started", kind: inbox.Agent,
+		write: func(t *testing.T, repo *workitem.Repo, story string, at time.Time) string {
+			appendAt(t, repo, inbox.AgentEvent(story, workitem.Story, "Story", inbox.AgentStarted, "agent-"+story, conventions.RoleStory, "auto-restart 1 of 3"), at)
+			return story
+		},
+		wrong: func(e map[string]any, _, story string) string {
+			return agentEventWrong(e, workitem.Story, inbox.AgentStarted, "agent-"+story, conventions.RoleStory, "auto-restart 1 of 3", story+" Story's agent agent-"+story+" started: auto-restart 1 of 3")
+		},
+	},
+	{
+		name: "agent ended", kind: inbox.Agent,
+		write: func(t *testing.T, repo *workitem.Repo, story string, at time.Time) string {
+			appendAt(t, repo, inbox.AgentEvent(story, workitem.Story, "Story", inbox.AgentEnded, "planner-"+story, conventions.RolePlan, "exit 0"), at)
+			return story
+		},
+		wrong: func(e map[string]any, _, story string) string {
+			return agentEventWrong(e, workitem.Story, inbox.AgentEnded, "planner-"+story, conventions.RolePlan, "exit 0", story+" Story's planner planner-"+story+" ended: exit 0")
+		},
+	},
+	{
+		name: "agent failed", kind: inbox.Agent,
+		write: func(t *testing.T, repo *workitem.Repo, story string, at time.Time) string {
+			appendAt(t, repo, inbox.AgentEvent(story, workitem.Story, "Story", inbox.AgentFailed, "agent-"+story, conventions.RoleStory, "usage limit, resets at 18:00"), at)
+			return story
+		},
+		wrong: func(e map[string]any, _, story string) string {
+			return agentEventWrong(e, workitem.Story, inbox.AgentFailed, "agent-"+story, conventions.RoleStory, "usage limit, resets at 18:00", story+" Story's agent agent-"+story+" failed: usage limit, resets at 18:00")
+		},
+	},
+	{
+		name: "agent stopped", kind: inbox.Agent,
+		write: func(t *testing.T, repo *workitem.Repo, _ string, at time.Time) string {
+			appendAt(t, repo, inbox.AgentEvent("orchestrator", inbox.RoleType, "orchestrator", inbox.AgentStopped, "orchestrator", conventions.RoleOrchestrate, "stopped by the operator"), at)
+			return "orchestrator"
+		},
+		wrong: func(e map[string]any, _, _ string) string {
+			return agentEventWrong(e, inbox.RoleType, inbox.AgentStopped, "orchestrator", conventions.RoleOrchestrate, "stopped by the operator", "the orchestrator's run was stopped: stopped by the operator")
+		},
+	},
+	{
 		name: "thread awaiting the agent", kind: inbox.Thread,
 		write: func(t *testing.T, repo *workitem.Repo, story string, at time.Time) string {
 			th, err := threads.New(repo, threads.NewOptions{Title: "Which way?", On: story, Author: "claude", Text: "A or B?", Now: at})
@@ -988,6 +1030,102 @@ var eventKindCases = []eventKindCase{
 			return ""
 		},
 	},
+}
+
+// agentEventWrong says what is wrong with the agent event e, which should be
+// of type typ, come to to, by by, with fields role and why, and say summary,
+// or nothing.
+func agentEventWrong(e map[string]any, typ, to, by, role, why, summary string) string {
+	fields, _ := e["fields"].(map[string]any)
+	if e["type"] != typ || e["to"] != to || e["by"] != by || fields[inbox.FieldRole] != role || fields[inbox.FieldWhy] != why || !strings.Contains(e["summary"].(string), summary+". A story's agent may let it pass") {
+		return "the item or role, what the run came to, its agent, its role and why, and the words " + summary
+	}
+	return ""
+}
+
+// agentEventCases are the eventKindCases of kind agent, one for each to.
+func agentEventCases() []eventKindCase {
+	var out []eventKindCase
+	for _, c := range eventKindCases {
+		if c.kind == inbox.Agent {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+// S-0532: an agent event appended while wait_for_events is held wakes it and
+// is reported once, with its fields, for each to; the inbox after it does not
+// report it again.
+func TestAnAgentEventIsReportedOnceWhileWaitForEventsIsHeld(t *testing.T) {
+	for _, c := range agentEventCases() {
+		t.Run(c.name, func(t *testing.T) {
+			t.Setenv("FLAI_STORY", "")
+			f := setup(t)
+			if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
+				t.Fatal(failed)
+			}
+			*f.clock = f.clock.Add(time.Minute)
+			done := make(chan map[string]any, 1)
+			go func() {
+				out, _ := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 3})
+				done <- out
+			}()
+			time.Sleep(150 * time.Millisecond)
+			id := c.write(t, f.repo, f.story.ID, *f.clock)
+			select {
+			case w := <-done:
+				if w["timed_out"] == true {
+					t.Fatalf("the event wakes the wait: %v", w)
+				}
+				e, wrong := ofKind(eventsOf("wait_for_events", w), inbox.Agent)
+				if wrong == "" && e["id"] != id {
+					wrong = "the event is on " + id
+				}
+				if wrong == "" {
+					wrong = c.wrong(e, id, f.story.ID)
+				}
+				if wrong != "" {
+					t.Errorf("wait_for_events: %s: %v", wrong, w)
+				}
+			case <-time.After(5 * time.Second):
+				t.Fatal("wait_for_events never returned")
+			}
+			out, failed := f.call(t, "inbox", map[string]any{})
+			if failed != "" {
+				t.Fatal(failed)
+			}
+			if _, wrong := ofKind(eventsOf("inbox", out), inbox.Agent); !strings.Contains(wrong, "got 0") {
+				t.Errorf("the inbox does not report it again: %v", out)
+			}
+		})
+	}
+}
+
+// S-0532: an agent is not told of its own runs' events, through either tool,
+// but is told of another agent's beside them.
+func TestAnAgentIsNotToldOfItsOwnRuns(t *testing.T) {
+	t.Setenv("FLAI_STORY", "")
+	f := setup(t) // the server's agent is claude
+	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
+		t.Fatal(failed)
+	}
+	for _, tool := range []string{"wait_for_events", "inbox"} {
+		*f.clock = f.clock.Add(time.Minute)
+		appendAt(t, f.repo, inbox.AgentEvent(f.story.ID, workitem.Story, "Story", inbox.AgentFailed, "claude", conventions.RoleStory, "exit 1"), *f.clock)
+		appendAt(t, f.repo, inbox.AgentEvent(f.story.ID, workitem.Story, "Story", inbox.AgentStarted, "agent-S-0099", conventions.RoleStory, ""), *f.clock)
+		out, failed := f.call(t, tool, map[string]any{})
+		if failed != "" {
+			t.Fatal(failed)
+		}
+		e, wrong := ofKind(eventsOf(tool, out), inbox.Agent)
+		if wrong == "" && (e["by"] != "agent-S-0099" || e["to"] != inbox.AgentStarted) {
+			wrong = "the other agent's run, not its own"
+		}
+		if wrong != "" {
+			t.Errorf("%s: %s: %v", tool, wrong, out)
+		}
+	}
 }
 
 // appendAt appends e to the event log as its writer does, stamped at, the
@@ -1063,7 +1201,7 @@ func TestTheNewEventKindsReachWaitForEventsAndInbox(t *testing.T) {
 func TestTheNewEventKindsAreDescribed(t *testing.T) {
 	root := t.TempDir()
 	makeProject(t, filepath.Join(root, "alpha"), "alpha")
-	wants := []string{"kind planned", "kind ready-empty", "fields room", "kind release-due", "fields before and after", "a story's agent may let them pass", "kind thread means a thread now awaits you, or, in the orchestrator's role, the operator", "awaits (your agent name, or operator) and on", "the conditions to-review and to-backlog qualify moved, draft-changed edited, and awaits-orchestrator thread"}
+	wants := []string{"kind planned", "kind ready-empty", "fields room", "kind release-due", "fields before and after", "kind agent", "started, ended", "failed", "or stopped", "type role", "fields role", "and why", "without reading the serve journal", "not told of your own runs", "a story's agent may let them pass", "kind thread means a thread now awaits you, or, in the orchestrator's role, the operator", "awaits (your agent name, or operator) and on", "the conditions to-review and to-backlog qualify moved, draft-changed edited, and awaits-orchestrator thread"}
 	for name, cs := range map[string]*mcp.ClientSession{"project": setup(t).cs, "folder": folderSetup(t, root).cs} {
 		texts := map[string]string{"instructions": cs.InitializeResult().Instructions}
 		res, err := cs.ListTools(context.Background(), nil)
