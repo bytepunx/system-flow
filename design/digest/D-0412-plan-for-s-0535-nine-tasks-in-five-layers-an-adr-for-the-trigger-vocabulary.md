@@ -14,31 +14,11 @@ cited: []
 
 # D-0412 Plan for S-0535: nine tasks in five layers, an ADR for the trigger vocabulary first: accept recommendation and resolve
 
-The operator, alex, answered TH-0715 at 2026-10-28T22:41:35Z.
+The operator, alex, answered TH-0715 at 2026-10-28T22:41:35Z, the plan thread of S-0535 (nine tasks in five layers, an ADR for the trigger vocabulary first), with "accept recommendation and resolve". They took the orchestrator's recommendation whole, on both proposals:
 
-What was asked:
+1. **`to-backlog` qualifies `{event: moved}` as a condition, added in S-0535 beside `to-review` (T-2293).** Without it, ADR-0209 §1's own trigger, `{event: moved, when: to-backlog}`, is refused by `flai check` as `roles.file`, so S-0536 could not pass. It had been only a call condition.
+2. **A declared folder touch no task changes a file under is dropped from the story.** `flai/internal/workitem` left S-0535's touches: while the story is in progress such a touch holds every ready story touching a file there, costing pull time for nothing (ADR-0096). The story's agent widens its touches through `flai task done` if a file there turns out to change.
 
-```text
-S-0535 is planned: nine tasks in five layers, its touches, a 4h forecast, and a cost of delay of 37.50 USD a week (from the 15m the orchestrator set on TH-0714).
-```
+The plan's other assumptions stood with it: the vocabulary gets an ADR of its own since ADR-0209 is accepted, keeping ADR-0207's `review` and `thread-opened` beside `moved` and `thread`; `release-due` is an event of its own, not `{event: accepted, when: release-due}`; `ready-empty` fires once on the look that finds the ready column empty, held stories counted, with the in-progress limit not full, after one that found it not empty; `planned` fires only when the run wrote something beyond its item.
 
-The recommendation it overruled:
-
-```text
-**Recommended:** yes to both.
-
-1. **Fold `to-backlog` as a condition on `moved` into T-2293.** It is one line beside `to-review`. ADR-0209 §1's own trigger, `{event: moved, when: to-backlog}`, is refused as `roles.file` without it, so S-0536, the next story of E-0030, could not pass `flai check`. Leaving it out only moves the same line into S-0536.
-2. **Drop `flai/internal/workitem` from S-0535's touches.** No task changes a file under it. While S-0535 is in progress, that folder touch holds every ready story touching a workitem file, which costs pull time for nothing (ADR-0096). The story's agent widens its touches by itself, through `flai task done`, if a file there turns out to change.
-
-**Or:** say no to either here. The planner then leaves `to-backlog` to S-0536, or keeps the touch.
-
-Source: design/adrs/0096-a-story-in-review-holds-nothing-an-overlap-inside-the-manifest-s-shared-paths.md
-```
-
-The operator's answer:
-
-```text
-accept recommendation and resolve
-```
-
-Source: TH-0715.
+Source: TH-0715, citing [ADR-0096](../adrs/0096-a-story-in-review-holds-nothing-an-overlap-inside-the-manifest-s-shared-paths.md).
