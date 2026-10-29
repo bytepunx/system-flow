@@ -7,7 +7,7 @@ status: ready
 parent: E-0030
 owner: alex
 created: 2026-10-28T21:00:58Z
-updated: 2026-10-29T01:07:14Z
+updated: 2026-10-29T01:55:59Z
 transitions:
   - to: ready
     at: 2026-10-28T22:21:04Z
@@ -46,10 +46,10 @@ cost_of_delay:
   at: 2026-10-28T21:10:53Z
 forecast:
   duration: 3h
-  delivery: 2026-10-29T07:53:00Z
-  basis: "Its own forecast of 3h; 1st in the pull order with an in-progress limit of 5, behind S-0514 and S-0519."
+  delivery: 2026-10-29T05:58:00Z
+  basis: "Its own forecast of 3h; 1st in the pull order with an in-progress limit of 5, behind S-0519."
   by: flai
-  at: 2026-10-29T01:07:14Z
+  at: 2026-10-29T01:55:59Z
 ---
 # S-0532 Starts, ends, and failures of a role's run and of a story's agent are events of kind agent that wait_for_events and inbox report, and the thread flai serve opens after auto_restarts cites them
 
