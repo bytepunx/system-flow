@@ -683,11 +683,18 @@ func Run(ctx context.Context, o Options) error {
 			// analysis scheduler, which sees analysis.schedule come round as
 			// the replanner sees planning.schedule (S-0223), and the curate
 			// scheduler, which sees stories accepted, the curator's run end,
-			// and digest.schedule come round (S-0432, ADR-0199).
+			// and digest.schedule come round (S-0432, ADR-0199). The roles the
+			// project defines are started the same way (S-0418): the role
+			// events queue the reasons the changes give each role whose
+			// trigger names an event and start a run for them, and look again
+			// when the reasons they hold come due between looks; and the role
+			// scheduler sees each schedule a role's trigger names come round.
 			replanner := newReplanner(o, e, starter)
 			orch := newOrchestrator(o, e, starter)
 			analyst := newAnalysisScheduler(o, e, starter)
 			curation := newCurateScheduler(o, e, starter)
+			roleStarts := newRoleEvents(o, e, starter)
+			roleSchedules := newRoleScheduler(o, e, starter)
 			// The thread reminder looks on the same changes and every minute,
 			// in the background, as a send may wait seconds (ADR-0205).
 			reminding := newReminder(o, e, &reminds)
@@ -702,6 +709,8 @@ func Run(ctx context.Context, o Options) error {
 			orch.look(cctx)
 			analyst.look(cctx)
 			curation.look(cctx)
+			roleStarts.look(cctx)
+			roleSchedules.look(cctx)
 			confirming.look(cctx)
 			reminding.soon(cctx)
 			newForgePass(o, e, &forgeLooks).start(cctx)
@@ -721,6 +730,8 @@ func Run(ctx context.Context, o Options) error {
 						starter.look(cctx, true)
 					case <-orch.wake:
 						// the orchestrator's queued reasons came due
+					case <-roleStarts.wake:
+						// a role's queued reasons came due
 					case <-time.After(time.Minute):
 						// an agent that outlived an earlier flai serve is not waited for
 						starter.look(cctx, false)
@@ -729,6 +740,8 @@ func Run(ctx context.Context, o Options) error {
 					orch.look(cctx)
 					analyst.look(cctx)
 					curation.look(cctx)
+					roleStarts.look(cctx)
+					roleSchedules.look(cctx)
 					confirming.look(cctx)
 					reminding.soon(cctx)
 				}
@@ -748,6 +761,8 @@ func Run(ctx context.Context, o Options) error {
 							orch.look(cctx)
 							analyst.look(cctx)
 							curation.look(cctx)
+							roleStarts.look(cctx)
+							roleSchedules.look(cctx)
 							confirming.look(cctx)
 							reminding.soon(cctx)
 							queue.wake()

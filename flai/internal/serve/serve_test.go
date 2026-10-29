@@ -867,3 +867,126 @@ func TestServeConfirmsARecommendationPastConfirmAfter(t *testing.T) {
 		time.Sleep(20 * time.Millisecond)
 	}
 }
+
+// S-0418: flai serve's loop starts the roles a project defines on their
+// triggers. A role whose trigger names a move to review is queued when a
+// story is moved there, and once orchestration.coalesce has passed the role's
+// own wake starts its run, which records the move as its trigger in
+// serve/agents.json and on its activity entry; a role whose trigger is
+// roles.<name>.schedule is started by the next look after the schedule comes
+// round, recording the schedule as its trigger. Each is started once.
+func TestServeStartsADefinedRoleOnAnEventAndOnASchedule(t *testing.T) {
+	lab := roleLab(t)
+	lab.now = time.Now().Add(-time.Hour) // the items made before serving are history to its first look
+	roleDir := filepath.Join(lab.root, "design", "workflows", "roles")
+	auditor := strings.Replace(auditorRole, "  - asked\n", "  - {schedule: roles.auditor.schedule}\n", 1)
+	for name, body := range map[string]string{"watcher.md": watcherRole, "auditor.md": auditor} {
+		if err := os.WriteFile(filepath.Join(roleDir, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(lab.root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"+
+		"orchestration:\n  coalesce: 1s\nroles:\n  auditor:\n    schedule: daily\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for agent, summary := range map[string]string{"watcher": "Watched the move.", "auditor": "Audited the project."} {
+		stream := strings.Join([]string{streamCall("s", "m1", runStart, 999), streamFinal(summary, 2000, 0.5)}, "\n") + "\n"
+		if err := os.WriteFile(filepath.Join(lab.outDir, "stream-"+agent), []byte(stream), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	lab.cfg.Enabled = false // no story's agent: only the roles start
+	lab.cfg.RoleActions = map[string]bool{"watch": true, "audit": true}
+	story := lab.backlog("Reviewed", nil)
+	lab.toReady(story)
+	it, err := lab.repo.Get(story)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := lab.repo.Transition(it, workitem.InProgress, "builder", "", lab.now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := lab.repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "Work", Parent: story, Owner: "builder-" + story, Now: lab.now}); err != nil {
+		t.Fatal(err)
+	}
+
+	dash := channeltest.New(t, "s3cret")
+	keyFile := filepath.Join(t.TempDir(), "agent.key")
+	if err := os.WriteFile(keyFile, []byte("s3cret\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := lab.o.Dir.Register(Entry{Key: "t", Name: "t", Root: lab.root, URL: dash.URL, KeyFile: keyFile}); err != nil {
+		t.Fatal(err)
+	}
+	// The loop's clock runs with the real one, ahead by ahead, so that a
+	// schedule can come round without a day's wait.
+	var ahead atomic.Int64
+	o := lab.o
+	o.Version, o.Every, o.WatchEvery = "test", 20*time.Millisecond, 20*time.Millisecond
+	o.Now = func() time.Time { return time.Now().Add(time.Duration(ahead.Load())) }
+	o.NewClient = func(e Entry, key []byte) *channel.Client {
+		return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
+			Methods: hostapi.Methods("test", nil), Version: "test", PingEvery: time.Hour /* the test dashboard answers no ping */, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, ReleaseKeys: dash.Keys}
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- Run(ctx, o) }()
+	t.Cleanup(func() {
+		cancel()
+		if err := <-done; err != nil {
+			t.Errorf("Run: %v", err)
+		}
+	})
+	starts := func() int {
+		n := 0
+		for _, e := range lab.entries() {
+			if e.Method == MethodRole && strings.HasPrefix(e.Detail, "started ") {
+				n++
+			}
+		}
+		return n
+	}
+	activity := func(name string) []workitem.ActivityEntry {
+		doc, err := lab.repo.Activity(name)
+		if err != nil {
+			return nil
+		}
+		return doc.Entries
+	}
+	waitFor(t, "the first look finds the watcher on", func() bool { return lab.o.Dir.roleQueues()[lab.root]["watcher"].On })
+
+	// an event: the story moved to review
+	it, err = lab.repo.Get(story)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := lab.repo.Transition(it, workitem.Review, "builder", "", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	waitFor(t, "the watcher's run for the move ended", func() bool { r := lab.roleRun("watcher", ""); return r != nil && r.Ended != "" })
+	if r := lab.roleRun("watcher", ""); r.Trigger != "moved "+story {
+		t.Errorf("the watcher's run's trigger = %q, want %q", r.Trigger, "moved "+story)
+	}
+	waitFor(t, "the watcher's activity logged", func() bool { return len(activity("watcher")) == 1 })
+	if got := activity("watcher")[0].Trigger; got != "moved "+story {
+		t.Errorf("the watcher's activity's trigger = %q, want %q", got, "moved "+story)
+	}
+	if n := starts(); n != 1 || lab.roleRun("auditor", "") != nil {
+		t.Fatalf("%d runs started for the move, the auditor's %+v; want the watcher's alone\n%s", n, lab.roleRun("auditor", ""), lab.logText())
+	}
+
+	// a schedule: the clock past the next midnight, and a change to look on
+	ahead.Store(int64(25 * time.Hour))
+	lab.backlog("Looked on", nil)
+	waitFor(t, "the auditor's run for its schedule ended", func() bool { r := lab.roleRun("auditor", ""); return r != nil && r.Ended != "" })
+	if r := lab.roleRun("auditor", ""); r.Trigger != "schedule daily" {
+		t.Errorf("the auditor's run's trigger = %q, want %q", r.Trigger, "schedule daily")
+	}
+	waitFor(t, "the auditor's activity logged", func() bool { return len(activity("auditor")) == 1 })
+	if got := activity("auditor")[0].Trigger; got != "schedule daily" {
+		t.Errorf("the auditor's activity's trigger = %q, want %q", got, "schedule daily")
+	}
+	if n := starts(); n != 2 {
+		t.Errorf("%d runs started in all, want one for the move and one for the schedule\n%s", n, lab.logText())
+	}
+}
