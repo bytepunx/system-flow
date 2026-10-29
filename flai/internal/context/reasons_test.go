@@ -304,16 +304,6 @@ func TestAPlannedReasonLoadsTheItemWhatThePlannerWroteAndItsThread(t *testing.T)
 	}
 }
 
-// ADR-0217 §3: review, release, and ready parse and load no item yet; their
-// loaders come with T-2309.
-func TestTheFigureReasonsLoadNoItemYet(t *testing.T) {
-	repo, _, story := reasonsRepo(t)
-	p := mustReasons(t, repo, "review:"+story.ID, "release", "ready")
-	if len(p.Items) != 0 || !slices.Equal(p.Reasons, []string{"review:" + story.ID, "release", "ready"}) {
-		t.Errorf("items %+v, reasons %v", p.Items, p.Reasons)
-	}
-}
-
 // ADR-0217 §3: an item two reasons name loads once, with the second reason
 // beside the first, and the conventions load once.
 func TestAnItemTwoReasonsNameLoadsOnce(t *testing.T) {

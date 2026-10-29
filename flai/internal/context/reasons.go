@@ -251,14 +251,17 @@ func ForReasons(repo *workitem.Repo, reasons []string, budget string) (*Pack, er
 // reasonLoader loads into l what one reason needs (ADR-0217 §3).
 type reasonLoader func(l *reasonLoad, r Reason) error
 
-// reasonLoaders is the loader of each kind of reason that loads anything.
-// review, release, and ready are parsed but load nothing yet: their story,
-// verify result, and figures come with T-2309, which adds their loaders
-// here.
+// reasonLoaders is the loader of each kind of reason: those that load
+// documents here, and those that load the figures flai works out, the last
+// verify result, release_evaluate's figures, and the board and the
+// promotion candidates, in reasons_figures.go.
 var reasonLoaders = map[string]reasonLoader{
 	ReasonThread:  loadThread,
+	ReasonReview:  loadReview,
 	ReasonPlanned: loadPlanned,
 	ReasonDraft:   loadDraft,
+	ReasonRelease: loadRelease,
+	ReasonReady:   loadReady,
 }
 
 // reasonLoad is what the reasons of one pack have loaded so far: the items,
