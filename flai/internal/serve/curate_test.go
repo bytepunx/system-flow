@@ -15,6 +15,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/digest"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -54,7 +55,7 @@ func (lab *agentLab) curate(since string) (*AgentRun, error) {
 func (lab *agentLab) curateHere(since string) bool {
 	lab.l.mu.Lock()
 	defer lab.l.mu.Unlock()
-	return lab.l.curate(context.Background(), lab.cfg, nil, since, TriggerAsked)
+	return lab.l.curate(context.Background(), lab.cfg, nil, since, TriggerAsked, "")
 }
 
 // curatorGiven is what the curator stub was given, once it has written it.
@@ -83,13 +84,146 @@ func (lab *agentLab) curatorRuns(final string, at time.Time) {
 
 // curatorLimited has the stub print I-0212's stream, a run the harness
 // refused on its usage limit, and exit 1, as that run did.
-func (lab *agentLab) curatorLimited() {
+func (lab *agentLab) curatorLimited() { lab.curatorLimitedOn(limitStream) }
+
+// unresetStream is I-0212's stream without its rate_limit_event: a run that
+// ends on the usage limit with no reset time named.
+var unresetStream = slices.Delete(slices.Clone(limitStream), 2, 3)
+
+// curatorLimitedOn has the stub print stream, a run that ends on the usage
+// limit, and exit 1.
+func (lab *agentLab) curatorLimitedOn(stream []string) {
 	lab.t.Helper()
-	if err := os.WriteFile(filepath.Join(lab.outDir, "stream-curate"), []byte(strings.Join(limitStream, "\n")+"\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(lab.outDir, "stream-curate"), []byte(strings.Join(stream, "\n")+"\n"), 0o644); err != nil {
 		lab.t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(lab.outDir, "exit-curate"), []byte("1"), 0o644); err != nil {
 		lab.t.Fatal(err)
+	}
+}
+
+// curatorEnded has the lab's launcher start the curator as the operator
+// asked, or, with resetAt, again once the usage limit its last run ended on
+// reset at resetAt, as the scheduler does, and returns the run as recorded
+// once the launcher no longer waits for it.
+func (lab *agentLab) curatorEnded(resetAt string) *AgentRun {
+	lab.t.Helper()
+	lab.l.mu.Lock()
+	started := lab.l.curate(context.Background(), lab.cfg, nil, "", TriggerAsked, resetAt)
+	lab.l.mu.Unlock()
+	if !started {
+		lab.t.Fatalf("not started: %+v", lab.state().Curator)
+	}
+	waitFor(lab.t, "the curator run ended", func() bool { r := lab.state().Curator; return r != nil && r.Ended != "" })
+	lab.settle()
+	return lab.state().Curator
+}
+
+// allThreads are the project's threads.
+func (lab *agentLab) allThreads() []*threads.Thread {
+	lab.t.Helper()
+	ths, err := threads.List(lab.repo)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	return ths
+}
+
+// curateEntries are the journal's curate entries by flai serve.
+func (lab *agentLab) curateEntries() []hostapi.Entry {
+	return slices.DeleteFunc(lab.entries(), func(e hostapi.Entry) bool {
+		return e.Action != "curate" || e.Method != "serve.curate" || e.By != "flai serve"
+	})
+}
+
+// raisedOnce checks that run's limit is raised on one thread to the operator
+// on system-flow.yaml, by flai serve, titled title, recorded on the run,
+// journalled, its text naming each of want; and that a second end of the
+// same run, and a look, open no other.
+func (lab *agentLab) raisedOnce(run *AgentRun, title string, want ...string) {
+	lab.t.Helper()
+	ths := lab.allThreads()
+	if len(ths) != 1 {
+		lab.t.Fatalf("threads = %d, want one", len(ths))
+	}
+	th := ths[0]
+	if run.LimitThread != th.ID || th.Title != title || th.Anchor.Path != "system-flow.yaml" || th.Anchor.Item != "" || !slices.Equal(th.Participants, []string{"flai serve"}) || th.Status != "open" {
+		lab.t.Errorf("thread = %+v, run's limit_thread %q; want %q on system-flow.yaml by flai serve, recorded on the run", th, run.LimitThread, title)
+	}
+	started := "The run started at " + run.Started + ", started by asked."
+	said := []string{"No digest entry is written until the curator runs.", started, run.Log, "flai serve schedules no retry for this limit.",
+		"`flai curate` starts the curator at any time.", "The next acceptance, or `digest.schedule` coming round, starts it"}
+	for _, w := range append(said, want...) {
+		if !strings.Contains(th.Body, w) {
+			lab.t.Errorf("the thread's text does not name %q:\n%s", w, th.Body)
+		}
+	}
+	if data, err := os.ReadFile(lab.o.Dir.agents()); err != nil || !strings.Contains(string(data), `"limit_thread": "`+th.ID+`"`) {
+		lab.t.Errorf("serve/agents.json does not record the thread (%v):\n%s", err, data)
+	}
+	j := lab.curateEntries()
+	if len(j) != 2 || j[1].Outcome != "done" || !strings.HasPrefix(j[1].Detail, "opened "+th.ID+": the curator's run started at "+run.Started+" ended on the harness's usage limit") {
+		lab.t.Errorf("journal: %+v, want the start and the thread's opening", j)
+	}
+	again := *run
+	again.Ended, again.Exit, again.Outcome, again.Why, again.ResetsAt, again.LimitThread = "", nil, "", "", "", ""
+	lab.l.curateEnded(&again, nil)
+	lab.l.look(context.Background(), false)
+	if n := len(lab.allThreads()); n != 1 || lab.state().Curator.LimitThread != th.ID || len(lab.curateEntries()) != 2 {
+		lab.t.Errorf("a second end: %d threads, limit_thread %q, journal %+v; want the one thread, still recorded", n, lab.state().Curator.LimitThread, lab.curateEntries())
+	}
+}
+
+// I-0212, ADR-0214 §7: a retry that ends on the usage limit again is raised
+// to the operator on one thread, naming the run, the harness's text, and the
+// reset time, and what starts the curator again.
+func TestACuratorRetryOnTheUsageLimitAgainIsRaisedOnce(t *testing.T) {
+	lab := curateLab(t)
+	lab.curatorLimited()
+	run := lab.curatorEnded("2026-10-21T08:00:00Z")
+	if !run.Retry || run.Outcome != OutcomeFailed || run.ResetsAt != limitResetsAt {
+		t.Errorf("run = %+v, want a retry failed on the limit", run)
+	}
+	lab.raisedOnce(run, "The curator ended on the harness's usage limit twice; start it when the limit allows",
+		"twice in a row: its retry, started once the limit reset, ended on it again.", "It "+limitWhyText+".", limitSaid, "once the limit resets at "+limitResetsAt+".")
+}
+
+// I-0212, ADR-0214 §7: a run on the usage limit whose harness named no reset
+// time is raised to the operator on one thread, saying so.
+func TestACuratorRunOnALimitWithNoResetTimeIsRaisedOnce(t *testing.T) {
+	lab := curateLab(t)
+	lab.curatorLimitedOn(unresetStream)
+	run := lab.curatorEnded("")
+	if run.Retry || run.Outcome != OutcomeFailed || run.ResetsAt != "" {
+		t.Errorf("run = %+v, want a first run failed on the limit, with no reset time", run)
+	}
+	lab.raisedOnce(run, "The curator ended on the harness's usage limit with no reset time; start it when the limit allows",
+		"and the harness named no reset time.", "It ended on the harness's usage limit (usage_limit_reached, 429); it named no reset time.", limitSaid, "starts it too.")
+}
+
+// ADR-0214 §7: a thread on the curator's usage limit that cannot be opened is
+// warned of and journalled failed, and no thread is recorded on the run.
+func TestACuratorLimitThreadThatCannotBeOpenedIsWarnedOf(t *testing.T) {
+	lab := curateLab(t)
+	dir := threads.Dir(lab.repo)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(dir, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
+	lab.curatorLimited()
+	run := lab.curatorEnded("2026-10-21T08:00:00Z")
+	if run.LimitThread != "" || run.Outcome != OutcomeFailed || run.ResetsAt != limitResetsAt {
+		t.Errorf("run = %+v, want failed on the limit, with no thread", run)
+	}
+	j := lab.curateEntries()
+	if len(j) != 2 || j[1].Outcome != "failed" || !strings.HasPrefix(j[1].Detail, "could not open a thread on system-flow.yaml for the curator's run started at "+run.Started+", which ended on the harness's usage limit again, as flai serve's retry: ") {
+		t.Errorf("journal: %+v, want the start and the failed opening", j)
+	}
+	if logged := lab.logText(); !strings.Contains(logged, `level=WARN msg="thread on the curator's usage limit not opened"`) {
+		t.Errorf("not warned:\n%s", logged)
 	}
 }
 
@@ -415,7 +549,8 @@ func TestACuratorRunThatFailsIsRecordedAsFailed(t *testing.T) {
 
 // I-0212, ADR-0214: a curator run that exits 1 on the harness's usage limit
 // is recorded failed on the limit, with its reset time, and logs no
-// activity, so the next run's since is still the last activity.
+// activity, so the next run's since is still the last activity. A first run
+// on a limit with a reset time is not raised to the operator (§7).
 func TestACuratorRunOnTheUsageLimitIsRecordedFailedOnIt(t *testing.T) {
 	lab := curateLab(t)
 	last := runStart.Add(time.Hour)
@@ -447,6 +582,9 @@ func TestACuratorRunOnTheUsageLimitIsRecordedFailedOnIt(t *testing.T) {
 	}
 	if strings.Contains(logged, "curator activity not logged") || strings.Contains(logged, "run's log not read") {
 		t.Errorf("warned:\n%s", logged)
+	}
+	if ths := lab.allThreads(); len(ths) != 0 || r.LimitThread != "" || len(lab.entries()) != 1 {
+		t.Errorf("threads = %+v, limit_thread %q, journal %+v; want none raised", ths, r.LimitThread, lab.entries())
 	}
 }
 

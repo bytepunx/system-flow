@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
@@ -16,6 +17,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -207,8 +209,10 @@ func (l *launcher) curate(ctx context.Context, cfg AgentConfig, agent *manifest.
 // seen, and the digest entries it wrote or changed: failed on the harness's
 // usage limit when its log ends on it, with why naming the limit and its
 // reset time, and the reset time recorded, whether its exit was seen or not
-// (ADR-0214); failed on a failed exit, with why; worked otherwise, whether it
-// wrote an entry or found nothing to take in, an exit nobody saw included.
+// (ADR-0214), raised to the operator on a thread when it was a retry or the
+// harness named no reset time; failed on a failed exit, with why; worked
+// otherwise, whether it wrote an entry or found nothing to take in, an exit
+// nobody saw included.
 // It logs the run's activity in the curator's activity document, with what
 // started it, the first line of the run's final text as its summary, and the
 // entries as its items, which charge nothing. Entries that cannot be looked
@@ -222,10 +226,13 @@ func (l *launcher) curateEnded(run *AgentRun, exit *int) {
 		l.warn("curator's entries not looked for", "err", err)
 	}
 	ended.Entries = entries
-	lim := runLimit(run, l.warn)
+	lim, said := runLimit(run, l.warn)
 	switch {
 	case lim != nil:
 		ended.Outcome, ended.Why, ended.ResetsAt = OutcomeFailed, limitWhy(lim), limitResets(lim)
+		if run.Retry || ended.ResetsAt == "" {
+			ended.LimitThread = l.raiseCurateLimit(&ended, said)
+		}
 	case exit != nil && *exit != 0:
 		ended.Outcome, ended.Why = OutcomeFailed, fmt.Sprintf("ended (exit %d)", *exit)
 	default:
@@ -246,6 +253,68 @@ func (l *launcher) curateEnded(run *AgentRun, exit *int) {
 	if _, err := logRunEnd(l.dir, l.entry.Root, l.entry.Key, workitem.ActivityCurator, run.Trigger, "", entries); err != nil {
 		l.warn("curator activity not logged", "err", err)
 	}
+}
+
+// raiseCurateLimit opens a thread to the operator on the manifest, by flai
+// serve, for run, a curator run that ended on the harness's usage limit as a
+// retry, or on a limit with no reset time, said the harness's text at its end
+// (ADR-0214 §7), journals the opening as the start is journalled, and returns
+// the thread's ID. A run already recorded with its thread keeps it, so that
+// it is opened once. A thread that cannot be opened is warned of and
+// journalled failed, and "" is returned: flai serve schedules no retry for
+// the run either way.
+func (l *launcher) raiseCurateLimit(run *AgentRun, said string) string {
+	if cur := l.dir.AgentStates()[l.entry.Root].Curator; cur.same(run) && cur.LimitThread != "" {
+		return cur.LimitThread
+	}
+	title, what := "The curator ended on the harness's usage limit with no reset time; start it when the limit allows", ", which named no reset time"
+	if run.Retry {
+		title, what = "The curator ended on the harness's usage limit twice; start it when the limit allows", " again, as flai serve's retry"
+	}
+	at := l.now().UTC()
+	entry := hostapi.Entry{At: at.Format(time.RFC3339), Action: hostapi.ActionCurate, Method: "serve.curate", Project: l.entry.Key, Root: l.entry.Root, By: limitAuthor}
+	repo, err := workitem.Open(l.entry.Root)
+	var th *threads.Thread
+	if err == nil {
+		th, err = threads.New(repo, threads.NewOptions{Title: title, On: manifest.File, Author: limitAuthor, Text: curateLimitText(run, said), Now: at})
+	}
+	if err != nil {
+		entry.Outcome, entry.Detail = "failed", fmt.Sprintf("could not open a thread on %s for the curator's run started at %s, which ended on the harness's usage limit%s: %v", manifest.File, run.Started, what, err)
+		if l.record != nil {
+			l.record(entry)
+		}
+		l.warn("thread on the curator's usage limit not opened", "started", run.Started, "err", err.Error())
+		return ""
+	}
+	entry.Outcome, entry.Detail = "done", fmt.Sprintf("opened %s: the curator's run started at %s ended on the harness's usage limit%s; flai serve schedules no retry for it", th.ID, run.Started, what)
+	if l.record != nil {
+		l.record(entry)
+	}
+	l.log("curator's usage limit raised", "started", run.Started, "resets_at", run.ResetsAt, "thread", th.ID)
+	return th.ID
+}
+
+// curateLimitText is the text of the thread raiseCurateLimit opens for run:
+// what happened, the run, said the harness's text at its end, and what
+// starts the curator again.
+func curateLimitText(run *AgentRun, said string) string {
+	lead := "The curator ended on the harness's usage limit, and the harness named no reset time."
+	if run.Retry {
+		lead = "The curator ended on the harness's usage limit twice in a row: its retry, started once the limit reset, ended on it again."
+	}
+	text := fmt.Sprintf("%s No digest entry is written until the curator runs.\n\nThe run started at %s, %s. It %s. Its log is %s.\n\n", lead, run.Started, startedBy(run), run.Why, run.Log)
+	if said != "" {
+		fence := "```"
+		for strings.Contains(said, fence) {
+			fence += "`"
+		}
+		text += fmt.Sprintf("The harness said:\n\n%[1]stext\n%[2]s\n%[1]s\n\n", fence, said)
+	}
+	text += "flai serve schedules no retry for this limit. `flai curate` starts the curator at any time."
+	if run.ResetsAt != "" {
+		return text + " The next acceptance, or `digest.schedule` coming round, starts it once the limit resets at " + run.ResetsAt + "."
+	}
+	return text + " The next acceptance, or `digest.schedule` coming round, starts it too."
 }
 
 // entryFile is a digest entry's file name, D-nnnn-<slug>.md, its number

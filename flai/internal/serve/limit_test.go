@@ -39,11 +39,12 @@ var limitStream = []string{
 		`"uuid":"08775fa3-fee4-4409-9d86-9783aa52ef89","queued_turn_count":0,"result_index":0,"model_usage_since_last_result":{}}`,
 }
 
-// limitResetsAt is when I-0212's limit resets, and limitWhyText the why of a
-// run that ended on it.
+// limitResetsAt is when I-0212's limit resets, limitWhyText the why of a run
+// that ended on it, and limitSaid the harness's text at its end.
 const (
 	limitResetsAt = "2026-10-28T08:00:00Z"
 	limitWhyText  = "ended on the harness's usage limit (usage_limit_reached, 429); it resets at " + limitResetsAt
+	limitSaid     = "You've hit your weekly limit · resets Oct 28, 2am (America/Denver)"
 )
 
 // limitLog writes lines as a run's log, one to a line, and returns its path.
@@ -64,10 +65,10 @@ func (w *warned) warn(msg string, args ...any) {
 }
 
 // A run whose log ends on the usage limit has it, with the error, the
-// status, and the reset time the harness named.
+// status, and the reset time the harness named, and the harness's text.
 func TestARunsLimitIsReadFromItsLog(t *testing.T) {
 	var w warned
-	lim := runLimit(&AgentRun{Log: limitLog(t, limitStream...)}, w.warn)
+	lim, said := runLimit(&AgentRun{Log: limitLog(t, limitStream...)}, w.warn)
 	want := usage.Limit{Error: "usage_limit_reached", Status: 429, Resets: time.Date(2026, 10, 28, 8, 0, 0, 0, time.UTC)}
 	if lim == nil || *lim != want {
 		t.Fatalf("limit = %+v, want %+v", lim, want)
@@ -77,6 +78,9 @@ func TestARunsLimitIsReadFromItsLog(t *testing.T) {
 	}
 	if got := limitResets(lim); got != limitResetsAt {
 		t.Errorf("resets = %q, want %q", got, limitResetsAt)
+	}
+	if said != limitSaid {
+		t.Errorf("said = %q, want %q", said, limitSaid)
 	}
 	if len(w) != 0 {
 		t.Errorf("warned: %v", w)
@@ -90,12 +94,12 @@ func TestARunWithoutALimitHasNone(t *testing.T) {
 	worked := limitLog(t, streamCall("s", "m1", runStart, 999), streamFinal("Curated.", 2000, 0.5))
 	for name, log := range map[string]string{"worked": worked, "missing": filepath.Join(t.TempDir(), "gone.log"), "none named": ""} {
 		var w warned
-		if lim := runLimit(&AgentRun{Log: log}, w.warn); lim != nil || len(w) != 0 {
+		if lim, said := runLimit(&AgentRun{Log: log}, w.warn); lim != nil || said != "" || len(w) != 0 {
 			t.Errorf("%s: limit = %+v, warned %v; want none, nothing warned", name, lim, w)
 		}
 	}
 	var w warned
-	if lim := runLimit(&AgentRun{Log: t.TempDir()}, w.warn); lim != nil || len(w) != 1 || !strings.Contains(w[0], "run's log not read for a usage limit") {
+	if lim, _ := runLimit(&AgentRun{Log: t.TempDir()}, w.warn); lim != nil || len(w) != 1 || !strings.Contains(w[0], "run's log not read for a usage limit") {
 		t.Errorf("an unreadable log: limit = %+v, warned %v; want none, warned once", lim, w)
 	}
 }

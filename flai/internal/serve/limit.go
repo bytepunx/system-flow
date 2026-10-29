@@ -14,24 +14,29 @@ import (
 // says so as data, which the harness's usage reader reads as the run's
 // Limit: the error the harness names, its status, and when the limit resets.
 
-// runLimit is the usage limit the log of run ends on, or nil when its log
-// ends otherwise, it has none, or it is missing. A log that cannot be read is
-// warned of with warn and read as ending on none. The log is read as Claude
-// Code's, the harness that runs a strategic agent from its definition
-// (Capabilities.StrategicAgents), as its activity is (activity.go).
-func runLimit(run *AgentRun, warn func(msg string, args ...any)) *usage.Limit {
+// runLimit is the usage limit the log of run ends on, with the harness's
+// final text, said, or nil when its log ends otherwise, it has none, or it is
+// missing. A log that cannot be read is warned of with warn and read as
+// ending on none. The log is read as Claude Code's, the harness that runs a
+// strategic agent from its definition (Capabilities.StrategicAgents), as its
+// activity is (activity.go).
+func runLimit(run *AgentRun, warn func(msg string, args ...any)) (lim *usage.Limit, said string) {
 	if run == nil || run.Log == "" {
-		return nil
+		return nil, ""
 	}
 	rec, err := usage.Read(harness.Adapters[harness.ClaudeCode].Reader(), run.Log)
 	if err != nil {
 		warn("run's log not read for a usage limit", "log", run.Log, "err", err)
-		return nil
+		return nil, ""
 	}
 	if len(rec.Runs) == 0 {
-		return nil
+		return nil, ""
 	}
-	return rec.Runs[len(rec.Runs)-1].Limit
+	last := rec.Runs[len(rec.Runs)-1]
+	if last.Limit == nil {
+		return nil, ""
+	}
+	return last.Limit, last.Result
 }
 
 // limitResets is when lim resets, as an RFC 3339 time in UTC, or "" when the
