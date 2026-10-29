@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.4 - 2026-10-29
+
+- S-0416 flai guard reads a role's permitted calls from its role file and refuses the rest, and the planner's, the orchestrator's, and the analyzer's rules move into their files with their guard tests unchanged (patch).
+
 ## 1.1.3 - 2026-10-29
 
 - S-0535 flai emits the events the orchestrator's trigger names: planned, ready-empty, release-due, a thread coming to await an agent, and the conditions awaits-orchestrator, draft-changed, and to-review (patch).
