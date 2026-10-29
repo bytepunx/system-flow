@@ -30,7 +30,10 @@ export type HostFlaiStatus = {
 	configured: boolean;
 	connected: boolean;
 	since?: string;
+	/** The connected flai's version. */
 	flai?: string;
+	/** This dashboard's own version, whether or not a flai is connected (S-0544). */
+	dashboard?: string;
 	error?: string;
 	/** The last flai this dashboard refused for the project as unsigned (S-0237); while none is
 	 * connected, error says so and what to do, so it is not read as only "not connected". */

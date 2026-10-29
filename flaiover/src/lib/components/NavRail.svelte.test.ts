@@ -2,11 +2,13 @@
 // icon is in the accent colour and a collapsed one's muted; the page shown is current and its group
 // expanded on arrival; a collapsed group carries its pages' indicators; the operator's choices are
 // kept per browser. S-0484: Charts is a button that lists the charts by group, each a link, the
-// chart shown current; it expands on arrival at a chart and keeps the operator's choice.
+// chart shown current; it expands on arrival at a chart and keeps the operator's choice. S-0544: under
+// License, the connected flai's version and the dashboard's, one to a line.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import { inboxState, type Inbox } from '$lib/inbox.svelte';
 import { projectState, resetForTests } from '$lib/project.svelte';
+import { hostFlai } from '$lib/hostflai.svelte';
 import { NavRailState } from '$lib/navrail.svelte';
 import { CHART_GROUPS, TITLES } from '$lib/viz/catalog';
 
@@ -50,6 +52,7 @@ describe('the nav rail (S-0458)', () => {
 		if (c) unmount(c);
 		c = undefined;
 		inboxState.data = null;
+		hostFlai.status = null;
 		resetForTests();
 		localStorage.clear();
 		document.body.innerHTML = '';
@@ -206,6 +209,28 @@ describe('the nav rail (S-0458)', () => {
 		expect(license.textContent).toBe('License');
 		expect(license.getAttribute('href')).toBe('/license');
 		expect(license.getAttribute('aria-current')).toBe('page');
+	});
+
+	it('shows the flai and dashboard versions under License, one to a line (S-0544)', () => {
+		hostFlai.status = { configured: true, connected: true, flai: '1.77.2', dashboard: '1.40.1' };
+		show('/board');
+		const versions = document.querySelector('[data-rail-versions]')!;
+		const license = document.querySelector('[data-rail-license]')!;
+		expect(
+			license.compareDocumentPosition(versions) & Node.DOCUMENT_POSITION_FOLLOWING
+		).toBeTruthy();
+		const lines = [...versions.querySelectorAll('span')];
+		expect(lines.map((l) => l.textContent)).toEqual(['flai 1.77.2', 'dashboard 1.40.1']);
+		for (const l of lines) expect(l.classList.contains('block')).toBe(true);
+	});
+
+	it('shows only the dashboard version while no flai is connected, and none before either is known', () => {
+		show('/board');
+		expect(document.querySelector('[data-rail-versions]')).toBeNull();
+		hostFlai.status = { configured: true, connected: false, dashboard: '1.40.1' };
+		flushSync();
+		const lines = [...document.querySelectorAll('[data-rail-versions] span')];
+		expect(lines.map((l) => l.textContent)).toEqual(['dashboard 1.40.1']);
 	});
 
 	it('calls onnavigate when a page or the License link is chosen', () => {

@@ -8,11 +8,14 @@
 	// Charts is a button too, not a link (S-0484): expanded, it lists the charts under their groups'
 	// muted labels, each chart a link, the chart shown current and Charts current on any chart; it
 	// expands on arrival at a chart and keeps the operator's choice as a group does, and collapsed,
-	// nothing below it is drawn. The rail fills the width its container gives it.
+	// nothing below it is drawn. The rail fills the width its container gives it. Under License, the
+	// versions running (S-0544): the connected flai's and this dashboard's, one to a line, each only
+	// once /api/agent has named it.
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 	import { projectState } from '$lib/project.svelte';
+	import { hostFlai } from '$lib/hostflai.svelte';
 	import { navRail, type NavRailState, type RailKey } from '$lib/navrail.svelte';
 	import {
 		SITE_MENU,
@@ -31,6 +34,12 @@
 	const BADGE = { inbox: InboxBadge };
 	const LICENSE = resolve('/license');
 	const here = $derived(locate(page.url.pathname));
+	const versions = $derived(
+		[
+			hostFlai.status?.flai && `flai ${hostFlai.status.flai}`,
+			hostFlai.status?.dashboard && `dashboard ${hostFlai.status.dashboard}`
+		].filter(Boolean)
+	);
 
 	/** A page that lists its children below it and expands as a group does. */
 	type ParentPage = LinkedPage & { key: PageKey & RailKey; children: PageChildGroup[] };
@@ -198,5 +207,12 @@
 			onclick={() => onnavigate?.()}>License</a
 		>
 		<!-- eslint-enable svelte/no-navigation-without-resolve -->
+		{#if versions.length}
+			<p class="mt-1 font-mono text-xs text-muted" data-rail-versions>
+				{#each versions as v (v)}
+					<span class="block">{v}</span>
+				{/each}
+			</p>
+		{/if}
 	</div>
 </nav>

@@ -1,4 +1,5 @@
 import { agent, heldBudget, type Refusal } from '$lib/server/agent';
+import { version } from '$lib/server/metrics';
 import { respond } from '$lib/server/respond';
 import type { RequestHandler } from './$types';
 
@@ -12,28 +13,33 @@ function refusedError(r: Refusal): string {
  * GET: whether a flai on the host has this dashboard connected (ADR-0029), and when it has, what it
  * says about the project: a round trip over the channel, so "connected" means it answers. Beside it,
  * `budget`, the providers flai serve holds every agent start on (S-0534), present only while it holds one.
+ * Every answer carries `dashboard`, this dashboard's own version, beside `flai`, the connected flai's
+ * (S-0544), so the nav rail can show both.
  */
 export const GET: RequestHandler = () =>
-	respond(async () => {
-		const status = agent().status();
-		// a flai refused as unsigned is never connected; the refusal is kept so the page can say why.
-		// While a flai is connected the project is served, and a refused second flai is not news here.
-		if (!status.connected)
-			return status.refused ? { ...status, error: refusedError(status.refused) } : status;
-		// a repository offered for import has no project.info to ask for; answering at all is enough
-		if (status.candidate) return status;
-		if (status.missing?.length)
-			return {
-				...status,
-				error: `flai ${status.flai} on the host is older than this dashboard and lacks ${status.missing.length} of the things it asks for (${status.missing.slice(0, 3).join(', ')}${status.missing.length > 3 ? ', …' : ''}); upgrade flai on the host, then run flai serve stop and flai dashboard`
-			};
-		try {
-			const [info, budget] = await Promise.all([
-				agent().ask('project.info', {}, 2000),
-				heldBudget(agent(), 2000)
-			]);
-			return budget ? { ...status, info, budget } : { ...status, info };
-		} catch (err) {
-			return { ...status, error: err instanceof Error ? err.message : String(err) };
-		}
-	});
+	respond(async () => ({ ...(await hostFlai()), dashboard: version }));
+
+/** The connection and what the connected flai says of the project, without the dashboard's version. */
+async function hostFlai(): Promise<object> {
+	const status = agent().status();
+	// a flai refused as unsigned is never connected; the refusal is kept so the page can say why.
+	// While a flai is connected the project is served, and a refused second flai is not news here.
+	if (!status.connected)
+		return status.refused ? { ...status, error: refusedError(status.refused) } : status;
+	// a repository offered for import has no project.info to ask for; answering at all is enough
+	if (status.candidate) return status;
+	if (status.missing?.length)
+		return {
+			...status,
+			error: `flai ${status.flai} on the host is older than this dashboard and lacks ${status.missing.length} of the things it asks for (${status.missing.slice(0, 3).join(', ')}${status.missing.length > 3 ? ', …' : ''}); upgrade flai on the host, then run flai serve stop and flai dashboard`
+		};
+	try {
+		const [info, budget] = await Promise.all([
+			agent().ask('project.info', {}, 2000),
+			heldBudget(agent(), 2000)
+		]);
+		return budget ? { ...status, info, budget } : { ...status, info };
+	} catch (err) {
+		return { ...status, error: err instanceof Error ? err.message : String(err) };
+	}
+}

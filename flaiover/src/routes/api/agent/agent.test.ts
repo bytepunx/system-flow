@@ -1,6 +1,7 @@
 // S-0098: /api/agent asks a connected project's flai for project.info, to say it answers. A
 // repository offered for import has none to give, by design, and is not reported as failing.
-// S-0534: it carries agent.status's budget beside the connection.
+// S-0534: it carries agent.status's budget beside the connection. S-0544: every answer carries the
+// dashboard's own version, beside the connected flai's.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 describe('GET /api/agent', () => {
@@ -128,5 +129,22 @@ describe('GET /api/agent', () => {
 	it('says nothing more of a flai that was never refused and is not connected', async () => {
 		const { body } = await answerFor({ configured: true, connected: false });
 		expect(body.error).toBeUndefined();
+	});
+
+	it("carries the dashboard's own version beside the connected flai's", async () => {
+		const { version } = await import('$lib/server/metrics');
+		const { body } = await answerFor(
+			{ ...connected, flai: '1.77.2' },
+			vi.fn(async () => ({ name: 'Harbour' }))
+		);
+		expect(body.flai).toBe('1.77.2');
+		expect(body.dashboard).toBe(version);
+		expect(version).not.toBe('');
+	});
+
+	it("carries the dashboard's own version with no flai connected", async () => {
+		const { version } = await import('$lib/server/metrics');
+		const { body } = await answerFor({ configured: true, connected: false });
+		expect(body.dashboard).toBe(version);
 	});
 });
