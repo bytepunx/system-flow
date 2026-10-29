@@ -147,6 +147,24 @@ func TestNewTriggerConditionsOnTheWrongEvent(t *testing.T) {
 	}
 }
 
+// S-0536 (ADR-0209 §1): continuous, alone or beside other entries, is a
+// roles.file error on its entry's line.
+func TestContinuousTriggerIsAFinding(t *testing.T) {
+	for _, tc := range []struct {
+		trigger string
+		line    int
+	}{
+		{"trigger: [continuous]", 11},
+		{"trigger:\n  - asked\n  - continuous", 13},
+	} {
+		repo := rolesProject(t, map[string]string{"reviewer.md": roleFile("reviewer", map[string]string{"trigger": tc.trigger})})
+		got := findings(t, repo, roles.CodeFile)
+		if len(got) != 1 || got[0].Level != Error || got[0].Path != "design/workflows/roles/reviewer.md" || got[0].Line != tc.line || !strings.Contains(got[0].Message, "no longer flai's (ADR-0209 §1)") {
+			t.Errorf("%q: %+v, want one roles.file error on line %d saying continuous is no longer flai's", tc.trigger, got, tc.line)
+		}
+	}
+}
+
 // S-0414: flai check reports roles.file, roles.grant, and roles.definition as
 // errors on the line of the field each is about, in the role file.
 func TestRoleFileProblemsAreErrorsOnTheirLine(t *testing.T) {

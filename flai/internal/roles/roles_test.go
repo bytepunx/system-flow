@@ -8,6 +8,31 @@ import (
 	"testing"
 )
 
+// orchestratorTrigger is the orchestrator's trigger, ADR-0209 §1's list as
+// ADR-0211 refines it, on one line.
+const orchestratorTrigger = "trigger: [asked, {event: thread, when: awaits-orchestrator}, {event: moved, when: to-review}, {event: moved, when: to-backlog}, {event: edited, when: draft-changed}, {event: planned}, {event: release-due}, {event: ready-empty}, {event: reordered}, {schedule: orchestration.schedule}]"
+
+// orchestratorTriggers are the entries of the orchestrator's trigger, the
+// first on line first and each next one step lines further.
+func orchestratorTriggers(first, step int) []Trigger {
+	out := []Trigger{
+		{Kind: TriggerAsked},
+		{Kind: TriggerEvent, Event: "thread", When: "awaits-orchestrator"},
+		{Kind: TriggerEvent, Event: "moved", When: "to-review"},
+		{Kind: TriggerEvent, Event: "moved", When: "to-backlog"},
+		{Kind: TriggerEvent, Event: "edited", When: "draft-changed"},
+		{Kind: TriggerEvent, Event: "planned"},
+		{Kind: TriggerEvent, Event: "release-due"},
+		{Kind: TriggerEvent, Event: "ready-empty"},
+		{Kind: TriggerEvent, Event: "reordered"},
+		{Kind: TriggerSchedule, Schedule: "orchestration.schedule"},
+	}
+	for i := range out {
+		out[i].Line = first + i*step
+	}
+	return out
+}
+
 const orchestratorFile = `---
 title: Orchestrator
 updated: 2026-10-28
@@ -19,7 +44,7 @@ definition:
   tools: [Read, Grep, Bash, mcp__flai__prime, mcp__flai__inbox, mcp__flai__item_edit, mcp__flai__item_move, mcp__flai__thread_reply, mcp__flai__thread_resolve, mcp__flai__plan, mcp__flai__release_publish, mcp__flai__queue_add]
   model: inherit
 action: orchestrate
-trigger: [continuous]
+` + orchestratorTrigger + `
 item: none
 topics: [orchestration]
 works_story: false
@@ -219,7 +244,7 @@ func TestValidRolesLoadWithEveryField(t *testing.T) {
 	if o.Definition.Description != "Keeps the work of this project moving." || o.Definition.Model != "inherit" || len(o.Definition.Tools) != 12 {
 		t.Errorf("orchestrator definition = %+v", o.Definition)
 	}
-	if !slices.Equal(o.Trigger, []Trigger{{Kind: TriggerContinuous, Line: 12}}) {
+	if !slices.Equal(o.Trigger, orchestratorTriggers(12, 0)) {
 		t.Errorf("orchestrator trigger = %+v", o.Trigger)
 	}
 	if len(o.Item) != 0 || !slices.Equal(o.Topics, []string{"orchestration"}) || len(o.Files) != 0 {
@@ -340,7 +365,7 @@ func TestValidateReportsEachProblem(t *testing.T) {
 	}{
 		{"missing title", "planner.md", plannerFile, "title: Planner\n", "", CodeFile, 1, "needs title"},
 		{"missing item", "planner.md", plannerFile, "item: [epic, story]\n", "", CodeFile, 1, "needs item"},
-		{"missing trigger", "orchestrator.md", orchestratorFile, "trigger: [continuous]\n", "", CodeFile, 1, "needs trigger"},
+		{"missing trigger", "orchestrator.md", orchestratorFile, orchestratorTrigger + "\n", "", CodeFile, 1, "needs trigger"},
 		{"bad updated", "planner.md", plannerFile, "updated: 2026-10-28", "updated: yesterday", CodeFile, 3, "not a date"},
 		{"bad status", "planner.md", plannerFile, "status: active", "status: live", CodeFile, 4, "status is \"live\""},
 		{"name not stem", "plotter.md", plannerFile, "title: Planner", "title: Plotter", CodeFile, 5, "file is plotter.md"},
@@ -351,7 +376,8 @@ func TestValidateReportsEachProblem(t *testing.T) {
 		{"unknown trigger", "planner.md", plannerFile, "  - asked\n", "  - sometimes\n", CodeFile, 12, "trigger \"sometimes\""},
 		{"unknown event", "planner.md", plannerFile, "{event: accepted, when: replan-agent}", "{event: merged}", CodeFile, 14, "event \"merged\""},
 		{"unknown schedule", "planner.md", plannerFile, "schedule: planning.schedule", "schedule: roles.curator.schedule", CodeFile, 17, "schedule \"roles.curator.schedule\""},
-		{"continuous not alone", "orchestrator.md", orchestratorFile, "trigger: [continuous]", "trigger: [continuous, asked]", CodeFile, 12, "only trigger"},
+		{"continuous alone", "orchestrator.md", orchestratorFile, orchestratorTrigger, "trigger: [continuous]", CodeFile, 12, "trigger continuous is no longer flai's (ADR-0209 §1); name the events the role acts on, asked, or a {schedule: <setting>}"},
+		{"continuous among others", "orchestrator.md", orchestratorFile, orchestratorTrigger, "trigger:\n  - asked\n  - continuous\n  - {event: reordered}", CodeFile, 14, "trigger continuous is no longer flai's"},
 		{"trigger condition on wrong trigger", "planner.md", plannerFile, "{event: edited, when: stale-figures}", "{event: accepted, when: stale-figures}", CodeFile, 13, "does not qualify this trigger"},
 		{"call condition on a trigger", "planner.md", plannerFile, "{event: edited, when: stale-figures}", "{event: edited, when: draft-only}", CodeFile, 13, "qualifies a call"},
 		{"to-review on another event", "planner.md", plannerFile, "{event: edited, when: stale-figures}", "{event: edited, when: to-review}", CodeFile, 13, "does not qualify this trigger; it qualifies an {event} entry for moved"},
@@ -443,6 +469,40 @@ func TestNewEventsAndConditionsValidate(t *testing.T) {
   - {event: thread, when: awaits-orchestrator}
 `)
 	rs, problems := load(t, map[string]string{"planner.md": f})
+	if len(problems) != 0 {
+		t.Fatalf("load problems: %v", problems)
+	}
+	if got := Validate(rs, "design", vocab); len(got) != 0 {
+		t.Errorf("Validate = %v, want none", got)
+	}
+}
+
+// S-0536 (ADR-0209 §1, ADR-0211): orchestrator.md and its template copy
+// name the orchestrator's trigger events, one entry a line, and validate
+// clean.
+func TestShippedOrchestratorNamesItsTriggerEvents(t *testing.T) {
+	for _, dir := range []string{"../../../design/workflows/roles", templateRoles} {
+		data, err := os.ReadFile(filepath.Join(dir, "orchestrator.md"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		r, p := Parse("design/workflows/roles/orchestrator.md", string(data))
+		if p != nil {
+			t.Fatalf("%s: %v", dir, p)
+		}
+		if !slices.Equal(r.Trigger, orchestratorTriggers(13, 1)) {
+			t.Errorf("%s: trigger = %+v", dir, r.Trigger)
+		}
+		if got := Validate([]Role{r}, "design", Vocabulary{}); len(got) != 0 {
+			t.Errorf("%s: Validate = %v, want none", dir, got)
+		}
+	}
+}
+
+// S-0536 (ADR-0209 §1): any role may name orchestration.schedule as its
+// schedule.
+func TestOrchestrationScheduleIsASchedule(t *testing.T) {
+	rs, problems := load(t, map[string]string{"analyzer.md": edit(t, analyzerFile, "{schedule: analysis.schedule}", "{schedule: orchestration.schedule}")})
 	if len(problems) != 0 {
 		t.Fatalf("load problems: %v", problems)
 	}

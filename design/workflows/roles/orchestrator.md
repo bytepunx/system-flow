@@ -1,6 +1,6 @@
 ---
 title: Orchestrator
-updated: 2026-10-28
+updated: 2026-10-29
 status: active
 name: orchestrator
 role: orchestrate
@@ -9,7 +9,17 @@ definition:
   tools: [Read, Grep, Glob, Bash, Agent, mcp__flai__prime, mcp__flai__inbox, mcp__flai__board, mcp__flai__item_get, mcp__flai__item_edit, mcp__flai__item_move, mcp__flai__doc_get, mcp__flai__doc_search, mcp__flai__thread_get, mcp__flai__thread_open, mcp__flai__thread_reply, mcp__flai__thread_resolve, mcp__flai__who_touches, mcp__flai__activity_log, mcp__flai__wait_for_events, mcp__flai__plan, mcp__flai__order_by_policy, mcp__flai__promote_candidates, mcp__flai__release_evaluate, mcp__flai__release_publish, mcp__flai__verify, mcp__flai__queue_add, mcp__flai__subprojects]
   model: inherit
 action: orchestrate
-trigger: [continuous]
+trigger:
+  - asked
+  - {event: thread, when: awaits-orchestrator}
+  - {event: moved, when: to-review}
+  - {event: moved, when: to-backlog}
+  - {event: edited, when: draft-changed}
+  - {event: planned}
+  - {event: release-due}
+  - {event: ready-empty}
+  - {event: reordered}
+  - {schedule: orchestration.schedule}
 item: none
 topics: [orchestration]
 works_story: false

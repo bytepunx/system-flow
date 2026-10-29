@@ -42,7 +42,9 @@ const (
 	CodeDefinition = "roles.definition"
 )
 
-// The trigger kinds a trigger entry takes (ADR-0207 §3).
+// The trigger kinds a trigger entry takes (ADR-0207 §3). TriggerContinuous
+// is no longer one: it is read only so that flai check can report it
+// (ADR-0209 §1).
 const (
 	TriggerAsked      = "asked"
 	TriggerContinuous = "continuous"
@@ -66,7 +68,7 @@ var (
 	Events = []string{"accepted", "cancelled", "ready", "review", "edited", "reordered", "thread-opened", "moved", "thread", "planned", "ready-empty", "release-due"}
 	// Schedules are the manifest settings a schedule trigger names besides
 	// roles.<name>.schedule.
-	Schedules = []string{"planning.schedule", "analysis.schedule", "digest.schedule"}
+	Schedules = []string{"planning.schedule", "analysis.schedule", "digest.schedule", "orchestration.schedule"}
 	// BuiltinActions are the built-in roles' host actions, each only its
 	// role's, by role name.
 	BuiltinActions = map[string]string{"plan": "planner", "orchestrate": Orchestrator, "analyze": "analyzer", "curate": "curator"}
@@ -134,8 +136,8 @@ type Call struct {
 	Line int `json:"-"`
 }
 
-// Trigger is a trigger entry: asked, continuous, an event, or a schedule,
-// the last two under an optional condition (ADR-0207 §3).
+// Trigger is a trigger entry: asked, an event, or a schedule, the last two
+// under an optional condition (ADR-0207 §3).
 type Trigger struct {
 	Kind     string `json:"kind"`
 	Event    string `json:"event,omitempty"`
@@ -368,13 +370,13 @@ func (c *Call) UnmarshalYAML(n ast.Node) error {
 	return nil
 }
 
-// UnmarshalYAML reads a trigger entry: asked, continuous, {event, when}, or
-// {schedule, when}.
+// UnmarshalYAML reads a trigger entry: asked, {event, when}, or
+// {schedule, when}, or another word, which the checker reports.
 func (t *Trigger) UnmarshalYAML(n ast.Node) error {
 	t.Line = n.GetToken().Position.Line
 	if pairs(n) == nil {
 		if err := yaml.NodeToValue(n, &t.Kind); err != nil || t.Kind == "" {
-			return shapeError(n, "a trigger entry is asked, continuous, {event: <event>, when: <condition>}, or {schedule: <setting>, when: <condition>}")
+			return shapeError(n, "a trigger entry is asked, {event: <event>, when: <condition>}, or {schedule: <setting>, when: <condition>}")
 		}
 		return nil
 	}
@@ -556,7 +558,7 @@ func (c *checker) action(r Role) {
 
 func (c *checker) triggers(r Role) {
 	if len(r.Trigger) == 0 {
-		c.add(r, CodeFile, r.line("trigger"), "front matter needs trigger; give asked, continuous, an {event}, or a {schedule} (ADR-0207 §3)")
+		c.add(r, CodeFile, r.line("trigger"), "front matter needs trigger; give asked, an {event}, or a {schedule} (ADR-0207 §3)")
 		return
 	}
 	schedules := append(slices.Clone(Schedules), "roles."+r.Name+".schedule")
@@ -565,9 +567,7 @@ func (c *checker) triggers(r Role) {
 		switch t.Kind {
 		case TriggerAsked:
 		case TriggerContinuous:
-			if len(r.Trigger) > 1 {
-				at("continuous is a role's only trigger; remove the others, or continuous")
-			}
+			at("trigger continuous is no longer flai's (ADR-0209 §1); name the events the role acts on, asked, or a {schedule: <setting>}")
 		case TriggerEvent:
 			if !slices.Contains(Events, t.Event) {
 				at("event %q is none of %s", t.Event, strings.Join(Events, ", "))
@@ -577,7 +577,7 @@ func (c *checker) triggers(r Role) {
 				at("schedule %q is none of %s; name the manifest setting that holds the schedule", t.Schedule, strings.Join(schedules, ", "))
 			}
 		default:
-			at("trigger %q is none of asked, continuous, {event: <event>}, or {schedule: <setting>}", t.Kind)
+			at("trigger %q is none of asked, {event: <event>}, or {schedule: <setting>}", t.Kind)
 		}
 		if t.When == "" {
 			continue
