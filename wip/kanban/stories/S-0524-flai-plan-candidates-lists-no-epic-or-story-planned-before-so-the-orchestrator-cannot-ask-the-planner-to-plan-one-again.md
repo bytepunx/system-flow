@@ -6,7 +6,7 @@ title: flai plan --candidates lists no epic or story planned before, so the orch
 status: backlog
 owner: alex
 created: 2026-10-28T12:53:50Z
-updated: 2026-10-29T15:16:36Z
+updated: 2026-10-29T15:51:33Z
 transitions: []
 tags: [flai, orchestrator, planner]
 topics: [orchestration, planning]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-10-28T14:45:49Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-30T03:49:00Z
-  basis: "Its own forecast of 1h15m; 23rd in the pull order with an in-progress limit of 5, behind S-0418, S-0537, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0508, S-0509, S-0510, S-0511, S-0512, S-0516, S-0517, S-0518, S-0520 and S-0523."
+  delivery: 2026-10-30T04:18:00Z
+  basis: "Its own forecast of 1h15m; 22nd in the pull order with an in-progress limit of 5, behind S-0418, S-0537, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0424, S-0425, S-0506, S-0508, S-0509, S-0510, S-0511, S-0512, S-0516, S-0517, S-0518, S-0520 and S-0523."
   by: flai
-  at: 2026-10-29T15:16:36Z
+  at: 2026-10-29T15:51:33Z
 finalized:
   by: alex
   at: 2026-10-28T12:59:03Z
