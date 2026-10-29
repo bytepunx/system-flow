@@ -3,11 +3,11 @@ id: S-0536
 type: story
 nature: feature
 title: "The orchestrator runs for a reason and ends: its trigger names events, flai check rejects continuous, flai serve coalesces the reasons into one run naming them, wait_for_events ends the run when they are done, and ADR-0209 is accepted"
-status: review
+status: done
 parent: E-0030
 owner: alex
 created: 2026-10-28T21:02:32Z
-updated: 2026-10-29T14:24:06Z
+updated: 2026-10-29T15:14:33Z
 transitions:
   - to: ready
     at: 2026-10-28T22:21:22Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-10-29T14:24:06Z
     by: system-flow
+  - to: done
+    at: 2026-10-29T15:14:33Z
+    by: alex
 blocked:
   - from: 2026-10-29T08:42:48Z
     until: 2026-10-29T13:52:33Z

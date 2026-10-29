@@ -4,10 +4,10 @@ title: "S-0536 is verified and meets all six criteria, but only you can accept i
 anchor:
   path: wip/kanban/stories/S-0536-the-orchestrator-runs-for-a-reason-and-ends-its-trigger-names-events-flai-check-rejects-continuous-flai-serve-coalesces-the-reasons-into-one-run-naming-them-wait-for-events-ends-the-run-when-they-are-done-and-adr-0209-is-accepted.md
   item: S-0536
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-29T14:41:52Z
-updated: 2026-10-29T14:41:52Z
+updated: 2026-10-29T15:14:33Z
 ---
 
 # TH-0748 S-0536 is verified and meets all six criteria, but only you can accept it: it changes .claude/agents/orchestrator.md
@@ -34,3 +34,6 @@ On wip/kanban/stories/S-0536-the-orchestrator-runs-for-a-reason-and-ends-its-tri
 ## Note
 
 Integration and smoke have not run on this story, since the queue cannot take it. You may want `flai verify S-0536 --all` with the branch's build before you accept.
+
+### 2026-10-29T15:14:33Z alex
+Resolved: S-0536 was accepted
