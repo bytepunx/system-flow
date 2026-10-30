@@ -1,6 +1,6 @@
 ---
 title: Documentation standard
-updated: 2026-10-29
+updated: 2026-10-30
 status: active
 topics: [all]
 ---
@@ -52,7 +52,8 @@ status: active             # active | draft | deprecated
 
 - `design/conventions/` files are edited above the marker only through the template (and `flai upgrade`); a project edits below the marker. An agent that thinks a baseline rule is wrong proposes the change, it does not make it.
 - `design/system` and `design/tech` are edited in place. If a change reverses an earlier decision, write an ADR first, then update the living document and link the ADR.
-- `design/adrs` are never edited after acceptance except to set `superseded_by` or `topics` ([ADR-0047](../adrs/0047-an-agent-is-primed-with-what-its-story-s-topics-claim-and-links-select.md)). The tooling holds this: `flai doc` refuses any other change to an accepted, superseded, or deprecated ADR, and the dashboard's editor shows one read-only; only `flai adr new --supersedes` sets `superseded_by` (S-0060), and `flai adr topics` sets `topics` on an ADR of any status (S-0134). A proposed ADR is a draft and is edited like any document.
+- `design/adrs` are never edited after acceptance except to set `superseded_by` or `topics` ([ADR-0047](../adrs/0047-an-agent-is-primed-with-what-its-story-s-topics-claim-and-links-select.md)). The tooling holds this: `flai doc` refuses any other change to an accepted, superseded, deprecated, or rejected ADR, and the dashboard's editor shows one read-only; only `flai adr new --supersedes` sets `superseded_by` (S-0060), and `flai adr topics` sets `topics` on an ADR of any status (S-0134). A proposed ADR is a draft and is edited like any document.
+- An ADR's status is one of `proposed`, `accepted`, `superseded`, `deprecated`, or `rejected` ([ADR-0223](../adrs/0223-an-adr-s-status-is-one-of-proposed-accepted-superseded-deprecated-or-rejected-a.md)). A rejected ADR is a proposed decision the operator declined in favour of another. It is immutable once set, as an accepted one is. `flai check` reports `adr.status` on an ADR whose status is outside the five; the template, `0000-template.md`, is passed over.
 - `wip/kanban` items are edited by agents and by `flai`. Human edits are welcome but must keep front matter valid; `flai check` validates it.
 - `wip/agents` narratives are append-only in the log section. The summary sections at the top are rewritten as understanding improves.
 

@@ -1,7 +1,7 @@
 ---
 id: ADR-0000
 title: Template
-status: template            # proposed | accepted | superseded | deprecated
+status: template            # proposed | accepted | superseded | deprecated | rejected
 date: 1970-01-01
 supersedes: []
 superseded_by: []

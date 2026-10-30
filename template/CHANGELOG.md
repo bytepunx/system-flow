@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.9 - 2026-10-30
+
+- S-0512 An ADR's status may be `rejected`, the fifth status, immutable as an accepted one is, and flai check reports adr.status on any status outside the five (patch).
+- S-0512 The ADR template names `rejected` as the fifth status (patch, ADR-0223): the status comment in `design/adrs/0000-template.md` reads `proposed | accepted | superseded | deprecated | rejected`. A rejected ADR is a proposed decision the operator declined in favour of another, and it is immutable once set. `flai check` reports `adr.status` on an ADR whose status is outside the five, and `flai doc` refuses any change to a rejected ADR but its `topics`. It needs a flai that has it, the release that carries S-0512: an older flai reports no `adr.status` and lets `flai doc` change a rejected ADR.
+
 ## 1.1.8 - 2026-10-29
 
 - S-0418 A role a project defines starts on an event or on a schedule, as its role file's trigger says, coalesced and logged with its trigger as the planner's runs are (patch).
