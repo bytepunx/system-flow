@@ -1405,6 +1405,60 @@ func TestClaudeCodeStartsThePlanner(t *testing.T) {
 	}
 }
 
+// S-0419: given the role file a built-in role runs from, the planner's
+// definition takes the file's body as its prompt, the text a project writes
+// below the marker included and the marker left out, while its description,
+// tools, and start prompt stay as they were; given none, it keeps its
+// .claude/agents prompt.
+func TestClaudeCodeGivesTheBuiltinRoleItsRoleFilesBody(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, ".claude", "agents")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	def := "---\nname: planner\ndescription: Plans one item.\ntools: Read, mcp__flai__item_new\nmodel: inherit\n---\n\nYou are the planner.\n"
+	if err := os.WriteFile(filepath.Join(dir, "planner.md"), []byte(def), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	f, ok := roles.BaselineFor("design", "plan")
+	if !ok {
+		t.Fatal("no baseline planner")
+	}
+	const addition = "- Name a reviewer for each task you draft."
+	f.Body = strings.TrimRight(f.Body, "\n") + "\n\n" + addition + "\n"
+	definitionOf := func(r Request) (map[string]any, string) {
+		t.Helper()
+		r.Root = root
+		st, err := (claudeCode{}).Start(r, Host{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var agents map[string]map[string]any
+		if err := json.Unmarshal([]byte(after(st.Argv, "--agents")), &agents); err != nil {
+			t.Fatalf("--agents: %v in %v", err, st.Argv)
+		}
+		return agents["planner"], st.Argv[2]
+	}
+
+	plain, start := definitionOf(planReq("E-0016", nil))
+	if plain["prompt"] != "You are the planner." {
+		t.Errorf("with no role file, the prompt is the definition's: %v", plain)
+	}
+	r := planReq("E-0016", nil)
+	r.Builtin = &f
+	got, withFile := definitionOf(r)
+	prompt, _ := got["prompt"].(string)
+	if !strings.Contains(prompt, addition) || !strings.HasPrefix(prompt, strings.TrimSpace(strings.SplitN(f.Body, "\n\n", 2)[0])) || strings.Contains(prompt, roles.Marker) {
+		t.Errorf("prompt is not the role file's body with its addition and without the marker:\n%s", prompt)
+	}
+	if got["description"] != plain["description"] || !slices.Equal(got["tools"].([]any), plain["tools"].([]any)) {
+		t.Errorf("description or tools changed: %v, was %v", got, plain)
+	}
+	if withFile != start {
+		t.Errorf("the start prompt changed with the role file:\n%s\nwas:\n%s", withFile, start)
+	}
+}
+
 func orchestrateReq(a *manifest.Agent) Request {
 	return Request{Role: "orchestrate", Root: "/p/flow", Project: "flow", Agent: a, Name: "orchestrator", Flai: "/usr/local/bin/flai"}
 }

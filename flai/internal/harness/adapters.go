@@ -318,7 +318,9 @@ var claudeCodeStrategic = map[string]string{conventions.RolePlan: "planner", con
 // the source of everything but the model. For a strategic agent, the
 // planner, the orchestrator, the analyzer, or the curator, it holds that
 // agent's definition as well, with the agent's model when it names one,
-// whatever its roles (S-0208, S-0218, S-0223, S-0431). For a role the
+// whatever its roles (S-0208, S-0218, S-0223, S-0431), and with its role
+// file's body as its prompt when the request carries the file, Builtin, so
+// that a project's additions below the marker reach it (S-0419). For a role the
 // project defines, it holds the definition flai generates from the role's
 // file under its name (roleDefinition), and nothing is read from or written
 // under .claude/ for it (S-0417, ADR-0207 §4).
@@ -339,6 +341,11 @@ func subAgents(r Request) (string, error) {
 		agent, err := readDefinition(r.Root, def)
 		if err != nil {
 			return "", fmt.Errorf("the %[1]s's session runs as the agent %[1]s, and %[2]w; flai upgrade adds it from the template when it is missing", def, err)
+		}
+		if r.Builtin != nil {
+			if prompt := roleBody(r.Builtin.Body); prompt != "" {
+				agent["prompt"] = prompt
+			}
 		}
 		if r.Agent != nil && r.Agent.Model != "" {
 			agent["model"] = r.Agent.Model

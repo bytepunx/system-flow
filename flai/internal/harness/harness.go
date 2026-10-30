@@ -57,6 +57,13 @@ type Request struct {
 	// own definitions, and for an agent working a story. Never read from a
 	// start request.
 	RoleFile *roles.Role `json:"-"`
+	// Builtin is the role file a built-in role runs from, the project's or
+	// the baseline flai carries (roles.Builtin): its body, the project's
+	// additions below the marker included, is the prompt of the definition
+	// claude-code passes it (S-0419, ADR-0207 §4). Nil for any other agent,
+	// and for a built-in role whose caller gives none, whose definition keeps
+	// the prompt of its .claude/agents file. Never read from a start request.
+	Builtin *roles.Role `json:"-"`
 	// Inputs are a defined role's run's inputs, in the order given, which
 	// its prompt names (S-0417); none for any other agent. Never read from a
 	// start request.
