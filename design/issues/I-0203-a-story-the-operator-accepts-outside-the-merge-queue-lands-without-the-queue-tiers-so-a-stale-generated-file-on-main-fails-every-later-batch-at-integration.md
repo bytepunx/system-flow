@@ -2,12 +2,12 @@
 id: I-0203
 title: A story the operator accepts outside the merge queue lands without the queue tiers, so a stale generated file on main fails every later batch at integration
 class: defect
-status: open
+status: closed
 count: 2
 cost: 18m
 first_reported: 2026-10-24T00:15:33Z
 last_reported: 2026-10-29T03:38:03Z
-updated: 2026-10-29T03:38:03Z
+updated: 2026-10-30T00:57:55Z
 ---
 
 # I-0203 A story the operator accepts outside the merge queue lands without the queue tiers, so a stale generated file on main fails every later batch at integration
@@ -28,3 +28,4 @@ S-0416 was accepted outside the merge queue (afbc75b) after S-0535 had changed t
 ## Remediation
 
 Story S-0529 remediates this issue, created from it at 2026-10-28T12:54:24Z.
+Closed 2026-10-30T00:57:55Z: S-0529: while the merge queue can batch, a hand acceptance (flai accept, flai move <S> done, the board, the dashboard) is refused before anything is merged until the story's last flai verify passed at its branch's head with every tier marked queue, naming the tiers and flai verify <S> --all, which now reuses the tiers the close-out passed and runs only the queue tiers; --without-queue-tiers lands it anyway and records the tiers in its Notes (ADR-0221). Reproduced by TestAHandAcceptanceWaitsForTheQueueTiersWhileTheQueueBatches in flai/cmd/accept_queue_tiers_test.go.
