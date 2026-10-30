@@ -170,6 +170,18 @@
 // open its pull request on the move to review, with the host's credentials
 // and the forge's token, which no agent holds; flai forge push is the
 // operator's. flai forge check and status read, and are left alone.
+//
+// No session flai serve starts, and no sub-agent, writes the host
+// configuration, ~/.flai/config.json or the file FLAI_CONFIG names (S-0511,
+// ADR-0220): flai serve enable and disable; flai serve agent set and clear,
+// and harness and provider with a setting or --reset; flai serve checks set,
+// timeout, and clear; components idle and max-servers; forge with
+// --token-env or --reset; notify set and clear; import add and remove; flai
+// config set; and flai template use are refused it, whatever its role or
+// permissions, since it holds what the operator lets flai serve do on the
+// host. A sub-agent puts the setting it needs in its final message, and a
+// served session asks the operator on a thread. The reads, such as flai serve
+// status and the show and list forms, are left alone by this rule.
 package guard
 
 import (

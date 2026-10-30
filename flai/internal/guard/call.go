@@ -113,8 +113,9 @@ func deny(why string) Verdict {
 	return Verdict{Outcome: Deny, Reason: why}
 }
 
-// Decide decides on c under g's policy: the shared paths and flai forge push
-// for every caller, then the rules of a sub-agent, or of the session's own
+// Decide decides on c under g's policy: the shared paths, flai forge push,
+// and the commands that write the host configuration (ADR-0220) for every
+// caller, then the rules of a sub-agent, or of the session's own
 // role, each role's from its role file, and the author a served agent writes
 // as. A session with no role, or a story's or a verifier's, never publishes.
 // A story's own agent's write to a path flai protects in its worktree, which
@@ -125,6 +126,9 @@ func Decide(g Guard, c Call) Verdict {
 		return v
 	}
 	if v := g.forgePush(c); v.Outcome != Allow {
+		return v
+	}
+	if v := g.hostConfig(c); v.Outcome != Allow {
 		return v
 	}
 	if c.Subagent {
