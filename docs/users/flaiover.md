@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-10-29
+updated: 2026-10-30
 status: active
 ---
 
@@ -345,7 +345,8 @@ Its settings are the `orchestration` keys of `system-flow.yaml` but `agent`, edi
 | Permission | Lets the orchestrator | Risk |
 |------------|-----------------------|------|
 | `plan_backlog_epics` | Ask the planner to draft stories for an epic in the backlog | The planner runs, and spends, on an epic you may not mean to start yet, and its drafts fill the backlog |
-| `plan_backlog_stories` | Ask the planner to plan each story in the backlog that lacks touches, a forecast, a cost of delay value, or tasks, answer and resolve the threads that planner opens, and give such a story its cost of delay inputs when neither it nor its epic has any | The planner runs, and spends, on every unplanned backlog story, and the orchestrator answers its questions and sets cost of delay inputs, money decisions, without you |
+| `plan_backlog_stories` | Ask the planner to plan each story in the backlog that lacks touches, a forecast, a cost of delay value, or tasks, answer and resolve the threads that planner opens, and give such a story its first cost of delay inputs when neither it nor its epic has any | The planner runs, and spends, on every unplanned backlog story, and the orchestrator answers its questions and sets cost of delay inputs, money decisions, without you |
+| `set_cost_of_delay` | Add or change the cost of delay inputs, revenue per week, penalty per week, and time lost per cycle, of any epic or story that is not done, cancelled, or archived, whether or not it or its epic has inputs already, and nothing else: no value, no removal | It changes money figures you set without you: the inputs an epic's or a story's cost of delay is worked out from |
 | `finalize_drafts` | Finalize a draft story, as `flai edit --no-draft` does | A story the planner drafted becomes one that can be promoted without your having read it |
 | `promote_to_ready` | Move a story to ready | Agents may pull, work, and spend on a story you have not chosen to start |
 | `order_ready` | Write the order of the ready column by its policy | It replaces the order you set on the board, so the next story pulled is the policy's choice, not yours |

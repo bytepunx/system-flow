@@ -1727,6 +1727,29 @@ func TestTheOrchestratorsPromptMarksARecommendationForTheOperatorAlone(t *testin
 	}
 }
 
+// S-0523, ADR-0224, I-0187: while set_cost_of_delay is on, the orchestrator
+// sets the cost of delay inputs the operator decided on a thread on the epic
+// or open story it concerns, inputs alone, and no other agent is told it.
+func TestTheOrchestratorsPromptSaysWhatSetCostOfDelayDoes(t *testing.T) {
+	p := Prompt(orchestrateReq(nil))
+	for _, w := range []string{
+		"set on an epic or a story the cost of delay inputs the operator decided, with item_edit, only while set_cost_of_delay is on",
+		"While set_cost_of_delay is on, set a cost of delay input the operator decided on a thread, as their answer or a recommendation they confirmed, on the epic or the story it concerns, while that is not done, cancelled, or archived, whether or not it or its epic has inputs",
+		"giving the inputs only, revenue_per_week, penalty_per_week, or time_lost_per_cycle, never a value, a removal, or a figure of your own (ADR-0224)",
+		"Log it with activity_log, naming the thread",
+	} {
+		if !strings.Contains(p, w) {
+			t.Errorf("the orchestrator's prompt lacks %q:\n%s", w, p)
+		}
+	}
+	others := map[string]string{"a story's agent": Prompt(req(nil)), "an epic's planner": Prompt(planReq("E-0016", nil)), "a story's planner": Prompt(planReq("S-0208", nil))}
+	for who, o := range others {
+		if strings.Contains(o, "set_cost_of_delay") {
+			t.Errorf("%s's prompt says set_cost_of_delay", who)
+		}
+	}
+}
+
 // S-0328, ADR-0119: while plan_backlog_stories is on, the orchestrator starts
 // the planner, after the epics, for each story flai plan --candidates lists,
 // one at a time, and settles the threads a story's planner opens whatever
@@ -1741,7 +1764,7 @@ func TestTheOrchestratorsPromptSaysWhatPlanBacklogStoriesDoes(t *testing.T) {
 	p := Prompt(orchestrateReq(nil))
 	for _, w := range []string{
 		// the permission
-		"ask it to plan a backlog story, with plan, and settle the threads a story's planner opens, giving its story cost of delay inputs with item_edit, only while plan_backlog_stories is on",
+		"ask it to plan a backlog story, with plan, and settle the threads a story's planner opens, giving a backlog story its first cost of delay inputs with item_edit, only while plan_backlog_stories is on",
 		"the epics to plan from flai plan --candidates, and after them the stories",
 		// planning
 		"While plan_backlog_stories is on, after the epics, start the planner with the flai MCP tool plan for each story flai plan --candidates lists, those whose type is story, one at a time, and for no other",
@@ -1753,6 +1776,8 @@ func TestTheOrchestratorsPromptSaysWhatPlanBacklogStoriesDoes(t *testing.T) {
 		"Set it with the flai MCP tool item_edit, cost_of_delay on the story, giving the inputs only, revenue_per_week, penalty_per_week, or time_lost_per_cycle, never a value and nothing else: the planner works the value out on its next run",
 		"Then reply naming what you set, and resolve the thread",
 		"Log each approval, answer, and cost of delay you set with activity_log",
+		// any input but a backlog story's first is the operator's (S-0523)
+		"When a question asks for a change of scope or a decision not yet recorded, or for a cost of delay input other than a backlog story's first, while neither it nor its epic has any, post a recommendation instead, which escalates it to the operator, and leave the thread open",
 		"Never confirm a recommendation: the operator does",
 		"While plan_backlog_stories is off, a story's planner's threads are the operator's, as answer_threads says",
 		// the exceptions to answer_threads

@@ -1,6 +1,6 @@
 ---
 title: Project manifest
-updated: 2026-10-29
+updated: 2026-10-30
 status: active
 topics: [cli, template]
 ---
@@ -104,7 +104,7 @@ orchestration:                               # optional (S-0217): how the ready 
     count: 5                                 # threshold: the accepted stories not yet released
     whole_epics: true                        # optional (S-0222): hold a batch back while a story's epic is in neither review nor done; default off
   permissions:                               # optional (S-0218): what the orchestrator may do without the operator; each off when unset
-    promote_to_ready: true                   # also plan_backlog_epics, plan_backlog_stories, finalize_drafts, order_ready, accept_reviews, publish
+    promote_to_ready: true                   # also plan_backlog_epics, plan_backlog_stories, set_cost_of_delay, finalize_drafts, order_ready, accept_reviews, publish
     answer_threads: recommend                # off, recommend, or autonomous; default off
     confirm_after: 48h                       # optional (S-0502): how long a recommendation of the orchestrator's may await the operator before flai serve confirms it, a Go duration; default unset, none confirmed
   agent:                                     # optional (S-0218): the orchestrator's agent, over agent above
@@ -233,7 +233,8 @@ Rules:
   | Key | Values | Default | Lets the orchestrator |
   |-----|--------|---------|-----------------------|
   | `plan_backlog_epics` | `true`, `false` | `false` | ask for the planner on an epic in the backlog |
-  | `plan_backlog_stories` | `true`, `false` | `false` | ask for the planner on a backlog story that lacks a plan, answer and resolve the threads that story's planner opens, and give a backlog story cost of delay inputs when neither it nor its epic has any ([ADR-0119](../adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md)) |
+  | `plan_backlog_stories` | `true`, `false` | `false` | ask for the planner on a backlog story that lacks a plan, answer and resolve the threads that story's planner opens, and give a backlog story its first cost of delay inputs when neither it nor its epic has any ([ADR-0119](../adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md)) |
+  | `set_cost_of_delay` | `true`, `false` | `false` | add or change the cost of delay inputs, and nothing else, of any epic or story that is not done, cancelled, or archived, whether or not it or its epic has inputs already, for a figure the operator decided on a thread; no value, no removal ([ADR-0224](../adrs/0224-orchestration-permissions-set-cost-of-delay-off-by-default-lets-the.md)) |
   | `finalize_drafts` | `true`, `false` | `false` | finalize a draft story, `flai edit --no-draft` |
   | `promote_to_ready` | `true`, `false` | `false` | move a story to `ready` |
   | `order_ready` | `true`, `false` | `false` | write the order of the ready column, `flai order` |
@@ -260,7 +261,8 @@ Rules:
   | Key | Kind | Default | Meaning |
   |-----|------|---------|---------|
   | `orchestration.permissions.plan_backlog_epics` | boolean | `false` | Lets the orchestrator ask the planner to draft stories for an epic in the backlog. Risk: the planner runs, and spends, on an epic you may not mean to start yet, and its drafts fill the backlog |
-  | `orchestration.permissions.plan_backlog_stories` | boolean | `false` | Lets the orchestrator ask the planner to plan each story in the backlog that lacks touches, a forecast, a cost of delay value, or tasks, answer and resolve the threads that planner opens, and give such a story its cost of delay inputs when neither it nor its epic has any. Risk: the planner runs, and spends, on every unplanned backlog story, and the orchestrator answers its questions and sets cost of delay inputs, money decisions, without you |
+  | `orchestration.permissions.plan_backlog_stories` | boolean | `false` | Lets the orchestrator ask the planner to plan each story in the backlog that lacks touches, a forecast, a cost of delay value, or tasks, answer and resolve the threads that planner opens, and give such a story its first cost of delay inputs when neither it nor its epic has any. Risk: the planner runs, and spends, on every unplanned backlog story, and the orchestrator answers its questions and sets cost of delay inputs, money decisions, without you |
+  | `orchestration.permissions.set_cost_of_delay` | boolean | `false` | Lets the orchestrator add or change the cost of delay inputs, revenue per week, penalty per week, and time lost per cycle, of any epic or story that is not done, cancelled, or archived, whether or not it or its epic has inputs already, and nothing else: no value, no removal. Risk: it changes money figures you set without you: the inputs an epic's or a story's cost of delay is worked out from |
   | `orchestration.permissions.finalize_drafts` | boolean | `false` | Lets the orchestrator finalize a draft story, as `flai edit --no-draft` does. Risk: a story the planner drafted becomes one that can be promoted without your having read it |
   | `orchestration.permissions.promote_to_ready` | boolean | `false` | Lets the orchestrator move a story to ready. Risk: agents may pull, work, and spend on a story you have not chosen to start |
   | `orchestration.permissions.order_ready` | boolean | `false` | Lets the orchestrator write the order of the ready column by `orchestration.policy`. Risk: it replaces the order you set on the board, so the next story pulled is the policy's choice, not yours |
