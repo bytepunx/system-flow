@@ -349,9 +349,9 @@ func orchestratorFinalizes(repo *workitem.Repo, id string, ch itemedit.Change) e
 
 // orchestratorSetsCostOfDelay says why the orchestrator may not make change
 // ch to item id in repo, one that gives a cost of delay, or nil when it may
-// (S-0328, ADR-0119): it gives a backlog story whose epic has none either its
-// first cost of delay inputs, and nothing else, while the project gives it
-// plan_backlog_stories.
+// (S-0328, ADR-0119, I-0187): it gives an open epic or story cost of delay
+// inputs, and nothing else, while the project gives it plan_backlog_stories
+// (workitem's OrchestratorSetsCostOfDelay).
 func orchestratorSetsCostOfDelay(repo *workitem.Repo, id string, ch itemedit.Change) error {
 	it, err := repo.Get(id)
 	if err != nil {

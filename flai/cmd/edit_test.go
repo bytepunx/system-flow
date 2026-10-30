@@ -378,12 +378,13 @@ func TestTheOrchestratorFinalizesOnlyACompleteDraft(t *testing.T) {
 	}
 }
 
-// S-0328: in the orchestrator's shell flai edit gives a backlog story its
-// cost of delay inputs while the project gives it plan_backlog_stories,
-// recorded as the orchestrator's, and only when neither the story nor its
-// epic has any, and with input flags alone: a value, a removal, another
-// flag, and a story not in the backlog are each refused, saying why.
-func TestTheOrchestratorGivesABacklogStoryItsFirstCostOfDelayInputs(t *testing.T) {
+// S-0328, I-0187: in the orchestrator's shell flai edit sets cost of delay
+// inputs on an epic or a story that is open while the project gives it
+// plan_backlog_stories, recorded as the orchestrator's, in any column and
+// with inputs of its own or its epic's already, and with input flags alone:
+// a value, a removal, another flag, and a cancelled story are each refused,
+// saying why.
+func TestTheOrchestratorSetsCostOfDelayInputsOnAnOpenEpicOrStory(t *testing.T) {
 	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
 	t.Setenv("FLAI_AGENT", "orchestrator")
 	t.Setenv("FLAI_ROLE", "")
@@ -405,17 +406,30 @@ func TestTheOrchestratorGivesABacklogStoryItsFirstCostOfDelayInputs(t *testing.T
 	run("story", "new", "Dropped", "--epic", "E-0001")
 	run("move", "S-0003", "cancelled", "--reason", "dropped")
 	run("story", "new", "Under a priced epic", "--epic", "E-0002")
+	run("story", "new", "Under way", "--epic", "E-0001")
+	underWay, _ := filepath.Glob(filepath.Join(root, "wip/kanban/stories", "S-0005-*.md"))
+	if len(underWay) != 1 {
+		t.Fatalf("S-0005: %v", underWay)
+	}
+	s := strings.Replace(read(t, underWay[0]), "## Goal\n", "## Goal\n\nDo it.\n", 1)
+	s = strings.Replace(s, "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n- [ ] it works\n", 1)
+	if err := os.WriteFile(underWay[0], []byte(s), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	run("move", "S-0005", "ready")
+	run("move", "S-0005", "in-progress")
+	run("stream", "open", "S-0005")
 
 	t.Setenv("FLAI_ROLE", "orchestrate")
 	inputs := []string{"--revenue-per-week", "500", "--time-lost-per-cycle", "4h"}
 	edit := func(id string, more ...string) []string {
 		return append(append([]string{"edit", id}, inputs...), more...)
 	}
-	if _, errOut, code := runIn(t, root, edit("S-0001")...); code == 0 || !strings.Contains(errOut, "rule: the orchestrator sets a story's cost of delay inputs only with orchestration.permissions.plan_backlog_stories, which is off: ask the operator with thread_open on S-0001") {
+	if _, errOut, code := runIn(t, root, edit("S-0001")...); code == 0 || !strings.Contains(errOut, "rule: the orchestrator sets cost of delay inputs only with orchestration.permissions.plan_backlog_stories, which is off: ask the operator with thread_open on S-0001") {
 		t.Errorf("without plan_backlog_stories: exit %d %s", code, errOut)
 	}
 	permitOrchestrator(t, root, "plan_backlog_stories")
-	only := "rule: S-0001: the orchestrator gives a story cost of delay inputs and nothing else, and this edit gives "
+	only := "rule: S-0001: the orchestrator sets cost of delay inputs and nothing else, and this edit gives "
 	for _, c := range []struct {
 		args []string
 		want string
@@ -425,9 +439,7 @@ func TestTheOrchestratorGivesABacklogStoryItsFirstCostOfDelayInputs(t *testing.T
 		{[]string{"edit", "S-0001", "--clear-cost-of-delay"}, only + "--clear-cost-of-delay too"},
 		{edit("S-0001", "--title", "Renamed"), only + "a flag other than the cost of delay inputs too"},
 		{edit("S-0001", "--touches", "flai"), only + "a flag other than the cost of delay inputs too"},
-		{edit("S-0002"), "rule: S-0002 has cost of delay inputs already: the orchestrator gives inputs to a story without any"},
-		{edit("S-0003"), "rule: S-0003 is cancelled, not in the backlog"},
-		{edit("S-0004"), "rule: S-0004's epic E-0002 has cost of delay inputs"},
+		{edit("S-0003"), "rule: S-0003 is cancelled: the orchestrator sets cost of delay inputs on an open epic or story alone, and none on one done or cancelled"},
 	} {
 		if _, errOut, code := runIn(t, root, c.args...); code == 0 || !strings.Contains(errOut, c.want) {
 			t.Errorf("flai %v: exit %d %s, want %q", c.args, code, errOut, c.want)
@@ -441,14 +453,18 @@ func TestTheOrchestratorGivesABacklogStoryItsFirstCostOfDelayInputs(t *testing.T
 		t.Fatalf("a refused edit changed S-0001: %+v %q %v", it.CostOfDelay, it.Title, it.Touches)
 	}
 
-	if out := run(edit("S-0001")...); !strings.Contains(out, "S-0001: changed cost_of_delay") {
-		t.Errorf("inputs on a bare backlog story: %s", out)
-	}
-	it, err := repo.Get("S-0001")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if c := it.CostOfDelay; c == nil || c.Inputs == nil || c.Inputs.RevenuePerWeek == nil || *c.Inputs.RevenuePerWeek != 500 || c.Inputs.TimeLostPerCycle != "4h" || c.Inputs.By != "orchestrator" || c.Value != nil {
-		t.Errorf("the inputs = %+v, want the orchestrator's, with no value", c)
+	// a bare backlog story, a story with inputs, one whose epic has inputs,
+	// one in progress, and the epics, with inputs and without (I-0187)
+	for _, id := range []string{"S-0001", "S-0002", "S-0004", "S-0005", "E-0001", "E-0002"} {
+		if out := run(edit(id)...); !strings.Contains(out, id+": changed cost_of_delay") {
+			t.Errorf("inputs on %s: %s", id, out)
+		}
+		it, err := repo.Get(id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if c := it.CostOfDelay; c == nil || c.Inputs == nil || c.Inputs.RevenuePerWeek == nil || *c.Inputs.RevenuePerWeek != 500 || c.Inputs.TimeLostPerCycle != "4h" || c.Inputs.By != "orchestrator" || c.Value != nil {
+			t.Errorf("%s's inputs = %+v, want the orchestrator's, with no value", id, c)
+		}
 	}
 }

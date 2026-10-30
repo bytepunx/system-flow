@@ -341,8 +341,8 @@ func (o *orchestration) ready() (ids []string) {
 }
 
 // planCall, finalizeCall, and promoteCall are the orchestrator's calls for
-// its first three permissions, and costCall its call giving a story cost of
-// delay inputs (S-0328), made as v says.
+// its first three permissions, and costCall its call giving an epic or a
+// story cost of delay inputs (S-0328, I-0187), made as v says.
 func planCall(v via, id string) (string, map[string]any) {
 	if v == viaMCP {
 		return "plan", map[string]any{"id": id}
@@ -710,13 +710,13 @@ func TestTheOrchestratorOrdersReadyOnlyWithOrderReady(t *testing.T) {
 	})
 }
 
-// S-0328, ADR-0119: on the fixture board, the orchestrator with
+// S-0328, ADR-0119, I-0187: on the fixture board, the orchestrator with
 // plan_backlog_stories asks for the planner on a backlog story, by flai plan
-// and the MCP tool plan alike, and gives a backlog story cost of delay
-// inputs, by flai edit and item_edit alike, named as who set them, while flai
-// refuses a story in ready for both; a value it never sets. Without the
-// permission the guard refuses both naming it, flai would too, and nothing
-// changes.
+// and the MCP tool plan alike, while flai refuses a story in ready, and gives
+// a backlog story, a story in ready, and an epic cost of delay inputs, by
+// flai edit and item_edit alike, named as who set them; a value it never
+// sets. Without the permission the guard refuses each naming it, flai would
+// too, and nothing changes.
 func TestTheOrchestratorPlansABacklogStoryOnlyWithPlanBacklogStories(t *testing.T) {
 	for _, v := range []via{viaBash, viaMCP} {
 		t.Run("on by "+string(v), func(t *testing.T) {
@@ -739,10 +739,11 @@ func TestTheOrchestratorPlansABacklogStoryOnlyWithPlanBacklogStories(t *testing.
 				t.Errorf("the planner did not start on S-0004: %s", js)
 			}
 
-			o.flaiRefuses(costCall(v, "S-0008"))("S-0008 is ready, not in the backlog")
-			o.passes(costCall(v, "S-0005"))
-			if c := o.item("S-0005").CostOfDelay; c == nil || c.Inputs == nil || c.Inputs.RevenuePerWeek == nil || *c.Inputs.RevenuePerWeek != 500 || c.Inputs.TimeLostPerCycle != "4h" || c.Inputs.By != "orchestrator" {
-				t.Errorf("S-0005's cost of delay: %+v", c)
+			for _, id := range []string{"S-0005", "S-0008", "E-0003"} {
+				o.passes(costCall(v, id))
+				if c := o.item(id).CostOfDelay; c == nil || c.Inputs == nil || c.Inputs.RevenuePerWeek == nil || *c.Inputs.RevenuePerWeek != 500 || c.Inputs.TimeLostPerCycle != "4h" || c.Inputs.By != "orchestrator" {
+					t.Errorf("%s's cost of delay: %+v", id, c)
+				}
 			}
 			if v == viaMCP {
 				o.guardRefusal("item_edit", map[string]any{"id": "S-0006", "cost_of_delay": map[string]any{"value": 300}}, "the orchestrator never does it", "")
@@ -754,7 +755,9 @@ func TestTheOrchestratorPlansABacklogStoryOnlyWithPlanBacklogStories(t *testing.
 			o := newOrchestration(t)
 			o.permit(allBut(manifest.PermitPlanBacklogStories)...)
 			o.guardRefuses(planCall(v, "S-0004"))(offRefusal(manifest.PermitPlanBacklogStories))
-			o.guardRefuses(costCall(v, "S-0005"))(offRefusal(manifest.PermitPlanBacklogStories))
+			for _, id := range []string{"S-0005", "S-0008", "E-0003"} {
+				o.guardRefuses(costCall(v, id))(offRefusal(manifest.PermitPlanBacklogStories))
+			}
 			before := treeOf(t, o.root)
 			if out := o.passes(bash("flai plan --candidates")); !strings.Contains(out, "  S-0004  First candidate\n") {
 				t.Errorf("flai plan --candidates, which reads: %s", out)
@@ -762,7 +765,8 @@ func TestTheOrchestratorPlansABacklogStoryOnlyWithPlanBacklogStories(t *testing.
 			// flai, past the guard, holds the orchestrator to the permission too
 			for _, c := range []struct{ args, want string }{
 				{"plan S-0004", "the orchestrator asks for the planner on a story only with orchestration.permissions.plan_backlog_stories, which is off"},
-				{"edit S-0005 --revenue-per-week 500", "the orchestrator sets a story's cost of delay inputs only with orchestration.permissions.plan_backlog_stories, which is off"},
+				{"edit S-0005 --revenue-per-week 500", "the orchestrator sets cost of delay inputs only with orchestration.permissions.plan_backlog_stories, which is off"},
+				{"edit E-0003 --time-lost-per-cycle 4h", "the orchestrator sets cost of delay inputs only with orchestration.permissions.plan_backlog_stories, which is off"},
 			} {
 				if _, errOut, code := runIn(t, o.root, strings.Fields(c.args)...); code == 0 || !strings.Contains(errOut, c.want) {
 					t.Errorf("flai %s past the guard: exit %d %s", c.args, code, errOut)
