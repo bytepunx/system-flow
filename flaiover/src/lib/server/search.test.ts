@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { Repo, type Ask } from './repo';
 import { flaiAsk } from './testing';
@@ -78,9 +79,15 @@ describe('adrs on the monorepo', { timeout: 30000 }, () => {
 		expect(list.find((a) => a.id === 'ADR-0018')?.refines).toEqual(['ADR-0016']);
 		expect(list.find((a) => a.id === 'ADR-0002')?.refines).toEqual([]);
 		// a real repository holds proposed, superseded, and rejected ADRs as well as accepted ones
-		// (ADR-0202 was rejected in favour of ADR-0203)
+		// (ADR-0202 was rejected in favour of ADR-0203); the statuses allowed are those the ADR
+		// template's status comment names (ADR-0223, I-0208), and a read that finds fewer fails here
 		expect(list.find((a) => a.id === 'ADR-0001')?.status).toBe('accepted');
-		const statuses = ['proposed', 'accepted', 'superseded', 'deprecated', 'rejected'];
+		const template = readFileSync(resolve(monorepo, 'design/adrs/0000-template.md'), 'utf8');
+		const statusLine = template.split('\n').find((l) => l.startsWith('status:')) ?? '';
+		const statuses = (statusLine.split('#')[1] ?? '').split('|').map((s) => s.trim());
+		expect(statuses).toEqual(
+			expect.arrayContaining(['proposed', 'accepted', 'superseded', 'deprecated', 'rejected'])
+		);
 		expect(list.filter((a) => !statuses.includes(a.status))).toEqual([]);
 		expect(list.every((a) => /^\d{4}-\d{2}-\d{2}$/.test(a.date))).toBe(true);
 	});
