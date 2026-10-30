@@ -240,8 +240,9 @@ func TestVerifySaysTheFlaiIsOlderThanTheProjectWhenTheTiersRefuse(t *testing.T) 
 // ADR-0174: while the host says the merge queue can batch for the project,
 // asked with its main checkout's root at each call, verify leaves the tiers
 // marked queue to it as queued steps and passes; with all, or while the queue
-// cannot batch, it runs them, and a run that left them reuses nothing for
-// one that runs them, while two that run them alike do.
+// cannot batch, it runs them. A run that runs them reuses the tiers a run
+// that left them passed at the same patch, and runs only those it left
+// (ADR-0221), and two that run them alike reuse them all.
 func TestVerifyLeavesTheQueueTiersToTheMergeQueueWhileItCanBatch(t *testing.T) {
 	batches, asked := true, ""
 	f, change, _ := verifyFixtureWith(t, func(o *Options) {
@@ -262,7 +263,7 @@ func TestVerifyLeavesTheQueueTiersToTheMergeQueueWhileItCanBatch(t *testing.T) {
 		want    string
 	}{
 		{"the queue batches", true, map[string]any{"story": f.story.ID}, "ok=passed late=queued"},
-		{"all", true, map[string]any{"story": f.story.ID, "all": true}, "ok=passed late=passed"},
+		{"all", true, map[string]any{"story": f.story.ID, "all": true}, "ok=reused late=passed"},
 		{"the queue cannot batch", false, map[string]any{"story": f.story.ID}, "ok=reused late=reused"},
 	} {
 		batches, asked = c.batches, ""
