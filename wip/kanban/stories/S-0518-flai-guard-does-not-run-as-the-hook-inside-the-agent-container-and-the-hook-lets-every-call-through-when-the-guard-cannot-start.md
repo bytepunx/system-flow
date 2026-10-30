@@ -6,7 +6,7 @@ title: flai guard does not run as the hook inside the agent container, and the h
 status: backlog
 owner: alex
 created: 2026-10-28T12:52:56Z
-updated: 2026-10-30T00:14:28Z
+updated: 2026-10-30T14:11:00Z
 transitions: []
 tags: [cli, template]
 topics: [harness]
@@ -22,16 +22,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 801
+      seconds: 840
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 70
-          output: 1042
-          cache_read: 19646500
-          cache_write: 23639
-          cost: 4.3183
-draft: true
+          input: 82
+          output: 1135
+          cache_read: 19940835
+          cache_write: 79027
+          cost: 4.3964
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -42,10 +41,13 @@ cost_of_delay:
   at: 2026-10-28T13:33:45Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-30T10:30:00Z
-  basis: "Its own forecast of 1h15m; 21st in the pull order with an in-progress limit of 5, behind S-0419, S-0511, S-0527, S-0424, S-0523, S-0524, S-0425, S-0529, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0506, S-0508, S-0509, S-0510, S-0512, S-0516 and S-0517."
+  delivery: 2026-10-30T22:46:00Z
+  basis: "Its own forecast of 1h15m; 18th in the pull order with an in-progress limit of 5, behind S-0523, S-0524, S-0424, S-0425, S-0241, S-0512, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0506, S-0508, S-0509, S-0510, S-0516 and S-0517."
   by: flai
-  at: 2026-10-30T00:14:28Z
+  at: 2026-10-30T14:11:00Z
+finalized:
+  by: orchestrator
+  at: 2026-10-30T13:37:06Z
 ---
 # S-0518 flai guard does not run as the hook inside the agent container, and the hook lets every call through when the guard cannot start
 

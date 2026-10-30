@@ -3,14 +3,20 @@ id: S-0512
 type: story
 nature: remediation
 title: search.test.ts 'lists ADRs with the supersession chain' fails on main since ADR-0202's status became rejected, a status outside the four the test and the ADR template name
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-26T16:03:03Z
-updated: 2026-10-30T00:14:13Z
-transitions: []
+updated: 2026-10-30T14:10:44Z
+transitions:
+  - to: ready
+    at: 2026-10-30T14:09:30Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-30T14:09:35Z
+    by: agent-S-0512
 tags: [cli, template, dashboard]
 topics: [cli, template, dashboard]
-touches: [flai/internal/adr/adr.go, flai/internal/check/check.go, flai/internal/check/check_test.go, flai/internal/docedit/docedit.go, flai/internal/docedit/docedit_test.go, design/adrs/0000-template.md, template/root/design/adrs/0000-template.md, template/CHANGELOG.md, template/template.yaml, design/system/documentation-standard.md, design/system/flai-cli.md, docs/users/flai.md, flaiover/src/lib/server/search.test.ts, design/adrs/README.md, design/issues/I-0208-search-test-ts-lists-adrs-with-the-supersession-chain-fails-on-main-since-adr-0202-s-status-became-rejected-a-status-outside-the-four-the-test-and-the-adr-template-name.md, design/issues/summary.md]
+touches: [flai/internal/adr/adr.go, flai/internal/check/check.go, flai/internal/check/check_test.go, flai/internal/docedit/docedit.go, flai/internal/docedit/docedit_test.go, design/adrs/0000-template.md, template/root/design/adrs/0000-template.md, template/CHANGELOG.md, template/template.yaml, design/system/documentation-standard.md, design/system/flai-cli.md, docs/users/flai.md, flaiover/src/lib/server/search.test.ts, design/adrs/README.md, design/issues/I-0208-search-test-ts-lists-adrs-with-the-supersession-chain-fails-on-main-since-adr-0202-s-status-became-rejected-a-status-outside-the-four-the-test-and-the-adr-template-name.md, design/issues/summary.md, design/adrs/0223-an-adr-s-status-is-one-of-proposed-accepted-superseded-deprecated-or-rejected-a.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -22,16 +28,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 465
+      seconds: 530
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 62
-          output: 863
-          cache_read: 6510372
-          cache_write: 19372
-          cost: 1.4336
-draft: true
+          input: 84
+          output: 1045
+          cache_read: 7253825
+          cache_write: 96243
+          cost: 1.6167
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -42,10 +47,13 @@ cost_of_delay:
   at: 2026-10-28T08:27:18Z
 forecast:
   duration: 1h
-  delivery: 2026-10-30T08:35:00Z
-  basis: "Its own forecast of 1h; 18th in the pull order with an in-progress limit of 5, behind S-0419, S-0511, S-0527, S-0424, S-0523, S-0524, S-0425, S-0529, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0506, S-0508, S-0509 and S-0510."
+  delivery: 2026-10-30T15:31:00Z
+  basis: "Its own forecast of 1h; 4th in the pull order with an in-progress limit of 5, behind S-0523, S-0524, S-0424, S-0425 and S-0241."
   by: flai
-  at: 2026-10-30T00:14:13Z
+  at: 2026-10-30T14:09:46Z
+finalized:
+  by: orchestrator
+  at: 2026-10-30T08:31:24Z
 ---
 # S-0512 search.test.ts 'lists ADRs with the supersession chain' fails on main since ADR-0202's status became rejected, a status outside the four the test and the ADR template name
 

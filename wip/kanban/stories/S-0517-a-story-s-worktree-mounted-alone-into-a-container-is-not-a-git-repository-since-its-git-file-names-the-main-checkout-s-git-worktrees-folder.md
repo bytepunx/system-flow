@@ -6,7 +6,7 @@ title: A story's worktree mounted alone into a container is not a git repository
 status: backlog
 owner: alex
 created: 2026-10-28T12:52:47Z
-updated: 2026-10-30T00:14:23Z
+updated: 2026-10-30T14:10:55Z
 transitions: []
 tags: [cli, docker]
 topics: [harness, docker]
@@ -23,15 +23,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 390
+      seconds: 401
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 40
-          output: 594
-          cache_read: 10804146
-          cache_write: 11966
-          cost: 2.3745
+          input: 46
+          output: 651
+          cache_read: 10915854
+          cache_write: 46563
+          cost: 2.4071
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -42,10 +42,10 @@ cost_of_delay:
   at: 2026-10-28T13:19:45Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-30T11:10:00Z
-  basis: "Its own forecast of 1h15m; 20th in the pull order with an in-progress limit of 5, behind S-0419, S-0511, S-0527, S-0424, S-0523, S-0524, S-0425, S-0529, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0506, S-0508, S-0509, S-0510, S-0512 and S-0516."
+  delivery: 2026-10-31T00:04:00Z
+  basis: "Its own forecast of 1h15m; 17th in the pull order with an in-progress limit of 5, behind S-0523, S-0524, S-0424, S-0425, S-0241, S-0512, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0506, S-0508, S-0509, S-0510 and S-0516."
   by: flai
-  at: 2026-10-30T00:14:23Z
+  at: 2026-10-30T14:10:55Z
 finalized:
   by: alex
   at: 2026-10-28T12:53:25Z
