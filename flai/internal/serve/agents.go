@@ -26,6 +26,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
+	"github.com/bytepunx/system-flow/flai/internal/roles"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
@@ -1961,6 +1962,9 @@ func (l *launcher) startOf(cfg AgentConfig, run *AgentRun, adapter harness.Adapt
 	if err := l.provide(cfg, run, &req); err != nil {
 		return harness.Start{}, nil, err
 	}
+	if err := l.builtinFile(&req); err != nil {
+		return harness.Start{}, nil, err
+	}
 	spec, err := adapter.Start(req, cfg.host(name))
 	if err != nil {
 		return harness.Start{}, nil, err
@@ -1970,6 +1974,37 @@ func (l *launcher) startOf(cfg AgentConfig, run *AgentRun, adapter harness.Adapt
 		return harness.Start{}, nil, err
 	}
 	return spec, keys, nil
+}
+
+// builtinFile gives the start of a built-in role, the planner, the
+// orchestrator, the analyzer, or the curator, the role file it runs from:
+// the project's under its design folder, else the baseline flai carries
+// (roles.Builtin), so that its definition's prompt is the file's body with
+// the project's additions below the marker (S-0419, ADR-0207 §4). Nothing for
+// a story's agent or a role the project defines, which carries its own file.
+// A manifest or a role file that cannot be read refuses the start.
+func (l *launcher) builtinFile(req *harness.Request) error {
+	if req.Story != "" || req.RoleFile != nil || req.Role == "" {
+		return nil
+	}
+	m, err := manifest.Load(filepath.Join(l.entry.Root, manifest.File))
+	if err != nil {
+		return fmt.Errorf("read the project's %s for the design folder its role files are under: %w; mend it (flai check says what is wrong) and start the agent again", manifest.File, err)
+	}
+	design := m.Layout["design"]
+	if design == "" {
+		design = "design"
+	}
+	b, ok := roles.BaselineFor(design, req.Role)
+	if !ok {
+		return nil
+	}
+	f, _, err := roles.Builtin(l.entry.Root, design, b.Name)
+	if err != nil {
+		return err
+	}
+	req.Builtin = &f
+	return nil
 }
 
 // provide resolves the provider req's agent names, from the host's providers

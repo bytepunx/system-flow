@@ -39,8 +39,9 @@ import (
 const MethodRole = "serve.role"
 
 // builtinRoles are the built-in roles, by name, each with how it is started
-// instead of by RunRole: they keep their own commands, and run as their own
-// definitions rather than from their role files until S-0419.
+// instead of by RunRole: they keep their own commands and start prompts, and
+// their definitions take their role files' bodies, the project's or the
+// baseline's, at the start every agent's run goes through (startOf, S-0419).
 var builtinRoles = map[string]string{
 	workitem.ActivityPlanner:      "flai plan <item>",
 	workitem.ActivityOrchestrator: "flai serve enable orchestrate",

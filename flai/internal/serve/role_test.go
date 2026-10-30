@@ -15,9 +15,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/roles"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -633,5 +635,84 @@ func TestADefinedRoleRunOnTheUsageLimitSetsTheBudgetState(t *testing.T) {
 	}
 	if got := lab.budgetChanges(); !slices.Equal(got, []string{"set the budget state", "started a probe of the budget state", "cleared the budget state"}) {
 		t.Errorf("budget changes journalled: %q", got)
+	}
+}
+
+// S-0419: every start of a built-in role is given the role file it runs
+// from: the project's, whose text below the marker then reaches the
+// planner's definition prompt, else the baseline flai carries; a story's
+// agent and a role the project defines are given none.
+func TestABuiltinRolesStartIsGivenItsRoleFile(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, manifest.File), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: plans\n  docs: docs\n  wip: wip\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	l := &launcher{entry: Entry{Key: "t", Name: "t", Root: root}}
+	given := func(req harness.Request) *roles.Role {
+		t.Helper()
+		if err := l.builtinFile(&req); err != nil {
+			t.Fatal(err)
+		}
+		return req.Builtin
+	}
+
+	// no role files: each built-in role runs from the baseline
+	for _, role := range []string{conventions.RolePlan, conventions.RoleOrchestrate, conventions.RoleAnalyze, conventions.RoleCurate} {
+		b, _ := roles.BaselineFor("plans", role)
+		if f := given(harness.Request{Role: role}); f == nil || f.Path != b.Path || f.Body != b.Body {
+			t.Errorf("%s: given %+v, want the baseline at %s", role, f, b.Path)
+		}
+	}
+
+	// the project's planner.md, with an addition below the marker
+	b, _ := roles.BaselineFor("plans", conventions.RolePlan)
+	data, err := os.ReadFile(filepath.Join("../roles/baseline", b.Name+".md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	const addition = "- Name a reviewer for each task you draft."
+	dir := filepath.Join(root, "plans", "workflows", "roles")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "planner.md"), []byte(strings.TrimRight(string(data), "\n")+"\n\n"+addition+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	f := given(harness.Request{Role: conventions.RolePlan, Item: "E-0001"})
+	if f == nil || !strings.Contains(f.Additions, addition) {
+		t.Fatalf("the planner is not given the project's file with its addition: %+v", f)
+	}
+	defs := filepath.Join(root, ".claude", "agents")
+	if err := os.MkdirAll(defs, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(defs, "planner.md"), []byte("---\nname: planner\ndescription: Plans one item.\ntools: Read\nmodel: inherit\n---\n\nYou are the planner.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// and the planner's claude-code definition takes it as its prompt
+	agent := &manifest.Agent{Harness: harness.ClaudeCode}
+	name, adapter, err := harness.For(agent, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	st, _, err := l.startOf(AgentConfig{}, &AgentRun{}, adapter, name, harness.Request{Role: conventions.RolePlan, Item: "E-0001", Root: root, Project: "t", Agent: agent, Name: "planner-E-0001"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	i := slices.Index(st.Argv, "--agents")
+	var agents map[string]map[string]any
+	if i < 0 || i+1 >= len(st.Argv) || json.Unmarshal([]byte(st.Argv[i+1]), &agents) != nil {
+		t.Fatalf("no --agents in %v", st.Argv)
+	}
+	if p, _ := agents["planner"]["prompt"].(string); !strings.Contains(p, addition) || strings.Contains(p, roles.Marker) {
+		t.Errorf("the planner's prompt does not carry the project's addition:\n%s", p)
+	}
+
+	// a story's agent and a defined role carry no built-in file
+	if f := given(harness.Request{Story: "S-0001"}); f != nil {
+		t.Errorf("a story's agent is given %+v", f)
+	}
+	if f := given(harness.Request{Role: "review", RoleFile: &roles.Role{Name: "reviewer"}}); f != nil {
+		t.Errorf("a defined role is given %+v", f)
 	}
 }
