@@ -48,7 +48,7 @@ func TestAnInputKnowsTheFieldsItGives(t *testing.T) {
 	}
 }
 
-// S-0219, S-0328: each of the five permissions of the orchestrator's
+// S-0219, S-0328, I-0187: each of the five permissions of the orchestrator's
 // planning and ordering passes its calls, by MCP and by command line, while
 // it is on, and while it is off refuses them naming it, whatever the others
 // are.
@@ -68,10 +68,14 @@ func TestTheOrchestratorPlansFinalizesPromotesAndOrdersByItsPermissions(t *testi
 			call(t, "plan", `{"id":"S-0328"}`),
 			call(t, "item_edit", `{"id":"S-0328","cost_of_delay":{"revenue_per_week":500}}`),
 			call(t, "item_edit", `{"project":"system-flow","id":"s-328","hash":"abc","cost_of_delay":{"revenue_per_week":500,"penalty_per_week":0,"time_lost_per_cycle":"4h"}}`),
+			call(t, "item_edit", `{"id":"E-0001","cost_of_delay":{"revenue_per_week":500}}`),
+			call(t, "item_edit", `{"project":"system-flow","id":"e-24","hash":"abc","cost_of_delay":{"time_lost_per_cycle":"4h"}}`),
 			bash("", "flai plan S-0328"),
 			bash("", "scripts/flai.sh --config c.json plan --json s-328"),
 			bash("", "flai edit S-0328 --revenue-per-week 500"),
 			bash("", "flai edit --by orchestrator S-0328 --penalty-per-week=50 --time-lost-per-cycle 4h --hash abc --json"),
+			bash("", "flai edit E-0001 --revenue-per-week 500"),
+			bash("", "flai edit E-0024 --time-lost-per-cycle 4h --hash abc --json"),
 		}},
 		{manifest.PermitFinalizeDrafts, manifest.Permissions{FinalizeDrafts: true}, []Event{
 			call(t, "item_edit", `{"id":"S-0001","draft":false}`),
@@ -116,9 +120,10 @@ func TestTheOrchestratorsFinalizingRefusalNamesItsPermission(t *testing.T) {
 	}
 }
 
-// S-0219, S-0328: the orchestrator never plans an item but an epic or a
-// story, edits an item beyond finalizing a draft or giving a story cost of
-// delay inputs, or places a story by hand, whatever its permissions.
+// S-0219, S-0328, I-0187: the orchestrator never plans an item but an epic or
+// a story, edits an item beyond finalizing a draft or giving an epic or a
+// story cost of delay inputs, or places a story by hand, whatever its
+// permissions.
 func TestTheOrchestratorNeverPlansATaskEditsAnItemOrPlacesOneByHand(t *testing.T) {
 	edits := []string{
 		`{"id":"S-0001"}`,
@@ -136,7 +141,9 @@ func TestTheOrchestratorNeverPlansATaskEditsAnItemOrPlacesOneByHand(t *testing.T
 		`{"id":"S-0001","cost_of_delay":"x"}`,
 		`{"id":"S-0001","cost_of_delay":{"revenue_per_week":500},"draft":false}`,
 		`{"id":"S-0001","cost_of_delay":{"revenue_per_week":500},"forecast":{"duration":"2h"}}`,
-		`{"id":"E-0001","cost_of_delay":{"revenue_per_week":500}}`,
+		`{"id":"T-0001","cost_of_delay":{"revenue_per_week":500}}`,
+		`{"id":"E-0001","cost_of_delay":{"revenue_per_week":500,"value":300}}`,
+		`{"id":"E-0001","cost_of_delay":{"revenue_per_week":500},"title":"Better"}`,
 		`{"cost_of_delay":{"revenue_per_week":500}}`,
 	}
 	for _, f := range []string{"title", "nature", "tags", "topics", "touches", "after", "parent", "agent", "clear_agent", "body", "cost_of_delay", "clear_cost_of_delay", "forecast", "clear_forecast"} {
@@ -163,7 +170,9 @@ func TestTheOrchestratorNeverPlansATaskEditsAnItemOrPlacesOneByHand(t *testing.T
 			bash("", "flai edit S-0001 --revenue-per-week"),
 			bash("", "flai edit S-0001 --revenue-per-week 500 --touches flai"),
 			bash("", "flai edit S-0001 --revenue-per-week 500 --no-draft"),
-			bash("", "flai edit E-0001 --revenue-per-week 500"),
+			bash("", "flai edit T-0001 --revenue-per-week 500"),
+			bash("", "flai edit E-0001 --clear-cost-of-delay"),
+			bash("", "flai edit E-0001 --time-lost-per-cycle 4h --title Better"),
 			bash("", "flai edit S-0001"),
 		}},
 		{byHand, []Event{
@@ -191,8 +200,9 @@ func TestTheOrchestratorNeverPlansATaskEditsAnItemOrPlacesOneByHand(t *testing.T
 	}
 }
 
-// S-0328: a refusal of a story's plan, or of its cost of delay inputs, says
-// what the call would do and names plan_backlog_stories.
+// S-0328, I-0187: a refusal of a story's plan, or of an epic's or a story's
+// cost of delay inputs, says what the call would do and names
+// plan_backlog_stories.
 func TestTheOrchestratorsStoryPlanningRefusalsNamePlanBacklogStories(t *testing.T) {
 	const needs = "orchestration.permissions.plan_backlog_stories"
 	for _, c := range []struct {
@@ -202,6 +212,8 @@ func TestTheOrchestratorsStoryPlanningRefusalsNamePlanBacklogStories(t *testing.
 	}{
 		{call(t, "plan", `{"id":"S-0001"}`), "the orchestrator cannot plan S-0001: it needs " + needs + ", which is off. " + askOperator, "plan S-0001"},
 		{call(t, "item_edit", `{"id":"S-0001","cost_of_delay":{"revenue_per_week":500}}`), "the orchestrator cannot give S-0001 cost of delay inputs: it needs " + needs + ", which is off. " + askOperator, "item_edit S-0001"},
+		{call(t, "item_edit", `{"id":"E-0001","cost_of_delay":{"time_lost_per_cycle":"4h"}}`), "the orchestrator cannot give E-0001 cost of delay inputs: it needs " + needs + ", which is off. " + askOperator, "item_edit E-0001"},
+		{bash("", "flai edit E-0001 --time-lost-per-cycle 4h"), `the orchestrator cannot run "flai edit E-0001 --time-lost-per-cycle 4h": it needs ` + needs + ", which is off. " + askOperator, "flai edit E-0001 --time-lost-per-cycle 4h"},
 		{bash("", "flai edit S-0001 --revenue-per-week 500"), `the orchestrator cannot run "flai edit S-0001 --revenue-per-week 500": it needs ` + needs + ", which is off. " + askOperator, "flai edit S-0001 --revenue-per-week 500"},
 	} {
 		if r := orchestrator(except(manifest.PermitPlanBacklogStories)).Decide(c.e); r.Why != c.why || r.Call != c.call || r.Needs != needs {

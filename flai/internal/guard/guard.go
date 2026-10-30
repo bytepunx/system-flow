@@ -57,12 +57,13 @@
 // the permission that allows it is on (S-0219 maps planning an epic,
 // finalizing a draft, promoting a story to ready, and ordering the ready
 // column by a policy). With plan_backlog_stories it asks for the planner on
-// a story, and gives a story cost of delay inputs with an edit that changes
-// nothing else, never a value or a removal (S-0328, ADR-0119); flai judges
-// which story. With accept_reviews it accepts a story in review, with
-// flai accept or flai move to done, only as itself, --by orchestrator
-// (S-0221, ADR-0093), and enqueues one for the merge queue to land, with
-// queue_add or flai queue add, as itself too; it never lands one with flai
+// a story, and gives an epic or a story cost of delay inputs with an edit
+// that changes nothing else, never a value or a removal (S-0328, ADR-0119,
+// I-0187); flai judges which epic or story. With accept_reviews it accepts
+// a story in review, with flai accept or flai move to done, only as itself,
+// --by orchestrator (S-0221, ADR-0093), and enqueues one for the merge
+// queue to land, with queue_add or flai queue add, as itself too; it never
+// lands one with flai
 // accept --batch, nor takes one out of the queue, holds it, or resumes it,
 // whatever its permissions (S-0403). A refusal names that permission; a call
 // no permission allows, such as an edit of a file, a commit, or a story
@@ -509,9 +510,9 @@ var (
 // finalizes a draft.
 var finalizeFields = []string{"draft", "hash", "id", "project"}
 
-// costFields are the fields item_edit's input may give when it only gives a
-// story cost of delay inputs, and costInputs the keys of its cost_of_delay
-// that are inputs (S-0328, ADR-0119).
+// costFields are the fields item_edit's input may give when it only gives an
+// epic or a story cost of delay inputs, and costInputs the keys of its
+// cost_of_delay that are inputs (S-0328, ADR-0119).
 var (
 	costFields = []string{"cost_of_delay", "hash", "id", "project"}
 	costInputs = []string{"penalty_per_week", "revenue_per_week", "time_lost_per_cycle"}
@@ -533,11 +534,11 @@ const askOperator = "Ask the operator with thread_open on the item if it needs d
 const plansCandidates = "it asks for the planner on an epic or a story alone, one flai plan --candidates lists"
 
 // Why the orchestrator never makes an edit, by MCP and on the command line:
-// it only finalizes a draft, or gives a story cost of delay inputs (S-0219,
-// S-0328, ADR-0119).
+// it only finalizes a draft, or gives an epic or a story cost of delay inputs
+// (S-0219, S-0328, ADR-0119, I-0187).
 const (
-	editsMCP = "it edits an item only to finalize a draft, with item_edit draft false and nothing else, or to give a story cost of delay inputs, with cost_of_delay's revenue_per_week, penalty_per_week, and time_lost_per_cycle and nothing else: no value, no clear_cost_of_delay"
-	editsCLI = "it edits an item only to finalize a draft, with flai edit --no-draft and nothing else, or to give a story cost of delay inputs, with --revenue-per-week, --penalty-per-week, and --time-lost-per-cycle and nothing else: no --cost-of-delay-value, no --clear-cost-of-delay"
+	editsMCP = "it edits an item only to finalize a draft, with item_edit draft false and nothing else, or to give an epic or a story cost of delay inputs, with cost_of_delay's revenue_per_week, penalty_per_week, and time_lost_per_cycle and nothing else: no value, no clear_cost_of_delay"
+	editsCLI = "it edits an item only to finalize a draft, with flai edit --no-draft and nothing else, or to give an epic or a story cost of delay inputs, with --revenue-per-week, --penalty-per-week, and --time-lost-per-cycle and nothing else: no --cost-of-delay-value, no --clear-cost-of-delay"
 )
 
 // byHand says why the orchestrator never places a story by hand in the pull
@@ -1102,13 +1103,14 @@ func finalizesDraft(in Args) bool {
 		!slices.ContainsFunc(in.Fields, func(f string) bool { return !slices.Contains(finalizeFields, f) })
 }
 
-// setsCostInputs says whether item_edit's input gives a story cost of delay
-// inputs and changes nothing else (S-0328, ADR-0119): cost_of_delay with one
-// input or more, none null or an empty string, which removes it, and no other
-// key, value among them; and no field but the story, its hash, and its
-// project besides. Whether the story may have them is flai's to judge.
+// setsCostInputs says whether item_edit's input gives an epic or a story cost
+// of delay inputs and changes nothing else (S-0328, ADR-0119, I-0187):
+// cost_of_delay with one input or more, none null or an empty string, which
+// removes it, and no other key, value among them; and no field but the item,
+// its hash, and its project besides. Whether the item may have them is
+// flai's to judge.
 func setsCostInputs(in Args) bool {
-	if !isStory(in.ID) || len(in.CostOfDelay) == 0 ||
+	if !isEpic(in.ID) && !isStory(in.ID) || len(in.CostOfDelay) == 0 ||
 		slices.ContainsFunc(in.Fields, func(f string) bool { return !slices.Contains(costFields, f) }) {
 		return false
 	}
@@ -1156,12 +1158,13 @@ func finalizesOnly(words []string) bool {
 	return true
 }
 
-// setsCostInputsOnly says whether the words of flai edit give a story cost
-// of delay inputs and change nothing else (S-0328, ADR-0119): one input flag
-// or more, each with a value that is not empty, which would remove it,
-// beside the flags that finalizing a draft allows but --no-draft.
+// setsCostInputsOnly says whether the words of flai edit give an epic or a
+// story cost of delay inputs and change nothing else (S-0328, ADR-0119,
+// I-0187): one input flag or more, each with a value that is not empty,
+// which would remove it, beside the flags that finalizing a draft allows but
+// --no-draft.
 func setsCostInputsOnly(words []string) bool {
-	if args := positionals(words, editValues); len(args) < 2 || !isStory(args[1]) {
+	if args := positionals(words, editValues); len(args) < 2 || !isEpic(args[1]) && !isStory(args[1]) {
 		return false
 	}
 	inputs := 0

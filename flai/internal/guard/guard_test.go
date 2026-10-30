@@ -782,7 +782,7 @@ func TestTheOrchestratorsPermissionsAllowItsCalls(t *testing.T) {
 		calls  []Event
 	}{
 		{manifest.PermitPlanBacklogEpics, manifest.Permissions{PlanBacklogEpics: true}, []Event{itemOf("plan", "E-0016", ""), itemOf("plan", "e-16", ""), bash("", "flai plan E-0016"), bash("", "scripts/flai.sh --config c.json plan E-1 --json")}},
-		{manifest.PermitPlanBacklogStories, manifest.Permissions{PlanBacklogStories: true}, []Event{itemOf("plan", "S-0001", ""), itemOf("plan", "s-1", ""), bash("", "flai plan S-0001"), bash("", "flai edit S-0001 --revenue-per-week 500 --time-lost-per-cycle=4h")}},
+		{manifest.PermitPlanBacklogStories, manifest.Permissions{PlanBacklogStories: true}, []Event{itemOf("plan", "S-0001", ""), itemOf("plan", "s-1", ""), bash("", "flai plan S-0001"), bash("", "flai edit S-0001 --revenue-per-week 500 --time-lost-per-cycle=4h"), bash("", "flai edit E-0001 --time-lost-per-cycle 4h")}},
 		{manifest.PermitFinalizeDrafts, manifest.Permissions{FinalizeDrafts: true}, []Event{bash("", "flai edit S-0001 --no-draft"), bash("", "flai edit --by orchestrator S-0001 --no-draft=true --hash=abc --json")}},
 		{manifest.PermitPromoteToReady, manifest.Permissions{PromoteToReady: true}, []Event{itemOf("item_move", "S-0001", "ready"), bash("", "flai move S-0001 ready"), bash("", "flai move --reason 'top of the backlog' S-0001 ready")}},
 		{manifest.PermitOrderReady, manifest.Permissions{OrderReady: true}, []Event{bash("", "flai order --by wsjf --apply")}},
