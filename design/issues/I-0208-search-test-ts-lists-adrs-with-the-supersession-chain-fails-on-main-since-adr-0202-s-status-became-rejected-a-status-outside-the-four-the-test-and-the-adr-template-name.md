@@ -2,12 +2,12 @@
 id: I-0208
 title: search.test.ts 'lists ADRs with the supersession chain' fails on main since ADR-0202's status became rejected, a status outside the four the test and the ADR template name
 class: defect
-status: open
+status: closed
 count: 1
 cost: 5m
 first_reported: 2026-10-26T04:35:14Z
 last_reported: 2026-10-26T04:35:14Z
-updated: 2026-10-26T16:03:03Z
+updated: 2026-10-30T14:17:23Z
 ---
 
 # I-0208 search.test.ts 'lists ADRs with the supersession chain' fails on main since ADR-0202's status became rejected, a status outside the four the test and the ADR template name
@@ -24,3 +24,4 @@ S-0501's flai test on search.test.ts failed at 'adrs on the monorepo > lists ADR
 ## Remediation
 
 Story S-0512 remediates this issue, created from it at 2026-10-26T16:03:03Z.
+Closed 2026-10-30T14:17:23Z: S-0512: ADR-0223 makes rejected the fifth ADR status. flai check now reports adr.status on an ADR whose status is outside check.ADRStatuses (proposed, accepted, superseded, deprecated, rejected), so an unknown status stops the close-out of the story that wrote it at flai check, before the vitest tier; TestADRStatusOutsideTheFive reproduces it. flai doc refuses a change to a rejected ADR but its topics, as to an accepted one (TestRejectedAdrIsImmutableButForItsTopics). Both copies of 0000-template.md name rejected in the status comment, and search.test.ts reads its allowed statuses from that comment instead of a list of its own.
