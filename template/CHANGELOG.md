@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.11 - 2026-10-30
+
+- S-0524 The orchestrator may ask the planner again for an epic or a story planned before, on which the operator has written since its newest planner run ended (patch, ADR-0222): in `strategic-agents.md`, the `plan_backlog_epics` and `plan_backlog_stories` rule of "As the orchestrator" says that `flai plan --candidates` lists some epics and stories as planned before, with a `thread`, that the orchestrator reads that thread with `thread_get` first, and that it starts the planner for such an item only when the operator's entry asks for a change to the plan, a story or task to add, split, merge, or drop, a changed outcome, or a changed figure, and never for a confirmation that changes nothing. Such a run records the trigger `orchestrator; TH-nnnn`, and the planner's prompt names the thread. It needs a flai that has it, the release that carries S-0524: an older flai lists no item planned before, so the orchestrator asks for none.
+
 ## 1.1.10 - 2026-10-30
 
 - S-0512 search.test.ts 'lists ADRs with the supersession chain' fails on main since ADR-0202's status became rejected, a status outside the four the test and the ADR template name (patch).
@@ -8,10 +12,6 @@
 
 - S-0512 An ADR's status may be `rejected`, the fifth status, immutable as an accepted one is, and flai check reports adr.status on any status outside the five (patch).
 - S-0512 The ADR template names `rejected` as the fifth status (patch, ADR-0223): the status comment in `design/adrs/0000-template.md` reads `proposed | accepted | superseded | deprecated | rejected`. A rejected ADR is a proposed decision the operator declined in favour of another, and it is immutable once set. `flai check` reports `adr.status` on an ADR whose status is outside the five, and `flai doc` refuses any change to a rejected ADR but its `topics`. It needs a flai that has it, the release that carries S-0512: an older flai reports no `adr.status` and lets `flai doc` change a rejected ADR.
-
-## 1.1.9 - 2026-10-30
-
-- S-0524 The orchestrator may ask the planner again for an epic or a story planned before, on which the operator has written since its newest planner run ended (patch, ADR-0222): in `strategic-agents.md`, the `plan_backlog_epics` and `plan_backlog_stories` rule of "As the orchestrator" says that `flai plan --candidates` lists some epics and stories as planned before, with a `thread`, that the orchestrator reads that thread with `thread_get` first, and that it starts the planner for such an item only when the operator's entry asks for a change to the plan, a story or task to add, split, merge, or drop, a changed outcome, or a changed figure, and never for a confirmation that changes nothing. Such a run records the trigger `orchestrator; TH-nnnn`, and the planner's prompt names the thread. It needs a flai that has it, the release that carries S-0524: an older flai lists no item planned before, so the orchestrator asks for none.
 
 ## 1.1.8 - 2026-10-29
 
