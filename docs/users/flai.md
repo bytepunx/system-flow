@@ -1738,9 +1738,9 @@ A run resumes from the stored report when nothing that decides the tiers has cha
 |--------------|----|---------------------|
 | `commit` | The branch's head | A commit on the branch |
 | `base_commit` | The main branch's commit | A commit on main, or a `flai stream sync` that takes one |
-| `fingerprint` | A hash of the manifest's `tests`, of the selected tiers' names, directories, and commands, and of the names of the tiers left to the merge queue | An edit to `tests`, a change that selects other tiers, or a run that leaves other tiers to the queue, such as one with `--all` |
+| `fingerprint` | A hash of the manifest's `tests` and of the selected tiers' names, directories, and commands, those left to the merge queue included | An edit to `tests`, or a change that selects other tiers |
 
-The four steps before the tiers always run. The tiers before the first one the last run showed `failed` or `not-reached` do not: each is `reused`, with the command, exit code, and duration of the run that ran it, and the run goes on from the tier that failed. A last run that stopped before the tiers reuses none; one that passed every tier reuses them all. A report from an older flai, with no `fingerprint` or `base_commit`, gives a full run. `--fresh` forces a full run. `flai test` never resumes.
+The four steps before the tiers always run. The tiers before the first one the last run showed `failed`, `not-reached`, or `queued` do not: each is `reused`, with the command, exit code, and duration of the run that ran it, and the run goes on from that first tier. A last run that stopped before the tiers reuses none; one that passed every tier reuses them all. A report from an older flai, with no `fingerprint` or `base_commit`, gives a full run. `--fresh` forces a full run. `flai test` never resumes.
 
 A reused tier's line gives, in place of its duration, when the run that ran it began. The last line counts the reused tiers and gives the earliest such time:
 
@@ -1775,7 +1775,7 @@ queued tier smoke: left to the merge queue
 verify: S-0037 passed every step, integration and smoke left to the merge queue
 ```
 
-`--all` leaves no tier to the queue: every tier the branch selects runs. Run it before you accept a story by hand while the queue can batch, since `flai accept` runs no tier. Otherwise the story lands without the `queue` tiers. Enqueueing it is the other way. The close-out runs `flai verify` without `--all`, so it leaves the same tiers. This repository's `scripts/flai.sh` reads `.flai-cache/config.json`, so a run through it leaves tiers to the queue only when that configuration turns the action on. `flai test --all` ignores the key and runs every tier.
+`--all` leaves no tier to the queue: every tier the branch selects runs. Whether a run leaves tiers to the queue does not change its fingerprint, so `--all` after a close-out at the same patch reuses each tier the close-out passed and runs only those it left `queued`, here `integration` and `smoke` ([ADR-0221](../../design/adrs/0221-while-the-merge-queue-can-batch-a-hand-acceptance-is-refused-until-the-queue.md)). Reuse stops at the first `queued` tier in the order `tests` lists them, so a `queue` tier listed before others runs those again too. While the queue can batch, your acceptance by hand waits for such a run, or you enqueue the story ([Accepting by hand while the queue batches](#accepting-by-hand-while-the-queue-batches)). The close-out runs `flai verify` without `--all`, so it leaves the same tiers. This repository's `scripts/flai.sh` reads `.flai-cache/config.json`, so a run through it leaves tiers to the queue only when that configuration turns the action on. `flai test --all` ignores the key and runs every tier.
 
 ### Resuming across a clean rebase
 
@@ -2620,6 +2620,8 @@ Only you keep a removal: `--keep-removal` with `--by orchestrator` is refused. T
 
 A story whose branch changes a protected path ([Writes to protected paths](#writes-to-protected-paths)) is accepted by you alone, since the change reaches every agent once it is merged (S-0286, [ADR-0106](../../design/adrs/0106-a-story-whose-branch-changes-a-path-claude-code-protects-is-accepted-by-the.md)). You are its operator as the story's owner or the project's `owner` in `system-flow.yaml`; when neither is set, anyone but the orchestrator is. `flai accept --dry-run` names the operator and lists the files, such as `only the operator (alex) accepts S-0031: its branch changes paths Claude Code protects: .claude/settings.json, .mcp.json`, and `--json` has them as `operator_only` and `protected`. An acceptance by anyone else, an agent accepting on its own name among them, is refused before anything is merged, with the files named. Read the files in the diff before you accept. The board accepts as the project's `owner`, or as `designer` when none is set; when the story names an owner, set the project's `owner` to your name to accept it from the board.
 
+While the merge queue can batch, your acceptance also waits for the tiers the close-out left to the queue to run at the story's head. It is refused with the blocker `queue_tiers` until `flai verify S-0031 --all` has run them, and `--without-queue-tiers` lands the story without them, recorded in its Notes ([Accepting by hand while the queue batches](#accepting-by-hand-while-the-queue-batches)).
+
 Under `acceptance.mode: pull-request`, acceptance also waits for the pull request's required checks, its standing requested changes, and its required approvals ([The acceptance waits for the pull request](#the-acceptance-waits-for-the-pull-request)). It then merges the pull request on the forge in place of the rebase and fast-forward here ([The merge on the forge](#the-merge-on-the-forge)).
 
 Another git process can hold the main checkout's index lock when acceptance commits: `flai serve`'s replan, an agent's commit, or another acceptance. Acceptance then waits and tries again, for up to about nine seconds, and never removes the lock file (S-0307). When the lock is still held, the acceptance fails and exits non-zero, in the dashboard too. The error shows git's own message and says what is left:
@@ -2942,7 +2944,23 @@ It refuses, and changes nothing, a story that is not in review, an item that is 
 
 `flai queue remove S-nnnn` takes a story out. When the batch under verification holds it, the batch is dropped, so that the queue never lands a story no one has enqueued, and the next batch can start. It refuses a story that is not enqueued.
 
-Accepting a story by hand, with `flai accept`, `flai move S-nnnn done`, or from the board, takes it out of the queue too, and drops the batch that holds it. Its outcome is `accepted_by_hand`. An acceptance by hand runs no test tier, so while the queue can batch, run `flai verify S-nnnn --all` first, or the story lands without the tiers its close-out left to the queue.
+Accepting a story by hand, with `flai accept`, `flai move S-nnnn done`, or from the board, takes it out of the queue too, and drops the batch that holds it. Its outcome is `accepted_by_hand`.
+
+#### Accepting by hand while the queue batches
+
+An acceptance by hand runs no test tier. While the queue can batch, the close-out left the `queue` tiers to the batch, so a story you accept by hand has not run them. Your acceptance therefore waits for them ([ADR-0221](../../design/adrs/0221-while-the-merge-queue-can-batch-a-hand-acceptance-is-refused-until-the-queue.md)). This holds for every acceptance but the orchestrator's and the queue's landing: `flai accept`, `flai move S-nnnn done`, the board, and the dashboard. It is refused, before anything is merged, until the story's last `flai verify` passed at its branch's head and ran every tier marked `queue` that it selects, none left `queued` and none failed.
+
+The refusal is the blocker `queue_tiers`. It names the tiers and three ways out:
+
+```bash
+flai verify S-0042 --all                       # run the queue tiers; reuses what the close-out passed
+flai queue add S-0042                          # or enqueue it, and the batch runs them
+flai accept S-0042 --by alex --without-queue-tiers   # or land it without them, recorded in its Notes
+```
+
+`flai accept --dry-run` and the dashboard's Accept dialog list the blocker. With `--json` it is in `queue_tiers_blocker`, and `queue_tiers` and `queue_tiers_why` say which tiers did not run and why.
+
+`--without-queue-tiers` is for a change the tiers cannot bear on, such as a documentation-only story. `flai accept` and `flai move S-nnnn done` take it, and the board and the dashboard do not. The acceptance writes, with its commit, a `### Accepted without the queue tiers` section in the story's `## Notes`: the tiers that did not run, or why when no report at the head names them, who accepted, and when. It is refused with `--by orchestrator` and with `--batch`. While the queue does not batch, or once the tiers ran, it changes nothing.
 
 #### Holding the queue
 
