@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -59,12 +60,20 @@ epic not done or cancelled whose stories, archived ones included, are all
 done or cancelled with at least one done. After them it lists the stories
 (S-0328): a story in the backlog, draft or not, that has no touches, no
 forecast duration, no cost of delay value, or no task that is not
-cancelled, each with what it lacks. It leaves out, and lists apart with
+cancelled, each with what it lacks. After them it lists the items planned
+before and asked again (S-0524, ADR-0222): an epic not done or cancelled,
+or a story in the backlog or ready, that neither of those lists, whose
+newest planner run has ended, and on which the operator (the manifest's
+owner, the story's owner, or designer) has written since, on a thread on
+the item or on an item under it: an epic's stories and their tasks, a
+story's tasks. Each names the operator's newest such entry, and --json
+gives that entry's thread as thread. It leaves out, and lists apart with
 why, an item a planner runs for now and one whose newest planner run ended
 asking a question still awaiting the operator, as flai serve's record of
 planner runs on this host says; and a story whose epic a planner runs for
-now, or whose newest planner run ended and which has not changed since. It
-starts nothing and writes nothing.
+now, or whose newest planner run ended and which has not changed, and on
+which the operator has not written, since. It starts nothing and writes
+nothing.
 
 The orchestrator (FLAI_ROLE=orchestrate) asks for the planner on an epic
 that --candidates lists alone, while orchestration.permissions gives it
@@ -88,7 +97,7 @@ orchestrator, in place of asked, as what started it (S-0219).`,
 			return a.planNow(workitem.CanonicalID(args[0]))
 		},
 	}
-	c.Flags().BoolVar(&candidates, "candidates", false, "list the epics and stories the planner should plan, each with why, and those left out while a planner runs or awaits the operator; writes nothing")
+	c.Flags().BoolVar(&candidates, "candidates", false, "list the epics and stories the planner should plan, each with why and any thread the operator wrote on since its planner ran, and those left out while a planner runs or awaits the operator; writes nothing")
 	return c
 }
 
@@ -131,7 +140,12 @@ func (a *app) planCandidatesOf(repo *workitem.Repo) (workitem.PlanCandidates, er
 	if err != nil {
 		return workitem.PlanCandidates{}, err
 	}
-	return workitem.PlanCandidatesOf(items, planHeld(repo, items, a.serveDir().AgentStates()[mainRootOf(repo)])), nil
+	st := a.serveDir().AgentStates()[mainRootOf(repo)]
+	asked, err := operatorWroteSince(repo, items, st)
+	if err != nil {
+		return workitem.PlanCandidates{}, err
+	}
+	return workitem.PlanCandidatesOf(items, planHeld(repo, items, st, asked), asked), nil
 }
 
 // planHeld is why each epic and story st's planner runs keep from being a
@@ -140,10 +154,11 @@ func (a *app) planCandidatesOf(repo *workitem.Repo) (workitem.PlanCandidates, er
 // planner's. A story is kept back too while a planner runs for its epic, and
 // when its newest planner run has ended and the story has not been updated
 // since, so that a planner that could not finish is not started again until
-// something changes (S-0328, ADR-0119). A run that has not ended but whose
-// process is gone is neither running nor ended: flai serve settles it at its
-// next look.
-func planHeld(repo *workitem.Repo, items []*workitem.Item, st serve.AgentState) map[string]string {
+// something changes (S-0328, ADR-0119); an entry of the operator's since, in
+// asked, is such a change (S-0524, ADR-0222). A run that has not ended but
+// whose process is gone is neither running nor ended: flai serve settles it
+// at its next look.
+func planHeld(repo *workitem.Repo, items []*workitem.Item, st serve.AgentState, asked map[string]workitem.PlanAsked) map[string]string {
 	out := map[string]string{}
 	byID := map[string]*workitem.Item{}
 	for _, it := range items {
@@ -162,6 +177,9 @@ func planHeld(repo *workitem.Repo, items []*workitem.Item, st serve.AgentState) 
 		}
 		if asked := plannerAsked(repo, run); asked != "" {
 			out[id] = asked
+			continue
+		}
+		if _, wrote := asked[id]; wrote {
 			continue
 		}
 		if story := byID[id]; typ == workitem.Story && story != nil && run.Ended != "" && !updatedAfter(story, run.Ended) {
@@ -193,6 +211,71 @@ func plannerAsked(repo *workitem.Repo, run *serve.AgentRun) string {
 		return fmt.Sprintf("its planner asked on %s, which awaits the operator: %s", th.ID, th.Title)
 	}
 	return ""
+}
+
+// operatorWroteSince is, for each epic and story whose newest planner run in
+// st has ended, the operator's newest entry after that end on a thread
+// anchored on the item or on an item under it, among items: for an epic its
+// stories and their tasks, for a story its tasks (S-0524, ADR-0222). An entry
+// is the operator's when threads.OperatorName takes its author for the story
+// the thread's item is or belongs to. Each names the thread and says who
+// wrote there, on what, and when, after the run's end. An entry or an end
+// whose time does not read counts for nothing.
+func operatorWroteSince(repo *workitem.Repo, items []*workitem.Item, st serve.AgentState) (map[string]workitem.PlanAsked, error) {
+	ends := map[string]time.Time{}
+	for id, run := range st.Plans {
+		if typ := workitem.TypeOfID(id); run == nil || run.Ended == "" || (typ != workitem.Epic && typ != workitem.Story) {
+			continue
+		}
+		if end, err := time.Parse(time.RFC3339, run.Ended); err == nil {
+			ends[id] = end
+		}
+	}
+	out := map[string]workitem.PlanAsked{}
+	if len(ends) == 0 {
+		return out, nil
+	}
+	byID := map[string]*workitem.Item{}
+	for _, it := range items {
+		byID[it.ID] = it
+	}
+	all, err := threads.List(repo)
+	if err != nil {
+		return nil, err
+	}
+	newest := map[string]time.Time{}
+	for _, th := range all {
+		if th.Anchor.Item == "" {
+			continue
+		}
+		on := workitem.CanonicalID(th.Anchor.Item)
+		over := []string{on}
+		for it := byID[on]; it != nil && it.Parent != ""; it = byID[it.Parent] {
+			over = append(over, it.Parent)
+		}
+		if !slices.ContainsFunc(over, func(id string) bool { _, ok := ends[id]; return ok }) {
+			continue
+		}
+		story := threads.StoryOf(repo, th)
+		for _, e := range th.Entries() {
+			at, err := time.Parse(time.RFC3339, e.At)
+			if err != nil || !threads.OperatorName(repo, story, e.Author) {
+				continue
+			}
+			for _, id := range over {
+				end, ok := ends[id]
+				if !ok || !at.After(end) {
+					continue
+				}
+				if was, ok := newest[id]; ok && at.Before(was) {
+					continue
+				}
+				newest[id] = at
+				out[id] = workitem.PlanAsked{Thread: th.ID, Reason: fmt.Sprintf("planned before; %s wrote on %s (%s) at %s, after its planner ran until %s", e.Author, th.ID, on, e.At, st.Plans[id].Ended)}
+			}
+		}
+	}
+	return out, nil
 }
 
 // updatedAfter says whether it was updated after ended, a run's end. An

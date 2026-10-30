@@ -2,6 +2,7 @@ package workitem
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -15,10 +16,15 @@ import (
 // candidate when it is in the backlog, not archived, and lacks a plan: it
 // has no touches, no forecast duration, no cost of delay value, or no task
 // that is not cancelled, archived tasks counting (S-0328, ADR-0119); a draft
-// is planned as a finalized story is. The caller names the items to leave
-// out, with why: those a planner runs for now, and those whose planner asked
-// a question the operator has not answered, which flai serve's runs record
-// and the work items do not.
+// is planned as a finalized story is. A third kind is an item planned
+// before, asked again (S-0524, ADR-0222): an epic not done or cancelled, or a
+// story in the backlog or ready, that neither other kind lists, on which the
+// operator has written since its newest planner run ended, which the caller
+// judges from flai serve's runs and the threads and names, with the reason
+// and the thread. The caller names the items to leave out, with why: those a
+// planner runs for now, and those whose planner asked a question the
+// operator has not answered, which flai serve's runs record and the work
+// items do not.
 
 // PlanCandidates are the epics and the stories the planner should plan, and
 // those that would be but are left out, with why.
@@ -36,14 +42,27 @@ type PlanCandidate struct {
 	Title  string `json:"title"`
 	Status string `json:"status"`
 	Reason string `json:"reason"`
+	// Thread is, for an item planned before and asked again, the thread
+	// with the operator's newest entry since its planner ran (S-0524,
+	// ADR-0222); empty for the other kinds.
+	Thread string `json:"thread,omitempty"`
+}
+
+// PlanAsked is why an item planned before is asked again: the thread the
+// operator wrote on since its newest planner run ended, and the reason that
+// says who wrote there and when (S-0524, ADR-0222).
+type PlanAsked struct {
+	Thread string
+	Reason string
 }
 
 // PlanCandidatesOf judges the epics among items, archived stories included,
-// in ID order, then the stories, archived tasks included, in ID order. An
-// item in leave, by ID, is listed as left out with the reason leave gives,
-// when it would otherwise be a candidate. Archived epics and stories are
-// never judged.
-func PlanCandidatesOf(items []*Item, leave map[string]string) PlanCandidates {
+// in ID order, then the stories, archived tasks included, in ID order, then
+// the epics and the stories in asked, by ID, that neither lists, in the same
+// order, with the reason and the thread asked gives. An item in leave, by
+// ID, is listed as left out with the reason leave gives, when it would
+// otherwise be a candidate. Archived epics and stories are never judged.
+func PlanCandidatesOf(items []*Item, leave map[string]string, asked map[string]PlanAsked) PlanCandidates {
 	out := PlanCandidates{Candidates: []PlanCandidate{}, LeftOut: []PlanCandidate{}}
 	type tally struct{ stories, done, cancelled int }
 	under := map[string]*tally{}
@@ -80,8 +99,10 @@ func PlanCandidatesOf(items []*Item, leave map[string]string) PlanCandidates {
 	}
 	sort.SliceStable(epics, func(i, j int) bool { return lessID(epics[i].ID, epics[j].ID) })
 	sort.SliceStable(stories, func(i, j int) bool { return lessID(stories[i].ID, stories[j].ID) })
-	judged := func(it *Item, reason string) {
-		c := PlanCandidate{ID: it.ID, Type: it.Type, Title: it.Title, Status: it.Status, Reason: reason}
+	listed := map[string]bool{}
+	judged := func(it *Item, reason, thread string) {
+		listed[it.ID] = true
+		c := PlanCandidate{ID: it.ID, Type: it.Type, Title: it.Title, Status: it.Status, Reason: reason, Thread: thread}
 		if why, ok := leave[it.ID]; ok {
 			c.Reason = why
 			out.LeftOut = append(out.LeftOut, c)
@@ -105,14 +126,24 @@ func PlanCandidatesOf(items []*Item, leave map[string]string) PlanCandidates {
 		default:
 			continue
 		}
-		judged(epic, reason)
+		judged(epic, reason, "")
 	}
 	for _, story := range stories {
 		if story.Status != Backlog {
 			continue
 		}
 		if lacks := storyPlanLacks(story, tasked[story.ID]); len(lacks) > 0 {
-			judged(story, "in the backlog without a plan: "+strings.Join(lacks, "; "))
+			judged(story, "in the backlog without a plan: "+strings.Join(lacks, "; "), "")
+		}
+	}
+	for _, it := range slices.Concat(epics, stories) {
+		again, ok := asked[it.ID]
+		switch {
+		case !ok || listed[it.ID]:
+		case it.Type == Epic && (it.Status == Done || it.Status == Cancelled):
+		case it.Type == Story && it.Status != Backlog && it.Status != Ready:
+		default:
+			judged(it, again.Reason, again.Thread)
 		}
 	}
 	return out

@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-10-29
+updated: 2026-10-30
 status: active
 ---
 
@@ -3021,7 +3021,7 @@ The run is recorded where flai serve tracks agents, by item, and its output goes
 
 It is a host action, off until you enable it (flai serve enable plan). It refuses, and says why, while the action is off for the project, for a task or an ID that is neither an epic's nor a story's, for an item that is archived, done, or cancelled, while a planner runs for the item, and when nothing can start it. The Plan button on an epic's or a story's page runs this.
 
---candidates lists, in ID order and with the reason for each, the epics the planner should plan (S-0219): an epic in the backlog with no story, and an epic not done or cancelled whose stories, archived ones included, are all done or cancelled with at least one done. After them it lists the stories (S-0328): a story in the backlog, draft or not, that has no touches, no forecast duration, no cost of delay value, or no task that is not cancelled, each with what it lacks. It leaves out, and lists apart with why, an item a planner runs for now and one whose newest planner run ended asking a question still awaiting the operator, as flai serve's record of planner runs on this host says; and a story whose epic a planner runs for now, or whose newest planner run ended and which has not changed since. It starts nothing and writes nothing.
+--candidates lists, in ID order and with the reason for each, the epics the planner should plan (S-0219): an epic in the backlog with no story, and an epic not done or cancelled whose stories, archived ones included, are all done or cancelled with at least one done. After them it lists the stories (S-0328): a story in the backlog, draft or not, that has no touches, no forecast duration, no cost of delay value, or no task that is not cancelled, each with what it lacks. After them it lists the items planned before and asked again (S-0524, ADR-0222): an epic not done or cancelled, or a story in the backlog or ready, that neither of those lists, whose newest planner run has ended, and on which the operator (the manifest's owner, the story's owner, or designer) has written since, on a thread on the item or on an item under it: an epic's stories and their tasks, a story's tasks. Each names the operator's newest such entry, and --json gives that entry's thread as thread. It leaves out, and lists apart with why, an item a planner runs for now and one whose newest planner run ended asking a question still awaiting the operator, as flai serve's record of planner runs on this host says; and a story whose epic a planner runs for now, or whose newest planner run ended and which has not changed, and on which the operator has not written, since. It starts nothing and writes nothing.
 
 The orchestrator (FLAI\_ROLE=orchestrate) asks for the planner on an epic that --candidates lists alone, while orchestration.permissions gives it plan\_backlog\_epics, and on a story that --candidates lists alone, while it gives it plan\_backlog\_stories (S-0328, ADR-0119); its run records orchestrator, in place of asked, as what started it (S-0219).
 
@@ -3038,7 +3038,7 @@ Flags:
 
 | Flag | Meaning |
 |------|---------|
-| `--candidates` | list the epics and stories the planner should plan, each with why, and those left out while a planner runs or awaits the operator; writes nothing |
+| `--candidates` | list the epics and stories the planner should plan, each with why and any thread the operator wrote on since its planner ran, and those left out while a planner runs or awaits the operator; writes nothing |
 
 ### flai prime
 

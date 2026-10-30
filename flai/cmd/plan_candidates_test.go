@@ -176,3 +176,144 @@ func TestPlanCandidatesCommand(t *testing.T) {
 		}
 	}
 }
+
+// S-0524, ADR-0222, I-0188: flai plan --candidates lists an epic or a story
+// planned before when the operator has written, since its newest planner run
+// ended, on a thread on it or on an item under it, naming the thread; an
+// entry by an agent, or one older than the run's end, lists nothing, and the
+// holds of a running planner for its epic and of its planner's question
+// awaiting the operator still leave it out.
+func TestPlanCandidatesAskedAgainCommand(t *testing.T) {
+	cfg := filepath.Join(t.TempDir(), "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfg)
+	t.Setenv("FLAI_AGENT", "")
+	root := tempProject(t)
+	manifest := filepath.Join(root, "system-flow.yaml")
+	m, _ := os.ReadFile(manifest)
+	if err := os.WriteFile(manifest, append(m, "owner: alex\n"...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	at := func(hhmm string, args ...string) {
+		t.Helper()
+		when, err := time.Parse(time.RFC3339, "2026-09-15T"+hhmm+":00Z")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, errOut, code := runInAt(t, root, when, args...); code != 0 {
+			t.Fatalf("flai %v: %s", args, errOut)
+		}
+	}
+	plan := func(id string) {
+		t.Helper()
+		at("18:00", "edit", id, "--by", "alex", "--touches", "flai/cmd", "--forecast-duration", "6h", "--cost-of-delay-value", "900")
+	}
+	at("18:00", "epic", "new", "Confirmed on a story")         // E-0001: a candidate, I-0188
+	at("18:00", "epic", "new", "Agents wrote")                 // E-0002: not one
+	at("18:00", "epic", "new", "Wrote before its planner end") // E-0003: not one
+	at("18:00", "epic", "new", "Its planner asks")             // E-0004: left out, its planner asked
+	at("18:00", "epic", "new", "Being planned")                // E-0005: a planner runs
+	at("18:00", "story", "new", "A new story confirmed", "--epic", "E-0001")
+	at("18:00", "story", "new", "Agents only", "--epic", "E-0002")
+	at("18:00", "story", "new", "Too early", "--epic", "E-0003")
+	at("18:00", "story", "new", "Under the asking epic", "--epic", "E-0004")
+	at("18:00", "story", "new", "Planned, asked on a task") // S-0005: a candidate
+	at("18:00", "story", "new", "Under the running epic", "--epic", "E-0005")
+	at("18:00", "story", "new", "Words changed, nobody wrote") // S-0007: not one
+	at("18:00", "task", "new", "--story", "S-0004", "Part")
+	at("18:00", "task", "new", "--story", "S-0005", "Part")
+	at("18:00", "task", "new", "--story", "S-0006", "Part")
+	at("18:00", "task", "new", "--story", "S-0007", "Part")
+	plan("S-0005")
+	plan("S-0006")
+	plan("S-0007")
+	at("20:30", "edit", "S-0007", "--by", "alex", "--title", "Words changed since, nobody wrote")
+	at("19:00", "thread", "new", "--on", "S-0001", "--by", "agent-S-0001", "One more story?", "Should E-0024 gain one?")
+	at("20:30", "thread", "reply", "TH-0001", "--by", "alex", "Yes, add it.")
+	at("21:00", "thread", "reply", "TH-0001", "--by", "planner-E-0001", "Noted.")
+	at("21:00", "thread", "new", "--on", "S-0002", "--by", "planner-E-0002", "A question", "Which?")
+	at("21:00", "thread", "reply", "TH-0002", "--by", "orchestrator", "That one.")
+	at("21:00", "thread", "new", "--on", "S-0003", "--by", "alex", "Too early", "Before its planner ended.")
+	at("19:30", "thread", "new", "--on", "E-0004", "--by", "planner-E-0004", "Which outcome?", "Say which.")
+	at("21:00", "thread", "new", "--on", "T-0001", "--by", "alex", "On a task", "Split it.")
+	at("21:00", "thread", "new", "--on", "T-0002", "--by", "alex", "On a task", "Split it.")
+	at("21:00", "thread", "new", "--on", "S-0006", "--by", "alex", "On the story", "Drop a task.")
+
+	sleep := exec.Command("sleep", "60")
+	serve.Detach(sleep)
+	if err := sleep.Start(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = sleep.Process.Kill(); _ = sleep.Wait() })
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ended := "2026-09-15T20:00:00Z"
+	worked := func(id, end string) *serve.AgentRun {
+		return &serve.AgentRun{Item: id, Agent: "planner-" + id, Started: "2026-09-15T19:00:00Z", Ended: end, Outcome: serve.OutcomeWorked}
+	}
+	states := map[string]serve.AgentState{mainRootOf(repo): {Plans: map[string]*serve.AgentRun{
+		"E-0001": worked("E-0001", ended),
+		"E-0002": worked("E-0002", ended),
+		"E-0003": worked("E-0003", "2026-09-15T22:00:00Z"),
+		"E-0004": {Item: "E-0004", Agent: "planner-E-0004", Started: "2026-09-15T19:00:00Z", Ended: ended, Outcome: serve.OutcomeAsked, Thread: "TH-0004"},
+		"E-0005": {Item: "E-0005", Agent: "planner-E-0005", PID: sleep.Process.Pid, Start: serve.Started(sleep.Process.Pid), Started: "2026-09-15T20:30:00Z"},
+		"S-0005": worked("S-0005", ended),
+		"S-0006": worked("S-0006", ended),
+		"S-0007": worked("S-0007", ended),
+	}}}
+	data, _ := json.Marshal(states)
+	dir := string(serve.DirFor(cfg))
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "agents.json"), data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	out, errOut, code := runIn(t, root, "plan", "--candidates")
+	if code != 0 {
+		t.Fatalf("flai plan --candidates: %s", errOut)
+	}
+	for _, want := range []string{
+		"  E-0001  Confirmed on a story\n    - planned before; alex wrote on TH-0001 (S-0001) at 2026-09-15T20:30:00Z, after its planner ran until 2026-09-15T20:00:00Z\n",
+		"  S-0005  Planned, asked on a task\n    - planned before; alex wrote on TH-0006 (T-0002) at 2026-09-15T21:00:00Z, after its planner ran until 2026-09-15T20:00:00Z\n",
+		"left out:\n",
+		"  E-0004  Its planner asks\n    - its planner asked on TH-0004, which awaits the operator: Which outcome?\n",
+		"  S-0006  Under the running epic\n    - a planner runs for its epic E-0005 now (pid ",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output lacks %q:\n%s", want, out)
+		}
+	}
+	for _, not := range []string{"  E-0002  ", "  E-0003  ", "  E-0005  ", "  S-0007  "} {
+		if strings.Contains(out, not) {
+			t.Errorf("%s listed:\n%s", not, out)
+		}
+	}
+
+	out, errOut, code = runIn(t, root, "plan", "--candidates", "--json")
+	if code != 0 {
+		t.Fatalf("flai plan --candidates --json: %s", errOut)
+	}
+	var j struct {
+		Candidates []struct{ ID, Thread string } `json:"candidates"`
+		LeftOut    []struct{ ID, Thread string } `json:"left_out"`
+	}
+	if err := json.Unmarshal([]byte(out), &j); err != nil {
+		t.Fatal(err)
+	}
+	threadOf := func(list []struct{ ID, Thread string }) map[string]string {
+		got := map[string]string{}
+		for _, c := range list {
+			got[c.ID] = c.Thread
+		}
+		return got
+	}
+	if got, want := threadOf(j.Candidates), map[string]string{"E-0001": "TH-0001", "S-0001": "", "S-0002": "", "S-0003": "", "S-0004": "", "S-0005": "TH-0006"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("--json: candidates and their threads %v, want %v", got, want)
+	}
+	if got, want := threadOf(j.LeftOut), map[string]string{"E-0004": "TH-0005", "S-0006": "TH-0007"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("--json: left out and their threads %v, want %v", got, want)
+	}
+}

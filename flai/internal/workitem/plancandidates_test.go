@@ -38,7 +38,7 @@ func TestPlanCandidates(t *testing.T) {
 		draft,
 		story("S-0008", "E-0011", Done), // a story whose epic is not among the items
 	}
-	got := PlanCandidatesOf(items, map[string]string{"E-0008": "a planner runs for it now", "E-0003": "ignored: not a candidate"})
+	got := PlanCandidatesOf(items, map[string]string{"E-0008": "a planner runs for it now", "E-0003": "ignored: not a candidate"}, nil)
 	var ids []string
 	for _, c := range got.Candidates {
 		ids = append(ids, c.ID)
@@ -60,7 +60,7 @@ func TestPlanCandidates(t *testing.T) {
 		t.Errorf("left out %+v, want %+v", got.LeftOut, want)
 	}
 
-	none := PlanCandidatesOf([]*Item{epic("E-0001", Done)}, nil)
+	none := PlanCandidatesOf([]*Item{epic("E-0001", Done)}, nil, nil)
 	if none.Candidates == nil || none.LeftOut == nil || len(none.Candidates)+len(none.LeftOut) != 0 {
 		t.Errorf("no candidates are empty lists, not null: %+v", none)
 	}
@@ -101,7 +101,7 @@ func TestPlanCandidatesStories(t *testing.T) {
 		bare("S-0007", Backlog), // left out by the caller
 		archived,                // archived: never judged
 	}
-	got := PlanCandidatesOf(items, map[string]string{"S-0007": "a planner runs for it now", "S-0001": "ignored: not a candidate"})
+	got := PlanCandidatesOf(items, map[string]string{"S-0007": "a planner runs for it now", "S-0001": "ignored: not a candidate"}, nil)
 	want := []PlanCandidate{
 		{ID: "S-0002", Type: Story, Title: "Story S-0002", Status: Backlog, Reason: "in the backlog without a plan: no tasks"},
 		{ID: "S-0003", Type: Story, Title: "Story S-0003", Status: Backlog, Reason: "in the backlog without a plan: no cost of delay value"},
@@ -113,5 +113,71 @@ func TestPlanCandidatesStories(t *testing.T) {
 	}
 	if want := []PlanCandidate{{ID: "S-0007", Type: Story, Title: "Story S-0007", Status: Backlog, Reason: "a planner runs for it now"}}; !reflect.DeepEqual(got.LeftOut, want) {
 		t.Errorf("left out %+v, want %+v", got.LeftOut, want)
+	}
+}
+
+// S-0524, ADR-0222: an epic not done or cancelled, or a story in the backlog
+// or ready, that neither other kind lists is a candidate planned before and
+// asked again when the caller names it in asked, after the other kinds and
+// with the reason and the thread asked gives; the caller's are left out with
+// its reason, and an item the other kinds list keeps their reason.
+func TestPlanCandidatesAskedAgain(t *testing.T) {
+	value := 900.0
+	epic := func(id, status string) *Item { return &Item{ID: id, Type: Epic, Status: status, Title: "Epic " + id} }
+	story := func(id, parent, status string) *Item {
+		return &Item{ID: id, Type: Story, Status: status, Parent: parent, Title: "Story " + id}
+	}
+	planned := func(id, status string) *Item {
+		s := story(id, "", status)
+		s.Touches, s.Forecast, s.CostOfDelay = []string{"flai/cmd"}, &Forecast{Duration: "6h"}, &CostOfDelay{Value: &value}
+		return s
+	}
+	task := func(id, story string) *Item { return &Item{ID: id, Type: Task, Status: Backlog, Parent: story} }
+	archivedEpic := epic("E-0007", InProgress)
+	archivedEpic.Archived = true
+	items := []*Item{
+		epic("E-0001", InProgress), // open stories, asked: a candidate
+		story("S-0001", "E-0001", InProgress),
+		epic("E-0002", Backlog), // asked, but left out by the caller
+		story("S-0002", "E-0002", Ready),
+		epic("E-0003", InProgress), // not asked: not one
+		story("S-0003", "E-0003", Review),
+		epic("E-0004", Backlog), // no stories: the first kind, its reason kept
+		epic("E-0005", Done),    // done: not one
+		epic("E-0006", Cancelled),
+		archivedEpic,               // archived: never judged
+		planned("S-0004", Backlog), // a plan, asked: a candidate
+		task("T-0004", "S-0004"),
+		planned("S-0005", Ready), // ready, asked: a candidate
+		task("T-0005", "S-0005"),
+		story("S-0006", "", Backlog),  // without a plan: the first kind, its reason kept
+		planned("S-0007", InProgress), // in progress: not one
+		task("T-0007", "S-0007"),
+		planned("S-0008", Backlog), // a plan, not asked: not one
+		task("T-0008", "S-0008"),
+		planned("S-0009", Backlog), // asked, but left out by the caller
+		task("T-0009", "S-0009"),
+	}
+	asked := map[string]PlanAsked{}
+	for _, id := range []string{"E-0001", "E-0002", "E-0004", "E-0005", "E-0006", "E-0007", "S-0004", "S-0005", "S-0006", "S-0007", "S-0009"} {
+		asked[id] = PlanAsked{Thread: "TH-0001", Reason: "planned before; alex wrote on TH-0001 (" + id + ")"}
+	}
+	got := PlanCandidatesOf(items, map[string]string{"E-0002": "a planner runs for it now", "S-0009": "its planner asked on TH-0002"}, asked)
+	want := []PlanCandidate{
+		{ID: "E-0004", Type: Epic, Title: "Epic E-0004", Status: Backlog, Reason: "in the backlog with no stories: the planner drafts them"},
+		{ID: "S-0006", Type: Story, Title: "Story S-0006", Status: Backlog, Reason: "in the backlog without a plan: no touches; no forecast duration; no cost of delay value; no tasks"},
+		{ID: "E-0001", Type: Epic, Title: "Epic E-0001", Status: InProgress, Reason: "planned before; alex wrote on TH-0001 (E-0001)", Thread: "TH-0001"},
+		{ID: "S-0004", Type: Story, Title: "Story S-0004", Status: Backlog, Reason: "planned before; alex wrote on TH-0001 (S-0004)", Thread: "TH-0001"},
+		{ID: "S-0005", Type: Story, Title: "Story S-0005", Status: Ready, Reason: "planned before; alex wrote on TH-0001 (S-0005)", Thread: "TH-0001"},
+	}
+	if !reflect.DeepEqual(got.Candidates, want) {
+		t.Errorf("candidates\n%+v\nwant\n%+v", got.Candidates, want)
+	}
+	left := []PlanCandidate{
+		{ID: "E-0002", Type: Epic, Title: "Epic E-0002", Status: Backlog, Reason: "a planner runs for it now", Thread: "TH-0001"},
+		{ID: "S-0009", Type: Story, Title: "Story S-0009", Status: Backlog, Reason: "its planner asked on TH-0002", Thread: "TH-0001"},
+	}
+	if !reflect.DeepEqual(got.LeftOut, left) {
+		t.Errorf("left out\n%+v\nwant\n%+v", got.LeftOut, left)
 	}
 }
