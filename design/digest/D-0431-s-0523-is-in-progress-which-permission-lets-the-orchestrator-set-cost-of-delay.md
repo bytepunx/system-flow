@@ -2,7 +2,7 @@
 id: D-0431
 title: "S-0523 is in progress: which permission lets the orchestrator set cost of delay inputs on an epic or a started story (TH-0694 question 2): Recommended for the operator: option 1. Add a new…"
 kind: answer
-sources: [TH-0764]
+sources: [TH-0764, S-0523]
 topics: [orchestration, planning, flai, cli, go, template, conventions, code, all]
 paths: [design/adrs, design/adrs/README.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/system/project-manifest.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md, docs/operators/settings.md, docs/operators/index.md, flai/internal/manifest/settings.go, flai/internal/guard/guard.go, flai/internal/guard/orchestrate_test.go, flai/internal/guard/guard_test.go, flai/internal/workitem/promotable.go, flai/internal/mcpserver/items_write.go, flai/internal/mcpserver/items_write_test.go, flai/cmd/edit.go, flai/cmd/edit_test.go, flai/cmd/orchestrate_permissions_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/issues/I-0187-the-orchestrator-cannot-set-a-cost-of-delay-input-the-operator-decided-on-an-epic-or-a-story-past-the-backlog.md, design/issues/summary.md]
 date: 2026-10-30
@@ -14,37 +14,16 @@ cited: []
 
 # D-0431 S-0523 is in progress: which permission lets the orchestrator set cost of delay inputs on an epic or a started story (TH-0694 question 2): Recommended for the operator: option 1. Add a new…
 
-The operator, alex, answered TH-0764 at 2026-10-30T16:47:47Z.
+The operator decided that the orchestrator's power to add or change cost of delay inputs on any open epic or story is a new permission of its own, `orchestration.permissions.set_cost_of_delay`, off by default. `plan_backlog_stories` is not widened: it keeps ADR-0119 § Decision item 4, first inputs on a backlog story that has none.
 
-What was asked:
+What was asked: S-0523's agent asked on TH-0764 which permission lets the orchestrator set cost of delay inputs the operator decided on an epic or a story past the backlog (I-0187). TH-0694 question 2 asked the same. The options were a new permission (option 1) or widening `plan_backlog_stories` (option 2).
 
-```text
-S-0523 has started. Most of its work does not depend on your answer, and I am doing that now. One choice is yours. TH-0694 asked it two days ago, and it is still open there.
-```
+The answer: on 2026-10-30T16:47:47Z the operator, alex, confirmed the orchestrator's recommendation of option 1. Its reasons:
 
-The answer:
+- Changing inputs the operator set is a new power over money, and the convention says "never overwrite the operator's inputs". A switch of its own keeps that consent explicit for every project made from the template.
+- Off by default, it grants nothing until the operator sets it in `system-flow.yaml`. Option 2 would grant it at once to every project with `plan_backlog_stories` on.
+- The operator can turn it off without losing story planning.
 
-```text
-**Recommended for the operator:** option 1. Add a new permission, `orchestration.permissions.set_cost_of_delay`, off by default. Leave `plan_backlog_stories` as ADR-0119 § Decision item 4 has it: inputs on a backlog story only.
+Both options keep the write to inputs only: no value, no removal, nothing else changed in the same call, never on a done, cancelled, or archived item, and only to a figure the operator decided on a thread.
 
-## Why this is yours to decide
-
-- It is a decision not yet recorded. ADR-0119 limits my cost of delay writes to a backlog story. Either option widens that.
-- It widens my own powers over money figures. I should not settle that myself.
-
-## Why option 1
-
-- **You turn it on yourself.** The new key is off by default. Confirming it grants me nothing until you set it in `system-flow.yaml`. Option 2 grants the power at once to every project that already has `plan_backlog_stories` on.
-- **It keeps consent separate.** The convention says "never overwrite the operator's inputs". Option 1 lets me change inputs you set. A separate switch keeps that a choice you make on its own. You can also turn it off without losing story planning.
-- **The cost is small.** It adds one manifest key, one settings toggle, and docs rows. The story's agent already builds the gate as one place.
-
-## The same question on TH-0694
-
-TH-0694 question 2 asks the same thing. My recommendation there, from 2026-10-28T14:34:37Z, is the same answer and still awaits you. One answer on either thread settles both.
-
-The thread stays open for your answer.
-
-Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
-```
-
-Source: TH-0764.
+Sources: TH-0764, S-0523; the same question is TH-0694 question 2.

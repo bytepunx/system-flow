@@ -7,12 +7,12 @@ status: backlog
 parent: S-0523
 owner: alex
 created: 2026-10-28T14:32:46Z
-updated: 2026-10-30T13:31:00Z
+updated: 2026-10-30T16:50:22Z
 transitions: []
 stream: S-0523
 tags: [docs, conventions, orchestrator, cost-of-delay]
 touches: [design/system/strategic-agents.md, design/system/flai-cli.md, design/system/project-manifest.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, template/CHANGELOG.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/manifest/settings.go, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md, docs/operators/settings.md, docs/operators/index.md]
-after: [T-2241, T-2242, T-2243]
+after: [T-2344]
 ---
 # T-2244 The design, the convention and its template copy, the orchestrator's prompt, the permission's settings text, and the guides say the orchestrator sets cost of delay inputs the operator decided on an epic or an open story
 
