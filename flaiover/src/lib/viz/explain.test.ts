@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { slug } from '../markdown';
-import { KINDS, type Kind } from './catalog';
+import { KINDS, TITLES, type Kind } from './catalog';
 import { explain, type ExplainContext } from './explain';
 
 const STORY_DAY: ExplainContext = { type: 'story', bucket: 'day' };
@@ -22,6 +22,13 @@ const anchors = new Set(
 			const m = /^#{1,6}\s+(.+)$/.exec(line);
 			return m ? [slug(m[1])] : [];
 		})
+);
+/** The first cell of each row of the table under metrics.md § Charts, its header left out. */
+const chartRows = new Set(
+	(/^## Charts$([\s\S]*?)^## /m.exec(METRICS)?.[1] ?? '').split('\n').flatMap((line) => {
+		const m = /^\|\s*([^|]+?)\s*\|/.exec(line);
+		return m && m[1] !== 'Chart' && !/^-+$/.test(m[1]) ? [m[1]] : [];
+	})
 );
 const balanced = (text: string) => (text.match(/`/g) ?? []).length % 2 === 0;
 /** The three parts of a kind's explainer as one text. */
@@ -73,6 +80,16 @@ describe('explain', () => {
 
 	it.each(KINDS)('anchors %s at a heading of metrics.md', (kind) => {
 		expect(anchors).toContain(explain(kind, STORY_DAY).metrics);
+	});
+
+	// I-0193, ADR-0219: § Charts has a row for every chart, under its catalogue title
+	it('reads the rows of metrics.md § Charts from the repository', () => {
+		expect(chartRows).toContain('Kanban board');
+		expect(chartRows.size).toBeGreaterThan(20);
+	});
+
+	it.each(KINDS)('gives %s a row in metrics.md § Charts under its title', (kind) => {
+		expect(chartRows).toContain(TITLES[kind]);
 	});
 
 	it('names cycle time by its transitions, and the p50 and p85 as nearest-rank', () => {
