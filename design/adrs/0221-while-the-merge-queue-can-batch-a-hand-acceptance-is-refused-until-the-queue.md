@@ -1,7 +1,7 @@
 ---
 id: ADR-0221
 title: "While the merge queue can batch, a hand acceptance is refused until the queue tiers ran at the story's head, flai verify --all runs only those tiers after a close-out at the same patch, and one flag lands the story without them, recorded in its Notes"
-status: proposed
+status: accepted
 date: 2026-10-30
 supersedes: []
 superseded_by: []
