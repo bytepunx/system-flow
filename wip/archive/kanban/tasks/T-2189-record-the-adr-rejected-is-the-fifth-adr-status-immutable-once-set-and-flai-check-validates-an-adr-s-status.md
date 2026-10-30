@@ -3,15 +3,36 @@ id: T-2189
 type: task
 nature: remediation
 title: "Record the ADR: rejected is the fifth ADR status, immutable once set, and flai check validates an ADR's status"
-status: backlog
+status: done
 parent: S-0512
 owner: alex
 created: 2026-10-28T08:27:31Z
-updated: 2026-10-28T08:27:31Z
-transitions: []
+updated: 2026-10-30T14:10:47Z
+transitions:
+  - to: ready
+    at: 2026-10-30T14:10:24Z
+    by: agent-S-0512
+  - to: in-progress
+    at: 2026-10-30T14:10:25Z
+    by: agent-S-0512
+  - to: done
+    at: 2026-10-30T14:10:47Z
+    by: agent-S-0512
 stream: S-0512
 tags: [cli, template]
 touches: [design/adrs/README.md]
+usage:
+  source: log
+  seconds: 22
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 1205
+      cache_read: 270461
+      cache_write: 11882
+      cost: 0.1584
 ---
 # T-2189 Record the ADR: rejected is the fifth ADR status, immutable once set, and flai check validates an ADR's status
 

@@ -4,10 +4,10 @@ title: "Plan for S-0518: the hook refuses a call when flai guard cannot start, a
 anchor:
   path: wip/kanban/stories/S-0518-flai-guard-does-not-run-as-the-hook-inside-the-agent-container-and-the-hook-lets-every-call-through-when-the-guard-cannot-start.md
   item: S-0518
-status: open
-participants: [planner-S-0518, orchestrator]
+status: resolved
+participants: [planner-S-0518, orchestrator, flai serve]
 created: 2026-10-28T13:35:01Z
-updated: 2026-10-28T13:35:21Z
+updated: 2026-10-30T13:37:28Z
 ---
 
 # TH-0688 Plan for S-0518: the hook refuses a call when flai guard cannot start, and the container's guard is the image's flai through the project's hook
@@ -66,3 +66,16 @@ ADR-0060 § Decision says the guard "fails open, so a missing or older `flai` co
 The thread stays open for your answer.
 
 Source: design/adrs/0060-a-claude-code-pretooluse-hook-flai-guard-refuses-any-sub-agent-s-call-that.md § Decision
+
+### 2026-10-30T13:36:14Z flai serve
+Confirmed the recommendation of 2026-10-28T13:35:21Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
+
+Source: design/adrs/0060-a-claude-code-pretooluse-hook-flai-guard-refuses-any-sub-agent-s-call-that.md § Decision
+
+### 2026-10-30T13:37:15Z orchestrator
+The plan is approved, as the confirmed recommendation says. Assumptions 1 to 3 stand: the hook refuses a call only when the guard command exits 126 or 127, and keeps failing open on every other exit. T-2223's ADR records this. I finalized S-0518 (draft false). `flai promote --drafts` listed it as complete. Its two criteria, 16 touches, 1h15m forecast, and value of 37.50 USD a week fit the plan.
+
+Source: design/adrs/0060-a-claude-code-pretooluse-hook-flai-guard-refuses-any-sub-agent-s-call-that.md
+
+### 2026-10-30T13:37:28Z orchestrator
+Resolved: The plan was approved by the recommendation flai serve confirmed after 48h, and S-0518 was finalized with draft false.

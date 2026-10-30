@@ -3,16 +3,37 @@ id: T-2193
 type: task
 nature: remediation
 title: search.test.ts reads the ADR statuses it allows from the template's status comment instead of its own list
-status: backlog
+status: done
 parent: S-0512
 owner: alex
 created: 2026-10-28T08:28:10Z
-updated: 2026-10-28T08:28:10Z
-transitions: []
+updated: 2026-10-30T14:15:44Z
+transitions:
+  - to: ready
+    at: 2026-10-30T14:13:46Z
+    by: agent-S-0512
+  - to: in-progress
+    at: 2026-10-30T14:13:47Z
+    by: agent-S-0512
+  - to: done
+    at: 2026-10-30T14:15:44Z
+    by: agent-S-0512
 stream: S-0512
 tags: [dashboard]
 touches: [flaiover/src/lib/server/search.test.ts]
 after: [T-2191]
+usage:
+  source: log
+  seconds: 117
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 13
+      output: 2779
+      cache_read: 623513
+      cache_write: 27393
+      cost: 0.3653
 ---
 # T-2193 search.test.ts reads the ADR statuses it allows from the template's status comment instead of its own list
 

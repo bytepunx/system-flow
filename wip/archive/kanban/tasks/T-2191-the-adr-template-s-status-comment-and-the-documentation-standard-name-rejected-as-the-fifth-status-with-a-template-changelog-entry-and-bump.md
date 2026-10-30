@@ -3,15 +3,36 @@ id: T-2191
 type: task
 nature: remediation
 title: The ADR template's status comment and the documentation standard name rejected as the fifth status, with a template changelog entry and bump
-status: backlog
+status: done
 parent: S-0512
 owner: alex
 created: 2026-10-28T08:27:46Z
-updated: 2026-10-28T08:27:46Z
-transitions: []
+updated: 2026-10-30T14:13:30Z
+transitions:
+  - to: ready
+    at: 2026-10-30T14:10:57Z
+    by: agent-S-0512
+  - to: in-progress
+    at: 2026-10-30T14:10:58Z
+    by: agent-S-0512
+  - to: done
+    at: 2026-10-30T14:13:30Z
+    by: agent-S-0512
 stream: S-0512
 tags: [template]
 touches: [design/adrs/0000-template.md, template/root/design/adrs/0000-template.md, design/system/documentation-standard.md, template/CHANGELOG.md, template/template.yaml]
+usage:
+  source: log
+  seconds: 152
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 16
+      output: 3564
+      cache_read: 799837
+      cache_write: 35139
+      cost: 0.4686
 ---
 # T-2191 The ADR template's status comment and the documentation standard name rejected as the fifth status, with a template changelog entry and bump
 

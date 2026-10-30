@@ -3,16 +3,37 @@ id: T-2258
 type: task
 nature: remediation
 title: "I-0193 is closed with the reason naming the ADR and the corrected § Charts"
-status: backlog
+status: done
 parent: S-0527
 owner: alex
 created: 2026-10-28T15:01:43Z
-updated: 2026-10-28T15:01:43Z
-transitions: []
+updated: 2026-10-30T00:15:49Z
+transitions:
+  - to: ready
+    at: 2026-10-30T00:15:38Z
+    by: agent-S-0527
+  - to: in-progress
+    at: 2026-10-30T00:15:40Z
+    by: agent-S-0527
+  - to: done
+    at: 2026-10-30T00:15:49Z
+    by: agent-S-0527
 stream: S-0527
 tags: [issues]
 touches: [design/issues/I-0193-metrics-md-charts-says-burn-up-draws-a-forecast-line-from-throughput-and-cycle-time-filters-by-nature-but-neither-chart-does.md, design/issues/summary.md]
 after: [T-2256, T-2257]
+usage:
+  source: log
+  seconds: 9
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 3
+      output: 608
+      cache_read: 218683
+      cache_write: 6719
+      cost: 0.1097
 ---
 # T-2258 I-0193 is closed with the reason naming the ADR and the corrected § Charts
 

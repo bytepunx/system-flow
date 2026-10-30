@@ -3,16 +3,19 @@ id: S-0511
 type: story
 nature: remediation
 title: flai guard lets a session flai serve started run the flai serve sub-commands that write the host configuration
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-26T16:01:48Z
-updated: 2026-10-30T00:11:34Z
+updated: 2026-10-30T00:33:46Z
 transitions:
   - to: ready
     at: 2026-10-30T00:10:22Z
     by: orchestrator
   - to: in-progress
     at: 2026-10-30T00:10:59Z
+    by: agent-S-0511
+  - to: review
+    at: 2026-10-30T00:33:46Z
     by: agent-S-0511
 tags: [cli, guard]
 topics: [cli]
@@ -23,20 +26,38 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1377
+  priced_by: harness
+  turns:
+    - day: 2026-10-30
+      ceremony: 3
+      hand_edits: 1
+      work: 31
+  models:
+    - model: claude-opus-5-5
+      input: 208
+      output: 58544
+      cache_read: 10036904
+      cache_write: 488417
+      cost: 6.3097
   strategic:
     - kind: orchestrator
-      seconds: 884
+      seconds: 998
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 31
-          output: 413
-          cache_read: 2818983
-          cache_write: 20987
-          cost: 0.6237
+          input: 71
+          output: 669
+          cache_read: 4035739
+          cache_write: 159397
+          cost: 0.925
+        - model: claude-sonnet-5-5
+          input: 6
+          output: 43
+          cache_read: 41325
+          cache_write: 34757
+          cost: 0.0525
 cost_of_delay:
   inputs:
     penalty_per_week: 500
@@ -62,8 +83,8 @@ finalized:
 This story remediates [I-0210](../../../design/issues/I-0210-flai-guard-lets-a-session-flai-serve-started-run-the-flai-serve-sub-commands-that-write-the-host-configuration.md), "flai guard lets a session flai serve started run the flai serve sub-commands that write the host configuration". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0210 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0210 is closed with `flai issue close I-0210 --reason` saying what fixed it
+- [x] The cause I-0210 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0210 is closed with `flai issue close I-0210 --reason` saying what fixed it
 
 ## Tasks
 - T-2184 An ADR records that flai guard refuses every served session and sub-agent the flai serve sub-commands that write the host configuration or turn a host action on or off

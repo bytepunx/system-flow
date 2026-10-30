@@ -3,15 +3,36 @@ id: T-2184
 type: task
 nature: remediation
 title: An ADR records that flai guard refuses every served session and sub-agent the flai serve sub-commands that write the host configuration or turn a host action on or off
-status: backlog
+status: done
 parent: S-0511
 owner: alex
 created: 2026-10-28T08:19:23Z
-updated: 2026-10-28T08:19:23Z
-transitions: []
+updated: 2026-10-30T00:13:07Z
+transitions:
+  - to: ready
+    at: 2026-10-30T00:12:18Z
+    by: agent-S-0511
+  - to: in-progress
+    at: 2026-10-30T00:12:19Z
+    by: agent-S-0511
+  - to: done
+    at: 2026-10-30T00:13:07Z
+    by: agent-S-0511
 stream: S-0511
 tags: [cli, guard, adr]
-touches: [design/adrs/README.md]
+touches: [design/adrs/README.md, design/adrs/0220-flai-guard-refuses-every-sub-agent-and-every-session-flai-serve-started-the.md]
+usage:
+  source: log
+  seconds: 48
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 9
+      output: 2664
+      cache_read: 456757
+      cache_write: 22227
+      cost: 0.2871
 ---
 # T-2184 An ADR records that flai guard refuses every served session and sub-agent the flai serve sub-commands that write the host configuration or turn a host action on or off
 

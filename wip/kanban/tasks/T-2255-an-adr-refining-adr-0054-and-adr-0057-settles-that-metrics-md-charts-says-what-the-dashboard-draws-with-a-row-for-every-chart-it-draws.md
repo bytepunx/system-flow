@@ -3,15 +3,36 @@ id: T-2255
 type: task
 nature: remediation
 title: "An ADR refining ADR-0054 and ADR-0057 settles that metrics.md § Charts says what the dashboard draws, with a row for every chart it draws"
-status: backlog
+status: done
 parent: S-0527
 owner: alex
 created: 2026-10-28T15:00:28Z
-updated: 2026-10-28T15:00:28Z
-transitions: []
+updated: 2026-10-30T00:12:45Z
+transitions:
+  - to: ready
+    at: 2026-10-30T00:12:06Z
+    by: agent-S-0527
+  - to: in-progress
+    at: 2026-10-30T00:12:07Z
+    by: agent-S-0527
+  - to: done
+    at: 2026-10-30T00:12:45Z
+    by: agent-S-0527
 stream: S-0527
 tags: [design, adr]
 touches: [design/adrs/README.md]
+usage:
+  source: log
+  seconds: 38
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 13
+      output: 2798
+      cache_read: 1005846
+      cache_write: 30903
+      cost: 0.5044
 ---
 # T-2255 An ADR refining ADR-0054 and ADR-0057 settles that metrics.md § Charts says what the dashboard draws, with a row for every chart it draws
 

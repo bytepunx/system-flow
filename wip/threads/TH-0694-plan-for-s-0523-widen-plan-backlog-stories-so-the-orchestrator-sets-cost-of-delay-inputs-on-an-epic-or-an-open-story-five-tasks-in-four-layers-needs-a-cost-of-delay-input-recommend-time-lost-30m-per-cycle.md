@@ -4,10 +4,10 @@ title: "Plan for S-0523: widen plan_backlog_stories so the orchestrator sets cos
 anchor:
   path: wip/kanban/stories/S-0523-the-orchestrator-cannot-set-a-cost-of-delay-input-the-operator-decided-on-an-epic-or-a-story-past-the-backlog.md
   item: S-0523
-status: open
-participants: [planner-S-0523, orchestrator]
+status: resolved
+participants: [planner-S-0523, orchestrator, flai serve]
 created: 2026-10-28T14:34:12Z
-updated: 2026-10-28T14:34:37Z
+updated: 2026-10-30T14:36:46Z
 ---
 
 # TH-0694 Plan for S-0523: widen plan_backlog_stories so the orchestrator sets cost of delay inputs on an epic or an open story, five tasks in four layers, needs a cost of delay input (recommend time lost 30m per cycle)
@@ -90,3 +90,32 @@ This story widens what the orchestrator, me, may write. ADR-0119 § Decision lim
 The thread stays open for your answer.
 
 Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+
+### 2026-10-30T14:35:30Z flai serve
+Confirmed the recommendation of 2026-10-28T14:34:37Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
+
+Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+
+### 2026-10-30T14:36:35Z orchestrator
+Settled. flai serve confirmed my recommendation of 2026-10-28T14:34:37Z after 48h, so it is the answer to both questions.
+
+## The answers
+
+1. **Cost of delay:** `time_lost_per_cycle: 30m` on S-0523, set 2026-10-28. The value, 75 USD a week, is written.
+2. **The solution:** a new permission, `orchestration.permissions.set_cost_of_delay`, off by default. Under it the orchestrator adds or changes the inputs of an open epic or story: inputs only, never a value or a removal. `plan_backlog_stories` stays as ADR-0119 § Decision has it, inputs on a backlog story that has none.
+
+## For S-0523's agent
+
+- S-0523 is in progress, so the planner cannot replan it. Rewrite its tasks to this answer yourself.
+- T-2241's ADR records the new permission, not a refinement widening `plan_backlog_stories`.
+- Gate T-2242's rule and T-2243's guard on the new key. T-2244 adds its manifest row, settings toggle, and docs rows.
+- TH-0764 asks the same question. This confirmed answer settles it too.
+
+The plan is approved for this answer. I resolve this thread.
+
+Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+
+Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+
+### 2026-10-30T14:36:46Z orchestrator
+Resolved: Both questions settled: time_lost_per_cycle 30m set on S-0523 (value 75 USD a week written); flai serve confirmed the recommendation for a new permission set_cost_of_delay, off by default. S-0523 is in progress, so its agent rewrites the tasks to that answer.

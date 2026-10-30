@@ -3,10 +3,10 @@ id: S-0512
 type: story
 nature: remediation
 title: search.test.ts 'lists ADRs with the supersession chain' fails on main since ADR-0202's status became rejected, a status outside the four the test and the ADR template name
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-26T16:03:03Z
-updated: 2026-10-30T14:10:44Z
+updated: 2026-10-30T14:40:03Z
 transitions:
   - to: ready
     at: 2026-10-30T14:09:30Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-30T14:09:35Z
     by: agent-S-0512
+  - to: review
+    at: 2026-10-30T14:21:20Z
+    by: agent-S-0512
+  - to: done
+    at: 2026-10-30T14:40:03Z
+    by: orchestrator
 tags: [cli, template, dashboard]
 topics: [cli, template, dashboard]
 touches: [flai/internal/adr/adr.go, flai/internal/check/check.go, flai/internal/check/check_test.go, flai/internal/docedit/docedit.go, flai/internal/docedit/docedit_test.go, design/adrs/0000-template.md, template/root/design/adrs/0000-template.md, template/CHANGELOG.md, template/template.yaml, design/system/documentation-standard.md, design/system/flai-cli.md, docs/users/flai.md, flaiover/src/lib/server/search.test.ts, design/adrs/README.md, design/issues/I-0208-search-test-ts-lists-adrs-with-the-supersession-chain-fails-on-main-since-adr-0202-s-status-became-rejected-a-status-outside-the-four-the-test-and-the-adr-template-name.md, design/issues/summary.md, design/adrs/0223-an-adr-s-status-is-one-of-proposed-accepted-superseded-deprecated-or-rejected-a.md]
@@ -23,20 +29,38 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 714
+  priced_by: harness
+  turns:
+    - day: 2026-10-30
+      ceremony: 1
+      hand_edits: 2
+      work: 38
+  models:
+    - model: claude-opus-5-5
+      input: 176
+      output: 38536
+      cache_read: 8647175
+      cache_write: 379893
+      cost: 5.066
   strategic:
     - kind: orchestrator
-      seconds: 530
+      seconds: 577
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 84
-          output: 1045
-          cache_read: 7253825
-          cache_write: 96243
-          cost: 1.6167
+          input: 98
+          output: 1171
+          cache_read: 7686554
+          cache_write: 161792
+          cost: 1.7281
+        - model: claude-sonnet-5-5
+          input: 4
+          output: 40
+          cache_read: 13341
+          cache_write: 32948
+          cost: 0.032
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -62,8 +86,8 @@ finalized:
 This story remediates [I-0208](../../../design/issues/I-0208-search-test-ts-lists-adrs-with-the-supersession-chain-fails-on-main-since-adr-0202-s-status-became-rejected-a-status-outside-the-four-the-test-and-the-adr-template-name.md), "search.test.ts 'lists ADRs with the supersession chain' fails on main since ADR-0202's status became rejected, a status outside the four the test and the ADR template name". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0208 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0208 is closed with `flai issue close I-0208 --reason` saying what fixed it
+- [x] The cause I-0208 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0208 is closed with `flai issue close I-0208 --reason` saying what fixed it
 
 ## Tasks
 - T-2189 Record the ADR: rejected is the fifth ADR status, immutable once set, and flai check validates an ADR's status
@@ -107,3 +131,14 @@ No folder touch is kept. The new ADR's file cannot be named until `flai adr new`
 Forecast: `flai forecast` gave 5m before the touches were written, from size 2 (2 criteria, 0 touches) in the small band. Run again with 16 touches the size is 18, the large band; the figure written is that run's, with the reason recorded beside it below if adjusted.
 
 Cost of delay: 12.50 USD a week stands, from the operator's input of 5m lost per 168h cycle at 150 USD an hour; the immediate failure is fixed on main by S-0501, and the input is the issue's, not the planner's to change.
+
+### Accepted by the orchestrator
+
+- Verified: a061ac9711b34034acce7de25ef1f827a5bd0b86
+- Batch: 20261030-142242
+- Enqueued verified: a061ac9711b34034acce7de25ef1f827a5bd0b86
+- At: 2026-10-30T14:40:03Z
+
+Verdict: pass
+- 1: flai/internal/check/check.go, flai/internal/check/check_test.go, flai/internal/docedit/docedit.go, flai/internal/docedit/docedit_test.go, flai/internal/adr/adr.go, design/adrs/0000-template.md, template/root/design/adrs/0000-template.md, flaiover/src/lib/server/search.test.ts, design/adrs/0223-an-adr-s-status-is-one-of-proposed-accepted-superseded-deprecated-or-rejected-a.md, design/adrs/README.md
+- 2: design/issues/I-0208-search-test-ts-lists-adrs-with-the-supersession-chain-fails-on-main-since-adr-0202-s-status-became-rejected-a-status-outside-the-four-the-test-and-the-adr-template-name.md, design/issues/summary.md

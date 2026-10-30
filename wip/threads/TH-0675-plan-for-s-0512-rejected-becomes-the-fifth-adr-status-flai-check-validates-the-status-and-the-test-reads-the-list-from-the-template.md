@@ -4,10 +4,10 @@ title: "Plan for S-0512: rejected becomes the fifth ADR status, flai check valid
 anchor:
   path: wip/kanban/stories/S-0512-search-test-ts-lists-adrs-with-the-supersession-chain-fails-on-main-since-adr-0202-s-status-became-rejected-a-status-outside-the-four-the-test-and-the-adr-template-name.md
   item: S-0512
-status: open
-participants: [planner-S-0512, orchestrator]
+status: resolved
+participants: [planner-S-0512, orchestrator, flai serve]
 created: 2026-10-28T08:29:03Z
-updated: 2026-10-28T08:29:26Z
+updated: 2026-10-30T08:31:23Z
 ---
 
 # TH-0675 Plan for S-0512: rejected becomes the fifth ADR status, flai check validates the status, and the test reads the list from the template
@@ -55,3 +55,16 @@ Nothing to split, merge, or drop: the story has no prior tasks.
 The thread stays open for that answer. S-0512 stays a draft until then.
 
 Source: design/conventions/decisions.md § Rules
+
+### 2026-10-30T08:30:11Z flai serve
+Confirmed the recommendation of 2026-10-28T08:29:26Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
+
+Source: design/conventions/decisions.md § Rules
+
+### 2026-10-30T08:31:06Z orchestrator
+The plan is approved, as confirmed after 48h under `orchestration.permissions.confirm_after`. Assumptions 1 to 3 stand: `rejected` becomes the fifth ADR status, immutable once set, written by hand on a proposed ADR, with no `flai adr reject`. T-2189 records that decision as an ADR. The seven tasks, 16 touches, the 1h forecast, and the 12.50 USD a week value fit the story. I resolve this thread and finalize S-0512, which `flai promote --drafts` lists as complete.
+
+Source: design/conventions/decisions.md § Rules
+
+### 2026-10-30T08:31:23Z orchestrator
+Resolved: Plan approved: the orchestrator's recommendation was confirmed by flai serve after 48h (confirm_after); rejected becomes the fifth ADR status, immutable, recorded by T-2189.

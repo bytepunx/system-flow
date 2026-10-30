@@ -3,16 +3,19 @@ id: S-0527
 type: story
 nature: remediation
 title: "metrics.md § Charts says Burn-up draws a forecast line from throughput and Cycle Time filters by nature, but neither chart does"
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-28T12:54:11Z
-updated: 2026-10-30T00:10:57Z
+updated: 2026-10-30T00:19:10Z
 transitions:
   - to: ready
     at: 2026-10-30T00:10:21Z
     by: orchestrator
   - to: in-progress
     at: 2026-10-30T00:10:57Z
+    by: agent-S-0527
+  - to: review
+    at: 2026-10-30T00:19:10Z
     by: agent-S-0527
 tags: [design, metrics, flaiover]
 topics: [dashboard]
@@ -23,9 +26,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 506
+  priced_by: harness
+  turns:
+    - day: 2026-10-30
+      hand_edits: 1
+      work: 42
+  models:
+    - model: claude-opus-5-5
+      input: 96
+      output: 20355
+      cache_read: 7318028
+      cache_write: 224831
+      cost: 3.6697
   strategic:
     - kind: planner
       seconds: 517
@@ -44,15 +58,21 @@ usage:
           cache_write: 121601
           cost: 0.1134
     - kind: orchestrator
-      seconds: 1096
+      seconds: 1160
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 56
-          output: 576
-          cache_read: 13747486
-          cache_write: 107421
-          cost: 3.0427
+          input: 70
+          output: 675
+          cache_read: 14144759
+          cache_write: 166450
+          cost: 3.1442
+        - model: claude-sonnet-5-5
+          input: 8
+          output: 54
+          cache_read: 87000
+          cache_write: 43274
+          cost: 0.0898
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -78,8 +98,8 @@ finalized:
 This story remediates [I-0193](../../../design/issues/I-0193-metrics-md-charts-says-burn-up-draws-a-forecast-line-from-throughput-and-cycle-time-filters-by-nature-but-neither-chart-does.md), "metrics.md § Charts says Burn-up draws a forecast line from throughput and Cycle Time filters by nature, but neither chart does". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0193 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0193 is closed with `flai issue close I-0193 --reason` saying what fixed it
+- [x] The cause I-0193 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0193 is closed with `flai issue close I-0193 --reason` saying what fixed it
 
 ## Tasks
 - T-2255 An ADR refining ADR-0054 and ADR-0057 settles that metrics.md § Charts says what the dashboard draws, with a row for every chart it draws

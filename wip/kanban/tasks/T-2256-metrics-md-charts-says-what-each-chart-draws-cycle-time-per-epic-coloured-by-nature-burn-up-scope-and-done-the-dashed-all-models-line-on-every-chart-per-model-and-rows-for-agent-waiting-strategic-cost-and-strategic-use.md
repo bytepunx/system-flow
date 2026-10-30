@@ -3,16 +3,37 @@ id: T-2256
 type: task
 nature: remediation
 title: "metrics.md § Charts says what each chart draws: Cycle Time per epic coloured by nature, Burn-up scope and done, the dashed all-models line on every chart per model, and rows for Agent Waiting, Strategic Cost, and Strategic Use"
-status: backlog
+status: done
 parent: S-0527
 owner: alex
 created: 2026-10-28T15:00:51Z
-updated: 2026-10-28T15:01:36Z
-transitions: []
+updated: 2026-10-30T00:13:40Z
+transitions:
+  - to: ready
+    at: 2026-10-30T00:12:55Z
+    by: agent-S-0527
+  - to: in-progress
+    at: 2026-10-30T00:12:56Z
+    by: agent-S-0527
+  - to: done
+    at: 2026-10-30T00:13:40Z
+    by: agent-S-0527
 stream: S-0527
 tags: [design, metrics]
 touches: [design/system/metrics.md]
 after: [T-2255]
+usage:
+  source: log
+  seconds: 44
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 15
+      output: 3103
+      cache_read: 1115486
+      cache_write: 34271
+      cost: 0.5594
 ---
 # T-2256 metrics.md § Charts says what each chart draws: Cycle Time per epic coloured by nature, Burn-up scope and done, the dashed all-models line on every chart per model, and rows for Agent Waiting, Strategic Cost, and Strategic Use
 

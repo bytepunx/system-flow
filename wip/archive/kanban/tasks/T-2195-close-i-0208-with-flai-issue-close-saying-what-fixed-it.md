@@ -3,16 +3,37 @@ id: T-2195
 type: task
 nature: remediation
 title: Close I-0208 with flai issue close saying what fixed it
-status: backlog
+status: done
 parent: S-0512
 owner: alex
 created: 2026-10-28T08:28:41Z
-updated: 2026-10-28T08:28:41Z
-transitions: []
+updated: 2026-10-30T14:17:28Z
+transitions:
+  - to: ready
+    at: 2026-10-30T14:17:16Z
+    by: agent-S-0512
+  - to: in-progress
+    at: 2026-10-30T14:17:17Z
+    by: agent-S-0512
+  - to: done
+    at: 2026-10-30T14:17:28Z
+    by: agent-S-0512
 stream: S-0512
 tags: [cli]
 touches: [design/issues/I-0208-search-test-ts-lists-adrs-with-the-supersession-chain-fails-on-main-since-adr-0202-s-status-became-rejected-a-status-outside-the-four-the-test-and-the-adr-template-name.md, design/issues/summary.md]
 after: [T-2192, T-2193, T-2194]
+usage:
+  source: log
+  seconds: 11
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 9
+      output: 1925
+      cache_read: 431886
+      cache_write: 18974
+      cost: 0.253
 ---
 # T-2195 Close I-0208 with flai issue close saying what fixed it
 

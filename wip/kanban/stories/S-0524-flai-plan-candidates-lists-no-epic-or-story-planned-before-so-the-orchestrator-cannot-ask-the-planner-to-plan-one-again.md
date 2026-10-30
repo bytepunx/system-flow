@@ -3,26 +3,42 @@ id: S-0524
 type: story
 nature: improvement
 title: flai plan --candidates lists no epic or story planned before, so the orchestrator cannot ask the planner to plan one again
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-28T12:53:50Z
-updated: 2026-10-30T00:12:59Z
+updated: 2026-10-30T14:35:46Z
 transitions:
   - to: ready
     at: 2026-10-30T00:10:24Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-10-30T13:06:40Z
+    by: agent-S-0524
 tags: [flai, orchestrator, planner]
 topics: [orchestration, planning]
-touches: [design/adrs, design/adrs/README.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, flai/internal/workitem/plancandidates.go, flai/internal/workitem/plancandidates_test.go, flai/cmd/plan.go, flai/cmd/plan_candidates_test.go, flai/cmd/plan_orchestrate_test.go, flai/cmd/orchestrate_permissions_test.go, flai/internal/mcpserver/plan.go, flai/internal/mcpserver/plan_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/issues/I-0188-flai-plan-candidates-lists-no-epic-or-story-planned-before-so-the-orchestrator-cannot-ask-the-planner-to-plan-one-again.md, design/issues/summary.md]
+touches: [design/adrs, design/adrs/README.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, flai/internal/workitem/plancandidates.go, flai/internal/workitem/plancandidates_test.go, flai/cmd/plan.go, flai/cmd/plan_candidates_test.go, flai/cmd/plan_orchestrate_test.go, flai/cmd/orchestrate_permissions_test.go, flai/internal/mcpserver/plan.go, flai/internal/mcpserver/plan_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/issues/I-0188-flai-plan-candidates-lists-no-epic-or-story-planned-before-so-the-orchestrator-cannot-ask-the-planner-to-plan-one-again.md, design/issues/summary.md, design/issues/I-0226-two-flai-serve-tests-check-before-what-they-wait-for-has-happened-and-fail-a-loaded-merge-queue-batch-on-timing.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 4766
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-30
+      ceremony: 2
+      hand_edits: 3
+      work: 45
+  models:
+    - model: claude-opus-5-5
+      input: 310
+      output: 1532
+      cache_read: 19310519
+      cache_write: 1220451
+      cost: 7.1074
   strategic:
     - kind: orchestrator
       seconds: 158
@@ -59,8 +75,8 @@ finalized:
 This story remediates [I-0188](../../../design/issues/I-0188-flai-plan-candidates-lists-no-epic-or-story-planned-before-so-the-orchestrator-cannot-ask-the-planner-to-plan-one-again.md), "flai plan --candidates lists no epic or story planned before, so the orchestrator cannot ask the planner to plan one again". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0188 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0188 is closed with `flai issue close I-0188 --reason` saying what fixed it
+- [x] The cause I-0188 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0188 is closed with `flai issue close I-0188 --reason` saying what fixed it
 
 ## Tasks
 - T-2246 An ADR refining ADR-0119 lets the orchestrator ask the planner again for an epic or story planned before when the operator has written on it since its newest plan

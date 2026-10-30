@@ -3,16 +3,37 @@ id: T-2250
 type: task
 nature: remediation
 title: I-0188 is closed with the reason naming the ADR and the third kind of candidate
-status: backlog
+status: done
 parent: S-0524
 owner: alex
 created: 2026-10-28T14:42:56Z
-updated: 2026-10-28T14:42:56Z
-transitions: []
+updated: 2026-10-30T14:26:06Z
+transitions:
+  - to: ready
+    at: 2026-10-30T14:25:55Z
+    by: agent-S-0524
+  - to: in-progress
+    at: 2026-10-30T14:25:56Z
+    by: agent-S-0524
+  - to: done
+    at: 2026-10-30T14:26:06Z
+    by: agent-S-0524
 stream: S-0524
 tags: [flai, issues]
 touches: [design/issues/I-0188-flai-plan-candidates-lists-no-epic-or-story-planned-before-so-the-orchestrator-cannot-ask-the-planner-to-plan-one-again.md, design/issues/summary.md]
 after: [T-2249]
+usage:
+  source: log
+  seconds: 5
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 2
+      output: 24
+      cache_read: 313718
+      cache_write: 911
+      cost: 0.1089
 ---
 # T-2250 I-0188 is closed with the reason naming the ADR and the third kind of candidate
 

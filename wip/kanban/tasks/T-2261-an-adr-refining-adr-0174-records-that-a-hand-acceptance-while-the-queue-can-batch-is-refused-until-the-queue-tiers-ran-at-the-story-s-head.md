@@ -3,15 +3,36 @@ id: T-2261
 type: task
 nature: remediation
 title: An ADR refining ADR-0174 records that a hand acceptance while the queue can batch is refused until the queue tiers ran at the story's head
-status: backlog
+status: done
 parent: S-0529
 owner: alex
 created: 2026-10-28T18:16:33Z
-updated: 2026-10-28T18:16:33Z
-transitions: []
+updated: 2026-10-30T00:23:21Z
+transitions:
+  - to: ready
+    at: 2026-10-30T00:18:02Z
+    by: agent-S-0529
+  - to: in-progress
+    at: 2026-10-30T00:18:03Z
+    by: agent-S-0529
+  - to: done
+    at: 2026-10-30T00:23:21Z
+    by: agent-S-0529
 stream: S-0529
 tags: [cli]
-touches: [design/adrs/README.md]
+touches: [design/adrs/README.md, design/adrs/0221-while-the-merge-queue-can-batch-a-hand-acceptance-is-refused-until-the-queue.md]
+usage:
+  source: log
+  seconds: 318
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 2010
+      cache_read: 421131
+      cache_write: 17712
+      cost: 0.2298
 ---
 # T-2261 An ADR refining ADR-0174 records that a hand acceptance while the queue can batch is refused until the queue tiers ran at the story's head
 

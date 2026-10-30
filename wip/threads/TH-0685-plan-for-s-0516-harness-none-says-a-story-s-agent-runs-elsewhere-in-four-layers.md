@@ -4,10 +4,10 @@ title: "Plan for S-0516: harness none says a story's agent runs elsewhere, in fo
 anchor:
   path: wip/kanban/stories/S-0516-flai-serve-starts-a-host-agent-for-a-story-meant-to-be-worked-in-a-container-since-nothing-on-a-story-or-the-host-says-its-agent-runs-elsewhere.md
   item: S-0516
-status: open
-participants: [planner-S-0516, orchestrator]
+status: resolved
+participants: [planner-S-0516, orchestrator, flai serve]
 created: 2026-10-28T13:14:54Z
-updated: 2026-10-28T13:15:10Z
+updated: 2026-10-30T13:16:22Z
 ---
 
 # TH-0685 Plan for S-0516: harness none says a story's agent runs elsewhere, in four layers
@@ -64,3 +64,16 @@ A reserved value that `flai serve`, `flai serve agent`, and `harness.For` all ho
 The thread stays open for your answer. S-0516 is still a draft, so finalizing it is your call too.
 
 Source: design/conventions/decisions.md § Rules
+
+### 2026-10-30T13:15:12Z flai serve
+Confirmed the recommendation of 2026-10-28T13:15:10Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
+
+Source: design/conventions/decisions.md § Rules
+
+### 2026-10-30T13:16:06Z orchestrator
+Plan approved, as the confirmed recommendation says. The reserved harness name `none` stands, and T-2213 records it as an ADR. The five tasks in four layers, the 17 file touches and `design/adrs`, the 1h forecast, and the 40 USD a week value stay as planned. `flai promote --drafts` lists S-0516 as complete, so I finalize it now and resolve this thread.
+
+Source: design/conventions/decisions.md § Rules
+
+### 2026-10-30T13:16:22Z orchestrator
+Resolved: Plan approved by the recommendation flai serve confirmed after 48h (confirm_after); S-0516 finalized.

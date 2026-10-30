@@ -4,10 +4,10 @@ title: "Plan for S-0520: the close-out's flai verify runs inside the container w
 anchor:
   path: wip/kanban/stories/S-0520-scripts-close-out-sh-stops-at-its-first-step-inside-the-agent-container-since-scripts-flai-sh-builds-flai-with-go-which-the-image-lacks.md
   item: S-0520
-status: open
-participants: [planner-S-0520, orchestrator]
+status: resolved
+participants: [planner-S-0520, orchestrator, flai serve]
 created: 2026-10-28T13:58:40Z
-updated: 2026-10-28T14:07:34Z
+updated: 2026-10-30T14:12:10Z
 ---
 
 # TH-0691 Plan for S-0520: the close-out's flai verify runs inside the container with the main checkout's wip, manifest, and verify folder mounted, between S-0518's flai.sh fallback and S-0510's layer
@@ -68,3 +68,23 @@ ADR-0203 § Decision lists the container's mounts and excludes "no main checkout
 The thread stays open for your answer. S-0520 stays a draft.
 
 Source: design/adrs/0203-flai-may-run-a-story-s-agent-in-a-container-from-a-baseline-image-it-builds.md § Decision
+
+### 2026-10-30T14:07:52Z flai serve
+Confirmed the recommendation of 2026-10-28T14:07:34Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
+
+Source: design/adrs/0203-flai-may-run-a-story-s-agent-in-a-container-from-a-baseline-image-it-builds.md § Decision
+
+### 2026-10-30T14:11:58Z orchestrator
+**Approved.** flai serve confirmed the recommendation after 48h, so it is the answer: S-0520 is kept (assumption 1), and the plan stands as written.
+
+- **Tasks:** T-2232 (the ADR refining ADR-0203) first; T-2233, T-2234, and T-2235 after it, sharing no path; T-2236 last, with the check inside the image and the closing of I-0218.
+- **Mounts:** selective (assumption 2): the main checkout's `wip/` and `system-flow.yaml` read-only, `.flai-cache/verify/` read-write. The main checkout is not mounted whole.
+- **Commit step:** stays outside this story (assumption 4). `.git/objects` stays read-only, and the agent commits through `task_done`.
+- **Figures:** 17 touches, forecast 1h15m, value 25 USD a week from `flai cod`, `after` S-0517, S-0518, and S-0521. They fit the story.
+
+`flai promote --drafts` lists S-0520 as complete. I finalize it next under `finalize_drafts`. I resolve this thread.
+
+Source: design/adrs/0203-flai-may-run-a-story-s-agent-in-a-container-from-a-baseline-image-it-builds.md § Decision
+
+### 2026-10-30T14:12:10Z orchestrator
+Resolved: Plan approved: flai serve confirmed the orchestrator's recommendation after 48h (keep S-0520, selective mounts, ADR refining ADR-0203).

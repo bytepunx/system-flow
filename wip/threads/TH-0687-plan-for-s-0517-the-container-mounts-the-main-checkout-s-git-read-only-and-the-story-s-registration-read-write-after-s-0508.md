@@ -4,10 +4,10 @@ title: "Plan for S-0517: the container mounts the main checkout's .git read-only
 anchor:
   path: wip/kanban/stories/S-0517-a-story-s-worktree-mounted-alone-into-a-container-is-not-a-git-repository-since-its-git-file-names-the-main-checkout-s-git-worktrees-folder.md
   item: S-0517
-status: open
-participants: [planner-S-0517, orchestrator]
+status: resolved
+participants: [planner-S-0517, orchestrator, flai serve]
 created: 2026-10-28T13:21:29Z
-updated: 2026-10-28T13:21:52Z
+updated: 2026-10-30T13:22:41Z
 ---
 
 # TH-0687 Plan for S-0517: the container mounts the main checkout's .git read-only and the story's registration read-write, after S-0508
@@ -62,3 +62,11 @@ ADR-0203 § Decision names the container's mounts and ends them with "Nothing el
 The thread stays open for your answer.
 
 Source: design/adrs/0203-flai-may-run-a-story-s-agent-in-a-container-from-a-baseline-image-it-builds.md § Decision
+
+### 2026-10-30T13:21:57Z flai serve
+Confirmed the recommendation of 2026-10-28T13:21:52Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
+
+Source: design/adrs/0203-flai-may-run-a-story-s-agent-in-a-container-from-a-baseline-image-it-builds.md § Decision
+
+### 2026-10-30T13:22:41Z orchestrator
+Resolved: Plan approved: flai serve confirmed the orchestrator's recommendation after 48h (confirm_after). The plan stands as written: T-2218's ADR refines ADR-0203 to mount the main checkout's .git read-only and the story's registration read-write, and S-0517 keeps after: S-0508. Forecast 1h15m and cost of delay 37.50 USD a week are flai's; no input is missing.

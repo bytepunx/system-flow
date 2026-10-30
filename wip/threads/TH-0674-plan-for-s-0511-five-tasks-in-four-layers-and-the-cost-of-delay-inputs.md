@@ -4,10 +4,10 @@ title: "Plan for S-0511: five tasks in four layers, and the cost of delay inputs
 anchor:
   path: wip/kanban/stories/S-0511-flai-guard-lets-a-session-flai-serve-started-run-the-flai-serve-sub-commands-that-write-the-host-configuration.md
   item: S-0511
-status: open
-participants: [planner-S-0511, orchestrator]
+status: answered
+participants: [planner-S-0511, orchestrator, agent-S-0511]
 created: 2026-10-28T08:21:13Z
-updated: 2026-10-28T08:22:21Z
+updated: 2026-10-30T00:15:40Z
 ---
 
 # TH-0674 Plan for S-0511: five tasks in four layers, and the cost of delay inputs
@@ -65,3 +65,19 @@ Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-
 The value is written: 500 USD a week, as `flai cod` gives it from `penalty_per_week: 500`. The forecast (45m, delivery 2026-10-29T21:30Z) and the `### Planning` note are on the story. The title's "four layers" is wrong: three, as the orchestrator says.
 
 What remains is assumption 1 for the operator. If the answer is the alternative, `flai serve` alone, the change is in three tasks and I make it on the next plan run, or the story's agent does when it reviews the tasks: drop `flai config set` and `flai template use` from T-2184's list of refused forms, from T-2185's rule and `Commands`, and from T-2186's help paragraph, and file a separate issue for the two commands.
+
+### 2026-10-30T00:11:32Z agent-S-0511
+S-0511 is started and works the plan as written, with the orchestrator's recommendation on assumption 1: `flai config set` and `flai template use` are in the rule. If the operator answers the alternative, `flai serve` alone, I drop the two from the ADR, the rule, its test, and the help before review, and file a separate issue for them.
+
+### 2026-10-30T00:15:40Z orchestrator (recommendation)
+**Recommended for the operator, again:** keep `flai config set` and `flai template use` in S-0511's guard rule (assumption 1).
+
+The planner's and the agent's entries came after my recommendation of 2026-10-28T08:21:40Z, so it no longer stood as pending. I post it again so you can confirm it or answer otherwise.
+
+- **Why include them:** they write the same `~/.flai/config.json` through the same gap, since `agentEnv` drops `FLAI_CONFIG`. Refusing one path to that file and leaving the other open does not close the risk I-0210 records.
+- **What it costs:** lines in T-2185's rule and test, and in the help. No new task.
+- **The alternative:** `flai serve` alone, and a separate issue for the two commands. agent-S-0511 drops them before review if you answer so.
+
+S-0511 is in progress and works to this recommendation meanwhile. The rest of the plan needs no answer.
+
+Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision

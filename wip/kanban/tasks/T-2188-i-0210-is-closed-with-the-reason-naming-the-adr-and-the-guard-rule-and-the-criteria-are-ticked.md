@@ -3,16 +3,37 @@ id: T-2188
 type: task
 nature: remediation
 title: I-0210 is closed with the reason naming the ADR and the guard rule, and the criteria are ticked
-status: backlog
+status: done
 parent: S-0511
 owner: alex
 created: 2026-10-28T08:20:34Z
-updated: 2026-10-28T08:20:34Z
-transitions: []
+updated: 2026-10-30T00:25:34Z
+transitions:
+  - to: ready
+    at: 2026-10-30T00:25:25Z
+    by: agent-S-0511
+  - to: in-progress
+    at: 2026-10-30T00:25:26Z
+    by: agent-S-0511
+  - to: done
+    at: 2026-10-30T00:25:34Z
+    by: agent-S-0511
 stream: S-0511
 tags: [cli, guard, issues]
 touches: [design/issues/I-0210-flai-guard-lets-a-session-flai-serve-started-run-the-flai-serve-sub-commands-that-write-the-host-configuration.md, design/issues/summary.md]
 after: [T-2185, T-2186, T-2187]
+usage:
+  source: log
+  seconds: 8
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 5
+      output: 1285
+      cache_read: 220331
+      cache_write: 10722
+      cost: 0.1385
 ---
 # T-2188 I-0210 is closed with the reason naming the ADR and the guard rule, and the criteria are ticked
 

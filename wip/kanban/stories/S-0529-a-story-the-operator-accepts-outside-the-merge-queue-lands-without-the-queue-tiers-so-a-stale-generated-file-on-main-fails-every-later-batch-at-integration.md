@@ -3,37 +3,55 @@ id: S-0529
 type: story
 nature: remediation
 title: A story the operator accepts outside the merge queue lands without the queue tiers, so a stale generated file on main fails every later batch at integration
-status: ready
+status: review
 owner: alex
 created: 2026-10-28T12:54:24Z
-updated: 2026-10-30T00:13:09Z
+updated: 2026-10-30T01:06:06Z
 transitions:
   - to: ready
     at: 2026-10-30T00:10:24Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-10-30T00:15:24Z
+    by: agent-S-0529
+  - to: review
+    at: 2026-10-30T01:06:06Z
+    by: agent-S-0529
 tags: [cli]
 topics: [orchestration, testing]
-touches: [design/adrs, design/adrs/README.md, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/cmd/accept.go, flai/cmd/verify.go, flai/cmd/accept_queue_tiers_test.go, flai/cmd/move_refused_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/index.md, design/system/workflow.md, design/system/flai-cli.md, design/issues/I-0203-a-story-the-operator-accepts-outside-the-merge-queue-lands-without-the-queue-tiers-so-a-stale-generated-file-on-main-fails-every-later-batch-at-integration.md, design/issues/summary.md]
+touches: [design/adrs, design/adrs/README.md, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/cmd/accept.go, flai/cmd/verify.go, flai/cmd/accept_queue_tiers_test.go, flai/cmd/move_refused_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/index.md, design/system/workflow.md, design/system/flai-cli.md, design/issues/I-0203-a-story-the-operator-accepts-outside-the-merge-queue-lands-without-the-queue-tiers-so-a-stale-generated-file-on-main-fails-every-later-batch-at-integration.md, design/issues/summary.md, docs/operators/settings.md, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/reads.go, flai/internal/hostapi/reads_test.go, flai/internal/preview/orchestrator.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 3057
+  priced_by: harness
+  turns:
+    - day: 2026-10-30
+      ceremony: 4
+      hand_edits: 3
+      work: 50
+  models:
+    - model: claude-opus-5-5
+      input: 356
+      output: 115438
+      cache_read: 24182320
+      cache_write: 1017093
+      cost: 13.1941
   strategic:
     - kind: orchestrator
-      seconds: 187
+      seconds: 223
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 45
-          output: 602
-          cache_read: 4043255
-          cache_write: 71777
-          cost: 0.9042
+          input: 59
+          output: 700
+          cache_read: 4432538
+          cache_write: 123934
+          cost: 1.0025
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -59,8 +77,8 @@ finalized:
 This story remediates [I-0203](../../../design/issues/I-0203-a-story-the-operator-accepts-outside-the-merge-queue-lands-without-the-queue-tiers-so-a-stale-generated-file-on-main-fails-every-later-batch-at-integration.md), "A story the operator accepts outside the merge queue lands without the queue tiers, so a stale generated file on main fails every later batch at integration". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0203 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0203 is closed with `flai issue close I-0203 --reason` saying what fixed it
+- [x] The cause I-0203 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0203 is closed with `flai issue close I-0203 --reason` saying what fixed it
 
 ## Tasks
 - T-2261 An ADR refining ADR-0174 records that a hand acceptance while the queue can batch is refused until the queue tiers ran at the story's head

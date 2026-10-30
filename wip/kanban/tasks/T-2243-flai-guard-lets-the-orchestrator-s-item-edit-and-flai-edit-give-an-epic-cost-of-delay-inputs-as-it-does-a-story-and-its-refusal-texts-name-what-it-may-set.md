@@ -3,16 +3,36 @@ id: T-2243
 type: task
 nature: improvement
 title: flai guard lets the orchestrator's item_edit and flai edit give an epic cost of delay inputs as it does a story, and its refusal texts name what it may set
-status: backlog
+status: done
 parent: S-0523
 owner: alex
 created: 2026-10-28T14:32:11Z
-updated: 2026-10-28T14:32:11Z
-transitions: []
+updated: 2026-10-30T14:03:35Z
+transitions:
+  - to: ready
+    at: 2026-10-30T13:07:23Z
+    by: agent-S-0523
+  - to: in-progress
+    at: 2026-10-30T13:07:24Z
+    by: agent-S-0523
+  - to: done
+    at: 2026-10-30T14:03:35Z
+    by: agent-S-0523
 stream: S-0523
 tags: [flai, guard, orchestrator, cost-of-delay]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/orchestrate_test.go, flai/internal/guard/guard_test.go]
-after: [T-2241]
+usage:
+  source: log
+  seconds: 3371
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 74
+      output: 14929
+      cache_read: 4518908
+      cache_write: 239856
+      cost: 2.6119
 ---
 # T-2243 flai guard lets the orchestrator's item_edit and flai edit give an epic cost of delay inputs as it does a story, and its refusal texts name what it may set
 

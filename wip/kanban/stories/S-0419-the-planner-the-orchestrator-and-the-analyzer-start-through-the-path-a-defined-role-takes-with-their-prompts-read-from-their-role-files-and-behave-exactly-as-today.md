@@ -3,11 +3,11 @@ id: S-0419
 type: story
 nature: improvement
 title: The planner, the orchestrator, and the analyzer start through the path a defined role takes, with their prompts read from their role files, and behave exactly as today
-status: in-progress
+status: review
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:19Z
-updated: 2026-10-30T00:12:18Z
+updated: 2026-10-30T14:06:45Z
 transitions:
   - to: ready
     at: 2026-10-28T13:05:18Z
@@ -21,9 +21,22 @@ transitions:
   - to: in-progress
     at: 2026-10-30T00:10:58Z
     by: agent-S-0419
+  - to: review
+    at: 2026-10-30T14:06:45Z
+    by: agent-S-0419
+blocked:
+  - from: 2026-10-30T00:56:44Z
+    until: 2026-10-30T01:57:41Z
+    reason: awaiting the operator on TH-0760
+  - from: 2026-10-30T13:34:19Z
+    until: 2026-10-30T13:34:19Z
+    reason: awaiting the operator on TH-0760
+  - from: 2026-10-30T13:34:42Z
+    until: 2026-10-30T14:05:54Z
+    reason: awaiting the operator on TH-0760
 tags: [cli, template]
 topics: [cli, planning, orchestration, template]
-touches: [design/conventions/strategic-agents.md, design/workflows/roles/analyzer.md, design/workflows/roles/orchestrator.md, design/workflows/roles/planner.md, design/system/strategic-agents.md, flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/roles/baseline.go, flai/internal/roles/baseline_test.go, flai/internal/roles/baseline/planner.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/roles/baseline/analyzer.md, flai/internal/serve/agents.go, flai/internal/serve/analysis_schedule.go, flai/internal/serve/analyze.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_hold.go, flai/internal/serve/plan.go, flai/internal/serve/replan.go, flai/internal/serve/role_continuous.go, flai/internal/serve/role.go, flai/internal/serve/role_test.go, flai/internal/serve/serve.go, template/CHANGELOG.md, template/root/design/conventions/strategic-agents.md, template/root/design/workflows/roles/analyzer.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/planner.md]
+touches: [design/conventions/strategic-agents.md, design/system/strategic-agents.md, flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/roles/baseline.go, flai/internal/roles/baseline_test.go, flai/internal/roles/baseline/planner.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/roles/baseline/analyzer.md, flai/internal/serve/agents.go, flai/internal/serve/role.go, flai/internal/serve/role_test.go, template/CHANGELOG.md, template/root/design/conventions/strategic-agents.md, flai/internal/check/activity_test.go, flai/internal/check/check_test.go, flai/internal/check/epic_lags_test.go, flai/internal/metrics/testdata/good/design/workflows/roles/analyzer.md, flai/internal/metrics/testdata/good/design/workflows/roles/curator.md, flai/internal/metrics/testdata/good/design/workflows/roles/orchestrator.md, flai/internal/metrics/testdata/good/design/workflows/roles/planner.md, flai/internal/harness/adapters.go, design/system/flai-cli.md, design/system/repository-layout.md, design/workflows/roles/README.md, docs/operators/index.md, docs/users/flai-reference.md, docs/users/flai.md, flai/cmd/check.go, template/root/design/workflows/roles/README.md, design/system/workflow.md, flai/cmd/check_stats_test.go]
 after: [S-0418]
 agent:
   harness: claude-code
@@ -31,9 +44,27 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 5061
+  priced_by: harness
+  turns:
+    - day: 2026-10-30
+      ceremony: 5
+      hand_edits: 3
+      work: 108
+  models:
+    - model: claude-haiku-5-5
+      input: 74
+      output: 31375
+      cache_read: 4568031
+      cache_write: 212627
+      cost: 0.3577
+    - model: claude-opus-5-5
+      input: 382
+      output: 108370
+      cache_read: 38910151
+      cache_write: 1012326
+      cost: 17.0189
   strategic:
     - kind: planner
       seconds: 120
@@ -46,15 +77,21 @@ usage:
           cache_write: 294016
           cost: 1.282
     - kind: orchestrator
-      seconds: 1260
+      seconds: 1457
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 164
-          output: 2034
-          cache_read: 28961227
-          cache_write: 197389
-          cost: 6.4331
+          input: 232
+          output: 2514
+          cache_read: 30771326
+          cache_write: 422270
+          cost: 6.887
+        - model: claude-sonnet-5-5
+          input: 10
+          output: 70
+          cache_read: 144835
+          cache_write: 54514
+          cost: 0.1377
 cost_of_delay:
   value: 48.45
   by: planner-S-0419
@@ -77,16 +114,16 @@ One path serves every role. `serve.Plan`, the orchestrator's launcher, and `serv
 
 ## Acceptance criteria
 
-- [ ] `planPrompt`, `orchestratePrompt`, and `analyzePrompt` are read from the bodies of the three role files, in the template and here, and `flai/internal/harness/harness_test.go` (`TestClaudeCodeStartsThePlanner`, `TheOrchestrator`, `TheAnalyzer`) passes with the same prompt text.
-- [ ] `flai plan`, `plan.run`, the MCP tool `plan`, the replanner, the orchestrator's start, stop, and hold, `flai analyze`, `analyze.run`, and the analysis schedule start their role through the defined-role path; `serve/agents.json` keeps `plans`, `orchestrator`, `analyzer`, `past_orchestrators`, and `past_analyzers` as they are beside `roles`; and the tests under `flai/internal/serve` and `flai/cmd` for the three pass unchanged.
-- [ ] Text a project writes below the marker of `planner.md` reaches the planner's prompt, shown by a test.
-- [ ] A project with no `design/workflows/roles/` runs the three roles from the baseline files embedded in flai, and `flai check` warns `roles.baseline`, naming `flai upgrade`.
-- [ ] `design/system/strategic-agents.md` (How it runs, What it is told, for each role), the convention `strategic-agents.md`, and `template/CHANGELOG.md` say that the three roles are role files run through the same path.
+- [x] The three roles' definition prompts carry their role file's body, its project additions included, from the project's file or the embedded baseline, and `flai/internal/harness/harness_test.go` (`TestClaudeCodeStartsThePlanner`, `TheOrchestrator`, `TheAnalyzer`) passes with the same start prompt text.
+- [x] `flai plan`, `plan.run`, the MCP tool `plan`, the replanner, the orchestrator's start, stop, and hold, `flai analyze`, `analyze.run`, and the analysis schedule start their role through the same start path a defined role takes; `serve/agents.json` keeps `plans`, `orchestrator`, `analyzer`, `past_orchestrators`, and `past_analyzers` as they are beside `roles`; and the tests under `flai/internal/serve` and `flai/cmd` for the three pass unchanged.
+- [x] Text a project writes below the marker of `planner.md` reaches the planner's prompt, shown by a test.
+- [x] A project with no `design/workflows/roles/` runs the three roles from the baseline files embedded in flai, and `flai check` warns `roles.baseline`, naming `flai upgrade`.
+- [x] `design/system/strategic-agents.md` (How it runs, What it is told, for each role), the convention `strategic-agents.md`, and `template/CHANGELOG.md` say that the three roles are role files run through the same path.
 
 ## Tasks
-- T-1753 planPrompt, orchestratePrompt, and analyzePrompt are read from the three role files' bodies, with the harness tests' prompt text unchanged
+- T-1753 The planner's, orchestrator's, and analyzer's definitions carry their role file's body, its additions included, when the harness is given the file
 - T-1754 A project with no design/workflows/roles runs the three roles from baseline files embedded in flai, and flai check warns roles.baseline naming flai upgrade
-- T-1756 serve.Plan and the replanner start the planner through the defined-role path, keeping plans in agents.json, and the text below planner.md's marker reaches its prompt
+- T-1756 Every start of a built-in role goes through startOf with its role file, the project's or the baseline, so the text below planner.md's marker reaches the planner's prompt
 - T-1757 serve.Analyze and the analysis schedule start the analyzer through the defined-role path, keeping analyzer and past_analyzers in agents.json
 - T-1759 The orchestrator's launcher, its stop, start, and hold, runs the orchestrator as the continuous role orchestrator.md defines, keeping orchestrator and past_orchestrators in agents.json
 - T-1761 The design, the convention, and the changelog say the three roles are role files run through the path every role takes
@@ -95,6 +132,8 @@ One path serves every role. `serve.Plan`, the orchestrator's launcher, and `serv
 
 - Drafted by the planner for E-0024. Waits for the trigger story, which gives the path the `continuous` and schedule triggers the orchestrator and the analyzer need.
 - The orchestrator's hold, the replanner's queue, and the analysis scheduler keep their behaviour; this story changes where they start a run, not when.
+
+- **Criteria 1 and 2 reworded (2026-10-30).** The operator confirmed on TH-0760 the orchestrator's recommendation, option A. A role file's body is the definition's prompt, and the start prompts stay in Go (ADR-0207 § 4). Criterion 1 says so, and criterion 2 names the same start path a defined role takes, `startOf`, in place of "the defined-role path". Reworded by agent-S-0419.
 
 ### Planning
 

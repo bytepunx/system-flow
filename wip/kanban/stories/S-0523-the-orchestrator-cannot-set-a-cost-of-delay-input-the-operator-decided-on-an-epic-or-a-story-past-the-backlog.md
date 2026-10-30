@@ -3,14 +3,32 @@ id: S-0523
 type: story
 nature: improvement
 title: The orchestrator cannot set a cost of delay input the operator decided on an epic or a story past the backlog
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-28T12:53:43Z
-updated: 2026-10-30T00:12:55Z
+updated: 2026-10-30T14:26:14Z
 transitions:
   - to: ready
     at: 2026-10-30T00:10:23Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-10-30T13:04:19Z
+    by: agent-S-0523
+blocked:
+  - from: 2026-10-30T14:07:50Z
+    until: 2026-10-30T14:13:30Z
+    reason: awaiting the operator on TH-0764
+  - from: 2026-10-30T14:14:27Z
+    until: 2026-10-30T14:17:08Z
+    reason: awaiting the operator on TH-0764
+  - from: 2026-10-30T14:17:23Z
+    until: 2026-10-30T14:20:17Z
+    reason: awaiting the operator on TH-0764
+  - from: 2026-10-30T14:21:04Z
+    until: 2026-10-30T14:25:42Z
+    reason: awaiting the operator on TH-0764
+  - from: 2026-10-30T14:26:14Z
+    reason: awaiting the operator on TH-0764
 tags: [flai, orchestrator, cost-of-delay, guard]
 topics: [orchestration, planning]
 touches: [design/adrs, design/adrs/README.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/system/project-manifest.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md, docs/operators/settings.md, docs/operators/index.md, flai/internal/manifest/settings.go, flai/internal/guard/guard.go, flai/internal/guard/orchestrate_test.go, flai/internal/guard/guard_test.go, flai/internal/workitem/promotable.go, flai/internal/mcpserver/items_write.go, flai/internal/mcpserver/items_write_test.go, flai/cmd/edit.go, flai/cmd/edit_test.go, flai/cmd/orchestrate_permissions_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/issues/I-0187-the-orchestrator-cannot-set-a-cost-of-delay-input-the-operator-decided-on-an-epic-or-a-story-past-the-backlog.md, design/issues/summary.md]
@@ -20,20 +38,32 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 3925
+  priced_by: harness
+  turns:
+    - day: 2026-10-30
+      ceremony: 1
+      hand_edits: 1
+      work: 62
+  models:
+    - model: claude-opus-5-5
+      input: 316
+      output: 64084
+      cache_read: 19398357
+      cache_write: 1029634
+      cost: 11.2123
   strategic:
     - kind: orchestrator
-      seconds: 622
+      seconds: 688
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 114
-          output: 1888
-          cache_read: 37807309
-          cache_write: 30382
-          cost: 8.3067
+          input: 138
+          output: 2070
+          cache_read: 38404887
+          cache_write: 125564
+          cost: 8.4615
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30m

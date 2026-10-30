@@ -3,16 +3,37 @@ id: T-2263
 type: task
 nature: remediation
 title: flai accept by hand while the queue can batch refuses a story whose queue tiers did not run at its head, lists it as a blocker in --dry-run, and lands it with an override flag
-status: backlog
+status: done
 parent: S-0529
 owner: alex
 created: 2026-10-28T18:17:04Z
-updated: 2026-10-28T18:17:04Z
-transitions: []
+updated: 2026-10-30T00:52:20Z
+transitions:
+  - to: ready
+    at: 2026-10-30T00:23:55Z
+    by: agent-S-0529
+  - to: in-progress
+    at: 2026-10-30T00:23:56Z
+    by: agent-S-0529
+  - to: done
+    at: 2026-10-30T00:52:20Z
+    by: agent-S-0529
 stream: S-0529
 tags: [cli]
-touches: [flai/cmd/accept.go, flai/cmd/verify.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/cmd/accept_queue_tiers_test.go, flai/cmd/move_refused_test.go, docs/users/flai-reference.md]
+touches: [flai/cmd/accept.go, flai/cmd/verify.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/cmd/accept_queue_tiers_test.go, flai/cmd/move_refused_test.go, docs/users/flai-reference.md, docs/operators/settings.md, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/reads.go, flai/internal/hostapi/reads_test.go, flai/internal/preview/orchestrator.go]
 after: [T-2262]
+usage:
+  source: log
+  seconds: 1704
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 168
+      output: 54576
+      cache_read: 11432730
+      cache_write: 480853
+      cost: 6.2378
 ---
 # T-2263 flai accept by hand while the queue can batch refuses a story whose queue tiers did not run at its head, lists it as a blocker in --dry-run, and lands it with an override flag
 

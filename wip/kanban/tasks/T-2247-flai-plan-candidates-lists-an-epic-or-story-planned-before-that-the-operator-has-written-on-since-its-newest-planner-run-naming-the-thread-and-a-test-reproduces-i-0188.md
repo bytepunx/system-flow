@@ -3,15 +3,36 @@ id: T-2247
 type: task
 nature: improvement
 title: flai plan --candidates lists an epic or story planned before that the operator has written on since its newest planner run, naming the thread, and a test reproduces I-0188
-status: backlog
+status: done
 parent: S-0524
 owner: alex
 created: 2026-10-28T14:41:23Z
-updated: 2026-10-28T14:41:23Z
-transitions: []
+updated: 2026-10-30T13:32:44Z
+transitions:
+  - to: ready
+    at: 2026-10-30T13:08:52Z
+    by: agent-S-0524
+  - to: in-progress
+    at: 2026-10-30T13:08:54Z
+    by: agent-S-0524
+  - to: done
+    at: 2026-10-30T13:32:44Z
+    by: agent-S-0524
 stream: S-0524
 tags: [flai, orchestrator, planner]
-touches: [flai/internal/workitem/plancandidates.go, flai/internal/workitem/plancandidates_test.go, flai/cmd/plan.go, flai/cmd/plan_candidates_test.go]
+touches: [flai/internal/workitem/plancandidates.go, flai/internal/workitem/plancandidates_test.go, flai/cmd/plan.go, flai/cmd/plan_candidates_test.go, docs/users/flai-reference.md]
+usage:
+  source: log
+  seconds: 1430
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 68
+      output: 286
+      cache_read: 3947240
+      cache_write: 212354
+      cost: 1.44
 ---
 # T-2247 flai plan --candidates lists an epic or story planned before that the operator has written on since its newest planner run, naming the thread, and a test reproduces I-0188
 

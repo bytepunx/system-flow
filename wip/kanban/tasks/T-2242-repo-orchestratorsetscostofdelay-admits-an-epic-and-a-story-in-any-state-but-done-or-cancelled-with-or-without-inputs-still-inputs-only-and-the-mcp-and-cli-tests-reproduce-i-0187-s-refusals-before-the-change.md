@@ -3,16 +3,36 @@ id: T-2242
 type: task
 nature: improvement
 title: Repo.OrchestratorSetsCostOfDelay admits an epic and a story in any state but done or cancelled, with or without inputs, still inputs only, and the MCP and CLI tests reproduce I-0187's refusals before the change
-status: backlog
+status: done
 parent: S-0523
 owner: alex
 created: 2026-10-28T14:31:58Z
-updated: 2026-10-28T14:31:58Z
-transitions: []
+updated: 2026-10-30T14:03:44Z
+transitions:
+  - to: ready
+    at: 2026-10-30T13:07:20Z
+    by: agent-S-0523
+  - to: in-progress
+    at: 2026-10-30T13:07:22Z
+    by: agent-S-0523
+  - to: done
+    at: 2026-10-30T14:03:44Z
+    by: agent-S-0523
 stream: S-0523
 tags: [flai, orchestrator, cost-of-delay]
 touches: [flai/internal/workitem/promotable.go, flai/internal/mcpserver/items_write.go, flai/internal/mcpserver/items_write_test.go, flai/cmd/edit.go, flai/cmd/edit_test.go, flai/cmd/orchestrate_permissions_test.go]
-after: [T-2241]
+usage:
+  source: log
+  seconds: 3382
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 115
+      output: 23417
+      cache_read: 7088305
+      cache_write: 376236
+      cost: 4.097
 ---
 # T-2242 Repo.OrchestratorSetsCostOfDelay admits an epic and a story in any state but done or cancelled, with or without inputs, still inputs only, and the MCP and CLI tests reproduce I-0187's refusals before the change
 

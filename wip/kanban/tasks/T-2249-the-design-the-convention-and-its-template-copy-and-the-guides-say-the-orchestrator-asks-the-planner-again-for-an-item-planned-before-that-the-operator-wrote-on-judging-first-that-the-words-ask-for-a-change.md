@@ -3,16 +3,37 @@ id: T-2249
 type: task
 nature: improvement
 title: The design, the convention and its template copy, and the guides say the orchestrator asks the planner again for an item planned before that the operator wrote on, judging first that the words ask for a change
-status: backlog
+status: done
 parent: S-0524
 owner: alex
 created: 2026-10-28T14:42:36Z
-updated: 2026-10-28T14:42:36Z
-transitions: []
+updated: 2026-10-30T14:25:32Z
+transitions:
+  - to: ready
+    at: 2026-10-30T14:20:38Z
+    by: agent-S-0524
+  - to: in-progress
+    at: 2026-10-30T14:20:39Z
+    by: agent-S-0524
+  - to: done
+    at: 2026-10-30T14:25:32Z
+    by: agent-S-0524
 stream: S-0524
 tags: [flai, orchestrator, planner, docs]
 touches: [design/system/strategic-agents.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md]
 after: [T-2246, T-2248]
+usage:
+  source: log
+  seconds: 293
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 66
+      output: 337
+      cache_read: 3804505
+      cache_write: 133372
+      cost: 1.3632
 ---
 # T-2249 The design, the convention and its template copy, and the guides say the orchestrator asks the planner again for an item planned before that the operator wrote on, judging first that the words ask for a change
 

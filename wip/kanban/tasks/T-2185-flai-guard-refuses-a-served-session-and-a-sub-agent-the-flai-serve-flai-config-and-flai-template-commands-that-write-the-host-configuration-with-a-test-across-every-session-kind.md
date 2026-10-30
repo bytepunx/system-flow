@@ -3,16 +3,37 @@ id: T-2185
 type: task
 nature: remediation
 title: flai guard refuses a served session and a sub-agent the flai serve, flai config, and flai template commands that write the host configuration, with a test across every session kind
-status: backlog
+status: done
 parent: S-0511
 owner: alex
 created: 2026-10-28T08:19:48Z
-updated: 2026-10-28T08:19:48Z
-transitions: []
+updated: 2026-10-30T00:24:00Z
+transitions:
+  - to: ready
+    at: 2026-10-30T00:13:46Z
+    by: agent-S-0511
+  - to: in-progress
+    at: 2026-10-30T00:13:47Z
+    by: agent-S-0511
+  - to: done
+    at: 2026-10-30T00:24:00Z
+    by: agent-S-0511
 stream: S-0511
 tags: [cli, guard]
 touches: [flai/internal/guard/hostconfig.go, flai/internal/guard/hostconfig_test.go, flai/internal/guard/call.go, flai/internal/guard/guard.go]
 after: [T-2184]
+usage:
+  source: log
+  seconds: 613
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 47
+      output: 13320
+      cache_read: 2283632
+      cache_write: 111126
+      cost: 1.4356
 ---
 # T-2185 flai guard refuses a served session and a sub-agent the flai serve, flai config, and flai template commands that write the host configuration, with a test across every session kind
 

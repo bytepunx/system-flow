@@ -3,16 +3,37 @@ id: T-2257
 type: task
 nature: remediation
 title: "explain.test.ts holds every chart kind to a row in metrics.md § Charts under its catalog title, which reproduces I-0193's missing Strategic Use row"
-status: backlog
+status: done
 parent: S-0527
 owner: alex
 created: 2026-10-28T15:01:15Z
-updated: 2026-10-28T15:01:15Z
-transitions: []
+updated: 2026-10-30T00:15:20Z
+transitions:
+  - to: ready
+    at: 2026-10-30T00:13:49Z
+    by: agent-S-0527
+  - to: in-progress
+    at: 2026-10-30T00:13:50Z
+    by: agent-S-0527
+  - to: done
+    at: 2026-10-30T00:15:20Z
+    by: agent-S-0527
 stream: S-0527
 tags: [flaiover, test]
 touches: [flaiover/src/lib/viz/explain.test.ts]
 after: [T-2256]
+usage:
+  source: log
+  seconds: 90
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 13
+      output: 2830
+      cache_read: 1017548
+      cache_write: 31262
+      cost: 0.5103
 ---
 # T-2257 explain.test.ts holds every chart kind to a row in metrics.md § Charts under its catalog title, which reproduces I-0193's missing Strategic Use row
 

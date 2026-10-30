@@ -3,16 +3,37 @@ id: T-2187
 type: task
 nature: remediation
 title: The user, operator, and design documents say the host configuration is the operator's and which flai serve sub-commands the guard refuses an agent
-status: backlog
+status: done
 parent: S-0511
 owner: alex
 created: 2026-10-28T08:20:07Z
-updated: 2026-10-28T08:20:07Z
-transitions: []
+updated: 2026-10-30T00:24:31Z
+transitions:
+  - to: ready
+    at: 2026-10-30T00:13:50Z
+    by: agent-S-0511
+  - to: in-progress
+    at: 2026-10-30T00:13:51Z
+    by: agent-S-0511
+  - to: done
+    at: 2026-10-30T00:24:31Z
+    by: agent-S-0511
 stream: S-0511
 tags: [cli, guard, docs]
 touches: [docs/users/flai.md, docs/operators/index.md, docs/operators/settings.md, design/system/flai-cli.md, design/system/agent-adapters.md]
 after: [T-2184]
+usage:
+  source: log
+  seconds: 640
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 51
+      output: 14421
+      cache_read: 2472419
+      cache_write: 120313
+      cost: 1.5543
 ---
 # T-2187 The user, operator, and design documents say the host configuration is the operator's and which flai serve sub-commands the guard refuses an agent
 

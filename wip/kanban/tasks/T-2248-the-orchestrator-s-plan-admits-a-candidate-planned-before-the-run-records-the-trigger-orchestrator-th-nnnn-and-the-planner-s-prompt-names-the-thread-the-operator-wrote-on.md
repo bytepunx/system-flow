@@ -3,16 +3,37 @@ id: T-2248
 type: task
 nature: improvement
 title: "The orchestrator's plan admits a candidate planned before, the run records the trigger orchestrator; TH-nnnn, and the planner's prompt names the thread the operator wrote on"
-status: backlog
+status: done
 parent: S-0524
 owner: alex
 created: 2026-10-28T14:42:09Z
-updated: 2026-10-28T14:42:09Z
-transitions: []
+updated: 2026-10-30T14:20:11Z
+transitions:
+  - to: ready
+    at: 2026-10-30T13:33:00Z
+    by: agent-S-0524
+  - to: in-progress
+    at: 2026-10-30T13:33:01Z
+    by: agent-S-0524
+  - to: done
+    at: 2026-10-30T14:20:11Z
+    by: agent-S-0524
 stream: S-0524
 tags: [flai, orchestrator, planner, mcp]
-touches: [flai/cmd/plan.go, flai/cmd/plan_orchestrate_test.go, flai/cmd/orchestrate_permissions_test.go, flai/internal/mcpserver/plan.go, flai/internal/mcpserver/plan_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go]
+touches: [flai/cmd/plan.go, flai/cmd/plan_orchestrate_test.go, flai/cmd/orchestrate_permissions_test.go, flai/internal/mcpserver/plan.go, flai/internal/mcpserver/plan_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, docs/users/flai-reference.md]
 after: [T-2247]
+usage:
+  source: log
+  seconds: 2830
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 122
+      output: 580
+      cache_read: 7326160
+      cache_write: 650247
+      cost: 2.7613
 ---
 # T-2248 The orchestrator's plan admits a candidate planned before, the run records the trigger orchestrator; TH-nnnn, and the planner's prompt names the thread the operator wrote on
 

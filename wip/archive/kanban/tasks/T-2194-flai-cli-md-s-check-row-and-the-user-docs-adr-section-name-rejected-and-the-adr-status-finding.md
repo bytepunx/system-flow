@@ -3,16 +3,37 @@ id: T-2194
 type: task
 nature: remediation
 title: flai-cli.md's check row and the user docs' ADR section name rejected and the adr.status finding
-status: backlog
+status: done
 parent: S-0512
 owner: alex
 created: 2026-10-28T08:28:26Z
-updated: 2026-10-28T08:28:26Z
-transitions: []
+updated: 2026-10-30T14:17:01Z
+transitions:
+  - to: ready
+    at: 2026-10-30T14:16:27Z
+    by: agent-S-0512
+  - to: in-progress
+    at: 2026-10-30T14:16:28Z
+    by: agent-S-0512
+  - to: done
+    at: 2026-10-30T14:17:01Z
+    by: agent-S-0512
 stream: S-0512
 tags: [cli]
 touches: [design/system/flai-cli.md, docs/users/flai.md]
 after: [T-2189, T-2190, T-2191, T-2192]
+usage:
+  source: log
+  seconds: 33
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 29
+      output: 6341
+      cache_read: 1422954
+      cache_write: 62514
+      cost: 0.8336
 ---
 # T-2194 flai-cli.md's check row and the user docs' ADR section name rejected and the adr.status finding
 

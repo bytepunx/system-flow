@@ -3,15 +3,36 @@ id: T-2262
 type: task
 nature: remediation
 title: flai verify --all reuses the tiers a run that left the queue tiers passed at the same patch, and names the queue tiers a report did not run
-status: backlog
+status: done
 parent: S-0529
 owner: alex
 created: 2026-10-28T18:16:46Z
-updated: 2026-10-28T18:16:46Z
-transitions: []
+updated: 2026-10-30T00:23:33Z
+transitions:
+  - to: ready
+    at: 2026-10-30T00:18:05Z
+    by: agent-S-0529
+  - to: in-progress
+    at: 2026-10-30T00:18:06Z
+    by: agent-S-0529
+  - to: done
+    at: 2026-10-30T00:23:33Z
+    by: agent-S-0529
 stream: S-0529
 tags: [cli]
 touches: [flai/internal/verify/story.go, flai/internal/verify/story_test.go]
+usage:
+  source: log
+  seconds: 327
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 26
+      output: 8473
+      cache_read: 1774936
+      cache_write: 74653
+      cost: 0.9684
 ---
 # T-2262 flai verify --all reuses the tiers a run that left the queue tiers passed at the same patch, and names the queue tiers a report did not run
 

@@ -3,15 +3,36 @@ id: T-2246
 type: task
 nature: improvement
 title: An ADR refining ADR-0119 lets the orchestrator ask the planner again for an epic or story planned before when the operator has written on it since its newest plan
-status: backlog
+status: done
 parent: S-0524
 owner: alex
 created: 2026-10-28T14:41:09Z
-updated: 2026-10-28T14:41:09Z
-transitions: []
+updated: 2026-10-30T13:09:40Z
+transitions:
+  - to: ready
+    at: 2026-10-30T13:08:48Z
+    by: agent-S-0524
+  - to: in-progress
+    at: 2026-10-30T13:08:51Z
+    by: agent-S-0524
+  - to: done
+    at: 2026-10-30T13:09:40Z
+    by: agent-S-0524
 stream: S-0524
 tags: [flai, orchestrator, planner, adr]
-touches: [design/adrs/README.md]
+touches: [design/adrs/README.md, design/adrs/0222-with-plan-backlog-epics-or-plan-backlog-stories-on-the-orchestrator-may-ask-the.md]
+usage:
+  source: log
+  seconds: 49
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 12
+      cache_read: 390383
+      cache_write: 2359
+      cost: 0.136
 ---
 # T-2246 An ADR refining ADR-0119 lets the orchestrator ask the planner again for an epic or story planned before when the operator has written on it since its newest plan
 

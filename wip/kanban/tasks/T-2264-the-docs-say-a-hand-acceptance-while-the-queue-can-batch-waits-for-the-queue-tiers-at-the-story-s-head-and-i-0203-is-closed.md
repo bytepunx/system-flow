@@ -3,16 +3,37 @@ id: T-2264
 type: task
 nature: remediation
 title: The docs say a hand acceptance while the queue can batch waits for the queue tiers at the story's head, and I-0203 is closed
-status: backlog
+status: done
 parent: S-0529
 owner: alex
 created: 2026-10-28T18:17:20Z
-updated: 2026-10-28T18:17:20Z
-transitions: []
+updated: 2026-10-30T00:57:46Z
+transitions:
+  - to: ready
+    at: 2026-10-30T00:52:56Z
+    by: agent-S-0529
+  - to: in-progress
+    at: 2026-10-30T00:52:57Z
+    by: agent-S-0529
+  - to: done
+    at: 2026-10-30T00:57:46Z
+    by: agent-S-0529
 stream: S-0529
 tags: [cli]
 touches: [docs/users/flai.md, docs/operators/index.md, design/system/workflow.md, design/system/flai-cli.md, design/issues/I-0203-a-story-the-operator-accepts-outside-the-merge-queue-lands-without-the-queue-tiers-so-a-stale-generated-file-on-main-fails-every-later-batch-at-integration.md, design/issues/summary.md]
 after: [T-2261, T-2263]
+usage:
+  source: log
+  seconds: 289
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 69
+      output: 22460
+      cache_read: 4705091
+      cache_write: 197893
+      cost: 2.5671
 ---
 # T-2264 The docs say a hand acceptance while the queue can batch waits for the queue tiers at the story's head, and I-0203 is closed
 

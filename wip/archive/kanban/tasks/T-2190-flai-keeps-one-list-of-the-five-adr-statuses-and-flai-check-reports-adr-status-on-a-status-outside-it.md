@@ -3,15 +3,36 @@ id: T-2190
 type: task
 nature: remediation
 title: flai keeps one list of the five ADR statuses and flai check reports adr.status on a status outside it
-status: backlog
+status: done
 parent: S-0512
 owner: alex
 created: 2026-10-28T08:27:39Z
-updated: 2026-10-28T08:27:39Z
-transitions: []
+updated: 2026-10-30T14:13:20Z
+transitions:
+  - to: ready
+    at: 2026-10-30T14:10:55Z
+    by: agent-S-0512
+  - to: in-progress
+    at: 2026-10-30T14:10:56Z
+    by: agent-S-0512
+  - to: done
+    at: 2026-10-30T14:13:20Z
+    by: agent-S-0512
 stream: S-0512
 tags: [cli]
 touches: [flai/internal/adr/adr.go, flai/internal/check/check.go, flai/internal/check/check_test.go]
+usage:
+  source: log
+  seconds: 144
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 14
+      output: 3044
+      cache_read: 682980
+      cache_write: 30005
+      cost: 0.4001
 ---
 # T-2190 flai keeps one list of the five ADR statuses and flai check reports adr.status on a status outside it
 

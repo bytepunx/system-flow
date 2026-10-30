@@ -1,0 +1,39 @@
+---
+id: S-0552
+type: story
+nature: improvement
+title: Acceptances land only through the merge queue, and the queue waits a window to fill a batch, so one verification lands several stories and an acceptance by hand drops no batch
+status: backlog
+parent: E-0031
+owner: alex
+created: 2026-10-30T01:52:31Z
+updated: 2026-10-30T01:52:31Z
+transitions: []
+tags: [flai]
+topics: [orchestration, testing, cli]
+touches: [flai/internal/serve, flai/internal/mergequeue, flai/cmd, system-flow.yaml, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, docs/operators]
+agent:
+  harness: claude-code
+  model: claude-opus-5-5
+  config:
+    effort: high
+---
+# S-0552 Acceptances land only through the merge queue, and the queue waits a window to fill a batch, so one verification lands several stories and an acceptance by hand drops no batch
+
+## Goal
+
+In the fortnight the merge queue ran 111 batches of mean size 1.0 to land 49 stories: every landing paid a full verification of about ten minutes, and an acceptance by the operator outside the queue dropped the batch under way and, as I-0203 records, landed without the queue tiers. This story lets batches fill: an enqueue waits a window, `merge_queue.coalesce` in the manifest with a default of a few minutes, during which further enqueues join the batch, and a batch under way is joined by the next rather than dropped; and a story the operator accepts on the board or with `flai move` is enqueued rather than landed, so every landing is verified once with its batch. The dashboard's queue page shows the window and the batch filling.
+
+## Acceptance criteria
+- [ ] An enqueue starts a window of `merge_queue.coalesce` during which later enqueues join the same batch, with the default, the key, and its check in the manifest schema and reference
+- [ ] Accepting a story on the board or with `flai move` enqueues it; landing happens only through the queue, and the operator's acceptance of a story that is in a batch under way does not drop the batch
+- [ ] A batch that fails bisects as today, and a story that passed in a failed batch's clean half lands without another verification of its own
+- [ ] `flai stats` reports batch size and verifications per landed story, and the fortnight after landing shows a mean batch size above one, recorded in the close-out
+
+## Tasks
+
+The planner drafts them.
+
+## Notes
+
+Evidence: `flai stats` merge-queue figures 2026-10-15 to 2026-10-29. ADR-0174 governs the queue; this story refines it with an ADR where the landing path changes.

@@ -3,16 +3,37 @@ id: T-2192
 type: task
 nature: remediation
 title: flai doc refuses a change to a rejected ADR as to an accepted one, but its topics
-status: backlog
+status: done
 parent: S-0512
 owner: alex
 created: 2026-10-28T08:28:01Z
-updated: 2026-10-28T08:28:01Z
-transitions: []
+updated: 2026-10-30T14:15:23Z
+transitions:
+  - to: ready
+    at: 2026-10-30T14:13:43Z
+    by: agent-S-0512
+  - to: in-progress
+    at: 2026-10-30T14:13:44Z
+    by: agent-S-0512
+  - to: done
+    at: 2026-10-30T14:15:23Z
+    by: agent-S-0512
 stream: S-0512
 tags: [cli]
 touches: [flai/internal/docedit/docedit.go, flai/internal/docedit/docedit_test.go]
 after: [T-2190]
+usage:
+  source: log
+  seconds: 99
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 20
+      output: 4298
+      cache_read: 964544
+      cache_write: 42375
+      cost: 0.5651
 ---
 # T-2192 flai doc refuses a change to a rejected ADR as to an accepted one, but its topics
 
