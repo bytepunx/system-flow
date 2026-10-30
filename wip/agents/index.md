@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-10-30T00:12:43Z
+updated: 2026-10-30T00:14:58Z
 ---
 
 # Active streams
@@ -8,8 +8,8 @@ updated: 2026-10-30T00:12:43Z
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
 | [S-0419](S-0419.md) | The planner, the orchestrator, and the analyzer start through the path a defined role takes, with their prompts read from their role files, and behave exactly as today | in-progress | agent-S-0419 | 2026-10-30T00:10:58Z |
-| [S-0511](S-0511.md) | flai guard lets a session flai serve started run the flai serve sub-commands that write the host configuration | in-progress | agent-S-0511 | 2026-10-30T00:10:59Z |
-| [S-0527](S-0527.md) | metrics.md § Charts says Burn-up draws a forecast line from throughput and Cycle Time filters by nature, but neither chart does | in-progress | agent-S-0527 | 2026-10-30T00:12:45Z |
+| [S-0511](S-0511.md) | flai guard lets a session flai serve started run the flai serve sub-commands that write the host configuration | in-progress | agent-S-0511 | 2026-10-30T00:13:58Z |
+| [S-0527](S-0527.md) | metrics.md § Charts says Burn-up draws a forecast line from throughput and Cycle Time filters by nature, but neither chart does | in-progress | agent-S-0527 | 2026-10-30T00:13:40Z |
 
 ## Strategic agents
 
