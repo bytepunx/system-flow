@@ -24,6 +24,9 @@ func activityRepo(t *testing.T) (string, string) {
 	for _, d := range []string{"design/adrs", "design/system", "design/tech", "design/conventions", "docs", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", "wip/threads"} {
 		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
 	}
+	// The template's role files, so that the project lacks none and no
+	// roles.baseline finding sits on a file named as an activity document.
+	writeTemplateRoles(t, root)
 	repo, err := workitem.Open(root)
 	if err != nil {
 		t.Fatal(err)
@@ -183,14 +186,15 @@ func TestADefinedRolesActivityDocumentIsValidated(t *testing.T) {
 	}
 	// the kinds are the role files' names as roles.Load reads them
 	defined, _, err := roles.Load(root, "design")
-	if err != nil || len(defined) != 1 {
+	i := slices.IndexFunc(defined, func(r roles.Role) bool { return r.Name == "reviewer" })
+	if err != nil || i < 0 {
 		t.Fatalf("role files: %+v %v", defined, err)
 	}
 	kinds, err := repo.ActivityKinds()
-	if err != nil || !slices.Contains(kinds, defined[0].Name) {
-		t.Fatalf("kinds %v %v hold no %s", kinds, err, defined[0].Name)
+	if err != nil || !slices.Contains(kinds, defined[i].Name) {
+		t.Fatalf("kinds %v %v hold no %s", kinds, err, defined[i].Name)
 	}
-	if _, err := repo.AppendActivity(defined[0].Name, workitem.ActivityEntry{At: now.Add(-time.Hour), Summary: "Reviewed", Items: []string{"S-0001"}, Seconds: 60, Cost: 0.5}); err != nil {
+	if _, err := repo.AppendActivity(defined[i].Name, workitem.ActivityEntry{At: now.Add(-time.Hour), Summary: "Reviewed", Items: []string{"S-0001"}, Seconds: 60, Cost: 0.5}); err != nil {
 		t.Fatal(err)
 	}
 	if got := activityFindings(runCheck(t, root)); len(got) != 0 {

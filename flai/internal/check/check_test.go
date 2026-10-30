@@ -1232,6 +1232,7 @@ func TestReviewOverItsLimitDoesNotFailStrict(t *testing.T) {
 	if !res.OK(true) || !res.OK(false) {
 		t.Errorf("review over its limit must not fail --strict: %+v", res)
 	}
+	writeTemplateRoles(t, repo.Root) // no roles.baseline among the advisories
 	full, err := Run(repo, now)
 	if err != nil {
 		t.Fatal(err)

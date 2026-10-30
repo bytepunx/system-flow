@@ -3,6 +3,7 @@ package check
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -72,12 +73,71 @@ func rolesProject(t *testing.T, files map[string]string) *workitem.Repo {
 }
 
 // roleFindings are the findings flai check's roles rule gives, without the
-// other rules.
+// other rules, and without the roles.baseline warnings for the built-in role
+// files these projects lack, which TestMissingBuiltinRoleFilesWarn covers.
 func roleFindings(repo *workitem.Repo) []Finding {
 	c := &checker{repo: repo, res: &Result{}}
 	c.roles()
 	sortFindings(c.res.Findings)
-	return c.res.Findings
+	var out []Finding
+	for _, f := range c.res.Findings {
+		if f.Rule != roles.CodeBaseline {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// S-0419: a project with no role files' folder is warned roles.baseline once
+// for each role flai carries a baseline for, naming the file under the
+// manifest's design folder and flai upgrade, advisory since flai runs the
+// baseline and only the operator's flai upgrade clears it; one with the
+// template's files is not.
+func TestMissingBuiltinRoleFilesWarn(t *testing.T) {
+	builtin := []string{"planner", "orchestrator", "analyzer", "curator"}
+	bare := planningProject(t, "")
+	got := findings(t, bare, roles.CodeBaseline)
+	if len(got) != len(builtin) {
+		t.Fatalf("a project with no roles folder: %+v, want %d warnings", got, len(builtin))
+	}
+	for _, name := range builtin {
+		rel := "design/workflows/roles/" + name + ".md"
+		i := slices.IndexFunc(got, func(f Finding) bool { return f.Path == rel })
+		if i < 0 {
+			t.Errorf("%s: no roles.baseline warning", rel)
+			continue
+		}
+		f := got[i]
+		if f.Level != Warning || !f.advisory || f.Line != 1 || !strings.Contains(f.Message, rel+" is missing: flai runs the "+name+" from the baseline") || !strings.Contains(f.Message, "run flai upgrade") {
+			t.Errorf("%s: %+v", rel, f)
+		}
+	}
+
+	full := planningProject(t, "")
+	writeTemplateRoles(t, full.Root)
+	if got := findings(t, full, roles.CodeBaseline); len(got) != 0 {
+		t.Errorf("a project with the four role files: %+v", got)
+	}
+}
+
+// writeTemplateRoles copies the template's role files into the project at
+// root, as flai new renders them.
+func writeTemplateRoles(t *testing.T, root string) {
+	t.Helper()
+	const shipped = "../../../template/root/design/workflows/roles"
+	dir := filepath.Join(root, "design", "workflows", "roles")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"planner", "orchestrator", "analyzer", "curator"} {
+		data, err := os.ReadFile(filepath.Join(shipped, name+".md"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, name+".md"), data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
 }
 
 // S-0415: the roles a convention may list beside flai's own are the verbs

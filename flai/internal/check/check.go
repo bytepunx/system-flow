@@ -1277,7 +1277,8 @@ func RolesVocabulary() roles.Vocabulary {
 }
 
 // roles validates the design folder's role files (ADR-0207): each problem
-// roles.Load or roles.Validate finds is an error under its code, on its line.
+// roles.Load or roles.Validate finds is an error under its code, on its line,
+// and each built-in role file missing is an advisory roles.baseline warning.
 func (c *checker) roles() {
 	design := c.repo.Manifest.Layout["design"]
 	list, problems, err := roles.Load(c.repo.Root, design)
@@ -1285,6 +1286,7 @@ func (c *checker) roles() {
 		c.add(Error, roles.CodeFile, filepath.Join(c.repo.Root, filepath.FromSlash(roles.Dir(design))), 1, "%v", err)
 		return
 	}
+	c.missingBaselineRoles(design)
 	for _, p := range append(problems, roles.Validate(list, design, RolesVocabulary())...) {
 		c.add(Error, p.Code, filepath.Join(c.repo.Root, filepath.FromSlash(p.Path)), p.Line, "%s", p.Message)
 	}
@@ -1294,6 +1296,19 @@ func (c *checker) roles() {
 	mf := filepath.Join(c.repo.Root, manifest.File)
 	for _, msg := range c.repo.Manifest.UndeclaredRoleSettings(declaredPermissions(list)) {
 		c.add(Warning, "manifest.roles", mf, keyLine(mf, "roles"), "%s", msg)
+	}
+}
+
+// missingBaselineRoles advises roles.baseline for each role flai carries a
+// baseline for whose file the project lacks: flai runs the baseline in its
+// place, and flai upgrade adds the file (S-0419).
+func (c *checker) missingBaselineRoles(design string) {
+	for _, r := range roles.Baseline(design) {
+		path := filepath.Join(c.repo.Root, filepath.FromSlash(r.Path))
+		if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		c.advise(roles.CodeBaseline, path, 1, "%s is missing: flai runs the %s from the baseline it carries; run flai upgrade to add the file from the template", r.Path, r.Name)
 	}
 }
 

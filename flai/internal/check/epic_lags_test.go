@@ -74,6 +74,7 @@ func TestAnEpicThatLagsItsStoriesIsWarned(t *testing.T) {
 	if c.res.Warnings != len(want) || c.res.Advisory != len(want) || !c.res.OK(true) {
 		t.Errorf("the warnings must be advisory and pass --strict: %+v", c.res)
 	}
+	writeTemplateRoles(t, repo.Root) // no roles.baseline among the advisories
 	full, err := Run(repo, now)
 	if err != nil {
 		t.Fatal(err)
