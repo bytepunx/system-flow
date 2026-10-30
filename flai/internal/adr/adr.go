@@ -30,7 +30,8 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-// Statuses an author may give a new ADR.
+// Statuses an author may give a new ADR with flai adr new: the subset of
+// check.ADRStatuses a decision starts in.
 var Statuses = []string{"proposed", "accepted"}
 
 var (

@@ -1259,6 +1259,45 @@ func TestReviewOverItsLimitDoesNotFailStrict(t *testing.T) {
 	}
 }
 
+// I-0208, ADR-0223: an ADR whose status is outside the five draws adr.status
+// on its status line; rejected is one of the five, and the template, whose
+// status is template, is passed over.
+func TestADRStatusOutsideTheFive(t *testing.T) {
+	root := t.TempDir()
+	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644)
+	for _, d := range []string{"design/adrs", "design/system", "design/tech", "design/conventions", "docs", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive"} {
+		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
+	}
+	adr := func(num, status string) string {
+		return "---\nid: ADR-" + num + "\ntitle: T\nstatus: " + status + "\ndate: 2026-09-01\n---\n\n# ADR-" + num + " T\n\n## Decision\n\nThe decision.\n"
+	}
+	for name, status := range map[string]string{
+		"0000-template.md": "template            # proposed | accepted | superseded | deprecated | rejected",
+		"0001-bogus.md":    "bogus",
+		"0002-rejected.md": "rejected",
+	} {
+		writeFile(t, filepath.Join(root, "design/adrs", name), adr(name[:4], status))
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := Run(repo, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []Finding
+	for _, f := range res.Findings {
+		if f.Rule == "adr.status" {
+			got = append(got, f)
+		}
+	}
+	want := `status "bogus" is not one of proposed, accepted, superseded, deprecated, rejected (ADR-0223)`
+	if len(got) != 1 || !strings.HasSuffix(got[0].Path, "0001-bogus.md") || got[0].Line != 4 || got[0].Level != Warning || got[0].Message != want {
+		t.Fatalf("adr.status findings = %+v, want one warning on 0001-bogus.md:4: %s", got, want)
+	}
+}
+
 // I-0129: an empty narrative has one finding, narrative.front-matter, on the
 // file; the index, which lists it as unreadable, draws none for it.
 func TestUnreadableNarrativeIsOneFinding(t *testing.T) {

@@ -1008,6 +1008,9 @@ type docFront struct {
 	Date    string `yaml:"date"`
 }
 
+// ADRStatuses are the statuses an ADR may carry (ADR-0223).
+var ADRStatuses = []string{"proposed", "accepted", "superseded", "deprecated", "rejected"}
+
 var adrName = regexp.MustCompile(`^(\d{4})-.*\.md$`)
 
 var adrIndexRow = regexp.MustCompile(`^\| *\[\d{4}\]\(([^)]+\.md)\)`)
@@ -1095,6 +1098,10 @@ func (c *checker) documentation() {
 				}
 				if f.Status == "" || f.Date == "" || f.Title == "" {
 					c.add(Warning, "adr.front-matter", path, 1, "ADRs need id, title, status, and date")
+				}
+				// The template, 0000, carries the status template.
+				if f.Status != "" && num != "0000" && !slices.Contains(ADRStatuses, f.Status) {
+					c.add(Warning, "adr.status", path, keyLine(path, "status"), "status %q is not one of %s (ADR-0223)", f.Status, strings.Join(ADRStatuses, ", "))
 				}
 				if _, ok := ctxpack.DecisionSentence(string(data)); !ok {
 					c.add(Warning, "adr.decision", path, headingLine(path, "## Decision"), "## Decision does not open with a sentence stating the decision; a context pack briefs the ADR by that sentence (ADR-0049)")
