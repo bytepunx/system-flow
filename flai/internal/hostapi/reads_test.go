@@ -54,7 +54,7 @@ var readRefused = map[string][]string{
 }
 
 func TestEveryReadIsCovered(t *testing.T) {
-	reads := readMethods(time.Now)
+	reads := readMethods(time.Now, Host{})
 	for name := range reads {
 		if _, ok := readPhase[name]; !ok {
 			t.Errorf("%s has no call in readPhase", name)
@@ -74,7 +74,7 @@ func TestEveryReadIsCovered(t *testing.T) {
 func TestAReadRefusesWhatIsNotDataBeforeReadingAnything(t *testing.T) {
 	// a root that does not exist: anything past validation fails otherwise
 	p := channel.Project{Key: "nowhere", Root: "/nonexistent/flai-test"}
-	reads := readMethods(time.Now)
+	reads := readMethods(time.Now, Host{})
 	for name, all := range readRefused {
 		for _, params := range all {
 			_, rerr := reads[name](context.Background(), p, json.RawMessage(params))
@@ -361,5 +361,66 @@ func TestBoardGetListsTheEligibleStories(t *testing.T) {
 	in, _ := got["ineligible"].([]any)
 	if len(el) != 1 || el[0].(map[string]any)["story"] != "S-0002" || len(in) != 1 || in[0].(map[string]any)["story"] != "S-0001" {
 		t.Errorf("queue: %v", got)
+	}
+}
+
+// ADR-0221: while the merge queue batches, with the merge-queue host action
+// on and accept_reviews on under local acceptance, accept.preview lists the
+// blocker queue_tiers for a story whose last flai verify left a tier marked
+// queue at its branch's head, as flai accept --dry-run does; with the host
+// action off it lists none.
+func TestAcceptPreviewListsTheQueueTiersWhileTheQueueBatches(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration: runs real git")
+	}
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	p, repo := reviewing(t)
+	m := filepath.Join(p.Root, "system-flow.yaml")
+	data, _ := os.ReadFile(m)
+	if err := os.WriteFile(m, append(data, "orchestration:\n  permissions:\n    accept_reviews: true\n"...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	r := execx.System{}
+	for _, args := range [][]string{{"init", "-q", "-b", "main"}, {"config", "user.email", "t@t"}, {"config", "user.name", "t"}, {"add", "-A"}, {"commit", "-q", "-m", "one"}, {"branch", storygit.Branch("S-0001")}} {
+		if out, err := r.Run(p.Root, "git", args...); err != nil {
+			t.Fatalf("git %v: %v %s", args, err, out)
+		}
+	}
+	head, err := r.Run(p.Root, "git", "rev-parse", storygit.Branch("S-0001"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := verify.SaveReport(repo, verify.Report{Story: "S-0001", Commit: strings.TrimSpace(head), Passed: true, Steps: []verify.Step{
+		{Name: "integration", Tier: true, State: verify.Queued},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	preview := func(on bool) map[string]any {
+		t.Helper()
+		host := Host{Enabled: func(action, root string) bool { return on && action == ActionMergeQueue && root == p.Root }}
+		out, rerr := readMethods(time.Now, host)["accept.preview"](context.Background(), p, json.RawMessage(`{"id":"S-0001"}`))
+		if rerr != nil {
+			t.Fatalf("accept.preview: %+v", rerr)
+		}
+		data, err := json.Marshal(out)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got struct {
+			Data map[string]any `json:"data"`
+		}
+		if err := json.Unmarshal(data, &got); err != nil {
+			t.Fatal(err)
+		}
+		return got.Data
+	}
+	got := preview(true)
+	if b, _ := got["queue_tiers_blocker"].(map[string]any); b["code"] != "queue_tiers" || !reflect.DeepEqual(got["queue_tiers"], []any{"integration"}) {
+		t.Errorf("with the queue batching, accept.preview lists queue_tiers naming integration: %v", got)
+	}
+	if got := preview(false); got["queue_tiers_blocker"] != nil || got["queue_tiers"] != nil {
+		t.Errorf("with the merge-queue host action off, accept.preview lists no queue tiers: %v", got)
 	}
 }

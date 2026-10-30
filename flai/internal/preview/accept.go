@@ -20,6 +20,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -97,6 +98,16 @@ type Acceptance struct {
 	// under pull-request acceptance, in place of the local merge (ADR-0170);
 	// nil under local acceptance.
 	Remote *RemoteMerge `json:"remote,omitempty"`
+	// QueueTiers are the tiers marked queue that the story's last flai
+	// verify did not run at its branch's head, and QueueTiersWhy why they do
+	// not count as run, while the merge queue batches (ADR-0221);
+	// QueueTiersWhy is "" when they ran, and QueueTiers is empty when the
+	// report is not at the head or there is none. QueueTiersBlocker is the
+	// blocker they bring, also in Blockers, nil under the operator's
+	// --without-queue-tiers.
+	QueueTiers        []string `json:"queue_tiers,omitempty"`
+	QueueTiersWhy     string   `json:"queue_tiers_why,omitempty"`
+	QueueTiersBlocker *Blocker `json:"queue_tiers_blocker,omitempty"`
 }
 
 // RemoteMerge is the merge of a story's pull request on the forge under
@@ -139,6 +150,11 @@ const (
 	BlockChangesRequested   = "changes_requested"    // a reviewer's latest decisive review requests changes
 	BlockApprovalsMissing   = "approvals_missing"    // fewer reviewers approve than the base branch requires
 )
+
+// BlockQueueTiers is the code of the blocker for a story whose tiers marked
+// queue did not run at its branch's head while the merge queue batches
+// (ADR-0221).
+const BlockQueueTiers = "queue_tiers"
 
 // BlockDirtyMain is the code of the orchestrator's blocker for a story whose
 // change would overwrite a file the main checkout has not committed outside
@@ -183,7 +199,10 @@ func Accept(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by string, n
 // as the verified commit (ADR-0176). Under pull-request
 // acceptance, a story's acceptance, whoever accepts, also has a blocker for
 // each forge condition of ADR-0169 that fails, read from the state flai serve
-// keeps of its pull request.
+// keeps of its pull request. With opts.QueueBatches, a story's acceptance that
+// is neither the orchestrator's nor the queue's landing has the blocker
+// queue_tiers while its last flai verify did not run the tiers marked queue at
+// its branch's head, which opts.WithoutQueueTiers lifts (ADR-0221).
 func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by string, now time.Time, log *slog.Logger, opts AcceptOptions) (*Acceptance, error) {
 	// Without git (a project that is not a repository) acceptance is the
 	// transition and the archive; with git it also merges and commits.
@@ -308,6 +327,9 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 	if it.Type == workitem.Story && repo.Manifest.Acceptance.PullRequest() && !res.Resumed {
 		forgeGate(r, repo, it.ID, res)
 	}
+	// while the merge queue batches, the operator's acceptance waits for the
+	// tiers it leaves to the batch to run at the story's head (ADR-0221)
+	queueTiersGate(r, repo, it, res, opts)
 	// the queue's landing takes the batch's verification of the story's
 	// rebased head (ADR-0176); for the orchestrator, in place of its own
 	var landing []string
@@ -377,6 +399,58 @@ func dirtyMainBlocker(r execx.Runner, repo *workitem.Repo, id string) *Blocker {
 		return nil
 	}
 	return &Blocker{Code: BlockDirtyMain, Message: fmt.Sprintf("%s's change would overwrite %s, which the main checkout has not committed, so the orchestrator does not accept it: commit them, or set them aside with %s, and it is accepted once they are clean (ADR-0189)", id, strings.Join(paths, ", "), mergequeue.FreeCommand(paths))}
+}
+
+// queueTiersGate sets on res the tiers marked queue that the last flai verify
+// of story it did not run at the head of res.Branch, why, and, unless
+// opts.WithoutQueueTiers, the blocker queue_tiers (ADR-0221). It gates only a
+// story with a branch, not done already, while the merge queue batches
+// (opts.QueueBatches), and neither the orchestrator's acceptance, which
+// enqueues the story instead (S-0403), nor the queue's landing, whose batch
+// ran every tier.
+func queueTiersGate(r execx.Runner, repo *workitem.Repo, it *workitem.Item, res *Acceptance, opts AcceptOptions) {
+	if it.Type != workitem.Story || res.Branch == "" || res.Resumed || opts.Orchestrator || opts.Batch != "" || !opts.QueueBatches {
+		return
+	}
+	res.QueueTiers, res.QueueTiersWhy = queueTiersNotRun(r, repo, it.ID, res.Branch)
+	if res.QueueTiersWhy == "" || opts.WithoutQueueTiers {
+		return
+	}
+	b := QueueTiersBlocker(it.ID, res.QueueTiersWhy)
+	res.QueueTiersBlocker = &b
+	res.Blockers = append(res.Blockers, b.Message)
+}
+
+// queueTiersNotRun is verify.QueueTiersNotRun for story id's last report
+// against the head of branch, with the tiers its worktree's manifest declares,
+// which its flai verify ran, or the main checkout's when it has no worktree.
+// A head, a report, or tiers that cannot be read is why, naming the error, so
+// the gate never opens unread.
+func queueTiersNotRun(r execx.Runner, repo *workitem.Repo, id, branch string) ([]string, string) {
+	head, err := r.Run(repo.MainRoot, "git", "rev-parse", "--verify", "--quiet", branch+"^{commit}")
+	if err != nil {
+		return nil, fmt.Sprintf("cannot read the head of %s: %v", branch, err)
+	}
+	rep, ok, err := verify.LastReport(repo, id)
+	if err != nil {
+		return nil, fmt.Sprintf("cannot %v", err)
+	}
+	root := repo.WorktreePath(id)
+	if _, err := os.Stat(root); err != nil {
+		root = repo.MainRoot
+	}
+	tiers, err := verify.CheckoutTiers(root)
+	if err != nil {
+		return nil, fmt.Sprintf("cannot read the tiers of %s: %v", rel(repo.MainRoot, root), err)
+	}
+	return verify.QueueTiersNotRun(rep, ok, strings.TrimSpace(head), tiers)
+}
+
+// QueueTiersBlocker is why story id cannot be accepted by hand while the
+// merge queue batches and its tiers marked queue did not run at its head, for
+// the reason why gives, naming the ways out (ADR-0221).
+func QueueTiersBlocker(id, why string) Blocker {
+	return Blocker{Code: BlockQueueTiers, Message: fmt.Sprintf("%s's tiers marked queue have not run at its head: %s; while the merge queue batches, a hand acceptance waits for them: run flai verify %s --all, which reuses the tiers its last run passed at the same patch, enqueue it with flai queue add %s, or, as the operator in a shell, accept it with flai accept %s --without-queue-tiers (ADR-0221)", id, why, id, id, id)}
 }
 
 // doneBy is who made it's last move to done, as its transitions record it;

@@ -64,6 +64,12 @@ type AcceptOptions struct {
 	// Keep are the paths whose removal of main's lines the operator keeps,
 	// each with its reason (ADR-0155).
 	Keep []KeptRemoval
+	// QueueBatches says the merge queue can batch for the project, by
+	// ADR-0174's three conditions, which the caller reads from the
+	// configuration; WithoutQueueTiers is the operator's override of the
+	// blocker it brings (ADR-0221).
+	QueueBatches      bool
+	WithoutQueueTiers bool
 }
 
 // Evidence is the markdown an orchestrator writes from its verifier's report:

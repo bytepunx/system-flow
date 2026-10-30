@@ -201,6 +201,8 @@ A story whose rebased branch undoes the main branch's change to a path, as a rev
 
 --batch &lt;id&gt; is the merge queue's landing (ADR-0176): flai serve runs it for each story of a batch that passed, in queue order, as whoever enqueued the story. It takes the batch's verification in place of the story head's own: the verified commit is the story's rebased head in the batch. It is refused, before anything is merged, unless the queue's batch is the one named, is not dropped, and lets the story land, the story is the next of it to land, the story's branch is still at the head the batch rebased a copy of, and the main branch is where the batch's landing left it. With --by orchestrator it needs no --verified, which it is refused beside, and no --evidence; the batch and its verified commit are written under ### Accepted by the orchestrator, with the evidence when given, else the evidence the orchestrator enqueued the story with and, as Enqueued verified, the commit its verifier checked then; a story enqueued without them lands with the batch's verification alone. The story is recorded as landed in the queue's state, and the batch kept, where an acceptance without --batch takes the story out of the queue and drops the batch that holds it. Under acceptance.mode: pull-request, which has no merge queue, it is refused, and under FLAI\_ROLE=orchestrate too: the orchestrator never lands a story by hand.
 
+While the merge-queue host action is on and the queue batches (accept\_reviews on, under local acceptance), the queue's batch runs the tiers the manifest marks queue, which flai verify and the close-out leave to it, so a story accepted by hand would land without them (ADR-0221, I-0203). An acceptance that is neither the orchestrator's nor the queue's landing is then refused, before anything is merged, until the story's last flai verify passed at its branch's head with every tier marked queue that it selects: none left queued and none failed. The refusal names the tiers and flai verify &lt;id&gt; --all, which reuses the tiers the last run passed at the same patch and runs the rest; enqueueing the story with flai queue add &lt;id&gt; lets the batch run them instead. --dry-run lists it as the blocker queue\_tiers, with --json under queue\_tiers\_blocker, and queue\_tiers and queue\_tiers\_why say which tiers did not run and why. --without-queue-tiers lands the story anyway and writes, with the commit, the tiers that did not run, or why when no report at its head names them, who accepted, and when under ### Accepted without the queue tiers in its Notes. It is refused with --by orchestrator and with --batch, and changes nothing while the queue does not batch or the tiers ran.
+
 Examples:
 
 ```bash
@@ -210,6 +212,7 @@ flai accept S-031 --by orchestrator --verified 4f1c2a9 --dry-run
 flai accept S-031 --by orchestrator --verified 4f1c2a9 --evidence evidence.md
 flai accept S-031 --by alex --keep-removal docs/guide.md --reason "the story rewrites the section"
 flai accept S-031 --by orchestrator --batch 20261019-041200
+flai accept S-031 --by alex --without-queue-tiers
 ```
 
 Flags:
@@ -224,6 +227,7 @@ Flags:
 | `--reason` stringArray | with --keep-removal: why the removal is kept, one per --keep-removal in order or one for all (repeatable) |
 | `--trailer` stringArray | line appended to the commit message (repeatable) |
 | `--verified` string | with --by orchestrator: the commit its verifier passed, the story branch's head |
+| `--without-queue-tiers` | as the operator: accept while the merge queue batches though the tiers marked queue did not run at the story's head, recorded in its Notes (ADR-0221) |
 
 ### flai activity
 
@@ -2933,6 +2937,7 @@ Flags:
 | `--reason` string | why (required for cancelled and review → in-progress; for done, why each --keep-removal is kept) |
 | `--trailer` stringArray | line appended to the commit message (repeatable) |
 | `--verified` string | with --by orchestrator: the commit its verifier passed, the story branch's head |
+| `--without-queue-tiers` | as the operator: accept while the merge queue batches though the tiers marked queue did not run at the story's head, recorded in its Notes (ADR-0221) |
 
 ### flai new
 

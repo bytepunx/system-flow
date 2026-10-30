@@ -50,6 +50,10 @@ type acceptOptions struct {
 	// sharedReason is the command's own --reason, for flai move, which
 	// defines --reason before the acceptance's flags: one reason for all.
 	sharedReason func() []string
+	// withoutQueueTiers is the operator's override: accept while the merge
+	// queue batches though the tiers marked queue did not run at the story's
+	// head (ADR-0221).
+	withoutQueueTiers bool
 }
 
 func newAcceptCmd(a *app) *cobra.Command {
@@ -197,13 +201,32 @@ The story is recorded as landed in the queue's state, and the batch kept,
 where an acceptance without --batch takes the story out of the queue and
 drops the batch that holds it. Under acceptance.mode: pull-request, which has
 no merge queue, it is refused, and under FLAI_ROLE=orchestrate too: the
-orchestrator never lands a story by hand.`,
+orchestrator never lands a story by hand.
+
+While the merge-queue host action is on and the queue batches
+(accept_reviews on, under local acceptance), the queue's batch runs the tiers
+the manifest marks queue, which flai verify and the close-out leave to it, so
+a story accepted by hand would land without them (ADR-0221, I-0203). An
+acceptance that is neither the orchestrator's nor the queue's landing is then
+refused, before anything is merged, until the story's last flai verify passed
+at its branch's head with every tier marked queue that it selects: none left
+queued and none failed. The refusal names the tiers and flai verify <id>
+--all, which reuses the tiers the last run passed at the same patch and runs
+the rest; enqueueing the story with flai queue add <id> lets the batch run
+them instead. --dry-run lists it as the blocker queue_tiers, with --json under
+queue_tiers_blocker, and queue_tiers and queue_tiers_why say which tiers did
+not run and why. --without-queue-tiers lands the story anyway and writes,
+with the commit, the tiers that did not run, or why when no report at its
+head names them, who accepted, and when under ### Accepted without the queue
+tiers in its Notes. It is refused with --by orchestrator and with --batch, and
+changes nothing while the queue does not batch or the tiers ran.`,
 		Example: `  flai accept S-031 --by alex
   flai accept S-031 --by alex --dry-run
   flai accept S-031 --by orchestrator --verified 4f1c2a9 --dry-run
   flai accept S-031 --by orchestrator --verified 4f1c2a9 --evidence evidence.md
   flai accept S-031 --by alex --keep-removal docs/guide.md --reason "the story rewrites the section"
-  flai accept S-031 --by orchestrator --batch 20261019-041200`,
+  flai accept S-031 --by orchestrator --batch 20261019-041200
+  flai accept S-031 --by alex --without-queue-tiers`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
@@ -235,6 +258,7 @@ func addAcceptFlags(c *cobra.Command, o *acceptOptions) {
 	c.Flags().StringArrayVar(&o.trailers, "trailer", nil, "line appended to the commit message (repeatable)")
 	c.Flags().StringVar(&o.verified, "verified", "", "with --by orchestrator: the commit its verifier passed, the story branch's head")
 	c.Flags().StringVar(&o.evidence, "evidence", "", "with --by orchestrator: file holding its evidence, a Verdict: line and - <n>: <files> per criterion (- reads standard input)")
+	c.Flags().BoolVar(&o.withoutQueueTiers, "without-queue-tiers", false, "as the operator: accept while the merge queue batches though the tiers marked queue did not run at the story's head, recorded in its Notes (ADR-0221)")
 	c.Flags().StringArrayVar(&o.keepRemovals, "keep-removal", nil, "as the operator: accept the branch's removal of the main branch's lines at this recorded path, with --reason (repeatable)")
 	if f := c.Flags().Lookup("reason"); f == nil {
 		c.Flags().StringArrayVar(&o.reasons, "reason", nil, "with --keep-removal: why the removal is kept, one per --keep-removal in order or one for all (repeatable)")
@@ -392,6 +416,11 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		// so does each removal of main's lines the operator keeps (ADR-0155)
 		if len(opts.Keep) > 0 {
 			it.Body = withNotesSection(it.Body, keptNotes(opts.Keep, res.By, a.now()))
+		}
+		// and the operator's acceptance without the tiers marked queue
+		// (ADR-0221)
+		if opts.WithoutQueueTiers && res.QueueTiersWhy != "" {
+			it.Body = withNotesSection(it.Body, withoutQueueTiersNotes(res, a.now()))
 		}
 		if err := repo.Save(it); err != nil {
 			return nil, err
@@ -871,8 +900,12 @@ func (a *app) tellAccepted(repo *workitem.Repo, it *workitem.Item, res *preview.
 // the orchestrator's acceptance but as the queue's landing, a dry run, or the
 // finishing of a story done already, while the merge queue batches, since it
 // enqueues a story instead (S-0403); and --keep-removal as keptRemovals
-// refuses it (ADR-0155). The finishing of a story done already needs no
-// evidence, since the acceptance that moved it to done wrote its own
+// refuses it (ADR-0155); and --without-queue-tiers with --batch or by the
+// orchestrator, whose acceptances the tiers marked queue do not gate
+// (ADR-0221). For the operator's acceptance it says whether the merge queue
+// batches, so that the preview gates it on those tiers. The finishing of a
+// story done already needs no evidence, since the acceptance that moved it to
+// done wrote its own
 // (ADR-0189). For the queue's
 // landing of a story the orchestrator enqueued with its evidence, and no
 // --evidence, it is also that enqueue, whose evidence the acceptance takes.
@@ -899,8 +932,14 @@ func (a *app) acceptance(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		return preview.AcceptOptions{}, none, fmt.Errorf("rule: --batch %s takes the merge queue batch's verification of %s's rebased head in place of --verified's: give one or the other (ADR-0176)", o.batch, it.ID)
 	case !orchestrator && (o.verified != "" || o.evidence != ""):
 		return preview.AcceptOptions{}, none, fmt.Errorf("rule: --verified and --evidence are the orchestrator's acceptance: give them with --by %s, or leave them out", workitem.ActivityOrchestrator)
+	case o.withoutQueueTiers && o.batch != "":
+		return preview.AcceptOptions{}, none, fmt.Errorf("rule: --without-queue-tiers is the operator's acceptance by hand, and --batch %s is the merge queue's landing, whose batch ran every tier: give one or the other (ADR-0221)", o.batch)
+	case o.withoutQueueTiers && orchestrator:
+		return preview.AcceptOptions{}, none, fmt.Errorf("rule: --without-queue-tiers is the operator's: the orchestrator never lands %s without the tiers marked queue, and enqueues it instead while the queue batches; leave it out (ADR-0221)", it.ID)
 	case !orchestrator:
-		return preview.AcceptOptions{Keep: keep, Batch: o.batch}, none, nil
+		// the queue's landing is not gated, so the queue is not read for it
+		batches := o.batch == "" && a.queueBatches(mainRootOf(repo))
+		return preview.AcceptOptions{Keep: keep, Batch: o.batch, QueueBatches: batches, WithoutQueueTiers: o.withoutQueueTiers}, none, nil
 	}
 	if err := repo.OrchestratorPermits(manifest.PermitAcceptReviews, "accepts a story", it.ID); err != nil {
 		return preview.AcceptOptions{}, none, fmt.Errorf("rule: %w", err)
@@ -1141,6 +1180,22 @@ func keptNotes(keep []preview.KeptRemoval, by string, now time.Time) string {
 	for _, k := range keep {
 		fmt.Fprintf(&b, "- `%s`, kept by %s at %s: %s\n", k.Path, by, now.UTC().Format(time.RFC3339), k.Reason)
 	}
+	return b.String()
+}
+
+// withoutQueueTiersNotes is what the operator's acceptance with
+// --without-queue-tiers writes under the story's Notes while the merge queue
+// batches (ADR-0221): the tiers marked queue that did not run at its head, or
+// why when no report at its head names them, who accepted, and when.
+func withoutQueueTiersNotes(res *preview.Acceptance, now time.Time) string {
+	var b strings.Builder
+	b.WriteString("### Accepted without the queue tiers\n\n")
+	if len(res.QueueTiers) > 0 {
+		fmt.Fprintf(&b, "- Tiers: %s\n", strings.Join(res.QueueTiers, ", "))
+	} else {
+		fmt.Fprintf(&b, "- Why: %s\n", res.QueueTiersWhy)
+	}
+	fmt.Fprintf(&b, "- By: %s\n- At: %s\n", res.By, now.UTC().Format(time.RFC3339))
 	return b.String()
 }
 

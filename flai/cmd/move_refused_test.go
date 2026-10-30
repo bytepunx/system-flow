@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/bytepunx/system-flow/flai/internal/verify"
 )
 
 // moveRefusal runs flai move id done --json in root and answers its exit
@@ -101,4 +103,19 @@ func TestMoveToDoneJSONRefusesABranchThatUndoesMainAsAcceptDoes(t *testing.T) {
 		t.Errorf("move printed\n%s\nflai accept printed\n%s", moved, accepted)
 	}
 	unchanged(t, root, wt, mainBefore)
+}
+
+// I-0203, ADR-0221: while the merge queue batches, flai move <story> done by
+// hand is refused as flai accept is, for a story whose close-out left a tier
+// marked queue at its head, naming the tier and flai verify --all.
+func TestMoveToDoneWaitsForTheQueueTiersAsAcceptDoes(t *testing.T) {
+	root, head := orchestratedStoryInReview(t, true)
+	mergeQueueOn(t, root)
+	storeS0001Report(t, root, head, verify.Queued)
+	mainBefore := gitIn(t, root, "rev-parse", "main")
+	want := queueTiersRefusal + "its last flai verify did not run tier integration, marked queue; while the merge queue batches, a hand acceptance waits for them: run flai verify S-0001 --all"
+	if _, errOut, code := runIn(t, root, "move", "S-0001", "done", "--by", "alex"); code == 0 || !strings.Contains(errOut, want) {
+		t.Errorf("flai move done must be refused with %q: %d\n%s", want, code, errOut)
+	}
+	assertNothingAccepted(t, root, mainBefore)
 }

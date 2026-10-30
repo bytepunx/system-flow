@@ -15,6 +15,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
+	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/metrics"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/preview"
@@ -110,7 +111,7 @@ func keptPullRequest(root, cacheDir, story string) (storyPullRequest, error) {
 	return out, nil
 }
 
-func readMethods(now func() time.Time) map[string]channel.Method {
+func readMethods(now func() time.Time, host Host) map[string]channel.Method {
 	return map[string]channel.Method{
 		// item.show: what flai edit --show prints, an item's own words and
 		// the hash an edit gives back (S-0085).
@@ -144,7 +145,8 @@ func readMethods(now func() time.Time) map[string]channel.Method {
 		},
 
 		// accept.preview: what would block an acceptance, as flai accept
-		// --dry-run prints it.
+		// --dry-run prints it, the tiers marked queue that did not run at the
+		// story's head among them while the merge queue batches (ADR-0221).
 		"accept.preview": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			id, e := idOnly(raw)
 			if e != nil {
@@ -156,7 +158,8 @@ func readMethods(now func() time.Time) map[string]channel.Method {
 				if err != nil {
 					return nil, err
 				}
-				return preview.Accept(r, repo, it, by, now(), log)
+				batches := mergequeue.Batches(host.enabled(ActionMergeQueue, p.Root), repo.Manifest)
+				return preview.AcceptWith(r, repo, it, by, now(), log, preview.AcceptOptions{QueueBatches: batches})
 			})
 		},
 
