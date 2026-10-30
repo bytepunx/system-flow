@@ -684,7 +684,7 @@ func (c *checker) grant(r Role, e Call, p string) {
 	}
 	if e.When != "" {
 		cond, _ := Condition(e.When)
-		if cond.Permission != "" && cond.Permission != p {
+		if cond.Permission != "" && !cond.GatedBy(p) {
 			where := "outside any permission"
 			if p != "" {
 				where = "under " + p

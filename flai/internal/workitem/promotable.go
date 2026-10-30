@@ -71,16 +71,19 @@ func (r *Repo) Promotable(it *Item) error {
 }
 
 // OrchestratorSetsCostOfDelay says why the orchestrator may not give it cost
-// of delay inputs with an edit, or nil when it may (S-0328, ADR-0119,
-// I-0187): the project gives it plan_backlog_stories, it is an epic or a
-// story that is open, done and cancelled left out, and the edit gives inputs
-// alone. besides names, as the caller words them, what else the edit gives: a
-// value, a removal, or another field; any refuses it. The orchestrator sets
-// the inputs the operator decided and no value: a value stays the
-// operator's.
+// of delay inputs with an edit, or nil when it may. With set_cost_of_delay
+// (S-0523, ADR-0224) it adds or changes the inputs of an epic or a story that
+// is open, done and cancelled left out, whatever inputs it or its epic has.
+// With plan_backlog_stories alone (S-0328, ADR-0119) it gives a story in the
+// backlog its first inputs, while neither it nor its epic has any. Either way
+// the edit gives inputs alone: besides names, as the caller words them, what
+// else the edit gives, a value, a removal, or another field, and any refuses
+// it. A value stays the operator's.
 func (r *Repo) OrchestratorSetsCostOfDelay(it *Item, besides []string) error {
-	if err := r.OrchestratorPermits(manifest.PermitPlanBacklogStories, "sets cost of delay inputs", it.ID); err != nil {
-		return err
+	p := r.Manifest.Orchestration.Permissions
+	wide, narrow := p.Allows(manifest.PermitSetCostOfDelay), p.Allows(manifest.PermitPlanBacklogStories)
+	if !wide && !narrow {
+		return fmt.Errorf("the orchestrator sets cost of delay inputs only with orchestration.permissions.%s, or on a backlog story's first inputs with orchestration.permissions.%s, which are off: ask the operator with thread_open on %s", manifest.PermitSetCostOfDelay, manifest.PermitPlanBacklogStories, it.ID)
 	}
 	if len(besides) > 0 {
 		return fmt.Errorf("%s: the orchestrator sets cost of delay inputs and nothing else, and this edit gives %s too: it sets no value, removes nothing, and changes nothing else of an item", it.ID, strings.Join(besides, ", "))
@@ -92,6 +95,30 @@ func (r *Repo) OrchestratorSetsCostOfDelay(it *Item, besides []string) error {
 		return fmt.Errorf("%s is archived: the orchestrator sets cost of delay inputs on an open epic or story alone", it.ID)
 	case it.Closed():
 		return fmt.Errorf("%s is %s: the orchestrator sets cost of delay inputs on an open epic or story alone, and none on one done or cancelled", it.ID, it.Status)
+	case wide:
+		return nil
+	}
+	// the rest needs set_cost_of_delay, which is off
+	rest := fmt.Sprintf("with %s the orchestrator gives a backlog story its first cost of delay inputs alone; the rest needs orchestration.permissions.%s, which is off", manifest.PermitPlanBacklogStories, manifest.PermitSetCostOfDelay)
+	switch {
+	case it.Type == Epic:
+		return fmt.Errorf("%s is an epic: %s", it.ID, rest)
+	case it.Status != Backlog:
+		return fmt.Errorf("%s is %s, not in the backlog: %s", it.ID, it.Status, rest)
+	case hasCostInputs(it):
+		return fmt.Errorf("%s has cost of delay inputs already: %s", it.ID, rest)
+	}
+	epic, err := r.parentOf(it, nil)
+	if err != nil {
+		return err
+	}
+	if epic != nil && hasCostInputs(epic) {
+		return fmt.Errorf("%s's epic %s has cost of delay inputs: %s", it.ID, epic.ID, rest)
 	}
 	return nil
+}
+
+// hasCostInputs says whether it has a cost of delay input.
+func hasCostInputs(it *Item) bool {
+	return it.CostOfDelay != nil && !it.CostOfDelay.Inputs.IsZero()
 }

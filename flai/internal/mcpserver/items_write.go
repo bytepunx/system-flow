@@ -235,9 +235,10 @@ func (s *server) finalizes(id string, ch itemedit.Change) error {
 }
 
 // setsCostOfDelay says why the orchestrator may not make edit in, one that
-// gives a cost of delay, or nil when it may (S-0328, ADR-0119, I-0187): it
-// gives an open epic or story cost of delay inputs, and nothing else, while
-// the project gives it plan_backlog_stories (workitem's
+// gives a cost of delay, or nil when it may (S-0328, ADR-0119, S-0523,
+// ADR-0224): it sets an open epic's or story's cost of delay inputs, and
+// nothing else, while the project gives it set_cost_of_delay, or a backlog
+// story's first inputs while it gives it plan_backlog_stories (workitem's
 // OrchestratorSetsCostOfDelay).
 func (s *server) setsCostOfDelay(in ItemEditIn) error {
 	it, err := s.repo.Get(in.ID)

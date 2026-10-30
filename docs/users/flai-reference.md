@@ -2506,6 +2506,7 @@ Write each key=value into its block of system-flow.yaml, and remove each --unset
 ```text
 orchestration.permissions.plan_backlog_epics (boolean; default false)
 orchestration.permissions.plan_backlog_stories (boolean; default false)
+orchestration.permissions.set_cost_of_delay (boolean; default false)
 orchestration.permissions.finalize_drafts (boolean; default false)
 orchestration.permissions.promote_to_ready (boolean; default false)
 orchestration.permissions.order_ready (boolean; default false)

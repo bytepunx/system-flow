@@ -57,15 +57,16 @@
 // the permission that allows it is on (S-0219 maps planning an epic,
 // finalizing a draft, promoting a story to ready, and ordering the ready
 // column by a policy). With plan_backlog_stories it asks for the planner on
-// a story, and gives an epic or a story cost of delay inputs with an edit
-// that changes nothing else, never a value or a removal (S-0328, ADR-0119,
-// I-0187); flai judges which epic or story. With accept_reviews it accepts
-// a story in review, with flai accept or flai move to done, only as itself,
-// --by orchestrator (S-0221, ADR-0093), and enqueues one for the merge
-// queue to land, with queue_add or flai queue add, as itself too; it never
-// lands one with flai
-// accept --batch, nor takes one out of the queue, holds it, or resumes it,
-// whatever its permissions (S-0403). A refusal names that permission; a call
+// a story. It gives a story cost of delay inputs with an edit that changes
+// nothing else, never a value or a removal, with plan_backlog_stories or
+// set_cost_of_delay, and an epic with set_cost_of_delay alone (S-0328,
+// ADR-0119, S-0523, ADR-0224); flai judges which epic or story each allows.
+// With accept_reviews it accepts a story in review, with flai accept or flai
+// move to done, only as itself, --by orchestrator (S-0221, ADR-0093), and
+// enqueues one for the merge queue to land, with queue_add or flai queue add,
+// as itself too; it never lands one with flai accept --batch, nor takes one
+// out of the queue, holds it, or resumes it, whatever its permissions
+// (S-0403). A refusal names that permission; a call
 // no permission allows, such as an edit of a file, a commit, or a story
 // placed by hand in the pull order, it never makes. With publish it
 // publishes through release_publish alone, and never with flai release,
@@ -865,7 +866,7 @@ func (g Guard) orchestration() rules {
 			if cmd == "thread" && slices.Contains([]string{"reply", "resolve", "confirm"}, sub) {
 				return g.thread(cliThread(sub, rest))
 			}
-			needs, never := orchestrated(cmd, sub, rest)
+			needs, never := orchestrated(cmd, sub, rest, g.Permissions)
 			switch {
 			case never != "":
 				return nevers(never), ""
@@ -890,8 +891,9 @@ func (g Guard) orchestration() rules {
 
 // orchestrated says what the orchestrator needs to run a flai command: the
 // permission that allows it, or why it never runs it; both "" when it runs
-// it whatever its permissions.
-func orchestrated(cmd, sub string, rest []string) (needs, never string) {
+// it whatever its permissions. Its permissions p pick the one cost of delay
+// inputs need (costNeeds).
+func orchestrated(cmd, sub string, rest []string, p manifest.Permissions) (needs, never string) {
 	if reads(cmd, sub, rest) {
 		return "", ""
 	}
@@ -913,7 +915,7 @@ func orchestrated(cmd, sub string, rest []string) (needs, never string) {
 		case finalizesOnly(rest):
 			return manifest.PermitFinalizeDrafts, ""
 		case setsCostInputsOnly(rest):
-			return manifest.PermitPlanBacklogStories, ""
+			return costNeeds(positionals(rest, editValues)[1], p), ""
 		}
 		return "", editsCLI
 	case "move":
@@ -1158,6 +1160,18 @@ func finalizesOnly(words []string) bool {
 	return true
 }
 
+// costNeeds is the permission the orchestrator needs to give item id, an
+// epic or a story, cost of delay inputs, under its permissions p: an epic
+// needs set_cost_of_delay; a story needs either, so set_cost_of_delay while
+// it is on and plan_backlog_stories, which a refusal names, otherwise
+// (S-0523, ADR-0224).
+func costNeeds(id string, p manifest.Permissions) string {
+	if isEpic(id) || p.Allows(manifest.PermitSetCostOfDelay) {
+		return manifest.PermitSetCostOfDelay
+	}
+	return manifest.PermitPlanBacklogStories
+}
+
 // setsCostInputsOnly says whether the words of flai edit give an epic or a
 // story cost of delay inputs and change nothing else (S-0328, ADR-0119,
 // I-0187): one input flag or more, each with a value that is not empty,
@@ -1332,7 +1346,7 @@ func (g Guard) orchestrate(c Call) Verdict {
 			case finalizesDraft(in):
 				what, needs = "finalize "+in.ID, manifest.PermitFinalizeDrafts
 			case setsCostInputs(in):
-				what, needs = "give "+in.ID+" cost of delay inputs", manifest.PermitPlanBacklogStories
+				what, needs = "give "+in.ID+" cost of delay inputs", costNeeds(in.ID, g.Permissions)
 			default:
 				never = editsMCP
 			}

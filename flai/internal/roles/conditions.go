@@ -10,6 +10,7 @@ import (
 const (
 	PlanBacklogEpics   = "plan_backlog_epics"
 	PlanBacklogStories = "plan_backlog_stories"
+	SetCostOfDelay     = "set_cost_of_delay"
 	FinalizeDrafts     = "finalize_drafts"
 	PromoteToReady     = "promote_to_ready"
 	OrderReady         = "order_ready"
@@ -21,7 +22,7 @@ const (
 
 // Permissions are every permission a role file's setting may name, in the
 // Settings page's order (ADR-0207 §5).
-var Permissions = []string{PlanBacklogEpics, PlanBacklogStories, FinalizeDrafts, PromoteToReady, OrderReady, AnswerThreads, AcceptReviews, Publish, EditSubprojects}
+var Permissions = []string{PlanBacklogEpics, PlanBacklogStories, SetCostOfDelay, FinalizeDrafts, PromoteToReady, OrderReady, AnswerThreads, AcceptReviews, Publish, EditSubprojects}
 
 // Cond is a named condition flai implements, which a role file names on a
 // call entry, a trigger entry, or, for under-folder, each files entry
@@ -41,7 +42,15 @@ type Cond struct {
 	Allows string `json:"allows"`
 	// Permission is the permission that gates it, empty when none does.
 	Permission string `json:"permission,omitempty"`
+	// Also are the other permissions it may stand under, each of which
+	// allows it as Permission does, as set_cost_of_delay allows cost-inputs
+	// (S-0523, ADR-0224).
+	Also []string `json:"also,omitempty"`
 }
+
+// GatedBy reports whether the condition may stand under permission p: p is
+// its Permission or one of its Also.
+func (c Cond) GatedBy(p string) bool { return p == c.Permission || slices.Contains(c.Also, p) }
 
 // Qualifies reports whether the condition may stand on a call entry naming
 // call.
@@ -115,7 +124,7 @@ var Conditions = []Cond{
 	{Name: "under-folder", Files: true, Allows: "an edit of a file under the folder, after .. and symbolic links are resolved, never of the folder itself"},
 	{Name: "plan-epic", Calls: []string{"plan", "flai plan"}, Allows: "starting the planner on an epic", Permission: PlanBacklogEpics},
 	{Name: "plan-story", Calls: []string{"plan", "flai plan"}, Allows: "starting the planner on a story", Permission: PlanBacklogStories},
-	{Name: "cost-inputs", Calls: []string{"item_edit", "flai edit"}, Allows: "giving a story cost of delay inputs and changing nothing else: no value, no clearing (ADR-0119)", Permission: PlanBacklogStories},
+	{Name: "cost-inputs", Calls: []string{"item_edit", "flai edit"}, Allows: "giving a story cost of delay inputs, or under set_cost_of_delay an epic or a story, and changing nothing else: no value, no clearing (ADR-0119, ADR-0224)", Permission: PlanBacklogStories, Also: []string{SetCostOfDelay}},
 	{Name: "planner-thread", Calls: []string{"thread_reply", "thread_resolve", "flai thread reply", "flai thread resolve"}, Allows: "on a thread a story's planner opened, an answer, with or without a source, or a recommendation, and resolving it (ADR-0119)", Permission: PlanBacklogStories},
 	{Name: "finalize-draft", Calls: []string{"item_edit", "flai edit"}, Allows: "finalizing a draft and changing nothing else", Permission: FinalizeDrafts},
 	{Name: "to-ready", Calls: []string{"item_move", "flai move"}, Allows: "a move to ready and nowhere else", Permission: PromoteToReady},
@@ -167,6 +176,8 @@ var Gated = []Gate{
 	{"flai plan", PlanBacklogStories, "plan-story"},
 	{"item_edit", PlanBacklogStories, "cost-inputs"},
 	{"flai edit", PlanBacklogStories, "cost-inputs"},
+	{"item_edit", SetCostOfDelay, "cost-inputs"},
+	{"flai edit", SetCostOfDelay, "cost-inputs"},
 	{"item_edit", FinalizeDrafts, "finalize-draft"},
 	{"flai edit", FinalizeDrafts, "finalize-draft"},
 	{"item_new", FinalizeDrafts, ""},

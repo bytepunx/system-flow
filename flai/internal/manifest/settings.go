@@ -104,8 +104,12 @@ var permissionText = map[string][2]string{
 		"The planner runs, and spends, on an epic you may not mean to start yet, and its drafts fill the backlog.",
 	},
 	PermitPlanBacklogStories: {
-		"Lets the orchestrator ask the planner to plan each story in the backlog that lacks touches, a forecast, a cost of delay value, or tasks, answer and resolve the threads that planner opens, and give such a story its cost of delay inputs when neither it nor its epic has any.",
+		"Lets the orchestrator ask the planner to plan each story in the backlog that lacks touches, a forecast, a cost of delay value, or tasks, answer and resolve the threads that planner opens, and give such a story its first cost of delay inputs when neither it nor its epic has any.",
 		"The planner runs, and spends, on every unplanned backlog story, and the orchestrator answers its questions and sets cost of delay inputs, money decisions, without you.",
+	},
+	PermitSetCostOfDelay: {
+		"Lets the orchestrator add or change the cost of delay inputs, revenue per week, penalty per week, and time lost per cycle, of any epic or story that is not done, cancelled, or archived, whether or not it or its epic has inputs already, and nothing else: no value, no removal.",
+		"It changes money figures you set without you: the inputs an epic's or a story's cost of delay is worked out from.",
 	},
 	PermitFinalizeDrafts: {
 		"Lets the orchestrator finalize a draft story, as flai edit --no-draft does.",

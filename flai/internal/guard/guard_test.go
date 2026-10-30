@@ -738,7 +738,7 @@ func orchestrator(p manifest.Permissions) Guard {
 }
 
 // allOn are every permission on; except turns one of them off.
-var allOn = manifest.Permissions{PlanBacklogEpics: true, PlanBacklogStories: true, FinalizeDrafts: true, PromoteToReady: true, OrderReady: true, AnswerThreads: manifest.AnswerAutonomous, AcceptReviews: true, Publish: true, EditSubprojects: true}
+var allOn = manifest.Permissions{PlanBacklogEpics: true, PlanBacklogStories: true, SetCostOfDelay: true, FinalizeDrafts: true, PromoteToReady: true, OrderReady: true, AnswerThreads: manifest.AnswerAutonomous, AcceptReviews: true, Publish: true, EditSubprojects: true}
 
 func except(name string) manifest.Permissions {
 	p := allOn
@@ -747,6 +747,8 @@ func except(name string) manifest.Permissions {
 		p.PlanBacklogEpics = false
 	case manifest.PermitPlanBacklogStories:
 		p.PlanBacklogStories = false
+	case manifest.PermitSetCostOfDelay:
+		p.SetCostOfDelay = false
 	case manifest.PermitFinalizeDrafts:
 		p.FinalizeDrafts = false
 	case manifest.PermitPromoteToReady:
@@ -782,7 +784,8 @@ func TestTheOrchestratorsPermissionsAllowItsCalls(t *testing.T) {
 		calls  []Event
 	}{
 		{manifest.PermitPlanBacklogEpics, manifest.Permissions{PlanBacklogEpics: true}, []Event{itemOf("plan", "E-0016", ""), itemOf("plan", "e-16", ""), bash("", "flai plan E-0016"), bash("", "scripts/flai.sh --config c.json plan E-1 --json")}},
-		{manifest.PermitPlanBacklogStories, manifest.Permissions{PlanBacklogStories: true}, []Event{itemOf("plan", "S-0001", ""), itemOf("plan", "s-1", ""), bash("", "flai plan S-0001"), bash("", "flai edit S-0001 --revenue-per-week 500 --time-lost-per-cycle=4h"), bash("", "flai edit E-0001 --time-lost-per-cycle 4h")}},
+		{manifest.PermitPlanBacklogStories, manifest.Permissions{PlanBacklogStories: true}, []Event{itemOf("plan", "S-0001", ""), itemOf("plan", "s-1", ""), bash("", "flai plan S-0001")}},
+		{manifest.PermitSetCostOfDelay, manifest.Permissions{SetCostOfDelay: true}, []Event{bash("", "flai edit E-0001 --time-lost-per-cycle 4h"), bash("", "flai edit e-24 --revenue-per-week 500 --time-lost-per-cycle=4h")}},
 		{manifest.PermitFinalizeDrafts, manifest.Permissions{FinalizeDrafts: true}, []Event{bash("", "flai edit S-0001 --no-draft"), bash("", "flai edit --by orchestrator S-0001 --no-draft=true --hash=abc --json")}},
 		{manifest.PermitPromoteToReady, manifest.Permissions{PromoteToReady: true}, []Event{itemOf("item_move", "S-0001", "ready"), bash("", "flai move S-0001 ready"), bash("", "flai move --reason 'top of the backlog' S-0001 ready")}},
 		{manifest.PermitOrderReady, manifest.Permissions{OrderReady: true}, []Event{bash("", "flai order --by wsjf --apply")}},

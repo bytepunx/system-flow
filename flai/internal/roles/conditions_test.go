@@ -26,6 +26,11 @@ func TestConditionsTableIsWellFormed(t *testing.T) {
 		if c.Permission != "" && !slices.Contains(Permissions, c.Permission) {
 			t.Errorf("condition %s is gated by unknown permission %s", c.Name, c.Permission)
 		}
+		for _, p := range c.Also {
+			if c.Permission == "" || p == c.Permission || !slices.Contains(Permissions, p) {
+				t.Errorf("condition %s may also stand under %s, unknown, its own, or with no permission gating it", c.Name, p)
+			}
+		}
 		for _, e := range c.Events {
 			if !slices.Contains(Events, e) {
 				t.Errorf("condition %s qualifies unknown event %s", c.Name, e)
@@ -40,7 +45,7 @@ func TestConditionsTableIsWellFormed(t *testing.T) {
 			continue
 		}
 		c, ok := Condition(g.Condition)
-		if !ok || c.Permission != g.Permission || !c.Qualifies(g.Call) {
+		if !ok || !c.GatedBy(g.Permission) || !c.Qualifies(g.Call) {
 			t.Errorf("gate %+v names a condition that does not qualify its call under its permission", g)
 		}
 	}
@@ -62,6 +67,12 @@ func TestCondition(t *testing.T) {
 	c, ok := Condition("to-ready")
 	if !ok || c.Permission != PromoteToReady || !c.Qualifies("flai move") || c.Qualifies("item_new") {
 		t.Errorf("Condition(to-ready) = %+v, %v", c, ok)
+	}
+	// S-0523, ADR-0224: cost-inputs stands under either permission that
+	// lets the orchestrator set cost of delay inputs, and no other
+	cost := cond(t, "cost-inputs")
+	if !cost.GatedBy(PlanBacklogStories) || !cost.GatedBy(SetCostOfDelay) || cost.GatedBy(FinalizeDrafts) || cost.GatedBy("") || c.GatedBy(SetCostOfDelay) {
+		t.Errorf("cost-inputs = %+v, to-ready = %+v", cost, c)
 	}
 	back, ok := Condition("to-backlog")
 	if !ok || !back.OnCall() || !back.OnTrigger() || !back.Qualifies("item_move") || !back.QualifiesTrigger(Trigger{Kind: TriggerEvent, Event: "moved"}) {

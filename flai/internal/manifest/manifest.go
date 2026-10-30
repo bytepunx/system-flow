@@ -639,6 +639,11 @@ type Permissions struct {
 	// threads, and give a backlog story without any its cost of delay
 	// inputs (S-0328, ADR-0119).
 	PlanBacklogStories bool `yaml:"plan_backlog_stories,omitempty" json:"plan_backlog_stories,omitempty"`
+	// SetCostOfDelay lets it add or change the cost of delay inputs of an
+	// epic or a story neither done, cancelled, nor archived, whether or not
+	// it or its epic has inputs already, and nothing else (S-0523,
+	// ADR-0224).
+	SetCostOfDelay bool `yaml:"set_cost_of_delay,omitempty" json:"set_cost_of_delay,omitempty"`
 	// FinalizeDrafts lets it finalize a draft story.
 	FinalizeDrafts bool `yaml:"finalize_drafts,omitempty" json:"finalize_drafts,omitempty"`
 	// PromoteToReady lets it move a story to ready.
@@ -670,6 +675,7 @@ type Permissions struct {
 const (
 	PermitPlanBacklogEpics   = "plan_backlog_epics"
 	PermitPlanBacklogStories = "plan_backlog_stories"
+	PermitSetCostOfDelay     = "set_cost_of_delay"
 	PermitFinalizeDrafts     = "finalize_drafts"
 	PermitPromoteToReady     = "promote_to_ready"
 	PermitOrderReady         = "order_ready"
@@ -682,7 +688,7 @@ const (
 
 // PermissionNames are the keys of orchestration.permissions, in the order
 // they are listed to the operator.
-var PermissionNames = []string{PermitPlanBacklogEpics, PermitPlanBacklogStories, PermitFinalizeDrafts, PermitPromoteToReady, PermitOrderReady, PermitAnswerThreads, PermitConfirmAfter, PermitAcceptReviews, PermitPublish, PermitEditSubprojects}
+var PermissionNames = []string{PermitPlanBacklogEpics, PermitPlanBacklogStories, PermitSetCostOfDelay, PermitFinalizeDrafts, PermitPromoteToReady, PermitOrderReady, PermitAnswerThreads, PermitConfirmAfter, PermitAcceptReviews, PermitPublish, PermitEditSubprojects}
 
 // The values of orchestration.permissions.answer_threads.
 const (
@@ -755,6 +761,8 @@ func (p Permissions) Allows(name string) bool {
 		return p.PlanBacklogEpics
 	case PermitPlanBacklogStories:
 		return p.PlanBacklogStories
+	case PermitSetCostOfDelay:
+		return p.SetCostOfDelay
 	case PermitFinalizeDrafts:
 		return p.FinalizeDrafts
 	case PermitPromoteToReady:

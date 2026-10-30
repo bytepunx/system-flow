@@ -259,8 +259,8 @@ func (h held) setting(s string) (manifest.Permissions, bool) {
 // it; both "" when one allows it. An entry that names the call, as names
 // says, allows it while its setting is on and its condition, if it names
 // one, qualifies the entry and holds, as holds says under the setting's
-// permissions.
-func (h held) judge(es []entry, names func(string) bool, holds func(cond string, p manifest.Permissions) bool) (why, needs string) {
+// permission, perm, "" for an entry under none, and its permissions.
+func (h held) judge(es []entry, names func(string) bool, holds func(cond, perm string, p manifest.Permissions) bool) (why, needs string) {
 	var offs []string
 	var unmet []roles.Cond
 	for _, e := range es {
@@ -272,7 +272,8 @@ func (h held) judge(es []entry, names func(string) bool, holds func(cond string,
 			continue
 		}
 		p, on := h.setting(e.setting)
-		met := e.call.When == "" || holds(e.call.When, p)
+		perm, _, _ := roles.ParseSetting(e.setting)
+		met := e.call.When == "" || holds(e.call.When, perm, p)
 		switch {
 		case met && on:
 			return "", ""
@@ -300,13 +301,13 @@ func (h held) judge(es []entry, names func(string) bool, holds func(cond string,
 func (h held) tool(tool string, in Args) (why, needs string) {
 	return h.judge(h.entries(false),
 		func(call string) bool { return call == tool },
-		func(cond string, p manifest.Permissions) bool { return h.toolHolds(cond, p, tool, in) })
+		func(cond, perm string, p manifest.Permissions) bool { return h.toolHolds(cond, perm, p, tool, in) })
 }
 
 // toolHolds says whether the condition named cond holds for a flai tool with
-// its arguments, under p, the permissions of the setting the entry stands
-// under.
-func (h held) toolHolds(cond string, p manifest.Permissions, tool string, in Args) bool {
+// its arguments, under perm, the permission of the setting the entry stands
+// under, and p, that setting's permissions.
+func (h held) toolHolds(cond, perm string, p manifest.Permissions, tool string, in Args) bool {
 	tc := threadCall{verb: strings.TrimPrefix(tool, "thread_"), id: in.ID, recommendation: in.Recommendation, sourced: cites(in.Source)}
 	switch cond {
 	case "draft-only":
@@ -328,7 +329,8 @@ func (h held) toolHolds(cond string, p manifest.Permissions, tool string, in Arg
 	case "plan-story":
 		return isStory(in.ID)
 	case "cost-inputs":
-		return setsCostInputs(in)
+		// an epic's only under set_cost_of_delay (S-0523, ADR-0224)
+		return setsCostInputs(in) && (isStory(in.ID) || perm == roles.SetCostOfDelay)
 	case "finalize-draft":
 		return finalizesDraft(in)
 	}
@@ -346,7 +348,9 @@ func (h held) rules() rules {
 			}
 			return h.judge(es,
 				func(call string) bool { return h.matches(call, cmd, sub) },
-				func(cond string, p manifest.Permissions) bool { return h.commandHolds(cond, p, cmd, sub, rest) })
+				func(cond, perm string, p manifest.Permissions) bool {
+					return h.commandHolds(cond, perm, p, cmd, sub, rest)
+				})
 		},
 		git: func(string) string { return "it runs only git's reads" },
 	}
@@ -409,9 +413,10 @@ func (h held) subcommandsOf(cmd string) []string {
 }
 
 // commandHolds says whether the condition named cond holds for flai's
-// command cmd, with its subcommand sub and the words after flai, under p,
-// the permissions of the setting the entry stands under.
-func (h held) commandHolds(cond string, p manifest.Permissions, cmd, sub string, rest []string) bool {
+// command cmd, with its subcommand sub and the words after flai, under perm,
+// the permission of the setting the entry stands under, and p, that
+// setting's permissions.
+func (h held) commandHolds(cond, perm string, p manifest.Permissions, cmd, sub string, rest []string) bool {
 	moves := positionals(rest, moveValues)
 	moveTo := ""
 	if cmd == "move" && len(moves) > 2 {
@@ -434,7 +439,8 @@ func (h held) commandHolds(cond string, p manifest.Permissions, cmd, sub string,
 	case "plan-story":
 		return len(plans) > 1 && isStory(plans[1])
 	case "cost-inputs":
-		return setsCostInputsOnly(rest)
+		// an epic's only under set_cost_of_delay (S-0523, ADR-0224)
+		return setsCostInputsOnly(rest) && (isStory(positionals(rest, editValues)[1]) || perm == roles.SetCostOfDelay)
 	case "finalize-draft":
 		return finalizesOnly(rest)
 	case "by-policy":

@@ -1,6 +1,6 @@
 ---
 title: Orchestrator
-updated: 2026-10-29
+updated: 2026-10-30
 status: active
 name: orchestrator
 role: orchestrate
@@ -54,6 +54,9 @@ permissions:
       - {call: flai edit, when: cost-inputs}
       - {call: flai thread reply, when: planner-thread}
       - {call: flai thread resolve, when: planner-thread}
+  - setting: orchestration.permissions.set_cost_of_delay
+    tools: [{call: item_edit, when: cost-inputs}]
+    commands: [{call: flai edit, when: cost-inputs}]
   - setting: orchestration.permissions.finalize_drafts
     tools: [{call: item_edit, when: finalize-draft}]
     commands: [{call: flai edit, when: finalize-draft}]

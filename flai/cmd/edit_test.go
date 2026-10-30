@@ -378,13 +378,15 @@ func TestTheOrchestratorFinalizesOnlyACompleteDraft(t *testing.T) {
 	}
 }
 
-// S-0328, I-0187: in the orchestrator's shell flai edit sets cost of delay
-// inputs on an epic or a story that is open while the project gives it
-// plan_backlog_stories, recorded as the orchestrator's, in any column and
-// with inputs of its own or its epic's already, and with input flags alone:
-// a value, a removal, another flag, and a cancelled story are each refused,
-// saying why.
-func TestTheOrchestratorSetsCostOfDelayInputsOnAnOpenEpicOrStory(t *testing.T) {
+// S-0328, S-0523, ADR-0224: in the orchestrator's shell flai edit sets cost
+// of delay inputs, recorded as the orchestrator's, with input flags alone: a
+// value, a removal, another flag, and a cancelled story are each refused,
+// saying why. With plan_backlog_stories alone it gives a backlog story its
+// first inputs while neither it nor its epic has any, and is refused the
+// rest naming set_cost_of_delay; with set_cost_of_delay it sets them on an
+// epic or a story that is open, in any column and with inputs of its own or
+// its epic's already.
+func TestTheOrchestratorSetsCostOfDelayInputsByItsPermissions(t *testing.T) {
 	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
 	t.Setenv("FLAI_AGENT", "orchestrator")
 	t.Setenv("FLAI_ROLE", "")
@@ -425,24 +427,36 @@ func TestTheOrchestratorSetsCostOfDelayInputsOnAnOpenEpicOrStory(t *testing.T) {
 	edit := func(id string, more ...string) []string {
 		return append(append([]string{"edit", id}, inputs...), more...)
 	}
-	if _, errOut, code := runIn(t, root, edit("S-0001")...); code == 0 || !strings.Contains(errOut, "rule: the orchestrator sets cost of delay inputs only with orchestration.permissions.plan_backlog_stories, which is off: ask the operator with thread_open on S-0001") {
-		t.Errorf("without plan_backlog_stories: exit %d %s", code, errOut)
+	for _, id := range []string{"S-0001", "E-0001"} {
+		if _, errOut, code := runIn(t, root, edit(id)...); code == 0 || !strings.Contains(errOut, "rule: the orchestrator sets cost of delay inputs only with orchestration.permissions.set_cost_of_delay, or on a backlog story's first inputs with orchestration.permissions.plan_backlog_stories, which are off: ask the operator with thread_open on "+id) {
+			t.Errorf("%s without either permission: exit %d %s", id, code, errOut)
+		}
 	}
-	permitOrchestrator(t, root, "plan_backlog_stories")
+	unpermitted := read(t, filepath.Join(root, "system-flow.yaml"))
+	permit := func(p string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte(unpermitted), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		permitOrchestrator(t, root, p)
+	}
 	only := "rule: S-0001: the orchestrator sets cost of delay inputs and nothing else, and this edit gives "
-	for _, c := range []struct {
-		args []string
-		want string
-	}{
-		{edit("S-0001", "--cost-of-delay-value", "300"), only + "--cost-of-delay-value too"},
-		{[]string{"edit", "S-0001", "--penalty-per-week", ""}, only + "an empty --penalty-per-week, which removes it too"},
-		{[]string{"edit", "S-0001", "--clear-cost-of-delay"}, only + "--clear-cost-of-delay too"},
-		{edit("S-0001", "--title", "Renamed"), only + "a flag other than the cost of delay inputs too"},
-		{edit("S-0001", "--touches", "flai"), only + "a flag other than the cost of delay inputs too"},
-		{edit("S-0003"), "rule: S-0003 is cancelled: the orchestrator sets cost of delay inputs on an open epic or story alone, and none on one done or cancelled"},
-	} {
-		if _, errOut, code := runIn(t, root, c.args...); code == 0 || !strings.Contains(errOut, c.want) {
-			t.Errorf("flai %v: exit %d %s, want %q", c.args, code, errOut, c.want)
+	for _, p := range []string{"plan_backlog_stories", "set_cost_of_delay"} {
+		permit(p)
+		for _, c := range []struct {
+			args []string
+			want string
+		}{
+			{edit("S-0001", "--cost-of-delay-value", "300"), only + "--cost-of-delay-value too"},
+			{[]string{"edit", "S-0001", "--penalty-per-week", ""}, only + "an empty --penalty-per-week, which removes it too"},
+			{[]string{"edit", "S-0001", "--clear-cost-of-delay"}, only + "--clear-cost-of-delay too"},
+			{edit("S-0001", "--title", "Renamed"), only + "a flag other than the cost of delay inputs too"},
+			{edit("S-0001", "--touches", "flai"), only + "a flag other than the cost of delay inputs too"},
+			{edit("S-0003"), "rule: S-0003 is cancelled: the orchestrator sets cost of delay inputs on an open epic or story alone, and none on one done or cancelled"},
+		} {
+			if _, errOut, code := runIn(t, root, c.args...); code == 0 || !strings.Contains(errOut, c.want) {
+				t.Errorf("%s: flai %v: exit %d %s, want %q", p, c.args, code, errOut, c.want)
+			}
 		}
 	}
 	repo, err := workitem.Open(root)
@@ -452,10 +466,8 @@ func TestTheOrchestratorSetsCostOfDelayInputsOnAnOpenEpicOrStory(t *testing.T) {
 	if it, _ := repo.Get("S-0001"); it.CostOfDelay != nil || it.Title != "Bare" || len(it.Touches) != 0 {
 		t.Fatalf("a refused edit changed S-0001: %+v %q %v", it.CostOfDelay, it.Title, it.Touches)
 	}
-
-	// a bare backlog story, a story with inputs, one whose epic has inputs,
-	// one in progress, and the epics, with inputs and without (I-0187)
-	for _, id := range []string{"S-0001", "S-0002", "S-0004", "S-0005", "E-0001", "E-0002"} {
+	set := func(id string) {
+		t.Helper()
 		if out := run(edit(id)...); !strings.Contains(out, id+": changed cost_of_delay") {
 			t.Errorf("inputs on %s: %s", id, out)
 		}
@@ -466,5 +478,29 @@ func TestTheOrchestratorSetsCostOfDelayInputsOnAnOpenEpicOrStory(t *testing.T) {
 		if c := it.CostOfDelay; c == nil || c.Inputs == nil || c.Inputs.RevenuePerWeek == nil || *c.Inputs.RevenuePerWeek != 500 || c.Inputs.TimeLostPerCycle != "4h" || c.Inputs.By != "orchestrator" || c.Value != nil {
 			t.Errorf("%s's inputs = %+v, want the orchestrator's, with no value", id, c)
 		}
+	}
+
+	// plan_backlog_stories alone: a bare backlog story's first inputs, and
+	// none for an epic, a story past the backlog, a story with inputs, or
+	// one whose epic has inputs
+	permit("plan_backlog_stories")
+	rest := ": with plan_backlog_stories the orchestrator gives a backlog story its first cost of delay inputs alone; the rest needs orchestration.permissions.set_cost_of_delay, which is off"
+	for _, c := range []struct{ id, want string }{
+		{"E-0001", "rule: E-0001 is an epic" + rest},
+		{"S-0002", "rule: S-0002 has cost of delay inputs already" + rest},
+		{"S-0004", "rule: S-0004's epic E-0002 has cost of delay inputs" + rest},
+		{"S-0005", "rule: S-0005 is in-progress, not in the backlog" + rest},
+	} {
+		if _, errOut, code := runIn(t, root, edit(c.id)...); code == 0 || !strings.Contains(errOut, c.want) {
+			t.Errorf("%s under plan_backlog_stories: exit %d %s, want %q", c.id, code, errOut, c.want)
+		}
+	}
+	set("S-0001")
+
+	// set_cost_of_delay: a story with inputs, its own or its epic's, one in
+	// progress, and the epics, with inputs and without (I-0187)
+	permit("set_cost_of_delay")
+	for _, id := range []string{"S-0002", "S-0004", "S-0005", "E-0001", "E-0002"} {
+		set(id)
 	}
 }

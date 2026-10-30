@@ -703,13 +703,16 @@ func TestTheOrchestratorFinalizesACompleteDraft(t *testing.T) {
 	}
 }
 
-// S-0328, I-0187: the orchestrator sets cost of delay inputs with item_edit
-// while the project gives it plan_backlog_stories, on an epic or a story that
-// is open, in any column and with inputs of its own or its epic's already,
-// recorded as its own, and the value left as it was (ADR-0080). A value, a
-// removal, another field, a task, an archived item, and an item done or
-// cancelled are each refused, saying why, and change nothing.
-func TestTheOrchestratorSetsCostOfDelayInputsOnAnOpenEpicOrStory(t *testing.T) {
+// S-0328, S-0523, ADR-0224: the orchestrator sets cost of delay inputs with
+// item_edit, recorded as its own and the value left as it was (ADR-0080).
+// With plan_backlog_stories alone it gives a backlog story its first inputs
+// while neither it nor its epic has any, and is refused, naming
+// set_cost_of_delay, the rest. With set_cost_of_delay it sets them on an
+// epic or a story that is open, in any column and with inputs of its own or
+// its epic's already. Without either, and under either a value, a removal,
+// another field, a task, an archived item, and an item done or cancelled,
+// each is refused, saying why, and changes nothing.
+func TestTheOrchestratorSetsCostOfDelayInputsByItsPermissions(t *testing.T) {
 	f, story := orchestrated(t)
 	at := func(title, status string) string {
 		t.Helper()
@@ -722,7 +725,20 @@ func TestTheOrchestratorSetsCostOfDelayInputsOnAnOpenEpicOrStory(t *testing.T) {
 		}
 		return id
 	}
+	priceInputs := func(id string) {
+		t.Helper()
+		revenue := 100.0
+		it, _ := f.repo.Get(id)
+		if it.CostOfDelay == nil {
+			it.CostOfDelay = &workitem.CostOfDelay{}
+		}
+		it.CostOfDelay.Inputs = &workitem.CostInputs{RevenuePerWeek: &revenue, By: "alex", At: "2026-09-15T12:00:00Z"}
+		if err := f.repo.Save(it); err != nil {
+			t.Fatal(err)
+		}
+	}
 	bare := story("Bare", true, false)
+	next := story("Next", false, false)
 	priced := story("Priced", false, true)
 	readied := at("Readied", workitem.Ready)
 	done := at("Done", workitem.Done)
@@ -736,53 +752,48 @@ func TestTheOrchestratorSetsCostOfDelayInputsOnAnOpenEpicOrStory(t *testing.T) {
 	if err := f.repo.Archive(plan); err != nil {
 		t.Fatal(err)
 	}
-	revenue := 100.0
-	for _, id := range []string{priced, f.story.Parent} {
-		it, _ := f.repo.Get(id)
-		if it.CostOfDelay == nil {
-			it.CostOfDelay = &workitem.CostOfDelay{}
-		}
-		it.CostOfDelay.Inputs = &workitem.CostInputs{RevenuePerWeek: &revenue, By: "alex", At: "2026-09-15T12:00:00Z"}
-		if err := f.repo.Save(it); err != nil {
-			t.Fatal(err)
-		}
-	}
+	priceInputs(priced)
+	epic := f.story.Parent
 	inputs := map[string]any{"revenue_per_week": 500, "time_lost_per_cycle": "4h"}
-	if _, failed := f.call(t, "item_edit", map[string]any{"id": bare, "cost_of_delay": inputs}); !strings.Contains(failed, "the orchestrator sets cost of delay inputs only with orchestration.permissions.plan_backlog_stories, which is off: ask the operator with thread_open on "+bare) {
-		t.Errorf("without plan_backlog_stories: %q", failed)
+	permits := &f.repo.Manifest.Orchestration.Permissions
+	for _, id := range []string{bare, epic} {
+		if _, failed := f.call(t, "item_edit", map[string]any{"id": id, "cost_of_delay": inputs}); !strings.Contains(failed, "the orchestrator sets cost of delay inputs only with orchestration.permissions.set_cost_of_delay, or on a backlog story's first inputs with orchestration.permissions.plan_backlog_stories, which are off: ask the operator with thread_open on "+id) {
+			t.Errorf("%s without either permission: %q", id, failed)
+		}
 	}
-	f.repo.Manifest.Orchestration.Permissions.PlanBacklogStories = true
+
 	only := ": the orchestrator sets cost of delay inputs and nothing else, and this edit gives "
-	for _, c := range []struct {
-		args map[string]any
-		want string
-	}{
-		{map[string]any{"id": bare, "cost_of_delay": map[string]any{"revenue_per_week": 500, "value": 300}}, bare + only + "a value too"},
-		{map[string]any{"id": bare, "cost_of_delay": map[string]any{"time_lost_per_cycle": ""}}, bare + only + "an empty time_lost_per_cycle, which removes it too"},
-		{map[string]any{"id": bare, "cost_of_delay": inputs, "clear_cost_of_delay": true}, bare + only + "clear_cost_of_delay too"},
-		{map[string]any{"id": bare, "cost_of_delay": inputs, "title": "Renamed"}, bare + only + "a field other than cost_of_delay too"},
-		{map[string]any{"id": bare, "cost_of_delay": inputs, "draft": true}, bare + only + "a field other than cost_of_delay too"},
-		{map[string]any{"id": f.task.ID, "cost_of_delay": inputs}, f.task.ID + " is a task: the orchestrator sets cost of delay inputs on an epic or a story, and no other item"},
-		{map[string]any{"id": archived, "cost_of_delay": inputs}, archived + " is archived: the orchestrator sets cost of delay inputs on an open epic or story alone"},
-		{map[string]any{"id": done, "cost_of_delay": inputs}, done + " is done: the orchestrator sets cost of delay inputs on an open epic or story alone, and none on one done or cancelled"},
-		{map[string]any{"id": cancelled, "cost_of_delay": inputs}, cancelled + " is cancelled: the orchestrator sets cost of delay inputs on an open epic or story alone, and none on one done or cancelled"},
-	} {
-		if _, failed := f.call(t, "item_edit", c.args); !strings.Contains(failed, c.want) {
-			t.Errorf("%v: %q, want %q", c.args, failed, c.want)
+	for _, p := range []manifest.Permissions{{PlanBacklogStories: true}, {SetCostOfDelay: true}} {
+		*permits = p
+		for _, c := range []struct {
+			args map[string]any
+			want string
+		}{
+			{map[string]any{"id": bare, "cost_of_delay": map[string]any{"revenue_per_week": 500, "value": 300}}, bare + only + "a value too"},
+			{map[string]any{"id": bare, "cost_of_delay": map[string]any{"time_lost_per_cycle": ""}}, bare + only + "an empty time_lost_per_cycle, which removes it too"},
+			{map[string]any{"id": bare, "cost_of_delay": inputs, "clear_cost_of_delay": true}, bare + only + "clear_cost_of_delay too"},
+			{map[string]any{"id": bare, "cost_of_delay": inputs, "title": "Renamed"}, bare + only + "a field other than cost_of_delay too"},
+			{map[string]any{"id": bare, "cost_of_delay": inputs, "draft": true}, bare + only + "a field other than cost_of_delay too"},
+			{map[string]any{"id": f.task.ID, "cost_of_delay": inputs}, f.task.ID + " is a task: the orchestrator sets cost of delay inputs on an epic or a story, and no other item"},
+			{map[string]any{"id": archived, "cost_of_delay": inputs}, archived + " is archived: the orchestrator sets cost of delay inputs on an open epic or story alone"},
+			{map[string]any{"id": done, "cost_of_delay": inputs}, done + " is done: the orchestrator sets cost of delay inputs on an open epic or story alone, and none on one done or cancelled"},
+			{map[string]any{"id": cancelled, "cost_of_delay": inputs}, cancelled + " is cancelled: the orchestrator sets cost of delay inputs on an open epic or story alone, and none on one done or cancelled"},
+		} {
+			if _, failed := f.call(t, "item_edit", c.args); !strings.Contains(failed, c.want) {
+				t.Errorf("%+v %v: %q, want %q", p, c.args, failed, c.want)
+			}
 		}
 	}
 	if it, _ := f.repo.Get(bare); it.CostOfDelay != nil || it.Title != "Bare" {
 		t.Fatalf("a refused edit changed %s: %+v %q", bare, it.CostOfDelay, it.Title)
 	}
-	for _, id := range []string{done, cancelled, archived} {
+	for _, id := range []string{done, cancelled, archived, epic} {
 		if it, _ := f.repo.Get(id); it.CostOfDelay != nil {
 			t.Fatalf("a refused edit changed %s: %+v", id, it.CostOfDelay)
 		}
 	}
-
-	// I-0187: stories whose epic has the operator's inputs, past the backlog
-	// or with inputs of their own, and the epic itself take them all the same
-	for _, id := range []string{bare, readied, f.story.ID, priced, f.story.Parent} {
+	set := func(id string) {
+		t.Helper()
 		ed, failed := f.call(t, "item_edit", map[string]any{"id": id, "cost_of_delay": inputs})
 		if failed != "" || strings.Join(toStrings(ed["changed"]), ",") != "cost_of_delay" {
 			t.Fatalf("inputs on %s: %v %s", id, ed, failed)
@@ -792,11 +803,42 @@ func TestTheOrchestratorSetsCostOfDelayInputsOnAnOpenEpicOrStory(t *testing.T) {
 			t.Errorf("%s's inputs = %+v, want the orchestrator's", id, c)
 		}
 	}
-	if it, _ := f.repo.Get(priced); it.CostOfDelay.Value == nil || *it.CostOfDelay.Value != 300 || it.CostOfDelay.By != "alex" {
-		t.Errorf("%s's value = %+v, want the operator's 300 as it was", priced, it.CostOfDelay)
+
+	// plan_backlog_stories alone: a backlog story's first inputs, and no more
+	*permits = manifest.Permissions{PlanBacklogStories: true}
+	rest := ": with plan_backlog_stories the orchestrator gives a backlog story its first cost of delay inputs alone; the rest needs orchestration.permissions.set_cost_of_delay, which is off"
+	narrow := []struct{ id, want string }{
+		{epic, epic + " is an epic" + rest},
+		{readied, readied + " is ready, not in the backlog" + rest},
+		{f.story.ID, f.story.ID + " is in-progress, not in the backlog" + rest},
+		{priced, priced + " has cost of delay inputs already" + rest},
 	}
+	for _, c := range narrow {
+		if _, failed := f.call(t, "item_edit", map[string]any{"id": c.id, "cost_of_delay": inputs}); !strings.Contains(failed, c.want) {
+			t.Errorf("%s under plan_backlog_stories: %q, want %q", c.id, failed, c.want)
+		}
+	}
+	set(bare)
 	if it, _ := f.repo.Get(bare); it.CostOfDelay.Value != nil {
 		t.Errorf("%s has a value the orchestrator set: %+v", bare, it.CostOfDelay)
+	}
+	if _, failed := f.call(t, "item_edit", map[string]any{"id": bare, "cost_of_delay": map[string]any{"penalty_per_week": 50}}); !strings.Contains(failed, bare+" has cost of delay inputs already"+rest) {
+		t.Errorf("a second set of inputs under plan_backlog_stories: %q", failed)
+	}
+	priceInputs(epic)
+	if _, failed := f.call(t, "item_edit", map[string]any{"id": next, "cost_of_delay": inputs}); !strings.Contains(failed, next+"'s epic "+epic+" has cost of delay inputs"+rest) {
+		t.Errorf("under an epic with inputs under plan_backlog_stories: %q", failed)
+	}
+
+	// I-0187: with set_cost_of_delay, stories whose epic has the operator's
+	// inputs, past the backlog or with inputs of their own, and the epic
+	// itself take them all the same
+	*permits = manifest.Permissions{SetCostOfDelay: true}
+	for _, id := range []string{next, readied, f.story.ID, priced, epic} {
+		set(id)
+	}
+	if it, _ := f.repo.Get(priced); it.CostOfDelay.Value == nil || *it.CostOfDelay.Value != 300 || it.CostOfDelay.By != "alex" {
+		t.Errorf("%s's value = %+v, want the operator's 300 as it was", priced, it.CostOfDelay)
 	}
 }
 
