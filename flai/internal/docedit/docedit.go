@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -152,7 +153,7 @@ func ModeOf(repo *workitem.Repo, abs string) (mode, reason string) {
 	case under(repo.AgentsDir()):
 		return Body, "flai owns a narrative's front matter"
 	case acceptedADR(repo, abs):
-		return None, "an accepted ADR is immutable but for its topics (flai adr topics): to change the decision, record a new ADR that supersedes it (flai adr new --supersedes)"
+		return None, "an ADR once accepted, superseded, deprecated, or rejected is immutable but for its topics (flai adr topics): to change the decision, record a new ADR that supersedes it (flai adr new --supersedes)"
 	}
 	return Full, ""
 }
@@ -166,14 +167,15 @@ func onlyTopics(old, content string) bool {
 }
 
 var (
-	adrFile        = regexp.MustCompile(`^\d{4}-.+\.md$`)
-	acceptedStatus = regexp.MustCompile(`(?m)^status: *(accepted|superseded|deprecated)\b`)
+	adrFile   = regexp.MustCompile(`^\d{4}-.+\.md$`)
+	adrStatus = regexp.MustCompile(`(?m)^status: *(\w+)`)
 )
 
-// acceptedADR reports whether the file is an ADR that has been accepted. A
-// proposed ADR is still a draft and is edited like any document; once
-// accepted, only flai adr new sets superseded_by on it (S-0060, settling
-// what S-0040 left open), and its topics may change (ADR-0047).
+// acceptedADR reports whether the file is an ADR that is no longer a draft.
+// A proposed ADR is a draft and is edited like any document; once accepted,
+// superseded, deprecated, or rejected, only flai adr new sets superseded_by
+// on it (S-0060, settling what S-0040 left open) and only its topics may
+// change (ADR-0047, ADR-0223).
 func acceptedADR(repo *workitem.Repo, abs string) bool {
 	if filepath.Base(filepath.Dir(abs)) != "adrs" || !adrFile.MatchString(filepath.Base(abs)) {
 		return false
@@ -187,7 +189,11 @@ func acceptedADR(repo *workitem.Repo, abs string) bool {
 		return false
 	}
 	fm, _, err := workitem.SplitFrontMatter(string(data))
-	return err == nil && acceptedStatus.MatchString(fm)
+	if err != nil {
+		return false
+	}
+	m := adrStatus.FindStringSubmatch(fm)
+	return m != nil && m[1] != "proposed" && slices.Contains(check.ADRStatuses, m[1])
 }
 
 // Show loads a document for editing, from story's worktree when story is

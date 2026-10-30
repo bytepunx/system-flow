@@ -225,3 +225,37 @@ func TestSaveWithAStoryRefuses(t *testing.T) {
 		})
 	}
 }
+
+// ADR-0223: a rejected ADR is immutable as an accepted one is, but for its
+// topics.
+func TestRejectedAdrIsImmutableButForItsTopics(t *testing.T) {
+	repo, root, _ := project(t)
+	const path = "design/adrs/0001-rejected.md"
+	adr := "---\nid: ADR-0001\ntitle: Rejected\nstatus: rejected\ndate: 2026-10-01\nsupersedes: []\nsuperseded_by: []\n---\n\n# ADR-0001: Rejected\n\n## Decision\n\nWe do not do it.\n"
+	if err := os.MkdirAll(filepath.Join(root, "design/adrs"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, path), []byte(adr), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if mode, reason := ModeOf(repo, filepath.Join(root, path)); mode != None || !strings.Contains(reason, "immutable") {
+		t.Errorf("a rejected ADR is read-only: %q %q", mode, reason)
+	}
+	body := strings.Replace(adr, "We do not do it.", "We do it after all.", 1)
+	var refused *RefusedError
+	if _, err := Save(repo, &fakeGit{}, path, body, SaveOptions{Hash: Hash(adr), NoCommit: true, Now: now}); !errors.As(err, &refused) || !strings.Contains(refused.Reason, "immutable") {
+		t.Errorf("a change to its body is refused: %v", err)
+	}
+	if got := read(t, filepath.Join(root, path)); got != adr {
+		t.Errorf("the refused save writes nothing:\n%s", got)
+	}
+
+	withTopics := strings.Replace(adr, "superseded_by: []\n---\n", "superseded_by: []\ntopics: [code]\n---\n", 1)
+	if _, err := Save(repo, &fakeGit{}, path, withTopics, SaveOptions{Hash: Hash(adr), NoCommit: true, Now: now}); err != nil {
+		t.Fatalf("a change to its topics alone is saved: %v", err)
+	}
+	if got := read(t, filepath.Join(root, path)); got != withTopics {
+		t.Errorf("the topics are written and nothing else changes:\n%s", got)
+	}
+}
