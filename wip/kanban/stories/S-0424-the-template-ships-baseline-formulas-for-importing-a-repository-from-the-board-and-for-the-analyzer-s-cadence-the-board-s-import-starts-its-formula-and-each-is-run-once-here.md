@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:41:19Z
-updated: 2026-10-29T18:11:55Z
+updated: 2026-10-30T00:05:20Z
 transitions: []
 tags: [cli, template, dashboard]
 topics: [cli, orchestration, template, conventions]
@@ -33,7 +33,6 @@ usage:
           cache_read: 24225640
           cache_write: 43672
           cost: 5.3588
-draft: true
 cost_of_delay:
   value: 50.85
   by: planner-S-0424
@@ -44,6 +43,9 @@ forecast:
   basis: "Its own forecast of 1h10m; 9th in the pull order with an in-progress limit of 5, behind S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411 and S-0412."
   by: flai
   at: 2026-10-29T18:11:55Z
+finalized:
+  by: alex
+  at: 2026-10-30T00:05:20Z
 ---
 # S-0424 The template ships baseline formulas for importing a repository from the board and for the analyzer's cadence, the board's import starts its formula, and each is run once here
 
