@@ -4,7 +4,7 @@ One file per strategic role, `<name>.md`: an agent `flai serve` starts as a sess
 
 A role file's front matter names the role (`name`, `role`), the harness definition flai generates for it (`definition`: `description`, `tools`, `model`), the host action that gates it (`action`), what starts it (`trigger`), the items a run takes (`item`), its `topics`, how its usage is charged (`charge`), and the calls the guard allows it: flai's MCP tools (`tools`), flai's commands (`commands`), the folders it may edit (`files`), and the calls only an operator's setting allows (`permissions`). A call is named plainly or under a condition flai implements. The body is the definition's prompt, with the baseline marker; a project adds its own below it, under `## Project additions`, and keeps it through `flai upgrade`, as it keeps its `topics`.
 
-The template ships four baseline roles. A role file the template does not ship is the project's own. `flai role list` prints every role; `flai check` reports `roles.file`, `roles.grant`, and `roles.definition`. Convention: [strategic-agents.md](../../conventions/strategic-agents.md).
+The template ships four baseline roles. A role file the template does not ship is the project's own. `flai role list` prints every role; `flai check` reports `roles.file`, `roles.grant`, and `roles.definition`, and advises `roles.baseline` for each of the four the project lacks, whose baseline flai runs in its place. Convention: [strategic-agents.md](../../conventions/strategic-agents.md).
 
 | File | Role | Action | Trigger |
 |------|------|--------|---------|

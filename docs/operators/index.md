@@ -482,12 +482,12 @@ The planner, the orchestrator, the analyzer, and the curator are each written do
 ```bash
 flai role list            # every role, its action, triggers, calls, and permissions
 flai role show <name>     # one role, with its harness definition and its prompt
-flai check                # roles.file, roles.grant, and roles.definition on a file that falls short
+flai check                # roles.file, roles.grant, and roles.definition on a file that falls short; roles.baseline, advisory, on a built-in role's file you lack
 ```
 
 **Understand what a role file means.** A defined role runs as you, as the built-in roles do: on your machine, as your user, with your git and forge credentials, the provider's key, and every file you can read ([Starting an agent when a story becomes ready](#starting-an-agent-when-a-story-becomes-ready) says what that environment holds). `flai guard` holds it to its file for flai's MCP tools, flai and git command lines, and file edits. It does not judge another program the session runs through `Bash`, so a role given `Bash` has your shell. A role file is code you run: review a change to one as you would a script's, and let it reach main only through a story you accept. No role may edit `design/workflows/`, so a role cannot widen itself. `flai check` refuses a file that grants an acceptance, a publish, a move past backlog, finalizing a draft, or cost of delay inputs outside the permission that gates it.
 
-`flai guard` reads each role's rules from its file (S-0416), and `flai serve` starts a role you define when you ask for it (S-0417, below). flai still decides from its own code when each of the four built-in roles starts, and `.claude/agents/` still holds their harness definitions. Since S-0418 it also starts one on the events and schedules its file's `trigger` names ([Giving a role you define a trigger](#giving-a-role-you-define-a-trigger-s-0418)).
+`flai guard` reads each role's rules from its file (S-0416), and `flai serve` starts a role you define when you ask for it (S-0417, below). flai still decides from its own code when each of the four built-in roles starts, and `.claude/agents/` still holds their harness definitions' description, tools, and model. Since S-0419 each one's prompt is its role file's body, with your additions below the marker; without the file it runs flai's baseline. Since S-0418 it also starts one on the events and schedules its file's `trigger` names ([Giving a role you define a trigger](#giving-a-role-you-define-a-trigger-s-0418)).
 
 ### The host action a role names: running a role you define (S-0417)
 

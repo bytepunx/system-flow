@@ -24,9 +24,11 @@ func newCheckCmd(a *app) *cobra.Command {
 narratives and their index, the board, and documentation front matter.
 
 Findings print as path:line: level: rule: message. Errors exit 1; with
---strict warnings do too, except two that only the operator clears: the
-review column over its limit, which acceptance clears, and an epic behind
-its stories (epic.lags-stories), which moving or accepting the epic clears.
+--strict warnings do too, except three that only the operator clears: the
+review column over its limit, which acceptance clears, an epic behind its
+stories (epic.lags-stories), which moving or accepting the epic clears, and
+a built-in role file the project lacks (roles.baseline), whose baseline
+flai runs in its place and which flai upgrade clears by adding the file.
 
 With --story S-nnnn, a finding is inside the story when it is on the
 story's item file or one of its tasks', its narrative, a thread anchored on

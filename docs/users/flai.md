@@ -2338,6 +2338,8 @@ A file that does not load is left out of `flai role list` and named on stderr. `
 | `roles.grant` | The file names a call only your settings allow outside the `permissions` entry for that setting, names a setting that is not the role's own, or names a call no setting allows, such as `flai push` or a move to done |
 | `roles.definition` | Its `definition` lacks a `description` or `tools`, or lists a tool the role's rules refuse |
 
+It also gives `roles.baseline`, an advisory warning `--strict` passes over, for each of `planner.md`, `orchestrator.md`, `analyzer.md`, and `curator.md` your project lacks. flai runs its own baseline copy of that role in its place, and `flai upgrade` adds the file (S-0419).
+
 A role runs as you, on your machine, with your credentials, so a role file is code you run: change one only through a story you accept. No role may edit `design/workflows/`.
 
 `flai guard` reads each role's rules from its file (S-0416, [ADR-0207](../../design/adrs/0207-a-strategic-role-is-a-markdown-file-under-design-workflows-roles-whose-front.md)). This holds the four agents above and any role your project defines, whose session runs with `FLAI_ROLE` set to the file's `role`. The reads every agent has pass. Each MCP tool, flai command, and folder to edit that the file lists passes, under its condition when it names one. A call under a `permissions` entry passes only while you have that setting on: `orchestration.permissions.<p>` for the orchestrator, `roles.<name>.permissions.<p>` in `system-flow.yaml` for any other role. The guard reads the setting at each call, so a change applies at the role's next call. Everything else is refused, naming the role, the rule, and its file, and telling the agent to ask you with `thread_open`.
@@ -2351,7 +2353,7 @@ roles:
 
 A built-in role your project has no file for is held to flai's own copy of it. A role your project defines with no file, or any role whose own file does not parse, is refused every write until you fix the file; the refusal names it and `flai check`. A role writes as itself alone: the guard refuses it a `--by` or `--placed-by` naming another, and setting `FLAI_AGENT` or `FLAI_SESSION` to anything but its own ([ADR-0210](../../design/adrs/0210-flai-guard-holds-a-role-a-role-file-defines-to-its-own-name-and-session-as-adr.md)). Its own name is its `FLAI_AGENT`, or its file's `name`, or `<name>-<item>` for a run on an item.
 
-In this release flai still decides from its own code when each of the four agents starts, and `.claude/agents/` still holds their harness definitions. A later release reads the files for those too. A role your project defines starts on its file's `trigger` since S-0418 ([What starts a role your project defines](#what-starts-a-role-your-project-defines)).
+In this release flai still decides from its own code when each of the four agents starts. Since S-0419 each one's harness definition takes its prompt from its role file's body, your additions below the marker included, while `.claude/agents/` still holds its description, tools, and model. A later release generates the whole definition from the file. A role your project defines starts on its file's `trigger` since S-0418 ([What starts a role your project defines](#what-starts-a-role-your-project-defines)).
 
 #### Running a role your project defines
 
