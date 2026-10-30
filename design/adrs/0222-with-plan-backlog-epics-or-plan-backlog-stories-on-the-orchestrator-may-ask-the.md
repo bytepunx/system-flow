@@ -1,7 +1,7 @@
 ---
 id: ADR-0222
 title: "With plan_backlog_epics or plan_backlog_stories on, the orchestrator may ask the planner again for an epic or a story planned before when the operator has written on a thread on it, or on an item under it, since its newest planner run ended, and the run records the thread"
-status: proposed
+status: accepted
 date: 2026-10-30
 supersedes: []
 superseded_by: []
