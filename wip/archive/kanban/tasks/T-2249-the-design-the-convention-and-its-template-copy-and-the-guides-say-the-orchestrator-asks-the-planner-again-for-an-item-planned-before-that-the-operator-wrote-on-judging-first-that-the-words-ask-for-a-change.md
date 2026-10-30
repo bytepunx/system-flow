@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 293
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 66
-      output: 337
-      cache_read: 3804505
-      cache_write: 133372
-      cost: 1.3632
+      input: 49
+      output: 18282
+      cache_read: 3822682
+      cache_write: 165020
+      cost: 2.0929
 ---
 # T-2249 The design, the convention and its template copy, and the guides say the orchestrator asks the planner again for an item planned before that the operator wrote on, judging first that the words ask for a change
 

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1430
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 68
-      output: 286
-      cache_read: 3947240
-      cache_write: 212354
-      cost: 1.44
+      input: 52
+      output: 19311
+      cache_read: 4037909
+      cache_write: 174311
+      cost: 2.2107
 ---
 # T-2247 flai plan --candidates lists an epic or story planned before that the operator has written on since its newest planner run, naming the thread, and a test reproduces I-0188
 

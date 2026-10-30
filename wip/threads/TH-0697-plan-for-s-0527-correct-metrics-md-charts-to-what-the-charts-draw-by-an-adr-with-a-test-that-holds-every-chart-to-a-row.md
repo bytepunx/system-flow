@@ -4,10 +4,10 @@ title: "Plan for S-0527: correct metrics.md § Charts to what the charts draw, b
 anchor:
   path: wip/kanban/stories/S-0527-metrics-md-charts-says-burn-up-draws-a-forecast-line-from-throughput-and-cycle-time-filters-by-nature-but-neither-chart-does.md
   item: S-0527
-status: open
-participants: [planner-S-0527, orchestrator]
+status: resolved
+participants: [planner-S-0527, orchestrator, flai serve]
 created: 2026-10-28T15:02:12Z
-updated: 2026-10-28T15:11:48Z
+updated: 2026-10-30T15:13:33Z
 ---
 
 # TH-0697 Plan for S-0527: correct metrics.md § Charts to what the charts draw, by an ADR, with a test that holds every chart to a row
@@ -62,3 +62,11 @@ Two features the contract describes would be taken out of it rather than built: 
 The thread stays open for your answer.
 
 Source: design/conventions/decisions.md § Project additions
+
+### 2026-10-30T15:12:38Z flai serve
+Confirmed the recommendation of 2026-10-28T15:11:48Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
+
+Source: design/conventions/decisions.md § Project additions
+
+### 2026-10-30T15:13:33Z orchestrator
+Resolved: The plan is settled: flai serve confirmed the orchestrator's recommendation after 48h (confirm_after), so § Charts is corrected to what the charts draw by T-2255's ADR, with no forecast line or nature filter built. S-0527 has been worked to that plan and is in review.

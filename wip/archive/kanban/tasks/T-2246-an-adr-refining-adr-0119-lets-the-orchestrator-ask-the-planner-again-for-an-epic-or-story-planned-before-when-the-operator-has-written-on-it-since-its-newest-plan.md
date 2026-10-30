@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 49
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 12
-      cache_read: 390383
-      cache_write: 2359
-      cost: 0.136
+      input: 5
+      output: 1823
+      cache_read: 381248
+      cache_write: 16458
+      cost: 0.2087
 ---
 # T-2246 An ADR refining ADR-0119 lets the orchestrator ask the planner again for an epic or story planned before when the operator has written on it since its newest plan
 

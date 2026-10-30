@@ -3,10 +3,10 @@ id: S-0524
 type: story
 nature: improvement
 title: flai plan --candidates lists no epic or story planned before, so the orchestrator cannot ask the planner to plan one again
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-28T12:53:50Z
-updated: 2026-10-30T14:35:46Z
+updated: 2026-10-30T15:20:38Z
 transitions:
   - to: ready
     at: 2026-10-30T00:10:24Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-30T13:06:40Z
     by: agent-S-0524
+  - to: review
+    at: 2026-10-30T15:04:42Z
+    by: agent-S-0524
+  - to: done
+    at: 2026-10-30T15:20:38Z
+    by: orchestrator
 tags: [flai, orchestrator, planner]
 topics: [orchestration, planning]
 touches: [design/adrs, design/adrs/README.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, flai/internal/workitem/plancandidates.go, flai/internal/workitem/plancandidates_test.go, flai/cmd/plan.go, flai/cmd/plan_candidates_test.go, flai/cmd/plan_orchestrate_test.go, flai/cmd/orchestrate_permissions_test.go, flai/internal/mcpserver/plan.go, flai/internal/mcpserver/plan_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/issues/I-0188-flai-plan-candidates-lists-no-epic-or-story-planned-before-so-the-orchestrator-cannot-ask-the-planner-to-plan-one-again.md, design/issues/summary.md, design/issues/I-0226-two-flai-serve-tests-check-before-what-they-wait-for-has-happened-and-fail-a-loaded-merge-queue-batch-on-timing.md]
@@ -24,32 +30,38 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 4766
-  estimated: true
-  priced_by: estimate
+  seconds: 7097
+  priced_by: harness
   turns:
     - day: 2026-10-30
-      ceremony: 2
-      hand_edits: 3
-      work: 45
+      ceremony: 5
+      test_runs: 2
+      hand_edits: 5
+      work: 66
   models:
     - model: claude-opus-5-5
-      input: 310
-      output: 1532
-      cache_read: 19310519
-      cache_write: 1220451
-      cost: 7.1074
+      input: 378
+      output: 141616
+      cache_read: 29611653
+      cache_write: 1278292
+      cost: 16.2122
   strategic:
     - kind: orchestrator
-      seconds: 158
+      seconds: 238
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 18
-          output: 223
-          cache_read: 5638971
-          cache_write: 24816
-          cost: 1.2435
+          input: 40
+          output: 446
+          cache_read: 6185360
+          cache_write: 115490
+          cost: 1.3861
+        - model: claude-sonnet-5-5
+          input: 8
+          output: 58
+          cache_read: 83181
+          cache_write: 45563
+          cost: 0.0892
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30m
@@ -108,3 +120,14 @@ Planned by planner-S-0524 on 2026-10-28; the plan is on TH-0695, where the orche
 **Forecast.** `flai forecast S-0524` gave 3m with no touches (size 2) and gives 38m with them: the median 89 s per unit of size over 98 done improvement stories on claude-opus-5-5 in the large band, times size 25 (2 criteria, 23 touches), delivery 2026-10-29T04:45Z, 35th in the pull order. Raised to 1h15m: five tasks in four serial layers, an ADR, fixture tests across four Go packages (cmd, mcpserver, serve, harness) that need a planner run's state and threads, and seven documents, the generated reference and the template changelog among them; S-0523, of the same shape, carries 1h15m. The delivery written is flai's play-out start, 04:45Z less 38m, plus 1h15m: 2026-10-29T05:22Z.
 
 **Cost of delay.** 75.00 USD a week, as `flai cod S-0524` works it out from the input the orchestrator set on TH-0695 at my recommendation: `time_lost_per_cycle: 30m` at 150 USD an hour, one 168h cycle a week. The figure stands: each scope change the operator decides on a thread while the orchestrator runs sends them to run `flai plan` by hand, and the drafted story waits meanwhile; S-0523, from the same TH-0579 instance, carries the same input.
+
+### Accepted by the orchestrator
+
+- Verified: 094ed36e1e780040e24a6dff3eeac03099b0fa4a
+- Batch: 20261030-150615
+- Enqueued verified: 094ed36e1e780040e24a6dff3eeac03099b0fa4a
+- At: 2026-10-30T15:20:38Z
+
+Verdict: S-0524 meets both acceptance criteria; flai verify passed at 094ed36 with integration and smoke left to the merge queue.
+- 1: design/adrs/0222-with-plan-backlog-epics-or-plan-backlog-stories-on-the-orchestrator-may-ask-the.md, flai/internal/workitem/plancandidates.go, flai/cmd/plan.go, flai/internal/serve/plan.go, flai/internal/mcpserver/plan.go, flai/internal/harness/harness.go, flai/cmd/plan_candidates_test.go, flai/internal/workitem/plancandidates_test.go
+- 2: design/issues/I-0188-flai-plan-candidates-lists-no-epic-or-story-planned-before-so-the-orchestrator-cannot-ask-the-planner-to-plan-one-again.md, design/issues/summary.md

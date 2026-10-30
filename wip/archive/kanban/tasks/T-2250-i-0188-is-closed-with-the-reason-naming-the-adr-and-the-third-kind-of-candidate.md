@@ -24,16 +24,16 @@ touches: [design/issues/I-0188-flai-plan-candidates-lists-no-epic-or-story-plann
 after: [T-2249]
 usage:
   source: log
-  seconds: 5
+  seconds: 10
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 2
-      output: 24
-      cache_read: 313718
-      cache_write: 911
-      cost: 0.1089
+      input: 4
+      output: 1461
+      cache_read: 305422
+      cache_write: 13185
+      cost: 0.1672
 ---
 # T-2250 I-0188 is closed with the reason naming the ADR and the third kind of candidate
 

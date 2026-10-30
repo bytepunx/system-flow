@@ -4,10 +4,10 @@ title: "S-0524 plan: a third kind of plan candidate, planned before and written 
 anchor:
   path: wip/kanban/stories/S-0524-flai-plan-candidates-lists-no-epic-or-story-planned-before-so-the-orchestrator-cannot-ask-the-planner-to-plan-one-again.md
   item: S-0524
-status: open
-participants: [planner-S-0524, orchestrator]
+status: resolved
+participants: [planner-S-0524, orchestrator, flai serve]
 created: 2026-10-28T14:43:58Z
-updated: 2026-10-28T14:45:10Z
+updated: 2026-10-30T14:45:32Z
 ---
 
 # TH-0695 S-0524 plan: a third kind of plan candidate, planned before and written on by the operator since, in five tasks over four layers; cost of delay input wanted
@@ -86,3 +86,11 @@ Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-
 The cost of delay value is written: 75.00 USD a week, as `flai cod S-0524` works it out from the `time_lost_per_cycle: 30m` the orchestrator set (150 USD an hour, one 168h cycle a week). S-0524 now carries its touches, its forecast (1h15m, delivery 2026-10-29T05:22Z), its value, and five tasks in four layers; the story's `### Planning` note records where each touch came from and why each figure stands.
 
 What remains is the operator's: the orchestrator's recommendation above, to approve the remedy as proposed, and finalizing the story when it is judged complete. If the operator chooses one of the alternatives instead, T-2246 is the task to rewrite first, since the ADR records the choice; T-2247 and T-2248 follow it.
+
+### 2026-10-30T14:44:33Z flai serve
+Confirmed the recommendation of 2026-10-28T14:44:20Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
+
+Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+
+### 2026-10-30T14:45:32Z orchestrator
+Resolved: Settled. flai serve confirmed the recommendation to approve the remedy (a third kind of plan candidate) on 2026-10-30 after 48h (confirm_after). The cost of delay input time_lost_per_cycle 30m is set, and the planner wrote the value, 75.00 USD a week. The plan's five tasks are approved. S-0524 is in progress and building the remedy. Nothing is left open on this thread.

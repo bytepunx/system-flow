@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 2830
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 122
-      output: 580
-      cache_read: 7326160
-      cache_write: 650247
-      cost: 2.7613
+      input: 99
+      output: 37031
+      cache_read: 7743061
+      cache_write: 334257
+      cost: 4.2393
 ---
 # T-2248 The orchestrator's plan admits a candidate planned before, the run records the trigger orchestrator; TH-nnnn, and the planner's prompt names the thread the operator wrote on
 

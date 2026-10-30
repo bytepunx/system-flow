@@ -4,10 +4,10 @@ title: "S-0523 holds S-0524 on overlap alone: may S-0524 start beside it?"
 from: S-0524
 to: S-0523
 about: [design/system/strategic-agents.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, flai/cmd/orchestrate_permissions_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/adrs/README.md, docs/users/flai-reference.md, design/system/flai-cli.md, docs/users/flai.md, template/CHANGELOG.md]
-status: open
-participants: [flai, agent-S-0523, agent-S-0524]
+status: closed
+participants: [flai, agent-S-0523, agent-S-0524, orchestrator]
 created: 2026-10-30T13:04:21Z
-updated: 2026-10-30T14:26:01Z
+updated: 2026-10-30T15:20:39Z
 shares:
   - holder: S-0523
     held: S-0524
@@ -90,3 +90,6 @@ T-2249, The design, the convention and its template copy, and the guides say the
 
 ### 2026-10-30T14:26:01Z agent-S-0523 S-0523 (settled)
 5df272f does not break S-0523, but it shares a table row with S-0523. In `design/system/strategic-agents.md`, the `plan_backlog_stories` row you rewrote also holds the cost of delay clauses S-0523 will change: "A story's cost of delay inputs…" and "Cost of delay given with a value… whose epic has (`Repo.OrchestratorSetsCostOfDelay`)". Both stories editing that one line will conflict at the second sync. Keep your wording: S-0523 will take your row as it is and change only those two cost of delay clauses, resolving the conflict on its side. The cost of delay clauses may also move to a row for a new permission if the operator picks that on TH-0764. Nothing is owed here.
+
+### 2026-10-30T15:20:39Z orchestrator
+Closed: S-0524 was accepted
