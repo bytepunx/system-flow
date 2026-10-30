@@ -2,12 +2,12 @@
 id: I-0193
 title: "metrics.md § Charts says Burn-up draws a forecast line from throughput and Cycle Time filters by nature, but neither chart does"
 class: defect
-status: open
+status: closed
 count: 1
 cost: 10m
 first_reported: 2026-10-22T21:09:37Z
 last_reported: 2026-10-22T21:09:37Z
-updated: 2026-10-28T12:54:11Z
+updated: 2026-10-30T00:15:41Z
 ---
 
 # I-0193 metrics.md § Charts says Burn-up draws a forecast line from throughput and Cycle Time filters by nature, but neither chart does
@@ -24,3 +24,4 @@ Writing S-0485's chart explainers from metrics.md: its § Charts row for Burn-up
 ## Remediation
 
 Story S-0527 remediates this issue, created from it at 2026-10-28T12:54:11Z.
+Closed 2026-10-30T00:15:41Z: S-0527: ADR-0219 settles that metrics.md § Charts says what the dashboard draws. § Charts now has Cycle Time coloured by nature with no nature filter, Burn-up scope and done with no forecast line, the dashed all-models line on Tokens / Min and Tokens / $, the bucket charts under their day titles, and rows for Agent Waiting, Strategic Cost, and Strategic Use; Strategic use per day says the mean waiting is the dashboard's. explain.test.ts fails for any catalogue chart with no § Charts row under its title, which reproduced the missing rows against main.
