@@ -1,6 +1,6 @@
 ---
 title: flai CLI
-updated: 2026-10-29
+updated: 2026-10-30
 status: active
 ---
 
@@ -1233,7 +1233,9 @@ From a story's worktree, record the decision in one call with `--commit`, or the
 
 `flai adr topics` sets which stories an ADR is for: it writes `topics: [cli, template]` into the front matter, in place of the key when it is there and at the end otherwise, and changes nothing else. It works on an ADR of any status, since `topics`, with `superseded_by`, is the one key an accepted ADR may gain. Topics are separate arguments or comma separated. Each is a word, and `flai check` must know it: `all` (every story), `code`, a sub-project's name, tag, or kind in `system-flow.yaml`, or a topic a story or epic declares. A topic it does not know is refused, the file is put back, and the exit code is 4. `--autocommit` and `--trailer` work as for `flai adr new`.
 
-`flai check` warns with `adr.index` when an ADR file has no row in the index or a row has no file. An accepted ADR is immutable but for its `topics`: `flai doc save` refuses any other change, and the dashboard's editor shows it read-only.
+An ADR's status is one of `proposed`, `accepted`, `superseded`, `deprecated`, or `rejected` ([ADR-0223](../../design/adrs/0223-an-adr-s-status-is-one-of-proposed-accepted-superseded-deprecated-or-rejected-a.md)). A rejected ADR is a proposed decision you declined in favour of another: write `rejected` on the proposed ADR by hand. A proposed ADR is a draft. Every other status makes it immutable but for its `topics`: `flai doc save` refuses any other change, and the dashboard's editor shows it read-only.
+
+`flai check` warns with `adr.index` when an ADR file has no row in the index or a row has no file, and with `adr.status` when an ADR's status is not one of the five.
 
 ### Topics on documents
 
