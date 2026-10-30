@@ -63,9 +63,23 @@ func TestCheckSummaryNamesTheAdvisoryWarnings(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	// the template's role files, so that no roles.baseline adds to the count
+	roleDir := filepath.Join(root, "design", "workflows", "roles")
+	if err := os.MkdirAll(roleDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"planner", "orchestrator", "analyzer", "curator"} {
+		data, err := os.ReadFile(filepath.Join("../../template/root/design/workflows/roles", name+".md"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(roleDir, name+".md"), data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
 	out, _, _ := runIn(t, root, "check")
 	if !strings.Contains(out, "warning: board.wip-limit: 4 stories in review, limit 3") ||
-		!strings.Contains(out, " warnings (1 that --strict passes over: review over its limit and an epic behind its stories, which only the operator clears, or a narrative not yet written, which flai stream state writes, or component examples left unchecked for want of node, a Svelte sub-project, or a sub-project's svelte, or a story in progress keeping a folder touch or a story three or more open stories name in after, which only their stories clear)\n") {
+		!strings.Contains(out, " warnings (1 that --strict passes over: review over its limit, an epic behind its stories, and a built-in role file the project lacks, which only the operator clears, or a narrative not yet written, which flai stream state writes, or component examples left unchecked for want of node, a Svelte sub-project, or a sub-project's svelte, or a story in progress keeping a folder touch or a story three or more open stories name in after, which only their stories clear)\n") {
 		t.Errorf("summary should name the advisory warning:\n%s", out)
 	}
 }
