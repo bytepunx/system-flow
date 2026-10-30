@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.10 - 2026-10-30
+
+- S-0512 search.test.ts 'lists ADRs with the supersession chain' fails on main since ADR-0202's status became rejected, a status outside the four the test and the ADR template name (patch).
+
 ## 1.1.9 - 2026-10-30
 
 - S-0512 An ADR's status may be `rejected`, the fifth status, immutable as an accepted one is, and flai check reports adr.status on any status outside the five (patch).
