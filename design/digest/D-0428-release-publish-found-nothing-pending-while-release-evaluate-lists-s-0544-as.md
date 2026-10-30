@@ -16,16 +16,14 @@ cited: []
 
 The operator, alex, answered TH-0759 at 2026-10-29T18:20:39Z.
 
-What was asked:
-
-```text
-Recommendation: check why `flai release --pending` and `flai release --evaluate` disagree about S-0544, then publish it, or say it needs no release.
-```
+What was asked: `release_publish` published nothing for S-0544 while `release_evaluate` listed it as pending. The orchestrator then found the cause in the publish warning: S-0544 touched flai and flaiover, but no tag said which project it delivers to.
 
 The answer:
 
 ```text
 yes, add the tag "flaiover"
 ```
+
+So a story whose change touches two projects and carries no tag naming one is given the tag of the project it delivers to, and is then published with that project. The orchestrator cannot set the tag: `flai guard` refused its `item_edit` (ADR-0060), so it asked the operator to run `flai edit S-0544 --tags flaiover`. D-0075 holds the same fact for acceptance (I-0024), with this case added.
 
 Source: TH-0759.

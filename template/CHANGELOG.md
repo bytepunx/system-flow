@@ -2,6 +2,7 @@
 
 ## 1.1.11 - 2026-10-30
 
+- S-0524 flai plan --candidates lists no epic or story planned before, so the orchestrator cannot ask the planner to plan one again (patch).
 - S-0524 The orchestrator may ask the planner again for an epic or a story planned before, on which the operator has written since its newest planner run ended (patch, ADR-0222): in `strategic-agents.md`, the `plan_backlog_epics` and `plan_backlog_stories` rule of "As the orchestrator" says that `flai plan --candidates` lists some epics and stories as planned before, with a `thread`, that the orchestrator reads that thread with `thread_get` first, and that it starts the planner for such an item only when the operator's entry asks for a change to the plan, a story or task to add, split, merge, or drop, a changed outcome, or a changed figure, and never for a confirmation that changes nothing. Such a run records the trigger `orchestrator; TH-nnnn`, and the planner's prompt names the thread. It needs a flai that has it, the release that carries S-0524: an older flai lists no item planned before, so the orchestrator asks for none.
 
 ## 1.1.10 - 2026-10-30

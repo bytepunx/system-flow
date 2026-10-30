@@ -14,64 +14,16 @@ cited: []
 
 # D-0429 S-0419: the role file body is the definition prompt, not the start prompt, and no continuous launcher exists; how should criteria 1, 2, and T-1759 read: if we go with A now, does that prevent us from…
 
-The operator, alex, answered TH-0760 at 2026-10-30T12:56:51Z.
+The operator, alex, settled TH-0760 on S-0419 at 2026-10-30T14:05:53Z by confirming the orchestrator's recommendation of 12:57:49Z: option A.
 
-What was asked:
+What was asked: S-0419's plan assumed a built-in role file's body could become the text `planPrompt`, `orchestratePrompt`, and `analyzePrompt` produce, and that a continuous-role launcher existed. Neither held. The body of `design/workflows/roles/<name>.md` is the agent's definition prompt (the system prompt), not the start prompt (the per-run user message), as ADR-0207 § 4 says. No continuous launcher exists: ADR-0209 makes the orchestrator run for a reason and end.
 
-```text
-Two of the plan's premises do not hold in the code today (worktree read 2026-10-30).
-```
+The decision, option A:
 
-The recommendation it overruled:
+- The planner, the orchestrator, the analyzer, and the curator load their role file, the project's or flai's embedded baseline, and start through the same start path a defined role takes (`startOf`). The harness passes the file's body, with the project's additions below the marker, as the definition's prompt in `--agents`.
+- The start prompts, the run records (`plans`, `orchestrator`, `analyzer`), and when each role runs stay in Go. `role_continuous.go` was dropped (T-1759 cancelled).
+- Option B, start-prompt text moved into the bodies as templates, was turned down because it contradicts ADR-0207 § 4.
 
-```text
-Recommended for the operator: take option A.
-
-- **ADR-0207 § 4 already settles premise 1.** The role file's body is the definition's prompt, the system prompt. The start prompt stays flai's: `planPrompt`, `orchestratePrompt`, and `analyzePrompt`. Criterion 1 and T-1753, as written, contradict the accepted ADR. A follows it.
-- **Premise 2 holds too.** ADR-0209 made the orchestrator run for a reason and then end. T-1759's "continuous role" has no launcher to build on, so drop `role_continuous.go` from it.
-- **Criterion 1 would read:** "The three roles' definition prompts carry their role file's body, its project additions included, from the project's file or the embedded baseline, and `flai/internal/harness/harness_test.go` (`TestClaudeCodeStartsThePlanner`, `TheOrchestrator`, `TheAnalyzer`) passes with the same start prompt text."
-- **Criterion 2:** keep it, with "the same start path a defined role takes" in place of "the defined-role path".
-- **What stays out of S-0419 (D-0351):** the follow-up story keeps the rest of definition generation. That is checking the generated definitions against `.claude/agents/*.md` and settling the symlink for sessions started by hand. In S-0419, the additions reach the prompt only through the `--agents` JSON, and nothing is written under `.claude/`.
-- **Until that story lands, D-0411 still applies:** a change to a baseline prompt is made in both `.claude/agents/<name>.md` and the role file.
-
-B would put start-prompt text into the bodies, which goes against ADR-0207 § 4. C splits off the launcher work with no gain, since A keeps the start prompts in Go and the risk is small.
-
-Rewording criteria 1 and 2 and T-1753 and T-1759 is yours.
-
-Source: design/adrs/0207-a-strategic-role-is-a-markdown-file-under-design-workflows-roles-whose-front.md § 4. The body and the harness definition
-```
-
-The operator's answer:
-
-```text
-if we go with A now, does that prevent us from eventually moving role definitions out of Go implementation so that the 3 existing strategic agents become defined solely by data files?
-```
-
-The operator, alex, answered TH-0760 again at 2026-10-30T14:05:53Z.
-
-The answer:
-
-```text
-Recommended for the operator: take option A for S-0419. It does not block roles defined only by data files.
-
-**Your question: does A prevent it?** No. agent-S-0419's answer above holds against ADR-0207 § 4.
-
-- After A, each built-in role's definition is read from its role file.
-- All three roles start through the one start path a defined role takes.
-- What stays in Go after A is the start prompt and the replan and schedule rules. Moving the start prompt means adding a templated start-prompt section to the role file. That refines ADR-0207 § 4 in a new ADR and leaves the body alone. B would put that text into the body now, against § 4 as accepted.
-
-**What to do on S-0419:**
-
-1. Criterion 1 reads: "The three roles' definition prompts carry their role file's body, its project additions included, from the project's file or the embedded baseline, and `flai/internal/harness/harness_test.go` (`TestClaudeCodeStartsThePlanner`, `TheOrchestrator`, `TheAnalyzer`) passes with the same start prompt text."
-2. Criterion 2 keeps its words, with "the same start path a defined role takes" in place of "the defined-role path".
-3. T-1753 drops the move of start-prompt text into the bodies.
-4. T-1759 drops `role_continuous.go`. ADR-0209 makes the orchestrator run for a reason and end, so there is no continuous launcher to build on.
-
-**Follow-up, a scope addition for you:** add a backlog story under E-0024, after the definition-generation story (D-0351). It covers two things: a templated start-prompt section in the role files, under a new ADR refining ADR-0207 § 4, and the planner's replan rules and the analysis schedule as `event` and `schedule` triggers. Once it lands, the three built-in roles are defined by their files alone. E-0024's planner can draft it.
-
-Until the generation story lands, D-0411 still holds: a change to a baseline prompt is made in both `.claude/agents/<name>.md` and the role file.
-
-Source: design/adrs/0207-a-strategic-role-is-a-markdown-file-under-design-workflows-roles-whose-front.md § 4. The body and the harness definition
-```
+The operator asked first whether A prevents the built-in roles from one day being defined by data files alone. The answer, which the confirmation took: no. Moving the start prompts needs a templated start-prompt section in the role file under a new ADR refining ADR-0207 § 4, leaving the body as the definition. The replan rules and the analysis schedule would move to `event` and `schedule` triggers. That follow-up is a backlog story under E-0024, after the definition-generation story (D-0351). Until that generation story lands, D-0411 still holds.
 
 Source: TH-0760.
