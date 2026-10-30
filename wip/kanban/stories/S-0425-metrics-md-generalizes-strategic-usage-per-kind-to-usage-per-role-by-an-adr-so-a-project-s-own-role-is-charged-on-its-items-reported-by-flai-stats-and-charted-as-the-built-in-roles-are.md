@@ -3,12 +3,15 @@ id: S-0425
 type: story
 nature: feature
 title: metrics.md generalizes strategic usage per kind to usage per role by an ADR, so a project's own role is charged on its items, reported by flai stats, and charted as the built-in roles are
-status: backlog
+status: ready
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:41:28Z
-updated: 2026-10-30T00:05:51Z
-transitions: []
+updated: 2026-10-30T00:06:14Z
+transitions:
+  - to: ready
+    at: 2026-10-30T00:05:56Z
+    by: alex
 tags: [cli, dashboard]
 topics: [cli, dashboard, planning, orchestration, template]
 touches: [design/adrs, design/adrs/README.md, design/system/flaiover-dashboard.md, design/system/metrics.md, design/system/work-hierarchy.md, design/system/strategic-agents.md, design/system/continuous-improvement.md, design/system/flai-cli.md, design/tech/charts.md, docs/users/flai.md, docs/users/flaiover.md, design/workflows/roles/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/analyzer.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/analyzer.md, template/CHANGELOG.md, flai/cmd/activity.go, flai/cmd/activity_test.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/internal/issues/usage.go, flai/internal/issues/usage_test.go, flai/internal/mcpserver/activity.go, flai/internal/mcpserver/activity_test.go, flai/internal/metrics/strategic.go, flai/internal/metrics/strategic_test.go, flai/internal/metrics/usage.go, flai/internal/metrics/usage_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, flai/internal/statsread/statsread.go, flai/internal/usage/usage.go, flai/internal/usage/usage_test.go, flai/internal/workitem/usage.go, flai/internal/workitem/usage_test.go, flaiover/src/lib/components/RolePage.svelte, flaiover/src/lib/components/RolePage.svelte.test.ts, flaiover/src/lib/strategic.test.ts, flaiover/src/lib/strategic.ts, flaiover/src/lib/usage.test.ts, flaiover/src/lib/usage.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/viz/charts.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts"]
@@ -39,10 +42,10 @@ cost_of_delay:
   at: 2026-10-23T15:35:46Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-30T00:54:00Z
-  basis: "Its own forecast of 1h30m; 10th in the pull order with an in-progress limit of 5, behind S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412 and S-0424."
+  delivery: 2026-10-30T05:15:00Z
+  basis: "Its own forecast of 1h30m; 10th in the pull order with an in-progress limit of 5, behind S-0424, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411 and S-0412."
   by: flai
-  at: 2026-10-29T18:11:59Z
+  at: 2026-10-30T00:06:14Z
 finalized:
   by: alex
   at: 2026-10-30T00:05:51Z
