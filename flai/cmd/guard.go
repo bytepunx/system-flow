@@ -126,6 +126,16 @@ tool shared_paths_edit and flai shared add and remove are refused, because
 claims.shared decides which overlaps hold a story (ADR-0096). Only the
 operator's own session changes them.
 
+Nor does any of them run a flai serve sub-command that writes the host
+configuration or turns a host action on or off: flai serve enable and
+disable, agent set and clear, agent harness and agent provider with a
+setting or --reset, checks set, timeout, and clear, components idle and
+max-servers, forge with a setting or --reset, notify set and clear, and
+import add and remove are refused, as are flai config set and flai template
+use, which write the same file, because the agent's flai reads the
+operator's ~/.flai/config.json (S-0511, ADR-0220). The reading forms stay
+open. Only the operator's own session changes the host configuration.
+
 With FLAI_ROLE set, the session's own calls, which carry no agent_id, are
 held to its role's file under the design folder's workflows/roles/, the
 one whose role is FLAI_ROLE (S-0416, ADR-0207): the planner's, the
