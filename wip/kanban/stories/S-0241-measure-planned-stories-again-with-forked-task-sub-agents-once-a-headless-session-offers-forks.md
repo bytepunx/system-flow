@@ -3,11 +3,14 @@ id: S-0241
 type: story
 nature: experiment
 title: Measure planned stories again with forked task sub-agents once a headless session offers forks
-status: backlog
+status: ready
 owner: arobson
 created: 2026-10-02T17:14:07Z
-updated: 2026-10-30T00:07:59Z
-transitions: []
+updated: 2026-10-30T00:10:35Z
+transitions:
+  - to: ready
+    at: 2026-10-30T00:10:25Z
+    by: orchestrator
 blocked:
   - from: 2026-10-08T07:08:56Z
     reason: No candidate solutions yet
@@ -25,15 +28,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 8200
+      seconds: 8202
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 265
-          output: 3309
-          cache_read: 29430310
-          cache_write: 427417
-          cost: 7.0709
+          input: 266
+          output: 3325
+          cache_read: 29467135
+          cache_write: 434458
+          cost: 7.0806
 cost_of_delay:
   inputs:
     penalty_per_week: 25
@@ -44,10 +47,10 @@ cost_of_delay:
   at: 2026-10-07T23:14:44Z
 forecast:
   duration: 2h
-  delivery: 2026-10-30T08:14:00Z
-  basis: "Its own forecast of 2h; 3rd in the pull order with an in-progress limit of 5, behind S-0424 and S-0425."
+  delivery: 2026-10-30T08:16:00Z
+  basis: "Its own forecast of 2h; 4th in the pull order with an in-progress limit of 5, behind S-0424, S-0425 and S-0527."
   by: flai
-  at: 2026-10-30T00:07:59Z
+  at: 2026-10-30T00:10:35Z
 ---
 # S-0241 Measure planned stories again with forked task sub-agents once a headless session offers forks
 

@@ -3,11 +3,17 @@ id: S-0511
 type: story
 nature: remediation
 title: flai guard lets a session flai serve started run the flai serve sub-commands that write the host configuration
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-26T16:01:48Z
-updated: 2026-10-30T00:08:53Z
-transitions: []
+updated: 2026-10-30T00:11:34Z
+transitions:
+  - to: ready
+    at: 2026-10-30T00:10:22Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-30T00:10:59Z
+    by: agent-S-0511
 tags: [cli, guard]
 topics: [cli]
 touches: [flai/internal/guard/hostconfig.go, flai/internal/guard/hostconfig_test.go, flai/internal/guard/call.go, flai/internal/guard/guard.go, flai/cmd/guard.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/index.md, docs/operators/settings.md, design/system/flai-cli.md, design/system/agent-adapters.md, design/adrs/README.md, design/adrs, design/issues/I-0210-flai-guard-lets-a-session-flai-serve-started-run-the-flai-serve-sub-commands-that-write-the-host-configuration.md, design/issues/summary.md]
@@ -22,15 +28,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 881
+      seconds: 884
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 29
-          output: 397
-          cache_read: 2782157
-          cache_write: 13945
-          cost: 0.614
+          input: 31
+          output: 413
+          cache_read: 2818983
+          cache_write: 20987
+          cost: 0.6237
 cost_of_delay:
   inputs:
     penalty_per_week: 500
@@ -41,10 +47,10 @@ cost_of_delay:
   at: 2026-10-28T08:22:46Z
 forecast:
   duration: 45m
-  delivery: 2026-10-30T06:57:00Z
-  basis: "Its own forecast of 45m; 15th in the pull order with an in-progress limit of 5, behind S-0424, S-0425, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0506, S-0508, S-0509 and S-0510."
+  delivery: 2026-10-30T06:59:00Z
+  basis: "Its own forecast of 45m; 16th in the pull order with an in-progress limit of 5, behind S-0424, S-0425, S-0527, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0506, S-0508, S-0509 and S-0510."
   by: flai
-  at: 2026-10-30T00:08:53Z
+  at: 2026-10-30T00:11:34Z
 finalized:
   by: alex
   at: 2026-10-28T12:56:42Z

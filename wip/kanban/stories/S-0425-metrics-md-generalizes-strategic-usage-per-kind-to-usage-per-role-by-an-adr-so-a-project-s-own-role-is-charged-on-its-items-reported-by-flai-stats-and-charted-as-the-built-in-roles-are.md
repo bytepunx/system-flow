@@ -7,7 +7,7 @@ status: ready
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:41:28Z
-updated: 2026-10-30T00:07:55Z
+updated: 2026-10-30T00:10:26Z
 transitions:
   - to: ready
     at: 2026-10-30T00:05:56Z
@@ -27,25 +27,25 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 2244
+      seconds: 2246
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 67
-          output: 735
-          cache_read: 4706101
-          cache_write: 100574
-          cost: 1.0572
+          input: 68
+          output: 750
+          cache_read: 4742926
+          cache_write: 107615
+          cost: 1.0669
 cost_of_delay:
   value: 62.36
   by: planner-S-0425
   at: 2026-10-23T15:35:46Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-30T03:33:00Z
+  delivery: 2026-10-30T03:36:00Z
   basis: "Its own forecast of 1h30m; 2nd in the pull order with an in-progress limit of 5, behind S-0424."
   by: flai
-  at: 2026-10-30T00:07:55Z
+  at: 2026-10-30T00:10:26Z
 finalized:
   by: alex
   at: 2026-10-30T00:05:51Z

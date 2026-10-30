@@ -3,11 +3,14 @@ id: S-0524
 type: story
 nature: improvement
 title: flai plan --candidates lists no epic or story planned before, so the orchestrator cannot ask the planner to plan one again
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-28T12:53:50Z
-updated: 2026-10-30T00:09:24Z
-transitions: []
+updated: 2026-10-30T00:12:09Z
+transitions:
+  - to: ready
+    at: 2026-10-30T00:10:24Z
+    by: orchestrator
 tags: [flai, orchestrator, planner]
 topics: [orchestration, planning]
 touches: [design/adrs, design/adrs/README.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, flai/internal/workitem/plancandidates.go, flai/internal/workitem/plancandidates_test.go, flai/cmd/plan.go, flai/cmd/plan_candidates_test.go, flai/cmd/plan_orchestrate_test.go, flai/cmd/orchestrate_permissions_test.go, flai/internal/mcpserver/plan.go, flai/internal/mcpserver/plan_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/issues/I-0188-flai-plan-candidates-lists-no-epic-or-story-planned-before-so-the-orchestrator-cannot-ask-the-planner-to-plan-one-again.md, design/issues/summary.md]
@@ -22,15 +25,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 156
+      seconds: 158
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 16
-          output: 207
-          cache_read: 5602145
-          cache_write: 17774
-          cost: 1.2338
+          input: 18
+          output: 223
+          cache_read: 5638971
+          cache_write: 24816
+          cost: 1.2435
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30m
@@ -41,10 +44,10 @@ cost_of_delay:
   at: 2026-10-28T14:45:49Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-30T11:17:00Z
-  basis: "Its own forecast of 1h15m; 22nd in the pull order with an in-progress limit of 5, behind S-0424, S-0425, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0506, S-0508, S-0509, S-0510, S-0511, S-0512, S-0516, S-0517, S-0518, S-0520 and S-0523."
+  delivery: 2026-10-30T11:20:00Z
+  basis: "Its own forecast of 1h15m; 23rd in the pull order with an in-progress limit of 5, behind S-0424, S-0425, S-0527, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0506, S-0508, S-0509, S-0510, S-0511, S-0512, S-0516, S-0517, S-0518, S-0520 and S-0523."
   by: flai
-  at: 2026-10-30T00:09:24Z
+  at: 2026-10-30T00:12:09Z
 finalized:
   by: alex
   at: 2026-10-28T12:59:03Z

@@ -3,11 +3,14 @@ id: S-0529
 type: story
 nature: remediation
 title: A story the operator accepts outside the merge queue lands without the queue tiers, so a stale generated file on main fails every later batch at integration
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-28T12:54:24Z
-updated: 2026-10-30T00:09:33Z
-transitions: []
+updated: 2026-10-30T00:12:14Z
+transitions:
+  - to: ready
+    at: 2026-10-30T00:10:24Z
+    by: orchestrator
 tags: [cli]
 topics: [orchestration, testing]
 touches: [design/adrs, design/adrs/README.md, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/cmd/accept.go, flai/cmd/verify.go, flai/cmd/accept_queue_tiers_test.go, flai/cmd/move_refused_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/index.md, design/system/workflow.md, design/system/flai-cli.md, design/issues/I-0203-a-story-the-operator-accepts-outside-the-merge-queue-lands-without-the-queue-tiers-so-a-stale-generated-file-on-main-fails-every-later-batch-at-integration.md, design/issues/summary.md]
@@ -22,15 +25,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 185
+      seconds: 187
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 44
-          output: 586
-          cache_read: 4006429
-          cache_write: 64735
-          cost: 0.8945
+          input: 45
+          output: 602
+          cache_read: 4043255
+          cache_write: 71777
+          cost: 0.9042
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -41,10 +44,10 @@ cost_of_delay:
   at: 2026-10-28T18:16:03Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-30T12:08:00Z
-  basis: "Its own forecast of 1h30m; 24th in the pull order with an in-progress limit of 5, behind S-0424, S-0425, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0506, S-0508, S-0509, S-0510, S-0511, S-0512, S-0516, S-0517, S-0518, S-0520, S-0523, S-0524 and S-0527."
+  delivery: 2026-10-30T12:06:00Z
+  basis: "Its own forecast of 1h30m; 24th in the pull order with an in-progress limit of 5, behind S-0424, S-0425, S-0527, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0506, S-0508, S-0509, S-0510, S-0511, S-0512, S-0516, S-0517, S-0518, S-0520, S-0523 and S-0524."
   by: flai
-  at: 2026-10-30T00:09:33Z
+  at: 2026-10-30T00:12:14Z
 finalized:
   by: alex
   at: 2026-10-28T12:57:38Z

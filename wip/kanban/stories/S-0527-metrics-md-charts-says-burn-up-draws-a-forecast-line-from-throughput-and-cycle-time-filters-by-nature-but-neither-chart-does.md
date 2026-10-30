@@ -3,11 +3,17 @@ id: S-0527
 type: story
 nature: remediation
 title: "metrics.md § Charts says Burn-up draws a forecast line from throughput and Cycle Time filters by nature, but neither chart does"
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-28T12:54:11Z
-updated: 2026-10-30T00:09:29Z
-transitions: []
+updated: 2026-10-30T00:10:57Z
+transitions:
+  - to: ready
+    at: 2026-10-30T00:10:21Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-30T00:10:57Z
+    by: agent-S-0527
 tags: [design, metrics, flaiover]
 topics: [dashboard]
 touches: [design/adrs, design/adrs/README.md, design/system/metrics.md, flaiover/src/lib/viz/explain.test.ts, design/issues/I-0193-metrics-md-charts-says-burn-up-draws-a-forecast-line-from-throughput-and-cycle-time-filters-by-nature-but-neither-chart-does.md, design/issues/summary.md]
@@ -38,15 +44,15 @@ usage:
           cache_write: 121601
           cost: 0.1134
     - kind: orchestrator
-      seconds: 1093
+      seconds: 1096
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 54
-          output: 560
-          cache_read: 13710660
-          cache_write: 100379
-          cost: 3.033
+          input: 56
+          output: 576
+          cache_read: 13747486
+          cache_write: 107421
+          cost: 3.0427
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -57,10 +63,10 @@ cost_of_delay:
   at: 2026-10-28T14:59:56Z
 forecast:
   duration: 40m
-  delivery: 2026-10-30T11:12:00Z
-  basis: "Its own forecast of 40m; 23rd in the pull order with an in-progress limit of 5, behind S-0424, S-0425, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0506, S-0508, S-0509, S-0510, S-0511, S-0512, S-0516, S-0517, S-0518, S-0520, S-0523 and S-0524."
+  delivery: 2026-10-30T01:06:00Z
+  basis: "Its own forecast of 40m; 3rd in the pull order with an in-progress limit of 5, behind S-0424 and S-0425."
   by: flai
-  at: 2026-10-30T00:09:29Z
+  at: 2026-10-30T00:10:31Z
 finalized:
   by: alex
   at: 2026-10-28T12:57:57Z
