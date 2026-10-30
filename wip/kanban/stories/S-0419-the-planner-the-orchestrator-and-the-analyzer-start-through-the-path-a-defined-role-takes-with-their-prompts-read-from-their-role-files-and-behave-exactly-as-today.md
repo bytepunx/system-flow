@@ -45,13 +45,14 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 5061
+  seconds: 5900
   priced_by: harness
   turns:
     - day: 2026-10-30
-      ceremony: 5
+      ceremony: 9
+      test_runs: 2
       hand_edits: 3
-      work: 108
+      work: 127
   models:
     - model: claude-haiku-5-5
       input: 74
@@ -60,11 +61,11 @@ usage:
       cache_write: 212627
       cost: 0.3577
     - model: claude-opus-5-5
-      input: 382
-      output: 108370
-      cache_read: 38910151
-      cache_write: 1012326
-      cost: 17.0189
+      input: 438
+      output: 119148
+      cache_read: 40340969
+      cache_write: 1069270
+      cost: 17.9763
   strategic:
     - kind: planner
       seconds: 120

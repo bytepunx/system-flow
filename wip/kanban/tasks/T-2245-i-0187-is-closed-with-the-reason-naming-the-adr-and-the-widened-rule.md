@@ -3,16 +3,37 @@ id: T-2245
 type: task
 nature: remediation
 title: I-0187 is closed with the reason naming the ADR and the widened rule
-status: backlog
+status: done
 parent: S-0523
 owner: alex
 created: 2026-10-28T14:33:05Z
-updated: 2026-10-28T14:33:05Z
-transitions: []
+updated: 2026-10-30T17:46:05Z
+transitions:
+  - to: ready
+    at: 2026-10-30T17:45:31Z
+    by: agent-S-0523
+  - to: in-progress
+    at: 2026-10-30T17:45:32Z
+    by: agent-S-0523
+  - to: done
+    at: 2026-10-30T17:46:05Z
+    by: agent-S-0523
 stream: S-0523
 tags: [issues, orchestrator, cost-of-delay]
 touches: [design/issues/I-0187-the-orchestrator-cannot-set-a-cost-of-delay-input-the-operator-decided-on-an-epic-or-a-story-past-the-backlog.md, design/issues/summary.md]
 after: [T-2244]
+usage:
+  source: log
+  seconds: 33
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 11
+      output: 2852
+      cache_read: 820188
+      cache_write: 35787
+      cost: 0.4319
 ---
 # T-2245 I-0187 is closed with the reason naming the ADR and the widened rule
 

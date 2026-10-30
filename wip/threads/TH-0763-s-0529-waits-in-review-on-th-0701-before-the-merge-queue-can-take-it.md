@@ -4,10 +4,10 @@ title: S-0529 waits in review on TH-0701 before the merge queue can take it
 anchor:
   path: wip/kanban/stories/S-0529-a-story-the-operator-accepts-outside-the-merge-queue-lands-without-the-queue-tiers-so-a-stale-generated-file-on-main-fails-every-later-batch-at-integration.md
   item: S-0529
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-10-30T01:07:14Z
-updated: 2026-10-30T01:07:14Z
+updated: 2026-10-30T18:21:07Z
 ---
 
 # TH-0763 S-0529 waits in review on TH-0701 before the merge queue can take it
@@ -34,3 +34,6 @@ On wip/kanban/stories/S-0529-a-story-the-operator-accepts-outside-the-merge-queu
 
 - Once TH-0701 is resolved, I verify the diff, resolve this thread, and enqueue S-0529.
 - If you pick another fix, the story goes back to its agent.
+
+### 2026-10-30T18:21:07Z orchestrator
+Resolved: TH-0701 is resolved: flai serve confirmed the fix after confirm_after. The verifier found both criteria met at 45e640d9, the branch head, where verify passed; S-0529 goes to the merge queue.

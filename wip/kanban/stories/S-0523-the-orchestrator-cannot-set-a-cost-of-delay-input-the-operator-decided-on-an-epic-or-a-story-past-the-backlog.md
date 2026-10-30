@@ -3,16 +3,19 @@ id: S-0523
 type: story
 nature: improvement
 title: The orchestrator cannot set a cost of delay input the operator decided on an epic or a story past the backlog
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-28T12:53:43Z
-updated: 2026-10-30T16:49:04Z
+updated: 2026-10-30T17:58:56Z
 transitions:
   - to: ready
     at: 2026-10-30T00:10:23Z
     by: orchestrator
   - to: in-progress
     at: 2026-10-30T13:04:19Z
+    by: agent-S-0523
+  - to: review
+    at: 2026-10-30T17:58:51Z
     by: agent-S-0523
 blocked:
   - from: 2026-10-30T14:07:50Z
@@ -32,7 +35,7 @@ blocked:
     reason: awaiting the operator on TH-0764
 tags: [flai, orchestrator, cost-of-delay, guard]
 topics: [orchestration, planning]
-touches: [design/adrs, design/adrs/README.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/system/project-manifest.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md, docs/operators/settings.md, docs/operators/index.md, flai/internal/manifest/settings.go, flai/internal/guard/guard.go, flai/internal/guard/orchestrate_test.go, flai/internal/guard/guard_test.go, flai/internal/workitem/promotable.go, flai/internal/mcpserver/items_write.go, flai/internal/mcpserver/items_write_test.go, flai/cmd/edit.go, flai/cmd/edit_test.go, flai/cmd/orchestrate_permissions_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/issues/I-0187-the-orchestrator-cannot-set-a-cost-of-delay-input-the-operator-decided-on-an-epic-or-a-story-past-the-backlog.md, design/issues/summary.md]
+touches: [design/adrs, design/adrs/README.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/system/project-manifest.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md, docs/operators/settings.md, docs/operators/index.md, flai/internal/manifest/settings.go, flai/internal/guard/guard.go, flai/internal/guard/orchestrate_test.go, flai/internal/guard/guard_test.go, flai/internal/workitem/promotable.go, flai/internal/mcpserver/items_write.go, flai/internal/mcpserver/items_write_test.go, flai/cmd/edit.go, flai/cmd/edit_test.go, flai/cmd/orchestrate_permissions_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/issues/I-0187-the-orchestrator-cannot-set-a-cost-of-delay-input-the-operator-decided-on-an-epic-or-a-story-past-the-backlog.md, design/issues/summary.md, flai/internal/guard/roles.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/roles/baseline/orchestrator.md, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/roles/roles.go, design/adrs/0224-orchestration-permissions-set-cost-of-delay-off-by-default-lets-the.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -40,32 +43,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 4024
-  estimated: true
-  priced_by: estimate
+  seconds: 8195
+  priced_by: harness
   turns:
     - day: 2026-10-30
-      ceremony: 1
-      hand_edits: 1
-      work: 69
+      ceremony: 9
+      hand_edits: 5
+      work: 95
   models:
     - model: claude-opus-5-5
-      input: 330
-      output: 64151
-      cache_read: 21336878
-      cache_write: 1361542
-      cost: 12.4546
+      input: 726
+      output: 197193
+      cache_read: 56709414
+      cache_write: 2474381
+      cost: 29.8605
   strategic:
     - kind: orchestrator
-      seconds: 700
+      seconds: 783
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 148
-          output: 2140
-          cache_read: 38605234
-          cache_write: 182616
-          cost: 8.5192
+          input: 166
+          output: 2240
+          cache_read: 39137291
+          cache_write: 263146
+          cost: 8.6567
+        - model: claude-sonnet-5-5
+          input: 10
+          output: 67
+          cache_read: 125450
+          cache_write: 50180
+          cost: 0.1219
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30m
@@ -91,8 +99,8 @@ finalized:
 This story remediates [I-0187](../../../design/issues/I-0187-the-orchestrator-cannot-set-a-cost-of-delay-input-the-operator-decided-on-an-epic-or-a-story-past-the-backlog.md), "The orchestrator cannot set a cost of delay input the operator decided on an epic or a story past the backlog". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0187 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0187 is closed with `flai issue close I-0187 --reason` saying what fixed it
+- [x] The cause I-0187 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0187 is closed with `flai issue close I-0187 --reason` saying what fixed it
 
 ## Tasks
 - T-2241 An ADR refining ADR-0119 lets the orchestrator add or change cost of delay inputs on an epic or an open story under plan_backlog_stories, inputs only

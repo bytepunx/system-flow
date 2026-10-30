@@ -3,10 +3,10 @@ id: S-0529
 type: story
 nature: remediation
 title: A story the operator accepts outside the merge queue lands without the queue tiers, so a stale generated file on main fails every later batch at integration
-status: review
+status: done
 owner: alex
 created: 2026-10-28T12:54:24Z
-updated: 2026-10-30T01:06:06Z
+updated: 2026-10-30T19:19:52Z
 transitions:
   - to: ready
     at: 2026-10-30T00:10:24Z
@@ -17,9 +17,18 @@ transitions:
   - to: review
     at: 2026-10-30T01:06:06Z
     by: agent-S-0529
+  - to: in-progress
+    at: 2026-10-30T18:30:48Z
+    by: flai
+  - to: review
+    at: 2026-10-30T19:04:05Z
+    by: agent-S-0529
+  - to: done
+    at: 2026-10-30T19:19:52Z
+    by: orchestrator
 tags: [cli]
 topics: [orchestration, testing]
-touches: [design/adrs, design/adrs/README.md, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/cmd/accept.go, flai/cmd/verify.go, flai/cmd/accept_queue_tiers_test.go, flai/cmd/move_refused_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/index.md, design/system/workflow.md, design/system/flai-cli.md, design/issues/I-0203-a-story-the-operator-accepts-outside-the-merge-queue-lands-without-the-queue-tiers-so-a-stale-generated-file-on-main-fails-every-later-batch-at-integration.md, design/issues/summary.md, docs/operators/settings.md, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/reads.go, flai/internal/hostapi/reads_test.go, flai/internal/preview/orchestrator.go]
+touches: [design/adrs, design/adrs/README.md, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/cmd/accept.go, flai/cmd/verify.go, flai/cmd/accept_queue_tiers_test.go, flai/cmd/move_refused_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/index.md, design/system/workflow.md, design/system/flai-cli.md, design/issues/I-0203-a-story-the-operator-accepts-outside-the-merge-queue-lands-without-the-queue-tiers-so-a-stale-generated-file-on-main-fails-every-later-batch-at-integration.md, design/issues/summary.md, docs/operators/settings.md, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/reads.go, flai/internal/hostapi/reads_test.go, flai/internal/preview/orchestrator.go, design/issues/I-0221-the-close-out-s-go-test-tier-runs-only-the-changed-packages-so-a-change-that-breaks-a-caller-package-s-tests-passes-before-review.md, flai/internal/mcpserver/verify_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -27,31 +36,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3057
+  seconds: 5043
   priced_by: harness
   turns:
     - day: 2026-10-30
-      ceremony: 4
-      hand_edits: 3
-      work: 50
+      ceremony: 5
+      hand_edits: 7
+      work: 71
   models:
     - model: claude-opus-5-5
-      input: 356
-      output: 115438
-      cache_read: 24182320
-      cache_write: 1017093
-      cost: 13.1941
+      input: 414
+      output: 125588
+      cache_read: 33529801
+      cache_write: 1384074
+      cost: 18.2027
   strategic:
     - kind: orchestrator
-      seconds: 223
+      seconds: 370
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 59
-          output: 700
-          cache_read: 4432538
-          cache_write: 123934
-          cost: 1.0025
+          input: 97
+          output: 1037
+          cache_read: 5477924
+          cache_write: 356163
+          cost: 1.2895
+        - model: claude-sonnet-5-5
+          input: 18
+          output: 93
+          cache_read: 228943
+          cache_write: 106889
+          cost: 0.2332
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -85,6 +100,8 @@ This story remediates [I-0203](../../../design/issues/I-0203-a-story-the-operato
 - T-2262 flai verify --all reuses the tiers a run that left the queue tiers passed at the same patch, and names the queue tiers a report did not run
 - T-2263 flai accept by hand while the queue can batch refuses a story whose queue tiers did not run at its head, lists it as a blocker in --dry-run, and lands it with an override flag
 - T-2264 The docs say a hand acceptance while the queue can batch waits for the queue tiers at the story's head, and I-0203 is closed
+- T-2345 TestVerifyLeavesTheQueueTiersToTheMergeQueueWhileItCanBatch expects verify --all after a run that left the queue tiers to reuse the tiers that run passed, as ADR-0221 makes it
+- T-2346 ADR-0221 is accepted, as TH-0701's confirmed recommendation settles the fix
 
 ## Notes
 
@@ -107,3 +124,15 @@ Figures:
 
 - Forecast 1h30m, adjusted: `flai forecast` gave 32m (99 s a unit of size over 39 done remediation stories in the large band, size 19). Four tasks, two of them Go changes with real-git tests in `verify` and `accept`, and a close-out whose go-test tier runs without `-short`, take longer than the band's median. The delivery, 2026-10-29T08:45:00Z, is flai's: 37th in the pull order.
 - Cost of delay value 37.50 USD a week: `flai cod` from the operator's input, 15m lost per 168h cycle at 150 USD an hour. It stands: one occurrence in 4.5 days gives no reason to scale it.
+- 2026-10-30T18:30:48Z: moved to in-progress: merge queue batch 20261030-182125 fails with S-0529 at a1fc087d13fe: integration failed: flai/internal/mcpserver/verify_test.go:275 TestVerifyLeavesTheQueueTiersToTheMergeQueueWhileItCanBatch: all: passed true, steps rebase=passed sync=passed narrative=passed check=passed ok=reused late=passed, want rebase=passed sync=passed narrative=passed check=passed ok=passed late=passed
+
+### Accepted by the orchestrator
+
+- Verified: 3ef6d4b45261f2c8499e082ef33f796008c3c1fe
+- Batch: 20261030-190545
+- Enqueued verified: 3ef6d4b45261f2c8499e082ef33f796008c3c1fe
+- At: 2026-10-30T19:19:52Z
+
+Verdict: both criteria met at 3ef6d4b; flai verify passed every step at the head, integration and smoke included.
+- 1: flai/cmd/accept.go, flai/internal/preview/accept.go, flai/internal/verify/story.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/reads.go, flai/internal/preview/orchestrator.go, flai/cmd/accept_queue_tiers_test.go, flai/cmd/move_refused_test.go, flai/internal/preview/accept_test.go, flai/internal/verify/story_test.go, flai/internal/hostapi/reads_test.go, flai/internal/mcpserver/verify_test.go, design/adrs/0221-while-the-merge-queue-can-batch-a-hand-acceptance-is-refused-until-the-queue.md, design/adrs/README.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, docs/operators/settings.md, design/system/workflow.md, design/system/flai-cli.md
+- 2: design/issues/I-0203-a-story-the-operator-accepts-outside-the-merge-queue-lands-without-the-queue-tiers-so-a-stale-generated-file-on-main-fails-every-later-batch-at-integration.md, design/issues/summary.md, design/issues/I-0221-the-close-out-s-go-test-tier-runs-only-the-changed-packages-so-a-change-that-breaks-a-caller-package-s-tests-passes-before-review.md

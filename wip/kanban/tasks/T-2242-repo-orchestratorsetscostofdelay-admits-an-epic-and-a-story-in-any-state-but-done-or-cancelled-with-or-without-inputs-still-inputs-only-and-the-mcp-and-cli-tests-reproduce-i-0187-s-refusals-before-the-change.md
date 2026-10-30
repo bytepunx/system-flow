@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 3382
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 115
-      output: 23417
-      cache_read: 7088305
-      cache_write: 376236
-      cost: 4.097
+      input: 92
+      output: 24898
+      cache_read: 7160240
+      cache_write: 312420
+      cost: 3.7702
 ---
 # T-2242 Repo.OrchestratorSetsCostOfDelay admits an epic and a story in any state but done or cancelled, with or without inputs, still inputs only, and the MCP and CLI tests reproduce I-0187's refusals before the change
 

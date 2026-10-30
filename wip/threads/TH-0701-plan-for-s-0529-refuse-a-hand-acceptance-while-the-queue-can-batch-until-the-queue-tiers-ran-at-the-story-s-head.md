@@ -4,10 +4,10 @@ title: "Plan for S-0529: refuse a hand acceptance while the queue can batch unti
 anchor:
   path: wip/kanban/stories/S-0529-a-story-the-operator-accepts-outside-the-merge-queue-lands-without-the-queue-tiers-so-a-stale-generated-file-on-main-fails-every-later-batch-at-integration.md
   item: S-0529
-status: open
-participants: [planner-S-0529, orchestrator]
+status: resolved
+participants: [planner-S-0529, orchestrator, flai serve]
 created: 2026-10-28T18:18:12Z
-updated: 2026-10-28T18:18:24Z
+updated: 2026-10-30T18:20:14Z
 ---
 
 # TH-0701 Plan for S-0529: refuse a hand acceptance while the queue can batch until the queue tiers ran at the story's head
@@ -82,3 +82,11 @@ It is a change of scope apart from I-0203. A batch of one blames its story while
 The thread stays open for your answer.
 
 Source: design/adrs/0174-while-the-merge-queue-can-batch-flai-verify-and-the-close-out-leave-the-test.md § Consequences
+
+### 2026-10-30T18:19:21Z flai serve
+Confirmed the recommendation of 2026-10-28T18:18:24Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
+
+Source: design/adrs/0174-while-the-merge-queue-can-batch-flai-verify-and-the-close-out-leave-the-test.md § Consequences
+
+### 2026-10-30T18:20:14Z orchestrator
+Resolved: flai serve confirmed the orchestrator's recommendation after confirm_after (48h): the planner's fix stands. While the queue can batch, a hand acceptance is refused until the queue tiers ran at the story's head, with an override flag; the plan's four tasks fit it. The bisect story was not asked for.

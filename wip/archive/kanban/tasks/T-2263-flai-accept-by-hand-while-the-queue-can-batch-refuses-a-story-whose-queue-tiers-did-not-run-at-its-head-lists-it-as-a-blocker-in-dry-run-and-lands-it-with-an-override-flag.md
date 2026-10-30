@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 168
-      output: 54576
-      cache_read: 11432730
-      cache_write: 480853
-      cost: 6.2378
+      input: 141
+      output: 42661
+      cache_read: 11389678
+      cache_write: 470154
+      cost: 6.1832
 ---
 # T-2263 flai accept by hand while the queue can batch refuses a story whose queue tiers did not run at its head, lists it as a blocker in --dry-run, and lands it with an override flag
 

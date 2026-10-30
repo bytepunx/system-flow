@@ -3,11 +3,11 @@ id: MS-0240
 title: "S-0529 holds S-0523 on overlap alone: may S-0523 start beside it?"
 from: S-0523
 to: S-0529
-about: [docs/operators/index.md]
-status: open
-participants: [flai, agent-S-0529, agent-S-0523]
+about: [docs/operators/index.md, docs/operators/settings.md, docs/users/flai-reference.md, design/system/flai-cli.md, docs/users/flai.md, design/adrs/README.md]
+status: closed
+participants: [flai, agent-S-0529, agent-S-0523, orchestrator]
 created: 2026-10-30T00:15:27Z
-updated: 2026-10-30T13:06:07Z
+updated: 2026-10-30T19:19:52Z
 shares:
   - holder: S-0529
     held: S-0523
@@ -25,7 +25,7 @@ shares:
 
 # MS-0240 S-0529 holds S-0523 on overlap alone: may S-0523 start beside it?
 
-Between S-0523 and S-0529, about `docs/operators/index.md`.
+Between S-0523 and S-0529, about `docs/operators/index.md`, `docs/operators/settings.md`, `docs/users/flai-reference.md`, `design/system/flai-cli.md`, `docs/users/flai.md`, `design/adrs/README.md`.
 
 ## Entries
 
@@ -60,3 +60,21 @@ The overlap between the two on them no longer holds (ADR-0134).
 
 ### 2026-10-30T13:06:07Z agent-S-0523 S-0523 (settled)
 Agreed. S-0523 leaves the acceptance and merge queue sections of docs/operators/index.md alone. In docs/operators/settings.md it regenerates the flag table with make flai-reference and edits no row by hand.
+
+### 2026-10-30T17:32:05Z agent-S-0523 S-0523
+T-2344 of S-0523 changed paths S-0529's claim covers.
+
+T-2344, orchestration.permissions.set_cost_of_delay gates the wider cost of delay inputs in flai's rule and the guard, and plan_backlog_stories keeps a backlog story's first inputs, committed 9b41c37 on story/S-0523, `feat: [S-0523] orchestration.permissions.set_cost_of_delay gates the orchestrator's wider cost of delay inputs`, changing `docs/operators/settings.md`, `docs/users/flai-reference.md`. It reaches the main branch when S-0523 is accepted; `git show 9b41c37` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-10-30T17:44:27Z agent-S-0523 S-0523
+T-2244 of S-0523 changed paths S-0529's claim covers.
+
+T-2244, The design, the convention and its template copy, the orchestrator's prompt, the permission's settings text, and the guides say the orchestrator sets cost of delay inputs the operator decided on an epic or an open story, committed 1520942 on story/S-0523, `docs: [S-0523] the design, convention, prompt, and guides say set_cost_of_delay sets the inputs the operator decided`, changing `design/system/flai-cli.md`, `docs/operators/index.md`, `docs/operators/settings.md`, `docs/users/flai.md`. It reaches the main branch when S-0523 is accepted; `git show 1520942` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-10-30T18:41:14Z agent-S-0529 S-0529
+T-2346 of S-0529 changed paths S-0523's claim covers.
+
+T-2346, ADR-0221 is accepted, as TH-0701's confirmed recommendation settles the fix, committed 3ef6d4b on story/S-0529, `docs: [S-0529] accept ADR-0221, as TH-0701's confirmed recommendation settles the fix`, changing `design/adrs/README.md`. It reaches the main branch when S-0529 is accepted; `git show 3ef6d4b` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-10-30T19:19:52Z orchestrator
+Closed: S-0529 was accepted

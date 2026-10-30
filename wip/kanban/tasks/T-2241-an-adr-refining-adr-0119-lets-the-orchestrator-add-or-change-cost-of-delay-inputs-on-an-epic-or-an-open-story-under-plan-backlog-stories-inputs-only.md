@@ -23,16 +23,16 @@ tags: [adr, orchestrator, cost-of-delay]
 touches: [design/adrs/README.md]
 usage:
   source: log
-  seconds: 32
+  seconds: 34
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 2
-      output: 8
-      cache_read: 331151
-      cache_write: 757
-      cost: 0.1816
+      input: 4
+      output: 1116
+      cache_read: 321053
+      cache_write: 14008
+      cost: 0.1691
 ---
 # T-2241 An ADR refining ADR-0119 lets the orchestrator add or change cost of delay inputs on an epic or an open story under plan_backlog_stories, inputs only
 

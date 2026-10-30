@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 50.6270
-accrued_seconds: 4699
-tasks_completed: 29
-last_run: 2026-10-30T15:24:34Z
+accrued_cost: 52.1920
+accrued_seconds: 4788
+tasks_completed: 30
+last_run: 2026-10-30T16:53:28Z
 ---
 
 # Curator activity
@@ -243,3 +243,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0353, D-0410, D-0430
 - Seconds: 124
 - Cost: 1.7925 USD, estimated
+
+### 2026-10-30T16:53:28Z
+
+- Summary: I wrote no new entries this run. I merged S-0523 and the confirmed TH-0764 answer into D-0431 (the new permission `orchestration.permissions.set_cost_of_delay`, off by default) and S-0511 into D-0432, absorbed D-0432 by ADR-0220 § Decision, and `flai digest compact` compacted none.
+- Trigger: accepted S-0511
+- Items: D-0431, D-0432
+- Seconds: 89
+- Cost: 1.5650 USD, estimated

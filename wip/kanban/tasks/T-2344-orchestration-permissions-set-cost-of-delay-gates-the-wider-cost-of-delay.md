@@ -3,11 +3,11 @@ id: T-2344
 type: task
 nature: feature
 title: orchestration.permissions.set_cost_of_delay gates the wider cost of delay inputs in flai's rule and the guard, and plan_backlog_stories keeps a backlog story's first inputs
-status: in-progress
+status: done
 parent: S-0523
 owner: alex
 created: 2026-10-30T16:49:04Z
-updated: 2026-10-30T16:50:28Z
+updated: 2026-10-30T17:32:08Z
 transitions:
   - to: ready
     at: 2026-10-30T16:50:27Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-30T16:50:28Z
     by: agent-S-0523
+  - to: done
+    at: 2026-10-30T17:32:08Z
+    by: agent-S-0523
 stream: S-0523
 tags: []
-touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/settings.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings_test.go, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/workitem/promotable.go, flai/internal/guard/guard.go, flai/internal/guard/orchestrate_test.go, flai/internal/guard/guard_test.go, flai/internal/mcpserver/items_write_test.go, flai/cmd/edit_test.go, flai/cmd/orchestrate_permissions_test.go, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md]
+touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/settings.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings_test.go, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/workitem/promotable.go, flai/internal/guard/guard.go, flai/internal/guard/orchestrate_test.go, flai/internal/guard/guard_test.go, flai/internal/mcpserver/items_write_test.go, flai/cmd/edit_test.go, flai/cmd/orchestrate_permissions_test.go, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/roles.go, flai/internal/roles/baseline/orchestrator.md, flai/internal/guard/roles.go, docs/operators/settings.md, flai/cmd/edit.go, flai/internal/mcpserver/items_write.go, docs/users/flai-reference.md]
 after: [T-2241]
+usage:
+  source: log
+  seconds: 2500
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 232
+      output: 63133
+      cache_read: 18156117
+      cache_write: 792199
+      cost: 9.5602
 ---
 
 # T-2344 orchestration.permissions.set_cost_of_delay gates the wider cost of delay inputs in flai's rule and the guard, and plan_backlog_stories keeps a backlog story's first inputs

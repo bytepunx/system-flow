@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 69
-      output: 22460
-      cache_read: 4705091
-      cache_write: 197893
-      cost: 2.5671
+      input: 58
+      output: 17557
+      cache_read: 4687374
+      cache_write: 193490
+      cost: 2.5447
 ---
 # T-2264 The docs say a hand acceptance while the queue can batch waits for the queue tiers at the story's head, and I-0203 is closed
 

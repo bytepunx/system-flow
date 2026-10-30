@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 6
-      output: 2010
-      cache_read: 421131
-      cache_write: 17712
-      cost: 0.2298
+      input: 5
+      output: 1571
+      cache_read: 419545
+      cache_write: 17318
+      cost: 0.2278
 ---
 # T-2261 An ADR refining ADR-0174 records that a hand acceptance while the queue can batch is refused until the queue tiers ran at the story's head
 

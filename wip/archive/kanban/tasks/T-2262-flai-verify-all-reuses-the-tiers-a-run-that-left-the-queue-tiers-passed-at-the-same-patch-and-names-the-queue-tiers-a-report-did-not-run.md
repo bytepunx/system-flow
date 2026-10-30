@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 26
-      output: 8473
-      cache_read: 1774936
-      cache_write: 74653
-      cost: 0.9684
+      input: 22
+      output: 6623
+      cache_read: 1768252
+      cache_write: 72992
+      cost: 0.96
 ---
 # T-2262 flai verify --all reuses the tiers a run that left the queue tiers passed at the same patch, and names the queue tiers a report did not run
 

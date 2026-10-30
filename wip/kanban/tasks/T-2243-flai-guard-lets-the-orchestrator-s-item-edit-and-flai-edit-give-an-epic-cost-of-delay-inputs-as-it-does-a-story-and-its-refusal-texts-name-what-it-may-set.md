@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 3371
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 74
-      output: 14929
-      cache_read: 4518908
-      cache_write: 239856
-      cost: 2.6119
+      input: 58
+      output: 15873
+      cache_read: 4564768
+      cache_write: 199173
+      cost: 2.4036
 ---
 # T-2243 flai guard lets the orchestrator's item_edit and flai edit give an epic cost of delay inputs as it does a story, and its refusal texts name what it may set
 
