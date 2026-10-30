@@ -6,7 +6,7 @@ title: The orchestrator cannot set a cost of delay input the operator decided on
 status: in-progress
 owner: alex
 created: 2026-10-28T12:53:43Z
-updated: 2026-10-30T14:26:14Z
+updated: 2026-10-30T16:49:04Z
 transitions:
   - to: ready
     at: 2026-10-30T00:10:23Z
@@ -28,6 +28,7 @@ blocked:
     until: 2026-10-30T14:25:42Z
     reason: awaiting the operator on TH-0764
   - from: 2026-10-30T14:26:14Z
+    until: 2026-10-30T16:47:48Z
     reason: awaiting the operator on TH-0764
 tags: [flai, orchestrator, cost-of-delay, guard]
 topics: [orchestration, planning]
@@ -39,31 +40,32 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3925
-  priced_by: harness
+  seconds: 4024
+  estimated: true
+  priced_by: estimate
   turns:
     - day: 2026-10-30
       ceremony: 1
       hand_edits: 1
-      work: 62
+      work: 69
   models:
     - model: claude-opus-5-5
-      input: 316
-      output: 64084
-      cache_read: 19398357
-      cache_write: 1029634
-      cost: 11.2123
+      input: 330
+      output: 64151
+      cache_read: 21336878
+      cache_write: 1361542
+      cost: 12.4546
   strategic:
     - kind: orchestrator
-      seconds: 688
+      seconds: 700
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 138
-          output: 2070
-          cache_read: 38404887
-          cache_write: 125564
-          cost: 8.4615
+          input: 148
+          output: 2140
+          cache_read: 38605234
+          cache_write: 182616
+          cost: 8.5192
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30m
@@ -98,6 +100,7 @@ This story remediates [I-0187](../../../design/issues/I-0187-the-orchestrator-ca
 - T-2243 flai guard lets the orchestrator's item_edit and flai edit give an epic cost of delay inputs as it does a story, and its refusal texts name what it may set
 - T-2244 The design, the convention and its template copy, the orchestrator's prompt, the permission's settings text, and the guides say the orchestrator sets cost of delay inputs the operator decided on an epic or an open story
 - T-2245 I-0187 is closed with the reason naming the ADR and the widened rule
+- T-2344 orchestration.permissions.set_cost_of_delay gates the wider cost of delay inputs in flai's rule and the guard, and plan_backlog_stories keeps a backlog story's first inputs
 
 ## Notes
 

@@ -3,15 +3,36 @@ id: T-2241
 type: task
 nature: improvement
 title: An ADR refining ADR-0119 lets the orchestrator add or change cost of delay inputs on an epic or an open story under plan_backlog_stories, inputs only
-status: backlog
+status: done
 parent: S-0523
 owner: alex
 created: 2026-10-28T14:31:26Z
-updated: 2026-10-28T14:31:26Z
-transitions: []
+updated: 2026-10-30T16:49:37Z
+transitions:
+  - to: ready
+    at: 2026-10-30T16:49:01Z
+    by: agent-S-0523
+  - to: in-progress
+    at: 2026-10-30T16:49:03Z
+    by: agent-S-0523
+  - to: done
+    at: 2026-10-30T16:49:37Z
+    by: agent-S-0523
 stream: S-0523
 tags: [adr, orchestrator, cost-of-delay]
 touches: [design/adrs/README.md]
+usage:
+  source: log
+  seconds: 32
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 2
+      output: 8
+      cache_read: 331151
+      cache_write: 757
+      cost: 0.1816
 ---
 # T-2241 An ADR refining ADR-0119 lets the orchestrator add or change cost of delay inputs on an epic or an open story under plan_backlog_stories, inputs only
 

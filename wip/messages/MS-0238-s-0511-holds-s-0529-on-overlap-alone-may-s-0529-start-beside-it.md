@@ -4,10 +4,10 @@ title: "S-0511 holds S-0529 on overlap alone: may S-0529 start beside it?"
 from: S-0529
 to: S-0511
 about: [docs/operators/index.md, design/adrs/README.md, docs/users/flai-reference.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/settings.md]
-status: open
-participants: [flai, agent-S-0511, agent-S-0529]
+status: closed
+participants: [flai, agent-S-0511, agent-S-0529, alex]
 created: 2026-10-30T00:12:54Z
-updated: 2026-10-30T00:57:43Z
+updated: 2026-10-30T16:50:00Z
 shares:
   - holder: S-0511
     held: S-0529
@@ -75,3 +75,6 @@ T-2263, flai accept by hand while the queue can batch refuses a story whose queu
 T-2264 of S-0529 changed paths S-0511's claim covers.
 
 T-2264, The docs say a hand acceptance while the queue can batch waits for the queue tiers at the story's head, and I-0203 is closed, committed b4ce1cd on story/S-0529, `docs: [S-0529] a hand acceptance while the merge queue batches waits for the queue tiers at the story's head`, changing `design/system/flai-cli.md`, `docs/operators/index.md`, `docs/users/flai.md`. It reaches the main branch when S-0529 is accepted; `git show b4ce1cd` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-10-30T16:50:00Z alex
+Closed: S-0511 was accepted

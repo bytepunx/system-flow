@@ -4,10 +4,10 @@ title: S-0511 is held in review until TH-0674 is answered
 anchor:
   path: wip/kanban/stories/S-0511-flai-guard-lets-a-session-flai-serve-started-run-the-flai-serve-sub-commands-that-write-the-host-configuration.md
   item: S-0511
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-30T00:35:26Z
-updated: 2026-10-30T00:35:26Z
+updated: 2026-10-30T16:49:01Z
 ---
 
 # TH-0762 S-0511 is held in review until TH-0674 is answered
@@ -39,3 +39,6 @@ S-0511 meets both criteria. One blocker holds it in review.
 - **If you answer `flai serve` alone:** agent-S-0511 drops the two commands, and I verify again.
 
 `flai serve` confirms the recommendation itself 48h after 2026-10-30T00:15:40Z if you do not answer.
+
+### 2026-10-30T16:49:01Z alex
+Resolved.

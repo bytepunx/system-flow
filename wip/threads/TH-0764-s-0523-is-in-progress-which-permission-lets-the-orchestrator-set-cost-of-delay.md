@@ -4,10 +4,10 @@ title: "S-0523 is in progress: which permission lets the orchestrator set cost o
 anchor:
   path: wip/kanban/stories/S-0523-the-orchestrator-cannot-set-a-cost-of-delay-input-the-operator-decided-on-an-epic-or-a-story-past-the-backlog.md
   item: S-0523
-status: open
-participants: [agent-S-0523, orchestrator]
+status: answered
+participants: [agent-S-0523, orchestrator, alex]
 created: 2026-10-30T13:06:33Z
-updated: 2026-10-30T13:07:33Z
+updated: 2026-10-30T16:47:47Z
 ---
 
 # TH-0764 S-0523 is in progress: which permission lets the orchestrator set cost of delay inputs on an epic or a started story (TH-0694 question 2)?
@@ -51,5 +51,10 @@ The permission gate is one place in each, so either answer costs little rework. 
 TH-0694 question 2 asks the same thing. My recommendation there, from 2026-10-28T14:34:37Z, is the same answer and still awaits you. One answer on either thread settles both.
 
 The thread stays open for your answer.
+
+Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+
+### 2026-10-30T16:47:47Z alex
+Confirmed the recommendation of 2026-10-30T13:07:33Z orchestrator.
 
 Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision

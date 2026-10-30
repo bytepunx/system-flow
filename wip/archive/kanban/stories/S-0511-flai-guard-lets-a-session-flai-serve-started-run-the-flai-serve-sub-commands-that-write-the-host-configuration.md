@@ -3,10 +3,10 @@ id: S-0511
 type: story
 nature: remediation
 title: flai guard lets a session flai serve started run the flai serve sub-commands that write the host configuration
-status: review
+status: done
 owner: alex
 created: 2026-10-26T16:01:48Z
-updated: 2026-10-30T00:33:46Z
+updated: 2026-10-30T16:50:00Z
 transitions:
   - to: ready
     at: 2026-10-30T00:10:22Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-30T00:33:46Z
     by: agent-S-0511
+  - to: done
+    at: 2026-10-30T16:50:00Z
+    by: alex
 tags: [cli, guard]
 topics: [cli]
 touches: [flai/internal/guard/hostconfig.go, flai/internal/guard/hostconfig_test.go, flai/internal/guard/call.go, flai/internal/guard/guard.go, flai/cmd/guard.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/index.md, docs/operators/settings.md, design/system/flai-cli.md, design/system/agent-adapters.md, design/adrs/README.md, design/adrs, design/issues/I-0210-flai-guard-lets-a-session-flai-serve-started-run-the-flai-serve-sub-commands-that-write-the-host-configuration.md, design/issues/summary.md]
@@ -43,15 +46,15 @@ usage:
       cost: 6.3097
   strategic:
     - kind: orchestrator
-      seconds: 998
+      seconds: 1007
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 71
-          output: 669
-          cache_read: 4035739
-          cache_write: 159397
-          cost: 0.925
+          input: 79
+          output: 733
+          cache_read: 4202829
+          cache_write: 213005
+          cost: 0.9745
         - model: claude-sonnet-5-5
           input: 6
           output: 43

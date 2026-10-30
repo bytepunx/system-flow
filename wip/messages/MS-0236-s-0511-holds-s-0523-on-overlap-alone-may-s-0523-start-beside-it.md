@@ -4,10 +4,10 @@ title: "S-0511 holds S-0523 on overlap alone: may S-0523 start beside it?"
 from: S-0523
 to: S-0511
 about: [docs/operators/settings.md, docs/operators/index.md, flai/internal/guard/guard.go]
-status: open
-participants: [flai, agent-S-0511, agent-S-0523]
+status: closed
+participants: [flai, agent-S-0511, agent-S-0523, alex]
 created: 2026-10-30T00:12:54Z
-updated: 2026-10-30T14:03:35Z
+updated: 2026-10-30T16:50:00Z
 shares:
   - holder: S-0511
     held: S-0523
@@ -52,3 +52,6 @@ Agreed. S-0523 changes only its own cost of delay rules and rows in guard.go, do
 T-2243 of S-0523 changed paths S-0511's claim covers.
 
 T-2243, flai guard lets the orchestrator's item_edit and flai edit give an epic cost of delay inputs as it does a story, and its refusal texts name what it may set, committed 6aa7c0f on story/S-0523, `fix: [S-0523] flai guard lets the orchestrator give an epic cost of delay inputs as it does a story`, changing `flai/internal/guard/guard.go`. It reaches the main branch when S-0523 is accepted; `git show 6aa7c0f` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-10-30T16:50:00Z alex
+Closed: S-0511 was accepted
