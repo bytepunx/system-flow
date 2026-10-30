@@ -221,6 +221,8 @@ The same file holds what `flai serve` may do on this host. These keys are not re
 
 `flai serve agent show`, `flai serve agent provider`, `flai serve forge`, `flai serve notify show`, `flai serve checks show`, `flai serve import list`, and `flai serve actions` print them. The [operator guide](../operators/index.md) says what enabling each host action gives a dashboard.
 
+These keys are yours. `flai guard` refuses the commands that set them, and `flai config set` and `flai template use`, to every sub-agent and every session `flai serve` starts, whatever its role or permissions ([ADR-0220](../../design/adrs/0220-flai-guard-refuses-every-sub-agent-and-every-session-flai-serve-started-the.md)). An agent asks you on a thread instead ([Sub-agents](#sub-agents)).
+
 Environment variables flai reads:
 
 | Variable | Effect |
@@ -2493,6 +2495,8 @@ echo '{"tool_name":"Bash","tool_input":{"command":"flai thread reply TH-0001 all
 # the story's agent cannot run "flai thread reply TH-0001 allow --by alex": it names alex as its author with --by, ... ; exit status 2
 ```
 
+No agent changes the host configuration, `~/.flai/config.json` or the file `FLAI_CONFIG` names (S-0511, [ADR-0220](../../design/adrs/0220-flai-guard-refuses-every-sub-agent-and-every-session-flai-serve-started-the.md)). As it refuses the shared paths and `flai forge push`, `flai guard` refuses every sub-agent and every session `flai serve` starts, whatever its role or permissions, each command that writes that file or turns a host action on or off: `flai serve enable` and `disable`; `flai serve agent set` and `clear`, and `agent harness` and `agent provider` with a name and a setting or `--reset`; `flai serve checks set`, `timeout`, and `clear`; `flai serve components idle` and `max-servers`; `flai serve forge` with `--token-env` or `--reset`; `flai serve notify set` and `clear`; `flai serve import add` and `remove`; `flai config set`; and `flai template use`. The reads stay open: `flai serve status`, `actions`, `journal`, `agent show`, `agent harness` and `agent provider` bare or with a name alone, `checks show`, `components show`, `forge` bare or with a forge alone, `notify show`, `import list`, and `flai config get` and `path`, though a sub-agent is still refused any flai command its own rule does not list as a read. The refusal tells a sub-agent to put what it needs in its final message, and a served session to ask you on a thread. Your own session is not held.
+
 A sub-agent primes with `flai prime --story <id> --role explore` or `--role verify`, or the MCP tool `prime` with `role`. Its pack is the conventions whose `roles` are empty or list the role, the story's goal and acceptance criteria, and briefs, never bodies, of what the story names, the design system when it reaches the story, and what its topics and links select, then the digest entries the story's pack would choose, in its order, each as a one-line brief, as many as fit half the budget; the header counts those left out, and `doc_search` finds them.
 
 A sub-agent that needs the designer puts the question in its final message, and the story's agent asks it with `thread_open`. A sub-agent's calls reach flai under the story's agent's name; in the agent's log under `flai serve`, each of its events carries `parent_tool_use_id`.
@@ -3264,6 +3268,8 @@ flai serve enable push      # for this project; --all-projects for every project
 flai serve disable push
 flai serve journal          # every host action asked for, and what became of it
 ```
+
+No agent turns a host action on or off: `flai guard` refuses `flai serve enable` and `disable` to every sub-agent and every session `flai serve` starts ([ADR-0220](../../design/adrs/0220-flai-guard-refuses-every-sub-agent-and-every-session-flai-serve-started-the.md), [Sub-agents](#sub-agents)).
 
 `auto-publish`, off by default, makes `flai push --pending`, in any shell that uses this configuration, release first. It is the operator's shell tool, outside the workflow (ADR-0067): `flai serve actions` lists it, and the dashboard neither shows nor changes it. Off, acceptances wait, unreleased, to be published together from Publish or `flai release --pending` (S-0144).
 

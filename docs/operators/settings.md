@@ -1,6 +1,6 @@
 ---
 title: Settings index
-updated: 2026-10-29
+updated: 2026-10-30
 status: active
 ---
 
@@ -241,7 +241,7 @@ The strategic agents' settings, the `orchestration` keys but `agent`, the `plann
 
 | Variable | Default | For |
 |----------|---------|-----|
-| `FLAI_CONFIG` | `~/.flai/config.json` | The configuration file when `--config` is not given; `flai host` and `flai serve` keep their state in `host` and `serve` beside it. Not passed on to an agent `flai serve` starts |
+| `FLAI_CONFIG` | `~/.flai/config.json` | The configuration file when `--config` is not given; `flai host` and `flai serve` keep their state in `host` and `serve` beside it. Not passed on to an agent `flai serve` starts, and `flai guard` refuses such an agent, and every sub-agent, the commands that write the file: the `flai serve` sub-commands that change a host setting or turn a host action on or off, `flai config set`, and `flai template use` ([ADR-0220](../../design/adrs/0220-flai-guard-refuses-every-sub-agent-and-every-session-flai-serve-started-the.md)) |
 | `FLAI_CACHE_DIR` | `~/.flai/cache` | The `cache_dir` written when the configuration file is created |
 | `FLAI_AGENT` | none | Who narrative entries, thread entries, and transitions are recorded as; the MCP server's agent unless `flai mcp --agent` names one |
 | `FLAI_SESSION` | none | Which session a narrative entry belongs to |
