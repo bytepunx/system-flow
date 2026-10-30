@@ -42,8 +42,22 @@ var planned = regexp.MustCompile(`^[ES]-\d{3,}$`)
 const TriggerAsked = "asked"
 
 // TriggerOrchestrator is the trigger of a planner run the orchestrator asked
-// for (S-0219).
+// for (S-0219). A run it asked for on an item planned before, for what the
+// operator wrote on a thread since, records it followed by "; " and the
+// thread, such as orchestrator; TH-0579 (S-0524, ADR-0222): orchestratorAsked
+// reads either as the orchestrator's.
 const TriggerOrchestrator = "orchestrator"
+
+// orchestratorAsked says whether trigger is the orchestrator's, and the
+// thread it names when it asked for an item planned before for what the
+// operator wrote there since (S-0524, ADR-0222); empty when it names none.
+func orchestratorAsked(trigger string) (thread string, ours bool) {
+	if trigger == TriggerOrchestrator {
+		return "", true
+	}
+	thread, ours = strings.CutPrefix(trigger, TriggerOrchestrator+"; ")
+	return thread, ours && thread != ""
+}
 
 // Plan starts the planner for item, an epic or a story, in project e, and
 // returns its run as recorded. It is refused while the plan host action is
@@ -60,17 +74,23 @@ func Plan(ctx context.Context, o Options, e Entry, item string) (*AgentRun, erro
 
 // PlanForOrchestrator is Plan for a run the orchestrator asked for: its
 // trigger is orchestrator in place of asked, so that the run and its entry
-// in the planner's activity document say who asked (S-0219). It is refused
-// as Plan is; whether the orchestrator may ask for item is its caller's to
-// judge.
-func PlanForOrchestrator(ctx context.Context, o Options, e Entry, item string) (*AgentRun, error) {
-	return planFor(ctx, o, e, item, TriggerOrchestrator)
+// in the planner's activity document say who asked (S-0219). With thread,
+// the thread the operator wrote on since the item was planned before, the
+// trigger is orchestrator; TH-nnnn, and the planner's prompt names the
+// thread (S-0524, ADR-0222); empty for none. It is refused as Plan is;
+// whether the orchestrator may ask for item is its caller's to judge.
+func PlanForOrchestrator(ctx context.Context, o Options, e Entry, item, thread string) (*AgentRun, error) {
+	trigger := TriggerOrchestrator
+	if thread != "" {
+		trigger += "; " + thread
+	}
+	return planFor(ctx, o, e, item, trigger)
 }
 
 // planFor is Plan for a run started by trigger, what the run records and its
 // activity entry says started it (ADR-0084): asked for the operator's,
-// orchestrator for the orchestrator's, the replanner's triggers otherwise. It
-// is refused as Plan is.
+// orchestrator, or orchestrator; TH-nnnn, for the orchestrator's, the
+// replanner's triggers otherwise. It is refused as Plan is.
 func planFor(ctx context.Context, o Options, e Entry, item, trigger string) (*AgentRun, error) {
 	ps, err := planCheck(o, e, item)
 	if err != nil {
@@ -148,11 +168,12 @@ func planCheck(o Options, e Entry, item string) (planStart, error) {
 }
 
 // plan starts the planner for item with agent, records the run with what
-// started it, trigger, journals it, and says whether it started. Its start,
-// or the start it could not make, is an agent event on item (S-0532). A
-// start the budget state of its provider holds is not made and nothing is
-// recorded: held is that state, nil when it was not held (spawnGated,
-// S-0534).
+// started it, trigger, journals it, and says whether it started. The thread
+// an orchestrator's trigger names goes to the planner's request, whose
+// prompt names it (S-0524, ADR-0222). Its start, or the start it could not
+// make, is an agent event on item (S-0532). A start the budget state of its
+// provider holds is not made and nothing is recorded: held is that state,
+// nil when it was not held (spawnGated, S-0534).
 func (l *launcher) plan(ctx context.Context, cfg AgentConfig, item string, agent *manifest.Agent, trigger string) (started bool, held *Budget) {
 	now := l.now().UTC()
 	run := &AgentRun{Item: item, Agent: workitem.ActivityPlanner + "-" + item, Started: now.Format(time.RFC3339), Session: newSession(), Trigger: trigger}
@@ -176,7 +197,8 @@ func (l *launcher) plan(ctx context.Context, cfg AgentConfig, item string, agent
 	if err != nil {
 		return fail(err)
 	}
-	spec, keys, err := l.startOf(cfg, run, adapter, name, harness.Request{Role: conventions.RolePlan, Item: item, Root: l.entry.Root, Project: l.entry.Key, Agent: agent,
+	askedOn, _ := orchestratorAsked(trigger)
+	spec, keys, err := l.startOf(cfg, run, adapter, name, harness.Request{Role: conventions.RolePlan, Item: item, AskedOn: askedOn, Root: l.entry.Root, Project: l.entry.Key, Agent: agent,
 		Name: run.Agent, Flai: cfg.Flai, Session: run.Session})
 	if err != nil {
 		return fail(err)
@@ -303,13 +325,17 @@ func (l *launcher) heldOnce(said map[string]bool, msg string, b Budget, args ...
 // triggerWhy is why a strategic role's run was started, for its started
 // agent event (S-0532), in a short form of the words its journal entry gives
 // its trigger: the operator's asking and the orchestrator's said as theirs,
-// and any other trigger, a schedule's, an acceptance's, or an edit's, as
-// startedBy says it.
+// the orchestrator's with the thread it names (S-0524, ADR-0222), and any
+// other trigger, a schedule's, an acceptance's, or an edit's, as startedBy
+// says it.
 func triggerWhy(run *AgentRun) string {
-	switch run.Trigger {
-	case TriggerAsked:
+	if run.Trigger == TriggerAsked {
 		return "the operator asked for it"
-	case TriggerOrchestrator:
+	}
+	switch thread, ours := orchestratorAsked(run.Trigger); {
+	case ours && thread != "":
+		return "the orchestrator asked for it again for what the operator wrote on " + thread
+	case ours:
 		return "the orchestrator asked for it"
 	}
 	return startedBy(run)

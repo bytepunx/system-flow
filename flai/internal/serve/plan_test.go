@@ -174,7 +174,7 @@ func TestAPlannerRunTheOrchestratorAskedForSaysSo(t *testing.T) {
 	lab := planLab(t)
 	lab.hold()
 	id := lab.epic.ID
-	run, err := PlanForOrchestrator(context.Background(), lab.o, Entry{Key: "t", Name: "t", Root: lab.root}, id)
+	run, err := PlanForOrchestrator(context.Background(), lab.o, Entry{Key: "t", Name: "t", Root: lab.root}, id, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -184,7 +184,7 @@ func TestAPlannerRunTheOrchestratorAskedForSaysSo(t *testing.T) {
 	if data, err := os.ReadFile(lab.o.Dir.agents()); err != nil || !strings.Contains(string(data), `"trigger": "orchestrator"`) {
 		t.Errorf("serve/agents.json does not record the run as the orchestrator's (%v):\n%s", err, data)
 	}
-	_, err = PlanForOrchestrator(context.Background(), lab.o, Entry{Key: "t", Name: "t", Root: lab.root}, id)
+	_, err = PlanForOrchestrator(context.Background(), lab.o, Entry{Key: "t", Name: "t", Root: lab.root}, id, "")
 	var no *Refused
 	if !errors.As(err, &no) || !strings.Contains(no.Why, "the planner is already running for "+id) {
 		t.Errorf("refused as Plan is: %v", err)
@@ -214,6 +214,78 @@ func TestAPlannerRunTheOrchestratorAskedForSaysSo(t *testing.T) {
 	}
 	if data, _ := os.ReadFile(doc.Path); !strings.Contains(string(data), "\n- Trigger: orchestrator\n") {
 		t.Errorf("the entry does not say the orchestrator asked:\n%s", data)
+	}
+}
+
+// S-0524, ADR-0222: a planner run the orchestrator asked for again, for what
+// the operator wrote on a thread since the item was planned before, records
+// orchestrator; TH-nnnn in serve/agents.json and in its activity entry's
+// Trigger line, its started event says the orchestrator asked for it again,
+// and the planner's prompt names the thread to read.
+func TestAPlannerRunTheOrchestratorAskedForAgainNamesTheThread(t *testing.T) {
+	lab := planLab(t)
+	lab.hold()
+	id := lab.epic.ID
+	const trigger = "orchestrator; TH-0579"
+	run, err := PlanForOrchestrator(context.Background(), lab.o, Entry{Key: "t", Name: "t", Root: lab.root}, id, "TH-0579")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if run.Trigger != trigger {
+		t.Errorf("run = %+v, want the trigger %q", run, trigger)
+	}
+	if data, err := os.ReadFile(lab.o.Dir.agents()); err != nil || !strings.Contains(string(data), `"trigger": "orchestrator; TH-0579"`) {
+		t.Errorf("serve/agents.json does not record the thread with the orchestrator (%v):\n%s", err, data)
+	}
+	lab.release(id)
+
+	// the run that ends logs its activity with the trigger as it is, and the
+	// planner, through Claude Code, is told to read the thread
+	agents := filepath.Join(lab.root, ".claude", "agents")
+	if err := os.MkdirAll(agents, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(agents, "planner.md"), []byte("---\nname: planner\ndescription: Plans one item.\ntools: Read\n---\n\nYou are the planner.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	stub := lab.cfg.Command[0]
+	lab.cfg.Command = nil
+	lab.cfg.Harnesses = map[string]harness.Host{harness.ClaudeCode: {Program: stub}}
+	story := lab.backlog("Asked again", nil)
+	stream := strings.Join([]string{streamCall("s", "m1", runStart, 999), streamFinal("Added a task to "+story+".", 2000, 0.25)}, "\n") + "\n"
+	if err := os.WriteFile(filepath.Join(lab.outDir, "stream-"+story), []byte(stream), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	lab.release(story)
+	lab.l.mu.Lock()
+	started, _ := lab.l.plan(context.Background(), lab.cfg, story, &manifest.Agent{Harness: harness.ClaudeCode}, trigger)
+	lab.l.mu.Unlock()
+	if !started {
+		t.Fatalf("not started: %+v", lab.planRun(story))
+	}
+	given := lab.given(story)
+	for _, want := range []string{
+		"because the orchestrator asked for " + story + " to be planned again: it was planned before, and the operator wrote on TH-0579 since its last plan",
+		"Read TH-0579 with the flai MCP tool thread_get (flai thread show TH-0579 on the host)",
+	} {
+		if !strings.Contains(given, want) {
+			t.Errorf("the planner was not told %q:\n%s", want, given)
+		}
+	}
+	waitFor(t, "its activity logged", func() bool {
+		doc, err := lab.repo.Activity(workitem.ActivityPlanner)
+		return err == nil && len(doc.Entries) == 1
+	})
+	doc, _ := lab.repo.Activity(workitem.ActivityPlanner)
+	if e := doc.Entries[0]; e.Trigger != trigger {
+		t.Errorf("activity = %+v, want the trigger %q", e, trigger)
+	}
+	if data, _ := os.ReadFile(doc.Path); !strings.Contains(string(data), "\n- Trigger: orchestrator; TH-0579\n") {
+		t.Errorf("the entry does not name the thread:\n%s", data)
+	}
+	events := inbox.AgentEventsOf(lab.repo, story, time.Time{})
+	if len(events) == 0 || events[0].To != inbox.AgentStarted || events[0].Fields[inbox.FieldWhy] != "the orchestrator asked for it again for what the operator wrote on TH-0579" {
+		t.Errorf("the started event: %+v", events)
 	}
 }
 
@@ -554,12 +626,14 @@ func TestAPlannerRunAppendsAnAgentEventAtItsStartAndItsEnd(t *testing.T) {
 // form of its journal entry's words.
 func TestAStartedEventSaysWhatStartedTheRole(t *testing.T) {
 	for trigger, want := range map[string]string{
-		TriggerAsked:           "the operator asked for it",
-		TriggerOrchestrator:    "the orchestrator asked for it",
-		"schedule daily":       "started by schedule daily",
-		"accepted S-0001":      "started by accepted S-0001",
-		"edited title by alex": "started by edited title by alex",
-		"":                     "trigger not recorded",
+		TriggerAsked:            "the operator asked for it",
+		TriggerOrchestrator:     "the orchestrator asked for it",
+		"orchestrator; TH-0579": "the orchestrator asked for it again for what the operator wrote on TH-0579",
+		"orchestrator;":         "started by orchestrator;",
+		"schedule daily":        "started by schedule daily",
+		"accepted S-0001":       "started by accepted S-0001",
+		"edited title by alex":  "started by edited title by alex",
+		"":                      "trigger not recorded",
 	} {
 		if got := triggerWhy(&AgentRun{Trigger: trigger}); got != want {
 			t.Errorf("%q: %q, want %q", trigger, got, want)
@@ -647,7 +721,10 @@ func TestAPlanIsRefusedWhileTheBudgetStateHoldsItsProvider(t *testing.T) {
 	until := anHour()
 	lab.budgetHeldOn(harness.Command, until)
 	id := lab.epic.ID
-	for name, start := range map[string]func(context.Context, Options, Entry, string) (*AgentRun, error){"flai plan": Plan, "the orchestrator's asking": PlanForOrchestrator} {
+	again := func(ctx context.Context, o Options, e Entry, item string) (*AgentRun, error) {
+		return PlanForOrchestrator(ctx, o, e, item, "TH-0579")
+	}
+	for name, start := range map[string]func(context.Context, Options, Entry, string) (*AgentRun, error){"flai plan": Plan, "the orchestrator's asking": again} {
 		if _, err := start(context.Background(), lab.o, Entry{Key: "t", Name: "t", Root: lab.root}, id); refusal(err) != heldFor(until) {
 			t.Errorf("%s: %v; want refused with %q", name, err, heldFor(until))
 		}

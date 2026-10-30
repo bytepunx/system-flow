@@ -65,6 +65,10 @@ type Request struct {
 	// on, checked by the caller; empty when the agent works a story,
 	// orchestrates, analyzes, or curates, or a defined role runs on none.
 	Item string
+	// AskedOn is the thread the operator wrote on since Item was planned
+	// before, when the orchestrator asked for the planner on Item again for
+	// it (S-0524, ADR-0222); empty for any other run.
+	AskedOn string
 	// Focus is what the analyzer looks for, one of Focuses; empty for all
 	// of them, and for any other agent.
 	Focus string
@@ -572,7 +576,11 @@ func takeUp(story, lead string) string {
 // no task can name yet may be added, and says why there (S-0295, ADR-0096);
 // it is told flai refuses a task's folder touch, and a story's its Planning
 // note does not name, and that after names only a story whose accepted
-// change the story needs on main (S-0468, ADR-0188).
+// change the story needs on main (S-0468, ADR-0188). When the orchestrator
+// asked for the item again, for what the operator wrote on r.AskedOn since
+// it was planned before, its first paragraph says so in place of the
+// operator's asking, and has the planner read that thread with thread_get
+// and plan what the operator asked for there (S-0524, ADR-0222).
 func planPrompt(r Request) string {
 	kind := workitem.TypeOfID(r.Item)
 	story := r.Item
@@ -610,7 +618,12 @@ func planPrompt(r Request) string {
 			"Open one thread on %[2]s that summarises the plan: the stories, their order (their after), each story's tasks and their layers, and the assumptions you made. In that same thread, propose each story you would split, merge, add, or drop, and create drafts for the additions only: never cancel a finalized story or rewrite its words without asking.", enrich, r.Item, draftTasks, taskRules)
 		summary = "End with a one-line summary that names by ID the stories and tasks you created and the stories you revisited"
 	}
-	return fmt.Sprintf(`You are %[1]s, the planner, started by flai serve on this host because the operator asked for %[2]s to be planned, in the project at %[3]s.
+	why := fmt.Sprintf("because the operator asked for %s to be planned, in the project at %s.", r.Item, r.Root)
+	if r.AskedOn != "" {
+		why = fmt.Sprintf("in the project at %[3]s, because the orchestrator asked for %[1]s to be planned again: it was planned before, and the operator wrote on %[2]s since its last plan. "+
+			"Read %[2]s with the flai MCP tool thread_get (flai thread show %[2]s on the host) and plan what the operator asked for there, drafting the additions and revisiting the rest as design/conventions/strategic-agents.md says.", r.Item, r.AskedOn, r.Root)
+	}
+	return fmt.Sprintf(`You are %[1]s, the planner, started by flai serve on this host %[3]s
 
 Plan %[2]s, and nothing else, as design/conventions/strategic-agents.md says under As the planner. Prime your session with flai prime --role plan --%[4]s %[2]s (or the flai MCP tool prime with role plan and %[4]s %[2]s), which prints the conventions you work by and what %[2]s names whole, and briefs the design its topics select. A brief is not the document: read the section that bears on the plan with the flai MCP tool doc_get and its heading before relying on it, and find sections by their words with doc_search. Call the flai MCP tool inbox. Read %[2]s with item_get, and what it links with item_get and doc_get. Hand wide search of the code, such as for a story's touches, to the explorer with the Agent tool.
 
@@ -620,7 +633,7 @@ Work in the main checkout and write only through flai: the flai MCP tools item_n
 
 When an input the operator owns is missing, do not guess past it: ask with the flai MCP tool thread_open on %[2]s, your recommended answer first, plan what needs no answer meanwhile, and hold the flai MCP tool wait_for_events, again each time it returns, until the thread is answered; then go on.
 
-%[6]s: flai serve logs the run's activity in wip/agents/planner.md with it.`, r.Name, r.Item, r.Root, kind, work, summary)
+%[6]s: flai serve logs the run's activity in wip/agents/planner.md with it.`, r.Name, r.Item, why, kind, work, summary)
 }
 
 // orchestratePrompt is what the orchestrator is asked to do (S-0218): keep

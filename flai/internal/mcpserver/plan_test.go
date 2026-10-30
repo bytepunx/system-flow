@@ -8,7 +8,9 @@ import (
 )
 
 // S-0208: an operator's own agent can have the planner started on the host
-// for an epic or a story, and the host judges whether it may.
+// for an epic or a story, and the host judges whether it may. The answer
+// names the trigger the run recorded, the thread with it for the
+// orchestrator's run on an item planned before (S-0524, ADR-0222).
 func TestThePlannerIsStartedThroughTheServer(t *testing.T) {
 	type call struct{ root, item, by string }
 	var got []call
@@ -21,14 +23,18 @@ func TestThePlannerIsStartedThroughTheServer(t *testing.T) {
 			case "S-0003":
 				return PlanStarted{}, errors.New("the planner is already running for S-0003 (pid 7, started 2026-10-03T09:00:00Z); one item has one planner at a time")
 			}
-			return PlanStarted{Item: item, Agent: "planner-" + item, Harness: "claude-code", Command: "claude", PID: 42, Session: "abc", Started: "2026-10-03T10:00:00Z"}, nil
+			trigger := "asked"
+			if item == "E-0001" {
+				trigger = "orchestrator; TH-0579"
+			}
+			return PlanStarted{Item: item, Agent: "planner-" + item, Harness: "claude-code", Command: "claude", PID: 42, Session: "abc", Started: "2026-10-03T10:00:00Z", Trigger: trigger}, nil
 		}
 	})
 	out, failed := f.call(t, "plan", map[string]any{"id": "e-1"})
-	if failed != "" || out["item"] != "E-0001" || out["agent"] != "planner-E-0001" || out["pid"] != float64(42) || out["session"] != "abc" {
+	if failed != "" || out["item"] != "E-0001" || out["agent"] != "planner-E-0001" || out["pid"] != float64(42) || out["session"] != "abc" || out["trigger"] != "orchestrator; TH-0579" {
 		t.Fatalf("an epic: %v %s", out, failed)
 	}
-	if out, failed := f.call(t, "plan", map[string]any{"id": "S-0001"}); failed != "" || out["item"] != "S-0001" {
+	if out, failed := f.call(t, "plan", map[string]any{"id": "S-0001"}); failed != "" || out["item"] != "S-0001" || out["trigger"] != "asked" {
 		t.Errorf("a story: %v %s", out, failed)
 	}
 	if _, failed := f.call(t, "plan", map[string]any{"id": "E-0002"}); !strings.Contains(failed, "the plan host action is off") {
@@ -55,8 +61,9 @@ func TestThePlannerIsStartedThroughTheServer(t *testing.T) {
 	}
 }
 
-// S-0219, S-0328: the tool tells the orchestrator which epics and stories it
-// may ask for, and that its run records it as who asked.
+// S-0219, S-0328, S-0524: the tool tells the orchestrator which epics and
+// stories it may ask for, those planned before included, and that its run
+// records it as who asked, with the thread for those.
 func TestThePlanToolSaysWhatTheOrchestratorMayPlan(t *testing.T) {
 	f := setup(t)
 	res, err := f.cs.ListTools(context.Background(), nil)
@@ -67,7 +74,7 @@ func TestThePlanToolSaysWhatTheOrchestratorMayPlan(t *testing.T) {
 		if tool.Name != "plan" {
 			continue
 		}
-		for _, want := range []string{"an epic that flai plan --candidates lists", "plan_backlog_epics is on", "a story that flai plan --candidates lists", "plan_backlog_stories is on", "records orchestrator, in place of asked"} {
+		for _, want := range []string{"an epic that flai plan --candidates lists", "plan_backlog_epics is on", "a story that flai plan --candidates lists", "plan_backlog_stories is on", "records orchestrator, in place of asked", "an item that flai plan --candidates lists as planned before", "records orchestrator; TH-nnnn, the thread the operator wrote on", "the answer's trigger"} {
 			if !strings.Contains(tool.Description, want) {
 				t.Errorf("plan's description lacks %q: %s", want, tool.Description)
 			}

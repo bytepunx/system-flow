@@ -17,6 +17,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
+	"github.com/bytepunx/system-flow/flai/internal/serve"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -425,6 +426,114 @@ func TestTheOrchestratorPlansACandidateEpicOnlyWithPlanBacklogEpics(t *testing.T
 				t.Error("the reads, or flai's refusal, changed the board")
 			}
 		})
+	}
+}
+
+// plannedBefore makes E-0003 and S-0010 of the fixture planned before and
+// asked again (S-0524, ADR-0222): each one's planner ran until two hours
+// before the calls, and since then the stories' owner, the operator, wrote
+// on TH-0002, on S-0010's task T-0001, which gives S-0010 a plan, and later
+// on TH-0001, on E-0003's story S-0003, the newest entry under E-0003. It
+// returns what the run of each item recorded as what started it.
+func (o *orchestration) plannedBefore() (trigger func(item string) string) {
+	o.t.Helper()
+	at := func(when time.Time, args ...string) {
+		o.t.Helper()
+		if _, errOut, code := runInAt(o.t, o.root, when, args...); code != 0 {
+			o.t.Fatalf("flai %v: %s", args, errOut)
+		}
+	}
+	ended := orchestrationNow.Add(-2 * time.Hour)
+	at(ended.Add(-time.Hour), "task", "new", "--story", "S-0010", "Piece")
+	at(orchestrationNow.Add(-time.Hour), "thread", "new", "--on", "S-0003", "--by", o.item("S-0003").Owner, "Add a story", "E-0003 needs one more.")
+	at(orchestrationNow.Add(-90*time.Minute), "thread", "new", "--on", "T-0001", "--by", o.item("S-0010").Owner, "Split it", "Split T-0001 in two.")
+	repo, err := workitem.Open(o.root)
+	if err != nil {
+		o.t.Fatal(err)
+	}
+	worked := func(id string) *serve.AgentRun {
+		return &serve.AgentRun{Item: id, Agent: "planner-" + id, Started: ended.Add(-time.Hour).Format(time.RFC3339), Ended: ended.Format(time.RFC3339), Outcome: serve.OutcomeWorked}
+	}
+	agents := filepath.Join(string(serve.DirFor(os.Getenv("FLAI_CONFIG"))), "agents.json")
+	data, _ := json.Marshal(map[string]serve.AgentState{mainRootOf(repo): {Plans: map[string]*serve.AgentRun{"E-0003": worked("E-0003"), "S-0010": worked("S-0010")}}})
+	if err := os.MkdirAll(filepath.Dir(agents), 0o755); err != nil {
+		o.t.Fatal(err)
+	}
+	if err := os.WriteFile(agents, data, 0o644); err != nil {
+		o.t.Fatal(err)
+	}
+	return func(item string) string {
+		o.t.Helper()
+		var all map[string]serve.AgentState
+		data, _ := os.ReadFile(agents)
+		if err := json.Unmarshal(data, &all); err != nil {
+			o.t.Fatal(err)
+		}
+		if run := all[mainRootOf(repo)].Plans[item]; run != nil {
+			return run.Trigger
+		}
+		return ""
+	}
+}
+
+// S-0524, ADR-0222: on the fixture board with E-0003 and S-0010 planned
+// before and asked again, the orchestrator with plan_backlog_epics asks for
+// the planner on E-0003 again, and with plan_backlog_stories on S-0010, by
+// flai plan and the MCP tool plan alike, and each run records
+// orchestrator; TH-nnnn; flai still refuses S-0008, in ready and never
+// planned, saying so. Without the permission the guard refuses each naming
+// it, flai would too, and nothing changes.
+func TestTheOrchestratorPlansAnItemPlannedBeforeOnlyWithItsPermission(t *testing.T) {
+	for _, v := range []via{viaBash, viaMCP} {
+		t.Run("on by "+string(v), func(t *testing.T) {
+			o := newOrchestration(t)
+			for _, args := range [][]string{{"serve", "enable", "plan"}, {"serve", "agent", "set", "--", "true"}} {
+				if _, errOut, code := runIn(t, o.root, args...); code != 0 {
+					t.Fatalf("flai %v: %s", args, errOut)
+				}
+			}
+			trigger := o.plannedBefore()
+			o.permit(manifest.PermitPlanBacklogEpics, manifest.PermitPlanBacklogStories)
+			out := o.passes(bash("flai plan --candidates"))
+			for _, want := range []string{
+				"  E-0003  Work\n    - planned before; " + o.item("S-0003").Owner + " wrote on TH-0001 (S-0003) at ",
+				"  S-0010  High\n    - planned before; " + o.item("S-0010").Owner + " wrote on TH-0002 (T-0001) at ",
+			} {
+				if !strings.Contains(out, want) {
+					t.Errorf("the candidates lack %q:\n%s", want, out)
+				}
+			}
+			o.flaiRefuses(planCall(v, "S-0008"))("the orchestrator asks for the planner on a story flai plan --candidates lists alone, and S-0008 is not one: it is ready, not in the backlog, and no planner has run for it on this host")
+			// S-0010 first: while E-0003's planner runs, it holds its stories
+			for _, c := range [][2]string{{"S-0010", "TH-0002"}, {"E-0003", "TH-0001"}} {
+				id, thread := c[0], c[1]
+				if out := o.passes(planCall(v, id)); v == viaBash && !strings.Contains(out, "to plan "+id+" as planner-"+id) {
+					t.Errorf("flai plan on %s: %s", id, out)
+				}
+				if tr := trigger(id); tr != "orchestrator; "+thread {
+					t.Errorf("%s's run trigger = %q, want orchestrator; %s", id, tr, thread)
+				}
+			}
+		})
+		for _, off := range []struct{ permission, id string }{{manifest.PermitPlanBacklogEpics, "E-0003"}, {manifest.PermitPlanBacklogStories, "S-0010"}} {
+			t.Run(off.permission+" off by "+string(v), func(t *testing.T) {
+				o := newOrchestration(t)
+				trigger := o.plannedBefore()
+				o.permit(allBut(off.permission)...)
+				o.guardRefuses(planCall(v, off.id))(offRefusal(off.permission))
+				before := treeOf(t, o.root)
+				if out := o.passes(bash("flai plan --candidates")); !strings.Contains(out, "  "+off.id+"  ") {
+					t.Errorf("flai plan --candidates, which reads, lacks %s: %s", off.id, out)
+				}
+				// flai, past the guard, holds the orchestrator to the permission too
+				if _, errOut, code := runIn(t, o.root, "plan", off.id); code == 0 || !strings.Contains(errOut, "orchestration.permissions."+off.permission+", which is off") {
+					t.Errorf("flai plan %s past the guard: exit %d %s", off.id, code, errOut)
+				}
+				if !reflect.DeepEqual(treeOf(t, o.root), before) || trigger(off.id) != "" {
+					t.Error("the reads, or flai's refusal, changed the board or started a run")
+				}
+			})
+		}
 	}
 }
 

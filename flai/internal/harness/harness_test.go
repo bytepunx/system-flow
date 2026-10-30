@@ -1203,6 +1203,43 @@ func TestThePlannersPromptPlansItsItem(t *testing.T) {
 	}
 }
 
+// S-0524, ADR-0222: the planner the orchestrator asked for again, for what
+// the operator wrote on a thread since the item was planned before, is told
+// so in its first paragraph, in place of the operator's asking, and to read
+// the thread with thread_get and plan what the operator asked for there; the
+// rest of its prompt is the operator's run's. The operator's run is told as
+// before that the operator asked.
+func TestThePlannerAskedForAgainIsToldTheThread(t *testing.T) {
+	for _, id := range []string{"E-0024", "S-0419"} {
+		asked := Prompt(planReq(id, nil))
+		r := planReq(id, nil)
+		r.AskedOn = "TH-0579"
+		again := Prompt(r)
+		first := "You are planner-" + id + ", the planner, started by flai serve on this host "
+		if want := first + "because the operator asked for " + id + " to be planned, in the project at /p/flow.\n\n"; !strings.HasPrefix(asked, want) {
+			t.Errorf("%s: the operator's run does not begin %q:\n%s", id, want, asked)
+		}
+		for _, never := range []string{"TH-0579", "thread_get", "planned again", "the orchestrator"} {
+			if strings.Contains(asked, never) {
+				t.Errorf("%s: the operator's run says %q:\n%s", id, never, asked)
+			}
+		}
+		want := first + "in the project at /p/flow, because the orchestrator asked for " + id + " to be planned again: it was planned before, and the operator wrote on TH-0579 since its last plan. " +
+			"Read TH-0579 with the flai MCP tool thread_get (flai thread show TH-0579 on the host) and plan what the operator asked for there, drafting the additions and revisiting the rest as design/conventions/strategic-agents.md says.\n\n"
+		if !strings.HasPrefix(again, want) {
+			t.Errorf("%s: the run asked for again does not begin %q:\n%s", id, want, again)
+		}
+		if strings.Contains(again, "because the operator asked") {
+			t.Errorf("%s: the run asked for again says the operator asked:\n%s", id, again)
+		}
+		_, restAsked, _ := strings.Cut(asked, "\n\n")
+		_, restAgain, _ := strings.Cut(again, "\n\n")
+		if restAgain != restAsked {
+			t.Errorf("%s: the rest of the prompt differs from the operator's run's:\n%s\n---\n%s", id, restAgain, restAsked)
+		}
+	}
+}
+
 // S-0255: a story's planner drafts its tasks into the backlog in layers, or
 // revisits the open ones without cancelling or rewriting them unasked, sums
 // up the plan in one thread, and names the tasks it created and revisited in

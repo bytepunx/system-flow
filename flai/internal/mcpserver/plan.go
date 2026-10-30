@@ -20,7 +20,8 @@ import (
 // why.
 type PlanStart func(ctx context.Context, root, item, by string) (PlanStarted, error)
 
-// PlanStarted is the planner run started.
+// PlanStarted is the planner run started, with the trigger it recorded:
+// asked, orchestrator, or orchestrator; TH-nnnn (S-0524, ADR-0222).
 type PlanStarted struct {
 	Item    string `json:"item"`
 	Agent   string `json:"agent"`
@@ -30,6 +31,7 @@ type PlanStarted struct {
 	Log     string `json:"log,omitempty" jsonschema:"the planner's output, on the host"`
 	Session string `json:"session,omitempty"`
 	Started string `json:"started,omitempty"`
+	Trigger string `json:"trigger,omitempty"`
 }
 
 // PlanIn names the epic or the story to plan.
@@ -40,7 +42,7 @@ type PlanIn struct {
 
 func (in PlanIn) project() string { return in.Project }
 
-const planDescription = "Start the planner for an epic or a story on this host now, as flai plan does (S-0208, ADR-0075): in the project's main checkout, with the project's planning agent (planning.agent over agent in system-flow.yaml), it drafts an epic's stories and each one's tasks (S-0300), enriches a story with touches, a forecast, and a cost of delay, and for an epic with stories revisits each one not done or cancelled and drafts the tasks of each story it adds, writing through flai and moving nothing past backlog. It does not wait for the planner: the run is recorded where flai serve tracks agents, and flai serve settles it once it ends. For the operator's own agent: refused to an agent flai serve started, but for the orchestrator, which may ask for an epic that flai plan --candidates lists (in the backlog with no stories, or open with every story done or cancelled and one done, and no planner running for it or awaiting the operator) while orchestration.permissions.plan_backlog_epics is on, and for a story that flai plan --candidates lists (in the backlog without touches, a forecast duration, a cost of delay value, or a task not cancelled, and no planner running for it or its epic, awaiting the operator, or ended with the story unchanged since) while orchestration.permissions.plan_backlog_stories is on (S-0328), and whose run records orchestrator, in place of asked, as what started it. Needs the plan host action on for the project (flai serve enable plan), as the dashboard's Plan does. Refused, saying why, for a task or an ID that is neither an epic's nor a story's, for an item that is archived, done, or cancelled, while a planner runs for the item, and when nothing can start it."
+const planDescription = "Start the planner for an epic or a story on this host now, as flai plan does (S-0208, ADR-0075): in the project's main checkout, with the project's planning agent (planning.agent over agent in system-flow.yaml), it drafts an epic's stories and each one's tasks (S-0300), enriches a story with touches, a forecast, and a cost of delay, and for an epic with stories revisits each one not done or cancelled and drafts the tasks of each story it adds, writing through flai and moving nothing past backlog. It does not wait for the planner: the run is recorded where flai serve tracks agents, and flai serve settles it once it ends. For the operator's own agent: refused to an agent flai serve started, but for the orchestrator, which may ask for an epic that flai plan --candidates lists (in the backlog with no stories, or open with every story done or cancelled and one done, and no planner running for it or awaiting the operator) while orchestration.permissions.plan_backlog_epics is on, and for a story that flai plan --candidates lists (in the backlog without touches, a forecast duration, a cost of delay value, or a task not cancelled, and no planner running for it or its epic, awaiting the operator, or ended with the story unchanged since) while orchestration.permissions.plan_backlog_stories is on (S-0328), and whose run records orchestrator, in place of asked, as what started it. The orchestrator may also ask for an item that flai plan --candidates lists as planned before, on which the operator has written since its planner ran, and that run records orchestrator; TH-nnnn, the thread the operator wrote on, which the planner's prompt names (S-0524, ADR-0222); the answer's trigger is what the run recorded. Needs the plan host action on for the project (flai serve enable plan), as the dashboard's Plan does. Refused, saying why, for a task or an ID that is neither an epic's nor a story's, for an item that is archived, done, or cancelled, while a planner runs for the item, and when nothing can start it."
 
 func (s *server) plan(ctx context.Context, _ *mcp.CallToolRequest, in PlanIn) (*mcp.CallToolResult, PlanStarted, error) {
 	item := workitem.CanonicalID(in.ID)

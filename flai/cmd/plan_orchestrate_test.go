@@ -167,3 +167,116 @@ func TestTheOrchestratorAsksForThePlannerOnACandidateEpic(t *testing.T) {
 		t.Errorf("the journal does not name the orchestrator: %s", js)
 	}
 }
+
+// S-0524, ADR-0222, I-0188: the orchestrator may have the planner plan again
+// an epic, or a story, that flai plan --candidates lists as planned before,
+// the operator having written on a thread under it since its planner ran,
+// while the project gives it plan_backlog_epics, or plan_backlog_stories,
+// through flai mcp's plan and flai plan alike; its run records
+// orchestrator; TH-nnnn, which the answer names. An epic planned before that
+// the operator has not written on since is refused, saying so.
+func TestTheOrchestratorAsksForThePlannerAgainOnAnItemPlannedBefore(t *testing.T) {
+	cfg := filepath.Join(t.TempDir(), "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfg)
+	t.Setenv("FLAI_AGENT", "")
+	root := tempProject(t)
+	manifest := filepath.Join(root, "system-flow.yaml")
+	m, _ := os.ReadFile(manifest)
+	if err := os.WriteFile(manifest, append(m, "owner: alex\n"...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runIn(t, root, "epic", "new", "Confirmed on a story")             // E-0001: planned before, asked again
+	runIn(t, root, "epic", "new", "Nobody wrote")                     // E-0002: planned before, not asked
+	runIn(t, root, "story", "new", "A new story", "--epic", "E-0001") // S-0001
+	runIn(t, root, "story", "new", "Quiet", "--epic", "E-0002")       // S-0002
+	runIn(t, root, "story", "new", "Asked on a task")                 // S-0003: planned before, asked again
+	runIn(t, root, "edit", "S-0003", "--touches", "flai/cmd", "--forecast-duration", "2h", "--cost-of-delay-value", "300")
+	runIn(t, root, "task", "new", "--story", "S-0003", "Piece") // T-0001
+	wrote := time.Date(2026, 9, 15, 22, 0, 0, 0, time.UTC)
+	for _, args := range [][]string{
+		{"thread", "new", "--on", "S-0001", "--by", "alex", "One more story", "Add a story for the report."}, // TH-0001
+		{"thread", "new", "--on", "T-0001", "--by", "alex", "Split it", "Split T-0001 in two."},              // TH-0002
+	} {
+		if _, errOut, code := runInAt(t, root, wrote, args...); code != 0 {
+			t.Fatalf("flai %v: %s", args, errOut)
+		}
+	}
+	runIn(t, root, "serve", "enable", "plan")
+	runIn(t, root, "serve", "agent", "set", "--", "true")
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ended := "2026-09-15T21:30:00Z"
+	worked := func(id string) *serve.AgentRun {
+		return &serve.AgentRun{Item: id, Agent: "planner-" + id, Started: "2026-09-15T21:00:00Z", Ended: ended, Outcome: serve.OutcomeWorked}
+	}
+	agents := filepath.Join(string(serve.DirFor(cfg)), "agents.json")
+	data, _ := json.Marshal(map[string]serve.AgentState{mainRootOf(repo): {Plans: map[string]*serve.AgentRun{"E-0001": worked("E-0001"), "E-0002": worked("E-0002"), "S-0003": worked("S-0003")}}})
+	if err := os.MkdirAll(filepath.Dir(agents), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(agents, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	trigger := func(item string) string {
+		t.Helper()
+		var all map[string]serve.AgentState
+		data, _ := os.ReadFile(agents)
+		if err := json.Unmarshal(data, &all); err != nil {
+			t.Fatal(err)
+		}
+		if run := all[mainRootOf(repo)].Plans[item]; run != nil {
+			return run.Trigger
+		}
+		return ""
+	}
+
+	t.Setenv("FLAI_STARTED_BY", "flai-serve")
+	t.Setenv("FLAI_ROLE", "orchestrate")
+	a := &app{out: &bytes.Buffer{}, errOut: &bytes.Buffer{}, cwd: root, clock: func() time.Time { return wrote.Add(time.Hour) }}
+	ctx := context.Background()
+	if _, err := a.mcpPlan(ctx, root, "E-0001", "agent-o"); err == nil || !strings.Contains(err.Error(), "only with orchestration.permissions.plan_backlog_epics, which is off") {
+		t.Errorf("plan_backlog_epics off: %v", err)
+	}
+	if _, stderr, code := runIn(t, root, "plan", "E-0001"); code == 0 || !strings.Contains(stderr, "only with orchestration.permissions.plan_backlog_epics, which is off") {
+		t.Errorf("flai plan with plan_backlog_epics off: exit %d %s", code, stderr)
+	}
+	if trigger("E-0001") != "" {
+		t.Fatalf("a refused plan started a run: %q", trigger("E-0001"))
+	}
+	m, _ = os.ReadFile(manifest)
+	if err := os.WriteFile(manifest, append(m, "orchestration:\n  permissions:\n    plan_backlog_epics: true\n"...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := a.mcpPlan(ctx, root, "E-0002", "agent-o"); err == nil || !strings.Contains(err.Error(), "E-0002 is not one: it is neither in the backlog with no stories nor open with every story done or cancelled and one done, and the operator has not written on it, or on an item under it, since its planner ran until "+ended) {
+		t.Errorf("an epic planned before and not written on: %v", err)
+	}
+	out, stderr, code := runIn(t, root, "plan", "E-0001", "--json")
+	if code != 0 {
+		t.Fatalf("flai plan on an epic planned before and asked again: exit %d %s %s", code, out, stderr)
+	}
+	var started struct{ Item, Trigger string }
+	if err := json.Unmarshal([]byte(out), &started); err != nil || started.Item != "E-0001" || started.Trigger != "orchestrator; TH-0001" {
+		t.Errorf("flai plan --json: %+v %v\n%s", started, err, out)
+	}
+	if tr := trigger("E-0001"); tr != "orchestrator; TH-0001" {
+		t.Errorf("the epic's run trigger = %q, want orchestrator; TH-0001", tr)
+	}
+
+	// a story planned before and asked again, only with plan_backlog_stories
+	if _, err := a.mcpPlan(ctx, root, "S-0003", "agent-o"); err == nil || !strings.Contains(err.Error(), "only with orchestration.permissions.plan_backlog_stories, which is off") {
+		t.Errorf("plan_backlog_stories off: %v", err)
+	}
+	m, _ = os.ReadFile(manifest)
+	if err := os.WriteFile(manifest, []byte(strings.Replace(string(m), "    plan_backlog_epics: true\n", "    plan_backlog_epics: true\n    plan_backlog_stories: true\n", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, err := a.mcpPlan(ctx, root, "S-0003", "agent-o")
+	if err != nil || got.Item != "S-0003" || got.Trigger != "orchestrator; TH-0002" {
+		t.Fatalf("a story planned before and asked again: %+v %v", got, err)
+	}
+	if tr := trigger("S-0003"); tr != "orchestrator; TH-0002" {
+		t.Errorf("the story's run trigger = %q, want orchestrator; TH-0002", tr)
+	}
+}
