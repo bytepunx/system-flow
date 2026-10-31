@@ -79,7 +79,8 @@ batch records none.
 With --fix, each rule on a generated file that the run reports inside it
 has the file rewritten from its sources, as the command that generates it
 does: issues.summary rewrites design/issues/summary.md, as flai issue
-summary does. A hand-written file is never rewritten. The check then runs
+summary does, and adr.index rewrites design/adrs/README.md, as flai adr
+index does (ADR-0228). A hand-written file is never rewritten. The check then runs
 again; each file rewritten is printed as "rewrote <path> (<rule>)", or
 "rewrote nothing" when no finding had a fixer, before what remains, and
 --json lists them in fixed.`,

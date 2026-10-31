@@ -1,6 +1,6 @@
 ---
 title: Template guide
-updated: 2026-10-06
+updated: 2026-10-31
 status: active
 ---
 
@@ -15,7 +15,7 @@ The published template is [bytepunx/system-flow-template](https://github.com/byt
 ```text
 <template>/
 ├── template.yaml      # the manifest: version, variables, layout, render rules
-├── CHANGELOG.md       # one entry per version
+├── CHANGELOG.md       # ## Unreleased, then one entry per version
 ├── README.md          # about the template; never rendered
 ├── root/              # rendered into the repository root
 │   ├── CLAUDE.md.tmpl
@@ -199,7 +199,7 @@ In this monorepo, `make smoke` renders `template/` and checks it, and CI runs it
 
 ## Versioning
 
-The version is the `version` line of `template.yaml`, with an entry in `CHANGELOG.md` for each one.
+The version is the `version` line of `template.yaml`, with an entry in `CHANGELOG.md` for each one. Changes not yet released are listed under `## Unreleased` at the top of the changelog, never under a version heading. `CHANGELOG.md` merges by union (`CHANGELOG.md merge=union` in `.gitattributes`), so two branches that each add lines there never conflict ([ADR-0228](../../design/adrs/0228-flai-generates-the-adr-index-from-the-adr-files-and-checks-the-issues-summary.md)).
 
 | Change | Bump |
 |--------|------|
@@ -207,9 +207,9 @@ The version is the `version` line of `template.yaml`, with an entry in `CHANGELO
 | A new file, section, or convention rule projects take without editing | Minor |
 | Wording, a fix, a rule clarified | Patch |
 
-In a fork, bump the version and add the changelog entry by hand, then publish it and tag it `v<version>`: `flai template push --tag` does both, and a template that is its own repository is tagged by hand. The tag is the release. A project whose `template.ref` follows releases moves to it with `flai upgrade` and nothing else, and `flai new` and `flai import` make new projects at it; once a template has version tags, a version on its default branch that is not tagged reaches only a project that names a commit. A project goes to an older release with `flai upgrade --ref <tag>`, or by naming it in `system-flow.yaml` and choosing it when `flai upgrade` asks; the next `flai upgrade` with no `--ref` takes the newest release again ([Upgrade to a newer template](../users/flai.md#upgrade-to-a-newer-template)).
+In a fork, bump the version and rename `## Unreleased` to `## <version> - <date>` by hand, with a new empty `## Unreleased` above it, then publish it and tag it `v<version>`: `flai template push --tag` does both, and a template that is its own repository is tagged by hand. The tag is the release. A project whose `template.ref` follows releases moves to it with `flai upgrade` and nothing else, and `flai new` and `flai import` make new projects at it; once a template has version tags, a version on its default branch that is not tagged reaches only a project that names a commit. A project goes to an older release with `flai upgrade --ref <tag>`, or by naming it in `system-flow.yaml` and choosing it when `flai upgrade` asks; the next `flai upgrade` with no `--ref` takes the newest release again ([Upgrade to a newer template](../users/flai.md#upgrade-to-a-newer-template)).
 
-In this monorepo the release tooling does both. `template/` is a component of kind `template` in `system-flow.yaml`; a story tagged `template` that changes it bumps the version by its nature when the next release is computed, per [git.md](../../design/conventions/git.md). Changes to conventions land in `design/system` first, then in `template/root/design/conventions/`, then above the marker in `design/conventions/`, in the same story.
+In this monorepo the release tooling does both. `template/` is a component of kind `template` in `system-flow.yaml`; a story tagged `template` that changes it writes its lines under `## Unreleased` and bumps the version by its nature when the next release is computed, per [git.md](../../design/conventions/git.md). `flai release` names `## Unreleased` the version, with its own lines above the stories', and leaves a new empty `## Unreleased` above it. Changes to conventions land in `design/system` first, then in `template/root/design/conventions/`, then above the marker in `design/conventions/`, in the same story.
 
 ## Publishing
 
