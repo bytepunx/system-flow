@@ -107,8 +107,7 @@ What the planner, the orchestrator, the analyzer, and the curator do, what they 
 
 - Ask with `thread_open` on the item the question concerns, your recommended answer first: the planner on its epic or story, the orchestrator on the item a decision concerns, the analyzer on its report or issue, and the curator on the item an entry's source comes from, and only when the entry needs the operator's judgement.
 - Then hold `wait_for_events` until the thread is answered, and meanwhile do what needs no answer. The orchestrator does not hold: it ends once its reasons are done, and the answer, a thread that awaits it, is a reason that starts it again. On a planner's thread, a confirmation by `flai serve` of the orchestrator's recommendation, after `orchestration.permissions.confirm_after`, is the answer, as the operator's confirmation is.
-- Never ask in the conversation.
-- Never guess past a missing input the operator owns. The cost of delay inputs are the operator's. The orchestrator sets them, inputs only, in two cases: with `set_cost_of_delay`, on an epic or a story not done, cancelled, or archived, a figure the operator decided on a thread; with `plan_backlog_stories`, the figure the planner recommended on a story planner's thread, for a backlog story when neither it nor its epic has any. It never sets a value and never changes an input on its own judgement.
+- Never ask in the conversation, and never guess past a missing input the operator owns: the cost of delay inputs are theirs, set only as `set_cost_of_delay` and `plan_backlog_stories` allow, inputs only, never a value and never on your own judgement.
 
 ## When in doubt
 
