@@ -6,7 +6,7 @@ title: flai serve starts a host agent for a story meant to be worked in a contai
 status: backlog
 owner: alex
 created: 2026-10-28T12:52:40Z
-updated: 2026-10-31T06:24:32Z
+updated: 2026-10-31T07:22:50Z
 transitions: []
 tags: [cli, serve]
 topics: [harness]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-10-28T13:12:42Z
 forecast:
   duration: 1h
-  delivery: 2026-10-31T13:32:00Z
-  basis: "Its own forecast of 1h; 15th in the pull order with an in-progress limit of 5, behind S-0424, S-0425, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0506, S-0508, S-0509 and S-0510."
+  delivery: 2026-10-31T14:31:00Z
+  basis: "Its own forecast of 1h; 16th in the pull order with an in-progress limit of 5, behind S-0424, S-0425, S-0548, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0506, S-0508, S-0509 and S-0510."
   by: flai
-  at: 2026-10-31T06:24:32Z
+  at: 2026-10-31T07:22:50Z
 finalized:
   by: orchestrator
   at: 2026-10-30T13:16:16Z
