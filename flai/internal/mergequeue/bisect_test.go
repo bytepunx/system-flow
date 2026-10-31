@@ -768,3 +768,20 @@ func TestASentBackStoryInReviewAtANewCommitHasItsThreadResolved(t *testing.T) {
 		t.Errorf("resolved again %v, %v; want nothing", resolved, err)
 	}
 }
+
+// I-0242: go test's summary line, "FAIL\t<package>\t<seconds>s", carries
+// tabs, which the project's markdown lint refuses (MD010), so a thread quoting
+// it was never written and the story never sent back. The quoted output has
+// its tabs as spaces.
+func TestTheFailingTiersOutputIsQuotedWithoutTabs(t *testing.T) {
+	batch := &Batch{ID: "20261031-110330", Base: "3460ff79e7d40f117d4833274128e638e1e2dcbb", Stories: []string{"S-0546"},
+		Bisect: &Bisect{Failing: "S-0546", Bad: 1, Commit: "ba58b74a6d10fb5377187672909d33706222e1cb"}}
+	failed := Result{StoppedAt: "smoke", Findings: "smoke: --- FAIL: TestGatewayOpenRouter (131.94s)\nFAIL\tgithub.com/bytepunx/system-flow/flai/internal/serve\t131.960s\nexit status 1"}
+	text := failingText(batch, failed, Head{Verified: "ba58b74a6d10fb5377187672909d33706222e1cb"})
+	if strings.Contains(text, "\t") {
+		t.Errorf("the thread's text carries a tab:\n%s", text)
+	}
+	if !strings.Contains(text, "FAIL    github.com/bytepunx/system-flow/flai/internal/serve    131.960s") {
+		t.Errorf("the summary line is not quoted with its tabs as spaces:\n%s", text)
+	}
+}

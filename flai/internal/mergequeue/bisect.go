@@ -413,14 +413,17 @@ func failingText(batch *Batch, failed Result, head Head) string {
 	return b.String()
 }
 
-// fenced is s in a text code block whose fence is longer than any run of
+// fenced is s in a text code block, its tabs as spaces, whose fence is longer than any run of
 // backticks in s.
 func fenced(s string) string {
 	fence := "```"
 	for strings.Contains(s, fence) {
 		fence += "`"
 	}
-	return fence + "text\n" + strings.TrimSpace(s) + "\n" + fence
+	// a tab in the output, as go test's summary line carries, would fail
+	// the thread the project's markdown lint (MD010), so nothing would be
+	// written and the story never sent back (I-0242)
+	return fence + "text\n" + strings.ReplaceAll(strings.TrimSpace(s), "\t", "    ") + "\n" + fence
 }
 
 // codeSpan is s in a code span whose fence is longer than any run of
