@@ -4,10 +4,10 @@ title: "S-0548 stays in review: criteria 4 and 9 are unticked, so the merge queu
 anchor:
   path: wip/kanban/stories/S-0548-a-queue-verification-takes-under-five-minutes-the-slow-and-network-bound-tests.md
   item: S-0548
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-31T10:00:25Z
-updated: 2026-10-31T10:00:25Z
+updated: 2026-10-31T21:02:24Z
 ---
 
 # TH-0788 S-0548 stays in review: criteria 4 and 9 are unticked, so the merge queue will not take it
@@ -33,3 +33,6 @@ On wip/kanban/stories/S-0548-a-queue-verification-takes-under-five-minutes-the-s
 3. Tick both with `flai criteria tick S-0548 4 9`.
 
 Rewording the criteria changes the story's scope, and that decision is yours.
+
+### 2026-10-31T21:02:24Z alex
+Resolved: S-0548 was accepted

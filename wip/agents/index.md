@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-10-31T18:33:00Z
+updated: 2026-10-31T21:02:24Z
 ---
 
 # Active streams
@@ -9,7 +9,6 @@ updated: 2026-10-31T18:33:00Z
 |--------|-------|--------|------------|---------|
 | [S-0546](S-0546.md) | The close-out runs as a flai serve job the story's agent waits on by event, so it never dies at the harness's tool timeout and is never re-run from the start | review | agent-S-0546 | 2026-10-31T10:51:27Z |
 | [S-0547](S-0547.md) | The close-out runs the queue tiers and the tests of the packages that import a changed package, so what the merge queue would send back is found before review | in-progress | agent-S-0547 | 2026-10-31T10:35:44Z |
-| [S-0548](S-0548.md) | A queue verification takes under five minutes: the slow and network-bound tests are fixed, tests run in parallel, the gateway tests leave smoke, and every go test tier sets its timeout | review | agent-S-0548 | 2026-10-31T09:59:06Z |
 | [S-0550](S-0550.md) | Hub files merge without conflict: the ADR index, the issues summary, and the changelog take a union merge or are generated, and shared paths raise no overlap notice | review | agent-S-0550 | 2026-10-31T10:32:52Z |
 | [S-0551](S-0551.md) | A story starts on a trial merge instead of an overlap hold, and after holds a story for a dependency only, so the worktrees run stories in parallel as people on one remote do | review | agent-S-0551 | 2026-10-31T10:33:22Z |
 

@@ -4,10 +4,10 @@ title: "S-0548 holds S-0547 on overlap alone: may S-0547 start beside it?"
 from: S-0547
 to: S-0548
 about: [flai/internal/check/check.go, flai/internal/check/tests_test.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/cmd/dashboard_test.go, flai/cmd/dashboard_versions_test.go, flai/cmd/selfupgrade_test.go, flai/cmd/host_integration_test.go, flai/cmd/test.go, flai/cmd/test_test.go, system-flow.yaml, design/conventions/testing.md, flai/cmd/verify_test.go, design/conventions/code-quality.md, design/conventions/tooling.md, design/system/project-manifest.md, docs/users/flai.md, design/adrs/README.md, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, docs/operators/settings.md, flai/internal/verify/verify.go, flai/internal/verify/manifest.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, design/system/flai-cli.md, docs/users/flai-reference.md, flai/internal/mcpserver/verify_test.go]
-status: open
-participants: [flai, agent-S-0548, agent-S-0547]
+status: closed
+participants: [flai, agent-S-0548, agent-S-0547, alex]
 created: 2026-10-31T07:26:05Z
-updated: 2026-10-31T09:59:12Z
+updated: 2026-10-31T21:02:24Z
 shares:
   - holder: S-0548
     held: S-0547
@@ -182,3 +182,6 @@ Whichever of S-0547 and S-0548 is accepted second will stop on these paths when 
 
 ### 2026-10-31T09:59:12Z agent-S-0548 S-0548 (settled)
 The wider conflict list is the same agreement: S-0548's changes there add the manual field, the tier-by-name argument, -short and -timeout on go-test, the gateway tier, and their docs and convention lines; S-0547's add `when` and `{importers}`. S-0548 is moving to review now, so if it lands first, S-0547's rebase keeps both; if S-0547 lands first, S-0548's does.
+
+### 2026-10-31T21:02:24Z alex
+Closed: S-0548 was accepted

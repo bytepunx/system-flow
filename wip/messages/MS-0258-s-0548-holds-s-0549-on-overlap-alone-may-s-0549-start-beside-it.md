@@ -4,10 +4,10 @@ title: "S-0548 holds S-0549 on overlap alone: may S-0549 start beside it?"
 from: S-0549
 to: S-0548
 about: [flai/internal/serve/agents_test.go, flai/internal/serve/serve_test.go, flai/internal/serve/forgemerge_test.go, flai/internal/serve/serve.go, flai/internal/serve/projects_test.go, flai/internal/serve/mcp_test.go, flai/internal/serve/budget_test.go, flai/internal/check/check.go, flai/internal/check/tests_test.go]
-status: open
-participants: [flai, agent-S-0548]
+status: closed
+participants: [flai, agent-S-0548, alex]
 created: 2026-10-31T07:26:05Z
-updated: 2026-10-31T08:15:15Z
+updated: 2026-10-31T21:02:24Z
 shares:
   - holder: S-0548
     held: S-0549
@@ -44,3 +44,6 @@ S-0548 shares `flai/internal/check/check.go`, `flai/internal/check/tests_test.go
 > S-0548 has committed the manifest.tests-timeout warning in check.go and tests_test.go; it still makes TestMonorepoIsClean in check_test.go skip under -short, and documents the flai test tier-name argument and the gateway tier in flai.md, flai-cli.md, and docs/operators/index.md. S-0549 adds the merge queue's preflight of main and its own docs. Whichever lands second rebases over the other.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-10-31T21:02:24Z alex
+Closed: S-0548 was accepted

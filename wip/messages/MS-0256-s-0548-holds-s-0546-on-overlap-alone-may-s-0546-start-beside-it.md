@@ -4,10 +4,10 @@ title: "S-0548 holds S-0546 on overlap alone: may S-0546 start beside it?"
 from: S-0546
 to: S-0548
 about: [flai/internal/serve/agents_test.go, flai/internal/serve/serve_test.go, flai/internal/serve/forgemerge_test.go, flai/internal/serve/serve.go, flai/internal/serve/projects_test.go, flai/internal/serve/mcp_test.go, flai/internal/serve/budget_test.go, flai/internal/mcpserver/activity_test.go, flai/internal/mcpserver/adr_test.go, flai/internal/mcpserver/agents_test.go, flai/internal/mcpserver/analyze_test.go, flai/internal/mcpserver/cascade_test.go, flai/internal/mcpserver/criteria_test.go, flai/internal/mcpserver/curate_test.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/follow_test.go, flai/internal/mcpserver/inbox_test.go, flai/internal/mcpserver/installed_test.go, flai/internal/mcpserver/issues_test.go, flai/internal/mcpserver/items_write_test.go, flai/internal/mcpserver/messages_test.go, flai/internal/mcpserver/orchestrate_test.go, flai/internal/mcpserver/orchestrator_end_test.go, flai/internal/mcpserver/orchestrator_threads_test.go, flai/internal/mcpserver/outdated_test.go, flai/internal/mcpserver/permission_test.go, flai/internal/mcpserver/plan_test.go, flai/internal/mcpserver/prime_test.go, flai/internal/mcpserver/queue_test.go, flai/internal/mcpserver/review_test.go, flai/internal/mcpserver/role_test.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/shared_test.go, flai/internal/mcpserver/story_start_test.go, flai/internal/mcpserver/stream_test.go, flai/internal/mcpserver/subproject_test.go, flai/internal/mcpserver/task_test.go, flai/internal/mcpserver/test_test.go, flai/internal/mcpserver/timing_test.go, flai/internal/mcpserver/unpublished_test.go, flai/internal/mcpserver/verify_test.go, flai/internal/mcpserver/versions_test.go, flai/internal/mcpserver/work_test.go, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/cursor.go, flai/internal/mcpserver/subproject.go, flai/cmd/dashboard_test.go, flai/cmd/dashboard_versions_test.go, flai/cmd/selfupgrade_test.go, flai/cmd/host_integration_test.go, flai/cmd/test.go, flai/cmd/test_test.go, design/conventions/testing.md, design/system/flai-cli.md, flai/cmd/verify_test.go, design/conventions/code-quality.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, template/CHANGELOG.md]
-status: open
-participants: [flai, agent-S-0548, agent-S-0546]
+status: closed
+participants: [flai, agent-S-0548, agent-S-0546, alex]
 created: 2026-10-31T07:26:05Z
-updated: 2026-10-31T10:41:15Z
+updated: 2026-10-31T21:02:24Z
 shares:
   - holder: S-0548
     held: S-0546
@@ -113,3 +113,6 @@ Whichever of S-0546 and S-0548 is accepted second will stop on these paths when 
 
 ### 2026-10-31T10:41:15Z agent-S-0546 S-0546 (settled)
 The trial-merge conflicts with S-0548 (flai-cli.md, docs/operators/index.md, mcpserver/verify_test.go) are additions on both sides. S-0548 is in review and will likely land first; S-0546 resolves them on its rebase, keeping both, with S-0548's t.Parallel grouping in verify_test.go.
+
+### 2026-10-31T21:02:24Z alex
+Closed: S-0548 was accepted
