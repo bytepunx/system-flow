@@ -1,15 +1,21 @@
-// Package adrindex merges the ADR index, the table of every ADR in
-// <design>/adrs/README.md, so that a rebase that stops on it because both
-// sides added a row resolves it itself, as it does an issue file.
+// Package adrindex renders the ADR index, the table of every ADR in
+// <design>/adrs/README.md, from the ADR files (ADR-0228), and merges it so
+// that a rebase that stops on it because both sides added a row resolves it
+// itself, as it does an issue file.
 package adrindex
 
 import (
 	"errors"
 	"fmt"
+	"io/fs"
+	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
+
+	"github.com/goccy/go-yaml"
 
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -33,6 +39,192 @@ func Path(r *workitem.Repo) string {
 		design = "design"
 	}
 	return filepath.ToSlash(filepath.Join(design, "adrs", "README.md"))
+}
+
+// tableHeader is the table's header and separator lines, as the render writes them.
+const tableHeader = "| ADR | Title | Status |\n|-----|-------|--------|\n"
+
+// newIndex is what Write puts above the table of an index that does not exist.
+const newIndex = "# Architecture Decision Records\n"
+
+// adrFile matches an ADR's file name, its number in the first group.
+var adrFile = regexp.MustCompile(`^(\d{4})-.+\.md$`)
+
+// entry is one ADR file as its row shows it: the number and file name, and
+// the front matter's title, status, and the ADRs it supersedes, refines, and
+// is superseded by.
+type entry struct {
+	Number       string   `yaml:"-"`
+	File         string   `yaml:"-"`
+	Title        string   `yaml:"title"`
+	Status       string   `yaml:"status"`
+	Supersedes   []string `yaml:"supersedes"`
+	Refines      []string `yaml:"refines"`
+	SupersededBy []string `yaml:"superseded_by"`
+}
+
+// read reads every NNNN-*.md file at the root of folder, 0000-template.md
+// left out, in number order then file name.
+func read(folder fs.FS) ([]entry, error) {
+	files, err := fs.ReadDir(folder, ".")
+	if err != nil {
+		return nil, err
+	}
+	var out []entry
+	for _, f := range files {
+		m := adrFile.FindStringSubmatch(f.Name())
+		if f.IsDir() || m == nil || m[1] == "0000" {
+			continue
+		}
+		data, err := fs.ReadFile(folder, f.Name())
+		if err != nil {
+			return nil, err
+		}
+		fm, _, err := workitem.SplitFrontMatter(string(data))
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w; the ADR index is rendered from each ADR's front matter", f.Name(), err)
+		}
+		e := entry{Number: m[1], File: f.Name()}
+		if err := yaml.Unmarshal([]byte(fm), &e); err != nil {
+			return nil, fmt.Errorf("%s: front matter does not parse: %w; the ADR index is rendered from it", f.Name(), err)
+		}
+		out = append(out, e)
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].Number != out[j].Number {
+			return out[i].Number < out[j].Number
+		}
+		return out[i].File < out[j].File
+	})
+	return out, nil
+}
+
+// row is the entry's line in the table, without a newline.
+func (e entry) row() string {
+	return fmt.Sprintf("| [%s](%s) | %s | %s |", e.Number, e.File, strings.ReplaceAll(e.Title, "|", `\|`), e.cell())
+}
+
+// cell is the status cell ADR-0228 §2 decides: the status word, then the ADRs
+// the entry supersedes, refines, and is superseded by, each list when not
+// empty.
+func (e entry) cell() string {
+	parts := []string{e.Status}
+	for _, p := range []struct {
+		label string
+		refs  []string
+	}{{"supersedes", e.Supersedes}, {"refines", e.Refines}, {"superseded by", e.SupersededBy}} {
+		if nums := numbers(p.refs); len(nums) > 0 {
+			parts = append(parts, p.label+" "+joinAnd(nums))
+		}
+	}
+	return strings.Join(parts, ", ")
+}
+
+// numbers is refs, each ADR-NNNN or NNNN, as four-digit numbers without
+// duplicates in ascending order; a ref that is not a number is kept as
+// written, after the numbers.
+func numbers(refs []string) []string {
+	seen := map[string]bool{}
+	var nums []int
+	var other []string
+	for _, r := range refs {
+		r = strings.TrimSpace(r)
+		s := strings.TrimPrefix(strings.ToUpper(r), "ADR-")
+		key := r
+		n, err := strconv.Atoi(s)
+		if err == nil {
+			key = fmt.Sprintf("%04d", n)
+		}
+		if r == "" || seen[key] {
+			continue
+		}
+		seen[key] = true
+		if err == nil {
+			nums = append(nums, n)
+		} else {
+			other = append(other, r)
+		}
+	}
+	sort.Ints(nums)
+	out := make([]string, 0, len(nums)+len(other))
+	for _, n := range nums {
+		out = append(out, fmt.Sprintf("%04d", n))
+	}
+	return append(out, other...)
+}
+
+// table is the header and one row per entry, each line ended with a newline.
+func table(entries []entry) string {
+	var b strings.Builder
+	b.WriteString(tableHeader)
+	for _, e := range entries {
+		b.WriteString(e.row())
+		b.WriteByte('\n')
+	}
+	return b.String()
+}
+
+// splice puts tbl in place of the table in current, keeping the text above
+// and below it; the table is its header line and every line after it that
+// starts with |. An index with no table gets one at its end.
+func splice(current, tbl string) string {
+	text := strings.TrimRight(current, "\n")
+	if strings.TrimSpace(text) == "" {
+		return tbl
+	}
+	lines := strings.Split(text, "\n")
+	h := -1
+	for i, l := range lines {
+		if headerRe.MatchString(l) {
+			h = i
+			break
+		}
+	}
+	if h < 0 {
+		return text + "\n\n" + tbl
+	}
+	end := h + 1
+	for end < len(lines) && strings.HasPrefix(lines[end], "|") {
+		end++
+	}
+	return joinLines(lines[:h]) + tbl + joinLines(lines[end:])
+}
+
+// Render is current, the index's text, with its table rendered again from
+// the ADR files at the root of folder (ADR-0228): one row per NNNN-*.md file,
+// 0000-template.md left out, in number order, each the file's link, its
+// title with | escaped, and its status cell. The text above and below the
+// table is kept; an index with no table gets one at its end. It fails when an
+// ADR's front matter cannot be read.
+func Render(folder fs.FS, current string) (string, error) {
+	entries, err := read(folder)
+	if err != nil {
+		return "", err
+	}
+	return splice(current, table(entries)), nil
+}
+
+// Write renders the index, README.md in dir, the ADR folder, from the ADR
+// files in it and writes it when that changes it, or when it does not exist,
+// headed "# Architecture Decision Records". It reports whether it wrote.
+func Write(dir string) (bool, error) {
+	path := filepath.Join(dir, "README.md")
+	current, err := os.ReadFile(path)
+	exists := err == nil
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		current = []byte(newIndex)
+	case err != nil:
+		return false, err
+	}
+	text, err := Render(os.DirFS(dir), string(current))
+	if err != nil {
+		return false, err
+	}
+	if exists && text == string(current) {
+		return false, nil
+	}
+	return true, os.WriteFile(path, []byte(text), 0o644)
 }
 
 // index is one version of the index split at its table: the text above the

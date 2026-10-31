@@ -270,19 +270,20 @@ Record architecture decisions.
 
 Subcommands:
 
-- [accept](#flai-adr-accept): Accept a proposed ADR: status accepted, dated today, index row updated
-- [new](#flai-adr-new): Record a new ADR: number, file, front matter, and index row are supplied
+- [accept](#flai-adr-accept): Accept a proposed ADR: status accepted, dated today, index written again
+- [index](#flai-adr-index): Write the ADR index, design/adrs/README.md, from the ADR files
+- [new](#flai-adr-new): Record a new ADR: number, file, front matter, and index are supplied
 - [topics](#flai-adr-topics): Set the topics of an ADR of any status, and nothing else
 
 #### flai adr accept
 
-Accept a proposed ADR: status accepted, dated today, index row updated.
+Accept a proposed ADR: status accepted, dated today, index written again.
 
 ```text
 flai adr accept <number> [flags]
 ```
 
-Only a proposed ADR can be accepted. Once accepted an ADR is immutable except for superseded\_by and topics: to change the decision, record a new ADR that supersedes it.
+Only a proposed ADR can be accepted. Once accepted an ADR is immutable except for superseded\_by and topics: to change the decision, record a new ADR that supersedes it. The index, design/adrs/README.md, is written again from the ADR files, as flai adr index writes it.
 
 Flags:
 
@@ -291,15 +292,34 @@ Flags:
 | `--autocommit` | commit the change on its own, unless dashboard.autocommit is false |
 | `--trailer` stringArray | trailer line for the commit (repeatable) |
 
+#### flai adr index
+
+Write the ADR index, design/adrs/README.md, from the ADR files.
+
+```text
+flai adr index
+```
+
+Write the table in design/adrs/README.md from the ADR files (ADR-0228): one row per NNNN-\*.md file in the folder, 0000-template.md left out, in number order. A row links the file and gives its title and a status cell: the status word, then "supersedes", "refines", and "superseded by" with the ADR numbers its front matter lists, each when there are any. The text above and below the table is kept; only the table is written. The index is never edited by hand: flai adr new and flai adr accept write it the same way, and flai check reports an index that differs from what its folder renders.
+
+The output says whether the index changed; --json prints path and changed. An index that does not exist is created. An ADR whose front matter cannot be read stops it, and nothing is written.
+
+Examples:
+
+```bash
+flai adr index
+flai adr index --json
+```
+
 #### flai adr new
 
-Record a new ADR: number, file, front matter, and index row are supplied.
+Record a new ADR: number, file, front matter, and index are supplied.
 
 ```text
 flai adr new "<title>" [flags]
 ```
 
-Record an architecture decision. The number is one more than the highest NNNN-\*.md in design/adrs in this checkout, on main, in any story's worktree (uncommitted files included), and on any story branch, so parallel stories do not take the same number; gaps are not filled. The file is NNNN-slug.md with id, title, status, date, supersedes, superseded\_by, and refines when given; its row is added to design/adrs/README.md; each ADR it supersedes gets superseded\_by set, the one edit allowed to an accepted ADR.
+Record an architecture decision. The number is one more than the highest NNNN-\*.md in design/adrs in this checkout, on main, in any story's worktree (uncommitted files included), and on any story branch, so parallel stories do not take the same number; gaps are not filled. The file is NNNN-slug.md with id, title, status, date, supersedes, superseded\_by, and refines when given; each ADR it supersedes gets superseded\_by set, the one edit allowed to an accepted ADR; and the index, design/adrs/README.md, is written again from the ADR files, as flai adr index writes it.
 
 The body below the heading is the project's 0000-template.md sections, or standard input with --body-stdin. flai check runs with everything in place: if it reports anything the ADR introduces, every file is put back, the findings are printed, and the exit code is 4. --autocommit commits the new file, the index, and any superseded ADRs on their own, unless the project sets dashboard.autocommit: false. Nothing is pushed. --print-body prints the template's sections and creates nothing.
 

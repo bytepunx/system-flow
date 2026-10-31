@@ -2,7 +2,9 @@
 
 One decision per file, numbered in order of acceptance. An ADR is never edited after acceptance except to record `superseded_by`, or its `topics` with `flai adr topics`. To change a decision, write a new ADR that supersedes the old one in whole or in part, then update the living documents in `design/system` and `design/tech`.
 
-Record a new one with `flai adr new "<title>"`, or from the dashboard's ADRs page: the number, the file, its front matter, and the row below are made for you, from the sections in `0000-template.md`. `flai check` warns when a file has no row here or a row has no file.
+Record a new one with `flai adr new "<title>"`, or from the dashboard's ADRs page: the number, the file, and its front matter are made for you, from the sections in `0000-template.md`.
+
+The table below is generated from the ADR files by `flai adr index`, and written the same way by `flai adr new` and `flai adr accept` (ADR-0228). Each row is one file's link, title, and status cell: its `status`, then the ADRs it supersedes, refines, and is superseded by. How much of an older ADR a newer one replaces is said in the newer one. Never edit the table by hand: `flai check` reports a table that differs from what the files render, and the next regeneration undoes the edit.
 
 | ADR | Title | Status |
 |-----|-------|--------|
@@ -12,7 +14,7 @@ Record a new one with `flai adr new "<title>"`, or from the dashboard's ADRs pag
 | [0004](0004-workflow-states-and-transitions.md) | One state machine, transitions recorded in front matter, blocked is a flag | accepted |
 | [0005](0005-template-as-separate-repository.md) | The template is a separate git repository rendered by flai | accepted |
 | [0006](0006-go-for-the-cli.md) | Go for the flai CLI | accepted |
-| [0007](0007-sveltekit-spa-with-node-adapter-in-docker.md) | SvelteKit SPA with node adapter, shipped as a Docker image | accepted, superseded in part by 0016 |
+| [0007](0007-sveltekit-spa-with-node-adapter-in-docker.md) | SvelteKit SPA with node adapter, shipped as a Docker image | accepted, superseded by 0016 |
 | [0008](0008-cli-config-location.md) | CLI configuration lives in ~/.flai/config.json | accepted |
 | [0009](0009-agent-narrative-per-story.md) | One agent narrative per story in wip/agents | accepted |
 | [0010](0010-shell-out-to-git-and-docker.md) | flai shells out to git and docker | accepted |
@@ -21,15 +23,15 @@ Record a new one with `flai adr new "<title>"`, or from the dashboard's ADRs pag
 | [0013](0013-conventions-folder.md) | design/conventions holds agent norms, one file per topic | accepted |
 | [0014](0014-design-issues.md) | design/issues records recurring friction with counts and cost | accepted |
 | [0015](0015-template-lock-file.md) | system-flow.lock.yaml records what the template rendered so upgrade can tell edits from baseline | accepted |
-| [0016](0016-dashboard-delegates-to-flai.md) | flaiover delegates writes and metrics to the flai binary | accepted, supersedes 0007 in part |
+| [0016](0016-dashboard-delegates-to-flai.md) | flaiover delegates writes and metrics to the flai binary | accepted, supersedes 0007 |
 | [0017](0017-four-digit-ids.md) | Work item IDs are zero-padded to four digits | accepted, refines 0003 |
 | [0018](0018-dashboard-token.md) | flaiover authenticates every request with a per-project token | accepted, refines 0016 |
-| [0019](0019-story-branches-and-touches.md) | Agents work each story on a branch in a worktree while wip stays on main | accepted, refined by 0022 |
+| [0019](0019-story-branches-and-touches.md) | Agents work each story on a branch in a worktree while wip stays on main | accepted |
 | [0020](0020-files-plus-mcp.md) | The designer and agents communicate through files, served to agents by flai mcp | accepted, refines 0009 and 0016 |
 | [0021](0021-story-ready-without-tasks.md) | A story is ready without tasks; the pulling agent writes them and review requires them | accepted |
-| [0022](0022-repository-mounted-at-its-host-path.md) | The dashboard mounts the repository at its host path; relative-path worktrees are an opt-in | accepted, refines 0019, superseded by 0031 |
-| [0023](0023-documents-are-saved-through-flai.md) | Documents edited in the dashboard are saved through flai | accepted, refines 0016 |
-| [0024](0024-mcp-over-http-and-project-identity.md) | flaiover serves MCP over HTTP, and every response names its project | accepted, refines 0018 and 0020, superseded by 0030 |
+| [0022](0022-repository-mounted-at-its-host-path.md) | The dashboard mounts the repository at its host path; relative-path worktrees are an opt-in | accepted, superseded by 0031 |
+| [0023](0023-documents-are-saved-through-flai.md) | Documents edited in the dashboard are saved through flai | accepted |
+| [0024](0024-mcp-over-http-and-project-identity.md) | flaiover serves MCP over HTTP, and every response names its project | accepted, superseded by 0030 |
 | [0025](0025-research-is-accepted-without-a-release.md) | A research story is accepted and pushed without a release; an experiment stays on its branch | accepted |
 | [0026](0026-the-dashboard-may-push-with-a-key-the-operator-gives-it.md) | The dashboard container may push acceptances with a key the operator gives it | accepted, refines 0018, superseded by 0031 |
 | [0027](0027-git-hooks-config-and-info-are-read-only-in-the-dashboard-container.md) | Git hooks, config, and info are read-only in the dashboard container | accepted, refines 0018, 0022 and 0026, superseded by 0031 |
@@ -43,10 +45,10 @@ Record a new one with `flai adr new "<title>"`, or from the dashboard's ADRs pag
 | [0035](0035-repositories-under-folders-the-operator-names-can-be-imported-from-the-board.md) | Repositories under folders the operator names can be imported from the board | accepted, refines 0029 |
 | [0036](0036-a-folder-that-is-not-a-project-is-served-whole-by-flai-mcp-and-flai-dashboard.md) | A folder that is not a project is served whole by flai mcp and flai dashboard | accepted, refines 0030 |
 | [0037](0037-a-story-carries-its-agent-copied-from-the-project-s-default-when-it-is-made.md) | A story carries its agent, copied from the project's default when it is made | accepted |
-| [0038](0038-flai-serve-starts-a-story-s-own-agent-through-an-adapter-with-what-the-operator.md) | flai serve starts a story's own agent through an adapter, with what the operator allows | accepted, refines 0029 and 0037, superseded in part by 0041 |
+| [0038](0038-flai-serve-starts-a-story-s-own-agent-through-an-adapter-with-what-the-operator.md) | flai serve starts a story's own agent through an adapter, with what the operator allows | accepted, refines 0029 and 0037, superseded by 0041 |
 | [0039](0039-a-settings-host-action-turned-on-only-in-a-shell-lets-the-dashboard-change-the.md) | A settings host action, turned on only in a shell, lets the dashboard change the host's settings | accepted, refines 0029 |
 | [0040](0040-one-flai-host-per-machine-runs-flai-serve-and-each-project-s-mcp-server-as-its.md) | One flai host per machine runs flai serve and each project's MCP server as its children | accepted, supersedes 0034, refines 0029 |
-| [0041](0041-a-story-in-ready-gets-its-agent-whether-it-entered-ready-before-or-after-flai.md) | A story in ready gets its agent whether it entered ready before or after flai serve started | accepted, supersedes 0038 in part |
+| [0041](0041-a-story-in-ready-gets-its-agent-whether-it-entered-ready-before-or-after-flai.md) | A story in ready gets its agent whether it entered ready before or after flai serve started | accepted, supersedes 0038 |
 | [0042](0042-someone-attending-holds-a-ready-story-back-for-the-attended-window-then-flai.md) | Someone attending holds a ready story back for the attended window, then flai serve starts it | accepted, refines 0038 and 0041, superseded by 0043 |
 | [0043](0043-flai-serve-starts-a-ready-story-s-agent-whenever-the-in-progress-limit-has-room.md) | flai serve starts a ready story's agent whenever the in-progress limit has room, and the operator can restart one that dropped or failed | accepted, supersedes 0042, refines 0038 and 0041 |
 | [0044](0044-a-retry-of-a-failed-agent-on-a-ready-story-with-the-in-progress-limit-full-is.md) | A retry of a failed agent on a ready story with the in-progress limit full is queued until there is room | accepted, refines 0043 |
@@ -72,7 +74,7 @@ Record a new one with `flai adr new "<title>"`, or from the dashboard's ADRs pag
 | [0064](0064-a-story-in-ready-or-in-progress-with-no-agent-run-on-this-host-is-started-here.md) | A story in ready or in progress with no agent run on this host is started here on the operator's word, and its agent is told who began it, where, and when | accepted, refines 0043 |
 | [0065](0065-a-story-s-agent-carries-a-model-per-sub-agent-role-and-claude-code-runs-each.md) | A story's agent carries a model per sub-agent role, and claude-code runs each role's sub-agent on it | accepted, refines 0037 and 0059 |
 | [0066](0066-an-experiment-story-is-accepted-like-any-other-and-records-its-results-in-a.md) | An experiment story is accepted like any other and records its results in a document under design/experiments | accepted, refines 0025 and 0032 |
-| [0067](0067-accepted-work-reaches-the-remote-only-when-it-is-published-and-agents-publish.md) | Accepted work reaches the remote only when it is published, and agents publish only when the operator asks | proposed, refines 0032 and 0048 |
+| [0067](0067-accepted-work-reaches-the-remote-only-when-it-is-published-and-agents-publish.md) | Accepted work reaches the remote only when it is published, and agents publish only when the operator asks | accepted, refines 0032 and 0048 |
 | [0068](0068-a-convention-s-roles-list-every-agent-that-reads-it-the-story-s-agent-included.md) | A convention's roles list every agent that reads it, the story's agent included, and a convention without roles is read by all | accepted, refines 0059 |
 | [0069](0069-agents-commit-each-task-on-the-story-branch-after-flai-stream-sync-and-never.md) | Agents commit each task on the story branch after flai stream sync, and never rebase or merge it by hand | accepted, refines 0019 |
 | [0070](0070-releases-are-signed-with-a-cosign-key-pair-verified-before-they-are-installed.md) | Releases are signed with a cosign key pair, verified before they are installed or run, and each component refuses a peer without a signed release stamp | accepted, refines 0029 and 0031 |
@@ -82,7 +84,7 @@ Record a new one with `flai adr new "<title>"`, or from the dashboard's ADRs pag
 | [0074](0074-work-items-carry-planning-data-a-story-s-draft-flag-an-epic-s-or-story-s-cost.md) | Work items carry planning data: a story's draft flag, an epic's or story's cost of delay, and a story's forecast, each saying who set it | accepted |
 | [0075](0075-the-planner-the-orchestrator-and-the-analyzer-prime-by-role-plan-orchestrate-or.md) | The planner, the orchestrator, and the analyzer prime by role, plan, orchestrate, or analyze, with a full pack of their own and no story | accepted, refines 0059 and 0068 |
 | [0076](0076-an-epic-follows-its-stories-to-ready-and-in-progress-with-the-first-to-review.md) | An epic follows its stories: to ready and in-progress with the first, to review with the last open one, to done when that one is accepted | accepted, refines 0004 |
-| [0077](0077-a-story-that-was-a-draft-records-who-finalized-it-and-when-and-the-dashboard.md) | A story that was a draft records who finalized it and when, and the dashboard finalizes through item.finalize | proposed, refines 0074 |
+| [0077](0077-a-story-that-was-a-draft-records-who-finalized-it-and-when-and-the-dashboard.md) | A story that was a draft records who finalized it and when, and the dashboard finalizes through item.finalize | accepted, refines 0074 |
 | [0078](0078-an-accepted-epic-contributes-no-release-bump-of-its-own-its-stories-carry-theirs.md) | An accepted epic contributes no release bump of its own: its stories carry theirs | accepted, refines 0076 |
 | [0079](0079-the-planner-the-orchestrator-and-the-analyzer-each-log-their-activities-in-one.md) | The planner, the orchestrator, and the analyzer each log their activities in one document per project under wip/agents, written by flai with its totals in front matter that flai stats reports | accepted |
 | [0080](0080-a-cost-of-delay-stamps-its-inputs-and-its-value-apart.md) | A cost of delay stamps its inputs and its value apart | accepted, refines 0074 |
@@ -207,7 +209,7 @@ Record a new one with `flai adr new "<title>"`, or from the dashboard's ADRs pag
 | [0199](0199-the-curator-runs-after-acceptances-coalesced-and-on-digest-schedule-marks.md) | The curator runs after acceptances, coalesced, and on digest.schedule, marks absorbed the entries a document now records, and compacts the active entries no work item, narrative, or thread cited within digest.compact_after, deleting nothing | accepted, refines 0196 |
 | [0200](0200-flai-stats-reports-per-week-the-threads-opened-to-the-operator-the-stories.md) | flai stats reports per week the threads opened to the operator, the stories completed, the threads per completed story, and those that asked what a digest entry already answered | accepted, refines 0081 and 0091 |
 | [0201](0201-when-the-manifest-names-flai-command-task-done-s-check-step-runs-that-command-s.md) | When the manifest names flai.command, task done's check step runs that command's flai check in the story's worktree in place of the running flai's own check, and stops when it gives no result | accepted, refines 0107, 0160 and 0180 |
-| [0202](0202-flai-gains-a-docker-agent-harness-adapter-that-runs-a-story-s-agent-as-a-docker.md) | flai gains a docker-agent harness adapter that runs a story's agent as a Docker Agent team mixing a Claude subscription, through its claude-code harness, with local models through Docker Model Runner or Ollama, under ADR-0130's contracts | proposed, refines 0130 and 0131 |
+| [0202](0202-flai-gains-a-docker-agent-harness-adapter-that-runs-a-story-s-agent-as-a-docker.md) | flai gains a docker-agent harness adapter that runs a story's agent as a Docker Agent team mixing a Claude subscription, through its claude-code harness, with local models through Docker Model Runner or Ollama, under ADR-0130's contracts | rejected, refines 0130 and 0131 |
 | [0203](0203-flai-may-run-a-story-s-agent-in-a-container-from-a-baseline-image-it-builds.md) | flai may run a story's agent in a container from a baseline image it builds, with a harness of its own as the entrypoint, so that flai chooses the mounts, the tools, the guard, the permission prompt, and the pricing of each model call across hosted and local models | accepted, refines 0130, 0131 and 0132 |
 | [0204](0204-flai-stats-reports-the-curator-s-runs-in-the-digest-section-and-leaves-asked.md) | flai stats reports the curator's runs in the digest section and leaves asked_again out of a week no curator run has reached | proposed, refines 0200 |
 | [0205](0205-flai-serve-reminds-the-operator-of-a-thread-that-awaits-them-past-threads.md) | flai serve reminds the operator of a thread that awaits them past threads.remind_after through a channel kept on the host, writing nothing on the thread, and blocks a story whose agent ended asking until the answer starts it again | accepted, refines 0090, 0091, 0108, 0154 and 0158 |

@@ -217,6 +217,52 @@ func TestAdrNewUndoesEverythingWhenItCannotFinish(t *testing.T) {
 	}
 }
 
+// ADR-0228: flai adr index writes the table from the ADR files, keeping the
+// text around it, says whether it changed, and changes nothing when run again.
+func TestAdrIndex(t *testing.T) {
+	root := adrProject(t)
+	readme := filepath.Join(root, "design/adrs/README.md")
+	before, _ := os.ReadFile(readme)
+	if out, errOut, code := runIn(t, root, "adr", "index"); code != 0 || out != "design/adrs/README.md is current\n" {
+		t.Fatalf("a current index: %d %q %s", code, out, errOut)
+	}
+	if after, _ := os.ReadFile(readme); string(after) != string(before) {
+		t.Errorf("a current index is left as it was:\n%s", after)
+	}
+
+	hand := strings.Replace(string(before), "| Second | accepted |", "| Second | accepted, superseded in part by 0007 |", 1)
+	hand = strings.Replace(hand, "| [0007](0007-seventh.md) | Seventh | accepted |\n", "", 1)
+	_ = os.WriteFile(readme, []byte(hand), 0o644)
+	_ = os.WriteFile(filepath.Join(root, "design/adrs/0009-by-hand.md"), []byte(strings.Replace(adrFile("0009", "By hand", "proposed"), "supersedes: []", "supersedes: [ADR-0007]", 1)), 0o644)
+	if out, errOut, code := runIn(t, root, "adr", "index"); code != 0 || out != "wrote design/adrs/README.md\n" {
+		t.Fatalf("a stale index: %d %q %s", code, out, errOut)
+	}
+	after, _ := os.ReadFile(readme)
+	want := "---\ntitle: ADRs\nupdated: 2026-09-01\nstatus: active\n---\n\n# Architecture Decision Records\n\n| ADR | Title | Status |\n|-----|-------|--------|\n" +
+		"| [0001](0001-first.md) | First | accepted |\n| [0002](0002-second.md) | Second | accepted |\n| [0007](0007-seventh.md) | Seventh | accepted |\n" +
+		"| [0009](0009-by-hand.md) | By hand | proposed, supersedes 0007 |\n\nText after the table stays after it.\n"
+	if string(after) != want {
+		t.Errorf("the table follows the files, the text around it stays:\n%s\nwant:\n%s", after, want)
+	}
+
+	out, errOut, code := runIn(t, root, "adr", "index", "--json")
+	var res struct {
+		Path    string `json:"path"`
+		Changed bool   `json:"changed"`
+	}
+	if err := json.Unmarshal([]byte(out), &res); code != 0 || err != nil || res.Path != "design/adrs/README.md" || res.Changed {
+		t.Errorf("a second run changes nothing: %d %v %s %s", code, err, out, errOut)
+	}
+
+	_ = os.WriteFile(filepath.Join(root, "design/adrs/0010-broken.md"), []byte("# ADR-0010 No front matter\n"), 0o644)
+	if _, errOut, code := runIn(t, root, "adr", "index"); code == 0 || !strings.Contains(errOut, "0010-broken.md") {
+		t.Errorf("an ADR with no front matter stops it: %d %s", code, errOut)
+	}
+	if data, _ := os.ReadFile(readme); string(data) != want {
+		t.Errorf("and nothing is written:\n%s", data)
+	}
+}
+
 // flai check keeps the index honest for ADRs made by hand.
 func TestCheckAdrIndex(t *testing.T) {
 	t.Parallel()

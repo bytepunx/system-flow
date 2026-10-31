@@ -1,9 +1,9 @@
 // Package adr records an architecture decision the way the conventions ask
 // (S-0060): the number comes from the files present here, on main, and in
 // every story's worktree and branch (I-0063), the file is named and
-// given its front matter, the index in design/adrs/README.md gets its row,
-// an ADR it supersedes gets superseded_by set, and the author writes only
-// the decision. Creation is one step that happens or does not, like an item
+// given its front matter, an ADR it supersedes gets superseded_by set, the
+// index in design/adrs/README.md is rendered again from the ADR files
+// (ADR-0228), and the author writes only the decision. Creation is one step that happens or does not, like an item
 // made with a body (S-0059): flai check runs with everything in place, a
 // finding it introduces undoes all of it, and what is kept is committed on
 // its own.
@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/adrindex"
 	"github.com/bytepunx/system-flow/flai/internal/check"
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
@@ -170,17 +171,6 @@ func idList(ns []int) string {
 	return "[" + strings.Join(ids, ", ") + "]"
 }
 
-func numList(ns []int) string {
-	parts := make([]string, len(ns))
-	for i, n := range ns {
-		parts[i] = num4(n)
-	}
-	if len(parts) <= 1 {
-		return strings.Join(parts, "")
-	}
-	return strings.Join(parts[:len(parts)-1], ", ") + " and " + parts[len(parts)-1]
-}
-
 func uniqueSorted(ns []int) []int {
 	seen := map[int]bool{}
 	var out []int
@@ -279,7 +269,6 @@ func New(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 		return nil, err
 	}
 	snap := &snapshot{was: map[string][]byte{}}
-	index := filepath.Join(dir, "README.md")
 
 	body := strings.TrimSpace(opt.Body)
 	if body == "" {
@@ -303,26 +292,7 @@ func New(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		return fail(err)
 	}
-	changed := []string{path}
-
-	// The index row, with the note the index already uses.
-	note := status
-	if len(supersedes) > 0 {
-		note += ", supersedes " + numList(supersedes)
-	}
-	if len(refines) > 0 {
-		note += ", refines " + numList(refines)
-	}
-	row := fmt.Sprintf("| [%s](%s) | %s | %s |", num4(n), name, strings.ReplaceAll(title, "|", "\\|"), note)
-	if _, err := os.Stat(index); err == nil {
-		if err := snap.keep(index); err != nil {
-			return fail(err)
-		}
-		if err := os.WriteFile(index, []byte(addRow(string(snap.was[index]), row)), 0o644); err != nil {
-			return fail(err)
-		}
-		changed = append(changed, index)
-	}
+	var superseded []string
 
 	// superseded_by is the one edit the conventions allow to an accepted ADR.
 	for _, old := range supersedes {
@@ -344,11 +314,16 @@ func New(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 		if err := os.WriteFile(oldPath, []byte(text), 0o644); err != nil {
 			return fail(err)
 		}
-		changed = append(changed, oldPath)
-		if data, err := os.ReadFile(index); err == nil {
-			_ = os.WriteFile(index, []byte(noteRow(string(data), old, "superseded by "+num4(n))), 0o644)
-		}
+		superseded = append(superseded, oldPath)
 	}
+
+	changed := []string{path}
+	if wrote, err := renderIndex(dir, snap); err != nil {
+		return fail(err)
+	} else if wrote != "" {
+		changed = append(changed, wrote)
+	}
+	changed = append(changed, superseded...)
 
 	res := &Result{ID: adrID(n), Number: n, Title: title, Status: status, Path: relTo(repo.Root, path), Warnings: []check.Finding{}}
 	for _, p := range changed {
@@ -382,7 +357,7 @@ func Accept(repo *workitem.Repo, r execx.Runner, n int, opt Options) (*Result, e
 	if !ok {
 		return nil, fmt.Errorf("rule: there is no %s", adrID(n))
 	}
-	path, index := filepath.Join(dir, name), filepath.Join(dir, "README.md")
+	path := filepath.Join(dir, name)
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -414,11 +389,13 @@ func Accept(repo *workitem.Repo, r execx.Runner, n int, opt Options) (*Result, e
 		return nil, err
 	}
 	changed := []string{path}
-	if _, err := os.Stat(index); err == nil {
-		if err := snap.keep(index); err == nil {
-			_ = os.WriteFile(index, []byte(setRowStatus(string(snap.was[index]), n, "proposed", "accepted")), 0o644)
-			changed = append(changed, index)
+	if wrote, err := renderIndex(dir, snap); err != nil {
+		if uerr := snap.undo(); uerr != nil {
+			return nil, errors.Join(err, fmt.Errorf("undoing the acceptance failed: %w", uerr))
 		}
+		return nil, err
+	} else if wrote != "" {
+		changed = append(changed, wrote)
 	}
 	res := &Result{ID: adrID(n), Number: n, Title: titleOf(newFM), Status: "accepted", Path: relTo(repo.Root, path), Warnings: []check.Finding{}}
 	for _, p := range changed {
@@ -546,56 +523,25 @@ func introduced(repo *workitem.Repo, before *check.Result, now time.Time) ([]che
 	return out, nil
 }
 
-var rowRe = regexp.MustCompile(`^\| *\[(\d{4})\]\(`)
-
-// addRow puts the row after the last row of the index table, or starts a
-// table at the end when the index has none.
-func addRow(index, row string) string {
-	lines := strings.Split(strings.TrimRight(index, "\n"), "\n")
-	last := -1
-	for i, l := range lines {
-		if rowRe.MatchString(l) || strings.HasPrefix(l, "|--") || strings.HasPrefix(l, "| ADR") {
-			last = i
+// renderIndex renders the index, README.md in dir, again from the ADR files
+// (ADR-0228), keeping it in snap first, and returns its path when that
+// changed it. An ADR folder with no index gets none.
+func renderIndex(dir string, snap *snapshot) (string, error) {
+	index := filepath.Join(dir, "README.md")
+	if _, err := os.Stat(index); err != nil {
+		if os.IsNotExist(err) {
+			return "", nil
 		}
+		return "", err
 	}
-	if last < 0 {
-		return strings.Join(lines, "\n") + "\n\n| ADR | Title | Status |\n|-----|-------|--------|\n" + row + "\n"
+	if err := snap.keep(index); err != nil {
+		return "", err
 	}
-	out := append(append(append([]string{}, lines[:last+1]...), row), lines[last+1:]...)
-	return strings.Join(out, "\n") + "\n"
-}
-
-// noteRow appends a note to the status cell of one ADR's row.
-func noteRow(index string, n int, note string) string {
-	lines := strings.Split(index, "\n")
-	for i, l := range lines {
-		if m := rowRe.FindStringSubmatch(l); m != nil && m[1] == num4(n) && !strings.Contains(l, note) {
-			trimmed := strings.TrimRight(l, " ")
-			if strings.HasSuffix(trimmed, "|") {
-				lines[i] = strings.TrimRight(strings.TrimSuffix(trimmed, "|"), " ") + ", " + note + " |"
-			}
-		}
+	wrote, err := adrindex.Write(dir)
+	if err != nil || !wrote {
+		return "", err
 	}
-	return strings.Join(lines, "\n")
-}
-
-// setRowStatus replaces the leading status word of one ADR's status cell.
-func setRowStatus(index string, n int, from, to string) string {
-	lines := strings.Split(index, "\n")
-	for i, l := range lines {
-		if m := rowRe.FindStringSubmatch(l); m != nil && m[1] == num4(n) {
-			cells := strings.Split(l, "|")
-			if len(cells) >= 3 {
-				k := len(cells) - 2
-				cell := strings.TrimSpace(cells[k])
-				if strings.HasPrefix(cell, from) {
-					cells[k] = " " + to + strings.TrimPrefix(cell, from) + " "
-					lines[i] = strings.Join(cells, "|")
-				}
-			}
-		}
-	}
-	return strings.Join(lines, "\n")
+	return index, nil
 }
 
 func relTo(root, path string) string {

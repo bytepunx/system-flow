@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/adr"
+	"github.com/bytepunx/system-flow/flai/internal/adrindex"
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
 )
 
@@ -17,7 +18,7 @@ func newAdrCmd(a *app) *cobra.Command {
 		Use:   "adr",
 		Short: "Record architecture decisions",
 	}
-	c.AddCommand(newAdrNewCmd(a), newAdrAcceptCmd(a), newAdrTopicsCmd(a))
+	c.AddCommand(newAdrNewCmd(a), newAdrAcceptCmd(a), newAdrTopicsCmd(a), newAdrIndexCmd(a))
 	return c
 }
 
@@ -78,14 +79,15 @@ func newAdrNewCmd(a *app) *cobra.Command {
 	var bodyStdin, printBody, commit bool
 	c := &cobra.Command{
 		Use:   "new \"<title>\"",
-		Short: "Record a new ADR: number, file, front matter, and index row are supplied",
+		Short: "Record a new ADR: number, file, front matter, and index are supplied",
 		Long: `Record an architecture decision. The number is one more than the highest
 NNNN-*.md in design/adrs in this checkout, on main, in any story's worktree
 (uncommitted files included), and on any story branch, so parallel stories
 do not take the same number; gaps are not filled. The file is
 NNNN-slug.md with id, title, status, date, supersedes, superseded_by, and
-refines when given; its row is added to design/adrs/README.md; each ADR it
-supersedes gets superseded_by set, the one edit allowed to an accepted ADR.
+refines when given; each ADR it supersedes gets superseded_by set, the one
+edit allowed to an accepted ADR; and the index, design/adrs/README.md, is
+written again from the ADR files, as flai adr index writes it.
 
 The body below the heading is the project's 0000-template.md sections, or
 standard input with --body-stdin. flai check runs with everything in place:
@@ -191,10 +193,11 @@ func newAdrAcceptCmd(a *app) *cobra.Command {
 	var opt adr.Options
 	c := &cobra.Command{
 		Use:   "accept <number>",
-		Short: "Accept a proposed ADR: status accepted, dated today, index row updated",
+		Short: "Accept a proposed ADR: status accepted, dated today, index written again",
 		Long: `Only a proposed ADR can be accepted. Once accepted an ADR is immutable
 except for superseded_by and topics: to change the decision, record a new
-ADR that supersedes it.`,
+ADR that supersedes it. The index, design/adrs/README.md, is written again
+from the ADR files, as flai adr index writes it.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
@@ -264,4 +267,46 @@ the file back and exits 4.`,
 	c.Flags().BoolVar(&opt.Autocommit, "autocommit", false, "commit the change on its own, unless dashboard.autocommit is false")
 	c.Flags().StringArrayVar(&opt.Trailers, "trailer", nil, "trailer line for the commit (repeatable)")
 	return c
+}
+
+func newAdrIndexCmd(a *app) *cobra.Command {
+	return &cobra.Command{
+		Use:   "index",
+		Short: "Write the ADR index, design/adrs/README.md, from the ADR files",
+		Long: `Write the table in design/adrs/README.md from the ADR files (ADR-0228):
+one row per NNNN-*.md file in the folder, 0000-template.md left out, in
+number order. A row links the file and gives its title and a status cell:
+the status word, then "supersedes", "refines", and "superseded by" with the
+ADR numbers its front matter lists, each when there are any. The text above
+and below the table is kept; only the table is written. The index is never
+edited by hand: flai adr new and flai adr accept write it the same way, and
+flai check reports an index that differs from what its folder renders.
+
+The output says whether the index changed; --json prints path and changed.
+An index that does not exist is created. An ADR whose front matter cannot be
+read stops it, and nothing is written.`,
+		Example: `  flai adr index
+  flai adr index --json`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			repo, err := a.project()
+			if err != nil {
+				return err
+			}
+			changed, err := adrindex.Write(adr.Dir(repo))
+			if err != nil {
+				return err
+			}
+			path := adrindex.Path(repo)
+			if a.jsonOut {
+				return a.printJSON(map[string]any{"path": path, "changed": changed})
+			}
+			if changed {
+				fmt.Fprintf(a.out, "wrote %s\n", path)
+			} else {
+				fmt.Fprintf(a.out, "%s is current\n", path)
+			}
+			return nil
+		},
+	}
 }
