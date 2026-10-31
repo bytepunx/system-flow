@@ -432,7 +432,7 @@ func TestThePlannersDraftStoryNeedsItsNoteForAFolderTouch(t *testing.T) {
 func TestTheThirdStoryAfterAHubIsKeptWithAWarning(t *testing.T) {
 	now := time.Date(2026, 10, 3, 9, 0, 0, 0, time.UTC)
 	repo := planned(t, now)
-	const body = "## Goal\n\nWait for S-0001.\n\n## Acceptance criteria\n\n- [ ] It builds on S-0001.\n\n## Tasks\n\n## Notes\n\nNone.\n"
+	const body = "## Goal\n\nWait for S-0001.\n\n## Acceptance criteria\n\n- [ ] It builds on S-0001.\n\n## Tasks\n\n## Notes\n\nIt reads the guard S-0001 writes.\n"
 	var res *Result
 	for i := range 3 {
 		var err error
@@ -443,6 +443,22 @@ func TestTheThirdStoryAfterAHubIsKeptWithAWarning(t *testing.T) {
 	}
 	if len(res.Warnings) != 1 || res.Warnings[0].Rule != "wip.after-hub" {
 		t.Errorf("the third story warns wip.after-hub: %+v", res.Warnings)
+	}
+}
+
+// S-0551: a story whose Notes give no reason for its after stands with the
+// wip.after-reason warning rather than being refused, since the finding is
+// advisory (ADR-0230).
+func TestAStoryAfterWithNoReasonIsKeptWithAWarning(t *testing.T) {
+	now := time.Date(2026, 10, 3, 9, 0, 0, 0, time.UTC)
+	repo := planned(t, now)
+	const body = "## Goal\n\nWait.\n\n## Acceptance criteria\n\n- [ ] It builds.\n\n## Tasks\n\n## Notes\n\nNone.\n"
+	res, err := Create(repo, nil, Options{New: workitem.NewOptions{Type: workitem.Story, Title: "After", Owner: "alex", Now: now, After: []string{"S-0001"}, Body: body}})
+	if err != nil {
+		t.Fatalf("a story whose after has no reason must be kept: %v", err)
+	}
+	if len(res.Warnings) != 1 || res.Warnings[0].Rule != "wip.after-reason" {
+		t.Errorf("the story warns wip.after-reason: %+v", res.Warnings)
 	}
 }
 

@@ -675,9 +675,10 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 			// touches that reach another story in progress are advisory
 			// (ADR-0019): the edit stands, and Grown tells both stories (I-0059)
 			res.Warnings = append(res.Warnings, f)
-		case isNew && (f.Rule == "touches.folder" || f.Rule == "wip.after-hub"):
-			// a kept folder and an after hub are advisory (ADR-0188): the
-			// edit stands, and the warning says so
+		case isNew && (f.Rule == "touches.folder" || f.Rule == "wip.after-hub" || f.Rule == "wip.after-reason"):
+			// a kept folder, an after hub, and an after with no reason are
+			// advisory (ADR-0188, ADR-0230): the edit stands, and the
+			// warning says so
 			res.Warnings = append(res.Warnings, f)
 		case onPath && f.Level == check.Error:
 			blocking = append(blocking, f)

@@ -53,8 +53,8 @@ type Result struct {
 
 // Create makes the item, checks the repository with it in place, scoped to
 // the item's story, and keeps it only when the check reports nothing new
-// inside that story but a wip.overlap, a touches.folder, or a wip.after-hub,
-// which are advisory (ADR-0019, ADR-0188) and come back in Warnings (I-0169),
+// inside that story but a wip.overlap, a touches.folder, a wip.after-hub, or
+// a wip.after-reason, which are advisory (ADR-0019, ADR-0188, ADR-0230) and come back in Warnings (I-0169),
 // as does a new finding outside the story (I-0191). A refusal is a
 // *docedit.RefusedError carrying the findings, as for a refused save.
 func Create(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
@@ -137,9 +137,10 @@ func Create(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 			// touches that reach another story in progress are advisory
 			// (ADR-0019): the item stands, and the warning says so (I-0169)
 			res.Warnings = append(res.Warnings, f)
-		case f.Rule == "touches.folder" || f.Rule == "wip.after-hub":
-			// a kept folder and an after hub are advisory (ADR-0188): the
-			// item stands, and the warning says so
+		case f.Rule == "touches.folder" || f.Rule == "wip.after-hub" || f.Rule == "wip.after-reason":
+			// a kept folder, an after hub, and an after with no reason are
+			// advisory (ADR-0188, ADR-0230): the item stands, and the
+			// warning says so
 			res.Warnings = append(res.Warnings, f)
 		case !kept:
 			// one a check scoped to the story leaves out, such as a finding

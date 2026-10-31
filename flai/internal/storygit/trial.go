@@ -2,6 +2,8 @@ package storygit
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"slices"
 	"sync"
 
@@ -15,7 +17,13 @@ import (
 // answers the paths that conflict, none when clean, or an error when the trial
 // cannot run. files is what a rebase resolves itself in repo, whose generated
 // and merged files it leaves out of the conflicts as sync's trial merge does.
+// It is nil without a runner or when repo's main checkout is no git
+// repository: no story there has a branch to trial-merge, so an overlap holds
+// as it did before (ADR-0230).
 func NewTrialJudge(r execx.Runner, repo *workitem.Repo, files Files) func(held, holder string) ([]string, error) {
+	if _, err := os.Stat(filepath.Join(repo.MainRoot, ".git")); r == nil || err != nil {
+		return nil
+	}
 	j := &trialJudge{r: r, root: repo.MainRoot, files: files, answers: map[[2]string][]string{}}
 	j.git = sync.OnceValue(j.gitTooOld)
 	return j.judge

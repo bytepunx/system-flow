@@ -147,3 +147,18 @@ func TestTrialJudgeErrsOnAGitTooOld(t *testing.T) {
 		t.Fatalf("merge-tree ran %d times", r.merges)
 	}
 }
+
+// S-0551: outside a git checkout, or without a runner, there is no judge, so
+// an overlap holds as it did before rather than saying git failed.
+func TestNoTrialJudgeOutsideAGitCheckoutOrWithoutARunner(t *testing.T) {
+	t.Parallel()
+	repo := &workitem.Repo{Root: t.TempDir()}
+	repo.MainRoot = repo.Root
+	if NewTrialJudge(execx.System{}, repo, Files{}) != nil {
+		t.Error("a folder that is no git checkout should get no trial judge")
+	}
+	git := syncProject(t)
+	if NewTrialJudge(nil, git, Files{}) != nil {
+		t.Error("no runner should give no trial judge")
+	}
+}
