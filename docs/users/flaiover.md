@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-10-30
+updated: 2026-10-31
 status: active
 ---
 
@@ -168,6 +168,7 @@ A cancelled item stays in the cancelled column, and `flai check` fails on it, un
 **Merge queue.** The merge queue verifies the enqueued stories in review as one batch, on the host, and is to land the green ones; landing is not built yet, so you still accept each story yourself ([The merge queue](flai.md#the-merge-queue) in flai.md). Each story in review says `queue 1`, `queue 2`, and so on, its place in the queue, or `not eligible`. Hover over `not eligible`, or use a screen reader, for every reason, such as an unticked criterion, an open thread, or a `flai verify` that did not pass at the branch's head. At the top of the review column a panel shows:
 
 - the batch being verified and its step, such as `rebasing S-0042` or `verifying go-test`, or `No batch.`;
+- while no batch is under way and the next one waits for more stories ([`merge_queue.coalesce`](../operators/settings.md)), when that wait ends and how full the batch is, such as `Next batch fills until 2026-10-31 07:41 UTC: 1 of 4 stories (S-0042).`, in your browser's time zone; the batch is built when the wait ends or it holds `merge_queue.batch_max` stories, whichever comes first;
 - once the batch is verified, its result: `Passed`, or `Failed at <tier>`, with when and flai's summary;
 - a dropped batch's reason, who dropped it, and when, such as a story taken out of the queue or accepted by hand;
 - the eligible stories in the queue's order, each marked enqueued when it is, or that none is eligible, and how many are not eligible.

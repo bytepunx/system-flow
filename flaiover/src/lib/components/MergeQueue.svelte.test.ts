@@ -1,7 +1,8 @@
 // S-0398: the merge queue above the review lane, and each card in review's mark from it; S-0399:
 // its hold switch, and the batch's step, result, and drop; S-0400: a red batch's bisection, and
 // what each batched story comes to in the batch; S-0402: a story the main checkout's uncommitted
-// files hold back, with its files and the command that frees them.
+// files hold back, with its files and the command that frees them; S-0552: the coalesce window the
+// next batch fills in.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import MergeQueue, {
@@ -11,6 +12,7 @@ import MergeQueue, {
 	verifying,
 	type MergeQueueState
 } from './MergeQueue.svelte';
+import { localTime } from '$lib/localtime';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
@@ -93,6 +95,32 @@ describe('MergeQueue', () => {
 		expect(text('merge-queue-batch')).toBe('No batch.');
 		expect(el('merge-queue-order')).toBeNull();
 		expect(el('merge-queue-ineligible')).toBeNull();
+	});
+
+	it('says when the next batch’s window ends and how full it is, in place of no batch (S-0552)', () => {
+		render({
+			...running,
+			batch: undefined,
+			window: { ends: '2026-10-31T07:41:00Z', stories: ['S-0003'], batch_max: 4 }
+		});
+		expect(localTime('2026-10-31T07:41:00Z')).toMatch(/^2026-10-3\d \d\d:41 \S+$/);
+		expect(text('merge-queue-window')).toBe(
+			`Next batch fills until ${localTime('2026-10-31T07:41:00Z')}: 1 of 4 stories (S-0003).`
+		);
+		expect(el('merge-queue-batch')).toBeNull();
+	});
+
+	it('shows no window without one, nor while a batch is under way', () => {
+		render({ ...running, batch: undefined });
+		expect(el('merge-queue-window')).toBeNull();
+		expect(text('merge-queue-batch')).toBe('No batch.');
+		unmount(component!);
+		render({
+			...running,
+			window: { ends: '2026-10-31T07:41:00Z', stories: ['S-0003'], batch_max: 4 }
+		});
+		expect(el('merge-queue-window')).toBeNull();
+		expect(text('merge-queue-batch')).toBe('Batch S-0003 at step verify');
 	});
 
 	it('takes null lists from flai as empty', () => {

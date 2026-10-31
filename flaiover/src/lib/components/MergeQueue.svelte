@@ -71,6 +71,17 @@
 		base?: string;
 		head?: string;
 	};
+	/**
+	 * The coalesce window the next batch fills in (S-0552, mergequeue.Window): when it ends, in UTC,
+	 * the stories the batch would hold were it built now, and merge_queue.batch_max, with as many of
+	 * which the batch is built at once. flai sends it only while no batch is under way and the window
+	 * has not ended.
+	 */
+	export type QueueWindow = {
+		ends: string;
+		stories: string[] | null;
+		batch_max: number;
+	};
 	/** The merge queue as board.get carries it (S-0398, mergequeue.Queue), held or not (S-0399). */
 	export type MergeQueueState = {
 		mode: string;
@@ -80,6 +91,7 @@
 		ineligible: QueueEntry[] | null;
 		enqueued?: { story: string; by: string; at: string }[] | null;
 		batch?: QueueBatch;
+		window?: QueueWindow;
 		outcomes?: QueueOutcome[] | null;
 		held?: boolean;
 		held_by?: string;
@@ -163,7 +175,9 @@
 	// bisection shows each step and the story it found failing, and each batched story is marked
 	// with what it comes to in the batch: landed, sent back, to land, or still enqueued (S-0400). A
 	// story whose change would overwrite the main checkout's uncommitted files is held back until they
-	// are clean, and the panel names it, its files, and the command that frees them (S-0402).
+	// are clean, and the panel names it, its files, and the command that frees them (S-0402). While
+	// no batch is under way and the next one waits out merge_queue.coalesce, the panel says when that
+	// window ends and how full the batch is, in place of No batch (S-0552).
 	import { api } from '$lib/api';
 	import { localTime } from '$lib/localtime';
 
@@ -365,6 +379,15 @@
 					</p>
 				{/if}
 			</div>
+		{:else if queue.window}
+			{@const w = queue.window.stories ?? []}
+			<p class="mt-1" data-testid="merge-queue-window">
+				Next batch fills until <span class="text-ink">{localTime(queue.window.ends)}</span>:
+				<span class="font-semibold text-ink">{w.length} of {queue.window.batch_max}</span>
+				{queue.window.batch_max === 1 ? 'story' : 'stories'}{w.length ? ' (' : ''}<span
+					class="font-mono text-ink">{w.join(', ')}</span
+				>{w.length ? ')' : ''}.
+			</p>
 		{:else}
 			<p class="mt-1" data-testid="merge-queue-batch">No batch.</p>
 		{/if}
