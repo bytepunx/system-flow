@@ -633,7 +633,7 @@ func TestAStorysAgentEndsOnAnOpenQuestion(t *testing.T) {
 // give a sub-agent, and to verify before review; the operator's command gets
 // no prompt, and an answered or commit run is not told again.
 func TestThePromptHandsNoisyWorkToSubAgents(t *testing.T) {
-	want := []string{"hand noisy work to sub-agents with the Agent tool", "to the explorer", "to the verifier", "the worktree's path, S-0104 and the task's ID, the question", "a summary with paths and lines, not raw output", "a question it returns for the designer is yours to ask with thread_open", "Before you move S-0104 to review, commit everything, run flai stream sync S-0104 again and resolve what it lists, then run the close-out yourself", "check the diff against the acceptance criteria and the conventions"}
+	want := []string{"hand noisy work to sub-agents with the Agent tool", "to the explorer", "to the verifier", "the worktree's path, S-0104 and the task's ID, the question", "a summary with paths and lines, not raw output", "a question it returns for the designer is yours to ask with thread_open", "Before you move S-0104 to review, commit everything, run flai stream sync S-0104 again and resolve what it lists, then ask flai serve for the close-out with the flai MCP tool verify", "check the diff against the acceptance criteria and the conventions"}
 	r := req(&manifest.Agent{Harness: ClaudeCode})
 	st, err := (claudeCode{}).Start(r, Host{})
 	if err != nil {
@@ -723,12 +723,12 @@ func TestThePromptRunsTheCloseOutItselfAndKeepsTheVerifierForTheReview(t *testin
 	for _, w := range []string{
 		"run only the tests for what you changed",
 		"Leave the whole suite, the whole lint, and flai check to the close-out before review",
-		"then run the close-out yourself, once, in the worktree: the project's close-out script where it has one, which runs flai verify S-0104 --record-issues and then commits",
-		"or flai verify S-0104 (the flai MCP tool verify) where it has none",
-		"When it stops, fix what it names yourself, commit, and run it again; never hand the run to a sub-agent",
-		"Its passing run is the story's run before review: do not repeat it, and read it again with flai verify S-0104 --last",
+		"the job runs the project's close-out script in the worktree, which runs flai verify S-0104 --record-issues and then commits",
+		"or flai verify S-0104 where it has none",
+		"When the verdict is not passed, fix what it names yourself, commit, and ask again; never hand the close-out to a sub-agent",
+		"The passing run, the job's or yours, is the story's run before review: do not repeat it, and read it again with flai verify S-0104 --last",
 		"Hand that review to one fresh verifier only when the diff is too large to read here: tell it the run passed, and at which commit, and to read the result with flai verify S-0104 --last rather than running the suite",
-		"Fix what it finds yourself, never through a sub-agent, commit, and run the close-out again",
+		"Fix what it finds yourself, never through a sub-agent, commit, and ask for the close-out again",
 		"the review of a large diff against the acceptance criteria and the conventions to the verifier",
 	} {
 		if !strings.Contains(p, w) {
@@ -780,17 +780,18 @@ func TestThePromptRunsTheTestsForWhatChangedWithFlaiTest(t *testing.T) {
 	}
 }
 
-// S-0266, S-0270: the story's agent runs the close-out itself, once, in one
-// command with the longest timeout and without a pipe or a file, reads its
-// last line, and fixes what it names before running it again; an answered or
-// commit run is not told again.
+// S-0266, S-0270, S-0546: only when flai serve is not running does the
+// story's agent run the close-out itself, once, in one command with the
+// longest timeout and without a pipe or a file, read its last line, and fix
+// what it names before running it again; an answered or commit run is not
+// told again.
 func TestThePromptSaysHowTheAgentRunsTheCloseOut(t *testing.T) {
 	r := req(&manifest.Agent{Harness: ClaudeCode})
 	restarted := r
 	restarted.Restart = "ended (exit 1)"
 	want := []string{
-		"then run the close-out yourself, once, in the worktree: the project's close-out script where it has one",
-		`Run it as one Bash call with a timeout of 600000 ms, its exit status echoed after it, such as scripts/close-out.sh S-0104 -m "<message>"; echo "exit $?", never piping its output or redirecting it into a file`,
+		"Only when verify says flai serve is not running, run the close-out yourself, once, in the worktree",
+		`as one Bash call with a timeout of 600000 ms, its exit status echoed after it, such as scripts/close-out.sh S-0104 -m "<message>"; echo "exit $?", never piping its output or redirecting it into a file`,
 		"read its last line, which names the outcome and the step it stopped at, and the findings of the step that failed",
 		"When it stops, fix what it names yourself, commit, and run it again",
 		"Then check the diff against the acceptance criteria and the conventions, naming the criteria it meets by number",
@@ -811,6 +812,46 @@ func TestThePromptSaysHowTheAgentRunsTheCloseOut(t *testing.T) {
 	for _, p := range []string{Prompt(answered), Prompt(commit)} {
 		if strings.Contains(p, "run the close-out yourself") {
 			t.Errorf("told how to run the close-out again:\n%s", p)
+		}
+	}
+}
+
+// S-0546, ADR-0229: before review the story's agent asks flai serve for the
+// close-out job with the MCP tool verify, or flai verify --job on the host,
+// and holds wait_for_events until it reports verified for its story, never
+// running the close-out script in a turn; it reads the verdict with flai
+// verify --last, fixes what it names and asks again, and takes an answer from
+// the record as the passing run. An answered or commit run is not told again.
+func TestThePromptAsksForTheCloseOutJobAndWaitsForVerified(t *testing.T) {
+	r := req(&manifest.Agent{Harness: ClaudeCode})
+	restarted := r
+	restarted.Restart = "ended (exit 1)"
+	want := []string{
+		"then ask flai serve for the close-out with the flai MCP tool verify, with S-0104 and its commit message",
+		`(flai verify S-0104 --job -m "<message>" on the host)`,
+		"it answers the close-out job's id at once",
+		"Never run the close-out script in a turn: hold the flai MCP tool wait_for_events, again each time it returns, until it reports verified for S-0104",
+		"then read the verdict and the findings of the step that failed with flai verify S-0104 --last",
+		"When the verdict is not passed, fix what it names yourself, commit, and ask again",
+		"When verify answers from the record, that is the passing run",
+		"Only when verify says flai serve is not running, run the close-out yourself",
+	}
+	for _, p := range []string{Prompt(r), Prompt(restarted)} {
+		at := 0
+		for _, w := range want {
+			i := strings.Index(p[at:], w)
+			if i < 0 {
+				t.Errorf("prompt lacks %q after what comes before it:\n%s", w, p)
+				continue
+			}
+			at += i + len(w)
+		}
+	}
+	answered, commit := r, r
+	answered.Answered, commit.Commit = "TH-0001", "/w"
+	for _, p := range []string{Prompt(answered), Prompt(commit)} {
+		if strings.Contains(p, "verified for") || strings.Contains(p, "--job") {
+			t.Errorf("told how to ask for the close-out again:\n%s", p)
 		}
 	}
 }
@@ -868,10 +909,11 @@ func TestThePromptAsksForThePlan(t *testing.T) {
 			"Name the task's ID in each task sub-agent's description, so that flai measures the task by its calls",
 			// S-0285: a sub-agent is launched in the foreground, the
 			// session is not left to end under a running one, and
-			// wait_for_events is for a thread awaiting the designer.
+			// wait_for_events is for a thread awaiting the designer or,
+			// since S-0546, the close-out job's verified event.
 			"Launch every sub-agent with the Agent tool's run_in_background set to false, a layer's in one message, so that each result comes back as the tool's result however long the sub-agent runs",
 			"Never end your turn while a sub-agent runs in the background: Claude Code ends this session ten minutes after the turn ends, and the sub-agent with it",
-			"Never wait for a sub-agent with the flai MCP tool wait_for_events either, which reports work items and threads, not sub-agents, and which flai guard refuses while one runs: wait_for_events is for a thread awaiting the designer",
+			"Never wait for a sub-agent with the flai MCP tool wait_for_events either, which reports work items and threads, not sub-agents, and which flai guard refuses while one runs: wait_for_events is for a thread awaiting the designer or the close-out job's verified event",
 			"Review each one's work yourself, fix what falls short, close the task with flai task done and test it as above",
 			"only you close tasks, commit, sync the stream, move items, and talk to the designer",
 		} {
@@ -962,8 +1004,8 @@ func TestThePromptSaysThePerTaskCycle(t *testing.T) {
 			"When the sync stops on conflicts, resolve each path it lists in the worktree, git add it, and git rebase --continue, then call it again",
 			"when the check stops, fix what it found and call it again",
 			"Then run the task's tests with flai test and the paths it changed (or the flai MCP tool test with them), and close any fix they need by calling flai task done again",
-			"Before you move S-0104 to review, commit everything, run flai stream sync S-0104 again and resolve what it lists, then run the close-out yourself",
-			"the project's close-out script where it has one, which runs flai verify S-0104 --record-issues and then commits (it refuses a branch that does not contain the main branch)",
+			"Before you move S-0104 to review, commit everything, run flai stream sync S-0104 again and resolve what it lists, then ask flai serve for the close-out with the flai MCP tool verify",
+			"the project's close-out script in the worktree, which runs flai verify S-0104 --record-issues and then commits (it refuses a branch that does not contain the main branch)",
 		}
 		at := 0
 		for _, w := range cycle {

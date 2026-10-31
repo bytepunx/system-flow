@@ -3,6 +3,12 @@
 # sync check, stopping at the first step that fails (I-0012). When main moved
 # during the run, it syncs and runs them again, at most three rounds
 # (ADR-0156).
+# The close-out runs as a flai serve job (ADR-0229): a story's agent asks for
+# it with the flai MCP tool verify, or flai verify S-nnnn --job -m "<message>"
+# on the host, and waits for its verified event rather than running this
+# script in a turn; the job runs this script in the story's worktree. Run it
+# by hand only where no flai serve runs: the operator, or a session without
+# serve.
 # Usage: scripts/close-out.sh S-nnnn [git commit options: -m, or -F with a file
 # outside the worktree, which git add -A would otherwise commit]
 # The cycle before it (git.md): close each task when it is done with
