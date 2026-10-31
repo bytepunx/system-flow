@@ -36,7 +36,7 @@ func TestOverlapsOf(t *testing.T) {
 	projects := []manifest.Project{{Name: "flai", Path: "flai", Tags: []string{"cli"}}, {Name: "flaiover", Path: "flaiover"}}
 	changed := []string{"flai/cmd/accept.go", "flai/cmd/move.go", "design/system/workflow.md"}
 	got := map[string][]string{}
-	for _, o := range overlapsOf(items, projects, "S-0001", changed) {
+	for _, o := range overlapsOf(items, projects, manifest.Claims{}, "S-0001", changed) {
 		if o.Accepted != "S-0001" || o.Title != o.ID {
 			t.Errorf("notice: %+v", o)
 		}
@@ -51,20 +51,79 @@ func TestOverlapsOf(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("told:\n got %v\nwant %v", got, want)
 	}
-	if overlapsOf(items, projects, "S-0001", nil) != nil {
+	if overlapsOf(items, projects, manifest.Claims{}, "S-0001", nil) != nil {
 		t.Error("a merge that changed nothing tells nobody")
+	}
+	// S-0550: a changed path inside claims.shared is nobody's notice
+	shared := manifest.Claims{Shared: []string{"design/system"}}
+	got = map[string][]string{}
+	for _, o := range overlapsOf(items, projects, shared, "S-0001", changed) {
+		got[o.ID] = o.Paths
+	}
+	delete(want, "S-0005")
+	want["S-0006"] = changed[:2]
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("told beside a shared path:\n got %v\nwant %v", got, want)
+	}
+	if o := overlapsOf(items, projects, shared, "S-0001", []string{"design/system/workflow.md"}); o != nil {
+		t.Errorf("a merge wholly inside the shared paths told %+v", o)
 	}
 }
 
 // Accepting a story records a notice for an open story whose claim covers
 // what it changed, and none for one whose claim does not (S-0132).
-func testAcceptTellsOverlappingOpenStories(t *testing.T) {
+func TestAcceptTellsOverlappingOpenStories(t *testing.T) {
+	told, notices := acceptBesideOpenStories(t, "", [3]string{"docs/guide.md", "docs", "design"}, "docs/guide.md")
+	if len(told) != 1 || told[0].ID != "S-0002" || !reflect.DeepEqual(told[0].Paths, []string{"docs/guide.md"}) {
+		t.Errorf("told: %+v", told)
+	}
+	if len(notices) != 1 {
+		t.Fatalf("notices recorded: %+v", notices)
+	}
+	if n := notices[0]; n.ID != "S-0002" || n.Accepted != "S-0001" || n.By != "alex" || n.At == "" || !reflect.DeepEqual(n.Paths, []string{"docs/guide.md"}) {
+		t.Errorf("notice: %+v", n)
+	}
+}
+
+// S-0550: accepting a story tells no open story of a changed path inside
+// claims.shared. A change beside it is told as before; a change wholly
+// inside it tells nobody, though both open stories' claims cover it.
+func TestAcceptTellsNoOpenStoryOfASharedPath(t *testing.T) {
+	const shared = "claims:\n  shared:\n    - docs/users/flai.md\n"
+	touches := [3]string{"docs", "docs", "docs/users/flai.md"}
+	t.Run("a shared path and one beside it", func(t *testing.T) {
+		told, notices := acceptBesideOpenStories(t, shared, touches, "docs/users/flai.md", "docs/guide.md")
+		if len(told) != 1 || told[0].ID != "S-0002" || !reflect.DeepEqual(told[0].Paths, []string{"docs/guide.md"}) {
+			t.Errorf("told: %+v", told)
+		}
+		if len(notices) != 1 || notices[0].ID != "S-0002" || !reflect.DeepEqual(notices[0].Paths, []string{"docs/guide.md"}) {
+			t.Errorf("notices recorded: %+v", notices)
+		}
+	})
+	t.Run("only a shared path", func(t *testing.T) {
+		told, notices := acceptBesideOpenStories(t, shared, touches, "docs/users/flai.md")
+		if len(told) != 0 || len(notices) != 0 {
+			t.Errorf("told %+v, recorded %+v", told, notices)
+		}
+	})
+}
+
+// acceptBesideOpenStories makes a project whose system-flow.yaml ends with
+// manifestTail, and stories S-0001, S-0002, and S-0003 touching touches, in
+// progress. S-0001 commits files, moves to review, and is accepted by alex;
+// it returns what the acceptance says it told and the notices recorded.
+func acceptBesideOpenStories(t *testing.T, manifestTail string, touches [3]string, files ...string) (told, notices []itemedit.Overlap) {
+	t.Helper()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
 	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	inEnv(t, "FLAI_AGENT", "tester")
 	root := tempProject(t)
+	if manifestTail != "" {
+		m, _ := os.ReadFile(filepath.Join(root, "system-flow.yaml"))
+		_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), append(m, manifestTail...), 0o644)
+	}
 	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", "design", "docs"} {
 		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
 		_ = os.WriteFile(filepath.Join(root, d, ".gitkeep"), nil, 0o644)
@@ -77,9 +136,9 @@ func testAcceptTellsOverlappingOpenStories(t *testing.T) {
 	gitIn(t, root, "commit", "-q", "-m", "init")
 	for _, args := range [][]string{
 		{"epic", "new", "Epic"},
-		{"story", "new", "Accepted", "--epic", "E-0001", "--touches", "docs/guide.md"},
-		{"story", "new", "Overlaps", "--epic", "E-0001", "--touches", "docs"},
-		{"story", "new", "Elsewhere", "--epic", "E-0001", "--touches", "design"},
+		{"story", "new", "Accepted", "--epic", "E-0001", "--touches", touches[0]},
+		{"story", "new", "Overlaps", "--epic", "E-0001", "--touches", touches[1]},
+		{"story", "new", "Elsewhere", "--epic", "E-0001", "--touches", touches[2]},
 	} {
 		if _, errOut, code := runIn(t, root, args...); code != 0 {
 			t.Fatalf("flai %v: %s", args, errOut)
@@ -102,9 +161,12 @@ func testAcceptTellsOverlappingOpenStories(t *testing.T) {
 		}
 	}
 	wt := filepath.Join(root, ".flai-cache", "worktrees", "S-0001")
-	_ = os.WriteFile(filepath.Join(wt, "docs", "guide.md"), []byte("guide\n"), 0o644)
+	for _, f := range files {
+		_ = os.MkdirAll(filepath.Dir(filepath.Join(wt, f)), 0o755)
+		_ = os.WriteFile(filepath.Join(wt, f), []byte(f+"\n"), 0o644)
+	}
 	gitIn(t, wt, "add", "-A")
-	gitIn(t, wt, "commit", "-q", "-m", "docs: [S-0001] guide")
+	gitIn(t, wt, "commit", "-q", "-m", "docs: [S-0001] change")
 	if _, errOut, code := runIn(t, root, "move", "S-0001", "review"); code != 0 {
 		t.Fatal(errOut)
 	}
@@ -119,18 +181,9 @@ func testAcceptTellsOverlappingOpenStories(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &res); err != nil {
 		t.Fatalf("accept json: %v\n%s", err, out)
 	}
-	if len(res.Overlaps) != 1 || res.Overlaps[0].ID != "S-0002" || !reflect.DeepEqual(res.Overlaps[0].Paths, []string{"docs/guide.md"}) {
-		t.Errorf("told: %+v", res.Overlaps)
-	}
 	repo, err := workitem.Open(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	notices := itemedit.Overlaps(repo)
-	if len(notices) != 1 {
-		t.Fatalf("notices recorded: %+v", notices)
-	}
-	if n := notices[0]; n.ID != "S-0002" || n.Accepted != "S-0001" || n.By != "alex" || n.At == "" || !reflect.DeepEqual(n.Paths, []string{"docs/guide.md"}) {
-		t.Errorf("notice: %+v", n)
-	}
+	return res.Overlaps, itemedit.Overlaps(repo)
 }

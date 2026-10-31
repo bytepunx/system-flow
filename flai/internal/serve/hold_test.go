@@ -4,6 +4,8 @@ package serve
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -93,6 +95,35 @@ func TestOneLookStartsNoTwoThatOverlap(t *testing.T) {
 	}
 	lab.release(first)
 	waitFor(t, "the first ends", func() bool { return !lab.run(first).live() })
+}
+
+// S-0550, ADR-0096: an overlap wholly inside claims.shared holds nothing, so
+// one look starts two ready stories that both touch docs/users/flai.md and a
+// file each of their own.
+func TestOneLookStartsTwoThatShareOnlyASharedPath(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	manifest := filepath.Join(lab.root, "system-flow.yaml")
+	m, err := os.ReadFile(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(manifest, append(m, "claims:\n  shared:\n    - docs/users/flai.md\n"...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	lab.limit(2)
+	lab.hold()
+	first := lab.readyTouching("First", "docs/users/flai.md", "flai/cmd/accept.go")
+	second := lab.readyTouching("Second", "docs/users/flai.md", "flai/internal/serve/hold.go")
+	lab.l.look(ctx, false)
+	waitFor(t, "both run", func() bool { return lab.run(first).live() && lab.run(second).live() })
+	if w := lab.state().Waiting; strings.Contains(w, first) || strings.Contains(w, second) {
+		t.Errorf("waiting names a started story: %q", w)
+	}
+	for _, id := range []string{first, second} {
+		lab.release(id)
+	}
+	waitFor(t, "both end", func() bool { return !lab.run(first).live() && !lab.run(second).live() })
 }
 
 // The operator's word starts a held story's agent, with a warning.
