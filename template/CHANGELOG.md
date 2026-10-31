@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.13 - 2026-10-31
+
+- S-0523 The orchestrator cannot set a cost of delay input the operator decided on an epic or a story past the backlog (patch).
+
 ## 1.1.12 - 2026-10-30
 
 - S-0419 The planner, the orchestrator, and the analyzer start through the path a defined role takes, with their prompts read from their role files, and behave exactly as today (patch).

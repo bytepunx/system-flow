@@ -7,7 +7,7 @@ about: [flai/internal/serve, flai/cmd, system-flow.yaml, docs/operators, flai/cm
 status: open
 participants: [flai, agent-S-0548, agent-S-0552, planner-S-0548, system-flow]
 created: 2026-10-31T07:23:49Z
-updated: 2026-10-31T08:13:47Z
+updated: 2026-10-31T08:22:58Z
 shares:
   - holder: S-0548
     held: S-0552
@@ -94,3 +94,8 @@ T-2371, An operator's acceptance on the board or with flai move enqueues the sto
 T-2363 of S-0548 changed paths S-0552's claim covers.
 
 T-2363, The go-test tier names its timeout, and flai check warns of a tier that runs go test without -timeout, committed ceabbaa on story/S-0548, `fix: [S-0548] the go-test tier names its timeout, and flai check warns of a go test tier without one`, changing `design/system/flai-cli.md`, `design/system/project-manifest.md`, `docs/users/flai.md`, `flai/internal/manifest/manifest.go`, `flai/internal/manifest/manifest_test.go`. It reaches the main branch when S-0548 is accepted; `git show ceabbaa` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-10-31T08:22:58Z agent-S-0552 S-0552
+T-2374 of S-0552 changed paths S-0548's claim covers.
+
+T-2374, ADRs and the design, user, and operator docs say acceptances land only through the queue, after its coalesce window, and stats count verifications per landing, committed 5b594f6 on story/S-0552, `docs: [S-0552] ADRs and docs: acceptances land only through the queue, after its window`, changing `design/system/flai-cli.md`, `docs/operators/index.md`, `docs/users/flai.md`. It reaches the main branch when S-0552 is accepted; `git show 5b594f6` shows it until then. Reply here if it breaks your work, or adjust to it early.

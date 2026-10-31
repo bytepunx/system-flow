@@ -18,7 +18,7 @@ tags: [flai]
 topics: [testing, git, orchestration, planning]
 usage:
   source: sum
-  seconds: 5417
+  seconds: 6591
   estimated: true
   priced_by: estimate
   turns:
@@ -26,20 +26,20 @@ usage:
       ceremony: 6
       test_runs: 2
       hand_edits: 2
-      work: 90
+      work: 111
   models:
     - model: claude-haiku-5-5
       input: 94
       output: 398
       cache_read: 5581074
       cache_write: 205101
-      cost: 0.417
+      cost: 0.4179
     - model: claude-opus-5-5
-      input: 980
-      output: 5068
-      cache_read: 59289194
-      cache_write: 2458528
-      cost: 21.4853
+      input: 1150
+      output: 6284
+      cache_read: 70772879
+      cache_write: 2770433
+      cost: 25.5837
   strategic:
     - kind: planner
       seconds: 538

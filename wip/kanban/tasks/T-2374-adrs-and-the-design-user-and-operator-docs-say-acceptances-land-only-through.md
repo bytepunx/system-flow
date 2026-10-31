@@ -3,11 +3,11 @@ id: T-2374
 type: task
 nature: improvement
 title: ADRs and the design, user, and operator docs say acceptances land only through the queue, after its coalesce window, and stats count verifications per landing
-status: in-progress
+status: done
 parent: S-0552
 owner: alex
 created: 2026-10-31T07:34:17Z
-updated: 2026-10-31T08:05:36Z
+updated: 2026-10-31T08:22:58Z
 transitions:
   - to: ready
     at: 2026-10-31T08:05:35Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-31T08:05:36Z
     by: system-flow
+  - to: done
+    at: 2026-10-31T08:22:58Z
+    by: agent-S-0552
 stream: S-0552
 tags: [flai]
-touches: [design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, design/adrs/README.md]
+touches: [design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, design/adrs/README.md, design/system/workflow.md, design/system/flaiover-dashboard.md, design/adrs/0225-while-the-merge-queue-batches-and-is-not-held-the-operator-s-acceptance-of-a.md, design/adrs/0226-the-merge-queue-waits-merge-queue-coalesce-3-minutes-by-default-from-the.md, design/adrs/0227-the-merge-queue-logs-each-bisection-step-s-verification-as-a-step-verified.md]
 after: [T-2370, T-2371, T-2372]
+usage:
+  source: log
+  seconds: 1042
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 97
+      output: 581
+      cache_read: 5096535
+      cache_write: 159783
+      cost: 1.8279
 ---
 # T-2374 ADRs and the design, user, and operator docs say acceptances land only through the queue, after its coalesce window, and stats count verifications per landing
 
