@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -51,7 +52,10 @@ ADR-0177; absent without that log), and digest (by the week, the threads
 opened to the operator against the stories completed, per story, and those
 of them that asked what a digest entry already answered, with the digest's
 entries by status, ADR-0200; with no digest folder, no repeats and no
-entries).
+entries). It carries closeouts too (by the week, the close-outs flai serve
+ran as jobs by verdict, those answered from the record, and the p50 and p85
+of their durations, from the serve journal on this host, ADR-0229), absent
+without that journal, and with a warning when it cannot be read.
 What strategic agents spent on items is reported apart from what agents did,
 under usage.strategic and each item's usage.strategic, beside the project's
 usage.cost_per_agent_hour and each item's expected_cost (ADR-0083). Each
@@ -89,6 +93,7 @@ cannot read, and digest is absent.`,
 			if err != nil {
 				return err
 			}
+			opt.CloseOuts = statsread.CloseOuts(a.serveDir().Journal(), repo, a.logger())
 			opt.Now, opt.Since, opt.Type, opt.By, opt.Bucket = a.now(), window, typ, by, bucket
 			rep := metrics.Compute(items, opt)
 			if a.jsonOut {
@@ -145,6 +150,29 @@ func printSummary(a *app, rep *metrics.Report, pullRequest bool) {
 	printClaims(a, rep)
 	printCoordination(a, rep.Coordination)
 	printDigest(a, rep.Digest)
+	printCloseOuts(a, rep.CloseOuts)
+}
+
+// printCloseOuts prints, for each week of the window, the close-outs flai
+// serve ran as jobs by verdict, those answered from the record, and the p50
+// and p85 of the durations of those that ran, an en dash in a week none ran
+// (S-0546). It prints nothing without a serve journal, or when no week
+// counts a close-out.
+func printCloseOuts(a *app, c *metrics.CloseOuts) {
+	if c == nil || !slices.ContainsFunc(c.Weeks, func(w metrics.CloseOutWeek) bool { return w.Passed+w.Stopped+w.Failed+w.Recorded > 0 }) {
+		return
+	}
+	seconds := func(s *float64) string {
+		if s == nil {
+			return "–"
+		}
+		return time.Duration(*s * float64(time.Second)).Round(time.Second).String()
+	}
+	fmt.Fprintln(a.out, "\nclose-outs:")
+	for _, w := range c.Weeks {
+		fmt.Fprintf(a.out, "  %s  %s  passed %d · stopped %d · failed %d · recorded %d · p50 %s · p85 %s\n",
+			w.Week, w.Start, w.Passed, w.Stopped, w.Failed, w.Recorded, seconds(w.P50), seconds(w.P85))
+	}
 }
 
 // printDigest prints, for each week of the window, the threads opened to

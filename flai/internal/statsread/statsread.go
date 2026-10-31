@@ -4,6 +4,9 @@
 package statsread
 
 import (
+	"bufio"
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -107,6 +110,58 @@ func queueEvents(cacheDir string, log *slog.Logger) ([]mergequeue.Event, bool) {
 		return nil, false
 	}
 	return events, true
+}
+
+// CloseOuts reads flai serve's host journal at path, the journal.jsonl of the
+// serve folder beside the configuration flai reads, for the close-outs of
+// repo's project, whose main checkout it names (S-0546, ADR-0229). It is
+// apart from Read because only flai stats on the host reads it. A missing
+// journal is nil with no warning; one that cannot be read is nil and warned
+// of on log, so that flai stats never fails on it. Either leaves the
+// close-outs section out.
+func CloseOuts(path string, repo *workitem.Repo, log *slog.Logger) *metrics.CloseOutJournal {
+	root := repo.Root
+	if repo.MainRoot != "" {
+		root = repo.MainRoot
+	}
+	entries, err := journalEntries(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		log.Warn("cannot read flai serve's journal", "component", "stats", "err", err.Error(),
+			"detail", "the close-outs section is left out; correct or remove the line the error names in "+path)
+		return nil
+	}
+	return &metrics.CloseOutJournal{Root: root, Entries: entries}
+}
+
+// journalEntries decodes every line of the host journal at path; an empty
+// line is skipped, and the first line that is not an entry stops it.
+func journalEntries(path string) ([]metrics.JournalEntry, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = f.Close() }()
+	entries := []metrics.JournalEntry{}
+	sc := bufio.NewScanner(f)
+	sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	for n := 1; sc.Scan(); n++ {
+		line := bytes.TrimSpace(sc.Bytes())
+		if len(line) == 0 {
+			continue
+		}
+		var e metrics.JournalEntry
+		if err := json.Unmarshal(line, &e); err != nil {
+			return nil, fmt.Errorf("read flai serve's journal %s, line %d: %w", path, n, err)
+		}
+		entries = append(entries, e)
+	}
+	if err := sc.Err(); err != nil {
+		return nil, fmt.Errorf("read flai serve's journal %s: %w", path, err)
+	}
+	return entries, nil
 }
 
 // forgeEvents reads the events of every story's kept forge state under

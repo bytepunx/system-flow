@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -18,6 +19,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
+	"github.com/bytepunx/system-flow/flai/internal/metrics"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -513,5 +515,59 @@ func TestReadUnderPullRequestAcceptanceLoadsTheForgeEvents(t *testing.T) {
 	if skipped == nil || skipped["level"] != "WARN" || skipped["component"] != "stats" || skipped["count"] != float64(1) ||
 		!strings.Contains(fmt.Sprint(skipped["paths"]), "S-0002.json") || skipped["err"] == nil || skipped["detail"] == nil {
 		t.Errorf("want a warning naming the status left out, got %s", logged.String())
+	}
+}
+
+// S-0546: a missing serve journal leaves the close-outs out with no warning;
+// one with a line that is not an entry leaves them out and is warned of; and
+// a readable one yields the figures of the project's close-out end entries,
+// its main checkout's, other actions and projects ignored.
+func TestCloseOutsReadsTheServeJournal(t *testing.T) {
+	t.Parallel()
+	repo := project(t)
+	path := filepath.Join(t.TempDir(), "serve", "journal.jsonl")
+	var logged bytes.Buffer
+	if j := CloseOuts(path, repo, slog.New(slog.NewJSONHandler(&logged, nil))); j != nil || logged.Len() != 0 {
+		t.Errorf("a missing journal: %+v, logged %s", j, logged.String())
+	}
+
+	root := filepath.Dir(repo.CacheDir())
+	lines := []string{
+		`{"at":"2026-10-01T10:00:00Z","action":"close-out","method":"verify.job","project":"t","root":"` + root + `","by":"agent-S-0001","outcome":"started","detail":"S-0001 job S-0001-20261001T100000Z"}`,
+		`{"at":"2026-10-01T10:05:00Z","action":"close-out","method":"verify.job","project":"t","root":"` + root + `","by":"agent-S-0001","outcome":"done","detail":"S-0001 job","duration_ms":300000,"verdict":"passed"}`,
+		`{"at":"2026-10-01T10:06:00Z","action":"close-out","method":"verify.job","project":"t","root":"` + root + `","by":"agent-S-0001","outcome":"done","detail":"from the record: S-0001's close-out passed at abc1234, run 2026-10-01T10:05:00Z","verdict":"passed"}`,
+		`{"at":"2026-10-01T10:07:00Z","action":"close-out","method":"verify.job","project":"u","root":"/elsewhere","by":"agent-S-0009","outcome":"failed","duration_ms":1000,"verdict":"failed"}`,
+		`{"at":"2026-10-01T10:08:00Z","action":"checks","method":"verify.run","project":"t","root":"` + root + `","by":"alex","outcome":"done"}`,
+		``,
+	}
+	writeFile(t, path, strings.Join(lines, "\n"))
+	j := CloseOuts(path, repo, slog.New(slog.DiscardHandler))
+	if j == nil || j.Root != root || len(j.Entries) != 5 {
+		t.Fatalf("a journal: %+v", j)
+	}
+	_, opt, err := Read(execx.System{}, repo, slog.New(slog.DiscardHandler))
+	if err != nil {
+		t.Fatal(err)
+	}
+	opt.CloseOuts, opt.Now, opt.Since = j, time.Date(2026, 10, 2, 9, 0, 0, 0, time.UTC), 7*24*time.Hour
+	rep := metrics.Compute(nil, opt)
+	five := 300.0
+	want := &metrics.CloseOuts{Weeks: []metrics.CloseOutWeek{{Week: "2026-W39", Start: "2026-09-21"}, {Week: "2026-W40", Start: "2026-09-28", Passed: 1, Recorded: 1, P50: &five, P85: &five}}}
+	if !reflect.DeepEqual(rep.CloseOuts, want) {
+		got, _ := json.Marshal(rep.CloseOuts)
+		t.Errorf("the figures: %s", got)
+	}
+
+	writeFile(t, path, lines[1]+"\n{not json\n")
+	logged.Reset()
+	if j := CloseOuts(path, repo, slog.New(slog.NewJSONHandler(&logged, nil))); j != nil {
+		t.Errorf("a bad journal: %+v", j)
+	}
+	warned := false
+	for _, ev := range warnings(t, &logged) {
+		warned = warned || (ev["level"] == "WARN" && ev["component"] == "stats" && ev["detail"] != nil && strings.Contains(fmt.Sprint(ev["err"]), "line 2"))
+	}
+	if !warned {
+		t.Errorf("no warning of the bad journal naming its line: %s", logged.String())
 	}
 }

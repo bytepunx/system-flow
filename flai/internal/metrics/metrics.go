@@ -78,6 +78,10 @@ type Options struct {
 	Owner            string
 	Entries          []digest.Entry
 	DigestUnreadable bool
+	// CloseOuts is the serve journal the close-outs are counted from, nil
+	// when the host has none or it cannot be read, which leaves the
+	// close-outs section out. Read by the caller (S-0546).
+	CloseOuts *CloseOutJournal
 }
 
 // ItemMetrics are the per-item derived values.
@@ -241,6 +245,9 @@ type Report struct {
 	// per week, with the digest's entries by status; nil when the digest
 	// cannot be read (S-0434).
 	Digest *Digest `json:"digest,omitempty"`
+	// CloseOuts is the close-outs flai serve ran as jobs, by verdict, with
+	// their durations, per week; nil without a serve journal (S-0546).
+	CloseOuts *CloseOuts `json:"closeouts,omitempty"`
 }
 
 // Compute derives every metric from the items.
@@ -346,6 +353,9 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	rep.Coordination = coordination(all, opt.Conversations, opt.Conflicts, !opt.ConflictsUnreadable, start, opt.Now)
 	if !opt.DigestUnreadable {
 		rep.Digest = digestSection(all, opt.Threads, opt.Entries, opt.Activities, opt.Owner, start, opt.Now)
+	}
+	if opt.CloseOuts != nil {
+		rep.CloseOuts = closeOuts(*opt.CloseOuts, start, opt.Now)
 	}
 	// Empty lists serialise as [] rather than null, so consumers can iterate
 	// without guarding every field (S-0045).
