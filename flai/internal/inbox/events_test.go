@@ -166,3 +166,30 @@ func TestDescribeSaysALoggedKindWithoutItsFields(t *testing.T) {
 		}
 	}
 }
+
+// ADR-0229 §4: a verified event says whose close-out came to what, at which
+// step, in how long, whether the record answered it, its job, and its head;
+// from the change alone, whose close-out came to what.
+func TestAVerifiedEventSaysTheCloseOutsVerdict(t *testing.T) {
+	t.Parallel()
+	ran := VerifiedEvent("S-0007", "Close me", "flai serve", Verification{Job: "S-0007-20261031T090000Z", Commit: "0123456789abcdef", Verdict: "stopped", StoppedAt: "go-test", Duration: 4*time.Minute + 12*time.Second + 300*time.Millisecond})
+	recorded := VerifiedEvent("S-0007", "Close me", "flai serve", Verification{Commit: "0123456789abcdef", Verdict: "passed", Recorded: true})
+	for _, tc := range []struct {
+		e    LoggedEvent
+		want string
+	}{
+		{ran, "S-0007 Close me's close-out stopped at go-test in 4m12s (job S-0007-20261031T090000Z); head 0123456789ab"},
+		{recorded, "S-0007 Close me's close-out passed, answered from the verify record; head 0123456789ab"},
+	} {
+		c := tc.e.Change()
+		if got := describeLogged(c, tc.e.Fields); got != tc.want {
+			t.Errorf("describeLogged:\n got %s\nwant %s", got, tc.want)
+		}
+	}
+	if ran.To != "stopped" || ran.Type != workitem.Story || ran.Fields[FieldDuration] != "4m12s" || ran.Fields[FieldRecorded] != "false" || recorded.Fields[FieldDuration] != "" {
+		t.Errorf("the events: %+v %+v", ran, recorded)
+	}
+	if got, want := Describe(ran.Change()), "S-0007 Close me's close-out stopped"; got != want {
+		t.Errorf("Describe without fields: %q, want %q", got, want)
+	}
+}

@@ -503,7 +503,8 @@ type Event struct {
 // CatchUp returns what others than r's agent changed since its cursor, among
 // items listed archive included, the events flai serve and flai accept logged
 // (ADR-0211), whoever caused them, save the agent events of r's agent's own
-// runs (S-0532), the messages to story, the agent's own,
+// runs (S-0532) and, for a reader with a story of its own, the verified
+// events of other stories (ADR-0229), the messages to story, the agent's own,
 // when it is given, and the threads whose newest entry makes them await r, or,
 // with operator, as the orchestrator's role reads them, the operator
 // (ADR-0181, ADR-0211 §5); the newest MaxEvents of them, and how many older
@@ -567,8 +568,18 @@ func CatchUp(repo *workitem.Repo, r Reader, story string, operator bool, now tim
 	// reader, whoever caused it, the orchestrator its acceptance's release-due
 	// too; but an agent is not told of its own runs (S-0532), as it is not of
 	// its own moves.
+	// A close-out's end is news to its story's agent and to readers with no
+	// story of their own, the orchestrator among them, never to another
+	// story's agent (ADR-0229 §4).
+	own := r.Own
+	if own == "" {
+		own = story
+	}
 	for _, l := range LoggedEvents(repo) {
 		if l.Kind == Agent && l.By == agent {
+			continue
+		}
+		if l.Kind == KindVerified && own != "" && workitem.CanonicalID(l.ID) != workitem.CanonicalID(own) {
 			continue
 		}
 		c := l.Change()
@@ -660,7 +671,7 @@ func Describe(c workitem.Change) string {
 		return c.Cause + " was accepted" + who + " and changed " + namePaths(c.To) + ", which " + c.ID + " " + c.Title + " claims. Run flai stream sync " + c.ID + " and the tests before you go on"
 	case Message:
 		return describeMessage(c, false)
-	case Planned, ReadyEmpty, ReleaseDue, Agent:
+	case Planned, ReadyEmpty, ReleaseDue, Agent, KindVerified:
 		return describeLogged(c, nil)
 	case Thread:
 		return describeThread(c)

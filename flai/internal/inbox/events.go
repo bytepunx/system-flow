@@ -29,13 +29,50 @@ const ReadyEmpty = "ready-empty"
 // accepted, Fields hold FieldBefore and FieldAfter, and By is the acceptor.
 const ReleaseDue = "release-due"
 
+// KindVerified is the kind of the event that a story's close-out ended, as a
+// job of flai serve or answered from the verify record (ADR-0229 §4): ID,
+// Type, and Title are the story, To is its verdict, By is flai serve, and
+// Fields hold FieldJob, FieldCommit, FieldVerdict, FieldStoppedAt,
+// FieldDuration, and FieldRecorded. The inbox reports it to the agent of its
+// story and to readers with no story of their own. It is not the merge
+// queue's verified, which lives in the queue's own log.
+const KindVerified = "verified"
+
 // The keys of a logged event's Fields.
 const (
-	FieldRoom   = "room"   // ready-empty: the in-progress limit less the stories in progress
-	FieldLimit  = "limit"  // ready-empty: the in-progress limit
-	FieldBefore = "before" // release-due: what flai release --evaluate answered before the acceptance
-	FieldAfter  = "after"  // release-due: what it answers after it
+	FieldRoom      = "room"       // ready-empty: the in-progress limit less the stories in progress
+	FieldLimit     = "limit"      // ready-empty: the in-progress limit
+	FieldBefore    = "before"     // release-due: what flai release --evaluate answered before the acceptance
+	FieldAfter     = "after"      // release-due: what it answers after it
+	FieldJob       = "job"        // verified: the close-out job's id; "" when answered from the record
+	FieldCommit    = "commit"     // verified: the worktree's head the verdict is for
+	FieldVerdict   = "verdict"    // verified: passed, stopped, failed, or interrupted
+	FieldStoppedAt = "stopped_at" // verified: the step a stopped close-out stopped at
+	FieldDuration  = "duration"   // verified: how long the job ran, a Go duration; "" when nothing was timed
+	FieldRecorded  = "recorded"   // verified: "true" when answered from the record, else "false"
 )
+
+// Verification is what a verified event says of a close-out.
+type Verification struct {
+	Job, Commit, Verdict, StoppedAt string
+	// Duration is how long the job ran; 0 when nothing was timed, as for an
+	// answer from the record or a job flai serve's stop interrupted.
+	Duration time.Duration
+	// Recorded is whether the verdict came from the verify record.
+	Recorded bool
+}
+
+// VerifiedEvent is the verified event, told by by, of the close-out of the
+// story id with title that came to v.
+func VerifiedEvent(id, title, by string, v Verification) LoggedEvent {
+	duration := ""
+	if v.Duration > 0 {
+		duration = v.Duration.Round(time.Second).String()
+	}
+	return LoggedEvent{Kind: KindVerified, ID: id, Type: workitem.Story, Title: title, To: v.Verdict, By: by,
+		Fields: map[string]string{FieldJob: v.Job, FieldCommit: v.Commit, FieldVerdict: v.Verdict, FieldStoppedAt: v.StoppedAt,
+			FieldDuration: duration, FieldRecorded: strconv.FormatBool(v.Recorded)}}
+}
 
 // A LoggedEvent is one line of the event log: something that happened in
 // flai serve or flai accept and leaves no trace in a work item file
@@ -177,8 +214,41 @@ func describeLogged(c workitem.Change, fields map[string]string) string {
 		return c.ID + " " + c.Title + "'s acceptance" + who + " changed what flai release --evaluate answers" + answer + letPass
 	case Agent:
 		return describeAgent(c, fields)
+	case KindVerified:
+		return describeVerified(c, fields)
 	}
 	return c.ID + " " + c.Kind
+}
+
+// describeVerified says a verified event: whose close-out, its verdict and
+// the step it stopped at, how long it ran, whether the record answered it,
+// its job, and the head it is for, as far as fields say.
+func describeVerified(c workitem.Change, fields map[string]string) string {
+	whose := c.ID
+	if c.Title != "" {
+		whose += " " + c.Title
+	}
+	verdict := c.To
+	if verdict == "" {
+		verdict = "ended"
+	}
+	s := whose + "'s close-out " + verdict
+	if step := fields[FieldStoppedAt]; step != "" {
+		s += " at " + step
+	}
+	if d := fields[FieldDuration]; d != "" {
+		s += " in " + d
+	}
+	if fields[FieldRecorded] == "true" {
+		s += ", answered from the verify record"
+	}
+	if job := fields[FieldJob]; job != "" {
+		s += " (job " + job + ")"
+	}
+	if commit := fields[FieldCommit]; commit != "" {
+		s += "; head " + commit[:min(len(commit), 12)]
+	}
+	return s
 }
 
 // stories counts n stories in words.

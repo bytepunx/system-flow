@@ -711,6 +711,10 @@ func Run(ctx context.Context, o Options) error {
 			// flai accept's requests to merge a pull request are taken every
 			// second, and answered behind the forge host action (S-0397)
 			newMergePass(o, e, &forgeLooks).start(cctx)
+			// a story's agent's requests for its close-out are taken every
+			// second and run as jobs in its worktree, with no model; a job
+			// running is stopped with the project and waited for (S-0546)
+			newVerifyPass(o, e, &forgeLooks).start(cctx)
 			queue := newQueuePass(o, e, queues)
 			queue.start(cctx)
 			// The project's loop and its watcher's looks are waited for once its

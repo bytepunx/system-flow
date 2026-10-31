@@ -418,6 +418,12 @@ append-only and yours: nothing a dashboard can ask for reads or changes it.`,
 			}
 			for _, e := range entries {
 				fmt.Fprintf(a.out, "%s  %-8s %-10s %s  for %s  %s", e.At, e.Outcome, e.Action, e.Project, e.By, e.Method)
+				if e.Verdict != "" {
+					fmt.Fprintf(a.out, "  verdict %s", e.Verdict)
+				}
+				if e.DurationMS > 0 {
+					fmt.Fprintf(a.out, " · %s", (time.Duration(e.DurationMS) * time.Millisecond).Round(time.Second))
+				}
 				if e.Detail != "" {
 					fmt.Fprintf(a.out, "\n    %s", e.Detail)
 				}

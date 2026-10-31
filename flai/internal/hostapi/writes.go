@@ -571,6 +571,10 @@ type Entry struct {
 	RequestID string `json:"request_id,omitempty"`
 	Outcome   string `json:"outcome"` // done, failed, or disabled
 	Detail    string `json:"detail,omitempty"`
+	// DurationMS is how long a close-out job ran, and Verdict what it came
+	// to, set on its end entry (ADR-0229 §6).
+	DurationMS int64  `json:"duration_ms,omitempty"`
+	Verdict    string `json:"verdict,omitempty"`
 }
 
 func (h Host) enabled(action, root string) bool {

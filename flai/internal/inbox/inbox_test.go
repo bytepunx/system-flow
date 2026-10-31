@@ -779,3 +779,51 @@ func TestTheInboxCarriesTheHostsBudgetWhileItIsSet(t *testing.T) {
 		t.Errorf("a cleared state leaves budget out: %s", data)
 	}
 }
+
+// ADR-0229 §4: a verified event is news to the agent of its story, whether
+// its reader or CatchUp names the story, and to readers with no story of
+// their own, the orchestrator among them; never to another story's agent.
+func TestAVerifiedEventIsToldToItsStorysAgentAndToReadersWithNoStory(t *testing.T) {
+	f := setup(t)
+	other := f.storyIn(t, "Other", []string{"docs"}, workitem.Ready, workitem.InProgress)
+	type reader struct {
+		r     Reader
+		story string
+		want  []string
+	}
+	readers := []reader{
+		{Reader{Agent: "agent-own", Own: f.story.ID}, "", []string{f.story.ID}},
+		{Reader{Agent: "agent-given"}, other.ID, []string{other.ID}},
+		{Reader{Agent: "orchestrator"}, "", []string{f.story.ID, other.ID}},
+	}
+	catchUp := func(rd reader) []Event {
+		t.Helper()
+		items, err := f.repo.List(true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		events, _, err := CatchUp(f.repo, rd.r, rd.story, false, f.clock, items)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return events
+	}
+	for _, rd := range readers {
+		catchUp(rd) // the first look sets the cursor
+	}
+	f.clock = t0.Add(10 * time.Minute)
+	at := t0.Add(5 * time.Minute)
+	f.appendAt(t, VerifiedEvent(f.story.ID, "Story", "flai serve", Verification{Job: f.story.ID + "-20260918T090500Z", Verdict: "passed", Duration: 4 * time.Minute}), at)
+	f.appendAt(t, VerifiedEvent(other.ID, "Other", "flai serve", Verification{Commit: "abc", Verdict: "failed", Recorded: true}), at.Add(time.Second))
+	for _, rd := range readers {
+		var got []string
+		for _, e := range catchUp(rd) {
+			if e.Kind == KindVerified {
+				got = append(got, e.ID)
+			}
+		}
+		if strings.Join(got, ",") != strings.Join(rd.want, ",") {
+			t.Errorf("%s with story %q was told of %v, want %v", rd.r.Agent, rd.story, got, rd.want)
+		}
+	}
+}
