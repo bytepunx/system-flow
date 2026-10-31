@@ -11,24 +11,30 @@ import (
 
 // Queue is, per ISO week of the window, the stories the merge queue landed
 // and sent back with their queue wait, the batches it built with their size,
-// and its bisections, from its event log (S-0404, ADR-0177).
+// its bisections, and its verification runs per story landed, from its event
+// log (S-0404, ADR-0177, S-0552).
 type Queue struct {
 	Weeks []QueueWeek `json:"weeks"`
 }
 
 // QueueWeek is the merge queue's events counted in one ISO week. The waits
 // are those of its landed and sent_back lines, in whole seconds.
+// Verifications are its verification runs, its verified lines, one a batch,
+// and its step_verified lines, one a bisection step (S-0552), and
+// VerificationsPerLanded is them over Landed, 0 when nothing landed.
 type QueueWeek struct {
-	Week          string  `json:"week"`
-	Start         string  `json:"start"`
-	Landed        int     `json:"landed"`
-	SentBack      int     `json:"sent_back"`
-	WaitMean      float64 `json:"wait_mean_seconds"`
-	WaitMax       int     `json:"wait_max_seconds"`
-	Batches       int     `json:"batches"`
-	BatchSizeMean float64 `json:"batch_size_mean"`
-	BatchSizeMax  int     `json:"batch_size_max"`
-	Bisections    int     `json:"bisections"`
+	Week                   string  `json:"week"`
+	Start                  string  `json:"start"`
+	Landed                 int     `json:"landed"`
+	SentBack               int     `json:"sent_back"`
+	WaitMean               float64 `json:"wait_mean_seconds"`
+	WaitMax                int     `json:"wait_max_seconds"`
+	Batches                int     `json:"batches"`
+	BatchSizeMean          float64 `json:"batch_size_mean"`
+	BatchSizeMax           int     `json:"batch_size_max"`
+	Bisections             int     `json:"bisections"`
+	Verifications          int     `json:"verifications"`
+	VerificationsPerLanded float64 `json:"verifications_per_landed"`
 }
 
 // queueWait is the wait of one landed or sent_back line: its story's
@@ -89,6 +95,8 @@ func mergeQueue(events []mergequeue.Event, start, now time.Time) (*Queue, map[st
 			sizes[i] = append(sizes[i], len(e.Stories))
 		case mergequeue.EventBisected:
 			wk.Bisections++
+		case mergequeue.EventVerified, mergequeue.EventStepVerified:
+			wk.Verifications++
 		}
 	}
 	for i := range out.Weeks {
@@ -106,6 +114,9 @@ func mergeQueue(events []mergequeue.Event, start, now time.Time) (*Queue, map[st
 				wk.BatchSizeMax = max(wk.BatchSizeMax, n)
 			}
 			wk.BatchSizeMean = float64(total) / float64(len(s))
+		}
+		if wk.Landed > 0 {
+			wk.VerificationsPerLanded = float64(wk.Verifications) / float64(wk.Landed)
 		}
 	}
 	return out, perStory

@@ -65,7 +65,8 @@ func withDefaults(d Deps) Deps {
 // result there, and a landing of the stories before it. The n-th step's
 // tiers write their whole output to step-<n> in the batch's BatchLogs, which
 // its result names, emptied first when the step is verified again. Each
-// step is written to the state as it begins and once it has a result. When
+// step is written to the state as it begins and once it has a result, the
+// write that logs its step_verified event (S-0552). When
 // ctx ends it stops with ctx's error, leaving the step without a result, and
 // the next run verifies that step again. A batch dropped meanwhile is left
 // as it is.

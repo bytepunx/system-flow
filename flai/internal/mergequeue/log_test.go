@@ -138,6 +138,43 @@ func TestEventsOfAWrite(t *testing.T) {
 			change: func(s *State) { s.Batch.Bisect.Good = 1 },
 		},
 		{
+			// S-0552: a bisection step's verification is one of the queue's
+			// verification runs, logged on the step's stories
+			name: "a bisection step verified",
+			before: func() State {
+				b := failed()
+				b.Bisect = &Bisect{Steps: []BisectStep{{Stories: []string{"S-0001"}, StartedAt: t1}}, Bad: 2}
+				return State{Enqueued: enqueued("S-0001", "S-0002"), Batch: b}
+			}(),
+			change: func(s *State) {
+				s.Batch.Bisect.Steps[0].Result = &Result{Passed: true, FinishedAt: t2}
+				s.Batch.Bisect.Good = 1
+			},
+			want: []Event{{At: t2, Event: EventStepVerified, Batch: "B-1", Stories: []string{"S-0001"}, Passed: &yes, Step: 1}},
+		},
+		{
+			name: "a bisection step begun after one verified",
+			before: func() State {
+				b := failed()
+				b.Bisect = &Bisect{Steps: []BisectStep{{Stories: []string{"S-0001"}, Result: &Result{Passed: true, FinishedAt: t2}}}, Good: 1, Bad: 3}
+				return State{Enqueued: enqueued("S-0001", "S-0002", "S-0003"), Batch: b}
+			}(),
+			change: func(s *State) {
+				s.Batch.Bisect.Steps = append(s.Batch.Bisect.Steps, BisectStep{Stories: []string{"S-0001", "S-0002"}, StartedAt: t2})
+			},
+		},
+		{
+			name:   "a bisection begun and its first step verified in one write",
+			before: State{Enqueued: enqueued("S-0001", "S-0002"), Batch: failed()},
+			change: func(s *State) {
+				s.Batch.Bisect = &Bisect{Steps: []BisectStep{{Stories: []string{"S-0001"}, Result: &Result{Passed: false}}}, Bad: 1}
+			},
+			want: []Event{
+				{At: now, Event: EventBisected, Batch: "B-1", Stories: []string{"S-0001", "S-0002"}},
+				{At: now, Event: EventStepVerified, Batch: "B-1", Stories: []string{"S-0001"}, Passed: &no, Step: 1},
+			},
+		},
+		{
 			name:   "a story landed",
 			before: State{Enqueued: enqueued("S-0001", "S-0002"), Batch: batch(StepLanding+" S-0001", "S-0001", "S-0002")},
 			change: func(s *State) {
@@ -229,6 +266,7 @@ func TestAppendAndReadEvents(t *testing.T) {
 	if err := AppendEvents(dir, []Event{
 		{At: at, Event: EventEnqueued, Stories: []string{"S-0001"}, By: "alex"},
 		{At: at, Event: EventVerified, Batch: "B-1", Stories: []string{"S-0001"}, Passed: &passed},
+		{At: at, Event: EventStepVerified, Batch: "B-1", Stories: []string{"S-0001"}, Passed: &passed, Step: 2},
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -244,6 +282,7 @@ func TestAppendAndReadEvents(t *testing.T) {
 	}
 	want := `{"at":"2026-10-19T08:30:15Z","event":"enqueued","stories":["S-0001"],"by":"alex"}` + "\n" +
 		`{"at":"2026-10-19T08:30:15Z","event":"verified","batch":"B-1","stories":["S-0001"],"passed":true}` + "\n" +
+		`{"at":"2026-10-19T08:30:15Z","event":"step_verified","batch":"B-1","stories":["S-0001"],"passed":true,"step":2}` + "\n" +
 		`{"at":"2026-10-19T08:30:15Z","event":"dequeued","stories":["S-0002"],"reason":"removed"}` + "\n"
 	if string(data) != want {
 		t.Errorf("log:\n%s\nwant:\n%s", data, want)
@@ -252,6 +291,7 @@ func TestAppendAndReadEvents(t *testing.T) {
 	wantRead := []Event{
 		{At: utc, Event: EventEnqueued, Stories: []string{"S-0001"}, By: "alex"},
 		{At: utc, Event: EventVerified, Batch: "B-1", Stories: []string{"S-0001"}, Passed: &passed},
+		{At: utc, Event: EventStepVerified, Batch: "B-1", Stories: []string{"S-0001"}, Passed: &passed, Step: 2},
 		{At: utc, Event: EventDequeued, Stories: []string{"S-0002"}, Reason: ReasonRemoved},
 	}
 	if got := eventLog(t, dir); !reflect.DeepEqual(got, wantRead) {
@@ -260,7 +300,7 @@ func TestAppendAndReadEvents(t *testing.T) {
 	if err := AppendEvents(dir, []Event{{At: at, Event: "merged", Stories: []string{"S-0001"}}}); err == nil {
 		t.Error("an event of no known kind was appended")
 	}
-	if got := eventLog(t, dir); len(got) != 3 {
+	if got := eventLog(t, dir); len(got) != 4 {
 		t.Errorf("a refused append wrote lines: %+v", got)
 	}
 }

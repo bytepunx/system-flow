@@ -181,9 +181,10 @@ func printDigest(a *app, d *metrics.Digest) {
 
 // printQueueStats prints, over the window, the stories the merge queue
 // landed and sent back with their longest wait, and the batches it built
-// with their size and its bisections, then each week with any, with its mean
-// wait (S-0404). It prints nothing when the queue's event log is missing or
-// cannot be read, or when it counts nothing in the window.
+// with their size, its bisections, and its verification runs per story
+// landed (S-0552), then each week with any, with its mean wait (S-0404). It
+// prints nothing when the queue's event log is missing or cannot be read, or
+// when it counts nothing in the window.
 func printQueueStats(a *app, q *metrics.Queue) {
 	if q == nil {
 		return
@@ -203,12 +204,16 @@ func printQueueStats(a *app, q *metrics.Queue) {
 		sizes += w.BatchSizeMean * float64(w.Batches)
 		total.BatchSizeMax = max(total.BatchSizeMax, w.BatchSizeMax)
 		total.Bisections += w.Bisections
+		total.Verifications += w.Verifications
 	}
 	if len(busy) == 0 {
 		return
 	}
 	if total.Batches > 0 {
 		total.BatchSizeMean = sizes / float64(total.Batches)
+	}
+	if total.Landed > 0 {
+		total.VerificationsPerLanded = float64(total.Verifications) / float64(total.Landed)
 	}
 	fmt.Fprintln(a.out, "\nmerge queue:")
 	fmt.Fprintf(a.out, "  %-14s landed %d · sent back %d · longest wait %s\n", "stories", total.Landed, total.SentBack, metrics.Human(float64(total.WaitMax)))
@@ -221,9 +226,14 @@ func printQueueStats(a *app, q *metrics.Queue) {
 }
 
 // queueBatchesText is how many batches the queue built, their mean and
-// largest size, and its bisections.
+// largest size, its bisections, and its verification runs, with them per
+// story landed when any landed.
 func queueBatchesText(w metrics.QueueWeek) string {
-	return fmt.Sprintf("built %d · mean size %.1f · largest %d · bisections %d", w.Batches, w.BatchSizeMean, w.BatchSizeMax, w.Bisections)
+	text := fmt.Sprintf("built %d · mean size %.1f · largest %d · bisections %d · verifications %d", w.Batches, w.BatchSizeMean, w.BatchSizeMax, w.Bisections, w.Verifications)
+	if w.Landed > 0 {
+		text += fmt.Sprintf(" · %.1f per story landed", w.VerificationsPerLanded)
+	}
+	return text
 }
 
 // printCoordination prints, over the window, the conflicts found against

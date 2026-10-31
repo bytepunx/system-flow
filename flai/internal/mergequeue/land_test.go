@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -185,6 +186,49 @@ func TestARedBatchLandsTheStoriesBeforeTheFailingOne(t *testing.T) {
 	ran, next := runBatch(t, fileDeps(v, t3), repo)
 	if !ran || next.Batch == nil || !slices.Equal(next.Batch.Stories, stories[2:]) {
 		t.Errorf("ran %v, batch %+v; want one of %s", ran, next.Batch, stories[2])
+	}
+}
+
+// S-0552 criterion 3: a red batch of four failing with its third story is
+// bisected as before, its first half passing in the first step and the first
+// three failing in the second, and the stories of that clean half land
+// through the acceptance of the batch's landing with no verification of their
+// own: the verifier runs for the batch and the two steps, and never again.
+// The log holds one verified line, two step_verified lines, and two landings.
+func TestACleanHalfLandsWithoutAVerificationOfItsOwn(t *testing.T) {
+	repo, v, stories, _, before := failedBatch(t, 4, 3)
+	fa := &fakeAccept{t: t, repo: repo}
+	did, st := advance(t, fileDeps(v, t2), fa, repo)
+	if !did {
+		t.Error("Advance did nothing")
+	}
+	if want := [][]string{stories[:2], stories[:3]}; !reflect.DeepEqual(v.stories, want) {
+		t.Errorf("verified after the batch given %v, want the two steps' %v alone", v.stories, want)
+	}
+	id := before.Batch.ID
+	if want := []acceptCall{{stories[0], "alex", id}, {stories[1], "alex", id}}; !slices.Equal(fa.calls, want) {
+		t.Errorf("accepted %+v, want the clean half %+v as the batch's landing", fa.calls, want)
+	}
+	for _, s := range stories[:2] {
+		if o, ok := outcomeOf(st, s); !ok || o.Outcome != OutcomeLanded {
+			t.Errorf("%s's outcome %+v, want landed", s, o)
+		}
+	}
+	if o, ok := outcomeOf(st, stories[2]); !ok || o.Outcome != OutcomeFailing {
+		t.Errorf("%s's outcome %+v, want it sent back as failing", stories[2], o)
+	}
+	if _, ok := st.EnqueuedAs(stories[3]); !ok || len(st.Enqueued) != 1 {
+		t.Errorf("enqueued %+v, want %s alone", st.Enqueued, stories[3])
+	}
+	count := map[string]int{}
+	for _, e := range eventLog(t, repo.CacheDir()) {
+		count[e.Event]++
+	}
+	if count[EventVerified] != 1 || count[EventStepVerified] != 2 || count[EventLanded] != 2 {
+		t.Errorf("logged %v, want 1 verified, 2 step_verified, and 2 landed", count)
+	}
+	if st.Batch != nil {
+		t.Errorf("batch %+v, want it cleared once its landing is done", st.Batch)
 	}
 }
 

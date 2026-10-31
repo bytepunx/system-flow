@@ -34,6 +34,10 @@ const (
 	EventVerified = "verified"
 	// EventBisected is the bisection of a batch that failed begun.
 	EventBisected = "bisected"
+	// EventStepVerified is a bisection step's verification finished, passed
+	// or not (S-0552): one verification run of the queue's beside each
+	// batch's verified, a kind of its own so that verified stays one a batch.
+	EventStepVerified = "step_verified"
 	// EventLanded is a story landed by the queue.
 	EventLanded = "landed"
 	// EventSentBack is the story a failed batch was bisected to, sent back.
@@ -44,7 +48,7 @@ const (
 )
 
 // eventKinds are the events of the log, in the order a write's lines are.
-var eventKinds = []string{EventEnqueued, EventBatchBuilt, EventVerified, EventBisected, EventLanded, EventSentBack, EventDequeued}
+var eventKinds = []string{EventEnqueued, EventBatchBuilt, EventVerified, EventBisected, EventStepVerified, EventLanded, EventSentBack, EventDequeued}
 
 // ReasonRemoved is the reason of a story dequeued with no outcome recorded
 // for it, as one taken out with flai queue remove.
@@ -57,7 +61,8 @@ type Event struct {
 	Batch   string    `json:"batch,omitempty"`    // the batch it is of, when one is
 	Stories []string  `json:"stories"`            // the stories it is on
 	By      string    `json:"by,omitempty"`       // who enqueued the story, on an enqueued line
-	Passed  *bool     `json:"passed,omitempty"`   // whether the batch passed, on a verified line
+	Passed  *bool     `json:"passed,omitempty"`   // whether the batch or the step passed, on a verified or step_verified line
+	Step    int       `json:"step,omitempty"`     // the bisection step's number, from 1, on a step_verified line
 	LeftOut []string  `json:"left_out,omitempty"` // the stories left out, on a batch_built line
 	Reason  string    `json:"reason,omitempty"`   // why the story left, on a dequeued line
 }
@@ -116,7 +121,8 @@ func Events(before, after State, now time.Time) []Event {
 // batchEvents are the events of the batch after, set against prev, the batch
 // before the write when it is the same batch: built once it leaves building
 // and rebasing, verified once it has a result, bisected once its bisection
-// begins.
+// begins, and a step verified once each step of its bisection has a result,
+// on the step's stories.
 func batchEvents(prev, b *Batch, now time.Time) []Event {
 	if b == nil {
 		return nil
@@ -142,6 +148,18 @@ func batchEvents(prev, b *Batch, now time.Time) []Event {
 	}
 	if b.Bisect != nil && (prev == nil || prev.Bisect == nil) {
 		out = append(out, Event{At: now, Event: EventBisected, Batch: b.ID, Stories: stories()})
+	}
+	if b.Bisect != nil {
+		for i, s := range b.Bisect.Steps {
+			if s.Result == nil || (prev != nil && prev.Bisect != nil && i < len(prev.Bisect.Steps) && prev.Bisect.Steps[i].Result != nil) {
+				continue
+			}
+			passed, at := s.Result.Passed, s.Result.FinishedAt
+			if at.IsZero() {
+				at = now
+			}
+			out = append(out, Event{At: at, Event: EventStepVerified, Batch: b.ID, Stories: append([]string{}, s.Stories...), Passed: &passed, Step: i + 1})
+		}
 	}
 	return out
 }

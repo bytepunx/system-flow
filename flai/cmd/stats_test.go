@@ -54,14 +54,16 @@ func TestStatsReportsTheMergeQueue(t *testing.T) {
 		}
 		return mergequeue.Event{At: when, Event: kind, Batch: batch, Stories: stories}
 	}
-	// week 40: a batch of two fails and is bisected to S-0002, sent back
-	// after an hour; S-0001 lands alone after three
+	// week 40: a batch of two fails and is bisected, in one step, to
+	// S-0002, sent back after an hour; S-0001 lands alone after three: two
+	// verification runs for one story landed (S-0552)
 	events := []mergequeue.Event{
 		ev("2026-09-29T09:00:00Z", enq, "", "S-0001"),
 		ev("2026-09-29T09:00:00Z", enq, "", "S-0002"),
 		ev("2026-09-29T09:10:00Z", built, "B1", "S-0001", "S-0002"),
 		ev("2026-09-29T09:40:00Z", verified, "B1", "S-0001", "S-0002"),
 		ev("2026-09-29T09:41:00Z", bisected, "B1", "S-0001", "S-0002"),
+		ev("2026-09-29T09:50:00Z", mergequeue.EventStepVerified, "B1", "S-0001"),
 		ev("2026-09-29T10:00:00Z", mergequeue.EventSentBack, "B1", "S-0002"),
 		ev("2026-09-29T11:00:00Z", built, "B2", "S-0001"),
 		ev("2026-09-29T12:00:00Z", mergequeue.EventLanded, "B2", "S-0001"),
@@ -86,9 +88,12 @@ func TestStatsReportsTheMergeQueue(t *testing.T) {
 		t.Fatalf("queue: %+v", rep.Queue)
 	}
 	want := metrics.QueueWeek{Week: "2026-W40", Start: "2026-09-28", Landed: 1, SentBack: 1, WaitMean: 2 * 3600, WaitMax: 3 * 3600,
-		Batches: 2, BatchSizeMean: 1.5, BatchSizeMax: 2, Bisections: 1}
+		Batches: 2, BatchSizeMean: 1.5, BatchSizeMax: 2, Bisections: 1, Verifications: 2, VerificationsPerLanded: 2}
 	if got := rep.Queue.Weeks[4]; got != want {
 		t.Errorf("week 40 = %+v, want %+v", got, want)
+	}
+	if !strings.Contains(out, `"verifications": 2,`) || !strings.Contains(out, `"verifications_per_landed": 2`) {
+		t.Errorf("stats --json does not carry the verifications:\n%s", out)
 	}
 	waits := map[string]float64{}
 	for _, m := range rep.Items {
@@ -103,9 +108,9 @@ func TestStatsReportsTheMergeQueue(t *testing.T) {
 	out, _, code = runInAt(t, root, at, "stats")
 	wantText := "\nmerge queue:\n" +
 		"  stories        landed 1 · sent back 1 · longest wait 3h\n" +
-		"  batches        built 2 · mean size 1.5 · largest 2 · bisections 1\n" +
+		"  batches        built 2 · mean size 1.5 · largest 2 · bisections 1 · verifications 2 · 2.0 per story landed\n" +
 		"  by week:\n" +
-		"    2026-W40 (2026-09-28)  stories landed 1 · sent back 1 · mean wait 2h · longest 3h; batches built 2 · mean size 1.5 · largest 2 · bisections 1\n"
+		"    2026-W40 (2026-09-28)  stories landed 1 · sent back 1 · mean wait 2h · longest 3h; batches built 2 · mean size 1.5 · largest 2 · bisections 1 · verifications 2 · 2.0 per story landed\n"
 	if code != 0 || !strings.Contains(out, wantText) {
 		t.Errorf("text: %d, want it to hold %q, got\n%s", code, wantText, out)
 	}
@@ -142,6 +147,25 @@ func TestPrintQueueStatsComesAfterTheWaitingAndSkipsAnEmptyQueue(t *testing.T) {
 	waiting, queue := strings.Index(text, "\nwaiting, over 1 completed:\n"), strings.Index(text, "\nmerge queue:\n")
 	if waiting < 0 || queue < waiting {
 		t.Errorf("the queue's section is not after the waiting:\n%s", text)
+	}
+}
+
+// S-0552: the batches' text names the verification runs, and them per story
+// landed only when a story landed.
+func TestQueueBatchesTextNamesTheVerificationsPerStoryLanded(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		w    metrics.QueueWeek
+		want string
+	}{
+		{metrics.QueueWeek{Landed: 2, Batches: 1, BatchSizeMean: 3, BatchSizeMax: 3, Bisections: 1, Verifications: 3, VerificationsPerLanded: 1.5},
+			"built 1 · mean size 3.0 · largest 3 · bisections 1 · verifications 3 · 1.5 per story landed"},
+		{metrics.QueueWeek{Batches: 1, BatchSizeMean: 1, BatchSizeMax: 1, Verifications: 1},
+			"built 1 · mean size 1.0 · largest 1 · bisections 0 · verifications 1"},
+	} {
+		if got := queueBatchesText(tc.w); got != tc.want {
+			t.Errorf("queueBatchesText(%+v) = %q, want %q", tc.w, got, tc.want)
+		}
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -247,6 +248,42 @@ func TestEachBisectionStepIsVerifiedGivenItsStories(t *testing.T) {
 	}
 }
 
+// eventsOf are the lines of the event log in dir of kind.
+func eventsOf(t *testing.T, dir, kind string) []Event {
+	t.Helper()
+	var out []Event
+	for _, e := range eventLog(t, dir) {
+		if e.Event == kind {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+// S-0552 criterion 4: each bisection step's verification is logged, once, as
+// a step_verified line naming the batch, the step, its stories, and whether
+// it passed, at its result's time; the batch's own verification stays its one
+// verified line.
+func TestEachBisectionStepIsLoggedAsAStepVerified(t *testing.T) {
+	repo, v, stories, _, before := failedBatch(t, 4, 3)
+	_, st := runBisect(t, fileDeps(v, t2), repo)
+	if bs := st.Batch.Bisect; bs == nil || !bs.Found() || len(bs.Steps) != 2 {
+		t.Fatalf("bisection %+v, want two steps and the story found", bs)
+	}
+	yes, no := true, false
+	id := before.Batch.ID
+	want := []Event{
+		{At: t2, Event: EventStepVerified, Batch: id, Stories: stories[:2], Passed: &yes, Step: 1},
+		{At: t2, Event: EventStepVerified, Batch: id, Stories: stories[:3], Passed: &no, Step: 2},
+	}
+	if got := eventsOf(t, repo.CacheDir(), EventStepVerified); !reflect.DeepEqual(got, want) {
+		t.Errorf("step_verified lines:\n%+v\nwant:\n%+v", got, want)
+	}
+	if got := eventsOf(t, repo.CacheDir(), EventVerified); len(got) != 1 || got[0].Batch != id || !slices.Equal(got[0].Stories, stories) {
+		t.Errorf("verified lines %+v, want the batch's one", got)
+	}
+}
+
 // S-0400 criterion 3: a bisection stopped while a step verifies leaves that
 // step without a result; the next run verifies it again in place, rather
 // than adding a second, and finishes.
@@ -276,6 +313,15 @@ func TestAStoppedBisectionIsResumedInPlace(t *testing.T) {
 	}
 	if !bs.Steps[0].StartedAt.Equal(later) || bs.Steps[0].Result == nil || !bs.Steps[0].Result.Passed {
 		t.Errorf("first step %+v, want it verified again at %s and passed", bs.Steps[0], later)
+	}
+	// S-0552: the stopped step had no result, so it is logged once, when
+	// verified again
+	var logged []int
+	for _, e := range eventsOf(t, repo.CacheDir(), EventStepVerified) {
+		logged = append(logged, e.Step)
+	}
+	if !slices.Equal(logged, []int{1, 2}) {
+		t.Errorf("step_verified lines for steps %v, want 1 and 2 once each", logged)
 	}
 }
 
