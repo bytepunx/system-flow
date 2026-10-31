@@ -2,12 +2,12 @@
 id: I-0221
 title: The close-out's go-test tier runs only the changed packages, so a change that breaks a caller package's tests passes before review
 class: defect
-status: open
+status: closed
 count: 2
 cost: 25m
 first_reported: 2026-10-28T19:01:11Z
 last_reported: 2026-10-30T18:40:01Z
-updated: 2026-10-30T18:40:01Z
+updated: 2026-10-31T09:56:42Z
 ---
 
 # I-0221 The close-out's go-test tier runs only the changed packages, so a change that breaks a caller package's tests passes before review
@@ -26,3 +26,4 @@ Story: S-0529.
 S-0529 changed flai verify's reuse rule in flai/internal/verify/story.go on purpose (ADR-0221): a verify --all after a run that left the queue tiers now reuses the tiers that run passed. TestVerifyLeavesTheQueueTiersToTheMergeQueueWhileItCanBatch in flai/internal/mcpserver/verify_test.go, a caller package S-0529 did not change, still expected the old rule. The close-out's go-test tier ran only the changed packages, and integration was left to the merge queue, so the close-out passed. Merge queue batch 20261030-182125 then failed S-0529 at integration and sent it back (TH-0767), costing one batch run and another close-out.
 
 ## Remediation
+Closed 2026-10-31T09:56:42Z: S-0547: this repository's go-test tier runs {importers}, the changed packages and every package of the module that imports them, so a change that breaks a caller package's tests fails flai test and the close-out. TestVerifyFailsAGoTestTierAtTheCallerTheBranchBreaks in flai/internal/verify/story_test.go reproduces it: the branch fails with {importers} and passes with {packages}. integration, which runs every package, also runs in the close-out of a story that touches flai or the template, while the merge queue can batch (ADR-0233). S-0547's close-out, recorded in its notes, is the proof run.

@@ -123,12 +123,14 @@ tests:
     all_only: true
     covers: [go-test]
     queue: true
+    when: ["flai/**", "template/**"]
   - name: smoke
     command: [scripts/smoke.sh]
     paths: ["flai/**", "scripts/**/*.sh"]
     format: plain
     all_only: true
     queue: true
+    when: ["flai/**", "template/**"]
   - name: gateway
     command: [scripts/gateway-smoke.sh]
     paths: ["scripts/gateway-smoke.sh"]
