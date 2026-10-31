@@ -8,6 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/gitver"
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -491,5 +494,155 @@ func TestTheOperatorsThreadsAwaitTheOperatorNotTheAgent(t *testing.T) {
 	ths := out["threads"].([]any)
 	if out["awaiting_you"].(float64) != 1 || len(ths) != 1 || ths[0].(map[string]any)["id"] != mine.ID || ths[0].(map[string]any)["awaiting"] != "you" {
 		t.Errorf("the thread on the agent's own story awaits it: %v", out)
+	}
+}
+
+// trialFixture is a fixture whose server runs git, so that its holds judge
+// an overlap with a story in progress by a trial merge (ADR-0230): the
+// fixture's story is in review, and theirs is in progress, touching
+// flai/internal/mcpserver, with its branch changing a line of trialFile that
+// main has not changed, all committed in the git repository the server was
+// made in.
+type trialFixture struct {
+	*fixture
+	theirs *workitem.Item
+}
+
+// trialFile is the file theirs's branch changes.
+const trialFile = "flai/internal/mcpserver/trial.go"
+
+// setupTrial is the trialFixture. It skips under -short and when git has no
+// merge-tree --write-tree. Integration: it runs real git, with the identity
+// given to each command rather than through the environment.
+func setupTrial(t *testing.T) *trialFixture {
+	t.Helper()
+	if testing.Short() {
+		t.Skip("integration: runs real git")
+	}
+	if v, err := gitver.Installed(execx.System{}); err != nil || !v.AtLeast(gitver.MergeTree) {
+		t.Skipf("git %v is older than %s: %v", v, gitver.MergeTree, err)
+	}
+	// the server is made in a git checkout, which it judges by a trial merge in
+	f := setupWith(t, func(o *Options) {
+		o.Runner = execx.System{}
+		gitIn(t, o.Repo.Root, "init", "-q", "-b", "main")
+	})
+	f.toReview(t)
+	theirs := f.readyStory(t, "Theirs", t0, "flai/internal/mcpserver")
+	if _, err := f.repo.Transition(theirs, workitem.InProgress, "gemini", "", t0); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.repo.OpenStream(theirs, workitem.StreamOptions{Agent: "gemini", Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+	f.limitInProgress(t, 3)
+	tf := &trialFixture{fixture: f, theirs: theirs}
+	root := f.repo.Root
+	if err := os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".flai-cache/\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	tf.commit(t, "1", "chore: the project")
+	gitIn(t, root, "checkout", "-q", "-b", storygit.Branch(theirs.ID))
+	tf.commit(t, "2", "feat: ["+theirs.ID+"] trial")
+	gitIn(t, root, "checkout", "-q", "main")
+	return tf
+}
+
+// commit writes trialFile with the value of its one constant and commits
+// everything on the branch checked out.
+func (tf *trialFixture) commit(t *testing.T, value, message string) {
+	t.Helper()
+	root := tf.repo.Root
+	p := filepath.Join(root, filepath.FromSlash(trialFile))
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p, []byte("package mcpserver\n\nconst trial = "+value+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitIn(t, root, "add", "-A")
+	gitIn(t, root, "-c", "commit.gpgsign=false", "commit", "-q", "-m", message)
+}
+
+// conflictsOnMain commits on main a change of the line theirs's branch
+// changes, so that a trial merge of that branch at main conflicts on it.
+func (tf *trialFixture) conflictsOnMain(t *testing.T) {
+	t.Helper()
+	tf.commit(t, "3", "chore: trial on main")
+}
+
+// S-0551, ADR-0230: a ready story whose claim overlaps that of a story in
+// progress is offered when a trial merge of that story's branch at main is
+// clean.
+func TestWaitForWorkOffersAStoryWhoseOverlapMergesCleanly(t *testing.T) {
+	t.Parallel()
+	tf := setupTrial(t)
+	held := tf.readyStory(t, "Overlaps", t0, trialFile)
+	if out := answered(t, tf.held(t, 1)); out["reason"] != WorkPull || storyOf(out) != held.ID {
+		t.Errorf("a clean trial holds nothing: %v", out)
+	}
+}
+
+// S-0551, ADR-0230: when the trial merge of the story in progress's branch at
+// main conflicts, the overlap holds the ready story, and the reason names the
+// path the trial conflicts on.
+func TestWaitForWorkHoldsAStoryWhoseOverlapConflicts(t *testing.T) {
+	t.Parallel()
+	tf := setupTrial(t)
+	tf.conflictsOnMain(t)
+	held := tf.readyStory(t, "Overlaps", t0, trialFile)
+	quiet := answered(t, tf.held(t, 1))
+	ready, _ := quiet["ready"].([]any)
+	if quiet["timed_out"] != true || quiet["waiting_for"] != WaitingForHeld || len(ready) != 1 || ready[0].(map[string]any)["id"] != held.ID {
+		t.Fatalf("the ready story held: %v", quiet)
+	}
+	h, _ := ready[0].(map[string]any)["held"].(map[string]any)
+	want := "a trial merge of " + storygit.Branch(tf.theirs.ID) + " at " + held.ID + "'s base conflicts in " + trialFile
+	if h["code"] != workitem.HoldOverlap || !strings.Contains(h["reason"].(string), want) {
+		t.Errorf("held %v, want the reason to say %q", h, want)
+	}
+}
+
+// S-0551, ADR-0230: promote_candidates, the orchestrator's, judges a backlog
+// story's overlap with a story in progress as wait_for_work does: a candidate
+// while the trial merge is clean, and held, naming the path, once it
+// conflicts.
+func TestPromoteCandidatesJudgeAnOverlapByTheTrialMerge(t *testing.T) {
+	t.Parallel()
+	tf := setupTrial(t)
+	s, err := tf.repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "Overlaps", Parent: tf.story.Parent, Owner: "alex", Touches: []string{trialFile}, Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(s.Path)
+	body := strings.Replace(string(data), "## Goal\n", "## Goal\n\nDo it.\n", 1)
+	body = strings.Replace(body, "## Acceptance criteria\n", "## Acceptance criteria\n- [ ] works\n", 1)
+	if err := os.WriteFile(s.Path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, failed := tf.call(t, "item_edit", map[string]any{"id": s.ID, "cost_of_delay": map[string]any{"value": 50}, "forecast": map[string]any{"duration": "1h"}}); failed != "" {
+		t.Fatal(failed)
+	}
+	out, failed := tf.call(t, "promote_candidates", map[string]any{})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	if got := strings.Join(stories(out["candidates"]), " "); got != s.ID {
+		t.Errorf("a clean trial leaves %s a candidate: %v", s.ID, out)
+	}
+
+	tf.conflictsOnMain(t)
+	out, failed = tf.call(t, "promote_candidates", map[string]any{})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	others, _ := out["others"].([]any)
+	if len(stories(out["candidates"])) != 0 || len(others) != 1 {
+		t.Fatalf("a conflicting trial holds %s: %v", s.ID, out)
+	}
+	h, _ := others[0].(map[string]any)["held"].(map[string]any)
+	want := "a trial merge of " + storygit.Branch(tf.theirs.ID) + " at " + s.ID + "'s base conflicts in " + trialFile
+	if others[0].(map[string]any)["id"] != s.ID || h["code"] != workitem.HoldOverlap || !strings.Contains(h["reason"].(string), want) {
+		t.Errorf("held %v, want the reason to say %q", others[0], want)
 	}
 }

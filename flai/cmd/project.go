@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/config"
+	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/template"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -53,6 +55,12 @@ func (a *app) project() (*workitem.Repo, error) {
 		return nil, fmt.Errorf("%w (run flai new or flai import first)", err)
 	}
 	repo.Git = a.runner
+	// an overlap holds a ready story only when a trial merge conflicts, as
+	// flai story start, flai board, and the promotion candidates judge it
+	// (ADR-0230); outside a git checkout NewTrialJudge gives none
+	if a.runner != nil {
+		repo.Trial = storygit.NewTrialJudge(a.runner, repo, issues.FilesIn(repo, repo.MainRoot, a.runner, time.Now))
+	}
 	cacheDir := config.Default().CacheDir
 	if cfg, _, err := a.loadConfig(); err == nil {
 		cacheDir = cfg.CacheDir

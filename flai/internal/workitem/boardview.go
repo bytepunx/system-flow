@@ -64,8 +64,10 @@ type BoardView struct {
 // NewBoardView lays the active items out by column. Stories only unless all.
 // A ready story that holds judges held is marked so (S-0128): Repo.Holds of
 // the same items, which reads the manifest's sub-projects and shared paths
-// (ADR-0096), the shares in force, and the asks about a hold (S-0338); nil
-// judges with none of them. A story ready, in progress, or in review carries
+// (ADR-0096), the shares in force, the asks about a hold (S-0338), and the
+// repository's trial merge, by which an overlap with a story in progress
+// holds only when it conflicts (Repo.Trial, ADR-0230); nil judges with none
+// of them. A story ready, in progress, or in review carries
 // the shares in force on which it is the held story (S-0338).
 // A story with tasks carries its task plan in counts (S-0176).
 // Acceptance archives a story the moment it merges (S-0087); pendingPublish

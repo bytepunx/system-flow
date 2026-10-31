@@ -6,7 +6,10 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -33,7 +36,7 @@ type WorkOut struct {
 	Reason     string               `json:"reason" jsonschema:"resume: your story is still in progress, go back to it; thread: a thread awaiting you, awaiting 'you' as inbox says, was written to; pull: pull story now; empty when it timed out"`
 	Story      *workitem.BoardCard  `json:"story,omitempty" jsonschema:"the story to resume or to pull"`
 	Threads    []ThreadSummary      `json:"threads" jsonschema:"threads awaiting you, those you take part in or on your own story, that were written to since wait_for_work last answered; never one awaiting the operator or another"`
-	Ready      []workitem.BoardCard `json:"ready" jsonschema:"stories ready to pull, in pull order; one an open story's claim holds, or that waits for a story it names in after, carries held with the reason and what clears it, and is not offered"`
+	Ready      []workitem.BoardCard `json:"ready" jsonschema:"stories ready to pull, in pull order; one an open story's claim holds (an overlap with a story in progress holds only when a trial merge of that story's branch at this one's base conflicts, ADR-0230), or that waits for a story it names in after, carries held with the reason and what clears it, and is not offered"`
 	CanPull    bool                 `json:"can_pull" jsonschema:"whether the in-progress limit leaves room and review is under its limit, so that one may be pulled"`
 	PullHold   string               `json:"pull_hold,omitempty" jsonschema:"why no story may be pulled now: the in-progress limit is full, or review is full and waits on acceptance"`
 	WaitingFor string               `json:"waiting_for,omitempty" jsonschema:"when it timed out: room, when a story is ready but the in-progress limit is full; review, when a story is ready but review is full and waits on the operator's acceptance; held, when every ready story is held (ready says why each is); ready, when no story is ready"`
@@ -102,6 +105,19 @@ func (s *server) work(ctx context.Context, since time.Time) (WorkOut, error) {
 		out.WaitingFor = WaitingForReady
 	}
 	return out, nil
+}
+
+// trialJudge is the judge by which repo's holds let an overlap with a story
+// in progress hold a ready story only when a trial merge of that story's
+// branch at the ready story's base conflicts (ADR-0230), so that
+// wait_for_work, story_start, inbox, board, and promote_candidates agree with
+// flai serve; nil, the overlap alone, without a runner to run git with or
+// outside a git checkout, where no story has a branch to trial-merge.
+func trialJudge(repo *workitem.Repo, r execx.Runner) workitem.TrialJudge {
+	if r == nil {
+		return nil
+	}
+	return storygit.NewTrialJudge(r, repo, issues.FilesIn(repo, repo.MainRoot, r, time.Now))
 }
 
 // mine says whether a story's narrative was last worked on under this

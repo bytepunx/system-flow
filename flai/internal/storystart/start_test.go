@@ -14,6 +14,7 @@ import (
 	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/gittest"
+	"github.com/bytepunx/system-flow/flai/internal/gitver"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
@@ -292,6 +293,77 @@ func TestStartRefusesAStoryHeldByAfter(t *testing.T) {
 	}
 	if exists(f.repo.NarrativePath(next.ID)) {
 		t.Errorf("%s has a narrative", next.ID)
+	}
+}
+
+// trialStart is a fixture in a git repository whose repo judges an overlap
+// by a trial merge, as the CLI's and the MCP server's do (ADR-0230): theirs
+// is in progress, touching docs/shared, with its branch changing a line of
+// docs/shared/page.md that main has not changed, and mine is ready, touching
+// that file. With conflict, main changes that line too. It skips under -short
+// and when git has no merge-tree --write-tree. Integration: it runs real git.
+func trialStart(t *testing.T, conflict bool) (f *fixture, theirs, mine *workitem.Item) {
+	t.Helper()
+	if testing.Short() {
+		t.Skip("integration: runs real git")
+	}
+	if v, err := gitver.Installed(execx.System{}); err != nil || !v.AtLeast(gitver.MergeTree) {
+		t.Skipf("git %v is older than %s: %v", v, gitver.MergeTree, err)
+	}
+	gittest.Identity(t, "t", "t@t")
+	f = newFixture(t, true)
+	theirs = f.story(t, "Theirs", workitem.NewOptions{Touches: []string{"docs/shared"}}, workitem.Ready, workitem.InProgress)
+	root := f.repo.Root
+	git := func(args ...string) {
+		t.Helper()
+		if out, err := (execx.System{}).Run(root, "git", args...); err != nil {
+			t.Fatal(out, err)
+		}
+	}
+	commit := func(line, message string) {
+		t.Helper()
+		write(t, root, "docs/shared/page.md", "# Page\n\n"+line+"\n")
+		git("add", "-A")
+		git("commit", "-q", "-m", message)
+	}
+	write(t, root, ".gitignore", ".flai-cache/\n")
+	git("init", "-q", "-b", "main")
+	// the judge is made in a git checkout: outside one there is none
+	f.repo.Trial = storygit.NewTrialJudge(execx.System{}, f.repo, storygit.Files{})
+	commit("First.", "chore: the project")
+	git("checkout", "-q", "-b", storygit.Branch(theirs.ID))
+	commit("Theirs.", "feat: ["+theirs.ID+"] page")
+	git("checkout", "-q", "main")
+	if conflict {
+		commit("Main's.", "chore: page")
+	}
+	mine = f.story(t, "Mine", workitem.NewOptions{Touches: []string{"docs/shared/page.md"}}, workitem.Ready)
+	return f, theirs, mine
+}
+
+// S-0551, ADR-0230: a ready story whose claim overlaps that of a story in
+// progress starts when a trial merge of that story's branch at main is
+// clean.
+func TestStartStartsAStoryWhoseOverlapMergesCleanly(t *testing.T) {
+	f, _, mine := trialStart(t, false)
+	res, err := Start(context.Background(), f.options(mine.ID, execx.System{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.get(t, mine.ID).Status != workitem.InProgress || res.Branch != storygit.Branch(mine.ID) {
+		t.Errorf("a clean trial holds nothing: %+v", res)
+	}
+}
+
+// S-0551, ADR-0230: when that trial merge conflicts, the start is refused
+// with the overlap's hold, whose reason names the conflicting path.
+func TestStartRefusesAStoryWhoseOverlapConflicts(t *testing.T) {
+	f, theirs, mine := trialStart(t, true)
+	_, err := Start(context.Background(), f.options(mine.ID, execx.System{}))
+	reason := refused(t, f, mine, err, workitem.HoldOverlap)
+	want := "a trial merge of " + storygit.Branch(theirs.ID) + " at " + mine.ID + "'s base conflicts in docs/shared/page.md"
+	if !strings.Contains(reason, want) || !strings.Contains(reason, theirs.ID+" moves to review") {
+		t.Errorf("reason %q, want it to say %q and what clears it", reason, want)
 	}
 }
 

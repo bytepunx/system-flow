@@ -188,6 +188,9 @@ func newServer(opt Options, repo *workitem.Repo) *server {
 	if repo.Git == nil {
 		repo.Git = opt.Runner // item_move asks git whether a story's worktree is committed (S-0140)
 	}
+	if repo.Trial == nil {
+		repo.Trial = trialJudge(repo, opt.Runner) // an overlap holds only when a trial merge conflicts (ADR-0230)
+	}
 	if s.agent == "" {
 		s.agent = "agent"
 	}
