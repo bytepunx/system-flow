@@ -6,8 +6,8 @@ sources: [TH-0140]
 topics: [orchestration, planning, analysis, flaiover, dashboard, sveltekit, code, all]
 paths: [flaiover/src/routes/charts, flaiover/src/lib/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/viz, flaiover/src/lib/sitemenu.ts]
 date: 2026-10-05
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/flaiover-dashboard.md#views"
 asked_again: []
 cited: []
 ---

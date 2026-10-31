@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0551-a-story-starts-on-a-trial-merge-instead-of-an-overlap-hold-and-after-holds-a.md
   item: S-0551
 status: open
-participants: [planner-S-0551]
+participants: [planner-S-0551, orchestrator]
 created: 2026-10-31T07:46:00Z
-updated: 2026-10-31T07:46:00Z
+updated: 2026-10-31T07:53:39Z
 ---
 
 # TH-0776 S-0551 plan: twelve tasks in three layers, a trial-merge judge given to every caller of the holds
@@ -49,3 +49,38 @@ S-0551 now has twelve tasks in three layers, predicted touches, and a 2h forecas
 
 1. **Drop the four declared folder touches** `flai/internal/serve`, `flai/internal/sync`, `flai/internal/claims`, and `design/workflows/roles`. The tasks name the files below them. Two of them name no package in the tree. The serve folder holds S-0546, S-0549, and S-0550 while S-0551 runs. I kept them because they are yours.
 2. **Split off the stats and the dashboard** (T-2410, T-2414) into a story of their own, if you want the hold change to land sooner. They share no file with the hold work and need only T-2388's metric ADR.
+
+### 2026-10-31T07:53:39Z orchestrator (recommendation)
+**Recommendation:** take the plan as written. Do not split it. Leave the declared touches to the story's agent.
+
+## The plan: approved
+
+- **The tasks fit the criteria.**
+  - Criterion 1: T-2389, T-2391, T-2395, and T-2404.
+  - Criterion 2: T-2393, T-2406, T-2408, and T-2412.
+  - Criterion 3: T-2410 and T-2414.
+  - Criterion 4: T-2388.
+  - T-2416 carries the docs.
+- **The layers follow the real dependencies.** The judge is passed in because `workitem` cannot import `storygit`. Holding as today when the trial merge cannot run keeps the change safe.
+- **The figures fit.** The 2h forecast over flai's 1h30m states its reason. The cost of delay input is on TH-0772.
+
+## Proposal 1, drop the four folder touches: no change is needed now
+
+- ADR-0096 §3 already narrows the claim. A declared folder that holds a task touch is replaced by those task touches.
+  - `flai/internal/serve` already claims only the five serve files of T-2395.
+  - `design/workflows/roles` already claims only `planner.md`.
+  - Dropping them frees none of S-0546, S-0549, or S-0550. The holds on the board come from S-0548 and S-0552.
+- `flai/internal/sync` and `flai/internal/claims` name no package. The story's agent can remove them with `flai touches`. S-0550 declares the same two folders, and their only overlap is with each other.
+
+## Proposal 2, split off the stats and the dashboard: no
+
+- Criterion 3 is one of the four you wrote, so splitting it off changes the story's scope.
+- T-2410 and T-2414 sit in layers 2 and 3 and share no file with the hold work. They do not delay criterion 1 inside the story.
+- The 2h forecast fits one session. Splitting the story would add a second acceptance and a second metric ADR hand-off, and gain no time.
+
+## What needs you
+
+- On TH-0772: run `flai edit S-0551 --time-lost-per-cycle 2h`.
+- Confirm this entry, or name the split you want instead.
+
+Source: design/adrs/0096-a-story-in-review-holds-nothing-an-overlap-inside-the-manifest-s-shared-paths.md § 3. Tasks narrow a folder claim

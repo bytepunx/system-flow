@@ -3,10 +3,10 @@ id: TH-0479
 title: Which of S-0413's nine prose steps become stories?
 anchor:
   path: design/system/agent-prose.md
-status: open
-participants: [orchestrator]
+status: answered
+participants: [orchestrator, alex]
 created: 2026-10-16T06:07:54Z
-updated: 2026-10-16T06:07:54Z
+updated: 2026-10-31T07:48:27Z
 ---
 
 # TH-0479 Which of S-0413's nine prose steps become stories?
@@ -21,3 +21,6 @@ Recommendation: draft stories for steps 1 to 3 now (measure in flai stats, a wor
 Why you: I accepted S-0413 under accept_reviews at 55882ab. Its last section, "Recommendation", says "The operator chooses at review which of these become stories. None is created by this story." Because I accepted it, you never saw that choice at review. Which stories to create is a scope decision, so it is yours.
 
 What I need: name the steps to turn into stories, or say "none". Once there is an epic, I will start its planner under plan_backlog_epics.
+
+### 2026-10-31T07:48:27Z alex
+provide the steps in question - referring to them by number only means nothing to me without the reference

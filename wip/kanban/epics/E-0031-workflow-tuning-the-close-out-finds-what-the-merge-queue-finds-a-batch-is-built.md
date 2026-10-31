@@ -32,15 +32,15 @@ usage:
           cache_write: 180629
           cost: 3.4605
     - kind: orchestrator
-      seconds: 117
+      seconds: 292
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 52
-          output: 350
-          cache_read: 1417808
-          cache_write: 237169
-          cost: 0.3741
+          input: 98
+          output: 650
+          cache_read: 3091184
+          cache_write: 406790
+          cost: 0.7912
 ---
 # E-0031 Workflow tuning: the close-out finds what the merge queue finds, a batch is built against a clean main, hub files merge without conflict, and stories run in parallel with a trial merge instead of a hold
 

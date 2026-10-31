@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 55.9602
-accrued_seconds: 5175
-tasks_completed: 32
-last_run: 2026-10-31T06:30:27Z
+accrued_cost: 57.5627
+accrued_seconds: 5267
+tasks_completed: 33
+last_run: 2026-10-31T07:50:13Z
 ---
 
 # Curator activity
@@ -267,3 +267,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0056, D-0057, D-0058, D-0060, D-0061, D-0062, D-0063, D-0065, D-0066, D-0067, D-0069, D-0070, D-0072, D-0073, D-0074, D-0075, D-0076, D-0077, D-0078, D-0080, D-0081, D-0083, D-0086, D-0088, D-0089, D-0092, D-0093, D-0097, D-0098, D-0099, D-0351, D-0411, D-0429, D-0433, D-0434
 - Seconds: 298
 - Cost: 2.1966 USD, estimated
+
+### 2026-10-31T07:50:13Z
+
+- Summary: I wrote no new entries this run. I merged TH-0479 into D-0435 and absorbed D-0166 by `design/system/flaiover-dashboard.md` § Views. `flai digest compact` compacted no entries; S-0527's four decisions held nothing that ADR-0219 and `metrics.md` § Charts do not already say.
+- Trigger: accepted S-0527
+- Items: D-0166, D-0316, D-0435
+- Seconds: 92
+- Cost: 1.6025 USD, estimated

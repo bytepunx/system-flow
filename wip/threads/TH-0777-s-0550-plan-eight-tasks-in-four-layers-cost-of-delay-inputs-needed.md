@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0550-hub-files-merge-without-conflict-the-adr-index-the-issues-summary-and-the.md
   item: S-0550
 status: open
-participants: [planner-S-0550]
+participants: [planner-S-0550, orchestrator]
 created: 2026-10-31T07:46:01Z
-updated: 2026-10-31T07:46:01Z
+updated: 2026-10-31T07:53:27Z
 ---
 
 # TH-0777 S-0550 plan: eight tasks in four layers; cost of delay inputs needed
@@ -65,3 +65,45 @@ Forecast: 5h, up from `flai forecast`'s 20m. Delivery at 18:30Z, counted from S-
 - Criterion 2's digest clause could be dropped from the story's words. That is your call.
 
 **Defect.** My start prompt said to read the thread `asked`. No such thread exists: the installed flai reads the trigger `asked` as a thread name. TH-0771 reported the same.
+
+### 2026-10-31T07:53:27Z orchestrator (recommendation)
+**Recommendation:** set `time_lost_per_cycle: 10m` on S-0550, as the planner recommends:
+
+```bash
+flai edit S-0550 --time-lost-per-cycle 10m
+```
+
+Then drop "and the digest index" from criterion 2. The digest has no index file.
+
+## The figure
+
+- **The goal is time lost.** It costs about 2.6 extra `stream sync` runs per acceptance, plus the hub-file conflicts worked by hand. That is agent time, not revenue or a penalty.
+- **The story gives no reason for an alternative.** No spend comes from these files, so no penalty applies.
+- **Put it on the story, not on E-0031**, as on TH-0773 to TH-0775. Inputs on the epic would stop flai taking inputs on any of its stories.
+
+## Why this needs you
+
+I tried to set it, and flai refused: "S-0550 is ready, not in the backlog: the orchestrator gives cost of delay inputs to a story in the backlog alone". You moved S-0550 to ready at 2026-10-31T07:24:05Z. A confirmation of this entry does not write the input. Running the command does.
+
+## The plan: approved
+
+- **The tasks fit the criteria.**
+  - Criterion 1: T-2394, T-2405, and T-2409.
+  - Criterion 2: T-2399.
+  - Criterion 3: T-2397.
+  - Criterion 4: T-2402.
+  - T-2390's ADR comes first because ADR-0157 rejected regenerating the index. T-2413 carries the docs.
+- **The assumptions hold.** Stories write under `## Unreleased`, because MD024 would refuse two sibling version headings. T-2399 tests that `merge-tree` honours `merge=union`. Criterion 4 stays unticked at close-out, with T-2402's before figures and method.
+- **The forecast and touches fit.** The 5h forecast over flai's 20m states its reason. ADR-0096 §3 narrows the declared `flai/internal/serve` and `template` folders to the files the tasks name.
+
+## The proposals
+
+- **Touches `flai/internal/sync` and `flai/internal/claims`:** the story's agent removes them with `flai touches`. They name no package. Today they also overlap the same two folders in S-0551's touches.
+- **Criterion 2's digest clause:** drop it, as above. No digest index exists to mark `merge=union`, and the criterion's words are yours. Left as it is, the clause cannot be ticked honestly at close-out.
+- **The `asked` trigger defect:** TH-0771 already reports it. Nothing more is needed here.
+
+The thread stays open for the cost of delay input and the criterion edit.
+
+For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
+
+Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
