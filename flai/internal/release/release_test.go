@@ -665,3 +665,61 @@ func TestBumpMergesIntoAChangelogSectionTheVersionAlreadyHas(t *testing.T) {
 		t.Errorf("one heading for 1.0.1:\n%s", got)
 	}
 }
+
+// S-0550: stories write their changelog lines under "## Unreleased", which
+// merges by union, and the release names that section the version: its
+// bullets above the stories' lines, a new empty "## Unreleased" above it. A
+// changelog without the section is released as before.
+func TestBumpNamesTheUnreleasedSectionTheVersion(t *testing.T) {
+	const older = "## 1.0.0 - 2026-01-01\n\n- start\n"
+	for _, tc := range []struct {
+		name, before, want string
+	}{
+		{
+			name:   "lines stories wrote",
+			before: "# Changelog\n\n## Unreleased\n\n- S-005 What one story wrote (patch).\n- S-006 What another wrote (patch).\n\n" + older,
+			want:   "# Changelog\n\n## Unreleased\n\n## 1.0.1 - 2026-09-17\n\n- S-004 Template tweak (patch).\n- S-005 What one story wrote (patch).\n- S-006 What another wrote (patch).\n\n" + older,
+		},
+		{
+			name:   "empty",
+			before: "# Changelog\n\n## Unreleased\n\n" + older,
+			want:   "# Changelog\n\n## Unreleased\n\n## 1.0.1 - 2026-09-17\n\n- S-004 Template tweak (patch).\n\n" + older,
+		},
+		{
+			name:   "the only section",
+			before: "# Changelog\n\n## Unreleased\n\n- S-005 What one story wrote (patch).\n",
+			want:   "# Changelog\n\n## Unreleased\n\n## 1.0.1 - 2026-09-17\n\n- S-004 Template tweak (patch).\n- S-005 What one story wrote (patch).\n",
+		},
+		{
+			name:   "beside a section the version already has",
+			before: "# Changelog\n\n## Unreleased\n\n- S-005 What one story wrote (patch).\n\n## 1.0.1 - 2026-09-16\n\n- S-004 What the story wrote by hand (patch).\n\n" + older,
+			want:   "# Changelog\n\n## Unreleased\n\n## 1.0.1 - 2026-09-16\n\n- S-004 Template tweak (patch).\n- S-005 What one story wrote (patch).\n- S-004 What the story wrote by hand (patch).\n\n" + older,
+		},
+		{
+			name:   "none",
+			before: "# Changelog\n\n" + older,
+			want:   "# Changelog\n\n## 1.0.1 - 2026-09-17\n\n- S-004 Template tweak (patch).\n\n" + older,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			if err := os.MkdirAll(filepath.Join(root, "tpl"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(root, "tpl", "template.yaml"), []byte("version: 1.0.0\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			cl := filepath.Join(root, "tpl", "CHANGELOG.md")
+			if err := os.WriteFile(cl, []byte(tc.before), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			to, _ := ParseVersion("1.0.1")
+			if err := bumpVersionAndChangelog(root, "tpl/template.yaml", "tpl", to, time.Date(2026, 9, 17, 0, 0, 0, 0, time.UTC), "- S-004 Template tweak (patch).\n"); err != nil {
+				t.Fatal(err)
+			}
+			if got, _ := os.ReadFile(cl); string(got) != tc.want {
+				t.Errorf("changelog:\n%s\nwant:\n%s", got, tc.want)
+			}
+		})
+	}
+}

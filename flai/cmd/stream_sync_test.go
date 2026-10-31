@@ -1608,3 +1608,113 @@ func testAcceptFixesTheLintOfTheFilesTheBranchChanges(t *testing.T) {
 		t.Errorf("main lacks the fix's commit:\n%s", got)
 	}
 }
+
+// changelogBase is a changelog with a line under "## Unreleased", and
+// changelogWith that changelog with line added below it, as a story writes
+// its entry (S-0550).
+const changelogBase = "# Changelog\n\n## Unreleased\n\n- S-0000 An earlier line (patch).\n\n## 1.0.0 - 2026-01-01\n\n- start\n"
+
+func changelogWith(line string) string {
+	return strings.Replace(changelogBase, "(patch).\n\n## 1.0.0", "(patch).\n"+line+"\n\n## 1.0.0", 1)
+}
+
+// unionStories commits changelogBase on main, with .gitattributes giving
+// CHANGELOG.md merge=union on main when onMain or on the two branches
+// alone otherwise, then makes S-0001 and S-0002 in progress, each of whose
+// branches adds a line under "## Unreleased". It returns the main checkout
+// and S-0002's worktree.
+func unionStories(t *testing.T, onMain bool) (root, b string) {
+	t.Helper()
+	root = syncProject(t)
+	files := map[string]string{"CHANGELOG.md": changelogBase}
+	if onMain {
+		files[".gitattributes"] = "CHANGELOG.md merge=union\n"
+	}
+	for p, c := range files {
+		if err := os.WriteFile(filepath.Join(root, p), []byte(c), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		gitIn(t, root, "add", p)
+	}
+	gitIn(t, root, "commit", "-q", "-m", "docs: changelog")
+	a := openSyncStory(t, root, 1, "CHANGELOG.md,.gitattributes")
+	b = openSyncStory(t, root, 2, "CHANGELOG.md,.gitattributes")
+	if !onMain {
+		commitIn(t, a, ".gitattributes", "CHANGELOG.md merge=union\n")
+		commitIn(t, b, ".gitattributes", "CHANGELOG.md merge=union\n")
+	}
+	commitIn(t, a, "CHANGELOG.md", changelogWith("- S-0001 One story's line (patch)."))
+	commitIn(t, b, "CHANGELOG.md", changelogWith("- S-0002 Another story's line (patch)."))
+	return root, b
+}
+
+// hasBothLines fails t unless changelog holds each story's line once, under
+// one "## Unreleased", with no conflict markers.
+func hasBothLines(t *testing.T, what, changelog string) {
+	t.Helper()
+	for _, line := range []string{"- S-0001 One story's line (patch).\n", "- S-0002 Another story's line (patch).\n", "- S-0000 An earlier line (patch).\n"} {
+		if strings.Count(changelog, line) != 1 {
+			t.Errorf("%s lacks %q once:\n%s", what, line, changelog)
+		}
+	}
+	if strings.Count(changelog, "## Unreleased") != 1 || strings.Contains(changelog, "<<<<<<<") {
+		t.Errorf("%s:\n%s", what, changelog)
+	}
+}
+
+// S-0550: with .gitattributes giving CHANGELOG.md merge=union on main, two
+// stories that each add a line under "## Unreleased" do not conflict: the
+// trial merge at sync finds the pair clean and its tree keeps both lines, and
+// once one is on main the other's sync rebases over it with both.
+func TestSyncMergesTwoStoriesChangelogLinesByUnion(t *testing.T) {
+	root, b := unionStories(t, true)
+	if raw, err := storygit.TrialMerge(execx.System{}, root, "story/S-0002", "story/S-0001"); err != nil || len(raw) != 0 {
+		t.Fatalf("git's trial merge: %v %q", err, raw)
+	}
+	tree := strings.SplitN(gitIn(t, root, "merge-tree", "--write-tree", "story/S-0002", "story/S-0001"), "\n", 2)[0]
+	hasBothLines(t, "the trial merge's tree", gitIn(t, root, "show", tree+":CHANGELOG.md")+"\n")
+
+	out, branches, _, convs := trialSync(t, root, b)
+	if !strings.Contains(out, "story/S-0002 merges cleanly with story/S-0001 (in progress)\n") || strings.Contains(out, "conflicts with") {
+		t.Errorf("sync output:\n%s", out)
+	}
+	if len(branches) != 1 || !branches[0].Clean || len(branches[0].Conflicts) != 0 {
+		t.Errorf("branches: %+v", branches)
+	}
+	if len(convs) != 0 {
+		t.Errorf("the pair was told of a conflict: %+v", convs)
+	}
+
+	gitIn(t, root, "merge", "-q", "--no-edit", "story/S-0001")
+	if out, errOut, code := runIn(t, b, "stream", "sync", "S-0002"); code != 0 {
+		t.Fatalf("sync over S-0001's line on main: %d %s %s", code, out, errOut)
+	}
+	got, err := os.ReadFile(filepath.Join(b, "CHANGELOG.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	hasBothLines(t, "the rebased worktree", string(got))
+}
+
+// git merge-tree reads merge attributes from the .gitattributes files of the
+// checkout it runs in, flai's main checkout, and not from the two trees it
+// merges (git 2.47; nor from the index, when the file is not checked out): with merge=union
+// committed on the two branches alone, git's trial merge still conflicts in
+// the changelog, which both changed, so the sync names it; --attr-source
+// set to a branch would read it from there.
+func TestSyncTrialMergeReadsMergeUnionFromTheMainCheckout(t *testing.T) {
+	root, b := unionStories(t, false)
+	if raw, err := storygit.TrialMerge(execx.System{}, root, "story/S-0002", "story/S-0001"); err != nil || strings.Join(raw, ",") != "CHANGELOG.md" {
+		t.Fatalf("git's trial merge: %v %q", err, raw)
+	}
+	if out := gitIn(t, root, "--attr-source=story/S-0002", "merge-tree", "--write-tree", "--name-only", "--no-messages", "story/S-0002", "story/S-0001"); strings.Contains(out, "CHANGELOG.md") {
+		t.Errorf("merge-tree with the branch as attribute source: %s", out)
+	}
+	out, branches, _, _ := trialSync(t, root, b)
+	if !strings.Contains(out, "story/S-0002 conflicts with story/S-0001 (in progress) in CHANGELOG.md") {
+		t.Errorf("sync output:\n%s", out)
+	}
+	if len(branches) != 1 || branches[0].Clean || strings.Join(branches[0].Conflicts, ",") != "CHANGELOG.md" {
+		t.Errorf("branches: %+v", branches)
+	}
+}

@@ -1,6 +1,6 @@
 ---
 title: Git
-updated: 2026-10-18
+updated: 2026-10-31
 audience: agent
 order: 70
 status: active
@@ -44,6 +44,7 @@ How history is made in this repository.
 - A `research` story is accepted like any other, and its findings (ADRs, design documents, new stories) land on `main`, but it contributes nothing to any component's next release. Releasing research builds with semver pre-release suffixes (`1.3.0-rc.1`) is a pattern to adopt when needed and is not yet defined.
 - An `experiment` story records its results in a document under `design/experiments`, and is accepted like any other, but contributes nothing to any component's next release.
 - Every release gets a changelog entry, naming every item a batched publish bundles, written by the release tooling where it exists and by hand in `CHANGELOG.md` otherwise.
+- `CHANGELOG.md` merges by union (`CHANGELOG.md merge=union` in `.gitattributes`): union keeps both sides' lines, so two stories' changelog entries never conflict. A story writes its lines under `## Unreleased`, never under a version heading; `flai release` names that section the version and leaves a new empty `## Unreleased` above it.
 - Before committing, run `git status` and `git diff --stat` and read them. Unrelated changes are split out or explained.
 - Attribution lines the operator or tooling requires go at the end of every commit message and pull request body, unchanged.
 

@@ -1,5 +1,7 @@
 # Changelog
 
+## Unreleased
+
 ## 1.1.13 - 2026-10-31
 
 - S-0523 The orchestrator cannot set a cost of delay input the operator decided on an epic or a story past the backlog (patch).

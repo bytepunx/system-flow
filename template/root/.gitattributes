@@ -5,3 +5,4 @@
 *.lock linguist-generated=true
 pnpm-lock.yaml linguist-generated=true
 go.sum linguist-generated=true
+CHANGELOG.md merge=union

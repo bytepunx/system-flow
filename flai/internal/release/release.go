@@ -394,8 +394,57 @@ func bumpTemplate(root string, st Step, plan *Plan, now time.Time) error {
 	return bumpVersionAndChangelog(root, st.Version, st.Component.Path, st.To, now, bullet)
 }
 
+// unreleasedHeading heads the one changelog section stories write their lines
+// under; a release names it (S-0550).
+const unreleasedHeading = "## Unreleased"
+
+// cutUnreleased takes a changelog's "## Unreleased" section out of s, its
+// heading and its body up to the next "## " heading, and returns what is
+// left and the body, without the blank lines around it. ok is false, and s
+// is returned as it is, when s has no such section.
+func cutUnreleased(s string) (rest, body string, ok bool) {
+	lines := strings.SplitAfter(s, "\n")
+	start := -1
+	for i, l := range lines {
+		if strings.TrimRight(l, " \t\r\n") == unreleasedHeading {
+			start = i
+			break
+		}
+	}
+	if start < 0 {
+		return s, "", false
+	}
+	end := len(lines)
+	for i := start + 1; i < len(lines); i++ {
+		if strings.HasPrefix(lines[i], "## ") {
+			end = i
+			break
+		}
+	}
+	body = strings.TrimLeft(strings.TrimRight(strings.Join(lines[start+1:end], ""), " \t\r\n"), "\n")
+	if body != "" {
+		body += "\n"
+	}
+	return strings.Join(lines[:start], "") + strings.Join(lines[end:], ""), body, true
+}
+
+// firstSection is the offset of the first "## " heading line in s, -1 when
+// it has none.
+func firstSection(s string) int {
+	if strings.HasPrefix(s, "## ") {
+		return 0
+	}
+	if i := strings.Index(s, "\n## "); i >= 0 {
+		return i + 1
+	}
+	return -1
+}
+
 // bumpVersionAndChangelog writes the version file's version: line and adds
 // one changelog entry above the previous one, its body the given bullets.
+// A changelog with a "## Unreleased" section has that section named the
+// version: the bullets go above the lines stories wrote under it, and a new
+// empty "## Unreleased" goes above the version's heading (S-0550).
 func bumpVersionAndChangelog(root, versionFile, componentPath string, to Version, now time.Time, bullets string) error {
 	path := filepath.Join(root, versionFile)
 	data, err := os.ReadFile(path)
@@ -417,19 +466,25 @@ func bumpVersionAndChangelog(root, versionFile, componentPath string, to Version
 	if err != nil {
 		return os.WriteFile(cl, []byte("# Changelog\n\n"+entry), 0o644)
 	}
-	s := string(existing)
+	s, unreleased, hasUnreleased := cutUnreleased(string(existing))
+	if hasUnreleased {
+		bullets += unreleased
+		entry += unreleased
+	}
 	if i := strings.Index(s, "\n## "+to.String()+" - "); i >= 0 {
 		// A section for this version is already there, written by hand before the
 		// release was cut: the bullets go under its heading, not under a second
 		// one, which the markdown lint refuses (I-0107).
 		body := i + 1 + strings.Index(s[i+1:], "\n") + 1
 		s = s[:body] + "\n" + bullets + strings.TrimLeft(s[body:], "\n")
-		return os.WriteFile(cl, []byte(s), 0o644)
-	}
-	if i := strings.Index(s, "\n## "); i >= 0 {
-		s = s[:i+1] + entry + "\n" + s[i+1:]
+	} else if i := firstSection(s); i >= 0 {
+		s = s[:i] + entry + "\n" + s[i:]
 	} else {
 		s = strings.TrimRight(s, "\n") + "\n\n" + entry
+	}
+	if hasUnreleased {
+		i := firstSection(s)
+		s = s[:i] + unreleasedHeading + "\n\n" + s[i:]
 	}
 	return os.WriteFile(cl, []byte(s), 0o644)
 }
