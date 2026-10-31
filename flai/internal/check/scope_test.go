@@ -262,8 +262,16 @@ func TestScopedCheckLeavesOutAnotherStorysFolderTouchAndAfterHub(t *testing.T) {
 			t.Errorf("S-004's own finding should be inside it and advisory: %+v", fs[0])
 		}
 	}
-	if len(scoped.Findings) != len(whole.Findings)-2 || scoped.Warnings != whole.Warnings-2 || scoped.Errors != whole.Errors {
-		t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-2, whole.Warnings-2, whole.Errors)
+	// S-007 to S-009 give no reason for their after, so each S-0551
+	// wip.after-reason on them is left out too
+	dropped := 2
+	for _, f := range whole.Findings {
+		if f.Rule == "wip.after-reason" {
+			dropped++
+		}
+	}
+	if len(scoped.Findings) != len(whole.Findings)-dropped || scoped.Warnings != whole.Warnings-dropped || scoped.Errors != whole.Errors {
+		t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-dropped, whole.Warnings-dropped, whole.Errors)
 	}
 	if scoped.Advisory != 2 {
 		t.Errorf("scoped advisory = %d, want S-004's two", scoped.Advisory)

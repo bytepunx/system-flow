@@ -117,6 +117,7 @@ func Run(repo *workitem.Repo, now time.Time) (*Result, error) {
 	c.after()
 	c.touchesFolder()
 	c.afterHub()
+	c.afterReason()
 	c.unaccepted()
 	c.epicLags()
 	c.board()
@@ -833,6 +834,41 @@ func (c *checker) afterHub() {
 		c.advise("wip.after-hub", hub.Path, 1, "%s is named in after by %d open stories, %s, and each of them waits until it is accepted; after names only a story whose accepted change the story needs on main, and the pull order sets an order of preference, so drop %s from the after of each that does not need its change (flai edit <id> --after) (ADR-0188)",
 			id, len(by), andList(by), id)
 		c.res.Findings[len(c.res.Findings)-1].Stories = []string{id}
+	}
+}
+
+// storyIDWord is a story ID as a whole word, in any form CanonicalID
+// accepts: S-42, S-0042, s42.
+var storyIDWord = regexp.MustCompile(`(?i)\bS-?\d+\b`)
+
+// afterReason gives an advisory warning on each open story for each story
+// in its after: that its "## Notes" section does not name, as a whole word
+// in any padding, with the story in Stories, so a run scoped to another
+// story leaves it out (S-0551, the after rule). An entry other rules report,
+// one naming nothing, itself, or no story, is passed over, and so is a
+// task's after:. It is advisory, as wip.after-hub is.
+func (c *checker) afterReason() {
+	for _, it := range c.items {
+		if it.Archived || it.Type != workitem.Story || it.Closed() || len(it.After) == 0 {
+			continue
+		}
+		named := map[string]bool{}
+		if notes, ok := workitem.NarrativeSection(it.Body, "Notes"); ok {
+			for _, w := range storyIDWord.FindAllString(notes.Text, -1) {
+				named[workitem.CanonicalID(w)] = true
+			}
+		}
+		seen := map[string]bool{}
+		for _, e := range it.After {
+			other := c.named(e)
+			if other == nil || other.Type != workitem.Story || other.ID == it.ID || seen[other.ID] || named[other.ID] {
+				continue
+			}
+			seen[other.ID] = true
+			c.advise("wip.after-reason", it.Path, keyLine(it.Path, "after"), "%s names %s in after with no reason in its Notes: say there what %s reads from %s, or drop it from after (the after rule)",
+				it.ID, other.ID, it.ID, other.ID)
+			c.res.Findings[len(c.res.Findings)-1].Stories = []string{it.ID}
+		}
 	}
 }
 
