@@ -4,7 +4,7 @@ title: "flai stream sync and flai accept merge design/adrs/README.md's index row
 status: accepted
 date: 2026-10-14
 supersedes: []
-superseded_by: []
+superseded_by: [ADR-0228]
 refines: [ADR-0098, ADR-0126]
 topics: [cli]
 ---
