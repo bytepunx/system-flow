@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/preview"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -43,6 +44,8 @@ const queueTiersRefusal = "S-0001 cannot be accepted yet: S-0001's tiers marked 
 func TestAHandAcceptanceWaitsForTheQueueTiersWhileTheQueueBatches(t *testing.T) {
 	root, head := orchestratedStoryInReview(t, true)
 	mergeQueueOn(t, root)
+	// held, so the hand acceptance lands rather than enqueues (S-0552)
+	writeQueueState(t, root, mergequeue.State{Held: true})
 	storeS0001Report(t, root, head, verify.Queued)
 	mainBefore := gitIn(t, root, "rev-parse", "main")
 
@@ -80,6 +83,8 @@ func TestAHandAcceptanceWaitsForTheQueueTiersWhileTheQueueBatches(t *testing.T) 
 func TestAHandAcceptanceWaitsForAReportAtTheStorysHead(t *testing.T) {
 	root, head := orchestratedStoryInReview(t, true)
 	mergeQueueOn(t, root)
+	// held, so the hand acceptance lands rather than enqueues (S-0552)
+	writeQueueState(t, root, mergequeue.State{Held: true})
 	mainBefore := gitIn(t, root, "rev-parse", "main")
 
 	if _, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "alex"); code == 0 || !strings.Contains(errOut, queueTiersRefusal+"no flai verify has run on it;") {

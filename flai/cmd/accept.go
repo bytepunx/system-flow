@@ -204,11 +204,27 @@ no merge queue, it is refused, and under FLAI_ROLE=orchestrate too: the
 orchestrator never lands a story by hand.
 
 While the merge-queue host action is on and the queue batches
-(accept_reviews on, under local acceptance), the queue's batch runs the tiers
-the manifest marks queue, which flai verify and the close-out leave to it, so
-a story accepted by hand would land without them (ADR-0221, I-0203). An
-acceptance that is neither the orchestrator's nor the queue's landing is then
-refused, before anything is merged, until the story's last flai verify passed
+(accept_reviews on, under local acceptance) and is not held, the operator's
+acceptance of a story in review lands nothing (S-0552): it enqueues the story
+as flai queue add <id> --by <by> does, and says so, and the queue lands it,
+as whoever enqueued it, once its batch passes. Nothing is merged, moved, or
+archived, and no batch is dropped; a story enqueued already, or in the batch
+under way, is answered so, changing nothing, and a refusal of the enqueue
+(a story not eligible for the queue) is the acceptance's. With --json it
+prints the story's id and status and, under queue, enqueued (whether this
+acceptance enqueued it), batch (the batch under way holding it), position,
+by, and at. --dry-run, --without-queue-tiers, and --keep-removal are not
+enqueued: the first previews the acceptance by hand, and the others land the
+story by hand, outside the queue, taking it out of the queue and dropping the
+batch that holds it, as below. While the queue is held, an acceptance is
+as below too.
+
+While the queue batches, the queue's batch runs the tiers the manifest marks
+queue, which flai verify and the close-out leave to it, so a story accepted
+by hand would land without them (ADR-0221, I-0203). An acceptance that would
+land the story by hand, neither the orchestrator's nor the queue's landing
+(while the queue is held, with --keep-removal, or as --dry-run previews), is
+then refused, before anything is merged, until the story's last flai verify passed
 at its branch's head with every tier marked queue that it selects: none left
 queued and none failed. The refusal names the tiers and flai verify <id>
 --all, which reuses the tiers the last run passed at the same patch and runs
@@ -287,6 +303,73 @@ type accepted struct {
 	// Installs are the sub-projects' install commands the acceptance ran in
 	// the main checkout after its commit (ADR-0185).
 	Installs []installRun `json:"installs,omitempty"`
+	// Queue is where the merge queue holds the story when the operator's
+	// acceptance enqueued it, or found it enqueued already, in place of
+	// landing it, while the queue batches and is not held (S-0552); nil for
+	// an acceptance that lands the story.
+	Queue *acceptQueued `json:"queue,omitempty"`
+}
+
+// acceptQueued is the merge queue's hold on a story the operator accepted
+// while the queue batches and is not held (S-0552): nothing is merged, moved,
+// or dropped, and the queue lands the story once its batch passes.
+type acceptQueued struct {
+	// Enqueued says this acceptance enqueued the story; false when it was
+	// enqueued already, or in the batch under way, and nothing changed.
+	Enqueued bool `json:"enqueued"`
+	// Batch is the ID of the batch under way that holds the story, when one
+	// does, and not dropped.
+	Batch string `json:"batch,omitempty"`
+	// Position is the story's place in the queue, from 1; 0 when it is not
+	// in the queue's list.
+	Position int `json:"position,omitempty"`
+	// By and At are who enqueued the story and when, in UTC.
+	By string    `json:"by,omitempty"`
+	At time.Time `json:"at,omitzero"`
+}
+
+// queuesInstead reports whether the acceptance of it with o, given opts, is
+// the operator's that the merge queue takes in place of a landing by hand
+// (S-0552): a story in review, accepted by neither the orchestrator nor the
+// queue's landing, while the queue batches, not as a dry run, and without
+// --without-queue-tiers or --keep-removal, which land it by hand, outside
+// the queue, as before. Whether the queue is held is read after.
+func queuesInstead(it *workitem.Item, o acceptOptions, opts preview.AcceptOptions) bool {
+	return it.Type == workitem.Story && it.Status == workitem.Review && opts.QueueBatches && !opts.Orchestrator &&
+		o.batch == "" && !o.dryRun && !o.withoutQueueTiers && len(opts.Keep) == 0
+}
+
+// enqueueAccepted is the operator's acceptance of story it, by by, while the
+// merge queue batches (S-0552): nil, so that the acceptance lands the story
+// as before, while the queue is held; else the story's place in the queue,
+// enqueued with mergequeue.Add when it was in neither the queue nor the
+// batch under way, whose refusal is the acceptance's. Nothing is merged,
+// moved, or dropped.
+func (a *app) enqueueAccepted(repo *workitem.Repo, it *workitem.Item, by string) (*accepted, error) {
+	st, err := mergequeue.ReadState(repo.CacheDir())
+	if err != nil {
+		return nil, fmt.Errorf("enqueue %s, which the merge queue lands while it batches, in place of accepting it by hand: %w", it.ID, err)
+	}
+	if st.Held {
+		return nil, nil
+	}
+	q := &acceptQueued{}
+	if st.HoldsStory(it.ID) && st.Batch.Dropped == nil {
+		q.Batch = st.Batch.ID
+	}
+	if _, ok := st.EnqueuedAs(it.ID); !ok && q.Batch == "" {
+		ch, err := mergequeue.Add(a.runner, repo, it.ID, by, a.now())
+		if err != nil {
+			return nil, err
+		}
+		q.Enqueued, st = ch.Changed, ch.State
+	}
+	if e, ok := st.EnqueuedAs(it.ID); ok {
+		q.By, q.At = e.By, e.At
+		q.Position = slices.IndexFunc(st.Enqueued, func(x mergequeue.Enqueued) bool { return x.Story == e.Story }) + 1
+	}
+	a.acceptStep(it, "enqueued", it.ID+" left to the merge queue, which lands it once its batch passes")
+	return &accepted{Acceptance: &preview.Acceptance{ID: it.ID, Status: it.Status}, Queue: q}, nil
 }
 
 // acceptItem runs the acceptance flow for a story or an epic.
@@ -294,6 +377,13 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	opts, enqueued, err := a.acceptance(repo, it, o)
 	if err != nil {
 		return nil, err
+	}
+	// while the queue batches and is not held, it lands what the operator
+	// accepts (S-0552)
+	if queuesInstead(it, o, opts) {
+		if acc, err := a.enqueueAccepted(repo, it, orDefault(o.by, a.author())); acc != nil || err != nil {
+			return acc, err
+		}
 	}
 	res, err := preview.AcceptWith(a.runner, repo, it, orDefault(o.by, a.author()), a.now(), a.logger(), opts)
 	if err != nil {
@@ -1252,6 +1342,10 @@ func (a *app) printAccept(acc *accepted) error {
 	if a.jsonOut {
 		return a.printJSON(acc)
 	}
+	if acc.Queue != nil {
+		fmt.Fprintln(a.out, queuedLine(acc.ID, acc.Queue))
+		return nil
+	}
 	res := acc.Acceptance
 	if res.DryRun {
 		for _, b := range res.Blockers {
@@ -1355,6 +1449,23 @@ func (a *app) printAccept(acc *accepted) error {
 		}
 	}
 	return nil
+}
+
+// queuedLine is the text answer of the operator's acceptance of story id that
+// the merge queue took in place of a landing by hand (S-0552).
+func queuedLine(id string, q *acceptQueued) string {
+	const lands = "the merge queue batches, so it lands the story once its batch passes; nothing merged, moved, or dropped, and flai queue shows it (--without-queue-tiers lands it by hand now)"
+	place := ""
+	if q.Position > 0 {
+		place = fmt.Sprintf(" at position %d", q.Position)
+	}
+	switch {
+	case q.Batch != "":
+		return fmt.Sprintf("%s is in merge queue batch %s, under way, and stays in review: %s", id, q.Batch, lands)
+	case q.Enqueued:
+		return fmt.Sprintf("enqueued %s in the merge queue%s as %s, and it stays in review: %s", id, place, q.By, lands)
+	}
+	return fmt.Sprintf("%s is enqueued in the merge queue already%s, by %s at %s, and stays in review: %s", id, place, q.By, q.At.Format(time.RFC3339), lands)
 }
 
 func firstLine(s string) string {

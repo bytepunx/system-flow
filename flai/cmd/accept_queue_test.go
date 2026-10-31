@@ -325,3 +325,140 @@ func TestALandingIsRefusedUnderPullRequestAcceptance(t *testing.T) {
 	}
 	assertNothingAccepted(t, root, mainBefore)
 }
+
+// queueUnderWay writes a queue state with S-0005 enqueued and in merge queue
+// batch landingBatch, under verification, and held when held says so.
+func queueUnderWay(t *testing.T, root string, held bool) {
+	t.Helper()
+	at := time.Date(2026, 9, 15, 20, 0, 0, 0, time.UTC)
+	writeQueueState(t, root, mergequeue.State{
+		Enqueued: []mergequeue.Enqueued{{Story: "S-0005", By: "orchestrator", At: at}},
+		Held:     held,
+		Batch:    &mergequeue.Batch{ID: landingBatch, Stories: []string{"S-0005"}, Step: "verify"},
+	})
+}
+
+// assertBatchUnderWay fails unless the queue's batch is landingBatch,
+// holding S-0005, and not dropped.
+func assertBatchUnderWay(t *testing.T, st mergequeue.State) {
+	t.Helper()
+	if st.Batch == nil || st.Batch.ID != landingBatch || st.Batch.Dropped != nil || !slices.Equal(st.Batch.Stories, []string{"S-0005"}) {
+		t.Errorf("batch %+v, want %s under way with S-0005, not dropped", st.Batch, landingBatch)
+	}
+}
+
+// S-0552 criterion 2: while the merge queue batches and is not held, the
+// operator's acceptance of a story in review enqueues it as the operator, in
+// text and with --json, and lands nothing: main does not move, the story
+// stays in review, and the batch under way is not dropped. Accepting it again
+// answers that it is enqueued already and changes nothing.
+func TestTheOperatorsAcceptanceEnqueuesWhileTheQueueBatches(t *testing.T) {
+	root, _ := orchestratedQueueProject(t, true)
+	mergeQueueOn(t, root)
+	queueUnderWay(t, root, false)
+	mainBefore := gitIn(t, root, "rev-parse", "main")
+
+	out, errOut, code := runInAt(t, root, landedAt, "accept", "S-0001", "--by", "alex", "--json")
+	if code != 0 {
+		t.Fatalf("flai accept --json: %d %s\n%s", code, errOut, out)
+	}
+	var res accepted
+	if err := json.Unmarshal([]byte(out), &res); err != nil {
+		t.Fatalf("%v: %s", err, out)
+	}
+	if q := res.Queue; q == nil || !q.Enqueued || q.Position != 2 || q.By != "alex" || !q.At.Equal(landedAt) || q.Batch != "" || res.ID != "S-0001" || res.Status != workitem.Review || res.Merged {
+		t.Errorf("--json must say S-0001 was enqueued second, as alex, and is in review: %+v %+v", res.Acceptance, res.Queue)
+	}
+	assertNothingAccepted(t, root, mainBefore)
+	st := readQueueState(t, root)
+	if len(st.Enqueued) != 2 || st.Enqueued[1].Story != "S-0001" || st.Enqueued[1].By != "alex" || len(st.Outcomes) != 0 {
+		t.Errorf("enqueued %+v outcomes %+v, want S-0001 after S-0005, by alex, and no outcome", st.Enqueued, st.Outcomes)
+	}
+	assertBatchUnderWay(t, st)
+
+	out, errOut, code = runIn(t, root, "accept", "S-0001", "--by", "bob")
+	if want := "S-0001 is enqueued in the merge queue already at position 2, by alex at 2026-09-17T09:00:00Z, and stays in review: the merge queue batches, so it lands the story once its batch passes"; code != 0 || !strings.Contains(out, want) {
+		t.Errorf("accepting it again must answer %q: %d %s\n%s", want, code, errOut, out)
+	}
+	assertNothingAccepted(t, root, mainBefore)
+	if again := readQueueState(t, root); string(mustJSON(t, again)) != string(mustJSON(t, st)) {
+		t.Errorf("accepting it again must change nothing:\nbefore %+v\nafter  %+v", st, again)
+	}
+}
+
+// S-0552 criterion 2: the operator's acceptance of a story in the batch under
+// way answers so, in text and with --json, and changes nothing.
+func TestTheOperatorsAcceptanceOfAStoryInTheBatchChangesNothing(t *testing.T) {
+	root, _ := orchestratedQueueProject(t, true)
+	mergeQueueOn(t, root)
+	enqueueWithBatch(t, root)
+	st := readQueueState(t, root)
+	st.Batch.ID = landingBatch
+	writeQueueState(t, root, st)
+	before := string(mustJSON(t, readQueueState(t, root)))
+	mainBefore := gitIn(t, root, "rev-parse", "main")
+
+	out, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "alex")
+	if want := "S-0001 is in merge queue batch " + landingBatch + ", under way, and stays in review"; code != 0 || !strings.Contains(out, want) {
+		t.Errorf("flai accept must answer %q: %d %s\n%s", want, code, errOut, out)
+	}
+	js, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "alex", "--json")
+	var res accepted
+	if code != 0 || json.Unmarshal([]byte(js), &res) != nil || res.Queue == nil || res.Queue.Enqueued || res.Queue.Batch != landingBatch || res.Queue.Position != 1 {
+		t.Errorf("--json must name the batch under way and enqueue nothing: %d %s\n%s", code, errOut, js)
+	}
+	assertNothingAccepted(t, root, mainBefore)
+	if after := string(mustJSON(t, readQueueState(t, root))); after != before {
+		t.Errorf("the queue must be as it was:\nbefore %s\nafter  %s", before, after)
+	}
+}
+
+// S-0552 criterion 2: an enqueue the queue refuses is the acceptance's
+// refusal, and nothing changes.
+func TestTheOperatorsAcceptanceIsRefusedAsTheQueueRefusesIt(t *testing.T) {
+	root, _ := orchestratedStoryInReview(t, true)
+	mergeQueueOn(t, root)
+	queueUnderWay(t, root, false)
+	mainBefore := gitIn(t, root, "rev-parse", "main")
+	_, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "alex")
+	if want := "S-0001 is not enqueued: it is not eligible for the merge queue"; code == 0 || !strings.Contains(errOut, want) {
+		t.Errorf("an ineligible story's acceptance must be refused with %q: %d\n%s", want, code, errOut)
+	}
+	assertNothingAccepted(t, root, mainBefore)
+	st := readQueueState(t, root)
+	if len(st.Enqueued) != 1 || st.Enqueued[0].Story != "S-0005" {
+		t.Errorf("enqueued %+v, want S-0005 only", st.Enqueued)
+	}
+	assertBatchUnderWay(t, st)
+}
+
+// S-0552 criterion 2: while the queue is held, the operator's acceptance lands
+// the story by hand as before, taking it out of the queue and dropping the
+// batch that holds it; so does --without-queue-tiers while it is not held.
+func TestTheOperatorsAcceptanceLandsWhileTheQueueIsHeldOrWithoutTheQueueTiers(t *testing.T) {
+	for name, c := range map[string]struct {
+		held  bool
+		extra []string
+	}{
+		"held":                  {held: true},
+		"--without-queue-tiers": {extra: []string{"--without-queue-tiers"}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			root, _ := orchestratedQueueProject(t, true)
+			mergeQueueOn(t, root)
+			enqueueWithBatch(t, root)
+			st := readQueueState(t, root)
+			st.Held = c.held
+			writeQueueState(t, root, st)
+			args := append([]string{"accept", "S-0001", "--by", "alex"}, c.extra...)
+			out, errOut, code := runIn(t, root, args...)
+			if code != 0 || !strings.Contains(out, "accepted S-0001: done") {
+				t.Fatalf("flai %v lands the story: %d %s\n%s", args, code, errOut, out)
+			}
+			if story := acceptedS0001(t, root); !story.Archived || story.Status != workitem.Done {
+				t.Errorf("S-0001 is %s, archived %v; want done and archived", story.Status, story.Archived)
+			}
+			assertLeftTheQueue(t, root)
+		})
+	}
+}

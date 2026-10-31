@@ -56,7 +56,15 @@ left or for a path the branch undoes of main's change exits 4 and prints
 {"refused": {...}}, the same object. There is no other way for a story to
 become done. When the story is its epic's last open one, the epic is accepted
 and archived with it. Acceptance computes no release; see flai release
---pending.`,
+--pending.
+
+While the merge-queue host action is on and the queue batches and is not
+held, the operator's move of a story from review to done enqueues it in the
+merge queue, as flai accept does (S-0552), and lands nothing: the story stays
+in review until the queue lands it once its batch passes, and a story
+enqueued already, or in the batch under way, is answered so, changing
+nothing. --without-queue-tiers and --keep-removal land it by hand as before,
+outside the queue; see flai accept --help.`,
 		Example: `  flai move S-004 in-progress
   flai move T-021 done
   flai move S-005 ready --yes                            # a draft, finalized with the move

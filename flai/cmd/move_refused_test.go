@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 )
 
@@ -111,6 +112,8 @@ func TestMoveToDoneJSONRefusesABranchThatUndoesMainAsAcceptDoes(t *testing.T) {
 func TestMoveToDoneWaitsForTheQueueTiersAsAcceptDoes(t *testing.T) {
 	root, head := orchestratedStoryInReview(t, true)
 	mergeQueueOn(t, root)
+	// held, so the hand acceptance lands rather than enqueues (S-0552)
+	writeQueueState(t, root, mergequeue.State{Held: true})
 	storeS0001Report(t, root, head, verify.Queued)
 	mainBefore := gitIn(t, root, "rev-parse", "main")
 	want := queueTiersRefusal + "its last flai verify did not run tier integration, marked queue; while the merge queue batches, a hand acceptance waits for them: run flai verify S-0001 --all"
