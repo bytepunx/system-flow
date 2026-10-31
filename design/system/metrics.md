@@ -26,7 +26,7 @@ Everything the dashboard charts is derived from work item front matter. This doc
 |--------|---------|---------|
 | Lead time | `completed - created` | How long from idea to delivered |
 | Cycle time | `completed - started` | How long once someone started |
-| Queue time | Sum of the `ready` intervals in `state_intervals` that end at or before `started`; `started - committed` for an item never moved out of `ready` but to `in-progress` ([ADR-0190](../adrs/0190-an-item-s-queue-time-is-the-seconds-it-spent-in-ready-before-it-started-so-a.md)) | How long ready work waits, leaving out a stretch back in backlog |
+| Queue time | Sum of the `ready` intervals in `state_intervals` that end at or before `started`; `started - committed` for an item never moved out of `ready` but to `in-progress` ([ADR-0190](../adrs/0190-an-item-s-queue-time-is-the-seconds-it-spent-in-ready-before-it-started-so-a.md)) | How long ready work waits, leaving out a stretch back in backlog. Reported at p50 and p85 as the ready wait ([Concurrency and the ready wait](#concurrency-and-the-ready-wait-s-0551)) |
 | Time in state | Sum of `state_intervals` per state | Where the process spends time |
 | Blocked time | `blocked_total` | How much of cycle time was waiting |
 | Estimate error | `(cycle time - estimate) / estimate` | How good estimates are, when present |
@@ -296,6 +296,25 @@ What claims cost in holds and parallelism, and how far a story's declared touche
 
 A story's commits are those on the main branch and the `story/` branches whose subject names it in brackets, `[S-nnnn]`, merges left out; their files under the `wip` folder are left out, since flai writes them. Its touches are its own and those of its tasks not cancelled, a project's name or tag read as its path, as a claim reads them. A file is under a touch that is the file or a folder that holds it. When git cannot be read, `claims.drift` is absent and `flai stats` says so on stderr, and so are `stories`, `exact`, and `exact_share` in every week; `held_seconds` is still there.
 
+The replay has no trial-merge judge ([ADR-0230](../adrs/0230-a-ready-story-whose-claim-overlaps-a-story-in-progress-is-held-only-when-a.md)). It counts a story whose claim overlaps as held by `overlap`, as the claims alone give it, even when a clean trial let it start.
+
+### Concurrency and the ready wait (S-0551)
+
+How many stories ran at once over the window, and how long ready stories waited to start ([ADR-0231](../adrs/0231-flai-stats-reports-the-share-of-the-window-with-n-stories-in-progress-at-once.md)). Both keys are at the top of `flai stats --json`, beside `claims`. T-2410 implements them to these names.
+
+| Value | Definition | Precision |
+|-------|------------|-----------|
+| `concurrency.window_seconds` | The seconds from `window_start` to `generated_at` | Whole seconds |
+| `concurrency.limit` | The board's `in-progress` limit today, as `claims.limit`; absent when it has none | Whole count |
+| `concurrency.seconds[]` | Entry n, from 0, is the seconds of the window in which exactly n items of the report's type were in `in-progress`, from their `state_intervals`, archived and cancelled items included. An interval counts its part inside the window, and an open one ends at now. A story in `review` is not in progress. The array runs from 0 through the larger of `limit` and the most items in progress at once in the window, every entry present, 0 when none | Whole seconds |
+| `concurrency.share[]` | Entry n is `seconds[n]` over `window_seconds`, so the entries sum to 1 | From 0 to 1, not rounded |
+| `concurrency.mean_busy` | The mean n over the seconds with n of 1 or more: the sum of n times `seconds[n]` over the sum of `seconds[n]`, n from 1. Absent when nothing was in progress in the window | Not rounded |
+| `ready_wait.count` | The items whose queue time `summary.queue_time` counts: of the report's type, completed in the window, cancelled ones left out, with a queue time | Whole count |
+| `ready_wait.p50_seconds` | The 50th percentile of their queue time ([Per item durations](#per-item-durations), [ADR-0190](../adrs/0190-an-item-s-queue-time-is-the-seconds-it-spent-in-ready-before-it-started-so-a.md)), equal to `summary.queue_time.p50_seconds`. Absent when `count` is 0 | Seconds, nearest rank |
+| `ready_wait.p85_seconds` | The 85th percentile of the same, equal to `summary.queue_time.p85_seconds`. Absent when `count` is 0 | Seconds, nearest rank |
+
+The ready wait is the queue time under the name the board uses. `flai stats` prints the summary's queue time line as `ready wait`, and under it one line of the shares as whole percents, then the mean to one decimal: `in progress  0 42% · 1 29% · 2 26% · 3 2% · 4 0% · 5 0% · mean 1.6 while busy`. The part from `mean` on is left out when `mean_busy` is absent.
+
 ### Strategic use per day
 
 `strategic_days[]` lays the strategic agents' activity beside delivery, for the Strategic Cost and Strategic Use charts. One point per day, each with:
@@ -540,6 +559,7 @@ This table says what the dashboard draws, with a row for every chart, its first 
 | Delivery Accuracy | One point per story done in the window with `delivery_error_seconds`, in days, x completed. Lines at plus and minus the p50 and p85 of `forecasts.delivery`. On a second axis, the share of those stories with an error of 0 or less, per ISO week of the window | Filter by nature and model. A week with no such story has no share, a gap, not 0 |
 | Forecast Error / Model | Per model, the item's `model`, one point per bucket: the p50 of the absolute `forecast_error_seconds` of its stories done in the bucket | Filter by nature. A bucket with no such story is a gap ([ADR-0111](../adrs/0111-flai-stats-gives-each-item-the-model-its-forecasts-are-grouped-under.md)) |
 | Parallelism | Per day of the window, `claims.days[].in_progress`, with `held` as a second series, and a line at `claims.limit` | No limit line when `claims.limit` is absent ([Claims and touches](#claims-and-touches)) |
+| Concurrency | Bar per n, from 0, `concurrency.share[]` as a percent of the window, with `concurrency.mean_busy` stated beside it and the ready wait, `ready_wait.p50_seconds` and `p85_seconds` in hours | In the flow group. Bars above `concurrency.limit` are those past the limit. No ready wait stated when `ready_wait.count` is 0 ([Concurrency and the ready wait](#concurrency-and-the-ready-wait-s-0551), [ADR-0231](../adrs/0231-flai-stats-reports-the-share-of-the-window-with-n-stories-in-progress-at-once.md)) |
 | Hold Time | Stacked bar per week of the window, `claims.weeks[].held_seconds` in hours, one series per reason: `overlap`, `after`, and `no-touches`, the empty claim | A hold with more than one reason counts under the one it is named by, so a bar's height is the time held ([ADR-0113](../adrs/0113-flai-stats-reports-held-stories-per-day-held-time-by-reason-per-week-and-the.md)) |
 | Coordination | Per week of the window, bars of the conflicts found early, `coordination.weeks[].conflicts.found`, against those met late, `met_sync` plus `met_accept`; and the conversations `opened`, `agreed`, `escalated`, and `closed_with_story`, one series each, as lines or bars | Beside it, the stories started on a share in the window and the hold time they saved, the sums of `shares.started` and `shares.held_seconds` over the weeks. Without the conflict log, `logged` false, the chart says it could not be read ([Coordination](#coordination), [ADR-0138](../adrs/0138-flai-stats-reports-per-week-the-conversations-between-agents-and-how-they-ended.md)) |
 | Merge Queue | Per week of the window, `queue.weeks[].wait_mean_seconds` and `wait_max_seconds` in hours, `batch_size_mean`, and `bisections`, one series each | Beside the agent-waiting chart. Without `queue`, the chart says the flai on the host sends none ([Merge queue](#merge-queue-s-0404), [ADR-0177](../adrs/0177-flai-stats-reports-per-week-the-stories-the-merge-queue-landed-or-sent-back.md)) |
@@ -565,6 +585,7 @@ So that `flai stats` and the dashboard agree to the second:
 - Time-in-state share divides total seconds per state by total lead time, over completed items in the window.
 - The planning, waiting, and claims values (S-0205) are seconds between timestamps, whole since timestamps are, and their means are not rounded. Empty wakes, held stories, and stories with exact touches are whole counts, and the mean of the empty wakes and the share of exact touches are not rounded either. The `started` and `ended` of a wait in `waiting.longest[]` are timestamps as the thread or the transition records them, `YYYY-MM-DDTHH:MM:SSZ`, and its `seconds` are whole. A day is a UTC day, from 00:00:00 up to, not including, the next; a day's or a week's share of an interval is the part of it inside the day or week, and today's ends at now. Cost of delay amounts are rounded to two decimals once summed, and strategic costs to four.
 - Strategic usage costs, per item, in totals, per kind, and in spend, are rounded to four decimals once summed, as activity costs are written; their tokens and seconds are whole. The cost per agent hour is rounded to four decimals, and an expected cost is the duration in hours times that rounded rate, rounded to four decimals, so that it can be recomputed from the JSON. Durations are Go durations, as `forecast_seconds` and `estimate_seconds` read them.
+- Concurrency's seconds are whole, and its shares and `mean_busy` are not rounded. An interval runs from its transition up to, not including, the next, so an item that leaves `in-progress` at the second another enters is not counted with it.
 - Turns are whole counts, each on the UTC day of its first event. The text report's shares of the total are rounded to a whole percent; `--json` has no shares.
 - A bucket holds the moments from its start up to, not including, the next one's. A week's bucket starts on the Monday of the ISO week, at 00:00:00 UTC. The running mean divides by the number of buckets from the first of the series, empty ones counted.
 

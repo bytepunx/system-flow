@@ -1,6 +1,6 @@
 ---
 title: Strategic agents
-updated: 2026-10-30
+updated: 2026-10-31
 status: active
 topics: [planning, orchestration, analysis]
 ---
@@ -263,7 +263,9 @@ Since S-0468 ([ADR-0188](../adrs/0188-a-task-takes-no-folder-touch-the-planner-s
 
 A refusal writes nothing. It names the folder and how many files it holds, and says to name the files, or to leave the folder to the story's touches with a `### Planning` note. The note is read as the body will be after the write, so one `item_edit` may carry both the note and the touch. The operator's and the story's agent's story touches are not refused.
 
-The planner writes `after` on a story only for a story whose accepted change it needs on main, never for an order of preference, which the pull order sets. `flai check` gives advisory warnings, which `--strict` passes over: `wip.after-hub` on a story that three or more open stories name in `after`, and `touches.folder` on a story in progress whose claim keeps a folder ([flai-cli.md](flai-cli.md#commands)).
+Since S-0551 ([ADR-0230](../adrs/0230-a-ready-story-whose-claim-overlaps-a-story-in-progress-is-held-only-when-a.md)) an overlap of claims holds a ready story only when a trial merge of the in-progress story's branch at the ready story's base conflicts ([workflow.md](workflow.md#branches-and-collisions-adr-0019)). So two stories that touch one file may run together, and the planner does not order them to keep them apart.
+
+The planner writes `after` on a story only for a story whose output it reads on main: a file, a command, a schema, or a decision the named story writes and this one builds on. It never writes one for an order of preference, which the pull order sets, nor to keep two stories off one file, which the trial merge judges. It gives the reason in the story's `## Notes`, under `### Planning`, naming the story by its ID. `flai check` gives advisory warnings, which `--strict` passes over: `wip.after-reason` on a story not done or cancelled whose `after` names a story its Notes do not name, `wip.after-hub` on a story that three or more open stories name in `after`, and `touches.folder` on a story in progress whose claim keeps a folder ([flai-cli.md](flai-cli.md#commands)).
 
 `planPrompt`, the convention's "As the planner", and `.claude/agents/planner.md` say these rules too.
 
