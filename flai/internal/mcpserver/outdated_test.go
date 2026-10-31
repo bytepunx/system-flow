@@ -21,6 +21,7 @@ import (
 // S-0181: inbox says, on every call, when the flai serving it is older than
 // the newest flai release tagged in the project's history, with the upgrade.
 func TestInboxSaysTheFlaiIsOlderThanTheProject(t *testing.T) {
+	t.Parallel()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
@@ -81,6 +82,7 @@ func TestInboxSaysTheFlaiIsOlderThanTheProject(t *testing.T) {
 // S-0181: in a folder, a project whose minimum flai is above this one is
 // left out, and the log says why once, not at every look.
 func TestAFolderLeavesOutAProjectThatNeedsANewerFlai(t *testing.T) {
+	// serial: it changes buildinfo.Version, which every manifest.Load reads
 	root := t.TempDir()
 	makeProject(t, filepath.Join(root, "alpha"), "alpha")
 	makeProject(t, filepath.Join(root, "beta"), "beta")

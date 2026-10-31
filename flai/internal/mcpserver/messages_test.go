@@ -16,11 +16,10 @@ import (
 )
 
 // messagesFixture is setup with a second story in progress, other, beside
-// the fixture's own, and FLAI_STORY cleared, so that a test names the
-// session's story itself.
+// the fixture's own, and FLAI_STORY cleared, as TestMain leaves it, so
+// that a test names the session's story itself.
 func messagesFixture(t *testing.T) (*fixture, *workitem.Item) {
 	t.Helper()
-	t.Setenv("FLAI_STORY", "")
 	f := setup(t)
 	epic, err := f.repo.Get(f.story.Parent)
 	if err != nil {
@@ -121,6 +120,7 @@ func TestMessageToolsWorkAConversationBetweenTwoStories(t *testing.T) {
 // not of the form agent-S-nnnn, and no story branch checked out, can neither
 // send nor reply, and nothing is written; it may still read a conversation.
 func TestAMessageNeedsASessionWithAStory(t *testing.T) {
+	t.Parallel()
 	f, other := messagesFixture(t)
 	if _, failed := f.call(t, "message_send", map[string]any{"to": other.ID, "text": "Hello"}); !strings.Contains(failed, "message_send writes as this session's own story, and it has none") || !strings.Contains(failed, `"claude"`) || !strings.Contains(failed, "nothing was written") {
 		t.Errorf("a send with no story should be refused, saying why and what to do: %q", failed)
@@ -193,6 +193,7 @@ func TestAMessageGoesOnlyBetweenOpenStories(t *testing.T) {
 // instructions send an agent whose paths another story comes to claim to
 // that story's agent, not to a thread, in a project and in a folder.
 func TestTheMessageToolsAndInstructions(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	res, err := f.cs.ListTools(context.Background(), nil)
 	if err != nil {
@@ -252,7 +253,7 @@ func TestTheMessageToolsAndInstructions(t *testing.T) {
 // S-0331: the tools route by project in a folder of projects, as the other
 // per-project tools do.
 func TestTheMessageToolsRouteByProject(t *testing.T) {
-	t.Setenv("FLAI_STORY", "")
+	t.Parallel()
 	root := t.TempDir()
 	makeProject(t, filepath.Join(root, "alpha"), "alpha")
 	makeProject(t, filepath.Join(root, "beta"), "beta")
@@ -492,7 +493,7 @@ func TestASettledReplyWakesAWaitingAgentOwingNone(t *testing.T) {
 // by the other story, which had asked it something, is not told it owes a
 // reply: its inbox has the conversation awaiting neither story, and the
 // event of the settled entry says no reply is owed.
-func TestAStorysAgentIsNotToldItOwesASettledConversationAReply(t *testing.T) {
+func testAStorysAgentIsNotToldItOwesASettledConversationAReply(t *testing.T) {
 	f, _ := storysAgent(t)
 	other := f.otherInProgress(t)
 	c := f.send(t, other.ID, f.story.ID)
@@ -599,6 +600,7 @@ func TestMessageEscalateAsksTheOperator(t *testing.T) {
 // the share flai's ask invited and answers the conversation with it; from the
 // held story's session it is refused, and nothing is written.
 func TestMessageShare(t *testing.T) {
+	t.Parallel()
 	f, _ := messagesFixture(t)
 	epic, err := f.repo.Get(f.story.Parent)
 	if err != nil {

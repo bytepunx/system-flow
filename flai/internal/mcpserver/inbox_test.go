@@ -32,6 +32,7 @@ func changeIDs(changes []Event) map[string]bool {
 // The CLI and the MCP tool read one cursor per agent name: a change the CLI
 // reported under the name is not reported again by the tool under it.
 func TestAChangeTheCLIReportedIsNotReportedAgainByTheTool(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
 		t.Fatal(failed)
@@ -60,6 +61,7 @@ func TestAChangeTheCLIReportedIsNotReportedAgainByTheTool(t *testing.T) {
 // A first look under a new name covers the last 24 hours of stories and
 // epics: not what is older, and not task transitions.
 func TestAFirstLookCoversADayOfStoriesAndEpics(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	now := t0.Add(48 * time.Hour)
 	*f.clock = now
@@ -119,6 +121,7 @@ func budgetWrong(got any) string {
 // with the provider, the limit, and until, and leaves budget out once it
 // clears; the instructions tell an agent to hold rather than retry.
 func TestInboxCarriesTheHostsBudgetWhileItIsSet(t *testing.T) {
+	t.Parallel()
 	state := anthropicOut
 	f := setupWith(t, func(o *Options) { o.Budgets = budgetState(&state) })
 	out, failed := f.call(t, "inbox", map[string]any{})
@@ -143,6 +146,7 @@ func TestInboxCarriesTheHostsBudgetWhileItIsSet(t *testing.T) {
 // A server with no budget reader, as a test or a host-less one has it,
 // answers no budget.
 func TestInboxWithoutABudgetReaderCarriesNone(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	out, failed := f.call(t, "inbox", map[string]any{})
 	if failed != "" {

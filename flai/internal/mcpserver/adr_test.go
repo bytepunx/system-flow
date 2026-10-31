@@ -12,8 +12,7 @@ import (
 // superseded ADR's superseded_by in the story's worktree, commits those and
 // only those on the story's branch as <ADR-nnnn> <decision> with the
 // story's prefix and the trailers, and widens the story's touches.
-func TestAdrNewCommitsOnTheStorysBranch(t *testing.T) {
-	t.Setenv("FLAI_STORY", "")
+func testAdrNewCommitsOnTheStorysBranch(t *testing.T) {
 	f := setup(t)
 	wt := storyGit(t, f)
 	writeIn(t, wt.Root, "design/system/plan.md", "---\ntitle: Plan\n---\n\n# Plan\n\nhalf done\n")
@@ -64,7 +63,7 @@ func TestAdrNewCommitsOnTheStorysBranch(t *testing.T) {
 // story has one and in the project otherwise, commits nothing, and refuses
 // what flai adr new refuses, writing nothing.
 func TestAdrNewWritesInTheStorysWorktreeOrTheProject(t *testing.T) {
-	t.Setenv("FLAI_STORY", "")
+	t.Parallel()
 	f := setup(t)
 	wt := f.repo.WorktreePath(f.story.ID)
 	if err := os.MkdirAll(wt, 0o755); err != nil {

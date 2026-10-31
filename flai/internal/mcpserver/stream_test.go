@@ -9,11 +9,23 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
+// TestInStreamSession runs the stream_state tests, as together runs them,
+// as session s9, FLAI_SESSION: set once here, so that they run in parallel
+// with each other (S-0548).
+func TestInStreamSession(t *testing.T) {
+	t.Setenv("FLAI_SESSION", "s9")
+	together(t,
+		testStreamStateWritesCurrentStateAndNextSteps,
+		testStreamStateWritesEachTextAlone,
+		testStreamStateRefusals,
+	)
+}
+
 // streamFixture is setup with the story's narrative holding a known body in
-// every section, as session s9.
+// every section, as session s9, in TestInStreamSession.
 func streamFixture(t *testing.T) (*fixture, string) {
 	t.Helper()
-	t.Setenv("FLAI_SESSION", "s9")
+	inEnv(t, "FLAI_SESSION", "s9")
 	f := setup(t)
 	n, err := workitem.ReadNarrative(f.repo.NarrativePath(f.story.ID))
 	if err != nil {
@@ -41,7 +53,7 @@ func section(t *testing.T, body, name string) string {
 // connected agent and leaves every other section as it was, appending
 // nothing to the log; the answer names the narrative by its path from the
 // project's root.
-func TestStreamStateWritesCurrentStateAndNextSteps(t *testing.T) {
+func testStreamStateWritesCurrentStateAndNextSteps(t *testing.T) {
 	f, before := streamFixture(t)
 	f.lintAsThisProjectDoes(t)
 	out, failed := f.call(t, "stream_state", map[string]any{"story": f.story.ID, "current": "T-1 is done.", "next": "1. Do T-2."})
@@ -84,7 +96,7 @@ func TestStreamStateWritesCurrentStateAndNextSteps(t *testing.T) {
 }
 
 // Each text alone writes its own section and leaves the other as it is.
-func TestStreamStateWritesEachTextAlone(t *testing.T) {
+func testStreamStateWritesEachTextAlone(t *testing.T) {
 	f, _ := streamFixture(t)
 	path := f.repo.NarrativePath(f.story.ID)
 	out, failed := f.call(t, "stream_state", map[string]any{"story": f.story.ID, "current": "Reviewing."})
@@ -108,7 +120,7 @@ func TestStreamStateWritesEachTextAlone(t *testing.T) {
 // A story not in progress or in review, one with no narrative, text the
 // lint rejects, and no text at all are refused with what to do, and nothing
 // is written.
-func TestStreamStateRefusals(t *testing.T) {
+func testStreamStateRefusals(t *testing.T) {
 	f, _ := streamFixture(t)
 	backlog, err := f.repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "Later", Owner: "alex", Now: t0})
 	if err != nil {

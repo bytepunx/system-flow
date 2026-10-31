@@ -78,6 +78,7 @@ func steps(t *testing.T, out map[string]any) (states, found string) {
 // answers a pass, with each step and the tier the branch's change selects,
 // and stores the answer as the story's last.
 func TestVerifyAnswersAPassAndStoresIt(t *testing.T) {
+	t.Parallel()
 	f, change := verifyFixture(t)
 	res, err := f.cs.ListTools(context.Background(), nil)
 	if err != nil {
@@ -118,6 +119,7 @@ func TestVerifyAnswersAPassAndStoresIt(t *testing.T) {
 // S-0270: a step that fails is an answer naming it, with its findings, and
 // the steps after it not reached; it is stored as the story's last too.
 func TestVerifyAnswersTheStepThatFailed(t *testing.T) {
+	t.Parallel()
 	f, change := verifyFixture(t)
 	change("ok/a.txt")
 	change("bad/b.txt")
@@ -156,9 +158,9 @@ func TestVerifyAnswersTheStepThatFailed(t *testing.T) {
 // S-0311: the orchestrator's server answers verify, and runs the tiers under
 // the verify role rather than its own, so a tier whose tests make flai's
 // writes is not refused as the orchestrator (TH-0260).
-func TestVerifyRunsTheTiersUnderTheVerifyRoleForTheOrchestrator(t *testing.T) {
+func testVerifyRunsTheTiersUnderTheVerifyRoleForTheOrchestrator(t *testing.T) {
 	// the server reads its role when the fixture makes it
-	t.Setenv("FLAI_ROLE", guard.RoleOrchestrate)
+	inEnv(t, "FLAI_ROLE", guard.RoleOrchestrate)
 	f, change := verifyFixture(t)
 	// on the story's branch the ok tier passes only under the verify role
 	manifest := strings.Replace(testManifest, `[sh, -c, "exit 0"]`, `[sh, -c, 'test "$FLAI_ROLE" = verify || { echo "FLAI_ROLE is $FLAI_ROLE, not verify"; exit 1; }']`, 1)
@@ -180,6 +182,7 @@ func TestVerifyRunsTheTiersUnderTheVerifyRoleForTheOrchestrator(t *testing.T) {
 // S-0270: a story that is not there, an item that is not a story, a story
 // with no worktree, and a max under 1 are refused, saying what to do.
 func TestVerifyRefusesWhatItCannotVerify(t *testing.T) {
+	t.Parallel()
 	f, _ := verifyFixture(t)
 	other, err := f.repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "Other", Owner: "alex", Now: t0})
 	if err != nil {
@@ -209,6 +212,7 @@ func TestVerifyRefusesWhatItCannotVerify(t *testing.T) {
 // upgrade when the project's history holds a newer flai release, and the
 // manifest's fix when it does not. No report is stored either way.
 func TestVerifySaysTheFlaiIsOlderThanTheProjectWhenTheTiersRefuse(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		version string
 		want    []string
@@ -244,6 +248,7 @@ func TestVerifySaysTheFlaiIsOlderThanTheProjectWhenTheTiersRefuse(t *testing.T) 
 // that left them passed at the same patch, and runs only those it left
 // (ADR-0221), and two that run them alike reuse them all.
 func TestVerifyLeavesTheQueueTiersToTheMergeQueueWhileItCanBatch(t *testing.T) {
+	t.Parallel()
 	batches, asked := true, ""
 	f, change, _ := verifyFixtureWith(t, func(o *Options) {
 		o.QueueBatches = func(root string) bool {

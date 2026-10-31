@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"sort"
 	"strings"
 	"testing"
@@ -19,6 +20,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/guard"
+	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
@@ -29,6 +31,50 @@ import (
 )
 
 var t0 = time.Date(2026, 9, 18, 17, 0, 0, 0, time.UTC)
+
+// sessionEnv are the variables flai serve sets in an agent's session, which
+// the server reads when it starts and its tools read when called.
+var sessionEnv = []string{"FLAI_STORY", "FLAI_ROLE", "FLAI_SESSION", harness.ReasonsEnv, guard.StartedByEnv}
+
+// TestMain clears sessionEnv, so that no test inherits the session of the
+// agent that runs the tests and a test that needs none of them set need not
+// clear them with t.Setenv, which would keep it from running in parallel
+// (S-0548).
+func TestMain(m *testing.M) {
+	for _, v := range sessionEnv {
+		if err := os.Unsetenv(v); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+	}
+	os.Exit(m.Run())
+}
+
+// together runs tests as parallel subtests of t, a test that does not run
+// in parallel and has set what they all need of the process, an environment
+// variable or a package variable: a test that sets either cannot run in
+// parallel with the package's other tests, but tests that need the same can
+// run with each other (S-0548). Each subtest is named for its function,
+// testX running as X.
+func together(t *testing.T, tests ...func(*testing.T)) {
+	t.Helper()
+	for _, test := range tests {
+		name := runtime.FuncForPC(reflect.ValueOf(test).Pointer()).Name()
+		t.Run(strings.TrimPrefix(name[strings.LastIndex(name, ".")+1:], "test"), func(t *testing.T) {
+			t.Parallel()
+			test(t)
+		})
+	}
+}
+
+// inEnv fails t unless the environment has key set to want, as the test
+// that runs t with together sets it.
+func inEnv(t *testing.T, key, want string) {
+	t.Helper()
+	if got := os.Getenv(key); got != want {
+		t.Fatalf("%s is %q, not %q: run this test with together from the test that sets it", key, got, want)
+	}
+}
 
 type fixture struct {
 	repo  *workitem.Repo
@@ -115,6 +161,7 @@ func (f *fixture) call(t *testing.T, name string, args any) (out map[string]any,
 }
 
 func TestToolsAreAdvertised(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	res, err := f.cs.ListTools(context.Background(), nil)
 	if err != nil {
@@ -192,6 +239,7 @@ func TestInboxReplyAndMirror(t *testing.T) {
 }
 
 func TestItemsAndRules(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	got, _ := f.call(t, "item_get", map[string]any{"id": "s-1"})
 	if got["id"] != f.story.ID || got["status"] != "in-progress" || len(got["children"].([]any)) != 1 || !strings.Contains(got["body"].(string), "## Goal") {
@@ -230,6 +278,7 @@ func TestItemsAndRules(t *testing.T) {
 // one, and a task, carry none; a kept state that cannot be read is said in
 // pull_request_error, and the item is still served.
 func TestItemGetCarriesTheKeptPullRequest(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	for _, id := range []string{f.story.ID, f.task.ID} {
 		got, failed := f.call(t, "item_get", map[string]any{"id": id})
@@ -279,6 +328,7 @@ func TestItemGetCarriesTheKeptPullRequest(t *testing.T) {
 }
 
 func TestDocumentsAndResources(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	doc, _ := f.call(t, "doc_get", map[string]any{"path": "design/system/plan.md"})
 	if doc["front_matter"] != "title: Plan\n" && !strings.Contains(doc["front_matter"].(string), "title: Plan") {
@@ -323,6 +373,7 @@ func TestDocumentsAndResources(t *testing.T) {
 // the designer replies (through the same package the CLI and dashboard use),
 // the wait returns within a second, and the inbox shows the thread.
 func TestDesignerReplyReachesAWaitingAgent(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	th, err := threads.New(f.repo, threads.NewOptions{Title: "Ready for review?", On: f.story.ID, Author: "claude", Text: "I think it is.", Now: t0})
 	if err != nil {
@@ -374,6 +425,7 @@ func TestDesignerReplyReachesAWaitingAgent(t *testing.T) {
 // story's agent waits for a sub-agent instead, in a project and across a
 // folder alike.
 func TestWaitForEventsSaysItDoesNotSeeASubAgentFinish(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	makeProject(t, filepath.Join(root, "alpha"), "alpha")
 	for name, cs := range map[string]*mcp.ClientSession{"a project": setup(t).cs, "a folder": folderSetup(t, root).cs} {
@@ -410,6 +462,7 @@ func TestWaitForEventsSaysItDoesNotSeeASubAgentFinish(t *testing.T) {
 // A story with no tasks moves to ready and in-progress through item_move and
 // is refused at review: the pulling agent writes the tasks (ADR-0021).
 func TestStoryWithoutTasksMovesUntilReview(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	s, err := f.repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "No tasks", Parent: f.story.Parent, Owner: "alex", Now: t0})
 	if err != nil {
@@ -459,6 +512,7 @@ func changeSummaries(out map[string]any, key string) (got []string) {
 // was not waiting, and still hears of it, once, and sees it as ready work
 // until it is pulled.
 func TestInboxReportsReadyWorkAndWhatOthersChanged(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	first, _ := f.call(t, "inbox", map[string]any{})
 	if len(first["ready"].([]any)) != 0 || first["can_pull"] != true {
@@ -504,6 +558,7 @@ func TestInboxReportsReadyWorkAndWhatOthersChanged(t *testing.T) {
 }
 
 func TestWaitForEventsReturnsWhatIsAlreadyBehindTheCursor(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" { // the agent looks, then goes away
 		t.Fatal(failed)
@@ -521,6 +576,7 @@ func TestWaitForEventsReturnsWhatIsAlreadyBehindTheCursor(t *testing.T) {
 }
 
 func TestWaitForEventsReportsAnEventWhileHeld(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
 		t.Fatal(failed)
@@ -549,6 +605,7 @@ func TestWaitForEventsReportsAnEventWhileHeld(t *testing.T) {
 // I-0059: wait_for_events holds for the timeout asked, up to 30 minutes,
 // and for a minute when none is asked.
 func TestWaitForEventsHoldsUpToTheLongestWait(t *testing.T) {
+	t.Parallel()
 	d := newDeadlines()
 	f := setupWith(t, func(o *Options) { o.MaxWait, o.After = 0, d.after })
 	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
@@ -565,6 +622,7 @@ func TestWaitForEventsHoldsUpToTheLongestWait(t *testing.T) {
 }
 
 func TestBoardToolMatchesTheSharedView(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	s := f.readyStory(t, "On the board", t0)
 	out, failed := f.call(t, "board", map[string]any{})
@@ -594,6 +652,7 @@ func TestBoardToolMatchesTheSharedView(t *testing.T) {
 // open story's as held, with the reason; the fixture's story is in progress
 // and touches flai/internal/mcpserver.
 func TestBoardAndInboxMarkHeldStories(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	held := f.readyStory(t, "Overlaps", t0, "flai/internal")
 	free := f.readyStory(t, "Elsewhere", t0)
@@ -626,6 +685,7 @@ func TestBoardAndInboxMarkHeldStories(t *testing.T) {
 }
 
 func TestPullOrderChangeIsReportedOnlyWhenPrioritiesChange(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		before, after []string
 		want          bool
@@ -664,6 +724,7 @@ func TestPullOrderChangeIsReportedOnlyWhenPrioritiesChange(t *testing.T) {
 // and 68 KB. A look is capped, the newest kept and the rest counted, a first
 // look leaves task transitions out, and the cursor passes all of it.
 func TestAFirstLookIsBoundedAndLeavesTasksOut(t *testing.T) {
+	t.Parallel()
 	// what the fixture alone holds for a first look: its own story and epic
 	quiet, _ := setup(t).call(t, "inbox", map[string]any{})
 	already := len(quiet["changes"].([]any))
@@ -713,6 +774,7 @@ func TestAFirstLookIsBoundedAndLeavesTasksOut(t *testing.T) {
 // With a cursor, task transitions are news again, and the cap still holds,
 // for wait_for_events as for inbox.
 func TestALaterLookReportsTasksAndIsStillCapped(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
 		t.Fatal(failed)
@@ -750,6 +812,7 @@ func TestALaterLookReportsTasksAndIsStillCapped(t *testing.T) {
 // S-0085: an agent is told when someone else edits an item, and what of it
 // changed; its own edits are not news to it; a waiting agent wakes for it.
 func TestAnEditBySomeoneElseReachesTheAgent(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	if out, _ := f.call(t, "inbox", map[string]any{}); out == nil {
 		t.Fatal("first look")
@@ -804,6 +867,7 @@ func TestAnEditBySomeoneElseReachesTheAgent(t *testing.T) {
 // told which paths changed, once, whoever accepted; a waiting agent wakes for
 // it, and the log is not shown to it as a path.
 func TestAnOverlapAtAcceptanceReachesTheAgent(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	if out, _ := f.call(t, "inbox", map[string]any{}); out == nil {
 		t.Fatal("first look")
@@ -856,6 +920,7 @@ func TestAnOverlapAtAcceptanceReachesTheAgent(t *testing.T) {
 // waiting agent, arrives with its fields, and the log is not shown to it as a
 // path.
 func TestALoggedEventWakesWaitForEvents(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	if out, _ := f.call(t, "inbox", map[string]any{}); out == nil {
 		t.Fatal("first look")
@@ -904,6 +969,18 @@ type eventKindCase struct {
 	write func(t *testing.T, repo *workitem.Repo, story string, at time.Time) string
 	// wrong says what is wrong with the event reported on id about story, or nothing
 	wrong func(e map[string]any, id, story string) string
+}
+
+// runAs runs t, the case's subtest, with FLAI_ROLE set to the case's role:
+// in parallel with the other cases when that is none, as TestMain leaves
+// it, and with t.Setenv, which keeps it serial, otherwise (S-0548).
+func (c eventKindCase) runAs(t *testing.T) {
+	t.Helper()
+	if c.role == "" {
+		t.Parallel()
+		return
+	}
+	t.Setenv("FLAI_ROLE", c.role)
 }
 
 // eventKindCases are the kinds flai serve and flai accept log, through
@@ -1058,9 +1135,10 @@ func agentEventCases() []eventKindCase {
 // is reported once, with its fields, for each to; the inbox after it does not
 // report it again.
 func TestAnAgentEventIsReportedOnceWhileWaitForEventsIsHeld(t *testing.T) {
+	t.Parallel()
 	for _, c := range agentEventCases() {
 		t.Run(c.name, func(t *testing.T) {
-			t.Setenv("FLAI_STORY", "")
+			t.Parallel()
 			f := setup(t)
 			if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
 				t.Fatal(failed)
@@ -1105,7 +1183,7 @@ func TestAnAgentEventIsReportedOnceWhileWaitForEventsIsHeld(t *testing.T) {
 // S-0532: an agent is not told of its own runs' events, through either tool,
 // but is told of another agent's beside them.
 func TestAnAgentIsNotToldOfItsOwnRuns(t *testing.T) {
-	t.Setenv("FLAI_STORY", "")
+	t.Parallel()
 	f := setup(t) // the server's agent is claude
 	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
 		t.Fatal(failed)
@@ -1168,8 +1246,7 @@ func eventsOf(tool string, out map[string]any) []any {
 func TestTheNewEventKindsReachWaitForEventsAndInbox(t *testing.T) {
 	for _, c := range eventKindCases {
 		t.Run(c.name, func(t *testing.T) {
-			t.Setenv("FLAI_STORY", "")
-			t.Setenv("FLAI_ROLE", c.role)
+			c.runAs(t)
 			f := setup(t)
 			if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
 				t.Fatal(failed)
@@ -1199,6 +1276,7 @@ func TestTheNewEventKindsReachWaitForEventsAndInbox(t *testing.T) {
 // ADR-0211: the instructions and the inbox's and wait_for_events's
 // descriptions name each kind it adds and its fields, in both modes.
 func TestTheNewEventKindsAreDescribed(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	makeProject(t, filepath.Join(root, "alpha"), "alpha")
 	wants := []string{"kind planned", "kind ready-empty", "fields room", "kind release-due", "fields before and after", "kind agent", "started, ended", "failed", "or stopped", "type role", "fields role", "and why", "without reading the serve journal", "not told of your own runs", "a story's agent may let them pass", "kind thread means a thread now awaits you, or, in the orchestrator's role, the operator", "awaits (your agent name, or operator) and on", "the conditions to-review and to-backlog qualify moved, draft-changed edited, and awaits-orchestrator thread"}
@@ -1228,6 +1306,7 @@ func TestTheNewEventKindsAreDescribed(t *testing.T) {
 
 // An overlap's summary names at most maxPaths paths; to has them all.
 func TestAnOverlapSummaryBoundsItsPaths(t *testing.T) {
+	t.Parallel()
 	var paths []string
 	for i := 0; i < maxPaths+3; i++ {
 		paths = append(paths, fmt.Sprintf("p/%d.go", i))
@@ -1243,6 +1322,7 @@ func TestAnOverlapSummaryBoundsItsPaths(t *testing.T) {
 // thread_get and the inbox; a source that names no file, or a heading not in
 // it, is refused. A caller that is not the orchestrator logs nothing.
 func TestAThreadReplyRecommendsCitingASource(t *testing.T) {
+	t.Parallel()
 	logged := 0
 	f := setupWith(t, func(o *Options) {
 		o.Activities = func(context.Context, string, string, string, []string, string) (ActivityLogged, error) {
@@ -1292,6 +1372,7 @@ func TestAThreadReplyRecommendsCitingASource(t *testing.T) {
 // the answer the operator gave last time, by its path; the source is
 // recorded as that path.
 func TestAThreadReplyMayCiteADigestEntry(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	entry := "design/digest/D-0001-split.md"
 	p := filepath.Join(f.repo.Root, filepath.FromSlash(entry))
@@ -1320,6 +1401,7 @@ func TestAThreadReplyMayCiteADigestEntry(t *testing.T) {
 // operator alone, which shows on the entry and the pending recommendation;
 // without recommendation it is refused, writing nothing.
 func TestAThreadReplyMarksARecommendationForTheOperatorAlone(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	th, err := threads.New(f.repo, threads.NewOptions{Title: "Buy a second host?", On: f.story.ID, Author: "agent-S-0001", Text: "Should I?", Now: t0})
 	if err != nil {
@@ -1352,8 +1434,8 @@ func TestAThreadReplyMarksARecommendationForTheOperatorAlone(t *testing.T) {
 // S-0220: the orchestrator's thread_reply is logged in its activity
 // document, saying whether it recommended or answered and what it cited,
 // with the thread's story as its item.
-func TestTheOrchestratorsThreadRepliesAreLoggedWithTheirSource(t *testing.T) {
-	t.Setenv("FLAI_ROLE", "orchestrate")
+func testTheOrchestratorsThreadRepliesAreLoggedWithTheirSource(t *testing.T) {
+	inEnv(t, "FLAI_ROLE", guard.RoleOrchestrate)
 	type call struct{ kind, summary, items, by string }
 	var got []call
 	f := setupWith(t, func(o *Options) {
@@ -1416,6 +1498,7 @@ func (f *fixture) digestEntries(t *testing.T) []string {
 // thread an agent opened is written as a digest entry at once, which the
 // result names; a later answer updates that entry.
 func TestAnOperatorsReplyBecomesADigestEntry(t *testing.T) {
+	t.Parallel()
 	var logs bytes.Buffer
 	f := ownersServer(t, "alex", &logs)
 	th, err := threads.New(f.repo, threads.NewOptions{Title: "Which library?", On: f.story.ID, Author: "claude", Text: "SDK or hand-rolled?", Now: t0})
@@ -1450,6 +1533,7 @@ func TestAnOperatorsReplyBecomesADigestEntry(t *testing.T) {
 // S-0433 criterion 1: an agent's reply, and the operator's reply on the
 // operator's own thread, write no entry, and the result has no digest.
 func TestOnlyTheOperatorsAnswerBecomesADigestEntry(t *testing.T) {
+	t.Parallel()
 	// the operator opens the thread: claude answers it, or alex replies on
 	// their own
 	for _, agent := range []string{"claude", "alex"} {
@@ -1473,6 +1557,7 @@ func TestOnlyTheOperatorsAnswerBecomesADigestEntry(t *testing.T) {
 // saved on the thread and written to no entry; the result's digest carries
 // the warning, which is logged at warn with the thread.
 func TestAnOperatorsAnswerThatCannotBeWrittenOnlyWarns(t *testing.T) {
+	t.Parallel()
 	var logs bytes.Buffer
 	f := ownersServer(t, "alex", &logs)
 	th, err := threads.New(f.repo, threads.NewOptions{Title: "Which key?", On: f.story.ID, Author: "claude", Text: "Which key do I use?", Now: t0})
@@ -1510,6 +1595,12 @@ func endFixture(t *testing.T, story, role string) (*fixture, *deadlines) {
 	// first story of its repository, S-0001, and FLAI_STORY is trimmed
 	t.Setenv("FLAI_STORY", story)
 	t.Setenv("FLAI_ROLE", role)
+	return endSetup(t)
+}
+
+// endSetup is endFixture in the environment as it is.
+func endSetup(t *testing.T) (*fixture, *deadlines) {
+	t.Helper()
 	d := newDeadlines()
 	f := setupWith(t, func(o *Options) { o.After = d.after })
 	if f.story.ID != "S-0001" {
@@ -1518,10 +1609,38 @@ func endFixture(t *testing.T, story, role string) (*fixture, *deadlines) {
 	return f, d
 }
 
-// storysAgent is endFixture for the fixture's story's agent.
+// storysAgentStory is FLAI_STORY as flai serve sets it for the fixture's
+// story's agent, untrimmed.
+const storysAgentStory = " S-0001\n"
+
+// TestAsTheStorysAgent runs the tests of the fixture's story's agent, as
+// together runs them, with FLAI_STORY storysAgentStory and no FLAI_ROLE:
+// set once here, so that they run in parallel with each other (S-0548).
+func TestAsTheStorysAgent(t *testing.T) {
+	t.Setenv("FLAI_STORY", storysAgentStory)
+	together(t,
+		testWaitForEventsEndsAStorysAgentWithOnlyItsQuestionPending,
+		testWaitForEventsReportsWhatIsBehindTheCursorWithEnd,
+		testWaitForEventsEndsOnAQuestionOnAStorysTask,
+		testWaitForEventsEndsWhileARecommendationAwaitsConfirmation,
+		testWaitForEventsHoldsAStorysAgentWithATaskInProgress,
+		testWaitForEventsHoldsOnceTheQuestionIsAnswered,
+		testWaitForEventsEndsAStorysAgentAwaitingAnotherStorysReply,
+		testWaitForEventsCountsNoSettledConversationAsAwaitingAReply,
+		testWaitForEventsEndsOnAThreadAndAConversation,
+		testWaitForEventsHoldsAStorysAgentAwaitingAReplyWithATaskInProgress,
+		testWaitForEventsHoldsWhileTheStoryOwesAReply,
+		testAStorysAgentIsNotToldItOwesASettledConversationAReply,
+	)
+}
+
+// storysAgent is endFixture for the fixture's story's agent, in
+// TestAsTheStorysAgent.
 func storysAgent(t *testing.T) (*fixture, *deadlines) {
 	t.Helper()
-	return endFixture(t, " S-0001\n", "")
+	inEnv(t, "FLAI_STORY", storysAgentStory)
+	inEnv(t, "FLAI_ROLE", "")
+	return endSetup(t)
 }
 
 // ask opens a thread on id as the agent and sets the agent's cursor after
@@ -1588,7 +1707,7 @@ func (f *fixture) holds(t *testing.T, d *deadlines) {
 // S-0272: a story's agent whose story has its question open to the designer
 // and no task in progress is told to end, with why naming the thread, at
 // once rather than held: flai serve starts it again on the answer.
-func TestWaitForEventsEndsAStorysAgentWithOnlyItsQuestionPending(t *testing.T) {
+func testWaitForEventsEndsAStorysAgentWithOnlyItsQuestionPending(t *testing.T) {
 	f, d := storysAgent(t)
 	th := f.ask(t, f.story.ID)
 	out := f.endsAtOnce(t, d)
@@ -1615,7 +1734,7 @@ func TestWaitForEventsEndsAStorysAgentWithOnlyItsQuestionPending(t *testing.T) {
 }
 
 // Events already behind the cursor come with end, so none is lost.
-func TestWaitForEventsReportsWhatIsBehindTheCursorWithEnd(t *testing.T) {
+func testWaitForEventsReportsWhatIsBehindTheCursorWithEnd(t *testing.T) {
 	f, d := storysAgent(t)
 	f.ask(t, f.story.ID)
 	*f.clock = t0.Add(10 * time.Minute)
@@ -1627,7 +1746,7 @@ func TestWaitForEventsReportsWhatIsBehindTheCursorWithEnd(t *testing.T) {
 }
 
 // A question on one of the story's tasks counts, as serve counts it.
-func TestWaitForEventsEndsOnAQuestionOnAStorysTask(t *testing.T) {
+func testWaitForEventsEndsOnAQuestionOnAStorysTask(t *testing.T) {
 	f, d := storysAgent(t)
 	th := f.ask(t, f.task.ID)
 	if why, _ := f.endsAtOnce(t, d)["why"].(string); !strings.Contains(why, th.ID) {
@@ -1637,7 +1756,7 @@ func TestWaitForEventsEndsOnAQuestionOnAStorysTask(t *testing.T) {
 
 // A recommendation on the agent's question awaits the operator's
 // confirmation and is no answer yet (ADR-0090): the agent still ends.
-func TestWaitForEventsEndsWhileARecommendationAwaitsConfirmation(t *testing.T) {
+func testWaitForEventsEndsWhileARecommendationAwaitsConfirmation(t *testing.T) {
 	f, d := storysAgent(t)
 	th := f.ask(t, f.story.ID)
 	if _, err := threads.ReplyWith(f.repo, th.ID, "orchestrator", "B.", t0.Add(time.Minute), threads.Marks{Recommendation: true}); err != nil {
@@ -1649,7 +1768,7 @@ func TestWaitForEventsEndsWhileARecommendationAwaitsConfirmation(t *testing.T) {
 }
 
 // With a task of the story in progress the agent has work in hand: it holds.
-func TestWaitForEventsHoldsAStorysAgentWithATaskInProgress(t *testing.T) {
+func testWaitForEventsHoldsAStorysAgentWithATaskInProgress(t *testing.T) {
 	f, d := storysAgent(t)
 	for _, to := range []string{workitem.Ready, workitem.InProgress} {
 		task, _ := f.repo.Get(f.task.ID)
@@ -1664,7 +1783,7 @@ func TestWaitForEventsHoldsAStorysAgentWithATaskInProgress(t *testing.T) {
 // An answered question awaits nothing: the agent is told of the answer once,
 // as a thread change (ADR-0211 §5), rather than told to end, then holds, and
 // so does it once the thread is resolved.
-func TestWaitForEventsHoldsOnceTheQuestionIsAnswered(t *testing.T) {
+func testWaitForEventsHoldsOnceTheQuestionIsAnswered(t *testing.T) {
 	f, d := storysAgent(t)
 	th := f.ask(t, f.story.ID)
 	if _, err := threads.Reply(f.repo, th.ID, "alex", "B.", t0.Add(time.Minute)); err != nil {
@@ -1732,7 +1851,7 @@ func (f *fixture) send(t *testing.T, from, to string) *messages.Conversation {
 // conversation and the story it waits on: flai serve starts it again on the
 // reply or a new message to its story. The reply, when it comes, is an event
 // and keeps the hold, so it is never swallowed by an end.
-func TestWaitForEventsEndsAStorysAgentAwaitingAnotherStorysReply(t *testing.T) {
+func testWaitForEventsEndsAStorysAgentAwaitingAnotherStorysReply(t *testing.T) {
 	f, d := storysAgent(t)
 	other := f.otherInProgress(t)
 	c := f.send(t, f.story.ID, other.ID)
@@ -1761,7 +1880,7 @@ func TestWaitForEventsEndsAStorysAgentAwaitingAnotherStorysReply(t *testing.T) {
 // A settled conversation awaits neither story (ADR-0154): alone, it does
 // not end the wait, and beside a question to the designer, why names only
 // the question.
-func TestWaitForEventsCountsNoSettledConversationAsAwaitingAReply(t *testing.T) {
+func testWaitForEventsCountsNoSettledConversationAsAwaitingAReply(t *testing.T) {
 	f, d := storysAgent(t)
 	other := f.otherInProgress(t)
 	c := f.send(t, f.story.ID, other.ID)
@@ -1783,7 +1902,7 @@ func TestWaitForEventsCountsNoSettledConversationAsAwaitingAReply(t *testing.T) 
 
 // A question to the designer and a message awaiting another story: why
 // names both.
-func TestWaitForEventsEndsOnAThreadAndAConversation(t *testing.T) {
+func testWaitForEventsEndsOnAThreadAndAConversation(t *testing.T) {
 	f, d := storysAgent(t)
 	other := f.otherInProgress(t)
 	th := f.ask(t, f.story.ID)
@@ -1796,7 +1915,7 @@ func TestWaitForEventsEndsOnAThreadAndAConversation(t *testing.T) {
 
 // With a task of the story in progress the agent has work in hand: it holds
 // while its message awaits the other story.
-func TestWaitForEventsHoldsAStorysAgentAwaitingAReplyWithATaskInProgress(t *testing.T) {
+func testWaitForEventsHoldsAStorysAgentAwaitingAReplyWithATaskInProgress(t *testing.T) {
 	f, d := storysAgent(t)
 	for _, to := range []string{workitem.Ready, workitem.InProgress} {
 		task, _ := f.repo.Get(f.task.ID)
@@ -1824,7 +1943,7 @@ func TestWaitForEventsHoldsOutsideAStorysAgentAwaitingAReply(t *testing.T) {
 
 // A message to the story awaiting its own reply is work it owes: the agent
 // holds, whatever else awaits others, and ends once it has replied.
-func TestWaitForEventsHoldsWhileTheStoryOwesAReply(t *testing.T) {
+func testWaitForEventsHoldsWhileTheStoryOwesAReply(t *testing.T) {
 	f, d := storysAgent(t)
 	other := f.otherInProgress(t)
 	f.ask(t, f.story.ID)
@@ -1859,6 +1978,7 @@ func (r headRunner) Run(dir, name string, args ...string) (string, error) {
 // batch and its step. Under pull-request acceptance the queue is off, with
 // the reason, and lists no story.
 func TestBoardToolCarriesTheMergeQueue(t *testing.T) {
+	t.Parallel()
 	const head = "0123456789abcdef0123456789abcdef01234567"
 	runner := headRunner{head: head}
 	f := setupWith(t, func(o *Options) { o.Runner = runner })

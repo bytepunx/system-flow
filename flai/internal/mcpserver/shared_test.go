@@ -21,10 +21,10 @@ const sharedManifest = "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n
 // tools must read the list as it is now.
 func sharedFixture(t *testing.T, served string) *fixture {
 	t.Helper()
-	for _, v := range []string{"FLAI_ROLE", "FLAI_STORY"} {
-		t.Setenv(v, "")
+	if served != "" {
+		// TestMain cleared it, and the rest of sessionEnv, for the others
+		t.Setenv(guard.StartedByEnv, served)
 	}
-	t.Setenv(guard.StartedByEnv, served)
 	f := setup(t)
 	if err := os.WriteFile(f.manifest(), []byte(sharedManifest), 0o644); err != nil {
 		t.Fatal(err)
@@ -58,6 +58,7 @@ func entries(es []SharedEntry) string {
 // S-0295, ADR-0096: shared_paths lists the patterns, the invalid ones with
 // why, and checks paths and touches entries, a component read as its path.
 func TestSharedPathsListsAndChecksPaths(t *testing.T) {
+	t.Parallel()
 	f := sharedFixture(t, "")
 	out, failed := f.call(t, "shared_paths", map[string]any{})
 	if failed != "" {
@@ -95,6 +96,7 @@ func TestSharedPathsListsAndChecksPaths(t *testing.T) {
 // shared_paths checks a story's claim entry by entry, as its hold reads it:
 // its touches, a component as its path, and its open tasks' touches.
 func TestSharedPathsChecksAStorysClaim(t *testing.T) {
+	t.Parallel()
 	f := sharedFixture(t, "")
 	story, err := f.repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "Shared", Owner: "alex", Touches: []string{"design/adrs", "cli"}, Now: t0})
 	if err != nil {
@@ -127,6 +129,7 @@ func TestSharedPathsChecksAStorysClaim(t *testing.T) {
 // shared_paths_edit adds and removes patterns, rewriting the list alone and
 // keeping its comment, and returns what changed and the list after.
 func TestSharedPathsEditAddsAndRemoves(t *testing.T) {
+	t.Parallel()
 	f := sharedFixture(t, "")
 	out, failed := f.call(t, "shared_paths_edit", map[string]any{"add": []string{"template/CHANGELOG.md", "design/**/README.md"}})
 	if failed != "" {
@@ -159,6 +162,7 @@ func TestSharedPathsEditAddsAndRemoves(t *testing.T) {
 // not listed is refused with flai's reason, and nothing is written, not even
 // what the call's other half would have changed.
 func TestSharedPathsEditRefusesWhatIsNotValid(t *testing.T) {
+	t.Parallel()
 	f := sharedFixture(t, "")
 	for _, c := range []struct {
 		args map[string]any

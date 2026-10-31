@@ -53,6 +53,7 @@ func criteria(t *testing.T, out map[string]any) string {
 // changes those boxes and nothing else, the box in the notes left alone;
 // nothing is committed, and the answer lists the criteria after the write.
 func TestCriteriaTickTicksAndUnticksByNumber(t *testing.T) {
+	t.Parallel()
 	f, before := criteriaFixture(t)
 	got, _ := f.call(t, "item_get", map[string]any{"id": f.story.ID})
 	hash := got["hash"].(string)
@@ -102,6 +103,7 @@ func TestCriteriaTickTicksAndUnticksByNumber(t *testing.T) {
 // S-0282: a number with no box, a stale hash, and a closed or archived item
 // are refused, and nothing is written.
 func TestCriteriaTickRefusesWithoutWriting(t *testing.T) {
+	t.Parallel()
 	f, before := criteriaFixture(t)
 	got, _ := f.call(t, "item_get", map[string]any{"id": f.story.ID})
 	hash := got["hash"].(string)
@@ -167,6 +169,7 @@ func TestCriteriaTickRefusesWithoutWriting(t *testing.T) {
 // itemedit's seam between them, which its own tests use; here the started
 // story is there before the tick, as the tool meets it a moment later.
 func TestCriteriaTickStandsBesideAStoryJustStarted(t *testing.T) {
+	t.Parallel()
 	f, _ := criteriaFixture(t)
 	other, err := f.repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "Other", Owner: "bob", Now: t0,
 		Body: "## Goal\n\nG.\n\n## Acceptance criteria\n- [ ] it works\n\n## Tasks\n\n## Notes\n"})

@@ -20,6 +20,7 @@ import (
 // naming it. S-0203: the story is a draft carrying the issue's cost of delay
 // inputs, and the issue's Remediation section names it.
 func TestIssueStoryMakesAStoryFromAnOpenIssue(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	defect, err := issues.New(f.repo, issues.NewOptions{Title: "Fixture was ignored", Class: "defect", Cost: "20m", Now: t0})
 	if err != nil {
@@ -87,6 +88,7 @@ func TestIssueStoryMakesAStoryFromAnOpenIssue(t *testing.T) {
 // story and its epic, as the CLI does, and the issue keeps it; a story made
 // from an issue with no usage has none.
 func TestIssueStoryCarriesTheIssuesStrategicUsage(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	epic := f.story.Parent
 	for _, title := range []string{"Review waits a day", "Fixture was ignored"} {
@@ -134,6 +136,7 @@ func TestIssueStoryCarriesTheIssuesStrategicUsage(t *testing.T) {
 // it recorded are until it is accepted, and names the story there (S-0203);
 // the story is made in the main wip.
 func TestIssueStoryReadsAStorysWorktree(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	wt := *f.repo
 	wt.Root = f.repo.WorktreePath(f.story.ID)
@@ -166,7 +169,7 @@ func TestIssueStoryReadsAStorysWorktree(t *testing.T) {
 // bumps the open issue rather than open a second, and from the same report it
 // changes nothing. issue_story then carries the impact over.
 func TestIssueNewFilesAFindingAndBumpsAnOpenIssueOfTheSameTitle(t *testing.T) {
-	t.Setenv("FLAI_STORY", "")
+	t.Parallel()
 	f := setup(t)
 	finding := map[string]any{"title": "Review waits a day for the operator", "class": "efficiency", "cost": "30m",
 		"time_lost_per_cycle": "6h", "revenue_per_week": 1200, "evidence": "12 stories waited 18h on average in review",
@@ -247,7 +250,7 @@ func TestIssueNewFilesAFindingAndBumpsAnOpenIssueOfTheSameTitle(t *testing.T) {
 // issue under another title: it links the report and replaces the figures it
 // gives in the Impact section, keeping the others.
 func TestIssueBumpLinksAReportAndUpdatesTheImpact(t *testing.T) {
-	t.Setenv("FLAI_STORY", "")
+	t.Parallel()
 	f := setup(t)
 	if _, err := issues.New(f.repo, issues.NewOptions{Title: "Releases slip", Class: "defect", Cost: "20m",
 		Impact: issues.Impact{RevenuePerWeek: "100", TimeLostPerCycle: "2h"}, Now: t0}); err != nil {
@@ -284,7 +287,7 @@ func TestIssueBumpLinksAReportAndUpdatesTheImpact(t *testing.T) {
 // S-0224: issue_new and issue_bump refuse what flai issue new and bump
 // refuse, with the same errors, and write nothing.
 func TestIssueNewAndBumpRefuseAndWriteNothing(t *testing.T) {
-	t.Setenv("FLAI_STORY", "")
+	t.Parallel()
 	f := setup(t)
 	for _, c := range []struct {
 		args map[string]any
@@ -370,10 +373,23 @@ func TestIssueNewRecordsForTheSessionsStoryInItsWorktree(t *testing.T) {
 	}
 }
 
+// TestWithAGitIdentity runs the tests that commit with real git on a
+// story's branch, as together runs them, with git isolated and given an
+// identity: set once here, so that they run in parallel with each other
+// (S-0548).
+func TestWithAGitIdentity(t *testing.T) {
+	gittest.Identity(t, "t", "t@t")
+	together(t,
+		testAdrNewCommitsOnTheStorysBranch,
+		testIssueToolsCommitOnTheStorysBranch,
+		testCommitIsRefusedOffTheStorysBranch,
+	)
+}
+
 // storyGit makes f's project a git repository whose main branch holds it,
 // with ADR 0001 and an ADR index, and checks the story's branch out in its
 // worktree, which it returns as the project there. Integration: it runs real
-// git.
+// git, in TestWithAGitIdentity.
 func storyGit(t *testing.T, f *fixture) *workitem.Repo {
 	t.Helper()
 	if testing.Short() {
@@ -382,7 +398,9 @@ func storyGit(t *testing.T, f *fixture) *workitem.Repo {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	gittest.Identity(t, "t", "t@t")
+	if os.Getenv("GIT_CONFIG_GLOBAL") == "" {
+		t.Fatal("git is not isolated: run this test from TestWithAGitIdentity")
+	}
 	root := f.repo.Root
 	writeIn(t, root, ".gitignore", ".flai-cache/\n")
 	writeIn(t, root, "design/adrs/0001-first.md", adrDoc("0001", "First"))
@@ -431,8 +449,7 @@ func strs(v any) []string {
 // the story's worktree, commit the issue and summary.md, and only those, on
 // the story's branch with the story's prefix and the trailers, and widen the
 // story's touches; an occurrence already recorded commits nothing.
-func TestIssueToolsCommitOnTheStorysBranch(t *testing.T) {
-	t.Setenv("FLAI_STORY", "")
+func testIssueToolsCommitOnTheStorysBranch(t *testing.T) {
 	f := setup(t)
 	wt := storyGit(t, f)
 	writeIn(t, wt.Root, "design/system/plan.md", "---\ntitle: Plan\n---\n\n# Plan\n\nhalf done\n")
@@ -521,8 +538,7 @@ func TestIssueToolsCommitOnTheStorysBranch(t *testing.T) {
 
 // S-0275: commit is refused, and nothing is written, when the story's
 // worktree does not have the story's branch checked out.
-func TestCommitIsRefusedOffTheStorysBranch(t *testing.T) {
-	t.Setenv("FLAI_STORY", "")
+func testCommitIsRefusedOffTheStorysBranch(t *testing.T) {
 	f := setup(t)
 	wt := storyGit(t, f)
 	gitIn(t, wt.Root, "checkout", "-q", "-b", "elsewhere")
@@ -546,7 +562,7 @@ func TestCommitIsRefusedOffTheStorysBranch(t *testing.T) {
 // S-0275: commit is refused before anything is written when no story
 // resolves, and when the story has no worktree, by every tool that takes it.
 func TestCommitIsRefusedWithoutAStoryOrItsWorktree(t *testing.T) {
-	t.Setenv("FLAI_STORY", "")
+	t.Parallel()
 	f := setup(t)
 	if _, err := issues.New(f.repo, issues.NewOptions{Title: "Kept as it was", Class: "efficiency", Now: t0}); err != nil {
 		t.Fatal(err)
@@ -590,7 +606,7 @@ func TestCommitIsRefusedWithoutAStoryOrItsWorktree(t *testing.T) {
 // worktree when the story has one, regenerating its summary there, and in the
 // project otherwise, as flai issue close does; nothing is committed.
 func TestIssueCloseClosesInTheStorysWorktreeOrTheProject(t *testing.T) {
-	t.Setenv("FLAI_STORY", "")
+	t.Parallel()
 	f := setup(t)
 	wt := *f.repo
 	wt.Root = f.repo.WorktreePath(f.story.ID)

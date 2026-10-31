@@ -14,6 +14,7 @@ import (
 // started on the host, on an item or on none, with inputs, and the host
 // judges whether it may, its refusals coming back as the tool's errors.
 func TestADefinedRoleIsStartedThroughTheServer(t *testing.T) {
+	t.Parallel()
 	type call struct {
 		root, name, item string
 		inputs           []harness.Input
@@ -54,6 +55,7 @@ func TestADefinedRoleIsStartedThroughTheServer(t *testing.T) {
 }
 
 func TestAServerThatCannotStartARoleSaysHow(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	if _, failed := f.call(t, "role_run", map[string]any{"name": "reviewer", "item": "S-0042", "inputs": []map[string]any{{"name": "focus", "value": "docs"}}}); !strings.Contains(failed, "this flai mcp cannot start a role; on the host run flai role run reviewer S-0042 --input focus=docs") {
 		t.Errorf("without a starter: %q", failed)

@@ -18,6 +18,7 @@ import (
 // S-0195, ADR-0067: publishing is the operator's, so the instructions give
 // no agent a duty to push, in a project or in a folder of them.
 func TestTheInstructionsGiveNoDutyToPush(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	makeProject(t, filepath.Join(root, "alpha"), "alpha")
 	for name, in := range map[string]string{
@@ -41,6 +42,7 @@ func TestTheInstructionsGiveNoDutyToPush(t *testing.T) {
 // yet published, on every call while it is true, so that whoever the
 // operator asks to publish can tell what is pending; never as unpushed.
 func TestInboxAndBoardReportWhatIsUnpublished(t *testing.T) {
+	t.Parallel()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}

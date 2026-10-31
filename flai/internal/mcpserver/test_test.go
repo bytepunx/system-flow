@@ -131,6 +131,7 @@ func answer(t *testing.T, out map[string]any) testAnswer {
 // findings, for passing ones it answers pass, and every tier the paths do not
 // select stays out of the answer.
 func TestTestAnswersPassOrTheFirstFindings(t *testing.T) {
+	t.Parallel()
 	f, _ := testFixture(t)
 	res, err := f.cs.ListTools(context.Background(), nil)
 	if err != nil {
@@ -174,6 +175,7 @@ func TestTestAnswersPassOrTheFirstFindings(t *testing.T) {
 // against main and what it has not committed; with none it runs in the main
 // checkout. A story without a worktree is refused, saying how to open one.
 func TestTestRunsInTheStorysWorktree(t *testing.T) {
+	t.Parallel()
 	f, git := testFixture(t)
 	root := f.repo.Root
 	wt := f.repo.WorktreePath(f.story.ID)
@@ -256,6 +258,7 @@ const i0141Problem = `tests[0].command (tier "ok") argument {dependents} is not 
 // versions and the upgrade, rather than telling the agent to fix the
 // manifest; a flai at that release refuses them naming the fix.
 func TestTestSaysTheFlaiIsOlderThanTheProjectWhenTheTiersRefuse(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		version string
 		want    []string
@@ -284,6 +287,7 @@ func TestTestSaysTheFlaiIsOlderThanTheProjectWhenTheTiersRefuse(t *testing.T) {
 // S-0273: a call cancelled while a tier runs stops the tier's processes and
 // answers at once rather than when the tier would have finished.
 func TestTestStopsTheTierWhenTheCallIsCancelled(t *testing.T) {
+	t.Parallel()
 	f, _ := testFixture(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()

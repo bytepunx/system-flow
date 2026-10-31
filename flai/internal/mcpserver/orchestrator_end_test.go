@@ -82,7 +82,7 @@ func TestWaitForEventsHoldsAnOrchestratorWithNoReasons(t *testing.T) {
 func TestWaitForEventsReasonsLeaveAStorysAgentAlone(t *testing.T) {
 	t.Run("holds", func(t *testing.T) {
 		t.Setenv(harness.ReasonsEnv, "ready-empty")
-		f, d := storysAgent(t)
+		f, d := endFixture(t, storysAgentStory, "")
 		if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
 			t.Fatal(failed)
 		}
@@ -90,7 +90,7 @@ func TestWaitForEventsReasonsLeaveAStorysAgentAlone(t *testing.T) {
 	})
 	t.Run("ends on its question", func(t *testing.T) {
 		t.Setenv(harness.ReasonsEnv, "ready-empty")
-		f, d := storysAgent(t)
+		f, d := endFixture(t, storysAgentStory, "")
 		th := f.ask(t, f.story.ID)
 		why, _ := f.endsAtOnce(t, d)["why"].(string)
 		if why == "reasons done" || !strings.Contains(why, th.ID) {

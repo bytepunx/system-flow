@@ -11,6 +11,7 @@ import (
 // with a focus or none, and the host judges whether it may; a focus the
 // analyzer does not take never reaches the host.
 func TestTheAnalyzerIsStartedThroughTheServer(t *testing.T) {
+	t.Parallel()
 	type call struct{ root, focus, by string }
 	var got []call
 	running := false
@@ -49,6 +50,7 @@ func TestTheAnalyzerIsStartedThroughTheServer(t *testing.T) {
 }
 
 func TestAServerThatCannotStartTheAnalyzerSaysHow(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	if _, failed := f.call(t, "analyze", map[string]any{"focus": "intent"}); !strings.Contains(failed, "this flai mcp cannot start the analyzer; on the host run flai analyze --focus intent") {
 		t.Errorf("without a starter: %q", failed)

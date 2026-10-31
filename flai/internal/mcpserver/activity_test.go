@@ -11,6 +11,7 @@ import (
 // S-0206, ADR-0079: a strategic agent reports an activity and gets back the
 // entry flai measured and the document's totals.
 func TestAStrategicAgentLogsAnActivityThroughTheServer(t *testing.T) {
+	t.Parallel()
 	type call struct {
 		root, kind, summary, items, by string
 	}
@@ -48,6 +49,7 @@ func TestAStrategicAgentLogsAnActivityThroughTheServer(t *testing.T) {
 }
 
 func TestAnActivityWithoutAKindOrASummaryIsRefused(t *testing.T) {
+	t.Parallel()
 	called := false
 	f := setupWith(t, func(o *Options) {
 		o.Activities = func(context.Context, string, string, string, []string, string) (ActivityLogged, error) {
@@ -67,6 +69,7 @@ func TestAnActivityWithoutAKindOrASummaryIsRefused(t *testing.T) {
 }
 
 func TestAServerThatCannotLogActivitiesSaysSo(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	if _, failed := f.call(t, "activity_log", map[string]any{"kind": "planner", "summary": "Planned S-0001"}); !strings.Contains(failed, "cannot log activities") {
 		t.Errorf("without a logger: %q", failed)
@@ -76,6 +79,7 @@ func TestAServerThatCannotLogActivitiesSaysSo(t *testing.T) {
 // S-0417, ADR-0207: activity_log takes a role the project defines, by its
 // name, as its kind, and refuses any other, naming the defined ones.
 func TestActivityLogTakesADefinedRolesName(t *testing.T) {
+	t.Parallel()
 	var kinds []string
 	f := setupWith(t, func(o *Options) {
 		o.Activities = func(_ context.Context, _, kind, summary string, items []string, _ string) (ActivityLogged, error) {

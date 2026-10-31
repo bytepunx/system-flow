@@ -64,6 +64,7 @@ func (f *fixture) limitInProgress(t *testing.T, n int) {
 // S-0097: an agent whose own story is still in progress is sent back to it,
 // not to a new one.
 func TestWaitForWorkResumesYourOwnStory(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	f.readyStory(t, "Next", t0)
 	out := answered(t, f.held(t, 3))
@@ -75,6 +76,7 @@ func TestWaitForWorkResumesYourOwnStory(t *testing.T) {
 // Criterion 3: nothing ready, so it waits; a story made ready is returned to
 // pull within a second.
 func TestWaitForWorkWaitsForAStoryToBeReady(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	f.toReview(t)
 	quiet, _ := f.call(t, "wait_for_work", map[string]any{"timeout_seconds": 1})
@@ -97,6 +99,7 @@ func TestWaitForWorkWaitsForAStoryToBeReady(t *testing.T) {
 // I-0059: wait_for_work holds for the timeout asked, up to 30 minutes, and
 // for five minutes when none is asked.
 func TestWaitForWorkHoldsUpToTheLongestWait(t *testing.T) {
+	t.Parallel()
 	d := newDeadlines()
 	f := setupWith(t, func(o *Options) { o.MaxWait, o.After = 0, d.after })
 	f.toReview(t)
@@ -113,6 +116,7 @@ func TestWaitForWorkHoldsUpToTheLongestWait(t *testing.T) {
 // pull order; with the in-progress limit full it waits for room, and answers
 // once another agent's story leaves in-progress.
 func TestWaitForWorkWaitsForRoomUnderTheLimit(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	f.toReview(t)
 	first := f.readyStory(t, "First", t0)
@@ -162,6 +166,7 @@ func (f *fixture) limits(t *testing.T, inProgress, review int) {
 // room the in-progress limit leaves: wait_for_work waits for review and says
 // why, inbox says the same, and a story is offered once one leaves review.
 func TestWaitForWorkWaitsWhileReviewIsFull(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	f.toReview(t) // the fixture's story is the one in review
 	next := f.readyStory(t, "Next", t0)
@@ -214,6 +219,7 @@ func TestWaitForWorkWaitsWhileReviewIsFull(t *testing.T) {
 // waits, says so, and offers the held one as soon as it is clear. Another
 // agent's story, in progress, touches flai/internal/mcpserver.
 func TestWaitForWorkPassesOverAHeldStory(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	f.toReview(t)
 	theirs := f.readyStory(t, "Theirs", t0, "flai/internal/mcpserver")
@@ -263,6 +269,7 @@ func TestWaitForWorkPassesOverAHeldStory(t *testing.T) {
 // touching flai/internal/mcpserver, is not held, and wait_for_work offers it
 // first.
 func TestWaitForWorkOffersAStoryOverlappingOnlyOneInReview(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	f.toReview(t)
 	over := f.readyStory(t, "Over", t0, "flai/internal")
@@ -281,6 +288,7 @@ func TestWaitForWorkOffersAStoryOverlappingOnlyOneInReview(t *testing.T) {
 // S-0130: a ready story that names, in after:, a story not yet done is
 // passed over, and the ready list says what it waits for.
 func TestWaitForWorkPassesOverAStoryWaitingForAnother(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	f.toReview(t)
 	waits := f.readyStory(t, "Waits", t0)
@@ -307,6 +315,7 @@ func TestWaitForWorkPassesOverAStoryWaitingForAnother(t *testing.T) {
 
 // S-0128: item_move warns on a held story and moves it all the same.
 func TestItemMoveWarnsOnAHeldStory(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	held := f.readyStory(t, "Held", t0, "flai/internal/mcpserver/work.go")
 	out, failed := f.call(t, "item_move", map[string]any{"id": held.ID, "to": "in-progress"})
@@ -351,6 +360,7 @@ func TestWaitForWorkWakesForAThreadWrittenWhileWaiting(t *testing.T) {
 // in its inbox, and wait_for_work is not woken by it; the confirmation is the
 // answer, and it is.
 func TestARecommendationIsNoAnswerToTheAgentThatAskedUntilConfirmed(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	f.toReview(t)
 	th, err := threads.New(f.repo, threads.NewOptions{Title: "Which port?", On: f.story.ID, Author: "claude", Text: "Eight or nine?", Now: t0})
@@ -399,6 +409,7 @@ func TestARecommendationIsNoAnswerToTheAgentThatAskedUntilConfirmed(t *testing.T
 // S-0220: a plain answer citing a source, as the orchestrator gives with
 // answer_threads autonomous, is an answer: the agent that asked goes on.
 func TestAnAnswerWithASourceIsAnAnswerToTheAgentThatAsked(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	th, err := threads.New(f.repo, threads.NewOptions{Title: "Which port?", On: f.story.ID, Author: "claude", Text: "Eight or nine?", Now: t0})
 	if err != nil {

@@ -26,6 +26,7 @@ func (r *statusRunner) Run(dir, name string, args ...string) (string, error) {
 // naming it, and moves it once the worktree is clean. The server hands its
 // runner to the repo, so the rule asks git as flai move does.
 func TestItemMoveRefusesReviewWithUncommittedWork(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	git := &statusRunner{status: "?? docs/left.md\n M flai/cmd/move.go"}
 	New(Options{Repo: f.repo, Runner: git})

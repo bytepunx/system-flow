@@ -36,6 +36,7 @@ func (f *fixture) readyUnderBacklogEpic(t *testing.T) (epic, story *workitem.Ite
 }
 
 func TestItemMoveReportsTheEpicThatFollowed(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	epic, story := f.readyUnderBacklogEpic(t)
 	*f.clock = t0.Add(2 * time.Minute)
@@ -56,6 +57,7 @@ func TestItemMoveReportsTheEpicThatFollowed(t *testing.T) {
 }
 
 func TestItemMoveThatLeavesItsEpicReportsNoFollowed(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	if e, _ := f.repo.Get(f.story.Parent); e.Status != workitem.InProgress {
 		t.Fatalf("the fixture's epic is %s, want in-progress with its story", e.Status)
@@ -74,6 +76,7 @@ func TestItemMoveThatLeavesItsEpicReportsNoFollowed(t *testing.T) {
 // Another actor's story move takes its epic along: the agent's inbox says
 // which story each of the epic's moves followed.
 func TestInboxSaysWhichStoryAnEpicFollowed(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	epic, story := f.readyUnderBacklogEpic(t)
 	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {

@@ -9,6 +9,7 @@ import (
 // agent learns of each cancellation with its cause, and its own cancellation
 // through item_move reports what went with it.
 func TestACascadedCancellationNamesItsCause(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
 		t.Fatal(failed)
@@ -45,6 +46,7 @@ func TestACascadedCancellationNamesItsCause(t *testing.T) {
 }
 
 func TestItemMoveToCancelledReportsWhatWentWithIt(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	*f.clock = t0.Add(2 * time.Minute)
 	out, failed := f.call(t, "item_move", map[string]any{"id": "S-0001", "to": "cancelled", "reason": "not needed"})

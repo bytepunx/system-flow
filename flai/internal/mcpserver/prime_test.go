@@ -20,6 +20,7 @@ import (
 
 // S-0138: prime returns the context pack flai prime --story --json prints.
 func TestPrimeReturnsTheStorysContextPack(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	conv := filepath.Join(f.repo.Root, "design", "conventions")
 	if err := os.MkdirAll(conv, 0o755); err != nil {
@@ -53,8 +54,12 @@ func TestPrimeReturnsTheStorysContextPack(t *testing.T) {
 	}
 }
 
-// Every story in this repository gets a pack the tool's output schema accepts.
+// Every story in this repository gets a pack the tool's output schema
+// accepts. Each story is primed in a subtest of its own, all at once on the
+// one session, as the server answers calls concurrently: a pack of this
+// repository takes seconds to build under -race.
 func TestPrimeOnThisRepository(t *testing.T) {
+	t.Parallel()
 	f := thisRepository(t)
 	items, err := f.repo.List(false)
 	if err != nil {
@@ -66,9 +71,12 @@ func TestPrimeOnThisRepository(t *testing.T) {
 			continue
 		}
 		n++
-		if out, failed := f.call(t, "prime", map[string]any{"story": it.ID}); failed != "" || out["story"] != it.ID {
-			t.Errorf("%s: %s", it.ID, failed)
-		}
+		t.Run(it.ID, func(t *testing.T) {
+			t.Parallel()
+			if out, failed := f.call(t, "prime", map[string]any{"story": it.ID}); failed != "" || out["story"] != it.ID {
+				t.Errorf("%s: %s", it.ID, failed)
+			}
+		})
 	}
 	if n == 0 {
 		t.Skip("no open story in the monorepo")
@@ -79,58 +87,80 @@ func TestPrimeOnThisRepository(t *testing.T) {
 // to a file instead of showing it, and this repository's packs encode to
 // more than that whole. The prime tool returns them in parts, each at most
 // ctxpack.PartLimit bytes as the server sends it, and refuses a part past
-// the last.
+// the last. Every call builds the whole pack again, seconds under -race, so
+// each pack is a subtest of its own, and once part 1 has said how many parts
+// there are, the whole pack, the other parts, and the part past the last are
+// asked for at once.
 func TestPrimeComesInPartsOnThisRepository(t *testing.T) {
+	t.Parallel()
 	f := thisRepository(t)
 	const resultLimit = 50000 // what Claude Code shows of a tool result
 	for _, c := range []struct {
+		name  string
 		in    map[string]any
 		whole func() (*ctxpack.Pack, error)
 	}{
-		{map[string]any{"story": "S-0205"}, func() (*ctxpack.Pack, error) { return ctxpack.ForStory(f.repo, "S-0205", "") }},
-		{map[string]any{"story": "S-0210"}, func() (*ctxpack.Pack, error) { return ctxpack.ForStory(f.repo, "S-0210", "") }},
-		{map[string]any{"story": "S-0211"}, func() (*ctxpack.Pack, error) { return ctxpack.ForStory(f.repo, "S-0211", "") }},
-		{map[string]any{"story": "S-0261"}, func() (*ctxpack.Pack, error) { return ctxpack.ForStory(f.repo, "S-0261", "") }},
-		{map[string]any{"role": "plan", "story": "S-0261"}, func() (*ctxpack.Pack, error) {
+		{"S-0205", map[string]any{"story": "S-0205"}, func() (*ctxpack.Pack, error) { return ctxpack.ForStory(f.repo, "S-0205", "") }},
+		{"S-0210", map[string]any{"story": "S-0210"}, func() (*ctxpack.Pack, error) { return ctxpack.ForStory(f.repo, "S-0210", "") }},
+		{"S-0211", map[string]any{"story": "S-0211"}, func() (*ctxpack.Pack, error) { return ctxpack.ForStory(f.repo, "S-0211", "") }},
+		{"S-0261", map[string]any{"story": "S-0261"}, func() (*ctxpack.Pack, error) { return ctxpack.ForStory(f.repo, "S-0261", "") }},
+		{"plan S-0261", map[string]any{"role": "plan", "story": "S-0261"}, func() (*ctxpack.Pack, error) {
 			return ctxpack.ForStrategic(f.repo, "plan", "", "S-0261", "")
 		}},
 	} {
-		whole, err := c.whole()
-		if err != nil {
-			t.Errorf("%v: %v", c.in, err)
-			continue
-		}
-		if data, _ := json.Marshal(whole); len(data) <= resultLimit {
-			t.Errorf("%v: the whole pack is %d bytes, not over the %d a tool result shows; this test no longer shows I-0068's cause", c.in, len(data), resultLimit)
-		}
-		parts := 0
-		for n := 1; n == 1 || n <= parts; n++ {
-			in := maps.Clone(c.in)
-			if n > 1 {
-				in["part"] = n
-			}
-			out, text, failed := f.callText(t, "prime", in)
-			if failed != "" {
-				t.Fatalf("%v part %d: %s", c.in, n, failed)
-			}
-			if n == 1 {
-				p, _ := out["parts"].(float64)
-				if parts = int(p); parts < 2 {
-					t.Errorf("%v: part 1 says %v parts, want more than 1", c.in, out["parts"])
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			// check asks for part n, or for part 1 when n is 0, and checks
+			// it says it is part n of parts; it returns the parts it says.
+			check := func(t *testing.T, n, parts int) int {
+				in := maps.Clone(c.in)
+				if n > 1 {
+					in["part"] = n
 				}
+				out, text, failed := f.callText(t, "prime", in)
+				if failed != "" {
+					t.Fatalf("%v part %d: %s", c.in, n, failed)
+				}
+				if n == 1 {
+					p, _ := out["parts"].(float64)
+					if parts = int(p); parts < 2 {
+						t.Errorf("%v: part 1 says %v parts, want more than 1", c.in, out["parts"])
+					}
+				}
+				if out["part"] != float64(n) || out["parts"] != float64(parts) {
+					t.Errorf("%v part %d: says part %v of %v", c.in, n, out["part"], out["parts"])
+				}
+				if len(text) > ctxpack.PartLimit {
+					t.Errorf("%v part %d: %d bytes as sent, over %d", c.in, n, len(text), ctxpack.PartLimit)
+				}
+				return parts
 			}
-			if out["part"] != float64(n) || out["parts"] != float64(parts) {
-				t.Errorf("%v part %d: says part %v of %v", c.in, n, out["part"], out["parts"])
+			parts := check(t, 1, 0)
+			t.Run("whole", func(t *testing.T) {
+				t.Parallel()
+				whole, err := c.whole()
+				if err != nil {
+					t.Fatalf("%v: %v", c.in, err)
+				}
+				if data, _ := json.Marshal(whole); len(data) <= resultLimit {
+					t.Errorf("%v: the whole pack is %d bytes, not over the %d a tool result shows; this test no longer shows I-0068's cause", c.in, len(data), resultLimit)
+				}
+			})
+			for n := 2; n <= parts; n++ {
+				t.Run(fmt.Sprintf("part %d", n), func(t *testing.T) {
+					t.Parallel()
+					check(t, n, parts)
+				})
 			}
-			if len(text) > ctxpack.PartLimit {
-				t.Errorf("%v part %d: %d bytes as sent, over %d", c.in, n, len(text), ctxpack.PartLimit)
-			}
-		}
-		in := maps.Clone(c.in)
-		in["part"] = parts + 1
-		if _, _, failed := f.callText(t, "prime", in); !strings.Contains(failed, fmt.Sprintf("give part 1 to %d", parts)) {
-			t.Errorf("%v part %d: %q, want it refused", c.in, parts+1, failed)
-		}
+			t.Run("past the last", func(t *testing.T) {
+				t.Parallel()
+				in := maps.Clone(c.in)
+				in["part"] = parts + 1
+				if _, _, failed := f.callText(t, "prime", in); !strings.Contains(failed, fmt.Sprintf("give part 1 to %d", parts)) {
+					t.Errorf("%v part %d: %q, want it refused", c.in, parts+1, failed)
+				}
+			})
+		})
 	}
 }
 
@@ -187,6 +217,7 @@ func (f *fixture) callText(t *testing.T, name string, args any) (out map[string]
 // S-0175, ADR-0059, ADR-0068: prime with a role returns a sub-agent's pack,
 // with the conventions whose roles are empty or list the role.
 func TestPrimeWithARole(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	conv := filepath.Join(f.repo.Root, "design", "conventions")
 	if err := os.MkdirAll(conv, 0o755); err != nil {
@@ -221,6 +252,7 @@ func TestPrimeWithARole(t *testing.T) {
 // names the defined roles for a role no file defines, and refuses a role
 // file that does not parse with its finding.
 func TestPrimeForARoleTheProjectDefines(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	write := func(rel, s string) {
 		p := filepath.Join(f.repo.Root, filepath.FromSlash(rel))
@@ -273,6 +305,7 @@ func TestPrimeForARoleTheProjectDefines(t *testing.T) {
 // an epic or a story, and the orchestrator's and the analyzer's for the
 // whole project, with the conventions whose roles are empty or list it.
 func TestPrimeForAStrategicRole(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	conv := filepath.Join(f.repo.Root, "design", "conventions")
 	if err := os.MkdirAll(conv, 0o755); err != nil {
@@ -334,6 +367,7 @@ func TestPrimeForAStrategicRole(t *testing.T) {
 // for it, marked digest with the reason thread TH-nnnn; rank 1, ahead of a
 // newer answer sharing fewer of its words.
 func TestPrimeForTheOrchestratorLoadsTheDigestsAnswers(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	write := func(rel, s string) {
 		p := filepath.Join(f.repo.Root, filepath.FromSlash(rel))
@@ -420,6 +454,7 @@ func primeReasons(t *testing.T, pad int) (*fixture, *threads.Thread) {
 // reasons do not need left out, and per reason what it loads, the thread
 // and its story for a thread reason, with no catalog.
 func TestPrimeForTheOrchestratorsReasonsComesInParts(t *testing.T) {
+	t.Parallel()
 	f, th := primeReasons(t, 1000)
 	in := map[string]any{"role": "orchestrate", "reasons": []string{"thread:th-1"}}
 	want := []any{"thread:" + th.ID}
@@ -475,6 +510,7 @@ func TestPrimeForTheOrchestratorsReasonsComesInParts(t *testing.T) {
 // ADR-0217 §1, S-0537 criterion 1: prime takes every kind of reason with
 // role orchestrate, each named on the pack and on what it loads.
 func TestPrimeTakesEveryKindOfReason(t *testing.T) {
+	t.Parallel()
 	f, th := primeReasons(t, 0)
 	for _, reason := range []string{"thread:" + th.ID, "review:" + f.story.ID, "planned:" + f.story.Parent, "planned:" + f.story.ID, "draft:" + f.story.ID, "release", "ready"} {
 		out, failed := f.call(t, "prime", map[string]any{"role": "orchestrate", "reasons": []string{reason}})
@@ -503,6 +539,7 @@ func TestPrimeTakesEveryKindOfReason(t *testing.T) {
 // than orchestrate and with a story or an epic, saying what to give, and an
 // unknown reason naming the forms a reason takes.
 func TestPrimeRefusesReasonsItCannotTake(t *testing.T) {
+	t.Parallel()
 	f, _ := primeReasons(t, 0)
 	for _, c := range []struct {
 		in   map[string]any

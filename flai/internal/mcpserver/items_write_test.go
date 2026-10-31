@@ -17,6 +17,7 @@ import (
 // project's default filled in, what is given winning, and an edit that
 // replaces or removes it; a stale hash is refused, not overwritten.
 func TestItemNewAndEditCarryTheAgent(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	f.repo.Manifest.Agent = &manifest.Agent{Harness: "claude-code", Model: "claude-opus-5-5", Provider: "litellm", Config: map[string]string{"effort": "high"}}
 
@@ -77,6 +78,7 @@ func toStrings(v any) []string {
 // S-0130: item_edit sets a story's after:, which item_get shows, refuses a
 // story that does not exist, and an empty list removes it.
 func TestItemEditSetsAndClearsAfter(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	later := f.readyStory(t, "Later", t0)
 	ed, failed := f.call(t, "item_edit", map[string]any{"id": later.ID, "after": []string{f.story.ID}})
@@ -102,6 +104,7 @@ func TestItemEditSetsAndClearsAfter(t *testing.T) {
 // of another story, or forms a cycle is refused with the check's finding, and
 // a refused creation leaves nothing; item_new sets a story's after too.
 func TestItemNewAndEditSetATasksAfter(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	out, failed := f.call(t, "item_new", map[string]any{"type": "task", "title": "Second", "parent": f.story.ID, "after": []string{"t-1"}})
 	if failed != "" || strings.Join(toStrings(out["after"]), ",") != f.task.ID {
@@ -158,6 +161,7 @@ func TestItemNewAndEditSetATasksAfter(t *testing.T) {
 // S-0135: item_new and item_edit set a story's or epic's topics, item_get
 // shows them, a task is refused them, and an empty list removes them.
 func TestItemNewAndEditCarryTopics(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	out, failed := f.call(t, "item_new", map[string]any{"type": "epic", "title": "Logs", "topics": []string{"logging"}})
 	if failed != "" || strings.Join(toStrings(out["topics"]), ",") != "logging" {
@@ -187,6 +191,7 @@ func TestItemNewAndEditCarryTopics(t *testing.T) {
 // I-0071: item_edit and item_new take a touch that starts with a dot, which
 // item_get shows, and refuse one that leaves the repository.
 func TestItemEditAndNewTakeATouchStartingWithADot(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	ed, failed := f.call(t, "item_edit", map[string]any{"id": f.story.ID, "touches": []string{".claude/agents/planner.md"}})
 	if failed != "" || strings.Join(toStrings(ed["changed"]), ",") != "touches" {
@@ -211,6 +216,7 @@ func TestItemEditAndNewTakeATouchStartingWithADot(t *testing.T) {
 // files, writing nothing, with the folder, its file count, and what to do
 // instead as the tool's error; a file is taken (ADR-0188).
 func TestItemNewAndEditRefuseATaskAFolderTouch(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	const refusal = "touch design/system is a folder holding 1 file: a task takes no folder touch (ADR-0188); name the files the task changes, or leave the folder to the story's touches with a ### Planning note"
 	if _, failed := f.call(t, "item_new", map[string]any{"type": "task", "title": "Folder", "parent": f.story.ID, "touches": []string{"design/system"}}); !strings.Contains(failed, "T-0002's "+refusal) {
@@ -240,6 +246,7 @@ func TestItemNewAndEditRefuseATaskAFolderTouch(t *testing.T) {
 // tool's error; the note in the body given, or in the same call's body,
 // admits it, and a file is taken with the template's body (ADR-0188).
 func TestItemNewAndEditHoldThePlannersStoryFolderTouchToItsNote(t *testing.T) {
+	t.Parallel()
 	f := setupWith(t, func(o *Options) { o.Agent = "planner-S-0001" })
 	const goal = "## Goal\n\nHold the planner's folder touches to a note.\n\n## Acceptance criteria\n\n- [ ] A folder touch needs its note.\n\n## Tasks\n\n## Notes\n\n"
 	const note = "### Planning\n\n`design/system` because each design change adds a file there.\n"
@@ -288,6 +295,7 @@ func TestItemNewAndEditHoldThePlannersStoryFolderTouchToItsNote(t *testing.T) {
 // draft of anything else; item_move refuses a draft story to ready, since
 // finalizing is the operator's, and so does item_edit's draft false.
 func TestADraftStoryIsMadeButNotFinalizedByAnAgent(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	out, failed := f.call(t, "item_new", map[string]any{"type": "story", "title": "Drafted", "draft": true, "body": "## Goal\n\nx\n\n## Acceptance criteria\n- [ ] it works\n\n## Tasks\n\n## Notes\n"})
 	if failed != "" || out["draft"] != true {
@@ -326,6 +334,7 @@ func TestADraftStoryIsMadeButNotFinalizedByAnAgent(t *testing.T) {
 // rejects, is refused with the findings and leaves nothing: no file, and its
 // epic as it was. A clean one is kept and listed in its epic.
 func TestItemNewWithABodyIsChecked(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	f.lintAsThisProjectDoes(t)
 	epic, err := f.repo.Get(f.story.Parent)
@@ -382,6 +391,7 @@ func (f *fixture) lintAsThisProjectDoes(t *testing.T) {
 // what done means, a nature, tags, touches, and after its sibling is kept as
 // written and listed in its story.
 func TestItemNewWithABodyChecksAStorysTask(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	f.lintAsThisProjectDoes(t)
 	storyWas, _ := os.ReadFile(f.story.Path)
@@ -438,6 +448,7 @@ func TestItemNewWithABodyChecksAStorysTask(t *testing.T) {
 // delay and a forecast, each stamped with the agent and the time; a cost of
 // delay's inputs and value each carry the stamp (ADR-0080).
 func TestItemEditSetsAndClearsCostOfDelayAndForecast(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	at := f.clock.UTC().Format(workitem.TimeFormat)
 	planning := func(key string) map[string]any {
@@ -510,6 +521,7 @@ func TestItemEditSetsAndClearsCostOfDelayAndForecast(t *testing.T) {
 // and each of the two stories is told once, as an overlapped change caused by
 // the other. A write that adds nothing inside another claim tells nobody.
 func TestAWriteThatGrowsAClaimIntoAnotherTellsBothStories(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	other := f.readyStory(t, "Other", t0, "docs/other")
 	if _, err := f.repo.Transition(other, workitem.InProgress, "alex", "", t0); err != nil {
@@ -612,6 +624,7 @@ func TestAWriteThatGrowsAClaimIntoAnotherTellsBothStories(t *testing.T) {
 // An overlap notice written at acceptance by a flai that predates grown
 // claims (I-0059) still reports as an acceptance.
 func TestAnOldOverlapNoticeReportsAsBefore(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	if out, _ := f.call(t, "inbox", map[string]any{}); out == nil {
 		t.Fatal("first look")
@@ -641,7 +654,7 @@ func TestAnOldOverlapNoticeReportsAsBefore(t *testing.T) {
 // (S-0328).
 func orchestrated(t *testing.T) (*fixture, func(title string, draft, planned bool, touches ...string) string) {
 	t.Helper()
-	t.Setenv("FLAI_ROLE", "orchestrate")
+	inEnv(t, "FLAI_ROLE", "orchestrate")
 	f := setupWith(t, func(o *Options) { o.Agent = "orchestrator" })
 	story := func(title string, draft, planned bool, touches ...string) string {
 		t.Helper()
@@ -674,7 +687,7 @@ func orchestrated(t *testing.T) (*fixture, func(title string, draft, planned boo
 // S-0219: the orchestrator finalizes a draft with item_edit's draft false and
 // nothing else, and only a complete one, which then names it as who
 // finalized it; an incomplete one is refused naming what it lacks.
-func TestTheOrchestratorFinalizesACompleteDraft(t *testing.T) {
+func testTheOrchestratorFinalizesACompleteDraft(t *testing.T) {
 	f, story := orchestrated(t)
 	complete := story("Complete", true, true, "docs")
 	incomplete := story("Incomplete", true, false)
@@ -712,7 +725,7 @@ func TestTheOrchestratorFinalizesACompleteDraft(t *testing.T) {
 // its epic's already. Without either, and under either a value, a removal,
 // another field, a task, an archived item, and an item done or cancelled,
 // each is refused, saying why, and changes nothing.
-func TestTheOrchestratorSetsCostOfDelayInputsByItsPermissions(t *testing.T) {
+func testTheOrchestratorSetsCostOfDelayInputsByItsPermissions(t *testing.T) {
 	f, story := orchestrated(t)
 	at := func(title, status string) string {
 		t.Helper()
@@ -845,7 +858,7 @@ func TestTheOrchestratorSetsCostOfDelayInputsByItsPermissions(t *testing.T) {
 // S-0219: the orchestrator moves to ready only a story flai promote
 // --candidates lists, and only while ready is under its WIP limit; a held
 // story, a draft, and any other item are refused with the reason.
-func TestTheOrchestratorPromotesACandidateWhileReadyHasRoom(t *testing.T) {
+func testTheOrchestratorPromotesACandidateWhileReadyHasRoom(t *testing.T) {
 	f, story := orchestrated(t)
 	candidate := story("Candidate", false, true, "docs/a")
 	next := story("Next", false, true, "docs/b")

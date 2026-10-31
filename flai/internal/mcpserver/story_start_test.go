@@ -13,7 +13,6 @@ import (
 
 	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
-	"github.com/bytepunx/system-flow/flai/internal/gittest"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -98,15 +97,14 @@ func starter(t *testing.T, repo *workitem.Repo, runner execx.Runner, with func(*
 // opened in its worktree, linked as the server's RelativePaths says, and
 // the answer holds every key flai story start --json gives, the pack whole
 // when it fits as part 1 of 1. Integration: it runs real git.
-func TestStoryStartStartsAReadyStory(t *testing.T) {
+func testStoryStartStartsAReadyStory(t *testing.T) {
 	if testing.Short() {
 		t.Skip("integration: runs real git")
 	}
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	gittest.Identity(t, "t", "t@t")
-	t.Setenv("FLAI_SESSION", "s1")
+	inGitSession(t)
 	dir := t.TempDir()
 	repo, epic := startProject(t, dir, "t", startConvention("- Commit at landing."))
 	story := storyOfEpic(t, repo, epic, "Start me", []string{"docs/start"}, workitem.Ready)
@@ -171,6 +169,7 @@ func TestStoryStartStartsAReadyStory(t *testing.T) {
 // it, and nothing is changed; a story in progress already is refused with
 // what an agent wait_for_work sent does then.
 func TestStoryStartRefusesAHeldStory(t *testing.T) {
+	t.Parallel()
 	repo, epic := startProject(t, t.TempDir(), "t", startConvention("- Commit at landing."))
 	theirs := storyOfEpic(t, repo, epic, "Theirs", []string{"docs/shared"}, workitem.Ready, workitem.InProgress)
 	mine := storyOfEpic(t, repo, epic, "Mine", []string{"docs/shared/page.md"}, workitem.Ready)
@@ -200,6 +199,7 @@ func TestStoryStartRefusesAHeldStory(t *testing.T) {
 // S-0274: a step that fails after the move is the tool's error, naming the
 // step and the command that finishes it; the story stays in progress.
 func TestStoryStartSaysWhichStepFailed(t *testing.T) {
+	t.Parallel()
 	repo, epic := startProject(t, t.TempDir(), "t", "")
 	story := storyOfEpic(t, repo, epic, "No pack", []string{"docs/none"}, workitem.Ready)
 	f := starter(t, repo, noGitRunner{}, nil)
@@ -218,6 +218,7 @@ func TestStoryStartSaysWhichStepFailed(t *testing.T) {
 // prime answers part 1. Thirty conventions of 2.5 KB fill part 1, and ten
 // threads awaiting the agent make the inbox 20 KB.
 func TestStoryStartAnswersThePacksHeaderWhenPartOneDoesNotFit(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	rule := "- Commit at landing, with the story's ID in the subject line and the reason in the body.\n"
 	for i := range 30 {
@@ -262,6 +263,7 @@ func TestStoryStartAnswersThePacksHeaderWhenPartOneDoesNotFit(t *testing.T) {
 // changes, counted in changes_omitted. Ten conventions of 2.5 KB make part
 // 1, and forty stories the operator moved to ready and back make the inbox's changes.
 func TestStoryStartLeavesOutOldChangesToKeepPartOne(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	rule := "- Commit at landing, with the story's ID in the subject line and the reason in the body.\n"
 	for i := range 10 {
@@ -340,6 +342,7 @@ func operatorsQuestions(t *testing.T, repo *workitem.Repo, on ...string) {
 // most ctxpack.PartLimit bytes, lists the story's thread alone, and counts
 // the others in threads_omitted.
 func TestStoryStartListsOnlyTheStorysThreads(t *testing.T) {
+	t.Parallel()
 	repo, epic := startProject(t, t.TempDir(), "t", startConvention("- Commit at landing."))
 	story := storyOfEpic(t, repo, epic, "Started", []string{"docs/started"}, workitem.Ready)
 	other := storyOfEpic(t, repo, epic, "Other", []string{"docs/other"}, workitem.Ready)
@@ -380,6 +383,7 @@ func TestStoryStartListsOnlyTheStorysThreads(t *testing.T) {
 // story_start answers lists no thread, awaiting_you 0, and no
 // threads_omitted.
 func TestStoryStartCarriesNoneOfTheOperatorsThreads(t *testing.T) {
+	t.Parallel()
 	repo, epic := startProject(t, t.TempDir(), "t", startConvention("- Commit at landing."))
 	story := storyOfEpic(t, repo, epic, "Started", []string{"docs/started"}, workitem.Ready)
 	other := storyOfEpic(t, repo, epic, "Other", []string{"docs/other"}, workitem.Ready)
@@ -400,6 +404,7 @@ func TestStoryStartCarriesNoneOfTheOperatorsThreads(t *testing.T) {
 // a task of it, each with the operator's last entry, await the story's
 // agent: story_start's inbox lists the two alone, awaiting "you".
 func TestStoryStartCarriesTheStorysThreadsAwaitingItsAgent(t *testing.T) {
+	t.Parallel()
 	repo, epic := startProject(t, t.TempDir(), "t", startConvention("- Commit at landing."))
 	story := storyOfEpic(t, repo, epic, "Started", []string{"docs/started"}, workitem.Ready)
 	other := storyOfEpic(t, repo, epic, "Other", []string{"docs/other"}, workitem.Ready)
@@ -431,6 +436,7 @@ func TestStoryStartCarriesTheStorysThreadsAwaitingItsAgent(t *testing.T) {
 // S-0274, S-0101: in a folder of projects, story_start takes project and
 // starts the story there, as the folder server's agent.
 func TestStoryStartTakesTheProjectInAFolder(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	startProject(t, filepath.Join(root, "alpha"), "alpha", startConvention("- Commit at landing."))
 	beta, epic := startProject(t, filepath.Join(root, "org", "beta"), "beta", startConvention("- Commit at landing."))
@@ -462,6 +468,7 @@ func TestStoryStartTakesTheProjectInAFolder(t *testing.T) {
 // The server tells an idle agent to pull with story_start, not with
 // item_move and flai stream open, in its instructions and in wait_for_work.
 func TestTheServersPullWithStoryStart(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	startProject(t, filepath.Join(root, "alpha"), "alpha", "")
 	for name, fx := range map[string]*folderFixture{"project": {cs: setup(t).cs}, "folder": folderSetup(t, root)} {

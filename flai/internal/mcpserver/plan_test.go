@@ -12,6 +12,7 @@ import (
 // names the trigger the run recorded, the thread with it for the
 // orchestrator's run on an item planned before (S-0524, ADR-0222).
 func TestThePlannerIsStartedThroughTheServer(t *testing.T) {
+	t.Parallel()
 	type call struct{ root, item, by string }
 	var got []call
 	f := setupWith(t, func(o *Options) {
@@ -65,6 +66,7 @@ func TestThePlannerIsStartedThroughTheServer(t *testing.T) {
 // stories it may ask for, those planned before included, and that its run
 // records it as who asked, with the thread for those.
 func TestThePlanToolSaysWhatTheOrchestratorMayPlan(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	res, err := f.cs.ListTools(context.Background(), nil)
 	if err != nil {
@@ -85,6 +87,7 @@ func TestThePlanToolSaysWhatTheOrchestratorMayPlan(t *testing.T) {
 }
 
 func TestAServerThatCannotStartThePlannerSaysHow(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	if _, failed := f.call(t, "plan", map[string]any{"id": "e-16"}); !strings.Contains(failed, "this flai mcp cannot start the planner; on the host run flai plan E-0016") {
 		t.Errorf("without a starter: %q", failed)

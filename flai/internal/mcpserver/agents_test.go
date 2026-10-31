@@ -10,6 +10,7 @@ import (
 // S-0177, ADR-0064: an operator's own agent can have a story's agent started
 // or restarted on the host, which judges whether it may.
 func TestAStorysAgentIsStartedThroughTheServer(t *testing.T) {
+	t.Parallel()
 	type call struct{ verb, root, story, by string }
 	var got []call
 	f := setupWith(t, func(o *Options) {
@@ -38,6 +39,7 @@ func TestAStorysAgentIsStartedThroughTheServer(t *testing.T) {
 }
 
 func TestAServerThatCannotStartAgentsSaysHow(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	if _, failed := f.call(t, "agent_restart", map[string]any{"story": "S-0001"}); !strings.Contains(failed, "flai serve agent restart S-0001") {
 		t.Errorf("without a starter: %q", failed)

@@ -24,10 +24,10 @@ const subprojectManifest = "version: 1\nname: t\nkey: t\nlayout:\n  design: desi
 // manifest as it is now.
 func subprojectFixture(t *testing.T, served string) *fixture {
 	t.Helper()
-	for _, v := range []string{"FLAI_ROLE", "FLAI_STORY"} {
-		t.Setenv(v, "")
+	if served != "" {
+		// TestMain cleared it, and the rest of sessionEnv, for the others
+		t.Setenv(guard.StartedByEnv, served)
 	}
-	t.Setenv(guard.StartedByEnv, served)
 	f := setup(t)
 	if err := os.WriteFile(f.manifest(), []byte(subprojectManifest), 0o644); err != nil {
 		t.Fatal(err)

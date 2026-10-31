@@ -50,6 +50,7 @@ func (l *lockedBuffer) answered(t *testing.T) map[string]map[string]any {
 }
 
 func TestEachToolCallIsTimedBeneathTheTransport(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644)
 	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive"} {
@@ -95,6 +96,7 @@ func TestEachToolCallIsTimedBeneathTheTransport(t *testing.T) {
 
 // inbox lists the items once for the board and the changes (S-0156).
 func TestInboxListsItemsOnce(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644)
 	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive"} {
@@ -139,6 +141,7 @@ func TestInboxListsItemsOnce(t *testing.T) {
 // I-0059: a wait holds for what it asked, up to LongestWait, and for its
 // default when it did not ask.
 func TestHoldFor(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		seconds int
 		def     time.Duration
@@ -268,6 +271,7 @@ func checkHolds(t *testing.T, d *deadlines, call func(args map[string]any) map[s
 // call (Claude Code: 30 minutes over stdio, 5 over HTTP) keeps it; a call
 // without one gets none.
 func TestHeldWaitsSendProgress(t *testing.T) {
+	t.Parallel()
 	var opt Options
 	setupWith(t, func(o *Options) {
 		o.Heartbeat, o.MaxWait = 20*time.Millisecond, 300*time.Millisecond

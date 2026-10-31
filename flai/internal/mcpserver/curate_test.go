@@ -10,6 +10,7 @@ import (
 // S-0431: an operator's own agent can have the curator started on the host,
 // with a since or none, and the host judges whether it may.
 func TestTheCuratorIsStartedThroughTheServer(t *testing.T) {
+	t.Parallel()
 	type call struct{ root, since, by string }
 	var got []call
 	running := false
@@ -41,6 +42,7 @@ func TestTheCuratorIsStartedThroughTheServer(t *testing.T) {
 }
 
 func TestAServerThatCannotStartTheCuratorSaysHow(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	if _, failed := f.call(t, "curate", map[string]any{"since": "2026-10-01"}); !strings.Contains(failed, "this flai mcp cannot start the curator; on the host run flai curate --since 2026-10-01") {
 		t.Errorf("without a starter: %q", failed)

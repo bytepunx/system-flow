@@ -151,6 +151,7 @@ func projectKeys(out map[string]any) []string {
 // project in it and below it, and nothing else: not a hidden folder (story
 // worktrees live in .flai-cache), not a folder with no manifest.
 func TestAFolderServesEveryProjectBelowIt(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	alpha := makeProject(t, filepath.Join(root, "alpha"), "alpha")
 	makeProject(t, filepath.Join(root, "org", "beta"), "beta")
@@ -214,6 +215,7 @@ func TestAFolderServesEveryProjectBelowIt(t *testing.T) {
 // wait_for_work looks across every project: it waits when nothing is ready
 // anywhere and hands over a story made ready in any of them, with its project.
 func TestWaitForWorkAcrossAFolder(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	makeProject(t, filepath.Join(root, "alpha"), "alpha")
 	beta := makeProject(t, filepath.Join(root, "beta"), "beta")
@@ -247,6 +249,7 @@ func TestWaitForWorkAcrossAFolder(t *testing.T) {
 // that way while TestWaitForWorkAcrossAFolder held its wait, and a loaded host
 // widened the window until a poll fell into it.
 func TestAHeldWaitFailsOnATruncatedStory(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	makeProject(t, filepath.Join(root, "alpha"), "alpha")
 	beta := makeProject(t, filepath.Join(root, "beta"), "beta")
@@ -274,6 +277,7 @@ func TestAHeldWaitFailsOnATruncatedStory(t *testing.T) {
 // S-0128: across a folder, wait_for_work passes over a held story to the
 // first clear one in any project, and says so when only held ones are left.
 func TestWaitForWorkAcrossAFolderSkipsHeldStories(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	alpha := makeProject(t, filepath.Join(root, "alpha"), "alpha")
 	beta := makeProject(t, filepath.Join(root, "beta"), "beta")
@@ -311,6 +315,7 @@ func TestWaitForWorkAcrossAFolderSkipsHeldStories(t *testing.T) {
 // I-0059: across a folder too, wait_for_work and wait_for_events hold for
 // the timeout asked, up to 30 minutes, and for their defaults when none is.
 func TestWaitsAcrossAFolderHoldUpToTheLongestWait(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	makeProject(t, filepath.Join(root, "alpha"), "alpha")
 	d := newDeadlines()
@@ -333,6 +338,7 @@ func TestWaitsAcrossAFolderHoldUpToTheLongestWait(t *testing.T) {
 
 // wait_for_events names the project each event happened in.
 func TestWaitForEventsAcrossAFolder(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	makeProject(t, filepath.Join(root, "alpha"), "alpha")
 	beta := makeProject(t, filepath.Join(root, "beta"), "beta")
@@ -376,8 +382,7 @@ func TestWaitForEventsAcrossAFolder(t *testing.T) {
 func TestTheNewEventKindsReachWaitForEventsAndInboxAcrossAFolder(t *testing.T) {
 	for _, c := range eventKindCases {
 		t.Run(c.name, func(t *testing.T) {
-			t.Setenv("FLAI_STORY", "")
-			t.Setenv("FLAI_ROLE", c.role)
+			c.runAs(t)
 			root := t.TempDir()
 			makeProject(t, filepath.Join(root, "alpha"), "alpha")
 			beta := makeProject(t, filepath.Join(root, "beta"), "beta")
@@ -421,6 +426,7 @@ func TestTheNewEventKindsReachWaitForEventsAndInboxAcrossAFolder(t *testing.T) {
 
 // An empty folder is served too: nothing to show, and it says why.
 func TestAnEmptyFolderIsServed(t *testing.T) {
+	t.Parallel()
 	f := folderSetup(t, t.TempDir())
 	out, failed := f.call(t, "inbox", map[string]any{})
 	if failed != "" || len(out["projects"].([]any)) != 0 {
@@ -436,6 +442,7 @@ func TestAnEmptyFolderIsServed(t *testing.T) {
 
 // With one project, naming another is a mistake worth saying.
 func TestASingleProjectServerRefusesAnotherProject(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	if _, failed := f.call(t, "item_get", map[string]any{"id": f.story.ID, "project": "elsewhere"}); !strings.Contains(failed, "serves only t") {
 		t.Errorf("another project: %q", failed)
@@ -450,6 +457,7 @@ func TestASingleProjectServerRefusesAnotherProject(t *testing.T) {
 // it clears; no project's own inbox repeats it, and the instructions tell an
 // agent to hold rather than retry.
 func TestAFolderInboxCarriesTheHostsBudgetOnce(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	makeProject(t, filepath.Join(root, "alpha"), "alpha")
 	makeProject(t, filepath.Join(root, "beta"), "beta")
