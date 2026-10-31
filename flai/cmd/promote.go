@@ -19,9 +19,9 @@ each draft story in the backlog and what it lacks to be finalized.
 
 A backlog story is a candidate when it is not a draft, meets the definition of
 ready (a goal, acceptance criteria with a checkbox, and an epic that is not
-cancelled), would not be held if it were ready (it declares touches that
-overlap no story in progress or in review, and every story it names in after:
-is done), and has a forecast duration and a cost of delay value.
+cancelled), would not be held if it were ready (every story in progress its touches
+overlap has a branch that a trial merge at its base finds clean, and every
+story it names in after: is done), and has a forecast duration and a cost of delay value.
 
 The candidates are ordered by orchestration.policy in system-flow.yaml, fifo
 when it is not set, as flai order --by orders the ready column, and each is

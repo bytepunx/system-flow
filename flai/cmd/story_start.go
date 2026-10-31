@@ -41,7 +41,8 @@ The steps run in this order:
    the others, which flai thread list lists.
 
 A story that is not ready, or that the board holds (its claim overlaps a
-story in progress, or it names in after: a story that is not done), is
+story in progress whose branch a trial merge at its base finds conflicting,
+or it names in after: a story that is not done), is
 refused and nothing changes. The agent is FLAI_AGENT and the session
 FLAI_SESSION; FLAI_AGENT records the move and names whose inbox is read.
 

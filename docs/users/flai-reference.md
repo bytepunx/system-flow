@@ -3136,7 +3136,7 @@ flai promote --candidates | --drafts [flags]
 
 List the backlog stories that could go to ready, ordered by the project's policy, and say why each other backlog story cannot; or, with --drafts, list each draft story in the backlog and what it lacks to be finalized.
 
-A backlog story is a candidate when it is not a draft, meets the definition of ready (a goal, acceptance criteria with a checkbox, and an epic that is not cancelled), would not be held if it were ready (it declares touches that overlap no story in progress or in review, and every story it names in after: is done), and has a forecast duration and a cost of delay value.
+A backlog story is a candidate when it is not a draft, meets the definition of ready (a goal, acceptance criteria with a checkbox, and an epic that is not cancelled), would not be held if it were ready (every story in progress its touches overlap has a branch that a trial merge at its base finds clean, and every story it names in after: is done), and has a forecast duration and a cost of delay value.
 
 The candidates are ordered by orchestration.policy in system-flow.yaml, fifo when it is not set, as flai order --by orders the ready column, and each is printed with the figure it was ordered by. Every other backlog story is printed with each reason it is not a candidate.
 
@@ -4428,7 +4428,7 @@ Start a ready story in one call (S-0274), in place of the four calls an agent ma
    the others, which flai thread list lists.
 ```
 
-A story that is not ready, or that the board holds (its claim overlaps a story in progress, or it names in after: a story that is not done), is refused and nothing changes. The agent is FLAI\_AGENT and the session FLAI\_SESSION; FLAI\_AGENT records the move and names whose inbox is read.
+A story that is not ready, or that the board holds (its claim overlaps a story in progress whose branch a trial merge at its base finds conflicting, or it names in after: a story that is not done), is refused and nothing changes. The agent is FLAI\_AGENT and the session FLAI\_SESSION; FLAI\_AGENT records the move and names whose inbox is read.
 
 The output is the move, the narrative, the branch and its worktree, the pack, and then the inbox: the story's threads awaiting you, how many on other items, the stories ready to pull, and what others changed. --json prints one object with the keys story, followed, worktree, branch, from, pack, and inbox, as the MCP tool story\_start answers it, at most 40,000 bytes of JSON (ADR-0179): pack is part 1 of the pack, or only its header when part 1 does not fit, the inbox's oldest changes are left out (changes\_omitted), and then its threads' last entries are shortened (entries\_shortened) where the answer needs it.
 
