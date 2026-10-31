@@ -3,7 +3,7 @@ id: I-0235
 title: "flai check finds `narrative.missing` outside the story at close-out"
 class: efficiency
 status: open
-count: 4
+count: 5
 first_reported: 2026-10-31T09:53:32Z
 last_reported: 2026-11-01T06:00:39Z
 updated: 2026-11-01T06:00:39Z
