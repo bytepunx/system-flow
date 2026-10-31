@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"os"
 	"path/filepath"
 	"slices"
@@ -375,6 +376,23 @@ func signedReleases(t *testing.T, key *ecdsa.PrivateKey) []flaioverRelease {
 	return rels
 }
 
+// closedURL is the http:// URL of a listener t opened on 127.0.0.1 and closed,
+// which refuses or resets a connection at once; a fixed port nothing listens
+// on, such as 127.0.0.1:1, can hang to the connect timeout on a WSL2 host
+// with mirrored networking.
+func closedURL(t *testing.T) string {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr := ln.Addr().String()
+	if err := ln.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return "http://" + addr
+}
+
 // dashboardReleasesAt are the options for o/r's releases at api, verified
 // with trusted.
 func dashboardReleasesAt(api string, trusted *ecdsa.PrivateKey) selfupgrade.Options {
@@ -525,7 +543,10 @@ func TestDashboardRunsTheCachedListWhenTheReleasesCannotBeReached(t *testing.T) 
 	if _, errOut, code := runWith(t, root, &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}, "dashboard", "--tag", "0.4.0"); code != 0 {
 		t.Fatalf("start: %s", errOut)
 	}
-	setDashboardReleases(t, func() selfupgrade.Options { return dashboardReleasesAt("http://127.0.0.1:1", key) })
+	// one attempt: the default three would wait retryPause between them
+	unreachable := dashboardReleasesAt(closedURL(t), key)
+	unreachable.Attempts = 1
+	setDashboardReleases(t, func() selfupgrade.Options { return unreachable })
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	out, errOut, code := runWith(t, root, f, "dashboard", "--tag", "0.4.0")
 	if code != 0 || !strings.Contains(out, "flaiover 0.4.0, run by digest from its verified digest list cached beside flai serve's state: the release could not be reached") {

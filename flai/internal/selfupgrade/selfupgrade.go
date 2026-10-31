@@ -51,6 +51,9 @@ type Options struct {
 	OS      string       // default runtime.GOOS
 	Arch    string       // default runtime.GOARCH
 	Client  *http.Client // default http.DefaultClient
+	// Attempts is how many times a request is made before its failure is
+	// answered; default defaultAttempts.
+	Attempts int
 	// Keys are the keys a release's checksums.txt.sig must verify against;
 	// default the release key embedded in the binary.
 	Keys []*ecdsa.PublicKey
@@ -103,6 +106,9 @@ func (o *Options) defaults() {
 	}
 	if o.Client == nil {
 		o.Client = http.DefaultClient
+	}
+	if o.Attempts <= 0 {
+		o.Attempts = defaultAttempts
 	}
 }
 
@@ -422,9 +428,9 @@ func Replace(dest string, bin []byte) error {
 	return nil
 }
 
-// attempts is how many times a request is made before its failure is
+// defaultAttempts is how many times a request is made before its failure is
 // answered: GitHub sometimes drops a connection mid-body (I-0086).
-const attempts = 3
+const defaultAttempts = 3
 
 // retryPause is the wait between attempts; tests set it to zero.
 var retryPause = time.Second
@@ -435,7 +441,7 @@ type statusError struct{ msg string }
 func (e *statusError) Error() string { return e.msg }
 
 // get answers the body and headers of url, asking again after retryPause
-// when the connection fails or drops mid-body, up to attempts times; a non-2xx
+// when the connection fails or drops mid-body, up to o.Attempts times; a non-2xx
 // answer fails at once.
 func (o Options) get(ctx context.Context, url, accept string) ([]byte, http.Header, error) {
 	for attempt := 1; ; attempt++ {
@@ -444,8 +450,8 @@ func (o Options) get(ctx context.Context, url, accept string) ([]byte, http.Head
 		if err == nil || errors.As(err, &status) || ctx.Err() != nil {
 			return body, header, err
 		}
-		if attempt == attempts {
-			return nil, nil, fmt.Errorf("%w (gave up after %d attempts; check the connection and run it again)", err, attempts)
+		if attempt >= o.Attempts {
+			return nil, nil, fmt.Errorf("%w (gave up after %d attempts; check the connection and run it again)", err, o.Attempts)
 		}
 		pause := time.NewTimer(retryPause)
 		select {

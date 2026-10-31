@@ -494,6 +494,22 @@ func TestDroppedAnswerIsAskedThreeTimes(t *testing.T) {
 	}
 }
 
+// S-0548: Attempts sets how many times a request is made, so a caller that
+// expects the releases to be unreachable asks once and does not wait.
+func TestAttemptsSetsHowManyTimesARequestIsMade(t *testing.T) {
+	pauseFor(t, 0)
+	d, front := dropFirst(t, map[string]int{"/repos/o/r/releases": 3})
+	srv := fakeGitHubBehind(t, nil, nil, "", front)
+
+	_, err := List(context.Background(), Options{Repo: "o/r", APIBase: srv.URL, Attempts: 1}, TagPrefix)
+	if err == nil || !strings.Contains(err.Error(), "gave up after 1 attempts") {
+		t.Errorf("one attempt, and the error says so: %v", err)
+	}
+	if got := d.count("/repos/o/r/releases"); got != 1 {
+		t.Errorf("one attempt, got %d requests", got)
+	}
+}
+
 func TestFailedAnswerIsNotAskedAgain(t *testing.T) {
 	pauseFor(t, 0)
 	d, front := dropFirst(t, nil)
