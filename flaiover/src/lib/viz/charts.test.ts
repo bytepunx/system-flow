@@ -62,6 +62,7 @@ import {
 	codOrderRows,
 	codOutstanding,
 	codWeekRows,
+	concurrencyChart,
 	coordinationChart,
 	hasCoordination,
 	hasQueue,
@@ -76,6 +77,7 @@ import {
 	type Bucket,
 	type Claims,
 	type CodDay,
+	type Concurrency,
 	type Coordination,
 	type CoordinationWeek,
 	type CostOfDelayReport,
@@ -556,6 +558,24 @@ const digest: Digest = {
 };
 const digesting: Report = { ...report, digest };
 
+// The share of the main fixture's 30-day window with n stories in progress (S-0551), in the Go
+// side's names: none for 42%, one for 29%, two for 26%, and three, past the limit of 2, for 3%;
+// the mean while busy 1.55, and the ready wait 2 hours at p50 and 5.4 at p85.
+const window30 = 30 * 86400;
+const busySeconds = [1088640, 751680, 673920, 77760];
+const concurrency: Concurrency = {
+	window_seconds: window30,
+	limit: 2,
+	seconds: busySeconds,
+	share: busySeconds.map((s) => s / window30),
+	mean_busy: (751680 + 2 * 673920 + 3 * 77760) / (751680 + 673920 + 77760)
+};
+const concurrent: Report = {
+	...report,
+	concurrency,
+	ready_wait: { count: 2, p50_seconds: 7200, p85_seconds: 19440 }
+};
+
 const light = theme(false);
 const dark = theme(true);
 /**
@@ -582,7 +602,9 @@ describe('chart builders', () => {
 							? queueing
 							: k === 'digest'
 								? digesting
-								: report;
+								: k === 'concurrency'
+									? concurrent
+									: report;
 			const o = build(k, fixture, light) as {
 				useUTC?: boolean;
 				yAxis: unknown;
@@ -2806,6 +2828,123 @@ describe('the coordination chart (S-0337)', () => {
 		} as unknown as Report);
 		expect(nulls.coordination).toEqual({ logged: true, weeks: [] });
 		expect(normalise(older).coordination).toBeUndefined();
+	});
+});
+
+describe('the concurrency chart (S-0551)', () => {
+	type Bar = { value: number | null; n: number; seconds: number };
+	type Series = {
+		name: string;
+		type: string;
+		stack: string;
+		itemStyle: { color: string };
+		data: Bar[];
+	};
+	type Option = {
+		legend: { show: boolean };
+		xAxis: { type: string; data: string[]; name: string };
+		yAxis: { name: string; min: number; axisLabel: { formatter: (v: number) => string } };
+		tooltip: { formatter: (p: unknown) => string };
+		series: Series[];
+	};
+	/** Each series' bars as percents, a bar another series draws as null. */
+	const percents = (o: Option) => o.series.map((s) => [s.name, s.data.map((d) => d.value)]);
+
+	it('reads the concurrency and the ready wait in the names flai stats --json sends', () => {
+		const r = normalise(concurrent);
+		expect(Object.keys(r.concurrency!)).toEqual([
+			'window_seconds',
+			'limit',
+			'seconds',
+			'share',
+			'mean_busy'
+		]);
+		expect(Object.keys(r.ready_wait!)).toEqual(['count', 'p50_seconds', 'p85_seconds']);
+		expect(r.concurrency).toEqual(concurrency);
+	});
+	it('draws a share to a tenth of a percent, and names it whole in the tooltip', () => {
+		const shares = [0.1234, 0.8766];
+		const o = concurrencyChart(
+			{ ...report, concurrency: { window_seconds: 10000, seconds: [1234, 8766], share: shares } },
+			light
+		) as Option;
+		expect(percents(o)).toEqual([['in progress', [12.3, 87.7]]]);
+		expect(o.tooltip.formatter({ data: o.series[0].data[0] })).toBe(
+			'0 stories in progress<br/>12% of the window (21m)'
+		);
+	});
+	it('draws one bar per n as a percent of the window, those past the limit apart', () => {
+		const o = concurrencyChart(concurrent, light) as Option;
+		expect(o.xAxis).toMatchObject({ type: 'category', data: ['0', '1', '2', '3'] });
+		expect(percents(o)).toEqual([
+			['within the limit', [42, 29, 26, null]],
+			['past the limit', [null, null, null, 3]]
+		]);
+		// stacked, so that each n has one bar in the middle of its place
+		expect(o.series.map((s) => [s.type, s.stack])).toEqual([
+			['bar', 'concurrency'],
+			['bar', 'concurrency']
+		]);
+		expect(o.series.map((s) => s.itemStyle.color)).toEqual([
+			light.series[STATE_SLOT['in-progress']],
+			light.series[1]
+		]);
+		expect(o.legend.show).toBe(true);
+		expect(o.yAxis).toMatchObject({ name: '% of the window', min: 0 });
+		expect(o.yAxis.axisLabel.formatter(40)).toBe('40%');
+		const bar = (n: number) => {
+			const s = o.series.find((x) => x.data[n].value !== null)!;
+			return o.tooltip.formatter({ seriesName: s.name, data: s.data[n] });
+		};
+		expect(bar(1)).toBe('1 story in progress<br/>29% of the window (8.7d)');
+		expect(bar(3)).toBe('3 stories in progress, past the limit of 2<br/>3% of the window (21.6h)');
+		expect((build('concurrency', concurrent, light) as Option).series).toEqual(o.series);
+	});
+	it('states the mean while busy and the ready wait at p50 and p85 in hours under the bars', () => {
+		const o = concurrencyChart(concurrent, light) as Option;
+		expect(o.xAxis.name).toBe(
+			'stories in progress at once · mean 1.6 while busy · ready wait p50 2h · p85 5.4h'
+		);
+		// no ready wait when it counts none, and no mean when nothing was in progress
+		const idle: Report = {
+			...report,
+			concurrency: { window_seconds: window30, seconds: [window30], share: [1] },
+			ready_wait: { count: 0 }
+		};
+		const still = concurrencyChart(idle, light) as Option;
+		expect(still.xAxis.name).toBe('stories in progress at once');
+		expect(percents(still)).toEqual([['in progress', [100]]]);
+	});
+	it('draws one series without a limit, and keeps the limit to stories', () => {
+		const { limit, ...unlimited } = concurrency;
+		void limit;
+		const free = concurrencyChart({ ...concurrent, concurrency: unlimited }, light) as Option;
+		expect(percents(free)).toEqual([['in progress', [42, 29, 26, 3]]]);
+		expect(free.legend.show).toBe(false);
+		// the board's limit applies to stories alone
+		const tasks = concurrencyChart({ ...concurrent, type: 'task' }, light) as Option;
+		expect(percents(tasks)).toEqual([['in progress', [42, 29, 26, 3]]]);
+		expect(tasks.xAxis.name).toMatch(/^tasks in progress at once · /);
+		expect(tasks.tooltip.formatter({ data: tasks.series[0].data[3] })).toBe(
+			'3 tasks in progress<br/>3% of the window (21.6h)'
+		);
+	});
+	it('draws empty from a flai that sends no concurrency', () => {
+		const o = build('concurrency', report, light) as Option;
+		expect(o.series).toEqual([]);
+		expect(o.xAxis.data).toEqual([]);
+		expect(o.xAxis.name).toBe('stories in progress at once');
+	});
+	it('lists Concurrency under the flow charts, of the type chosen and no epic', () => {
+		expect(FLOW_KINDS).toContain('concurrency');
+		expect(titleOf('concurrency')).toBe('Concurrency');
+		expect(controls('concurrency')).toEqual({
+			type: true,
+			epic: false,
+			bucket: false,
+			nature: false,
+			model: false
+		});
 	});
 });
 

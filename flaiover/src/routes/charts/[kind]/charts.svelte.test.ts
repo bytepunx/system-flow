@@ -1360,6 +1360,65 @@ describe('the claims charts (S-0214)', () => {
 		expect(queueNotes()).toEqual([]);
 	});
 
+	// the share of the 30-day window with n stories in progress as flai sends it (S-0551): none for
+	// half of it, one for 30%, two for 15%, and three, past the limit of 2, for 5%
+	const window30 = 30 * 86400;
+	const concurrency = {
+		window_seconds: window30,
+		limit: 2,
+		seconds: [0.5, 0.3, 0.15, 0.05].map((f) => f * window30),
+		share: [0.5, 0.3, 0.15, 0.05],
+		mean_busy: 1.5
+	};
+	const ready_wait = { count: 2, p50_seconds: 3600, p85_seconds: 9000 };
+
+	it('draws the share of the window with n in progress and the ready wait, of the type chosen (S-0551)', async () => {
+		answered = { items, concurrency, ready_wait };
+		await open('concurrency');
+		expect(text('h1')).toBe('Concurrency');
+		expect(controls()).toEqual(['window', 'type']);
+		expect(asked()).toEqual(['/api/stats?since=30d&type=story&bucket=day']);
+		type Bars = Drawn & { xAxis: { data: string[]; name: string } };
+		const bars = () => {
+			const o = drawn() as Bars;
+			const values = o.series.map((s) => [
+				s.name,
+				(s.data as { value: number | null }[]).map((d) => d.value)
+			]);
+			return { categories: o.xAxis.data, name: o.xAxis.name, values };
+		};
+		expect(bars()).toEqual({
+			categories: ['0', '1', '2', '3'],
+			name: 'stories in progress at once · mean 1.5 while busy · ready wait p50 1h · p85 2.5h',
+			values: [
+				['within the limit', [50, 30, 15, null]],
+				['past the limit', [null, null, null, 5]]
+			]
+		});
+		expect(text('[data-testid="explainer-what"]')).toContain(
+			'the share of the window in which exactly that many were'
+		);
+		expect(text('[data-testid="explainer-what"]')).toContain('the ready wait at p50 and p85');
+		// tasks have no in-progress limit of their own
+		const type = [...document.querySelectorAll('label')]
+			.find((l) => l.textContent!.trim().startsWith('type'))!
+			.querySelector('select')!;
+		type.value = 'task';
+		type.dispatchEvent(new Event('change', { bubbles: true }));
+		await settle();
+		expect(asked().at(-1)).toBe('/api/stats?since=30d&type=task&bucket=day');
+		expect(bars().values).toEqual([['in progress', [50, 30, 15, 5]]]);
+		expect(bars().name).toMatch(/^tasks in progress at once · /);
+	});
+
+	it('draws no bars and states no figures when the flai on the host sends no concurrency (S-0551)', async () => {
+		answered = { items };
+		await open('concurrency');
+		const o = drawn() as Drawn & { xAxis: { data: string[]; name: string } };
+		expect(o.series).toEqual([]);
+		expect(o.xAxis.name).toBe('stories in progress at once');
+	});
+
 	// the digest as flai sends it (S-0434) over two weeks of the window: in W39 five threads to the
 	// operator for two stories completed, one a repeat; in W40 two threads and no story completed
 	const digest = {

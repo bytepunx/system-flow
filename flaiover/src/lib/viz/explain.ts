@@ -51,6 +51,7 @@ const STRATEGIC_DAYS = 'strategic-use-per-day';
 const COORDINATION = 'coordination';
 const QUEUE = 'merge-queue-(s-0404)';
 const DIGEST = 'digest-(s-0434)';
+const CONCURRENCY = 'concurrency-and-the-ready-wait-(s-0551)';
 
 /** The note every chart of spend over time carried under it. */
 const spendNote = (w: Words) =>
@@ -102,6 +103,12 @@ const EXPLAINERS: Record<Kind, (w: Words) => Explainer> = {
 		how: `From \`throughput\` in \`flai stats --json\`: the ${w.types} whose \`completed\`, the last transition, to \`done\` or \`cancelled\`, falls in the week. Weeks are ISO weeks starting Monday, UTC, from the one that holds the window's start to the one that holds now. \`summary.throughput_per_week\` is the ${w.types} completed in the window over its days divided by seven.`,
 		read: `Bars of even height are a steady pace to forecast from. Bars that swing widely make a forecast from throughput less certain.`,
 		metrics: AGGREGATES
+	}),
+	concurrency: (w) => ({
+		what: `One bar per number of ${w.types} in progress at once, from none: the share of the window in which exactly that many were. For stories, the bars past the board's in-progress limit are in a colour of their own. Under the bars, the mean number in progress while any was, and the ready wait at p50 and p85, in hours.`,
+		how: `From \`concurrency\` in \`flai stats --json\`: \`seconds[]\` counts, for each n from 0, the whole seconds from \`window_start\` to \`generated_at\` in which exactly n ${w.types} were in \`in-progress\`, from their state intervals, archived and cancelled ones included; ${w.a} in \`review\` is not in progress. \`share[]\` is each over \`window_seconds\`, so the bars add up to 100%. The bars run to the larger of the limit, \`concurrency.limit\`, and the most in progress at once. \`mean_busy\` is the mean n over the seconds with one or more. The ready wait is \`ready_wait\`: the queue time, the seconds ${w.a} waited in \`ready\` before it started, of the ${w.types} completed in the window, cancelled ones left out, ${NEAREST_RANK}; it equals \`summary.queue_time\`.`,
+		read: `A tall bar at 0 is time the board stood idle; bars up to the limit are work running side by side, and a short ready wait with them means ready work starts soon. With no ${w.type} completed in the window there is no ready wait, and with none in progress no mean.`,
+		metrics: CONCURRENCY
 	}),
 	'agent-waiting': (w) => ({
 		what: `One stacked bar per ISO week of the window: the hours the agents of the ${w.types} completed that week waited on their threads and in review. Under pull-request acceptance, review is split into its time on the required checks and on the reviewers. The dashed line is the mean wait per ${w.type} done that week. The table lists the ten longest waits.`,

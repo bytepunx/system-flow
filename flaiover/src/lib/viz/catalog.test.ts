@@ -27,6 +27,14 @@ describe('CHART_GROUPS', () => {
 		]);
 	});
 
+	it('lists Concurrency under flow, after Throughput (S-0551)', () => {
+		const flow = CHART_GROUPS.find((g) => g.key === 'flow')!.kinds;
+		expect(flow).toContain('concurrency');
+		expect(flow.indexOf('concurrency')).toBe(flow.indexOf('throughput') + 1);
+		expect(CHART_GROUPS.filter((g) => g.kinds.includes('concurrency'))).toHaveLength(1);
+		expect(TITLES.concurrency).toBe('Concurrency');
+	});
+
 	it('names the groups flow, usage, planning, strategic, in that order', () => {
 		expect(CHART_GROUPS.map((g) => g.key)).toEqual(['flow', 'usage', 'planning', 'strategic']);
 		expect(CHART_GROUPS.map((g) => g.label)).toEqual(['flow', 'usage', 'planning', 'strategic']);

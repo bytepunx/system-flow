@@ -141,6 +141,26 @@ export type Claims = {
 	/** Absent when git could not be read. */
 	drift?: TouchDrift[];
 };
+/**
+ * How long, over the window, exactly n items of the report's type were in progress at once
+ * (S-0551, metrics.md § Concurrency and the ready wait).
+ */
+export type Concurrency = {
+	window_seconds: number;
+	/** The board's in-progress limit today; absent when it has none. */
+	limit?: number;
+	/** Entry n, from 0, is the whole seconds with exactly n in progress. */
+	seconds: number[];
+	/** Entry n is `seconds[n]` over `window_seconds`, so the entries sum to 1. */
+	share: number[];
+	/** The mean n over the seconds with one or more in progress; absent when none was. */
+	mean_busy?: number;
+};
+/**
+ * The queue time `summary.queue_time` counts at p50 and p85, under the name the board uses
+ * (S-0551); the percentiles are absent when it counts none.
+ */
+export type ReadyWait = { count: number; p50_seconds?: number; p85_seconds?: number };
 /** The conversations between stories of an ISO week, by how they began or ended (ADR-0138). */
 export type ConversationCounts = {
 	opened: number;
@@ -455,6 +475,10 @@ export type Report = {
 	forecasts?: Forecasts;
 	/** Absent from a flai older than S-0205. */
 	claims?: Claims;
+	/** Absent from a flai older than S-0551. */
+	concurrency?: Concurrency;
+	/** Absent from a flai older than S-0551. */
+	ready_wait?: ReadyWait;
 	/** Absent from a flai older than S-0205. */
 	waiting?: Waiting;
 	/** One per day of the window; absent from a flai older than S-0205. */
@@ -552,7 +576,8 @@ export const isClaimsKind = (kind: Kind): kind is ClaimsKind =>
  * as flai lays them out. flai lays the strategic charts out by the day over the report's type, so
  * only the type is chosen. Cost of delay takes the window alone, and so does the merge queue,
  * whose weeks flai counts from its event log, whatever the type, and the digest, whose weeks count
- * the stories completed, whatever the type.
+ * the stories completed, whatever the type. Concurrency is of the type chosen, over every item of
+ * it, so no epic narrows it.
  */
 export function controls(kind: Kind) {
 	if ((STRATEGIC_KINDS as readonly Kind[]).includes(kind))
@@ -572,7 +597,7 @@ export function controls(kind: Kind) {
 	return {
 		// the ready column's projection is of stories, whatever the type (ADR-0112)
 		type: cod ? kind !== 'cod-order' : !PER_ITEM_KINDS.includes(kind),
-		epic: !cod && !spend && !['cfd', 'throughput', 'agent-waiting'].includes(kind),
+		epic: !cod && !spend && !['cfd', 'throughput', 'concurrency', 'agent-waiting'].includes(kind),
 		bucket: spend,
 		nature: false,
 		model: false
@@ -2162,6 +2187,86 @@ export function parallelism(r: Report, t: Theme): Opt {
 		series
 	});
 }
+/** A bar of the concurrency chart: n's share of the window as a percent to a tenth, with its seconds. */
+type ConcurrencyBar = { value: number | null; n: number; seconds: number };
+/**
+ * What the concurrency chart states under its bars: the mean while busy to one decimal, as
+ * `flai stats` prints it, and the ready wait's p50 and p85 in hours; each left out when flai sends
+ * none.
+ */
+function concurrencyFigures(r: Report): string[] {
+	const mean = r.concurrency?.mean_busy;
+	const { count = 0, p50_seconds: p50, p85_seconds: p85 } = r.ready_wait ?? {};
+	const waited = count > 0 && p50 !== undefined && p85 !== undefined;
+	return [
+		...(mean !== undefined ? [`mean ${mean.toFixed(1)} while busy`] : []),
+		...(waited ? [`ready wait p50 ${hours(p50)}h · p85 ${hours(p85)}h`] : [])
+	];
+}
+/**
+ * Concurrency (S-0551, ADR-0231): one bar per n, from 0, the share of the window in which exactly
+ * n items of the report's type were in progress at once, as a percent. For stories, the only type
+ * the in-progress limit applies to, the bars above the limit are a series of their own, past the
+ * limit, in the colour the charts keep for work over its bound. Under the bars, the mean while
+ * busy and the ready wait at p50 and p85.
+ */
+export function concurrencyChart(r: Report, t: Theme): Opt {
+	const c = r.concurrency;
+	const share = c?.share ?? [];
+	const limit = r.type === 'story' ? c?.limit : undefined;
+	const past = (n: number) => limit !== undefined && n > limit;
+	const split = share.some((_, n) => past(n));
+	const bars = (name: string, color: string, shown: (n: number) => boolean) => ({
+		name,
+		type: 'bar',
+		stack: 'concurrency',
+		barMaxWidth: 24,
+		itemStyle: { color, borderColor: t.surface, borderWidth: 1 },
+		data: share.map((s, n): ConcurrencyBar => {
+			// a tenth of a percent is finer than a bar can show
+			const value = shown(n) ? Math.round(s * 1000) / 10 : null;
+			return { value, n, seconds: c?.seconds[n] ?? 0 };
+		})
+	});
+	const busy = colorFor(t, STATE_SLOT, 'in-progress', 0);
+	const series =
+		share.length === 0
+			? []
+			: split
+				? [
+						bars('within the limit', busy, (n) => !past(n)),
+						bars('past the limit', t.series[1], past)
+					]
+				: [bars('in progress', busy, () => true)];
+	const types = plural(r.type);
+	return base(t, {
+		legend: legend(t, series.length > 1),
+		tooltip: tooltip(t, {
+			formatter: (p: { data: ConcurrencyBar }) => {
+				const { n, seconds } = p.data;
+				const what = `${n} ${n === 1 ? r.type : types} in progress`;
+				const beyond = past(n) ? `, past the limit of ${limit}` : '';
+				return `${what}${beyond}<br/>${percent(share[n])} of the window (${human(seconds)})`;
+			}
+		}),
+		xAxis: axisX(t, {
+			type: 'category',
+			data: share.map((_, n) => `${n}`),
+			name: [`${types} in progress at once`, ...concurrencyFigures(r)].join(' · '),
+			nameLocation: 'middle',
+			nameGap: 30,
+			nameTextStyle: { color: t.textSecondary }
+		}),
+		yAxis: axisY(t, {
+			type: 'value',
+			min: 0,
+			name: '% of the window',
+			nameTextStyle: { color: t.textSecondary },
+			axisLabel: { color: t.textSecondary, formatter: (v: number) => `${v}%` }
+		}),
+		series
+	});
+}
 /**
  * Each reason's series on the hold-time chart: its name, `no-touches` as the empty claim it is,
  * and its colour, of the three slots that stay apart for every pair in both modes.
@@ -2845,6 +2950,8 @@ export function build(
 			return timeInState(r, t, epic);
 		case 'throughput':
 			return throughput(r, t);
+		case 'concurrency':
+			return concurrencyChart(r, t);
 		case 'agent-waiting':
 			return agentWaiting(r, t);
 		case 'queue':

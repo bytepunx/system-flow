@@ -9,6 +9,7 @@ export const FLOW_KINDS = [
 	'cfd',
 	'time-in-state',
 	'throughput',
+	'concurrency',
 	'agent-waiting',
 	'queue',
 	'digest'
@@ -59,6 +60,7 @@ export const TITLES: Record<Kind, string> = {
 	cfd: 'Cumulative Flow',
 	'time-in-state': 'Time in State',
 	throughput: 'Throughput',
+	concurrency: 'Concurrency',
 	'agent-waiting': 'Agent Waiting',
 	queue: 'Merge Queue',
 	digest: 'Digest',
