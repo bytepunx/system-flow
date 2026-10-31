@@ -230,6 +230,10 @@ type Report struct {
 	// Claims is the items in progress against the limit and the stories'
 	// touches drift (S-0205).
 	Claims Claims `json:"claims"`
+	// Concurrency is the seconds of the window with n items in progress at
+	// once, and ReadyWait the queue time at p50 and p85 (S-0551).
+	Concurrency Concurrency `json:"concurrency"`
+	ReadyWait   ReadyWait   `json:"ready_wait"`
 	// Turns is the story agents' turns per class over the window, per day,
 	// and per story (S-0293).
 	Turns Turns `json:"turns"`
@@ -348,6 +352,8 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	rep.CostOfDelay.Order = costOrder(all, opt)
 	rep.Waiting = waiting(items, perItem, waits, pulls, start, opt.Now)
 	rep.Claims = claims(items, all, start, opt, replay)
+	rep.Concurrency = concurrency(items, start, opt.Now, opt.WIPLimit)
+	rep.ReadyWait = readyWait(rep.Summary.QueueTime)
 	rep.StrategicDays = strategicDays(opt.Activities, items, perItem, start, opt.Now)
 	rep.Turns = turns(all, start, opt.Now)
 	rep.Coordination = coordination(all, opt.Conversations, opt.Conflicts, !opt.ConflictsUnreadable, start, opt.Now)

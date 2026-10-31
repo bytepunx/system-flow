@@ -39,7 +39,10 @@ threads and in review, by the week, and the story agents' empty wakes,
 ADR-0105), claims (in progress and held by the day
 against the limit; under claims.weeks the time held by reason and the share of
 stories with exact touches, by the week; and each story's touches against the
-files its commits changed, ADR-0113), strategic_days (the strategic agents' cost and time beside delivery),
+files its commits changed, ADR-0113), concurrency (the seconds and the share of the window with
+each number of items in progress at once, from 0 through the larger of the
+limit and the most seen, and the mean while any was) and ready_wait (the
+queue time at p50 and p85, as summary.queue_time has it, ADR-0231), strategic_days (the strategic agents' cost and time beside delivery),
 and coordination (by the week, the conversations between stories opened,
 agreed, escalated, and closed with a story; the conflicts a trial merge found
 against those a rebase met at sync or at acceptance, from
@@ -114,11 +117,11 @@ cannot read, and digest is absent.`,
 // stories through pull requests, which adds the checks and reviewers waits.
 func printSummary(a *app, rep *metrics.Report, pullRequest bool) {
 	fmt.Fprintf(a.out, "%s completed in the last %gd (since %s)\n", workitem.Folder(rep.Type), rep.WindowDays, rep.WindowStart[:10])
-	printGroup(a, rep.Summary)
+	printGroup(a, rep.Summary, &rep.Concurrency)
 	printUsage(a, rep.Type, rep.Usage)
 	for _, g := range rep.Groups {
 		fmt.Fprintf(a.out, "\n[%s]\n", g.Group)
-		printGroup(a, g)
+		printGroup(a, g, nil)
 	}
 	if len(rep.Aging) > 0 {
 		fmt.Fprintln(a.out, "\naging WIP (age since started, vs cycle time p85):")
@@ -687,7 +690,9 @@ func printStrategicIssues(a *app, list []metrics.StrategicIssue) {
 	}
 }
 
-func printGroup(a *app, s metrics.Summary) {
+// printGroup prints a summary's aggregates; under its ready wait, the
+// report's concurrency when one is given, as the summary's is (S-0551).
+func printGroup(a *app, s metrics.Summary, conc *metrics.Concurrency) {
 	fmt.Fprintf(a.out, "  completed %d · cancelled %d (%.0f%%) · throughput %.1f/week · WIP now %d\n",
 		s.Completed, s.Cancelled, s.CancellationRate*100, s.ThroughputWeek, s.WIP)
 	dist := func(name string, d metrics.Distribution) {
@@ -700,7 +705,10 @@ func printGroup(a *app, s metrics.Summary) {
 	}
 	dist("cycle time", s.CycleTime)
 	dist("lead time", s.LeadTime)
-	dist("queue time", s.QueueTime)
+	dist("ready wait", s.QueueTime)
+	if conc != nil && len(conc.Seconds) > 0 {
+		fmt.Fprintf(a.out, "  %-12s %s\n", "in progress", concurrencyText(*conc))
+	}
 	if s.CycleTime.Count > 0 {
 		fmt.Fprintf(a.out, "  flow efficiency %.0f%%\n", s.FlowEfficiency*100)
 	}
@@ -716,6 +724,20 @@ func printGroup(a *app, s metrics.Summary) {
 		}
 		fmt.Fprintf(a.out, "  time in state: %s\n", strings.Join(parts, " · "))
 	}
+}
+
+// concurrencyText is the share of the window with each n in progress as a
+// whole percent, then the mean while busy to one decimal when there is one
+// (ADR-0231).
+func concurrencyText(c metrics.Concurrency) string {
+	parts := make([]string, 0, len(c.Share)+1)
+	for n, share := range c.Share {
+		parts = append(parts, fmt.Sprintf("%d %.0f%%", n, share*100))
+	}
+	if c.MeanBusy != nil {
+		parts = append(parts, fmt.Sprintf("mean %.1f while busy", *c.MeanBusy))
+	}
+	return strings.Join(parts, " · ")
 }
 
 // printUsage prints what agents spent on the items done in the window: in

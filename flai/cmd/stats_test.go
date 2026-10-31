@@ -388,3 +388,76 @@ func TestLoggingJSON(t *testing.T) {
 		testStatsReportsTheDigest,
 	)
 }
+
+// S-0551: flai stats prints the queue time as the ready wait, and under it
+// the share of the window with each number of stories in progress at once
+// through the board's limit, with the mean while busy; --json and the
+// dashboard's read carry them under concurrency and ready_wait (ADR-0231).
+func TestStatsReportsConcurrencyAndTheReadyWait(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("LOG_FORMAT", "json")
+	root := tempProject(t)
+	board := "---\ntitle: Board\nstatus: active\nwip_limits:\n  in-progress: 3\n---\n\n# Board\n"
+	if err := os.WriteFile(filepath.Join(root, "wip/kanban/board.md"), []byte(board), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// on the 3rd of October, S-0001 waits 2h in ready and is in progress
+	// from 08:00 to 14:00, then in review; S-0002 waits 4h and is in progress
+	// from 10:00 to 12:00: 1 at once for 4h, 2 for 2h, 0 for the other 18h
+	for _, moves := range [][]workitem.Transition{
+		{{To: workitem.Ready, At: "2026-10-03T06:00:00Z"}, {To: workitem.InProgress, At: "2026-10-03T08:00:00Z"},
+			{To: workitem.Review, At: "2026-10-03T14:00:00Z"}, {To: workitem.Done, At: "2026-10-03T15:00:00Z"}},
+		{{To: workitem.Ready, At: "2026-10-03T06:00:00Z"}, {To: workitem.InProgress, At: "2026-10-03T10:00:00Z"},
+			{To: workitem.Done, At: "2026-10-03T12:00:00Z"}},
+	} {
+		it, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "Runs", Owner: "t", Now: time.Date(2026, 10, 1, 9, 0, 0, 0, time.UTC)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		it.Transitions, it.Status = moves, workitem.Done
+		if err := repo.Save(it); err != nil {
+			t.Fatal(err)
+		}
+	}
+	at := time.Date(2026, 10, 3, 20, 0, 0, 0, time.UTC)
+
+	out, errOut, code := runInAt(t, root, at, "stats", "--since", "1d")
+	wantText := "  ready wait   p50 2h · p85 4h · max 4h · mean 3h (n=2)\n" +
+		"  in progress  0 75% · 1 17% · 2 8% · 3 0% · mean 1.3 while busy\n"
+	if code != 0 || !strings.Contains(out, wantText) {
+		t.Errorf("text: %d %s, want it to hold %q, got\n%s", code, errOut, wantText, out)
+	}
+
+	out, errOut, code = runInAt(t, root, at, "stats", "--since", "1d", "--json")
+	if code != 0 {
+		t.Fatalf("stats --json: %s", errOut)
+	}
+	var rep struct {
+		Concurrency map[string]any `json:"concurrency"`
+		ReadyWait   map[string]any `json:"ready_wait"`
+	}
+	if err := json.Unmarshal([]byte(out), &rep); err != nil {
+		t.Fatal(err)
+	}
+	h := 3600.0
+	wantConc := map[string]any{
+		"window_seconds": 24 * h, "limit": 3.0,
+		"seconds":   []any{18 * h, 4 * h, 2 * h, 0.0},
+		"share":     []any{0.75, 4.0 / 24, 2.0 / 24, 0.0},
+		"mean_busy": 8.0 / 6,
+	}
+	if !reflect.DeepEqual(rep.Concurrency, wantConc) {
+		t.Errorf("concurrency = %v, want %v", rep.Concurrency, wantConc)
+	}
+	if want := map[string]any{"count": 2.0, "p50_seconds": 2 * h, "p85_seconds": 4 * h}; !reflect.DeepEqual(rep.ReadyWait, want) {
+		t.Errorf("ready_wait = %v, want %v", rep.ReadyWait, want)
+	}
+	// the dashboard's read answers the same
+	if _, rerr := sameAnswer(t, root, hostapi.Host{}, "stats.get", `{}`, "stats"); rerr != nil {
+		t.Errorf("stats.get: %+v", rerr)
+	}
+}
