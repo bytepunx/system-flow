@@ -6,7 +6,7 @@ title: scripts/close-out.sh stops at its first step inside the agent container, 
 status: backlog
 owner: alex
 created: 2026-10-28T12:53:17Z
-updated: 2026-10-31T07:25:17Z
+updated: 2026-10-31T07:27:31Z
 transitions: []
 tags: [cli, docker]
 topics: [harness, docker]
@@ -42,10 +42,10 @@ cost_of_delay:
   at: 2026-10-28T13:56:47Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-31T18:41:00Z
-  basis: "Its own forecast of 1h15m; 18th in the pull order with an in-progress limit of 5, behind S-0548, S-0425, S-0552, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0506, S-0508, S-0509, S-0510, S-0516, S-0517 and S-0518."
+  delivery: 2026-10-31T19:18:00Z
+  basis: "Its own forecast of 1h15m; 23rd in the pull order with an in-progress limit of 5, behind S-0548, S-0550, S-0551, S-0552, S-0546, S-0547, S-0549, S-0425, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0506, S-0508, S-0509, S-0510, S-0516, S-0517 and S-0518."
   by: flai
-  at: 2026-10-31T07:25:17Z
+  at: 2026-10-31T07:27:31Z
 finalized:
   by: orchestrator
   at: 2026-10-30T14:12:19Z

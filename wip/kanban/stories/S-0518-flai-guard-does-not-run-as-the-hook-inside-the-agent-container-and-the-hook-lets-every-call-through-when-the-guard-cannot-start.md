@@ -6,7 +6,7 @@ title: flai guard does not run as the hook inside the agent container, and the h
 status: backlog
 owner: alex
 created: 2026-10-28T12:52:56Z
-updated: 2026-10-31T07:25:11Z
+updated: 2026-10-31T07:27:25Z
 transitions: []
 tags: [cli, template]
 topics: [harness]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-10-28T13:33:45Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-31T15:51:00Z
-  basis: "Its own forecast of 1h15m; 17th in the pull order with an in-progress limit of 5, behind S-0548, S-0425, S-0552, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0506, S-0508, S-0509, S-0510, S-0516 and S-0517."
+  delivery: 2026-10-31T16:28:00Z
+  basis: "Its own forecast of 1h15m; 22nd in the pull order with an in-progress limit of 5, behind S-0548, S-0550, S-0551, S-0552, S-0546, S-0547, S-0549, S-0425, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0506, S-0508, S-0509, S-0510, S-0516 and S-0517."
   by: flai
-  at: 2026-10-31T07:25:11Z
+  at: 2026-10-31T07:27:25Z
 finalized:
   by: orchestrator
   at: 2026-10-30T13:37:06Z
