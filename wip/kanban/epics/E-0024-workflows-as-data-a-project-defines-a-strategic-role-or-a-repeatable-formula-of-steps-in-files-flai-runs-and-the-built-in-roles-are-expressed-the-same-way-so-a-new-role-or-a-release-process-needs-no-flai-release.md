@@ -6,7 +6,7 @@ title: "Workflows as data: a project defines a strategic role or a repeatable fo
 status: in-progress
 owner: alex
 created: 2026-10-16T04:28:02Z
-updated: 2026-10-29T16:37:06Z
+updated: 2026-10-30T20:45:40Z
 transitions:
   - to: ready
     at: 2026-10-20T19:01:17Z
@@ -57,7 +57,7 @@ usage:
       cost: 137.6632
   strategic:
     - kind: planner
-      seconds: 1866
+      seconds: 2502
       estimated: true
       models:
         - model: claude-fable-5-1
@@ -67,27 +67,27 @@ usage:
           cache_write: 346401
           cost: 11.9783
         - model: claude-haiku-5-5
-          input: 84
-          output: 28177
-          cache_read: 2955958
-          cache_write: 109701
-          cost: 0.123
+          input: 166
+          output: 66869
+          cache_read: 8823730
+          cache_write: 349600
+          cost: 0.585
         - model: claude-opus-5-5
-          input: 51
-          output: 5737
-          cache_read: 3726197
-          cache_write: 294016
-          cost: 1.282
+          input: 115
+          output: 46993
+          cache_read: 7388384
+          cache_write: 471093
+          cost: 4.2564
     - kind: orchestrator
-      seconds: 15787
+      seconds: 16008
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2263
-          output: 35316
-          cache_read: 508404988
-          cache_write: 1205465
-          cost: 114.3072
+          input: 2337
+          output: 35739
+          cache_read: 511343864
+          cache_write: 1490207
+          cost: 115.0333
         - model: claude-sonnet-5-5
           input: 94
           output: 439
@@ -125,6 +125,8 @@ To be drafted by the planner. Order: the role file format and its validation fir
 - S-0423 The template ships a baseline publish formula that fetches, evaluates orchestration.release, and publishes what is pending, the orchestrator starts it in place of calling release_publish, and it is run once here
 - S-0424 The template ships baseline formulas for importing a repository from the board and for the analyzer's cadence, the board's import starts its formula, and each is run once here
 - S-0425 metrics.md generalizes strategic usage per kind to usage per role by an ADR, so a project's own role is charged on its items, reported by flai stats, and charted as the built-in roles are
+- S-0553 flai generates the planner's, the orchestrator's, the analyzer's, and the curator's harness definitions from their role files alone, flai check holds a .claude/agents copy to them, and a session started by hand reads the same definition
+- S-0554 A role file's start prompt and its triggers replace the planner's, the orchestrator's, the analyzer's, and the curator's start prompts and schedules in Go, so the built-in roles are defined by their files alone
 
 ## Notes
 

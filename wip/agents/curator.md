@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 52.1920
-accrued_seconds: 4788
-tasks_completed: 30
-last_run: 2026-10-30T16:53:28Z
+accrued_cost: 53.7636
+accrued_seconds: 4877
+tasks_completed: 31
+last_run: 2026-10-30T19:23:15Z
 ---
 
 # Curator activity
@@ -251,3 +251,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0431, D-0432
 - Seconds: 89
 - Cost: 1.5650 USD, estimated
+
+### 2026-10-30T19:23:15Z
+
+- Summary: I merged the two facts from the S-0529 candidates into two existing entries. I wrote no new entries, no entry was absorbed, and `flai digest compact` compacted none.
+- Trigger: accepted S-0529
+- Items: D-0413, D-0430
+- Seconds: 89
+- Cost: 1.5716 USD, estimated
