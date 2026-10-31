@@ -18,11 +18,13 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
+	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
+	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
@@ -573,6 +575,9 @@ type launcher struct {
 	// holds does not repeat it.
 	holding  map[string]Budget
 	heldSaid string
+	// git asks git for the trial merge that judges an overlap (ADR-0230),
+	// the system's when nil.
+	git execx.Runner
 }
 
 // told records a run in the host's state and tells changed.
@@ -613,7 +618,7 @@ func (l *launcher) ended(run *AgentRun) (first bool) {
 }
 
 func newLauncher(o Options, e Entry) *launcher {
-	return &launcher{dir: o.Dir, entry: e, config: o.Agent, record: o.Host.Record, now: o.Now, waiting: map[int]bool{}, again: make(chan struct{}, 1),
+	return &launcher{dir: o.Dir, entry: e, config: o.Agent, record: o.Host.Record, now: o.Now, waiting: map[int]bool{}, again: make(chan struct{}, 1), git: gitOf(o),
 		log: func(msg string, args ...any) {
 			o.Logger.Info(msg, append([]any{"component", "serve", "project", e.Key}, args...)...)
 		},
@@ -664,6 +669,16 @@ type readyStory struct {
 	// automatic restart, and the run keeps its last run's count.
 	AfterLimit bool
 	item       *workitem.Item
+}
+
+// withTrial has repo hold a ready story on overlap only when a trial merge,
+// asked of git, the system's when nil, conflicts (ADR-0230); outside a git
+// checkout NewTrialJudge gives none, and an overlap holds as before.
+func withTrial(repo *workitem.Repo, git execx.Runner) {
+	if git == nil {
+		git = execx.System{}
+	}
+	repo.Trial = storygit.NewTrialJudge(git, repo, issues.FilesIn(repo, repo.MainRoot, git, time.Now))
 }
 
 // readyStories are the ready stories in pull order, the claims of the open
@@ -992,6 +1007,7 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 	if err != nil {
 		return
 	}
+	withTrial(repo, l.git)
 	stories, holds, free, review, items, err := readyStories(repo)
 	if err != nil {
 		return
@@ -2286,6 +2302,7 @@ func Activity(root string, st AgentState) map[string]StoryActivity {
 	if err != nil {
 		return map[string]StoryActivity{}
 	}
+	withTrial(repo, nil)
 	out := runActivity(repo, st)
 	for id, h := range held(repo, st) {
 		out[id] = StoryActivity{State: ActivityWaiting, Why: h.Reason, Run: standIn(repo, st, id, ""), Hold: h}
@@ -2389,10 +2406,11 @@ func runActivity(repo *workitem.Repo, st AgentState) map[string]StoryActivity {
 }
 
 // held are the stories in ready with no agent running that a claim holds,
-// counting the claim of each story in ready whose agent runs, as the
-// launcher does. One whose agent ended asking is left out until the question
-// or its conversation is answered: it waits for the answer, and then for its
-// hold (S-0182, S-0335).
+// counting the claim of each story in ready whose agent runs, and judging an
+// overlap by a trial merge when repo has a judge, as the launcher does. One
+// whose agent ended asking is left out until the question or its
+// conversation is answered: it waits for the answer, and then for its hold
+// (S-0182, S-0335).
 func held(repo *workitem.Repo, st AgentState) map[string]*workitem.Hold {
 	items, err := repo.List(false)
 	if err != nil {

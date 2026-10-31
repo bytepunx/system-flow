@@ -34,6 +34,7 @@ func Start(ctx context.Context, o Options, e Entry, story string) (*AgentRun, er
 	if err != nil {
 		return nil, err
 	}
+	withTrial(repo, gitOf(o))
 	it, err := repo.Get(story)
 	if err != nil {
 		return nil, err

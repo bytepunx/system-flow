@@ -4,8 +4,11 @@ package serve
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -35,6 +38,8 @@ func TestAHeldStoryIsSkippedAndStartedFirstOnceClear(t *testing.T) {
 	behind := lab.readyTouching("Behind", "docs/behind")
 	lab.l.look(ctx, false)
 	waitFor(t, "the clear story's agent runs", func() bool { return lab.run(clear).live() })
+	// the lab is no git repository, so there is no trial judge and the
+	// overlap holds as it did before (ADR-0230)
 	why := "held (overlap): touches flai/cmd/serve, inside flai/cmd which " + open + " (in progress) touches; starts when " + open + " moves to review, is cancelled, or is sent back"
 	if lab.run(held) != nil || lab.run(behind) != nil {
 		t.Fatalf("started a held story, or one past the limit: %+v", lab.state().Stories)
@@ -269,4 +274,169 @@ func TestTheLauncherStartsAStoryOverlappingOnlyOneInReview(t *testing.T) {
 	}
 	lab.release(ready)
 	waitFor(t, "it ends", func() bool { return !lab.run(ready).live() })
+}
+
+// trialFile is the file the stories of the trial-merge tests change.
+const trialFile = "flai/cmd/serve.go"
+
+// gitMain makes the lab a git repository on main, whose one commit holds
+// trialFile with ten numbered lines, for the trial merge that judges an
+// overlap (ADR-0230).
+func (lab *agentLab) gitMain() {
+	lab.t.Helper()
+	if testing.Short() {
+		lab.t.Skip("needs git")
+	}
+	if _, err := exec.LookPath("git"); err != nil {
+		lab.t.Skip("git not installed")
+	}
+	_ = os.WriteFile(filepath.Join(lab.root, ".gitignore"), []byte(".flai-cache/\n"), 0o644)
+	lab.git(lab.root, "init", "-q", "-b", "main")
+	lab.git(lab.root, "config", "user.email", "t@t")
+	lab.git(lab.root, "config", "user.name", "t")
+	lab.git(lab.root, "config", "commit.gpgsign", "false")
+	var lines strings.Builder
+	for i := 1; i <= 10; i++ {
+		fmt.Fprintf(&lines, "line %d\n", i)
+	}
+	_ = os.MkdirAll(filepath.Dir(filepath.Join(lab.root, trialFile)), 0o755)
+	if err := os.WriteFile(filepath.Join(lab.root, trialFile), []byte(lines.String()), 0o644); err != nil {
+		lab.t.Fatal(err)
+	}
+	lab.git(lab.root, "add", "-A")
+	lab.git(lab.root, "commit", "-q", "-m", "init")
+}
+
+// storyBranch gives story id its branch from main, checked out in its
+// worktree, which it is.
+func (lab *agentLab) storyBranch(id string) string {
+	lab.t.Helper()
+	wt := lab.repo.WorktreePath(id)
+	lab.git(lab.root, "worktree", "add", "-q", "-b", "story/"+id, wt)
+	return wt
+}
+
+// commitLine sets line n, from 1, of trialFile in the checkout dir to text
+// and commits it there.
+func (lab *agentLab) commitLine(dir string, n int, text string) {
+	lab.t.Helper()
+	path := filepath.Join(dir, trialFile)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	lines := strings.Split(string(data), "\n")
+	lines[n-1] = text
+	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0o644); err != nil {
+		lab.t.Fatal(err)
+	}
+	lab.git(dir, "add", trialFile)
+	lab.git(dir, "commit", "-q", "-m", "change line "+strconv.Itoa(n)+" of "+trialFile)
+}
+
+// S-0551, ADR-0230: a ready story whose claim overlaps that of a story in
+// progress is not held when the holder's branch merges cleanly at main: it
+// waits only for room in the in-progress limit, no one is asked about a hold,
+// and the launcher starts it and journals the start as any other.
+func TestTheLauncherStartsAnOverlappingStoryOnACleanTrialMerge(t *testing.T) {
+	t.Parallel()
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.gitMain()
+	lab.limit(1)
+	lab.hold()
+	holder := lab.readyTouching("Holder", trialFile)
+	lab.move(holder, workitem.InProgress)
+	lab.commitLine(lab.storyBranch(holder), 1, "the holder's line 1")
+	lab.commitLine(lab.root, 10, "main's line 10")
+	ready := lab.readyTouching("Ready", "flai/cmd")
+
+	// the limit is full: it waits for room, not on a hold, and no one is asked
+	lab.l.look(ctx, false)
+	if r := lab.run(ready); r != nil {
+		t.Fatalf("started past the limit: %+v", r)
+	}
+	if w := lab.state().Waiting; strings.Contains(w, "held") || !strings.Contains(w, "the in-progress limit leaves no room for "+ready) {
+		t.Errorf("waiting: %q", w)
+	}
+	if a := Activity(lab.root, lab.state())[ready]; a.Hold != nil {
+		t.Errorf("activity says it is held: %+v", a)
+	}
+	if asks := lab.asks(ready); len(asks) != 0 {
+		t.Errorf("asked about a hold a clean trial clears: %v", asks)
+	}
+
+	// room: it starts beside the story it overlaps, journaled as any start
+	lab.limit(2)
+	lab.l.look(ctx, false)
+	waitFor(t, "the overlapping story's agent runs", func() bool { return lab.run(ready).live() })
+	if j := lab.entries(); len(j) != 1 || j[0].Outcome != "done" || !strings.Contains(j[0].Detail, "started stub-agent (command) for "+ready) {
+		t.Errorf("journal: %+v", j)
+	}
+	if w := lab.state().Waiting; strings.Contains(w, ready) {
+		t.Errorf("waiting names the started story: %q", w)
+	}
+	lab.release(ready)
+	waitFor(t, "it ends", func() bool { return !lab.run(ready).live() })
+}
+
+// S-0551, ADR-0230: a ready story whose claim overlaps that of a story in
+// progress is held when the holder's branch conflicts with main, and the
+// launcher's journal of why it waits names the path the trial merge
+// conflicts on, as the activity does; the holder's agent is asked about it.
+func TestTheLauncherHoldsAnOverlappingStoryOnAConflictingTrialMerge(t *testing.T) {
+	t.Parallel()
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.gitMain()
+	lab.limit(2)
+	lab.hold()
+	holder := lab.readyTouching("Holder", trialFile)
+	lab.move(holder, workitem.InProgress)
+	lab.commitLine(lab.storyBranch(holder), 1, "the holder's line 1")
+	lab.commitLine(lab.root, 1, "main's line 1")
+	held := lab.readyTouching("Held", "flai/cmd")
+	lab.l.look(ctx, false)
+	if r := lab.run(held); r != nil {
+		t.Fatalf("started a story whose holder's trial merge conflicts: %+v", r)
+	}
+	why := held + " held (overlap): touches flai/cmd, which holds " + trialFile + " that " + holder + " (in progress) touches, and a trial merge of story/" + holder + " at " + held + "'s base conflicts in " + trialFile + "; starts when " + holder
+	if w := lab.state().Waiting; !strings.Contains(w, why) {
+		t.Errorf("waiting: %q\nwant: %q", w, why)
+	}
+	if n := lab.said(held); n != 1 {
+		t.Errorf("logged %d times why %s waits", n, held)
+	}
+	if a := Activity(lab.root, lab.state())[held]; a.Hold == nil || a.Hold.Code != workitem.HoldOverlap || !strings.Contains(a.Why, "conflicts in "+trialFile) {
+		t.Errorf("activity: %+v", a)
+	}
+	if asks := lab.asks(held); asks[holder] != 1 {
+		t.Errorf("asks: %v", asks)
+	}
+	if j := lab.entries(); len(j) != 0 {
+		t.Errorf("journal: %+v", j)
+	}
+}
+
+// S-0551, ADR-0230: a story in progress with no branch yet cannot be
+// trial-merged, so a ready story whose claim overlaps its claim is held as
+// before, and why it waits says the trial could not run.
+func TestTheLauncherHoldsAnOverlappingStoryWhileTheHolderHasNoBranch(t *testing.T) {
+	t.Parallel()
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.gitMain()
+	lab.limit(2)
+	lab.hold()
+	holder := lab.readyTouching("Holder", trialFile)
+	lab.move(holder, workitem.InProgress)
+	held := lab.readyTouching("Held", "flai/cmd")
+	lab.l.look(ctx, false)
+	if r := lab.run(held); r != nil {
+		t.Fatalf("started a story whose holder has no branch: %+v", r)
+	}
+	why := held + " held (overlap): touches flai/cmd, which holds " + trialFile + " that " + holder + " (in progress) touches; the trial merge could not run: " + holder + " has no branch story/" + holder + " yet"
+	if w := lab.state().Waiting; !strings.Contains(w, why) {
+		t.Errorf("waiting: %q\nwant: %q", w, why)
+	}
 }
