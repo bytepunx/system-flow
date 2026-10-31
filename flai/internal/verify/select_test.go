@@ -274,7 +274,7 @@ func TestSelectStoryLeavingQueueAnswersTheQueueTiersApart(t *testing.T) {
 	}
 	fsys := fstest.MapFS{"flai/go.mod": {}, "flai/main.go": {}}
 	paths := []string{"flai/main.go"}
-	run, queued := SelectStoryLeavingQueue(fsys, tiers, paths)
+	run, queued := SelectStoryLeavingQueue(fsys, tiers, paths, nil)
 	if got, want := coverage(run), []string{"go-test covered by lint", "lint", "vet covered by lint"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("run %q, want %q", got, want)
 	}
@@ -288,7 +288,7 @@ func TestSelectStoryLeavingQueueAnswersTheQueueTiersApart(t *testing.T) {
 
 	// without lint, nothing that runs covers go-test or vet
 	alone := append(append([]Tier{}, tiers[0]), tiers[2:]...)
-	run, _ = SelectStoryLeavingQueue(fsys, alone, paths)
+	run, _ = SelectStoryLeavingQueue(fsys, alone, paths, nil)
 	if got, want := coverage(run), []string{"go-test", "vet"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("run without lint %q, want %q", got, want)
 	}
@@ -313,7 +313,7 @@ var manualTiers = []Tier{
 func TestSelectLeavesTheManualTiersOut(t *testing.T) {
 	fsys := fstest.MapFS{"flai/go.mod": {}, "flai/main.go": {}}
 	paths := []string{"flai/main.go"}
-	run, queued := SelectStoryLeavingQueue(fsys, manualTiers, paths)
+	run, queued := SelectStoryLeavingQueue(fsys, manualTiers, paths, nil)
 	for _, tc := range []struct {
 		name string
 		got  []Selected
@@ -351,6 +351,88 @@ func TestSelectTierChoosesOneTierByItsName(t *testing.T) {
 	for _, name := range []string{"nope", "", "flai/main.go"} {
 		if s, ok := SelectTier(tiers, name); ok {
 			t.Errorf("SelectTier(%q) chose %+v", name, s)
+		}
+	}
+}
+
+// ADR-0233: SelectStoryLeavingQueue runs a queue tier whose when matches an
+// entry of the story's claim, or else a changed path, naming the first
+// pattern and the claim entry, then path, it matches; it leaves to the queue
+// one whose when matches neither and one with no when; and a queue tier that
+// runs covers what it covers.
+func TestSelectStoryLeavingQueueRunsAQueueTierWhoseWhenMatches(t *testing.T) {
+	t.Parallel()
+	queueTier := func(name string, when ...string) Tier {
+		return Tier{Name: name, AllOnly: true, Queue: true, Command: []string{name + ".sh"}, When: when}
+	}
+	tiers := []Tier{
+		{Name: "go-test", Dir: "flai", Paths: []string{"flai/**/*.go"}, Command: []string{"go", "test", "{packages}"}},
+		{Name: "integration", AllOnly: true, Queue: true, Dir: "flai", Paths: []string{"flai/**"}, Command: []string{"go", "test", "{packages}"}, Covers: []string{"go-test"}, When: []string{"docs/**", "flai/**"}},
+		queueTier("by-path", "!flai/internal/x/x_test.go", "flai/internal/x/*.go"),
+		queueTier("by-neither", "template/**", "!flai/**"),
+		queueTier("by-none"),
+	}
+	fsys := fstest.MapFS{"flai/go.mod": {}, "flai/internal/x/x.go": {}}
+	paths := []string{"flai/internal/x/x.go"}
+	claim := []string{"README.md", "flai/internal/check"}
+	run, queued := SelectStoryLeavingQueue(fsys, tiers, paths, claim)
+	var got []string
+	for _, s := range run {
+		got = append(got, s.Tier.Name+" covered by "+s.CoveredBy+", ran for "+s.RanFor)
+	}
+	want := []string{
+		"go-test covered by integration, ran for ",
+		"integration covered by , ran for its when flai/** matches flai/internal/check",
+		"by-path covered by , ran for its when flai/internal/x/*.go matches flai/internal/x/x.go",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("run\n%q\nwant\n%q", got, want)
+	}
+	var names []string
+	for _, s := range queued {
+		names = append(names, s.Tier.Name+" ran for "+s.RanFor)
+	}
+	if want := []string{"by-neither ran for ", "by-none ran for "}; !reflect.DeepEqual(names, want) {
+		t.Errorf("queued %q, want %q", names, want)
+	}
+
+	// with no claim, integration runs for the changed path, and with a when
+	// that matches nothing it is left to the queue and covers nothing
+	run, _ = SelectStoryLeavingQueue(fsys, tiers, paths, nil)
+	if run[1].RanFor != "its when flai/** matches flai/internal/x/x.go" {
+		t.Errorf("integration ran for %q with no claim", run[1].RanFor)
+	}
+	tiers[1].When = []string{"docs/**"}
+	run, queued = SelectStoryLeavingQueue(fsys, tiers, paths, nil)
+	if got, want := coverage(run), []string{"go-test", "by-path"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("run with integration's when matching nothing %q, want %q", got, want)
+	}
+	if len(queued) != 3 || queued[0].Tier.Name != "integration" {
+		t.Errorf("queued %+v, want integration first of three", queued)
+	}
+}
+
+// ADR-0233: a when pattern such as flai/** matches a claim entry that is a
+// folder below the sub-project and one that is the sub-project's own path,
+// as Holds.Claim reads a sub-project's name; a narrower pattern does not
+// match a wider folder.
+func TestFirstMatchingReadsAClaimsFoldersAndSubProjects(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		patterns []string
+		entry    string
+		want     string
+	}{
+		{[]string{"flai/**"}, "flai/internal/check", "flai/**"},
+		{[]string{"flai/**"}, "flai", "flai/**"},
+		{[]string{"flai"}, "flai/internal/check", "flai"},
+		{[]string{"docs/**", "flai/**"}, "flai/cmd/verify.go", "flai/**"},
+		{[]string{"flai/**", "!flai/internal/**"}, "flai/internal/check", ""},
+		{[]string{"flai/internal/verify/**"}, "flai", ""},
+	} {
+		pattern, entry, ok := firstMatching(tc.patterns, []string{tc.entry})
+		if pattern != tc.want || ok != (tc.want != "") || (ok && entry != tc.entry) {
+			t.Errorf("firstMatching(%q, %q) = %q, %q, %v, want %q", tc.patterns, tc.entry, pattern, entry, ok, tc.want)
 		}
 	}
 }

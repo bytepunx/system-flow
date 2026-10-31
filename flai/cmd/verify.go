@@ -70,12 +70,17 @@ merge-queue host action is on for the project in the configuration this flai
 reads, orchestration.permissions.accept_reviews is on, and acceptance is
 local. Each such tier the branch selects is listed after the rest as
 "queued tier <name>: left to the merge queue", the run passes without it, and
-a tier that only it covers runs. --all leaves no tier to the queue: every
-tier the branch selects runs (ADR-0174). When the branch selects a tier marked
-queue but the queue cannot batch, a line before the notes and the outcome
-names those tiers and the condition that is off, such as the host action off
-for the project in the configuration this flai reads, and --json carries it as
-queue_off (S-0466).
+a tier that only it covers runs. A tier marked queue whose when matches one
+of the story's touches, as its claim holds them (its own and its open
+tasks'), or a path its branch changed runs here all the same, and the batch
+runs it again: its line names the pattern and the touch or path that chose
+it, as "passed tier <name> (<duration>): ran here, its when <pattern> matches
+<touch or path>", and --json carries that as its step's ran_for (ADR-0233).
+--all leaves no tier to the queue: every tier the branch selects runs
+(ADR-0174). When the branch selects a tier marked queue but the queue cannot
+batch, a line before the notes and the outcome names those tiers and the
+condition that is off, such as the host action off for the project in the
+configuration this flai reads, and --json carries it as queue_off (S-0466).
 
 When the story's last run was at the same head and base commit, and the
 tiers, their commands, and those the branch selects are the same, the steps
@@ -107,7 +112,8 @@ and the base's commit, the merge base and the branch's patch id, when it ran,
 how long it took, passed, stopped_at, the
 paths the branch changed, and each step's state, duration, and findings, a
 reused tier's reused_from, a skipped tier's covered_by, a tier left to the
-merge queue as queued, and the notes.
+merge queue as queued, the ran_for of a tier marked queue that ran here,
+and the notes.
 
 Each run's report is stored in the project's .flai-cache/verify, whether it
 passes or not; --last prints the story's stored report and runs nothing, or
@@ -357,7 +363,9 @@ func (a *app) printLastVerify(repo *workitem.Repo, story string, maxNotes int) e
 // verifyText is the report as flai verify prints it: a line for each step,
 // its state, name, and duration, a tier's name after "tier", a reused tier's
 // time of the run it comes from in place of its duration, a skipped tier's
-// line naming the tier that covers it in place of a duration, a passing step's
+// line naming the tier that covers it in place of a duration, after the
+// duration of a tier marked queue that ran here why it was not left to the
+// merge queue (ADR-0233), a passing step's
 // note and the failing step's findings indented under it, then why the tiers
 // marked queue ran here when the merge queue cannot batch (S-0466), at most
 // maxNotes of the notes outside the story, the issues they were recorded in,
@@ -369,6 +377,10 @@ func verifyText(rep verify.Report, recorded []recordedIssue, stopped bool, maxNo
 		if s.Tier {
 			name = "tier " + s.Name
 		}
+		ranFor := ""
+		if s.RanFor != "" {
+			ranFor = ": ran here, " + s.RanFor
+		}
 		switch {
 		case s.State == verify.NotReached:
 			fmt.Fprintf(&b, "%s %s\n", s.State, name)
@@ -377,9 +389,9 @@ func verifyText(rep verify.Report, recorded []recordedIssue, stopped bool, maxNo
 		case s.State == verify.Queued:
 			fmt.Fprintf(&b, "%s %s: left to the merge queue\n", s.State, name)
 		case s.State == verify.Reused && s.ReusedFrom != nil:
-			fmt.Fprintf(&b, "%s %s (from %s)\n", s.State, name, s.ReusedFrom.UTC().Format(time.RFC3339))
+			fmt.Fprintf(&b, "%s %s (from %s)%s\n", s.State, name, s.ReusedFrom.UTC().Format(time.RFC3339), ranFor)
 		default:
-			fmt.Fprintf(&b, "%s %s (%s)\n", s.State, name, s.Duration)
+			fmt.Fprintf(&b, "%s %s (%s)%s\n", s.State, name, s.Duration, ranFor)
 		}
 		if s.Note != "" {
 			b.WriteString("    " + strings.Join(strings.Fields(s.Note), " ") + "\n")

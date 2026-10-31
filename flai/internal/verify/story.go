@@ -70,8 +70,10 @@ type StoryOptions struct {
 	Fresh bool
 	// LeaveToQueue leaves each selected tier marked Queue to the merge
 	// queue's batch, which runs it: it is not run but reported Queued, after
-	// the tiers that run. Set it while the merge queue can batch for the
-	// project and the caller did not ask for every tier (ADR-0174).
+	// the tiers that run, unless its When matches the story's claim or a path
+	// its branch changed, when it runs with them (ADR-0233). Set it while the
+	// merge queue can batch for the project and the caller did not ask for
+	// every tier (ADR-0174).
 	LeaveToQueue bool
 	// QueueOff is why the merge queue cannot batch for the project, when
 	// that alone keeps the caller from leaving tiers to it: the report's
@@ -168,6 +170,10 @@ type Step struct {
 	// CoveredBy names the tier that covers a skipped tier, as TierResult
 	// has it (S-0342).
 	CoveredBy string `json:"covered_by,omitempty"`
+	// RanFor says why a tier marked Queue that ran or was reused was not
+	// left to the merge queue, as Selected has it: "its when <pattern>
+	// matches <touch or path>" (ADR-0233).
+	RanFor string `json:"ran_for,omitempty"`
 	// Log is the file holding a tier's whole output, as TierResult has it.
 	Log string `json:"log,omitempty"`
 }
@@ -207,7 +213,11 @@ type Note struct {
 // step that fails; the steps after it are not reached, but for a tier that
 // another selected tier covers, which is skipped either way. With
 // LeaveToQueue, the selected tiers marked Queue are not run but reported
-// Queued after the rest, and the run passes without them (ADR-0174). When the story's
+// Queued after the rest, and the run passes without them (ADR-0174), but for
+// those whose When matches the story's claim, as Holds.Claim reads it from
+// the project, or a path its branch changed, which run with the rest, their
+// steps saying why in RanFor (ADR-0233); a claim the project cannot give is
+// taken as empty. When the story's
 // last report has the same head, base commit, and fingerprint, and Fresh is
 // not set, the tiers before the first it shows failed, not reached, or left
 // to the merge queue are not run again but reported Reused, with the time of
@@ -425,6 +435,13 @@ func (v *storyRun) run(ctx context.Context) (Report, error) {
 	var runErr error
 	if rep.Passed {
 		reused, sentBack := v.reusable(rep.Fingerprint, selected)
+		for i := range reused {
+			// why this run, not the last, did not leave a queue tier out
+			reused[i].RanFor = ""
+			if reused[i].State == Reused {
+				reused[i].RanFor = selected[i].RanFor
+			}
+		}
 		rep.Steps = append(rep.Steps, reused...)
 		ro := v.opts.RunOptions
 		ro.Env = append(append([]string{}, ro.Env...), StoryEnv+"="+v.story)
@@ -434,6 +451,9 @@ func (v *storyRun) run(ctx context.Context) (Report, error) {
 			step := tierStep(tr)
 			if i == 0 {
 				step.Note = sentBack
+			}
+			if tr.State == Passed || tr.State == Failed {
+				step.RanFor = selected[len(reused)+i].RanFor
 			}
 			rep.Steps = append(rep.Steps, step)
 			if tr.State == Failed && rep.Passed {
@@ -457,11 +477,29 @@ func (v *storyRun) run(ctx context.Context) (Report, error) {
 // of both.
 func (v *storyRun) selection() (selected, queued []Selected, fp string) {
 	if v.opts.LeaveToQueue {
-		selected, queued = SelectStoryLeavingQueue(v.opts.FS, v.opts.Tiers, v.paths)
+		selected, queued = SelectStoryLeavingQueue(v.opts.FS, v.opts.Tiers, v.paths, v.claim())
 	} else {
 		selected = SelectStory(v.opts.FS, v.opts.Tiers, v.paths)
 	}
 	return selected, queued, fingerprint(v.opts.Tiers, inListOrder(v.opts.Tiers, selected, queued))
+}
+
+// claim is the story's claim, as Holds.Claim reads it from the project's
+// items (ADR-0096): its touches, each folder narrowed to its tasks' touches
+// inside it, and its open tasks' touches. It is none when the items cannot
+// be read or do not hold the story, so that the changed paths alone choose
+// the queue tiers a run does not leave to the merge queue (ADR-0233).
+func (v *storyRun) claim() []string {
+	items, err := v.opts.Project.List(false)
+	if err != nil {
+		return nil
+	}
+	for _, it := range items {
+		if it.Type == workitem.Story && it.ID == v.story {
+			return workitem.NewHolds(items, v.opts.Project.Manifest.Projects).Claim(it)
+		}
+	}
+	return nil
 }
 
 // queueOffText is Report's QueueOff for a run that selected these tiers and
@@ -495,7 +533,8 @@ func tierList(names []string) string {
 // inListOrder is the tiers a run runs and those it leaves to the merge queue
 // as one selection, in the order tiers lists them: what SelectStory chooses,
 // but for which are marked covered, which the fingerprint does not hash
-// (I-0203).
+// (I-0203). A tier marked Queue that the run runs (ADR-0233) takes its place
+// in the list as one left to the queue would.
 func inListOrder(tiers []Tier, run, queued []Selected) []Selected {
 	if len(queued) == 0 {
 		return run
@@ -503,7 +542,7 @@ func inListOrder(tiers []Tier, run, queued []Selected) []Selected {
 	out := make([]Selected, 0, len(run)+len(queued))
 	for _, t := range tiers {
 		switch {
-		case len(run) > 0 && !t.Queue && run[0].Tier.Name == t.Name:
+		case len(run) > 0 && run[0].Tier.Queue == t.Queue && run[0].Tier.Name == t.Name:
 			out, run = append(out, run[0]), run[1:]
 		case len(queued) > 0 && t.Queue && queued[0].Tier.Name == t.Name:
 			out, queued = append(out, queued[0]), queued[1:]

@@ -23,6 +23,10 @@ type Selected struct {
 	// CoveredBy names the selected tier that covers this one, which Run
 	// skips rather than runs; "" when it runs.
 	CoveredBy string
+	// RanFor says why a tier marked Queue runs in a story's close-out while
+	// the merge queue can batch, rather than being left to the batch: "its
+	// when <pattern> matches <touch or path>" (ADR-0233); "" for any other.
+	RanFor string
 }
 
 // Select chooses the tiers, in list order, that the root-relative paths
@@ -83,16 +87,27 @@ func SelectStory(fsys fs.FS, tiers []Tier, paths []string) []Selected {
 
 // SelectStoryLeavingQueue chooses the tiers SelectStory chooses, but answers
 // those marked Queue apart, in list order, as left to the merge queue's
-// batch, which runs them (ADR-0174). The rest are marked covered as
+// batch, which runs them (ADR-0174), unless a pattern of the tier's When
+// matches an entry of claim, the story's claim as Holds.Claim reads it, or
+// one of paths: such a tier runs with the rest, its RanFor naming the first
+// pattern and the first claim entry, then path, it matches, and the batch
+// runs it again (ADR-0233). The tiers that run are marked covered as
 // SelectStory marks them, but by none of those left out: a tier that only a
-// queue tier covers runs, as the tier that covers it does not.
-func SelectStoryLeavingQueue(fsys fs.FS, tiers []Tier, paths []string) (run, queued []Selected) {
+// queue tier left out covers runs, as the tier that covers it does not.
+func SelectStoryLeavingQueue(fsys fs.FS, tiers []Tier, paths, claim []string) (run, queued []Selected) {
 	for _, s := range selectStoryTiers(fsys, tiers, paths) {
 		if s.Tier.Queue {
-			queued = append(queued, s)
-		} else {
-			run = append(run, s)
+			pattern, entry, ok := firstMatching(s.Tier.When, claim)
+			if !ok {
+				pattern, entry, ok = firstMatching(s.Tier.When, paths)
+			}
+			if !ok {
+				queued = append(queued, s)
+				continue
+			}
+			s.RanFor = "its when " + pattern + " matches " + entry
 		}
+		run = append(run, s)
 	}
 	return cover(tiers, run), queued
 }
@@ -214,7 +229,34 @@ func allArgv(t Tier) []string {
 
 // matching are the paths that a pattern matches and no ! pattern does.
 func matching(patterns, paths []string) []string {
-	var in, out manifest.Claims
+	in, out := splitPatterns(patterns)
+	var got []string
+	for _, p := range paths {
+		if _, ok := matchPath(in, out, p); ok {
+			got = append(got, p)
+		}
+	}
+	return got
+}
+
+// firstMatching is the first of entries that a pattern matches and no !
+// pattern does, as matching reads them, and the first pattern that matches
+// it; ok is false when none does. An entry may be a path or a claim's entry,
+// a folder such as flai/internal/check or a sub-project's path such as flai,
+// which a pattern such as flai/** matches as it matches a path below it.
+func firstMatching(patterns, entries []string) (pattern, entry string, ok bool) {
+	in, out := splitPatterns(patterns)
+	for _, e := range entries {
+		if pattern, ok := matchPath(in, out, e); ok {
+			return pattern, e, true
+		}
+	}
+	return "", "", false
+}
+
+// splitPatterns are patterns as claims to match: in those without a leading
+// !, and out those with one, without it.
+func splitPatterns(patterns []string) (in, out manifest.Claims) {
 	for _, p := range patterns {
 		if rest, ok := strings.CutPrefix(p, "!"); ok {
 			out.Shared = append(out.Shared, rest)
@@ -222,17 +264,20 @@ func matching(patterns, paths []string) []string {
 			in.Shared = append(in.Shared, p)
 		}
 	}
-	var got []string
-	for _, p := range paths {
-		if _, ok := in.Match(p); !ok {
-			continue
-		}
-		if _, ok := out.Match(p); ok {
-			continue
-		}
-		got = append(got, p)
+	return in, out
+}
+
+// matchPath is the first pattern of in that matches p, and whether one does
+// and no pattern of out does.
+func matchPath(in, out manifest.Claims, p string) (string, bool) {
+	pattern, ok := in.Match(p)
+	if !ok {
+		return "", false
 	}
-	return got
+	if _, ok := out.Match(p); ok {
+		return "", false
+	}
+	return pattern, true
 }
 
 // fill is argv with each placeholder that lists holds replaced by its list,

@@ -1558,3 +1558,125 @@ func TestVerifyFailsAGoTestTierAtTheCallerTheBranchBreaks(t *testing.T) {
 		t.Errorf("with {packages}, passed %v at %q, tiers %v; want it to pass, testing the callee alone", rep.Passed, rep.StoppedAt, tierStates(rep))
 	}
 }
+
+// touch gives the fixture's item at rel, under wip/kanban, the touches
+// entries in its front matter.
+func (f *verifyFixture) touch(t *testing.T, rel string, entries ...string) {
+	t.Helper()
+	p := filepath.Join(f.root, "wip", "kanban", rel)
+	data, err := os.ReadFile(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	touches := "touches:\n"
+	for _, e := range entries {
+		touches += "  - " + e + "\n"
+	}
+	if !strings.Contains(string(data), "\ntags: []\n") {
+		t.Fatalf("%s has no tags line", rel)
+	}
+	if err := os.WriteFile(p, []byte(strings.Replace(string(data), "\ntags: []\n", "\n"+touches+"tags: []\n", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// whenTiers are queueTiers with integration run in the close-out for what
+// touches docs, and smoke for what touches template (ADR-0233).
+func whenTiers() []Tier {
+	tiers := queueTiers()
+	tiers[2].When, tiers[4].When = []string{"docs/**"}, []string{"template/**"}
+	return tiers
+}
+
+// ADR-0233: with LeaveToQueue, a queue tier whose when matches the story's
+// claim, its own touches or an open task's, runs with the rest, its step
+// saying why, and one whose when matches nothing is left to the merge queue;
+// the run that ran it counts as having run it at the head, and a run of every
+// tier at the same head reuses it.
+func TestVerifyRunsAQueueTierWhoseWhenMatchesTheStorysClaim(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name string
+		item string
+	}{
+		{"the story's touch", "stories/S-004-four.md"},
+		{"an open task's touch", "tasks/T-003-t3.md"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			f := newVerifyFixture(t)
+			f.touch(t, tc.item, "docs/users")
+			f.opts.Tiers, f.opts.LeaveToQueue = whenTiers(), true
+			rep, err := Verify(context.Background(), f.opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := []string{"go-test:passed", "integration:passed", "smoke:queued"}
+			if got := tierStates(rep); !rep.Passed || !reflect.DeepEqual(got, want) {
+				t.Fatalf("passed %v, tiers %v, want %v; steps %+v", rep.Passed, got, want, rep.Steps)
+			}
+			if ran := []string{"go test ./internal/x", "go test ./..."}; !reflect.DeepEqual(f.proc.ran, ran) {
+				t.Errorf("ran %q, want %q", f.proc.ran, ran)
+			}
+			if got, want := rep.Steps[5].RanFor, "its when docs/** matches docs/users"; got != want {
+				t.Errorf("integration ran for %q, want %q", got, want)
+			}
+			if got := rep.Steps[4].RanFor + rep.Steps[6].RanFor; got != "" {
+				t.Errorf("go-test and smoke ran for %q, want nothing", got)
+			}
+			if names, _ := QueueTiersNotRun(rep, true, "0123abc", f.opts.Tiers); !reflect.DeepEqual(names, []string{"smoke"}) {
+				t.Errorf("tiers not run at the head %q, want smoke alone", names)
+			}
+
+			// a run of every tier at the same head reuses integration
+			f.opts.LeaveToQueue = false
+			f.proc.ran, f.proc.now = nil, f.proc.now.Add(time.Minute)
+			all, err := Verify(context.Background(), f.opts)
+			if err != nil || !all.Passed {
+				t.Fatalf("run of every tier %+v, %v", all, err)
+			}
+			if all.Fingerprint != rep.Fingerprint {
+				t.Errorf("the fingerprint changed with LeaveToQueue: %s, then %s", rep.Fingerprint, all.Fingerprint)
+			}
+			if got, want := tierStates(all), []string{"go-test:reused", "integration:reused", "smoke:passed"}; !reflect.DeepEqual(got, want) {
+				t.Errorf("tiers %v, want %v", got, want)
+			}
+			if !reflect.DeepEqual(f.proc.ran, []string{"smoke.sh"}) {
+				t.Errorf("ran %q, want smoke.sh alone", f.proc.ran)
+			}
+			if got := all.Steps[5].RanFor; got != "" {
+				t.Errorf("integration reused by a run of every tier ran for %q, want nothing", got)
+			}
+		})
+	}
+}
+
+// ADR-0233: with LeaveToQueue, a queue tier whose when matches neither the
+// story's claim nor a changed path is left to the merge queue, as one with
+// no when is, and one whose when matches a changed path runs.
+func TestVerifyLeavesAQueueTierWhoseWhenMatchesNothing(t *testing.T) {
+	t.Parallel()
+	f := newVerifyFixture(t)
+	f.touch(t, "stories/S-004-four.md", "design/system")
+	f.opts.Tiers, f.opts.LeaveToQueue = whenTiers(), true
+	rep, err := Verify(context.Background(), f.opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := tierStates(rep), []string{"go-test:passed", "integration:queued", "smoke:queued"}; !rep.Passed || !reflect.DeepEqual(got, want) {
+		t.Fatalf("passed %v, tiers %v, want %v", rep.Passed, got, want)
+	}
+
+	// a new when changes the tiers, and so the fingerprint: nothing is reused
+	f.opts.Tiers[2].When = []string{"flai/internal/**"}
+	f.proc.ran, f.proc.now = nil, f.proc.now.Add(time.Minute)
+	if rep, err = Verify(context.Background(), f.opts); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := tierStates(rep), []string{"go-test:passed", "integration:passed", "smoke:queued"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("tiers %v, want %v", got, want)
+	}
+	if got, want := rep.Steps[5].RanFor, "its when flai/internal/** matches flai/internal/x/x.go"; got != want {
+		t.Errorf("integration ran for %q, want %q", got, want)
+	}
+}

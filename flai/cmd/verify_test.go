@@ -863,6 +863,35 @@ func TestVerifyOutcomeNamesTheQueuedTiersBeforeTheReused(t *testing.T) {
 	}
 }
 
+// ADR-0233: a tier marked queue that ran here, or was reused, says after its
+// duration why it was not left to the merge queue; one left to it, and a
+// tier that is not marked queue, say nothing of it; the help says when such
+// a tier runs here.
+func TestVerifyTextNamesWhyAQueueTierRanHere(t *testing.T) {
+	t.Parallel()
+	from := time.Date(2026, 10, 31, 9, 0, 0, 0, time.UTC)
+	rep := verify.Report{Story: "S-004", Passed: true, Steps: []verify.Step{
+		{Name: "go-test", Tier: true, State: verify.Passed, Duration: "2s"},
+		{Name: "integration", Tier: true, State: verify.Passed, Duration: "12m0s", RanFor: "its when flai/** matches flai/internal/verify"},
+		{Name: "lint", Tier: true, State: verify.Reused, ReusedFrom: &from, RanFor: "its when **/*.go matches flai/cmd/verify.go"},
+		{Name: "smoke", Tier: true, State: verify.Queued},
+	}}
+	want := "passed tier go-test (2s)\n" +
+		"passed tier integration (12m0s): ran here, its when flai/** matches flai/internal/verify\n" +
+		"reused tier lint (from 2026-10-31T09:00:00Z): ran here, its when **/*.go matches flai/cmd/verify.go\n" +
+		"queued tier smoke: left to the merge queue\n" +
+		"verify: S-004 passed every step, smoke left to the merge queue (reused 1 tier from 2026-10-31T09:00:00Z)\n"
+	if got := verifyText(rep, nil, false, verify.DefaultMax); got != want {
+		t.Errorf("text\n%s\nwant\n%s", got, want)
+	}
+	long := strings.Join(strings.Fields(newVerifyCmd(&app{}).Long), " ")
+	for _, said := range []string{"whose when matches one of the story's touches", "the batch runs it again", "ran_for (ADR-0233)"} {
+		if !strings.Contains(long, said) {
+			t.Errorf("the help does not say %q", said)
+		}
+	}
+}
+
 // taggedGit is verifyGit in a project whose history holds the flai release
 // tags given.
 type taggedGit struct {
