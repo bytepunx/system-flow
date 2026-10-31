@@ -358,6 +358,37 @@ func TestSelectTierChoosesOneTierByItsName(t *testing.T) {
 // I-0105: this repository's manifest has flai test check a changed flaiover
 // file's format and lint with flaiover-lint, outside --all and before vitest,
 // rather than leaving prettier and eslint to the close-out's flaiover tier.
+// S-0548: this repository's gateway tier runs only by name, never for a
+// path, a story, or --all, so no close-out or batch spends on the paid
+// gateway checks.
+func TestRepositoryManifestRunsTheGatewayChecksOnlyByName(t *testing.T) {
+	root := filepath.Join("..", "..", "..")
+	if _, err := os.Stat(filepath.Join(root, "system-flow.yaml")); err != nil {
+		t.Skip("monorepo not present")
+	}
+	tiers, err := CheckoutTiers(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, ok := SelectTier(tiers, "gateway")
+	if !ok || !s.Tier.Manual || s.Tier.Queue || strings.Join(s.Argv, " ") != "scripts/gateway-smoke.sh" {
+		t.Fatalf("the gateway tier: %+v %v", s, ok)
+	}
+	paths := []string{"scripts/gateway-smoke.sh", "scripts/smoke.sh"}
+	runs := map[string][]Selected{
+		"paths": Select(os.DirFS(root), tiers, paths, false),
+		"all":   Select(os.DirFS(root), tiers, nil, true),
+		"story": SelectStory(os.DirFS(root), tiers, paths),
+	}
+	for name, run := range runs {
+		for _, sel := range run {
+			if sel.Tier.Name == "gateway" {
+				t.Errorf("a %s run selects the gateway tier", name)
+			}
+		}
+	}
+}
+
 func TestRepositoryManifestLintsChangedFlaioverFiles(t *testing.T) {
 	if testing.Short() {
 		t.Skip("integration: reads the monorepo")

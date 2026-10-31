@@ -1,6 +1,6 @@
 ---
 title: Contributors guide
-updated: 2026-10-21
+updated: 2026-10-31
 status: draft
 ---
 
@@ -62,7 +62,21 @@ Run `make install-tools` once, from any tree: it installs the pinned golangci-li
 
 ### Gateway checks
 
-The gateway checks run `claude -p` through a gateway with the `claude-code` adapter's arguments, `flai guard`, and `permission_prompt` on, and log what the gateway charged beside Claude Code's `total_cost_usd`. Each run spends real money on the gateway's key. `scripts/gateway-smoke.sh`, the smoke tier's last step, runs the check of each gateway whose variables are set and prints one line for each it skips, naming the variables missing. The integration tier leaves them to it, and `make test` never runs them. A close-out whose branch changes `flai/` runs the smoke tier, so on a host with a key each such close-out spends one run.
+The gateway checks run `claude -p` through a gateway with the `claude-code` adapter's arguments, `flai guard`, and `permission_prompt` on, and log what the gateway charged beside Claude Code's `total_cost_usd`. Each run spends real money on the gateway's key. They are the only check that the guard and `permission_prompt` hold through a gateway (S-0351, S-0356). `scripts/gateway-smoke.sh` runs the check of each gateway whose variables are set and prints one line for each it skips, naming the variables missing. It is the `gateway` tier of `system-flow.yaml`, a manual tier, which runs only when you name it or on a schedule the host sets:
+
+```sh
+flai test gateway             # or scripts/flai.sh test gateway, or scripts/gateway-smoke.sh
+```
+
+No path selects it, and neither `flai test --all`, a close-out, nor the merge queue's batch runs it: since S-0548 the smoke tier no longer ends with it, so no batch spends gateway money or fails on a provider's answer, as one did on OpenRouter's 402 on 2026-10-31. The go-test and integration tiers skip `^TestGateway`, and `make test` never runs them. To run the tier on a schedule, see the [operators guide](../operators/index.md#the-gateway-checks-on-the-hosts-schedule-s-0548).
+
+What a run spends: in the batches of 2026-10-29 and 2026-10-30, the OpenRouter check raised its key's usage by 0.085 to 0.087 USD, which Claude Code counted as about 0.33 USD, and the LiteLLM check ran on a free model, so its key's spend did not move, though Claude Code counted 0.29 to 0.36 USD for it. That Claude Code figure, about 0.32 USD a check, is what `FLAI_TEST_GATEWAY_BUDGET` caps, for each check's session; a run of both takes 70 s to 194 s.
+
+To run the tier and spend nothing, unset the keys. Unsetting `LITELLM_BASE_URL` is not enough, because `scripts/env.sh` then reads it and the virtual key from `.flai-cache/litellm/litellm.env`; set it to a placeholder instead, so that the LiteLLM check skips for want of `LITELLM_API_KEY`:
+
+```sh
+env -u OPENROUTER_API_KEY -u LITELLM_API_KEY LITELLM_BASE_URL=unset flai test gateway
+```
 
 | Variable | Default | What |
 |----------|---------|------|
@@ -73,7 +87,7 @@ The gateway checks run `claude -p` through a gateway with the `claude-code` adap
 | `FLAI_TEST_LITELLM_HAIKU` | The first that answers of `litellmHaikuDefaults` in `gateway_test.go`, in order, each as `openrouter-messages/<slug>`: `nvidia/nemotron-3-ultra-550b-a55b:free`, `minimax/minimax-m3.1-flash:free`, `nvidia/nemotron-3.5-lightning:free` | The proxy's model `haiku` resolves to on the unified route. Unset, or a slug on the list, the check probes the list in order, runs on the first slug the proxy answers 2xx, and logs each it passed over; when none answers, it fails, naming each slug and its answer. A slug not on the list is used alone, and fails the check when the proxy refuses it. The defaults are free OpenRouter models, so the check spends nothing. `scripts/litellm.sh up` sets it in the key file: `admin.env` keeps `LITELLM_HAIKU_MODEL` only when it was set, and drops it when it is a default the script has retired |
 | `FLAI_TEST_LITELLM_PASSTHROUGH` | unset: the pass-through skips | `1` runs the check through the proxy's `/anthropic` pass-through too, on `claude-haiku-4-5`; it forwards to Anthropic only, so it needs the proxy's upstream `ANTHROPIC_API_KEY` and spends on it |
 | `LITELLM_MASTER_KEY` | none: the spend log is not read | The proxy's master key, the only key that reads `/spend/logs`; without it the check logs the virtual key's spend from `/key/info` alone |
-| `FLAI_TEST_GATEWAY_BUDGET` | `1.00` | The run's `max_budget_usd`, held to Claude Code's own count, which runs three to four times what OpenRouter charges; a run costs about $0.06 at OpenRouter |
+| `FLAI_TEST_GATEWAY_BUDGET` | `1.00` | Each check's `max_budget_usd`, held to Claude Code's own count, which runs three to four times what OpenRouter charges; an OpenRouter check costs about $0.09 at OpenRouter and $0.33 in Claude Code's count |
 
 Give the key a credit limit of its own on OpenRouter's keys page, so that a run gone wrong cannot spend past it, then run one check:
 

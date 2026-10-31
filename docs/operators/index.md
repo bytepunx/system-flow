@@ -344,7 +344,7 @@ flai serve journal                # every run and cancel, refused ones included
 flai serve checks clear flaiover  # one name, or every name with no argument
 ```
 
-In this repository a story's close-out runs `flai verify`, which runs the tiers of `system-flow.yaml`'s `tests` that the branch's changes select (S-0270): for a change to `flai/`, gofmt, vet, golangci-lint, the Go tests of the changed packages with `-short`, then the full Go tests with the race detector (`scripts/integration.sh`) and the smoke tier, which the close-out leaves to the merge queue's batch while the queue can batch. The tests that skip under `-short` are the integration tier's own: those that need real git or the monorepo, among them `TestMonorepoIsClean`, `TestRepositoryLintsClean`, `TestPrimeOnThisRepository`, and `TestPrimeComesInPartsOnThisRepository`, which check, lint, and prime the whole monorepo and took minutes under the race detector in every close-out that touched their packages (S-0548). In a close-out or a batch the smoke tier's `scripts/check.sh` and `scripts/lint-md.sh` run the repository check and the markdown lint once: `TestMonorepoIsClean` skips there, and so does `TestRepositoryLintsClean` unless the stories change flai's markdown linter or its configuration. A change to `template/` selects `scripts/template-test.sh`; a change to `flaiover/`, vitest on the related files and `scripts/flaiover-test.sh`, which installs flaiover's dependencies first when they are missing or older than `pnpm-lock.yaml`, so no story worktree needs `make flaiover-install` by hand; and the markdown lint for changed markdown. `make flai-test` still runs the whole of `scripts/flai-test.sh`. Between tasks an agent runs `flai test` on the paths it changed instead, which runs the tiers `system-flow.yaml`'s `tests` declare for those paths ([Run the tests for what changed](../users/flai.md#run-the-tests-for-what-changed)).
+In this repository a story's close-out runs `flai verify`, which runs the tiers of `system-flow.yaml`'s `tests` that the branch's changes select (S-0270): for a change to `flai/`, gofmt, vet, golangci-lint, the Go tests of the changed packages with `-short`, then the full Go tests with the race detector (`scripts/integration.sh`) and the smoke tier, which the close-out leaves to the merge queue's batch while the queue can batch. The tests that skip under `-short` are the integration tier's own: those that need real git or the monorepo, among them `TestMonorepoIsClean`, `TestRepositoryLintsClean`, `TestPrimeOnThisRepository`, and `TestPrimeComesInPartsOnThisRepository`, which check, lint, and prime the whole monorepo and took minutes under the race detector in every close-out that touched their packages (S-0548). In a close-out or a batch the smoke tier's `scripts/check.sh` and `scripts/lint-md.sh` run the repository check and the markdown lint once: `TestMonorepoIsClean` skips there, and so does `TestRepositoryLintsClean` unless the stories change flai's markdown linter or its configuration. The gateway checks are no part of a close-out or a batch: they are the `gateway` tier, which runs only by name or on your schedule ([below](#the-gateway-checks-on-the-hosts-schedule-s-0548)). A change to `template/` selects `scripts/template-test.sh`; a change to `flaiover/`, vitest on the related files and `scripts/flaiover-test.sh`, which installs flaiover's dependencies first when they are missing or older than `pnpm-lock.yaml`, so no story worktree needs `make flaiover-install` by hand; and the markdown lint for changed markdown. `make flai-test` still runs the whole of `scripts/flai-test.sh`. Between tasks an agent runs `flai test` on the paths it changed instead, which runs the tiers `system-flow.yaml`'s `tests` declare for those paths ([Run the tests for what changed](../users/flai.md#run-the-tests-for-what-changed)).
 
 Naming nothing here leaves the manifest's own `checks:` in effect instead — the project's own default, committed and visible to everyone. Naming any command here, on this host, uses this list instead, for this host only: your own real choice of where to name them, never a merge of both.
 
@@ -361,6 +361,57 @@ What a compromised container could still do is what the dashboard itself does: a
 | `dashboard.notify_url` | `system-flow.yaml`, per project | unset | A webhook for the designer's inbox. When it is an `http` or `https` URL, the dashboard's server POSTs `{ "project": "<name>", "entry": { "key", "kind", "title", "href", "at" } }` as JSON for each inbox entry that appears after the server started: `kind` is `thread`, `question`, `review`, `blocked`, or `overlap`, and `href` is a path in the dashboard. One attempt per entry, a five second timeout, no retry; a failure is a warning in the log naming the host only, since the URL may carry a secret. The project token, file contents, and anything else are never sent. Entries that existed at start are not posted, so a restart does not replay the inbox. Read once at start: restart the dashboard after changing it |
 | `dashboard.autocommit` | `system-flow.yaml`, per project | `true` | Documents saved from the dashboard's editor are committed on the main checkout by `flai serve`, one path per commit, authored by your git identity, with a `Co-Authored-By: flaiover` trailer. `false` leaves them uncommitted: agents on story branches then do not see the edit until someone commits it, and an acceptance from the board lists it as an uncommitted change. Nothing is pushed ([ADR-0023](../../design/adrs/0023-documents-are-saved-through-flai.md)) |
 | `worktrees.relative_paths` | `~/.flai/config.json`, per user (`flai config set`) | `false` | With git 2.48 or newer, `flai stream open` links new worktrees with relative paths, for clones that are moved or shared. The dashboard no longer has any use for it. Sets `extensions.relativeWorktrees` on the clone, after which git older than 2.48 refuses the repository. Never enabled automatically. How to turn it back off is in [the flai guide](../users/flai.md) |
+
+### The gateway checks on the host's schedule (S-0548)
+
+The gateway checks, `scripts/gateway-smoke.sh`, run `claude -p` through OpenRouter and through the local LiteLLM proxy with `flai guard` and `permission_prompt` on. They are the only check that the guard and `permission_prompt` hold through a gateway (S-0351, S-0356), and each run spends on the gateway's key and fails when the provider refuses, as OpenRouter's 402 did on 2026-10-31. So they are the `gateway` tier of `system-flow.yaml`, a manual tier: no path selects it, and neither `flai test --all`, a close-out, nor the merge queue's batch runs it. It runs when you name it, `flai test gateway`, and on a schedule you set in the host's own scheduler; flai keeps no schedule for it. A gateway whose variables are unset is skipped, with a line naming what is missing, so a run with no key spends nothing.
+
+What a run spends: the OpenRouter check raised its key's usage by about 0.09 USD in the batches of 2026-10-29 and 2026-10-30, which Claude Code counts as about 0.33 USD; the LiteLLM check runs on a free OpenRouter model and spends nothing, though Claude Code counts about 0.32 USD for it. `FLAI_TEST_GATEWAY_BUDGET`, 1.00 by default, is each check's `--max-budget-usd`, held to Claude Code's count, so it stops a check at a quarter to a third of that in OpenRouter's money. Give the OpenRouter key a credit limit of its own as well ([contributors guide](../contributors/index.md#gateway-checks)). A weekly run comes to about 0.40 USD a month at OpenRouter.
+
+Keep the keys in a file only you can read, one `KEY=value` a line, such as `~/.config/flai/gateway.env` with mode 600:
+
+```sh
+OPENROUTER_API_KEY=sk-or-...
+FLAI_TEST_GATEWAY_BUDGET=0.50
+```
+
+The LiteLLM check needs no line there: `scripts/env.sh` reads the proxy's address and virtual key from `.flai-cache/litellm/litellm.env`, which `scripts/litellm.sh up` writes. The tier runs `go test` and `claude`, so the scheduler's `PATH` must hold both, with `flai`; the paths below are examples, so put yours. With cron, Mondays at 06:00, from the main checkout:
+
+```cron
+0 6 * * 1  cd "$HOME/git/bytepunx/system-flow" && set -a && . "$HOME/.config/flai/gateway.env" && set +a && export PATH="$HOME/.flai/bin:/usr/local/go/bin:$HOME/.local/bin:$PATH" && flai test gateway >> .flai-cache/gateway.log 2>&1
+```
+
+With a systemd user timer, `~/.config/systemd/user/flai-gateway.service`:
+
+```ini
+[Unit]
+Description=flai's gateway checks for system-flow
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/git/bytepunx/system-flow
+EnvironmentFile=%h/.config/flai/gateway.env
+Environment=PATH=%h/.flai/bin:/usr/local/go/bin:%h/.local/bin:/usr/bin:/bin
+ExecStart=%h/.flai/bin/flai test gateway
+```
+
+and `~/.config/systemd/user/flai-gateway.timer`:
+
+```ini
+[Unit]
+Description=Run flai's gateway checks weekly
+
+[Timer]
+OnCalendar=Mon *-*-* 06:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+Then `systemctl --user daemon-reload && systemctl --user enable --now flai-gateway.timer`, and `journalctl --user -u flai-gateway.service` shows each run. A user timer runs only while you are logged in unless `loginctl enable-linger` is set for you. Either way `flai test gateway` exits 1 when a check fails and prints its first findings, not the whole test log; run `scripts/gateway-smoke.sh` by hand for that.
+
+`flai test gateway` needs a flai with S-0548. An older flai has no `manual` and takes `gateway` for a path: run `scripts/gateway-smoke.sh` from the checkout instead. While the merge queue, `flai serve`, or the MCP server runs an older flai, the tier's paths, the script alone, keep it out of every close-out and batch but those of a story that changes `scripts/gateway-smoke.sh`, and that flai's `flai test --all` runs it.
 
 ### The components host action (S-0438)
 

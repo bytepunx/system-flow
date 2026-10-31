@@ -129,6 +129,12 @@ tests:
     format: plain
     all_only: true
     queue: true
+  - name: gateway
+    command: [scripts/gateway-smoke.sh]
+    paths: ["scripts/gateway-smoke.sh"]
+    format: plain
+    all_only: true
+    manual: true
 orchestration:
   permissions:
     accept_reviews: true

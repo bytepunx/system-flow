@@ -1,8 +1,9 @@
 #!/usr/bin/env sh
 # Integration tests: real git and the monorepo itself. Run after behavior tests pass.
 # Arguments go to go test: flai test's integration tier passes -json.
-# The gateway checks are left to the smoke tier, which runs them where a key
-# is set (gateway-smoke.sh), so that no run spends on them twice.
+# The gateway checks are left to the manual gateway tier, which runs
+# gateway-smoke.sh only when named (flai test gateway, S-0548), so that no
+# close-out or batch spends on them.
 # In a worktree it first installs flaiover's dependencies when they are missing
 # or stale, so that the components tests run on this tree's lockfile rather
 # than on the main checkout's install (I-0178).
