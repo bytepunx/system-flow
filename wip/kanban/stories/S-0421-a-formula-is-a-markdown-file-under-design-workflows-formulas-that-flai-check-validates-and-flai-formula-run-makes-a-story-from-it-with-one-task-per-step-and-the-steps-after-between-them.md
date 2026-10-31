@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:40Z
-updated: 2026-10-31T07:23:16Z
+updated: 2026-10-31T07:25:28Z
 transitions:
   - to: ready
     at: 2026-10-28T13:10:51Z
@@ -45,10 +45,10 @@ cost_of_delay:
   at: 2026-10-21T12:39:49Z
 forecast:
   duration: 1h3m
-  delivery: 2026-10-31T18:47:00Z
-  basis: "Its own forecast of 1h3m; 21st in the pull order with an in-progress limit of 5, behind S-0424, S-0425, S-0548, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0506, S-0508, S-0509, S-0510, S-0516, S-0517, S-0518, S-0520 and S-0420."
+  delivery: 2026-10-31T18:49:00Z
+  basis: "Its own forecast of 1h3m; 20th in the pull order with an in-progress limit of 5, behind S-0548, S-0425, S-0552, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0506, S-0508, S-0509, S-0510, S-0516, S-0517, S-0518, S-0520 and S-0420."
   by: flai
-  at: 2026-10-31T07:23:16Z
+  at: 2026-10-31T07:25:28Z
 finalized:
   by: alex
   at: 2026-10-28T13:10:45Z
