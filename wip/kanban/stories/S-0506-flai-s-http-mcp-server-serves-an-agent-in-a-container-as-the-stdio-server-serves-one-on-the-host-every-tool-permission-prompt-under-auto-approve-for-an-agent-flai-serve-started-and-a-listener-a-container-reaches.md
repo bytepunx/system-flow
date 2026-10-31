@@ -7,7 +7,7 @@ status: backlog
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:42:51Z
-updated: 2026-10-31T07:26:52Z
+updated: 2026-10-31T07:43:46Z
 transitions: []
 tags: [cli, mcp]
 topics: [harness, docker, mcp]
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-10-26T12:30:19Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-31T13:10:00Z
-  basis: "Its own forecast of 1h30m; 16th in the pull order with an in-progress limit of 5, behind S-0548, S-0550, S-0551, S-0552, S-0546, S-0547, S-0549, S-0425, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411 and S-0412."
+  delivery: 2026-10-31T15:13:00Z
+  basis: "Its own forecast of 1h30m; 15th in the pull order with an in-progress limit of 5, behind S-0548, S-0552, S-0550, S-0551, S-0546, S-0549, S-0547, S-0425, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411 and S-0412."
   by: flai
-  at: 2026-10-31T07:26:52Z
+  at: 2026-10-31T07:43:46Z
 ---
 # S-0506 flai's HTTP MCP server serves an agent in a container as the stdio server serves one on the host: every tool, permission_prompt under auto-approve for an agent flai serve started, and a listener a container reaches
 
