@@ -2,12 +2,12 @@
 id: I-0233
 title: "TestAChangedFileReachesTheDashboardAsANotification fails its temp folder's cleanup with \"directory not empty\", as I-0048's serve tests did"
 class: defect
-status: open
+status: closed
 count: 2
 cost: 10m
 first_reported: 2026-10-29T16:37:28Z
 last_reported: 2026-10-29T17:47:15Z
-updated: 2026-10-29T17:47:15Z
+updated: 2026-10-31T09:50:17Z
 ---
 
 # I-0233 TestAChangedFileReachesTheDashboardAsANotification fails its temp folder's cleanup with "directory not empty", as I-0048's serve tests did
@@ -28,3 +28,4 @@ S-0418's close-out stopped at the go-test tier after 7m26s on its new loop test,
 ## Remediation
 
 Story S-0543 remediates this issue, created from it at 2026-10-29T17:25:41Z.
+Closed 2026-10-31T09:50:17Z: S-0418's fe589e207 made Run wait for each served project's client, loop of looks, and watcher before it returns, which the test's cleanup waits for before its temp folder is removed; S-0548 T-2362 replaced the test's 80 ms sleep with a wait for the watcher's first look. GOMAXPROCS=2 go test -race -count=10 passed it 10 of 10, and 50 of 50 in a further run.
