@@ -190,20 +190,19 @@ rebase --abort in the worktree, which puts the branch back as it was before
 the sync). It exits non-zero; with --json it prints uncommitted, conflicts,
 rebase_in_progress, continue, and abort, with ok false.
 
-A stop whose only conflicting paths are generated files, which today is
-design/issues/summary.md alone, issue files under design/issues, and the ADR
-index, design/adrs/README.md, does not wait for you (ADR-0098, ADR-0126,
-ADR-0157). Sync merges each issue file from the stop's three versions by its
+A stop whose only conflicting paths are generated files, which today are
+design/issues/summary.md and the ADR index, design/adrs/README.md, and issue
+files under design/issues, does not wait for you (ADR-0098, ADR-0126,
+ADR-0228). Sync merges each issue file from the stop's three versions by its
 instances, keeping the instances both sides added and adding up the count,
-and the ADR index row by row, keeping the rows both sides added in ADR number
-order, then writes summary.md again from the issue files in the worktree at
-that stop, git adds them, and continues the rebase, until the rebase finishes
-or stops on another path. An issue file both sides changed some other way,
-its title or description, say, or an index row both sides changed
-differently, is not merged: the stop is left for you. A stop where other
-paths conflict too is left for you, and
-lists them all, summary.md included; once the others are resolved, flai issue
-summary run in the worktree writes it. flai accept syncs the same way. A
+then writes summary.md again from the issue files and the ADR index again
+from the ADR files in the worktree at that stop, git adds them, and continues
+the rebase, until the rebase finishes or stops on another path. An issue file
+both sides changed some other way, its title or description, say, is not
+merged: the stop is left for you. A stop where other paths conflict too is
+left for you, and lists them all, the generated files included; once the
+others are resolved, flai issue summary and flai adr index run in the
+worktree write them. flai accept syncs the same way. A
 rebase already in progress is never continued for you.
 
 Once the rebase is clean, each open issue the branch added whose title an open
@@ -211,7 +210,7 @@ issue on the main branch has too is folded into that issue: its instances,
 count, and cost move into it, the branch's file is deleted, summary.md is
 written again, and the fold is committed on the branch as
 "docs: [S-nnnn] fold I-x into I-y". flai accept folds the same way. The report
-names each file merged, issue file or ADR index, and each issue folded; with
+names each issue file merged and each issue folded; with
 --json, merged lists the files and folded each fold's from and into.
 
 Then it runs the fix command of each test tier in system-flow.yaml (fix_command)

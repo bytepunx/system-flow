@@ -461,7 +461,8 @@ func fold(o SyncOptions, path string, res *SyncResult) error {
 	if len(folds) == 0 {
 		return nil
 	}
-	paths = append(paths, o.Files.generatedPaths()...)
+	generated := o.Files.generatedPaths()
+	paths = append(paths, generated...)
 	undone := func(step string, err error) error {
 		return fmt.Errorf("%s the fold of %s on %s: %w; in %s, git add -A -- %s, commit it as %q, and run %s again",
 			step, foldList(folds), res.Branch, err, res.Worktree, strings.Join(paths, " "), foldSubject(id, folds), again(o))
@@ -471,6 +472,9 @@ func fold(o SyncOptions, path string, res *SyncResult) error {
 			return undone("write "+f.Path+" again after", err)
 		}
 	}
+	// a generated file the project does not have, as an ADR index with no
+	// ADR folder, is left unwritten, and git refuses to add a path that is not there
+	paths = slices.DeleteFunc(paths, func(p string) bool { return slices.Contains(generated, p) && !inWorktree(path, p) })
 	if _, err := o.Runner.Run(path, "git", append([]string{"add", "-A", "--"}, paths...)...); err != nil {
 		return undone("stage", err)
 	}
@@ -591,7 +595,7 @@ func ContinueOverResolved(r execx.Runner, dir string, files Files, log *slog.Log
 		}
 		staged := slices.Clone(conflicts)
 		for _, f := range regen {
-			if !slices.Contains(staged, f.Path) {
+			if !slices.Contains(staged, f.Path) && inWorktree(dir, f.Path) {
 				staged = append(staged, f.Path)
 			}
 		}
@@ -626,6 +630,12 @@ func resolvable(conflicts []string, files Files) (merge []string, regen []Genera
 		}
 	}
 	return merge, regen, len(conflicts) > 0
+}
+
+// inWorktree says whether p, as git names it, is in the worktree at dir.
+func inWorktree(dir, p string) bool {
+	_, err := os.Stat(filepath.Join(dir, filepath.FromSlash(p)))
+	return err == nil
 }
 
 // relPath is p relative to root, or p when it is not below it.

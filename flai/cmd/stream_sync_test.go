@@ -847,34 +847,54 @@ func adrRow(n int, status string) string {
 	return fmt.Sprintf("| [%04d](%04d-decision-%d.md) | Decision %d | %s |", n, n, n, n, status)
 }
 
-// adrStories commits an index of ADRs 0001 and 0002 on main, then makes
-// S-0001 and S-0002 in progress, whose branches commit the index with the
-// rows a and b. It returns the main checkout and S-0002's worktree.
-func adrStories(t *testing.T, a, b []string) (root, wt string) {
+// adrDecision writes ADR n, accepted, whose row adrRow(n, "accepted") is,
+// in the checkout at dir.
+func adrDecision(t *testing.T, dir string, n int) {
+	t.Helper()
+	text := fmt.Sprintf("---\nid: ADR-%04d\ntitle: Decision %d\nstatus: accepted\ndate: 2026-10-31\nsupersedes: []\nsuperseded_by: []\n---\n\n# ADR-%04d Decision %d\n\n## Decision\n\nWe decide.\n", n, n, n, n)
+	if err := os.WriteFile(filepath.Join(dir, "design", "adrs", fmt.Sprintf("%04d-decision-%d.md", n, n)), []byte(text), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// adrStories commits ADRs 0001 and 0002 and their index on main, then makes
+// S-0001 and S-0002 in progress, whose branches each commit the ADRs
+// numbered in their adds and the index with their rows, a and b. It returns
+// the main checkout and S-0002's worktree.
+func adrStories(t *testing.T, a, b []string, aAdds, bAdds []int) (root, wt string) {
 	t.Helper()
 	root = syncProject(t)
 	if err := os.MkdirAll(filepath.Join(root, "design", "adrs"), 0o755); err != nil {
 		t.Fatal(err)
 	}
+	adrDecision(t, root, 1)
+	adrDecision(t, root, 2)
 	if err := os.WriteFile(filepath.Join(root, adrIndexPath), []byte(adrIndex(adrRow(1, "accepted"), adrRow(2, "accepted"))), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	gitIn(t, root, "add", adrIndexPath)
+	gitIn(t, root, "add", "design/adrs")
 	gitIn(t, root, "commit", "-q", "-m", "docs: ADR index")
 	wa := openSyncStory(t, root, 1, "design,docs")
 	wt = openSyncStory(t, root, 2, "design,docs")
+	for _, n := range aAdds {
+		adrDecision(t, wa, n)
+	}
+	for _, n := range bAdds {
+		adrDecision(t, wt, n)
+	}
 	commitIn(t, wa, adrIndexPath, adrIndex(a...))
 	commitIn(t, wt, adrIndexPath, adrIndex(b...))
 	return root, wt
 }
 
 // I-0099: two open stories that each add an ADR append a row to the index
-// where the other does, which git's trial merge reports, telling the pair. A
-// rebase merges the index row by row, so the pair is clean (ADR-0157).
-func testSyncTrialMergeLeavesOutTheADRIndex(t *testing.T) {
+// where the other does, which git's trial merge reports. The index is
+// generated, written again by a rebase that stops on it, so the pair is
+// clean and not told (ADR-0157, ADR-0228).
+func TestSyncTrialMergeLeavesOutTheADRIndex(t *testing.T) {
 	root, b := adrStories(t,
 		[]string{adrRow(1, "accepted"), adrRow(2, "accepted"), adrRow(3, "accepted")},
-		[]string{adrRow(1, "accepted"), adrRow(2, "accepted"), adrRow(4, "accepted")})
+		[]string{adrRow(1, "accepted"), adrRow(2, "accepted"), adrRow(4, "accepted")}, []int{3}, []int{4})
 	// git itself reports the pair as conflicting in the index
 	if raw, err := storygit.TrialMerge(execx.System{}, root, "story/S-0002", "story/S-0001"); err != nil || strings.Join(raw, ",") != adrIndexPath {
 		t.Fatalf("git's trial merge: %v %q", err, raw)
@@ -892,21 +912,22 @@ func testSyncTrialMergeLeavesOutTheADRIndex(t *testing.T) {
 	}
 }
 
-// I-0099, as S-0306 met it: once one story's ADR is on main, the other's sync
-// stopped on the index. It now merges the index, keeping both rows in ADR
-// number order, and goes on (ADR-0157).
-func testSyncMergesTheADRIndexBothSidesAddedARowTo(t *testing.T) {
+// I-0099, as S-0306 met it, and S-0550: once one story's ADR is on main, the
+// other's sync stops on the index. It writes the index again from the
+// rebased tree's ADR files, both sides' among them, merging nothing, and
+// goes on with no person's help (ADR-0228).
+func TestSyncWritesTheADRIndexBothSidesAddedAnADRToFromTheirFiles(t *testing.T) {
 	root, b := adrStories(t,
 		[]string{adrRow(1, "accepted"), adrRow(2, "accepted"), adrRow(4, "accepted")},
-		[]string{adrRow(1, "accepted"), adrRow(2, "accepted"), adrRow(3, "accepted")})
+		[]string{adrRow(1, "accepted"), adrRow(2, "accepted"), adrRow(3, "accepted")}, []int{4}, []int{3})
 	gitIn(t, root, "merge", "-q", "--no-edit", "story/S-0001")
 	if raw, err := storygit.TrialMerge(execx.System{}, root, "main", "story/S-0002"); err != nil || strings.Join(raw, ",") != adrIndexPath {
 		t.Fatalf("git's merge onto main: %v %q", err, raw)
 	}
 
 	res := syncIssuesJSON(t, b)
-	if strings.Join(res.Merged, ",") != adrIndexPath {
-		t.Errorf("merged %v", res.Merged)
+	if len(res.Merged) != 0 {
+		t.Errorf("merged %v; the index is written again, not merged", res.Merged)
 	}
 	want := adrIndex(adrRow(1, "accepted"), adrRow(2, "accepted"), adrRow(3, "accepted"), adrRow(4, "accepted"))
 	if got, _ := os.ReadFile(filepath.Join(b, adrIndexPath)); string(got) != want {
@@ -920,23 +941,21 @@ func testSyncMergesTheADRIndexBothSidesAddedARowTo(t *testing.T) {
 	}
 }
 
-// When both sides changed one row differently, the index is not merged: the
-// sync stops on it as before, for the agent.
-func testSyncStopsOnARowOfTheADRIndexBothSidesChanged(t *testing.T) {
+// A row both sides changed by hand, differently, no longer stops the sync:
+// the index is written from the ADR files, which neither side changed, and
+// both hand edits go (ADR-0228).
+func TestSyncWritesARowOfTheADRIndexBothSidesChangedFromItsFile(t *testing.T) {
 	root, b := adrStories(t,
-		[]string{adrRow(1, "accepted"), adrRow(2, "superseded by 0003")},
-		[]string{adrRow(1, "accepted"), adrRow(2, "rejected")})
+		[]string{adrRow(1, "accepted"), adrRow(2, "accepted, superseded in part by 0003")},
+		[]string{adrRow(1, "accepted"), adrRow(2, "rejected")}, nil, nil)
 	gitIn(t, root, "merge", "-q", "--no-edit", "story/S-0001")
 
-	out, errOut, code := runInAt(t, b, issueClock.Add(4*time.Hour), "stream", "sync", "S-0002")
-	if code == 0 {
-		t.Fatalf("a sync over a row both sides changed succeeded: %s", out)
+	res := syncIssuesJSON(t, b)
+	if len(res.Merged) != 0 {
+		t.Errorf("merged %v", res.Merged)
 	}
-	if !strings.Contains(out, "\n  "+adrIndexPath+"\n") || !strings.Contains(errOut, "stopped on conflicts in "+adrIndexPath) {
-		t.Errorf("the stop does not list the index:\n%s\n%s", out, errOut)
-	}
-	if !storygit.RebaseInProgress(execx.System{}, b) {
-		t.Fatal("the rebase is not left in progress for the agent")
+	if got, want := gitIn(t, b, "show", "HEAD:"+adrIndexPath)+"\n", adrIndex(adrRow(1, "accepted"), adrRow(2, "accepted")); got != want {
+		t.Errorf("the index committed on the branch:\n%s\nwant:\n%s", got, want)
 	}
 }
 
@@ -1041,10 +1060,9 @@ func testSyncResolvesAThreadOnWhatMainBrought(t *testing.T) {
 	}
 }
 
-// The generated files are one list, the issue summary alone today, named as
-// git names them (ADR-0098).
-func TestGeneratedPathsAreTheIssueSummary(t *testing.T) {
-	t.Parallel()
+// The generated files are one list, the issue summary and the ADR index,
+// named as git names them (ADR-0098, ADR-0228).
+func TestGeneratedPathsAreTheIssueSummaryAndTheADRIndex(t *testing.T) {
 	repo, err := workitem.Open(tempProject(t))
 	if err != nil {
 		t.Fatal(err)
@@ -1053,7 +1071,7 @@ func TestGeneratedPathsAreTheIssueSummary(t *testing.T) {
 	for _, f := range issues.Generated(repo, "S-0001", time.Now) {
 		got = append(got, f.Path)
 	}
-	if strings.Join(got, ",") != "design/issues/summary.md" {
+	if strings.Join(got, ",") != "design/issues/summary.md,design/adrs/README.md" {
 		t.Errorf("generated paths: %q", got)
 	}
 }
@@ -1392,10 +1410,9 @@ func testSyncMergesABumpIntoTheIssueMainClosed(t *testing.T) {
 }
 
 // The files a rebase merges are the I-nnnn files directly in the issues
-// folder, not summary.md or README.md (ADR-0126), and the ADR index
-// (ADR-0157).
-func TestSyncFilesMergeTheIssueFilesAndTheADRIndex(t *testing.T) {
-	t.Parallel()
+// folder, not summary.md or README.md (ADR-0126); the ADR index is generated
+// (ADR-0228).
+func TestSyncFilesMergeTheIssueFilesAndGenerateTheADRIndex(t *testing.T) {
 	repo, err := workitem.Open(tempProject(t))
 	if err != nil {
 		t.Fatal(err)
@@ -1408,7 +1425,7 @@ func TestSyncFilesMergeTheIssueFilesAndTheADRIndex(t *testing.T) {
 		"design/issues/old/I-0001-moved.md":      false,
 		"docs/I-0001-elsewhere.md":               false,
 		"design/issues/I-0118-notes.txt":         false,
-		"design/adrs/README.md":                  true,
+		"design/adrs/README.md":                  false,
 		"design/adrs/0157-merge-the-index.md":    false,
 		"docs/README.md":                         false,
 	} {
@@ -1416,7 +1433,7 @@ func TestSyncFilesMergeTheIssueFilesAndTheADRIndex(t *testing.T) {
 			t.Errorf("merges %s: %v, want %v", p, got, want)
 		}
 	}
-	if len(f.Generated) != 1 || f.Generated[0].Path != "design/issues/summary.md" || f.Fold == nil {
+	if len(f.Generated) != 2 || f.Generated[0].Path != "design/issues/summary.md" || f.Generated[1].Path != "design/adrs/README.md" || f.Fold == nil {
 		t.Errorf("files: %+v", f)
 	}
 }
@@ -1427,10 +1444,10 @@ func TestPrintSyncChecksNamesTheMergedFilesAndTheFolds(t *testing.T) {
 	t.Parallel()
 	var out strings.Builder
 	printSyncChecks(&out, &workitem.Item{ID: "S-0002"}, storygit.SyncResult{
-		Merged: []string{"design/issues/I-0118-the-sync-stops.md", "design/adrs/README.md", "docs/users/flai.md"},
+		Merged: []string{"design/issues/I-0118-the-sync-stops.md", "docs/users/flai.md"},
 		Folded: []storygit.Folded{{From: "I-0112", Into: "I-0111"}},
 	})
-	if want := "merged design/issues/I-0118-the-sync-stops.md: kept both sides' instances\nmerged design/adrs/README.md: kept both sides' rows\nmerged docs/users/flai.md: kept both sides' sections\nfolded I-0112 into I-0111\n"; out.String() != want {
+	if want := "merged design/issues/I-0118-the-sync-stops.md: kept both sides' instances\nmerged docs/users/flai.md: kept both sides' sections\nfolded I-0112 into I-0111\n"; out.String() != want {
 		t.Errorf("report:\n%s\nwant:\n%s", out.String(), want)
 	}
 }

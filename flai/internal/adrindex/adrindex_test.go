@@ -1,9 +1,9 @@
 package adrindex
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -15,83 +15,107 @@ import (
 const (
 	intro  = "# Architecture Decision Records\n\nOne decision per file.\n\n"
 	header = "| ADR | Title | Status |\n|-----|-------|--------|\n"
-	r0154  = "| [0154](0154-a-reply-may-settle.md) | A reply may settle a conversation | accepted |\n"
-	r0154s = "| [0154](0154-a-reply-may-settle.md) | A reply may settle a conversation | accepted, superseded by 0157 |\n"
-	r0154r = "| [0154](0154-a-reply-may-settle.md) | A reply may settle a conversation | accepted, refines 0019 |\n"
-	r0155  = "| [0155](0155-adr-index-merges.md) | The ADR index merges on a rebase | accepted |\n"
-	r0156  = "| [0156](0156-a-close-out-syncs.md) | A close-out that main outran syncs again | accepted |\n"
-	r0157  = "| [0157](0157-supersedes-0154.md) | A reply settles nothing | accepted, supersedes 0154 |\n"
+	row1   = "| [0001](0001-one.md) | One | accepted |\n"
+	row2   = "| [0002](0002-two.md) | Two | accepted |\n"
+	row3   = "| [0003](0003-three.md) | Three | proposed |\n"
 )
 
-// doc is an index with the intro above its table and rows in the order given.
-func doc(rows ...string) string { return intro + header + strings.Join(rows, "") }
+// both is an ADR folder as a rebase that stopped on the index sees it: ADR
+// 0001 from the base, 0002 the one side added, 0003 the other.
+func both() fstest.MapFS {
+	return fstest.MapFS{
+		"0001-one.md":   {Data: []byte(adrText("ADR-0001", "title: One\nstatus: accepted\n"))},
+		"0002-two.md":   {Data: []byte(adrText("ADR-0002", "title: Two\nstatus: accepted\n"))},
+		"0003-three.md": {Data: []byte(adrText("ADR-0003", "title: Three\nstatus: proposed\n"))},
+	}
+}
 
-func TestMergeMerges(t *testing.T) {
+// ADR-0228 §1: a stop on the index writes it from the rebased tree's ADR
+// files, whatever rows each side's version holds, keeping the text around the
+// table that one side changed.
+func TestRenderStoppedWritesTheTableFromTheFolder(t *testing.T) {
 	cases := []struct {
 		name, base, ours, theirs, want string
 	}{
-		{"each side appends a different row (I-0099)",
-			doc(r0154), doc(r0154, r0157), doc(r0154, r0155),
-			doc(r0154, r0155, r0157)},
-		{"one side notes a row superseded while the other appends a row",
-			doc(r0154, r0156), doc(r0154s, r0156, r0157), doc(r0154, r0155, r0156),
-			doc(r0154s, r0155, r0156, r0157)},
-		{"both sides append the same row",
-			doc(r0154), doc(r0154, r0155), doc(r0154, r0155),
-			doc(r0154, r0155)},
-		{"one side removes a row the other leaves alone",
-			doc(r0154, r0155), doc(r0154), doc(r0154, r0155, r0156),
-			doc(r0154, r0156)},
-		{"one side changes the text above the table",
-			doc(r0154), "# ADRs\n\n" + header + r0154, doc(r0154, r0155),
-			"# ADRs\n\n" + header + r0154 + r0155},
-		{"text below the table is kept and changed by one side",
-			doc(r0154) + "\nA note.\n", doc(r0154) + "\nA longer note.\n", doc(r0154, r0155) + "\nA note.\n",
-			doc(r0154, r0155) + "\nA longer note.\n"},
-		{"the trailing newlines are one",
-			doc(r0154), doc(r0154, r0155) + "\n\n", doc(r0154),
-			doc(r0154, r0155)},
+		{"each side added a different row (I-0099)",
+			intro + header + row1, intro + header + row1 + row2, intro + header + row1 + row3,
+			intro + header + row1 + row2 + row3},
+		{"both sides changed one row differently",
+			intro + header + row1, intro + header + "| [0001](0001-one.md) | One | rejected |\n", intro + header + "| [0001](0001-one.md) | One | accepted, in part |\n",
+			intro + header + row1 + row2 + row3},
+		{"one side changed the text above the table",
+			intro + header + row1, "# ADRs\n\n" + header + row1 + row2, intro + header + row1 + row3,
+			"# ADRs\n\n" + header + row1 + row2 + row3},
+		{"one side changed the text below it",
+			intro + header + row1 + "\nA note.\n", intro + header + row1 + row2 + "\nA note.\n", intro + header + row1 + row3 + "\nA longer note.\n",
+			intro + header + row1 + row2 + row3 + "\nA longer note.\n"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got, err := Merge(c.base, c.ours, c.theirs)
-			if err != nil {
-				t.Fatalf("Merge: %v", err)
-			}
-			if got != c.want {
-				t.Errorf("got:\n%s\nwant:\n%s", got, c.want)
+			got, err := RenderStopped(both(), c.base, c.ours, c.theirs)
+			if err != nil || got != c.want {
+				t.Errorf("RenderStopped: %v\ngot:\n%s\nwant:\n%s", err, got, c.want)
 			}
 		})
 	}
 }
 
-func TestMergeRefuses(t *testing.T) {
+// The text around the table both sides changed differently is a person's to
+// merge, and so is an ADR whose front matter does not read.
+func TestRenderStoppedRefuses(t *testing.T) {
+	if _, err := RenderStopped(both(), intro+header+row1, "# ADRs\n\n"+header+row1, "# Decisions\n\n"+header+row1); err == nil || !strings.Contains(err.Error(), "text around the table") {
+		t.Errorf("text changed differently on both sides: %v", err)
+	}
+	broken := both()
+	broken["0004-broken.md"] = &fstest.MapFile{Data: []byte("# ADR-0004 No front matter\n")}
+	if _, err := RenderStopped(broken, intro+header+row1, intro+header+row1+row2, intro+header+row1+row3); err == nil || !strings.Contains(err.Error(), "0004-broken.md") {
+		t.Errorf("an unreadable ADR: %v", err)
+	}
+}
+
+// Diff names the rows that differ, are missing, or link no file, by number,
+// and the first line that differs.
+func TestDiff(t *testing.T) {
+	rendered := intro + header + row1 + row2 + row3 + "\nAfter.\n"
 	cases := []struct {
-		name, base, ours, theirs, names string
+		name, current string
+		want          Difference
 	}{
-		{"both sides change one row differently",
-			doc(r0154), doc(r0154s), doc(r0154r),
-			"the row for 0154-a-reply-may-settle.md"},
-		{"both sides change the text above the table differently",
-			doc(r0154), "# ADRs\n\n" + header + r0154, "# Decisions\n\n" + header + r0154,
-			"the text above the table"},
-		{"one side removes a row the other changes",
-			doc(r0154, r0155), doc(r0155), doc(r0154s, r0155),
-			"the row for 0154-a-reply-may-settle.md"},
-		{"a version has no table",
-			doc(r0154), intro, doc(r0154, r0155),
-			"the ours version has no table"},
-		{"a version has two rows for one file",
-			doc(r0154), doc(r0154, r0154s), doc(r0154),
-			"two rows for 0154-a-reply-may-settle.md"},
+		{"the same", rendered, Difference{}},
+		{"a row changed, one missing, one extra, one twice",
+			intro + header + row1 + row1 + "| [0002](0002-two.md) | Two | proposed |\n" + "| [0009](0009-gone.md) | Gone | accepted |\n" + "\nAfter.\n",
+			Difference{Line: 8, Changed: []string{"0001", "0002"}, Missing: []string{"0003"}, Extra: []string{"0009"}}},
+		{"the text alone", "# ADRs\n\n" + header + row1 + row2 + row3 + "\nAfter.\n", Difference{Line: 1}},
+		{"rows missing at the end, at the last line", intro + header + row1 + row2, Difference{Line: 8, Missing: []string{"0003"}}},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			out, err := Merge(c.base, c.ours, c.theirs)
-			if !errors.Is(err, ErrNotMerged) || !strings.Contains(err.Error(), c.names) {
-				t.Errorf("want ErrNotMerged naming %s, got %v:\n%s", c.names, err, out)
+			if got := Diff(c.current, rendered); !reflect.DeepEqual(got, c.want) {
+				t.Errorf("Diff = %+v, want %+v", got, c.want)
 			}
 		})
+	}
+	if got := Diff("# adrs\n", "# adrs\n\n"+header); !reflect.DeepEqual(got, Difference{}) {
+		t.Errorf("an index with no table and no ADRs to list does not differ: %+v", got)
+	}
+	if got := Diff("# adrs\n", "# adrs\n\n"+header+row1); !reflect.DeepEqual(got, Difference{Line: 1, Missing: []string{"0001"}}) {
+		t.Errorf("an index with no table and an ADR to list: %+v", got)
+	}
+}
+
+func TestSource(t *testing.T) {
+	r := &workitem.Repo{Manifest: manifest.Manifest{Layout: map[string]string{"design": "design"}}}
+	for p, want := range map[string]bool{
+		"design/adrs/0228-generated.md":    true,
+		"design/adrs/0000-template.md":     false,
+		"design/adrs/README.md":            false,
+		"design/adrs/old/0001-moved.md":    false,
+		"design/system/0001-not-an-adr.md": false,
+		"design/adrs/0001-notes.txt":       false,
+	} {
+		if got := Source(r, p); got != want {
+			t.Errorf("Source(%s) = %v, want %v", p, got, want)
+		}
 	}
 }
 

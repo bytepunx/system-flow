@@ -530,8 +530,16 @@ func adrIndex(ns ...int) string {
 	return "# Architecture Decision Records\n\nOne decision per file.\n\n| ADR | Title | Status |\n|-----|-------|--------|\n" + rows.String()
 }
 
+// adrPath is the file of ADR n, whose row adrIndex writes.
+func adrPath(n int) string { return fmt.Sprintf("design/adrs/%04d-decision-%d.md", n, n) }
+
+// adrDoc is ADR n's file, accepted, as its row in adrIndex reads.
+func adrDoc(n int) string {
+	return fmt.Sprintf("---\nid: ADR-%04d\ntitle: Decision %d\nstatus: accepted\ndate: 2026-10-31\nsupersedes: []\nsuperseded_by: []\n---\n\n# ADR-%04d Decision %d\n\n## Decision\n\nWe decide.\n", n, n, n, n)
+}
+
 // sharedRecords commits on main issue I-0001, the issue summary written from
-// it, and an ADR index of ADRs 1 and 2, the files each story then changes.
+// it, and ADRs 1 and 2 with their index, the files each story then changes.
 func sharedRecords(t *testing.T, repo *workitem.Repo) {
 	t.Helper()
 	if _, err := issues.New(repo, issues.NewOptions{Title: "Shared friction", Class: "efficiency", Now: t0}); err != nil {
@@ -540,14 +548,16 @@ func sharedRecords(t *testing.T, repo *workitem.Repo) {
 	if _, err := issues.WriteSummary(repo, t0); err != nil {
 		t.Fatal(err)
 	}
+	writeFile(t, repo.MainRoot, adrPath(1), adrDoc(1))
+	writeFile(t, repo.MainRoot, adrPath(2), adrDoc(2))
 	writeFile(t, repo.MainRoot, adrIndexPath, adrIndex(1, 2))
 	runGit(t, repo.MainRoot, "add", "-A")
 	runGit(t, repo.MainRoot, "commit", "-q", "-m", "docs: issues and ADRs")
 }
 
 // recording is a story's change that bumps I-0001 for the story at at,
-// writes the issue summary again, and adds ADR adr to the index, as a story
-// that records an issue and an ADR commits them.
+// writes the issue summary again, and adds ADR adr and its row in the index,
+// as a story that records an issue and an ADR commits them.
 func recording(t *testing.T, repo *workitem.Repo, at time.Time, adr int) func(id, wt string) {
 	return func(id, _ string) {
 		wt := issues.RepoFor(repo, id)
@@ -561,15 +571,17 @@ func recording(t *testing.T, repo *workitem.Repo, at time.Time, adr int) func(id
 		if _, err := issues.WriteSummary(wt, at); err != nil {
 			t.Fatal(err)
 		}
+		writeFile(t, wt.Root, adrPath(adr), adrDoc(adr))
 		writeFile(t, wt.Root, adrIndexPath, adrIndex(1, 2, adr))
 	}
 }
 
 // S-0401 criterion 1: two stories that both bump one issue, write the issue
-// summary again, and add a row to the ADR index stop the second's rebase
-// onto the batch on all three; the batch merges the issue and the index,
-// writes the summary again from the merge, and continues, as flai stream
-// sync does, so both stories stay in the batch (ADR-0175).
+// summary again, and add an ADR and its row to the ADR index stop the
+// second's rebase onto the batch on the issue, the summary, and the index;
+// the batch merges the issue, writes the summary again from the merge and
+// the index from both ADR files, and continues, as flai stream sync does, so
+// both stories stay in the batch (ADR-0175, ADR-0228).
 func TestTheBatchMergesTheIssuesTheSummaryAndTheADRIndexItStopsOn(t *testing.T) {
 	repo, proc := gitProject(t, "")
 	sharedRecords(t, repo)
@@ -605,7 +617,7 @@ func TestTheBatchMergesTheIssuesTheSummaryAndTheADRIndexItStopsOn(t *testing.T) 
 	if storygit.RebaseInProgress(execx.System{}, wt) || runGit(t, wt, "status", "--porcelain") != "" {
 		t.Error("the batch's worktree is left with a rebase or changes")
 	}
-	for _, says := range []string{"component=mergequeue", "story=" + b, adrIndexPath, "design/issues/I-0001-shared-friction.md", "regenerated=[design/issues/summary.md]"} {
+	for _, says := range []string{"component=mergequeue", "story=" + b, adrIndexPath, "design/issues/I-0001-shared-friction.md", "regenerated=\"[design/issues/summary.md design/adrs/README.md]\""} {
 		if !strings.Contains(logged.String(), says) {
 			t.Errorf("the log does not say %q:\n%s", says, logged.String())
 		}

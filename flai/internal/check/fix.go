@@ -3,9 +3,11 @@ package check
 import (
 	"fmt"
 	"maps"
+	"path/filepath"
 	"slices"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/adrindex"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -17,6 +19,7 @@ type Fixer func(repo *workitem.Repo, now time.Time) (string, error)
 // fixers maps a rule to the Fixer of its generated file. Only a rule on a
 // generated file has one: a hand-written file is never rewritten.
 var fixers = map[string]Fixer{
+	"adr.index":      fixADRIndex,
 	"issues.summary": fixIssuesSummary,
 }
 
@@ -53,6 +56,16 @@ func fixIssuesSummary(repo *workitem.Repo, now time.Time) (string, error) {
 	path := issues.SummaryPath(repo)
 	if _, err := issues.WriteSummary(repo, now); err != nil {
 		return path, fmt.Errorf("rewrite %s from the issue files: %w; fix the issue file it names, then run flai issue summary", path, err)
+	}
+	return path, nil
+}
+
+// fixADRIndex rewrites design/adrs/README.md from the ADR files as flai adr
+// index does (ADR-0228).
+func fixADRIndex(repo *workitem.Repo, _ time.Time) (string, error) {
+	path := adrindex.Path(repo)
+	if _, err := adrindex.Write(filepath.Join(repo.Root, filepath.FromSlash(filepath.Dir(path)))); err != nil {
+		return path, fmt.Errorf("rewrite %s from the ADR files: %w; fix the ADR it names, then run flai adr index", path, err)
 	}
 	return path, nil
 }

@@ -19,6 +19,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 
+	"github.com/bytepunx/system-flow/flai/internal/adrindex"
 	"github.com/bytepunx/system-flow/flai/internal/analysis"
 	"github.com/bytepunx/system-flow/flai/internal/components"
 	"github.com/bytepunx/system-flow/flai/internal/conflictmark"
@@ -1017,48 +1018,47 @@ var ADRStatuses = []string{"proposed", "accepted", "superseded", "deprecated", "
 
 var adrName = regexp.MustCompile(`^(\d{4})-.*\.md$`)
 
-var adrIndexRow = regexp.MustCompile(`^\| *\[\d{4}\]\(([^)]+\.md)\)`)
-
-// adrIndex keeps design/adrs/README.md honest (S-0060): every ADR file has a
-// row, and every row has its file. flai adr new writes both; this is for the
-// ADR someone made by hand. The template, 0000, has no row.
+// adrIndex keeps design/adrs/README.md what its ADR files render
+// (ADR-0228): an index that differs is one warning, on its first line that
+// differs, naming the rows that differ, are missing, or link no file. A
+// project without the folder or the index has nothing to keep, and an ADR
+// whose front matter does not read is doc.front-matter's to report.
 func (c *checker) adrIndex() {
 	dir := filepath.Join(c.repo.Manifest.Dir(c.repo.Root, "design"), "adrs")
 	index := filepath.Join(dir, "README.md")
 	data, err := os.ReadFile(index)
 	if err != nil {
-		return // a project without an ADR index has nothing to keep honest
-	}
-	rows := map[string]int{}
-	for i, l := range strings.Split(string(data), "\n") {
-		if m := adrIndexRow.FindStringSubmatch(l); m != nil {
-			rows[m[1]] = i + 1
-		}
-	}
-	entries, err := os.ReadDir(dir)
-	if err != nil {
 		return
 	}
-	present := map[string]bool{}
-	for _, e := range entries {
-		m := adrName.FindStringSubmatch(e.Name())
-		if e.IsDir() || m == nil || m[1] == "0000" {
-			continue
-		}
-		present[e.Name()] = true
-		if _, ok := rows[e.Name()]; !ok {
-			indexRel := index
-			if r, err := filepath.Rel(c.repo.Root, index); err == nil {
-				indexRel = filepath.ToSlash(r)
-			}
-			c.add(Warning, "adr.index", filepath.Join(dir, e.Name()), 1, "no row in %s; add one, or record ADRs with flai adr new, which does", indexRel)
+	rendered, err := adrindex.Render(os.DirFS(dir), string(data))
+	if err != nil {
+		return // the unreadable ADR is doc.front-matter's to report
+	}
+	d := adrindex.Diff(string(data), rendered)
+	if d.Line == 0 {
+		return
+	}
+	var what []string
+	for _, p := range []struct {
+		nums        []string
+		one, plural string
+	}{
+		{d.Changed, "row %s differs", "rows %s differ"},
+		{d.Missing, "row %s is missing", "rows %s are missing"},
+		{d.Extra, "row %s links no ADR file", "rows %s link no ADR file"},
+	} {
+		switch len(p.nums) {
+		case 0:
+		case 1:
+			what = append(what, fmt.Sprintf(p.one, p.nums[0]))
+		default:
+			what = append(what, fmt.Sprintf(p.plural, andList(p.nums)))
 		}
 	}
-	for name, line := range rows {
-		if !present[name] && name != "0000-template.md" {
-			c.add(Warning, "adr.index", index, line, "the row links to %s, which is not there", name)
-		}
+	if len(what) == 0 {
+		what = []string{"the order or layout of its table differs"}
 	}
+	c.add(Warning, "adr.index", index, d.Line, "the ADR index differs from what its ADR files render: %s; run flai check --fix or flai adr index, which rewrite it", andList(what))
 }
 
 func (c *checker) documentation() {

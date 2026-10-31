@@ -1253,9 +1253,10 @@ func TestVerifyReusesTheTiersAcrossARebaseThatWritesTheSummaryAgain(t *testing.T
 }
 
 // patchDiff is the git diff BranchPatch runs for a fixture's branch from the
-// merge base mb: the issues summary left out.
+// merge base mb: the generated files, the issues summary and the ADR index,
+// left out (ADR-0192, ADR-0228).
 func patchDiff(mb string) string {
-	return "diff --no-color --no-ext-diff --full-index " + mb + " HEAD -- :(top,exclude)design/issues/summary.md"
+	return "diff --no-color --no-ext-diff --full-index " + mb + " HEAD -- :(top,exclude)design/issues/summary.md :(top,exclude)design/adrs/README.md"
 }
 
 // ADR-0156, without real git: what a run after a rebase reuses, by what git

@@ -363,9 +363,10 @@ func (v *storyRun) runSteps(rep *Report, steps []storyStep) {
 }
 
 // generated are the paths of the files a sync's rebase writes again from
-// others (ADR-0098), which the branch's patch id leaves out: the issues
-// summary, written from the issue files, which stay in the patch, and main's,
-// whose paths select the tiers main sends back (ADR-0156).
+// others (ADR-0098, ADR-0228), which the branch's patch id leaves out: the
+// issues summary and the ADR index, written from the issue and ADR files,
+// which stay in the patch, and main's, whose paths select the tiers main
+// sends back (ADR-0156).
 func (v *storyRun) generated() []string {
 	var paths []string
 	for _, g := range issues.Generated(v.opts.Project, v.story, v.opts.Now) {

@@ -72,3 +72,95 @@ func TestFixRewritesOnlyWhatTheRunReportsInsideIt(t *testing.T) {
 		}
 	}
 }
+
+// adrDoc is an ADR file numbered n with title and status.
+func adrDoc(n, title, status string) string {
+	return "---\nid: ADR-" + n + "\ntitle: " + title + "\nstatus: " + status + "\ndate: 2026-10-31\nsupersedes: []\nsuperseded_by: []\n---\n\n# ADR-" + n + " " + title + "\n\n## Decision\n\nWe decide.\n"
+}
+
+// writeADRs writes files, by name, in the project's design/adrs.
+func writeADRs(t *testing.T, root string, files map[string]string) {
+	t.Helper()
+	dir := filepath.Join(root, "design", "adrs")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for name, text := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// S-0550, ADR-0228 §1 and §3: an ADR index behind its folder is one
+// adr.index warning on its first line that differs, naming the rows; Fix
+// rewrites it to what flai adr index writes, and the check then reports
+// nothing for it.
+func TestFixRewritesAnADRIndexBehindItsFolder(t *testing.T) {
+	repo := issuesProject(t)
+	if _, err := issues.WriteSummary(repo, now); err != nil {
+		t.Fatal(err)
+	}
+	intro := "# Architecture Decision Records\n\nThe table is generated.\n\n| ADR | Title | Status |\n|-----|-------|--------|\n"
+	writeADRs(t, repo.Root, map[string]string{
+		"0000-template.md": adrDoc("0000", "Template", "template"),
+		"0001-first.md":    adrDoc("0001", "First", "accepted"),
+		"0002-second.md":   adrDoc("0002", "Second", "proposed"),
+		"README.md": intro + "| [0001](0001-first.md) | First | proposed |\n" +
+			"| [0007](0007-gone.md) | Gone | accepted |\n\nText below stays.\n",
+	})
+	res, err := Run(repo, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var found []Finding
+	for _, f := range res.Findings {
+		if f.Rule == "adr.index" {
+			found = append(found, f)
+		}
+	}
+	want := "the ADR index differs from what its ADR files render: row 0001 differs, row 0002 is missing and row 0007 links no ADR file; run flai check --fix or flai adr index, which rewrite it"
+	if len(found) != 1 || found[0].Level != Warning || found[0].Path != "design/adrs/README.md" || found[0].Line != 7 || found[0].Message != want {
+		t.Fatalf("the index behind its folder should be one warning on line 7:\n%+v\nwant message %q", found, want)
+	}
+	fixed, err := Fix(repo, res, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []Fixed{{Rule: "adr.index", Path: "design/adrs/README.md"}}; !slices.Equal(fixed, want) {
+		t.Errorf("fixed %+v, want %+v", fixed, want)
+	}
+	data, err := os.ReadFile(filepath.Join(repo.Root, "design", "adrs", "README.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := intro + "| [0001](0001-first.md) | First | accepted |\n| [0002](0002-second.md) | Second | proposed |\n\nText below stays.\n"; string(data) != want {
+		t.Errorf("the index is not what flai adr index writes:\n%s\nwant:\n%s", data, want)
+	}
+	if got := rules(t, repo, "adr.index"); len(got) != 0 {
+		t.Errorf("after the fix the check still reports: %q", got)
+	}
+}
+
+// The template's index, an empty table beside 0000-template.md, is current,
+// and so is an index with no table and no ADRs to list; a project with no ADR
+// index has nothing to report.
+func TestADRIndexOfTheTemplateOrOfNoIndexIsNotReported(t *testing.T) {
+	repo := issuesProject(t)
+	if got := rules(t, repo, "adr.index"); len(got) != 0 {
+		t.Errorf("no ADR folder: %q", got)
+	}
+	writeADRs(t, repo.Root, map[string]string{"0000-template.md": adrDoc("0000", "Template", "template"), "0001-first.md": adrDoc("0001", "First", "accepted")})
+	if got := rules(t, repo, "adr.index"); len(got) != 0 {
+		t.Errorf("no index: %q", got)
+	}
+	_ = os.Remove(filepath.Join(repo.Root, "design", "adrs", "0001-first.md"))
+	writeADRs(t, repo.Root, map[string]string{"README.md": "# Architecture Decision Records\n\nText.\n\n| ADR | Title | Status |\n|-----|-------|--------|\n"})
+	if got := rules(t, repo, "adr.index"); len(got) != 0 {
+		t.Errorf("the template's index: %q", got)
+	}
+	writeADRs(t, repo.Root, map[string]string{"README.md": "# adrs\n"})
+	if got := rules(t, repo, "adr.index"); len(got) != 0 {
+		t.Errorf("an index with no table and no ADRs to list: %q", got)
+	}
+}

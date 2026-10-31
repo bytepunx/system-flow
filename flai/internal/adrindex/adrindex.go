@@ -1,7 +1,7 @@
 // Package adrindex renders the ADR index, the table of every ADR in
-// <design>/adrs/README.md, from the ADR files (ADR-0228), and merges it so
-// that a rebase that stops on it because both sides added a row resolves it
-// itself, as it does an issue file.
+// <design>/adrs/README.md, from the ADR files (ADR-0228), tells how an index
+// differs from its render, and renders it at a rebase that stopped on it, so
+// that the rebase writes it again from the rebased tree's ADR files.
 package adrindex
 
 import (
@@ -9,8 +9,10 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -20,14 +22,9 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-// ErrNotMerged is returned, wrapped with the reason, when the index's
-// versions do not merge without a person's judgment.
-var ErrNotMerged = errors.New("ADR index not merged")
-
 var (
-	headerRe    = regexp.MustCompile(`^\| *ADR *\| *Title *\| *Status *\| *$`)
-	separatorRe = regexp.MustCompile(`^\|[-:| ]+\| *$`)
-	rowRe       = regexp.MustCompile(`^\| *\[(\d{4})\]\(([^)]+)\)`)
+	headerRe = regexp.MustCompile(`^\| *ADR *\| *Title *\| *Status *\| *$`)
+	rowRe    = regexp.MustCompile(`^\| *\[(\d{4})\]\(([^)]+)\)`)
 )
 
 // Path is the index's path relative to the repository root, slash-separated,
@@ -39,6 +36,14 @@ func Path(r *workitem.Repo) string {
 		design = "design"
 	}
 	return filepath.ToSlash(filepath.Join(design, "adrs", "README.md"))
+}
+
+// Source says whether p, relative to the repository root and slash-separated
+// as git names it, is an ADR file the index is rendered from: an NNNN-*.md
+// file beside the index, 0000-template.md left out.
+func Source(r *workitem.Repo, p string) bool {
+	m := adrFile.FindStringSubmatch(path.Base(p))
+	return m != nil && m[1] != "0000" && path.Dir(p) == path.Dir(Path(r))
 }
 
 // tableHeader is the table's header and separator lines, as the render writes them.
@@ -208,8 +213,8 @@ func Render(folder fs.FS, current string) (string, error) {
 // files in it and writes it when that changes it, or when it does not exist,
 // headed "# Architecture Decision Records". It reports whether it wrote.
 func Write(dir string) (bool, error) {
-	path := filepath.Join(dir, "README.md")
-	current, err := os.ReadFile(path)
+	file := filepath.Join(dir, "README.md")
+	current, err := os.ReadFile(file)
 	exists := err == nil
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
@@ -224,49 +229,89 @@ func Write(dir string) (bool, error) {
 	if exists && text == string(current) {
 		return false, nil
 	}
-	return true, os.WriteFile(path, []byte(text), 0o644)
+	return true, os.WriteFile(file, []byte(text), 0o644)
 }
 
-// index is one version of the index split at its table: the text above the
-// table, the header and its separator line, the rows by the file each links,
-// and the text below the table. The texts end each of their lines with a
-// newline; a row is its line without one.
-type index struct {
-	above, header, below string
-	rows                 map[string]string
+// RenderStopped is the index rendered at a rebase that stopped on it, from
+// the ADR files at the root of folder, the rebased tree's at the stop, and
+// the stop's three versions of the index, base, ours, and theirs (ADR-0228):
+// each version rendered, so that the two sides differ only in the text
+// around the table, and the side that changed that text from base taken. It
+// fails when both sides changed the text around the table differently, or
+// when an ADR's front matter cannot be read.
+func RenderStopped(folder fs.FS, base, ours, theirs string) (string, error) {
+	var v [3]string
+	for i, text := range [3]string{base, ours, theirs} {
+		r, err := Render(folder, text)
+		if err != nil {
+			return "", err
+		}
+		v[i] = r
+	}
+	text, ok := pick(v[0], v[1], v[2])
+	if !ok {
+		return "", errors.New("the two sides changed the text around the table differently; merge that text by hand, then run flai adr index")
+	}
+	return text, nil
 }
 
-// parse splits text, the side version of the index, at its table.
-func parse(side, text string) (index, error) {
-	lines := strings.Split(strings.TrimRight(text, "\n"), "\n")
-	h := -1
-	for i, l := range lines {
-		if headerRe.MatchString(l) {
-			h = i
-			break
-		}
-	}
-	if h < 0 {
-		return index{}, fmt.Errorf("%w: the %s version has no table headed | ADR | Title | Status |; merge the file by hand", ErrNotMerged, side)
-	}
-	end := h + 1
-	if end < len(lines) && separatorRe.MatchString(lines[end]) {
-		end++
-	}
-	ix := index{above: joinLines(lines[:h]), header: joinLines(lines[h:end]), rows: map[string]string{}}
-	for ; end < len(lines); end++ {
-		m := rowRe.FindStringSubmatch(lines[end])
-		if m == nil {
-			break
-		}
-		if _, dup := ix.rows[m[2]]; dup {
-			return index{}, fmt.Errorf("%w: the %s version has two rows for %s; merge the file by hand, keeping one", ErrNotMerged, side, m[2])
-		}
-		ix.rows[m[2]] = lines[end]
-	}
-	ix.below = joinLines(lines[end:])
-	return ix, nil
+// Difference is how an index differs from its render: the line of the index
+// where they first differ, counted from 1 and at most its last line, or 0
+// when they do not, and, each by ADR number in ascending order, the rows the
+// render writes differently (a file linked twice among them), the rows it
+// adds, and the rows it drops, which link a file the folder does not have.
+type Difference struct {
+	Line                    int
+	Changed, Missing, Extra []string
 }
+
+// Diff is how current, the index's text, differs from rendered, its render.
+// An index with no table whose render has no rows does not differ: the
+// render would only add an empty table to it.
+func Diff(current, rendered string) Difference {
+	var d Difference
+	have, want := rows(current), rows(rendered)
+	if current == rendered || (len(want) == 0 && !slices.ContainsFunc(strings.Split(current, "\n"), headerRe.MatchString)) {
+		return d
+	}
+	cl, rl := strings.Split(current, "\n"), strings.Split(rendered, "\n")
+	for d.Line < len(cl) && d.Line < len(rl) && cl[d.Line] == rl[d.Line] {
+		d.Line++
+	}
+	d.Line = min(d.Line+1, max(1, len(strings.Split(strings.TrimSuffix(current, "\n"), "\n"))))
+	for file, lines := range want {
+		switch got := have[file]; {
+		case len(got) == 0:
+			d.Missing = append(d.Missing, number(lines[0]))
+		case !slices.Equal(got, lines):
+			d.Changed = append(d.Changed, number(lines[0]))
+		}
+	}
+	for file, lines := range have {
+		if len(want[file]) == 0 {
+			d.Extra = append(d.Extra, number(lines[0]))
+		}
+	}
+	for _, l := range []*[]string{&d.Changed, &d.Missing, &d.Extra} {
+		slices.Sort(*l)
+		*l = slices.Compact(*l)
+	}
+	return d
+}
+
+// rows is every line of text that is an index row, by the file it links.
+func rows(text string) map[string][]string {
+	out := map[string][]string{}
+	for _, l := range strings.Split(text, "\n") {
+		if m := rowRe.FindStringSubmatch(l); m != nil {
+			out[m[2]] = append(out[m[2]], l)
+		}
+	}
+	return out
+}
+
+// number is the ADR number of row, an index row.
+func number(row string) string { return rowRe.FindStringSubmatch(row)[1] }
 
 // joinLines joins lines, each ended with a newline.
 func joinLines(lines []string) string {
@@ -276,80 +321,6 @@ func joinLines(lines []string) string {
 		b.WriteByte('\n')
 	}
 	return b.String()
-}
-
-// Merge merges three versions of the index's text, base and the two sides
-// that changed it, ours and theirs, row by row, and returns the merged text;
-// it returns an error wrapping ErrNotMerged when they do not merge.
-func Merge(base, ours, theirs string) (string, error) {
-	var v [3]index
-	for i, side := range [3]struct{ name, text string }{{"base", base}, {"ours", ours}, {"theirs", theirs}} {
-		ix, err := parse(side.name, side.text)
-		if err != nil {
-			return "", err
-		}
-		v[i] = ix
-	}
-	b, o, t := v[0], v[1], v[2]
-
-	var conflicts []string
-	str := func(name, inBase, inOurs, inTheirs string) string {
-		m, ok := pick(inBase, inOurs, inTheirs)
-		if !ok {
-			conflicts = append(conflicts, name)
-		}
-		return m
-	}
-	m := index{
-		above:  str("the text above the table", b.above, o.above, t.above),
-		header: str("the table's header", b.header, o.header, t.header),
-		below:  str("the text below the table", b.below, o.below, t.below),
-		rows:   map[string]string{},
-	}
-	for _, file := range sortedFiles(b.rows, o.rows, t.rows) {
-		if line := str("the row for "+file, b.rows[file], o.rows[file], t.rows[file]); line != "" {
-			m.rows[file] = line
-		}
-	}
-	if len(conflicts) > 0 {
-		return "", fmt.Errorf("%w: the two sides changed %s differently; merge the file by hand", ErrNotMerged, joinAnd(conflicts))
-	}
-	return m.text(), nil
-}
-
-// text is the index written out, its rows by ADR number then file name.
-func (ix index) text() string {
-	var b strings.Builder
-	b.WriteString(ix.above)
-	b.WriteString(ix.header)
-	for _, f := range sortedFiles(ix.rows) {
-		b.WriteString(ix.rows[f])
-		b.WriteByte('\n')
-	}
-	b.WriteString(ix.below)
-	return b.String()
-}
-
-// sortedFiles is the files the rows of every version link, by the ADR number
-// of their row then file name.
-func sortedFiles(versions ...map[string]string) []string {
-	number := map[string]string{}
-	for _, rows := range versions {
-		for f, line := range rows {
-			number[f] = rowRe.FindStringSubmatch(line)[1]
-		}
-	}
-	out := make([]string, 0, len(number))
-	for f := range number {
-		out = append(out, f)
-	}
-	sort.Slice(out, func(i, j int) bool {
-		if number[out[i]] != number[out[j]] {
-			return number[out[i]] < number[out[j]]
-		}
-		return out[i] < out[j]
-	})
-	return out
 }
 
 // pick is the three-way merge of one value: the side that changed it from

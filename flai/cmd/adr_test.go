@@ -263,7 +263,8 @@ func TestAdrIndex(t *testing.T) {
 	}
 }
 
-// flai check keeps the index honest for ADRs made by hand.
+// flai check reports an index that differs from what its ADR files render,
+// once, on its first line that differs, naming the rows (ADR-0228).
 func TestCheckAdrIndex(t *testing.T) {
 	t.Parallel()
 	root := adrProject(t)
@@ -273,11 +274,8 @@ func TestCheckAdrIndex(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(root, "design/adrs/0009-by-hand.md"), []byte(adrFile("0009", "By hand", "proposed")), 0o644)
 	_ = os.Remove(filepath.Join(root, "design/adrs/0001-first.md"))
 	out, _, _ := runIn(t, root, "check")
-	if !strings.Contains(out, "design/adrs/0009-by-hand.md:1: warning: adr.index: no row in design/adrs/README.md") {
-		t.Errorf("a file with no row:\n%s", out)
-	}
-	if !strings.Contains(out, "design/adrs/README.md:11: warning: adr.index: the row links to 0001-first.md, which is not there") {
-		t.Errorf("a row with no file, at its line:\n%s", out)
+	if want := "design/adrs/README.md:11: warning: adr.index: the ADR index differs from what its ADR files render: row 0009 is missing and row 0001 links no ADR file; run flai check --fix or flai adr index, which rewrite it\n"; !strings.Contains(out, want) || strings.Count(out, "adr.index") != 1 {
+		t.Errorf("one finding on the row with no file, naming both rows:\n%s", out)
 	}
 	if strings.Contains(out, "0000-template.md") {
 		t.Errorf("the template needs no row:\n%s", out)
