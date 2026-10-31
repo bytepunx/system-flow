@@ -309,9 +309,12 @@ func (lab *agentLab) entries() []hostapi.Entry {
 	return append([]hostapi.Entry{}, lab.journal...)
 }
 
+// waitFor polls ok until it holds, failing the test after 30 seconds: a
+// condition that holds is seen within a poll on a fast host, and the
+// deadline is there for a loaded one (load 23.7 in I-0226), not for speed.
 func waitFor(t *testing.T, what string, ok func() bool) {
 	t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(30 * time.Second)
 	for !ok() {
 		if time.Now().After(deadline) {
 			t.Fatalf("never happened: %s", what)
@@ -2771,14 +2774,19 @@ func TestAStorySentBackIsStartedAfreshOrBeforeARestart(t *testing.T) {
 	t.Run("a failed run from before the send back", func(t *testing.T) {
 		lab := newAgentLab(t)
 		lab.cfg.AutoRestarts = 2
+		// Held, so that the stub cannot end in progress before the same look
+		// restarts what ended (restartEnded), which would start it again as
+		// automatic restart 1 in place of the run for the send back (I-0226).
+		lab.hold()
 		id := lab.putEnded("Failed before", AgentRun{Outcome: OutcomeFailed, AutoRestarts: 1})
 		lab.endedAgo(id, 2*time.Minute)
 		th := lab.sendBack(id, "abc1234", time.Now().Add(-time.Minute))
 		lab.l.look(ctx, false)
 		waitFor(t, "it is started for the send back", func() bool { return lab.run(id).SentBack == th.ID })
-		if r := lab.run(id); r.Session != "earlier" || r.AutoRestarts != 0 || lab.startedCount() != 1 {
+		if r := lab.run(id); r.Session != "earlier" || r.AutoRestarts != 0 || !r.live() || lab.startedCount() != 1 {
 			t.Errorf("run %+v, journal %+v", r, lab.entries())
 		}
+		lab.release(id)
 		waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
 	})
 }

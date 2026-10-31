@@ -3,6 +3,7 @@ package serve
 import (
 	"context"
 	"errors"
+	"net"
 	"slices"
 	"sync"
 	"testing"
@@ -17,6 +18,23 @@ type fakeMCP struct {
 	mu   sync.Mutex
 	told [][]string
 	fail error
+}
+
+// closedURL is the address of a listener opened on a free local port and
+// closed, so that a dial to it is refused at once: a port nothing ever listened
+// on, such as 127.0.0.1:1, hangs to the connect timeout on a host with WSL2's
+// mirrored networking instead (S-0548).
+func closedURL(t *testing.T) string {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr := ln.Addr().String()
+	if err := ln.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return "http://" + addr
 }
 
 func (f *fakeMCP) Keep(roots []string) error {
@@ -75,9 +93,10 @@ func TestServeTellsTheHostWhichProjectsNeedAnMCPServer(t *testing.T) {
 	dir := DirFor(t.TempDir() + "/config.json")
 	alpha, alphaKey := scratchProject(t, "alpha")
 	beta, betaKey := scratchProject(t, "beta")
+	closed := closedURL(t)
 	for _, e := range []Entry{
-		{Key: "alpha", Name: "Alpha", Root: alpha, URL: "http://127.0.0.1:1", KeyFile: alphaKey},
-		{Key: "beta", Name: "Beta", Root: beta, URL: "http://127.0.0.1:1", KeyFile: betaKey},
+		{Key: "alpha", Name: "Alpha", Root: alpha, URL: closed, KeyFile: alphaKey},
+		{Key: "beta", Name: "Beta", Root: beta, URL: closed, KeyFile: betaKey},
 	} {
 		if err := dir.Register(e); err != nil {
 			t.Fatal(err)
@@ -105,7 +124,7 @@ func TestServeTellsTheHostWhichProjectsNeedAnMCPServer(t *testing.T) {
 func TestAHostThatDidNotHearIsToldAgain(t *testing.T) {
 	dir := DirFor(t.TempDir() + "/config.json")
 	alpha, alphaKey := scratchProject(t, "alpha")
-	_ = dir.Register(Entry{Key: "alpha", Name: "Alpha", Root: alpha, URL: "http://127.0.0.1:1", KeyFile: alphaKey})
+	_ = dir.Register(Entry{Key: "alpha", Name: "Alpha", Root: alpha, URL: closedURL(t), KeyFile: alphaKey})
 	m := &fakeMCP{fail: errors.New("flai host restarting")}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

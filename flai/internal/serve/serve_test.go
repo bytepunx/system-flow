@@ -343,17 +343,60 @@ func TestAChangedFileReachesTheDashboardAsANotification(t *testing.T) {
 	if err := dir.Register(Entry{Key: "harbour", Name: "harbour", Root: root, URL: dash.URL, KeyFile: key}); err != nil {
 		t.Fatal(err)
 	}
+	_ = os.MkdirAll(filepath.Join(root, "docs"), 0o755)
 	run(t, dir, dash)
 	conn := dash.Wait(t)
-	time.Sleep(80 * time.Millisecond)                                                     // the watcher has its first look
+	watcherHasLooked(t, conn, root)
 	_ = os.WriteFile(filepath.Join(root, "src/main.go"), []byte("package main\n"), 0o644) // not the dashboard's business
 	_ = os.WriteFile(filepath.Join(root, "wip/kanban/stories/S-0001-a.md"), []byte("a\n"), 0o644)
 	method, params := conn.Next(t)
+	for isChange(method, params, watchProbe) { // the probe's last write may be reported late
+		method, params = conn.Next(t)
+	}
 	var p struct{ Project, Path string }
 	_ = json.Unmarshal(params, &p)
 	if method != "change" || p.Project != "harbour" || p.Path != "wip/kanban/stories/S-0001-a.md" {
 		t.Errorf("notification: %s %s", method, params)
 	}
+}
+
+// watchProbe is the file watcherHasLooked writes, under a folder flai serve
+// watches and none of its looks reads.
+const watchProbe = "docs/watch-probe.md"
+
+// watcherHasLooked returns once flai serve's watcher of root has had its
+// first look, which it takes beside the dial, so that a file written after is
+// reported: one written before is in what it first saw, and never is. It
+// writes the probe, a byte longer each time in case a write came before the
+// look, until conn is told the probe changed, and stops writing it before it
+// returns. Anything else conn is told meanwhile fails the test.
+func watcherHasLooked(t *testing.T, conn *channeltest.Conn, root string) {
+	t.Helper()
+	stop, stopped := make(chan struct{}), make(chan struct{})
+	go func() {
+		defer close(stopped)
+		for n := 1; ; n++ {
+			_ = os.WriteFile(filepath.Join(root, watchProbe), []byte(strings.Repeat("x", n)), 0o644)
+			select {
+			case <-stop:
+				return
+			case <-time.After(250 * time.Millisecond):
+			}
+		}
+	}()
+	defer func() {
+		close(stop)
+		<-stopped
+	}()
+	if method, params := conn.Next(t); !isChange(method, params, watchProbe) {
+		t.Fatalf("told before the probe: %s %s", method, params)
+	}
+}
+
+// isChange says whether a notification is the change of the file at rel.
+func isChange(method string, params json.RawMessage, rel string) bool {
+	var p struct{ Path string }
+	return method == "change" && json.Unmarshal(params, &p) == nil && p.Path == rel
 }
 
 // S-0154: an agent starting or ending changes no file of the project, so flai

@@ -280,8 +280,10 @@ func (lab *forgeLab) mergeHandOff() *handOff {
 	return h
 }
 
-// shortWait is a wait for flai serve short enough for a test.
-var shortWait = MergeWait{Take: 5 * time.Second, Answer: 5 * time.Second, Poll: 5 * time.Millisecond}
+// shortWait is a wait for flai serve that polls fast enough for a test. A
+// request is answered within a few polls on a fast host; the 30 seconds are
+// for a loaded one (I-0226), as waitFor's are.
+var shortWait = MergeWait{Take: 30 * time.Second, Answer: 30 * time.Second, Poll: 5 * time.Millisecond}
 
 // S-0397 criterion 2: flai accept, with no token, hands the merge to flai
 // serve, which takes the request, merges with its token, and answers; the
