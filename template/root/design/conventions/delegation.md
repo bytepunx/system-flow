@@ -1,6 +1,6 @@
 ---
 title: Delegation
-updated: 2026-10-08
+updated: 2026-10-31
 audience: agent
 order: 130
 status: active
@@ -34,14 +34,16 @@ When and how the agent working a story hands work to a sub-agent and what it may
   - move a task you have just written to ready and in-progress in one command, `flai move T-nnnn ready && flai move T-nnnn in-progress`, since `flai move` refuses a task straight from `backlog` to `in-progress`
 - Before moving a story to `review`:
   - commit what is outstanding, run `flai stream sync` again and resolve what it reports, as `git.md` says
-  - run the close-out yourself, once, in the worktree: the project's close-out script, which runs `flai verify S-nnnn --record-issues` and then commits (`work-management.md`), or `flai verify S-nnnn`, or the MCP tool `verify`, where the project has no close-out script
-  - run it as one command with the longest timeout the harness allows (Claude Code's Bash tool: 600000 ms), its exit status echoed after it on the same line: `scripts/close-out.sh S-nnnn -m "<message>"; echo "exit $?"`; never pipe its output, which loses the exit status, and never redirect it into a file
-  - read its last line, which names the outcome and the step it stopped at, and the findings of the step that failed
-  - when it stops, fix what it names, commit, and run it again; do not finish the steps by hand, and never hand the run to a sub-agent
+  - ask flai serve for the close-out once, with the MCP tool `verify` and the commit message, or `flai verify S-nnnn --job -m "<message>"`: it answers the job's id at once and runs the project's close-out script, which runs `flai verify S-nnnn --record-issues` and then commits (`work-management.md`), or `flai verify S-nnnn` where the project has none, in the worktree ([ADR-0229](../adrs/0229-the-close-out-runs-as-a-flai-serve-job-the-story-s-agent-asks-for-with-the.md))
+  - wait for it by holding `wait_for_events` until it reports `verified` for the story; never run the close-out script in a turn while flai serve runs
+  - read its result with `flai verify S-nnnn --last`: the outcome, the step it stopped at, and the findings of the step that failed
+  - a verdict the request answers from the verify record is the passing run at that commit; it ran nothing
+  - where no flai serve runs, the request says so after ten seconds: run the close-out yourself, once, in the worktree, as one command with the longest timeout the harness allows (Claude Code's Bash tool: 600000 ms), its exit status echoed after it on the same line: `scripts/close-out.sh S-nnnn -m "<message>"; echo "exit $?"`; never pipe its output, which loses the exit status, and never redirect it into a file; read its last line, which names the outcome and the step it stopped at
+  - when it stops, fix what it names, commit, and ask for it again; do not finish the steps by hand, and never hand the run to a sub-agent
   - its passing run is the story's run before review; do not repeat it. `flai verify S-nnnn --last` prints it again
   - check the diff against the story's acceptance criteria and these conventions, saying which criteria, by number, the diff meets and which it does not
   - hand that review to one fresh verifier when it pays, as when the diff is too large to read in your own context; tell it the run passed, and at which commit, and to read the result with `flai verify S-nnnn --last` rather than run the suite
-  - if the review finds an issue, fix it, commit, and run the close-out again.
+  - if the review finds an issue, fix it, commit, and ask for the close-out again.
 - Fix what a verifier finds yourself; never delegate a fix to a sub-agent.
 - Sub-agents:
   - start with nothing but your prompt, unless a fork, which holds your conversation
@@ -56,7 +58,7 @@ When and how the agent working a story hands work to a sub-agent and what it may
 
 ## Tasks worked by sub-agents
 
-- Hand each task of the plan to a task sub-agent, so that its reading and editing stay out of your context. When a layer (`work-management.md`) holds more than one task, you may run them at once, one task sub-agent each, and then wait for all of them before you act on any. Launch each sub-agent in the foreground, a layer's in one message, so that each result comes back as the tool's result however long the sub-agent runs (in Claude Code, the Agent tool's `run_in_background` set to false), and go on from there. Never end your turn while a sub-agent runs in the background: a headless Claude Code session ends ten minutes after its turn ends, and the sub-agent with it. When only the designer's answer is left (`work-management.md`), end the session once every sub-agent is back. Never wait for a sub-agent with `wait_for_events` either, which reports work items and threads, not sub-agents: it is for a thread awaiting the designer, held by an agent that `flai serve` does not start again, and `flai guard` refuses it to a story's agent while a sub-agent of its session runs and no thread on the story or one of its tasks is open. That saves time only when the tasks are long beside what only you do: priming, reviewing each task, verifying, and closing out.
+- Hand each task of the plan to a task sub-agent, so that its reading and editing stay out of your context. When a layer (`work-management.md`) holds more than one task, you may run them at once, one task sub-agent each, and then wait for all of them before you act on any. Launch each sub-agent in the foreground, a layer's in one message, so that each result comes back as the tool's result however long the sub-agent runs (in Claude Code, the Agent tool's `run_in_background` set to false), and go on from there. Never end your turn while a sub-agent runs in the background: a headless Claude Code session ends ten minutes after its turn ends, and the sub-agent with it. When only the designer's answer is left (`work-management.md`), end the session once every sub-agent is back. Never wait for a sub-agent with `wait_for_events` either, which reports work items, threads, and close-out jobs, not sub-agents: it is for the `verified` event of the story's close-out job, and for a thread awaiting the designer, held by an agent that `flai serve` does not start again, and `flai guard` refuses it to a story's agent while a sub-agent of its session runs and no thread on the story or one of its tasks is open. That saves time only when the tasks are long beside what only you do: priming, reviewing each task, verifying, and closing out.
 - Use a fork, which inherits your conversation, where the harness offers one. Otherwise give the sub-agent the task's ID, the worktree's path, the paths the task touches, and the conventions to read.
 - Name the task's ID in each task sub-agent's description, the Agent tool's `description`, so that flai measures the task by its sub-agent's calls rather than by the time it was in progress. An explorer or verifier started for one task names that task too; one started for the story as a whole names none.
 - A layer's tasks share the story's worktree when their `touches` have no path in common. Give each task its own worktree from the story's branch (`git worktree add -b task/T-nnnn <path> <story branch>`), and merge it back yourself, when one builds or tests what another changes, so that a half-done edit cannot fail a sibling's tests.
@@ -72,6 +74,7 @@ When and how the agent working a story hands work to a sub-agent and what it may
 - Do not move, create, or edit work items, write to threads or send messages, read the inbox, or wait for events or work; your tools leave them out; never work around that through the shell.
 - Answer the question you were given. Do not do the story's work.
 - As a verifier, review the diff against the story's acceptance criteria and the conventions, naming the criteria it meets by number. Do not run the tests, the lint, or `flai check` to learn whether they pass: read the story's last result with `flai verify S-nnnn --last`, and say so when it did not pass or its commit is not the branch's head.
+- Never ask flai serve for the story's close-out job, with the MCP tool `verify` or `flai verify S-nnnn --job`, unless your prompt asks: the story's agent asks for it and waits for its `verified` event.
 - Run the close-out, or `flai verify`, only when your prompt asks. Then run it once, as one command with the longest timeout the harness allows (Claude Code's Bash tool: 600000 ms), its exit status echoed after it on the same line: `flai verify S-nnnn; echo "exit $?"`. Never pipe its output, which loses the exit status, and never redirect it into a file. Read its last line, which names the outcome and the step it stopped at.
 - When you need the designer to decide something, stop and put the question in your final message, with your recommended answer first.
 - Your final message is all the agent that started you sees. Lead with the answer, then the evidence, then what you could not check.

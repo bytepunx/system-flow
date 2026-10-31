@@ -413,6 +413,30 @@ Then `systemctl --user daemon-reload && systemctl --user enable --now flai-gatew
 
 `flai test gateway` needs a flai with S-0548. An older flai has no `manual` and takes `gateway` for a path: run `scripts/gateway-smoke.sh` from the checkout instead. While the merge queue, `flai serve`, or the MCP server runs an older flai, the tier's paths, the script alone, keep it out of every close-out and batch but those of a story that changes `scripts/gateway-smoke.sh`, and that flai's `flai test --all` runs it.
 
+### Close-out jobs (S-0546)
+
+`flai serve` runs a story's close-out as a job when the story's agent asks for it, with the MCP tool `verify` or `flai verify S-nnnn --job`, in every project it serves; it needs no host action ([The close-out job](../users/flai.md#the-close-out-job), [ADR-0229](../../design/adrs/0229-the-close-out-runs-as-a-flai-serve-job-the-story-s-agent-asks-for-with-the.md)). The job runs `scripts/close-out.sh` in the story's worktree, or `flai verify --record-issues` where it has none, with no model, for at most two hours. Without `flai serve`, the request is withdrawn after ten seconds and the agent runs the close-out itself.
+
+```bash
+flai serve journal          # each job's start, and its end with verdict and duration
+flai verify S-nnnn --last   # the result of the story's last run
+```
+
+**Where to look.** A job's files are under `.flai-cache/verify/jobs/` in the project's main checkout, on this host only:
+
+| File | What it holds |
+|------|---------------|
+| `S-nnnn.request.json` | The agent's request, until `flai serve` takes it by renaming it `S-nnnn.taken.json` |
+| `S-nnnn.answer.json` | `flai serve`'s answer: the job's id, or the verdict from the record, or why it refused |
+| `S-nnnn.job.json` | The job: its id, story, asker, and start, and once it ended, its end, exit code, verdict, and the head commit it ended at |
+| `S-nnnn.log` | The close-out's output |
+
+`flai verify` keeps its record of each story under `.flai-cache/verify/`: the newest run as before, and each run on a clean worktree under its commit in `.flai-cache/verify/S-nnnn/<commit>.json`. A request at a clean commit that holds a passing verdict is answered from it, and nothing runs.
+
+**The journal.** Each job's start and end are entries with the action `close-out` and the method `verify.job`. The start has the outcome `started`; the end has `done` for a pass and `failed` otherwise, with `verdict` (`passed`, `stopped`, `failed`, or `interrupted`) and `duration_ms`. An answer from the record is one end entry whose `detail` begins `from the record`. `flai stats` counts these entries per week ([Flow metrics](../users/flai.md#flow-metrics)).
+
+**When `flai serve` restarts.** Stopping `flai serve` stops a running job and everything it started. When `flai serve` starts again, it ends each job it left running `failed`, with the verdict `interrupted`, journals that, and tells the story's agent with a `verified` event; the agent asks for the close-out again.
+
 ### The components host action (S-0438)
 
 `flai serve` can run a Svelte sub-project's own Vite dev server, with flai's component harness, on your machine, because the dashboard's Components page asked ([ADR-0163](../../design/adrs/0163-flai-runs-a-sub-project-s-own-vite-dev-server-on-127-0-0-1-behind-the.md)). It runs the sub-project's own `vite`, from its `node_modules`, in its folder, with its own config, plugins, and dependencies, as you. It is a host action, off until you enable it:
