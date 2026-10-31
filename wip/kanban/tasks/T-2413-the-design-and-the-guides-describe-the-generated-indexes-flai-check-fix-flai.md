@@ -3,16 +3,37 @@ id: T-2413
 type: task
 nature: improvement
 title: The design and the guides describe the generated indexes, flai check --fix, flai adr index, the union-merged changelogs, and the acceptance notice that skips the shared paths
-status: backlog
+status: done
 parent: S-0550
 owner: alex
 created: 2026-10-31T07:44:43Z
-updated: 2026-10-31T07:44:43Z
-transitions: []
+updated: 2026-10-31T10:20:42Z
+transitions:
+  - to: ready
+    at: 2026-10-31T10:11:03Z
+    by: agent-S-0550
+  - to: in-progress
+    at: 2026-10-31T10:11:05Z
+    by: agent-S-0550
+  - to: done
+    at: 2026-10-31T10:20:41Z
+    by: agent-S-0550
 stream: S-0550
 tags: [cli, template]
-touches: [design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, design/system/continuous-improvement.md, design/system/workflow.md, design/conventions/decisions.md, template/root/design/conventions/decisions.md, template/CHANGELOG.md]
+touches: [design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, design/system/continuous-improvement.md, design/system/workflow.md, design/conventions/decisions.md, template/root/design/conventions/decisions.md, template/CHANGELOG.md, docs/contributors/template.md, flai/cmd/check.go]
 after: [T-2409, T-2397, T-2399, T-2402]
+usage:
+  source: log
+  seconds: 576
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 129
+      output: 45613
+      cache_read: 7836167
+      cache_write: 368156
+      cost: 4.5135
 ---
 # T-2413 The design and the guides describe the generated indexes, flai check --fix, flai adr index, the union-merged changelogs, and the acceptance notice that skips the shared paths
 

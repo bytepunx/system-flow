@@ -3,16 +3,31 @@ id: T-2412
 type: task
 nature: improvement
 title: Review the open after chain S-0420 to S-0422 against the rule, keeping each after that reads another story's output with its reason and proposing the rest
-status: backlog
+status: done
 parent: S-0551
 owner: alex
 created: 2026-10-31T07:44:42Z
-updated: 2026-10-31T07:44:42Z
-transitions: []
+updated: 2026-10-31T10:07:27Z
+transitions:
+  - to: ready
+    at: 2026-10-31T10:07:13Z
+    by: agent-S-0551
+  - to: in-progress
+    at: 2026-10-31T10:07:15Z
+    by: agent-S-0551
+  - to: done
+    at: 2026-10-31T10:07:27Z
+    by: agent-S-0551
 stream: S-0551
 tags: [flai, planning]
 touches: [wip/kanban/stories/S-0420-the-dashboard-s-planner-orchestrator-and-analyzer-pages-become-one-role-page-per-defined-role-with-its-settings-panel-its-activity-document-and-its-runs-and-agent-status-carries-every-role-by-name.md, wip/kanban/stories/S-0421-a-formula-is-a-markdown-file-under-design-workflows-formulas-that-flai-check-validates-and-flai-formula-run-makes-a-story-from-it-with-one-task-per-step-and-the-steps-after-between-them.md, wip/kanban/stories/S-0422-a-story-s-agent-works-a-formula-s-instance-on-its-branch-a-role-step-runs-its-role-charged-to-the-instance-a-failed-step-asks-on-a-thread-and-a-formula-starts-from-its-schedule-or-a-role.md]
 after: [T-2393, T-2408]
+usage:
+  source: log
+  seconds: 12
+  estimated: true
+  priced_by: harness
+  models: []
 ---
 # T-2412 Review the open after chain S-0420 to S-0422 against the rule, keeping each after that reads another story's output with its reason and proposing the rest
 

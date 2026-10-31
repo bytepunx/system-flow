@@ -3,16 +3,37 @@ id: T-2416
 type: task
 nature: improvement
 title: The flai user guide and the CLI design describe the trial merge, the after advisory, and the new stats
-status: backlog
+status: done
 parent: S-0551
 owner: alex
 created: 2026-10-31T07:44:56Z
-updated: 2026-10-31T07:44:56Z
-transitions: []
+updated: 2026-10-31T10:18:12Z
+transitions:
+  - to: ready
+    at: 2026-10-31T10:07:19Z
+    by: agent-S-0551
+  - to: in-progress
+    at: 2026-10-31T10:07:21Z
+    by: agent-S-0551
+  - to: done
+    at: 2026-10-31T10:18:12Z
+    by: agent-S-0551
 stream: S-0551
 tags: [flai, docs]
-touches: [docs/users/flai.md, design/system/flai-cli.md]
+touches: [docs/users/flai.md, design/system/flai-cli.md, flai/internal/mcpserver/story_start.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, flai/cmd/promote.go, flai/cmd/story_start.go, design/system/workflow.md, docs/users/flai-reference.md]
 after: [T-2393, T-2395, T-2404, T-2410]
+usage:
+  source: log
+  seconds: 651
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 131
+      output: 41673
+      cache_read: 8194638
+      cache_write: 300546
+      cost: 4.1476
 ---
 # T-2416 The flai user guide and the CLI design describe the trial merge, the after advisory, and the new stats
 

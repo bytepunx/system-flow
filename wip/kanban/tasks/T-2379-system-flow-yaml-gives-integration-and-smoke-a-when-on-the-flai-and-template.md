@@ -3,16 +3,37 @@ id: T-2379
 type: task
 nature: improvement
 title: system-flow.yaml gives integration and smoke a when on the flai and template paths, a close-out shows both run, and I-0221 is closed
-status: backlog
+status: done
 parent: S-0547
 owner: alex
 created: 2026-10-31T07:40:21Z
-updated: 2026-10-31T07:40:21Z
-transitions: []
+updated: 2026-10-31T09:57:00Z
+transitions:
+  - to: ready
+    at: 2026-10-31T09:51:42Z
+    by: agent-S-0547
+  - to: in-progress
+    at: 2026-10-31T09:51:44Z
+    by: agent-S-0547
+  - to: done
+    at: 2026-10-31T09:57:00Z
+    by: agent-S-0547
 stream: S-0547
 tags: [flai]
 touches: [system-flow.yaml, design/issues/I-0221-the-close-out-s-go-test-tier-runs-only-the-changed-packages-so-a-change-that-breaks-a-caller-package-s-tests-passes-before-review.md, design/issues/I-0203-a-story-the-operator-accepts-outside-the-merge-queue-lands-without-the-queue-tiers-so-a-stale-generated-file-on-main-fails-every-later-batch-at-integration.md, design/issues/summary.md]
 after: [T-2377, T-2378]
+usage:
+  source: log
+  seconds: 316
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 16
+      output: 4449
+      cache_read: 1160210
+      cache_write: 39176
+      cost: 0.5609
 ---
 # T-2379 system-flow.yaml gives integration and smoke a when on the flai and template paths, a close-out shows both run, and I-0221 is closed
 

@@ -30,15 +30,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 380
+      seconds: 386
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 114
-          output: 2001
-          cache_read: 28526941
-          cache_write: 34404
-          cost: 6.2814
+          input: 115
+          output: 2009
+          cache_read: 28558701
+          cache_write: 36982
+          cost: 6.2892
 cost_of_delay:
   value: 48.09
   by: planner-S-0421

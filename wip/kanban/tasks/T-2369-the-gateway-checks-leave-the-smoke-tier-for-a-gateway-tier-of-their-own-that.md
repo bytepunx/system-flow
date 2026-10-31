@@ -3,16 +3,37 @@ id: T-2369
 type: task
 nature: remediation
 title: The gateway checks leave the smoke tier for a gateway tier of their own that runs only when the operator asks or on the host's schedule
-status: backlog
+status: done
 parent: S-0548
 owner: alex
 created: 2026-10-31T07:26:50Z
-updated: 2026-10-31T07:26:50Z
-transitions: []
+updated: 2026-10-31T09:34:12Z
+transitions:
+  - to: ready
+    at: 2026-10-31T09:26:22Z
+    by: agent-S-0548
+  - to: in-progress
+    at: 2026-10-31T09:26:23Z
+    by: agent-S-0548
+  - to: done
+    at: 2026-10-31T09:34:12Z
+    by: agent-S-0548
 stream: S-0548
 tags: [cli]
-touches: [system-flow.yaml, scripts/smoke.sh, scripts/gateway-smoke.sh, docs/contributors/index.md, docs/operators/index.md, design/conventions/tooling.md, design/system/agent-adapters.md]
+touches: [system-flow.yaml, scripts/smoke.sh, scripts/gateway-smoke.sh, docs/contributors/index.md, docs/operators/index.md, design/conventions/tooling.md, design/system/agent-adapters.md, design/conventions/code-quality.md, scripts/README.md, scripts/integration.sh, flai/internal/verify/select_test.go]
 after: [T-2366, T-2368]
+usage:
+  source: log
+  seconds: 469
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 78
+      output: 25516
+      cache_read: 6716474
+      cache_write: 135670
+      cost: 2.6233
 ---
 # T-2369 The gateway checks leave the smoke tier for a gateway tier of their own that runs only when the operator asks or on the host's schedule
 

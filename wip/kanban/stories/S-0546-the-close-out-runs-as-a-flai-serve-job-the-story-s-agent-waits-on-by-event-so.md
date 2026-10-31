@@ -3,11 +3,11 @@ id: S-0546
 type: story
 nature: improvement
 title: The close-out runs as a flai serve job the story's agent waits on by event, so it never dies at the harness's tool timeout and is never re-run from the start
-status: in-progress
+status: review
 parent: E-0031
 owner: alex
 created: 2026-10-30T01:51:56Z
-updated: 2026-10-31T09:01:09Z
+updated: 2026-10-31T10:51:30Z
 transitions:
   - to: ready
     at: 2026-10-31T07:24:17Z
@@ -15,9 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-10-31T08:38:50Z
     by: agent-S-0546
+  - to: review
+    at: 2026-10-31T10:51:30Z
+    by: agent-S-0546
 tags: [flai]
 topics: [testing, mcp, cli]
-touches: [flai/internal/serve, flai/internal/mcpserver, flai/cmd, scripts/close-out.sh, design/system/flai-cli.md, design/conventions/testing.md, docs/users/flai.md, design/adrs/README.md, design/system/metrics.md, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/serve.go, flai/internal/inbox/events.go, flai/internal/inbox/events_test.go, flai/internal/hostapi/writes.go, flai/cmd/serve_actions.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go, flai/internal/mcpserver/server.go, flai/internal/metrics/closeouts.go, flai/internal/metrics/closeouts_test.go, flai/internal/metrics/metrics.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, flai/cmd/stats.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, template/root/scripts/close-out.sh, docs/users/flai-reference.md, docs/operators/index.md, design/conventions/code-quality.md, design/conventions/delegation.md, design/conventions/work-management.md, template/root/design/conventions/code-quality.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/adrs/0229-the-close-out-runs-as-a-flai-serve-job-the-story-s-agent-asks-for-with-the.md]
+touches: [flai/internal/serve, flai/internal/mcpserver, flai/cmd, scripts/close-out.sh, design/system/flai-cli.md, design/conventions/testing.md, docs/users/flai.md, design/adrs/README.md, design/system/metrics.md, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/serve.go, flai/internal/inbox/events.go, flai/internal/inbox/events_test.go, flai/internal/hostapi/writes.go, flai/cmd/serve_actions.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go, flai/internal/mcpserver/server.go, flai/internal/metrics/closeouts.go, flai/internal/metrics/closeouts_test.go, flai/internal/metrics/metrics.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, flai/cmd/stats.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, template/root/scripts/close-out.sh, docs/users/flai-reference.md, docs/operators/index.md, design/conventions/code-quality.md, design/conventions/delegation.md, design/conventions/work-management.md, template/root/design/conventions/code-quality.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/adrs/0229-the-close-out-runs-as-a-flai-serve-job-the-story-s-agent-asks-for-with-the.md, flai/internal/verify/record.go, flai/internal/verify/record_test.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, docs/operators/settings.md, flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go, design/issues/I-0240-flai-guard-still-lists-the-verify-mcp-tool-among-a-sub-agent-s-reads-though-it.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -25,37 +28,52 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 767
-  estimated: true
-  priced_by: estimate
+  seconds: 7977
+  priced_by: harness
   turns:
     - day: 2026-10-31
-      ceremony: 4
-      work: 15
+      ceremony: 7
+      test_runs: 2
+      hand_edits: 2
+      work: 64
   models:
     - model: claude-haiku-5-5
-      input: 114
-      output: 535
-      cache_read: 7362160
-      cache_write: 226559
-      cost: 0.5479
+      input: 116
+      output: 50745
+      cache_read: 7588719
+      cache_write: 229659
+      cost: 0.5494
     - model: claude-opus-5-5
-      input: 118
-      output: 639
-      cache_read: 5879045
-      cache_write: 305079
-      cost: 2.1524
+      input: 812
+      output: 332634
+      cache_read: 56493488
+      cache_write: 2899443
+      cost: 33.6743
   strategic:
     - kind: orchestrator
-      seconds: 171
+      seconds: 758
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 60
-          output: 430
-          cache_read: 1778396
-          cache_write: 213250
-          cost: 0.4511
+          input: 88
+          output: 669
+          cache_read: 2610352
+          cache_write: 364595
+          cost: 0.6754
+        - model: claude-sonnet-5-5
+          input: 14
+          output: 83
+          cache_read: 229890
+          cache_write: 58427
+          cost: 0.2006
+cost_of_delay:
+  inputs:
+    time_lost_per_cycle: 9h
+    by: alex
+    at: 2026-10-31T09:07:57Z
+  value: 1350
+  by: alex
+  at: 2026-10-31T09:07:57Z
 forecast:
   duration: 2h30m
   delivery: 2026-10-31T11:43:00Z
@@ -70,10 +88,10 @@ forecast:
 `scripts/close-out.sh` runs `flai verify` inside one Bash tool call of the agent's turn. Claude Code ends a tool call at 600 s, and 64 of the fortnight's 267 close-outs died there, 146 ended with no summary line, and only 88 reported every step passing; the agent then ran the whole close-out again from the start, every tier included, p50 109 s and p85 the full 600 s, for 18.5 hours of the fortnight's 113 session-hours. This story makes the close-out a job: the agent asks flai serve, through the `verify` MCP tool or `flai verify --job`, to run the close-out in the story's worktree, gets a job id at once, and waits for its `verified` event with `wait_for_events`, so no tool call outlives its timeout and a close-out is never cut short. The job's tiers, output, and verdict are recorded where `flai verify` records them today, and a close-out that is asked for again at the same commit answers from that record instead of running.
 
 ## Acceptance criteria
-- [ ] `verify` (MCP) and `flai verify --job` start the close-out as a serve job in the story's worktree and return its id without waiting; `wait_for_events` reports `verified` with the job's verdict when it ends, and `flai verify` without `--job` behaves as today for a session without serve
-- [ ] A close-out asked for again at a commit the record already holds a verdict for answers from the record, saying so, and runs nothing
-- [ ] `scripts/close-out.sh`, the testing convention, `flai-cli.md`, and the user docs say the close-out is a job the agent waits on, and the story agent's prompt tells it to wait rather than call the script in a turn
-- [ ] The serve journal records each job's start, end, duration, and verdict, and `flai stats` counts close-outs from it
+- [x] `verify` (MCP) and `flai verify --job` start the close-out as a serve job in the story's worktree and return its id without waiting; `wait_for_events` reports `verified` with the job's verdict when it ends, and `flai verify` without `--job` behaves as today for a session without serve
+- [x] A close-out asked for again at a commit the record already holds a verdict for answers from the record, saying so, and runs nothing
+- [x] `scripts/close-out.sh`, the testing convention, `flai-cli.md`, and the user docs say the close-out is a job the agent waits on, and the story agent's prompt tells it to wait rather than call the script in a turn
+- [x] The serve journal records each job's start, end, duration, and verdict, and `flai stats` counts close-outs from it
 
 ## Tasks
 

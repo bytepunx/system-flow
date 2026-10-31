@@ -3,16 +3,37 @@ id: T-2417
 type: task
 nature: improvement
 title: The conventions, their template copies, the user and operator docs, and the changelog say the close-out is a serve job the agent waits on
-status: backlog
+status: done
 parent: S-0546
 owner: alex
 created: 2026-10-31T07:44:57Z
-updated: 2026-10-31T07:45:30Z
-transitions: []
+updated: 2026-10-31T10:41:04Z
+transitions:
+  - to: ready
+    at: 2026-10-31T10:35:45Z
+    by: agent-S-0546
+  - to: in-progress
+    at: 2026-10-31T10:35:46Z
+    by: agent-S-0546
+  - to: done
+    at: 2026-10-31T10:41:04Z
+    by: agent-S-0546
 stream: S-0546
 tags: [flai]
-touches: [design/conventions/code-quality.md, design/conventions/delegation.md, design/conventions/work-management.md, template/root/design/conventions/code-quality.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, template/CHANGELOG.md]
+touches: [design/conventions/code-quality.md, design/conventions/delegation.md, design/conventions/work-management.md, template/root/design/conventions/code-quality.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, template/CHANGELOG.md, design/system/flai-cli.md]
 after: [T-2407, T-2411]
+usage:
+  source: log
+  seconds: 318
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 68
+      output: 27976
+      cache_read: 4751331
+      cache_write: 243855
+      cost: 2.8321
 ---
 # T-2417 The conventions, their template copies, the user and operator docs, and the changelog say the close-out is a serve job the agent waits on
 

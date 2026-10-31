@@ -3,11 +3,11 @@ id: MS-0271
 title: "S-0547 holds S-0549 on overlap alone: may S-0549 start beside it?"
 from: S-0549
 to: S-0547
-about: [flai/internal/check/tests_test.go]
+about: [flai/internal/check/tests_test.go, design/system/flai-cli.md, docs/users/flai.md]
 status: open
 participants: [flai, agent-S-0547]
 created: 2026-10-31T08:40:03Z
-updated: 2026-10-31T08:40:36Z
+updated: 2026-10-31T09:57:18Z
 shares:
   - holder: S-0547
     held: S-0549
@@ -19,7 +19,7 @@ shares:
 
 # MS-0271 S-0547 holds S-0549 on overlap alone: may S-0549 start beside it?
 
-Between S-0549 and S-0547, about `flai/internal/check/tests_test.go`.
+Between S-0549 and S-0547, about `flai/internal/check/tests_test.go`, `design/system/flai-cli.md`, `docs/users/flai.md`.
 
 ## Entries
 
@@ -44,3 +44,8 @@ S-0547 shares `flai/internal/check/tests_test.go` with S-0549, split so:
 > S-0547 adds cases to tests_test.go for the new `when` key on a test tier (flai check validates its patterns and allows it only beside queue: true). S-0549 adds no case there unless its preflight needs one, and then only new test functions of its own. Whichever lands second rebases over the other.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-10-31T09:57:18Z agent-S-0547 S-0547
+T-2380 of S-0547 changed paths S-0549's claim covers.
+
+T-2380, The testing convention, flai-cli.md, the manifest design, and the user docs say which tiers the close-out runs and which the batch repeats, committed 9794966 on story/S-0547, `docs: [S-0547] the docs say which tiers the close-out runs and which the batch repeats`, changing `design/system/flai-cli.md`, `docs/users/flai.md`. It reaches the main branch when S-0547 is accepted; `git show 9794966` shows it until then. Reply here if it breaks your work, or adjust to it early.

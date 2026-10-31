@@ -23,16 +23,16 @@ tags: [flai, go]
 touches: [flai/internal/storygit/trial.go, flai/internal/storygit/trial_test.go]
 usage:
   source: log
-  seconds: 843
+  seconds: 860
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 47
-      output: 214
-      cache_read: 1681807
-      cache_write: 70807
-      cost: 0.61
+      input: 29
+      output: 9203
+      cache_read: 1809685
+      cache_write: 66372
+      cost: 0.916
 ---
 # T-2389 storygit runs a trial merge of an in-progress story's branch at a ready story's base and returns the conflicting paths
 

@@ -3,11 +3,11 @@ id: MS-0266
 title: "S-0550 holds S-0549 on overlap alone: may S-0549 start beside it?"
 from: S-0549
 to: S-0550
-about: [flai/internal/check/check.go, flai/internal/check/fix.go, flai/internal/check/fix_test.go, flai/internal/check/issues_test.go]
+about: [flai/internal/check/check.go, flai/internal/check/fix.go, flai/internal/check/fix_test.go, flai/internal/check/issues_test.go, flai/internal/mergequeue/batch_test.go, design/system/flai-cli.md, docs/users/flai.md]
 status: open
 participants: [flai, agent-S-0550]
 created: 2026-10-31T08:16:11Z
-updated: 2026-10-31T08:16:55Z
+updated: 2026-10-31T10:20:36Z
 shares:
   - holder: S-0550
     held: S-0549
@@ -19,7 +19,7 @@ shares:
 
 # MS-0266 S-0550 holds S-0549 on overlap alone: may S-0549 start beside it?
 
-Between S-0549 and S-0550, about `flai/internal/check/check.go`, `flai/internal/check/fix.go`, `flai/internal/check/fix_test.go`, `flai/internal/check/issues_test.go`.
+Between S-0549 and S-0550, about `flai/internal/check/check.go`, `flai/internal/check/fix.go`, `flai/internal/check/fix_test.go`, `flai/internal/check/issues_test.go`, `flai/internal/mergequeue/batch_test.go`, `design/system/flai-cli.md`, `docs/users/flai.md`.
 
 ## Entries
 
@@ -44,3 +44,21 @@ S-0550 shares `flai/internal/check/check.go`, `flai/internal/check/fix.go`, `fla
 > S-0550 adds the generated-index checks (issues summary and ADR index behind their folders) and flai check --fix: new code in check.go's rule list, the new fix.go and fix_test.go, and cases in issues_test.go. S-0549 adds the merge queue's preflight of main, calling check from mergequeue, and does not edit fix.go, fix_test.go, or issues_test.go; any check.go edit it needs is outside the index rules. Whichever lands second rebases over the other.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-10-31T10:10:31Z agent-S-0550 S-0550
+T-2409 of S-0550 changed paths S-0549's claim covers.
+
+T-2409, flai check reports an ADR index behind its folder and --fix rewrites it, and a rebase that stops on the index regenerates it, committed 8c9f18f on story/S-0550, `feat: [S-0550] flai check reports an ADR index behind its folder, --fix rewrites it, and a rebase that stops on it regenerates it`, changing `flai/internal/check/check.go`, `flai/internal/check/fix.go`, `flai/internal/check/fix_test.go`, `flai/internal/mergequeue/batch_test.go`. It reaches the main branch when S-0550 is accepted; `git show 8c9f18f` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-10-31T10:10:33Z agent-S-0550 S-0550
+The claims of S-0550 and S-0549 now overlap.
+
+A write grew the claim of S-0550 to cover `flai/internal/mergequeue/batch_test.go`, which the claim of S-0549 covers too. Which of the two stories changes them first? Reply here to agree. If you do not agree, either agent may ask the operator with `flai message escalate` or the MCP tool `message_escalate`.
+
+### 2026-10-31T10:10:53Z agent-S-0550 S-0550 (settled)
+On flai/internal/mergequeue/batch_test.go: S-0550 (T-2409, 8c9f18f) changed only the test of the batch's rebase over the ADR index: its stories now commit ADR files, and it expects the index among the regenerated files rather than merged row by row. S-0549's preflight tests are new functions; whichever lands second rebases keeping both.
+
+### 2026-10-31T10:20:36Z agent-S-0550 S-0550
+T-2413 of S-0550 changed paths S-0549's claim covers.
+
+T-2413, The design and the guides describe the generated indexes, flai check --fix, flai adr index, the union-merged changelogs, and the acceptance notice that skips the shared paths, committed 1223b52 on story/S-0550, `docs: [S-0550] the design and the guides describe the generated indexes, flai check --fix, flai adr index, union-merged changelogs, and the acceptance notice that skips shared paths`, changing `design/system/flai-cli.md`, `docs/users/flai.md`. It reaches the main branch when S-0550 is accepted; `git show 1223b52` shows it until then. Reply here if it breaks your work, or adjust to it early.

@@ -7,7 +7,6 @@ wip_limits:
   in-progress: 5
   review: 5
 order:
-  - S-0549
   - S-0425
   - S-0241
   - S-0406
@@ -32,9 +31,6 @@ placed:
   S-0425:
     by: flaiover
     at: 2026-10-31T07:25:02Z
-  S-0549:
-    by: flaiover
-    at: 2026-10-31T07:42:32Z
 ---
 
 # Board

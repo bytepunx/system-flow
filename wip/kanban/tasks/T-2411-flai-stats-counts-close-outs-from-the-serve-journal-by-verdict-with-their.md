@@ -3,16 +3,37 @@ id: T-2411
 type: task
 nature: feature
 title: flai stats counts close-outs from the serve journal, by verdict, with their durations, as metrics.md defines
-status: backlog
+status: done
 parent: S-0546
 owner: alex
 created: 2026-10-31T07:44:33Z
-updated: 2026-10-31T07:44:33Z
-transitions: []
+updated: 2026-10-31T10:35:22Z
+transitions:
+  - to: ready
+    at: 2026-10-31T09:30:18Z
+    by: agent-S-0546
+  - to: in-progress
+    at: 2026-10-31T09:30:19Z
+    by: agent-S-0546
+  - to: done
+    at: 2026-10-31T10:35:22Z
+    by: agent-S-0546
 stream: S-0546
 tags: [flai]
 touches: [flai/internal/metrics/closeouts.go, flai/internal/metrics/closeouts_test.go, flai/internal/metrics/metrics.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, flai/cmd/stats.go]
 after: [T-2403]
+usage:
+  source: log
+  seconds: 3903
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 93
+      output: 38021
+      cache_read: 6457401
+      cache_write: 331416
+      cost: 3.8491
 ---
 # T-2411 flai stats counts close-outs from the serve journal, by verdict, with their durations, as metrics.md defines
 

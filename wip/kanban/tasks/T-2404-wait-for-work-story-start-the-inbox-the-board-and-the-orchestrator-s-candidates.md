@@ -3,11 +3,11 @@ id: T-2404
 type: task
 nature: improvement
 title: wait_for_work, story start, the inbox, the board, and the orchestrator's candidates judge an overlap by the trial merge
-status: in-progress
+status: done
 parent: S-0551
 owner: alex
 created: 2026-10-31T07:44:07Z
-updated: 2026-10-31T08:57:49Z
+updated: 2026-10-31T10:06:12Z
 transitions:
   - to: ready
     at: 2026-10-31T08:57:47Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-31T08:57:49Z
     by: agent-S-0551
+  - to: done
+    at: 2026-10-31T10:06:12Z
+    by: agent-S-0551
 stream: S-0551
 tags: [flai, go]
-touches: [flai/internal/mcpserver/work.go, flai/internal/mcpserver/work_test.go, flai/internal/mcpserver/orchestrate.go, flai/internal/workitem/promote.go, flai/internal/workitem/boardview.go, flai/internal/storystart/start.go, flai/internal/storystart/start_test.go, flai/internal/inbox/inbox.go, flai/internal/mcpserver/server.go, flai/cmd/project.go]
+touches: [flai/internal/mcpserver/work.go, flai/internal/mcpserver/work_test.go, flai/internal/mcpserver/orchestrate.go, flai/internal/workitem/boardview.go, flai/internal/storystart/start_test.go, flai/internal/mcpserver/server.go, flai/cmd/project.go]
 after: [T-2389, T-2391]
+usage:
+  source: log
+  seconds: 4103
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 129
+      output: 41064
+      cache_read: 8074963
+      cache_write: 296157
+      cost: 4.0871
 ---
 # T-2404 wait_for_work, story start, the inbox, the board, and the orchestrator's candidates judge an overlap by the trial merge
 

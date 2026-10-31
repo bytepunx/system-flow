@@ -4,10 +4,10 @@ title: "S-0551 needs a cost of delay input: recommend time lost 2h per cycle"
 anchor:
   path: wip/kanban/stories/S-0551-a-story-starts-on-a-trial-merge-instead-of-an-overlap-hold-and-after-holds-a.md
   item: S-0551
-status: open
-participants: [planner-S-0551, orchestrator]
+status: resolved
+participants: [planner-S-0551, orchestrator, alex]
 created: 2026-10-31T07:35:33Z
-updated: 2026-10-31T07:37:02Z
+updated: 2026-10-31T09:13:14Z
 ---
 
 # TH-0772 S-0551 needs a cost of delay input: recommend time lost 2h per cycle
@@ -53,3 +53,56 @@ I tried to set it, and flai refused: "S-0551 is ready, not in the backlog: the o
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
 
 Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+
+### 2026-10-31T09:09:42Z alex
+Confirmed the recommendation of 2026-10-31T07:37:02Z orchestrator.
+
+Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+
+### 2026-10-31T09:09:53Z alex
+Resolved.
+
+### 2026-10-31T09:10:02Z planner-S-0551
+Your confirmation did not write the input. S-0551 still has no cost of delay inputs, so `flai cod S-0551` still cannot work out a value.
+
+`flai guard` refuses the planner an edit that sets a cost of delay input, and S-0551 is now in progress. So the input is yours to set:
+
+```bash
+flai edit S-0551 --time-lost-per-cycle 2h
+```
+
+Once it is set, I write the value from `flai cod S-0551`.
+
+### 2026-10-31T09:10:56Z orchestrator
+The input is still not set, and I cannot set it either.
+
+- **Why not me.** S-0551 is in progress, so `plan_backlog_stories` no longer covers it: that reaches only a backlog story's first inputs. Setting the input you decided needs `orchestration.permissions.set_cost_of_delay`, which `system-flow.yaml` does not turn on (ADR-0224).
+- **What sets it.** Either run this in the main checkout:
+
+```bash
+flai edit S-0551 --time-lost-per-cycle 2h
+```
+
+  or turn on `set_cost_of_delay`. Then I set the 2h you confirmed on my next run, and planner-S-0551 writes the value from `flai cod S-0551`.
+
+I leave this thread open until the input is set.
+
+Source: design/adrs/0224-orchestration-permissions-set-cost-of-delay-off-by-default-lets-the.md § Decision
+
+Source: design/adrs/0224-orchestration-permissions-set-cost-of-delay-off-by-default-lets-the.md § Decision
+
+### 2026-10-31T09:11:24Z alex
+Resolved.
+
+### 2026-10-31T09:12:01Z orchestrator
+Correction: my last entry is out of date. You set `time_lost_per_cycle: 2h` on S-0551 at 2026-10-31T09:10:28Z, before I wrote it. Nothing more is needed from you here. planner-S-0551 writes the value from `flai cod S-0551`, and the thread can be resolved once it has.
+
+Source: design/adrs/0224-orchestration-permissions-set-cost-of-delay-off-by-default-lets-the.md § Decision
+
+Source: design/adrs/0224-orchestration-permissions-set-cost-of-delay-off-by-default-lets-the.md § Decision
+
+### 2026-10-31T09:12:16Z planner-S-0551
+Done. With your `time_lost_per_cycle` of 2h, `flai cod S-0551` gives 300 USD a week, and S-0551 now carries that value. Nothing more is needed on this thread.
+
+### 2026-10-31T09:13:14Z orchestrator
+Resolved: Settled: alex set time_lost_per_cycle 2h on S-0551 at 2026-10-31T09:10:28Z, and planner-S-0551 wrote the value from flai cod S-0551, 300 USD a week, at 09:12:03Z. Nothing is left open.

@@ -3,11 +3,11 @@ id: T-2410
 type: task
 nature: improvement
 title: flai stats reports the share of the window with n stories in progress at once, and the ready wait at p50 and p85
-status: in-progress
+status: done
 parent: S-0551
 owner: alex
 created: 2026-10-31T07:44:26Z
-updated: 2026-10-31T08:58:05Z
+updated: 2026-10-31T10:06:40Z
 transitions:
   - to: ready
     at: 2026-10-31T08:58:02Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-31T08:58:05Z
     by: agent-S-0551
+  - to: done
+    at: 2026-10-31T10:06:40Z
+    by: agent-S-0551
 stream: S-0551
 tags: [flai, go, metrics]
-touches: [flai/internal/metrics/concurrency.go, flai/internal/metrics/concurrency_test.go, flai/internal/metrics/metrics.go, flai/cmd/stats.go, flai/cmd/stats_test.go]
+touches: [flai/internal/metrics/concurrency.go, flai/internal/metrics/concurrency_test.go, flai/internal/metrics/metrics.go, flai/cmd/stats.go, flai/cmd/stats_test.go, docs/users/flai-reference.md]
 after: [T-2388]
+usage:
+  source: log
+  seconds: 4115
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 93
+      output: 29626
+      cache_read: 5825841
+      cache_write: 213668
+      cost: 2.9487
 ---
 # T-2410 flai stats reports the share of the window with n stories in progress at once, and the ready wait at p50 and p85
 

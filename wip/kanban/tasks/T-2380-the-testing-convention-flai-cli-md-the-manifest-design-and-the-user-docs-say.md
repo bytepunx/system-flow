@@ -3,16 +3,37 @@ id: T-2380
 type: task
 nature: improvement
 title: The testing convention, flai-cli.md, the manifest design, and the user docs say which tiers the close-out runs and which the batch repeats
-status: backlog
+status: done
 parent: S-0547
 owner: alex
 created: 2026-10-31T07:40:29Z
-updated: 2026-10-31T07:40:29Z
-transitions: []
+updated: 2026-10-31T09:57:25Z
+transitions:
+  - to: ready
+    at: 2026-10-31T09:51:46Z
+    by: agent-S-0547
+  - to: in-progress
+    at: 2026-10-31T09:51:48Z
+    by: agent-S-0547
+  - to: done
+    at: 2026-10-31T09:57:25Z
+    by: agent-S-0547
 stream: S-0547
 tags: [flai]
 touches: [design/conventions/code-quality.md, design/conventions/tooling.md, design/system/flai-cli.md, design/system/project-manifest.md, docs/users/flai.md]
 after: [T-2375, T-2378]
+usage:
+  source: log
+  seconds: 337
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 57
+      output: 15773
+      cache_read: 4113030
+      cache_write: 138882
+      cost: 1.9885
 ---
 # T-2380 The testing convention, flai-cli.md, the manifest design, and the user docs say which tiers the close-out runs and which the batch repeats
 

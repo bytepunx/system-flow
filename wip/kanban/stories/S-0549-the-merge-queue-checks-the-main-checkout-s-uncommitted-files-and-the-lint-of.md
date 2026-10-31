@@ -3,14 +3,17 @@ id: S-0549
 type: story
 nature: improvement
 title: The merge queue checks the main checkout's uncommitted files and the lint of main before it builds a batch, so a dirty main fails once in seconds and not every batch
-status: ready
+status: in-progress
 parent: E-0031
 owner: alex
 created: 2026-10-30T01:52:13Z
-updated: 2026-10-31T09:02:23Z
+updated: 2026-10-31T09:47:53Z
 transitions:
   - to: ready
     at: 2026-10-31T07:24:09Z
+    by: alex
+  - to: in-progress
+    at: 2026-10-31T09:47:53Z
     by: alex
 tags: [flai]
 topics: [testing, git, cli, dashboard]
@@ -26,15 +29,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 34
+      seconds: 100
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 15
-          output: 90
-          cache_read: 443482
-          cache_write: 57690
-          cost: 0.1136
+          input: 37
+          output: 241
+          cache_read: 1014866
+          cache_write: 195787
+          cost: 0.2754
 forecast:
   duration: 5h
   delivery: 2026-10-31T17:24:00Z

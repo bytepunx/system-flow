@@ -3,11 +3,11 @@ id: T-2400
 type: task
 nature: improvement
 title: The verify record keeps a verdict per commit, and a close-out asked for again at a commit it holds answers from it, saying so, and runs nothing
-status: in-progress
+status: done
 parent: S-0546
 owner: alex
 created: 2026-10-31T07:43:44Z
-updated: 2026-10-31T08:52:17Z
+updated: 2026-10-31T09:29:04Z
 transitions:
   - to: ready
     at: 2026-10-31T08:52:15Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-31T08:52:17Z
     by: agent-S-0546
+  - to: done
+    at: 2026-10-31T09:29:03Z
+    by: agent-S-0546
 stream: S-0546
 tags: [flai]
-touches: [flai/internal/verify/story.go, flai/internal/verify/story_test.go]
+touches: [flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/verify/record.go, flai/internal/verify/record_test.go]
 after: [T-2396]
+usage:
+  source: log
+  seconds: 2206
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 55
+      output: 22354
+      cache_read: 3796594
+      cache_write: 194854
+      cost: 2.263
 ---
 # T-2400 The verify record keeps a verdict per commit, and a close-out asked for again at a commit it holds answers from it, saying so, and runs nothing
 

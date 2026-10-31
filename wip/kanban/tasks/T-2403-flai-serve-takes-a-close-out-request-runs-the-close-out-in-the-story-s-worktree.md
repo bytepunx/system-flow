@@ -3,11 +3,11 @@ id: T-2403
 type: task
 nature: feature
 title: flai serve takes a close-out request, runs the close-out in the story's worktree as a job, appends a verified event with its verdict, and journals its start, end, duration, and verdict
-status: in-progress
+status: done
 parent: S-0546
 owner: alex
 created: 2026-10-31T07:44:01Z
-updated: 2026-10-31T08:52:21Z
+updated: 2026-10-31T09:29:23Z
 transitions:
   - to: ready
     at: 2026-10-31T08:52:19Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-31T08:52:21Z
     by: agent-S-0546
+  - to: done
+    at: 2026-10-31T09:29:23Z
+    by: agent-S-0546
 stream: S-0546
 tags: [flai]
 touches: [flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/serve.go, flai/internal/inbox/events.go, flai/internal/inbox/events_test.go, flai/internal/hostapi/writes.go, flai/cmd/serve_actions.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go]
 after: [T-2396]
+usage:
+  source: log
+  seconds: 2222
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 130
+      output: 53314
+      cache_read: 9054681
+      cache_write: 464718
+      cost: 5.3973
 ---
 # T-2403 flai serve takes a close-out request, runs the close-out in the story's worktree as a job, appends a verified event with its verdict, and journals its start, end, duration, and verdict
 

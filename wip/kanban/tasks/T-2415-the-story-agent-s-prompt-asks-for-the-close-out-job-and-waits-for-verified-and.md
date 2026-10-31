@@ -3,16 +3,37 @@ id: T-2415
 type: task
 nature: improvement
 title: The story agent's prompt asks for the close-out job and waits for verified, and scripts/close-out.sh and the template's copy say they run as the job, not in a turn
-status: backlog
+status: done
 parent: S-0546
 owner: alex
 created: 2026-10-31T07:44:50Z
-updated: 2026-10-31T07:45:23Z
-transitions: []
+updated: 2026-10-31T10:40:50Z
+transitions:
+  - to: ready
+    at: 2026-10-31T10:35:42Z
+    by: agent-S-0546
+  - to: in-progress
+    at: 2026-10-31T10:35:43Z
+    by: agent-S-0546
+  - to: done
+    at: 2026-10-31T10:40:50Z
+    by: agent-S-0546
 stream: S-0546
 tags: [flai]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, scripts/close-out.sh, template/root/scripts/close-out.sh]
 after: [T-2407]
+usage:
+  source: log
+  seconds: 307
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 14
+      output: 5832
+      cache_read: 990555
+      cache_write: 50839
+      cost: 0.5904
 ---
 # T-2415 The story agent's prompt asks for the close-out job and waits for verified, and scripts/close-out.sh and the template's copy say they run as the job, not in a turn
 

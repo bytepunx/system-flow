@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0031
 owner: alex
 created: 2026-10-30T01:52:02Z
-updated: 2026-10-31T08:40:01Z
+updated: 2026-10-31T10:41:16Z
 transitions:
   - to: ready
     at: 2026-10-31T07:24:13Z
@@ -15,29 +15,67 @@ transitions:
   - to: in-progress
     at: 2026-10-31T08:40:01Z
     by: agent-S-0547
+blocked:
+  - from: 2026-10-31T10:12:10Z
+    until: 2026-10-31T10:12:16Z
+    reason: awaiting the operator on TH-0789
+  - from: 2026-10-31T10:12:35Z
+    until: 2026-10-31T10:18:06Z
+    reason: awaiting the operator on TH-0789
+  - from: 2026-10-31T10:18:27Z
+    until: 2026-10-31T10:20:48Z
+    reason: awaiting the operator on TH-0789
+  - from: 2026-10-31T10:21:07Z
+    until: 2026-10-31T10:35:11Z
+    reason: awaiting the operator on TH-0789
+  - from: 2026-10-31T10:35:51Z
+    until: 2026-10-31T10:40:59Z
+    reason: awaiting the operator on TH-0789
+  - from: 2026-10-31T10:41:16Z
+    reason: awaiting the operator on TH-0789
 tags: [flai]
 topics: [testing, cli]
-touches: [flai/internal/check, flai/internal/verify, flai/cmd, system-flow.yaml, design/system/flai-cli.md, design/conventions/testing.md, docs/users/flai.md, design/adrs, design/adrs/README.md, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go, docs/operators/settings.md, docs/users/flai-reference.md, design/system/project-manifest.md, design/conventions/code-quality.md, design/conventions/tooling.md, design/issues/I-0221-the-close-out-s-go-test-tier-runs-only-the-changed-packages-so-a-change-that-breaks-a-caller-package-s-tests-passes-before-review.md, design/issues/I-0203-a-story-the-operator-accepts-outside-the-merge-queue-lands-without-the-queue-tiers-so-a-stale-generated-file-on-main-fails-every-later-batch-at-integration.md, design/issues/summary.md]
+touches: [flai/internal/check, flai/internal/verify, flai/cmd, system-flow.yaml, design/system/flai-cli.md, design/conventions/testing.md, docs/users/flai.md, design/adrs, design/adrs/README.md, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go, docs/operators/settings.md, docs/users/flai-reference.md, design/system/project-manifest.md, design/conventions/code-quality.md, design/conventions/tooling.md, design/issues/I-0221-the-close-out-s-go-test-tier-runs-only-the-changed-packages-so-a-change-that-breaks-a-caller-package-s-tests-passes-before-review.md, design/issues/I-0203-a-story-the-operator-accepts-outside-the-merge-queue-lands-without-the-queue-tiers-so-a-stale-generated-file-on-main-fails-every-later-batch-at-integration.md, design/issues/summary.md, design/issues/I-0226-two-flai-serve-tests-check-before-what-they-wait-for-has-happened-and-fail-a-loaded-merge-queue-batch-on-timing.md, design/issues/I-0237-the-smoke-tier-s-openrouter-gateway-check-fails-on-a-402-because-the-operator-s.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 5598
+  priced_by: harness
+  turns:
+    - day: 2026-10-31
+      ceremony: 4
+      hand_edits: 3
+      work: 69
+  models:
+    - model: claude-opus-5-5
+      input: 446
+      output: 122371
+      cache_read: 31910085
+      cache_write: 1077488
+      cost: 15.4277
   strategic:
     - kind: orchestrator
-      seconds: 60
+      seconds: 108
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 19
-          output: 110
-          cache_read: 631869
-          cache_write: 83671
-          cost: 0.1619
+          input: 39
+          output: 249
+          cache_read: 1095155
+          cache_write: 162725
+          cost: 0.2856
+cost_of_delay:
+  inputs:
+    time_lost_per_cycle: 3h
+    by: alex
+    at: 2026-10-31T09:08:43Z
+  value: 450
+  by: planner-S-0547
+  at: 2026-10-31T09:09:21Z
 forecast:
   duration: 4h
   delivery: 2026-10-31T13:44:00Z
@@ -52,10 +90,10 @@ forecast:
 The close-out's go-test tier runs only the changed packages, and ADR-0174 leaves the `queue: true` tiers, integration and smoke, to the merge-queue batch. In the fortnight 24 of 104 queue verifications failed and 14 stories were sent back, 22 percent of landings, each costing the agent a restart, a fix, another close-out, a re-enqueue, and another 10-minute verification. I-0221 records a change that broke a caller package's tests and passed its close-out; I-0203 a stale generated file that failed every later batch at integration. This story makes the close-out find what the queue finds: the go-test tier runs the changed packages and every package that imports them (`go list -deps` in reverse), and the queue tiers run in the close-out too, in the worktree, when the story's touches reach what they test, with the batch keeping them for the landing check. With the close-out as a serve job, their time no longer hits a tool timeout.
 
 ## Acceptance criteria
-- [ ] The go-test tier's `{packages}` expands to the changed packages and the packages that import them, and a test shows a change that breaks a caller's tests fails the close-out
-- [ ] A tier with `queue: true` runs in the close-out when a `when:` the manifest gives it matches the story's touches, and in the batch as today; the manifest schema, `flai check`, and the reference describe `when`
+- [x] The go-test tier's `{packages}` expands to the changed packages and the packages that import them, and a test shows a change that breaks a caller's tests fails the close-out
+- [x] A tier with `queue: true` runs in the close-out when a `when:` the manifest gives it matches the story's touches, and in the batch as today; the manifest schema, `flai check`, and the reference describe `when`
 - [ ] system-flow.yaml gives integration and smoke a `when` that reaches them from the flai and template paths, and I-0221 and I-0203 are closed by the story that proves it
-- [ ] The testing convention, `flai-cli.md`, and the user docs say which tiers the close-out runs and which the batch repeats
+- [x] The testing convention, `flai-cli.md`, and the user docs say which tiers the close-out runs and which the batch repeats
 
 ## Tasks
 
@@ -71,6 +109,18 @@ The planner drafts them.
 
 Evidence: `flai stats` merge-queue figures for 2026-10-15 to 2026-10-29 and the serve journal's send-backs, in the operator's conversation on 2026-10-29.
 
+### Proof run
+
+The close-out at 9794966, 2026-10-31, with the merge queue able to batch:
+
+| Tier | Result |
+|------|--------|
+| go-test | skipped, covered by integration |
+| integration | passed, 9m41.5s, "ran here, its when flai/** matches flai/internal/check/tests_test.go" |
+| smoke | failed, 2m55.2s, "ran here, its when flai/** matches flai/internal/check/tests_test.go" |
+
+Smoke failed only on `TestGatewayOpenRouter`. The OpenRouter key is out of credits and answered 402 (I-0237, TH-0789). Criterion 3 stays unticked until a close-out passes smoke.
+
 ### Planning
 
 Planned by planner-S-0547 on 2026-10-31. The tasks form three layers: T-2375, T-2376, and T-2377 wait for none; T-2378 waits for T-2376; T-2379 waits for T-2377 and T-2378, and T-2380 for T-2375 and T-2378.
@@ -83,8 +133,8 @@ Touches:
 - Layout: `flai/internal/manifest/manifest.go`, `manifest_test.go`, `settings.go`, `settings_test.go`, where the tier keys and `Manifest.TestErrors` live; `flai/internal/mcpserver/verify.go` and `verify_test.go`, the MCP `verify` tool's second `LeaveToQueue` call site; the I-0221 and I-0203 issue files and `design/issues/summary.md`, which criterion 3 closes.
 - Co-change: `flai touches suggest` ranked `docs/users/flai-reference.md` (24%) and `docs/operators/settings.md` (15%) first, both taken; `docs/operators/index.md`, `flaiover-dashboard.md`, `flaiover.md`, `hostapi`, `mcpserver/server.go`, and the rest no criterion reaches, so they are left out.
 
-Forecast: `flai forecast` gave 18m, 96 s per unit of size over 22 improvement stories at size 11 (4 criteria, 7 touches). Raised to 4h: the size counts neither the six tasks, nor the selection change through `flai verify` and the MCP tool with their reports, nor T-2377's real two-package `go test` fixture, nor T-2379's proving run of integration and smoke, about twelve minutes a round. Delivery 22:00 UTC: the story is held on `flai/internal/check` until S-0548 moves to review (its forecast delivery 13:30), and S-0546, ahead of it in the pull order, overlaps it on `flai/cmd`, `flai-cli.md`, and `testing.md`, so it starts once S-0546 reaches review too.
+Forecast: `flai forecast` gave 18m, 96 s per unit of size over 22 improvement stories at size 11 (4 criteria, 7 touches). Raised to 4h: the size counts neither the six tasks, nor the selection change through `flai verify` and the MCP tool with their reports, nor T-2377's real two-package `go test` fixture, nor T-2379's proving run of integration and smoke, about twelve minutes a round. The delivery I first wrote, 22:00 UTC, assumed the story would wait for S-0548 and S-0546 to reach review. It started at 08:40 on a share instead, and flai's replan now gives the delivery.
 
-Cost of delay: none written. Neither S-0547 nor E-0031 has inputs, so `flai cod S-0547` refuses; the plan's thread asks for them.
+Cost of delay: 450 USD a week, from the operator's input `time_lost_per_cycle: 3h` (set 2026-10-31T09:08:43Z, as TH-0774 recommended), × `planning.hour_rate` 150 × one 168h cycle a week, as `flai cod S-0547` works it out. It stands unadjusted: the input is the 7 send-backs a week of about 25 minutes each that the goal's figures give.
 
 After: none. S-0547 needs no other story's accepted change on main. S-0548 changes the same `go-test` line in `system-flow.yaml` (`-timeout`, `-short`) and `flai/internal/check/tests_test.go`; T-2377 and T-2376 say to keep its change.

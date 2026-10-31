@@ -7,7 +7,7 @@ status: done
 parent: S-0551
 owner: alex
 created: 2026-10-31T07:43:11Z
-updated: 2026-10-31T08:57:10Z
+updated: 2026-10-31T10:05:28Z
 transitions:
   - to: ready
     at: 2026-10-31T08:42:43Z
@@ -20,19 +20,19 @@ transitions:
     by: agent-S-0551
 stream: S-0551
 tags: [flai, go]
-touches: [flai/internal/check/check.go, flai/internal/check/check_test.go, flai/internal/check/after_reason_test.go, flai/internal/check/scope.go, flai/internal/check/scope_test.go]
+touches: [flai/internal/check/check.go, flai/internal/check/check_test.go, flai/internal/check/after_reason_test.go, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/internal/itemnew/itemnew.go, flai/internal/itemedit/itemedit.go, flai/internal/itemnew/itemnew_test.go, flai/internal/storygit/trial.go, flai/internal/storygit/trial_test.go]
 usage:
   source: log
-  seconds: 837
+  seconds: 865
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 47
-      output: 162
-      cache_read: 1602862
-      cache_write: 65968
-      cost: 0.5809
+      input: 30
+      output: 9459
+      cache_read: 1860123
+      cache_write: 68222
+      cost: 0.9415
 ---
 # T-2393 flai check advises of a story's after that names a story its Notes give no reason for
 

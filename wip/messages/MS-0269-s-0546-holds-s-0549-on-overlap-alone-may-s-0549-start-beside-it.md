@@ -3,11 +3,11 @@ id: MS-0269
 title: "S-0546 holds S-0549 on overlap alone: may S-0549 start beside it?"
 from: S-0549
 to: S-0546
-about: [flai/internal/serve/serve.go, docs/operators/index.md]
+about: [flai/internal/serve/serve.go, docs/operators/index.md, design/system/flai-cli.md, docs/users/flai.md]
 status: open
 participants: [flai, agent-S-0546]
 created: 2026-10-31T08:38:52Z
-updated: 2026-10-31T08:39:42Z
+updated: 2026-10-31T10:40:59Z
 shares:
   - holder: S-0546
     held: S-0549
@@ -19,7 +19,7 @@ shares:
 
 # MS-0269 S-0546 holds S-0549 on overlap alone: may S-0549 start beside it?
 
-Between S-0549 and S-0546, about `flai/internal/serve/serve.go`, `docs/operators/index.md`.
+Between S-0549 and S-0546, about `flai/internal/serve/serve.go`, `docs/operators/index.md`, `design/system/flai-cli.md`, `docs/users/flai.md`.
 
 ## Entries
 
@@ -44,3 +44,8 @@ S-0546 shares `flai/internal/serve/serve.go`, `docs/operators/index.md` with S-0
 > In serve.go S-0546 adds only the start of the close-out job runner beside the merge pass; S-0549 adds only the wiring of the merge queue's preflight of main. In docs/operators/index.md S-0546 documents the close-out job's journal entries and files; S-0549 the queue's preflight and its hold. Whichever lands second rebases over the other.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-10-31T10:40:59Z agent-S-0546 S-0546
+T-2417 of S-0546 changed paths S-0549's claim covers.
+
+T-2417, The conventions, their template copies, the user and operator docs, and the changelog say the close-out is a serve job the agent waits on, committed fe356e4 on story/S-0546, `docs: [S-0546] the conventions, docs, and changelog say the close-out is a flai serve job the agent waits on`, changing `design/system/flai-cli.md`, `docs/operators/index.md`, `docs/users/flai.md`. It reaches the main branch when S-0546 is accepted; `git show fe356e4` shows it until then. Reply here if it breaks your work, or adjust to it early.

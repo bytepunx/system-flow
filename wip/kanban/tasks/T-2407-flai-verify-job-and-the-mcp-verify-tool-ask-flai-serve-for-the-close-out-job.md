@@ -3,16 +3,37 @@ id: T-2407
 type: task
 nature: feature
 title: flai verify --job and the MCP verify tool ask flai serve for the close-out job and return its id at once, and wait_for_events lists verified among its kinds
-status: backlog
+status: done
 parent: S-0546
 owner: alex
 created: 2026-10-31T07:44:18Z
-updated: 2026-10-31T07:44:18Z
-transitions: []
+updated: 2026-10-31T10:35:05Z
+transitions:
+  - to: ready
+    at: 2026-10-31T09:30:15Z
+    by: agent-S-0546
+  - to: in-progress
+    at: 2026-10-31T09:30:17Z
+    by: agent-S-0546
+  - to: done
+    at: 2026-10-31T10:35:05Z
+    by: agent-S-0546
 stream: S-0546
 tags: [flai]
-touches: [flai/cmd/verify.go, flai/cmd/verify_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go, flai/internal/mcpserver/server.go]
+touches: [flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go, flai/internal/mcpserver/server.go, flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, docs/operators/settings.md, flai/cmd/mcp.go, flai/cmd/mcp_http.go]
 after: [T-2400, T-2403]
+usage:
+  source: log
+  seconds: 3888
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 255
+      output: 104456
+      cache_read: 17740407
+      cache_write: 910500
+      cost: 10.5746
 ---
 # T-2407 flai verify --job and the MCP verify tool ask flai serve for the close-out job and return its id at once, and wait_for_events lists verified among its kinds
 

@@ -3,11 +3,11 @@ id: T-2402
 type: task
 nature: improvement
 title: The fortnight before is recorded, overlap notices per acceptance and conflicts per week from 2026-10-15 to 2026-10-29, with how to measure the fortnight after
-status: in-progress
+status: done
 parent: S-0550
 owner: alex
 created: 2026-10-31T07:43:49Z
-updated: 2026-10-31T08:17:34Z
+updated: 2026-10-31T09:03:27Z
 transitions:
   - to: ready
     at: 2026-10-31T08:17:33Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-31T08:17:34Z
     by: agent-S-0550
+  - to: done
+    at: 2026-10-31T09:03:27Z
+    by: agent-S-0550
 stream: S-0550
 tags: [cli]
 touches: [design/system/workflow.md]
+usage:
+  source: log
+  seconds: 2753
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 33
+      output: 11680
+      cache_read: 2006631
+      cache_write: 94275
+      cost: 1.1558
 ---
 # T-2402 The fortnight before is recorded, overlap notices per acceptance and conflicts per week from 2026-10-15 to 2026-10-29, with how to measure the fortnight after
 

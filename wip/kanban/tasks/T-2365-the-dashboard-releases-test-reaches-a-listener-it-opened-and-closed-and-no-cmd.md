@@ -23,16 +23,16 @@ tags: [cli]
 touches: [flai/cmd/dashboard_test.go, flai/cmd/dashboard_versions_test.go, flai/cmd/selfupgrade_test.go, flai/cmd/host_integration_test.go, flai/cmd/serve_mcp_test.go, flai/cmd/mcp_http_test.go, flai/internal/selfupgrade/selfupgrade.go, flai/internal/selfupgrade/selfupgrade_test.go]
 usage:
   source: log
-  seconds: 2488
+  seconds: 2506
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 79
-      output: 363
-      cache_read: 2949483
-      cache_write: 179824
-      cost: 1.0889
+      input: 37
+      output: 12141
+      cache_read: 3195779
+      cache_write: 64553
+      cost: 1.2482
 ---
 # T-2365 The dashboard releases test reaches a listener it opened and closed, and no cmd test dials a port nothing listens on
 

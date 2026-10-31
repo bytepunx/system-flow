@@ -3,11 +3,11 @@ id: S-0550
 type: story
 nature: improvement
 title: "Hub files merge without conflict: the ADR index, the issues summary, and the changelog take a union merge or are generated, and shared paths raise no overlap notice"
-status: in-progress
+status: review
 parent: E-0031
 owner: alex
 created: 2026-10-30T01:52:19Z
-updated: 2026-10-31T08:16:50Z
+updated: 2026-10-31T18:33:00Z
 transitions:
   - to: ready
     at: 2026-10-31T07:24:05Z
@@ -15,29 +15,49 @@ transitions:
   - to: in-progress
     at: 2026-10-31T08:16:09Z
     by: agent-S-0550
+  - to: review
+    at: 2026-10-31T10:33:03Z
+    by: agent-S-0550
 tags: [flai]
 topics: [git, cli, conventions, release]
-touches: [flai/internal/serve, ".gitattributes", design/conventions/git.md, design/system/flai-cli.md, design/adrs/README.md, design/issues/summary.md, template, design/adrs, design/adrs/0157-flai-stream-sync-and-flai-accept-merge-design-adrs-readme-md-s-index-row-by-row.md, flai/internal/check/check.go, flai/internal/check/fix.go, flai/internal/check/fix_test.go, flai/internal/check/issues_test.go, flai/cmd/check.go, flai/cmd/check_test.go, flai/cmd/accept_overlap.go, flai/cmd/accept_overlap_test.go, flai/internal/serve/hold_test.go, template/root/.gitattributes, template/.gitattributes, flai/internal/release/release.go, flai/internal/release/release_test.go, flai/cmd/stream_sync_test.go, template/root/design/conventions/git.md, template/CHANGELOG.md, design/system/workflow.md, flai/internal/adrindex/adrindex.go, flai/internal/adrindex/adrindex_test.go, flai/internal/adr/adr.go, flai/internal/adr/adr_test.go, flai/cmd/adr.go, flai/cmd/adr_test.go, template/root/design/adrs/README.md, flai/internal/issues/generated.go, flai/internal/issues/generated_test.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/continuous-improvement.md, design/conventions/decisions.md, template/root/design/conventions/decisions.md]
+touches: [flai/internal/serve, ".gitattributes", design/conventions/git.md, design/system/flai-cli.md, design/adrs/README.md, design/issues/summary.md, template, design/adrs, design/adrs/0157-flai-stream-sync-and-flai-accept-merge-design-adrs-readme-md-s-index-row-by-row.md, flai/internal/check/check.go, flai/internal/check/fix.go, flai/internal/check/fix_test.go, flai/internal/check/issues_test.go, flai/cmd/check.go, flai/cmd/check_test.go, flai/cmd/accept_overlap.go, flai/cmd/accept_overlap_test.go, flai/internal/serve/hold_test.go, template/root/.gitattributes, template/.gitattributes, flai/internal/release/release.go, flai/internal/release/release_test.go, flai/cmd/stream_sync_test.go, template/root/design/conventions/git.md, template/CHANGELOG.md, design/system/workflow.md, flai/internal/adrindex/adrindex.go, flai/internal/adrindex/adrindex_test.go, flai/internal/adr/adr.go, flai/internal/adr/adr_test.go, flai/cmd/adr.go, flai/cmd/adr_test.go, template/root/design/adrs/README.md, flai/internal/issues/generated.go, flai/internal/issues/generated_test.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/continuous-improvement.md, design/conventions/decisions.md, template/root/design/conventions/decisions.md, docs/operators/settings.md, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/internal/mergequeue/batch_test.go, flai/internal/storygit/sync.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, docs/contributors/template.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 8231
+  priced_by: harness
+  turns:
+    - day: 2026-10-31
+      ceremony: 3
+      hand_edits: 5
+      work: 65
+  models:
+    - model: claude-opus-5-5
+      input: 820
+      output: 289066
+      cache_read: 49660266
+      cache_write: 2333121
+      cost: 28.6034
   strategic:
     - kind: orchestrator
-      seconds: 49
+      seconds: 64
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 15
-          output: 127
-          cache_read: 444096
-          cache_write: 76286
-          cost: 0.118
+          input: 23
+          output: 186
+          cache_read: 613962
+          cache_write: 132441
+          cost: 0.1695
+cost_of_delay:
+  inputs:
+    time_lost_per_cycle: 10m
+    by: alex
+    at: 2026-10-31T09:13:23Z
 forecast:
   duration: 5h
   delivery: 2026-10-31T14:32:00Z
@@ -52,10 +72,10 @@ forecast:
 Every story edits the same few files: the issues summary (326 touches in the fortnight), the flai user docs (242), `flai-cli.md` (223), `flai-reference.md` (147), the ADR index (99), and the template changelog. Each acceptance overlapped 2.6 open stories on average, 248 overlap notices over 97 acceptances, and each notice made an open story's agent run `stream sync` again; 62 recorded conflicts in the period are almost all on those files. This story makes the hub files merge on their own. The ADR index and the issues summary are generated from their folders by `flai check --fix` or a `flai adr index` and `flai issue summary` command, so no story edits them by hand; the changelog and the digest index take `merge=union` in `.gitattributes`, which the template carries; and the overlap notice and the hold skip the paths in `claims.shared`, since the trial merge at `stream sync` already decides whether a shared edit conflicts.
 
 ## Acceptance criteria
-- [ ] `design/adrs/README.md` and `design/issues/summary.md` are generated by flai from their folders, `flai check` reports an index that is behind its folder and `--fix` rewrites it, and the ADR and issue commands regenerate it when they write
-- [ ] `.gitattributes` in this repository and in `template/` gives the changelog and the digest index `merge=union`, and the git convention says which files carry it and why
-- [ ] A story's acceptance sends no overlap notice for a path in `claims.shared`, and `flai serve` holds no story on overlap for one; a test shows two stories editing `docs/users/flai.md` start together
-- [ ] The fortnight after landing shows fewer overlap notices per acceptance and fewer conflicts in the serve journal, recorded in the close-out
+- [x] `design/adrs/README.md` and `design/issues/summary.md` are generated by flai from their folders, `flai check` reports an index that is behind its folder and `--fix` rewrites it, and the ADR and issue commands regenerate it when they write
+- [x] `.gitattributes` in this repository and in `template/` gives the changelog `merge=union`, and the git convention says which files carry it and why
+- [x] A story's acceptance sends no overlap notice for a path in `claims.shared`, and `flai serve` holds no story on overlap for one; a test shows two stories editing `docs/users/flai.md` start together
+- [x] The close-out records the fortnight's overlap notices per acceptance and conflicts in the serve journal before the change, as the figures to compare against after landing
 
 ## Tasks
 
@@ -70,6 +90,12 @@ The planner drafts them.
 - T-2413 The design and the guides describe the generated indexes, flai check --fix, flai adr index, the union-merged changelogs, and the acceptance notice that skips the shared paths
 
 ## Notes
+
+### Before the change
+
+Recorded by the operator on 2026-10-31 from the serve journal, 2026-10-15 to 2026-10-29: 248 overlap notices over 97 acceptances (mean 2.56 open stories told per acceptance, max 58), 62 conflicts recorded, almost all on `design/issues/summary.md` (326 touches in the fortnight), `docs/users/flai.md` (242), `design/system/flai-cli.md` (223), `docs/users/flai-reference.md` (147), `design/adrs/README.md` (99), and `template/CHANGELOG.md`. The fortnight after landing is compared against these.
+
+Measured after landing, not a criterion (the merge queue takes only a story whose criteria can be ticked at review): the fortnight after landing shows fewer overlap notices per acceptance and fewer conflicts in the serve journal than the fortnight before.
 
 Evidence: the serve journal's `overlap` notices and `conflict` records 2026-10-15 to 2026-10-29, counted in the operator's conversation. ADR-0096 on claims and the shared paths list are the base; the story records a new ADR if it changes what a shared path means.
 
@@ -109,3 +135,11 @@ Cost of delay: none written. Neither S-0550 nor E-0031 has inputs, so `flai cod`
 After: none. The story needs no other story's accepted change. While it is in progress it overlaps S-0548 (`flai/internal/serve`, `flai/internal/check/check.go`) and S-0551 (`flai/internal/serve`).
 
 Criterion 4 can be read only a fortnight after acceptance. T-2402 records the before figures and the method, and the criterion stays unticked at close-out.
+
+### Criterion 2
+
+"and the digest index" was dropped from criterion 2 on the operator's confirmation of the orchestrator's recommendation on TH-0777 (2026-10-31T09:13:39Z): the digest has no index file (`design/digest/README.md`), as ADR-0228 §4 records.
+
+### Criterion 4
+
+Criterion 4 stays unticked at close-out because it can be read only a fortnight after S-0550 is accepted. Then run the commands in `design/system/workflow.md` § Hub files: the fortnight before S-0550, with `FROM` the UTC day after acceptance and `TO` 13 days later, and tick it if notices at acceptance per acceptance are below 1.45 and conflicts below 42. The before, 2026-10-15 to 2026-10-29: 190 notices at acceptance over 131 acceptances, and 42 conflicts. The Goal's 248 notices count the 58 grown-claim notices too, its 62 conflicts start on 2026-10-12, and its 97 acceptances could not be reproduced.

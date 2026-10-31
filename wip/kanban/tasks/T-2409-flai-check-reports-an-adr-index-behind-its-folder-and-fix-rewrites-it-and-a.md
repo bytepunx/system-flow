@@ -3,16 +3,37 @@ id: T-2409
 type: task
 nature: improvement
 title: flai check reports an ADR index behind its folder and --fix rewrites it, and a rebase that stops on the index regenerates it
-status: backlog
+status: done
 parent: S-0550
 owner: alex
 created: 2026-10-31T07:44:26Z
-updated: 2026-10-31T07:44:26Z
-transitions: []
+updated: 2026-10-31T10:10:33Z
+transitions:
+  - to: ready
+    at: 2026-10-31T09:32:44Z
+    by: agent-S-0550
+  - to: in-progress
+    at: 2026-10-31T09:32:45Z
+    by: agent-S-0550
+  - to: done
+    at: 2026-10-31T10:10:33Z
+    by: agent-S-0550
 stream: S-0550
 tags: [cli]
-touches: [flai/internal/check/check.go, flai/internal/check/fix.go, flai/internal/check/fix_test.go, flai/internal/issues/generated.go, flai/internal/issues/generated_test.go, flai/internal/adrindex/adrindex.go, flai/internal/adrindex/adrindex_test.go]
+touches: [flai/internal/check/check.go, flai/internal/check/fix.go, flai/internal/check/fix_test.go, flai/internal/issues/generated.go, flai/internal/issues/generated_test.go, flai/internal/adrindex/adrindex.go, flai/internal/adrindex/adrindex_test.go, docs/users/flai-reference.md, flai/cmd/adr_test.go, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/internal/mergequeue/batch_test.go, flai/internal/storygit/sync.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go]
 after: [T-2394, T-2405]
+usage:
+  source: log
+  seconds: 2268
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 210
+      output: 74153
+      cache_read: 12739135
+      cache_write: 598506
+      cost: 7.3375
 ---
 # T-2409 flai check reports an ADR index behind its folder and --fix rewrites it, and a rebase that stops on the index regenerates it
 

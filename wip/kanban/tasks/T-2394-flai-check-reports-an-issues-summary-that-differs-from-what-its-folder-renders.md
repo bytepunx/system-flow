@@ -3,11 +3,11 @@ id: T-2394
 type: task
 nature: improvement
 title: flai check reports an issues summary that differs from what its folder renders, and flai check --fix rewrites it
-status: in-progress
+status: done
 parent: S-0550
 owner: alex
 created: 2026-10-31T07:43:20Z
-updated: 2026-10-31T08:17:27Z
+updated: 2026-10-31T09:05:00Z
 transitions:
   - to: ready
     at: 2026-10-31T08:17:25Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-31T08:17:27Z
     by: agent-S-0550
+  - to: done
+    at: 2026-10-31T09:05:00Z
+    by: agent-S-0550
 stream: S-0550
 tags: [cli]
-touches: [flai/internal/check/check.go, flai/internal/check/fix.go, flai/internal/check/fix_test.go, flai/internal/check/issues_test.go, flai/cmd/check.go, flai/cmd/check_test.go]
+touches: [flai/internal/check/check.go, flai/internal/check/fix.go, flai/internal/check/fix_test.go, flai/internal/check/issues_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, docs/operators/settings.md]
+usage:
+  source: log
+  seconds: 2853
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 63
+      output: 22155
+      cache_read: 3806068
+      cache_write: 178815
+      cost: 2.1922
 ---
 # T-2394 flai check reports an issues summary that differs from what its folder renders, and flai check --fix rewrites it
 

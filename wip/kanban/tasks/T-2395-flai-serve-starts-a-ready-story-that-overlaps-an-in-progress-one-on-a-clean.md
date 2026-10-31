@@ -3,11 +3,11 @@ id: T-2395
 type: task
 nature: improvement
 title: flai serve starts a ready story that overlaps an in-progress one on a clean trial merge, and journals the conflicting paths when it holds
-status: in-progress
+status: done
 parent: S-0551
 owner: alex
 created: 2026-10-31T07:43:25Z
-updated: 2026-10-31T08:57:46Z
+updated: 2026-10-31T10:05:57Z
 transitions:
   - to: ready
     at: 2026-10-31T08:57:44Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-31T08:57:46Z
     by: agent-S-0551
+  - to: done
+    at: 2026-10-31T10:05:57Z
+    by: agent-S-0551
 stream: S-0551
 tags: [flai, go]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/hold_test.go, flai/internal/serve/restart.go, flai/internal/serve/start.go]
 after: [T-2389, T-2391]
+usage:
+  source: log
+  seconds: 4091
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 98
+      output: 31185
+      cache_read: 6132376
+      cache_write: 224911
+      cost: 3.1038
 ---
 # T-2395 flai serve starts a ready story that overlaps an in-progress one on a clean trial merge, and journals the conflicting paths when it holds
 

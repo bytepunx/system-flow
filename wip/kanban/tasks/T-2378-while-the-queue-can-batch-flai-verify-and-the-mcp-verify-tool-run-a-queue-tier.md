@@ -3,16 +3,37 @@ id: T-2378
 type: task
 nature: feature
 title: While the queue can batch, flai verify and the MCP verify tool run a queue tier whose when matches the story's touches or changed paths, and leave the rest to the batch
-status: backlog
+status: done
 parent: S-0547
 owner: alex
 created: 2026-10-31T07:40:02Z
-updated: 2026-10-31T07:40:02Z
-transitions: []
+updated: 2026-10-31T09:51:13Z
+transitions:
+  - to: ready
+    at: 2026-10-31T09:51:05Z
+    by: agent-S-0547
+  - to: in-progress
+    at: 2026-10-31T09:51:06Z
+    by: agent-S-0547
+  - to: done
+    at: 2026-10-31T09:51:13Z
+    by: agent-S-0547
 stream: S-0547
 tags: [flai]
 touches: [flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go, docs/users/flai-reference.md]
 after: [T-2376]
+usage:
+  source: log
+  seconds: 7
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 67
+      output: 18486
+      cache_read: 4820599
+      cache_write: 162774
+      cost: 2.3306
 ---
 # T-2378 While the queue can batch, flai verify and the MCP verify tool run a queue tier whose when matches the story's touches or changed paths, and leave the rest to the batch
 

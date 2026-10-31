@@ -3,11 +3,11 @@ id: T-2377
 type: task
 nature: improvement
 title: The go-test tier runs the changed packages and every package that imports them, and a test shows a change that breaks a caller's tests fails verify
-status: in-progress
+status: done
 parent: S-0547
 owner: alex
 created: 2026-10-31T07:39:42Z
-updated: 2026-10-31T08:41:09Z
+updated: 2026-10-31T09:08:29Z
 transitions:
   - to: ready
     at: 2026-10-31T08:41:08Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-31T08:41:09Z
     by: agent-S-0547
+  - to: done
+    at: 2026-10-31T09:08:29Z
+    by: agent-S-0547
 stream: S-0547
 tags: [flai]
-touches: [system-flow.yaml, flai/internal/verify/story_test.go, flai/internal/verify/importers_test.go]
+touches: [system-flow.yaml, flai/internal/verify/story_test.go, flai/internal/verify/importers_test.go, flai/internal/verify/select_test.go]
+usage:
+  source: log
+  seconds: 1640
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 23
+      output: 6345
+      cache_read: 1654578
+      cache_write: 55869
+      cost: 0.7999
 ---
 # T-2377 The go-test tier runs the changed packages and every package that imports them, and a test shows a change that breaks a caller's tests fails verify
 

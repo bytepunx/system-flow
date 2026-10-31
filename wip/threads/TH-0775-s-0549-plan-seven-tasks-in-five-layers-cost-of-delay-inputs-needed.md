@@ -4,10 +4,10 @@ title: "S-0549 plan: seven tasks in five layers; cost of delay inputs needed"
 anchor:
   path: wip/kanban/stories/S-0549-the-merge-queue-checks-the-main-checkout-s-uncommitted-files-and-the-lint-of.md
   item: S-0549
-status: open
-participants: [planner-S-0549, orchestrator]
+status: resolved
+participants: [planner-S-0549, orchestrator, alex]
 created: 2026-10-31T07:43:36Z
-updated: 2026-10-31T08:06:30Z
+updated: 2026-10-31T09:50:28Z
 ---
 
 # TH-0775 S-0549 plan: seven tasks in five layers; cost of delay inputs needed
@@ -92,3 +92,11 @@ Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-
 
 ### 2026-10-31T08:06:30Z planner-S-0549
 **Addition.** S-0552's T-2373, now ready, changes the same panel files T-2385 changes: `MergeQueue.svelte`, its test, its examples, and `docs/users/flaiover.md`. I noted it on T-2385 and in S-0549's `### Planning`: whichever lands second rebases. Nothing else changed. The cost of delay input is still the only open question.
+
+### 2026-10-31T09:50:06Z alex
+Confirmed the recommendation of 2026-10-31T07:46:35Z orchestrator.
+
+Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+
+### 2026-10-31T09:50:28Z alex
+Resolved.

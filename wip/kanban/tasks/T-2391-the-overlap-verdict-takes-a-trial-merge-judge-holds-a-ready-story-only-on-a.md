@@ -23,16 +23,16 @@ tags: [flai, go]
 touches: [flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/workitem/repo.go, flai/internal/workitem/share.go, design/adrs/0230-a-ready-story-whose-claim-overlaps-a-story-in-progress-is-held-only-when-a.md, design/adrs/0231-flai-stats-reports-the-share-of-the-window-with-n-stories-in-progress-at-once.md]
 usage:
   source: log
-  seconds: 840
+  seconds: 843
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 53
-      output: 255
-      cache_read: 2051193
-      cache_write: 81736
-      cost: 0.7424
+      input: 34
+      output: 10675
+      cache_read: 2099103
+      cache_write: 76987
+      cost: 1.0624
 ---
 # T-2391 The overlap verdict takes a trial-merge judge, holds a ready story only on a conflicting trial merge, and names the conflicting paths in its reason
 

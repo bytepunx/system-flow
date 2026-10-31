@@ -3,11 +3,11 @@ id: T-2376
 type: task
 nature: feature
 title: "A test tier may carry when, path patterns flai check validates and allows only beside queue: true, read into verify's Tier and described in the settings index"
-status: in-progress
+status: done
 parent: S-0547
 owner: alex
 created: 2026-10-31T07:39:35Z
-updated: 2026-10-31T08:41:07Z
+updated: 2026-10-31T09:08:16Z
 transitions:
   - to: ready
     at: 2026-10-31T08:41:06Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-31T08:41:07Z
     by: agent-S-0547
+  - to: done
+    at: 2026-10-31T09:08:16Z
+    by: agent-S-0547
 stream: S-0547
 tags: [flai]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/verify/verify.go, flai/internal/verify/manifest.go, flai/internal/verify/manifest_test.go, flai/internal/check/tests_test.go, docs/operators/settings.md]
+usage:
+  source: log
+  seconds: 1629
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 32
+      output: 8648
+      cache_read: 2255148
+      cache_write: 76148
+      cost: 1.0903
 ---
 # T-2376 A test tier may carry when, path patterns flai check validates and allows only beside queue: true, read into verify's Tier and described in the settings index
 

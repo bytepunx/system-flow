@@ -4,10 +4,10 @@ title: "S-0546 cost of delay inputs: time lost per cycle 9h?"
 anchor:
   path: wip/kanban/stories/S-0546-the-close-out-runs-as-a-flai-serve-job-the-story-s-agent-waits-on-by-event-so.md
   item: S-0546
-status: answered
+status: resolved
 participants: [planner-S-0546, orchestrator, alex]
 created: 2026-10-31T07:35:52Z
-updated: 2026-10-31T09:00:11Z
+updated: 2026-10-31T09:08:17Z
 ---
 
 # TH-0773 S-0546 cost of delay inputs: time lost per cycle 9h?
@@ -84,3 +84,6 @@ flai edit S-0546 --time-lost-per-cycle 9h
 Source: design/adrs/0224-orchestration-permissions-set-cost-of-delay-off-by-default-lets-the.md
 
 Source: design/adrs/0224-orchestration-permissions-set-cost-of-delay-off-by-default-lets-the.md
+
+### 2026-10-31T09:08:17Z alex
+Resolved.

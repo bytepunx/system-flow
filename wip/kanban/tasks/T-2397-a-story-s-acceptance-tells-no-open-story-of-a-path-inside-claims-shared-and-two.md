@@ -3,11 +3,11 @@ id: T-2397
 type: task
 nature: improvement
 title: A story's acceptance tells no open story of a path inside claims.shared, and two ready stories that both edit docs/users/flai.md start together
-status: in-progress
+status: done
 parent: S-0550
 owner: alex
 created: 2026-10-31T07:43:30Z
-updated: 2026-10-31T08:17:29Z
+updated: 2026-10-31T09:05:22Z
 transitions:
   - to: ready
     at: 2026-10-31T08:17:28Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-31T08:17:29Z
     by: agent-S-0550
+  - to: done
+    at: 2026-10-31T09:05:22Z
+    by: agent-S-0550
 stream: S-0550
 tags: [cli]
 touches: [flai/cmd/accept_overlap.go, flai/cmd/accept_overlap_test.go, flai/internal/serve/hold_test.go]
+usage:
+  source: log
+  seconds: 2873
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 39
+      output: 13611
+      cache_read: 2338368
+      cache_write: 109860
+      cost: 1.3469
 ---
 # T-2397 A story's acceptance tells no open story of a path inside claims.shared, and two ready stories that both edit docs/users/flai.md start together
 

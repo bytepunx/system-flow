@@ -23,16 +23,16 @@ tags: []
 touches: [flai/internal/serve/agents_test.go, flai/internal/serve/serve_test.go, flai/internal/serve/forgemerge_test.go, flai/internal/serve/budget_test.go, flai/internal/serve/mcp_test.go, flai/internal/serve/projects_test.go]
 usage:
   source: log
-  seconds: 2494
+  seconds: 2525
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 107
-      output: 467
-      cache_read: 4858233
-      cache_write: 131766
-      cost: 1.7364
+      input: 60
+      output: 19721
+      cache_read: 5191045
+      cache_write: 104857
+      cost: 2.0275
 ---
 # T-2362 The serve tests I-0226 and I-0233 name wait for what they assert, and pass ten times in a row under -race -count=10 with GOMAXPROCS=2
 

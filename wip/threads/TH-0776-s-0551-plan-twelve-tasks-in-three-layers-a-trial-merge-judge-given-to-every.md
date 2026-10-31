@@ -4,10 +4,10 @@ title: "S-0551 plan: twelve tasks in three layers, a trial-merge judge given to 
 anchor:
   path: wip/kanban/stories/S-0551-a-story-starts-on-a-trial-merge-instead-of-an-overlap-hold-and-after-holds-a.md
   item: S-0551
-status: open
-participants: [planner-S-0551, orchestrator]
+status: resolved
+participants: [planner-S-0551, orchestrator, alex]
 created: 2026-10-31T07:46:00Z
-updated: 2026-10-31T07:53:39Z
+updated: 2026-10-31T09:12:00Z
 ---
 
 # TH-0776 S-0551 plan: twelve tasks in three layers, a trial-merge judge given to every caller of the holds
@@ -84,3 +84,11 @@ S-0551 now has twelve tasks in three layers, predicted touches, and a 2h forecas
 - Confirm this entry, or name the split you want instead.
 
 Source: design/adrs/0096-a-story-in-review-holds-nothing-an-overlap-inside-the-manifest-s-shared-paths.md § 3. Tasks narrow a folder claim
+
+### 2026-10-31T09:10:54Z alex
+Confirmed the recommendation of 2026-10-31T07:53:39Z orchestrator.
+
+Source: design/adrs/0096-a-story-in-review-holds-nothing-an-overlap-inside-the-manifest-s-shared-paths.md § 3. Tasks narrow a folder claim
+
+### 2026-10-31T09:12:00Z alex
+Resolved.

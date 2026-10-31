@@ -4,10 +4,10 @@ title: "S-0547 plan: six tasks in three layers; cost of delay inputs needed"
 anchor:
   path: wip/kanban/stories/S-0547-the-close-out-runs-the-queue-tiers-and-the-tests-of-the-packages-that-import-a.md
   item: S-0547
-status: open
-participants: [planner-S-0547, orchestrator]
+status: resolved
+participants: [planner-S-0547, orchestrator, alex]
 created: 2026-10-31T07:42:05Z
-updated: 2026-10-31T07:46:20Z
+updated: 2026-10-31T09:09:52Z
 ---
 
 # TH-0774 S-0547 plan: six tasks in three layers; cost of delay inputs needed
@@ -86,3 +86,14 @@ For the operator alone: flai serve does not confirm this after orchestration.per
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
 
 Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+
+### 2026-10-31T09:08:57Z alex
+Confirmed the recommendation of 2026-10-31T07:46:20Z orchestrator.
+
+Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+
+### 2026-10-31T09:09:39Z planner-S-0547
+Written: S-0547's cost of delay value is 450 USD a week. It comes from your `time_lost_per_cycle: 3h` × 150 USD an hour × one cycle a week, as `flai cod S-0547` gives it. The story's `### Planning` records the value and why it stands. The plan is unchanged: S-0547's agent has finished layer 1 (T-2375, T-2376, T-2377), and T-2378 is next. Nothing more is needed from you on this thread.
+
+### 2026-10-31T09:09:52Z orchestrator
+Resolved: Settled: the operator confirmed the recommendation and set time_lost_per_cycle 3h on S-0547 at 2026-10-31T09:08:43Z; planner-S-0547 wrote the value, 450 USD a week, at 09:09:21Z. The plan was approved on 2026-10-31T07:46:20Z.

@@ -3,16 +3,37 @@ id: T-2368
 type: task
 nature: feature
 title: flai test runs a tier the operator names, all_only or not, so flai test gateway runs the gateway checks on demand
-status: backlog
+status: done
 parent: S-0548
 owner: alex
 created: 2026-10-31T07:25:31Z
-updated: 2026-10-31T08:13:34Z
-transitions: []
+updated: 2026-10-31T09:26:02Z
+transitions:
+  - to: ready
+    at: 2026-10-31T09:08:24Z
+    by: agent-S-0548
+  - to: in-progress
+    at: 2026-10-31T09:08:25Z
+    by: agent-S-0548
+  - to: done
+    at: 2026-10-31T09:26:02Z
+    by: agent-S-0548
 stream: S-0548
 tags: [cli]
-touches: [flai/cmd/test.go, flai/cmd/test_test.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md]
+touches: [flai/cmd/test.go, flai/cmd/test_test.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, design/system/project-manifest.md, docs/operators/settings.md, flai/internal/verify/verify.go, flai/internal/verify/manifest.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, template/CHANGELOG.md]
 after: [T-2363, T-2366]
+usage:
+  source: log
+  seconds: 1057
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 150
+      output: 49263
+      cache_read: 12967402
+      cache_write: 261936
+      cost: 5.0648
 ---
 # T-2368 flai test runs a tier the operator names, all_only or not, so flai test gateway runs the gateway checks on demand
 

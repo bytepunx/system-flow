@@ -3,11 +3,11 @@ id: T-2406
 type: task
 nature: improvement
 title: The planner's role file, its baseline, and its start prompt say after names a story whose output this one reads, with the reason in its Notes
-status: in-progress
+status: done
 parent: S-0551
 owner: alex
 created: 2026-10-31T07:44:14Z
-updated: 2026-10-31T08:57:53Z
+updated: 2026-10-31T10:06:20Z
 transitions:
   - to: ready
     at: 2026-10-31T08:57:50Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-31T08:57:53Z
     by: agent-S-0551
+  - to: done
+    at: 2026-10-31T10:06:20Z
+    by: agent-S-0551
 stream: S-0551
 tags: [flai, conventions]
 touches: [design/workflows/roles/planner.md, template/root/design/workflows/roles/planner.md, flai/internal/roles/baseline/planner.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, template/root/.claude/agents/planner.md, ".claude/agents/planner.md"]
 after: [T-2388]
+usage:
+  source: log
+  seconds: 4107
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 75
+      output: 23705
+      cache_read: 4661443
+      cache_write: 170963
+      cost: 2.3593
 ---
 # T-2406 The planner's role file, its baseline, and its start prompt say after names a story whose output this one reads, with the reason in its Notes
 

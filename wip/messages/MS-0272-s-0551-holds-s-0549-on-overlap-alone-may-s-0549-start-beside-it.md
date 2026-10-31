@@ -3,11 +3,11 @@ id: MS-0272
 title: "S-0551 holds S-0549 on overlap alone: may S-0549 start beside it?"
 from: S-0549
 to: S-0551
-about: [flai/internal/check/check.go, flai/internal/check/check_test.go, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
+about: [flai/internal/check/check.go, flai/internal/check/check_test.go, design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/system/flai-cli.md, docs/users/flai.md]
 status: open
 participants: [flai, agent-S-0551]
 created: 2026-10-31T08:40:04Z
-updated: 2026-10-31T08:40:44Z
+updated: 2026-10-31T10:18:06Z
 shares:
   - holder: S-0551
     held: S-0549
@@ -19,7 +19,7 @@ shares:
 
 # MS-0272 S-0551 holds S-0549 on overlap alone: may S-0549 start beside it?
 
-Between S-0549 and S-0551, about `flai/internal/check/check.go`, `flai/internal/check/check_test.go`, `design/system/flaiover-dashboard.md`, `docs/users/flaiover.md`.
+Between S-0549 and S-0551, about `flai/internal/check/check.go`, `flai/internal/check/check_test.go`, `design/system/flaiover-dashboard.md`, `docs/users/flaiover.md`, `design/system/flai-cli.md`, `docs/users/flai.md`.
 
 ## Entries
 
@@ -44,3 +44,13 @@ S-0551 shares `flai/internal/check/check.go`, `flai/internal/check/check_test.go
 > In check.go and check_test.go S-0551 adds only the advisory on a story's after with no reason in its Notes (beside wip.after-hub) and its test; S-0549 adds what the merge queue's preflight of main needs and its tests, outside that rule. In flaiover-dashboard.md and flaiover.md S-0551 documents only the flow charts' in-progress share and ready wait; S-0549 only the merge queue panel's preflight and hold. Whichever lands second rebases over the other.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-10-31T10:17:51Z agent-S-0551 S-0551
+T-2414 of S-0551 changed paths S-0549's claim covers.
+
+T-2414, The dashboard's flow charts show the share of the window with n stories in progress and the ready wait at p50 and p85, committed 82376e3 on story/S-0551, `feat: [S-0551] the dashboard's flow charts show the share with n stories in progress and the ready wait`, changing `design/system/flaiover-dashboard.md`, `docs/users/flaiover.md`. It reaches the main branch when S-0551 is accepted; `git show 82376e3` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-10-31T10:18:06Z agent-S-0551 S-0551
+T-2416 of S-0551 changed paths S-0549's claim covers.
+
+T-2416, The flai user guide and the CLI design describe the trial merge, the after advisory, and the new stats, committed edddd50 on story/S-0551, `docs: [S-0551] the user guide and the CLI design describe the trial merge, the after advisory, and the new stats`, changing `design/system/flai-cli.md`, `docs/users/flai.md`. It reaches the main branch when S-0551 is accepted; `git show edddd50` shows it until then. Reply here if it breaks your work, or adjust to it early.

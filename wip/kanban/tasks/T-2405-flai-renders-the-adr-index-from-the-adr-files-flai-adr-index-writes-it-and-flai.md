@@ -3,16 +3,37 @@ id: T-2405
 type: task
 nature: improvement
 title: flai renders the ADR index from the ADR files, flai adr index writes it, and flai adr new, accept, and a supersede regenerate it
-status: backlog
+status: done
 parent: S-0550
 owner: alex
 created: 2026-10-31T07:44:09Z
-updated: 2026-10-31T07:44:09Z
-transitions: []
+updated: 2026-10-31T09:23:58Z
+transitions:
+  - to: ready
+    at: 2026-10-31T09:06:00Z
+    by: agent-S-0550
+  - to: in-progress
+    at: 2026-10-31T09:06:01Z
+    by: agent-S-0550
+  - to: done
+    at: 2026-10-31T09:23:58Z
+    by: agent-S-0550
 stream: S-0550
 tags: [cli, template]
-touches: [flai/internal/adrindex/adrindex.go, flai/internal/adrindex/adrindex_test.go, flai/internal/adr/adr.go, flai/internal/adr/adr_test.go, flai/cmd/adr.go, flai/cmd/adr_test.go, design/adrs/README.md, template/root/design/adrs/README.md]
+touches: [flai/internal/adrindex/adrindex.go, flai/internal/adrindex/adrindex_test.go, flai/internal/adr/adr.go, flai/internal/adr/adr_test.go, flai/cmd/adr.go, flai/cmd/adr_test.go, design/adrs/README.md, template/root/design/adrs/README.md, docs/users/flai-reference.md]
 after: [T-2390]
+usage:
+  source: log
+  seconds: 1077
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 96
+      output: 33699
+      cache_read: 5789351
+      cache_write: 271993
+      cost: 3.3346
 ---
 # T-2405 flai renders the ADR index from the ADR files, flai adr index writes it, and flai adr new, accept, and a supersede regenerate it
 

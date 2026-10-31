@@ -23,16 +23,16 @@ tags: [flai, design]
 touches: [design/adrs/README.md, design/system/workflow.md, design/system/strategic-agents.md, design/system/metrics.md]
 usage:
   source: log
-  seconds: 845
+  seconds: 889
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 87
-      output: 424
-      cache_read: 5001945
-      cache_write: 172044
-      cost: 1.8008
+      input: 90
+      output: 28408
+      cache_read: 5586303
+      cache_write: 204883
+      cost: 2.8274
 ---
 # T-2388 Write the ADRs and the design: a trial merge replaces the overlap hold, after names a read dependency with its reason, and the in-progress share is a metric
 

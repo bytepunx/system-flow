@@ -23,22 +23,22 @@ tags: [flai]
 touches: [design/adrs/README.md, design/system/metrics.md, design/system/flai-cli.md, design/adrs/0229-the-close-out-runs-as-a-flai-serve-job-the-story-s-agent-asks-for-with-the.md]
 usage:
   source: log
-  seconds: 334
+  seconds: 342
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-haiku-5-5
-      input: 114
-      output: 535
-      cache_read: 7362160
-      cache_write: 226559
-      cost: 0.5479
+      input: 116
+      output: 50745
+      cache_read: 7588719
+      cache_write: 229659
+      cost: 0.5494
     - model: claude-opus-5-5
-      input: 92
-      output: 486
-      cache_read: 4772262
-      cache_write: 133020
-      cost: 1.7073
+      input: 68
+      output: 27940
+      cache_read: 4745258
+      cache_write: 243543
+      cost: 2.8285
 ---
 # T-2396 An ADR settles the close-out job: how the CLI and MCP reach flai serve, what the job runs, the verified event, the per-commit verdict, and the journal's fields, and metrics.md defines the close-out count
 

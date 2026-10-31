@@ -9,7 +9,7 @@ date: 2026-10-28
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0550]
 ---
 
 # D-0400 When two stories each add rows to the generated flag index, the one accepted second regenerates it with make flai-reference rather than merging rows by hand

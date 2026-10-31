@@ -23,16 +23,16 @@ tags: []
 touches: [system-flow.yaml, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/check/check.go, flai/internal/check/tests_test.go, design/system/project-manifest.md, design/system/flai-cli.md, docs/users/flai.md, template/CHANGELOG.md, flai/internal/verify/select_test.go]
 usage:
   source: log
-  seconds: 2491
+  seconds: 2495
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 99
-      output: 564
-      cache_read: 4211139
-      cache_write: 119655
-      cost: 1.507
+      input: 50
+      output: 16305
+      cache_read: 4291986
+      cache_write: 86696
+      cost: 1.6763
 ---
 # T-2363 The go-test tier names its timeout, and flai check warns of a tier that runs go test without -timeout
 
