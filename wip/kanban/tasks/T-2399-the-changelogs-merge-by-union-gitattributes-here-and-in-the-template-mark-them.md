@@ -3,12 +3,18 @@ id: T-2399
 type: task
 nature: improvement
 title: "The changelogs merge by union: .gitattributes here and in the template mark them, flai release names one Unreleased section, and the git convention says why"
-status: backlog
+status: in-progress
 parent: S-0550
 owner: alex
 created: 2026-10-31T07:43:42Z
-updated: 2026-10-31T07:43:42Z
-transitions: []
+updated: 2026-10-31T08:17:32Z
+transitions:
+  - to: ready
+    at: 2026-10-31T08:17:30Z
+    by: agent-S-0550
+  - to: in-progress
+    at: 2026-10-31T08:17:32Z
+    by: agent-S-0550
 stream: S-0550
 tags: [template, cli]
 touches: [".gitattributes", template/root/.gitattributes, template/.gitattributes, flai/internal/release/release.go, flai/internal/release/release_test.go, flai/cmd/stream_sync_test.go, design/conventions/git.md, template/root/design/conventions/git.md, template/CHANGELOG.md]

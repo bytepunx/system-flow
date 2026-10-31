@@ -3,12 +3,18 @@ id: T-2390
 type: task
 nature: improvement
 title: An ADR records that the ADR index is generated from its folder, that the changelogs merge by union, and that the acceptance notice skips the shared paths
-status: backlog
+status: in-progress
 parent: S-0550
 owner: alex
 created: 2026-10-31T07:43:04Z
-updated: 2026-10-31T07:43:04Z
-transitions: []
+updated: 2026-10-31T08:17:24Z
+transitions:
+  - to: ready
+    at: 2026-10-31T08:17:23Z
+    by: agent-S-0550
+  - to: in-progress
+    at: 2026-10-31T08:17:24Z
+    by: agent-S-0550
 stream: S-0550
 tags: [cli]
 touches: [design/adrs/README.md, design/adrs/0157-flai-stream-sync-and-flai-accept-merge-design-adrs-readme-md-s-index-row-by-row.md]

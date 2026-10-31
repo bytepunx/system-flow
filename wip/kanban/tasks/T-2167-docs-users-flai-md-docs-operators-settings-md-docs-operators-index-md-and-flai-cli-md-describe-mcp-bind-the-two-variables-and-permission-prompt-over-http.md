@@ -7,12 +7,12 @@ status: backlog
 parent: S-0506
 owner: alex
 created: 2026-10-26T04:50:15Z
-updated: 2026-10-26T04:50:15Z
+updated: 2026-10-31T07:59:24Z
 transitions: []
 stream: S-0506
 tags: [cli, mcp]
 touches: [docs/users/flai.md, docs/operators/settings.md, docs/operators/index.md, design/system/flai-cli.md, docs/users/flai-reference.md]
-after: [T-2150, T-2152, T-2160]
+after: [T-2150, T-2152, T-2160, T-2418, T-2419]
 ---
 # T-2167 docs/users/flai.md, docs/operators/settings.md, docs/operators/index.md, and flai-cli.md describe mcp.bind, the two variables, and permission_prompt over HTTP
 

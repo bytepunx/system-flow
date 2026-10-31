@@ -3,11 +3,11 @@ id: T-2371
 type: task
 nature: improvement
 title: An operator's acceptance on the board or with flai move enqueues the story while the queue batches, and drops no batch
-status: in-progress
+status: done
 parent: S-0552
 owner: alex
 created: 2026-10-31T07:33:07Z
-updated: 2026-10-31T07:34:57Z
+updated: 2026-10-31T08:04:38Z
 transitions:
   - to: ready
     at: 2026-10-31T07:34:56Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-31T07:34:57Z
     by: system-flow
+  - to: done
+    at: 2026-10-31T08:04:38Z
+    by: agent-S-0552
 stream: S-0552
 tags: [flai]
-touches: [flai/cmd/accept.go, flai/cmd/accept_queue_test.go, flai/cmd/move.go, flai/cmd/move_test.go, flai/internal/preview/accept.go]
+touches: [flai/cmd/accept.go, flai/cmd/accept_queue_test.go, flai/cmd/move.go, flai/cmd/move_test.go, flai/internal/preview/accept.go, docs/users/flai-reference.md, flai/cmd/accept_queue_tiers_test.go, flai/cmd/move_refused_test.go]
+usage:
+  source: log
+  seconds: 1762
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 89
+      output: 437
+      cache_read: 3857819
+      cache_write: 247243
+      cost: 1.4283
 ---
 # T-2371 An operator's acceptance on the board or with flai move enqueues the story while the queue batches, and drops no batch
 

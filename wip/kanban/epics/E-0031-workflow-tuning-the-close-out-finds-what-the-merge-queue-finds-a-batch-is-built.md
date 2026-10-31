@@ -18,8 +18,28 @@ tags: [flai]
 topics: [testing, git, orchestration, planning]
 usage:
   source: sum
-  seconds: 0
-  models: []
+  seconds: 5417
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-31
+      ceremony: 6
+      test_runs: 2
+      hand_edits: 2
+      work: 90
+  models:
+    - model: claude-haiku-5-5
+      input: 94
+      output: 398
+      cache_read: 5581074
+      cache_write: 205101
+      cost: 0.417
+    - model: claude-opus-5-5
+      input: 980
+      output: 5068
+      cache_read: 59289194
+      cache_write: 2458528
+      cost: 21.4853
   strategic:
     - kind: planner
       seconds: 538
@@ -32,15 +52,15 @@ usage:
           cache_write: 180629
           cost: 3.4605
     - kind: orchestrator
-      seconds: 292
+      seconds: 330
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 98
-          output: 650
-          cache_read: 3091184
-          cache_write: 406790
-          cost: 0.7912
+          input: 118
+          output: 801
+          cache_read: 3594059
+          cache_write: 506228
+          cost: 0.928
 ---
 # E-0031 Workflow tuning: the close-out finds what the merge queue finds, a batch is built against a clean main, hub files merge without conflict, and stories run in parallel with a trial merge instead of a hold
 

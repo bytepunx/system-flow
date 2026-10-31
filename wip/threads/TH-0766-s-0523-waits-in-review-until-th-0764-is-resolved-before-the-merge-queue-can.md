@@ -4,10 +4,10 @@ title: S-0523 waits in review until TH-0764 is resolved before the merge queue c
 anchor:
   path: wip/kanban/stories/S-0523-the-orchestrator-cannot-set-a-cost-of-delay-input-the-operator-decided-on-an-epic-or-a-story-past-the-backlog.md
   item: S-0523
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-30T18:00:47Z
-updated: 2026-10-30T18:00:47Z
+updated: 2026-10-31T08:20:09Z
 ---
 
 # TH-0766 S-0523 waits in review until TH-0764 is resolved before the merge queue can take it
@@ -41,3 +41,6 @@ thread_open: thread TH-0764 is not resolved on S-0523 or its tasks: resolve each
 ## What happens next
 
 - Once TH-0764 is resolved, I resolve this thread and enqueue S-0523 at `66836768`, unless a commit lands on the branch first.
+
+### 2026-10-31T08:20:09Z alex
+Resolved: S-0523 was accepted

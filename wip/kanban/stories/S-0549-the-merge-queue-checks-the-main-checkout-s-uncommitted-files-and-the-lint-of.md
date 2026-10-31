@@ -7,7 +7,7 @@ status: ready
 parent: E-0031
 owner: alex
 created: 2026-10-30T01:52:13Z
-updated: 2026-10-31T07:48:47Z
+updated: 2026-10-31T08:06:18Z
 transitions:
   - to: ready
     at: 2026-10-31T07:24:09Z
@@ -26,15 +26,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 17
+      seconds: 34
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 5
-          output: 20
-          cache_read: 215105
-          cache_write: 19254
-          cost: 0.053
+          input: 15
+          output: 90
+          cache_read: 443482
+          cache_write: 57690
+          cost: 0.1136
 forecast:
   duration: 5h
   delivery: 2026-10-31T14:32:00Z
@@ -71,7 +71,7 @@ Evidence: S-0541's batches in the serve journal and the fix of T-2332 by hand on
 
 ### Planning
 
-Planned by planner-S-0549 on 2026-10-31. The operator asked for the plan; no thread on S-0549 or E-0031 existed, so there was nothing earlier to revisit.
+Planned by planner-S-0549 on 2026-10-31. The operator asked for the plan; no thread on S-0549 or E-0031 existed, so there was nothing earlier to revisit. The plan's thread is TH-0775.
 
 Touches:
 
@@ -81,8 +81,8 @@ Touches:
 - Co-change: `flai touches suggest` ranks `docs/users/flai-reference.md` (17%), `docs/operators/index.md` (15%), and `design/system/flaiover-dashboard.md` (12%) first. The last two are taken. `flai-reference.md` is left out: no task adds a flag or a command. The rest (`settings.md`, `workflow.md`, `CHANGELOG.md`, `hostapi`) no criterion reaches.
 - Topic `dashboard` added for T-2385.
 
-Forecast: `flai forecast` gave 16m, 96 s per unit of size over 22 improvement stories at size 10. Raised to 5h: the size counts four criteria and six touches. It does not count the seven tasks, the new queue state, the kept batch that lands again, the serve watcher and thread with race tests, the Svelte panel, and four documents. S-0548, of the same epic and similar breadth, was raised to 6h for the same reason. Delivery counts from 13:30, when S-0548's forecast puts it in review and the overlap hold on `flai/internal/serve` clears.
+Forecast: `flai forecast` gave 16m, 96 s per unit of size over 22 improvement stories at size 10. Raised to 5h: the size counts four criteria and six touches. It does not count the seven tasks, the new queue state, the kept batch that lands again, the serve watcher and thread with race tests, the Svelte panel, and four documents. S-0548, of the same epic and similar breadth, was raised to 6h for the same reason. flai's replan sets the delivery from that duration and the pull order.
 
-Cost of delay: none written. Neither S-0549 nor E-0031 has inputs, so `flai cod` refuses; the plan's thread asks for them.
+Cost of delay: none written. Neither S-0549 nor E-0031 has inputs, so `flai cod` refuses. TH-0775 asks for them, recommending `time_lost_per_cycle` 20m (50 USD a week). The orchestrator cannot set inputs on a story past the backlog, so they wait on the operator.
 
-After: none. S-0549 needs no other story's accepted change. It shares `flai/internal/mergequeue` with S-0552 (in progress) under the split of MS-0263: S-0552 changes the window in `batch.go`, `eligible.go`, `bisect.go`, and `log.go`; S-0549 adds `preflight.go` and keeps its edits to `batch.go`, `land.go`, `state.go`, `log.go`, and `eligible.go` small. Whichever lands second rebases. `docs/operators/index.md` is claimed by S-0548 and S-0552 too.
+After: none. S-0549 needs no other story's accepted change. It shares `flai/internal/mergequeue` with S-0552 (in progress) under the split of MS-0263: S-0552 changes the window in `batch.go`, `eligible.go`, `bisect.go`, and `log.go`; S-0549 adds `preflight.go` and keeps its edits to `batch.go`, `land.go`, `state.go`, `log.go`, and `eligible.go` small. S-0552's T-2373 also changes `MergeQueue.svelte`, its test, its examples, and `docs/users/flaiover.md`, which T-2385 changes. Whichever lands second rebases. `docs/operators/index.md` is claimed by S-0548 and S-0552 too.

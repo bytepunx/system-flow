@@ -3,11 +3,11 @@ id: T-2365
 type: task
 nature: remediation
 title: The dashboard releases test reaches a listener it opened and closed, and no cmd test dials a port nothing listens on
-status: in-progress
+status: done
 parent: S-0548
 owner: alex
 created: 2026-10-31T07:25:11Z
-updated: 2026-10-31T07:32:15Z
+updated: 2026-10-31T08:14:01Z
 transitions:
   - to: ready
     at: 2026-10-31T07:32:13Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-31T07:32:15Z
     by: agent-S-0548
+  - to: done
+    at: 2026-10-31T08:14:01Z
+    by: agent-S-0548
 stream: S-0548
 tags: [cli]
 touches: [flai/cmd/dashboard_test.go, flai/cmd/dashboard_versions_test.go, flai/cmd/selfupgrade_test.go, flai/cmd/host_integration_test.go, flai/cmd/serve_mcp_test.go, flai/cmd/mcp_http_test.go, flai/internal/selfupgrade/selfupgrade.go, flai/internal/selfupgrade/selfupgrade_test.go]
+usage:
+  source: log
+  seconds: 2488
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 79
+      output: 363
+      cache_read: 2949483
+      cache_write: 179824
+      cost: 1.0889
 ---
 # T-2365 The dashboard releases test reaches a listener it opened and closed, and no cmd test dials a port nothing listens on
 

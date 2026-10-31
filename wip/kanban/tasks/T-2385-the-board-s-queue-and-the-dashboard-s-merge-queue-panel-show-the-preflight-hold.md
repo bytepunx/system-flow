@@ -7,7 +7,7 @@ status: backlog
 parent: S-0549
 owner: alex
 created: 2026-10-31T07:41:30Z
-updated: 2026-10-31T07:41:30Z
+updated: 2026-10-31T08:05:50Z
 transitions: []
 stream: S-0549
 tags: [flai, flaiover]
@@ -21,6 +21,8 @@ after: [T-2383]
 Carry the preflight hold on `mergequeue.Queue` (`eligible.go`), which `OnBoard` gives `board.get`, `flai board --json`, and the MCP `board` tool: when it began, each file, line, rule, and message, and the thread once `flai serve` has opened it. S-0552 adds its window to `Queue` in the same file, so keep to one field and its filling (MS-0263).
 
 In `MergeQueue.svelte`, add the field to `MergeQueueState` and show the hold in `warn` beside the operator's `Held by` line: that no batch is built until main is clean, each file with its findings, and the thread as a link. The dashboard's `/api/queue` passes `board.queue` through, so the route needs no change. Add a held example to `MergeQueue.examples.json` so `flai check`'s `components.examples` stays clean, and a test in `MergeQueue.svelte.test.ts`.
+
+S-0552's T-2373 changes the same panel, its test, its examples, and `docs/users/flaiover.md` to show its coalesce window. Rebase over it if it lands first, and keep the hold's line apart from the window's.
 
 Describe the panel's new line in `design/system/flaiover-dashboard.md` (the `/board` row's merge queue sentences) and `docs/users/flaiover.md` (the **Merge queue.** paragraph under Board), in the same commit.
 

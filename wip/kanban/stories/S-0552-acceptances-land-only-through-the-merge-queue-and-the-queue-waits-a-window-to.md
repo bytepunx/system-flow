@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0031
 owner: alex
 created: 2026-10-30T01:52:31Z
-updated: 2026-10-31T07:34:17Z
+updated: 2026-10-31T08:04:38Z
 transitions:
   - to: ready
     at: 2026-10-31T07:23:26Z
@@ -17,12 +17,35 @@ transitions:
     by: agent-S-0552
 tags: [flai]
 topics: [orchestration, testing, cli]
-touches: [flai/internal/mergequeue, flai/cmd, design/system/flai-cli.md, docs/users/flai.md, docs/operators]
+touches: [flai/internal/mergequeue, flai/cmd, design/system/flai-cli.md, docs/users/flai.md, docs/operators, design/system/project-manifest.md, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, docs/users/flai-reference.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 2290
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-31
+      ceremony: 3
+      hand_edits: 1
+      work: 32
+  models:
+    - model: claude-haiku-5-5
+      input: 94
+      output: 398
+      cache_read: 5581074
+      cache_write: 205101
+      cost: 0.417
+    - model: claude-opus-5-5
+      input: 360
+      output: 1963
+      cache_read: 18060058
+      cache_write: 1244128
+      cost: 6.7167
 ---
 # S-0552 Acceptances land only through the merge queue, and the queue waits a window to fill a batch, so one verification lands several stories and an acceptance by hand drops no batch
 

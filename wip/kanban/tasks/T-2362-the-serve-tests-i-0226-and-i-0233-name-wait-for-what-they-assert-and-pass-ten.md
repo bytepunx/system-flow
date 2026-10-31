@@ -3,11 +3,11 @@ id: T-2362
 type: task
 nature: remediation
 title: "The serve tests I-0226 and I-0233 name wait for what they assert, and pass ten times in a row under -race -count=10 with GOMAXPROCS=2"
-status: in-progress
+status: done
 parent: S-0548
 owner: alex
 created: 2026-10-31T07:24:50Z
-updated: 2026-10-31T07:32:09Z
+updated: 2026-10-31T08:14:14Z
 transitions:
   - to: ready
     at: 2026-10-31T07:32:08Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-31T07:32:09Z
     by: agent-S-0548
+  - to: done
+    at: 2026-10-31T08:14:14Z
+    by: agent-S-0548
 stream: S-0548
 tags: []
 touches: [flai/internal/serve/agents_test.go, flai/internal/serve/serve_test.go, flai/internal/serve/forgemerge_test.go, flai/internal/serve/budget_test.go, flai/internal/serve/mcp_test.go, flai/internal/serve/projects_test.go]
+usage:
+  source: log
+  seconds: 2494
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 107
+      output: 467
+      cache_read: 4858233
+      cache_write: 131766
+      cost: 1.7364
 ---
 # T-2362 The serve tests I-0226 and I-0233 name wait for what they assert, and pass ten times in a row under -race -count=10 with GOMAXPROCS=2
 

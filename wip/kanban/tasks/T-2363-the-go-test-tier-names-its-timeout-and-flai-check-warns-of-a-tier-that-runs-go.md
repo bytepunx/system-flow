@@ -3,11 +3,11 @@ id: T-2363
 type: task
 nature: remediation
 title: The go-test tier names its timeout, and flai check warns of a tier that runs go test without -timeout
-status: in-progress
+status: done
 parent: S-0548
 owner: alex
 created: 2026-10-31T07:25:01Z
-updated: 2026-10-31T07:32:12Z
+updated: 2026-10-31T08:13:47Z
 transitions:
   - to: ready
     at: 2026-10-31T07:32:11Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-31T07:32:12Z
     by: agent-S-0548
+  - to: done
+    at: 2026-10-31T08:13:47Z
+    by: agent-S-0548
 stream: S-0548
 tags: []
-touches: [system-flow.yaml, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/check/check.go, flai/internal/check/tests_test.go, design/system/project-manifest.md, design/system/flai-cli.md, docs/users/flai.md, template/CHANGELOG.md]
+touches: [system-flow.yaml, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/check/check.go, flai/internal/check/tests_test.go, design/system/project-manifest.md, design/system/flai-cli.md, docs/users/flai.md, template/CHANGELOG.md, flai/internal/verify/select_test.go]
+usage:
+  source: log
+  seconds: 2491
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 99
+      output: 564
+      cache_read: 4211139
+      cache_write: 119655
+      cost: 1.507
 ---
 # T-2363 The go-test tier names its timeout, and flai check warns of a tier that runs go test without -timeout
 

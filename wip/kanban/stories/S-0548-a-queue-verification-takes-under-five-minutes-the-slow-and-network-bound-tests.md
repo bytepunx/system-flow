@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0031
 owner: alex
 created: 2026-10-30T01:52:08Z
-updated: 2026-10-31T07:31:01Z
+updated: 2026-10-31T08:14:11Z
 transitions:
   - to: ready
     at: 2026-10-31T07:21:29Z
@@ -17,16 +17,30 @@ transitions:
     by: agent-S-0548
 tags: [flai]
 topics: [testing]
-touches: [flai/internal/mcpserver, flai/internal/serve, flai/internal/dashboard, flai/internal/selfupgrade, flai/cmd, flai/internal/check, flai/internal/mdlint, scripts/smoke.sh, scripts/gateway-smoke.sh, scripts/integration.sh, system-flow.yaml, ".github/workflows/flai.yml", design/conventions/testing.md, design/tech/go-libraries.md, docs/operators, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, design/system/project-manifest.md, design/system/flai-cli.md, design/system/agent-adapters.md, design/conventions/code-quality.md, design/conventions/tooling.md, docs/users/flai.md, docs/users/flai-reference.md, docs/contributors/index.md, template/CHANGELOG.md, design/issues/summary.md, design/issues/I-0225-flai-internal-mcpserver-s-tests-take-8-to-10-minutes-under-race-at-go-s-10-minute-default-timeout-so-the-integration-tier-fails-a-merge-queue-batch-on-time-alone.md, design/issues/I-0226-two-flai-serve-tests-check-before-what-they-wait-for-has-happened-and-fail-a-loaded-merge-queue-batch-on-timing.md, design/issues/I-0227-flai-test-s-go-test-tier-runs-the-mcpserver-package-with-race-into-go-test-s-10-minute-default-timeout-on-a-loaded-host-and-names-only-the-package-so-a-story-that-changes-mcpserver-cannot-pass-its-tests.md, design/issues/I-0233-testachangedfilereachesthedashboardasanotification-fails-its-temp-folder-s-cleanup-with-directory-not-empty-as-i-0048-s-serve-tests-did.md]
+touches: [flai/internal/mcpserver, flai/internal/serve, flai/internal/selfupgrade, flai/cmd, flai/internal/check, flai/internal/mdlint, scripts/smoke.sh, scripts/gateway-smoke.sh, scripts/integration.sh, system-flow.yaml, ".github/workflows/flai.yml", design/conventions/testing.md, design/tech/go-libraries.md, docs/operators, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, design/system/project-manifest.md, design/system/flai-cli.md, design/system/agent-adapters.md, design/conventions/code-quality.md, design/conventions/tooling.md, docs/users/flai.md, docs/users/flai-reference.md, docs/contributors/index.md, template/CHANGELOG.md, design/issues/summary.md, design/issues/I-0225-flai-internal-mcpserver-s-tests-take-8-to-10-minutes-under-race-at-go-s-10-minute-default-timeout-so-the-integration-tier-fails-a-merge-queue-batch-on-time-alone.md, design/issues/I-0226-two-flai-serve-tests-check-before-what-they-wait-for-has-happened-and-fail-a-loaded-merge-queue-batch-on-timing.md, design/issues/I-0227-flai-test-s-go-test-tier-runs-the-mcpserver-package-with-race-into-go-test-s-10-minute-default-timeout-on-a-loaded-host-and-names-only-the-package-so-a-story-that-changes-mcpserver-cannot-pass-its-tests.md, design/issues/I-0233-testachangedfilereachesthedashboardasanotification-fails-its-temp-folder-s-cleanup-with-directory-not-empty-as-i-0048-s-serve-tests-did.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 3127
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-31
+      ceremony: 3
+      test_runs: 2
+      hand_edits: 1
+      work: 58
+  models:
+    - model: claude-opus-5-5
+      input: 620
+      output: 3105
+      cache_read: 41229136
+      cache_write: 1214400
+      cost: 14.7686
   strategic:
     - kind: planner
       seconds: 538

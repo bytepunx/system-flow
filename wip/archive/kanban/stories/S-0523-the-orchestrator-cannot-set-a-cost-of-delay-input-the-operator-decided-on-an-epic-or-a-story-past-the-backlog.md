@@ -3,10 +3,10 @@ id: S-0523
 type: story
 nature: improvement
 title: The orchestrator cannot set a cost of delay input the operator decided on an epic or a story past the backlog
-status: review
+status: done
 owner: alex
 created: 2026-10-28T12:53:43Z
-updated: 2026-10-30T17:58:56Z
+updated: 2026-10-31T08:20:09Z
 transitions:
   - to: ready
     at: 2026-10-30T00:10:23Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-30T17:58:51Z
     by: agent-S-0523
+  - to: done
+    at: 2026-10-31T08:20:09Z
+    by: alex
 blocked:
   - from: 2026-10-30T14:07:50Z
     until: 2026-10-30T14:13:30Z

@@ -3,12 +3,18 @@ id: T-2374
 type: task
 nature: improvement
 title: ADRs and the design, user, and operator docs say acceptances land only through the queue, after its coalesce window, and stats count verifications per landing
-status: backlog
+status: in-progress
 parent: S-0552
 owner: alex
 created: 2026-10-31T07:34:17Z
-updated: 2026-10-31T07:34:17Z
-transitions: []
+updated: 2026-10-31T08:05:36Z
+transitions:
+  - to: ready
+    at: 2026-10-31T08:05:35Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-31T08:05:36Z
+    by: system-flow
 stream: S-0552
 tags: [flai]
 touches: [design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, design/adrs/README.md]

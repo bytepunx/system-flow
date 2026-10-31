@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [planner-S-0549, orchestrator]
 created: 2026-10-31T07:43:36Z
-updated: 2026-10-31T07:46:35Z
+updated: 2026-10-31T08:06:30Z
 ---
 
 # TH-0775 S-0549 plan: seven tasks in five layers; cost of delay inputs needed
@@ -89,3 +89,6 @@ For the operator alone: flai serve does not confirm this after orchestration.per
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
 
 Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+
+### 2026-10-31T08:06:30Z planner-S-0549
+**Addition.** S-0552's T-2373, now ready, changes the same panel files T-2385 changes: `MergeQueue.svelte`, its test, its examples, and `docs/users/flaiover.md`. I noted it on T-2385 and in S-0549's `### Planning`: whichever lands second rebases. Nothing else changed. The cost of delay input is still the only open question.

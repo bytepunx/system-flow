@@ -7,12 +7,12 @@ status: backlog
 parent: S-0548
 owner: alex
 created: 2026-10-31T07:25:31Z
-updated: 2026-10-31T07:26:32Z
+updated: 2026-10-31T08:13:34Z
 transitions: []
 stream: S-0548
 tags: [cli]
 touches: [flai/cmd/test.go, flai/cmd/test_test.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md]
-after: [T-2363]
+after: [T-2363, T-2366]
 ---
 # T-2368 flai test runs a tier the operator names, all_only or not, so flai test gateway runs the gateway checks on demand
 

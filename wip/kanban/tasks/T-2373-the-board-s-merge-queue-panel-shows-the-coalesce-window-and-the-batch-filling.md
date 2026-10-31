@@ -3,12 +3,18 @@ id: T-2373
 type: task
 nature: improvement
 title: The board's merge queue panel shows the coalesce window and the batch filling
-status: backlog
+status: in-progress
 parent: S-0552
 owner: alex
 created: 2026-10-31T07:34:12Z
-updated: 2026-10-31T07:34:12Z
-transitions: []
+updated: 2026-10-31T08:05:33Z
+transitions:
+  - to: ready
+    at: 2026-10-31T08:05:32Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-31T08:05:33Z
+    by: system-flow
 stream: S-0552
 tags: [dashboard]
 touches: [flaiover/src/lib/components/MergeQueue.svelte, flaiover/src/lib/components/MergeQueue.svelte.test.ts, design/components/flaiover/src/lib/components/MergeQueue.examples.json, docs/users/flaiover.md]

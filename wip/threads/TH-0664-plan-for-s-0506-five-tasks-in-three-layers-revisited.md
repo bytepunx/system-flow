@@ -4,10 +4,10 @@ title: "Plan for S-0506: five tasks in three layers, revisited"
 anchor:
   path: wip/kanban/stories/S-0506-flai-s-http-mcp-server-serves-an-agent-in-a-container-as-the-stdio-server-serves-one-on-the-host-every-tool-permission-prompt-under-auto-approve-for-an-agent-flai-serve-started-and-a-listener-a-container-reaches.md
   item: S-0506
-status: answered
-participants: [planner-S-0506, orchestrator, flai serve]
+status: resolved
+participants: [planner-S-0506, orchestrator, flai serve, alex]
 created: 2026-10-26T12:31:43Z
-updated: 2026-10-29T00:13:10Z
+updated: 2026-10-31T07:56:21Z
 ---
 
 # TH-0664 Plan for S-0506: five tasks in three layers, revisited
@@ -72,3 +72,6 @@ S-0506 stays a draft until then. It is also held on overlap with S-0535 (`flai/i
 Source: design/conventions/strategic-agents.md § As the orchestrator
 
 Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-10-31T07:56:21Z alex
+Resolved.

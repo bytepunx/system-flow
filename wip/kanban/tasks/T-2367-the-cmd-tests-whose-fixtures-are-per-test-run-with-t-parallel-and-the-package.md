@@ -3,12 +3,18 @@ id: T-2367
 type: task
 nature: remediation
 title: The cmd tests whose fixtures are per test run with t.Parallel, and the package globals that stop them are made per test or named
-status: backlog
+status: in-progress
 parent: S-0548
 owner: alex
 created: 2026-10-31T07:25:25Z
-updated: 2026-10-31T07:26:18Z
-transitions: []
+updated: 2026-10-31T08:16:02Z
+transitions:
+  - to: ready
+    at: 2026-10-31T08:16:01Z
+    by: agent-S-0548
+  - to: in-progress
+    at: 2026-10-31T08:16:02Z
+    by: agent-S-0548
 stream: S-0548
 tags: [cli]
 touches: [flai/cmd/dashboard_test.go, flai/cmd/dashboard.go, flai/cmd/root.go, flai/cmd/forge.go, flai/cmd/components.go, flai/cmd/serve_mcp.go, flai/cmd/selfupgrade.go, flai/cmd/issue.go, flai/cmd/accept_remote.go]

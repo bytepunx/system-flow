@@ -4,10 +4,10 @@ title: "E-0024's nine complete drafts wait on the epic's 4h input before I final
 anchor:
   path: wip/kanban/epics/E-0024-workflows-as-data-a-project-defines-a-strategic-role-or-a-repeatable-formula-of-steps-in-files-flai-runs-and-the-built-in-roles-are-expressed-the-same-way-so-a-new-role-or-a-release-process-needs-no-flai-release.md
   item: E-0024
-status: answered
+status: resolved
 participants: [orchestrator, alex]
 created: 2026-10-21T16:02:39Z
-updated: 2026-10-31T07:52:39Z
+updated: 2026-10-31T07:56:49Z
 ---
 
 # TH-0587 E-0024's nine complete drafts wait on the epic's 4h input before I finalize them: S-0414 to S-0422
@@ -38,3 +38,6 @@ The order is by throughput, so these values do not change which story goes first
 
 ### 2026-10-31T07:52:39Z alex
 finalize as they are
+
+### 2026-10-31T07:56:49Z orchestrator
+Resolved: Answered "finalize as they are" (D-0436). Nothing is left to finalize: S-0414 to S-0419 are done and archived, and S-0420 to S-0422 are already finalized in the backlog. flai promote --drafts lists none of the nine.

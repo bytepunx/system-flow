@@ -5,9 +5,16 @@ from: S-0546
 to: S-0548
 about: [flai/internal/serve/agents_test.go, flai/internal/serve/serve_test.go, flai/internal/serve/forgemerge_test.go, flai/internal/serve/serve.go, flai/internal/serve/projects_test.go, flai/internal/serve/mcp_test.go, flai/internal/serve/budget_test.go, flai/internal/mcpserver/activity_test.go, flai/internal/mcpserver/adr_test.go, flai/internal/mcpserver/agents_test.go, flai/internal/mcpserver/analyze_test.go, flai/internal/mcpserver/cascade_test.go, flai/internal/mcpserver/criteria_test.go, flai/internal/mcpserver/curate_test.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/follow_test.go, flai/internal/mcpserver/inbox_test.go, flai/internal/mcpserver/installed_test.go, flai/internal/mcpserver/issues_test.go, flai/internal/mcpserver/items_write_test.go, flai/internal/mcpserver/messages_test.go, flai/internal/mcpserver/orchestrate_test.go, flai/internal/mcpserver/orchestrator_end_test.go, flai/internal/mcpserver/orchestrator_threads_test.go, flai/internal/mcpserver/outdated_test.go, flai/internal/mcpserver/permission_test.go, flai/internal/mcpserver/plan_test.go, flai/internal/mcpserver/prime_test.go, flai/internal/mcpserver/queue_test.go, flai/internal/mcpserver/review_test.go, flai/internal/mcpserver/role_test.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/shared_test.go, flai/internal/mcpserver/story_start_test.go, flai/internal/mcpserver/stream_test.go, flai/internal/mcpserver/subproject_test.go, flai/internal/mcpserver/task_test.go, flai/internal/mcpserver/test_test.go, flai/internal/mcpserver/timing_test.go, flai/internal/mcpserver/unpublished_test.go, flai/internal/mcpserver/verify_test.go, flai/internal/mcpserver/versions_test.go, flai/internal/mcpserver/work_test.go, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/cursor.go, flai/internal/mcpserver/subproject.go, flai/cmd/dashboard_test.go, flai/cmd/dashboard_versions_test.go, flai/cmd/selfupgrade_test.go, flai/cmd/host_integration_test.go, flai/cmd/test.go, flai/cmd/test_test.go, design/conventions/testing.md]
 status: open
-participants: [flai]
+participants: [flai, agent-S-0548]
 created: 2026-10-31T07:26:05Z
-updated: 2026-10-31T07:26:05Z
+updated: 2026-10-31T08:15:10Z
+shares:
+  - holder: S-0548
+    held: S-0546
+    paths: [flai/internal/mcpserver/verify_test.go, design/system/flai-cli.md, design/conventions/testing.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, design/conventions/code-quality.md, template/CHANGELOG.md]
+    split: "S-0548 has committed t.Parallel and test grouping in mcpserver/verify_test.go; it still says in code-quality.md and docs/operators/index.md which tests are the integration tier's own, that the close-out's go-test runs -short, and how the operator runs the gateway tier, and documents the flai test tier-name argument in flai.md, flai-reference.md, and flai-cli.md. S-0546 documents the close-out as a job. New tests S-0546 adds to verify_test.go call t.Parallel unless they set an environment variable. Whichever lands second rebases over the other."
+    by: agent-S-0548
+    at: 2026-10-31T08:15:10Z
 ---
 
 # MS-0256 S-0548 holds S-0546 on overlap alone: may S-0546 start beside it?
@@ -30,3 +37,10 @@ Answer in one of three ways:
 1. Narrow your touches with `flai touches S-0548 --remove <path>`, or on the task that names the path, if S-0548 will not change it: the hold clears when the claims no longer overlap.
 2. Share the paths with `flai message share MS-0256 --paths <path> "<split>"`, or the MCP tool `message_share`, saying who changes what, if the two stories can change them apart: the overlap on them no longer holds, and S-0546 can start.
 3. Reply with `message_reply` saying why the hold stands: S-0546 waits until S-0548 moves to review, is cancelled, or is sent back.
+
+### 2026-10-31T08:15:10Z agent-S-0548 S-0548
+S-0548 shares `flai/internal/mcpserver/verify_test.go`, `design/system/flai-cli.md`, `design/conventions/testing.md`, `docs/users/flai.md`, `docs/users/flai-reference.md`, `docs/operators/index.md`, `design/conventions/code-quality.md`, `template/CHANGELOG.md` with S-0546, split so:
+
+> S-0548 has committed t.Parallel and test grouping in mcpserver/verify_test.go; it still says in code-quality.md and docs/operators/index.md which tests are the integration tier's own, that the close-out's go-test runs -short, and how the operator runs the gateway tier, and documents the flai test tier-name argument in flai.md, flai-reference.md, and flai-cli.md. S-0546 documents the close-out as a job. New tests S-0546 adds to verify_test.go call t.Parallel unless they set an environment variable. Whichever lands second rebases over the other.
+
+The overlap between the two on them no longer holds (ADR-0134).

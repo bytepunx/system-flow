@@ -3,12 +3,18 @@ id: T-2402
 type: task
 nature: improvement
 title: The fortnight before is recorded, overlap notices per acceptance and conflicts per week from 2026-10-15 to 2026-10-29, with how to measure the fortnight after
-status: backlog
+status: in-progress
 parent: S-0550
 owner: alex
 created: 2026-10-31T07:43:49Z
-updated: 2026-10-31T07:43:49Z
-transitions: []
+updated: 2026-10-31T08:17:34Z
+transitions:
+  - to: ready
+    at: 2026-10-31T08:17:33Z
+    by: agent-S-0550
+  - to: in-progress
+    at: 2026-10-31T08:17:34Z
+    by: agent-S-0550
 stream: S-0550
 tags: [cli]
 touches: [design/system/workflow.md]

@@ -5,9 +5,16 @@ from: S-0551
 to: S-0548
 about: [flai/internal/serve/agents_test.go, flai/internal/serve/serve_test.go, flai/internal/serve/forgemerge_test.go, flai/internal/serve/serve.go, flai/internal/serve/projects_test.go, flai/internal/serve/mcp_test.go, flai/internal/serve/budget_test.go]
 status: open
-participants: [flai]
+participants: [flai, agent-S-0548]
 created: 2026-10-31T07:26:05Z
-updated: 2026-10-31T07:26:05Z
+updated: 2026-10-31T08:15:07Z
+shares:
+  - holder: S-0548
+    held: S-0551
+    paths: [flai/internal/serve/agents_test.go, docs/users/flai.md, design/system/flai-cli.md, flai/internal/check/check.go, flai/internal/check/check_test.go, flai/internal/mcpserver/work_test.go, template/CHANGELOG.md]
+    split: "S-0548 has committed its edits to agents_test.go (waitFor's 30 s deadline, the send-back subtest's hold), work_test.go (t.Parallel), and check.go (the manifest.tests-timeout warning); it still makes TestMonorepoIsClean in check_test.go skip under -short and adds the flai test tier-name argument to flai.md and flai-cli.md. S-0551 changes serve's start and hold code and check's after warning, with its own tests. New tests S-0551 adds to work_test.go call t.Parallel unless they set an environment variable. Whichever lands second rebases over the other."
+    by: agent-S-0548
+    at: 2026-10-31T08:15:07Z
 ---
 
 # MS-0255 S-0548 holds S-0551 on overlap alone: may S-0551 start beside it?
@@ -30,3 +37,10 @@ Answer in one of three ways:
 1. Narrow your touches with `flai touches S-0548 --remove <path>`, or on the task that names the path, if S-0548 will not change it: the hold clears when the claims no longer overlap.
 2. Share the paths with `flai message share MS-0255 --paths <path> "<split>"`, or the MCP tool `message_share`, saying who changes what, if the two stories can change them apart: the overlap on them no longer holds, and S-0551 can start.
 3. Reply with `message_reply` saying why the hold stands: S-0551 waits until S-0548 moves to review, is cancelled, or is sent back.
+
+### 2026-10-31T08:15:07Z agent-S-0548 S-0548
+S-0548 shares `flai/internal/serve/agents_test.go`, `docs/users/flai.md`, `design/system/flai-cli.md`, `flai/internal/check/check.go`, `flai/internal/check/check_test.go`, `flai/internal/mcpserver/work_test.go`, `template/CHANGELOG.md` with S-0551, split so:
+
+> S-0548 has committed its edits to agents_test.go (waitFor's 30 s deadline, the send-back subtest's hold), work_test.go (t.Parallel), and check.go (the manifest.tests-timeout warning); it still makes TestMonorepoIsClean in check_test.go skip under -short and adds the flai test tier-name argument to flai.md and flai-cli.md. S-0551 changes serve's start and hold code and check's after warning, with its own tests. New tests S-0551 adds to work_test.go call t.Parallel unless they set an environment variable. Whichever lands second rebases over the other.
+
+The overlap between the two on them no longer holds (ADR-0134).

@@ -3,15 +3,21 @@ id: T-2366
 type: task
 nature: remediation
 title: The four whole-repository tests skip under -short, the close-out's go-test tier runs with -short, and the check and the markdown lint run once in a batch
-status: backlog
+status: in-progress
 parent: S-0548
 owner: alex
 created: 2026-10-31T07:25:19Z
-updated: 2026-10-31T07:26:26Z
-transitions: []
+updated: 2026-10-31T08:15:59Z
+transitions:
+  - to: ready
+    at: 2026-10-31T08:15:58Z
+    by: agent-S-0548
+  - to: in-progress
+    at: 2026-10-31T08:15:59Z
+    by: agent-S-0548
 stream: S-0548
 tags: [cli]
-touches: [flai/internal/mcpserver/prime_test.go, flai/internal/check/check_test.go, flai/internal/mdlint/repo_test.go, system-flow.yaml, scripts/smoke.sh, design/conventions/code-quality.md, design/conventions/tooling.md, docs/operators/index.md]
+touches: [flai/internal/mcpserver/prime_test.go, flai/internal/check/check_test.go, flai/internal/mdlint/repo_test.go, system-flow.yaml, scripts/smoke.sh, design/conventions/code-quality.md, design/conventions/tooling.md, docs/operators/index.md, flai/internal/verify/select_test.go]
 after: [T-2361, T-2363]
 ---
 # T-2366 The four whole-repository tests skip under -short, the close-out's go-test tier runs with -short, and the check and the markdown lint run once in a batch
