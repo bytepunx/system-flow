@@ -132,6 +132,14 @@ type Report struct {
 	// tier ran here for that reason: the run left them to the queue,
 	// selected none, or was asked for every tier (S-0466).
 	QueueOff string `json:"queue_off,omitempty"`
+	// Clean says the worktree had nothing uncommitted, untracked files
+	// included, when the run began, so that it verified exactly Commit and
+	// the record keeps it under Commit (ADR-0229).
+	Clean bool `json:"clean,omitempty"`
+	// FromRecord says the report is the verdict the record holds at Commit,
+	// answered without running any step: RanAt and the durations are those of
+	// the run the record kept (ADR-0229).
+	FromRecord bool `json:"from_record,omitempty"`
 }
 
 // Step is what one step of Verify did.
@@ -212,17 +220,34 @@ type Note struct {
 // the main branch brought in select, which runs again with every tier after
 // it (ADR-0156). It commits nothing and records
 // no issue. The report, whole, is stored as the story's last (SaveReport)
-// whether it passes or not. It returns an error, with no report, when the
-// story, its worktree, or its changes cannot be read, and, with the report
-// so far, when ctx ends during a tier or the report cannot be stored.
+// whether it passes or not, and, when the worktree was clean as it began and
+// ctx did not end, kept in the record as the verdict at its head (KeepAt).
+// Unless Fresh is set, a passing verdict the record holds at the head is
+// answered first, as Recorded answers it, marked FromRecord: then no step
+// runs and nothing is stored (ADR-0229). It returns an error, with no
+// report, when the story, its worktree, or its changes cannot be read, and,
+// with the report so far, when ctx ends during a tier or the report cannot
+// be stored.
 func Verify(ctx context.Context, opts StoryOptions) (Report, error) {
 	v, err := newStoryRun(opts)
 	if err != nil {
 		return Report{}, err
 	}
+	if !opts.Fresh {
+		// a record that cannot be read is answered by running, which keeps
+		// the run in its place
+		if rep, ok, _ := v.recorded(); ok {
+			return rep, nil
+		}
+	}
 	rep, runErr := v.run(ctx)
 	if err := SaveReport(opts.Project, rep); err != nil {
 		return rep, errors.Join(runErr, err)
+	}
+	if rep.Clean && runErr == nil {
+		if err := KeepAt(opts.Project, rep.Commit, rep); err != nil {
+			return rep, err
+		}
 	}
 	return rep, runErr
 }
@@ -260,6 +285,8 @@ type storyRun struct {
 	// of its own change, as Report has them; Verify reads them.
 	mergeBase string
 	patch     string
+	// clean says the worktree had nothing uncommitted when it was read.
+	clean bool
 	// note is what the step running says about what it passed over, which
 	// runSteps puts on its result.
 	note string
@@ -315,6 +342,9 @@ func newStoryRun(opts StoryOptions) (*storyRun, error) {
 	if v.paths, err = ChangedPaths(opts.Git, v.worktree, v.base); err != nil {
 		return nil, fmt.Errorf("verify %s: %w", v.story, err)
 	}
+	if v.clean, err = v.worktreeClean(); err != nil {
+		return nil, fmt.Errorf("verify %s: %w", v.story, err)
+	}
 	return v, nil
 }
 
@@ -335,7 +365,7 @@ func (v *storyRun) syncSteps() []storyStep {
 func (v *storyRun) newReport(start time.Time) Report {
 	return Report{
 		Story: v.story, Commit: v.commit, Base: v.base, BaseCommit: v.baseCommit, MergeBase: v.mergeBase, Patch: v.patch,
-		RanAt: start.UTC(), Passed: true, Paths: v.paths, Steps: []Step{},
+		RanAt: start.UTC(), Passed: true, Paths: v.paths, Steps: []Step{}, Clean: v.clean,
 	}
 }
 
@@ -387,14 +417,11 @@ func (v *storyRun) run(ctx context.Context) (Report, error) {
 		storyStep{StepNarrative, v.narrative},
 		storyStep{StepCheck, func() []Finding { return v.check(&rep) }},
 	))
-	var selected, queued []Selected
-	if v.opts.LeaveToQueue {
-		selected, queued = SelectStoryLeavingQueue(v.opts.FS, v.opts.Tiers, v.paths)
-	} else {
-		selected = SelectStory(v.opts.FS, v.opts.Tiers, v.paths)
+	selected, queued, fp := v.selection()
+	if !v.opts.LeaveToQueue {
 		rep.QueueOff = queueOffText(selected, v.opts.QueueOff)
 	}
-	rep.Fingerprint = fingerprint(v.opts.Tiers, inListOrder(v.opts.Tiers, selected, queued))
+	rep.Fingerprint = fp
 	var runErr error
 	if rep.Passed {
 		reused, sentBack := v.reusable(rep.Fingerprint, selected)
@@ -423,6 +450,18 @@ func (v *storyRun) run(ctx context.Context) (Report, error) {
 	}
 	rep.DurationMS, rep.Duration = took(v.opts.Now().Sub(start))
 	return rep, runErr
+}
+
+// selection is the tiers the branch's paths select: those the run runs, and,
+// with LeaveToQueue, those it leaves to the merge queue, and the fingerprint
+// of both.
+func (v *storyRun) selection() (selected, queued []Selected, fp string) {
+	if v.opts.LeaveToQueue {
+		selected, queued = SelectStoryLeavingQueue(v.opts.FS, v.opts.Tiers, v.paths)
+	} else {
+		selected = SelectStory(v.opts.FS, v.opts.Tiers, v.paths)
+	}
+	return selected, queued, fingerprint(v.opts.Tiers, inListOrder(v.opts.Tiers, selected, queued))
 }
 
 // queueOffText is Report's QueueOff for a run that selected these tiers and

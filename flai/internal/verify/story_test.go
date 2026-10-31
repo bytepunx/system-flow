@@ -572,6 +572,9 @@ func TestVerifyResumesAtTheTierTheLastRunFailed(t *testing.T) {
 	if last, _, err := LastReport(f.opts.Project, "S-004"); err != nil || !reflect.DeepEqual(last, second) {
 		t.Errorf("the stored report is not the whole run: %+v, %v", last, err)
 	}
+	// something uncommitted, so that the record does not answer the
+	// second run's verdict and the run reuses its tiers (ADR-0229)
+	f.git.out["status --porcelain --untracked-files=all"] = " M flai/internal/x/x.go"
 	f.proc.ran = nil
 	third, err := Verify(context.Background(), f.opts)
 	if err != nil {
@@ -737,6 +740,9 @@ func TestVerifyReusesAcrossLeavingToTheQueue(t *testing.T) {
 				t.Fatalf("first run %+v, %v", first, err)
 			}
 			f.opts.LeaveToQueue = tc.after
+			// something uncommitted, so that the record does not answer the
+			// first run's verdict and the run reuses its tiers (ADR-0229)
+			f.git.out["status --porcelain --untracked-files=all"] = " M flai/internal/x/x.go"
 			f.proc.ran, f.proc.now = nil, f.proc.now.Add(time.Minute)
 			rep, err := Verify(context.Background(), f.opts)
 			if err != nil || !rep.Passed {
@@ -1086,10 +1092,11 @@ func TestVerifyReusesTheTiersAcrossACleanRebaseWhenMainsPathsSelectNone(t *testi
 			t.Errorf("%s has a note: %q", s.Name, s.Note)
 		}
 	}
-	// a run after it, at the same head and base, reuses them with no note
+	// an ask after it, at the same clean head and base, answers the second
+	// run's verdict from the record and runs nothing (ADR-0229)
 	third := f.verify(t)
-	if !reflect.DeepEqual(tierStates(third), want) || len(f.proc.ran) != 0 || third.Steps[4].Note != "" {
-		t.Errorf("third run tiers %v, ran %q, note %q", tierStates(third), f.proc.ran, third.Steps[4].Note)
+	if !third.FromRecord || !third.RanAt.Equal(second.RanAt) || len(f.proc.ran) != 0 {
+		t.Errorf("third ask %+v, ran %q; want the second run's verdict from the record", third, f.proc.ran)
 	}
 }
 
@@ -1175,17 +1182,21 @@ func TestVerifyReusesNothingAcrossARebaseWhenTheBranchsChangeMayDiffer(t *testin
 
 // ADR-0135, ADR-0156: a commit on main that changes only wip/ paths the
 // branch does not change is passed over by the sync step, and since the
-// branch was not rebased, its tiers are reused.
+// branch was not rebased, its tiers are reused; the last run stopped at a
+// tier, so the record does not answer it (ADR-0229). An ask after the run
+// passed, with main ahead only by such a commit, answers from the record.
 func TestVerifyReusesTheTiersWhenMainGainsOnlyWipCommits(t *testing.T) {
 	f := newRebaseFixture(t)
+	f.proc.steps = map[string]step{"smoke": {exit: 1}}
 	first := f.verify(t)
-	if !first.Passed {
+	if first.StoppedAt != "smoke" {
 		t.Fatalf("first run %v", states(first))
 	}
+	f.proc.steps = nil
 	f.commitOnMain(t, "wip/notes.txt")
 	rep := f.verify(t)
-	want := []string{"unit:reused", "integration:reused", "smoke:reused"}
-	if !rep.Passed || !reflect.DeepEqual(tierStates(rep), want) || len(f.proc.ran) != 0 {
+	want := []string{"unit:reused", "integration:reused", "smoke:passed"}
+	if !rep.Passed || rep.FromRecord || !reflect.DeepEqual(tierStates(rep), want) || !reflect.DeepEqual(f.proc.ran, []string{"smoke"}) {
 		t.Fatalf("steps %v, ran %q; want %v", states(rep), f.proc.ran, want)
 	}
 	if s := rep.Steps[1]; s.State != Passed || !strings.Contains(s.Note, "passed over 1 commit of main") {
@@ -1194,6 +1205,11 @@ func TestVerifyReusesTheTiersWhenMainGainsOnlyWipCommits(t *testing.T) {
 	note := "reused though main moved on: the branch's own change is the same as at " + first.Commit[:7] + ", and it was not rebased"
 	if rep.Commit != first.Commit || rep.BaseCommit == first.BaseCommit || rep.Steps[4].Note != note {
 		t.Errorf("commit %s, base %s, note %q; first %s, %s; want the note %q", rep.Commit, rep.BaseCommit, rep.Steps[4].Note, first.Commit, first.BaseCommit, note)
+	}
+	f.commitOnMain(t, "wip/more-notes.txt")
+	again := f.verify(t)
+	if !again.FromRecord || !again.RanAt.Equal(rep.RanAt) || len(f.proc.ran) != 0 {
+		t.Errorf("an ask with main ahead by a wip commit %+v, ran %q; want the record's verdict", again, f.proc.ran)
 	}
 }
 
