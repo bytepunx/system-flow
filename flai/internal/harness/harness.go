@@ -582,8 +582,11 @@ func takeUp(story, lead string) string {
 // It names files, not folders, in touches, keeping a folder only where files
 // no task can name yet may be added, and says why there (S-0295, ADR-0096);
 // it is told flai refuses a task's folder touch, and a story's its Planning
-// note does not name, and that after names only a story whose accepted
-// change the story needs on main (S-0468, ADR-0188). When the orchestrator
+// note does not name (S-0468, ADR-0188). It is told that after names only
+// a story whose output the story reads, with the reason in its Notes under
+// ### Planning, never an order of preference or a guard against a
+// conflict, which a trial merge judges, and that an overlap holds only
+// until such a trial is clean (S-0551, ADR-0230). When the orchestrator
 // asked for the item again, for what the operator wrote on r.AskedOn since
 // it was planned before, its first paragraph says so in place of the
 // operator's asking, and has the planner read that thread with thread_get
@@ -596,9 +599,11 @@ func planPrompt(r Request) string {
 	}
 	enrich := fmt.Sprintf("its predicted touches, a forecast, and a cost of delay value worked out from the operator's inputs. "+
 		"Run flai touches suggest %[1]s, adding the paths its goal, criteria, and linked design name when it declares no touches, and predict its touches from what that lists, its goal and criteria, the design documents it links, and the code layout, keeping every touch it already declares. "+
-		"Name files, not folders, in the touches you write for the story and for each of its tasks: keep a folder touch only where the story may add files there that no task can name yet, since a folder touch claims every file below it and, while the story is in progress, holds every ready story that touches one; record each folder touch you kept, and why, under the story's ### Planning heading. "+
+		"Name files, not folders, in the touches you write for the story and for each of its tasks: keep a folder touch only where the story may add files there that no task can name yet, since a folder touch claims every file below it and, while the story is in progress, holds every ready story that touches one until a trial merge of its branch at that story's base is clean; record each folder touch you kept, and why, under the story's ### Planning heading. "+
 		"flai refuses the folder touches this asks you not to write, writing nothing: a task's always, and a story's unless the story's Notes name the folder under ### Planning, which one item_edit may add with the touch (ADR-0188). "+
-		"Name in a story's after only a story whose accepted change it needs on main, never an order of preference, which the pull order sets. "+
+		"Name in a story's after only a story whose output it reads: a file, a command, a schema, or a decision the named story writes and this one builds on. "+
+		"Give the reason in the story's Notes under ### Planning, naming that story by its ID and what this one reads from it; flai check warns of an after the Notes do not name (wip.after-reason). "+
+		"Never name one for an order of preference, which the pull order sets, nor to keep two stories off one file, which a trial merge judges (ADR-0230). "+
 		"Run flai forecast %[1]s and flai cod %[1]s. "+
 		"Review each figure, adjust it where you have a reason and state the reason, and write the touches, the forecast (duration, delivery, and basis), and the cost of delay value through flai: item_edit, or flai edit and flai touches. "+
 		"In the story's Notes, under a ### Planning heading that is yours to rewrite, record where each touch came from (declared, co-change, design, or layout) and why each figure stands or was adjusted, and leave the rest of the Notes as it was", story)
@@ -622,7 +627,7 @@ func planPrompt(r Request) string {
 			"For each story you draft, and each one you revisit that is a draft with no tasks, %[3]s. "+
 			"A task carries no draft flag: it is a draft because its story is one. "+
 			"%[4]s\n\n"+
-			"Open one thread on %[2]s that summarises the plan: the stories, their order (their after), each story's tasks and their layers, and the assumptions you made. In that same thread, propose each story you would split, merge, add, or drop, and create drafts for the additions only: never cancel a finalized story or rewrite its words without asking.", enrich, r.Item, draftTasks, taskRules)
+			"Open one thread on %[2]s that summarises the plan: the stories, their order, each story's after and what it reads from the story it names, each story's tasks and their layers, and the assumptions you made. In that same thread, propose each story you would split, merge, add, or drop, and create drafts for the additions only: never cancel a finalized story or rewrite its words without asking.", enrich, r.Item, draftTasks, taskRules)
 		summary = "End with a one-line summary that names by ID the stories and tasks you created and the stories you revisited"
 	}
 	why := fmt.Sprintf("because the operator asked for %s to be planned, in the project at %s.", r.Item, r.Root)

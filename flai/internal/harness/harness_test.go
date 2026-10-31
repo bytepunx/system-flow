@@ -1196,15 +1196,18 @@ func TestThePlannersPromptPlansItsItem(t *testing.T) {
 			"Run flai touches suggest S-nnnn, adding", "Run flai forecast S-nnnn and flai cod S-nnnn", "under a ### Planning heading",
 			// S-0295: file-level touches, a folder kept only for files no task can name yet
 			"Name files, not folders, in the touches you write for the story and for each of its tasks: keep a folder touch only where the story may add files there that no task can name yet",
-			// S-0468 (ADR-0188): flai refuses the folder touches, and after names a needed change
+			// S-0468 (ADR-0188): flai refuses the folder touches
 			"flai refuses the folder touches this asks you not to write, writing nothing: a task's always, and a story's unless the story's Notes name the folder under ### Planning",
-			"Name in a story's after only a story whose accepted change it needs on main, never an order of preference, which the pull order sets",
+			// S-0551 (ADR-0230): after names a story whose output this one reads, with the reason in its Notes
+			"Name in a story's after only a story whose output it reads: a file, a command, a schema, or a decision the named story writes and this one builds on",
+			"Give the reason in the story's Notes under ### Planning, naming that story by its ID and what this one reads from it; flai check warns of an after the Notes do not name (wip.after-reason)",
+			"Never name one for an order of preference, which the pull order sets, nor to keep two stories off one file, which a trial merge judges (ADR-0230)",
 			"make each one you write pass flai check --strict",
 			// S-0300: and its tasks drafted, in layers, with no draft flag of their own
 			"For each story you draft, and each one you revisit that is a draft with no tasks, draft the tasks that deliver its outcome",
 			"A task carries no draft flag: it is a draft because its story is one",
 			// S-0209: one thread holds the plan and what the planner proposes
-			"Open one thread on E-0016 that summarises the plan: the stories, their order (their after), each story's tasks and their layers, and the assumptions you made",
+			"Open one thread on E-0016 that summarises the plan: the stories, their order, each story's after and what it reads from the story it names, each story's tasks and their layers, and the assumptions you made",
 			"In that same thread, propose each story you would split, merge, add, or drop, and create drafts for the additions only",
 			"never cancel a finalized story or rewrite its words without asking",
 			"End with a one-line summary that names by ID the stories and tasks you created and the stories you revisited: flai serve logs",
@@ -1215,10 +1218,13 @@ func TestThePlannersPromptPlansItsItem(t *testing.T) {
 			"Run flai touches suggest S-0208, adding the paths its goal, criteria, and linked design name when it declares no touches",
 			"predict its touches from what that lists, its goal and criteria, the design documents it links, and the code layout, keeping every touch it already declares",
 			// S-0295 (ADR-0096): file-level touches, and why a folder was kept
-			"Name files, not folders, in the touches you write for the story and for each of its tasks: keep a folder touch only where the story may add files there that no task can name yet, since a folder touch claims every file below it and, while the story is in progress, holds every ready story that touches one; record each folder touch you kept, and why, under the story's ### Planning heading",
-			// S-0468 (ADR-0188): flai refuses the folder touches it asks against, and after names a needed change
+			"Name files, not folders, in the touches you write for the story and for each of its tasks: keep a folder touch only where the story may add files there that no task can name yet, since a folder touch claims every file below it and, while the story is in progress, holds every ready story that touches one until a trial merge of its branch at that story's base is clean; record each folder touch you kept, and why, under the story's ### Planning heading",
+			// S-0468 (ADR-0188): flai refuses the folder touches it asks against
 			"flai refuses the folder touches this asks you not to write, writing nothing: a task's always, and a story's unless the story's Notes name the folder under ### Planning, which one item_edit may add with the touch (ADR-0188)",
-			"Name in a story's after only a story whose accepted change it needs on main, never an order of preference, which the pull order sets",
+			// S-0551 (ADR-0230): after names a story whose output this one reads, with the reason in its Notes
+			"Name in a story's after only a story whose output it reads: a file, a command, a schema, or a decision the named story writes and this one builds on",
+			"Give the reason in the story's Notes under ### Planning, naming that story by its ID and what this one reads from it; flai check warns of an after the Notes do not name (wip.after-reason)",
+			"Never name one for an order of preference, which the pull order sets, nor to keep two stories off one file, which a trial merge judges (ADR-0230)",
 			"Run flai forecast S-0208 and flai cod S-0208",
 			"Review each figure, adjust it where you have a reason and state the reason",
 			"write the touches, the forecast (duration, delivery, and basis), and the cost of delay value through flai: item_edit, or flai edit and flai touches",
@@ -1234,7 +1240,7 @@ func TestThePlannersPromptPlansItsItem(t *testing.T) {
 				t.Errorf("%s: prompt lacks %q:\n%s", c.id, w, p)
 			}
 		}
-		for _, never := range []string{"flai stream open", "flai move", "worktree", "work story", "publish"} {
+		for _, never := range []string{"flai stream open", "flai move", "worktree", "work story", "publish", "accepted change it needs on main", "their order (their after)"} {
 			if strings.Contains(p, never) {
 				t.Errorf("%s: the planner's prompt says %q:\n%s", c.id, never, p)
 			}
