@@ -7,7 +7,7 @@ status: ready
 parent: E-0031
 owner: alex
 created: 2026-10-30T01:52:02Z
-updated: 2026-10-31T07:45:39Z
+updated: 2026-10-31T07:48:41Z
 transitions:
   - to: ready
     at: 2026-10-31T07:24:13Z
@@ -37,10 +37,10 @@ usage:
           cost: 0.1619
 forecast:
   duration: 4h
-  delivery: 2026-10-31T13:09:00Z
+  delivery: 2026-10-31T13:12:00Z
   basis: "Its own forecast of 4h; 2nd in the pull order with an in-progress limit of 5, behind S-0548, S-0552 and S-0546."
   by: flai
-  at: 2026-10-31T07:45:39Z
+  at: 2026-10-31T07:48:41Z
 ---
 # S-0547 The close-out runs the queue tiers and the tests of the packages that import a changed package, so what the merge queue would send back is found before review
 

@@ -7,7 +7,7 @@ status: ready
 parent: E-0031
 owner: alex
 created: 2026-10-30T01:52:19Z
-updated: 2026-10-31T07:45:28Z
+updated: 2026-10-31T07:48:53Z
 transitions:
   - to: ready
     at: 2026-10-31T07:24:05Z
@@ -37,10 +37,10 @@ usage:
           cost: 0.0189
 forecast:
   duration: 5h
-  delivery: 2026-10-31T18:30:00Z
-  basis: "flai forecast's 20m from size 13 raised to 5h for eight tasks in four layers: an ADR, a generated ADR index with its command and write paths, check --fix for two generated files, a release change, and the acceptance notice, each with tests; it starts when S-0548 moves to review, forecast 13:30Z."
-  by: planner-S-0550
-  at: 2026-10-31T07:45:28Z
+  delivery: 2026-10-31T14:32:00Z
+  basis: "Its own forecast of 5h; 4th in the pull order with an in-progress limit of 5, behind S-0548, S-0552, S-0546, S-0547 and S-0549."
+  by: flai
+  at: 2026-10-31T07:48:53Z
 ---
 # S-0550 Hub files merge without conflict: the ADR index, the issues summary, and the changelog take a union merge or are generated, and shared paths raise no overlap notice
 
