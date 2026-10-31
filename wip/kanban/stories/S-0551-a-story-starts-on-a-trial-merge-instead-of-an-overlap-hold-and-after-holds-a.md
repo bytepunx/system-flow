@@ -7,7 +7,7 @@ status: ready
 parent: E-0031
 owner: alex
 created: 2026-10-30T01:52:25Z
-updated: 2026-10-31T07:49:01Z
+updated: 2026-10-31T08:20:45Z
 transitions:
   - to: ready
     at: 2026-10-31T07:24:00Z
@@ -37,10 +37,10 @@ usage:
           cost: 0.0343
 forecast:
   duration: 2h
-  delivery: 2026-10-31T13:00:00Z
-  basis: "Its own forecast of 2h; 5th in the pull order with an in-progress limit of 5, behind S-0548, S-0552, S-0546, S-0547, S-0549 and S-0550."
+  delivery: 2026-10-31T13:33:00Z
+  basis: "Its own forecast of 2h; 4th in the pull order with an in-progress limit of 5, behind S-0548, S-0550, S-0552, S-0546, S-0547 and S-0549."
   by: flai
-  at: 2026-10-31T07:49:01Z
+  at: 2026-10-31T08:20:45Z
 ---
 # S-0551 A story starts on a trial merge instead of an overlap hold, and after holds a story for a dependency only, so the worktrees run stories in parallel as people on one remote do
 

@@ -7,7 +7,7 @@ status: ready
 parent: E-0031
 owner: alex
 created: 2026-10-30T01:52:13Z
-updated: 2026-10-31T08:06:18Z
+updated: 2026-10-31T08:20:39Z
 transitions:
   - to: ready
     at: 2026-10-31T07:24:09Z
@@ -37,10 +37,10 @@ usage:
           cost: 0.1136
 forecast:
   duration: 5h
-  delivery: 2026-10-31T14:32:00Z
-  basis: "Its own forecast of 5h; 3rd in the pull order with an in-progress limit of 5, behind S-0548, S-0552, S-0546 and S-0547."
+  delivery: 2026-10-31T15:05:00Z
+  basis: "Its own forecast of 5h; 3rd in the pull order with an in-progress limit of 5, behind S-0548, S-0550, S-0552, S-0546 and S-0547."
   by: flai
-  at: 2026-10-31T07:48:47Z
+  at: 2026-10-31T08:20:39Z
 ---
 # S-0549 The merge queue checks the main checkout's uncommitted files and the lint of main before it builds a batch, so a dirty main fails once in seconds and not every batch
 

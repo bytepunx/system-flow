@@ -7,7 +7,7 @@ status: ready
 parent: E-0031
 owner: alex
 created: 2026-10-30T01:51:56Z
-updated: 2026-10-31T07:48:34Z
+updated: 2026-10-31T08:20:13Z
 transitions:
   - to: ready
     at: 2026-10-31T07:24:17Z
@@ -37,10 +37,10 @@ usage:
           cost: 0.3395
 forecast:
   duration: 2h30m
-  delivery: 2026-10-31T11:11:00Z
-  basis: "Its own forecast of 2h30m; 1st in the pull order with an in-progress limit of 5, behind S-0548 and S-0552."
+  delivery: 2026-10-31T11:43:00Z
+  basis: "Its own forecast of 2h30m; 1st in the pull order with an in-progress limit of 5, behind S-0548, S-0550 and S-0552."
   by: flai
-  at: 2026-10-31T07:48:34Z
+  at: 2026-10-31T08:20:13Z
 ---
 # S-0546 The close-out runs as a flai serve job the story's agent waits on by event, so it never dies at the harness's tool timeout and is never re-run from the start
 

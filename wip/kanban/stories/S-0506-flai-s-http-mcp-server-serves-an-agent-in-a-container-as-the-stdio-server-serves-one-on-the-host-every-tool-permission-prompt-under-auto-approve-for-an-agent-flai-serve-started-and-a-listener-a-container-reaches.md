@@ -7,7 +7,7 @@ status: backlog
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:42:51Z
-updated: 2026-10-31T08:02:32Z
+updated: 2026-10-31T08:21:57Z
 transitions: []
 tags: [cli, mcp]
 topics: [harness, docker, mcp]
@@ -49,10 +49,10 @@ cost_of_delay:
   at: 2026-10-31T08:00:25Z
 forecast:
   duration: 2h
-  delivery: 2026-10-31T18:35:00Z
-  basis: "flai forecast's 1h12m (110 s per unit over 101 done feature stories, size 39) raised to 2h: seven tasks, two of them ADRs, across five packages, with a by-hand check that a container reaches the listener; delivery is flai's playout plus the 48m the raise adds."
-  by: planner-S-0506
-  at: 2026-10-31T07:59:45Z
+  delivery: 2026-10-31T19:02:00Z
+  basis: "Its own forecast of 2h; 14th in the pull order with an in-progress limit of 5, behind S-0548, S-0550, S-0552, S-0546, S-0547, S-0549, S-0551, S-0425, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411 and S-0412."
+  by: flai
+  at: 2026-10-31T08:21:57Z
 finalized:
   by: orchestrator
   at: 2026-10-31T08:02:32Z
