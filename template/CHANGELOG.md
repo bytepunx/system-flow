@@ -2,6 +2,7 @@
 
 ## 1.1.12 - 2026-10-30
 
+- S-0419 The planner, the orchestrator, and the analyzer start through the path a defined role takes, with their prompts read from their role files, and behave exactly as today (patch).
 - S-0419 The planner, the orchestrator, the analyzer, and the curator run from their role files (patch, ADR-0207 §4): each one's harness definition takes as its prompt the body of `design/workflows/roles/<name>.md`, the baseline text with the project's additions below the marker, so a project changes what a built-in role is told by writing there. A project that lacks one of the four files runs the baseline flai carries, and `flai check` gives a new advisory warning, `roles.baseline`, which `--strict` passes over, naming `flai upgrade`, which adds the file. The description, the tools, and the model still come from `.claude/agents/<name>.md`. In `strategic-agents.md`, the section "Rules" gains a rule saying a project adds to a built-in role below its role file's marker, never above it, and `design/workflows/roles/README.md` names `roles.baseline` beside the other role checks. It needs a flai that has it, the release that carries S-0419: an older flai gives a built-in role its `.claude/agents/<name>.md` prompt and does not read the role file's body.
 
 ## 1.1.11 - 2026-10-30
