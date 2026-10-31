@@ -363,12 +363,18 @@ func TestRepositoryManifestTypeChecksChangedFlaioverFiles(t *testing.T) {
 	}
 }
 
-// I-0201: this repository's go-test tier runs the changed packages' tests
-// whole, without -short, so a real-git or monorepo test a story adds runs in
-// flai test and the close-out rather than only in the merge queue's batch;
-// it skips the paid gateway tests, as scripts/integration.sh does. Not gated
-// under -short, so that make test catches a manifest that brings -short back.
-func TestRepositoryManifestRunsChangedGoPackagesWithoutShort(t *testing.T) {
+// S-0548: this repository's go-test tier runs the changed packages' tests
+// with -short, reversing I-0201's choice. The tests that skip under -short,
+// those that need real git or the monorepo, are the integration tier's own;
+// among them the four that check, lint, and prime the whole monorepo
+// (TestMonorepoIsClean, TestRepositoryLintsClean, TestPrimeOnThisRepository,
+// TestPrimeComesInPartsOnThisRepository) took minutes under -race in every
+// close-out that touched their packages and test the repository, not the
+// change. The integration tier runs scripts/integration.sh, without -short,
+// so they all still run in the merge queue's batch. go-test skips the paid
+// gateway tests, as integration.sh does, and names its timeout. Not gated
+// under -short, so that make test catches a manifest that changes either.
+func TestRepositoryManifestRunsChangedGoPackagesShortAndIntegrationWhole(t *testing.T) {
 	root := filepath.Join("..", "..", "..")
 	if _, err := os.Stat(filepath.Join(root, "system-flow.yaml")); err != nil {
 		t.Skip("monorepo not present")
@@ -383,9 +389,18 @@ func TestRepositoryManifestRunsChangedGoPackagesWithoutShort(t *testing.T) {
 			got = s.Argv
 		}
 	}
-	want := []string{"go", "test", "-json", "-race", "-count=1", "-timeout", "20m", "-skip", "^TestGateway", "./internal/verify"}
+	want := []string{"go", "test", "-json", "-race", "-short", "-count=1", "-timeout", "20m", "-skip", "^TestGateway", "./internal/verify"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("go-test runs %q, want %q", got, want)
+	}
+	var integration []string
+	for _, s := range Select(os.DirFS(root), tiers, []string{"flai/internal/verify/select.go"}, true) {
+		if s.Tier.Name == "integration" {
+			integration = s.Argv
+		}
+	}
+	if want := []string{"../scripts/integration.sh", "-json"}; !reflect.DeepEqual(integration, want) {
+		t.Errorf("integration runs %q, want %q, which runs go test without -short", integration, want)
 	}
 }
 

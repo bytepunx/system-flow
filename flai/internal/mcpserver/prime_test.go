@@ -165,11 +165,15 @@ func TestPrimeComesInPartsOnThisRepository(t *testing.T) {
 }
 
 // thisRepository is a session with the prime tool on this monorepo, or
-// skips the test without it.
+// skips the test without it. Under -short, as the close-out's go-test tier
+// runs, it skips too: TestPrimeOnThisRepository and
+// TestPrimeComesInPartsOnThisRepository, which call it first, prime the
+// monorepo's stories, minutes under -race, and are the integration tier's own
+// (S-0548).
 func thisRepository(t *testing.T) *fixture {
 	t.Helper()
 	if testing.Short() {
-		t.Skip("integration: reads the monorepo")
+		t.Skip("the integration tier's own: primes stories of the whole monorepo")
 	}
 	root := filepath.Join("..", "..", "..")
 	if _, err := os.Stat(filepath.Join(root, "system-flow.yaml")); err != nil {

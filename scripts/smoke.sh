@@ -1,5 +1,9 @@
 #!/usr/bin/env sh
 # Smoke tests: end-to-end. Render the template and check it; check this repository.
+# Under flai verify, in a close-out or a merge queue batch, the repository check
+# and the markdown lint run here: TestMonorepoIsClean, in the integration tier,
+# skips there, and so does TestRepositoryLintsClean unless the stories change
+# mdlint or the markdownlint configuration (S-0548).
 set -eu
 . "$(dirname "$0")/env.sh"
 echo "smoke: template render and check"

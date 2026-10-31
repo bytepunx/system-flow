@@ -10,9 +10,7 @@ import (
 	"time"
 
 	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
-	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
-	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -107,9 +105,22 @@ func TestBadFixtureFindings(t *testing.T) {
 	}
 }
 
+// The integration tier's own: it checks the whole monorepo, so it skips
+// under -short, as the close-out's go-test tier runs (S-0548). Under flai
+// verify, in a close-out (CLOSE_OUT_STORY) or a merge queue batch
+// (MERGE_QUEUE_STORIES, verify.MergeQueueStoriesEnv, which this package
+// cannot import: verify imports check), it skips too: the smoke tier, which
+// every path that selects the integration tier selects, runs
+// scripts/check.sh, flai check --strict scoped to the same stories, which
+// fails on the warnings this test passes over as well as on its errors, so
+// the check runs once there. It runs unscoped: make integration, CI, and
+// flai test --all.
 func TestMonorepoIsClean(t *testing.T) {
 	if testing.Short() {
-		t.Skip("integration: reads the monorepo")
+		t.Skip("the integration tier's own: checks the whole monorepo")
+	}
+	if os.Getenv("CLOSE_OUT_STORY") != "" || os.Getenv("MERGE_QUEUE_STORIES") != "" {
+		t.Skip("under flai verify: the smoke tier's scripts/check.sh runs flai check --strict on the monorepo")
 	}
 	repo, err := workitem.Open("../../..")
 	if err != nil {
@@ -119,54 +130,15 @@ func TestMonorepoIsClean(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// In a close-out (scripts/close-out.sh exports the story), the errors
-	// outside the story are main's, logged as scripts/check.sh notes them,
-	// and do not fail the story (S-0249); in a merge queue batch, those
-	// outside every story it verifies (I-0174).
-	stories := scopeStories()
-	story := strings.Join(stories, ",")
-	if len(stories) > 0 {
-		var changed []string
-		for _, id := range stories {
-			c, err := storygit.StoryChanges(execx.System{}, repo, id)
-			if err != nil {
-				t.Fatal(err)
-			}
-			changed = append(changed, c...)
-		}
-		if err := ScopeToStories(res, repo, stories, changed); err != nil {
-			t.Fatal(err)
-		}
-	}
 	// Warnings (a done story awaiting archive, a WIP breach) are board state,
 	// not code defects; the strict check job gates them. Errors fail here.
 	for _, f := range res.Findings {
-		switch {
-		case f.Outside:
-			t.Logf("outside %s: %s:%d: %s: %s: %s", story, f.Path, f.Line, f.Level, f.Rule, f.Message)
-		case f.Level == Error:
+		if f.Level == Error {
 			t.Errorf("%s:%d: %s: %s: %s", f.Path, f.Line, f.Level, f.Rule, f.Message)
-		default:
+		} else {
 			t.Logf("warning: %s:%d: %s: %s", f.Path, f.Line, f.Rule, f.Message)
 		}
 	}
-}
-
-// scopeStories is the stories the run is scoped to: the close-out's story
-// in CLOSE_OUT_STORY, else the merge queue batch's, comma-separated in
-// MERGE_QUEUE_STORIES (verify.MergeQueueStoriesEnv, which this package
-// cannot import: verify imports check), else none.
-func scopeStories() []string {
-	if story := os.Getenv("CLOSE_OUT_STORY"); story != "" {
-		return []string{story}
-	}
-	var stories []string
-	for _, id := range strings.Split(os.Getenv("MERGE_QUEUE_STORIES"), ",") {
-		if id = strings.TrimSpace(id); id != "" {
-			stories = append(stories, id)
-		}
-	}
-	return stories
 }
 
 func TestCacheMustBeIgnored(t *testing.T) {

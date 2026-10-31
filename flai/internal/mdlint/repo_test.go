@@ -18,9 +18,20 @@ import (
 // Every markdown file in the monorepo passes markdownlint-cli2 (make
 // lint-md, in CI), so mdlint must report nothing on any of them: a finding
 // here is one markdownlint would not make.
+//
+// The integration tier's own: it lints the whole monorepo, so it skips under
+// -short, as the close-out's go-test tier runs (S-0548). Under flai verify, in
+// a close-out or a merge queue batch, the smoke tier's scripts/lint-md.sh
+// lints the same files with markdownlint-cli2 itself, so this test runs there
+// only when the stories change what its verdict depends on besides the
+// markdown: mdlint's code, the markdownlint configuration, or lint-md.sh,
+// which pins the markdownlint-cli2 version mdlint agrees with. A false
+// positive the markdown alone brings is still caught in wip/, which flai check
+// --strict lints with mdlint, and elsewhere unscoped: make integration, CI,
+// and flai test --all.
 func TestRepositoryLintsClean(t *testing.T) {
 	if testing.Short() {
-		t.Skip("integration: reads the monorepo")
+		t.Skip("the integration tier's own: lints the whole monorepo")
 	}
 	root := filepath.Join("..", "..", "..")
 	if _, err := os.Stat(filepath.Join(root, "system-flow.yaml")); err != nil {
@@ -46,6 +57,9 @@ func TestRepositoryLintsClean(t *testing.T) {
 				t.Fatal(err)
 			}
 			changed = append(changed, c...)
+		}
+		if !changesTheVerdict(changed) {
+			t.Skipf("under flai verify for %s, which changes neither mdlint nor its configuration: the smoke tier's scripts/lint-md.sh lints the monorepo", story)
 		}
 	}
 	failing, outside, n, err := lintTree(root, changed)
@@ -77,6 +91,37 @@ func scopeStories() []string {
 		}
 	}
 	return stories
+}
+
+// changesTheVerdict reports whether the changed paths hold what
+// TestRepositoryLintsClean's verdict depends on besides the markdown: mdlint's
+// code, a markdownlint configuration file, or scripts/lint-md.sh.
+func changesTheVerdict(changed []string) bool {
+	for _, p := range changed {
+		if strings.HasPrefix(p, "flai/internal/mdlint/") || p == "scripts/lint-md.sh" || slices.Contains(mdlint.ConfigFiles, p) {
+			return true
+		}
+	}
+	return false
+}
+
+func TestChangesTheVerdict(t *testing.T) {
+	for _, tc := range []struct {
+		changed []string
+		want    bool
+	}{
+		{nil, false},
+		{[]string{"design/x.md", "flai/internal/check/check.go", "scripts/check.sh"}, false},
+		{[]string{"design/x.md", "flai/internal/mdlint/rules.go"}, true},
+		{[]string{"flai/internal/mdlint/"}, true},
+		{[]string{".markdownlint.yaml"}, true},
+		{[]string{".markdownlint-cli2.jsonc"}, true},
+		{[]string{"scripts/lint-md.sh"}, true},
+	} {
+		if got := changesTheVerdict(tc.changed); got != tc.want {
+			t.Errorf("changesTheVerdict(%v) = %v, want %v", tc.changed, got, tc.want)
+		}
+	}
 }
 
 // I-0117: a finding in main's wip fails only the close-out of a story that changes the file.
