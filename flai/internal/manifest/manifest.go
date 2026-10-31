@@ -1501,6 +1501,43 @@ func testField(i int, t TestTier, field string) string {
 	return s
 }
 
+// TestWarnings are what a tests key may hold that runs but fails badly, one
+// sentence each, named as TestErrors names a field: each command or
+// all_command that runs go test with no timeout of its own, since go's
+// 10-minute default panics naming only the package (I-0227). A command whose
+// program is not go, such as a script, is not inspected.
+func (m Manifest) TestWarnings() []string {
+	var warns []string
+	for i, t := range m.Tests {
+		for _, c := range []struct {
+			field string
+			args  []string
+		}{{"command", t.Command}, {"all_command", t.AllCommand}} {
+			if runsGoTest(c.args) && !slices.ContainsFunc(c.args[2:], isTimeoutFlag) {
+				warns = append(warns, testField(i, t, c.field)+` runs go test with no -timeout, so go's 10-minute default panics naming only the package when a slow host reaches it; add "-timeout" and a duration above the slowest package's, such as "20m"`)
+			}
+		}
+	}
+	return warns
+}
+
+// runsGoTest reports whether args run go test: the program is go, by name or
+// by a path ending in it, and its first argument is test.
+func runsGoTest(args []string) bool {
+	return len(args) >= 2 && filepath.Base(strings.TrimSpace(args[0])) == "go" && args[1] == "test"
+}
+
+// isTimeoutFlag reports whether a is go test's timeout flag, with one dash or
+// two and with its value after = or not: -timeout, --timeout=20m, or
+// -test.timeout as the test binary takes it.
+func isTimeoutFlag(a string) bool {
+	if !strings.HasPrefix(a, "-") {
+		return false
+	}
+	name, _, _ := strings.Cut(strings.TrimPrefix(a[1:], "-"), "=")
+	return name == "timeout" || name == "test.timeout"
+}
+
 // coverCycles are the groups of tiers that cover one another through covers,
 // each the tiers' indexes in list order and each group once; tiers maps a
 // name to the index of the first tier with it. A tier naming itself is not a

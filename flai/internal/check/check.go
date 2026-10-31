@@ -269,6 +269,10 @@ func (c *checker) layout() {
 		mf := filepath.Join(c.repo.Root, "system-flow.yaml")
 		c.add(Error, "manifest.tests", mf, keyLine(mf, "tests"), "%s", msg)
 	}
+	for _, msg := range m.TestWarnings() {
+		mf := filepath.Join(c.repo.Root, "system-flow.yaml")
+		c.add(Warning, "manifest.tests-timeout", mf, keyLine(mf, "tests"), "%s", msg)
+	}
 	for _, msg := range m.ProjectErrors(os.DirFS(c.repo.Root)) {
 		mf := filepath.Join(c.repo.Root, "system-flow.yaml")
 		c.add(Error, "manifest.projects", mf, keyLine(mf, "projects"), "%s", msg)

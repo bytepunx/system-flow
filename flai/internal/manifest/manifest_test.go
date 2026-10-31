@@ -1839,6 +1839,66 @@ func TestTestErrors(t *testing.T) {
 	}
 }
 
+// S-0548, I-0227: a command or all_command that runs go test without a
+// timeout of its own is warned of, naming the tier's index, field, and name,
+// since go's 10-minute default panics naming only the package; one that names
+// a timeout, in any of the forms go takes, and one that runs a script or
+// another go command, are not.
+func TestTestWarnings(t *testing.T) {
+	tier := func(command, all []string) TestTier {
+		return TestTier{Name: "go-test", Command: command, AllCommand: all, Paths: []string{"flai/**"}}
+	}
+	for _, c := range []struct {
+		name string
+		tier TestTier
+		want []string
+	}{
+		{"command", tier([]string{"go", "test", "-json", "-race", "{packages}"}, nil), []string{`tests[0].command (tier "go-test") runs go test with no -timeout`}},
+		{"all_command", tier([]string{"go", "test", "-timeout", "20m", "{packages}"}, []string{"go", "test", "./..."}), []string{`tests[0].all_command (tier "go-test") runs go test with no -timeout`}},
+		{"both", tier([]string{"go", "test", "{packages}"}, []string{"go", "test", "./..."}), []string{`tests[0].command (tier "go-test")`, `tests[0].all_command (tier "go-test")`}},
+		{"go by its path", tier([]string{"/usr/local/go/bin/go", "test", "{packages}"}, nil), []string{`tests[0].command (tier "go-test") runs go test with no -timeout`}},
+		{"a timeout after -args is still one", tier([]string{"go", "test", "{packages}", "-args", "-test.timeout=20m"}, nil), nil},
+		{"a value is not a flag", tier([]string{"go", "test", "-run", "timeout", "{packages}"}, nil), []string{`tests[0].command (tier "go-test")`}},
+		{"three dashes are not the flag", tier([]string{"go", "test", "---timeout=20m", "{packages}"}, nil), []string{`tests[0].command (tier "go-test")`}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			warns := Manifest{Tests: []TestTier{c.tier}}.TestWarnings()
+			if len(warns) != len(c.want) {
+				t.Fatalf("got %d warnings, want %d:\n%s", len(warns), len(c.want), strings.Join(warns, "\n"))
+			}
+			for i, w := range c.want {
+				if !strings.HasPrefix(warns[i], w) {
+					t.Errorf("warning %d: %q, want it to begin %q", i, warns[i], w)
+				}
+			}
+		})
+	}
+	got := Manifest{Tests: []TestTier{tier([]string{"go", "test", "{packages}"}, nil)}}.TestWarnings()
+	if want := `add "-timeout" and a duration above the slowest package's`; len(got) != 1 || !strings.Contains(got[0], want) || !strings.Contains(got[0], "10-minute default panics naming only the package") {
+		t.Errorf("got %q, want it to say why and to say %s", got, want)
+	}
+	for _, args := range [][]string{
+		{"go", "test", "-timeout", "20m", "{packages}"},
+		{"go", "test", "-timeout=20m", "{packages}"},
+		{"go", "test", "--timeout", "20m", "{packages}"},
+		{"go", "test", "--timeout=20m", "{packages}"},
+		{"go", "test", "-test.timeout", "20m", "{packages}"},
+		{"go", "test", "-test.timeout=20m", "{packages}"},
+		{"go", "vet", "{packages}"},
+		{"go", "build", "./..."},
+		{"scripts/integration.sh", "-json"},
+		{"../scripts/with-env.sh", "go", "test", "./..."},
+		{"gotest", "test", "./..."},
+	} {
+		if warns := (Manifest{Tests: []TestTier{tier(args, nil)}}).TestWarnings(); len(warns) != 0 {
+			t.Errorf("%q warned of: %v", args, warns)
+		}
+	}
+	if warns := (Manifest{}).TestWarnings(); len(warns) != 0 {
+		t.Errorf("no tests key warned of: %v", warns)
+	}
+}
+
 // S-0273: with no tests key the project has one plain tier running
 // scripts/test.sh, when it is there, for every path; an empty list has none,
 // and a list with a bad tier is refused.

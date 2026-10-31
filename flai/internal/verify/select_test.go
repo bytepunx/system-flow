@@ -383,7 +383,7 @@ func TestRepositoryManifestRunsChangedGoPackagesWithoutShort(t *testing.T) {
 			got = s.Argv
 		}
 	}
-	want := []string{"go", "test", "-json", "-race", "-count=1", "-skip", "^TestGateway", "./internal/verify"}
+	want := []string{"go", "test", "-json", "-race", "-count=1", "-timeout", "20m", "-skip", "^TestGateway", "./internal/verify"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("go-test runs %q, want %q", got, want)
 	}
