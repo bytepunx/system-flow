@@ -35,6 +35,10 @@ type Repo struct {
 	// Git runs git for the rules that ask it: a story goes to review only
 	// with its worktree committed (S-0140). Nil skips them.
 	Git execx.Runner
+	// Trial judges by a trial merge whether an overlap holds a ready story
+	// (S-0551), as Repo.Holds applies it. Nil leaves the overlap hold as it
+	// was.
+	Trial TrialJudge
 }
 
 // Open finds the manifest above start and returns a Repo.

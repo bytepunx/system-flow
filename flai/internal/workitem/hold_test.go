@@ -749,3 +749,138 @@ func TestPlanningTouchErrorSaysWhatToDo(t *testing.T) {
 		t.Errorf("a component's tag names its folder: %s", tag)
 	}
 }
+
+// fakeTrial is a TrialJudge that answers from verdicts by holder, and counts
+// its calls by held and holder.
+type fakeTrial struct {
+	paths map[string][]string // by holder
+	errs  map[string]error    // by holder
+	calls map[string]int      // by "held holder"
+}
+
+func (f *fakeTrial) judge(held, holder string) ([]string, error) {
+	if f.calls == nil {
+		f.calls = map[string]int{}
+	}
+	f.calls[held+" "+holder]++
+	return f.paths[holder], f.errs[holder]
+}
+
+// S-0551: with a trial judge, an overlap holds only when the trial merge
+// conflicts, naming the conflicting paths, and holds as it does without one
+// when the trial cannot run, saying why.
+func TestTrialMergeJudgesAnOverlap(t *testing.T) {
+	const today = "touches flai/cmd/serve, inside flai/cmd which S-0001 (in progress) touches"
+	const clears = "; starts when S-0001 moves to review, is cancelled, or is sent back"
+	cases := []struct {
+		name  string
+		trial fakeTrial
+		why   string // empty: not held
+	}{
+		{"a clean trial frees it", fakeTrial{}, ""},
+		{"a conflicting trial holds it and names the paths",
+			fakeTrial{paths: map[string][]string{"S-0001": {"flai/cmd/serve/a.go", "flai/cmd/serve/b.go"}}},
+			"held (overlap): " + today + ", and a trial merge of story/S-0001 at S-0009's base conflicts in flai/cmd/serve/a.go and flai/cmd/serve/b.go" + clears},
+		{"a trial that cannot run holds as today and says why",
+			fakeTrial{errs: map[string]error{"S-0001": errors.New("story/S-0001 has no branch yet")}},
+			"held (overlap): " + today + "; the trial merge could not run: story/S-0001 has no branch yet" + clears},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			open, ready := claimed("S-0001", InProgress, "flai/cmd"), claimed("S-0009", Ready, "flai/cmd/serve")
+			h := NewHolds([]*Item{open, ready}, holdProjects).WithTrial(c.trial.judge)
+			hold := h.Of(ready)
+			switch {
+			case c.why == "" && hold != nil:
+				t.Fatalf("held: %s", hold.Reason)
+			case c.why == "":
+			case hold == nil:
+				t.Fatal("not held")
+			case hold.Code != HoldOverlap || hold.Reason != c.why:
+				t.Errorf("hold = %s: %s\nwant   %s: %s", hold.Code, hold.Reason, HoldOverlap, c.why)
+			}
+			over := h.OverlapsBy(ready)
+			if (c.why == "") != (over == nil) {
+				t.Errorf("overlaps = %+v, held %v", over, c.why != "")
+			}
+		})
+	}
+}
+
+// S-0551: the judge is asked once per held and holder pair, however many of
+// their paths overlap and however often the story is judged; a holder whose
+// trial is clean is not named, nor asked about.
+func TestTrialMergeIsAskedOncePerPair(t *testing.T) {
+	ready := claimed("S-0009", Ready, "flai/cmd", "flai/internal", "docs/users")
+	items := []*Item{
+		claimed("S-0001", InProgress, "flai/cmd/serve.go", "flai/internal/x.go", "flai/internal/y.go"),
+		claimed("S-0002", InProgress, "docs"),
+		ready,
+	}
+	trial := &fakeTrial{paths: map[string][]string{"S-0002": {"docs/users/flai.md"}}}
+	h := NewHolds(items, holdProjects).WithTrial(trial.judge).WithAsks([]Ask{
+		{Conversation: "MS-0001", Held: "S-0009", Holder: "S-0001", At: "2026-10-31T09:00:00Z"},
+		{Conversation: "MS-0002", Held: "S-0009", Holder: "S-0002", At: "2026-10-31T09:00:00Z"},
+	})
+	hold := h.Of(ready)
+	h.Of(ready)
+	over := h.OverlapsBy(ready)
+	if hold == nil || strings.Contains(hold.Reason, "S-0001") || !strings.Contains(hold.Reason, "conflicts in docs/users/flai.md") {
+		t.Errorf("hold = %+v", hold)
+	}
+	if len(over) != 1 || over[0].By != "S-0002" {
+		t.Errorf("overlaps = %+v, want S-0002 alone", over)
+	}
+	if hold != nil && (len(hold.Asked) != 1 || hold.Asked[0].By != "S-0002") {
+		t.Errorf("asked = %+v, want S-0002 alone", hold.Asked)
+	}
+	want := map[string]int{"S-0009 S-0001": 1, "S-0009 S-0002": 1}
+	if fmt.Sprint(trial.calls) != fmt.Sprint(want) {
+		t.Errorf("calls = %v, want %v", trial.calls, want)
+	}
+}
+
+// S-0551: a no-touches hold, of a ready story without touches or by an open
+// story without them, never asks the judge; nor does a memo remember a pair
+// while a judge is set.
+func TestTrialMergeLeavesNoTouchesHoldsAndTheMemo(t *testing.T) {
+	trial := &fakeTrial{}
+	bare, ready := claimed("S-0009", Ready), claimed("S-0010", Ready, "flai")
+	h := NewHolds([]*Item{claimed("S-0001", InProgress, "flai"), bare, ready}, holdProjects).WithTrial(trial.judge)
+	if hold := h.Of(bare); hold == nil || hold.Code != HoldNoTouches {
+		t.Errorf("story without touches: hold = %+v", hold)
+	}
+	h = NewHolds([]*Item{claimed("S-0001", InProgress), ready}, holdProjects).WithTrial(trial.judge)
+	if hold := h.Of(ready); hold == nil || hold.Code != HoldNoTouches {
+		t.Errorf("open story without touches: hold = %+v", hold)
+	}
+	if len(trial.calls) != 0 {
+		t.Errorf("judge asked %v", trial.calls)
+	}
+
+	memo := NewHoldsMemo()
+	items := []*Item{claimed("S-0001", InProgress, "flai"), ready}
+	if hold := memo.NewHolds(items, holdProjects).Of(ready); hold == nil {
+		t.Fatal("not held without a judge")
+	}
+	if hold := memo.NewHolds(items, holdProjects).WithTrial(trial.judge).Of(ready); hold != nil {
+		t.Errorf("a clean trial with a memo: held: %s", hold.Reason)
+	}
+}
+
+// S-0551: Repo.Holds applies the repository's judge.
+func TestRepoHoldsApplyTheTrial(t *testing.T) {
+	r := newProject(t)
+	items := []*Item{claimed("S-0001", InProgress, "flai"), claimed("S-0009", Ready, "flai")}
+	if r.Holds(items).Of(items[1]) == nil {
+		t.Fatal("with no judge, S-0001 should hold S-0009")
+	}
+	trial := &fakeTrial{}
+	r.Trial = trial.judge
+	if h := r.Holds(items).Of(items[1]); h != nil {
+		t.Errorf("a clean trial, yet held: %s", h.Reason)
+	}
+	if trial.calls["S-0009 S-0001"] != 1 {
+		t.Errorf("calls = %v", trial.calls)
+	}
+}

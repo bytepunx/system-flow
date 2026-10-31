@@ -195,7 +195,8 @@ type Overlap struct {
 // after: and no story without touches holding it), each open story that holds
 // it, in ID order, with the paths it is held on that no share clears: for
 // each holding pair of entries the narrower, the path both stories change,
-// in the ready story's claim order, without duplicates. Otherwise nil.
+// in the ready story's claim order, without duplicates. A holder whose trial
+// merge is clean holds nothing, so it is not named (S-0551). Otherwise nil.
 func (h *Holds) OverlapsBy(story *Item) []Overlap {
 	return h.overlapsBy(story, h.of(story))
 }
@@ -220,7 +221,7 @@ func (h *Holds) overlapsBy(story *Item, hold *Hold) []Overlap {
 				paths = append(paths, p)
 			}
 		}
-		if len(paths) > 0 {
+		if len(paths) > 0 && !h.clearedByTrial(story.ID, o.id) {
 			out = append(out, Overlap{By: o.id, Paths: paths})
 		}
 	}

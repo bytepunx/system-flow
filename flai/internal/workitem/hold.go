@@ -28,7 +28,13 @@ import (
 // conversation, holds nothing while the share is in force (ADR-0134, share.go).
 // A hold on overlap alone names each holding story whose agent flai asked
 // about it in their open conversation since the ready story last entered
-// ready (S-0338). The operator's own moves only warn.
+// ready (S-0338). With a trial judge (TrialJudge, ADR-0046 as S-0551 refines
+// it), an overlap between a ready story and a story in progress holds only
+// when a trial merge of the holder's branch at the ready story's base
+// conflicts, and the reason names the conflicting paths; a clean trial holds
+// nothing, and a trial that cannot run holds as an overlap does without one,
+// saying why. A no-touches hold never asks the judge. The operator's own
+// moves only warn.
 
 // Hold reason codes.
 const (
@@ -56,6 +62,17 @@ type HoldAsk struct {
 	At           string `json:"at"`           // when, in TimeFormat
 }
 
+// TrialJudge answers the paths that conflict when holder's branch merges at
+// held's base, none when the merge is clean, and an error when the trial
+// cannot run (S-0551).
+type TrialJudge func(held, holder string) ([]string, error)
+
+// trialVerdict is what a TrialJudge answered for one pair.
+type trialVerdict struct {
+	paths []string
+	err   error
+}
+
 // Holds judges ready stories against the stories open at one reading of the
 // repository.
 type Holds struct {
@@ -70,6 +87,8 @@ type Holds struct {
 	// archived one when only the active items were read.
 	lookup func(id string) *Item
 	memo   *HoldsMemo
+	trial  TrialJudge                 // a trial merge clears an overlap, when set (S-0551)
+	trials map[[2]string]trialVerdict // what trial answered, by held and holder
 }
 
 // HoldsMemo remembers, for the Holds that share it, the claim of each story,
@@ -166,7 +185,7 @@ func (r *Repo) Holds(items []*Item) *Holds {
 		return nil
 	}
 	shares, asks := r.Conversations()
-	return h.WithShares(shares).WithAsks(asks)
+	return h.WithShares(shares).WithAsks(asks).WithTrial(r.Trial)
 }
 
 // SharedClaims is the manifest's claims as system-flow.yaml has them now,
@@ -187,6 +206,36 @@ func (r *Repo) SharedClaims() manifest.Claims {
 func (h *Holds) WithShared(claims manifest.Claims) *Holds {
 	h.shared = claims
 	return h
+}
+
+// WithTrial has h hold a ready story on overlap only when j finds that a
+// trial merge conflicts (S-0551), nil for the overlap alone, and returns h.
+func (h *Holds) WithTrial(j TrialJudge) *Holds {
+	h.trial = j
+	h.trials = map[[2]string]trialVerdict{}
+	return h
+}
+
+// trialOf is what h.trial answers for held and holder, asked once per pair.
+func (h *Holds) trialOf(held, holder string) trialVerdict {
+	k := [2]string{held, holder}
+	if v, ok := h.trials[k]; ok {
+		return v
+	}
+	paths, err := h.trial(held, holder)
+	v := trialVerdict{paths: paths, err: err}
+	h.trials[k] = v
+	return v
+}
+
+// clearedByTrial says whether a trial merge of holder at held's base is
+// clean, so that their overlap holds nothing; false without a judge.
+func (h *Holds) clearedByTrial(held, holder string) bool {
+	if h.trial == nil {
+		return false
+	}
+	v := h.trialOf(held, holder)
+	return v.err == nil && len(v.paths) == 0
 }
 
 // Overlaps says whether paths a and b, such as entries of two claims, overlap
@@ -685,9 +734,10 @@ func (h *Holds) overlap(story *Item) *Hold {
 }
 
 // heldBy is holdBy, remembered in the memo for claim, numbered n, and o's
-// while no share is in force.
+// while no share is in force and no trial judge is set: branches move
+// between looks.
 func (h *Holds) heldBy(held string, claim []string, n int, o openClaim) (part, code string) {
-	if n == 0 || o.n == 0 || len(h.shares) > 0 {
+	if n == 0 || o.n == 0 || len(h.shares) > 0 || h.trial != nil {
 		return h.holdBy(held, claim, o)
 	}
 	k := claimPair{held: n, holder: o.n, label: o.label}
@@ -702,7 +752,8 @@ func (h *Holds) heldBy(held string, claim []string, n int, o openClaim) (part, c
 // holdBy says how claim, held's, overlaps o's, if it does, naming the first
 // pair that holds: a pair whose overlap lies wholly inside a shared path, or
 // inside a path o shared with held, does not, so the pair named is one still
-// held.
+// held. With a trial judge, an overlap holds only when the trial merge
+// conflicts, naming the conflicting paths, or cannot run, saying why.
 func (h *Holds) holdBy(held string, claim []string, o openClaim) (part, code string) {
 	who := o.id + " (" + o.label + ")"
 	if len(o.paths) == 0 {
@@ -714,12 +765,24 @@ func (h *Holds) holdBy(held string, claim []string, o openClaim) (part, code str
 	}
 	switch {
 	case mine == theirs:
-		return fmt.Sprintf("touches %s, which %s touches too", mine, who), HoldOverlap
+		part = fmt.Sprintf("touches %s, which %s touches too", mine, who)
 	case strings.HasPrefix(mine, theirs+"/"):
-		return fmt.Sprintf("touches %s, inside %s which %s touches", mine, theirs, who), HoldOverlap
+		part = fmt.Sprintf("touches %s, inside %s which %s touches", mine, theirs, who)
 	default:
-		return fmt.Sprintf("touches %s, which holds %s that %s touches", mine, theirs, who), HoldOverlap
+		part = fmt.Sprintf("touches %s, which holds %s that %s touches", mine, theirs, who)
 	}
+	if h.trial == nil {
+		return part, HoldOverlap
+	}
+	switch v := h.trialOf(held, o.id); {
+	case v.err != nil:
+		part += "; the trial merge could not run: " + v.err.Error()
+	case len(v.paths) == 0:
+		return "", ""
+	default:
+		part += fmt.Sprintf(", and a trial merge of story/%s at %s's base conflicts in %s", o.id, held, and(v.paths))
+	}
+	return part, HoldOverlap
 }
 
 // holding is every pair of an entry of claim, held's, and one of o's that
