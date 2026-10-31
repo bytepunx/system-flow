@@ -479,6 +479,39 @@ Each value is counted in the ISO week that holds it, from the window's start to 
 
 A repeat is counted only once the curator has listed the thread in an entry's `asked_again`, so this week's repeats read low until its next run, and a week no run has reached reads none at all. The rate counts every question to the operator, not only those an entry could have answered.
 
+## Close-outs (S-0546)
+
+How the close-outs flai serve runs as jobs end, and how long they take ([ADR-0229](../adrs/0229-the-close-out-runs-as-a-flai-serve-job-the-story-s-agent-asks-for-with-the.md)): per week, the close-outs by verdict, those answered from the record apart, and the median and 85th percentile of the durations of those that ran. Every value comes from one source.
+
+| Source | What is read |
+|--------|--------------|
+| Serve journal | `journal.jsonl` in the serve folder beside the configuration this flai reads, `~/.flai/serve/journal.jsonl` by default. Only a host that runs flai serve has one. Its entries with action `close-out`, method `verify.job`, and `root` the project's main checkout |
+
+| Value | Definition |
+|-------|------------|
+| A close-out | An end entry: outcome `done` or `failed`. A start entry, outcome `started`, is not counted |
+| Its verdict | The entry's `verdict`: `passed`, `stopped`, `failed`, or `interrupted`, a job serve was running when it stopped. `interrupted` counts as `failed`, as its outcome is |
+| Answered from the record | An end entry whose `detail` begins `from the record`: the close-out ran nothing ([ADR-0229](../adrs/0229-the-close-out-runs-as-a-flai-serve-job-the-story-s-agent-asks-for-with-the.md) §5) |
+| A close-out that ran | A close-out not answered from the record and not `interrupted`, with `duration_ms`. An interrupted job's time measures serve's stop, not the close-out |
+| Its week | The ISO week that holds the end entry's `at` |
+
+Each value is counted in the ISO week that holds it, from the window's start to now, as `coordination.weeks[]` is.
+
+| Value | Definition | Precision |
+|-------|------------|-----------|
+| `closeouts` | Absent when the host has no serve journal, as a container has none. An unreadable journal is warned of on stderr, and the section is absent too | |
+| `closeouts.weeks[]` | One point per ISO week: `week` and `start`, as `claims.weeks[]` has them, then `passed`, `stopped`, `failed`, `recorded`, `p50_seconds`, and `p85_seconds` | `start` is `YYYY-MM-DD`, a Monday |
+| `closeouts.weeks[].passed` | The close-outs with the verdict `passed`, not answered from the record | Whole count |
+| `closeouts.weeks[].stopped` | Those with `stopped`, not answered from the record | Whole count |
+| `closeouts.weeks[].failed` | Those with `failed` or `interrupted`, not answered from the record | Whole count |
+| `closeouts.weeks[].recorded` | The close-outs answered from the record, whatever their verdict | Whole count |
+| `closeouts.weeks[].p50_seconds` | The median of the `duration_ms` of the week's close-outs that ran, in seconds. Absent when none ran: such a week has no duration, a gap, not 0 | Nearest rank on the milliseconds, then over 1000, not rounded |
+| `closeouts.weeks[].p85_seconds` | Their 85th percentile, likewise | Likewise |
+
+`flai stats` prints the section under a `close-outs` heading, one line per week of the window, `2026-W44  2026-10-26  passed 12 · stopped 3 · failed 1 · recorded 4 · p50 6m12s · p85 9m40s`, the durations as Go durations to the second and `–` in a week none ran. It prints nothing when `closeouts` is absent.
+
+Not counted: a close-out a session ran itself, with `scripts/close-out.sh` or `flai verify` in its own process, and an answer from the record that `flai verify` gave without serve. Neither reaches the journal. Before the release that journals the job, weeks show nothing, which is no evidence either way.
+
 ## Charts
 
 Every chart spans the window chosen ([ADR-0054](../adrs/0054-every-chart-spans-the-window-chosen-its-time-axis-runs-from-the-window-s-start.md), S-0166), save CoD by Order, which projects from now ([What the pull order costs](#what-the-pull-order-costs-s-0213)). A time axis runs from the window's start to the report's now, whatever the data: a series by the day from the day that holds the start, a series in buckets from the bucket that holds the start to the one that holds now, with half a bucket either side. A chart per item plots only the items completed in the window, and time in state groups them by the day they were completed; `items` in `flai stats --json` holds every item of the type, and the dashboard picks them.
