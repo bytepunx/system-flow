@@ -297,6 +297,64 @@ func TestSelectStoryLeavingQueueAnswersTheQueueTiersApart(t *testing.T) {
 	}
 }
 
+// manualTiers are a tier for paths, an all_only one, and two manual ones, one
+// with paths that would select it and one that covers the tier for paths.
+var manualTiers = []Tier{
+	{Name: "go-test", Dir: "flai", Paths: []string{"flai/**/*.go"}, Command: []string{"go", "test", "{packages}"}},
+	{Name: "smoke", AllOnly: true, Command: []string{"smoke.sh"}},
+	{Name: "gateway", Manual: true, Command: []string{"gateway-smoke.sh"}},
+	{Name: "deep", Manual: true, Dir: "flai", Paths: []string{"flai/**"}, Command: []string{"go", "test", "-race", "{packages}"}, Covers: []string{"go-test"}},
+}
+
+// S-0548: no run but one that names it selects a manual tier: not paths that
+// match its own, not all, not a story's close-out, not the merge queue's
+// batch; and a manual tier left out covers nothing, so the tier it covers
+// runs.
+func TestSelectLeavesTheManualTiersOut(t *testing.T) {
+	fsys := fstest.MapFS{"flai/go.mod": {}, "flai/main.go": {}}
+	paths := []string{"flai/main.go"}
+	run, queued := SelectStoryLeavingQueue(fsys, manualTiers, paths)
+	for _, tc := range []struct {
+		name string
+		got  []Selected
+		want []string
+	}{
+		{"Select for paths", Select(fsys, manualTiers, paths, false), []string{"go-test"}},
+		{"Select with all", Select(fsys, manualTiers, paths, true), []string{"go-test", "smoke"}},
+		{"SelectStory", SelectStory(fsys, manualTiers, paths), []string{"go-test", "smoke"}},
+		{"SelectStoryLeavingQueue's run", run, []string{"go-test", "smoke"}},
+		{"SelectStoryLeavingQueue's queued", queued, nil},
+	} {
+		if got := coverage(tc.got); !reflect.DeepEqual(got, tc.want) {
+			t.Errorf("%s: selected %q, want %q", tc.name, got, tc.want)
+		}
+	}
+}
+
+// S-0548: SelectTier chooses the tier of the name, trimmed, alone, with the
+// argv it runs with all, whether it is manual, all_only, or neither, and
+// answers false for a name no tier has.
+func TestSelectTierChoosesOneTierByItsName(t *testing.T) {
+	tiers := append(slices.Clone(manualTiers), Tier{Name: "golangci", Dir: "flai", Paths: []string{"flai/**/*.go"}, Command: []string{"golangci-lint", "run", "{packages}"}, AllCommand: []string{"golangci-lint", "run"}})
+	for _, tc := range []struct{ name, want string }{
+		{"gateway", "gateway-smoke.sh"},
+		{" deep ", "go test -race ./..."},
+		{"smoke", "smoke.sh"},
+		{"go-test", "go test ./..."},
+		{"golangci", "golangci-lint run"},
+	} {
+		s, ok := SelectTier(tiers, tc.name)
+		if !ok || s.Tier.Name != strings.TrimSpace(tc.name) || strings.Join(s.Argv, " ") != tc.want || s.CoveredBy != "" {
+			t.Errorf("SelectTier(%q) = %+v, %v; want tier %s running %q", tc.name, s, ok, strings.TrimSpace(tc.name), tc.want)
+		}
+	}
+	for _, name := range []string{"nope", "", "flai/main.go"} {
+		if s, ok := SelectTier(tiers, name); ok {
+			t.Errorf("SelectTier(%q) chose %+v", name, s)
+		}
+	}
+}
+
 // I-0105: this repository's manifest has flai test check a changed flaiover
 // file's format and lint with flaiover-lint, outside --all and before vitest,
 // rather than leaving prettier and eslint to the close-out's flaiover tier.

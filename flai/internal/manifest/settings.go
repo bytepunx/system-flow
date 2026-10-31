@@ -783,6 +783,9 @@ func testsLines(tiers []TestTier, indent, key, old string) []string {
 		if t.Queue {
 			field("queue", "true")
 		}
+		if t.Manual {
+			field("manual", "true")
+		}
 	}
 	return out
 }
@@ -801,7 +804,7 @@ func flowList(items []string) string {
 // absent and one empty alike.
 func sameTiers(a, b []TestTier) bool {
 	return slices.EqualFunc(a, b, func(x, y TestTier) bool {
-		return x.Name == y.Name && x.Dir == y.Dir && x.Format == y.Format && x.AllOnly == y.AllOnly && x.Queue == y.Queue &&
+		return x.Name == y.Name && x.Dir == y.Dir && x.Format == y.Format && x.AllOnly == y.AllOnly && x.Queue == y.Queue && x.Manual == y.Manual &&
 			slices.Equal(x.Command, y.Command) && slices.Equal(x.Paths, y.Paths) && slices.Equal(x.AllCommand, y.AllCommand) &&
 			slices.Equal(x.FixCommand, y.FixCommand) && slices.Equal(x.Covers, y.Covers)
 	})

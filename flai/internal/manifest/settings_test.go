@@ -950,6 +950,32 @@ func TestEditSettingsWritesQueue(t *testing.T) {
 	}
 }
 
+// S-0548: a tier's manual is written, read back, and makes two tiers differ,
+// and a manual tier needs no paths.
+func TestEditSettingsWritesManual(t *testing.T) {
+	value := `[{"name":"gateway","command":["scripts/gateway-smoke.sh"],"manual":true}]`
+	got, err := EditSettings([]byte(settingsFixture), []Assignment{{"tests", value}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := settingsFixture + "tests:\n" +
+		"  - name: gateway\n" +
+		"    command: [scripts/gateway-smoke.sh]\n" +
+		"    manual: true\n"
+	if string(got) != want {
+		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
+	}
+	m := loaded(t, got)
+	if len(m.Tests) != 1 || !m.Tests[0].Manual {
+		t.Errorf("reads back: %+v", m.Tests)
+	}
+	automatic := slices.Clone(m.Tests)
+	automatic[0].Manual = false
+	if sameTiers(m.Tests, automatic) {
+		t.Error("tiers that differ in manual are the same")
+	}
+}
+
 // S-0273: a value that is not a list of tiers, and a tier the manifest's
 // validation refuses, are refused with the field and the reason, and nothing
 // is written.

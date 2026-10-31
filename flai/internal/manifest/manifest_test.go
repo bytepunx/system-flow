@@ -1677,8 +1677,8 @@ func TestDesignStylesheet(t *testing.T) {
 }
 
 // S-0273: tests is an ordered list of tiers that loads with every field,
-// queue among them (S-0405), reads back the same through YAML and JSON, and
-// is valid.
+// queue (S-0405) and manual (S-0548) among them, reads back the same through
+// YAML and JSON, and is valid.
 func TestTestsRoundTrip(t *testing.T) {
 	body := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\n" +
 		"tests:\n" +
@@ -1692,13 +1692,17 @@ func TestTestsRoundTrip(t *testing.T) {
 		"- name: smoke\n" +
 		"  command: [scripts/smoke.sh]\n" +
 		"  all_only: true\n" +
-		"  queue: true\n"
+		"  queue: true\n" +
+		"- name: gateway\n" +
+		"  command: [scripts/gateway-smoke.sh]\n" +
+		"  manual: true\n"
 	m := loaded(t, []byte(body))
 	want := []TestTier{
 		{Name: "unit", Command: []string{"go", "test", "-json", PlaceholderPackages}, Dir: "flai",
 			Paths: []string{"flai/**", "!flai/testdata/**"}, Format: FormatGoTestJSON, AllCommand: []string{"go", "test", "-json", "./..."},
 			FixCommand: []string{"gofmt", "-w", PlaceholderFiles}},
 		{Name: "smoke", Command: []string{"scripts/smoke.sh"}, AllOnly: true, Queue: true},
+		{Name: "gateway", Command: []string{"scripts/gateway-smoke.sh"}, Manual: true},
 	}
 	if !reflect.DeepEqual(m.Tests, want) {
 		t.Fatalf("tests:\n got %+v\nwant %+v", m.Tests, want)
@@ -1725,7 +1729,7 @@ func TestTestsRoundTrip(t *testing.T) {
 	if err := json.Unmarshal(js, &fromJSON); err != nil || !reflect.DeepEqual(fromJSON, want) {
 		t.Errorf("JSON round trip: %v\n%s", err, js)
 	}
-	if !strings.Contains(string(js), `"all_only":true`) || !strings.Contains(string(js), `"all_command":`) || !strings.Contains(string(js), `"fix_command":`) || !strings.Contains(string(js), `"queue":true`) {
+	if !strings.Contains(string(js), `"all_only":true`) || !strings.Contains(string(js), `"all_command":`) || !strings.Contains(string(js), `"fix_command":`) || !strings.Contains(string(js), `"queue":true`) || !strings.Contains(string(js), `"manual":true`) {
 		t.Errorf("JSON keys are not snake_case: %s", js)
 	}
 }
@@ -1802,6 +1806,10 @@ func TestTestErrors(t *testing.T) {
 		{"covers itself", []TestTier{named("unit", "unit")}, `tests[0].covers (tier "unit") names the tier itself`},
 		{"covers a tier twice", []TestTier{named("unit", "lint", "lint"), named("lint")}, `tests[0].covers (tier "unit") names "lint" twice`},
 		{"covers in a cycle", cycle, `tests[0].covers (tier "a") makes a cycle through the tiers "a", "b", "c", which cover one another`},
+		// S-0548: the batch never runs a manual tier, so one cannot be queued.
+		{"manual and queued", []TestTier{with(func(x *TestTier) { x.Manual, x.Queue = true, true })}, `tests[0].manual (tier "unit") is true with queue, but the merge queue's batch never runs a manual tier`},
+		{"manual with a fix", []TestTier{with(func(x *TestTier) { x.Manual, x.FixCommand = true, []string{"gofmt", "-w", "{files}"} })}, `tests[0].manual (tier "unit") is true with fix_command`},
+		{"no paths names manual", []TestTier{with(func(x *TestTier) { x.Paths = nil })}, "or manual for one that runs only by its name"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			errs := Manifest{Tests: c.tiers}.TestErrors()
@@ -1825,6 +1833,9 @@ func TestTestErrors(t *testing.T) {
 		with(func(x *TestTier) {
 			x.Queue, x.Paths, x.AllOnly, x.FixCommand = true, nil, true, []string{"scripts/lint-md.sh", "--fix", "{files}"}
 		}),
+		// S-0548: a manual tier needs no paths, and may have them.
+		with(func(x *TestTier) { x.Paths, x.Manual = nil, true }),
+		with(func(x *TestTier) { x.Manual = true }),
 	} {
 		if errs := (Manifest{Tests: []TestTier{tier}}).TestErrors(); len(errs) != 0 {
 			t.Errorf("%+v refused: %v", tier, errs)

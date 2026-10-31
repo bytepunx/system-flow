@@ -66,6 +66,9 @@ type Tier struct {
 	// Queue leaves the tier to the merge queue's batch while the queue runs
 	// (S-0405).
 	Queue bool `json:"queue,omitempty"`
+	// Manual keeps the tier out of every run but one that names it, as
+	// SelectTier chooses it (S-0548).
+	Manual bool `json:"manual,omitempty"`
 }
 
 // Finding is one failure a tier's output names.

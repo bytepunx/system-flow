@@ -291,3 +291,137 @@ func TestFlaiTestSaysTheFlaiIsOlderThanTheProjectWhenTheTiersRefuse(t *testing.T
 		}
 	}
 }
+
+// namedTiersManifest is tempProject's manifest with a tier named docs for
+// the docs folder, with an all_command; an all_only tier; a manual tier the
+// docs folder's paths would select; and a manual tier that fails.
+const namedTiersManifest = `version: 1
+name: t
+key: t
+layout:
+  design: design
+  docs: docs
+  wip: wip
+tests:
+  - name: docs
+    command: [sh, -c, 'exit 0', docs, "{files}"]
+    paths: ["docs/**"]
+    all_command: [sh, -c, 'exit 0', docs-all]
+  - name: smoke
+    command: [sh, -c, 'exit 0', smoke]
+    all_only: true
+  - name: gateway
+    command: [sh, -c, 'exit 0', gateway, "{files}"]
+    paths: ["docs/**"]
+    manual: true
+  - name: broken
+    command: [sh, -c, 'echo the provider refused; exit 3', broken]
+    manual: true
+`
+
+// namedTiersFixture is a project, outside git, whose manifest is
+// namedTiersManifest, holding docs/x.md.
+func namedTiersFixture(t *testing.T) string {
+	t.Helper()
+	if _, err := exec.LookPath("sh"); err != nil {
+		t.Skip("sh not installed")
+	}
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	for name, body := range map[string]string{"system-flow.yaml": namedTiersManifest, "docs/x.md": "x\n"} {
+		p := filepath.Join(root, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return root
+}
+
+// S-0548: a lone argument that names a tier runs that tier alone for the
+// whole checkout, with its all_command when it has one, whether it is
+// all_only, manual, or neither, and is read as the tier where a folder has
+// the same name; a manual tier that fails answers as any failing tier does.
+func TestFlaiTestRunsATierByItsName(t *testing.T) {
+	t.Parallel()
+	root := namedTiersFixture(t)
+	for _, c := range []struct {
+		arg, tier, command string
+	}{
+		{"docs", "docs", "sh -c exit 0 docs-all"},
+		{"smoke", "smoke", "sh -c exit 0 smoke"},
+		{"gateway", "gateway", "sh -c exit 0 gateway ."},
+		{" gateway ", "gateway", "sh -c exit 0 gateway ."},
+	} {
+		res := testResult(t, root, 0, c.arg)
+		if len(res.Tiers) != 1 || res.Tiers[0].Name != c.tier || res.Tiers[0].State != verify.Passed || !res.Passed || len(res.Paths) != 0 {
+			t.Errorf("flai test %q ran %v: %+v", c.arg, tierNames(res), res)
+			continue
+		}
+		if got := strings.Join(res.Tiers[0].Command, " "); got != c.command {
+			t.Errorf("flai test %q ran %q, want %q", c.arg, got, c.command)
+		}
+	}
+
+	// written as a path, the folder of the tier's name is the folder
+	res := testResult(t, root, 0, "./docs")
+	if got := strings.Join(tierNames(res), ","); got != "docs" || strings.Join(res.Tiers[0].Command, " ") != "sh -c exit 0 docs docs/x.md" || strings.Join(res.Paths, ",") != "docs/x.md" {
+		t.Errorf("./docs ran %s: %+v", got, res)
+	}
+
+	res = testResult(t, root, 1, "broken")
+	if len(res.Tiers) != 1 || res.Tiers[0].State != verify.Failed || res.Passed || len(res.Tiers[0].Findings) == 0 || !strings.Contains(res.Tiers[0].Findings[0].Message, "the provider refused") {
+		t.Errorf("a failing manual tier by name: %+v", res)
+	}
+	out, _, code := runIn(t, root, "test", "gateway")
+	if code != 0 || !strings.HasPrefix(out, "passed gateway (") {
+		t.Errorf("text: exit %d\n%s", code, out)
+	}
+}
+
+// S-0548: a manual tier runs by name alone: paths its own match do not select
+// it, and --all leaves it out.
+func TestFlaiTestLeavesAManualTierOutOfPathsAndAll(t *testing.T) {
+	t.Parallel()
+	root := namedTiersFixture(t)
+	res := testResult(t, root, 0, "docs/x.md")
+	if got := strings.Join(tierNames(res), ","); got != "docs" {
+		t.Errorf("docs/x.md ran %s, want docs alone", got)
+	}
+	res = testResult(t, root, 0, "--all")
+	if got := strings.Join(tierNames(res), ","); got != "docs,smoke" {
+		t.Errorf("--all ran %s, want docs,smoke", got)
+	}
+}
+
+// S-0548: a lone argument that is neither a tier nor a path is refused naming
+// the tiers, and a tier's name with a path, another name, or --all is refused,
+// each with exit 2 before any tier runs.
+func TestFlaiTestRefusesATierNameItCannotRunAlone(t *testing.T) {
+	t.Parallel()
+	root := namedTiersFixture(t)
+	for _, c := range []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"neither a tier nor a path", []string{"nope"}, "nope is neither a tier nor a file or folder; name a tier, one of docs, smoke, gateway, broken, or a file or folder"},
+		{"a tier with a path", []string{"gateway", "docs/x.md"}, "gateway names a tier, which runs alone for the whole checkout; give it with no path"},
+		{"two tiers", []string{"gateway", "smoke"}, "gateway, smoke each name a tier, and flai test runs one tier by name"},
+		{"a tier with --all", []string{"--all", "gateway"}, "gateway names a tier, and --all runs every tier but the manual ones"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			out, errOut, code := runIn(t, root, append([]string{"test"}, c.args...)...)
+			if code != exitTestUnusable || out != "" || !strings.Contains(errOut, c.want) {
+				t.Errorf("exit %d, want %d\nout %q\nerr %q, want it to say %q", code, exitTestUnusable, out, errOut, c.want)
+			}
+		})
+	}
+	// with paths alone, one not there is refused as before, naming no tier
+	_, errOut, code := runIn(t, root, "test", "docs/x.md", "nope")
+	if code != exitTestUnusable || !strings.Contains(errOut, "nope is not a file or folder") {
+		t.Errorf("a missing path among paths: exit %d\nerr %q", code, errOut)
+	}
+}

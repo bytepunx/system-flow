@@ -1304,7 +1304,8 @@ type TestTier struct {
 	Dir string `yaml:"dir,omitempty" json:"dir,omitempty"`
 	// Paths are glob patterns relative to the repository root, as
 	// claims.shared's are, that select the tier for a changed or named path;
-	// one beginning with ! takes paths out again. Required unless AllOnly.
+	// one beginning with ! takes paths out again. Required unless AllOnly or
+	// Manual.
 	Paths []string `yaml:"paths,omitempty" json:"paths,omitempty"`
 	// Format is how the command's output becomes findings: one of
 	// TestFormats; empty means FormatPlain.
@@ -1325,6 +1326,10 @@ type TestTier struct {
 	// Queue leaves the tier to the merge queue: while the queue runs, flai
 	// verify leaves it out and the queue's batch runs it (S-0405).
 	Queue bool `yaml:"queue,omitempty" json:"queue,omitempty"`
+	// Manual runs the tier only when it is named, as flai test <tier> does:
+	// never for paths, --all, a close-out, or the merge queue's batch
+	// (S-0548). It takes neither Queue nor FixCommand.
+	Manual bool `yaml:"manual,omitempty" json:"manual,omitempty"`
 }
 
 // The placeholders a tier's command may hold, each as an argument of its own.
@@ -1457,11 +1462,17 @@ func (m Manifest) TestErrors() []string {
 			}
 		}
 		switch {
-		case t.AllOnly || selects > 0:
+		case t.AllOnly || t.Manual || selects > 0:
 		case len(t.Paths) == 0:
-			errs = append(errs, at("paths")+" is empty; write the globs that select the tier, such as flai/**, or set all_only for a tier that runs only when every tier is asked for")
+			errs = append(errs, at("paths")+" is empty; write the globs that select the tier, such as flai/**, or set all_only for a tier that runs only when every tier is asked for, or manual for one that runs only by its name")
 		default:
 			errs = append(errs, at("paths")+" has no pattern that selects a path, only ones beginning with ! or ones not valid; add one, such as flai/**")
+		}
+		if t.Manual && t.Queue {
+			errs = append(errs, at("manual")+" is true with queue, but the merge queue's batch never runs a manual tier; remove queue, or manual for a tier the batch runs")
+		}
+		if t.Manual && len(t.FixCommand) > 0 {
+			errs = append(errs, at("manual")+" is true with fix_command, but a fix runs for the paths a commit changes, which never select a manual tier; remove fix_command, or manual")
 		}
 		if f := t.FormatOrDefault(); !slices.Contains(TestFormats, f) {
 			errs = append(errs, fmt.Sprintf("%s %q is not a format flai reads; write %s, or remove it for plain", at("format"), t.Format, strings.Join(TestFormats, ", ")))

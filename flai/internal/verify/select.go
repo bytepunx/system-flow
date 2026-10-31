@@ -32,15 +32,32 @@ type Selected struct {
 // command comes to nothing, as {packages} and {importers} do for files no Go
 // package holds. fsys is the checkout, read for the directories that hold .go
 // files and, for {importers}, for the imports of each.
-// A selected tier that another selected tier covers is marked CoveredBy.
+// A selected tier that another selected tier covers is marked CoveredBy. A
+// Manual tier is never selected; SelectTier chooses it by name.
 func Select(fsys fs.FS, tiers []Tier, paths []string, all bool) []Selected {
 	return cover(tiers, selectTiers(fsys, tiers, paths, all))
+}
+
+// SelectTier chooses the tier named name, trimmed, alone for the whole
+// checkout, as it runs with all, whether it is AllOnly, Manual, or neither;
+// false when no tier has the name (S-0548).
+func SelectTier(tiers []Tier, name string) (Selected, bool) {
+	name = strings.TrimSpace(name)
+	for _, t := range tiers {
+		if strings.TrimSpace(t.Name) == name {
+			return Selected{Tier: t, Argv: allArgv(t)}, true
+		}
+	}
+	return Selected{}, false
 }
 
 // selectTiers is Select before the covered tiers are marked.
 func selectTiers(fsys fs.FS, tiers []Tier, paths []string, all bool) []Selected {
 	var out []Selected
 	for _, t := range tiers {
+		if t.Manual {
+			continue
+		}
 		if all {
 			out = append(out, Selected{Tier: t, Argv: allArgv(t)})
 			continue
@@ -59,7 +76,7 @@ func selectTiers(fsys fs.FS, tiers []Tier, paths []string, all bool) []Selected 
 // runs for the paths its branch changed: those Select chooses without all,
 // and the AllOnly tiers that the paths select or that have no Paths, which
 // run as they do with all, each tier another of them covers marked as Select
-// marks it. Verify runs them.
+// marks it; never a Manual tier. Verify runs them.
 func SelectStory(fsys fs.FS, tiers []Tier, paths []string) []Selected {
 	return cover(tiers, selectStoryTiers(fsys, tiers, paths))
 }
@@ -84,6 +101,9 @@ func SelectStoryLeavingQueue(fsys fs.FS, tiers []Tier, paths []string) (run, que
 func selectStoryTiers(fsys fs.FS, tiers []Tier, paths []string) []Selected {
 	var out []Selected
 	for _, t := range tiers {
+		if t.Manual {
+			continue
+		}
 		if !t.AllOnly {
 			if s, ok := selectByPaths(fsys, t, paths); ok {
 				out = append(out, s)

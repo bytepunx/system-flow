@@ -67,7 +67,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [subproject](#flai-subproject) | List, add, change, and remove the sub-projects under projects in system-flow.yaml |
 | [task](#flai-task) | Create tasks (flai show prints one, flai move transitions it) |
 | [template](#flai-template) | Inspect, refresh, and switch the template source |
-| [test](#flai-test) | Run the test and lint tiers for paths or packages and answer pass or the first findings |
+| [test](#flai-test) | Run the test and lint tiers for paths or packages, or one tier by name, and answer pass or the first findings |
 | [thread](#flai-thread) | Threads between the designer and agents, anchored to documents and items (wip/threads) |
 | [touches](#flai-touches) | Set what a story or task is working on; flai check warns on overlap |
 | [unblock](#flai-unblock) | Close the open blocked interval on an item |
@@ -149,7 +149,7 @@ Subcommands:
 - [subproject](#flai-subproject): List, add, change, and remove the sub-projects under projects in system-flow.yaml
 - [task](#flai-task): Create tasks (flai show prints one, flai move transitions it)
 - [template](#flai-template): Inspect, refresh, and switch the template source
-- [test](#flai-test): Run the test and lint tiers for paths or packages and answer pass or the first findings
+- [test](#flai-test): Run the test and lint tiers for paths or packages, or one tier by name, and answer pass or the first findings
 - [thread](#flai-thread): Threads between the designer and agents, anchored to documents and items (wip/threads)
 - [touches](#flai-touches): Set what a story or task is working on; flai check warns on overlap
 - [unblock](#flai-unblock): Close the open blocked interval on an item
@@ -4921,17 +4921,19 @@ Flags:
 
 ### flai test
 
-Run the test and lint tiers for paths or packages and answer pass or the first findings.
+Run the test and lint tiers for paths or packages, or one tier by name, and answer pass or the first findings.
 
 ```text
-flai test [path|package]... [flags]
+flai test [path|package]... | test <tier> [flags]
 ```
 
-Run the project's test and lint tiers, the tests list in system-flow.yaml, for the files and folders given, in the checkout of the working directory: a story's worktree or the main checkout. A Go package is given as its folder. With no argument the files are those the checkout changed against the main branch, committed or not. --all runs every tier, all\_only ones too, for the whole checkout.
+Run the project's test and lint tiers, the tests list in system-flow.yaml, for the files and folders given, in the checkout of the working directory: a story's worktree or the main checkout. A Go package is given as its folder. With no argument the files are those the checkout changed against the main branch, committed or not. --all runs every tier but the manual ones, all\_only ones too, for the whole checkout.
+
+A lone argument that names a tier runs that tier alone for the whole checkout, as --all runs it, with its all\_command when it has one: all\_only, manual, or neither, and even where a file or folder has the same name. A manual tier runs only so: no path selects it, and neither --all, flai verify, nor the merge queue's batch runs it (S-0548). A tier's name with paths, with another name, or with --all is refused.
 
 The tiers whose paths select a file run in the manifest's order, cheapest first, and the run stops at the first that fails. The answer is pass, or the failing tier's first findings, never its whole output: each as path:line name: message, at most --max across the run, with how many were left out. A selected tier that another selected tier covers, by the covers key, is not run: it is listed as "skipped &lt;tier&gt;: covered by &lt;tier&gt;" (S-0342). A manifest without tests runs scripts/test.sh as its one tier. Each tier runs with FLAI\_ROLE=verify whatever role ran flai test, so a test that runs flai's writes is not refused as the orchestrator (S-0311).
 
-The exit status is 0 on pass, 1 when a tier fails, and 2 when flai test could not answer: an argument outside the checkout, tiers the manifest does not declare validly, or a run stopped before it finished. With --json the answer is the result, {"passed": ..., "paths": [...], "tiers": [...]}, each tier with its state, command, duration, and findings, and a skipped tier with covered\_by.
+The exit status is 0 on pass, 1 when a tier fails, and 2 when flai test could not answer: an argument outside the checkout, one that is neither a tier nor a file or folder, a tier's name given with others, tiers the manifest does not declare validly, or a run stopped before it finished. With --json the answer is the result, {"passed": ..., "paths": [...], "tiers": [...]}, each tier with its state, command, duration, and findings, and a skipped tier with covered\_by.
 
 Examples:
 
@@ -4940,13 +4942,14 @@ flai test flai/internal/manifest
 flai test flaiover/src/lib/board.ts --json
 flai test                # what this checkout changed against the main branch
 flai test --all --max 10
+flai test gateway        # the tier named gateway, alone, for the whole checkout
 ```
 
 Flags:
 
 | Flag | Meaning |
 |------|---------|
-| `--all` | run every tier for the whole checkout, all\_only ones too, whatever the arguments |
+| `--all` | run every tier for the whole checkout, all\_only ones too and manual ones not, whatever the paths |
 | `--max` int | the most findings to report across the run (default `5`) |
 
 ### flai thread
