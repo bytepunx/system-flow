@@ -21,8 +21,9 @@ import (
 // activity from its run's log in the serve folder and writes it in the
 // project's activity document, returning the entry and the totals.
 func TestTheMCPServerLogsAStrategicAgentsActivity(t *testing.T) {
+	t.Parallel()
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	root := tempProject(t)
 	start := time.Date(2026, 10, 3, 10, 0, 0, 0, time.UTC)
 	repo, err := workitem.Open(root)
@@ -53,7 +54,7 @@ func TestTheMCPServerLogsAStrategicAgentsActivity(t *testing.T) {
 	}
 	now := start.Add(90 * time.Second)
 	var out, errOut bytes.Buffer
-	a := &app{out: &out, errOut: &errOut, cwd: root, clock: func() time.Time { return now }}
+	a := &app{configPath: configOf(t), out: &out, errOut: &errOut, cwd: root, clock: func() time.Time { return now }}
 	ctx := context.Background()
 	half := math.Round(1.2345*2000/4000*1e4) / 1e4
 
@@ -100,8 +101,9 @@ func TestTheMCPServerLogsAStrategicAgentsActivity(t *testing.T) {
 // folder and written in wip/agents/<name>.md, charged to no item; a kind no
 // role file defines is refused, naming the defined ones.
 func TestTheMCPServerLogsADefinedRolesActivity(t *testing.T) {
+	t.Parallel()
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	root := tempProject(t)
 	roles := filepath.Join(root, "design", "workflows", "roles")
 	if err := os.MkdirAll(roles, 0o755); err != nil {
@@ -128,7 +130,7 @@ func TestTheMCPServerLogsADefinedRolesActivity(t *testing.T) {
 	}
 	now := start.Add(90 * time.Second)
 	var out, errOut bytes.Buffer
-	a := &app{out: &out, errOut: &errOut, cwd: root, clock: func() time.Time { return now }}
+	a := &app{configPath: configOf(t), out: &out, errOut: &errOut, cwd: root, clock: func() time.Time { return now }}
 	ctx := context.Background()
 
 	got, err := a.mcpActivity(ctx, root, "reviewer", "Reviewed S-0001", []string{"S-0001"}, "reviewer")
@@ -157,6 +159,7 @@ func TestTheMCPServerLogsADefinedRolesActivity(t *testing.T) {
 // charged to: the item a planner planned, the items an orchestrator named,
 // the issues an analyzer named, or the kind's project strategic total.
 func TestActivityLogSaysWhatTheCostWasChargedTo(t *testing.T) {
+	t.Parallel()
 	logged := func(kind string, cost float64, planned string, shared ...string) *serve.Logged {
 		return &serve.Logged{Entry: workitem.ActivityEntry{Cost: cost}, Activity: &workitem.Activity{Kind: kind}, Planned: planned, Shared: shared}
 	}

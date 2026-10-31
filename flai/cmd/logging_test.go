@@ -34,9 +34,7 @@ func find(evs []map[string]any, msg string) map[string]any {
 }
 
 func TestLogEventsPinFieldNames(t *testing.T) {
-	t.Setenv("LOG_LEVEL", "")
-	t.Setenv("LOG_FORMAT", "")
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 
 	// first run creates the config: info event with component and path
 	out, errOut, code := runCLI(t, "config", "get")

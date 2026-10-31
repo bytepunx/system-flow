@@ -35,6 +35,7 @@ type criteriaJSON struct {
 
 // S-0282: flai criteria list numbers the boxes as tick takes them.
 func TestCriteriaList(t *testing.T) {
+	t.Parallel()
 	root, _ := criteriaProject(t)
 	out, errOut, code := runIn(t, root, "criteria", "list", "S-0001")
 	want := "S-0001: 1 of 3 ticked\n  1 [ ] it works\n  2 [x] it is fast\n  3 [ ] it is small\n"
@@ -58,6 +59,7 @@ func TestCriteriaList(t *testing.T) {
 // S-0282: tick and untick change the one box, report it, and commit the item
 // alone with --autocommit; ticking what is ticked changes nothing.
 func TestCriteriaTickAndUntick(t *testing.T) {
+	t.Parallel()
 	root, file := criteriaProject(t)
 	before := read(t, file)
 	out, errOut, code := runIn(t, root, "criteria", "tick", "S-0001", "1,3", "--autocommit", "--trailer", "Co-Authored-By: someone <s@s>")
@@ -97,6 +99,7 @@ func below(file string) string {
 // S-0282: what the caller gets wrong is a rule, and nothing is written; a
 // stale hash is a conflict; a closed or archived item is refused, and listed.
 func TestCriteriaRefusals(t *testing.T) {
+	t.Parallel()
 	root, file := criteriaProject(t)
 	before := read(t, file)
 	for name, c := range map[string]struct {

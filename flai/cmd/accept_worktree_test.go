@@ -14,10 +14,11 @@ import (
 // error. It must say what to do, in the preview and in the real run, and
 // change nothing.
 func TestAcceptSaysWhatToDoWhenTheWorktreeCannotBeOpened(t *testing.T) {
+	t.Parallel()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", "docs"} {
 		_ = os.MkdirAll(filepath.Join(root, d), 0o755)

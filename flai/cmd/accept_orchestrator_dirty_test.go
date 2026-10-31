@@ -17,6 +17,7 @@ import (
 // them as they were, uncommitted and out of the acceptance commit, where the
 // operator's acceptance by hand still refuses them unless --yes.
 func TestTheOrchestratorAcceptsOnADirtyMainAndLeavesTheFilesAsTheyAre(t *testing.T) {
+	t.Parallel()
 	root, head := orchestratedStoryInReview(t, true)
 	dirty := dirtyMain(t, root)
 	mainBefore := gitIn(t, root, "rev-parse", "main")
@@ -59,6 +60,7 @@ func TestTheOrchestratorAcceptsOnADirtyMainAndLeavesTheFilesAsTheyAre(t *testing
 // its dry run lists the blocker dirty_main, naming the file and the command
 // that sets it aside.
 func TestTheOrchestratorIsRefusedAStoryWhoseChangeWouldOverwriteADirtyFile(t *testing.T) {
+	t.Parallel()
 	root, head := orchestratedStoryInReview(t, true)
 	dirtyMain(t, root)
 	if err := os.WriteFile(filepath.Join(root, "cli/feature.go"), []byte("the operator's own\n"), 0o644); err != nil {
@@ -116,6 +118,7 @@ func failCommits(t *testing.T, root string) string {
 // itself that stopped before its commit, on a main checkout that has gained
 // uncommitted files since, which it leaves as they are.
 func TestTheOrchestratorFinishesItsOwnAcceptanceThatStoppedBeforeItsCommit(t *testing.T) {
+	t.Parallel()
 	root, head := orchestratedStoryInReview(t, true)
 	hook := failCommits(t, root)
 	ev := evidenceFile(t, "Verdict: pass\n- 1: `cli/feature.go`\n")
@@ -153,6 +156,7 @@ func TestTheOrchestratorFinishesItsOwnAcceptanceThatStoppedBeforeItsCommit(t *te
 // but the orchestrator, stays the operator's to finish, and the refusal of
 // the orchestrator names who made it.
 func TestTheOrchestratorDoesNotFinishAnAcceptanceSomeoneElseMade(t *testing.T) {
+	t.Parallel()
 	root, _ := orchestratedStoryInReview(t, true)
 	hook := failCommits(t, root)
 	if _, _, code := runIn(t, root, "accept", "S-0001", "--by", "alex"); code == 0 {

@@ -180,23 +180,33 @@ func remoteProject(t *testing.T, method string) (root, remote, head string, f *m
 	gitIn(t, root, "remote", "add", "origin", remote)
 	gitIn(t, root, "push", "-q", "origin", "main", "story/S-0001")
 	keepStatus(t, root, passingStatus(head))
-	t.Setenv("FLAI_AGENT", "")
-	t.Setenv("GITHUB_TOKEN", "accept-token")
+	inEnv(t, "GITHUB_TOKEN", "accept-token")
 	if _, errOut, code := runIn(t, root, "serve", "enable", "forge"); code != 0 {
 		t.Fatalf("serve enable forge: %s", errOut)
 	}
 	f = &mergeForge{remote: remote, pr: forge.PullRequest{Number: 7, URL: forgePRURL, Head: "story/S-0001", Base: "main", HeadSHA: head, State: forge.PullRequestOpen}}
-	old, oldWait := acceptNewForge, acceptMergeWait
-	acceptNewForge = func(_, _ string, token forge.TokenFunc) (forge.Forge, error) {
-		if _, err := token(); err != nil {
-			return nil, err
-		}
-		return f, nil
-	}
-	acceptMergeWait = serve.MergeWait{Take: 5 * time.Second, Answer: 20 * time.Second, Poll: 10 * time.Millisecond}
-	t.Cleanup(func() { acceptNewForge, acceptMergeWait = old, oldWait })
+	acceptForges.set(t, acceptForge{
+		make: func(_, _ string, token forge.TokenFunc) (forge.Forge, error) {
+			if _, err := token(); err != nil {
+				return nil, err
+			}
+			return f, nil
+		},
+		wait: serve.MergeWait{Take: 5 * time.Second, Answer: 20 * time.Second, Poll: 10 * time.Millisecond},
+	})
 	return root, remote, head, f
 }
+
+// acceptForge is the fake forge flai accept merges through in a test's
+// commands, and how long it waits for flai serve's answer.
+type acceptForge struct {
+	make serve.NewForge
+	wait serve.MergeWait
+}
+
+// acceptForges are the fake forges tests set; runInAt gives a command its
+// test's.
+var acceptForges perTest[acceptForge]
 
 // acceptJSON runs flai accept S-0001 --by alex --json in root, failing the
 // test unless it succeeds, and answers the acceptance.
@@ -211,6 +221,25 @@ func acceptJSON(t *testing.T, root string, extra ...string) accepted {
 		t.Fatalf("%v: %s", err, out)
 	}
 	return res
+}
+
+// TestWithTheForgesToken runs the tests of an acceptance through the remote,
+// as together runs them, with the forge's token in GITHUB_TOKEN, set once
+// here, so that they run in parallel with each other (S-0548).
+func TestWithTheForgesToken(t *testing.T) {
+	t.Setenv("GITHUB_TOKEN", "accept-token")
+	together(t,
+		testAStoryThePullRequestPassesIsAcceptedThroughTheRemote,
+		testAcceptThroughTheRemoteTakesTheStoryOutOfTheQueue,
+		testAcceptMergesThePullRequestThroughTheRemoteByEachMethod,
+		testAcceptOfAPullRequestMergedAlreadyMakesNoSecondMerge,
+		testAMergeTheForgeRefusesChangesNothingHere,
+		testUnpublishedCommitsOutsideWipStopTheAcceptanceBeforeTheMerge,
+		testUnpublishedWipCommitsAreRebasedOntoOriginsMain,
+		testAcceptRefusesWhileTheForgeHostActionIsOff,
+		testTheDryRunSaysItWouldMergeThroughTheRemote,
+		testAnAcceptanceThroughTheRemoteCommitsAsALocalOneDoes,
+	)
 }
 
 // assertAcceptedThroughRemote fails unless S-0001 is done and archived with
@@ -267,7 +296,7 @@ func assertNothingChangedHere(t *testing.T, root, remote, mainBefore string) {
 // story's pull request on the forge by acceptance.merge_method, deletes the
 // branch on origin, brings main up to origin's, removes the local branch and
 // worktree, and moves to done, archives, and commits.
-func TestAcceptMergesThePullRequestThroughTheRemoteByEachMethod(t *testing.T) {
+func testAcceptMergesThePullRequestThroughTheRemoteByEachMethod(t *testing.T) {
 	for _, method := range []forge.MergeMethod{forge.MergeMerge, forge.MergeSquash, forge.MergeRebase} {
 		t.Run(string(method), func(t *testing.T) {
 			root, remote, head, f := remoteProject(t, string(method))
@@ -291,7 +320,7 @@ func TestAcceptMergesThePullRequestThroughTheRemoteByEachMethod(t *testing.T) {
 // S-0397 criterion 3: a pull request merged on the forge already, by a
 // reviewer, is accepted with no second merge, whether flai serve read it
 // merged or still read it open.
-func TestAcceptOfAPullRequestMergedAlreadyMakesNoSecondMerge(t *testing.T) {
+func testAcceptOfAPullRequestMergedAlreadyMakesNoSecondMerge(t *testing.T) {
 	for name, keptMerged := range map[string]bool{"kept as merged": true, "kept as open": false} {
 		t.Run(name, func(t *testing.T) {
 			root, remote, head, f := remoteProject(t, "")
@@ -322,7 +351,7 @@ func TestAcceptOfAPullRequestMergedAlreadyMakesNoSecondMerge(t *testing.T) {
 
 // S-0397 criterion 4: a merge the forge refuses stops the acceptance before
 // anything changes here, naming the forge's reason.
-func TestAMergeTheForgeRefusesChangesNothingHere(t *testing.T) {
+func testAMergeTheForgeRefusesChangesNothingHere(t *testing.T) {
 	root, remote, _, f := remoteProject(t, "")
 	f.refuse = fmt.Errorf("merge pull request #7 by merge in o/r on GitHub: %w: Merge conflict", forge.ErrMergeRefused)
 	mainBefore := gitIn(t, root, "rev-parse", "main")
@@ -338,7 +367,7 @@ func TestAMergeTheForgeRefusesChangesNothingHere(t *testing.T) {
 
 // S-0397 criterion 4: unpublished commits on main outside wip/ stop the
 // acceptance before the merge, naming each commit.
-func TestUnpublishedCommitsOutsideWipStopTheAcceptanceBeforeTheMerge(t *testing.T) {
+func testUnpublishedCommitsOutsideWipStopTheAcceptanceBeforeTheMerge(t *testing.T) {
 	root, remote, _, f := remoteProject(t, "")
 	if err := os.MkdirAll(filepath.Join(root, "docs"), 0o755); err != nil {
 		t.Fatal(err)
@@ -362,7 +391,7 @@ func TestUnpublishedCommitsOutsideWipStopTheAcceptanceBeforeTheMerge(t *testing.
 
 // ADR-0170: main's unpublished commits under wip/ are rebased onto origin's
 // main, and the main checkout's uncommitted edits survive the move.
-func TestUnpublishedWipCommitsAreRebasedOntoOriginsMain(t *testing.T) {
+func testUnpublishedWipCommitsAreRebasedOntoOriginsMain(t *testing.T) {
 	root, remote, _, _ := remoteProject(t, "squash")
 	notes := filepath.Join(root, "wip", "notes.md")
 	if err := os.WriteFile(notes, []byte("# Notes\n"), 0o644); err != nil {
@@ -390,7 +419,7 @@ func TestUnpublishedWipCommitsAreRebasedOntoOriginsMain(t *testing.T) {
 
 // S-0397 criterion 2: a merge flai accept would make itself is refused,
 // naming the host action, while the forge host action is off.
-func TestAcceptRefusesWhileTheForgeHostActionIsOff(t *testing.T) {
+func testAcceptRefusesWhileTheForgeHostActionIsOff(t *testing.T) {
 	root, remote, _, f := remoteProject(t, "")
 	if _, errOut, code := runIn(t, root, "serve", "disable", "forge"); code != 0 {
 		t.Fatal(errOut)
@@ -457,6 +486,7 @@ func fakeServe(t *testing.T, root string, f *mergeForge, refused string) *[]serv
 // it with nothing changed here; and the dashboard's flai accept never hands
 // the merge over.
 func TestWithoutTheTokenFlaiAcceptHandsTheMergeToFlaiServe(t *testing.T) {
+	t.Setenv("GITHUB_TOKEN", "accept-token")
 	t.Run("answered merged", func(t *testing.T) {
 		root, remote, head, f := remoteProject(t, "rebase")
 		t.Setenv("GITHUB_TOKEN", "")
@@ -505,7 +535,7 @@ func TestWithoutTheTokenFlaiAcceptHandsTheMergeToFlaiServe(t *testing.T) {
 
 // S-0397 criterion 5: the dry run says it would merge through the remote and
 // by which method, in its text and its JSON, and calls nothing.
-func TestTheDryRunSaysItWouldMergeThroughTheRemote(t *testing.T) {
+func testTheDryRunSaysItWouldMergeThroughTheRemote(t *testing.T) {
 	root, remote, head, f := remoteProject(t, "squash")
 	mainBefore := gitIn(t, root, "rev-parse", "main")
 	text, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "alex", "--dry-run")
@@ -528,7 +558,7 @@ func TestTheDryRunSaysItWouldMergeThroughTheRemote(t *testing.T) {
 
 // ADR-0170: the acceptance commit's subject and the archive are the same
 // under pull-request acceptance as under local acceptance.
-func TestAnAcceptanceThroughTheRemoteCommitsAsALocalOneDoes(t *testing.T) {
+func testAnAcceptanceThroughTheRemoteCommitsAsALocalOneDoes(t *testing.T) {
 	committed := func(root string) (string, []string) {
 		var archive []string
 		for _, p := range strings.Split(gitIn(t, root, "show", "--name-only", "--format=", "HEAD"), "\n") {

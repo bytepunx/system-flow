@@ -13,10 +13,11 @@ import (
 // choice is made before confirming; the real run still refuses them unless
 // --yes includes them.
 func TestAcceptReportsUncommittedPathsInTheDryRun(t *testing.T) {
+	t.Parallel()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", "docs"} {
 		_ = os.MkdirAll(filepath.Join(root, d), 0o755)

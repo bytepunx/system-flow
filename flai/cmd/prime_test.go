@@ -18,7 +18,8 @@ import (
 )
 
 func TestPrime(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	dir := "../internal/metrics/testdata/good"
 	out, errOut, code := runIn(t, dir, "prime")
 	if code != 0 {
@@ -51,7 +52,8 @@ func TestPrime(t *testing.T) {
 // ADR-0104: --part prints a part of the pack as JSON, the text the MCP
 // prime tool returns for it; it is refused with --cat and past the last part.
 func TestPrimePart(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	dir := "../internal/metrics/testdata/good"
 	out, errOut, code := runIn(t, dir, "prime", "--story", "S-4", "--part", "1")
 	if code != 0 {
@@ -106,7 +108,8 @@ func TestPrimePart(t *testing.T) {
 }
 
 func TestPrimeStory(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	dir := "../internal/metrics/testdata/good"
 	cat, _, _ := runIn(t, dir, "prime", "--cat")
 	out, errOut, code := runIn(t, dir, "prime", "--story", "S-4")
@@ -203,7 +206,8 @@ func TestPrimeStory(t *testing.T) {
 }
 
 func TestPrimeStoryDesign(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	write := func(rel, s string) {
 		p := filepath.Join(root, filepath.FromSlash(rel))
@@ -347,7 +351,8 @@ func TestPrimeStoryDesign(t *testing.T) {
 // roles for a role no file defines, and refuses a role file that does not
 // parse with its finding.
 func TestPrimeForARoleTheProjectDefines(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	write := func(rel, s string) {
 		p := filepath.Join(root, filepath.FromSlash(rel))
@@ -412,7 +417,8 @@ func TestPrimeForARoleTheProjectDefines(t *testing.T) {
 }
 
 func TestPrimeStoryRole(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	write := func(rel, s string) {
 		p := filepath.Join(root, filepath.FromSlash(rel))
@@ -565,7 +571,8 @@ func TestPrimeStoryRole(t *testing.T) {
 // design-system convention only when the project has a design system's
 // guidance.
 func TestPrimeCatHasTheDesignSystemConventionOnlyWithGuidance(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	write := func(rel, s string) {
 		p := filepath.Join(root, filepath.FromSlash(rel))
@@ -679,7 +686,8 @@ func packDigest(t *testing.T, out string) []packItem {
 // the reason thread TH-nnnn; rank 1, ahead of a newer answer sharing fewer
 // of its words.
 func TestPrimeLoadsTheDigest(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := primeDigestProject(t)
 	one := "# D-0001 Prime loads digest entries\n\nThe pack loads digest entries ranked against the story.\n"
 	out, errOut, code := runIn(t, root, "prime", "--story", "S-0001")
@@ -800,7 +808,8 @@ type reasonPack struct {
 // text, and in parts. The general pack is printed without --reason as
 // before.
 func TestPrimeForTheOrchestratorsReasons(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := primeReasonsProject(t)
 	story := func(id string) string {
 		m, err := filepath.Glob(filepath.Join(root, "wip", "kanban", "stories", id+"-*.md"))
@@ -930,7 +939,8 @@ func TestPrimeForTheOrchestratorsReasons(t *testing.T) {
 // unknown reason, and one without the ID it needs, are refused naming every
 // form a reason takes.
 func TestPrimeRefusesReasonsOutsideTheOrchestrator(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := primeReasonsProject(t)
 	forms := "thread:TH-nnnn, review:S-nnnn, planned:E-nnnn or planned:S-nnnn, draft:S-nnnn, release, or ready"
 	for _, c := range []struct {

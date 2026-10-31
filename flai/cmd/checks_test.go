@@ -15,7 +15,7 @@ import (
 // and, on the host's own config, one named check that always passes.
 func checksProject(t *testing.T) (root, story string) {
 	t.Helper()
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root = tempProject(t)
 	story = "S-0001"
 	repo, err := workitem.Open(root)
@@ -32,14 +32,16 @@ func checksProject(t *testing.T) (root, story string) {
 }
 
 func TestChecksRunRefusesSomethingThatIsNotAStoryID(t *testing.T) {
+	t.Parallel()
 	root := tempProject(t)
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	if _, errOut, code := runIn(t, root, "checks", "run", "not-a-story"); code == 0 || !strings.Contains(errOut, "is not a story's ID") {
 		t.Errorf("run: %d %s", code, errOut)
 	}
 }
 
 func TestChecksStatusBeforeAnyRun(t *testing.T) {
+	t.Parallel()
 	root, story := checksProject(t)
 	out, _, code := runIn(t, root, "checks", "status", story, "--json")
 	if code != 0 {
@@ -55,6 +57,7 @@ func TestChecksStatusBeforeAnyRun(t *testing.T) {
 }
 
 func TestChecksRunEndToEndThroughTheCLI(t *testing.T) {
+	t.Parallel()
 	root, story := checksProject(t)
 	out, errOut, code := runIn(t, root, "checks", "run", story, "--json")
 	if code != 0 {
@@ -99,7 +102,8 @@ func TestChecksRunEndToEndThroughTheCLI(t *testing.T) {
 }
 
 func TestChecksRunRefusesWithoutAWorktree(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	if _, _, code := runIn(t, root, "serve", "checks", "set", "--name", "ok", "--", "true"); code != 0 {
 		t.Fatal("set")
@@ -110,6 +114,7 @@ func TestChecksRunRefusesWithoutAWorktree(t *testing.T) {
 }
 
 func TestChecksCancelRefusesWhenNothingIsRunning(t *testing.T) {
+	t.Parallel()
 	root, story := checksProject(t)
 	if _, errOut, code := runIn(t, root, "checks", "cancel", story); code == 0 || !strings.Contains(errOut, "no checks run is active") {
 		t.Errorf("cancel: %d %s", code, errOut)

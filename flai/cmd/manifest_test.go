@@ -15,7 +15,7 @@ import (
 // strategic block, and its manifest's contents.
 func manifestProject(t *testing.T) (string, string) {
 	t.Helper()
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	file := filepath.Join(root, manifest.File)
 	data, _ := os.ReadFile(file)
@@ -38,6 +38,7 @@ func readManifest(t *testing.T, root string) string {
 // S-0229: flai manifest set writes keys of each kind into their blocks,
 // --unset removes one, and the rest of the file is as it was.
 func TestManifestSetWritesAndUnsets(t *testing.T) {
+	t.Parallel()
 	root, before := manifestProject(t)
 	out, errOut, code := runIn(t, root, "manifest", "set", "orchestration.policy=wsjf", "planning.schedule=0 6 * * 1-5", "orchestration.permissions.publish=true", "--unset", "orchestration.permissions.promote_to_ready")
 	if code != 0 {
@@ -74,6 +75,7 @@ func TestManifestSetWritesAndUnsets(t *testing.T) {
 // S-0229: a bad value and a key outside the catalog are refused with the
 // field and the reason, as a rule is, and nothing is written.
 func TestManifestSetRefuses(t *testing.T) {
+	t.Parallel()
 	root, before := manifestProject(t)
 	out, errOut, code := runIn(t, root, "manifest", "set", "planning.cycle")
 	if code != 1 || !strings.Contains(out, "planning.cycle: is not key=value") || !strings.Contains(errOut, "rule: ") {

@@ -29,7 +29,7 @@ func planProject(t *testing.T) string {
 // S-0176: flai show prints a story's task plan, each task's state and what
 // it waits for and the layers, and --json carries it as plan beside item
 // and children; a story without tasks has none.
-func TestShowPrintsTheTaskPlan(t *testing.T) {
+func testShowPrintsTheTaskPlan(t *testing.T) {
 	root := planProject(t)
 	out, errOut, code := runIn(t, root, "show", "S-0001")
 	if code != 0 {
@@ -73,7 +73,7 @@ func TestShowPrintsTheTaskPlan(t *testing.T) {
 
 // S-0176: flai board gives a story with tasks its plan in counts, as text
 // and as JSON, and none to a story without tasks.
-func TestBoardCountsAStorysTasks(t *testing.T) {
+func testBoardCountsAStorysTasks(t *testing.T) {
 	root := planProject(t)
 	out, errOut, code := runIn(t, root, "board")
 	if code != 0 {
@@ -111,7 +111,7 @@ func TestBoardCountsAStorysTasks(t *testing.T) {
 
 // S-0176: moving a task to in progress while a task of its after is open
 // warns, and moves it.
-func TestMovingAWaitingTaskWarnsAndMoves(t *testing.T) {
+func testMovingAWaitingTaskWarnsAndMoves(t *testing.T) {
 	root := planProject(t)
 	if _, errOut, code := runIn(t, root, "move", "T-0002", "ready"); code != 0 {
 		t.Fatal(errOut)

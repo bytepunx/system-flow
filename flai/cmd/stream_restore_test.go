@@ -67,7 +67,7 @@ type restoreRefusalJSON struct {
 // rebased branch undoes on the story's branch, so the branch holds main's
 // lines again and the path leaves the record; a path the record no longer
 // holds is then refused.
-func TestStreamRestoreCommitsMainsVersionOfAnUndonePath(t *testing.T) {
+func testStreamRestoreCommitsMainsVersionOfAnUndonePath(t *testing.T) {
 	root, wt := undoneStory(t)
 
 	out, errOut, code := runIn(t, wt, "--json", "stream", "restore", "S-0001", "--path", "./docs/guide.md", "--trailer", "Co-Authored-By: t <t@t>")
@@ -116,7 +116,7 @@ func TestStreamRestoreCommitsMainsVersionOfAnUndonePath(t *testing.T) {
 }
 
 // The text output names the branch, the commit, and each path restored.
-func TestStreamRestorePrintsWhatItRestored(t *testing.T) {
+func testStreamRestorePrintsWhatItRestored(t *testing.T) {
 	_, wt := undoneStory(t)
 	out, errOut, code := runIn(t, wt, "stream", "restore", "S-0001", "--path", "docs/guide.md")
 	if code != 0 {
@@ -130,7 +130,7 @@ func TestStreamRestorePrintsWhatItRestored(t *testing.T) {
 
 // A worktree with uncommitted changes is refused, naming them, and nothing
 // changes: no commit, the changes as they were, the record as it was.
-func TestStreamRestoreRefusesUncommittedChangesChangingNothing(t *testing.T) {
+func testStreamRestoreRefusesUncommittedChangesChangingNothing(t *testing.T) {
 	root, wt := undoneStory(t)
 	head := gitIn(t, wt, "rev-parse", "HEAD")
 	_ = os.WriteFile(filepath.Join(wt, "docs", "guide.md"), []byte("half done\n"), 0o644)
@@ -164,7 +164,7 @@ func TestStreamRestoreRefusesUncommittedChangesChangingNothing(t *testing.T) {
 
 // A path the record does not hold is refused, naming those it holds, and
 // nothing changes, not even the paths given that it holds.
-func TestStreamRestoreRefusesAPathTheRecordDoesNotHold(t *testing.T) {
+func testStreamRestoreRefusesAPathTheRecordDoesNotHold(t *testing.T) {
 	root, wt := undoneStory(t)
 	head := gitIn(t, wt, "rev-parse", "HEAD")
 
@@ -197,9 +197,9 @@ func TestStreamRestoreRefusesAPathTheRecordDoesNotHold(t *testing.T) {
 
 // A story not in progress or in review, and an item that is not a story, are
 // refused before git is asked anything.
-func TestStreamRestoreRefusesAStoryNotInProgressOrReview(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "tester")
+func testStreamRestoreRefusesAStoryNotInProgressOrReview(t *testing.T) {
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	inEnv(t, "FLAI_AGENT", "tester")
 	root := tempProject(t)
 	for _, args := range [][]string{{"epic", "new", "Epic"}, {"story", "new", "Story", "--epic", "E-0001"}} {
 		if _, errOut, code := runIn(t, root, args...); code != 0 {

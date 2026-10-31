@@ -11,10 +11,11 @@ import (
 )
 
 func TestTemplatePushCommand(t *testing.T) {
+	t.Parallel()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	r := execx.System{}
 	bare := filepath.Join(t.TempDir(), "tpl.git")
 	if _, err := r.Run("", "git", "init", "-q", "--bare", "-b", "main", bare); err != nil {

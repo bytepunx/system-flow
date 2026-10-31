@@ -37,7 +37,8 @@ func legacyRepo(t *testing.T) string {
 }
 
 func TestImportDryRunAndApply(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := legacyRepo(t)
 	out, errOut, code := runIn(t, ".", "import", root, "--template", "../../template", "--dry-run")
 	if _, err := os.Stat(filepath.Join("..", "..", "template", "template.yaml")); err != nil {
@@ -105,7 +106,8 @@ func TestImportDryRunAndApply(t *testing.T) {
 // An empty required --var stops flai import before it moves a folder or
 // writes a file (I-0041).
 func TestImportRefusesAnEmptyRequiredVarBeforeMovingAnything(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := legacyRepo(t)
 	_, errOut, code := runIn(t, ".", "import", root, "--template", miniTemplate, "--yes", "--var", "project_name=")
 	if code == 0 || !strings.Contains(errOut, "required variables not set: project_name") {
@@ -124,8 +126,9 @@ func TestImportRefusesAnEmptyRequiredVarBeforeMovingAnything(t *testing.T) {
 // spells, wins; a configured ref naming another branch is used as given
 // (ADR-0103). An import writes no lock, so system-flow.yaml is the record.
 func TestImportAppliesTheNewestRelease(t *testing.T) {
+	t.Parallel()
 	url := releasedTemplate(t)
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	if _, errOut, code := runIn(t, ".", "template", "use", url, "--ref", "main"); code != 0 {
 		t.Fatalf("template use: %s", errOut)
 	}

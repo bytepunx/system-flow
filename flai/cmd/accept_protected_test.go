@@ -18,6 +18,7 @@ import (
 // agent on its own name are refused before anything is merged, each refusal
 // naming the files.
 func TestOnlyTheOperatorAcceptsAStoryThatChangesProtectedPaths(t *testing.T) {
+	t.Parallel()
 	root, head := protectedStoryInReview(t, "")
 	mainBefore := gitIn(t, root, "rev-parse", "main")
 	files := ".claude/settings.json, .mcp.json"
@@ -82,6 +83,7 @@ func TestOnlyTheOperatorAcceptsAStoryThatChangesProtectedPaths(t *testing.T) {
 // The operator is the story's owner or the project's owner; with neither
 // named, anyone but the orchestrator.
 func TestTheOperatorIsTheStorysOwnerOrTheProjects(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		name, projectOwner, storyOwner, by string
 	}{

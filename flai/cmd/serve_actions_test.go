@@ -89,7 +89,7 @@ func TestHostActionPush(t *testing.T) {
 	if code != 0 || !strings.Contains(out, "push enabled for t") || !strings.Contains(out, "flai serve journal") || !strings.Contains(out, "flai serve disable push") {
 		t.Fatalf("enable: %d %s", code, out)
 	}
-	cfg, _ := os.ReadFile(os.Getenv("FLAI_CONFIG"))
+	cfg, _ := os.ReadFile(configOf(t))
 	if !strings.Contains(string(cfg), `"host_actions"`) || !strings.Contains(string(cfg), root) {
 		t.Errorf("it is written to the host's configuration, for this project: %s", cfg)
 	}
@@ -128,7 +128,7 @@ func TestHostActionPush(t *testing.T) {
 	if !strings.Contains(text, "nothing pushed") || strings.Contains(text, "disabled") {
 		t.Errorf("journal -n 1: %s", text)
 	}
-	if st, err := os.Stat(filepath.Join(filepath.Dir(os.Getenv("FLAI_CONFIG")), "serve", "journal.jsonl")); err != nil || st.Mode().Perm() != 0o600 {
+	if st, err := os.Stat(filepath.Join(filepath.Dir(configOf(t)), "serve", "journal.jsonl")); err != nil || st.Mode().Perm() != 0o600 {
 		t.Errorf("the journal is the operator's alone: %v %v", st, err)
 	}
 
@@ -155,7 +155,8 @@ func TestHostActionPush(t *testing.T) {
 // S-0079: the agent's command is the operator's, an argument list with no
 // default, managed on the host and nowhere else.
 func TestServeAgentCommand(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	out, _, _ := runIn(t, root, "serve", "agent")
 	if !strings.Contains(out, "no command is set, so a story that names no harness is not started") || !strings.Contains(out, "off for this project") {
@@ -168,7 +169,7 @@ func TestServeAgentCommand(t *testing.T) {
 	if code != 0 || !strings.Contains(out, `command: "claude" "-p" "work on {story}; echo $HOME"`) || !strings.Contains(out, "never through a shell") {
 		t.Fatalf("set: %d %s %s", code, out, errOut)
 	}
-	cfg, _ := os.ReadFile(os.Getenv("FLAI_CONFIG"))
+	cfg, _ := os.ReadFile(configOf(t))
 	if !strings.Contains(string(cfg), `"work on {story}; echo $HOME"`) || !strings.Contains(string(cfg), `"name": "builder"`) {
 		t.Errorf("kept as an argument list, as written: %s", cfg)
 	}
@@ -183,14 +184,14 @@ func TestServeAgentCommand(t *testing.T) {
 	if !strings.Contains(js, `"enabled_here": true`) || !strings.Contains(js, `"claude"`) {
 		t.Errorf("show --json: %s", js)
 	}
-	got := (&app{}).agentConfig(root)
+	got := (&app{configPath: configOf(t)}).agentConfig(root)
 	if !got.Enabled || len(got.Command) != 3 || got.Name != "builder" {
 		t.Errorf("what flai serve is given: %+v", got)
 	}
 	if out, _, _ := runIn(t, root, "serve", "agent", "clear"); !strings.Contains(out, "no command is set") {
 		t.Errorf("clear: %s", out)
 	}
-	if got := (&app{}).agentConfig(root); len(got.Command) != 0 {
+	if got := (&app{configPath: configOf(t)}).agentConfig(root); len(got.Command) != 0 {
 		t.Errorf("cleared: %+v", got)
 	}
 }
@@ -199,18 +200,19 @@ func TestServeAgentCommand(t *testing.T) {
 // told at every look whether it is on, and agent.status carries the
 // project's orchestrator run, null before the first.
 func TestServeOrchestrateAction(t *testing.T) {
+	t.Parallel()
 	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfgPath)
+	useConfig(t, cfgPath)
 	root := tempProject(t)
 	if out, _, _ := runIn(t, root, "serve", "actions"); !strings.Contains(out, "orchestrate: off everywhere") || !strings.Contains(out, "orchestration.permissions") {
 		t.Errorf("actions names it and what it means: %s", out)
 	}
-	if (&app{}).agentConfig(root).Orchestrate {
+	if (&app{configPath: configOf(t)}).agentConfig(root).Orchestrate {
 		t.Error("orchestrate is on by default")
 	}
 	status := func() string {
 		t.Helper()
-		got, err := json.Marshal((&app{}).host().Agent(root))
+		got, err := json.Marshal((&app{configPath: configOf(t)}).host().Agent(root))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -222,7 +224,7 @@ func TestServeOrchestrateAction(t *testing.T) {
 	if out, errOut, code := runIn(t, root, "serve", "enable", "orchestrate"); code != 0 || !strings.Contains(out, "orchestrate enabled for t") {
 		t.Fatalf("enable: %d %s %s", code, out, errOut)
 	}
-	if !(&app{}).agentConfig(root).Orchestrate {
+	if !(&app{configPath: configOf(t)}).agentConfig(root).Orchestrate {
 		t.Error("enabled, flai serve is not told")
 	}
 	run := `{"` + root + `":{"orchestrator":{"story":"","harness":"command","command":"run-agent","agent":"orchestrator","pid":42,"started":"2026-10-05T10:00:00Z","session":"s","log":"/l/t-orchestrator-20261005T100000Z.log"}}}`
@@ -237,7 +239,7 @@ func TestServeOrchestrateAction(t *testing.T) {
 		t.Errorf("agent.status with a run: %s", got)
 	}
 	runIn(t, root, "serve", "disable", "orchestrate")
-	if (&app{}).agentConfig(root).Orchestrate {
+	if (&app{configPath: configOf(t)}).agentConfig(root).Orchestrate {
 		t.Error("disabled, flai serve is still told it is on")
 	}
 }
@@ -246,8 +248,9 @@ func TestServeOrchestrateAction(t *testing.T) {
 // one entry per provider held, read from budget.json in the serve folder,
 // and leaves it out once the state is cleared or the file cannot be read.
 func TestAgentStatusCarriesTheHostsBudget(t *testing.T) {
+	t.Parallel()
 	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfgPath)
+	useConfig(t, cfgPath)
 	root := tempProject(t)
 	dir := string(serve.DirFor(cfgPath))
 	if err := os.MkdirAll(dir, 0o700); err != nil {
@@ -262,7 +265,7 @@ func TestAgentStatusCarriesTheHostsBudget(t *testing.T) {
 	var warned bytes.Buffer
 	status := func() map[string]any {
 		t.Helper()
-		out, ok := (&app{errOut: &warned}).host().Agent(root).(map[string]any)
+		out, ok := (&app{configPath: configOf(t), errOut: &warned}).host().Agent(root).(map[string]any)
 		if !ok {
 			t.Fatal("agent.status's state is not a map")
 		}
@@ -299,6 +302,7 @@ func TestAgentStatusCarriesTheHostsBudget(t *testing.T) {
 // S-0534: flai serve status names each held provider with its limit and
 // until, says when a probe runs, and when until has passed with none.
 func TestBudgetLine(t *testing.T) {
+	t.Parallel()
 	now := time.Date(2026, 10, 28, 8, 30, 0, 0, time.UTC)
 	for _, c := range []struct {
 		b    hostapi.Budget
@@ -323,11 +327,12 @@ func TestBudgetLine(t *testing.T) {
 // serve actions names it and what it means, the dashboard's settings page
 // lists it, and enable and disable turn it on and off for the project.
 func TestServeMergeQueueAction(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	enabled := func() bool {
 		t.Helper()
-		cfg, _, err := (&app{}).loadConfig()
+		cfg, _, err := (&app{configPath: configOf(t)}).loadConfig()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -335,7 +340,7 @@ func TestServeMergeQueueAction(t *testing.T) {
 	}
 	listed := func() map[string]any {
 		t.Helper()
-		got, err := json.Marshal((&app{}).hostSettings(root))
+		got, err := json.Marshal((&app{configPath: configOf(t)}).hostSettings(root))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -383,18 +388,19 @@ func TestServeMergeQueueAction(t *testing.T) {
 // run, with its focus, trigger, outcome, report, and log, null before the
 // first, apart from the orchestrator's.
 func TestServeAnalyzeAction(t *testing.T) {
+	t.Parallel()
 	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfgPath)
+	useConfig(t, cfgPath)
 	root := tempProject(t)
 	if out, _, _ := runIn(t, root, "serve", "actions"); !strings.Contains(out, "analyze: off everywhere") || !strings.Contains(out, "analysis.agent") || !strings.Contains(out, "design/analysis") {
 		t.Errorf("actions names it and what it means: %s", out)
 	}
-	if (&app{}).agentConfig(root).Analyze {
+	if (&app{configPath: configOf(t)}).agentConfig(root).Analyze {
 		t.Error("analyze is on by default")
 	}
 	status := func() string {
 		t.Helper()
-		got, err := json.Marshal((&app{}).host().Agent(root))
+		got, err := json.Marshal((&app{configPath: configOf(t)}).host().Agent(root))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -406,7 +412,7 @@ func TestServeAnalyzeAction(t *testing.T) {
 	if out, errOut, code := runIn(t, root, "serve", "enable", "analyze"); code != 0 || !strings.Contains(out, "analyze enabled for t") {
 		t.Fatalf("enable: %d %s %s", code, out, errOut)
 	}
-	if !(&app{}).agentConfig(root).Analyze {
+	if !(&app{configPath: configOf(t)}).agentConfig(root).Analyze {
 		t.Error("enabled, flai serve is not told")
 	}
 	run := `{"` + root + `":{"analyzer":{"story":"","harness":"command","command":"run-agent","agent":"analyzer","pid":42,"started":"2026-10-06T10:00:00Z","ended":"2026-10-06T10:05:00Z","log":"/l/t-analyzer-20261006T100000Z.log","trigger":"asked","focus":"risk","report":"design/analysis/2026-10-06-risk.md","outcome":"worked"}}}`
@@ -425,7 +431,7 @@ func TestServeAnalyzeAction(t *testing.T) {
 		}
 	}
 	runIn(t, root, "serve", "disable", "analyze")
-	if (&app{}).agentConfig(root).Analyze {
+	if (&app{configPath: configOf(t)}).agentConfig(root).Analyze {
 		t.Error("disabled, flai serve is still told it is on")
 	}
 }
@@ -435,18 +441,19 @@ func TestServeAnalyzeAction(t *testing.T) {
 // run, with its since, trigger, outcome, entries, and log, null before the
 // first, apart from the analyzer's.
 func TestServeCurateAction(t *testing.T) {
+	t.Parallel()
 	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfgPath)
+	useConfig(t, cfgPath)
 	root := tempProject(t)
 	if out, _, _ := runIn(t, root, "serve", "actions"); !strings.Contains(out, "curate: off everywhere") || !strings.Contains(out, "digest.agent") || !strings.Contains(out, "flai digest new and edit") {
 		t.Errorf("actions names it and what it means: %s", out)
 	}
-	if (&app{}).agentConfig(root).Curate {
+	if (&app{configPath: configOf(t)}).agentConfig(root).Curate {
 		t.Error("curate is on by default")
 	}
 	status := func() string {
 		t.Helper()
-		got, err := json.Marshal((&app{}).host().Agent(root))
+		got, err := json.Marshal((&app{configPath: configOf(t)}).host().Agent(root))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -458,7 +465,7 @@ func TestServeCurateAction(t *testing.T) {
 	if out, errOut, code := runIn(t, root, "serve", "enable", "curate"); code != 0 || !strings.Contains(out, "curate enabled for t") {
 		t.Fatalf("enable: %d %s %s", code, out, errOut)
 	}
-	if !(&app{}).agentConfig(root).Curate {
+	if !(&app{configPath: configOf(t)}).agentConfig(root).Curate {
 		t.Error("enabled, flai serve is not told")
 	}
 	run := `{"` + root + `":{"curator":{"story":"","harness":"command","command":"run-agent","agent":"curator","role":"curate","pid":42,"started":"2026-10-23T10:00:00Z","ended":"2026-10-23T10:05:00Z","log":"/l/t-curator-20261023T100000Z.log","trigger":"asked","since":"2026-10-01","entries":["D-0007"],"outcome":"worked"}}}`
@@ -477,7 +484,7 @@ func TestServeCurateAction(t *testing.T) {
 		}
 	}
 	runIn(t, root, "serve", "disable", "curate")
-	if (&app{}).agentConfig(root).Curate {
+	if (&app{configPath: configOf(t)}).agentConfig(root).Curate {
 		t.Error("disabled, flai serve is still told it is on")
 	}
 }
@@ -485,7 +492,8 @@ func TestServeCurateAction(t *testing.T) {
 // S-0104: what each harness a story may name is on this host, and what its
 // agent may do, are the operator's, set here and nowhere else.
 func TestServeAgentHarness(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	out, _, _ := runIn(t, root, "serve", "agent", "harness")
 	if !strings.Contains(out, `harness claude-code: "claude" "--permission-mode" "acceptEdits" "--allowedTools" "Bash,mcp__flai"`) {
@@ -495,27 +503,27 @@ func TestServeAgentHarness(t *testing.T) {
 	if code != 0 || !strings.Contains(out, `harness claude-code: "/opt/claude" "--permission-mode" "bypassPermissions"`) {
 		t.Fatalf("set: %d %s %s", code, out, errOut)
 	}
-	got := (&app{}).agentConfig(root).Harnesses["claude-code"]
+	got := (&app{configPath: configOf(t)}).agentConfig(root).Harnesses["claude-code"]
 	if got.Program != "/opt/claude" || strings.Join(got.Args, " ") != "--permission-mode bypassPermissions" {
 		t.Errorf("what flai serve is given: %+v", got)
 	}
 	// the program alone keeps the arguments; "--" alone means none
 	runIn(t, root, "serve", "agent", "harness", "claude-code", "--program", "/usr/bin/claude")
-	if got := (&app{}).agentConfig(root).Harnesses["claude-code"]; got.Program != "/usr/bin/claude" || len(got.Args) != 2 {
+	if got := (&app{configPath: configOf(t)}).agentConfig(root).Harnesses["claude-code"]; got.Program != "/usr/bin/claude" || len(got.Args) != 2 {
 		t.Errorf("program only: %+v", got)
 	}
 	runIn(t, root, "serve", "agent", "harness", "claude-code", "--")
-	if got := (&app{}).agentConfig(root).Harnesses["claude-code"]; len(got.Args) != 0 {
+	if got := (&app{configPath: configOf(t)}).agentConfig(root).Harnesses["claude-code"]; len(got.Args) != 0 {
 		t.Errorf("no arguments: %+v", got)
 	}
 	// setting the command keeps the harnesses, and it is a harness of its own
 	runIn(t, root, "serve", "agent", "set", "--", "run-agent", "{story}")
-	cfg := (&app{}).agentConfig(root)
+	cfg := (&app{configPath: configOf(t)}).agentConfig(root)
 	if cfg.Harnesses["command"].Program != "run-agent" || cfg.Harnesses["claude-code"].Program != "/usr/bin/claude" {
 		t.Errorf("both: %+v", cfg.Harnesses)
 	}
 	runIn(t, root, "serve", "agent", "clear")
-	if got := (&app{}).agentConfig(root).Harnesses["claude-code"]; got.Program != "/usr/bin/claude" {
+	if got := (&app{configPath: configOf(t)}).agentConfig(root).Harnesses["claude-code"]; got.Program != "/usr/bin/claude" {
 		t.Errorf("clear removes only the command: %+v", got)
 	}
 	out, _, _ = runIn(t, root, "serve", "agent", "harness", "claude-code", "--reset")
@@ -534,10 +542,11 @@ func TestServeAgentHarness(t *testing.T) {
 // own field; --reset clears both; the command's program stays flai serve agent
 // set's; and a guard other than none is refused, naming what sets it.
 func TestServeAgentHarnessGuardAndDenyProtected(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	harnesses := func() map[string]config.HarnessHost {
-		cfg, _, err := (&app{}).loadConfig()
+		cfg, _, err := (&app{configPath: configOf(t)}).loadConfig()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -555,7 +564,7 @@ func TestServeAgentHarnessGuardAndDenyProtected(t *testing.T) {
 	if !strings.Contains(out, "  deny_protected: your arguments deny the protected paths") {
 		t.Errorf("show says deny_protected: %s", out)
 	}
-	if got := (&app{}).agentConfig(root).Harnesses["command"]; got.Program != "run-agent" || strings.Join(got.Args, " ") != "{story}" {
+	if got := (&app{configPath: configOf(t)}).agentConfig(root).Harnesses["command"]; got.Program != "run-agent" || strings.Join(got.Args, " ") != "{story}" {
 		t.Errorf("the command's program is still flai serve agent set's: %+v", got)
 	}
 	out, _, _ = runIn(t, root, "serve", "agent", "show", "--json")
@@ -613,22 +622,23 @@ func TestServeAgentHarnessGuardAndDenyProtected(t *testing.T) {
 // lifts on each harness, the command's among them, and whether the
 // project's auto-approve host action is on.
 func TestServeAgentConfigCarriesTheLiftsAndAutoApprove(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	runIn(t, root, "serve", "agent", "set", "--", "run-agent", "{story}")
-	if got := (&app{}).agentConfig(root); len(got.Lifts) != 0 || got.AutoApprove {
+	if got := (&app{configPath: configOf(t)}).agentConfig(root); len(got.Lifts) != 0 || got.AutoApprove {
 		t.Errorf("nothing lifted: %+v %v", got.Lifts, got.AutoApprove)
 	}
 	runIn(t, root, "serve", "agent", "harness", "command", "--guard", "none")
 	runIn(t, root, "serve", "agent", "harness", "claude-code", "--deny-protected")
-	got := (&app{}).agentConfig(root).Lifts
+	got := (&app{configPath: configOf(t)}).agentConfig(root).Lifts
 	if got["command"] != (serve.HarnessLifts{GuardNone: true}) || got["claude-code"] != (serve.HarnessLifts{DenyProtected: true}) {
 		t.Errorf("lifts: %+v", got)
 	}
 	if _, errOut, code := runIn(t, root, "serve", "enable", "auto-approve"); code != 0 {
 		t.Fatal(errOut)
 	}
-	if !(&app{}).agentConfig(root).AutoApprove {
+	if !(&app{configPath: configOf(t)}).agentConfig(root).AutoApprove {
 		t.Error("auto-approve is on for the project")
 	}
 }
@@ -640,7 +650,7 @@ func TestServeAgentConfigCarriesTheLiftsAndAutoApprove(t *testing.T) {
 // command never reads.
 func TestServeAgentProvider(t *testing.T) {
 	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfgPath)
+	useConfig(t, cfgPath)
 	const key = "sk-never-shown-0123456789"
 	t.Setenv("LITELLM_API_KEY", key)
 	const masterKey = "sk-master-never-shown-0123456789"
@@ -749,9 +759,8 @@ func TestServeAgentProvider(t *testing.T) {
 // prints or writes holds the token, which no flag takes.
 func TestServeForge(t *testing.T) {
 	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfgPath)
+	useConfig(t, cfgPath)
 	const token = "ghp_never-shown-0123456789"
-	t.Setenv("GITHUB_TOKEN", "")
 	t.Setenv("FLAI_GH_TOKEN", token)
 	root := tempProject(t)
 	var seen strings.Builder
@@ -805,7 +814,7 @@ func TestServeForge(t *testing.T) {
 		t.Errorf("a refused value changes nothing: %+v", got)
 	}
 	// S-0393: flai serve is told the variable it keeps from every agent
-	if got := (&app{}).agentConfig(root).ForgeTokenEnvs; len(got) != 1 || got[0] != "FLAI_GH_TOKEN" {
+	if got := (&app{configPath: configOf(t)}).agentConfig(root).ForgeTokenEnvs; len(got) != 1 || got[0] != "FLAI_GH_TOKEN" {
 		t.Errorf("the forge tokens kept from the agents: %q, want FLAI_GH_TOKEN", got)
 	}
 	data, err := os.ReadFile(cfgPath)
@@ -815,7 +824,7 @@ func TestServeForge(t *testing.T) {
 	if out, _, _ := run("github", "--reset"); out != "forge github: its token in the variable GITHUB_TOKEN (default), not set in this environment\n" || saved() != nil {
 		t.Errorf("reset: %q %+v", out, saved())
 	}
-	if got := (&app{}).agentConfig(root).ForgeTokenEnvs; len(got) != 1 || got[0] != "GITHUB_TOKEN" {
+	if got := (&app{configPath: configOf(t)}).agentConfig(root).ForgeTokenEnvs; len(got) != 1 || got[0] != "GITHUB_TOKEN" {
 		t.Errorf("the forge tokens kept from the agents once reset: %q, want GITHUB_TOKEN", got)
 	}
 	if strings.Contains(seen.String()+string(data), token) {
@@ -828,8 +837,9 @@ func TestServeForge(t *testing.T) {
 // or the harnesses; show says it and whether it is the default; a negative
 // count is refused; and clear keeps it.
 func TestServeAgentAutoRestarts(t *testing.T) {
+	t.Parallel()
 	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfgPath)
+	useConfig(t, cfgPath)
 	root := tempProject(t)
 	if out, _, _ := runIn(t, root, "serve", "agent", "show"); !strings.Contains(out, "automatic restarts: 2 (default)") {
 		t.Errorf("unset, show says the default: %s", out)
@@ -879,7 +889,8 @@ func TestServeAgentAutoRestarts(t *testing.T) {
 // S-0082: the checks commands are the operator's, named argument lists with
 // no default, several at once, managed on the host and nowhere else.
 func TestServeChecksCommands(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	out, _, _ := runIn(t, root, "serve", "checks")
 	if !strings.Contains(out, "no command is named here; the manifest's own checks: is used instead") ||
@@ -907,7 +918,7 @@ func TestServeChecksCommands(t *testing.T) {
 	if code != 0 || !strings.Contains(out, `flai: "scripts/flai-test.sh" "--fast"`) || strings.Count(out, "flai:") != 1 {
 		t.Fatalf("the same name replaces: %d %s", code, out)
 	}
-	cfg, _ := os.ReadFile(os.Getenv("FLAI_CONFIG"))
+	cfg, _ := os.ReadFile(configOf(t))
 	if !strings.Contains(string(cfg), `"cd flaiover; pnpm test"`) || !strings.Contains(string(cfg), `"name": "flaiover"`) {
 		t.Errorf("kept as an argument list, as written: %s", cfg)
 	}
@@ -938,7 +949,8 @@ func TestServeChecksCommands(t *testing.T) {
 // components.idle a host setting flai serve components idle keeps, which
 // flai serve's supervisor of the dev servers reads.
 func TestServeComponentsActionAndIdle(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	out, _, _ := runIn(t, root, "serve", "components")
 	if !strings.Contains(out, "idle: 30m (default)") || !strings.Contains(out, "max_servers: 3 (default): at most this many dev servers run at once per project") ||
@@ -967,7 +979,7 @@ func TestServeComponentsActionAndIdle(t *testing.T) {
 	if code != 0 || !strings.Contains(out, "max_servers: 5: at most") || !strings.Contains(out, "idle: 45m: a dev server") {
 		t.Fatalf("max-servers 5: %d %s %s", code, out, errOut)
 	}
-	cfg, _ := os.ReadFile(os.Getenv("FLAI_CONFIG"))
+	cfg, _ := os.ReadFile(configOf(t))
 	if !strings.Contains(string(cfg), `"components"`) || !strings.Contains(string(cfg), `"idle": "45m"`) || !strings.Contains(string(cfg), `"max_servers": 5`) {
 		t.Errorf("kept in the host's configuration: %s", cfg)
 	}
@@ -993,7 +1005,7 @@ func TestServeComponentsActionAndIdle(t *testing.T) {
 	// flai serve's own host has the supervisor, on components.idle and
 	// components.max_servers as set, and stops it when asked
 	var sink bytes.Buffer
-	a := &app{out: &sink, errOut: &sink, cwd: root}
+	a := &app{configPath: configOf(t), out: &sink, errOut: &sink, cwd: root}
 	host, stop := a.serveHost(t.Context())
 	if host.Components == nil || host.Components.Idle() != 45*time.Minute || !host.Enabled(hostapi.ActionComponents, root) {
 		t.Errorf("serveHost: %+v", host)
@@ -1019,14 +1031,15 @@ func TestServeComponentsActionAndIdle(t *testing.T) {
 // S-0082: the host's own named commands are used when there are any; the
 // manifest's checks: only when the host names none. Never a merge.
 func TestChecksConfigResolvesHostOverManifest(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	runIn(t, root, "serve", "checks", "show") // creates the config file, as flai itself would
 	repo, err := workitem.Open(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	a := &app{}
+	a := &app{configPath: configOf(t)}
 
 	// nothing named anywhere
 	cc, err := a.checksConfig(repo)
@@ -1067,8 +1080,9 @@ func TestChecksConfigResolvesHostOverManifest(t *testing.T) {
 // S-0105: the settings host action, the agent's name without a command, and
 // what the dashboard's settings page is told.
 func TestServeSettingsAreShownToTheDashboard(t *testing.T) {
+	t.Parallel()
 	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfgPath)
+	useConfig(t, cfgPath)
 	root := tempProject(t)
 	// S-0122: the served projects, without the dashboard's address or the credential's path
 	if err := serve.DirFor(cfgPath).Register(serve.Entry{Key: "harbour", Name: "Harbour", Root: "/p/harbour", URL: "http://127.0.0.1:4242", KeyFile: "/p/harbour/k"}); err != nil {
@@ -1081,11 +1095,11 @@ func TestServeSettingsAreShownToTheDashboard(t *testing.T) {
 	if _, errOut, code := runIn(t, root, "serve", "agent", "set", "--name", "builder", "--attended-minutes", "9"); code != 0 || !strings.Contains(errOut, "attended-minutes") || !strings.Contains(errOut, "does nothing") {
 		t.Fatalf("name without a command: %d %s", code, errOut)
 	}
-	cfg := (&app{}).agentConfig(root)
+	cfg := (&app{configPath: configOf(t)}).agentConfig(root)
 	if cfg.Name != "builder" || len(cfg.Command) != 0 {
 		t.Errorf("name: %+v", cfg)
 	}
-	if loaded, _, _ := (&app{}).loadConfig(); loaded.Agent.AttendedMinutes != 0 {
+	if loaded, _, _ := (&app{configPath: configOf(t)}).loadConfig(); loaded.Agent.AttendedMinutes != 0 {
 		t.Errorf("the retired minutes were stored: %+v", loaded.Agent)
 	}
 	runIn(t, root, "serve", "enable", "settings")
@@ -1102,7 +1116,7 @@ func TestServeSettingsAreShownToTheDashboard(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, _ := json.Marshal((&app{}).hostSettings(mainRootOf(repo)))
+	got, _ := json.Marshal((&app{configPath: configOf(t)}).hostSettings(mainRootOf(repo)))
 	for _, want := range []string{`"here":true,"means":"change this project's host settings`, `"here":false,"means":"publish when you press Publish`, `"name":"builder"`,
 		`"claude-code":{"args":["--permission-mode","acceptEdits","--allowedTools","Bash,mcp__flai"],"ask_capable":true,"deny_protected":false,"guard":"","guard_capable":true,"program":"claude","set":false}`,
 		`"command":{"args":[],"ask_capable":false,"deny_protected":false,"guard":"","guard_capable":false,"program":"","set":false}`,
@@ -1122,7 +1136,8 @@ func TestServeSettingsAreShownToTheDashboard(t *testing.T) {
 // still says the program and arguments are the defaults; and the command is
 // there with flai serve agent set's program and arguments.
 func TestServeSettingsShowEachHarnessGuardAndDenyProtected(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	runIn(t, root, "serve", "agent", "set", "--", "run-agent", "{story}")
 	for _, args := range [][]string{{"claude-code", "--guard", "none"}, {"command", "--guard", "none", "--deny-protected"}} {
@@ -1134,7 +1149,7 @@ func TestServeSettingsShowEachHarnessGuardAndDenyProtected(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, _ := json.Marshal((&app{}).hostSettings(mainRootOf(repo)))
+	got, _ := json.Marshal((&app{configPath: configOf(t)}).hostSettings(mainRootOf(repo)))
 	for _, want := range []string{
 		`"claude-code":{"args":["--permission-mode","acceptEdits","--allowedTools","Bash,mcp__flai"],"ask_capable":true,"deny_protected":false,"guard":"none","guard_capable":true,"program":"claude","set":false}`,
 		`"command":{"args":["{story}"],"ask_capable":false,"deny_protected":true,"guard":"none","guard_capable":false,"program":"run-agent","set":false}`,
@@ -1144,7 +1159,7 @@ func TestServeSettingsShowEachHarnessGuardAndDenyProtected(t *testing.T) {
 		}
 	}
 	runIn(t, root, "serve", "agent", "harness", "claude-code", "--program", "/opt/claude")
-	got, _ = json.Marshal((&app{}).hostSettings(mainRootOf(repo)))
+	got, _ = json.Marshal((&app{configPath: configOf(t)}).hostSettings(mainRootOf(repo)))
 	if want := `"guard":"none","guard_capable":true,"program":"/opt/claude","set":true}`; !strings.Contains(string(got), want) {
 		t.Errorf("a program beside the guard is set: want %s in\n%s", want, got)
 	}
@@ -1156,7 +1171,7 @@ func TestServeSettingsShowEachHarnessGuardAndDenyProtected(t *testing.T) {
 // variable's value.
 func TestServeSettingsShowTheProvidersNeverTheirKeys(t *testing.T) {
 	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfgPath)
+	useConfig(t, cfgPath)
 	const key = "sk-never-shown-0123456789"
 	t.Setenv("LITELLM_API_KEY", key)
 	t.Setenv("OPENROUTER_API_KEY", "")
@@ -1174,7 +1189,7 @@ func TestServeSettingsShowTheProvidersNeverTheirKeys(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got, _ := json.Marshal((&app{}).hostSettings(mainRootOf(repo)))
+		got, _ := json.Marshal((&app{configPath: configOf(t)}).hostSettings(mainRootOf(repo)))
 		if strings.Contains(string(got), key) || strings.Contains(string(got), masterKey) {
 			t.Errorf("a key is in the settings: %s", got)
 		}
@@ -1212,6 +1227,7 @@ func TestServeSettingsShowTheProvidersNeverTheirKeys(t *testing.T) {
 // settings action, its refusal a rule with flai's reason; and
 // settings.shared_check answers what flai shared check does, for anyone.
 func TestSettingsSharedThroughTheHostAPI(t *testing.T) {
+	t.Setenv("FLAI_AGENT", "tester")
 	root := sharedProject(t)
 	inProcess(t)
 	hostapiCall := func(method, params string) (string, int) {
@@ -1310,13 +1326,14 @@ func TestSettingsSharedThroughTheHostAPI(t *testing.T) {
 // the manifest sets it, and the schedule as written with its next run; a
 // value flai cannot read comes with its error.
 func TestSettingsShowThePlanningTriggers(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	repo, err := workitem.Open(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	a := &app{errOut: &bytes.Buffer{}, clock: func() time.Time { return time.Date(2026, 10, 4, 9, 30, 0, 0, time.UTC) }}
+	a := &app{configPath: configOf(t), errOut: &bytes.Buffer{}, clock: func() time.Time { return time.Date(2026, 10, 4, 9, 30, 0, 0, time.UTC) }}
 	planning := func() string {
 		t.Helper()
 		got, _ := json.Marshal(a.hostSettings(mainRootOf(repo)).(map[string]any)["planning"])
@@ -1360,7 +1377,7 @@ func TestSettingsShowThePlanningTriggers(t *testing.T) {
 // with that action on, and flai's refusal reaches the caller as Refused with
 // the field and the reason, the manifest left as it was.
 func TestSettingsShowAndSaveTheStrategicAgentsSettings(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	file := filepath.Join(root, manifest.File)
 	data, err := os.ReadFile(file)
@@ -1489,7 +1506,8 @@ func TestSettingsShowAndSaveTheStrategicAgentsSettings(t *testing.T) {
 // what it has flai push do; the dashboard is neither told of it nor can turn
 // it on or off.
 func TestAutoPublishIsTheShellsAlone(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	out, _, _ := runIn(t, root, "serve", "actions")
 	if !strings.Contains(out, "auto-publish: off everywhere\n  has flai push --pending, run in a shell") || !strings.Contains(out, "push: off everywhere\n  lets a dashboard publish when you press Publish") {
@@ -1511,10 +1529,10 @@ func TestAutoPublishIsTheShellsAlone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg, _, _ := (&app{}).loadConfig(); !cfg.ActionEnabled("auto-publish", mainRootOf(repo)) {
+	if cfg, _, _ := (&app{configPath: configOf(t)}).loadConfig(); !cfg.ActionEnabled("auto-publish", mainRootOf(repo)) {
 		t.Error("the refusal left auto-publish as the shell set it")
 	}
-	got, _ := json.Marshal((&app{}).hostSettings(mainRootOf(repo)))
+	got, _ := json.Marshal((&app{configPath: configOf(t)}).hostSettings(mainRootOf(repo)))
 	if strings.Contains(string(got), "auto-publish") || !strings.Contains(string(got), `"name":"push"`) {
 		t.Errorf("the settings page is told of auto-publish: %s", got)
 	}
@@ -1525,7 +1543,8 @@ func TestAutoPublishIsTheShellsAlone(t *testing.T) {
 // project, saying what it has flai serve do, and the dashboard is neither
 // told of it nor can turn it on or off.
 func TestAutoUpgradeIsTheShellsAlone(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	out, errOut, code := runIn(t, root, "serve", "enable", "auto-upgrade")
 	if code != 0 || !strings.Contains(out, "auto-upgrade enabled for t\n  it has flai serve ask flai host") || strings.Contains(out, "journal") || !strings.Contains(out, "flai serve disable auto-upgrade") {
@@ -1535,7 +1554,7 @@ func TestAutoUpgradeIsTheShellsAlone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !(&app{}).host().Enabled(hostapi.ActionAutoUpgrade, mainRootOf(repo)) {
+	if !(&app{configPath: configOf(t)}).host().Enabled(hostapi.ActionAutoUpgrade, mainRootOf(repo)) {
 		t.Error("flai serve sees auto-upgrade on for the project")
 	}
 	if info, _, _ := runIn(t, root, "hostapi", "project.info"); strings.Contains(info, "auto-upgrade") {
@@ -1546,7 +1565,7 @@ func TestAutoUpgradeIsTheShellsAlone(t *testing.T) {
 	if code == 0 || !strings.Contains(out, "flai serve disable auto-upgrade") {
 		t.Errorf("settings.action refuses auto-upgrade, naming what to run: %d %s", code, out)
 	}
-	got, _ := json.Marshal((&app{}).hostSettings(mainRootOf(repo)))
+	got, _ := json.Marshal((&app{configPath: configOf(t)}).hostSettings(mainRootOf(repo)))
 	if strings.Contains(string(got), "auto-upgrade") {
 		t.Errorf("the settings page is told of auto-upgrade: %s", got)
 	}
@@ -1556,6 +1575,7 @@ func TestAutoUpgradeIsTheShellsAlone(t *testing.T) {
 // by version, as flai host upgrade --version does, and hears whether the
 // host restarts on it or why it refused; a serve under no host asks none.
 func TestServeAsksItsHostForTheRelease(t *testing.T) {
+	t.Parallel()
 	var asked []string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
@@ -1589,7 +1609,8 @@ func TestServeAsksItsHostForTheRelease(t *testing.T) {
 
 // S-0116: flai serve agent restart says why it will not start an agent.
 func TestServeAgentRestartSaysWhyItRefuses(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	if _, errOut, code := runIn(t, root, "serve", "agent", "restart", "S-0001"); code == 0 || !strings.Contains(errOut, "rule: the agent host action is off for this project") {
 		t.Errorf("action off: %d %s", code, errOut)
@@ -1603,8 +1624,9 @@ func TestServeAgentRestartSaysWhyItRefuses(t *testing.T) {
 // S-0118: flai serve agent restart queues the agent of a story in ready
 // while the in-progress limit is full, and says so.
 func TestServeAgentRestartQueuesWhenTheLimitIsFull(t *testing.T) {
+	t.Parallel()
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	root := tempProject(t)
 	runIn(t, root, "epic", "new", "Epic")
 	for _, s := range []struct{ id, file string }{{"S-0001", "S-0001-slice.md"}, {"S-0002", "S-0002-busy.md"}} {
@@ -1655,7 +1677,8 @@ func TestServeAgentRestartQueuesWhenTheLimitIsFull(t *testing.T) {
 // S-0115: flai serve agent start starts a ready story's agent now, recorded
 // where flai serve tracks it, and says why when it will not.
 func TestServeAgentStartStartsAReadyStorysAgent(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	runIn(t, root, "epic", "new", "Epic")
 	runIn(t, root, "story", "new", "Slice", "--epic", "E-0001")
@@ -1695,7 +1718,8 @@ func TestServeAgentStartStartsAReadyStorysAgent(t *testing.T) {
 // S-0140: flai serve agent commit starts an agent to commit what a story in
 // review left uncommitted in its worktree, and says why when it will not.
 func TestServeAgentCommitStartsAnAgentForAnUncommittedWorktree(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	runIn(t, root, "epic", "new", "Epic")
 	runIn(t, root, "story", "new", "Slice", "--epic", "E-0001")
@@ -1720,8 +1744,9 @@ func TestServeAgentCommitStartsAnAgentForAnUncommittedWorktree(t *testing.T) {
 // S-0142: flai serve agent stream prints what a story's agent said and did,
 // from the log flai serve gave it, and the host answers agent.stream from it.
 func TestServeAgentStreamPrintsTheLog(t *testing.T) {
+	t.Parallel()
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	root := tempProject(t)
 	repo, err := workitem.Open(root)
 	if err != nil {
@@ -1768,7 +1793,7 @@ func TestServeAgentStreamPrintsTheLog(t *testing.T) {
 	}
 
 	// the host answers agent.stream from the same state
-	a := &app{}
+	a := &app{configPath: configOf(t)}
 	res, e := hostapi.MethodsFor("test", nil, a.host())["agent.stream"](context.Background(), channel.Project{Key: "t", Root: mainRootOf(repo)}, json.RawMessage(`{"story":"S-0001","after":`+first+`}`))
 	if e != nil {
 		t.Fatal(e)
@@ -1782,7 +1807,7 @@ func TestServeAgentStreamPrintsTheLog(t *testing.T) {
 // serve agent restart does, under the same agent host action, and journal
 // the agent that asked.
 func TestTheMCPServerStartsAStorysAgentUnderTheAgentAction(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	t.Setenv("FLAI_STARTED_BY", "") // the operator's own agent, whoever runs the tests
 	root := tempProject(t)
 	runIn(t, root, "epic", "new", "Epic")
@@ -1796,7 +1821,7 @@ func TestTheMCPServerStartsAStorysAgentUnderTheAgentAction(t *testing.T) {
 		}
 	}
 	var out, errOut bytes.Buffer
-	a := &app{out: &out, errOut: &errOut, cwd: root, clock: func() time.Time { return time.Date(2026, 10, 1, 10, 0, 0, 0, time.UTC) }}
+	a := &app{configPath: configOf(t), out: &out, errOut: &errOut, cwd: root, clock: func() time.Time { return time.Date(2026, 10, 1, 10, 0, 0, 0, time.UTC) }}
 	ctx := context.Background()
 	if _, err := a.mcpAgents(ctx, "restart", root, "S-0001", "agent-ops"); err == nil || !strings.Contains(err.Error(), "the agent host action is off") {
 		t.Errorf("action off: %v", err)
@@ -1840,7 +1865,7 @@ func orchestratorState(t *testing.T, cfg, root string, orchestrator, analyzer *s
 // the orchestrator is held.
 func TestServeOrchestrateHoldsTheOrchestratorStopped(t *testing.T) {
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	root := tempProject(t)
 	repo, err := workitem.Open(root)
 	if err != nil {
@@ -1874,7 +1899,7 @@ func TestServeOrchestrateHoldsTheOrchestratorStopped(t *testing.T) {
 	if _, errOut, code := runIn(t, root, "serve", "orchestrate", "stop"); code == 0 || !strings.Contains(errOut, "rule: the orchestrator is already held stopped") {
 		t.Errorf("stop twice: %d %s", code, errOut)
 	}
-	a := &app{out: &bytes.Buffer{}, errOut: &bytes.Buffer{}}
+	a := &app{configPath: configOf(t), out: &bytes.Buffer{}, errOut: &bytes.Buffer{}}
 	p := channel.Project{Key: "t", Root: main}
 	res, e := hostapi.MethodsFor("test", nil, a.host())["agent.status"](context.Background(), p, json.RawMessage(`{}`))
 	if b, _ := json.Marshal(res); e != nil || !strings.Contains(string(b), `"orchestrator":{`) || !strings.Contains(string(b), `"session":"s1","outcome":"failed","why":"could not be started: no harness","held":true}`) {
@@ -1912,8 +1937,9 @@ func TestServeOrchestrateHoldsTheOrchestratorStopped(t *testing.T) {
 // S-0228: the host answers agent.stream with role from the analyzer's newest
 // run, as flai serve recorded it, and is not found with no run of the role.
 func TestTheHostAnswersARolesStream(t *testing.T) {
+	t.Parallel()
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	root := tempProject(t)
 	repo, err := workitem.Open(root)
 	if err != nil {
@@ -1924,7 +1950,7 @@ func TestTheHostAnswersARolesStream(t *testing.T) {
 		t.Fatal(err)
 	}
 	orchestratorState(t, cfg, mainRootOf(repo), nil, &serve.AgentRun{Agent: "analyzer", Focus: "risk", Started: "2026-09-15T20:00:00Z", Ended: "2026-09-15T20:05:00Z", Outcome: serve.OutcomeWorked, Log: log})
-	a := &app{}
+	a := &app{configPath: configOf(t)}
 	m := hostapi.MethodsFor("test", nil, a.host())["agent.stream"]
 	p := channel.Project{Key: "t", Root: mainRootOf(repo)}
 	res, e := m(context.Background(), p, json.RawMessage(`{"role":"analyze"}`))
@@ -1943,11 +1969,12 @@ func TestTheHostAnswersARolesStream(t *testing.T) {
 // configuration names it, normalized as the container is given it: empty
 // until it is set.
 func TestServeSettingsShowTheAllowedHosts(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	allowed := func() any {
 		t.Helper()
-		got, err := json.Marshal((&app{}).hostSettings(root))
+		got, err := json.Marshal((&app{configPath: configOf(t)}).hostSettings(root))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1980,8 +2007,9 @@ func TestServeSettingsShowTheAllowedHosts(t *testing.T) {
 // with --json too, clear removes them, and a URL that is not http or https,
 // an empty command, and a set with neither are refused, changing nothing.
 func TestServeNotify(t *testing.T) {
+	t.Parallel()
 	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfgPath)
+	useConfig(t, cfgPath)
 	root := tempProject(t)
 	run := func(args ...string) (string, string, int) {
 		t.Helper()
@@ -2043,17 +2071,18 @@ func TestServeNotify(t *testing.T) {
 // settings page list it, flai serve is told whether it is on, and
 // agent.status carries the role's runs under roles, by name and item.
 func TestServeEnableTakesADefinedRolesAction(t *testing.T) {
+	t.Parallel()
 	root := rolesProject(t, map[string]string{"reviewer.md": reviewerRole})
-	cfgPath := os.Getenv("FLAI_CONFIG")
+	cfgPath := configOf(t)
 	if out, _, _ := runIn(t, root, "serve", "actions"); !strings.Contains(out, "review: off everywhere\n  lets a dashboard start the role reviewer, which design/workflows/roles/reviewer.md defines") {
 		t.Errorf("actions names it and what it means: %s", out)
 	}
-	if (&app{}).agentConfig(root).RoleActions["review"] {
+	if (&app{configPath: configOf(t)}).agentConfig(root).RoleActions["review"] {
 		t.Error("review is on by default")
 	}
 	status := func() string {
 		t.Helper()
-		got, err := json.Marshal((&app{}).host().Agent(root))
+		got, err := json.Marshal((&app{configPath: configOf(t)}).host().Agent(root))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -2068,10 +2097,10 @@ func TestServeEnableTakesADefinedRolesAction(t *testing.T) {
 	if out, errOut, code := runIn(t, root, "serve", "enable", "review"); code != 0 || !strings.Contains(out, "review enabled for t\n  it lets a dashboard start the role reviewer") || !strings.Contains(out, "every use is journalled") {
 		t.Fatalf("enable: %d %s %s", code, out, errOut)
 	}
-	if !(&app{}).agentConfig(root).RoleActions["review"] {
+	if !(&app{configPath: configOf(t)}).agentConfig(root).RoleActions["review"] {
 		t.Error("enabled, flai serve is not told")
 	}
-	settings, err := json.Marshal((&app{}).hostSettings(root))
+	settings, err := json.Marshal((&app{configPath: configOf(t)}).hostSettings(root))
 	if err != nil || !strings.Contains(string(settings), `"here":true,"means":"start the role reviewer`) || !strings.Contains(string(settings), `"name":"review"`) {
 		t.Errorf("the settings page does not list review on: %s %v", settings, err)
 	}
@@ -2101,9 +2130,10 @@ func TestServeEnableTakesADefinedRolesAction(t *testing.T) {
 // S-0534: flai serve status prints a line per provider the host holds out of
 // budget, and its --json carries the same entries as agent.status.
 func TestServeStatusShowsEachHeldProvider(t *testing.T) {
+	t.Parallel()
 	home := t.TempDir()
 	cfgPath := filepath.Join(home, "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfgPath)
+	useConfig(t, cfgPath)
 	dir := string(serve.DirFor(cfgPath))
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		t.Fatal(err)

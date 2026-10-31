@@ -55,7 +55,7 @@ type inProcessHost struct {
 
 func runHostFor(t *testing.T, cfg, exe string) *inProcessHost {
 	t.Helper()
-	l := &hostLauncher{a: &app{}, exe: exe, config: cfg, taken: map[string]string{}}
+	l := &hostLauncher{a: &app{configPath: configOf(t)}, exe: exe, config: cfg, taken: map[string]string{}}
 	ctx, cancel := context.WithCancel(context.Background())
 	h := &inProcessHost{l: l, done: make(chan error, 1)}
 	ended := make(chan struct{})
@@ -103,8 +103,9 @@ func lastCall(t *testing.T, calls string) string {
 // S-0298: flai host versions prints the host's list of published releases,
 // as text and as it is with --json.
 func TestHostVersions(t *testing.T) {
+	t.Parallel()
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	exe, calls := selfUpgradeStandIn(t, "/home/me/.flai/bin/flai")
 	dir := t.TempDir()
 
@@ -160,8 +161,9 @@ func TestHostVersions(t *testing.T) {
 // through the host, which restarts on what was installed as for the newest;
 // a malformed or unpublished version is refused before anything is replaced.
 func TestHostUpgradeToAVersion(t *testing.T) {
+	t.Parallel()
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	installed := "/home/me/.flai/bin/flai"
 	exe, calls := selfUpgradeStandIn(t, installed)
 	dir := t.TempDir()
@@ -227,8 +229,9 @@ func TestHostUpgradeToAVersion(t *testing.T) {
 // verify ends with self-upgrade's refusal, naming the release and why; nothing
 // is installed and the host does not restart.
 func TestHostUpgradeRefusesAnUnverifiableRelease(t *testing.T) {
+	t.Parallel()
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	exe, calls := selfUpgradeStandIn(t, "/home/me/.flai/bin/flai")
 	dir := t.TempDir()
 	h := runHostFor(t, cfg, exe)

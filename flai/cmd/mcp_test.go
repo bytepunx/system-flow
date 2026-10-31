@@ -29,7 +29,7 @@ func TestMCPServesTheAgentNamedByTheFlagOverTheEnvironment(t *testing.T) {
 	if got := mcpAgent(""); got != "agent" {
 		t.Errorf("neither: %q", got)
 	}
-	c := newMCPCmd(&app{})
+	c := newMCPCmd(&app{configPath: configOf(t)})
 	if f := c.Flags().Lookup("agent"); f == nil || !strings.Contains(f.Usage, "FLAI_AGENT") {
 		t.Errorf("flai mcp takes --agent: %+v", f)
 	}
@@ -40,15 +40,16 @@ func TestMCPServesTheAgentNamedByTheFlagOverTheEnvironment(t *testing.T) {
 // shell turns it on and disabling it off without restarting the server, and
 // a configuration flai cannot read enables nothing, so permission_prompt asks.
 func TestMCPAutoApproveReadsTheShellsSettingAtEveryRequest(t *testing.T) {
+	t.Parallel()
 	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfgPath)
+	useConfig(t, cfgPath)
 	root := tempProject(t)
 	repo, err := workitem.Open(root)
 	if err != nil {
 		t.Fatal(err)
 	}
 	main := mainRootOf(repo)
-	a := &app{out: &bytes.Buffer{}, errOut: &bytes.Buffer{}}
+	a := &app{configPath: configOf(t), out: &bytes.Buffer{}, errOut: &bytes.Buffer{}}
 	if a.mcpAutoApprove(main) {
 		t.Error("auto-approve is off by default")
 	}
@@ -79,14 +80,15 @@ func TestMCPAutoApproveReadsTheShellsSettingAtEveryRequest(t *testing.T) {
 }
 
 // S-0534: flai mcp reads the host's budget state from budget.json in flai
-// serve's folder beside FLAI_CONFIG's configuration, afresh at every inbox,
+// serve's folder beside its configuration, afresh at every inbox,
 // without writing it. A missing serve folder or file is no budget, and so is
 // one it cannot read, which it logs at warn once.
 func TestMCPBudgetsReadsTheHostsStateBesideTheConfiguration(t *testing.T) {
+	t.Parallel()
 	cfgDir := t.TempDir()
-	t.Setenv("FLAI_CONFIG", filepath.Join(cfgDir, "config.json"))
+	useConfig(t, filepath.Join(cfgDir, "config.json"))
 	errOut := &bytes.Buffer{}
-	a := &app{out: &bytes.Buffer{}, errOut: errOut}
+	a := &app{configPath: configOf(t), out: &bytes.Buffer{}, errOut: errOut}
 	read := a.mcpBudgets()
 	if got := read(); len(got) != 0 {
 		t.Errorf("no serve folder, no budget: %+v", got)

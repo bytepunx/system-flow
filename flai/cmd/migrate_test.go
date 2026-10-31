@@ -8,12 +8,12 @@ import (
 	"testing"
 )
 
-func TestMigrateIDs(t *testing.T) {
+func testMigrateIDs(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "tester")
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	inEnv(t, "FLAI_AGENT", "tester")
 	root := tempProject(t)
 	git := func(args ...string) {
 		t.Helper()

@@ -20,7 +20,7 @@ import (
 // says why when it will not; plan.run does the same for a dashboard.
 func TestPlanStartsThePlannerForAnItem(t *testing.T) {
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	root := tempProject(t)
 	inProcess(t)
 	runIn(t, root, "epic", "new", "Epic")
@@ -81,14 +81,13 @@ func TestPlanStartsThePlannerForAnItem(t *testing.T) {
 // S-0208: flai mcp's plan starts the planner as flai plan does, under the
 // same plan host action, and journals the agent that asked.
 func TestTheMCPServerStartsThePlannerUnderThePlanAction(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	t.Setenv("FLAI_STARTED_BY", "") // the operator's own agent, whoever runs the tests
-	t.Setenv("FLAI_ROLE", "")
 	root := tempProject(t)
 	runIn(t, root, "epic", "new", "Epic")
 	runIn(t, root, "story", "new", "Slice", "--epic", "E-0001")
 	var out, errOut bytes.Buffer
-	a := &app{out: &out, errOut: &errOut, cwd: root, clock: func() time.Time { return time.Date(2026, 10, 3, 10, 0, 0, 0, time.UTC) }}
+	a := &app{configPath: configOf(t), out: &out, errOut: &errOut, cwd: root, clock: func() time.Time { return time.Date(2026, 10, 3, 10, 0, 0, 0, time.UTC) }}
 	ctx := context.Background()
 	if _, err := a.mcpPlan(ctx, root, "E-0001", "agent-ops"); err == nil || !strings.Contains(err.Error(), "the plan host action is off for this project: flai serve enable plan") {
 		t.Errorf("action off: %v", err)
@@ -115,6 +114,7 @@ func TestTheMCPServerStartsThePlannerUnderThePlanAction(t *testing.T) {
 }
 
 func TestOrchestratorBy(t *testing.T) {
+	t.Parallel()
 	for by, want := range map[string]string{"": "orchestrator", "orchestrator-t": "orchestrator-t", "system-flow": "orchestrator (system-flow)"} {
 		if got := orchestratorBy(by); got != want {
 			t.Errorf("orchestratorBy(%q) = %q, want %q", by, got, want)

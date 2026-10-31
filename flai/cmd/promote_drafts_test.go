@@ -12,8 +12,8 @@ import (
 // S-0219: flai promote --drafts lists each draft story in the backlog by the
 // manifest's policy, complete or with what it lacks, and writes nothing.
 func TestPromoteDraftsCommand(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "")
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	run := func(args ...string) string {
 		t.Helper()

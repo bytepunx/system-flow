@@ -19,6 +19,7 @@ import (
 // lets everything else through, the story's agent's calls and unreadable
 // input included.
 func TestGuard(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	for _, c := range []struct {
 		in   string
@@ -48,6 +49,7 @@ func TestGuard(t *testing.T) {
 // or adr_new with commit, it is refused with exit 2, and what it wrote stays
 // uncommitted for the story's agent.
 func TestGuardLetsASubAgentWriteAnADRButNotCommitIt(t *testing.T) {
+	t.Parallel()
 	root := adrProject(t)
 	hook := func(tool string, input map[string]any) string {
 		in, _ := json.Marshal(map[string]any{"tool_name": tool, "tool_input": input, "agent_type": "general-purpose", "agent_id": "a1"})
@@ -86,7 +88,6 @@ func TestGuardLetsASubAgentWriteAnADRButNotCommitIt(t *testing.T) {
 // exit 2, a call that names another author or sets FLAI_AGENT to another;
 // the operator's own session is not held to a name.
 func TestGuardHoldsAServedAgentToItsOwnName(t *testing.T) {
-	t.Setenv("FLAI_ROLE", "")
 	t.Setenv("FLAI_STORY", "S-0001")
 	t.Setenv("FLAI_AGENT", "agent-S-0001")
 	t.Setenv("FLAI_SESSION", "20261012T000000")
@@ -247,7 +248,7 @@ func TestGuardHoldsTheOrchestratorToItsPermissions(t *testing.T) {
 // enables auto-approve for the project; the story's agent's own write, and a
 // sub-agent's outside a .claude/ folder, pass either way.
 func TestGuardRefusesASubAgentsWriteUnderClaudeWhileAutoApproveIsOff(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	t.Setenv("FLAI_STORY", "S-0001")
 	root := tempProject(t)
 	file := filepath.Join(root, "template", "root", ".claude", "agents", "analyzer.md")
@@ -281,6 +282,7 @@ func TestGuardRefusesASubAgentsWriteUnderClaudeWhileAutoApproveIsOff(t *testing.
 // command that writes a file outside the temporary folder, with exit 2; a
 // write to /tmp, and a general-purpose sub-agent's sed -i, pass.
 func TestGuardRefusesAReadOnlySubAgentsShellWrite(t *testing.T) {
+	t.Parallel()
 	root := tempProject(t)
 	agents := filepath.Join(root, ".claude", "agents")
 	if err := os.MkdirAll(agents, 0o755); err != nil {
@@ -315,6 +317,7 @@ func TestGuardRefusesAReadOnlySubAgentsShellWrite(t *testing.T) {
 // bin/flai and scripts/flai.sh alike, lets a read-only one list but refuses
 // it serve, and refuses every sub-agent config, with exit 2.
 func TestGuardLetsATaskSubAgentListAndServeComponents(t *testing.T) {
+	t.Parallel()
 	root := tempProject(t)
 	agents := filepath.Join(root, ".claude", "agents")
 	if err := os.MkdirAll(agents, 0o755); err != nil {
@@ -352,6 +355,7 @@ func TestGuardLetsATaskSubAgentListAndServeComponents(t *testing.T) {
 // story's agent's session alone, so that a story's sub-agent's write in a .claude/ folder meets the
 // guard's refusal (I-0093) while the operator's own session edits unguarded.
 func TestTheSettingsRunTheGuardOnEditsInStrategicAndStorySessions(t *testing.T) {
+	t.Parallel()
 	for _, path := range []string{filepath.Join("..", "..", ".claude", "settings.json"), filepath.Join("..", "..", "template", "root", ".claude", "settings.json")} {
 		data, err := os.ReadFile(path)
 		if err != nil {
@@ -444,6 +448,7 @@ const waitHook = `{"session_id":"s1","hook_event_name":"PreToolUse","tool_name":
 // in its session, in the main checkout's .flai-cache, and removes it on
 // SubagentStop, saying nothing.
 func TestGuardRecordsASessionsSubAgents(t *testing.T) {
+	t.Parallel()
 	root := tempProject(t)
 	dir := filepath.Join(root, ".flai-cache", "guard")
 	for _, c := range []struct {
@@ -493,9 +498,8 @@ func TestGuardRecordsASessionsSubAgents(t *testing.T) {
 // story or its tasks is open, naming the sub-agent and how to wait instead;
 // a wait for the designer, with a thread open, passes.
 func TestGuardRefusesTheStorysAgentsWaitOnItsSubAgents(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	t.Setenv("FLAI_AGENT", "agent-S-0001")
-	t.Setenv("FLAI_ROLE", "")
 	t.Setenv("FLAI_STORY", "S-0001")
 	root := tempProject(t)
 	for _, args := range [][]string{{"story", "new", "Slice"}, {"story", "new", "Other"}, {"task", "new", "--story", "S-0001", "Piece"}} {
@@ -558,6 +562,7 @@ func TestGuardRefusesTheStorysAgentsWaitOnItsSubAgents(t *testing.T) {
 // claude-code by default; a harness with no reader passes the call, with a
 // warning on standard error naming the readers there are.
 func TestGuardReadsTheInputWithTheHarnessesReader(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	const refused = `{"tool_name":"mcp__flai__item_move","tool_input":{"id":"S-1","to":"review"},"agent_type":"verifier","agent_id":"a1"}`
 	for _, args := range [][]string{{"guard"}, {"guard", "--harness", "claude-code"}} {

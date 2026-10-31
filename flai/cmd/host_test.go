@@ -20,6 +20,7 @@ import (
 // a connected project adds nothing, and without a running flai serve no
 // refusal is said.
 func TestDescribeHostSaysWhichSideRefusedTheOtherAsUnsigned(t *testing.T) {
+	t.Parallel()
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
 	st := host.Status{Children: []host.Child{
 		{Name: host.Serve, State: "running", PID: 41, Since: "2026-10-12T17:00:00Z", Version: "1.44.0"},
@@ -48,6 +49,7 @@ func TestDescribeHostSaysWhichSideRefusedTheOtherAsUnsigned(t *testing.T) {
 // whether each project's dashboard image is signed, unsigned and not dialled,
 // or not measured, from flai serve's state.
 func TestDescribeHostSaysEachProjectsImageVerdict(t *testing.T) {
+	t.Parallel()
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
 	st := host.Status{Children: []host.Child{
 		{Name: host.Serve, State: "running", PID: 41, Since: "2026-10-12T17:00:00Z", Version: "1.44.0"},
@@ -68,9 +70,10 @@ func TestDescribeHostSaysEachProjectsImageVerdict(t *testing.T) {
 // S-0238: flai host status --json carries flai serve's verdicts by root while
 // the host runs, and none when flai serve has no state.
 func TestHostStatusJSONCarriesEachProjectsImageVerdict(t *testing.T) {
+	t.Parallel()
 	home := t.TempDir()
 	cfg := filepath.Join(home, "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	now := time.Now().UTC().Format(time.RFC3339)
 	hst, err := json.Marshal(host.Status{PID: os.Getpid(), Version: "1.44.0", Started: now, Updated: now})
 	if err != nil {
@@ -109,9 +112,10 @@ func TestHostStatusJSONCarriesEachProjectsImageVerdict(t *testing.T) {
 // the side for each project whose connection was admitted unsigned, and
 // nothing for a signed pair; --json carries the sides by root.
 func TestHostStatusSaysUnsignedAllowedWithTheSide(t *testing.T) {
+	t.Parallel()
 	home := t.TempDir()
 	cfg := filepath.Join(home, "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	st := host.Status{Children: []host.Child{
 		{Name: host.Serve, State: "running", PID: 41, Since: "2026-10-12T17:00:00Z", Version: "1.44.0"},
 	}}

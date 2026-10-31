@@ -17,8 +17,6 @@ import (
 func storyCommitProject(t *testing.T) (root, wt string) {
 	t.Helper()
 	root = adrProject(t)
-	t.Setenv("FLAI_STORY", "")
-	t.Setenv("FLAI_AGENT", "")
 	writeIn(t, root, "design/conventions/README.md", "# c\n")
 	if out, errOut, code := runIn(t, root, "story", "new", "Commit from the worktree"); code != 0 || !strings.HasPrefix(out, "S-0001 ") {
 		t.Fatalf("story new: %d %s %s", code, out, errOut)
@@ -81,8 +79,9 @@ func leftAlone(t *testing.T, wt string) {
 }
 
 func TestBeginStoryCommitRefusesWithoutAStoryBranch(t *testing.T) {
+	t.Parallel()
 	root, wt := storyCommitProject(t)
-	a := &app{runner: execx.System{}}
+	a := &app{configPath: configOf(t), runner: execx.System{}}
 	repo, err := workitem.Open(wt)
 	if err != nil {
 		t.Fatal(err)

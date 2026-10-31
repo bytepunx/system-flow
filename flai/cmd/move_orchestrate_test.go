@@ -12,9 +12,8 @@ import (
 // WIP limit; a held story, a draft, even with --yes, and any other item are
 // refused with the reason. Outside it a move to ready is as it was.
 func TestTheOrchestratorMovesOnlyACandidateToReady(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	t.Setenv("FLAI_AGENT", "orchestrator")
-	t.Setenv("FLAI_ROLE", "")
 	root := tempProject(t)
 	run := func(args ...string) string {
 		t.Helper()

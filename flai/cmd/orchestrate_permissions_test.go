@@ -53,12 +53,58 @@ const (
 	viaMCP  via = "MCP"
 )
 
+// TestAsTheOrchestrator builds the fixture board once, with no session set,
+// then runs the tests of the orchestrator's permissions, as together runs
+// them, each on a copy of the board, in the orchestrator's session: FLAI_ROLE
+// orchestrate and FLAI_AGENT orchestrator, set once here, so that they run in
+// parallel with each other (S-0548).
+func TestAsTheOrchestrator(t *testing.T) {
+	orchestrationBoards.set(t, buildOrchestration(t))
+	t.Setenv("FLAI_ROLE", "orchestrate")
+	t.Setenv("FLAI_AGENT", "orchestrator")
+	together(t,
+		testTheOrchestratorPlansACandidateEpicOnlyWithPlanBacklogEpics,
+		testTheOrchestratorPlansAnItemPlannedBeforeOnlyWithItsPermission,
+		testTheOrchestratorFinalizesACompleteDraftOnlyWithFinalizeDrafts,
+		testTheOrchestratorPromotesACandidateOnlyWithPromoteToReady,
+		testTheOrchestratorOrdersReadyOnlyWithOrderReady,
+		testTheOrchestratorPlansABacklogStoryOnlyWithPlanBacklogStories,
+		testTheOrchestratorSetsCostOfDelayInputsOnlyWithSetCostOfDelay,
+		testTheOrchestratorSettlesAStoryPlannersThreadOnlyWithPlanBacklogStories,
+	)
+}
+
+// orchestrationBoards are the fixture boards TestAsTheOrchestrator built.
+var orchestrationBoards perTest[*orchestration]
+
+// newOrchestration is a copy, of t's own, of the fixture board and its
+// configuration, which TestAsTheOrchestrator built once before it made the
+// session the orchestrator's.
 func newOrchestration(t *testing.T) *orchestration {
 	t.Helper()
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "")
-	t.Setenv("FLAI_ROLE", "")
-	t.Setenv("FLAI_STARTED_BY", "")
+	board, ok := orchestrationBoards.get(t)
+	if !ok {
+		t.Fatal("no fixture board: run this test with together from TestAsTheOrchestrator")
+	}
+	root := filepath.Join(t.TempDir(), "board")
+	if err := os.CopyFS(root, os.DirFS(board.root)); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := os.ReadFile(configOf(board.t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "cfg.json")
+	if err := os.WriteFile(path, cfg, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	useConfig(t, path)
+	return &orchestration{t: t, root: root, manifest: board.manifest}
+}
+
+// buildOrchestration builds the fixture board with no session set.
+func buildOrchestration(t *testing.T) *orchestration {
+	t.Helper()
 	root := tempProject(t)
 	run := func(args ...string) {
 		t.Helper()
@@ -142,7 +188,7 @@ func newOrchestration(t *testing.T) *orchestration {
 }
 
 // permit gives the orchestrator the permissions on, and no other, by the
-// cod policy, and makes the session the orchestrator's from here on.
+// cod policy, in the orchestrator's session TestAsTheOrchestrator set.
 func (o *orchestration) permit(on ...string) {
 	o.t.Helper()
 	block := "orchestration:\n  policy: cod\n"
@@ -155,8 +201,8 @@ func (o *orchestration) permit(on ...string) {
 	if err := os.WriteFile(filepath.Join(o.root, "system-flow.yaml"), append(append([]byte{}, o.manifest...), block...), 0o644); err != nil {
 		o.t.Fatal(err)
 	}
-	o.t.Setenv("FLAI_ROLE", "orchestrate")
-	o.t.Setenv("FLAI_AGENT", "orchestrator")
+	inEnv(o.t, "FLAI_ROLE", "orchestrate")
+	inEnv(o.t, "FLAI_AGENT", "orchestrator")
 }
 
 // allBut is the five permissions these tests cover but off.
@@ -210,7 +256,7 @@ func (o *orchestration) mcp(tool string, input map[string]any) string {
 		o.t.Fatal(err)
 	}
 	clock := func() time.Time { return orchestrationNow }
-	a := &app{out: &bytes.Buffer{}, errOut: &bytes.Buffer{}, cwd: o.root, clock: clock}
+	a := &app{out: &bytes.Buffer{}, errOut: &bytes.Buffer{}, cwd: o.root, clock: clock, configPath: configOf(o.t)}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	ct, st := mcp.NewInMemoryTransports()
@@ -382,9 +428,10 @@ func bash(command string) (string, map[string]any) {
 // without it the guard refuses both naming the permission, flai would too,
 // and nothing changes; flai plan --candidates it runs either way, and a plan
 // for a story only with plan_backlog_stories (S-0328).
-func TestTheOrchestratorPlansACandidateEpicOnlyWithPlanBacklogEpics(t *testing.T) {
+func testTheOrchestratorPlansACandidateEpicOnlyWithPlanBacklogEpics(t *testing.T) {
 	const notOne = "the orchestrator asks for the planner on an epic flai plan --candidates lists alone, and E-0003 is not one"
 	t.Run("on", func(t *testing.T) {
+		t.Parallel()
 		o := newOrchestration(t)
 		for _, args := range [][]string{{"serve", "enable", "plan"}, {"serve", "agent", "set", "--", "true"}} {
 			if _, errOut, code := runIn(t, o.root, args...); code != 0 {
@@ -410,6 +457,7 @@ func TestTheOrchestratorPlansACandidateEpicOnlyWithPlanBacklogEpics(t *testing.T
 	})
 	for _, v := range []via{viaBash, viaMCP} {
 		t.Run("off by "+string(v), func(t *testing.T) {
+			t.Parallel()
 			o := newOrchestration(t)
 			o.permit(allBut(manifest.PermitPlanBacklogEpics)...)
 			want, needs := offRefusal(manifest.PermitPlanBacklogEpics)
@@ -454,7 +502,7 @@ func (o *orchestration) plannedBefore() (trigger func(item string) string) {
 	worked := func(id string) *serve.AgentRun {
 		return &serve.AgentRun{Item: id, Agent: "planner-" + id, Started: ended.Add(-time.Hour).Format(time.RFC3339), Ended: ended.Format(time.RFC3339), Outcome: serve.OutcomeWorked}
 	}
-	agents := filepath.Join(string(serve.DirFor(os.Getenv("FLAI_CONFIG"))), "agents.json")
+	agents := filepath.Join(string(serve.DirFor(configOf(o.t))), "agents.json")
 	data, _ := json.Marshal(map[string]serve.AgentState{mainRootOf(repo): {Plans: map[string]*serve.AgentRun{"E-0003": worked("E-0003"), "S-0010": worked("S-0010")}}})
 	if err := os.MkdirAll(filepath.Dir(agents), 0o755); err != nil {
 		o.t.Fatal(err)
@@ -483,9 +531,10 @@ func (o *orchestration) plannedBefore() (trigger func(item string) string) {
 // orchestrator; TH-nnnn; flai still refuses S-0008, in ready and never
 // planned, saying so. Without the permission the guard refuses each naming
 // it, flai would too, and nothing changes.
-func TestTheOrchestratorPlansAnItemPlannedBeforeOnlyWithItsPermission(t *testing.T) {
+func testTheOrchestratorPlansAnItemPlannedBeforeOnlyWithItsPermission(t *testing.T) {
 	for _, v := range []via{viaBash, viaMCP} {
 		t.Run("on by "+string(v), func(t *testing.T) {
+			t.Parallel()
 			o := newOrchestration(t)
 			for _, args := range [][]string{{"serve", "enable", "plan"}, {"serve", "agent", "set", "--", "true"}} {
 				if _, errOut, code := runIn(t, o.root, args...); code != 0 {
@@ -517,6 +566,7 @@ func TestTheOrchestratorPlansAnItemPlannedBeforeOnlyWithItsPermission(t *testing
 		})
 		for _, off := range []struct{ permission, id string }{{manifest.PermitPlanBacklogEpics, "E-0003"}, {manifest.PermitPlanBacklogStories, "S-0010"}} {
 			t.Run(off.permission+" off by "+string(v), func(t *testing.T) {
+				t.Parallel()
 				o := newOrchestration(t)
 				trigger := o.plannedBefore()
 				o.permit(allBut(off.permission)...)
@@ -543,9 +593,10 @@ func TestTheOrchestratorPlansAnItemPlannedBeforeOnlyWithItsPermission(t *testing
 // incomplete one naming what it lacks; without it the guard refuses
 // naming the permission and nothing changes; an edit that does more than
 // finalize it never makes.
-func TestTheOrchestratorFinalizesACompleteDraftOnlyWithFinalizeDrafts(t *testing.T) {
+func testTheOrchestratorFinalizesACompleteDraftOnlyWithFinalizeDrafts(t *testing.T) {
 	for _, v := range []via{viaBash, viaMCP} {
 		t.Run("on by "+string(v), func(t *testing.T) {
+			t.Parallel()
 			o := newOrchestration(t)
 			o.permit(manifest.PermitFinalizeDrafts)
 			out := o.passes(bash("flai promote --drafts"))
@@ -567,6 +618,7 @@ func TestTheOrchestratorFinalizesACompleteDraftOnlyWithFinalizeDrafts(t *testing
 			}
 		})
 		t.Run("off by "+string(v), func(t *testing.T) {
+			t.Parallel()
 			o := newOrchestration(t)
 			o.permit(allBut(manifest.PermitFinalizeDrafts)...)
 			want, needs := offRefusal(manifest.PermitFinalizeDrafts)
@@ -594,10 +646,11 @@ func TestTheOrchestratorFinalizesACompleteDraftOnlyWithFinalizeDrafts(t *testing
 // MCP tool item_move alike, and flai refuses the second at the ready
 // column's limit, and the held story and the drafts whenever; without it the
 // guard refuses naming the permission and nothing changes.
-func TestTheOrchestratorPromotesACandidateOnlyWithPromoteToReady(t *testing.T) {
+func testTheOrchestratorPromotesACandidateOnlyWithPromoteToReady(t *testing.T) {
 	const notCandidate = " is not a candidate to go to ready (flai promote --candidates): "
 	for _, v := range []via{viaBash, viaMCP} {
 		t.Run("on by "+string(v), func(t *testing.T) {
+			t.Parallel()
 			o := newOrchestration(t)
 			o.permit(manifest.PermitPromoteToReady)
 			var got struct {
@@ -627,6 +680,7 @@ func TestTheOrchestratorPromotesACandidateOnlyWithPromoteToReady(t *testing.T) {
 			}
 		})
 		t.Run("off by "+string(v), func(t *testing.T) {
+			t.Parallel()
 			o := newOrchestration(t)
 			o.permit(allBut(manifest.PermitPromoteToReady)...)
 			want, needs := offRefusal(manifest.PermitPromoteToReady)
@@ -654,7 +708,7 @@ func TestTheOrchestratorPromotesACandidateOnlyWithPromoteToReady(t *testing.T) {
 // and the story placed by hand an hour ago keeps its place; without it the
 // guard refuses naming the permission and nothing changes; flai order --by
 // without --apply it runs either way, and a placement by hand never.
-func TestTheOrchestratorOrdersReadyOnlyWithOrderReady(t *testing.T) {
+func testTheOrchestratorOrdersReadyOnlyWithOrderReady(t *testing.T) {
 	placedByHand := map[string]workitem.Placed{"S-0008": {By: "alex", At: "2026-09-15T20:00:00Z"}}
 	placed := func(o *orchestration) map[string]workitem.Placed {
 		o.t.Helper()
@@ -670,6 +724,7 @@ func TestTheOrchestratorOrdersReadyOnlyWithOrderReady(t *testing.T) {
 	}
 	const byHand = "the orchestrator never does it, whatever its permissions: it orders the ready column by its policy"
 	t.Run("on", func(t *testing.T) {
+		t.Parallel()
 		o := newOrchestration(t)
 		o.permit(manifest.PermitOrderReady)
 		o.guardRefuses(bash("flai order S-0010 --top"))(byHand, "")
@@ -685,6 +740,7 @@ func TestTheOrchestratorOrdersReadyOnlyWithOrderReady(t *testing.T) {
 		}
 	})
 	t.Run("off", func(t *testing.T) {
+		t.Parallel()
 		o := newOrchestration(t)
 		o.permit(allBut(manifest.PermitOrderReady)...)
 		want, needs := offRefusal(manifest.PermitOrderReady)
@@ -718,9 +774,10 @@ func TestTheOrchestratorOrdersReadyOnlyWithOrderReady(t *testing.T) {
 // set_cost_of_delay, and the guard an epic's inputs; a value it never sets.
 // Without the permission the guard refuses each naming it, flai would too,
 // and nothing changes.
-func TestTheOrchestratorPlansABacklogStoryOnlyWithPlanBacklogStories(t *testing.T) {
+func testTheOrchestratorPlansABacklogStoryOnlyWithPlanBacklogStories(t *testing.T) {
 	for _, v := range []via{viaBash, viaMCP} {
 		t.Run("on by "+string(v), func(t *testing.T) {
+			t.Parallel()
 			o := newOrchestration(t)
 			for _, args := range [][]string{{"serve", "enable", "plan"}, {"serve", "agent", "set", "--", "true"}} {
 				if _, errOut, code := runIn(t, o.root, args...); code != 0 {
@@ -753,6 +810,7 @@ func TestTheOrchestratorPlansABacklogStoryOnlyWithPlanBacklogStories(t *testing.
 			}
 		})
 		t.Run("off by "+string(v), func(t *testing.T) {
+			t.Parallel()
 			o := newOrchestration(t)
 			o.permit(allBut(manifest.PermitPlanBacklogStories)...)
 			o.guardRefuses(planCall(v, "S-0004"))(offRefusal(manifest.PermitPlanBacklogStories))
@@ -787,7 +845,7 @@ const bothOff = "the orchestrator sets cost of delay inputs only with orchestrat
 // them; a value it never sets. Without it, whatever the others are, the
 // guard refuses the epic's naming it, and flai refuses the ready story's,
 // and the epic's past the guard, naming it too; nothing changes.
-func TestTheOrchestratorSetsCostOfDelayInputsOnlyWithSetCostOfDelay(t *testing.T) {
+func testTheOrchestratorSetsCostOfDelayInputsOnlyWithSetCostOfDelay(t *testing.T) {
 	for _, v := range []via{viaBash, viaMCP} {
 		t.Run("on by "+string(v), func(t *testing.T) {
 			o := newOrchestration(t)
@@ -827,7 +885,7 @@ func TestTheOrchestratorSetsCostOfDelayInputsOnlyWithSetCostOfDelay(t *testing.T
 // MCP tool thread_reply alike, and resolves it, but never confirms there;
 // an epic's planner's thread stays under answer_threads. Without the
 // permission the guard refuses each naming it, and nothing changes.
-func TestTheOrchestratorSettlesAStoryPlannersThreadOnlyWithPlanBacklogStories(t *testing.T) {
+func testTheOrchestratorSettlesAStoryPlannersThreadOnlyWithPlanBacklogStories(t *testing.T) {
 	// open is the fixture with TH-0001, which S-0004's planner opened, and
 	// TH-0002, which E-0003's did
 	open := func(t *testing.T) *orchestration {
@@ -853,6 +911,7 @@ func TestTheOrchestratorSettlesAStoryPlannersThreadOnlyWithPlanBacklogStories(t 
 		return !th.Open()
 	}
 	t.Run("on", func(t *testing.T) {
+		t.Parallel()
 		o := open(t)
 		o.permit(manifest.PermitPlanBacklogStories)
 		o.passes("thread_reply", map[string]any{"id": "TH-0001", "text": "Take 500 a week."})
@@ -867,6 +926,7 @@ func TestTheOrchestratorSettlesAStoryPlannersThreadOnlyWithPlanBacklogStories(t 
 		o.guardRefuses(bash("flai thread resolve TH-0002"))("it resolves only a thread it opened", "")
 	})
 	t.Run("off", func(t *testing.T) {
+		t.Parallel()
 		o := open(t)
 		o.permit(allBut(manifest.PermitPlanBacklogStories)...)
 		want, needs := offRefusal(manifest.PermitPlanBacklogStories)

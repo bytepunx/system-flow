@@ -20,7 +20,8 @@ import (
 // <path> still sets touches; it refuses what is not a story, and a story with
 // nothing to start from, before it reads git.
 func TestTouchesSuggestRoutesAndRefuses(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	for _, step := range [][]string{{"epic", "new", "E"}, {"story", "new", "S", "--epic", "E-0001"}, {"task", "new", "T", "--story", "S-0001"}} {
 		if _, errOut, code := runIn(t, root, step...); code != 0 {
@@ -49,9 +50,9 @@ func TestTouchesSuggestRoutesAndRefuses(t *testing.T) {
 // S-0211: setting a story's touches leaves an edit notice, as flai edit does,
 // naming touches and who set them, so that flai serve plans the story again;
 // showing them, or setting what is already there, leaves none.
-func TestTouchesLeavesAnEditNotice(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "alex")
+func testTouchesLeavesAnEditNotice(t *testing.T) {
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	inEnv(t, "FLAI_AGENT", "alex")
 	root := tempProject(t)
 	for _, step := range [][]string{{"epic", "new", "E"}, {"story", "new", "S", "--epic", "E-0001"}, {"touches", "S-0001", "a/b"}, {"touches", "S-0001"}, {"touches", "S-0001", "a/b"}} {
 		if _, errOut, code := runIn(t, root, step...); code != 0 {
@@ -76,7 +77,8 @@ func TestTouchesLeavesAnEditNotice(t *testing.T) {
 // I-0071: flai touches takes a path that starts with a dot, as flai edit
 // does, and refuses one that leaves the repository, writing nothing.
 func TestTouchesTakesADotPathAndRefusesOneOutside(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	for _, step := range [][]string{{"epic", "new", "E"}, {"story", "new", "S", "--epic", "E-0001"}} {
 		if _, errOut, code := runIn(t, root, step...); code != 0 {
@@ -103,7 +105,8 @@ func TestTouchesTakesADotPathAndRefusesOneOutside(t *testing.T) {
 // path the item does not touch, either flag with no path, and two of the
 // flags together are refused, writing nothing.
 func TestTouchesAddsRemovesAndReplaces(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	for _, step := range [][]string{{"epic", "new", "E"}, {"story", "new", "S", "--epic", "E-0001", "--touches", "a,b"}} {
 		if _, errOut, code := runIn(t, root, step...); code != 0 {
@@ -154,13 +157,14 @@ func TestTouchesAddsRemovesAndReplaces(t *testing.T) {
 // cancelled, a component named by a tag read as its path, and the paths
 // given; the files changed with them on the main branch are counted.
 func TestTouchesSuggestCountsFilesChangedWithTheSeeds(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skip("integration: runs real git")
 	}
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\nprojects:\n  - name: cli\n    path: cli\n    kind: go\n    tags: [command]\n"), 0o644)
 	r := execx.System{}
@@ -255,7 +259,8 @@ func TestTouchesSuggestCountsFilesChangedWithTheSeeds(t *testing.T) {
 // to be made, and leaves a story's folder touch alone; flai task new
 // --touches refuses one as well (ADR-0188).
 func TestTouchesRefusesATaskAFolderTouch(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	for _, p := range []string{"flai/cmd/a.go", "flai/cmd/b.go"} {
 		if err := os.MkdirAll(filepath.Join(root, filepath.Dir(p)), 0o755); err != nil {
@@ -304,9 +309,8 @@ func TestTouchesRefusesATaskAFolderTouch(t *testing.T) {
 // and take a file and a path to be made; once the note names the folder it
 // is taken; another author's story folder touch is taken (ADR-0188).
 func TestTouchesHoldsThePlannersStoryFolderTouchToItsNote(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	t.Setenv("FLAI_AGENT", "alex")
-	t.Setenv("FLAI_ROLE", "")
 	root := tempProject(t)
 	for _, p := range []string{"flai/cmd/a.go", "flai/cmd/b.go"} {
 		if err := os.MkdirAll(filepath.Join(root, filepath.Dir(p)), 0o755); err != nil {

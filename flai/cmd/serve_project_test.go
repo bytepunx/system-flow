@@ -29,16 +29,17 @@ func keyedProject(t *testing.T, parent, key string) string {
 
 func serveProjectRun(t *testing.T, cwd string, args ...string) (string, string, int) {
 	t.Helper()
-	return runWithApp(t, &app{cwd: cwd}, append([]string{"serve", "project"}, args...)...)
+	return runWithApp(t, &app{configPath: configOf(t), cwd: cwd}, append([]string{"serve", "project"}, args...)...)
 }
 
 // S-0121: flai serve project add registers the project in a folder, the
 // current one by default, as flai dashboard does, and refuses what cannot be
 // served, naming why.
 func TestServeProjectAddRegistersAndRefuses(t *testing.T) {
+	t.Parallel()
 	home := t.TempDir()
 	cfg := filepath.Join(home, "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	harbour := keyedProject(t, home, "harbour")
 
 	out, errOut, code := serveProjectRun(t, harbour, "add")
@@ -89,9 +90,10 @@ func TestServeProjectAddRegistersAndRefuses(t *testing.T) {
 // S-0121: flai serve project remove unregisters by key or by folder and
 // touches none of the project's files.
 func TestServeProjectRemoveUnregistersAndTouchesNoFile(t *testing.T) {
+	t.Parallel()
 	home := t.TempDir()
 	cfg := filepath.Join(home, "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	harbour := keyedProject(t, home, "harbour")
 	lighthouse := keyedProject(t, home, "lighthouse")
 	for _, p := range []string{harbour, lighthouse} {
@@ -132,9 +134,10 @@ func TestServeProjectRemoveUnregistersAndTouchesNoFile(t *testing.T) {
 // unregistered and put on the list of removed projects, so that flai serve
 // does not serve it from there either.
 func TestServeProjectRemoveListsARegisteredProjectBelowAnImportFolder(t *testing.T) {
+	t.Parallel()
 	home := t.TempDir()
 	cfg := filepath.Join(home, "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	git := filepath.Join(home, "git")
 	blog := keyedProject(t, git, "blog")
 	_ = os.MkdirAll(filepath.Join(blog, ".git"), 0o755)
@@ -163,9 +166,10 @@ func TestServeProjectRemoveListsARegisteredProjectBelowAnImportFolder(t *testing
 // or by folder, shown as removed by list, and taken off by add, which serves
 // it from there again without registering it.
 func TestServeProjectRemoveAndAddAProjectServedFromBelowAFolder(t *testing.T) {
+	t.Parallel()
 	home := t.TempDir()
 	cfg := filepath.Join(home, "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	git := filepath.Join(home, "git")
 	blog := keyedProject(t, git, "blog")
 	_ = os.MkdirAll(filepath.Join(blog, ".git"), 0o755)
@@ -216,7 +220,7 @@ func TestServeProjectRemoveAndAddAProjectServedFromBelowAFolder(t *testing.T) {
 		t.Errorf("list:\n%s", out)
 	}
 	// and the settings page is told it was removed, so that Serve brings it back
-	view, _ := json.Marshal((&app{cwd: home}).servedView())
+	view, _ := json.Marshal((&app{configPath: configOf(t), cwd: home}).servedView())
 	if !strings.Contains(string(view), `"root":"`+blog+`","reason":"removed from the dashboard;`) || !strings.Contains(string(view), `"removed":true`) {
 		t.Errorf("settings view: %s", view)
 	}
@@ -283,9 +287,10 @@ func equalMaps(a, b map[string]string) bool {
 // the repositories offered for import, and the projects under the import
 // folders that are not served; flai serve status names an unavailable one.
 func TestServeProjectListSaysWhyAProjectIsNotShowing(t *testing.T) {
+	t.Parallel()
 	home := t.TempDir()
 	cfg := filepath.Join(home, "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	harbour := keyedProject(t, home, "harbour")
 	quay := keyedProject(t, home, "quay")
 	for _, p := range []string{harbour, quay} {

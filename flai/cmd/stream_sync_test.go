@@ -34,8 +34,8 @@ func syncProject(t *testing.T) string {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "tester")
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	inEnv(t, "FLAI_AGENT", "tester")
 	root := tempProject(t)
 	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", "design", "docs"} {
 		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
@@ -52,6 +52,88 @@ func syncProject(t *testing.T) string {
 		t.Fatal(errOut)
 	}
 	return root
+}
+
+// TestAsTester runs the tests whose commands run as the agent tester, as
+// together runs them: FLAI_AGENT tester, set once here, so that they run in
+// parallel with each other (S-0548).
+func TestAsTester(t *testing.T) {
+	t.Setenv("FLAI_AGENT", "tester")
+	together(t,
+		testAcceptFixesTheMainCheckoutsMarkdownBeforeItCommits,
+		testAcceptRefusesABranchWhoseLintTheFixLeaves,
+		testAcceptRefusesTheMainCheckoutsLintBeforeAnythingChanges,
+		testAcceptJSONRefusesABranchsLintWithEachFinding,
+		testAcceptJSONRefusesTheMainCheckoutsLintWithEachFinding,
+		testAcceptInstallsASubProjectWhoseLockTheStoryChanged,
+		testAcceptInstallsNothingForAStoryThatChangesNoInstallPath,
+		testAcceptReportsAFailedInstallAndStillAccepts,
+		testAcceptDryRunInstallsNothing,
+		testDesignProposalsListsTheStoriesChangingTheDesignSystem,
+		testTaskAfterIsSetByTaskNewAndEdit,
+		testMovingAHeldStoryWarns,
+		testBoardMarksAHeldStory,
+		testEditAfterHoldsAStoryUntilTheOtherIsDone,
+		testMCPOverHTTP,
+		testMCPOverHTTPRefusesAnUnansweredWriteBeforeClaudeCodeGivesUp,
+		testMoveToDoneJSONRefusesABranchsLintAsAcceptDoes,
+		testMoveToDoneJSONRefusesTheMainCheckoutsLintAsAcceptDoes,
+		testSharedList,
+		testSharedListWarnsOfAnInvalidPattern,
+		testSharedAddRemove,
+		testSharedCheck,
+		testSharedHelpGivesTheDialect,
+		testSharedAddAutocommitsTheManifestAlone,
+		testStreamRestoreCommitsMainsVersionOfAnUndonePath,
+		testStreamRestorePrintsWhatItRestored,
+		testStreamRestoreRefusesUncommittedChangesChangingNothing,
+		testStreamRestoreRefusesAPathTheRecordDoesNotHold,
+		testStreamRestoreRefusesAStoryNotInProgressOrReview,
+		testSyncTrialMergesOtherOpenBranches,
+		testSyncConflictIsAMessageBetweenThePair,
+		testSyncListsPathsChangedOutsideTheClaim,
+		testSyncListsPathsChangedOutsideANarrowedClaim,
+		testSyncRefusesUncommittedChanges,
+		testSyncConflictListsPathsAndHowToContinueOrAbort,
+		testSyncRegeneratesTheIssueSummaryWhenTheRebaseStopsOnItAlone,
+		testAcceptRegeneratesTheIssueSummaryWhenTheRebaseStopsOnItAlone,
+		testSyncAndAcceptRegenerateTheIssueSummaryChangedOnMainItself,
+		testSyncStopsWhenTheIssueSummaryIsNotTheOnlyConflict,
+		testSyncTrialMergeLeavesOutTheIssueSummary,
+		testSyncTrialMergeReportsOtherConflictsWithoutTheIssueSummary,
+		testSyncTrialMergeLeavesOutTheADRIndex,
+		testSyncMergesTheADRIndexBothSidesAddedARowTo,
+		testSyncStopsOnARowOfTheADRIndexBothSidesChanged,
+		testSyncTrialMergeLeavesOutWhatMainBrought,
+		testSyncTrialMergeReportsWhatBothChangedBesideWhatMainBrought,
+		testSyncResolvesAThreadOnWhatMainBrought,
+		testSyncFoldsTheBranchsIssueIntoMainsOfTheSameTitle,
+		testSyncMergesAnIssueBothSidesBumped,
+		testSyncTrialMergeLeavesOutIssueFiles,
+		testAcceptMergesAnIssueBothSidesBumped,
+		testSyncMergesABumpIntoTheIssueMainClosed,
+		testSyncWarnsOnAPathTheRebasedBranchUndoesOfMain,
+		testSyncFixesTheLintOfTheFilesTheBranchChanges,
+		testAcceptFixesTheLintOfTheFilesTheBranchChanges,
+		testSubprojectAddCreatesTheFolderAndListShowsIt,
+		testSubprojectListEmpty,
+		testSubprojectAddIntoAFolderThatIsThere,
+		testSubprojectSet,
+		testSubprojectRemove,
+		testSubprojectRefusals,
+		testSubprojectAddAutocommitsTheManifestAndTheReadme,
+		testShowPrintsTheTaskPlan,
+		testBoardCountsAStorysTasks,
+		testMovingAWaitingTaskWarnsAndMoves,
+		testTopicsOnStoriesAndEpics,
+		testShowPrintsAStorysTopics,
+		testATouchInsideAnotherClaimTellsBothStories,
+		testWorkItemLifecycle,
+		testAcceptTellsOverlappingOpenStories,
+		testAcceptCompletesAnUnacceptedStory,
+		testStoryBranchLifecycle,
+		testMigrateIDs,
+	)
 }
 
 // openSyncStory creates story n in progress with touches and opens its
@@ -92,7 +174,7 @@ func commitIn(t *testing.T, wt, rel, content string) {
 	gitIn(t, wt, "commit", "-q", "-m", "change "+rel)
 }
 
-func TestSyncTrialMergesOtherOpenBranches(t *testing.T) {
+func testSyncTrialMergesOtherOpenBranches(t *testing.T) {
 	root := syncProject(t)
 	one := openSyncStory(t, root, 1, "docs")
 	two := openSyncStory(t, root, 2, "docs/guide.md")
@@ -182,7 +264,7 @@ func agentInbox(t *testing.T, root, agent string) mcpserver.InboxOut {
 // ADR-0121: a conflict is a message from the syncing story to the other in
 // the pair's conversation, which the sync names and --json gives as the
 // branch's conversation; no thread is opened.
-func TestSyncConflictIsAMessageBetweenThePair(t *testing.T) {
+func testSyncConflictIsAMessageBetweenThePair(t *testing.T) {
 	root := syncProject(t)
 	one := openSyncStory(t, root, 1, "docs")
 	two := openSyncStory(t, root, 2, "docs/guide.md")
@@ -223,7 +305,6 @@ func TestSyncConflictIsAMessageBetweenThePair(t *testing.T) {
 		t.Errorf("a thread was opened: %v %+v", err, all)
 	}
 	// each story's agent finds it in its inbox, S-0002's to answer
-	t.Setenv("FLAI_STORY", "")
 	for agent, awaiting := range map[string]string{"agent-S-0001": "other", "agent-S-0002": "you"} {
 		if in := agentInbox(t, root, agent); len(in.Messages) != 1 || in.Messages[0].ID != "MS-0001" || in.Messages[0].Awaiting != awaiting {
 			t.Errorf("%s's inbox messages: %+v", agent, in.Messages)
@@ -257,7 +338,7 @@ func TestSyncConflictIsAMessageBetweenThePair(t *testing.T) {
 	}
 }
 
-func TestSyncListsPathsChangedOutsideTheClaim(t *testing.T) {
+func testSyncListsPathsChangedOutsideTheClaim(t *testing.T) {
 	root := syncProject(t)
 	wt := openSyncStory(t, root, 1, "docs/guide.md")
 	if _, errOut, code := runIn(t, root, "task", "new", "Design it", "--story", "S-0001", "--touches", "design/note.md"); code != 0 {
@@ -302,7 +383,7 @@ func TestSyncListsPathsChangedOutsideTheClaim(t *testing.T) {
 // is narrowed to it, so a file the branch changed elsewhere in the folder is
 // reported; a done task's file stays claimed, and widening the task's touches
 // clears the report.
-func TestSyncListsPathsChangedOutsideANarrowedClaim(t *testing.T) {
+func testSyncListsPathsChangedOutsideANarrowedClaim(t *testing.T) {
 	root := syncProject(t)
 	wt := openSyncStory(t, root, 1, "docs")
 	if _, errOut, code := runIn(t, root, "task", "new", "Write the guide", "--story", "S-0001", "--touches", "docs/guide.md"); code != 0 {
@@ -352,7 +433,7 @@ func TestSyncListsPathsChangedOutsideANarrowedClaim(t *testing.T) {
 
 // ADR-0069: sync never stashes; it refuses a worktree with uncommitted
 // changes, touching nothing, and names each path.
-func TestSyncRefusesUncommittedChanges(t *testing.T) {
+func testSyncRefusesUncommittedChanges(t *testing.T) {
 	root := syncProject(t)
 	wt := openSyncStory(t, root, 1, "docs")
 	commitIn(t, wt, "docs/guide.md", "branch's line\n")
@@ -421,7 +502,8 @@ func TestSyncRefusesUncommittedChanges(t *testing.T) {
 // from the main checkout, naming it and the MCP tool stream_sync, and
 // changes nothing.
 func TestSyncRefusesAWorktreeWhoseMainCheckoutIsAbsent(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	worktree, main := absentMainWorktree(t)
 	before := treeOf(t, worktree)
 	out, errOut, code := runIn(t, worktree, "stream", "sync", "S-004")
@@ -437,7 +519,7 @@ func TestSyncRefusesAWorktreeWhoseMainCheckoutIsAbsent(t *testing.T) {
 // A sync that stops on conflicts lists each path and how to continue or
 // abort, leaves the rebase in progress, and a sync while it is in progress
 // is refused with the same paths and steps.
-func TestSyncConflictListsPathsAndHowToContinueOrAbort(t *testing.T) {
+func testSyncConflictListsPathsAndHowToContinueOrAbort(t *testing.T) {
 	root := syncProject(t)
 	wt := openSyncStory(t, root, 1, "docs")
 	// one commit, so the rebase stops on both paths at once
@@ -528,7 +610,7 @@ func TestSyncConflictListsPathsAndHowToContinueOrAbort(t *testing.T) {
 // onto main after one is accepted stopped on it. The file is generated from
 // the issue files, so the sync writes it again at each such stop and goes on
 // (ADR-0098).
-func TestSyncRegeneratesTheIssueSummaryWhenTheRebaseStopsOnItAlone(t *testing.T) {
+func testSyncRegeneratesTheIssueSummaryWhenTheRebaseStopsOnItAlone(t *testing.T) {
 	_, b := issueStories(t, nil)
 	// a second commit that rewrites the summary stops the rebase again
 	recordIssueIn(t, b, issueClock.Add(3*time.Hour), "B's second issue", nil)
@@ -562,7 +644,7 @@ func TestSyncRegeneratesTheIssueSummaryWhenTheRebaseStopsOnItAlone(t *testing.T)
 
 // The acceptance syncs through the same rebase, so the second story whose
 // branch records an issue is accepted without stopping on the summary.
-func TestAcceptRegeneratesTheIssueSummaryWhenTheRebaseStopsOnItAlone(t *testing.T) {
+func testAcceptRegeneratesTheIssueSummaryWhenTheRebaseStopsOnItAlone(t *testing.T) {
 	root, b := issueStories(t, nil)
 	issueStoryInReview(t, root, "S-0002", "T-0001")
 
@@ -587,7 +669,7 @@ func TestAcceptRegeneratesTheIssueSummaryWhenTheRebaseStopsOnItAlone(t *testing.
 // closed on main itself, not through another story's acceptance, so both
 // sides rewrite design/issues/summary.md and the story's sync stopped on it.
 // The sync and the acceptance regenerate it from the issue files (ADR-0098).
-func TestSyncAndAcceptRegenerateTheIssueSummaryChangedOnMainItself(t *testing.T) {
+func testSyncAndAcceptRegenerateTheIssueSummaryChangedOnMainItself(t *testing.T) {
 	root := syncProject(t)
 	onMain := func(at time.Time, msg string, args ...string) {
 		t.Helper()
@@ -644,7 +726,7 @@ func TestSyncAndAcceptRegenerateTheIssueSummaryChangedOnMainItself(t *testing.T)
 
 // When another path conflicts as well, the summary's rows may depend on it,
 // so the sync stops as before and names every path, the summary included.
-func TestSyncStopsWhenTheIssueSummaryIsNotTheOnlyConflict(t *testing.T) {
+func testSyncStopsWhenTheIssueSummaryIsNotTheOnlyConflict(t *testing.T) {
 	_, b := issueStories(t, map[string][2]string{"docs/guide.md": {"A's line\n", "B's line\n"}})
 
 	out, errOut, code := runInAt(t, b, issueClock.Add(4*time.Hour), "stream", "sync", "S-0002")
@@ -710,7 +792,7 @@ func trialSync(t *testing.T, root, wt string) (string, []storygit.BranchCheck, [
 // I-0074: two open stories that each record an issue conflict in
 // design/issues/summary.md alone, which the trial merge reported, telling
 // the pair. The file is generated, so the pair is clean (ADR-0098).
-func TestSyncTrialMergeLeavesOutTheIssueSummary(t *testing.T) {
+func testSyncTrialMergeLeavesOutTheIssueSummary(t *testing.T) {
 	root, b := openIssueStories(t, nil)
 	// git itself reports the pair as conflicting in the summary
 	if raw, err := storygit.TrialMerge(execx.System{}, root, "story/S-0002", "story/S-0001"); err != nil || strings.Join(raw, ",") != "design/issues/summary.md" {
@@ -731,7 +813,7 @@ func TestSyncTrialMergeLeavesOutTheIssueSummary(t *testing.T) {
 
 // When the pair conflicts in another file as well, the trial merge reports
 // that file alone, in the sync's output and in the pair's conversation.
-func TestSyncTrialMergeReportsOtherConflictsWithoutTheIssueSummary(t *testing.T) {
+func testSyncTrialMergeReportsOtherConflictsWithoutTheIssueSummary(t *testing.T) {
 	root, b := openIssueStories(t, map[string][2]string{"docs/guide.md": {"A's line\n", "B's line\n"}})
 
 	out, branches, _, convs := trialSync(t, root, b)
@@ -789,7 +871,7 @@ func adrStories(t *testing.T, a, b []string) (root, wt string) {
 // I-0099: two open stories that each add an ADR append a row to the index
 // where the other does, which git's trial merge reports, telling the pair. A
 // rebase merges the index row by row, so the pair is clean (ADR-0157).
-func TestSyncTrialMergeLeavesOutTheADRIndex(t *testing.T) {
+func testSyncTrialMergeLeavesOutTheADRIndex(t *testing.T) {
 	root, b := adrStories(t,
 		[]string{adrRow(1, "accepted"), adrRow(2, "accepted"), adrRow(3, "accepted")},
 		[]string{adrRow(1, "accepted"), adrRow(2, "accepted"), adrRow(4, "accepted")})
@@ -813,7 +895,7 @@ func TestSyncTrialMergeLeavesOutTheADRIndex(t *testing.T) {
 // I-0099, as S-0306 met it: once one story's ADR is on main, the other's sync
 // stopped on the index. It now merges the index, keeping both rows in ADR
 // number order, and goes on (ADR-0157).
-func TestSyncMergesTheADRIndexBothSidesAddedARowTo(t *testing.T) {
+func testSyncMergesTheADRIndexBothSidesAddedARowTo(t *testing.T) {
 	root, b := adrStories(t,
 		[]string{adrRow(1, "accepted"), adrRow(2, "accepted"), adrRow(4, "accepted")},
 		[]string{adrRow(1, "accepted"), adrRow(2, "accepted"), adrRow(3, "accepted")})
@@ -840,7 +922,7 @@ func TestSyncMergesTheADRIndexBothSidesAddedARowTo(t *testing.T) {
 
 // When both sides changed one row differently, the index is not merged: the
 // sync stops on it as before, for the agent.
-func TestSyncStopsOnARowOfTheADRIndexBothSidesChanged(t *testing.T) {
+func testSyncStopsOnARowOfTheADRIndexBothSidesChanged(t *testing.T) {
 	root, b := adrStories(t,
 		[]string{adrRow(1, "accepted"), adrRow(2, "superseded by 0003")},
 		[]string{adrRow(1, "accepted"), adrRow(2, "rejected")})
@@ -884,7 +966,7 @@ func staleStories(t *testing.T, files map[string][2]string) (root, a string) {
 // with main, not with a fresh branch that carries main's change and leaves
 // the path alone. The trial merge stopped on it and blamed the fresh story's
 // sync; a pair's conflicts are the paths both changed, so the pair is clean.
-func TestSyncTrialMergeLeavesOutWhatMainBrought(t *testing.T) {
+func testSyncTrialMergeLeavesOutWhatMainBrought(t *testing.T) {
 	root, a := staleStories(t, nil)
 	// git itself reports the pair as conflicting in main's change
 	if raw, err := storygit.TrialMerge(execx.System{}, root, "story/S-0002", "story/S-0001"); err != nil || strings.Join(raw, ",") != "docs/guide.md" {
@@ -905,7 +987,7 @@ func TestSyncTrialMergeLeavesOutWhatMainBrought(t *testing.T) {
 
 // A path both branches change still conflicts beside one main brought, and
 // is the only one the sync and the pair's conversation name.
-func TestSyncTrialMergeReportsWhatBothChangedBesideWhatMainBrought(t *testing.T) {
+func testSyncTrialMergeReportsWhatBothChangedBesideWhatMainBrought(t *testing.T) {
 	root, a := staleStories(t, map[string][2]string{"docs/more.md": {"stale branch's more\n", "fresh branch's more\n"}})
 	if raw, err := storygit.TrialMerge(execx.System{}, root, "story/S-0002", "story/S-0001"); err != nil || strings.Join(raw, ",") != "docs/guide.md,docs/more.md" {
 		t.Fatalf("git's trial merge: %v %q", err, raw)
@@ -931,7 +1013,7 @@ func TestSyncTrialMergeReportsWhatBothChangedBesideWhatMainBrought(t *testing.T)
 // A pair's thread that named only what main brought, as a sync before the
 // fix wrote it, is resolved at the next sync, which finds the pair clean and
 // names the thread; it opens no conversation.
-func TestSyncResolvesAThreadOnWhatMainBrought(t *testing.T) {
+func testSyncResolvesAThreadOnWhatMainBrought(t *testing.T) {
 	root, a := staleStories(t, nil)
 	repo, err := workitem.Open(root)
 	if err != nil {
@@ -962,6 +1044,7 @@ func TestSyncResolvesAThreadOnWhatMainBrought(t *testing.T) {
 // The generated files are one list, the issue summary alone today, named as
 // git names them (ADR-0098).
 func TestGeneratedPathsAreTheIssueSummary(t *testing.T) {
+	t.Parallel()
 	repo, err := workitem.Open(tempProject(t))
 	if err != nil {
 		t.Fatal(err)
@@ -1118,7 +1201,7 @@ func hasInstances(t *testing.T, is *issues.Issue, hours ...int) {
 // title, each its own number. Once the first is on main, the second's sync
 // folds its issue into main's, so that one issue of the title holds both
 // occurrences, and commits the fold on the branch (ADR-0126).
-func TestSyncFoldsTheBranchsIssueIntoMainsOfTheSameTitle(t *testing.T) {
+func testSyncFoldsTheBranchsIssueIntoMainsOfTheSameTitle(t *testing.T) {
 	root := syncProject(t)
 	if _, errOut, code := runInAt(t, root, issueClock, "issue", "summary"); code != 0 {
 		t.Fatal(errOut)
@@ -1187,7 +1270,7 @@ func bumpStories(t *testing.T) (root, b string) {
 // first is on main, the second's sync stopped on the issue file and the
 // summary; it now merges the issue by its instances, keeping both and adding
 // up the count, writes the summary again, and goes on (ADR-0126).
-func TestSyncMergesAnIssueBothSidesBumped(t *testing.T) {
+func testSyncMergesAnIssueBothSidesBumped(t *testing.T) {
 	root, b := bumpStories(t)
 	gitIn(t, root, "merge", "-q", "--no-edit", "story/S-0001")
 
@@ -1212,7 +1295,7 @@ func TestSyncMergesAnIssueBothSidesBumped(t *testing.T) {
 // Two open branches that bump one issue conflict in its file and the summary
 // alone, which a rebase merges and writes again, so the trial merge counts
 // the pair clean and tells it nothing (ADR-0126).
-func TestSyncTrialMergeLeavesOutIssueFiles(t *testing.T) {
+func testSyncTrialMergeLeavesOutIssueFiles(t *testing.T) {
 	root, b := bumpStories(t)
 	raw, err := storygit.TrialMerge(execx.System{}, root, "story/S-0002", "story/S-0001")
 	if err != nil || !slices.Contains(raw, "design/issues/I-0001-shared-friction.md") {
@@ -1246,7 +1329,7 @@ func stopsOnSharedFriction(t *testing.T, root string) {
 // acceptance stopped on the issue file and the summary until the instances
 // were merged by hand; its rebase now merges them, adding up the count, and
 // writes the summary again (ADR-0126).
-func TestAcceptMergesAnIssueBothSidesBumped(t *testing.T) {
+func testAcceptMergesAnIssueBothSidesBumped(t *testing.T) {
 	root, _ := bumpStories(t)
 	issueStoryInReview(t, root, "S-0001", "T-0001")
 	if _, errOut, code := runInAt(t, root, issueClock.Add(3*time.Hour), "accept", "S-0001"); code != 0 {
@@ -1277,7 +1360,7 @@ func TestAcceptMergesAnIssueBothSidesBumped(t *testing.T) {
 // on the issue file and the branch dropped its bump; it now merges them into
 // a closed issue that holds the bump and counts it, and writes the summary
 // again without it (ADR-0126).
-func TestSyncMergesABumpIntoTheIssueMainClosed(t *testing.T) {
+func testSyncMergesABumpIntoTheIssueMainClosed(t *testing.T) {
 	root, b := bumpStories(t)
 	if _, errOut, code := runInAt(t, root, issueClock.Add(3*time.Hour), "issue", "close", "I-0001", "--reason", "fixed on main"); code != 0 {
 		t.Fatal(errOut)
@@ -1312,6 +1395,7 @@ func TestSyncMergesABumpIntoTheIssueMainClosed(t *testing.T) {
 // folder, not summary.md or README.md (ADR-0126), and the ADR index
 // (ADR-0157).
 func TestSyncFilesMergeTheIssueFilesAndTheADRIndex(t *testing.T) {
+	t.Parallel()
 	repo, err := workitem.Open(tempProject(t))
 	if err != nil {
 		t.Fatal(err)
@@ -1340,6 +1424,7 @@ func TestSyncFilesMergeTheIssueFilesAndTheADRIndex(t *testing.T) {
 // The text report names each file merged, by what it kept, and each issue
 // folded.
 func TestPrintSyncChecksNamesTheMergedFilesAndTheFolds(t *testing.T) {
+	t.Parallel()
 	var out strings.Builder
 	printSyncChecks(&out, &workitem.Item{ID: "S-0002"}, storygit.SyncResult{
 		Merged: []string{"design/issues/I-0118-the-sync-stops.md", "design/adrs/README.md", "docs/users/flai.md"},
@@ -1352,6 +1437,7 @@ func TestPrintSyncChecksNamesTheMergedFilesAndTheFolds(t *testing.T) {
 
 // The text report names the files whose lint the sync fixed and committed.
 func TestPrintSyncChecksNamesTheFilesFixed(t *testing.T) {
+	t.Parallel()
 	var out strings.Builder
 	printSyncChecks(&out, &workitem.Item{ID: "S-0002"}, storygit.SyncResult{Fixed: []string{"docs/a.md", "docs/b.md"}})
 	if want := "fixed the lint of 2 files and committed it: docs/a.md, docs/b.md\n"; out.String() != want {
@@ -1363,6 +1449,7 @@ func TestPrintSyncChecksNamesTheFilesFixed(t *testing.T) {
 // naming flai stream restore and --keep-removal, before the outside-touches
 // note (ADR-0155).
 func TestPrintSyncChecksWarnsOnEachPathTheBranchUndoesOfMain(t *testing.T) {
+	t.Parallel()
 	var out strings.Builder
 	printSyncChecks(&out, &workitem.Item{ID: "S-0002"}, storygit.SyncResult{
 		UndoesMain: []storygit.Undone{
@@ -1385,7 +1472,7 @@ story/S-0002 changed 1 path outside S-0002's touches: README.md
 // stream restore, exits 0, and gives it under undoes_main; a later sync,
 // whose rebase starts past main's change and cannot find it, still warns on
 // it from the story's record.
-func TestSyncWarnsOnAPathTheRebasedBranchUndoesOfMain(t *testing.T) {
+func testSyncWarnsOnAPathTheRebasedBranchUndoesOfMain(t *testing.T) {
 	root := syncProject(t)
 	wt := openSyncStory(t, root, 1, "docs")
 	commitIn(t, wt, "docs/guide.md", "line one\nline two\n")
@@ -1472,7 +1559,7 @@ func fixProject(t *testing.T) string {
 // S-0367: flai stream sync runs the manifest's fix commands over the files
 // the branch changes right after its rebase, not over those only main
 // changed, and commits what they rewrote on the branch.
-func TestSyncFixesTheLintOfTheFilesTheBranchChanges(t *testing.T) {
+func testSyncFixesTheLintOfTheFilesTheBranchChanges(t *testing.T) {
 	root := fixProject(t)
 	wt := openSyncStory(t, root, 1, "docs")
 	commitIn(t, wt, "docs/new.md", "bad\n")
@@ -1505,7 +1592,7 @@ func TestSyncFixesTheLintOfTheFilesTheBranchChanges(t *testing.T) {
 
 // flai accept fixes the same way before it merges the branch, so the fix
 // reaches main with the story.
-func TestAcceptFixesTheLintOfTheFilesTheBranchChanges(t *testing.T) {
+func testAcceptFixesTheLintOfTheFilesTheBranchChanges(t *testing.T) {
 	root := fixProject(t)
 	wt := openSyncStory(t, root, 1, "docs")
 	commitIn(t, wt, "docs/new.md", "bad\n")

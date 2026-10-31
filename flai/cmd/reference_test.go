@@ -12,6 +12,7 @@ import (
 )
 
 func TestRenderReferenceTree(t *testing.T) {
+	t.Parallel()
 	root := &cobra.Command{Use: "tool", Short: "A tool"}
 	root.PersistentFlags().Bool("json", false, "print JSON")
 	group := &cobra.Command{Use: "item", Short: "Work with items"}
@@ -71,6 +72,7 @@ children, one per line.
 }
 
 func TestReferenceCoversEveryCommand(t *testing.T) {
+	t.Parallel()
 	root := newRootCmd(io.Discard, io.Discard)
 	got := renderReference(root)
 	var walk func(c *cobra.Command)
@@ -92,6 +94,7 @@ func TestReferenceCoversEveryCommand(t *testing.T) {
 }
 
 func TestReferenceWriteKeepsDateWhenUnchanged(t *testing.T) {
+	t.Parallel()
 	path := filepath.Join(t.TempDir(), "flai-reference.md")
 	day1 := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
 	day2 := time.Date(2026, 9, 2, 12, 0, 0, 0, time.UTC)
@@ -116,6 +119,7 @@ func TestReferenceWriteKeepsDateWhenUnchanged(t *testing.T) {
 // The committed reference is what the help says now; make flai-reference
 // regenerates it.
 func TestReferenceIsCurrent(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skip("reads the monorepo's docs")
 	}
@@ -129,6 +133,7 @@ func TestReferenceIsCurrent(t *testing.T) {
 }
 
 func TestRenderFlagIndex(t *testing.T) {
+	t.Parallel()
 	root := &cobra.Command{Use: "tool", Short: "A tool"}
 	root.PersistentFlags().BoolP("yes", "y", false, "answer yes")
 	group := &cobra.Command{Use: "item", Short: "Work with items"}
@@ -159,6 +164,7 @@ func TestRenderFlagIndex(t *testing.T) {
 }
 
 func TestReferenceWritesFlagIndexBetweenMarkers(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	ref := filepath.Join(dir, "users", "flai-reference.md")
 	page := filepath.Join(dir, "operators", "settings.md")
@@ -203,6 +209,7 @@ func TestReferenceWritesFlagIndexBetweenMarkers(t *testing.T) {
 // The committed flag index is what the help says now; make flai-reference
 // regenerates it with the reference.
 func TestFlagIndexIsCurrent(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skip("reads the monorepo's docs")
 	}

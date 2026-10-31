@@ -120,7 +120,7 @@ func signedDashboardStandIn(t *testing.T) (url string, asked func() []string) {
 // versionsProject is a project whose configured dashboard tag is tag.
 func versionsProject(t *testing.T, tag string) string {
 	t.Helper()
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	t.Setenv("GITHUB_TOKEN", "tok")
 	root := tempProject(t)
 	m := "version: 1\nname: My Proj\nkey: m\nlayout:\n  design: design\n  docs: docs\n  wip: wip\ndashboard:\n  port: 5555\n  tag: " + tag + "\n"
@@ -283,7 +283,7 @@ func TestDashboardUpgradePublishedDeploysAPublishedTag(t *testing.T) {
 	if !slices.Contains(f.calls, "docker pull --quiet --platform linux/amd64 "+to) || f.containerRef["flaiover"] != to || f.containerLabel["flaiover"] != to {
 		t.Errorf("pulled and swapped to 0.3.0 by digest: %v %v", f.containerRef, f.calls)
 	}
-	cfg, _ := os.ReadFile(os.Getenv("FLAI_CONFIG"))
+	cfg, _ := os.ReadFile(configOf(t))
 	if strings.Contains(string(cfg), "0.3.0") {
 		t.Errorf("dashboard.tag is not written: %s", cfg)
 	}

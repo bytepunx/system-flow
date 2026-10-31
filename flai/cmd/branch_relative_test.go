@@ -42,10 +42,10 @@ func TestRelativeWorktreesIsAnOptIn(t *testing.T) {
 			if err := os.WriteFile(cfg, []byte(c.config), 0o600); err != nil {
 				t.Fatal(err)
 			}
-			t.Setenv("FLAI_CONFIG", cfg)
+			useConfig(t, cfg)
 			t.Setenv("LOG_FORMAT", "json")
 			var errOut bytes.Buffer
-			a := &app{out: &bytes.Buffer{}, errOut: &errOut, runner: versionRunner{version: c.git}}
+			a := &app{configPath: configOf(t), out: &bytes.Buffer{}, errOut: &errOut, runner: versionRunner{version: c.git}}
 			if got := a.relativeWorktrees(); got != c.want {
 				t.Errorf("relativeWorktrees() = %v, want %v", got, c.want)
 			}
@@ -62,6 +62,7 @@ func TestRelativeWorktreesIsAnOptIn(t *testing.T) {
 // open links the worktree with relative paths, so it works wherever the
 // repository is mounted.
 func TestStreamOpenRelativeWorktree(t *testing.T) {
+	t.Parallel()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
@@ -72,7 +73,7 @@ func TestStreamOpenRelativeWorktree(t *testing.T) {
 	if !v.AtLeast(gitver.RelativeWorktrees) {
 		t.Skipf("git %s on PATH; relative worktree paths need %s", v, gitver.RelativeWorktrees)
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive"} {
 		_ = os.MkdirAll(filepath.Join(root, d), 0o755)

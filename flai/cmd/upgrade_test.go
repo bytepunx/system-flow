@@ -20,7 +20,8 @@ import (
 )
 
 func TestUpgradeCommand(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	dest := filepath.Join(t.TempDir(), "proj")
 	if _, errOut, code := runIn(t, ".", "new", dest, "--template", miniTemplate, "--defaults", "--no-git"); code != 0 {
 		t.Fatalf("new: %s", errOut)
@@ -154,7 +155,8 @@ func forkVersion(t *testing.T, tpl, version, addVars, body string) {
 // upgrade; a variable added since gets its default, --var changes one, and a
 // required one with no value is refused before anything changes (I-0040).
 func TestUpgradeRendersAForksOwnVariables(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	tpl := copyTemplate(t)
 	forkVersion(t, tpl, "1.0.0", "  - name: team\n    required: true\n", "team={{ .team }}\n")
 	dest := filepath.Join(t.TempDir(), "proj")
@@ -259,6 +261,7 @@ func TestUpgradeRendersAForksOwnVariables(t *testing.T) {
 // the tag it names and records that ref and its version in system-flow.yaml
 // and the lock, and --relock with --ref records it the same way.
 func TestUpgradeRefWinsOverTheManifestsRef(t *testing.T) {
+	t.Parallel()
 	tpl, url, commitVersion := gitTemplate(t)
 	dest := newFromGit(t, url, "main")
 	commitVersion("10.0.0", "v10.0.0")
@@ -295,7 +298,7 @@ func gitTemplate(t *testing.T) (tpl, url string, commitVersion func(version, tag
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	tpl = copyTemplate(t)
 	forkVersion(t, tpl, "9.9.9", "", "v9.9.9\n")
 	gitIn(t, tpl, "init", "-q", "-b", "main")
@@ -393,10 +396,10 @@ func upgradeIn(t *testing.T, dir, cache, reply string, args ...string) (string, 
 	t.Setenv("FLAI_CACHE_DIR", cache)
 	var out, errOut bytes.Buffer
 	tty := reply != ""
-	a := &app{out: &out, errOut: &errOut, cwd: dir, stdinIsTerminal: &tty,
+	a := &app{configPath: configOf(t), out: &out, errOut: &errOut, cwd: dir, stdinIsTerminal: &tty,
 		clock:    func() time.Time { return time.Date(2026, 10, 6, 21, 0, 0, 0, time.UTC) },
 		prompter: prompt.New(strings.NewReader(reply), &out)}
-	root := newRootCmdWith(a)
+	root := testRoot(t, a)
 	root.SetArgs(args)
 	code := 0
 	if err := root.Execute(); err != nil {
@@ -605,6 +608,7 @@ func remoteWith(t *testing.T, tags ...string) template.Remote {
 
 // The decision of which ref an upgrade with no --ref applies (ADR-0103).
 func TestChooseTarget(t *testing.T) {
+	t.Parallel()
 	rm := remoteWith(t, "v1.0.18", "v1.0.50", "v1.0.60")
 	at := func(ref, version string) manifest.Template { return manifest.Template{Ref: ref, Version: version} }
 	lockAt := func(ref, version string) *lock.Template { return &lock.Template{Ref: ref, Version: version} }
@@ -657,6 +661,7 @@ func TestChooseTarget(t *testing.T) {
 // A required variable recorded empty takes the default a newer template
 // gives it, and the values the lock records survive any characters.
 func TestUpgradeVarsAndTheLockRoundTrip(t *testing.T) {
+	t.Parallel()
 	m := template.Manifest{Variables: []template.Variable{
 		{Name: "project_name", Required: true},
 		{Name: "zone", Required: true, Default: "z1"},

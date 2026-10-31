@@ -12,6 +12,7 @@ import (
 )
 
 func TestWebURL(t *testing.T) {
+	t.Parallel()
 	for remote, want := range map[string]string{
 		"git@github.com:arobson/astro-blog.git":           "https://github.com/arobson/astro-blog",
 		"github.com:owner/repo":                           "https://github.com/owner/repo",
@@ -33,6 +34,7 @@ func TestWebURL(t *testing.T) {
 }
 
 func TestCheckRepoURL(t *testing.T) {
+	t.Parallel()
 	for _, ok := range []string{"", "https://github.com/owner/repo", "http://git.local:3000/owner/repo"} {
 		if err := checkRepoURL(ok); err != nil {
 			t.Errorf("%q refused: %v", ok, err)
@@ -57,13 +59,14 @@ func TestCheckRepoURL(t *testing.T) {
 // S-0120: an import offers the origin remote as an https URL for repo_url,
 // and refuses a value that is not a URL before writing anything.
 func TestImportTakesRepoURLFromOrigin(t *testing.T) {
+	t.Parallel()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
 	if _, err := os.Stat(filepath.Join("..", "..", "template", "template.yaml")); err != nil {
 		t.Skip("prototype template not present")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := legacyRepo(t)
 	if _, err := (execx.System{}).Run(root, "git", "remote", "add", "origin", "git@github.com:arobson/astro-blog.git"); err != nil {
 		t.Fatal(err)

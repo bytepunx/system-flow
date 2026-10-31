@@ -18,7 +18,7 @@ func TestAStreamBegunOnAnotherHostIsReopened(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	t.Setenv("FLAI_AGENT", "agent-S-0001")
 	t.Setenv("FLAI_SESSION", "there")
 
@@ -112,7 +112,7 @@ func TestAStreamIsReopenedOverAWorktreeACrashLeft(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	t.Setenv("FLAI_AGENT", "agent-S-0001")
 	t.Setenv("FLAI_SESSION", "crashed")
 	root := tempProject(t)

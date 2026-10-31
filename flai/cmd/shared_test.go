@@ -17,8 +17,8 @@ import (
 // touching a file outside them, and a story S-0002 touching nothing.
 func sharedProject(t *testing.T) string {
 	t.Helper()
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "tester")
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	inEnv(t, "FLAI_AGENT", "tester")
 	root := tempProject(t)
 	file := filepath.Join(root, manifest.File)
 	data, _ := os.ReadFile(file)
@@ -56,7 +56,7 @@ func readManifestShared(t *testing.T, root string) []string {
 
 // S-0295: flai shared list prints the patterns, and [] with --json when
 // there are none.
-func TestSharedList(t *testing.T) {
+func testSharedList(t *testing.T) {
 	root := sharedProject(t)
 	if out := sharedRun(t, root, "shared", "list"); !strings.Contains(out, "no shared paths") {
 		t.Errorf("an empty list says so, got %q", out)
@@ -78,7 +78,7 @@ func TestSharedList(t *testing.T) {
 }
 
 // S-0295: a pattern that is not valid is listed, and warned about on stderr.
-func TestSharedListWarnsOfAnInvalidPattern(t *testing.T) {
+func testSharedListWarnsOfAnInvalidPattern(t *testing.T) {
 	root := sharedProject(t)
 	file := filepath.Join(root, manifest.File)
 	data, _ := os.ReadFile(file)
@@ -95,7 +95,7 @@ func TestSharedListWarnsOfAnInvalidPattern(t *testing.T) {
 // S-0295: flai shared add and remove change claims.shared, keep the rest of
 // the manifest, say what changed, and refuse what they cannot do with the
 // reason, writing nothing.
-func TestSharedAddRemove(t *testing.T) {
+func testSharedAddRemove(t *testing.T) {
 	root := sharedProject(t)
 	if out := sharedRun(t, root, "shared", "add", "design/adrs", "docs/users/*.md"); out != "added design/adrs\nadded docs/users/*.md\n" {
 		t.Errorf("add says what it added, got %q", out)
@@ -157,7 +157,7 @@ func TestSharedAddRemove(t *testing.T) {
 
 // S-0295: flai shared check says of each path, touches entry, or story's
 // claim entry whether it lies inside a pattern, and which.
-func TestSharedCheck(t *testing.T) {
+func testSharedCheck(t *testing.T) {
 	root := sharedProject(t)
 	sharedRun(t, root, "shared", "add", "design/adrs", "docs/users/*.md")
 
@@ -222,7 +222,7 @@ func TestSharedCheck(t *testing.T) {
 
 // S-0295: the help of flai shared and of each subcommand gives the glob
 // dialect.
-func TestSharedHelpGivesTheDialect(t *testing.T) {
+func testSharedHelpGivesTheDialect(t *testing.T) {
 	root := sharedProject(t)
 	for _, args := range [][]string{{"shared"}, {"shared", "list"}, {"shared", "add"}, {"shared", "remove"}, {"shared", "check"}} {
 		out := sharedRun(t, root, append(args, "--help")...)
@@ -236,7 +236,7 @@ func TestSharedHelpGivesTheDialect(t *testing.T) {
 
 // S-0295: with --autocommit, an edit of the shared paths is committed,
 // system-flow.yaml alone, with its trailers; without it, nothing is.
-func TestSharedAddAutocommitsTheManifestAlone(t *testing.T) {
+func testSharedAddAutocommitsTheManifestAlone(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}

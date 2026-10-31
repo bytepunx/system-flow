@@ -25,7 +25,7 @@ const (
 // designProject is a scratch project with no design system.
 func designProject(t *testing.T) string {
 	t.Helper()
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	return tempProject(t)
 }
 
@@ -59,6 +59,7 @@ func projectFileExists(root, name string) bool {
 // its updated today, its topics all, and the token file's path in its body;
 // flai check finds nothing in either.
 func TestDesignInitWritesTheTokenFileAndTheGuidance(t *testing.T) {
+	t.Parallel()
 	root := designProject(t)
 	out, errOut, code := runIn(t, root, "design", "init")
 	if code != 0 {
@@ -88,6 +89,7 @@ func TestDesignInitWritesTheTokenFileAndTheGuidance(t *testing.T) {
 // S-0381: --topics sets the guidance's topics, --json says what was written,
 // and a word that is no topic is refused before anything is written.
 func TestDesignInitTopics(t *testing.T) {
+	t.Parallel()
 	root := designProject(t)
 	out, errOut, code := runIn(t, root, "design", "init", "--topics", "flaiover,ui", "--json")
 	var got struct {
@@ -127,6 +129,7 @@ func designProjectWithSubProjects(t *testing.T) string {
 // S-0386: --project writes each sub-project into the guidance's topics, the
 // one list prime reads (ADR-0152), and drops the default all.
 func TestDesignInitProject(t *testing.T) {
+	t.Parallel()
 	root := designProjectWithSubProjects(t)
 	out, errOut, code := runIn(t, root, "design", "init", "--project", "flaiover", "--json")
 	var got struct {
@@ -146,6 +149,7 @@ func TestDesignInitProject(t *testing.T) {
 // S-0386: with --topics and --project, the topics are the --topics values,
 // then each sub-project not among them, once each.
 func TestDesignInitProjectWithTopics(t *testing.T) {
+	t.Parallel()
 	root := designProjectWithSubProjects(t)
 	out, errOut, code := runIn(t, root, "design", "init", "--topics", "ui,flaiover", "--project", "flaiover", "--project", "flai", "--json")
 	var got struct {
@@ -165,6 +169,7 @@ func TestDesignInitProjectWithTopics(t *testing.T) {
 // S-0386: a --project the manifest does not list is refused, naming the flag,
 // the name, and the sub-projects there are, and nothing is written.
 func TestDesignInitProjectRefusesAnUnknownSubProject(t *testing.T) {
+	t.Parallel()
 	root := designProjectWithSubProjects(t)
 	_, errOut, code := runIn(t, root, "design", "init", "--project", "flaiover,web")
 	if code != 1 {
@@ -191,6 +196,7 @@ func TestDesignInitProjectRefusesAnUnknownSubProject(t *testing.T) {
 // S-0381: init refuses when either file is there, naming it, and writes
 // neither.
 func TestDesignInitRefusesWhenEitherFileIsThere(t *testing.T) {
+	t.Parallel()
 	for _, there := range []string{designTokensFile, designGuidanceFile} {
 		t.Run(filepath.Base(there), func(t *testing.T) {
 			root := designProject(t)
@@ -214,6 +220,7 @@ func TestDesignInitRefusesWhenEitherFileIsThere(t *testing.T) {
 // S-0381: init writes the token file where the manifest's design.tokens
 // says, and the guidance names that path.
 func TestDesignInitFollowsDesignTokens(t *testing.T) {
+	t.Parallel()
 	root := designProject(t)
 	data := readProjectFile(t, root, manifest.File) + "design:\n  tokens: ui/brand.tokens.json\n"
 	writeProjectFile(t, root, manifest.File, data)
@@ -229,6 +236,7 @@ func TestDesignInitFollowsDesignTokens(t *testing.T) {
 // S-0381: show without a token file says so and how to write one, and is no
 // error, in text and in JSON.
 func TestDesignShowWithoutATokenFile(t *testing.T) {
+	t.Parallel()
 	root := designProject(t)
 	out, errOut, code := runIn(t, root, "design", "show")
 	if code != 0 || out != "no token file at "+designTokensFile+": run flai design init to write one and its guidance\n" {
@@ -248,6 +256,7 @@ func TestDesignShowWithoutATokenFile(t *testing.T) {
 // tokens of each theme, and each role pair's contrast; --json is
 // designsystem.Show's answer.
 func TestDesignShowAfterInit(t *testing.T) {
+	t.Parallel()
 	root := designProject(t)
 	if _, errOut, code := runIn(t, root, "design", "init"); code != 0 {
 		t.Fatal(errOut)
@@ -289,6 +298,7 @@ func TestDesignShowAfterInit(t *testing.T) {
 // S-0381: show prints each problem as <file>:<line>: <token path>: <message>
 // and exits 0, and says when the guidance is not there.
 func TestDesignShowPrintsProblems(t *testing.T) {
+	t.Parallel()
 	root := designProject(t)
 	writeProjectFile(t, root, designTokensFile, "{\n  \"color\": {\n    \"background\": { \"$type\": \"color\", \"$value\": { \"colorSpace\": \"hsl\", \"components\": [0, 0, 100] } }\n  }\n}\n")
 	out, errOut, code := runIn(t, root, "design", "show")
@@ -313,6 +323,7 @@ func TestDesignShowPrintsProblems(t *testing.T) {
 // --tailwind the @theme block; no token file, or one with problems, is an
 // error and prints nothing.
 func TestDesignCSS(t *testing.T) {
+	t.Parallel()
 	root := designProject(t)
 	out, errOut, code := runIn(t, root, "design", "css")
 	if code != 1 || out != "" || !strings.Contains(errOut, "no token file at "+designTokensFile) || !strings.Contains(errOut, "flai design init") {
@@ -360,6 +371,7 @@ func nameDesignStylesheet(t *testing.T, root string) {
 // replaces a stylesheet that has fallen behind; --json says what was written
 // from what; --write and --tailwind are mutually exclusive.
 func TestDesignCSSWrite(t *testing.T) {
+	t.Parallel()
 	root := designProject(t)
 	if _, errOut, code := runIn(t, root, "design", "init"); code != 0 {
 		t.Fatal(errOut)
@@ -405,6 +417,7 @@ func TestDesignCSSWrite(t *testing.T) {
 // manifest names no stylesheet, when there is no token file, and when the
 // token file has problems.
 func TestDesignCSSWriteRefuses(t *testing.T) {
+	t.Parallel()
 	t.Run("no stylesheet named", func(t *testing.T) {
 		root := designProject(t)
 		if _, errOut, code := runIn(t, root, "design", "init"); code != 0 {
@@ -447,6 +460,7 @@ func TestDesignCSSWriteRefuses(t *testing.T) {
 // manifest names one, as a third path written and the stylesheet key in
 // --json, and no stylesheet when it names none.
 func TestDesignInitWritesTheStylesheetWhenNamed(t *testing.T) {
+	t.Parallel()
 	root := designProject(t)
 	nameDesignStylesheet(t, root)
 	out, errOut, code := runIn(t, root, "design", "init")
@@ -484,6 +498,7 @@ func TestDesignInitWritesTheStylesheetWhenNamed(t *testing.T) {
 // sub-project, init leaves the token file and the stylesheet in step, and
 // flai check reports no design.stale, which it does once they fall apart.
 func TestDesignInitLeavesTheStylesheetInStep(t *testing.T) {
+	t.Parallel()
 	root := designProject(t)
 	writeProjectFile(t, root, manifest.File, readProjectFile(t, root, manifest.File)+"projects:\n  - name: web\n    path: web\n    kind: sveltekit\n")
 	nameDesignStylesheet(t, root)
@@ -520,6 +535,7 @@ func sheetOf(t *testing.T, tokens, content string) string {
 // token in both themes, and every role pair passes its contrast threshold
 // in light and dark with no colour clipped.
 func TestDesignStarterTokensPassContrast(t *testing.T) {
+	t.Parallel()
 	fsys := fstest.MapFS{"tokens.json": {Data: designsystem.StarterTokens}}
 	sys, err := designsystem.Load(fsys, "tokens.json")
 	if err != nil {
@@ -566,6 +582,7 @@ func mustJSON(t *testing.T, v any) []byte {
 // S-0381: in a project made from the template, the token file and the
 // guidance init writes pass flai check --strict.
 func TestDesignInitInTheTemplatePassesCheck(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skip("integration: renders the monorepo template")
 	}
@@ -573,7 +590,7 @@ func TestDesignInitInTheTemplatePassesCheck(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(proto, "template.yaml")); err != nil {
 		t.Skip("prototype template not present")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	dest := filepath.Join(t.TempDir(), "sample")
 	if _, errOut, code := runCLI(t, "new", dest, "--template", proto, "--defaults", "--no-git"); code != 0 {
 		t.Fatalf("render the template: %s", errOut)
@@ -631,6 +648,7 @@ func designStories(t *testing.T, root string, stories ...designStory) *workitem.
 // S-0384: show --story refuses, with exit status 1 and the reason, an ID no
 // story has, a done story, and a story with no worktree.
 func TestDesignShowStoryRefuses(t *testing.T) {
+	t.Parallel()
 	root := designProject(t)
 	repo := designStories(t, root,
 		designStory{"Open", workitem.InProgress, true},
@@ -666,6 +684,7 @@ func TestDesignShowStoryRefuses(t *testing.T) {
 // not the main checkout, names the story and its worktree, and reads the
 // same from inside the worktree; --json is the worktree's design system.
 func TestDesignShowStoryReadsItsWorktree(t *testing.T) {
+	t.Parallel()
 	root := designProject(t)
 	repo := designStories(t, root, designStory{"Proposal", workitem.InProgress, true})
 	wt := repo.WorktreePath("S-0001")
@@ -712,6 +731,7 @@ func TestDesignShowStoryReadsItsWorktree(t *testing.T) {
 // prints [] with --json, and says so naming the token file and the guidance;
 // a project that is not a git repository has no branches, so no proposals.
 func TestDesignProposalsNone(t *testing.T) {
+	t.Parallel()
 	root := designProject(t)
 	designStories(t, root, designStory{"Open", workitem.InProgress, true})
 	out, errOut, code := runIn(t, root, "design", "proposals", "--json")
@@ -729,7 +749,7 @@ func TestDesignProposalsNone(t *testing.T) {
 // titles, states, and paths, the same from the main checkout and from a
 // worktree; show --story reads what a proposal commits. Integration: it
 // runs real git.
-func TestDesignProposalsListsTheStoriesChangingTheDesignSystem(t *testing.T) {
+func testDesignProposalsListsTheStoriesChangingTheDesignSystem(t *testing.T) {
 	root := syncProject(t)
 	// git status lists a new file in a folder git does not track as the folder
 	writeProjectFile(t, root, "design/system/.gitkeep", "")

@@ -17,8 +17,7 @@ import (
 // a narrative, one in backlog with a task.
 func cancelProject(t *testing.T) string {
 	t.Helper()
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "")
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	for _, args := range [][]string{
 		{"config", "set", "author", "olive"},
@@ -59,6 +58,7 @@ func statusOf(t *testing.T, root, glob string) string {
 }
 
 func TestMoveCancelledDryRunListsAndChangesNothing(t *testing.T) {
+	t.Parallel()
 	root := cancelProject(t)
 	out, errOut, code := runIn(t, root, "move", "E-0001", "cancelled", "--reason", "a different route", "--dry-run")
 	if code != 0 {
@@ -85,6 +85,7 @@ func TestMoveCancelledDryRunListsAndChangesNothing(t *testing.T) {
 }
 
 func TestMoveCancelledCascadesAndReportsJSON(t *testing.T) {
+	t.Parallel()
 	root := cancelProject(t)
 	out, errOut, code := runIn(t, root, "move", "E-0001", "cancelled", "--reason", "a different route", "--json")
 	if code != 0 {
@@ -120,8 +121,8 @@ func TestMoveCancelledCascadesAndReportsJSON(t *testing.T) {
 }
 
 func TestMoveCancelledAsksOnATerminal(t *testing.T) {
+	t.Parallel()
 	root := cancelProject(t)
-	t.Setenv("FLAI_CACHE_DIR", filepath.Join(t.TempDir(), "cache"))
 	run := func(answer bool, args ...string) (string, string, int, int) {
 		var out, errOut bytes.Buffer
 		tty := true
@@ -129,10 +130,10 @@ func TestMoveCancelledAsksOnATerminal(t *testing.T) {
 		if answer {
 			reply = "y\n"
 		}
-		a := &app{out: &out, errOut: &errOut, cwd: root, stdinIsTerminal: &tty,
+		a := &app{configPath: configOf(t), out: &out, errOut: &errOut, cwd: root, stdinIsTerminal: &tty,
 			clock:    func() time.Time { return time.Date(2026, 9, 15, 21, 0, 0, 0, time.UTC) },
 			prompter: prompt.New(strings.NewReader(reply), &out)}
-		cmd := newRootCmdWith(a)
+		cmd := testRoot(t, a)
 		cmd.SetArgs(args)
 		code := 0
 		if err := cmd.Execute(); err != nil {

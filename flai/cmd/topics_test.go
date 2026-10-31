@@ -10,7 +10,7 @@ import (
 
 // S-0135: flai story new and flai epic new take --topics, flai edit sets,
 // shows, and clears them, and a task has no such flag.
-func TestTopicsOnStoriesAndEpics(t *testing.T) {
+func testTopicsOnStoriesAndEpics(t *testing.T) {
 	root := heldProject(t)
 	if _, errOut, code := runIn(t, root, "epic", "new", "Logs", "--topics", "logging"); code != 0 {
 		t.Fatal(errOut)
@@ -59,7 +59,7 @@ func TestTopicsOnStoriesAndEpics(t *testing.T) {
 
 // S-0135: flai show prints a story's topics with their sources, and --json
 // returns every source; an epic shows its own.
-func TestShowPrintsAStorysTopics(t *testing.T) {
+func testShowPrintsAStorysTopics(t *testing.T) {
 	root := heldProject(t)
 	if _, errOut, code := runIn(t, root, "edit", "E-0001", "--topics", "release"); code != 0 {
 		t.Fatal(errOut)

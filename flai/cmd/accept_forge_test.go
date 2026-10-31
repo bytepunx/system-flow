@@ -20,6 +20,7 @@ const forgePRURL = "https://github.com/o/r/pull/7"
 // lists each in forge_blockers with its code, name, and page, and names it
 // in its text.
 func TestEveryAcceptanceWaitsForThePullRequestsChecksAndReviews(t *testing.T) {
+	t.Parallel()
 	root, head := forgeGatedStoryInReview(t, "pull-request")
 	mainBefore := gitIn(t, root, "rev-parse", "main")
 	evidence := evidenceFile(t, "Verdict: pass\n- 1: `cli/feature.go`\n")
@@ -113,7 +114,7 @@ func TestEveryAcceptanceWaitsForThePullRequestsChecksAndReviews(t *testing.T) {
 // head, with its required checks passed and its approvals met, is accepted,
 // its pull request merged through the remote, by the operator and by the
 // orchestrator alike.
-func TestAStoryThePullRequestPassesIsAcceptedThroughTheRemote(t *testing.T) {
+func testAStoryThePullRequestPassesIsAcceptedThroughTheRemote(t *testing.T) {
 	for who, args := range map[string]func(head string) []string{
 		"the operator": func(string) []string { return []string{"accept", "S-0001", "--by", "alex", "--json"} },
 		"the orchestrator": func(head string) []string {
@@ -147,6 +148,7 @@ func TestAStoryThePullRequestPassesIsAcceptedThroughTheRemote(t *testing.T) {
 // ADR-0169: under local acceptance the kept state gates nothing: a failing
 // check is no blocker, and the story is accepted as before.
 func TestUnderLocalAcceptanceTheKeptStateGatesNothing(t *testing.T) {
+	t.Parallel()
 	root, head := forgeGatedStoryInReview(t, "local")
 	st := passingStatus(head)
 	st.Checks[0].State = forge.CheckFailed

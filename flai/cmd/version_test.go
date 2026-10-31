@@ -11,8 +11,9 @@ import (
 // flai version --json prints the task-done rules number beside the version,
 // which an outdated MCP server reads from the installed flai (ADR-0180).
 func TestVersionJSONPrintsTheTaskDoneRules(t *testing.T) {
+	t.Parallel()
 	var out bytes.Buffer
-	a := &app{out: &out, jsonOut: true}
+	a := &app{configPath: configOf(t), out: &out, jsonOut: true}
 	if err := a.printVersion(versionReport{Info: buildinfo.Get(), Release: buildinfo.OwnStamp()}); err != nil {
 		t.Fatal(err)
 	}

@@ -14,6 +14,7 @@ import (
 // S-0195, ADR-0067: flai board says what is accepted and not yet published,
 // as information that publishing is the operator's, and tells no one to push.
 func TestBoardSaysWhatIsUnpublished(t *testing.T) {
+	t.Parallel()
 	root, _ := researchProject(t, "feature", true)
 	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
 		t.Fatalf("accept: %s", errOut)
@@ -52,6 +53,7 @@ func TestBoardSaysWhatIsUnpublished(t *testing.T) {
 // it, in its JSON as queue, and as one line under the review column naming
 // the queue's order and the batch; the reasons are flai queue's to give.
 func TestBoardCarriesTheMergeQueue(t *testing.T) {
+	t.Parallel()
 	root := queueProject(t)
 	writeQueueState(t, root, mergequeue.State{Batch: &mergequeue.Batch{Stories: []string{"S-0001"}, Step: "verify"}})
 
@@ -82,6 +84,7 @@ func TestBoardCarriesTheMergeQueue(t *testing.T) {
 // S-0398, ADR-0169: under pull-request acceptance flai board says the queue
 // is off in its place, and its JSON lists no story as eligible.
 func TestBoardSaysTheQueueIsOffUnderPullRequest(t *testing.T) {
+	t.Parallel()
 	root := queueProject(t)
 	m := filepath.Join(root, "system-flow.yaml")
 	_ = os.WriteFile(m, []byte(read(t, m)+"acceptance:\n  mode: pull-request\n"), 0o644)

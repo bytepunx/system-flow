@@ -24,8 +24,7 @@ import (
 // started it, and the journal names it.
 func TestTheOrchestratorAsksForThePlannerOnACandidateEpic(t *testing.T) {
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
-	t.Setenv("FLAI_AGENT", "")
+	useConfig(t, cfg)
 	root := tempProject(t)
 	runIn(t, root, "epic", "new", "Empty")      // E-0001: a candidate
 	runIn(t, root, "epic", "new", "Dropped")    // E-0002: cancelled
@@ -76,7 +75,7 @@ func TestTheOrchestratorAsksForThePlannerOnACandidateEpic(t *testing.T) {
 	t.Setenv("FLAI_STARTED_BY", "flai-serve")
 	t.Setenv("FLAI_ROLE", "orchestrate")
 	var out, errOut bytes.Buffer
-	a := &app{out: &out, errOut: &errOut, cwd: root, clock: func() time.Time { return time.Date(2026, 10, 5, 10, 0, 0, 0, time.UTC) }}
+	a := &app{configPath: configOf(t), out: &out, errOut: &errOut, cwd: root, clock: func() time.Time { return time.Date(2026, 10, 5, 10, 0, 0, 0, time.UTC) }}
 	ctx := context.Background()
 	if _, err := a.mcpPlan(ctx, root, "E-0001", "agent-o"); err == nil || !strings.Contains(err.Error(), "only with orchestration.permissions.plan_backlog_epics, which is off") {
 		t.Errorf("permission off: %v", err)
@@ -177,8 +176,7 @@ func TestTheOrchestratorAsksForThePlannerOnACandidateEpic(t *testing.T) {
 // the operator has not written on since is refused, saying so.
 func TestTheOrchestratorAsksForThePlannerAgainOnAnItemPlannedBefore(t *testing.T) {
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
-	t.Setenv("FLAI_AGENT", "")
+	useConfig(t, cfg)
 	root := tempProject(t)
 	manifest := filepath.Join(root, "system-flow.yaml")
 	m, _ := os.ReadFile(manifest)
@@ -234,7 +232,7 @@ func TestTheOrchestratorAsksForThePlannerAgainOnAnItemPlannedBefore(t *testing.T
 
 	t.Setenv("FLAI_STARTED_BY", "flai-serve")
 	t.Setenv("FLAI_ROLE", "orchestrate")
-	a := &app{out: &bytes.Buffer{}, errOut: &bytes.Buffer{}, cwd: root, clock: func() time.Time { return wrote.Add(time.Hour) }}
+	a := &app{configPath: configOf(t), out: &bytes.Buffer{}, errOut: &bytes.Buffer{}, cwd: root, clock: func() time.Time { return wrote.Add(time.Hour) }}
 	ctx := context.Background()
 	if _, err := a.mcpPlan(ctx, root, "E-0001", "agent-o"); err == nil || !strings.Contains(err.Error(), "only with orchestration.permissions.plan_backlog_epics, which is off") {
 		t.Errorf("plan_backlog_epics off: %v", err)

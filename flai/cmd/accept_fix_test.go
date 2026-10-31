@@ -57,7 +57,7 @@ func storyStatus(t *testing.T, root, id string) string {
 // S-0367 criterion 2: the markdown flai accept commits from the main
 // checkout, what was there before and what the acceptance writes, is fixed
 // before it is committed.
-func TestAcceptFixesTheMainCheckoutsMarkdownBeforeItCommits(t *testing.T) {
+func testAcceptFixesTheMainCheckoutsMarkdownBeforeItCommits(t *testing.T) {
 	root := lintProject(t,
 		"  - name: notes\n    command: [\"true\"]\n    paths: [\"wip/notes/**\"]\n"+
 			"    fix_command: [sh, -c, 'for f; do printf \"good\\n\" > \"$f\"; done', sh, \"{files}\"]\n"+
@@ -87,7 +87,7 @@ func TestAcceptFixesTheMainCheckoutsMarkdownBeforeItCommits(t *testing.T) {
 // TH-0413: a story branch whose markdown the fix after the rebase leaves
 // failing is refused before the merge, with the file and line, and stays in
 // review with main unchanged.
-func TestAcceptRefusesABranchWhoseLintTheFixLeaves(t *testing.T) {
+func testAcceptRefusesABranchWhoseLintTheFixLeaves(t *testing.T) {
 	root := lintProject(t, "  - name: md\n    command: "+badCheck+"\n    paths: [\"docs/**\"]\n    fix_command: [\"true\"]\n")
 	wt := openSyncStory(t, root, 1, "docs")
 	commitIn(t, wt, "docs/bad.md", "fine\nBAD line\n")
@@ -116,7 +116,7 @@ func TestAcceptRefusesABranchWhoseLintTheFixLeaves(t *testing.T) {
 
 // TH-0413: an uncommitted main-checkout file whose lint the fix leaves
 // refuses the acceptance before anything changes.
-func TestAcceptRefusesTheMainCheckoutsLintBeforeAnythingChanges(t *testing.T) {
+func testAcceptRefusesTheMainCheckoutsLintBeforeAnythingChanges(t *testing.T) {
 	root := lintProject(t, "  - name: notes\n    command: "+badCheck+"\n    paths: [\"wip/notes/**\"]\n    fix_command: [\"true\"]\n")
 	wt := openSyncStory(t, root, 1, "docs")
 	commitIn(t, wt, "docs/new.md", "new\n")
@@ -166,7 +166,7 @@ func acceptRefusal(t *testing.T, root, id string) (int, unfixedRefusal) {
 // S-0378: with --json, a branch whose markdown the fix leaves failing is
 // refused with exit 4 and each finding as data, naming the story's branch as
 // where to correct it.
-func TestAcceptJSONRefusesABranchsLintWithEachFinding(t *testing.T) {
+func testAcceptJSONRefusesABranchsLintWithEachFinding(t *testing.T) {
 	root := lintProject(t, "  - name: markdown\n    command: "+mdCheck+"\n    paths: [\"docs/**\"]\n    fix_command: [\"true\"]\n")
 	wt := openSyncStory(t, root, 1, "docs")
 	commitIn(t, wt, "docs/bad.md", "fine\nBAD line\n")
@@ -191,7 +191,7 @@ func TestAcceptJSONRefusesABranchsLintWithEachFinding(t *testing.T) {
 
 // S-0378: with --json, an uncommitted main-checkout file whose markdown the
 // fix leaves failing is refused with exit 4, naming the main checkout.
-func TestAcceptJSONRefusesTheMainCheckoutsLintWithEachFinding(t *testing.T) {
+func testAcceptJSONRefusesTheMainCheckoutsLintWithEachFinding(t *testing.T) {
 	root := lintProject(t, "  - name: markdown\n    command: "+mdCheck+"\n    paths: [\"wip/notes/**\"]\n    fix_command: [\"true\"]\n")
 	wt := openSyncStory(t, root, 1, "docs")
 	commitIn(t, wt, "docs/new.md", "new\n")
@@ -218,6 +218,7 @@ func TestAcceptJSONRefusesTheMainCheckoutsLintWithEachFinding(t *testing.T) {
 }
 
 func TestUnfixedErrorNamesEachFinding(t *testing.T) {
+	t.Parallel()
 	res := verify.Result{Tiers: []verify.TierResult{
 		{Name: "go", State: verify.Passed},
 		{Name: "markdown", State: verify.Failed, Omitted: 2, Findings: []verify.Finding{
@@ -244,6 +245,7 @@ func TestUnfixedErrorNamesEachFinding(t *testing.T) {
 // with its path, line, column, level, rule, and alias when it gives them,
 // and the checkout to correct it in; other lines are none.
 func TestUnfixedErrorGivesEachMarkdownlintLineAsData(t *testing.T) {
+	t.Parallel()
 	out := "lint-md: markdownlint-cli2 0.20.0\n" +
 		"Summary: 3 error(s)\n" +
 		"docs/a.md:3 error MD012/no-multiple-blanks Multiple consecutive blank lines [Expected: 1; Actual: 2]\n" +

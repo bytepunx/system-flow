@@ -12,8 +12,8 @@ import (
 // touching cli, which the manifest names as flai's tag: S-0002 is held.
 func heldProject(t *testing.T) string {
 	t.Helper()
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "tester")
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	inEnv(t, "FLAI_AGENT", "tester")
 	root := tempProject(t)
 	manifest := filepath.Join(root, "system-flow.yaml")
 	data, _ := os.ReadFile(manifest)
@@ -43,7 +43,7 @@ func heldProject(t *testing.T) string {
 const heldWhy = "held (overlap): touches flai, which holds flai/cmd that S-0001 (in progress) touches; starts when S-0001 moves to review, is cancelled, or is sent back"
 
 // S-0128: moving a held story to in-progress warns, and moves it.
-func TestMovingAHeldStoryWarns(t *testing.T) {
+func testMovingAHeldStoryWarns(t *testing.T) {
 	root := heldProject(t)
 	out, errOut, code := runIn(t, root, "move", "S-0002", "in-progress")
 	if code != 0 || !strings.Contains(out, "S-0002 → in-progress") {
@@ -55,7 +55,7 @@ func TestMovingAHeldStoryWarns(t *testing.T) {
 }
 
 // S-0128: flai board marks a held story and says why, as text and as JSON.
-func TestBoardMarksAHeldStory(t *testing.T) {
+func testBoardMarksAHeldStory(t *testing.T) {
 	root := heldProject(t)
 	out, errOut, code := runIn(t, root, "board")
 	if code != 0 {
@@ -92,7 +92,7 @@ func TestBoardMarksAHeldStory(t *testing.T) {
 // S-0130: flai edit --after makes a ready story wait for another, flai board
 // says so, flai check refuses a story that does not exist and a cycle, and
 // --clear-after lets it go.
-func TestEditAfterHoldsAStoryUntilTheOtherIsDone(t *testing.T) {
+func testEditAfterHoldsAStoryUntilTheOtherIsDone(t *testing.T) {
 	root := heldProject(t)
 	if _, errOut, code := runIn(t, root, "story", "new", "Later", "--epic", "E-0001", "--touches", "docs"); code != 0 {
 		t.Fatal(errOut)

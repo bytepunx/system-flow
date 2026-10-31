@@ -42,10 +42,10 @@ status: active
 // after:. FLAI_AGENT is agent-a.
 func storyStartProject(t *testing.T) string {
 	t.Helper()
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "agent-a")
-	t.Setenv("FLAI_SESSION", "s1")
-	t.Setenv("LOG_FORMAT", "json")
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	inEnv(t, "FLAI_AGENT", "agent-a")
+	inEnv(t, "FLAI_SESSION", "s1")
+	inEnv(t, "LOG_FORMAT", "json")
 	root := tempProject(t)
 	writeIn(t, root, "design/conventions/README.md", "# Agent conventions\n\n| Order | File | Governs |\n|-------|------|---------|\n| 10 | [git.md](git.md) | Commits |\n")
 	writeIn(t, root, "design/conventions/git.md", storyStartConvention)
@@ -82,6 +82,30 @@ func storyStartProject(t *testing.T) string {
 	return root
 }
 
+// TestInTheSessionOfAgentA runs the tests of flai story start and stream open,
+// as together runs them, in the session of agent-a logging JSON: FLAI_AGENT
+// agent-a, FLAI_SESSION s1, and LOG_FORMAT json, set once here, so that they
+// run in parallel with each other (S-0548).
+func TestInTheSessionOfAgentA(t *testing.T) {
+	t.Setenv("FLAI_AGENT", "agent-a")
+	t.Setenv("FLAI_SESSION", "s1")
+	t.Setenv("LOG_FORMAT", "json")
+	together(t,
+		testStoryStartStartsAReadyStoryAsText,
+		testStoryStartAnswersJSON,
+		testStoryStartRefusesABacklogStory,
+		testStoryStartRefusesAHeldStory,
+		testStoryStartJSONListsOnlyTheStorysThreads,
+		testStoryStartSaysHowManyThreadsAreElsewhere,
+		testStoryStartPrintsNoneOfTheOperatorsThreads,
+		testStoryStartPrintsTheStorysThreadsAwaitingItsAgent,
+		testStreamOpenStartsAReadyStory,
+		testStreamOpenRefusesAHeldReadyStory,
+		testStreamOpenLeavesAStoryThatIsNotReadyUnmoved,
+		testStreamOpenOfAStorySentBackSaysToTakeItUp,
+	)
+}
+
 func storyStartGet(t *testing.T, root, id string) *workitem.Item {
 	t.Helper()
 	repo, err := workitem.Open(root)
@@ -113,7 +137,7 @@ func fatalErr(t *testing.T, errOut string) string {
 // S-0274: a ready story starts in one call: it is in progress, moved by
 // FLAI_AGENT, and the output is the move, the narrative, the branch (none
 // outside git), the pack, and the inbox, in that order.
-func TestStoryStartStartsAReadyStoryAsText(t *testing.T) {
+func testStoryStartStartsAReadyStoryAsText(t *testing.T) {
 	root := storyStartProject(t)
 	out, errOut, code := runIn(t, root, "story", "start", "S-0001")
 	if code != 0 {
@@ -147,7 +171,7 @@ func TestStoryStartStartsAReadyStoryAsText(t *testing.T) {
 }
 
 // S-0274: --json prints the result as one object with every key.
-func TestStoryStartAnswersJSON(t *testing.T) {
+func testStoryStartAnswersJSON(t *testing.T) {
 	root := storyStartProject(t)
 	out, errOut, code := runIn(t, root, "story", "start", "S-0002", "--json", "--budget", "40KB")
 	if code != 0 {
@@ -189,7 +213,7 @@ func TestStoryStartAnswersJSON(t *testing.T) {
 
 // S-0274: a story in backlog is refused with exit 4, its state in the
 // reason, and nothing changes: no move, no narrative.
-func TestStoryStartRefusesABacklogStory(t *testing.T) {
+func testStoryStartRefusesABacklogStory(t *testing.T) {
 	root := storyStartProject(t)
 	before := storyStartGet(t, root, "S-0003")
 	out, errOut, code := runIn(t, root, "story", "start", "S-0003")
@@ -204,7 +228,7 @@ func TestStoryStartRefusesABacklogStory(t *testing.T) {
 
 // S-0274: a ready story the board holds is refused with exit 4 and its
 // hold's reason, as text and as --json, and nothing changes.
-func TestStoryStartRefusesAHeldStory(t *testing.T) {
+func testStoryStartRefusesAHeldStory(t *testing.T) {
 	root := storyStartProject(t)
 	before := storyStartGet(t, root, "S-0004")
 	repo, err := workitem.Open(root)
@@ -266,6 +290,7 @@ func storyStartUnchanged(t *testing.T, root string, before *workitem.Item) {
 // S-0274: the help says what the command does and the four calls it
 // replaces at the start of a story.
 func TestStoryStartHelpNamesWhatItReplaces(t *testing.T) {
+	t.Parallel()
 	out, _, code := runCLI(t, "story", "start", "--help")
 	if code != 0 {
 		t.Fatalf("help: %d", code)
@@ -333,7 +358,7 @@ func storyStartThreads(t *testing.T, root string) string {
 
 // ADR-0179: --json lists the story's threads alone, counts the others in
 // threads_omitted, and is at most 40,000 bytes, as story_start answers.
-func TestStoryStartJSONListsOnlyTheStorysThreads(t *testing.T) {
+func testStoryStartJSONListsOnlyTheStorysThreads(t *testing.T) {
 	root := storyStartProject(t)
 	mine := storyStartThreads(t, root)
 	out, errOut, code := runIn(t, root, "story", "start", "S-0001", "--json")
@@ -361,7 +386,7 @@ func TestStoryStartJSONListsOnlyTheStorysThreads(t *testing.T) {
 
 // ADR-0179: the text form lists the story's threads and says how many are
 // on other items, and that flai thread list lists them.
-func TestStoryStartSaysHowManyThreadsAreElsewhere(t *testing.T) {
+func testStoryStartSaysHowManyThreadsAreElsewhere(t *testing.T) {
 	root := storyStartProject(t)
 	mine := storyStartThreads(t, root)
 	out, errOut, code := runIn(t, root, "story", "start", "S-0001")
@@ -396,7 +421,7 @@ func storyStartOperatorsProject(t *testing.T) (string, *workitem.Repo) {
 // ADR-0181: with the operator's threads open and none on the story, flai
 // story start prints no thread and none on other items, and --json's inbox
 // lists none and counts none.
-func TestStoryStartPrintsNoneOfTheOperatorsThreads(t *testing.T) {
+func testStoryStartPrintsNoneOfTheOperatorsThreads(t *testing.T) {
 	root, _ := storyStartOperatorsProject(t)
 	out, errOut, code := runIn(t, root, "story", "start", "S-0001")
 	if code != 0 {
@@ -429,7 +454,7 @@ func TestStoryStartPrintsNoneOfTheOperatorsThreads(t *testing.T) {
 // ADR-0181: beside the operator's threads, a thread on the story and one on
 // a task of it, each with alex's last entry, are printed awaiting the agent,
 // and no other thread is.
-func TestStoryStartPrintsTheStorysThreadsAwaitingItsAgent(t *testing.T) {
+func testStoryStartPrintsTheStorysThreadsAwaitingItsAgent(t *testing.T) {
 	root, repo := storyStartOperatorsProject(t)
 	task, err := repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "A task", Parent: "S-0001", Owner: "alex", Now: time.Date(2026, 9, 15, 21, 0, 0, 0, time.UTC)})
 	if err != nil {

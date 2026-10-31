@@ -22,9 +22,9 @@ import (
 // epic a planner runs for or whose planner ended with it unchanged since,
 // and writes nothing.
 func TestPlanCandidatesCommand(t *testing.T) {
+	t.Parallel()
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
-	t.Setenv("FLAI_AGENT", "")
+	useConfig(t, cfg)
 	root := tempProject(t)
 	run := func(args ...string) string {
 		t.Helper()
@@ -184,9 +184,9 @@ func TestPlanCandidatesCommand(t *testing.T) {
 // holds of a running planner for its epic and of its planner's question
 // awaiting the operator still leave it out.
 func TestPlanCandidatesAskedAgainCommand(t *testing.T) {
+	t.Parallel()
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
-	t.Setenv("FLAI_AGENT", "")
+	useConfig(t, cfg)
 	root := tempProject(t)
 	manifest := filepath.Join(root, "system-flow.yaml")
 	m, _ := os.ReadFile(manifest)

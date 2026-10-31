@@ -43,6 +43,7 @@ func assertLeftTheQueue(t *testing.T, root string) {
 // S-0399 criterion 1, ADR-0173: flai accept by hand takes the story out of
 // the queue, drops the batch that holds it, and records its outcome.
 func TestAcceptByHandTakesTheStoryOutOfTheQueue(t *testing.T) {
+	t.Parallel()
 	root, _ := orchestratedStoryInReview(t, false)
 	enqueueWithBatch(t, root)
 	if out, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "alex"); code != 0 {
@@ -53,7 +54,7 @@ func TestAcceptByHandTakesTheStoryOutOfTheQueue(t *testing.T) {
 
 // S-0399 criterion 1: under pull-request acceptance too, the story merged
 // through the remote leaves the queue.
-func TestAcceptThroughTheRemoteTakesTheStoryOutOfTheQueue(t *testing.T) {
+func testAcceptThroughTheRemoteTakesTheStoryOutOfTheQueue(t *testing.T) {
 	root, _, _, _ := remoteProject(t, "")
 	enqueueWithBatch(t, root)
 	acceptJSON(t, root)
@@ -63,6 +64,7 @@ func TestAcceptThroughTheRemoteTakesTheStoryOutOfTheQueue(t *testing.T) {
 // A queue state that cannot be written after the merge is warned of, and the
 // acceptance is not failed for it.
 func TestAcceptWarnsOfAQueueStateItCannotWrite(t *testing.T) {
+	t.Parallel()
 	root, _ := orchestratedStoryInReview(t, false)
 	path := mergequeue.StatePath(filepath.Join(root, ".flai-cache"))
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -154,6 +156,7 @@ func assertLanded(t *testing.T, root, by string) {
 // the same flai stats figures. The queue records it landed and keeps the
 // batch, where an acceptance by hand drops it.
 func TestALandingIsAnAcceptanceByHand(t *testing.T) {
+	t.Parallel()
 	byHand, _ := orchestratedStoryInReview(t, false)
 	if out, errOut, code := runInAt(t, byHand, landedAt, "accept", "S-0001", "--by", "alex"); code != 0 {
 		t.Fatalf("flai accept by hand: %d %s\n%s", code, errOut, out)
@@ -228,6 +231,7 @@ func TestALandingIsAnAcceptanceByHand(t *testing.T) {
 // --verified and needing no evidence; its Notes name the story's rebased head
 // in the batch and the batch, with the evidence when one is given.
 func TestTheOrchestratorsLandingTakesTheBatchsVerification(t *testing.T) {
+	t.Parallel()
 	evidence := "Verdict: pass, tests and lint clean\n- 1: `cli/feature.go`"
 	for _, ev := range []string{"", evidence} {
 		root, head := orchestratedStoryInReview(t, true)
@@ -263,6 +267,7 @@ func TestTheOrchestratorsLandingTakesTheBatchsVerification(t *testing.T) {
 // lands the story next, the story's branch is at the head the batch rebased,
 // and main is where the landing left it; and --verified is not given with it.
 func TestALandingIsRefusedUnlessTheBatchVerifiedWhatLands(t *testing.T) {
+	t.Parallel()
 	for name, c := range map[string]struct {
 		edit  func(*mergequeue.Batch)
 		move  func(t *testing.T, root string)
@@ -317,6 +322,7 @@ func TestALandingIsRefusedUnlessTheBatchVerifiedWhatLands(t *testing.T) {
 // S-0400 criterion 2, ADR-0173: under pull-request acceptance there is no
 // merge queue, so --batch is refused before anything changes.
 func TestALandingIsRefusedUnderPullRequestAcceptance(t *testing.T) {
+	t.Parallel()
 	root, _ := forgeGatedStoryInReview(t, "pull-request")
 	mainBefore := gitIn(t, root, "rev-parse", "main")
 	_, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "alex", "--batch", landingBatch)

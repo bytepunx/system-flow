@@ -30,10 +30,10 @@ func taskDoneProject(t *testing.T) (root, wt string) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	gittest.Identity(t, "t", "t@t")
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "agent-S-004")
-	t.Setenv("FLAI_SESSION", "s1")
+	inEnv(t, "GIT_AUTHOR_NAME", "t")
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	inEnv(t, "FLAI_AGENT", "agent-S-004")
+	inEnv(t, "FLAI_SESSION", "s1")
 	root = t.TempDir()
 	if err := os.CopyFS(root, os.DirFS("../internal/metrics/testdata/good")); err != nil {
 		t.Fatal(err)
@@ -49,6 +49,25 @@ func taskDoneProject(t *testing.T) (root, wt string) {
 	wt = repo.WorktreePath("S-004")
 	gitIn(t, root, "worktree", "add", "-q", "-b", storygit.Branch("S-004"), wt, "main")
 	return root, wt
+}
+
+// TestInTheSessionOfS004sAgent runs the tests of flai task done, as together
+// runs them, in the session of S-004's agent with a git identity: FLAI_AGENT
+// agent-S-004 and FLAI_SESSION s1, set once here, so that they run in
+// parallel with each other (S-0548).
+func TestInTheSessionOfS004sAgent(t *testing.T) {
+	gittest.Identity(t, "t", "t@t")
+	t.Setenv("FLAI_AGENT", "agent-S-004")
+	t.Setenv("FLAI_SESSION", "s1")
+	together(t,
+		testTaskDoneClosesATaskAndAnswersTextAndJSON,
+		testTaskDoneStopsAtARefusedSync,
+		testTaskDoneStopsAtAFailedCheck,
+		testTaskDoneLeavesAnotherOpenTasksPaths,
+		testTaskDoneNeedsAMessageOnlyToCommit,
+		testTaskDoneCountsTheThreadsOnOtherItems,
+		testTaskDonePrintsNoneOfTheOperatorsThreads,
+	)
 }
 
 func writeIn(t *testing.T, dir, rel, content string) {
@@ -90,7 +109,7 @@ func taskStatus(t *testing.T, root string) string {
 // touches, checks, and reads the inbox, a line for each; called again with
 // --json it commits nothing, tells nobody, does not move the task again, and
 // prints the result.
-func TestTaskDoneClosesATaskAndAnswersTextAndJSON(t *testing.T) {
+func testTaskDoneClosesATaskAndAnswersTextAndJSON(t *testing.T) {
 	root, wt := taskDoneProject(t)
 	writeIn(t, root, "wip/kanban/stories/S-006-six.md", otherStory)
 	writeIn(t, wt, "README.md", "# good\n\nChanged on the story's branch.\n")
@@ -146,7 +165,7 @@ func TestTaskDoneClosesATaskAndAnswersTextAndJSON(t *testing.T) {
 // A sync that stops on a conflict with the main branch stops the run with
 // exit 3, the paths, and how to continue, before the move. Called again with
 // the rebase unfinished, the commit step refuses, with exit 1.
-func TestTaskDoneStopsAtARefusedSync(t *testing.T) {
+func testTaskDoneStopsAtARefusedSync(t *testing.T) {
 	root, wt := taskDoneProject(t)
 	writeIn(t, root, "README.md", "# good\n\nChanged on main.\n")
 	gitIn(t, root, "commit", "-q", "-am", "docs: main's readme")
@@ -195,7 +214,7 @@ func TestTaskDoneStopsAtARefusedSync(t *testing.T) {
 
 // A check that fails in the story stops the run with exit 4 and each
 // finding, after the move and the log, and before the inbox.
-func TestTaskDoneStopsAtAFailedCheck(t *testing.T) {
+func testTaskDoneStopsAtAFailedCheck(t *testing.T) {
 	root, wt := taskDoneProject(t)
 	writeIn(t, wt, "docs/notes.md", "# Notes\n\nNo front matter.\n")
 
@@ -230,7 +249,8 @@ func TestTaskDoneStopsAtAFailedCheck(t *testing.T) {
 // A story or an epic is refused with what moves it on instead, with no
 // project needed.
 func TestTaskDoneRefusesAStoryOrAnEpic(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	dir := t.TempDir()
 	for _, tc := range []struct {
 		name string
@@ -285,7 +305,7 @@ func sibling(t *testing.T, root string, mine, touches []string) string {
 // commits its own file alone, leaves the other's uncommitted and names it,
 // says the sync waits for it, and exits 0; the other's close, with --json,
 // commits it, leaves none, and syncs.
-func TestTaskDoneLeavesAnotherOpenTasksPaths(t *testing.T) {
+func testTaskDoneLeavesAnotherOpenTasksPaths(t *testing.T) {
 	root, wt := taskDoneProject(t)
 	second := sibling(t, root, []string{"README.md"}, []string{"src/two.go"})
 	writeIn(t, wt, "README.md", "# good\n\nT-003's.\n")
@@ -338,7 +358,7 @@ func TestTaskDoneLeavesAnotherOpenTasksPaths(t *testing.T) {
 // ADR-0128: a close with nothing to commit needs no -m: it runs to the end
 // and logs that the task was closed; one with something to commit and no -m
 // stops at the commit step asking for one.
-func TestTaskDoneNeedsAMessageOnlyToCommit(t *testing.T) {
+func testTaskDoneNeedsAMessageOnlyToCommit(t *testing.T) {
 	root, wt := taskDoneProject(t)
 	second := sibling(t, root, nil, []string{"src/two.go"})
 
@@ -365,7 +385,7 @@ func TestTaskDoneNeedsAMessageOnlyToCommit(t *testing.T) {
 // ADR-0179: the inbox flai task done prints lists the threads on the story
 // and counts those awaiting the agent on other items, its questions the
 // operator answered (ADR-0181), naming where they are listed.
-func TestTaskDoneCountsTheThreadsOnOtherItems(t *testing.T) {
+func testTaskDoneCountsTheThreadsOnOtherItems(t *testing.T) {
 	root, wt := taskDoneProject(t)
 	repo, err := workitem.Open(root)
 	if err != nil {
@@ -393,7 +413,7 @@ func TestTaskDoneCountsTheThreadsOnOtherItems(t *testing.T) {
 // ADR-0181: with the fixture's thread on S-004 resolved and the operator's
 // threads open on S-006, the epic, and a design folder, flai task done
 // prints no thread and none on other items.
-func TestTaskDonePrintsNoneOfTheOperatorsThreads(t *testing.T) {
+func testTaskDonePrintsNoneOfTheOperatorsThreads(t *testing.T) {
 	root, wt := taskDoneProject(t)
 	writeIn(t, root, "wip/kanban/stories/S-006-six.md", otherStory)
 	repo, err := workitem.Open(root)

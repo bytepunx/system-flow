@@ -11,9 +11,10 @@ import (
 // S-0098: the folders named for import are kept in the host's configuration,
 // and list says what is found in them.
 func TestServeImportNamesFoldersAndListsWhatIsInThem(t *testing.T) {
+	t.Parallel()
 	home := t.TempDir()
 	cfg := filepath.Join(home, "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	folder := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(folder, "widget", ".git"), 0o755); err != nil {
 		t.Fatal(err)

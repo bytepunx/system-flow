@@ -30,16 +30,6 @@ import (
 // hands the merge back to flai serve, which would have no token either.
 const dashboardAgent = "flaiover"
 
-var (
-	// acceptNewForge makes the forge's adapter for a merge flai accept makes
-	// in its own process; tests put a fake forge here.
-	acceptNewForge serve.NewForge = newForge
-	// acceptMergeWait is how long flai accept waits for flai serve to take
-	// and answer a merge it hands over; zero fields are RequestMerge's
-	// defaults, and tests shorten them.
-	acceptMergeWait serve.MergeWait
-)
-
 // remoteRoute is where a merge through the remote is made: here, when the
 // forge's token can be read in this process, or by flai serve.
 type remoteRoute struct {
@@ -169,10 +159,14 @@ func (a *app) mergeRemote(ctx context.Context, repo *workitem.Repo, id, by strin
 	defer stop()
 	if route.direct {
 		a.logger().Info("merging the pull request on the forge", "component", "accept", "item", id, "pull_request", plan.PullRequest, "method", string(plan.Method))
-		return serve.MergeStory(ctx, serve.ForgeMerge{Repo: repo, Story: id, Head: plan.Head, Method: plan.Method, Git: a.runner, Token: route.token, NewForge: acceptNewForge, Now: a.now}), nil
+		makeForge := a.acceptForge
+		if makeForge == nil {
+			makeForge = newForge
+		}
+		return serve.MergeStory(ctx, serve.ForgeMerge{Repo: repo, Story: id, Head: plan.Head, Method: plan.Method, Git: a.runner, Token: route.token, NewForge: makeForge, Now: a.now}), nil
 	}
 	a.logger().Info("merge handed to flai serve", "component", "accept", "item", id, "pull_request", plan.PullRequest, "method", string(plan.Method), "token_env", route.token.Env)
-	answer, err := serve.RequestMerge(ctx, repo, serve.MergeRequest{Story: id, Head: plan.Head, Method: plan.Method, By: by, At: a.now().UTC().Format(time.RFC3339)}, acceptMergeWait)
+	answer, err := serve.RequestMerge(ctx, repo, serve.MergeRequest{Story: id, Head: plan.Head, Method: plan.Method, By: by, At: a.now().UTC().Format(time.RFC3339)}, a.acceptWait)
 	if err != nil {
 		return answer, fmt.Errorf("%s cannot be accepted, and nothing changed here: %w", id, err)
 	}

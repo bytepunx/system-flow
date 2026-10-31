@@ -18,8 +18,8 @@ import (
 func runStdin(t *testing.T, dir, stdin string, args ...string) (string, string, int) {
 	t.Helper()
 	var out, errOut bytes.Buffer
-	a := &app{out: &out, errOut: &errOut, cwd: dir, clock: func() time.Time { return time.Date(2026, 9, 19, 2, 0, 0, 0, time.UTC) }}
-	root := newRootCmdWith(a)
+	a := &app{configPath: configOf(t), out: &out, errOut: &errOut, cwd: dir, clock: func() time.Time { return time.Date(2026, 9, 19, 2, 0, 0, 0, time.UTC) }}
+	root := testRoot(t, a)
 	root.SetArgs(args)
 	root.SetIn(strings.NewReader(stdin))
 	code := 0
@@ -45,8 +45,8 @@ func docProject(t *testing.T) string {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	gittest.Identity(t, "Dana Designer", "dana@example.com")
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	inEnv(t, "GIT_AUTHOR_NAME", "Dana Designer")
 	root := tempProject(t)
 	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", "design/system", "docs"} {
 		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
@@ -64,6 +64,34 @@ func docProject(t *testing.T) string {
 	return root
 }
 
+// TestAsTheDesigner runs the tests of flai doc and file save, as together runs
+// them, with the designer's git identity, set once here, so that they run in
+// parallel with each other (S-0548).
+func TestAsTheDesigner(t *testing.T) {
+	gittest.Identity(t, "Dana Designer", "dana@example.com")
+	together(t,
+		testDocSaveCommitsOnePathAsTheDesigner,
+		testDocSaveKeepsTheDesignersOwnDate,
+		testDocSaveWithoutCommit,
+		testDocSaveBodyModeProtectsFrontMatter,
+		testDocSaveRefusesWhatCannotBeEdited,
+		testDocSaveConflict,
+		testDocSaveRefusedByTheCheckRestoresTheFile,
+		testDocSaveWithAStoryCommitsOnItsBranch,
+		testDocSaveWithAStoryRefusesWipAndAStoryWithoutAWorktree,
+		testDocSearchRanksSections,
+		testDocShowHeadingPrintsOneSection,
+		testFileShow,
+		testFileRefusesWhatItDoesNotReach,
+		testFileSaveWithoutHashCreates,
+		testFileSaveCommitsOnePath,
+		testFileSaveTokensCommitsTheStylesheet,
+		testFileSaveConflict,
+		testFileSaveRefused,
+		testFileSaveWithAStory,
+	)
+}
+
 func showDoc(t *testing.T, root, path string, flags ...string) (content, hash, mode string) {
 	t.Helper()
 	out, errOut, code := runIn(t, root, append([]string{"doc", "show", path, "--json"}, flags...)...)
@@ -77,7 +105,7 @@ func showDoc(t *testing.T, root, path string, flags ...string) (content, hash, m
 	return d.Content, d.Hash, d.Mode
 }
 
-func TestDocSaveCommitsOnePathAsTheDesigner(t *testing.T) {
+func testDocSaveCommitsOnePathAsTheDesigner(t *testing.T) {
 	root := docProject(t)
 	// an agent's uncommitted wip change must not be swept into the commit
 	story := filepath.Join(root, "wip/kanban/stories/S-0001-editable.md")
@@ -127,7 +155,7 @@ func TestDocSaveCommitsOnePathAsTheDesigner(t *testing.T) {
 	}
 }
 
-func TestDocSaveKeepsTheDesignersOwnDate(t *testing.T) {
+func testDocSaveKeepsTheDesignersOwnDate(t *testing.T) {
 	root := docProject(t)
 	content, hash, _ := showDoc(t, root, "design/system/plan.md")
 	edited := strings.Replace(content, "updated: 2026-09-01", "updated: 2026-09-10", 1)
@@ -140,7 +168,7 @@ func TestDocSaveKeepsTheDesignersOwnDate(t *testing.T) {
 	}
 }
 
-func TestDocSaveWithoutCommit(t *testing.T) {
+func testDocSaveWithoutCommit(t *testing.T) {
 	root := docProject(t)
 	head := gitIn(t, root, "rev-parse", "HEAD")
 	content, hash, _ := showDoc(t, root, "design/system/plan.md")
@@ -160,7 +188,7 @@ func TestDocSaveWithoutCommit(t *testing.T) {
 	}
 }
 
-func TestDocSaveBodyModeProtectsFrontMatter(t *testing.T) {
+func testDocSaveBodyModeProtectsFrontMatter(t *testing.T) {
 	root := docProject(t)
 	path := "wip/kanban/stories/S-0001-editable.md"
 	content, hash, mode := showDoc(t, root, path)
@@ -183,7 +211,7 @@ func TestDocSaveBodyModeProtectsFrontMatter(t *testing.T) {
 	}
 }
 
-func TestDocSaveRefusesWhatCannotBeEdited(t *testing.T) {
+func testDocSaveRefusesWhatCannotBeEdited(t *testing.T) {
 	root := docProject(t)
 	if _, errOut, code := runIn(t, root, "stream", "open", "S-0001", "--no-branch"); code != 0 {
 		t.Fatal(errOut)
@@ -202,7 +230,7 @@ func TestDocSaveRefusesWhatCannotBeEdited(t *testing.T) {
 	}
 }
 
-func TestDocSaveConflict(t *testing.T) {
+func testDocSaveConflict(t *testing.T) {
 	root := docProject(t)
 	content, hash, _ := showDoc(t, root, "design/system/plan.md")
 	// someone else saves first
@@ -233,7 +261,7 @@ func TestDocSaveConflict(t *testing.T) {
 	}
 }
 
-func TestDocSaveRefusedByTheCheckRestoresTheFile(t *testing.T) {
+func testDocSaveRefusedByTheCheckRestoresTheFile(t *testing.T) {
 	root := docProject(t)
 	content, hash, _ := showDoc(t, root, "design/system/plan.md")
 	broken := strings.Replace(content, "title: Plan\n", "", 1)
@@ -268,7 +296,7 @@ func storyWorktreeIn(t *testing.T, root string) string {
 // S-0378: flai doc save --story writes and commits the file on the story's
 // branch in its worktree, leaves the main checkout as it was, and refuses a
 // stale hash as a conflict.
-func TestDocSaveWithAStoryCommitsOnItsBranch(t *testing.T) {
+func testDocSaveWithAStoryCommitsOnItsBranch(t *testing.T) {
 	root := docProject(t)
 	wt := storyWorktreeIn(t, root)
 	mainHead := gitIn(t, root, "rev-parse", "HEAD")
@@ -321,7 +349,7 @@ func TestDocSaveWithAStoryCommitsOnItsBranch(t *testing.T) {
 
 // S-0378: --story refuses a story without a worktree and a path under wip,
 // which lives on the main checkout (ADR-0019).
-func TestDocSaveWithAStoryRefusesWipAndAStoryWithoutAWorktree(t *testing.T) {
+func testDocSaveWithAStoryRefusesWipAndAStoryWithoutAWorktree(t *testing.T) {
 	root := docProject(t)
 	path := "design/system/plan.md"
 	_, hash, _ := showDoc(t, root, path)
@@ -344,7 +372,7 @@ func TestDocSaveWithAStoryRefusesWipAndAStoryWithoutAWorktree(t *testing.T) {
 }
 
 // S-0147: flai doc search ranks sections of design and docs.
-func TestDocSearchRanksSections(t *testing.T) {
+func testDocSearchRanksSections(t *testing.T) {
 	root := docProject(t)
 	_ = os.WriteFile(filepath.Join(root, "docs/guide.md"), []byte("---\ntitle: Guide\n---\n\n# Guide\n\n## Install\n\nDownload the shape tool.\n\n## Other\n\nNothing.\n"), 0o644)
 	out, errOut, code := runIn(t, root, "doc", "search", "shape")
@@ -374,7 +402,7 @@ func TestDocSearchRanksSections(t *testing.T) {
 }
 
 // S-0147: flai doc show --heading prints one section; without it, as before.
-func TestDocShowHeadingPrintsOneSection(t *testing.T) {
+func testDocShowHeadingPrintsOneSection(t *testing.T) {
 	root := docProject(t)
 	out, errOut, code := runIn(t, root, "doc", "show", "design/system/plan.md", "--heading", "Plan › Shape")
 	if code != 0 || out != "## Shape\ntext\n" {

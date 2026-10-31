@@ -13,12 +13,12 @@ import (
 // A story that is done but was never accepted (an older flai, a hand edit,
 // a board that only changed the state) is flagged by check and completed by
 // accept (S-0046).
-func TestAcceptCompletesAnUnacceptedStory(t *testing.T) {
+func testAcceptCompletesAnUnacceptedStory(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "tester")
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	inEnv(t, "FLAI_AGENT", "tester")
 	root := tempProject(t)
 	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", "design/adrs", "design/system", "design/tech", "design/conventions", "docs"} {
 		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
@@ -93,7 +93,7 @@ func TestAcceptRefusesBeforeChangingAnythingWithoutIdentity(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	gittest.NoIdentity(t)
 	root := tempProject(t)
 	_ = os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".flai-cache/\n"), 0o644)

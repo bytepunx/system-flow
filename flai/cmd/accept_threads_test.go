@@ -22,6 +22,7 @@ import (
 // A thread on another item is left as it is, and the dry run names the
 // threads and changes nothing.
 func TestAcceptResolvesTheThreadsOnWhatItArchives(t *testing.T) {
+	t.Parallel()
 	root := storyInReviewWithThreads(t)
 	status, head := gitIn(t, root, "status", "--porcelain"), gitIn(t, root, "rev-parse", "HEAD")
 	paths := threadPaths(t, root)
@@ -76,6 +77,7 @@ func TestAcceptResolvesTheThreadsOnWhatItArchives(t *testing.T) {
 // finish resolves a thread left open on what it archived, as an older flai's
 // acceptance left them, into the commit it makes.
 func TestFinishingAnAcceptanceResolvesTheThreadsLeftOpen(t *testing.T) {
+	t.Parallel()
 	root := storyInReviewWithThreads(t)
 	paths := threadPaths(t, root)
 	hook := filepath.Join(root, ".git", "hooks", "pre-commit")
@@ -182,6 +184,7 @@ func thread(t *testing.T, root, id string) *threads.Thread {
 // stories, and one closed already, are left as they are, and the dry run
 // names the conversations it would close and changes nothing.
 func TestAcceptClosesTheConversationsOfTheStory(t *testing.T) {
+	t.Parallel()
 	root, paths := storyInReviewWithConversations(t)
 	status, head := gitIn(t, root, "status", "--porcelain"), gitIn(t, root, "rev-parse", "HEAD")
 
@@ -238,6 +241,7 @@ func TestAcceptClosesTheConversationsOfTheStory(t *testing.T) {
 // finish closes a conversation left open on the story it accepted, as an older
 // flai's acceptance left them, into the commit it makes.
 func TestFinishingAnAcceptanceClosesTheConversationsLeftOpen(t *testing.T) {
+	t.Parallel()
 	root, paths := storyInReviewWithConversations(t)
 	hook := filepath.Join(root, ".git", "hooks", "pre-commit")
 	_ = os.MkdirAll(filepath.Dir(hook), 0o755)
@@ -270,9 +274,9 @@ func TestFinishingAnAcceptanceClosesTheConversationsLeftOpen(t *testing.T) {
 // ADR-0120: messages are kept apart from threads. With a conversation and a
 // thread in the project, flai thread list, with --all or not, lists the
 // thread only, and the inbox's threads, awaiting anyone, hold no conversation.
-func TestMessagesStayApartFromThreads(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "alex")
+func testMessagesStayApartFromThreads(t *testing.T) {
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	inEnv(t, "FLAI_AGENT", "alex")
 	root := tempProject(t)
 	for _, args := range [][]string{
 		{"story", "new", "Slice"},

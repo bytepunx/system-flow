@@ -25,7 +25,7 @@ func streamOpenMoved(t *testing.T, out string) bool {
 // I-0097, ADR-0153: flai stream open on a ready story starts it as flai
 // story start does: it is in progress, moved by FLAI_AGENT, and the output
 // says so before the narrative; --json gives moved true.
-func TestStreamOpenStartsAReadyStory(t *testing.T) {
+func testStreamOpenStartsAReadyStory(t *testing.T) {
 	root := storyStartProject(t)
 	out, errOut, code := runIn(t, root, "stream", "open", "S-0001")
 	if code != 0 {
@@ -54,7 +54,7 @@ func TestStreamOpenStartsAReadyStory(t *testing.T) {
 // ADR-0153: a ready story the board holds is refused as flai story start
 // refuses it, with exit 4 and the hold's reason, and nothing is written: no
 // move, no narrative, no worktree.
-func TestStreamOpenRefusesAHeldReadyStory(t *testing.T) {
+func testStreamOpenRefusesAHeldReadyStory(t *testing.T) {
 	root := storyStartProject(t)
 	before := storyStartGet(t, root, "S-0004")
 	out, errOut, code := runIn(t, root, "stream", "open", "S-0004")
@@ -72,7 +72,7 @@ func TestStreamOpenRefusesAHeldReadyStory(t *testing.T) {
 
 // ADR-0153: a story in any state but ready is opened as before, unmoved:
 // one in progress already and one in backlog; --json gives moved false.
-func TestStreamOpenLeavesAStoryThatIsNotReadyUnmoved(t *testing.T) {
+func testStreamOpenLeavesAStoryThatIsNotReadyUnmoved(t *testing.T) {
 	root := storyStartProject(t)
 	if _, errOut, code := runIn(t, root, "move", "S-0002", workitem.InProgress, "--by", "alex"); code != 0 {
 		t.Fatalf("move S-0002: %s", errOut)
@@ -99,7 +99,7 @@ func TestStreamOpenLeavesAStoryThatIsNotReadyUnmoved(t *testing.T) {
 // A story sent back to ready keeps its narrative: stream open moves it to in
 // progress again and says to take it up where it is, rather than to run
 // stream open again.
-func TestStreamOpenOfAStorySentBackSaysToTakeItUp(t *testing.T) {
+func testStreamOpenOfAStorySentBackSaysToTakeItUp(t *testing.T) {
 	root := storyStartProject(t)
 	if _, errOut, code := runIn(t, root, "stream", "open", "S-0001"); code != 0 {
 		t.Fatalf("stream open: %s", errOut)

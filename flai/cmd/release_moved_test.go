@@ -36,6 +36,7 @@ func moveRemoteDuringPush(t *testing.T, root, remote string) string {
 // leaves none on the remote, and says to fetch and rebase or merge; once
 // merged, publishing again tags again and pushes.
 func TestReleasePendingWhenTheRemoteMovesDuringThePush(t *testing.T) {
+	t.Parallel()
 	root, remote := pendingProject(t)
 	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
 		t.Fatalf("accept: %s", errOut)
@@ -79,6 +80,7 @@ func TestReleasePendingWhenTheRemoteMovesDuringThePush(t *testing.T) {
 // advice to merge rather than rebase; a tag of the user's own that did not
 // go is not a release tag and is not deleted.
 func TestReleasePendingKeepsTagsAlreadyPushedWhenTheRemoteMoves(t *testing.T) {
+	t.Parallel()
 	root, remote := pendingProject(t)
 	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
 		t.Fatalf("accept: %s", errOut)
@@ -113,6 +115,7 @@ func TestReleasePendingKeepsTagsAlreadyPushedWhenTheRemoteMoves(t *testing.T) {
 // S-0242: with --json, the refusal is the result with remote_moved and the
 // tags deleted and kept, and exit 3.
 func TestReleasePendingJSONWhenTheRemoteMovesDuringThePush(t *testing.T) {
+	t.Parallel()
 	root, remote := pendingProject(t)
 	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
 		t.Fatalf("accept: %s", errOut)

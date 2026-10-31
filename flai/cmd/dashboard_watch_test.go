@@ -16,7 +16,8 @@ import (
 // S-0184: status probes the published port and says running, not answering,
 // or gone, with docker's HEALTHCHECK verdict beside it.
 func TestDashboardStatusSaysRunningNotAnsweringOrGone(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{"flaiover": true}, probeAddr: "0.0.0.0:4242", health: map[string]string{"flaiover": "healthy"}}
 
@@ -24,7 +25,7 @@ func TestDashboardStatusSaysRunningNotAnsweringOrGone(t *testing.T) {
 	answers := true
 	status := func(args ...string) string {
 		t.Helper()
-		a := &app{cwd: root, runner: f, healthProbe: func(url string) bool { probed = append(probed, url); return answers }}
+		a := &app{configPath: configOf(t), releases: releasesOf(t), cwd: root, runner: f, healthProbe: func(url string) bool { probed = append(probed, url); return answers }}
 		out, errOut, code := runWithApp(t, a, append([]string{"dashboard", "status"}, args...)...)
 		if code != 0 {
 			t.Fatalf("status: %d %s", code, errOut)
@@ -78,6 +79,7 @@ func TestDashboardStatusSaysRunningNotAnsweringOrGone(t *testing.T) {
 }
 
 func TestProbeHostProbesAWildcardOnThisHost(t *testing.T) {
+	t.Parallel()
 	for in, want := range map[string]string{
 		"0.0.0.0:4242":     "127.0.0.1:4242",
 		"[::]:4242":        "127.0.0.1:4242",
@@ -95,8 +97,9 @@ func TestProbeHostProbesAWildcardOnThisHost(t *testing.T) {
 // ran, an upgrade records the new image, and a stop that leaves no project
 // forgets it, so that flai host does not bring back what the operator stopped.
 func TestDashboardRecordsWhatFlaiHostRestarts(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
-	dir := string((&app{}).serveDir())
+	dir := string((&app{configPath: configOf(t)}).serveDir())
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	if _, errOut, code := runWith(t, root, f, "dashboard", "--tag", "0.2.0"); code != 0 {
 		t.Fatalf("start: %s", errOut)
@@ -107,7 +110,7 @@ func TestDashboardRecordsWhatFlaiHostRestarts(t *testing.T) {
 	}
 
 	// dashboard.tag latest resolves to the newest release, run by digest
-	if _, errOut, code := runWithApp(t, &app{cwd: root, runner: f}, "dashboard", "upgrade"); code != 0 {
+	if _, errOut, code := runWithApp(t, &app{configPath: configOf(t), releases: releasesOf(t), cwd: root, runner: f}, "dashboard", "upgrade"); code != 0 {
 		t.Fatalf("upgrade: %s", errOut)
 	}
 	if r, _ = readDashboardRecord(dir); r.Ref != flaioverRef("0.10.0") || r.Image != f.idFor(flaioverRef("0.10.0")) {
@@ -135,10 +138,11 @@ func TestDashboardRecordsWhatFlaiHostRestarts(t *testing.T) {
 // dashboard.no_restart, and a restart starts the recorded image again, by its
 // image ID (I-0116).
 func TestDashboardWatchLooksAndRestartsAsRecorded(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	answers := true
 	f := &fakeRunner{images: map[string]bool{"sha256:v020": true}, running: map[string]bool{}, imageIDs: map[string]string{flaioverRef("0.2.0"): "sha256:v020"}}
-	a := &app{cwd: root, runner: f, healthProbe: func(string) bool { return answers }}
+	a := &app{configPath: configOf(t), releases: releasesOf(t), cwd: root, runner: f, healthProbe: func(string) bool { return answers }}
 	if _, _, code := runWithApp(t, a, "dashboard", "--tag", "0.2.0"); code != 0 {
 		t.Fatal("start")
 	}
@@ -168,7 +172,7 @@ func TestDashboardWatchLooksAndRestartsAsRecorded(t *testing.T) {
 		t.Error("restarted container runs")
 	}
 
-	if _, errOut, code := runWithApp(t, &app{cwd: root, runner: f}, "config", "set", "dashboard.no_restart", "true"); code != 0 {
+	if _, errOut, code := runWithApp(t, &app{configPath: configOf(t), releases: releasesOf(t), cwd: root, runner: f}, "config", "set", "dashboard.no_restart", "true"); code != 0 {
 		t.Fatalf("config set: %s", errOut)
 	}
 	if got := w.Look(ctx); got != host.DashboardOff {
@@ -195,10 +199,11 @@ func lastRun(calls []string) string {
 // tag, never what the tag names now, so a newer image flai dashboard check
 // pulled under a floating tag is not started without an upgrade.
 func TestDashboardWatchRestartsTheImageIDNotWhatItsTagNamesNow(t *testing.T) {
+	t.Parallel()
 	root := mirrorProject(t)
 	const latest = mirrorLatest
 	f := &fakeRunner{images: map[string]bool{"sha256:old": true}, running: map[string]bool{}, imageIDs: map[string]string{latest: "sha256:old"}}
-	a := &app{cwd: root, runner: f}
+	a := &app{configPath: configOf(t), releases: releasesOf(t), cwd: root, runner: f}
 	if _, errOut, code := runWithApp(t, a, "dashboard"); code != 0 {
 		t.Fatalf("start: %s", errOut)
 	}
@@ -221,11 +226,12 @@ func TestDashboardWatchRestartsTheImageIDNotWhatItsTagNamesNow(t *testing.T) {
 // I-0116: a record an older flai wrote has no image ID, and the watch starts
 // its reference as before.
 func TestDashboardWatchRestartsAnOlderRecordFromItsRef(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	useSignedDashboardReleases(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	// the restart reads the configuration, which it creates, saying so
-	a := &app{cwd: root, runner: f, log: slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))}
+	a := &app{configPath: configOf(t), releases: releasesOf(t), cwd: root, runner: f, log: slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))}
 	dir := string(a.serveDir())
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		t.Fatal(err)
@@ -250,10 +256,11 @@ func TestDashboardWatchRestartsAnOlderRecordFromItsRef(t *testing.T) {
 // release that tag resolves to by digest and records it, and one whose tag
 // is refused starts nothing.
 func TestARestartPinsAnOlderRecordOfTheSignedRepositoryByDigest(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	useSignedDashboardReleases(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
-	a := &app{cwd: root, runner: f, log: slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))}
+	a := &app{configPath: configOf(t), releases: releasesOf(t), cwd: root, runner: f, log: slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))}
 	dir := string(a.serveDir())
 	record := func(ref string) {
 		t.Helper()
@@ -298,11 +305,12 @@ func TestARestartPinsAnOlderRecordOfTheSignedRepositoryByDigest(t *testing.T) {
 // prune, cannot be started: the watch says so at warn and starts the
 // reference, and records the ID that now runs.
 func TestDashboardWatchStartsTheRefWhenTheRecordedImageIsGone(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	ref := flaioverRef("0.2.0")
 	f := &fakeRunner{images: map[string]bool{ref: true}, running: map[string]bool{}, imageIDs: map[string]string{ref: "sha256:v020"}}
 	var logged bytes.Buffer
-	a := &app{cwd: root, runner: f, log: slog.New(slog.NewTextHandler(&logged, nil))}
+	a := &app{configPath: configOf(t), releases: releasesOf(t), cwd: root, runner: f, log: slog.New(slog.NewTextHandler(&logged, nil))}
 	dir := string(a.serveDir())
 	if err := writeDashboardRecord(dir, dashboardRecord{Name: "flaiover", Ref: ref, Image: "sha256:pruned", Publish: "0.0.0.0:5555:3000"}); err != nil {
 		t.Fatal(err)
@@ -325,10 +333,11 @@ func TestDashboardWatchStartsTheRefWhenTheRecordedImageIsGone(t *testing.T) {
 // shows beside it, so the watch's restart after it is labelled with the tag,
 // not the ID.
 func TestDashboardRestartRecordsTheTagAndTheImageID(t *testing.T) {
+	t.Parallel()
 	root := mirrorProject(t)
 	const latest = mirrorLatest
 	f := &fakeRunner{images: map[string]bool{"sha256:old": true}, running: map[string]bool{}, imageIDs: map[string]string{latest: "sha256:old"}}
-	a := &app{cwd: root, runner: f}
+	a := &app{configPath: configOf(t), releases: releasesOf(t), cwd: root, runner: f}
 	if _, errOut, code := runWithApp(t, a, "dashboard"); code != 0 {
 		t.Fatalf("start: %s", errOut)
 	}
@@ -355,10 +364,11 @@ func TestDashboardRestartRecordsTheTagAndTheImageID(t *testing.T) {
 // restart does, and records them; when the configuration cannot be read it
 // keeps the hosts the record names.
 func TestDashboardWatchRestartsWithTheConfiguredAllowedHosts(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	ref := flaioverRef("0.2.0")
 	f := &fakeRunner{images: map[string]bool{"sha256:v020": true}, running: map[string]bool{}, imageIDs: map[string]string{ref: "sha256:v020"}}
-	a := &app{cwd: root, runner: f, log: slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))}
+	a := &app{configPath: configOf(t), releases: releasesOf(t), cwd: root, runner: f, log: slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))}
 	dir := string(a.serveDir())
 	if err := writeDashboardRecord(dir, dashboardRecord{Name: "flaiover", Ref: ref, Image: "sha256:v020", Publish: "0.0.0.0:5555:3000", AllowedHosts: "old.example"}); err != nil {
 		t.Fatal(err)
@@ -377,7 +387,7 @@ func TestDashboardWatchRestartsWithTheConfiguredAllowedHosts(t *testing.T) {
 		t.Errorf("the record names the hosts it runs with now: %+v", r)
 	}
 
-	if err := os.WriteFile(os.Getenv("FLAI_CONFIG"), []byte("{not json"), 0o644); err != nil {
+	if err := os.WriteFile(configOf(t), []byte("{not json"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	delete(f.running, "flaiover")

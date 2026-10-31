@@ -18,7 +18,8 @@ import (
 // hour, as an estimate, and prints what the planner spent on it apart from
 // its agents' usage, alone when no agent has worked it (ADR-0083).
 func TestShowPrintsExpectedCostAndStrategicUsage(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	repo, err := workitem.Open(root)
 	if err != nil {
@@ -101,7 +102,8 @@ func TestShowPrintsExpectedCostAndStrategicUsage(t *testing.T) {
 // S-0225: an estimate is priced when there is no forecast duration, and
 // nothing is priced while no story has been measured from its logs.
 func TestShowPricesAnEstimateAndNothingWithoutARate(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	// S-001 has an estimate of 20h, and its stories $4.04 per agent hour
 	out, errOut, code := runIn(t, "../internal/metrics/testdata/good", "show", "S-001")
 	if code != 0 || !strings.Contains(out, "  expected cost: $80.80 (estimated, from the estimate of 20h at $4.04 per agent hour)\n") {
@@ -141,7 +143,8 @@ func keptPullRequestFixture(story string) forge.Status {
 // without the events; a story without one, or a task, has none; and a kept
 // state that cannot be read is warned of without hiding the item.
 func TestShowPrintsTheKeptPullRequest(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	for _, args := range [][]string{{"story", "new", "Reviewed"}, {"story", "new", "Unread"}, {"task", "new", "--story", "S-0001", "Piece"}} {
 		if _, errOut, code := runIn(t, root, args...); code != 0 {

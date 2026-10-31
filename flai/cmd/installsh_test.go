@@ -31,6 +31,7 @@ import (
 // releases a small page at a time, asking for the next page only while no
 // flai release has turned up.
 func TestInstallShRetriesAListingTheNetworkDrops(t *testing.T) {
+	t.Parallel()
 	api, script, listed := installStandIn(t, func(w http.ResponseWriter, n int, page string) {
 		switch {
 		case n == 1:
@@ -67,6 +68,7 @@ func TestInstallShRetriesAListingTheNetworkDrops(t *testing.T) {
 // answers for a private repository without a token, fails at once with the
 // hint, and the listing is asked for once.
 func TestInstallShFailsAtOnceOnAnHTTPError(t *testing.T) {
+	t.Parallel()
 	api, script, listed := installStandIn(t, func(w http.ResponseWriter, _ int, _ string) {
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprint(w, `{"message":"Not Found"}`)

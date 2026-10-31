@@ -11,10 +11,11 @@ import (
 )
 
 func TestAcceptEndToEnd(t *testing.T) {
+	t.Parallel()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	_ = os.MkdirAll(filepath.Join(root, "design", "conventions"), 0o755)
 	_ = os.WriteFile(filepath.Join(root, "design", "conventions", "README.md"), []byte("# c\n"), 0o644)
@@ -100,6 +101,7 @@ func TestAcceptEndToEnd(t *testing.T) {
 // as not merged to its upstream, after main had the work and the worktree was
 // gone. The acceptance deletes it with -D and finishes.
 func TestAcceptDeletesABranchWhoseUpstreamTheRebaseLeftBehind(t *testing.T) {
+	t.Parallel()
 	root := pushedStoryInReview(t)
 	if _, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "alex"); code != 0 {
 		t.Fatalf("accept: %d %s", code, errOut)
@@ -119,6 +121,7 @@ func TestAcceptDeletesABranchWhoseUpstreamTheRebaseLeftBehind(t *testing.T) {
 // on main, the worktree removed, and the branch left, finishes when run
 // again: it fast-forwards nothing and deletes the branch.
 func TestAcceptFinishesFromAFastForwardItAlreadyMade(t *testing.T) {
+	t.Parallel()
 	root := pushedStoryInReview(t)
 	wt := filepath.Join(root, ".flai-cache", "worktrees", "S-0001")
 	gitIn(t, wt, "rebase", "-q", "main")
@@ -146,7 +149,7 @@ func pushedStoryInReview(t *testing.T) (root string) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root = tempProject(t)
 	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", "design"} {
 		_ = os.MkdirAll(filepath.Join(root, d), 0o755)

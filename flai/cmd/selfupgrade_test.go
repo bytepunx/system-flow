@@ -32,7 +32,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 )
 
-// selfUpgradeConfig points FLAI_CONFIG at a new config whose cache_dir is a
+// selfUpgradeConfig gives t a new config whose cache_dir is a
 // new temporary folder, so that no test reads or writes ~/.flai/cache, and
 // answers the config's path and that folder.
 func selfUpgradeConfig(t *testing.T) (path, cacheDir string) {
@@ -43,7 +43,7 @@ func selfUpgradeConfig(t *testing.T) (path, cacheDir string) {
 	if err := config.Save(path, cfg); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("FLAI_CONFIG", path)
+	useConfig(t, path)
 	return path, cacheDir
 }
 
@@ -108,7 +108,6 @@ func TestSelfUpgradeCommand(t *testing.T) {
 		t.Errorf("installed content: %q", got)
 	}
 	t.Setenv("GITHUB_TOKEN", "")
-	t.Setenv("GH_TOKEN", "")
 	_, errOut, code = runWith(t, dir, &fakeRunner{missing: true, images: map[string]bool{}, running: map[string]bool{}}, "self-upgrade", "--check", "--repo", "o/r", "--api", srv.URL)
 	if code == 0 || !strings.Contains(errOut, "private repository") {
 		t.Errorf("without a token the error should hint at authentication: %d %s", code, errOut)
@@ -285,6 +284,7 @@ func TestSelfUpgradeNeverInstallsIntoAProject(t *testing.T) {
 // S-0111: flai host restarts on the binary the upgrade installed, which is
 // not its own when it ran from a checkout.
 func TestTheHostRestartsOnWhatTheUpgradeInstalled(t *testing.T) {
+	t.Parallel()
 	if runtime.GOOS == "windows" {
 		t.Skip("a shell script stands in for flai")
 	}
@@ -292,7 +292,7 @@ func TestTheHostRestartsOnWhatTheUpgradeInstalled(t *testing.T) {
 	if err := os.WriteFile(exe, []byte("#!/bin/sh\necho '{\"previous\":\"1.0.0\",\"installed\":\"2.0.0\",\"path\":\"/home/me/.flai/bin/flai\"}'\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	l := &hostLauncher{a: &app{}, exe: exe, config: filepath.Join(t.TempDir(), "cfg.json"), taken: map[string]string{}}
+	l := &hostLauncher{a: &app{configPath: configOf(t)}, exe: exe, config: filepath.Join(t.TempDir(), "cfg.json"), taken: map[string]string{}}
 	if l.installedTo() != "" {
 		t.Fatal("nothing installed yet")
 	}

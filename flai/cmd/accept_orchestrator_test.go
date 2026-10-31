@@ -18,6 +18,7 @@ import (
 // naming a changed file for every criterion. The done transition is its own,
 // and its evidence is in the story's Notes in the acceptance commit.
 func TestTheOrchestratorAcceptsAStoryItCanVouchFor(t *testing.T) {
+	t.Parallel()
 	root, head := orchestratedStoryInReview(t, true)
 	evidence := "Verdict: pass, tests and lint clean\n- 1: `cli/feature.go`"
 
@@ -70,6 +71,7 @@ func TestTheOrchestratorAcceptsAStoryItCanVouchFor(t *testing.T) {
 // A thread open on the story stops the orchestrator, whatever it verified:
 // the refusal names the thread, and nothing is merged.
 func TestTheOrchestratorDoesNotAcceptAStoryWithAThreadOpen(t *testing.T) {
+	t.Parallel()
 	root, head := orchestratedStoryInReview(t, true)
 	if _, errOut, code := runIn(t, root, "thread", "new", "--on", "S-0001", "--by", "alex", "Is the flag right?", "Say which."); code != 0 {
 		t.Fatal(errOut)
@@ -89,6 +91,7 @@ func TestTheOrchestratorDoesNotAcceptAStoryWithAThreadOpen(t *testing.T) {
 // With accept_reviews off, flai refuses the orchestrator's acceptance itself,
 // naming the permission, through flai accept and flai move alike.
 func TestTheOrchestratorAcceptsOnlyUnderAcceptReviews(t *testing.T) {
+	t.Parallel()
 	root, head := orchestratedStoryInReview(t, false)
 	mainBefore := gitIn(t, root, "rev-parse", "main")
 	ev := evidenceFile(t, "Verdict: pass\n- 1: `cli/feature.go`\n")
@@ -110,6 +113,7 @@ func TestTheOrchestratorAcceptsOnlyUnderAcceptReviews(t *testing.T) {
 // criterion, a file outside the touches, and a verified commit that is no
 // longer the head.
 func TestTheOrchestratorsDryRunNamesEachBlocker(t *testing.T) {
+	t.Parallel()
 	root, verified := orchestratedStoryInReview(t, true)
 	story := filepath.Join(root, "wip/kanban/stories/S-0001-ship-it.md")
 	b, _ := os.ReadFile(story)
@@ -153,6 +157,7 @@ func TestTheOrchestratorsDryRunNamesEachBlocker(t *testing.T) {
 // evidence that names no changed file for a criterion: a criterion it cannot
 // check against the diff is never accepted.
 func TestTheOrchestratorsAcceptanceNeedsEvidenceForEveryCriterion(t *testing.T) {
+	t.Parallel()
 	root, head := orchestratedStoryInReview(t, true)
 	mainBefore := gitIn(t, root, "rev-parse", "main")
 
@@ -208,6 +213,7 @@ func TestAnAcceptanceUnderTheOrchestratorsRoleIsItsOwn(t *testing.T) {
 // The orchestrator's section goes at the end of the Notes, wherever they
 // are, and a body without Notes gains them.
 func TestTheOrchestratorsSectionGoesAtTheEndOfTheNotes(t *testing.T) {
+	t.Parallel()
 	sec := "### Accepted by the orchestrator\n\nx\n"
 	for body, want := range map[string]string{
 		"## Goal\ng\n\n## Notes\n- a note\n":                "## Goal\ng\n\n## Notes\n- a note\n\n" + sec,
@@ -230,8 +236,7 @@ func orchestratedStoryInReview(t *testing.T, permit bool) (root, head string) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_ROLE", "")
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root = tempProject(t)
 	m := "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"
 	if permit {
@@ -311,14 +316,14 @@ func mustRel(t *testing.T, root, path string) string {
 }
 
 // mergeQueueOn turns the merge-queue host action on for the projects at
-// roots in the configuration FLAI_CONFIG names.
+// roots in t's configuration.
 func mergeQueueOn(t *testing.T, roots ...string) {
 	t.Helper()
 	cfg, err := json.Marshal(map[string]any{"host_actions": map[string][]string{"merge-queue": roots}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(os.Getenv("FLAI_CONFIG"), cfg, 0o644); err != nil {
+	if err := os.WriteFile(configOf(t), cfg, 0o644); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -328,6 +333,7 @@ func mergeQueueOn(t *testing.T, roots ...string) {
 // move alike, naming the queue and how to enqueue instead; its dry run still
 // previews. With the action off for the project it accepts as before.
 func TestTheOrchestratorEnqueuesRatherThanAcceptsWhileTheQueueRuns(t *testing.T) {
+	t.Parallel()
 	root, head := orchestratedStoryInReview(t, true)
 	mergeQueueOn(t, root)
 	mainBefore := gitIn(t, root, "rev-parse", "main")
@@ -384,6 +390,7 @@ func TestTheOrchestratorNeverLandsAStoryByHand(t *testing.T) {
 // that evidence, and the commit its verifier checked, under ### Accepted by
 // the orchestrator in the story's Notes.
 func TestTheQueuesLandingWritesTheEvidenceTheOrchestratorEnqueuedWith(t *testing.T) {
+	t.Parallel()
 	root, head := orchestratedStoryInReview(t, true)
 	mergeQueueOn(t, root)
 	rebased := landingState(t, root, head, "orchestrator", nil)

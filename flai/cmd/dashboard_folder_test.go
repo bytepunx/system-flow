@@ -16,8 +16,9 @@ import (
 // project, names the folder for import, and records the dashboard so that
 // flai serve offers it the repositories to import with no project served.
 func TestDashboardInAFolderWithNoProject(t *testing.T) {
+	t.Parallel()
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	folder := t.TempDir()
 	dir := serve.DirFor(cfg)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
@@ -74,8 +75,9 @@ func TestDashboardInAFolderWithNoProject(t *testing.T) {
 
 // The projects below the folder are registered, as flai mcp there serves them.
 func TestDashboardInAFolderRegistersTheProjectsBelowIt(t *testing.T) {
+	t.Parallel()
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	folder := t.TempDir()
 	for _, key := range []string{"alpha", "beta"} {
 		p := filepath.Join(folder, "org", key)
@@ -100,7 +102,8 @@ func TestDashboardInAFolderRegistersTheProjectsBelowIt(t *testing.T) {
 
 // A manifest that does not parse is still an error, not "no project here".
 func TestDashboardStillRefusesABrokenManifest(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	folder := t.TempDir()
 	if err := os.WriteFile(filepath.Join(folder, "system-flow.yaml"), []byte("version: [\n"), 0o644); err != nil {
 		t.Fatal(err)

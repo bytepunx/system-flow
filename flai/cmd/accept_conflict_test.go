@@ -21,6 +21,7 @@ import (
 // such a branch, naming each marker's path and line and merging nothing, and
 // accept it once the conflict is resolved and committed (S-0253).
 func TestAcceptRefusesABranchCarryingConflictMarkers(t *testing.T) {
+	t.Parallel()
 	root, wt, doc := conflictedStoryInReview(t)
 	storyFile := filepath.Join(root, "wip/kanban/stories/S-0001-conflicted.md")
 	mainBefore := gitIn(t, root, "rev-parse", "main")
@@ -69,6 +70,7 @@ func TestAcceptRefusesABranchCarryingConflictMarkers(t *testing.T) {
 // dashboard's Accept dialog shows, names the same markers as a blocker before
 // Accept is pressed, and names none once they are resolved.
 func TestAcceptPreviewReportsConflictMarkers(t *testing.T) {
+	t.Parallel()
 	root, wt, doc := conflictedStoryInReview(t)
 	mainBefore := gitIn(t, root, "rev-parse", "main")
 
@@ -114,6 +116,7 @@ func TestAcceptPreviewReportsConflictMarkers(t *testing.T) {
 // conflict is refused, and the stop is a line of the conflict log, met at
 // acceptance.
 func TestAcceptLogsTheConflictItsRebaseStopsOn(t *testing.T) {
+	t.Parallel()
 	root, wt, doc := conflictedStoryInReview(t)
 	_ = os.WriteFile(doc, []byte("\n# X\n\nthe story's\nend\n"), 0o644)
 	gitIn(t, wt, "commit", "-q", "-am", "docs: [S-0001] resolve x")
@@ -151,6 +154,7 @@ func TestAcceptLogsTheConflictItsRebaseStopsOn(t *testing.T) {
 // refusal that exits 4. The operator's acceptance leaves the stop, as
 // TestAcceptLogsTheConflictItsRebaseStopsOn asserts.
 func TestTheOrchestratorSendsBackAStoryWhoseRebaseItCannotSettle(t *testing.T) {
+	t.Parallel()
 	root, head := orchestratedStoryInReview(t, true)
 	wt := filepath.Join(root, ".flai-cache", "worktrees", "S-0001")
 	_ = os.WriteFile(filepath.Join(root, "cli", "feature.go"), []byte("package cli\n\n// main's\n"), 0o644)
@@ -244,7 +248,7 @@ func conflictedStoryInReview(t *testing.T) (root, wt, doc string) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root = tempProject(t)
 	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", "design"} {
 		_ = os.MkdirAll(filepath.Join(root, d), 0o755)

@@ -49,6 +49,7 @@ func pendingProject(t *testing.T) (root, remote string) {
 // S-0087: several stories accepted against one component release together at
 // the highest level among them, only when the operator publishes.
 func TestReleasePendingEndToEnd(t *testing.T) {
+	t.Parallel()
 	root, remote := pendingProject(t)
 	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 { // remediation: patch
 		t.Fatalf("accept S-0001: %s", errOut)
@@ -93,6 +94,7 @@ func TestReleasePendingEndToEnd(t *testing.T) {
 // push (S-0087). The push fails here because the remote moved; one that
 // cannot be reached refuses before tagging (S-0174).
 func TestReleasePendingResumesAfterAFailedPush(t *testing.T) {
+	t.Parallel()
 	root, remote := pendingProject(t)
 	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
 		t.Fatalf("accept: %s", errOut)
@@ -139,6 +141,7 @@ func TestReleasePendingResumesAfterAFailedPush(t *testing.T) {
 
 // Nothing accepted at all: publishing says so and changes nothing.
 func TestReleasePendingNothingPending(t *testing.T) {
+	t.Parallel()
 	root, _ := researchProject(t, "remediation", true)
 	out, _, code := runIn(t, root, "release", "--pending")
 	if code != 0 || !strings.Contains(out, "nothing pending") {
@@ -150,6 +153,7 @@ func TestReleasePendingNothingPending(t *testing.T) {
 // another clone, offers no plan built on its stale tag and refuses to
 // publish, changing nothing, until the tags are fetched.
 func TestReleasePendingFromACloneMissingTheRemotesTags(t *testing.T) {
+	t.Parallel()
 	root, remote := pendingProject(t)
 	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
 		t.Fatalf("accept: %s", errOut)
@@ -197,6 +201,7 @@ func TestReleasePendingFromACloneMissingTheRemotesTags(t *testing.T) {
 // warning, and refuses the publish before anything changes: the push would
 // need that remote anyway.
 func TestReleasePendingWithAnUnreachableRemote(t *testing.T) {
+	t.Parallel()
 	root, _ := pendingProject(t)
 	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
 		t.Fatalf("accept: %s", errOut)
@@ -225,6 +230,7 @@ func TestReleasePendingWithAnUnreachableRemote(t *testing.T) {
 // delivers to is named with the reason in the dry run and warned of when
 // publishing, instead of vanishing from the batch.
 func TestReleasePendingNamesWhatItCannotPlan(t *testing.T) {
+	t.Parallel()
 	root, _ := pendingProject(t)
 	manifest := filepath.Join(root, "system-flow.yaml")
 	s, _ := os.ReadFile(manifest)

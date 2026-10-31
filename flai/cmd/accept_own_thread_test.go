@@ -54,6 +54,7 @@ func blockersOf(res preview.Acceptance, code string) []preview.Blocker {
 // resolves it; once the operator writes on it, it is thread_open as any
 // other thread, with the text it has always had.
 func TestTheOrchestratorsDryRunNamesAThreadOfItsOwnApart(t *testing.T) {
+	t.Parallel()
 	root, head := orchestratedStoryInReview(t, true)
 	orchestratorOpensAThread(t, root)
 
@@ -84,6 +85,7 @@ func TestTheOrchestratorsDryRunNamesAThreadOfItsOwnApart(t *testing.T) {
 // thread as its own; once the orchestrator resolves it with a reason, the
 // acceptance goes through and the thread keeps the reason.
 func TestTheOrchestratorAcceptsOnceItResolvesAThreadOfItsOwn(t *testing.T) {
+	t.Parallel()
 	root, head := orchestratedStoryInReview(t, true)
 	orchestratorOpensAThread(t, root)
 	mainBefore := gitIn(t, root, "rev-parse", "main")

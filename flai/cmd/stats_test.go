@@ -21,9 +21,9 @@ import (
 // from the queue's event log, and --json and the dashboard's read carry it
 // under queue, with each story's queue wait under items; with no log, there
 // is neither.
-func TestStatsReportsTheMergeQueue(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("LOG_FORMAT", "json")
+func testStatsReportsTheMergeQueue(t *testing.T) {
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	inEnv(t, "LOG_FORMAT", "json")
 	root := tempProject(t)
 	repo, err := workitem.Open(root)
 	if err != nil {
@@ -132,8 +132,9 @@ func TestStatsReportsTheMergeQueue(t *testing.T) {
 // S-0404: the queue's section comes after the waiting, and before the
 // turns, and a queue that counts nothing in the window prints nothing.
 func TestPrintQueueStatsComesAfterTheWaitingAndSkipsAnEmptyQueue(t *testing.T) {
+	t.Parallel()
 	var out bytes.Buffer
-	printQueueStats(&app{out: &out}, &metrics.Queue{Weeks: []metrics.QueueWeek{{Week: "2026-W40", Start: "2026-09-28"}}})
+	printQueueStats(&app{configPath: configOf(t), out: &out}, &metrics.Queue{Weeks: []metrics.QueueWeek{{Week: "2026-W40", Start: "2026-09-28"}}})
 	if out.Len() != 0 {
 		t.Errorf("an empty queue prints:\n%s", out.String())
 	}
@@ -142,7 +143,7 @@ func TestPrintQueueStatsComesAfterTheWaitingAndSkipsAnEmptyQueue(t *testing.T) {
 		Waiting: metrics.Waiting{Weeks: []metrics.WaitWeek{{Week: "2026-W40", Start: "2026-09-28", Items: 1}}},
 		Queue:   &metrics.Queue{Weeks: []metrics.QueueWeek{{Week: "2026-W40", Start: "2026-09-28", Landed: 1}}},
 	}
-	printSummary(&app{out: &out}, rep, false)
+	printSummary(&app{configPath: configOf(t), out: &out}, rep, false)
 	text := out.String()
 	waiting, queue := strings.Index(text, "\nwaiting, over 1 completed:\n"), strings.Index(text, "\nmerge queue:\n")
 	if waiting < 0 || queue < waiting {
@@ -183,9 +184,9 @@ func digestEntry(id, status, date string, askedAgain ...string) string {
 // I-0207); with no digest folder the section is still there, with no
 // repeats and no entries; and a digest that cannot be read is warned of and
 // leaves it out.
-func TestStatsReportsTheDigest(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("LOG_FORMAT", "json")
+func testStatsReportsTheDigest(t *testing.T) {
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	inEnv(t, "LOG_FORMAT", "json")
 	root := tempProject(t)
 	manifestPath := filepath.Join(root, "system-flow.yaml")
 	m, err := os.ReadFile(manifestPath)
@@ -341,15 +342,16 @@ func TestStatsReportsTheDigest(t *testing.T) {
 // decimals, prints an en dash for asked again in a week no curator run has
 // reached, and the curator's runs and last run (ADR-0204).
 func TestPrintDigestRoundsTheRateAndSkipsNoDigest(t *testing.T) {
+	t.Parallel()
 	var out bytes.Buffer
-	printDigest(&app{out: &out}, nil)
+	printDigest(&app{configPath: configOf(t), out: &out}, nil)
 	if out.Len() != 0 {
 		t.Errorf("no digest prints:\n%s", out.String())
 	}
 	r := 7.0 / 4
 	third := 1.0 / 3
 	two, none := 2, 0
-	printDigest(&app{out: &out}, &metrics.Digest{
+	printDigest(&app{configPath: configOf(t), out: &out}, &metrics.Digest{
 		Weeks: []metrics.DigestWeek{
 			{Week: "2026-W42", Start: "2026-10-12", ThreadsToOperator: 2, AskedAgain: &none},
 			{Week: "2026-W43", Start: "2026-10-19", ThreadsToOperator: 7, StoriesCompleted: 4, PerStory: &r, AskedAgain: &two, CuratorRuns: 1},
@@ -368,8 +370,21 @@ func TestPrintDigestRoundsTheRateAndSkipsNoDigest(t *testing.T) {
 		t.Errorf("printDigest:\n%s\nwant\n%s", out.String(), want)
 	}
 	out.Reset()
-	printDigest(&app{out: &out}, &metrics.Digest{Weeks: []metrics.DigestWeek{}})
+	printDigest(&app{configPath: configOf(t), out: &out}, &metrics.Digest{Weeks: []metrics.DigestWeek{}})
 	if want := "\ndigest:\n  entries  active 0 · compacted 0 · absorbed 0\n  curator  runs 0 · never run\n"; out.String() != want {
 		t.Errorf("printDigest with no curator run:\n%s\nwant\n%s", out.String(), want)
 	}
+}
+
+// TestLoggingJSON runs the tests of flai stats that read its JSON log events,
+// as together runs them: LOG_FORMAT json, set once here, so that they run in
+// parallel with each other (S-0548).
+func TestLoggingJSON(t *testing.T) {
+	t.Setenv("LOG_FORMAT", "json")
+	together(t,
+		testStatsReportsPlanningWaitingAndClaims,
+		testStatsReportsCoordination,
+		testStatsReportsTheMergeQueue,
+		testStatsReportsTheDigest,
+	)
 }

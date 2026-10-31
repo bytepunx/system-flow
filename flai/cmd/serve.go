@@ -60,7 +60,7 @@ func (a *app) serveMCP() serve.MCP {
 // beside flai serve's state, and the flaiover releases it fetches a missing
 // one from. Keys that cannot be read leave every image not measured, with why.
 func (a *app) serveImageLists() *serve.ImageLists {
-	opt := dashboardReleases()
+	opt := a.dashboardReleases()
 	opt.Token = a.githubToken()
 	cache, err := a.dashboardCache(opt)
 	if err != nil {

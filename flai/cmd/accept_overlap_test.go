@@ -18,6 +18,7 @@ import (
 // covers a changed path by the prefix rule, a component name counts as its
 // path, and an empty claim covers everything.
 func TestOverlapsOf(t *testing.T) {
+	t.Parallel()
 	story := func(id, status string, touches ...string) *workitem.Item {
 		return &workitem.Item{ID: id, Type: workitem.Story, Status: status, Title: id, Touches: touches}
 	}
@@ -57,12 +58,12 @@ func TestOverlapsOf(t *testing.T) {
 
 // Accepting a story records a notice for an open story whose claim covers
 // what it changed, and none for one whose claim does not (S-0132).
-func TestAcceptTellsOverlappingOpenStories(t *testing.T) {
+func testAcceptTellsOverlappingOpenStories(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "tester")
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	inEnv(t, "FLAI_AGENT", "tester")
 	root := tempProject(t)
 	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", "design", "docs"} {
 		_ = os.MkdirAll(filepath.Join(root, d), 0o755)

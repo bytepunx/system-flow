@@ -12,8 +12,7 @@ import (
 // acceptance criteria are written, so that it may go to ready.
 func planningProject(t *testing.T, storyArgs ...string) (root, story string) {
 	t.Helper()
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "")
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root = tempProject(t)
 	for _, args := range [][]string{{"config", "set", "author", "olive"}, {"epic", "new", "Epic"}, append([]string{"story", "new", "Planned", "--epic", "E-0001"}, storyArgs...)} {
 		if _, errOut, code := runIn(t, root, args...); code != 0 {
@@ -30,6 +29,7 @@ func planningProject(t *testing.T, storyArgs ...string) (root, story string) {
 // value removes it; the block records who changed it and when, a cost of
 // delay for its inputs and its value apart (ADR-0080).
 func TestEditPlanningFlags(t *testing.T) {
+	t.Parallel()
 	root, story := planningProject(t)
 	out, errOut, code := runIn(t, root, "edit", "S-0001", "--revenue-per-week", "1200", "--penalty-per-week", "50", "--time-lost-per-cycle", "4h", "--cost-of-delay-value", "1400",
 		"--forecast-duration", "6h", "--forecast-delivery", "2026-10-09T17:00:00Z", "--forecast-basis", "like S-0185", "--by", "planner")
@@ -111,6 +111,7 @@ func TestEditPlanningFlags(t *testing.T) {
 // ready until --yes finalizes it with the move; flai edit --no-draft and
 // --draft finalize and draft it again; flai epic new has no --draft.
 func TestStoryNewDraftAndMoveFinalizes(t *testing.T) {
+	t.Parallel()
 	root, story := planningProject(t, "--draft")
 	if item := read(t, story); !strings.Contains(item, "\ndraft: true\n") {
 		t.Fatalf("the story is a draft:\n%s", item)
@@ -179,6 +180,7 @@ func TestStoryNewDraftAndMoveFinalizes(t *testing.T) {
 // the inputs set by the owner when the item is made (ADR-0080); none given is no block, a bad
 // amount or duration is refused with nothing made, and a task has no flags.
 func TestNewItemTakesCostOfDelayInputs(t *testing.T) {
+	t.Parallel()
 	root, story := planningProject(t, "--revenue-per-week", "1200", "--penalty-per-week", " 50.5 ", "--time-lost-per-cycle", "4h")
 	if item := read(t, story); !strings.Contains(item, "cost_of_delay:\n  inputs:\n    revenue_per_week: 1200\n    penalty_per_week: 50.5\n    time_lost_per_cycle: 4h\n    by: olive\n    at: 2026-09-15T21:00:00Z\n---\n") {
 		t.Errorf("the story's inputs, by its owner:\n%s", item)
@@ -219,6 +221,7 @@ func TestNewItemTakesCostOfDelayInputs(t *testing.T) {
 // the forecast, with who set each: a cost of delay's inputs and value apart,
 // and that the value is stale when the inputs changed after it (ADR-0080).
 func TestShowPrintsPlanning(t *testing.T) {
+	t.Parallel()
 	root, _ := planningProject(t)
 	cfg := filepath.Join(root, "system-flow.yaml")
 	m, _ := os.ReadFile(cfg)

@@ -10,8 +10,7 @@ import (
 // S-0058: an agent's moves carry its name, so MCP does not report them back
 // to it as the designer's.
 func TestMoveRecordsWhoMovedIt(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "")
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	for _, args := range [][]string{{"config", "set", "author", "olive"}, {"epic", "new", "Epic"}, {"story", "new", "Moved", "--epic", "E-0001"}} {
 		if _, errOut, code := runIn(t, root, args...); code != 0 {

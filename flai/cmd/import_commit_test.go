@@ -71,8 +71,9 @@ type importAnswer struct {
 // S-0098: an import that passes its tests is committed, and the commit holds
 // the import and nothing else.
 func TestImportCommitRunsTheTestsAndCommits(t *testing.T) {
+	t.Parallel()
 	templateOrSkip(t)
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := goRepo(t, true)
 	before := git(t, root, "rev-parse", "HEAD")
 
@@ -108,8 +109,9 @@ func TestImportCommitRunsTheTestsAndCommits(t *testing.T) {
 
 // A failing test leaves the import uncommitted, says which failed, and exits 5.
 func TestImportCommitLeavesAFailedImportUncommitted(t *testing.T) {
+	t.Parallel()
 	templateOrSkip(t)
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := goRepo(t, false)
 	before := git(t, root, "rev-parse", "HEAD")
 
@@ -142,8 +144,9 @@ func TestImportCommitLeavesAFailedImportUncommitted(t *testing.T) {
 // Uncommitted changes, or no git at all, refuse --commit before anything is
 // touched: the commit must hold the import alone.
 func TestImportCommitRefusesADirtyTreeUntouched(t *testing.T) {
+	t.Parallel()
 	templateOrSkip(t)
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := goRepo(t, true)
 	if err := os.WriteFile(filepath.Join(root, "wip.txt"), []byte("mine\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -165,8 +168,9 @@ func TestImportCommitRefusesADirtyTreeUntouched(t *testing.T) {
 
 // Nothing to test is not a failure: the import is committed and says so.
 func TestImportCommitWithNoTestsFound(t *testing.T) {
+	t.Parallel()
 	templateOrSkip(t)
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := goRepo(t, true)
 	for _, f := range []string{"go.mod", "add.go", "add_test.go"} {
 		git(t, root, "rm", "-q", f)

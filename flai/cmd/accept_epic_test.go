@@ -15,6 +15,7 @@ import (
 // the one acceptance commit, and archives what of it is left on the board: a
 // cancelled story does not hold the epic open.
 func TestAcceptingTheLastOpenStoryAcceptsItsEpic(t *testing.T) {
+	t.Parallel()
 	root, _ := researchProject(t, "remediation", true)
 	for _, args := range [][]string{
 		{"story", "new", "Dropped", "--epic", "E-0001"},
@@ -80,6 +81,7 @@ func TestAcceptingTheLastOpenStoryAcceptsItsEpic(t *testing.T) {
 
 // S-0200: a story that is not its epic's last open one is accepted alone.
 func TestAcceptingAStoryWithOthersOpenLeavesItsEpic(t *testing.T) {
+	t.Parallel()
 	root, _ := pendingProject(t) // S-0001 and S-0002 in review, S-0003 in backlog
 	js, errOut, code := runIn(t, root, "accept", "S-0001", "--dry-run", "--json")
 	var pre preview.Acceptance
@@ -104,8 +106,7 @@ func TestAcceptingAStoryWithOthersOpenLeavesItsEpic(t *testing.T) {
 // a ticked criterion and a task, in a project without git.
 func moveProject(t *testing.T) string {
 	t.Helper()
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "")
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	for _, args := range [][]string{
 		{"epic", "new", "Epic"},
@@ -129,6 +130,7 @@ func moveProject(t *testing.T) string {
 // S-0200: flai move names the move a story's epic made with it, in text and
 // in --json, and says nothing of an epic that stayed.
 func TestMoveReportsTheEpicFollowing(t *testing.T) {
+	t.Parallel()
 	root := moveProject(t)
 	out, errOut, code := runIn(t, root, "move", "S-0001", "ready")
 	if code != 0 || out != "S-0001 → ready\n  E-0001 → ready, following S-0001\n" {
@@ -160,6 +162,7 @@ func TestMoveReportsTheEpicFollowing(t *testing.T) {
 // S-0200: a cancelled story whose siblings are all in review takes its epic
 // to review, and the cancellation says so, previewed and done.
 func TestCancellingAStoryReportsTheEpicFollowing(t *testing.T) {
+	t.Parallel()
 	root := moveProject(t)
 	for _, args := range [][]string{
 		{"move", "S-0001", "ready"}, {"move", "S-0001", "in-progress"},

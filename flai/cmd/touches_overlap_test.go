@@ -23,9 +23,9 @@ import (
 // item_edit, names the other story and the paths, and both stories are told
 // once in the inbox as an overlapped change caused by the other. A write that
 // adds no path inside another claim tells nobody.
-func TestATouchInsideAnotherClaimTellsBothStories(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "tester")
+func testATouchInsideAnotherClaimTellsBothStories(t *testing.T) {
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	inEnv(t, "FLAI_AGENT", "tester")
 	root := tempProject(t)
 	// stamped with the wall clock, which the MCP server reads
 	run := func(args ...string) string {

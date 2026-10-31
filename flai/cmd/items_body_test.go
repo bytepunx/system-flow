@@ -15,8 +15,7 @@ func bodyProject(t *testing.T) string {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "")
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	_ = os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".flai-cache/\n"), 0o644)
 	gitIn(t, root, "init", "-q", "-b", "main")
@@ -35,6 +34,7 @@ const storyBody = "## Goal\nThe operator creates work from the board.\n\n## Acce
 // S-0059: the author's markdown becomes the item's body, and everything else
 // is what flai story new would have written.
 func TestStoryNewWithABodyFromStandardInput(t *testing.T) {
+	t.Parallel()
 	root := bodyProject(t)
 	out, errOut, code := runStdin(t, root, storyBody, "story", "new", "Created from the board", "--epic", "E-0001", "--nature", "improvement", "--owner", "olive", "--tag", "dashboard", "--body-stdin", "--autocommit", "--trailer", "Created-with: flaiover", "--json")
 	if code != 0 {
@@ -87,6 +87,7 @@ func TestStoryNewWithABodyFromStandardInput(t *testing.T) {
 }
 
 func TestEpicNewWithABodyAndAutocommitOff(t *testing.T) {
+	t.Parallel()
 	root := bodyProject(t)
 	manifest := filepath.Join(root, "system-flow.yaml")
 	m, _ := os.ReadFile(manifest)
@@ -109,6 +110,7 @@ func TestEpicNewWithABodyAndAutocommitOff(t *testing.T) {
 // What flai check would report with the new item in place refuses it, and
 // nothing is left behind: no file, no link in the parent, no commit.
 func TestItemNewIsRefusedByTheCheckAndLeavesNothingBehind(t *testing.T) {
+	t.Parallel()
 	root := bodyProject(t)
 	epic, _ := filepath.Glob(filepath.Join(root, "wip/kanban/epics/E-0001-*.md"))
 	epicWas, _ := os.ReadFile(epic[0])
@@ -150,6 +152,7 @@ func TestItemNewIsRefusedByTheCheckAndLeavesNothingBehind(t *testing.T) {
 }
 
 func TestItemNewPrintBodyAndItsRefusals(t *testing.T) {
+	t.Parallel()
 	root := bodyProject(t)
 	out, errOut, code := runIn(t, root, "story", "new", "--print-body")
 	if code != 0 {

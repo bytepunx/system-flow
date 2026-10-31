@@ -20,7 +20,8 @@ import (
 )
 
 func TestCheckCommand(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	out, errOut, code := runIn(t, "../internal/metrics/testdata/good", "check", "--strict")
 	if code != 0 || !strings.Contains(out, "10 items checked, 0 errors, 1 warnings (1 that --strict passes over") || !strings.Contains(out, "epic.lags-stories") {
 		t.Fatalf("good: %d %s %s", code, out, errOut)
@@ -47,7 +48,8 @@ func TestCheckCommand(t *testing.T) {
 // S-0243: the summary says how many warnings --strict passes over, and only
 // when there are some.
 func TestCheckSummaryNamesTheAdvisoryWarnings(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	repo, err := workitem.Open(root)
 	if err != nil {
@@ -85,7 +87,8 @@ func TestCheckSummaryNamesTheAdvisoryWarnings(t *testing.T) {
 }
 
 func TestStatsCommand(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	dir := "../internal/metrics/testdata/good"
 	a := func(args ...string) (string, string, int) {
 		return runInAt(t, dir, time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC), args...)
@@ -164,8 +167,9 @@ func TestStatsCommand(t *testing.T) {
 // in the window on a line of its own, after the agents' figures, and does so
 // when agents spent nothing on them.
 func TestStatsPrintsStrategicUsageApart(t *testing.T) {
+	t.Parallel()
 	var out bytes.Buffer
-	a := &app{out: &out}
+	a := &app{configPath: configOf(t), out: &out}
 	rate := 4.04
 	u := metrics.UsageReport{CostPerAgentHour: &rate, Strategic: metrics.StrategicTotals{
 		StrategicSpend: metrics.StrategicSpend{Items: 2, Tokens: 12_500, Cost: 0.4213, Seconds: 723}, Estimated: true,
@@ -189,8 +193,9 @@ func TestStatsPrintsStrategicUsageApart(t *testing.T) {
 // S-0272, ADR-0105: the waiting section ends with the empty wakes, their
 // mean left out when no item completed carries agents' usage.
 func TestStatsPrintsTheEmptyWakes(t *testing.T) {
+	t.Parallel()
 	var out bytes.Buffer
-	a := &app{out: &out}
+	a := &app{configPath: configOf(t), out: &out}
 	mean := 1.5
 	week := metrics.WaitWeek{Items: 8, Threads: metrics.ThreadWaitTotal{WaitTotal: metrics.WaitTotal{Total: 3600}}, Review: metrics.WaitTotal{Total: 7200}}
 	printWaiting(a, metrics.Waiting{EmptyWakes: metrics.EmptyWakes{Count: 12, Mean: &mean}, Weeks: []metrics.WaitWeek{week}}, false)
@@ -254,7 +259,8 @@ func waitingProject(t *testing.T, acceptance string) string {
 // the checks wait and the reviewers wait under its review line, each total
 // and mean over the completed items.
 func TestStatsPrintsTheChecksAndReviewersWaitsUnderPullRequestAcceptance(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := waitingProject(t, "acceptance:\n  mode: pull-request\n")
 	out, errOut, code := runInAt(t, root, time.Date(2026, 10, 3, 20, 0, 0, 0, time.UTC), "stats")
 	if code != 0 {
@@ -271,7 +277,8 @@ func TestStatsPrintsTheChecksAndReviewersWaitsUnderPullRequestAcceptance(t *test
 // checks wait nor the reviewers wait, even with forge state kept from an
 // earlier mode, and its other lines are as they were.
 func TestStatsPrintsNoChecksOrReviewersWaitInLocalMode(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := waitingProject(t, "")
 	out, errOut, code := runInAt(t, root, time.Date(2026, 10, 3, 20, 0, 0, 0, time.UTC), "stats")
 	if code != 0 {
@@ -284,7 +291,7 @@ func TestStatsPrintsNoChecksOrReviewersWaitInLocalMode(t *testing.T) {
 	// nor from weeks that carry the two waits
 	var buf bytes.Buffer
 	week := metrics.WaitWeek{Items: 1, Review: metrics.WaitTotal{Total: 3600}, Checks: metrics.WaitTotal{Total: 600}, Reviewers: metrics.WaitTotal{Total: 1200}}
-	printWaiting(&app{out: &buf}, metrics.Waiting{Weeks: []metrics.WaitWeek{week}}, false)
+	printWaiting(&app{configPath: configOf(t), out: &buf}, metrics.Waiting{Weeks: []metrics.WaitWeek{week}}, false)
 	if s := buf.String(); strings.Contains(s, "on checks") || strings.Contains(s, "on reviewers") {
 		t.Errorf("local mode printed:\n%s", s)
 	}
@@ -294,8 +301,9 @@ func TestStatsPrintsNoChecksOrReviewersWaitInLocalMode(t *testing.T) {
 // column with any, and what the ready stories will cost until pulled under
 // each order, each only when there is something to show.
 func TestStatsPrintsTheItemsWithoutAValueAndThePullOrdersCost(t *testing.T) {
+	t.Parallel()
 	var out bytes.Buffer
-	a := &app{out: &out}
+	a := &app{configPath: configOf(t), out: &out}
 	value := 10.0
 	cols := func(ready, review float64) map[string]float64 {
 		return map[string]float64{workitem.Backlog: 0, workitem.Ready: ready, workitem.InProgress: 0, workitem.Review: review}
@@ -342,8 +350,9 @@ func TestStatsPrintsTheItemsWithoutAValueAndThePullOrdersCost(t *testing.T) {
 // window's, then the days that have any, then each story; nothing prints
 // when there are none.
 func TestStatsPrintsTheStoryAgentsTurns(t *testing.T) {
+	t.Parallel()
 	var out bytes.Buffer
-	a := &app{out: &out}
+	a := &app{configPath: configOf(t), out: &out}
 	counts := func(ceremony, tests, wakes, edits, work int) metrics.TurnCounts {
 		return metrics.TurnCounts{Turns: ceremony + tests + wakes + edits + work, Ceremony: ceremony, TestRuns: tests, EmptyWakes: wakes, HandEdits: edits, Work: work}
 	}
@@ -384,7 +393,8 @@ func TestStatsPrintsTheStoryAgentsTurns(t *testing.T) {
 // strategic, and an unreadable document stops stats as an unreadable item
 // does.
 func TestStatsReportsTheStrategicAgents(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	at := time.Date(2026, 10, 3, 20, 0, 0, 0, time.UTC)
 	a := func(args ...string) (string, string, int) { return runInAt(t, root, at, args...) }
@@ -474,8 +484,8 @@ func TestStatsReportsTheStrategicAgents(t *testing.T) {
 // story from it, and then once, as the story's, under items; a project with
 // no design/issues folder reports none.
 func TestStatsReportsTheIssuesStrategicUsageOnce(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_STORY", "")
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	_ = os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".flai-cache/\n"), 0o644)
 	at := time.Date(2026, 10, 3, 20, 0, 0, 0, time.UTC)
@@ -545,9 +555,9 @@ func TestStatsReportsTheIssuesStrategicUsageOnce(t *testing.T) {
 // S-0205: flai stats carries forecasts, cost of delay, waiting, claims, and
 // the strategic agents' use by the day, and prints them. Outside git it
 // leaves the touches drift out, warns on stderr, and still succeeds.
-func TestStatsReportsPlanningWaitingAndClaims(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("LOG_FORMAT", "json")
+func testStatsReportsPlanningWaitingAndClaims(t *testing.T) {
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	inEnv(t, "LOG_FORMAT", "json")
 	root := tempProject(t)
 	repo, err := workitem.Open(root)
 	if err != nil {
@@ -743,6 +753,7 @@ func TestStatsReportsPlanningWaitingAndClaims(t *testing.T) {
 // and how many stories with commits completed in them had exact touches; a
 // week git could not be read for, or with none completed, adds nothing.
 func TestStatsPrintsHeldByReasonAndExactTouches(t *testing.T) {
+	t.Parallel()
 	n := func(v int) *int { return &v }
 	drift := []metrics.TouchDrift{{ID: "S-0001"}, {ID: "S-0002", OutsideCount: 1}, {ID: "S-0003"}}
 	rep := &metrics.Report{WindowStart: "2026-09-01T00:00:00Z", Claims: metrics.Claims{
@@ -754,7 +765,7 @@ func TestStatsPrintsHeldByReasonAndExactTouches(t *testing.T) {
 		},
 	}}
 	var out bytes.Buffer
-	printClaims(&app{out: &out}, rep)
+	printClaims(&app{configPath: configOf(t), out: &out}, rep)
 	want := "\nclaims:\n" +
 		"  held by reason  overlap 3h · after 1d2h · no-touches 30m, every story over the window's weeks\n" +
 		"  touches drift  3 stories with commits · 1 files outside their touches · 0 touches unchanged\n" +
@@ -766,7 +777,7 @@ func TestStatsPrintsHeldByReasonAndExactTouches(t *testing.T) {
 	// outside git and with nothing held, neither line
 	rep.Claims = metrics.Claims{Weeks: []metrics.ClaimWeek{{Week: "2026-W36"}}}
 	out.Reset()
-	printClaims(&app{out: &out}, rep)
+	printClaims(&app{configPath: configOf(t), out: &out}, rep)
 	if out.Len() != 0 {
 		t.Errorf("claims with nothing held, outside git:\n%s", out.String())
 	}
@@ -775,9 +786,9 @@ func TestStatsPrintsHeldByReasonAndExactTouches(t *testing.T) {
 // S-0337: flai stats prints the coordination section after the claims, from
 // the conversations under wip/messages and the conflict log, and --json and
 // the dashboard's read carry it under coordination.
-func TestStatsReportsCoordination(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("LOG_FORMAT", "json")
+func testStatsReportsCoordination(t *testing.T) {
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	inEnv(t, "LOG_FORMAT", "json")
 	root := tempProject(t)
 	repo, err := workitem.Open(root)
 	if err != nil {
@@ -886,8 +897,9 @@ func TestStatsReportsCoordination(t *testing.T) {
 // S-0337: with an unreadable conflict log and nothing else, the coordination
 // section still says the log could not be read, and has no weeks.
 func TestPrintCoordinationSaysTheLogCouldNotBeRead(t *testing.T) {
+	t.Parallel()
 	var out bytes.Buffer
-	printCoordination(&app{out: &out}, metrics.Coordination{Weeks: []metrics.CoordinationWeek{{Week: "2026-W40", Start: "2026-09-28"}}})
+	printCoordination(&app{configPath: configOf(t), out: &out}, metrics.Coordination{Weeks: []metrics.CoordinationWeek{{Week: "2026-W40", Start: "2026-09-28"}}})
 	want := "\ncoordination:\n" +
 		"  conflicts      the conflict log could not be read; none are counted\n" +
 		"  conversations  opened 0 · agreed 0 · escalated 0 · closed with story 0\n" +

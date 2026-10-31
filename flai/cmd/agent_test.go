@@ -11,7 +11,8 @@ import (
 // S-0103: flai agent sets the project's default agent in system-flow.yaml,
 // and every story created while it is set gets a copy.
 func TestFlaiAgentSetsTheDefaultNewStoriesGet(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	if out, _, _ := runIn(t, root, "agent"); !strings.Contains(out, "no default agent") {
 		t.Errorf("none yet: %s", out)
@@ -58,7 +59,8 @@ func TestFlaiAgentSetsTheDefaultNewStoriesGet(t *testing.T) {
 // flai edit: merged into what it has, a key given with no value removed,
 // --clear-agent alone removing it and with other flags replacing it.
 func TestAStorysAgentIsSetAndEdited(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	runIn(t, root, "agent", "set", "--harness", "claude-code", "--model", "claude-opus-5-5", "--config", "effort=high")
 	runIn(t, root, "epic", "new", "E")
@@ -110,7 +112,8 @@ func TestAStorysAgentIsSetAndEdited(t *testing.T) {
 // merged role by role by flai story new, and edited, a role key given with
 // no value and a role --unset-role names removed.
 func TestAgentRolesAreSetAndEdited(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	if out, errOut, code := runIn(t, root, "agent", "set", "--harness", "claude-code", "--model", "claude-opus-5-5", "--role-model", "explore=haiku", "--role-model", "verify=sonnet"); code != 0 || !strings.Contains(out, "default agent: claude-code, claude-opus-5-5; explore: haiku; verify: sonnet") {
 		t.Fatalf("set: %d %s %s", code, out, errOut)
@@ -154,7 +157,8 @@ func TestAgentRolesAreSetAndEdited(t *testing.T) {
 // new and flai edit, cleared with the rest by --clear-agent, and a story
 // that names one passes flai check --strict with no entry for it on the host.
 func TestAProviderIsSetCopiedEditedAndChecked(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	runIn(t, root, "agent", "set", "--harness", "claude-code", "--model", "claude-opus-5-5")
 	if out, errOut, code := runIn(t, root, "agent", "set", "--provider", "litellm"); code != 0 || !strings.Contains(out, "default agent: claude-code, claude-opus-5-5, provider litellm\n") {
@@ -222,7 +226,8 @@ func TestAProviderIsSetCopiedEditedAndChecked(t *testing.T) {
 // S-0105: the dashboard replaces the default whole and commits it, as its
 // other writes are committed.
 func TestTheDefaultAgentIsReplacedAndCommitted(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	for _, c := range [][]string{{"init", "-q", "-b", "main"}, {"config", "user.email", "t@example.invalid"}, {"config", "user.name", "T"}, {"add", "-A"}, {"commit", "-qm", "setup"}} {
 		if out, err := exec.Command("git", append([]string{"-C", root}, c...)...).CombinedOutput(); err != nil {

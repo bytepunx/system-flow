@@ -66,7 +66,7 @@ func verifyFixture(t *testing.T, script string) (root, worktree string) {
 	if _, err := exec.LookPath("sh"); err != nil {
 		t.Skip("sh not installed")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root = scopeFixture(t)
 	worktree = filepath.Join(root, ".flai-cache", "worktrees", "S-004")
 	if err := os.CopyFS(worktree, os.DirFS("../internal/metrics/testdata/good")); err != nil {
@@ -122,10 +122,9 @@ func stepStates(rep verify.Report) string {
 // does.
 func runVerify(t *testing.T, dir string, git execx.Runner, args ...string) (string, string, int) {
 	t.Helper()
-	t.Setenv("FLAI_CACHE_DIR", filepath.Join(t.TempDir(), "cache"))
 	var out, errOut bytes.Buffer
-	a := &app{out: &out, errOut: &errOut, cwd: dir, runner: git, clock: func() time.Time { return time.Date(2026, 9, 17, 1, 0, 0, 0, time.UTC) }}
-	root := newRootCmdWith(a)
+	a := &app{configPath: configOf(t), out: &out, errOut: &errOut, cwd: dir, runner: git, clock: func() time.Time { return time.Date(2026, 9, 17, 1, 0, 0, 0, time.UTC) }}
+	root := testRoot(t, a)
 	root.SetArgs(args)
 	code := 0
 	if err := root.Execute(); err != nil {
@@ -161,6 +160,7 @@ func lastLine(text string) string {
 }
 
 func TestVerifyPassesEveryStepAndSaysSoLast(t *testing.T) {
+	t.Parallel()
 	root, worktree := verifyFixture(t, "test -f \"$1\"")
 
 	out, errOut, code := runVerify(t, root, verifyGit{}, "verify", "S-4")
@@ -188,6 +188,7 @@ func TestVerifyPassesEveryStepAndSaysSoLast(t *testing.T) {
 }
 
 func TestVerifyStopsAtAFailingStepWithItsFindingsAndExitsOne(t *testing.T) {
+	t.Parallel()
 	root, _ := verifyFixture(t, "echo \"docs/README.md is broken\" >&2; exit 3")
 
 	out, errOut, code := runVerify(t, root, verifyGit{}, "verify", "S-004")
@@ -232,6 +233,7 @@ func TestVerifyStopsAtAFailingStepWithItsFindingsAndExitsOne(t *testing.T) {
 // S-0342: a tier that another selected tier covers is skipped, its line
 // naming the tier that covers it, in the text, in --json, and in --last.
 func TestVerifySkipsATierThatASelectedTierCovers(t *testing.T) {
+	t.Parallel()
 	root, worktree := verifyFixture(t, "exit 0")
 	manifest := filepath.Join(worktree, "system-flow.yaml")
 	data, err := os.ReadFile(manifest)
@@ -259,6 +261,7 @@ func TestVerifySkipsATierThatASelectedTierCovers(t *testing.T) {
 // S-0249: the check's findings outside the story are notes that do not fail
 // it, given after the steps and in --json.
 func TestVerifyGivesTheNotesOutsideTheStory(t *testing.T) {
+	t.Parallel()
 	root, _ := verifyFixture(t, "exit 0")
 	note := "    wip/archive/kanban/stories/S-002-two.md:6: warning: story.unaccepted: S-002 is done but its branch story/S-002 was never merged; merge or delete it\n"
 
@@ -283,6 +286,7 @@ func TestVerifyGivesTheNotesOutsideTheStory(t *testing.T) {
 // --record-issues records the notes in design/issues of the story's
 // worktree through flai check's recorder, once per story and notes.
 func TestVerifyRecordIssuesRecordsTheNotesInTheWorktree(t *testing.T) {
+	t.Parallel()
 	root, worktree := verifyFixture(t, "exit 0")
 	finding := "`wip/archive/kanban/stories/S-002-two.md`: S-002 is done but its branch story/S-002 was never merged; merge or delete it"
 
@@ -336,6 +340,7 @@ func TestVerifyRecordIssuesRecordsTheNotesInTheWorktree(t *testing.T) {
 // --last prints the stored report and runs nothing, or says there is none,
 // and exits 0 whatever the report holds.
 func TestVerifyLastPrintsTheStoredReport(t *testing.T) {
+	t.Parallel()
 	root, _ := verifyFixture(t, "exit 3")
 
 	out, errOut, code := runVerify(t, root, verifyGit{}, "verify", "S-4", "--last")
@@ -392,7 +397,7 @@ func TestRoleTierMovesAStoryToReady(t *testing.T) {
 	if os.Getenv(roleTierEnv) != "1" {
 		t.Skip("roleTier's command; it runs only in a tier")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	t.Setenv("FLAI_AGENT", "tester")
 	root := tempProject(t)
 	for _, args := range [][]string{{"epic", "new", "Epic"}, {"story", "new", "Moved", "--epic", "E-0001"}} {
@@ -427,6 +432,7 @@ func TestVerifyRunsItsTiersUnderTheVerifyRoleForTheOrchestrator(t *testing.T) {
 }
 
 func TestVerifyRefusesAStoryWithNoWorktree(t *testing.T) {
+	t.Parallel()
 	root, worktree := verifyFixture(t, "exit 0")
 	if err := os.RemoveAll(worktree); err != nil {
 		t.Fatal(err)
@@ -462,6 +468,7 @@ func TestVerifyRefusesAStoryWithNoWorktree(t *testing.T) {
 // With the main checkout's files absent, flai verify refuses, naming the
 // main checkout and the MCP tool verify, and stores no report.
 func TestVerifyRefusesAWorktreeWhoseMainCheckoutIsAbsent(t *testing.T) {
+	t.Parallel()
 	root, worktree := verifyFixture(t, "exit 0")
 	for _, p := range []string{"system-flow.yaml", "wip"} {
 		if err := os.RemoveAll(filepath.Join(root, p)); err != nil {
@@ -488,6 +495,7 @@ func TestVerifyRefusesAWorktreeWhoseMainCheckoutIsAbsent(t *testing.T) {
 // says so under the sync step; a commit outside wip/ still fails it, naming
 // flai stream sync. Neither touches the stored report.
 func TestVerifySyncOnlyPassesOverWipCommitsAndStoresNoReport(t *testing.T) {
+	t.Parallel()
 	root, _ := verifyFixture(t, "exit 3")
 	report := verify.ReportPath(openProject(t, root), "S-004")
 	replan := verifyGit{commits: "a1a1a1a", paths: "wip/kanban/board.md"}
@@ -536,6 +544,7 @@ func TestVerifySyncOnlyPassesOverWipCommitsAndStoresNoReport(t *testing.T) {
 // A step's note is printed indented under its line, on one line, as a
 // failing step's findings are; --last prints it with the same text.
 func TestVerifyTextPrintsAStepsNoteUnderIt(t *testing.T) {
+	t.Parallel()
 	rep := verify.Report{Story: "S-004", Passed: true, Steps: []verify.Step{
 		{Name: verify.StepRebase, State: verify.Passed, Duration: "0s"},
 		{Name: verify.StepSync, State: verify.Passed, Duration: "1ms", Note: "passed over 2 commits of main that change only wip/\npaths the branch does not change: b2b2b2b, a1a1a1a"},
@@ -603,6 +612,7 @@ func resumeReport(t *testing.T, dir string, wantCode int, args ...string) (verif
 // resumes at the tier that failed, prints the tiers it reused with the time
 // of the run they come from, and says so on its last line.
 func TestVerifyResumesAtTheTierThatFailedAndSaysWhatItReused(t *testing.T) {
+	t.Parallel()
 	root, marker := resumeFixture(t)
 
 	out, errOut, code := runVerify(t, root, resumeGit{}, "verify", "S-004")
@@ -666,6 +676,7 @@ func TestVerifyResumesAtTheTierThatFailedAndSaysWhatItReused(t *testing.T) {
 // --fresh reaches the story's run: it runs every selected tier where a run
 // without it reuses them.
 func TestVerifyFreshRunsEveryTier(t *testing.T) {
+	t.Parallel()
 	root, marker := resumeFixture(t)
 	if err := os.WriteFile(marker, nil, 0o644); err != nil {
 		t.Fatal(err)
@@ -708,7 +719,7 @@ func queueFixture(t *testing.T, acceptReviews bool, roots func(root string) []st
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(os.Getenv("FLAI_CONFIG"), cfg, 0o644); err != nil {
+	if err := os.WriteFile(configOf(t), cfg, 0o644); err != nil {
 		t.Fatal(err)
 	}
 	return root
@@ -731,6 +742,7 @@ func appendFile(t *testing.T, path, text string) {
 // last line, and passes; unit, which a queue tier covers, runs. With --all,
 // or with the host action or accept_reviews off, every tier runs as before.
 func TestVerifyLeavesTheQueueTiersToTheMergeQueueWhileItCanBatch(t *testing.T) {
+	t.Parallel()
 	this := func(root string) []string { return []string{root} }
 	root := queueFixture(t, true, this)
 	out, errOut, code := runVerify(t, root, verifyGit{}, "verify", "S-004")
@@ -775,17 +787,17 @@ func TestVerifyLeavesTheQueueTiersToTheMergeQueueWhileItCanBatch(t *testing.T) {
 		name          string
 		acceptReviews bool
 		roots         func(root string) []string
-		why           func(root string) string
+		why           func(t *testing.T, root string) string
 	}{
 		{"the host action off", true, func(string) []string { return nil }, hostActionOff},
 		{"the host action on for another project", true, func(string) []string { return []string{"/elsewhere"} }, hostActionOff},
-		{"accept_reviews off", false, this, func(string) string {
+		{"accept_reviews off", false, this, func(*testing.T, string) string {
 			return "orchestration.permissions.accept_reviews is off in the main checkout's system-flow.yaml"
 		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			root := queueFixture(t, tc.acceptReviews, tc.roots)
-			want := ranHere + tc.why(root) + "\n"
+			want := ranHere + tc.why(t, root) + "\n"
 			out, errOut, code := runVerify(t, root, verifyGit{}, "verify", "S-004")
 			if code != 0 || !strings.Contains(out, want) {
 				t.Errorf("exit %d, want 0 with the line %q\n%s%s", code, want, out, errOut)
@@ -810,16 +822,17 @@ func TestVerifyLeavesTheQueueTiersToTheMergeQueueWhileItCanBatch(t *testing.T) {
 }
 
 // hostActionOff is why the merge queue cannot batch for the project at root
-// whose configuration, the test's FLAI_CONFIG, lacks the merge-queue host
-// action for it (S-0466).
-func hostActionOff(root string) string {
-	return "the merge-queue host action is off for " + root + " in the configuration " + os.Getenv("FLAI_CONFIG") +
+// whose configuration, t's, lacks the merge-queue host action for it
+// (S-0466).
+func hostActionOff(t *testing.T, root string) string {
+	return "the merge-queue host action is off for " + root + " in the configuration " + configOf(t) +
 		"; turn it on there with flai serve enable merge-queue in a shell on the host, or run flai with --config naming the configuration flai serve reads"
 }
 
 // ADR-0174: the last line names the tiers left to the merge queue before
 // what it reused, which the close-out reads from the line's end.
 func TestVerifyOutcomeNamesTheQueuedTiersBeforeTheReused(t *testing.T) {
+	t.Parallel()
 	from := time.Date(2026, 9, 17, 1, 0, 0, 0, time.UTC)
 	tier := func(name string, state verify.State) verify.Step {
 		s := verify.Step{Name: name, Tier: true, State: state}

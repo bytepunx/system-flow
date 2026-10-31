@@ -21,6 +21,7 @@ const settingsPage = "../../docs/operators/settings.md"
 // each in its own section, and every environment variable flai, flaiover, and
 // install.sh read or set, so that a setting added without a row fails here.
 func TestSettingsIndexIsComplete(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skip("reads the monorepo's docs and sources")
 	}
@@ -51,6 +52,7 @@ func TestSettingsIndexIsComplete(t *testing.T) {
 // The walk that feeds the test above finds what it should: a key of every
 // shape the schemas use, and a variable where it is only a prefix of a string.
 func TestSettingsIndexWalks(t *testing.T) {
+	t.Parallel()
 	type leaf struct {
 		On *bool `json:"on"`
 	}

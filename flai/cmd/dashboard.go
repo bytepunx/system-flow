@@ -130,8 +130,11 @@ const signedDashboardImage = "ghcr.io/bytepunx/flaiover"
 // dashboardReleases are the release client's options, the token aside, that
 // flai dashboard resolves dashboard.tag with: the flaiover releases of the
 // repository self-upgrade reads, from FLAI_RELEASES_API when set, verified
-// with the keys this flai trusts. Tests point it at a stand-in.
-var dashboardReleases = func() selfupgrade.Options {
+// with the keys this flai trusts. A test's app points them at a stand-in.
+func (a *app) dashboardReleases() selfupgrade.Options {
+	if a.releases != nil {
+		return a.releases()
+	}
 	return selfupgrade.Options{Repo: "bytepunx/system-flow", APIBase: strings.TrimSpace(os.Getenv("FLAI_RELEASES_API")), Keys: releaseKeys}
 }
 
@@ -180,7 +183,7 @@ func (a *app) chooseDashboardImage(ctx context.Context, s dashboardSettings, bui
 	if build || s.Image != signedDashboardImage {
 		return dashboardImage{Ref: s.ref()}, nil
 	}
-	opt := dashboardReleases()
+	opt := a.dashboardReleases()
 	opt.Token = a.githubToken()
 	cache, err := a.dashboardCache(opt)
 	if err != nil {
@@ -697,7 +700,7 @@ func (a *app) runningProvenance(name string) imageProvenance {
 	if len(repoDigests) == 0 {
 		return imageProvenance{}
 	}
-	cache, err := a.dashboardCache(dashboardReleases())
+	cache, err := a.dashboardCache(a.dashboardReleases())
 	if err != nil {
 		a.logger().Warn("cached digest lists not read", "component", "dashboard", "err", err.Error())
 		return imageProvenance{Digest: digestOf(repoDigests[0])}

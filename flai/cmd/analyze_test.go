@@ -47,7 +47,7 @@ func endAnalyzer(t *testing.T, cfg string) {
 // for a dashboard.
 func TestAnalyzeStartsTheAnalyzerForTheProject(t *testing.T) {
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	root := tempProject(t)
 	inProcess(t)
 	t.Cleanup(func() {
@@ -135,7 +135,7 @@ func TestAnalyzeStartsTheAnalyzerForTheProject(t *testing.T) {
 // agent flai serve started.
 func TestTheMCPServerStartsTheAnalyzerUnderTheAnalyzeAction(t *testing.T) {
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	t.Setenv("FLAI_STARTED_BY", "") // the operator's own agent, whoever runs the tests
 	root := tempProject(t)
 	t.Cleanup(func() {
@@ -144,7 +144,7 @@ func TestTheMCPServerStartsTheAnalyzerUnderTheAnalyzeAction(t *testing.T) {
 		}
 	})
 	var out, errOut bytes.Buffer
-	a := &app{out: &out, errOut: &errOut, cwd: root, clock: func() time.Time { return time.Date(2026, 10, 6, 10, 0, 0, 0, time.UTC) }}
+	a := &app{configPath: configOf(t), out: &out, errOut: &errOut, cwd: root, clock: func() time.Time { return time.Date(2026, 10, 6, 10, 0, 0, 0, time.UTC) }}
 	ctx := context.Background()
 	if _, err := a.mcpAnalyze(ctx, root, "risk", "agent-ops"); err == nil || !strings.Contains(err.Error(), "the analyze host action is off for this project: flai serve enable analyze") {
 		t.Errorf("action off: %v", err)

@@ -15,7 +15,7 @@ import (
 // issue, with no digest folder yet.
 func digestProject(t *testing.T) string {
 	t.Helper()
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	for path, body := range map[string]string{
 		"wip/kanban/stories/S-0001-a-story.md": "---\nid: S-0001\n---\n",
@@ -54,6 +54,7 @@ func digestFiles(t *testing.T, root string) []string {
 // ADR-0191, S-0428 criterion 3: new allocates the ID, writes the entry in the
 // checkout it runs in, and prints it; the next one takes the next number.
 func TestDigestNew(t *testing.T) {
+	t.Parallel()
 	root := digestProject(t)
 	out, errOut, code := runIn(t, root, "digest", "new", "The digest lives under design/digest", "--kind", "answer", "--source", "TH-0002,S-0001", "--topic", "digest", "--path", "design/digest", "--body", "The operator chose one file per entry.")
 	if code != 0 {
@@ -87,6 +88,7 @@ func TestDigestNew(t *testing.T) {
 
 // --body-file reads the body from a file, or standard input with -.
 func TestDigestNewBodyFile(t *testing.T) {
+	t.Parallel()
 	root := digestProject(t)
 	if err := os.WriteFile(filepath.Join(root, "body.md"), []byte("From a file.\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -109,6 +111,7 @@ func TestDigestNewBodyFile(t *testing.T) {
 // new refuses a missing --kind, an unknown kind, and no --source before it
 // writes anything, saying what to give.
 func TestDigestNewNeedsKindAndSource(t *testing.T) {
+	t.Parallel()
 	root := digestProject(t)
 	for _, c := range []struct {
 		args []string
@@ -132,6 +135,7 @@ func TestDigestNewNeedsKindAndSource(t *testing.T) {
 // S-0428 criterion 3: a write the check refuses prints each problem, exits 4,
 // and leaves no file, nor the folder it made.
 func TestDigestNewRefused(t *testing.T) {
+	t.Parallel()
 	root := digestProject(t)
 	out, errOut, code := runIn(t, root, "digest", "new", "A fact with a key", "--kind", "decision", "--source", "S-0001", "--body", "The key is AKIAIOSFODNN7EXAMPLE.")
 	if code != exitDocRefused {
@@ -172,6 +176,7 @@ func TestDigestNewRefused(t *testing.T) {
 // S-0428 criterion 3: edit replaces the lists it is given, empties one given
 // empty, and leaves the rest of the file as it was.
 func TestDigestEdit(t *testing.T) {
+	t.Parallel()
 	root := digestProject(t)
 	if out, errOut, code := runIn(t, root, "digest", "new", "A fact", "--kind", "decision", "--source", "S-0001", "--topic", "cli", "--path", "flai/cmd", "--body", "Why."); code != 0 {
 		t.Fatalf("digest new: %d %s %s", code, out, errOut)
@@ -202,6 +207,7 @@ func TestDigestEdit(t *testing.T) {
 // edit with nothing to change is refused naming the flags; one the check
 // refuses puts the file back and exits 4.
 func TestDigestEditRefused(t *testing.T) {
+	t.Parallel()
 	root := digestProject(t)
 	if out, errOut, code := runIn(t, root, "digest", "new", "A fact", "--kind", "decision", "--source", "S-0001"); code != 0 {
 		t.Fatalf("digest new: %d %s %s", code, out, errOut)
@@ -228,6 +234,7 @@ func TestDigestEditRefused(t *testing.T) {
 // document, filtered by --status and --topic; --json is an array, [] when
 // empty.
 func TestDigestList(t *testing.T) {
+	t.Parallel()
 	root := digestProject(t)
 	out, _, code := runIn(t, root, "digest", "list", "--json")
 	if code != 0 || strings.TrimSpace(out) != "[]" {
@@ -297,6 +304,7 @@ func TestDigestList(t *testing.T) {
 // S-0428 criterion 2: show prints the entry's fields and body; --json the
 // entry; an unknown ID is an error naming it and flai digest list.
 func TestDigestShow(t *testing.T) {
+	t.Parallel()
 	root := digestProject(t)
 	if out, errOut, code := runIn(t, root, "digest", "new", "A fact", "--kind", "recommendation", "--source", "TH-0002", "--source", "S-0001", "--topic", "cli", "--body", "Line one.\n\nLine two."); code != 0 {
 		t.Fatalf("digest new: %d %s %s", code, out, errOut)
@@ -344,7 +352,7 @@ func TestDigestShow(t *testing.T) {
 // overruling a recommendation on 2026-10-22.
 func seedProject(t *testing.T) string {
 	t.Helper()
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	thread := func(id, title, status string, entries ...string) string {
 		var b strings.Builder
@@ -396,6 +404,7 @@ func harvested(list []digest.Candidate) []string {
 // where in it, date, title, and the entries citing it, then a count by kind;
 // --json is the candidates with every field.
 func TestDigestHarvest(t *testing.T) {
+	t.Parallel()
 	root := seedProject(t)
 	if err := os.Remove(filepath.Join(root, "wip", "threads", "TH-0003-key.md")); err != nil {
 		t.Fatal(err)
@@ -440,6 +449,7 @@ func TestDigestHarvest(t *testing.T) {
 // day or a time; --kind keeps its kinds, repeated or comma separated; a
 // --since or --kind with nothing to list is [] and "no candidates".
 func TestDigestHarvestSinceAndKind(t *testing.T) {
+	t.Parallel()
 	root := seedProject(t)
 	for _, c := range []struct {
 		args []string
@@ -471,6 +481,7 @@ func TestDigestHarvestSinceAndKind(t *testing.T) {
 // harvest and seed refuse a --since that is not a date, and harvest a
 // --kind that is none of the kinds, each saying what to give.
 func TestDigestHarvestRefusesABadSinceOrKind(t *testing.T) {
+	t.Parallel()
 	root := seedProject(t)
 	for _, c := range []struct {
 		args []string
@@ -497,6 +508,7 @@ func TestDigestHarvestRefusesABadSinceOrKind(t *testing.T) {
 // check refuses is skipped and named by its rule, never its text, while the
 // rest are written; a second run writes nothing.
 func TestDigestSeed(t *testing.T) {
+	t.Parallel()
 	root := seedProject(t)
 	out, errOut, code := runIn(t, root, "digest", "seed")
 	if code != 0 {
@@ -549,6 +561,7 @@ func TestDigestSeed(t *testing.T) {
 // nothing; --json gives the result with no IDs, and an answer with a key's
 // shape is skipped as the real run skips it.
 func TestDigestSeedDryRun(t *testing.T) {
+	t.Parallel()
 	root := seedProject(t)
 	out, errOut, code := runIn(t, root, "digest", "seed", "--dry-run", "--since", "2026-10-21")
 	if code != 0 {
@@ -599,6 +612,7 @@ func writeFiles(t *testing.T, root string, files map[string]string) {
 // shows the document; a missing --by, a path that names no file, and a
 // heading the document does not have are refused, writing nothing.
 func TestDigestAbsorb(t *testing.T) {
+	t.Parallel()
 	root := digestProject(t)
 	writeFiles(t, root, map[string]string{"design/system/x.md": "# X\n\nThe design.\n\n## Entry rules\n\nOne rule.\n"})
 	for _, title := range []string{"First fact", "Second fact"} {
@@ -670,6 +684,7 @@ func citeProject(t *testing.T) string {
 // ADR-0199 §4, S-0432 criterion 4: cited lists each entry's latest citation
 // and citers and writes cited where it changed; a second run writes nothing.
 func TestDigestCited(t *testing.T) {
+	t.Parallel()
 	root := citeProject(t)
 	out, errOut, code := runIn(t, root, "digest", "cited")
 	want := "D-0001 active    2026-10-20T00:00:00Z S-0005, S-0006  (written)\n" +
@@ -697,6 +712,7 @@ func TestDigestCited(t *testing.T) {
 // second run compacts nothing; compact_after 0 turns it off, and one that is
 // not a duration is refused.
 func TestDigestCompact(t *testing.T) {
+	t.Parallel()
 	root := citeProject(t)
 	at := time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC)
 	before := map[string]string{}

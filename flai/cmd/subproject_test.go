@@ -16,8 +16,8 @@ import (
 // and the manifest's text.
 func subprojectProject(t *testing.T) (string, string) {
 	t.Helper()
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "tester")
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	inEnv(t, "FLAI_AGENT", "tester")
 	root := tempProject(t)
 	file := filepath.Join(root, manifest.File)
 	data, _ := os.ReadFile(file)
@@ -31,7 +31,7 @@ func subprojectProject(t *testing.T) (string, string) {
 // S-0491: add to projects: [] writes the entry as a block, creates the
 // folder with a README.md that names the sub-project and its kind, says what
 // it wrote, and list shows the entry with its folder present.
-func TestSubprojectAddCreatesTheFolderAndListShowsIt(t *testing.T) {
+func testSubprojectAddCreatesTheFolderAndListShowsIt(t *testing.T) {
 	root, before := subprojectProject(t)
 	out := sharedRun(t, root, "subproject", "add", "web", "--kind", "sveltekit")
 	if want := "added sub-project web (web, sveltekit)\ncreated folder web\nwrote system-flow.yaml\nwrote web/README.md\n"; out != want {
@@ -73,7 +73,7 @@ func TestSubprojectAddCreatesTheFolderAndListShowsIt(t *testing.T) {
 }
 
 // S-0491: list says so when there are no sub-projects, and --json gives [].
-func TestSubprojectListEmpty(t *testing.T) {
+func testSubprojectListEmpty(t *testing.T) {
 	root, _ := subprojectProject(t)
 	if out := sharedRun(t, root, "subproject", "list"); !strings.Contains(out, "no sub-projects") {
 		t.Errorf("an empty list says so, got %q", out)
@@ -85,7 +85,7 @@ func TestSubprojectListEmpty(t *testing.T) {
 
 // S-0491: add into a folder that is there writes no README.md, and --json
 // gives the entry, the paths written, and no commit.
-func TestSubprojectAddIntoAFolderThatIsThere(t *testing.T) {
+func testSubprojectAddIntoAFolderThatIsThere(t *testing.T) {
 	root, _ := subprojectProject(t)
 	if err := os.MkdirAll(filepath.Join(root, "services", "api"), 0o755); err != nil {
 		t.Fatal(err)
@@ -110,7 +110,7 @@ func TestSubprojectAddIntoAFolderThatIsThere(t *testing.T) {
 // S-0491: set changes the keys given and keeps the rest, components among
 // them; renames; and creates a folder that a new path names, leaving the old
 // one alone.
-func TestSubprojectSet(t *testing.T) {
+func testSubprojectSet(t *testing.T) {
 	root, _ := subprojectProject(t)
 	sharedRun(t, root, "subproject", "add", "web", "--kind", "sveltekit", "--tags", "ui")
 	sharedRun(t, root, "components", "config", "web", "--include", "src/**/*.svelte")
@@ -155,7 +155,7 @@ func TestSubprojectSet(t *testing.T) {
 
 // S-0491: remove takes the entry out, leaves the folder, and says so;
 // removing the last leaves projects: [].
-func TestSubprojectRemove(t *testing.T) {
+func testSubprojectRemove(t *testing.T) {
 	root, before := subprojectProject(t)
 	sharedRun(t, root, "subproject", "add", "web", "--kind", "sveltekit")
 	out := sharedRun(t, root, "subproject", "remove", "web")
@@ -172,7 +172,7 @@ func TestSubprojectRemove(t *testing.T) {
 
 // S-0491: an add, set, or remove that is refused writes nothing, neither the
 // manifest nor a folder, and says why.
-func TestSubprojectRefusals(t *testing.T) {
+func testSubprojectRefusals(t *testing.T) {
 	root, _ := subprojectProject(t)
 	sharedRun(t, root, "subproject", "add", "web", "--kind", "sveltekit")
 	if err := os.WriteFile(filepath.Join(root, "notes"), []byte("a file\n"), 0o644); err != nil {
@@ -234,7 +234,7 @@ func TestSubprojectRefusals(t *testing.T) {
 
 // S-0491: with --autocommit, add commits the manifest and the README.md it
 // wrote in one commit, with the trailer given, and nothing else.
-func TestSubprojectAddAutocommitsTheManifestAndTheReadme(t *testing.T) {
+func testSubprojectAddAutocommitsTheManifestAndTheReadme(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}

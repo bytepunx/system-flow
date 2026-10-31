@@ -17,6 +17,7 @@ import (
 // acceptance refuses it, merging nothing, and accepts the branch once main's
 // version is committed back on it.
 func TestAcceptRefusesABranchThatUndoesMainsChange(t *testing.T) {
+	t.Parallel()
 	root, wt := undoingStoryInReview(t, true)
 	mainBefore := gitIn(t, root, "rev-parse", "main")
 
@@ -67,6 +68,7 @@ func TestAcceptRefusesABranchThatUndoesMainsChange(t *testing.T) {
 // reason; the preview shows the reason and no blocker, and the acceptance
 // goes through with the reason under ### Removals kept in the story's Notes.
 func TestAcceptKeepsARemovalTheOperatorGivesAReasonFor(t *testing.T) {
+	t.Parallel()
 	root, _ := undoingStoryInReview(t, true)
 	keep := []string{"--keep-removal", "docs/guide.md", "--reason", "the story drops line two on purpose"}
 
@@ -106,6 +108,7 @@ func TestAcceptKeepsARemovalTheOperatorGivesAReasonFor(t *testing.T) {
 // ADR-0155: a keep the operator may not give, or that names no recorded
 // path, is refused before anything changes.
 func TestAcceptRefusesAKeepItCannotHonour(t *testing.T) {
+	t.Parallel()
 	root, wt := undoingStoryInReview(t, true)
 	mainBefore := gitIn(t, root, "rev-parse", "main")
 	for _, c := range []struct {
@@ -137,6 +140,7 @@ func TestAcceptRefusesAKeepItCannotHonour(t *testing.T) {
 // with the path as data, merging nothing; the rebase records it, so the
 // preview lists it after.
 func TestAcceptRefusesAPathOnlyItsRebaseFinds(t *testing.T) {
+	t.Parallel()
 	root, wt := undoingStoryInReview(t, false)
 	_ = os.WriteFile(filepath.Join(root, "docs", "guide.md"), []byte("line one\nline two\n"), 0o644)
 	gitIn(t, root, "commit", "-q", "-am", "feat: [S-0002] line two")
@@ -222,7 +226,7 @@ func undoingStoryInReview(t *testing.T, mainFirst bool) (root, wt string) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root = tempProject(t)
 	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", "design"} {
 		_ = os.MkdirAll(filepath.Join(root, d), 0o755)

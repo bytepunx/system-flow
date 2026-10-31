@@ -11,8 +11,8 @@ import (
 // S-0167: flai board limit sets a column's WIP limit in board.md, and flai
 // board reads it from there.
 func TestBoardLimitCommand(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "")
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	run := func(args ...string) string {
 		t.Helper()

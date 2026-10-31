@@ -20,10 +20,12 @@ func runIn(t *testing.T, dir string, args ...string) (string, string, int) {
 // runInAt runs the CLI with the working directory and clock fixed.
 func runInAt(t *testing.T, dir string, at time.Time, args ...string) (string, string, int) {
 	t.Helper()
-	t.Setenv("FLAI_CACHE_DIR", filepath.Join(t.TempDir(), "cache"))
 	var out, errOut bytes.Buffer
-	a := &app{out: &out, errOut: &errOut, cwd: dir, clock: func() time.Time { return at }}
-	root := newRootCmdWith(a)
+	a := &app{configPath: configOf(t), out: &out, errOut: &errOut, cwd: dir, clock: func() time.Time { return at }}
+	if f, ok := acceptForges.get(t); ok {
+		a.acceptForge, a.acceptWait = f.make, f.wait
+	}
+	root := testRoot(t, a)
 	root.SetArgs(args)
 	code := 0
 	if err := root.Execute(); err != nil {
@@ -51,9 +53,9 @@ func tempProject(t *testing.T) string {
 	return root
 }
 
-func TestWorkItemLifecycle(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "tester")
+func testWorkItemLifecycle(t *testing.T) {
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	inEnv(t, "FLAI_AGENT", "tester")
 	root := tempProject(t)
 	nested := filepath.Join(root, "wip", "kanban")
 
@@ -142,7 +144,8 @@ func TestWorkItemLifecycle(t *testing.T) {
 }
 
 func TestCommandsOutsideProject(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	_, errOut, code := runIn(t, t.TempDir(), "board")
 	if code == 0 || !strings.Contains(errOut, "system-flow.yaml") {
 		t.Fatalf("expected manifest error: %s", errOut)

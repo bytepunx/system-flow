@@ -22,7 +22,7 @@ func adrProject(t *testing.T) string {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	dir := filepath.Join(root, "design", "adrs")
 	_ = os.MkdirAll(dir, 0o755)
@@ -46,6 +46,7 @@ const decision = "## Context\n\nA reason.\n\n## Decision\n\nWe do the thing.\n\n
 // S-0060: the author writes the decision; the number, file, front matter,
 // index row, and superseded_by are supplied.
 func TestAdrNew(t *testing.T) {
+	t.Parallel()
 	root := adrProject(t)
 	out, errOut, code := runStdin(t, root, decision, "adr", "new", "Tokens: one per project, never shared", "--status", "accepted", "--supersedes", "2", "--refines", "ADR-0001", "--body-stdin", "--autocommit", "--trailer", "Co-Authored-By: flaiover <flaiover@localhost>", "--json")
 	if code != 0 {
@@ -99,6 +100,7 @@ func TestAdrNew(t *testing.T) {
 }
 
 func TestAdrNewFromTheTemplateThenAccept(t *testing.T) {
+	t.Parallel()
 	root := adrProject(t)
 	out, errOut, code := runIn(t, root, "adr", "new", "A proposal")
 	if code != 0 || !strings.HasPrefix(out, "ADR-0008 A proposal (proposed)") {
@@ -134,6 +136,7 @@ func TestAdrNewFromTheTemplateThenAccept(t *testing.T) {
 }
 
 func TestAdrNewRefusals(t *testing.T) {
+	t.Parallel()
 	root := adrProject(t)
 	head := strings.TrimSpace(gitIn(t, root, "rev-parse", "HEAD"))
 	for _, c := range []struct {
@@ -164,8 +167,8 @@ func TestAdrNewRefusals(t *testing.T) {
 // committed in its worktree, holds its number, so a third story's ADR takes
 // the next one.
 func TestAdrNewNumbersPastEveryStorysAdrs(t *testing.T) {
+	t.Parallel()
 	root := adrProject(t)
-	t.Setenv("FLAI_STORY", "")
 	writeAdr := func(dir, n, title string) {
 		t.Helper()
 		path := filepath.Join(dir, "design", "adrs", n+"-"+strings.ToLower(title)+".md")
@@ -194,6 +197,7 @@ func TestAdrNewNumbersPastEveryStorysAdrs(t *testing.T) {
 
 // A failure after files were written puts every one of them back.
 func TestAdrNewUndoesEverythingWhenItCannotFinish(t *testing.T) {
+	t.Parallel()
 	root := adrProject(t)
 	// an old ADR with no superseded_by line cannot be marked superseded
 	legacy := filepath.Join(root, "design/adrs/0007-seventh.md")
@@ -215,6 +219,7 @@ func TestAdrNewUndoesEverythingWhenItCannotFinish(t *testing.T) {
 
 // flai check keeps the index honest for ADRs made by hand.
 func TestCheckAdrIndex(t *testing.T) {
+	t.Parallel()
 	root := adrProject(t)
 	if out, _, _ := runIn(t, root, "check"); strings.Contains(out, "adr.index") {
 		t.Fatalf("a consistent index has no finding:\n%s", out)
@@ -235,6 +240,7 @@ func TestCheckAdrIndex(t *testing.T) {
 
 // An accepted ADR is immutable in the editor too; a proposed one is a draft.
 func TestAcceptedAdrCannotBeEdited(t *testing.T) {
+	t.Parallel()
 	root := adrProject(t)
 	var doc struct {
 		Mode, Reason, Hash, Content string
@@ -264,6 +270,7 @@ func TestAcceptedAdrCannotBeEdited(t *testing.T) {
 }
 
 func TestAdrSlugIsCutAtAWord(t *testing.T) {
+	t.Parallel()
 	root := adrProject(t)
 	out, errOut, code := runIn(t, root, "adr", "new", "The dashboard container cannot write git hooks, git config, or git info: they are mounted read-only over the clone")
 	if code != 0 {
@@ -277,6 +284,7 @@ func TestAdrSlugIsCutAtAWord(t *testing.T) {
 // ADR-0047: topics is the one key besides superseded_by an accepted ADR may
 // gain, with flai adr topics, and nothing else about it changes.
 func TestAdrTopics(t *testing.T) {
+	t.Parallel()
 	root := adrProject(t)
 	path := filepath.Join(root, "design/adrs/0001-first.md")
 	before, _ := os.ReadFile(path)
@@ -335,6 +343,7 @@ func TestAdrTopics(t *testing.T) {
 // I-0222: a title holding <, >, or & is written as itself, not as JSON's
 // HTML escapes, and adr topics prints it as written.
 func TestAdrNewWritesAngleBracketsAndAmpersandsAsThemselves(t *testing.T) {
+	t.Parallel()
 	root := adrProject(t)
 	title := "Titles keep < and > & more"
 	out, errOut, code := runIn(t, root, "adr", "new", title, "--json")
@@ -360,6 +369,7 @@ func TestAdrNewWritesAngleBracketsAndAmpersandsAsThemselves(t *testing.T) {
 
 // A save of an accepted ADR goes through when its topics are all it changes.
 func TestDocSaveTakesTopicsAloneOnAnAcceptedAdr(t *testing.T) {
+	t.Parallel()
 	root := adrProject(t)
 	rel := "design/adrs/0002-second.md"
 	content, hash, mode := showDoc(t, root, rel)
@@ -391,6 +401,7 @@ func TestDocSaveTakesTopicsAloneOnAnAcceptedAdr(t *testing.T) {
 // branch with the story's prefix, and widens the story's touches in the
 // main checkout to them, in JSON and in text.
 func TestAdrNewCommitsOnTheStoryBranch(t *testing.T) {
+	t.Parallel()
 	root, wt := storyCommitProject(t)
 	out, errOut, code := runStdin(t, wt, decision, "adr", "new", "Issues are committed on the story branch", "--supersedes", "2", "--body-stdin", "--commit", "--json")
 	if code != 0 {

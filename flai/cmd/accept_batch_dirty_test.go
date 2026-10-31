@@ -48,6 +48,7 @@ func porcelainOutsideWip(t *testing.T, root string) []string {
 // checkout holds uncommitted files no story of the batch changes, and leaves
 // them as they were, uncommitted and out of the acceptance commit.
 func TestALandingLeavesTheMainCheckoutsUncommittedFilesAsTheyAre(t *testing.T) {
+	t.Parallel()
 	root, head := orchestratedStoryInReview(t, false)
 	landingState(t, root, head, "alex", nil)
 	dirty := dirtyMain(t, root)
@@ -83,6 +84,7 @@ func TestALandingLeavesTheMainCheckoutsUncommittedFilesAsTheyAre(t *testing.T) {
 // S-0402 criterion 5: an acceptance by hand still refuses the main
 // checkout's uncommitted files outside wip, changing nothing, unless --yes.
 func TestAnAcceptanceByHandStillRefusesTheUncommittedFiles(t *testing.T) {
+	t.Parallel()
 	root, _ := orchestratedStoryInReview(t, false)
 	dirtyMain(t, root)
 	_, errOut, code := runInAt(t, root, landedAt, "accept", "S-0001", "--by", "alex")
@@ -98,6 +100,7 @@ func TestAnAcceptanceByHandStillRefusesTheUncommittedFiles(t *testing.T) {
 // uncommitted files is stopped by git's own check before anything changes:
 // the story stays in review and the operator's file is as they left it.
 func TestALandingThatWouldOverwriteAnUncommittedFileIsStopped(t *testing.T) {
+	t.Parallel()
 	root, head := orchestratedStoryInReview(t, false)
 	landingState(t, root, head, "alex", nil)
 	if err := os.WriteFile(filepath.Join(root, "cli/feature.go"), []byte("the operator's own\n"), 0o644); err != nil {
@@ -115,6 +118,7 @@ func TestALandingThatWouldOverwriteAnUncommittedFileIsStopped(t *testing.T) {
 }
 
 func TestAddArgsLeavesOutEachPathLeft(t *testing.T) {
+	t.Parallel()
 	if got := addArgs(nil); !slices.Equal(got, []string{"add", "-A"}) {
 		t.Errorf("addArgs(nil) = %v", got)
 	}

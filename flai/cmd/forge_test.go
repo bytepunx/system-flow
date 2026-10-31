@@ -29,8 +29,7 @@ const forgeSentinel = "ghp_forge-check-sentinel-0123456789"
 // with a host configuration of its own and GITHUB_TOKEN empty.
 func forgeProject(t *testing.T, remote string) string {
 	t.Helper()
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("GITHUB_TOKEN", "")
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	git(t, root, "init", "-q", "-b", "main")
 	if remote != "" {
@@ -229,11 +228,10 @@ func (g githubOrigin) Run(dir, name string, args ...string) (string, error) {
 // githubOrigin, and fails t if the sentinel token appears in what it printed.
 func runForge(t *testing.T, root string, args ...string) (string, string, int) {
 	t.Helper()
-	t.Setenv("FLAI_CACHE_DIR", filepath.Join(t.TempDir(), "cache"))
 	var out, errOut bytes.Buffer
-	a := &app{out: &out, errOut: &errOut, cwd: root, runner: githubOrigin{},
+	a := &app{configPath: configOf(t), out: &out, errOut: &errOut, cwd: root, runner: githubOrigin{},
 		clock: func() time.Time { return time.Date(2026, 9, 15, 21, 0, 0, 0, time.UTC) }}
-	cmd := newRootCmdWith(a)
+	cmd := testRoot(t, a)
 	cmd.SetArgs(args)
 	code := 0
 	if err := cmd.Execute(); err != nil {
@@ -353,8 +351,7 @@ func (gh *pullsStandIn) counts() (calls, posts, patches int) {
 // as origin, and story S-0001, "Ship it", with two criteria, moved to status.
 func pullRequestProject(t *testing.T, mode, status string) string {
 	t.Helper()
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("GITHUB_TOKEN", "")
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := t.TempDir()
 	m := "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\nacceptance:\n  mode: " + mode + "\n"
 	if err := os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte(m), 0o644); err != nil {
@@ -642,6 +639,7 @@ func TestForgeStatusNamesTheLastFailure(t *testing.T) {
 // flai forge status --json gives the same findings, and says why origin
 // could not be read when it cannot.
 func TestForgeStatusJSON(t *testing.T) {
+	t.Parallel()
 	root := pullRequestProject(t, "pull-request", workitem.Review)
 	gitIn(t, root, "remote", "remove", "origin")
 	out, errOut, code := runForge(t, root, "forge", "status", "S-0001", "--json")

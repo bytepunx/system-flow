@@ -39,6 +39,7 @@ func commitPolicy(t *testing.T, root, yaml string) {
 // threshold of one story met, and appends one release-due event with both
 // answers and the acceptor.
 func TestAcceptAppendsReleaseDueWhenTheReleaseBecomesDue(t *testing.T) {
+	t.Parallel()
 	root, remote := researchProject(t, "feature", true)
 	commitPolicy(t, root, "    policy: threshold\n    count: 1\n")
 
@@ -66,6 +67,7 @@ func TestAcceptAppendsReleaseDueWhenTheReleaseBecomesDue(t *testing.T) {
 // adding a pending story changes the figures the answer holds, so it is
 // release-due too.
 func TestMoveDoneAppendsReleaseDueWhenTheFiguresChange(t *testing.T) {
+	t.Parallel()
 	root, _ := researchProject(t, "feature", true)
 	if _, errOut, code := runIn(t, root, "move", "S-0001", "done", "--by", "alex"); code != 0 {
 		t.Fatalf("move to done: %d %s", code, errOut)
@@ -80,6 +82,7 @@ func TestMoveDoneAppendsReleaseDueWhenTheFiguresChange(t *testing.T) {
 // ADR-0211: a research story that changes no component adds nothing pending,
 // so the answer is the same before and after, and no event is appended.
 func TestAcceptAppendsNoReleaseDueWhenTheAnswerStays(t *testing.T) {
+	t.Parallel()
 	root, remote := researchProject(t, "research", false)
 	commitPolicy(t, root, "    policy: threshold\n    count: 1\n")
 
@@ -96,6 +99,7 @@ func TestAcceptAppendsNoReleaseDueWhenTheAnswerStays(t *testing.T) {
 // template.yaml is missing, is warned of and appends nothing, and the
 // acceptance is made as it would be without it.
 func TestAcceptStandsWhenTheReleaseCannotBeEvaluated(t *testing.T) {
+	t.Parallel()
 	root, remote := researchProject(t, "feature", true)
 	path := filepath.Join(root, "system-flow.yaml")
 	data, err := os.ReadFile(path)

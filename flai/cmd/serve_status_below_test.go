@@ -33,8 +33,9 @@ func belowFolder(t *testing.T) string {
 // S-0120: with flai serve not running, status still lists the projects below
 // the folders named for import, and why each is not served.
 func TestServeStatusListsTheProjectsBelowTheImportRootsNotServed(t *testing.T) {
+	t.Parallel()
 	home := t.TempDir()
-	t.Setenv("FLAI_CONFIG", filepath.Join(home, "cfg.json"))
+	useConfig(t, filepath.Join(home, "cfg.json"))
 	folder := belowFolder(t)
 	if _, errOut, code := runIn(t, home, "serve", "import", "add", folder); code != 0 {
 		t.Fatalf("add: %s", errOut)
@@ -67,9 +68,10 @@ func TestServeStatusListsTheProjectsBelowTheImportRootsNotServed(t *testing.T) {
 // With flai serve running, status shows what it serves from the folders
 // named for import and what it does not, from its state.
 func TestServeStatusShowsWhatServeServesBelowTheImportRoots(t *testing.T) {
+	t.Parallel()
 	home := t.TempDir()
 	cfg := filepath.Join(home, "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	now := time.Now().UTC().Format(time.RFC3339)
 	st := serve.Status{PID: os.Getpid(), Version: "test", Started: now, Updated: now,
 		ImportProjects: []serve.Entry{{Key: "blog", Root: "/g/blog", URL: "http://127.0.0.1:4242"}, {Key: "quay", Root: "/g/quay", URL: "http://127.0.0.1:4242"}},

@@ -49,6 +49,7 @@ func installProjects() []manifest.Project {
 // its command once, in manifest order, in its folder under the main
 // checkout, with its output on the writer given; the others run nothing.
 func TestRunInstallsRunsEachMatchingProjectOnceInOrder(t *testing.T) {
+	t.Parallel()
 	proc := &installProc{out: "added 1 package\n"}
 	var out bytes.Buffer
 	changed := []string{"svc/api/go.sum", "web/pnpm-lock.yaml", "web/package.json", "cli/go.sum", "docs/x.md"}
@@ -81,6 +82,7 @@ func TestRunInstallsRunsEachMatchingProjectOnceInOrder(t *testing.T) {
 // ADR-0185: a command that exits non-zero or cannot start is recorded with
 // why, and the last lines of what it printed; the runs after it still run.
 func TestRunInstallsRecordsAFailureAndGoesOn(t *testing.T) {
+	t.Parallel()
 	proc := &installProc{exits: map[string]int{"pnpm": 3}, fails: map[string]error{"go": errors.New("exec: \"go\": executable file not found in $PATH")}}
 	proc.out = strings.Repeat("progress\n", 30) + "\nERR_PNPM_FETCH_404 left-pad\n"
 
@@ -104,8 +106,9 @@ func TestRunInstallsRecordsAFailureAndGoesOn(t *testing.T) {
 // ADR-0185: the text output names each run, and for one that failed the
 // reason and the command to run by hand, quoted for a shell, and where.
 func TestPrintAcceptNamesEachInstall(t *testing.T) {
+	t.Parallel()
 	var out bytes.Buffer
-	a := &app{out: &out}
+	a := &app{configPath: configOf(t), out: &out}
 	acc := &accepted{Acceptance: &preview.Acceptance{ID: "S-0001"}, Installs: []installRun{
 		{Project: "web", Command: []string{"pnpm", "install"}, OK: true, folder: "/main/web"},
 		{Project: "site", Command: []string{"sh", "-c", "it's done"}, Error: "exit status 3", folder: "/main/site"},
@@ -172,7 +175,7 @@ const copyLock = "[sh, -c, 'cp lock.yaml installed.txt']"
 // main checkout's install as it was, since nothing installed after the
 // merge. The acceptance now runs the sub-project's install command in the
 // main checkout, on the lock file it merged.
-func TestAcceptInstallsASubProjectWhoseLockTheStoryChanged(t *testing.T) {
+func testAcceptInstallsASubProjectWhoseLockTheStoryChanged(t *testing.T) {
 	root := installProject(t, copyLock, "web/lock.yaml", "left-pad: 2\n")
 
 	out, errOut, code := runIn(t, root, "accept", "S-0001")
@@ -190,7 +193,7 @@ func TestAcceptInstallsASubProjectWhoseLockTheStoryChanged(t *testing.T) {
 
 // ADR-0185: a story that changes none of a sub-project's install paths runs
 // no install.
-func TestAcceptInstallsNothingForAStoryThatChangesNoInstallPath(t *testing.T) {
+func testAcceptInstallsNothingForAStoryThatChangesNoInstallPath(t *testing.T) {
 	root := installProject(t, copyLock, "web/readme.md", "web\n")
 
 	out, errOut, code := runIn(t, root, "--json", "accept", "S-0001")
@@ -209,7 +212,7 @@ func TestAcceptInstallsNothingForAStoryThatChangesNoInstallPath(t *testing.T) {
 // ADR-0185: an install that fails leaves the acceptance done and committed
 // with exit 0, and --json reports it with its command and why, while what it
 // printed goes to standard error, out of the JSON.
-func TestAcceptReportsAFailedInstallAndStillAccepts(t *testing.T) {
+func testAcceptReportsAFailedInstallAndStillAccepts(t *testing.T) {
 	cmd := "[sh, -c, 'echo boom; exit 3']"
 	root := installProject(t, cmd, "web/lock.yaml", "left-pad: 2\n")
 
@@ -239,7 +242,7 @@ func TestAcceptReportsAFailedInstallAndStillAccepts(t *testing.T) {
 }
 
 // ADR-0185: --dry-run runs no install.
-func TestAcceptDryRunInstallsNothing(t *testing.T) {
+func testAcceptDryRunInstallsNothing(t *testing.T) {
 	root := installProject(t, copyLock, "web/lock.yaml", "left-pad: 2\n")
 
 	if _, errOut, code := runIn(t, root, "accept", "--dry-run", "S-0001"); code != 0 {

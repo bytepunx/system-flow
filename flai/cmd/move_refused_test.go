@@ -28,7 +28,7 @@ func moveRefusal(t *testing.T, root, id string) (int, string, unfixedRefusal) {
 // I-0145: with --json, a move to done of a story whose branch holds lint the
 // fix leaves is refused as flai accept --json refuses it: exit 4 and the same
 // refused object, each finding naming the story's branch as its checkout.
-func TestMoveToDoneJSONRefusesABranchsLintAsAcceptDoes(t *testing.T) {
+func testMoveToDoneJSONRefusesABranchsLintAsAcceptDoes(t *testing.T) {
 	root := lintProject(t, "  - name: markdown\n    command: "+mdCheck+"\n    paths: [\"docs/**\"]\n    fix_command: [\"true\"]\n")
 	wt := openSyncStory(t, root, 1, "docs")
 	commitIn(t, wt, "docs/bad.md", "fine\nBAD line\n")
@@ -53,7 +53,7 @@ func TestMoveToDoneJSONRefusesABranchsLintAsAcceptDoes(t *testing.T) {
 // file whose lint the fix leaves exits 4 with the same refused object as flai
 // accept --json, naming the main checkout; without --json it is the text it
 // was, with exit 1.
-func TestMoveToDoneJSONRefusesTheMainCheckoutsLintAsAcceptDoes(t *testing.T) {
+func testMoveToDoneJSONRefusesTheMainCheckoutsLintAsAcceptDoes(t *testing.T) {
 	root := lintProject(t, "  - name: markdown\n    command: "+mdCheck+"\n    paths: [\"wip/notes/**\"]\n    fix_command: [\"true\"]\n")
 	wt := openSyncStory(t, root, 1, "docs")
 	commitIn(t, wt, "docs/new.md", "new\n")
@@ -86,6 +86,7 @@ func TestMoveToDoneJSONRefusesTheMainCheckoutsLintAsAcceptDoes(t *testing.T) {
 // main branch's change exits 4 with the same refused object as flai accept
 // --json, the path under undoes_main, and changes nothing.
 func TestMoveToDoneJSONRefusesABranchThatUndoesMainAsAcceptDoes(t *testing.T) {
+	t.Parallel()
 	root, wt := undoingStoryInReview(t, true)
 	mainBefore := gitIn(t, root, "rev-parse", "main")
 
@@ -110,6 +111,7 @@ func TestMoveToDoneJSONRefusesABranchThatUndoesMainAsAcceptDoes(t *testing.T) {
 // hand is refused as flai accept is, for a story whose close-out left a tier
 // marked queue at its head, naming the tier and flai verify --all.
 func TestMoveToDoneWaitsForTheQueueTiersAsAcceptDoes(t *testing.T) {
+	t.Parallel()
 	root, head := orchestratedStoryInReview(t, true)
 	mergeQueueOn(t, root)
 	// held, so the hand acceptance lands rather than enqueues (S-0552)

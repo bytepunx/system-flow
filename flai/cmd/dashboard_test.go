@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -276,7 +277,7 @@ func (f *fakeRunner) Run(dir, name string, args ...string) (string, error) {
 
 func runWith(t *testing.T, dir string, r *fakeRunner, args ...string) (string, string, int) {
 	t.Helper()
-	return runWithApp(t, &app{cwd: dir, runner: r}, args...)
+	return runWithApp(t, &app{configPath: configOf(t), releases: releasesOf(t), cwd: dir, runner: r}, args...)
 }
 
 // runWithApp is runWith for a test that needs to set more of app than the
@@ -284,7 +285,6 @@ func runWith(t *testing.T, dir string, r *fakeRunner, args ...string) (string, s
 // that never succeeds does not make the test wait for real.
 func runWithApp(t *testing.T, a *app, args ...string) (string, string, int) {
 	t.Helper()
-	t.Setenv("FLAI_CACHE_DIR", filepath.Join(t.TempDir(), "cache"))
 	var out, errOut bytes.Buffer
 	a.out, a.errOut = &out, &errOut
 	if a.clock == nil {
@@ -300,10 +300,10 @@ func runWithApp(t *testing.T, a *app, args ...string) (string, string, int) {
 	if a.healthProbe == nil {
 		a.healthProbe = func(string) bool { return true } // tests never reach the network; a running container answers
 	}
-	if dashboardReleasesOf != t {
-		lazySignedDashboardReleases(t) // nor does flai dashboard, for a test that names no releases of its own
+	if a.releases == nil {
+		a.releases = releasesOf(t) // nor does flai dashboard
 	}
-	root := newRootCmdWith(a)
+	root := testRoot(t, a)
 	root.SetArgs(args)
 	code := 0
 	if err := root.Execute(); err != nil {
@@ -342,17 +342,27 @@ func signedListOf(version string) []byte {
 		"sha256:" + hex.EncodeToString(platform[:]) + " " + ref + " linux/amd64\n")
 }
 
-// dashboardReleasesOf is the test dashboardReleases answers for, nil when
-// none has set it.
-var dashboardReleasesOf *testing.T
+// testReleases are the releases tests named with setDashboardReleases.
+var testReleases perTest[func() selfupgrade.Options]
 
 // setDashboardReleases makes flai dashboard resolve its releases through opt
-// for the rest of t.
+// in the commands t and its subtests run, for the rest of t.
 func setDashboardReleases(t *testing.T, opt func() selfupgrade.Options) {
 	t.Helper()
-	old, oldOf := dashboardReleases, dashboardReleasesOf
-	t.Cleanup(func() { dashboardReleases, dashboardReleasesOf = old, oldOf })
-	dashboardReleases, dashboardReleasesOf = opt, t
+	testReleases.set(t, opt)
+}
+
+// releasesOf is what flai dashboard resolves its releases through in t's
+// commands: what t or its parent set with setDashboardReleases, else
+// lazySignedDashboardReleases, which it sets for t.
+func releasesOf(t *testing.T) func() selfupgrade.Options {
+	t.Helper()
+	if opt, ok := testReleases.get(t); ok {
+		return opt
+	}
+	opt := lazySignedDashboardReleases(t)
+	setDashboardReleases(t, opt)
+	return opt
 }
 
 // releaseKey is a fresh key for a test's releases to be signed with.
@@ -424,21 +434,16 @@ func useSignedDashboardReleases(t *testing.T) (asked func() []string) {
 // lazySignedDashboardReleases is useSignedDashboardReleases, started the first
 // time flai dashboard asks for its releases in t: every dashboard test gets it
 // from runWithApp unless it sets its own.
-func lazySignedDashboardReleases(t *testing.T) {
+func lazySignedDashboardReleases(t *testing.T) func() selfupgrade.Options {
 	t.Helper()
-	var opt *selfupgrade.Options
-	setDashboardReleases(t, func() selfupgrade.Options {
-		if opt == nil {
-			key := releaseKey(t)
-			tags := make([]string, len(testReleaseVersions))
-			for i, v := range testReleaseVersions {
-				tags[i] = selfupgrade.DashboardTagPrefix + v
-			}
-			api, _ := dashboardStandIn(t, tags, signedReleases(t, key)...)
-			o := dashboardReleasesAt(api, key)
-			opt = &o
+	return sync.OnceValue(func() selfupgrade.Options {
+		key := releaseKey(t)
+		tags := make([]string, len(testReleaseVersions))
+		for i, v := range testReleaseVersions {
+			tags[i] = selfupgrade.DashboardTagPrefix + v
 		}
-		return *opt
+		api, _ := dashboardStandIn(t, tags, signedReleases(t, key)...)
+		return dashboardReleasesAt(api, key)
 	})
 }
 
@@ -454,6 +459,7 @@ func called(f *fakeRunner, prefix string) bool {
 // release, verifies its digest list, keeps it in the cache beside flai
 // serve's state, and pulls and runs the image by the list's index digest.
 func TestDashboardRunsTheReleaseByDigest(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	asked := useSignedDashboardReleases(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
@@ -471,7 +477,7 @@ func TestDashboardRunsTheReleaseByDigest(t *testing.T) {
 	if !strings.Contains(out, "image "+ref) || !strings.Contains(out, "flaiover 0.10.0, run by digest from its verified digest list") || strings.Contains(out, "unsigned") {
 		t.Errorf("output: %s", out)
 	}
-	dir := string((&app{}).serveDir())
+	dir := string((&app{configPath: configOf(t)}).serveDir())
 	cached, err := os.ReadFile(filepath.Join(dir, "dashboard-digests", "0.10.0.digests"))
 	if err != nil || string(cached) != string(signedListOf("0.10.0")) {
 		t.Errorf("the verified list is cached beside flai serve's state: %v %q", err, cached)
@@ -505,6 +511,7 @@ func TestDashboardRunsTheReleaseByDigest(t *testing.T) {
 // names no release, starts no container: nothing is pulled or run, nothing is
 // cached, and the error says why.
 func TestDashboardRefusesAReleaseWithNoListItCanVerify(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	key := releaseKey(t)
 	noList := signedFlaiover(t, "0.10.0", signedListOf("0.10.0"), key)
@@ -529,7 +536,7 @@ func TestDashboardRefusesAReleaseWithNoListItCanVerify(t *testing.T) {
 			t.Errorf("%s: nothing is pulled or run:\n%s", tag, strings.Join(f.calls, "\n"))
 		}
 	}
-	if entries, _ := os.ReadDir(filepath.Join(string((&app{}).serveDir()), "dashboard-digests")); len(entries) != 0 {
+	if entries, _ := os.ReadDir(filepath.Join(string((&app{configPath: configOf(t)}).serveDir()), "dashboard-digests")); len(entries) != 0 {
 		t.Errorf("nothing refused is cached: %v", entries)
 	}
 }
@@ -537,6 +544,7 @@ func TestDashboardRefusesAReleaseWithNoListItCanVerify(t *testing.T) {
 // S-0236: when the releases cannot be reached, the cached verified list of the
 // release runs, and flai dashboard says so; with none cached nothing starts.
 func TestDashboardRunsTheCachedListWhenTheReleasesCannotBeReached(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	key := releaseKey(t)
 	serveDashboardReleases(t, key, signedReleases(t, key)...)
@@ -566,6 +574,7 @@ func TestDashboardRunsTheCachedListWhenTheReleasesCannotBeReached(t *testing.T) 
 // repository, and --build run what they name, as before, asking no release,
 // and say the container is unsigned.
 func TestDashboardRunsAnotherImageUnsigned(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	asked := useSignedDashboardReleases(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
@@ -588,6 +597,7 @@ func TestDashboardRunsAnotherImageUnsigned(t *testing.T) {
 // S-0236: status shows the running image's repository digest, the release
 // whose cached verified list names it, and whether it is on a signed list.
 func TestDashboardStatusShowsTheDigestAndItsRelease(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	useSignedDashboardReleases(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
@@ -654,8 +664,9 @@ func TestDashboardStatusShowsTheDigestAndItsRelease(t *testing.T) {
 // as unsigned is allowed (S-0239); or not measured, with why. The verdict is this project's, else any project's, as one container
 // serves them all; there is none while flai serve does not run.
 func TestDashboardStatusSaysWhatFlaiServeDidWithTheImage(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
-	cfg := os.Getenv("FLAI_CONFIG")
+	cfg := configOf(t)
 	useSignedDashboardReleases(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	if _, errOut, code := runWith(t, root, f, "dashboard"); code != 0 {
@@ -754,6 +765,7 @@ func TestDashboardStatusSaysWhatFlaiServeDidWithTheImage(t *testing.T) {
 // S-0236, ADR-0118: flai dashboard restart starts the release it ran again by
 // digest, asking no release and pulling nothing.
 func TestDashboardRestartKeepsTheDigest(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	asked := useSignedDashboardReleases(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
@@ -769,14 +781,15 @@ func TestDashboardRestartKeepsTheDigest(t *testing.T) {
 	if f.containerLabel["flaiover"] != ref || f.containerImage["flaiover"] != ranImage || called(f, "docker pull") || len(asked()) != before {
 		t.Errorf("restart keeps the digest: label %s image %s\n%s", f.containerLabel["flaiover"], f.containerImage["flaiover"], strings.Join(f.calls, "\n"))
 	}
-	if r, _ := readDashboardRecord(string((&app{}).serveDir())); r.Ref != ref {
+	if r, _ := readDashboardRecord(string((&app{configPath: configOf(t)}).serveDir())); r.Ref != ref {
 		t.Errorf("record after restart: %+v", r)
 	}
 }
 
 func TestDashboardLifecycle(t *testing.T) {
+	t.Parallel()
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	serveDir := string(serve.DirFor(cfg))
 	root := tempProject(t)
 	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: My Proj\nkey: m\nlayout:\n  design: design\n  docs: docs\n  wip: wip\ndashboard:\n  port: 5555\n"), 0o644)
@@ -924,7 +937,8 @@ func TestDashboardLifecycle(t *testing.T) {
 // another platform is pulled again, and a registry with nothing for the
 // platform gets an error that names it.
 func TestDashboardPullsTheDaemonsPlatform(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	img := flaioverRef("0.10.0")
 
@@ -957,9 +971,8 @@ func TestDashboardPullsTheDaemonsPlatform(t *testing.T) {
 }
 
 func TestDashboardPrivateRegistryAndBuild(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("GITHUB_TOKEN", "")
-	t.Setenv("GH_TOKEN", "")
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	img := flaioverRef("0.10.0")
 
@@ -1006,7 +1019,8 @@ func TestDashboardPrivateRegistryAndBuild(t *testing.T) {
 // S-0235: only release-flaiover.yml stamps an image, on a release tag; a
 // dashboard built here passes no stamp, so its image has none.
 func TestDashboardBuildPassesNoReleaseStamp(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	_ = os.MkdirAll(filepath.Join(root, "flaiover"), 0o755)
 	_ = os.WriteFile(filepath.Join(root, "flaiover", "Dockerfile"), []byte("FROM scratch\n"), 0o644)
@@ -1036,7 +1050,8 @@ func TestDashboardBuildPassesNoReleaseStamp(t *testing.T) {
 // S-0077: the push key is retired. Asked for, it is named, explained, and
 // ignored, and the dashboard starts.
 func TestDashboardPushKeyIsRetired(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	img := map[string]bool{flaioverRef("0.10.0"): true}
 	f := &fakeRunner{images: img, running: map[string]bool{}}
@@ -1067,7 +1082,7 @@ func TestDashboardPushKeyIsRetired(t *testing.T) {
 
 func dashboardProject(t *testing.T) string {
 	t.Helper()
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: My Proj\nkey: m\nlayout:\n  design: design\n  docs: docs\n  wip: wip\ndashboard:\n  port: 5555\n  tag: latest\n"), 0o644)
 	return root
@@ -1086,7 +1101,7 @@ const (
 // unsigned image has, and of check and upgrade, which compare by tag.
 func mirrorProject(t *testing.T) string {
 	t.Helper()
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: My Proj\nkey: m\nlayout:\n  design: design\n  docs: docs\n  wip: wip\ndashboard:\n  image: "+mirrorImage+"\n  port: 5555\n  tag: latest\n"), 0o644)
 	return root
@@ -1095,6 +1110,7 @@ func mirrorProject(t *testing.T) string {
 // S-0236: with no container and no record, restart starts what flai dashboard
 // starts: the release dashboard.tag resolves to, pulled and run by digest.
 func TestDashboardRestartStartsWhenNotRunning(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	out, errOut, code := runWith(t, root, f, "dashboard", "restart")
@@ -1111,7 +1127,7 @@ func TestDashboardRestartStartsWhenNotRunning(t *testing.T) {
 	if run := lastRunOf(f); !strings.HasSuffix(run, " --label "+dashboardRefLabel+"="+ref+" "+ref) || !slices.Contains(f.calls, "docker pull --quiet --platform linux/amd64 "+ref) || called(f, "docker pull --quiet --platform linux/amd64 ghcr.io/bytepunx/flaiover:") {
 		t.Errorf("the newest release by digest, never by tag:\n%s", strings.Join(f.calls, "\n"))
 	}
-	if r, _ := readDashboardRecord(string((&app{}).serveDir())); r.Ref != ref {
+	if r, _ := readDashboardRecord(string((&app{configPath: configOf(t)}).serveDir())); r.Ref != ref {
 		t.Errorf("record: %+v", r)
 	}
 }
@@ -1120,6 +1136,7 @@ func TestDashboardRestartStartsWhenNotRunning(t *testing.T) {
 // release again by digest, asking no release, unless --tag names another,
 // which it resolves as flai dashboard does.
 func TestDashboardRestartRunsTheRecordedDigestWhenNoContainerRuns(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	asked := useSignedDashboardReleases(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
@@ -1142,7 +1159,7 @@ func TestDashboardRestartRunsTheRecordedDigestWhenNoContainerRuns(t *testing.T) 
 	if code != 0 || !strings.Contains(out, "started flaiover ("+flaioverRef("0.3.0")+")") {
 		t.Fatalf("restart --tag: %d %s %s", code, out, errOut)
 	}
-	if r, _ := readDashboardRecord(string((&app{}).serveDir())); r.Ref != flaioverRef("0.3.0") {
+	if r, _ := readDashboardRecord(string((&app{configPath: configOf(t)}).serveDir())); r.Ref != flaioverRef("0.3.0") {
 		t.Errorf("record after restart --tag: %+v", r)
 	}
 
@@ -1156,6 +1173,7 @@ func TestDashboardRestartRunsTheRecordedDigestWhenNoContainerRuns(t *testing.T) 
 }
 
 func TestDashboardRestartCyclesTheRunningContainerWithoutChangingItsImage(t *testing.T) {
+	t.Parallel()
 	root := mirrorProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
@@ -1184,6 +1202,7 @@ func TestDashboardRestartCyclesTheRunningContainerWithoutChangingItsImage(t *tes
 // newer latest is pulled the tag names another image than the one that runs.
 // A restart starts the image that runs, by its ID, and still names the tag.
 func TestDashboardRestartRunsTheImageIDNotWhatTheTagNamesNow(t *testing.T) {
+	t.Parallel()
 	root := mirrorProject(t)
 	tag := mirrorLatest
 	f := &fakeRunner{images: map[string]bool{tag: true}, running: map[string]bool{}, imageIDs: map[string]string{tag: "sha256:old"}}
@@ -1229,6 +1248,7 @@ func TestDashboardRestartRunsTheImageIDNotWhatTheTagNamesNow(t *testing.T) {
 // A running dashboard whose image ID docker does not say is started again
 // from the reference it shows, as before I-0116.
 func TestDashboardRestartFallsBackToTheRefWhenTheImageIDIsUnknown(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{"flaiover": true}}
 	out, errOut, code := runWith(t, root, f, "dashboard", "restart")
@@ -1241,11 +1261,12 @@ func TestDashboardRestartFallsBackToTheRefWhenTheImageIDIsUnknown(t *testing.T) 
 // started from an image ID needs, and a container an older flai started
 // without the label by its {{.Config.Image}}.
 func TestContainerInfoPrefersTheRefLabel(t *testing.T) {
+	t.Parallel()
 	f := &fakeRunner{
 		containerRef:   map[string]string{"labelled": "sha256:abc", "older": "ghcr.io/bytepunx/flaiover:0.1.0"},
 		containerLabel: map[string]string{"labelled": "ghcr.io/bytepunx/flaiover:latest"},
 	}
-	a := &app{runner: f}
+	a := &app{configPath: configOf(t), releases: releasesOf(t), runner: f}
 	if image, url := a.containerInfo("labelled"); image != "ghcr.io/bytepunx/flaiover:latest" || url != "http://localhost:5555" {
 		t.Errorf("labelled: %q %q", image, url)
 	}
@@ -1257,11 +1278,12 @@ func TestContainerInfoPrefersTheRefLabel(t *testing.T) {
 // containerInfo reads its fields by position, so an empty one, such as a
 // container that publishes no port, does not shift the others.
 func TestContainerInfoReadsEmptyFields(t *testing.T) {
-	a := &app{runner: &answerRunner{out: "ghcr.io/bytepunx/flaiover:0.1.0||ghcr.io/bytepunx/flaiover:latest\n"}}
+	t.Parallel()
+	a := &app{configPath: configOf(t), releases: releasesOf(t), runner: &answerRunner{out: "ghcr.io/bytepunx/flaiover:0.1.0||ghcr.io/bytepunx/flaiover:latest\n"}}
 	if image, url := a.containerInfo("flaiover"); image != "ghcr.io/bytepunx/flaiover:latest" || url != "" {
 		t.Errorf("no port: %q %q", image, url)
 	}
-	a = &app{runner: &answerRunner{out: "ghcr.io/bytepunx/flaiover:0.1.0\n"}}
+	a = &app{configPath: configOf(t), releases: releasesOf(t), runner: &answerRunner{out: "ghcr.io/bytepunx/flaiover:0.1.0\n"}}
 	if image, url := a.containerInfo("flaiover"); image != "ghcr.io/bytepunx/flaiover:0.1.0" || url != "" {
 		t.Errorf("one field: %q %q", image, url)
 	}
@@ -1279,6 +1301,7 @@ func (r *answerRunner) RunInput(string, string, string, ...string) (string, erro
 func (r *answerRunner) LookPath(name string) (string, error) { return "/usr/bin/" + name, nil }
 
 func TestDashboardCheckReportsNotRunningPlainly(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	out, errOut, code := runWith(t, root, f, "dashboard", "check")
@@ -1316,6 +1339,7 @@ func checkJSON(t *testing.T, root string, f *fakeRunner, args ...string) checkRe
 // container up to date when one of its image's RepoDigests is on the release's
 // verified list, pulling nothing.
 func TestDashboardCheckFindsNothingWhenAlreadyCurrent(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
@@ -1349,6 +1373,7 @@ func TestDashboardCheckFindsNothingWhenAlreadyCurrent(t *testing.T) {
 // name, another release's or another repository's, has an update; --tag
 // checks against that release.
 func TestDashboardCheckFindsAnUpdate(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	if _, _, code := runWith(t, root, f, "dashboard", "--tag", "0.4.0"); code != 0 {
@@ -1380,6 +1405,7 @@ func TestDashboardCheckFindsAnUpdate(t *testing.T) {
 // S-0236: an image of another repository is checked as before, by the image
 // ID its tag names once pulled, asking no release, and is said to be unsigned.
 func TestDashboardCheckComparesAnotherImageByItsTag(t *testing.T) {
+	t.Parallel()
 	root := mirrorProject(t)
 	asked := useSignedDashboardReleases(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
@@ -1409,6 +1435,7 @@ func TestDashboardCheckComparesAnotherImageByItsTag(t *testing.T) {
 // this flai can verify, saying why, before anything is pulled; the running
 // container is left as it was.
 func TestDashboardCheckAndUpgradeRefuseAReleaseWithNoListItCanVerify(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	key := releaseKey(t)
 	noList := signedFlaiover(t, "0.10.0", signedListOf("0.10.0"), key)
@@ -1435,6 +1462,7 @@ func TestDashboardCheckAndUpgradeRefuseAReleaseWithNoListItCanVerify(t *testing.
 }
 
 func TestDashboardUpgradeStartsWhenNotRunning(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	out, errOut, code := runWith(t, root, f, "dashboard", "upgrade")
@@ -1452,13 +1480,14 @@ func TestDashboardUpgradeStartsWhenNotRunning(t *testing.T) {
 // S-0236: a container whose image the resolved release's list names is up to
 // date: nothing is pulled and no temporary container is started.
 func TestDashboardUpgradeReportsAlreadyUpToDate(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
 		t.Fatal("start")
 	}
 	f.calls = nil
-	a := &app{cwd: root, runner: f, healthProbe: func(string) bool { t.Fatal("no probe needed when already current"); return false }}
+	a := &app{configPath: configOf(t), releases: releasesOf(t), cwd: root, runner: f, healthProbe: func(string) bool { t.Fatal("no probe needed when already current"); return false }}
 	out, errOut, code := runWithApp(t, a, "dashboard", "upgrade")
 	if code != 0 {
 		t.Fatalf("upgrade: %d %s", code, errOut)
@@ -1479,12 +1508,13 @@ func TestDashboardUpgradeReportsAlreadyUpToDate(t *testing.T) {
 // An image of another repository is up to date, as before, when the
 // container runs the image ID its tag names once pulled; it is unsigned.
 func TestDashboardUpgradeReportsAnotherImageAlreadyUpToDate(t *testing.T) {
+	t.Parallel()
 	root := mirrorProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
 		t.Fatal("start")
 	}
-	a := &app{cwd: root, runner: f, healthProbe: func(string) bool { t.Fatal("no probe needed when already current"); return false }}
+	a := &app{configPath: configOf(t), releases: releasesOf(t), cwd: root, runner: f, healthProbe: func(string) bool { t.Fatal("no probe needed when already current"); return false }}
 	out, errOut, code := runWithApp(t, a, "dashboard", "upgrade")
 	if code != 0 {
 		t.Fatalf("upgrade: %d %s", code, errOut)
@@ -1505,6 +1535,7 @@ const dashboardUpgradeProbeName = "flaiover" + upgradeProbeSuffix
 // it healthy in a temporary container, and swaps to it by digest, which the
 // container's label and the restart record keep.
 func TestDashboardUpgradeSwapsToAHealthyNewImage(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	if _, _, code := runWith(t, root, f, "dashboard", "--tag", "0.4.0"); code != 0 {
@@ -1512,7 +1543,7 @@ func TestDashboardUpgradeSwapsToAHealthyNewImage(t *testing.T) {
 	}
 	f.calls = nil
 	var probed []string
-	a := &app{cwd: root, runner: f, healthProbe: func(url string) bool { probed = append(probed, url); return true }}
+	a := &app{configPath: configOf(t), releases: releasesOf(t), cwd: root, runner: f, healthProbe: func(url string) bool { probed = append(probed, url); return true }}
 	out, errOut, code := runWithApp(t, a, "dashboard", "upgrade")
 	if code != 0 {
 		t.Fatalf("upgrade: %d %s", code, errOut)
@@ -1561,13 +1592,14 @@ func TestDashboardUpgradeSwapsToAHealthyNewImage(t *testing.T) {
 }
 
 func TestDashboardUpgradeLeavesThePreviousContainerRunningWhenTheNewOneNeverAnswersHealthy(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	if _, _, code := runWith(t, root, f, "dashboard", "--tag", "0.4.0"); code != 0 {
 		t.Fatal("start")
 	}
 	previous := f.containerImage["flaiover"]
-	a := &app{cwd: root, runner: f, healthProbe: func(string) bool { return false }}
+	a := &app{configPath: configOf(t), releases: releasesOf(t), cwd: root, runner: f, healthProbe: func(string) bool { return false }}
 	out, errOut, code := runWithApp(t, a, "dashboard", "upgrade")
 	if code == 0 {
 		t.Fatalf("upgrade should have failed: %s", out)
@@ -1590,6 +1622,7 @@ func TestDashboardUpgradeLeavesThePreviousContainerRunningWhenTheNewOneNeverAnsw
 // holds its name until it has removed it, and a docker run under that name
 // at once fails with a conflict. An upgrade waits for the name first.
 func TestDashboardUpgradeSwapsWhileDockerStillRemovesTheStoppedContainer(t *testing.T) {
+	t.Parallel()
 	root := mirrorProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
@@ -1614,6 +1647,7 @@ func TestDashboardUpgradeSwapsWhileDockerStillRemovesTheStoppedContainer(t *test
 }
 
 func TestDashboardRestartWaitsWhileDockerStillRemovesTheStoppedContainer(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
@@ -1630,6 +1664,7 @@ func TestDashboardRestartWaitsWhileDockerStillRemovesTheStoppedContainer(t *test
 }
 
 func TestDashboardUpgradeRemovesANameDockerNeverReleases(t *testing.T) {
+	t.Parallel()
 	root := mirrorProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
@@ -1639,7 +1674,7 @@ func TestDashboardUpgradeRemovesANameDockerNeverReleases(t *testing.T) {
 	f.removeDelay = nameReleaseAttempts + 5 // still listed when the wait gives up
 	f.calls = nil
 	slept := 0
-	a := &app{cwd: root, runner: f, sleep: func(time.Duration) { slept++ }}
+	a := &app{configPath: configOf(t), releases: releasesOf(t), cwd: root, runner: f, sleep: func(time.Duration) { slept++ }}
 	out, errOut, code := runWithApp(t, a, "dashboard", "upgrade")
 	if code != 0 {
 		t.Fatalf("upgrade: %d %s", code, errOut)
@@ -1663,6 +1698,7 @@ func TestDashboardUpgradeRemovesANameDockerNeverReleases(t *testing.T) {
 }
 
 func TestDashboardUpgradeStartsThePreviousImageAgainWhenTheNewOneFailsToStart(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	if _, _, code := runWith(t, root, f, "dashboard", "--tag", "0.4.0"); code != 0 {
@@ -1685,12 +1721,13 @@ func TestDashboardUpgradeStartsThePreviousImageAgainWhenTheNewOneFailsToStart(t 
 	if f.containerLabel["flaiover"] != previousRef {
 		t.Errorf("the previous image is labelled with the digest it ran as, so status names that: %q", f.containerLabel["flaiover"])
 	}
-	if r, _ := readDashboardRecord(string((&app{}).serveDir())); r.Ref != previousRef {
+	if r, _ := readDashboardRecord(string((&app{configPath: configOf(t)}).serveDir())); r.Ref != previousRef {
 		t.Errorf("the record keeps the previous release: %+v", r)
 	}
 }
 
 func TestDashboardUpgradeSaysTheDashboardIsDownWhenThePreviousImageFailsToStartToo(t *testing.T) {
+	t.Parallel()
 	root := mirrorProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
@@ -1714,6 +1751,7 @@ func TestDashboardUpgradeSaysTheDashboardIsDownWhenThePreviousImageFailsToStartT
 }
 
 func TestDashboardRestartSaysTheDashboardIsDownWhenItDoesNotStartAgain(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
@@ -1754,6 +1792,7 @@ func allowUnsignedProject(t *testing.T, value string) string {
 // it, or --allow-unsigned allows unsigned builds, records that, and says so;
 // otherwise the variable is not passed at all.
 func TestDashboardAllowsUnsignedBuildsOnlyWhenAsked(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		name, manifest, host string
 		args                 []string
@@ -1789,7 +1828,7 @@ func TestDashboardAllowsUnsignedBuildsOnlyWhenAsked(t *testing.T) {
 			if got := strings.Contains(out, "unsigned allowed: started with "+allowUnsignedEnv+"=1"); got != c.want {
 				t.Errorf("output says unsigned allowed: %v, want %v:\n%s", got, c.want, out)
 			}
-			if r, _ := readDashboardRecord(string((&app{}).serveDir())); r.AllowUnsigned != c.want {
+			if r, _ := readDashboardRecord(string((&app{configPath: configOf(t)}).serveDir())); r.AllowUnsigned != c.want {
 				t.Errorf("record: %+v", r)
 			}
 		})
@@ -1798,7 +1837,8 @@ func TestDashboardAllowsUnsignedBuildsOnlyWhenAsked(t *testing.T) {
 
 // S-0239: --build allows unsigned builds for the flaiover:local it starts.
 func TestDashboardBuildAllowsUnsignedBuilds(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	_ = os.MkdirAll(filepath.Join(root, "flaiover"), 0o755)
 	_ = os.WriteFile(filepath.Join(root, "flaiover", "Dockerfile"), []byte("FROM scratch\n"), 0o644)
@@ -1818,11 +1858,12 @@ func TestDashboardBuildAllowsUnsignedBuilds(t *testing.T) {
 // S-0239: --allow-unsigned is for one start: the configuration file is the
 // same after it, and a later start without it passes nothing.
 func TestDashboardAllowUnsignedLeavesTheConfigurationUnchanged(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	if _, errOut, code := runWith(t, root, &fakeRunner{}, "config", "set", "dashboard.allow_unsigned", "false"); code != 0 {
 		t.Fatalf("config set: %s", errOut)
 	}
-	cfg := os.Getenv("FLAI_CONFIG")
+	cfg := configOf(t)
 	before, err := os.ReadFile(cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -1835,7 +1876,7 @@ func TestDashboardAllowUnsignedLeavesTheConfigurationUnchanged(t *testing.T) {
 		t.Errorf("the configuration changed: %v\nbefore: %s\nafter: %s", err, before, after)
 	}
 	g := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
-	forgetDashboard(string((&app{}).serveDir()))
+	forgetDashboard(string((&app{configPath: configOf(t)}).serveDir()))
 	if _, errOut, code := runWith(t, root, g, "dashboard"); code != 0 || strings.Contains(lastRunOf(g), allowUnsignedEnv) {
 		t.Errorf("a later start without it: %d %s\n%s", code, errOut, lastRunOf(g))
 	}
@@ -1844,6 +1885,7 @@ func TestDashboardAllowUnsignedLeavesTheConfigurationUnchanged(t *testing.T) {
 // S-0239: a container that runs without the allowance gets none from
 // flai dashboard --allow-unsigned, which starts nothing, and that is said.
 func TestDashboardAllowUnsignedSaysARunningContainerKeepsItsTerms(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	if _, errOut, code := runWith(t, root, f, "dashboard"); code != 0 {
@@ -1861,9 +1903,10 @@ func TestDashboardAllowUnsignedSaysARunningContainerKeepsItsTerms(t *testing.T) 
 // was given, a one-start --allow-unsigned included; a container started
 // without it is restarted without it.
 func TestDashboardRestartAndUpgradeKeepTheAllowance(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
-	a := &app{cwd: root, runner: f, log: slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))}
+	a := &app{configPath: configOf(t), releases: releasesOf(t), cwd: root, runner: f, log: slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))}
 	dir := string(a.serveDir())
 	if _, errOut, code := runWithApp(t, a, "dashboard", "--tag", "0.4.0", "--allow-unsigned"); code != 0 {
 		t.Fatalf("start: %s", errOut)
@@ -1925,9 +1968,10 @@ func TestDashboardRestartAndUpgradeKeepTheAllowance(t *testing.T) {
 // pair; a signed pair, with the allowance on or off, shows neither. --json
 // carries the sides as host_flai.unsigned and the record as allow_unsigned.
 func TestDashboardStatusSaysUnsignedAllowedWithTheSide(t *testing.T) {
+	t.Parallel()
 	for _, allow := range []bool{false, true} {
 		root := dashboardProject(t)
-		cfg := os.Getenv("FLAI_CONFIG")
+		cfg := configOf(t)
 		f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 		args := []string{"dashboard"}
 		if allow {
@@ -2007,9 +2051,10 @@ func allowedHostsArg(hosts string) string { return "--env " + allowedHostsEnv + 
 // temporary container included, start it with the configuration's list as it
 // is then; and an empty list passes no variable.
 func TestDashboardGivesTheContainerTheAllowedHosts(t *testing.T) {
+	t.Parallel()
 	root := dashboardProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
-	a := &app{cwd: root, runner: f, log: slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))}
+	a := &app{configPath: configOf(t), releases: releasesOf(t), cwd: root, runner: f, log: slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))}
 	dir := string(a.serveDir())
 	configure := func(list string) {
 		t.Helper()
@@ -2120,6 +2165,7 @@ func TestDashboardGivesTheContainerTheAllowedHosts(t *testing.T) {
 // S-0489: what status says of the allowed hosts: the list the container was
 // started with, when any, and the configuration's when that is another.
 func TestDescribeAllowedHosts(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct{ started, configured, want string }{
 		{"", "", ""},
 		{"a.example", "a.example", "  allowed hosts: started with " + allowedHostsEnv + "=a.example\n"},

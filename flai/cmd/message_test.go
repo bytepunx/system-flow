@@ -42,9 +42,7 @@ type messageView struct {
 // ready, and S-0005 done. The environment names no story and no agent.
 func messageProject(t *testing.T) (string, *workitem.Repo) {
 	t.Helper()
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "")
-	t.Setenv("FLAI_STORY", "")
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	if err := os.MkdirAll(filepath.Join(root, "design", "system"), 0o755); err != nil {
 		t.Fatal(err)
@@ -130,6 +128,7 @@ func TestMessageSendStartsAConversation(t *testing.T) {
 // A send to or from a story not in progress or in review, or with no sender
 // story, is refused with the reason, and nothing is written.
 func TestMessageSendRefusals(t *testing.T) {
+	t.Parallel()
 	root, _ := messageProject(t)
 	for _, tc := range []struct {
 		name string
@@ -155,6 +154,7 @@ func TestMessageSendRefusals(t *testing.T) {
 // shows the open ones, a story's with --story, and the closed ones with
 // --all; show prints every entry; each has --json.
 func TestMessageReplyListAndShow(t *testing.T) {
+	t.Parallel()
 	root, repo := messageProject(t)
 	t1 := time.Date(2026, 9, 15, 22, 0, 0, 0, time.UTC)
 	for _, args := range [][]string{
@@ -232,6 +232,7 @@ func TestMessageReplyListAndShow(t *testing.T) {
 // --json gives an empty awaiting and each entry's settled. It stays open, and
 // the next message awaits the other story again.
 func TestMessageReplySettled(t *testing.T) {
+	t.Parallel()
 	root, _ := messageProject(t)
 	if _, errOut, code := runIn(t, root, "message", "send", "S-0003", "I changed root.go", "--from", "S-0001", "--by", "agent-S-0001"); code != 0 {
 		t.Fatalf("send: %d %s", code, errOut)
@@ -382,6 +383,7 @@ func shareFixture(t *testing.T) (string, *workitem.Repo) {
 // S-0334, ADR-0134: flai message share records the share from the holding
 // story's agent, prints it, and the held story is no longer held.
 func TestMessageShare(t *testing.T) {
+	t.Parallel()
 	root, repo := shareFixture(t)
 	out, errOut, code := runIn(t, root, "message", "share", "MS-0001", "--paths", "design/system/plan.md", "S-0001 edits the first section; S-0004 adds one at the end.", "--from", "S-0001", "--by", "agent-S-0001")
 	if code != 0 {
@@ -421,6 +423,7 @@ func TestMessageShare(t *testing.T) {
 // S-0334, ADR-0134: flai message share is refused from the held story, and
 // for a path outside the overlap, writing nothing.
 func TestMessageShareRefusals(t *testing.T) {
+	t.Parallel()
 	root, repo := shareFixture(t)
 	for _, tc := range []struct {
 		args []string

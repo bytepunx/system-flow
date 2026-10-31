@@ -35,9 +35,9 @@ func (b mcpBearer) RoundTrip(r *http.Request) (*http.Response, error) {
 
 // S-0076: flai mcp http is the server flai mcp is, over HTTP, with its token,
 // state, and address kept under .flai-cache.
-func TestMCPOverHTTP(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "tester")
+func testMCPOverHTTP(t *testing.T) {
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	inEnv(t, "FLAI_AGENT", "tester")
 	root := tempProject(t)
 	runIn(t, root, "epic", "new", "Big thing")
 	runIn(t, root, "story", "new", "Slice", "--epic", "E-0001")
@@ -60,7 +60,7 @@ func TestMCPOverHTTP(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	var out, errOut bytes.Buffer
-	a := &app{out: &out, errOut: &errOut, cwd: root}
+	a := &app{configPath: configOf(t), out: &out, errOut: &errOut, cwd: root}
 	served := make(chan error, 1)
 	// built here, not in the goroutine: building a command tree writes to a
 	// table cobra shares, and the status calls below build one each
@@ -181,7 +181,8 @@ func TestMCPOverHTTP(t *testing.T) {
 }
 
 func TestMCPStateGoesStale(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	_ = os.MkdirAll(filepath.Join(root, ".flai-cache"), 0o700)
 	old := time.Now().Add(-time.Minute).UTC().Format(time.RFC3339)
@@ -200,6 +201,7 @@ func TestMCPStateGoesStale(t *testing.T) {
 // S-0105: a server flai serve started is started again with a new token as
 // flai serve's still, and one started by hand as it was.
 func TestARotatedServerKeepsWhatItWentWith(t *testing.T) {
+	t.Parallel()
 	st := mcpState{Addr: "127.0.0.1:4247", ExitWith: os.Getpid()}
 	if got := strings.Join(restartArgs(st, "/c/config.json"), " "); got != "mcp http --addr 127.0.0.1:4247 --exit-with "+strconv.Itoa(os.Getpid())+" --config /c/config.json" {
 		t.Errorf("serve's: %s", got)
@@ -226,14 +228,14 @@ const claudeCodeHTTPTimeout = 60 * time.Second
 // server an agent reaches over HTTP now holds a write less than Claude Code
 // waits: with both scaled down alike, a client that gives up when Claude Code
 // does gets the refusal naming the open thread.
-func TestMCPOverHTTPRefusesAnUnansweredWriteBeforeClaudeCodeGivesUp(t *testing.T) {
+func testMCPOverHTTPRefusesAnUnansweredWriteBeforeClaudeCodeGivesUp(t *testing.T) {
 	root := heldProject(t) // S-0001 in progress
 	repo, err := workitem.Open(root)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var out, errOut bytes.Buffer
-	a := &app{out: &out, errOut: &errOut, cwd: root}
+	a := &app{configPath: configOf(t), out: &out, errOut: &errOut, cwd: root}
 	opt := a.mcpHTTPOptions(repo, "claude", nil, "")
 	if opt.PermissionHold <= 0 || opt.PermissionHold >= claudeCodeHTTPTimeout {
 		t.Errorf("over HTTP permission_prompt holds a write for %s, not less than the %s Claude Code waits", opt.PermissionHold, claudeCodeHTTPTimeout)

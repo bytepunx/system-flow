@@ -101,7 +101,7 @@ projects:
 // sub-projects and their files, and its manifest's contents.
 func componentsFixture(t *testing.T) (string, string) {
 	t.Helper()
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	file := filepath.Join(root, manifest.File)
 	data, err := os.ReadFile(file)
@@ -376,6 +376,7 @@ func TestComponentsListMissingTools(t *testing.T) {
 // and the order; a later flag replaces its field alone; --unset removes the
 // key.
 func TestComponentsConfigWritesMergesUnsets(t *testing.T) {
+	t.Parallel()
 	root, before := componentsFixture(t)
 	out, errOut, code := runIn(t, root, "components", "config", "ui", "--include", "src/lib/**/*.svelte", "--include", "src/widgets/*.svelte", "--setup", "src/app.css")
 	if code != 0 {
@@ -432,6 +433,7 @@ func TestComponentsConfigWritesMergesUnsets(t *testing.T) {
 // file, a sub-project of an unsupported kind, an unknown sub-project, and
 // flags that do not go together, and writes nothing.
 func TestComponentsConfigRefuses(t *testing.T) {
+	t.Parallel()
 	root, before := componentsFixture(t)
 	for _, tc := range []struct {
 		name   string
@@ -470,6 +472,7 @@ func TestComponentsConfigRefuses(t *testing.T) {
 // soon after. It writes its pid and its arguments, one per line, into
 // FLAI_FAKE_COMPONENTS_VITE_DIR first. Run as a test, it does nothing.
 func TestHelperComponentsVite(t *testing.T) {
+	t.Parallel()
 	mode := os.Getenv("FLAI_FAKE_COMPONENTS_VITE")
 	if mode == "" {
 		return
@@ -558,11 +561,10 @@ type served struct {
 // context the test cancels as an interrupt would.
 func serveComponentsIn(t *testing.T, root string, args ...string) *served {
 	t.Helper()
-	t.Setenv("FLAI_CACHE_DIR", filepath.Join(t.TempDir(), "cache"))
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &served{out: &lockedBuffer{}, errOut: &lockedBuffer{}, cancel: cancel, done: make(chan error, 1)}
-	a := &app{out: s.out, errOut: s.errOut, cwd: root}
-	cmd := newRootCmdWith(a)
+	a := &app{configPath: configOf(t), out: s.out, errOut: s.errOut, cwd: root}
+	cmd := testRoot(t, a)
 	cmd.SetArgs(args)
 	go func() { s.done <- cmd.ExecuteContext(ctx) }()
 	t.Cleanup(func() {
@@ -640,7 +642,7 @@ func processGone(pid int) bool {
 // app, ui, and a Go sub-project, cli, so that ui is the one supported.
 func oneSvelteFixture(t *testing.T) string {
 	t.Helper()
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	file := filepath.Join(root, manifest.File)
 	data, err := os.ReadFile(file)
@@ -753,6 +755,7 @@ func TestComponentsServeEndsWhenViteExits(t *testing.T) {
 // S-0438: serve refuses an unknown, an unsupported, or an ambiguous
 // sub-project, and one without vite installed, and starts nothing.
 func TestComponentsServeRefuses(t *testing.T) {
+	t.Parallel()
 	root, _ := componentsFixture(t)
 	for _, tc := range []struct {
 		name   string

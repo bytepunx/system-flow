@@ -16,8 +16,8 @@ import (
 // S-0057: flai order places a story in the pull order, flai board reads the
 // columns in it, and a story that becomes ready joins the ready section.
 func TestOrderCommand(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "")
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	run := func(args ...string) string {
 		t.Helper()
@@ -126,8 +126,8 @@ func TestOrderCommand(t *testing.T) {
 // S-0217: an order computed by a policy is printed with its figures, and
 // only --apply writes it to board.md.
 func TestOrderByCommand(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "")
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	run := func(args ...string) string {
 		t.Helper()
@@ -234,9 +234,7 @@ func TestOrderByCommand(t *testing.T) {
 // the column drops the record, and --by --apply keeps the place of a story
 // placed by hand within --keep-placed and orders the others around it.
 func TestOrderKeepsHandPlacements(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "")
-	t.Setenv("FLAI_ROLE", "")
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	now := time.Date(2026, 9, 15, 21, 0, 0, 0, time.UTC)
 	runAt := func(at time.Time, args ...string) string {

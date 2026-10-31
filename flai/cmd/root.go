@@ -18,6 +18,8 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/logx"
 	"github.com/bytepunx/system-flow/flai/internal/prompt"
+	"github.com/bytepunx/system-flow/flai/internal/selfupgrade"
+	"github.com/bytepunx/system-flow/flai/internal/serve"
 )
 
 // app carries state shared by all commands.
@@ -38,6 +40,14 @@ type app struct {
 	clock           func() time.Time                  // tests override the clock
 	healthProbe     func(url string) bool             // tests fake the dashboard upgrade's health check
 	sleep           func(d time.Duration)             // tests skip a real poll delay (dashboard upgrade, checks cancel)
+	releases        func() selfupgrade.Options        // tests point the dashboard's releases at a stand-in; see dashboardReleases
+	// acceptForge makes the forge's adapter for a merge flai accept makes in
+	// its own process, newForge when nil; tests put a fake forge here.
+	acceptForge serve.NewForge
+	// acceptWait is how long flai accept waits for flai serve to take and
+	// answer a merge it hands over; zero fields are RequestMerge's defaults,
+	// and tests shorten them.
+	acceptWait serve.MergeWait
 }
 
 // Execute runs the CLI and returns the process exit code.
@@ -46,17 +56,17 @@ func Execute() int {
 }
 
 func run(args []string, out, errOut io.Writer) int {
-	root := newRootCmd(out, errOut)
+	a := &app{out: out, errOut: errOut}
+	root := newRootCmdWith(a)
 	root.SetArgs(args)
 	if err := root.Execute(); err != nil {
 		var ee *exitError
 		if errors.As(err, &ee) {
 			if ee.msg != "" {
-				rootApp(root).fail(err)
+				a.fail(err)
 			}
 			return ee.code
 		}
-		a := rootApp(root)
 		a.fail(err)
 		return 1
 	}
@@ -84,10 +94,6 @@ func (a *app) initLogger() {
 	// a listing that reads past fields this flai does not know (S-0181).
 	slog.SetDefault(a.log)
 }
-
-var apps = map[*cobra.Command]*app{}
-
-func rootApp(root *cobra.Command) *app { return apps[root] }
 
 func newRootCmd(out, errOut io.Writer) *cobra.Command {
 	return newRootCmdWith(&app{out: out, errOut: errOut})
@@ -119,11 +125,15 @@ FLAI_CONFIG). Every command that prints data accepts --json.`,
 			a.initLogger()
 		},
 	}
-	apps[root] = a
 	root.SetOut(out)
 	root.SetErr(errOut)
 	pf := root.PersistentFlags()
+	// Defining the flag sets its variable to the flag's default; a config
+	// path the app was made with, as a test's own file, stays until --config
+	// names another.
+	configPath := a.configPath
 	pf.StringVar(&a.configPath, "config", "", "path to config file (default ~/.flai/config.json, or $FLAI_CONFIG)")
+	a.configPath = configPath
 	pf.BoolVar(&a.jsonOut, "json", false, "print structured JSON output")
 	pf.BoolVarP(&a.yes, "yes", "y", false, "answer yes to confirmations")
 	pf.BoolVarP(&a.verbose, "verbose", "v", false, "debug-level log events on stderr (LOG_LEVEL, LOG_FORMAT also apply)")

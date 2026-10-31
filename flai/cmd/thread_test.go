@@ -14,8 +14,8 @@ import (
 // no file, or a heading not in it, is refused; flai thread show marks the
 // recommendation; and flai thread confirm makes it the answer.
 func TestAThreadRecommendationIsPostedWithItsSourceAndConfirmed(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "")
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	if err := os.MkdirAll(filepath.Join(root, "design", "system"), 0o755); err != nil {
 		t.Fatal(err)
@@ -86,8 +86,8 @@ func TestAThreadRecommendationIsPostedWithItsSourceAndConfirmed(t *testing.T) {
 // shown as operator_only in --json; --operator-only without --recommend is
 // refused, writing nothing.
 func TestAThreadRecommendationIsMarkedForTheOperatorAlone(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "")
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	if err := os.MkdirAll(filepath.Join(root, "design", "system"), 0o755); err != nil {
 		t.Fatal(err)
@@ -136,8 +136,7 @@ func TestAThreadRecommendationIsMarkedForTheOperatorAlone(t *testing.T) {
 // S-0369: a thread entry without --by is FLAI_AGENT's when it is set, else
 // the config's author, so the operator's own shell answers as the operator.
 func TestAThreadEntryIsTheConfigAuthorsWithoutFLAIAGENT(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "")
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	for _, args := range [][]string{{"config", "set", "author", "olive"}, {"thread", "new", "--on", "system-flow.yaml", "--by", "planner", "Which first?", "The CLI or the dashboard?"}} {
 		if _, errOut, code := runIn(t, root, args...); code != 0 {
@@ -176,8 +175,7 @@ func TestAThreadEntryIsTheConfigAuthorsWithoutFLAIAGENT(t *testing.T) {
 // which claude opened on the manifest.
 func answerProject(t *testing.T) string {
 	t.Helper()
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "")
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	if err := os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nowner: alex\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -239,6 +237,7 @@ func entryText(t *testing.T, root, path string) string {
 // is written as a digest entry, named under digest in --json and on a line of
 // its own in the text; a second answer updates that entry.
 func TestThreadReplyByTheOperatorWritesADigestEntry(t *testing.T) {
+	t.Parallel()
 	root := answerProject(t)
 	view, _ := answer(t, root, 1, "thread", "reply", "TH-0001", "--by", "alex", "--", "The CLI. It is what agents use.")
 	d := view.Digest
@@ -272,6 +271,7 @@ func TestThreadReplyByTheOperatorWritesADigestEntry(t *testing.T) {
 // S-0433 criterion 2: the operator's confirmation of an agent's pending
 // recommendation writes an entry with the recommendation's text.
 func TestThreadConfirmByTheOperatorWritesADigestEntry(t *testing.T) {
+	t.Parallel()
 	root := answerProject(t)
 	view, raw := answer(t, root, 1, "thread", "reply", "TH-0001", "--by", "orchestrator", "--recommend", "The CLI, as the plan says.")
 	if _, ok := raw["digest"]; ok || view.Digest != nil {
@@ -290,6 +290,7 @@ func TestThreadConfirmByTheOperatorWritesADigestEntry(t *testing.T) {
 // S-0433 criterion 1: an agent's reply, and the operator's on a thread of
 // their own, write no entry and print no digest.
 func TestThreadReplyByAnAgentWritesNoDigestEntry(t *testing.T) {
+	t.Parallel()
 	root := answerProject(t)
 	view, raw := answer(t, root, 1, "thread", "reply", "TH-0001", "--by", "planner", "The CLI.")
 	if _, ok := raw["digest"]; ok || view.Status != "answered" {
@@ -310,6 +311,7 @@ func TestThreadReplyByAnAgentWritesNoDigestEntry(t *testing.T) {
 // S-0433 criterion 4: an entry that cannot be written leaves the reply saved
 // and the command's exit 0, with the warning logged and under digest.warning.
 func TestThreadReplyKeepsTheAnswerWhenItsDigestEntryFails(t *testing.T) {
+	t.Parallel()
 	root := answerProject(t)
 	if err := os.MkdirAll(filepath.Join(root, "design"), 0o755); err != nil {
 		t.Fatal(err)

@@ -13,6 +13,7 @@ import (
 )
 
 func TestIssueRecordingStoryOrder(t *testing.T) {
+	t.Parallel()
 	env := func(vars map[string]string) func(string) string {
 		return func(k string) string { return vars[k] }
 	}
@@ -41,9 +42,7 @@ func TestIssueRecordingStoryOrder(t *testing.T) {
 // the environment.
 func issueProject(t *testing.T) string {
 	t.Helper()
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_STORY", "")
-	t.Setenv("FLAI_AGENT", "")
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	_ = os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".flai-cache/\n"), 0o644)
 	_ = os.MkdirAll(filepath.Join(root, "design", "conventions"), 0o755)
@@ -109,6 +108,7 @@ func TestIssueListStory(t *testing.T) {
 }
 
 func TestIssueStory(t *testing.T) {
+	t.Parallel()
 	root := issueProject(t)
 	for _, args := range [][]string{
 		{"issue", "new", "Fixture was ignored", "--class", "defect", "--cost", "20m"},
@@ -194,8 +194,8 @@ func TestIssueStory(t *testing.T) {
 // issue that now names it (S-0203). An issue in another story's worktree is
 // named there and left for that story to commit.
 func TestIssueStoryAutocommit(t *testing.T) {
+	t.Parallel()
 	root := bodyProject(t)
-	t.Setenv("FLAI_STORY", "")
 	if _, errOut, code := runIn(t, root, "issue", "new", "Fixture was ignored", "--class", "defect"); code != 0 {
 		t.Fatalf("issue new: %s", errOut)
 	}
@@ -258,8 +258,8 @@ func TestIssueStoryAutocommit(t *testing.T) {
 // committed with it; the issue keeps its entry. A story made from an issue
 // with no usage has none.
 func TestIssueStoryCarriesTheIssuesStrategicUsage(t *testing.T) {
+	t.Parallel()
 	root := bodyProject(t)
-	t.Setenv("FLAI_STORY", "")
 	for _, title := range []string{"Review waits a day", "Fixture was ignored"} {
 		if _, errOut, code := runIn(t, root, "issue", "new", title, "--class", "efficiency"); code != 0 {
 			t.Fatalf("issue new: %s", errOut)
@@ -326,6 +326,7 @@ func readIssueFile(t *testing.T, root, name string) []byte {
 // there and names the story there, and the story made from one goes to wip/
 // in the main checkout.
 func TestIssueStoryWorktree(t *testing.T) {
+	t.Parallel()
 	root := issueProject(t)
 	wt := filepath.Join(root, ".flai-cache", "worktrees", "S-0005")
 	if err := os.MkdirAll(wt, 0o755); err != nil {
@@ -385,7 +386,8 @@ func TestIssueStoryWorktree(t *testing.T) {
 }
 
 func TestIssueCommands(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	_ = os.MkdirAll(filepath.Join(root, "design", "conventions"), 0o755)
 	_ = os.WriteFile(filepath.Join(root, "design", "conventions", "README.md"), []byte("# c\n"), 0o644)
@@ -442,11 +444,11 @@ func TestIssueCommands(t *testing.T) {
 // yet committed in its worktree, holds its number, so a third story's issue
 // takes the next one.
 func TestIssueNewNumbersPastEveryStorysIssues(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skip("needs git")
 	}
 	root := bodyProject(t)
-	t.Setenv("FLAI_STORY", "")
 	writeIssue := func(dir, name string) {
 		t.Helper()
 		path := filepath.Join(dir, "design", "issues", name)
@@ -485,6 +487,7 @@ func TestIssueNewNumbersPastEveryStorysIssues(t *testing.T) {
 // duplicated, and --json says which; bump with --report links a report and
 // updates the impact; anything bad is refused with nothing written.
 func TestIssueNewAndBumpWithImpactAndReport(t *testing.T) {
+	t.Parallel()
 	root := issueProject(t)
 	report := "design/analysis/2026-10-06-bottlenecks.md"
 	issueFiles := func() []string {
@@ -576,6 +579,7 @@ func TestIssueNewAndBumpWithImpactAndReport(t *testing.T) {
 // story's branch with the story's prefix and widen the story's touches in
 // the main checkout to them, in text and in JSON.
 func TestIssueCommandsCommitOnTheStoryBranch(t *testing.T) {
+	t.Parallel()
 	root, wt := storyCommitProject(t)
 	const title = "Lint cache is shared between worktrees"
 
@@ -661,8 +665,8 @@ func TestIssueCommandsCommitOnTheStoryBranch(t *testing.T) {
 // and summary.md on their own with the trailers, in text and in JSON, and
 // --commit with --autocommit is refused with nothing written.
 func TestIssueCommandsAutocommitInTheMainCheckout(t *testing.T) {
+	t.Parallel()
 	root := bodyProject(t)
-	t.Setenv("FLAI_STORY", "")
 	const title = "The board is slow to load"
 	const trailer = "Co-Authored-By: flaiover <flaiover@localhost>"
 	file := "design/issues/I-0001-the-board-is-slow-to-load.md"
@@ -728,8 +732,8 @@ func TestIssueCommandsAutocommitInTheMainCheckout(t *testing.T) {
 // is written, the text says nothing of a commit, and --json says committed
 // false with no commit.
 func TestIssueAutocommitOffCommitsNothing(t *testing.T) {
+	t.Parallel()
 	root := bodyProject(t)
-	t.Setenv("FLAI_STORY", "")
 	manifest := filepath.Join(root, "system-flow.yaml")
 	m, _ := os.ReadFile(manifest)
 	_ = os.WriteFile(manifest, append(m, []byte("dashboard:\n  autocommit: false\n")...), 0o644)
@@ -760,6 +764,7 @@ func TestIssueAutocommitOffCommitsNothing(t *testing.T) {
 // written, whether no story resolves or the story's branch is not the one
 // checked out.
 func TestIssueCommitRefusedOutsideTheStorysWorktree(t *testing.T) {
+	t.Parallel()
 	root, _ := storyCommitProject(t)
 	head := gitIn(t, root, "rev-parse", "HEAD")
 	for _, c := range []struct {

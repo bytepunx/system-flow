@@ -42,6 +42,7 @@ const queueTiersRefusal = "S-0001 cannot be accepted yet: S-0001's tiers marked 
 // is merged; --dry-run lists it as the blocker queue_tiers. Once a report at
 // its head ran every tier, it is accepted.
 func TestAHandAcceptanceWaitsForTheQueueTiersWhileTheQueueBatches(t *testing.T) {
+	t.Parallel()
 	root, head := orchestratedStoryInReview(t, true)
 	mergeQueueOn(t, root)
 	// held, so the hand acceptance lands rather than enqueues (S-0552)
@@ -81,6 +82,7 @@ func TestAHandAcceptanceWaitsForTheQueueTiersWhileTheQueueBatches(t *testing.T) 
 // ADR-0221: a report at a commit other than the branch's head, and no report
 // at all, refuse the hand acceptance too, saying why.
 func TestAHandAcceptanceWaitsForAReportAtTheStorysHead(t *testing.T) {
+	t.Parallel()
 	root, head := orchestratedStoryInReview(t, true)
 	mergeQueueOn(t, root)
 	// held, so the hand acceptance lands rather than enqueues (S-0552)
@@ -102,6 +104,7 @@ func TestAHandAcceptanceWaitsForAReportAtTheStorysHead(t *testing.T) {
 // that did not run, who accepted, and when in its Notes; with no report it
 // writes why.
 func TestWithoutQueueTiersLandsTheStoryAndRecordsItInItsNotes(t *testing.T) {
+	t.Parallel()
 	root, head := orchestratedStoryInReview(t, true)
 	mergeQueueOn(t, root)
 	storeS0001Report(t, root, head, verify.Queued)
@@ -128,6 +131,7 @@ func TestWithoutQueueTiersLandsTheStoryAndRecordsItInItsNotes(t *testing.T) {
 // whatever the report left to the queue, and --without-queue-tiers writes
 // nothing.
 func TestAHandAcceptanceIsUnchangedWhileTheQueueDoesNotBatch(t *testing.T) {
+	t.Parallel()
 	root, head := orchestratedStoryInReview(t, true)
 	mergeQueueOn(t, filepath.Join(t.TempDir(), "another"))
 	storeS0001Report(t, root, head, verify.Queued)
@@ -142,6 +146,7 @@ func TestAHandAcceptanceIsUnchangedWhileTheQueueDoesNotBatch(t *testing.T) {
 // ADR-0221: --without-queue-tiers is the operator's alone, refused with --by
 // orchestrator and with --batch before anything changes.
 func TestWithoutQueueTiersIsRefusedForTheOrchestratorAndTheQueuesLanding(t *testing.T) {
+	t.Parallel()
 	root, head := orchestratedStoryInReview(t, true)
 	mainBefore := gitIn(t, root, "rev-parse", "main")
 	ev := evidenceFile(t, "Verdict: pass\n- 1: `cli/feature.go`\n")

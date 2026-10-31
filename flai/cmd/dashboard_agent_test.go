@@ -16,8 +16,9 @@ import (
 // S-0072: flai dashboard hands the container the agent credential, registers
 // the project with flai serve, and reports the connection.
 func TestDashboardHandsOverTheAgentCredentialAndRegistersTheProject(t *testing.T) {
+	t.Parallel()
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	root := tempProject(t)
 	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: Harbour\nkey: harbour\nlayout:\n  design: design\n  docs: docs\n  wip: wip\ndashboard:\n  port: 5555\n"), 0o644)
 	f := &fakeRunner{images: map[string]bool{"ghcr.io/bytepunx/flaiover:latest": true}, running: map[string]bool{}}
@@ -102,8 +103,9 @@ func TestDashboardHandsOverTheAgentCredentialAndRegistersTheProject(t *testing.T
 }
 
 func TestDashboardNoServeRegistersNothing(t *testing.T) {
+	t.Parallel()
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	root := tempProject(t)
 	f := &fakeRunner{images: map[string]bool{"ghcr.io/bytepunx/flaiover:latest": true}, running: map[string]bool{}}
 	out, errOut, code := runWith(t, root, f, "dashboard", "--no-serve")
@@ -119,6 +121,7 @@ func TestDashboardNoServeRegistersNothing(t *testing.T) {
 }
 
 func TestDialURLFollowsTheBindAddress(t *testing.T) {
+	t.Parallel()
 	for bind, want := range map[string]string{"0.0.0.0": "http://127.0.0.1:4242", "": "http://127.0.0.1:4242", "127.0.0.1": "http://127.0.0.1:4242", "192.168.1.5": "http://192.168.1.5:4242", "::1": "http://[::1]:4242"} {
 		if got := (dashboardSettings{Bind: bind, Port: 4242}).dialURL(); got != want {
 			t.Errorf("bind %q: %s, want %s", bind, got, want)
@@ -129,8 +132,9 @@ func TestDialURLFollowsTheBindAddress(t *testing.T) {
 // S-0080: one dashboard container serves every project the host flai serves,
 // with one shared login token and one shared agent credential.
 func TestDashboardSharesOneContainerAcrossProjects(t *testing.T) {
+	t.Parallel()
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	serveDir := string(serve.DirFor(cfg))
 
 	first := tempProject(t)
@@ -213,6 +217,7 @@ func TestDashboardSharesOneContainerAcrossProjects(t *testing.T) {
 // flai dashboard status says which side refused the other as unsigned in the
 // words flai serve status uses, not flai serve's raw last error (S-0237).
 func TestHostFlaiDescribesARefusalInServeStatusWords(t *testing.T) {
+	t.Parallel()
 	h := hostFlaiStatus{HostRunning: true, Running: true, PID: 7, Registered: true,
 		LastError: "flai refused the dashboard: unsigned peer: missing stamp; trying again in 1m0s",
 		Refused:   "flai refused the dashboard: unsigned (missing stamp)"}

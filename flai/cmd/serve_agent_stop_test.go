@@ -19,8 +19,9 @@ import (
 // S-0170: flai serve agent stop ends a story's running agent, journals it,
 // and says why when there is none to stop.
 func TestServeAgentStopEndsAStorysAgent(t *testing.T) {
+	t.Parallel()
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	root := tempProject(t)
 	runIn(t, root, "epic", "new", "Epic")
 	runIn(t, root, "story", "new", "Slice", "--epic", "E-0001")

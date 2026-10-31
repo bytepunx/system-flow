@@ -62,6 +62,7 @@ func writeQueueState(t *testing.T, root string, st mergequeue.State) {
 // order, then each other story in review with every reason it is not
 // eligible, each by kind, then the batch and its step and the outcomes.
 func TestQueueListsTheEligibleThenEveryReasonOfTheOthers(t *testing.T) {
+	t.Parallel()
 	root := queueProject(t)
 	at := time.Date(2026, 9, 15, 20, 0, 0, 0, time.UTC)
 	writeQueueState(t, root, mergequeue.State{
@@ -114,6 +115,7 @@ func TestQueueListsTheEligibleThenEveryReasonOfTheOthers(t *testing.T) {
 
 // S-0398: with no state file the queue shows no batch and no outcomes.
 func TestQueueWithNoStateShowsNoBatch(t *testing.T) {
+	t.Parallel()
 	root := queueProject(t)
 	out, errOut, code := runIn(t, root, "queue")
 	if code != 0 || !strings.Contains(out, "batch: none\n") || strings.Contains(out, "outcomes") {
@@ -127,7 +129,8 @@ func TestQueueWithNoStateShowsNoBatch(t *testing.T) {
 
 // S-0398: with no story in review flai queue says so plainly.
 func TestQueueWithNoStoryInReview(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	out, errOut, code := runIn(t, tempProject(t), "queue")
 	if code != 0 || out != "no story is in review\nbatch: none\n" {
 		t.Errorf("flai queue: %d %q %s", code, out, errOut)
@@ -137,6 +140,7 @@ func TestQueueWithNoStoryInReview(t *testing.T) {
 // S-0398, ADR-0169: under pull-request acceptance flai queue says the queue
 // does not run, and why, and lists no story.
 func TestQueueIsOffUnderPullRequestAcceptance(t *testing.T) {
+	t.Parallel()
 	root := queueProject(t)
 	m := filepath.Join(root, "system-flow.yaml")
 	_ = os.WriteFile(m, []byte(read(t, m)+"acceptance:\n  mode: pull-request\n"), 0o644)
@@ -201,6 +205,7 @@ func TestQueueAddRecordsWhoAndWhen(t *testing.T) {
 // S-0399 criterion 1: flai queue add refuses a story that is not eligible,
 // naming each reason by kind, and writes nothing.
 func TestQueueAddRefusesAnIneligibleStoryNamingEachReason(t *testing.T) {
+	t.Parallel()
 	root := queueProject(t)
 	_, errOut, code := runIn(t, root, "queue", "add", "S-0002")
 	if code == 0 {
@@ -219,6 +224,7 @@ func TestQueueAddRefusesAnIneligibleStoryNamingEachReason(t *testing.T) {
 // S-0399 criterion 1: flai queue add refuses a story not in review, and an
 // item that is not a story.
 func TestQueueAddRefusesAStoryNotInReview(t *testing.T) {
+	t.Parallel()
 	root := queueProject(t)
 	if _, errOut, code := runIn(t, root, "story", "new", "Later", "--epic", "E-0001"); code != 0 {
 		t.Fatal(errOut)
@@ -236,6 +242,7 @@ func TestQueueAddRefusesAStoryNotInReview(t *testing.T) {
 // S-0399 criterion 1, ADR-0173: under pull-request acceptance flai queue add
 // refuses, saying the queue runs under local acceptance only.
 func TestQueueAddRefusesUnderPullRequestAcceptance(t *testing.T) {
+	t.Parallel()
 	root := queueProject(t)
 	m := filepath.Join(root, "system-flow.yaml")
 	_ = os.WriteFile(m, []byte(read(t, m)+"acceptance:\n  mode: pull-request\n"), 0o644)
@@ -326,6 +333,7 @@ func TestQueueHoldAndResume(t *testing.T) {
 
 // S-0399: flai queue shows the batch's result and why it was dropped.
 func TestQueueShowsTheBatchsResultAndDrop(t *testing.T) {
+	t.Parallel()
 	root := queueProject(t)
 	at := time.Date(2026, 9, 15, 20, 0, 0, 0, time.UTC)
 	batch := &mergequeue.Batch{Stories: []string{"S-0001", "S-0004"}, Step: "verify"}
@@ -395,6 +403,7 @@ func assertNotEnqueued(t *testing.T, root string) {
 // orchestrator enqueues a story it can vouch for, recording the commit its
 // verifier checked and its evidence as given with the story.
 func TestQueueAddByTheOrchestratorRecordsItsEvidence(t *testing.T) {
+	t.Parallel()
 	root, head := orchestratedQueueProject(t, true)
 	evidence := "Verdict: pass, tests and lint clean\n- 1: `cli/feature.go`"
 	js, errOut, code := runStdin(t, root, evidence+"\n", "queue", "add", "S-0001", "--by", "orchestrator", "--verified", head, "--evidence", "-", "--json")
@@ -423,6 +432,7 @@ func TestQueueAddByTheOrchestratorRecordsItsEvidence(t *testing.T) {
 // S-0403 criterion 1: flai queue add --by orchestrator is refused while
 // accept_reviews is off, naming the permission, and writes nothing.
 func TestQueueAddByTheOrchestratorOnlyUnderAcceptReviews(t *testing.T) {
+	t.Parallel()
 	root, head := orchestratedQueueProject(t, false)
 	_, errOut, code := runIn(t, root, "queue", "add", "S-0001", "--by", "orchestrator", "--verified", head, "--evidence", evidenceFile(t, "Verdict: pass\n- 1: `cli/feature.go`\n"))
 	want := "rule: the orchestrator enqueues a story for the merge queue to land only with orchestration.permissions.accept_reviews, which is off: ask the operator with thread_open on S-0001"
@@ -438,6 +448,7 @@ func TestQueueAddByTheOrchestratorOnlyUnderAcceptReviews(t *testing.T) {
 // criterion out or names no changed file for it, or with a verified commit
 // that is not the branch's head.
 func TestQueueAddByTheOrchestratorHoldsTheEvidenceToTheAcceptancesRules(t *testing.T) {
+	t.Parallel()
 	root, head := orchestratedQueueProject(t, true)
 	good := evidenceFile(t, "Verdict: pass\n- 1: `cli/feature.go`\n")
 	initial := gitIn(t, root, "rev-parse", "main")

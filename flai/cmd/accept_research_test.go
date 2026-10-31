@@ -18,8 +18,7 @@ func researchProject(t *testing.T, nature string, withCode bool) (root, remote s
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "")
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root = t.TempDir()
 	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\nprojects:\n  - name: cli\n    path: cli\n    kind: go\n"), 0o644)
 	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", "design", "cli"} {
@@ -108,6 +107,7 @@ func assertAccepted(t *testing.T, root, remote string) {
 // acceptance itself never releases; the point of this test is that a
 // research story is not blocked or treated specially on the way.
 func TestAcceptResearchEndToEnd(t *testing.T) {
+	t.Parallel()
 	root, remote := researchProject(t, "research", false)
 
 	out, errOut, code := runIn(t, root, "accept", "S-0001", "--dry-run", "--json")
@@ -133,6 +133,7 @@ func TestAcceptResearchEndToEnd(t *testing.T) {
 // The board's way in: flai move <story> done is the same acceptance. This
 // story also changed a component; acceptance alone still releases nothing.
 func TestMoveResearchToDoneNamesCodeLandingUnreleased(t *testing.T) {
+	t.Parallel()
 	root, remote := researchProject(t, "research", true)
 	if _, errOut, code := runIn(t, root, "move", "S-0001", "done"); code != 0 {
 		t.Fatalf("move to done: %d %s", code, errOut)
@@ -147,6 +148,7 @@ func TestMoveResearchToDoneNamesCodeLandingUnreleased(t *testing.T) {
 // anything is merged, in the preview as a blocker naming the document and in
 // the real run as an error.
 func TestAcceptRefusesAnExperimentWithoutItsResults(t *testing.T) {
+	t.Parallel()
 	root, remote := researchProject(t, "experiment", false)
 	before := strings.TrimSpace(gitIn(t, root, "rev-parse", "HEAD"))
 	want := "design/experiments/S-0001-what-we-found.md"
@@ -186,6 +188,7 @@ func TestAcceptRefusesAnExperimentWithoutItsResults(t *testing.T) {
 // ADR-0066: an experiment with its results document committed on its branch
 // is accepted like any other story, its code landing on main unreleased.
 func TestAcceptAnExperimentWithItsResults(t *testing.T) {
+	t.Parallel()
 	root, remote := researchProject(t, "experiment", true)
 	wt := filepath.Join(root, ".flai-cache", "worktrees", "S-0001")
 	results := filepath.Join(wt, "design", "experiments", "S-0001-what-we-found.md")
@@ -221,6 +224,7 @@ func TestAcceptAnExperimentWithItsResults(t *testing.T) {
 // A feature story that touched no component: acceptance still merges,
 // archives, and commits it; nothing is released or pushed by accept alone.
 func TestAcceptPushesWhenThePlanIsSkipped(t *testing.T) {
+	t.Parallel()
 	root, remote := researchProject(t, "feature", false)
 	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
 		t.Fatalf("accept: %d %s", code, errOut)

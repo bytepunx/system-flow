@@ -22,6 +22,7 @@ import (
 // flai serve, keeps the MCP server of the project flai serve serves, restarts
 // serve when asked, and when it is killed outright, its children go with it.
 func TestHostRunsServeAndTheMCPServersAndTakesThemWithIt(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skip("builds flai and runs real processes")
 	}

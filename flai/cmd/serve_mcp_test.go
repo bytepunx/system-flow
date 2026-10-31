@@ -20,7 +20,8 @@ import (
 // serves, so they cannot all take the one default port: each takes the first
 // free one from it that no other project was given, and keeps it once used.
 func TestMCPAddrForAProjectFlaiServeStarts(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	repo, err := workitem.Open(root)
 	if err != nil {
@@ -73,8 +74,9 @@ func TestMCPAddrForAProjectFlaiServeStarts(t *testing.T) {
 // flai mcp http --exit-with stops the server once that process is gone: a
 // flai host that was killed never stops its children itself.
 func TestMCPHTTPExitsWithTheProcessItWasGiven(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
 	t.Setenv("FLAI_AGENT", "tester")
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	inEnv(t, "FLAI_AGENT", "tester")
 	old := exitWithProcessEvery
 	exitWithProcessEvery = 20 * time.Millisecond
 	t.Cleanup(func() { exitWithProcessEvery = old })
@@ -87,7 +89,7 @@ func TestMCPHTTPExitsWithTheProcessItWasGiven(t *testing.T) {
 	t.Cleanup(func() { _ = parent.Process.Kill(); _ = parent.Wait() })
 
 	var out, errOut bytes.Buffer
-	a := &app{out: &out, errOut: &errOut, cwd: root}
+	a := &app{configPath: configOf(t), out: &out, errOut: &errOut, cwd: root}
 	server := newRootCmdWith(a)
 	server.SetArgs([]string{"mcp", "http", "--addr", "127.0.0.1:0", "--exit-with", strconv.Itoa(parent.Process.Pid)})
 	served := make(chan error, 1)
@@ -125,9 +127,10 @@ func TestMCPHTTPExitsWithTheProcessItWasGiven(t *testing.T) {
 // S-0110: flai host gives two projects that remembered the same MCP address
 // one each: the first keeps it, the second gets a free one, and the log says so.
 func TestTheHostGivesTwoProjectsThatRememberOnePortOneEach(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	var logged bytes.Buffer
-	l := &hostLauncher{a: &app{log: slog.New(slog.NewTextHandler(&logged, nil))}, taken: map[string]string{}}
+	l := &hostLauncher{a: &app{configPath: configOf(t), log: slog.New(slog.NewTextHandler(&logged, nil))}, taken: map[string]string{}}
 	var repos []*workitem.Repo
 	for i := 0; i < 2; i++ {
 		repo, err := workitem.Open(tempProject(t))
@@ -147,7 +150,7 @@ func TestTheHostGivesTwoProjectsThatRememberOnePortOneEach(t *testing.T) {
 	thirdRepo, _ := workitem.Open(third)
 	_ = os.MkdirAll(thirdRepo.CacheDir(), 0o700)
 	_ = os.WriteFile(mcpFile(thirdRepo, mcpAddrFile), []byte("127.0.0.1:4244\n"), 0o600)
-	serveDir := filepath.Join(filepath.Dir(os.Getenv("FLAI_CONFIG")), "serve")
+	serveDir := filepath.Join(filepath.Dir(configOf(t)), "serve")
 	_ = os.MkdirAll(serveDir, 0o700)
 	_ = os.WriteFile(filepath.Join(serveDir, "projects.json"), []byte(`[{"key":"c","name":"c","root":"`+third+`","url":"http://127.0.0.1:1"}]`), 0o600)
 	first, err := l.mcpAddr(repos[0])

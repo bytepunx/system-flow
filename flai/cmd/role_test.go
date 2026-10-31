@@ -59,7 +59,7 @@ You are the reviewer.
 // rolesProject is a project whose design folder's role files are files.
 func rolesProject(t *testing.T, files map[string]string) string {
 	t.Helper()
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	dir := filepath.Join(root, "design", "workflows", "roles")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -78,6 +78,7 @@ func rolesProject(t *testing.T, files map[string]string) string {
 // trigger under a condition as (when condition), and says a file that does
 // not load on stderr; --json gives the roles with their paths.
 func TestRoleList(t *testing.T) {
+	t.Parallel()
 	root := rolesProject(t, map[string]string{"README.md": "# Roles\n", "reviewer.md": reviewerRole, "broken.md": "no front matter\n"})
 	out, errOut, code := runIn(t, root, "role", "list")
 	if code != 0 {
@@ -122,6 +123,7 @@ func TestRoleList(t *testing.T) {
 // S-0414: flai role show prints a role, its definition, and its body; --json
 // gives the role; an unknown name is an error naming the roles there are.
 func TestRoleShow(t *testing.T) {
+	t.Parallel()
 	root := rolesProject(t, map[string]string{"reviewer.md": reviewerRole})
 	out, errOut, code := runIn(t, root, "role", "show", "reviewer")
 	if code != 0 {
@@ -159,6 +161,7 @@ func TestRoleShow(t *testing.T) {
 // shipped role files to both, so that a renamed command or MCP tool that a
 // baseline role names fails here.
 func TestShippedRolesNameFlaisToolsAndCommands(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skip("integration: reads the monorepo's role files")
 	}
@@ -171,7 +174,7 @@ func TestShippedRolesNameFlaisToolsAndCommands(t *testing.T) {
 		t.Fatalf("the shipped role files: %d roles, %v, %v", len(list), problems, err)
 	}
 	v := check.RolesVocabulary()
-	v.Commands = commandPaths(newRootCmdWith(&app{out: &bytes.Buffer{}, errOut: &bytes.Buffer{}}))
+	v.Commands = commandPaths(newRootCmdWith(&app{configPath: configOf(t), out: &bytes.Buffer{}, errOut: &bytes.Buffer{}}))
 	v.Tools = mcpToolNames(t)
 	if !slices.Contains(v.Commands, "story new") || !slices.Contains(v.Tools, "inbox") {
 		t.Fatalf("the vocabulary misses flai story new or inbox: %v %v", v.Commands, v.Tools)
@@ -236,7 +239,7 @@ func TestRoleRunStartsADefinedRole(t *testing.T) {
 		t.Skip("starts true as the agent's command")
 	}
 	root := rolesProject(t, map[string]string{"reviewer.md": reviewerRole})
-	cfg := os.Getenv("FLAI_CONFIG")
+	cfg := configOf(t)
 	inProcess(t)
 	for _, title := range []string{"Slice", "Gone", "Other"} {
 		runIn(t, root, "story", "new", title)
@@ -316,6 +319,7 @@ func TestRoleRunStartsADefinedRole(t *testing.T) {
 // in its activity document, as the MCP tool activity_log does, and refuses a
 // kind that is no strategic agent, naming those there are.
 func TestActivityLogTakesADefinedRole(t *testing.T) {
+	t.Parallel()
 	root := rolesProject(t, map[string]string{"reviewer.md": reviewerRole})
 	runIn(t, root, "story", "new", "Slice")
 	out, errOut, code := runIn(t, root, "activity", "log", "reviewer", "  reviewed\n S-0001 ", "--item", "S-1", "--json")
@@ -358,7 +362,7 @@ func TestTheMCPServerStartsADefinedRoleUnderItsAction(t *testing.T) {
 	root := rolesProject(t, map[string]string{"reviewer.md": reviewerRole})
 	t.Setenv("FLAI_STARTED_BY", "") // the operator's own agent, whoever runs the tests
 	runIn(t, root, "story", "new", "Slice")
-	a := &app{out: &bytes.Buffer{}, errOut: &bytes.Buffer{}, cwd: root, clock: func() time.Time { return time.Date(2026, 10, 28, 10, 0, 0, 0, time.UTC) }}
+	a := &app{configPath: configOf(t), out: &bytes.Buffer{}, errOut: &bytes.Buffer{}, cwd: root, clock: func() time.Time { return time.Date(2026, 10, 28, 10, 0, 0, 0, time.UTC) }}
 	ctx := context.Background()
 	focus := []harness.Input{{Name: "focus", Value: "docs"}}
 	if _, err := a.mcpRoleRun(ctx, root, "reviewer", "S-1", focus, "agent-ops"); err == nil || !strings.Contains(err.Error(), "the review host action, which the role reviewer's file design/workflows/roles/reviewer.md names, is off for this project: flai serve enable review") {

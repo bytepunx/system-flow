@@ -58,7 +58,8 @@ func absentMainWorktree(t *testing.T) (worktree, main string) {
 // naming the main checkout and the host, and reads and writes nothing,
 // rather than checking the worktree's tracked wip/ for the board's.
 func TestCheckRefusesAWorktreeWhoseMainCheckoutIsAbsent(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	worktree, main := absentMainWorktree(t)
 	before := treeOf(t, worktree)
 	for _, args := range [][]string{
@@ -81,7 +82,8 @@ func TestCheckRefusesAWorktreeWhoseMainCheckoutIsAbsent(t *testing.T) {
 // S-0249: --story S-nnnn passes over the findings outside the story, says
 // how many in the summary, and marks them in --json.
 func TestCheckStoryPassesOverFindingsOutsideIt(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := scopeFixture(t)
 	out, errOut, code := runIn(t, root, "check", "--strict")
 	if code != 1 || !strings.Contains(out, "warning: story.unaccepted: S-002 is done but its branch story/S-002 was never merged; merge or delete it\n") {
@@ -137,7 +139,8 @@ func TestCheckStoryPassesOverFindingsOutsideIt(t *testing.T) {
 // summary names both, and --record-issues, which records one close-out's
 // findings, is refused before checking.
 func TestCheckStoryTakesSeveralStories(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := overlapFixture(t, "", map[string]string{"S-006": "docs"})
 	refs := filepath.Join(root, ".git", "refs", "heads", "story")
 	if err := os.MkdirAll(refs, 0o755); err != nil {
@@ -220,7 +223,8 @@ func (gitScript) LookPath(name string) (string, error) { return name, nil }
 // S-0249: a finding on a path the story's branch changes, committed or
 // uncommitted in its worktree, is the story's and still fails --strict.
 func TestCheckStoryFailsOnAPathItChanges(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	for _, tc := range []struct {
 		name string
 		git  gitScript
@@ -241,7 +245,7 @@ func TestCheckStoryFailsOnAPathItChanges(t *testing.T) {
 			if err := os.MkdirAll(filepath.Join(root, ".flai-cache", "worktrees", "S-004"), 0o755); err != nil {
 				t.Fatal(err)
 			}
-			out, errOut, code := runWithApp(t, &app{cwd: root, runner: tc.git}, "check", "--strict", "--story", "S-004")
+			out, errOut, code := runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: tc.git}, "check", "--strict", "--story", "S-004")
 			if code != tc.code {
 				t.Fatalf("exit %d, want %d:\n%s%s", code, tc.code, out, errOut)
 			}
@@ -282,7 +286,8 @@ func issueFiles(t *testing.T, root string) []string {
 // S-0249: --record-issues records each rule's findings outside the story in
 // one issue, once per story and findings, and bumps it for another story.
 func TestCheckRecordIssuesOpensThenBumpsOncePerStory(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := scopeFixture(t)
 	issue := filepath.Join(root, "design", "issues", "I-0002-flai-check-finds-story-unaccepted-outside-the-story-at-close-out.md")
 	finding := "`wip/archive/kanban/stories/S-002-two.md`: S-002 is done but its branch story/S-002 was never merged; merge or delete it"
@@ -406,14 +411,15 @@ func overlapFixture(t *testing.T, s004 string, stories map[string]string) string
 // I-0076, ADR-0115: two other stories in progress overlap; a close-out of a
 // third neither notes the overlap nor records it in an issue.
 func TestCheckRecordIssuesLeavesOutAnOverlapBetweenTwoOtherStories(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := overlapFixture(t, "", map[string]string{"S-006": "flai", "S-007": "flai/cmd"})
 	git := gitScript{changed: "wip/kanban/epics/E-001-epic.md"}
-	out, errOut, _ := runWithApp(t, &app{cwd: root, runner: git}, "check")
+	out, errOut, _ := runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: git}, "check")
 	if !strings.Contains(out, "warning: wip.overlap: S-006 touches flai, which S-007 (in progress) also touches as flai/cmd\n") {
 		t.Fatalf("unscoped, the run should report the overlap of S-006 and S-007:\n%s%s", out, errOut)
 	}
-	out, errOut, code := runWithApp(t, &app{cwd: root, runner: git}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
+	out, errOut, code := runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: git}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
 	var res struct {
 		Outside  int `json:"outside"`
 		Findings []struct {
@@ -435,9 +441,10 @@ func TestCheckRecordIssuesLeavesOutAnOverlapBetweenTwoOtherStories(t *testing.T)
 // ADR-0115: an overlap that names the closing story is printed as a note
 // outside it, and is not recorded in an issue.
 func TestCheckRecordIssuesNotesButDoesNotRecordTheStorysOwnOverlap(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := overlapFixture(t, "flai", map[string]string{"S-006": "flai/cmd"})
-	out, errOut, code := runWithApp(t, &app{cwd: root, runner: gitScript{changed: "wip/kanban/epics/E-001-epic.md"}}, "check", "--strict", "--story", "S-004", "--record-issues")
+	out, errOut, code := runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: gitScript{changed: "wip/kanban/epics/E-001-epic.md"}}, "check", "--strict", "--story", "S-004", "--record-issues")
 	if code != 0 {
 		t.Fatalf("a note should not fail --strict: exit %d\n%s%s", code, out, errOut)
 	}
@@ -456,7 +463,8 @@ func TestCheckRecordIssuesNotesButDoesNotRecordTheStorysOwnOverlap(t *testing.T)
 // archived; a close-out of S-004 neither notes its item.archive nor records
 // it in an issue, while the unscoped check still warns on it.
 func TestCheckRecordIssuesLeavesOutAnItemArchiveOutsideTheStory(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := overlapFixture(t, "", nil)
 	story := "---\nid: S-006\ntype: story\nnature: feature\ntitle: Six\nstatus: cancelled\nparent: E-001\nowner: agent\n" +
 		"created: 2026-08-25T09:00:00Z\nupdated: 2026-08-26T10:00:00Z\ntransitions:\n  - to: cancelled\n    at: 2026-08-26T10:00:00Z\n    by: alex\ntags: []\n" +
@@ -473,11 +481,11 @@ func TestCheckRecordIssuesLeavesOutAnItemArchiveOutsideTheStory(t *testing.T) {
 		t.Fatal(err)
 	}
 	git := gitScript{changed: "wip/kanban/epics/E-001-epic.md"}
-	out, errOut, _ := runWithApp(t, &app{cwd: root, runner: git}, "check")
+	out, errOut, _ := runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: git}, "check")
 	if !strings.Contains(out, "warning: item.archive: S-006 is cancelled; run flai archive\n") {
 		t.Fatalf("unscoped, the run should report S-006's item.archive:\n%s%s", out, errOut)
 	}
-	out, errOut, code := runWithApp(t, &app{cwd: root, runner: git}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
+	out, errOut, code := runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: git}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
 	var res struct {
 		Outside  int               `json:"outside"`
 		Recorded []json.RawMessage `json:"recorded"`
@@ -498,7 +506,8 @@ func TestCheckRecordIssuesLeavesOutAnItemArchiveOutsideTheStory(t *testing.T) {
 // notes the board.wip-limit nor records it in an issue, while the unscoped
 // check still warns on it and fails --strict.
 func TestCheckRecordIssuesLeavesOutABoardWIPLimitOutsideTheStory(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := overlapFixture(t, "", map[string]string{"S-006": "docs", "S-007": "template"})
 	board := filepath.Join(root, "wip/kanban/board.md")
 	data, err := os.ReadFile(board)
@@ -509,11 +518,11 @@ func TestCheckRecordIssuesLeavesOutABoardWIPLimitOutsideTheStory(t *testing.T) {
 		t.Fatal(err)
 	}
 	git := gitScript{changed: "wip/kanban/epics/E-001-epic.md"}
-	out, errOut, code := runWithApp(t, &app{cwd: root, runner: git}, "check", "--strict")
+	out, errOut, code := runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: git}, "check", "--strict")
 	if code == 0 || !strings.Contains(out, "warning: board.wip-limit: 3 stories in in-progress, limit 2\n") {
 		t.Fatalf("unscoped, the run should warn on the board's in-progress limit and fail --strict: exit %d\n%s%s", code, out, errOut)
 	}
-	out, errOut, code = runWithApp(t, &app{cwd: root, runner: git}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
+	out, errOut, code = runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: git}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
 	var res struct {
 		Outside  int               `json:"outside"`
 		Recorded []json.RawMessage `json:"recorded"`
@@ -535,7 +544,8 @@ func TestCheckRecordIssuesLeavesOutABoardWIPLimitOutsideTheStory(t *testing.T) {
 // notes the issues.no-story nor records it in an issue, while the unscoped
 // check still warns on it and fails --strict.
 func TestCheckRecordIssuesLeavesOutAnIssuesNoStoryOutsideTheStory(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := overlapFixture(t, "", nil)
 	dir := filepath.Join(root, "design", "issues")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -551,11 +561,11 @@ func TestCheckRecordIssuesLeavesOutAnIssuesNoStoryOutsideTheStory(t *testing.T) 
 		t.Fatal(err)
 	}
 	git := gitScript{changed: "wip/kanban/epics/E-001-epic.md"}
-	out, errOut, code := runWithApp(t, &app{cwd: root, runner: git}, "check", "--strict")
+	out, errOut, code := runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: git}, "check", "--strict")
 	if code == 0 || !strings.Contains(out, "warning: issues.no-story: I-0052 has been open since 2026-08-01 with no open story linking it") {
 		t.Fatalf("unscoped, the run should warn on I-0052 with no story and fail --strict: exit %d\n%s%s", code, out, errOut)
 	}
-	out, errOut, code = runWithApp(t, &app{cwd: root, runner: git}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
+	out, errOut, code = runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: git}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
 	var res struct {
 		Outside  int               `json:"outside"`
 		Recorded []json.RawMessage `json:"recorded"`
@@ -584,7 +594,8 @@ func TestCheckRecordIssuesLeavesOutAnIssuesNoStoryOutsideTheStory(t *testing.T) 
 // threads.archived nor records it in an issue, while the unscoped check still
 // warns on it and fails --strict.
 func TestCheckRecordIssuesLeavesOutAThreadsArchivedOutsideTheStory(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := overlapFixture(t, "", nil)
 	thread := "---\nid: TH-0389\ntitle: Waits for the operator\nanchor:\n  path: wip/kanban/stories/S-003-three.md\n  item: S-003\n" +
 		"status: open\nparticipants: [orchestrator]\ncreated: 2026-08-30T09:00:00Z\nupdated: 2026-08-30T09:00:00Z\n---\n\n" +
@@ -594,11 +605,11 @@ func TestCheckRecordIssuesLeavesOutAThreadsArchivedOutsideTheStory(t *testing.T)
 		t.Fatal(err)
 	}
 	git := gitScript{changed: "wip/kanban/epics/E-001-epic.md"}
-	out, errOut, code := runWithApp(t, &app{cwd: root, runner: git}, "check", "--strict")
+	out, errOut, code := runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: git}, "check", "--strict")
 	if code == 0 || !strings.Contains(out, "warning: threads.archived: TH-0389 is open but S-003 is archived; resolve it with flai thread resolve TH-0389") {
 		t.Fatalf("unscoped, the run should warn on TH-0389 open on the archived S-003 and fail --strict: exit %d\n%s%s", code, out, errOut)
 	}
-	out, errOut, code = runWithApp(t, &app{cwd: root, runner: git}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
+	out, errOut, code = runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: git}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
 	var res struct {
 		Outside  int               `json:"outside"`
 		Recorded []json.RawMessage `json:"recorded"`
@@ -625,7 +636,7 @@ func TestCheckRecordIssuesLeavesOutAThreadsArchivedOutsideTheStory(t *testing.T)
 // svelte is not installed gets the same note on its folder; the check
 // package's scope tests cover it, as node cannot be faked here.)
 func TestCheckRecordIssuesLeavesOutAnUncheckedExamplesNoteOutsideTheStory(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	t.Setenv("PATH", t.TempDir())
 	root := overlapFixture(t, "", nil)
 	const examples = "design/components/web/src/lib/Card.examples.json"
@@ -648,7 +659,7 @@ func TestCheckRecordIssuesLeavesOutAnUncheckedExamplesNoteOutsideTheStory(t *tes
 	write(filepath.Join(root, filepath.FromSlash(examples)), `{"examples": [{"name": "A", "props": {}}]}`)
 	const note = "warning: components.examples: the props of the examples under design/components are not checked against their components': flai reads a component's props with node, which is not on PATH"
 	git := gitScript{changed: "wip/kanban/epics/E-001-epic.md"}
-	out, errOut, code := runWithApp(t, &app{cwd: root, runner: git}, "check")
+	out, errOut, code := runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: git}, "check")
 	if code != 0 || !strings.Contains(out, note) {
 		t.Fatalf("unscoped, the run should note the examples left unchecked: exit %d\n%s%s", code, out, errOut)
 	}
@@ -660,7 +671,7 @@ func TestCheckRecordIssuesLeavesOutAnUncheckedExamplesNoteOutsideTheStory(t *tes
 		Outside  int               `json:"outside"`
 		Recorded []json.RawMessage `json:"recorded"`
 	}
-	out, errOut, code = runWithApp(t, &app{cwd: root, runner: git}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
+	out, errOut, code = runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: git}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
 	if err := json.Unmarshal([]byte(out), &res); err != nil || code != 0 {
 		t.Fatalf("exit %d %v\n%s%s", code, err, out, errOut)
 	}
@@ -682,7 +693,7 @@ func TestCheckRecordIssuesLeavesOutAnUncheckedExamplesNoteOutsideTheStory(t *tes
 			Rule string `json:"rule"`
 		} `json:"recorded"`
 	}
-	out, errOut, code = runWithApp(t, &app{cwd: root, runner: gitScript{changed: examples}}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
+	out, errOut, code = runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: gitScript{changed: examples}}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
 	if err := json.Unmarshal([]byte(out), &own); err != nil || code != 0 {
 		t.Fatalf("exit %d %v\n%s%s", code, err, out, errOut)
 	}
@@ -708,7 +719,8 @@ func TestCheckRecordIssuesLeavesOutAnUncheckedExamplesNoteOutsideTheStory(t *tes
 // its markdown.MD038 nor records it in an issue, while the unscoped check
 // still warns on it.
 func TestCheckRecordIssuesLeavesOutAMarkdownFindingOnAnotherOpenStorysNarrative(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := overlapFixture(t, "", map[string]string{"S-006": "docs"})
 	if err := os.WriteFile(filepath.Join(root, ".markdownlint.yaml"), []byte("default: true\nMD022:\n  lines_below: 0\nMD024:\n  siblings_only: true\nMD025:\n  front_matter_title: \"\"\nMD041: false\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -722,11 +734,11 @@ func TestCheckRecordIssuesLeavesOutAMarkdownFindingOnAnotherOpenStorysNarrative(
 		t.Fatal(err)
 	}
 	git := gitScript{changed: "wip/kanban/epics/E-001-epic.md"}
-	out, errOut, _ := runWithApp(t, &app{cwd: root, runner: git}, "check")
+	out, errOut, _ := runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: git}, "check")
 	if !strings.Contains(out, "wip/agents/S-006.md:29: warning: markdown.MD038: ") {
 		t.Fatalf("unscoped, the run should report the MD038 on S-006's narrative:\n%s%s", out, errOut)
 	}
-	out, errOut, code := runWithApp(t, &app{cwd: root, runner: git}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
+	out, errOut, code := runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: git}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
 	var res struct {
 		Outside  int               `json:"outside"`
 		Recorded []json.RawMessage `json:"recorded"`
@@ -747,7 +759,8 @@ func TestCheckRecordIssuesLeavesOutAMarkdownFindingOnAnotherOpenStorysNarrative(
 // a close-out of S-004 neither notes its narrative.state nor records it in an
 // issue, while the unscoped check still warns on it.
 func TestCheckRecordIssuesLeavesOutNarrativeStateOnAnotherOpenStorysNarrative(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := overlapFixture(t, "", map[string]string{"S-006": "docs"})
 	narrative := filepath.Join(root, "wip/agents/S-006.md")
 	data, err := os.ReadFile(narrative)
@@ -762,11 +775,11 @@ func TestCheckRecordIssuesLeavesOutNarrativeStateOnAnotherOpenStorysNarrative(t 
 		t.Fatal(err)
 	}
 	git := gitScript{changed: "wip/kanban/epics/E-001-epic.md"}
-	out, errOut, _ := runWithApp(t, &app{cwd: root, runner: git}, "check")
+	out, errOut, _ := runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: git}, "check")
 	if !strings.Contains(out, "wip/agents/S-006.md:14: warning: narrative.state: ") {
 		t.Fatalf("unscoped, the run should report the narrative.state on S-006's narrative:\n%s%s", out, errOut)
 	}
-	out, errOut, code := runWithApp(t, &app{cwd: root, runner: git}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
+	out, errOut, code := runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: git}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
 	var res struct {
 		Outside  int               `json:"outside"`
 		Recorded []json.RawMessage `json:"recorded"`
@@ -785,6 +798,7 @@ func TestCheckRecordIssuesLeavesOutNarrativeStateOnAnotherOpenStorysNarrative(t 
 // S-0227: a finding that quotes a code span is written without backticks,
 // so the issue it is recorded in passes the markdown lint (MD038).
 func TestFindingTextLeavesNoCodeSpanOpen(t *testing.T) {
+	t.Parallel()
 	got := findingText("MD038/no-space-in-code Spaces inside code span elements\n  [Context: \"`rule: `\"]")
 	want := `MD038/no-space-in-code Spaces inside code span elements [Context: "'rule: '"]`
 	if got != want {
@@ -795,7 +809,8 @@ func TestFindingTextLeavesNoCodeSpanOpen(t *testing.T) {
 // S-0249: --record-issues needs --story, and a run with nothing outside the
 // story writes nothing under design/issues.
 func TestCheckRecordIssuesNeedsStoryAndWritesOnlyWhatIsOutside(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := scopeFixture(t)
 	out, errOut, code := runIn(t, root, "check", "--strict", "--record-issues")
 	if code == 0 || !strings.Contains(errOut, "--record-issues records the findings outside a story: give --story S-nnnn") || strings.Contains(out, "items checked") {
@@ -808,7 +823,7 @@ func TestCheckRecordIssuesNeedsStoryAndWritesOnlyWhatIsOutside(t *testing.T) {
 	if err := os.CopyFS(root, os.DirFS("../internal/metrics/testdata/good")); err != nil {
 		t.Fatal(err)
 	}
-	out, errOut, code = runWithApp(t, &app{cwd: root, runner: gitScript{changed: "wip/kanban/epics/E-001-epic.md"}}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
+	out, errOut, code = runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: gitScript{changed: "wip/kanban/epics/E-001-epic.md"}}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
 	var res struct {
 		Outside  int               `json:"outside"`
 		Findings []json.RawMessage `json:"findings"`
@@ -828,6 +843,7 @@ func TestCheckRecordIssuesNeedsStoryAndWritesOnlyWhatIsOutside(t *testing.T) {
 // Run in a story's worktree, a finding on wip/, which lives in the main
 // checkout, is recorded under the path the project names it by, not with ../.
 func TestProjectPathNamesWipFromTheMainCheckout(t *testing.T) {
+	t.Parallel()
 	main := filepath.Join(t.TempDir(), "proj")
 	wt := filepath.Join(main, ".flai-cache", "worktrees", "S-0004")
 	repo := &workitem.Repo{Root: wt, MainRoot: main}

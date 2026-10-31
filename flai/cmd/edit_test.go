@@ -18,8 +18,7 @@ func editProject(t *testing.T) string {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "")
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	_ = os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".flai-cache/\n"), 0o644)
 	_ = os.MkdirAll(filepath.Join(root, "design", "system"), 0o755)
@@ -59,6 +58,7 @@ func read(t *testing.T, path string) string {
 // S-0085: a title lives in six places, and a retitle keeps them in step, in
 // one commit.
 func TestEditRetitlesEverywhere(t *testing.T) {
+	t.Parallel()
 	root := editProject(t)
 	out, errOut, code := runIn(t, root, "edit", "S-0001", "--title", "  A better   name ", "--autocommit", "--trailer", "Co-Authored-By: someone <s@s>")
 	if code != 0 || !strings.Contains(out, "changed title") || !strings.Contains(out, "renamed from wip/kanban/stories/S-0001-a-plain-story.md") {
@@ -108,6 +108,7 @@ func TestEditRetitlesEverywhere(t *testing.T) {
 }
 
 func TestEditFieldsParentAndBody(t *testing.T) {
+	t.Parallel()
 	root := editProject(t)
 	out, errOut, code := runIn(t, root, "edit", "S-0001", "--nature", "remediation", "--tag", "dashboard,cli", "--touches", "flai/cmd/", "--touches", "flaiover/src", "--parent", "E-2", "--json")
 	var res struct {
@@ -169,6 +170,7 @@ func TestEditFieldsParentAndBody(t *testing.T) {
 // and flai edit records it; one that leaves the repository is refused as a
 // rule, and nothing is written.
 func TestEditTouchesStartingWithADot(t *testing.T) {
+	t.Parallel()
 	root := editProject(t)
 	file := filepath.Join(root, "wip/kanban/stories/S-0001-a-plain-story.md")
 	if out, errOut, code := runIn(t, root, "edit", "S-0001", "--touches", ".claude/agents/planner.md", "--touches", ".github/workflows/"); code != 0 || !strings.Contains(out, "changed touches") {
@@ -189,6 +191,7 @@ func TestEditTouchesStartingWithADot(t *testing.T) {
 }
 
 func TestEditRefusals(t *testing.T) {
+	t.Parallel()
 	root := editProject(t)
 	file := filepath.Join(root, "wip/kanban/stories/S-0001-a-plain-story.md")
 	before := read(t, file)
@@ -255,7 +258,7 @@ func TestEditRefusals(t *testing.T) {
 // entry that names no task, a task of another story, or a cycle is refused
 // and nothing is written; --clear-after removes them. flai story new --after
 // sets a story's.
-func TestTaskAfterIsSetByTaskNewAndEdit(t *testing.T) {
+func testTaskAfterIsSetByTaskNewAndEdit(t *testing.T) {
 	root := heldProject(t)
 	for _, args := range [][]string{
 		{"task", "new", "First", "--story", "S-0001"},
@@ -325,9 +328,8 @@ func TestTaskAfterIsSetByTaskNewAndEdit(t *testing.T) {
 // changed, and names the orchestrator as who finalized it; an incomplete one
 // is refused naming what it lacks. Outside it --no-draft is as it was.
 func TestTheOrchestratorFinalizesOnlyACompleteDraft(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	t.Setenv("FLAI_AGENT", "orchestrator")
-	t.Setenv("FLAI_ROLE", "")
 	root := tempProject(t)
 	run := func(args ...string) string {
 		t.Helper()
@@ -387,9 +389,8 @@ func TestTheOrchestratorFinalizesOnlyACompleteDraft(t *testing.T) {
 // epic or a story that is open, in any column and with inputs of its own or
 // its epic's already.
 func TestTheOrchestratorSetsCostOfDelayInputsByItsPermissions(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	t.Setenv("FLAI_AGENT", "orchestrator")
-	t.Setenv("FLAI_ROLE", "")
 	root := tempProject(t)
 	run := func(args ...string) string {
 		t.Helper()

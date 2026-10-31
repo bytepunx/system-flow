@@ -10,6 +10,7 @@ import (
 
 // S-0231: flai license prints the license built into the binary, whole.
 func TestLicensePrintsTheEmbeddedLicense(t *testing.T) {
+	t.Parallel()
 	out, errOut, code := runCLI(t, "license")
 	if code != 0 {
 		t.Fatalf("exit %d: %s", code, errOut)

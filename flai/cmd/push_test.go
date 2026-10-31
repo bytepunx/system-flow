@@ -12,6 +12,7 @@ import (
 // the host, by flai push --pending, an operator's tool outside the workflow
 // since ADR-0067; flai board no longer says when there is one.
 func TestPushPending(t *testing.T) {
+	t.Parallel()
 	root, remote := researchProject(t, "feature", true)
 	// accept as the dashboard container does when it holds nothing; S-0087:
 	// acceptance alone tags nothing, so there is a pending acceptance commit
@@ -47,6 +48,7 @@ func TestPushPending(t *testing.T) {
 // unreleased, to be published together (ADR-0032), however many pushes
 // carry it to the remote.
 func TestPushPendingReleasesNothingByDefault(t *testing.T) {
+	t.Parallel()
 	root, remote := researchProject(t, "feature", true)
 	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
 		t.Fatalf("accept: %s", errOut)
@@ -92,6 +94,7 @@ func TestPushPendingReleasesNothingByDefault(t *testing.T) {
 // something does. With the auto-publish host action enabled (S-0144), a push
 // does, before the push itself, not as a separate step.
 func TestPushPendingTagsWhatAcceptLeftUnreleased(t *testing.T) {
+	t.Parallel()
 	root, remote := researchProject(t, "feature", true)
 	if _, errOut, code := runIn(t, root, "serve", "enable", "auto-publish"); code != 0 {
 		t.Fatalf("enable auto-publish: %s", errOut)
@@ -140,6 +143,7 @@ func TestPushPendingTagsWhatAcceptLeftUnreleased(t *testing.T) {
 // pushes nothing and tags nothing, dry run or not: the release it would tag
 // first is built on a stale tag.
 func TestPushPendingAutoPublishRefusesALaggingClone(t *testing.T) {
+	t.Parallel()
 	root, remote := researchProject(t, "feature", true)
 	if _, errOut, code := runIn(t, root, "serve", "enable", "auto-publish"); code != 0 {
 		t.Fatalf("enable auto-publish: %s", errOut)
@@ -164,6 +168,7 @@ func TestPushPendingAutoPublishRefusesALaggingClone(t *testing.T) {
 }
 
 func TestPushPendingLeavesOrdinaryCommitsAndDivergenceAlone(t *testing.T) {
+	t.Parallel()
 	root, remote := researchProject(t, "feature", false)
 	gitIn(t, root, "add", "-A")
 	gitIn(t, root, "commit", "-q", "-m", "chore: wip that is nobody's acceptance")
@@ -195,6 +200,7 @@ func TestPushPendingLeavesOrdinaryCommitsAndDivergenceAlone(t *testing.T) {
 // S-0144: with auto-publish turned on after an acceptance was pushed, the
 // next push tags it and sends the tag alone, since the remote has the commit.
 func TestPushPendingAutoPublishesAnAcceptanceAlreadyPushed(t *testing.T) {
+	t.Parallel()
 	root, remote := researchProject(t, "feature", true)
 	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
 		t.Fatalf("accept: %s", errOut)
@@ -220,6 +226,7 @@ func TestPushPendingAutoPublishesAnAcceptanceAlreadyPushed(t *testing.T) {
 // I-0026: more than three tags in one push create no tag events on GitHub, so
 // the push is made in parts, and every tag still arrives.
 func TestPushPendingManyTags(t *testing.T) {
+	t.Parallel()
 	root, remote := researchProject(t, "feature", true)
 	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
 		t.Fatalf("accept: %s", errOut)
@@ -245,6 +252,7 @@ func TestPushPendingManyTags(t *testing.T) {
 // S-0078: --publish also publishes a template component whose version the
 // pushed commits moved, after the push, as flai template push --tag does.
 func TestPushPendingPublishesAMovedTemplate(t *testing.T) {
+	t.Parallel()
 	root, remote := researchProject(t, "feature", true)
 	bare := filepath.Join(t.TempDir(), "tpl.git")
 	gitIn(t, filepath.Dir(bare), "init", "-q", "--bare", "-b", "main", bare)

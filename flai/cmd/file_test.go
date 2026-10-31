@@ -64,7 +64,7 @@ func showFile(t *testing.T, root, path string, flags ...string) (content, hash s
 
 // S-0436: flai file show prints the raw content on standard output and the
 // path and hash on standard error, or {path, content, hash} with --json.
-func TestFileShow(t *testing.T) {
+func testFileShow(t *testing.T) {
 	root := fileCmdProject(t)
 	out, errOut, code := runIn(t, root, "file", "show", "./"+filePalette)
 	if code != 0 || out != palette {
@@ -84,7 +84,7 @@ func TestFileShow(t *testing.T) {
 // S-0436: a path out of reach, the wip folder, a markdown file, a binary
 // file, and a file over the size limit are refused by show and save with
 // exit status 1 and the reason, and nothing is written.
-func TestFileRefusesWhatItDoesNotReach(t *testing.T) {
+func testFileRefusesWhatItDoesNotReach(t *testing.T) {
 	root := fileCmdProject(t)
 	writeProjectFile(t, root, "wip/notes.txt", "notes\n")
 	writeProjectFile(t, root, "design/system/blob.bin", "GIF89a\x00\x01")
@@ -118,7 +118,7 @@ func TestFileRefusesWhatItDoesNotReach(t *testing.T) {
 
 // S-0443, ADR-0164: a save without --hash creates a file that is absent,
 // with its folders, and commits it.
-func TestFileSaveWithoutHashCreates(t *testing.T) {
+func testFileSaveWithoutHashCreates(t *testing.T) {
 	root := fileCmdProject(t)
 	path := "design/system/drafts/new.json"
 	out, errOut, code := runStdin(t, root, "{}\n", "file", "save", path)
@@ -139,7 +139,7 @@ func TestFileSaveWithoutHashCreates(t *testing.T) {
 
 // S-0436: a save writes the content as it is and commits the one path as
 // docs, as text and as JSON; the same content again is unchanged.
-func TestFileSaveCommitsOnePath(t *testing.T) {
+func testFileSaveCommitsOnePath(t *testing.T) {
 	root := fileCmdProject(t)
 	_, hash := showFile(t, root, filePalette)
 	mine := "{\"accent\": \"mine\"}\n"
@@ -172,7 +172,7 @@ func TestFileSaveCommitsOnePath(t *testing.T) {
 // S-0436, ADR-0150: a save of the token file writes the stylesheet from the
 // new tokens and commits both paths in one commit, and flai check finds the
 // stylesheet in step.
-func TestFileSaveTokensCommitsTheStylesheet(t *testing.T) {
+func testFileSaveTokensCommitsTheStylesheet(t *testing.T) {
 	if editedTokens == starterTokens || sheetOf(t, fileTokens, editedTokens) == sheetOf(t, fileTokens, starterTokens) {
 		t.Fatal("the edit must change the stylesheet")
 	}
@@ -219,7 +219,7 @@ func TestFileSaveTokensCommitsTheStylesheet(t *testing.T) {
 
 // S-0436: a stale hash is a conflict, exit 3, with the current content and
 // a diff, as JSON and as text, and the other change is kept.
-func TestFileSaveConflict(t *testing.T) {
+func testFileSaveConflict(t *testing.T) {
 	root := fileCmdProject(t)
 	_, hash := showFile(t, root, filePalette)
 	theirs := "{\"accent\": \"theirs\"}\n"
@@ -250,7 +250,7 @@ func TestFileSaveConflict(t *testing.T) {
 // and the files are left as they were: a token file it cannot render, a
 // stylesheet the check finds out of step with the tokens, and binary
 // content.
-func TestFileSaveRefused(t *testing.T) {
+func testFileSaveRefused(t *testing.T) {
 	root := fileCmdProject(t)
 	head := gitIn(t, root, "rev-parse", "HEAD")
 	_, tokensHash := showFile(t, root, fileTokens)
@@ -285,7 +285,7 @@ func TestFileSaveRefused(t *testing.T) {
 // S-0436, ADR-0145: with --story, show reads and save writes, checks, and
 // commits the token file and its stylesheet in the story's worktree, on its
 // branch, and the main checkout is left as it was.
-func TestFileSaveWithAStory(t *testing.T) {
+func testFileSaveWithAStory(t *testing.T) {
 	root := fileCmdProject(t)
 	if _, errOut, code := runIn(t, root, "file", "show", filePalette, "--story", "S-0001"); code != 1 || !strings.Contains(errOut, "S-0001: it has no worktree") {
 		t.Errorf("a story without a worktree: %d %s", code, errOut)

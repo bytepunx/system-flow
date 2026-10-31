@@ -21,7 +21,8 @@ import (
 const miniTemplate = "../internal/template/testdata/mini"
 
 func TestNewWithDefaultsAndVars(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	dest := filepath.Join(t.TempDir(), "demo-app")
 	out, errOut, code := runCLI(t, "new", dest, "--template", miniTemplate, "--defaults", "--var", "description=Hello", "--no-git")
 	if code != 0 {
@@ -60,7 +61,8 @@ func TestNewWithDefaultsAndVars(t *testing.T) {
 }
 
 func TestNewLayoutRenameAndErrors(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	dest := filepath.Join(t.TempDir(), "p")
 	_, errOut, code := runCLI(t, "new", dest, "--template", miniTemplate, "--defaults", "--no-git", "--layout", "design=arch")
 	if code != 0 {
@@ -89,7 +91,8 @@ func TestNewLayoutRenameAndErrors(t *testing.T) {
 }
 
 func TestNewRequiresVarsWhenNotInteractive(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	tpl := t.TempDir()
 	_ = os.MkdirAll(filepath.Join(tpl, "root"), 0o755)
 	_ = os.WriteFile(filepath.Join(tpl, "template.yaml"), []byte("version: 1\nvariables:\n  - name: team\n    required: true\nlayout: {design: design, docs: docs, wip: wip}\n"), 0o644)
@@ -107,7 +110,8 @@ func TestNewRequiresVarsWhenNotInteractive(t *testing.T) {
 // An empty value given with --var for a required variable is refused before
 // anything is written, as an empty default is (I-0041).
 func TestNewRefusesAnEmptyRequiredVarBeforeWriting(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	dest := filepath.Join(t.TempDir(), "p")
 	_, errOut, code := runCLI(t, "new", dest, "--template", miniTemplate, "--defaults", "--no-git", "--var", "project_name=")
 	if code == 0 || !strings.Contains(errOut, "required variables not set: project_name") {
@@ -119,8 +123,9 @@ func TestNewRefusesAnEmptyRequiredVarBeforeWriting(t *testing.T) {
 }
 
 func TestTemplateCommands(t *testing.T) {
+	t.Parallel()
 	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfgPath)
+	useConfig(t, cfgPath)
 	out, _, code := runCLI(t, "template", "use", miniTemplate, "--ref", "x")
 	if code != 0 || !strings.Contains(out, "template.repo = "+miniTemplate) {
 		t.Fatalf("use: %d %s", code, out)
@@ -147,6 +152,7 @@ func TestTemplateCommands(t *testing.T) {
 // and checks the result is a valid conforming project. Skipped when the
 // prototype is not present (for example when flai is built standalone).
 func TestRenderPrototypeTemplate(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skip("integration: renders the monorepo template")
 	}
@@ -154,7 +160,7 @@ func TestRenderPrototypeTemplate(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(proto, "template.yaml")); err != nil {
 		t.Skip("prototype template not present")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	dest := filepath.Join(t.TempDir(), "sample")
 	_, errOut, code := runCLI(t, "new", dest, "--template", proto, "--defaults", "--no-git",
 		"--var", "description=Sample project", "--var", "owner=qa")
@@ -208,9 +214,10 @@ func TestRenderPrototypeTemplate(t *testing.T) {
 }
 
 func TestNewAsksForEachVariableAtATerminal(t *testing.T) {
+	t.Parallel()
 	var out strings.Builder
 	tty := true
-	a := &app{out: &out, stdinIsTerminal: &tty,
+	a := &app{configPath: configOf(t), out: &out, stdinIsTerminal: &tty,
 		prompter: prompt.New(strings.NewReader("\n\nOwner\nnot a url\nhttps://example.org/o/r\n"), &out)}
 	m := template.Manifest{Variables: []template.Variable{
 		{Name: "project_name", Prompt: "Project name"},
@@ -287,8 +294,9 @@ func madeAt(t *testing.T, dest, url, ref, version string) {
 // version it spells, wins; a configured ref naming another branch is used
 // as given (ADR-0103).
 func TestNewMakesTheProjectAtTheNewestRelease(t *testing.T) {
+	t.Parallel()
 	url := releasedTemplate(t)
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	if _, errOut, code := runIn(t, ".", "template", "use", url, "--ref", "main"); code != 0 {
 		t.Fatalf("template use: %s", errOut)
 	}
@@ -339,13 +347,14 @@ func TestNewMakesTheProjectAtTheNewestRelease(t *testing.T) {
 
 // A git template with no release tags is used at the configured ref.
 func TestNewWithoutReleaseTagsUsesTheConfiguredRef(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skip("integration: builds a git template")
 	}
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	tpl := copyTemplate(t)
 	forkVersion(t, tpl, "1.2.3", "", "v1.2.3\n")
 	gitIn(t, tpl, "init", "-q", "-b", "main")
@@ -387,7 +396,7 @@ func (r *staleRunner) LookPath(name string) (string, error) { return "/usr/bin/"
 // A cached branch clone that cannot be fetched again is used, with a
 // warning, rather than failing the command (ADR-0103).
 func TestResolveTemplateWarnsAndUsesAStaleClone(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	cache := t.TempDir()
 	t.Setenv(config.CacheEnvVar, cache)
 	repo := "https://example.invalid/template.git"
@@ -404,7 +413,7 @@ func TestResolveTemplateWarnsAndUsesAStaleClone(t *testing.T) {
 	}
 	var out, errOut strings.Builder
 	r := &staleRunner{}
-	a := &app{out: &out, errOut: &errOut, runner: r}
+	a := &app{configPath: configOf(t), out: &out, errOut: &errOut, runner: r}
 	got, m, err := a.resolveTemplate(repo, "main", false)
 	if err != nil {
 		t.Fatalf("a stale clone must not fail: %v", err)

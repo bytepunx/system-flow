@@ -26,9 +26,10 @@ import (
 // flai serve keeps its registry beside the config file in use, so a test
 // (and a repository with its own config) never touches the operator's home.
 func TestServeStatusReadsTheRegistryBesideTheConfig(t *testing.T) {
+	t.Parallel()
 	home := t.TempDir()
 	cfg := filepath.Join(home, "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	out, errOut, code := runIn(t, home, "serve", "status")
 	if code != 0 || !strings.Contains(out, "not running") || !strings.Contains(out, "no projects registered") {
 		t.Fatalf("empty: %d %s %s", code, out, errOut)
@@ -55,9 +56,10 @@ func TestServeStatusReadsTheRegistryBesideTheConfig(t *testing.T) {
 // S-0096: flai serve status says where each served project's MCP server
 // listens, the one flai serve keeps running, so an agent can be pointed at it.
 func TestServeStatusNamesEachProjectsMCPServer(t *testing.T) {
+	t.Parallel()
 	home := t.TempDir()
 	cfg := filepath.Join(home, "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	root := tempProject(t)
 	if err := serve.DirFor(cfg).Register(serve.Entry{Key: "harbour", Name: "Harbour", Root: root, URL: "http://127.0.0.1:4242", KeyFile: filepath.Join(root, "k")}); err != nil {
 		t.Fatal(err)
@@ -123,6 +125,7 @@ func TestServeKeepsMCPServersOnlyWithTheHostItsConfigNames(t *testing.T) {
 // S-0235: flai serve logs one warn at start when a versioned build carries no
 // valid release stamp, and none for a development build or a signed one.
 func TestServeWarnsOnceWithoutAValidReleaseStamp(t *testing.T) {
+	t.Parallel()
 	k, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		t.Fatal(err)
@@ -207,9 +210,10 @@ var refusedConnections = map[string]channel.State{
 // bare last error, for a registered project and one served from the folder;
 // a connected project is shown as before, and --json carries the fields.
 func TestServeStatusSaysWhichSideRefusedTheOtherAsUnsigned(t *testing.T) {
+	t.Parallel()
 	home := t.TempDir()
 	cfg := filepath.Join(home, "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	for key, root := range map[string]string{"harbour": tempProject(t), "dock": tempProject(t)} {
 		if err := os.WriteFile(filepath.Join(root, "k"), []byte("credential"), 0o600); err != nil {
 			t.Fatal(err)
@@ -264,6 +268,7 @@ func TestServeStatusSaysWhichSideRefusedTheOtherAsUnsigned(t *testing.T) {
 // A close that gave no reason and a dashboard that named no version are said
 // without the parentheses rather than with an empty or repeated reason.
 func TestRefusalLeavesOutWhatIsNotKnown(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		state channel.State
 		want  string
@@ -308,6 +313,7 @@ var imageConnections = map[string]channel.State{
 // flai dashboard status uses; an unlisted one dialled under the allowance
 // says so (S-0239); a kind this flai does not know is said by none.
 func TestImageVerdictLineSaysEachVerdict(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		v    serve.ImageVerdict
 		want string
@@ -332,6 +338,7 @@ func TestImageVerdictLineSaysEachVerdict(t *testing.T) {
 // S-0238: a dial the image gate refused is said in the gate's words, not
 // wrapped as a refused stamp is.
 func TestRefusalSaysAnImageRefusalInTheGatesWords(t *testing.T) {
+	t.Parallel()
 	if got, want := refusal(imageConnections["/p/quay"]), "flai refused the dashboard: "+unsignedImageReason; got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -342,9 +349,10 @@ func TestRefusalSaysAnImageRefusalInTheGatesWords(t *testing.T) {
 // dialled, or not measured, and nothing for a project with no verdict yet;
 // --json carries each verdict under status.images by root.
 func TestServeStatusSaysEachProjectsImageVerdict(t *testing.T) {
+	t.Parallel()
 	home := t.TempDir()
 	cfg := filepath.Join(home, "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	roots := map[string]string{"harbour": tempProject(t), "dock": tempProject(t), "pier": tempProject(t)}
 	for key, root := range roots {
 		if err := os.WriteFile(filepath.Join(root, "k"), []byte("credential"), 0o600); err != nil {
@@ -407,6 +415,7 @@ var unsignedConnections = map[string]channel.State{
 // S-0239: the sides allowed unsigned are said in the dashboard switcher's
 // words, and nothing is said for a signed pair or a connection not open.
 func TestUnsignedAllowedLineSaysTheSides(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		state channel.State
 		want  string
@@ -429,9 +438,10 @@ func TestUnsignedAllowedLineSaysTheSides(t *testing.T) {
 // folder, or from a folder named for import, and nothing for a signed pair;
 // --json carries the sides as status.connections.<root>.unsigned.
 func TestServeStatusSaysUnsignedAllowedWithTheSide(t *testing.T) {
+	t.Parallel()
 	home := t.TempDir()
 	cfg := filepath.Join(home, "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	roots := map[string]string{"harbour": tempProject(t), "dock": tempProject(t)}
 	for key, root := range roots {
 		if err := os.WriteFile(filepath.Join(root, "k"), []byte("credential"), 0o600); err != nil {

@@ -38,8 +38,8 @@ func treeOf(t *testing.T, root string) map[string]string {
 // to ready by the manifest's policy, caps them with --limit, says why each
 // other one cannot, and writes nothing.
 func TestPromoteCandidatesCommand(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "")
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	run := func(args ...string) string {
 		t.Helper()

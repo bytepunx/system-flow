@@ -39,8 +39,9 @@ func importForServe(t *testing.T, args ...string) (root, out, errOut string, cod
 // S-0120: with no flai host running, nothing is registered and the import
 // names the one command that serves the project.
 func TestImportWithNoHostSaysWhatServesIt(t *testing.T) {
+	t.Parallel()
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	root, out, errOut, code := importForServe(t)
 	if code != 0 {
 		t.Fatalf("import: %d %s", code, errOut)
@@ -58,10 +59,11 @@ func TestImportWithNoHostSaysWhatServesIt(t *testing.T) {
 // with or without --commit, and committed or not: the legacy repository's
 // go module has no Go files, so go test fails and --commit exits 5.
 func TestImportWithAHostRegistersTheProject(t *testing.T) {
+	t.Parallel()
 	for args, exit := range map[string]int{"": 0, "--commit": exitImportNotCommitted} {
 		t.Run("import "+args, func(t *testing.T) {
 			cfg := filepath.Join(t.TempDir(), "cfg.json")
-			t.Setenv("FLAI_CONFIG", cfg)
+			useConfig(t, cfg)
 			fakeRunning(t, string(host.DirFor(cfg)))
 			dir := serve.DirFor(cfg)
 			fakeRunning(t, string(dir))
@@ -91,8 +93,9 @@ func TestImportWithAHostRegistersTheProject(t *testing.T) {
 
 // A host whose flai serve was stopped: registered, and told how to start it.
 func TestImportWithServeStoppedSaysToStartIt(t *testing.T) {
+	t.Parallel()
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	useConfig(t, cfg)
 	fakeRunning(t, string(host.DirFor(cfg)))
 
 	_, out, errOut, code := importForServe(t, "--json")

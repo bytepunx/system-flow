@@ -36,12 +36,13 @@ func (l *lockingRunner) Run(dir, name string, args ...string) (string, error) {
 // I-0100: an acceptance whose commit meets the index lock another git process
 // holds for a moment waits it out and completes, with one acceptance commit.
 func TestAnAcceptanceWaitsOutAnIndexLockHeldForAMoment(t *testing.T) {
+	t.Parallel()
 	root, _ := orchestratedStoryInReview(t, false)
 	before := gitIn(t, root, "rev-parse", "HEAD")
 	lock := filepath.Join(root, ".git", "index.lock")
 	r := &lockingRunner{lock: lock, runs: map[string]int{}}
 
-	out, errOut, code := runWithApp(t, &app{cwd: root, runner: r}, "accept", "S-0001")
+	out, errOut, code := runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: r}, "accept", "S-0001")
 	if code != 0 || !strings.Contains(out, "accepted S-0001") {
 		t.Fatalf("the acceptance waits out the lock: %d %s %s", code, out, errOut)
 	}
@@ -66,6 +67,7 @@ func TestAnAcceptanceWaitsOutAnIndexLockHeldForAMoment(t *testing.T) {
 // how to finish; the story stays done and archived, its changes staged, and
 // flai accept commits them, under the usual subject, as the operator's.
 func TestAnAcceptanceWhoseCommitFailedIsFinishedByRunningItAgain(t *testing.T) {
+	t.Parallel()
 	root, _ := orchestratedStoryInReview(t, true)
 	// an open story whose claim covers what S-0001's commits changed
 	if _, errOut, code := runIn(t, root, "story", "new", "Next", "--touches", "cli"); code != 0 {

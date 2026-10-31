@@ -10,9 +10,9 @@ import (
 // items it archives (a story and its tasks), naming each as archived, and
 // leaves a thread on an item it does not archive open. The dry run names the
 // threads and resolves none.
-func TestArchiveResolvesTheThreadsOnWhatItArchives(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", t.TempDir()+"/cfg.json")
-	t.Setenv("FLAI_AGENT", "alex")
+func testArchiveResolvesTheThreadsOnWhatItArchives(t *testing.T) {
+	useConfig(t, t.TempDir()+"/cfg.json")
+	inEnv(t, "FLAI_AGENT", "alex")
 	root := tempProject(t)
 	// the author flai archive resolves as is the config's, which a fresh config fills with this
 	// host's user: pin it, so the test does not depend on who runs it (I-0013)
@@ -82,9 +82,9 @@ func TestArchiveResolvesTheThreadsOnWhatItArchives(t *testing.T) {
 // it archives, each with the entry "Closed: S-0001 was archived" by the
 // author, and leaves a conversation between two other stories open. The dry
 // run names the conversations and closes none.
-func TestArchiveClosesTheConversationsOfWhatItArchives(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", t.TempDir()+"/cfg.json")
-	t.Setenv("FLAI_AGENT", "alex")
+func testArchiveClosesTheConversationsOfWhatItArchives(t *testing.T) {
+	useConfig(t, t.TempDir()+"/cfg.json")
+	inEnv(t, "FLAI_AGENT", "alex")
 	root := tempProject(t)
 	for _, args := range [][]string{
 		{"config", "set", "author", "alex"},
@@ -138,9 +138,9 @@ func TestArchiveClosesTheConversationsOfWhatItArchives(t *testing.T) {
 
 // The text of flai archive names each conversation it closes with the story
 // it was open with, or both stories when it archives both.
-func TestArchiveNamesTheConversationsItCloses(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", t.TempDir()+"/cfg.json")
-	t.Setenv("FLAI_AGENT", "alex")
+func testArchiveNamesTheConversationsItCloses(t *testing.T) {
+	useConfig(t, t.TempDir()+"/cfg.json")
+	inEnv(t, "FLAI_AGENT", "alex")
 	root := tempProject(t)
 	for _, args := range [][]string{
 		{"config", "set", "author", "alex"},
@@ -162,4 +162,18 @@ func TestArchiveNamesTheConversationsItCloses(t *testing.T) {
 	}
 	assertClosedAs(t, root, "Closed: S-0001 and S-0002 were archived", "MS-0001")
 	assertClosedAs(t, root, "Closed: S-0002 was archived", "MS-0002")
+}
+
+// TestAsAlex runs the tests whose commands run as the operator's agent name
+// alex, as together runs them: FLAI_AGENT alex, set once here, so that they
+// run in parallel with each other (S-0548).
+func TestAsAlex(t *testing.T) {
+	t.Setenv("FLAI_AGENT", "alex")
+	together(t,
+		testMessagesStayApartFromThreads,
+		testArchiveResolvesTheThreadsOnWhatItArchives,
+		testArchiveClosesTheConversationsOfWhatItArchives,
+		testArchiveNamesTheConversationsItCloses,
+		testTouchesLeavesAnEditNotice,
+	)
 }

@@ -17,8 +17,7 @@ func reviewProject(t *testing.T) (root, wt string) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_AGENT", "")
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root = tempProject(t)
 	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", "docs"} {
 		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
@@ -50,6 +49,7 @@ func reviewProject(t *testing.T) (root, wt string) {
 }
 
 func TestStreamDiff(t *testing.T) {
+	t.Parallel()
 	root, wt := reviewProject(t)
 	_ = os.WriteFile(filepath.Join(wt, "docs", "keep.md"), []byte("one\n2\nthree\nfour\n"), 0o644)
 	_ = os.WriteFile(filepath.Join(wt, "docs", "new.md"), []byte("hello\n"), 0o644)
@@ -107,6 +107,7 @@ func TestStreamDiff(t *testing.T) {
 }
 
 func TestStreamDiffWithoutABranch(t *testing.T) {
+	t.Parallel()
 	root, _ := reviewProject(t)
 	if _, errOut, code := runIn(t, root, "story", "new", "No branch", "--epic", "E-0001"); code != 0 {
 		t.Fatal(errOut)
@@ -150,6 +151,7 @@ func TestAcceptLogsEachStep(t *testing.T) {
 // ticked was refused only after its branch had been merged and its worktree
 // removed. The rules for done are checked first now, and the preview says so.
 func TestAcceptChecksTheRulesBeforeItMergesAnything(t *testing.T) {
+	t.Parallel()
 	root, wt := reviewProject(t)
 	file := filepath.Join(root, "wip/kanban/stories/S-0001-reviewed.md")
 	s, _ := os.ReadFile(file)

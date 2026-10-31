@@ -14,11 +14,9 @@ import (
 // and the exit code.
 func lintDoc(t *testing.T, root, stdin string, args ...string) (string, string, int) {
 	t.Helper()
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
-	t.Setenv("FLAI_CACHE_DIR", filepath.Join(t.TempDir(), "cache"))
 	var out, errOut bytes.Buffer
-	a := &app{out: &out, errOut: &errOut, cwd: root}
-	rootCmd := newRootCmdWith(a)
+	a := &app{configPath: configOf(t), out: &out, errOut: &errOut, cwd: root}
+	rootCmd := testRoot(t, a)
 	rootCmd.SetArgs(append([]string{"doc", "lint"}, args...))
 	rootCmd.SetIn(strings.NewReader(stdin))
 	code := 0
@@ -53,6 +51,7 @@ type lintAnswer struct {
 }
 
 func TestDocLintAnswersTheFindingsOfTheContentGiven(t *testing.T) {
+	t.Parallel()
 	root := docLintProject(t)
 	content := "# Title\n\n\n## Same\n\ntext \n\n## Same\n"
 	out, errOut, code := lintDoc(t, root, content, "docs/x.md", "--stdin", "--json")
@@ -78,6 +77,7 @@ func TestDocLintAnswersTheFindingsOfTheContentGiven(t *testing.T) {
 }
 
 func TestDocLintAnswersAnEmptyListForCleanContent(t *testing.T) {
+	t.Parallel()
 	root := docLintProject(t)
 	out, errOut, code := lintDoc(t, root, "# Title\n\ntext\n", "design/system/new.md", "--stdin", "--json")
 	if code != 0 {
@@ -89,6 +89,7 @@ func TestDocLintAnswersAnEmptyListForCleanContent(t *testing.T) {
 }
 
 func TestDocLintPrintsPathLineRuleAndMessage(t *testing.T) {
+	t.Parallel()
 	root := docLintProject(t)
 	out, _, code := lintDoc(t, root, "# Title\n\ntext \n", "wip/agents/S-0001.md", "--stdin")
 	if code != exitDocLintFindings {
@@ -100,6 +101,7 @@ func TestDocLintPrintsPathLineRuleAndMessage(t *testing.T) {
 }
 
 func TestDocLintRefusesWhatItCannotLint(t *testing.T) {
+	t.Parallel()
 	root := docLintProject(t)
 	for _, tc := range []struct {
 		name string

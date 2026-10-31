@@ -17,6 +17,7 @@ import (
 // the story, the file, and the command that frees it, and flai queue --json
 // carries them as a dirty_main reason; once the file is clean, neither does.
 func TestQueueAndBoardNameTheStoryAnUncommittedFileHoldsBack(t *testing.T) {
+	t.Parallel()
 	root, head := orchestratedStoryInReview(t, false)
 	if err := verify.SaveReport(openProject(t, root), verify.Report{Story: "S-0001", Commit: head, Passed: true}); err != nil {
 		t.Fatal(err)
@@ -59,6 +60,7 @@ func TestQueueAndBoardNameTheStoryAnUncommittedFileHoldsBack(t *testing.T) {
 // S-0402 criterion 3, ADR-0178: flai queue names each story the batch's
 // landing held back, with the files and the command that frees it.
 func TestQueueNamesTheStoriesALandingHeldBack(t *testing.T) {
+	t.Parallel()
 	root := tempProject(t)
 	writeQueueState(t, root, mergequeue.State{Batch: &mergequeue.Batch{
 		Stories: []string{"S-0001", "S-0002"}, Step: mergequeue.StepLanding + " S-0002",

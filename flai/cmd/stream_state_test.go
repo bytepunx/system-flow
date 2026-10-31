@@ -15,7 +15,7 @@ import (
 // S-0003 is ready.
 func streamStateProject(t *testing.T) (root, narrative string) {
 	t.Helper()
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	t.Setenv("FLAI_AGENT", "tester")
 	t.Setenv("FLAI_SESSION", "sess-1")
 	root = tempProject(t)

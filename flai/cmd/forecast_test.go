@@ -31,7 +31,8 @@ func forecastStory(t *testing.T, root, id, status string, archived bool, extra s
 // board, and the manifest, and prints the forecast and its basis, or the
 // whole result with --json.
 func TestForecastCommand(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	// three done stories at 300, 400, and 500 agent seconds per unit, in
 	// progress 1.5 times and done twice their agent seconds after starting

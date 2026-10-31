@@ -64,6 +64,7 @@ func releaseState(t *testing.T, root, remote string) string {
 }
 
 func TestReleaseEvaluateThreshold(t *testing.T) {
+	t.Parallel()
 	root, remote := evaluateProject(t)
 	setReleasePolicy(t, root, "    policy: threshold\n    value: 300\n")
 	before := releaseState(t, root, remote)
@@ -93,6 +94,7 @@ func TestReleaseEvaluateThreshold(t *testing.T) {
 }
 
 func TestReleaseEvaluateThemeAndJudgement(t *testing.T) {
+	t.Parallel()
 	root, remote := evaluateProject(t)
 	setReleasePolicy(t, root, "    policy: theme\n    epic: E-0001\n")
 	out, errOut, code := runIn(t, root, "release", "--evaluate")
@@ -124,6 +126,7 @@ func TestReleaseEvaluateThemeAndJudgement(t *testing.T) {
 }
 
 func TestReleaseEvaluateRefusesToRelease(t *testing.T) {
+	t.Parallel()
 	root, remote := evaluateProject(t)
 	before := releaseState(t, root, remote)
 	for _, args := range [][]string{
@@ -147,6 +150,7 @@ func TestReleaseEvaluateRefusesToRelease(t *testing.T) {
 // in review in evaluateProject, is moved back to in-progress; in review, it
 // holds nothing.
 func TestReleaseEvaluateWholeEpics(t *testing.T) {
+	t.Parallel()
 	root, remote := evaluateProject(t)
 	setReleasePolicy(t, root, "    policy: threshold\n    value: 300\n    whole_epics: true\n")
 	if out, _, _ := runIn(t, root, "release", "--evaluate"); !strings.HasPrefix(out, "release policy threshold: met\n") || strings.Contains(out, "held by epic") {
