@@ -1493,25 +1493,24 @@ func (c *checker) issues() {
 		}
 	}
 	c.issuesNoStory(list)
+	if len(list) == 0 {
+		return // a project that has never had an issue keeps the template's summary
+	}
 	summaryPath := filepath.Join(dir, issues.SummaryFile)
 	data, err := os.ReadFile(summaryPath)
 	if err != nil {
-		if len(list) > 0 {
-			c.add(Warning, "issues.summary", dir, 1, "summary.md is missing; run flai issue summary")
-		}
+		c.add(Warning, "issues.summary", dir, 1, "summary.md is missing; run flai check --fix or flai issue summary, which write it")
 		return
 	}
-	text := string(data)
-	for _, is := range list {
-		linked := strings.Contains(text, "["+is.ID+"]")
-		switch {
-		case is.Status == "open" && !linked:
-			c.add(Warning, "issues.summary", summaryPath, 1, "open issue %s is not in summary.md; run flai issue summary", is.ID)
-		case is.Status != "open" && linked:
-			c.add(Warning, "issues.summary", summaryPath, 1, "closed issue %s is still in summary.md; run flai issue summary", is.ID)
-		}
+	if summaryUpdated.ReplaceAllString(string(data), "") != summaryUpdated.ReplaceAllString(issues.Summary(list, c.now), "") {
+		c.add(Warning, "issues.summary", summaryPath, 1, "summary.md differs from what its issue files render; run flai check --fix or flai issue summary, which rewrite it")
 	}
 }
+
+// summaryUpdated is summary.md's updated line, which says when it was
+// written rather than what it holds, so the issues.summary comparison leaves
+// it out.
+var summaryUpdated = regexp.MustCompile(`(?m)^updated: .*$`)
 
 // issuesNoStory warns about each open issue older than issues.story_after
 // that no open story links (S-0198). An invalid story_after is layout's

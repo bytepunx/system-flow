@@ -15,7 +15,7 @@ import (
 )
 
 func newCheckCmd(a *app) *cobra.Command {
-	var strict, record bool
+	var strict, record, fix bool
 	var stories []string
 	c := &cobra.Command{
 		Use:   "check [dir]",
@@ -74,7 +74,15 @@ summary.md is regenerated, each issue is printed as opened, bumped, or
 already recorded, and --json lists them in recorded. The run records
 whether or not it passes; a failure to record is an error. With several
 stories --record-issues is refused: it records a close-out's findings, and a
-batch records none.`,
+batch records none.
+
+With --fix, each rule on a generated file that the run reports inside it
+has the file rewritten from its sources, as the command that generates it
+does: issues.summary rewrites design/issues/summary.md, as flai issue
+summary does. A hand-written file is never rewritten. The check then runs
+again; each file rewritten is printed as "rewrote <path> (<rule>)", or
+"rewrote nothing" when no finding had a fixer, before what remains, and
+--json lists them in fixed.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if record && len(stories) == 0 {
@@ -111,6 +119,15 @@ batch records none.`,
 			if err != nil {
 				return err
 			}
+			var fixed []check.Fixed
+			if fix {
+				if fixed, err = check.Fix(repo, res, a.now()); err != nil {
+					return err
+				}
+				if res, err = check.RunScoped(repo, a.runner, a.now(), ids...); err != nil {
+					return err
+				}
+			}
 			var recorded []recordedIssue
 			if record {
 				if recorded, err = a.recordOutside(repo, res, ids[0]); err != nil {
@@ -119,13 +136,22 @@ batch records none.`,
 			}
 			if a.jsonOut {
 				var v any = res
-				if record {
-					v = checkRecorded{Result: res, Recorded: recorded}
+				switch {
+				case record:
+					v = checkRecorded{Result: res, Recorded: recorded, Fixed: fixed}
+				case fix:
+					v = checkFixed{Result: res, Fixed: fixed}
 				}
 				if err := a.printJSON(v); err != nil {
 					return err
 				}
 			} else {
+				if fix && len(fixed) == 0 {
+					fmt.Fprintln(a.out, "rewrote nothing")
+				}
+				for _, f := range fixed {
+					fmt.Fprintf(a.out, "rewrote %s (%s)\n", f.Path, f.Rule)
+				}
 				for _, f := range res.Findings {
 					fmt.Fprintf(a.out, "%s:%d: %s: %s: %s", f.Path, f.Line, f.Level, f.Rule, f.Message)
 					if f.Outside {
@@ -155,15 +181,25 @@ batch records none.`,
 	}
 	c.Flags().BoolVar(&strict, "strict", false, "treat warnings as failures, except the review column over its limit and an epic behind its stories")
 	c.Flags().StringSliceVar(&stories, "story", nil, "scope the run to a story (S-nnnn), or to several, comma-separated or repeated: findings outside every one are notes that do not fail it")
+	c.Flags().BoolVar(&fix, "fix", false, "rewrite the generated files the run reports from their sources, then check again")
 	c.Flags().BoolVar(&record, "record-issues", false, "with --story and one story, record each rule's findings outside the story in an issue, opening or bumping it once per story and findings")
 	return c
 }
 
 // checkRecorded is flai check --json with --record-issues: the result, and
-// the issues the findings outside the story were recorded in.
+// the issues the findings outside the story were recorded in, and with --fix
+// the files rewritten.
 type checkRecorded struct {
 	*check.Result
 	Recorded []recordedIssue `json:"recorded"`
+	Fixed    []check.Fixed   `json:"fixed,omitempty"`
+}
+
+// checkFixed is flai check --json with --fix: the result of the run after
+// fixing, and the files rewritten.
+type checkFixed struct {
+	*check.Result
+	Fixed []check.Fixed `json:"fixed"`
 }
 
 // recordedIssue is the issue one rule's findings outside a story were

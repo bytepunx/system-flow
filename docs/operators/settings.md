@@ -400,6 +400,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--evaluate` | [flai release](../users/flai-reference.md#flai-release) |
 | `--evidence` | [flai accept](../users/flai-reference.md#flai-accept), [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue new](../users/flai-reference.md#flai-issue-new), [flai move](../users/flai-reference.md#flai-move), [flai queue add](../users/flai-reference.md#flai-queue-add) |
 | `--exclude` | [flai components config](../users/flai-reference.md#flai-components-config) |
+| `--fix` | [flai check](../users/flai-reference.md#flai-check) |
 | `--focus` | [flai analyze](../users/flai-reference.md#flai-analyze) |
 | `-f`, `--follow` | [flai dashboard logs](../users/flai-reference.md#flai-dashboard-logs), [flai serve agent stream](../users/flai-reference.md#flai-serve-agent-stream) |
 | `--force` | [flai import](../users/flai-reference.md#flai-import), [flai new](../users/flai-reference.md#flai-new), [flai template push](../users/flai-reference.md#flai-template-push), [flai upgrade](../users/flai-reference.md#flai-upgrade) |

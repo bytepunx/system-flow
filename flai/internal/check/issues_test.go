@@ -7,7 +7,9 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -103,5 +105,85 @@ func TestIssuesWithNoStory(t *testing.T) {
 	}
 	if len(invalid) != 1 || invalid[0].Level != Error || invalid[0].Path != "system-flow.yaml" || invalid[0].Line != 8 || !strings.Contains(invalid[0].Message, `issues.story_after "7d"`) {
 		t.Errorf("an invalid story_after is one error on its key: %+v", invalid)
+	}
+}
+
+// issuesProject is a project with the issues given as id and status in
+// design/issues, and no summary.md yet.
+func issuesProject(t *testing.T, list ...[2]string) *workitem.Repo {
+	t.Helper()
+	root := t.TempDir()
+	for _, d := range []string{"design/issues", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive"} {
+		if err := os.MkdirAll(filepath.Join(root, d), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	files := map[string]string{"system-flow.yaml": "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\nissues:\n  story_after: \"0\"\n"}
+	for _, is := range list {
+		files["design/issues/"+is[0]+"-issue.md"] = fmt.Sprintf("---\nid: %s\ntitle: Issue %s\nclass: defect\nstatus: %s\ncount: 2\ncost: 15m\nfirst_reported: 2026-08-01T12:00:00Z\nlast_reported: 2026-08-02T12:00:00Z\nupdated: 2026-08-02T12:00:00Z\n---\n\n# %s Issue %s\n", is[0], is[0], is[1], is[0], is[0])
+	}
+	for name, body := range files {
+		if err := os.WriteFile(filepath.Join(root, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return repo
+}
+
+// S-0550: summary.md is compared whole with what its issue files render,
+// its updated line aside; a summary that differs, or is missing, is one
+// issues.summary warning naming flai check --fix and flai issue summary.
+// A project that has never had an issue keeps the template's summary.
+func TestIssuesSummaryIsComparedWithWhatItsFolderRenders(t *testing.T) {
+	repo := issuesProject(t, [2]string{"I-0001", "open"}, [2]string{"I-0002", "closed"})
+	summary := filepath.Join(repo.Root, "design", "issues", "summary.md")
+	want := []string{"summary.md is missing; run flai check --fix or flai issue summary, which write it"}
+	if got := rules(t, repo, "issues.summary"); !slices.Equal(got, want) {
+		t.Errorf("missing: %q, want %q", got, want)
+	}
+	if _, err := issues.WriteSummary(repo, now.Add(-48*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if got := rules(t, repo, "issues.summary"); len(got) != 0 {
+		t.Errorf("a summary written two days ago, from the same files, differs only in its updated line: %q", got)
+	}
+	data, err := os.ReadFile(summary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// the open issue linked, as the old rule asked, but its count stale
+	stale := strings.Replace(string(data), "| 2 | 15m | 30m |", "| 1 | 15m | 15m |", 1)
+	if stale == string(data) {
+		t.Fatalf("the fixture's row is not as expected:\n%s", data)
+	}
+	if err := os.WriteFile(summary, []byte(stale), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	res, err := Run(repo, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var found []Finding
+	for _, f := range res.Findings {
+		if f.Rule == "issues.summary" {
+			found = append(found, f)
+		}
+	}
+	if len(found) != 1 || found[0].Level != Warning || found[0].Path != "design/issues/summary.md" || found[0].Line != 1 ||
+		found[0].Message != "summary.md differs from what its issue files render; run flai check --fix or flai issue summary, which rewrite it" {
+		t.Errorf("a stale count is one warning on summary.md: %+v", found)
+	}
+
+	template := "---\ntitle: Open issues\nupdated: 2026-08-01\nstatus: active\n---\n\n# Open issues\n\n| ID | Class | Title | Count | Avg cost | Total cost | Last reported |\n|----|-------|-------|-------|----------|------------|---------------|\n"
+	empty := issuesProject(t)
+	if err := os.WriteFile(filepath.Join(empty.Root, "design", "issues", "summary.md"), []byte(template), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := rules(t, empty, "issues.summary"); len(got) != 0 {
+		t.Errorf("a project with no issues keeps the template's summary: %q", got)
 	}
 }
