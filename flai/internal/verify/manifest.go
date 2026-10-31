@@ -27,6 +27,7 @@ func FromManifest(tiers []manifest.TestTier) []Tier {
 			Covers:     slices.Clone(t.Covers),
 			Queue:      t.Queue,
 			Manual:     t.Manual,
+			When:       slices.Clone(t.When),
 		})
 	}
 	return out

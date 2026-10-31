@@ -69,6 +69,10 @@ type Tier struct {
 	// Manual keeps the tier out of every run but one that names it, as
 	// SelectTier chooses it (S-0548).
 	Manual bool `json:"manual,omitempty"`
+	// When are path patterns, in the language of Paths, that, while the
+	// merge queue can batch, have a story's close-out run a Queue tier
+	// rather than leave it to the batch (S-0547).
+	When []string `json:"when,omitempty"`
 }
 
 // Finding is one failure a tier's output names.

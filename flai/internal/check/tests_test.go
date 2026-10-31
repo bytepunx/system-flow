@@ -55,3 +55,20 @@ func TestGoTestTiersWithoutATimeoutAreWarnedOf(t *testing.T) {
 		t.Errorf("the warning is advisory, so --strict passes over it: %+v", got[0])
 	}
 }
+
+// S-0547: when on a tier without queue is an error on the tests key, naming
+// its index and the tier; when beside queue is not reported.
+func TestTestTierWhenIsChecked(t *testing.T) {
+	queued := "tests:\n  - name: integration\n    command: [scripts/integration.sh]\n    all_only: true\n    queue: true\n    when: [\"flai/internal/serve/**\"]\n"
+	if got := findings(t, planningProject(t, queued), "manifest.tests"); len(got) != 0 {
+		t.Errorf("when beside queue: %+v", got)
+	}
+	repo := planningProject(t, "tests:\n  - name: integration\n    command: [scripts/integration.sh]\n    all_only: true\n    when: [\"flai/internal/serve/**\"]\n")
+	got := findings(t, repo, "manifest.tests")
+	if len(got) != 1 {
+		t.Fatalf("want one error, the when: %+v", got)
+	}
+	if f := got[0]; f.Level != Error || f.Path != "system-flow.yaml" || !strings.Contains(f.Message, `tests[0].when (tier "integration") is set on a tier without queue: true`) {
+		t.Errorf("finding: %+v, want an error naming tests[0].when and the tier", f)
+	}
+}

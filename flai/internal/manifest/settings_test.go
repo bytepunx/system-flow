@@ -989,6 +989,8 @@ func TestEditSettingsRefusesBadTests(t *testing.T) {
 		{"a bad format", `[{"name":"unit","command":["x"],"paths":["**"],"format":"junit"}]`, "tests[0].format", `(tier "unit") "junit" is not a format flai reads`},
 		{"no paths", `[{"name":"unit","command":["x"]}]`, "tests[0].paths", "is empty"},
 		{"a name twice", `[{"name":"a","command":["x"],"paths":["**"]},{"name":"a","command":["y"],"paths":["**"]}]`, "tests[1].name", "is tests[0]'s name too"},
+		// S-0547: when only beside queue.
+		{"when without queue", `[{"name":"unit","command":["x"],"paths":["**"],"when":["flai/**"]}]`, "tests[0].when", `(tier "unit") is set on a tier without queue: true`},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			file := filepath.Join(t.TempDir(), File)
@@ -1168,5 +1170,37 @@ func TestEditComponentsRefuses(t *testing.T) {
 	want := strings.Replace(componentsFixture, "    tags: [dashboard]   # its tag\n", "    tags: [dashboard]   # its tag\n    components:\n      setup: src/app.css\n", 1)
 	if data, _ := os.ReadFile(file); string(data) != want {
 		t.Errorf("SetComponents wrote:\n%s", data)
+	}
+}
+
+// S-0547: a queue tier's when is written after queue, read back, and makes
+// two tiers differ.
+func TestEditSettingsWritesWhen(t *testing.T) {
+	value := `[{"name":"integration","command":["scripts/integration.sh"],"all_only":true,"queue":true,"when":["flai/internal/serve/**","!flai/internal/serve/testdata/**"]}]`
+	got, err := EditSettings([]byte(settingsFixture), []Assignment{{"tests", value}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := settingsFixture + "tests:\n" +
+		"  - name: integration\n" +
+		"    command: [scripts/integration.sh]\n" +
+		"    all_only: true\n" +
+		"    queue: true\n" +
+		"    when: [\"flai/internal/serve/**\", \"!flai/internal/serve/testdata/**\"]\n"
+	if string(got) != want {
+		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
+	}
+	m := loaded(t, got)
+	if len(m.Tests) != 1 || !slices.Equal(m.Tests[0].When, []string{"flai/internal/serve/**", "!flai/internal/serve/testdata/**"}) {
+		t.Errorf("reads back: %+v", m.Tests)
+	}
+	again, err := EditSettings(got, []Assignment{{"tests", value}}, nil)
+	if err != nil || string(again) != want {
+		t.Errorf("setting the same tiers again: %v\n%s", err, again)
+	}
+	unwhen := slices.Clone(m.Tests)
+	unwhen[0].When = []string{"flai/internal/serve/**"}
+	if sameTiers(m.Tests, unwhen) {
+		t.Error("tiers that differ in when are the same")
 	}
 }

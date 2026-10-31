@@ -1330,6 +1330,11 @@ type TestTier struct {
 	// never for paths, --all, a close-out, or the merge queue's batch
 	// (S-0548). It takes neither Queue nor FixCommand.
 	Manual bool `yaml:"manual,omitempty" json:"manual,omitempty"`
+	// When are glob patterns, in the language of Paths, that, while the
+	// merge queue can batch, have a story's close-out run a Queue tier too
+	// when one matches the story's touches or changed paths, rather than
+	// leave it to the batch alone (S-0547). Allowed only beside Queue.
+	When []string `yaml:"when,omitempty" json:"when,omitempty"`
 }
 
 // The placeholders a tier's command may hold, each as an argument of its own.
@@ -1473,6 +1478,14 @@ func (m Manifest) TestErrors() []string {
 		}
 		if t.Manual && len(t.FixCommand) > 0 {
 			errs = append(errs, at("manual")+" is true with fix_command, but a fix runs for the paths a commit changes, which never select a manual tier; remove fix_command, or manual")
+		}
+		if len(t.When) > 0 && !t.Queue {
+			errs = append(errs, at("when")+" is set on a tier without queue: true; when only chooses when a queue tier also runs in the close-out, so set queue: true or remove when")
+		}
+		for _, p := range t.When {
+			if r := patternProblem(strings.TrimPrefix(p, "!")); r != "" {
+				errs = append(errs, fmt.Sprintf("%s pattern %q %s", at("when"), p, r))
+			}
 		}
 		if f := t.FormatOrDefault(); !slices.Contains(TestFormats, f) {
 			errs = append(errs, fmt.Sprintf("%s %q is not a format flai reads; write %s, or remove it for plain", at("format"), t.Format, strings.Join(TestFormats, ", ")))

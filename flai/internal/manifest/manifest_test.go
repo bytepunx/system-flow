@@ -2172,3 +2172,51 @@ func TestInstallMatches(t *testing.T) {
 		t.Error("a sub-project with no install key matches")
 	}
 }
+
+// S-0547: a queue tier's when loads with its patterns, exclusions among them,
+// and is valid; when on a tier without queue, a blank pattern, and a pattern
+// the paths language refuses are each named by index, field, and tier.
+func TestTestErrorsWhen(t *testing.T) {
+	body := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\n" +
+		"tests:\n" +
+		"- name: integration\n" +
+		"  command: [scripts/integration.sh]\n" +
+		"  all_only: true\n" +
+		"  queue: true\n" +
+		"  when: [\"flai/internal/serve/**\", flai/internal/verify, \"!flai/internal/serve/testdata/**\"]\n"
+	m := loaded(t, []byte(body))
+	if want := []string{"flai/internal/serve/**", "flai/internal/verify", "!flai/internal/serve/testdata/**"}; len(m.Tests) != 1 || !reflect.DeepEqual(m.Tests[0].When, want) {
+		t.Fatalf("when: got %+v, want %q", m.Tests, want)
+	}
+	if errs := m.TestErrors(); len(errs) != 0 {
+		t.Errorf("a queue tier's when refused: %v", errs)
+	}
+	queued := TestTier{Name: "smoke", Command: []string{"scripts/smoke.sh"}, AllOnly: true, Queue: true}
+	with := func(f func(*TestTier)) TestTier {
+		tier := queued
+		f(&tier)
+		return tier
+	}
+	for _, c := range []struct {
+		name string
+		tier TestTier
+		want string
+	}{
+		{"without queue", with(func(x *TestTier) { x.Queue, x.When = false, []string{"flai/**"} }),
+			`tests[0].when (tier "smoke") is set on a tier without queue: true; when only chooses when a queue tier also runs in the close-out`},
+		{"a blank pattern", with(func(x *TestTier) { x.When = []string{"flai/**", " "} }), `tests[0].when (tier "smoke") pattern " " is empty`},
+		{"an empty exclusion", with(func(x *TestTier) { x.When = []string{"!"} }), `tests[0].when (tier "smoke") pattern "!" is empty`},
+		{"a bad pattern", with(func(x *TestTier) { x.When = []string{"../x"} }), `tests[0].when (tier "smoke") pattern "../x" has a .. segment`},
+		{"an absolute pattern", with(func(x *TestTier) { x.When = []string{"/srv/flai"} }), `tests[0].when (tier "smoke") pattern "/srv/flai" is an absolute path`},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			errs := Manifest{Tests: []TestTier{c.tier}}.TestErrors()
+			if len(errs) != 1 || !strings.Contains(errs[0], c.want) {
+				t.Fatalf("got %q, want one error with ...%s...", errs, c.want)
+			}
+			if p := splitProblem(errs[0]); p.Field != "tests[0].when" {
+				t.Errorf("%q is not split into the field tests[0].when and a reason: %+v", errs[0], p)
+			}
+		})
+	}
+}
