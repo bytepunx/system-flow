@@ -21,7 +21,8 @@ import (
 // agent (ADR-0196), schedule, and compaction window (ADR-0199); when the
 // operator is reminded of a thread that awaits them (ADR-0205); the
 // project's test tiers (S-0273); how a story is accepted (S-0392); and the
-// most stories a batch of the merge queue holds (S-0399). The catalog says
+// most stories a batch of the merge queue holds (S-0399) and how long it
+// waits for a batch to fill (S-0552). The catalog says
 // of each its kind, its values, its default, and what it does; whether a value is allowed is always the manifest's own
 // validation (Planning.Errors, Orchestration.Errors, Analysis.Errors,
 // Digest.Errors, Threads.Errors, Acceptance.Errors, MergeQueue.Errors,
@@ -247,6 +248,9 @@ func buildCatalog() []Setting {
 		Setting{Key: "merge_queue.batch_max", Kind: KindNumber, Whole: true, Default: strconv.Itoa(DefaultBatchMax),
 			Meaning: "The most enqueued stories flai serve's merge queue takes into one batch, verified together once, a whole number of one or more; the queue runs behind the merge-queue host action, while orchestration.permissions.accept_reviews is on, under local acceptance only.",
 			get:     func(m Manifest) (any, bool) { return count(m.MergeQueue.BatchMax) }},
+		Setting{Key: "merge_queue.coalesce", Kind: KindDuration, Default: durationText(DefaultMergeQueueCoalesce),
+			Meaning: "How long after the first of a batch's stories was enqueued flai serve's merge queue waits for more before it builds a batch of fewer than merge_queue.batch_max, so that stories enqueued close together are verified together; a batch of merge_queue.batch_max starts at once, and 0 builds each batch at once.",
+			get:     func(m Manifest) (any, bool) { return text(m.MergeQueue.Coalesce) }},
 		Setting{Key: "tests", Kind: KindTests,
 			Meaning: "The project's test tiers, cheapest first, that flai test runs for the paths each selects: each a name, a command, the paths that select it, and the format of its output; unset, one plain tier runs scripts/test.sh when it exists, and [] means none.",
 			get: func(m Manifest) (any, bool) {

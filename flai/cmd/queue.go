@@ -44,7 +44,7 @@ queue does not run, because the forge's required checks gate each story
 			if err != nil {
 				return err
 			}
-			q, err := mergequeue.Compute(a.runner, repo)
+			q, err := mergequeue.ComputeAt(a.runner, repo, a.now())
 			if err != nil {
 				return err
 			}
@@ -244,8 +244,9 @@ func (a *app) printQueueChange(ch mergequeue.Change) error {
 }
 
 // printQueue writes q as text: the eligible stories in order, each other
-// story in review with its reasons, the batch, and the outcomes; or, when
-// the queue is off, the one line saying why.
+// story in review with its reasons, the batch, the window the next batch
+// fills in, in place of "batch: none" when there is no batch, and the
+// outcomes; or, when the queue is off, the one line saying why.
 func printQueue(w io.Writer, q mergequeue.Queue) {
 	if q.Off {
 		fmt.Fprintf(w, "merge queue off under acceptance.mode %s: %s\n", q.Mode, q.OffReason)
@@ -275,7 +276,12 @@ func printQueue(w io.Writer, q mergequeue.Queue) {
 			}
 		}
 	}
-	printBatch(w, q.Batch)
+	if q.Batch != nil || q.Window == nil {
+		printBatch(w, q.Batch)
+	}
+	if win := q.Window; win != nil {
+		fmt.Fprintf(w, "batch fills until %s: %d of %d stories (%s)\n", win.Ends.UTC().Format("15:04:05Z"), len(win.Stories), win.BatchMax, strings.Join(win.Stories, ", "))
+	}
 	if len(q.Outcomes) > 0 {
 		fmt.Fprintln(w, "outcomes")
 		for _, o := range q.Outcomes {

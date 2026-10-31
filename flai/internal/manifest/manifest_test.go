@@ -776,6 +776,47 @@ func TestMergeQueue(t *testing.T) {
 	}
 }
 
+// S-0552: a manifest without merge_queue.coalesce waits 3 minutes for a
+// batch to fill; a duration of zero or more loads as given, 0 waiting for
+// none; a value that is not a duration and a negative one are refused at
+// load, naming the key, the value, and what to write.
+func TestMergeQueueCoalesce(t *testing.T) {
+	head := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\n"
+	m := loaded(t, []byte(head))
+	if d, err := m.MergeQueue.CoalesceDuration(); err != nil || d != 3*time.Minute || m.MergeQueueCoalesce() != DefaultMergeQueueCoalesce || DefaultMergeQueueCoalesce != 3*time.Minute {
+		t.Errorf("unset: %v, %v, %v", d, err, m.MergeQueueCoalesce())
+	}
+	for value, want := range map[string]time.Duration{"3m": 3 * time.Minute, "90s": 90 * time.Second, "0": 0, "0s": 0, "1h": time.Hour} {
+		m := loaded(t, []byte(head+"merge_queue:\n  coalesce: \""+value+"\"\n"))
+		if got := m.MergeQueueCoalesce(); got != want || len(m.MergeQueue.Errors()) != 0 {
+			t.Errorf("coalesce %q reads as %v, %v", value, got, m.MergeQueue.Errors())
+		}
+	}
+	if got := loaded(t, []byte(head+"merge_queue:\n  coalesce: 0\n")).MergeQueueCoalesce(); got != 0 {
+		t.Errorf("coalesce 0, unquoted, reads as %v", got)
+	}
+
+	p := filepath.Join(t.TempDir(), File)
+	for _, c := range []struct{ value, want string }{
+		{"soon", `merge_queue.coalesce "soon" is not a duration; write how long the merge queue waits for a batch to fill, such as 3m or 90s, 0 to build each batch at once, or remove it for 3m`},
+		{"3", `merge_queue.coalesce "3" is not a duration`},
+		{"-1m", `merge_queue.coalesce "-1m" is negative; write how long the merge queue waits for a batch to fill`},
+	} {
+		if err := os.WriteFile(p, []byte(head+"merge_queue:\n  coalesce: "+c.value+"\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		_, err := Load(p)
+		if err == nil || !strings.HasPrefix(err.Error(), p+": ") || !strings.Contains(err.Error(), c.want) {
+			t.Errorf("coalesce %s: got %v, want %s", c.value, err, c.want)
+		}
+	}
+	zero := 0
+	bad := MergeQueue{BatchMax: &zero, Coalesce: "-1s"}
+	if errs := bad.Errors(); len(errs) != 2 {
+		t.Errorf("both wrong, one error each: %q", errs)
+	}
+}
+
 // S-0218: orchestration.agent reads as agent does, is checked as agent is
 // under its own name, and the orchestrator's agent is it merged over the
 // project's agent, field by field, config key by key, and role by role.

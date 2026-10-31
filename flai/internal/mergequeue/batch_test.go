@@ -851,6 +851,134 @@ func TestBatchMaxCapsTheBatch(t *testing.T) {
 	}
 }
 
+// enqueueAt enqueues the stories in order, as alex at at.
+func enqueueAt(t *testing.T, repo *workitem.Repo, at time.Time, stories ...string) {
+	t.Helper()
+	if _, err := Update(repo.CacheDir(), func(s *State) error {
+		for _, id := range stories {
+			s.Enqueue(id, "alex", at)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// windowAt is the queue's window at at, failing the test when the queue
+// cannot be computed.
+func windowAt(t *testing.T, repo *workitem.Repo, at time.Time) *Window {
+	t.Helper()
+	q, err := ComputeAt(execx.System{}, repo, at)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return q.Window
+}
+
+// S-0552 criterion 1: a story enqueued alone builds no batch before
+// merge_queue.coalesce, 3m by default, has passed since it was enqueued;
+// a second enqueued inside the window joins it, the window still ending 3m
+// after the first, and the batch of both is built once it ends. The queue
+// shows the window filling meanwhile.
+func TestAnEnqueueWaitsOutTheCoalesceWindowAndTheNextJoinsIt(t *testing.T) {
+	repo, proc := gitProject(t, "")
+	a, _ := readyStory(t, repo, "A", t0.Add(time.Hour), "a.txt", "a\n")
+	b, _ := readyStory(t, repo, "B", t0.Add(2*time.Hour), "b.txt", "b\n")
+	enqueueAt(t, repo, t1, a)
+	ends := t1.Add(3 * time.Minute)
+
+	if ran, st := runBatch(t, deps(proc, t1.Add(time.Minute)), repo); ran || st.Batch != nil {
+		t.Fatalf("ran %v, batch %+v; want none inside the window", ran, st.Batch)
+	}
+	if w := windowAt(t, repo, t1.Add(time.Minute)); w == nil || !w.Ends.Equal(ends) || !slices.Equal(w.Stories, []string{a}) || w.BatchMax != 4 {
+		t.Errorf("window %+v, want %s alone until %s", w, a, ends)
+	}
+
+	enqueueAt(t, repo, t1.Add(2*time.Minute), b)
+	if ran, st := runBatch(t, deps(proc, ends.Add(-time.Second)), repo); ran || st.Batch != nil {
+		t.Fatalf("ran %v, batch %+v; want none a second before the window ends", ran, st.Batch)
+	}
+	if w := windowAt(t, repo, ends.Add(-time.Second)); w == nil || !w.Ends.Equal(ends) || !slices.Equal(w.Stories, []string{a, b}) {
+		t.Errorf("window %+v, want %s and %s until %s", w, a, b, ends)
+	}
+	if len(proc.ran) != 0 {
+		t.Errorf("tiers ran %v inside the window", proc.ran)
+	}
+
+	if w := windowAt(t, repo, ends); w != nil {
+		t.Errorf("window %+v once it ended", w)
+	}
+	ran, st := runBatch(t, deps(proc, ends), repo)
+	if !ran || st.Batch == nil || !slices.Equal(st.Batch.Stories, []string{a, b}) || st.Batch.Step != StepVerified {
+		t.Fatalf("ran %v, batch %+v; want %s and %s batched as the window ends", ran, st.Batch, a, b)
+	}
+	if w := windowAt(t, repo, ends); w != nil {
+		t.Errorf("window %+v while a batch waits to land", w)
+	}
+}
+
+// S-0552: merge_queue.batch_max stories enqueued start a batch at once,
+// inside the window, and merge_queue.coalesce 0 starts one for a story
+// alone at once, with no window.
+func TestAFullBatchOrNoCoalesceStartsAtOnce(t *testing.T) {
+	for _, c := range []struct {
+		name, manifest string
+		stories        int
+	}{
+		{"batch_max stories", "merge_queue:\n  batch_max: 2\n", 2},
+		{"coalesce 0", "merge_queue:\n  coalesce: 0\n", 1},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			repo, proc := gitProject(t, c.manifest)
+			var ids []string
+			for i := range c.stories {
+				id, _ := readyStory(t, repo, fmt.Sprintf("S%d", i), t0.Add(time.Duration(i+1)*time.Hour), fmt.Sprintf("s%d.txt", i), "s\n")
+				ids = append(ids, id)
+			}
+			enqueueAt(t, repo, t1, ids...)
+			if w := windowAt(t, repo, t1); w != nil {
+				t.Errorf("window %+v, want none", w)
+			}
+			ran, st := runBatch(t, deps(proc, t1), repo)
+			if !ran || st.Batch == nil || !slices.Equal(st.Batch.Stories, ids) {
+				t.Errorf("ran %v, batch %+v; want %v batched at once", ran, st.Batch, ids)
+			}
+		})
+	}
+}
+
+// S-0552: a story left enqueued once its batch was dropped keeps when it
+// was enqueued, and so does one enqueued while that batch waited to land:
+// the next batch, of both, is built at once, as the window opened by the
+// first of them has ended, rather than 3m after the drop or the second
+// enqueue.
+func TestAStoryLeftEnqueuedOpensNoNewWindow(t *testing.T) {
+	repo, proc := gitProject(t, "")
+	a, _ := readyStory(t, repo, "A", t0.Add(time.Hour), "a.txt", "a\n")
+	b, _ := readyStory(t, repo, "B", t0.Add(2*time.Hour), "b.txt", "b\n")
+	enqueueAt(t, repo, t1, a)
+	ends := t1.Add(3 * time.Minute)
+	if ran, st := runBatch(t, deps(proc, ends), repo); !ran || st.Batch == nil || st.Batch.Result == nil {
+		t.Fatalf("ran %v, batch %+v; want %s batched and verified", ran, st.Batch, a)
+	}
+
+	enqueueAt(t, repo, ends.Add(10*time.Second), b)
+	drop := ends.Add(30 * time.Second)
+	if _, err := Update(repo.CacheDir(), func(s *State) error {
+		s.DropBatchHolding(a, "the main branch moved", "flai serve", drop)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if w := windowAt(t, repo, drop); w != nil {
+		t.Errorf("window %+v after the drop, want none: the first story's window ended at %s", w, ends)
+	}
+	ran, st := runBatch(t, deps(proc, drop), repo)
+	if !ran || st.Batch == nil || st.Batch.Dropped != nil || !slices.Equal(st.Batch.Stories, []string{a, b}) {
+		t.Errorf("ran %v, batch %+v; want %s and %s batched at once", ran, st.Batch, a, b)
+	}
+}
+
 // S-0399: a batch dropped while it is verified, as flai accept by hand drops
 // it, keeps its result and stays dropped; the next run replaces it, removing
 // its branch and worktree, and builds the next batch from main.

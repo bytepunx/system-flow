@@ -42,8 +42,9 @@ const (
 )
 
 // Queue is the merge queue as it stands: the stories in review that are
-// eligible, in order, each other story in review with its reasons, and the
-// state's enqueued stories, batch, and outcomes.
+// eligible, in order, each other story in review with its reasons, the
+// state's enqueued stories, batch, and outcomes, and the window the next
+// batch fills in.
 type Queue struct {
 	// Mode is the project's acceptance mode, local or pull-request.
 	Mode string `json:"mode"`
@@ -65,6 +66,59 @@ type Queue struct {
 	Held   bool      `json:"held,omitempty"`
 	HeldBy string    `json:"held_by,omitempty"`
 	HeldAt time.Time `json:"held_at,omitzero"`
+	// Window is the window the next batch fills in before it is built
+	// (S-0552): set only while the queue is not held, no batch is under
+	// way or the last one has a result and was dropped, so that the next
+	// is built in its place, stories are enqueued and eligible, fewer than
+	// merge_queue.batch_max, merge_queue.coalesce is more than zero, and
+	// the window has not ended; nil otherwise.
+	Window *Window `json:"window,omitempty"`
+}
+
+// Window is the window a batch of the merge queue fills in (S-0552): it
+// opens when the first of its stories was enqueued and lasts
+// merge_queue.coalesce, and the batch is built when it ends or holds
+// BatchMax stories, whichever comes first. A story enqueued while a batch
+// ran, or left enqueued once one was dropped or landed, keeps when it was
+// enqueued, so it opens no new window.
+type Window struct {
+	// Ends is when the window ends, in UTC: when the first of Stories was
+	// enqueued, plus merge_queue.coalesce.
+	Ends time.Time `json:"ends"`
+	// Stories are the stories the batch would hold were it built now, in
+	// the order they were enqueued.
+	Stories []string `json:"stories"`
+	// BatchMax is merge_queue.batch_max: with as many stories, the batch
+	// is built at once.
+	BatchMax int `json:"batch_max"`
+}
+
+// window is the window the batch of picks, the stories pick chose from
+// enqueued at most limit, fills in at now, coalesce long; nil when there is
+// no window to wait out: coalesce is not more than zero, picks is empty or
+// holds limit stories, or the window ended. A story's enqueue time is the
+// one enqueued records for it.
+func window(picks []Entry, enqueued []Enqueued, limit int, coalesce time.Duration, now time.Time) *Window {
+	if coalesce <= 0 || len(picks) == 0 || len(picks) >= limit {
+		return nil
+	}
+	at := map[string]time.Time{}
+	for _, en := range enqueued {
+		at[workitem.CanonicalID(en.Story)] = en.At
+	}
+	var first time.Time
+	stories := make([]string, 0, len(picks))
+	for i, e := range picks {
+		if t := at[workitem.CanonicalID(e.Story)]; i == 0 || t.Before(first) {
+			first = t
+		}
+		stories = append(stories, e.Story)
+	}
+	ends := first.Add(coalesce).UTC()
+	if !now.Before(ends) {
+		return nil
+	}
+	return &Window{Ends: ends, Stories: stories, BatchMax: limit}
 }
 
 // Entry is a story in review as the queue sees it.
@@ -112,8 +166,15 @@ func Batches(actionOn bool, m manifest.Manifest) bool {
 // queue's state from the main checkout's .flai-cache. Under pull-request
 // acceptance it is off, with no story listed. A story whose own records
 // cannot be read is ineligible for it; the items, the threads, or the state
-// that cannot be read are an error.
+// that cannot be read are an error. Its Window is as it stands now, read
+// with the main branch's head; a head git cannot read leaves it nil.
 func Compute(r execx.Runner, repo *workitem.Repo) (Queue, error) {
+	return ComputeAt(r, repo, time.Now())
+}
+
+// ComputeAt is Compute with its Window as it stands at now, as flai queue
+// reads it with its own clock.
+func ComputeAt(r execx.Runner, repo *workitem.Repo, now time.Time) (Queue, error) {
 	q := Queue{Mode: repo.Manifest.Acceptance.ModeOrDefault(), Eligible: []Entry{}, Ineligible: []Entry{}, Enqueued: []Enqueued{}, Outcomes: []Outcome{}}
 	if repo.Manifest.Acceptance.PullRequest() {
 		q.Off, q.OffReason = true, OffUnderPullRequest
@@ -173,7 +234,30 @@ func Compute(r execx.Runner, repo *workitem.Repo) (Queue, error) {
 			q.Ineligible = append(q.Ineligible, e)
 		}
 	}
+	q.Window = filling(r, repo, q, now)
 	return q, nil
+}
+
+// filling is the window q's next batch fills in at now, as RunBatch would
+// pick it from the main branch's head: nil while the queue is held, a batch
+// is under way or waits to be landed or bisected, the queue has no window
+// to wait out, or the main branch's head cannot be read. It reads git only
+// when stories are enqueued and eligible and merge_queue.coalesce is more
+// than zero.
+func filling(r execx.Runner, repo *workitem.Repo, q Queue, now time.Time) *Window {
+	if q.Held || (q.Batch != nil && (q.Batch.Result == nil || q.Batch.Dropped == nil)) {
+		return nil
+	}
+	coalesce := repo.Manifest.MergeQueueCoalesce()
+	if coalesce <= 0 || len(enqueuedEligible(q)) == 0 {
+		return nil
+	}
+	_, base, err := mainHead(r, repo, "read the merge queue's window")
+	if err != nil {
+		return nil
+	}
+	limit := repo.Manifest.BatchMax()
+	return window(pick(q, base, limit), q.Enqueued, limit, coalesce, now)
 }
 
 // Board is the board with the merge queue beside it: what flai board --json,

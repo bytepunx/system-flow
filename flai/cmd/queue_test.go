@@ -343,6 +343,33 @@ func TestQueueShowsTheBatchsResultAndDrop(t *testing.T) {
 	}
 }
 
+// S-0552: while the next batch fills its window, flai queue says until when
+// and which stories it holds, of merge_queue.batch_max, in place of "batch:
+// none", and --json carries the window; once it ends it says neither.
+func TestQueueShowsTheWindowTheNextBatchFills(t *testing.T) {
+	root := queueProject(t)
+	at := time.Date(2026, 9, 15, 23, 0, 0, 0, time.UTC)
+	writeQueueState(t, root, mergequeue.State{Enqueued: []mergequeue.Enqueued{{Story: "S-0001", By: "alex", At: at}}})
+
+	out, errOut, code := runInAt(t, root, at.Add(time.Minute), "queue")
+	if code != 0 || !strings.Contains(out, "batch fills until 23:03:00Z: 1 of 4 stories (S-0001)\n") || strings.Contains(out, "batch: none") {
+		t.Errorf("flai queue inside the window: %d %s\n%s", code, errOut, out)
+	}
+	js, errOut, code := runInAt(t, root, at.Add(time.Minute), "queue", "--json")
+	var q mergequeue.Queue
+	if code != 0 || json.Unmarshal([]byte(js), &q) != nil {
+		t.Fatalf("flai queue --json: %d %s %s", code, js, errOut)
+	}
+	if w := q.Window; w == nil || !w.Ends.Equal(at.Add(3*time.Minute)) || strings.Join(w.Stories, " ") != "S-0001" || w.BatchMax != 4 {
+		t.Errorf("window %+v", q.Window)
+	}
+
+	out, _, _ = runInAt(t, root, at.Add(3*time.Minute), "queue")
+	if strings.Contains(out, "batch fills") || !strings.Contains(out, "batch: none\n") {
+		t.Errorf("flai queue once the window ended:\n%s", out)
+	}
+}
+
 // orchestratedQueueProject is orchestratedStoryInReview, with accept_reviews
 // on when permit says so, and its S-0001 verified at the head of its branch,
 // which head is, so that the merge queue finds it eligible.

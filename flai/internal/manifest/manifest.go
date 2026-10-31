@@ -1179,16 +1179,55 @@ func (a Acceptance) Errors() []string {
 
 // MergeQueue is the project's say about the merge queue flai serve runs
 // behind the merge-queue host action (S-0399, ADR-0173). A manifest without
-// the block batches DefaultBatchMax stories at most.
+// the block batches DefaultBatchMax stories at most, and waits
+// DefaultMergeQueueCoalesce for a batch to fill (S-0552).
 type MergeQueue struct {
 	// BatchMax is the most enqueued stories one batch holds, a whole number
 	// of one or more; unset means DefaultBatchMax.
 	BatchMax *int `yaml:"batch_max,omitempty" json:"batch_max,omitempty"`
+	// Coalesce is how long after the first of a batch's stories was
+	// enqueued the queue waits for more before it builds a batch of fewer
+	// than BatchMax, a Go duration such as 3m; empty means
+	// DefaultMergeQueueCoalesce, and 0 builds it at once.
+	Coalesce string `yaml:"coalesce,omitempty" json:"coalesce,omitempty"`
 }
 
 // DefaultBatchMax is the most stories a batch of the merge queue holds when
 // merge_queue.batch_max is not set (ADR-0173).
 const DefaultBatchMax = 4
+
+// DefaultMergeQueueCoalesce is how long the merge queue waits for a batch to
+// fill when merge_queue.coalesce is not set: 3 minutes.
+const DefaultMergeQueueCoalesce = 3 * time.Minute
+
+// CoalesceDuration is merge_queue.coalesce as a duration:
+// DefaultMergeQueueCoalesce when it is empty, and zero when the queue waits
+// for none.
+func (q MergeQueue) CoalesceDuration() (time.Duration, error) {
+	s := strings.TrimSpace(q.Coalesce)
+	if s == "" {
+		return DefaultMergeQueueCoalesce, nil
+	}
+	d, err := time.ParseDuration(s)
+	if err != nil {
+		return 0, fmt.Errorf("merge_queue.coalesce %q is not a duration; write how long the merge queue waits for a batch to fill, such as 3m or 90s, 0 to build each batch at once, or remove it for 3m", q.Coalesce)
+	}
+	if d < 0 {
+		return 0, fmt.Errorf("merge_queue.coalesce %q is negative; write how long the merge queue waits for a batch to fill, such as 3m or 90s, 0 to build each batch at once, or remove it for 3m", q.Coalesce)
+	}
+	return d, nil
+}
+
+// MergeQueueCoalesce is merge_queue.coalesce as a duration, zero when the
+// queue waits for no batch to fill, or DefaultMergeQueueCoalesce when it is
+// not set or not valid, which MergeQueue.Errors refuses at load.
+func (m Manifest) MergeQueueCoalesce() time.Duration {
+	d, err := m.MergeQueue.CoalesceDuration()
+	if err != nil {
+		return DefaultMergeQueueCoalesce
+	}
+	return d
+}
 
 // BatchMax is merge_queue.batch_max, or DefaultBatchMax when it is not set.
 // It does not say whether the value is one or more; MergeQueue.Errors does.
@@ -1232,10 +1271,14 @@ func batchMaxProblem(data []byte) string {
 // Errors are what is wrong with the merge queue's settings, one sentence
 // each; none when they are valid.
 func (q MergeQueue) Errors() []string {
+	var errs []string
 	if b := q.BatchMax; b != nil && *b < 1 {
-		return []string{fmt.Sprintf("merge_queue.batch_max %d is not a number of one or more; write the most enqueued stories one batch of the merge queue holds, such as %d, or remove it for %d", *b, DefaultBatchMax, DefaultBatchMax)}
+		errs = append(errs, fmt.Sprintf("merge_queue.batch_max %d is not a number of one or more; write the most enqueued stories one batch of the merge queue holds, such as %d, or remove it for %d", *b, DefaultBatchMax, DefaultBatchMax))
 	}
-	return nil
+	if _, err := q.CoalesceDuration(); err != nil {
+		errs = append(errs, err.Error())
+	}
+	return errs
 }
 
 // NamedCommand is one command by name: an argument list, run as it stands,

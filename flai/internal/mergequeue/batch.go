@@ -111,8 +111,13 @@ type Deps struct {
 // enqueued stories, in the order they were enqueued, that Compute lists as
 // eligible, but for one left out of a batch or left waiting at the main
 // branch's commit and the head it has now, at most the manifest's
-// merge_queue.batch_max. A batch with no result and not dropped, as a flai
-// serve stopped mid-run leaves it, and a dropped one are replaced.
+// merge_queue.batch_max. While they are fewer than that, it builds none
+// until the window they fill in ends, merge_queue.coalesce after the first
+// of them was enqueued, by d.Now (S-0552): a story enqueued while a batch
+// ran, or left enqueued once one was dropped or landed, keeps when it was
+// enqueued, so the next batch waits no longer for it. A batch with no
+// result and not dropped, as a flai serve stopped mid-run leaves it, and a
+// dropped one are replaced.
 //
 // It removes the last batch's worktree and branch, then builds the batch in
 // its own worktree, WorktreeName, on its own branch, from the main branch's
@@ -155,7 +160,7 @@ func RunBatch(ctx context.Context, d Deps, repo *workitem.Repo) (bool, error) {
 	if d.Log == nil {
 		d.Log = slog.New(slog.DiscardHandler)
 	}
-	q, err := Compute(d.Runner, repo)
+	q, err := ComputeAt(d.Runner, repo, d.Now())
 	if err != nil {
 		return false, err
 	}
@@ -170,8 +175,9 @@ func RunBatch(ctx context.Context, d Deps, repo *workitem.Repo) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("build a merge queue batch: read the head of %s: %w; check that git can read the main branch", main, err)
 	}
-	picks := pick(q, strings.TrimSpace(base), repo.Manifest.BatchMax())
-	if len(picks) == 0 {
+	limit := repo.Manifest.BatchMax()
+	picks := pick(q, strings.TrimSpace(base), limit)
+	if len(picks) == 0 || window(picks, q.Enqueued, limit, repo.Manifest.MergeQueueCoalesce(), d.Now()) != nil {
 		return false, nil
 	}
 	if err := ctx.Err(); err != nil {

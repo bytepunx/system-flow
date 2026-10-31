@@ -420,3 +420,86 @@ func TestTheQueueBatchesOnlyWithTheActionAcceptReviewsAndLocalAcceptance(t *test
 		}
 	}
 }
+
+// S-0552: the window opens when the first of the stories picked was
+// enqueued, whatever their order, and lasts the coalesce; there is none
+// once it ends, with no story, with as many stories as the limit, and with
+// no coalesce.
+func TestTheWindowOpensWithTheFirstStoryEnqueued(t *testing.T) {
+	picks := []Entry{{Story: "S-0002"}, {Story: "S-0001"}}
+	enqueued := []Enqueued{{Story: "S-1", At: t0.Add(time.Minute)}, {Story: "S-0002", At: t0.Add(2 * time.Minute)}, {Story: "S-0003", At: t0}}
+	w := window(picks, enqueued, 4, 3*time.Minute, t0.Add(3*time.Minute))
+	if w == nil || !w.Ends.Equal(t0.Add(4*time.Minute)) || !slices.Equal(w.Stories, []string{"S-0002", "S-0001"}) || w.BatchMax != 4 {
+		t.Errorf("window %+v, want S-0002 and S-0001 until %s, of 4", w, t0.Add(4*time.Minute))
+	}
+	for _, c := range []struct {
+		name  string
+		picks []Entry
+		limit int
+		wait  time.Duration
+		now   time.Time
+	}{
+		{"ended", picks, 4, 3 * time.Minute, t0.Add(4 * time.Minute)},
+		{"no story", nil, 4, 3 * time.Minute, t0},
+		{"as many as the limit", picks, 2, 3 * time.Minute, t0},
+		{"no coalesce", picks, 4, 0, t0},
+	} {
+		if w := window(c.picks, enqueued, c.limit, c.wait, c.now); w != nil {
+			t.Errorf("%s: window %+v, want none", c.name, w)
+		}
+	}
+}
+
+// S-0552: the queue carries the window its next batch fills in, as flai
+// queue --json and the board give it, while no batch is under way or the
+// last was dropped with its result; not while the queue is held, a batch is
+// under way or waits to land, the window has ended, or the main branch's
+// head cannot be read.
+func TestTheQueueCarriesTheWindow(t *testing.T) {
+	repo := project(t, "")
+	g := scriptedGit{}
+	g.script("main", "rev-parse", "--abbrev-ref", "HEAD")
+	g.script("m1", "rev-parse", "--verify", "--quiet", "refs/heads/main^{commit}")
+	s, _ := story(t, repo, "Ready", []bool{true}, t0.Add(time.Hour))
+	passed(t, repo, g, s.ID, "aaaa")
+	enqueued := `"enqueued": [{"story": "` + s.ID + `", "by": "alex", "at": "2026-10-19T08:00:00Z"}]`
+	ends := time.Date(2026, 10, 19, 8, 3, 0, 0, time.UTC)
+
+	writeState(t, repo.CacheDir(), "{"+enqueued+"}")
+	q, err := ComputeAt(g, repo, ends.Add(-time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w := q.Window; w == nil || !w.Ends.Equal(ends) || !slices.Equal(w.Stories, []string{s.ID}) || w.BatchMax != 4 {
+		t.Fatalf("window %+v, want %s until %s", w, s.ID, ends)
+	}
+	data, err := json.Marshal(q)
+	if err != nil || !strings.Contains(string(data), `"window":{"ends":"2026-10-19T08:03:00Z","stories":["`+s.ID+`"],"batch_max":4}`) {
+		t.Errorf("as JSON: %v\n%s", err, data)
+	}
+	if q, err := ComputeAt(g, repo, ends); err != nil || q.Window != nil {
+		t.Errorf("window %+v, %v once it ended", q.Window, err)
+	}
+	dropped := `"batch": {"stories": ["` + s.ID + `"], "step": "verified", "result": {"passed": true, "finished_at": "2026-10-19T08:01:00Z"}, "dropped": {"reason": "x", "by": "alex", "at": "2026-10-19T08:01:30Z"}}`
+	writeState(t, repo.CacheDir(), "{"+enqueued+", "+dropped+"}")
+	if q, err := ComputeAt(g, repo, ends.Add(-time.Minute)); err != nil || q.Window == nil {
+		t.Errorf("window %+v, %v with the last batch dropped, want one", q.Window, err)
+	}
+
+	for name, state := range map[string]string{
+		"held":                 `"held": true, "held_by": "alex", "held_at": "2026-10-19T08:00:30Z"`,
+		"a batch under way":    `"batch": {"stories": ["` + s.ID + `"], "step": "verifying unit"}`,
+		"a batch to land":      `"batch": {"stories": ["` + s.ID + `"], "step": "verified", "result": {"passed": true, "finished_at": "2026-10-19T08:01:00Z"}}`,
+		"dropped while it ran": `"batch": {"stories": ["` + s.ID + `"], "step": "verifying unit", "dropped": {"reason": "x", "by": "alex", "at": "2026-10-19T08:01:30Z"}}`,
+	} {
+		writeState(t, repo.CacheDir(), "{"+enqueued+", "+state+"}")
+		if q, err := ComputeAt(g, repo, ends.Add(-time.Minute)); err != nil || q.Window != nil {
+			t.Errorf("%s: window %+v, %v; want none", name, q.Window, err)
+		}
+	}
+	writeState(t, repo.CacheDir(), "{"+enqueued+"}")
+	delete(g, "rev-parse --abbrev-ref HEAD")
+	if q, err := ComputeAt(g, repo, ends.Add(-time.Minute)); err != nil || q.Window != nil {
+		t.Errorf("main unread: window %+v, %v; want none", q.Window, err)
+	}
+}

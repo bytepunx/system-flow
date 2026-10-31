@@ -175,6 +175,8 @@ func TestEditSettingsRefusesWithTheFieldAndTheReason(t *testing.T) {
 		{"batch max negative", []Assignment{{"merge_queue.batch_max", "-3"}}, nil, "merge_queue.batch_max", "-3 is not a number of one or more"},
 		{"batch max not a number", []Assignment{{"merge_queue.batch_max", "four"}}, nil, "merge_queue.batch_max", `"four" is not a whole number; write one such as 5`},
 		{"batch max not whole", []Assignment{{"merge_queue.batch_max", "2.5"}}, nil, "merge_queue.batch_max", `"2.5" is not a whole number`},
+		{"coalesce window", []Assignment{{"merge_queue.coalesce", "soon"}}, nil, "merge_queue.coalesce", `"soon" is not a duration; write how long the merge queue waits for a batch to fill, such as 3m`},
+		{"negative coalesce window", []Assignment{{"merge_queue.coalesce", "-1m"}}, nil, "merge_queue.coalesce", `"-1m" is negative`},
 		{"unknown key", []Assignment{{"planning.colour", "blue"}}, nil, "planning.colour", "is not a setting flai manifest set writes"},
 		{"unknown key unset", nil, []string{"dashboard.port"}, "dashboard.port", "is not a setting flai manifest set writes"},
 		{"currency", []Assignment{{"planning.currency", "GBP"}}, nil, "planning.currency", "re-denominates every amount"},
@@ -274,6 +276,33 @@ func TestEditSettingsWritesBatchMax(t *testing.T) {
 	}
 	if !v.Set || v.Value != 6 {
 		t.Errorf("its value: %+v", v)
+	}
+}
+
+// S-0552: merge_queue.coalesce is written into a merge_queue block added at
+// the end, 0 among its values, read back by Load, and unset so that its
+// default, 3m, applies; the rest of the file is as it was.
+func TestEditSettingsWritesMergeQueueCoalesce(t *testing.T) {
+	if s, ok := SettingFor("merge_queue.coalesce"); !ok || s.Kind != KindDuration || s.Default != "3m" {
+		t.Fatalf("merge_queue.coalesce in the catalog: %+v, %v", s, ok)
+	}
+	got, err := EditSettings([]byte(settingsFixture), []Assignment{{"merge_queue.coalesce", "90s"}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := settingsFixture + "merge_queue:\n  coalesce: 90s\n"; string(got) != want {
+		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
+	}
+	if d := loaded(t, got).MergeQueueCoalesce(); d != 90*time.Second {
+		t.Errorf("read back %v", d)
+	}
+	off, err := EditSettings(got, []Assignment{{"merge_queue.coalesce", "0"}}, nil)
+	if err != nil || string(off) != settingsFixture+"merge_queue:\n  coalesce: \"0\"\n" || loaded(t, off).MergeQueueCoalesce() != 0 {
+		t.Errorf("coalesce=0: %v\n%s", err, off)
+	}
+	unset, err := EditSettings(got, nil, []string{"merge_queue.coalesce"})
+	if err != nil || string(unset) != settingsFixture+"merge_queue:\n" || loaded(t, unset).MergeQueueCoalesce() != DefaultMergeQueueCoalesce {
+		t.Errorf("unset: %v\n%s", err, unset)
 	}
 }
 
@@ -778,7 +807,7 @@ func TestSettingValues(t *testing.T) {
 	if a, ok := got["planning.agent"].Value.(*Agent); !ok || a.Model != "claude-sonnet-5" {
 		t.Errorf("planning.agent = %v", got["planning.agent"].Value)
 	}
-	for _, key := range []string{"orchestration.permissions.publish", "planning.hour_rate", "analysis.schedule", "analysis.agent", "digest.schedule", "digest.compact_after", "acceptance.mode", "acceptance.forge", "acceptance.merge_method", "merge_queue.batch_max"} {
+	for _, key := range []string{"orchestration.permissions.publish", "planning.hour_rate", "analysis.schedule", "analysis.agent", "digest.schedule", "digest.compact_after", "acceptance.mode", "acceptance.forge", "acceptance.merge_method", "merge_queue.batch_max", "merge_queue.coalesce"} {
 		if v := got[key]; v.Set || v.Value != nil {
 			t.Errorf("%s is unset, got %v", key, v.Value)
 		}
@@ -789,7 +818,7 @@ func TestSettingValues(t *testing.T) {
 	if d := got["planning.default_duration"].Default; d != "1h" {
 		t.Errorf("planning.default_duration's default = %q, want 1h", d)
 	}
-	for key, want := range map[string]string{"digest.compact_after": "720h", "acceptance.mode": AcceptLocal, "acceptance.forge": ForgeGitHub, "acceptance.merge_method": MergeMerge, "merge_queue.batch_max": "4"} {
+	for key, want := range map[string]string{"digest.compact_after": "720h", "acceptance.mode": AcceptLocal, "acceptance.forge": ForgeGitHub, "acceptance.merge_method": MergeMerge, "merge_queue.batch_max": "4", "merge_queue.coalesce": "3m"} {
 		if d := got[key].Default; d != want {
 			t.Errorf("%s's default = %q, want %q", key, d, want)
 		}
