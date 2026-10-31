@@ -7,7 +7,7 @@ status: ready
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:41:19Z
-updated: 2026-10-30T19:19:53Z
+updated: 2026-10-31T06:23:25Z
 transitions:
   - to: ready
     at: 2026-10-30T00:05:31Z
@@ -42,10 +42,10 @@ cost_of_delay:
   at: 2026-10-21T16:11:12Z
 forecast:
   duration: 1h10m
-  delivery: 2026-10-30T20:54:00Z
+  delivery: 2026-10-31T07:58:00Z
   basis: "Its own forecast of 1h10m; 1st in the pull order with an in-progress limit of 5, with nothing ahead of it."
   by: flai
-  at: 2026-10-30T19:19:53Z
+  at: 2026-10-31T06:23:25Z
 finalized:
   by: alex
   at: 2026-10-30T00:05:20Z
