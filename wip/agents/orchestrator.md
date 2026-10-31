@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1935.6796
-accrued_seconds: 1499045
-tasks_completed: 1526
-last_run: 2026-10-31T08:18:57Z
+accrued_cost: 1936.4009
+accrued_seconds: 1499220
+tasks_completed: 1535
+last_run: 2026-10-31T09:01:20Z
 ---
 
 # Orchestrator activity
@@ -10709,6 +10709,69 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 17
 - Cost: 0.2117 USD, estimated
+
+### 2026-10-31T08:25:39Z
+
+- Summary: release-due S-0523: under publish (policy judgement; count 1, value 75 USD/week, nothing in held_by_epic) published S-0523, judged complete (six tasks done, criteria met, ADR-0224, I-0187 closed). Releases: flai 1.78.5 to 1.78.6 (patch, flai/v1.78.6), template 1.1.12 to 1.1.13 (patch, v1.1.13 at 7a9da0e on system-flow-template), pushed, no warnings. Bundled: S-0523.
+- Items: S-0523
+- Seconds: 38
+- Cost: 0.0850 USD, estimated
+
+### 2026-10-31T08:25:55Z
+
+- Summary: I published S-0523 under the judgement release policy, and the push went through with no warnings.
+- Items: none
+- Seconds: 16
+- Cost: 0.1178 USD, estimated
+
+### 2026-10-31T08:39:53Z
+
+- Summary: Left S-0552 in review, not enqueued: flai verify passed at story/S-0552 head 382c790, but the queue lists it ineligible (criteria_unticked: criterion 4, measurable only a fortnight after landing). Opened TH-0782 recommending the criterion be split so the queue can take it.
+- Items: S-0552
+- Seconds: 32
+- Cost: 0.0851 USD, estimated
+
+### 2026-10-31T08:40:10Z
+
+- Summary: I did not enqueue S-0552, so it stays in review.
+- Items: none
+- Seconds: 17
+- Cost: 0.1596 USD, estimated
+
+### 2026-10-31T09:00:12Z
+
+- Summary: Answered TH-0773, citing design/adrs/0224-orchestration-permissions-set-cost-of-delay-off-by-default-lets-the.md
+- Items: S-0546
+- Seconds: 19
+- Cost: 0.0480 USD, estimated
+
+### 2026-10-31T09:00:24Z
+
+- Summary: TH-0773: operator confirmed time_lost_per_cycle 9h on S-0546, but set_cost_of_delay is off and S-0546 is in progress, so I set nothing; replied asking the operator to run flai edit S-0546 --time-lost-per-cycle 9h or turn on set_cost_of_delay (ADR-0224). Thread left open.
+- Items: S-0546
+- Seconds: 12
+- Cost: 0.0151 USD, estimated
+
+### 2026-10-31T09:00:37Z
+
+- Summary: The 9h time-lost-per-cycle input for S-0546 that you confirmed on TH-0773 is still not set: I couldn't set it, so I left the thread open.
+- Items: none
+- Seconds: 13
+- Cost: 0.0893 USD, estimated
+
+### 2026-10-31T09:01:02Z
+
+- Summary: TH-0773 (S-0546 cost of delay 9h): no action. Last entry is mine, set_cost_of_delay is still off in system-flow.yaml, and S-0546 is in progress, so plan_backlog_stories does not cover it; the confirmed input awaits the operator's flai edit S-0546 --time-lost-per-cycle 9h or set_cost_of_delay on.
+- Items: S-0546
+- Seconds: 10
+- Cost: 0.0485 USD, estimated
+
+### 2026-10-31T09:01:20Z
+
+- Summary: I did not change anything on TH-0773: the cost of delay input you confirmed for S-0546 is still not set, and I'm not allowed to set it.
+- Items: none
+- Seconds: 18
+- Cost: 0.0729 USD, estimated
 
 ## Refusals
 

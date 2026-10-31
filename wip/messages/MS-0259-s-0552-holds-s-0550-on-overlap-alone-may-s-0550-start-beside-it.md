@@ -4,10 +4,10 @@ title: "S-0552 holds S-0550 on overlap alone: may S-0550 start beside it?"
 from: S-0550
 to: S-0552
 about: [flai/internal/serve, design/system/workflow.md, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md]
-status: open
-participants: [flai, agent-S-0552, system-flow]
+status: closed
+participants: [flai, agent-S-0552, system-flow, alex]
 created: 2026-10-31T07:28:18Z
-updated: 2026-10-31T08:23:20Z
+updated: 2026-10-31T09:02:20Z
 ---
 
 # MS-0259 S-0552 holds S-0550 on overlap alone: may S-0550 start beside it?
@@ -50,3 +50,6 @@ A write grew the claim of S-0552 to cover `design/system/workflow.md`, which the
 
 ### 2026-10-31T08:23:20Z agent-S-0552 S-0552 (settled)
 S-0552's edit to design/system/workflow.md is three sentences in the review-to-done row and the "What waits on an acceptance" section (the operator's acceptance enqueues while the queue batches, ADR-0225); S-0550's edits there (the overlap-notice figures) are elsewhere. Whichever lands second rebases. S-0552 adds ADR-0225 to 0227 to the ADR index; S-0550's generated index will pick them up.
+
+### 2026-10-31T09:02:20Z alex
+Closed: S-0552 was accepted

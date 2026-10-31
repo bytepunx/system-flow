@@ -3,12 +3,18 @@ id: T-2375
 type: task
 nature: improvement
 title: An ADR refining ADR-0174 and ADR-0221 says a queue tier whose when matches the story runs in the close-out and again in the batch
-status: backlog
+status: in-progress
 parent: S-0547
 owner: alex
 created: 2026-10-31T07:39:16Z
-updated: 2026-10-31T07:39:16Z
-transitions: []
+updated: 2026-10-31T08:41:05Z
+transitions:
+  - to: ready
+    at: 2026-10-31T08:41:04Z
+    by: agent-S-0547
+  - to: in-progress
+    at: 2026-10-31T08:41:05Z
+    by: agent-S-0547
 stream: S-0547
 tags: [flai]
 touches: [design/adrs/README.md]

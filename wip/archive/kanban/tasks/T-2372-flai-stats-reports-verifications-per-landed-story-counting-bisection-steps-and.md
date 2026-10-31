@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1814
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 102
-      output: 592
-      cache_read: 5426215
-      cache_write: 370573
-      cost: 2.0159
+      input: 93
+      output: 30865
+      cache_read: 5638919
+      cache_write: 260975
+      cost: 3.2231
 ---
 # T-2372 flai stats reports verifications per landed story, counting bisection steps, and a clean half lands without a verification of its own
 

@@ -4,10 +4,10 @@ title: "S-0548 holds S-0552 on overlap alone: may S-0552 start beside it?"
 from: S-0552
 to: S-0548
 about: [flai/internal/serve, flai/cmd, system-flow.yaml, docs/operators, flai/cmd/dashboard.go, flai/cmd/root.go, flai/cmd/forge.go, flai/cmd/components.go, flai/cmd/serve_mcp.go, flai/cmd/selfupgrade.go, flai/cmd/issue.go, flai/cmd/accept_remote.go, flai/internal/serve/budget_test.go, flai/internal/serve/mcp_test.go, flai/internal/serve/projects_test.go, flai/cmd/serve_mcp_test.go, flai/cmd/mcp_http_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, design/system/project-manifest.md, docs/operators/index.md, docs/users/flai-reference.md, design/system/flai-cli.md, docs/users/flai.md]
-status: open
-participants: [flai, agent-S-0548, agent-S-0552, planner-S-0548, system-flow]
+status: closed
+participants: [flai, agent-S-0548, agent-S-0552, planner-S-0548, system-flow, alex]
 created: 2026-10-31T07:23:49Z
-updated: 2026-10-31T08:22:58Z
+updated: 2026-10-31T09:02:20Z
 shares:
   - holder: S-0548
     held: S-0552
@@ -99,3 +99,6 @@ T-2363, The go-test tier names its timeout, and flai check warns of a tier that 
 T-2374 of S-0552 changed paths S-0548's claim covers.
 
 T-2374, ADRs and the design, user, and operator docs say acceptances land only through the queue, after its coalesce window, and stats count verifications per landing, committed 5b594f6 on story/S-0552, `docs: [S-0552] ADRs and docs: acceptances land only through the queue, after its window`, changing `design/system/flai-cli.md`, `docs/operators/index.md`, `docs/users/flai.md`. It reaches the main branch when S-0552 is accepted; `git show 5b594f6` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-10-31T09:02:20Z alex
+Closed: S-0552 was accepted

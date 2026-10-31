@@ -3,15 +3,18 @@ id: S-0547
 type: story
 nature: improvement
 title: The close-out runs the queue tiers and the tests of the packages that import a changed package, so what the merge queue would send back is found before review
-status: ready
+status: in-progress
 parent: E-0031
 owner: alex
 created: 2026-10-30T01:52:02Z
-updated: 2026-10-31T08:20:33Z
+updated: 2026-10-31T08:40:01Z
 transitions:
   - to: ready
     at: 2026-10-31T07:24:13Z
     by: alex
+  - to: in-progress
+    at: 2026-10-31T08:40:01Z
+    by: agent-S-0547
 tags: [flai]
 topics: [testing, cli]
 touches: [flai/internal/check, flai/internal/verify, flai/cmd, system-flow.yaml, design/system/flai-cli.md, design/conventions/testing.md, docs/users/flai.md, design/adrs, design/adrs/README.md, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go, docs/operators/settings.md, docs/users/flai-reference.md, design/system/project-manifest.md, design/conventions/code-quality.md, design/conventions/tooling.md, design/issues/I-0221-the-close-out-s-go-test-tier-runs-only-the-changed-packages-so-a-change-that-breaks-a-caller-package-s-tests-passes-before-review.md, design/issues/I-0203-a-story-the-operator-accepts-outside-the-merge-queue-lands-without-the-queue-tiers-so-a-stale-generated-file-on-main-fails-every-later-batch-at-integration.md, design/issues/summary.md]

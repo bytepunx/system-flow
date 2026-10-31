@@ -3,15 +3,36 @@ id: T-2391
 type: task
 nature: improvement
 title: The overlap verdict takes a trial-merge judge, holds a ready story only on a conflicting trial merge, and names the conflicting paths in its reason
-status: backlog
+status: done
 parent: S-0551
 owner: alex
 created: 2026-10-31T07:43:04Z
-updated: 2026-10-31T07:43:04Z
-transitions: []
+updated: 2026-10-31T08:56:45Z
+transitions:
+  - to: ready
+    at: 2026-10-31T08:42:41Z
+    by: agent-S-0551
+  - to: in-progress
+    at: 2026-10-31T08:42:42Z
+    by: agent-S-0551
+  - to: done
+    at: 2026-10-31T08:56:45Z
+    by: agent-S-0551
 stream: S-0551
 tags: [flai, go]
-touches: [flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go]
+touches: [flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/workitem/repo.go, flai/internal/workitem/share.go, design/adrs/0230-a-ready-story-whose-claim-overlaps-a-story-in-progress-is-held-only-when-a.md, design/adrs/0231-flai-stats-reports-the-share-of-the-window-with-n-stories-in-progress-at-once.md]
+usage:
+  source: log
+  seconds: 840
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 53
+      output: 255
+      cache_read: 2051193
+      cache_write: 81736
+      cost: 0.7424
 ---
 # T-2391 The overlap verdict takes a trial-merge judge, holds a ready story only on a conflicting trial merge, and names the conflicting paths in its reason
 

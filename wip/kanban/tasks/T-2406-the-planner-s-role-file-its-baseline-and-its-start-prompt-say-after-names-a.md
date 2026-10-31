@@ -3,12 +3,18 @@ id: T-2406
 type: task
 nature: improvement
 title: The planner's role file, its baseline, and its start prompt say after names a story whose output this one reads, with the reason in its Notes
-status: backlog
+status: in-progress
 parent: S-0551
 owner: alex
 created: 2026-10-31T07:44:14Z
-updated: 2026-10-31T07:44:14Z
-transitions: []
+updated: 2026-10-31T08:57:53Z
+transitions:
+  - to: ready
+    at: 2026-10-31T08:57:50Z
+    by: agent-S-0551
+  - to: in-progress
+    at: 2026-10-31T08:57:53Z
+    by: agent-S-0551
 stream: S-0551
 tags: [flai, conventions]
 touches: [design/workflows/roles/planner.md, template/root/design/workflows/roles/planner.md, flai/internal/roles/baseline/planner.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, template/root/.claude/agents/planner.md, ".claude/agents/planner.md"]

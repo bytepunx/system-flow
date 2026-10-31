@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 57.5627
-accrued_seconds: 5267
-tasks_completed: 33
-last_run: 2026-10-31T07:50:13Z
+accrued_cost: 58.8803
+accrued_seconds: 5331
+tasks_completed: 34
+last_run: 2026-10-31T08:25:35Z
 ---
 
 # Curator activity
@@ -275,3 +275,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0166, D-0316, D-0435
 - Seconds: 92
 - Cost: 1.6025 USD, estimated
+
+### 2026-10-31T08:25:35Z
+
+- Summary: I wrote no new entries this run. I merged TH-0587 into D-0436, whose body now states the fact the operator gave: finalize complete drafts with the cost of delay values their planners worked out by hand. I absorbed D-0431 by `design/adrs/0224-orchestration-permissions-set-cost-of-delay-off-by-default-lets-the.md` § Decision. `flai digest compact` compacted no entries. S-0523's other narrative decisions were plan progress already covered by D-0431.
+- Trigger: accepted S-0523
+- Items: D-0431, D-0436
+- Seconds: 64
+- Cost: 1.3176 USD, estimated

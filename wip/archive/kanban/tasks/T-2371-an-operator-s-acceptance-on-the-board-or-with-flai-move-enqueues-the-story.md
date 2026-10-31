@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1781
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 90
-      output: 441
-      cache_read: 3973174
-      cache_write: 253957
-      cost: 1.47
+      input: 68
+      output: 22507
+      cache_read: 4112024
+      cache_write: 190309
+      cost: 2.3503
 ---
 # T-2371 An operator's acceptance on the board or with flai move enqueues the story while the queue batches, and drops no batch
 

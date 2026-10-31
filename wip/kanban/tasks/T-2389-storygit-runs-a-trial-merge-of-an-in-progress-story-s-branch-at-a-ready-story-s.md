@@ -3,15 +3,36 @@ id: T-2389
 type: task
 nature: improvement
 title: storygit runs a trial merge of an in-progress story's branch at a ready story's base and returns the conflicting paths
-status: backlog
+status: done
 parent: S-0551
 owner: alex
 created: 2026-10-31T07:42:57Z
-updated: 2026-10-31T07:42:57Z
-transitions: []
+updated: 2026-10-31T08:56:59Z
+transitions:
+  - to: ready
+    at: 2026-10-31T08:42:38Z
+    by: agent-S-0551
+  - to: in-progress
+    at: 2026-10-31T08:42:39Z
+    by: agent-S-0551
+  - to: done
+    at: 2026-10-31T08:56:59Z
+    by: agent-S-0551
 stream: S-0551
 tags: [flai, go]
 touches: [flai/internal/storygit/trial.go, flai/internal/storygit/trial_test.go]
+usage:
+  source: log
+  seconds: 843
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 47
+      output: 214
+      cache_read: 1681807
+      cache_write: 70807
+      cost: 0.61
 ---
 # T-2389 storygit runs a trial merge of an in-progress story's branch at a ready story's base and returns the conflicting paths
 

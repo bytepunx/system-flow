@@ -3,12 +3,18 @@ id: T-2408
 type: task
 nature: improvement
 title: The work-management and strategic-agents conventions state the trial merge and the after rule, in the tree and the template, with a changelog entry
-status: backlog
+status: in-progress
 parent: S-0551
 owner: alex
 created: 2026-10-31T07:44:19Z
-updated: 2026-10-31T07:44:19Z
-transitions: []
+updated: 2026-10-31T08:57:59Z
+transitions:
+  - to: ready
+    at: 2026-10-31T08:57:56Z
+    by: agent-S-0551
+  - to: in-progress
+    at: 2026-10-31T08:57:59Z
+    by: agent-S-0551
 stream: S-0551
 tags: [flai, conventions, template]
 touches: [design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md]

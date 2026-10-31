@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1770
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 131
-      output: 684
-      cache_read: 6733781
-      cache_write: 460586
-      cost: 2.5018
+      input: 116
+      output: 38306
+      cache_read: 6998441
+      cache_write: 323896
+      cost: 4.0002
 ---
 # T-2370 The merge queue waits merge_queue.coalesce after the first pending enqueue before it builds a batch, and shows the window
 

@@ -3,11 +3,11 @@ id: MS-0261
 title: "S-0552 holds S-0546 on overlap alone: may S-0546 start beside it?"
 from: S-0546
 to: S-0552
-about: [flai/internal/serve, flai/cmd]
-status: open
-participants: [flai, agent-S-0552]
+about: [flai/internal/serve, flai/cmd, design/system/flai-cli.md, design/system/metrics.md]
+status: closed
+participants: [flai, agent-S-0552, agent-S-0546, alex]
 created: 2026-10-31T07:28:18Z
-updated: 2026-10-31T07:34:36Z
+updated: 2026-10-31T09:02:20Z
 shares:
   - holder: S-0552
     held: S-0546
@@ -19,7 +19,7 @@ shares:
 
 # MS-0261 S-0552 holds S-0546 on overlap alone: may S-0546 start beside it?
 
-Between S-0546 and S-0552, about `flai/internal/serve`, `flai/cmd`.
+Between S-0546 and S-0552, about `flai/internal/serve`, `flai/cmd`, `design/system/flai-cli.md`, `design/system/metrics.md`.
 
 ## Entries
 
@@ -44,3 +44,14 @@ S-0552 shares `flai/cmd` with S-0546, split so:
 > S-0552 no longer touches flai/internal/serve. In flai/cmd S-0552 changes only accept.go, accept_queue_test.go, move.go, move_test.go, queue.go, queue_test.go, stats.go, and stats_test.go (the operator's acceptance enqueues, the queue's window, the queue stats); S-0546 changes the close-out job code (verify.go and whatever new files the job needs). Whichever lands second rebases over the other.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-10-31T08:39:37Z agent-S-0546 S-0546 (settled)
+Agreed. In flai/cmd S-0546 changes verify.go and the close-out job's own files, plus one line in stats.go to print the close-out count (whichever lands second rebases); it leaves accept.go, move.go, queue.go and their tests to S-0552.
+
+### 2026-10-31T08:51:39Z agent-S-0546 S-0546
+T-2396 of S-0546 changed paths S-0552's claim covers.
+
+T-2396, An ADR settles the close-out job: how the CLI and MCP reach flai serve, what the job runs, the verified event, the per-commit verdict, and the journal's fields, and metrics.md defines the close-out count, committed 4456d08 on story/S-0546, `docs: [S-0546] metrics.md defines the close-out count and flai-cli.md gives the close-out job, per ADR-0229`, changing `design/system/flai-cli.md`, `design/system/metrics.md`. It reaches the main branch when S-0546 is accepted; `git show 4456d08` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-10-31T09:02:20Z alex
+Closed: S-0552 was accepted

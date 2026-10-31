@@ -3,38 +3,59 @@ id: S-0546
 type: story
 nature: improvement
 title: The close-out runs as a flai serve job the story's agent waits on by event, so it never dies at the harness's tool timeout and is never re-run from the start
-status: ready
+status: in-progress
 parent: E-0031
 owner: alex
 created: 2026-10-30T01:51:56Z
-updated: 2026-10-31T08:20:13Z
+updated: 2026-10-31T09:01:09Z
 transitions:
   - to: ready
     at: 2026-10-31T07:24:17Z
     by: alex
+  - to: in-progress
+    at: 2026-10-31T08:38:50Z
+    by: agent-S-0546
 tags: [flai]
 topics: [testing, mcp, cli]
-touches: [flai/internal/serve, flai/internal/mcpserver, flai/cmd, scripts/close-out.sh, design/system/flai-cli.md, design/conventions/testing.md, docs/users/flai.md, design/adrs/0224-the-close-out-runs-as-a-flai-serve-job-the-story-s-agent-waits-on-by-event.md, design/adrs/README.md, design/system/metrics.md, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/serve.go, flai/internal/inbox/events.go, flai/internal/inbox/events_test.go, flai/internal/hostapi/writes.go, flai/cmd/serve_actions.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go, flai/internal/mcpserver/server.go, flai/internal/metrics/closeouts.go, flai/internal/metrics/closeouts_test.go, flai/internal/metrics/metrics.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, flai/cmd/stats.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, template/root/scripts/close-out.sh, docs/users/flai-reference.md, docs/operators/index.md, design/conventions/code-quality.md, design/conventions/delegation.md, design/conventions/work-management.md, template/root/design/conventions/code-quality.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md]
+touches: [flai/internal/serve, flai/internal/mcpserver, flai/cmd, scripts/close-out.sh, design/system/flai-cli.md, design/conventions/testing.md, docs/users/flai.md, design/adrs/README.md, design/system/metrics.md, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/serve.go, flai/internal/inbox/events.go, flai/internal/inbox/events_test.go, flai/internal/hostapi/writes.go, flai/cmd/serve_actions.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go, flai/internal/mcpserver/server.go, flai/internal/metrics/closeouts.go, flai/internal/metrics/closeouts_test.go, flai/internal/metrics/metrics.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, flai/cmd/stats.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, template/root/scripts/close-out.sh, docs/users/flai-reference.md, docs/operators/index.md, design/conventions/code-quality.md, design/conventions/delegation.md, design/conventions/work-management.md, template/root/design/conventions/code-quality.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/adrs/0229-the-close-out-runs-as-a-flai-serve-job-the-story-s-agent-asks-for-with-the.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 767
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-31
+      ceremony: 4
+      work: 15
+  models:
+    - model: claude-haiku-5-5
+      input: 114
+      output: 535
+      cache_read: 7362160
+      cache_write: 226559
+      cost: 0.5479
+    - model: claude-opus-5-5
+      input: 118
+      output: 639
+      cache_read: 5879045
+      cache_write: 305079
+      cost: 2.1524
   strategic:
     - kind: orchestrator
-      seconds: 130
+      seconds: 171
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 42
-          output: 300
-          cache_read: 1358341
-          cache_write: 142271
-          cost: 0.3395
+          input: 60
+          output: 430
+          cache_read: 1778396
+          cache_write: 213250
+          cost: 0.4511
 forecast:
   duration: 2h30m
   delivery: 2026-10-31T11:43:00Z
@@ -73,7 +94,7 @@ Evidence: the fortnight's story agent logs, counted in the operator's conversati
 
 Touches, by source:
 
-- Declared, kept: `flai/internal/serve`, `flai/internal/mcpserver`, `flai/cmd`, `scripts/close-out.sh`, `design/system/flai-cli.md`, `design/conventions/testing.md`, `docs/users/flai.md`. The three folders stay because the story declared them; the tasks name the files in each, and flai narrows each folder in the claim to those files (ADR-0096). `design/conventions/testing.md` does not exist: the close-out's convention text is in `code-quality.md`, `delegation.md`, and `work-management.md`, which the layout adds; the plan's thread asks whether criterion 3's "testing convention" means those.
+- Declared, kept: `flai/internal/serve`, `flai/internal/mcpserver`, `flai/cmd`, `scripts/close-out.sh`, `design/system/flai-cli.md`, `design/conventions/testing.md`, `docs/users/flai.md`. The three folders stay because the story declared them; the tasks name the files in each, and flai narrows each folder in the claim to those files (ADR-0096). `design/conventions/testing.md` does not exist. On TH-0778 the orchestrator read criterion 3's "testing convention" as `code-quality.md`, plus `delegation.md` and `work-management.md` where they describe the close-out. T-2417 changes all three, and dropping the `testing.md` touch is the story's agent's to do.
 - Design: the ADR the job needs (predicted number 0224; the agent renames it to the number `flai adr new` gives) and `design/adrs/README.md`; `design/system/metrics.md`, since counting close-outs in `flai stats` is a metrics change and needs the ADR.
 - Layout, from the explorer's read of the code: the verify record (`flai/internal/verify/story.go`, keyed by story and overwritten each run, so a per-commit verdict is new); the serve job beside the merge hand-off (`flai/internal/serve/verifyjob.go`, started from `serve.go` as `newMergePass` is); the event kind (`flai/internal/inbox/events.go`); the journal entry (`flai/internal/hostapi/writes.go`'s `Entry`, written by `flai/cmd/serve_actions.go`); the CLI and MCP entry points (`flai/cmd/verify.go`, `flai/internal/mcpserver/verify.go`, `server.go`'s event-kind description, `flai/cmd/mcp.go` and `mcp_http.go` wiring); the stats (`flai/internal/statsread/statsread.go`, `flai/internal/metrics`, `flai/cmd/stats.go`); the story agent's prompt (`flai/internal/harness/harness.go`'s close-out line); the template's copies of the script and the conventions, and `template/CHANGELOG.md`.
 - Co-change: `docs/users/flai-reference.md` (22 percent, regenerated from the verify help) and `docs/operators/index.md` (13 percent, the journal's fields) from `flai touches suggest`; the rest of its list is hub files this story has no reason to change.
@@ -82,6 +103,6 @@ Touches, by source:
 Figures:
 
 - Forecast: `flai forecast` gave 1h12m, which is 89 s per unit of size over 108 done large improvement stories, times size 48 (4 criteria, 44 touches). Raised to 2h30m: seven tasks in four layers, including a new concurrent serve job behind an ADR. Also, each task's tests and the close-out run the serve and mcpserver packages, which take 8 to 10 minutes under `-race` (I-0225) until S-0548 lands. flai's replan keeps the 2h30m and sets the delivery from the pull order.
-- Cost of delay: no value yet. Neither S-0546 nor E-0031 has inputs, and they are the operator's. TH-0773 asks for them, recommending `time_lost_per_cycle: 9h`, from the goal's 18.5 lost hours a fortnight.
+- Cost of delay: the operator confirmed `time_lost_per_cycle: 9h` on TH-0773, from the goal's 18.5 lost hours a fortnight. It sits on the story rather than on E-0031, whose stories each measure a different loss. The value it gives is 1350 a week: 9h × `planning.hour_rate` 150, over a `planning.cycle` of 168h. flai's guard refuses the planner a cost of delay input, so TH-0773 asks the operator to write both with `flai edit S-0546 --time-lost-per-cycle 9h --cost-of-delay-value 1350`.
 
 Plan: T-2396 first; T-2400 and T-2403 together; T-2407 and T-2411 together; T-2415 and T-2417 together. Each task's `## Work` says what it waits for and why.

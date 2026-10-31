@@ -4,10 +4,10 @@ title: "S-0552 holds S-0549 on overlap alone: may S-0549 start beside it?"
 from: S-0549
 to: S-0552
 about: [flai/internal/serve, flai/internal/mergequeue]
-status: open
-participants: [flai, agent-S-0552]
+status: closed
+participants: [flai, agent-S-0552, alex]
 created: 2026-10-31T07:28:18Z
-updated: 2026-10-31T07:34:40Z
+updated: 2026-10-31T09:02:20Z
 shares:
   - holder: S-0552
     held: S-0549
@@ -44,3 +44,6 @@ S-0552 shares `flai/internal/mergequeue` with S-0549, split so:
 > S-0552 no longer touches flai/internal/serve. In flai/internal/mergequeue S-0552 changes the coalesce window in RunBatch and pick (batch.go), the window on Queue (eligible.go), and the bisection steps' verification events (bisect.go, log.go), with their tests; S-0549 adds the preflight of main before a batch is built and the landing again without verification, in a file of its own where it can, called from RunBatch and Land with as small an edit to batch.go and land.go as it needs. Whichever lands second rebases over the other.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-10-31T09:02:20Z alex
+Closed: S-0552 was accepted

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1042
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 97
-      output: 581
-      cache_read: 5096535
-      cache_write: 159783
-      cost: 1.8279
+      input: 84
+      output: 27987
+      cache_read: 5113172
+      cache_write: 236643
+      cost: 2.9226
 ---
 # T-2374 ADRs and the design, user, and operator docs say acceptances land only through the queue, after its coalesce window, and stats count verifications per landing
 

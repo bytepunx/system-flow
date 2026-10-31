@@ -3,12 +3,18 @@ id: T-2400
 type: task
 nature: improvement
 title: The verify record keeps a verdict per commit, and a close-out asked for again at a commit it holds answers from it, saying so, and runs nothing
-status: backlog
+status: in-progress
 parent: S-0546
 owner: alex
 created: 2026-10-31T07:43:44Z
-updated: 2026-10-31T07:45:11Z
-transitions: []
+updated: 2026-10-31T08:52:17Z
+transitions:
+  - to: ready
+    at: 2026-10-31T08:52:15Z
+    by: agent-S-0546
+  - to: in-progress
+    at: 2026-10-31T08:52:17Z
+    by: agent-S-0546
 stream: S-0546
 tags: [flai]
 touches: [flai/internal/verify/story.go, flai/internal/verify/story_test.go]

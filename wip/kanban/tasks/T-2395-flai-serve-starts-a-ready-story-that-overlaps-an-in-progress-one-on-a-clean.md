@@ -3,12 +3,18 @@ id: T-2395
 type: task
 nature: improvement
 title: flai serve starts a ready story that overlaps an in-progress one on a clean trial merge, and journals the conflicting paths when it holds
-status: backlog
+status: in-progress
 parent: S-0551
 owner: alex
 created: 2026-10-31T07:43:25Z
-updated: 2026-10-31T07:43:25Z
-transitions: []
+updated: 2026-10-31T08:57:46Z
+transitions:
+  - to: ready
+    at: 2026-10-31T08:57:44Z
+    by: agent-S-0551
+  - to: in-progress
+    at: 2026-10-31T08:57:46Z
+    by: agent-S-0551
 stream: S-0551
 tags: [flai, go]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/hold_test.go, flai/internal/serve/restart.go, flai/internal/serve/start.go]

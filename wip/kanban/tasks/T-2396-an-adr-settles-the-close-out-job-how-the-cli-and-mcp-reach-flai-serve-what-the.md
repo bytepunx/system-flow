@@ -3,15 +3,42 @@ id: T-2396
 type: task
 nature: improvement
 title: "An ADR settles the close-out job: how the CLI and MCP reach flai serve, what the job runs, the verified event, the per-commit verdict, and the journal's fields, and metrics.md defines the close-out count"
-status: backlog
+status: done
 parent: S-0546
 owner: alex
 created: 2026-10-31T07:43:28Z
-updated: 2026-10-31T07:43:28Z
-transitions: []
+updated: 2026-10-31T08:51:43Z
+transitions:
+  - to: ready
+    at: 2026-10-31T08:45:59Z
+    by: agent-S-0546
+  - to: in-progress
+    at: 2026-10-31T08:46:01Z
+    by: agent-S-0546
+  - to: done
+    at: 2026-10-31T08:51:43Z
+    by: agent-S-0546
 stream: S-0546
 tags: [flai]
-touches: [design/adrs/0224-the-close-out-runs-as-a-flai-serve-job-the-story-s-agent-waits-on-by-event.md, design/adrs/README.md, design/system/metrics.md, design/system/flai-cli.md]
+touches: [design/adrs/README.md, design/system/metrics.md, design/system/flai-cli.md, design/adrs/0229-the-close-out-runs-as-a-flai-serve-job-the-story-s-agent-asks-for-with-the.md]
+usage:
+  source: log
+  seconds: 334
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-haiku-5-5
+      input: 114
+      output: 535
+      cache_read: 7362160
+      cache_write: 226559
+      cost: 0.5479
+    - model: claude-opus-5-5
+      input: 92
+      output: 486
+      cache_read: 4772262
+      cache_write: 133020
+      cost: 1.7073
 ---
 # T-2396 An ADR settles the close-out job: how the CLI and MCP reach flai serve, what the job runs, the verified event, the per-commit verdict, and the journal's fields, and metrics.md defines the close-out count
 

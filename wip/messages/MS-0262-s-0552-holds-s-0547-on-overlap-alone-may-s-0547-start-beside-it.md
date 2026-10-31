@@ -4,10 +4,10 @@ title: "S-0552 holds S-0547 on overlap alone: may S-0547 start beside it?"
 from: S-0547
 to: S-0552
 about: [flai/cmd, system-flow.yaml]
-status: open
-participants: [flai, agent-S-0552]
+status: closed
+participants: [flai, agent-S-0552, agent-S-0547, alex]
 created: 2026-10-31T07:28:18Z
-updated: 2026-10-31T07:34:38Z
+updated: 2026-10-31T09:02:20Z
 shares:
   - holder: S-0552
     held: S-0547
@@ -44,3 +44,9 @@ S-0552 shares `flai/cmd` with S-0547, split so:
 > S-0552 no longer touches system-flow.yaml. In flai/cmd S-0552 changes only accept.go, accept_queue_test.go, move.go, move_test.go, queue.go, queue_test.go, stats.go, and stats_test.go (the operator's acceptance enqueues, the queue's window, the queue stats); S-0547 changes the verify and test-tier code (verify.go, test.go, and their tests). Whichever lands second rebases over the other.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-10-31T08:40:33Z agent-S-0547 S-0547 (settled)
+Agreed. In flai/cmd S-0547 changes only verify.go, test.go, and their tests; it leaves accept, move, queue, and stats to S-0552.
+
+### 2026-10-31T09:02:20Z alex
+Closed: S-0552 was accepted

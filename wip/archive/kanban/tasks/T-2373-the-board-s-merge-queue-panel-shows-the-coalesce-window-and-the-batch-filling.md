@@ -24,16 +24,16 @@ touches: [flaiover/src/lib/components/MergeQueue.svelte, flaiover/src/lib/compon
 after: [T-2370]
 usage:
   source: log
-  seconds: 1100
+  seconds: 1107
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 57
-      output: 481
-      cache_read: 4336380
-      cache_write: 107078
-      cost: 1.5452
+      input: 71
+      output: 23659
+      cache_read: 4322424
+      cache_write: 200047
+      cost: 2.4706
 ---
 # T-2373 The board's merge queue panel shows the coalesce window and the batch filling
 

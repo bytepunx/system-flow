@@ -3,15 +3,36 @@ id: T-2388
 type: task
 nature: improvement
 title: "Write the ADRs and the design: a trial merge replaces the overlap hold, after names a read dependency with its reason, and the in-progress share is a metric"
-status: backlog
+status: done
 parent: S-0551
 owner: alex
 created: 2026-10-31T07:42:42Z
-updated: 2026-10-31T07:42:42Z
-transitions: []
+updated: 2026-10-31T08:57:26Z
+transitions:
+  - to: ready
+    at: 2026-10-31T08:42:36Z
+    by: agent-S-0551
+  - to: in-progress
+    at: 2026-10-31T08:42:37Z
+    by: agent-S-0551
+  - to: done
+    at: 2026-10-31T08:57:26Z
+    by: agent-S-0551
 stream: S-0551
 tags: [flai, design]
 touches: [design/adrs/README.md, design/system/workflow.md, design/system/strategic-agents.md, design/system/metrics.md]
+usage:
+  source: log
+  seconds: 845
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 87
+      output: 424
+      cache_read: 5001945
+      cache_write: 172044
+      cost: 1.8008
 ---
 # T-2388 Write the ADRs and the design: a trial merge replaces the overlap hold, after names a read dependency with its reason, and the in-progress share is a metric
 

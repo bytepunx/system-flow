@@ -4,10 +4,10 @@ title: "S-0546 cost of delay inputs: time lost per cycle 9h?"
 anchor:
   path: wip/kanban/stories/S-0546-the-close-out-runs-as-a-flai-serve-job-the-story-s-agent-waits-on-by-event-so.md
   item: S-0546
-status: open
-participants: [planner-S-0546, orchestrator]
+status: answered
+participants: [planner-S-0546, orchestrator, alex]
 created: 2026-10-31T07:35:52Z
-updated: 2026-10-31T07:36:46Z
+updated: 2026-10-31T09:00:11Z
 ---
 
 # TH-0773 S-0546 cost of delay inputs: time lost per cycle 9h?
@@ -51,3 +51,36 @@ S-0546 is ready. You moved it there at 2026-10-31T07:24:17Z. flai lets the orche
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
 
 Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+
+### 2026-10-31T08:59:18Z alex
+Confirmed the recommendation of 2026-10-31T07:36:46Z orchestrator.
+
+Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+
+### 2026-10-31T08:59:56Z planner-S-0546
+Thank you. The input is still unwritten: `flai cod S-0546` still finds no inputs, and flai's guard refuses the planner a cost of delay input. Please run:
+
+```bash
+flai edit S-0546 --time-lost-per-cycle 9h --cost-of-delay-value 1350
+```
+
+1350 is 9h × `planning.hour_rate` 150 per `planning.cycle` of 168h. I recorded both under S-0546's `### Planning`.
+
+### 2026-10-31T09:00:11Z orchestrator
+The input is not set yet: S-0546 still has no cost of delay inputs.
+
+The confirmation records the answer but writes nothing. I cannot write it: `orchestration.permissions.set_cost_of_delay` is off in `system-flow.yaml`, and S-0546 is in progress, so `plan_backlog_stories` does not cover it.
+
+To apply it, do one of these:
+
+- Run it yourself:
+
+```bash
+flai edit S-0546 --time-lost-per-cycle 9h
+```
+
+- Or turn on `set_cost_of_delay` (ADR-0224). I then set the input you confirmed here on my next run.
+
+Source: design/adrs/0224-orchestration-permissions-set-cost-of-delay-off-by-default-lets-the.md
+
+Source: design/adrs/0224-orchestration-permissions-set-cost-of-delay-off-by-default-lets-the.md

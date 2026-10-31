@@ -3,12 +3,18 @@ id: T-2410
 type: task
 nature: improvement
 title: flai stats reports the share of the window with n stories in progress at once, and the ready wait at p50 and p85
-status: backlog
+status: in-progress
 parent: S-0551
 owner: alex
 created: 2026-10-31T07:44:26Z
-updated: 2026-10-31T07:44:26Z
-transitions: []
+updated: 2026-10-31T08:58:05Z
+transitions:
+  - to: ready
+    at: 2026-10-31T08:58:02Z
+    by: agent-S-0551
+  - to: in-progress
+    at: 2026-10-31T08:58:05Z
+    by: agent-S-0551
 stream: S-0551
 tags: [flai, go, metrics]
 touches: [flai/internal/metrics/concurrency.go, flai/internal/metrics/concurrency_test.go, flai/internal/metrics/metrics.go, flai/cmd/stats.go, flai/cmd/stats_test.go]
