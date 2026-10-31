@@ -6,81 +6,87 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/bytepunx/system-flow/flai/internal/execx"
-	"github.com/bytepunx/system-flow/flai/internal/verify"
+	"github.com/bytepunx/system-flow/flai/internal/closeout"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-const verifyDescription = "Verify a story before it goes to review (S-0270): run, in the story's worktree, what the close-out runs, cheapest first, stopping at the first step that fails: no rebase is left unfinished (rebase), the branch contains the main branch (sync), the narrative's Current state and Next steps are written (narrative), flai check --strict scoped to the story passes (check), and then the test and lint tiers the branch's changes select, each run with CLOSE_OUT_STORY set to the story. While the merge queue can batch for the project (the merge-queue host action on, accept_reviews on, acceptance local), a tier the manifest marks queue is not run but left to the queue's batch, which runs it, as a step in the state queued after the rest, and the run passes without it; all leaves no tier to the queue (ADR-0174). Answers passed, stopped_at naming the step that failed, the commit and the main branch it was verified against, the paths the tiers were selected for, and each step with its state (passed, failed, not-reached, skipped, with covered_by naming the selected tier that covers a skipped one and runs in its place, or queued, left to the merge queue), its duration, and its findings, each a name, a path, a line, and a message, at most max across the run (5 by default; omitted counts the rest), a tier's with its command and exit code. A check finding outside the story is a note, in notes, not a failure. A failing step is an answer, not an error; a story with no worktree, or not a story, is refused. The answer is stored as the story's last, which flai verify --last prints. It commits nothing and records no issue. flai verify --json on the command line answers the same. Call it before you move a story to review, instead of having the verifier sub-agent run the tests, lint, and check; the verifier is kept for the review of the diff against the story's acceptance criteria and the conventions."
+const verifyDescription = "Ask flai serve for a story's close-out (S-0546, ADR-0229): it runs the close-out in the story's worktree as a job, with no model, scripts/close-out.sh S-nnnn -m <message> where the worktree has the script, else flai verify S-nnnn --record-issues, so no tool call holds it and the harness's time limit does not cut it short. It answers at once: the job's id (started true, or running true when a job of the story was running already and is answered instead), or, when the worktree is clean at a commit the verify record holds a passing verdict for, that verdict with recorded true, its commit and ran_at, and nothing runs. message is the commit message the close-out commits with; all leaves no tier to the merge queue; fresh runs whatever the record holds. Then hold wait_for_events until it reports verified for the story, with the job, the commit, the verdict (passed, stopped with stopped_at, failed, or interrupted), and the duration, and read the result, each step with its findings, with flai verify S-nnnn --last; the job's output is in log. Call it before you move a story to review, instead of running the close-out in a turn, and keep the verifier sub-agent for the review of the diff against the story's acceptance criteria and the conventions. When flai serve is not running, it takes no request within ten seconds and the call says so: run the close-out script, or flai verify where the project has none, yourself. A story with no worktree, or an ID that is not a story, is refused."
 
-// VerifyIn verifies one story in its worktree (S-0270).
+// VerifyIn asks flai serve for one story's close-out (S-0546).
 type VerifyIn struct {
 	Project string `json:"project,omitempty" jsonschema:"the project, by key or folder: needed only when the server serves more than one"`
-	Story   string `json:"story" jsonschema:"the story to verify (S-nnnn, any zero padding), in its worktree under .flai-cache/worktrees"`
-	Max     int    `json:"max,omitempty" jsonschema:"the most findings to answer across the run; 5 when left out"`
+	Story   string `json:"story" jsonschema:"the story to close out (S-nnnn, any zero padding), in its worktree under .flai-cache/worktrees"`
+	Message string `json:"message,omitempty" jsonschema:"the commit message the close-out commits with, as scripts/close-out.sh -m takes it; needed when the worktree has something uncommitted"`
 	All     bool   `json:"all,omitempty" jsonschema:"leave no tier to the merge queue: run every tier the branch's changes select, those marked queue too"`
+	Fresh   bool   `json:"fresh,omitempty" jsonschema:"run every step whatever the verify record holds, reusing nothing"`
 }
 
-// QueueBatches reports whether the merge queue can batch for the project
-// whose main checkout is root (ADR-0174).
-type QueueBatches func(root string) bool
+// VerifyOut is flai serve's answer to the close-out request: the job it
+// started or found running, or the verdict the verify record holds.
+type VerifyOut struct {
+	Job     string `json:"job,omitempty"`
+	Story   string `json:"story"`
+	Started bool   `json:"started"`
+	Running bool   `json:"running,omitempty"`
+	// Recorded is a verdict from the verify record at Commit, of the run at
+	// RanAt; nothing ran.
+	Recorded  bool      `json:"recorded,omitempty"`
+	Verdict   string    `json:"verdict,omitempty"`
+	StoppedAt string    `json:"stopped_at,omitempty"`
+	Commit    string    `json:"commit,omitempty"`
+	RanAt     time.Time `json:"ran_at,omitzero"`
+	// Log is where the job's output is kept.
+	Log string `json:"log,omitempty"`
+}
 
 func (in VerifyIn) project() string { return in.Project }
 
-// verify answers what flai verify --json prints for the story the call
-// names, run in its worktree with the tiers its branch's manifest declares,
-// leaving those marked queue to the merge queue while it can batch, unless
-// the call asks for all.
-func (s *server) verify(ctx context.Context, _ *mcp.CallToolRequest, in VerifyIn) (*mcp.CallToolResult, verify.Report, error) {
-	if in.Max < 0 {
-		return nil, verify.Report{}, fmt.Errorf("max %d is not a number of findings; give 1 or more, or leave it out for %d", in.Max, verify.DefaultMax)
-	}
-	story, wt, err := s.storyWorktree(in.Story)
+// closeOutWait is how long verify waits for flai serve to take and answer
+// the request: closeout's defaults, ten seconds each; a test shortens it.
+var closeOutWait = closeout.Wait{}
+
+// verify asks flai serve for the close-out of the story the call names as a
+// job, as flai verify --job does, and answers its answer; it runs nothing in
+// this process. A refusal and a request flai serve did not take are errors.
+func (s *server) verify(ctx context.Context, _ *mcp.CallToolRequest, in VerifyIn) (*mcp.CallToolResult, VerifyOut, error) {
+	story, err := s.storyWithWorktree(in.Story)
 	if err != nil {
-		return nil, verify.Report{}, err
+		return nil, VerifyOut{}, err
 	}
-	git := s.runner
-	if git == nil {
-		git = execx.System{}
-	}
-	git = execx.Timed(ctx, git)
-	tiers, err := verify.CheckoutTiersFor(wt, git, s.version)
+	ans, err := closeout.Ask(ctx, s.repo.CacheDir(), closeout.Request{Story: story, By: s.agent, Message: in.Message, All: in.All, Fresh: in.Fresh}, closeOutWait)
 	if err != nil {
-		return nil, verify.Report{}, err
+		return nil, VerifyOut{}, err
 	}
-	rep, err := verify.Verify(ctx, verify.StoryOptions{
-		Story: story, Project: s.repo, Worktree: wt, Tiers: tiers, Git: git,
-		LeaveToQueue: !in.All && s.queueBatches != nil && s.queueBatches(projectRoot(s.repo)),
-		RunOptions:   verify.RunOptions{Max: in.Max},
-	})
-	if err != nil {
-		return nil, verify.Report{}, err
+	if ans.Refused() {
+		return nil, VerifyOut{}, errors.New(ans.Reason)
 	}
-	return nil, rep, nil
+	return nil, VerifyOut{Job: ans.Job, Story: ans.Story, Started: ans.Started, Running: ans.Running(), Recorded: ans.Recorded,
+		Verdict: ans.Verdict, StoppedAt: ans.StoppedAt, Commit: ans.Commit, RanAt: ans.RanAt, Log: ans.Log}, nil
 }
 
-// storyWorktree is the story id names, as its canonical ID, and its
-// worktree, which must exist.
-func (s *server) storyWorktree(id string) (story, worktree string, err error) {
+// storyWithWorktree is the story id names, as its canonical ID, which must
+// have a worktree.
+func (s *server) storyWithWorktree(id string) (string, error) {
 	if strings.TrimSpace(id) == "" {
-		return "", "", errors.New("name the story to verify, such as S-0042")
+		return "", errors.New("name the story to verify, such as S-0042")
 	}
 	it, err := s.repo.Get(id)
 	if err != nil {
 		if errors.Is(err, workitem.ErrNotFound) {
-			return "", "", fmt.Errorf("%s is not a work item here; name a story with a worktree", id)
+			return "", fmt.Errorf("%s is not a work item here; name a story with a worktree", id)
 		}
-		return "", "", err
+		return "", err
 	}
 	if it.Type != workitem.Story {
-		return "", "", fmt.Errorf("%s is a %s; name a story (S-nnnn): verify runs for a story's worktree", it.ID, it.Type)
+		return "", fmt.Errorf("%s is a %s; name a story (S-nnnn): verify runs for a story's worktree", it.ID, it.Type)
 	}
 	wt := s.repo.WorktreePath(it.ID)
 	if st, err := os.Stat(wt); err != nil || !st.IsDir() {
-		return "", "", fmt.Errorf("%s has no worktree at %s; open it with flai stream open %s on the host", it.ID, s.rel(wt), it.ID)
+		return "", fmt.Errorf("%s has no worktree at %s; open it with flai stream open %s on the host", it.ID, s.rel(wt), it.ID)
 	}
-	return it.ID, wt, nil
+	return it.ID, nil
 }

@@ -187,7 +187,6 @@ func TestAsTheOrchestrator(t *testing.T) {
 		testTheOrchestratorPromotesACandidateWhileReadyHasRoom,
 		testQueueAddEnqueuesWithTheOrchestratorsEvidence,
 		testQueueAddRefusesAsTheOrchestratorsAcceptanceWould,
-		testVerifyRunsTheTiersUnderTheVerifyRoleForTheOrchestrator,
 		testTheOrchestratorsThreadRepliesAreLoggedWithTheirSource,
 	)
 }

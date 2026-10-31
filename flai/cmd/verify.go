@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/check"
+	"github.com/bytepunx/system-flow/flai/internal/closeout"
 	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
@@ -28,11 +30,17 @@ import (
 // failing step's 1, as flai test keeps them (S-0270).
 const exitVerifyUnusable = 2
 
+// verifyJobWait is how long flai verify --job waits for flai serve to take
+// and answer its request: closeout's defaults, ten seconds each; a test
+// shortens it.
+var verifyJobWait = closeout.Wait{}
+
 // newVerifyCmd runs a story's close-out steps and the tiers its branch
 // selects in its worktree and answers one report (S-0270).
 func newVerifyCmd(a *app) *cobra.Command {
-	var record, last, syncOnly, fresh, all bool
+	var record, last, syncOnly, fresh, all, job bool
 	var maxFindings int
+	var message string
 	c := &cobra.Command{
 		Use:   "verify <story>",
 		Short: "Run a story's close-out steps and the tiers its branch selects, in its worktree, and answer one result",
@@ -115,11 +123,33 @@ as flai check --story --record-issues does: each rule's notes in the open
 issue whose title names the rule, once per story and notes. The close-out
 commits them with the story.
 
+Each run on a worktree with nothing uncommitted is kept in the record under
+its commit as well. Unless --fresh, a run at a commit whose record holds a
+passing verdict, with the worktree clean and the main branch at the
+record's base commit or ahead of it only by commits the sync step passes
+over, answers that verdict and runs nothing: its last line ends
+"(answered from the record of <time> at <commit>; ran nothing)", and
+--record-issues records nothing for it (ADR-0229).
+
+--job runs nothing here: it asks flai serve for the story's close-out as a
+job in its worktree, scripts/close-out.sh S-nnnn -m <message> where the
+worktree has the script and flai verify --record-issues where it has none,
+and prints the job's id as soon as flai serve takes the request; wait for
+the job's verified event (wait_for_events), then read the result with
+flai verify S-nnnn --last. A job of the story already running is answered
+with its id, and a commit the record holds a passing verdict for is
+answered from the record at once, starting no job. -m/--message is the
+commit message the close-out commits with, and --all and --fresh go to the
+job. A request flai serve does not take within ten seconds is withdrawn:
+flai serve is not running, so run the close-out script, or flai verify where
+the project has none, yourself (ADR-0229).
+
 The exit status is 0 when every step passed, 1 when a step failed, and 2 when
 flai verify could not answer: the story has no worktree, the manifest's tiers
 are not valid, the notes could not be recorded, or the run was stopped before
 it finished.`,
 		Example: `  flai verify S-0270
+  flai verify S-0270 --job -m "feat: [S-0270] what the story did"
   flai verify S-0270 --json
   flai verify S-0270 --record-issues
   flai verify S-0270 --fresh
@@ -145,6 +175,9 @@ it finished.`,
 			if syncOnly && record {
 				return &exitError{code: exitVerifyUnusable, msg: "--sync-only runs no check, so it has no notes to record; drop --record-issues, or --sync-only to run every step"}
 			}
+			if msg := jobFlagsRefusal(job, last, syncOnly, record, message); msg != "" {
+				return &exitError{code: exitVerifyUnusable, msg: msg}
+			}
 			repo, err := a.project()
 			if err != nil {
 				return &exitError{code: exitVerifyUnusable, msg: err.Error()}
@@ -156,6 +189,9 @@ it finished.`,
 			}
 			if last {
 				return a.printLastVerify(repo, args[0], maxFindings)
+			}
+			if job {
+				return a.askCloseOut(cmd, repo, args[0], closeout.Request{Message: message, All: all, Fresh: fresh})
 			}
 			return a.verifyStory(cmd, repo, args[0], verifyOptions{record: record, syncOnly: syncOnly, fresh: fresh, all: all, max: maxFindings})
 		},
@@ -169,6 +205,8 @@ it finished.`,
 	c.Flags().BoolVar(&last, "last", false, "print the story's stored last result and run nothing")
 	c.Flags().BoolVar(&syncOnly, "sync-only", false, "run only the rebase and sync steps, and store no result")
 	c.Flags().IntVar(&maxFindings, "max", verify.DefaultMax, "the most findings to report across the run")
+	c.Flags().BoolVar(&job, "job", false, "ask flai serve for the story's close-out as a job and print its id at once; wait for its verified event")
+	c.Flags().StringVarP(&message, "message", "m", "", "with --job, the commit message the close-out commits with")
 	return c
 }
 
@@ -228,7 +266,9 @@ func (a *app) verifyStory(cmd *cobra.Command, repo *workitem.Repo, story string,
 	}
 	a.logger().Debug("story verified", "component", "cmd", "story", rep.Story, "steps", len(rep.Steps), "notes", len(rep.Notes), "passed", rep.Passed)
 	var recorded []recordedIssue
-	if o.record {
+	// a verdict from the record ran nothing now, and its notes were recorded
+	// when it ran, by the close-out that ran it
+	if o.record && !rep.FromRecord {
 		if recorded, err = a.recordNotes(worktree, rep); err != nil {
 			return &exitError{code: exitVerifyUnusable, msg: err.Error()}
 		}
@@ -377,11 +417,16 @@ func noteText(n verify.Note) string {
 
 // verifyOutcome is the report's last line, in the close-out's form: the
 // story passed every step, or the step it stopped at and why, then the tiers
-// it left to the merge queue, if any, and last the tiers it reused and the
-// earliest run they come from, if any, which the close-out reads from the
-// line's end.
+// it left to the merge queue, if any, the tiers it reused and the earliest
+// run they come from, if any, which the close-out reads from the line's end,
+// and last, for a verdict from the record, that it came from the record, when
+// that run was, and that nothing ran (ADR-0229).
 func verifyOutcome(rep verify.Report, stopped bool) string {
-	return verifyResult(rep, stopped) + queuedText(rep) + reusedText(rep)
+	line := verifyResult(rep, stopped) + queuedText(rep) + reusedText(rep)
+	if text := rep.RecordText(); text != "" {
+		line += " (" + text + ")"
+	}
+	return line
 }
 
 // queuedText is ", <tiers> left to the merge queue" for a report that left
@@ -509,4 +554,79 @@ func shortCommit(commit string) string {
 		return commit[:7]
 	}
 	return commit
+}
+
+// jobFlagsRefusal is why flai verify's flags cannot go together with --job,
+// or -m/--message without it; "" when they can.
+func jobFlagsRefusal(job, last, syncOnly, record bool, message string) string {
+	switch {
+	case !job && message != "":
+		return "--message is the commit message of the close-out job, so it goes with --job; add --job, or drop --message"
+	case job && last:
+		return "--job asks flai serve for a close-out and --last prints the stored result; drop one of them"
+	case job && syncOnly:
+		return "--job asks flai serve for the whole close-out and --sync-only runs only the rebase and sync steps here; drop one of them"
+	case job && record:
+		return "--job's close-out records the notes outside the story itself; drop --record-issues"
+	}
+	return ""
+}
+
+// askCloseOut asks flai serve for the story's close-out as a job (ADR-0229)
+// and prints its answer: the job it started, or the one of the story that
+// runs, with where to wait and read; the verdict the record holds, as a
+// verify that passed or stopped answers it; or why it ran nothing, as an
+// unusable verify.
+func (a *app) askCloseOut(cmd *cobra.Command, repo *workitem.Repo, story string, req closeout.Request) error {
+	id, _, err := storyWorktree(repo, story)
+	if err != nil {
+		return &exitError{code: exitVerifyUnusable, msg: err.Error()}
+	}
+	req.Story, req.By = id, a.writer()
+	ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	ans, err := closeout.Ask(ctx, repo.CacheDir(), req, verifyJobWait)
+	if err != nil {
+		if errors.Is(err, context.Canceled) || errors.Is(err, closeout.ErrServeNotTaking) {
+			return &exitError{code: exitVerifyUnusable, msg: err.Error()}
+		}
+		return &exitError{code: exitVerifyUnusable, msg: fmt.Sprintf("ask flai serve for %s's close-out: %v", id, err)}
+	}
+	a.logger().Debug("close-out asked", "component", "cmd", "story", id, "job_id", ans.Job, "started", ans.Started, "recorded", ans.Recorded, "refused", ans.Refused())
+	if a.jsonOut {
+		if err := a.printJSON(ans); err != nil {
+			return err
+		}
+	} else if !ans.Refused() {
+		fmt.Fprintln(a.out, closeOutAnswerText(ans))
+	}
+	switch {
+	case ans.Refused():
+		msg := ans.Reason
+		if a.jsonOut {
+			msg = ""
+		}
+		return &exitError{code: exitVerifyUnusable, msg: msg}
+	case ans.Recorded && ans.Verdict != closeout.VerdictPassed:
+		return &exitError{code: 1}
+	}
+	return nil
+}
+
+// closeOutAnswerText is flai serve's answer to a close-out request as flai
+// verify --job prints it: the job it started or found running, what to wait
+// for, and where its output is; or the verdict the record holds.
+func closeOutAnswerText(ans closeout.Answer) string {
+	if ans.Recorded {
+		verdict := ans.Verdict
+		if ans.StoppedAt != "" {
+			verdict += " at " + ans.StoppedAt
+		}
+		return fmt.Sprintf("%s %s from the record of %s at %s; ran nothing", ans.Story, verdict, ans.RanAt.UTC().Format(time.RFC3339), shortCommit(ans.Commit))
+	}
+	state := "started"
+	if ans.Running() {
+		state = "is already running"
+	}
+	return fmt.Sprintf("close-out job %s %s for %s: wait for its verified event (wait_for_events), then read it with flai verify %s --last; its output is in %s", ans.Job, state, ans.Story, ans.Story, ans.Log)
 }

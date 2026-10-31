@@ -17,6 +17,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/bytepunx/system-flow/flai/internal/closeout"
 	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/digest"
@@ -95,11 +96,6 @@ type Options struct {
 	// story's worktree without asking the operator on a thread when it
 	// returns true (S-0257); nil asks every time.
 	AutoApprove AutoApprove
-	// QueueBatches, called at every verify request with the project's root,
-	// reports whether the merge queue can batch for it, and verify then
-	// leaves the tiers marked queue to the batch unless asked for all
-	// (ADR-0174); nil leaves none.
-	QueueBatches QueueBatches
 	// Publish publishes as publish.run does, under the push host action, for
 	// the orchestrator's tool release_publish (S-0222); without it the tool
 	// says it cannot.
@@ -168,10 +164,7 @@ type server struct {
 	version    string // the running flai's, compared with the project's newest flai tag (S-0181)
 	// autoApprove lets permission_prompt allow without asking (S-0257)
 	autoApprove AutoApprove
-	// queueBatches says whether verify leaves the queue tiers to the merge
-	// queue (ADR-0174)
-	queueBatches QueueBatches
-	publish      *hostapi.Publisher // publishes for release_publish (S-0222)
+	publish     *hostapi.Publisher // publishes for release_publish (S-0222)
 	// relativePaths says whether story_start links a new worktree with
 	// relative paths (S-0274)
 	relativePaths func() bool
@@ -191,7 +184,7 @@ type server struct {
 
 // newServer is the server for one project, with the defaults filled in.
 func newServer(opt Options, repo *workitem.Repo) *server {
-	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, analyses: opt.Analyses, curations: opt.Curations, roles: opt.Roles, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, queueBatches: opt.QueueBatches, publish: opt.Publish, relativePaths: opt.RelativePaths, logger: opt.Logger, installed: opt.Installed, permissionHold: permissionHoldOf(opt), budgets: opt.Budgets}
+	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, analyses: opt.Analyses, curations: opt.Curations, roles: opt.Roles, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, publish: opt.Publish, relativePaths: opt.RelativePaths, logger: opt.Logger, installed: opt.Installed, permissionHold: permissionHoldOf(opt), budgets: opt.Budgets}
 	if repo.Git == nil {
 		repo.Git = opt.Runner // item_move asks git whether a story's worktree is committed (S-0140)
 	}
@@ -241,7 +234,7 @@ func projectRoot(repo *workitem.Repo) string {
 // and wait_for_events's descriptions, the kinds flai serve and flai accept
 // log and the thread kind the inbox derives from the thread files, with their
 // fields, and the trigger conditions a role file puts on them (ADR-0211).
-const eventKindsDescription = "A change of kind planned means a planner's run on id wrote the items to names; of kind ready-empty, that the ready column's count, to, fell below the in-progress room, with fields room (the in-progress limit less the stories in progress) and limit; of kind release-due, that accepting the story id changed what flai release --evaluate answers, with fields before and after; of kind agent, that the run of an agent flai serve runs came to to: started, ended (on its own, its work done or waiting for an answer), failed (it could not be started, or ended without its work done), or stopped (by the operator), id and title being the item the run is on, a story for a story's agent and the item planned for a planner, or, for a run on no item (the orchestrator's, the analyzer's, the curator's, or a project role's), the role's name with type role, by the agent, and fields role (the run's kind: story, plan, orchestrate, analyze, curate, or a project role's name) and why (in the serve journal's words: the exit, the usage-limit refusal and its reset time, the operator's stop, or the auto-restart count); it lets you see an agent start, fail, stop, or restart without reading the serve journal, nothing is owed on it, and you are not told of your own runs. flai serve and flai accept log these four, and a story's agent may let them pass. A change of kind thread means a thread now awaits you, or, in the orchestrator's role, the operator: id and title are the thread's, to says whom (you or operator), by wrote its newest entry, cause is its story or path, and fields hold awaits (your agent name, or operator) and on (the item or path it is anchored to); read it with thread_get and answer it with thread_reply. A role file's trigger names these but agent, and moved, as events; the conditions to-review and to-backlog qualify moved, draft-changed edited, and awaits-orchestrator thread (ADR-0211)."
+const eventKindsDescription = "A change of kind planned means a planner's run on id wrote the items to names; of kind ready-empty, that the ready column's count, to, fell below the in-progress room, with fields room (the in-progress limit less the stories in progress) and limit; of kind release-due, that accepting the story id changed what flai release --evaluate answers, with fields before and after; of kind agent, that the run of an agent flai serve runs came to to: started, ended (on its own, its work done or waiting for an answer), failed (it could not be started, or ended without its work done), or stopped (by the operator), id and title being the item the run is on, a story for a story's agent and the item planned for a planner, or, for a run on no item (the orchestrator's, the analyzer's, the curator's, or a project role's), the role's name with type role, by the agent, and fields role (the run's kind: story, plan, orchestrate, analyze, curate, or a project role's name) and why (in the serve journal's words: the exit, the usage-limit refusal and its reset time, the operator's stop, or the auto-restart count); it lets you see an agent start, fail, stop, or restart without reading the serve journal, nothing is owed on it, and you are not told of your own runs. flai serve and flai accept log these four, and a story's agent may let them pass. A change of kind thread means a thread now awaits you, or, in the orchestrator's role, the operator: id and title are the thread's, to says whom (you or operator), by wrote its newest entry, cause is its story or path, and fields hold awaits (your agent name, or operator) and on (the item or path it is anchored to); read it with thread_get and answer it with thread_reply. A role file's trigger names these but agent, and moved, as events; the conditions to-review and to-backlog qualify moved, draft-changed edited, and awaits-orchestrator thread (ADR-0211). A change of kind verified means the close-out of story id that its agent asked flai serve for ended as a job, or was answered from the verify record (ADR-0229): to is its verdict, and fields hold job (empty when answered from the record), commit, verdict (passed, stopped, failed, or interrupted), stopped_at, duration, and recorded (true when it came from the record and nothing ran); only the story's own agent and readers with no story of their own get it; read the result with flai verify S-nnnn --last."
 
 // New builds the MCP server with its tools and resources: for one project,
 // or, with Options.Folder and no Repo, for every project in a folder (S-0101).
@@ -1021,11 +1014,12 @@ func (s *server) waitForEvents(ctx context.Context, req *mcp.CallToolRequest, in
 // (FLAI_STORY, no role), a thread on its story or one of its tasks awaits an
 // answer to its own question or a conversation of its story awaits the other
 // story's reply (S-0335), no conversation of its story awaits its own reply,
-// and no task of the story is in progress. It is serve's rule for an agent it
-// starts again on the answer or the reply (internal/serve/agents.go), so an
-// agent told to end is one serve restarts. Anything it cannot read keeps the
-// hold. The orchestrator flai serve started for reasons (FLAI_REASONS) is
-// told "reasons done": reasons that arrive during its run start the next run,
+// no task of the story is in progress, and no close-out job of the story
+// runs, whose verified event the agent waits for (ADR-0229 §4). It is
+// serve's rule for an agent it starts again on the answer or the reply
+// (internal/serve/agents.go), so an agent told to end is one serve restarts.
+// Anything it cannot read keeps the hold. The orchestrator flai serve
+// started for reasons (FLAI_REASONS) is told "reasons done": reasons that arrive during its run start the next run,
 // so once it holds, its own are done (ADR-0209 §4); one with no reasons, as a
 // hand-run one, holds.
 func (s *server) endWhy() string {
@@ -1057,6 +1051,9 @@ func (s *server) endWhy() string {
 		if it.Status == workitem.InProgress {
 			return ""
 		}
+	}
+	if job, ok, err := closeout.ReadJob(s.repo.CacheDir(), workitem.CanonicalID(s.story)); err != nil || ok && job.Running() {
+		return ""
 	}
 	var pending []string
 	if len(open) > 0 {

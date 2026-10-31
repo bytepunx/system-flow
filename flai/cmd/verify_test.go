@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
+	"github.com/bytepunx/system-flow/flai/internal/closeout"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -593,13 +594,13 @@ func resumeFixture(t *testing.T) (root, marker string) {
 	return root, marker
 }
 
-// resumeReport runs flai verify --json in dir with resumeGit and decodes its
-// answer, and answers it raw too.
-func resumeReport(t *testing.T, dir string, wantCode int, args ...string) (verify.Report, string) {
+// resumeReport runs flai verify --json in dir with resumeGit, wants it to
+// pass, and decodes its answer, and answers it raw too.
+func resumeReport(t *testing.T, dir string, args ...string) (verify.Report, string) {
 	t.Helper()
 	out, errOut, code := runVerify(t, dir, resumeGit{}, append([]string{"verify", "--json"}, args...)...)
-	if code != wantCode {
-		t.Fatalf("flai verify %v: exit %d, want %d\n%s%s", args, code, wantCode, out, errOut)
+	if code != 0 {
+		t.Fatalf("flai verify %v: exit %d, want 0\n%s%s", args, code, out, errOut)
 	}
 	var rep verify.Report
 	if err := json.Unmarshal([]byte(out), &rep); err != nil {
@@ -656,12 +657,17 @@ func TestVerifyResumesAtTheTierThatFailedAndSaysWhatItReused(t *testing.T) {
 		t.Errorf("third run's last line %q:\n%s", got, out)
 	}
 
-	// every tier passed: both are reused, and --json carries it
+	// every tier passed: both are reused, and --json carries it; the record
+	// would answer the third run's verdict at the same commit and run nothing
+	// (ADR-0229), so it is cleared for the run to resume
+	if err := os.RemoveAll(filepath.Dir(verify.RecordPath(project, "S-004", "0123abc4567"))); err != nil {
+		t.Fatal(err)
+	}
 	out, errOut, code = runVerify(t, root, resumeGit{}, "verify", "S-004")
 	if got := lastLine(out); code != 0 || got != "verify: S-004 passed every step (reused 2 tiers from 2026-09-17T00:00:00Z)" {
 		t.Errorf("fourth run: exit %d, last line %q\n%s%s", code, got, out, errOut)
 	}
-	rep, raw := resumeReport(t, root, 0, "S-004")
+	rep, raw := resumeReport(t, root, "S-004")
 	if want := "rebase:passed,sync:passed,narrative:passed,check:passed,tier unit:reused,tier lint:reused"; stepStates(rep) != want {
 		t.Errorf("steps %s, want %s", stepStates(rep), want)
 	}
@@ -681,16 +687,17 @@ func TestVerifyFreshRunsEveryTier(t *testing.T) {
 	if err := os.WriteFile(marker, nil, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if rep, _ := resumeReport(t, root, 0, "S-004"); stepStates(rep) != "rebase:passed,sync:passed,narrative:passed,check:passed,tier unit:passed,tier lint:passed" {
+	if rep, _ := resumeReport(t, root, "S-004"); stepStates(rep) != "rebase:passed,sync:passed,narrative:passed,check:passed,tier unit:passed,tier lint:passed" {
 		t.Fatalf("first run: steps %s", stepStates(rep))
 	}
 
-	// lint would fail now, but a run without --fresh does not run it
+	// lint would fail now, but a run without --fresh does not run it: the
+	// record answers the first run's verdict at the same commit (ADR-0229)
 	if err := os.Remove(marker); err != nil {
 		t.Fatal(err)
 	}
-	if rep, _ := resumeReport(t, root, 0, "S-004"); stepStates(rep) != "rebase:passed,sync:passed,narrative:passed,check:passed,tier unit:reused,tier lint:reused" {
-		t.Errorf("without --fresh: steps %s", stepStates(rep))
+	if rep, _ := resumeReport(t, root, "S-004"); !rep.FromRecord || stepStates(rep) != "rebase:passed,sync:passed,narrative:passed,check:passed,tier unit:passed,tier lint:passed" {
+		t.Errorf("without --fresh: from the record %v, steps %s", rep.FromRecord, stepStates(rep))
 	}
 	out, errOut, code := runVerify(t, root, resumeGit{}, "verify", "S-004", "--fresh")
 	if code != 1 || !strings.Contains(out, "\npassed tier unit (") || strings.Contains(out, "reused") {
@@ -914,5 +921,180 @@ func TestVerifySaysTheFlaiIsOlderThanTheProjectWhenTheTiersRefuse(t *testing.T) 
 		if strings.Contains(errOut, c.not) {
 			t.Errorf("flai %s: %q, want it not to say %q", c.version, errOut, c.not)
 		}
+	}
+}
+
+// S-0546 criterion 2, ADR-0229 §5: a run at a commit the record holds a
+// passing verdict for answers it and runs nothing, saying so on the last
+// line, which keeps the close-out's wording before it; --record-issues
+// records nothing for it, and --fresh runs.
+func TestVerifyAnswersAPassingVerdictFromTheRecordAndSaysSo(t *testing.T) {
+	fail := filepath.Join(t.TempDir(), "fail")
+	root, worktree := verifyFixture(t, `test ! -e "`+fail+`"`)
+	out, errOut, code := runVerify(t, root, resumeGit{}, "verify", "S-004", "--record-issues")
+	if code != 0 || !strings.Contains(out, "\nrecorded story.unaccepted outside S-004 in I-") || strings.Contains(out, "the record") {
+		t.Fatalf("the run that records: exit %d\n%s%s", code, out, errOut)
+	}
+	issues := issueFiles(t, worktree)
+	// the tier would fail now, but the record answers and nothing runs
+	if err := os.WriteFile(fail, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out, errOut, code = runVerify(t, root, resumeGit{}, "verify", "S-004", "--record-issues")
+	if want := "verify: S-004 passed every step (answered from the record of 2026-09-17T01:00:00Z at 0123abc; ran nothing)"; code != 0 || lastLine(out) != want {
+		t.Errorf("the answer from the record: exit %d, last line %q, want %q\n%s%s", code, lastLine(out), want, out, errOut)
+	}
+	if strings.Contains(out, "\nrecorded ") || strings.Join(issueFiles(t, worktree), ",") != strings.Join(issues, ",") {
+		t.Errorf("an answer from the record recorded notes:\n%s", out)
+	}
+	if rep, _ := resumeReport(t, root, "S-004"); !rep.FromRecord || !rep.Passed {
+		t.Errorf("--json carries from_record: %+v", rep)
+	}
+	out, errOut, code = runVerify(t, root, resumeGit{}, "verify", "S-004", "--fresh")
+	if code != 1 || strings.Contains(out, "the record") || lastLine(out) != "verify: S-004 stopped at unit (exit 1)" {
+		t.Errorf("--fresh runs: exit %d\n%s%s", code, out, errOut)
+	}
+}
+
+// takeCloseOut stands in for flai serve: it waits for the close-out request
+// of the fixture's S-004 in the project's cache dir, takes it, and answers
+// with what answer makes of it. The request it read arrives on the channel,
+// which is closed when none came within five seconds.
+func takeCloseOut(t *testing.T, cacheDir string, answer func(closeout.Request) closeout.Answer) <-chan closeout.Request {
+	const story = "S-004"
+	t.Helper()
+	got := make(chan closeout.Request, 1)
+	dir := closeout.Dir(cacheDir)
+	go func() {
+		deadline := time.Now().Add(5 * time.Second)
+		for time.Now().Before(deadline) {
+			taken := closeout.File(dir, story, closeout.TakenSuffix)
+			if os.Rename(closeout.File(dir, story, closeout.RequestSuffix), taken) == nil {
+				var req closeout.Request
+				data, err := os.ReadFile(taken)
+				if err == nil {
+					err = json.Unmarshal(data, &req)
+				}
+				if err != nil {
+					t.Errorf("the request taken: %v", err)
+				}
+				got <- req
+				if err := closeout.WriteAnswer(dir, answer(req)); err != nil {
+					t.Errorf("the answer: %v", err)
+				}
+				return
+			}
+			time.Sleep(2 * time.Millisecond)
+		}
+		close(got)
+	}()
+	return got
+}
+
+// S-0546 criterion 1, ADR-0229 §1: flai verify --job runs nothing here: it
+// asks flai serve for the close-out as this agent, with the message, --all,
+// and --fresh, and prints the job's id at once, what to wait for, and where
+// its output is; a job of the story already running is answered with its
+// id, and --json prints the answer.
+func TestVerifyJobAsksFlaiServeAndPrintsTheJobAtOnce(t *testing.T) {
+	root, _ := verifyFixture(t, "exit 7")
+	t.Setenv("FLAI_AGENT", "agent-S-0004")
+	cache := openProject(t, root).CacheDir()
+	log := closeout.LogPath(cache, "S-004")
+	got := takeCloseOut(t, cache, func(r closeout.Request) closeout.Answer {
+		return closeout.Answer{Job: r.Story + "-20261031T090000Z", Story: r.Story, Started: true, Log: log}
+	})
+	out, errOut, code := runVerify(t, root, verifyGit{}, "verify", "S-4", "--job", "-m", "feat: close out", "--all", "--fresh")
+	want := "close-out job S-004-20261031T090000Z started for S-004: wait for its verified event (wait_for_events), then read it with flai verify S-004 --last; its output is in " + log + "\n"
+	if code != 0 || out != want {
+		t.Errorf("the job started: exit %d\n%q\nwant %q\n%s", code, out, want, errOut)
+	}
+	if req := <-got; req.Story != "S-004" || req.By != "agent-S-0004" || req.Message != "feat: close out" || !req.All || !req.Fresh {
+		t.Errorf("the request flai serve read: %+v", req)
+	}
+	if _, ok, err := verify.LastReport(openProject(t, root), "S-004"); ok || err != nil {
+		t.Errorf("--job ran a verify here: %v %v", ok, err)
+	}
+
+	takeCloseOut(t, cache, func(r closeout.Request) closeout.Answer {
+		return closeout.Answer{Job: r.Story + "-20261031T090000Z", Story: r.Story, Log: log}
+	})
+	out, errOut, code = runVerify(t, root, verifyGit{}, "verify", "S-004", "--job")
+	if code != 0 || !strings.HasPrefix(out, "close-out job S-004-20261031T090000Z is already running for S-004: wait for its verified event") {
+		t.Errorf("the job already running: exit %d\n%s%s", code, out, errOut)
+	}
+
+	takeCloseOut(t, cache, func(r closeout.Request) closeout.Answer {
+		return closeout.Answer{Job: r.Story + "-20261031T090000Z", Story: r.Story, Started: true, Log: log}
+	})
+	out, errOut, code = runVerify(t, root, verifyGit{}, "verify", "S-004", "--job", "--json")
+	var ans closeout.Answer
+	if err := json.Unmarshal([]byte(out), &ans); err != nil || code != 0 || ans.Job != "S-004-20261031T090000Z" || !ans.Started {
+		t.Errorf("--json: exit %d %v\n%s%s", code, err, out, errOut)
+	}
+}
+
+// S-0546 criterion 2: flai verify --job at a commit the record holds a
+// verdict for prints it, saying it came from the record, and exits as a
+// verify that passed does.
+func TestVerifyJobAnsweredFromTheRecordSaysSo(t *testing.T) {
+	root, _ := verifyFixture(t, "exit 0")
+	ranAt := time.Date(2026, 10, 31, 9, 0, 0, 0, time.UTC)
+	takeCloseOut(t, openProject(t, root).CacheDir(), func(r closeout.Request) closeout.Answer {
+		return closeout.Answer{Story: r.Story, Recorded: true, Verdict: closeout.VerdictPassed, Commit: "0123abc4567", RanAt: ranAt}
+	})
+	out, errOut, code := runVerify(t, root, verifyGit{}, "verify", "S-004", "--job")
+	if code != 0 || out != "S-004 passed from the record of 2026-10-31T09:00:00Z at 0123abc; ran nothing\n" {
+		t.Errorf("the answer from the record: exit %d %q\n%s", code, out, errOut)
+	}
+}
+
+// ADR-0229 §1: with no flai serve to take the request, flai verify --job
+// withdraws it and exits 2, saying to run the close-out yourself; a request
+// flai serve refuses exits 2 with its reason.
+func TestVerifyJobWithoutFlaiServeIsRefused(t *testing.T) {
+	root, _ := verifyFixture(t, "exit 0")
+	was := verifyJobWait
+	verifyJobWait = closeout.Wait{Take: 50 * time.Millisecond, Poll: 5 * time.Millisecond}
+	t.Cleanup(func() { verifyJobWait = was })
+	out, errOut, code := runVerify(t, root, verifyGit{}, "verify", "S-004", "--job")
+	if code != exitVerifyUnusable || out != "" || !strings.Contains(errOut, "flai serve is not running") || !strings.Contains(errOut, "run the close-out script") {
+		t.Errorf("no flai serve: exit %d %q\n%s", code, out, errOut)
+	}
+	cache := openProject(t, root).CacheDir()
+	if _, err := os.Stat(closeout.File(closeout.Dir(cache), "S-004", closeout.RequestSuffix)); !os.IsNotExist(err) {
+		t.Errorf("the request was not withdrawn: %v", err)
+	}
+
+	verifyJobWait = was
+	takeCloseOut(t, cache, func(r closeout.Request) closeout.Answer {
+		return closeout.Answer{Story: r.Story, Reason: "S-004 has no worktree here, so its close-out cannot run"}
+	})
+	out, errOut, code = runVerify(t, root, verifyGit{}, "verify", "S-004", "--job")
+	if code != exitVerifyUnusable || out != "" || !strings.Contains(errOut, "so its close-out cannot run") {
+		t.Errorf("a refusal: exit %d %q\n%s", code, out, errOut)
+	}
+}
+
+// --job goes with neither --last, --sync-only, nor --record-issues, and
+// --message only with --job; each is refused with exit 2 and asks nothing.
+func TestVerifyRefusesJobFlagsThatDoNotGoTogether(t *testing.T) {
+	root, _ := verifyFixture(t, "exit 0")
+	for _, c := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"-m", "x"}, "--message is the commit message of the close-out job"},
+		{[]string{"--job", "--last"}, "--job asks flai serve for a close-out and --last"},
+		{[]string{"--job", "--sync-only"}, "--sync-only runs only the rebase and sync steps"},
+		{[]string{"--job", "--record-issues"}, "records the notes outside the story itself"},
+	} {
+		out, errOut, code := runVerify(t, root, verifyGit{}, append([]string{"verify", "S-004"}, c.args...)...)
+		if code != exitVerifyUnusable || out != "" || !strings.Contains(errOut, c.want) {
+			t.Errorf("%v: exit %d %q\n%s", c.args, code, out, errOut)
+		}
+	}
+	if _, err := os.Stat(closeout.Dir(openProject(t, root).CacheDir())); !os.IsNotExist(err) {
+		t.Errorf("a refusal asked flai serve: %v", err)
 	}
 }

@@ -419,6 +419,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--include` | [flai components config](../users/flai-reference.md#flai-components-config) |
 | `--input` | [flai role run](../users/flai-reference.md#flai-role-run) |
 | `--item` | [flai activity log](../users/flai-reference.md#flai-activity-log) |
+| `--job` | [flai verify](../users/flai-reference.md#flai-verify) |
 | `--json` | every command ([global flags](../users/flai-reference.md#flai)) |
 | `--keep-all` | [flai upgrade](../users/flai-reference.md#flai-upgrade) |
 | `--keep-placed` | [flai order](../users/flai-reference.md#flai-order) |
@@ -434,7 +435,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--max` | [flai test](../users/flai-reference.md#flai-test), [flai verify](../users/flai-reference.md#flai-verify) |
 | `--max-sessions` | [flai mcp http](../users/flai-reference.md#flai-mcp-http), [flai mcp start](../users/flai-reference.md#flai-mcp-start) |
 | `--message` | [flai doc save](../users/flai-reference.md#flai-doc-save), [flai edit](../users/flai-reference.md#flai-edit), [flai file save](../users/flai-reference.md#flai-file-save) |
-| `-m`, `--message` | [flai task done](../users/flai-reference.md#flai-task-done) |
+| `-m`, `--message` | [flai task done](../users/flai-reference.md#flai-task-done), [flai verify](../users/flai-reference.md#flai-verify) |
 | `--min` | [flai touches suggest](../users/flai-reference.md#flai-touches-suggest) |
 | `--model` | [flai agent set](../users/flai-reference.md#flai-agent-set), [flai edit](../users/flai-reference.md#flai-edit), [flai serve agent provider](../users/flai-reference.md#flai-serve-agent-provider), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--name` | [flai serve agent set](../users/flai-reference.md#flai-serve-agent-set), [flai serve checks set](../users/flai-reference.md#flai-serve-checks-set), [flai subproject set](../users/flai-reference.md#flai-subproject-set) |

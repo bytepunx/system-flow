@@ -2,28 +2,31 @@ package mcpserver
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
-	"github.com/bytepunx/system-flow/flai/internal/guard"
-	"github.com/bytepunx/system-flow/flai/internal/verify"
+	"github.com/bytepunx/system-flow/flai/internal/closeout"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-// verifyFixture is testFixture with the story's worktree on its own branch
-// from main and its narrative's Current state and Next steps written; change
-// commits a file on the story's branch.
-func verifyFixture(t *testing.T) (f *fixture, change func(rel string)) {
+// closeOutFixture is setup with the story's worktree there.
+func closeOutFixture(t *testing.T) *fixture {
 	t.Helper()
-	f, change, _ = verifyFixtureWith(t, nil)
-	return f, change
+	f := setup(t)
+	if err := os.MkdirAll(f.repo.WorktreePath(f.story.ID), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return f
 }
 
-// verifyFixtureWith is verifyFixture with the server's options changed by
-// with as well, when it is not nil, and the git it runs.
+// verifyFixtureWith is testFixture, with the server's options changed by
+// with when it is not nil, with the story's worktree on its own branch from
+// main and its narrative's Current state and Next steps written; change
+// commits a file on the story's branch, and git runs git.
 func verifyFixtureWith(t *testing.T, with func(*Options)) (f *fixture, change func(rel string), git func(dir string, args ...string)) {
 	t.Helper()
 	f, git = testFixtureWith(t, with)
@@ -54,45 +57,62 @@ func verifyFixtureWith(t *testing.T, with func(*Options)) (f *fixture, change fu
 	}, git
 }
 
-// steps are the answer's steps as name=state, and its findings' messages.
-func steps(t *testing.T, out map[string]any) (states, found string) {
+// takeCloseOut stands in for flai serve: it waits for story's close-out
+// request in the project's cache dir, takes it, and answers with what answer
+// makes of it. The request it read arrives on the channel, which is closed
+// when none came within five seconds.
+func takeCloseOut(t *testing.T, cacheDir, story string, answer func(closeout.Request) closeout.Answer) <-chan closeout.Request {
 	t.Helper()
-	list, ok := out["steps"].([]any)
-	if !ok {
-		t.Fatalf("no steps in %v", out)
-	}
-	var s, f []string
-	for _, x := range list {
-		step := x.(map[string]any)
-		s = append(s, fmt.Sprintf("%s=%s", step["name"], step["state"]))
-		fs, _ := step["findings"].([]any)
-		for _, y := range fs {
-			f = append(f, fmt.Sprint(y.(map[string]any)["message"]))
+	got := make(chan closeout.Request, 1)
+	dir := closeout.Dir(cacheDir)
+	go func() {
+		deadline := time.Now().Add(5 * time.Second)
+		for time.Now().Before(deadline) {
+			taken := closeout.File(dir, story, closeout.TakenSuffix)
+			if os.Rename(closeout.File(dir, story, closeout.RequestSuffix), taken) == nil {
+				var req closeout.Request
+				data, err := os.ReadFile(taken)
+				if err == nil {
+					err = json.Unmarshal(data, &req)
+				}
+				if err != nil {
+					t.Errorf("the request taken: %v", err)
+				}
+				got <- req
+				if err := closeout.WriteAnswer(dir, answer(req)); err != nil {
+					t.Errorf("the answer: %v", err)
+				}
+				return
+			}
+			time.Sleep(2 * time.Millisecond)
 		}
-	}
-	return strings.Join(s, " "), strings.Join(f, "\n")
+		close(got)
+	}()
+	return got
 }
 
-// S-0270: the tool is listed, saying what it runs, that a finding outside
-// the story is a note, and that the verifier is kept for the review; it
-// answers a pass, with each step and the tier the branch's change selects,
-// and stores the answer as the story's last.
-func TestVerifyAnswersAPassAndStoresIt(t *testing.T) {
+// S-0546 criterion 1, ADR-0229 §1: the tool is listed, saying that it asks
+// flai serve for the close-out as a job and what to wait for; it asks as the
+// session's agent, with the message, all, and fresh, and answers the job's
+// id at once, or the id of the story's job already running.
+func TestVerifyAsksFlaiServeForTheCloseOutJob(t *testing.T) {
 	t.Parallel()
-	f, change := verifyFixture(t)
+	f := closeOutFixture(t)
 	res, err := f.cs.ListTools(context.Background(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	listed := false
 	for _, tool := range res.Tools {
-		if tool.Name == "verify" {
-			listed = true
-			for _, want := range []string{"what the close-out runs", "rebase", "narrative", "flai check --strict scoped to the story", "tiers the branch's changes select",
-				"outside the story is a note", "records no issue", "flai verify --json", "the verifier is kept for the review", "acceptance criteria and the conventions"} {
-				if !strings.Contains(tool.Description, want) {
-					t.Errorf("the description does not say %q: %s", want, tool.Description)
-				}
+		if tool.Name != "verify" {
+			continue
+		}
+		listed = true
+		for _, want := range []string{"Ask flai serve for a story's close-out", "as a job", "scripts/close-out.sh S-nnnn -m <message>", "answers at once",
+			"a commit the verify record holds a passing verdict for", "hold wait_for_events until it reports verified", "flai verify S-nnnn --last",
+			"flai serve is not running", "run the close-out script, or flai verify where the project has none, yourself", "acceptance criteria and the conventions"} {
+			if !strings.Contains(tool.Description, want) {
+				t.Errorf("the description does not say %q: %s", want, tool.Description)
 			}
 		}
 	}
@@ -100,90 +120,88 @@ func TestVerifyAnswersAPassAndStoresIt(t *testing.T) {
 		t.Fatal("the tool verify is not listed")
 	}
 
-	change("ok/a.txt")
-	out, failed := f.call(t, "verify", map[string]any{"story": f.story.ID})
+	cache := f.repo.CacheDir()
+	id := f.story.ID + "-20261031T090000Z"
+	got := takeCloseOut(t, cache, f.story.ID, func(r closeout.Request) closeout.Answer {
+		return closeout.Answer{Job: id, Story: r.Story, Started: true, Log: closeout.LogPath(cache, r.Story)}
+	})
+	out, failed := f.call(t, "verify", map[string]any{"story": f.story.ID, "message": "feat: close out", "all": true, "fresh": true})
 	if failed != "" {
 		t.Fatal(failed)
 	}
-	states, found := steps(t, out)
-	if out["passed"] != true || out["stopped_at"] != nil || out["story"] != f.story.ID || out["base"] != "main" ||
-		states != "rebase=passed sync=passed narrative=passed check=passed ok=passed" || found != "" {
-		t.Errorf("a pass: %v (steps %s, findings %q)", out, states, found)
+	if out["job"] != id || out["story"] != f.story.ID || out["started"] != true || out["running"] != nil || out["recorded"] != nil || out["log"] != closeout.LogPath(cache, f.story.ID) {
+		t.Errorf("the job started: %v", out)
 	}
-	last, ok, err := verify.LastReport(f.repo, f.story.ID)
-	if err != nil || !ok || !last.Passed || last.Commit != out["commit"] || last.Commit == "" {
-		t.Errorf("the stored report: %+v, %v, %v; answered commit %v", last, ok, err, out["commit"])
-	}
-}
-
-// S-0270: a step that fails is an answer naming it, with its findings, and
-// the steps after it not reached; it is stored as the story's last too.
-func TestVerifyAnswersTheStepThatFailed(t *testing.T) {
-	t.Parallel()
-	f, change := verifyFixture(t)
-	change("ok/a.txt")
-	change("bad/b.txt")
-	out, failed := f.call(t, "verify", map[string]any{"story": f.story.ID, "max": 1})
-	if failed != "" {
-		t.Fatal(failed)
-	}
-	states, found := steps(t, out)
-	if out["passed"] != false || out["stopped_at"] != "bad" ||
-		states != "rebase=passed sync=passed narrative=passed check=passed ok=passed bad=failed" || !strings.Contains(found, "bad/b.txt:3: it broke") {
-		t.Errorf("a failing tier: %v (steps %s, findings %q)", out, states, found)
-	}
-	if last, ok, err := verify.LastReport(f.repo, f.story.ID); err != nil || !ok || last.Passed || last.StoppedAt != "bad" {
-		t.Errorf("the stored report: %+v, %v, %v", last, ok, err)
+	if req := <-got; req.Story != f.story.ID || req.By != "claude" || req.Message != "feat: close out" || !req.All || !req.Fresh {
+		t.Errorf("the request flai serve read: %+v", req)
 	}
 
-	path := f.repo.NarrativePath(f.story.ID)
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(path, []byte(strings.Replace(string(data), "## Next steps\n\nWritten.\n", "## Next steps\n\n-\n", 1)), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	takeCloseOut(t, cache, f.story.ID, func(r closeout.Request) closeout.Answer {
+		return closeout.Answer{Job: id, Story: r.Story, Log: closeout.LogPath(cache, r.Story)}
+	})
 	out, failed = f.call(t, "verify", map[string]any{"story": f.story.ID})
 	if failed != "" {
 		t.Fatal(failed)
 	}
-	states, found = steps(t, out)
-	if out["passed"] != false || out["stopped_at"] != "narrative" ||
-		states != "rebase=passed sync=passed narrative=failed check=not-reached ok=not-reached bad=not-reached" || !strings.Contains(found, "## Next steps is empty") {
-		t.Errorf("an empty narrative section: %v (steps %s, findings %q)", out, states, found)
+	if out["job"] != id || out["started"] != false || out["running"] != true {
+		t.Errorf("the job already running: %v", out)
 	}
 }
 
-// S-0311: the orchestrator's server answers verify, and runs the tiers under
-// the verify role rather than its own, so a tier whose tests make flai's
-// writes is not refused as the orchestrator (TH-0260).
-func testVerifyRunsTheTiersUnderTheVerifyRoleForTheOrchestrator(t *testing.T) {
-	// the server reads its role when the fixture makes it
-	inEnv(t, "FLAI_ROLE", guard.RoleOrchestrate)
-	f, change := verifyFixture(t)
-	// on the story's branch the ok tier passes only under the verify role
-	manifest := strings.Replace(testManifest, `[sh, -c, "exit 0"]`, `[sh, -c, 'test "$FLAI_ROLE" = verify || { echo "FLAI_ROLE is $FLAI_ROLE, not verify"; exit 1; }']`, 1)
-	if err := os.WriteFile(filepath.Join(f.repo.WorktreePath(f.story.ID), "system-flow.yaml"), []byte(manifest), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	change("ok/a.txt")
-
+// S-0546 criterion 2, ADR-0229 §5: a commit the verify record holds a
+// verdict for is answered with it, saying it came from the record, with its
+// commit and the time of its run, and no job.
+func TestVerifyAnswersTheVerdictTheRecordHolds(t *testing.T) {
+	t.Parallel()
+	f := closeOutFixture(t)
+	ranAt := time.Date(2026, 10, 31, 9, 0, 0, 0, time.UTC)
+	takeCloseOut(t, f.repo.CacheDir(), f.story.ID, func(r closeout.Request) closeout.Answer {
+		return closeout.Answer{Story: r.Story, Recorded: true, Verdict: closeout.VerdictPassed, Commit: "0123abc4567", RanAt: ranAt}
+	})
 	out, failed := f.call(t, "verify", map[string]any{"story": f.story.ID})
 	if failed != "" {
-		t.Fatalf("the orchestrator's verify was refused: %s", failed)
+		t.Fatal(failed)
 	}
-	states, found := steps(t, out)
-	if out["passed"] != true || states != "rebase=passed sync=passed narrative=passed check=passed ok=passed" {
-		t.Errorf("the orchestrator's run: %v (steps %s, findings %q)", out, states, found)
+	if out["recorded"] != true || out["verdict"] != closeout.VerdictPassed || out["commit"] != "0123abc4567" || out["ran_at"] != "2026-10-31T09:00:00Z" ||
+		out["job"] != nil || out["started"] != false {
+		t.Errorf("the answer from the record: %v", out)
 	}
 }
 
-// S-0270: a story that is not there, an item that is not a story, a story
-// with no worktree, and a max under 1 are refused, saying what to do.
-func TestVerifyRefusesWhatItCannotVerify(t *testing.T) {
+// A request flai serve refuses is an error with its reason.
+func TestVerifyFailsWithTheReasonFlaiServeRefused(t *testing.T) {
 	t.Parallel()
-	f, _ := verifyFixture(t)
+	f := closeOutFixture(t)
+	takeCloseOut(t, f.repo.CacheDir(), f.story.ID, func(r closeout.Request) closeout.Answer {
+		return closeout.Answer{Story: r.Story, Reason: "flai serve could not start " + r.Story + "'s close-out: the disk is full"}
+	})
+	if _, failed := f.call(t, "verify", map[string]any{"story": f.story.ID}); !strings.Contains(failed, "the disk is full") {
+		t.Errorf("the refusal: %q", failed)
+	}
+}
+
+// ADR-0229 §1: with no flai serve to take the request, it is withdrawn and
+// the call fails, saying to run the close-out yourself.
+func TestVerifySaysFlaiServeIsNotRunning(t *testing.T) {
+	// it shortens the package's wait, so it runs before the parallel tests
+	was := closeOutWait
+	closeOutWait = closeout.Wait{Take: 50 * time.Millisecond, Poll: 5 * time.Millisecond}
+	t.Cleanup(func() { closeOutWait = was })
+	f := closeOutFixture(t)
+	_, failed := f.call(t, "verify", map[string]any{"story": f.story.ID})
+	if !strings.Contains(failed, "flai serve is not running") || !strings.Contains(failed, "run the close-out script") {
+		t.Errorf("no flai serve: %q", failed)
+	}
+	if _, err := os.Stat(closeout.File(closeout.Dir(f.repo.CacheDir()), f.story.ID, closeout.RequestSuffix)); !os.IsNotExist(err) {
+		t.Errorf("the request was not withdrawn: %v", err)
+	}
+}
+
+// S-0270: a story that is not there, an item that is not a story, and a
+// story with no worktree are refused, saying what to do, and nothing is
+// asked of flai serve.
+func TestVerifyRefusesWhatItCannotVerify(t *testing.T) {
+	f := closeOutFixture(t)
 	other, err := f.repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "Other", Owner: "alex", Now: t0})
 	if err != nil {
 		t.Fatal(err)
@@ -196,107 +214,43 @@ func TestVerifyRefusesWhatItCannotVerify(t *testing.T) {
 		{map[string]any{"story": "S-0099"}, "S-0099 is not a work item here"},
 		{map[string]any{"story": f.task.ID}, f.task.ID + " is a task; name a story"},
 		{map[string]any{"story": other.ID}, other.ID + " has no worktree at .flai-cache/worktrees/" + other.ID + "; open it with flai stream open " + other.ID},
-		{map[string]any{"story": f.story.ID, "max": -1}, "max -1 is not a number of findings"},
 	} {
 		if _, failed := f.call(t, "verify", c.args); !strings.Contains(failed, c.want) {
 			t.Errorf("%v: %q, want %q", c.args, failed, c.want)
 		}
 	}
-	if _, ok, err := verify.LastReport(f.repo, f.story.ID); ok || err != nil {
-		t.Errorf("a refusal stored a report: %v, %v", ok, err)
+	if _, err := os.Stat(closeout.Dir(f.repo.CacheDir())); !os.IsNotExist(err) {
+		t.Errorf("a refusal asked flai serve: %v", err)
 	}
 }
 
-// I-0141, ADR-0158: verify refuses tiers its flai does not take, in the
-// story's worktree, as the tool test does: naming both versions and the
-// upgrade when the project's history holds a newer flai release, and the
-// manifest's fix when it does not. No report is stored either way.
-func TestVerifySaysTheFlaiIsOlderThanTheProjectWhenTheTiersRefuse(t *testing.T) {
-	t.Parallel()
-	for _, c := range []struct {
-		version string
-		want    []string
-		not     string
-	}{
-		{"1.40.1", []string{i0141Problem, "this flai is 1.40.1, older than flai 1.49.0 in the project's history", "upgrade it with flai host upgrade"}, "flai manifest set tests="},
-		{"1.49.0", []string{i0141Problem, "flai manifest set tests="}, "upgrade it"},
-	} {
-		f, _, git := verifyFixtureWith(t, func(o *Options) { o.Version = c.version })
-		git(f.repo.Root, "tag", "-a", "flai/v1.49.0", "-m", "flai 1.49.0", "main")
-		if err := os.WriteFile(filepath.Join(f.repo.WorktreePath(f.story.ID), "system-flow.yaml"), []byte(i0141Manifest), 0o644); err != nil {
-			t.Fatal(err)
-		}
-		_, failed := f.call(t, "verify", map[string]any{"story": f.story.ID})
-		for _, want := range c.want {
-			if !strings.Contains(failed, want) {
-				t.Errorf("flai %s: %q, want it to say %q", c.version, failed, want)
-			}
-		}
-		if strings.Contains(failed, c.not) {
-			t.Errorf("flai %s: %q, want it not to say %q", c.version, failed, c.not)
-		}
-		if _, ok, err := verify.LastReport(f.repo, f.story.ID); ok || err != nil {
-			t.Errorf("flai %s: a refusal stored a report: %v, %v", c.version, ok, err)
-		}
-	}
-}
-
-// ADR-0174: while the host says the merge queue can batch for the project,
-// asked with its main checkout's root at each call, verify leaves the tiers
-// marked queue to it as queued steps and passes; with all, or while the queue
-// cannot batch, it runs them. A run that runs them reuses the tiers a run
-// that left them passed at the same patch, and runs only those it left
-// (ADR-0221), and two that run them alike reuse them all.
-func TestVerifyLeavesTheQueueTiersToTheMergeQueueWhileItCanBatch(t *testing.T) {
-	t.Parallel()
-	batches, asked := true, ""
-	f, change, _ := verifyFixtureWith(t, func(o *Options) {
-		o.QueueBatches = func(root string) bool {
-			asked = root
-			return batches
-		}
-	})
-	manifest := testManifest + "  - name: late\n    command: [sh, -c, \"exit 0\"]\n    paths: [\"ok/**\"]\n    queue: true\n"
-	if err := os.WriteFile(filepath.Join(f.repo.WorktreePath(f.story.ID), "system-flow.yaml"), []byte(manifest), 0o644); err != nil {
+// ADR-0229 §4: a story's agent with its question open to the designer is not
+// told to end while a close-out job of its story runs, nor when the job's
+// state cannot be read, since it waits for the job's verified event; once
+// the job ended, it is.
+func testWaitForEventsHoldsAStorysAgentWhileItsCloseOutJobRuns(t *testing.T) {
+	f, d := storysAgent(t)
+	f.ask(t, f.story.ID)
+	dir := closeout.Dir(f.repo.CacheDir())
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	change("ok/a.txt")
-	for _, c := range []struct {
-		name    string
-		batches bool
-		args    map[string]any
-		want    string
-	}{
-		{"the queue batches", true, map[string]any{"story": f.story.ID}, "ok=passed late=queued"},
-		{"all", true, map[string]any{"story": f.story.ID, "all": true}, "ok=reused late=passed"},
-		{"the queue cannot batch", false, map[string]any{"story": f.story.ID}, "ok=reused late=reused"},
-	} {
-		batches, asked = c.batches, ""
-		out, failed := f.call(t, "verify", c.args)
-		if failed != "" {
-			t.Fatalf("%s: %s", c.name, failed)
-		}
-		states, _ := steps(t, out)
-		if want := "rebase=passed sync=passed narrative=passed check=passed " + c.want; out["passed"] != true || states != want {
-			t.Errorf("%s: passed %v, steps %s, want %s", c.name, out["passed"], states, want)
-		}
-		if c.args["all"] == nil && asked != projectRoot(f.repo) {
-			t.Errorf("%s: asked for %q, want the project's root %q", c.name, asked, projectRoot(f.repo))
-		}
-	}
-
-	res, err := f.cs.ListTools(context.Background(), nil)
-	if err != nil {
+	job := closeout.Job{ID: f.story.ID + "-20261031T090000Z", Story: f.story.ID, By: "claude", Started: t0}
+	if err := closeout.WriteJob(dir, job); err != nil {
 		t.Fatal(err)
 	}
-	for _, tool := range res.Tools {
-		if tool.Name != "verify" {
-			continue
-		}
-		for _, want := range []string{"marks queue", "queued, left to the merge queue", "all leaves no tier to the queue"} {
-			if !strings.Contains(tool.Description, want) {
-				t.Errorf("the description does not say %q: %s", want, tool.Description)
-			}
-		}
+	f.holds(t, d)
+
+	path := closeout.File(dir, f.story.ID, closeout.JobSuffix)
+	if err := os.WriteFile(path, []byte("{"), 0o644); err != nil {
+		t.Fatal(err)
 	}
+	f.holds(t, d)
+
+	code := 0
+	job.Ended, job.ExitCode, job.Verdict = t0.Add(time.Minute), &code, closeout.VerdictPassed
+	if err := closeout.WriteJob(dir, job); err != nil {
+		t.Fatal(err)
+	}
+	f.endsAtOnce(t, d)
 }

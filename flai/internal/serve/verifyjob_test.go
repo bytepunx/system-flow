@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/closeout"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
@@ -141,13 +142,13 @@ func (lab *verifyLab) start() {
 }
 
 // ask asks for the story's close-out as its agent does.
-func (lab *verifyLab) ask(req VerifyRequest) VerifyAnswer {
+func (lab *verifyLab) ask(req closeout.Request) closeout.Answer {
 	lab.t.Helper()
 	req.Story = lab.story
 	if req.By == "" {
 		req.By = "agent-" + lab.story
 	}
-	a, err := RequestVerify(context.Background(), lab.repo.CacheDir(), req, VerifyWait{Take: 5 * time.Second, Answer: 5 * time.Second, Poll: 5 * time.Millisecond})
+	a, err := closeout.Ask(context.Background(), lab.repo.CacheDir(), req, closeout.Wait{Take: 5 * time.Second, Answer: 5 * time.Second, Poll: 5 * time.Millisecond})
 	if err != nil {
 		lab.t.Fatal(err)
 	}
@@ -203,15 +204,15 @@ func TestACloseOutRequestRunsAJobThatEndsWithAVerifiedEvent(t *testing.T) {
 	t.Parallel()
 	lab := newVerifyLab(t, true)
 	lab.start()
-	a := lab.ask(VerifyRequest{Message: "close out"})
+	a := lab.ask(closeout.Request{Message: "close out"})
 	if !a.Started || !strings.HasPrefix(a.Job, lab.story+"-") || len(a.Job) != len(lab.story)+len("-20261031T090000Z") || a.Refused() || a.Recorded {
 		t.Fatalf("the answer that starts the job: %+v", a)
 	}
-	again := lab.ask(VerifyRequest{})
+	again := lab.ask(closeout.Request{})
 	if again.Started || again.Job != a.Job {
 		t.Fatalf("a second request while the job runs: %+v, want job %s not started", again, a.Job)
 	}
-	if job, ok, err := ReadVerifyJob(lab.repo.CacheDir(), lab.story); err != nil || !ok || !job.Running() || job.ID != a.Job || job.By != "agent-"+lab.story {
+	if job, ok, err := closeout.ReadJob(lab.repo.CacheDir(), lab.story); err != nil || !ok || !job.Running() || job.ID != a.Job || job.By != "agent-"+lab.story {
 		t.Fatalf("the running job's state: %+v %v %v", job, ok, err)
 	}
 	lab.saveReport("head-a", true, "")
@@ -219,13 +220,13 @@ func TestACloseOutRequestRunsAJobThatEndsWithAVerifiedEvent(t *testing.T) {
 	lab.release()
 
 	e := lab.awaitVerified(1)
-	want := map[string]string{inbox.FieldJob: a.Job, inbox.FieldCommit: "head-b", inbox.FieldVerdict: VerdictPassed, inbox.FieldStoppedAt: "", inbox.FieldRecorded: "false"}
+	want := map[string]string{inbox.FieldJob: a.Job, inbox.FieldCommit: "head-b", inbox.FieldVerdict: closeout.VerdictPassed, inbox.FieldStoppedAt: "", inbox.FieldRecorded: "false"}
 	for k, v := range want {
 		if e.Fields[k] != v {
 			t.Errorf("the verified event's %s: %q, want %q (%+v)", k, e.Fields[k], v, e)
 		}
 	}
-	if e.ID != lab.story || e.To != VerdictPassed || e.By != verifyServeAuthor || e.Fields[inbox.FieldDuration] == "" {
+	if e.ID != lab.story || e.To != closeout.VerdictPassed || e.By != verifyServeAuthor || e.Fields[inbox.FieldDuration] == "" {
 		t.Errorf("the verified event: %+v", e)
 	}
 	if n := len(lab.verified()); n != 1 {
@@ -238,11 +239,11 @@ func TestACloseOutRequestRunsAJobThatEndsWithAVerifiedEvent(t *testing.T) {
 	if s := entries[0]; s.Outcome != "started" || s.By != "agent-"+lab.story || s.Detail != lab.story+" job "+a.Job || s.Verdict != "" || s.Project != "t" {
 		t.Errorf("the start entry: %+v", s)
 	}
-	if end := entries[1]; end.Outcome != "done" || end.Verdict != VerdictPassed || end.DurationMS <= 0 || !strings.HasPrefix(end.Detail, lab.story+" job "+a.Job+": passed in ") {
+	if end := entries[1]; end.Outcome != "done" || end.Verdict != closeout.VerdictPassed || end.DurationMS <= 0 || !strings.HasPrefix(end.Detail, lab.story+" job "+a.Job+": passed in ") {
 		t.Errorf("the end entry: %+v", end)
 	}
-	job, _, err := ReadVerifyJob(lab.repo.CacheDir(), lab.story)
-	if err != nil || job.Running() || job.ExitCode == nil || *job.ExitCode != 0 || job.Verdict != VerdictPassed || job.Commit != "head-b" || job.DurationMS <= 0 {
+	job, _, err := closeout.ReadJob(lab.repo.CacheDir(), lab.story)
+	if err != nil || job.Running() || job.ExitCode == nil || *job.ExitCode != 0 || job.Verdict != closeout.VerdictPassed || job.Commit != "head-b" || job.DurationMS <= 0 {
 		t.Errorf("the ended job's state: %+v %v", job, err)
 	}
 	lab.mu.Lock()
@@ -251,7 +252,7 @@ func TestACloseOutRequestRunsAJobThatEndsWithAVerifiedEvent(t *testing.T) {
 	if kept != lab.story+" head-b head-a" {
 		t.Errorf("the passing report kept under the commit the close-out made: %q", kept)
 	}
-	out, err := os.ReadFile(VerifyLogPath(lab.repo.CacheDir(), lab.story))
+	out, err := os.ReadFile(closeout.LogPath(lab.repo.CacheDir(), lab.story))
 	if err != nil || !strings.Contains(string(out), "close-out "+lab.story+" -m close out") || !strings.Contains(string(out), "agent=agent-"+lab.story) {
 		t.Errorf("the job's log: %q %v", out, err)
 	}
@@ -263,16 +264,16 @@ func TestACloseOutThatStopsIsStoppedAtTheStepTheRecordNames(t *testing.T) {
 	t.Parallel()
 	lab := newVerifyLab(t, true)
 	lab.start()
-	a := lab.ask(VerifyRequest{})
+	a := lab.ask(closeout.Request{})
 	lab.saveReport("head-a", false, "go-test")
 	lab.write("exit-code", "1\n")
 	lab.release()
 	e := lab.awaitVerified(1)
-	if e.To != VerdictStopped || e.Fields[inbox.FieldStoppedAt] != "go-test" || e.Fields[inbox.FieldJob] != a.Job {
+	if e.To != closeout.VerdictStopped || e.Fields[inbox.FieldStoppedAt] != "go-test" || e.Fields[inbox.FieldJob] != a.Job {
 		t.Errorf("the verified event of a stop: %+v", e)
 	}
 	entries := lab.journal()
-	if end := entries[len(entries)-1]; end.Outcome != "failed" || end.Verdict != VerdictStopped || !strings.Contains(end.Detail, ": stopped at go-test in ") {
+	if end := entries[len(entries)-1]; end.Outcome != "failed" || end.Verdict != closeout.VerdictStopped || !strings.Contains(end.Detail, ": stopped at go-test in ") {
 		t.Errorf("the end entry of a stop: %+v", end)
 	}
 	lab.mu.Lock()
@@ -296,27 +297,27 @@ func TestACloseOutTheRecordHoldsIsAnsweredWithoutAJob(t *testing.T) {
 		return verify.Report{Story: story, Commit: "head-a", RanAt: ranAt, Passed: true}, true, nil
 	}
 	lab.start()
-	a := lab.ask(VerifyRequest{})
-	if !a.Recorded || a.Started || a.Job != "" || a.Verdict != VerdictPassed || a.Commit != "head-a" || !a.RanAt.Equal(ranAt) {
+	a := lab.ask(closeout.Request{})
+	if !a.Recorded || a.Started || a.Job != "" || a.Verdict != closeout.VerdictPassed || a.Commit != "head-a" || !a.RanAt.Equal(ranAt) {
 		t.Fatalf("the answer from the record: %+v", a)
 	}
-	if _, ok, err := ReadVerifyJob(lab.repo.CacheDir(), lab.story); ok || err != nil {
+	if _, ok, err := closeout.ReadJob(lab.repo.CacheDir(), lab.story); ok || err != nil {
 		t.Errorf("no job for an answer from the record: %v %v", ok, err)
 	}
 	e := lab.awaitVerified(1)
-	if e.Fields[inbox.FieldRecorded] != "true" || e.To != VerdictPassed || e.Fields[inbox.FieldJob] != "" || e.Fields[inbox.FieldCommit] != "head-a" || e.Fields[inbox.FieldDuration] != "" {
+	if e.Fields[inbox.FieldRecorded] != "true" || e.To != closeout.VerdictPassed || e.Fields[inbox.FieldJob] != "" || e.Fields[inbox.FieldCommit] != "head-a" || e.Fields[inbox.FieldDuration] != "" {
 		t.Errorf("the verified event of an answer from the record: %+v", e)
 	}
 	entries := lab.journal()
-	if len(entries) != 1 || entries[0].Outcome != "done" || entries[0].Verdict != VerdictPassed || entries[0].DurationMS != 0 || !strings.HasPrefix(entries[0].Detail, fromTheRecord) {
+	if len(entries) != 1 || entries[0].Outcome != "done" || entries[0].Verdict != closeout.VerdictPassed || entries[0].DurationMS != 0 || !strings.HasPrefix(entries[0].Detail, fromTheRecord) {
 		t.Fatalf("one end entry from the record: %+v", entries)
 	}
 
 	lab.release()
-	if fresh := lab.ask(VerifyRequest{Fresh: true}); !fresh.Started || fresh.Recorded {
+	if fresh := lab.ask(closeout.Request{Fresh: true}); !fresh.Started || fresh.Recorded {
 		t.Errorf("fresh runs whatever the record holds: %+v", fresh)
 	}
-	if e := lab.awaitVerified(2); e.Fields[inbox.FieldRecorded] != "false" || e.To != VerdictPassed {
+	if e := lab.awaitVerified(2); e.Fields[inbox.FieldRecorded] != "false" || e.To != closeout.VerdictPassed {
 		t.Errorf("the fresh job's verified event: %+v", e)
 	}
 }
@@ -326,25 +327,25 @@ func TestACloseOutTheRecordHoldsIsAnsweredWithoutAJob(t *testing.T) {
 func TestAJobLeftRunningIsEndedInterruptedWhenServeStarts(t *testing.T) {
 	t.Parallel()
 	lab := newVerifyLab(t, false)
-	dir := verifyJobsDir(lab.repo.CacheDir())
+	dir := closeout.Dir(lab.repo.CacheDir())
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	left := VerifyJob{ID: lab.story + "-20261031T080000Z", Story: lab.story, By: "agent-" + lab.story, Started: time.Now().Add(-time.Hour).UTC()}
-	if err := writeVerifyJob(dir, left); err != nil {
+	left := closeout.Job{ID: lab.story + "-20261031T080000Z", Story: lab.story, By: "agent-" + lab.story, Started: time.Now().Add(-time.Hour).UTC()}
+	if err := closeout.WriteJob(dir, left); err != nil {
 		t.Fatal(err)
 	}
 	lab.start()
 	e := lab.awaitVerified(1)
-	if e.To != VerdictInterrupted || e.Fields[inbox.FieldJob] != left.ID || e.Fields[inbox.FieldCommit] != "head-a" {
+	if e.To != closeout.VerdictInterrupted || e.Fields[inbox.FieldJob] != left.ID || e.Fields[inbox.FieldCommit] != "head-a" {
 		t.Errorf("the verified event of an interrupted job: %+v", e)
 	}
-	job, _, err := ReadVerifyJob(lab.repo.CacheDir(), lab.story)
-	if err != nil || job.Running() || job.Verdict != VerdictInterrupted || job.ExitCode == nil || *job.ExitCode != -1 {
+	job, _, err := closeout.ReadJob(lab.repo.CacheDir(), lab.story)
+	if err != nil || job.Running() || job.Verdict != closeout.VerdictInterrupted || job.ExitCode == nil || *job.ExitCode != -1 {
 		t.Errorf("the interrupted job's state: %+v %v", job, err)
 	}
 	entries := lab.journal()
-	if len(entries) != 1 || entries[0].Outcome != "failed" || entries[0].Verdict != VerdictInterrupted || entries[0].By != left.By {
+	if len(entries) != 1 || entries[0].Outcome != "failed" || entries[0].Verdict != closeout.VerdictInterrupted || entries[0].By != left.By {
 		t.Errorf("the interrupted job journaled failed: %+v", entries)
 	}
 }
@@ -356,7 +357,7 @@ func TestAJobIsStoppedWithServeAndLeftForTheNextStart(t *testing.T) {
 	t.Parallel()
 	lab := newVerifyLab(t, true)
 	lab.start()
-	if a := lab.ask(VerifyRequest{}); !a.Started {
+	if a := lab.ask(closeout.Request{}); !a.Started {
 		t.Fatalf("the job did not start: %+v", a)
 	}
 	lab.stop()
@@ -370,7 +371,7 @@ func TestAJobIsStoppedWithServeAndLeftForTheNextStart(t *testing.T) {
 	case <-time.After(10 * time.Second):
 		t.Fatal("the job was not stopped with flai serve")
 	}
-	if job, ok, err := ReadVerifyJob(lab.repo.CacheDir(), lab.story); err != nil || !ok || !job.Running() {
+	if job, ok, err := closeout.ReadJob(lab.repo.CacheDir(), lab.story); err != nil || !ok || !job.Running() {
 		t.Errorf("the stopped job's state: %+v %v %v", job, ok, err)
 	}
 	if n := len(lab.verified()); n != 0 {
@@ -389,11 +390,11 @@ func TestAWorktreeWithoutTheScriptRunsFlaiVerify(t *testing.T) {
 	}
 	lab.pass.exe = func() (string, error) { return stub, nil }
 	lab.start()
-	lab.ask(VerifyRequest{All: true, Fresh: true, Message: "unused"})
-	if e := lab.awaitVerified(1); e.To != VerdictPassed {
+	lab.ask(closeout.Request{All: true, Fresh: true, Message: "unused"})
+	if e := lab.awaitVerified(1); e.To != closeout.VerdictPassed {
 		t.Errorf("the verified event: %+v", e)
 	}
-	out, err := os.ReadFile(VerifyLogPath(lab.repo.CacheDir(), lab.story))
+	out, err := os.ReadFile(closeout.LogPath(lab.repo.CacheDir(), lab.story))
 	if err != nil || strings.TrimSpace(string(out)) != "flai verify "+lab.story+" --record-issues --all --fresh" {
 		t.Errorf("the command run: %q %v", out, err)
 	}
@@ -408,25 +409,11 @@ func TestACloseOutWithNoWorktreeIsRefused(t *testing.T) {
 		t.Fatal(err)
 	}
 	lab.start()
-	a := lab.ask(VerifyRequest{})
+	a := lab.ask(closeout.Request{})
 	if !a.Refused() || a.Job != "" || !strings.Contains(a.Reason, "flai stream open "+lab.story) {
 		t.Fatalf("the refusal: %+v", a)
 	}
 	if entries := lab.journal(); len(entries) != 0 {
 		t.Errorf("a refusal journals no close-out: %+v", entries)
-	}
-}
-
-// ADR-0229 §1: a request no flai serve takes in time is withdrawn, and the
-// error is ErrServeNotTaking, saying to run the close-out yourself.
-func TestRequestVerifyNotTakenIsWithdrawn(t *testing.T) {
-	t.Parallel()
-	cache := t.TempDir()
-	_, err := RequestVerify(context.Background(), cache, VerifyRequest{Story: "S-0001", By: "agent-S-0001"}, VerifyWait{Take: 50 * time.Millisecond, Poll: 5 * time.Millisecond})
-	if !errors.Is(err, ErrServeNotTaking) || !strings.Contains(err.Error(), "run the close-out script") {
-		t.Fatalf("a request no one took: %v", err)
-	}
-	if _, err := os.Stat(verifyFile(verifyJobsDir(cache), "S-0001", mergeRequestSuffix)); !os.IsNotExist(err) {
-		t.Errorf("the request was not withdrawn: %v", err)
 	}
 }

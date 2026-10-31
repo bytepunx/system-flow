@@ -1631,6 +1631,7 @@ func TestAsTheStorysAgent(t *testing.T) {
 		testWaitForEventsHoldsAStorysAgentAwaitingAReplyWithATaskInProgress,
 		testWaitForEventsHoldsWhileTheStoryOwesAReply,
 		testAStorysAgentIsNotToldItOwesASettledConversationAReply,
+		testWaitForEventsHoldsAStorysAgentWhileItsCloseOutJobRuns,
 	)
 }
 
