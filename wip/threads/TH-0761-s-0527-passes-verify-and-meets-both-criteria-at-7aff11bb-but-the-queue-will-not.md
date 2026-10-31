@@ -4,10 +4,10 @@ title: S-0527 passes verify and meets both criteria at 7aff11bb, but the queue w
 anchor:
   path: wip/kanban/stories/S-0527-metrics-md-charts-says-burn-up-draws-a-forecast-line-from-throughput-and-cycle-time-filters-by-nature-but-neither-chart-does.md
   item: S-0527
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-30T00:20:48Z
-updated: 2026-10-30T00:20:48Z
+updated: 2026-10-31T07:46:20Z
 ---
 
 # TH-0761 S-0527 passes verify and meets both criteria at 7aff11bb, but the queue will not take it while TH-0697 is open
@@ -37,3 +37,6 @@ On wip/kanban/stories/S-0527-metrics-md-charts-says-burn-up-draws-a-forecast-lin
 - With `confirm_after: 48h`, flai serve confirms that recommendation on 2026-10-30T15:11:48Z if you do not answer first.
 
 I resolve this thread once TH-0697 is settled.
+
+### 2026-10-31T07:46:20Z alex
+Resolved: S-0527 was accepted

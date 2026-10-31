@@ -3,13 +3,44 @@ id: E-0031
 type: epic
 nature: improvement
 title: "Workflow tuning: the close-out finds what the merge queue finds, a batch is built against a clean main, hub files merge without conflict, and stories run in parallel with a trial merge instead of a hold"
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-30T01:48:50Z
-updated: 2026-10-30T01:52:31Z
-transitions: []
+updated: 2026-10-31T07:22:05Z
+transitions:
+  - to: ready
+    at: 2026-10-31T07:21:29Z
+    by: alex
+  - to: in-progress
+    at: 2026-10-31T07:21:39Z
+    by: agent-S-0548
 tags: [flai]
 topics: [testing, git, orchestration, planning]
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: planner
+      seconds: 538
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 100
+          output: 46177
+          cache_read: 5457420
+          cache_write: 180629
+          cost: 3.4605
+    - kind: orchestrator
+      seconds: 117
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 52
+          output: 350
+          cache_read: 1417808
+          cache_write: 237169
+          cost: 0.3741
 ---
 # E-0031 Workflow tuning: the close-out finds what the merge queue finds, a batch is built against a clean main, hub files merge without conflict, and stories run in parallel with a trial merge instead of a hold
 
@@ -25,7 +56,7 @@ When this epic is done, a story's close-out finds what the merge queue would fin
 
 - S-0546 The close-out runs as a flai serve job the story's agent waits on by event, so it never dies at the harness's tool timeout and is never re-run from the start
 - S-0547 The close-out runs the queue tiers and the tests of the packages that import a changed package, so what the merge queue would send back is found before review
-- S-0548 A queue verification takes under five minutes: the mcpserver tests are split or parallelized, the timing-dependent serve tests wait for what they check, and every go test tier sets its timeout
+- S-0548 A queue verification takes under five minutes: the slow and network-bound tests are fixed, tests run in parallel, the gateway tests leave smoke, and every go test tier sets its timeout
 - S-0549 The merge queue checks the main checkout's uncommitted files and the lint of main before it builds a batch, so a dirty main fails once in seconds and not every batch
 - S-0550 Hub files merge without conflict: the ADR index, the issues summary, and the changelog take a union merge or are generated, and shared paths raise no overlap notice
 - S-0551 A story starts on a trial merge instead of an overlap hold, and after holds a story for a dependency only, so the worktrees run stories in parallel as people on one remote do
@@ -34,3 +65,5 @@ When this epic is done, a story's close-out finds what the merge queue would fin
 ## Notes
 
 Asked by the operator in conversation on 2026-10-29 after the analysis, which lives in that conversation; the figures above are its evidence. The orchestrator's own wake cost is E-0030's and ADR-0209's, not this epic's.
+- 2026-10-31T07:21:29Z: moved to ready: follows S-0548, which moved to ready
+- 2026-10-31T07:21:39Z: moved to in-progress: follows S-0548, which moved to in-progress

@@ -1,0 +1,35 @@
+---
+id: MS-0260
+title: "S-0552 holds S-0551 on overlap alone: may S-0551 start beside it?"
+from: S-0551
+to: S-0552
+about: [flai/internal/serve, design/system/strategic-agents.md]
+status: open
+participants: [flai, agent-S-0552]
+created: 2026-10-31T07:28:18Z
+updated: 2026-10-31T07:34:34Z
+---
+
+# MS-0260 S-0552 holds S-0551 on overlap alone: may S-0551 start beside it?
+
+Between S-0551 and S-0552, about `flai/internal/serve`, `design/system/strategic-agents.md`.
+
+## Entries
+
+### 2026-10-31T07:28:18Z flai S-0551
+S-0552 holds S-0551 on overlap alone: may S-0551 start beside it?
+
+S-0551, "A story starts on a trial merge instead of an overlap hold, and after holds a story for a dependency only, so the worktrees run stories in parallel as people on one remote do", is ready, and its claim overlaps S-0552's on `flai/internal/serve`, `design/system/strategic-agents.md`. It has no agent until it starts, so flai asks for it (ADR-0134).
+
+Its goal:
+
+> The worktrees isolate every story, and the scheduler then serializes them: with an in-progress limit of 5, nothing was in progress for 42 percent of the fortnight, one story for 29 percent, two for 26 percent, three for 2 percent, and four or five never, mean 1.6 when anything ran. The journal records 124 overlap holds and 113 `after` holds against 62 real conflicts, the overlap holds on `check.go`, the strategic-agents design and convention, the manifest and dashboard designs, and the `after` chains planner-made, S-0417 to S-0422 each waiting on the one before, as I-0152 already noted. People sharing one remote merge optimistically and resolve the rare conflict; this story makes flai do the same. A ready story whose touches overlap an in-progress story's is started when a trial merge of the in-progress story's branch into a worktree at the ready story's base is clean, and held only when it is not, with the journal naming the conflicting file; `after` is honoured as today but the planner sets it only when a story reads what another writes, named in the story's notes, and `flai check` warns of an `after` with no reason; and the ready wait at p85, 5.4 hours in the fortnight, is a figure `flai stats` reports.
+
+Answer in one of three ways:
+
+1. Narrow your touches with `flai touches S-0552 --remove <path>`, or on the task that names the path, if S-0552 will not change it: the hold clears when the claims no longer overlap.
+2. Share the paths with `flai message share MS-0260 --paths <path> "<split>"`, or the MCP tool `message_share`, saying who changes what, if the two stories can change them apart: the overlap on them no longer holds, and S-0551 can start.
+3. Reply with `message_reply` saying why the hold stands: S-0551 waits until S-0552 moves to review, is cancelled, or is sent back.
+
+### 2026-10-31T07:34:34Z agent-S-0552 S-0552 (settled)
+S-0552 narrowed its touches: it no longer touches flai/internal/serve or design/system/strategic-agents.md, so it no longer holds S-0551 on them.

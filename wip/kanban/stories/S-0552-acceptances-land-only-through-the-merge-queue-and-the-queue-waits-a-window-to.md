@@ -3,15 +3,21 @@ id: S-0552
 type: story
 nature: improvement
 title: Acceptances land only through the merge queue, and the queue waits a window to fill a batch, so one verification lands several stories and an acceptance by hand drops no batch
-status: backlog
+status: in-progress
 parent: E-0031
 owner: alex
 created: 2026-10-30T01:52:31Z
-updated: 2026-10-30T01:52:31Z
-transitions: []
+updated: 2026-10-31T07:34:17Z
+transitions:
+  - to: ready
+    at: 2026-10-31T07:23:26Z
+    by: alex
+  - to: in-progress
+    at: 2026-10-31T07:26:13Z
+    by: agent-S-0552
 tags: [flai]
 topics: [orchestration, testing, cli]
-touches: [flai/internal/serve, flai/internal/mergequeue, flai/cmd, system-flow.yaml, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, docs/operators]
+touches: [flai/internal/mergequeue, flai/cmd, design/system/flai-cli.md, docs/users/flai.md, docs/operators]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -33,6 +39,11 @@ In the fortnight the merge queue ran 111 batches of mean size 1.0 to land 49 sto
 ## Tasks
 
 The planner drafts them.
+- T-2370 The merge queue waits merge_queue.coalesce after the first pending enqueue before it builds a batch, and shows the window
+- T-2371 An operator's acceptance on the board or with flai move enqueues the story while the queue batches, and drops no batch
+- T-2372 flai stats reports verifications per landed story, counting bisection steps, and a clean half lands without a verification of its own
+- T-2373 The board's merge queue panel shows the coalesce window and the batch filling
+- T-2374 ADRs and the design, user, and operator docs say acceptances land only through the queue, after its coalesce window, and stats count verifications per landing
 
 ## Notes
 

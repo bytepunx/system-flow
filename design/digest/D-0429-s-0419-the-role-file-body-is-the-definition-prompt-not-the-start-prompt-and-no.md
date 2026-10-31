@@ -2,14 +2,14 @@
 id: D-0429
 title: "S-0419: the role file body is the definition prompt, not the start prompt, and no continuous launcher exists; how should criteria 1, 2, and T-1759 read: if we go with A now, does that prevent us from…"
 kind: recommendation
-sources: [TH-0760]
+sources: [TH-0760, S-0419]
 topics: [cli, planning, orchestration, template, conventions, flai, go, code, all]
 paths: [design/conventions/strategic-agents.md, design/workflows/roles/analyzer.md, design/workflows/roles/orchestrator.md, design/workflows/roles/planner.md, design/system/strategic-agents.md, flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/roles/baseline.go, flai/internal/roles/baseline_test.go, flai/internal/roles/baseline/planner.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/roles/baseline/analyzer.md, flai/internal/serve/agents.go, flai/internal/serve/analysis_schedule.go, flai/internal/serve/analyze.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_hold.go, flai/internal/serve/plan.go, flai/internal/serve/replan.go, flai/internal/serve/role_continuous.go, flai/internal/serve/role.go, flai/internal/serve/role_test.go, flai/internal/serve/serve.go, template/CHANGELOG.md, template/root/design/conventions/strategic-agents.md, template/root/design/workflows/roles/analyzer.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/planner.md, flai/internal/check/activity_test.go, flai/internal/check/check_test.go, flai/internal/check/epic_lags_test.go, flai/internal/metrics/testdata/good/design/workflows/roles/analyzer.md, flai/internal/metrics/testdata/good/design/workflows/roles/curator.md, flai/internal/metrics/testdata/good/design/workflows/roles/orchestrator.md, flai/internal/metrics/testdata/good/design/workflows/roles/planner.md]
 date: 2026-10-30
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/strategic-agents.md#role-files-s-0414"
 asked_again: []
-cited: []
+cited: [TH-0768]
 ---
 
 # D-0429 S-0419: the role file body is the definition prompt, not the start prompt, and no continuous launcher exists; how should criteria 1, 2, and T-1759 read: if we go with A now, does that prevent us from…
@@ -34,4 +34,8 @@ The answer:
 Are you able to write the story?
 ```
 
-Source: TH-0760.
+What came of it: the orchestrator asked the planner to replan E-0024 for that answer. The planner wrote S-0553, which generates the four built-in roles' harness definitions from their role files alone and has `flai check` hold a `.claude/agents` copy to them, and S-0554, which moves the start prompts and the triggers into the role files, so the built-in roles are defined by their files alone (TH-0768).
+
+S-0419 built option A and was accepted on 2026-10-31. Its narrative records: "The operator confirmed A on TH-0760 (14:05Z): I reworded criteria 1 and 2 as the orchestrator's recommendation words them." T-1753 made each built-in role's definition prompt its role file's body (`roleBody`), writing nothing under `.claude/` (D-0351). T-1756 gave each built-in role its file in `startOf` (`builtinFile`, `roles.Builtin`). T-1757 and T-1759 were cancelled, since `startOf` already covers the analyzer's and the orchestrator's starts, stops, and holds. `design/system/strategic-agents.md` § Role files (S-0414) now records the outcome.
+
+Source: TH-0760; S-0419 (wip/archive/agents/S-0419.md, Decisions).

@@ -9,7 +9,7 @@ date: 2026-10-21
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [S-0419, TH-0760]
+cited: [S-0419, S-0553, S-0554, TH-0760, TH-0768]
 ---
 
 # D-0351 S-0419 plan: six tasks in five layers, moved to design/workflows/roles, with the embedded baseline first: Recommended for the operator

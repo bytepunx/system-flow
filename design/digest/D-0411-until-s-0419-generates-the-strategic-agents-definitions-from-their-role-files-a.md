@@ -2,14 +2,14 @@
 id: D-0411
 title: "Until S-0419 generates the strategic agents' definitions from their role files, a change to a strategic agent's prompt is made in both .claude/agents/<name>.md and design/workflows/roles/<name>.md, and in their template copies"
 kind: decision
-sources: [S-0502, S-0536, S-0537, TH-0760]
+sources: [S-0502, S-0536, S-0537, TH-0760, S-0419]
 topics: [orchestration, planning, analysis, template, conventions]
-paths: [".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md]
+paths: [".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md]
 date: 2026-10-28
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/strategic-agents.md#role-files-s-0414"
 asked_again: []
-cited: [S-0419, S-0537, T-2313, T-2330, T-2338, TH-0755, TH-0760]
+cited: [S-0419, S-0537, S-0553, T-2313, T-2330, T-2338, T-2350, T-2352, T-2353, TH-0755, TH-0760, TH-0768]
 ---
 
 # D-0411 Until S-0419 generates the strategic agents' definitions from their role files, a change to a strategic agent's prompt is made in both .claude/agents/<name>.md and design/workflows/roles/<name>.md, and in their template copies
@@ -24,4 +24,6 @@ S-0536 changed the orchestrator's prompt the same way and put the protected pair
 
 S-0537 did the same for the orchestrator's priming step: "The protected `.claude/agents/orchestrator.md` pair is T-2338, a task of its own after T-2313 (D-0411), so that the rest can close while the write waits on the operator."
 
-Source: S-0502 (wip/archive/agents/S-0502.md, Decisions); S-0536 (wip/archive/agents/S-0536.md, Decisions); S-0537 (wip/archive/agents/S-0537.md, Decisions); TH-0760.
+S-0419 was accepted on 2026-10-31 as option A: each built-in role's definition prompt is now its role file's body, and the description, tools, and model still come from `.claude/agents/<name>.md`. The generation story is S-0553, which E-0024's replan wrote after the operator asked for it on TH-0760; until it lands, this entry's rule holds, and `design/system/strategic-agents.md` § Role files (S-0414) states it. flai's embedded baseline copy under `flai/internal/roles/baseline/` must match the template's role file as well (D-0433).
+
+Source: S-0502 (wip/archive/agents/S-0502.md, Decisions); S-0536 (wip/archive/agents/S-0536.md, Decisions); S-0537 (wip/archive/agents/S-0537.md, Decisions); TH-0760; S-0419 (wip/archive/agents/S-0419.md, Decisions).

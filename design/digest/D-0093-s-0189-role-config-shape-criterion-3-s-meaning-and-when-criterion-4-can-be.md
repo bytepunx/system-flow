@@ -6,26 +6,10 @@ sources: [TH-0057]
 topics: [conventions, flai, cli, go, flaiover, dashboard, sveltekit, template, code, all]
 paths: [template/root/.claude/agents, ".claude/agents", flai/internal/harness, flai/internal/guard, flai/internal/manifest, flai/internal/workitem, flai/cmd, flai/internal/mcpserver, flai/internal/hostapi, flai/internal/serve, flaiover/src, design/adrs, design/conventions/delegation.md, template/root/design/conventions/delegation.md, design/system/agent-context.md, design/system/conventions.md, design/system/flai-cli.md, design/system/work-hierarchy.md, design/system/project-manifest.md, template/CHANGELOG.md, template/template.yaml, docs/users/flai.md, docs/users/flai-reference.md, docs/users/conventions.md, docs/operators/settings.md, design/issues]
 date: 2026-10-01
-status: active
+status: compacted
 absorbed_by: ""
 asked_again: []
 cited: []
 ---
 
 # D-0093 S-0189: role config shape, criterion 3's meaning, and when criterion 4 can be measured: I accept your recommendations
-
-The operator, alex, answered TH-0057 at 2026-10-01T10:51:30Z.
-
-What was asked:
-
-```text
-Three questions. Each has my recommended answer first. I'm going ahead on the parts that don't depend on them: the cheaper models in the definitions, and the delegation and prompt wording.
-```
-
-The answer:
-
-```text
-I accept your recommendations. I allow `Edit(.claude/agents/**) for this session. Let me know if I need to take additional steps to make that permission take effect.
-```
-
-Source: TH-0057.

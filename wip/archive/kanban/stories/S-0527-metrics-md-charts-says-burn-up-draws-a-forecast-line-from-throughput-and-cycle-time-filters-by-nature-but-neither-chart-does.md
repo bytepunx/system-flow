@@ -3,10 +3,10 @@ id: S-0527
 type: story
 nature: remediation
 title: "metrics.md § Charts says Burn-up draws a forecast line from throughput and Cycle Time filters by nature, but neither chart does"
-status: review
+status: done
 owner: alex
 created: 2026-10-28T12:54:11Z
-updated: 2026-10-30T00:19:10Z
+updated: 2026-10-31T07:46:20Z
 transitions:
   - to: ready
     at: 2026-10-30T00:10:21Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-30T00:19:10Z
     by: agent-S-0527
+  - to: done
+    at: 2026-10-31T07:46:20Z
+    by: alex
 tags: [design, metrics, flaiover]
 topics: [dashboard]
 touches: [design/adrs, design/adrs/README.md, design/system/metrics.md, flaiover/src/lib/viz/explain.test.ts, design/issues/I-0193-metrics-md-charts-says-burn-up-draws-a-forecast-line-from-throughput-and-cycle-time-filters-by-nature-but-neither-chart-does.md, design/issues/summary.md]

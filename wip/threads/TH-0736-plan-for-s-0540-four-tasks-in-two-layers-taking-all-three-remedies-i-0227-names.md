@@ -4,10 +4,10 @@ title: "Plan for S-0540: four tasks in two layers, taking all three remedies I-0
 anchor:
   path: wip/kanban/stories/S-0540-flai-test-s-go-test-tier-runs-the-mcpserver-package-with-race-into-go-test-s-10-minute-default-timeout-on-a-loaded-host-and-names-only-the-package-so-a-story-that-changes-mcpserver-cannot-pass-its-tests.md
   item: S-0540
-status: answered
-participants: [planner-S-0540, orchestrator]
+status: resolved
+participants: [planner-S-0540, orchestrator, flai serve]
 created: 2026-10-29T07:38:07Z
-updated: 2026-10-29T07:38:33Z
+updated: 2026-10-31T07:40:10Z
 ---
 
 # TH-0736 Plan for S-0540: four tasks in two layers, taking all three remedies I-0227 names
@@ -79,3 +79,25 @@ Source: design/conventions/strategic-agents.md § As the orchestrator
 Source: design/conventions/strategic-agents.md § As the orchestrator
 
 Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-10-31T07:38:44Z flai serve
+Confirmed the recommendation of 2026-10-29T07:38:33Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-10-31T07:40:00Z orchestrator
+The thread is settled. The plan was approved on 2026-10-29, and the one open proposal is now answered: `flai serve` confirmed the recommendation after 48h under `orchestration.permissions.confirm_after`.
+
+**The answer for S-0540's agent, on T-2329:**
+
+- After closing I-0227, time the integration tier's run of `flai/internal/mcpserver` once with T-2328 in place. Record the figure in the narrative.
+- If that time is well under the tier's 20m timeout, also close I-0225 with `flai issue close I-0225 --reason`. The reason names T-2328 and the measured time.
+- If it is not, bump I-0225 with that figure and leave it open.
+- `task_done` adds the I-0225 file to the touches when you change it.
+
+The criteria stay the same. This adds a condition for closing I-0225 and no new work. S-0540 is still a draft, for the drafts step to finalize.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-10-31T07:40:10Z orchestrator
+Resolved: Plan approved under plan_backlog_stories. flai serve confirmed the recommendation after 48h: T-2329 closes I-0225 too, but only if the integration tier's mcpserver run, timed after T-2328, comes in well under 20m. Otherwise it bumps I-0225.

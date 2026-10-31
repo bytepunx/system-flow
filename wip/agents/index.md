@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-10-31T07:45:23Z
+updated: 2026-10-31T07:46:20Z
 ---
 
 # Active streams
@@ -8,7 +8,6 @@ updated: 2026-10-31T07:45:23Z
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
 | [S-0523](S-0523.md) | The orchestrator cannot set a cost of delay input the operator decided on an epic or a story past the backlog | review | agent-S-0523 | 2026-10-30T17:58:44Z |
-| [S-0527](S-0527.md) | metrics.md § Charts says Burn-up draws a forecast line from throughput and Cycle Time filters by nature, but neither chart does | review | agent-S-0527 | 2026-10-30T00:19:14Z |
 | [S-0548](S-0548.md) | A queue verification takes under five minutes: the slow and network-bound tests are fixed, tests run in parallel, the gateway tests leave smoke, and every go test tier sets its timeout | in-progress | agent-S-0548 | 2026-10-31T07:21:39Z |
 | [S-0552](S-0552.md) | Acceptances land only through the merge queue, and the queue waits a window to fill a batch, so one verification lands several stories and an acceptance by hand drops no batch | in-progress | agent-S-0552 | 2026-10-31T07:35:13Z |
 
