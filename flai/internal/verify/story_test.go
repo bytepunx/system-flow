@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"slices"
@@ -1496,5 +1497,64 @@ func TestVerifyTiersRefusesACheckoutGitCannotRead(t *testing.T) {
 	delete(f.git.out, "rev-parse HEAD")
 	if rep, err := Tiers(context.Background(), f.tierOptions(new([]string), new([]string))); err == nil || !strings.Contains(err.Error(), f.root) || len(rep.Steps) != 0 {
 		t.Errorf("report %+v, %v; want an error naming the checkout", rep, err)
+	}
+}
+
+// I-0221: a branch that changes only a callee package, so that the test of a
+// caller package of the same module breaks, fails the close-out at a go-test
+// tier that runs {importers}; the same tier running {packages} tests the
+// callee alone and passes, as the close-out did before.
+func TestVerifyFailsAGoTestTierAtTheCallerTheBranchBreaks(t *testing.T) {
+	t.Parallel()
+	for _, tool := range []string{"git", "go"} {
+		if _, err := exec.LookPath(tool); err != nil {
+			t.Skipf("%s not installed", tool)
+		}
+	}
+	root := t.TempDir()
+	runGit(t, root, "init", "-q", "-b", "main")
+	runGit(t, root, "config", "user.email", "t@t")
+	runGit(t, root, "config", "user.name", "t")
+	if err := os.CopyFS(root, os.DirFS("../metrics/testdata/good")); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, root, ".gitignore", ".flai-cache/\n")
+	writeFile(t, root, "flai/go.mod", "module example.com/m\n\ngo 1.21\n")
+	writeFile(t, root, "flai/callee/callee.go", "package callee\n\n// N is a number.\nfunc N() int { return 1 }\n")
+	writeFile(t, root, "flai/caller/caller.go", "package caller\n\nimport \"example.com/m/callee\"\n\n// N is callee's number.\nfunc N() int { return callee.N() }\n")
+	writeFile(t, root, "flai/caller/caller_test.go", "package caller\n\nimport \"testing\"\n\nfunc TestN(t *testing.T) {\n\tif got := N(); got != 1 {\n\t\tt.Fatalf(\"N() = %d, want 1\", got)\n\t}\n}\n")
+	runGit(t, root, "add", "-A")
+	runGit(t, root, "commit", "-q", "-m", "init")
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	worktree := repo.WorktreePath("S-004")
+	runGit(t, root, "worktree", "add", "-q", "-b", "story/S-004", worktree)
+	writeFile(t, worktree, "flai/callee/callee.go", "package callee\n\n// N is a number.\nfunc N() int { return 2 }\n")
+	runGit(t, worktree, "commit", "-q", "-am", "S-004's change")
+
+	verify := func(arg string) Report {
+		t.Helper()
+		rep, err := Verify(context.Background(), StoryOptions{
+			Story: "S-004", Project: repo, Base: "main", Git: execx.System{}, Fresh: true,
+			Tiers: []Tier{{Name: "go-test", Dir: "flai", Paths: []string{"flai/**/*.go"},
+				Command: []string{"go", "test", "-json", "-count=1", arg}, Format: FormatGoTestJSON}},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return rep
+	}
+	rep := verify("{importers}")
+	if want := []string{"go-test:failed"}; rep.Passed || rep.StoppedAt != "go-test" || !reflect.DeepEqual(tierStates(rep), want) {
+		t.Fatalf("with {importers}, passed %v at %q, tiers %v; want %v: %+v", rep.Passed, rep.StoppedAt, tierStates(rep), want, rep)
+	}
+	findings := rep.Steps[len(rep.Steps)-1].Findings
+	if !slices.ContainsFunc(findings, func(f Finding) bool { return strings.HasPrefix(f.Path, "flai/caller/") }) {
+		t.Errorf("with {importers}, findings %+v; want one in flai/caller", findings)
+	}
+	if rep := verify("{packages}"); !rep.Passed || !reflect.DeepEqual(tierStates(rep), []string{"go-test:passed"}) {
+		t.Errorf("with {packages}, passed %v at %q, tiers %v; want it to pass, testing the callee alone", rep.Passed, rep.StoppedAt, tierStates(rep))
 	}
 }

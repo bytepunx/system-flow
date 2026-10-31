@@ -461,7 +461,8 @@ func TestRepositoryManifestTypeChecksChangedFlaioverFiles(t *testing.T) {
 // close-out that touched their packages and test the repository, not the
 // change. The integration tier runs scripts/integration.sh, without -short,
 // so they all still run in the merge queue's batch. go-test skips the paid
-// gateway tests, as integration.sh does, and names its timeout. Not gated
+// gateway tests, as integration.sh does, and names its timeout. It runs the
+// changed packages' importers too (S-0547, I-0221). Not gated
 // under -short, so that make test catches a manifest that changes either.
 func TestRepositoryManifestRunsChangedGoPackagesShortAndIntegrationWhole(t *testing.T) {
 	root := filepath.Join("..", "..", "..")
@@ -478,9 +479,15 @@ func TestRepositoryManifestRunsChangedGoPackagesShortAndIntegrationWhole(t *test
 			got = s.Argv
 		}
 	}
-	want := []string{"go", "test", "-json", "-race", "-short", "-count=1", "-timeout", "20m", "-skip", "^TestGateway", "./internal/verify"}
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("go-test runs %q, want %q", got, want)
+	flags := []string{"go", "test", "-json", "-race", "-short", "-count=1", "-timeout", "20m", "-skip", "^TestGateway"}
+	if len(got) <= len(flags) || !reflect.DeepEqual(got[:len(flags)], flags) {
+		t.Fatalf("go-test runs %q, want %q and the packages", got, flags)
+	}
+	// a change to verify runs cmd's tests too, which call it
+	for _, pkg := range []string{"./internal/verify", "./cmd"} {
+		if !slices.Contains(got[len(flags):], pkg) {
+			t.Errorf("go-test runs %q, want it to hold %s", got, pkg)
+		}
 	}
 	var integration []string
 	for _, s := range Select(os.DirFS(root), tiers, []string{"flai/internal/verify/select.go"}, true) {
