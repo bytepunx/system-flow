@@ -191,3 +191,54 @@ The batch rebases each story with those steps, so a stop they settle keeps the s
 | Any outside, changed by no story ahead | `sent_back` | The conflict is with the main branch itself. flai moves the story back to `in-progress` with the paths as the reason, and it leaves the queue. Its agent syncs it. |
 
 The operator hears of a conflict or an overlap only when the two agents do not agree. Either story's agent then runs `flai message escalate <MS-nnnn> "<reason>"`, or the MCP tool `message_escalate`, saying what they could not agree. It opens a thread on the escalating story that names both stories, gives the conversation's path, and quotes the reason. The conversation gets a message naming the thread, awaits the other story, and stays open. A third story, a story not in progress or in review, a closed conversation, and an empty reason are refused, and `flai guard` refuses a sub-agent the escalation.
+
+### Hub files: the fortnight before S-0550
+
+S-0550 makes the hub files merge on their own and stops the notice at acceptance for the shared paths. Its fourth criterion compares the fortnight after it lands with the fortnight before, 2026-10-15 to 2026-10-29 inclusive, by UTC date. These are the before figures, counted on 2026-10-31.
+
+| Week | Days in window | Acceptances | Notices at acceptance | Per acceptance | Conflicts: trial, sync, accept | Conflicts |
+|------|----------------|-------------|-----------------------|----------------|--------------------------------|-----------|
+| 2026-W42 | 10-15 to 10-18 | 31 | 19 | 0.61 | 5, 3, 1 | 9 |
+| 2026-W43 | 10-19 to 10-25 | 63 | 113 | 1.79 | 11, 3, 4 | 18 |
+| 2026-W44 | 10-26 to 10-29 | 37 | 58 | 1.57 | 6, 6, 3 | 15 |
+| Fortnight | 10-15 to 10-29 | 131 | 190 | 1.45 | 22, 12, 8 | 42 |
+
+123 of the 190 notices named only paths inside `claims.shared`, and 180 named at least one. 20 of the 42 conflicts were only on shared paths, and 25 were on at least one. The hub files:
+
+| Path | Notices at acceptance | Conflicts |
+|------|-----------------------|-----------|
+| `design/issues/summary.md` | 133 | 0 |
+| `docs/users/flai.md` | 87 | 9 |
+| `design/system/flai-cli.md` | 77 | 10 |
+| `design/adrs/README.md` | 48 | 0 |
+| `docs/users/flai-reference.md` | 42 | 0 |
+| `template/CHANGELOG.md` | 12 | 9 |
+
+The conflict log leaves out the files a rebase settles itself, so the issues summary and the ADR index show no conflicts. The next path after the hubs is `flai/internal/mergequeue/batch.go`, with 4.
+
+Sources:
+
+| Figure | Source |
+|--------|--------|
+| Acceptances | The `accept and archive` commits on `main`, by commit time in UTC. `flai stats` gives 63 stories done in 2026-W43, the one whole week in the window, which agrees |
+| Notices at acceptance | The lines of `.flai-cache/overlaps.jsonl` in the main checkout that name `accepted`. Its other lines, 58 in the window, are grown-claim notices (S-0244) |
+| Conflicts | `.flai-cache/conflicts.jsonl` in the main checkout. `flai stats` gives the same counts for 2026-W43 under `coordination.weeks[].conflicts` |
+
+The overlap log is cut to its newest 500 lines when it reaches 1,000. On 2026-10-31 it held 650 lines, the oldest of 2026-09-29, so it covered the whole window. The conflict log is never cut.
+
+The story's Goal counted 248 notices over 97 acceptances and 62 conflicts. The 248 is every notice in the window, grown-claim notices included: 190 at acceptance and 58 grown. The 62 is every conflict from the log's first line on 2026-10-12 to 2026-10-29: 42 in the window and 20 on 2026-10-12 and 2026-10-14. The 97 could not be reproduced. The nearest count is 96 accepted stories that sent at least one notice; `main` has 131 acceptances in the window. The comparison uses the figures above.
+
+The fortnight after can be read a fortnight after S-0550 is accepted. Set `FROM` to the UTC day after its acceptance and `TO` to 13 days later, and run in the main checkout:
+
+```bash
+FROM=YYYY-MM-DD; TO=YYYY-MM-DD
+head -1 .flai-cache/overlaps.jsonl | jq -r .at   # must be before FROM
+git log main --grep='accept and archive' --format=%ct --since="${FROM}T00:00:00Z" \
+  | jq -Rn --arg f "$FROM" --arg t "$TO" '[inputs|tonumber|todate[:10]|select(.>=$f and .<=$t)]|length'
+jq -s --arg f "$FROM" --arg t "$TO" '[.[]|select(.accepted and .at[:10]>=$f and .at[:10]<=$t)]|length' .flai-cache/overlaps.jsonl
+jq -s -c --arg f "$FROM" --arg t "$TO" '[.[]|select(.accepted and .at[:10]>=$f and .at[:10]<=$t)|.paths[]]|group_by(.)|map({path:.[0],n:length})|sort_by(-.n)|.[:6]' .flai-cache/overlaps.jsonl
+jq -s -c --arg f "$FROM" --arg t "$TO" '[.[]|select(.at[:10]>=$f and .at[:10]<=$t)]|group_by(.where)|map({where:.[0].where,n:length})' .flai-cache/conflicts.jsonl
+jq -s -c --arg f "$FROM" --arg t "$TO" '[.[]|select(.at[:10]>=$f and .at[:10]<=$t)|.paths[]]|group_by(.)|map({path:.[0],n:length})|sort_by(-.n)|.[:6]' .flai-cache/conflicts.jsonl
+```
+
+The lines give the overlap log's oldest notice, the acceptances, the notices at acceptance, their top paths, the conflicts by kind, and their top paths. Notices per acceptance is the third over the second. The criterion holds when that ratio is below 1.45 and the conflicts are fewer than 42. `flai stats --json --since <days>d` cross-checks a whole ISO week, under `throughput[].done` and `coordination.weeks[].conflicts`. Its window counts back from now, so it cannot give the fortnight's own days.
