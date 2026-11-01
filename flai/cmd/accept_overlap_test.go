@@ -72,7 +72,7 @@ func TestOverlapsOf(t *testing.T) {
 
 // Accepting a story records a notice for an open story whose claim covers
 // what it changed, and none for one whose claim does not (S-0132).
-func TestAcceptTellsOverlappingOpenStories(t *testing.T) {
+func testAcceptTellsOverlappingOpenStories(t *testing.T) {
 	told, notices := acceptBesideOpenStories(t, "", [3]string{"docs/guide.md", "docs", "design"}, "docs/guide.md")
 	if len(told) != 1 || told[0].ID != "S-0002" || !reflect.DeepEqual(told[0].Paths, []string{"docs/guide.md"}) {
 		t.Errorf("told: %+v", told)
@@ -88,7 +88,7 @@ func TestAcceptTellsOverlappingOpenStories(t *testing.T) {
 // S-0550: accepting a story tells no open story of a changed path inside
 // claims.shared. A change beside it is told as before; a change wholly
 // inside it tells nobody, though both open stories' claims cover it.
-func TestAcceptTellsNoOpenStoryOfASharedPath(t *testing.T) {
+func testAcceptTellsNoOpenStoryOfASharedPath(t *testing.T) {
 	const shared = "claims:\n  shared:\n    - docs/users/flai.md\n"
 	touches := [3]string{"docs", "docs", "docs/users/flai.md"}
 	t.Run("a shared path and one beside it", func(t *testing.T) {

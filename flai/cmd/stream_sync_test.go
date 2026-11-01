@@ -102,14 +102,16 @@ func TestAsTester(t *testing.T) {
 		testSyncTrialMergeLeavesOutTheIssueSummary,
 		testSyncTrialMergeReportsOtherConflictsWithoutTheIssueSummary,
 		testSyncTrialMergeLeavesOutTheADRIndex,
-		testSyncMergesTheADRIndexBothSidesAddedARowTo,
-		testSyncStopsOnARowOfTheADRIndexBothSidesChanged,
+		testSyncWritesTheADRIndexBothSidesAddedAnADRToFromTheirFiles,
+		testSyncWritesARowOfTheADRIndexBothSidesChangedFromItsFile,
 		testSyncTrialMergeLeavesOutWhatMainBrought,
 		testSyncTrialMergeReportsWhatBothChangedBesideWhatMainBrought,
 		testSyncResolvesAThreadOnWhatMainBrought,
 		testSyncFoldsTheBranchsIssueIntoMainsOfTheSameTitle,
 		testSyncMergesAnIssueBothSidesBumped,
 		testSyncTrialMergeLeavesOutIssueFiles,
+		testSyncMergesTwoStoriesChangelogLinesByUnion,
+		testSyncTrialMergeReadsMergeUnionFromTheMainCheckout,
 		testAcceptMergesAnIssueBothSidesBumped,
 		testSyncMergesABumpIntoTheIssueMainClosed,
 		testSyncWarnsOnAPathTheRebasedBranchUndoesOfMain,
@@ -130,6 +132,7 @@ func TestAsTester(t *testing.T) {
 		testATouchInsideAnotherClaimTellsBothStories,
 		testWorkItemLifecycle,
 		testAcceptTellsOverlappingOpenStories,
+		testAcceptTellsNoOpenStoryOfASharedPath,
 		testAcceptCompletesAnUnacceptedStory,
 		testStoryBranchLifecycle,
 		testMigrateIDs,
@@ -891,7 +894,7 @@ func adrStories(t *testing.T, a, b []string, aAdds, bAdds []int) (root, wt strin
 // where the other does, which git's trial merge reports. The index is
 // generated, written again by a rebase that stops on it, so the pair is
 // clean and not told (ADR-0157, ADR-0228).
-func TestSyncTrialMergeLeavesOutTheADRIndex(t *testing.T) {
+func testSyncTrialMergeLeavesOutTheADRIndex(t *testing.T) {
 	root, b := adrStories(t,
 		[]string{adrRow(1, "accepted"), adrRow(2, "accepted"), adrRow(3, "accepted")},
 		[]string{adrRow(1, "accepted"), adrRow(2, "accepted"), adrRow(4, "accepted")}, []int{3}, []int{4})
@@ -916,7 +919,7 @@ func TestSyncTrialMergeLeavesOutTheADRIndex(t *testing.T) {
 // other's sync stops on the index. It writes the index again from the
 // rebased tree's ADR files, both sides' among them, merging nothing, and
 // goes on with no person's help (ADR-0228).
-func TestSyncWritesTheADRIndexBothSidesAddedAnADRToFromTheirFiles(t *testing.T) {
+func testSyncWritesTheADRIndexBothSidesAddedAnADRToFromTheirFiles(t *testing.T) {
 	root, b := adrStories(t,
 		[]string{adrRow(1, "accepted"), adrRow(2, "accepted"), adrRow(4, "accepted")},
 		[]string{adrRow(1, "accepted"), adrRow(2, "accepted"), adrRow(3, "accepted")}, []int{4}, []int{3})
@@ -944,7 +947,7 @@ func TestSyncWritesTheADRIndexBothSidesAddedAnADRToFromTheirFiles(t *testing.T) 
 // A row both sides changed by hand, differently, no longer stops the sync:
 // the index is written from the ADR files, which neither side changed, and
 // both hand edits go (ADR-0228).
-func TestSyncWritesARowOfTheADRIndexBothSidesChangedFromItsFile(t *testing.T) {
+func testSyncWritesARowOfTheADRIndexBothSidesChangedFromItsFile(t *testing.T) {
 	root, b := adrStories(t,
 		[]string{adrRow(1, "accepted"), adrRow(2, "accepted, superseded in part by 0003")},
 		[]string{adrRow(1, "accepted"), adrRow(2, "rejected")}, nil, nil)
@@ -1683,7 +1686,7 @@ func hasBothLines(t *testing.T, what, changelog string) {
 // stories that each add a line under "## Unreleased" do not conflict: the
 // trial merge at sync finds the pair clean and its tree keeps both lines, and
 // once one is on main the other's sync rebases over it with both.
-func TestSyncMergesTwoStoriesChangelogLinesByUnion(t *testing.T) {
+func testSyncMergesTwoStoriesChangelogLinesByUnion(t *testing.T) {
 	root, b := unionStories(t, true)
 	if raw, err := storygit.TrialMerge(execx.System{}, root, "story/S-0002", "story/S-0001"); err != nil || len(raw) != 0 {
 		t.Fatalf("git's trial merge: %v %q", err, raw)
@@ -1719,7 +1722,7 @@ func TestSyncMergesTwoStoriesChangelogLinesByUnion(t *testing.T) {
 // committed on the two branches alone, git's trial merge still conflicts in
 // the changelog, which both changed, so the sync names it; --attr-source
 // set to a branch would read it from there.
-func TestSyncTrialMergeReadsMergeUnionFromTheMainCheckout(t *testing.T) {
+func testSyncTrialMergeReadsMergeUnionFromTheMainCheckout(t *testing.T) {
 	root, b := unionStories(t, false)
 	if raw, err := storygit.TrialMerge(execx.System{}, root, "story/S-0002", "story/S-0001"); err != nil || strings.Join(raw, ",") != "CHANGELOG.md" {
 		t.Fatalf("git's trial merge: %v %q", err, raw)
