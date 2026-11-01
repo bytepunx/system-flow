@@ -7,7 +7,7 @@ status: backlog
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:13:48Z
-updated: 2026-11-01T23:51:11Z
+updated: 2026-11-01T23:57:37Z
 transitions: []
 tags: [cli, template]
 topics: [agents, cli, template]
@@ -39,10 +39,10 @@ cost_of_delay:
   at: 2026-10-20T21:13:37Z
 forecast:
   duration: 1h15m
-  delivery: 2026-11-02T04:03:00Z
-  basis: "Its own forecast of 1h15m; 10th in the pull order with an in-progress limit of 5, behind S-0549, S-0423, S-0421, S-0553, S-0424, S-0554, S-0422, S-0425, S-0420 and S-0518."
+  delivery: 2026-11-02T04:02:00Z
+  basis: "Its own forecast of 1h15m; 9th in the pull order with an in-progress limit of 5, behind S-0518, S-0549, S-0423, S-0421, S-0553, S-0424, S-0554, S-0422, S-0425 and S-0420."
   by: flai
-  at: 2026-11-01T23:51:11Z
+  at: 2026-11-01T23:57:37Z
 ---
 # S-0406 A story's agent may run on OpenCode headless with flai's MCP server, no guard, and no roles, and the findings the OpenCode section leaves to check are settled against a real opencode binary
 
