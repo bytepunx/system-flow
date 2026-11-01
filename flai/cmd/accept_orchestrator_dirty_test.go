@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/bytepunx/system-flow/flai/internal/preview"
+	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -46,7 +47,7 @@ func TestTheOrchestratorAcceptsOnADirtyMainAndLeavesTheFilesAsTheyAre(t *testing
 		t.Errorf("uncommitted after the acceptance %v, want the operator's files %v as they were", got, dirty)
 	}
 	for _, p := range strings.Split(gitIn(t, root, "show", "--name-only", "--format=", "HEAD"), "\n") {
-		if isLeft(p, dirty) {
+		if verify.IsLeft(p, dirty) {
 			t.Errorf("the acceptance commit holds the operator's file %s", p)
 		}
 	}

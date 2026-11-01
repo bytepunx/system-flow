@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -71,7 +72,7 @@ func TestALandingLeavesTheMainCheckoutsUncommittedFilesAsTheyAre(t *testing.T) {
 		t.Errorf("uncommitted after the landing %v, want the operator's files %v as they were", got, dirty)
 	}
 	for _, p := range strings.Split(gitIn(t, root, "show", "--name-only", "--format=", "HEAD"), "\n") {
-		if isLeft(p, dirty) {
+		if verify.IsLeft(p, dirty) {
 			t.Errorf("the acceptance commit holds the operator's file %s", p)
 		}
 	}
@@ -125,8 +126,5 @@ func TestAddArgsLeavesOutEachPathLeft(t *testing.T) {
 	want := []string{"add", "-A", "--", ".", ":(exclude,literal)design/a.md", ":(exclude,literal)design/analysis"}
 	if got := addArgs([]string{"design/a.md", "design/analysis/"}); !slices.Equal(got, want) {
 		t.Errorf("addArgs = %v, want %v", got, want)
-	}
-	if got := withoutLeft([]string{"design/a.md", "design/analysis/r.md", "design/analysisx.md", "cli/b.go"}, []string{"design/a.md", "design/analysis/"}); !slices.Equal(got, []string{"design/analysisx.md", "cli/b.go"}) {
-		t.Errorf("withoutLeft = %v", got)
 	}
 }

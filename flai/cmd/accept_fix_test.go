@@ -176,7 +176,7 @@ func testAcceptJSONRefusesABranchsLintWithEachFinding(t *testing.T) {
 	if code != exitDocRefused {
 		t.Errorf("exit %d, want %d", code, exitDocRefused)
 	}
-	want := unfixedFinding{Tier: "markdown", Checkout: "story", Story: "S-0001", Path: "docs/bad.md", Line: 2, Column: 3, Level: "error",
+	want := verify.FileFinding{Tier: "markdown", Checkout: "story", Story: "S-0001", Path: "docs/bad.md", Line: 2, Column: 3, Level: "error",
 		Rule: "MD009", Alias: "no-trailing-spaces", Message: "Trailing spaces [Expected: 0; Actual: 1]"}
 	if r.ID != "S-0001" || len(r.Findings) != 1 || r.Findings[0] != want {
 		t.Errorf("the refusal's data: %+v, want the finding %+v", r, want)
@@ -228,7 +228,7 @@ func TestUnfixedErrorNamesEachFinding(t *testing.T) {
 		}},
 		{Name: "later", State: verify.NotReached},
 	}}
-	at := unfixedAt{root: "/repo", checkout: checkoutMain, where: "the main checkout's uncommitted files", fixIn: "in the main checkout"}
+	at := unfixedAt{root: "/repo", checkout: verify.CheckoutMain, where: "the main checkout's uncommitted files", fixIn: "in the main checkout"}
 	err := unfixedError("S-0009", at, res)
 	want := "rule: S-0009 cannot be accepted: the main checkout's uncommitted files hold lint the fix of the markdown tier could not fix:\n" +
 		"  wip/a.md:3: trailing spaces (markdown, MD009)\n" +
@@ -238,47 +238,5 @@ func TestUnfixedErrorNamesEachFinding(t *testing.T) {
 		"correct them in the main checkout and run flai accept S-0009 again"
 	if err.Error() != want {
 		t.Errorf("got:\n%s\nwant:\n%s", err, want)
-	}
-}
-
-// S-0378: each markdownlint-cli2 line of a plain tier's output is a finding
-// with its path, line, column, level, rule, and alias when it gives them,
-// and the checkout to correct it in; other lines are none.
-func TestUnfixedErrorGivesEachMarkdownlintLineAsData(t *testing.T) {
-	t.Parallel()
-	out := "lint-md: markdownlint-cli2 0.20.0\n" +
-		"Summary: 3 error(s)\n" +
-		"docs/a.md:3 error MD012/no-multiple-blanks Multiple consecutive blank lines [Expected: 1; Actual: 2]\n" +
-		"docs/a.md:7:1 error MD004/ul-style Unordered list style [Expected: asterisk; Actual: dash]\n" +
-		"/wt/sub/b.md:1 MD041/first-line-heading/first-line-h1 First line in a file should be a top-level heading\n" +
-		"c.md:2:5 warning MD013 Line length\n" +
-		"exit status 1"
-	res := verify.Result{Tiers: []verify.TierResult{
-		{Name: "markdown", Dir: "sub", State: verify.Failed, Findings: []verify.Finding{{Name: "markdown", Message: out}}},
-		{Name: "go", State: verify.Failed, Findings: []verify.Finding{{Name: "errcheck", Path: "x.go", Line: 4, Message: "unchecked "}}},
-	}}
-	at := unfixedAt{root: "/wt", checkout: checkoutStory, story: "S-0009", where: "the files story/S-0009 changes", fixIn: "in the worktree"}
-	got := unfixedError("S-0009", at, res).Findings
-	story := unfixedFinding{Checkout: "story", Story: "S-0009"}
-	want := []unfixedFinding{
-		{Path: "sub/docs/a.md", Line: 3, Level: "error", Rule: "MD012", Alias: "no-multiple-blanks", Message: "Multiple consecutive blank lines [Expected: 1; Actual: 2]"},
-		{Path: "sub/docs/a.md", Line: 7, Column: 1, Level: "error", Rule: "MD004", Alias: "ul-style", Message: "Unordered list style [Expected: asterisk; Actual: dash]"},
-		{Path: "sub/b.md", Line: 1, Rule: "MD041", Alias: "first-line-heading", Message: "First line in a file should be a top-level heading"},
-		{Path: "sub/c.md", Line: 2, Column: 5, Level: "warning", Rule: "MD013", Message: "Line length"},
-		{Tier: "go", Path: "x.go", Line: 4, Rule: "errcheck", Message: "unchecked"},
-	}
-	for i := range want {
-		if want[i].Tier == "" {
-			want[i].Tier = "markdown"
-		}
-		want[i].Checkout, want[i].Story = story.Checkout, story.Story
-	}
-	if len(got) != len(want) {
-		t.Fatalf("got %d findings, want %d: %+v", len(got), len(want), got)
-	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Errorf("finding %d:\n got %+v\nwant %+v", i, got[i], want[i])
-		}
 	}
 }

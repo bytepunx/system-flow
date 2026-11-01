@@ -26,32 +26,6 @@ func leftUncommitted(res *preview.Acceptance) []string {
 	return res.Uncommitted
 }
 
-// withoutLeft is paths without each path left names, or that lies below a
-// folder left names, as git status names an untracked folder.
-func withoutLeft(paths, left []string) []string {
-	if len(left) == 0 {
-		return paths
-	}
-	var out []string
-	for _, p := range paths {
-		if !isLeft(p, left) {
-			out = append(out, p)
-		}
-	}
-	return out
-}
-
-// isLeft reports whether p is, or lies below, a path left names.
-func isLeft(p string, left []string) bool {
-	for _, l := range left {
-		l = strings.TrimSuffix(l, "/")
-		if p == l || strings.HasPrefix(p, l+"/") {
-			return true
-		}
-	}
-	return false
-}
-
 // addArgs is git add's arguments to stage everything the acceptance changed
 // in the main checkout but the paths left.
 func addArgs(left []string) []string {
