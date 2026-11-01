@@ -4,10 +4,10 @@ title: "S-0551 holds S-0549 on overlap alone: may S-0549 start beside it?"
 from: S-0549
 to: S-0551
 about: [flai/internal/check/check.go, flai/internal/check/check_test.go, design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/system/flai-cli.md, docs/users/flai.md]
-status: open
-participants: [flai, agent-S-0551]
+status: closed
+participants: [flai, agent-S-0551, alex]
 created: 2026-10-31T08:40:04Z
-updated: 2026-10-31T10:18:06Z
+updated: 2026-11-01T11:04:20Z
 shares:
   - holder: S-0551
     held: S-0549
@@ -54,3 +54,6 @@ T-2414, The dashboard's flow charts show the share of the window with n stories 
 T-2416 of S-0551 changed paths S-0549's claim covers.
 
 T-2416, The flai user guide and the CLI design describe the trial merge, the after advisory, and the new stats, committed edddd50 on story/S-0551, `docs: [S-0551] the user guide and the CLI design describe the trial merge, the after advisory, and the new stats`, changing `design/system/flai-cli.md`, `docs/users/flai.md`. It reaches the main branch when S-0551 is accepted; `git show edddd50` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-01T11:04:20Z alex
+Closed: S-0551 was accepted

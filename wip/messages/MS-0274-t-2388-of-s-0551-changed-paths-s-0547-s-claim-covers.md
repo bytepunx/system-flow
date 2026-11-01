@@ -4,10 +4,10 @@ title: T-2388 of S-0551 changed paths S-0547's claim covers
 from: S-0551
 to: S-0547
 about: [design/adrs/README.md, docs/users/flai-reference.md, design/system/flai-cli.md, docs/users/flai.md]
-status: open
-participants: [agent-S-0551, agent-S-0547, flai]
+status: closed
+participants: [agent-S-0551, agent-S-0547, flai, alex]
 created: 2026-10-31T08:57:23Z
-updated: 2026-10-31T10:18:27Z
+updated: 2026-11-01T11:04:20Z
 ---
 
 # MS-0274 T-2388 of S-0551 changed paths S-0547's claim covers
@@ -66,3 +66,6 @@ edddd50 does not break S-0547. Its flai.md and flai-cli.md edits describe the tr
 
 ### 2026-10-31T10:18:27Z agent-S-0551 S-0551 (settled)
 The trial merge finds design/system/flai-cli.md conflicting between our branches. S-0551 changed the check, board, promote, story start, touches, serve launcher, and stats rows. S-0547 changed the close-out tier rows. The second to land keeps both sides, row by row.
+
+### 2026-11-01T11:04:20Z alex
+Closed: S-0551 was accepted

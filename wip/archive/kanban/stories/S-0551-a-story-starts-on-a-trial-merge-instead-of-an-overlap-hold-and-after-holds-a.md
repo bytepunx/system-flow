@@ -3,11 +3,11 @@ id: S-0551
 type: story
 nature: improvement
 title: A story starts on a trial merge instead of an overlap hold, and after holds a story for a dependency only, so the worktrees run stories in parallel as people on one remote do
-status: review
+status: done
 parent: E-0031
 owner: alex
 created: 2026-10-30T01:52:25Z
-updated: 2026-10-31T10:33:22Z
+updated: 2026-11-01T11:04:20Z
 transitions:
   - to: ready
     at: 2026-10-31T07:24:00Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-10-31T10:33:22Z
     by: agent-S-0551
+  - to: done
+    at: 2026-11-01T11:04:20Z
+    by: alex
 tags: [flai]
 topics: [git, orchestration, planning, conventions, dashboard]
 touches: [flai/internal/serve, design/workflows/roles, design/system/workflow.md, design/system/strategic-agents.md, design/conventions/work-management.md, docs/users/flai.md, design/adrs, design/adrs/README.md, design/system/metrics.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, flai/internal/storygit/trial.go, flai/internal/storygit/trial_test.go, flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/check/check.go, flai/internal/check/check_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/hold_test.go, flai/internal/serve/restart.go, flai/internal/serve/start.go, flai/internal/mcpserver/work.go, flai/internal/mcpserver/work_test.go, flai/internal/mcpserver/orchestrate.go, flai/internal/workitem/boardview.go, flai/internal/storystart/start_test.go, design/workflows/roles/planner.md, template/root/design/workflows/roles/planner.md, flai/internal/roles/baseline/planner.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, template/root/.claude/agents/planner.md, ".claude/agents/planner.md", design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, flai/internal/metrics/concurrency.go, flai/internal/metrics/concurrency_test.go, flai/internal/metrics/metrics.go, flai/cmd/stats.go, flai/cmd/stats_test.go, flaiover/src/lib/viz/catalog.ts, flaiover/src/lib/viz/catalog.test.ts, flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/viz/explain.ts, flaiover/src/lib/sitemenu.ts, "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", docs/users/flaiover.md, flai/internal/workitem/repo.go, flai/internal/workitem/share.go, flai/internal/check/after_reason_test.go, flai/internal/check/scope.go, flai/internal/check/scope_test.go, design/issues/I-0227-flai-test-s-go-test-tier-runs-the-mcpserver-package-with-race-into-go-test-s-10-minute-default-timeout-on-a-loaded-host-and-names-only-the-package-so-a-story-that-changes-mcpserver-cannot-pass-its-tests.md, design/issues/summary.md, flai/internal/itemedit/itemedit.go, flai/internal/itemnew/itemnew.go, flai/internal/itemnew/itemnew_test.go, flai/cmd/project.go, flai/internal/mcpserver/server.go, docs/users/flai-reference.md, flai/cmd/promote.go, flai/cmd/story_start.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/story_start.go, design/issues/I-0235-flai-check-finds-narrative-missing-outside-the-story-at-close-out.md]
@@ -118,3 +121,9 @@ The topic `dashboard` is added for T-2414's flow chart.
 Forecast: `flai forecast` gave 1h30m, 89 s per unit of size over 108 done large improvement stories on claude-opus-5-5, times size 60 (4 criteria, 56 touches). Raised to 2h: twelve tasks in three layers, hold tests that need temporary git repositories, a `.claude/` write that waits on the operator, and S-0548's and S-0552's claims on serve and stats files to agree in conversation. flai sets the delivery from the pull order.
 
 Cost of delay: 300 USD a week, as `flai cod` works it out from the operator's `time_lost_per_cycle` of 2h (TH-0772): 2h lost per 168h cycle at the manifest's 150 USD an hour, one cycle a week. It stands unadjusted: the input is the operator's, and nothing in the story argues for a different cycle.
+
+### Accepted without the queue tiers
+
+- Why: its last flai verify ran at 074fb32, not at its head da3140f
+- By: alex
+- At: 2026-11-01T11:04:20Z
