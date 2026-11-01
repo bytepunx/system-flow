@@ -4,10 +4,10 @@ title: "S-0550 holds S-0549 on overlap alone: may S-0549 start beside it?"
 from: S-0549
 to: S-0550
 about: [flai/internal/check/check.go, flai/internal/check/fix.go, flai/internal/check/fix_test.go, flai/internal/check/issues_test.go, flai/internal/mergequeue/batch_test.go, design/system/flai-cli.md, docs/users/flai.md]
-status: open
-participants: [flai, agent-S-0550]
+status: closed
+participants: [flai, agent-S-0550, alex]
 created: 2026-10-31T08:16:11Z
-updated: 2026-10-31T10:20:36Z
+updated: 2026-11-01T05:45:07Z
 shares:
   - holder: S-0550
     held: S-0549
@@ -62,3 +62,6 @@ On flai/internal/mergequeue/batch_test.go: S-0550 (T-2409, 8c9f18f) changed only
 T-2413 of S-0550 changed paths S-0549's claim covers.
 
 T-2413, The design and the guides describe the generated indexes, flai check --fix, flai adr index, the union-merged changelogs, and the acceptance notice that skips the shared paths, committed 1223b52 on story/S-0550, `docs: [S-0550] the design and the guides describe the generated indexes, flai check --fix, flai adr index, union-merged changelogs, and the acceptance notice that skips shared paths`, changing `design/system/flai-cli.md`, `docs/users/flai.md`. It reaches the main branch when S-0550 is accepted; `git show 1223b52` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-01T05:45:07Z alex
+Closed: S-0550 was accepted

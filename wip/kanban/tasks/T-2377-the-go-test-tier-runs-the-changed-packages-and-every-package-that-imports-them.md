@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 23
-      output: 6345
-      cache_read: 1654578
-      cache_write: 55869
-      cost: 0.7999
+      output: 6158
+      cache_read: 1634605
+      cache_write: 75084
+      cost: 0.9498
 ---
 # T-2377 The go-test tier runs the changed packages and every package that imports them, and a test shows a change that breaks a caller's tests fails verify
 

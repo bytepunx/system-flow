@@ -3,11 +3,11 @@ id: S-0550
 type: story
 nature: improvement
 title: "Hub files merge without conflict: the ADR index, the issues summary, and the changelog take a union merge or are generated, and shared paths raise no overlap notice"
-status: review
+status: done
 parent: E-0031
 owner: alex
 created: 2026-10-30T01:52:19Z
-updated: 2026-10-31T18:33:00Z
+updated: 2026-11-01T05:45:06Z
 transitions:
   - to: ready
     at: 2026-10-31T07:24:05Z
@@ -18,9 +18,12 @@ transitions:
   - to: review
     at: 2026-10-31T10:33:03Z
     by: agent-S-0550
+  - to: done
+    at: 2026-11-01T05:45:06Z
+    by: alex
 tags: [flai]
 topics: [git, cli, conventions, release]
-touches: [flai/internal/serve, ".gitattributes", design/conventions/git.md, design/system/flai-cli.md, design/adrs/README.md, design/issues/summary.md, template, design/adrs, design/adrs/0157-flai-stream-sync-and-flai-accept-merge-design-adrs-readme-md-s-index-row-by-row.md, flai/internal/check/check.go, flai/internal/check/fix.go, flai/internal/check/fix_test.go, flai/internal/check/issues_test.go, flai/cmd/check.go, flai/cmd/check_test.go, flai/cmd/accept_overlap.go, flai/cmd/accept_overlap_test.go, flai/internal/serve/hold_test.go, template/root/.gitattributes, template/.gitattributes, flai/internal/release/release.go, flai/internal/release/release_test.go, flai/cmd/stream_sync_test.go, template/root/design/conventions/git.md, template/CHANGELOG.md, design/system/workflow.md, flai/internal/adrindex/adrindex.go, flai/internal/adrindex/adrindex_test.go, flai/internal/adr/adr.go, flai/internal/adr/adr_test.go, flai/cmd/adr.go, flai/cmd/adr_test.go, template/root/design/adrs/README.md, flai/internal/issues/generated.go, flai/internal/issues/generated_test.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/continuous-improvement.md, design/conventions/decisions.md, template/root/design/conventions/decisions.md, docs/operators/settings.md, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/internal/mergequeue/batch_test.go, flai/internal/storygit/sync.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, docs/contributors/template.md]
+touches: [flai/internal/serve, ".gitattributes", design/conventions/git.md, design/system/flai-cli.md, design/adrs/README.md, design/issues/summary.md, template, design/adrs, design/adrs/0157-flai-stream-sync-and-flai-accept-merge-design-adrs-readme-md-s-index-row-by-row.md, flai/internal/check/check.go, flai/internal/check/fix.go, flai/internal/check/fix_test.go, flai/internal/check/issues_test.go, flai/cmd/check.go, flai/cmd/check_test.go, flai/cmd/accept_overlap.go, flai/cmd/accept_overlap_test.go, flai/internal/serve/hold_test.go, template/root/.gitattributes, template/.gitattributes, flai/internal/release/release.go, flai/internal/release/release_test.go, flai/cmd/stream_sync_test.go, template/root/design/conventions/git.md, template/CHANGELOG.md, design/system/workflow.md, flai/internal/adrindex/adrindex.go, flai/internal/adrindex/adrindex_test.go, flai/internal/adr/adr.go, flai/internal/adr/adr_test.go, flai/cmd/adr.go, flai/cmd/adr_test.go, template/root/design/adrs/README.md, flai/internal/issues/generated.go, flai/internal/issues/generated_test.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/continuous-improvement.md, design/conventions/decisions.md, template/root/design/conventions/decisions.md, docs/operators/settings.md, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/internal/mergequeue/batch_test.go, flai/internal/storygit/sync.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, docs/contributors/template.md, design/issues/I-0235-flai-check-finds-narrative-missing-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5

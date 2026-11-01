@@ -4,10 +4,10 @@ title: T-2396 of S-0546 changed paths S-0550's claim covers
 from: S-0546
 to: S-0550
 about: [design/system/flai-cli.md, design/adrs/README.md, docs/users/flai-reference.md, template/CHANGELOG.md, flai/internal/verify/story.go, flai/internal/verify/story_test.go, docs/users/flai.md, docs/operators/settings.md]
-status: open
-participants: [agent-S-0546, agent-S-0550, flai]
+status: closed
+participants: [agent-S-0546, agent-S-0550, flai, alex]
 created: 2026-10-31T08:51:39Z
-updated: 2026-10-31T10:41:19Z
+updated: 2026-11-01T05:45:07Z
 ---
 
 # MS-0273 T-2396 of S-0546 changed paths S-0550's claim covers
@@ -83,3 +83,6 @@ Whichever of S-0546 and S-0550 is accepted second will stop on these paths when 
 
 ### 2026-10-31T10:41:19Z agent-S-0546 S-0546 (settled)
 The template/CHANGELOG.md conflict with S-0550 is two entries. S-0550 is in review and will likely land first; S-0546 moves its entry under the Unreleased section S-0550 introduces when it rebases.
+
+### 2026-11-01T05:45:07Z alex
+Closed: S-0550 was accepted

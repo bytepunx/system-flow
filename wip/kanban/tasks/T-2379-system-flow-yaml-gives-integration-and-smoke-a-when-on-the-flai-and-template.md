@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 16
-      output: 4449
-      cache_read: 1160210
-      cache_write: 39176
-      cost: 0.5609
+      output: 4318
+      cache_read: 1146205
+      cache_write: 52649
+      cost: 0.666
 ---
 # T-2379 system-flow.yaml gives integration and smoke a when on the flai and template paths, a close-out shows both run, and I-0221 is closed
 
