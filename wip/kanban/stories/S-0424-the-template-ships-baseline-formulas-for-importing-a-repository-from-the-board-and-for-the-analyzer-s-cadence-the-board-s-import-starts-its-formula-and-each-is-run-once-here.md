@@ -3,17 +3,20 @@ id: S-0424
 type: story
 nature: improvement
 title: The template ships baseline formulas for importing a repository from the board and for the analyzer's cadence, the board's import starts its formula, and each is run once here
-status: backlog
+status: ready
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:41:19Z
-updated: 2026-11-01T11:06:07Z
+updated: 2026-11-01T23:46:13Z
 transitions:
   - to: ready
     at: 2026-10-30T00:05:31Z
     by: alex
   - to: backlog
     at: 2026-10-31T07:23:43Z
+    by: alex
+  - to: ready
+    at: 2026-11-01T23:44:01Z
     by: alex
 tags: [cli, template, dashboard]
 topics: [cli, orchestration, template, conventions]
@@ -45,10 +48,10 @@ cost_of_delay:
   at: 2026-10-21T16:11:12Z
 forecast:
   duration: 1h10m
-  delivery: 2026-11-02T03:17:00Z
-  basis: "Its own forecast of 1h10m; 22nd in the pull order with an in-progress limit of 5, behind S-0547, S-0549, S-0425, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0506, S-0508, S-0509, S-0510, S-0516, S-0517, S-0518, S-0520, S-0420, S-0421, S-0422 and S-0423."
+  delivery: 2026-11-02T02:44:00Z
+  basis: "Its own forecast of 1h10m; 4th in the pull order with an in-progress limit of 5, behind S-0549, S-0423, S-0421 and S-0553."
   by: flai
-  at: 2026-11-01T11:06:07Z
+  at: 2026-11-01T23:46:13Z
 finalized:
   by: alex
   at: 2026-10-30T00:05:20Z

@@ -3,12 +3,15 @@ id: S-0554
 type: story
 nature: feature
 title: A role file's start prompt and its triggers replace the planner's, the orchestrator's, the analyzer's, and the curator's start prompts and schedules in Go, so the built-in roles are defined by their files alone
-status: backlog
+status: ready
 parent: E-0024
 owner: alex
 created: 2026-10-30T20:45:40Z
-updated: 2026-11-01T11:06:22Z
-transitions: []
+updated: 2026-11-01T23:46:17Z
+transitions:
+  - to: ready
+    at: 2026-11-01T23:44:13Z
+    by: alex
 tags: [cli, template]
 topics: [cli, orchestration, planning, template, conventions]
 touches: [design/adrs, design/adrs/README.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, design/workflows/roles/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/analyzer.md, design/workflows/roles/curator.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/analyzer.md, template/root/design/workflows/roles/curator.md, flai/internal/roles/baseline/planner.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/roles/baseline/analyzer.md, flai/internal/roles/baseline/curator.md, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/roles/start.go, flai/internal/roles/start_test.go, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/replan.go, flai/internal/serve/role_events.go, flai/internal/serve/role_events_test.go, flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go, flai/internal/serve/analysis_schedule.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/serve.go, docs/operators/index.md, template/CHANGELOG.md]
@@ -33,17 +36,19 @@ usage:
           cache_read: 1449087
           cache_write: 91757
           cost: 0.3471
-draft: true
 cost_of_delay:
   value: 71.06
   by: planner-E-0024
   at: 2026-10-30T20:48:20Z
 forecast:
   duration: 1h19m
-  delivery: 2026-11-02T01:55:00Z
-  basis: "Its own forecast of 1h19m; 27th in the pull order with an in-progress limit of 5, behind S-0547, S-0549, S-0425, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0506, S-0508, S-0509, S-0510, S-0516, S-0517, S-0518, S-0520, S-0420, S-0421, S-0422, S-0423, S-0424, S-0540, S-0543, S-0545 and S-0553."
+  delivery: 2026-11-02T02:53:00Z
+  basis: "Its own forecast of 1h19m; 5th in the pull order with an in-progress limit of 5, behind S-0549, S-0423, S-0421, S-0553 and S-0424."
   by: flai
-  at: 2026-11-01T11:06:22Z
+  at: 2026-11-01T23:46:17Z
+finalized:
+  by: orchestrator
+  at: 2026-11-01T20:53:33Z
 ---
 # S-0554 A role file's start prompt and its triggers replace the planner's, the orchestrator's, the analyzer's, and the curator's start prompts and schedules in Go, so the built-in roles are defined by their files alone
 

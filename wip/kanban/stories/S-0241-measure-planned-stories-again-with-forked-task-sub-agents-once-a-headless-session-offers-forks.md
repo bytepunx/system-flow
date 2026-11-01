@@ -3,14 +3,17 @@ id: S-0241
 type: story
 nature: experiment
 title: Measure planned stories again with forked task sub-agents once a headless session offers forks
-status: ready
+status: backlog
 owner: arobson
 created: 2026-10-02T17:14:07Z
-updated: 2026-11-01T11:04:30Z
+updated: 2026-11-01T23:48:24Z
 transitions:
   - to: ready
     at: 2026-10-30T00:10:25Z
     by: orchestrator
+  - to: backlog
+    at: 2026-11-01T23:44:38Z
+    by: alex
 blocked:
   - from: 2026-10-08T07:08:56Z
     reason: No candidate solutions yet
@@ -28,15 +31,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 8207
+      seconds: 8262
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 268
-          output: 3338
-          cache_read: 29538290
-          cache_write: 446940
-          cost: 7.0995
+          input: 284
+          output: 3450
+          cache_read: 30000857
+          cache_write: 495448
+          cost: 7.2168
 cost_of_delay:
   inputs:
     penalty_per_week: 25
@@ -47,10 +50,10 @@ cost_of_delay:
   at: 2026-10-07T23:14:44Z
 forecast:
   duration: 2h
-  delivery: 2026-11-01T19:10:00Z
-  basis: "Its own forecast of 2h; 2nd in the pull order with an in-progress limit of 5, behind S-0547, S-0549 and S-0425."
+  delivery: 2026-11-02T18:40:00Z
+  basis: "Its own forecast of 2h; 24th in the pull order with an in-progress limit of 5, behind S-0549, S-0423, S-0421, S-0553, S-0424, S-0554, S-0422, S-0425, S-0420, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0506, S-0508, S-0509, S-0510, S-0516, S-0517, S-0518 and S-0520."
   by: flai
-  at: 2026-11-01T11:04:30Z
+  at: 2026-11-01T23:48:24Z
 ---
 # S-0241 Measure planned stories again with forked task sub-agents once a headless session offers forks
 

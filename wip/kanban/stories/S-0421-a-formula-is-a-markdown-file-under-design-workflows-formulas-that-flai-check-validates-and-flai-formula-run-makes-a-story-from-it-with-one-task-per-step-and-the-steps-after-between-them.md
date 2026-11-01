@@ -3,17 +3,20 @@ id: S-0421
 type: story
 nature: feature
 title: A formula is a markdown file under design/workflows/formulas that flai check validates, and flai formula run makes a story from it with one task per step and the steps' after between them
-status: backlog
+status: ready
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:40Z
-updated: 2026-11-01T11:05:53Z
+updated: 2026-11-01T23:46:04Z
 transitions:
   - to: ready
     at: 2026-10-28T13:10:51Z
     by: alex
   - to: backlog
     at: 2026-10-28T22:20:42Z
+    by: alex
+  - to: ready
+    at: 2026-11-01T23:43:52Z
     by: alex
 tags: [cli, template]
 topics: [cli, orchestration, template, conventions]
@@ -45,10 +48,10 @@ cost_of_delay:
   at: 2026-10-21T12:39:49Z
 forecast:
   duration: 1h3m
-  delivery: 2026-11-01T22:35:00Z
-  basis: "Its own forecast of 1h3m; 19th in the pull order with an in-progress limit of 5, behind S-0547, S-0549, S-0425, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0506, S-0508, S-0509, S-0510, S-0516, S-0517, S-0518, S-0520 and S-0420."
+  delivery: 2026-11-02T01:04:00Z
+  basis: "Its own forecast of 1h3m; 2nd in the pull order with an in-progress limit of 5, behind S-0549 and S-0423."
   by: flai
-  at: 2026-11-01T11:05:53Z
+  at: 2026-11-01T23:46:04Z
 finalized:
   by: alex
   at: 2026-10-28T13:10:45Z

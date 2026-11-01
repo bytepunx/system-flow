@@ -3,17 +3,20 @@ id: S-0420
 type: story
 nature: feature
 title: The dashboard's Planner, Orchestrator, and Analyzer pages become one role page per defined role, with its settings panel, its activity document, and its runs, and agent.status carries every role by name
-status: backlog
+status: ready
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:31Z
-updated: 2026-11-01T11:05:48Z
+updated: 2026-11-01T23:46:36Z
 transitions:
   - to: ready
     at: 2026-10-28T13:05:34Z
     by: alex
   - to: backlog
     at: 2026-10-28T22:20:48Z
+    by: alex
+  - to: ready
+    at: 2026-11-01T23:43:49Z
     by: alex
 tags: [dashboard, cli]
 topics: [dashboard, planning, orchestration]
@@ -45,10 +48,10 @@ cost_of_delay:
   at: 2026-10-21T12:28:25Z
 forecast:
   duration: 1h35m
-  delivery: 2026-11-01T21:17:00Z
-  basis: "Its own forecast of 1h35m; 18th in the pull order with an in-progress limit of 5, behind S-0547, S-0549, S-0425, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0506, S-0508, S-0509, S-0510, S-0516, S-0517, S-0518 and S-0520."
+  delivery: 2026-11-02T02:48:00Z
+  basis: "Its own forecast of 1h35m; 8th in the pull order with an in-progress limit of 5, behind S-0549, S-0423, S-0421, S-0553, S-0424, S-0554, S-0422 and S-0425."
   by: flai
-  at: 2026-11-01T11:05:48Z
+  at: 2026-11-01T23:46:36Z
 finalized:
   by: alex
   at: 2026-10-28T13:03:39Z
