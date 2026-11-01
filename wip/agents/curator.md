@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 63.9256
-accrued_seconds: 6274
-tasks_completed: 36
-last_run: 2026-10-31T21:10:47Z
+accrued_cost: 65.8007
+accrued_seconds: 6388
+tasks_completed: 37
+last_run: 2026-11-01T05:49:11Z
 ---
 
 # Curator activity
@@ -299,3 +299,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0334, D-0403, D-0413, D-0416, D-0427, D-0443, D-0444
 - Seconds: 366
 - Cost: 2.9202 USD, estimated
+
+### 2026-11-01T05:49:11Z
+
+- Summary: Curator run: wrote D-0445; merged S-0550 into D-0441; absorbed D-0410 by `design/conventions/git.md` § Rules; `flai digest compact` compacted D-0100, D-0101, D-0102, D-0103, D-0105, D-0106, D-0107, D-0112, D-0113, D-0114, D-0115 and D-0116. All 17 candidates came from S-0550, and the rest are already stated in ADR-0228 and `design/system/workflow.md`.
+- Trigger: accepted S-0550
+- Items: D-0100, D-0101, D-0102, D-0103, D-0105, D-0106, D-0107, D-0112, D-0113, D-0114, D-0115, D-0116, D-0410, D-0441, D-0445
+- Seconds: 114
+- Cost: 1.8751 USD, estimated

@@ -2,7 +2,7 @@
 id: D-0441
 title: "S-0550 plan: eight tasks in four layers; cost of delay inputs needed: Recommendation: set `time_lost_per_cycle: 10m` on S-0550, as the planner recommends"
 kind: answer
-sources: [TH-0777]
+sources: [TH-0777, S-0550]
 topics: [git, cli, conventions, release, testing, orchestration, planning, flai, go, template, code, all]
 paths: [flai/internal/serve, ".gitattributes", design/conventions/git.md, design/system/flai-cli.md, design/adrs/README.md, design/issues/summary.md, template, design/adrs, design/adrs/0157-flai-stream-sync-and-flai-accept-merge-design-adrs-readme-md-s-index-row-by-row.md, flai/internal/check/check.go, flai/internal/check/fix.go, flai/internal/check/fix_test.go, flai/internal/check/issues_test.go, flai/cmd/check.go, flai/cmd/check_test.go, flai/cmd/accept_overlap.go, flai/cmd/accept_overlap_test.go, flai/internal/serve/hold_test.go, template/root/.gitattributes, template/.gitattributes, flai/internal/release/release.go, flai/internal/release/release_test.go, flai/cmd/stream_sync_test.go, template/root/design/conventions/git.md, template/CHANGELOG.md, design/system/workflow.md, flai/internal/adrindex/adrindex.go, flai/internal/adrindex/adrindex_test.go, flai/internal/adr/adr.go, flai/internal/adr/adr_test.go, flai/cmd/adr.go, flai/cmd/adr_test.go, template/root/design/adrs/README.md, flai/internal/issues/generated.go, flai/internal/issues/generated_test.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/continuous-improvement.md, design/conventions/decisions.md, template/root/design/conventions/decisions.md, docs/operators/settings.md]
 date: 2026-10-31

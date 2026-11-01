@@ -6,8 +6,8 @@ sources: [S-0255, S-0467, S-0498, S-0502, S-0418, S-0524]
 topics: [template, git]
 paths: [template/CHANGELOG.md, template/template.yaml]
 date: 2026-10-28
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/conventions/git.md#rules"
 asked_again: []
 cited: [S-0418, T-1751, TH-0755]
 ---
