@@ -3,11 +3,17 @@ id: S-0518
 type: story
 nature: remediation
 title: flai guard does not run as the hook inside the agent container, and the hook lets every call through when the guard cannot start
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-28T12:52:56Z
-updated: 2026-11-01T23:48:02Z
-transitions: []
+updated: 2026-11-01T23:51:06Z
+transitions:
+  - to: ready
+    at: 2026-11-01T23:50:02Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-11-01T23:50:15Z
+    by: agent-S-0518
 tags: [cli, template]
 topics: [harness]
 touches: [".claude/settings.json", template/root/.claude/settings.json, template/CHANGELOG.md, scripts/flai.sh, scripts/README.md, flai/cmd/guard_test.go, flai/internal/harness/harness_test.go, flai/cmd/guard.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/settings.md, design/system/agent-adapters.md, design/adrs/README.md, design/adrs, design/issues/I-0216-flai-guard-does-not-run-as-the-hook-inside-the-agent-container-and-the-hook-lets-every-call-through-when-the-guard-cannot-start.md, design/issues/summary.md]
@@ -22,15 +28,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 840
+      seconds: 935
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 82
-          output: 1135
-          cache_read: 19940835
-          cache_write: 79027
-          cost: 4.3964
+          input: 112
+          output: 1336
+          cache_read: 21083831
+          cache_write: 149790
+          cost: 4.6751
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -41,10 +47,10 @@ cost_of_delay:
   at: 2026-10-28T13:33:45Z
 forecast:
   duration: 1h15m
-  delivery: 2026-11-02T10:45:00Z
-  basis: "Its own forecast of 1h15m; 22nd in the pull order with an in-progress limit of 5, behind S-0549, S-0423, S-0421, S-0553, S-0424, S-0554, S-0422, S-0425, S-0420, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0506, S-0508, S-0509, S-0510, S-0516 and S-0517."
+  delivery: 2026-11-02T03:54:00Z
+  basis: "Its own forecast of 1h15m; 9th in the pull order with an in-progress limit of 5, behind S-0549, S-0423, S-0421, S-0553, S-0424, S-0554, S-0422, S-0425 and S-0420."
   by: flai
-  at: 2026-11-01T23:48:02Z
+  at: 2026-11-01T23:51:06Z
 finalized:
   by: orchestrator
   at: 2026-10-30T13:37:06Z
