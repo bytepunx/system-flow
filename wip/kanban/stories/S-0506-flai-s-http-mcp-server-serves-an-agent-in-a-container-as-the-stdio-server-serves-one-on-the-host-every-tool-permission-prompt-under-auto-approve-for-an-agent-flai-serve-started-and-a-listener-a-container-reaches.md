@@ -7,7 +7,7 @@ status: backlog
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:42:51Z
-updated: 2026-11-01T05:45:53Z
+updated: 2026-11-01T10:45:20Z
 transitions: []
 tags: [cli, mcp]
 topics: [harness, docker, mcp]
@@ -49,10 +49,10 @@ cost_of_delay:
   at: 2026-10-31T08:00:25Z
 forecast:
   duration: 2h
-  delivery: 2026-11-01T11:31:00Z
+  delivery: 2026-11-01T16:31:00Z
   basis: "Its own forecast of 2h; 10th in the pull order with an in-progress limit of 5, behind S-0547, S-0549, S-0425, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411 and S-0412."
   by: flai
-  at: 2026-11-01T05:45:53Z
+  at: 2026-11-01T10:45:20Z
 finalized:
   by: orchestrator
   at: 2026-10-31T08:02:32Z
