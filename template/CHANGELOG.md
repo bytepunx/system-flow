@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.16 - 2026-11-01
+
+- S-0551 A story starts on a trial merge instead of an overlap hold, and after holds a story for a dependency only, so the worktrees run stories in parallel as people on one remote do (patch).
+
 ## 1.1.15 - 2026-11-01
 
 - S-0546 The close-out runs as a flai serve job the story's agent waits on by event, so it never dies at the harness's tool timeout and is never re-run from the start (patch).
