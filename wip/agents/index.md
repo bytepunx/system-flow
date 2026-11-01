@@ -1,14 +1,16 @@
 ---
 title: Active streams
-updated: 2026-11-01T23:58:55Z
+updated: 2026-11-01T23:59:15Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
+| [S-0420](S-0420.md) | The dashboard's Planner, Orchestrator, and Analyzer pages become one role page per defined role, with its settings panel, its activity document, and its runs, and agent.status carries every role by name | in-progress | agent-S-0420 | 2026-11-01T23:59:15Z |
 | [S-0518](S-0518.md) | flai guard does not run as the hook inside the agent container, and the hook lets every call through when the guard cannot start | in-progress | agent-S-0518 | 2026-11-01T23:54:02Z |
 | [S-0549](S-0549.md) | The merge queue checks the main checkout's uncommitted files and the lint of main before it builds a batch, so a dirty main fails once in seconds and not every batch | in-progress | agent-S-0549 | 2026-11-01T23:56:32Z |
+| [S-0553](S-0553.md) | flai generates the planner's, the orchestrator's, the analyzer's, and the curator's harness definitions from their role files alone, flai check holds a .claude/agents copy to them, and a session started by hand reads the same definition | in-progress | agent-S-0553 | 2026-11-01T23:59:11Z |
 
 ## Strategic agents
 
