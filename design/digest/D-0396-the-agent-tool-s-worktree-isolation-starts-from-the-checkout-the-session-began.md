@@ -2,7 +2,7 @@
 id: D-0396
 title: The Agent tool's worktree isolation starts from the checkout the session began in, not the story branch, so a task worktree is made by hand from story/S-nnnn
 kind: decision
-sources: [S-0176, S-0502, S-0417, S-0534, S-0418]
+sources: [S-0176, S-0502, S-0417, S-0534, S-0418, S-0546]
 topics: [orchestration, git, conventions]
 paths: [design/conventions/delegation.md]
 date: 2026-10-28
@@ -22,4 +22,6 @@ S-0417 ran its first layer the same way and for the same reason: "Layer 1 runs a
 
 S-0534 did it again: "Layers 2 and 3 ran their Go tasks in task worktrees (`task/T-nnnn`), since T-2283 and T-2288, and T-2284 and T-2285, build one package; I copied each back into the story worktree, their files being disjoint, and removed the worktrees" (wip/archive/agents/S-0534.md, Decisions).
 
-Sources: S-0176, S-0502, S-0417, S-0534.
+S-0546 did it again, for a reason of the same kind: "T-2400 and T-2411 ran in task worktrees of their own (`task/T-nnnn`), since the sibling task's tests compile the package they changed; their files were copied into the story worktree and closed with `flai task done` there" (wip/archive/agents/S-0546.md, Decisions).
+
+Sources: S-0176, S-0502, S-0417, S-0534, S-0418, S-0546.
