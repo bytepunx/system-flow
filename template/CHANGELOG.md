@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.15 - 2026-11-01
+
+- S-0546 The close-out runs as a flai serve job the story's agent waits on by event, so it never dies at the harness's tool timeout and is never re-run from the start (patch).
+
 ## 1.1.14 - 2026-11-01
 
 - S-0550 Hub files merge without conflict: the ADR index, the issues summary, and the changelog take a union merge or are generated, and shared paths raise no overlap notice (patch).
