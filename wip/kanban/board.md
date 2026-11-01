@@ -7,8 +7,14 @@ wip_limits:
   in-progress: 5
   review: 5
 order:
+  - S-0423
+  - S-0421
+  - S-0553
+  - S-0424
+  - S-0554
+  - S-0422
   - S-0425
-  - S-0241
+  - S-0420
   - S-0406
   - S-0407
   - S-0408
@@ -22,12 +28,8 @@ order:
   - S-0510
   - S-0516
   - S-0517
-  - S-0518
   - S-0520
 placed:
-  S-0241:
-    by: flaiover
-    at: 2026-10-31T07:24:49Z
   S-0425:
     by: flaiover
     at: 2026-10-31T07:25:02Z

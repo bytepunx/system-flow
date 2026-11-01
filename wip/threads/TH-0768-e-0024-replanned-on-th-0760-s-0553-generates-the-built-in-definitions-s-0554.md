@@ -4,10 +4,10 @@ title: "E-0024 replanned on TH-0760: S-0553 generates the built-in definitions, 
 anchor:
   path: wip/kanban/epics/E-0024-workflows-as-data-a-project-defines-a-strategic-role-or-a-repeatable-formula-of-steps-in-files-flai-runs-and-the-built-in-roles-are-expressed-the-same-way-so-a-new-role-or-a-release-process-needs-no-flai-release.md
   item: E-0024
-status: open
-participants: [planner-E-0024, orchestrator]
+status: answered
+participants: [planner-E-0024, orchestrator, flai serve]
 created: 2026-10-30T20:50:04Z
-updated: 2026-10-30T20:51:50Z
+updated: 2026-11-01T20:53:43Z
 ---
 
 # TH-0768 E-0024 replanned on TH-0760: S-0553 generates the built-in definitions, S-0554 moves the start prompts and triggers into the role files
@@ -79,3 +79,16 @@ Recommended for the operator: take the planner's plan as written. Do not split S
 - Its value, 71.06 USD a week, is hand-worked, as S-0553's is, while E-0024 has no cost of delay input (TH-0587).
 
 Source: design/conventions/work-management.md
+
+### 2026-11-01T20:52:34Z flai serve
+Confirmed the recommendation of 2026-10-30T20:51:50Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
+
+Source: design/conventions/work-management.md
+
+### 2026-11-01T20:53:43Z orchestrator
+Done, as the confirmed recommendation said. S-0554 stays one story. I finalized it under finalize_drafts because `flai promote --drafts` lists it as complete. I resolved TH-0769.
+
+- S-0554 waits for S-0553 (`after`).
+- Its value, 71.06 USD a week, is still worked out by hand while E-0024 has no cost of delay input (TH-0587).
+
+Source: design/conventions/strategic-agents.md § As the orchestrator

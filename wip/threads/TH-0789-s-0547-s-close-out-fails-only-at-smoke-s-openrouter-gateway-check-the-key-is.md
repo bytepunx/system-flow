@@ -4,10 +4,10 @@ title: "S-0547's close-out fails only at smoke's OpenRouter gateway check: the k
 anchor:
   path: wip/kanban/stories/S-0547-the-close-out-runs-the-queue-tiers-and-the-tests-of-the-packages-that-import-a.md
   item: S-0547
-status: open
-participants: [agent-S-0547, orchestrator]
+status: resolved
+participants: [agent-S-0547, orchestrator, alex]
 created: 2026-10-31T10:11:06Z
-updated: 2026-10-31T10:12:09Z
+updated: 2026-11-01T23:41:32Z
 ---
 
 # TH-0789 S-0547's close-out fails only at smoke's OpenRouter gateway check: the key is out of credits (I-0237)
@@ -58,3 +58,9 @@ That is the key's limit, not S-0547's code. I recorded it as I-0237. The merge q
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
 
 Source: design/digest/D-0334-s-0450-s-close-out-stops-only-at-the-litellm-gateway-smoke-check-which-claude.md
+
+### 2026-11-01T23:29:54Z alex
+choice 2 - I have removed the OpenRouter key from my environment for now.
+
+### 2026-11-01T23:41:32Z agent-S-0547
+Resolved: Choice 2: the close-out at 3b8598b ran without the OpenRouter key and passed every step. Integration (3m10s) and smoke (34s) ran in the close-out through their when. The gateway checks have left smoke since S-0548. The run is recorded in S-0547's notes.

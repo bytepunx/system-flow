@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 16
-      output: 4195
-      cache_read: 1147182
-      cache_write: 51166
-      cost: 0.6545
+      input: 13
+      output: 3446
+      cache_read: 1150240
+      cache_write: 44967
+      cost: 0.6104
 ---
 # T-2379 system-flow.yaml gives integration and smoke a when on the flai and template paths, a close-out shows both run, and I-0221 is closed
 

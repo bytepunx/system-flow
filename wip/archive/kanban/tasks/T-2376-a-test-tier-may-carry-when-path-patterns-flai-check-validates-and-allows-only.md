@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 30
-      output: 8155
-      cache_read: 2229824
-      cache_write: 99454
-      cost: 1.2722
+      input: 25
+      output: 6698
+      cache_read: 2235769
+      cache_write: 87405
+      cost: 1.1864
 ---
 # T-2376 A test tier may carry when, path patterns flai check validates and allows only beside queue: true, read into verify's Tier and described in the settings index
 

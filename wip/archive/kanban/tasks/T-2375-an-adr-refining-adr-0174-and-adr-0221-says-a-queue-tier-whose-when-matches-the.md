@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 8
-      output: 2043
-      cache_read: 558639
-      cache_write: 24916
-      cost: 0.3187
+      input: 6
+      output: 1678
+      cache_read: 560128
+      cache_write: 21898
+      cost: 0.2972
 ---
 # T-2375 An ADR refining ADR-0174 and ADR-0221 says a queue tier whose when matches the story runs in the close-out and again in the batch
 

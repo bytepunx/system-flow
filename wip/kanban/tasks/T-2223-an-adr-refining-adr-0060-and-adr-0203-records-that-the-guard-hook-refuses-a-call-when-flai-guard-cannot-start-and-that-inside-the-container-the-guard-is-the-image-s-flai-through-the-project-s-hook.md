@@ -3,15 +3,36 @@ id: T-2223
 type: task
 nature: remediation
 title: An ADR refining ADR-0060 and ADR-0203 records that the guard hook refuses a call when flai guard cannot start, and that inside the container the guard is the image's flai through the project's hook
-status: backlog
+status: done
 parent: S-0518
 owner: alex
 created: 2026-10-28T13:32:54Z
-updated: 2026-10-28T13:32:54Z
-transitions: []
+updated: 2026-11-01T23:53:41Z
+transitions:
+  - to: ready
+    at: 2026-11-01T23:51:49Z
+    by: agent-S-0518
+  - to: in-progress
+    at: 2026-11-01T23:51:50Z
+    by: agent-S-0518
+  - to: done
+    at: 2026-11-01T23:53:41Z
+    by: agent-S-0518
 stream: S-0518
 tags: [cli, template]
-touches: [design/adrs/README.md]
+touches: [design/adrs/README.md, design/adrs/0235-the-guard-hook-refuses-a-call-when-flai-guard-cannot-start-exit-126-or-127-and.md]
+usage:
+  source: log
+  seconds: 107
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 58
+      cache_read: 851938
+      cache_write: 8008
+      cost: 0.301
 ---
 # T-2223 An ADR refining ADR-0060 and ADR-0203 records that the guard hook refuses a call when flai guard cannot start, and that inside the container the guard is the image's flai through the project's hook
 

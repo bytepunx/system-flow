@@ -3,15 +3,36 @@ id: T-2224
 type: task
 nature: remediation
 title: scripts/flai.sh runs the installed flai, with a warning, when go is absent and bin/flai is not built, so this repository's guard hook reaches the image's flai inside the container
-status: backlog
+status: done
 parent: S-0518
 owner: alex
 created: 2026-10-28T13:33:04Z
-updated: 2026-10-28T13:33:51Z
-transitions: []
+updated: 2026-11-01T23:54:02Z
+transitions:
+  - to: ready
+    at: 2026-11-01T23:51:52Z
+    by: agent-S-0518
+  - to: in-progress
+    at: 2026-11-01T23:51:54Z
+    by: agent-S-0518
+  - to: done
+    at: 2026-11-01T23:54:02Z
+    by: agent-S-0518
 stream: S-0518
 tags: [cli]
 touches: [scripts/flai.sh, scripts/README.md]
+usage:
+  source: log
+  seconds: 103
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 58
+      cache_read: 851938
+      cache_write: 8008
+      cost: 0.301
 ---
 # T-2224 scripts/flai.sh runs the installed flai, with a warning, when go is absent and bin/flai is not built, so this repository's guard hook reaches the image's flai inside the container
 

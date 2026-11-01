@@ -6,7 +6,7 @@ title: flai guard does not run as the hook inside the agent container, and the h
 status: in-progress
 owner: alex
 created: 2026-10-28T12:52:56Z
-updated: 2026-11-01T23:51:06Z
+updated: 2026-11-01T23:54:14Z
 transitions:
   - to: ready
     at: 2026-11-01T23:50:02Z
@@ -16,16 +16,28 @@ transitions:
     by: agent-S-0518
 tags: [cli, template]
 topics: [harness]
-touches: [".claude/settings.json", template/root/.claude/settings.json, template/CHANGELOG.md, scripts/flai.sh, scripts/README.md, flai/cmd/guard_test.go, flai/internal/harness/harness_test.go, flai/cmd/guard.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/settings.md, design/system/agent-adapters.md, design/adrs/README.md, design/adrs, design/issues/I-0216-flai-guard-does-not-run-as-the-hook-inside-the-agent-container-and-the-hook-lets-every-call-through-when-the-guard-cannot-start.md, design/issues/summary.md]
+touches: [".claude/settings.json", template/root/.claude/settings.json, template/CHANGELOG.md, scripts/flai.sh, scripts/README.md, flai/cmd/guard_test.go, flai/cmd/guard.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/settings.md, design/system/agent-adapters.md, design/adrs/README.md, design/adrs, design/issues/I-0216-flai-guard-does-not-run-as-the-hook-inside-the-agent-container-and-the-hook-lets-every-call-through-when-the-guard-cannot-start.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 206
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-01
+      hand_edits: 1
+      work: 25
+  models:
+    - model: claude-opus-5-5
+      input: 56
+      output: 366
+      cache_read: 3175659
+      cache_write: 148366
+      cost: 1.1637
   strategic:
     - kind: orchestrator
       seconds: 935

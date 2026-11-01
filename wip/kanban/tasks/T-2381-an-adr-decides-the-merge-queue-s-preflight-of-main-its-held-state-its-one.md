@@ -3,15 +3,36 @@ id: T-2381
 type: task
 nature: improvement
 title: An ADR decides the merge queue's preflight of main, its held state, its one thread to the operator, and the landing again without verification
-status: backlog
+status: done
 parent: S-0549
 owner: alex
 created: 2026-10-31T07:40:30Z
-updated: 2026-10-31T07:42:23Z
-transitions: []
+updated: 2026-11-01T23:37:12Z
+transitions:
+  - to: ready
+    at: 2026-11-01T23:36:57Z
+    by: agent-S-0549
+  - to: in-progress
+    at: 2026-11-01T23:36:58Z
+    by: agent-S-0549
+  - to: done
+    at: 2026-11-01T23:37:12Z
+    by: agent-S-0549
 stream: S-0549
 tags: [flai]
 touches: [design/adrs/README.md]
+usage:
+  source: log
+  seconds: 14
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 1
+      output: 22
+      cache_read: 94124
+      cache_write: 261
+      cost: 0.033
 ---
 # T-2381 An ADR decides the merge queue's preflight of main, its held state, its one thread to the operator, and the landing again without verification
 

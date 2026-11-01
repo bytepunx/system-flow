@@ -3,16 +3,37 @@ id: T-2383
 type: task
 nature: improvement
 title: The merge queue runs the landing's preflight before it builds a batch and holds itself on a finding, with the files and findings in its state and event log
-status: backlog
+status: done
 parent: S-0549
 owner: alex
 created: 2026-10-31T07:41:02Z
-updated: 2026-10-31T07:42:31Z
-transitions: []
+updated: 2026-11-01T23:56:32Z
+transitions:
+  - to: ready
+    at: 2026-11-01T23:42:34Z
+    by: agent-S-0549
+  - to: in-progress
+    at: 2026-11-01T23:42:35Z
+    by: agent-S-0549
+  - to: done
+    at: 2026-11-01T23:56:32Z
+    by: agent-S-0549
 stream: S-0549
 tags: [flai]
 touches: [flai/internal/mergequeue/preflight.go, flai/internal/mergequeue/preflight_test.go, flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/log.go, flai/internal/mergequeue/log_test.go]
 after: [T-2381, T-2382]
+usage:
+  source: log
+  seconds: 837
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 134
+      output: 676
+      cache_read: 9179825
+      cache_write: 203386
+      cost: 3.2849
 ---
 # T-2383 The merge queue runs the landing's preflight before it builds a batch and holds itself on a finding, with the files and findings in its state and event log
 

@@ -3,11 +3,11 @@ id: S-0547
 type: story
 nature: improvement
 title: The close-out runs the queue tiers and the tests of the packages that import a changed package, so what the merge queue would send back is found before review
-status: in-progress
+status: done
 parent: E-0031
 owner: alex
 created: 2026-10-30T01:52:02Z
-updated: 2026-11-01T06:05:00Z
+updated: 2026-11-01T23:56:43Z
 transitions:
   - to: ready
     at: 2026-10-31T07:24:13Z
@@ -15,6 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-10-31T08:40:01Z
     by: agent-S-0547
+  - to: review
+    at: 2026-11-01T23:41:47Z
+    by: agent-S-0547
+  - to: done
+    at: 2026-11-01T23:56:43Z
+    by: alex
 blocked:
   - from: 2026-10-31T10:12:10Z
     until: 2026-10-31T10:12:16Z
@@ -38,10 +44,11 @@ blocked:
     until: 2026-11-01T06:04:34Z
     reason: awaiting the operator on TH-0789
   - from: 2026-11-01T06:05:00Z
+    until: 2026-11-01T23:29:54Z
     reason: awaiting the operator on TH-0789
 tags: [flai]
 topics: [testing, cli]
-touches: [flai/internal/check, flai/internal/verify, flai/cmd, system-flow.yaml, design/system/flai-cli.md, design/conventions/testing.md, docs/users/flai.md, design/adrs, design/adrs/README.md, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go, docs/operators/settings.md, docs/users/flai-reference.md, design/system/project-manifest.md, design/conventions/code-quality.md, design/conventions/tooling.md, design/issues/I-0221-the-close-out-s-go-test-tier-runs-only-the-changed-packages-so-a-change-that-breaks-a-caller-package-s-tests-passes-before-review.md, design/issues/I-0203-a-story-the-operator-accepts-outside-the-merge-queue-lands-without-the-queue-tiers-so-a-stale-generated-file-on-main-fails-every-later-batch-at-integration.md, design/issues/summary.md, design/issues/I-0226-two-flai-serve-tests-check-before-what-they-wait-for-has-happened-and-fail-a-loaded-merge-queue-batch-on-timing.md, design/issues/I-0237-the-smoke-tier-s-openrouter-gateway-check-fails-on-a-402-because-the-operator-s.md]
+touches: [flai/internal/check, flai/internal/verify, flai/cmd, system-flow.yaml, design/system/flai-cli.md, design/conventions/testing.md, docs/users/flai.md, design/adrs, design/adrs/README.md, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go, docs/operators/settings.md, docs/users/flai-reference.md, design/system/project-manifest.md, design/conventions/code-quality.md, design/conventions/tooling.md, design/issues/I-0221-the-close-out-s-go-test-tier-runs-only-the-changed-packages-so-a-change-that-breaks-a-caller-package-s-tests-passes-before-review.md, design/issues/I-0203-a-story-the-operator-accepts-outside-the-merge-queue-lands-without-the-queue-tiers-so-a-stale-generated-file-on-main-fails-every-later-batch-at-integration.md, design/issues/summary.md, design/issues/I-0226-two-flai-serve-tests-check-before-what-they-wait-for-has-happened-and-fail-a-loaded-merge-queue-batch-on-timing.md, design/issues/I-0237-the-smoke-tier-s-openrouter-gateway-check-fails-on-a-402-because-the-operator-s.md, design/issues/I-0235-flai-check-finds-narrative-missing-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -49,7 +56,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 5618
+  seconds: 6325
   priced_by: harness
   turns:
     - day: 2026-10-31
@@ -57,25 +64,28 @@ usage:
       hand_edits: 3
       work: 69
     - day: 2026-11-01
-      work: 4
+      ceremony: 8
+      test_runs: 4
+      hand_edits: 2
+      work: 28
   models:
     - model: claude-opus-5-5
-      input: 460
-      output: 124468
-      cache_read: 34034803
-      cache_write: 1518016
-      cost: 19.4189
+      input: 600
+      output: 160718
+      cache_read: 53647838
+      cache_write: 2097301
+      cost: 28.4691
   strategic:
     - kind: orchestrator
-      seconds: 108
+      seconds: 143
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 39
-          output: 249
-          cache_read: 1095155
-          cache_write: 162725
-          cost: 0.2856
+          input: 59
+          output: 405
+          cache_read: 1648903
+          cache_write: 305280
+          cost: 0.4453
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 3h
@@ -100,7 +110,7 @@ The close-out's go-test tier runs only the changed packages, and ADR-0174 leaves
 ## Acceptance criteria
 - [x] The go-test tier's `{packages}` expands to the changed packages and the packages that import them, and a test shows a change that breaks a caller's tests fails the close-out
 - [x] A tier with `queue: true` runs in the close-out when a `when:` the manifest gives it matches the story's touches, and in the batch as today; the manifest schema, `flai check`, and the reference describe `when`
-- [ ] system-flow.yaml gives integration and smoke a `when` that reaches them from the flai and template paths, and I-0221 and I-0203 are closed by the story that proves it
+- [x] system-flow.yaml gives integration and smoke a `when` that reaches them from the flai and template paths, and I-0221 and I-0203 are closed by the story that proves it
 - [x] The testing convention, `flai-cli.md`, and the user docs say which tiers the close-out runs and which the batch repeats
 
 ## Tasks
@@ -127,7 +137,15 @@ The close-out at 9794966, 2026-10-31, with the merge queue able to batch:
 | integration | passed, 9m41.5s, "ran here, its when flai/** matches flai/internal/check/tests_test.go" |
 | smoke | failed, 2m55.2s, "ran here, its when flai/** matches flai/internal/check/tests_test.go" |
 
-Smoke failed only on `TestGatewayOpenRouter`. The OpenRouter key is out of credits and answered 402 (I-0237, TH-0789). Criterion 3 stays unticked until a close-out passes smoke.
+Smoke failed only on `TestGatewayOpenRouter`. The OpenRouter key is out of credits and answered 402 (I-0237, TH-0789).
+
+The close-out at 3b8598b, 2026-11-01, after the rebase onto S-0548, S-0546, S-0550, and S-0551, passed every step. It ran without the OpenRouter key, as the operator chose on TH-0789:
+
+| Tier | Result |
+|------|--------|
+| go-test | skipped, covered by integration |
+| integration | passed, 3m9.7s, "ran here, its when flai/** matches flai/internal/check/tests_test.go" |
+| smoke | passed, 33.7s, "ran here, its when flai/** matches flai/internal/check/tests_test.go" |
 
 ### Planning
 

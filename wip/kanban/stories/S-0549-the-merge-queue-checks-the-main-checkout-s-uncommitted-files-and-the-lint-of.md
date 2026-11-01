@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0031
 owner: alex
 created: 2026-10-30T01:52:13Z
-updated: 2026-10-31T09:47:53Z
+updated: 2026-11-01T23:42:13Z
 transitions:
   - to: ready
     at: 2026-10-31T07:24:09Z
@@ -17,16 +17,29 @@ transitions:
     by: alex
 tags: [flai]
 topics: [testing, git, cli, dashboard]
-touches: [flai/internal/serve, flai/internal/mergequeue, flai/internal/check, design/system/flai-cli.md, design/adrs, docs/users/flai.md, design/adrs/README.md, flai/cmd/accept_markdown.go, flai/internal/verify/findings.go, flai/internal/verify/findings_test.go, flaiover/src/lib/components/MergeQueue.svelte, flaiover/src/lib/components/MergeQueue.svelte.test.ts, design/components/flaiover/src/lib/components/MergeQueue.examples.json, design/system/flaiover-dashboard.md, docs/users/flaiover.md, docs/operators/index.md]
+touches: [flai/internal/serve, flai/internal/mergequeue, design/system/flai-cli.md, design/adrs, docs/users/flai.md, design/adrs/README.md, flai/cmd/accept_markdown.go, flai/internal/verify/findings.go, flai/internal/verify/findings_test.go, flaiover/src/lib/components/MergeQueue.svelte, flaiover/src/lib/components/MergeQueue.svelte.test.ts, design/components/flaiover/src/lib/components/MergeQueue.examples.json, design/system/flaiover-dashboard.md, docs/users/flaiover.md, docs/operators/index.md, flai/cmd/accept_batch_dirty.go, flai/cmd/accept_batch_dirty_test.go, flai/cmd/accept_fix_test.go, flai/cmd/accept_orchestrator_dirty_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1393
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-01
+      ceremony: 2
+      hand_edits: 1
+      work: 31
+  models:
+    - model: claude-opus-5-5
+      input: 218
+      output: 1071
+      cache_read: 13595419
+      cache_write: 463693
+      cost: 4.9219
   strategic:
     - kind: orchestrator
       seconds: 100

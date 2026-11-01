@@ -3,15 +3,36 @@ id: T-2382
 type: task
 nature: improvement
 title: The unfixed-markdown findings move from flai/cmd into flai/internal/verify, so the merge queue reports them as flai accept does
-status: backlog
+status: done
 parent: S-0549
 owner: alex
 created: 2026-10-31T07:40:40Z
-updated: 2026-10-31T07:40:40Z
-transitions: []
+updated: 2026-11-01T23:42:13Z
+transitions:
+  - to: ready
+    at: 2026-11-01T23:36:59Z
+    by: agent-S-0549
+  - to: in-progress
+    at: 2026-11-01T23:37:00Z
+    by: agent-S-0549
+  - to: done
+    at: 2026-11-01T23:42:13Z
+    by: agent-S-0549
 stream: S-0549
 tags: [flai]
-touches: [flai/cmd/accept_markdown.go, flai/internal/verify/findings.go, flai/internal/verify/findings_test.go]
+touches: [flai/cmd/accept_markdown.go, flai/internal/verify/findings.go, flai/internal/verify/findings_test.go, flai/cmd/accept_batch_dirty.go, flai/cmd/accept_batch_dirty_test.go, flai/cmd/accept_fix_test.go, flai/cmd/accept_orchestrator_dirty_test.go]
+usage:
+  source: log
+  seconds: 313
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 33
+      output: 179
+      cache_read: 1402294
+      cache_write: 82909
+      cost: 0.52
 ---
 # T-2382 The unfixed-markdown findings move from flai/cmd into flai/internal/verify, so the merge queue reports them as flai accept does
 

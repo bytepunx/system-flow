@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 67.6146
-accrued_seconds: 6620
-tasks_completed: 38
-last_run: 2026-11-01T10:50:37Z
+accrued_cost: 69.4925
+accrued_seconds: 7081
+tasks_completed: 39
+last_run: 2026-11-01T11:14:18Z
 ---
 
 # Curator activity
@@ -315,3 +315,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0396, D-0420, D-0446
 - Seconds: 232
 - Cost: 1.8139 USD, estimated
+
+### 2026-11-01T11:14:18Z
+
+- Summary: Wrote D-0447 (storygit cannot import issues, so `storygit.NewTrialJudge` takes a `storygit.Files` its caller builds with `issues.FilesIn`); merged none; absorbed none; `flai digest compact` compacted none. All 10 candidates came from S-0551, and the other 9 were plan progress or are already in ADR-0230.
+- Trigger: accepted S-0551
+- Items: D-0447
+- Seconds: 461
+- Cost: 1.8779 USD, estimated
