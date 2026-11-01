@@ -7,10 +7,13 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/verify"
 )
 
 // writeState writes data as the queue's state in cacheDir.
@@ -139,7 +142,7 @@ func TestAnUnheldStateLeavesTheHoldOut(t *testing.T) {
 		t.Fatal(err)
 	}
 	data, _ := os.ReadFile(StatePath(dir))
-	for _, name := range []string{"held", "batch", "dropped"} {
+	for _, name := range []string{"held", "preflight", "batch", "dropped"} {
 		if strings.Contains(string(data), name) {
 			t.Errorf("the state file has %s:\n%s", name, data)
 		}
@@ -344,5 +347,66 @@ func TestARefusalNamesEachReason(t *testing.T) {
 	}
 	if got := (&Refusal{Text: "nothing to remove"}).Error(); got != "nothing to remove" {
 		t.Errorf("refusal %q", got)
+	}
+}
+
+// ADR-0234: the preflight's hold is a field of its own, written and read back
+// with each finding, apart from the operator's hold: flai queue hold and
+// resume leave it as it is.
+func TestThePreflightHoldRoundTripsAndTheOperatorsHoldLeavesIt(t *testing.T) {
+	repo := project(t, "")
+	dir := repo.CacheDir()
+	open := &PreflightHold{Since: t0, Main: "c0ffee", Findings: []verify.FileFinding{
+		{Tier: "markdown", Checkout: verify.CheckoutMain, Path: "wip/notes/n.md", Line: 3, Column: 7, Level: "error", Rule: "MD051", Alias: "link-fragments", Message: "Link fragments should be valid"},
+	}}
+	if _, err := Update(dir, func(s *State) error { s.Preflight = open; return nil }); err != nil {
+		t.Fatal(err)
+	}
+	read := func() State {
+		t.Helper()
+		st, err := ReadState(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return st
+	}
+	if st := read(); !st.PreflightHeld() || !reflect.DeepEqual(st.Preflight, open) || st.Held {
+		t.Fatalf("read back %+v, want %+v and the operator's hold off", st.Preflight, open)
+	}
+	if ch, err := Hold(repo, "alex", t1); err != nil || !ch.Changed {
+		t.Fatalf("hold: %+v, %v", ch, err)
+	}
+	if st := read(); !st.Held || !reflect.DeepEqual(st.Preflight, open) {
+		t.Errorf("the operator's hold changed the preflight's: %+v", st.Preflight)
+	}
+	if ch, err := Resume(repo, "alex", t1); err != nil || !ch.Changed {
+		t.Fatalf("resume: %+v, %v", ch, err)
+	}
+	if st := read(); st.Held || !reflect.DeepEqual(st.Preflight, open) {
+		t.Errorf("flai queue resume cleared or changed the preflight's hold: %+v", st.Preflight)
+	}
+}
+
+// SetPreflightThread records the thread on the preflight's hold, and sets
+// nothing while the preflight does not hold the queue.
+func TestSetPreflightThread(t *testing.T) {
+	dir := t.TempDir()
+	if set, err := SetPreflightThread(dir, "TH-0001"); err != nil || set {
+		t.Errorf("set %v, %v with no hold; want nothing set", set, err)
+	}
+	if _, err := os.Stat(StatePath(dir)); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("a thread with no hold wrote the state: %v", err)
+	}
+	if _, err := Update(dir, func(s *State) error {
+		s.Preflight = &PreflightHold{Since: t0, Findings: []verify.FileFinding{{Path: "wip/notes/n.md", Rule: "MD051"}}}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if set, err := SetPreflightThread(dir, "TH-0001"); err != nil || !set {
+		t.Fatalf("set %v, %v; want the thread set", set, err)
+	}
+	if st, err := ReadState(dir); err != nil || st.Preflight == nil || st.Preflight.Thread != "TH-0001" {
+		t.Errorf("state %+v, %v; want the hold's thread TH-0001", st.Preflight, err)
 	}
 }

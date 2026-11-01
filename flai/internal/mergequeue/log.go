@@ -27,6 +27,13 @@ import (
 const (
 	// EventEnqueued is a story enqueued.
 	EventEnqueued = "enqueued"
+	// EventPreflightHeld is the queue held by the landing's preflight, or
+	// its findings changed while it held it (ADR-0234), with the files and
+	// rules they name.
+	EventPreflightHeld = "preflight_held"
+	// EventPreflightCleared is the preflight's hold cleared by a look that
+	// found main clean, with how long it held the queue.
+	EventPreflightCleared = "preflight_cleared"
 	// EventBatchBuilt is a batch built: its stories rebased, those whose
 	// rebase stopped left out, and its verification begun.
 	EventBatchBuilt = "batch_built"
@@ -48,7 +55,7 @@ const (
 )
 
 // eventKinds are the events of the log, in the order a write's lines are.
-var eventKinds = []string{EventEnqueued, EventBatchBuilt, EventVerified, EventBisected, EventStepVerified, EventLanded, EventSentBack, EventDequeued}
+var eventKinds = []string{EventEnqueued, EventPreflightHeld, EventPreflightCleared, EventBatchBuilt, EventVerified, EventBisected, EventStepVerified, EventLanded, EventSentBack, EventDequeued}
 
 // ReasonRemoved is the reason of a story dequeued with no outcome recorded
 // for it, as one taken out with flai queue remove.
@@ -56,15 +63,18 @@ const ReasonRemoved = "removed"
 
 // Event is one line of the merge queue's event log.
 type Event struct {
-	At      time.Time `json:"at"`                 // when it happened, UTC to the second
-	Event   string    `json:"event"`              // one of the Event constants
-	Batch   string    `json:"batch,omitempty"`    // the batch it is of, when one is
-	Stories []string  `json:"stories"`            // the stories it is on
-	By      string    `json:"by,omitempty"`       // who enqueued the story, on an enqueued line
-	Passed  *bool     `json:"passed,omitempty"`   // whether the batch or the step passed, on a verified or step_verified line
-	Step    int       `json:"step,omitempty"`     // the bisection step's number, from 1, on a step_verified line
-	LeftOut []string  `json:"left_out,omitempty"` // the stories left out, on a batch_built line
-	Reason  string    `json:"reason,omitempty"`   // why the story left, on a dequeued line
+	At      time.Time `json:"at"`                     // when it happened, UTC to the second
+	Event   string    `json:"event"`                  // one of the Event constants
+	Batch   string    `json:"batch,omitempty"`        // the batch it is of, when one is
+	Stories []string  `json:"stories"`                // the stories it is on
+	By      string    `json:"by,omitempty"`           // who enqueued the story, on an enqueued line
+	Passed  *bool     `json:"passed,omitempty"`       // whether the batch or the step passed, on a verified or step_verified line
+	Step    int       `json:"step,omitempty"`         // the bisection step's number, from 1, on a step_verified line
+	LeftOut []string  `json:"left_out,omitempty"`     // the stories left out, on a batch_built line
+	Reason  string    `json:"reason,omitempty"`       // why the story left, on a dequeued line
+	Files   []string  `json:"files,omitempty"`        // the files the findings name, sorted, on a preflight_held line
+	Rules   []string  `json:"rules,omitempty"`        // the rules the findings name, sorted, on a preflight_held line
+	HeldFor int64     `json:"held_seconds,omitempty"` // how long the preflight held the queue, in seconds, on a preflight_cleared line
 }
 
 // EventsPath is where the merge queue's event log is in the cache folder
@@ -83,6 +93,7 @@ func Events(before, after State, now time.Time) []Event {
 			out = append(out, Event{At: e.At, Event: EventEnqueued, Stories: []string{e.Story}, By: e.By})
 		}
 	}
+	out = append(out, preflightEvents(before.Preflight, after.Preflight, now)...)
 	out = append(out, batchEvents(before.Batch, after.Batch, now)...)
 	recorded := map[string]Outcome{}
 	var landed, sentBack []Event
@@ -116,6 +127,21 @@ func Events(before, after State, now time.Time) []Event {
 		out = append(out, ev)
 	}
 	return out
+}
+
+// preflightEvents are the events of the preflight's hold after, set against
+// prev, the hold before the write: held when it begins, at when it began,
+// or when its findings change, at now; cleared when it ends, at now.
+func preflightEvents(prev, hold *PreflightHold, now time.Time) []Event {
+	switch {
+	case hold != nil && prev == nil:
+		return []Event{{At: hold.Since, Event: EventPreflightHeld, Files: findingFiles(hold.Findings), Rules: findingRules(hold.Findings)}}
+	case hold != nil && !slices.Equal(prev.Findings, hold.Findings):
+		return []Event{{At: now, Event: EventPreflightHeld, Files: findingFiles(hold.Findings), Rules: findingRules(hold.Findings)}}
+	case hold == nil && prev != nil:
+		return []Event{{At: now, Event: EventPreflightCleared, HeldFor: int64(max(0, now.Sub(prev.Since).Round(time.Second).Seconds()))}}
+	}
+	return nil
 }
 
 // batchEvents are the events of the batch after, set against prev, the batch

@@ -100,6 +100,9 @@ type Deps struct {
 	// Verify verifies the built batch; nil is CheckoutVerifier with this
 	// flai's version.
 	Verify Verifier
+	// Preflight runs the landing's preflight on the main checkout before a
+	// batch is built (ADR-0234); nil is MainPreflight with Runner and Now.
+	Preflight Preflighter
 	// Log takes the batch's lifecycle; nil discards it.
 	Log *slog.Logger
 }
@@ -118,6 +121,14 @@ type Deps struct {
 // enqueued, so the next batch waits no longer for it. A batch with no
 // result and not dropped, as a flai serve stopped mid-run leaves it, and a
 // dropped one are replaced.
+//
+// Before it builds a batch it runs d.Preflight on the main checkout, and it
+// runs it on every call while the preflight holds the queue, whether or not
+// a batch would be built, so that the look that finds main clean clears the
+// hold (ADR-0234). On a finding it records or refreshes the hold in the
+// state, builds nothing, runs no tier, and reports false with no error; on
+// a clean run while held it clears the hold and goes on. A preflight that
+// could not run is its error, and builds nothing.
 //
 // It removes the last batch's worktree and branch, then builds the batch in
 // its own worktree, WorktreeName, on its own branch, from the main branch's
@@ -160,34 +171,56 @@ func RunBatch(ctx context.Context, d Deps, repo *workitem.Repo) (bool, error) {
 	if d.Log == nil {
 		d.Log = slog.New(slog.DiscardHandler)
 	}
+	if d.Preflight == nil {
+		d.Preflight = MainPreflight(d.Runner, d.Now, d.Log)
+	}
 	q, err := ComputeAt(d.Runner, repo, d.Now())
 	if err != nil {
 		return false, err
 	}
-	if q.Off || (q.Batch != nil && q.Batch.Result != nil && q.Batch.Dropped == nil) || len(enqueuedEligible(q)) == 0 {
+	if q.Off {
 		return false, nil
 	}
-	main, err := storygit.MainBranch(d.Runner, repo.MainRoot)
+	picks, main, base, err := toBuild(d, repo, q)
 	if err != nil {
-		return false, fmt.Errorf("build a merge queue batch: find the main branch it is built from: %w; check out the main branch in the main checkout", err)
-	}
-	base, err := d.Runner.Run(repo.MainRoot, "git", "rev-parse", "--verify", "--quiet", "refs/heads/"+main+"^{commit}")
-	if err != nil {
-		return false, fmt.Errorf("build a merge queue batch: read the head of %s: %w; check that git can read the main branch", main, err)
-	}
-	limit := repo.Manifest.BatchMax()
-	picks := pick(q, strings.TrimSpace(base), limit)
-	if len(picks) == 0 || window(picks, q.Enqueued, limit, repo.Manifest.MergeQueueCoalesce(), d.Now()) != nil {
-		return false, nil
+		return false, err
 	}
 	if err := ctx.Err(); err != nil {
 		return false, err
 	}
+	if clean, err := preflightLook(ctx, d, repo, len(picks) > 0); err != nil || !clean || len(picks) == 0 {
+		return false, err
+	}
 	now := d.Now().UTC()
-	b := &build{d: d, repo: repo, main: main, base: strings.TrimSpace(base), id: now.Format("20060102-150405")}
+	b := &build{d: d, repo: repo, main: main, base: base, id: now.Format("20060102-150405")}
 	b.branch = BranchPrefix + b.id
 	b.path = filepath.Join(repo.CacheDir(), "worktrees", WorktreeName)
 	return true, b.run(ctx, q.Batch, picks, now)
+}
+
+// toBuild is the batch RunBatch would build from q now: the stories to
+// batch, the main branch, and its head the batch is built on; no stories
+// while the state's batch has a result and is not dropped, no story is to be
+// batched, or the window they fill in has not ended.
+func toBuild(d Deps, repo *workitem.Repo, q Queue) ([]Entry, string, string, error) {
+	if (q.Batch != nil && q.Batch.Result != nil && q.Batch.Dropped == nil) || len(enqueuedEligible(q)) == 0 {
+		return nil, "", "", nil
+	}
+	main, err := storygit.MainBranch(d.Runner, repo.MainRoot)
+	if err != nil {
+		return nil, "", "", fmt.Errorf("build a merge queue batch: find the main branch it is built from: %w; check out the main branch in the main checkout", err)
+	}
+	base, err := d.Runner.Run(repo.MainRoot, "git", "rev-parse", "--verify", "--quiet", "refs/heads/"+main+"^{commit}")
+	if err != nil {
+		return nil, "", "", fmt.Errorf("build a merge queue batch: read the head of %s: %w; check that git can read the main branch", main, err)
+	}
+	base = strings.TrimSpace(base)
+	limit := repo.Manifest.BatchMax()
+	picks := pick(q, base, limit)
+	if len(picks) == 0 || window(picks, q.Enqueued, limit, repo.Manifest.MergeQueueCoalesce(), d.Now()) != nil {
+		return nil, "", "", nil
+	}
+	return picks, main, base, nil
 }
 
 // enqueuedEligible are q's stories enqueued, in the order they were, that

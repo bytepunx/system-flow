@@ -16,11 +16,13 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/filelock"
+	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // State is the merge queue's state file (ADR-0173): what is enqueued,
-// whether the queue is held, the batch under verification, and each story's
+// whether the queue is held, by the operator or by its preflight, the batch
+// under verification, and each story's
 // last outcome. Update is its only writer.
 type State struct {
 	// Enqueued are the stories enqueued, in the order they were.
@@ -30,10 +32,47 @@ type State struct {
 	Held   bool      `json:"held,omitempty"`
 	HeldBy string    `json:"held_by,omitempty"`
 	HeldAt time.Time `json:"held_at,omitzero"`
+	// Preflight is the hold of the landing's preflight on what it found on
+	// the main checkout (ADR-0234), apart from Held: flai queue hold and
+	// resume leave it, and the look that finds main clean clears it; nil
+	// while it does not hold the queue.
+	Preflight *PreflightHold `json:"preflight,omitempty"`
 	// Batch is the batch under verification; nil when there is none.
 	Batch *Batch `json:"batch,omitempty"`
 	// Outcomes are each story's last outcome, one per story.
 	Outcomes []Outcome `json:"outcomes"`
+}
+
+// PreflightHold is the queue held by the landing's preflight (ADR-0234):
+// when the hold began, in UTC, the main branch's head when the preflight
+// last found something, each finding, and the thread flai serve opened to
+// the operator for it.
+type PreflightHold struct {
+	Since time.Time `json:"since"`
+	Main  string    `json:"main,omitempty"`
+	// Findings are what holds the queue, each with its file, line, rule,
+	// and message, in the main checkout.
+	Findings []verify.FileFinding `json:"findings"`
+	// Thread is the ID of the one thread flai serve opens to the operator
+	// for the hold; "" until it is opened.
+	Thread string `json:"thread,omitempty"`
+}
+
+// PreflightHeld reports whether the landing's preflight holds the queue.
+func (s *State) PreflightHeld() bool { return s.Preflight != nil }
+
+// SetPreflightThread records thread as the thread opened for the preflight
+// hold in the queue's state in cacheDir, and reports false, changing
+// nothing, when the preflight does not hold the queue.
+func SetPreflightThread(cacheDir, thread string) (bool, error) {
+	set := false
+	_, err := Update(cacheDir, func(s *State) error {
+		if s.Preflight != nil {
+			s.Preflight.Thread, set = thread, true
+		}
+		return nil
+	})
+	return set, err
 }
 
 // Enqueued is a story enqueued: who enqueued it and when, in UTC, and, when

@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/verify"
 )
 
 // copyState is a deep copy of st, as Update keeps the state before a write.
@@ -404,5 +406,63 @@ func TestAnEventLogNotWrittenWarnsAndTheWriteStands(t *testing.T) {
 		if !strings.Contains(logged.String(), want) {
 			t.Errorf("the failed append's warning lacks %s: %s", want, logged.String())
 		}
+	}
+}
+
+// ADR-0234: the preflight's hold logs preflight_held when it begins, at when
+// it began, and again when its findings change, with the files and rules
+// they name; preflight_cleared when it clears, with how long it held; and
+// nothing when it stands as it was.
+func TestPreflightEventsOfAWrite(t *testing.T) {
+	since, now := t0, t0.Add(90*time.Minute)
+	note := verify.FileFinding{Tier: "markdown", Checkout: verify.CheckoutMain, Path: "wip/notes/n.md", Line: 3, Rule: "MD051", Message: "Link fragments should be valid"}
+	other := verify.FileFinding{Tier: PreflightCheckTier, Checkout: verify.CheckoutMain, Path: "system-flow.yaml", Line: 1, Rule: "manifest.roles", Message: "bad role"}
+	hold := func(fs ...verify.FileFinding) *PreflightHold {
+		return &PreflightHold{Since: since, Main: "c0ffee", Findings: fs}
+	}
+	cases := []struct {
+		name         string
+		before, open *PreflightHold
+		want         []Event
+	}{
+		{name: "begins", open: hold(note),
+			want: []Event{{At: since, Event: EventPreflightHeld, Files: []string{"wip/notes/n.md"}, Rules: []string{"MD051"}}}},
+		{name: "findings change", before: hold(note), open: hold(note, other),
+			want: []Event{{At: now, Event: EventPreflightHeld, Files: []string{"system-flow.yaml", "wip/notes/n.md"}, Rules: []string{"MD051", "manifest.roles"}}}},
+		{name: "stands as it was", before: hold(note), open: &PreflightHold{Since: since, Main: "beef", Findings: []verify.FileFinding{note}, Thread: "TH-0001"}},
+		{name: "clears", before: hold(note), want: []Event{{At: now, Event: EventPreflightCleared, HeldFor: 5400}}},
+		{name: "never held"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := Events(State{Preflight: tc.before}, State{Preflight: tc.open}, now)
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("events %+v, want %+v", got, tc.want)
+			}
+		})
+	}
+}
+
+// ADR-0234: the preflight's two events are appended through Update, the
+// state's only writer, and read back with their files, rules, and duration.
+func TestPreflightEventsAreAppendedAndReadBack(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), ".flai-cache")
+	since := time.Date(2026, 10, 19, 8, 0, 0, 0, time.UTC)
+	note := verify.FileFinding{Tier: "markdown", Checkout: verify.CheckoutMain, Path: "wip/notes/n.md", Line: 3, Rule: "MD051", Message: "Link fragments should be valid"}
+	for _, open := range []*PreflightHold{{Since: since, Main: "c0ffee", Findings: []verify.FileFinding{note}}, nil} {
+		if _, err := Update(dir, func(s *State) error { s.Preflight = open; return nil }); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got := eventLog(t, dir)
+	if len(got) != 2 {
+		t.Fatalf("events %+v, want preflight_held then preflight_cleared", got)
+	}
+	held := Event{At: since, Event: EventPreflightHeld, Stories: []string{}, Files: []string{"wip/notes/n.md"}, Rules: []string{"MD051"}}
+	if !reflect.DeepEqual(got[0], held) {
+		t.Errorf("held %+v, want %+v", got[0], held)
+	}
+	if got[1].Event != EventPreflightCleared || got[1].HeldFor <= 0 || len(got[1].Stories) != 0 {
+		t.Errorf("cleared %+v, want preflight_cleared on no story with how long it held", got[1])
 	}
 }

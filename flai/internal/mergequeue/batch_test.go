@@ -77,8 +77,9 @@ func deps(p *tierProc, at time.Time) Deps {
 
 // gitProject is a project in a real git repository, accepting locally, with
 // extra added to its manifest, and x.txt committed on main; wip and the
-// cache are ignored, as the items need not be committed. It skips under
-// -short.
+// cache are ignored, as the items need not be committed, and its layout's
+// docs folder is there, so that flai check, which the preflight runs, finds
+// no error. It skips under -short.
 func gitProject(t *testing.T, extra string) (*workitem.Repo, *tierProc) {
 	t.Helper()
 	if testing.Short() {
@@ -98,7 +99,7 @@ func gitProject(t *testing.T, extra string) (*workitem.Repo, *tierProc) {
 	runGit(t, root, "config", "commit.gpgsign", "false")
 	runGit(t, root, "add", "-A")
 	runGit(t, root, "commit", "-q", "-m", "init")
-	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents"} {
+	for _, d := range []string{"docs", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents"} {
 		if err := os.MkdirAll(filepath.Join(root, d), 0o755); err != nil {
 			t.Fatal(err)
 		}
@@ -1192,5 +1193,171 @@ func TestTheResultSummarisesTheVerification(t *testing.T) {
 	}
 	if r := result(verify.Report{Passed: true, Steps: []verify.Step{}}, nil, t1); r.Summary != "no tier selects the paths the batch changes" {
 		t.Errorf("empty result %+v", r)
+	}
+}
+
+// preflightEventsIn are the preflight's events of the log in cacheDir.
+func preflightEventsIn(t *testing.T, cacheDir string) []Event {
+	t.Helper()
+	var out []Event
+	for _, e := range eventLog(t, cacheDir) {
+		if e.Event == EventPreflightHeld || e.Event == EventPreflightCleared {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+// ADR-0234, S-0549 criterion 1: an uncommitted wip note of the main checkout
+// that breaks a markdown rule holds the queue with its file and rule: no
+// batch is built and no tier runs. The hold stands as it began while the
+// finding does, keeps its thread when the findings change, and the look that
+// finds main clean clears it, even with nothing to build.
+func TestAPreflightFindingHoldsTheQueueUntilALookFindsMainClean(t *testing.T) {
+	repo := project(t, "")
+	g := scriptedGit{}
+	g.script("main", "rev-parse", "--abbrev-ref", "HEAD")
+	g.script("c0ffee", "rev-parse", "--verify", "--quiet", "refs/heads/main^{commit}")
+	s, _ := story(t, repo, "Ready", []bool{true}, t0.Add(time.Hour))
+	passed(t, repo, g, s.ID, "aaaa")
+	enqueue(t, repo, s.ID)
+	note := verify.FileFinding{Tier: "markdown", Checkout: verify.CheckoutMain, Path: "wip/kanban/tasks/T-0009-a-note.md", Line: 7, Level: "error", Rule: "MD051", Alias: "link-fragments", Message: "Link fragments should be valid"}
+	findings := []verify.FileFinding{note}
+	looks, verified, at := 0, false, t1
+	var logs bytes.Buffer
+	d := Deps{Runner: g, Now: func() time.Time { return at }, Log: slog.New(slog.NewJSONHandler(&logs, nil)),
+		Verify: func(context.Context, string, string, string, []string, func(string)) (verify.Report, error) {
+			verified = true
+			return verify.Report{}, nil
+		},
+		Preflight: func(context.Context, *workitem.Repo) ([]verify.FileFinding, error) {
+			looks++
+			return slices.Clone(findings), nil
+		}}
+	warns := func() int { return strings.Count(logs.String(), `"level":"WARN"`) }
+
+	ran, st := runBatch(t, d, repo)
+	if ran || verified || looks != 1 || st.Batch != nil {
+		t.Fatalf("ran %v, verified %v, looks %d, batch %+v; want one look, no batch, and no tier run", ran, verified, looks, st.Batch)
+	}
+	want := &PreflightHold{Since: t1, Main: "c0ffee", Findings: []verify.FileFinding{note}}
+	if !reflect.DeepEqual(st.Preflight, want) {
+		t.Fatalf("hold %+v, want %+v", st.Preflight, want)
+	}
+	held := Event{At: t1, Event: EventPreflightHeld, Stories: []string{}, Files: []string{note.Path}, Rules: []string{"MD051"}}
+	if got := preflightEventsIn(t, repo.CacheDir()); !reflect.DeepEqual(got, []Event{held}) {
+		t.Errorf("events %+v, want %+v", got, held)
+	}
+	if warns() != 1 || !strings.Contains(logs.String(), note.Path) {
+		t.Errorf("logs %s; want one warning naming %s", logs.String(), note.Path)
+	}
+
+	// the same finding a look later: the hold stands as it began
+	at = t1.Add(time.Minute)
+	if ran, st = runBatch(t, d, repo); ran || verified || looks != 2 || !reflect.DeepEqual(st.Preflight, want) {
+		t.Fatalf("ran %v, verified %v, looks %d, hold %+v; want the hold as it began", ran, verified, looks, st.Preflight)
+	}
+	if got := preflightEventsIn(t, repo.CacheDir()); len(got) != 1 || warns() != 1 {
+		t.Errorf("events %+v, %d warnings; want no new event or warning for a hold that stands", got, warns())
+	}
+
+	// a finding more keeps when the hold began and its thread
+	if set, err := SetPreflightThread(repo.CacheDir(), "TH-0042"); err != nil || !set {
+		t.Fatalf("thread set %v, %v", set, err)
+	}
+	other := verify.FileFinding{Tier: PreflightCheckTier, Checkout: verify.CheckoutMain, Path: "system-flow.yaml", Line: 4, Level: "error", Rule: "manifest.roles", Message: "a role is not valid"}
+	findings, at = append(findings, other), t1.Add(2*time.Minute)
+	ran, st = runBatch(t, d, repo)
+	if ran || verified || st.Preflight == nil || !st.Preflight.Since.Equal(t1) || st.Preflight.Thread != "TH-0042" || len(st.Preflight.Findings) != 2 {
+		t.Fatalf("ran %v, verified %v, hold %+v; want both findings, since %s, on TH-0042", ran, verified, st.Preflight, t1)
+	}
+	if got := preflightEventsIn(t, repo.CacheDir()); len(got) != 2 || !slices.Equal(got[1].Files, []string{"system-flow.yaml", note.Path}) {
+		t.Errorf("events %+v; want a second preflight_held naming both files", got)
+	}
+
+	// nothing would be built, yet the look runs the preflight while held,
+	// and a clean main clears the hold
+	if _, err := Remove(repo, s.ID, "alex", at); err != nil {
+		t.Fatal(err)
+	}
+	findings, at = nil, t1.Add(3*time.Minute)
+	if ran, st = runBatch(t, d, repo); ran || verified || looks != 4 || st.Preflight != nil {
+		t.Fatalf("ran %v, verified %v, looks %d, hold %+v; want the hold cleared", ran, verified, looks, st.Preflight)
+	}
+	if got := preflightEventsIn(t, repo.CacheDir()); len(got) != 3 || got[2].Event != EventPreflightCleared {
+		t.Errorf("events %+v; want preflight_cleared last", got)
+	}
+
+	// not held, and nothing to build: no preflight runs
+	if ran, _ = runBatch(t, d, repo); ran || looks != 4 {
+		t.Errorf("ran %v, looks %d; want no preflight with nothing to build and no hold", ran, looks)
+	}
+}
+
+// A preflight that cannot run is RunBatch's error: it builds nothing, runs
+// no tier, and holds nothing.
+func TestAPreflightThatCannotRunBuildsAndHoldsNothing(t *testing.T) {
+	repo := project(t, "")
+	g := scriptedGit{}
+	g.script("main", "rev-parse", "--abbrev-ref", "HEAD")
+	g.script("c0ffee", "rev-parse", "--verify", "--quiet", "refs/heads/main^{commit}")
+	s, _ := story(t, repo, "Ready", []bool{true}, t0.Add(time.Hour))
+	passed(t, repo, g, s.ID, "aaaa")
+	enqueue(t, repo, s.ID)
+	verified := false
+	d := Deps{Runner: g, Now: func() time.Time { return t1 },
+		Verify: func(context.Context, string, string, string, []string, func(string)) (verify.Report, error) {
+			verified = true
+			return verify.Report{}, nil
+		},
+		Preflight: func(context.Context, *workitem.Repo) ([]verify.FileFinding, error) {
+			return nil, errors.New("run the merge queue's preflight: no git")
+		}}
+	ran, err := RunBatch(context.Background(), d, repo)
+	if ran || verified || err == nil || !strings.Contains(err.Error(), "no git") {
+		t.Fatalf("ran %v, verified %v, err %v; want the preflight's error and nothing built", ran, verified, err)
+	}
+	if st, err := ReadState(repo.CacheDir()); err != nil || st.Preflight != nil || st.Batch != nil {
+		t.Errorf("state %+v, %v; want no hold and no batch", st, err)
+	}
+}
+
+// ADR-0234, S-0549 criterion 1, end to end: the landing's preflight finds
+// the uncommitted wip note of the main checkout that breaks a markdown rule
+// its fix does not clear, and holds the queue with that file and rule: no
+// batch is built, no tier runs, and the scratch worktree is gone. Once the
+// note is fixed, the next look clears the hold and builds the batch.
+func TestAMainNoteThatBreaksAMarkdownRuleHoldsTheQueueUntilItIsFixed(t *testing.T) {
+	repo, proc := gitProject(t, markdownTier)
+	writeFile(t, repo.MainRoot, ".gitignore", ".flai-cache/\nwip/*\n!wip/notes/\n")
+	runGit(t, repo.MainRoot, "commit", "-q", "-am", "track the wip notes")
+	id, _ := readyStory(t, repo, "Alpha", t0.Add(time.Hour), "a.txt", "a\n")
+	enqueue(t, repo, id)
+	writeFile(t, repo.MainRoot, "wip/notes/n.md", "# A note\n\n[gone](#BAD)\n")
+
+	ran, st := runBatch(t, deps(proc, t1), repo)
+	if ran || st.Batch != nil || len(proc.ran) != 0 {
+		t.Fatalf("ran %v, batch %+v, tiers %v; want nothing built and no tier run", ran, st.Batch, proc.ran)
+	}
+	if st.Preflight == nil || len(st.Preflight.Findings) != 1 || st.Preflight.Findings[0].Path != "wip/notes/n.md" || st.Preflight.Findings[0].Rule != "MD051" {
+		t.Fatalf("hold %+v, want wip/notes/n.md and MD051", st.Preflight)
+	}
+	if _, err := os.Stat(filepath.Join(repo.CacheDir(), "worktrees", PreflightWorktreeName)); !os.IsNotExist(err) {
+		t.Errorf("the preflight's scratch worktree is still there: %v", err)
+	}
+
+	writeFile(t, repo.MainRoot, "wip/notes/n.md", "# A note\n")
+	ran, st = runBatch(t, deps(proc, t1.Add(time.Minute)), repo)
+	if !ran || st.Preflight != nil || st.Batch == nil || st.Batch.Result == nil || !st.Batch.Result.Passed || len(proc.ran) == 0 {
+		t.Fatalf("ran %v, hold %+v, batch %+v; want the hold cleared and the batch built and verified", ran, st.Preflight, st.Batch)
+	}
+	var kinds []string
+	for _, e := range eventLog(t, repo.CacheDir()) {
+		if e.Event != EventEnqueued {
+			kinds = append(kinds, e.Event)
+		}
+	}
+	if want := []string{EventPreflightHeld, EventPreflightCleared, EventBatchBuilt, EventVerified}; !slices.Equal(kinds, want) {
+		t.Errorf("events %v, want %v", kinds, want)
 	}
 }
