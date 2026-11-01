@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 61.0054
-accrued_seconds: 5908
-tasks_completed: 35
-last_run: 2026-10-31T09:15:34Z
+accrued_cost: 63.9256
+accrued_seconds: 6274
+tasks_completed: 36
+last_run: 2026-10-31T21:10:47Z
 ---
 
 # Curator activity
@@ -291,3 +291,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0400, D-0438, D-0439, D-0440, D-0441
 - Seconds: 577
 - Cost: 2.1251 USD, estimated
+
+### 2026-10-31T21:10:47Z
+
+- Summary: Wrote D-0443 (mcpserver tests that set a session variable run through `together`) and D-0444 (on this WSL2 host a dial to a closed port hangs, so tests dial a listener they opened and closed); merged S-0548 into D-0403, D-0413, D-0416 and D-0427; absorbed none, since no document states an active entry's fact; `flai digest compact` compacted none.
+- Trigger: accepted S-0548
+- Items: D-0334, D-0403, D-0413, D-0416, D-0427, D-0443, D-0444
+- Seconds: 366
+- Cost: 2.9202 USD, estimated

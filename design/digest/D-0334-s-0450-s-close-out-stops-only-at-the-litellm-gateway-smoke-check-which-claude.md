@@ -9,7 +9,7 @@ date: 2026-10-20
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-0789]
 ---
 
 # D-0334 S-0450's close-out stops only at the LiteLLM gateway smoke check, which Claude Code 2.1.296 fails outside this story: recommend a close-out with the gateway check skipped: Recommendation: set…

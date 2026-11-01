@@ -53,15 +53,15 @@ usage:
       cost: 19.5809
   strategic:
     - kind: orchestrator
-      seconds: 32
+      seconds: 48
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 12
-          output: 96
-          cache_read: 325795
-          cache_write: 48774
-          cost: 0.0851
+          input: 18
+          output: 124
+          cache_read: 458363
+          cache_write: 81196
+          cost: 0.1228
 ---
 # S-0552 Acceptances land only through the merge queue, and the queue waits a window to fill a batch, so one verification lands several stories and an acceptance by hand drops no batch
 
