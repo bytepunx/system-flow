@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0031
 owner: alex
 created: 2026-10-30T01:52:02Z
-updated: 2026-11-01T05:23:25Z
+updated: 2026-11-01T06:05:00Z
 transitions:
   - to: ready
     at: 2026-10-31T07:24:13Z
@@ -35,6 +35,9 @@ blocked:
     until: 2026-11-01T05:22:59Z
     reason: awaiting the operator on TH-0789
   - from: 2026-11-01T05:23:25Z
+    until: 2026-11-01T06:04:34Z
+    reason: awaiting the operator on TH-0789
+  - from: 2026-11-01T06:05:00Z
     reason: awaiting the operator on TH-0789
 tags: [flai]
 topics: [testing, cli]
@@ -46,7 +49,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 5608
+  seconds: 5618
   priced_by: harness
   turns:
     - day: 2026-10-31
@@ -54,14 +57,14 @@ usage:
       hand_edits: 3
       work: 69
     - day: 2026-11-01
-      work: 2
+      work: 4
   models:
     - model: claude-opus-5-5
-      input: 454
-      output: 123363
-      cache_read: 32748575
-      cache_write: 1504265
-      cost: 19.0295
+      input: 460
+      output: 124468
+      cache_read: 34034803
+      cache_write: 1518016
+      cost: 19.4189
   strategic:
     - kind: orchestrator
       seconds: 108

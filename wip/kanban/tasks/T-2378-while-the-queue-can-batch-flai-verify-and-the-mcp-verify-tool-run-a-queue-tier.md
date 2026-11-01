@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 66
-      output: 17940
-      cache_read: 4762409
-      cache_write: 218755
-      cost: 2.7673
+      input: 64
+      output: 17431
+      cache_read: 4766468
+      cache_write: 212593
+      cost: 2.7196
 ---
 # T-2378 While the queue can batch, flai verify and the MCP verify tool run a queue tier whose when matches the story's touches or changed paths, and leave the rest to the batch
 

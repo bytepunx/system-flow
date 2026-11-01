@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 56
-      output: 15307
-      cache_read: 4063381
-      cache_write: 186646
-      cost: 2.3611
+      input: 55
+      output: 14873
+      cache_read: 4066844
+      cache_write: 181389
+      cost: 2.3204
 ---
 # T-2380 The testing convention, flai-cli.md, the manifest design, and the user docs say which tiers the close-out runs and which the batch repeats
 

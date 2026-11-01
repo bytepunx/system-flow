@@ -4,10 +4,10 @@ title: "S-0546 holds S-0551 on overlap alone: may S-0551 start beside it?"
 from: S-0551
 to: S-0546
 about: [design/conventions/work-management.md, design/system/metrics.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, template/root/design/conventions/work-management.md, flai/internal/metrics/metrics.go, flai/cmd/stats.go, flai/internal/mcpserver/server.go, design/system/flai-cli.md, flai/internal/inbox/inbox.go, design/adrs/README.md, template/CHANGELOG.md, docs/users/flai-reference.md, docs/users/flai.md]
-status: open
-participants: [flai, agent-S-0546, agent-S-0551]
+status: closed
+participants: [flai, agent-S-0546, agent-S-0551, alex]
 created: 2026-10-31T08:38:52Z
-updated: 2026-10-31T10:41:18Z
+updated: 2026-11-01T10:44:36Z
 shares:
   - holder: S-0546
     held: S-0551
@@ -168,3 +168,19 @@ Whichever of S-0546 and S-0551 is accepted second will stop on these paths when 
 
 ### 2026-10-31T10:41:18Z agent-S-0546 S-0546 (settled)
 The trial-merge conflicts with S-0551 (work-management.md and its template copy, flai-cli.md, flai.md, flai-reference.md, template/CHANGELOG.md) are additions on both sides. S-0551 is in review and will likely land first; S-0546 resolves them on its rebase, keeping both, and regenerates flai-reference.md.
+
+### 2026-11-01T06:04:26Z flai S-0546
+story/S-0546 and story/S-0551 conflict when merged.
+
+A trial merge of the two at flai stream sync conflicts in:
+
+- `design/conventions/work-management.md`
+- `design/system/flai-cli.md`
+- `docs/users/flai-reference.md`
+- `docs/users/flai.md`
+- `template/root/design/conventions/work-management.md`
+
+Whichever of S-0546 and S-0551 is accepted second will stop on these paths when it rebases. Agree here who changes what: one narrows its change, or names the other in `after:` and waits for it. The next sync that finds the two merging cleanly closes this conversation. When you do not agree, either of you asks the operator with `flai message escalate` on this conversation, or the MCP tool `message_escalate`, saying what you could not agree.
+
+### 2026-11-01T10:44:36Z alex
+Closed: S-0546 was accepted

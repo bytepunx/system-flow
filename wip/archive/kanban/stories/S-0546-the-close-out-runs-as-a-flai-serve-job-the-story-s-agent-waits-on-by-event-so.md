@@ -3,11 +3,11 @@ id: S-0546
 type: story
 nature: improvement
 title: The close-out runs as a flai serve job the story's agent waits on by event, so it never dies at the harness's tool timeout and is never re-run from the start
-status: review
+status: done
 parent: E-0031
 owner: alex
 created: 2026-10-30T01:51:56Z
-updated: 2026-10-31T10:51:30Z
+updated: 2026-11-01T10:44:36Z
 transitions:
   - to: ready
     at: 2026-10-31T07:24:17Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-10-31T10:51:30Z
     by: agent-S-0546
+  - to: done
+    at: 2026-11-01T10:44:36Z
+    by: alex
 tags: [flai]
 topics: [testing, mcp, cli]
 touches: [flai/internal/serve, flai/internal/mcpserver, flai/cmd, scripts/close-out.sh, design/system/flai-cli.md, design/conventions/testing.md, docs/users/flai.md, design/adrs/README.md, design/system/metrics.md, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/serve.go, flai/internal/inbox/events.go, flai/internal/inbox/events_test.go, flai/internal/hostapi/writes.go, flai/cmd/serve_actions.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go, flai/internal/mcpserver/server.go, flai/internal/metrics/closeouts.go, flai/internal/metrics/closeouts_test.go, flai/internal/metrics/metrics.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, flai/cmd/stats.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, template/root/scripts/close-out.sh, docs/users/flai-reference.md, docs/operators/index.md, design/conventions/code-quality.md, design/conventions/delegation.md, design/conventions/work-management.md, template/root/design/conventions/code-quality.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/adrs/0229-the-close-out-runs-as-a-flai-serve-job-the-story-s-agent-asks-for-with-the.md, flai/internal/verify/record.go, flai/internal/verify/record_test.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, docs/operators/settings.md, flai/internal/closeout/closeout.go, flai/internal/closeout/closeout_test.go, design/issues/I-0240-flai-guard-still-lists-the-verify-mcp-tool-among-a-sub-agent-s-reads-though-it.md, design/issues/summary.md]

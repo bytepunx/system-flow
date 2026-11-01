@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 23
-      output: 6158
-      cache_read: 1634605
-      cache_write: 75084
-      cost: 0.9498
+      input: 22
+      output: 5983
+      cache_read: 1635998
+      cache_write: 72969
+      cost: 0.9334
 ---
 # T-2377 The go-test tier runs the changed packages and every package that imports them, and a test shows a change that breaks a caller's tests fails verify
 
