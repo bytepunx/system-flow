@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
@@ -470,7 +471,9 @@ func fakeServe(t *testing.T, root string, f *mergeForge, refused string) *[]serv
 					NewForge: func(string, string, forge.TokenFunc) (forge.Forge, error) { return f, nil }})
 			}
 			out, _ := json.Marshal(a)
-			_ = os.WriteFile(serve.MergeAnswerPath(repo, "S-0001"), out, 0o644)
+			// written whole, as flai serve writes it: accept polls for the
+			// answer, and a read of a half-written file is a JSON error
+			_ = atomicfile.WriteFile(serve.MergeAnswerPath(repo, "S-0001"), out, 0o644)
 		}
 	}()
 	t.Cleanup(func() {
