@@ -24,16 +24,16 @@ touches: [flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/internal/mcphttp/mcphttp.g
 after: [T-2151]
 usage:
   source: log
-  seconds: 1225
+  seconds: 1226
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 99
-      output: 480
-      cache_read: 5833252
-      cache_write: 156403
-      cost: 2.1099
+      input: 102
+      output: 32046
+      cache_read: 5951433
+      cache_write: 166431
+      cost: 2.7979
 ---
 # T-2160 FLAI_MCP_URL and FLAI_MCP_TOKEN hand a run the server and its token by environment, flai mcp token prints the one in force, and the log names the agent and never the token
 

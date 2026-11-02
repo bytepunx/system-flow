@@ -3,16 +3,37 @@ id: T-2167
 type: task
 nature: feature
 title: docs/users/flai.md, docs/operators/settings.md, docs/operators/index.md, and flai-cli.md describe mcp.bind, the two variables, and permission_prompt over HTTP
-status: backlog
+status: done
 parent: S-0506
 owner: alex
 created: 2026-10-26T04:50:15Z
-updated: 2026-10-31T07:59:24Z
-transitions: []
+updated: 2026-11-02T06:29:01Z
+transitions:
+  - to: ready
+    at: 2026-11-02T06:19:10Z
+    by: agent-S-0506
+  - to: in-progress
+    at: 2026-11-02T06:19:12Z
+    by: agent-S-0506
+  - to: done
+    at: 2026-11-02T06:29:01Z
+    by: agent-S-0506
 stream: S-0506
 tags: [cli, mcp]
 touches: [docs/users/flai.md, docs/operators/settings.md, docs/operators/index.md, design/system/flai-cli.md, docs/users/flai-reference.md]
 after: [T-2150, T-2152, T-2160, T-2418, T-2419]
+usage:
+  source: log
+  seconds: 589
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 102
+      output: 32033
+      cache_read: 5948911
+      cache_write: 166361
+      cost: 2.7967
 ---
 # T-2167 docs/users/flai.md, docs/operators/settings.md, docs/operators/index.md, and flai-cli.md describe mcp.bind, the two variables, and permission_prompt over HTTP
 

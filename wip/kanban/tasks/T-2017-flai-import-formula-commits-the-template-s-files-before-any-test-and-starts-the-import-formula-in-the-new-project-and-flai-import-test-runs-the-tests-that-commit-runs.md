@@ -23,16 +23,16 @@ tags: [cli]
 touches: [flai/cmd/import.go, flai/cmd/import_commit.go, flai/cmd/import_test.go, flai/cmd/import_commit_test.go, docs/users/flai-reference.md, docs/operators/settings.md]
 usage:
   source: log
-  seconds: 978
+  seconds: 1006
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 78
-      output: 445
-      cache_read: 3306033
-      cache_write: 225785
-      cost: 1.2441
+      input: 84
+      output: 476
+      cache_read: 3696835
+      cache_write: 239972
+      cost: 1.3876
 ---
 # T-2017 flai import --formula commits the template's files before any test and starts the import formula in the new project, and flai import test runs the tests that --commit runs
 

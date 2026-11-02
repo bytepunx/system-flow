@@ -24,16 +24,16 @@ touches: [flai/cmd/serve_settings.go, flai/cmd/serve_settings_test.go, flai/cmd/
 after: [T-2152]
 usage:
   source: log
-  seconds: 1220
+  seconds: 1247
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 79
-      output: 393
-      cache_read: 3129240
-      cache_write: 97725
-      cost: 1.1368
+      input: 60
+      output: 18737
+      cache_read: 3479789
+      cache_write: 97312
+      cost: 1.6359
 ---
 # T-2418 flai serve settings prints the host settings the dashboard's settings.get gives, its mcp block naming the bind address flai serve mcp sets
 

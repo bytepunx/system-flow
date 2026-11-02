@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 918
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 106
-      output: 588
-      cache_read: 4671748
-      cache_write: 131384
-      cost: 1.692
+      input: 82
+      output: 25698
+      cache_read: 4772506
+      cache_write: 133463
+      cost: 2.2437
 ---
 # T-2151 An ADR settles permission_prompt over HTTP under the auto-approve host action for an agent flai serve started, and the HTTP server follows it
 

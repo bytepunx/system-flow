@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1957.1639
-accrued_seconds: 1504959
-tasks_completed: 1698
-last_run: 2026-11-02T05:49:40Z
+accrued_cost: 1957.8273
+accrued_seconds: 1505063
+tasks_completed: 1701
+last_run: 2026-11-02T06:35:23Z
 ---
 
 # Orchestrator activity
@@ -11915,6 +11915,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 33
 - Cost: 0.2076 USD, estimated
 
+### 2026-11-02T06:06:14Z
+
+- Summary: release-due S-0516: did not publish. Policy judgement (count 1, value 40 USD/week, nothing in held_by_epic). I judge S-0516 complete (five tasks done, landed via the merge queue at 0920284). The publish formula's evaluate step would stop it: `flai release --evaluate --require-met` exits 2 under judgement, checked just now. flai 1.80.2 is installed, and release_publish refuses while a publish formula exists. So I started no instance. TH-0811 already asks the operator for a release policy the formula can meet, and nothing it depends on has changed. S-0516 stays pending until then.
+- Items: S-0516
+- Seconds: 46
+- Cost: 0.1313 USD, estimated
+
+### 2026-11-02T06:06:29Z
+
+- Summary: I didn't publish S-0516: there is currently no way to publish anything under this project's release policy.
+- Items: none
+- Seconds: 15
+- Cost: 0.1548 USD, estimated
+
+### 2026-11-02T06:35:23Z
+
+- Summary: Finalized S-0540 under finalize_drafts: flai promote --drafts lists it complete (rank 3, throughput); its plan was approved and TH-0736 resolved; forecast 1h30m, value 180 USD/week from flai cod. S-0406 and S-0412, also complete, stay drafts on TH-0532 and TH-0533 for the operator.
+- Items: S-0540
+- Seconds: 43
+- Cost: 0.3773 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -12265,4 +12286,14 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-11-02T05:31:06Z
 
 - Call: `git tag --sort=-creatordate`
+- Needs: none
+
+### 2026-11-02T06:05:38Z
+
+- Call: `git tag --sort=-creatordate`
+- Needs: none
+
+### 2026-11-02T06:35:41Z
+
+- Call: `flai order --by throughput --apply 2>&1`
 - Needs: none

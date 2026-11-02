@@ -32,7 +32,7 @@ usage:
       output: 254
       cache_read: 1614966
       cache_write: 131329
-      cost: 0.6151
+      cost: 0.6155
 ---
 # T-2016 A scheduled formula may declare inputs that all carry a default, and the template test passes over a formula's input placeholders
 

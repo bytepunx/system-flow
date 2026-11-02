@@ -3,11 +3,11 @@ id: S-0506
 type: story
 nature: feature
 title: "flai's HTTP MCP server serves an agent in a container as the stdio server serves one on the host: every tool, permission_prompt under auto-approve for an agent flai serve started, and a listener a container reaches"
-status: in-progress
+status: done
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:42:51Z
-updated: 2026-11-02T05:56:15Z
+updated: 2026-11-02T06:36:10Z
 transitions:
   - to: ready
     at: 2026-11-02T05:13:28Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-11-02T05:14:09Z
     by: agent-S-0506
+  - to: review
+    at: 2026-11-02T06:34:05Z
+    by: agent-S-0506
+  - to: done
+    at: 2026-11-02T06:36:10Z
+    by: orchestrator
 tags: [cli, mcp]
 topics: [harness, docker, mcp]
-touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/mcphttp/mcphttp.go, flai/internal/mcphttp/mcphttp_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/cmd/mcp_http_test.go, flai/cmd/host.go, flai/cmd/host_test.go, flai/cmd/serve_mcp.go, flai/cmd/serve_mcp_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, design/adrs/README.md, design/adrs, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, docs/operators/index.md, design/system/flai-cli.md, flai/cmd/serve.go, flai/cmd/serve_settings.go, flai/cmd/serve_settings_test.go, flai/internal/mcpserver/work.go, flai/internal/mcpserver/timing.go, design/issues/I-0228-claude-code-drops-any-call-to-flai-s-http-mcp-server-that-answers-after-60-seconds-so-wait-for-events-wait-for-work-verify-and-a-slow-task-done-fail-for-an-agent-in-a-container.md, design/issues/summary.md, flai/cmd/mcp_http_permission_test.go, flai/internal/guard/hostconfig.go, flai/internal/guard/hostconfig_test.go, flai/cmd/cmd_test.go, flai/cmd/mcp_token_env_test.go]
+touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/mcphttp/mcphttp.go, flai/internal/mcphttp/mcphttp_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/cmd/mcp_http_test.go, flai/cmd/host.go, flai/cmd/host_test.go, flai/cmd/serve_mcp.go, flai/cmd/serve_mcp_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, design/adrs/README.md, design/adrs, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, docs/operators/index.md, design/system/flai-cli.md, flai/cmd/serve.go, flai/cmd/serve_settings.go, flai/cmd/serve_settings_test.go, flai/internal/mcpserver/work.go, flai/internal/mcpserver/timing.go, design/issues/I-0228-claude-code-drops-any-call-to-flai-s-http-mcp-server-that-answers-after-60-seconds-so-wait-for-events-wait-for-work-verify-and-a-slow-task-done-fail-for-an-agent-in-a-container.md, design/issues/summary.md, flai/cmd/mcp_http_permission_test.go, flai/internal/guard/hostconfig.go, flai/internal/guard/hostconfig_test.go, flai/cmd/cmd_test.go, flai/cmd/mcp_token_env_test.go, design/issues/I-0252-testservesaystheflaiisolderthantheproject-fails-under-load-project-info-is.md, flai/internal/mcpserver/timing_test.go]
 after: [S-0505]
 agent:
   harness: claude-code
@@ -26,21 +32,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2528
-  estimated: true
-  priced_by: estimate
+  seconds: 4812
+  priced_by: harness
   turns:
     - day: 2026-11-02
-      ceremony: 1
-      hand_edits: 1
-      work: 37
+      ceremony: 2
+      hand_edits: 3
+      work: 59
   models:
     - model: claude-opus-5-5
-      input: 514
-      output: 2582
-      cache_read: 26076542
-      cache_write: 849383
-      cost: 9.485
+      input: 746
+      output: 233658
+      cache_read: 43393615
+      cache_write: 1213497
+      cost: 20.4003
   strategic:
     - kind: planner
       seconds: 296
@@ -84,11 +89,11 @@ An agent in a container reaches flai only through the HTTP MCP server `flai host
 
 ## Acceptance criteria
 
-- [ ] A test compares the tool names the stdio server and the HTTP server register for the same agent and fails on any difference, and every tool the spike found missing or failing over HTTP, from the issues S-0505 filed, answers over HTTP as it does on stdio, `task_done`, `stream_sync`, `permission_prompt`, and `wait_for_events` among them
+- [x] A test compares the tool names the stdio server and the HTTP server register for the same agent and fails on any difference, and every tool the spike found missing or failing over HTTP, from the issues S-0505 filed, answers over HTTP as it does on stdio, `task_done`, `stream_sync`, `permission_prompt`, and `wait_for_events` among them
 - [x] An ADR settles whether `permission_prompt` over HTTP honours the `auto-approve` host action for an agent `flai serve` started and named, as the stdio server does, while the dashboard token still cannot grant it, and the HTTP server behaves as the ADR says, with a test for an agent flai serve started and one it did not
-- [ ] `flai host` starts each project's `flai mcp http` on an address containers reach when the host setting `flai serve mcp` says so, loopback by default: `flai serve mcp bind <address>` sets it, `flai serve settings` shows it, a container on the default bridge reaches the listener through Docker's host gateway, and the listener still refuses a request with an `Origin` header and one without the bearer token
-- [ ] `flai mcp token` and the server accept a token `flai serve` hands a run by environment as `FLAI_MCP_TOKEN`, with the URL as `FLAI_MCP_URL`, so that the container adapter can pass both without writing either into an image, a start request, or argv, and the server's log names the agent from `X-Flai-Agent`, never the token
-- [ ] `docs/users/flai.md` § MCP over HTTP, `docs/operators/settings.md` (the new setting and the two variables, so `settings_doc_test` passes), `docs/operators/index.md`, and `design/system/flai-cli.md` describe the setting, the variables, and the behaviour the ADR settles
+- [x] `flai host` starts each project's `flai mcp http` on an address containers reach when the host setting `flai serve mcp` says so, loopback by default: `flai serve mcp bind <address>` sets it, `flai serve settings` shows it, a container on the default bridge reaches the listener through Docker's host gateway, and the listener still refuses a request with an `Origin` header and one without the bearer token
+- [x] `flai mcp token` and the server accept a token `flai serve` hands a run by environment as `FLAI_MCP_TOKEN`, with the URL as `FLAI_MCP_URL`, so that the container adapter can pass both without writing either into an image, a start request, or argv, and the server's log names the agent from `X-Flai-Agent`, never the token
+- [x] `docs/users/flai.md` § MCP over HTTP, `docs/operators/settings.md` (the new setting and the two variables, so `settings_doc_test` passes), `docs/operators/index.md`, and `design/system/flai-cli.md` describe the setting, the variables, and the behaviour the ADR settles
 
 ## Tasks
 - T-2150 A test compares the tool names the stdio and HTTP servers register for one agent, and every tool the spike found missing over HTTP is registered there
@@ -129,3 +134,20 @@ The folder `design/adrs` is kept from the layout. `flai adr new` in T-2151 and T
 Forecast. `flai forecast S-0506` gives 1h12m: a median of 110 s per unit over 101 done feature stories on claude-opus-5-5 in the large band, times size 39 (5 criteria, 34 touches). That puts delivery at 2026-10-31T17:47Z, 15th in the pull order. The forecast is raised to 2h, up from the 1h30m kept on 2026-10-26, because the story now has seven tasks. Two of them write an ADR, the changes span five packages (cmd, config, mcpserver, mcphttp, serve), and one step checks by hand that a container reaches the listener. The band's median comes from stories whose touches are mostly documents. The delivery written, 2026-10-31T18:35Z, is flai's playout plus the 48m the raise adds.
 
 Cost of delay. `flai cod S-0506` gives 33.33 USD a week, written as flai gives it. That is the story's share of E-0029's `penalty_per_week` of 150 USD, which the operator set on TH-0657. The share goes by forecast duration: 2h of 9h over the epic's four open stories without inputs. The story has no inputs of its own and needs none, since it delivers for the epic alone.
+
+### Delivery
+
+- Criterion 1 names `stream_sync`, which is no MCP tool on either transport: `task_done` runs the sync as one of its steps, and the parity test calls `task_done` over both. No `stream_sync` tool was added.
+- Criterion 3's container check was made by hand on this WSL2 host with Docker Desktop 29.7.2. On the loopback default and on `0.0.0.0`, a container on the default bridge reached the server through `host.docker.internal`: 200 with the token, 401 without it, 403 with an `Origin` header.
+
+### Accepted by the orchestrator
+
+- Verified: e8bbf3e954a9ae7ffe9f6944b69f800d7a097c12
+- At: 2026-11-02T06:36:10Z
+
+Verdict: meets all criteria (verified at e8bbf3e954a9ae7ffe9f6944b69f800d7a097c12)
+- 1: flai/cmd/mcp_http_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/work.go, flai/internal/mcpserver/timing_test.go
+- 2: design/adrs/0243-over-http-permission-prompt-honours-the-auto-approve-host-action-only-for-the.md, design/adrs/README.md, flai/cmd/mcp_http.go, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/cmd/mcp_http_permission_test.go
+- 3: flai/cmd/serve_actions.go, flai/internal/config/config.go, flai/cmd/serve_mcp.go, flai/cmd/host.go, flai/cmd/serve_settings.go, flai/cmd/serve_settings_test.go, flai/internal/guard/hostconfig.go, flai/internal/mcphttp/mcphttp.go
+- 4: flai/cmd/mcp_http.go, flai/cmd/mcp.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/mcphttp/mcphttp.go, flai/cmd/mcp_token_env_test.go, flai/internal/mcphttp/mcphttp_test.go
+- 5: docs/users/flai.md, docs/operators/settings.md, docs/operators/index.md, design/system/flai-cli.md, docs/users/flai-reference.md

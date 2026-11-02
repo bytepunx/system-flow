@@ -3,16 +3,37 @@ id: T-2419
 type: task
 nature: remediation
 title: wait_for_events and wait_for_work over HTTP answer within 45 seconds, below Claude Code's 60-second tool-call timeout, as an ADR refining ADR-0215 settles, and I-0228 says what is left
-status: backlog
+status: done
 parent: S-0506
 owner: alex
 created: 2026-10-31T07:59:10Z
-updated: 2026-10-31T07:59:10Z
-transitions: []
+updated: 2026-11-02T06:18:34Z
+transitions:
+  - to: ready
+    at: 2026-11-02T06:04:52Z
+    by: agent-S-0506
+  - to: in-progress
+    at: 2026-11-02T06:04:54Z
+    by: agent-S-0506
+  - to: done
+    at: 2026-11-02T06:18:34Z
+    by: agent-S-0506
 stream: S-0506
 tags: [cli, mcp]
-touches: [flai/cmd/mcp_http.go, flai/cmd/mcp_http_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/work.go, flai/internal/mcpserver/timing.go, design/adrs/README.md, docs/users/flai.md, design/issues/I-0228-claude-code-drops-any-call-to-flai-s-http-mcp-server-that-answers-after-60-seconds-so-wait-for-events-wait-for-work-verify-and-a-slow-task-done-fail-for-an-agent-in-a-container.md, design/issues/summary.md]
+touches: [flai/cmd/mcp_http.go, flai/cmd/mcp_http_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/work.go, flai/internal/mcpserver/timing.go, design/adrs/README.md, docs/users/flai.md, design/issues/I-0228-claude-code-drops-any-call-to-flai-s-http-mcp-server-that-answers-after-60-seconds-so-wait-for-events-wait-for-work-verify-and-a-slow-task-done-fail-for-an-agent-in-a-container.md, design/issues/summary.md, design/adrs/0244-over-http-one-wait-for-events-or-wait-for-work-call-holds-at-most-the-45.md, flai/internal/mcpserver/timing_test.go, flai/internal/mcpserver/folder.go]
 after: [T-2150, T-2160]
+usage:
+  source: log
+  seconds: 820
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 77
+      output: 24096
+      cache_read: 4475041
+      cache_write: 125144
+      cost: 2.1038
 ---
 # T-2419 wait_for_events and wait_for_work over HTTP answer within 45 seconds, below Claude Code's 60-second tool-call timeout, as an ADR refining ADR-0215 settles, and I-0228 says what is left
 

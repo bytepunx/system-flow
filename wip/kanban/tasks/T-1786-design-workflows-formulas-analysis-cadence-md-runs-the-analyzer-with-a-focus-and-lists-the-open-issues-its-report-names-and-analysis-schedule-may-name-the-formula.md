@@ -3,11 +3,11 @@ id: T-1786
 type: task
 nature: improvement
 title: design/workflows/formulas/analysis-cadence.md runs the analyzer with a focus and lists the open issues its report names, and analysis.schedule may name the formula
-status: in-progress
+status: done
 parent: S-0424
 owner: alex
 created: 2026-10-16T05:48:59Z
-updated: 2026-11-02T05:52:07Z
+updated: 2026-11-02T06:19:54Z
 transitions:
   - to: ready
     at: 2026-11-02T05:52:06Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-02T05:52:07Z
     by: agent-S-0424
+  - to: done
+    at: 2026-11-02T06:19:54Z
+    by: agent-S-0424
 stream: S-0424
 tags: [cli, template]
 touches: [design/workflows/formulas/analysis-cadence.md, template/root/design/workflows/formulas/analysis-cadence.md, flai/internal/serve/analysis_schedule.go, flai/internal/serve/analysis_schedule_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, template/template.yaml, flai/cmd/issue.go, flai/cmd/issue_test.go, docs/users/flai-reference.md, docs/operators/settings.md, flai/internal/check/check.go, flai/internal/check/formulas_test.go]
 after: [T-2016]
+usage:
+  source: log
+  seconds: 1667
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 196
+      output: 1029
+      cache_read: 13096549
+      cache_write: 384834
+      cost: 4.7515
 ---
 # T-1786 design/workflows/formulas/analysis-cadence.md runs the analyzer with a focus and lists the open issues its report names, and analysis.schedule may name the formula
 

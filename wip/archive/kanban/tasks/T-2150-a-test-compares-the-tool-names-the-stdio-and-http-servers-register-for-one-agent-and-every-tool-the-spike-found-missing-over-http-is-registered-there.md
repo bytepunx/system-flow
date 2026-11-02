@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 929
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 73
-      output: 306
-      cache_read: 3334586
-      cache_write: 142336
-      cost: 1.2248
+      input: 59
+      output: 18602
+      cache_read: 3454747
+      cache_write: 96612
+      cost: 1.6242
 ---
 # T-2150 A test compares the tool names the stdio and HTTP servers register for one agent, and every tool the spike found missing over HTTP is registered there
 

@@ -3,11 +3,17 @@ id: S-0540
 type: story
 nature: remediation
 title: flai test's go-test tier runs the mcpserver package with -race into go test's 10-minute default timeout on a loaded host, and names only the package, so a story that changes mcpserver cannot pass its tests
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-29T05:59:43Z
-updated: 2026-11-02T06:04:42Z
-transitions: []
+updated: 2026-11-02T06:35:44Z
+transitions:
+  - to: ready
+    at: 2026-11-02T06:35:35Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-11-02T06:35:44Z
+    by: agent-S-0540
 tags: [flai, testing]
 topics: [cli, go]
 touches: [flai/internal/verify/gotest.go, flai/internal/verify/parse_test.go, flai/internal/verify/testdata/go-test-timeout.json, design/system/project-manifest.md, system-flow.yaml, flai/internal/verify/select_test.go, design/conventions/tooling.md, flai/internal/mcpserver/prime_test.go, design/issues/I-0227-flai-test-s-go-test-tier-runs-the-mcpserver-package-with-race-into-go-test-s-10-minute-default-timeout-on-a-loaded-host-and-names-only-the-package-so-a-story-that-changes-mcpserver-cannot-pass-its-tests.md, design/issues/summary.md]
@@ -22,16 +28,21 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 1091
+      seconds: 1134
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 132
-          output: 2088
-          cache_read: 32802783
-          cache_write: 130548
-          cost: 7.2644
-draft: true
+          input: 148
+          output: 2183
+          cache_read: 33397064
+          cache_write: 243858
+          cost: 7.4302
+        - model: claude-sonnet-5-5
+          input: 14
+          output: 84
+          cache_read: 246774
+          cache_write: 55782
+          cost: 0.2115
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1h12m
@@ -46,6 +57,9 @@ forecast:
   basis: "Its own forecast of 1h30m; 16th in the pull order with an in-progress limit of 5, behind S-0424, S-0506, S-0518, S-0554, S-0425, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0508, S-0509, S-0510, S-0517, S-0520 and S-0241."
   by: flai
   at: 2026-11-02T06:04:42Z
+finalized:
+  by: orchestrator
+  at: 2026-11-02T06:35:14Z
 ---
 # S-0540 flai test's go-test tier runs the mcpserver package with -race into go test's 10-minute default timeout on a loaded host, and names only the package, so a story that changes mcpserver cannot pass its tests
 

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1004
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 131
-      output: 666
-      cache_read: 7101489
-      cache_write: 137880
-      cost: 2.5501
+      input: 124
+      output: 38733
+      cache_read: 7193181
+      cache_write: 201156
+      cost: 3.3817
 ---
 # T-2152 flai serve mcp bind sets the address flai host gives each project's MCP server, loopback by default, and a container on the bridge reaches it through the host gateway
 
