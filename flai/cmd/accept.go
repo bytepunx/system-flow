@@ -1056,7 +1056,12 @@ func (a *app) acceptance(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 			// its Notes, and finishing it writes none (ADR-0189)
 			return opts, none, nil
 		}
-		return preview.AcceptOptions{}, none, fmt.Errorf("rule: the orchestrator's acceptance of %s needs its evidence: --evidence <file> or -, a Verdict: line and one - <n>: <files> item per criterion (ADR-0093)", it.ID)
+		item := "- <n>: <files>"
+		if it.Formula != "" {
+			// a formula's instance is evidenced by its steps' tasks (S-0422)
+			item = "- <n>: T-nnnn done"
+		}
+		return preview.AcceptOptions{}, none, fmt.Errorf("rule: the orchestrator's acceptance of %s needs its evidence: --evidence <file> or -, a Verdict: line and one %s item per criterion (ADR-0093)", it.ID, item)
 	}
 	text, err := a.readEvidence(o)
 	if err != nil {

@@ -22,10 +22,11 @@ import (
 // (ADR-0176), every acceptance criterion is ticked, every file the branch
 // changes is under the story's touches, no
 // thread on the story or its tasks is open, and the orchestrator's evidence,
-// when given, names for each criterion a file the branch changes; and the
-// branch changes no path Claude Code protects, which the operator alone
-// accepts (ADR-0106). Each failing condition is a blocker of the preview,
-// beside those of any acceptance.
+// when given, names for each criterion a file the branch changes, or, for a
+// formula's instance, whose steps may change nothing, the done task of the
+// criterion's step (S-0422); and the branch changes no path Claude Code
+// protects, which the operator alone accepts (ADR-0106). Each failing
+// condition is a blocker of the preview, beside those of any acceptance.
 
 // Codes of the blockers an acceptance by the orchestrator adds.
 const (
@@ -35,7 +36,7 @@ const (
 	BlockOutsideTouches       = "outside_touches"       // the branch changes a file under none of the touches
 	BlockThreadOpen           = "thread_open"           // a thread on the story or a task is not resolved
 	BlockOwnThreadOpen        = "own_thread_open"       // a thread the orchestrator opened and alone wrote on is not resolved (ADR-0189)
-	BlockCriterionUnevidenced = "criterion_unevidenced" // the evidence names no changed file for a criterion
+	BlockCriterionUnevidenced = "criterion_unevidenced" // the evidence names no changed file for a criterion, or, for a formula's instance, no done task of its step
 	BlockProtectedPaths       = "protected_paths"       // the branch changes a path Claude Code protects, which the operator accepts (ADR-0106)
 )
 
@@ -92,6 +93,9 @@ var (
 	verdictLine  = regexp.MustCompile(`^\s*Verdict:(.*)$`)
 	criterionRow = regexp.MustCompile(`^\s*[-*]\s+(\d+):(.*)$`)
 	quoted       = regexp.MustCompile("`([^`]+)`")
+	// stepDone is a formula instance's evidence for a criterion: the task of
+	// its step and its done transition, "T-nnnn done" (S-0422)
+	stepDone = regexp.MustCompile("^`?([Tt]-\\d+)`?\\s+done\\b")
 )
 
 // ParseEvidence reads an orchestrator's evidence: one "Verdict: <verdict>"
@@ -228,12 +232,15 @@ func orchestratorBlockers(r execx.Runner, repo *workitem.Repo, it *workitem.Item
 	// orchestrator opened and nobody else wrote on is its own blocker, the
 	// orchestrator's to resolve (ADR-0189)
 	ids := []string{it.ID}
-	if items, err := repo.List(false); err != nil {
-		add(BlockThreadOpen, "cannot list the tasks of %s to check their threads: %v", it.ID, err)
+	tasks := map[string]*workitem.Item{}
+	items, listErr := repo.List(false)
+	if listErr != nil {
+		add(BlockThreadOpen, "cannot list the tasks of %s to check their threads: %v", it.ID, listErr)
 	} else {
 		for _, x := range items {
 			if x.Type == workitem.Task && workitem.CanonicalID(x.Parent) == it.ID {
 				ids = append(ids, x.ID)
+				tasks[x.ID] = x
 			}
 		}
 	}
@@ -257,8 +264,16 @@ func orchestratorBlockers(r execx.Runner, repo *workitem.Repo, it *workitem.Item
 		}
 	}
 
-	// 5. the evidence, when given, names a changed file for every criterion
-	if opts.Evidence != nil && diff != nil {
+	// 5. the evidence, when given, names a changed file for every criterion;
+	// for a formula's instance, whose steps may change no file, the task of
+	// the criterion's step, done (S-0422)
+	switch {
+	case opts.Evidence == nil:
+	case it.Formula != "" && listErr != nil:
+		add(BlockCriterionUnevidenced, "cannot list the tasks of %s to check the evidence against its steps: %v", it.ID, listErr)
+	case it.Formula != "":
+		blockers = append(blockers, stepsUndone(it, criteria, opts.Evidence, tasks)...)
+	case diff != nil:
 		blockers = append(blockers, unevidenced(criteria, opts.Evidence, changed)...)
 	}
 
@@ -330,6 +345,55 @@ func unevidenced(criteria []itemedit.Criterion, ev *Evidence, changed []string) 
 				named = strings.Join(byN[c.N], ", ")
 			}
 			out = append(out, Blocker{Code: BlockCriterionUnevidenced, Message: fmt.Sprintf("the evidence for acceptance criterion %d (%s) names no file the branch changes (it names %s), so it cannot be checked against the diff", c.N, c.Text, named)})
+		}
+	}
+	return out
+}
+
+// stepsUndone is a blocker for each criterion of it, a formula's instance,
+// that the evidence has no item for, whose item names no task's done
+// transition, "- <n>: T-nnnn done", or names one that is not a task of it in
+// tasks or is not done: a step's evidence is its task's done transition, not
+// a changed file, since a step may change nothing (S-0422).
+func stepsUndone(it *workitem.Item, criteria []itemedit.Criterion, ev *Evidence, tasks map[string]*workitem.Item) []Blocker {
+	said := evidenceItems(ev.Text)
+	var out []Blocker
+	block := func(format string, args ...any) {
+		out = append(out, Blocker{Code: BlockCriterionUnevidenced, Message: fmt.Sprintf(format, args...)})
+	}
+	for _, c := range criteria {
+		text, listed := said[c.N]
+		if !listed {
+			block("the evidence has no item for acceptance criterion %d (%s): %s is an instance of formula %s, so add \"- %d: T-nnnn done\" naming the task of its step", c.N, c.Text, it.ID, it.Formula, c.N)
+			continue
+		}
+		m := stepDone.FindStringSubmatch(text)
+		if m == nil {
+			block("the evidence for acceptance criterion %d (%s) names no task's done transition (it says %q): %s is an instance of formula %s, so write \"- %d: T-nnnn done\" naming the task of its step", c.N, c.Text, text, it.ID, it.Formula, c.N)
+			continue
+		}
+		id := workitem.CanonicalID(m[1])
+		switch task := tasks[id]; {
+		case task == nil:
+			block("the evidence for acceptance criterion %d (%s) names %s, which is not a task of %s", c.N, c.Text, id, it.ID)
+		case task.Status != workitem.Done:
+			block("the evidence for acceptance criterion %d (%s) names %s, which is %s, not done: its step has not passed", c.N, c.Text, id, task.Status)
+		}
+	}
+	return out
+}
+
+// evidenceItems is the text of each criterion's list item in an evidence,
+// "- <n>: <text>", trimmed, by criterion number.
+func evidenceItems(text string) map[int]string {
+	out := map[int]string{}
+	for _, line := range strings.Split(text, "\n") {
+		m := criterionRow.FindStringSubmatch(strings.TrimRight(line, "\r"))
+		if m == nil {
+			continue
+		}
+		if n, err := strconv.Atoi(m[1]); err == nil {
+			out[n] = strings.TrimSpace(m[2])
 		}
 	}
 	return out

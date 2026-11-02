@@ -5,13 +5,16 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/forge"
+	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -288,6 +291,102 @@ func TestTheQueueTiersGateNeverOpensUnread(t *testing.T) {
 		res := gate(c.git)
 		if !strings.HasPrefix(res.QueueTiersWhy, c.why) || res.QueueTiersBlocker == nil || len(res.Blockers) != 1 || !strings.Contains(res.Blockers[0], c.why) {
 			t.Errorf("%s: why %q, blockers %q; want %q", name, res.QueueTiersWhy, res.Blockers, c.why)
+		}
+	}
+}
+
+// S-0422 criterion 4: a story whose branch changes nothing beyond main is
+// accepted as any story, formula or not: its preview names no blocker for the
+// empty diff. Under the orchestrator, an ordinary story's evidence is still
+// the files its branch changes, which an empty branch has none of, while a
+// formula's instance's is the done task of each step.
+func TestAStoryWhoseBranchChangesNothingIsAccepted(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	at := time.Date(2026, 11, 2, 3, 0, 0, 0, time.UTC)
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	repo, s := forgeRepo(t, "local", at)
+	r := execx.System{}
+	git := func(args ...string) string {
+		t.Helper()
+		out, err := r.Run(repo.MainRoot, "git", args...)
+		if err != nil {
+			t.Fatalf("git %v: %v %s", args, err, out)
+		}
+		return strings.TrimSpace(out)
+	}
+	if err := os.WriteFile(filepath.Join(repo.MainRoot, ".gitignore"), []byte(".flai-cache/\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{{"init", "-q", "-b", "main"}, {"config", "user.email", "t@t"}, {"config", "user.name", "t"}, {"add", "-A"}, {"commit", "-q", "-m", "init"}, {"branch", "story/" + s.ID}} {
+		git(args...)
+	}
+	head := git("rev-parse", "story/"+s.ID)
+
+	res, err := AcceptWith(r, repo, s, "alex", at, log, AcceptOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Blockers) != 0 || res.Branch != "story/"+s.ID {
+		t.Errorf("a story whose branch changes nothing is accepted: branch %q, blockers %q", res.Branch, res.Blockers)
+	}
+
+	ev, err := ParseEvidence("Verdict: pass\n- 1: `cli/feature.go`")
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err = AcceptWith(r, repo, s, "orchestrator", at, log, AcceptOptions{Orchestrator: true, Verified: head, Evidence: ev})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b := res.OrchestratorBlockers; len(b) != 1 || b[0].Code != BlockCriterionUnevidenced || !strings.Contains(b[0].Message, "names no file the branch changes (it names cli/feature.go)") {
+		t.Errorf("an ordinary story's evidence is still its changed files: %+v", b)
+	}
+
+	s.Formula = "weekly-check"
+	if err := repo.Save(s); err != nil {
+		t.Fatal(err)
+	}
+	if ev, err = ParseEvidence("Verdict: pass\n- 1: T-0001 done"); err != nil {
+		t.Fatal(err)
+	}
+	for by, opts := range map[string]AcceptOptions{"alex": {}, "orchestrator": {Orchestrator: true, Verified: head, Evidence: ev}} {
+		if res, err = AcceptWith(r, repo, s, by, at, log, opts); err != nil {
+			t.Fatal(err)
+		}
+		if len(res.Blockers) != 0 || len(res.OrchestratorBlockers) != 0 {
+			t.Errorf("an instance whose branch changes nothing is accepted by %s, on its steps' tasks: %q", by, res.Blockers)
+		}
+	}
+}
+
+// S-0422 criterion 4: an instance's criterion is blocked unless its item
+// names a task of the instance, in any zero padding, that is done.
+func TestStepsUndoneNamesEachCriterionWhoseTaskIsNotDone(t *testing.T) {
+	it := &workitem.Item{ID: "S-0001", Type: workitem.Story, Formula: "weekly-check"}
+	tasks := map[string]*workitem.Item{
+		"T-0001": {ID: "T-0001", Type: workitem.Task, Status: workitem.Done},
+		"T-0002": {ID: "T-0002", Type: workitem.Task, Status: workitem.InProgress},
+	}
+	ev, err := ParseEvidence("Verdict: pass\n- 1: T-0001 done, exit 0\n- 2: `T-2` done\n- 3: T-0009 done\n- 4: `a.go`\n- 6: `T-1` done")
+	if err != nil {
+		t.Fatal(err)
+	}
+	criteria := []itemedit.Criterion{{N: 1, Text: "one"}, {N: 2, Text: "two"}, {N: 3, Text: "three"}, {N: 4, Text: "four"}, {N: 5, Text: "five"}, {N: 6, Text: "six"}}
+	got := stepsUndone(it, criteria, ev, tasks)
+	want := []string{
+		"criterion 2 (two) names T-0002, which is in-progress, not done",
+		"criterion 3 (three) names T-0009, which is not a task of S-0001",
+		"criterion 4 (four) names no task's done transition (it says \"`a.go`\")",
+		"no item for acceptance criterion 5 (five)",
+	}
+	if len(got) != len(want) {
+		t.Fatalf("blockers = %+v, want %d", got, len(want))
+	}
+	for i, says := range want {
+		if got[i].Code != BlockCriterionUnevidenced || !strings.Contains(got[i].Message, says) {
+			t.Errorf("blocker %d = %+v, want %s saying %q", i, got[i], BlockCriterionUnevidenced, says)
 		}
 	}
 }
