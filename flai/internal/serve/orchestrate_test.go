@@ -208,10 +208,14 @@ func TestAnEndedOrchestratorIsStartedAgainOnlyForAReason(t *testing.T) {
 	if failed.Outcome != OutcomeFailed || failed.Exit == nil || *failed.Exit != 3 || failed.Why != "ended (exit 3)" {
 		t.Fatalf("second = %+v, want failed with exit 3", failed)
 	}
-	// the failed run gives its reason back, to wait for the next (ADR-0209 §5)
-	if q := lab.o.Dir.reasonQueue(lab.root); len(q.Reasons) != 1 || q.Reasons[0].ID != "S-0001" || len(q.Taken) != 0 {
-		t.Errorf("the failed run did not give its reason back: %+v", q)
-	}
+	// the failed run gives its reason back, to wait for the next (ADR-0209 §5);
+	// the end is recorded before the reasons are settled, so the give-back
+	// is waited for as the end was
+	var q reasonQueue
+	waitFor(t, "the failed run gave its reason back", func() bool {
+		q = lab.o.Dir.reasonQueue(lab.root)
+		return len(q.Reasons) == 1 && q.Reasons[0].ID == "S-0001" && len(q.Taken) == 0
+	})
 	// the looks around the retry take their time from the recorded end, which
 	// is to the second, not from the host's clock, so neither depends on how
 	// long the host took to get there (I-0106)
