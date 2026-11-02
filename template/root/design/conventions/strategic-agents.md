@@ -1,6 +1,5 @@
 ---
 title: Strategic agents
-<<<<<<< HEAD
 updated: 2026-11-02
 audience: agent
 order: 140
