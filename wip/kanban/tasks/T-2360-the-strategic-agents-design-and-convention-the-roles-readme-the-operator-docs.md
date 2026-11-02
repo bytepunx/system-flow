@@ -24,16 +24,16 @@ touches: [design/system/strategic-agents.md, design/system/flai-cli.md, design/c
 after: [T-2357, T-2359]
 usage:
   source: log
-  seconds: 626
+  seconds: 634
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 176
-      output: 991
-      cache_read: 13155748
-      cache_write: 198494
-      cost: 4.7288
+      input: 165
+      output: 62209
+      cache_read: 13278157
+      cache_write: 266360
+      cost: 5.4816
 ---
 # T-2360 The strategic-agents design and convention, the roles README, the operator docs, flai-cli.md, and the changelog say a built-in role's start prompt and triggers are read from its file
 

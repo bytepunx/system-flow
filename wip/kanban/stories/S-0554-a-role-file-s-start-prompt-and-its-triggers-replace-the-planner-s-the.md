@@ -3,11 +3,11 @@ id: S-0554
 type: story
 nature: feature
 title: A role file's start prompt and its triggers replace the planner's, the orchestrator's, the analyzer's, and the curator's start prompts and schedules in Go, so the built-in roles are defined by their files alone
-status: in-progress
+status: review
 parent: E-0024
 owner: alex
 created: 2026-10-30T20:45:40Z
-updated: 2026-11-02T21:38:20Z
+updated: 2026-11-02T21:50:33Z
 transitions:
   - to: ready
     at: 2026-11-01T23:44:13Z
@@ -15,9 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-11-02T20:33:32Z
     by: agent-S-0554
+  - to: review
+    at: 2026-11-02T21:50:33Z
+    by: agent-S-0554
 tags: [cli, template]
 topics: [cli, orchestration, planning, template, conventions]
-touches: [design/adrs, design/adrs/README.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, design/workflows/roles/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/analyzer.md, design/workflows/roles/curator.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/analyzer.md, template/root/design/workflows/roles/curator.md, flai/internal/roles/baseline/planner.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/roles/baseline/analyzer.md, flai/internal/roles/baseline/curator.md, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/roles/start.go, flai/internal/roles/start_test.go, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/replan.go, flai/internal/serve/role_events.go, flai/internal/serve/role_events_test.go, flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go, flai/internal/serve/analysis_schedule.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/serve.go, docs/operators/index.md, template/CHANGELOG.md, flai/internal/roles/definition.go, flai/internal/roles/definition_test.go, flai/internal/harness/adapters.go, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/planner_triggers_test.go, docs/users/flai.md, flai/internal/serve/builtin_triggers_test.go, design/issues/I-0262-flai-serve-does-not-start-a-defined-role-that-takes-items-on-a-schedule-entry.md, design/issues/summary.md]
+touches: [design/adrs, design/adrs/README.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, design/workflows/roles/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/analyzer.md, design/workflows/roles/curator.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/analyzer.md, template/root/design/workflows/roles/curator.md, flai/internal/roles/baseline/planner.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/roles/baseline/analyzer.md, flai/internal/roles/baseline/curator.md, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/roles/start.go, flai/internal/roles/start_test.go, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/replan.go, flai/internal/serve/role_events.go, flai/internal/serve/role_events_test.go, flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go, flai/internal/serve/analysis_schedule.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/serve.go, docs/operators/index.md, template/CHANGELOG.md, flai/internal/roles/definition.go, flai/internal/roles/definition_test.go, flai/internal/harness/adapters.go, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/planner_triggers_test.go, docs/users/flai.md, flai/internal/serve/builtin_triggers_test.go, design/issues/I-0262-flai-serve-does-not-start-a-defined-role-that-takes-items-on-a-schedule-entry.md, design/issues/summary.md, flai/cmd/new_test.go]
 after: [S-0553]
 agent:
   harness: claude-code
@@ -26,21 +29,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3852
-  estimated: true
-  priced_by: estimate
+  seconds: 4634
+  priced_by: harness
   turns:
     - day: 2026-11-02
-      ceremony: 4
-      hand_edits: 1
-      work: 76
+      ceremony: 5
+      hand_edits: 2
+      work: 106
   models:
     - model: claude-opus-5-5
-      input: 664
-      output: 3872
-      cache_read: 46577673
-      cache_write: 1138189
-      cost: 16.8966
+      input: 742
+      output: 279515
+      cache_read: 59661004
+      cache_write: 1196799
+      cost: 24.6299
   strategic:
     - kind: orchestrator
       seconds: 108

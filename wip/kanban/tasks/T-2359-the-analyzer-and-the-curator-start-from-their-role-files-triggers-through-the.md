@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 599
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 78
-      output: 522
-      cache_read: 7238898
-      cache_write: 119191
-      cost: 2.6055
+      input: 91
+      output: 34277
+      cache_read: 7316148
+      cache_write: 146762
+      cost: 3.0203
 ---
 # T-2359 The analyzer and the curator start from their role files' triggers through the same launchers, in place of the analysis and digest schedulers' own rules
 

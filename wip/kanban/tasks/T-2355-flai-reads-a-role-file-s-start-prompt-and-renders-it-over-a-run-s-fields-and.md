@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 840
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 37
-      output: 159
-      cache_read: 1855323
-      cache_write: 123250
-      cost: 0.7006
+      input: 24
+      output: 9217
+      cache_read: 1967309
+      cache_write: 39464
+      cost: 0.8122
 ---
 # T-2355 flai reads a role file's start prompt and renders it over a run's fields, and flai check reports one that does not parse or names an unknown field
 

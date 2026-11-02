@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1005
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 133
-      output: 721
-      cache_read: 8895425
-      cache_write: 188967
-      cost: 3.2169
+      input: 112
+      output: 42318
+      cache_read: 9032645
+      cache_write: 181195
+      cost: 3.729
 ---
 # T-2358 The planner starts from its role file's triggers through the event and schedule launchers, which take an item-taking built-in role, in place of the replanner's own triggers
 

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 124
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 16
-      output: 121
-      cache_read: 1611712
-      cache_write: 13631
-      cost: 0.5755
+      input: 20
+      output: 7571
+      cache_read: 1616077
+      cache_write: 32418
+      cost: 0.6672
 ---
 # T-2354 An ADR refining ADR-0207 § 4 settles a role file's start prompt as data and the built-in roles' triggers read from their files
 

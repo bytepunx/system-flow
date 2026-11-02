@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 841
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 63
-      output: 363
-      cache_read: 2966375
-      cache_write: 117533
-      cost: 1.0921
+      input: 38
+      output: 14366
+      cache_read: 3066357
+      cache_write: 61511
+      cost: 1.2659
 ---
 # T-2356 The trigger conditions stale-figures, replan-agent, and each-ready-story are implemented in flai/internal/roles/conditions.go
 
