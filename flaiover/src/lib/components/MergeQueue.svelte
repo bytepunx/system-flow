@@ -82,7 +82,31 @@
 		stories: string[] | null;
 		batch_max: number;
 	};
-	/** The merge queue as board.get carries it (S-0398, mergequeue.Queue), held or not (S-0399). */
+	/** One finding of the landing's preflight on the main checkout (verify.FileFinding): its file, line, rule, and message. */
+	export type PreflightFinding = {
+		tier: string;
+		checkout: string;
+		story?: string;
+		path: string;
+		line?: number;
+		column?: number;
+		level?: string;
+		rule?: string;
+		alias?: string;
+		message: string;
+	};
+	/**
+	 * The queue held by the landing's preflight (S-0549, ADR-0234, mergequeue.PreflightHold): when the
+	 * hold began, main's head, what holds it, and the one thread flai serve opened to the operator for
+	 * it, once it has. Apart from held: resuming the queue does not clear it; main found clean does.
+	 */
+	export type QueuePreflight = {
+		since: string;
+		main?: string;
+		findings: PreflightFinding[] | null;
+		thread?: string;
+	};
+	/** The merge queue as board.get carries it (S-0398, mergequeue.Queue), held or not (S-0399), and held by the preflight (S-0549). */
 	export type MergeQueueState = {
 		mode: string;
 		off?: boolean;
@@ -96,6 +120,7 @@
 		held?: boolean;
 		held_by?: string;
 		held_at?: string;
+		preflight?: QueuePreflight;
 	};
 	/** A write to the queue refused (mergequeue.Refusal): flai's sentence, and every reason a story is not eligible. */
 	export type QueueRefusal = { text: string; reasons: QueueReason[] };
@@ -177,7 +202,10 @@
 	// story whose change would overwrite the main checkout's uncommitted files is held back until they
 	// are clean, and the panel names it, its files, and the command that frees them (S-0402). While
 	// no batch is under way and the next one waits out merge_queue.coalesce, the panel says when that
-	// window ends and how full the batch is, in place of No batch (S-0552).
+	// window ends and how full the batch is, in place of No batch (S-0552). While the landing's
+	// preflight holds the queue, the panel says since when, each file with its findings, and the
+	// thread to the operator (S-0549).
+	import { resolve } from '$app/paths';
 	import { api } from '$lib/api';
 	import { localTime } from '$lib/localtime';
 
@@ -196,6 +224,16 @@
 	const eligible = $derived(queue?.eligible ?? []);
 	const ineligible = $derived(queue?.ineligible ?? []);
 	const batch = $derived(queue?.batch);
+	// The preflight's findings by file, in the order flai gives them.
+	const preflightFiles = $derived.by(() => {
+		const files: { path: string; findings: PreflightFinding[] }[] = [];
+		for (const f of queue?.preflight?.findings ?? []) {
+			const file = files.find((g) => g.path === f.path);
+			if (file) file.findings.push(f);
+			else files.push({ path: f.path, findings: [f] });
+		}
+		return files;
+	});
 
 	// Each mark's colour; its words carry its meaning.
 	const markTone: Record<BatchMark, string> = {
@@ -318,6 +356,43 @@
 				Held by {queue.held_by}{queue.held_at ? ` at ${localTime(queue.held_at)}` : ''}: no batch is
 				built until it is resumed.
 			</p>
+		{/if}
+		{#if queue.preflight}
+			{@const pf = queue.preflight}
+			<div class="mt-1" data-testid="merge-queue-preflight">
+				<p class="font-semibold text-warn">
+					Held by the preflight since {localTime(pf.since)}: the landing would fail on the main
+					checkout's files below, so no batch is built until main is clean. The queue changes none
+					of them; fix them, and the next look builds the batch.
+				</p>
+				<ul class="mt-1 space-y-1">
+					{#each preflightFiles as f (f.path)}
+						<li data-path={f.path} data-testid="merge-queue-preflight-file">
+							<span class="font-mono break-all text-ink">{f.path}</span>
+							<ul class="mt-0.5 space-y-0.5 pl-2">
+								{#each f.findings as x, i (i)}
+									<li data-testid="merge-queue-preflight-finding">
+										{x.line ? `line ${x.line}: ` : ''}{#if x.rule}<span class="font-mono text-ink"
+												>{x.rule}</span
+											>{/if}{x.rule ? ` ${x.message}` : x.message}
+									</li>
+								{/each}
+							</ul>
+						</li>
+					{/each}
+				</ul>
+				{#if pf.thread}
+					<p class="mt-1" data-testid="merge-queue-preflight-thread">
+						Thread to the operator:
+						<!-- eslint-disable svelte/no-navigation-without-resolve -- the page is resolve()d; the rule does not follow the thread added to it -->
+						<a
+							class="font-mono underline"
+							href={resolve('/threads') + `?thread=${encodeURIComponent(pf.thread)}`}>{pf.thread}</a
+						>.
+						<!-- eslint-enable svelte/no-navigation-without-resolve -->
+					</p>
+				{/if}
+			</div>
 		{/if}
 		{#if enabled === false}
 			<p class="mt-1" data-testid="merge-queue-disabled">

@@ -66,12 +66,18 @@ type Queue struct {
 	Held   bool      `json:"held,omitempty"`
 	HeldBy string    `json:"held_by,omitempty"`
 	HeldAt time.Time `json:"held_at,omitzero"`
+	// Preflight is the hold of the landing's preflight, as the state has
+	// it (ADR-0234): when it began, each finding on the main checkout with
+	// its file, line, rule, and message, and the thread flai serve opened
+	// for it; nil while the preflight does not hold the queue.
+	Preflight *PreflightHold `json:"preflight,omitempty"`
 	// Window is the window the next batch fills in before it is built
-	// (S-0552): set only while the queue is not held, no batch is under
-	// way or the last one has a result and was dropped, so that the next
-	// is built in its place, stories are enqueued and eligible, fewer than
-	// merge_queue.batch_max, merge_queue.coalesce is more than zero, and
-	// the window has not ended; nil otherwise.
+	// (S-0552): set only while the queue is not held, by the operator or
+	// the preflight, no batch is under way or the last one has a result
+	// and was dropped, so that the next is built in its place, stories are
+	// enqueued and eligible, fewer than merge_queue.batch_max,
+	// merge_queue.coalesce is more than zero, and the window has not
+	// ended; nil otherwise.
 	Window *Window `json:"window,omitempty"`
 }
 
@@ -186,6 +192,7 @@ func ComputeAt(r execx.Runner, repo *workitem.Repo, now time.Time) (Queue, error
 	}
 	q.Enqueued, q.Batch, q.Outcomes = st.Enqueued, st.Batch, st.Outcomes
 	q.Held, q.HeldBy, q.HeldAt = st.Held, st.HeldBy, st.HeldAt
+	q.Preflight = st.Preflight
 	items, err := repo.List(false)
 	if err != nil {
 		return q, fmt.Errorf("list the items to find the stories in review for the merge queue: %w; fix the item file it names", err)
@@ -239,13 +246,13 @@ func ComputeAt(r execx.Runner, repo *workitem.Repo, now time.Time) (Queue, error
 }
 
 // filling is the window q's next batch fills in at now, as RunBatch would
-// pick it from the main branch's head: nil while the queue is held, a batch
-// is under way or waits to be landed or bisected, the queue has no window
-// to wait out, or the main branch's head cannot be read. It reads git only
-// when stories are enqueued and eligible and merge_queue.coalesce is more
-// than zero.
+// pick it from the main branch's head: nil while the queue is held, by the
+// operator or the preflight, a batch is under way or waits to be landed or
+// bisected, the queue has no window to wait out, or the main branch's head
+// cannot be read. It reads git only when stories are enqueued and eligible
+// and merge_queue.coalesce is more than zero.
 func filling(r execx.Runner, repo *workitem.Repo, q Queue, now time.Time) *Window {
-	if q.Held || (q.Batch != nil && (q.Batch.Result == nil || q.Batch.Dropped == nil)) {
+	if q.Held || q.Preflight != nil || (q.Batch != nil && (q.Batch.Result == nil || q.Batch.Dropped == nil)) {
 		return nil
 	}
 	coalesce := repo.Manifest.MergeQueueCoalesce()

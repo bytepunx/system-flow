@@ -2,7 +2,7 @@
 // its hold switch, and the batch's step, result, and drop; S-0400: a red batch's bisection, and
 // what each batched story comes to in the batch; S-0402: a story the main checkout's uncommitted
 // files hold back, with its files and the command that frees them; S-0552: the coalesce window the
-// next batch fills in.
+// next batch fills in; S-0549: the landing's preflight's hold, with its files, findings, and thread.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import MergeQueue, {
@@ -425,6 +425,76 @@ describe('MergeQueue', () => {
 		expect(text('merge-queue-held')).toMatch(
 			/^Held by alex at 2026-10-1\d \d\d:\d\d .+: no batch is built until it is resumed\.$/
 		);
+	});
+
+	it('says the preflight holds the queue until main is clean, with each file, its findings, and the thread (S-0549)', () => {
+		const since = '2026-11-01T08:00:00Z';
+		const finding = {
+			tier: 'lint',
+			checkout: 'main',
+			path: 'wip/kanban/tasks/T-0001-a.md',
+			line: 12,
+			level: 'error',
+			rule: 'MD051',
+			alias: 'link-fragments',
+			message: 'Link fragments should be valid'
+		};
+		render({
+			...running,
+			held: true,
+			held_by: 'alex',
+			held_at: '2026-11-01T07:00:00Z',
+			preflight: {
+				since,
+				main: 'abc',
+				findings: [
+					finding,
+					{ ...finding, line: 20, rule: 'MD009', message: 'Trailing spaces' },
+					{ tier: 'flai-check', checkout: 'main', path: 'design/b.md', message: 'broken link' }
+				],
+				thread: 'TH-0042'
+			}
+		});
+		expect(text('merge-queue-held')).toMatch(/^Held by alex/);
+		const hold = el('merge-queue-preflight')!;
+		expect(hold.querySelector('p')!.className).toContain('text-warn');
+		expect(hold.querySelector('p')!.textContent!.replace(/\s+/g, ' ').trim()).toBe(
+			`Held by the preflight since ${localTime(since)}: the landing would fail on the main checkout's files below, so no batch is built until main is clean. The queue changes none of them; fix them, and the next look builds the batch.`
+		);
+		const files = [
+			...document.querySelectorAll<HTMLElement>('[data-testid="merge-queue-preflight-file"]')
+		];
+		expect(files.map((f) => f.dataset.path)).toEqual([
+			'wip/kanban/tasks/T-0001-a.md',
+			'design/b.md'
+		]);
+		const findings = (f: HTMLElement) =>
+			[...f.querySelectorAll('[data-testid="merge-queue-preflight-finding"]')].map((li) =>
+				li.textContent!.replace(/\s+/g, ' ').trim()
+			);
+		expect(findings(files[0])).toEqual([
+			'line 12: MD051 Link fragments should be valid',
+			'line 20: MD009 Trailing spaces'
+		]);
+		expect(findings(files[1])).toEqual(['broken link']);
+		expect(text('merge-queue-preflight-thread')).toBe('Thread to the operator: TH-0042.');
+		const link = el('merge-queue-preflight-thread')!.querySelector('a')!;
+		expect(link.getAttribute('href')).toMatch(/\/threads\?thread=TH-0042$/);
+	});
+
+	it('shows no preflight hold without one, and no thread link before flai serve opens it', () => {
+		render(running);
+		expect(el('merge-queue-preflight')).toBeNull();
+		unmount(component!);
+		render({
+			...running,
+			preflight: {
+				since: '2026-11-01T08:00:00Z',
+				findings: [{ tier: 'lint', checkout: 'main', path: 'a.md', message: 'x' }]
+			}
+		});
+		expect(el('merge-queue-preflight')).not.toBeNull();
+		expect(el('merge-queue-preflight-thread')).toBeNull();
 	});
 
 	describe('the hold switch', () => {

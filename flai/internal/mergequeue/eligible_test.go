@@ -386,6 +386,36 @@ func TestTheQueueCarriesTheState(t *testing.T) {
 	}
 }
 
+// ADR-0234: the queue carries the preflight's hold as the state has it, apart
+// from the operator's, with when it began, each finding, and its thread, and
+// flai board --json shows it under queue as preflight; with no hold it has
+// none.
+func TestTheQueueCarriesThePreflightHold(t *testing.T) {
+	repo := project(t, "")
+	g := scriptedGit{}
+	if q := compute(t, g, repo); q.Preflight != nil {
+		t.Errorf("preflight %+v with no state, want none", q.Preflight)
+	}
+	writeState(t, repo.CacheDir(), `{"preflight": {"since": "2026-10-19T08:00:00Z", "main": "m1",
+  "findings": [{"tier": "lint", "checkout": "main", "path": "wip/kanban/tasks/T-1-x.md", "line": 3, "column": 5, "level": "error", "rule": "MD051", "alias": "link-fragments", "message": "Link fragments should be valid"}],
+  "thread": "TH-0042"}, "outcomes": []}`)
+	q := compute(t, g, repo)
+	h := q.Preflight
+	if h == nil || !h.Since.Equal(time.Date(2026, 10, 19, 8, 0, 0, 0, time.UTC)) || h.Main != "m1" || h.Thread != "TH-0042" {
+		t.Fatalf("preflight %+v, want the state's hold since 08:00 at m1 with TH-0042", h)
+	}
+	if len(h.Findings) != 1 || h.Findings[0].Path != "wip/kanban/tasks/T-1-x.md" || h.Findings[0].Line != 3 || h.Findings[0].Rule != "MD051" {
+		t.Errorf("findings %+v, want the one MD051 at line 3", h.Findings)
+	}
+	if q.Held {
+		t.Error("held, want the preflight's hold apart from the operator's")
+	}
+	data, err := json.Marshal(Board{Queue: &q})
+	if err != nil || !strings.Contains(string(data), `"queue":{`) || !strings.Contains(string(data), `"preflight":{"since":"2026-10-19T08:00:00Z","main":"m1","findings":[{"tier":"lint","checkout":"main","path":"wip/kanban/tasks/T-1-x.md","line":3,"column":5,"level":"error","rule":"MD051","alias":"link-fragments","message":"Link fragments should be valid"}],"thread":"TH-0042"}`) {
+		t.Errorf("as the board's JSON: %v\n%s", err, data)
+	}
+}
+
 // A malformed state is an error of the queue, naming the file.
 func TestAMalformedStateIsAnErrorOfTheQueue(t *testing.T) {
 	repo := project(t, "")
@@ -452,7 +482,8 @@ func TestTheWindowOpensWithTheFirstStoryEnqueued(t *testing.T) {
 
 // S-0552: the queue carries the window its next batch fills in, as flai
 // queue --json and the board give it, while no batch is under way or the
-// last was dropped with its result; not while the queue is held, a batch is
+// last was dropped with its result; not while the queue is held, by the
+// operator or the preflight, a batch is
 // under way or waits to land, the window has ended, or the main branch's
 // head cannot be read.
 func TestTheQueueCarriesTheWindow(t *testing.T) {
@@ -487,10 +518,11 @@ func TestTheQueueCarriesTheWindow(t *testing.T) {
 	}
 
 	for name, state := range map[string]string{
-		"held":                 `"held": true, "held_by": "alex", "held_at": "2026-10-19T08:00:30Z"`,
-		"a batch under way":    `"batch": {"stories": ["` + s.ID + `"], "step": "verifying unit"}`,
-		"a batch to land":      `"batch": {"stories": ["` + s.ID + `"], "step": "verified", "result": {"passed": true, "finished_at": "2026-10-19T08:01:00Z"}}`,
-		"dropped while it ran": `"batch": {"stories": ["` + s.ID + `"], "step": "verifying unit", "dropped": {"reason": "x", "by": "alex", "at": "2026-10-19T08:01:30Z"}}`,
+		"held":                  `"held": true, "held_by": "alex", "held_at": "2026-10-19T08:00:30Z"`,
+		"held by the preflight": `"preflight": {"since": "2026-10-19T08:00:30Z", "findings": [{"tier": "lint", "checkout": "main", "path": "a.md", "message": "x"}]}`,
+		"a batch under way":     `"batch": {"stories": ["` + s.ID + `"], "step": "verifying unit"}`,
+		"a batch to land":       `"batch": {"stories": ["` + s.ID + `"], "step": "verified", "result": {"passed": true, "finished_at": "2026-10-19T08:01:00Z"}}`,
+		"dropped while it ran":  `"batch": {"stories": ["` + s.ID + `"], "step": "verifying unit", "dropped": {"reason": "x", "by": "alex", "at": "2026-10-19T08:01:30Z"}}`,
 	} {
 		writeState(t, repo.CacheDir(), "{"+enqueued+", "+state+"}")
 		if q, err := ComputeAt(g, repo, ends.Add(-time.Minute)); err != nil || q.Window != nil {
