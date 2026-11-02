@@ -168,6 +168,19 @@ It then logs the activity in the role's own activity document, `wip/agents/<name
 
 The start, a failure to start, and the end are each a journal entry under the action the role's file names, with method `serve.role`; the start's says `started by <trigger>`, and an end that `failed` is journalled as failed, with why. `agent.status` carries the runs as `roles`. When a run starts, cannot start, or ends, `flai serve` tells the dashboard with an `agent` notification `{project, role, name, item?}`: `role` the file's verb, `name` the role's name, and `item` when the run has one. As a planner run does since S-0532, it also logs an `agent` event, with `fields.role` the file's verb, on the item the run is on, or on no item with `id` and `title` the role's name and `type` `role`: `started` with its trigger as `why`, then `ended` for `worked` or `asked`, or `failed` with its exit. The orchestrator, the analyzer, and the operator see it in `inbox` and `wait_for_events` ([flai-cli.md](flai-cli.md#the-events-wait_for_events-and-inbox-report)).
 
+## In a container (S-0509)
+
+The planner, the orchestrator, the analyzer, and the curator run in a container when their agent's harness is `container`, as a story's agent does ([flai-cli.md](flai-cli.md#the-container-harness-s-0508)). What the container mounts, and the rule for its writes, is [ADR-0247](../adrs/0247-a-strategic-agent-s-container-mounts-the-main-checkout-read-write-at-its-host.md):
+
+| Mount | Where | How |
+|-------|-------|-----|
+| The project's main checkout, its `.git` inside it | Its host path, the working directory | Read-write |
+| The checkout's `.git/hooks`, which `flai serve` makes when missing | Its host path | Read-only |
+| The role's cache folder, `.flai-cache/agents/<role>`, `<role>` the run's `plan`, `orchestrate`, `analyze`, or `curate` | Its host path | Read-write |
+| The operator's login, for an inner harness that needs it | `/run/claude-login` | Read-only |
+
+Nothing else is mounted: no home, no `~/.ssh`, no `~/.flai`, no Docker socket. The container is named `flai-agent-<role>-<session>`, and a stop stops it by that name. pilot's start request carries the run's role, item, focus, since, and asked-on thread, so the inner harness starts with `--agent <role>` and `FLAI_ROLE` as on the host, and pilot reads the role file from the mounted checkout. The guard runs inside the container from the checkout's `.claude/settings.json` and holds each role to what it holds it to on the host: its writes are the ones its guard allows there. A role a project defines in a role file of its own is refused on the container harness.
+
 ## The planner
 
 The planner plans one epic or one story and ends (S-0208, [ADR-0082](../adrs/0082-flai-serve-starts-the-planner-for-an-epic-or-a-story-behind-the-plan-host.md)). For an epic with no stories it drafts them, enriches each one, and drafts each one's tasks (S-0300); for a story it adds touches, a forecast, and a cost of delay value ([Enriching a story](#enriching-a-story-s-0210)), and drafts its tasks or revisits those it has (S-0255); for an epic with stories it revisits each one not done or cancelled, enriches it again, and proposes on the epic's plan thread what it would split, merge, add, or drop, drafting the additions (S-0209) and the tasks of each story it adds and of each draft it revisits that has none (S-0300). One run plans an epic's stories and their tasks: `flai serve` queues no planner for a story the epic's planner drafted. It writes through flai alone, every story it creates is a draft, and it moves nothing past backlog.
@@ -197,7 +210,7 @@ The MCP tool `plan` also refuses an agent `flai serve` started (`FLAI_STARTED_BY
 
 ### Its agent
 
-`planning.agent` in `system-flow.yaml`, merged over the project's `agent` field by field, config key by config key, and role by role (`Manifest.PlanningAgent`), gives the planner's harness, model, config, and roles. With neither set, the host's command starts it. `flai check` reports a `planning.agent` that is not valid as `manifest.planning`. See [project-manifest.md](project-manifest.md).
+`planning.agent` in `system-flow.yaml`, merged over the project's `agent` field by field, config key by config key, and role by role (`Manifest.PlanningAgent`), gives the planner's harness, model, config, and roles. With neither set, the host's command starts it. `flai check` reports a `planning.agent` that is not valid as `manifest.planning`. See [project-manifest.md](project-manifest.md). Its harness may be `container`: [In a container](#in-a-container-s-0509) says what the container mounts.
 
 ### How it runs
 
@@ -506,7 +519,7 @@ A start is refused when the orchestrator's agent names no harness and no command
 
 ### Its agent
 
-`orchestration.agent` in `system-flow.yaml`, merged over the project's `agent` as `planning.agent` is (`Manifest.OrchestrationAgent`), gives the orchestrator's harness, model, config, and roles. With neither set, the host's command starts it. `flai check` reports an `orchestration.agent` that is not valid as `manifest.orchestration`. See [project-manifest.md](project-manifest.md).
+`orchestration.agent` in `system-flow.yaml`, merged over the project's `agent` as `planning.agent` is (`Manifest.OrchestrationAgent`), gives the orchestrator's harness, model, config, and roles. With neither set, the host's command starts it. `flai check` reports an `orchestration.agent` that is not valid as `manifest.orchestration`. See [project-manifest.md](project-manifest.md). Its harness may be `container`: [In a container](#in-a-container-s-0509) says what the container mounts.
 
 ### How it runs
 
@@ -795,7 +808,7 @@ The MCP tool `analyze` also refuses an agent `flai serve` started (`FLAI_STARTED
 
 ### The analyzer's agent
 
-`analysis.agent` in `system-flow.yaml`, merged over the project's `agent` as `planning.agent` is (`Manifest.AnalysisAgent`), gives the analyzer's harness, model, config, and roles. With neither set, the host's command starts it. `flai check` reports an `analysis.agent` or an `analysis.schedule` that is not valid as `manifest.analysis`. See [project-manifest.md](project-manifest.md).
+`analysis.agent` in `system-flow.yaml`, merged over the project's `agent` as `planning.agent` is (`Manifest.AnalysisAgent`), gives the analyzer's harness, model, config, and roles. With neither set, the host's command starts it. `flai check` reports an `analysis.agent` or an `analysis.schedule` that is not valid as `manifest.analysis`. See [project-manifest.md](project-manifest.md). Its harness may be `container`: [In a container](#in-a-container-s-0509) says what the container mounts.
 
 ### How the analyzer runs
 
@@ -938,7 +951,7 @@ The MCP tool `curate` also refuses an agent `flai serve` started (`FLAI_STARTED_
 
 ### The curator's agent
 
-`digest.agent` in `system-flow.yaml`, merged over the project's `agent` as `analysis.agent` is (`Manifest.DigestAgent`), gives the curator's harness, model, config, and roles. With neither set, the host's command starts it. `flai check` reports a `digest.agent`, a `digest.schedule`, or a `digest.compact_after` that is not valid as `manifest.digest`. See [project-manifest.md](project-manifest.md).
+`digest.agent` in `system-flow.yaml`, merged over the project's `agent` as `analysis.agent` is (`Manifest.DigestAgent`), gives the curator's harness, model, config, and roles. With neither set, the host's command starts it. `flai check` reports a `digest.agent`, a `digest.schedule`, or a `digest.compact_after` that is not valid as `manifest.digest`. See [project-manifest.md](project-manifest.md). Its harness may be `container`: [In a container](#in-a-container-s-0509) says what the container mounts.
 
 ### How the curator runs
 

@@ -47,7 +47,7 @@ A strategic agent's container mounts the main checkout read-write at its host pa
 
    | Role | The guard refuses inside the container, as on the host |
    |------|--------------------------------------------------------|
-   | Planner | Every file edit; any write to an item it was not started for, or outside planning; git writes |
+   | Planner | Every file edit; a story that is not a draft, a finalized draft, a cost of delay input, and a move to any state but `backlog`; git writes |
    | Orchestrator | Each act whose `orchestration.permissions` entry is off; `flai release` but `--evaluate`, `flai push`, `git push`, and `git tag`; every file edit |
    | Analyzer | Every file edit outside `design/analysis/`; any write to a work item; git writes |
    | Curator | Every file edit; `flai digest seed`; any write to a work item; git writes |
