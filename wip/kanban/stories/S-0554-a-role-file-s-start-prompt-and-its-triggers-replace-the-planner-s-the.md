@@ -7,7 +7,7 @@ status: ready
 parent: E-0024
 owner: alex
 created: 2026-10-30T20:45:40Z
-updated: 2026-11-01T23:57:08Z
+updated: 2026-11-02T01:33:19Z
 transitions:
   - to: ready
     at: 2026-11-01T23:44:13Z
@@ -42,10 +42,10 @@ cost_of_delay:
   at: 2026-10-30T20:48:20Z
 forecast:
   duration: 1h19m
-  delivery: 2026-11-02T03:03:00Z
-  basis: "Its own forecast of 1h19m; 5th in the pull order with an in-progress limit of 5, behind S-0518, S-0549, S-0423, S-0421, S-0553 and S-0424."
+  delivery: 2026-11-02T03:11:00Z
+  basis: "Its own forecast of 1h19m; 4th in the pull order with an in-progress limit of 5, behind S-0420, S-0553, S-0423, S-0421 and S-0424."
   by: flai
-  at: 2026-11-01T23:57:08Z
+  at: 2026-11-02T01:33:19Z
 finalized:
   by: orchestrator
   at: 2026-11-01T20:53:33Z
