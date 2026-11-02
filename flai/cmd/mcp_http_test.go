@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -274,4 +275,210 @@ func testMCPOverHTTPRefusesAnUnansweredWriteBeforeClaudeCodeGivesUp(t *testing.T
 	if text == nil || !strings.Contains(text.Text, `"behavior":"deny"`) || !strings.Contains(text.Text, "No answer on "+all[0].ID+" yet") {
 		t.Errorf("the unanswered write is refused naming the open thread: %+v", res.Content)
 	}
+}
+
+// mcpHelperEnv, set to 1, makes TestMCPHelperProcess run flai with the
+// arguments after "--", on this process's own standard streams: flai mcp on
+// stdio reads and writes those, so a test reaches the server that command
+// builds only from a process of its own.
+const mcpHelperEnv = "FLAI_TEST_MCP_HELPER"
+
+func TestMCPHelperProcess(t *testing.T) {
+	if os.Getenv(mcpHelperEnv) != "1" {
+		t.Skip("flaiProcess runs it as flai; it does nothing on its own")
+	}
+	if code := run(flag.Args(), os.Stdout, os.Stderr); code != 0 {
+		t.Fatalf("flai %s exited %d", strings.Join(flag.Args(), " "), code)
+	}
+}
+
+// flaiProcess is flai with args, run in dir by this test binary through
+// TestMCPHelperProcess with t's config file, its standard error kept in a
+// file that stderr reads once the process has ended.
+func flaiProcess(t *testing.T, dir string, args ...string) (cmd *exec.Cmd, stderr func() string) {
+	t.Helper()
+	logPath := filepath.Join(t.TempDir(), "stderr.log")
+	logFile, err := os.Create(logPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = logFile.Close() })
+	cmd = exec.Command(os.Args[0], append([]string{"-test.run=^TestMCPHelperProcess$", "--", "--config", configOf(t)}, args...)...)
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), mcpHelperEnv+"=1")
+	cmd.Stderr = logFile
+	return cmd, func() string {
+		data, _ := os.ReadFile(logPath)
+		return string(data)
+	}
+}
+
+// mcpStdioSession is a session with flai mcp on stdio, serving agent in root.
+func mcpStdioSession(ctx context.Context, t *testing.T, root, agent string) *mcp.ClientSession {
+	t.Helper()
+	cmd, stderr := flaiProcess(t, root, "mcp", "--agent", agent)
+	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "1"}, nil)
+	cs, err := client.Connect(ctx, &mcp.CommandTransport{Command: cmd}, nil)
+	if err != nil {
+		t.Fatalf("connect to flai mcp on stdio: %v\n%s", err, stderr())
+	}
+	t.Cleanup(func() { _ = cs.Close() })
+	return cs
+}
+
+// mcpHTTPSession is a session with flai mcp http, serving repo, as agent
+// names itself by X-Flai-Agent with token.
+func mcpHTTPSession(ctx context.Context, t *testing.T, repo *workitem.Repo, token, agent string) *mcp.ClientSession {
+	t.Helper()
+	cmd, stderr := flaiProcess(t, repo.Root, "mcp", "http", "--addr", "127.0.0.1:0")
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	exited := make(chan struct{})
+	go func() { _ = cmd.Wait(); close(exited) }()
+	t.Cleanup(func() {
+		_ = cmd.Process.Signal(os.Interrupt)
+		select {
+		case <-exited:
+		case <-time.After(10 * time.Second):
+			_ = cmd.Process.Kill()
+			<-exited
+		}
+	})
+	var st mcpState
+	for alive := false; !alive; {
+		select {
+		case <-exited:
+			t.Fatalf("flai mcp http stopped at once:\n%s", stderr())
+		case <-ctx.Done():
+			t.Fatal("flai mcp http never said it was up")
+		case <-time.After(20 * time.Millisecond):
+		}
+		st, alive = readMCPState(repo, time.Now())
+		alive = alive && st.PID == cmd.Process.Pid
+	}
+	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "1"}, nil)
+	cs, err := client.Connect(ctx, &mcp.StreamableClientTransport{Endpoint: st.URL, HTTPClient: &http.Client{Transport: mcpBearer{token, agent}}, DisableStandaloneSSE: true}, &mcp.ClientSessionOptions{ProtocolVersion: "2025-11-25"})
+	if err != nil {
+		t.Fatalf("connect to flai mcp http at %s: %v", st.URL, err)
+	}
+	t.Cleanup(func() { _ = cs.Close() })
+	return cs
+}
+
+// mcpToolDescriptions are the tools a session offers, each with its
+// description.
+func mcpToolDescriptions(ctx context.Context, t *testing.T, cs *mcp.ClientSession) map[string]string {
+	t.Helper()
+	tools := map[string]string{}
+	for tool, err := range cs.Tools(ctx, nil) {
+		if err != nil {
+			t.Fatal(err)
+		}
+		tools[tool.Name] = tool.Description
+	}
+	return tools
+}
+
+// differsByTransport names each tool that the stdio and HTTP servers offer
+// with different descriptions, and why.
+var differsByTransport = map[string]string{
+	"permission_prompt": "its description states how long it holds a write for the operator's answer: StdioPermissionHold over stdio, and HTTPPermissionHold over HTTP, below the 60 seconds after which Claude Code drops a call there (ADR-0215)",
+}
+
+// S-0506: an agent in a container reaches flai only over HTTP, so the server
+// flai mcp http builds offers every tool the one flai mcp builds on stdio
+// offers, for the same agent, and the tools S-0505 named answer alike on
+// both. Each server is built by its own command in a flai process of its own.
+func TestMCPOverHTTPOffersEveryToolStdioDoes(t *testing.T) {
+	t.Parallel()
+	root := tempProject(t)
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token, _, err := mcpToken(repo, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	const agent = "parity"
+	stdio := mcpStdioSession(ctx, t, root, agent)
+	overHTTP := mcpHTTPSession(ctx, t, repo, token, agent)
+
+	onStdio, onHTTP := mcpToolDescriptions(ctx, t, stdio), mcpToolDescriptions(ctx, t, overHTTP)
+	if len(onStdio) == 0 {
+		t.Fatal("flai mcp on stdio offers no tools")
+	}
+	for name, desc := range onStdio {
+		other, ok := onHTTP[name]
+		why, differs := differsByTransport[name]
+		switch {
+		case !ok:
+			t.Errorf("%s is offered on stdio and not over HTTP", name)
+		case other != desc && !differs:
+			t.Errorf("%s is described differently over HTTP than on stdio, and differsByTransport gives no reason:\nstdio: %s\nHTTP:  %s", name, desc, other)
+		case other == desc && differs:
+			t.Errorf("%s is described alike on both now, so differsByTransport's reason no longer holds: %s", name, why)
+		}
+	}
+	for name := range onHTTP {
+		if _, ok := onStdio[name]; !ok {
+			t.Errorf("%s is offered over HTTP and not on stdio", name)
+		}
+	}
+
+	// A refusal is an answer: the tool ran on the host and said why.
+	outside := filepath.Join(root, "README.md")
+	for _, c := range []struct {
+		call mcp.CallToolParams
+		says string
+		ok   func(string) bool
+	}{
+		{mcp.CallToolParams{Name: "task_done", Arguments: map[string]any{"task": "T-9999"}}, "refuses a task that does not exist, naming it",
+			func(got string) bool { return strings.HasPrefix(got, "error: ") && strings.Contains(got, "T-9999") }},
+		{mcp.CallToolParams{Name: "permission_prompt", Arguments: map[string]any{"tool_name": "Write", "input": map[string]any{"file_path": outside, "content": "x"}}}, "refuses a write outside every worktree, naming it",
+			func(got string) bool {
+				return strings.Contains(got, `"behavior":"deny"`) && strings.Contains(got, outside)
+			}},
+	} {
+		want, got := mcpAnswer(ctx, t, stdio, c.call), mcpAnswer(ctx, t, overHTTP, c.call)
+		if got != want {
+			t.Errorf("%s answers over HTTP otherwise than on stdio:\nstdio: %s\nHTTP:  %s", c.call.Name, want, got)
+		}
+		if !c.ok(got) {
+			t.Errorf("%s over HTTP %s: %s", c.call.Name, c.says, got)
+		}
+	}
+	for _, cs := range []*mcp.ClientSession{stdio, overHTTP} {
+		var out struct {
+			TimedOut bool `json:"timed_out"`
+		}
+		got := mcpAnswer(ctx, t, cs, mcp.CallToolParams{Name: "wait_for_events", Arguments: map[string]any{"timeout_seconds": 1}})
+		if err := json.Unmarshal([]byte(got), &out); err != nil || !out.TimedOut {
+			t.Errorf("wait_for_events with nothing to report runs out its second: %s", got)
+		}
+	}
+}
+
+// mcpAnswer is the text a tool call answers, prefixed "error: " when the
+// tool reports an error; a protocol error fails t.
+func mcpAnswer(ctx context.Context, t *testing.T, cs *mcp.ClientSession, call mcp.CallToolParams) string {
+	t.Helper()
+	res, err := cs.CallTool(ctx, &call)
+	if err != nil {
+		t.Fatalf("%s: %v", call.Name, err)
+	}
+	var text []string
+	for _, c := range res.Content {
+		if tc, ok := c.(*mcp.TextContent); ok {
+			text = append(text, tc.Text)
+		}
+	}
+	answer := strings.Join(text, "\n")
+	if res.IsError {
+		answer = "error: " + answer
+	}
+	return answer
 }
