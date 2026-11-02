@@ -7,7 +7,7 @@ count: 2
 cost: 13m
 first_reported: 2026-11-02T03:57:28Z
 last_reported: 2026-11-02T04:12:45Z
-updated: 2026-11-02T04:12:45Z
+updated: 2026-11-02T21:41:52Z
 ---
 
 # I-0251 A story branch rebased across a release brings back the changelog's old Unreleased heading and the lines the release moved, since union merge keeps both sides
@@ -26,3 +26,5 @@ Story: S-0518.
 It happened again within the hour. Release 1.1.18 on main renamed the top `## Unreleased`, which held S-0422's lines, to `## 1.1.18`. The next `flai stream sync` of S-0518, at 2026-11-02T04:12Z, rebased the branch's line from the top `## Unreleased` into the `## 1.1.18` section. The union merge also dropped main's second `## 1.1.3 - 2026-10-28` heading, which the sync reported as `undoes_main` on `template/CHANGELOG.md`. Fixed by hand again, from main's file plus S-0518's line under the top `## Unreleased`. So every release lands a story's changelog line in the wrong section, unless the story's agent puts it back after each sync.
 
 ## Remediation
+
+Story S-0570 remediates this issue, created from it at 2026-11-02T21:41:52Z.
