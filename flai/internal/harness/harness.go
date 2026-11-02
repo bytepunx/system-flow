@@ -1020,28 +1020,7 @@ Work in the main checkout. flai guard holds every call you make to what your rol
 When an input the operator owns is missing, do not guess past it: ask with the flai MCP tool thread_open on %[11]s, your recommended answer first, do what needs no answer meanwhile, and hold the flai MCP tool wait_for_events, again each time it returns, until the thread is answered; then go on.
 
 End with a one-line summary of what you did: flai serve logs the run's activity in wip/agents/%[2]s.md with it, with the run's cost, so you need not log it yourself with activity_log.`,
-		r.Name, f.Name, f.Path, on, r.Root, roleBody(f.Body), item, prime, names, inputs, ask)
-}
-
-// roleBody is a role file's body as its definition's prompt (ADR-0207 §4):
-// the baseline text and the project's additions, without the marker's line
-// and the blank lines that followed it.
-func roleBody(body string) string {
-	var out []string
-	skip := false
-	for _, l := range strings.Split(strings.ReplaceAll(body, "\r\n", "\n"), "\n") {
-		blank := strings.TrimSpace(l) == ""
-		switch {
-		case strings.TrimSpace(l) == roles.Marker:
-			skip = len(out) > 0 && strings.TrimSpace(out[len(out)-1]) == ""
-			continue
-		case skip && blank:
-			continue
-		}
-		skip = false
-		out = append(out, l)
-	}
-	return strings.TrimSpace(strings.Join(out, "\n"))
+		r.Name, f.Name, f.Path, on, r.Root, roles.Prompt(f.Body), item, prime, names, inputs, ask)
 }
 
 // sinceForms are the forms a curator's since takes, as flai digest harvest

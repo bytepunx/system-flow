@@ -1427,10 +1427,35 @@ func TestAStorysPlannerDraftsAndRevisitsItsTasks(t *testing.T) {
 	}
 }
 
-// S-0208: claude-code runs the planner's session as the project's planner
-// definition, passed with --agents beside the explorer and the verifier, with
-// the planner's model over the definition's, and tells it its role and item
-// in its environment; what is not a planner's request is refused.
+// baselineAgent is the --agents definition flai generates from the baseline
+// role file of role, with model over the file's, as it reads back from JSON.
+func baselineAgent(t *testing.T, role, model string) map[string]any {
+	t.Helper()
+	f, ok := roles.BaselineFor("design", role)
+	if !ok {
+		t.Fatalf("no baseline role %s", role)
+	}
+	g, err := roles.Generate(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	js, err := json.Marshal(g.Agent(model))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out map[string]any
+	if err := json.Unmarshal(js, &out); err != nil {
+		t.Fatal(err)
+	}
+	return out
+}
+
+// S-0208, S-0553: claude-code runs the planner's session as the definition
+// flai generates from its role file, passed with --agents beside the
+// explorer and the verifier, with the planner's model over the file's, and
+// tells it its role and item in its environment; a project with no
+// .claude/agents/planner.md starts it; what is not a planner's request is
+// refused.
 func TestClaudeCodeStartsThePlanner(t *testing.T) {
 	root := t.TempDir()
 	dir := filepath.Join(root, ".claude", "agents")
@@ -1438,7 +1463,6 @@ func TestClaudeCodeStartsThePlanner(t *testing.T) {
 		t.Fatal(err)
 	}
 	for name, def := range map[string]string{
-		"planner":  "---\nname: planner\ndescription: Plans one item.\ntools: Read, mcp__flai__item_new\nmodel: inherit\n---\n\nYou are the planner.\n",
 		"explorer": "---\nname: explorer\ndescription: Searches.\ntools: Read\nmodel: haiku\n---\n\nYou are the explorer.\n",
 		"verifier": "---\nname: verifier\ndescription: Runs the checks.\ntools: Read, Bash\nmodel: sonnet\n---\n\nYou are the verifier.\n",
 	} {
@@ -1472,6 +1496,9 @@ func TestClaudeCodeStartsThePlanner(t *testing.T) {
 			t.Errorf("%s: %v", def, got)
 		}
 	}
+	if want := baselineAgent(t, "plan", "claude-opus-5-5"); !reflect.DeepEqual(agents["planner"], want) {
+		t.Errorf("planner: %v, want the baseline role file's %v", agents["planner"], want)
+	}
 	if i, j := slices.Index(st.Argv, "--agent"), slices.Index(st.Argv, "--permission-mode"); i < 0 || j < i {
 		t.Errorf("--agent comes before the operator's arguments: %v", st.Argv)
 	}
@@ -1488,17 +1515,21 @@ func TestClaudeCodeStartsThePlanner(t *testing.T) {
 		t.Errorf("a planner run is passed --settings: %v", st.Argv)
 	}
 
-	// a planner's agent with no model and no roles: the definition's model,
-	// and the planner alone
+	// a planner's agent with no model and no roles, in a project with no
+	// .claude folder: the file's model, inherit, left to the session, and the
+	// planner alone
 	plain := planReq("S-0208", &manifest.Agent{Harness: ClaudeCode})
-	plain.Root = root
+	plain.Root = t.TempDir()
 	st, err = (claudeCode{}).Start(plain, Host{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	agents = nil
-	if err := json.Unmarshal([]byte(after(st.Argv, "--agents")), &agents); err != nil || len(agents) != 1 || agents["planner"]["model"] != "inherit" {
+	if err := json.Unmarshal([]byte(after(st.Argv, "--agents")), &agents); err != nil || len(agents) != 1 || !reflect.DeepEqual(agents["planner"], baselineAgent(t, "plan", "")) {
 		t.Errorf("--agents %v: %v", agents, err)
+	}
+	if _, ok := agents["planner"]["model"]; ok {
+		t.Errorf("an inherited model is passed: %v", agents["planner"])
 	}
 	if slices.Contains(st.Argv, "--model") || !slices.Contains(st.Env, "FLAI_ITEM=S-0208") {
 		t.Errorf("argv %q, env %q", st.Argv, st.Env)
@@ -1511,9 +1542,7 @@ func TestClaudeCodeStartsThePlanner(t *testing.T) {
 		t.Errorf("a story's agent: argv %q, env %q", st.Argv, st.Env)
 	}
 
-	missing := planReq("E-0016", nil)
-	missing.Root = t.TempDir()
-	bad := map[string]Request{"runs as the agent planner, and its definition could not be read": missing}
+	bad := map[string]Request{}
 	for want, mod := range map[string]func(*Request){
 		`flai cannot start an agent in role "review"`: func(r *Request) { r.Role = "review" },
 		"was given story S-0104 to work":              func(r *Request) { r.Story = "S-0104" },
@@ -1530,10 +1559,8 @@ func TestClaudeCodeStartsThePlanner(t *testing.T) {
 		if _, err := (claudeCode{}).Start(x, Host{}); err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("%+v: %v, want %q", x, err, want)
 		}
-		if want != "runs as the agent planner, and its definition could not be read" {
-			if _, err := (command{}).Start(x, Host{Program: "run"}); err == nil || !strings.Contains(err.Error(), want) {
-				t.Errorf("command %+v: %v, want %q", x, err, want)
-			}
+		if _, err := (command{}).Start(x, Host{Program: "run"}); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("command %+v: %v, want %q", x, err, want)
 		}
 	}
 
@@ -1550,18 +1577,19 @@ func TestClaudeCodeStartsThePlanner(t *testing.T) {
 	}
 }
 
-// S-0419: given the role file a built-in role runs from, the planner's
-// definition takes the file's body as its prompt, the text a project writes
-// below the marker included and the marker left out, while its description,
-// tools, and start prompt stay as they were; given none, it keeps its
-// .claude/agents prompt.
-func TestClaudeCodeGivesTheBuiltinRoleItsRoleFilesBody(t *testing.T) {
+// S-0419, S-0553: the planner's definition is the one flai generates from
+// the role file a built-in role runs from: its description and tools, and
+// its body as its prompt, the text a project writes below the marker
+// included and the marker left out, while its start prompt stays as it was;
+// given none, the baseline flai carries. A project's .claude/agents/
+// planner.md, with another description, tools, and prompt, is ignored.
+func TestClaudeCodeGivesTheBuiltinRoleItsRoleFilesDefinition(t *testing.T) {
 	root := t.TempDir()
 	dir := filepath.Join(root, ".claude", "agents")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	def := "---\nname: planner\ndescription: Plans one item.\ntools: Read, mcp__flai__item_new\nmodel: inherit\n---\n\nYou are the planner.\n"
+	def := "---\nname: planner\ndescription: Plans one item.\ntools: Read, mcp__flai__item_new\nmodel: haiku\n---\n\nYou are the planner.\n"
 	if err := os.WriteFile(filepath.Join(dir, "planner.md"), []byte(def), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -1571,6 +1599,8 @@ func TestClaudeCodeGivesTheBuiltinRoleItsRoleFilesBody(t *testing.T) {
 	}
 	const addition = "- Name a reviewer for each task you draft."
 	f.Body = strings.TrimRight(f.Body, "\n") + "\n\n" + addition + "\n"
+	f.Definition.Description = "Plans this project's items."
+	f.Definition.Tools = []string{"Read", "mcp__flai__item_edit"}
 	definitionOf := func(r Request) (map[string]any, string) {
 		t.Helper()
 		r.Root = root
@@ -1586,8 +1616,8 @@ func TestClaudeCodeGivesTheBuiltinRoleItsRoleFilesBody(t *testing.T) {
 	}
 
 	plain, start := definitionOf(planReq("E-0016", nil))
-	if plain["prompt"] != "You are the planner." {
-		t.Errorf("with no role file, the prompt is the definition's: %v", plain)
+	if want := baselineAgent(t, "plan", ""); !reflect.DeepEqual(plain, want) {
+		t.Errorf("with no role file, the definition is not the baseline's: %v, want %v", plain, want)
 	}
 	r := planReq("E-0016", nil)
 	r.Builtin = &f
@@ -1596,8 +1626,11 @@ func TestClaudeCodeGivesTheBuiltinRoleItsRoleFilesBody(t *testing.T) {
 	if !strings.Contains(prompt, addition) || !strings.HasPrefix(prompt, strings.TrimSpace(strings.SplitN(f.Body, "\n\n", 2)[0])) || strings.Contains(prompt, roles.Marker) {
 		t.Errorf("prompt is not the role file's body with its addition and without the marker:\n%s", prompt)
 	}
-	if got["description"] != plain["description"] || !slices.Equal(got["tools"].([]any), plain["tools"].([]any)) {
-		t.Errorf("description or tools changed: %v, was %v", got, plain)
+	if got["description"] != "Plans this project's items." || !reflect.DeepEqual(got["tools"], []any{"Read", "mcp__flai__item_edit"}) {
+		t.Errorf("description or tools are not the role file's: %v", got)
+	}
+	if _, ok := got["model"]; ok {
+		t.Errorf("the .claude/agents file's model is passed: %v", got)
 	}
 	if withFile != start {
 		t.Errorf("the start prompt changed with the role file:\n%s\nwas:\n%s", withFile, start)
@@ -2079,11 +2112,11 @@ func TestTheOrchestratorsPromptSaysHowItPublishes(t *testing.T) {
 	}
 }
 
-// S-0218: claude-code runs the orchestrator's session as the project's
-// orchestrator definition, passed with --agents beside the explorer and the
-// verifier, named for the project and the role, and tells it its role alone;
-// a project with no definition, and an orchestrator given a story or an
-// item, are refused.
+// S-0218, S-0553: claude-code runs the orchestrator's session as the
+// definition flai generates from its role file, passed with --agents beside
+// the explorer and the verifier, named for the project and the role, and
+// tells it its role alone; a project with no .claude/agents/orchestrator.md
+// starts it, and an orchestrator given a story or an item is refused.
 func TestClaudeCodeStartsTheOrchestrator(t *testing.T) {
 	root := t.TempDir()
 	dir := filepath.Join(root, ".claude", "agents")
@@ -2091,9 +2124,8 @@ func TestClaudeCodeStartsTheOrchestrator(t *testing.T) {
 		t.Fatal(err)
 	}
 	for name, def := range map[string]string{
-		"orchestrator": "---\nname: orchestrator\ndescription: Keeps work moving.\ntools: Read, mcp__flai__item_move\nmodel: inherit\n---\n\nYou are the orchestrator.\n",
-		"explorer":     "---\nname: explorer\ndescription: Searches.\ntools: Read\nmodel: haiku\n---\n\nYou are the explorer.\n",
-		"verifier":     "---\nname: verifier\ndescription: Runs the checks.\ntools: Read, Bash\nmodel: sonnet\n---\n\nYou are the verifier.\n",
+		"explorer": "---\nname: explorer\ndescription: Searches.\ntools: Read\nmodel: haiku\n---\n\nYou are the explorer.\n",
+		"verifier": "---\nname: verifier\ndescription: Runs the checks.\ntools: Read, Bash\nmodel: sonnet\n---\n\nYou are the verifier.\n",
 	} {
 		if err := os.WriteFile(filepath.Join(dir, name+".md"), []byte(def), 0o644); err != nil {
 			t.Fatal(err)
@@ -2126,6 +2158,9 @@ func TestClaudeCodeStartsTheOrchestrator(t *testing.T) {
 			t.Errorf("%s: %v", def, got)
 		}
 	}
+	if want := baselineAgent(t, "orchestrate", "claude-opus-5-5"); !reflect.DeepEqual(agents["orchestrator"], want) {
+		t.Errorf("orchestrator: %v, want the baseline role file's %v", agents["orchestrator"], want)
+	}
 	if _, ok := agents["planner"]; ok {
 		t.Errorf("the orchestrator is passed the planner: %v", agents)
 	}
@@ -2136,25 +2171,18 @@ func TestClaudeCodeStartsTheOrchestrator(t *testing.T) {
 		t.Errorf("env %q, want %q", st.Env, want)
 	}
 
-	// an orchestrator with no agent of its own: the definition's model, and
-	// the orchestrator alone
+	// an orchestrator with no agent of its own, in a project with no .claude
+	// folder: the file's model, inherit, left to the session, and the
+	// orchestrator alone
 	plain := orchestrateReq(nil)
-	plain.Root = root
+	plain.Root = t.TempDir()
 	st, err = (claudeCode{}).Start(plain, Host{})
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("a project with no orchestrator.md: %v", err)
 	}
 	agents = nil
-	if err := json.Unmarshal([]byte(after(st.Argv, "--agents")), &agents); err != nil || len(agents) != 1 || agents["orchestrator"]["model"] != "inherit" {
+	if err := json.Unmarshal([]byte(after(st.Argv, "--agents")), &agents); err != nil || len(agents) != 1 || !reflect.DeepEqual(agents["orchestrator"], baselineAgent(t, "orchestrate", "")) {
 		t.Errorf("--agents %v: %v", agents, err)
-	}
-
-	missing := orchestrateReq(nil)
-	missing.Root = t.TempDir()
-	if _, err := (claudeCode{}).Start(missing, Host{}); err == nil ||
-		!strings.Contains(err.Error(), "the orchestrator's session runs as the agent orchestrator, and its definition could not be read") ||
-		!strings.Contains(err.Error(), "flai upgrade adds it from the template") {
-		t.Errorf("a project with no orchestrator.md: %v", err)
 	}
 	for want, mod := range map[string]func(*Request){
 		"the orchestrator was given story S-0104 to work": func(r *Request) { r.Story = "S-0104" },
@@ -2359,8 +2387,9 @@ func TestTheAnalyzersPromptAsksForOneReport(t *testing.T) {
 	}
 }
 
-// S-0223: claude-code runs the analyzer's session as the project's analyzer
-// definition, beside the explorer, named for the project, the role, and the
+// S-0223, S-0553: claude-code runs the analyzer's session as the definition
+// flai generates from its role file, beside the explorer, even in a project
+// with no .claude/agents/analyzer.md, named for the project, the role, and the
 // focus, and tells it its role alone in its environment; the operator's
 // command is told the role and the focus. An analyzer given a story, an
 // item, or a focus it does not take is refused, as is a focus for a story.
@@ -2371,7 +2400,6 @@ func TestClaudeCodeStartsTheAnalyzer(t *testing.T) {
 		t.Fatal(err)
 	}
 	for name, def := range map[string]string{
-		"analyzer": "---\nname: analyzer\ndescription: Writes a report.\ntools: Read, Write\nmodel: inherit\n---\n\nYou are the analyzer.\n",
 		"explorer": "---\nname: explorer\ndescription: Searches.\ntools: Read\nmodel: haiku\n---\n\nYou are the explorer.\n",
 	} {
 		if err := os.WriteFile(filepath.Join(dir, name+".md"), []byte(def), 0o644); err != nil {
@@ -2396,7 +2424,7 @@ func TestClaudeCodeStartsTheAnalyzer(t *testing.T) {
 	if err := json.Unmarshal([]byte(after(st.Argv, "--agents")), &agents); err != nil {
 		t.Fatalf("--agents: %v in %v", err, st.Argv)
 	}
-	if len(agents) != 2 || agents["analyzer"]["model"] != "claude-opus-5-5" || agents["explorer"]["model"] != "claude-haiku-4-5" {
+	if len(agents) != 2 || !reflect.DeepEqual(agents["analyzer"], baselineAgent(t, "analyze", "claude-opus-5-5")) || agents["explorer"]["model"] != "claude-haiku-4-5" {
 		t.Errorf("--agents %v", agents)
 	}
 	if want := []string{"FLAI_ROLE=analyze"}; !slices.Equal(st.Env, want) {
@@ -2419,7 +2447,7 @@ func TestClaudeCodeStartsTheAnalyzer(t *testing.T) {
 
 	missing := analyzeReq("", nil)
 	missing.Root = t.TempDir()
-	if _, err := (claudeCode{}).Start(missing, Host{}); err == nil || !strings.Contains(err.Error(), "the analyzer's session runs as the agent analyzer, and its definition could not be read") {
+	if st, err := (claudeCode{}).Start(missing, Host{}); err != nil || after(st.Argv, "--agent") != "analyzer" {
 		t.Errorf("a project with no analyzer.md: %v", err)
 	}
 	for want, mod := range map[string]func(*Request){
@@ -2520,13 +2548,13 @@ func TestTheCuratorsPromptKeepsTheDigest(t *testing.T) {
 	}
 }
 
-// S-0431, ADR-0196: claude-code runs the curator's session as the project's
-// curator definition, beside the explorer, named for the project and the
+// S-0431, ADR-0196, S-0553: claude-code runs the curator's session as the
+// definition flai generates from its role file, beside the explorer, named for the project and the
 // role, its MCP server told its name, and tells it its role alone in its
 // environment; the operator's command is told the role and the since. A
 // curator given a story, an item, a focus, or a since that does not read is
-// refused, as is a since for any other agent, and a project with no
-// curator.md is told flai upgrade adds it.
+// refused, as is a since for any other agent; a project with no
+// .claude/agents/curator.md starts it.
 func TestClaudeCodeStartsTheCurator(t *testing.T) {
 	root := t.TempDir()
 	dir := filepath.Join(root, ".claude", "agents")
@@ -2534,7 +2562,6 @@ func TestClaudeCodeStartsTheCurator(t *testing.T) {
 		t.Fatal(err)
 	}
 	for name, def := range map[string]string{
-		"curator":  "---\nname: curator\ndescription: Keeps the digest.\ntools: Read, Bash\nmodel: inherit\n---\n\nYou are the curator.\n",
 		"explorer": "---\nname: explorer\ndescription: Searches.\ntools: Read\nmodel: haiku\n---\n\nYou are the explorer.\n",
 	} {
 		if err := os.WriteFile(filepath.Join(dir, name+".md"), []byte(def), 0o644); err != nil {
@@ -2562,7 +2589,7 @@ func TestClaudeCodeStartsTheCurator(t *testing.T) {
 	if err := json.Unmarshal([]byte(after(st.Argv, "--agents")), &agents); err != nil {
 		t.Fatalf("--agents: %v in %v", err, st.Argv)
 	}
-	if len(agents) != 2 || agents["curator"]["model"] != "claude-opus-5-5" || agents["explorer"]["model"] != "claude-haiku-4-5" {
+	if len(agents) != 2 || !reflect.DeepEqual(agents["curator"], baselineAgent(t, "curate", "claude-opus-5-5")) || agents["explorer"]["model"] != "claude-haiku-4-5" {
 		t.Errorf("--agents %v", agents)
 	}
 	if want := []string{"FLAI_ROLE=curate"}; !slices.Equal(st.Env, want) {
@@ -2585,7 +2612,7 @@ func TestClaudeCodeStartsTheCurator(t *testing.T) {
 
 	missing := curateReq("", nil)
 	missing.Root = t.TempDir()
-	if _, err := (claudeCode{}).Start(missing, Host{}); err == nil || !strings.Contains(err.Error(), "the curator's session runs as the agent curator, and its definition could not be read") || !strings.Contains(err.Error(), "flai upgrade adds it") {
+	if st, err := (claudeCode{}).Start(missing, Host{}); err != nil || after(st.Argv, "--agent") != "curator" {
 		t.Errorf("a project with no curator.md: %v", err)
 	}
 	for _, c := range []struct {
@@ -3291,22 +3318,6 @@ func TestADefinedRoleIsRefusedWhatItsFileDoesNotTake(t *testing.T) {
 			if _, err := ad.Start(x, Host{Program: "run"}); err == nil || !strings.Contains(err.Error(), "only a role a project defines takes inputs") {
 				t.Errorf("%s: a %s with inputs: %v", an, name, err)
 			}
-		}
-	}
-}
-
-// ADR-0207 §4: a role file's body is its definition's prompt without the
-// marker's line and the blank lines after it; a body with no marker is
-// itself, trimmed.
-func TestARoleFilesBodyIsItsPromptWithoutTheMarker(t *testing.T) {
-	for _, c := range []struct{ body, want string }{
-		{"\nBaseline.\n\n" + roles.Marker + "\n\n## Project additions\n\nMore.\n", "Baseline.\n\n## Project additions\n\nMore."},
-		{"\r\nBaseline.\r\n" + roles.Marker + "\r\n## Project additions\r\n", "Baseline.\n## Project additions"},
-		{"\nNo marker.\n\n", "No marker."},
-	} {
-		body, want := c.body, c.want
-		if got := roleBody(body); got != want {
-			t.Errorf("roleBody(%q) = %q, want %q", body, got, want)
 		}
 	}
 }

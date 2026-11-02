@@ -339,14 +339,14 @@ func TestTheOrchestratorIsRefusedOnce(t *testing.T) {
 	if r := lab.orchestrator(); r.Started != run.Started {
 		t.Errorf("the refusal was recorded again: %+v", r)
 	}
-	manifest := "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\norchestration:\n  agent:\n    harness: claude-code\n"
+	manifest := "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\norchestration:\n  agent:\n    harness: claude-code\n    roles:\n      verify:\n        model: sonnet\n"
 	if err := os.WriteFile(filepath.Join(lab.root, "system-flow.yaml"), []byte(manifest), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	lab.shift = 4 * orchestrateRetry
 	lab.look()
-	if r := lab.orchestrator(); r.Harness != "claude-code" || !strings.Contains(r.Error, "the orchestrator's session runs as the agent orchestrator, and its definition could not be read") {
-		t.Errorf("no orchestrator.md: %+v", r)
+	if r := lab.orchestrator(); r.Harness != "claude-code" || !strings.Contains(r.Error, "role verify runs the sub-agent verifier, and its definition could not be read") {
+		t.Errorf("no verifier.md: %+v", r)
 	}
 	lab.shift = 6 * orchestrateRetry
 	lab.look()

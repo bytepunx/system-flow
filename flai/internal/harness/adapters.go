@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"sort"
 	"strings"
 
@@ -304,29 +303,32 @@ func permissionArgs(host Host) []string {
 // .claude/agents/, that each role runs as (ADR-0059).
 var claudeCodeRoles = map[string]string{manifest.RoleExplore: "explorer", manifest.RoleVerify: "verifier"}
 
-// claudeCodeStrategic are the definitions, in the project's .claude/agents/,
-// that a strategic agent's session runs as, by its role: the planner's
-// (S-0208), the orchestrator's (S-0218), the analyzer's (S-0223), and the
-// curator's (S-0431). roleEnv refuses any other role before they are looked
-// up.
+// claudeCodeStrategic are the names of the definitions a strategic agent's
+// session runs as, by its role: the planner's (S-0208), the orchestrator's
+// (S-0218), the analyzer's (S-0223), and the curator's (S-0431). flai
+// generates each from the role's file (roles.Generate), and reads nothing
+// under .claude/ for it (ADR-0236). roleEnv refuses any other role before
+// they are looked up.
 var claudeCodeStrategic = map[string]string{conventions.RolePlan: "planner", conventions.RoleOrchestrate: "orchestrator", conventions.RoleAnalyze: "analyzer", conventions.RoleCurate: "curator"}
 
 // subAgents is the --agents JSON that runs each of the agent's roles on its
-// own model (S-0189): the project's definition of the role's sub-agent, its
-// front matter and its prompt, with the role's model over the definition's.
-// A session's --agents outranks the project's definitions, so the file stays
-// the source of everything but the model. For a strategic agent, the
-// planner, the orchestrator, the analyzer, or the curator, it holds that
-// agent's definition as well, with the agent's model when it names one,
-// whatever its roles (S-0208, S-0218, S-0223, S-0431), and with its role
-// file's body as its prompt when the request carries the file, Builtin, so
-// that a project's additions below the marker reach it (S-0419). For a role the
-// project defines, it holds the definition flai generates from the role's
-// file under its name (roleDefinition), and nothing is read from or written
-// under .claude/ for it (S-0417, ADR-0207 §4).
-// Empty when nothing is to be passed. A role sub-agents cannot run, because
-// it names another harness or config, or has no definition, refuses the
-// start, as a strategic agent with no definition does.
+// own model (S-0189): the project's definition of the role's sub-agent, in
+// .claude/agents/, its front matter and its prompt, with the role's model
+// over the definition's. A session's --agents outranks the project's
+// definitions, so the file stays the source of everything but the model.
+// For a strategic agent, the planner, the orchestrator, the analyzer, or the
+// curator, it holds that agent's definition as well, whatever its roles,
+// which flai generates from the role file the request carries, Builtin, or
+// the baseline flai carries when it carries none: its name, its
+// definition's description, tools, and model, with the agent's model over
+// it, and its body, the project's additions included, as its prompt
+// (ADR-0207 §4, ADR-0236). For a role the project defines, it holds the
+// definition flai generates from the role's file under its name
+// (roleDefinition). Nothing is read from or written under .claude/ for
+// either (S-0417, S-0553). Empty when nothing is to be passed. A role
+// sub-agents cannot run, because it names another harness or config, or has
+// no definition, refuses the start, as a role file that lacks what its
+// definition needs does.
 func subAgents(r Request) (string, error) {
 	out := map[string]map[string]any{}
 	switch {
@@ -337,20 +339,11 @@ func subAgents(r Request) (string, error) {
 		}
 		out[r.RoleFile.Name] = agent
 	case r.Role != "":
-		def := claudeCodeStrategic[r.Role]
-		agent, err := readDefinition(r.Root, def)
+		agent, err := strategicDefinition(r)
 		if err != nil {
-			return "", fmt.Errorf("the %[1]s's session runs as the agent %[1]s, and %[2]w; flai upgrade adds it from the template when it is missing", def, err)
+			return "", err
 		}
-		if r.Builtin != nil {
-			if prompt := roleBody(r.Builtin.Body); prompt != "" {
-				agent["prompt"] = prompt
-			}
-		}
-		if r.Agent != nil && r.Agent.Model != "" {
-			agent["model"] = r.Agent.Model
-		}
-		out[def] = agent
+		out[claudeCodeStrategic[r.Role]] = agent
 	}
 	a := r.Agent
 	for _, n := range a.RoleNames() {
@@ -383,8 +376,25 @@ func subAgents(r Request) (string, error) {
 	return string(js), nil
 }
 
-// inherit is a definition's model when it takes the session's.
-const inherit = "inherit"
+// strategicDefinition is the definition flai generates for a built-in
+// role, as --agents takes it: from the request's role file, Builtin, or the
+// baseline flai carries when it carries none, with the agent's model over
+// the file's.
+func strategicDefinition(r Request) (map[string]any, error) {
+	f := r.Builtin
+	if f == nil {
+		b, ok := roles.BaselineFor("design", r.Role)
+		if !ok {
+			return nil, fmt.Errorf("flai carries no role file for role %q, and the start gave none; start a built-in role, plan, orchestrate, analyze, or curate", r.Role)
+		}
+		f = &b
+	}
+	g, err := roles.Generate(*f)
+	if err != nil {
+		return nil, err
+	}
+	return g.Agent(agentModel(r.Agent)), nil
+}
 
 // roleDefinition is the definition flai generates from a role file, as
 // --agents takes one (ADR-0207 §4): its definition's description and tools,
@@ -394,30 +404,20 @@ const inherit = "inherit"
 // description or no tools, or whose body is empty, is refused, naming flai
 // check, which reports it.
 func roleDefinition(f *roles.Role, a *manifest.Agent) (map[string]any, error) {
-	d := f.Definition
-	prompt := roleBody(f.Body)
-	var lacks []string
-	if strings.TrimSpace(d.Description) == "" {
-		lacks = append(lacks, "definition.description")
+	g, err := roles.Generate(*f)
+	if err != nil {
+		return nil, err
 	}
-	if len(d.Tools) == 0 {
-		lacks = append(lacks, "definition.tools")
+	return g.Agent(agentModel(a)), nil
+}
+
+// agentModel is the agent's model, empty when there is no agent or it names
+// none.
+func agentModel(a *manifest.Agent) string {
+	if a == nil {
+		return ""
 	}
-	if prompt == "" {
-		lacks = append(lacks, "body")
-	}
-	if len(lacks) > 0 {
-		return nil, fmt.Errorf("the role %s runs as the agent %s, which flai generates from its file %s, and the file has no %s; flai check reports what it lacks", f.Name, f.Name, f.Path, strings.Join(lacks, " and no "))
-	}
-	agent := map[string]any{"description": d.Description, "tools": slices.Clone(d.Tools), "prompt": prompt}
-	model := d.Model
-	if a != nil && a.Model != "" {
-		model = a.Model
-	}
-	if model != "" && model != inherit {
-		agent["model"] = model
-	}
-	return agent, nil
+	return a.Model
 }
 
 // readDefinition reads the project's .claude/agents/<def>.md as --agents
