@@ -12219,3 +12219,8 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 
 - Call: `flai order --by throughput --apply 2>&1`
 - Needs: none
+
+### 2026-11-02T05:31:06Z
+
+- Call: `git tag --sort=-creatordate`
+- Needs: none

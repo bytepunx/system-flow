@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:41:19Z
-updated: 2026-11-02T05:28:18Z
+updated: 2026-11-02T05:30:51Z
 transitions:
   - to: ready
     at: 2026-10-30T00:05:31Z
@@ -74,12 +74,12 @@ Two more processes that live in prose and Go become formulas. `import` brings a 
 - [ ] `design/system/strategic-agents.md` § The analysis schedule, `design/system/continuous-improvement.md` § Cadence, `docs/operators/index.md`, `docs/users/flaiover.md` where it describes Import, and `template/CHANGELOG.md` say that both are formulas.
 
 ## Tasks
-- T-1785 design/workflows/formulas/import.md takes a path and runs the board's import steps, and the host API's import starts the formula so its progress shows as a story
+- T-1785 design/workflows/formulas/import.md takes a path and runs the check and the tests after the import's commit, and the host API's import runs flai import --formula so its progress shows as a story
 - T-1786 design/workflows/formulas/analysis-cadence.md runs the analyzer with a focus and lists the open issues its report names, and analysis.schedule may name the formula
 - T-1787 The import formula is run once from the board on a scratch repository under a folder named for import, its instance worked to review and accepted
 - T-1788 The analysis-cadence formula is run once in this repository, its instance worked to review and accepted, with the report and the issues it names recorded
 - T-1789 The design, the manifest's design, the operator and user docs, and the changelog say that import and the analyzer's cadence are formulas
-- T-2016 A formula input may carry a default, which flai formula run takes for a missing input and flai check passes over when the formula is scheduled
+- T-2016 A scheduled formula may declare inputs that all carry a default, and the template test passes over a formula's input placeholders
 - T-2017 flai import --formula commits the template's files before any test and starts the import formula in the new project, and flai import test runs the tests that --commit runs
 
 ## Notes

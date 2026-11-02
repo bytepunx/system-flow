@@ -9,7 +9,7 @@ date: 2026-10-29
 status: active
 absorbed_by: ""
 asked_again: [TH-0719, TH-0803]
-cited: [S-0423, S-0562, TH-0803]
+cited: [S-0423, S-0562, TH-0803, TH-0810]
 ---
 
 # D-0422 Plan for S-0536: eight tasks in five layers, and two questions on criterion 6: confirm recommendation

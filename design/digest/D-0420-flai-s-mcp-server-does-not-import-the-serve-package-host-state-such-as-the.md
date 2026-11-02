@@ -9,7 +9,7 @@ date: 2026-10-29
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0506]
 ---
 
 # D-0420 flai's MCP server does not import the serve package: host state such as the budget reaches it through an Options function cmd wires to the serve folder, as AutoApprove does

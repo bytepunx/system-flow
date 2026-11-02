@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:42:51Z
-updated: 2026-11-02T05:14:17Z
+updated: 2026-11-02T05:30:45Z
 transitions:
   - to: ready
     at: 2026-11-02T05:13:28Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0506
 tags: [cli, mcp]
 topics: [harness, docker, mcp]
-touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/mcphttp/mcphttp.go, flai/internal/mcphttp/mcphttp_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/cmd/mcp_http_test.go, flai/cmd/host.go, flai/cmd/host_test.go, flai/cmd/serve_mcp.go, flai/cmd/serve_mcp_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, design/adrs/README.md, design/adrs, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, docs/operators/index.md, design/system/flai-cli.md, flai/cmd/serve.go, flai/cmd/serve_settings.go, flai/cmd/serve_settings_test.go, flai/internal/mcpserver/work.go, flai/internal/mcpserver/timing.go, design/issues/I-0228-claude-code-drops-any-call-to-flai-s-http-mcp-server-that-answers-after-60-seconds-so-wait-for-events-wait-for-work-verify-and-a-slow-task-done-fail-for-an-agent-in-a-container.md, design/issues/summary.md]
+touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/mcphttp/mcphttp.go, flai/internal/mcphttp/mcphttp_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/cmd/mcp_http_test.go, flai/cmd/host.go, flai/cmd/host_test.go, flai/cmd/serve_mcp.go, flai/cmd/serve_mcp_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, design/adrs/README.md, design/adrs, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, docs/operators/index.md, design/system/flai-cli.md, flai/cmd/serve.go, flai/cmd/serve_settings.go, flai/cmd/serve_settings_test.go, flai/internal/mcpserver/work.go, flai/internal/mcpserver/timing.go, design/issues/I-0228-claude-code-drops-any-call-to-flai-s-http-mcp-server-that-answers-after-60-seconds-so-wait-for-events-wait-for-work-verify-and-a-slow-task-done-fail-for-an-agent-in-a-container.md, design/issues/summary.md, flai/cmd/mcp_http_permission_test.go]
 after: [S-0505]
 agent:
   harness: claude-code
@@ -25,9 +25,22 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 997
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-02
+      ceremony: 1
+      hand_edits: 1
+      work: 19
+  models:
+    - model: claude-opus-5-5
+      input: 310
+      output: 1591
+      cache_read: 14156480
+      cache_write: 553616
+      cost: 5.1798
   strategic:
     - kind: planner
       seconds: 296

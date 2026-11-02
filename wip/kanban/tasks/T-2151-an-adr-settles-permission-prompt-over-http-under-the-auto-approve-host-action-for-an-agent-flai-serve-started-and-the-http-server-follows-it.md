@@ -3,11 +3,11 @@ id: T-2151
 type: task
 nature: feature
 title: An ADR settles permission_prompt over HTTP under the auto-approve host action for an agent flai serve started, and the HTTP server follows it
-status: in-progress
+status: done
 parent: S-0506
 owner: alex
 created: 2026-10-26T04:47:21Z
-updated: 2026-11-02T05:15:27Z
+updated: 2026-11-02T05:30:45Z
 transitions:
   - to: ready
     at: 2026-11-02T05:15:26Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-02T05:15:27Z
     by: agent-S-0506
+  - to: done
+    at: 2026-11-02T05:30:45Z
+    by: agent-S-0506
 stream: S-0506
 tags: [cli, mcp]
-touches: [design/adrs/README.md, flai/cmd/mcp_http.go, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/mcphttp/mcphttp.go]
+touches: [design/adrs/README.md, flai/cmd/mcp_http.go, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/mcphttp/mcphttp.go, flai/cmd/mcp_http_permission_test.go, design/adrs/0243-over-http-permission-prompt-honours-the-auto-approve-host-action-only-for-the.md, flai/internal/mcpserver/server.go]
+usage:
+  source: log
+  seconds: 916
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 106
+      output: 588
+      cache_read: 4671748
+      cache_write: 131384
+      cost: 1.6913
 ---
 # T-2151 An ADR settles permission_prompt over HTTP under the auto-approve host action for an agent flai serve started, and the HTTP server follows it
 
