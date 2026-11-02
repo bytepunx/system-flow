@@ -9,7 +9,7 @@ date: 2026-09-29
 status: compacted
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0563, TH-0805]
 ---
 
 # D-0048 S-0138's pack cannot fit 80 KB under ADR-0049's rules: which way: how many kb are the open issues

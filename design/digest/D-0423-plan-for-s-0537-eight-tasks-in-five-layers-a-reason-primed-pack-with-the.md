@@ -9,7 +9,7 @@ date: 2026-10-29
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [TH-0755]
+cited: [TH-0755, TH-0803]
 ---
 
 # D-0423 Plan for S-0537: eight tasks in five layers, a reason-primed pack with the conventions cut by reason: confirm the recommendation

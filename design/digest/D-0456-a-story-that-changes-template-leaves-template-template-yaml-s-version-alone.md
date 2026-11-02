@@ -9,7 +9,7 @@ date: 2026-11-02
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0423, T-1780, TH-0803]
 ---
 
 # D-0456 A story that changes template/ leaves template/template.yaml's version alone: flai release bumps it at publish, and the story's changelog lines go under ## Unreleased
