@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- S-0424 Import and the analyzer's cadence are baseline formulas (patch): the template ships `design/workflows/formulas/import.md`, whose input `path` names the imported repository and whose steps run `flai check --strict`, then `flai import test`, which `flai import --formula`, and so the board's Import, starts once the import is committed; and `design/workflows/formulas/analysis-cadence.md`, whose input `focus` defaults to empty for all three and whose steps run the analyzer, then `flai issue list --report latest --json` in the main checkout, which `analysis.formula` has the analysis schedule start. The formulas README lists all three baseline formulas, and says a scheduled formula may declare inputs that all carry a default.
+
 ## 1.1.19 - 2026-11-02
 
 - S-0423 The template ships a baseline publish formula that fetches, evaluates orchestration.release, and publishes what is pending, the orchestrator starts it in place of calling release_publish, and it is run once here (patch).
