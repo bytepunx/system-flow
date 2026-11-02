@@ -24,7 +24,7 @@ touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.g
 after: [T-2355]
 usage:
   source: log
-  seconds: 989
+  seconds: 991
   estimated: true
   priced_by: estimate
   models:

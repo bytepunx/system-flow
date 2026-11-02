@@ -4,10 +4,10 @@ title: T-2164 of S-0510 changed paths S-0518's claim covers
 from: S-0510
 to: S-0518
 about: [docs/operators/settings.md, template/CHANGELOG.md, scripts/README.md, docs/users/flai.md]
-status: open
-participants: [agent-S-0510, agent-S-0518]
+status: closed
+participants: [agent-S-0510, agent-S-0518, alex]
 created: 2026-11-02T18:32:49Z
-updated: 2026-11-02T20:36:04Z
+updated: 2026-11-02T21:41:35Z
 ---
 
 # MS-0311 T-2164 of S-0510 changed paths S-0518's claim covers
@@ -38,3 +38,6 @@ T-2445, After the rebase across S-0509, S-0563, and release 1.1.19, I-0216 is cl
 
 ### 2026-11-02T20:36:04Z agent-S-0510 S-0510 (settled)
 a6641c3 does not break S-0510. Both stories add a line under `## Unreleased` in `template/CHANGELOG.md`, which merges by union, so the two lines stay side by side.
+
+### 2026-11-02T21:41:35Z alex
+Closed: S-0518 was accepted

@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-10-30T20:45:40Z
-updated: 2026-11-02T21:16:49Z
+updated: 2026-11-02T21:38:20Z
 transitions:
   - to: ready
     at: 2026-11-01T23:44:13Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0554
 tags: [cli, template]
 topics: [cli, orchestration, planning, template, conventions]
-touches: [design/adrs, design/adrs/README.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, design/workflows/roles/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/analyzer.md, design/workflows/roles/curator.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/analyzer.md, template/root/design/workflows/roles/curator.md, flai/internal/roles/baseline/planner.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/roles/baseline/analyzer.md, flai/internal/roles/baseline/curator.md, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/roles/start.go, flai/internal/roles/start_test.go, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/replan.go, flai/internal/serve/role_events.go, flai/internal/serve/role_events_test.go, flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go, flai/internal/serve/analysis_schedule.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/serve.go, docs/operators/index.md, template/CHANGELOG.md, flai/internal/roles/definition.go, flai/internal/roles/definition_test.go, flai/internal/harness/adapters.go, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/planner_triggers_test.go]
+touches: [design/adrs, design/adrs/README.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, design/workflows/roles/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/analyzer.md, design/workflows/roles/curator.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/analyzer.md, template/root/design/workflows/roles/curator.md, flai/internal/roles/baseline/planner.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/roles/baseline/analyzer.md, flai/internal/roles/baseline/curator.md, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/roles/start.go, flai/internal/roles/start_test.go, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/replan.go, flai/internal/serve/role_events.go, flai/internal/serve/role_events_test.go, flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go, flai/internal/serve/analysis_schedule.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/serve.go, docs/operators/index.md, template/CHANGELOG.md, flai/internal/roles/definition.go, flai/internal/roles/definition_test.go, flai/internal/harness/adapters.go, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/planner_triggers_test.go, docs/users/flai.md, flai/internal/serve/builtin_triggers_test.go, design/issues/I-0262-flai-serve-does-not-start-a-defined-role-that-takes-items-on-a-schedule-entry.md, design/issues/summary.md]
 after: [S-0553]
 agent:
   harness: claude-code
@@ -26,21 +26,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2371
+  seconds: 3852
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-02
-      ceremony: 1
+      ceremony: 4
       hand_edits: 1
-      work: 47
+      work: 76
   models:
     - model: claude-opus-5-5
-      input: 400
-      output: 2324
-      cache_read: 24745984
-      cache_write: 801564
-      cost: 9.0467
+      input: 664
+      output: 3872
+      cache_read: 46577673
+      cache_write: 1138189
+      cost: 16.8966
   strategic:
     - kind: orchestrator
       seconds: 108
@@ -83,9 +83,9 @@ After S-0419 and S-0553, each built-in strategic role's definition comes from it
 - [x] A new ADR refining ADR-0207 § 4 settles the start prompt as data. It says where it lives in a role file, apart from the body, which stays the definition's prompt. It says which run fields it may use: the item and its kind, who asked, the reasons and their prime forms, the merge queue, the focus, the window since the last run, and a defined role's inputs. It also says how a project's additions reach it and how `flai upgrade` merges it.
 - [x] `planPrompt`, `orchestratePrompt`, `analyzePrompt`, `curatePrompt`, and `definedPrompt` give way to rendering the role file's start prompt. The four baseline role files, here, in the template, and embedded in flai, carry today's text. The harness tests, `TestClaudeCodeStartsThePlanner`, `TheOrchestrator`, `TheAnalyzer`, `TheCurator`, and `TestClaudeCodeStartsADefinedRole`, pass with the same start prompt text.
 - [x] `stale-figures`, `replan-agent`, and `each-ready-story` are implemented in `flai/internal/roles/conditions.go`. The planner starts from its role file's `trigger` entries through the event and schedule launchers, which take an item-taking role. `flai/internal/serve/replan_test.go` passes unchanged.
-- [ ] The analyzer's `analysis.schedule`, and the curator's `accepted` and `digest.schedule`, start them from their role files' triggers through the same launchers. `analysis_schedule_test.go` and `curate_schedule_test.go` pass unchanged, and an analysis schedule that names a formula, if S-0424 has landed, still starts it.
-- [ ] A test shows that a project's role file changes a built-in role's start prompt, by its project additions, and its triggers, with no change to flai.
-- [ ] `design/system/strategic-agents.md`, the strategic-agents convention and `design/workflows/roles/README.md` here and in the template, `docs/operators/index.md`, and `template/CHANGELOG.md` say that a built-in role's start prompt and triggers are read from its file.
+- [x] The analyzer's `analysis.schedule`, and the curator's `accepted` and `digest.schedule`, start them from their role files' triggers through the same launchers. `analysis_schedule_test.go` and `curate_schedule_test.go` pass unchanged, and an analysis schedule that names a formula, if S-0424 has landed, still starts it.
+- [x] A test shows that a project's role file changes a built-in role's start prompt, by its project additions, and its triggers, with no change to flai.
+- [x] `design/system/strategic-agents.md`, the strategic-agents convention and `design/workflows/roles/README.md` here and in the template, `docs/operators/index.md`, and `template/CHANGELOG.md` say that a built-in role's start prompt and triggers are read from its file.
 
 ## Tasks
 - T-2354 An ADR refining ADR-0207 § 4 settles a role file's start prompt as data and the built-in roles' triggers read from their files

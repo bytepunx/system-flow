@@ -3,10 +3,10 @@ id: S-0518
 type: story
 nature: remediation
 title: flai guard does not run as the hook inside the agent container, and the hook lets every call through when the guard cannot start
-status: review
+status: done
 owner: alex
 created: 2026-10-28T12:52:56Z
-updated: 2026-11-02T20:44:46Z
+updated: 2026-11-02T21:41:34Z
 transitions:
   - to: ready
     at: 2026-11-01T23:50:02Z
@@ -23,6 +23,9 @@ transitions:
   - to: review
     at: 2026-11-02T20:44:46Z
     by: agent-S-0518
+  - to: done
+    at: 2026-11-02T21:41:34Z
+    by: alex
 blocked:
   - from: 2026-11-02T00:20:51Z
     until: 2026-11-02T00:20:52Z

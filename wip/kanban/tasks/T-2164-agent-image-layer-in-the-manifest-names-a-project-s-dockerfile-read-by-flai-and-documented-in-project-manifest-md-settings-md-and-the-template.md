@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 56
-      output: 14920
-      cache_read: 6853464
-      cache_write: 79287
-      cost: 2.2055
+      output: 14763
+      cache_read: 6807925
+      cache_write: 124340
+      cost: 2.555
 ---
 # T-2164 agent.image.layer in the manifest names a project's Dockerfile, read by flai and documented in project-manifest.md, settings.md, and the template
 

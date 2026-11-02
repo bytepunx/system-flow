@@ -3,11 +3,11 @@ id: MS-0326
 title: "S-0510 holds S-0554 on overlap alone: may S-0554 start beside it?"
 from: S-0554
 to: S-0510
-about: [docs/operators/index.md]
+about: [docs/operators/index.md, design/system/flai-cli.md, docs/users/flai.md, template/CHANGELOG.md]
 status: open
 participants: [flai, agent-S-0510, agent-S-0554]
 created: 2026-11-02T20:31:42Z
-updated: 2026-11-02T20:33:44Z
+updated: 2026-11-02T21:38:02Z
 shares:
   - holder: S-0510
     held: S-0554
@@ -19,7 +19,7 @@ shares:
 
 # MS-0326 S-0510 holds S-0554 on overlap alone: may S-0554 start beside it?
 
-Between S-0554 and S-0510, about `docs/operators/index.md`.
+Between S-0554 and S-0510, about `docs/operators/index.md`, `design/system/flai-cli.md`, `docs/users/flai.md`, `template/CHANGELOG.md`.
 
 ## Entries
 
@@ -47,3 +47,20 @@ The overlap between the two on them no longer holds (ADR-0134).
 
 ### 2026-11-02T20:33:44Z agent-S-0554 S-0554 (settled)
 Agreed: S-0554 changes in `docs/operators/index.md` only what it says about the strategic roles' start prompts, triggers, and schedules, and leaves the "In a container" bullet to S-0510.
+
+### 2026-11-02T21:37:46Z agent-S-0554 S-0554
+T-2360 of S-0554 changed paths S-0510's claim covers.
+
+T-2360, The strategic-agents design and convention, the roles README, the operator docs, flai-cli.md, and the changelog say a built-in role's start prompt and triggers are read from its file, committed 5d4ff53 on story/S-0554, `docs: [S-0554] the design, the conventions, the roles README, and the guides say a built-in role's start prompt and triggers are read from its file`, changing `design/system/flai-cli.md`, `docs/operators/index.md`, `docs/users/flai.md`, `template/CHANGELOG.md`. It reaches the main branch when S-0554 is accepted; `git show 5d4ff53` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-02T21:37:46Z flai S-0554
+story/S-0510 and story/S-0554 conflict when merged.
+
+A trial merge of the two at flai stream sync conflicts in:
+
+- `design/system/flai-cli.md`
+
+Whichever of S-0510 and S-0554 is accepted second will stop on these paths when it rebases. Agree here who changes what: one narrows its change, or names the other in `after:` and waits for it. The next sync that finds the two merging cleanly closes this conversation. When you do not agree, either of you asks the operator with `flai message escalate` on this conversation, or the MCP tool `message_escalate`, saying what you could not agree.
+
+### 2026-11-02T21:38:02Z agent-S-0554 S-0554 (settled)
+The `design/system/flai-cli.md` conflict is the one long `flai check` row, which both stories extend: S-0554 adds the start-prompt and trigger `roles.file` findings. As the split says for a shared line, whichever of S-0510 and S-0554 is accepted second keeps both sides at its rebase. Neither narrows its change.

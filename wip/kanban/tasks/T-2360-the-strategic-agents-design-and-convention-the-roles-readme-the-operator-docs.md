@@ -3,16 +3,37 @@ id: T-2360
 type: task
 nature: improvement
 title: The strategic-agents design and convention, the roles README, the operator docs, flai-cli.md, and the changelog say a built-in role's start prompt and triggers are read from its file
-status: backlog
+status: done
 parent: S-0554
 owner: alex
 created: 2026-10-30T20:49:25Z
-updated: 2026-10-30T20:49:25Z
-transitions: []
+updated: 2026-11-02T21:37:50Z
+transitions:
+  - to: ready
+    at: 2026-11-02T21:27:15Z
+    by: agent-S-0554
+  - to: in-progress
+    at: 2026-11-02T21:27:16Z
+    by: agent-S-0554
+  - to: done
+    at: 2026-11-02T21:37:50Z
+    by: agent-S-0554
 stream: S-0554
 tags: [template]
-touches: [design/system/strategic-agents.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/operators/index.md, template/CHANGELOG.md]
+touches: [design/system/strategic-agents.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/operators/index.md, template/CHANGELOG.md, docs/users/flai.md]
 after: [T-2357, T-2359]
+usage:
+  source: log
+  seconds: 626
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 176
+      output: 991
+      cache_read: 13155748
+      cache_write: 198494
+      cost: 4.7288
 ---
 # T-2360 The strategic-agents design and convention, the roles README, the operator docs, flai-cli.md, and the changelog say a built-in role's start prompt and triggers are read from its file
 

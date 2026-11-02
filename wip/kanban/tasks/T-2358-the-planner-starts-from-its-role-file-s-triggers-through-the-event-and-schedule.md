@@ -24,16 +24,16 @@ touches: [flai/internal/serve/replan.go, flai/internal/serve/role_events.go, fla
 after: [T-2356]
 usage:
   source: log
-  seconds: 986
+  seconds: 1005
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 131
-      output: 713
-      cache_read: 8620446
-      cache_write: 186382
-      cost: 3.1186
+      input: 133
+      output: 721
+      cache_read: 8895425
+      cache_write: 188967
+      cost: 3.2169
 ---
 # T-2358 The planner starts from its role file's triggers through the event and schedule launchers, which take an item-taking built-in role, in place of the replanner's own triggers
 

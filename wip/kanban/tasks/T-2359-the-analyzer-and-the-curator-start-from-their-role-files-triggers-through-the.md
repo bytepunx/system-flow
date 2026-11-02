@@ -3,11 +3,11 @@ id: T-2359
 type: task
 nature: feature
 title: The analyzer and the curator start from their role files' triggers through the same launchers, in place of the analysis and digest schedulers' own rules
-status: in-progress
+status: done
 parent: S-0554
 owner: alex
 created: 2026-10-30T20:49:20Z
-updated: 2026-11-02T21:16:56Z
+updated: 2026-11-02T21:26:55Z
 transitions:
   - to: ready
     at: 2026-11-02T21:16:55Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-02T21:16:56Z
     by: agent-S-0554
+  - to: done
+    at: 2026-11-02T21:26:55Z
+    by: agent-S-0554
 stream: S-0554
 tags: [cli]
-touches: [flai/internal/serve/analysis_schedule.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/serve.go]
+touches: [flai/internal/serve/analysis_schedule.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/serve.go, flai/internal/serve/replan.go, flai/internal/serve/role_schedule.go, flai/internal/serve/builtin_triggers_test.go]
 after: [T-2358]
+usage:
+  source: log
+  seconds: 599
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 78
+      output: 522
+      cache_read: 7238898
+      cache_write: 119191
+      cost: 2.6055
 ---
 # T-2359 The analyzer and the curator start from their role files' triggers through the same launchers, in place of the analysis and digest schedulers' own rules
 
