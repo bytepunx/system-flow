@@ -1,0 +1,332 @@
+package cmd
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
+	"testing"
+
+	"github.com/bytepunx/system-flow/flai/internal/formulas"
+)
+
+// releaseCheck is ADR-0238's example formula with the reviewer role
+// reviewerRole defines: a script step, then a flai step and a role step after
+// it, an input with a default and one without.
+const releaseCheck = `---
+title: "Release check for {{version}}"
+updated: 2026-11-01
+status: active
+name: release-check
+description: "Check that the work on main is ready to publish as {{version}}."
+nature: remediation
+inputs:
+  - name: version
+    description: The version to check, such as 1.4.0.
+  - name: area
+    description: What the reviewer looks at.
+    default: the changes since the last release
+steps:
+  - id: test
+    title: The tests pass
+    run: {script: scripts/test.sh --short}
+  - id: evaluate
+    title: The release evaluation agrees on {{version}}
+    run: {flai: release --evaluate}
+    after: [test]
+  - id: risk
+    title: The reviewer reports the risk of {{version}}
+    run:
+      role: reviewer
+      prompt: Report the risk in {{area}} before {{version}} is published.
+    after: [test]
+---
+
+# Release check
+
+Run before a release is published.
+
+<!-- system-flow:end-of-baseline -->
+
+## Project additions
+`
+
+// formulaProject is a project with the reviewer role, scripts/test.sh, and
+// the formula files files.
+func formulaProject(t *testing.T, files map[string]string) string {
+	t.Helper()
+	root := rolesProject(t, map[string]string{"reviewer.md": reviewerRole})
+	for dir, list := range map[string]map[string]string{"scripts": {"test.sh": "#!/bin/sh\n"}, "design/workflows/formulas": files} {
+		if err := os.MkdirAll(filepath.Join(root, dir), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		for name, content := range list {
+			if err := os.WriteFile(filepath.Join(root, dir, name), []byte(content), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	return root
+}
+
+// itemFiles are the story and task files under root's kanban.
+func itemFiles(t *testing.T, root string) []string {
+	t.Helper()
+	var out []string
+	for _, dir := range []string{"stories", "tasks"} {
+		matches, err := filepath.Glob(filepath.Join(root, "wip", "kanban", dir, "*.md"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		out = append(out, matches...)
+	}
+	return out
+}
+
+// itemFile is the content of the one item file of id under root's kanban.
+func itemFile(t *testing.T, root, id string) string {
+	t.Helper()
+	matches, _ := filepath.Glob(filepath.Join(root, "wip", "kanban", "*", id+"-*.md"))
+	if len(matches) != 1 {
+		t.Fatalf("%s: %v", id, matches)
+	}
+	data, err := os.ReadFile(matches[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
+}
+
+// S-0421 (ADR-0238 §7): flai formula list gives each formula's name, nature,
+// step count, file, and title, and says a file that does not load on stderr;
+// --json gives a list.
+func TestFormulaList(t *testing.T) {
+	t.Parallel()
+	root := formulaProject(t, map[string]string{"README.md": "# Formulas\n", "release-check.md": releaseCheck, "broken.md": "no front matter\n"})
+	out, errOut, code := runIn(t, root, "formula", "list")
+	if code != 0 || out != "release-check  remediation  3 steps  design/workflows/formulas/release-check.md\n  Release check for {{version}}\n" {
+		t.Errorf("formula list: %d %q %s", code, out, errOut)
+	}
+	if !strings.Contains(errOut, "design/workflows/formulas/broken.md:1: formulas.file:") || !strings.Contains(errOut, "(left out)") {
+		t.Errorf("the file that does not load is said on stderr: %s", errOut)
+	}
+	js, _, code := runIn(t, root, "formula", "list", "--json")
+	var got []map[string]any
+	if err := json.Unmarshal([]byte(js), &got); code != 0 || err != nil || len(got) != 1 {
+		t.Fatalf("formula list --json: %d %v %s", code, err, js)
+	}
+	if got[0]["name"] != "release-check" || got[0]["nature"] != "remediation" || got[0]["steps"] != 3.0 || got[0]["path"] != "design/workflows/formulas/release-check.md" || got[0]["title"] != "Release check for {{version}}" {
+		t.Errorf("formula list --json: %v", got[0])
+	}
+	empty := formulaProject(t, nil)
+	if out, _, _ := runIn(t, empty, "formula", "list"); out != "no formulas\n" {
+		t.Errorf("no formulas: %q", out)
+	}
+	if js, _, _ := runIn(t, empty, "formula", "list", "--json"); strings.TrimSpace(js) != "[]" {
+		t.Errorf("no formulas, --json: %q", js)
+	}
+}
+
+// S-0421 (ADR-0238 §7): flai formula show prints the inputs, the steps with
+// what each runs and is after, and the layers; --json gives the formula,
+// each step's kind, and its layers; an unknown name names the formulas, and
+// one whose file does not load says why.
+func TestFormulaShow(t *testing.T) {
+	t.Parallel()
+	root := formulaProject(t, map[string]string{"release-check.md": releaseCheck, "broken.md": "no front matter\n"})
+	out, errOut, code := runIn(t, root, "formula", "show", "release-check")
+	want := `release-check  remediation  design/workflows/formulas/release-check.md
+  title:       Release check for {{version}}
+  status:      active
+  updated:     2026-11-01
+  description: Check that the work on main is ready to publish as {{version}}.
+inputs:
+  version  required  The version to check, such as 1.4.0.
+  area  default "the changes since the last release"  What the reviewer looks at.
+steps:
+  test: The tests pass
+    script: scripts/test.sh --short
+  evaluate: The release evaluation agrees on {{version}}
+    flai:   flai release --evaluate
+    after:  test
+  risk: The reviewer reports the risk of {{version}}
+    role:   reviewer
+    prompt: Report the risk in {{area}} before {{version}} is published.
+    after:  test
+layers:
+  1  test
+  2  evaluate, risk
+`
+	if code != 0 || out != want {
+		t.Errorf("formula show: %d %s\n%s", code, errOut, out)
+	}
+	js, _, code := runIn(t, root, "formula", "show", "release-check", "--json")
+	var got struct {
+		Name   string     `json:"name"`
+		Layers [][]string `json:"layers"`
+		Inputs []struct {
+			Name    string  `json:"name"`
+			Default *string `json:"default"`
+		} `json:"inputs"`
+		Steps []struct {
+			ID   string       `json:"id"`
+			Kind string       `json:"kind"`
+			Run  formulas.Run `json:"run"`
+		} `json:"steps"`
+	}
+	if err := json.Unmarshal([]byte(js), &got); code != 0 || err != nil {
+		t.Fatalf("formula show --json: %d %v %s", code, err, js)
+	}
+	var kinds []string
+	for _, s := range got.Steps {
+		kinds = append(kinds, s.Kind)
+	}
+	if got.Name != "release-check" || !slices.Equal(kinds, []string{"script", "flai", "role"}) || got.Steps[2].Run.Role != "reviewer" ||
+		len(got.Layers) != 2 || !slices.Equal(got.Layers[1], []string{"evaluate", "risk"}) || got.Inputs[0].Default != nil || got.Inputs[1].Default == nil {
+		t.Errorf("formula show --json: %s", js)
+	}
+	if _, errOut, code := runIn(t, root, "formula", "show", "nope"); code == 0 || !strings.Contains(errOut, "no formula is named nope; the formulas are release-check") {
+		t.Errorf("an unknown formula: %d %s", code, errOut)
+	}
+	if _, errOut, code := runIn(t, root, "formula", "show", "broken"); code == 0 || !strings.Contains(errOut, "formula broken does not load: design/workflows/formulas/broken.md:1: formulas.file:") {
+		t.Errorf("a formula whose file does not load: %d %s", code, errOut)
+	}
+}
+
+// S-0421 (ADR-0238 §7, §9): flai formula run makes one story in backlog with
+// the formula's nature, formula: <name>, the filled title, the description
+// as its goal, a criterion per step, and notes naming the file and the
+// inputs, in the epic given; and a task per step with its Work, its Done
+// when, and the tasks of its after as its after, so that the tasks' layers
+// are the steps'. flai check --strict passes on what it made.
+func TestFormulaRun(t *testing.T) {
+	t.Parallel()
+	root := formulaProject(t, map[string]string{"release-check.md": releaseCheck})
+	if _, errOut, code := runIn(t, root, "epic", "new", "Releases"); code != 0 {
+		t.Fatal(errOut)
+	}
+	js, errOut, code := runIn(t, root, "formula", "run", "release-check", "--input", "version=1.4.0", "--epic", "E-0001", "--json")
+	if code != 0 {
+		t.Fatalf("formula run: %d %s %s", code, js, errOut)
+	}
+	var got formulaRunResult
+	if err := json.Unmarshal([]byte(js), &got); err != nil {
+		t.Fatalf("formula run --json: %v %s", err, js)
+	}
+	wantTasks := []formulaTask{{ID: "T-0001", Step: "test"}, {ID: "T-0002", Step: "evaluate"}, {ID: "T-0003", Step: "risk"}}
+	if got.Story != "S-0001" || got.Formula != "release-check" || !slices.Equal(got.Tasks, wantTasks) ||
+		got.Inputs["version"] != "1.4.0" || got.Inputs["area"] != "the changes since the last release" || got.Commit != "" {
+		t.Errorf("formula run --json: %+v", got)
+	}
+	story := itemFile(t, root, "S-0001")
+	for _, want := range []string{
+		"type: story\nnature: remediation\ntitle: Release check for 1.4.0\nstatus: backlog\nparent: E-0001\n",
+		"\nformula: release-check\n",
+		"# S-0001 Release check for 1.4.0\n\n## Goal\n\nCheck that the work on main is ready to publish as 1.4.0.\n\n",
+		"## Acceptance criteria\n\n- [ ] The tests pass\n- [ ] The release evaluation agrees on 1.4.0\n- [ ] The reviewer reports the risk of 1.4.0\n\n",
+		"## Tasks\n- T-0001 The tests pass\n- T-0002 The release evaluation agrees on 1.4.0\n- T-0003 The reviewer reports the risk of 1.4.0\n",
+		"## Notes\n\nMade by `flai formula run release-check` from `design/workflows/formulas/release-check.md`, with the inputs `area=the changes since the last release`, `version=1.4.0`.\n",
+	} {
+		if !strings.Contains(story, want) {
+			t.Errorf("the story lacks %q:\n%s", want, story)
+		}
+	}
+	if epic := itemFile(t, root, "E-0001"); !strings.Contains(epic, "- S-0001 Release check for 1.4.0") {
+		t.Errorf("the epic does not list the story:\n%s", epic)
+	}
+	for id, want := range map[string][]string{
+		"T-0001": {"nature: remediation\ntitle: The tests pass\nstatus: backlog\nparent: S-0001\n", "## Work\n\nRun `scripts/test.sh --short` from the repository root.\n\n## Done when\n\n`scripts/test.sh --short` exits 0.\n"},
+		"T-0002": {"after: [T-0001]", "## Work\n\nRun `flai release --evaluate`.\n\n## Done when\n\n`flai release --evaluate` exits 0.\n"},
+		"T-0003": {"after: [T-0001]", "## Work\n\nRun the role `reviewer` with this prompt:\n\n> Report the risk in the changes since the last release before 1.4.0 is published.\n\n## Done when\n\nThe role's run ends with its work done.\n"},
+	} {
+		task := itemFile(t, root, id)
+		for _, w := range want {
+			if !strings.Contains(task, w) {
+				t.Errorf("%s lacks %q:\n%s", id, w, task)
+			}
+		}
+	}
+	if strings.Contains(itemFile(t, root, "T-0001"), "after:") {
+		t.Errorf("T-0001 waits for nothing:\n%s", itemFile(t, root, "T-0001"))
+	}
+	show, errOut, code := runIn(t, root, "show", "S-0001", "--json")
+	var plan struct {
+		Plan struct {
+			Layers [][]string `json:"layers"`
+		} `json:"plan"`
+	}
+	if err := json.Unmarshal([]byte(show), &plan); code != 0 || err != nil {
+		t.Fatalf("show S-0001: %d %v %s", code, err, errOut)
+	}
+	if want := [][]string{{"T-0001"}, {"T-0002", "T-0003"}}; len(plan.Plan.Layers) != 2 || !slices.Equal(plan.Plan.Layers[0], want[0]) || !slices.Equal(plan.Plan.Layers[1], want[1]) {
+		t.Errorf("the tasks' layers are not the steps': %v", plan.Plan.Layers)
+	}
+	// the fixture is no whole project, so the check is scoped to the story,
+	// which takes in its tasks
+	if out, errOut, code := runIn(t, root, "check", "--strict", "--story", "S-0001"); code != 0 {
+		t.Errorf("check --strict on what formula run made: %d\n%s%s", code, out, errOut)
+	}
+	out, errOut, code := runIn(t, root, "formula", "run", "release-check", "--input", "version=2.0.0", "--input", "area=docs")
+	if code != 0 || !strings.HasPrefix(out, "S-0002 Release check for 2.0.0\n  wip/kanban/stories/S-0002-") ||
+		!strings.Contains(out, "\n  T-0004 The tests pass (test)\n  T-0005 The release evaluation agrees on 2.0.0 (evaluate), after T-0004\n  T-0006 The reviewer reports the risk of 2.0.0 (risk), after T-0004\n") {
+		t.Errorf("formula run: %d %s\n%s", code, errOut, out)
+	}
+	if story := itemFile(t, root, "S-0002"); strings.Contains(story, "parent: E") || !strings.Contains(story, "`area=docs`, `version=2.0.0`") {
+		t.Errorf("a story without --epic, with both inputs given:\n%s", story)
+	}
+}
+
+// S-0421 (ADR-0238 §7): flai formula run refuses, before it writes anything,
+// a malformed --input, one given twice, an undeclared input, a missing
+// required one, an unknown formula, and one flai check reports a problem in;
+// and when an item it makes is refused, it removes the story and the tasks
+// it made and restores the epic.
+func TestFormulaRunRefuses(t *testing.T) {
+	t.Parallel()
+	invalid := strings.Replace(strings.Replace(releaseCheck, "name: release-check", "name: invalid", 1), "role: reviewer", "role: nobody", 1)
+	untitled := strings.Replace(strings.Replace(releaseCheck, "name: release-check", "name: untitled", 1), "title: The release evaluation agrees on {{version}}", `title: "..."`, 1)
+	root := formulaProject(t, map[string]string{"release-check.md": releaseCheck, "invalid.md": invalid, "untitled.md": untitled})
+	if _, errOut, code := runIn(t, root, "epic", "new", "Releases"); code != 0 {
+		t.Fatal(errOut)
+	}
+	epicWas := itemFile(t, root, "E-0001")
+	for _, tc := range []struct {
+		name string
+		args []string
+		says string
+	}{
+		{"malformed", []string{"release-check", "--input", "version"}, `is not name=value: give each input as its name`},
+		{"twice", []string{"release-check", "--input", "version=1", "--input", "version=2"}, "--input version is given twice"},
+		{"undeclared", []string{"release-check", "--input", "version=1", "--input", "colour=red"}, "formula release-check declares no input colour"},
+		{"missing", []string{"release-check"}, "formula release-check needs input version, which has no default; its inputs are version (required), area"},
+		{"unknown", []string{"nope"}, "no formula is named nope; the formulas are"},
+		{"invalid", []string{"invalid", "--input", "version=1"}, "formula invalid has 1 problem, so nothing was made"},
+		{"refused item", []string{"untitled", "--input", "version=1", "--epic", "E-0001"}, "making the task for step evaluate of formula untitled, so the story S-0001 and the tasks made before it were removed: a title is required"},
+	} {
+		_, errOut, code := runIn(t, root, append([]string{"formula", "run"}, tc.args...)...)
+		if code == 0 || !strings.Contains(errOut, tc.says) {
+			t.Errorf("%s: %d %s, want %q", tc.name, code, errOut, tc.says)
+		}
+		if made := itemFiles(t, root); len(made) != 0 {
+			t.Errorf("%s: wrote %v", tc.name, made)
+		}
+	}
+	if epic := itemFile(t, root, "E-0001"); epic != epicWas {
+		t.Errorf("the epic was not restored:\n%s", epic)
+	}
+}
+
+// S-0421: the tasks are made in file order, save that a step comes after
+// each step its after names.
+func TestFormulaCreationOrder(t *testing.T) {
+	t.Parallel()
+	f := formulas.Formula{Steps: []formulas.Step{{ID: "a", After: []string{"c"}}, {ID: "b"}, {ID: "c"}, {ID: "d", After: []string{"b"}}}}
+	var got []string
+	for _, s := range creationOrder(f) {
+		got = append(got, s.ID)
+	}
+	if want := []string{"b", "c", "a", "d"}; !slices.Equal(got, want) {
+		t.Errorf("creation order %v, want %v", got, want)
+	}
+}

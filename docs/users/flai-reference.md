@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-10-31
+updated: 2026-11-02
 status: active
 ---
 
@@ -37,6 +37,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [file](#flai-file) | Read and save a text file that is not markdown |
 | [forecast](#flai-forecast) | Print a story's forecast duration and delivery, worked out from history and the pull order |
 | [forge](#flai-forge) | The project's forge, through which pull-request acceptance merges a story |
+| [formula](#flai-formula) | Read the project's formulas, one file each under design/workflows/formulas, and make a story from one (ADR-0238) |
 | [guard](#flai-guard) | Refuse a sub-agent's writes, hold every strategic role, the planner, the orchestrator, the analyzer, the curator, and any a project defines, to its role file, and keep a story's agent from waiting on its sub-agents with wait\_for\_events, as a Claude Code hook |
 | [host](#flai-host) | Run flai host: the one process per machine that keeps flai serve and the MCP servers running |
 | [hostapi](#flai-hostapi) | Answer one method of the dashboard's API for this project, as flai serve would |
@@ -119,6 +120,7 @@ Subcommands:
 - [file](#flai-file): Read and save a text file that is not markdown
 - [forecast](#flai-forecast): Print a story's forecast duration and delivery, worked out from history and the pull order
 - [forge](#flai-forge): The project's forge, through which pull-request acceptance merges a story
+- [formula](#flai-formula): Read the project's formulas, one file each under design/workflows/formulas, and make a story from one (ADR-0238)
 - [guard](#flai-guard): Refuse a sub-agent's writes, hold every strategic role, the planner, the orchestrator, the analyzer, the curator, and any a project defines, to its role file, and keep a story's agent from waiting on its sub-agents with wait\_for\_events, as a Claude Code hook
 - [host](#flai-host): Run flai host: the one process per machine that keeps flai serve and the MCP servers running
 - [hostapi](#flai-hostapi): Answer one method of the dashboard's API for this project, as flai serve would
@@ -2060,6 +2062,73 @@ Examples:
 flai forge status S-0042
 flai forge status S-0042 --json
 ```
+
+### flai formula
+
+Read the project's formulas, one file each under design/workflows/formulas, and make a story from one (ADR-0238).
+
+A formula is a repeatable process as data: one markdown file, &lt;name&gt;.md, in the design folder's workflows/formulas (ADR-0238). Its front matter names the formula, the nature of the story it makes, its inputs, and its steps. Each step runs a flai command, a script under scripts/, or a role with a prompt, after the steps its after names. An input is used as {{name}} in the title, a step's title, and a step's run. flai check reports a formula file that falls short as formulas.file.
+
+flai formula run makes from a formula one ordinary story in backlog, with one task per step, which a story's agent works as it works any story.
+
+Subcommands:
+
+- [list](#flai-formula-list): List the project's formulas with their nature, step count, file, and title
+- [run](#flai-formula-run): Make a story from a formula, with one task per step, in backlog
+- [show](#flai-formula-show): Print a formula: its inputs, its steps and what each runs, and the steps' layers
+
+#### flai formula list
+
+List the project's formulas with their nature, step count, file, and title.
+
+```text
+flai formula list
+```
+
+List the formulas in this checkout's design folder's workflows/formulas, in file order: each one's name, the nature of the story it makes, its number of steps, and its file, and below it its title. A formula file that does not load is left out and said on stderr; flai check reports it. --json gives an array of {name, title, nature, status, steps, path}, steps the count, [] when none.
+
+#### flai formula run
+
+Make a story from a formula, with one task per step, in backlog.
+
+```text
+flai formula run <name> [flags]
+```
+
+Make the formula's instance (ADR-0238 §7): one story in backlog, as flai story new makes it, and one task of it per step. Each --input, name=value, gives one of the formula's inputs; an input not given takes its default.
+
+Before it writes anything it refuses a formula flai check reports a problem in, an --input that is not name=value or is given twice, an input the formula does not declare, and a required input not given.
+
+The story has the formula's nature, formula: &lt;name&gt; in its front matter, the formula's title with the inputs filled as its title, the description as its goal, one acceptance criterion per step, and notes naming the formula file and the inputs the run took. --epic makes it a story of that epic; a story need not belong to one. Each task has the step's title, a Work section naming what the step runs, a Done when section that is its exit (the command or script exits 0, or the role's run ends with its work done), and the tasks of the step's after as its after, so that the tasks' layers are the steps'. The tasks are made in file order, each after those it waits for.
+
+Each item is checked as flai story new --body-stdin checks one: a finding it brings refuses it, and the story and the tasks made before it are removed (exit 4). --autocommit commits the story, its tasks, and its epic in one commit, unless the project sets dashboard.autocommit: false. Nothing is pushed. It prints the story's ID, path, and tasks; --json gives {story, path, tasks: [{id, step}], formula, inputs}, with commit when it committed.
+
+Examples:
+
+```bash
+flai formula list
+flai formula show release-check
+flai formula run release-check --input version=1.4.0 --epic E-0007
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--autocommit` | commit the story, its tasks, and its epic in one commit, unless dashboard.autocommit is false |
+| `--epic` string | the epic the story belongs to (optional: a story need not belong to one) |
+| `--input` stringArray | one of the formula's inputs, as name=value (repeatable) |
+| `--trailer` stringArray | trailer line for the commit (repeatable) |
+
+#### flai formula show
+
+Print a formula: its inputs, its steps and what each runs, and the steps' layers.
+
+```text
+flai formula show <name>
+```
+
+Print one formula by its name: its nature, file, title, status, updated, and description; its inputs, each required or with its default, and what it is; its steps, each with its title, what it runs, and the steps it is after; and its layers, the steps grouped by the longest chain of after before each, so that the tasks of a layer can run at once once those of the layers before it are done. The problems flai check would report in it are said on stderr. --json gives the formula, each step's kind among its fields, and its layers.
 
 ### flai guard
 

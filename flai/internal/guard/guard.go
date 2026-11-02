@@ -262,7 +262,8 @@ const (
 // library, and flai components alone prints its help (S-0477, ADR-0186).
 // flai digest list and show read the digest (S-0428). flai subproject list
 // reads the manifest's sub-projects, and flai subproject alone prints its
-// help (S-0491).
+// help (S-0491). flai formula list and show read the formulas, and flai
+// formula alone prints its help (S-0421).
 var cliReads = map[string][]string{
 	"board":      {""},
 	"check":      nil,
@@ -272,6 +273,7 @@ var cliReads = map[string][]string{
 	"digest":     {"list", "show"},
 	"doc":        {"search", "show"},
 	"forecast":   nil,
+	"formula":    {"", "list", "show"},
 	"help":       nil,
 	"issue":      {"list"},
 	"message":    {"list", "show"},
@@ -421,11 +423,13 @@ var cliAnalyzes = map[string][]string{
 
 // cliAuthors are the flai commands that author a work item, with the
 // subcommands that do, nil for every one; the analyzer runs none of them.
+// flai formula run makes a story and its tasks (S-0421).
 var cliAuthors = map[string][]string{
-	"epic":  nil,
-	"issue": {"story"},
-	"story": nil,
-	"task":  nil,
+	"epic":    nil,
+	"formula": {"run"},
+	"issue":   {"story"},
+	"story":   nil,
+	"task":    nil,
 }
 
 // analyzer ends each of the analyzer's refusals: the rule the call breaks

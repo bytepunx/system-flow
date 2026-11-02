@@ -39,6 +39,8 @@ type NewOptions struct {
 	// Draft makes a story a draft (S-0199): an agent wrote it, and it is
 	// finalized before it is ready.
 	Draft bool
+	// Formula names the formula flai formula run makes a story from (S-0421).
+	Formula string
 	// CostOfDelay is what waiting for a story or an epic costs (S-0203): a
 	// story made from an issue carries the issue's cost of delay inputs.
 	CostOfDelay *CostOfDelay
@@ -145,6 +147,10 @@ func (r *Repo) Create(opt NewOptions) (*Item, error) {
 		return nil, fmt.Errorf("only a story is a draft, not %s", articled(opt.Type))
 	}
 	it.Draft = opt.Draft
+	if opt.Formula != "" && opt.Type != Story {
+		return nil, fmt.Errorf("only a story is made from a formula, not %s", articled(opt.Type))
+	}
+	it.Formula = opt.Formula
 	if c := opt.CostOfDelay; !c.IsZero() {
 		if !Carries(opt.Type, "cost_of_delay") {
 			return nil, fmt.Errorf("only a story or an epic carries a cost of delay, not %s", articled(opt.Type))
