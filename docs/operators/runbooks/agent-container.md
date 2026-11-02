@@ -59,11 +59,12 @@ Before the run it writes two things to `.flai-cache/agents/S-nnnn/`, which is gi
 | Host path | In the container | Mode | For |
 |-----------|------------------|------|-----|
 | `.flai-cache/worktrees/S-nnnn` | the same path, the working directory | read-write | the story's worktree |
+| `.git` of the main checkout | the same path | read-only | git in the worktree reads the objects, refs, and `config` from it |
+| `.git/worktrees/S-nnnn` of the main checkout, the story's registration | the same path, over the read-only `.git` | read-write | the worktree's own `index`, `HEAD`, logs, and locks, which its `.git` file names |
 | `.flai-cache/agents/S-nnnn` | the same path, as `CLAUDE_CONFIG_DIR` | read-write | Claude Code's state: settings, transcript, caches; and in `flai/`, the container's flai config and cache |
 | `~/.claude` (`FLAI_CLAUDE_LOGIN`) | `/run/claude-login` | read-only | the login; only `.credentials.json` is read |
-| `.git` of the main checkout, only with `FLAI_AGENT_GIT_MOUNT=1` | the same path | read-write | git in the worktree, whose `.git` file points there |
 
-Nothing else is mounted. The Docker socket is never mounted, so the agent cannot start containers or reach the host's Docker. Without `FLAI_AGENT_GIT_MOUNT=1`, git in the worktree fails with `not a git repository`, and the agent cannot commit or close a task.
+Nothing else is mounted. The Docker socket is never mounted, so the agent cannot start containers or reach the host's Docker. The two git mounts are [ADR-0246](../../../design/adrs/0246-a-container-that-runs-a-story-s-agent-mounts-the-main-checkout-s-git-read-only.md)'s: git in the worktree reads its history and refreshes its index, so `git status`, `diff`, `log`, and `show` work, and a `git commit`, `stash`, or new branch is refused by git on the read-only objects and refs. Commits are the host's, through `task_done` and the close-out. The script refuses to start when the story's registration, `.git/worktrees/S-nnnn`, is missing, and names its path.
 
 The script sets two variables in the container so that its flai writes nothing under the container's home, `/home/agent`:
 
@@ -84,7 +85,6 @@ Environment variables the script reads:
 | `FLAI_CLAUDE_LOGIN` | `~/.claude` | the folder holding the login, mounted read-only |
 | `FLAI_AGENT_MODEL` | Claude Code's own | `claude --model`, such as `haiku` |
 | `FLAI_AGENT_NETWORK` | `bridge` | `bridge` reaches the host as `host.docker.internal`; `host` uses Docker's host network |
-| `FLAI_AGENT_GIT_MOUNT` | unset | `1` also mounts the main checkout's `.git` |
 | `FLAI_SESSION` | a new UUID | the session ID the agent logs under |
 
 On the bridge network the agent sends the server's own `Host` header, `127.0.0.1:<port>`, whatever address it dials, because the server refuses a request on its loopback listener that names another host. On Docker Desktop the `host` network is the VM's, not the machine's, and the server is not reachable from it.
@@ -118,4 +118,4 @@ If a token in an `mcp.json` may have been copied elsewhere, rotate it with `flai
 
 ## Limitations
 
-S-0505's results document records what was tried, what worked, and what is still open, among them the network attempts, the login's OAuth refresh, which was not exercised, and git inside the container. Read it before relying on this runbook for long runs: [S-0505's results](../../../design/experiments/S-0505-claude-code-works-one-story-of-this-repository-inside-a-hand-built-container-from-a-bedrock-image-and-a-claude-code-layer-and-the-results-settle-what-adr-0203-leaves-open.md).
+S-0505's results document records what was tried, what worked, and what is still open, among them the network attempts, the login's OAuth refresh, which was not exercised, and git inside the container, which ADR-0246's two git mounts have since settled. Read it before relying on this runbook for long runs: [S-0505's results](../../../design/experiments/S-0505-claude-code-works-one-story-of-this-repository-inside-a-hand-built-container-from-a-bedrock-image-and-a-claude-code-layer-and-the-results-settle-what-adr-0203-leaves-open.md).

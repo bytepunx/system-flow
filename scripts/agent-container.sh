@@ -7,11 +7,14 @@
 # project's HTTP MCP server's URL, token, and Host. pilot writes the MCP file, which names those
 # variables and holds no token, and starts claude with the argv flai serve gives on the host, the
 # prompt included; its log is claude's stream-json, as on the host.
-# Mounts the story's worktree read-write at its host path (the working directory),
-# .flai-cache/agents/S-nnnn read-write at its host path as the cache (claude's configuration in its
-# claude folder), and the operator's Claude login (FLAI_CLAUDE_LOGIN, default ~/.claude) read-only
-# at /run/claude-login; nothing else, never the Docker socket. The server is the one `flai mcp
-# status` names, with the token from `flai mcp token`, passed by environment, never in an argument.
+# Mounts, each at its host path, the story's worktree read-write (the working directory), the main
+# checkout's .git read-only and the story's registration in it, .git/worktrees/S-nnnn, read-write
+# over it (ADR-0246), and .flai-cache/agents/S-nnnn read-write as the cache (claude's configuration
+# in its claude folder); and the operator's Claude login (FLAI_CLAUDE_LOGIN, default ~/.claude)
+# read-only at /run/claude-login; nothing else, never the Docker socket. Git in the worktree reads
+# and refreshes its index; a commit fails on the read-only objects, since commits are the host's,
+# through task_done and the close-out. The server is the one `flai mcp status` names, with the
+# token from `flai mcp token`, passed by environment, never in an argument.
 # The container's flai keeps its config and cache under .flai-cache/agents/S-nnnn/flai (FLAI_CONFIG,
 # FLAI_CACHE_DIR), so nothing is written under the container's home.
 # FLAI_BIN       the flai that answers mcp status and token (default: the flai on PATH, installed)
@@ -19,7 +22,6 @@
 # FLAI_AGENT_MODEL    the agent's model, such as haiku (default: claude's own)
 # FLAI_AGENT_MAX_BUDGET_USD  the agent's max_budget_usd, such as 0.05, for a trial run
 # FLAI_AGENT_SESSION  the session; a second run with the same one resumes it (default: a new one)
-# FLAI_AGENT_GIT_MOUNT=1  also mounts the main checkout's .git at its host path, for git inside
 set -eu
 # The installed flai, before env.sh puts this tree's bin/ first on PATH.
 FLAI_BIN="${FLAI_BIN:-$(command -v flai || true)}"
@@ -41,6 +43,11 @@ WORKTREE="$CACHE_ROOT/.flai-cache/worktrees/$STORY"
 AGENT_DIR="$CACHE_ROOT/.flai-cache/agents/$STORY"
 LOGIN="${FLAI_CLAUDE_LOGIN:-$HOME/.claude}"
 [ -d "$WORKTREE" ] || { echo "no worktree at $WORKTREE: flai story start $STORY opens it" >&2; exit 1; }
+# The story's registration, which the worktree's .git file names: git in the container writes its
+# index, HEAD, and locks there, and reads the rest of the main checkout's .git read-only.
+GIT_COMMON="$CACHE_ROOT/.git"
+REGISTRATION="$GIT_COMMON/worktrees/$STORY"
+[ -d "$REGISTRATION" ] || { echo "no worktree registration at $REGISTRATION: git in the container needs it; flai story start $STORY opens the worktree with it" >&2; exit 1; }
 [ -f "$LOGIN/.credentials.json" ] || { echo "no Claude login at $LOGIN/.credentials.json: sign in with claude on the host, or set FLAI_CLAUDE_LOGIN" >&2; exit 1; }
 [ -x "${FLAI_BIN:-/nonexistent}" ] || { echo "no flai to ask for the MCP server: install it, or set FLAI_BIN" >&2; exit 1; }
 # The operator's host's server: its state is the main checkout's .flai-cache/mcp-http.json, whatever
@@ -85,21 +92,20 @@ esac
 PROJECT="$(sed -n 's/^key: *//p' "$ROOT/system-flow.yaml" | head -n 1)"
 REQUEST="$(printf '{"Story":"%s","Root":"%s","Project":"%s","Name":"%s","Session":"%s","Agent":{%s},"inner":"claude-code","mcp_url_env":"FLAI_MCP_URL","mcp_token_env":"FLAI_MCP_TOKEN","mcp_host_env":"FLAI_MCP_HOST","cache":"%s"}' \
   "$STORY" "$WORKTREE" "$PROJECT" "$AGENT" "$SESSION" "$AGENT_JSON" "$AGENT_DIR")"
-GIT_ARGS=""
-if [ "${FLAI_AGENT_GIT_MOUNT:-0}" = 1 ]; then
-  GIT_ARGS="-v $CACHE_ROOT/.git:$CACHE_ROOT/.git"
-fi
 # docker run -e NAME, with no value, copies NAME from this environment: the token stays out of
 # every argument.
 FLAI_MCP_URL="$URL" FLAI_MCP_TOKEN="$TOKEN" FLAI_MCP_HOST="$HOST_HEADER"
 export FLAI_MCP_URL FLAI_MCP_TOKEN FLAI_MCP_HOST
-# NET_ARGS and GIT_ARGS split on spaces by design: neither holds a path with one.
+# NET_ARGS splits on spaces by design: it holds no path. The registration's mount comes after the
+# read-only .git's, the shorter destination first, so that Docker nests it over its parent.
 run() {
   # shellcheck disable=SC2086
   docker run --rm -i --user "$(id -u):$(id -g)" $NET_ARGS \
     -v "$WORKTREE:$WORKTREE" -w "$WORKTREE" \
+    -v "$GIT_COMMON:$GIT_COMMON:ro" \
+    -v "$REGISTRATION:$REGISTRATION" \
     -v "$AGENT_DIR:$AGENT_DIR" \
-    -v "$LOGIN:$LOGIN_IN:ro" $GIT_ARGS \
+    -v "$LOGIN:$LOGIN_IN:ro" \
     -e FLAI_MCP_URL -e FLAI_MCP_TOKEN -e FLAI_MCP_HOST \
     -e "FLAI_CONFIG=$AGENT_DIR/flai/config.json" -e "FLAI_CACHE_DIR=$AGENT_DIR/flai/cache" \
     "$@"
