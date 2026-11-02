@@ -107,7 +107,8 @@ func heldRefusal(story string, b Budget, now time.Time) error {
 // room, as it starts a story that enters ready (S-0118). It is refused while
 // the agent action is off for the project, when the story is in another
 // state, while its agent runs or waits for an answer, when one is already
-// queued, when nothing can start it, and while the host's budget state holds
+// queued, when its agent runs elsewhere (harness none, ADR-0242), when
+// nothing can start it, and while the host's budget state holds
 // its provider (S-0534), with nothing queued.
 func Restart(ctx context.Context, o Options, e Entry, story string) (*AgentRun, error) {
 	cfg := o.Agent(e.Root)
@@ -142,6 +143,9 @@ func Restart(ctx context.Context, o Options, e Entry, story string) (*AgentRun, 
 		return nil, refused("%s's agent is %s; flai serve starts it again when that comes", it.ID, run.awaits())
 	case run.Queued != "" && it.Status == workitem.Ready:
 		return nil, refused("another agent for %s is already queued (since %s); flai serve starts it when there is room", it.ID, run.Queued)
+	}
+	if harness.Elsewhere(it.Agent) {
+		return nil, refused("%s", harness.ElsewhereRefusal(it.ID))
 	}
 	if (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
 		return nil, refused("%s names no harness, and no command is set on the host (flai serve agent set -- <program> [args...])", it.ID)

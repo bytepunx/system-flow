@@ -243,6 +243,24 @@ func TestAReadyStorysAgentIsStartedOnTheOperatorsWord(t *testing.T) {
 			t.Errorf("a refused start left a run: %+v", r)
 		}
 	})
+	// I-0214, ADR-0242: a story whose agent runs elsewhere is refused with a
+	// command set on the host, as it is without one, and nothing is started.
+	t.Run("a story whose agent runs elsewhere", func(t *testing.T) {
+		lab := newAgentLab(t)
+		lab.hold()
+		id := lab.readyWith("By hand", &manifest.Agent{Harness: harness.None})
+		before := len(lab.entries())
+		refusedFor(t, lab, id, "runs elsewhere (harness none)")
+		refusedFor(t, lab, id, "flai story start "+id)
+		lab.cfg.Command = nil
+		refusedFor(t, lab, id, "runs elsewhere (harness none)")
+		if r := lab.run(id); r != nil {
+			t.Errorf("a refused start left a run: %+v", r)
+		}
+		if j := lab.entries(); len(j) != before {
+			t.Errorf("a refused start journalled a start: %+v", j[before:])
+		}
+	})
 }
 
 // S-0534, ADR-0209 §5: a start the operator asks for by hand, flai serve

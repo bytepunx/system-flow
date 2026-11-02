@@ -16,8 +16,9 @@ import (
 // ended, and the work it left uncommitted stops the acceptance. It is refused
 // while the agent action is off for the project, when the story is not in
 // review, while its agent runs or waits for an answer, when it has no
-// worktree or the worktree holds nothing uncommitted, and when nothing can
-// start it. The in-progress limit does not apply: the story is past it.
+// worktree or the worktree holds nothing uncommitted, when its agent runs
+// elsewhere (harness none, ADR-0242), and when nothing can start it. The
+// in-progress limit does not apply: the story is past it.
 func Commit(ctx context.Context, o Options, e Entry, story string) (*AgentRun, error) {
 	cfg := o.Agent(e.Root)
 	if !cfg.Enabled {
@@ -60,6 +61,9 @@ func Commit(ctx context.Context, o Options, e Entry, story string) (*AgentRun, e
 	}
 	if len(dirty) == 0 {
 		return nil, refused("the worktree %s has nothing uncommitted", repo.RelToMain(wt))
+	}
+	if harness.Elsewhere(it.Agent) {
+		return nil, refused("%s", harness.ElsewhereRefusal(it.ID))
 	}
 	if (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
 		return nil, refused("%s names no harness, and no command is set on the host (flai serve agent set -- <program> [args...])", it.ID)

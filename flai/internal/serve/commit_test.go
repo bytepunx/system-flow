@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/harness"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -82,5 +84,38 @@ func TestAnAgentIsStartedToCommitWhatAStoryInReviewLeftUncommitted(t *testing.T)
 	// story still in review worked.
 	if judgeRun(lab.root, run, new(int)); run.Outcome != OutcomeWorked {
 		t.Errorf("a commit run that leaves the story in review: %s %s", run.Outcome, run.Why)
+	}
+}
+
+// I-0214, ADR-0242: no agent is started to commit what a story in review
+// left uncommitted when its agent runs elsewhere, with a command set on the
+// host or without one.
+func TestNoAgentIsStartedToCommitForAStoryWhoseAgentRunsElsewhere(t *testing.T) {
+	ctx := context.Background()
+	lab := newAgentLab(t)
+	lab.hold()
+	lab.o.Git = &worktreeGit{status: "?? docs/left.md"}
+	id := lab.readyWith("By hand", &manifest.Agent{Harness: harness.None})
+	lab.move(id, workitem.InProgress)
+	lab.move(id, workitem.Review)
+	if err := os.MkdirAll(lab.repo.WorktreePath(id), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	before := len(lab.entries())
+	for _, command := range []bool{true, false} {
+		if !command {
+			lab.cfg.Command = nil
+		}
+		_, err := Commit(ctx, lab.o, Entry{Key: "t", Name: "t", Root: lab.root}, id)
+		var no *Refused
+		if !errors.As(err, &no) || !strings.Contains(no.Why, "runs elsewhere (harness none)") || !strings.Contains(no.Why, "flai story start "+id) {
+			t.Errorf("commit %s, command set %v: %v, want refused as running elsewhere", id, command, err)
+		}
+	}
+	if r := lab.run(id); r != nil {
+		t.Errorf("a refused commit left a run: %+v", r)
+	}
+	if j := lab.entries(); len(j) != before {
+		t.Errorf("a refused commit journalled a start: %+v", j[before:])
 	}
 }

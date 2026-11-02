@@ -5,6 +5,7 @@ package serve
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -19,6 +20,8 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/bytepunx/system-flow/flai/internal/filelock"
+	"github.com/bytepunx/system-flow/flai/internal/harness"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -263,4 +266,40 @@ func TestAnAgentThatWaitForEventsEndsOnAQuestionIsStartedAgainOnTheAnswerWithItI
 
 	lab.release(id)
 	waitFor(t, "it ends again", func() bool { return !lab.run(id).live() })
+}
+
+// I-0214, ADR-0242: a story whose agent runs elsewhere gets no new agent on
+// the operator's word, in ready or in progress after a run that failed, with
+// a command set on the host or without one: nothing is started or queued.
+func TestAStoryWhoseAgentRunsElsewhereIsNotRestarted(t *testing.T) {
+	ctx := context.Background()
+	lab := newAgentLab(t)
+	lab.hold()
+	none := &manifest.Agent{Harness: harness.None}
+	ready := lab.readyWith("By hand", none)
+	failed := lab.putEnded("By hand in progress", AgentRun{Outcome: OutcomeFailed})
+	lab.setAgent(failed, none)
+	was := lab.run(failed)
+	before := len(lab.entries())
+	for _, command := range []bool{true, false} {
+		if !command {
+			lab.cfg.Command = nil
+		}
+		for _, id := range []string{ready, failed} {
+			_, err := Restart(ctx, lab.o, Entry{Key: "t", Name: "t", Root: lab.root}, id)
+			var no *Refused
+			if !errors.As(err, &no) || !strings.Contains(no.Why, "runs elsewhere (harness none)") || !strings.Contains(no.Why, "flai story start "+id) {
+				t.Errorf("restart %s, command set %v: %v, want refused as running elsewhere", id, command, err)
+			}
+		}
+	}
+	if r := lab.run(ready); r != nil {
+		t.Errorf("a refused restart left a run: %+v", r)
+	}
+	if r := lab.run(failed); r == nil || r.Session != was.Session || r.Started != was.Started || r.Queued != "" || r.PID != 0 {
+		t.Errorf("a refused restart changed the run: %+v, was %+v", r, was)
+	}
+	if j := lab.entries(); len(j) != before {
+		t.Errorf("a refused restart journalled a start: %+v", j[before:])
+	}
 }
