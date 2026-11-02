@@ -7,7 +7,7 @@ count: 3
 cost: 7m
 first_reported: 2026-11-02T01:00:19Z
 last_reported: 2026-11-02T04:06:44Z
-updated: 2026-11-02T04:06:44Z
+updated: 2026-11-02T21:41:39Z
 ---
 
 # I-0247 TestServeSaysTheFlaiIsOlderThanTheProject and TestServeStartsADefinedRoleOnAnEventAndOnASchedule fail the close-out's integration tier on timing, on a branch that does not touch flai/internal/serve
@@ -30,3 +30,5 @@ Story: S-0518.
 The next close-out of S-0518, at 2026-11-02T04:03Z, failed the integration tier (4m0s) on a third test outside the story, `flai/internal/mcpserver/folder_test.go:371 TestWaitForEventsAcrossAFolder: changed paths are relative to the folder: []` (I-0186's test, closed). The host's load average was 76.81 (1 min), 59.37 (5 min), 40.60 (15 min) right after. The waits in these tests do not hold on a host this loaded, whichever test meets them.
 
 ## Remediation
+
+Story S-0569 remediates this issue, created from it at 2026-11-02T21:41:39Z.
