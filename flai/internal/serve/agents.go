@@ -2176,7 +2176,9 @@ func startWhy(story readyStory, run *AgentRun, limit int) string {
 // variables that carry the provider's key into the child (ADR-0129), with the
 // project's HTTP MCP server's URL and token when the adapter asks for them
 // (mcpEnv, S-0506), the URL's host the container's own name for the host
-// when the container harness's network is not the host's (S-0508): every
+// when the container harness's network is not the host's (S-0508), and the
+// container's image the project's layer when its manifest names one
+// (containerImageHost, S-0510): every
 // start, a story's agent's and a strategic agent's, builds its command here.
 // On the container harness it readies the host for the start too, a story's
 // and a strategic agent's alike (S-0508, S-0509): containerAllowed before
@@ -2204,7 +2206,15 @@ func (l *launcher) startOf(cfg AgentConfig, run *AgentRun, adapter harness.Adapt
 	if err := l.builtinFile(&req); err != nil {
 		return harness.Start{}, nil, err
 	}
-	spec, err := adapter.Start(req, cfg.host(name))
+	host := cfg.host(name)
+	if name == harness.Container {
+		h, _, err := containerImageHost(l.entry.Root, cfg, innerOf(req.Agent))
+		if err != nil {
+			return harness.Start{}, nil, err
+		}
+		host = h
+	}
+	spec, err := adapter.Start(req, host)
 	if err != nil {
 		return harness.Start{}, nil, err
 	}
@@ -2217,7 +2227,7 @@ func (l *launcher) startOf(cfg AgentConfig, run *AgentRun, adapter harness.Adapt
 		return harness.Start{}, nil, err
 	}
 	if name == harness.Container {
-		mcp = containerMCP(mcp, cfg.host(name).Network)
+		mcp = containerMCP(mcp, host.Network)
 		if err := l.containerReady(cfg, run, req); err != nil {
 			return harness.Start{}, nil, err
 		}

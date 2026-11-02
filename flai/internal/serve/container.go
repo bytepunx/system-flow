@@ -3,6 +3,7 @@ package serve
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"net/url"
 	"os"
@@ -57,13 +58,42 @@ func innerOf(agent *manifest.Agent) string {
 	return harness.ClaudeCode
 }
 
-// containerImage is the image the container harness runs inner in on the
-// host cfg says, "" when none is set and none is the default.
-func containerImage(cfg AgentConfig, inner string) string {
-	if image := cfg.host(harness.Container).Images[inner]; image != "" {
-		return image
+// containerImageHost is the container harness's host cfg says, for an agent of
+// the project at root whose inner harness is inner, with Images[inner] the
+// image the container runs: the project's layer image when its manifest
+// names agent.image.layer (S-0510), else the host's, else the default; layer
+// says it is the layer's. It is the one place that image is decided, so that
+// the check that it is on this host, the version read from it, and the
+// adapter's docker run agree. Images is a copy; cfg's map is never changed.
+// The layer applies only to an inner harness with a harness image, which the
+// layer is built over. A manifest that cannot be read refuses the start: one
+// without its layer would run the agent without the project's tools.
+func containerImageHost(root string, cfg AgentConfig, inner string) (host harness.Host, layer bool, err error) {
+	host = cfg.host(harness.Container)
+	m, err := manifest.Load(filepath.Join(root, manifest.File))
+	if err != nil {
+		return harness.Host{}, false, fmt.Errorf("read the project's %s for the agent image layer it may name: %w; mend it (flai check says what is wrong) and start the agent again", manifest.File, err)
 	}
-	return harness.DefaultImages[inner]
+	image := ""
+	if harness.DefaultImages[inner] != "" {
+		image = m.LayerImage(inner)
+	}
+	layer = image != ""
+	if image == "" {
+		image = host.Images[inner]
+	}
+	if image == "" {
+		image = harness.DefaultImages[inner]
+	}
+	if image == "" {
+		return host, false, nil
+	}
+	host.Images = maps.Clone(host.Images)
+	if host.Images == nil {
+		host.Images = map[string]string{}
+	}
+	host.Images[inner] = image
+	return host, layer, nil
 }
 
 // containerAllowed refuses the start of an agent, a story's or a strategic
@@ -76,14 +106,22 @@ func (l *launcher) containerAllowed(cfg AgentConfig, agent *manifest.Agent) erro
 		return fmt.Errorf("the container harness runs %s, which is not on flai serve's PATH: install Docker, or name its client with flai serve agent harness container --program <path>", program)
 	}
 	inner := innerOf(agent)
-	image := containerImage(cfg, inner)
+	host, layer, err := containerImageHost(l.entry.Root, cfg, inner)
+	if err != nil {
+		return err
+	}
+	image := host.Images[inner]
 	if image == "" {
 		return nil
 	}
-	if out, err := l.docker.Run(l.entry.Root, program, "image", "inspect", "--format", "{{.Id}}", image); err != nil {
-		return fmt.Errorf("the image %[1]s the container harness runs the inner harness %[2]s in is not on this host (%[3]s): build it with make agent-images, or name another with flai serve agent harness container --image %[2]s=<image>", image, inner, dockerSaid(out, err))
+	out, err := l.docker.Run(l.entry.Root, program, "image", "inspect", "--format", "{{.Id}}", image)
+	switch {
+	case err == nil:
+		return nil
+	case layer:
+		return fmt.Errorf("the image %[1]s, the project's layer for the inner harness %[2]s that agent.image.layer in %[3]s names, is not on this host (%[4]s): build it with make agent-images, or with scripts/agent-image.sh --layer over the harness image already built", image, inner, manifest.File, dockerSaid(out, err))
 	}
-	return nil
+	return fmt.Errorf("the image %[1]s the container harness runs the inner harness %[2]s in is not on this host (%[3]s): build it with make agent-images, or name another with flai serve agent harness container --image %[2]s=<image>", image, inner, dockerSaid(out, err))
 }
 
 // containerReady readies the host for the start of an agent, run, on the
@@ -96,7 +134,11 @@ func (l *launcher) containerAllowed(cfg AgentConfig, agent *manifest.Agent) erro
 func (l *launcher) containerReady(cfg AgentConfig, run *AgentRun, req harness.Request) error {
 	inner := innerOf(req.Agent)
 	if inner == harness.ClaudeCode {
-		l.containerVersion(cfg, run, containerImage(cfg, inner))
+		host, _, err := containerImageHost(l.entry.Root, cfg, inner)
+		if err != nil {
+			return err
+		}
+		l.containerVersion(cfg, run, host.Images[inner])
 	}
 	subject := req.Story
 	if subject == "" {

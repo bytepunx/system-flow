@@ -30,8 +30,10 @@ func containerLab(t *testing.T) (*agentLab, string) {
 // containerOn puts a fake docker first on PATH for lab, sets the container
 // harness's login, and runs the project's HTTP MCP server, as flai host keeps
 // it, at a loopback URL with a token, which it returns. The fake answers
-// image inspect, unless a file no-image is in the lab's output folder; a run
-// with --entrypoint, as claude --version in the image; and stop, recording
+// image inspect, recording the image in docker-inspected, unless a file
+// no-image is in the lab's output folder; a run with --entrypoint, as claude
+// --version in the image, recording its arguments in docker-versioned; and
+// stop, recording
 // the name, failing when a file stop-fails is there. Any other run is the
 // agent's, for its subject, FLAI_STORY's value, else FLAI_ROLE's: it reads
 // its standard input whole into <subject>.stdin, prints stream-<subject> as
@@ -45,10 +47,10 @@ func containerOn(lab *agentLab) string {
 	fake := "#!/bin/sh\n" +
 		"out=\"" + out + "\"\n" +
 		"case \"$1\" in\n" +
-		"image) [ -f \"$out/no-image\" ] && { echo \"Error: No such image: $5\"; exit 1; }; echo sha256:fake; exit 0 ;;\n" +
+		"image) echo \"$5\" >> \"$out/docker-inspected\"; [ -f \"$out/no-image\" ] && { echo \"Error: No such image: $5\"; exit 1; }; echo sha256:fake; exit 0 ;;\n" +
 		"stop) echo \"$2\" >> \"$out/docker-stopped\"; [ -f \"$out/stop-fails\" ] && { echo \"Error response from daemon: cannot stop\"; exit 1; }; exit 0 ;;\n" +
 		"esac\n" +
-		"for a in \"$@\"; do [ \"$a\" = --entrypoint ] && { echo \"2.1.312 (Claude Code)\"; exit 0; }; done\n" +
+		"for a in \"$@\"; do [ \"$a\" = --entrypoint ] && { echo \"$*\" >> \"$out/docker-versioned\"; echo \"2.1.312 (Claude Code)\"; exit 0; }; done\n" +
 		"trap 'touch \"$out/ended-$$\"; exit 143' TERM\n" +
 		"subject=\"${FLAI_STORY:-$FLAI_ROLE}\"\n" +
 		"cat > \"$out/$subject.stdin\"\n" +
@@ -238,6 +240,10 @@ func TestAContainerStartIsRefusedWhatItLacks(t *testing.T) {
 		}, says: []string{"not on flai serve's PATH", "flai serve agent harness container --program"}},
 		{name: "no image", set: func(lab *agentLab) { _ = os.WriteFile(filepath.Join(lab.outDir, "no-image"), nil, 0o644) },
 			says: []string{"flai-agent-claude-code:local", "No such image", "make agent-images", "--image claude-code=<image>"}},
+		{name: "no layer image", set: func(lab *agentLab) {
+			layerManifest(lab)
+			_ = os.WriteFile(filepath.Join(lab.outDir, "no-image"), nil, 0o644)
+		}, says: []string{"flai-agent-t-claude-code:local", "No such image", "agent.image.layer in system-flow.yaml", "make agent-images", "scripts/agent-image.sh --layer"}},
 		{name: "no login", set: func(lab *agentLab) { lab.cfg.Harnesses[harness.Container] = harness.Host{} },
 			says: []string{"flai serve agent harness container --login"}},
 		{name: "no worktree", bare: true, says: []string{"there is none at", "only in a git repository"}},
@@ -267,6 +273,115 @@ func TestAContainerStartIsRefusedWhatItLacks(t *testing.T) {
 				t.Error("the agent's container was run")
 			}
 		})
+	}
+}
+
+// layerManifest makes the lab's project name a layer for its agents' image
+// under agent.image.layer.
+func layerManifest(lab *agentLab) {
+	lab.t.Helper()
+	m := "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\nagent:\n  image:\n    layer: images/agent/Dockerfile\n"
+	if err := os.WriteFile(filepath.Join(lab.root, manifest.File), []byte(m), 0o644); err != nil {
+		lab.t.Fatal(err)
+	}
+}
+
+// S-0510: a story's agent on the container harness runs in the project's
+// layer image, flai-agent-<key>-claude-code:local, when the manifest names
+// agent.image.layer, in place of the host's image and the default: the image
+// checked to be on this host, the one claude --version is read from, and the
+// one docker runs are the same. With no layer the host's image still wins
+// over the default. The host's images are never changed.
+func TestTheProjectsLayerImageRunsItsContainerAgents(t *testing.T) {
+	ctx := context.Background()
+	const hostImage = "host-agent:1"
+	for _, c := range []struct {
+		name  string
+		layer bool
+		want  string
+	}{
+		{name: "layer", layer: true, want: "flai-agent-t-claude-code:local"},
+		{name: "no layer", want: hostImage},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			lab, _ := containerLab(t)
+			if c.layer {
+				layerManifest(lab)
+			}
+			host := lab.cfg.Harnesses[harness.Container]
+			host.Images = map[string]string{harness.ClaudeCode: hostImage}
+			lab.cfg.Harnesses[harness.Container] = host
+			id := containerStory(lab, "In the image", &manifest.Agent{Harness: harness.Container})
+			lab.l.look(ctx, false)
+			waitFor(t, "it ended", func() bool { r := lab.run(id); return r != nil && !r.live() })
+			if r := lab.run(id); r.Error != "" || r.PID == 0 || r.HarnessVersion != "2.1.312" {
+				t.Fatalf("run: %+v", r)
+			}
+			got, _ := os.ReadFile(filepath.Join(lab.outDir, id+".txt"))
+			args, _, _ := strings.Cut(string(got), "\n")
+			if !strings.Contains(args+" ", " "+c.want+" ") {
+				t.Errorf("docker run does not run %s: %s", c.want, args)
+			}
+			for _, other := range []string{hostImage, "flai-agent-claude-code:local", "flai-agent-t-claude-code:local"} {
+				if other != c.want && strings.Contains(args, other) {
+					t.Errorf("docker run names %s, not only %s: %s", other, c.want, args)
+				}
+			}
+			if inspected, _ := os.ReadFile(filepath.Join(lab.outDir, "docker-inspected")); string(inspected) != c.want+"\n" {
+				t.Errorf("docker image inspect was of %q, not %s", inspected, c.want)
+			}
+			if versioned, _ := os.ReadFile(filepath.Join(lab.outDir, "docker-versioned")); !strings.Contains(string(versioned), " "+c.want+" --version") {
+				t.Errorf("claude --version was not read from %s: %s", c.want, versioned)
+			}
+			if images := lab.cfg.Harnesses[harness.Container].Images; len(images) != 1 || images[harness.ClaudeCode] != hostImage {
+				t.Errorf("the host's images were changed: %v", images)
+			}
+		})
+	}
+}
+
+// S-0510: containerImageHost decides the container's image: the project's layer
+// for an inner harness with a harness image, else the host's, else the
+// default, in a copy of the host's images; an inner harness with no harness
+// image gets no layer, and is the adapter's to refuse. A manifest that cannot
+// be read refuses.
+func TestContainerImageHostPutsTheLayerImageInACopyOfTheHostsImages(t *testing.T) {
+	lab := newAgentLab(t)
+	images := map[string]string{harness.ClaudeCode: "host-agent:1"}
+	cfg := AgentConfig{Harnesses: map[string]harness.Host{harness.Container: {Login: "/login", Images: images}}}
+	bare := AgentConfig{Harnesses: map[string]harness.Host{}}
+	for _, c := range []struct {
+		name      string
+		layer     bool
+		cfg       AgentConfig
+		inner     string
+		want      string
+		wantLayer bool
+	}{
+		{name: "host image", cfg: cfg, inner: harness.ClaudeCode, want: "host-agent:1"},
+		{name: "default", cfg: bare, inner: harness.ClaudeCode, want: harness.DefaultImages[harness.ClaudeCode]},
+		{name: "layer over the host's", layer: true, cfg: cfg, inner: harness.ClaudeCode, want: "flai-agent-t-claude-code:local", wantLayer: true},
+		{name: "layer over the default", layer: true, cfg: bare, inner: harness.ClaudeCode, want: "flai-agent-t-claude-code:local", wantLayer: true},
+		{name: "no harness image", layer: true, cfg: bare, inner: harness.Command, want: ""},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			if c.layer {
+				layerManifest(lab)
+			} else {
+				_ = os.WriteFile(filepath.Join(lab.root, manifest.File), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644)
+			}
+			host, layer, err := containerImageHost(lab.root, c.cfg, c.inner)
+			if err != nil || host.Images[c.inner] != c.want || layer != c.wantLayer || host.Login != c.cfg.host(harness.Container).Login {
+				t.Errorf("containerImageHost = %+v, %v, %v; want image %q, layer %v", host, layer, err, c.want, c.wantLayer)
+			}
+			if len(images) != 1 || images[harness.ClaudeCode] != "host-agent:1" {
+				t.Errorf("the host's images were changed: %v", images)
+			}
+		})
+	}
+	_ = os.WriteFile(filepath.Join(lab.root, manifest.File), []byte("name: [\n"), 0o644)
+	if _, _, err := containerImageHost(lab.root, cfg, harness.ClaudeCode); err == nil || !strings.Contains(err.Error(), "agent image layer") {
+		t.Errorf("an unreadable manifest is not refused: %v", err)
 	}
 }
 
