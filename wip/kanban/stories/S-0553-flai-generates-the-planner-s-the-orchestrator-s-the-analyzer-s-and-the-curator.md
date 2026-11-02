@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-10-30T20:45:17Z
-updated: 2026-11-02T01:09:00Z
+updated: 2026-11-02T01:36:08Z
 transitions:
   - to: ready
     at: 2026-11-01T23:44:10Z
@@ -20,6 +20,7 @@ blocked:
     until: 2026-11-02T01:08:28Z
     reason: awaiting the operator on TH-0794
   - from: 2026-11-02T01:09:00Z
+    until: 2026-11-02T01:36:08Z
     reason: awaiting the operator on TH-0794
 tags: [cli, template]
 topics: [cli, orchestration, planning, template, conventions]
