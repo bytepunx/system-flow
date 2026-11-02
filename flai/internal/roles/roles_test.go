@@ -192,7 +192,7 @@ var vocab = Vocabulary{
 		"queue_add", "release_publish", "task_done", "issue_new", "issue_bump", "subproject_edit", "shared_paths_edit", "story_start", "prime", "board"},
 	Commands: []string{"issue new", "issue bump", "queue", "queue add", "queue hold", "queue remove", "queue resume", "thread new", "thread reply", "thread resolve", "thread confirm",
 		"plan", "edit", "move", "order", "accept", "subproject add", "subproject set", "subproject remove", "story new", "story start", "epic new", "task new",
-		"touches", "touches suggest", "release", "push"},
+		"touches", "touches suggest", "release", "push", "formula", "formula run"},
 	Reads: []string{"prime", "board", "item_get", "doc_get"},
 }
 
@@ -220,6 +220,20 @@ func load(t *testing.T, files map[string]string) ([]Role, []Problem) {
 		t.Fatal(err)
 	}
 	return rs, problems
+}
+
+// S-0423: an entry flai formula run <name> names the command flai formula
+// run, of that formula alone, so a role file that lists it under a
+// permission, as the orchestrator's does under publish, validates clean.
+func TestAFormulaRunEntryNamesTheCommand(t *testing.T) {
+	file := edit(t, orchestratorFile, "    tools: [release_publish]\n", "    tools: [release_publish]\n    commands: [flai formula run publish]\n")
+	rs, problems := load(t, map[string]string{"orchestrator.md": file})
+	if len(problems) != 0 {
+		t.Fatalf("load problems: %v", problems)
+	}
+	if got := Validate(rs, "design", vocab); len(got) != 0 {
+		t.Fatalf("Validate = %v, want none", got)
+	}
 }
 
 func TestValidRolesLoadWithEveryField(t *testing.T) {
@@ -397,6 +411,8 @@ func TestValidateReportsEachProblem(t *testing.T) {
 		{"tool under commands", "planner.md", plannerFile, "  - flai epic new\n", "  - inbox\n", CodeFile, 32, "not a flai command"},
 		{"unknown command", "planner.md", plannerFile, "  - flai epic new\n", "  - flai epic burn\n", CodeFile, 32, "not a flai command"},
 		{"wildcard on a command without subcommands", "planner.md", plannerFile, "  - flai epic new\n", "  - flai edit *\n", CodeFile, 32, "not a flai command"},
+		{"formula run of every formula", "planner.md", plannerFile, "  - flai epic new\n", "  - flai formula run *\n", CodeFile, 32, "not a flai command"},
+		{"formula run with a flag", "planner.md", plannerFile, "  - flai epic new\n", "  - flai formula run publish --ready\n", CodeFile, 32, "not a flai command"},
 		{"git in commands", "planner.md", plannerFile, "  - flai epic new\n", "  - git commit\n", CodeGrant, 32, "names git"},
 		{"plain gated tool outside a permission", "planner.md", plannerFile, "{call: item_move, when: to-backlog}", "item_move", CodeGrant, 26, "name it under to-backlog, or under to-ready in the permissions entry for roles.planner.permissions.promote_to_ready"},
 		{"plain gated command outside a permission", "planner.md", plannerFile, "{call: flai edit, when: ungated-edit}", "flai edit", CodeGrant, 34, "named plainly allows flai edit"},

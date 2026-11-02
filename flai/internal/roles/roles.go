@@ -650,11 +650,16 @@ func qualifies(cond Cond) string {
 }
 
 // knownCommand reports whether a command entry names a flai command, or a
-// command with subcommands for flai <command> *.
+// command with subcommands for flai <command> *. An entry flai formula run
+// <name> names flai formula run, of that formula alone, as the guard reads
+// it (S-0422, S-0423).
 func (c *checker) knownCommand(call string) bool {
 	words := strings.Fields(strings.TrimPrefix(call, "flai "))
 	if len(words) == 0 || slices.Contains(words[:len(words)-1], "*") {
 		return false
+	}
+	if len(words) == 3 && words[0] == "formula" && words[1] == "run" && words[2] != "*" {
+		words = words[:2]
 	}
 	wild := words[len(words)-1] == "*"
 	if wild {
