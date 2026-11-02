@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:41:19Z
-updated: 2026-11-02T06:34:34Z
+updated: 2026-11-02T06:49:30Z
 transitions:
   - to: ready
     at: 2026-10-30T00:05:31Z
@@ -21,9 +21,12 @@ transitions:
   - to: in-progress
     at: 2026-11-02T05:28:18Z
     by: agent-S-0424
+blocked:
+  - from: 2026-11-02T06:49:30Z
+    reason: awaiting the operator on TH-0810
 tags: [cli, template, dashboard]
 topics: [cli, orchestration, template, conventions]
-touches: [design/workflows/formulas/analysis-cadence.md, design/workflows/formulas/import.md, template/root/design/workflows/formulas/analysis-cadence.md, template/root/design/workflows/formulas/import.md, template/template.yaml, template/CHANGELOG.md, flai/internal/hostapi/import.go, flai/internal/hostapi/import_test.go, flai/cmd/import.go, flai/cmd/import_commit.go, flai/cmd/import_test.go, flai/cmd/import_commit_test.go, flai/cmd/issue.go, flai/cmd/issue_test.go, flai/cmd/formula.go, flai/cmd/formula_test.go, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/check/check.go, flai/internal/check/formulas_test.go, flai/internal/serve/analysis_schedule.go, flai/internal/serve/analysis_schedule_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, design/system/strategic-agents.md, design/system/continuous-improvement.md, design/system/project-manifest.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flaiover.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/new_test.go, flaiover/src/lib/components/ImportPrompt.svelte, flaiover/src/lib/components/ImportPrompt.svelte.test.ts, flaiover/src/routes/api/import/+server.ts, design/adrs/0245-a-formula-s-role-step-that-names-the-built-in-analyzer-starts-it-through-the.md, design/adrs/README.md, flai/cmd/role.go, flai/cmd/role_test.go, flai/internal/serve/agent_events.go, flai/internal/serve/agents.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/role.go, design/system/dashboard-host-channel.md, design/workflows/formulas/README.md, template/root/design/workflows/formulas/README.md]
+touches: [design/workflows/formulas/analysis-cadence.md, design/workflows/formulas/import.md, template/root/design/workflows/formulas/analysis-cadence.md, template/root/design/workflows/formulas/import.md, template/template.yaml, template/CHANGELOG.md, flai/internal/hostapi/import.go, flai/internal/hostapi/import_test.go, flai/cmd/import.go, flai/cmd/import_commit.go, flai/cmd/import_test.go, flai/cmd/import_commit_test.go, flai/cmd/issue.go, flai/cmd/issue_test.go, flai/cmd/formula.go, flai/cmd/formula_test.go, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/check/check.go, flai/internal/check/formulas_test.go, flai/internal/serve/analysis_schedule.go, flai/internal/serve/analysis_schedule_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, design/system/strategic-agents.md, design/system/continuous-improvement.md, design/system/project-manifest.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flaiover.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/new_test.go, flaiover/src/lib/components/ImportPrompt.svelte, flaiover/src/lib/components/ImportPrompt.svelte.test.ts, flaiover/src/routes/api/import/+server.ts, design/adrs/0245-a-formula-s-role-step-that-names-the-built-in-analyzer-starts-it-through-the.md, design/adrs/README.md, flai/cmd/role.go, flai/cmd/role_test.go, flai/internal/serve/agent_events.go, flai/internal/serve/agents.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/role.go, design/system/dashboard-host-channel.md, design/workflows/formulas/README.md, template/root/design/workflows/formulas/README.md, design/issues/I-0246-testaheldwaitfailsonatruncatedstory-and-testservestartsadefinedroleonaneventando.md, design/issues/summary.md]
 after: [S-0422, S-0423]
 agent:
   harness: claude-code
@@ -32,20 +35,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3983
-  estimated: true
-  priced_by: estimate
+  seconds: 4881
+  priced_by: harness
   turns:
     - day: 2026-11-02
-      hand_edits: 2
-      work: 57
+      ceremony: 1
+      hand_edits: 4
+      work: 80
   models:
     - model: claude-opus-5-5
-      input: 740
-      output: 3992
-      cache_read: 40418770
-      cache_write: 1507662
-      cost: 14.7771
+      input: 808
+      output: 250070
+      cache_read: 50034078
+      cache_write: 1557714
+      cost: 23.7656
   strategic:
     - kind: orchestrator
       seconds: 786
@@ -79,11 +82,11 @@ Two more processes that live in prose and Go become formulas. `import` brings a 
 
 ## Acceptance criteria
 
-- [ ] `design/workflows/formulas/import.md`, in the template and here, takes the input `path` and has the steps the import runs after its commit, `flai check --strict` and `flai import test`; `flai import --formula` commits the import before any test and starts the formula in the new project, and the host API's import runs `flai import --formula`, so its progress shows as a story; the import tests pass.
-- [ ] `design/workflows/formulas/analysis-cadence.md`, in the template and here, takes the input `focus` and has a role step that runs the analyzer with it and a step that lists the open issues its report names, for the operator to choose stories from at acceptance; the analysis schedule may name the formula in place of the analyzer.
-- [ ] `flai check --strict` reports nothing on either formula, here and in a project made from the template.
+- [x] `design/workflows/formulas/import.md`, in the template and here, takes the input `path` and has the steps the import runs after its commit, `flai check --strict` and `flai import test`; `flai import --formula` commits the import before any test and starts the formula in the new project, and the host API's import runs `flai import --formula`, so its progress shows as a story; the import tests pass.
+- [x] `design/workflows/formulas/analysis-cadence.md`, in the template and here, takes the input `focus` and has a role step that runs the analyzer with it and a step that lists the open issues its report names, for the operator to choose stories from at acceptance; the analysis schedule may name the formula in place of the analyzer.
+- [x] `flai check --strict` reports nothing on either formula, here and in a project made from the template.
 - [ ] Each formula is run once in this repository: an import of a scratch repository under a folder named for import, and one analyzer cadence, each instance worked to review and accepted, with its Notes naming what it produced.
-- [ ] `design/system/strategic-agents.md` § The analysis schedule, `design/system/continuous-improvement.md` § Cadence, `docs/operators/index.md`, `docs/users/flaiover.md` where it describes Import, and `template/CHANGELOG.md` say that both are formulas.
+- [x] `design/system/strategic-agents.md` § The analysis schedule, `design/system/continuous-improvement.md` § Cadence, `docs/operators/index.md`, `docs/users/flaiover.md` where it describes Import, and `template/CHANGELOG.md` say that both are formulas.
 
 ## Tasks
 - T-1785 design/workflows/formulas/import.md takes a path and runs the check and the tests after the import's commit, and the host API's import runs flai import --formula so its progress shows as a story
@@ -98,6 +101,7 @@ Two more processes that live in prose and Go become formulas. `import` brings a 
 
 ## Notes
 
+- Criterion 4 is unticked: neither live run can start before S-0424 is accepted. The two formula files, `flai import --formula`, and `flai issue list --report` exist only on `story/S-0424`, and the board's Import runs the installed flai. TH-0810 asks to move T-1787 and T-1788 to a follow-up story, as D-0461 did for S-0423.
 - Criterion 1 reworded by agent-S-0424 on 2026-11-02 to TH-0588's answer to question 1, which flai serve confirmed on 2026-10-28 and the operator resolved on 2026-10-31: the import is committed before its tests, and the formula's steps are the check and the tests.
 - Drafted by the planner for E-0024. Waits for the story that works a formula's instance; runs beside the publish formula story, with which it shares only the shared docs.
 - The analyzer's cadence run spends a model session; the operator chooses its focus when finalizing this story, or the run takes none, which looks for all three.

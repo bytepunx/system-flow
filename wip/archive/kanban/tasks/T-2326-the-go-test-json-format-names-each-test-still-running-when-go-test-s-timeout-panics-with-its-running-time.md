@@ -3,15 +3,36 @@ id: T-2326
 type: task
 nature: remediation
 title: The go-test-json format names each test still running when go test's timeout panics, with its running time
-status: backlog
+status: done
 parent: S-0540
 owner: alex
 created: 2026-10-29T07:36:52Z
-updated: 2026-10-29T07:36:52Z
-transitions: []
+updated: 2026-11-02T06:42:27Z
+transitions:
+  - to: ready
+    at: 2026-11-02T06:38:57Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-02T06:38:58Z
+    by: system-flow
+  - to: done
+    at: 2026-11-02T06:42:27Z
+    by: agent-S-0540
 stream: S-0540
 tags: [flai, testing]
 touches: [flai/internal/verify/gotest.go, flai/internal/verify/parse_test.go, flai/internal/verify/testdata/go-test-timeout.json, design/system/project-manifest.md]
+usage:
+  source: log
+  seconds: 209
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 14
+      output: 3024
+      cache_read: 1551627
+      cache_write: 38737
+      cost: 0.6808
 ---
 # T-2326 The go-test-json format names each test still running when go test's timeout panics, with its running time
 

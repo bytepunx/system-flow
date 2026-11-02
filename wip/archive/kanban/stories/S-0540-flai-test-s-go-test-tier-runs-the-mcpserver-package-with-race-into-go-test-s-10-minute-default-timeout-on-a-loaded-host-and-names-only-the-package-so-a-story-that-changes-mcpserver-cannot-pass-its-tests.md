@@ -3,10 +3,10 @@ id: S-0540
 type: story
 nature: remediation
 title: flai test's go-test tier runs the mcpserver package with -race into go test's 10-minute default timeout on a loaded host, and names only the package, so a story that changes mcpserver cannot pass its tests
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-29T05:59:43Z
-updated: 2026-11-02T06:35:44Z
+updated: 2026-11-02T06:52:14Z
 transitions:
   - to: ready
     at: 2026-11-02T06:35:35Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-02T06:35:44Z
     by: agent-S-0540
+  - to: review
+    at: 2026-11-02T06:50:36Z
+    by: agent-S-0540
+  - to: done
+    at: 2026-11-02T06:52:14Z
+    by: orchestrator
 tags: [flai, testing]
 topics: [cli, go]
 touches: [flai/internal/verify/gotest.go, flai/internal/verify/parse_test.go, flai/internal/verify/testdata/go-test-timeout.json, design/system/project-manifest.md, system-flow.yaml, flai/internal/verify/select_test.go, design/conventions/tooling.md, flai/internal/mcpserver/prime_test.go, design/issues/I-0227-flai-test-s-go-test-tier-runs-the-mcpserver-package-with-race-into-go-test-s-10-minute-default-timeout-on-a-loaded-host-and-names-only-the-package-so-a-story-that-changes-mcpserver-cannot-pass-its-tests.md, design/issues/summary.md]
@@ -23,20 +29,33 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 908
+  priced_by: harness
+  turns:
+    - day: 2026-11-02
+      ceremony: 3
+      test_runs: 3
+      hand_edits: 2
+      work: 38
+  models:
+    - model: claude-opus-5-5
+      input: 100
+      output: 21763
+      cache_read: 11167505
+      cache_write: 278800
+      cost: 4.8996
   strategic:
     - kind: orchestrator
-      seconds: 1134
+      seconds: 1166
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 148
-          output: 2183
-          cache_read: 33397064
-          cache_write: 243858
-          cost: 7.4302
+          input: 152
+          output: 2224
+          cache_read: 33632823
+          cache_write: 249579
+          cost: 7.4868
         - model: claude-sonnet-5-5
           input: 14
           output: 84
@@ -68,14 +87,14 @@ finalized:
 This story remediates [I-0227](../../../design/issues/I-0227-flai-test-s-go-test-tier-runs-the-mcpserver-package-with-race-into-go-test-s-10-minute-default-timeout-on-a-loaded-host-and-names-only-the-package-so-a-story-that-changes-mcpserver-cannot-pass-its-tests.md), "flai test's go-test tier runs the mcpserver package with -race into go test's 10-minute default timeout on a loaded host, and names only the package, so a story that changes mcpserver cannot pass its tests". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0227 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0227 is closed with `flai issue close I-0227 --reason` saying what fixed it
+- [x] The cause I-0227 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0227 is closed with `flai issue close I-0227 --reason` saying what fixed it
 
 ## Tasks
 - T-2326 The go-test-json format names each test still running when go test's timeout panics, with its running time
 - T-2327 The go-test tier runs go test with -timeout 20m, as the integration tier does, pinned by the repository-manifest test
 - T-2328 The mcpserver package's two prime-on-this-repository tests take less time under -race and still check what they check
-- T-2329 Close I-0227 with flai issue close, naming the timeout finding, the tier's timeout, and the faster prime tests
+- T-2329 I-0227's Remediation records that the go-test-json format names the tests running at a timeout, and the mcpserver package passes flai test here
 
 ## Notes
 
@@ -107,3 +126,12 @@ Touches, file by file, no folder:
 Forecast: `flai forecast`, with the touches written, gave 24m (median 118 s per unit of size over 35 medium remediation stories, size 12), delivery 2026-10-29T23:42Z. Set to 1h30m, delivery 2026-10-30T00:48Z. The extra 66m pays for three `-race` runs of `flai/internal/mcpserver`, about 10 minutes each: before the change, after it, and in the close-out. The median does not include them.
 
 Cost of delay: `flai cod` gives 180 USD a week from the inputs, 1h12m lost per 168h cycle at 150 USD an hour. The value stands as flai computed it. The inputs are the operator's. They likely understate the loss: the three occurrences came within five hours, from three stories. I-0225, the same slowness in the integration tier, is not counted in them.
+
+### Accepted by the orchestrator
+
+- Verified: cfd6edd70d75ee1b4e253ca19cd077dda2a6125b
+- At: 2026-11-02T06:52:14Z
+
+Verdict: accept — the timeout-panic finding fix is tested and documented, the first cause was already fixed on main by S-0548, I-0227 is closed, and the close-out passed at cfd6edd70d75ee1b4e253ca19cd077dda2a6125b.
+- 1: flai/internal/verify/gotest.go, flai/internal/verify/parse_test.go, flai/internal/verify/testdata/go-test-timeout.json, design/system/project-manifest.md
+- 2: design/issues/I-0227-flai-test-s-go-test-tier-runs-the-mcpserver-package-with-race-into-go-test-s-10-minute-default-timeout-on-a-loaded-host-and-names-only-the-package-so-a-story-that-changes-mcpserver-cannot-pass-its-tests.md

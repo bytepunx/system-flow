@@ -24,16 +24,16 @@ touches: [flai/cmd/role.go, flai/cmd/role_test.go, flai/internal/serve/role.go, 
 after: [T-1786]
 usage:
   source: log
-  seconds: 778
+  seconds: 780
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 139
-      output: 816
-      cache_read: 8675189
-      cache_write: 180359
-      cost: 3.1212
+      input: 141
+      output: 43653
+      cache_read: 8734021
+      cache_write: 271917
+      cost: 4.1486
 ---
 # T-2434 A formula's role step that names the analyzer starts it with the instance's focus on the instance, and its end is the agent event on the instance
 

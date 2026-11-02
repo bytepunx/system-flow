@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 395
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 34
-      output: 190
-      cache_read: 1138950
-      cache_write: 60285
-      cost: 0.4227
+      input: 19
+      output: 5912
+      cache_read: 1182790
+      cache_write: 36824
+      cost: 0.5618
 ---
 # T-2433 The board's Import prompt says the import is committed before its tests and names the story that runs them
 

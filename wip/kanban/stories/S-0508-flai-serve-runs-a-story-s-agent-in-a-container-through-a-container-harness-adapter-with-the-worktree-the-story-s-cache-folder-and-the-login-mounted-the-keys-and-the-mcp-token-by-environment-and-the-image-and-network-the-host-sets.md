@@ -3,12 +3,18 @@ id: S-0508
 type: story
 nature: feature
 title: flai serve runs a story's agent in a container through a container harness adapter, with the worktree, the story's cache folder, and the login mounted, the keys and the MCP token by environment, and the image and network the host sets
-status: backlog
+status: in-progress
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:44:13Z
-updated: 2026-11-02T06:36:57Z
-transitions: []
+updated: 2026-11-02T06:51:43Z
+transitions:
+  - to: ready
+    at: 2026-11-02T06:51:38Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-11-02T06:51:43Z
+    by: agent-S-0508
 tags: [cli, docker]
 topics: [harness, docker]
 touches: [flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/protected/protected.go, flai/internal/protected/protected_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/start.go, flai/internal/serve/start_test.go, flai/internal/serve/stop.go, flai/internal/serve/stop_test.go, flai/internal/serve/restart.go, docs/operators/settings.md, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/index.md, docs/operators/runbooks/install.md, design/system/flai-cli.md, design/system/agent-adapters.md, design/tech/docker.md, design/issues/summary.md, design/issues]

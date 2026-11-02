@@ -3,12 +3,15 @@ id: T-2328
 type: task
 nature: remediation
 title: The mcpserver package's two prime-on-this-repository tests take less time under -race and still check what they check
-status: backlog
+status: cancelled
 parent: S-0540
 owner: alex
 created: 2026-10-29T07:37:19Z
-updated: 2026-10-29T07:37:34Z
-transitions: []
+updated: 2026-11-02T06:37:52Z
+transitions:
+  - to: cancelled
+    at: 2026-11-02T06:37:52Z
+    by: agent-S-0540
 stream: S-0540
 tags: [flai, testing]
 touches: [flai/internal/mcpserver/prime_test.go]
@@ -33,3 +36,4 @@ It waits for no task: no other task of this story touches `prime_test.go`. S-053
 - `flai test flai/internal/mcpserver` passes.
 
 ## Notes
+- 2026-11-02T06:37:52Z: moved to cancelled: S-0548's T-2366 gated TestPrimeOnThisRepository and TestPrimeComesInPartsOnThisRepository under -short, so the go-test tier no longer runs them, and T-2361 ran the package in parallel, 9m14s to 136-162 s under -race; what speed remains is I-0234's (D-0416)

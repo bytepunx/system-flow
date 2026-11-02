@@ -3,12 +3,15 @@ id: T-2327
 type: task
 nature: remediation
 title: The go-test tier runs go test with -timeout 20m, as the integration tier does, pinned by the repository-manifest test
-status: backlog
+status: cancelled
 parent: S-0540
 owner: alex
 created: 2026-10-29T07:37:05Z
-updated: 2026-10-29T07:37:05Z
-transitions: []
+updated: 2026-11-02T06:37:51Z
+transitions:
+  - to: cancelled
+    at: 2026-11-02T06:37:51Z
+    by: agent-S-0540
 stream: S-0540
 tags: [flai, testing]
 touches: [system-flow.yaml, flai/internal/verify/select_test.go, design/conventions/tooling.md]
@@ -32,3 +35,4 @@ It waits for no task: no other task of this story touches these files.
 - `flai test flai/internal/verify` passes.
 
 ## Notes
+- 2026-11-02T06:37:51Z: moved to cancelled: S-0548's T-2363 did it: system-flow.yaml's go-test tier passes -timeout 20m, flai/internal/verify/select_test.go pins it, and flai check warns manifest.tests-timeout of a go test tier with none (I-0227's Remediation, D-0416)

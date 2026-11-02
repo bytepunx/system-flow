@@ -24,16 +24,16 @@ touches: [design/system/strategic-agents.md, design/system/continuous-improvemen
 after: [T-1785, T-1786]
 usage:
   source: log
-  seconds: 776
+  seconds: 794
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 99
-      output: 528
-      cache_read: 5310945
-      cache_write: 142413
-      cost: 1.9221
+      input: 92
+      output: 28372
+      cache_read: 5676727
+      cache_write: 176734
+      cost: 2.6964
 ---
 # T-1789 The design, the manifest's design, the operator and user docs, and the changelog say that import and the analyzer's cadence are formulas
 
