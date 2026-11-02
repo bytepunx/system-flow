@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"regexp"
 	"slices"
 	"sort"
@@ -489,49 +490,41 @@ func options(harness string, config map[string]string, takes map[string]option) 
 // its story is told the share's conversation, paths, and split (ADR-0134,
 // shared). One whose story is a formula's instance is told to work its tasks
 // as the formula's steps and what to do when one fails (S-0422, instance),
-// and, answered, to run a failed step again (answeredStep). The planner is
-// asked to plan its item instead
-// (planPrompt), the orchestrator to keep the project's work moving
-// (orchestratePrompt), the analyzer to write a report (analyzePrompt), the
-// curator to keep the digest (curatePrompt), and a role the project defines
-// to do what its file's body says, on its item, with its run's inputs
-// (definedPrompt).
+// and, answered, to run a failed step again (answeredStep). A strategic
+// role, the planner, the orchestrator, the analyzer, the curator, or a role
+// the project defines, is asked what its role file's start prompt says,
+// rendered over the run's fields (startPrompt, ADR-0250). Its error is a
+// start prompt that does not render, which stops the start.
 // Only the claude-code adapter sends a prompt.
-func Prompt(r Request) string {
+func Prompt(r Request) (string, error) {
 	if r.RoleFile != nil {
-		return definedPrompt(r)
+		return startPrompt(r)
 	}
 	switch r.Role {
-	case conventions.RolePlan:
-		return planPrompt(r)
-	case conventions.RoleOrchestrate:
-		return orchestratePrompt(r)
-	case conventions.RoleAnalyze:
-		return analyzePrompt(r)
-	case conventions.RoleCurate:
-		return curatePrompt(r)
+	case conventions.RolePlan, conventions.RoleOrchestrate, conventions.RoleAnalyze, conventions.RoleCurate:
+		return startPrompt(r)
 	}
 	if r.Commit != "" && r.Answered == "" {
 		return fmt.Sprintf(`You are %[1]s, started by flai serve on this host because the operator asked for the work left uncommitted in story %[2]s's worktree, %[3]s, to be committed: %[2]s is in review, and it cannot be accepted until that worktree is clean.
 
 Do only this. Follow CLAUDE.md, or AGENTS.md where there is no CLAUDE.md, for how commits are made here. In the worktree, read git status and git diff. Commit the changes on story/%[2]s, in commits whose messages name %[2]s and say what changed and why, after the lint and tests the project runs for what they touch; fix what they find only when it is part of the same work. Discard a file only when it is plainly output that does not belong in the repository, and say which in the story's narrative with flai stream log %[2]s. Do not move %[2]s or its tasks, do not change anything the uncommitted work does not already change, and do not start other work. When git status in the worktree is clean, log what you committed with flai stream log %[2]s and end.
 
-If a change cannot be committed without the designer deciding something, ask with the flai MCP tool thread_open on %[2]s, and commit what does not wait on the answer. Then write the narrative's Current state and Next steps with flai stream state, saying what you asked and what is left to commit, and end: flai serve starts you again in this session when the thread is answered, and your first inbox holds the answer. Do not hold the flai MCP tool wait_for_events for an answer; when it answers end: true, write the narrative's Current state and Next steps with flai stream state, and end.`, r.Name, r.Story, r.Commit)
+If a change cannot be committed without the designer deciding something, ask with the flai MCP tool thread_open on %[2]s, and commit what does not wait on the answer. Then write the narrative's Current state and Next steps with flai stream state, saying what you asked and what is left to commit, and end: flai serve starts you again in this session when the thread is answered, and your first inbox holds the answer. Do not hold the flai MCP tool wait_for_events for an answer; when it answers end: true, write the narrative's Current state and Next steps with flai stream state, and end.`, r.Name, r.Story, r.Commit), nil
 	}
 	if strings.HasPrefix(r.Answered, "MS-") {
 		return fmt.Sprintf(`Another story's agent has written to %[2]s on %[3]s. Read it with the flai MCP tool inbox, which lists %[2]s's conversations under messages, or message_get (flai message show %[3]s on the host), answer what awaits your reply with message_reply, then go on working %[2]s to review as before.
 
-%[4]s`, r.Name, r.Story, r.Answered, rules(r))
+%[4]s`, r.Name, r.Story, r.Answered, rules(r)), nil
 	}
 	if r.Answered != "" {
 		return fmt.Sprintf(`The designer has answered your question %[3]s on %[2]s. Read the answer with the flai MCP tool thread_get (or flai thread show %[3]s), then go on working %[2]s to review as before.%[5]s
 
-%[4]s`, r.Name, r.Story, r.Answered, rules(r), answeredStep(r))
+%[4]s`, r.Name, r.Story, r.Answered, rules(r), answeredStep(r)), nil
 	}
 	if b := r.SentBack; b != nil && b.Resumed {
 		return fmt.Sprintf(`flai sent %[1]s back from review to in-progress, on thread %[2]s: %[3]s. Read the thread with the flai MCP tool thread_get (flai thread show %[2]s on the host); your inbox lists it, awaiting you. Fix the branch in %[1]s's worktree, close out, and move %[1]s to review again; %[5]s.
 
-%[4]s`, r.Story, b.Thread, b.What, rules(r), b.then(r.Story))
+%[4]s`, r.Story, b.Thread, b.What, rules(r), b.then(r.Story)), nil
 	}
 	why := "because it entered ready."
 	open := startStory(r.Story, "Begin")
@@ -565,7 +558,7 @@ Work %[2]s to review, and no other story. Follow CLAUDE.md, or AGENTS.md where t
 
 %[6]s
 
-%[4]s`, r.Name, r.Story, r.Root, rules(r), why, delegation(r), open, shared(r), instance(r))
+%[4]s`, r.Name, r.Story, r.Root, rules(r), why, delegation(r), open, shared(r), instance(r)), nil
 }
 
 // instance tells the agent of a formula's instance, a story flai formula run
@@ -659,369 +652,79 @@ func takeUp(story, lead string) string {
 	return fmt.Sprintf("%[2]s your session with flai prime --story %[1]s (or the flai MCP tool prime), which prints the conventions that apply and what the story names whole, and briefs the design and ADRs its topics and links select, within a size budget, and take %[1]s up with flai stream open %[1]s, which prints the worktree to work in.", story, lead)
 }
 
-// planPrompt is what the planner is asked to do (S-0208): plan its item, an
-// epic or a story, as strategic-agents.md says, through flai alone, drafting
-// a story's tasks or revisiting the open ones it has (S-0255); ask the
-// operator on the item for an input it owns that is missing; and end with a
-// summary, which flai serve logs as the run's activity (ADR-0079). An epic's
-// planner writes its stories as drafts, summarises the plan in one thread on
-// the epic, proposes there what it would change in the stories the epic
-// already has, and names in its summary the stories it created and revisited
-// (S-0209). It enriches each story it drafts as it would a story, drafts
-// that story's tasks, and those of each draft it revisits that has none, in
-// the story planner's words, names them and their layers in the epic's
-// thread, and names by ID in its summary the tasks it created too (S-0300).
-// A story's planner drafts its tasks, or revisits the open ones, and names
-// in its summary the tasks it created and revisited (S-0255).
-// It enriches a story from flai touches suggest, flai forecast, and flai cod,
-// and records why under a ### Planning heading in the story's Notes (S-0210).
-// It names files, not folders, in touches, keeping a folder only where files
-// no task can name yet may be added, and says why there (S-0295, ADR-0096);
-// it is told flai refuses a task's folder touch, and a story's its Planning
-// note does not name (S-0468, ADR-0188). It is told that after names only
-// a story whose output the story reads, with the reason in its Notes under
-// ### Planning, never an order of preference or a guard against a
-// conflict, which a trial merge judges, and that an overlap holds only
-// until such a trial is clean (S-0551, ADR-0230). When the orchestrator
-// asked for the item again, for what the operator wrote on r.AskedOn since
-// it was planned before, its first paragraph says so in place of the
-// operator's asking, and has the planner read that thread with thread_get
-// and plan what the operator asked for there (S-0524, ADR-0222).
-func planPrompt(r Request) string {
-	kind := workitem.TypeOfID(r.Item)
-	story := r.Item
-	if kind == workitem.Epic {
-		story = "S-nnnn"
+// startPrompt is what a strategic role is asked to do (ADR-0250): the start
+// prompt of the role file it runs from, rendered over the run's fields
+// (startFields), with the project's Start prompt additions below the
+// marker. The file is RoleFile for a role the project defines, Builtin for
+// a built-in role whose caller gave it, else the baseline flai carries for
+// the role. A file with no start renders the baseline's for a built-in role
+// and flai's default for a defined one (roles.Role.StartTemplate). A
+// template that does not render is an error naming the file and flai
+// check, never a prompt.
+func startPrompt(r Request) (string, error) {
+	f := r.RoleFile
+	if f == nil {
+		f = r.Builtin
 	}
-	enrich := fmt.Sprintf("its predicted touches, a forecast, and a cost of delay value worked out from the operator's inputs. "+
-		"Run flai touches suggest %[1]s, adding the paths its goal, criteria, and linked design name when it declares no touches, and predict its touches from what that lists, its goal and criteria, the design documents it links, and the code layout, keeping every touch it already declares. "+
-		"Name files, not folders, in the touches you write for the story and for each of its tasks: keep a folder touch only where the story may add files there that no task can name yet, since a folder touch claims every file below it and, while the story is in progress, holds every ready story that touches one until a trial merge of its branch at that story's base is clean; record each folder touch you kept, and why, under the story's ### Planning heading. "+
-		"flai refuses the folder touches this asks you not to write, writing nothing: a task's always, and a story's unless the story's Notes name the folder under ### Planning, which one item_edit may add with the touch (ADR-0188). "+
-		"Name in a story's after only a story whose output it reads: a file, a command, a schema, or a decision the named story writes and this one builds on. "+
-		"Give the reason in the story's Notes under ### Planning, naming that story by its ID and what this one reads from it; flai check warns of an after the Notes do not name (wip.after-reason). "+
-		"Never name one for an order of preference, which the pull order sets, nor to keep two stories off one file, which a trial merge judges (ADR-0230). "+
-		"Run flai forecast %[1]s and flai cod %[1]s. "+
-		"Review each figure, adjust it where you have a reason and state the reason, and write the touches, the forecast (duration, delivery, and basis), and the cost of delay value through flai: item_edit, or flai edit and flai touches. "+
-		"In the story's Notes, under a ### Planning heading that is yours to rewrite, record where each touch came from (declared, co-change, design, or layout) and why each figure stands or was adjusted, and leave the rest of the Notes as it was", story)
-	// The story's planner and the epic's say the same about drafting a
-	// story's tasks, in the same words (S-0300).
-	draftTasks := "draft the tasks that deliver its outcome, each with ## Work and ## Done when in its body, a nature, tags, touches (the paths it changes), and after (the tasks of the story it waits for), so that they form layers as work-management.md says, and create each in the backlog with the flai MCP tool item_new, type task and parent the story, or flai task new"
-	taskRules := "Tasks carry no topics: when a task reaches a topic the story lacks, add the topic to the story. " +
-		"Make each task you write pass flai check --strict and the markdown lint: flai refuses one that does not, so fix what the refusal names and write it again."
-	work := fmt.Sprintf("It is a story: enrich it with %[1]s. "+
-		"If it has no tasks, %[3]s. "+
-		"If it has tasks, revisit each one not done or cancelled against the story's outcome: re-enrich its touches and after with item_edit, create the tasks the outcome still lacks, and propose in the plan's thread any task you would split, merge, or drop. "+
-		"Never cancel a task, or rewrite the title, Work, or Done when of a task you did not write, without asking on that thread. "+
-		"%[4]s\n\n"+
-		"Open one thread on %[2]s that summarises the plan. In the plan's thread, name the tasks, their order and layers, and the assumptions you made.", enrich, r.Item, draftTasks, taskRules)
-	summary := "End with a one-line summary that names by ID the tasks you created and the tasks you revisited"
-	if kind == workitem.Epic {
-		work = fmt.Sprintf("It is an epic. If it has no stories, draft the stories that deliver its outcome, each with a goal, acceptance criteria as checkboxes, a nature, tags, topics, touches, and after, and create each with draft true in the backlog (item_new's draft, or flai story new --draft). "+
-			"If it has stories, revisit each one not done or cancelled against the epic's outcome. "+
-			"Enrich each story you draft, and again each one you revisit, as you would a story, S-nnnn being its ID: %[1]s. "+
-			"Size stories as work-management.md says, and make each one you write pass flai check --strict.\n\n"+
-			"For each story you draft, and each one you revisit that is a draft with no tasks, %[3]s. "+
-			"A task carries no draft flag: it is a draft because its story is one. "+
-			"%[4]s\n\n"+
-			"Open one thread on %[2]s that summarises the plan: the stories, their order, each story's after and what it reads from the story it names, each story's tasks and their layers, and the assumptions you made. In that same thread, propose each story you would split, merge, add, or drop, and create drafts for the additions only: never cancel a finalized story or rewrite its words without asking.", enrich, r.Item, draftTasks, taskRules)
-		summary = "End with a one-line summary that names by ID the stories and tasks you created and the stories you revisited"
+	if f == nil {
+		b, ok := roles.BaselineFor("design", r.Role)
+		if !ok {
+			return "", fmt.Errorf("flai carries no role file for role %q, and the start gave none; start a built-in role, plan, orchestrate, analyze, or curate", r.Role)
+		}
+		f = &b
 	}
-	why := fmt.Sprintf("because the operator asked for %s to be planned, in the project at %s.", r.Item, r.Root)
-	if r.AskedOn != "" {
-		why = fmt.Sprintf("in the project at %[3]s, because the orchestrator asked for %[1]s to be planned again: it was planned before, and the operator wrote on %[2]s since its last plan. "+
-			"Read %[2]s with the flai MCP tool thread_get (flai thread show %[2]s on the host) and plan what the operator asked for there, drafting the additions and revisiting the rest as design/conventions/strategic-agents.md says.", r.Item, r.AskedOn, r.Root)
-	}
-	return fmt.Sprintf(`You are %[1]s, the planner, started by flai serve on this host %[3]s
-
-Plan %[2]s, and nothing else, as design/conventions/strategic-agents.md says under As the planner. Prime your session with flai prime --role plan --%[4]s %[2]s (or the flai MCP tool prime with role plan and %[4]s %[2]s), which prints the conventions you work by and what %[2]s names whole, and briefs the design its topics select. A brief is not the document: read the section that bears on the plan with the flai MCP tool doc_get and its heading before relying on it, and find sections by their words with doc_search. Call the flai MCP tool inbox. Read %[2]s with item_get, and what it links with item_get and doc_get. Hand wide search of the code, such as for a story's touches, to the explorer with the Agent tool.
-
-%[5]s
-
-Work in the main checkout and write only through flai: the flai MCP tools item_new and item_edit, or the flai CLI. Never edit a file yourself, code or anything else, never move an item past backlog, and never finalize a draft. Never overwrite the operator's inputs: a cost of delay's inputs, a story's estimate, and a finalized story's words; never cancel or rewrite a finalized story without asking.
-
-When an input the operator owns is missing, do not guess past it: ask with the flai MCP tool thread_open on %[2]s, your recommended answer first, plan what needs no answer meanwhile, and hold the flai MCP tool wait_for_events, again each time it returns, until the thread is answered; then go on.
-
-%[6]s: flai serve logs the run's activity in wip/agents/planner.md with it.`, r.Name, r.Item, why, kind, work, summary)
+	return f.RenderStart(designOf(*f), startFields(r, *f))
 }
 
-// orchestratePrompt is what the orchestrator is asked to do (S-0218): keep
-// the project's work moving as strategic-agents.md says, only as far as the
-// permissions the operator sets in orchestration.permissions allow, which
-// with its policy and release policy it reads again before each decision,
-// since the operator may change them while it runs and the guard holds each
-// call to them as they are then (S-0229), taking
-// every order, candidate, and release figure from flai's commands rather
-// than working it out; log each action with activity_log, its reason and
-// the policy figure that justified it; and end. Its first paragraph lists
-// the reasons flai serve started it for, r.Reasons, one a markdown list
-// item, and it acts on each, logs each action, then ends, since flai serve
-// starts it again when there are more and wait_for_events answers it end
-// once its reasons are done; a run with none, by hand, looks at the inbox
-// and the board once, then ends (ADR-0209 §3, §4). When flai serve gives each
-// reason its form for prime, r.PrimeReasons, one for each line, each line
-// names its form, and it is told to prime with flai prime --role orchestrate
-// and a --reason for each form, or MCP prime with role orchestrate and those
-// reasons, each once, reading every part of a pack that holds the conventions
-// those reasons need and what each reason needs, with no design briefs, so
-// that it finds the rest with doc_search; otherwise, by hand or for a reason
-// with no form, it primes with role orchestrate alone, for the general pack,
-// which briefs the design its role's topic selects (ADR-0217 §6). It is told what to do with each of plan_backlog_epics,
-// finalize_drafts, promote_to_ready, and order_ready, and by which command
-// (S-0219), and what to do with the threads awaiting the operator, those
-// inbox marks awaiting "operator" and lists in its role without all
-// (ADR-0181), under each value of answer_threads, which it reads afresh
-// each time since the operator may change it while it runs (S-0220), and
-// how it accepts a story
-// in review under accept_reviews: flai verify runs, or its last result is
-// read, at the branch's head, its verifier checks the diff against each
-// criterion (S-0270), flai accept --dry-run names the blockers, and it accepts with the verified
-// commit and evidence for every criterion, or leaves the story in review and
-// says on a thread what is missing (S-0221, ADR-0093). It is told that the
-// main checkout's uncommitted files stop it only as dirty_main, that a thread
-// of its own is own_thread_open, which it resolves with a reason once its
-// concern is gone, that it opens a thread on a story in review only for a
-// reason not to accept it, that a story flai accept sent back over a rebase
-// it could not settle needs nothing more of it, and that it finishes an
-// acceptance of its own that stopped after its move to done (ADR-0189).
-// While publish is on,
-// it evaluates the release policy after each acceptance and publishes,
-// through the publish formula or, where the project has none,
-// release_publish alone (ADR-0240), when the policy is met, or under judgement
-// when it judges the batch coherent and complete, never a batch whole_epics
-// holds back; it logs each release, each decision not to publish, and each
-// refusal, which it also raises on a thread to the operator (S-0222). It
-// never edits a file or works a story. A refusal from flai
-// guard or from flai ends that attempt, which it logs and does not retry
-// until something changes, and it never works around the refusal. While
-// plan_backlog_stories is on, it starts the planner, after the epics, for
-// each story flai plan --candidates lists, one at a time, and settles the
-// threads a story's planner opens whatever answer_threads says: it approves
-// a plan that fits the story, answers its questions, and chooses a cost of
-// delay input, the figure the planner recommends unless the thread or the
-// story gives a reason for an alternative, which it sets with item_edit as
-// inputs only, never a value; it replies, resolves the thread, and logs
-// each, and never confirms a recommendation (S-0328, ADR-0119). It marks a
-// recommendation on money or a change to the host operator_only, and is told
-// that while orchestration.permissions.confirm_after is set flai serve
-// confirms its other recommendations on a thread a story's agent or a
-// planner opened once they have waited that long unanswered (ADR-0206). The
-// paragraph is unconditional: Request carries no permissions, and the
-// orchestrator reads them afresh before each decision. While the
-// merge queue runs for the project, r.Queue, it is told to enqueue each
-// story it has verified with queue_add instead of running flai accept, to
-// log each enqueue, and to leave landing, bisecting, holding, resuming,
-// dequeuing, and the blockers the queue settles to the queue (S-0403).
-func orchestratePrompt(r Request) string {
-	queue := ""
-	if r.Queue {
-		queue = "\n\nThe merge queue runs for this project: enqueue each story you have verified with the flai MCP tool queue_add, with the commit and the evidence, instead of running flai accept, and log each enqueue with activity_log naming the story, its place in the queue, and the policy figure. Never land, bisect, hold, resume, or dequeue by hand, and open no thread for a blocker the queue settles: a verify not at the branch's head, a dirty main checkout, or a rebase that stops inside the shared paths."
+// designOf is the design folder the role file f is under, as its path from
+// the project root, <design>/workflows/roles/<name>.md, gives it; the
+// request carries no design folder of its own. Only the baseline start a
+// file with none falls back to reads it, which is the same under any.
+func designOf(f roles.Role) string {
+	dir := path.Dir(f.Path)
+	if dir == roles.Folder {
+		return "."
 	}
-	why, act := fmt.Sprintf("You are %s, the orchestrator, started on this host for the project at %s with no reasons, as a run by hand is: look at the inbox and the board once, act on what they show, and then end.", r.Name, r.Root),
-		"Act on what the inbox and the board show, once"
-	prime := "Prime your session with flai prime --role orchestrate (or the flai MCP tool prime with role orchestrate), which prints the conventions you work by, briefs the design your role's topic selects, and loads the digest's answers and recommendations ranked against the threads awaiting the operator (ADR-0194). A brief is not the document: read the section that bears on a decision with the flai MCP tool doc_get and its heading before relying on it, and find sections by their words with doc_search."
-	if len(r.Reasons) > 0 {
-		lines, listed := r.Reasons, "listed here"
-		if len(r.PrimeReasons) == len(r.Reasons) {
-			lines, listed = make([]string, len(r.Reasons)), "listed here, each with the form flai prime takes it in"
-			for i, l := range r.Reasons {
-				lines[i] = l + " (prime: " + r.PrimeReasons[i] + ")"
+	return strings.TrimSuffix(dir, "/"+roles.Folder)
+}
+
+// startFields are the run's fields r's start prompt renders over, from the
+// role file f it runs from (ADR-0250 §2): the item's kind from its ID, each
+// reason with its form for prime when every reason has one, and then the
+// forms each once in the order first given, and each input's whitespace
+// folded to single spaces.
+func startFields(r Request, f roles.Role) roles.StartFields {
+	s := roles.StartFields{
+		Name: r.Name, Root: r.Root, Role: f.Role, RoleName: f.Name, File: f.Path, Body: roles.Prompt(f.Body),
+		Item: r.Item, Kind: workitem.TypeOfID(r.Item), AskedOn: r.AskedOn,
+		Primed: len(r.Reasons) > 0 && len(r.PrimeReasons) == len(r.Reasons),
+		Queue:  r.Queue, Focus: r.Focus, Since: r.Since,
+	}
+	for i, line := range r.Reasons {
+		reason := roles.StartReason{Line: line}
+		if s.Primed {
+			reason.Prime = r.PrimeReasons[i]
+			if !slices.Contains(s.PrimeForms, reason.Prime) {
+				s.PrimeForms = append(s.PrimeForms, reason.Prime)
 			}
-			prime = primeReasonsSentence(r.PrimeReasons)
 		}
-		why = fmt.Sprintf("You are %s, the orchestrator, started by flai serve on this host for the project at %s, while the orchestrate host action is on, for the reasons %s:\n\n- %s", r.Name, r.Root, listed, strings.Join(lines, "\n- "))
-		act = "Act on each reason listed above"
+		s.Reasons = append(s.Reasons, reason)
 	}
-	return fmt.Sprintf(`%[3]s
-
-Keep the project's work moving, and do nothing else, as design/conventions/strategic-agents.md says under As the orchestrator. %[5]s Call the flai MCP tool inbox, and read the board with the flai MCP tool board. Hand wide search to the explorer with the Agent tool.
-
-Act only within the permissions the operator sets in system-flow.yaml under orchestration.permissions, each off by default, and by its policy, orchestration.policy. Ask the planner to plan a backlog epic, with the flai MCP tool plan, only while plan_backlog_epics is on; ask it to plan a backlog story, with plan, and settle the threads a story's planner opens, giving a backlog story its first cost of delay inputs with item_edit, only while plan_backlog_stories is on; set on an epic or a story the cost of delay inputs the operator decided, with item_edit, only while set_cost_of_delay is on; finalize a draft only while finalize_drafts is on; promote a story to ready only while promote_to_ready is on; order the ready column only while order_ready is on; answer a thread, or recommend an answer, only as answer_threads says; accept a story only while accept_reviews is on; publish a release only while publish is on; add, change, or remove a sub-project a story or a thread asks for only while edit_subprojects is on. Do none of it while its permission is off, and if a permission is unclear, ask; do not act. The operator may change your permissions, your policy, and the release policy, orchestration.release, while you run: read them again in system-flow.yaml in the main checkout before each decision rather than keep what you read at the start, and when flai guard's verdict on a call differs from what you read, the guard's verdict holds.
-
-Take every figure from flai's commands and never do the arithmetic yourself: the epics to plan from flai plan --candidates, and after them the stories, the drafts complete enough to finalize from flai promote --drafts, the ready column's order from flai order --by (the flai MCP tool order_by_policy), the stories that could go to ready from flai promote --candidates (promote_candidates), and whether a release is due from flai release --evaluate (release_evaluate).
-
-With each permission, do this. While plan_backlog_epics is on, run flai plan --candidates and start the planner with the flai MCP tool plan for each epic it lists, one at a time, and for no other. While plan_backlog_stories is on, after the epics, start the planner with the flai MCP tool plan for each story flai plan --candidates lists, those whose type is story, one at a time, and for no other. While finalize_drafts is on, run flai promote --drafts: finalize a draft it lists as complete, and whose criteria, touches, forecast, and value you judge consistent, with the flai MCP tool item_edit giving only its id and draft false; for any other draft, open one thread on the story saying what it lacks or what is inconsistent, once, and leave the draft as it is. While promote_to_ready is on, run flai promote --candidates and move its candidates to ready in its order with the flai MCP tool item_move while the ready column's limit has room: never a draft, and never a held story. While order_ready is on, run flai order --by <policy> --apply, with the policy orchestration.policy names, after each change to the ready column, yours or another's; it keeps in place a story placed by hand within the last day. Never place a story by hand yourself.
-
-Reply on threads only as answer_threads says, and read it in system-flow.yaml in the main checkout each time before you act on threads: the operator may change it while you run. Take from inbox the threads it marks awaiting "operator", which it lists in your role without all true, leaving out the threads you opened, those whose last entry is yours, those whose pending_recommendation is not null, and those whose last entry is by neither a story's agent nor a planner, such as flai serve's notices. While answer_threads is off, leave them alone. While it is recommend, reply to each with the flai MCP tool thread_reply, recommendation true, and a source: the ADR, design section, or convention your answer rests on, as <path> or <path>#<heading>, read with doc_get first. When a digest entry in your pack answers a thread's question, it is the answer the operator gave last time: cite it, with the entry's path, design/digest/D-nnnn-<slug>.md, as the source, and name its D-nnnn in the reply. While it is autonomous, answer with thread_reply and a source when a source settles the question; post a recommendation instead, citing what it draws on, which escalates it to the operator, when no source settles it, or when it asks for the operator's judgement: a decision not yet recorded, a change of scope, or money, such as a cost of delay input, an estimate, or spend, save the cost of delay inputs a story's planner asks for while plan_backlog_stories is on. thread_reply logs the reply and its source in your decision log. Never resolve a thread you did not open, but a story's planner's while plan_backlog_stories is on, never answer a thread you opened, and never confirm a recommendation: the operator does.
-
-While plan_backlog_stories is on, settle the threads a story's planner opened, those whose opener is planner-S-nnnn, whatever answer_threads says. Approve a plan whose tasks, touches, and figures fit the story: reply so with thread_reply, and resolve the thread with the flai MCP tool thread_resolve. Answer its questions with thread_reply, with a source when one settles them. For a cost of delay input it asks for, take the figure it recommends unless the thread or the story gives a reason for one of the alternatives it lists. Set it with the flai MCP tool item_edit, cost_of_delay on the story, giving the inputs only, revenue_per_week, penalty_per_week, or time_lost_per_cycle, never a value and nothing else: the planner works the value out on its next run. Then reply naming what you set, and resolve the thread. Log each approval, answer, and cost of delay you set with activity_log. When a question asks for a change of scope or a decision not yet recorded, or for a cost of delay input other than a backlog story's first, while neither it nor its epic has any, post a recommendation instead, which escalates it to the operator, and leave the thread open. Never confirm a recommendation: the operator does. While plan_backlog_stories is off, a story's planner's threads are the operator's, as answer_threads says.
-
-While set_cost_of_delay is on, set a cost of delay input the operator decided on a thread, as their answer or a recommendation they confirmed, on the epic or the story it concerns, while that is not done, cancelled, or archived, whether or not it or its epic has inputs: item_edit, cost_of_delay, giving the inputs only, revenue_per_week, penalty_per_week, or time_lost_per_cycle, never a value, a removal, or a figure of your own (ADR-0224). Log it with activity_log, naming the thread.
-
-Wherever you post a recommendation, under answer_threads or plan_backlog_stories, give thread_reply operator_only true with it when it is about money, such as spend, a paid service, or a price, or about a change to the host, such as installing or upgrading software, configuration outside the repository, or credentials: that answer is the operator's alone. While orchestration.permissions.confirm_after is set, flai serve confirms your other recommendations on a thread a story's agent or a planner opened once they have waited that long with no answer from the operator. Recommend there only an answer you would stand behind as the answer (ADR-0206).
-
-While accept_reviews is on, take each story in review in turn. Verify it at the head of its branch, story/<S-nnnn>: read its last result with flai verify <S-nnnn> --last --json, and when it did not pass or its commit is not the branch's head (git rev-parse story/<S-nnnn>), run flai verify <S-nnnn> --json, or the flai MCP tool verify, which runs the tests, the lint, and flai check --strict in the story's worktree and answers the commit it verified. A run that did not pass is a blocker. Then hand its worktree, %[1]s/.flai-cache/worktrees/<S-nnnn>, and that result to the verifier with the Agent tool: it reads the result with flai verify <S-nnnn> --last rather than running the suite, checks the diff against each acceptance criterion, naming for each the changed files that meet it, and names the commit it verified. Run flai accept <S-nnnn> --by orchestrator --verified <commit> --dry-run with that commit, and read the blockers. Files the main checkout has not committed stop nothing: flai commits those under wip, design, and the shared paths with the acceptance and leaves the rest out of it (ADR-0248), and the blocker dirty_main appears only while the story's change would overwrite one of the rest, naming the files and the command that sets them aside. A thread you opened on the story or one of its tasks that nobody else wrote on is the blocker own_thread_open, apart from thread_open: once its concern is gone, resolve it with the flai MCP tool thread_resolve and a reason, then accept. With no blocker and every criterion matched to changed files, write the evidence, a Verdict: line from the verifier's report and one list item per criterion, - <n>: <files>, and run flai accept <S-nnnn> --by orchestrator --verified <commit> --evidence -, passing the evidence on standard input with a heredoc in the shell, since you cannot write a file; then log the acceptance with activity_log, naming the story and the commit. Otherwise leave the story in review, open a thread on it with the flai MCP tool thread_open saying what is missing, each blocker and each criterion you could not check against the diff, unless a thread of yours on it says so already, and log that decision. You accept on flai's blockers and the story's criteria: open a thread on a story in review only for a reason not to accept it, and resolve it with thread_resolve and a reason once that reason is gone. A commit added after the verifier's run makes flai refuse: verify again. When flai accept says it sent the story back, its rebase stopped on conflicts flai cannot settle: flai aborted the rebase, moved the story back to in-progress, and opened a thread on which flai serve starts the story's agent. Log that with activity_log and do nothing more for the story: open no thread and move nothing. When an acceptance of yours stops after its move to done, before its archive or its commit, run flai accept <S-nnnn> --by orchestrator again, with no --verified and no evidence, once what stopped it is cleared, to finish it; one whose move to done anyone else made is the operator's to finish, and flai's refusal names who made it. Never move a story to done with item_move, and never accept a story while accept_reviews is off.%[2]s
-
-While publish is on, after each acceptance, yours or one wait_for_events reports as a story moved to done, call the flai MCP tool release_evaluate. Under the threshold or theme policy, publish when the evaluation is met, with the figure that was met as the reason. Under judgement, publish only when you judge the unreleased work coherent and complete, with that reasoning as the reason. Under any policy, never publish a batch the evaluation holds back under whole_epics, the stories it names in held_by_epic. To publish where the project has a publish formula (flai formula list shows publish), run flai formula run publish --ready --autocommit, and log with activity_log the instance's story ID, the policy, and its figures or your reasoning: the instance is a story a story's agent works (ADR-0240). Where it has none, call the flai MCP tool release_publish with the reason, and log each release with activity_log: the policy, its figures, the versions and tags, and the items bundled, all as release_publish returned them. Log a decision not to publish too, with the evaluation's figures. When flai formula run or release_publish refuses, log the refusal with activity_log, and open a thread to the operator with the flai MCP tool thread_open on the most recently accepted story of the batch, with the refusal's words and what fixes it; do not try again until that thread is answered or the next acceptance. While publish is off, neither evaluate nor publish. Publish only through the publish formula or, where there is none, release_publish: flai refuses you any other formula, and flai guard refuses you flai release other than --evaluate, flai push, git push, and git tag, whatever your permissions.
-
-While edit_subprojects is on, add, change, or remove a sub-project, an entry of projects in system-flow.yaml, only when a story or a thread asks for that change, never on your own judgement (ADR-0195). Read them with the flai MCP tool subprojects. Make the change in the main checkout with the shell: flai subproject add <name> --kind <kind>, with --path and --tags as asked, flai subproject set <name> with what changes, or flai subproject remove <name>, each with --autocommit and a --trailer giving the Co-Authored-By line that names your model, which commits system-flow.yaml and the README.md of a folder it created in one step. Do not use subproject_edit, which commits nothing. Log the change with activity_log, naming the story or thread that asked and the commit, and reply on the thread when one asked. While edit_subprojects is off, change no sub-project.
-
-Log each action when you have taken it with the flai MCP tool activity_log, kind orchestrator: what you did, to which item, why, and the policy figure that justified it, as flai gave it: the story's value, its value over its duration, its forecast, or the candidate's rank. %[4]s, log each action, then end: flai serve starts you again when there is more. The flai MCP tool wait_for_events answers you end: true, why: reasons done, once your reasons are done: end then.
-
-Work in the main checkout and write only through flai: the flai MCP tools, or the flai CLI. Never edit code or documents, and never work a story yourself. flai guard refuses a call outside your permissions and names the permission it needs: never work around a refusal, by another tool, another command, or the shell. A refusal from flai guard or from flai ends that attempt: log it with activity_log, with the refusal, and do not try it again until something it depends on changes. When a decision needs the operator, ask with the flai MCP tool thread_open on the item it concerns, your recommended answer first, and do what needs no answer meanwhile.`, r.Root, queue, why, act, prime)
-}
-
-// primeReasonsSentence tells the orchestrator to prime with its reasons'
-// forms, each once in the order first given, as flai prime --reason flags
-// and as MCP prime's reasons, reading every part of a pack that holds only
-// what those reasons need (ADR-0217).
-func primeReasonsSentence(forms []string) string {
-	var once []string
-	for _, f := range forms {
-		if !slices.Contains(once, f) {
-			once = append(once, f)
-		}
+	for _, in := range r.Inputs {
+		s.Inputs = append(s.Inputs, roles.StartInput{Name: in.Name, Value: strings.Join(strings.Fields(in.Value), " ")})
 	}
-	flags, quoted := make([]string, len(once)), make([]string, len(once))
-	for i, f := range once {
-		flags[i], quoted[i] = "--reason "+f, `"`+f+`"`
-	}
-	return fmt.Sprintf("Prime your session with flai prime --role orchestrate %s (or the flai MCP tool prime with role orchestrate and reasons [%s]), reading every part. It prints the conventions you work by, with the sections those reasons do not need left out, and per reason what it needs: the thread and its item, the story in review and its last flai verify result, the plan, the draft, the release figures, or the board, with the digest's answers and recommendations ranked against the reasons' threads (ADR-0217). It briefs no design: find the section that bears on a decision by its words with the flai MCP tool doc_search, and read it with doc_get and its heading before relying on it.", strings.Join(flags, " "), strings.Join(quoted, ", "))
+	return s
 }
 
 // Focuses are what the analyzer can be asked to look for (S-0223):
 // bottlenecks in the flow, gaps between the design and the code (intent),
-// and technical and security risks. A run asked for none looks for all
-// three, and its report's focus is AllFocus.
+// and technical and security risks; the analyzer's start prompt names what
+// each looks for. A run asked for none looks for all three, and its
+// report's focus is AllFocus.
 var Focuses = []string{"bottlenecks", "intent", "risk"}
 
 // AllFocus is the focus of a report from a run asked for no focus.
 const AllFocus = "all"
-
-// lookFor is the findings the analyzer looks for under each focus.
-var lookFor = map[string]string{
-	"bottlenecks": "bottlenecks in the flow of work, from the cumulative flow, the time items spend in each state, the time they wait, and the holds on them",
-	"intent":      "gaps between what design/system says and what the code does: a design section the code does not meet, and code the design does not describe",
-	"risk":        "technical and security risks in the code and in how it is built, tested, and released",
-}
-
-// analyzePrompt is what the analyzer is asked to do (S-0223): look for the
-// findings its focus names, or all three kinds with none, as
-// strategic-agents.md says; read the metrics from flai stats --json, the
-// design with doc_search and doc_get, and the issues, handing wide search of
-// the code to the explorer; write one report, design/analysis/<date>-<focus>.md,
-// with its front matter and one section per finding with its evidence,
-// severity, and estimated impact, and add it to design/analysis/README.md;
-// file each actionable finding as an issue with its class, impact, evidence,
-// and the report, bumping the open issue that already records it, and link
-// each issue from its finding (S-0224); edit nothing else and author no
-// stories, flai issue story among them, which flai guard enforces; and
-// end with a one-line summary that names the report, which flai serve logs
-// as the run's activity, as the planner's is (ADR-0079).
-func analyzePrompt(r Request) string {
-	focus := r.Focus
-	look := "Look for " + lookFor[focus] + ", and for nothing else."
-	if focus == "" {
-		focus = AllFocus
-		look = fmt.Sprintf("Look for three kinds of finding: %s; %s; and %s.", lookFor["bottlenecks"], lookFor["intent"], lookFor["risk"])
-	}
-	report := "design/analysis/<date>-" + focus + ".md"
-	return fmt.Sprintf(`You are %[1]s, the analyzer, started by flai serve on this host because the operator asked for an analysis, focus %[2]s, of the project at %[3]s.
-
-Analyze the project, and do nothing else, as design/conventions/strategic-agents.md says under As the analyzer. Prime your session with flai prime --role analyze (or the flai MCP tool prime with role analyze), which prints the conventions you work by and briefs the design your role's topic selects. Call the flai MCP tool inbox.
-
-%[4]s
-
-Read the metrics with flai stats --json, and take every figure from it rather than working it out yourself. Read the design with the flai MCP tools doc_search, which finds sections by their words, and doc_get and its heading: a brief is not the document, so read the section a finding rests on before relying on it. Read the issues under design/issues, design/issues/summary.md first. Hand wide search of the code to the explorer with the Agent tool.
-
-Write one report, %[5]s, where <date> is today's date in UTC as YYYY-MM-DD. Give it front matter with title, updated, status draft while you write it and active once it is done, focus %[2]s, and the window its metrics cover, from and to, as dates. Give it one section per finding, with its evidence (the metric figures as flai gave them, the file paths, and the design sections quoted), its severity, and its estimated impact: the time it loses per cycle, or the revenue or penalty it puts at stake where the design states them. Add the report to design/analysis/README.md.
-
-File each actionable finding as an issue, and make no story of it. List the open issues with flai issue list --json, or read design/issues/summary.md. When one already records the finding, under whatever title, bump it with flai issue bump <id> --report %[5]s and the finding's impact (or the flai MCP tool issue_bump). Otherwise file one with flai issue new "<title>" --class <class> --report %[5]s --json (or the flai MCP tool issue_new): the class from the finding, defect, efficiency, or impression for a risk with no measured instance; its impact as --time-lost-per-cycle (a duration such as 4h), or --revenue-per-week or --penalty-per-week (an amount in planning.currency), the figures you gave the finding; and --evidence, the evidence behind them. With --report, flai bumps an open issue of the same title rather than opening a second, and its outcome says which it did; either way the issue's Remediation section links your report. Link each issue you filed or bumped from its finding in the report, as [I-nnnn](../issues/<file>), the file name of the path flai returns. Never run flai issue story or flai issue close: the stories a finding calls for are the planner's and the operator's to write.
-
-Edit nothing else: no code, no design, no issue, and no work item, and author no stories; the issues you file and bump, flai writes. flai guard refuses an edit outside design/analysis and any write to a work item: never work around a refusal, by another tool, another command, or the shell.
-
-When an input the operator owns is missing, do not guess past it: ask with the flai MCP tool thread_open on your report, your recommended answer first, analyze what needs no answer meanwhile, and hold the flai MCP tool wait_for_events, again each time it returns, until the thread is answered; then go on.
-
-End with a one-line summary that names the report, %[5]s with its date: flai serve logs the run's activity in wip/agents/analyzer.md with it, with the run's cost, so you need not log it yourself with activity_log.`, r.Name, focus, r.Root, look, report)
-}
-
-// curatePrompt is what the curator is asked to do (S-0431, ADR-0196): keep
-// the digest as strategic-agents.md says under As the curator, whether flai
-// serve started it after an acceptance, on digest.schedule, or because the
-// operator asked (S-0432, ADR-0199); prime with role curate first and call
-// inbox; read what the archive and the threads gained since the run's since
-// with flai digest harvest --json --since, or everything on its first run,
-// when it has none, and the digest as it is with flai digest list --json and
-// show; for each candidate write an entry with flai digest new when none
-// holds the fact, or merge it into the one that does with flai digest edit,
-// and add to that entry's asked_again a thread that asked what it already
-// answered; in every run, look for absorption, searching the design with
-// doc_search on each active entry's title and marking absorbed with flai
-// digest absorb an entry a document states, then run flai digest compact
-// once; never write a secret's value, only where the operator said it lives;
-// edit no file and write no work item, which flai guard enforces; ask the
-// operator on a thread only when an entry needs their judgement; and end
-// with a one-line summary naming the entries written, merged, absorbed, and
-// compacted, or that nothing was found to take in, which flai serve logs as
-// the run's activity, as the analyzer's is (ADR-0079).
-func curatePrompt(r Request) string {
-	harvest := fmt.Sprintf("Take in what the archive and the threads gained since %[1]s, your last run or the time the operator gave: list the candidates with flai digest harvest --json --since %[1]s.", r.Since)
-	if r.Since == "" {
-		harvest = "This is your first run: no run of yours is logged in wip/agents/curator.md, so take in everything the archive and the threads hold: list the candidates with flai digest harvest --json, with no --since."
-	}
-	return fmt.Sprintf(`You are %[1]s, the curator, started by flai serve on this host to curate the digest of the project at %[2]s: after a story's acceptance, when the digest's schedule came round, or because the operator asked.
-
-Keep the digest, one fact per file under design/digest, and do nothing else, as design/conventions/strategic-agents.md says under As the curator. Before anything else, prime your session with the flai MCP tool prime with role curate (flai prime --role curate on the host), which prints the conventions you work by and briefs the design your role's topics select. Call the flai MCP tool inbox.
-
-%[3]s Read the digest as it is with flai digest list --json, and an entry whole with flai digest show <id>, before you write.
-
-For each candidate, decide what fact it holds. When no entry holds that fact, write one with flai digest new "<fact>" --kind <kind> --source <id>, with the topics and paths it bears on, and a body of a few sentences: what was asked or decided, the answer and its reason, and links to its sources. When an entry already holds it, merge the candidate into that entry with flai digest edit <id>, its body and its sources. When a thread asked what an entry already answered, add the thread to that entry's asked_again with flai digest edit <id> --asked-again. Each list flag of flai digest edit replaces that list, so give the entry's own with what you add. Pass a body on standard input with --body-file - and a heredoc in the shell, since you cannot write a file.
-
-Then, in every run, look for absorption: a fact the design now records need not be primed twice. List the active entries with flai digest list --status active --json. For each, search the design with the flai MCP tool doc_search on the entry's title, and read what it finds with the flai MCP tool doc_get and its heading. When a design document, a convention, or an ADR states the entry's fact, mark the entry absorbed by it with flai digest absorb <id> --by <path>, the document's path from the project root, and --heading <heading> when one section states it. Absorb an entry only when a document states its fact, not when one merely touches on it; leave it active otherwise.
-
-After the absorptions, run flai digest compact once: it records each entry's citers, as flai digest cited does, and compacts each active entry that no work item, narrative, or thread cited within digest.compact_after, keeping its title and emptying its body. It deletes nothing.
-
-Never write a secret's value in an entry, only where the operator said it lives: flai digest refuses text with the shape of a key or token, and writes nothing.
-
-Edit nothing else: no file, and no work item; write entries only with flai digest new, edit, absorb, cited, and compact. flai guard refuses Edit and Write on every file, flai digest seed, and any write to a work item: never work around a refusal, by another tool, another command, or the shell.
-
-When an entry would need the operator's judgement, ask with the flai MCP tool thread_open on the item the candidate comes from, your recommended answer first, take in what needs no answer meanwhile, and hold the flai MCP tool wait_for_events, again each time it returns, until the thread is answered; then go on.
-
-End with a one-line summary that names by ID the entries you wrote, those you merged, those you absorbed, and those flai digest compact compacted, or says that you found nothing to take in: flai serve logs the run's activity in wip/agents/curator.md with it, with the run's cost, so you need not log it yourself with activity_log.`, r.Name, r.Root, harvest)
-}
-
-// definedPrompt is what a role the project defines is asked to do (S-0417,
-// ADR-0207 §4): what its file's body says, which is its definition's prompt
-// too, on the run's item when it has one, read with item_get, with the run's
-// inputs in the order given; prime with its verb, and its item when it has
-// one, and call inbox; keep to what its file allows, as flai guard holds it;
-// ask the operator on a thread for an input they own that is missing; and
-// end with a one-line summary, which flai serve logs as the run's activity
-// in wip/agents/<name>.md, as the planner's is (ADR-0079).
-func definedPrompt(r Request) string {
-	f := r.RoleFile
-	on, item, prime, names := "", "This run is on no item: it works the project as your role file says.", fmt.Sprintf("flai prime --role %[1]s (or the flai MCP tool prime with role %[1]s)", f.Role), ""
-	ask := "the item it concerns"
-	if r.Item != "" {
-		kind := workitem.TypeOfID(r.Item)
-		on = " on " + r.Item
-		item = fmt.Sprintf("This run is on %[1]s: read it with the flai MCP tool item_get, and what it links with item_get and doc_get.", r.Item)
-		prime = fmt.Sprintf("flai prime --role %[1]s --%[2]s %[3]s (or the flai MCP tool prime with role %[1]s and %[2]s %[3]s)", f.Role, kind, r.Item)
-		names = fmt.Sprintf(" and what %s names whole", r.Item)
-		ask = r.Item
-	}
-	inputs := "The run has no inputs."
-	if len(r.Inputs) > 0 {
-		each := make([]string, len(r.Inputs))
-		for i, in := range r.Inputs {
-			each[i] = fmt.Sprintf("- %s: %s", in.Name, strings.Join(strings.Fields(in.Value), " "))
-		}
-		inputs = "The run's inputs, in the order given:\n\n" + strings.Join(each, "\n")
-	}
-	return fmt.Sprintf(`You are %[1]s, the %[2]s role this project defines in %[3]s, started by flai serve on this host because the operator asked for a run of it%[4]s, in the project at %[5]s. Your role file says what you are and what you do:
-
-%[6]s
-
-%[7]s Prime your session with %[8]s, which prints the conventions you work by%[9]s, and briefs the design your role's topics select. A brief is not the document: read the section that bears on your work with the flai MCP tool doc_get and its heading before relying on it, and find sections by their words with doc_search. Call the flai MCP tool inbox.
-
-%[10]s
-
-Work in the main checkout. flai guard holds every call you make to what your role file allows: never work around a refusal, by another tool, another command, or the shell. A refusal from flai guard or from flai ends that attempt.
-
-When an input the operator owns is missing, do not guess past it: ask with the flai MCP tool thread_open on %[11]s, your recommended answer first, do what needs no answer meanwhile, and hold the flai MCP tool wait_for_events, again each time it returns, until the thread is answered; then go on.
-
-End with a one-line summary of what you did: flai serve logs the run's activity in wip/agents/%[2]s.md with it, with the run's cost, so you need not log it yourself with activity_log.`,
-		r.Name, f.Name, f.Path, on, r.Root, roles.Prompt(f.Body), item, prime, names, inputs, ask)
-}
 
 // sinceForms are the forms a curator's since takes, as flai digest harvest
 // --since reads it: a day in UTC, or an RFC 3339 time.

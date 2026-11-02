@@ -111,7 +111,13 @@ func (claudeCode) Start(r Request, host Host) (Start, error) {
 	case r.Role != "":
 		subject = strings.Join(strings.Fields(r.Role+" "+r.Item+" "+r.Focus), " ")
 	}
-	argv := append(headless(host.Program, Prompt(r), mcp), "--name", strings.TrimSpace(r.Project+" "+subject))
+	// A role file's start prompt that does not render stops the start, with
+	// what is wrong and where (ADR-0250).
+	prompt, err := Prompt(r)
+	if err != nil {
+		return Start{}, err
+	}
+	argv := append(headless(host.Program, prompt, mcp), "--name", strings.TrimSpace(r.Project+" "+subject))
 	// A session of its own, so that an agent that ended waiting for an
 	// answer, or whose story was sent back, goes on with what it knew.
 	switch {

@@ -19,6 +19,16 @@ func req(a *manifest.Agent) Request {
 	return Request{Story: "S-0104", Root: "/p/flow", Project: "flow", Agent: a, Name: "agent-S-0104", Flai: "/usr/local/bin/flai"}
 }
 
+// mustPrompt is r's prompt, failing the test when it does not render.
+func mustPrompt(t *testing.T, r Request) string {
+	t.Helper()
+	p, err := Prompt(r)
+	if err != nil {
+		t.Fatalf("Prompt: %v", err)
+	}
+	return p
+}
+
 // after is the value that follows flag in argv, empty when flag is not there.
 func after(argv []string, flag string) string {
 	i := slices.Index(argv, flag)
@@ -224,7 +234,7 @@ func TestTheOperatorsCommandGetsTheModelAndTheConfig(t *testing.T) {
 }
 
 func TestThePromptKeepsTheAgentToItsStoryAndTheInbox(t *testing.T) {
-	p := Prompt(req(nil))
+	p := mustPrompt(t, req(nil))
 	if strings.Contains(p, "--cat") {
 		t.Errorf("an agent with a story primes with its pack, not every convention:\n%s", p)
 	}
@@ -240,7 +250,7 @@ func TestThePromptKeepsTheAgentToItsStoryAndTheInbox(t *testing.T) {
 // for a story already in progress, which story_start refuses, still primes
 // and takes it up with flai stream open.
 func TestAReadyStoryBeginsWithStoryStart(t *testing.T) {
-	p := Prompt(req(nil))
+	p := mustPrompt(t, req(nil))
 	for _, want := range []string{
 		"Follow CLAUDE.md, or AGENTS.md where there is no CLAUDE.md. Begin with the flai MCP tool story_start with S-0104 (flai story start S-0104 on the host)",
 		"moves S-0104 to in-progress, opens its narrative and its branch in a worktree, primes your session, and answers your inbox",
@@ -261,12 +271,12 @@ func TestAReadyStoryBeginsWithStoryStart(t *testing.T) {
 	}
 	r := req(nil)
 	r.Started = true
-	if p := Prompt(r); !strings.Contains(p, "Begin with the flai MCP tool story_start with S-0104") || strings.Contains(p, "flai stream open") {
+	if p := mustPrompt(t, r); !strings.Contains(p, "Begin with the flai MCP tool story_start with S-0104") || strings.Contains(p, "flai stream open") {
 		t.Errorf("an operator's start of a ready story begins with story_start:\n%s", p)
 	}
 
 	r.Past = []string{"held (overlap): touches flai/cmd"}
-	p = Prompt(r)
+	p = mustPrompt(t, r)
 	for _, want := range []string{"Begin with the flai MCP tool story_start with S-0104", "If story_start refuses S-0104 because the board holds it, start it as the operator asked with flai move S-0104 in-progress, which only warns of the hold, then prime your session with flai prime --story S-0104", "flai stream open S-0104"} {
 		if !strings.Contains(p, want) {
 			t.Errorf("a start past a hold lacks %q:\n%s", want, p)
@@ -275,7 +285,7 @@ func TestAReadyStoryBeginsWithStoryStart(t *testing.T) {
 
 	r = req(nil)
 	r.Begun = &Begun{By: "alex", At: "2026-10-01T07:40:00Z", Agent: "agent-S-0104"}
-	p = Prompt(r)
+	p = mustPrompt(t, r)
 	for _, want := range []string{"Follow CLAUDE.md, or AGENTS.md where there is no CLAUDE.md. Prime your session with flai prime --story S-0104 (or the flai MCP tool prime)", "take S-0104 up with flai stream open S-0104", "A brief is not the document"} {
 		if !strings.Contains(p, want) {
 			t.Errorf("the reconcile prompt lacks %q:\n%s", want, p)
@@ -287,13 +297,13 @@ func TestAReadyStoryBeginsWithStoryStart(t *testing.T) {
 
 	r = req(nil)
 	r.Restart, r.AutoRestart = "ended (exit 1) with S-0104 in in-progress", "1 of 2"
-	if p := Prompt(r); !strings.Contains(p, "Prime your session with flai prime --story S-0104") || !strings.Contains(p, "flai stream open S-0104") || strings.Contains(p, "story_start") {
+	if p := mustPrompt(t, r); !strings.Contains(p, "Prime your session with flai prime --story S-0104") || !strings.Contains(p, "flai stream open S-0104") || strings.Contains(p, "story_start") {
 		t.Errorf("an automatic restart takes the story up:\n%s", p)
 	}
 
 	r = req(nil)
 	r.Restart = "ended (exit 1) with S-0104 in ready"
-	p = Prompt(r)
+	p = mustPrompt(t, r)
 	for _, want := range []string{"If S-0104 is still ready, begin with the flai MCP tool story_start with S-0104", "If it is in progress already, prime your session with flai prime --story S-0104", "take S-0104 up with flai stream open S-0104"} {
 		if !strings.Contains(p, want) {
 			t.Errorf("a restart lacks %q:\n%s", want, p)
@@ -304,12 +314,12 @@ func TestAReadyStoryBeginsWithStoryStart(t *testing.T) {
 // S-0116: a restarted agent is told how its last one ended and to go on
 // from the story's narrative.
 func TestARestartedAgentIsToldHowTheLastOneEnded(t *testing.T) {
-	if p := Prompt(req(nil)); !strings.Contains(p, "because it entered ready.") {
+	if p := mustPrompt(t, req(nil)); !strings.Contains(p, "because it entered ready.") {
 		t.Errorf("first start: %s", p)
 	}
 	r := req(nil)
 	r.Restart = "ended (exit 1) with S-0104 in in-progress"
-	p := Prompt(r)
+	p := mustPrompt(t, r)
 	for _, want := range []string{"because the operator restarted it: its last agent ended (exit 1) with S-0104 in in-progress.", "Current state and Next steps", "rather than starting over", "flai stream open S-0104", "flai move S-0104 review"} {
 		if !strings.Contains(p, want) {
 			t.Errorf("restart prompt lacks %q:\n%s", want, p)
@@ -322,7 +332,7 @@ func TestARestartedAgentIsToldHowTheLastOneEnded(t *testing.T) {
 func TestAnAgentStartedAgainAfterTheUsageLimitIsToldSo(t *testing.T) {
 	r := req(nil)
 	r.Restart, r.AfterLimit = "ended on the harness's usage limit (usage_limit_reached, 429); it resets at 2026-10-28T08:00:00Z", true
-	p := Prompt(r)
+	p := mustPrompt(t, r)
 	for _, want := range []string{"because its last agent ended on the harness's usage limit", "started it again on its own once the host's usage limit no longer held its provider, spending no automatic restart", "rather than starting over"} {
 		if !strings.Contains(p, want) {
 			t.Errorf("the prompt after the usage limit lacks %q:\n%s", want, p)
@@ -339,7 +349,7 @@ func TestAnAgentStartedAgainAfterTheUsageLimitIsToldSo(t *testing.T) {
 func TestAnAgentForAStoryBegunElsewhereIsToldWhereItWasBegun(t *testing.T) {
 	r := req(nil)
 	r.Begun = &Begun{By: "agent-S-0104", At: "2026-10-01T07:40:00Z", Agent: "agent-S-0104", Host: "far-away", Threads: []string{"TH-0041"}}
-	p := Prompt(r)
+	p := mustPrompt(t, r)
 	for _, want := range []string{
 		"because the operator started it here, and this host has had no agent for it: it was begun by agent-S-0104, who moved it to in-progress at 2026-10-01T07:40:00Z, on the host far-away.",
 		"run flai stream open S-0104",
@@ -356,13 +366,13 @@ func TestAnAgentForAStoryBegunElsewhereIsToldWhereItWasBegun(t *testing.T) {
 		t.Errorf("a story begun elsewhere did not just enter ready:\n%s", p)
 	}
 	r.Begun = &Begun{By: "alex", At: "2026-10-01T07:40:00Z", Agent: "agent-S-0104", Threads: []string{"TH-0041", "TH-0042"}}
-	p = Prompt(r)
+	p = mustPrompt(t, r)
 	for _, want := range []string{"begun by alex, who moved it to in-progress at 2026-10-01T07:40:00Z; its narrative names agent-S-0104, on another host.", "Its threads TH-0041, TH-0042 have entries"} {
 		if !strings.Contains(p, want) {
 			t.Errorf("prompt lacks %q:\n%s", want, p)
 		}
 	}
-	if p := Prompt(req(nil)); strings.Contains(p, "begun") {
+	if p := mustPrompt(t, req(nil)); strings.Contains(p, "begun") {
 		t.Errorf("a story that entered ready is not told it was begun elsewhere:\n%s", p)
 	}
 }
@@ -372,12 +382,12 @@ func TestAnAgentForAStoryBegunElsewhereIsToldWhereItWasBegun(t *testing.T) {
 func TestAnAgentTheOperatorStartedIsToldWhatItWentPast(t *testing.T) {
 	r := req(nil)
 	r.Started = true
-	if p := Prompt(r); !strings.Contains(p, "because the operator started it now, from the story's page or with flai serve agent start.") || strings.Contains(p, "entered ready") || strings.Contains(p, "past what") {
+	if p := mustPrompt(t, r); !strings.Contains(p, "because the operator started it now, from the story's page or with flai serve agent start.") || strings.Contains(p, "entered ready") || strings.Contains(p, "past what") {
 		t.Errorf("a start past nothing: %s", p)
 	}
 	hold := "held (overlap): touches flai/cmd, which holds flai/cmd/prime.go that S-0138 (in progress) touches; starts when S-0138 is accepted, cancelled, or sent back"
 	r.Past = []string{hold, "the in-progress limit was full"}
-	p := Prompt(r)
+	p := mustPrompt(t, r)
 	for _, want := range []string{
 		"because the operator started it now, from the story's page or with flai serve agent start, past what kept flai serve from starting it: " + hold + "; the in-progress limit was full.",
 		"pull S-0104 as they asked",
@@ -572,7 +582,7 @@ func TestAnAgentAnAcceptanceSentBackIsToldItIsAcceptedAgain(t *testing.T) {
 func TestAnAgentStartedToCommitIsToldToDoOnlyThat(t *testing.T) {
 	r := req(nil)
 	r.Commit = "/repo/.flai-cache/worktrees/S-0104"
-	p := Prompt(r)
+	p := mustPrompt(t, r)
 	for _, want := range []string{"agent-S-0104", "work left uncommitted in story S-0104's worktree, /repo/.flai-cache/worktrees/S-0104", "Do only this", "on story/S-0104", "Do not move S-0104", "flai stream log S-0104", "thread_open on S-0104"} {
 		if !strings.Contains(p, want) {
 			t.Errorf("commit prompt lacks %q:\n%s", want, p)
@@ -607,7 +617,7 @@ func TestAStorysAgentEndsOnAnOpenQuestion(t *testing.T) {
 	commit := req(nil)
 	commit.Commit = "/repo/.flai-cache/worktrees/S-0104"
 	for name, r := range map[string]Request{"story": req(nil), "answered": answered, "commit": commit} {
-		p := Prompt(r)
+		p := mustPrompt(t, r)
 		for _, want := range ends {
 			if !strings.Contains(p, want) {
 				t.Errorf("the %s run's prompt lacks %q:\n%s", name, want, p)
@@ -617,7 +627,7 @@ func TestAStorysAgentEndsOnAnOpenQuestion(t *testing.T) {
 			t.Errorf("the %s run's prompt still holds wait_for_events for an answer:\n%s", name, p)
 		}
 	}
-	p := Prompt(req(nil))
+	p := mustPrompt(t, req(nil))
 	for _, want := range []string{
 		"ask with the flai MCP tool thread_open on S-0104, and go on with the work of S-0104 that does not wait on the answer. When nothing is left but the answer, write the narrative's Current state and Next steps with flai stream state, saying what you asked and what you will do with each answer, and end",
 		"when it answers end: true, do as its why says: write the narrative's Current state and Next steps with flai stream state, and end.",
@@ -629,7 +639,7 @@ func TestAStorysAgentEndsOnAnOpenQuestion(t *testing.T) {
 			t.Errorf("the story run's prompt lacks %q:\n%s", want, p)
 		}
 	}
-	if p := Prompt(commit); !strings.Contains(p, "ask with the flai MCP tool thread_open on S-0104, and commit what does not wait on the answer. Then write the narrative's Current state and Next steps with flai stream state, saying what you asked and what is left to commit, and end") {
+	if p := mustPrompt(t, commit); !strings.Contains(p, "ask with the flai MCP tool thread_open on S-0104, and commit what does not wait on the answer. Then write the narrative's Current state and Next steps with flai stream state, saying what you asked and what is left to commit, and end") {
 		t.Errorf("the commit run's prompt:\n%s", p)
 	}
 	for name, c := range map[string]struct {
@@ -641,7 +651,7 @@ func TestAStorysAgentEndsOnAnOpenQuestion(t *testing.T) {
 		"curator":      {curateReq("", nil), "and hold the flai MCP tool wait_for_events, again each time it returns, until the thread is answered; then go on"},
 		"orchestrator": {orchestrateReq(nil), "log each action, then end: flai serve starts you again when there is more"},
 	} {
-		p := Prompt(c.r)
+		p := mustPrompt(t, c.r)
 		if !strings.Contains(p, c.hold) {
 			t.Errorf("the %s's prompt lacks %q:\n%s", name, c.hold, p)
 		}
@@ -665,7 +675,7 @@ func TestThePromptHandsNoisyWorkToSubAgents(t *testing.T) {
 	}
 	restarted := r
 	restarted.Restart = "ended (exit 1)"
-	for _, p := range []string{st.Argv[2], Prompt(restarted)} {
+	for _, p := range []string{st.Argv[2], mustPrompt(t, restarted)} {
 		for _, w := range want {
 			if !strings.Contains(p, w) {
 				t.Errorf("prompt lacks %q:\n%s", w, p)
@@ -674,7 +684,7 @@ func TestThePromptHandsNoisyWorkToSubAgents(t *testing.T) {
 	}
 	answered, commit := r, r
 	answered.Answered, commit.Commit = "TH-0001", "/w"
-	for _, p := range []string{Prompt(answered), Prompt(commit)} {
+	for _, p := range []string{mustPrompt(t, answered), mustPrompt(t, commit)} {
 		if strings.Contains(p, "sub-agents") {
 			t.Errorf("told again:\n%s", p)
 		}
@@ -699,7 +709,7 @@ func TestThePromptNeverTellsTheAgentToPush(t *testing.T) {
 	begun.Begun = &Begun{By: "alex", At: "2026-10-01T07:40:00Z", Agent: "agent-S-0104", Threads: []string{"TH-0041"}}
 	started.Started, started.Past = true, []string{"the in-progress limit was full"}
 	for _, x := range []Request{r, restarted, answered, commit, begun, started} {
-		p := Prompt(x)
+		p := mustPrompt(t, x)
 		for _, never := range []string{"flai push", "git push", "unpushed", "push --pending", "publish"} {
 			if strings.Contains(p, never) {
 				t.Errorf("prompt says %q:\n%s", never, p)
@@ -718,7 +728,7 @@ func TestThePromptSaysTheOperatorTurnsIssuesIntoStories(t *testing.T) {
 	answered.Answered = "TH-0001"
 	commit.Commit = "/w"
 	for _, x := range []Request{r, answered} {
-		p := Prompt(x)
+		p := mustPrompt(t, x)
 		for _, w := range []string{
 			"flai issue new --commit, or flai issue bump --commit when the issue exists, run in the worktree (or the flai MCP tools issue_new and issue_bump with commit): each instance names " + r.Story,
 			// S-0275: the one call commits the issue on the story's branch and widens its touches, and records an ADR the same way
@@ -732,8 +742,8 @@ func TestThePromptSaysTheOperatorTurnsIssuesIntoStories(t *testing.T) {
 			}
 		}
 	}
-	if strings.Contains(Prompt(commit), "flai issue") {
-		t.Errorf("the commit prompt mentions issues:\n%s", Prompt(commit))
+	if strings.Contains(mustPrompt(t, commit), "flai issue") {
+		t.Errorf("the commit prompt mentions issues:\n%s", mustPrompt(t, commit))
 	}
 }
 
@@ -743,7 +753,7 @@ func TestThePromptSaysTheOperatorTurnsIssuesIntoStories(t *testing.T) {
 // kept for the review of a large diff against the criteria and the
 // conventions, which reads flai verify --last rather than running the suite.
 func TestThePromptRunsTheCloseOutItselfAndKeepsTheVerifierForTheReview(t *testing.T) {
-	p := Prompt(req(&manifest.Agent{Harness: ClaudeCode}))
+	p := mustPrompt(t, req(&manifest.Agent{Harness: ClaudeCode}))
 	for _, w := range []string{
 		"run only the tests for what you changed",
 		"Leave the whole suite, the whole lint, and flai check to the close-out before review",
@@ -780,7 +790,7 @@ func TestThePromptRunsTheTestsForWhatChangedWithFlaiTest(t *testing.T) {
 	r := req(&manifest.Agent{Harness: ClaudeCode})
 	restarted := r
 	restarted.Restart = "ended (exit 1)"
-	for _, p := range []string{Prompt(r), Prompt(restarted)} {
+	for _, p := range []string{mustPrompt(t, r), mustPrompt(t, restarted)} {
 		for _, w := range []string{
 			"run only the tests for what you changed, yourself, with flai test and the paths you changed, or the flai MCP tool test with them",
 			"it runs the test and lint tiers the manifest's tests declare that those paths select, cheapest first, and answers pass or the first findings",
@@ -797,7 +807,7 @@ func TestThePromptRunsTheTestsForWhatChangedWithFlaiTest(t *testing.T) {
 	}
 	answered, commit := r, r
 	answered.Answered, commit.Commit = "TH-0001", "/w"
-	for _, p := range []string{Prompt(answered), Prompt(commit)} {
+	for _, p := range []string{mustPrompt(t, answered), mustPrompt(t, commit)} {
 		if strings.Contains(p, "flai test") {
 			t.Errorf("told about flai test again:\n%s", p)
 		}
@@ -820,7 +830,7 @@ func TestThePromptSaysHowTheAgentRunsTheCloseOut(t *testing.T) {
 		"When it stops, fix what it names yourself, commit, and run it again",
 		"Then check the diff against the acceptance criteria and the conventions, naming the criteria it meets by number",
 	}
-	for _, p := range []string{Prompt(r), Prompt(restarted)} {
+	for _, p := range []string{mustPrompt(t, r), mustPrompt(t, restarted)} {
 		at := 0
 		for _, w := range want {
 			i := strings.Index(p[at:], w)
@@ -833,7 +843,7 @@ func TestThePromptSaysHowTheAgentRunsTheCloseOut(t *testing.T) {
 	}
 	answered, commit := r, r
 	answered.Answered, commit.Commit = "TH-0001", "/w"
-	for _, p := range []string{Prompt(answered), Prompt(commit)} {
+	for _, p := range []string{mustPrompt(t, answered), mustPrompt(t, commit)} {
 		if strings.Contains(p, "run the close-out yourself") {
 			t.Errorf("told how to run the close-out again:\n%s", p)
 		}
@@ -860,7 +870,7 @@ func TestThePromptAsksForTheCloseOutJobAndWaitsForVerified(t *testing.T) {
 		"When verify answers from the record, that is the passing run",
 		"Only when verify says flai serve is not running, run the close-out yourself",
 	}
-	for _, p := range []string{Prompt(r), Prompt(restarted)} {
+	for _, p := range []string{mustPrompt(t, r), mustPrompt(t, restarted)} {
 		at := 0
 		for _, w := range want {
 			i := strings.Index(p[at:], w)
@@ -873,7 +883,7 @@ func TestThePromptAsksForTheCloseOutJobAndWaitsForVerified(t *testing.T) {
 	}
 	answered, commit := r, r
 	answered.Answered, commit.Commit = "TH-0001", "/w"
-	for _, p := range []string{Prompt(answered), Prompt(commit)} {
+	for _, p := range []string{mustPrompt(t, answered), mustPrompt(t, commit)} {
 		if strings.Contains(p, "verified for") || strings.Contains(p, "--job") {
 			t.Errorf("told how to ask for the close-out again:\n%s", p)
 		}
@@ -895,7 +905,7 @@ func TestThePromptSaysToBatchIndependentCalls(t *testing.T) {
 		"flai move T-nnnn ready && flai move T-nnnn in-progress",
 		"flai move refuses a task straight from backlog to in-progress",
 	}
-	for _, p := range []string{Prompt(r), Prompt(restarted)} {
+	for _, p := range []string{mustPrompt(t, r), mustPrompt(t, restarted)} {
 		for _, w := range want {
 			if !strings.Contains(p, w) {
 				t.Errorf("prompt lacks %q:\n%s", w, p)
@@ -904,7 +914,7 @@ func TestThePromptSaysToBatchIndependentCalls(t *testing.T) {
 	}
 	answered, commit := r, r
 	answered.Answered, commit.Commit = "TH-0001", "/w"
-	for _, p := range []string{Prompt(answered), Prompt(commit)} {
+	for _, p := range []string{mustPrompt(t, answered), mustPrompt(t, commit)} {
 		if strings.Contains(p, "in one turn") || strings.Contains(p, "ready && flai move") {
 			t.Errorf("told to batch its calls again:\n%s", p)
 		}
@@ -921,7 +931,7 @@ func TestThePromptAsksForThePlan(t *testing.T) {
 	r := req(&manifest.Agent{Harness: ClaudeCode})
 	restarted := r
 	restarted.Restart = "ended (exit 1)"
-	for _, p := range []string{Prompt(r), Prompt(restarted)} {
+	for _, p := range []string{mustPrompt(t, r), mustPrompt(t, restarted)} {
 		for _, w := range []string{
 			"Plan S-0104's tasks as you write them",
 			"the paths it touches (--touches)",
@@ -951,7 +961,7 @@ func TestThePromptAsksForThePlan(t *testing.T) {
 	}
 	answered, commit := r, r
 	answered.Answered, commit.Commit = "TH-0001", "/w"
-	for _, p := range []string{Prompt(answered), Prompt(commit)} {
+	for _, p := range []string{mustPrompt(t, answered), mustPrompt(t, commit)} {
 		if strings.Contains(p, "layer") {
 			t.Errorf("told the plan again:\n%s", p)
 		}
@@ -970,7 +980,7 @@ func TestThePromptKeepsClaudeWritesFromSubAgents(t *testing.T) {
 	r := req(&manifest.Agent{Harness: ClaudeCode})
 	restarted := r
 	restarted.Restart = "ended (exit 1)"
-	for _, p := range []string{Prompt(r), Prompt(restarted)} {
+	for _, p := range []string{mustPrompt(t, r), mustPrompt(t, restarted)} {
 		for _, w := range []string{
 			"A write to a path Claude Code protects, such as a file in a .claude/ folder or .mcp.json, is never a sub-agent's: flai guard refuses it unless the operator has turned on auto-approve",
 			"say so in the prompt of every sub-agent whose task changes such a file, and ask it to return the file's whole new content in its final message",
@@ -1003,7 +1013,7 @@ func TestThePromptKeepsClaudeWritesFromSubAgents(t *testing.T) {
 	}
 	answered, commit := r, r
 	answered.Answered, commit.Commit = "TH-0001", "/w"
-	for _, p := range []string{Prompt(answered), Prompt(commit)} {
+	for _, p := range []string{mustPrompt(t, answered), mustPrompt(t, commit)} {
 		if strings.Contains(p, ".claude/") {
 			t.Errorf("told about .claude/ writes again:\n%s", p)
 		}
@@ -1021,7 +1031,7 @@ func TestThePromptSaysThePerTaskCycle(t *testing.T) {
 	r := req(&manifest.Agent{Harness: ClaudeCode})
 	restarted := r
 	restarted.Restart = "ended (exit 1)"
-	for _, p := range []string{Prompt(r), Prompt(restarted)} {
+	for _, p := range []string{mustPrompt(t, r), mustPrompt(t, restarted)} {
 		cycle := []string{
 			`When a task is done, close it with flai task done T-nnnn -m "<message>" in the worktree (or the flai MCP tool task_done), with its docs and work-item updates in the change`,
 			"it commits on story/S-0104, runs flai stream sync S-0104, moves the task to done, logs it in the narrative, widens the touches, runs flai check, and answers your inbox, stopping at the first step that fails",
@@ -1056,7 +1066,7 @@ func TestThePromptSaysThePerTaskCycle(t *testing.T) {
 	}
 	answered := r
 	answered.Answered = "TH-0001"
-	if p := Prompt(answered); !strings.Contains(p, "commit everything outstanding in the worktree, so that git status there is clean, run flai stream sync S-0104 again and resolve what it lists, then move S-0104 to review") {
+	if p := mustPrompt(t, answered); !strings.Contains(p, "commit everything outstanding in the worktree, so that git status there is clean, run flai stream sync S-0104 again and resolve what it lists, then move S-0104 to review") {
 		t.Errorf("an answered agent is not told to sync before review:\n%s", p)
 	}
 }
@@ -1067,10 +1077,10 @@ func TestThePromptSaysThePerTaskCycle(t *testing.T) {
 // prompt it got before, which the instance's is with that paragraph taken out.
 func TestAnInstancesPromptSaysHowItsStepsAreWorked(t *testing.T) {
 	r := req(&manifest.Agent{Harness: ClaudeCode})
-	plain := Prompt(r)
+	plain := mustPrompt(t, r)
 	in := r
 	in.Formula = "release"
-	p := Prompt(in)
+	p := mustPrompt(t, in)
 	for _, w := range []string{
 		"S-0104 is an instance of the formula release, which flai formula run made from design/workflows/formulas/release.md: its tasks are the formula's steps, written already, so write, review, add, rewrite, or cancel none of them.",
 		"Work them in their layers, a layer only once every task of the one before is done, and in no other order, each as its task's ## Work names it, and run each step yourself rather than through a task sub-agent.",
@@ -1114,13 +1124,13 @@ func TestAnInstancesPromptSaysHowItsStepsAreWorked(t *testing.T) {
 func TestAnAnsweredInstanceRunsItsBlockedStepAgain(t *testing.T) {
 	r := req(&manifest.Agent{Harness: ClaudeCode})
 	r.Answered = "TH-0001"
-	plain := Prompt(r)
+	plain := mustPrompt(t, r)
 	if want := "The designer has answered your question TH-0001 on S-0104. Read the answer with the flai MCP tool thread_get (or flai thread show TH-0001), then go on working S-0104 to review as before.\n\n" + rules(r); plain != want {
 		t.Errorf("a story with no formula is told something new when answered:\n%s\nwant:\n%s", plain, want)
 	}
 	in := r
 	in.Formula = "release"
-	p := Prompt(in)
+	p := mustPrompt(t, in)
 	step := " S-0104 is an instance of the formula release: if you asked TH-0001 because a step failed, unblock its task with flai unblock T-nnnn in the worktree, run that step again as the answer says, and go on with the layers from there, closing its task with task_done when it passes."
 	if !strings.Contains(p, "go on working S-0104 to review as before."+step+"\n\n") {
 		t.Errorf("an answered instance is not told to run its blocked step again:\n%s", p)
@@ -1129,7 +1139,7 @@ func TestAnAnsweredInstanceRunsItsBlockedStepAgain(t *testing.T) {
 		t.Errorf("an answered instance's prompt is not the story's with the step's sentence added:\n%s\nwant:\n%s", got, plain)
 	}
 	in.Answered = "MS-0002"
-	if p := Prompt(in); strings.Contains(p, "unblock") || strings.Contains(p, "formula") {
+	if p := mustPrompt(t, in); strings.Contains(p, "unblock") || strings.Contains(p, "formula") {
 		t.Errorf("an instance started on a message is told of a blocked step:\n%s", p)
 	}
 }
@@ -1142,7 +1152,7 @@ func TestThePromptSaysHowCriteriaAreTicked(t *testing.T) {
 	r := req(&manifest.Agent{Harness: ClaudeCode})
 	answered := r
 	answered.Answered = "TH-0001"
-	for _, p := range []string{Prompt(r), Prompt(answered)} {
+	for _, p := range []string{mustPrompt(t, r), mustPrompt(t, answered)} {
 		for _, w := range []string{
 			"Tick each acceptance criterion with flai criteria tick S-0104 <n> (or the flai MCP tool criteria_tick) as soon as you have verified it, never by editing S-0104's file",
 			"leave one you cannot verify here unticked and say why in S-0104's notes",
@@ -1152,7 +1162,7 @@ func TestThePromptSaysHowCriteriaAreTicked(t *testing.T) {
 			}
 		}
 	}
-	p := Prompt(r)
+	p := mustPrompt(t, r)
 	for _, w := range []string{
 		"ask each to name in its final message the acceptance criteria its task meets, by their numbers in flai criteria list S-0104",
 		"close the task with flai task done and test it as above, then tick the criteria your review verified it meets",
@@ -1167,7 +1177,7 @@ func TestThePromptSaysHowCriteriaAreTicked(t *testing.T) {
 // Next steps with flai stream state, never by editing the narrative, and to
 // write them so when it ends on an open question.
 func TestThePromptSaysHowTheNarrativesStateIsWritten(t *testing.T) {
-	p := Prompt(req(&manifest.Agent{Harness: ClaudeCode}))
+	p := mustPrompt(t, req(&manifest.Agent{Harness: ClaudeCode}))
 	for _, w := range []string{
 		`Keep the narrative's Current state and Next steps true: rewrite them at every task transition with flai stream state S-0104 --current "<text>" --next "<text>" (or the flai MCP tool stream_state), never by editing the narrative.`,
 		"write the narrative's Current state and Next steps with flai stream state, saying what you asked",
@@ -1331,7 +1341,7 @@ func TestThePlannersPromptPlansItsItem(t *testing.T) {
 			"End with a one-line summary that names by ID the tasks you created and the tasks you revisited: flai serve logs",
 		}},
 	} {
-		p := Prompt(planReq(c.id, nil))
+		p := mustPrompt(t, planReq(c.id, nil))
 		for _, w := range append(common(c.id, c.flag), c.want...) {
 			if !strings.Contains(p, w) {
 				t.Errorf("%s: prompt lacks %q:\n%s", c.id, w, p)
@@ -1343,7 +1353,7 @@ func TestThePlannersPromptPlansItsItem(t *testing.T) {
 			}
 		}
 	}
-	if p := Prompt(planReq("S-0208", nil)); strings.Contains(p, "draft the stories") || strings.Contains(p, "split, merge, add, or drop") {
+	if p := mustPrompt(t, planReq("S-0208", nil)); strings.Contains(p, "draft the stories") || strings.Contains(p, "split, merge, add, or drop") {
 		t.Errorf("a story's planner is told to plan an epic's stories:\n%s", p)
 	}
 }
@@ -1356,10 +1366,10 @@ func TestThePlannersPromptPlansItsItem(t *testing.T) {
 // before that the operator asked.
 func TestThePlannerAskedForAgainIsToldTheThread(t *testing.T) {
 	for _, id := range []string{"E-0024", "S-0419"} {
-		asked := Prompt(planReq(id, nil))
+		asked := mustPrompt(t, planReq(id, nil))
 		r := planReq(id, nil)
 		r.AskedOn = "TH-0579"
-		again := Prompt(r)
+		again := mustPrompt(t, r)
 		first := "You are planner-" + id + ", the planner, started by flai serve on this host "
 		if want := first + "because the operator asked for " + id + " to be planned, in the project at /p/flow.\n\n"; !strings.HasPrefix(asked, want) {
 			t.Errorf("%s: the operator's run does not begin %q:\n%s", id, want, asked)
@@ -1408,13 +1418,13 @@ func TestAStorysPlannerDraftsAndRevisitsItsTasks(t *testing.T) {
 		"In the plan's thread, name the tasks, their order and layers, and the assumptions you made",
 		"End with a one-line summary that names by ID the tasks you created and the tasks you revisited",
 	}
-	p := Prompt(planReq("S-0255", nil))
+	p := mustPrompt(t, planReq("S-0255", nil))
 	for _, w := range append(slices.Clone(shared), storyOnly...) {
 		if !strings.Contains(p, w) {
 			t.Errorf("a story's planner prompt lacks %q:\n%s", w, p)
 		}
 	}
-	e := Prompt(planReq("E-0016", nil))
+	e := mustPrompt(t, planReq("E-0016", nil))
 	for _, w := range shared {
 		if !strings.Contains(e, w) {
 			t.Errorf("an epic's planner is not told %q:\n%s", w, e)
@@ -1637,6 +1647,82 @@ func TestClaudeCodeGivesTheBuiltinRoleItsRoleFilesDefinition(t *testing.T) {
 	}
 }
 
+// S-0554, ADR-0250 §1: a project changes what its planner is told with no
+// change to flai. The planner file under its design folder, read as flai
+// serve reads it (roles.Builtin), ends the start prompt with its Start
+// prompt section below the marker, rendered over the run's fields, which the
+// definition's prompt does not carry; its own start replaces the baseline's;
+// and a start that does not render stops the start, naming the file and
+// flai check.
+func TestAProjectsPlannerFileChangesItsStartPrompt(t *testing.T) {
+	baseline, err := os.ReadFile(filepath.Join("..", "roles", "baseline", "planner.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	fm, body, ok := strings.Cut(string(baseline), "\nstart: |\n")
+	_, body, found := strings.Cut(body, "\n---\n")
+	if !ok || !found {
+		t.Fatal("the baseline planner has no start field ending its front matter")
+	}
+	withStart := func(start string) string { return fm + "\nstart: |\n" + start + "\n---\n" + body }
+	// start starts the planner on S-0208 in a project whose planner file is
+	// file, returning the start prompt and the definition's prompt, and the
+	// start prompt flai gives a project with no file.
+	start := func(t *testing.T, file string) (got, def, plain string, err error) {
+		t.Helper()
+		root := t.TempDir()
+		dir := filepath.Join(root, "design", "workflows", "roles")
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "planner.md"), []byte(file), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		f, fromBaseline, err := roles.Builtin(root, "design", "planner")
+		if err != nil || fromBaseline {
+			t.Fatalf("the project's planner file is not read: %v, from the baseline %v", err, fromBaseline)
+		}
+		r := planReq("S-0208", nil)
+		r.Root = root
+		plain = mustPrompt(t, r)
+		r.Builtin = &f
+		st, err := (claudeCode{}).Start(r, Host{})
+		if err != nil {
+			return "", "", plain, err
+		}
+		var agents map[string]map[string]any
+		if err := json.Unmarshal([]byte(after(st.Argv, "--agents")), &agents); err != nil {
+			t.Fatalf("--agents: %v in %v", err, st.Argv)
+		}
+		def, _ = agents["planner"]["prompt"].(string)
+		return st.Argv[2], def, plain, nil
+	}
+
+	got, _, plain, err := start(t, string(baseline))
+	if err != nil || got != plain {
+		t.Errorf("the baseline's own file changes the start prompt: %v\n%s\nwas:\n%s", err, got, plain)
+	}
+
+	added := strings.TrimRight(string(baseline), "\n") + "\n\n" + roles.StartHeading + "\n\nWhen you plan {{.Item}}, name a reviewer for each task you draft.\n"
+	got, def, plain, err := start(t, added)
+	if want := plain + "\n\nWhen you plan S-0208, name a reviewer for each task you draft."; err != nil || got != want {
+		t.Errorf("the additions do not end the start prompt: %v\n%s\nwant:\n%s", err, got, want)
+	}
+	if strings.Contains(def, "name a reviewer") || strings.Contains(def, roles.StartHeading) {
+		t.Errorf("the definition's prompt carries the start prompt's additions:\n%s", def)
+	}
+
+	got, _, _, err = start(t, withStart("  You are {{.Name}}: plan {{.Item}}, a {{.Kind}}, in {{.Root}}."))
+	if err != nil || !strings.HasPrefix(got, "You are planner-S-0208: plan S-0208, a story, in ") || strings.Contains(got, "Plan S-0208, and nothing else") {
+		t.Errorf("the file's own start does not replace the baseline's: %v\n%s", err, got)
+	}
+
+	_, _, _, err = start(t, withStart("  Plan {{.Itme}}."))
+	if err == nil || !strings.Contains(err.Error(), "design/workflows/roles/planner.md") || !strings.Contains(err.Error(), "Itme") || !strings.Contains(err.Error(), "flai check") {
+		t.Errorf("a start that does not render: %v, want an error naming the file, the field, and flai check", err)
+	}
+}
+
 func orchestrateReq(a *manifest.Agent) Request {
 	return Request{Role: "orchestrate", Root: "/p/flow", Project: "flow", Agent: a, Name: "orchestrator", Flai: "/usr/local/bin/flai"}
 }
@@ -1645,7 +1731,7 @@ func orchestrateReq(a *manifest.Agent) Request {
 // the operator's permissions, with flai's figures, logging each decision;
 // never to edit a file, work a story, or work around flai guard.
 func TestTheOrchestratorsPromptKeepsWorkMovingWithinItsPermissions(t *testing.T) {
-	p := Prompt(orchestrateReq(nil))
+	p := mustPrompt(t, orchestrateReq(nil))
 	for _, w := range []string{
 		"You are orchestrator, the orchestrator, started on this host for the project at /p/flow with no reasons",
 		"as design/conventions/strategic-agents.md says under As the orchestrator",
@@ -1686,12 +1772,12 @@ func TestTheOrchestratorsPromptKeepsWorkMovingWithinItsPermissions(t *testing.T)
 func TestTheOrchestratorsPromptListsItsReasonsAndEnds(t *testing.T) {
 	r := orchestrateReq(nil)
 	r.Reasons = []string{"moved S-0123 to review: Add the thing", "asked: the operator asked"}
-	withNone := Prompt(orchestrateReq(nil))
+	withNone := mustPrompt(t, orchestrateReq(nil))
 	for name, c := range map[string]struct {
 		p    string
 		want []string
 	}{
-		"with reasons": {Prompt(r), []string{
+		"with reasons": {mustPrompt(t, r), []string{
 			"You are orchestrator, the orchestrator, started by flai serve on this host for the project at /p/flow, while the orchestrate host action is on, for the reasons listed here:\n\n- moved S-0123 to review: Add the thing\n- asked: the operator asked\n\nKeep the project's work moving",
 			"Act on each reason listed above, log each action, then end: flai serve starts you again when there is more.",
 		}},
@@ -1724,7 +1810,7 @@ func TestTheOrchestratorsPromptPrimesWithItsReasons(t *testing.T) {
 	r := orchestrateReq(nil)
 	r.Reasons = []string{"thread TH-0007 awaits the orchestrator: A question", "moved S-0123 to review: Add the thing", "ready-empty: the ready column holds 1, below the in-progress room", "reordered: the pull order changed"}
 	r.PrimeReasons = []string{"thread:TH-0007", "review:S-0123", "ready", "ready"}
-	p := Prompt(r)
+	p := mustPrompt(t, r)
 	for _, w := range []string{
 		"for the reasons listed here, each with the form flai prime takes it in:\n\n- thread TH-0007 awaits the orchestrator: A question (prime: thread:TH-0007)\n- moved S-0123 to review: Add the thing (prime: review:S-0123)\n- ready-empty: the ready column holds 1, below the in-progress room (prime: ready)\n- reordered: the pull order changed (prime: ready)\n\nKeep the project's work moving",
 		`Prime your session with flai prime --role orchestrate --reason thread:TH-0007 --reason review:S-0123 --reason ready (or the flai MCP tool prime with role orchestrate and reasons ["thread:TH-0007", "review:S-0123", "ready"]), reading every part.`,
@@ -1744,7 +1830,7 @@ func TestTheOrchestratorsPromptPrimesWithItsReasons(t *testing.T) {
 	}
 	// a reason with no form, asked here, and so no forms: the general pack
 	r.Reasons, r.PrimeReasons = []string{"moved S-0123 to review: Add the thing", "asked: the operator asked"}, nil
-	p = Prompt(r)
+	p = mustPrompt(t, r)
 	for _, w := range []string{
 		"for the reasons listed here:\n\n- moved S-0123 to review: Add the thing\n- asked: the operator asked\n\n",
 		"Prime your session with flai prime --role orchestrate (or the flai MCP tool prime with role orchestrate), which prints the conventions you work by, briefs the design your role's topic selects",
@@ -1779,10 +1865,10 @@ func TestTheOrchestratorTakesOneFormForEachReason(t *testing.T) {
 // No other agent is told it.
 func TestTheOrchestratorsPromptSaysItsPermissionsMayChangeWhileItRuns(t *testing.T) {
 	const w = "The operator may change your permissions, your policy, and the release policy, orchestration.release, while you run: read them again in system-flow.yaml in the main checkout before each decision rather than keep what you read at the start, and when flai guard's verdict on a call differs from what you read, the guard's verdict holds"
-	if p := Prompt(orchestrateReq(nil)); !strings.Contains(p, w) {
+	if p := mustPrompt(t, orchestrateReq(nil)); !strings.Contains(p, w) {
 		t.Errorf("the orchestrator's prompt lacks %q:\n%s", w, p)
 	}
-	others := map[string]string{"a story's agent": Prompt(req(nil)), "an epic's planner": Prompt(planReq("E-0016", nil)), "a story's planner": Prompt(planReq("S-0208", nil))}
+	others := map[string]string{"a story's agent": mustPrompt(t, req(nil)), "an epic's planner": mustPrompt(t, planReq("E-0016", nil)), "a story's planner": mustPrompt(t, planReq("S-0208", nil))}
 	for who, o := range others {
 		if strings.Contains(o, "The operator may change your permissions") {
 			t.Errorf("%s's prompt says its permissions may change while it runs:\n%s", who, o)
@@ -1796,7 +1882,7 @@ func TestTheOrchestratorsPromptSaysItsPermissionsMayChangeWhileItRuns(t *testing
 // policy figure that justified it; and that a refusal ends the attempt,
 // which it logs and does not retry until something changes.
 func TestTheOrchestratorsPromptSaysWhatEachPermissionDoes(t *testing.T) {
-	p := Prompt(orchestrateReq(nil))
+	p := mustPrompt(t, orchestrateReq(nil))
 	for _, w := range []string{
 		// plan_backlog_epics
 		"While plan_backlog_epics is on, run flai plan --candidates and start the planner with the flai MCP tool plan for each epic it lists, one at a time, and for no other",
@@ -1854,8 +1940,8 @@ func TestTheOrchestratorsPromptSaysWhatToDoWithThreads(t *testing.T) {
 			"post a recommendation instead, citing what it draws on, which escalates it to the operator, when no source settles it, or when it asks for the operator's judgement: a decision not yet recorded, a change of scope, or money, such as a cost of delay input, an estimate, or spend",
 		},
 	}
-	p := Prompt(orchestrateReq(nil))
-	others := map[string]string{"a story's agent": Prompt(req(nil)), "an epic's planner": Prompt(planReq("E-0016", nil)), "a story's planner": Prompt(planReq("S-0208", nil))}
+	p := mustPrompt(t, orchestrateReq(nil))
+	others := map[string]string{"a story's agent": mustPrompt(t, req(nil)), "an epic's planner": mustPrompt(t, planReq("E-0016", nil)), "a story's planner": mustPrompt(t, planReq("S-0208", nil))}
 	for value, ws := range rules {
 		for _, w := range ws {
 			if !strings.Contains(p, w) {
@@ -1891,14 +1977,14 @@ func TestTheOrchestratorsPromptMarksARecommendationForTheOperatorAlone(t *testin
 	queued := orchestrateReq(nil)
 	queued.Queue = true
 	for name, r := range map[string]Request{"plain": orchestrateReq(nil), "with the merge queue": queued} {
-		p := Prompt(r)
+		p := mustPrompt(t, r)
 		for _, w := range wants {
 			if !strings.Contains(p, w) {
 				t.Errorf("%s: the orchestrator's prompt lacks %q:\n%s", name, w, p)
 			}
 		}
 	}
-	for who, o := range map[string]string{"a story's agent": Prompt(req(nil)), "an epic's planner": Prompt(planReq("E-0016", nil)), "a story's planner": Prompt(planReq("S-0208", nil))} {
+	for who, o := range map[string]string{"a story's agent": mustPrompt(t, req(nil)), "an epic's planner": mustPrompt(t, planReq("E-0016", nil)), "a story's planner": mustPrompt(t, planReq("S-0208", nil))} {
 		if strings.Contains(o, "operator_only") || strings.Contains(o, "confirm_after") {
 			t.Errorf("%s's prompt names operator_only or confirm_after:\n%s", who, o)
 		}
@@ -1909,7 +1995,7 @@ func TestTheOrchestratorsPromptMarksARecommendationForTheOperatorAlone(t *testin
 // sets the cost of delay inputs the operator decided on a thread on the epic
 // or open story it concerns, inputs alone, and no other agent is told it.
 func TestTheOrchestratorsPromptSaysWhatSetCostOfDelayDoes(t *testing.T) {
-	p := Prompt(orchestrateReq(nil))
+	p := mustPrompt(t, orchestrateReq(nil))
 	for _, w := range []string{
 		"set on an epic or a story the cost of delay inputs the operator decided, with item_edit, only while set_cost_of_delay is on",
 		"While set_cost_of_delay is on, set a cost of delay input the operator decided on a thread, as their answer or a recommendation they confirmed, on the epic or the story it concerns, while that is not done, cancelled, or archived, whether or not it or its epic has inputs",
@@ -1920,7 +2006,7 @@ func TestTheOrchestratorsPromptSaysWhatSetCostOfDelayDoes(t *testing.T) {
 			t.Errorf("the orchestrator's prompt lacks %q:\n%s", w, p)
 		}
 	}
-	others := map[string]string{"a story's agent": Prompt(req(nil)), "an epic's planner": Prompt(planReq("E-0016", nil)), "a story's planner": Prompt(planReq("S-0208", nil))}
+	others := map[string]string{"a story's agent": mustPrompt(t, req(nil)), "an epic's planner": mustPrompt(t, planReq("E-0016", nil)), "a story's planner": mustPrompt(t, planReq("S-0208", nil))}
 	for who, o := range others {
 		if strings.Contains(o, "set_cost_of_delay") {
 			t.Errorf("%s's prompt says set_cost_of_delay", who)
@@ -1939,7 +2025,7 @@ func TestTheOrchestratorsPromptSaysWhatSetCostOfDelayDoes(t *testing.T) {
 // save on a story planner's thread under this permission. No other agent is
 // told any of it.
 func TestTheOrchestratorsPromptSaysWhatPlanBacklogStoriesDoes(t *testing.T) {
-	p := Prompt(orchestrateReq(nil))
+	p := mustPrompt(t, orchestrateReq(nil))
 	for _, w := range []string{
 		// the permission
 		"ask it to plan a backlog story, with plan, and settle the threads a story's planner opens, giving a backlog story its first cost of delay inputs with item_edit, only while plan_backlog_stories is on",
@@ -1966,7 +2052,7 @@ func TestTheOrchestratorsPromptSaysWhatPlanBacklogStoriesDoes(t *testing.T) {
 			t.Errorf("the orchestrator's prompt lacks %q:\n%s", w, p)
 		}
 	}
-	others := map[string]string{"a story's agent": Prompt(req(nil)), "an epic's planner": Prompt(planReq("E-0016", nil)), "a story's planner": Prompt(planReq("S-0208", nil))}
+	others := map[string]string{"a story's agent": mustPrompt(t, req(nil)), "an epic's planner": mustPrompt(t, planReq("E-0016", nil)), "a story's planner": mustPrompt(t, planReq("S-0208", nil))}
 	for who, o := range others {
 		for _, w := range []string{"plan_backlog_stories", "planner-S-nnnn", "thread_resolve"} {
 			if strings.Contains(o, w) {
@@ -1988,7 +2074,7 @@ func TestTheOrchestratorsPromptSaysWhatPlanBacklogStoriesDoes(t *testing.T) {
 // back needs nothing more of it, and that it finishes an acceptance of its
 // own that stopped (ADR-0189). No other agent is told any of it (ADR-0093).
 func TestTheOrchestratorsPromptSaysHowItAcceptsAStory(t *testing.T) {
-	p := Prompt(orchestrateReq(nil))
+	p := mustPrompt(t, orchestrateReq(nil))
 	for _, w := range []string{
 		"While accept_reviews is on, take each story in review in turn",
 		// flai verify at the branch's head
@@ -2022,7 +2108,7 @@ func TestTheOrchestratorsPromptSaysHowItAcceptsAStory(t *testing.T) {
 			t.Errorf("the orchestrator's prompt lacks %q:\n%s", w, p)
 		}
 	}
-	others := map[string]string{"a story's agent": Prompt(req(nil)), "an epic's planner": Prompt(planReq("E-0016", nil)), "a story's planner": Prompt(planReq("S-0208", nil))}
+	others := map[string]string{"a story's agent": mustPrompt(t, req(nil)), "an epic's planner": mustPrompt(t, planReq("E-0016", nil)), "a story's planner": mustPrompt(t, planReq("S-0208", nil))}
 	for who, o := range others {
 		for _, w := range []string{"accept_reviews", "--by orchestrator", "--verified", "--evidence", "own_thread_open", "dirty_main"} {
 			if strings.Contains(o, w) {
@@ -2040,7 +2126,7 @@ func TestTheOrchestratorsPromptSaysHowItAcceptsAStory(t *testing.T) {
 func TestTheOrchestratorsPromptSaysToEnqueueWhileTheQueueRuns(t *testing.T) {
 	r := orchestrateReq(nil)
 	r.Queue = true
-	p := Prompt(r)
+	p := mustPrompt(t, r)
 	for _, w := range []string{
 		"The merge queue runs for this project: enqueue each story you have verified with the flai MCP tool queue_add, with the commit and the evidence, instead of running flai accept",
 		"log each enqueue with activity_log naming the story, its place in the queue, and the policy figure",
@@ -2055,7 +2141,7 @@ func TestTheOrchestratorsPromptSaysToEnqueueWhileTheQueueRuns(t *testing.T) {
 	if publish := strings.Index(p, "While publish is on"); accept < 0 || queue < accept || publish < queue {
 		t.Errorf("the queue's paragraph is not between accept_reviews (%d) and publish (%d), at %d", accept, publish, queue)
 	}
-	if p := Prompt(orchestrateReq(nil)); strings.Contains(p, "queue_add") || strings.Contains(p, "merge queue") {
+	if p := mustPrompt(t, orchestrateReq(nil)); strings.Contains(p, "queue_add") || strings.Contains(p, "merge queue") {
 		t.Errorf("the orchestrator's prompt without the queue speaks of it:\n%s", p)
 	}
 }
@@ -2069,7 +2155,7 @@ func TestTheOrchestratorsPromptSaysToEnqueueWhileTheQueueRuns(t *testing.T) {
 // and each refusal, which it raises on a thread to the operator. It
 // publishes no other way. No other agent is told any of it.
 func TestTheOrchestratorsPromptSaysHowItPublishes(t *testing.T) {
-	p := Prompt(orchestrateReq(nil))
+	p := mustPrompt(t, orchestrateReq(nil))
 	for _, w := range []string{
 		"While publish is on, after each acceptance, yours or one wait_for_events reports as a story moved to done, call the flai MCP tool release_evaluate",
 		// threshold and theme
@@ -2102,7 +2188,7 @@ func TestTheOrchestratorsPromptSaysHowItPublishes(t *testing.T) {
 			t.Errorf("the orchestrator's prompt says %q:\n%s", never, p)
 		}
 	}
-	others := map[string]string{"a story's agent": Prompt(req(nil)), "an epic's planner": Prompt(planReq("E-0016", nil)), "a story's planner": Prompt(planReq("S-0208", nil))}
+	others := map[string]string{"a story's agent": mustPrompt(t, req(nil)), "an epic's planner": mustPrompt(t, planReq("E-0016", nil)), "a story's planner": mustPrompt(t, planReq("S-0208", nil))}
 	for who, o := range others {
 		for _, w := range []string{"release_publish", "release_evaluate", "whole_epics", "held_by_epic"} {
 			if strings.Contains(o, w) {
@@ -2395,7 +2481,7 @@ func TestTheAnalyzersPromptAsksForOneReport(t *testing.T) {
 		"risk":        "technical and security risks",
 	}
 	for _, focus := range append([]string{""}, Focuses...) {
-		p := Prompt(analyzeReq(focus, nil))
+		p := mustPrompt(t, analyzeReq(focus, nil))
 		want := append(common(focus), "Look for "+finding[focus], ", and for nothing else.")
 		if focus == "" {
 			want = append(common(AllFocus), "Look for three kinds of finding: ")
@@ -2562,7 +2648,7 @@ func TestTheCuratorsPromptKeepsTheDigest(t *testing.T) {
 		{"", "This is your first run: no run of yours is logged in wip/agents/curator.md, so take in everything the archive and the threads hold: list the candidates with flai digest harvest --json, with no --since."},
 	} {
 		since, harvest := c.since, c.harvest
-		p := Prompt(curateReq(since, nil))
+		p := mustPrompt(t, curateReq(since, nil))
 		for _, w := range append(common, harvest) {
 			if !strings.Contains(p, w) {
 				t.Errorf("since %q: the curator's prompt lacks %q:\n%s", since, w, p)
@@ -2761,12 +2847,12 @@ func TestTheTemplatesAnalyzerIsHeldToItsReport(t *testing.T) {
 // answer on the conversation when it no longer fits; one started on none is
 // told of none.
 func TestAnAgentStartedOnAShareIsToldTheSplit(t *testing.T) {
-	if p := Prompt(req(nil)); strings.Contains(p, "works on a share") || strings.Contains(p, "message_get") {
+	if p := mustPrompt(t, req(nil)); strings.Contains(p, "works on a share") || strings.Contains(p, "message_get") {
 		t.Errorf("a story started on no share is told of one:\n%s", p)
 	}
 	r := req(nil)
 	r.Shares = []Share{{Conversation: "MS-0007", Holder: "S-0100", Paths: []string{"flai/cmd/serve.go", "docs/guide.md"}, Split: "S-0100 changes the flags;\nS-0104 adds the command."}}
-	p := Prompt(r)
+	p := mustPrompt(t, r)
 	for _, want := range []string{
 		"S-0104 works on a share (ADR-0134): its claim overlaps the claim of another story, whose agent shared the overlapping paths with it and split the work, so the overlap no longer holds it.",
 		"On MS-0007, S-0100's agent shared `flai/cmd/serve.go`, `docs/guide.md` with S-0104, split so: \"S-0100 changes the flags; S-0104 adds the command.\".",
@@ -2780,7 +2866,7 @@ func TestAnAgentStartedOnAShareIsToldTheSplit(t *testing.T) {
 		}
 	}
 	r.Shares = append(r.Shares, Share{Conversation: "MS-0009", Holder: "S-0101", Paths: []string{"design"}, Split: "Each its own section."})
-	p = Prompt(r)
+	p = mustPrompt(t, r)
 	for _, want := range []string{
 		"On MS-0009, S-0101's agent shared `design` with S-0104",
 		"Keep to each split",
@@ -3160,7 +3246,7 @@ func TestADefinedRoleWorksUnderItsNameAndItem(t *testing.T) {
 // its file allows, asks on a thread, and ends with a summary for its
 // activity document. On no item it primes with its verb alone.
 func TestADefinedRolesPromptIsItsBodyWithItsItemAndInputs(t *testing.T) {
-	p := Prompt(reviewReq(t, "S-0001", nil))
+	p := mustPrompt(t, reviewReq(t, "S-0001", nil))
 	for _, w := range []string{
 		"You are reviewer-S-0001, the reviewer role this project defines in design/workflows/roles/reviewer.md, started by flai serve on this host because the operator asked for a run of it on S-0001, in the project at /p/flow.",
 		reviewerBody,
@@ -3184,7 +3270,7 @@ func TestADefinedRolesPromptIsItsBodyWithItsItemAndInputs(t *testing.T) {
 
 	none := reviewReq(t, "", nil)
 	none.Inputs = nil
-	p = Prompt(none)
+	p = mustPrompt(t, none)
 	for _, w := range []string{
 		"You are reviewer, the reviewer role this project defines in design/workflows/roles/reviewer.md, started by flai serve on this host because the operator asked for a run of it, in the project at /p/flow.",
 		"This run is on no item",
