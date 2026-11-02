@@ -6,6 +6,7 @@ date: 2026-11-02
 supersedes: []
 superseded_by: []
 refines: [ADR-0083, ADR-0095, ADR-0100]
+topics: [cli, dashboard, orchestration, planning, analysis]
 ---
 
 # ADR-0249 Strategic usage is per role: a role's activity is charged by its role file's charge rule under its name in usage.strategic, flai stats reports every defined role, and the dashboard draws a series per role
