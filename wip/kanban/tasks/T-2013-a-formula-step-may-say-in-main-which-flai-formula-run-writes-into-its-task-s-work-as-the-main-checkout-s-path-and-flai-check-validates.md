@@ -32,7 +32,7 @@ usage:
       output: 396
       cache_read: 4006074
       cache_write: 147134
-      cost: 1.4616
+      cost: 1.4617
 ---
 # T-2013 A formula step may say in: main, which flai formula run writes into its task's Work as the main checkout's path and flai check validates
 

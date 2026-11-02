@@ -33,7 +33,7 @@ usage:
       output: 245
       cache_read: 2549648
       cache_write: 79775
-      cost: 0.9253
+      cost: 0.9254
 ---
 # T-1781 flai release --pending refuses an agent flai serve started while the push host action is off, and a publish refused for a moved remote stops the instance with flai's conflict message
 

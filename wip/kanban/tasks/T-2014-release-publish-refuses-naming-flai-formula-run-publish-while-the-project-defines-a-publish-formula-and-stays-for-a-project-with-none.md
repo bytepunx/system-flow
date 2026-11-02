@@ -32,7 +32,7 @@ usage:
       output: 289
       cache_read: 2984065
       cache_write: 123034
-      cost: 1.0934
+      cost: 1.0935
 ---
 # T-2014 release_publish refuses, naming flai formula run publish, while the project defines a publish formula, and stays for a project with none
 

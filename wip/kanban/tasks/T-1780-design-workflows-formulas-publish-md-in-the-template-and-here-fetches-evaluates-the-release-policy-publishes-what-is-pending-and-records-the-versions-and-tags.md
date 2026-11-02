@@ -33,7 +33,7 @@ usage:
       output: 390
       cache_read: 2505787
       cache_write: 77145
-      cost: 0.909
+      cost: 0.9091
 ---
 # T-1780 design/workflows/formulas/publish.md, in the template and here, fetches, evaluates the release policy, publishes what is pending, and records the versions and tags
 

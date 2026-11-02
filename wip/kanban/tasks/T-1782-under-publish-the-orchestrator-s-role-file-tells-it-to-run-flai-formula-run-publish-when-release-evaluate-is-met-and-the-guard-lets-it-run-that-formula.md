@@ -33,7 +33,7 @@ usage:
       output: 671
       cache_read: 6568007
       cache_write: 155646
-      cost: 2.3662
+      cost: 2.3663
 ---
 # T-1782 Under publish, the orchestrator's role file tells it to run flai formula run publish when release_evaluate is met, and the guard lets it run that formula
 

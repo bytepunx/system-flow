@@ -24,7 +24,7 @@ touches: [design/system/strategic-agents.md, design/conventions/strategic-agents
 after: [T-1781, T-1782, T-2013, T-2015]
 usage:
   source: log
-  seconds: 602
+  seconds: 608
   estimated: true
   priced_by: estimate
   models:
@@ -33,7 +33,7 @@ usage:
       output: 638
       cache_read: 8237407
       cache_write: 169084
-      cost: 2.9583
+      cost: 2.9585
 ---
 # T-1784 The design, the conventions that describe publishing, the operator docs, and the changelog say that publishing is the publish formula
 

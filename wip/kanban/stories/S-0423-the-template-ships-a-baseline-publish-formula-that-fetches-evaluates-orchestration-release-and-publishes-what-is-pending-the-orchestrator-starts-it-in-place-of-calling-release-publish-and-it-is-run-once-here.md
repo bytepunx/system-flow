@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:41:11Z
-updated: 2026-11-02T05:01:36Z
+updated: 2026-11-02T05:04:30Z
 transitions:
   - to: ready
     at: 2026-10-28T13:11:59Z
@@ -29,7 +29,7 @@ transitions:
     by: agent-S-0423
 tags: [cli, template]
 topics: [cli, orchestration, template, conventions]
-touches: [design/adrs, design/adrs/README.md, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, template/template.yaml, template/CHANGELOG.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/release.go, flai/cmd/release_evaluate_test.go, flai/cmd/release_push_action_test.go, flai/cmd/orchestrate_permissions_test.go, flai/cmd/formula.go, flai/cmd/formula_test.go, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/check/check.go, flai/internal/check/formulas_test.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/mcpserver/orchestrate.go, flai/internal/mcpserver/orchestrate_test.go, design/workflows/formulas/README.md, docs/operators/settings.md, scripts/README.md, scripts/fetch.sh, template/root/design/workflows/formulas/README.md, template/root/scripts/README.md, template/root/scripts/fetch.sh, flai/internal/roles/baseline/orchestrator.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go]
+touches: [design/adrs, design/adrs/README.md, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, template/template.yaml, template/CHANGELOG.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/release.go, flai/cmd/release_evaluate_test.go, flai/cmd/release_push_action_test.go, flai/cmd/orchestrate_permissions_test.go, flai/cmd/formula.go, flai/cmd/formula_test.go, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/check/check.go, flai/internal/check/formulas_test.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/mcpserver/orchestrate.go, flai/internal/mcpserver/orchestrate_test.go, design/workflows/formulas/README.md, docs/operators/settings.md, scripts/README.md, scripts/fetch.sh, template/root/design/workflows/formulas/README.md, template/root/scripts/README.md, template/root/scripts/fetch.sh, flai/internal/roles/baseline/orchestrator.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go]
 after: [S-0422]
 agent:
   harness: claude-code
@@ -38,21 +38,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2721
+  seconds: 3221
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-02
-      ceremony: 3
-      hand_edits: 4
-      work: 60
+      ceremony: 4
+      hand_edits: 5
+      work: 79
   models:
     - model: claude-opus-5-5
-      input: 514
-      output: 2939
-      cache_read: 31235844
-      cache_write: 958397
-      cost: 11.3297
+      input: 556
+      output: 3316
+      cache_read: 38831196
+      cache_write: 990688
+      cost: 14.0145
   strategic:
     - kind: planner
       seconds: 1746

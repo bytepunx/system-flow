@@ -3,11 +3,11 @@ id: T-2432
 type: task
 nature: feature
 title: "roles.Validate knows a flai formula run <name> entry as the command flai formula run, so the shipped orchestrator role passes TestShippedRolesNameFlaisToolsAndCommands"
-status: in-progress
+status: done
 parent: S-0423
 owner: alex
 created: 2026-11-02T05:01:36Z
-updated: 2026-11-02T05:01:46Z
+updated: 2026-11-02T05:04:30Z
 transitions:
   - to: ready
     at: 2026-11-02T05:01:45Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-02T05:01:46Z
     by: agent-S-0423
+  - to: done
+    at: 2026-11-02T05:04:30Z
+    by: agent-S-0423
 stream: S-0423
 tags: []
 touches: [flai/internal/roles/roles.go, flai/internal/roles/roles_test.go]
+usage:
+  source: log
+  seconds: 161
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 85
+      cache_read: 2223747
+      cache_write: 8237
+      cost: 0.7855
 ---
 # T-2432 roles.Validate knows a flai formula run <name> entry as the command flai formula run, so the shipped orchestrator role passes TestShippedRolesNameFlaisToolsAndCommands
 
