@@ -31,17 +31,24 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            race: -race
+          - os: macos-latest
+            race: ""
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
           go-version-file: flai/go.mod
+      # the race detector runs on ubuntu only: on the macos-26 image its
+      # runtime crashes in forked children now and then (ThreadSanitizer
+      # CHECK failed in tsan_rtl.cpp, or a segmentation fault in git)
       - name: Behavior tests
-        run: go test -race -short -count=1 -timeout 30m ./...
+        run: go test ${{ matrix.race }} -short -count=1 -timeout 30m ./...
       - name: Integration tests
-        run: go test -race -count=1 -timeout 30m ./...
+        run: go test ${{ matrix.race }} -count=1 -timeout 30m ./...
 
   build:
     runs-on: ubuntu-latest
