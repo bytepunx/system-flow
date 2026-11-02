@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
+	"github.com/bytepunx/system-flow/flai/internal/harness"
+	"github.com/bytepunx/system-flow/flai/internal/roles"
 )
 
 // fakeClaude is a claude for pilot to start: it records its arguments, one
@@ -33,6 +35,8 @@ for a in "$@"; do printf '%s\000' "$a" >> "$d/argv"; done
   printf 'FLAI_AGENT=%s\n' "$FLAI_AGENT"
   printf 'FLAI_SESSION=%s\n' "$FLAI_SESSION"
   printf 'FLAI_STORY=%s\n' "$FLAI_STORY"
+  printf 'FLAI_ROLE=%s\n' "$FLAI_ROLE"
+  printf 'FLAI_ITEM=%s\n' "$FLAI_ITEM"
   if [ -n "$FLAI_MCP_TOKEN" ]; then echo 'token=set'; else echo 'token=unset'; fi
 } > "$d/env"
 echo 'the harness on its standard error' >&2
@@ -281,23 +285,166 @@ func TestRunGivesTheHarnessItsEnvironment(t *testing.T) {
 	}
 }
 
-func TestRunStartsAStrategicAgentAsItsDefinition(t *testing.T) {
-	dir := fake(t)
+// checkout is a project's main checkout as a strategic agent's container
+// mounts it: its manifest, and the definitions of the four built-in roles'
+// sessions, each with a prompt of its own that a role file's body replaces.
+func checkout(t *testing.T) string {
+	t.Helper()
 	root := t.TempDir()
-	def := filepath.Join(root, ".claude", "agents", "planner.md")
-	if err := os.MkdirAll(filepath.Dir(def), 0o755); err != nil {
+	files := map[string]string{"system-flow.yaml": "version: 1\nname: flow\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"}
+	for _, name := range []string{"planner", "orchestrator", "analyzer", "curator"} {
+		files[filepath.Join(".claude", "agents", name+".md")] = "---\nname: " + name + "\ndescription: The " + name + ".\n---\nThe definition's own prompt.\n"
+	}
+	for rel, data := range files {
+		p := filepath.Join(root, rel)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(data), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return root
+}
+
+// agentPrompt is the prompt of the definition name in the --agents JSON of
+// args.
+func agentPrompt(t *testing.T, args []string, name string) string {
+	t.Helper()
+	i := slices.Index(args, "--agents")
+	if i < 0 || i+1 >= len(args) {
+		t.Fatalf("argv has no --agents: %q", args)
+	}
+	var agents map[string]map[string]any
+	if err := json.Unmarshal([]byte(args[i+1]), &agents); err != nil {
+		t.Fatalf("--agents %s: %v", args[i+1], err)
+	}
+	prompt, _ := agents[name]["prompt"].(string)
+	return prompt
+}
+
+// S-0509, ADR-0247 §3: a built-in role's start request reaches the inner
+// harness's start as its definition, with --agent and FLAI_ROLE, and with
+// the role file pilot reads from the mounted checkout, the project's own, or
+// the baseline flai carries when the project has none, as its prompt.
+func TestRunStartsAStrategicAgentAsItsDefinition(t *testing.T) {
+	baseline, ok := roles.BaselineFor("design", conventions.RolePlan)
+	if !ok {
+		t.Fatal("flai carries no baseline planner")
+	}
+	firstLine := strings.TrimSpace(strings.SplitN(strings.TrimSpace(baseline.Baseline), "\n", 2)[0])
+	for _, c := range []struct {
+		name     string
+		roleFile string // the project's planner role file; none when empty
+		want     string // what the planner's prompt holds
+	}{
+		{"the project's role file", baselineFile(t) + "\nPlan in this project's own way.\n", "Plan in this project's own way."},
+		{"the baseline", "", firstLine},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			dir := fake(t)
+			root := checkout(t)
+			if c.roleFile != "" {
+				p := filepath.Join(root, "design", "workflows", "roles", "planner.md")
+				if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(p, []byte(c.roleFile), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			req := valid(t.TempDir())
+			req.Story, req.Root, req.Role, req.Item = "", root, conventions.RolePlan, "E-0029"
+			if r := run(t, t.Context(), req, environ(dir), nil); r.code != 0 {
+				t.Fatalf("pilot exited %d; stderr: %s", r.code, r.stderr)
+			}
+			args := argv(t, dir)
+			if !follows(args, "--agent", "planner") {
+				t.Errorf("the planner's argv has no --agent planner: %q", args)
+			}
+			if prompt := agentPrompt(t, args, "planner"); !strings.Contains(prompt, c.want) || strings.Contains(prompt, "The definition's own prompt.") {
+				t.Errorf("the planner's prompt is not the role file's body with %q:\n%s", c.want, prompt)
+			}
+			env, err := os.ReadFile(filepath.Join(dir, "env"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, want := range []string{"FLAI_ROLE=plan\n", "FLAI_ITEM=E-0029\n"} {
+				if !strings.Contains(string(env), want) {
+					t.Errorf("the planner's environment lacks %q:\n%s", want, env)
+				}
+			}
+		})
+	}
+}
+
+// baselineFile is the baseline planner's role file, as a project made from
+// the template holds it.
+func baselineFile(t *testing.T) string {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("..", "roles", "baseline", "planner.md"))
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(def, []byte("---\nname: planner\ndescription: Plans one epic or one story.\n---\nPlan it.\n"), 0o600); err != nil {
+	return string(data)
+}
+
+// S-0509: each built-in role's start request, as the container adapter
+// writes it, reaches the inner harness as the role's definition with
+// FLAI_ROLE.
+func TestRunStartsEachBuiltinRole(t *testing.T) {
+	for _, c := range []struct {
+		role, agent string
+		change      func(*harness.Request)
+	}{
+		{conventions.RolePlan, "planner", func(r *harness.Request) { r.Item = "S-0509" }},
+		{conventions.RoleOrchestrate, "orchestrator", func(r *harness.Request) { r.Reasons = []string{"moved S-0509 to review: a title"} }},
+		{conventions.RoleAnalyze, "analyzer", func(r *harness.Request) { r.Focus = "risk" }},
+		{conventions.RoleCurate, "curator", func(r *harness.Request) { r.Since = "2026-10-01" }},
+	} {
+		t.Run(c.role, func(t *testing.T) {
+			dir := fake(t)
+			req := valid(t.TempDir())
+			req.Story, req.Root, req.Role = "", checkout(t), c.role
+			c.change(&req)
+			if r := run(t, t.Context(), req, environ(dir), nil); r.code != 0 {
+				t.Fatalf("pilot exited %d; stderr: %s", r.code, r.stderr)
+			}
+			args := argv(t, dir)
+			if !follows(args, "--agent", c.agent) {
+				t.Errorf("argv has no --agent %s: %q", c.agent, args)
+			}
+			if prompt := agentPrompt(t, args, c.agent); prompt == "" || strings.Contains(prompt, "The definition's own prompt.") {
+				t.Errorf("the %s's prompt is not its baseline role file's body:\n%s", c.agent, prompt)
+			}
+			env, err := os.ReadFile(filepath.Join(dir, "env"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(string(env), "FLAI_ROLE="+c.role+"\n") {
+				t.Errorf("the %s's environment lacks FLAI_ROLE=%s:\n%s", c.agent, c.role, env)
+			}
+		})
+	}
+}
+
+// S-0509: a built-in role's start in a folder that holds no project's
+// manifest is refused, as flai serve refuses it on the host, before the inner
+// harness starts.
+func TestRunRefusesARoleWithoutTheProjectsManifest(t *testing.T) {
+	dir := fake(t)
+	root := checkout(t)
+	if err := os.Remove(filepath.Join(root, "system-flow.yaml")); err != nil {
 		t.Fatal(err)
 	}
 	req := valid(t.TempDir())
 	req.Story, req.Root, req.Role, req.Item = "", root, conventions.RolePlan, "E-0029"
-	if r := run(t, t.Context(), req, environ(dir), nil); r.code != 0 {
-		t.Fatalf("pilot exited %d; stderr: %s", r.code, r.stderr)
+	r := run(t, t.Context(), req, environ(dir), nil)
+	if r.code != ExitUsage || !strings.Contains(r.stderr, "mount the project's main checkout at the start request's root") {
+		t.Errorf("pilot exited %d, want %d with what to do; stderr: %s", r.code, ExitUsage, r.stderr)
 	}
-	if args := argv(t, dir); !follows(args, "--agent", "planner") {
-		t.Errorf("the planner's argv has no --agent planner: %q", args)
+	if _, err := os.Stat(filepath.Join(dir, "argv")); err == nil {
+		t.Error("the harness was started")
 	}
 }
 

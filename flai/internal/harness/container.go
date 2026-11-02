@@ -11,14 +11,15 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 )
 
-// Container is the harness that runs a story's agent in a Docker container,
-// whose entrypoint, pilot, starts the inner harness its agent's config.inner
-// names (S-0508, ADR-0212).
+// Container is the harness that runs a story's agent, or a strategic agent's
+// (S-0509, ADR-0247), in a Docker container, whose entrypoint, pilot, starts
+// the inner harness its agent's config.inner names (S-0508, ADR-0212).
 const Container = "container"
 
 // ContainerLogin is where the container finds the operator's login to the
@@ -44,9 +45,14 @@ const (
 	containerCacheDir = "FLAI_CACHE_DIR"
 )
 
-// containerEnv are the variables every container is passed by name, in order,
-// before the provider's key.
+// containerEnv are the variables a story's container is passed by name, in
+// order, before the provider's key.
 var containerEnv = []string{"FLAI_AGENT", "FLAI_SESSION", "FLAI_STORY", "FLAI_STARTED_BY", containerURLEnv, containerTokenEnv, containerConfig, containerCacheDir}
+
+// roleContainerEnv are the variables a strategic agent's container is passed
+// by name, in order, before the provider's key: a story's, with FLAI_ROLE in
+// FLAI_STORY's place (ADR-0247 §2).
+var roleContainerEnv = []string{"FLAI_AGENT", "FLAI_SESSION", "FLAI_ROLE", "FLAI_STARTED_BY", containerURLEnv, containerTokenEnv, containerConfig, containerCacheDir}
 
 // containerSession is a session that names a container and pilot records in
 // its cache as one file's name.
@@ -99,20 +105,22 @@ func inners() []string {
 	return slices.DeleteFunc(Names(), func(n string) bool { return n == Container || n == Command })
 }
 
-// ContainerName is the name of story's container in session, by which flai
-// serve stops it.
-func ContainerName(story, session string) string {
+// ContainerName is the name of the container in session of subject, a
+// story's ID or a strategic agent's role, such as plan, by which flai serve
+// stops it.
+func ContainerName(subject, session string) string {
 	if session == "" {
-		return "flai-agent-" + story
+		return "flai-agent-" + subject
 	}
-	return "flai-agent-" + story + "-" + session
+	return "flai-agent-" + subject + "-" + session
 }
 
-// ContainerCache is the folder under the project at root that keeps story's
-// inner harness's configuration and sessions and the container's flai's,
-// mounted at the same path.
-func ContainerCache(root, story string) string {
-	return filepath.Join(root, ".flai-cache", "agents", story)
+// ContainerCache is the folder under the project at root that keeps the inner
+// harness's configuration and sessions and the container's flai's for
+// subject, a story's ID or a strategic agent's role, such as plan, mounted at
+// the same path.
+func ContainerCache(root, subject string) string {
+	return filepath.Join(root, ".flai-cache", "agents", subject)
 }
 
 // Start runs docker with the story's worktree; the two git mounts
@@ -122,16 +130,15 @@ func ContainerCache(root, story string) string {
 // containerEnv and the provider's key passed by name alone, the values in the
 // docker client's environment; and pilot's start request on standard input,
 // which names the inner harness, the cache, and the MCP server's variables,
-// never a value. It refuses a request with no story, the operator's
-// arguments, an inner harness with no image, a login the inner harness needs
-// and the host has not set, a worktree whose git it cannot mount, and what
-// the inner harness itself refuses of the request, as pilot would.
+// never a value. A strategic agent's start mounts the main checkout instead
+// (roleStart). It refuses a request that is neither a story's agent's nor a
+// built-in strategic agent's (containerSubject), the operator's arguments, an
+// inner harness with no image, a login the inner harness needs and the host
+// has not set, a worktree whose git it cannot mount, and what the inner
+// harness itself refuses of the request, as pilot would.
 func (container) Start(r Request, host Host) (Start, error) {
-	if r.Story == "" {
-		return Start{}, fmt.Errorf("the container harness runs a story's agent alone, and this start is for none: a strategic agent's mounts are S-0509's; run it on another harness")
-	}
-	if filepath.Base(r.Story) != r.Story || r.Story == ".." {
-		return Start{}, fmt.Errorf("the story %q is not a story's ID", r.Story)
+	if err := containerSubject(r); err != nil {
+		return Start{}, err
 	}
 	if len(host.Args) > 0 {
 		return Start{}, fmt.Errorf("the container harness takes no arguments of the operator's, since its mounts and variables are fixed: clear them, and set its image, network, and login with flai serve agent harness container")
@@ -156,6 +163,9 @@ func (container) Start(r Request, host Host) (Start, error) {
 	if innerLogin[inner] && host.Login == "" {
 		return Start{}, fmt.Errorf("the inner harness %s signs in from the operator's login, and the host names none: set it with flai serve agent harness container --login <path>", inner)
 	}
+	if r.Story == "" {
+		return roleStart(r, host, inner, image)
+	}
 	worktree := filepath.Join(r.Root, ".flai-cache", "worktrees", r.Story)
 	cache := ContainerCache(r.Root, r.Story)
 	if err := mountable(r.Root, worktree, cache, host.Login); err != nil {
@@ -176,14 +186,87 @@ func (container) Start(r Request, host Host) (Start, error) {
 		}
 		gitArgs = append(gitArgs, "-v", v)
 	}
-	pr := pilotRequest(r, inner, worktree, cache)
-	if _, err := Adapters[inner].Start(pr, Host{}); err != nil {
-		return Start{}, fmt.Errorf("the inner harness %s refuses the start: %w", inner, err)
+	stdin, err := pilotStdin(pilotRequest(r, inner, worktree, cache))
+	if err != nil {
+		return Start{}, err
+	}
+	argv := append(dockerRun(host, ContainerName(r.Story, r.Session)),
+		"-v", worktree+":"+worktree, "-w", worktree)
+	argv = append(argv, gitArgs...)
+	argv = append(argv, "-v", cache+":"+cache)
+	return containerStart(argv, containerEnv, r, host, image, cache, stdin)
+}
+
+// roleStart is Start for a strategic agent, the planner, the orchestrator,
+// the analyzer, or the curator (S-0509, ADR-0247): it mounts the project's
+// main checkout read-write at its host path as the working directory, the
+// checkout's .git/hooks read-only over it, the role's cache folder, and the
+// operator's login read-only, and nothing else; it passes the variables of
+// roleContainerEnv by name, FLAI_ROLE's value in the docker client's
+// environment, as the claude-code adapter's is on the host; and it names the
+// container for the role.
+func roleStart(r Request, host Host, inner, image string) (Start, error) {
+	cache := ContainerCache(r.Root, r.Role)
+	if err := mountable(r.Root, r.Root, cache, host.Login); err != nil {
+		return Start{}, err
+	}
+	stdin, err := pilotStdin(pilotRequest(r, inner, r.Root, cache))
+	if err != nil {
+		return Start{}, err
+	}
+	hooks := filepath.Join(r.Root, ".git", "hooks")
+	argv := append(dockerRun(host, ContainerName(r.Role, r.Session)),
+		"-v", r.Root+":"+r.Root, "-w", r.Root,
+		"-v", hooks+":"+hooks+":ro",
+		"-v", cache+":"+cache)
+	st, err := containerStart(argv, roleContainerEnv, r, host, image, cache, stdin)
+	if err != nil {
+		return Start{}, err
+	}
+	st.Env = append(st.Env, "FLAI_ROLE="+r.Role)
+	return st, nil
+}
+
+// containerSubject refuses a start the container harness cannot run: one
+// that names neither a story nor a role, or both; a role a project defines in
+// a role file of its own, whose file the start request does not carry to
+// pilot; a role that is not a built-in strategic one; and a story that is not
+// a story's ID.
+func containerSubject(r Request) error {
+	switch {
+	case r.Story == "" && r.Role == "":
+		return fmt.Errorf("the container harness runs a story's agent or a strategic agent, and this start names neither a story nor a role: start it for one")
+	case r.Story != "" && r.Role != "":
+		return fmt.Errorf("this start names story %s and role %q, and the container harness runs a story's agent or a strategic agent, not both: start it for one", r.Story, r.Role)
+	case r.RoleFile != nil:
+		return fmt.Errorf("role %q is one the project defines in a role file of its own, which the container harness cannot carry to pilot: run it on another harness until a story carries its file to pilot", r.Role)
+	case r.Story == "" && !slices.Contains(conventions.StrategicRoles, r.Role):
+		return fmt.Errorf("the container harness runs the strategic agents in role %s, and %q is none of them: start one of them, or run this agent on another harness", strings.Join(conventions.StrategicRoles, ", "), r.Role)
+	case r.Story != "" && (filepath.Base(r.Story) != r.Story || r.Story == ".."):
+		return fmt.Errorf("the story %q is not a story's ID", r.Story)
+	}
+	return nil
+}
+
+// pilotStdin is pr, pilot's start request, as pilot reads it on standard
+// input, once the inner harness has been asked to start it, so that a start
+// it refuses is refused here, as pilot would refuse it.
+func pilotStdin(pr Request) ([]byte, error) {
+	if _, err := Adapters[pr.Inner].Start(pr, Host{}); err != nil {
+		return nil, fmt.Errorf("the inner harness %s refuses the start: %w", pr.Inner, err)
 	}
 	stdin, err := json.Marshal(pr)
 	if err != nil {
-		return Start{}, fmt.Errorf("the start request for pilot: %w", err)
+		return nil, fmt.Errorf("the start request for pilot: %w", err)
 	}
+	return stdin, nil
+}
+
+// dockerRun is the host's container program's run of the container named
+// name, before its mounts: removed when it ends, its standard input open, as
+// the user, on the host's network, bridge when the host names none, and with
+// the host reachable as host.docker.internal.
+func dockerRun(host Host, name string) []string {
 	network := host.Network
 	if network == "" {
 		network = "bridge"
@@ -192,16 +275,22 @@ func (container) Start(r Request, host Host) (Start, error) {
 	if program == "" {
 		program = "docker"
 	}
-	argv := []string{program, "run", "--rm", "-i", "--name", ContainerName(r.Story, r.Session),
+	return []string{program, "run", "--rm", "-i", "--name", name,
 		"--user", strconv.Itoa(os.Getuid()) + ":" + strconv.Itoa(os.Getgid()),
-		"--network", network, "--add-host", "host.docker.internal:host-gateway",
-		"-v", worktree + ":" + worktree, "-w", worktree}
-	argv = append(argv, gitArgs...)
-	argv = append(argv, "-v", cache+":"+cache)
+		"--network", network, "--add-host", "host.docker.internal:host-gateway"}
+}
+
+// containerStart is the Start of argv, docker's run with its mounts, after
+// which it mounts the operator's login read-only when the host names one,
+// passes the variables of names and the provider's key by name alone, and
+// runs image; its environment points the container's flai into cache, and
+// stdin is pilot's start request. It refuses a provider's key_env that is not
+// a variable's name.
+func containerStart(argv, names []string, r Request, host Host, image, cache string, stdin []byte) (Start, error) {
 	if host.Login != "" {
 		argv = append(argv, "-v", host.Login+":"+ContainerLogin+":ro")
 	}
-	for _, name := range containerEnv {
+	for _, name := range names {
 		argv = append(argv, "-e", name)
 	}
 	var from map[string]string
@@ -218,12 +307,12 @@ func (container) Start(r Request, host Host) (Start, error) {
 }
 
 // pilotRequest is the start request pilot reads for r: r in the container's
-// terms, rooted in the worktree, which is all of the project it mounts, its
-// agent the inner harness's without inner, and the inner harness, the cache,
-// and the MCP server's variables named.
-func pilotRequest(r Request, inner, worktree, cache string) Request {
+// terms, rooted in root, all of the project it mounts, a story's worktree or
+// the main checkout, its agent the inner harness's without inner, and the
+// inner harness, the cache, and the MCP server's variables named.
+func pilotRequest(r Request, inner, root, cache string) Request {
 	pr := r
-	pr.Root, pr.Flai = worktree, ""
+	pr.Root, pr.Flai = root, ""
 	pr.RoleFile, pr.Builtin, pr.Inputs, pr.Resume = nil, nil, nil, false
 	pr.Inner, pr.Cache, pr.MCPURLEnv, pr.MCPTokenEnv, pr.MCPHostEnv = inner, cache, containerURLEnv, containerTokenEnv, ""
 	if a := r.Agent; a != nil {
@@ -241,9 +330,10 @@ func pilotRequest(r Request, inner, worktree, cache string) Request {
 
 // mountable refuses a login that reaches what a container never mounts: the
 // home, ~/.flai, the main checkout, or the Docker socket; and a path that a
-// mount's colon-separated form cannot carry. The main checkout's files are
-// never mounted; of it, Start mounts only its .git, read-only, with the
-// story's registration under it read-write (ADR-0246).
+// mount's colon-separated form cannot carry. A story's agent's start mounts
+// none of the main checkout's files; of it, Start mounts only its .git,
+// read-only, with the story's registration under it read-write (ADR-0246). A
+// strategic agent's mounts the main checkout itself (ADR-0247).
 func mountable(root, worktree, cache, login string) error {
 	for _, p := range []string{worktree, cache, login} {
 		if strings.Contains(p, ":") {

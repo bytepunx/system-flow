@@ -15,6 +15,8 @@ import (
 	"syscall"
 
 	"github.com/bytepunx/system-flow/flai/internal/harness"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/roles"
 )
 
 // sessionName is a session pilot can record in its cache as one file name.
@@ -62,11 +64,15 @@ func Run(ctx context.Context, req harness.Request, stdout, stderr io.Writer, env
 
 // prepare makes the command that runs req's inner harness, and the marker
 // that records its session: it sets req.Resume when the cache records the
-// session already, writes the files the adapter's start needs, and builds
-// the child's environment. It starts nothing.
+// session already, gives a built-in role its role file, writes the files the
+// adapter's start needs, and builds the child's environment. It starts
+// nothing.
 func prepare(req *harness.Request, stderr io.Writer, environ []string) (*exec.Cmd, string, error) {
 	marker, err := resume(req)
 	if err != nil {
+		return nil, "", err
+	}
+	if err := builtin(req); err != nil {
 		return nil, "", err
 	}
 	adapter, ok := harness.Adapters[req.Inner]
@@ -117,6 +123,35 @@ func resume(req *harness.Request) (string, error) {
 		req.Resume = true
 	}
 	return marker, nil
+}
+
+// builtin gives req, the start of a built-in role, the planner, the
+// orchestrator, the analyzer, or the curator, the role file it runs from, as
+// flai serve does on the host, since the start request does not carry it
+// (ADR-0247 §3): the mounted checkout's own under its design folder, else
+// the baseline flai carries (roles.Builtin), so that its definition's prompt
+// is the file's body with the project's additions below the marker. Nothing
+// for a story's agent or a role the project defines. A manifest or a role
+// file that cannot be read refuses the start.
+func builtin(req *harness.Request) error {
+	if req.Story != "" || req.RoleFile != nil || req.Role == "" {
+		return nil
+	}
+	m, err := manifest.Load(filepath.Join(req.Root, manifest.File))
+	if err != nil {
+		return fmt.Errorf("the %s runs from a role file under the design folder the project's %s names, which pilot cannot read: %w; mount the project's main checkout at the start request's root", req.Role, manifest.File, err)
+	}
+	design := m.Layout["design"]
+	b, ok := roles.BaselineFor(design, req.Role)
+	if !ok {
+		return nil
+	}
+	f, _, err := roles.Builtin(req.Root, design, b.Name)
+	if err != nil {
+		return err
+	}
+	req.Builtin = &f
+	return nil
 }
 
 // write writes f with its mode, making its folder, and sets the mode of a

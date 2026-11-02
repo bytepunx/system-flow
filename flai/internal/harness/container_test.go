@@ -13,6 +13,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/pilot"
+	"github.com/bytepunx/system-flow/flai/internal/roles"
 )
 
 // containerReq is a start of S-0508's agent on the container harness in a
@@ -218,7 +219,7 @@ func TestTheContainerRefusesWhatItCannotRun(t *testing.T) {
 		says   string
 	}{
 		{"no login", func(_ *harness.Request, h *harness.Host) { h.Login = "" }, "flai serve agent harness container --login <path>"},
-		{"no story", func(r *harness.Request, _ *harness.Host) { r.Story = "" }, "a strategic agent's mounts are S-0509's"},
+		{"no story", func(r *harness.Request, _ *harness.Host) { r.Story = "" }, "names neither a story nor a role: start it for one"},
 		{"the operator's arguments", func(_ *harness.Request, h *harness.Host) { h.Args = []string{"-v", "/:/host"} }, "takes no arguments of the operator's"},
 		{"a login that is the home", func(_ *harness.Request, h *harness.Host) { h.Login = filepath.Dir(h.Login) }, "which a container never mounts"},
 		{"a login above the project", func(r *harness.Request, h *harness.Host) { h.Login = filepath.Dir(r.Root) }, "which a container never mounts"},
@@ -286,6 +287,160 @@ func TestTheContainerMountsNoGitBesideAWorktreeThatCarriesItsOwn(t *testing.T) {
 	}
 	if n := strings.Count(strings.Join(st.Argv, "\x00"), "\x00-v\x00"); n != 3 || strings.Contains(strings.Join(st.Argv, " "), filepath.Join(r.Root, ".git")) {
 		t.Errorf("argv %q, want the worktree, the cache, and the login alone", st.Argv)
+	}
+}
+
+// roleReq is a start of the strategic agent in role on the container
+// harness, in a main checkout of its own that holds the four roles'
+// definitions, with a home of its own and the host's login, the token, and a
+// provider's key set where a leak would show.
+func roleReq(t *testing.T, role string) (harness.Request, harness.Host) {
+	t.Helper()
+	r, host := containerReq(t, &manifest.Agent{Harness: harness.Container, Model: "claude-opus-5-5", Provider: "gateway"})
+	r.ProviderName, r.Provider = "gateway", &manifest.Provider{API: manifest.APIAnthropicMessages, BaseURL: "https://gw.example", KeyEnv: "GATEWAY_KEY"}
+	dir := filepath.Join(r.Root, ".claude", "agents")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"planner", "orchestrator", "analyzer", "curator"} {
+		if err := os.WriteFile(filepath.Join(dir, name+".md"), []byte("---\nname: "+name+"\ndescription: The "+name+".\n---\nYou are the "+name+".\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	r.Story, r.Role, r.Name = "", role, "agent-"+role
+	return r, host
+}
+
+// roleRuns are a run of each built-in strategic role, as flai serve starts
+// it, and the definition its inner session runs as.
+var roleRuns = []struct {
+	role, agent string
+	change      func(*harness.Request)
+}{
+	{"plan", "planner", func(r *harness.Request) { r.Item, r.AskedOn = "E-0029", "TH-0042" }},
+	{"orchestrate", "orchestrator", func(r *harness.Request) {
+		r.Reasons, r.PrimeReasons, r.Queue = []string{"moved S-0123 to review: a title"}, []string{"review:S-0123"}, true
+	}},
+	{"analyze", "analyzer", func(r *harness.Request) { r.Focus = "risk" }},
+	{"curate", "curator", func(r *harness.Request) { r.Since = "2026-10-01" }},
+}
+
+// S-0509, ADR-0247: a strategic agent's container mounts the main checkout
+// read-write as its working directory, its .git/hooks read-only, the role's
+// cache folder, and the login read-only, and nothing else; it is named for
+// the role, and passed FLAI_ROLE by name rather than FLAI_STORY.
+func TestAStrategicAgentsContainerMountsTheCheckout(t *testing.T) {
+	for _, c := range roleRuns {
+		r, host := roleReq(t, c.role)
+		c.change(&r)
+		st, err := harness.Adapters[harness.Container].Start(r, host)
+		if err != nil {
+			t.Fatalf("%s: %v", c.role, err)
+		}
+		root, hooks := r.Root, filepath.Join(r.Root, ".git", "hooks")
+		cache := filepath.Join(r.Root, ".flai-cache", "agents", c.role)
+		user := strconv.Itoa(os.Getuid()) + ":" + strconv.Itoa(os.Getgid())
+		want := []string{"docker", "run", "--rm", "-i", "--name", "flai-agent-" + c.role + "-3f2a-b1", "--user", user,
+			"--network", "bridge", "--add-host", "host.docker.internal:host-gateway",
+			"-v", root + ":" + root, "-w", root, "-v", hooks + ":" + hooks + ":ro", "-v", cache + ":" + cache, "-v", host.Login + ":/run/claude-login:ro",
+			"-e", "FLAI_AGENT", "-e", "FLAI_SESSION", "-e", "FLAI_ROLE", "-e", "FLAI_STARTED_BY", "-e", "FLAI_MCP_URL", "-e", "FLAI_MCP_TOKEN",
+			"-e", "FLAI_CONFIG", "-e", "FLAI_CACHE_DIR", "-e", "GATEWAY_KEY", "flai-agent-claude-code:local"}
+		if st.Harness != harness.Container || !slices.Equal(st.Argv, want) {
+			t.Errorf("%s: harness %q argv\n%q\nwant\n%q", c.role, st.Harness, st.Argv, want)
+		}
+		if slices.Contains(st.Argv, "FLAI_STORY") {
+			t.Errorf("%s: the container is passed FLAI_STORY", c.role)
+		}
+		wantEnv := []string{"FLAI_CONFIG=" + cache + "/flai/config.json", "FLAI_CACHE_DIR=" + cache + "/flai/cache", "FLAI_ROLE=" + c.role}
+		if !slices.Equal(st.Env, wantEnv) {
+			t.Errorf("%s: env %q, want %q", c.role, st.Env, wantEnv)
+		}
+		if !maps.Equal(st.EnvFrom, map[string]string{"GATEWAY_KEY": "GATEWAY_KEY"}) {
+			t.Errorf("%s: EnvFrom %v, want the key's variable copied by its own name", c.role, st.EnvFrom)
+		}
+		whole := strings.Join(st.Argv, " ") + strings.Join(st.Env, " ") + string(st.Stdin)
+		for _, secret := range []string{"token-value-never-shown", "key-value-never-shown"} {
+			if strings.Contains(whole, secret) {
+				t.Errorf("%s: the start carries a secret's value: %s", c.role, secret)
+			}
+		}
+	}
+}
+
+// S-0509, ADR-0247 §3: pilot's start request for a strategic agent carries
+// its role and its run's item, asked-on thread, focus, since, and reasons,
+// is rooted in the main checkout with the role's cache, and is one pilot
+// checks and its inner harness starts.
+func TestAStrategicAgentsContainerHandsPilotItsRun(t *testing.T) {
+	for _, c := range roleRuns {
+		r, host := roleReq(t, c.role)
+		c.change(&r)
+		st, err := harness.Adapters[harness.Container].Start(r, host)
+		if err != nil {
+			t.Fatalf("%s: %v", c.role, err)
+		}
+		pr, err := pilot.Read(bytes.NewReader(st.Stdin))
+		if err != nil {
+			t.Fatalf("%s: pilot reads %s: %v", c.role, st.Stdin, err)
+		}
+		cache := filepath.Join(r.Root, ".flai-cache", "agents", c.role)
+		env := map[string]string{"FLAI_MCP_URL": "http://host.docker.internal:4243/mcp", "FLAI_MCP_TOKEN": "t"}
+		if err := pilot.Check(pr, func(n string) string { return env[n] }, func(p string) bool { return p == cache }); err != nil {
+			t.Errorf("%s: pilot refuses %s: %v", c.role, st.Stdin, err)
+		}
+		if pr.Role != c.role || pr.Story != "" || pr.Root != r.Root || pr.Cache != cache || pr.Inner != harness.ClaudeCode || pr.Flai != "" ||
+			pr.Item != r.Item || pr.AskedOn != r.AskedOn || pr.Focus != r.Focus || pr.Since != r.Since || pr.Queue != r.Queue ||
+			!slices.Equal(pr.Reasons, r.Reasons) || !slices.Equal(pr.PrimeReasons, r.PrimeReasons) || pr.Session != "3f2a-b1" || pr.Name != "agent-"+c.role {
+			t.Errorf("%s: request %+v", c.role, pr)
+		}
+		inner, err := harness.Adapters[pr.Inner].Start(pr, harness.Host{})
+		if err != nil {
+			t.Fatalf("%s: the inner harness refuses the request pilot reads: %v", c.role, err)
+		}
+		if i := slices.Index(inner.Argv, "--agent"); i < 0 || i+1 >= len(inner.Argv) || inner.Argv[i+1] != c.agent {
+			t.Errorf("%s: the inner start has no --agent %s: %q", c.role, c.agent, inner.Argv)
+		}
+		if !slices.Contains(inner.Env, "FLAI_ROLE="+c.role) {
+			t.Errorf("%s: the inner start's env %q lacks FLAI_ROLE=%s", c.role, inner.Env, c.role)
+		}
+	}
+}
+
+func TestAStrategicAgentsContainerRefusesWhatItCannotRun(t *testing.T) {
+	for _, c := range []struct {
+		name   string
+		change func(*harness.Request, *harness.Host)
+		says   string
+	}{
+		{"neither a story nor a role", func(r *harness.Request, _ *harness.Host) { r.Role = "" }, "names neither a story nor a role: start it for one"},
+		{"a story and a role", func(r *harness.Request, _ *harness.Host) { r.Story = "S-0509" }, "not both: start it for one"},
+		{"a role that is not a strategic one", func(r *harness.Request, _ *harness.Host) { r.Role = "review" }, `"review" is none of them: start one of them, or run this agent on another harness`},
+		{"a role the project defines", func(r *harness.Request, _ *harness.Host) {
+			r.Role, r.RoleFile = "review", &roles.Role{Name: "reviewer", Role: "review"}
+		}, "run it on another harness until a story carries its file to pilot"},
+		{"a login that is the checkout", func(r *harness.Request, h *harness.Host) { h.Login = r.Root }, "which a container never mounts"},
+		{"a login that is the home", func(_ *harness.Request, h *harness.Host) { h.Login = filepath.Dir(h.Login) }, "which a container never mounts"},
+		{"an analyzer given an item", func(r *harness.Request, _ *harness.Host) { r.Role, r.Item = "analyze", "E-0029" }, "inner harness claude-code refuses the start"},
+		{"the operator's arguments", func(_ *harness.Request, h *harness.Host) { h.Args = []string{"-v", "/:/host"} }, "takes no arguments of the operator's"},
+	} {
+		r, host := roleReq(t, "plan")
+		r.Item = "E-0029"
+		c.change(&r, &host)
+		if _, err := harness.Adapters[harness.Container].Start(r, host); err == nil || !strings.Contains(err.Error(), c.says) {
+			t.Errorf("%s: %v, want %q", c.name, err, c.says)
+		}
+	}
+}
+
+func TestTheContainersNameAndCacheAreTheRoles(t *testing.T) {
+	if got := harness.ContainerName("plan", "abc"); got != "flai-agent-plan-abc" {
+		t.Errorf("name %q", got)
+	}
+	if got := harness.ContainerName("orchestrate", ""); got != "flai-agent-orchestrate" {
+		t.Errorf("name without a session %q", got)
+	}
+	if got := harness.ContainerCache("/p/flow", "curate"); got != "/p/flow/.flai-cache/agents/curate" {
+		t.Errorf("cache %q", got)
 	}
 }
 
