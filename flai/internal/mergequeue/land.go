@@ -49,6 +49,9 @@ func Landable(r execx.Runner, repo *workitem.Repo, story, batch string) (Head, [
 	if b.Dropped != nil {
 		reasons = append(reasons, fmt.Sprintf("merge queue batch %s was dropped by %s: %s; its stories still enqueued are batched again from the main branch and land with the next batch", b.ID, b.Dropped.By, b.Dropped.Reason))
 	}
+	if p := st.Preflight; p != nil {
+		reasons = append(reasons, fmt.Sprintf("the merge queue's preflight holds the queue on what it found in the main checkout (%s), so the landing of merge queue batch %s waits for main to be clean; fix what it names, and flai serve lands the batch on from the commits it verified once a look finds main clean (ADR-0234)", orNone(findingFiles(p.Findings)), b.ID))
+	}
 	l := b.Landing
 	switch {
 	case l == nil && b.Result == nil:
@@ -216,6 +219,44 @@ func dropBatch(repo *workitem.Repo, id, reason, by string, at time.Time) error {
 	return err
 }
 
+// stallOnMain runs the landing's preflight on repo's main checkout once
+// landing story from merge queue batch id failed with failure, and reports
+// whether the failure is main's (ADR-0234): when the preflight finds
+// something, it holds the queue on it, the batch is kept and marked Stalled
+// at story, and it reports true. It reports false, changing no batch, when
+// the preflight finds nothing, so that the failure is the stories', and
+// when it cannot run, which is logged at warn; and false too when the batch
+// was replaced or dropped meanwhile. An error is a stall it could not write.
+func stallOnMain(ctx context.Context, d Deps, repo *workitem.Repo, id, story string, failure error) (bool, error) {
+	clean, err := preflightLook(ctx, d, repo, true)
+	if err != nil {
+		d.Log.Warn("merge queue preflight did not run after a failed landing; the batch is dropped", "component", "mergequeue", "batch", id, "story", story, "err", err.Error())
+		return false, nil
+	}
+	if clean {
+		return false, nil
+	}
+	stalled := false
+	st, err := Update(repo.CacheDir(), func(s *State) error {
+		if b := s.Batch; b != nil && b.ID == id && b.Dropped == nil {
+			b.Stalled, stalled = &Stalled{Story: story, Reason: said(failure), At: d.Now().UTC()}, true
+		}
+		return nil
+	})
+	if err != nil {
+		return false, fmt.Errorf("record that landing %s from merge queue batch %s waits on the main checkout: %w; the preflight holds the queue, and the batch lands on once a look finds main clean", story, id, err)
+	}
+	if stalled {
+		var files []string
+		if st.Preflight != nil {
+			files = findingFiles(st.Preflight.Findings)
+		}
+		d.Log.Warn("merge queue landing waits on main; the preflight found the main checkout not clean", "component", "mergequeue", "batch", id, "story", story,
+			"files", files, "err", said(failure))
+	}
+	return stalled, nil
+}
+
 // buildOf is the build of batch, as the landing, the bisection, and the
 // clean-up work on it.
 func buildOf(d Deps, repo *workitem.Repo, batch *Batch) *build {
@@ -232,12 +273,22 @@ func buildOf(d Deps, repo *workitem.Repo, batch *Batch) *build {
 // not committed is held back, still enqueued, and the rest land (holdBack,
 // ADR-0178). Each landing is written as the batch's step as it begins, and once
 // it is done the main branch's head is where the landing leaves it. A
-// landing that fails drops the batch, so that the stories not landed are
-// batched again from the main branch, and is returned. When ctx ends it
-// stops with ctx's error, the batch kept, and the next run lands on. It does
-// nothing under pull-request acceptance.
+// landing that fails runs d.Preflight on the main checkout (ADR-0234): when
+// it finds something, the failure is main's, so the preflight holds the
+// queue, the batch is kept with its landing and its heads and marked
+// Stalled, and Land returns with no error; otherwise, or when the preflight
+// cannot run, the batch is dropped, so that the stories not landed are
+// batched again from the main branch, and the failure is returned. While the
+// preflight holds the queue it lands nothing; once a look clears the hold,
+// the landing goes on from the next story not landed, from the commits the
+// batch verified, with no tier run, and its stall is cleared. When ctx ends
+// it stops with ctx's error, the batch kept, and the next run lands on. It
+// does nothing under pull-request acceptance.
 func Land(ctx context.Context, d Deps, accept Accepter, repo *workitem.Repo) (bool, error) {
 	d = withDefaults(d)
+	if d.Preflight == nil {
+		d.Preflight = MainPreflight(d.Runner, d.Now, d.Log)
+	}
 	if repo.Manifest.Acceptance.PullRequest() {
 		return false, nil
 	}
@@ -254,7 +305,7 @@ func Land(ctx context.Context, d Deps, accept Accepter, repo *workitem.Repo) (bo
 			return landed, err
 		}
 		batch := st.Batch
-		if batch == nil || batch.Dropped != nil {
+		if batch == nil || batch.Dropped != nil || st.PreflightHeld() {
 			return landed, nil
 		}
 		story, ok := batch.Landing.Next()
@@ -279,12 +330,22 @@ func Land(ctx context.Context, d Deps, accept Accepter, repo *workitem.Repo) (bo
 			continue
 		}
 		b := buildOf(d, repo, batch)
-		if err := b.step(StepLanding + " " + story); err != nil {
+		var resumed *Stalled
+		if err := b.update(func(_ *State, batch *Batch) {
+			batch.Step, resumed, batch.Stalled = StepLanding+" "+story, batch.Stalled, nil
+		}); err != nil {
 			return landed, err
+		}
+		if resumed != nil {
+			d.Log.Info("merge queue batch lands again without a new verification; main is clean", "component", "mergequeue", "batch", batch.ID, "story", story,
+				"stalled_at", resumed.Story, "waited", d.Now().Sub(resumed.At).Round(time.Second).String())
 		}
 		if err := accept(ctx, story, en.By, batch.ID); err != nil {
 			if ctx.Err() != nil {
 				return landed, ctx.Err()
+			}
+			if stalled, serr := stallOnMain(ctx, d, repo, batch.ID, story, err); serr != nil || stalled {
+				return landed, serr
 			}
 			reason := fmt.Sprintf("landing %s failed: %s; the stories not landed are batched again from the main branch", story, said(err))
 			if derr := dropBatch(repo, batch.ID, reason, queueBy, d.Now()); derr != nil {
@@ -383,7 +444,10 @@ func shellQuote(p string) string {
 // moved is dropped (DropIfMainMoved), and RunBatch builds it again. A batch
 // that passed lands every story; one that failed is bisected (RunBisect), the
 // story it fails with sent back (SendBack), and the stories before it
-// landed; with Land, accepting each with accept. Once every story the batch
+// landed; with Land, accepting each with accept. A landing that failed on
+// the main checkout's state keeps the batch, which lands nothing while the
+// preflight holds the queue and lands on without a new verification once a
+// look clears the hold (ADR-0234). Once every story the batch
 // lands has landed, its worktree and branch are removed and the state left
 // with no batch, so that RunBatch batches the stories still enqueued, those
 // after a failing one among them. A bisection that cannot run drops the

@@ -1,9 +1,11 @@
 package mergequeue
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -641,5 +643,252 @@ func TestALandingSkipsAHeldStoryAndQuotesTheCommandThatFreesIt(t *testing.T) {
 	}
 	if got, want := FreeCommand([]string{"design/a.md", "docs/it's here.md"}), `git stash push -- design/a.md 'docs/it'\''s here.md'`; got != want {
 		t.Errorf("FreeCommand = %s, want %s", got, want)
+	}
+}
+
+// keptBatch is a project with two stories enqueued, A and B, and a batch of
+// them that passed its verification at t1 on main's head c0ffee, with each
+// story's verified and rebased heads, its git scripted in g, whose main head
+// a test moves by scripting it again. Its deps run g at the clock *at, with
+// a preflight that answers *findings and counts its looks, a verifier that
+// counts its runs, and a JSON log.
+type keptBatch struct {
+	repo     *workitem.Repo
+	g        scriptedGit
+	a, b     string
+	id       string
+	at       time.Time
+	findings []verify.FileFinding
+	looks    int
+	verified int
+	logs     bytes.Buffer
+}
+
+// mainHeadArgs are the arguments of the git command that reads main's head.
+var mainHeadArgs = []string{"rev-parse", "--verify", "--quiet", "refs/heads/main^{commit}"}
+
+func newKeptBatch(t *testing.T) *keptBatch {
+	t.Helper()
+	k := &keptBatch{repo: project(t, ""), g: scriptedGit{}, id: "20261019-160000", at: t2}
+	k.g.script("main", "rev-parse", "--abbrev-ref", "HEAD")
+	k.g.script("c0ffee", mainHeadArgs...)
+	k.g.script("", "-c", "core.quotePath=false", "status", "--porcelain", "--no-renames", "--untracked-files=all")
+	k.g.script("", "worktree", "prune")
+	sa, _ := story(t, k.repo, "A", []bool{true}, t0.Add(time.Hour))
+	sb, _ := story(t, k.repo, "B", []bool{true}, t0.Add(2*time.Hour))
+	k.a, k.b = sa.ID, sb.ID
+	passed(t, k.repo, k.g, k.a, "aaaa")
+	passed(t, k.repo, k.g, k.b, "bbbb")
+	enqueue(t, k.repo, k.a, k.b)
+	if _, err := Update(k.repo.CacheDir(), func(s *State) error {
+		s.Batch = &Batch{ID: k.id, Branch: BranchPrefix + k.id, Base: "c0ffee", Stories: []string{k.a, k.b}, StartedAt: t1, Step: StepVerified,
+			Result: &Result{Passed: true, Summary: "passed unit", FinishedAt: t1},
+			Heads:  []Head{{Story: k.a, Verified: "aaaa", Rebased: "a1a1"}, {Story: k.b, Verified: "bbbb", Rebased: "b1b1"}}}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return k
+}
+
+func (k *keptBatch) deps() Deps {
+	return Deps{Runner: k.g, Now: func() time.Time { return k.at }, Log: slog.New(slog.NewJSONHandler(&k.logs, nil)),
+		Verify: func(context.Context, string, string, string, []string, func(string)) (verify.Report, error) {
+			k.verified++
+			return verify.Report{Passed: true}, nil
+		},
+		Preflight: func(context.Context, *workitem.Repo) ([]verify.FileFinding, error) {
+			k.looks++
+			return slices.Clone(k.findings), nil
+		}}
+}
+
+// accepter is a fake flai accept --batch on k: it records each call, fails
+// with the error fail names for the story, and otherwise checks with
+// Landable that the story may land, moves main's head on, and records the
+// landing with Landed.
+func (k *keptBatch) accepter(calls *[]acceptCall, fail map[string]error) Accepter {
+	return func(_ context.Context, story, by, batch string) error {
+		*calls = append(*calls, acceptCall{story, by, batch})
+		if err := fail[story]; err != nil {
+			return err
+		}
+		if _, reasons, err := Landable(k.g, k.repo, story, batch); err != nil || len(reasons) > 0 {
+			return fmt.Errorf("%s may not land: %q, %w", story, reasons, err)
+		}
+		k.g.script("landed-"+story, mainHeadArgs...)
+		_, err := Landed(k.repo.CacheDir(), story, batch, by, k.at)
+		return err
+	}
+}
+
+// state is k's merge queue state, failing the test when it cannot be read.
+func (k *keptBatch) state(t *testing.T) State {
+	t.Helper()
+	st, err := ReadState(k.repo.CacheDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return st
+}
+
+// mainNote is the preflight's finding of an uncommitted task note in the
+// main checkout whose link breaks MD051, which the lint fix does not clear.
+var mainNote = verify.FileFinding{Tier: "markdown", Checkout: verify.CheckoutMain, Path: "wip/kanban/tasks/T-0009-a-note.md", Line: 7, Level: "error", Rule: "MD051", Message: "Link fragments should be valid"}
+
+// errLintRefusal is flai accept --batch refusing a landing for the note's lint.
+var errLintRefusal = errors.New("the markdown tier still fails on files the fix does not clear:\nwip/kanban/tasks/T-0009-a-note.md:7 MD051")
+
+// ADR-0234, S-0549 criterion 3: a passing batch whose first landing is
+// refused for an uncommitted note's lint, while the preflight finds the
+// note, is kept with its landing and its heads, stalled at that story, with
+// the queue held on the note; nothing more lands while the hold stands, and
+// a hand acceptance is told why. Once the note is fixed, a look clears the
+// hold with no batch built, and the landing goes on from the commits the
+// batch verified, logging landing_resumed; no tier runs at any point.
+func TestALandingThatFailedOnMainLandsAgainWithoutANewVerification(t *testing.T) {
+	k := newKeptBatch(t)
+	k.findings = []verify.FileFinding{mainNote}
+	var calls []acceptCall
+	accept := k.accepter(&calls, map[string]error{k.a: errLintRefusal})
+
+	did, err := Advance(context.Background(), k.deps(), accept, k.repo)
+	if err != nil || !did {
+		t.Fatalf("did %v, %v; want the landing begun and no error, as a hold is a state", did, err)
+	}
+	st := k.state(t)
+	bt := st.Batch
+	if bt == nil || bt.Dropped != nil || bt.Landing == nil || bt.Landing.Head != "c0ffee" || len(bt.Landing.Landed) != 0 || len(bt.Heads) != 2 {
+		t.Fatalf("batch %+v; want it kept with its landing at c0ffee and its heads", bt)
+	}
+	if want := (&Stalled{Story: k.a, Reason: said(errLintRefusal), At: t2}); !reflect.DeepEqual(bt.Stalled, want) {
+		t.Errorf("stalled %+v, want %+v", bt.Stalled, want)
+	}
+	if want := (&PreflightHold{Since: t2, Main: "c0ffee", Findings: []verify.FileFinding{mainNote}}); !reflect.DeepEqual(st.Preflight, want) {
+		t.Errorf("hold %+v, want %+v", st.Preflight, want)
+	}
+	if _, ok := st.EnqueuedAs(k.a); !ok || k.looks != 1 || k.verified != 0 || len(calls) != 1 {
+		t.Errorf("%s enqueued %v, looks %d, verified %d, accepted %+v; want it still enqueued, one look, no tier run, one acceptance", k.a, ok, k.looks, k.verified, calls)
+	}
+	if !strings.Contains(k.logs.String(), "merge queue landing waits on main") || !strings.Contains(k.logs.String(), mainNote.Path) {
+		t.Errorf("logs %s; want a warning that the landing waits on main, naming %s", k.logs.String(), mainNote.Path)
+	}
+
+	// the hold stands: nothing lands, and a hand acceptance is told why
+	k.at = t2.Add(time.Minute)
+	if ran, _ := runBatch(t, k.deps(), k.repo); ran || k.looks != 2 || k.verified != 0 {
+		t.Fatalf("ran %v, looks %d, verified %d; want the look to keep the hold and build nothing", ran, k.looks, k.verified)
+	}
+	if _, err := Advance(context.Background(), k.deps(), accept, k.repo); err != nil || len(calls) != 1 {
+		t.Fatalf("%v, accepted %+v; want nothing landed while the preflight holds the queue", err, calls)
+	}
+	if _, reasons, err := Landable(k.g, k.repo, k.a, k.id); err != nil || len(reasons) != 1 || !strings.Contains(reasons[0], "waits for main to be clean") || !strings.Contains(reasons[0], mainNote.Path) {
+		t.Errorf("reasons %q, %v; want one saying the landing waits for main to be clean, naming %s", reasons, err, mainNote.Path)
+	}
+
+	// the note is fixed: the look clears the hold and builds nothing
+	k.findings, k.at = nil, t3
+	if ran, st := runBatch(t, k.deps(), k.repo); ran || st.Preflight != nil || st.Batch == nil || st.Batch.ID != k.id || st.Batch.Dropped != nil || k.verified != 0 {
+		t.Fatalf("ran %v, hold %+v, batch %+v, verified %d; want the hold cleared, the batch kept, and no tier run", ran, st.Preflight, st.Batch, k.verified)
+	}
+	if _, reasons, err := Landable(k.g, k.repo, k.a, k.id); err != nil || len(reasons) != 0 {
+		t.Errorf("reasons %q, %v; want %s landable once main is clean", reasons, err, k.a)
+	}
+
+	accept = k.accepter(&calls, nil)
+	did, err = Advance(context.Background(), k.deps(), accept, k.repo)
+	if err != nil || !did {
+		t.Fatalf("did %v, %v; want the batch landed", did, err)
+	}
+	if want := []acceptCall{{k.a, "alex", k.id}, {k.a, "alex", k.id}, {k.b, "alex", k.id}}; !slices.Equal(calls, want) {
+		t.Errorf("accepted %+v, want %+v", calls, want)
+	}
+	if st := k.state(t); st.Batch != nil || len(st.Enqueued) != 0 || k.verified != 0 {
+		t.Errorf("batch %+v, enqueued %+v, verified %d; want both landed, the batch gone, and no tier run", st.Batch, st.Enqueued, k.verified)
+	}
+	var resumed []Event
+	for _, e := range eventLog(t, k.repo.CacheDir()) {
+		if e.Event == EventLandingResumed {
+			resumed = append(resumed, e)
+		}
+	}
+	// Update stamps a write's events with the wall clock, so the wait is
+	// measured from the stall to now
+	if len(resumed) != 1 || resumed[0].Batch != k.id || !slices.Equal(resumed[0].Stories, []string{k.a}) || resumed[0].Waited <= 0 {
+		t.Errorf("landing_resumed events %+v; want one of %s at %s with how long it waited", resumed, k.id, k.a)
+	}
+	if !strings.Contains(k.logs.String(), "merge queue batch lands again without a new verification") {
+		t.Errorf("logs %s; want that the batch lands again without a new verification", k.logs.String())
+	}
+}
+
+// ADR-0234: a landing kept on main's state is dropped as before when main
+// moved meanwhile, as by committing the fix on it, and nothing lands or is
+// verified; a hand acceptance is told main moved.
+func TestALandingKeptOnMainIsDroppedWhenMainMoved(t *testing.T) {
+	k := newKeptBatch(t)
+	k.findings = []verify.FileFinding{mainNote}
+	var calls []acceptCall
+	accept := k.accepter(&calls, map[string]error{k.a: errLintRefusal})
+	if _, err := Advance(context.Background(), k.deps(), accept, k.repo); err != nil {
+		t.Fatal(err)
+	}
+	k.g.script("beef", mainHeadArgs...)
+	k.findings, k.at = nil, t3
+	runBatch(t, k.deps(), k.repo)
+	if _, reasons, err := Landable(k.g, k.repo, k.a, k.id); err != nil || len(reasons) != 1 || !strings.Contains(reasons[0], "main moved") {
+		t.Errorf("reasons %q, %v; want one saying main moved", reasons, err)
+	}
+
+	did, err := Advance(context.Background(), k.deps(), k.accepter(&calls, nil), k.repo)
+	if err != nil || !did {
+		t.Fatalf("did %v, %v; want the batch dropped", did, err)
+	}
+	st := k.state(t)
+	if st.Batch == nil || st.Batch.Dropped == nil || !strings.Contains(st.Batch.Dropped.Reason, "moved from c0ffee to beef") {
+		t.Fatalf("batch %+v; want it dropped as main moved", st.Batch)
+	}
+	if len(calls) != 1 || k.verified != 0 {
+		t.Errorf("accepted %+v, verified %d; want nothing more landed and no tier run", calls, k.verified)
+	}
+	for _, e := range eventLog(t, k.repo.CacheDir()) {
+		if e.Event == EventLandingResumed {
+			t.Errorf("logged %+v; a dropped landing does not resume", e)
+		}
+	}
+}
+
+// ADR-0176, ADR-0234: a landing that fails while the preflight finds the
+// main checkout clean, or cannot run, failed on its stories: the batch is
+// dropped as before, with the acceptance's error, and nothing holds the
+// queue or stalls.
+func TestALandingThatFailsWithMainCleanDropsTheBatch(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		preflight Preflighter
+	}{
+		{name: "main clean", preflight: func(context.Context, *workitem.Repo) ([]verify.FileFinding, error) { return nil, nil }},
+		{name: "preflight cannot run", preflight: func(context.Context, *workitem.Repo) ([]verify.FileFinding, error) {
+			return nil, errors.New("run the merge queue's preflight: no git")
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			k := newKeptBatch(t)
+			var calls []acceptCall
+			d := k.deps()
+			d.Preflight = tc.preflight
+			_, err := Advance(context.Background(), d, k.accepter(&calls, map[string]error{k.a: errors.New("merge stopped\non x.txt")}), k.repo)
+			if err == nil || !strings.Contains(err.Error(), "merge stopped") || !strings.Contains(err.Error(), "flai accept "+k.a) {
+				t.Errorf("error %v, want the acceptance's, saying what to do", err)
+			}
+			st := k.state(t)
+			dr := st.Batch.Dropped
+			if dr == nil || dr.Reason != "landing "+k.a+" failed: merge stopped on x.txt; the stories not landed are batched again from the main branch" {
+				t.Errorf("dropped %+v, want it dropped as the landing of %s failed", dr, k.a)
+			}
+			if st.Preflight != nil || st.Batch.Stalled != nil || k.verified != 0 {
+				t.Errorf("hold %+v, stalled %+v, verified %d; want neither, and no tier run", st.Preflight, st.Batch.Stalled, k.verified)
+			}
+		})
 	}
 }

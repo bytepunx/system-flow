@@ -117,6 +117,21 @@ type Batch struct {
 	Heads   []Head   `json:"heads,omitempty"`
 	Bisect  *Bisect  `json:"bisect,omitempty"`
 	Landing *Landing `json:"landing,omitempty"`
+	// Stalled is the landing waiting on main (ADR-0234): one of its
+	// acceptances failed while the preflight found the main checkout not
+	// clean, so the batch is kept, with its landing and its heads, and lands
+	// on from the commits it verified once a look finds main clean; nil
+	// while the landing does not wait.
+	Stalled *Stalled `json:"stalled,omitempty"`
+}
+
+// Stalled is a batch's landing waiting on main (ADR-0234): the story whose
+// acceptance failed on the main checkout's state, what the acceptance said,
+// and when, in UTC.
+type Stalled struct {
+	Story  string    `json:"story"`
+	Reason string    `json:"reason"`
+	At     time.Time `json:"at"`
 }
 
 // LeftOut is a story left out of a batch, left out, waiting, or sent back,

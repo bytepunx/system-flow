@@ -45,6 +45,11 @@ const (
 	// or not (S-0552): one verification run of the queue's beside each
 	// batch's verified, a kind of its own so that verified stays one a batch.
 	EventStepVerified = "step_verified"
+	// EventLandingResumed is a batch's landing that waited on main going on
+	// once main is clean, from the commits the batch verified, with no new
+	// verification (ADR-0234): on the story it resumes at, with how long it
+	// waited.
+	EventLandingResumed = "landing_resumed"
 	// EventLanded is a story landed by the queue.
 	EventLanded = "landed"
 	// EventSentBack is the story a failed batch was bisected to, sent back.
@@ -55,7 +60,7 @@ const (
 )
 
 // eventKinds are the events of the log, in the order a write's lines are.
-var eventKinds = []string{EventEnqueued, EventPreflightHeld, EventPreflightCleared, EventBatchBuilt, EventVerified, EventBisected, EventStepVerified, EventLanded, EventSentBack, EventDequeued}
+var eventKinds = []string{EventEnqueued, EventPreflightHeld, EventPreflightCleared, EventBatchBuilt, EventVerified, EventBisected, EventStepVerified, EventLandingResumed, EventLanded, EventSentBack, EventDequeued}
 
 // ReasonRemoved is the reason of a story dequeued with no outcome recorded
 // for it, as one taken out with flai queue remove.
@@ -63,18 +68,19 @@ const ReasonRemoved = "removed"
 
 // Event is one line of the merge queue's event log.
 type Event struct {
-	At      time.Time `json:"at"`                     // when it happened, UTC to the second
-	Event   string    `json:"event"`                  // one of the Event constants
-	Batch   string    `json:"batch,omitempty"`        // the batch it is of, when one is
-	Stories []string  `json:"stories"`                // the stories it is on
-	By      string    `json:"by,omitempty"`           // who enqueued the story, on an enqueued line
-	Passed  *bool     `json:"passed,omitempty"`       // whether the batch or the step passed, on a verified or step_verified line
-	Step    int       `json:"step,omitempty"`         // the bisection step's number, from 1, on a step_verified line
-	LeftOut []string  `json:"left_out,omitempty"`     // the stories left out, on a batch_built line
-	Reason  string    `json:"reason,omitempty"`       // why the story left, on a dequeued line
-	Files   []string  `json:"files,omitempty"`        // the files the findings name, sorted, on a preflight_held line
-	Rules   []string  `json:"rules,omitempty"`        // the rules the findings name, sorted, on a preflight_held line
-	HeldFor int64     `json:"held_seconds,omitempty"` // how long the preflight held the queue, in seconds, on a preflight_cleared line
+	At      time.Time `json:"at"`                       // when it happened, UTC to the second
+	Event   string    `json:"event"`                    // one of the Event constants
+	Batch   string    `json:"batch,omitempty"`          // the batch it is of, when one is
+	Stories []string  `json:"stories"`                  // the stories it is on
+	By      string    `json:"by,omitempty"`             // who enqueued the story, on an enqueued line
+	Passed  *bool     `json:"passed,omitempty"`         // whether the batch or the step passed, on a verified or step_verified line
+	Step    int       `json:"step,omitempty"`           // the bisection step's number, from 1, on a step_verified line
+	LeftOut []string  `json:"left_out,omitempty"`       // the stories left out, on a batch_built line
+	Reason  string    `json:"reason,omitempty"`         // why the story left, on a dequeued line
+	Files   []string  `json:"files,omitempty"`          // the files the findings name, sorted, on a preflight_held line
+	Rules   []string  `json:"rules,omitempty"`          // the rules the findings name, sorted, on a preflight_held line
+	HeldFor int64     `json:"held_seconds,omitempty"`   // how long the preflight held the queue, in seconds, on a preflight_cleared line
+	Waited  int64     `json:"waited_seconds,omitempty"` // how long the landing waited on main, in seconds, on a landing_resumed line
 }
 
 // EventsPath is where the merge queue's event log is in the cache folder
@@ -147,8 +153,9 @@ func preflightEvents(prev, hold *PreflightHold, now time.Time) []Event {
 // batchEvents are the events of the batch after, set against prev, the batch
 // before the write when it is the same batch: built once it leaves building
 // and rebasing, verified once it has a result, bisected once its bisection
-// begins, and a step verified once each step of its bisection has a result,
-// on the step's stories.
+// begins, a step verified once each step of its bisection has a result, on
+// the step's stories, and its landing resumed once the landing that waited
+// on main goes on, on the story it lands then.
 func batchEvents(prev, b *Batch, now time.Time) []Event {
 	if b == nil {
 		return nil
@@ -186,6 +193,13 @@ func batchEvents(prev, b *Batch, now time.Time) []Event {
 			}
 			out = append(out, Event{At: at, Event: EventStepVerified, Batch: b.ID, Stories: append([]string{}, s.Stories...), Passed: &passed, Step: i + 1})
 		}
+	}
+	if prev != nil && prev.Stalled != nil && b.Stalled == nil && b.Dropped == nil {
+		story, ok := strings.CutPrefix(b.Step, StepLanding+" ")
+		if !ok {
+			story = prev.Stalled.Story
+		}
+		out = append(out, Event{At: now, Event: EventLandingResumed, Batch: b.ID, Stories: []string{story}, Waited: int64(max(0, now.Sub(prev.Stalled.At).Round(time.Second).Seconds()))})
 	}
 	return out
 }

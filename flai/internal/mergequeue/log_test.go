@@ -466,3 +466,47 @@ func TestPreflightEventsAreAppendedAndReadBack(t *testing.T) {
 		t.Errorf("cleared %+v, want preflight_cleared on no story with how long it held", got[1])
 	}
 }
+
+// ADR-0234, S-0549 criterion 3: a landing that waited on main logs
+// landing_resumed once its stall clears, on the story it lands then, with
+// how long it waited; a stall that stands, or one whose batch was dropped or
+// replaced, logs nothing.
+func TestLandingResumedEventsOfAWrite(t *testing.T) {
+	stalledAt, now := t0, t0.Add(45*time.Minute)
+	batch := func(id, step string, stalled bool) *Batch {
+		b := &Batch{ID: id, Stories: []string{"S-0001", "S-0002"}, Step: step, Result: &Result{Passed: true, FinishedAt: t0},
+			Landing: &Landing{Stories: []string{"S-0001", "S-0002"}, Landed: []string{}, Head: "c0ffee"}}
+		if stalled {
+			b.Stalled = &Stalled{Story: "S-0001", Reason: "lint failed", At: stalledAt}
+		}
+		return b
+	}
+	dropped := batch("B-1", "landing S-0001", false)
+	dropped.Dropped = &Dropped{Reason: "the main branch moved", By: "flai serve", At: now}
+	cases := []struct {
+		name          string
+		before, after *Batch
+		want          []Event
+	}{
+		{name: "resumes at the story it stalled at", before: batch("B-1", "landing S-0001", true), after: batch("B-1", "landing S-0001", false),
+			want: []Event{{At: now, Event: EventLandingResumed, Batch: "B-1", Stories: []string{"S-0001"}, Waited: 2700}}},
+		{name: "resumes past a story held back", before: batch("B-1", "landing S-0001", true), after: batch("B-1", "landing S-0002", false),
+			want: []Event{{At: now, Event: EventLandingResumed, Batch: "B-1", Stories: []string{"S-0002"}, Waited: 2700}}},
+		{name: "stands", before: batch("B-1", "landing S-0001", true), after: batch("B-1", "landing S-0001", true)},
+		{name: "dropped", before: batch("B-1", "landing S-0001", true), after: dropped},
+		{name: "replaced", before: batch("B-1", "landing S-0001", true), after: batch("B-2", StepVerified, false)},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var got []Event
+			for _, e := range Events(State{Batch: tc.before}, State{Batch: tc.after}, now) {
+				if e.Event == EventLandingResumed {
+					got = append(got, e)
+				}
+			}
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("events %+v, want %+v", got, tc.want)
+			}
+		})
+	}
+}
