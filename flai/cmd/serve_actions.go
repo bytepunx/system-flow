@@ -1790,11 +1790,14 @@ func (a *app) hostSettings(root string) any {
 		out["manifest_checks"] = repo.Manifest.Checks
 		out["planning"] = planningTriggers(repo.Manifest.Planning, cfg.ActionEnabled(hostapi.ActionPlan, root), a.now())
 		out["strategic"] = strategicSettings(root, repo.Manifest, cfg.ActionEnabled(hostapi.ActionSettings, root))
+		// bind is the address flai host starts the server on, mcp.bind or the
+		// loopback default, with bind_set saying which (S-0506)
+		bind, set := mcpBindOf(cfg)
+		mcp := map[string]any{"running": false, "bind": bind, "bind_set": set}
 		if st, running := readMCPState(repo, a.now()); running {
-			out["mcp"] = map[string]any{"running": true, "url": st.URL, "pid": st.PID}
-		} else {
-			out["mcp"] = map[string]any{"running": false}
+			mcp["running"], mcp["url"], mcp["pid"] = true, st.URL, st.PID
 		}
+		out["mcp"] = mcp
 	}
 	return out
 }

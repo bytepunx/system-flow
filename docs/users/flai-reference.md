@@ -2683,7 +2683,7 @@ Standard output is the protocol channel; log events go to standard error.
 
 Started in a folder that is not a project, ~/git say, it serves every system-flow project in the folder and below it (S-0101): inbox, wait\_for\_work, and wait\_for\_events cover them all, and the other tools take the project's key.
 
-An agent that cannot start a process here reaches the same server over Streamable HTTP (ADR-0030): flai mcp start runs it in the background for this project, flai mcp status says where it listens and what an agent's configuration looks like, and flai mcp token prints its bearer token.
+An agent that cannot start a process here reaches the same server over Streamable HTTP (ADR-0030): flai mcp start runs it in the background for this project, flai mcp status says where it listens and what an agent's configuration looks like, and flai mcp token prints its bearer token. A run flai serve starts for a harness that reaches the server over HTTP, such as one in a container, is handed its URL and token by environment, as FLAI\_MCP\_URL and FLAI\_MCP\_TOKEN, never in its arguments (S-0506).
 
 Examples:
 
@@ -2772,11 +2772,13 @@ flai mcp token [flags]
 
 The token lives at .flai-cache/mcp.token (mode 0600, git-ignored) and is created the first time it is needed. It is not the dashboard's token: that one opens the dashboard, this one lets an agent act on the project. --rotate writes a new one and restarts a running server, which ends every session.
 
+In a run flai serve started for a harness that reaches the server over HTTP, such as one in a container, the token is handed to the run as FLAI\_MCP\_TOKEN, with the server's URL as FLAI\_MCP\_URL (S-0506): while FLAI\_MCP\_TOKEN is set, flai mcp token prints it, the token in force, and reads no file, so that it answers where there is no .flai-cache. --rotate ignores FLAI\_MCP\_TOKEN and rotates the project's file.
+
 Flags:
 
 | Flag | Meaning |
 |------|---------|
-| `--rotate` | replace the token |
+| `--rotate` | replace the token in the project's file, whatever FLAI\_MCP\_TOKEN holds |
 
 ### flai message
 
@@ -3550,9 +3552,11 @@ Subcommands:
 - [forge](#flai-serve-forge): Set the environment variable a forge's token is read from, such as GITHUB\_TOKEN for github
 - [import](#flai-serve-import): The folders whose git repositories the board offers to import into system-flow
 - [journal](#flai-serve-journal): Every host action a dashboard asked for: when, what, which project, for whom, and what became of it
+- [mcp](#flai-serve-mcp): The address flai host starts each project's HTTP MCP server on, on this host
 - [notify](#flai-serve-notify): The channel flai serve reminds you through of a thread that awaits you, on this host
 - [orchestrate](#flai-serve-orchestrate): Stop the project's orchestrator and hold it stopped, or start it again
 - [project](#flai-serve-project): The projects flai serve serves on the dashboard: add, remove, and list them, and why one is not showing
+- [settings](#flai-serve-settings): Print this host's settings as the dashboard's settings page has them for the project in this folder
 - [start](#flai-serve-start): Start flai serve under flai host, starting the host if it is not running
 - [status](#flai-serve-status): Whether flai serve runs, which projects it serves, and which dashboards have it connected
 - [stop](#flai-serve-stop): Stop flai serve: the host stops it and keeps it stopped until flai serve start
@@ -4098,6 +4102,57 @@ Flags:
 |------|---------|
 | `-n`, `--last` int | only the last n entries |
 
+#### flai serve mcp
+
+The address flai host starts each project's HTTP MCP server on, on this host.
+
+```text
+flai serve mcp
+```
+
+flai host starts a flai mcp http for every project flai serve serves, each on a port of its own that it keeps across restarts, and on mcp.bind, 127.0.0.1 by default, so that only this machine reaches it. flai serve mcp bind sets another address, an IP address or a host name without a port, such as 0.0.0.0 or Docker's bridge gateway, 172.17.0.1, so that an agent in a container reaches the server through the host gateway; flai serve mcp clear goes back to 127.0.0.1. It is for every project on this host, and each server listens on it from its next start: flai host restart mcp starts them again now.
+
+Wherever it listens, the server refuses a request without the bearer token flai mcp token prints and one with an Origin header, and it warns in its log when it listens beyond this machine, since flai does not encrypt the token.
+
+Examples:
+
+```bash
+flai serve mcp bind 0.0.0.0
+flai host restart mcp
+flai serve mcp show --json
+flai serve mcp clear
+```
+
+Subcommands:
+
+- [bind](#flai-serve-mcp-bind): Start each project's MCP server on this address, an IP address or a host name without a port (default 127.0.0.1)
+- [clear](#flai-serve-mcp-clear): Unset mcp.bind, so that each project's MCP server listens on 127.0.0.1 again
+- [show](#flai-serve-mcp-show): Print the address flai host starts each project's MCP server on
+
+##### flai serve mcp bind
+
+Start each project's MCP server on this address, an IP address or a host name without a port (default 127.0.0.1).
+
+```text
+flai serve mcp bind <address>
+```
+
+##### flai serve mcp clear
+
+Unset mcp.bind, so that each project's MCP server listens on 127.0.0.1 again.
+
+```text
+flai serve mcp clear
+```
+
+##### flai serve mcp show
+
+Print the address flai host starts each project's MCP server on.
+
+```text
+flai serve mcp show
+```
+
 #### flai serve notify
 
 The channel flai serve reminds you through of a thread that awaits you, on this host.
@@ -4245,6 +4300,23 @@ Stop serving a project; none of its files is touched, and the dashboard keeps ru
 
 ```text
 flai serve project remove <key|folder>
+```
+
+#### flai serve settings
+
+Print this host's settings as the dashboard's settings page has them for the project in this folder.
+
+```text
+flai serve settings
+```
+
+Prints what the dashboard's settings page is given for the project in the working directory: the host actions, here and everywhere; the agent, its harnesses and providers; the checks; the folders named for import; the projects flai serve serves; planning; and the project's HTTP MCP server, whether it runs and the address flai host starts it on, mcp.bind or 127.0.0.1 by default, which flai serve mcp bind sets. --json prints every field as the dashboard gets it. It prints no token and no variable's value.
+
+Examples:
+
+```bash
+flai serve settings
+flai serve settings --json
 ```
 
 #### flai serve start
