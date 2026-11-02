@@ -194,12 +194,8 @@ func (r *orchestrator) look(ctx context.Context) {
 	}
 	r.starter.mu.Lock()
 	defer r.starter.mu.Unlock()
-	var started bool
-	r.said, _, started = r.starter.orchestrate(ctx, cfg, repo.Manifest.OrchestrationAgent(), r.said, queueBatches(r.o, r.e, repo.Manifest), q.Reasons)
+	r.said, _ = r.starter.orchestrate(ctx, cfg, repo.Manifest.OrchestrationAgent(), r.said, queueBatches(r.o, r.e, repo.Manifest), q.Reasons)
 	run = r.o.Dir.AgentStates()[r.e.Root].Orchestrator
-	if started && run != nil {
-		r.took(run.Session, q.Reasons)
-	}
 	r.seen = seenAs(run) // told as it was recorded
 }
 
@@ -286,14 +282,6 @@ func (r *orchestrator) schedule(o manifest.Orchestration, now time.Time) *cron.S
 		return nil
 	}
 	return sched
-}
-
-// took takes the reasons the run of session was started with out of the
-// queue, kept as taken until it ends (reasonQueue.take).
-func (r *orchestrator) took(session string, reasons []orchestrateReason) {
-	if _, err := r.o.Dir.updateReasonQueue(r.e.Root, func(q *reasonQueue) { q.take(session, reasons) }); err != nil {
-		r.starter.warn("orchestrator reasons not kept", "err", err)
-	}
 }
 
 // wakeIn has the serving loop look again in d, when the reasons queued come
@@ -455,9 +443,10 @@ func (r *orchestrator) journalStop(at, detail string) {
 // holds is not made and nothing is recorded (spawnGated, S-0534): held is
 // that state, nil when it was not held, and why it is held is returned as
 // said, logged when it is not the one said last, so that a hold is logged
-// once per state. started says whether a run was started, so that the
-// reasons it took leave the queue.
-func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *manifest.Agent, said string, queue bool, reasons []orchestrateReason) (string, *Budget, bool) {
+// once per state. The reasons a run is started for are taken out of the
+// queue before the run is waited on, so that an end that comes at once
+// settles them (reasonQueue.take).
+func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *manifest.Agent, said string, queue bool, reasons []orchestrateReason) (string, *Budget) {
 	now := l.now().UTC()
 	last := l.dir.AgentStates()[l.entry.Root].Orchestrator
 	run := &AgentRun{Agent: workitem.ActivityOrchestrator, Started: now.Format(time.RFC3339), Session: newSession()}
@@ -475,11 +464,11 @@ func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *mani
 		l.warn("orchestrator could not be started", "harness", run.Harness, "err", run.Error)
 		appendAgentEvent(l.entry.Root, run, inbox.AgentFailed, run.Why, l.warn)
 	}
-	refuse := func(err error) (string, *Budget, bool) {
+	refuse := func(err error) (string, *Budget) {
 		if err.Error() != said {
 			fail(err)
 		}
-		return err.Error(), nil, false
+		return err.Error(), nil
 	}
 	commandSet := cfg.host(harness.Command).Program != ""
 	if (agent == nil || agent.Harness == "") && !commandSet {
@@ -501,11 +490,11 @@ func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *mani
 		if why != said {
 			l.log("orchestrator start held", "provider", held.Provider, "until", held.Until.UTC().Format(time.RFC3339), "reason", why)
 		}
-		return why, held, false
+		return why, held
 	}
 	if err != nil {
 		fail(err)
-		return "", nil, false
+		return "", nil
 	}
 	l.told(run)
 	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s (%s) as %s (pid %d) for %s; log %s", run.Command, run.Harness, run.Agent, run.PID, reasonsSaid(reasons), run.Log)
@@ -514,8 +503,16 @@ func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *mani
 	}
 	l.log("orchestrator started", "harness", run.Harness, "command", run.Command, "pid", run.PID, "reasons", len(reasons))
 	appendAgentEvent(l.entry.Root, run, inbox.AgentStarted, orchestrateWhy(last, reasons), l.warn)
+	// the reasons are taken before the run's end can settle them: a run that
+	// ends at once, before the look that started it comes back to take them,
+	// would otherwise settle nothing, and the take after it would hold the
+	// reasons as taken for a run already ended, so that a failed run's
+	// reasons were never given back (ADR-0209 §5)
+	if _, err := l.dir.updateReasonQueue(l.entry.Root, func(q *reasonQueue) { q.take(run.Session, reasons) }); err != nil {
+		l.warn("orchestrator reasons not kept", "err", err)
+	}
 	l.await(cmd, out, run.PID, func(code int) { l.orchestrateEnded(run, &code) })
-	return "", nil, true
+	return "", nil
 }
 
 // orchestrateEnded records an orchestrator run as ended, with its exit code

@@ -173,16 +173,11 @@ func OrchestratorStart(ctx context.Context, o Options, e Entry) (*AgentRun, erro
 	if err != nil {
 		return nil, err
 	}
-	_, held, started := l.orchestrate(ctx, cfg, agent, "", queueBatches(o, e, repo.Manifest), q.Reasons)
+	_, held := l.orchestrate(ctx, cfg, agent, "", queueBatches(o, e, repo.Manifest), q.Reasons)
 	if held != nil {
 		return nil, l.budgetRefused(*held)
 	}
 	out := o.Dir.AgentStates()[e.Root].Orchestrator
-	if started && out != nil {
-		if _, err := o.Dir.updateReasonQueue(e.Root, func(q2 *reasonQueue) { q2.take(out.Session, q.Reasons) }); err != nil {
-			l.warn("orchestrator reasons not kept", "err", err)
-		}
-	}
 	switch {
 	case out == nil || (run != nil && out.Session == run.Session):
 		return nil, fmt.Errorf("the orchestrator's new run was not recorded in %s; it was not started", o.Dir.agents())
