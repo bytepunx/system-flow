@@ -601,7 +601,8 @@ func (c *checker) triggers(r Role) {
 	}
 	schedules := append(slices.Clone(Schedules), "roles."+r.Name+".schedule")
 	for _, t := range r.Trigger {
-		at := func(format string, args ...any) { c.add(r, CodeFile, t.Line, format, args...) }
+		bad := false
+		at := func(format string, args ...any) { bad = true; c.add(r, CodeFile, t.Line, format, args...) }
 		switch t.Kind {
 		case TriggerAsked:
 		case TriggerContinuous:
@@ -617,19 +618,90 @@ func (c *checker) triggers(r Role) {
 		default:
 			at("trigger %q is none of asked, {event: <event>}, or {schedule: <setting>}", t.Kind)
 		}
-		if t.When == "" {
+		if t.When != "" {
+			cond, ok := Condition(t.When)
+			switch {
+			case !ok:
+				at("condition %q is not one flai implements; use one of %s, or ask for a new one", t.When, strings.Join(ConditionNames(), ", "))
+			case !cond.OnTrigger():
+				at("condition %s qualifies a call, not a trigger; remove it from the trigger", t.When)
+			case !cond.QualifiesTrigger(t):
+				at("condition %s does not qualify this trigger; %s", t.When, triggerTargets(cond))
+			}
+		}
+		if bad {
 			continue
 		}
-		cond, ok := Condition(t.When)
-		switch {
-		case !ok:
-			at("condition %q is not one flai implements; use one of %s, or ask for a new one", t.When, strings.Join(ConditionNames(), ", "))
-		case !cond.OnTrigger():
-			at("condition %s qualifies a call, not a trigger; remove it from the trigger", t.When)
-		case !cond.QualifiesTrigger(t):
-			at("condition %s does not qualify this trigger; %s", t.When, triggerTargets(cond))
+		if l, builtin := launchers[r.Name]; builtin {
+			if !l.serves(t) {
+				at("the %s's launcher in flai serve does not serve %s, so nothing would start the role on it; it serves %s (ADR-0250 §4); remove the entry", r.Name, t, l.says)
+			}
+			continue
+		}
+		if t.Kind == TriggerSchedule && len(r.Item) > 0 && t.When != CondEachReadyStory {
+			at("%s gives the role no item to run on, and it takes one (item: [%s]); add when: %s to run it once for every ready story, or remove the entry (ADR-0250 §4)", t, strings.Join(r.Item, ", "), CondEachReadyStory)
 		}
 	}
+}
+
+// CondEachReadyStory is the condition under which a schedule entry starts a
+// role that takes an item, once for every ready story (ADR-0250 §5).
+const CondEachReadyStory = "each-ready-story"
+
+// launcher is what a built-in role's own launcher in flai serve serves of
+// its file's trigger entries (ADR-0250 §4): serves says whether it serves
+// an entry, and says lists those it serves, for flai check to name.
+type launcher struct {
+	serves func(Trigger) bool
+	says   string
+}
+
+// launchers are the built-in roles whose launchers start them on their
+// files' entries by name, but for the orchestrator, whose launcher reads
+// every entry its file may name (ADR-0209). asked, every role's on-demand
+// start, each serves.
+var launchers = map[string]launcher{
+	"planner": {
+		serves: func(t Trigger) bool {
+			switch t.Kind {
+			case TriggerEvent:
+				return slices.Contains([]string{"edited", "accepted", "cancelled", "reordered"}, t.Event)
+			case TriggerSchedule:
+				return t.When == CondEachReadyStory
+			}
+			return true
+		},
+		says: "asked; {event: edited}, {event: accepted}, {event: cancelled}, and {event: reordered}, each with or without a condition; and {schedule: <setting>, when: " + CondEachReadyStory + "}",
+	},
+	"analyzer": {
+		serves: func(t Trigger) bool { return t.Kind == TriggerAsked || (t.Kind == TriggerSchedule && t.When == "") },
+		says:   "asked and {schedule: <setting>}",
+	},
+	"curator": {
+		serves: func(t Trigger) bool {
+			return t.Kind == TriggerAsked || (t.When == "" && (t.Kind == TriggerSchedule || (t.Kind == TriggerEvent && t.Event == "accepted")))
+		},
+		says: "asked, {event: accepted}, and {schedule: <setting>}",
+	},
+}
+
+// String is the entry as a role file writes it: asked, {event: edited,
+// when: stale-figures}, or {schedule: planning.schedule}.
+func (t Trigger) String() string {
+	var b strings.Builder
+	switch t.Kind {
+	case TriggerEvent:
+		b.WriteString("{event: " + t.Event)
+	case TriggerSchedule:
+		b.WriteString("{schedule: " + t.Schedule)
+	default:
+		return t.Kind
+	}
+	if t.When != "" {
+		b.WriteString(", when: " + t.When)
+	}
+	b.WriteString("}")
+	return b.String()
 }
 
 // triggerTargets says which trigger entries a trigger condition qualifies.

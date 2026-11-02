@@ -31,7 +31,10 @@ import (
 // until it starts (S-0534). A role whose file takes items is not started:
 // a schedule gives it no item to run on. Times missed between two looks come
 // round once, and a schedule set or changed, or a role or trigger added,
-// comes round first at its next time from then.
+// comes round first at its next time from then. The built-in roles' own
+// launchers follow the settings their files name, by the same functions
+// (scheduleSettings, scheduleSettingValid, matching), and start their roles
+// themselves (ADR-0250 §4).
 //
 // What it has seen is kept in memory only, as the analysis scheduler's is.
 // While a role's host action is off its schedules start nothing and keep up,
@@ -117,9 +120,8 @@ func (s *roleScheduler) look(ctx context.Context) {
 // dropped. A setting that is not one the role may name, or whose value does
 // not parse, is warned of once and starts nothing.
 func (s *roleScheduler) lookAt(ctx context.Context, file roles.Role, setting string, f *roleFollow, m manifest.Manifest, on bool, now time.Time) {
-	if setting != "roles."+file.Name+".schedule" && !slices.Contains(roles.Schedules, setting) {
-		s.warnOnce("role schedule not valid", fmt.Errorf("the role %s's file %s names the schedule %s, which is neither roles.%s.schedule nor one of %s, as flai check reports",
-			file.Name, file.Path, setting, file.Name, strings.Join(roles.Schedules, ", ")), "role", file.Name)
+	if err := scheduleSettingValid(file, setting); err != nil {
+		s.warnOnce("role schedule not valid", err, "role", file.Name)
 		return
 	}
 	_, sched, err := m.ScheduleSetting(setting)
@@ -192,23 +194,44 @@ type scheduledRole struct {
 func (r scheduledRole) key() roleSetting { return roleSetting{role: r.file.Name, setting: r.setting} }
 
 // scheduledRoles are the settings files' schedule triggers name, each role's
-// once, for each role that is not built-in: the built-in roles keep their
-// own schedulers.
+// once, for each role that is not built-in. The built-in roles' own
+// launchers start them, judging the same entries by scheduleSettings and
+// matching (ADR-0250 §4): the planner's replanner here, and the analyzer's
+// and the curator's schedulers.
 func scheduledRoles(files []roles.Role) []scheduledRole {
 	var out []scheduledRole
-	seen := map[roleSetting]bool{}
 	for _, f := range files {
 		if _, builtin := builtinRoles[f.Name]; builtin {
 			continue
 		}
-		for _, t := range f.Trigger {
-			r := scheduledRole{file: f, setting: t.Schedule}
-			if t.Kind != roles.TriggerSchedule || seen[r.key()] {
-				continue
-			}
-			seen[r.key()] = true
-			out = append(out, r)
+		for _, setting := range scheduleSettings(f) {
+			out = append(out, scheduledRole{file: f, setting: setting})
 		}
 	}
 	return out
+}
+
+// scheduleSettings are the settings f's schedule trigger entries name, each
+// once, in the file's order: what a launcher of f follows a cadence for.
+// Whether a setting's coming round starts f, and how, is matching's to say
+// of a schedule occurrence on it, by the entries' conditions.
+func scheduleSettings(f roles.Role) []string {
+	var out []string
+	for _, t := range f.Trigger {
+		if t.Kind == roles.TriggerSchedule && !slices.Contains(out, t.Schedule) {
+			out = append(out, t.Schedule)
+		}
+	}
+	return out
+}
+
+// scheduleSettingValid is nil when setting is one f's schedule entry may
+// name, roles.<name>.schedule or one of roles.Schedules, and otherwise what
+// flai check reports of it.
+func scheduleSettingValid(f roles.Role, setting string) error {
+	if setting == "roles."+f.Name+".schedule" || slices.Contains(roles.Schedules, setting) {
+		return nil
+	}
+	return fmt.Errorf("the role %s's file %s names the schedule %s, which is neither roles.%s.schedule nor one of %s, as flai check reports",
+		f.Name, f.Path, setting, f.Name, strings.Join(roles.Schedules, ", "))
 }

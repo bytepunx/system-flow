@@ -454,18 +454,36 @@ func occurrenceOf(e inbox.Event, byID map[string]*workitem.Item, you func(awaits
 // event is o's, and its condition, when it names one, holds for o. A
 // condition flai does not judge against an event matches nothing.
 func triggered(triggers []roles.Trigger, o roles.Occurrence) bool {
-	return slices.ContainsFunc(triggers, func(t roles.Trigger) bool {
-		if t.Kind != roles.TriggerEvent || t.Event != o.Event {
-			return false
+	return len(matching(triggers, o)) > 0
+}
+
+// matching are the entries among triggers that o meets, in their order: for
+// an event, those naming o's event; for a schedule, o.Event empty, those
+// naming the setting o.Schedule; each only when its condition, if it names
+// one, holds for o. A condition flai does not judge against an occurrence
+// matches nothing. The defined roles' launchers and the built-in roles' own
+// launchers judge their triggers by it alike (ADR-0250 §4), so a built-in
+// role's launcher can tell which entry, and so under which condition, an
+// occurrence starts its role.
+func matching(triggers []roles.Trigger, o roles.Occurrence) []roles.Trigger {
+	var out []roles.Trigger
+	for _, t := range triggers {
+		switch {
+		case o.Event != "" && (t.Kind != roles.TriggerEvent || t.Event != o.Event):
+			continue
+		case o.Event == "" && (o.Schedule == "" || t.Kind != roles.TriggerSchedule || t.Schedule != o.Schedule):
+			continue
 		}
-		if t.When == "" {
-			return true
+		if t.When != "" {
+			c, ok := roles.Condition(t.When)
+			if !ok {
+				continue
+			}
+			if holds, implemented := c.Matches(o); !implemented || !holds {
+				continue
+			}
 		}
-		c, ok := roles.Condition(t.When)
-		if !ok {
-			return false
-		}
-		holds, implemented := c.Matches(o)
-		return implemented && holds
-	})
+		out = append(out, t)
+	}
+	return out
 }

@@ -488,12 +488,108 @@ func TestNewEventsAndConditionsValidate(t *testing.T) {
   - {event: edited, when: draft-changed}
   - {event: thread, when: awaits-orchestrator}
 `)
-	rs, problems := load(t, map[string]string{"planner.md": f})
+	// a role the project defines, since the planner's launcher serves none
+	// of these events (ADR-0250 §4)
+	f = asDefined(t, f)
+	rs, problems := load(t, map[string]string{"reviewer.md": f})
 	if len(problems) != 0 {
 		t.Fatalf("load problems: %v", problems)
 	}
 	if got := Validate(rs, "design", vocab); len(got) != 0 {
 		t.Errorf("Validate = %v, want none", got)
+	}
+}
+
+// asDefined is the planner fixture f as the reviewer, a role the project
+// defines, with the review action.
+func asDefined(t *testing.T, f string) string {
+	t.Helper()
+	f = edit(t, f, "title: Planner", "title: Reviewer")
+	f = edit(t, f, "name: planner", "name: reviewer")
+	f = edit(t, f, "role: plan", "role: review")
+	return edit(t, f, "action: plan", "action: review")
+}
+
+// curatorFile is the curator's file as the baseline's triggers have it, on
+// the analyzer fixture.
+func curatorFile(t *testing.T) string {
+	t.Helper()
+	f := edit(t, analyzerFile, "title: Analyzer", "title: Curator")
+	f = edit(t, f, "name: analyzer", "name: curator")
+	f = edit(t, f, "role: analyze", "role: curate")
+	f = edit(t, f, "action: analyze", "action: curate")
+	return edit(t, f, "trigger: [asked, {schedule: analysis.schedule}]", "trigger: [asked, {event: accepted}, {schedule: digest.schedule}]")
+}
+
+// ADR-0250 §4: an entry a built-in role's launcher does not serve is
+// roles.file, naming what it serves, as is a schedule entry on a role that
+// takes an item but under each-ready-story; what each serves validates, and
+// the orchestrator's file is left to its own launcher.
+func TestValidateReportsTriggersNoLauncherServes(t *testing.T) {
+	plannerEntry := "{event: accepted, when: replan-agent}"
+	cases := []struct {
+		name, file, content string
+		want                string // "" for none
+	}{
+		{"planner as shipped", "planner.md", plannerFile, ""},
+		{"planner on any condition or none", "planner.md", edit(t, plannerFile, plannerEntry, "{event: accepted}\n  - {event: edited}\n  - {event: edited, when: draft-changed}\n  - {event: cancelled}\n  - {event: reordered}"), ""},
+		{"planner on a move", "planner.md", edit(t, plannerFile, plannerEntry, "{event: moved, when: to-review}"),
+			"the planner's launcher in flai serve does not serve {event: moved, when: to-review}, so nothing would start the role on it; it serves asked; {event: edited}, {event: accepted}, {event: cancelled}, and {event: reordered}, each with or without a condition; and {schedule: <setting>, when: each-ready-story} (ADR-0250 §4)"},
+		{"planner on a thread", "planner.md", edit(t, plannerFile, plannerEntry, "{event: thread}"), "does not serve {event: thread}"},
+		{"planner on a schedule without each-ready-story", "planner.md", edit(t, plannerFile, "{schedule: planning.schedule, when: each-ready-story}", "{schedule: planning.schedule}"), "does not serve {schedule: planning.schedule}"},
+		{"planner on its own schedule", "planner.md", edit(t, plannerFile, "{schedule: planning.schedule, when: each-ready-story}", "{schedule: roles.planner.schedule, when: each-ready-story}"), ""},
+		{"analyzer as shipped", "analyzer.md", analyzerFile, ""},
+		{"analyzer on an event", "analyzer.md", edit(t, analyzerFile, "{schedule: analysis.schedule}", "{event: accepted}"), "the analyzer's launcher in flai serve does not serve {event: accepted}, so nothing would start the role on it; it serves asked and {schedule: <setting>}"},
+		{"analyzer on each ready story", "analyzer.md", edit(t, analyzerFile, "{schedule: analysis.schedule}", "{schedule: analysis.schedule, when: each-ready-story}"), "does not serve {schedule: analysis.schedule, when: each-ready-story}"},
+		{"curator as shipped", "curator.md", curatorFile(t), ""},
+		{"curator on a cancellation", "curator.md", edit(t, curatorFile(t), "{event: accepted}", "{event: cancelled}"), "the curator's launcher in flai serve does not serve {event: cancelled}, so nothing would start the role on it; it serves asked, {event: accepted}, and {schedule: <setting>}"},
+		{"curator on replan-agent", "curator.md", edit(t, curatorFile(t), "{event: accepted}", "{event: accepted, when: replan-agent}"), "does not serve {event: accepted, when: replan-agent}"},
+		{"orchestrator on what it reads", "orchestrator.md", orchestratorFile, ""},
+		{"defined role on each ready story", "reviewer.md", asDefined(t, plannerFile), ""},
+		{"defined role taking items on a schedule", "reviewer.md", asDefined(t, edit(t, plannerFile, "{schedule: planning.schedule, when: each-ready-story}", "{schedule: roles.reviewer.schedule}")),
+			"{schedule: roles.reviewer.schedule} gives the role no item to run on, and it takes one (item: [epic, story]); add when: each-ready-story to run it once for every ready story, or remove the entry (ADR-0250 §4)"},
+		{"defined role taking no item on a schedule", "auditor.md", edit(t, edit(t, edit(t, edit(t, analyzerFile, "name: analyzer", "name: auditor"), "role: analyze", "role: audit"), "action: analyze", "action: audit"), "{schedule: analysis.schedule}", "{schedule: roles.auditor.schedule}"), ""},
+		{"an entry already wrong is reported once", "planner.md", edit(t, plannerFile, plannerEntry, "{event: merged}"), "event \"merged\" is none of"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rs, problems := load(t, map[string]string{tc.file: tc.content})
+			if len(problems) != 0 {
+				t.Fatalf("load problems: %v", problems)
+			}
+			got := Validate(rs, "design", vocab)
+			if tc.want == "" {
+				if len(got) != 0 {
+					t.Fatalf("Validate = %v, want none", got)
+				}
+				return
+			}
+			if len(got) != 1 || got[0].Code != CodeFile || !strings.Contains(got[0].Message, tc.want) {
+				t.Fatalf("Validate = %v, want one roles.file containing %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// ADR-0250 §4: the four baseline role files, flai's, this repository's, and
+// the template's, name only entries their launchers serve.
+func TestShippedRolesNameOnlyServedTriggers(t *testing.T) {
+	for _, dir := range []string{"baseline", "../../../design/workflows/roles", templateRoles} {
+		for _, name := range baselineNames {
+			data, err := os.ReadFile(filepath.Join(dir, name+".md"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			r, p := Parse("design/workflows/roles/"+name+".md", string(data))
+			if p != nil {
+				t.Fatalf("%s/%s: %v", dir, name, p)
+			}
+			for _, got := range Validate([]Role{r}, "design", Vocabulary{}) {
+				if strings.Contains(got.Message, "launcher") || strings.Contains(got.Message, "no item to run on") {
+					t.Errorf("%s/%s: %s", dir, name, got)
+				}
+			}
+		}
 	}
 }
 

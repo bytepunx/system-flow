@@ -138,7 +138,10 @@ func (r *roleEvents) look(ctx context.Context) {
 }
 
 // eventRoles are the roles among all that flai serve starts for events: not
-// built-in, with a trigger that names an event.
+// built-in, with a trigger that names an event. The built-in roles' own
+// launchers start them, judging their event entries by the same matching,
+// with the same roleAgentOf and takes (ADR-0250 §4): the planner's
+// replanner, the curator's acceptances, and the orchestrator's reasons.
 func eventRoles(all []roles.Role) []roles.Role {
 	var out []roles.Role
 	for _, f := range all {
@@ -330,7 +333,13 @@ func roleAgentOf(f roles.Role, name string) bool {
 		return true
 	}
 	item, ok := strings.CutPrefix(name, f.Name+"-")
-	return ok && len(f.Item) > 0 && slices.Contains(f.Item, workitem.TypeOfID(item)) && harness.RoleAgent(f.Name, item) == name
+	return ok && takes(f, item) && harness.RoleAgent(f.Name, item) == name
+}
+
+// takes says whether f runs on an item of id's kind; a role that takes no
+// item takes none.
+func takes(f roles.Role, id string) bool {
+	return len(f.Item) > 0 && slices.Contains(f.Item, workitem.TypeOfID(id))
 }
 
 // reasonItem is the item f's run for e is on, "" for a role that takes no
@@ -345,7 +354,7 @@ func reasonItem(f roles.Role, e inbox.Event) (item string, ok bool) {
 		id = e.Fields[inbox.FieldOn]
 	}
 	id = workitem.CanonicalID(id)
-	return id, slices.Contains(f.Item, workitem.TypeOfID(id))
+	return id, takes(f, id)
 }
 
 // unloaded says whether the role name's file is among those that did not

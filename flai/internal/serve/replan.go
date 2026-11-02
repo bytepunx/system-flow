@@ -11,9 +11,11 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/cron"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/planning"
+	"github.com/bytepunx/system-flow/flai/internal/roles"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -22,22 +24,41 @@ import (
 // With the plan host action on, flai serve plans again without the operator
 // asking. A replanner per served project looks whenever the project's
 // launcher does: when its work items or threads change, when an agent ends,
-// and every minute. It acts on three triggers.
+// and every minute. At each look it reads the planner's role file, the
+// project's or the baseline flai carries (roles.Builtin), and queues the
+// planner only for the trigger entries the file names, judged by matching as
+// the defined roles' launchers judge theirs (ADR-0250 §4). The baseline's
+// entries are these.
 //
-//   - An edit. Someone other than a planner or the story's own agent edits a
-//     backlog or ready story's goal, criteria, or touches, and the story has
-//     a forecast or a cost of delay value older than the edit; or edits its
-//     cost of delay's inputs after its value. The planner is queued for the
-//     story. A story never planned, with neither figure, is not.
-//   - Work ahead completes or the order changes: a story is accepted or
-//     cancelled, or the pull order changes. planning.replan decides: never
-//     does nothing; deterministic, the default, plays the board out again
-//     for every ready and backlog story with a forecast, keeping its own
-//     duration, and writes the delivery and basis where the delivery moved,
-//     stamped by flai, in one commit; agent does the same and queues the
-//     planner for each story it wrote.
-//   - planning.schedule. Each time it comes round, the planner is queued for
-//     every ready story. Times missed in between come round once.
+//   - {event: edited, when: stale-figures}. Someone other than a planner or
+//     the story's own agent edits a backlog or ready story's goal, criteria,
+//     or touches, and the story has a forecast or a cost of delay value older
+//     than the edit; or edits its cost of delay's inputs after its value
+//     (roles.StaleFigures). The planner is queued for the story. A story
+//     never planned, with neither figure, is not.
+//   - {event: accepted}, {event: cancelled}, and {event: reordered}, each
+//     when replan-agent: work ahead completes or the order changes, and
+//     planning.replan is agent. The planner is queued for each story the
+//     replay moved (roles.ReplanAgent).
+//   - {schedule: planning.schedule, when: each-ready-story}. Each time the
+//     setting comes round, the planner is queued for every ready story, in
+//     pull order (roles.EachReadyStory). Times missed in between come round
+//     once. Each setting the file's schedule entries name keeps a cadence of
+//     its own.
+//
+// An event entry with no condition queues the event's item, when it is of a
+// kind the planner takes, and never for an edit by a planner or by the
+// replay; {event: reordered} has no item, and queues nothing so. An entry the
+// replanner does not serve, as flai check reports, queues nothing.
+//
+// Replaying the forecasts is flai's own work, which no trigger entry gates:
+// when a story is accepted or cancelled, or the pull order changes,
+// planning.replan decides. never does nothing; deterministic, the default,
+// plays the board out again for every ready and backlog story with a
+// forecast, keeping its own duration, and writes the delivery and basis
+// where the delivery moved, stamped by flai, in one commit; agent does the
+// same, and replan-agent's entries queue the planner for each story it
+// wrote.
 //
 // The queue holds a story once: a trigger for a story already queued is
 // added to its entry. It runs one planner at a time per project, with the
@@ -53,14 +74,6 @@ import (
 // from its start are acted on, and none that passed while flai serve was
 // down. While the plan host action is off it acts on nothing and keeps up
 // with what happens, so that turning it on does not act on the past.
-
-// replanFields are the fields whose edit makes a planned story due for the
-// planner again (ADR-0084), in the order a trigger names them; an edit of
-// the cost of delay is judged apart.
-var replanFields = []string{"goal", "criteria", "touches"}
-
-// costOfDelay is the field an edit of a cost of delay names.
-const costOfDelay = "cost_of_delay"
 
 // triggerReordered is the trigger of a change of the pull order.
 const triggerReordered = "reordered"
@@ -90,9 +103,10 @@ type replanner struct {
 	since time.Time
 	seen  map[string]time.Time
 	order []string // the pull order as last seen
-	// cadence follows planning.schedule.
-	cadence cadence
-	queue   []queued
+	// cadences follow the settings the planner's schedule entries name, by
+	// setting.
+	cadences map[string]*cadence
+	queue    []queued
 	// started is the item of the planner run this replanner last started.
 	started string
 	said    map[string]bool // the manifest's refusals warned of, and the holds logged (heldOnce)
@@ -103,20 +117,25 @@ type replanner struct {
 // it.
 func newReplanner(o Options, e Entry, starter *launcher) *replanner {
 	now := o.Now().UTC()
-	r := &replanner{o: o, e: e, starter: starter, since: now.Truncate(time.Second), seen: map[string]time.Time{}, cadence: cadence{mark: now}, said: map[string]bool{}}
+	r := &replanner{o: o, e: e, starter: starter, since: now.Truncate(time.Second), seen: map[string]time.Time{}, cadences: map[string]*cadence{}, said: map[string]bool{}}
 	if repo, err := workitem.Open(e.Root); err == nil {
 		if board, err := repo.LoadBoard(); err == nil {
 			r.order = slices.Clone(board.Order)
 		}
-		r.cadence.spec = strings.TrimSpace(repo.Manifest.Planning.Schedule)
+		if planner, _, err := roles.Builtin(repo.Root, repo.Manifest.Layout["design"], workitem.ActivityPlanner); err == nil {
+			for _, setting := range scheduleSettings(planner) {
+				spec, _, _ := repo.Manifest.ScheduleSetting(setting)
+				r.cadences[setting] = &cadence{spec: strings.TrimSpace(spec), mark: now}
+			}
+		}
 	}
 	return r
 }
 
-// look acts on what happened since the last look: it queues the planner on
-// an edit and on the schedule, replans when work ahead completes or the
-// order changes, and starts the next queued planner when none it started
-// runs.
+// look acts on what happened since the last look, as the planner's role
+// file says: it queues the planner for the event and schedule entries the
+// file names, replays the forecasts when work ahead completes or the order
+// changes, and starts the next queued planner when none it started runs.
 func (r *replanner) look(ctx context.Context) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -136,76 +155,149 @@ func (r *replanner) look(ctx context.Context) {
 		r.warnOnce("replanner could not read the project", err)
 		return
 	}
+	planner, _, err := roles.Builtin(repo.Root, repo.Manifest.Layout["design"], workitem.ActivityPlanner)
+	if err != nil {
+		r.warnOnce("planner role file not read", err) // the replay goes on; no entry queues the planner
+	}
 	var changes []workitem.Change
 	var edits []itemedit.Notice
 	changes, edits, r.since, r.seen = news(items, itemedit.Notices(repo), r.since, r.seen, now)
 	reordered := workitem.Reordered(r.order, board.Order)
 	r.order = slices.Clone(board.Order)
-	sched := r.schedule(repo.Manifest.Planning, now)
+	scheds := r.schedules(planner, repo.Manifest, now)
 	var cfg AgentConfig
 	if r.o.Agent != nil {
 		cfg = r.o.Agent(r.e.Root)
 	}
 	if !cfg.Plan {
-		r.queue, r.cadence.mark = nil, now
+		r.queue = nil
+		for _, c := range r.cadences {
+			c.mark = now
+		}
 		return
 	}
-	byID := map[string]*workitem.Item{}
-	for _, it := range items {
-		byID[it.ID] = it
-	}
+	byID := itemsByID(items)
 	for _, n := range edits {
-		if t := editTrigger(byID[n.ID], n, cfg.Name); t != "" {
-			r.queue = enqueue(r.queue, n.ID, t)
+		r.queueEdit(planner, byID[n.ID], n, cfg.Name)
+	}
+	if ahead := aheadOf(changes, reordered); len(ahead) > 0 {
+		policy, written := r.replan(repo, items, board, now, triggersOf(ahead))
+		for _, a := range ahead {
+			r.queueAhead(planner, a, policy, written)
 		}
 	}
-	ahead := moveTriggers(changes)
-	if reordered {
-		ahead = append(ahead, triggerReordered)
-	}
-	if len(ahead) > 0 {
-		r.replan(repo, items, board, now, ahead)
-	}
-	if r.cadence.due(sched, now) {
-		for _, id := range workitem.PullSequence(board.Order, items, workitem.Ready) {
-			r.queue = enqueue(r.queue, id, scheduleTrigger(sched))
+	for _, setting := range scheduleSettings(planner) {
+		sched, ok := scheds[setting]
+		if !ok || !r.cadences[setting].due(sched, now) {
+			continue
+		}
+		for _, t := range matching(planner.Trigger, roles.Occurrence{Schedule: setting}) {
+			if t.When != roles.CondEachReadyStory {
+				continue // flai check reports it: a schedule gives the planner no item
+			}
+			for _, id := range roles.EachReadyStory(board.Order, items) {
+				r.queue = enqueue(r.queue, id, scheduleTrigger(sched))
+			}
 		}
 	}
 	r.drain(ctx, byID)
 }
 
-// schedule is planning.schedule parsed, nil when it is unset or cannot be
-// parsed, which is warned of once. A schedule set or changed comes round
-// first at its next time from now.
-func (r *replanner) schedule(plan manifest.Planning, now time.Time) *cron.Schedule {
-	r.cadence.see(plan.Schedule, now)
-	sched, err := plan.PlanSchedule()
-	if err != nil {
-		r.warnOnce("planning schedule not valid", err)
-		return nil
+// queueEdit queues the planner, whose role file is planner, for the edit n
+// of it, as read after the edit, under each edited entry of the file that n
+// matches: under stale-figures with editTrigger's trigger, and under no
+// condition, or one such as draft-changed, with the fields the edit named,
+// unless a planner or the replay made the edit, or it is of no kind the
+// planner takes. agent is the configured name of the story agents.
+func (r *replanner) queueEdit(planner roles.Role, it *workitem.Item, n itemedit.Notice, agent string) {
+	o := roles.Occurrence{Event: inbox.Edited, Item: it, Edit: roles.Edit{Changed: n.Changed, By: n.By, At: n.At, Own: storyAgent(agent, n.ID)}}
+	o.Draft = it != nil && it.Type == workitem.Story && it.Draft && (n.By != replanBy || !slices.Contains(n.Changed, "forecast"))
+	for _, t := range matching(planner.Trigger, o) {
+		switch {
+		case t.When == "stale-figures":
+			if trigger := editTrigger(it, n, agent); trigger != "" {
+				r.queue = enqueue(r.queue, n.ID, trigger)
+			}
+		case it != nil && takes(planner, n.ID) && !roleAgentOf(planner, n.By) && n.By != replanBy:
+			r.queue = enqueue(r.queue, n.ID, "edited "+strings.Join(n.Changed, ", ")+" by "+orSomeone(n.By))
+		}
 	}
-	return sched
+}
+
+// queueAhead queues the planner, whose role file is planner, for a, work
+// ahead completing or the order changing, under each entry of the file for
+// a's event that a matches: under replan-agent for each story the replay
+// wrote, written, while policy, planning.replan, is agent; under no
+// condition for a's own item, when it has one of a kind the planner takes.
+// Each is queued with a's trigger.
+func (r *replanner) queueAhead(planner roles.Role, a ahead, policy string, written []string) {
+	for _, t := range matching(planner.Trigger, roles.Occurrence{Event: a.event, To: a.to, Replan: policy}) {
+		var ids []string
+		switch {
+		case t.When == "replan-agent":
+			ids = roles.ReplanAgent(policy, written)
+		case t.When == "" && a.item != "" && takes(planner, a.item):
+			ids = []string{a.item}
+		}
+		for _, id := range ids {
+			r.queue = enqueue(r.queue, id, a.trigger)
+		}
+	}
+}
+
+// schedules are the settings the planner's schedule entries name, by
+// setting, parsed from m, each seen by its cadence at now, so that one set or
+// changed comes round first at its next time from now, and one newly named
+// is followed from now. A setting that is unset, that the planner may not
+// name, or that cannot be parsed is left out, and the latter two are warned
+// of once. Cadences of settings the file no longer names are let go.
+func (r *replanner) schedules(planner roles.Role, m manifest.Manifest, now time.Time) map[string]*cron.Schedule {
+	out := map[string]*cron.Schedule{}
+	cadences := map[string]*cadence{}
+	for _, setting := range scheduleSettings(planner) {
+		c := r.cadences[setting]
+		if c == nil {
+			c = &cadence{mark: now}
+		}
+		cadences[setting] = c
+		if err := scheduleSettingValid(planner, setting); err != nil {
+			r.warnOnce("planning schedule not valid", err)
+			continue
+		}
+		spec, sched, err := m.ScheduleSetting(setting)
+		c.see(spec, now)
+		if err != nil {
+			r.warnOnce("planning schedule not valid", err)
+			continue
+		}
+		if sched != nil {
+			out[setting] = sched
+		}
+	}
+	r.cadences = cadences
+	return out
 }
 
 // replan plays the board out again after triggers as planning.replan says:
 // it writes the forecast deliveries that moved as at now, each stamped at its
-// write (I-0183), commits them in one commit unless autocommit is off, and
-// under agent queues the planner for each story it wrote. A policy that is
-// not valid is warned of once, and nothing is done.
-func (r *replanner) replan(repo *workitem.Repo, items []*workitem.Item, board *workitem.Board, now time.Time, triggers []string) {
+// write (I-0183), and commits them in one commit unless autocommit is off.
+// It returns the policy and the stories it wrote, which replan-agent's
+// entries queue the planner for under agent. A policy that is not valid is
+// warned of once, and nothing is done.
+func (r *replanner) replan(repo *workitem.Repo, items []*workitem.Item, board *workitem.Board, now time.Time, triggers []string) (policy string, written []string) {
 	policy, err := repo.Manifest.Planning.ReplanPolicy()
 	if err != nil {
 		r.warnOnce("planning replan not valid", err)
-		return
+		return "", nil
 	}
 	if policy == manifest.ReplanNever {
-		return
+		return policy, nil
 	}
 	moves, errs := replays(items, board, repo.Manifest.Planning, now)
 	for _, err := range errs {
 		r.starter.warn("forecast not replayed", "err", err)
 	}
-	var files, written []string
+	var files []string
 	for _, m := range moves {
 		delivery, basis := m.delivery, m.basis
 		res, err := itemedit.Apply(repo, gitOf(r.o), m.id, itemedit.Change{Forecast: &itemedit.ForecastEdit{Delivery: &delivery, Basis: &basis}},
@@ -232,13 +324,7 @@ func (r *replanner) replan(repo *workitem.Repo, items []*workitem.Item, board *w
 		}
 	}
 	r.starter.log("forecasts replanned", "policy", policy, "moved", len(written), "triggers", why)
-	if policy == manifest.ReplanAgent {
-		for _, id := range written {
-			for _, t := range triggers {
-				r.queue = enqueue(r.queue, id, t)
-			}
-		}
-	}
+	return policy, written
 }
 
 // drain starts the planner for the first queued story with no planner
@@ -367,78 +453,68 @@ func noticeKey(n itemedit.Notice) string {
 	return n.ID + "|edited|" + strings.Join(n.Changed, ",") + "|" + n.By + "|" + n.At
 }
 
-// editTrigger is the trigger an edit gives story it: "edited", the fields
-// that make it due, and who edited; "" when it gives none (ADR-0084). It
-// gives none for an item that is not a backlog or ready story on the board,
-// for a planner's edit, and for an edit by the story's own agent, whose
-// configured name is agent (I-0098). A goal, criteria, or touches edit makes
-// it due when its forecast or its cost of delay value is older than the
-// edit; a cost of delay edit, when its inputs are now newer than its value.
-// A stamp that cannot be read is not older.
+// editTrigger is the trigger an edit gives story it under stale-figures:
+// "edited", the fields that make it due, and who edited; "" when it gives
+// none (ADR-0084, roles.StaleFigures). It gives none for an item that is not
+// a backlog or ready story on the board, for a planner's edit, and for an
+// edit by the story's own agent, whose configured name is agent (I-0098). A
+// goal, criteria, or touches edit makes it due when its forecast or its cost
+// of delay value is older than the edit; a cost of delay edit, when its
+// inputs are now newer than its value. A stamp that cannot be read is not
+// older.
 func editTrigger(it *workitem.Item, n itemedit.Notice, agent string) string {
-	if it == nil || it.Archived || it.Type != workitem.Story || (it.Status != workitem.Backlog && it.Status != workitem.Ready) ||
-		strings.HasPrefix(n.By, workitem.ActivityPlanner+"-") || n.By == storyAgent(agent, it.ID) {
+	if it == nil {
 		return ""
 	}
-	at, err := time.Parse(workitem.TimeFormat, n.At)
-	if err != nil {
-		return ""
-	}
-	var fields []string
-	if older(forecastAt(it), at) || older(valueAt(it), at) {
-		for _, f := range replanFields {
-			if slices.Contains(n.Changed, f) {
-				fields = append(fields, f)
-			}
-		}
-	}
-	if slices.Contains(n.Changed, costOfDelay) && it.CostOfDelay.Stale() {
-		fields = append(fields, costOfDelay)
-	}
+	fields := roles.StaleFigures(it, roles.Edit{Changed: n.Changed, By: n.By, At: n.At, Own: storyAgent(agent, it.ID)})
 	if len(fields) == 0 {
 		return ""
 	}
 	return "edited " + strings.Join(fields, ", ") + " by " + orSomeone(n.By)
 }
 
-// forecastAt is when a story's forecast was written, "" when it has none.
-func forecastAt(it *workitem.Item) string {
-	if it.Forecast.IsZero() {
-		return ""
-	}
-	return it.Forecast.At
-}
-
-// valueAt is when a story's cost of delay value was set, "" when it has
-// none.
-func valueAt(it *workitem.Item) string {
-	if it.CostOfDelay == nil || it.CostOfDelay.Value == nil {
-		return ""
-	}
-	return it.CostOfDelay.At
-}
-
-// older reports whether the stamp is a time before t.
-func older(stamp string, t time.Time) bool {
-	at, err := time.Parse(workitem.TimeFormat, stamp)
-	return err == nil && at.Before(t)
-}
-
 // moveTriggers are the triggers among changes of work ahead completing, in
 // order: accepted for a story moved to done, cancelled for one moved to
 // cancelled. A task's or an epic's move is none.
 func moveTriggers(changes []workitem.Change) []string {
-	var out []string
+	return triggersOf(aheadOf(changes, false))
+}
+
+// ahead is work ahead completing or the order changing: the trigger event it
+// is, accepted, cancelled, or reordered; the state a move went to; the item
+// it is on, "" for a reorder; and its trigger as a run records it,
+// "accepted S-0001" or "reordered".
+type ahead struct {
+	event, to, item, trigger string
+}
+
+// aheadOf is the work ahead completing among changes, in order, a story
+// moved to done or to cancelled, then the order changing when reordered
+// says it did. A task's or an epic's move is none.
+func aheadOf(changes []workitem.Change, reordered bool) []ahead {
+	var out []ahead
 	for _, c := range changes {
 		if c.Type != workitem.Story || c.Kind != workitem.Moved {
 			continue
 		}
 		switch c.To {
 		case workitem.Done:
-			out = append(out, "accepted "+c.ID)
+			out = append(out, ahead{event: "accepted", to: c.To, item: c.ID, trigger: "accepted " + c.ID})
 		case workitem.Cancelled:
-			out = append(out, "cancelled "+c.ID)
+			out = append(out, ahead{event: "cancelled", to: c.To, item: c.ID, trigger: "cancelled " + c.ID})
 		}
+	}
+	if reordered {
+		out = append(out, ahead{event: triggerReordered, trigger: triggerReordered})
+	}
+	return out
+}
+
+// triggersOf are the triggers of as, in order.
+func triggersOf(as []ahead) []string {
+	out := make([]string, len(as))
+	for i, a := range as {
+		out[i] = a.trigger
 	}
 	return out
 }
