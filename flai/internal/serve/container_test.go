@@ -71,7 +71,20 @@ func containerLab(t *testing.T) (*agentLab, string) {
 func containerStory(lab *agentLab, title string, a *manifest.Agent) string {
 	lab.t.Helper()
 	id := lab.backlog(title, a)
-	if err := os.MkdirAll(filepath.Join(lab.root, ".flai-cache", "worktrees", id), 0o755); err != nil {
+	// A linked worktree, as git worktree add leaves it: its .git file names
+	// its registration, whose commondir names the main checkout's .git, which
+	// the adapter mounts beside it (ADR-0246).
+	reg := filepath.Join(lab.root, ".git", "worktrees", id)
+	worktree := filepath.Join(lab.root, ".flai-cache", "worktrees", id)
+	for _, d := range []string{reg, worktree} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			lab.t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(reg, "commondir"), []byte("../..\n"), 0o644); err != nil {
+		lab.t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(worktree, ".git"), []byte("gitdir: "+reg+"\n"), 0o644); err != nil {
 		lab.t.Fatal(err)
 	}
 	lab.toReady(id)

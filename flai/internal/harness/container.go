@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 )
 
@@ -114,15 +115,17 @@ func ContainerCache(root, story string) string {
 	return filepath.Join(root, ".flai-cache", "agents", story)
 }
 
-// Start runs docker with the story's worktree, its cache folder, and the
-// operator's login read-only, mounted and nothing else; the variables of
+// Start runs docker with the story's worktree; the two git mounts
+// storygit.GitMounts gives it, the main checkout's .git read-only and the
+// story's registration under it read-write (ADR-0246); its cache folder; and
+// the operator's login read-only, mounted and nothing else; the variables of
 // containerEnv and the provider's key passed by name alone, the values in the
 // docker client's environment; and pilot's start request on standard input,
 // which names the inner harness, the cache, and the MCP server's variables,
 // never a value. It refuses a request with no story, the operator's
 // arguments, an inner harness with no image, a login the inner harness needs
-// and the host has not set, and what the inner harness itself refuses of the
-// request, as pilot would.
+// and the host has not set, a worktree whose git it cannot mount, and what
+// the inner harness itself refuses of the request, as pilot would.
 func (container) Start(r Request, host Host) (Start, error) {
 	if r.Story == "" {
 		return Start{}, fmt.Errorf("the container harness runs a story's agent alone, and this start is for none: a strategic agent's mounts are S-0509's; run it on another harness")
@@ -158,6 +161,21 @@ func (container) Start(r Request, host Host) (Start, error) {
 	if err := mountable(r.Root, worktree, cache, host.Login); err != nil {
 		return Start{}, err
 	}
+	gitMounts, err := storygit.GitMounts(worktree)
+	if err != nil {
+		return Start{}, fmt.Errorf("the story's worktree %s has no git for the container: %w", worktree, err)
+	}
+	var gitArgs []string
+	for _, m := range gitMounts {
+		if strings.Contains(m.Path, ":") {
+			return Start{}, fmt.Errorf("the path %q holds a colon, which a mount cannot carry", m.Path)
+		}
+		v := m.Path + ":" + m.Path
+		if m.ReadOnly {
+			v += ":ro"
+		}
+		gitArgs = append(gitArgs, "-v", v)
+	}
 	pr := pilotRequest(r, inner, worktree, cache)
 	if _, err := Adapters[inner].Start(pr, Host{}); err != nil {
 		return Start{}, fmt.Errorf("the inner harness %s refuses the start: %w", inner, err)
@@ -177,8 +195,9 @@ func (container) Start(r Request, host Host) (Start, error) {
 	argv := []string{program, "run", "--rm", "-i", "--name", ContainerName(r.Story, r.Session),
 		"--user", strconv.Itoa(os.Getuid()) + ":" + strconv.Itoa(os.Getgid()),
 		"--network", network, "--add-host", "host.docker.internal:host-gateway",
-		"-v", worktree + ":" + worktree, "-w", worktree,
-		"-v", cache + ":" + cache}
+		"-v", worktree + ":" + worktree, "-w", worktree}
+	argv = append(argv, gitArgs...)
+	argv = append(argv, "-v", cache+":"+cache)
 	if host.Login != "" {
 		argv = append(argv, "-v", host.Login+":"+ContainerLogin+":ro")
 	}
@@ -220,9 +239,11 @@ func pilotRequest(r Request, inner, worktree, cache string) Request {
 	return pr
 }
 
-// mountable refuses a mount that reaches what a container never mounts: the
+// mountable refuses a login that reaches what a container never mounts: the
 // home, ~/.flai, the main checkout, or the Docker socket; and a path that a
-// mount's colon-separated form cannot carry.
+// mount's colon-separated form cannot carry. The main checkout's files are
+// never mounted; of it, Start mounts only its .git, read-only, with the
+// story's registration under it read-write (ADR-0246).
 func mountable(root, worktree, cache, login string) error {
 	for _, p := range []string{worktree, cache, login} {
 		if strings.Contains(p, ":") {

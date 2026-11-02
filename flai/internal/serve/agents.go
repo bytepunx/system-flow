@@ -2029,6 +2029,11 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 		if err := l.containerAllowed(cfg, story.Agent); err != nil {
 			return fail(err)
 		}
+		// The adapter reads the worktree's git to mount it (ADR-0246), so the
+		// worktree is opened before it is asked.
+		if err := l.containerWorktree(story.ID); err != nil {
+			return fail(err)
+		}
 	}
 	var shares []harness.Share
 	if story.Asked == nil && story.Resume == nil && story.Commit == "" {

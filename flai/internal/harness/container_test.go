@@ -25,8 +25,31 @@ func containerReq(t *testing.T, a *manifest.Agent) (harness.Request, harness.Hos
 	t.Setenv("FLAI_MCP_TOKEN", "token-value-never-shown")
 	t.Setenv("GATEWAY_KEY", "key-value-never-shown")
 	root := filepath.Join(t.TempDir(), "flow")
+	linkedWorktree(t, root, "S-0508")
 	r := harness.Request{Story: "S-0508", Root: root, Project: "flow", Agent: a, Name: "agent-S-0508", Flai: "/usr/local/bin/flai", Session: "3f2a-b1"}
 	return r, harness.Host{Login: filepath.Join(home, ".claude")}
+}
+
+// linkedWorktree makes story's worktree under the project at root as git
+// worktree add leaves it: a .git file naming the story's registration in the
+// main checkout's .git, whose commondir names that .git, and returns the
+// registration.
+func linkedWorktree(t *testing.T, root, story string) string {
+	t.Helper()
+	reg := filepath.Join(root, ".git", "worktrees", story)
+	worktree := filepath.Join(root, ".flai-cache", "worktrees", story)
+	for _, d := range []string{reg, worktree} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(reg, "commondir"), []byte("../..\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(worktree, ".git"), []byte("gitdir: "+reg+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return reg
 }
 
 func TestForSelectsTheContainerWithItsInnersCapabilitiesAndReader(t *testing.T) {
@@ -66,7 +89,12 @@ func TestForRefusesAnInnerHarnessAContainerCannotRun(t *testing.T) {
 	}
 }
 
-func TestTheContainerRunsDockerWithThreeMountsAndVariablesByName(t *testing.T) {
+// The container mounts five folders: the worktree; the main checkout's .git
+// read-only and the story's registration under it read-write, after it, so
+// git works in the worktree and can write nothing of the repository's but
+// the story's own index, HEAD, and logs (ADR-0246, I-0215); the cache; and the
+// login read-only. Nothing else under .git is mounted.
+func TestTheContainerRunsDockerWithFiveMountsTwoOfThemGitsAndVariablesByName(t *testing.T) {
 	a := &manifest.Agent{Harness: harness.Container, Model: "claude-opus-5-5", Provider: "gateway", Config: map[string]string{"inner": harness.ClaudeCode, "effort": "high"}}
 	r, host := containerReq(t, a)
 	r.ProviderName, r.Provider = "gateway", &manifest.Provider{API: manifest.APIAnthropicMessages, BaseURL: "https://gw.example", KeyEnv: "GATEWAY_KEY"}
@@ -80,10 +108,12 @@ func TestTheContainerRunsDockerWithThreeMountsAndVariablesByName(t *testing.T) {
 	}
 	worktree := filepath.Join(r.Root, ".flai-cache", "worktrees", "S-0508")
 	cache := filepath.Join(r.Root, ".flai-cache", "agents", "S-0508")
+	common, reg := filepath.Join(r.Root, ".git"), filepath.Join(r.Root, ".git", "worktrees", "S-0508")
 	user := strconv.Itoa(os.Getuid()) + ":" + strconv.Itoa(os.Getgid())
 	want := []string{"docker", "run", "--rm", "-i", "--name", "flai-agent-S-0508-3f2a-b1", "--user", user,
 		"--network", "bridge", "--add-host", "host.docker.internal:host-gateway",
-		"-v", worktree + ":" + worktree, "-w", worktree, "-v", cache + ":" + cache, "-v", host.Login + ":/run/claude-login:ro",
+		"-v", worktree + ":" + worktree, "-w", worktree, "-v", common + ":" + common + ":ro", "-v", reg + ":" + reg,
+		"-v", cache + ":" + cache, "-v", host.Login + ":/run/claude-login:ro",
 		"-e", "FLAI_AGENT", "-e", "FLAI_SESSION", "-e", "FLAI_STORY", "-e", "FLAI_STARTED_BY", "-e", "FLAI_MCP_URL", "-e", "FLAI_MCP_TOKEN",
 		"-e", "FLAI_CONFIG", "-e", "FLAI_CACHE_DIR", "-e", "GATEWAY_KEY", "flai-agent-claude-code:local"}
 	if st.Harness != harness.Container || !slices.Equal(st.Argv, want) {
@@ -96,18 +126,22 @@ func TestTheContainerRunsDockerWithThreeMountsAndVariablesByName(t *testing.T) {
 		}
 		if i > 0 && st.Argv[i-1] == "-v" {
 			src, _, _ := strings.Cut(arg, ":")
-			for _, never := range []string{home, filepath.Join(home, ".flai"), r.Root, filepath.Join(r.Root, ".git")} {
+			for _, never := range []string{home, filepath.Join(home, ".flai"), r.Root} {
 				if src == never {
 					t.Errorf("mounts %s", src)
 				}
+			}
+			if underGit := src == common || strings.HasPrefix(src, common+string(filepath.Separator)); underGit &&
+				arg != common+":"+common+":ro" && arg != reg+":"+reg {
+				t.Errorf("mounts %s, under .git, beyond the common dir read-only and the story's registration", arg)
 			}
 		}
 		if strings.Contains(arg, "docker.sock") {
 			t.Errorf("mounts the Docker socket: %s", arg)
 		}
 	}
-	if n := strings.Count(strings.Join(st.Argv, "\x00"), "\x00-v\x00"); n != 3 {
-		t.Errorf("%d mounts, want 3", n)
+	if n := strings.Count(strings.Join(st.Argv, "\x00"), "\x00-v\x00"); n != 5 {
+		t.Errorf("%d mounts, want 5: the worktree, its two git mounts, the cache, and the login", n)
 	}
 	whole := strings.Join(st.Argv, " ") + strings.Join(st.Env, " ") + string(st.Stdin) + strings.Join(slices.Collect(maps.Values(st.EnvFrom)), " ")
 	for _, secret := range []string{"token-value-never-shown", "key-value-never-shown"} {
@@ -203,6 +237,55 @@ func TestTheContainerRefusesWhatItCannotRun(t *testing.T) {
 		if _, err := harness.Adapters[harness.Container].Start(r, host); err == nil || !strings.Contains(err.Error(), c.says) {
 			t.Errorf("%s: %v, want %q", c.name, err, c.says)
 		}
+	}
+}
+
+// I-0215: a worktree whose registration is absent fails the start with the
+// reason, naming the registration, rather than starting a container whose
+// worktree is not a git repository; one whose registration names a path with
+// a colon is refused, as a mount cannot carry it.
+func TestTheContainerRefusesAWorktreeWhoseGitItCannotMount(t *testing.T) {
+	r, host := containerReq(t, &manifest.Agent{Harness: harness.Container})
+	reg := filepath.Join(r.Root, ".git", "worktrees", "S-0508")
+	if err := os.RemoveAll(reg); err != nil {
+		t.Fatal(err)
+	}
+	st, err := harness.Adapters[harness.Container].Start(r, host)
+	if err == nil || !strings.Contains(err.Error(), "has no git for the container") || !strings.Contains(err.Error(), reg) {
+		t.Errorf("start %v, want the missing registration %s named", err, reg)
+	}
+	if st.Argv != nil || st.Harness != "" || st.Stdin != nil {
+		t.Errorf("start %+v, want none", st)
+	}
+
+	r, host = containerReq(t, &manifest.Agent{Harness: harness.Container})
+	colon := linkedWorktree(t, filepath.Join(t.TempDir(), "a:b"), "S-0508")
+	worktree := filepath.Join(r.Root, ".flai-cache", "worktrees", "S-0508")
+	if err := os.WriteFile(filepath.Join(worktree, ".git"), []byte("gitdir: "+colon+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if st, err := harness.Adapters[harness.Container].Start(r, host); err == nil || !strings.Contains(err.Error(), "holds a colon") || st.Argv != nil {
+		t.Errorf("a registration under a colon: start %q %v", st.Argv, err)
+	}
+}
+
+// A worktree whose .git is a folder carries its repository, so the container
+// mounts no git beside it.
+func TestTheContainerMountsNoGitBesideAWorktreeThatCarriesItsOwn(t *testing.T) {
+	r, host := containerReq(t, &manifest.Agent{Harness: harness.Container})
+	worktree := filepath.Join(r.Root, ".flai-cache", "worktrees", "S-0508")
+	if err := os.Remove(filepath.Join(worktree, ".git")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(worktree, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	st, err := harness.Adapters[harness.Container].Start(r, host)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := strings.Count(strings.Join(st.Argv, "\x00"), "\x00-v\x00"); n != 3 || strings.Contains(strings.Join(st.Argv, " "), filepath.Join(r.Root, ".git")) {
+		t.Errorf("argv %q, want the worktree, the cache, and the login alone", st.Argv)
 	}
 }
 

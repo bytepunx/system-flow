@@ -82,15 +82,13 @@ func (l *launcher) containerAllowed(cfg AgentConfig, agent *manifest.Agent) erro
 
 // containerReady readies the host for the start of a story's agent, run,
 // agent its story's, on the container harness, once the adapter has taken
-// it: it reads the inner harness's version from its image onto run, opens
-// the story's worktree, and makes its cache folder.
+// it: it reads the inner harness's version from its image onto run and makes
+// the story's cache folder. The worktree is opened before the adapter is
+// asked (containerWorktree), since the adapter reads its git to mount it.
 func (l *launcher) containerReady(cfg AgentConfig, run *AgentRun, agent *manifest.Agent) error {
 	inner := innerOf(agent)
 	if inner == harness.ClaudeCode {
 		l.containerVersion(cfg, run, containerImage(cfg, inner))
-	}
-	if err := l.containerWorktree(run.Story); err != nil {
-		return err
 	}
 	return containerCache(l.entry.Root, run.Story, inner == harness.ClaudeCode)
 }
