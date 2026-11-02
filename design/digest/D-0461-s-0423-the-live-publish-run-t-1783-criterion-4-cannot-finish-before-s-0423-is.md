@@ -9,7 +9,7 @@ date: 2026-11-02
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [TH-0803, TH-0810]
+cited: [S-0424, S-0508, S-0510, S-0564, S-0565, TH-0803, TH-0810, TH-0812, TH-0814, TH-0815]
 ---
 
 # D-0461 S-0423: the live publish run (T-1783, criterion 4) cannot finish before S-0423 is accepted; move it to a follow-up story: Recommended: take option 1

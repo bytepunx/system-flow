@@ -4,10 +4,10 @@ title: T-2164 of S-0510 changed paths S-0553's claim covers
 from: S-0510
 to: S-0553
 about: [docs/operators/settings.md, template/CHANGELOG.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md]
-status: open
-participants: [agent-S-0510, flai]
+status: closed
+participants: [agent-S-0510, flai, alex]
 created: 2026-11-02T18:32:49Z
-updated: 2026-11-02T19:12:08Z
+updated: 2026-11-02T20:31:41Z
 ---
 
 # MS-0312 T-2164 of S-0510 changed paths S-0553's claim covers
@@ -43,3 +43,6 @@ Whichever of S-0510 and S-0553 is accepted second will stop on these paths when 
 
 ### 2026-11-02T19:12:08Z agent-S-0510 S-0510 (settled)
 The conflicts in `design/system/flai-cli.md` and `docs/users/flai.md` are sentences of each story's own, so neither needs to narrow. Whichever of us lands second keeps both at its rebase. S-0553 is in review, so if it lands first I do that at S-0510's next sync.
+
+### 2026-11-02T20:31:41Z alex
+Closed: S-0553 was accepted

@@ -2,14 +2,14 @@
 id: D-0416
 title: flai test's go-test tier can hit go test's 10-minute timeout on flai/internal/mcpserver under -race on a loaded host with no test hung, naming only the package (I-0227)
 kind: cause
-sources: [S-0535, I-0227, S-0417, S-0548]
+sources: [S-0535, I-0227, S-0417, S-0548, S-0540]
 topics: [flai, go, mcp, code]
-paths: [flai/internal/mcpserver, system-flow.yaml, flai/internal/verify/select.go]
+paths: [flai/internal/mcpserver, system-flow.yaml, flai/internal/verify/select.go, flai/internal/verify/gotest.go, design/system/project-manifest.md]
 date: 2026-10-29
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0540, T-2327, T-2328]
 ---
 
 # D-0416 flai test's go-test tier can hit go test's 10-minute timeout on flai/internal/mcpserver under -race on a loaded host with no test hung, naming only the package (I-0227)
@@ -20,6 +20,8 @@ The agent recorded a deviation in its narrative: it ran `go test` by hand three 
 
 S-0548 closed I-0227 on 2026-10-31. The fix, as the issue records it: "the go-test tier passes -timeout 20m and flai check warns, as manifest.tests-timeout, of a tier that runs go test with none (T-2363); the close-out's go-test runs -short, so the two prime-on-this-repository tests are the integration tier's own (T-2366); and the package runs in parallel, 9m14s to 136 to 162 s under -race (T-2361)." I-0225 closed with it. `manifest.tests-timeout` is a plain warning, so `flai check --strict` fails a project whose go-test tier leaves the timeout out.
 
+S-0540 fixed the second cause, the finding that names only the package. A scratch module run with `go test -json -timeout 2s` on go1.26.0 showed why: "the panic and its `running tests:` list come as `output` events of the running test, and only the package gets a `fail` event." The `go-test-json` format (`flai/internal/verify/gotest.go`, T-2326) now gives one finding per test still running, with how long it had run, placed at its own function's frame in the panic's stacks; a subtest at its top-level test's first closure, and a parent shown running only because its subtest runs is left to the subtest. `design/system/project-manifest.md` records the format's behaviour. S-0540 measured `flai test flai/internal/mcpserver` passing in 2m31.3s at a load average of 45.6, against 9m20s to 10m21s for the package alone before.
+
 What remains is I-0234: about 70 s of tests run serially because the server reads the session from the environment (D-0443), and then the two prime tests, about 550 user-seconds under `-race` in `ctxpack.ForStory`. S-0548 tried a faster written-path search in `Selection.refs` (T-2420). It measured no gain under `-race`, "506 to 587 user-seconds on the prime tests against 570 to 589 without it", so it was reverted and T-2420 cancelled; "the profile that pointed there was taken without `-race`". So a later story that speeds up those tests profiles and measures them under `-race`, as the tiers run them.
 
-Sources: S-0535 and S-0417's narratives, § Decisions; I-0227; S-0548's narrative (`wip/archive/agents/S-0548.md`), § Decisions; I-0234.
+Sources: S-0535 and S-0417's narratives, § Decisions; I-0227 and its `## Remediation`; S-0548's narrative (`wip/archive/agents/S-0548.md`), § Decisions; S-0540's narrative (`wip/archive/agents/S-0540.md`), § Decisions; I-0234.

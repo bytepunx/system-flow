@@ -2,14 +2,14 @@
 id: D-0457
 title: "Criterion 2's usage charge of a formula's role run needs S-0425's per-role usage: move that clause to S-0425: Recommended: take agent-S-0422's recommendation and move the usage-charge clause of…"
 kind: answer
-sources: [TH-0800, S-0422]
+sources: [TH-0800, S-0422, S-0425]
 topics: [cli, orchestration, conventions, template, planning, flai, go, code, all]
 paths: [design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, template/CHANGELOG.md, flai/cmd/accept.go, flai/cmd/accept_formula_test.go, flai/cmd/formula.go, flai/cmd/formula_test.go, flai/cmd/role.go, flai/cmd/role_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/check/check.go, flai/internal/check/formulas_test.go, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/mcpserver/role.go, flai/internal/mcpserver/role_test.go, flai/internal/preview/orchestrator.go, flai/internal/preview/accept_test.go, flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, flai/internal/serve/agents.go, flai/internal/serve/formula_schedule.go, flai/internal/serve/formula_schedule_test.go, flai/internal/serve/role.go, flai/internal/serve/role_test.go, flai/internal/serve/serve.go, flai/internal/roles/roles.go, design/adrs/0239-a-formula-s-instance-is-worked-by-its-story-s-agent-step-by-step-a-role-step.md, design/adrs/README.md, design/workflows/formulas/README.md, template/root/design/workflows/formulas/README.md, design/system/metrics.md]
 date: 2026-11-02
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0249-strategic-usage-is-per-role-a-role-s-activity-is-charged-by-its-role-file-s.md#decision"
 asked_again: []
-cited: [TH-0801]
+cited: [S-0425, TH-0801]
 ---
 
 # D-0457 Criterion 2's usage charge of a formula's role run needs S-0425's per-role usage: move that clause to S-0425: Recommended: take agent-S-0422's recommendation and move the usage-charge clause of…
@@ -50,4 +50,12 @@ S-0422's narrative, `## Decisions`, records the outcome:
 Criterion 2's usage charge moved to S-0425 on TH-0800, confirmed by the operator: `usage.strategic` takes a defined role only through S-0425's ADR on `metrics.md`. The criterion's words and the Notes say so.
 ```
 
-Sources: TH-0800, S-0422 (wip/archive/agents/S-0422.md).
+S-0425 carried the clause out. Its narrative, `## Decisions`, records:
+
+```text
+Criterion 2 gained "including a formula's role step, charged to the instance its run was started for", as the operator confirmed on TH-0800 (D-0457); answered TH-0801.
+```
+
+[ADR-0249](../adrs/0249-strategic-usage-is-per-role-a-role-s-activity-is-charged-by-its-role-file-s.md) § Decision, item 3, now states the charge: a role run started for a formula's instance has the instance as its item, so a role whose rule is `item` is charged to the instance and the items above it, and the analyzer started for a role step keeps its own rule, `issues`.
+
+Sources: TH-0800, S-0422 (wip/archive/agents/S-0422.md), S-0425 (wip/archive/agents/S-0425.md).

@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 25
-      output: 6667
-      cache_read: 2895785
-      cache_write: 35557
-      cost: 0.9525
+      input: 24
+      output: 6596
+      cache_read: 2895994
+      cache_write: 35116
+      cost: 0.9482
 ---
 # T-2171 flai check reports agent.image when the manifest names a layer that is not built or whose Dockerfile is missing, and notes when docker is not on PATH
 

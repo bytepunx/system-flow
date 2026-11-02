@@ -2,14 +2,14 @@
 id: D-0422
 title: "Plan for S-0536: eight tasks in five layers, and two questions on criterion 6: confirm recommendation"
 kind: recommendation
-sources: [TH-0717, S-0536, S-0537]
+sources: [TH-0717, S-0536, S-0537, TH-0810, TH-0812]
 topics: [orchestration, cli, template, conventions, mcp, dashboard, flai, go, code, all, planning]
 paths: [flai/internal/serve, flai/internal/mcpserver, flai/internal/harness, flai/internal/manifest, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/flai-cli.md, design/system/strategic-agents.md, design/system/project-manifest.md, docs, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/check/roles_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, docs/operators/settings.md, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/orchestrate_reasons_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/orchestrate_hold.go, flai/internal/serve/orchestrate_hold_test.go, flai/internal/serve/orchestrate_timeout.go, flai/internal/serve/orchestrate_timeout_test.go, flai/internal/serve/serve.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, flai/internal/mcpserver/server.go, flai/internal/mcpserver/orchestrator_end_test.go, design/system/agent-narrative.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/users/flai.md, docs/operators/index.md, template/CHANGELOG.md, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/roles/baseline/orchestrator.md, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/cmd/role.go, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md]
 date: 2026-10-29
 status: active
 absorbed_by: ""
-asked_again: [TH-0719, TH-0803]
-cited: [S-0423, S-0562, TH-0803, TH-0810]
+asked_again: [TH-0719, TH-0803, TH-0810, TH-0812, TH-0815]
+cited: [S-0423, S-0562, TH-0803, TH-0810, TH-0812]
 ---
 
 # D-0422 Plan for S-0536: eight tasks in five layers, and two questions on criterion 6: confirm recommendation
@@ -43,3 +43,9 @@ Source: TH-0719; S-0537 (wip/archive/agents/S-0537.md, Decisions).
 TH-0803 asked it again for S-0423's criterion 4 and T-1783, a live run of the `publish` formula with its instance accepted. The formula's `in: main` steps need `flai release --evaluate --require-met` and the `push` gate of `flai release --pending`, which existed only on `story/S-0423`, so the run could not happen before S-0423 was accepted, and published when the steps run the installed flai. The recommendation named this entry: "you have answered this before (D-0422, TH-0717, confirmed 2026-10-29)". The operator took option 1 at 2026-11-02T04:13:28Z: S-0423's agent cancels T-1783, removes criterion 4, and writes a draft story in E-0024 with `after: S-0423` holding the run (D-0461). The rule reads the same for any change that exists only on the story branch and must run on the host or in the main checkout.
 
 Source: TH-0803 (D-0461).
+
+TH-0810 asked it again for S-0424's criterion 4 and T-1787 and T-1788, a live run of the `import` and `analysis-cadence` formulas with their instances accepted. The formula files, `flai import --formula`, and `flai issue list --report` existed only on `story/S-0424`, and `flai formula run` reads the main checkout while the board's Import runs the installed flai. The orchestrator's recommendation named D-0461 and this entry. The operator took option 1 at 2026-11-02T18:07:50Z: S-0424's agent cancelled T-1787 and T-1788, removed criterion 4, and wrote a draft follow-up story in E-0024 with `after: S-0424` (D-0465).
+
+TH-0812 asked it again for S-0508's criterion 6, a live run of a story's agent on `harness: container`, since the container adapter existed only on `story/S-0508` and the host's flai serve is the installed release. The operator confirmed the same answer at 2026-11-02T18:08:27Z: criterion 6 moved to S-0565, a draft experiment in E-0029 with `after: S-0508` (D-0466; wip/archive/agents/S-0508.md, Decisions).
+
+Source: TH-0810 (D-0465); TH-0812 (D-0466).

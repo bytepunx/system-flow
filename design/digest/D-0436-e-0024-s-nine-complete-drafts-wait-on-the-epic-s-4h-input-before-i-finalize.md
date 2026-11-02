@@ -9,7 +9,7 @@ date: 2026-10-31
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [TH-0587]
+cited: [TH-0587, TH-0725]
 ---
 
 # D-0436 E-0024's nine complete drafts wait on the epic's 4h input before I finalize them: S-0414 to S-0422: finalize as they are

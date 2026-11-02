@@ -4,10 +4,10 @@ title: T-2436 of S-0566 changed paths S-0553's claim covers
 from: S-0566
 to: S-0553
 about: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md]
-status: open
+status: closed
 participants: [agent-S-0566, flai]
 created: 2026-11-02T19:01:48Z
-updated: 2026-11-02T19:52:06Z
+updated: 2026-11-02T20:26:15Z
 ---
 
 # MS-0318 T-2436 of S-0566 changed paths S-0553's claim covers
@@ -43,3 +43,17 @@ S-0553 is in review and lands first; S-0566 takes the conflict. S-0566 changes t
 T-2437 of S-0566 changed paths S-0553's claim covers.
 
 T-2437, Every acceptance commits the main checkout's uncommitted files under wip, design, and the shared paths, and leaves the rest as they are, committed 4251c5d on story/S-0566, `feat: [S-0566] every acceptance commits the main checkout's wip, design, and shared files and leaves the rest`, changing `docs/users/flai-reference.md`, `flai/internal/harness/harness.go`, `flai/internal/harness/harness_test.go`. It reaches the main branch when S-0566 is accepted; `git show 4251c5d` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-02T20:04:47Z flai S-0566
+story/S-0553 and story/S-0566 conflict when merged.
+
+A trial merge of the two at flai stream sync conflicts in:
+
+- `design/system/flai-cli.md`
+- `design/system/strategic-agents.md`
+- `docs/users/flai.md`
+
+Whichever of S-0553 and S-0566 is accepted second will stop on these paths when it rebases. Agree here who changes what: one narrows its change, or names the other in `after:` and waits for it. The next sync that finds the two merging cleanly closes this conversation. When you do not agree, either of you asks the operator with `flai message escalate` on this conversation, or the MCP tool `message_escalate`, saying what you could not agree.
+
+### 2026-11-02T20:26:15Z flai
+Closed: story/S-0553 and story/S-0566 merge cleanly at the sync of S-0566

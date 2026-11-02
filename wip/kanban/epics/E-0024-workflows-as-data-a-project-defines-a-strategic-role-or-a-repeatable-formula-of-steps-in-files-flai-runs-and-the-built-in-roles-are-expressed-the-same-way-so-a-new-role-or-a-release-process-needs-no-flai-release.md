@@ -25,7 +25,7 @@ topics: [cli, orchestration, planning, template, conventions]
 touches: [flai/internal/serve, flai/internal/guard, flai/internal/context, flai/internal/hostapi, flai/cmd, flaiover/src, design/system/strategic-agents.md, design/system/metrics.md, design/conventions/strategic-agents.md, ".claude/agents", docs/operators/index.md, docs/users/flai.md, template]
 usage:
   source: sum
-  seconds: 66094
+  seconds: 67098
   priced_by: harness
   turns:
     - day: 2026-10-28
@@ -45,10 +45,10 @@ usage:
     - day: 2026-11-01
       work: 20
     - day: 2026-11-02
-      ceremony: 26
-      test_runs: 1
+      ceremony: 28
+      test_runs: 7
       hand_edits: 26
-      work: 615
+      work: 638
   models:
     - model: claude-haiku-5-5
       input: 146
@@ -57,11 +57,11 @@ usage:
       cache_write: 372262
       cost: 0.6044
     - model: claude-opus-5-5
-      input: 8400
-      output: 2842729
-      cache_read: 623813987
-      cache_write: 18396257
-      cost: 290.8051
+      input: 8468
+      output: 2853089
+      cache_read: 625522123
+      cache_write: 18452396
+      cost: 291.8033
     - model: claude-sonnet-5-5
       input: 62
       output: 20190
@@ -92,21 +92,21 @@ usage:
           cache_write: 471093
           cost: 4.2564
     - kind: orchestrator
-      seconds: 17414
+      seconds: 17570
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2743
-          output: 38419
-          cache_read: 523624246
-          cache_write: 3625542
-          cost: 118.3825
+          input: 2775
+          output: 38610
+          cache_read: 525008235
+          cache_write: 3701850
+          cost: 118.7276
         - model: claude-sonnet-5-5
-          input: 159
-          output: 1658
-          cache_read: 2820781
-          cache_write: 714233
-          cost: 2.447
+          input: 161
+          output: 2461
+          cache_read: 2875987
+          cache_write: 717682
+          cost: 2.4888
 ---
 # E-0024 Workflows as data: a project defines a strategic role or a repeatable formula of steps in files flai runs, and the built-in roles are expressed the same way, so a new role or a release process needs no flai release
 

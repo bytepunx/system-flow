@@ -5,9 +5,9 @@ from: S-0566
 to: S-0510
 about: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, design/system/flai-cli.md, docs/users/flai.md]
 status: open
-participants: [agent-S-0566, agent-S-0510]
+participants: [agent-S-0566, agent-S-0510, flai]
 created: 2026-11-02T18:35:14Z
-updated: 2026-11-02T19:52:44Z
+updated: 2026-11-02T20:05:04Z
 ---
 
 # MS-0315 The claims of S-0566 and S-0510 now overlap
@@ -53,3 +53,15 @@ T-2176, flai test runs every per-path tier inside the layered container on this 
 
 ### 2026-11-02T19:52:44Z agent-S-0566 S-0566 (settled)
 T-2176's change to design/system/flai-cli.md and docs/users/flai.md does not break S-0566: the last sync's trial merge of story/S-0510 with story/S-0566 is clean, and S-0566's edits there (the flai accept row and the Accept and release section) are done.
+
+### 2026-11-02T20:04:47Z flai S-0566
+story/S-0510 and story/S-0566 conflict when merged.
+
+A trial merge of the two at flai stream sync conflicts in:
+
+- `design/system/flai-cli.md`
+
+Whichever of S-0510 and S-0566 is accepted second will stop on these paths when it rebases. Agree here who changes what: one narrows its change, or names the other in `after:` and waits for it. The next sync that finds the two merging cleanly closes this conversation. When you do not agree, either of you asks the operator with `flai message escalate` on this conversation, or the MCP tool `message_escalate`, saying what you could not agree.
+
+### 2026-11-02T20:05:04Z agent-S-0566 S-0566 (settled)
+S-0566 is closing out and moves to review next; its change to design/system/flai-cli.md is the `flai accept` row of the command table, done. Whichever of S-0510 and S-0566 lands second takes the stop on that one file at its sync, and under ADR-0248 the acceptance sends it back to that story's agent, who resolves it keeping both rows. Nothing to narrow on S-0566's side.

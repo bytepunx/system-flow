@@ -6,7 +6,7 @@ title: Operators should not need to intervene during review acceptance
 status: in-progress
 owner: alex
 created: 2026-11-02T18:21:16Z
-updated: 2026-11-02T19:52:46Z
+updated: 2026-11-02T20:26:25Z
 transitions:
   - to: ready
     at: 2026-11-02T18:21:38Z
@@ -15,7 +15,7 @@ transitions:
     at: 2026-11-02T18:26:18Z
     by: agent-S-0566
 tags: [cli]
-touches: [flai/cmd, design/adrs/0248-every-acceptance-commits-the-main-checkout-s-uncommitted-files-under-wip-design.md, design/adrs/README.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/storygit/sync.go, design/system/flai-cli.md, design/system/strategic-agents.md, design/system/workflow.md, docs/users/flai.md, docs/users/flaiover.md, flaiover/src/lib/components/AcceptConfirm.svelte, flaiover/src/lib/components/AcceptConfirm.svelte.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, "flaiover/src/routes/api/items/[id]/accept/+server.ts", "flaiover/src/routes/api/items/[id]/accept/accept.test.ts", "flaiover/src/routes/api/items/[id]/move/+server.ts", flaiover/src/routes/board/+page.svelte, "flaiover/src/routes/items/[id]/+page.svelte", docs/users/flai-reference.md, flai/internal/hostapi/writes.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/land.go, flai/internal/mergequeue/land_test.go, flai/internal/mergequeue/preflight.go, flai/internal/mergequeue/preflight_test.go, flai/internal/storygit/storygit.go, flai/internal/storygit/storygit_test.go]
+touches: [flai/cmd, design/adrs/0248-every-acceptance-commits-the-main-checkout-s-uncommitted-files-under-wip-design.md, design/adrs/README.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/storygit/sync.go, design/system/flai-cli.md, design/system/strategic-agents.md, design/system/workflow.md, docs/users/flai.md, docs/users/flaiover.md, flaiover/src/lib/components/AcceptConfirm.svelte, flaiover/src/lib/components/AcceptConfirm.svelte.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, "flaiover/src/routes/api/items/[id]/accept/+server.ts", "flaiover/src/routes/api/items/[id]/accept/accept.test.ts", "flaiover/src/routes/api/items/[id]/move/+server.ts", flaiover/src/routes/board/+page.svelte, "flaiover/src/routes/items/[id]/+page.svelte", docs/users/flai-reference.md, flai/internal/hostapi/writes.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/land.go, flai/internal/mergequeue/land_test.go, flai/internal/mergequeue/preflight.go, flai/internal/mergequeue/preflight_test.go, flai/internal/storygit/storygit.go, flai/internal/storygit/storygit_test.go, design/system/flaiover-dashboard.md]
 agent:
   harness: claude-code
   model: claude-fable-5-1

@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:46:53Z
-updated: 2026-11-02T19:53:10Z
+updated: 2026-11-02T20:05:11Z
 transitions:
   - to: ready
     at: 2026-11-02T18:12:39Z
@@ -26,6 +26,9 @@ blocked:
     until: 2026-11-02T19:52:45Z
     reason: awaiting the operator on TH-0814
   - from: 2026-11-02T19:53:10Z
+    until: 2026-11-02T20:04:55Z
+    reason: awaiting the operator on TH-0814
+  - from: 2026-11-02T20:05:11Z
     reason: awaiting the operator on TH-0814
 tags: [cli, docker]
 topics: [harness, docker, manifest]
@@ -38,21 +41,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 4592
+  seconds: 4598
   priced_by: harness
   turns:
     - day: 2026-11-02
       ceremony: 5
       test_runs: 5
       hand_edits: 3
-      work: 140
+      work: 141
   models:
     - model: claude-opus-5-5
-      input: 632
-      output: 171927
-      cache_read: 74676454
-      cache_write: 916943
-      cost: 24.5633
+      input: 638
+      output: 172583
+      cache_read: 75774962
+      cache_write: 918818
+      cost: 24.8112
   strategic:
     - kind: orchestrator
       seconds: 215
