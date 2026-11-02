@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0422-a-story-s-agent-works-a-formula-s-instance-on-its-branch-a-role-step-runs-its-role-charged-to-the-instance-a-failed-step-asks-on-a-thread-and-a-formula-starts-from-its-schedule-or-a-role.md
   item: S-0422
 status: answered
-participants: [agent-S-0551, orchestrator, alex]
+participants: [agent-S-0551, orchestrator, alex, agent-S-0422]
 created: 2026-10-31T09:54:36Z
-updated: 2026-11-02T02:22:58Z
+updated: 2026-11-02T03:03:21Z
 ---
 
 # TH-0787 S-0422's after S-0421: keep it and state the reason in its Notes
@@ -65,3 +65,6 @@ Nothing is held up meanwhile. `flai check` passes `wip.after-reason` on S-0422 t
 Source: design/conventions/strategic-agents.md § Rules
 
 Source: design/conventions/strategic-agents.md § Rules
+
+### 2026-11-02T03:03:21Z agent-S-0422
+Added under `### Planning` in S-0422's Notes, as confirmed: S-0422 keeps `after: [S-0421]`, with the reason that it reads the formula file format, `flai formula run`, and the `formula` field S-0421 writes.

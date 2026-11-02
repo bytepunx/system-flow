@@ -3,12 +3,18 @@ id: T-1775
 type: task
 nature: feature
 title: An instance's agent starts a role step's role through role_run with the step's prompt and inputs, allowed for that formula's roles alone, woken when it ends, its usage charged to the instance
-status: backlog
+status: in-progress
 parent: S-0422
 owner: alex
 created: 2026-10-16T05:47:45Z
-updated: 2026-10-21T12:59:09Z
-transitions: []
+updated: 2026-11-02T03:04:27Z
+transitions:
+  - to: ready
+    at: 2026-11-02T03:04:26Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-02T03:04:27Z
+    by: system-flow
 stream: S-0422
 tags: [cli]
 touches: [flai/cmd/role.go, flai/cmd/role_test.go, flai/internal/mcpserver/role.go, flai/internal/mcpserver/role_test.go, flai/internal/serve/role.go, flai/internal/serve/role_test.go, flai/internal/serve/activity.go, flai/internal/serve/activity_test.go]

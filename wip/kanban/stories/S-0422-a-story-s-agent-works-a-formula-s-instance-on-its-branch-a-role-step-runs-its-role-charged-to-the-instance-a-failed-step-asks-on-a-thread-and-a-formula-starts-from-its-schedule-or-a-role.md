@@ -3,11 +3,11 @@ id: S-0422
 type: story
 nature: feature
 title: A story's agent works a formula's instance on its branch, a role step runs its role charged to the instance, a failed step asks on a thread, and a formula starts from its schedule or a role
-status: ready
+status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:50Z
-updated: 2026-11-02T02:09:16Z
+updated: 2026-11-02T03:02:51Z
 transitions:
   - to: ready
     at: 2026-10-28T13:11:31Z
@@ -18,6 +18,9 @@ transitions:
   - to: ready
     at: 2026-11-01T23:43:54Z
     by: alex
+  - to: in-progress
+    at: 2026-11-02T03:02:51Z
+    by: agent-S-0422
 tags: [cli, template]
 topics: [cli, orchestration, conventions, template]
 touches: [design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, template/CHANGELOG.md, flai/cmd/accept.go, flai/cmd/accept_formula_test.go, flai/cmd/formula.go, flai/cmd/formula_test.go, flai/cmd/role.go, flai/cmd/role_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/check/check.go, flai/internal/check/formulas_test.go, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/mcpserver/role.go, flai/internal/mcpserver/role_test.go, flai/internal/preview/orchestrator.go, flai/internal/preview/accept_test.go, flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, flai/internal/serve/agents.go, flai/internal/serve/formula_schedule.go, flai/internal/serve/formula_schedule_test.go, flai/internal/serve/role.go, flai/internal/serve/role_test.go, flai/internal/serve/serve.go]
@@ -87,6 +90,8 @@ A formula's instance is worked as any story is: by a story's agent, on its branc
 - A step runs where the agent works: in the instance's worktree. A step that must act in the main checkout with the host's credentials, such as `flai release --pending`, is the publish formula story's to settle (S-0423).
 
 ### Planning
+
+- **After S-0421.** S-0422 reads the formula file format, `flai formula run`, and the instance story's `formula` field, which S-0421 writes, to work a formula's instance step by step (TH-0787, D-0454).
 
 - **Plan thread.** TH-0582, 2026-10-21, approved and resolved by the orchestrator under `plan_backlog_stories`: the replan on TH-0471's answer 5, the rewrite of T-1774 to T-1779, and T-2012 with `flai formula run --ready`. The six tasks were then rewritten as approved; each carries a Notes line saying so. Layers: T-1774, T-1775, T-1777, T-1778, and T-2012 first; T-1776 after T-1774, since both write `harness.go` and `work-management.md`; T-1779 last.
 - **TH-0471's answer 5** takes the serve-side step runner, the failure path, the no-branch acceptance, and `flai formula resume` out of the story. An instance's agent runs the steps; a failed step is a blocked task and a thread, and the answer starts the agent again, as for any question. What stays: the role step's start, now from the agent through `role_run`; the acceptance of an instance, now one whose branch may change nothing; the starters, with T-1778's role starter split into T-2012.

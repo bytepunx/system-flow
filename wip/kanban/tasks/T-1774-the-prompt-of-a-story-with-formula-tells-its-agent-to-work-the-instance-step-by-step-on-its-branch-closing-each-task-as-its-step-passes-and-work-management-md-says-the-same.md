@@ -3,12 +3,18 @@ id: T-1774
 type: task
 nature: feature
 title: The prompt of a story with formula tells its agent to work the instance step by step on its branch, closing each task as its step passes, and work-management.md says the same
-status: backlog
+status: in-progress
 parent: S-0422
 owner: alex
 created: 2026-10-16T05:47:38Z
-updated: 2026-10-21T12:58:53Z
-transitions: []
+updated: 2026-11-02T03:04:25Z
+transitions:
+  - to: ready
+    at: 2026-11-02T03:04:24Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-02T03:04:25Z
+    by: system-flow
 stream: S-0422
 tags: [cli]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md]
