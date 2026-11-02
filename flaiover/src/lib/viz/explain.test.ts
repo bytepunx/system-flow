@@ -132,12 +132,10 @@ describe('explain', () => {
 
 	it('explains the strategic charts with the type', () => {
 		const cost = all('strategic-cost', { type: 'epic', bucket: 'day' });
-		expect(cost).toContain('The bars are what planning, orchestration, and analysis cost each day');
+		expect(cost).toContain('The bars are what each strategic role cost each day');
 		expect(cost).toContain(STRATEGIC_LINES);
 		const use = all('strategic-use');
-		expect(use).toContain(
-			'The bars are the hours the planner, the orchestrator, and the analyzer worked each day'
-		);
+		expect(use).toContain('The bars are the hours each strategic role worked each day');
 		expect(use).toContain('the mean cycle time and the mean waiting of the stories completed');
 		expect(use).toContain(STRATEGIC_RETURN);
 	});

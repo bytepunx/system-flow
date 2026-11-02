@@ -1664,7 +1664,7 @@ describe('the strategic charts (S-0216)', () => {
 		// the explanation under the chart is in its explainer, the ratio stays under it (S-0485)
 		expect(document.querySelector('[data-testid="strategic-note"]')).toBeNull();
 		expect(text('[data-testid="explainer-what"]')).toContain(
-			'The bars are what planning, orchestration, and analysis cost each day'
+			'The bars are what each strategic role cost each day'
 		);
 		expect(text('[data-testid="explainer-what"]')).toContain(
 			'the dashed line is what the strategic agents add to each story over the window'
@@ -1701,7 +1701,7 @@ describe('the strategic charts (S-0216)', () => {
 		expect(document.querySelector('[data-testid="strategic-note"]')).toBeNull();
 		expect(document.querySelector('[data-testid="strategic-figures"]')).toBeNull();
 		expect(text('[data-testid="explainer-what"]')).toContain(
-			'The bars are the hours the planner, the orchestrator, and the analyzer worked each day'
+			'The bars are the hours each strategic role worked each day'
 		);
 		expect(text('[data-testid="explainer-what"]')).toContain(
 			'The lines are the mean cycle time and the mean waiting of the stories completed that day'

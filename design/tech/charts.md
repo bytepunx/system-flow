@@ -1,6 +1,6 @@
 ---
 title: Charts
-updated: 2026-09-29
+updated: 2026-11-02
 status: active
 topics: [dashboard]
 ---
@@ -19,7 +19,7 @@ topics: [dashboard]
 
 ## Palette and rules
 
-Colours come from the validated reference palette in `flaiover/src/lib/viz/palette.ts` (eight categorical slots for light and for dark, both modes checked with the dataviz validator on 2026-09-17). Workflow states, natures, model families (S-0143), and item types (S-0163) have fixed slots so a state, a nature, a model, or a type keeps its colour across charts. On the line charts of spend over time a model and an item type also have a mark each (circle, square, triangle, diamond), shown in the legend: the opus and fable slots are close for a reader who sees little red or green (the validator's all-pairs check gives 0.6 in light and 2.2 in dark), so colour is not the only thing that tells two models apart. Those charts draw time in UTC, with ticks no finer than a bucket and the axis a bucket wider than the data on each side. Rules applied in every builder (`src/lib/viz/charts.ts`): one y-axis per chart, thin marks (2px lines, bars capped at 24px, a surface-coloured seam between stacked segments), a legend whenever two or more series are shown, a tooltip on every mark, p50 and p85 as dashed reference lines, scatter colours at most three groups (the all-pairs rule) and folds the rest into "other", and every chart page offers a table view.
+Colours come from the validated reference palette in `flaiover/src/lib/viz/palette.ts` (eight categorical slots for light and for dark, both modes checked with the dataviz validator on 2026-09-17). Workflow states, natures, model families (S-0143), and item types (S-0163) have fixed slots so a state, a nature, a model, or a type keeps its colour across charts. The strategic roles do too (S-0425, [ADR-0249](../adrs/0249-strategic-usage-is-per-role-a-role-s-activity-is-charged-by-its-role-file-s.md)): the planner, the orchestrator, and the analyzer keep slots 6, 5, and 4, the curator takes 3, and each other role in the window, by name, takes the next of 2, 1, 0, and 7, around again after the eighth (`strategicSlots` in `charts.ts`); a role's page draws it in the same colour. On the line charts of spend over time a model and an item type also have a mark each (circle, square, triangle, diamond), shown in the legend: the opus and fable slots are close for a reader who sees little red or green (the validator's all-pairs check gives 0.6 in light and 2.2 in dark), so colour is not the only thing that tells two models apart. Those charts draw time in UTC, with ticks no finer than a bucket and the axis a bucket wider than the data on each side. Rules applied in every builder (`src/lib/viz/charts.ts`): one y-axis per chart, thin marks (2px lines, bars capped at 24px, a surface-coloured seam between stacked segments), a legend whenever two or more series are shown, a tooltip on every mark, p50 and p85 as dashed reference lines, scatter colours at most three groups (the all-pairs rule) and folds the rest into "other", and every chart page offers a table view.
 
 ## Considered
 

@@ -154,7 +154,7 @@ const EXPLAINERS: Record<Kind, (w: Words) => Explainer> = {
 	}),
 	'cost-spent': (w) => ({
 		what: `One bar per ${w.bucket}: the dollars spent on the ${w.types} done in it, stacked by model, with what the strategic agents spent on them stacked on top as a series of its own, strategic. The dashed line is the mean per ${w.bucket} so far.`,
-		how: `${spendNote(w)} ${meanNote(w)} ${COST} A bar is the \`cost\` of each model in \`usage.spend.${w.type}.buckets[]\` of \`flai stats --json\`, and strategic is \`buckets[].strategic.cost\`, what the planner, the orchestrator, and the analyzer spent on those ${w.types}, never added to the agents' figures. The dashed line is \`mean_cost\`, the agents' alone: the sum from the first ${w.bucket} of the series to this one over the number of those ${w.buckets}, empty ones counted. ${STAR} Strategic cost is always estimated.`,
+		how: `${spendNote(w)} ${meanNote(w)} ${COST} A bar is the \`cost\` of each model in \`usage.spend.${w.type}.buckets[]\` of \`flai stats --json\`, and strategic is \`buckets[].strategic.cost\`, what the strategic roles spent on those ${w.types}, never added to the agents' figures. The dashed line is \`mean_cost\`, the agents' alone: the sum from the first ${w.bucket} of the series to this one over the number of those ${w.buckets}, empty ones counted. ${STAR} Strategic cost is always estimated.`,
 		read: `Bars above the dashed line are ${w.buckets} that cost more than usual. Spend counts when its item is done, not when it was spent, so a ${w.bucket} with nothing done is empty.`,
 		metrics: SPEND
 	}),
@@ -166,7 +166,7 @@ const EXPLAINERS: Record<Kind, (w: Words) => Explainer> = {
 	}),
 	cost: (w) => ({
 		what: `One bar per ${w.type} completed in the window with usage, in order of completion, stacked by model. What the strategic agents spent on ${w.a} is stacked on top as a series of its own, strategic; ${w.a} only they spent on shows that alone.`,
-		how: `${COST} It comes from the ${w.type}'s \`usage\` front matter: \`items[].usage.models[].cost\` in \`flai stats --json\`. Strategic is its \`items[].usage.strategic\` costs summed, what the planner, the orchestrator, and the analyzer spent on it, apart from its total, which is the agents'. A star after an ID marks a cost estimated in part: a task's share of its story's session, a run that ended without its totals, or strategic cost, which is always estimated.`,
+		how: `${COST} It comes from the ${w.type}'s \`usage\` front matter: \`items[].usage.models[].cost\` in \`flai stats --json\`. Strategic is its \`items[].usage.strategic\` costs summed, what the strategic roles spent on it, apart from its total, which is the agents'. A star after an ID marks a cost estimated in part: a task's share of its story's session, a run that ended without its totals, or strategic cost, which is always estimated.`,
 		read: `The tallest bars are the ${w.types} that cost most. Hover a bar for its cost per model and what the strategic agents spent on it.`,
 		metrics: USAGE
 	}),
@@ -225,14 +225,14 @@ const EXPLAINERS: Record<Kind, (w: Words) => Explainer> = {
 		metrics: CLAIMS
 	}),
 	'strategic-cost': (w) => ({
-		what: `The bars are what planning, orchestration, and analysis cost each day, the planner, the orchestrator, and the analyzer stacked. The line is what the agents spent per ${w.type} completed that day, the strategic agents left out; the dashed line is what the strategic agents add to each ${w.type} over the window.`,
-		how: `From \`strategic_days[]\` in \`flai stats --json\`, one point per UTC day. A bar is the \`cost\` of an agent under \`agents\`, the cost of its activities that ended that day, from its activity document under \`wip/agents\`. The line is \`cost_per_item\`: the agents' usage cost of the ${w.types} completed that day on which they spent, over their number, strategic usage left out. The dashed line is the sum of \`cost\` over the window over the sum of \`completed\`, labelled with its share of what the agents spent per ${w.type}, \`usage.cost\` over \`usage.items\`. A star marks a cost estimated in part: an activity of that agent that day carries an estimated cost.`,
+		what: `The bars are what each strategic role cost each day, stacked: the planner, the orchestrator, the analyzer, and the curator first, then every other role by name. The line is what the agents spent per ${w.type} completed that day, the strategic agents left out; the dashed line is what the strategic agents add to each ${w.type} over the window.`,
+		how: `From \`strategic_days[]\` in \`flai stats --json\`, one point per UTC day. A bar is the \`cost\` of a role under \`agents\`, by its name, the cost of its activities that ended that day, from its activity document under \`wip/agents\`. The line is \`cost_per_item\`: the agents' usage cost of the ${w.types} completed that day on which they spent, over their number, strategic usage left out. The dashed line is the sum of \`cost\` over the window over the sum of \`completed\`, labelled with its share of what the agents spent per ${w.type}, \`usage.cost\` over \`usage.items\`. A star marks a cost estimated in part: an activity of that agent that day carries an estimated cost.`,
 		read: `At 10%, the strategic agents add a tenth to each ${w.type}'s cost. A day with nothing completed has no point on the line, and with nothing completed in the window, or nothing spent by the agents, there is no dashed line.`,
 		metrics: STRATEGIC_DAYS
 	}),
 	'strategic-use': (w) => ({
-		what: `The bars are the hours the planner, the orchestrator, and the analyzer worked each day, stacked. The lines are the mean cycle time and the mean waiting of the ${w.types} completed that day, in hours.`,
-		how: `From \`strategic_days[]\` in \`flai stats --json\`, one point per UTC day. A bar is the \`seconds\` of an agent under \`agents\`, the wall-clock seconds of its activities that ended that day. The mean cycle time is \`cycle_time_seconds\`, over the ${w.types} completed that day with one, each ${CYCLE}. The mean waiting is each such ${w.type}'s \`wait_threads_seconds\`, its thread waits while in progress, plus its \`wait_review_seconds\`, its time in review, averaged.`,
+		what: `The bars are the hours each strategic role worked each day, stacked in the same order as on Strategic Cost. The lines are the mean cycle time and the mean waiting of the ${w.types} completed that day, in hours.`,
+		how: `From \`strategic_days[]\` in \`flai stats --json\`, one point per UTC day. A bar is the \`seconds\` of a role under \`agents\`, by its name, the wall-clock seconds of its activities that ended that day. The mean cycle time is \`cycle_time_seconds\`, over the ${w.types} completed that day with one, each ${CYCLE}. The mean waiting is each such ${w.type}'s \`wait_threads_seconds\`, its thread waits while in progress, plus its \`wait_review_seconds\`, its time in review, averaged.`,
 		read: `Waiting or cycle time falling while the strategic agents' hours rise is the return on their time. A day with nothing completed has no point on the lines.`,
 		metrics: STRATEGIC_DAYS
 	}),
