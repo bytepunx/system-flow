@@ -231,16 +231,24 @@ func (a *app) roleRun(name, item string, inputs []harness.Input) error {
 	if _, running := o.Dir.ReadStatus(a.now()); !running {
 		fmt.Fprintln(a.errOut, "flai serve is not running (flai serve start, or flai host start): the role runs, and its end is recorded and its activity logged once flai serve is")
 	}
+	role, on, action := roleStartedAs(name, run)
 	if a.jsonOut {
-		return a.printJSON(map[string]any{"role": run.RoleName, "item": run.Item, "action": run.Action, "agent": run.Agent, "harness": run.Harness, "command": run.Command,
+		return a.printJSON(map[string]any{"role": role, "item": on, "action": action, "agent": run.Agent, "harness": run.Harness, "command": run.Command,
 			"pid": run.PID, "log": run.Log, "session": run.Session, "started": run.Started, "trigger": run.Trigger})
 	}
-	on := "on no item"
-	if run.Item != "" {
-		on = "on " + run.Item
-	}
-	fmt.Fprintf(a.out, "started %s (%s) to run the role %s %s as %s (pid %d); log %s\n", run.Command, run.Harness, run.RoleName, on, run.Agent, run.PID, run.Log)
+	fmt.Fprintf(a.out, "started %s (%s) to run the role %s %s as %s (pid %d); log %s\n", run.Command, run.Harness, role, onItem(on), run.Agent, run.PID, run.Log)
 	return nil
+}
+
+// roleStartedAs is the role, the item, and the host action of run, which
+// serve.RunRole started when asked for the role name: a defined role's, as
+// its run records them, or, for the analyzer a formula instance's role step
+// started (S-0424), name, the instance it ran for, and the analyze action.
+func roleStartedAs(name string, run *serve.AgentRun) (role, item, action string) {
+	if run.RoleName != "" {
+		return run.RoleName, run.Item, run.Action
+	}
+	return name, run.Instance, hostapi.ActionAnalyze
 }
 
 // mcpRoleRun starts the role name the project defines on item, or on none,
@@ -251,7 +259,9 @@ func (a *app) roleRun(name, item string, inputs []harness.Input) error {
 // step of its formula, on the instance (runTrigger, S-0422); a refusal of
 // any other is journalled nowhere. A name the project defines no role by, a
 // built-in role's among them, names no action, and its refusal is journalled
-// nowhere, as role.run's is not.
+// nowhere, as role.run's is not, save the analyzer a formula instance's role
+// step asks for, which runs and is journalled under the analyze action
+// (S-0424).
 func (a *app) mcpRoleRun(ctx context.Context, root, name, item string, inputs []harness.Input, by string) (mcpserver.RoleStarted, error) {
 	trigger, err := runTrigger(root, name, item, by)
 	if err != nil {
@@ -267,11 +277,20 @@ func (a *app) mcpRoleRun(ctx context.Context, root, name, item string, inputs []
 	if item != "" {
 		asked += " on " + item
 	}
-	if action := definedRoleAction(e.Root, name); action != "" {
+	action := definedRoleAction(e.Root, name)
+	if action == "" && name == workitem.ActivityAnalyzer && trigger != serve.TriggerAsked {
+		action = hostapi.ActionAnalyze // a formula's role step starts the analyzer under its own action
+	}
+	if action != "" {
 		entry := hostapi.Entry{At: a.now().UTC().Format(time.RFC3339), Action: action, Method: "mcp.role_run", Project: e.Key, Root: e.Root, By: by, Outcome: "done"}
+		cfg := o.Agent(e.Root)
+		on := cfg.RoleActions[action]
+		if action == hostapi.ActionAnalyze {
+			on = cfg.Analyze
+		}
 		var no *serve.Refused
 		switch {
-		case errors.As(err, &no) && !o.Agent(e.Root).RoleActions[action]:
+		case errors.As(err, &no) && !on:
 			entry.Outcome, entry.Detail = "disabled", fmt.Sprintf("%s: %s", asked, no.Why)
 		case err != nil:
 			entry.Outcome, entry.Detail = "failed", fmt.Sprintf("%s: %s", asked, err)
@@ -283,7 +302,8 @@ func (a *app) mcpRoleRun(ctx context.Context, root, name, item string, inputs []
 	if err != nil {
 		return mcpserver.RoleStarted{}, err
 	}
-	return mcpserver.RoleStarted{Role: run.RoleName, Item: run.Item, Action: run.Action, Agent: run.Agent, Harness: run.Harness, Command: run.Command, PID: run.PID,
+	role, on, started := roleStartedAs(name, run)
+	return mcpserver.RoleStarted{Role: role, Item: on, Action: started, Agent: run.Agent, Harness: run.Harness, Command: run.Command, PID: run.PID,
 		Log: run.Log, Session: run.Session, Started: run.Started, Trigger: run.Trigger}, nil
 }
 
@@ -295,7 +315,10 @@ func (a *app) mcpRoleRun(ctx context.Context, root, name, item string, inputs []
 // role (S-0422). The session's story is FLAI_STORY, else the S-nnnn of by
 // when by is agent-S-nnnn. Any other session flai serve started is refused,
 // as a *serve.Refused that says why; a story or a formula that cannot be read
-// is an error.
+// is an error. A role step that names the built-in analyzer gets its trigger
+// too: serve.RunRole starts the analyzer for it through the analyzer's own
+// start, and refuses the other built-in roles, as it refuses every built-in
+// role to the operator's asking, naming its command (S-0424).
 func runTrigger(root, name, item, by string) (string, error) {
 	if os.Getenv(guard.StartedByEnv) != guard.StartedByServe {
 		return serve.TriggerAsked, nil

@@ -36,7 +36,9 @@ import (
 // agent of a formula's instance starts one too, for a role step of its
 // formula, on the instance, through the same start with the trigger
 // FormulaTrigger gives (S-0422); its end is an agent event on the instance,
-// which that agent's wait_for_events reports.
+// which that agent's wait_for_events reports. A role step that names the
+// built-in analyzer starts it through the analyzer's own start, on the
+// instance, the one built-in role a role step starts (S-0424).
 
 // MethodRole is the method a defined role's start and end are journalled
 // under, with the host action its file names as the entry's action.
@@ -57,6 +59,20 @@ var builtinRoles = map[string]string{
 // instance of the formula name, started for a role step of it (S-0422).
 func FormulaTrigger(name, story string) string { return "formula " + name + " " + story }
 
+// formulaTriggered is the formula and the story of trigger when it is one
+// FormulaTrigger gives, and ok false otherwise.
+func formulaTriggered(trigger string) (name, story string, ok bool) {
+	rest, ok := strings.CutPrefix(trigger, "formula ")
+	if !ok {
+		return "", "", false
+	}
+	name, story, ok = strings.Cut(rest, " ")
+	if !ok || name == "" || workitem.TypeOfID(story) != workitem.Story || strings.Contains(story, " ") {
+		return "", "", false
+	}
+	return name, story, true
+}
+
 // RunRole starts name, a role project e defines in its role file, on item
 // when its file takes one, with inputs, the run's inputs in the order given,
 // and returns its run as recorded, with trigger as what started it:
@@ -72,7 +88,24 @@ func FormulaTrigger(name, story string) string { return "formula " + name + " " 
 // start, naming the provider and until, with nothing recorded (S-0534). It
 // does not wait for the run: the serving flai settles it once the process is
 // gone.
+//
+// With FormulaTrigger's trigger, which runTrigger in cmd gives the agent of
+// a formula's instance for a role step of its formula, the built-in analyzer
+// is the one built-in role started: through the analyzer's own start, with
+// its checks, under the analyze host action, its focus the instance's, and
+// the instance as the run's, so that its end is an agent event on the
+// instance (analyzeStep, S-0424). The planner, the orchestrator, and the
+// curator are refused for such a step, and every built-in role for any
+// other trigger, the operator's own asking among them.
 func RunRole(ctx context.Context, o Options, e Entry, name, item string, inputs []harness.Input, trigger string) (*AgentRun, error) {
+	if _, story, ok := formulaTriggered(trigger); ok {
+		if name == workitem.ActivityAnalyzer {
+			return analyzeStep(ctx, o, e, story, item, inputs, trigger)
+		}
+		if how, builtin := builtinRoles[name]; builtin {
+			return nil, refused("%s is a built-in role a role step cannot start: only the analyzer is started for a role step, through %s's start; flai starts the %s with %s", name, builtinRoles[workitem.ActivityAnalyzer], name, how)
+		}
+	}
 	rs, err := roleCheck(o, e, name, item)
 	if err != nil {
 		return nil, err

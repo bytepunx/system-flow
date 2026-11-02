@@ -767,7 +767,10 @@ func (c *checker) run(f Formula, s Step, name string) {
 			at("step %s's script %s does not exist; add it, or name a script that does", name, clean)
 		}
 	case KindRole:
-		if !slices.Contains(c.n.Roles, r.Role) {
+		switch {
+		case slices.Contains(unstartedBuiltins, r.Role):
+			at("step %s's role %s is a built-in role a role step cannot start; only the analyzer is started for a role step, through flai analyze's start", name, r.Role)
+		case !slices.Contains(c.n.Roles, r.Role):
 			at("step %s's role %s is no role file's; name one of %s", name, r.Role, roleList(c.n.Roles))
 		}
 		if strings.TrimSpace(r.Prompt) == "" {
@@ -775,6 +778,12 @@ func (c *checker) run(f Formula, s Step, name string) {
 		}
 	}
 }
+
+// unstartedBuiltins are the built-in roles a role step cannot start: each
+// keeps its own start, which no formula instance's agent may ask for. The
+// analyzer, the fourth, is started for a role step through its own start
+// (S-0424).
+var unstartedBuiltins = []string{workitem.ActivityPlanner, workitem.ActivityOrchestrator, workitem.ActivityCurator}
 
 // roleList is the role names for a message, or a note that there are none.
 func roleList(names []string) string {

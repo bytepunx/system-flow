@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -38,7 +39,10 @@ import (
 // design/analysis changed since it started, beside the run's seconds and
 // cost, and naming the issues that name the report, which share the cost
 // (S-0227). It is no story's agent: the in-progress limit does not count it,
-// and it holds no story back.
+// and it holds no story back. The agent of a formula's instance starts it
+// too, for a role step of its formula that names it, through RunRole and
+// analyzeStep, with Analyze's checks; that run's start and end are agent
+// events on the instance (S-0424).
 
 // Analyze starts the analyzer in project e, looking for focus, one of
 // harness.Focuses, or for all of them when focus is empty, and returns its
@@ -52,6 +56,12 @@ import (
 // nothing recorded (S-0534). It does not wait for the analyzer: the serving
 // flai settles the run once the process is gone.
 func Analyze(ctx context.Context, o Options, e Entry, focus, trigger string) (*AgentRun, error) {
+	return analyzeFor(ctx, o, e, focus, trigger, "")
+}
+
+// analyzeFor is Analyze for instance, the formula's instance whose agent
+// started the run for a role step, or "" for any other start.
+func analyzeFor(ctx context.Context, o Options, e Entry, focus, trigger, instance string) (*AgentRun, error) {
 	as, err := analyzeCheck(o, e, focus)
 	if err != nil {
 		return nil, err
@@ -61,7 +71,7 @@ func Analyze(ctx context.Context, o Options, e Entry, focus, trigger string) (*A
 	if err := l.budgetRefusal(as.cfg, as.agent); err != nil {
 		return nil, err
 	}
-	if _, held := l.analyze(ctx, as.cfg, as.agent, focus, trigger); held != nil {
+	if _, held := l.analyzeOn(ctx, as.cfg, as.agent, focus, trigger, instance); held != nil {
 		return nil, l.budgetRefused(*held)
 	}
 	run := o.Dir.AgentStates()[e.Root].Analyzer
@@ -72,6 +82,61 @@ func Analyze(ctx context.Context, o Options, e Entry, focus, trigger string) (*A
 		return run, errors.New(run.Why)
 	}
 	return run, nil
+}
+
+// analyzeStep starts the analyzer for a role step of a formula that names it,
+// as RunRole does when the agent of story, the formula's instance, asks for
+// it on item with trigger, FormulaTrigger's (S-0424, ADR-0239 §2). It goes
+// through the analyzer's own start, with Analyze's checks, under the analyze
+// host action, and records story as the run's instance, so that its start
+// and its end are agent events on the instance. Its focus is the last input
+// named focus among inputs, else the focus input the instance's Notes say
+// flai formula run took (instanceFocus), empty for all three. An item that
+// is not story is refused.
+func analyzeStep(ctx context.Context, o Options, e Entry, story, item string, inputs []harness.Input, trigger string) (*AgentRun, error) {
+	if workitem.CanonicalID(item) != story {
+		return nil, refused("the analyzer runs for a role step of a formula on its instance %s alone, and was asked for %s: give the item %s", story, onItem(item), story)
+	}
+	focus, given := "", false
+	for _, in := range inputs {
+		if in.Name == "focus" {
+			focus, given = strings.TrimSpace(in.Value), true
+		}
+	}
+	if !given {
+		repo, err := workitem.Open(e.Root)
+		if err != nil {
+			return nil, err
+		}
+		it, err := repo.Get(story)
+		if err != nil {
+			return nil, fmt.Errorf("reading %s, the instance whose role step asked for the analyzer: %w", story, err)
+		}
+		focus = instanceFocus(it.Body)
+	}
+	return analyzeFor(ctx, o, e, focus, trigger, story)
+}
+
+// madeBy is the line of an instance's Notes that flai formula run writes,
+// naming the inputs it took, and focusTaken the focus input among them.
+var (
+	madeBy     = regexp.MustCompile("(?m)^Made by `flai formula run [^`]+` from .*$")
+	focusTaken = regexp.MustCompile("`focus=([^`]*)`")
+)
+
+// instanceFocus is the focus input an instance's body says flai formula run
+// took, on the line of its Notes that names the inputs, or "" when the line
+// names none.
+func instanceFocus(body string) string {
+	line := madeBy.FindString(body)
+	_, took, ok := strings.Cut(line, " with the inputs ")
+	if !ok {
+		return ""
+	}
+	if m := focusTaken.FindStringSubmatch(took); m != nil {
+		return strings.TrimSpace(m[1])
+	}
+	return ""
 }
 
 // analyzeStart is what the analyzer is started with once the checks pass:
@@ -123,12 +188,25 @@ func startedBy(run *AgentRun) string {
 // analyze starts the analyzer with agent, looking for focus, or for all of
 // it when focus is empty, records the run with what started it, trigger,
 // journals it, and says whether it started. Its start, or the start it could
-// not make, is an agent event on the analyzer's role (S-0532). A start the
+// not make, is an agent event on the analyzer's role (S-0532), or on the
+// formula's instance it was started for (analyzeOn). A start the
 // budget state of its provider holds is not made and nothing is recorded:
 // held is that state, nil when it was not held (spawnGated, S-0534).
 func (l *launcher) analyze(ctx context.Context, cfg AgentConfig, agent *manifest.Agent, focus, trigger string) (started bool, held *Budget) {
+	return l.analyzeOn(ctx, cfg, agent, focus, trigger, "")
+}
+
+// analyzeOn is analyze for instance, the formula's instance whose agent
+// started the run for a role step, recorded as the run's Instance, so that
+// its start and its end are agent events on the instance (S-0424); "" for
+// any other start.
+func (l *launcher) analyzeOn(ctx context.Context, cfg AgentConfig, agent *manifest.Agent, focus, trigger, instance string) (started bool, held *Budget) {
 	now := l.now().UTC()
-	run := &AgentRun{Agent: workitem.ActivityAnalyzer, Focus: focus, Started: now.Format(time.RFC3339), Session: newSession(), Trigger: trigger}
+	run := &AgentRun{Agent: workitem.ActivityAnalyzer, Focus: focus, Started: now.Format(time.RFC3339), Session: newSession(), Trigger: trigger, Instance: instance}
+	on := ""
+	if instance != "" {
+		on = ", on " + instance
+	}
 	if run.Focus == "" {
 		run.Focus = harness.AllFocus
 	}
@@ -139,7 +217,7 @@ func (l *launcher) analyze(ctx context.Context, cfg AgentConfig, agent *manifest
 	fail := func(err error) (bool, *Budget) {
 		run.Error, run.Ended, run.Outcome, run.Why = err.Error(), run.Started, OutcomeFailed, "could not be started: "+err.Error()
 		l.told(run)
-		entry.Outcome, entry.Detail = "failed", fmt.Sprintf("the analyzer, focus %s, could not be started: %s", run.Focus, run.Error)
+		entry.Outcome, entry.Detail = "failed", fmt.Sprintf("the analyzer, focus %s%s, could not be started: %s", run.Focus, on, run.Error)
 		if l.record != nil {
 			l.record(entry)
 		}
@@ -165,11 +243,14 @@ func (l *launcher) analyze(ctx context.Context, cfg AgentConfig, agent *manifest
 		return fail(err)
 	}
 	l.told(run)
-	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s (%s) to analyze, focus %s, as %s (pid %d); log %s", run.Command, run.Harness, run.Focus, run.Agent, run.PID, run.Log)
+	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s (%s) to analyze, focus %s%s, as %s (pid %d); log %s", run.Command, run.Harness, run.Focus, on, run.Agent, run.PID, run.Log)
+	if instance != "" {
+		entry.Detail += ", started by " + run.Trigger
+	}
 	if l.record != nil {
 		l.record(entry)
 	}
-	l.log("analyzer started", "focus", run.Focus, "trigger", run.Trigger, "harness", run.Harness, "command", run.Command, "pid", run.PID)
+	l.log("analyzer started", "focus", run.Focus, "trigger", run.Trigger, "instance", run.Instance, "harness", run.Harness, "command", run.Command, "pid", run.PID)
 	appendAgentEvent(l.entry.Root, run, inbox.AgentStarted, triggerWhy(run)+", focus "+run.Focus, l.warn)
 	l.await(cmd, out, run.PID, func(code int) { l.analyzeEnded(run, &code) })
 	return true, nil
@@ -184,8 +265,9 @@ func (l *launcher) analyze(ctx context.Context, cfg AgentConfig, agent *manifest
 // is split evenly between them (S-0227). A report, or issues naming it, that
 // cannot be looked for, and an activity that cannot be logged, are warned
 // of: the activity is logged naming no issue, and the run stays recorded as
-// it ended. The end is an agent event on the analyzer's role, appended once,
-// by the end that recorded the run as ended first (S-0532). A run whose log
+// it ended. The end is an agent event on the analyzer's role, or on the
+// formula's instance the run was started for (S-0424), appended once, by the
+// end that recorded the run as ended first (S-0532). A run whose log
 // ends on the harness's usage limit is failed on it, with why naming the
 // limit, whether its exit was seen or not, and marked so (limitEnded); every
 // end feeds its provider's budget state once (budgetEnd, S-0534).

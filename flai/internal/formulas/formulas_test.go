@@ -29,7 +29,7 @@ steps:
   - id: notes
     title: Write the notes for {{ version }}
     run:
-      role: planner
+      role: reviewer
       prompt: Draft the release notes for {{version}} on {{channel}}.
   - id: tag
     title: Tag {{version}}
@@ -56,7 +56,7 @@ const releasePath = "design/workflows/formulas/release.md"
 
 // names are the role and script names the fixtures' steps name.
 var names = Names{
-	Roles:  []string{"planner", "analyzer"},
+	Roles:  []string{"planner", "analyzer", "reviewer"},
 	Script: func(p string) bool { return p == "scripts/check.sh" || p == "scripts/lint-md.sh" },
 }
 
@@ -88,7 +88,7 @@ func TestValidFormulaParsesWithEveryKind(t *testing.T) {
 		t.Errorf("kinds = %v, want %v", kinds, want)
 	}
 	notes := f.Steps[1]
-	if notes.Run.Role != "planner" || notes.Run.Prompt != "Draft the release notes for {{version}} on {{channel}}." || notes.Line != 19 || notes.Lines["run"] != 21 {
+	if notes.Run.Role != "reviewer" || notes.Run.Prompt != "Draft the release notes for {{version}} on {{channel}}." || notes.Line != 19 || notes.Lines["run"] != 21 {
 		t.Errorf("notes step = %+v", notes)
 	}
 	if got := f.Steps[0].Run.ScriptPath(); got != "scripts/check.sh" {
@@ -179,7 +179,7 @@ func TestValidateReportsEachProblem(t *testing.T) {
 		{"script absolute", step("    run:", "      script: /scripts/x.sh"), "not under scripts/", 10},
 		{"script missing", step("    run:", "      script: scripts/gone.sh --all"), "scripts/gone.sh does not exist", 10},
 		{"role undefined", step("    run:", "      role: deployer", "      prompt: p"), "role deployer is no role file's", 10},
-		{"role without prompt", step("    run:", "      role: planner"), "no prompt", 10},
+		{"role without prompt", step("    run:", "      role: reviewer"), "no prompt", 10},
 		{"after no step", step("    run: {flai: check}", "    after: [b]"), `after "b", which is no step's id`, 11},
 		{"in neither place", step("    run: {flai: check}", "    in: elsewhere"), `step a's in is "elsewhere", which is none of worktree, main`, 11},
 		{"step id missing", head + "steps:\n  - title: A\n    run: {flai: check}\n---\n", "step needs id", 8},
@@ -190,7 +190,7 @@ func TestValidateReportsEachProblem(t *testing.T) {
 		{"step title uses undeclared", head + "steps:\n  - id: a\n    title: A {{ who }}\n    run: {flai: check}\n---\n", "step a's title uses {{who}}", 9},
 		{"flai uses undeclared", step(`    run: {flai: "check {{who}}"}`), "step a's run uses {{who}}", 10},
 		{"script uses undeclared", step(`    run: {script: "scripts/check.sh {{who}}"}`), "step a's run uses {{who}}", 10},
-		{"prompt uses undeclared", step(`    run: {role: planner, prompt: "plan {{who}}"}`), "step a's run uses {{who}}", 10},
+		{"prompt uses undeclared", step(`    run: {role: reviewer, prompt: "plan {{who}}"}`), "step a's run uses {{who}}", 10},
 		{"input name invalid", head + "inputs:\n  - {name: Who, description: d}\n" + oneStep, `input name "Who"`, 8},
 		{"input name missing", head + "inputs:\n  - description: d\n" + oneStep, "needs name", 8},
 		{"input description missing", head + "inputs:\n  - name: who\n" + oneStep, "input who needs description", 8},
@@ -339,10 +339,29 @@ func TestValidateSortsByPathAndLine(t *testing.T) {
 }
 
 func TestNoRolesRefusesEveryRole(t *testing.T) {
-	f := parse(t, "design/workflows/formulas/x.md", "---\ntitle: X\nupdated: 2026-11-01\nstatus: active\nname: x\ndescription: d\nsteps: [{id: a, title: A, run: {role: planner, prompt: p}}]\n---\n")
+	f := parse(t, "design/workflows/formulas/x.md", "---\ntitle: X\nupdated: 2026-11-01\nstatus: active\nname: x\ndescription: d\nsteps: [{id: a, title: A, run: {role: reviewer, prompt: p}}]\n---\n")
 	got := Validate([]Formula{f}, Names{})
 	if len(got) != 1 || !strings.Contains(got[0].Message, "the project has none") {
 		t.Errorf("Validate with no roles = %v", got)
+	}
+}
+
+// S-0424: a role step that names the planner, the orchestrator, or the
+// curator is reported, though the project has the role's file, since a role
+// step cannot start it; one that names the analyzer is not, as it is started
+// for a role step through its own start.
+func TestARoleStepNamingABuiltinRoleOtherThanTheAnalyzerIsReported(t *testing.T) {
+	all := Names{Roles: []string{"planner", "orchestrator", "analyzer", "curator"}}
+	for _, role := range []string{"planner", "orchestrator", "curator"} {
+		f := parse(t, "design/workflows/formulas/x.md", "---\ntitle: X\nupdated: 2026-11-01\nstatus: active\nname: x\ndescription: d\nsteps: [{id: a, title: A, run: {role: "+role+", prompt: p}}]\n---\n")
+		want := "step a's role " + role + " is a built-in role a role step cannot start; only the analyzer is started for a role step, through flai analyze's start"
+		if got := Validate([]Formula{f}, all); len(got) != 1 || got[0].Code != CodeFile || got[0].Line != 7 || got[0].Message != want {
+			t.Errorf("Validate on a step naming the %s = %v, want one on line 7 saying %q", role, got, want)
+		}
+	}
+	f := parse(t, "design/workflows/formulas/x.md", "---\ntitle: X\nupdated: 2026-11-01\nstatus: active\nname: x\ndescription: d\nsteps: [{id: a, title: A, run: {role: analyzer, prompt: p}}]\n---\n")
+	if got := Validate([]Formula{f}, all); len(got) != 0 {
+		t.Errorf("Validate on a step naming the analyzer = %v, want none", got)
 	}
 }
 

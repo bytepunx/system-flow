@@ -257,6 +257,12 @@ type AgentRun struct {
 	// root, once it has ended: the newest file under design/analysis changed
 	// since it started; empty when it wrote none (S-0223).
 	Report string `json:"report,omitempty"`
+	// Instance is the formula's instance an analyzer run was started for, by
+	// its agent, for a role step of its formula that names the analyzer: its
+	// agent events are on the instance rather than on the analyzer's role
+	// (S-0424). It is empty on every other run, and leaves Item empty, so that
+	// the run is still the analyzer's (analyzes).
+	Instance string `json:"instance,omitempty"`
 	// Outcome is set once it has ended; Why says what went wrong, or what it
 	// waits for, and Thread is the question to the operator it ended waiting
 	// on.

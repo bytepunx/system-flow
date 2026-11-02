@@ -519,3 +519,89 @@ func TestAFormulaInstancesAgentStartsItsRoleStep(t *testing.T) {
 		}
 	}
 }
+
+// cadence is a formula whose role step runs the built-in analyzer with the
+// focus its input gives, as analysis-cadence does.
+const cadence = `---
+title: Analyze the project
+updated: 2026-11-02
+status: active
+name: cadence
+description: "Run the analyzer on its focus."
+inputs:
+  - name: focus
+    description: "bottlenecks, intent, or risk; empty for all three"
+    default: ""
+steps:
+  - id: analyze
+    title: Run the analyzer
+    run: {role: analyzer, prompt: "Analyze this project with the focus \"{{focus}}\"."}
+---
+
+# Cadence
+`
+
+// S-0424: the agent of a formula's instance whose role step names the
+// built-in analyzer starts it, through role_run, on the instance, with the
+// focus the instance was made with, as the project's analyzer recorded with
+// the instance, journalled under the analyze action; the operator's own flai
+// role run analyzer is refused still, naming flai analyze.
+func TestAFormulaInstancesAgentStartsTheAnalyzerForItsRoleStep(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("starts true as the agent's command")
+	}
+	analyzer, err := os.ReadFile(filepath.Join("..", "internal", "roles", "baseline", "analyzer.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := rolesProject(t, map[string]string{"analyzer.md": string(analyzer)})
+	dir := filepath.Join(root, "design", "workflows", "formulas")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "cadence.md"), []byte(cadence), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("FLAI_STARTED_BY", "")
+	t.Setenv("FLAI_STORY", "")
+	cfg := configOf(t)
+	if out, errOut, code := runIn(t, root, "formula", "run", "cadence", "--input", "focus=risk"); code != 0 {
+		t.Fatalf("formula run: %d %s %s", code, out, errOut)
+	}
+	runIn(t, root, "serve", "agent", "set", "--", "true")
+	// the operator's own asking is refused, naming the analyzer's command
+	if _, errOut, code := runIn(t, root, "role", "run", "analyzer", "S-1"); code == 0 || !strings.Contains(errOut, "rule: analyzer is a built-in role, which flai starts with flai analyze") {
+		t.Errorf("flai role run analyzer by the operator: %d %s", code, errOut)
+	}
+	a := &app{configPath: cfg, out: &bytes.Buffer{}, errOut: &bytes.Buffer{}, cwd: root, clock: func() time.Time { return time.Date(2026, 11, 2, 10, 0, 0, 0, time.UTC) }}
+	ctx := context.Background()
+	t.Setenv("FLAI_STARTED_BY", "flai-serve")
+	t.Setenv("FLAI_STORY", "S-0001")
+	if _, err := a.mcpRoleRun(ctx, root, "analyzer", "S-1", nil, "agent-S-0001"); err == nil || !strings.Contains(err.Error(), "the analyze host action is off for this project: flai serve enable analyze") {
+		t.Errorf("the analyze action off: %v", err)
+	}
+	runIn(t, root, "serve", "enable", "analyze")
+	got, err := a.mcpRoleRun(ctx, root, "analyzer", "S-1", nil, "agent-S-0001")
+	if err != nil || got.Role != "analyzer" || got.Item != "S-0001" || got.Action != "analyze" || got.Agent != "analyzer" || got.PID == 0 || got.Trigger != "formula cadence S-0001" {
+		t.Fatalf("role_run of the analyzer by the instance's agent: %+v %v", got, err)
+	}
+	var all map[string]serve.AgentState
+	data, _ := os.ReadFile(filepath.Join(string(serve.DirFor(cfg)), "agents.json"))
+	if err := json.Unmarshal(data, &all); err != nil {
+		t.Fatal(err)
+	}
+	for _, st := range all {
+		if run := st.Analyzer; run == nil || run.Focus != "risk" || run.Instance != "S-0001" || run.Item != "" || run.Trigger != serve.FormulaTrigger("cadence", "S-0001") {
+			t.Errorf("the analyzer's run = %+v, want focus risk on the instance S-0001", run)
+		}
+		if len(st.Roles) != 0 {
+			t.Errorf("roles = %+v, want none", st.Roles)
+		}
+	}
+	js, _, _ := runIn(t, root, "serve", "journal", "--json")
+	for _, want := range []string{`"method": "mcp.role_run"`, `"action": "analyze"`, `"outcome": "disabled"`, "agent-S-0001 asked to run the role analyzer on S-1: started true as analyzer (pid "} {
+		if !strings.Contains(js, want) {
+			t.Errorf("the journal lacks %q: %s", want, js)
+		}
+	}
+}

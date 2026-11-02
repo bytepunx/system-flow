@@ -439,6 +439,173 @@ func TestAnAnalyzerRunAppendsAnAgentEventAtItsStartAndItsEnd(t *testing.T) {
 	})
 }
 
+// instance is a story, Cadence, the lab's repository holds as an instance
+// of the formula analysis-cadence that flai formula run made with the focus
+// input focus, as its Notes say.
+func (lab *agentLab) instance(focus string) string {
+	lab.t.Helper()
+	id := lab.backlog("Cadence", nil)
+	it, err := lab.repo.Get(id)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	data, _ := os.ReadFile(it.Path)
+	notes := "\nMade by `flai formula run analysis-cadence` from `design/workflows/formulas/analysis-cadence.md`, with the inputs `focus=" + focus + "`.\n"
+	if err := os.WriteFile(it.Path, append(data, notes...), 0o644); err != nil {
+		lab.t.Fatal(err)
+	}
+	return id
+}
+
+// S-0424: the agent of a formula's instance that asks, through RunRole, for
+// the analyzer a role step of its formula names starts the analyzer through
+// its own start, as the project's analyzer, with the instance's focus, the
+// focus input its Notes record, or the run's own focus input when given, and
+// the instance as the run's, under the analyze action, with the formula's
+// trigger.
+func TestAFormulaRoleStepStartsTheAnalyzerOnItsInstance(t *testing.T) {
+	t.Run("the instance's focus", func(t *testing.T) {
+		lab := analyzeLab(t)
+		lab.hold()
+		story := lab.instance("risk")
+		trigger := FormulaTrigger("analysis-cadence", story)
+		run, err := RunRole(context.Background(), lab.o, Entry{Key: "t", Name: "t", Root: lab.root}, "analyzer", story, []harness.Input{{Name: "prompt", Value: "Analyze."}}, trigger)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if run.Agent != "analyzer" || run.Focus != "risk" || run.Instance != story || run.Item != "" || run.Story != "" || run.RoleName != "" || run.Trigger != trigger || run.PID == 0 {
+			t.Errorf("run = %+v, want the analyzer's, focus risk, on %s", run, story)
+		}
+		if got := lab.analyzerGiven(); !strings.Contains(got, "focus: risk\n") || !strings.Contains(got, "role: analyze\n") || !strings.Contains(got, "agent: analyzer\n") {
+			t.Errorf("the analyzer was given\n%s", got)
+		}
+		if st := lab.state(); !st.Analyzer.same(run) || st.Analyzer.Instance != story || len(st.Roles) != 0 || len(st.Plans) != 0 {
+			t.Errorf("state = %+v, want the run as the project's analyzer alone", st)
+		}
+		if data, err := os.ReadFile(lab.o.Dir.agents()); err != nil || !strings.Contains(string(data), `"instance": "`+story+`"`) {
+			t.Errorf("serve/agents.json does not record the run's instance (%v):\n%s", err, data)
+		}
+		j := lab.entries()
+		if len(j) != 1 || j[0].Action != hostapi.ActionAnalyze || j[0].Method != "serve.analyze" || !strings.Contains(j[0].Detail, "to analyze, focus risk, on "+story+", as analyzer (pid ") || !strings.HasSuffix(j[0].Detail, "started by "+trigger) {
+			t.Errorf("journal: %+v", j)
+		}
+		lab.release("analyze")
+	})
+	t.Run("the run's focus input", func(t *testing.T) {
+		lab := analyzeLab(t)
+		story := lab.instance("risk")
+		run, err := RunRole(context.Background(), lab.o, Entry{Key: "t", Name: "t", Root: lab.root}, "analyzer", story, []harness.Input{{Name: "focus", Value: "intent"}}, FormulaTrigger("analysis-cadence", story))
+		if err != nil || run.Focus != "intent" || run.Instance != story {
+			t.Fatalf("run = %+v (%v), want focus intent on %s", run, err, story)
+		}
+	})
+	t.Run("no focus is all three", func(t *testing.T) {
+		lab := analyzeLab(t)
+		story := lab.instance("")
+		run, err := RunRole(context.Background(), lab.o, Entry{Key: "t", Name: "t", Root: lab.root}, "analyzer", story, nil, FormulaTrigger("analysis-cadence", story))
+		if err != nil || run.Focus != harness.AllFocus || run.Instance != story {
+			t.Fatalf("run = %+v (%v), want focus all on %s", run, err, story)
+		}
+		if got := lab.analyzerGiven(); !strings.Contains(got, "focus: unset\n") {
+			t.Errorf("the analyzer was given a focus:\n%s", got)
+		}
+	})
+}
+
+// S-0424: the analyzer is refused to the operator's own asking through
+// RunRole, naming flai analyze; to a role step on an item not its instance;
+// with the analyze action off, as Analyze refuses it; and the planner, the
+// orchestrator, and the curator are refused to a role step. A refusal records
+// nothing.
+func TestTheAnalyzerThroughRunRoleIsRefusedWithWhy(t *testing.T) {
+	lab := analyzeLab(t)
+	story, other := lab.instance("risk"), lab.backlog("Other", nil)
+	trigger := FormulaTrigger("analysis-cadence", story)
+	refusedFor := func(name, item, trigger, want string) {
+		t.Helper()
+		_, err := RunRole(context.Background(), lab.o, Entry{Key: "t", Name: "t", Root: lab.root}, name, item, nil, trigger)
+		var no *Refused
+		if !errors.As(err, &no) || !strings.Contains(no.Why, want) {
+			t.Errorf("run %s on %q by %q: %v, want refused for %q", name, item, trigger, err, want)
+		}
+	}
+	refusedFor("analyzer", story, TriggerAsked, "analyzer is a built-in role, which flai starts with flai analyze, not as a role the project defines")
+	refusedFor("analyzer", other, trigger, "the analyzer runs for a role step of a formula on its instance "+story+" alone, and was asked for on "+other+": give the item "+story)
+	refusedFor("analyzer", "", trigger, "and was asked for on no item")
+	for name, how := range map[string]string{"planner": "flai plan <item>", "orchestrator": "flai serve enable orchestrate", "curator": "flai curate"} {
+		refusedFor(name, story, trigger, name+" is a built-in role a role step cannot start: only the analyzer is started for a role step, through flai analyze's start; flai starts the "+name+" with "+how)
+	}
+	refusedFor("analyzer", story, trigger+"; schedule daily", "analyzer is a built-in role, which flai starts with flai analyze")
+	lab.cfg.Analyze = false
+	refusedFor("analyzer", story, trigger, "the analyze host action is off for this project: flai serve enable analyze")
+	if st := lab.state(); st.Analyzer != nil || len(lab.entries()) != 0 {
+		t.Errorf("a refusal was recorded: %+v %+v", st.Analyzer, lab.entries())
+	}
+}
+
+// S-0424: the analyzer run a formula instance's role step started appends
+// its agent events on the instance, by the analyzer, role analyze: started
+// with its trigger and focus, then ended for a run that wrote its report and
+// failed for one that did not, which the instance's agent is told of; the
+// analyzer's other runs keep theirs on the analyzer's role.
+func TestAFormulaAnalyzerRunsEndIsAnAgentEventOnTheInstance(t *testing.T) {
+	onInstance := func(lab *agentLab, story, title string, want ...[2]string) {
+		t.Helper()
+		lab.agentEventsAre(story, workitem.Story, title, workitem.ActivityAnalyzer, conventions.RoleAnalyze, want...)
+		if got := inbox.AgentEventsOf(lab.repo, workitem.ActivityAnalyzer, time.Time{}); len(got) != 0 {
+			t.Errorf("agent events on the analyzer's role: %+v, want none", got)
+		}
+	}
+	start := func(lab *agentLab, story, focus string) {
+		t.Helper()
+		lab.l.mu.Lock()
+		started, _ := lab.l.analyzeOn(context.Background(), lab.cfg, nil, focus, FormulaTrigger("analysis-cadence", story), story)
+		lab.l.mu.Unlock()
+		if !started {
+			t.Fatalf("not started: %+v", lab.state().Analyzer)
+		}
+		waitFor(t, "the analyzer run ended", func() bool { r := lab.state().Analyzer; return r != nil && r.Ended != "" })
+	}
+	t.Run("a report is ended", func(t *testing.T) {
+		lab := analyzeLab(t)
+		story := lab.instance("risk")
+		lab.analyzerRuns("2026-11-02-risk.md", "Wrote the risk report.", runStart)
+		start(lab, story, "risk")
+		onInstance(lab, story, "Cadence", [2]string{inbox.AgentStarted, "started by formula analysis-cadence " + story + ", focus risk"}, [2]string{inbox.AgentEnded, "ended with its work done"})
+		items, err := lab.repo.List(true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		events, _, err := inbox.CatchUp(lab.repo, inbox.Reader{Agent: "agent-" + story}, story, false, time.Now(), items)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var ends []inbox.Event
+		for _, e := range events {
+			if e.Kind == inbox.Agent && e.ID == story && e.To != inbox.AgentStarted {
+				ends = append(ends, e)
+			}
+		}
+		if len(ends) != 1 || ends[0].By != workitem.ActivityAnalyzer || ends[0].To != inbox.AgentEnded {
+			t.Errorf("agent-%s is told of %+v, want the analyzer's one end", story, ends)
+		}
+		if r := lab.state().Analyzer; r.Instance != story || r.Outcome != OutcomeWorked || r.Report != "design/analysis/2026-11-02-risk.md" {
+			t.Errorf("run = %+v, want worked on %s with its report", r, story)
+		}
+	})
+	t.Run("no report is failed", func(t *testing.T) {
+		lab := analyzeLab(t)
+		story := lab.instance("")
+		lab.analyzerRuns("", "Found nothing.", runStart)
+		start(lab, story, "")
+		r := lab.state().Analyzer
+		if r.Outcome != OutcomeFailed || !strings.Contains(r.Why, "(exit 0) without writing a report") {
+			t.Fatalf("run = %+v, want failed without a report", r)
+		}
+		onInstance(lab, story, "Cadence", [2]string{inbox.AgentStarted, "started by formula analysis-cadence " + story + ", focus " + harness.AllFocus}, [2]string{inbox.AgentFailed, r.Why})
+	})
+}
+
 // S-0534: an analyzer run whose log ends on the recorded usage-limit refusal
 // is failed on the limit and sets the budget state until the reset the API
 // reported; the probe that starts at the reset and ends on the limit again
