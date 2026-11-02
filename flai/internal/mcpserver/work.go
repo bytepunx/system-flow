@@ -28,7 +28,7 @@ const (
 
 // WorkIn bounds one wait.
 type WorkIn struct {
-	TimeoutSeconds int `json:"timeout_seconds,omitempty" jsonschema:"how long to wait in seconds, default 300 (5 minutes), at most 1800 (30 minutes); call it again when it times out"`
+	TimeoutSeconds int `json:"timeout_seconds,omitempty" jsonschema:"how long to wait in seconds; the tool's description gives the default and the most this server holds; call it again when it times out"`
 }
 
 // WorkOut is what an idle agent should do next, or why there is nothing yet.

@@ -2,11 +2,13 @@ package mcpserver
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/bytepunx/system-flow/flai/internal/ask"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
 )
 
@@ -16,6 +18,11 @@ var waits = map[string]bool{"wait_for_work": true, "wait_for_events": true}
 // LongestWait caps one wait_for_events or wait_for_work call (I-0059): every
 // return is a model turn that reads the agent's whole context again.
 const LongestWait = 30 * time.Minute
+
+// HTTPLongestWait caps one wait_for_events or wait_for_work call over HTTP
+// (ADR-0244): the bound permission_prompt holds there, below the 60 seconds
+// after which Claude Code drops a call (I-0228).
+const HTTPLongestWait = HTTPPermissionHold
 
 const (
 	eventsWait = time.Minute     // wait_for_events without timeout_seconds
@@ -64,6 +71,17 @@ func holdFor(seconds int, def, longest time.Duration) time.Duration {
 		return longest
 	}
 	return time.Duration(seconds) * time.Second
+}
+
+// waitBound is how a wait's description states timeout_seconds on a server
+// that holds one call at most longest, def when it did not ask; a bound
+// below LongestWait is named as the server's own (ADR-0244).
+func waitBound(def, longest time.Duration) string {
+	text := fmt.Sprintf("timeout_seconds, %d by default and at most %d (%s)", min(def, longest)/time.Second, longest/time.Second, ask.Spoken(longest))
+	if longest < LongestWait {
+		text += ", the most this server holds one call (ADR-0244): a longer timeout_seconds is held that long"
+	}
+	return text
 }
 
 // timing times each request the server receives, beneath stdio or HTTP,

@@ -134,11 +134,13 @@ func mcpURL(addr net.Addr) string {
 
 // mcpHTTPOptions are the options of the server an agent reaches over HTTP:
 // permission_prompt holds a write at most mcpserver.HTTPPermissionHold, below
-// the 60 seconds after which Claude Code drops a call there (ADR-0215). It
+// the 60 seconds after which Claude Code drops a call there (ADR-0215), and
+// wait_for_events and wait_for_work hold a call at most
+// mcpserver.HTTPLongestWait, the same bound (ADR-0244). It
 // allows a protected write without asking only under the auto-approve host
 // action and only for the agent flai serve runs for the story (ADR-0243).
 func (a *app) mcpHTTPOptions(repo *workitem.Repo, agent string, closing <-chan struct{}, installed string) mcpserver.Options {
-	return mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Closing: closing, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Analyses: a.mcpAnalyze, Curations: a.mcpCurate, Roles: a.mcpRoleRun, Activities: a.mcpActivity, AutoApprove: a.mcpAutoApprove, ServedAgent: a.mcpServedAgent, Publish: a.mcpPublisher(), RelativePaths: a.relativeWorktrees, Installed: installed, PermissionHold: mcpserver.HTTPPermissionHold, Budgets: a.mcpBudgets()}
+	return mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Closing: closing, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Analyses: a.mcpAnalyze, Curations: a.mcpCurate, Roles: a.mcpRoleRun, Activities: a.mcpActivity, AutoApprove: a.mcpAutoApprove, ServedAgent: a.mcpServedAgent, Publish: a.mcpPublisher(), RelativePaths: a.relativeWorktrees, Installed: installed, PermissionHold: mcpserver.HTTPPermissionHold, MaxWait: mcpserver.HTTPLongestWait, Budgets: a.mcpBudgets()}
 }
 
 // mcpServedAgent reports whether agent is the name of the run flai serve
@@ -178,9 +180,10 @@ func (a *app) serveMCPHTTP(ctx context.Context, repo *workitem.Repo, addr string
 	})
 	mux := http.NewServeMux()
 	mux.Handle(mcpPath, handler)
-	// No write timeout: wait_for_events and wait_for_work hold a request for
-	// up to mcpserver.LongestWait, and the SDK pauses a session's --idle
-	// timer while one of its requests is open.
+	// No write timeout: a call such as task_done may run past any bound, and
+	// the SDK pauses a session's --idle timer while one of its requests is
+	// open; wait_for_events and wait_for_work hold one for up to
+	// mcpserver.HTTPLongestWait (ADR-0244).
 	srv := &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 
 	st := mcpState{PID: os.Getpid(), Addr: ln.Addr().String(), URL: mcpURL(ln.Addr()), Started: time.Now().UTC().Format(time.RFC3339), Version: buildinfo.Version, ExitWith: exitWith}

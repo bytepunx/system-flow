@@ -322,3 +322,82 @@ func TestHeldWaitsSendProgress(t *testing.T) {
 		t.Errorf("a call without a progress token got progress: %v", got)
 	}
 }
+
+// ADR-0244: a server with MaxWait HTTPLongestWait, as flai mcp http builds
+// it, holds a wait_for_events or wait_for_work asked for 600 s, or for
+// nothing, at most HTTPLongestWait and then answers timed_out, and both
+// descriptions say so; without MaxWait, as flai mcp builds it over stdio, the
+// same call is held the 600 s it asked for.
+func TestWaitsHoldAtMostTheServersBound(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		name    string
+		maxWait time.Duration
+		asked   time.Duration // what timeout_seconds 600 is held for
+		events  time.Duration // what wait_for_events with none is held for
+		work    time.Duration // what wait_for_work with none is held for
+		says    string
+	}{
+		{"stdio", 0, 600 * time.Second, eventsWait, workWait, "at most 1800 (30 minutes)"},
+		{"HTTP", HTTPLongestWait, HTTPLongestWait, HTTPLongestWait, HTTPLongestWait, "at most 45 (45 seconds), the most this server holds one call (ADR-0244)"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			d := newDeadlines()
+			f := setupWith(t, func(o *Options) { o.MaxWait, o.After = c.maxWait, d.after })
+			f.toReview(t)
+			if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
+				t.Fatal(failed)
+			}
+			*f.clock = t0.Add(10 * time.Minute)
+			tools, err := f.cs.ListTools(context.Background(), nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			described := map[string]bool{}
+			for _, tool := range tools.Tools {
+				if (tool.Name == "wait_for_events" || tool.Name == "wait_for_work") && strings.Contains(tool.Description, c.says) {
+					described[tool.Name] = true
+				}
+			}
+			for _, w := range []struct {
+				tool string
+				def  time.Duration
+			}{{"wait_for_events", c.events}, {"wait_for_work", c.work}} {
+				if !described[w.tool] {
+					t.Errorf("%s's description states the bound in force, %q", w.tool, c.says)
+				}
+				for _, h := range []struct {
+					args map[string]any
+					want time.Duration
+				}{{map[string]any{"timeout_seconds": 600}, c.asked}, {map[string]any{}, w.def}} {
+					done := make(chan map[string]any, 1)
+					go func() {
+						out, failed := f.call(t, w.tool, h.args)
+						if failed != "" {
+							t.Errorf("%s: %s", w.tool, failed)
+						}
+						done <- out
+					}()
+					select {
+					case got := <-d.armed:
+						if got != h.want {
+							t.Errorf("%s %v is held %s, want %s", w.tool, h.args, got, h.want)
+						}
+					case <-time.After(5 * time.Second):
+						t.Fatalf("%s %v never armed a deadline", w.tool, h.args)
+					}
+					d.advance(h.want)
+					select {
+					case out := <-done:
+						if out["timed_out"] != true {
+							t.Errorf("%s %v answers timed_out once its bound passes: %v", w.tool, h.args, out)
+						}
+					case <-time.After(5 * time.Second):
+						t.Fatalf("%s %v never answered once its bound passed", w.tool, h.args)
+					}
+				}
+			}
+		})
+	}
+}

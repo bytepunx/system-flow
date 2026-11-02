@@ -277,6 +277,67 @@ func testMCPOverHTTPRefusesAnUnansweredWriteBeforeClaudeCodeGivesUp(t *testing.T
 	}
 }
 
+// I-0228: over HTTP, wait_for_events and wait_for_work held a call for the
+// timeout_seconds asked, so Claude Code dropped it after 60 seconds and the
+// agent saw an error instead of timed_out. The server an agent reaches over
+// HTTP now holds one at most HTTPLongestWait (ADR-0244): with that bound and
+// Claude Code's scaled down alike, both asked for 600 seconds answer
+// timed_out before a client that gives up when Claude Code does.
+func TestMCPOverHTTPAnswersAWaitBeforeClaudeCodeGivesUp(t *testing.T) {
+	t.Parallel()
+	root := tempProject(t)
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out, errOut bytes.Buffer
+	a := &app{configPath: configOf(t), out: &out, errOut: &errOut, cwd: root}
+	opt := a.mcpHTTPOptions(repo, "idle", nil, "")
+	if opt.MaxWait != mcpserver.HTTPLongestWait || opt.MaxWait <= 0 || opt.MaxWait >= claudeCodeHTTPTimeout {
+		t.Errorf("over HTTP a wait is held at most %s, want mcpserver.HTTPLongestWait (%s), less than the %s Claude Code waits", opt.MaxWait, mcpserver.HTTPLongestWait, claudeCodeHTTPTimeout)
+	}
+	const scale = 20
+	opt.MaxWait /= scale
+	srv := httptest.NewServer(mcphttp.Handler(mcphttp.Options{Token: "token", NewServer: func(string) *mcp.Server { return mcpserver.New(opt) }}))
+	defer srv.Close()
+	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "1"}, nil)
+	cs, err := client.Connect(context.Background(), &mcp.StreamableClientTransport{Endpoint: srv.URL, HTTPClient: &http.Client{Transport: mcpBearer{"token", "idle"}}, DisableStandaloneSSE: true}, &mcp.ClientSessionOptions{ProtocolVersion: "2025-11-25"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = cs.Close() }()
+	ctx, cancel := context.WithTimeout(context.Background(), claudeCodeHTTPTimeout/scale)
+	defer cancel()
+	waits := []string{"wait_for_events", "wait_for_work"}
+	answers := make(chan string, len(waits))
+	for _, tool := range waits {
+		go func() {
+			res, err := cs.CallTool(ctx, &mcp.CallToolParams{Name: tool, Arguments: map[string]any{"timeout_seconds": 600}})
+			var got struct {
+				TimedOut bool `json:"timed_out"`
+			}
+			switch {
+			case err != nil:
+				answers <- fmt.Sprintf("%s outlives the client's %s, as it outlived Claude Code's %s: %v", tool, claudeCodeHTTPTimeout/scale, claudeCodeHTTPTimeout, err)
+			case res.IsError || len(res.Content) == 0:
+				answers <- fmt.Sprintf("%s answers an error: %+v", tool, res.Content)
+			default:
+				text, _ := res.Content[0].(*mcp.TextContent)
+				if text == nil || json.Unmarshal([]byte(text.Text), &got) != nil || !got.TimedOut {
+					answers <- fmt.Sprintf("%s with nothing to answer answers timed_out within the bound: %+v", tool, res.Content)
+					return
+				}
+				answers <- ""
+			}
+		}()
+	}
+	for range waits {
+		if failed := <-answers; failed != "" {
+			t.Error(failed)
+		}
+	}
+}
+
 // mcpHelperEnv, set to 1, makes TestMCPHelperProcess run flai with the
 // arguments after "--", on this process's own standard streams: flai mcp on
 // stdio reads and writes those, so a test reaches the server that command
@@ -384,6 +445,8 @@ func mcpToolDescriptions(ctx context.Context, t *testing.T, cs *mcp.ClientSessio
 // with different descriptions, and why.
 var differsByTransport = map[string]string{
 	"permission_prompt": "its description states how long it holds a write for the operator's answer: StdioPermissionHold over stdio, and HTTPPermissionHold over HTTP, below the 60 seconds after which Claude Code drops a call there (ADR-0215)",
+	"wait_for_events":   "its description states the most it holds one call: LongestWait over stdio, and HTTPLongestWait over HTTP, the same bound as permission_prompt's there (ADR-0244)",
+	"wait_for_work":     "its description states the most it holds one call: LongestWait over stdio, and HTTPLongestWait over HTTP, the same bound as permission_prompt's there (ADR-0244)",
 }
 
 // S-0506: an agent in a container reaches flai only over HTTP, so the server
