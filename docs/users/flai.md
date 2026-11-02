@@ -2310,6 +2310,8 @@ While `plan` is on, `flai serve` also plans again on its own, so that forecasts 
 | A story is accepted or cancelled, or the pull order changes | What `planning.replan` says. By default flai plays the board out again with no agent and moves the delivery of each ready and backlog forecast that changed, keeping its duration, in one commit, `chore: replan forecasts after …` |
 | `planning.schedule` comes round | The planner runs for every ready story |
 
+These are the entries of the planner's role file's `trigger`, `design/workflows/roles/planner.md`, as the template ships it. Since S-0554 `flai serve` starts the planner only on the entries the file names: take one out and the planner no longer runs on it, though the forecasts are still replayed as `planning.replan` says ([ADR-0250](../../design/adrs/0250-a-role-file-s-start-prompt-is-a-text-template-in-its-front-matter-s-start-field.md)).
+
 ```yaml
 planning:
   replan: deterministic      # the default; or never, or agent
