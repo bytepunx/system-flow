@@ -3,15 +3,36 @@ id: T-2213
 type: task
 nature: remediation
 title: "An ADR records the remediation proposed from I-0214's instances: harness none on a story's agent says its agent runs elsewhere, and flai serve starts nothing for it"
-status: backlog
+status: done
 parent: S-0516
 owner: alex
 created: 2026-10-28T13:13:11Z
-updated: 2026-10-28T13:13:11Z
-transitions: []
+updated: 2026-11-02T05:16:34Z
+transitions:
+  - to: ready
+    at: 2026-11-02T05:15:03Z
+    by: agent-S-0516
+  - to: in-progress
+    at: 2026-11-02T05:15:04Z
+    by: agent-S-0516
+  - to: done
+    at: 2026-11-02T05:16:34Z
+    by: agent-S-0516
 stream: S-0516
 tags: [cli, serve, adr]
-touches: [design/adrs/README.md]
+touches: [design/adrs/README.md, design/adrs/0242-a-story-s-agent-whose-harness-is-none-runs-elsewhere-and-flai-serve-starts.md]
+usage:
+  source: log
+  seconds: 90
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 98
+      cache_read: 933562
+      cache_write: 6628
+      cost: 0.3311
 ---
 # T-2213 An ADR records the remediation proposed from I-0214's instances: harness none on a story's agent says its agent runs elsewhere, and flai serve starts nothing for it
 

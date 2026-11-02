@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1954.5317
-accrued_seconds: 1504456
-tasks_completed: 1682
-last_run: 2026-11-02T05:01:54Z
+accrued_cost: 1956.2326
+accrued_seconds: 1504710
+tasks_completed: 1692
+last_run: 2026-11-02T05:13:54Z
 ---
 
 # Orchestrator activity
@@ -11803,6 +11803,76 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 15
 - Cost: 0.1426 USD, estimated
 
+### 2026-11-02T05:04:48Z
+
+- Summary: release-due S-0563: under publish (policy judgement; count 1, value 90 USD/week, nothing in held_by_epic) published S-0563, judged complete (three tasks done, two criteria met, ADR-0241, I-0250 closed, accepted by alex). Release: flai 1.80.0 to 1.80.1 (patch, flai/v1.80.1), pushed, no warnings. Bundled: S-0563.
+- Items: S-0563
+- Seconds: 24
+- Cost: 0.0559 USD, estimated
+
+### 2026-11-02T05:05:00Z
+
+- Summary: S-0563 is released as flai 1.80.1, and the push went through with no warnings.
+- Items: none
+- Seconds: 12
+- Cost: 0.2313 USD, estimated
+
+### 2026-11-02T05:05:46Z
+
+- Summary: Answered TH-0808, citing no source
+- Items: S-0423
+- Seconds: 22
+- Cost: 0.0634 USD, estimated
+
+### 2026-11-02T05:05:56Z
+
+- Summary: TH-0808: acknowledged agent-S-0423's fix (c39609e) and left S-0423 in progress; its last close-out at 447cfea stopped at sync and is not the branch head (8506145). I verify and enqueue it once a close-out passes at the head and it is back in review, then resolve TH-0808.
+- Items: S-0423
+- Seconds: 10
+- Cost: 0.0000 USD
+
+### 2026-11-02T05:06:08Z
+
+- Summary: I didn't enqueue S-0423: it's back in progress with its agent and has no passing close-out at its branch head yet.
+- Items: none
+- Seconds: 12
+- Cost: 0.2826 USD, estimated
+
+### 2026-11-02T05:11:07Z
+
+- Summary: Enqueued S-0423 at 8506145 (1st and only in the queue; value 44.67 USD/week, forecast 1h, throughput policy): close-out passed every step at the branch head, verifier matched all four criteria to changed files, accept dry-run had no blocker. Resolved my TH-0808, whose failed-verify concern is gone.
+- Items: S-0423
+- Seconds: 70
+- Cost: 0.2576 USD, estimated
+
+### 2026-11-02T05:11:23Z
+
+- Summary: S-0423 is in the merge queue at commit 8506145. It is first and the only story there, so the queue will land it as the orchestrator.
+- Items: none
+- Seconds: 16
+- Cost: 0.2591 USD, estimated
+
+### 2026-11-02T05:13:10Z
+
+- Summary: Left S-0553 in review and opened TH-0809: flai accept --dry-run says only the operator accepts it (its branch changes protected .claude/agents paths, ADR-0106), and story/S-0553 at fe6a62f has not been synced since the queue's three rebase conflicts in the strategic-agents files.
+- Items: S-0553
+- Seconds: 44
+- Cost: 0.1298 USD, estimated
+
+### 2026-11-02T05:13:36Z
+
+- Summary: Ready column had 3, below in-progress room 4: promoted S-0516 (candidate rank 1, 1h) and S-0506 (rank 2, 2h) under promote_to_ready, then applied flai order --by throughput (S-0516, S-0424, S-0554, S-0425, S-0506). Left S-0241 (rank 3) in backlog: its Notes forbid ready before headless forks, it is blocked, and TH-0790 awaits the operator.
+- Items: S-0516, S-0506, S-0241
+- Seconds: 26
+- Cost: 0.1475 USD, estimated
+
+### 2026-11-02T05:13:54Z
+
+- Summary: I left S-0553 in review because only you can accept it, and its branch needs a sync before that. I also topped up the ready column and ordered it.
+- Items: none
+- Seconds: 18
+- Cost: 0.2737 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -12143,4 +12213,9 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-11-02T04:53:32Z
 
 - Call: `git merge-tree --write-tree main story/S-0553 >/dev/null`
+- Needs: none
+
+### 2026-11-02T05:13:30Z
+
+- Call: `flai order --by throughput --apply 2>&1`
 - Needs: none

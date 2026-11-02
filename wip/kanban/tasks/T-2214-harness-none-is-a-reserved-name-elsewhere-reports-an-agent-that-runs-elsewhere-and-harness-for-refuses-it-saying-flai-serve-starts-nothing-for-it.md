@@ -3,16 +3,37 @@ id: T-2214
 type: task
 nature: remediation
 title: "harness.None is a reserved name: Elsewhere reports an agent that runs elsewhere, and harness.For refuses it saying flai serve starts nothing for it"
-status: backlog
+status: done
 parent: S-0516
 owner: alex
 created: 2026-10-28T13:13:27Z
-updated: 2026-10-28T13:13:27Z
-transitions: []
+updated: 2026-11-02T05:20:59Z
+transitions:
+  - to: ready
+    at: 2026-11-02T05:16:59Z
+    by: agent-S-0516
+  - to: in-progress
+    at: 2026-11-02T05:17:00Z
+    by: agent-S-0516
+  - to: done
+    at: 2026-11-02T05:20:59Z
+    by: agent-S-0516
 stream: S-0516
 tags: [cli, serve]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go]
 after: [T-2213]
+usage:
+  source: log
+  seconds: 237
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 10
+      output: 60
+      cache_read: 868147
+      cache_write: 6541
+      cost: 0.308
 ---
 # T-2214 harness.None is a reserved name: Elsewhere reports an agent that runs elsewhere, and harness.For refuses it saying flai serve starts nothing for it
 

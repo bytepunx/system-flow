@@ -3,11 +3,11 @@ id: S-0423
 type: story
 nature: improvement
 title: The template ships a baseline publish formula that fetches, evaluates orchestration.release, and publishes what is pending, the orchestrator starts it in place of calling release_publish, and it is run once here
-status: in-progress
+status: done
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:41:11Z
-updated: 2026-11-02T05:04:30Z
+updated: 2026-11-02T05:27:41Z
 transitions:
   - to: ready
     at: 2026-10-28T13:11:59Z
@@ -27,9 +27,15 @@ transitions:
   - to: in-progress
     at: 2026-11-02T05:01:22Z
     by: agent-S-0423
+  - to: review
+    at: 2026-11-02T05:09:21Z
+    by: agent-S-0423
+  - to: done
+    at: 2026-11-02T05:27:41Z
+    by: orchestrator
 tags: [cli, template]
 topics: [cli, orchestration, template, conventions]
-touches: [design/adrs, design/adrs/README.md, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, template/template.yaml, template/CHANGELOG.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/release.go, flai/cmd/release_evaluate_test.go, flai/cmd/release_push_action_test.go, flai/cmd/orchestrate_permissions_test.go, flai/cmd/formula.go, flai/cmd/formula_test.go, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/check/check.go, flai/internal/check/formulas_test.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/mcpserver/orchestrate.go, flai/internal/mcpserver/orchestrate_test.go, design/workflows/formulas/README.md, docs/operators/settings.md, scripts/README.md, scripts/fetch.sh, template/root/design/workflows/formulas/README.md, template/root/scripts/README.md, template/root/scripts/fetch.sh, flai/internal/roles/baseline/orchestrator.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go]
+touches: [design/adrs, design/adrs/README.md, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, template/template.yaml, template/CHANGELOG.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/release.go, flai/cmd/release_evaluate_test.go, flai/cmd/release_push_action_test.go, flai/cmd/orchestrate_permissions_test.go, flai/cmd/formula.go, flai/cmd/formula_test.go, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/check/check.go, flai/internal/check/formulas_test.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/mcpserver/orchestrate.go, flai/internal/mcpserver/orchestrate_test.go, design/workflows/formulas/README.md, docs/operators/settings.md, scripts/README.md, scripts/fetch.sh, template/root/design/workflows/formulas/README.md, template/root/scripts/README.md, template/root/scripts/fetch.sh, flai/internal/roles/baseline/orchestrator.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, design/issues/I-0246-testaheldwaitfailsonatruncatedstory-and-testservestartsadefinedroleonaneventando.md, design/issues/summary.md]
 after: [S-0422]
 agent:
   harness: claude-code
@@ -38,21 +44,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3221
-  estimated: true
-  priced_by: estimate
+  seconds: 3530
+  priced_by: harness
   turns:
     - day: 2026-11-02
-      ceremony: 4
+      ceremony: 6
       hand_edits: 5
-      work: 79
+      work: 91
   models:
     - model: claude-opus-5-5
-      input: 556
-      output: 3316
-      cache_read: 38831196
-      cache_write: 990688
-      cost: 14.0145
+      input: 604
+      output: 174416
+      cache_read: 45798079
+      cache_write: 1024462
+      cost: 18.9445
   strategic:
     - kind: planner
       seconds: 1746
@@ -71,15 +76,21 @@ usage:
           cache_write: 109701
           cost: 0.123
     - kind: orchestrator
-      seconds: 971
+      seconds: 1063
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 272
-          output: 3979
-          cache_read: 71318340
-          cache_write: 280120
-          cost: 15.8209
+          input: 296
+          output: 4229
+          cache_read: 72057227
+          cache_write: 404593
+          cost: 16.0226
+        - model: claude-sonnet-5-5
+          input: 10
+          output: 66
+          cache_read: 124632
+          cache_write: 46163
+          cost: 0.1193
 cost_of_delay:
   value: 44.67
   by: planner-S-0423
@@ -144,3 +155,16 @@ Publishing a release stops being prose. A baseline formula, `publish`, spells ou
 - **Forecast.** flai's 38m was for size 25; at size 36 (5 criteria, 31 touches) the same 89 s a unit gives 53m, raised to 1h because T-1783 waits on an instance another agent works and on its acceptance, which no touch counts, as the earlier plan raised it by 14m for the same reason. The delivery is flai's play-out after S-0422, 18th in the pull order, with the duration times the cycle factor 1.15: 2026-10-22T04:59Z.
 - **Cost of delay.** 44.67 USD a week, worked out by hand from TH-0471's answer 1, as the planners of S-0414 to S-0422 did, because `flai cod` refuses while E-0024 has no inputs (TH-0567, question 3, confirmed and not yet written on the epic). 4h lost per cycle at `planning.hour_rate` 150 over the default 168h cycle gives E-0024 600 USD a week; S-0423's share is its 1h of the 13h26m forecast for E-0024's twelve open stories: 60 / 806 × 600. Once the input is on E-0024, `flai cod S-0423` gives the same figure while the forecasts stand.
 - 2026-11-02T05:01:22Z: moved to in-progress: close-out stopped at integration: TestShippedRolesNameFlaisToolsAndCommands refuses the role file's flai formula run publish entry; fixing it in a task
+
+### Accepted by the orchestrator
+
+- Verified: 2e45808e51e448f630e396d6b3fc3738182b7b32
+- Batch: 20261102-052112
+- Enqueued verified: 8506145c7a5a6a46fa4ce6a0be746ab33047a195
+- At: 2026-11-02T05:27:41Z
+
+Verdict: pass at 8506145c7a5a6a46fa4ce6a0be746ab33047a195; close-out job S-0423-20261102T050504Z passed every step, integration and smoke included
+- 1: design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, scripts/fetch.sh, template/root/scripts/fetch.sh, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/check/formulas_test.go, flai/cmd/release.go, flai/cmd/release_evaluate_test.go
+- 2: flai/cmd/release.go, flai/cmd/release_push_action_test.go, design/workflows/formulas/publish.md, design/system/strategic-agents.md
+- 3: design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/cmd/formula.go, flai/cmd/formula_test.go, flai/internal/mcpserver/orchestrate.go, flai/internal/mcpserver/orchestrate_test.go, flai/cmd/orchestrate_permissions_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go
+- 4: design/system/strategic-agents.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, docs/operators/index.md, template/CHANGELOG.md

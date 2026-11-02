@@ -3,12 +3,18 @@ id: T-2150
 type: task
 nature: feature
 title: A test compares the tool names the stdio and HTTP servers register for one agent, and every tool the spike found missing over HTTP is registered there
-status: backlog
+status: in-progress
 parent: S-0506
 owner: alex
 created: 2026-10-26T04:47:12Z
-updated: 2026-10-26T04:47:12Z
-transitions: []
+updated: 2026-11-02T05:15:24Z
+transitions:
+  - to: ready
+    at: 2026-11-02T05:15:23Z
+    by: agent-S-0506
+  - to: in-progress
+    at: 2026-11-02T05:15:24Z
+    by: agent-S-0506
 stream: S-0506
 tags: [cli, mcp]
 touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server_test.go, flai/cmd/mcp_http_test.go, flai/internal/mcphttp/mcphttp_test.go]

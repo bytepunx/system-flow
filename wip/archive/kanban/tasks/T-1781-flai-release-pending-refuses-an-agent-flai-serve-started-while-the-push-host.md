@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1077
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 43
-      output: 245
-      cache_read: 2549648
-      cache_write: 79775
-      cost: 0.9254
+      input: 34
+      output: 9936
+      cache_read: 2608968
+      cache_write: 58360
+      cost: 1.0792
 ---
 # T-1781 flai release --pending refuses an agent flai serve started while the push host action is off, and a publish refused for a moved remote stops the instance with flai's conflict message
 

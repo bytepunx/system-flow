@@ -3,12 +3,18 @@ id: T-2216
 type: task
 nature: remediation
 title: flai serve agent start, restart, and commit refuse a story whose agent runs elsewhere, saying flai serve starts nothing for it
-status: backlog
+status: in-progress
 parent: S-0516
 owner: alex
 created: 2026-10-28T13:13:55Z
-updated: 2026-10-28T13:14:16Z
-transitions: []
+updated: 2026-11-02T05:21:21Z
+transitions:
+  - to: ready
+    at: 2026-11-02T05:21:19Z
+    by: agent-S-0516
+  - to: in-progress
+    at: 2026-11-02T05:21:21Z
+    by: agent-S-0516
 stream: S-0516
 tags: [cli, serve]
 touches: [flai/internal/serve/start.go, flai/internal/serve/start_test.go, flai/internal/serve/restart.go, flai/internal/serve/restart_test.go, flai/internal/serve/commit.go, flai/internal/serve/commit_test.go]

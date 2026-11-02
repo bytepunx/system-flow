@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 42
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 3
-      output: 5
-      cache_read: 189580
-      cache_write: 1641
-      cost: 0.0673
+      output: 723
+      cache_read: 189732
+      cache_write: 4244
+      cost: 0.0785
 ---
 # T-2015 An ADR refining ADR-0094 records that under publish the orchestrator starts the publish formula in place of release_publish, which stays for a project with none
 

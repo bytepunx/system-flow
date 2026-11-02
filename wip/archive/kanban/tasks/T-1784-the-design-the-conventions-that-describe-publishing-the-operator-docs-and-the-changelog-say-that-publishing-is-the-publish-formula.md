@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 608
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 118
-      output: 638
-      cache_read: 8237407
-      cache_write: 169084
-      cost: 2.9585
+      input: 110
+      output: 31766
+      cache_read: 8341103
+      cache_write: 186583
+      cost: 3.4503
 ---
 # T-1784 The design, the conventions that describe publishing, the operator docs, and the changelog say that publishing is the publish formula
 

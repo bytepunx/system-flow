@@ -23,16 +23,16 @@ tags: []
 touches: [flai/internal/roles/roles.go, flai/internal/roles/roles_test.go]
 usage:
   source: log
-  seconds: 161
+  seconds: 164
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 12
-      output: 85
-      cache_read: 2223747
-      cache_write: 8237
-      cost: 0.7855
+      input: 29
+      output: 8434
+      cache_read: 2214604
+      cache_write: 49539
+      cost: 0.9161
 ---
 # T-2432 roles.Validate knows a flai formula run <name> entry as the command flai formula run, so the shipped orchestrator role passes TestShippedRolesNameFlaisToolsAndCommands
 

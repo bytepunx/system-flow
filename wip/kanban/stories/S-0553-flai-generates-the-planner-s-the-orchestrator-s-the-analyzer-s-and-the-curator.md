@@ -3,11 +3,11 @@ id: S-0553
 type: story
 nature: improvement
 title: flai generates the planner's, the orchestrator's, the analyzer's, and the curator's harness definitions from their role files alone, flai check holds a .claude/agents copy to them, and a session started by hand reads the same definition
-status: in-progress
+status: review
 parent: E-0024
 owner: alex
 created: 2026-10-30T20:45:17Z
-updated: 2026-11-02T04:56:27Z
+updated: 2026-11-02T05:11:49Z
 transitions:
   - to: ready
     at: 2026-11-01T23:44:10Z
@@ -33,6 +33,9 @@ transitions:
   - to: in-progress
     at: 2026-11-02T04:56:27Z
     by: flai
+  - to: review
+    at: 2026-11-02T05:11:49Z
+    by: alex
 blocked:
   - from: 2026-11-02T00:54:49Z
     until: 2026-11-02T01:08:28Z
@@ -72,15 +75,15 @@ usage:
       cost: 18.2938
   strategic:
     - kind: orchestrator
-      seconds: 238
+      seconds: 282
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 79
-          output: 486
-          cache_read: 2410843
-          cache_write: 441980
-          cost: 0.6545
+          input: 93
+          output: 567
+          cache_read: 2867309
+          cache_write: 540837
+          cost: 0.7843
         - model: claude-sonnet-5-5
           input: 14
           output: 83

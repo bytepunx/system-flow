@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1087
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 111
-      output: 671
-      cache_read: 6568007
-      cache_write: 155646
-      cost: 2.3663
+      input: 88
+      output: 25407
+      cache_read: 6671363
+      cache_write: 149232
+      cost: 2.7596
 ---
 # T-1782 Under publish, the orchestrator's role file tells it to run flai formula run publish when release_evaluate is met, and the guard lets it run that formula
 

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 565
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 57
-      output: 289
-      cache_read: 2984065
-      cache_write: 123034
-      cost: 1.0935
+      input: 41
+      output: 11741
+      cache_read: 3082938
+      cache_write: 68963
+      cost: 1.2753
 ---
 # T-2014 release_publish refuses, naming flai formula run publish, while the project defines a publish formula, and stays for a project with none
 

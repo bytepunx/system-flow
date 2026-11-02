@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 253
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 62
-      output: 390
-      cache_read: 2505787
-      cache_write: 77145
-      cost: 0.9091
+      input: 34
+      output: 9760
+      cache_read: 2562867
+      cache_write: 57329
+      cost: 1.0601
 ---
 # T-1780 design/workflows/formulas/publish.md, in the template and here, fetches, evaluates the release policy, publishes what is pending, and records the versions and tags
 

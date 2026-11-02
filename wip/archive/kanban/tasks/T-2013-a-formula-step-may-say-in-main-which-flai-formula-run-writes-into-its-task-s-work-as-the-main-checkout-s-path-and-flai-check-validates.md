@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 560
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 73
-      output: 396
-      cache_read: 4006074
-      cache_write: 147134
-      cost: 1.4617
+      input: 54
+      output: 15694
+      cache_read: 4120911
+      cache_write: 92181
+      cost: 1.7046
 ---
 # T-2013 A formula step may say in: main, which flai formula run writes into its task's Work as the main checkout's path and flai check validates
 

@@ -3,12 +3,18 @@ id: T-2151
 type: task
 nature: feature
 title: An ADR settles permission_prompt over HTTP under the auto-approve host action for an agent flai serve started, and the HTTP server follows it
-status: backlog
+status: in-progress
 parent: S-0506
 owner: alex
 created: 2026-10-26T04:47:21Z
-updated: 2026-10-26T04:47:21Z
-transitions: []
+updated: 2026-11-02T05:15:27Z
+transitions:
+  - to: ready
+    at: 2026-11-02T05:15:26Z
+    by: agent-S-0506
+  - to: in-progress
+    at: 2026-11-02T05:15:27Z
+    by: agent-S-0506
 stream: S-0506
 tags: [cli, mcp]
 touches: [design/adrs/README.md, flai/cmd/mcp_http.go, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/mcphttp/mcphttp.go]

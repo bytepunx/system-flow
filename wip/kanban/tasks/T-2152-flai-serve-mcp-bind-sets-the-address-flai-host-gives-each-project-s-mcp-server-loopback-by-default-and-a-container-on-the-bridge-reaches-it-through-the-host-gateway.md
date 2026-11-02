@@ -3,12 +3,18 @@ id: T-2152
 type: task
 nature: feature
 title: flai serve mcp bind sets the address flai host gives each project's MCP server, loopback by default, and a container on the bridge reaches it through the host gateway
-status: backlog
+status: in-progress
 parent: S-0506
 owner: alex
 created: 2026-10-26T04:47:30Z
-updated: 2026-10-26T12:30:53Z
-transitions: []
+updated: 2026-11-02T05:15:30Z
+transitions:
+  - to: ready
+    at: 2026-11-02T05:15:28Z
+    by: agent-S-0506
+  - to: in-progress
+    at: 2026-11-02T05:15:30Z
+    by: agent-S-0506
 stream: S-0506
 tags: [cli, mcp]
 touches: [flai/cmd/host.go, flai/cmd/host_test.go, flai/cmd/serve_mcp.go, flai/cmd/serve_mcp_test.go, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go]

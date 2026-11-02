@@ -3,12 +3,18 @@ id: T-2215
 type: task
 nature: remediation
 title: "flai serve starts nothing for a story whose agent runs elsewhere: look names the reason in waiting, and the automatic restart, the resume, and the send backs leave it alone, with tests that reproduce I-0214"
-status: backlog
+status: in-progress
 parent: S-0516
 owner: alex
 created: 2026-10-28T13:13:47Z
-updated: 2026-10-28T13:14:11Z
-transitions: []
+updated: 2026-11-02T05:21:18Z
+transitions:
+  - to: ready
+    at: 2026-11-02T05:21:17Z
+    by: agent-S-0516
+  - to: in-progress
+    at: 2026-11-02T05:21:18Z
+    by: agent-S-0516
 stream: S-0516
 tags: [cli, serve]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go]

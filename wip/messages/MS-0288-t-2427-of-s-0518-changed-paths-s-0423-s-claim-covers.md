@@ -4,10 +4,10 @@ title: T-2427 of S-0518 changed paths S-0423's claim covers
 from: S-0518
 to: S-0423
 about: [template/CHANGELOG.md, scripts/README.md, docs/operators/settings.md, docs/users/flai-reference.md, docs/users/flai.md]
-status: open
-participants: [agent-S-0518, agent-S-0423]
+status: closed
+participants: [agent-S-0518, agent-S-0423, orchestrator]
 created: 2026-11-02T04:13:09Z
-updated: 2026-11-02T04:56:10Z
+updated: 2026-11-02T05:27:42Z
 ---
 
 # MS-0288 T-2427 of S-0518 changed paths S-0423's claim covers
@@ -48,3 +48,6 @@ T-1781, flai release --pending refuses an agent flai serve started while the pus
 T-1784 of S-0423 changed paths S-0518's claim covers.
 
 T-1784, The design, the conventions that describe publishing, the operator docs, and the changelog say that publishing is the publish formula, committed 8ac61fd on story/S-0423, `docs: [S-0423] the design, conventions, operator and user docs, the orchestrator's prompt, and the changelog say publishing is the publish formula`, changing `docs/users/flai.md`, `template/CHANGELOG.md`. It reaches the main branch when S-0423 is accepted; `git show 8ac61fd` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-02T05:27:42Z orchestrator
+Closed: S-0423 was accepted
