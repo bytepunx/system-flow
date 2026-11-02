@@ -1,6 +1,6 @@
 ---
 title: Flow metrics
-updated: 2026-10-31
+updated: 2026-11-02
 status: active
 topics: [cli, dashboard, analysis]
 ---
@@ -430,14 +430,18 @@ A line of the event log:
 | Field | Definition |
 |-------|------------|
 | `at` | When, `YYYY-MM-DDTHH:MM:SSZ`. An `enqueued` line takes the enqueueing's time, a `landed` or `sent_back` line its outcome's time, a `verified` or `step_verified` line the result's finish time; the rest the time of the write |
-| `event` | `enqueued`: a story entered the queue. `batch_built`: a batch left the building and rebasing steps, so its stories are the ones it verifies; a batch whose every story was left out writes none. `verified`: the batch's verification finished. `bisected`: a failed batch's bisection began. `step_verified`: a bisection step's verification finished, once a step, a step stopped and verified again in place counting once (S-0552); a kind of its own, so that `verified` stays one a batch. `landed`: the queue landed a story, outcome `landed`. `sent_back`: the story a red batch was bisected to was sent back, outcome `failing`. `dequeued`: a story left the queue other than by landing or being sent back |
-| `batch` | The batch's ID, on `batch_built`, `verified`, `bisected`, `step_verified`, `landed`, and `sent_back` |
-| `stories` | On `enqueued`, `dequeued`, `landed`, and `sent_back`, the one story; on `batch_built`, `verified`, and `bisected`, the batch's stories in the order rebased; on `step_verified`, the stories the step verified, the batch's first ones |
+| `event` | `enqueued`: a story entered the queue. `batch_built`: a batch left the building and rebasing steps, so its stories are the ones it verifies; a batch whose every story was left out writes none. `verified`: the batch's verification finished. `bisected`: a failed batch's bisection began. `step_verified`: a bisection step's verification finished, once a step, a step stopped and verified again in place counting once (S-0552); a kind of its own, so that `verified` stays one a batch. `landed`: the queue landed a story, outcome `landed`. `sent_back`: the story a red batch was bisected to was sent back, outcome `failing`. `dequeued`: a story left the queue other than by landing or being sent back. Since S-0549 ([ADR-0237](../adrs/0237-the-merge-queue-s-event-log-gains-preflight-held-preflight-cleared-and-landing.md)), `preflight_held`: the landing's preflight began to hold the queue on what it found on the main checkout, or the findings of its hold changed ([ADR-0234](../adrs/0234-before-it-builds-a-batch-the-merge-queue-runs-the-landing-s-preflight-on-the.md)); `preflight_cleared`: a look found main clean and cleared the hold; `landing_resumed`: a batch whose landing waited on main went on from the commits it verified, with no new verification. No metric counts these three |
+| `batch` | The batch's ID, on `batch_built`, `verified`, `bisected`, `step_verified`, `landing_resumed`, `landed`, and `sent_back` |
+| `stories` | On `enqueued`, `dequeued`, `landed`, and `sent_back`, the one story; on `batch_built`, `verified`, and `bisected`, the batch's stories in the order rebased; on `step_verified`, the stories the step verified, the batch's first ones; on `landing_resumed`, the story the landing went on at; on `preflight_held` and `preflight_cleared`, none |
 | `by` | On `enqueued`, who enqueued it |
 | `passed` | On `verified`, whether the batch passed; on `step_verified`, whether the step passed |
 | `step` | On `step_verified` only, the step's number in the bisection, from 1 |
 | `left_out` | On `batch_built`, the stories selected for the batch whose rebase onto it stopped, when there are any |
 | `reason` | On `dequeued`, `removed` when no outcome came with it (`flai queue remove`, the host API), else the outcome recorded with it, such as `accepted_by_hand` or `left_out` |
+| `files` | On `preflight_held`, the files the hold's findings name, sorted |
+| `rules` | On `preflight_held`, the rules the hold's findings name, sorted |
+| `held_seconds` | On `preflight_cleared`, how long the preflight held the queue, in seconds |
+| `waited_seconds` | On `landing_resumed`, how long the landing waited on main, in seconds |
 
 A queue wait: for each `landed` or `sent_back` line, the seconds from that story's latest `enqueued` line before it to it. A line with no `enqueued` line before it has no wait: the log starts with the release that writes it.
 
