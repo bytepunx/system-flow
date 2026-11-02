@@ -1161,7 +1161,7 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 		return
 	}
 	commandSet := cfg.host(harness.Command).Program != ""
-	var todo, nothing, noRoom, reviewFull []readyStory
+	var todo, away, nothing, noRoom, reviewFull []readyStory
 	byLimit := map[string][]readyStory{} // held by the budget state, by why
 	reserved := 0
 	for _, s := range stories {
@@ -1174,6 +1174,10 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 		case run.live():
 			reserved++ // started, and not in progress yet: it has its agent
 			holds.Open(s.item, agentStarted)
+		case harness.Elsewhere(s.Agent):
+			// its agent runs elsewhere, which no command on the host changes,
+			// and is no failure (ADR-0242)
+			away = append(away, s)
 		case asked(run) && answer == "":
 			sk.add(s.ID+"'s agent is "+run.awaits(), s)
 		case asked(run):
@@ -1198,6 +1202,9 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 			}
 			todo = append(todo, s)
 		}
+	}
+	for _, s := range away {
+		sk.add(s.ID+"'s agent runs elsewhere (harness none): flai serve starts nothing for it", s)
 	}
 	if len(nothing) > 0 {
 		sk.add(fmt.Sprintf("%s %s no harness, and no command is set on the host", strings.Join(ids(nothing), ", "), oneOrMany(len(nothing), "names", "name")), nothing...)
@@ -1398,7 +1405,8 @@ func (l *launcher) settleOrphans() {
 // no such rule. The interval flai serve opened when the agent ended asking
 // (blockAsked) is no such block: it is closed before the agent is started
 // again, whatever answered it, and one an agent or the operator wrote is
-// left open (ADR-0205).
+// left open (ADR-0205). A story whose agent runs elsewhere is left alone,
+// answered or not (ADR-0242).
 func (l *launcher) resume(ctx context.Context, cfg AgentConfig, repo *workitem.Repo) {
 	st := l.dir.AgentStates()[l.entry.Root]
 	for id, run := range st.Stories {
@@ -1410,7 +1418,7 @@ func (l *launcher) resume(ctx context.Context, cfg AgentConfig, repo *workitem.R
 			continue
 		}
 		it, err := repo.Get(id)
-		if err != nil || (it.Status != workitem.InProgress && it.Status != workitem.Review) {
+		if err != nil || (it.Status != workitem.InProgress && it.Status != workitem.Review) || harness.Elsewhere(it.Agent) {
 			continue
 		}
 		own := run.Thread != "" && askedOn(it) == run.Thread
@@ -1440,8 +1448,8 @@ func (l *launcher) resume(ctx context.Context, cfg AgentConfig, repo *workitem.R
 // own, whose inbox lists the thread, so nothing is started beside it. Like
 // resume, it spends no automatic restart and does not wait for room under
 // the in-progress limit, whose place the story kept, and it leaves alone a
-// run the operator stopped, which waits for their retry, and a story that
-// nothing can start.
+// run the operator stopped, which waits for their retry, a story that
+// nothing can start, and one whose agent runs elsewhere (ADR-0242).
 func (l *launcher) startSentBack(ctx context.Context, cfg AgentConfig, repo *workitem.Repo) {
 	st := l.dir.AgentStates()[l.entry.Root]
 	// only a story whose pull request flai serve has read can have been sent back
@@ -1462,7 +1470,7 @@ func (l *launcher) startSentBack(ctx context.Context, cfg AgentConfig, repo *wor
 		if at, err := time.Parse(time.RFC3339, b.At); err != nil || !startedBefore(run, at) {
 			continue
 		}
-		if (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
+		if harness.Elsewhere(it.Agent) || (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
 			continue
 		}
 		s := readyStory{ID: it.ID, Agent: it.Agent, SentBack: &harness.SentBack{Thread: b.Thread, What: what}}
@@ -1503,7 +1511,7 @@ func (l *launcher) startQueueSentBack(ctx context.Context, cfg AgentConfig, repo
 		if !ok {
 			continue
 		}
-		if (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
+		if harness.Elsewhere(it.Agent) || (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
 			continue
 		}
 		s := readyStory{ID: it.ID, Agent: it.Agent, SentBack: &harness.SentBack{Thread: thread, What: strings.TrimPrefix(o.Detail, "sent back to in-progress: "), Queue: true}}
@@ -1551,7 +1559,7 @@ func (l *launcher) startAcceptSentBack(ctx context.Context, cfg AgentConfig, rep
 		if run == nil || run.live() || run.Stopped != "" || !startedBefore(run, at) {
 			continue
 		}
-		if (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
+		if harness.Elsewhere(it.Agent) || (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
 			continue
 		}
 		what := fmt.Sprintf("the orchestrator's acceptance found that %s, which it cannot settle, and aborted the rebase; run flai stream sync %s in its worktree and resolve them",
@@ -1637,7 +1645,8 @@ func sentBackFor(repo *workitem.Repo, story string) (forge.SendBack, string, boo
 // how the last one ended and that flai serve started it on its own. It does
 // so up to cfg.AutoRestarts times in a row; a run that ends at the limit gets
 // one thread to the operator instead (S-0294, ADR-0108). A story that nothing
-// can start, which flai serve agent restart refuses, is left alone. One
+// can start, or whose agent runs elsewhere (ADR-0242), which flai serve agent
+// restart refuses, is left alone, with no thread at the limit. One
 // whose run ended on the harness's usage limit (afterLimit) is no such
 // failure: it is started again once its provider's budget state no longer
 // holds it, which the start's gate says, as the probe when the hold has just
@@ -1656,7 +1665,7 @@ func (l *launcher) restartEnded(ctx context.Context, cfg AgentConfig, repo *work
 		if err != nil || it.Status != workitem.InProgress || it.IsBlocked() {
 			continue
 		}
-		if (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
+		if harness.Elsewhere(it.Agent) || (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
 			continue
 		}
 		if again {

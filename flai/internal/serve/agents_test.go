@@ -2152,6 +2152,82 @@ func TestAnEndedAgentIsNotRestartedOnItsOwnWhenItShouldNotBe(t *testing.T) {
 	}
 }
 
+// I-0214, ADR-0242: a story whose agent runs elsewhere gets no agent when it
+// enters ready, though the agent action is on, a command is set on the host,
+// and the limit has room, as S-0513 got one within a second; waiting names it
+// with the reason, logged once, and the story beside it is started.
+func TestAStoryWhoseAgentRunsElsewhereIsNotStartedFromReady(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.hold()
+	away := lab.readyWith("Worked in a container", &manifest.Agent{Harness: harness.None})
+	beside := lab.ready("Beside it")
+	lab.l.look(ctx, false)
+	waitFor(t, "the story beside it runs", func() bool { return lab.run(beside).live() })
+	lab.l.look(ctx, false)
+	if r := lab.run(away); r != nil {
+		t.Fatalf("started for a story whose agent runs elsewhere: %+v", r)
+	}
+	if n := lab.startedCount(); n != 1 {
+		t.Errorf("%d agents started, want 1: %+v", n, lab.entries())
+	}
+	want := away + "'s agent runs elsewhere (harness none): flai serve starts nothing for it"
+	if w := lab.state().Waiting; !strings.Contains(w, want) || strings.Contains(w, beside) {
+		t.Errorf("waiting: %q, want %q", w, want)
+	}
+	if lab.said(away) != 1 {
+		t.Errorf("logged %d for %s, want once", lab.said(away), away)
+	}
+	lab.release(beside)
+	waitFor(t, "the story beside it ends", func() bool { return !lab.run(beside).live() })
+}
+
+// I-0214, ADR-0242: a story in progress whose agent runs elsewhere, whose
+// newest run ended early, is not started again on its own, as S-0513's was as
+// automatic restart 1 of 2 while its container agent worked it, and gets no
+// thread at the limit, however agent.auto_restarts stands; nor is it started
+// again once its run's usage limit passes, nor for the answer to a question
+// its run asked.
+func TestAStoryWhoseAgentRunsElsewhereIsNotRestartedOnItsOwn(t *testing.T) {
+	ctx := context.Background()
+	for _, c := range []struct {
+		name  string
+		limit int
+		run   AgentRun
+	}{
+		{"restarts left", 2, AgentRun{Outcome: OutcomeFailed}},
+		{"at the limit", 2, AgentRun{Outcome: OutcomeFailed, AutoRestarts: 2}},
+		{"restarts off", 0, AgentRun{Outcome: OutcomeFailed}},
+		{"ended on the usage limit", 2, AgentRun{Outcome: OutcomeFailed, UsageLimited: true}},
+		{"asked, and answered", 2, AgentRun{Outcome: OutcomeAsked}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			lab := newAgentLab(t)
+			lab.cfg.AutoRestarts = c.limit
+			id := lab.putEnded("Worked in a container", c.run)
+			if c.run.Outcome == OutcomeAsked {
+				th := lab.asksOn(id, time.Now().Add(-2*time.Minute))
+				lab.endedAgo(id, 30*time.Second)
+				if _, err := threads.Reply(lab.repo, th.ID, "alex", "Nine.", time.Now()); err != nil {
+					t.Fatal(err)
+				}
+			}
+			lab.setAgent(id, &manifest.Agent{Harness: harness.None})
+			lab.l.look(ctx, false)
+			lab.l.look(ctx, false)
+			if r := lab.run(id); r.Session != "earlier" || r.live() || r.LimitThread != "" {
+				t.Errorf("started again: %+v", r)
+			}
+			if j := lab.entries(); len(j) != 0 {
+				t.Errorf("journal: %+v", j)
+			}
+			if ths := lab.limitThreads(id); len(ths) != 0 {
+				t.Errorf("%d threads opened at the limit", len(ths))
+			}
+		})
+	}
+}
+
 // asks counts, by holding story, the messages flai wrote on held's
 // conversations asking about its hold (ADR-0134).
 func (lab *agentLab) asks(held string) map[string]int {
@@ -2918,6 +2994,9 @@ func TestASentBackStorysAgentIsNotStartedWhenItShouldNotBe(t *testing.T) {
 		{"the operator stopped its run", AgentRun{Outcome: OutcomeStopped, Stopped: "2026-10-06T00:00:00Z"}, time.Minute, nil},
 		{"the agent action is off", AgentRun{Outcome: OutcomeWorked}, time.Minute, func(lab *agentLab, _ string, _ *threads.Thread) { lab.cfg.Enabled = false }},
 		{"nothing can start it", AgentRun{Outcome: OutcomeWorked}, time.Minute, func(lab *agentLab, _ string, _ *threads.Thread) { lab.cfg.Command = nil }},
+		{"its agent runs elsewhere", AgentRun{Outcome: OutcomeWorked}, time.Minute, func(lab *agentLab, id string, _ *threads.Thread) {
+			lab.setAgent(id, &manifest.Agent{Harness: harness.None}) // ADR-0242
+		}},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			lab := newAgentLab(t)
@@ -3082,6 +3161,9 @@ func TestAStoryTheMergeQueueSentBackIsNotStartedWhenItShouldNotBe(t *testing.T) 
 			lab.move(id, workitem.Review)
 		}},
 		{"its run started after the send back", 5 * time.Minute, nil},
+		{"its agent runs elsewhere", time.Minute, func(lab *agentLab, id string, _ *threads.Thread) {
+			lab.setAgent(id, &manifest.Agent{Harness: harness.None}) // ADR-0242
+		}},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			lab := newAgentLab(t)
@@ -3225,6 +3307,9 @@ func TestAStoryTheOrchestratorsAcceptanceSentBackIsNotStartedWhenItShouldNotBe(t
 			}
 		}},
 		{"its run started after the send back", 5 * time.Minute, nil},
+		{"its agent runs elsewhere", time.Minute, func(lab *agentLab, id string, _ *threads.Thread) {
+			lab.setAgent(id, &manifest.Agent{Harness: harness.None}) // ADR-0242
+		}},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			lab := newAgentLab(t)
