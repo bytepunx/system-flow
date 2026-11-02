@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 86.3638
-accrued_seconds: 8345
-tasks_completed: 49
-last_run: 2026-11-02T06:54:04Z
+accrued_cost: 87.5112
+accrued_seconds: 8461
+tasks_completed: 50
+last_run: 2026-11-02T18:15:32Z
 ---
 
 # Curator activity
@@ -403,3 +403,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0416, D-0422, D-0423, D-0461, D-0464
 - Seconds: 77
 - Cost: 1.5010 USD, estimated
+
+### 2026-11-02T18:15:32Z
+
+- Summary: I wrote no new entries, merged TH-0810 and TH-0812 into D-0422 (added to its sources and asked_again, which already had D-0465 and D-0466 for them), absorbed none because no design change since the last run states an active entry's fact, and flai digest compact compacted none.
+- Trigger: accepted S-0508
+- Items: D-0422, D-0461
+- Seconds: 116
+- Cost: 1.1474 USD, estimated

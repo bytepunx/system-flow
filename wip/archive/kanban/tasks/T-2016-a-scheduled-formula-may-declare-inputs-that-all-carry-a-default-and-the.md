@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 26
-      output: 7945
-      cache_read: 1723729
-      cache_write: 49427
-      cost: 0.7837
+      input: 23
+      output: 6748
+      cache_read: 1717441
+      cache_write: 50869
+      cost: 0.7909
 ---
 # T-2016 A scheduled formula may declare inputs that all carry a default, and the template test passes over a formula's input placeholders
 

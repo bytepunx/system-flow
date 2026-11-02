@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 18
-      output: 5456
-      cache_read: 1183732
-      cache_write: 33943
-      cost: 0.5382
+      input: 16
+      output: 4634
+      cache_read: 1179414
+      cache_write: 34933
+      cost: 0.5431
 ---
 # T-2433 The board's Import prompt says the import is committed before its tests and names the story that runs them
 

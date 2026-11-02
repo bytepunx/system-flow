@@ -3,11 +3,17 @@ id: S-0566
 type: story
 nature: improvement
 title: Operators should not need to intervene during review acceptance
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-11-02T18:21:16Z
-updated: 2026-11-02T18:21:16Z
-transitions: []
+updated: 2026-11-02T18:26:18Z
+transitions:
+  - to: ready
+    at: 2026-11-02T18:21:38Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-02T18:26:18Z
+    by: agent-S-0566
 tags: [cli]
 touches: [flai/cmd]
 agent:

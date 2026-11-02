@@ -3,12 +3,18 @@ id: T-2163
 type: task
 nature: feature
 title: The container adapter mounts a strategic role's checkout and cache folder as the ADR says, and pilot's request carries Role, Item, and Focus so the inner harness starts with --agent
-status: backlog
+status: in-progress
 parent: S-0509
 owner: alex
 created: 2026-10-26T04:49:31Z
-updated: 2026-10-26T04:49:31Z
-transitions: []
+updated: 2026-11-02T18:21:07Z
+transitions:
+  - to: ready
+    at: 2026-11-02T18:21:02Z
+    by: agent-S-0509
+  - to: in-progress
+    at: 2026-11-02T18:21:07Z
+    by: agent-S-0509
 stream: S-0509
 tags: [cli, docker]
 touches: [flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/pilot/run.go, flai/internal/pilot/run_test.go]

@@ -3,16 +3,37 @@ id: T-2219
 type: task
 nature: remediation
 title: storygit.GitMounts gives a story worktree's two git mounts, the common dir read-only and its registration read-write, with a real-git test that reproduces I-0215
-status: backlog
+status: done
 parent: S-0517
 owner: alex
 created: 2026-10-28T13:20:19Z
-updated: 2026-10-28T13:20:19Z
-transitions: []
+updated: 2026-11-02T18:27:52Z
+transitions:
+  - to: ready
+    at: 2026-11-02T18:17:54Z
+    by: agent-S-0517
+  - to: in-progress
+    at: 2026-11-02T18:17:55Z
+    by: agent-S-0517
+  - to: done
+    at: 2026-11-02T18:27:52Z
+    by: agent-S-0517
 stream: S-0517
 tags: [cli, docker]
 touches: [flai/internal/storygit/mounts.go, flai/internal/storygit/mounts_test.go]
 after: [T-2218]
+usage:
+  source: log
+  seconds: 597
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 241
+      cache_read: 1838544
+      cache_write: 70416
+      cost: 0.6758
 ---
 # T-2219 storygit.GitMounts gives a story worktree's two git mounts, the common dir read-only and its registration read-write, with a real-git test that reproduces I-0215
 

@@ -3,11 +3,11 @@ id: S-0424
 type: story
 nature: improvement
 title: The template ships baseline formulas for importing a repository from the board and for the analyzer's cadence, the board's import starts its formula, and each is run once here
-status: in-progress
+status: done
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:41:19Z
-updated: 2026-11-02T18:09:07Z
+updated: 2026-11-02T18:29:19Z
 transitions:
   - to: ready
     at: 2026-10-30T00:05:31Z
@@ -21,6 +21,12 @@ transitions:
   - to: in-progress
     at: 2026-11-02T05:28:18Z
     by: agent-S-0424
+  - to: review
+    at: 2026-11-02T18:26:07Z
+    by: agent-S-0424
+  - to: done
+    at: 2026-11-02T18:29:19Z
+    by: orchestrator
 blocked:
   - from: 2026-11-02T06:49:30Z
     until: 2026-11-02T07:10:03Z
@@ -45,20 +51,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 4942
+  seconds: 6037
   priced_by: harness
   turns:
     - day: 2026-11-02
-      ceremony: 1
-      hand_edits: 4
-      work: 92
+      ceremony: 3
+      hand_edits: 7
+      work: 118
   models:
     - model: claude-opus-5-5
-      input: 838
-      output: 255103
-      cache_read: 55345707
-      cache_write: 1587014
-      cost: 25.1631
+      input: 904
+      output: 264450
+      cache_read: 67308085
+      cache_write: 1993607
+      cost: 30.9956
   strategic:
     - kind: orchestrator
       seconds: 802
@@ -132,3 +138,14 @@ Two more processes that live in prose and Go become formulas. `import` brings a 
   - No folder touch.
 - **Forecast.** flai's 58m at size 39 (5 criteria, 34 touches), 89 s a unit over 86 done improvement stories on this model in the large band, raised to 1h10m for the two live runs the touches do not count: the analyzer session the cadence instance's agent waits on, and the import of a scratch repository, started from the board, worked by another agent, and accepted, as the earlier plan raised 36m to 50m for the same runs and S-0423 raised 53m to 1h for one. The delivery is flai's play-out after S-0423, 19th in the pull order: S-0423's delivery of 2026-10-22T07:44Z plus 1h10m times the cycle factor 1.15, 2026-10-22T09:05Z.
 - **Cost of delay.** 50.85 USD a week, worked out by hand from TH-0471's answer 1, as the planners of S-0414 to S-0423 did, because `flai cod` refuses while E-0024 has no inputs (TH-0567, question 3, confirmed; TH-0587 asks the operator to write it on the epic). 4h lost per cycle at `planning.hour_rate` 150 over the default 168h cycle gives E-0024 600 USD a week; S-0424's share is its 1h10m of the 13h46m forecast for E-0024's twelve open stories: 70 / 826 × 600. Once the input is on E-0024, `flai cod S-0424` gives the same figure while the forecasts stand.
+
+### Accepted by the orchestrator
+
+- Verified: 612ff3f130797405cc3419c810539af2700d0646
+- At: 2026-11-02T18:29:19Z
+
+Verdict: pass. All 4 criteria are met at 612ff3f, verify passed at that commit, and every changed file is under the story's touches.
+- 1: design/workflows/formulas/import.md, template/root/design/workflows/formulas/import.md, flai/cmd/import.go, flai/cmd/import_commit.go, flai/cmd/import_commit_test.go, flai/internal/hostapi/import.go, flai/internal/hostapi/import_test.go, flaiover/src/lib/components/ImportPrompt.svelte, flaiover/src/lib/components/ImportPrompt.svelte.test.ts, flaiover/src/routes/api/import/+server.ts
+- 2: design/workflows/formulas/analysis-cadence.md, template/root/design/workflows/formulas/analysis-cadence.md, flai/internal/manifest/manifest.go, flai/internal/serve/analysis_schedule.go, flai/cmd/issue.go, flai/internal/serve/analyze.go, flai/internal/serve/role.go, flai/internal/serve/agents.go, flai/internal/serve/agent_events.go, flai/cmd/role.go
+- 3: flai/internal/check/check.go, flai/internal/check/formulas_test.go, flai/internal/formulas/formulas.go, flai/cmd/new_test.go
+- 4: design/system/strategic-agents.md, design/system/continuous-improvement.md, docs/operators/index.md, docs/users/flaiover.md, template/CHANGELOG.md

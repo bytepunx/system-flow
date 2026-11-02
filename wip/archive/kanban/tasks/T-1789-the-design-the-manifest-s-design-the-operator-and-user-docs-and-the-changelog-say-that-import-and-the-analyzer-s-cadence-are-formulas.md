@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 86
-      output: 26186
-      cache_read: 5681249
-      cache_write: 162907
-      cost: 2.583
+      input: 76
+      output: 22240
+      cache_read: 5660523
+      cache_write: 167660
+      cost: 2.6067
 ---
 # T-1789 The design, the manifest's design, the operator and user docs, and the changelog say that import and the analyzer's cadence are formulas
 

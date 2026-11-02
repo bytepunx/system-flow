@@ -3,15 +3,18 @@ id: S-0510
 type: story
 nature: feature
 title: A project's manifest names an image layer for its test tiers' tools, flai serve runs it, flai check warns when it is not built, and this repository's layer runs the close-out inside the container
-status: ready
+status: in-progress
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:46:53Z
-updated: 2026-11-02T18:14:02Z
+updated: 2026-11-02T18:16:07Z
 transitions:
   - to: ready
     at: 2026-11-02T18:12:39Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-02T18:16:07Z
+    by: agent-S-0510
 tags: [cli, docker]
 topics: [harness, docker, manifest]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/check/check.go, flai/internal/check/image.go, flai/internal/check/image_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, scripts/agent-image.sh, Makefile, scripts/README.md, flai/images/system-flow/Dockerfile, system-flow.yaml, design/system/project-manifest.md, docs/operators/settings.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, docs/users/flai.md, docs/operators/index.md, docs/operators/runbooks/install.md, design/system/flai-cli.md, design/tech/docker.md, design/issues/summary.md, design/issues]
@@ -27,15 +30,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 183
+      seconds: 215
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 23
-          output: 228
-          cache_read: 1935020
-          cache_write: 16486
-          cost: 0.4306
+          input: 31
+          output: 286
+          cache_read: 2126200
+          cache_write: 72043
+          cost: 0.4887
 cost_of_delay:
   value: 27.78
   by: planner-S-0510

@@ -3,15 +3,36 @@ id: T-2158
 type: task
 nature: feature
 title: An ADR settles what a strategic agent's container mounts and the rule for its writes
-status: backlog
+status: done
 parent: S-0509
 owner: alex
 created: 2026-10-26T04:48:25Z
-updated: 2026-10-26T04:48:25Z
-transitions: []
+updated: 2026-11-02T18:20:26Z
+transitions:
+  - to: ready
+    at: 2026-11-02T18:18:15Z
+    by: agent-S-0509
+  - to: in-progress
+    at: 2026-11-02T18:18:17Z
+    by: agent-S-0509
+  - to: done
+    at: 2026-11-02T18:20:26Z
+    by: agent-S-0509
 stream: S-0509
 tags: [cli, docker]
-touches: [design/adrs/README.md, design/system/strategic-agents.md]
+touches: [design/adrs/README.md, design/system/strategic-agents.md, design/adrs/0247-a-strategic-agent-s-container-mounts-the-main-checkout-read-write-at-its-host.md]
+usage:
+  source: log
+  seconds: 123
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 24
+      output: 144
+      cache_read: 3675283
+      cache_write: 24734
+      cost: 1.309
 ---
 # T-2158 An ADR settles what a strategic agent's container mounts and the rule for its writes
 

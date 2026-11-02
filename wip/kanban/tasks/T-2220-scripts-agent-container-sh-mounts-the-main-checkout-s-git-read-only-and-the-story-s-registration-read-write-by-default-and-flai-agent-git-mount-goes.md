@@ -3,16 +3,37 @@ id: T-2220
 type: task
 nature: remediation
 title: scripts/agent-container.sh mounts the main checkout's .git read-only and the story's registration read-write by default, and FLAI_AGENT_GIT_MOUNT goes
-status: backlog
+status: done
 parent: S-0517
 owner: alex
 created: 2026-10-28T13:20:34Z
-updated: 2026-10-28T13:20:34Z
-transitions: []
+updated: 2026-11-02T18:28:11Z
+transitions:
+  - to: ready
+    at: 2026-11-02T18:17:56Z
+    by: agent-S-0517
+  - to: in-progress
+    at: 2026-11-02T18:17:57Z
+    by: agent-S-0517
+  - to: done
+    at: 2026-11-02T18:28:11Z
+    by: agent-S-0517
 stream: S-0517
 tags: [cli, docker, scripts]
 touches: [scripts/agent-container.sh, docs/operators/runbooks/agent-container.md, scripts/README.md]
 after: [T-2218]
+usage:
+  source: log
+  seconds: 595
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 54
+      output: 266
+      cache_read: 2372975
+      cache_write: 78134
+      cost: 0.8677
 ---
 # T-2220 scripts/agent-container.sh mounts the main checkout's .git read-only and the story's registration read-write by default, and FLAI_AGENT_GIT_MOUNT goes
 

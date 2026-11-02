@@ -3,15 +3,36 @@ id: T-2218
 type: task
 nature: remediation
 title: "An ADR records the remediation proposed from I-0215's instance: the container mounts the main checkout's .git read-only and the story's worktree registration read-write, and commits stay the host's"
-status: backlog
+status: done
 parent: S-0517
 owner: alex
 created: 2026-10-28T13:19:58Z
-updated: 2026-10-28T13:19:58Z
-transitions: []
+updated: 2026-11-02T18:17:46Z
+transitions:
+  - to: ready
+    at: 2026-11-02T18:15:09Z
+    by: agent-S-0517
+  - to: in-progress
+    at: 2026-11-02T18:15:11Z
+    by: agent-S-0517
+  - to: done
+    at: 2026-11-02T18:17:46Z
+    by: agent-S-0517
 stream: S-0517
 tags: [cli, docker, adr]
-touches: [design/adrs/README.md]
+touches: [design/adrs/README.md, design/adrs/0246-a-container-that-runs-a-story-s-agent-mounts-the-main-checkout-s-git-read-only.md]
+usage:
+  source: log
+  seconds: 155
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 34
+      output: 150
+      cache_read: 1431955
+      cache_write: 76995
+      cost: 0.5342
 ---
 # T-2218 An ADR records the remediation proposed from I-0215's instance: the container mounts the main checkout's .git read-only and the story's worktree registration read-write, and commits stay the host's
 

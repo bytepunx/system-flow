@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 59
-      output: 17911
-      cache_read: 3885895
-      cache_write: 111426
-      cost: 1.7667
+      input: 52
+      output: 15212
+      cache_read: 3871719
+      cache_write: 114677
+      cost: 1.7829
 ---
 # T-2017 flai import --formula commits the template's files before any test and starts the import formula in the new project, and flai import test runs the tests that --commit runs
 
