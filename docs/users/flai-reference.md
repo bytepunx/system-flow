@@ -2067,7 +2067,7 @@ flai forge status S-0042 --json
 
 Read the project's formulas, one file each under design/workflows/formulas, and make a story from one (ADR-0238).
 
-A formula is a repeatable process as data: one markdown file, &lt;name&gt;.md, in the design folder's workflows/formulas (ADR-0238). Its front matter names the formula, the nature of the story it makes, its inputs, and its steps. Each step runs a flai command, a script under scripts/, or a role with a prompt, after the steps its after names. An input is used as {{name}} in the title, a step's title, and a step's run. flai check reports a formula file that falls short as formulas.file.
+A formula is a repeatable process as data: one markdown file, &lt;name&gt;.md, in the design folder's workflows/formulas (ADR-0238). Its front matter names the formula, the nature of the story it makes, its inputs, and its steps. Each step runs a flai command, a script under scripts/, or a role with a prompt, after the steps its after names, in the instance's worktree or, with in: main, in the project's main checkout. An input is used as {{name}} in the title, a step's title, and a step's run. flai check reports a formula file that falls short as formulas.file.
 
 flai formula run makes from a formula one ordinary story in backlog, with one task per step, which a story's agent works as it works any story.
 
@@ -2099,7 +2099,7 @@ Make the formula's instance (ADR-0238 §7): one story in backlog, as flai story 
 
 Before it writes anything it refuses a formula flai check reports a problem in, an --input that is not name=value or is given twice, an input the formula does not declare, and a required input not given.
 
-The story has the formula's nature, formula: &lt;name&gt; in its front matter, the formula's title with the inputs filled as its title, the description as its goal, one acceptance criterion per step, and notes naming the formula file and the inputs the run took. --epic makes it a story of that epic; a story need not belong to one. Each task has the step's title, a Work section naming what the step runs, a Done when section that is its exit (the command or script exits 0, or the role's run ends with its work done), and the tasks of the step's after as its after, so that the tasks' layers are the steps'. The tasks are made in file order, each after those it waits for.
+The story has the formula's nature, formula: &lt;name&gt; in its front matter, the formula's title with the inputs filled as its title, the description as its goal, one acceptance criterion per step, and notes naming the formula file and the inputs the run took. --epic makes it a story of that epic; a story need not belong to one. Each task has the step's title, a Work section naming what the step runs, and for a step with in: main that it runs from the project's main checkout, by its absolute path, rather than the instance's worktree, a Done when section that is its exit (the command or script exits 0, or the role's run ends with its work done), and the tasks of the step's after as its after, so that the tasks' layers are the steps'. The tasks are made in file order, each after those it waits for.
 
 Each item is checked as flai story new --body-stdin checks one: a finding it brings refuses it, and the story and the tasks made before it are removed (exit 4). --ready then moves the story to ready as flai move does, by FLAI\_AGENT when set, its epic following and the board placing it last, so that flai serve starts its agent; a move the workflow rules refuse removes what it made too. Without --ready the story stays in backlog. --autocommit commits the story, its tasks, its epic, and, with --ready, the board and the stream index the move wrote, in one commit, unless the project sets dashboard.autocommit: false. Nothing is pushed. It prints the story's ID, path, and tasks; --json gives {story, path, status, tasks: [{id, step}], formula, inputs}, status backlog or ready, with followed when the epic moved with it and commit when it committed.
 
@@ -2130,7 +2130,7 @@ Print a formula: its inputs, its steps and what each runs, and the steps' layers
 flai formula show <name>
 ```
 
-Print one formula by its name: its nature, file, title, status, updated, and description; its inputs, each required or with its default, and what it is; its steps, each with its title, what it runs, and the steps it is after; and its layers, the steps grouped by the longest chain of after before each, so that the tasks of a layer can run at once once those of the layers before it are done. The problems flai check would report in it are said on stderr. --json gives the formula, each step's kind among its fields, and its layers.
+Print one formula by its name: its nature, file, title, status, updated, and description; its inputs, each required or with its default, and what it is; its steps, each with its title, what it runs, the steps it is after, and in: main when it runs in the project's main checkout; and its layers, the steps grouped by the longest chain of after before each, so that the tasks of a layer can run at once once those of the layers before it are done. The problems flai check would report in it are said on stderr. --json gives the formula, each step's kind among its fields, and its layers.
 
 ### flai guard
 
@@ -3389,6 +3389,8 @@ What is pending is worked out from this clone's tags and branch, and flai never 
 
 flai release --evaluate says whether system-flow.yaml's orchestration.release policy is met, why, and the figures it rests on (S-0217): the stories accepted and not yet released, their count, and their cost of delay per week summed. A threshold is met when that sum or that count is at or over the value or count it sets; a story with no value counts but adds nothing to the sum, and is named. A theme is met when every story of its epic or its tag, archived or not and cancelled ones aside, is accepted and one at least is not yet released; the ones not yet accepted are named. Judgement, the default, is never met by itself: the call is the orchestrator's or the operator's. With orchestration.release.whole\_epics set, no policy is met while a story accepted and not yet released belongs to an epic in neither review nor done (S-0222); those stories are named with their epics, and under judgement they are what must not be published. It tags, bumps, commits, and pushes nothing, and so takes no item and none of --apply, --pending, --dry-run, or --deliver.
 
+With --require-met, --evaluate prints the same and then exits 2 with the evaluation's reason when the policy is not met, so a script or a formula step stops there (ADR-0240); met, it exits 0. It is refused without --evaluate.
+
 Examples:
 
 ```bash
@@ -3397,6 +3399,7 @@ flai release S-031 --deliver flai --apply
 flai release --pending --dry-run
 flai release --pending
 flai release --evaluate --json
+flai release --evaluate --require-met
 ```
 
 Flags:
@@ -3408,6 +3411,7 @@ Flags:
 | `--dry-run` | print the plan only, or with --pending what would publish |
 | `--evaluate` | say whether orchestration.release is met, with its figures; changes nothing |
 | `--pending` | publish everything merged and unreleased since each component's last tag |
+| `--require-met` | with --evaluate, exit 2 with the reason when the policy is not met |
 
 ### flai role
 

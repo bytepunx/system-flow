@@ -192,3 +192,54 @@ func TestReleaseEvaluateWholeEpics(t *testing.T) {
 		t.Errorf("whole_epics off holds nothing: %s", out)
 	}
 }
+
+// S-0423: --require-met exits 0 when the policy is met and 2, naming the
+// reason, when it is not, after printing the evaluation either way; it is
+// refused without --evaluate, changing nothing.
+func TestReleaseEvaluateRequireMet(t *testing.T) {
+	t.Parallel()
+	root, remote := evaluateProject(t)
+	setReleasePolicy(t, root, "    policy: threshold\n    value: 300\n")
+	before := releaseState(t, root, remote)
+
+	out, errOut, code := runIn(t, root, "release", "--evaluate", "--require-met")
+	if code != 0 || !strings.HasPrefix(out, "release policy threshold: met\n") {
+		t.Errorf("a met policy exits 0: %d %s %s", code, out, errOut)
+	}
+
+	setReleasePolicy(t, root, "    policy: threshold\n    count: 3\n")
+	out, errOut, code = runIn(t, root, "release", "--evaluate", "--require-met")
+	if code != 2 {
+		t.Errorf("a policy not met exits 2: %d %s", code, errOut)
+	}
+	if !strings.HasPrefix(out, "release policy threshold: not met\n") || !strings.Contains(out, "pending:") {
+		t.Errorf("the evaluation is printed as without the flag: %s", out)
+	}
+	if !strings.Contains(errOut, "their count, 2, is under the threshold of 3") {
+		t.Errorf("the exit names the evaluation's reason: %s", errOut)
+	}
+
+	out, _, code = runIn(t, root, "release", "--evaluate", "--require-met", "--json")
+	var ev release.Evaluation
+	if err := json.Unmarshal([]byte(out), &ev); err != nil {
+		t.Fatalf("%v: %s", err, out)
+	}
+	if code != 2 || ev.Met {
+		t.Errorf("--json prints the evaluation and exits 2 too: %d %+v", code, ev)
+	}
+
+	for _, args := range [][]string{
+		{"release", "--require-met"},
+		{"release", "--pending", "--require-met"},
+		{"release", "S-0001", "--require-met"},
+	} {
+		_, errOut, code := runIn(t, root, args...)
+		if code == 0 || !strings.Contains(errOut, "--require-met") || !strings.Contains(errOut, "--evaluate") {
+			t.Errorf("flai %v is refused and says why: %d %s", args, code, errOut)
+		}
+	}
+	setReleasePolicy(t, root, "    policy: threshold\n    value: 300\n")
+	if after := releaseState(t, root, remote); after != before {
+		t.Errorf("evaluate and its refusals change nothing:\n%s\nvs\n%s", before, after)
+	}
+}
