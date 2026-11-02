@@ -3,13 +3,16 @@ import { repo, RepoError } from '$lib/server/repo';
 import type { RequestHandler } from './$types';
 
 /**
- * POST { include_uncommitted?, keep_removals? }: accept the item as the designer (flai's accept.run
- * on the host, S-0075) and stream what happens as newline-delimited JSON (S-0041): { event: "progress", step, msg }
+ * POST { keep_removals? }: accept the item as the designer (flai's accept.run on the host, S-0075)
+ * and stream what happens as newline-delimited JSON (S-0041): { event: "progress", step, msg }
  * for each step flai logs, { event: "warning", msg } for its warnings, then { event: "done", result }
  * or { event: "error", error, status, data? } with flai's message verbatim, and what flai sent with
  * it as data: a refusal for lint the fix left, { id, reason, findings }, each finding a file to
- * open and correct (ADR-0140, S-0378), or a refusal for a branch that undoes main's change,
- * { id, reason, undoes_main } (ADR-0155, S-0388). keep_removals, each { path, reason }, are the
+ * open and correct (ADR-0140, S-0378), a refusal for a branch that undoes main's change,
+ * { id, reason, undoes_main } (ADR-0155, S-0388), or a send back for a rebase that stopped,
+ * { id, reason, sent_back, branch, base, conflicts, thread } (ADR-0248). The main checkout's
+ * uncommitted files are flai's to commit or leave (ADR-0248): the body carries no choice about
+ * them, and an include_uncommitted an older page sends is ignored. keep_removals, each { path, reason }, are the
  * removals of main's lines the designer keeps, with why; a list that is not one, or an entry with a
  * blank path or reason, is 400 before flai is asked. The steps arrive as progress
  * notifications over the channel while the acceptance runs. The HTTP status is 200 once the stream
@@ -40,10 +43,7 @@ function keepRemovals(value: unknown): Keep[] | string {
 }
 
 export const POST: RequestHandler = async ({ params, request }) => {
-	const body = (await request.json().catch(() => ({}))) as {
-		include_uncommitted?: boolean;
-		keep_removals?: unknown;
-	};
+	const body = (await request.json().catch(() => ({}))) as { keep_removals?: unknown };
 	const keeps = keepRemovals(body.keep_removals);
 	if (typeof keeps === 'string') return json({ error: keeps }, { status: 400 });
 	const encoder = new TextEncoder();
@@ -56,7 +56,6 @@ export const POST: RequestHandler = async ({ params, request }) => {
 					'accept.run',
 					{
 						id: params.id,
-						include_uncommitted: body.include_uncommitted === true,
 						...(keeps.length ? { keep_removals: keeps } : {})
 					},
 					{

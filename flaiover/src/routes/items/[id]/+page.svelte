@@ -480,8 +480,8 @@
 	<AcceptConfirm
 		id={item.id}
 		oncancel={() => (accepting = false)}
-		onconfirm={async (include) => {
-			await post(`/api/items/${item!.id}/move`, { to: 'done', include_uncommitted: include });
+		onconfirm={async () => {
+			await post(`/api/items/${item!.id}/move`, { to: 'done' });
 			accepting = false;
 		}}
 	/>

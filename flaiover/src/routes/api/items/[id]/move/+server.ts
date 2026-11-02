@@ -3,15 +3,16 @@ import { respond } from '$lib/server/respond';
 import type { RequestHandler } from './$types';
 
 /**
- * POST { to, reason?, include_uncommitted?, dry_run? }: flai's item.move on the host (S-0075). flai
- * validates the arguments, builds the command, and records the move as the manifest's owner: a move
- * made on the board is the designer's (S-0058), and the dashboard does not get to name anyone.
- * include_uncommitted is the designer's choice in the acceptance confirmation to put uncommitted
- * files outside wip into the acceptance commit, and only for a move to done (S-0051). dry_run, only
- * for a move to cancelled, changes nothing and answers with what the cancellation would take with it
- * (S-0070, ADR-0028). A move to done that flai refuses answers 422 with the refused object's
- * findings, each a file to open on its own checkout and correct (ADR-0140), or its undoes_main
- * (ADR-0155), beside error (S-0465).
+ * POST { to, reason?, dry_run? }: flai's item.move on the host (S-0075). flai validates the
+ * arguments, builds the command, and records the move as the manifest's owner: a move made on the
+ * board is the designer's (S-0058), and the dashboard does not get to name anyone. A move to done
+ * is an acceptance; the main checkout's uncommitted files are flai's to commit or leave (ADR-0248),
+ * so the body carries no choice about them, and an include_uncommitted an older page sends is
+ * ignored. dry_run, only for a move to cancelled, changes nothing and answers with what the
+ * cancellation would take with it (S-0070, ADR-0028). A move to done that flai refuses answers 422
+ * with the refused object's findings, each a file to open on its own checkout and correct
+ * (ADR-0140), its undoes_main (ADR-0155), or its send back for a rebase that stopped, sent_back
+ * with reason, conflicts, and thread (ADR-0248), beside error (S-0465).
  */
 type Moved = {
 	id: string;
@@ -27,7 +28,6 @@ export const POST: RequestHandler = ({ params, request }) =>
 		const body = (await request.json().catch(() => ({}))) as {
 			to?: string;
 			reason?: string;
-			include_uncommitted?: boolean;
 			dry_run?: boolean;
 		};
 		if (!body.to) throw new RepoError(400, 'to is required');
@@ -40,8 +40,7 @@ export const POST: RequestHandler = ({ params, request }) =>
 			{
 				id: params.id,
 				to: body.to,
-				reason: body.reason,
-				include_uncommitted: body.include_uncommitted === true
+				reason: body.reason
 			},
 			// A story moved to done is accepted: a rebase, a merge, and an archive take their time.
 			{ timeoutMs: body.to === 'done' ? 600000 : 60000 }

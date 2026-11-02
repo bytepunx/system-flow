@@ -56,7 +56,10 @@
 	type Preview = {
 		branch?: string;
 		blockers?: string[];
+		/** The main checkout's uncommitted files outside the shared set: the acceptance leaves them as they are (ADR-0248). */
 		uncommitted?: string[];
+		/** The main checkout's uncommitted files under wip, design, and the shared paths: the acceptance commits them (ADR-0248). */
+		shared_uncommitted?: string[];
 		/** Uncommitted paths in the story's worktree: they block acceptance (S-0140). */
 		worktree_uncommitted?: string[];
 		/** Files the branch changes on a path Claude Code protects: only the operator accepts it (ADR-0106). */
@@ -79,6 +82,8 @@
 	};
 	/** A path the branch undoes of main's change, as flai's preview and refusal give it (ADR-0155). */
 	type Undone = { path: string; lines: string[]; old_base: string };
+	/** A send back for a rebase that stopped, as flai's refusal gives it (ADR-0248): the story is in-progress again. */
+	type SentBack = { reason: string; branch?: string; conflicts: string[]; thread?: string };
 	/** A forge blocker as flai's preview gives it: name is a check's or a reviewer's, url its page (ADR-0169). */
 	type ForgeBlocker = { code: string; message: string; name?: string; url?: string };
 	/** A file of the story's diff, as /diff gives it and DiffView shows it. */
@@ -121,7 +126,6 @@
 	let error = $state<string | null>(null);
 	let writable = $state(false);
 
-	let include = $state(false);
 	let running = $state(false);
 	let progress = $state<Progress[]>([]);
 	let warnings = $state<string[]>([]);
@@ -133,6 +137,9 @@
 	// by AcceptFindings' key. Accept is on again once each file the editor can open has been saved.
 	let findings = $state<Finding[]>([]);
 	let saved = $state<string[]>([]);
+	// A rebase that stopped (ADR-0248): flai aborted it, sent the story back to in-progress, and
+	// opened a thread naming the paths for its agent. A notice, not a failure of the designer's.
+	let sentBack = $state<SentBack | null>(null);
 
 	let sendingBack = $state(false);
 	let reason = $state('');
@@ -203,7 +210,6 @@
 	const criteria = $derived(item ? criteriaOf(item.body) : []);
 	const ticked = $derived(criteria.filter((c) => c.checked).length);
 	const inReview = $derived(item?.status === 'review');
-	const needsChoice = $derived(!!preview?.uncommitted?.length && !include);
 	const chosen = $derived(issues.filter((r) => r.checked));
 	// Another refusal's text, each file it names opening the editor on the story's branch.
 	const refusal = $derived(failure ? linkSegments(failure, { story: id }) : []);
@@ -227,7 +233,6 @@
 			!forgeBlockers.length &&
 			!preview.worktree_uncommitted?.length &&
 			!unresolved.length &&
-			!needsChoice &&
 			!unsaved.length
 	);
 	const enqueuedAs = $derived(queueState?.enqueued?.find((e) => e.story === id));
@@ -273,7 +278,8 @@
 
 	// The sidebar (S-0461): a scroll entry for each section the page shows, in its order, and under
 	// Changes one for each changed file. A file's id is its path made fit for an id, kept unique.
-	const acceptShown = $derived(inReview || !!result);
+	// a story sent back is in-progress again, and the section stays to say so (ADR-0248)
+	const acceptShown = $derived(inReview || !!result || !!sentBack);
 	const issuesShown = $derived(acceptShown && (issues.length > 0 || !!issuesError));
 	const checksShown = $derived(inReview || !!checksRun?.started);
 	const verifyShown = $derived(!!verify || !!verifyError);
@@ -347,6 +353,24 @@
 		return Array.isArray(list) ? (list as Undone[]) : [];
 	}
 
+	/** The send back a refusal's data carries (ADR-0248), or null when it is another refusal. */
+	function sentBackOf(data: unknown, fallback: string): SentBack | null {
+		const d = (data ?? {}) as {
+			sent_back?: unknown;
+			reason?: unknown;
+			branch?: unknown;
+			conflicts?: unknown;
+			thread?: unknown;
+		};
+		if (d.sent_back !== true) return null;
+		return {
+			reason: typeof d.reason === 'string' && d.reason ? d.reason : fallback,
+			branch: typeof d.branch === 'string' ? d.branch : undefined,
+			conflicts: Array.isArray(d.conflicts) ? d.conflicts.map(String) : [],
+			thread: typeof d.thread === 'string' && d.thread ? d.thread : undefined
+		};
+	}
+
 	function fileSaved(key: string) {
 		if (!saved.includes(key)) saved = [...saved, key];
 	}
@@ -376,6 +400,7 @@
 		warnings = [];
 		findings = [];
 		saved = [];
+		sentBack = null;
 		issues = [];
 		issuesError = null;
 		made = [];
@@ -761,6 +786,7 @@
 		failure = null;
 		findings = [];
 		saved = [];
+		sentBack = null;
 		progress = [];
 		warnings = [];
 		const keeps = undone
@@ -770,10 +796,7 @@
 			const r = await api(`/api/items/${id}/accept`, {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({
-					include_uncommitted: include || undefined,
-					keep_removals: keeps.length ? keeps : undefined
-				})
+				body: JSON.stringify({ keep_removals: keeps.length ? keeps : undefined })
 			});
 			if (!r.ok) {
 				failure = (await r.json().catch(() => ({}))).error ?? r.statusText;
@@ -785,6 +808,9 @@
 				else if (l.event === 'warning') warnings = [...warnings, String(l.msg)];
 				else if (l.event === 'done') result = (l.result ?? {}) as typeof result;
 				else if (l.event === 'error') {
+					// a rebase that stopped sent the story back to its agent (ADR-0248)
+					sentBack = sentBackOf(l.data, String(l.error));
+					if (sentBack) return;
 					failure = String(l.error);
 					findings = findingsOf(l.data);
 					// a path only the acceptance's own rebase found joins the cards (S-0388)
@@ -792,13 +818,13 @@
 					if (refused.length) undone = [...undone, ...refused];
 				}
 			});
-			if (!result && !failure) failure = 'the acceptance ended without a result';
+			if (!result && !failure && !sentBack) failure = 'the acceptance ended without a result';
 		} catch (e) {
 			failure = e instanceof Error ? e.message : String(e);
 		} finally {
 			running = false;
-			if (failure) {
-				// flai left the story in review; show it as it is now
+			if (failure || sentBack) {
+				// flai left the story in review, or sent it back; show it as it is now
 				const fresh = await get<{ item: Item }>(`/api/items/${id}`).catch(() => null);
 				if (fresh) item = fresh.item;
 			}
@@ -1447,16 +1473,29 @@
 						</ul>
 					</div>
 				{/if}
+				<!-- The main checkout's uncommitted files (ADR-0248): the shared set lands with the
+				     acceptance, the rest stay as they are; neither asks the designer anything. -->
+				{#if preview.shared_uncommitted?.length}
+					<div class="mb-2 text-muted" data-testid="shared-uncommitted">
+						<p>Committed with the acceptance:</p>
+						<ul class="mt-1 ml-4 list-disc font-mono text-xs">
+							{#each preview.shared_uncommitted as p (p)}<li>{p}</li>{/each}
+						</ul>
+					</div>
+				{/if}
 				{#if preview.uncommitted?.length}
-					<div class="mb-2 rounded border border-warn bg-warn-soft p-2 text-warn">
-						<p class="font-medium">Uncommitted changes outside wip:</p>
+					<div
+						class="mb-2 rounded border border-line bg-surface p-2"
+						role="status"
+						data-testid="left-uncommitted"
+					>
+						<p class="font-medium">Left as they are:</p>
 						<ul class="mt-1 ml-4 list-disc font-mono text-xs">
 							{#each preview.uncommitted as p (p)}<li>{p}</li>{/each}
 						</ul>
-						<label class="mt-2 flex items-center gap-2">
-							<input type="checkbox" bind:checked={include} disabled={running} />
-							Include these files in the acceptance commit
-						</label>
+						<p class="mt-1 text-muted">
+							The acceptance refuses only when the story would overwrite one of them.
+						</p>
 					</div>
 				{/if}
 			{/if}
@@ -1472,7 +1511,37 @@
 			{#each warnings as w (w)}
 				<p class="mt-2 rounded border border-warn bg-warn-soft p-2 text-warn">{w}</p>
 			{/each}
-			{#if failure && findings.length}
+			{#if sentBack}
+				<!-- A rebase that stopped (ADR-0248): the story is its agent's again, and the thread names the paths. -->
+				<div
+					class="mt-3 rounded border border-line bg-surface p-2"
+					role="status"
+					data-testid="accept-sent-back"
+				>
+					<p class="font-medium">Sent back to in-progress</p>
+					<p class="mt-1">{sentBack.reason}</p>
+					{#if sentBack.conflicts.length}
+						<p class="mt-1 text-muted">
+							The rebase of {sentBack.branch ?? `story/${item.id}`} stopped on:
+						</p>
+						<ul class="mt-1 ml-4 list-disc font-mono text-xs">
+							{#each sentBack.conflicts as p (p)}<li>{p}</li>{/each}
+						</ul>
+					{/if}
+					{#if sentBack.thread}
+						<p class="mt-1">
+							<!-- eslint-disable svelte/no-navigation-without-resolve -- the page is resolve()d; the rule does not follow the thread added to it -->
+							<a
+								class="font-mono underline"
+								href={resolve('/threads') + `?thread=${encodeURIComponent(sentBack.thread)}`}
+								>{sentBack.thread}</a
+							>
+							<!-- eslint-enable svelte/no-navigation-without-resolve -->
+							names them for the story's agent, which resolves them and moves {item.id} to review again.
+						</p>
+					{/if}
+				</div>
+			{:else if failure && findings.length}
 				<AcceptFindings id={item.id} status={item.status} {findings} {saved} onsaved={fileSaved} />
 			{:else if failure}
 				<div class="mt-3 rounded border border-danger bg-danger-soft p-2 text-danger" role="alert">

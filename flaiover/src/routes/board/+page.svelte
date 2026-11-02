@@ -524,7 +524,7 @@
 		if (!saved.includes(key)) saved = [...saved, key];
 	}
 
-	async function move(id: string, to: string, includeUncommitted = false, why?: string) {
+	async function move(id: string, to: string, why?: string) {
 		notice = null;
 		saved = [];
 		let reason = why;
@@ -538,10 +538,17 @@
 		const r = await api(`/api/items/${id}/move`, {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ to, reason, include_uncommitted: includeUncommitted || undefined })
+			body: JSON.stringify({ to, reason })
 		});
 		const body = await r.json();
-		if (!r.ok)
+		// A rebase that stopped sent the story back to its agent (ADR-0248): a notice, not an error.
+		if (!r.ok && body.sent_back === true)
+			notice = {
+				kind: 'warn',
+				text: `${id} was sent back to in-progress. ${body.reason ?? body.error ?? r.statusText}`,
+				story: id
+			};
+		else if (!r.ok)
 			notice = {
 				kind: 'error',
 				text: body.error ?? r.statusText,
@@ -568,9 +575,9 @@
 	<AcceptConfirm
 		id={accepting}
 		oncancel={() => (accepting = null)}
-		onconfirm={async (include) => {
+		onconfirm={async () => {
 			const id = accepting!;
-			await move(id, 'done', include);
+			await move(id, 'done');
 			accepting = null;
 		}}
 	/>
@@ -642,7 +649,7 @@
 		oncancel={() => (cancelling = null)}
 		onconfirm={async (reason) => {
 			const id = cancelling!;
-			await move(id, 'cancelled', false, reason);
+			await move(id, 'cancelled', reason);
 			cancelling = null;
 		}}
 	/>

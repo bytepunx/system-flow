@@ -21,7 +21,10 @@
 		branch?: string;
 		resumed?: boolean;
 		blockers?: string[];
+		/** The main checkout's uncommitted files outside the shared set: the acceptance leaves them as they are (ADR-0248). */
 		uncommitted?: string[];
+		/** The main checkout's uncommitted files under wip, design, and the shared paths: the acceptance commits them (ADR-0248). */
+		shared_uncommitted?: string[];
 		/** Uncommitted paths in the story's worktree: they block acceptance (S-0140). */
 		worktree_uncommitted?: string[];
 		plan?: {
@@ -40,17 +43,13 @@
 		oncancel
 	}: {
 		id: string;
-		/** include is true when the designer chose to put the uncommitted files in the acceptance commit. */
-		onconfirm: (include: boolean) => void | Promise<void>;
+		onconfirm: () => void | Promise<void>;
 		oncancel: () => void;
 	} = $props();
 
 	let preview = $state<Preview | null>(null);
 	let error = $state<string | null>(null);
 	let busy = $state(false);
-	// Uncommitted files outside wip: off by default, and accept waits for the choice (S-0051).
-	let include = $state(false);
-	const needsChoice = $derived(!!preview?.uncommitted?.length && !include);
 
 	const blockers = $derived(preview ? otherBlockers(preview) : []);
 
@@ -60,7 +59,6 @@
 		const target = id;
 		preview = null;
 		error = null;
-		include = false;
 		api(`/api/items/${target}/acceptance`)
 			.then(async (r) => {
 				const data = await r.json();
@@ -73,7 +71,7 @@
 	async function confirm() {
 		busy = true;
 		try {
-			await onconfirm(include);
+			await onconfirm();
 		} finally {
 			busy = false;
 		}
@@ -120,20 +118,29 @@
 					disabled={busy}
 				/>
 			{/if}
+			<!-- The main checkout's uncommitted files (ADR-0248): the shared set lands with the
+			     acceptance, the rest stay as they are; neither asks the designer anything. -->
+			{#if preview.shared_uncommitted?.length}
+				<div class="mt-3 text-muted" data-testid="shared-uncommitted">
+					<p>Committed with the acceptance:</p>
+					<ul class="mt-1 ml-4 list-disc font-mono text-xs">
+						{#each preview.shared_uncommitted as p (p)}<li>{p}</li>{/each}
+					</ul>
+				</div>
+			{/if}
 			{#if preview.uncommitted?.length}
-				<div class="mt-3 rounded border border-warn bg-warn-soft p-2 text-warn" role="group">
-					<p class="font-medium">Uncommitted changes outside wip:</p>
+				<div
+					class="mt-3 rounded border border-line bg-surface p-2"
+					role="status"
+					data-testid="left-uncommitted"
+				>
+					<p class="font-medium">Left as they are:</p>
 					<ul class="mt-1 ml-4 list-disc font-mono text-xs">
 						{#each preview.uncommitted as p (p)}<li>{p}</li>{/each}
 					</ul>
-					<p class="mt-2">
-						Acceptance refuses these by default, so its commit holds only acceptance. Cancel to
-						commit or stash them first, or include them.
+					<p class="mt-1 text-muted">
+						The acceptance refuses only when the story would overwrite one of them.
 					</p>
-					<label class="mt-2 flex items-center gap-2">
-						<input type="checkbox" bind:checked={include} disabled={busy} />
-						Include these files in the acceptance commit
-					</label>
 				</div>
 			{/if}
 			<ul class="mt-3 space-y-1">
@@ -187,8 +194,7 @@
 					!!error ||
 					!preview ||
 					!!preview.blockers?.length ||
-					!!preview.worktree_uncommitted?.length ||
-					needsChoice}
+					!!preview.worktree_uncommitted?.length}
 				onclick={confirm}>{busy ? 'Accepting…' : 'Accept'}</button
 			>
 		</div>

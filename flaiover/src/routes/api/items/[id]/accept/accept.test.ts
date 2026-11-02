@@ -95,18 +95,21 @@ describe('acceptance and diff endpoints over the channel', () => {
 		expect(out.at(-1).result).toMatchObject({ status: 'done', tags: ['flaiover/v0.13.0'] });
 		expect(asked).toHaveLength(1);
 		expect(asked[0].method).toBe('accept.run');
-		expect(asked[0].params).toMatchObject({ id: 'S-0041', include_uncommitted: false });
+		expect(asked[0].params).toMatchObject({ id: 'S-0041' });
+		expect(asked[0].params).not.toHaveProperty('include_uncommitted');
 		// a write: it carries a request ID, and names nobody: flai decides who the designer is
 		expect(String(asked[0].params.request_id)).toMatch(/^[0-9a-f-]{36}$/);
 		expect(asked[0].params).not.toHaveProperty('by');
 	});
 
-	it('passes the choice to include uncommitted files only when it is true', async () => {
+	// ADR-0248: the main checkout's uncommitted files are flai's to commit or leave; a choice an
+	// older page sends is not passed on.
+	it('passes no choice about uncommitted files, whatever the body says', async () => {
 		script = { answer: { data: { id: 'S-0041', status: 'done' }, warnings: [] } };
 		await (await post('S-0041', { include_uncommitted: true })).text();
-		expect(asked[0].params.include_uncommitted).toBe(true);
+		expect(asked[0].params).not.toHaveProperty('include_uncommitted');
 		await (await post('S-0041', { include_uncommitted: 'yes' })).text();
-		expect(asked[1].params.include_uncommitted).toBe(false);
+		expect(asked[1].params).not.toHaveProperty('include_uncommitted');
 	});
 
 	// ADR-0155, S-0388: the removals of main's lines the designer keeps, each with why, go to flai
@@ -119,7 +122,6 @@ describe('acceptance and diff endpoints over the channel', () => {
 		];
 		await (await post('S-0041', { keep_removals: keeps })).text();
 		expect(asked[0].params.keep_removals).toEqual(keeps);
-		expect(asked[0].params.include_uncommitted).toBe(false);
 		await (await post('S-0041', { keep_removals: [] })).text();
 		expect(asked[1].params).not.toHaveProperty('keep_removals');
 		await (await post('S-0041', {})).text();
@@ -212,6 +214,25 @@ describe('acceptance and diff endpoints over the channel', () => {
 				data: { id: 'S-0041', reason, undoes_main: undoes }
 			}
 		]);
+	});
+
+	// ADR-0248: a rebase that stops sends the story back to its agent; the refusal carries the
+	// paths and the thread, whole, so the page can show it as a send back and link the thread.
+	it('ends a send back for a rebase that stopped with its data, whole', async () => {
+		const reason =
+			'S-0041 was sent back to in-progress: the rebase of story/S-0041 onto main stopped with conflicts in docs/a.md; TH-0042 names them for its agent';
+		const data = {
+			id: 'S-0041',
+			reason,
+			sent_back: true,
+			branch: 'story/S-0041',
+			base: 'main',
+			conflicts: ['docs/a.md'],
+			thread: 'TH-0042'
+		};
+		script = { error: new AgentError(502, `rule: ${reason}`, -32010, data) };
+		const out = await lines(await post('S-0041', {}));
+		expect(out).toEqual([{ event: 'error', status: 422, error: `rule: ${reason}`, data }]);
 	});
 
 	it('says the acceptance may have completed when the connection is lost on the way', async () => {

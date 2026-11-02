@@ -223,7 +223,7 @@ describe('AcceptConfirm', () => {
 		unmount(c);
 	});
 
-	it('passes false to onconfirm when there is nothing uncommitted', async () => {
+	it('confirms with no argument and offers no choice when there is nothing uncommitted', async () => {
 		api.mockResolvedValue(json({ id: 'S-0051', plan: null }));
 		const onconfirm = vi.fn();
 		const c = mount(AcceptConfirm, {
@@ -232,15 +232,24 @@ describe('AcceptConfirm', () => {
 		});
 		await settle();
 		expect(document.querySelector('input[type=checkbox]')).toBeNull();
+		expect(document.querySelector('[data-testid="shared-uncommitted"]')).toBeNull();
+		expect(document.querySelector('[data-testid="left-uncommitted"]')).toBeNull();
 		([...document.querySelectorAll('button')][1] as HTMLButtonElement).click();
 		await settle();
-		expect(onconfirm).toHaveBeenCalledWith(false);
+		expect(onconfirm).toHaveBeenCalledWith();
 		unmount(c);
 	});
 
-	it('lists uncommitted paths and waits for the choice before accepting', async () => {
+	// ADR-0248: the main checkout's uncommitted files under wip, design, and the shared paths land
+	// with the acceptance, the rest stay as they are, and the designer is asked nothing.
+	it('shows the shared set as committed and the rest as left alone, with no checkbox', async () => {
 		api.mockResolvedValue(
-			json({ id: 'S-0051', plan: null, uncommitted: ['.claude/', 'docs/stray.md'] })
+			json({
+				id: 'S-0051',
+				plan: null,
+				shared_uncommitted: ['wip/agents/S-0051.md', 'design/issues/summary.md'],
+				uncommitted: ['.claude/', 'docs/stray.md']
+			})
 		);
 		const onconfirm = vi.fn();
 		const c = mount(AcceptConfirm, {
@@ -248,37 +257,47 @@ describe('AcceptConfirm', () => {
 			props: { id: 'S-0051', onconfirm, oncancel: vi.fn() }
 		});
 		await settle();
-		const text = document.body.textContent ?? '';
-		expect(text).toContain('.claude/');
-		expect(text).toContain('docs/stray.md');
-		expect(text).toContain('holds only acceptance');
-		const box = document.querySelector('input[type=checkbox]') as HTMLInputElement;
+		const shared = document.querySelector('[data-testid="shared-uncommitted"]')!;
+		expect(shared.textContent).toContain('Committed with the acceptance:');
+		expect([...shared.querySelectorAll('li')].map((li) => li.textContent)).toEqual([
+			'wip/agents/S-0051.md',
+			'design/issues/summary.md'
+		]);
+		const left = document.querySelector('[data-testid="left-uncommitted"]')!;
+		expect(left.textContent).toContain('Left as they are:');
+		expect([...left.querySelectorAll('li')].map((li) => li.textContent)).toEqual([
+			'.claude/',
+			'docs/stray.md'
+		]);
+		expect(left.textContent).toContain('refuses only when the story would overwrite one');
+		expect(left.className).not.toContain('warn');
+		expect(document.querySelector('input[type=checkbox]')).toBeNull();
+		expect(document.querySelector('[role=alert]')).toBeNull();
+		expect(document.body.textContent).not.toContain('Include these files');
 		const accept = [...document.querySelectorAll('button')][1] as HTMLButtonElement;
-		expect(box.checked).toBe(false); // off by default
-		expect(accept.disabled).toBe(true);
-		accept.click();
-		expect(onconfirm).not.toHaveBeenCalled();
-
-		box.click();
-		await settle();
 		expect(accept.disabled).toBe(false);
 		accept.click();
 		await settle();
-		expect(onconfirm).toHaveBeenCalledWith(true);
+		expect(onconfirm).toHaveBeenCalledWith();
 		unmount(c);
 	});
 
-	it('keeps accept disabled for a blocker even when the choice is made', async () => {
+	it('keeps accept disabled for a blocker whatever is uncommitted', async () => {
 		api.mockResolvedValue(
-			json({ id: 'S-0051', plan: null, blockers: ['no identity'], uncommitted: ['x.md'] })
+			json({
+				id: 'S-0051',
+				plan: null,
+				blockers: ['no identity'],
+				shared_uncommitted: ['wip/x.md'],
+				uncommitted: ['x.md']
+			})
 		);
 		const c = mount(AcceptConfirm, {
 			target: document.body,
 			props: { id: 'S-0051', onconfirm: vi.fn(), oncancel: vi.fn() }
 		});
 		await settle();
-		(document.querySelector('input[type=checkbox]') as HTMLInputElement).click();
-		await settle();
+		expect(document.querySelector('input[type=checkbox]')).toBeNull();
 		expect(([...document.querySelectorAll('button')][1] as HTMLButtonElement).disabled).toBe(true);
 		unmount(c);
 	});

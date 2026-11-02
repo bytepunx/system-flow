@@ -675,17 +675,83 @@ describe('Review', () => {
 		);
 	});
 
-	it('keeps accept disabled for blockers and until uncommitted files are chosen', async () => {
-		backend({ preview: { branch: 'story/S-0041', plan: null, uncommitted: ['docs/stray.md'] } });
+	// ADR-0248: the main checkout's uncommitted files under wip, design, and the shared paths land
+	// with the acceptance, the rest stay as they are, and the page asks nothing and sends no choice.
+	it('shows the shared set as committed and the rest as left alone, and asks nothing', async () => {
+		backend({
+			preview: {
+				branch: 'story/S-0041',
+				plan: null,
+				shared_uncommitted: ['wip/agents/S-0041.md', 'design/issues/summary.md'],
+				uncommitted: ['docs/stray.md']
+			}
+		});
 		c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
 		await settle();
-		expect(button('Accept').disabled).toBe(true);
-		(document.querySelector('input[type=checkbox]') as HTMLInputElement).click();
-		flushSync();
+		const shared = document.querySelector('[data-testid="shared-uncommitted"]')!;
+		expect(shared.textContent).toContain('Committed with the acceptance:');
+		expect([...shared.querySelectorAll('li')].map((li) => li.textContent)).toEqual([
+			'wip/agents/S-0041.md',
+			'design/issues/summary.md'
+		]);
+		const left = document.querySelector('[data-testid="left-uncommitted"]')!;
+		expect(left.textContent).toContain('Left as they are:');
+		expect([...left.querySelectorAll('li')].map((li) => li.textContent)).toEqual(['docs/stray.md']);
+		expect(left.textContent).toContain('refuses only when the story would overwrite one');
+		expect(left.className).not.toContain('warn');
+		// the criteria's boxes are elsewhere on the page; the acceptance offers none
+		const section = document.querySelector('[data-testid="review-accept"]')!;
+		expect(section.querySelector('input[type=checkbox]')).toBeNull();
+		expect(document.body.textContent).not.toContain('Include these files');
 		expect(button('Accept').disabled).toBe(false);
 		button('Accept').click();
 		await settle();
-		expect(JSON.parse(calls('/accept')[0][1].body)).toEqual({ include_uncommitted: true });
+		expect(JSON.parse(calls('/accept')[0][1].body)).toEqual({});
+	});
+
+	// ADR-0248: a rebase that stops is not the designer's to resolve; flai sends the story back to
+	// its agent with a thread naming the paths, and the page says so as a notice, not a failure.
+	it('shows a send back for a rebase that stopped as a notice naming the thread', async () => {
+		const reason =
+			'S-0041 was sent back to in-progress: the rebase of story/S-0041 onto main stopped with conflicts in docs/a.md and docs/b.md';
+		const refusal = () =>
+			ndjson([
+				{
+					event: 'error',
+					status: 422,
+					error: `rule: ${reason}`,
+					data: {
+						id: 'S-0041',
+						reason,
+						sent_back: true,
+						branch: 'story/S-0041',
+						base: 'main',
+						conflicts: ['docs/a.md', 'docs/b.md'],
+						thread: 'TH-0042'
+					}
+				}
+			]);
+		backend({ accept: refusal });
+		c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+		await settle();
+		// once sent back, the story reads as in-progress
+		backend({ accept: refusal, item: { ...STORY, status: 'in-progress' } });
+		button('Accept').click();
+		await settle();
+		const notice = document.querySelector('[data-testid="accept-sent-back"]')!;
+		expect(notice.getAttribute('role')).toBe('status');
+		expect(notice.textContent).toContain('Sent back to in-progress');
+		expect(notice.textContent).toContain(reason);
+		expect([...notice.querySelectorAll('li')].map((li) => li.textContent)).toEqual([
+			'docs/a.md',
+			'docs/b.md'
+		]);
+		const link = notice.querySelector('a')!;
+		expect(link.textContent).toBe('TH-0042');
+		expect(link.getAttribute('href')).toBe('/threads?thread=TH-0042');
+		expect(document.body.textContent).not.toContain('Not accepted');
+		expect(document.body.textContent).toContain('S-0041 is in-progress, not in review');
+		expect(document.querySelector('[data-testid="accept-findings"]')).toBeNull();
 	});
 
 	// ADR-0106: a branch that changes paths Claude Code protects is accepted by the operator only;
