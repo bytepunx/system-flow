@@ -104,6 +104,17 @@ func TestValidFormulaIsClean(t *testing.T) {
 	}
 }
 
+// S-0423: a step may say in: main or in: worktree, and flai check reports
+// neither.
+func TestAStepsInMainOrWorktreeIsClean(t *testing.T) {
+	content := strings.Replace(formulaFile, "    after: [check, notes]\n", "    after: [check, notes]\n    in: main\n", 1)
+	content = strings.Replace(content, "      script: scripts/check.sh --strict\n", "      script: scripts/check.sh --strict\n    in: worktree\n", 1)
+	repo := formulasProject(t, map[string]string{"release.md": content})
+	if got := findings(t, repo, formulas.CodeFile); len(got) != 0 {
+		t.Errorf("flai check on steps in main and in the worktree: %+v", got)
+	}
+}
+
 // S-0421: a project with no formula files' folder reports nothing.
 func TestNoFormulasFolderReportsNothing(t *testing.T) {
 	repo := planningProject(t, "")
@@ -137,6 +148,7 @@ func TestFormulaProblemsAreErrorsOnTheirLine(t *testing.T) {
 		{"a duplicate step id", "  - id: tag\n", "  - id: notes\n", 20, "step id notes is also an earlier step's"},
 		{"an input a prompt uses undeclared", "for {{version}}.", "for {{release}}.", 17, "uses {{release}}, which the formula's inputs do not declare"},
 		{"an input a title uses undeclared", "title: Tag {{version}}", "title: Tag {{tag}}", 21, "uses {{tag}}, which the formula's inputs do not declare"},
+		{"an in that is neither place", "    after: [check, notes]\n", "    after: [check, notes]\n    in: elsewhere\n", 25, `step tag's in is "elsewhere", which is none of worktree, main`},
 		{"a schedule on a formula with inputs", "description: Cuts a release.\n", "description: Cuts a release.\nschedule: daily\n", 7, "schedule starts the formula with no inputs, as nobody is there to give them, but it declares version"},
 	} {
 		if !strings.Contains(formulaFile, tc.old) {

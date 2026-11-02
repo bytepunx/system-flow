@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/bytepunx/system-flow/flai/internal/formulas"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // releaseCheck is ADR-0238's example formula with the reviewer role
@@ -275,6 +276,75 @@ func TestFormulaRun(t *testing.T) {
 	}
 	if story := itemFile(t, root, "S-0002"); strings.Contains(story, "parent: E") || !strings.Contains(story, "`area=docs`, `version=2.0.0`") {
 		t.Errorf("a story without --epic, with both inputs given:\n%s", story)
+	}
+}
+
+// S-0423: a step with in: main runs in the project's main checkout. flai
+// formula show prints its in, and --json carries it; flai formula run writes
+// into its task's Work that it runs from the main checkout, by its absolute
+// path, while a step in the worktree, by in: worktree or by none, keeps the
+// Work it had.
+func TestFormulaStepInMain(t *testing.T) {
+	t.Parallel()
+	inMain := strings.Replace(releaseCheck, "    run: {flai: release --evaluate}\n    after: [test]\n", "    run: {flai: release --evaluate}\n    after: [test]\n    in: main\n", 1)
+	inMain = strings.Replace(inMain, "    run: {script: scripts/test.sh --short}\n", "    run: {script: scripts/test.sh --short}\n    in: worktree\n", 1)
+	if inMain == releaseCheck {
+		t.Fatal("the fixture did not change")
+	}
+	root := formulaProject(t, map[string]string{"release-check.md": inMain})
+	out, errOut, code := runIn(t, root, "formula", "show", "release-check")
+	if code != 0 || strings.Contains(errOut, formulas.CodeFile) || !strings.Contains(out, "  evaluate: The release evaluation agrees on {{version}}\n    flai:   flai release --evaluate\n    after:  test\n    in:     main\n  risk:") ||
+		!strings.Contains(out, "  test: The tests pass\n    script: scripts/test.sh --short\n  evaluate:") {
+		t.Errorf("formula show: %d %s\n%s", code, errOut, out)
+	}
+	js, _, code := runIn(t, root, "formula", "show", "release-check", "--json")
+	var shown struct {
+		Steps []map[string]any `json:"steps"`
+	}
+	if err := json.Unmarshal([]byte(js), &shown); code != 0 || err != nil || len(shown.Steps) != 3 {
+		t.Fatalf("formula show --json: %d %v %s", code, err, js)
+	}
+	if shown.Steps[0]["in"] != "worktree" || shown.Steps[1]["in"] != "main" {
+		t.Errorf("formula show --json: the steps' in: %v", shown.Steps)
+	}
+	if _, ok := shown.Steps[2]["in"]; ok {
+		t.Errorf("formula show --json: a step with no in has one: %v", shown.Steps[2])
+	}
+	if js, errOut, code := runIn(t, root, "formula", "run", "release-check", "--input", "version=1.4.0", "--json"); code != 0 {
+		t.Fatalf("formula run: %d %s %s", code, js, errOut)
+	}
+	checkout := codeSpan(root)
+	for id, want := range map[string]string{
+		"T-0001": "## Work\n\nRun `scripts/test.sh --short` from the repository root.\n\n## Done when\n\n`scripts/test.sh --short` exits 0.\n",
+		"T-0002": "## Work\n\nRun `flai release --evaluate` from the project's main checkout, " + checkout + ", not from this story's worktree.\n\n## Done when\n\n`flai release --evaluate` exits 0 in the main checkout.\n",
+		"T-0003": "## Work\n\nRun the role `reviewer` with this prompt:\n\n> Report the risk in the changes since the last release before 1.4.0 is published.\n\n## Done when\n\nThe role's run ends with its work done.\n",
+	} {
+		if task := itemFile(t, root, id); !strings.Contains(task, want) {
+			t.Errorf("%s lacks %q:\n%s", id, want, task)
+		}
+	}
+	if out, errOut, code := runIn(t, root, "check", "--strict", "--story", "S-0001"); code != 0 {
+		t.Errorf("check --strict on what formula run made: %d\n%s%s", code, out, errOut)
+	}
+}
+
+// S-0423: a step in main runs in the main checkout of a story worktree, the
+// one its .git file names when it is not mounted here, or the project root.
+func TestFormulaMainCheckout(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name string
+		repo workitem.Repo
+		want string
+	}{
+		{"the main checkout", workitem.Repo{Root: "/p", MainRoot: "/p"}, "/p"},
+		{"a story worktree", workitem.Repo{Root: "/p/.flai-cache/worktrees/S-1", MainRoot: "/p"}, "/p"},
+		{"a worktree mounted alone", workitem.Repo{Root: "/w/S-1", MainRoot: "/w/S-1", MainAbsent: "/p"}, "/p"},
+		{"no main checkout known", workitem.Repo{Root: "/p"}, "/p"},
+	} {
+		if got := formulaMainCheckout(&tc.repo); got != tc.want {
+			t.Errorf("%s: %s, want %s", tc.name, got, tc.want)
+		}
 	}
 }
 

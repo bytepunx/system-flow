@@ -27,7 +27,8 @@ func newFormulaCmd(a *app) *cobra.Command {
 the design folder's workflows/formulas (ADR-0238). Its front matter names the
 formula, the nature of the story it makes, its inputs, and its steps. Each
 step runs a flai command, a script under scripts/, or a role with a prompt,
-after the steps its after names. An input is used as {{name}} in the title,
+after the steps its after names, in the instance's worktree or, with in:
+main, in the project's main checkout. An input is used as {{name}} in the title,
 a step's title, and a step's run. flai check reports a formula file that
 falls short as formulas.file.
 
@@ -87,7 +88,8 @@ func newFormulaShowCmd(a *app) *cobra.Command {
 		Short: "Print a formula: its inputs, its steps and what each runs, and the steps' layers",
 		Long: `Print one formula by its name: its nature, file, title, status, updated, and
 description; its inputs, each required or with its default, and what it is;
-its steps, each with its title, what it runs, and the steps it is after; and
+its steps, each with its title, what it runs, the steps it is after, and
+in: main when it runs in the project's main checkout; and
 its layers, the steps grouped by the longest chain of after before each, so
 that the tasks of a layer can run at once once those of the layers before it
 are done. The problems flai check would report in it are said on stderr.
@@ -157,6 +159,11 @@ func (a *app) printFormula(f formulas.Formula, layers [][]string) {
 		if len(s.After) > 0 {
 			fmt.Fprintf(a.out, "    after:  %s\n", strings.Join(s.After, ", "))
 		}
+		// S-0423: a step that runs in the main checkout says so; one in the
+		// worktree, the default, prints as before.
+		if s.In != "" && s.In != formulas.InWorktree {
+			fmt.Fprintf(a.out, "    in:     %s\n", s.In)
+		}
 	}
 	fmt.Fprintln(a.out, "layers:")
 	for i, l := range layers {
@@ -184,7 +191,9 @@ formula's title with the inputs filled as its title, the description as its
 goal, one acceptance criterion per step, and notes naming the formula file
 and the inputs the run took. --epic makes it a story of that epic; a story
 need not belong to one. Each task has the step's title, a Work section
-naming what the step runs, a Done when section that is its exit (the
+naming what the step runs, and for a step with in: main that it runs from
+the project's main checkout, by its absolute path, rather than the
+instance's worktree, a Done when section that is its exit (the
 command or script exits 0, or the role's run ends with its work done), and
 the tasks of the step's after as its after, so that the tasks' layers are
 the steps'. The tasks are made in file order, each after those it waits for.
@@ -317,7 +326,7 @@ func (a *app) formulaRun(name string, given map[string]string, epic string, opt 
 		}
 		res, err := itemnew.Create(repo, a.runner, itemnew.Options{New: workitem.NewOptions{
 			Type: workitem.Task, Title: s.Title, Nature: f.Nature, Parent: story.Item.ID, Owner: owner, After: after[s.ID], Now: now,
-			Body: fillSections(taskBody, formulaTaskSections(s)),
+			Body: fillSections(taskBody, formulaTaskSections(s, formulaMainCheckout(repo))),
 		}})
 		if err != nil {
 			err = undo(fmt.Errorf("making the task for step %s of formula %s, so the story %s and the tasks made before it were removed: %w", s.ID, f.Name, story.Item.ID, err))
@@ -520,25 +529,50 @@ func formulaStorySections(f formulas.Formula, values map[string]string) [][2]str
 }
 
 // formulaTaskSections are the sections a step's task takes, filled: Work,
-// what the step runs, and Done when, its exit.
-func formulaTaskSections(s formulas.Step) [][2]string {
+// what the step runs, and Done when, its exit. A step in main (S-0423) runs
+// from the project's main checkout, main, an absolute path, rather than the
+// instance's worktree, and its Work says so.
+func formulaTaskSections(s formulas.Step, main string) [][2]string {
+	there := " from the project's main checkout, " + codeSpan(main) + ", not from this story's worktree"
 	var work, done string
 	switch s.Kind() {
 	case formulas.KindFlai:
 		line := codeSpan("flai " + s.Run.Flai)
 		work, done = "Run "+line+".", line+" exits 0."
+		if s.InMain() {
+			work, done = "Run "+line+there+".", line+" exits 0 in the main checkout."
+		}
 	case formulas.KindScript:
 		line := codeSpan(s.Run.Script)
 		work, done = "Run "+line+" from the repository root.", line+" exits 0."
+		if s.InMain() {
+			work, done = "Run "+line+there+".", line+" exits 0 in the main checkout."
+		}
 	case formulas.KindRole:
 		quoted := strings.Split(strings.TrimSpace(s.Run.Prompt), "\n")
 		for i, l := range quoted {
 			quoted[i] = strings.TrimRight("> "+l, " ")
 		}
 		work = "Run the role " + codeSpan(s.Run.Role) + " with this prompt:\n\n" + strings.Join(quoted, "\n")
+		if s.InMain() {
+			work += "\n\nRun it" + there + "."
+		}
 		done = "The role's run ends with its work done."
 	}
 	return [][2]string{{"Work", work}, {"Done when", done}}
+}
+
+// formulaMainCheckout is the project's main checkout, absolute, where a step
+// in main runs (S-0423): the main checkout of a story worktree, the one its
+// .git file names when the main checkout is not mounted here, or the root.
+func formulaMainCheckout(repo *workitem.Repo) string {
+	switch {
+	case repo.MainAbsent != "":
+		return repo.MainAbsent
+	case repo.MainRoot != "":
+		return repo.MainRoot
+	}
+	return repo.Root
 }
 
 // codeSpan is s as markdown inline code, its fence longer than any run of

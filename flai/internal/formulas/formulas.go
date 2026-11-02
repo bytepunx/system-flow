@@ -112,13 +112,27 @@ func (f Formula) Scheduled() (*cron.Schedule, error) {
 // Required reports whether the input has no default, so a run must give it.
 func (in Input) Required() bool { return in.Default == nil }
 
-// Step is one of a formula's steps: its id, its title, what it runs, and the
-// steps it comes after.
+// Where a step runs (S-0423): the instance's worktree, as every step did
+// before, or the project's main checkout, for a step such as flai release
+// --pending that tags and pushes the checked-out branch.
+const (
+	InWorktree = "worktree"
+	InMain     = "main"
+)
+
+// Ins are the values a step's in may take; empty is InWorktree.
+var Ins = []string{InWorktree, InMain}
+
+// Step is one of a formula's steps: its id, its title, what it runs, the
+// steps it comes after, and where it runs.
 type Step struct {
 	ID    string   `yaml:"id" json:"id"`
 	Title string   `yaml:"title" json:"title"`
 	Run   Run      `yaml:"run" json:"run"`
 	After []string `yaml:"after" json:"after"`
+	// In is where the step runs: InWorktree, the instance's worktree, when
+	// empty, or InMain, the project's main checkout (S-0423).
+	In string `yaml:"in" json:"in,omitempty"`
 	// Line is the entry's file line.
 	Line int `yaml:"-" json:"-"`
 	// Lines are the file lines of the entry's keys; a key not there is
@@ -129,6 +143,10 @@ type Step struct {
 // Kind is what the step runs: KindFlai, KindScript, or KindRole, or empty
 // when its run gives none of them or more than one.
 func (s Step) Kind() string { return s.Run.Kind() }
+
+// InMain reports whether the step runs in the project's main checkout rather
+// than the instance's worktree (S-0423).
+func (s Step) InMain() bool { return s.In == InMain }
 
 // Run is what a step runs: a flai command line without flai, a script's
 // command line, or a role and the prompt it is given.
@@ -315,7 +333,7 @@ func (in *Input) UnmarshalYAML(n ast.Node) error {
 // UnmarshalYAML reads a steps entry, the line it starts on, and its keys'.
 func (s *Step) UnmarshalYAML(n ast.Node) error {
 	if pairs(n) == nil {
-		return shapeError(n, "a steps entry is a mapping: {id: <id>, title: <text>, run: {...}, after: [<id>...]}")
+		return shapeError(n, "a steps entry is a mapping: {id: <id>, title: <text>, run: {...}, after: [<id>...], in: worktree or main}")
 	}
 	type fields Step
 	if err := yaml.NodeToValue(n, (*fields)(s)); err != nil {
@@ -705,6 +723,9 @@ func (c *checker) step(f Formula, s Step, ids, declared map[string]bool) {
 		if !ids[a] || a == "" {
 			at("after", "step %s is after %q, which is no step's id; name a step of this formula", name, a)
 		}
+	}
+	if s.In != "" && !slices.Contains(Ins, s.In) {
+		at("in", "step %s's in is %q, which is none of %s; give %s, the instance's worktree and the default, or %s, the project's main checkout", name, s.In, strings.Join(Ins, ", "), InWorktree, InMain)
 	}
 }
 

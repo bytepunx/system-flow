@@ -181,6 +181,7 @@ func TestValidateReportsEachProblem(t *testing.T) {
 		{"role undefined", step("    run:", "      role: deployer", "      prompt: p"), "role deployer is no role file's", 10},
 		{"role without prompt", step("    run:", "      role: planner"), "no prompt", 10},
 		{"after no step", step("    run: {flai: check}", "    after: [b]"), `after "b", which is no step's id`, 11},
+		{"in neither place", step("    run: {flai: check}", "    in: elsewhere"), `step a's in is "elsewhere", which is none of worktree, main`, 11},
 		{"step id missing", head + "steps:\n  - title: A\n    run: {flai: check}\n---\n", "step needs id", 8},
 		{"step id not kebab", head + "steps:\n  - id: A_1\n    title: A\n    run: {flai: check}\n---\n", "not kebab-case", 8},
 		{"step title missing", head + "steps:\n  - id: a\n    run: {flai: check}\n---\n", "step a needs title", 8},
@@ -203,6 +204,44 @@ func TestValidateReportsEachProblem(t *testing.T) {
 				t.Errorf("Validate = %v, want one on line %d saying %q", got, tc.line, tc.says)
 			}
 		})
+	}
+}
+
+// S-0423: a step's in says where it runs: main is the project's main
+// checkout, and worktree or no in at all is the instance's worktree; the line
+// of its in key is kept, and any other value is refused on that line, naming
+// the two.
+func TestStepIn(t *testing.T) {
+	const head = "---\ntitle: X\nupdated: 2026-11-01\nstatus: active\nname: x\ndescription: d\nsteps:\n  - id: a\n    title: A\n    run: {flai: check}\n"
+	for _, tc := range []struct {
+		name, line, in string
+		main           bool
+	}{
+		{"main", "    in: main\n", InMain, true},
+		{"worktree", "    in: worktree\n", InWorktree, false},
+		{"absent", "", "", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			content := head + tc.line + "---\n"
+			s := parse(t, "design/workflows/formulas/x.md", content).Steps[0]
+			if s.In != tc.in || s.InMain() != tc.main {
+				t.Errorf("in = %q, InMain = %v, want %q, %v", s.In, s.InMain(), tc.in, tc.main)
+			}
+			if tc.line != "" && s.Lines["in"] != 11 {
+				t.Errorf("the in key's line = %d, want 11", s.Lines["in"])
+			}
+			if got := problems(t, content); len(got) != 0 {
+				t.Errorf("Validate: %v", got)
+			}
+		})
+	}
+	got := problems(t, head+"    in: elsewhere\n---\n")
+	if len(got) != 1 || got[0].Code != CodeFile || got[0].Line != 11 || !strings.Contains(got[0].Message, `step a's in is "elsewhere", which is none of worktree, main; give worktree`) {
+		t.Errorf("in: elsewhere = %v, want one problem on line 11 naming worktree and main", got)
+	}
+	filled := parse(t, "design/workflows/formulas/x.md", head+"    in: main\n---\n").Filled(nil)
+	if !filled.Steps[0].InMain() {
+		t.Errorf("Filled dropped the step's in: %+v", filled.Steps[0])
 	}
 }
 
