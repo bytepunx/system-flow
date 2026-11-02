@@ -1624,6 +1624,11 @@ func itemSpecs() map[string]spec {
 		// environment, with the forge token's variable, so it merges directly
 		// and never hands off. It is refused while the forge host action is
 		// off, before flai runs, after orchestratorAccepts.
+		// include_uncommitted, which older dashboards send, passes --yes:
+		// since ADR-0248 every acceptance commits the main checkout's
+		// uncommitted files under wip, design, and the shared paths and
+		// leaves the rest as they are, and --yes includes the rest in the
+		// acceptance commit too; the dashboard offers no choice.
 		"accept.run": {progress: true, exits: map[int]int{4: Refused}, needs: forgeAcceptance, build: func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			in, e := decode[struct {
 				ID                 string `json:"id"`

@@ -9,24 +9,17 @@ import (
 	"testing"
 
 	"github.com/bytepunx/system-flow/flai/internal/preview"
-	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-// ADR-0189, I-0150: the orchestrator accepts on a main checkout holding
-// uncommitted files outside wip that the story does not change, and leaves
-// them as they were, uncommitted and out of the acceptance commit, where the
-// operator's acceptance by hand still refuses them unless --yes.
-func TestTheOrchestratorAcceptsOnADirtyMainAndLeavesTheFilesAsTheyAre(t *testing.T) {
+// ADR-0189, ADR-0248, I-0150: the orchestrator accepts on a main checkout
+// holding uncommitted files the story does not change: it commits those of
+// the shared set with the acceptance and leaves the operator's as they were,
+// uncommitted and out of the acceptance commit.
+func TestTheOrchestratorAcceptsOnADirtyMainAndLeavesTheOperatorsFilesAsTheyAre(t *testing.T) {
 	t.Parallel()
 	root, head := orchestratedStoryInReview(t, true)
 	dirty := dirtyMain(t, root)
-	mainBefore := gitIn(t, root, "rev-parse", "main")
-
-	if _, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "alex"); code == 0 || !strings.Contains(errOut, "uncommitted changes outside wip") || !strings.Contains(errOut, "--yes") {
-		t.Fatalf("the operator's acceptance by hand on a dirty checkout must refuse, naming --yes: %d %s", code, errOut)
-	}
-	assertNothingAccepted(t, root, mainBefore)
 
 	ev := evidenceFile(t, "Verdict: pass\n- 1: `cli/feature.go`\n")
 	dry, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "orchestrator", "--verified", head, "--evidence", ev, "--dry-run")
@@ -43,23 +36,14 @@ func TestTheOrchestratorAcceptsOnADirtyMainAndLeavesTheFilesAsTheyAre(t *testing
 	if !strings.Contains(gitIn(t, root, "show", "main:cli/feature.go"), "package cli") {
 		t.Error("the story's change must be on main")
 	}
-	if got := porcelainOutsideWip(t, root); !slices.Equal(got, dirty) {
-		t.Errorf("uncommitted after the acceptance %v, want the operator's files %v as they were", got, dirty)
-	}
-	for _, p := range strings.Split(gitIn(t, root, "show", "--name-only", "--format=", "HEAD"), "\n") {
-		if verify.IsLeft(p, dirty) {
-			t.Errorf("the acceptance commit holds the operator's file %s", p)
-		}
-	}
-	if b, _ := os.ReadFile(filepath.Join(root, "design/.gitkeep")); string(b) != "the operator's edit\n" {
-		t.Errorf("the operator's edit was changed: %q", b)
-	}
+	assertSharedCommittedRestLeft(t, root, dirty)
 }
 
-// ADR-0189: a story whose change would overwrite a file the main checkout
-// has not committed is refused the orchestrator before anything changes, and
-// its dry run lists the blocker dirty_main, naming the file and the command
-// that sets it aside.
+// ADR-0189, ADR-0248: a story whose change would overwrite a file the main
+// checkout has not committed outside the shared set is refused the
+// orchestrator before anything changes, and its dry run lists the blocker
+// dirty_main among the orchestrator's, naming the file and the command that
+// sets it aside.
 func TestTheOrchestratorIsRefusedAStoryWhoseChangeWouldOverwriteADirtyFile(t *testing.T) {
 	t.Parallel()
 	root, head := orchestratedStoryInReview(t, true)
@@ -69,7 +53,7 @@ func TestTheOrchestratorIsRefusedAStoryWhoseChangeWouldOverwriteADirtyFile(t *te
 	}
 	mainBefore := gitIn(t, root, "rev-parse", "main")
 	ev := evidenceFile(t, "Verdict: pass\n- 1: `cli/feature.go`\n")
-	want := "S-0001's change would overwrite cli/feature.go, which the main checkout has not committed, so the orchestrator does not accept it: commit them, or set them aside with git stash push -- cli/feature.go, and it is accepted once they are clean (ADR-0189)"
+	want := preview.DirtyMainMessage("S-0001", []string{"cli/feature.go"})
 
 	out, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "orchestrator", "--verified", head, "--evidence", ev, "--dry-run", "--json")
 	if code != 0 {
@@ -117,7 +101,8 @@ func failCommits(t *testing.T, root string) string {
 
 // ADR-0189, I-0150 (S-0338): the orchestrator finishes an acceptance it made
 // itself that stopped before its commit, on a main checkout that has gained
-// uncommitted files since, which it leaves as they are.
+// uncommitted files since: those of the shared set go with the commit, and
+// the operator's are left as they are (ADR-0248).
 func TestTheOrchestratorFinishesItsOwnAcceptanceThatStoppedBeforeItsCommit(t *testing.T) {
 	t.Parallel()
 	root, head := orchestratedStoryInReview(t, true)

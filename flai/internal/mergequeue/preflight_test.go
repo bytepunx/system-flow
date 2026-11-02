@@ -43,7 +43,7 @@ func newMainGit(root, status string) *mainGit {
 	g.script("main", "rev-parse", "--abbrev-ref", "HEAD")
 	g.script("c0ffee", "rev-parse", "--verify", "--quiet", "refs/heads/main^{commit}")
 	g.script(status, "status", "--porcelain", "--untracked-files=all")
-	g.script(status, "status", "--porcelain")
+	g.script(status, "-c", "core.quotePath=false", "status", "--porcelain", "--no-renames", "--untracked-files=all")
 	return g
 }
 
@@ -122,16 +122,17 @@ func TestThePreflightKeepsOnlyFlaiChecksErrors(t *testing.T) {
 	}
 }
 
-// S-0549: an error of flai check on an uncommitted file outside wip/, which
-// a landing leaves as it is (ADR-0178) and the batch never sees, holds
-// nothing; one on a committed file, or with no file, still holds.
+// S-0549: an error of flai check on an uncommitted file outside the shared
+// set, the operator's, which a landing leaves as it is (ADR-0178, ADR-0248)
+// and the batch never sees, holds nothing; one on a committed file, or with
+// no file, still holds.
 func TestThePreflightLeavesTheChecksErrorsOnFilesALandingLeaves(t *testing.T) {
 	res := &check.Result{Findings: []check.Finding{
-		{Level: check.Error, Rule: "issue.front-matter", Path: "design/issues/I-0150-x.md", Line: 1, Message: "no front matter"},
-		{Level: check.Error, Rule: "doc.front-matter", Path: "design/analysis/2026-10-19-all.md", Line: 1, Message: "no front matter"},
+		{Level: check.Error, Rule: "doc.front-matter", Path: "docs/plan.md", Line: 1, Message: "no front matter"},
+		{Level: check.Error, Rule: "doc.front-matter", Path: "notes/2026-10-19.md", Line: 1, Message: "no front matter"},
 		{Level: check.Error, Rule: "layout.folder", Path: ".", Line: 1, Message: "no design folder"},
 	}}
-	left := []string{"design/issues/I-0150-x.md", "design/analysis/"}
+	left := []string{"docs/plan.md", "notes/"}
 	want := []verify.FileFinding{{Tier: PreflightCheckTier, Checkout: verify.CheckoutMain, Path: ".", Line: 1, Level: check.Error, Rule: "layout.folder", Message: "no design folder"}}
 	if got := checkFindings(res, left); !reflect.DeepEqual(got, want) {
 		t.Errorf("findings %+v, want %+v", got, want)
@@ -159,14 +160,15 @@ func TestThePreflightHoldsOnAnErrorOfFlaiCheck(t *testing.T) {
 	}
 }
 
-// ADR-0234: uncommitted wip files the fixing tiers pass in place hold
-// nothing, and need no scratch worktree; nor do files outside wip, which a
-// landing leaves, whatever they hold.
+// ADR-0234, ADR-0248: uncommitted files of the shared set the fixing tiers
+// pass in place hold nothing, and need no scratch worktree; nor do files
+// outside it, the operator's, which a landing leaves, whatever they hold.
 func TestThePreflightLintPassesInPlace(t *testing.T) {
 	repo := preflightProject(t, markdownTier)
 	writeFile(t, repo.Root, "wip/notes/n.md", "# A note\n")
+	writeFile(t, repo.Root, "design/notes/n.md", "# A design note\n")
 	writeFile(t, repo.Root, "notes.md", "BAD\n")
-	g := newMainGit(repo.Root, "?? wip/notes/n.md\n?? notes.md\n")
+	g := newMainGit(repo.Root, "?? wip/notes/n.md\n?? design/notes/n.md\n?? notes.md\n")
 	if got := preflight(t, g, repo); len(got) != 0 {
 		t.Errorf("findings %+v, want none", got)
 	}
@@ -175,32 +177,34 @@ func TestThePreflightLintPassesInPlace(t *testing.T) {
 	}
 }
 
-// ADR-0234: a lint finding in place is confirmed in a scratch worktree of
-// main's head, with the file copied in and the fix run there: one the fix
-// leaves holds the queue, by the main checkout's path, file, and rule; one
-// the fix clears holds nothing. The main checkout's file is never changed,
-// and the scratch worktree is removed after.
+// ADR-0234, ADR-0248: a lint finding in place in a file of the shared set,
+// under wip or design, is confirmed in a scratch worktree of main's head,
+// with the file copied in and the fix run there: one the fix leaves holds
+// the queue, by the main checkout's path, file, and rule; one the fix clears
+// holds nothing. The main checkout's file is never changed, and the scratch
+// worktree is removed after.
 func TestThePreflightConfirmsALintFindingInAScratchWorktree(t *testing.T) {
 	for _, tc := range []struct {
-		name, note string
-		hold       bool
+		name, path, note string
+		hold             bool
 	}{
-		{name: "the fix leaves it", note: "# A note\n\n[gone](#BAD)\n", hold: true},
-		{name: "the fix clears it", note: "# A note\n\n[gone](#FIXABLE)\n"},
+		{name: "the fix leaves it", path: "wip/notes/n.md", note: "# A note\n\n[gone](#BAD)\n", hold: true},
+		{name: "the fix leaves it under design", path: "design/notes/n.md", note: "# A note\n\n[gone](#BAD)\n", hold: true},
+		{name: "the fix clears it", path: "wip/notes/n.md", note: "# A note\n\n[gone](#FIXABLE)\n"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			repo := preflightProject(t, markdownTier)
-			writeFile(t, repo.Root, "wip/notes/n.md", tc.note)
-			g := newMainGit(repo.Root, "?? wip/notes/n.md\n")
+			writeFile(t, repo.Root, tc.path, tc.note)
+			g := newMainGit(repo.Root, "?? "+tc.path+"\n")
 			got := preflight(t, g, repo)
 			if tc.hold {
-				if len(got) != 1 || got[0].Path != "wip/notes/n.md" || got[0].Rule != "MD051" || got[0].Tier != "markdown" || got[0].Checkout != verify.CheckoutMain || got[0].Line != 1 {
-					t.Errorf("findings %+v, want wip/notes/n.md:1 MD051 of the markdown tier, in the main checkout", got)
+				if len(got) != 1 || got[0].Path != tc.path || got[0].Rule != "MD051" || got[0].Tier != "markdown" || got[0].Checkout != verify.CheckoutMain || got[0].Line != 1 {
+					t.Errorf("findings %+v, want %s:1 MD051 of the markdown tier, in the main checkout", got, tc.path)
 				}
 			} else if len(got) != 0 {
 				t.Errorf("findings %+v, want none: the landing's fix clears it", got)
 			}
-			if data, err := os.ReadFile(filepath.Join(repo.Root, "wip", "notes", "n.md")); err != nil || string(data) != tc.note {
+			if data, err := os.ReadFile(filepath.Join(repo.Root, filepath.FromSlash(tc.path))); err != nil || string(data) != tc.note {
 				t.Errorf("the main checkout's note is %q, %v; want it as it was", data, err)
 			}
 			scratch := filepath.Join(repo.CacheDir(), "worktrees", PreflightWorktreeName)

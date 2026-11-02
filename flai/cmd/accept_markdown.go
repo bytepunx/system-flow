@@ -11,15 +11,17 @@ import (
 )
 
 // What flai accept commits passes the lint of the tiers that carry a fix
-// command (S-0367, TH-0413): the main checkout's uncommitted files are fixed
-// before anything changes and again before the acceptance commit, and the
+// command (S-0367, TH-0413): the main checkout's uncommitted files it
+// commits, the shared set and never the rest it leaves as it is (ADR-0248),
+// are fixed before anything changes and again before each commit, and the
 // story's branch was fixed by its rebase; what a fix leaves refuses the
 // acceptance, naming each file, line, and error, before anything changes or
 // before the merge.
 
 // fixUncommitted runs the lint fix over what the checkout at root has not
 // committed but the paths left, which the acceptance leaves as they are
-// (S-0402), logging at warn what it could not do, and answers those paths.
+// (S-0402, ADR-0248), logging at warn what it could not do, and answers
+// those paths.
 func (a *app) fixUncommitted(ctx context.Context, id, root string, left []string) []string {
 	paths, err := verify.ChangedPaths(a.runner, root, "")
 	if err != nil {

@@ -80,6 +80,25 @@ design/conventions/work-management.md and git.md:
   4. tell every story in progress or in review whose touches cover a path
      the merge changed which paths those are, for its agent's MCP inbox
 
+The main checkout's uncommitted and untracked files under the manifest's
+wip folder, its design folder, and the shared paths of claims.shared are the
+shared set, flai's own work between landings, which every acceptance commits,
+by hand, from the dashboard, --by orchestrator, and --batch alike (ADR-0248):
+with step 3's commit when the story's change, main...story/<id>, would
+overwrite none of them, and otherwise, before step 0's rebase, in a commit of
+their own on the main branch, "chore: [<id>] commit the main checkout's wip
+and design before accepting", lint-fixed first, so that the rebase settles
+each such path by its own rules; a commit that fails refuses the acceptance
+before anything is merged. Every other uncommitted file is the operator's,
+and every acceptance leaves it as it is, out of the lint fix and out of its
+commits. The acceptance is refused, before anything is merged, only while the
+story's change would overwrite one of them, as the blocker dirty_main, naming
+the files and the command that sets them aside; the merge queue's landing
+holds such a story back instead. --yes, by hand from the shell, includes
+those files in step 3's commit; the dashboard offers no choice. --dry-run
+never refuses for them: it lists the shared set as shared_uncommitted and
+the rest as uncommitted, with or without --yes.
+
 Under acceptance.mode: pull-request (ADR-0170), step 0 merges no branch on
 this machine. Once the pull request's checks and reviews pass (ADR-0169), it
 refuses, naming them, while the main branch has commits not on origin's main
@@ -146,12 +165,11 @@ path Claude Code protects, no thread on the story or its tasks is open, and
 names a changed file for each of them. For a formula's instance, whose
 branch may change nothing, each item is "- <n>: T-nnnn done" instead,
 naming the done task of the criterion's step (S-0422, ADR-0239).
-It leaves the main checkout's uncommitted files outside wip as the merge
-queue's landing does, --yes or not: out of the lint fix and the acceptance
-commit. It is refused only while the story's change, main...story/<id>,
-would overwrite one of them or an untracked one; --dry-run lists that as the
-blocker dirty_main, naming the files and the command that sets them aside
-(ADR-0189).
+It commits the shared set and leaves the main checkout's other uncommitted
+files as every acceptance does (above), never with --yes, and is refused only
+while the story's change would overwrite one of them; --dry-run lists that as
+the blocker dirty_main among its orchestrator_blockers, naming the files and
+the command that sets them aside (ADR-0189, ADR-0248).
 The evidence is written, with the commit, under ### Accepted by the
 orchestrator in the story's Notes. With --dry-run the evidence is optional.
 While the merge-queue host action is on and the queue batches (accept_reviews
@@ -305,6 +323,9 @@ type accepted struct {
 	// closing names each of ClosedMessages with the story it was open with,
 	// for the text output.
 	closing []string
+	// wip is the manifest's wip folder with a trailing slash, for the text
+	// output, which names the shared set's files outside it alone.
+	wip string
 	// Installs are the sub-projects' install commands the acceptance ran in
 	// the main checkout after its commit (ADR-0185).
 	Installs []installRun `json:"installs,omitempty"`
@@ -397,17 +418,16 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	if opts.Orchestrator && res.Resumed && !workitem.IsOrchestrator(res.DoneBy) {
 		return nil, notOrchestratorsToResume(it.ID, res)
 	}
-	acc := &accepted{Acceptance: res}
+	acc := &accepted{Acceptance: res, wip: strings.TrimSuffix(repo.Manifest.Layout["wip"], "/") + "/"}
 	messagesToClose(repo, it, acc)
 	res.DryRun = o.dryRun
 	if !o.dryRun {
 		res.By = orDefault(o.by, a.author())
 	}
-	// the merge queue's landing and the orchestrator's acceptance leave them
-	// as they are (S-0402, ADR-0189)
-	if dirty := res.Uncommitted; len(dirty) > 0 && !a.yes && !o.dryRun && o.batch == "" && !opts.Orchestrator {
-		return nil, fmt.Errorf("working tree has uncommitted changes outside wip (%s); commit or stash them so the acceptance commit holds only acceptance, or pass --yes to include them", strings.Join(dirty, ", "))
-	}
+	// every acceptance commits the shared set and leaves the rest as it is;
+	// --yes, by hand from the shell, includes the rest in the acceptance
+	// commit (ADR-0248)
+	res.IncludesUncommitted = a.yes && o.batch == "" && !opts.Orchestrator
 	if err := keptHeld(it.ID, res.UndoesMain, opts.Keep); err != nil {
 		return nil, err
 	}
@@ -446,6 +466,8 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	switch {
 	case it.Type != workitem.Story:
 	case repo.Manifest.Acceptance.PullRequest():
+		// the merge is made on the forge, so no rebase here would meet the
+		// shared set: it goes with the acceptance commit (ADR-0248)
 		if res.Remote != nil && useGit {
 			if changed, err = a.acceptThroughRemote(context.Background(), repo, it, res); err != nil {
 				return nil, err
@@ -454,6 +476,11 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	default:
 		before := ""
 		if hasBranch {
+			// the shared set the story's change would overwrite goes on the
+			// main branch first, so the rebase settles it (ADR-0248)
+			if err := a.commitSharedBeforeMerge(repo, it, res); err != nil {
+				return nil, err
+			}
 			before = a.headOf(repo.MainRoot)
 		}
 		merged, err := a.mergeStoryBranch(repo, it.ID, opts.Keep)
@@ -901,10 +928,67 @@ func canonicalSet(ids []string) map[string]bool {
 	return set
 }
 
+// commitSharedBeforeMerge is the acceptance's commit of the shared set
+// before the merge (ADR-0248): when the story's change, the main branch to
+// its branch from the commit they share, would overwrite a file of
+// res.SharedUncommitted, the main checkout's uncommitted files under wip,
+// design, and the shared paths, it runs the lint fix over them and commits
+// them all on the main branch under sharedSubject, so that the rebase
+// settles each such path by its own rules in place of git refusing to
+// overwrite it. The rest stays as it is, out of the fix and the commit. When
+// the change would overwrite none, nothing is committed here: the shared set
+// goes with the acceptance commit. A commit that fails refuses the
+// acceptance, before anything is merged, with git's output and what to do.
+func (a *app) commitSharedBeforeMerge(repo *workitem.Repo, it *workitem.Item, res *preview.Acceptance) error {
+	if len(res.SharedUncommitted) == 0 {
+		return nil
+	}
+	main, err := storygit.MainBranch(a.runner, repo.MainRoot)
+	if err != nil {
+		return fmt.Errorf("find the main branch to see whether %s's change overwrites the main checkout's uncommitted files under wip and design: %w", it.ID, err)
+	}
+	overwritten, err := storygit.ChangedAmong(a.runner, repo.MainRoot, main, res.Branch, res.SharedUncommitted)
+	if err != nil {
+		return fmt.Errorf("cannot %w; nothing is merged, so fix that and run flai accept %s again", err, it.ID)
+	}
+	if len(overwritten) == 0 {
+		return nil
+	}
+	a.fixUncommitted(context.Background(), it.ID, repo.Root, res.Uncommitted)
+	args := []string{"add", "-A", "--"}
+	for _, p := range res.SharedUncommitted {
+		args = append(args, ":(literal)"+p)
+	}
+	subject := sharedSubject(it.ID)
+	if out, err := storygit.RunPastIndexLock(a.runner, repo.Root, args...); err != nil {
+		return notCommittedShared(it.ID, "stage", gitSaid(out, err))
+	}
+	if out, err := storygit.RunPastIndexLock(a.runner, repo.Root, "commit", "-q", "-m", subject); err != nil {
+		return notCommittedShared(it.ID, "commit", gitSaid(out, err))
+	}
+	a.acceptStep(it, "committed-shared", fmt.Sprintf("%s: %s, which %s would overwrite, with the rest of the shared set", subject, strings.Join(overwritten, ", "), res.Branch))
+	return nil
+}
+
+// sharedSubject is the subject of the commit of the main checkout's shared
+// set an acceptance of id makes before the merge (ADR-0248).
+func sharedSubject(id string) string {
+	return fmt.Sprintf("chore: [%s] commit the main checkout's wip and design before accepting", id)
+}
+
+// notCommittedShared is the refusal of id's acceptance whose commit of the
+// shared set before the merge failed at step, stage or commit, with what git
+// said: nothing is merged, and the acceptance is run again once that is
+// resolved.
+func notCommittedShared(id, step, said string) error {
+	return fmt.Errorf("%s the main checkout's uncommitted files under wip, design, and the shared paths before accepting %s: %s\nnothing is merged and the story stays in review; once git's error above is resolved, run flai accept %s again", step, id, said, id)
+}
+
 // commitAcceptance is step 3: it runs the lint fix over what the main
 // checkout has not committed (S-0367) and commits everything there under the
-// acceptance's subject, but what the merge queue's landing leaves
-// uncommitted (S-0402). git add and git commit are run again while another
+// acceptance's subject, but the rest, the uncommitted files outside the
+// shared set, which every acceptance leaves as they are unless --yes includes
+// them (S-0402, ADR-0248). git add and git commit are run again while another
 // git process holds the index lock (I-0100). A commit that fails even so says
 // what the acceptance has done and how to finish it.
 func (a *app) commitAcceptance(repo *workitem.Repo, it *workitem.Item, res *preview.Acceptance, trailers []string) error {
@@ -1380,17 +1464,27 @@ func (a *app) printAccept(acc *accepted) error {
 		for _, b := range res.Blockers {
 			fmt.Fprintf(a.out, "blocked: %s\n", b)
 		}
+		// wip is committed as a matter of course and goes unlisted; the
+		// shared set's other files are named, as the operator may not expect
+		// them in the commit
+		if shared := outsideFolder(res.SharedUncommitted, acc.wip); len(shared) > 0 {
+			when := "with the acceptance commit, as it commits wip"
+			if res.Branch != "" && res.Remote == nil && !res.CommitOnly {
+				when += ", or before the merge when " + res.Branch + " would overwrite one"
+			}
+			fmt.Fprintf(a.out, "uncommitted under design and the shared paths: %s; the acceptance commits them %s (ADR-0248)\n", workitem.Shorten(shared, 20), when)
+		}
 		if len(res.Uncommitted) > 0 {
-			effect := "the real run refuses until they are committed or stashed, or --yes includes them"
+			effect := "the acceptance leaves them as they are; it is refused only while the story's change would overwrite one, and --yes includes them in the acceptance commit (ADR-0248)"
 			switch {
 			case res.Batch != "":
 				effect = "the merge queue's landing leaves them as they are, out of the acceptance commit (ADR-0178)"
 			case res.Orchestrator:
-				effect = "the orchestrator's acceptance leaves them as they are, out of the acceptance commit, and is refused only while its change would overwrite one (ADR-0189)"
-			case a.yes:
+				effect = "the orchestrator's acceptance leaves them as they are, out of the acceptance commit, and is refused only while its change would overwrite one (ADR-0248)"
+			case res.IncludesUncommitted:
 				effect = "--yes includes them in the acceptance commit"
 			}
-			fmt.Fprintf(a.out, "uncommitted outside wip: %s; %s\n", strings.Join(res.Uncommitted, ", "), effect)
+			fmt.Fprintf(a.out, "uncommitted outside wip, design, and the shared paths: %s; %s\n", strings.Join(res.Uncommitted, ", "), effect)
 		}
 		if res.OperatorOnly != "" {
 			fmt.Fprintf(a.out, "%s: %s\n", res.OperatorOnly, strings.Join(res.Protected, ", "))

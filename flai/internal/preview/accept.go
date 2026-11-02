@@ -47,12 +47,23 @@ type Acceptance struct {
 	DoneBy string `json:"done_by,omitempty"`
 	// Orchestrator says the acceptance is the orchestrator's (ADR-0093).
 	Orchestrator bool `json:"orchestrator,omitempty"`
-	// Uncommitted paths outside wip. The real run refuses them unless --yes
-	// includes them in the acceptance commit; a dry run reports them so the
-	// choice can be made before confirming (S-0051). The merge queue's
-	// landing and the orchestrator's acceptance leave them as they are, out
-	// of the acceptance commit (S-0402, ADR-0189).
+	// SharedUncommitted are the main checkout's uncommitted and untracked
+	// files in the shared set, under wip, design, and the shared paths
+	// (ADR-0248): flai's own work between landings, which every acceptance
+	// commits, with the acceptance commit, or in a commit of their own
+	// before the merge when the story's change would overwrite one.
+	SharedUncommitted []string `json:"shared_uncommitted,omitempty"`
+	// Uncommitted are the main checkout's other uncommitted and untracked
+	// files, the operator's, which every acceptance leaves as they are, out
+	// of the lint fix and out of its commits (S-0402, ADR-0189, ADR-0248);
+	// a dry run reports them so the operator knows (S-0051). The acceptance
+	// is refused, as the blocker dirty_main, only while the story's change
+	// would overwrite one of them.
 	Uncommitted []string `json:"uncommitted,omitempty"`
+	// IncludesUncommitted says the acceptance includes Uncommitted in the
+	// acceptance commit after all: flai accept --yes, by hand from the shell,
+	// never the orchestrator's nor the queue's landing (ADR-0248).
+	IncludesUncommitted bool `json:"includes_uncommitted,omitempty"`
 	// WorktreeUncommitted are the uncommitted paths in the story's worktree.
 	// They block acceptance: the branch is merged as it is committed, and
 	// the worktree is removed with it (S-0140).
@@ -156,9 +167,10 @@ const (
 // (ADR-0221).
 const BlockQueueTiers = "queue_tiers"
 
-// BlockDirtyMain is the code of the orchestrator's blocker for a story whose
-// change would overwrite a file the main checkout has not committed outside
-// wip (ADR-0189).
+// BlockDirtyMain is the code of the blocker of every acceptance but the
+// merge queue's landing for a story whose change would overwrite a file the
+// main checkout has not committed outside the shared set, wip, design, and
+// the shared paths (ADR-0189, ADR-0248).
 const BlockDirtyMain = "dirty_main"
 
 // UndonePath is a path the story's branch undoes of the main branch's change
@@ -189,10 +201,12 @@ func Accept(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by string, n
 
 // AcceptWith is Accept with what the acceptance adds: under
 // opts.Orchestrator, a blocker for each condition of ADR-0093 that fails,
-// beside every blocker Accept reports, and one for a change of the story's
-// that would overwrite a file the main checkout has not committed, while a
-// story already done is resumed without ADR-0093's conditions, which held
-// when it was moved to done (ADR-0189); and no blocker for a path the branch
+// beside every blocker Accept reports, while a story already done is resumed
+// without ADR-0093's conditions, which held when it was moved to done
+// (ADR-0189); for every acceptance but the queue's landing, the blocker
+// dirty_main for a change of the story's that would overwrite a file the
+// main checkout has not committed outside the shared set, which every
+// acceptance commits (ADR-0248); and no blocker for a path the branch
 // undoes of main that opts.Keep keeps (ADR-0155). With opts.Batch, the
 // queue's landing, a blocker for each reason the merge queue does not let the
 // story land from that batch now, and the story's rebased head in the batch
@@ -230,7 +244,14 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 		res.DoneBy = doneBy(it)
 	}
 	if useGit {
-		res.Uncommitted = storygit.DirtyOutsideWip(r, repo)
+		// the shared set is committed, the rest left as it is (ADR-0248);
+		// what git cannot read is a blocker, since the merge would meet it
+		// unread
+		if d, err := storygit.DirtyMain(r, repo); err != nil {
+			res.Blockers = append(res.Blockers, fmt.Sprintf("cannot %v", err))
+		} else {
+			res.SharedUncommitted, res.Uncommitted = d.Shared, d.Rest
+		}
 		if _, err := r.Run(repo.MainRoot, "git", "var", "GIT_COMMITTER_IDENT"); err != nil {
 			res.Blockers = append(res.Blockers, "git has no committer identity here; set user.name and user.email (git config), or restart the dashboard with flai dashboard so it passes yours into the container")
 		}
@@ -348,57 +369,63 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 		if !res.Resumed || it.Type != workitem.Story {
 			res.OrchestratorBlockers, res.Verified = orchestratorBlockers(r, repo, it, opts, res.Protected, res.Verified, landing)
 		}
-		if res.Branch != "" {
-			if b := dirtyMainBlocker(r, repo, it.ID); b != nil {
+	}
+	// a file outside the shared set the story's change would overwrite
+	// refuses every acceptance that merges here but the queue's landing,
+	// which holds such a story back itself (ADR-0178, ADR-0248); the
+	// orchestrator's dry run reads the code among its own blockers
+	if res.Branch != "" && opts.Batch == "" {
+		if b := dirtyMainBlocker(r, repo, it.ID, res.Uncommitted); b != nil {
+			if opts.Orchestrator {
 				res.OrchestratorBlockers = append(res.OrchestratorBlockers, *b)
+			} else {
+				res.Blockers = append(res.Blockers, b.Message)
 			}
 		}
-		for _, b := range res.OrchestratorBlockers {
-			res.Blockers = append(res.Blockers, b.Message)
-		}
+	}
+	for _, b := range res.OrchestratorBlockers {
+		res.Blockers = append(res.Blockers, b.Message)
 	}
 	threadsToResolve(repo, it, res)
 	return res, nil
 }
 
-// dirtyMainBlocker is the orchestrator's blocker for story id when its
-// change, its branch from the commit it shares with the main branch, would
-// overwrite a file the main checkout has not committed, or has not tracked,
-// outside wip, naming the files and the command that sets them aside; nil
-// when it would overwrite none. The checkout's other uncommitted files stop
-// nothing: the acceptance leaves them as they are (ADR-0189). What git
-// cannot read is the blocker too, since the merge would meet it unread.
-func dirtyMainBlocker(r execx.Runner, repo *workitem.Repo, id string) *Blocker {
+// dirtyMainBlocker is the blocker dirty_main for story id when its change,
+// its branch from the commit it shares with the main branch, would overwrite
+// one of rest, the main checkout's uncommitted and untracked files outside
+// the shared set, naming the files and the command that sets them aside; nil
+// when it would overwrite none. The rest's other files stop nothing: the
+// acceptance leaves them as they are, and the shared set is committed before
+// the merge, so it is never among them (ADR-0189, ADR-0248). What git cannot
+// read is the blocker too, since the merge would meet it unread.
+func dirtyMainBlocker(r execx.Runner, repo *workitem.Repo, id string, rest []string) *Blocker {
+	if len(rest) == 0 {
+		return nil
+	}
 	branch := storygit.Branch(id)
 	unread := func(err error) *Blocker {
-		return &Blocker{Code: BlockDirtyMain, Message: fmt.Sprintf("cannot read which uncommitted files of the main checkout %s would overwrite: %v; check that git can read the main checkout and %s (ADR-0189)", branch, err, branch)}
-	}
-	files, err := storygit.DirtyFiles(r, repo.MainRoot)
-	if err != nil {
-		return unread(err)
-	}
-	wip := strings.TrimSuffix(repo.Manifest.Layout["wip"], "/") + "/"
-	var outside []string
-	for _, f := range files {
-		if !strings.HasPrefix(f, wip) {
-			outside = append(outside, f)
-		}
-	}
-	if len(outside) == 0 {
-		return nil
+		return &Blocker{Code: BlockDirtyMain, Message: fmt.Sprintf("cannot read which uncommitted files of the main checkout %s would overwrite: %v; check that git can read the main checkout and %s (ADR-0248)", branch, err, branch)}
 	}
 	main, err := storygit.MainBranch(r, repo.MainRoot)
 	if err != nil {
 		return unread(fmt.Errorf("find the main branch: %w", err))
 	}
-	paths, err := storygit.ChangedAmong(r, repo.MainRoot, main, branch, outside)
+	paths, err := storygit.ChangedAmong(r, repo.MainRoot, main, branch, rest)
 	if err != nil {
 		return unread(err)
 	}
 	if len(paths) == 0 {
 		return nil
 	}
-	return &Blocker{Code: BlockDirtyMain, Message: fmt.Sprintf("%s's change would overwrite %s, which the main checkout has not committed, so the orchestrator does not accept it: commit them, or set them aside with %s, and it is accepted once they are clean (ADR-0189)", id, strings.Join(paths, ", "), mergequeue.FreeCommand(paths))}
+	return &Blocker{Code: BlockDirtyMain, Message: DirtyMainMessage(id, paths)}
+}
+
+// DirtyMainMessage is why story id cannot be accepted while its change would
+// overwrite paths, files the main checkout has not committed outside the
+// shared set, which every acceptance leaves as they are, naming the command
+// that sets them aside (ADR-0248).
+func DirtyMainMessage(id string, paths []string) string {
+	return fmt.Sprintf("%s's change would overwrite %s, which the main checkout has not committed and the acceptance leaves as they are, so it is not accepted: commit them, or set them aside with %s, and accept again once they are clean (ADR-0248)", id, strings.Join(paths, ", "), mergequeue.FreeCommand(paths))
 }
 
 // queueTiersGate sets on res the tiers marked queue that the last flai verify

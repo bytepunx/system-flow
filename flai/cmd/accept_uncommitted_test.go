@@ -5,13 +5,15 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
 
-// S-0051: uncommitted paths outside wip are reported by the dry run so the
-// choice is made before confirming; the real run still refuses them unless
-// --yes includes them.
+// S-0051, ADR-0248: the dry run lists the main checkout's uncommitted files
+// in the shared set, which the acceptance commits, as shared_uncommitted,
+// and the rest, which it leaves as they are, as uncommitted; the real run
+// asks nothing and refuses nothing for them, and --yes includes the rest.
 func TestAcceptReportsUncommittedPathsInTheDryRun(t *testing.T) {
 	t.Parallel()
 	if _, err := exec.LookPath("git"); err != nil {
@@ -19,7 +21,7 @@ func TestAcceptReportsUncommittedPathsInTheDryRun(t *testing.T) {
 	}
 	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
-	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", "docs"} {
+	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", "docs", "design"} {
 		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
 		_ = os.WriteFile(filepath.Join(root, d, ".gitkeep"), nil, 0o644)
 	}
@@ -29,68 +31,87 @@ func TestAcceptReportsUncommittedPathsInTheDryRun(t *testing.T) {
 	gitIn(t, root, "config", "user.name", "t")
 	gitIn(t, root, "add", "-A")
 	gitIn(t, root, "commit", "-q", "-m", "init")
-	for _, args := range [][]string{{"epic", "new", "Epic"}, {"story", "new", "Stray", "--epic", "E-0001"}} {
-		if _, errOut, code := runIn(t, root, args...); code != 0 {
+	if _, errOut, code := runIn(t, root, "epic", "new", "Epic"); code != 0 {
+		t.Fatal(errOut)
+	}
+	// two stories in review, with no branch: one accepted without --yes, one
+	// moved to done with it
+	for i, title := range []string{"Stray", "Second"} {
+		story, task := "S-000"+string(rune('1'+i)), "T-000"+string(rune('1'+i))
+		if _, errOut, code := runIn(t, root, "story", "new", title, "--epic", "E-0001"); code != 0 {
 			t.Fatal(errOut)
 		}
-	}
-	storyFile := filepath.Join(root, "wip/kanban/stories/S-0001-stray.md")
-	s, _ := os.ReadFile(storyFile)
-	_ = os.WriteFile(storyFile, []byte(strings.Replace(string(s), "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n- [x] done\n", 1)), 0o644)
-	for _, args := range [][]string{
-		{"move", "S-0001", "ready"}, {"move", "S-0001", "in-progress"}, {"stream", "open", "S-0001", "--no-branch"},
-		{"task", "new", "Do it", "--story", "S-0001"},
-		{"move", "T-0001", "ready"}, {"move", "T-0001", "in-progress"}, {"move", "T-0001", "done"},
-		{"move", "S-0001", "review"},
-	} {
-		if _, errOut, code := runIn(t, root, args...); code != 0 {
-			t.Fatalf("flai %v: %s", args, errOut)
+		storyFile := filepath.Join(root, "wip/kanban/stories/"+story+"-"+strings.ToLower(title)+".md")
+		s, _ := os.ReadFile(storyFile)
+		_ = os.WriteFile(storyFile, []byte(strings.Replace(string(s), "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n- [x] done\n", 1)), 0o644)
+		for _, args := range [][]string{
+			{"move", story, "ready"}, {"move", story, "in-progress"}, {"stream", "open", story, "--no-branch"},
+			{"task", "new", "Do it", "--story", story},
+			{"move", task, "ready"}, {"move", task, "in-progress"}, {"move", task, "done"},
+			{"move", story, "review"},
+		} {
+			if _, errOut, code := runIn(t, root, args...); code != 0 {
+				t.Fatalf("flai %v: %s", args, errOut)
+			}
 		}
 	}
-	preview := func(args ...string) []string {
+	type lists struct {
+		Shared      []string `json:"shared_uncommitted"`
+		Uncommitted []string `json:"uncommitted"`
+		Includes    bool     `json:"includes_uncommitted"`
+	}
+	preview := func(args ...string) lists {
 		t.Helper()
 		out, errOut, code := runIn(t, root, append([]string{"accept", "S-0001", "--dry-run", "--json"}, args...)...)
 		if code != 0 {
 			t.Fatalf("a dry run must not refuse (%v): %d %s", args, code, errOut)
 		}
-		var res struct {
-			Uncommitted []string `json:"uncommitted"`
-		}
+		var res lists
 		if err := json.Unmarshal([]byte(out), &res); err != nil {
 			t.Fatalf("preview json: %v\n%s", err, out)
 		}
-		return res.Uncommitted
+		return res
 	}
-	if got := preview(); len(got) != 0 {
-		t.Errorf("clean tree, wip changes only: uncommitted = %v", got)
+	if got := preview(); len(got.Uncommitted) != 0 || len(got.Shared) == 0 || slices.ContainsFunc(got.Shared, func(p string) bool { return !strings.HasPrefix(p, "wip/") }) {
+		t.Errorf("clean tree, wip changes only: uncommitted = %v, shared_uncommitted = %v", got.Uncommitted, got.Shared)
 	}
 
 	_ = os.WriteFile(filepath.Join(root, "docs", "stray.md"), []byte("x\n"), 0o644)
+	_ = os.WriteFile(filepath.Join(root, "design", "d.md"), []byte("# flai's\n"), 0o644)
 	for _, args := range [][]string{nil, {"--yes"}} {
-		if got := preview(args...); len(got) != 1 || got[0] != "docs/stray.md" {
-			t.Errorf("dry run %v should report the stray file, got %v", args, got)
+		got := preview(args...)
+		if !slices.Equal(got.Uncommitted, []string{"docs/stray.md"}) || !slices.Contains(got.Shared, "design/d.md") || got.Includes != (len(args) > 0) {
+			t.Errorf("dry run %v should report the stray file as uncommitted and the design file as shared, got %+v", args, got)
 		}
 	}
 	out, _, _ := runIn(t, root, "accept", "S-0001", "--dry-run")
-	if !strings.Contains(out, "uncommitted outside wip: docs/stray.md") || !strings.Contains(out, "--yes") {
-		t.Errorf("text preview should name the file and the way to include it:\n%s", out)
+	for _, want := range []string{
+		"uncommitted under design and the shared paths: design/d.md; the acceptance commits them with the acceptance commit, as it commits wip (ADR-0248)",
+		"uncommitted outside wip, design, and the shared paths: docs/stray.md; the acceptance leaves them as they are", "--yes includes them",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("text preview should say %q:\n%s", want, out)
+		}
 	}
 
-	_, errOut, code := runIn(t, root, "accept", "S-0001")
-	if code == 0 || !strings.Contains(errOut, "uncommitted changes outside wip (docs/stray.md)") {
-		t.Errorf("the real run must still refuse without --yes: %d %s", code, errOut)
+	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
+		t.Fatalf("the real run asks nothing about the uncommitted files: %d %s", code, errOut)
 	}
-	if after, _ := os.ReadFile(storyFile); !strings.Contains(string(after), "status: review") {
-		t.Error("a refused acceptance must leave the story in review")
+	files := gitIn(t, root, "show", "--name-only", "--format=", "HEAD")
+	if !strings.Contains(files, "design/d.md") || strings.Contains(files, "docs/stray.md") {
+		t.Errorf("the acceptance commit holds the design file and not the stray one:\n%s", files)
+	}
+	if st := gitIn(t, root, "status", "--porcelain"); st != "?? docs/stray.md" {
+		t.Errorf("the stray file alone is left uncommitted: %q", st)
 	}
 
-	if _, errOut, code := runIn(t, root, "move", "S-0001", "done", "--yes"); code != 0 {
+	if _, errOut, code := runIn(t, root, "move", "S-0002", "done", "--yes"); code != 0 {
 		t.Fatalf("move to done with --yes should accept and include the file: %s", errOut)
 	}
 	if files := gitIn(t, root, "show", "--name-only", "--format=", "HEAD"); !strings.Contains(files, "docs/stray.md") {
-		t.Errorf("the acceptance commit should hold the stray file:\n%s", files)
+		t.Errorf("the acceptance commit under --yes should hold the stray file:\n%s", files)
 	}
 	if st := gitIn(t, root, "status", "--porcelain"); st != "" {
-		t.Errorf("tree should be clean after acceptance: %s", st)
+		t.Errorf("tree should be clean after acceptance with --yes: %s", st)
 	}
 }

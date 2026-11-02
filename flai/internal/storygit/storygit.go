@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -132,35 +133,49 @@ func FetchBranch(r execx.Runner, root, remote, branch string) (bool, error) {
 	return true, nil
 }
 
-// DirtyOutsideWip lists uncommitted paths that are not under the wip
-// folder, which accumulates transitions between story landings by design.
-func DirtyOutsideWip(r execx.Runner, repo *workitem.Repo) []string {
-	st, err := r.Run(repo.MainRoot, "git", "status", "--porcelain")
-	if err != nil {
-		return nil // not a repository: nothing to be dirty
-	}
-	wip := strings.TrimSuffix(repo.Manifest.Layout["wip"], "/") + "/"
-	var out []string
-	for _, p := range workitem.PorcelainPaths(st) {
-		if !strings.HasPrefix(p, wip) {
-			out = append(out, p)
-		}
-	}
-	return out
+// Dirty is the main checkout's uncommitted and untracked files, each file
+// of an untracked folder named, split by the shared set (ADR-0248). Shared
+// are those in the shared set: under the manifest's wip folder, under its
+// design folder, or under or at a path in claims.shared, flai's own work
+// between landings, which every acceptance commits. Rest are the others, the
+// operator's, which every acceptance leaves as they are.
+type Dirty struct {
+	Shared []string
+	Rest   []string
 }
 
-// Overwritten lists, sorted, the main checkout's uncommitted and untracked
-// files that the change from commit from to commit to also changes, from the
-// commit they share: the files git refuses to overwrite as it moves the
-// checkout's branch from one to the other (ADR-0178). The checkout's other
-// uncommitted files are left out, since they stop nothing. Git is read
-// through r in mainRoot; an error says what could not be read.
-func Overwritten(r execx.Runner, mainRoot, from, to string) ([]string, error) {
-	dirty, err := DirtyFiles(r, mainRoot)
+// DirtyMain reads the uncommitted and untracked files of repo's main
+// checkout through r, as DirtyFiles reads them, and splits them by the
+// shared set of repo's manifest, as InSharedSet reads it. An error says what
+// could not be read.
+func DirtyMain(r execx.Runner, repo *workitem.Repo) (Dirty, error) {
+	files, err := DirtyFiles(r, repo.MainRoot)
 	if err != nil {
-		return nil, err
+		return Dirty{}, err
 	}
-	return ChangedAmong(r, mainRoot, from, to, dirty)
+	var d Dirty
+	for _, f := range files {
+		if InSharedSet(repo.Manifest, f) {
+			d.Shared = append(d.Shared, f)
+		} else {
+			d.Rest = append(d.Rest, f)
+		}
+	}
+	return d, nil
+}
+
+// InSharedSet reports whether p, a file's path relative to the repository
+// root, is in the shared set of ADR-0248: under the folder m's layout names
+// wip or design, or under or at a path a pattern of its claims.shared
+// matches, as Claims.Match reads one.
+func InSharedSet(m manifest.Manifest, p string) bool {
+	for _, key := range []string{"wip", "design"} {
+		if dir := strings.TrimSuffix(m.Layout[key], "/"); dir != "" && strings.HasPrefix(p, dir+"/") {
+			return true
+		}
+	}
+	_, ok := m.Claims.Match(p)
+	return ok
 }
 
 // DirtyFiles lists the uncommitted and untracked files of the checkout at
@@ -174,8 +189,10 @@ func DirtyFiles(r execx.Runner, root string) ([]string, error) {
 }
 
 // ChangedAmong lists, sorted, the paths of dirty that the change from commit
-// from to commit to changes, from the commit they share, as Overwritten
-// does; it runs no git when dirty is empty.
+// from to commit to changes, from the commit they share: of the main
+// checkout's uncommitted files, those git refuses to overwrite as it moves
+// the checkout's branch from one to the other (ADR-0178). It runs no git when
+// dirty is empty.
 func ChangedAmong(r execx.Runner, mainRoot, from, to string, dirty []string) ([]string, error) {
 	if len(dirty) == 0 {
 		return nil, nil

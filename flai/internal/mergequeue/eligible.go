@@ -38,7 +38,7 @@ const (
 	KindThreadOpen       = "thread_open"       // a thread on the story or one of its tasks is not resolved
 	KindUndoneMain       = "undone_main"       // a path is recorded as undoing main's change (ADR-0155)
 	KindUnreadable       = "unreadable"        // its last flai verify result or its record of undone paths cannot be read
-	KindDirtyMain        = "dirty_main"        // its change would overwrite files the main checkout has not committed (ADR-0178)
+	KindDirtyMain        = "dirty_main"        // its change would overwrite files the main checkout has not committed outside the shared set (ADR-0178, ADR-0248)
 )
 
 // Queue is the merge queue as it stands: the stories in review that are
@@ -402,21 +402,25 @@ func undoesMain(r execx.Runner, repo *workitem.Repo, story string) *Reason {
 	return &Reason{Kind: KindUndoneMain, Paths: paths, Text: fmt.Sprintf("%s undoes the main branch's change to %s, and the queue never batches it: restore main's version with flai stream restore %s --path <path>, keep the removal by accepting it with flai accept %s --keep-removal <path> --reason \"<why>\", or send %s back to in-progress (ADR-0155)", storygit.Branch(story), strings.Join(paths, ", "), story, story, story)}
 }
 
-// dirt is the main checkout's uncommitted files and the main branch's head,
-// as the queue's eligibility reads them once for every story in review.
+// dirt is the main checkout's uncommitted files outside the shared set and
+// the main branch's head, as the queue's eligibility reads them once for
+// every story in review.
 type dirt struct {
 	files []string
 	main  string
 }
 
-// mainDirt reads repo's main checkout's uncommitted files and the main
-// branch's head through r. A checkout git cannot read has none to hold a
-// story back; the stories' other reasons say what git cannot read.
+// mainDirt reads repo's main checkout's uncommitted files outside the shared
+// set, wip, design, and the shared paths, which the landing commits
+// (ADR-0248), and the main branch's head through r. A checkout git cannot
+// read has none to hold a story back; the stories' other reasons say what
+// git cannot read.
 func mainDirt(r execx.Runner, repo *workitem.Repo) dirt {
-	files, err := storygit.DirtyFiles(r, repo.MainRoot)
-	if err != nil || len(files) == 0 {
+	d, err := storygit.DirtyMain(r, repo)
+	if err != nil || len(d.Rest) == 0 {
 		return dirt{}
 	}
+	files := d.Rest
 	_, head, err := mainHead(r, repo, "read the main branch")
 	if err != nil {
 		return dirt{}

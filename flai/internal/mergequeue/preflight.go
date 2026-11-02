@@ -53,8 +53,9 @@ func MainPreflight(r execx.Runner, now func() time.Time, log *slog.Logger) Prefl
 // git through r and judging flai check at now (ADR-0234), and answers the
 // findings that hold the queue, each to be corrected in verify.CheckoutMain:
 // first what the lint of the tiers that carry a fix command still finds,
-// after their fix, in the main checkout's uncommitted files but those
-// outside wip/, which a landing leaves (ADR-0178), as flai accept --batch
+// after their fix, in the main checkout's uncommitted files but the rest,
+// those outside the shared set of wip, design, and the shared paths, which a
+// landing leaves as they are (ADR-0178, ADR-0248), as flai accept --batch
 // lints them; then each error-level finding of flai check on the main
 // checkout, unscoped. A warning holds nothing, since main always has some
 // (D-0338). A lint finding in place is confirmed in a scratch worktree of
@@ -66,7 +67,11 @@ func Preflight(ctx context.Context, r execx.Runner, repo *workitem.Repo, now tim
 	if log == nil {
 		log = slog.New(slog.DiscardHandler)
 	}
-	left := storygit.DirtyOutsideWip(r, repo)
+	d, err := storygit.DirtyMain(r, repo)
+	if err != nil {
+		return nil, fmt.Errorf("run the merge queue's preflight: %w", err)
+	}
+	left := d.Rest
 	lint, err := preflightLint(ctx, r, repo, left, log)
 	if err != nil {
 		return nil, err
@@ -209,8 +214,9 @@ func removeScratch(r execx.Runner, root, path string) error {
 
 // preflightCheck is each error-level finding of flai check on repo's main
 // checkout, unscoped, judged at now, but those on left, the uncommitted
-// files outside wip/ a landing leaves as they are (ADR-0178): neither the
-// batch, built from main's commit, nor the landing sees them.
+// files outside the shared set a landing leaves as they are (ADR-0178,
+// ADR-0248): neither the batch, built from main's commit, nor the landing
+// sees them.
 func preflightCheck(repo *workitem.Repo, now time.Time, left []string) ([]verify.FileFinding, error) {
 	main := repo
 	if repo.Root != repo.MainRoot {

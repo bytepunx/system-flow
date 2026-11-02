@@ -530,16 +530,18 @@ func TestAdvanceDoesNothingWithNoVerifiedBatch(t *testing.T) {
 	}
 }
 
-// S-0402 criterion 2, ADR-0178: files the main checkout has not committed
-// that no story of the batch changes stop no landing, as the analyzer's
-// report and issues did on TH-0462; they are left as they were.
+// S-0402 criterion 2, ADR-0178, ADR-0248: files the main checkout has not
+// committed that no story of the batch changes stop no landing, as the
+// analyzer's report and issues did on TH-0462: those of the shared set,
+// which the landing commits, pass the preflight's flai check, and the
+// operator's are left as they were.
 func TestUncommittedFilesNoStoryChangesStopNoLanding(t *testing.T) {
 	repo, proc := gitProject(t, "")
 	a, _ := readyStory(t, repo, "A", t0.Add(time.Hour), "a.txt", "a\n")
 	b, _ := readyStory(t, repo, "B", t0.Add(2*time.Hour), "b.txt", "b\n")
 	enqueue(t, repo, a, b)
-	writeFile(t, repo.MainRoot, "design/analysis/2026-10-19-all.md", "# report\n")
-	writeFile(t, repo.MainRoot, "design/issues/I-0150-x.md", "# issue\n")
+	writeFile(t, repo.MainRoot, "design/analysis/2026-10-19-bottlenecks.md", "---\ntitle: Bottlenecks\nupdated: 2026-10-19T08:00:00Z\nstatus: active\nfocus: bottlenecks\nfrom: 2026-09-01\nto: 2026-09-30\n---\n\n# Bottlenecks\n")
+	writeFile(t, repo.MainRoot, "design/issues/I-0150-x.md", "---\nid: I-0150\ntitle: X\nclass: defect\nstatus: open\ncount: 1\nfirst_reported: 2026-10-19T12:00:00Z\nlast_reported: 2026-10-19T12:00:00Z\nupdated: 2026-10-19T12:00:00Z\n---\n\n# I-0150 X\n")
 	writeFile(t, repo.MainRoot, "x.txt", "the operator's edit\n")
 	before := runGit(t, repo.MainRoot, "status", "--porcelain", "--untracked-files=all")
 
@@ -627,6 +629,43 @@ func TestAnUncommittedFileAStoryChangesHoldsBackThatStoryOnly(t *testing.T) {
 	}
 	if _, again := runBatch(t, deps(proc, t3), repo); again.Batch == nil || !slices.Equal(again.Batch.Stories, []string{a}) {
 		t.Errorf("once the file is clean %s is batched again: %+v", a, again.Batch)
+	}
+}
+
+// ADR-0248: a file of the shared set a story of the batch changes, left
+// uncommitted in the main checkout under design after the batch was built,
+// holds nothing back: the landing commits it, so the story lands, and the
+// queue's eligibility counts it as clean.
+func TestAnUncommittedSharedFileAStoryChangesHoldsNothingBack(t *testing.T) {
+	repo, proc := gitProject(t, "")
+	a, _ := readyStory(t, repo, "A", t0.Add(time.Hour), "design/d.md", "# d\n")
+	enqueue(t, repo, a)
+	_, built := runBatch(t, deps(proc, t1), repo)
+	if bt := built.Batch; bt == nil || bt.Step != StepVerified {
+		t.Fatalf("batch %+v, want %s verified", bt, a)
+	}
+	writeFile(t, repo.MainRoot, "design/d.md", "# flai's own d\n")
+
+	q, err := Compute(execx.System{}, repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(q.Ineligible) != 0 {
+		t.Errorf("a dirty file under design holds no story back from the queue: ineligible %+v", q.Ineligible)
+	}
+	fa := &fakeAccept{t: t, repo: repo}
+	did, st := advance(t, deps(proc, t2), fa, repo)
+	if !did {
+		t.Error("Advance did nothing")
+	}
+	if want := []acceptCall{{a, "alex", built.Batch.ID}}; !slices.Equal(fa.calls, want) {
+		t.Errorf("accepted %+v, want %+v", fa.calls, want)
+	}
+	if len(st.Enqueued) != 0 || st.Batch != nil {
+		t.Errorf("enqueued %+v, batch %+v; want %s landed and no batch", st.Enqueued, st.Batch, a)
+	}
+	if o, ok := outcomeOf(st, a); !ok || o.Outcome != OutcomeLanded {
+		t.Errorf("%s's outcome %+v, want landed", a, o)
 	}
 }
 

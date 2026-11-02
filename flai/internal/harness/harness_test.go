@@ -2009,7 +2009,7 @@ func TestTheOrchestratorsPromptSaysHowItAcceptsAStory(t *testing.T) {
 		"A commit added after the verifier's run makes flai refuse: verify again",
 		// a dirty main, a thread of its own, a send back, a stopped
 		// acceptance of its own (ADR-0189)
-		"Files the main checkout has not committed stop nothing: flai leaves them out of the acceptance, and the blocker dirty_main appears only while the story's change would overwrite one of them",
+		"Files the main checkout has not committed stop nothing: flai commits those under wip, design, and the shared paths with the acceptance and leaves the rest out of it (ADR-0248), and the blocker dirty_main appears only while the story's change would overwrite one of the rest",
 		"A thread you opened on the story or one of its tasks that nobody else wrote on is the blocker own_thread_open, apart from thread_open: once its concern is gone, resolve it with the flai MCP tool thread_resolve and a reason, then accept",
 		"You accept on flai's blockers and the story's criteria: open a thread on a story in review only for a reason not to accept it, and resolve it with thread_resolve and a reason once that reason is gone",
 		"When flai accept says it sent the story back, its rebase stopped on conflicts flai cannot settle: flai aborted the rebase, moved the story back to in-progress, and opened a thread on which flai serve starts the story's agent",

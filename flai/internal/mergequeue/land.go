@@ -372,16 +372,23 @@ func Land(ctx context.Context, d Deps, accept Accepter, repo *workitem.Repo) (bo
 }
 
 // overwrittenBy lists the files the main checkout of repo has not committed
-// that story's change, its branch from the commit it shares with the main
-// branch, would overwrite, read through r (ADR-0178).
+// outside the shared set that story's change, its branch from the commit it
+// shares with the main branch, would overwrite, read through r (ADR-0178). A
+// file in the shared set, under wip, design, or the shared paths, holds the
+// story back from nothing: the landing commits it (ADR-0248).
 func overwrittenBy(r execx.Runner, repo *workitem.Repo, story string) ([]string, error) {
-	_, head, err := mainHead(r, repo, "check which uncommitted files of the main checkout landing "+story+" would overwrite")
+	what := "check which uncommitted files of the main checkout landing " + story + " would overwrite"
+	_, head, err := mainHead(r, repo, what)
 	if err != nil {
 		return nil, err
 	}
-	paths, err := storygit.Overwritten(r, repo.MainRoot, head, storygit.Branch(story))
+	d, err := storygit.DirtyMain(r, repo)
 	if err != nil {
-		return nil, fmt.Errorf("check which uncommitted files of the main checkout landing %s would overwrite: %w", story, err)
+		return nil, fmt.Errorf("%s: %w", what, err)
+	}
+	paths, err := storygit.ChangedAmong(r, repo.MainRoot, head, storygit.Branch(story), d.Rest)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", what, err)
 	}
 	return paths, nil
 }
