@@ -308,6 +308,10 @@ type AgentRun struct {
 	// Retry marks a run started again after the run before it ended on the
 	// usage limit (S-0514, ADR-0214).
 	Retry bool `json:"retry,omitempty"`
+	// HarnessVersion is the version of the inner harness a container run's
+	// image holds, as the harness prints it, such as 2.1.312 for Claude Code
+	// (S-0508); empty on every other run, and when it could not be read.
+	HarnessVersion string `json:"harness_version,omitempty"`
 }
 
 // same says whether r and o are one run: the same start of the same
@@ -669,6 +673,9 @@ type launcher struct {
 	// git asks git for the trial merge that judges an overlap (ADR-0230),
 	// the system's when nil.
 	git execx.Runner
+	// docker asks docker whether the container harness can start a story's
+	// agent, and stops its container (S-0508).
+	docker execx.Runner
 }
 
 // told records a run in the host's state and tells changed.
@@ -709,7 +716,7 @@ func (l *launcher) ended(run *AgentRun) (first bool) {
 }
 
 func newLauncher(o Options, e Entry) *launcher {
-	return &launcher{dir: o.Dir, entry: e, config: o.Agent, record: o.Host.Record, now: o.Now, waiting: map[int]bool{}, again: make(chan struct{}, 1), git: gitOf(o),
+	return &launcher{dir: o.Dir, entry: e, config: o.Agent, record: o.Host.Record, now: o.Now, waiting: map[int]bool{}, again: make(chan struct{}, 1), git: gitOf(o), docker: dockerOf(o),
 		log: func(msg string, args ...any) {
 			o.Logger.Info(msg, append([]any{"component", "serve", "project", e.Key}, args...)...)
 		},
@@ -2012,6 +2019,11 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 	if err != nil {
 		return fail(err)
 	}
+	if name == harness.Container {
+		if err := l.containerAllowed(cfg, story.Agent); err != nil {
+			return fail(err)
+		}
+	}
 	var shares []harness.Share
 	if story.Asked == nil && story.Resume == nil && story.Commit == "" {
 		shares = sharedWith(l.entry.Root, story.ID) // a resumed session knows them; a commit needs none
@@ -2026,8 +2038,13 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 	if err != nil {
 		return fail(err)
 	}
+	if name == harness.Container {
+		if err := l.containerReady(cfg, run, story.Agent); err != nil {
+			return fail(err)
+		}
+	}
 	spend := l.spendAtStart(ctx, cfg, run) // before its first call is charged
-	cmd, out, err := l.spawn(ctx, run, spec.Argv, story.ID, now, slices.Concat([]string{"FLAI_STORY=" + story.ID}, spec.Env, keys))
+	cmd, out, err := l.spawnWith(ctx, run, spec.Argv, story.ID, now, slices.Concat([]string{"FLAI_STORY=" + story.ID}, spec.Env, keys), spec.Stdin)
 	if err != nil {
 		return fail(err)
 	}
@@ -2162,10 +2179,12 @@ func startWhy(story readyStory, run *AgentRun, limit int) string {
 // the provider the agent names resolved into req and recorded on run, and the
 // variables that carry the provider's key into the child (ADR-0129), with the
 // project's HTTP MCP server's URL and token when the adapter asks for them
-// (mcpEnv, S-0506): every start, a story's agent's and a strategic agent's,
-// builds its command here. The keys and the token go to spawn's env and
-// nowhere else, not run, a log line, the journal, or an error, so that a
-// secret flai serve holds reaches the child alone. A refusal is the start's
+// (mcpEnv, S-0506), the URL's host the container's own name for the host
+// when the container harness's network is not the host's (S-0508): every
+// start, a story's agent's and a strategic agent's, builds its command here.
+// The keys and the token go to spawn's env and nowhere else, not run, a log
+// line, the journal, or an error, so that a secret flai serve holds reaches
+// the child alone. A refusal is the start's
 // failure, as an adapter's refusal is.
 func (l *launcher) startOf(cfg AgentConfig, run *AgentRun, adapter harness.Adapter, name string, req harness.Request) (harness.Start, []string, error) {
 	if err := l.provide(cfg, run, &req); err != nil {
@@ -2185,6 +2204,9 @@ func (l *launcher) startOf(cfg AgentConfig, run *AgentRun, adapter harness.Adapt
 	mcp, err := mcpEnv(adapter, name, l.entry.Root, l.now)
 	if err != nil {
 		return harness.Start{}, nil, err
+	}
+	if name == harness.Container {
+		mcp = containerMCP(mcp, cfg.host(name).Network)
 	}
 	return spec, append(keys, mcp...), nil
 }
@@ -2346,6 +2368,13 @@ func (l *launcher) openLog(subject string, at time.Time) (*os.File, error) {
 // goes into the child's environment and nowhere else: not the log, run, or
 // an error.
 func (l *launcher) spawn(ctx context.Context, run *AgentRun, argv []string, subject string, at time.Time, env []string) (*exec.Cmd, *os.File, error) {
+	return l.spawnWith(ctx, run, argv, subject, at, env, nil)
+}
+
+// spawnWith is spawn with stdin written to the child's standard input, then
+// closed: the container harness's start request for pilot (S-0508). With no
+// stdin the child's standard input is the null device, as spawn's is.
+func (l *launcher) spawnWith(ctx context.Context, run *AgentRun, argv []string, subject string, at time.Time, env []string, stdin []byte) (*exec.Cmd, *os.File, error) {
 	run.Command = filepath.Base(argv[0])
 	out, err := l.openLog(subject, at)
 	if err != nil {
@@ -2360,13 +2389,35 @@ func (l *launcher) spawn(ctx context.Context, run *AgentRun, argv []string, subj
 	cmd.Env = append(l.withoutForgeTokens(l.withoutSpendKeys(agentEnv(os.Environ()))), "FLAI_AGENT="+run.Agent, "FLAI_SESSION="+at.Format("20060102T150405"), "FLAI_STARTED_BY=flai-serve")
 	cmd.Env = append(cmd.Env, env...)
 	Detach(cmd)
+	var feed *os.File
+	if len(stdin) > 0 {
+		r, w, err := os.Pipe()
+		if err != nil {
+			_ = out.Close()
+			return nil, nil, fmt.Errorf("a pipe for the start request on the agent's standard input: %w", err)
+		}
+		cmd.Stdin, feed = r, w
+		defer func() { _ = r.Close() }() // the child holds its own copy once started
+	}
 	if err := cmd.Start(); err != nil {
 		_ = out.Close()
+		if feed != nil {
+			_ = feed.Close()
+		}
 		var ee *exec.Error
 		if errors.As(err, &ee) {
 			err = fmt.Errorf("%s: %w", ee.Name, ee.Err)
 		}
 		return nil, nil, err
+	}
+	if feed != nil {
+		if err := writeStdin(feed, stdin); err != nil {
+			// a child without its whole request cannot start the agent
+			_ = KillGroup(cmd.Process.Pid)
+			_ = cmd.Wait()
+			_ = out.Close()
+			return nil, nil, fmt.Errorf("write the start request to %s's standard input: %w", run.Command, err)
+		}
 	}
 	run.PID = cmd.Process.Pid
 	run.Start = Started(run.PID)
@@ -2374,6 +2425,23 @@ func (l *launcher) spawn(ctx context.Context, run *AgentRun, argv []string, subj
 		l.waiting[run.PID] = true
 	}
 	return cmd, out, nil
+}
+
+// stdinWait bounds the write of a start request to a child's standard
+// input: a request fits the pipe's buffer, so only a child that never reads
+// a larger one would hold the write.
+const stdinWait = 10 * time.Second
+
+// writeStdin writes data to w, the write end of a child's standard input,
+// within stdinWait, and closes it, so that the child reads to its end. A
+// look, and a start on the operator's word that exits once the agent runs,
+// never wait on the child longer than that.
+func writeStdin(w *os.File, data []byte) error {
+	defer func() { _ = w.Close() }()
+	// a pipe that takes no deadline, as on Windows, is written without one
+	_ = w.SetWriteDeadline(time.Now().Add(stdinWait))
+	_, err := w.Write(data)
+	return err
 }
 
 // await waits in the background for the process spawn started, has end

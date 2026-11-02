@@ -143,6 +143,22 @@ func (d Dir) recordClaudeCheck(version, provider string, c ClaudeCheck) error {
 	return d.write(d.claudeChecksFile(), all)
 }
 
+// claudePassed says whether this host has a passed check of Claude Code
+// version through any provider: what a container's Claude Code is held to,
+// whose check in its image flai serve does not make (S-0508).
+func (d Dir) claudePassed(version string) (bool, error) {
+	all, err := d.claudeChecks()
+	if err != nil {
+		return false, err
+	}
+	for _, c := range all[version] {
+		if c.Outcome == ClaudeCheckPassed {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // checkedThrough is what a check through the provider a default agent names
 // is recorded under: the provider's name, or anthropic for none.
 func checkedThrough(provider string) string {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -16,6 +17,10 @@ import (
 // again when the answer comes. Either way the run ends stopped, and its story
 // is left where it is, with its worktree as the agent left it: it gets no
 // agent until the operator retries it or moves it back to ready.
+//
+// An agent on the container harness has its container stopped by its name
+// too, once its docker client is signalled (S-0508), so that a client
+// killed outright leaves no container at work.
 //
 // The process is signalled only while it is still the one flai started
 // (Owns): a run whose PID the system has given to another process since is
@@ -76,6 +81,15 @@ func Stop(o Options, e Entry, story string) (*AgentRun, error) {
 			gone(run.PID, 2*time.Second)
 		}
 	}
+	// the container's docker client was signalled; the container goes by its name
+	contained := ""
+	if run.live() && run.Harness == harness.Container {
+		var cfg AgentConfig
+		if o.Agent != nil {
+			cfg = o.Agent(e.Root)
+		}
+		contained = l.stopContainer(cfg, run)
+	}
 	var out *AgentRun
 	told := false
 	o.Dir.updateAgent(e.Root, func(s *AgentState) {
@@ -105,6 +119,9 @@ func Stop(o Options, e Entry, story string) (*AgentRun, error) {
 		what = fmt.Sprintf("ended its process group (pid %d)", run.PID)
 	case run.live():
 		what = fmt.Sprintf("recorded it as stopped: pid %d is no longer the agent flai started", run.PID)
+	}
+	if contained != "" {
+		what += "; " + contained
 	}
 	if o.Host.Record != nil {
 		o.Host.Record(hostapi.Entry{At: at, Action: hostapi.ActionAgent, Method: "serve.agent", Project: e.Key, Root: e.Root, By: "flai serve",
