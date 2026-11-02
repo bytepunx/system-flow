@@ -2213,12 +2213,43 @@ func TestClaudeCodeStartsTheOrchestrator(t *testing.T) {
 	}
 }
 
-// The template's own definitions read as --agents takes them.
+// generatedDefinition is the Claude Code agent file flai generates from the
+// role file name.md under the roles folder of the project at root
+// (ADR-0236).
+func generatedDefinition(t *testing.T, root, name string) []byte {
+	t.Helper()
+	rel := "design/workflows/roles/" + name + ".md"
+	data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(rel)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, p := roles.Parse(rel, string(data))
+	if p != nil {
+		t.Fatalf("%s: %s", rel, p.Message)
+	}
+	g, err := roles.Generate(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return g.File()
+}
+
+// The template's own definitions read as --agents takes them: the
+// explorer's and the verifier's in .claude/agents, and the strategic
+// agents' as flai generates them from the template's role files, which ship
+// no copy under .claude/agents (ADR-0236).
 func TestTheTemplatesDefinitionsRead(t *testing.T) {
+	template := filepath.Join("..", "..", "..", "template", "root")
 	for _, def := range []string{"explorer", "verifier", "planner", "orchestrator", "analyzer", "curator"} {
-		data, err := os.ReadFile(filepath.Join("..", "..", "..", "template", "root", ".claude", "agents", def+".md"))
-		if err != nil {
-			t.Fatal(err)
+		var data []byte
+		switch def {
+		case "explorer", "verifier":
+			var err error
+			if data, err = os.ReadFile(filepath.Join(template, ".claude", "agents", def+".md")); err != nil {
+				t.Fatal(err)
+			}
+		default:
+			data = generatedDefinition(t, template, def)
 		}
 		got, err := definition(data)
 		if err != nil {
@@ -2239,17 +2270,15 @@ func TestTheTemplatesDefinitionsRead(t *testing.T) {
 	}
 }
 
-// The orchestrator's definition, the project's and the template's alike,
-// says what it does with each permission S-0219 gives work to, logs each
-// action with its policy figure, and ends an attempt on a refusal.
+// The orchestrator's definition, the project's and the template's alike, as
+// flai generates them from their role files (ADR-0236), says what it does
+// with each permission S-0219 gives work to, logs each action with its
+// policy figure, and ends an attempt on a refusal.
 func TestTheOrchestratorsDefinitionSaysWhatEachPermissionDoes(t *testing.T) {
 	root := filepath.Join("..", "..", "..")
 	var copies []string
-	for _, p := range []string{filepath.Join(root, ".claude", "agents", "orchestrator.md"), filepath.Join(root, "template", "root", ".claude", "agents", "orchestrator.md")} {
-		data, err := os.ReadFile(p)
-		if err != nil {
-			t.Fatal(err)
-		}
+	for _, p := range []string{root, filepath.Join(root, "template", "root")} {
+		data := generatedDefinition(t, p, "orchestrator")
 		copies = append(copies, string(data))
 		for _, want := range []string{
 			"With `plan_backlog_epics`, run `flai plan --candidates`",
@@ -2307,7 +2336,7 @@ func TestTheOrchestratorsDefinitionSaysWhatEachPermissionDoes(t *testing.T) {
 		}
 	}
 	if copies[0] != copies[1] {
-		t.Error("the project's and the template's orchestrator.md differ")
+		t.Error("the definitions the project's and the template's orchestrator.md generate differ")
 	}
 }
 
@@ -2669,11 +2698,7 @@ func TestClaudeCodeStartsTheCurator(t *testing.T) {
 // orchestrator's.
 func TestTheTemplatesAnalyzerIsHeldToItsReport(t *testing.T) {
 	root := filepath.Join("..", "..", "..", "template", "root", ".claude")
-	data, err := os.ReadFile(filepath.Join(root, "agents", "analyzer.md"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	def, err := definition(data)
+	def, err := definition(generatedDefinition(t, filepath.Dir(root), "analyzer"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2702,7 +2727,7 @@ func TestTheTemplatesAnalyzerIsHeldToItsReport(t *testing.T) {
 			t.Errorf("analyzer.md does not say %q", want)
 		}
 	}
-	data, err = os.ReadFile(filepath.Join(root, "settings.json"))
+	data, err := os.ReadFile(filepath.Join(root, "settings.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2845,13 +2870,6 @@ func TestClaudeCodeRefusesAProviderItCannotSpeak(t *testing.T) {
 // calls its provider the same way.
 func TestClaudeCodeStartsAStrategicAgentOnItsProvider(t *testing.T) {
 	root := t.TempDir()
-	dir := filepath.Join(root, ".claude", "agents")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "planner.md"), []byte("---\nname: planner\ndescription: Plans one item.\ntools: Read\n---\n\nYou are the planner.\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
 	r := withProvider(planReq("E-0016", &manifest.Agent{Harness: ClaudeCode, Provider: "litellm"}))
 	r.Root = root
 	st, err := (claudeCode{}).Start(r, Host{})

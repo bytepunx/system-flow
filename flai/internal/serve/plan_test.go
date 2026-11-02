@@ -241,13 +241,6 @@ func TestAPlannerRunTheOrchestratorAskedForAgainNamesTheThread(t *testing.T) {
 
 	// the run that ends logs its activity with the trigger as it is, and the
 	// planner, through Claude Code, is told to read the thread
-	agents := filepath.Join(lab.root, ".claude", "agents")
-	if err := os.MkdirAll(agents, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(agents, "planner.md"), []byte("---\nname: planner\ndescription: Plans one item.\ntools: Read\n---\n\nYou are the planner.\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
 	stub := lab.cfg.Command[0]
 	lab.cfg.Command = nil
 	lab.cfg.Harnesses = map[string]harness.Host{harness.ClaudeCode: {Program: stub}}
