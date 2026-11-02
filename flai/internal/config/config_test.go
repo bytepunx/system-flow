@@ -660,3 +660,64 @@ func TestNotify(t *testing.T) {
 		}
 	}
 }
+
+// S-0506: mcp.bind is the address flai host starts each project's MCP
+// server on, 127.0.0.1 unset; an IP address or a host name, with no port.
+func TestMCPBind(t *testing.T) {
+	c := Default()
+	if got := c.MCPBind(); got != "127.0.0.1" {
+		t.Errorf("unset: %q, want 127.0.0.1", got)
+	}
+	if data, _ := json.Marshal(c); strings.Contains(string(data), `"mcp"`) {
+		t.Errorf("unset is not written: %s", data)
+	}
+	for _, good := range []string{"0.0.0.0", "172.17.0.1", "::", "::1", "host.docker.internal", "localhost", " 10.0.0.2 "} {
+		set, err := c.WithMCPBind(good)
+		if err != nil {
+			t.Errorf("WithMCPBind(%q): %v", good, err)
+			continue
+		}
+		if set.MCPBind() != strings.TrimSpace(good) {
+			t.Errorf("WithMCPBind(%q) binds %q", good, set.MCPBind())
+		}
+	}
+	if c.MCP.Bind != "" {
+		t.Errorf("WithMCPBind leaves the receiver alone: %q", c.MCP.Bind)
+	}
+	for _, bad := range []string{"", "  ", "127.0.0.1:4243", "[::1]", "[::1]:4243", "http://0.0.0.0", "a b", "-bad.example", "bad..example", "host:port"} {
+		if _, err := c.WithMCPBind(bad); err == nil {
+			t.Errorf("WithMCPBind(%q) is accepted", bad)
+		} else if !strings.Contains(err.Error(), "mcp.bind") {
+			t.Errorf("WithMCPBind(%q) does not name the setting: %v", bad, err)
+		}
+	}
+	set, err := c.WithMCPBind("0.0.0.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := Save(path, set); err != nil {
+		t.Fatal(err)
+	}
+	back, _, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if back.MCPBind() != "0.0.0.0" {
+		t.Errorf("round trip: %q", back.MCPBind())
+	}
+	if file, _ := os.ReadFile(path); !strings.Contains(string(file), `"bind": "0.0.0.0"`) || !strings.Contains(string(file), `"mcp": {`) {
+		t.Errorf("written as mcp.bind: %s", file)
+	}
+	if cleared := back.WithoutMCPBind(); cleared.MCPBind() != DefaultMCPBind || back.MCPBind() != "0.0.0.0" {
+		t.Errorf("WithoutMCPBind clears a copy: %q, %q", cleared.MCPBind(), back.MCPBind())
+	}
+	if _, err := Parse([]byte(`{"mcp":{"bind":"127.0.0.1:4243"}}`)); err == nil || !strings.Contains(err.Error(), "mcp.bind") {
+		t.Errorf("a file with a port in mcp.bind is refused: %v", err)
+	}
+	for _, k := range Keys() {
+		if strings.HasPrefix(k, "mcp") {
+			t.Error("flai config set cannot reach mcp: only flai serve mcp does")
+		}
+	}
+}

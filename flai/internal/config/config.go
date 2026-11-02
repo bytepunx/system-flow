@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"net"
 	"net/url"
 	"os"
 	"os/user"
@@ -75,6 +76,94 @@ type Config struct {
 	// only logged. flai serve notify manages it, on the host, so it is not
 	// among Keys.
 	Notify Notify `json:"notify,omitzero"`
+	// MCP is the host's say about the HTTP MCP server flai host starts for
+	// each project it serves (S-0506). flai serve mcp manages it, on the
+	// host, so it is not among Keys.
+	MCP MCPHost `json:"mcp,omitzero"`
+}
+
+// DefaultMCPBind is the address flai host starts each project's MCP server
+// on when mcp.bind is unset: this machine only.
+const DefaultMCPBind = "127.0.0.1"
+
+// MCPHost is the host's say about each project's HTTP MCP server.
+type MCPHost struct {
+	// Bind is the address, an IP address or a host name without a port, that
+	// flai host starts each project's flai mcp http on, keeping the port it
+	// picks for the project; DefaultMCPBind when empty. An address a
+	// container reaches lets an agent in one call the server; the bearer
+	// token and the Origin refusal guard it wherever it listens.
+	Bind string `json:"bind,omitempty"`
+}
+
+// MCPBind is the address flai host starts each project's MCP server on:
+// mcp.bind, or DefaultMCPBind when it is unset.
+func (c Config) MCPBind() string {
+	if c.MCP.Bind == "" {
+		return DefaultMCPBind
+	}
+	return c.MCP.Bind
+}
+
+// WithMCPBind returns the configuration with mcp.bind set to addr, refusing
+// one that is not an IP address or a host name, or that names a port.
+func (c Config) WithMCPBind(addr string) (Config, error) {
+	addr = strings.TrimSpace(addr)
+	if addr == "" {
+		return c, errors.New("mcp.bind needs an address, such as 127.0.0.1 or 0.0.0.0; flai serve mcp clear goes back to " + DefaultMCPBind)
+	}
+	if err := checkMCPBind(addr); err != nil {
+		return c, err
+	}
+	c.MCP.Bind = addr
+	return c, nil
+}
+
+// WithoutMCPBind returns the configuration with mcp.bind unset, so that flai
+// host starts each project's MCP server on DefaultMCPBind.
+func (c Config) WithoutMCPBind() Config {
+	c.MCP.Bind = ""
+	return c
+}
+
+// checkMCPBind refuses an mcp.bind that is neither an IP address nor a host
+// name, or that names a port; empty is unset and passes.
+func checkMCPBind(addr string) error {
+	if addr == "" {
+		return nil
+	}
+	if why := badBindAddress(addr); why != "" {
+		return fmt.Errorf("mcp.bind %q %s; give an IP address or a host name without a port, such as 127.0.0.1, 0.0.0.0, or 172.17.0.1, with flai serve mcp bind <address>", addr, why)
+	}
+	return nil
+}
+
+// badBindAddress is why addr is not an IP address or a host name with no
+// port, or "" when it is one.
+func badBindAddress(addr string) string {
+	if net.ParseIP(addr) != nil {
+		return ""
+	}
+	if strings.HasPrefix(addr, "[") {
+		return "is bracketed: write an IPv6 address without brackets or a port"
+	}
+	if strings.Contains(addr, ":") {
+		return "names a port, or is no IP address: flai picks each project's port itself"
+	}
+	if len(addr) > 253 {
+		return "is longer than a host name may be"
+	}
+	for _, label := range strings.Split(addr, ".") {
+		if label == "" || len(label) > 63 || strings.HasPrefix(label, "-") || strings.HasSuffix(label, "-") {
+			return "is not a host name"
+		}
+		for _, r := range label {
+			if (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9') && r != '-' {
+				return "is not a host name"
+			}
+		}
+	}
+	return ""
 }
 
 // Notify is the host's reminder channel (ADR-0205). Either may be empty,
@@ -658,8 +747,9 @@ func Load(path string) (cfg Config, created bool, err error) {
 // agent.auto_restarts, an agent.harnesses guard other than none, an
 // agent.providers entry that is not whole or sets a value flai refuses, a
 // forges entry checkForges refuses, a dashboard.allowed_hosts entry that is
-// not a host name with an optional port, and a notify channel checkNotify
-// refuses.
+// not a host name with an optional port, a notify channel checkNotify
+// refuses, and an mcp.bind that is no IP address or host name or names a
+// port.
 func Parse(data []byte) (Config, error) {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
@@ -685,6 +775,9 @@ func Parse(data []byte) (Config, error) {
 		return Config{}, err
 	}
 	if err := checkNotify(cfg.Notify); err != nil {
+		return Config{}, err
+	}
+	if err := checkMCPBind(cfg.MCP.Bind); err != nil {
 		return Config{}, err
 	}
 	return cfg, nil

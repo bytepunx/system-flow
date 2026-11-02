@@ -17,35 +17,56 @@ import (
 // remembered address looks for a free one.
 const mcpPorts = 20
 
-// mcpAddrFor is the address the project's server listens on: the one it used
-// last, so an agent's configuration survives a restart, else the first free
-// port from mcpDefaultAddr's that is not among taken, since flai host starts
-// one for every project flai serve serves and they cannot all have the one
-// default (S-0096, S-0106). A remembered address that is among taken, given
-// to another project already, is not given twice: two projects that
-// remembered the same port both got it, and one failed to listen on every
-// start (S-0110). A new port also leaves out avoid, the ports other projects
-// remember while their servers are not running yet, so that one move does
-// not push the next project off its port.
-func mcpAddrFor(repo *workitem.Repo, taken, avoid map[string]bool) (string, error) {
-	if addr := rememberedMCPAddr(repo); addr != "" && !taken[addr] {
-		return addr, nil
+// mcpAddrFor is the address the project's server listens on, on bind, the
+// host's mcp.bind: the port it used last, so an agent's configuration
+// survives a restart, else the first free port from mcpDefaultAddr's that is
+// not among taken, since flai host starts one for every project flai serve
+// serves and they cannot all have the one default (S-0096, S-0106). A
+// remembered port that is among taken, given to another project already, is
+// not given twice: two projects that remembered the same port both got it,
+// and one failed to listen on every start (S-0110). A new port also leaves
+// out avoid, the ports other projects remember while their servers are not
+// running yet, so that one move does not push the next project off its port.
+// taken and avoid hold addresses and are compared by port alone, whatever
+// host each names, so that a change of mcp.bind moves no project off its
+// port.
+func mcpAddrFor(repo *workitem.Repo, bind string, taken, avoid map[string]bool) (string, error) {
+	takenPorts, avoidPorts := portsOf(taken), portsOf(avoid)
+	if port := portOf(rememberedMCPAddr(repo)); port != "" && !takenPorts[port] {
+		return net.JoinHostPort(bind, port), nil
 	}
-	host, port, err := net.SplitHostPort(mcpDefaultAddr)
-	if err != nil {
-		return "", err
-	}
-	first, err := strconv.Atoi(port)
+	first, err := strconv.Atoi(portOf(mcpDefaultAddr))
 	if err != nil {
 		return "", err
 	}
 	for p := first; p < first+mcpPorts; p++ {
-		addr := net.JoinHostPort(host, strconv.Itoa(p))
-		if !taken[addr] && !avoid[addr] && freePort(addr) {
+		port := strconv.Itoa(p)
+		addr := net.JoinHostPort(bind, port)
+		if !takenPorts[port] && !avoidPorts[port] && freePort(addr) {
 			return addr, nil
 		}
 	}
-	return "", fmt.Errorf("no free port for flai mcp http between %d and %d; give the project one with flai mcp start --addr", first, first+mcpPorts-1)
+	return "", fmt.Errorf("no port between %d and %d is free to listen on at %s for flai mcp http; give the project one with flai mcp start --addr, or, if this machine has no such address, set another with flai serve mcp bind", first, first+mcpPorts-1, bind)
+}
+
+// portOf is the port of addr, a host and a port, or "" when it names none.
+func portOf(addr string) string {
+	_, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return ""
+	}
+	return port
+}
+
+// portsOf is the ports of addrs' addresses.
+func portsOf(addrs map[string]bool) map[string]bool {
+	ports := map[string]bool{}
+	for addr, in := range addrs {
+		if port := portOf(addr); in && port != "" {
+			ports[port] = true
+		}
+	}
+	return ports
 }
 
 // exitWithProcessEvery is how often --exit-with looks for its process.

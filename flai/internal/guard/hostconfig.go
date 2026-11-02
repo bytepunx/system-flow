@@ -22,6 +22,7 @@ var hostWrites = map[string][]string{
 	"checks":     {"set", "timeout", "clear"},
 	"components": {"idle", "max-servers"},
 	"notify":     {"set", "clear"},
+	"mcp":        {"bind", "clear"},
 	"import":     {"add", "remove"},
 }
 
@@ -41,7 +42,7 @@ var forgeSettings = []string{"--token-env", "--reset"}
 var hostValues = map[string]bool{"--api": true, "--auto-restarts": true, "--base-url": true, "--command": true, "--config": true, "--guard": true, "--key-env": true, "--model": true, "--name": true, "--program": true, "--spend-key-env": true, "--token-env": true, "--url": true}
 
 // operatorsHost says why no agent writes the host configuration (ADR-0220).
-const operatorsHost = "the host configuration, ~/.flai/config.json or the file FLAI_CONFIG names, holds what the operator lets flai serve do on this host, its host actions, agent command, harnesses, providers, checks, forge token variable, reminder channel, and import folders, and flai serve hands an agent no copy of its own, so an agent that wrote it could widen its own permissions or name a program the host runs; only the operator changes it, in a shell or through the dashboard's settings host action (ADR-0220)"
+const operatorsHost = "the host configuration, ~/.flai/config.json or the file FLAI_CONFIG names, holds what the operator lets flai serve do on this host, its host actions, agent command, harnesses, providers, checks, forge token variable, reminder channel, import folders, and the address the MCP servers bind, and flai serve hands an agent no copy of its own, so an agent that wrote it could widen its own permissions or name a program the host runs; only the operator changes it, in a shell or through the dashboard's settings host action (ADR-0220)"
 
 // askForHost ends the refusal of a session's own write of the host
 // configuration: what it does instead.

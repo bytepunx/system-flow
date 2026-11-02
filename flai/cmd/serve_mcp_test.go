@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -32,12 +33,12 @@ func TestMCPAddrForAProjectFlaiServeStarts(t *testing.T) {
 		p, _ := strconv.Atoi(port)
 		return err == nil && host == "127.0.0.1" && p >= 4243 && p < 4243+mcpPorts
 	}
-	first, err := mcpAddrFor(repo, nil, nil)
+	first, err := mcpAddrFor(repo, "127.0.0.1", nil, nil)
 	if err != nil || !inRange(first) {
 		t.Fatalf("first free: %q %v", first, err)
 	}
 	// given to another project and not yet listening: not given again
-	if other, err := mcpAddrFor(repo, map[string]bool{first: true}, nil); err != nil || other == first || !inRange(other) {
+	if other, err := mcpAddrFor(repo, "127.0.0.1", map[string]bool{first: true}, nil); err != nil || other == first || !inRange(other) {
 		t.Errorf("with %s given to another: %q %v", first, other, err)
 	}
 	// that port taken (another project's server): the next free one
@@ -46,7 +47,7 @@ func TestMCPAddrForAProjectFlaiServeStarts(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = held.Close() }()
-	second, err := mcpAddrFor(repo, nil, nil)
+	second, err := mcpAddrFor(repo, "127.0.0.1", nil, nil)
 	if err != nil || !inRange(second) || second == first {
 		t.Errorf("with %s taken: %q %v", first, second, err)
 	}
@@ -57,16 +58,16 @@ func TestMCPAddrForAProjectFlaiServeStarts(t *testing.T) {
 	if err := os.WriteFile(mcpFile(repo, mcpAddrFile), []byte("127.0.0.1:5999\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if got, _ := mcpAddrFor(repo, nil, nil); got != "127.0.0.1:5999" {
+	if got, _ := mcpAddrFor(repo, "127.0.0.1", nil, nil); got != "127.0.0.1:5999" {
 		t.Errorf("remembered: %q", got)
 	}
 	// S-0110: a remembered address another project already has is not given twice
-	moved, err := mcpAddrFor(repo, map[string]bool{"127.0.0.1:5999": true}, nil)
+	moved, err := mcpAddrFor(repo, "127.0.0.1", map[string]bool{"127.0.0.1:5999": true}, nil)
 	if err != nil || moved == "127.0.0.1:5999" || !inRange(moved) {
 		t.Errorf("remembered, and given to another: %q %v", moved, err)
 	}
 	// and the new one is none that another project remembers
-	if again, err := mcpAddrFor(repo, map[string]bool{"127.0.0.1:5999": true}, map[string]bool{moved: true}); err != nil || again == moved || again == "127.0.0.1:5999" {
+	if again, err := mcpAddrFor(repo, "127.0.0.1", map[string]bool{"127.0.0.1:5999": true}, map[string]bool{moved: true}); err != nil || again == moved || again == "127.0.0.1:5999" {
 		t.Errorf("remembered by another: %q %v", again, err)
 	}
 }
@@ -166,5 +167,104 @@ func TestTheHostGivesTwoProjectsThatRememberOnePortOneEach(t *testing.T) {
 	}
 	if !strings.Contains(logged.String(), "mcp address moved") || !strings.Contains(logged.String(), "to="+second) {
 		t.Errorf("the log says so:\n%s", logged.String())
+	}
+}
+
+// S-0506: mcpAddrFor puts the project's port on the host's mcp.bind, the
+// remembered port included, and tells ports apart whatever host the taken and
+// avoided addresses name, so a change of mcp.bind moves no project off its
+// port and gives no project another's.
+func TestMCPAddrForListensOnTheBindAddress(t *testing.T) {
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	repo, err := workitem.Open(tempProject(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := mcpAddrFor(repo, "0.0.0.0", nil, nil)
+	if host, _, _ := net.SplitHostPort(first); err != nil || host != "0.0.0.0" {
+		t.Fatalf("a new port, on the bind address: %q %v", first, err)
+	}
+	if err := os.MkdirAll(repo.CacheDir(), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(mcpFile(repo, mcpAddrFile), []byte("127.0.0.1:5999\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := mcpAddrFor(repo, "0.0.0.0", nil, nil); err != nil || got != "0.0.0.0:5999" {
+		t.Errorf("the remembered port, on the bind address: %q %v", got, err)
+	}
+	if got, err := mcpAddrFor(repo, "::1", nil, nil); err != nil || got != "[::1]:5999" {
+		t.Errorf("an IPv6 bind address is bracketed: %q %v", got, err)
+	}
+	moved, err := mcpAddrFor(repo, "0.0.0.0", map[string]bool{"127.0.0.1:5999": true}, nil)
+	if err != nil || moved == "0.0.0.0:5999" {
+		t.Errorf("a port another project has on another host is not given twice: %q %v", moved, err)
+	}
+	if again, err := mcpAddrFor(repo, "0.0.0.0", map[string]bool{"127.0.0.1:5999": true}, map[string]bool{"127.0.0.1:" + portOf(moved): true}); err != nil || again == moved {
+		t.Errorf("nor one another project remembers on another host: %q %v", again, err)
+	}
+}
+
+// S-0506: flai host starts each project's server on mcp.bind, read at every
+// start: a project keeps its port when the setting changes, the log says
+// nothing moved, and clearing it goes back to loopback.
+func TestTheHostStartsEachProjectsServerOnTheBindAddress(t *testing.T) {
+	t.Parallel()
+	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
+	useConfig(t, cfgPath)
+	var logged bytes.Buffer
+	l := &hostLauncher{a: &app{configPath: cfgPath, log: slog.New(slog.NewTextHandler(&logged, nil))}, taken: map[string]string{}}
+	repo, err := workitem.Open(tempProject(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(repo.CacheDir(), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(mcpFile(repo, mcpAddrFile), []byte("127.0.0.1:5998\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := l.mcpAddr(repo); err != nil || got != "127.0.0.1:5998" {
+		t.Fatalf("unset, loopback: %q %v", got, err)
+	}
+	bindTo := func(addr string) {
+		t.Helper()
+		cfg, _, err := config.Load(cfgPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if addr == "" {
+			cfg = cfg.WithoutMCPBind()
+		} else if cfg, err = cfg.WithMCPBind(addr); err != nil {
+			t.Fatal(err)
+		}
+		if err := config.Save(cfgPath, cfg); err != nil {
+			t.Fatal(err)
+		}
+	}
+	bindTo("0.0.0.0")
+	if got, err := l.mcpAddr(repo); err != nil || got != "0.0.0.0:5998" {
+		t.Errorf("set, the same port on the bind address: %q %v", got, err)
+	}
+	other, err := workitem.Open(tempProject(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(other.CacheDir(), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(mcpFile(other, mcpAddrFile), []byte("0.0.0.0:5998\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := l.mcpAddr(other); err != nil || portOf(got) == "5998" {
+		t.Errorf("another project that remembers that port gets another: %q %v", got, err)
+	}
+	bindTo("")
+	if got, err := l.mcpAddr(repo); err != nil || got != "127.0.0.1:5998" {
+		t.Errorf("cleared, loopback again: %q %v", got, err)
+	}
+	if strings.Contains(logged.String(), "root="+repo.MainRoot) {
+		t.Errorf("a change of the bind address is no move:\n%s", logged.String())
 	}
 }

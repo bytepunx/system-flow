@@ -618,12 +618,18 @@ func (l *hostLauncher) mcp(root string) (host.Spec, error) {
 		Log: mcpFile(repo, mcpLogFile), Env: []string{"LOG_FORMAT=json"}, Version: l.version()}, nil
 }
 
-// mcpAddr is mcpAddrFor, with the addresses already given to other projects
-// left out: two starting at once must not pick the same free port.
+// mcpAddr is mcpAddrFor on the host's mcp.bind, read at every start so
+// that a change takes effect at a server's next start, with the ports
+// already given to other projects left out: two starting at once must not
+// pick the same free port. A project keeps the port it was given while the
+// host runs, on the bind address as it is now.
 func (l *hostLauncher) mcpAddr(repo *workitem.Repo) (string, error) {
+	bind := l.a.mcpBind()
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if addr, ok := l.taken[repo.MainRoot]; ok {
+		addr = net.JoinHostPort(bind, portOf(addr))
+		l.taken[repo.MainRoot] = addr
 		return addr, nil
 	}
 	others := map[string]bool{}
@@ -645,11 +651,11 @@ func (l *hostLauncher) mcpAddr(repo *workitem.Repo) (string, error) {
 			}
 		}
 	}
-	addr, err := mcpAddrFor(repo, others, remembered)
+	addr, err := mcpAddrFor(repo, bind, others, remembered)
 	if err != nil {
 		return "", err
 	}
-	if was := rememberedMCPAddr(repo); was != "" && was != addr {
+	if was := rememberedMCPAddr(repo); was != "" && portOf(was) != portOf(addr) {
 		// the server remembers the new one when it starts; an agent given the
 		// old one must be given this
 		l.a.logger().Warn("mcp address moved: another project the host runs has it", "component", "host", "root", repo.MainRoot, "from", was, "to", addr)

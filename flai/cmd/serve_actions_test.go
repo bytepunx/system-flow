@@ -2402,3 +2402,73 @@ func TestServeStatusShowsEachHeldProvider(t *testing.T) {
 		t.Errorf("json: %v %s", err, js)
 	}
 }
+
+// S-0506: flai serve mcp bind keeps the address flai host starts each
+// project's MCP server on, show prints it, with --json too, and the
+// loopback default when it is unset, clear unsets it, and an address with a
+// port or one that is no IP address or host name is refused, changing
+// nothing.
+func TestServeMCPBind(t *testing.T) {
+	t.Parallel()
+	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
+	useConfig(t, cfgPath)
+	run := func(asJSON bool, args ...string) (string, error) {
+		t.Helper()
+		var out bytes.Buffer
+		a := &app{configPath: cfgPath, out: &out, errOut: &bytes.Buffer{}, cwd: t.TempDir(), jsonOut: asJSON}
+		c := newServeMCPCmd(a)
+		c.SetArgs(args)
+		c.SetOut(&out)
+		c.SetErr(&bytes.Buffer{})
+		c.SilenceUsage, c.SilenceErrors = true, true
+		err := c.Execute()
+		return out.String(), err
+	}
+	saved := func() string {
+		t.Helper()
+		cfg, _, err := config.Load(cfgPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return cfg.MCP.Bind
+	}
+	if out, err := run(false, "show"); err != nil || !strings.Contains(out, "bind: 127.0.0.1 (default)") {
+		t.Errorf("unset: %v %q", err, out)
+	}
+	if js, err := run(true); err != nil || !strings.Contains(js, `"bind": "127.0.0.1"`) || !strings.Contains(js, `"bind_set": false`) {
+		t.Errorf("unset, --json: %v %s", err, js)
+	}
+	if out, err := run(false, "bind", "0.0.0.0"); err != nil || !strings.HasPrefix(out, "bind: 0.0.0.0: ") {
+		t.Fatalf("bind: %v %q", err, out)
+	}
+	if got := saved(); got != "0.0.0.0" {
+		t.Errorf("saved: %q", got)
+	}
+	if js, err := run(true, "show"); err != nil || !strings.Contains(js, `"bind": "0.0.0.0"`) || !strings.Contains(js, `"bind_set": true`) {
+		t.Errorf("--json: %v %s", err, js)
+	}
+	for _, bad := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"bind", "0.0.0.0:4243"}, "names a port"},
+		{[]string{"bind", "[::1]"}, "is bracketed"},
+		{[]string{"bind", "http://example.com"}, "names a port, or is no IP address"},
+		{[]string{"bind", "not a host"}, "is not a host name"},
+		{[]string{"bind", " "}, "mcp.bind needs an address"},
+		{[]string{"bind"}, "accepts 1 arg"},
+	} {
+		if _, err := run(false, bad.args...); err == nil || !strings.Contains(err.Error(), bad.want) {
+			t.Errorf("%q is refused, saying why: %v", bad.args, err)
+		}
+	}
+	if got := saved(); got != "0.0.0.0" {
+		t.Errorf("a refused address changes nothing: %q", got)
+	}
+	if out, err := run(false, "clear"); err != nil || !strings.Contains(out, "bind: 127.0.0.1 (default)") || saved() != "" {
+		t.Errorf("clear: %v %q %q", err, out, saved())
+	}
+	if data, _ := os.ReadFile(cfgPath); strings.Contains(string(data), `"mcp"`) {
+		t.Errorf("a cleared address is not written: %s", data)
+	}
+}
