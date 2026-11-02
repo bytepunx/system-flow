@@ -2,12 +2,12 @@
 id: I-0214
 title: flai serve starts a host agent for a story meant to be worked in a container, since nothing on a story or the host says its agent runs elsewhere
 class: defect
-status: open
+status: closed
 count: 2
 cost: 8m
 first_reported: 2026-10-28T12:27:00Z
 last_reported: 2026-10-28T12:32:02Z
-updated: 2026-10-28T12:52:40Z
+updated: 2026-11-02T05:38:39Z
 ---
 
 # I-0214 flai serve starts a host agent for a story meant to be worked in a container, since nothing on a story or the host says its agent runs elsewhere
@@ -28,3 +28,4 @@ S-0505 T-2166: the first host agent for S-0513 ended (exit 0) with the story in 
 ## Remediation
 
 Story S-0516 remediates this issue, created from it at 2026-10-28T12:52:40Z.
+Closed 2026-11-02T05:38:39Z: S-0516 reserves the harness name none for a story's agent that runs elsewhere, by hand or in a container no harness starts yet (ADR-0242). flai serve starts nothing for such a story: not from ready, not as an automatic restart, not on a resume or a send back, and it names the reason in waiting with no restart-limit thread. flai serve agent start, restart, and commit refuse it, and harness.For refuses none. Tests in flai/internal/serve/agents_test.go reproduce both instances.
