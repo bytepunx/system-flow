@@ -1,0 +1,45 @@
+{"Time":"2026-11-01T23:38:34.12506766-07:00","Action":"start","Package":"example.com/fx/calc"}
+{"Time":"2026-11-01T23:38:34.128248425-07:00","Action":"run","Package":"example.com/fx/calc","Test":"TestAdd"}
+{"Time":"2026-11-01T23:38:34.128290255-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestAdd","Output":"=== RUN   TestAdd\n"}
+{"Time":"2026-11-01T23:38:34.128346337-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestAdd","Output":"--- PASS: TestAdd (0.00s)\n"}
+{"Time":"2026-11-01T23:38:34.128350477-07:00","Action":"pass","Package":"example.com/fx/calc","Test":"TestAdd","Elapsed":0}
+{"Time":"2026-11-01T23:38:34.128354577-07:00","Action":"run","Package":"example.com/fx/calc","Test":"TestSlowSum"}
+{"Time":"2026-11-01T23:38:34.128357257-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowSum","Output":"=== RUN   TestSlowSum\n"}
+{"Time":"2026-11-01T23:38:34.128360187-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowSum","Output":"=== PAUSE TestSlowSum\n"}
+{"Time":"2026-11-01T23:38:34.128362507-07:00","Action":"pause","Package":"example.com/fx/calc","Test":"TestSlowSum"}
+{"Time":"2026-11-01T23:38:34.128365267-07:00","Action":"run","Package":"example.com/fx/calc","Test":"TestSlowProduct"}
+{"Time":"2026-11-01T23:38:34.128367617-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct","Output":"=== RUN   TestSlowProduct\n"}
+{"Time":"2026-11-01T23:38:34.128371587-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct","Output":"=== PAUSE TestSlowProduct\n"}
+{"Time":"2026-11-01T23:38:34.128374067-07:00","Action":"pause","Package":"example.com/fx/calc","Test":"TestSlowProduct"}
+{"Time":"2026-11-01T23:38:34.128376797-07:00","Action":"cont","Package":"example.com/fx/calc","Test":"TestSlowSum"}
+{"Time":"2026-11-01T23:38:34.128379017-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowSum","Output":"=== CONT  TestSlowSum\n"}
+{"Time":"2026-11-01T23:38:34.128384097-07:00","Action":"cont","Package":"example.com/fx/calc","Test":"TestSlowProduct"}
+{"Time":"2026-11-01T23:38:34.128386657-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct","Output":"=== CONT  TestSlowProduct\n"}
+{"Time":"2026-11-01T23:38:34.128390358-07:00","Action":"run","Package":"example.com/fx/calc","Test":"TestSlowProduct/large"}
+{"Time":"2026-11-01T23:38:34.128392708-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct/large","Output":"=== RUN   TestSlowProduct/large\n"}
+{"Time":"2026-11-01T23:38:36.132026471-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct/large","Output":"panic: test timed out after 2s\n"}
+{"Time":"2026-11-01T23:38:36.132060291-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct/large","Output":"\trunning tests:\n"}
+{"Time":"2026-11-01T23:38:36.132064611-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct/large","Output":"\t\tTestSlowProduct (2s)\n"}
+{"Time":"2026-11-01T23:38:36.132067242-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct/large","Output":"\t\tTestSlowProduct/large (2s)\n"}
+{"Time":"2026-11-01T23:38:36.132069582-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct/large","Output":"\t\tTestSlowSum (2s)\n"}
+{"Time":"2026-11-01T23:38:36.132072052-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct/large","Output":"\n"}
+{"Time":"2026-11-01T23:38:36.132075092-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct/large","Output":"goroutine 33 [running]:\n"}
+{"Time":"2026-11-01T23:38:36.132140983-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct/large","Output":"\n"}
+{"Time":"2026-11-01T23:38:36.132143233-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct/large","Output":"goroutine 20 [sleep]:\n"}
+{"Time":"2026-11-01T23:38:36.132145483-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct/large","Output":"time.Sleep(0x2540be400)\n"}
+{"Time":"2026-11-01T23:38:36.132147743-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct/large","Output":"\t/usr/local/go/src/runtime/time.go:363 +0x165\n"}
+{"Time":"2026-11-01T23:38:36.132150073-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct/large","Output":"example.com/fx/calc.TestSlowSum(0x1c3e7e6e6488?)\n"}
+{"Time":"2026-11-01T23:38:36.132152373-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct/large","Output":"\t/home/dev/proj/fx/calc/calc_test.go:12 +0x25\n"}
+{"Time":"2026-11-01T23:38:36.132228575-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct/large","Output":"goroutine 21 [chan receive]:\n"}
+{"Time":"2026-11-01T23:38:36.132231395-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct/large","Output":"testing.(*T).Run(0x1c3e7e6e66c8, {0x584efe?, 0x4e9e93?}, 0x592e90)\n"}
+{"Time":"2026-11-01T23:38:36.132235805-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct/large","Output":"\t/usr/local/go/src/testing/testing.go:2109 +0x4e5\n"}
+{"Time":"2026-11-01T23:38:36.132238835-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct/large","Output":"example.com/fx/calc.TestSlowProduct(0x1c3e7e6e66c8)\n"}
+{"Time":"2026-11-01T23:38:36.132242135-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct/large","Output":"\t/home/dev/proj/fx/calc/calc_test.go:17 +0x35\n"}
+{"Time":"2026-11-01T23:38:36.132589662-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct/large","Output":"\n"}
+{"Time":"2026-11-01T23:38:36.132592132-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct/large","Output":"goroutine 5 [sleep]:\n"}
+{"Time":"2026-11-01T23:38:36.132594502-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct/large","Output":"time.Sleep(0x2540be400)\n"}
+{"Time":"2026-11-01T23:38:36.132596852-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct/large","Output":"\t/usr/local/go/src/runtime/time.go:363 +0x165\n"}
+{"Time":"2026-11-01T23:38:36.132599212-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct/large","Output":"example.com/fx/calc.TestSlowProduct.func1(0x1c3e7e624008?)\n"}
+{"Time":"2026-11-01T23:38:36.132601593-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestSlowProduct/large","Output":"\t/home/dev/proj/fx/calc/calc_test.go:18 +0x1d\n"}
+{"Time":"2026-11-01T23:38:36.132737195-07:00","Action":"output","Package":"example.com/fx/calc","Output":"FAIL\texample.com/fx/calc\t2.007s\n"}
+{"Time":"2026-11-01T23:38:36.132803226-07:00","Action":"fail","Package":"example.com/fx/calc","Elapsed":2.008}

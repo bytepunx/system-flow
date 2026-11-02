@@ -179,6 +179,35 @@ func TestGoTestReportsAPackageThatFailsWithNoTestFailing(t *testing.T) {
 	}
 }
 
+// A timed-out run, recorded from go1.26.0 with -timeout 2s, writes its panic
+// as output of the running subtest and fails only the package (I-0227).
+func TestGoTestNamesEachTestStillRunningWhenTheTimeoutPanics(t *testing.T) {
+	got := parseGoTest(fixture(t, "go-test-timeout.json"), "", env{root: fixtureRoot, dir: "fx", fsys: fixtureFS()})
+	want := []Finding{
+		{Name: "TestSlowProduct/large", Path: "fx/calc/calc_test.go", Line: 18, Message: "test timed out after 2s; TestSlowProduct/large had run 2s"},
+		{Name: "TestSlowSum", Path: "fx/calc/calc_test.go", Line: 12, Message: "test timed out after 2s; TestSlowSum had run 2s"},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %s", show(got))
+	}
+}
+
+func TestGoTestPlacesATimedOutTestAtItsPackageWhenNoStackShowsIt(t *testing.T) {
+	out := strings.Join([]string{
+		`{"Action":"output","Package":"example.com/fx/calc","Test":"TestSlow","Output":"panic: test timed out after 10m0s\n"}`,
+		`{"Action":"output","Package":"example.com/fx/calc","Test":"TestSlow","Output":"\trunning tests:\n"}`,
+		`{"Action":"output","Package":"example.com/fx/calc","Test":"TestSlow","Output":"\t\tTestSlow (9m58s)\n"}`,
+		`{"Action":"output","Package":"example.com/fx/calc","Test":"TestSlow","Output":"\n"}`,
+		`{"Action":"output","Package":"example.com/fx/calc","Output":"FAIL\texample.com/fx/calc\t600.17s\n"}`,
+		`{"Action":"fail","Package":"example.com/fx/calc","Elapsed":600.17}`,
+	}, "\n")
+	got := parseGoTest(out, "", env{root: fixtureRoot, dir: "fx", fsys: fixtureFS()})
+	want := []Finding{{Name: "TestSlow", Path: "fx/calc", Message: "test timed out after 10m0s; TestSlow had run 9m58s"}}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %s", show(got))
+	}
+}
+
 func TestGoTestReadsBuildErrorsFromStderrWhenAnOlderGoPrintsThemThere(t *testing.T) {
 	stdout := `{"Action":"output","Package":"example.com/fx/broken","Output":"FAIL\texample.com/fx/broken [build failed]\n"}
 {"Action":"fail","Package":"example.com/fx/broken"}`

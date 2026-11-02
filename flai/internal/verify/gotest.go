@@ -37,6 +37,7 @@ type goTest struct {
 	got     []Finding
 	built   map[string]bool     // packages with a build finding
 	output  map[string][]string // a test's or a package's output lines
+	all     map[string][]string // a package's output lines, its tests' included, in order
 	failed  map[string][]string // each package's failed tests
 	current string              // the package whose build output is being read
 	last    int                 // the build finding a continuation line adds to, or -1
@@ -49,7 +50,7 @@ type goTest struct {
 func parseGoTest(stdout, stderr string, e env) []Finding {
 	g := &goTest{
 		e: e, module: modulePath(e), built: map[string]bool{},
-		output: map[string][]string{}, failed: map[string][]string{}, last: -1,
+		output: map[string][]string{}, all: map[string][]string{}, failed: map[string][]string{}, last: -1,
 	}
 	if !strings.Contains(stdout, `"Action":"build-output"`) {
 		// a go before build output came as events printed it on stderr
@@ -74,7 +75,9 @@ func (g *goTest) event(ev goEvent) {
 	case "build-output":
 		g.buildOutput(ev.ImportPath, ev.Output)
 	case "output":
-		g.output[key] = append(g.output[key], strings.TrimRight(ev.Output, "\n"))
+		line := strings.TrimRight(ev.Output, "\n")
+		g.output[key] = append(g.output[key], line)
+		g.all[ev.Package] = append(g.all[ev.Package], line)
 	case "fail":
 		switch {
 		case ev.Test != "":
@@ -85,10 +88,85 @@ func (g *goTest) event(ev goEvent) {
 				g.got = append(g.got, Finding{Name: "build", Path: dir, Message: packageMessage(g.output[key])})
 			}
 		case len(g.failed[ev.Package]) == 0:
+			if running := g.timedOut(ev.Package); len(running) > 0 {
+				g.got = append(g.got, running...)
+				break
+			}
 			dir, _ := g.packageDir(ev.Package)
 			g.got = append(g.got, Finding{Name: ev.Package, Path: dir, Message: packageMessage(g.output[key])})
 		}
 	}
+}
+
+// runningLine is a test the timeout panic's "running tests:" list names,
+// and how long it had run.
+var runningLine = regexp.MustCompile(`^(\S+) \(([^)]+)\)$`)
+
+// timedOut is a finding for each test still running when the package's
+// timeout panicked, none when its output holds no timeout panic. go test
+// -json writes the panic as output of whichever test was running and sends
+// that test no fail, so only the package fails (I-0227). A test whose
+// subtest is running is left to the subtest, as testFailed leaves it. Each
+// is placed by its own function's frame in the panic's stacks when they
+// hold one, else at the package's directory.
+func (g *goTest) timedOut(pkg string) []Finding {
+	lines := g.all[pkg]
+	start := -1
+	var panicked string
+	for i, l := range lines {
+		if t, ok := strings.CutPrefix(strings.TrimSpace(l), "panic: "); ok && strings.HasPrefix(t, "test timed out after ") {
+			start, panicked = i, t
+			break
+		}
+	}
+	if start < 0 || start+1 >= len(lines) || strings.TrimSpace(lines[start+1]) != "running tests:" {
+		return nil
+	}
+	type test struct{ name, ran string }
+	var tests []test
+	for _, l := range lines[start+2:] {
+		m := runningLine.FindStringSubmatch(strings.TrimSpace(l))
+		if m == nil {
+			break
+		}
+		tests = append(tests, test{m[1], m[2]})
+	}
+	dir, _ := g.packageDir(pkg)
+	var out []Finding
+	for i, t := range tests {
+		if i+1 < len(tests) && strings.HasPrefix(tests[i+1].name, t.name+"/") {
+			continue
+		}
+		f := Finding{Name: t.name, Path: dir, Message: panicked + "; " + t.name + " had run " + t.ran}
+		if loc, line := g.testFrame(bare(pkg), t.name, lines[start:]); loc != "" {
+			f.Path, f.Line = loc, line
+		}
+		out = append(out, f)
+	}
+	return out
+}
+
+// testFrame is where the stacks in lines show the test's own function, a
+// subtest's being its top-level test's first closure, and its line; "" when
+// they show none below the root.
+func (g *goTest) testFrame(pkg, test string, lines []string) (string, int) {
+	top, _, sub := strings.Cut(test, "/")
+	fn := pkg + "." + top + "("
+	if sub {
+		fn = pkg + "." + top + ".func"
+	}
+	for i, l := range lines {
+		if !strings.HasPrefix(strings.TrimSpace(l), fn) || i+1 >= len(lines) {
+			continue
+		}
+		if m := frameLine.FindStringSubmatch(strings.TrimSpace(lines[i+1])); m != nil {
+			if p := g.e.rel(m[1]); !path.IsAbs(p) {
+				n, _ := strconv.Atoi(m[2])
+				return p, n
+			}
+		}
+	}
+	return "", 0
 }
 
 // buildOutput takes a line the build printed in: a file:line: message is a
