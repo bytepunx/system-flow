@@ -37,7 +37,7 @@
 	import type { Snippet } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { api } from '$lib/api';
-	import { roleControls, roleStream, triggerLine, type RoleActionName } from '$lib/roles';
+	import { roleControls, roleRuns, roleStream, triggerLine, type RoleActionName } from '$lib/roles';
 	import type { ActivityDocument, ActivityEntry } from '$lib/strategic';
 	import StrategicAgentPanel, { enableCommand } from './StrategicAgentPanel.svelte';
 
@@ -82,7 +82,7 @@
 	} = $props();
 
 	const offers = $derived(roleControls(role));
-	const runs = $derived([...role.running, ...role.runs]);
+	const runs = $derived(roleRuns(role));
 	const takesItem = $derived(role.item.length > 0);
 	/** A role that runs for the project runs one at a time; one per item runs one on each. */
 	const busy = $derived(!takesItem && role.run !== null);

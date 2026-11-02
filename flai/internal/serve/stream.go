@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -129,9 +130,10 @@ func PlanStream(st AgentState, item string, after int64) (*StreamRead, error) {
 // serve started for the project, as Stream reads a story's agent's: the
 // orchestrator's for conventions.RoleOrchestrate (S-0218), the analyzer's for
 // conventions.RoleAnalyze (S-0228), and, for any other role, the newest run
-// of the role of that name, built-in or defined, on whatever item, its item
-// in Item (S-0420). It is an error that is hostapi.ErrNoAgent when it started
-// none. Which names a project defines is for its caller to judge: agent.stream
+// under way of the role of that name, built-in or defined, on whatever item,
+// else its newest run, its item in Item (S-0420): the run agent.status names
+// under way. It is an error that is hostapi.ErrNoAgent when it started none.
+// Which names a project defines is for its caller to judge: agent.stream
 // refuses one it does not.
 func RoleStream(st AgentState, role string, after int64) (*StreamRead, error) {
 	var run *AgentRun
@@ -142,7 +144,10 @@ func RoleStream(st AgentState, role string, after int64) (*StreamRead, error) {
 	case conventions.RoleAnalyze:
 		run, what = st.Analyzer, "analyzer"
 	default:
-		if runs := st.roleRuns(role); len(runs) > 0 {
+		runs := st.roleRuns(role)
+		if i := slices.IndexFunc(runs, (*AgentRun).live); i >= 0 {
+			run = runs[i]
+		} else if len(runs) > 0 {
 			run = runs[0]
 		}
 		what = "run of the role " + role

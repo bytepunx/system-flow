@@ -315,6 +315,14 @@ func TestRoleStreamReadsAnyRolesNewestRunByName(t *testing.T) {
 	if got.Role != "reviewer" || got.Item != "S-0003" || got.Story != "" || got.Agent != "reviewer-S-0003" || !got.Running || got.Next != int64(len(text)) {
 		t.Errorf("reviewer run = %+v, want its newest, on S-0003", got)
 	}
+	// a newer run that ended gives way to an older one still under way, the
+	// run agent.status names under way
+	st.Roles["reviewer"]["S-0001"].Log = log
+	st.Roles["reviewer"]["S-0003"] = reviewer("S-0003", "2026-09-29T07:00:00Z", other, 0)
+	st.Roles["reviewer"]["S-0003"].Ended = "2026-09-29T07:30:00Z"
+	if got, err = RoleStream(st, "reviewer", -1); err != nil || got.Item != "S-0001" || got.Agent != "reviewer-S-0001" {
+		t.Errorf("reviewer with a newer ended run = %+v, %v; want the run under way, on S-0001", got, err)
+	}
 	st.Plans = map[string]*AgentRun{
 		"E-0001": {Item: "E-0001", Agent: "planner-E-0001", Started: "2026-09-29T07:00:00Z", Log: other, PID: 52},
 		"S-0002": {Item: "S-0002", Agent: "planner-S-0002", Started: "2026-09-29T03:00:00Z", Log: log, PID: 53},

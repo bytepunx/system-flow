@@ -1,6 +1,6 @@
 // Behaviour tests for how the role page reads a role as agent.status's roles carry it (S-0420): the
-// order the roles are listed in, the controls a role offers, the write each control is, where a run's
-// stream is read, which agent events concern a role, and what its action's state says.
+// order its runs are listed in, the controls a role offers, the write each control is, where a
+// run's stream is read, which agent events concern a role, and what its action's state says.
 
 import { describe, expect, it } from 'vitest';
 import {
@@ -8,7 +8,6 @@ import {
 	roleControls,
 	roleRuns,
 	roleState,
-	rolesInOrder,
 	roleStream,
 	roleWrite,
 	triggerLine,
@@ -54,24 +53,6 @@ describe('roles (S-0420)', () => {
 		expect(roleState(raw)).toEqual(role('reviewer', { trigger: [] }));
 	});
 
-	it('lists the planner, the orchestrator, and the analyzer first, then the rest by name', () => {
-		const roles = Object.fromEntries(
-			['reviewer', 'analyzer', 'curator', 'orchestrator', 'auditor', 'planner'].map((n) => [
-				n,
-				role(n)
-			])
-		);
-		expect(rolesInOrder(roles).map((r) => r.name)).toEqual([
-			'planner',
-			'orchestrator',
-			'analyzer',
-			'auditor',
-			'curator',
-			'reviewer'
-		]);
-		expect(rolesInOrder(null)).toEqual([]);
-	});
-
 	it('lists the runs under way before those that ended', () => {
 		const ended = { ...reviewing, item: 'S-0002', ended: '2026-10-28T09:00:00Z' };
 		expect(roleRuns({ ...reviewer, runs: [ended] })).toEqual([reviewing, ended]);
@@ -94,7 +75,8 @@ describe('roles (S-0420)', () => {
 	});
 
 	it('offers Stop while the orchestrator is not held and Start while it is, and no other role either', () => {
-		const orchestrator = role('orchestrator', { role: 'orchestrate', trigger: ['event'] });
+		// the baseline orchestrator.md names asked among its triggers: it is started, not run
+		const orchestrator = role('orchestrator', { role: 'orchestrate', trigger: ['asked', 'event'] });
 		expect(roleControls(orchestrator)).toMatchObject({ run: false, stop: true, start: false });
 		expect(roleControls({ ...orchestrator, held: true })).toMatchObject({
 			stop: false,

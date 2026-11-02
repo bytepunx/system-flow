@@ -55,22 +55,6 @@ export function roleState(raw: RawRoleState): RoleState {
 /** The /api/roles/<name> answer: the role as agent.status reports it, and its activity document. */
 export type RoleView = { role: RoleState; activity: ActivityDocument };
 
-/** The roles the Workflow menu lists first, in this order; the rest follow by name. */
-export const FIRST_ROLES = ['planner', 'orchestrator', 'analyzer'];
-
-/** Every role given, the planner, the orchestrator, and the analyzer first, then the rest by name. */
-export function rolesInOrder<R extends Pick<RoleState, 'name'>>(
-	roles: Record<string, R> | null | undefined
-): R[] {
-	const place = (r: R) => {
-		const i = FIRST_ROLES.indexOf(r.name);
-		return i < 0 ? FIRST_ROLES.length : i;
-	};
-	return Object.values(roles ?? {}).sort(
-		(a, b) => place(a) - place(b) || a.name.localeCompare(b.name)
-	);
-}
-
 /** Every run of the role flai knows of, those under way first, newest first. */
 export const roleRuns = <R extends RoleRun>(role: RoleState<R>): R[] => [
 	...role.running,
@@ -82,17 +66,17 @@ export const HOLDING_ROLE = 'orchestrate';
 
 /**
  * What the role page offers for a role: Run for a role its file lets the operator ask for, with an
- * item when its run takes one; Stop while the orchestrator is not held, and Start while it is,
- * since only the orchestrator has a hold. Until flai has role.stop and role.start (TH-0797), no other
- * role has either.
+ * item when its run takes one, but for the orchestrator, which is started rather than run; Stop
+ * while the orchestrator is not held, and Start while it is, since only the orchestrator has a hold.
+ * Until flai has role.stop and role.start (TH-0797), no other role has either.
  */
 export type RoleControls = { run: boolean; item: boolean; stop: boolean; start: boolean };
 
 export function roleControls(
 	role: Pick<RoleState, 'role' | 'item' | 'trigger' | 'held'>
 ): RoleControls {
-	const asked = role.trigger.includes('asked');
 	const holds = role.role === HOLDING_ROLE;
+	const asked = role.trigger.includes('asked') && !holds;
 	return {
 		run: asked,
 		item: asked && role.item.length > 0,
