@@ -497,15 +497,24 @@ func (fw *folderWaits) events(ctx context.Context, req *mcp.CallToolRequest, in 
 				notices[log] = true
 			}
 		}
+		projects := false
 		for _, p := range changed {
-			if strings.HasPrefix(p, "project:") || notices[p] {
+			if strings.HasPrefix(p, "project:") {
+				projects = true
+				continue
+			}
+			if notices[p] {
 				continue
 			}
 			out.Changed = append(out.Changed, fw.f.rel(p))
 		}
 		events, omitted, err := fw.catchUp(ctx)
 		out.Events, out.Omitted = events, omitted
-		return true, err
+		// a notice log is created before its first line is written, and a
+		// poll between the two sees a new empty file: a wake by the logs
+		// alone that reads no event is not a change to answer with, so the
+		// wait goes on for the line that follows
+		return err != nil || projects || len(out.Changed) > 0 || len(events) > 0, err
 	})
 	out.TimedOut = timedOut
 	return nil, out, err

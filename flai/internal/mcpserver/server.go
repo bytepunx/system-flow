@@ -986,7 +986,9 @@ func (s *server) waitForEvents(ctx context.Context, req *mcp.CallToolRequest, in
 		case <-s.closing: // nil, and so never ready, unless the server was given one
 			return nil, WaitOut{Events: []Event{}, Changed: []string{}, TimedOut: true}, nil
 		case <-tick.C:
-			if changed := diff(before, s.snapshot()); len(changed) > 0 {
+			after := s.snapshot()
+			if changed := diff(before, after); len(changed) > 0 {
+				before = after
 				// the notices wake a waiting agent and are not a path of the
 				// repository to show it: what they say arrives as events
 				shown := changed[:0]
@@ -1005,6 +1007,13 @@ func (s *server) waitForEvents(ctx context.Context, req *mcp.CallToolRequest, in
 				events, omitted, err := s.catchUp(ctx)
 				if err != nil {
 					return nil, WaitOut{}, err
+				}
+				// a notice log is created before its first line is written,
+				// and a poll between the two sees a new empty file: a wake by
+				// the logs alone that reads no event is not a change to answer
+				// with, so the wait goes on for the line that follows
+				if len(changed) == 0 && len(events) == 0 {
+					continue
 				}
 				return nil, WaitOut{Events: events, Omitted: omitted, Changed: changed}, nil
 			}

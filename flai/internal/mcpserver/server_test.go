@@ -919,6 +919,51 @@ func TestAnOverlapAtAcceptanceReachesTheAgent(t *testing.T) {
 // ADR-0211 §4: an event flai serve or flai accept appends to the log wakes a
 // waiting agent, arrives with its fields, and the log is not shown to it as a
 // path.
+// The event log is created before its first line is written, so a poll of
+// wait_for_events between the two sees a new empty file: that wake answers
+// nothing and the wait goes on, so the event that follows is what it
+// answers with, not an empty answer that neither timed out nor changed.
+func TestAnEmptyEventLogDoesNotWakeWaitForEventsBeforeItsEvent(t *testing.T) {
+	t.Parallel()
+	f := setup(t)
+	if out, _ := f.call(t, "inbox", map[string]any{}); out == nil {
+		t.Fatal("first look")
+	}
+	*f.clock = f.clock.Add(time.Minute)
+	stamp := f.clock.Format(workitem.TimeFormat)
+	done := make(chan map[string]any, 1)
+	go func() {
+		out, _ := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 3})
+		done <- out
+	}()
+	time.Sleep(150 * time.Millisecond)
+	path := inbox.EventsPath(f.repo)
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(300 * time.Millisecond)
+	e := inbox.ReadyEmptyEvent(1, 3, 5, "flai serve")
+	e.At = stamp
+	if err := inbox.AppendEvent(f.repo, e); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case w := <-done:
+		events := w["events"].([]any)
+		if w["timed_out"] == true || len(events) != 1 {
+			t.Fatalf("wait: %v", w)
+		}
+		if got := events[0].(map[string]any); got["kind"] != inbox.ReadyEmpty {
+			t.Errorf("the event: %v", got)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("wait_for_events never returned")
+	}
+}
+
 func TestALoggedEventWakesWaitForEvents(t *testing.T) {
 	t.Parallel()
 	f := setup(t)
