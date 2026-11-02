@@ -1,6 +1,6 @@
 ---
 title: Strategic agents
-updated: 2026-10-31
+updated: 2026-11-02
 status: active
 topics: [planning, orchestration, analysis]
 ---
@@ -35,6 +35,26 @@ Each role is also written down as data: one file, `design/workflows/roles/<name>
   - A defined role writes as itself alone, as the planner does ([ADR-0210](../adrs/0210-flai-guard-holds-a-role-a-role-file-defines-to-its-own-name-and-session-as-adr.md)): a `--by`, `--placed-by`, `FLAI_AGENT`, or `FLAI_SESSION` naming another is refused. Its own name is the hook's `FLAI_AGENT`, or the name `flai serve` gives its run, `<name>` or `<name>-<item>`. Its refusals name it `the role <name>`.
   - `.claude/settings.json` runs the guard on `Edit|MultiEdit|Write|NotebookEdit` for any non-empty `FLAI_ROLE`, so a defined role's file edits are held too ([The guard](#the-guard)).
 - **What reads them.** S-0415 builds a role's pack from its file, S-0416 has the guard hold a role to it, S-0417 has `flai serve` start a role a project defines from its file when the operator asks ([A role a project defines](#a-role-a-project-defines-s-0417)), and S-0418 has it start one on the events and schedules its file's `trigger` names ([On an event or a schedule](#on-an-event-or-a-schedule-s-0418)). The orchestrator's start reads its file's `trigger` since S-0536 ([Starting and stopping it](#starting-and-stopping-it)). flai still decides from its Go when the planner, the analyzer, and the curator start. Since S-0419 each built-in role's definition takes its prompt from its file's body.
+
+## Formulas (S-0421)
+
+A formula is a repeatable process written down as data: one file, `design/workflows/formulas/<name>.md`, beside the role files ([ADR-0238](../adrs/0238-a-formula-is-a-markdown-file-under-design-workflows-formulas-whose-front-matter.md), [repository-layout.md](repository-layout.md)). The ADR holds the fields and the example; this section says how flai uses them.
+
+- **What it holds.** The front matter names the formula (`name`, the file's stem), the nature of the story it makes (`nature`, `improvement` by default), that story's goal (`description`), its `inputs`, and its `steps`. Each step has an `id`, a `title`, a `run`, and the steps it is `after`. The body is for a reader, with the baseline marker. `formulas.Load` in `flai/internal/formulas` reads every `*.md` in the folder but `README.md`, and reads past a key it does not know.
+- **The three step kinds.** A step's `run` holds exactly one:
+
+  | Kind | `run` | Checked |
+  |------|-------|---------|
+  | A flai command | `flai: <command line>` | Not that the command exists ([ADR-0238](../adrs/0238-a-formula-is-a-markdown-file-under-design-workflows-formulas-whose-front-matter.md) §6) |
+  | A script | `script: <command line>` | Its first word is a file under `scripts/` |
+  | A role | `role: <name>`, `prompt: <text>` | A role file defines it |
+
+- **Inputs.** An input has a `name`, a `description`, and optionally a `default`; one without a default is required. It is used as `{{name}}` in the formula's title, a step's title, and a step's run, and filled in as text.
+- **The check.** `flai check` reports `formulas.file`, an error on its line, on a formula that does not parse or misses a field, a step whose `run` is not one kind, a missing script or unknown role, an `after` naming no step, a cycle, a duplicate step id, and an input used but not declared (`checker.formulas`).
+- **What run makes.** `flai formula run <name> [--input key=value]... [--epic E-nnnn]` refuses a formula with a finding, and an input missing, undeclared, or malformed, before it writes anything. It then makes, through `itemnew` as `flai story new` and `flai task new` do, one backlog story with the formula's nature, `formula: <name>`, the title with inputs filled, the description as goal, one criterion per step, and Notes naming the file and the inputs; and one task per step, with `## Work` naming what the step runs, `## Done when` its exit, and the step's `after` as the task's. An item refused removes those made before it. `--autocommit` commits them in one commit ([flai-cli.md § Commands](flai-cli.md#commands)).
+- **The instance is a story.** A story's agent pulls and works it on its branch and worktree, as it works any story; the pull order, the limits, the metrics, and acceptance treat it as any story. `flai serve` does not work it. `flai guard` lets every agent run `flai formula list` and `show`, and only a story's agent and the operator `run`.
+- **Who changes one.** A formula file is code the operator runs, as a role file is: it changes only through a story the operator accepts, and no role may edit `design/workflows/`. The template ships the folder's `README.md` and no formula.
+- **Later.** Working a step, a role step's run, schedules, and the thread a failed step opens are S-0422's.
 
 ## A role a project defines (S-0417)
 

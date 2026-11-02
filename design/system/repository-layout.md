@@ -1,6 +1,6 @@
 ---
 title: Repository layout
-updated: 2026-10-30
+updated: 2026-11-02
 status: active
 topics: [all]
 ---
@@ -27,7 +27,8 @@ A conforming monorepo has this shape. Folder names are defaults; a project may r
 │   ├── digest/             # what past stories learned, one fact per file, written through flai digest
 │   ├── components/         # supporting files for components, one examples file per component
 │   └── workflows/          # what flai runs as data
-│       └── roles/          # one file per strategic role, its rules and harness definition (ADR-0207)
+│       ├── roles/          # one file per strategic role, its rules and harness definition (ADR-0207)
+│       └── formulas/       # one file per formula, a repeatable process flai formula run makes a story from (ADR-0238)
 ├── docs/                   # outward-facing documentation, one subfolder per audience
 │   ├── README.md
 │   ├── users/
@@ -83,7 +84,9 @@ Work in process. Everything in here is expected to change daily. See [work-hiera
 
 `design/components/` holds supporting files for a project's components (S-0443): today one examples file per component, `design/components/<sub-project>/<path>`, the sub-project's manifest `name` and the component's path in it with `.svelte` replaced by `.examples.json`. Each is JSON, an exception to "Everything is markdown" as the design token file is, holding the component's examples, named sets of its props that flaiover's Components page lists and loads. The page writes them through `file.save`, on main or on the story it shows, and a story that changes a component keeps its examples in step; `flai check` reports `components.examples` for a file that does not fit the format or its component. The template ships the folder's `README.md`. See [component-library.md § Examples](component-library.md#examples-s-0443) and [ADR-0164](../adrs/0164-a-component-s-examples-are-named-sets-of-props-in-one-json-file-per-component.md).
 
-`design/workflows/` holds what flai runs as data rather than as its own code (S-0414, [ADR-0207](../adrs/0207-a-strategic-role-is-a-markdown-file-under-design-workflows-roles-whose-front.md)): `roles/` now, `formulas/` when E-0024's formula stories land. `roles/` holds one file per strategic role, `<name>.md`, and a `README.md` that lists them. A role file's front matter names the role, the host action that gates it, its triggers, the items a run takes, its topics, the calls the guard allows it, and the fields flai generates its harness definition from; its body is that definition's prompt, with the baseline marker. The template ships `planner.md`, `orchestrator.md`, `analyzer.md`, and `curator.md`; a file it does not ship is the project's own. A role file is code the operator runs: it changes only through a story the operator accepts, and no role may edit the folder. `flai role list` prints the roles, and `flai check` reports `roles.file`, `roles.grant`, and `roles.definition`, and advises `roles.baseline` for a built-in role's file the project lacks, whose baseline flai runs in its place. See [strategic-agents.md § Role files](strategic-agents.md#role-files-s-0414).
+`design/workflows/` holds what flai runs as data rather than as its own code (S-0414, [ADR-0207](../adrs/0207-a-strategic-role-is-a-markdown-file-under-design-workflows-roles-whose-front.md)): `roles/` and, since S-0421, `formulas/`. `roles/` holds one file per strategic role, `<name>.md`, and a `README.md` that lists them. A role file's front matter names the role, the host action that gates it, its triggers, the items a run takes, its topics, the calls the guard allows it, and the fields flai generates its harness definition from; its body is that definition's prompt, with the baseline marker. The template ships `planner.md`, `orchestrator.md`, `analyzer.md`, and `curator.md`; a file it does not ship is the project's own. A role file is code the operator runs: it changes only through a story the operator accepts, and no role may edit the folder. `flai role list` prints the roles, and `flai check` reports `roles.file`, `roles.grant`, and `roles.definition`, and advises `roles.baseline` for a built-in role's file the project lacks, whose baseline flai runs in its place. See [strategic-agents.md § Role files](strategic-agents.md#role-files-s-0414).
+
+`formulas/` holds one file per formula, `<name>.md`, and a `README.md` that indexes them (S-0421, [ADR-0238](../adrs/0238-a-formula-is-a-markdown-file-under-design-workflows-formulas-whose-front-matter.md)). A formula's front matter names its nature, its inputs, and its steps; each step runs a flai command, a script under `scripts/`, or a role with a prompt. `flai formula run` makes from it one backlog story with one task per step, and `flai check` reports `formulas.file` on a formula that could not run. The template ships only the README. A formula file is code the operator runs, as a role file is. See [strategic-agents.md § Formulas](strategic-agents.md#formulas-s-0421).
 
 ### `scripts/`
 

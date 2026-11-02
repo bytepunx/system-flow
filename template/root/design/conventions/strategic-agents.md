@@ -1,6 +1,6 @@
 ---
 title: Strategic agents
-updated: 2026-10-31
+updated: 2026-11-02
 audience: agent
 order: 140
 status: active
@@ -20,7 +20,7 @@ What the planner, the orchestrator, the analyzer, and the curator do, what they 
 - The pack holds the conventions whose `roles` are empty or list your role, and briefs of the design your role's topic selects. A brief is not the document: read the section that bears on the work with `doc_get` before relying on it.
 - Call `inbox` when you start.
 - Work in the main checkout, through flai: the CLI or the MCP tools. Never hand-edit front matter.
-- Never edit code. A change that needs code is a story for a story's agent. Never edit a role file: a change to a role is a story too, which the operator accepts.
+- Never edit code. A change that needs code is a story for a story's agent. Never edit a role file: a change to a role is a story too, which the operator accepts. A repeatable process is a formula, `design/workflows/formulas/<name>.md` ([README](../workflows/formulas/README.md), [ADR-0238](../adrs/0238-a-formula-is-a-markdown-file-under-design-workflows-formulas-whose-front-matter.md)), from which `flai formula run` makes an ordinary story with one task per step, which a story's agent works as any story. Never write, edit, or run a formula: a new or changed one is a story too, and only a story's agent or the operator runs one.
 - Never accept a story or publish a release. Only the orchestrator may, and only while the operator's permission for it is on.
 - Record what you set as yours: flai stamps `by` and `at` on a cost of delay or a forecast you change ([ADR-0074](../adrs/0074-work-items-carry-planning-data-a-story-s-draft-flag-an-epic-s-or-story-s-cost.md)).
 - Never overwrite the operator's inputs. The cost of delay `inputs`, a story's `estimate`, and a finalized story's words are the operator's.

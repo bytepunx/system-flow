@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-11-01
+updated: 2026-11-02
 status: active
 ---
 
@@ -605,6 +605,62 @@ flai serve journal                                    # each start says started 
 ```
 
 **Understand what a trigger means.** Each start on an event or a schedule spends what one agent session costs, without you asking. Events wait `orchestration.coalesce`, the orchestrator's window, and then start one run per item for a role that takes items, or one for the project for a role that takes none; those that come while it runs start the next run when it ends. The events waiting are kept in `serve/role-reasons.json`. Turning the action off empties them, and turned on again, what happened meanwhile starts nothing. A start flai refuses is logged in `serve.log` and not tried again. While the role's provider is out of budget, a start waits until the limit resets ([When a provider is out of budget](#when-a-provider-is-out-of-budget-s-0534)).
+
+### Writing and running a formula (S-0421)
+
+A formula is a process you repeat, written down as one file, `design/workflows/formulas/<name>.md`, in a story you accept ([ADR-0238](../../design/adrs/0238-a-formula-is-a-markdown-file-under-design-workflows-formulas-whose-front-matter.md)). `flai formula run` makes from it an ordinary story with one task per step, which a story's agent works as any story. The template ships the folder's `README.md` and no formula.
+
+```markdown
+---
+title: "Release check for {{version}}"
+updated: 2026-11-02
+status: active
+name: release-check
+description: "Check that main is ready to publish as {{version}}."
+nature: improvement
+inputs:
+  - name: version
+    description: The version to check, such as 1.4.0.
+steps:
+  - id: test
+    title: The tests pass
+    run: {script: scripts/test.sh}
+  - id: evaluate
+    title: The release evaluation agrees on {{version}}
+    run: {flai: release --evaluate}
+    after: [test]
+  - id: risk
+    title: The analyzer reports the risk of {{version}}
+    run: {role: analyzer, prompt: "Report the risk before {{version}} is published."}
+    after: [test]
+---
+
+# Release check
+
+Run before a release is published.
+
+<!-- system-flow:end-of-baseline -->
+
+## Project additions
+```
+
+| Field | What it is |
+|-------|------------|
+| `name` | The formula's name, the file's stem, lowercase kebab-case |
+| `title` | The story's title; quote it when it starts with `{` |
+| `description` | The story's goal |
+| `nature` | The story's nature, `improvement` by default |
+| `inputs` | Each a `name`, a `description`, and optionally a `default`; one without a default is required. Use one as `{{name}}` in the title, a step's title, or a step's run |
+| `steps` | Each an `id`, a `title`, a `run`, and optionally the step ids it is `after` |
+| `run` | Exactly one of `flai: <command line after flai>`, `script: <path under scripts/ and its arguments>`, or `role: <name>` with `prompt: <text>` |
+
+```bash
+flai check                                         # formulas.file on a formula that could not run
+flai formula show release-check                    # its inputs, its steps, and their layers
+flai formula run release-check --input version=1.4.0  # the story and its tasks, in the backlog
+```
+
+**Understand what a formula means.** A formula file is code you run, as a role file is: review a change to one as you would a script's, and let it reach main only through a story you accept. No role may edit `design/workflows/`, and only a story's agent and you may run `flai formula run`. An input is filled in as text, so a value with shell characters reaches a script's or a flai command line as written: quote it in the formula where it matters. `flai check` does not catch a flai command that does not exist; that step fails when its task is worked. [A story from a formula](../users/flai.md#a-story-from-a-formula) says what the story holds.
 
 ### The settings host action: changing the host's settings from the dashboard (S-0105)
 

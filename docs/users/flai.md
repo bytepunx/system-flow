@@ -1,6 +1,6 @@
 ---
 title: flai CLI
-updated: 2026-11-01
+updated: 2026-11-02
 status: active
 ---
 
@@ -361,6 +361,31 @@ flai story new "Invoice PDF export" --epic E-0001 --body-stdin --autocommit < st
 ```
 
 The heading (`# S-0007 Invoice PDF export`) and the front matter are flai's; the body is everything below the heading. `flai check` runs with the new item in place, scoped to the new item's story as `flai check --story` scopes it ([ADR-0213](../../design/adrs/0213-a-checked-creation-of-a-work-item-refuses-only-a-new-finding-inside-the-new.md)): if it reports anything new inside that story, nothing is created, the parent is left as it was, the findings are printed, and the exit code is 4. A new finding outside the story does not refuse the item: `--json` lists it in `warnings`. So the first item made in a project with no `.gitignore` is created, though making it creates `.flai-cache`, and `layout.gitignore` comes back as a warning. A new epic has no story, so it refuses only a new finding on its own file or its parent's. A `wip.overlap` is advisory too: a task whose touches reach the claim of another story in progress is created, and the overlap is told as below (S-0451). `--autocommit` commits the new item and its parent on their own (`chore: [S-0007] create story: ...`) unless the project sets `dashboard.autocommit: false`; `--trailer` adds trailer lines. Nothing is pushed.
+
+### A story from a formula
+
+A formula is a repeatable process written down as one file, `design/workflows/formulas/<name>.md` (S-0421, [ADR-0238](../../design/adrs/0238-a-formula-is-a-markdown-file-under-design-workflows-formulas-whose-front-matter.md)). Its steps each run a flai command, a script under `scripts/`, or a role with a prompt. `flai formula run` makes from it one ordinary story in the backlog, with one task per step:
+
+```bash
+flai formula list                                           # each formula: its nature, step count, file, and title
+flai formula show release-check                             # its inputs, its steps and what each runs, and the steps' layers
+flai formula run release-check --input version=1.4.0        # a backlog story and its tasks; prints the story's ID
+flai formula run release-check --input version=1.4.0 --epic E-0007 --autocommit --json
+```
+
+| Part of the story | From the formula |
+|-------------------|------------------|
+| Title | Its `title`, each `{{name}}` filled with the input |
+| Nature | Its `nature`, `improvement` by default |
+| `formula` in the front matter | Its `name`; only `flai formula run` writes it |
+| Goal | Its `description` |
+| Acceptance criteria | One per step |
+| Notes | The formula's file and the inputs the run took |
+| Tasks | One per step: the step's title, `## Work` naming what it runs, `## Done when` its exit (the command or script exits 0, or the role's run ends with its work done), and the step's `after` as the task's |
+
+`--input name=value` gives one input; give it once per input. An input you leave out takes its default. `run` refuses, before it writes anything, a formula `flai check` reports a problem in, an input the formula does not declare, an input given twice or not as `name=value`, and a required input you did not give. Each item is checked as `flai story new --body-stdin` checks one; if one is refused, the story and the tasks made before it are removed (exit 4). `--autocommit` commits them in one commit; nothing is pushed.
+
+The story is ordered, pulled, worked, and accepted as any story. A story's agent and you may run `flai formula run`; every agent may run `list` and `show`. `flai check` reports `formulas.file` on a formula that could not run. [Writing a formula](../operators/index.md#writing-and-running-a-formula-s-0421) says how to write one.
 
 ### Who works a story: its agent
 
