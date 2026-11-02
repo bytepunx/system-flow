@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 3
-      output: 590
-      cache_read: 327543
-      cache_write: 5764
-      cost: 0.1234
+      input: 2
+      output: 548
+      cache_read: 325854
+      cache_write: 7454
+      cost: 0.1358
 ---
 
 # T-2425 template/CHANGELOG.md has one Unreleased section, with S-0518's line under it, after the rebase across release 1.1.17

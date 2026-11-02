@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 7
-      output: 1523
-      cache_read: 845073
-      cache_write: 14872
-      cost: 0.3185
+      input: 6
+      output: 1414
+      cache_read: 840715
+      cache_write: 19230
+      cost: 0.3503
 ---
 # T-2223 An ADR refining ADR-0060 and ADR-0203 records that the guard hook refuses a call when flai guard cannot start, and that inside the container the guard is the image's flai through the project's hook
 

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1531
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-fable-5-1
-      input: 671
-      output: 319
-      cache_read: 3265535
-      cache_write: 167497
-      cost: 5.2061
+      input: 312
+      output: 9005
+      cache_read: 3413847
+      cache_write: 41497
+      cost: 1.9457
 ---
 # T-2438 The dashboard's acceptance drops the checkbox for uncommitted files, shows the shared set it commits, and shows a send back as such
 

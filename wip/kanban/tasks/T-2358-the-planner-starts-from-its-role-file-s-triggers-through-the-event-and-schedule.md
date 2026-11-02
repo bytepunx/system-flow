@@ -3,16 +3,37 @@ id: T-2358
 type: task
 nature: feature
 title: The planner starts from its role file's triggers through the event and schedule launchers, which take an item-taking built-in role, in place of the replanner's own triggers
-status: backlog
+status: done
 parent: S-0554
 owner: alex
 created: 2026-10-30T20:49:07Z
-updated: 2026-10-30T20:49:07Z
-transitions: []
+updated: 2026-11-02T21:13:20Z
+transitions:
+  - to: ready
+    at: 2026-11-02T20:56:33Z
+    by: agent-S-0554
+  - to: in-progress
+    at: 2026-11-02T20:56:35Z
+    by: agent-S-0554
+  - to: done
+    at: 2026-11-02T21:13:20Z
+    by: agent-S-0554
 stream: S-0554
 tags: [cli]
-touches: [flai/internal/serve/replan.go, flai/internal/serve/role_events.go, flai/internal/serve/role_events_test.go, flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go]
+touches: [flai/internal/serve/replan.go, flai/internal/serve/role_events.go, flai/internal/serve/role_events_test.go, flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/planner_triggers_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go]
 after: [T-2356]
+usage:
+  source: log
+  seconds: 986
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 131
+      output: 713
+      cache_read: 8620446
+      cache_write: 186382
+      cost: 3.1186
 ---
 # T-2358 The planner starts from its role file's triggers through the event and schedule launchers, which take an item-taking built-in role, in place of the replanner's own triggers
 

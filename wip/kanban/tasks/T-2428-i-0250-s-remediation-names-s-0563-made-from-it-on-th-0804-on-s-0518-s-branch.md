@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 3
-      output: 714
-      cache_read: 396048
-      cache_write: 6970
-      cost: 0.1493
+      output: 663
+      cache_read: 394006
+      cache_write: 9012
+      cost: 0.1642
 ---
 
 # T-2428 I-0250's Remediation names S-0563, made from it on TH-0804, on S-0518's branch

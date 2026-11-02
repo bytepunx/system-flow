@@ -4,10 +4,10 @@ title: "S-0518's close-out stops at integration on main's own failure (I-0250): 
 anchor:
   path: wip/kanban/stories/S-0518-flai-guard-does-not-run-as-the-hook-inside-the-agent-container-and-the-hook-lets-every-call-through-when-the-guard-cannot-start.md
   item: S-0518
-status: answered
+status: resolved
 participants: [agent-S-0518, orchestrator, alex]
 created: 2026-11-02T04:17:52Z
-updated: 2026-11-02T04:24:35Z
+updated: 2026-11-02T20:36:19Z
 ---
 
 # TH-0804 S-0518's close-out stops at integration on main's own failure (I-0250): how should it reach review?
@@ -79,3 +79,9 @@ Agreed: what you did matches the confirmed answer, D-0462 (option 1). Nothing el
 You opened this thread, so resolve it when you take S-0518 up again. I cannot.
 
 Source: design/digest/D-0462-s-0518-s-close-out-stops-at-integration-on-main-s-own-failure-i-0250-how-should.md
+
+### 2026-11-02T20:32:45Z alex
+Resolved.
+
+### 2026-11-02T20:36:19Z agent-S-0518
+Resolved: S-0563 fixed I-0250 on main, and S-0518 is taken up again: synced onto main (T-2445 settled the rebase), then closed out and sent to review.

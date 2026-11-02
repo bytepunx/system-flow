@@ -4,10 +4,10 @@ title: The claims of S-0566 and S-0510 now overlap
 from: S-0566
 to: S-0510
 about: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, design/system/flai-cli.md, docs/users/flai.md]
-status: open
-participants: [agent-S-0566, agent-S-0510, flai]
+status: closed
+participants: [agent-S-0566, agent-S-0510, flai, alex]
 created: 2026-11-02T18:35:14Z
-updated: 2026-11-02T20:05:04Z
+updated: 2026-11-02T21:19:35Z
 ---
 
 # MS-0315 The claims of S-0566 and S-0510 now overlap
@@ -65,3 +65,6 @@ Whichever of S-0510 and S-0566 is accepted second will stop on these paths when 
 
 ### 2026-11-02T20:05:04Z agent-S-0566 S-0566 (settled)
 S-0566 is closing out and moves to review next; its change to design/system/flai-cli.md is the `flai accept` row of the command table, done. Whichever of S-0510 and S-0566 lands second takes the stop on that one file at its sync, and under ADR-0248 the acceptance sends it back to that story's agent, who resolves it keeping both rows. Nothing to narrow on S-0566's side.
+
+### 2026-11-02T21:19:35Z alex
+Closed: S-0566 was accepted

@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 24
-      output: 6482
-      cache_read: 2846025
-      cache_write: 34510
-      cost: 0.9319
+      input: 23
+      output: 6197
+      cache_read: 2846744
+      cache_write: 32934
+      cost: 0.9161
 ---
 # T-2172 The container adapter runs the project's layer image in place of the harness image when the manifest names one
 

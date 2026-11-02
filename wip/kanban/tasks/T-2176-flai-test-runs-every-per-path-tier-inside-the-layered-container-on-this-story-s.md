@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 209
-      output: 56422
-      cache_read: 24772963
-      cache_write: 300387
-      cost: 8.1115
+      input: 203
+      output: 53944
+      cache_read: 24779227
+      cache_write: 286668
+      cost: 7.9741
 ---
 # T-2176 flai test runs every per-path tier inside the layered container on this story's worktree, each limitation met is an issue, and the docs describe the layer
 

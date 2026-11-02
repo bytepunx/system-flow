@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1496
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-fable-5-1
-      input: 975
-      output: 307
-      cache_read: 4311389
-      cache_write: 323627
-      cost: 7.0288
+      input: 421
+      output: 12159
+      cache_read: 4609183
+      cache_write: 56026
+      cost: 2.627
 ---
 # T-2436 flai accept sends a story whose rebase it cannot settle back to its agent, whoever accepts
 

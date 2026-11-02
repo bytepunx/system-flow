@@ -3,15 +3,36 @@ id: T-2354
 type: task
 nature: improvement
 title: "An ADR refining ADR-0207 § 4 settles a role file's start prompt as data and the built-in roles' triggers read from their files"
-status: backlog
+status: done
 parent: S-0554
 owner: alex
 created: 2026-10-30T20:48:31Z
-updated: 2026-10-30T20:48:31Z
-transitions: []
+updated: 2026-11-02T20:39:07Z
+transitions:
+  - to: ready
+    at: 2026-11-02T20:37:02Z
+    by: agent-S-0554
+  - to: in-progress
+    at: 2026-11-02T20:37:03Z
+    by: agent-S-0554
+  - to: done
+    at: 2026-11-02T20:39:07Z
+    by: agent-S-0554
 stream: S-0554
 tags: [cli]
-touches: [design/adrs/README.md]
+touches: [design/adrs/README.md, design/adrs/0250-a-role-file-s-start-prompt-is-a-text-template-in-its-front-matter-s-start-field.md]
+usage:
+  source: log
+  seconds: 124
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 16
+      output: 121
+      cache_read: 1611712
+      cache_write: 13631
+      cost: 0.5755
 ---
 # T-2354 An ADR refining ADR-0207 § 4 settles a role file's start prompt as data and the built-in roles' triggers read from their files
 

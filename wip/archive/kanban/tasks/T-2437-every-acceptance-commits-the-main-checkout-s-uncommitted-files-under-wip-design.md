@@ -24,16 +24,16 @@ touches: [flai/internal/storygit/storygit.go, flai/internal/storygit/storygit_te
 after: [T-2436]
 usage:
   source: log
-  seconds: 2934
+  seconds: 2947
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-fable-5-1
-      input: 3274
-      output: 1255
-      cache_read: 26034200
-      cache_write: 343968
-      cost: 39.9973
+      input: 2396
+      output: 69189
+      cache_read: 26228897
+      cache_write: 318822
+      cost: 14.9493
 ---
 # T-2437 Every acceptance commits the main checkout's uncommitted files under wip, design, and the shared paths, and leaves the rest as they are
 

@@ -3,16 +3,37 @@ id: T-2356
 type: task
 nature: feature
 title: The trigger conditions stale-figures, replan-agent, and each-ready-story are implemented in flai/internal/roles/conditions.go
-status: backlog
+status: done
 parent: S-0554
 owner: alex
 created: 2026-10-30T20:48:48Z
-updated: 2026-10-30T20:48:48Z
-transitions: []
+updated: 2026-11-02T20:53:51Z
+transitions:
+  - to: ready
+    at: 2026-11-02T20:39:46Z
+    by: agent-S-0554
+  - to: in-progress
+    at: 2026-11-02T20:39:50Z
+    by: agent-S-0554
+  - to: done
+    at: 2026-11-02T20:53:51Z
+    by: agent-S-0554
 stream: S-0554
 tags: [cli]
 touches: [flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go]
 after: [T-2354]
+usage:
+  source: log
+  seconds: 841
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 63
+      output: 363
+      cache_read: 2966375
+      cache_write: 117533
+      cost: 1.0921
 ---
 # T-2356 The trigger conditions stale-figures, replan-agent, and each-ready-story are implemented in flai/internal/roles/conditions.go
 

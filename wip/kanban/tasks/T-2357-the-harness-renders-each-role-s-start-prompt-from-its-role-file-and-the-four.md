@@ -3,16 +3,37 @@ id: T-2357
 type: task
 nature: feature
 title: The harness renders each role's start prompt from its role file, and the four baseline role files carry today's start prompts
-status: backlog
+status: done
 parent: S-0554
 owner: alex
 created: 2026-10-30T20:49:01Z
-updated: 2026-10-30T20:49:01Z
-transitions: []
+updated: 2026-11-02T21:13:03Z
+transitions:
+  - to: ready
+    at: 2026-11-02T20:56:31Z
+    by: agent-S-0554
+  - to: in-progress
+    at: 2026-11-02T20:56:32Z
+    by: agent-S-0554
+  - to: done
+    at: 2026-11-02T21:13:03Z
+    by: agent-S-0554
 stream: S-0554
 tags: [cli, template]
-touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/roles/baseline/planner.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/roles/baseline/analyzer.md, flai/internal/roles/baseline/curator.md, design/workflows/roles/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/analyzer.md, design/workflows/roles/curator.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/analyzer.md, template/root/design/workflows/roles/curator.md]
+touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/roles/baseline/planner.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/roles/baseline/analyzer.md, flai/internal/roles/baseline/curator.md, design/workflows/roles/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/analyzer.md, design/workflows/roles/curator.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/analyzer.md, template/root/design/workflows/roles/curator.md, flai/internal/harness/adapters.go]
 after: [T-2355]
+usage:
+  source: log
+  seconds: 989
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 93
+      output: 586
+      cache_read: 5720503
+      cache_write: 164791
+      cost: 2.0841
 ---
 # T-2357 The harness renders each role's start prompt from its role file, and the four baseline role files carry today's start prompts
 

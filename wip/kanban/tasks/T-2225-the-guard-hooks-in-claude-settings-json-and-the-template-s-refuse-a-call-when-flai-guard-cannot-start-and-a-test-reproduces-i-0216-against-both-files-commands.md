@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 82
-      output: 18621
-      cache_read: 10332507
-      cache_write: 181839
-      cost: 3.894
+      input: 75
+      output: 17284
+      cache_read: 10279227
+      cache_write: 235125
+      cost: 4.2828
 ---
 # T-2225 The guard hooks in .claude/settings.json and the template's refuse a call when flai guard cannot start, and a test reproduces I-0216 against both files' commands
 

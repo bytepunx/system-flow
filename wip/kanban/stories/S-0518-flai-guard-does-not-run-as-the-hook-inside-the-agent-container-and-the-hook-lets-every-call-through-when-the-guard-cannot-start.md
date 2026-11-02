@@ -3,10 +3,10 @@ id: S-0518
 type: story
 nature: remediation
 title: flai guard does not run as the hook inside the agent container, and the hook lets every call through when the guard cannot start
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-28T12:52:56Z
-updated: 2026-11-02T04:22:46Z
+updated: 2026-11-02T20:44:46Z
 transitions:
   - to: ready
     at: 2026-11-01T23:50:02Z
@@ -20,6 +20,9 @@ transitions:
   - to: in-progress
     at: 2026-11-02T03:56:41Z
     by: flai
+  - to: review
+    at: 2026-11-02T20:44:46Z
+    by: agent-S-0518
 blocked:
   - from: 2026-11-02T00:20:51Z
     until: 2026-11-02T00:20:52Z
@@ -37,6 +40,7 @@ blocked:
     until: 2026-11-02T04:21:06Z
     reason: awaiting the operator on TH-0804
   - from: 2026-11-02T04:22:46Z
+    until: 2026-11-02T20:32:49Z
     reason: "waiting for S-0563 to fix I-0250 on main: TestAThreadPackIsUnderAQuarterOfTheGeneralPack fails the integration tier of S-0518's close-out and of the merge queue's batch until then (TH-0804, option 1)"
 tags: [cli, template]
 topics: [harness]
@@ -48,7 +52,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 5105
+  seconds: 5782
   priced_by: harness
   turns:
     - day: 2026-11-01
@@ -56,15 +60,15 @@ usage:
       work: 34
     - day: 2026-11-02
       ceremony: 4
-      hand_edits: 5
-      work: 99
+      hand_edits: 6
+      work: 121
   models:
     - model: claude-opus-5-5
-      input: 328
-      output: 74222
-      cache_read: 41184964
-      cache_write: 724802
-      cost: 15.5212
+      input: 376
+      output: 86177
+      cache_read: 51250169
+      cache_write: 1172287
+      cost: 21.3534
   strategic:
     - kind: orchestrator
       seconds: 1296
@@ -119,6 +123,7 @@ This story remediates [I-0216](../../../design/issues/I-0216-flai-guard-does-not
 - T-2426 TestTheGuardHooksRefuseACallWhenTheGuardCannotStart writes every file it executes before t.Parallel, so a parallel test's fork cannot make one text file busy
 - T-2427 template/CHANGELOG.md matches main but for S-0518's line under the top Unreleased, after the rebase across release 1.1.18
 - T-2428 I-0250's Remediation names S-0563, made from it on TH-0804, on S-0518's branch
+- T-2445 After the rebase across S-0509, S-0563, and release 1.1.19, I-0216 is closed again, the guard sentence is back in agent-adapters.md, and the changelog line is under Unreleased
 
 ## Notes
 

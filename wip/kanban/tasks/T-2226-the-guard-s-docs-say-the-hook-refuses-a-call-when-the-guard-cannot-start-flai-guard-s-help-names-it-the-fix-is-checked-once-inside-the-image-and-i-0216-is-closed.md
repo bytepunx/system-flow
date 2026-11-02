@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 5
-      output: 1019
-      cache_read: 565158
-      cache_write: 9946
-      cost: 0.213
+      input: 4
+      output: 945
+      cache_read: 562244
+      cache_write: 12861
+      cost: 0.2343
 ---
 # T-2226 The guard's docs say the hook refuses a call when the guard cannot start, flai guard's help names it, the fix is checked once inside the image, and I-0216 is closed
 

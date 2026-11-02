@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 3
-      output: 672
-      cache_read: 372799
-      cache_write: 6561
-      cost: 0.1405
+      output: 624
+      cache_read: 370877
+      cache_write: 8483
+      cost: 0.1545
 ---
 
 # T-2427 template/CHANGELOG.md matches main but for S-0518's line under the top Unreleased, after the rebase across release 1.1.18

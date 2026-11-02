@@ -3,16 +3,37 @@ id: T-2355
 type: task
 nature: feature
 title: flai reads a role file's start prompt and renders it over a run's fields, and flai check reports one that does not parse or names an unknown field
-status: backlog
+status: done
 parent: S-0554
 owner: alex
 created: 2026-10-30T20:48:42Z
-updated: 2026-10-30T20:48:42Z
-transitions: []
+updated: 2026-11-02T20:53:41Z
+transitions:
+  - to: ready
+    at: 2026-11-02T20:39:38Z
+    by: agent-S-0554
+  - to: in-progress
+    at: 2026-11-02T20:39:41Z
+    by: agent-S-0554
+  - to: done
+    at: 2026-11-02T20:53:41Z
+    by: agent-S-0554
 stream: S-0554
 tags: [cli]
-touches: [flai/internal/roles/start.go, flai/internal/roles/start_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go]
+touches: [flai/internal/roles/start.go, flai/internal/roles/start_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/roles/definition.go, flai/internal/roles/definition_test.go]
 after: [T-2354]
+usage:
+  source: log
+  seconds: 840
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 159
+      cache_read: 1855323
+      cache_write: 123250
+      cost: 0.7006
 ---
 # T-2355 flai reads a role file's start prompt and renders it over a run's fields, and flai check reports one that does not parse or names an unknown field
 

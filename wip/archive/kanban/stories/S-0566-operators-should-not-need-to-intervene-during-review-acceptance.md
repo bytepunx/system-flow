@@ -3,10 +3,10 @@ id: S-0566
 type: story
 nature: improvement
 title: Operators should not need to intervene during review acceptance
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-02T18:21:16Z
-updated: 2026-11-02T20:26:25Z
+updated: 2026-11-02T21:19:35Z
 transitions:
   - to: ready
     at: 2026-11-02T18:21:38Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-02T18:26:18Z
     by: agent-S-0566
+  - to: review
+    at: 2026-11-02T20:45:30Z
+    by: agent-S-0566
+  - to: done
+    at: 2026-11-02T21:19:35Z
+    by: alex
 tags: [cli]
 touches: [flai/cmd, design/adrs/0248-every-acceptance-commits-the-main-checkout-s-uncommitted-files-under-wip-design.md, design/adrs/README.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/storygit/sync.go, design/system/flai-cli.md, design/system/strategic-agents.md, design/system/workflow.md, docs/users/flai.md, docs/users/flaiover.md, flaiover/src/lib/components/AcceptConfirm.svelte, flaiover/src/lib/components/AcceptConfirm.svelte.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, "flaiover/src/routes/api/items/[id]/accept/+server.ts", "flaiover/src/routes/api/items/[id]/accept/accept.test.ts", "flaiover/src/routes/api/items/[id]/move/+server.ts", flaiover/src/routes/board/+page.svelte, "flaiover/src/routes/items/[id]/+page.svelte", docs/users/flai-reference.md, flai/internal/hostapi/writes.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/land.go, flai/internal/mergequeue/land_test.go, flai/internal/mergequeue/preflight.go, flai/internal/mergequeue/preflight_test.go, flai/internal/storygit/storygit.go, flai/internal/storygit/storygit_test.go, design/system/flaiover-dashboard.md]
 agent:
@@ -23,20 +29,26 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 5149
-  estimated: true
-  priced_by: estimate
+  seconds: 8367
+  priced_by: harness
   turns:
     - day: 2026-11-02
-      hand_edits: 1
-      work: 34
+      ceremony: 1
+      hand_edits: 2
+      work: 185
   models:
     - model: claude-fable-5-1
-      input: 6194
-      output: 2407
-      cache_read: 41603546
-      cache_write: 1363673
-      cost: 65.1532
+      input: 11250
+      output: 324853
+      cache_read: 123148618
+      cache_write: 1496915
+      cost: 70.1893
+    - model: claude-sonnet-5-5
+      input: 36
+      output: 10484
+      cache_read: 1314519
+      cache_write: 112674
+      cost: 0.518
 cost_of_delay:
   inputs:
     penalty_per_week: 600

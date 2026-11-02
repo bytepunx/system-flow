@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 3
-      output: 643
-      cache_read: 357010
-      cache_write: 6283
-      cost: 0.1345
+      output: 597
+      cache_read: 355169
+      cache_write: 8124
+      cost: 0.148
 ---
 
 # T-2426 TestTheGuardHooksRefuseACallWhenTheGuardCannotStart writes every file it executes before t.Parallel, so a parallel test's fork cannot make one text file busy

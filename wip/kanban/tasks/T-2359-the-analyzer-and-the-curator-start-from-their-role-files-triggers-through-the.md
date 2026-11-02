@@ -3,12 +3,18 @@ id: T-2359
 type: task
 nature: feature
 title: The analyzer and the curator start from their role files' triggers through the same launchers, in place of the analysis and digest schedulers' own rules
-status: backlog
+status: in-progress
 parent: S-0554
 owner: alex
 created: 2026-10-30T20:49:20Z
-updated: 2026-10-30T20:49:20Z
-transitions: []
+updated: 2026-11-02T21:16:56Z
+transitions:
+  - to: ready
+    at: 2026-11-02T21:16:55Z
+    by: agent-S-0554
+  - to: in-progress
+    at: 2026-11-02T21:16:56Z
+    by: agent-S-0554
 stream: S-0554
 tags: [cli]
 touches: [flai/internal/serve/analysis_schedule.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/serve.go]

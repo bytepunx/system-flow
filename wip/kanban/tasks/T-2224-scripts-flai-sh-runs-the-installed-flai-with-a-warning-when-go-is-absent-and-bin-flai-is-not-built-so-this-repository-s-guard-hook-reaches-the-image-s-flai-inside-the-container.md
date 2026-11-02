@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 8
-      output: 1836
-      cache_read: 1018978
-      cache_write: 17933
-      cost: 0.384
+      input: 7
+      output: 1705
+      cache_read: 1013724
+      cache_write: 23188
+      cost: 0.4224
 ---
 # T-2224 scripts/flai.sh runs the installed flai, with a warning, when go is absent and bin/flai is not built, so this repository's guard hook reaches the image's flai inside the container
 

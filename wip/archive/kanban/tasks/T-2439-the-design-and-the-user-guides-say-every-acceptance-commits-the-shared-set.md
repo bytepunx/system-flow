@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1517
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-fable-5-1
-      input: 639
-      output: 317
-      cache_read: 3113040
-      cache_write: 178852
-      cost: 4.9921
+      input: 299
+      output: 8635
+      cache_read: 3273491
+      cache_write: 39790
+      cost: 1.8657
 ---
 # T-2439 The design and the user guides say every acceptance commits the shared set, leaves the rest, and sends an unsettled rebase back to the agent
 
