@@ -6,7 +6,7 @@ title: flai test's go-test tier runs the mcpserver package with -race into go te
 status: backlog
 owner: alex
 created: 2026-10-29T05:59:43Z
-updated: 2026-11-02T05:30:00Z
+updated: 2026-11-02T06:04:42Z
 transitions: []
 tags: [flai, testing]
 topics: [cli, go]
@@ -42,10 +42,10 @@ cost_of_delay:
   at: 2026-10-29T07:36:26Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-02T15:55:00Z
-  basis: "Its own forecast of 1h30m; 17th in the pull order with an in-progress limit of 5, behind S-0506, S-0516, S-0518, S-0424, S-0554, S-0425, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0508, S-0509, S-0510, S-0517, S-0520 and S-0241."
+  delivery: 2026-11-02T15:43:00Z
+  basis: "Its own forecast of 1h30m; 16th in the pull order with an in-progress limit of 5, behind S-0424, S-0506, S-0518, S-0554, S-0425, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0508, S-0509, S-0510, S-0517, S-0520 and S-0241."
   by: flai
-  at: 2026-11-02T05:30:00Z
+  at: 2026-11-02T06:04:42Z
 ---
 # S-0540 flai test's go-test tier runs the mcpserver package with -race into go test's 10-minute default timeout on a loaded host, and names only the package, so a story that changes mcpserver cannot pass its tests
 
