@@ -1,13 +1,19 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"path"
+	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
+	"github.com/bytepunx/system-flow/flai/internal/analysis"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/itemnew"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
@@ -516,7 +522,7 @@ func newIssueSummaryCmd(a *app) *cobra.Command {
 
 func newIssueListCmd(a *app) *cobra.Command {
 	var all bool
-	var story string
+	var story, report string
 	c := &cobra.Command{
 		Use:   "list",
 		Short: "List issues without touching files",
@@ -525,12 +531,24 @@ occurrence recorded for that story, read from the story's worktree when it has
 one: the issues a story records are committed on its branch and are there
 until it is accepted. --json gives every issue, closed ones too, with stories,
 the stories its occurrences name, and story, the open story that links it, or
-"" when none does.`,
+"" when none does.
+
+--report lists only the open issues with an instance that names the analysis
+report, closed ones too with --all: a markdown file under design/analysis, or
+latest for the newest report there, the one named for the latest day, of those
+the last written. The text starts with a line naming the report, and --json
+gives {report, issues}, the issues as above. It is the analysis-cadence
+formula's listing of what the analyzer's report found (S-0424).`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
 			if err != nil {
 				return err
+			}
+			if report != "" {
+				if report, err = listedReport(repo, report); err != nil {
+					return err
+				}
 			}
 			list, err := issues.List(issues.RepoFor(repo, story))
 			if err != nil {
@@ -538,6 +556,13 @@ the stories its occurrences name, and story, the open story that links it, or
 			}
 			if story != "" {
 				list = issues.RecordedBy(list, story)
+			}
+			if report != "" {
+				named, err := issues.NamingReport(issues.RepoFor(repo, story), report)
+				if err != nil {
+					return err
+				}
+				list = namingReport(list, named, all)
 			}
 			if a.jsonOut {
 				items, err := repo.List(false)
@@ -548,7 +573,13 @@ the stories its occurrences name, and story, the open story that links it, or
 				for _, is := range list {
 					out = append(out, issueListed{Issue: is, Stories: append([]string{}, issues.Stories(is)...), Story: issues.LinkedBy(is, items)})
 				}
+				if report != "" {
+					return a.printJSON(issuesOfReport{Report: report, Issues: out})
+				}
 				return a.printJSON(out)
+			}
+			if report != "" {
+				fmt.Fprintf(a.out, "Report: %s\n", report)
 			}
 			for _, is := range list {
 				if !all && is.Status != "open" {
@@ -561,7 +592,98 @@ the stories its occurrences name, and story, the open story that links it, or
 	}
 	c.Flags().BoolVar(&all, "all", false, "include closed issues")
 	c.Flags().StringVar(&story, "story", "", "list only the issues with an occurrence recorded for this story, from its worktree when it has one")
+	c.Flags().StringVar(&report, "report", "", "list only the open issues with an instance naming this analysis report: its path under design/analysis, or latest for the newest")
 	return c
+}
+
+// issuesOfReport is what flai issue list --report --json gives: the report,
+// latest resolved, and the issues that name it.
+type issuesOfReport struct {
+	Report string        `json:"report"`
+	Issues []issueListed `json:"issues"`
+}
+
+// latestReport is the --report value that names the newest analysis report.
+const latestReport = "latest"
+
+// reportName is an analysis report's file name, <date>-<focus>.md,
+// capturing the date.
+var reportName = regexp.MustCompile(`^(\d{4}-\d{2}-\d{2})-[a-z]+\.md$`)
+
+// listedReport is the analysis report --report names, as a path from the
+// project root, slash separated: latest is the newest report in the reports
+// folder, and any other value is a markdown file under it other than its
+// index, taken from the project root when relative. latest with no report
+// there is an error.
+func listedReport(repo *workitem.Repo, value string) (string, error) {
+	dir := analysis.Dir(repo.Manifest)
+	if strings.TrimSpace(value) == latestReport {
+		newest, err := newestAnalysisReport(repo.Root, dir)
+		if err != nil {
+			return "", err
+		}
+		if newest == "" {
+			return "", fmt.Errorf("--report latest: no analysis report under %s/, named <date>-<focus>.md; the analyzer writes one", dir)
+		}
+		return newest, nil
+	}
+	rel := strings.TrimSpace(value)
+	if filepath.IsAbs(rel) {
+		if r, err := filepath.Rel(repo.Root, rel); err == nil {
+			rel = r
+		}
+	}
+	rel = path.Clean(filepath.ToSlash(rel))
+	if !strings.HasPrefix(rel, dir+"/") || path.Ext(rel) != ".md" || analysis.Skipped(path.Base(rel)) {
+		return "", fmt.Errorf("--report %q is not an analysis report: give the markdown file under %s/, like %s/2026-10-06-risk.md, or latest", value, dir, dir)
+	}
+	return rel, nil
+}
+
+// newestAnalysisReport is the newest report in dir, a folder under root: the
+// one named for the latest day, and of those the last written, then the last
+// by name; "" when there is none.
+func newestAnalysisReport(root, dir string) (string, error) {
+	entries, err := os.ReadDir(filepath.Join(root, filepath.FromSlash(dir)))
+	if errors.Is(err, os.ErrNotExist) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("reading the analysis reports' folder %s: %w", dir, err)
+	}
+	var best, bestDay string
+	var bestAt time.Time
+	for _, e := range entries {
+		m := reportName.FindStringSubmatch(e.Name())
+		if m == nil || !e.Type().IsRegular() {
+			continue
+		}
+		info, err := e.Info()
+		if err != nil {
+			continue
+		}
+		day, at := m[1], info.ModTime()
+		if best == "" || day > bestDay || day == bestDay && (at.After(bestAt) || at.Equal(bestAt) && e.Name() > best) {
+			best, bestDay, bestAt = e.Name(), day, at
+		}
+	}
+	if best == "" {
+		return "", nil
+	}
+	return path.Join(dir, best), nil
+}
+
+// namingReport are the issues of list whose IDs are named, those an instance
+// of which names the report as issues.NamingReport gives them, open ones only
+// unless all, in list's order.
+func namingReport(list []*issues.Issue, named []string, all bool) []*issues.Issue {
+	var out []*issues.Issue
+	for _, is := range list {
+		if (all || is.Status == "open") && slices.Contains(named, is.ID) {
+			out = append(out, is)
+		}
+	}
+	return out
 }
 
 // issueListed is an issue as flai issue list --json gives it.

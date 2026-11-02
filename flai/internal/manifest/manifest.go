@@ -397,6 +397,10 @@ type Analysis struct {
 	// Schedule is when flai serve runs the analyzer: a five-field cron
 	// expression in UTC or daily; empty means no schedule.
 	Schedule string `yaml:"schedule,omitempty" json:"schedule,omitempty"`
+	// Formula is the formula flai serve makes an instance of, in place of
+	// starting the analyzer, each time Schedule comes round: a formula's
+	// kebab-case name; empty for none (S-0424).
+	Formula string `yaml:"formula,omitempty" json:"formula,omitempty"`
 }
 
 // AnalysisSchedule is analysis.schedule parsed: nil when it is empty.
@@ -410,6 +414,9 @@ func (a Analysis) Errors() []string {
 	var errs []string
 	if _, err := a.AnalysisSchedule(); err != nil {
 		errs = append(errs, err.Error())
+	}
+	if f := a.Formula; f != "" && !roleName.MatchString(f) {
+		errs = append(errs, fmt.Sprintf("analysis.formula %q is not a formula's name such as analysis-cadence (lower case letters and digits, joined by single hyphens); write the name its file under design/workflows/formulas gives", f))
 	}
 	return append(errs, a.Agent.problems("analysis.agent")...)
 }

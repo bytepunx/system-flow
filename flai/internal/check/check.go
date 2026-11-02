@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -1361,6 +1362,36 @@ func (c *checker) formulas() {
 	names := formulas.Names{Roles: c.roleNames(), Script: formulas.ScriptOnDisk(c.repo.Root)}
 	for _, p := range append(problems, formulas.Validate(list, names)...) {
 		c.add(Error, p.Code, filepath.Join(c.repo.Root, filepath.FromSlash(p.Path)), p.Line, "%s", p.Message)
+	}
+	c.analysisFormula(list, problems)
+}
+
+// analysisFormula holds analysis.formula to the formula files (S-0424): the
+// formula it names is one a file defines, and analysis.schedule makes its
+// instance with no inputs, so its every input carries a default. Either
+// falls short as a manifest.analysis error. A formula whose file does not
+// parse is left to the formulas.file error on it.
+func (c *checker) analysisFormula(list []formulas.Formula, problems []formulas.Problem) {
+	name := c.repo.Manifest.Analysis.Formula
+	if name == "" {
+		return
+	}
+	file := path.Join(formulas.Dir(c.repo.Manifest.Layout["design"]), name+".md")
+	for _, p := range problems {
+		if p.Path == file {
+			return
+		}
+	}
+	mf := filepath.Join(c.repo.Root, manifest.File)
+	f, err := formulas.Find(list, name)
+	if err != nil {
+		c.add(Error, "manifest.analysis", mf, keyLine(mf, "analysis"), "analysis.formula: %v", err)
+		return
+	}
+	for _, in := range f.Inputs {
+		if in.Required() {
+			c.add(Error, "manifest.analysis", mf, keyLine(mf, "analysis"), "analysis.formula names %s, whose input %s has no default, but analysis.schedule makes its instance with no inputs; give %s a default in %s, or name another formula", name, in.Name, in.Name, f.Path)
+		}
 	}
 }
 

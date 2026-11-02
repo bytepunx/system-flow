@@ -269,3 +269,54 @@ func TestScopedCheckHoldsAFormulaToTheStorysPaths(t *testing.T) {
 		}
 	}
 }
+
+// analysisFormulaProject is a formulasProject whose manifest names formula
+// as analysis.formula, with files as its formula files.
+func analysisFormulaProject(t *testing.T, formula string, files map[string]string) *workitem.Repo {
+	t.Helper()
+	repo := formulasProject(t, files)
+	m := "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\nanalysis:\n  schedule: daily\n  formula: " + formula + "\n"
+	if err := os.WriteFile(filepath.Join(repo.Root, "system-flow.yaml"), []byte(m), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	again, err := workitem.Open(repo.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return again
+}
+
+// S-0424: analysis.formula names a formula a file defines whose every input
+// carries a default; one no file defines, or one with an input of no
+// default, is a manifest.analysis error on the manifest's analysis line. A
+// formula whose file does not parse is left to its formulas.file error.
+func TestAnalysisFormulaIsHeldToTheFormulaFiles(t *testing.T) {
+	defaulted := strings.Replace(formulaFile, "    description: The version to release.\n", "    description: The version to release.\n    default: next\n", 1)
+	for _, tc := range []struct {
+		name, formula string
+		files         map[string]string
+		says          string
+	}{
+		{"a formula whose inputs all carry a default", "release", map[string]string{"release.md": defaulted}, ""},
+		{"a formula no file defines", "cadence", map[string]string{"release.md": defaulted}, "analysis.formula: no formula is named cadence; the formulas are release"},
+		{"a formula with an input of no default", "release", map[string]string{"release.md": formulaFile},
+			"analysis.formula names release, whose input version has no default, but analysis.schedule makes its instance with no inputs; give version a default in design/workflows/formulas/release.md"},
+		{"a formula whose file does not parse", "release", map[string]string{"release.md": "no front matter\n"}, ""},
+	} {
+		repo := analysisFormulaProject(t, tc.formula, tc.files)
+		got := findings(t, repo, "manifest.analysis")
+		if tc.says == "" {
+			if len(got) != 0 {
+				t.Errorf("%s: %+v", tc.name, got)
+			}
+			continue
+		}
+		if len(got) != 1 || got[0].Level != Error || got[0].Path != "system-flow.yaml" || got[0].Line != 8 || !strings.Contains(got[0].Message, tc.says) {
+			t.Errorf("%s: %+v, want one manifest.analysis error on system-flow.yaml:8 saying %q", tc.name, got, tc.says)
+		}
+	}
+	repo := analysisFormulaProject(t, "release", map[string]string{"release.md": "no front matter\n"})
+	if got := findings(t, repo, formulas.CodeFile); len(got) != 1 {
+		t.Errorf("the file that does not parse: %+v", got)
+	}
+}

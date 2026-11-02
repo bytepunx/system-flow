@@ -3,6 +3,7 @@ package manifest
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 	"os"
 	"path/filepath"
@@ -974,6 +975,33 @@ func TestAnalysisSchedule(t *testing.T) {
 		}
 		if s, err := c.a.AnalysisSchedule(); err == nil || s != nil {
 			t.Errorf("%+v: a bad schedule is accepted: %v", c.a, s)
+		}
+	}
+}
+
+// S-0424: analysis.formula reads from the manifest beside the schedule; a
+// kebab-case name, or none, is valid, and any other is one error naming the
+// key.
+func TestAnalysisFormula(t *testing.T) {
+	p := filepath.Join(t.TempDir(), File)
+	body := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\nanalysis:\n  schedule: daily\n  formula: analysis-cadence\n"
+	if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m, err := Load(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m.Analysis.Formula != "analysis-cadence" || m.Analysis.Schedule != "daily" {
+		t.Fatalf("analysis: %+v", m.Analysis)
+	}
+	if errs := m.Analysis.Errors(); len(errs) != 0 {
+		t.Errorf("a kebab-case formula: %v", errs)
+	}
+	for _, name := range []string{"Analysis", "analysis_cadence", "analysis--cadence", "-cadence", "cadence-", "two words"} {
+		got := Analysis{Formula: name}.Errors()
+		if len(got) != 1 || !strings.Contains(got[0], fmt.Sprintf("analysis.formula %q is not a formula's name", name)) {
+			t.Errorf("%q: got %q, want one error naming analysis.formula", name, got)
 		}
 	}
 }

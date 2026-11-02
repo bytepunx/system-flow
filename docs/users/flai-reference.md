@@ -2493,11 +2493,14 @@ flai issue list [flags]
 
 List issues without touching files. --story lists only the issues with an occurrence recorded for that story, read from the story's worktree when it has one: the issues a story records are committed on its branch and are there until it is accepted. --json gives every issue, closed ones too, with stories, the stories its occurrences name, and story, the open story that links it, or "" when none does.
 
+--report lists only the open issues with an instance that names the analysis report, closed ones too with --all: a markdown file under design/analysis, or latest for the newest report there, the one named for the latest day, of those the last written. The text starts with a line naming the report, and --json gives {report, issues}, the issues as above. It is the analysis-cadence formula's listing of what the analyzer's report found (S-0424).
+
 Flags:
 
 | Flag | Meaning |
 |------|---------|
 | `--all` | include closed issues |
+| `--report` string | list only the open issues with an instance naming this analysis report: its path under design/analysis, or latest for the newest |
 | `--story` string | list only the issues with an occurrence recorded for this story, from its worktree when it has one |
 
 #### flai issue new

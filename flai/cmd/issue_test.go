@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
@@ -104,6 +105,87 @@ func TestIssueListStory(t *testing.T) {
 	out, _, _ = runIn(t, root, "issue", "list", "--story", "S-0099", "--json")
 	if strings.TrimSpace(out) != "[]" {
 		t.Errorf("list --story with none should be an empty array: %s", out)
+	}
+}
+
+// S-0424: flai issue list --report lists the open issues an instance names
+// the report, closed ones too with --all, after a line naming it; latest is
+// the report named for the newest day, of those the last written; --json
+// gives the report and the issues. A path that is no analysis report, and
+// latest with none written, are refused.
+func TestIssueListReport(t *testing.T) {
+	t.Parallel()
+	root := issueProject(t)
+	if _, errOut, code := runIn(t, root, "issue", "list", "--report", "latest"); code == 0 || !strings.Contains(errOut, "--report latest: no analysis report under design/analysis/") {
+		t.Errorf("latest with no report: %d %s", code, errOut)
+	}
+	const older, newer = "design/analysis/2026-10-06-bottlenecks.md", "design/analysis/2026-10-13-all.md"
+	for _, args := range [][]string{
+		{"issue", "new", "Review waits a day", "--class", "efficiency", "--report", older},
+		{"issue", "new", "Lint is slow", "--class", "efficiency", "--report", newer},
+		{"issue", "new", "Fixture was ignored", "--class", "defect", "--report", newer},
+		{"issue", "new", "Tests flake", "--class", "defect"},
+		{"issue", "close", "I-0003", "--reason", "fixed"},
+	} {
+		if _, errOut, code := runIn(t, root, args...); code != 0 {
+			t.Fatalf("%v: %d %s", args, code, errOut)
+		}
+	}
+	analysisDir := filepath.Join(root, "design", "analysis")
+	_ = os.MkdirAll(analysisDir, 0o755)
+	_ = os.WriteFile(filepath.Join(analysisDir, "README.md"), []byte("# analysis\n"), 0o644)
+	_ = os.WriteFile(filepath.Join(analysisDir, "notes.txt"), []byte("not a report\n"), 0o644)
+	for _, name := range []string{"2026-10-13-all.md", "2026-10-06-bottlenecks.md"} { // the older day written last
+		if err := os.WriteFile(filepath.Join(analysisDir, name), []byte("# Report\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	ids := func(out string) string {
+		var got []string
+		for _, line := range strings.Split(strings.TrimSpace(out), "\n")[1:] {
+			got = append(got, strings.Fields(line)[0])
+		}
+		return strings.Join(got, ",")
+	}
+	for _, c := range []struct {
+		args       []string
+		report, is string
+	}{
+		{[]string{"--report", older}, older, "I-0001"},
+		{[]string{"--report", filepath.Join(root, older)}, older, "I-0001"},
+		{[]string{"--report", "latest"}, newer, "I-0002"},
+		{[]string{"--report", "latest", "--all"}, newer, "I-0002,I-0003"},
+	} {
+		out, errOut, code := runIn(t, root, append([]string{"issue", "list"}, c.args...)...)
+		if code != 0 || !strings.HasPrefix(out, "Report: "+c.report+"\n") || ids(out) != c.is {
+			t.Errorf("list %v: %d %q %s, want the report %s and %s", c.args, code, out, errOut, c.report, c.is)
+		}
+	}
+
+	out, errOut, code := runIn(t, root, "issue", "list", "--report", "latest", "--json")
+	var got struct {
+		Report string           `json:"report"`
+		Issues []map[string]any `json:"issues"`
+	}
+	if code != 0 || json.Unmarshal([]byte(out), &got) != nil || got.Report != newer || len(got.Issues) != 1 || got.Issues[0]["id"] != "I-0002" || got.Issues[0]["status"] != "open" {
+		t.Errorf("list --report latest --json: %d %s %s", code, out, errOut)
+	}
+
+	// a later report the same day, written last, is the latest, and names no issue
+	later := filepath.Join(analysisDir, "2026-10-13-risk.md")
+	_ = os.WriteFile(later, []byte("# Report\n"), 0o644)
+	future := time.Now().Add(time.Hour)
+	_ = os.Chtimes(later, future, future)
+	out, _, _ = runIn(t, root, "issue", "list", "--report", "latest", "--json")
+	if json.Unmarshal([]byte(out), &got) != nil || got.Report != "design/analysis/2026-10-13-risk.md" || got.Issues == nil || len(got.Issues) != 0 {
+		t.Errorf("the same day's last written report: %s", out)
+	}
+
+	for _, report := range []string{"design/issues/summary.md", "design/analysis/README.md", "design/analysis/notes.txt", "../2026-10-06-bottlenecks.md"} {
+		if _, errOut, code := runIn(t, root, "issue", "list", "--report", report); code == 0 || !strings.Contains(errOut, "is not an analysis report") {
+			t.Errorf("--report %s should be refused: %d %s", report, code, errOut)
+		}
 	}
 }
 

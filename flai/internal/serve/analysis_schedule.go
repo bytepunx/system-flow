@@ -3,10 +3,12 @@ package serve
 import (
 	"context"
 	"errors"
+	"os"
 	"sync"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/cron"
+	"github.com/bytepunx/system-flow/flai/internal/formulas"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -26,6 +28,15 @@ import (
 // between two looks come round once, and a schedule set or changed comes
 // round first at its next time from then.
 //
+// When analysis.formula names a formula, the schedule coming round makes
+// that formula's instance in place of starting the analyzer (S-0424): it
+// runs flai formula run <name> --ready --autocommit --json in the main
+// checkout, as the formula scheduler does, journalled under the formula
+// action with the trigger "analysis.schedule daily", and the instance's role
+// step starts the analyzer through the checks a role's run makes. A run flai
+// formula run refuses is logged and not tried again until the schedule next
+// comes round.
+//
 // What it has seen is kept in memory only: times that passed while flai
 // serve was down do not come round. While the analyze host action is off it
 // starts nothing and keeps up with the schedule, so that turning it on does
@@ -37,6 +48,10 @@ type analysisScheduler struct {
 	o       Options
 	e       Entry
 	starter *launcher
+	// run runs flai formula run for analysis.formula, and exe is this
+	// flai's executable, as the formula scheduler's are.
+	run outputRunner
+	exe func() (string, error)
 
 	mu sync.Mutex
 	// cadence follows analysis.schedule.
@@ -52,7 +67,7 @@ type analysisScheduler struct {
 // the analyzer with starter, the project's launcher. Times before now do
 // not come round.
 func newAnalysisScheduler(o Options, e Entry, starter *launcher) *analysisScheduler {
-	s := &analysisScheduler{o: o, e: e, starter: starter, cadence: cadence{mark: o.Now().UTC()}, said: map[string]bool{}}
+	s := &analysisScheduler{o: o, e: e, starter: starter, run: runOutput, exe: os.Executable, cadence: cadence{mark: o.Now().UTC()}, said: map[string]bool{}}
 	if repo, err := workitem.Open(e.Root); err == nil {
 		s.cadence.see(repo.Manifest.Analysis.Schedule, s.cadence.mark)
 	}
@@ -63,7 +78,8 @@ func newAnalysisScheduler(o Options, e Entry, starter *launcher) *analysisSchedu
 // come round since the last look, or a run it came round for was held by the
 // budget state, and the analyze host action is on, unless the checks refuse
 // it. A start the budget state holds is kept for the next look, and logged
-// once per state.
+// once per state. With analysis.formula set, it makes that formula's
+// instance instead.
 func (s *analysisScheduler) look(ctx context.Context) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -86,6 +102,10 @@ func (s *analysisScheduler) look(ctx context.Context) {
 		return
 	}
 	s.heldDue = ""
+	if name := repo.Manifest.Analysis.Formula; name != "" {
+		s.makeFormula(ctx, name, "analysis."+trigger, now)
+		return
+	}
 	as, err := analyzeCheck(s.o, s.e, "")
 	var no *Refused
 	switch {
@@ -102,6 +122,15 @@ func (s *analysisScheduler) look(ctx context.Context) {
 		s.heldDue = trigger
 		s.starter.heldOnce(s.said, "scheduled analyzer held", *held, "trigger", trigger)
 	}
+}
+
+// makeFormula makes the instance of the formula analysis.formula names, with
+// trigger, through the run the formula scheduler makes (S-0424): this flai's
+// formula run <name> --ready --autocommit --json in the main checkout,
+// journalled under the formula action, or logged when it is refused.
+func (s *analysisScheduler) makeFormula(ctx context.Context, name, trigger string, now time.Time) {
+	fs := &formulaScheduler{o: s.o, e: s.e, starter: s.starter, run: s.run, exe: s.exe}
+	fs.make(ctx, formulas.Formula{Name: name}, trigger, now)
 }
 
 // schedule is analysis.schedule parsed, nil when it is unset or cannot be

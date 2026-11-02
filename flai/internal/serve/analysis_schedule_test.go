@@ -4,6 +4,7 @@ package serve
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -201,5 +202,74 @@ func TestAScheduledAnalyzerWaitsWhileTheBudgetStateHoldsIt(t *testing.T) {
 	lab.lookAt(lab.clock.Add(time.Minute))
 	if n := lab.starts(); n != 1 {
 		t.Errorf("the held time started %d runs, want one", n)
+	}
+}
+
+// S-0424: with analysis.formula set, analysis.schedule coming round with the
+// analyze action on makes that formula's instance in place of starting the
+// analyzer: this flai's formula run <name> --ready --autocommit --json in the
+// main checkout, journalled under the formula action with the trigger
+// analysis.schedule daily. A run flai formula run refuses is logged and
+// journals nothing; with analyze off nothing is run.
+func TestTheAnalysisScheduleMakesTheFormulasInstanceWhenOneIsNamed(t *testing.T) {
+	lab := newScheduleLab(t, "daily", time.Date(2026, 11, 2, 10, 0, 0, 0, time.UTC))
+	m := "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\nanalysis:\n  schedule: daily\n  formula: analysis-cadence\n"
+	if err := os.WriteFile(filepath.Join(lab.root, "system-flow.yaml"), []byte(m), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var runs []formulaRun
+	refuse := ""
+	lab.s.exe = func() (string, error) { return "/opt/flai/bin/flai", nil }
+	lab.s.run = func(_ context.Context, dir string, env []string, name string, args ...string) ([]byte, []byte, error) {
+		runs = append(runs, formulaRun{dir: dir, env: env, name: name, args: args})
+		if refuse != "" {
+			return nil, []byte("Error: " + refuse + "\n"), errors.New("exit status 4")
+		}
+		return []byte(`{"story":"S-0099","status":"ready","commit":"abc1234"}`), nil, nil
+	}
+	made := func() []hostapi.Entry {
+		var out []hostapi.Entry
+		for _, e := range lab.entries() {
+			if e.Action == hostapi.ActionFormula {
+				out = append(out, e)
+			}
+		}
+		return out
+	}
+	lab.lookAt(lab.clock)
+	if len(runs) != 0 {
+		t.Fatalf("ran before the schedule came round: %+v", runs)
+	}
+	lab.lookAt(time.Date(2026, 11, 4, 12, 0, 0, 0, time.UTC)) // two midnights missed
+	if len(runs) != 1 {
+		t.Fatalf("ran %d times for the times missed, want once", len(runs))
+	}
+	if r := runs[0]; r.dir != lab.root || r.name != "/opt/flai/bin/flai" || strings.Join(r.args, " ") != "formula run analysis-cadence --ready --autocommit --json" {
+		t.Errorf("ran %s %v in %s, want this flai's formula run analysis-cadence --ready --autocommit --json in the main checkout", r.name, r.args, r.dir)
+	}
+	if n := lab.starts(); n != 0 || lab.state().Analyzer != nil {
+		t.Errorf("the analyzer was started beside the formula: %d runs, %+v", n, lab.state().Analyzer)
+	}
+	if got := made(); len(got) != 1 || got[0].Method != "serve.formula" || got[0].Outcome != "done" ||
+		got[0].Detail != "made S-0099, the instance of formula analysis-cadence, in ready, started by analysis.schedule daily; committed abc1234" {
+		t.Errorf("journal: %+v", got)
+	}
+	if !strings.Contains(lab.logText(), `msg="scheduled formula instance made" component=serve project=t formula=analysis-cadence trigger="analysis.schedule daily" story=S-0099`) {
+		t.Errorf("the instance is not logged:\n%s", lab.logText())
+	}
+
+	refuse = "no formula is named analysis-cadence"
+	lab.lookAt(time.Date(2026, 11, 5, 0, 0, 0, 0, time.UTC))
+	if len(runs) != 2 || len(made()) != 1 {
+		t.Fatalf("a refused run: %d runs, journal %+v", len(runs), made())
+	}
+	if !strings.Contains(lab.logText(), `level=INFO msg="scheduled formula not run" component=serve project=t formula=analysis-cadence trigger="analysis.schedule daily" reason="Error: no formula is named analysis-cadence"`) {
+		t.Errorf("the refusal is not logged at info:\n%s", lab.logText())
+	}
+
+	lab.cfg.Analyze = false
+	lab.lookAt(time.Date(2026, 11, 6, 0, 0, 0, 0, time.UTC))
+	if len(runs) != 2 {
+		t.Errorf("ran while analyze is off: %d runs", len(runs))
 	}
 }
