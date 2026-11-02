@@ -3,16 +3,21 @@ id: T-1770
 type: task
 nature: feature
 title: A story carries formula in its front matter, listed in front-matter-fields.txt and the work hierarchy's schema, and an older flai reads past it
-status: backlog
+status: in-progress
 parent: S-0421
 owner: alex
 created: 2026-10-16T05:47:18Z
-updated: 2026-10-16T05:47:18Z
-transitions: []
+updated: 2026-11-02T02:09:51Z
+transitions:
+  - to: ready
+    at: 2026-11-02T02:09:50Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-02T02:09:51Z
+    by: system-flow
 stream: S-0421
 tags: [cli]
 touches: [flai/internal/workitem/front-matter-fields.txt, flai/internal/workitem/item.go, flai/internal/workitem/fields_test.go, design/system/work-hierarchy.md]
-after: [T-1768]
 ---
 # T-1770 A story carries formula in its front matter, listed in front-matter-fields.txt and the work hierarchy's schema, and an older flai reads past it
 

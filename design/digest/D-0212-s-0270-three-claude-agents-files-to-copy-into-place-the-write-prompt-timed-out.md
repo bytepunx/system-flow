@@ -9,7 +9,7 @@ date: 2026-10-07
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-0794]
 ---
 
 # D-0212 S-0270: three .claude/agents files to copy into place (the write prompt timed out): done

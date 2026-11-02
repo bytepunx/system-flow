@@ -9,7 +9,7 @@ date: 2026-10-06
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-0794]
 ---
 
 # D-0188 alex: copy the analyzer's two definitions into S-0224's worktree (tools change): file have been copied

@@ -9,7 +9,7 @@ date: 2026-10-29
 status: absorbed
 absorbed_by: "design/adrs/0209-the-orchestrator-runs-for-a-reason-and-ends-started-by-flai-serve-on-the-events.md#decision"
 asked_again: []
-cited: [TH-0755]
+cited: [S-0420, TH-0755, TH-0797]
 ---
 
 # D-0425 S-0418 predates ADR-0209: drop continuous and wait for S-0536: Recommended for the operator: answer A

@@ -3,12 +3,18 @@ id: T-1768
 type: task
 nature: feature
 title: "An ADR records the formula file: where it lives, its steps and inputs, its body, its marker, and the instance's nature and formula field"
-status: backlog
+status: in-progress
 parent: S-0421
 owner: alex
 created: 2026-10-16T05:47:09Z
-updated: 2026-10-16T05:47:09Z
-transitions: []
+updated: 2026-11-02T02:09:47Z
+transitions:
+  - to: ready
+    at: 2026-11-02T02:09:46Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-02T02:09:47Z
+    by: system-flow
 stream: S-0421
 tags: [cli]
 touches: [design/adrs, design/adrs/README.md]

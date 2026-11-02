@@ -3,16 +3,21 @@ id: T-1769
 type: task
 nature: feature
 title: flai/internal/formulas reads and validates a project's formulas into steps, inputs, and layers
-status: backlog
+status: in-progress
 parent: S-0421
 owner: alex
 created: 2026-10-16T05:47:14Z
-updated: 2026-10-16T05:47:14Z
-transitions: []
+updated: 2026-11-02T02:09:49Z
+transitions:
+  - to: ready
+    at: 2026-11-02T02:09:48Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-02T02:09:49Z
+    by: system-flow
 stream: S-0421
 tags: [cli]
 touches: [flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go]
-after: [T-1768]
 ---
 # T-1769 flai/internal/formulas reads and validates a project's formulas into steps, inputs, and layers
 
