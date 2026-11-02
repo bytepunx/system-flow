@@ -212,6 +212,7 @@ The same file holds what `flai serve` may do on this host. These keys are not re
 | `agent.auto_restarts` | `flai serve agent set --auto-restarts <n>` | How many times in a row `flai serve` restarts a story's agent on its own after it fails with its story in progress, 2 when unset, 0 never; past it, `flai serve` opens a thread on the story for you ([ADR-0108](../../design/adrs/0108-flai-serve-restarts-a-story-s-agent-that-ended-with-its-story-in-progress-up-to.md)); since S-0532 the thread lists the story's `agent` events from the start of the first run it counted, oldest first, each with its time, `to`, and `why` |
 | `agent.attended_minutes` | none | Retired ([ADR-0043](../../design/adrs/0043-flai-serve-starts-a-ready-story-s-agent-whenever-the-in-progress-limit-has-room.md)): a configuration that sets it still loads, and nothing reads it. `flai serve agent set --attended-minutes` is accepted and does nothing |
 | `agent.harnesses.<name>.program`, `agent.harnesses.<name>.args` | `flai serve agent harness <name> --program <path> -- [args...]`, `--reset` | The program a harness is on this host, and the arguments that replace its adapter's defaults and say what the agent may do |
+| `agent.harnesses.container.images`, `agent.harnesses.container.network`, `agent.harnesses.container.login` | `flai serve agent harness container --image <inner>=<image> --network <name> --login <path>`, `--reset` | The `container` harness's image for each inner harness, the Docker network its agents join, and the folder of your Claude login it mounts read-only ([In a container](#in-a-container-the-container-harness)) |
 | `agent.providers.<name>` | `flai serve agent provider <name> --api --base-url --key-env [--model alias=name]...`, `--reset` | Where the model calls of an agent that names provider `<name>` go: the API, the URL, the name of the variable that holds the key, and model aliases. See [Where its model's calls go](#where-its-models-calls-go-a-provider) |
 | `forges.<name>.token_env` | `flai serve forge <name> --token-env <NAME>`, `--reset` | The name of the environment variable on this host that holds the forge's token, for a project that accepts through a pull request; `GITHUB_TOKEN` for `github` when unset. Never the token. See [Accepting through a pull request](#accepting-through-a-pull-request) |
 | `checks.commands` | `flai serve checks set --name <name> -- <program> [args...]`, `flai serve checks clear [name]` | The named commands a story in review is checked with, in order, in its worktree; empty means the manifest's `checks:` |
@@ -417,7 +418,7 @@ flai agent clear
 
 A story's agent says what will work it: the harness that runs the agent (such as `claude-code`), the model, and options for that harness as `key=value`, which flai passes on without reading them ([ADR-0037](../../design/adrs/0037-a-story-carries-its-agent-copied-from-the-project-s-default-when-it-is-made.md)). The project's default lives in `system-flow.yaml` under `agent`. Every story created while it is set gets a copy in its front matter, with whatever `--harness`, `--model`, or `--agent-config` you give on `flai story new` laid over it. The copy belongs to the story. Changing the default later affects only stories made after it; to move an open story to another model, edit it. `flai show` and `flai edit --show` print a story's agent. Epics and tasks have none.
 
-The harness `none` says that the story's agent runs elsewhere, by hand or in a container no harness starts yet, and `flai serve` starts nothing for it ([ADR-0242](../../design/adrs/0242-a-story-s-agent-whose-harness-is-none-runs-elsewhere-and-flai-serve-starts.md)). Set it with `flai edit S-0007 --harness none`, or with `flai agent set --harness none` for every new story. `flai serve` names such a story in `waiting` and starts no agent for it when it enters ready, when its agent ends with it in progress, on an answer, or when it is sent back; `flai serve agent start`, `restart`, and `commit` refuse it. Start its agent yourself, where it runs, with `flai story start S-0007`, which works as it does for any story.
+The harness `none` says that the story's agent runs elsewhere, by hand or in a container you start yourself, and `flai serve` starts nothing for it ([ADR-0242](../../design/adrs/0242-a-story-s-agent-whose-harness-is-none-runs-elsewhere-and-flai-serve-starts.md)). Set it with `flai edit S-0007 --harness none`, or with `flai agent set --harness none` for every new story. `flai serve` names such a story in `waiting` and starts no agent for it when it enters ready, when its agent ends with it in progress, on an answer, or when it is sent back; `flai serve agent start`, `restart`, and `commit` refuse it. Start its agent yourself, where it runs, with `flai story start S-0007`, which works as it does for any story.
 
 A project with no default and no story with an agent has no `agent` keys at all, and an older flai reads it as before. Once a story has one, use a flai that knows about agents (`flai self-upgrade`).
 
@@ -468,6 +469,53 @@ The start is refused when one of these holds. The refusal is recorded as a start
 | `system-flow.yaml` cannot be read | Mend it; `flai check` says what is wrong |
 
 An agent that names no provider is started as before: the harness uses its own default, and `system-flow.yaml` is not read for it. `CLAUDE_CODE_SUBAGENT_MODEL` is not set, and the `fallback_model` option is not checked against the provider's models.
+
+#### In a container: the container harness
+
+```bash
+make agent-images                                       # in system-flow's repository: flai-agent-claude-code:local
+flai serve agent harness container --login ~/.claude    # the folder of your Claude login, mounted read-only
+flai serve agent harness container --image claude-code=flai-agent-claude-code:local --network flai-agents
+flai agent set --harness container --config inner=claude-code
+flai edit S-0007 --harness container
+```
+
+The harness `container` runs a story's agent in a Docker container from flai's agent images (S-0508, [ADR-0203](../../design/adrs/0203-flai-may-run-a-story-s-agent-in-a-container-from-a-baseline-image-it-builds.md), [ADR-0212](../../design/adrs/0212-the-agent-images-are-layered-a-bedrock-layer-and-one-layer-per-inner-harness.md)). The image's entrypoint, pilot, runs the inner harness the agent's `config.inner` names: `claude-code` when it names none, and the only one today. An `inner` of `container`, `command`, or a harness flai has no adapter for is refused before the start. The agent's model and options are the inner harness's, checked as for it on the host. The inner harness also says what the agent can do, and pilot relays its log unchanged, so `flai serve agent stream` and the usage read it as they read Claude Code's on the host. The image, the network, and the login are set on the host; their keys are in the [settings index](../operators/settings.md#flai-configuration).
+
+`flai serve` starts the container as you, `docker run --rm -i --name flai-agent-<story>-<session> --user <uid>:<gid>`, on Docker's default bridge unless you set `--network`, with `host.docker.internal` mapped to the host's gateway. It mounts three things:
+
+| Host path | In the container | Mode | For |
+|-----------|------------------|------|-----|
+| `.flai-cache/worktrees/<story>` | the same path, the working directory | read-write | the story's worktree |
+| `.flai-cache/agents/<story>` | the same path | read-write | the inner harness's configuration and sessions in `claude/`, the container's flai's configuration and cache in `flai/`, pilot's record of its sessions |
+| the folder `--login` names | `/run/claude-login` | read-only | your Claude login |
+
+Nothing else is mounted: never the Docker socket, your home, `~/.flai`, or the main checkout and its `.git`. The variables go by name, `-e NAME`, so no value is in the command line: `FLAI_AGENT`, `FLAI_SESSION`, `FLAI_STORY`, `FLAI_STARTED_BY`, `FLAI_MCP_URL`, `FLAI_MCP_TOKEN`, `FLAI_CONFIG`, `FLAI_CACHE_DIR`, and the variable the provider's `key_env` names. pilot's start request goes on the container's standard input. The container is removed when it ends.
+
+Claude Code in the container runs on your login. `flai serve` makes the cache folder yours alone (mode 0700) and links its `claude/.credentials.json` to `/run/claude-login/.credentials.json`; nothing of the login is copied. The agent reaches the project's MCP server over HTTP ([Serving agents over MCP](#serving-agents-over-mcp)): the URL's host is `host.docker.internal` unless the network is `host`. A native Docker engine on Linux does not reach the server's loopback default that way and needs `mcp.bind` set ([operator guide](../operators/index.md#mcp-over-http)).
+
+Before the start, `flai serve` opens the story's worktree when it has none and makes the cache folder. It reads Claude Code's version from the image with `docker run --rm --network none --entrypoint claude <image> --version` and records it on the run as `harness_version`. It does not run its `permission_prompt` check inside the image ([Writes to protected paths](#writes-to-protected-paths)): when `claude-checks.json` holds no passed check of that version, the serve log warns `container claude code version unchecked`, and the agent starts. `flai serve agent stop`, or **Stop** on the dashboard, signals the docker client and runs `docker stop flai-agent-<story>-<session>`. A resume after you answer a thread starts a container on the same session and cache folder, and the inner harness resumes its session.
+
+The start is refused, as a start that failed, when one of these holds:
+
+| Refused when | Fix |
+|--------------|-----|
+| `docker` is not on `flai serve`'s `PATH` | Install Docker, or name its client with `flai serve agent harness container --program <path>` |
+| The inner harness's image is not on this host | `make agent-images` in system-flow's repository, or `flai serve agent harness container --image <inner>=<image>` |
+| No login is set, for `claude-code` | `flai serve agent harness container --login ~/.claude` |
+| The login is not an absolute path, or is or holds your home, `~/.flai`, the project, or the Docker socket | `--login` with the folder of your login alone |
+| `config.inner` names `container`, `command`, or no harness flai has | `flai edit <story> --agent-config inner=claude-code` |
+| Arguments are set for the harness after `--` | `flai serve agent harness container --`, which clears them; its mounts and variables are fixed |
+| The agent is a strategic agent's: the planner, the orchestrator, the analyzer, or the curator | Run it on another harness; S-0509 carries it |
+| The project is not a git repository, so the story has no worktree | Run its agent on another harness |
+
+What it does not do yet:
+
+- Git does not work in the container. The worktree's `.git` file names the main checkout's `.git`, which is not mounted (S-0517). Use the MCP tools `task_done`, `stream_sync`, and `verify`, which run on the host ([Story branches](#story-branches)).
+- The close-out cannot run in the image, which lacks the tiers' tools (S-0510, S-0520).
+- Claude Code's version in the image is not checked against `permission_prompt`, as above.
+
+[Run a story's agent in a container](../operators/runbooks/agent-container.md) runs one by hand with `scripts/agent-container.sh`.
 
 ### Moving work
 
@@ -1240,7 +1288,7 @@ flai serve mcp clear             # back to 127.0.0.1
 
 Set it only when an agent in a container cannot reach the default. On Docker Desktop, measured under WSL2, you need not: a container on the default bridge reaches the loopback default as `host.docker.internal` (`docker run --add-host host.docker.internal:host-gateway`). A Docker engine whose host gateway is not the host's loopback, such as a native engine on Linux, needs the address of its bridge, `docker0`, often `172.17.0.1`, or `0.0.0.0`. Beyond loopback the server warns in its log, because flai does not encrypt the token: with `0.0.0.0` it travels in the clear to anything that reaches the port. Wherever it listens, the token and the `Origin` refusal above still guard it. `flai serve settings` shows the address too. No agent changes it: `flai guard` refuses `bind` and `clear` to every sub-agent and every session `flai serve` starts ([ADR-0220](../../design/adrs/0220-flai-guard-refuses-every-sub-agent-and-every-session-flai-serve-started-the.md)).
 
-`flai serve` hands a run whose harness reaches flai over HTTP, such as an agent in a container, the project's server's URL and token as `FLAI_MCP_URL` and `FLAI_MCP_TOKEN`. They are in the run's environment only, never in its arguments, a start request, or a log. Every other run, Claude Code on the host among them, gets neither. A start that needs them while the project's server is not running fails and says to run `flai mcp start`. No harness flai ships asks for them yet. While `FLAI_MCP_TOKEN` is set, `flai mcp token` prints it and reads no file; `--rotate` still replaces the project's token file.
+`flai serve` hands a run whose harness reaches flai over HTTP, such as an agent in a container, the project's server's URL and token as `FLAI_MCP_URL` and `FLAI_MCP_TOKEN`. They are in the run's environment only, never in its arguments, a start request, or a log. Every other run, Claude Code on the host among them, gets neither. A start that needs them while the project's server is not running fails and says to run `flai mcp start`. The `container` harness asks for them, and its docker client gets the URL with its host as `host.docker.internal` ([In a container](#in-a-container-the-container-harness)). While `FLAI_MCP_TOKEN` is set, `flai mcp token` prints it and reads no file; `--rotate` still replaces the project's token file.
 
 The server logs each request at `debug` and each refusal at `warn`, with the agent named in `X-Flai-Agent`. It never logs the token or any other header. Its log is the project's `.flai-cache/mcp-http.log`.
 
@@ -3521,7 +3569,7 @@ The image is published for `linux/amd64` and `linux/arm64`. `flai dashboard` and
 
 #### Writes to protected paths
 
-flai protects some paths, and keeps the list itself, one per harness ([ADR-0130](../../design/adrs/0130-every-harness-meets-flai-through-neutral-contracts-an-adapter-s-capabilities-a.md)). Today the only list is Claude Code's: the paths Claude Code protects, a `.claude/` folder, which holds the project's settings, hooks, and agent definitions and the template's copies of them, `.mcp.json`, `.git`, `.vscode/`, shell profiles such as `.bashrc`, and the others [ADR-0106](../../design/adrs/0106-a-story-whose-branch-changes-a-path-claude-code-protects-is-accepted-by-the.md) lists. Another harness's own files, such as `.codex/`, `.opencode/`, `.agents/plugins/`, or `AGENTS.md`, join the list with that harness's adapter. A path on any harness's list is protected whichever harness writes it, and the acceptance below reads the same list.
+flai protects some paths, and keeps the list itself, one per harness ([ADR-0130](../../design/adrs/0130-every-harness-meets-flai-through-neutral-contracts-an-adapter-s-capabilities-a.md)). Claude Code's list holds the paths Claude Code protects, a `.claude/` folder, which holds the project's settings, hooks, and agent definitions and the template's copies of them, `.mcp.json`, `.git`, `.vscode/`, shell profiles such as `.bashrc`, and the others [ADR-0106](../../design/adrs/0106-a-story-whose-branch-changes-a-path-claude-code-protects-is-accepted-by-the.md) lists. The `container` harness's list holds what changes what an agent in a container may do: `flai/images/`, `scripts/agent-image.sh`, and `scripts/agent-container.sh`, each by its path from the repository's root, so a folder of the same name deeper in the tree is not protected (S-0508). `flai guard` reads a write's path from the story's worktree as well as the main checkout. Another harness's own files, such as `.codex/`, `.opencode/`, `.agents/plugins/`, or `AGENTS.md`, join the list with that harness's adapter. A path on any harness's list is protected whichever harness writes it, and the acceptance below reads the same list.
 
 A story's own agent writes a protected path in its worktree, other than one in `.git`, only with your approval. While `auto-approve` is off, `flai guard` decides to ask for such a write, and you are asked on a thread on the story: the hold-and-ask. The harness's own permission handling holds the write while you are asked. For Claude Code that is flai's MCP tool `permission_prompt`. It holds the write at most four minutes over stdio, the `flai mcp` an agent on the host starts, and at most 45 seconds over HTTP, the `flai mcp start` server an agent in a container reaches. Each bound sits below Claude Code's tool-call timeout on that transport: 30 minutes over stdio, 60 seconds over HTTP ([ADR-0215](../../design/adrs/0215-permission-prompt-holds-a-write-at-most-four-minutes-over-stdio-and-at-most-45.md)). What follows describes it.
 

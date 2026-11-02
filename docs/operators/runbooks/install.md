@@ -1,6 +1,6 @@
 ---
 title: "Runbook: install"
-updated: 2026-10-12
+updated: 2026-11-02
 status: active
 ---
 
@@ -13,7 +13,7 @@ status: active
 | Linux or macOS on amd64 or arm64 | `install.sh`; on Windows use the zip from the releases page, and note that `flai host` there has not been tried | `uname -sm` |
 | `curl`, `tar`, `openssl`, and `sha256sum` or `shasum` | `install.sh`; `openssl` verifies the release's signature, and the script refuses to run without it | `command -v curl tar openssl sha256sum shasum` |
 | `git` | every project command | `git --version` |
-| Docker Engine 24 or newer, on `PATH` | the dashboard only | `docker version` |
+| Docker Engine 24 or newer, on `PATH` | the dashboard, and the `container` harness, which runs a story's agent in a container | `docker version` |
 | A GitHub token, while the repository is private: `GITHUB_TOKEN`, `GH_TOKEN`, or `gh auth login` | the download, and the dashboard image (scope `read:packages`) | `gh auth status` |
 
 Nothing here needs `sudo`. Everything flai keeps is under `~/.flai` and each project's `.flai-cache/`.
@@ -81,3 +81,27 @@ If the script refuses the release, it says why: `openssl` is missing, the releas
 | `flai host` will not start: another program holds `127.0.0.1:4241` | Set `FLAI_HOST_ADDR` to another loopback address for every flai you run |
 | `flai dashboard` is refused because a host runs with another configuration | One host runs per machine, for one configuration; use the same `FLAI_CONFIG`, or stop the other host with `flai host stop` |
 | Pages say no flai is connected | `flai serve status` says why; `flai host restart serve` |
+
+## Agents in containers
+
+Only if a story's agent is to run on the `container` harness ([In a container](../../users/flai.md#in-a-container-the-container-harness)). It needs Docker Engine on the `PATH` `flai serve` runs with, the agent images, and your Claude login on this host.
+
+1. Sign in to Claude Code on the host with `claude`, so that `~/.claude/.credentials.json` exists.
+2. Build the images, in a checkout of system-flow's repository, with Docker running:
+
+   ```bash
+   make agent-images     # flai-agent-bedrock:local and flai-agent-claude-code:local
+   ```
+
+   They are built on this machine, from the checked-out tree; nothing publishes them ([Run a story's agent in a container](agent-container.md#build)).
+3. Name the folder of your login, which the container mounts read-only:
+
+   ```bash
+   flai serve agent harness container --login ~/.claude
+   flai serve agent show     # the image, the network, and the login
+   ```
+
+4. On a native Docker engine on Linux, not Docker Desktop, have the MCP servers listen where a container reaches them: `flai serve mcp bind <address>` ([MCP over HTTP](../index.md#mcp-over-http)).
+5. Give a story the harness: `flai edit S-nnnn --harness container`, or `flai agent set --harness container` for every new story.
+
+The image, the network, and the login are in the [settings index](../settings.md#flai-configuration).

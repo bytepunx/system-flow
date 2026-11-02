@@ -1,12 +1,12 @@
 ---
 title: "Runbook: run a story's agent in a container"
-updated: 2026-10-28
+updated: 2026-11-02
 status: active
 ---
 
 # Run a story's agent in a container
 
-Building the agent images and running one story's Claude Code agent in a container by hand. This is the first step of E-0029, flai running agents in Docker containers; `flai serve` does not start agents this way yet. The scripts came from the experiment S-0505, and its results document records what was measured.
+Building the agent images and running one story's Claude Code agent in a container by hand. This is the first step of E-0029, flai running agents in Docker containers. Since S-0508 `flai serve` starts a story's agent this way on `harness: container`, as [docs/users/flai.md](../../users/flai.md#in-a-container-the-container-harness) describes; this runbook is the hand-run form. The scripts came from the experiment S-0505, and its results document records what was measured.
 
 ## The images
 
