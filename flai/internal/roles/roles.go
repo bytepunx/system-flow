@@ -521,6 +521,8 @@ func (c *checker) role(r Role) {
 	}
 	if !slices.Contains(Charges, r.Charge) {
 		file("charge", "charge is %q, which is none of %s", r.Charge, strings.Join(Charges, ", "))
+	} else if r.Charge == "item" && len(r.Item) == 0 && r.Lines["item"] != 0 {
+		file("charge", "charge is item, but the role takes no item (item: none), so the item rule charges nothing (ADR-0249 §8); give named, issues, or none, or name the item kinds it takes")
 	}
 	for _, e := range r.Tools {
 		c.call(r, e, "tools", "")

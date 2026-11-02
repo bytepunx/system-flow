@@ -401,6 +401,7 @@ func TestValidateReportsEachProblem(t *testing.T) {
 		{"unknown item kind", "planner.md", plannerFile, "item: [epic, story]", "item: [epic, task]", CodeFile, 18, "item kind \"task\""},
 		{"bad topic", "planner.md", plannerFile, "topics: [planning]", "topics: [\"two words\"]", CodeFile, 19, "not a word"},
 		{"bad charge", "planner.md", plannerFile, "charge: item", "charge: everyone", CodeFile, 20, "charge is \"everyone\""},
+		{"item charge with no item", "analyzer.md", analyzerFile, "charge: issues", "charge: item", CodeFile, 14, "the role takes no item (item: none)"},
 		{"unknown condition", "planner.md", plannerFile, "{call: item_new, when: draft-only}", "{call: item_new, when: drafts-only}", CodeFile, 24, "condition \"drafts-only\" is not one"},
 		{"condition on wrong call", "planner.md", plannerFile, "{call: item_move, when: to-backlog}", "{call: item_move, when: draft-only}", CodeFile, 26, "does not qualify item_move"},
 		{"trigger condition on a call", "planner.md", plannerFile, "{call: item_move, when: to-backlog}", "{call: item_move, when: stale-figures}", CodeFile, 26, "qualifies a trigger"},
