@@ -1552,9 +1552,9 @@ func queueSendBackThread(repo *workitem.Repo, story string) (string, bool) {
 	return "", false
 }
 
-// startAcceptSentBack starts the agent of each story the orchestrator's
-// acceptance sent back to in-progress over a rebase it could not settle
-// (ADR-0189), as startQueueSentBack does the queue's: one not blocked, with
+// startAcceptSentBack starts the agent of each story an acceptance, whoever
+// made it, sent back to in-progress over a rebase it could not settle
+// (ADR-0248), as startQueueSentBack does the queue's: one not blocked, with
 // the thread flai accept opened on it still open, whose last run ended
 // before that thread was opened, told of the thread and the paths it
 // stopped on, in its last run's session where it has one.
@@ -1575,8 +1575,8 @@ func (l *launcher) startAcceptSentBack(ctx context.Context, cfg AgentConfig, rep
 		if harness.Elsewhere(it.Agent) || (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
 			continue
 		}
-		what := fmt.Sprintf("the orchestrator's acceptance found that %s, which it cannot settle, and aborted the rebase; run flai stream sync %s in its worktree and resolve them",
-			strings.TrimPrefix(th.Title, storygit.SentBackPrefix), it.ID)
+		what := fmt.Sprintf("the acceptance of %s found that %s, which it cannot settle, and aborted the rebase; run flai stream sync %s in its worktree and resolve them",
+			it.ID, strings.TrimPrefix(th.Title, storygit.SentBackPrefix), it.ID)
 		s := readyStory{ID: it.ID, Agent: it.Agent, SentBack: &harness.SentBack{Thread: th.ID, What: what, Acceptance: true}}
 		if run.Session != "" {
 			s.Resume, s.SentBack.Resumed = run, true
@@ -1588,10 +1588,10 @@ func (l *launcher) startAcceptSentBack(ctx context.Context, cfg AgentConfig, rep
 }
 
 // resolveAcceptSentBack resolves, as flai serve, each open thread flai
-// accept opened on a story it sent back (ADR-0189) once the story is back in
+// accept opened on a story it sent back (ADR-0248) once the story is back in
 // review, moved there after the thread was opened, so that the thread holds
-// the orchestrator's next acceptance of it no longer. One that cannot be
-// resolved is warned of and tried again at the next look.
+// the next acceptance of it no longer. One that cannot be resolved is warned
+// of and tried again at the next look.
 func (l *launcher) resolveAcceptSentBack(repo *workitem.Repo) {
 	for _, th := range acceptSentBackThreads(repo) {
 		it, err := repo.Get(th.Anchor.Item)
@@ -1603,7 +1603,7 @@ func (l *launcher) resolveAcceptSentBack(repo *workitem.Repo) {
 		if err != nil || back.Before(at) {
 			continue
 		}
-		why := fmt.Sprintf("%s is back in review since %s, after the send back; the orchestrator's acceptance takes it up again", it.ID, back.UTC().Format(time.RFC3339))
+		why := fmt.Sprintf("%s is back in review since %s, after the send back; its next acceptance takes it up again", it.ID, back.UTC().Format(time.RFC3339))
 		if _, err := threads.Resolve(repo, th.ID, forgeAuthor, why, l.now()); err != nil {
 			l.warn("send back thread not resolved", "story", it.ID, "thread", th.ID, "err", err.Error())
 			continue
@@ -1613,7 +1613,7 @@ func (l *launcher) resolveAcceptSentBack(repo *workitem.Repo) {
 }
 
 // acceptSentBackThreads are the open threads flai accept opened on the
-// stories the orchestrator's acceptance sent back (ADR-0189); none when the
+// stories an acceptance sent back (ADR-0248); none when the
 // threads cannot be read, which, as resume does with what it cannot read,
 // starts and resolves nothing.
 func acceptSentBackThreads(repo *workitem.Repo) []*threads.Thread {

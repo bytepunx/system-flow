@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -178,6 +179,57 @@ func TestALandingTakesTheBatchsVerification(t *testing.T) {
 	}
 	if got := unverified(res); len(got) != 0 || res.Verified != "bbb222" {
 		t.Errorf("the orchestrator's landing takes the batch's verification: %q, verified %q", got, res.Verified)
+	}
+}
+
+// markedBranch is gitAnswers whose git cat-file --batch answers one blob,
+// text, as the blob of the one file the branch changes.
+type markedBranch struct {
+	gitAnswers
+	text string
+}
+
+func (m markedBranch) RunInput(_, _, _ string, args ...string) (string, error) {
+	if strings.Join(args, " ") != "cat-file --batch" {
+		return "", errors.New("no answer")
+	}
+	return "abc123 blob " + strconv.Itoa(len(m.text)) + "\n" + m.text + "\n", nil
+}
+
+// ADR-0248: the conflict-markers blocker names each marker's path and line
+// and says to send the story back to in-progress for its agent to resolve
+// them, in its worktree when it has one and on its branch otherwise; it
+// never asks the operator to resolve them and accept again.
+func TestConflictMarkersSaysToSendTheStoryBack(t *testing.T) {
+	at := time.Date(2026, 11, 2, 3, 0, 0, 0, time.UTC)
+	repo, s := forgeRepo(t, "local", at)
+	branch := "story/" + s.ID
+	git := markedBranch{gitAnswers{
+		"rev-parse --abbrev-ref HEAD": "main",
+		"diff --raw -z --no-abbrev --no-renames --diff-filter=AM main..." + branch: ":100644 100644 " + strings.Repeat("0", 40) + " abc123 M\x00design/x.md\x00",
+	}, "# X\n<<<<<<< HEAD\nours\n=======\ntheirs\n>>>>>>> theirs\n"}
+	// the divider is not a marker
+	markers := branch + " carries merge conflict markers at design/x.md:2, design/x.md:6; send " + s.ID + " back to in-progress so that its agent resolves each conflict "
+	rest := ", keeping what both sides meant, removes the markers, commits, and moves it to review again (ADR-0248)"
+
+	got, err := ConflictMarkers(git, repo, s.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := markers + "on " + branch + ", whose worktree flai stream open " + s.ID + " opens" + rest; got != want {
+		t.Errorf("without a worktree:\n got %q\nwant %q", got, want)
+	}
+	if err := os.MkdirAll(repo.WorktreePath(s.ID), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if got, err = ConflictMarkers(git, repo, s.ID); err != nil {
+		t.Fatal(err)
+	}
+	if want := markers + "in .flai-cache/worktrees/" + s.ID + rest; got != want {
+		t.Errorf("with a worktree:\n got %q\nwant %q", got, want)
+	}
+	if strings.Contains(got, "accept again") {
+		t.Errorf("the blocker asks the operator to resolve the markers: %q", got)
 	}
 }
 

@@ -87,14 +87,14 @@ func AbortRebase(r execx.Runner, dir, branch string) error {
 	return nil
 }
 
-// SentBackAuthor moves a story the orchestrator's acceptance sent back over
-// a rebase it could not settle to in-progress, and opens the thread that
-// tells its agent (ADR-0189).
+// SentBackAuthor moves a story an acceptance, whoever made it, sent back
+// over a rebase it could not settle to in-progress, and opens the thread that
+// tells its agent (ADR-0248).
 const SentBackAuthor = "flai"
 
 // SentBackPrefix begins the title of that thread, by which flai serve finds
 // it to start the story's agent and to resolve it once the story is back in
-// review (ADR-0189).
+// review (ADR-0248).
 const SentBackPrefix = "Acceptance sent back: "
 
 // SentBackTitle is that thread's title for branch, whose rebase onto base

@@ -232,17 +232,17 @@ type SentBack struct {
 	// Queue is set when the merge queue sent the story back, from a batch
 	// that failed with it, rather than its pull request (ADR-0176).
 	Queue bool
-	// Acceptance is set when the orchestrator's acceptance sent the story
-	// back over a rebase it could not settle (ADR-0189).
+	// Acceptance is set when an acceptance, whoever made it, sent the story
+	// back over a rebase it could not settle (ADR-0248).
 	Acceptance bool
 }
 
 // then is what follows the agent's fix of a story sent back on thread: the
 // push of its pull request, from the merge queue its batching again, or from
-// the orchestrator's acceptance its acceptance again.
+// an acceptance its acceptance again.
 func (b *SentBack) then(story string) string {
 	if b.Acceptance {
-		return fmt.Sprintf("flai serve resolves %[2]s once %[1]s is back in review, and the orchestrator accepts it again", story, b.Thread)
+		return fmt.Sprintf("flai serve resolves %[2]s once %[1]s is back in review, and it is accepted again", story, b.Thread)
 	}
 	if b.Queue {
 		return fmt.Sprintf("flai serve resolves %[2]s once %[1]s is back in review at a new commit, and the merge queue batches it again once it is enqueued", story, b.Thread)

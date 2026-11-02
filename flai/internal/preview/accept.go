@@ -651,7 +651,9 @@ func walkedFrom(ts []workitem.Transition) string {
 // conflict markers it carries, naming each path and line of the files it
 // adds or changes against the main branch, or "" when it carries none. The
 // acceptance refuses by it and its preview reports by it, so the two cannot
-// disagree (S-0253, S-0276, I-0066).
+// disagree (S-0253, S-0276, I-0066). It says to send the story back to
+// in-progress for its agent to resolve them, not to resolve them by hand
+// (ADR-0248).
 func ConflictMarkers(r execx.Runner, repo *workitem.Repo, id string) (string, error) {
 	branch := storygit.Branch(id)
 	base, err := storygit.MainBranch(r, repo.MainRoot)
@@ -665,9 +667,9 @@ func ConflictMarkers(r execx.Runner, repo *workitem.Repo, id string) (string, er
 	wt := repo.WorktreePath(id)
 	where := "in " + rel(repo.MainRoot, wt)
 	if _, err := os.Stat(wt); err != nil {
-		where = fmt.Sprintf("on %s (open its worktree with flai stream open %s)", branch, id)
+		where = fmt.Sprintf("on %s, whose worktree flai stream open %s opens", branch, id)
 	}
-	return fmt.Sprintf("%s carries merge conflict markers at %s; resolve each conflict %s keeping what both sides meant, remove the markers, commit, and accept again", branch, workitem.Shorten(found, 20), where), nil
+	return fmt.Sprintf("%s carries merge conflict markers at %s; send %s back to in-progress so that its agent resolves each conflict %s, keeping what both sides meant, removes the markers, commits, and moves it to review again (ADR-0248)", branch, workitem.Shorten(found, 20), id, where), nil
 }
 
 // UndonePaths are the paths of undone, each with its reason when keep names

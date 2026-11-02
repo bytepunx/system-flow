@@ -152,15 +152,6 @@ commit. It is refused only while the story's change, main...story/<id>,
 would overwrite one of them or an untracked one; --dry-run lists that as the
 blocker dirty_main, naming the files and the command that sets them aside
 (ADR-0189).
-When its rebase of the story branch stops on conflicts that the merge of the
-issue files, the ADR index, the issue summary, and the shared markdown files
-does not settle, it aborts the rebase, moves the story back to in-progress as
-flai with the paths in the reason, opens one thread on the story naming them
-and the branch, which flai serve starts the story's agent on, and exits
-saying the story was sent back; with --json it exits 4 and prints
-{"refused": {"id", "reason", "sent_back", "branch", "base", "conflicts",
-"thread"}}. Any other acceptance leaves the stopped rebase in the worktree
-(ADR-0189).
 The evidence is written, with the commit, under ### Accepted by the
 orchestrator in the story's Notes. With --dry-run the evidence is optional.
 While the merge-queue host action is on and the queue batches (accept_reviews
@@ -168,6 +159,18 @@ on, under local acceptance), --by orchestrator is refused, naming the queue,
 but as the queue's landing or with --dry-run: the orchestrator enqueues the
 story instead, with flai queue add <id> --by orchestrator --verified <commit>
 --evidence <file> or the MCP tool queue_add, and the queue lands it (S-0403).
+
+When the acceptance's rebase of the story branch stops on conflicts that the
+merge of the issue files, the ADR index, the issue summary, and the shared
+markdown files does not settle, whoever accepts, by hand, from the dashboard,
+or as the orchestrator, it aborts the rebase, so the branch and the main
+branch are as they were, moves the story back to in-progress as flai with the
+paths in the reason, opens one thread on the story naming them and the
+branch, which flai serve starts the story's agent on, and exits saying the
+story was sent back: the agent resolves them, never the operator. With --json
+it exits 4 and prints {"refused": {"id", "reason", "sent_back", "branch",
+"base", "conflicts", "thread"}}. The merge queue's landing, --batch, keeps its
+own send back (ADR-0176, ADR-0248).
 
 A story whose rebased branch undoes the main branch's change to a path, as a
 revert replayed over main's identical change does (ADR-0155, I-0124), is
@@ -456,11 +459,11 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		merged, err := a.mergeStoryBranch(repo, it.ID, opts.Keep)
 		if err != nil {
 			a.logAcceptConflict(repo, it.ID, err)
-			// the orchestrator's own acceptance sends a stop back to the
-			// story's agent; the operator's, and the queue's landing, leave
-			// it as it is (ADR-0189)
-			if opts.Orchestrator && o.batch == "" {
-				return nil, a.sendBackUnsettled(repo, it, err)
+			// every acceptance that lands here sends a stop back to the
+			// story's agent; the queue's landing keeps its own send back
+			// (ADR-0248)
+			if o.batch == "" {
+				return nil, a.sendBackUnsettled(repo, it, res.By, err)
 			}
 			return nil, err
 		}
@@ -625,10 +628,10 @@ func (a *app) logAcceptConflict(repo *workitem.Repo, story string, err error) {
 	storygit.RecordConflict(repo.CacheDir(), c, issues.SyncFiles(repo, story, a.runner, a.now), a.logger())
 }
 
-// sentBack is the orchestrator's acceptance of a story it sent back to
-// in-progress over a rebase it could not settle (ADR-0189): its text, and
-// for flai accept --json, which prints it as {"refused": {...}} and exits 4,
-// the branch, the paths, and the thread its agent is told on.
+// sentBack is an acceptance of a story it sent back to in-progress over a
+// rebase it could not settle (ADR-0248): its text, and for flai accept
+// --json, which prints it as {"refused": {...}} and exits 4, the branch, the
+// paths, and the thread its agent is told on.
 type sentBack struct {
 	ID        string   `json:"id"`
 	Reason    string   `json:"reason"`
@@ -642,48 +645,57 @@ type sentBack struct {
 // Error is the send back's text.
 func (e *sentBack) Error() string { return e.Reason }
 
-// sendBackUnsettled answers the orchestrator's acceptance of story it after
-// err (ADR-0189). When err is the acceptance's own rebase of the story's
-// branch, stopped on conflicts the merge steps did not settle, it aborts the
-// rebase, which leaves the branch and the main branch as they were, moves
-// the story back to in-progress as flai with a reason naming the paths, and
-// opens one thread on it naming them and the branch, for flai serve to start
-// its agent on; the answer is a *sentBack saying so. Any other err, a rebase
-// found in progress among them, is answered as it is.
-func (a *app) sendBackUnsettled(repo *workitem.Repo, it *workitem.Item, err error) error {
+// sendBackUnsettled answers the acceptance of story it, by by, after err
+// (ADR-0248). When err is the acceptance's own rebase of the story's branch,
+// stopped on conflicts the merge steps did not settle, it aborts the rebase,
+// which leaves the branch and the main branch as they were, moves the story
+// back to in-progress as flai with a reason naming the paths, and opens one
+// thread on it naming them and the branch, for flai serve to start its agent
+// on; the answer is a *sentBack saying so. Any other err, a rebase found in
+// progress among them, is answered as it is.
+func (a *app) sendBackUnsettled(repo *workitem.Repo, it *workitem.Item, by string, err error) error {
 	var stop *syncStopped
 	if !errors.As(err, &stop) || !stop.RebaseInProgress || stop.Found {
 		return err
 	}
-	branch := storyBranch(it.ID)
+	branch, who := storyBranch(it.ID), acceptanceBy(it.ID, by)
 	stopped := fmt.Sprintf("the rebase of %s onto %s stopped", branch, stop.Base)
 	if len(stop.Conflicts) > 0 {
 		stopped += " on conflicts in " + workitem.Shorten(stop.Conflicts, 10)
 	}
 	if aerr := storygit.AbortRebase(a.runner, repo.WorktreePath(it.ID), branch); aerr != nil {
-		return fmt.Errorf("%w; the orchestrator's acceptance could not send %s back to in-progress, since %w", err, it.ID, aerr)
+		return fmt.Errorf("%w; %s could not send %s back to in-progress, since %w", err, who, it.ID, aerr)
 	}
-	reason := fmt.Sprintf("%s, which the orchestrator's acceptance cannot settle, so it aborted the rebase; sync it with flai stream sync %s and resolve them", stopped, it.ID)
+	reason := fmt.Sprintf("%s, which %s cannot settle, so it aborted the rebase; its agent syncs it with flai stream sync %s and resolves them", stopped, who, it.ID)
 	if _, merr := repo.Transition(it, workitem.InProgress, storygit.SentBackAuthor, reason, a.now()); merr != nil {
-		return fmt.Errorf("%s, and the orchestrator's acceptance aborted the rebase but could not move %s back to in-progress: %w; the operator moves it with flai move %s in-progress --reason %q", stopped, it.ID, merr, it.ID, reason)
+		return fmt.Errorf("%s, and %s aborted the rebase but could not move %s back to in-progress: %w; the operator moves it with flai move %s in-progress --reason %q", stopped, who, it.ID, merr, it.ID, reason)
 	}
-	th, terr := a.openSentBack(repo, it.ID, branch, stop)
+	th, terr := a.openSentBack(repo, it.ID, branch, who, stop)
 	if terr != nil {
 		return fmt.Errorf("%s was sent back to in-progress: %s, and flai aborted the rebase; but its thread could not be opened: %w; tell its agent with flai thread new --on %s", it.ID, stopped, terr, it.ID)
 	}
-	a.logger().Info("story sent back from the orchestrator's acceptance", "component", "accept", "item", it.ID, "branch", branch, "paths", stop.Conflicts, "thread", th.ID)
+	a.logger().Info("story sent back from its acceptance", "component", "accept", "item", it.ID, "by", by, "branch", branch, "paths", stop.Conflicts, "thread", th.ID)
 	return &sentBack{
 		ID: it.ID, SentBack: true, Branch: branch, Base: stop.Base, Conflicts: nonNil(stop.Conflicts), Thread: th.ID,
-		Reason: fmt.Sprintf("%s was sent back to in-progress: %s, which the orchestrator's acceptance cannot settle; flai aborted the rebase, so %s and %s are as they were, and its agent resolves them on %s (ADR-0189)",
-			it.ID, stopped, branch, stop.Base, th.ID),
+		Reason: fmt.Sprintf("%s was sent back to in-progress: %s, which %s cannot settle; flai aborted the rebase, so %s and %s are as they were, and its agent resolves them on %s (ADR-0248)",
+			it.ID, stopped, who, branch, stop.Base, th.ID),
 	}
 }
 
-// openSentBack opens the thread that tells story's agent of the send back
-// of its branch over stop (ADR-0189), or adds the same words to the one
+// acceptanceBy names the acceptance of story by by, as the send back's words
+// do: "the acceptance of S-nnnn by alex", or without by when no one is named.
+func acceptanceBy(story, by string) string {
+	if by == "" {
+		return "the acceptance of " + story
+	}
+	return fmt.Sprintf("the acceptance of %s by %s", story, by)
+}
+
+// openSentBack opens the thread that tells story's agent of the send back of
+// its branch by who over stop (ADR-0248), or adds the same words to the one
 // still open from an earlier send back.
-func (a *app) openSentBack(repo *workitem.Repo, story, branch string, stop *syncStopped) (*threads.Thread, error) {
-	text := sentBackText(story, branch, stop)
+func (a *app) openSentBack(repo *workitem.Repo, story, branch, who string, stop *syncStopped) (*threads.Thread, error) {
+	text := sentBackText(story, branch, who, stop)
 	all, err := threads.For(repo, story)
 	if err != nil {
 		return nil, err
@@ -697,10 +709,11 @@ func (a *app) openSentBack(repo *workitem.Repo, story, branch string, stop *sync
 }
 
 // sentBackText is what the send back's thread tells story's agent: what
-// stopped, each path, and how to settle them and come back to review.
-func sentBackText(story, branch string, stop *syncStopped) string {
+// stopped, by whose acceptance, each path, and how the agent settles them
+// and comes back to review.
+func sentBackText(story, branch, who string, stop *syncStopped) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "The orchestrator's acceptance of %s rebased `%s` onto `%s`, and the rebase stopped on conflicts that the merge of the issue files, the ADR index, the issue summary, and the shared markdown files did not settle", story, branch, stop.Base)
+	fmt.Fprintf(&b, "%s rebased `%s` onto `%s`, and the rebase stopped on conflicts that the merge of the issue files, the ADR index, the issue summary, and the shared markdown files did not settle", capitalize(who), branch, stop.Base)
 	if len(stop.Conflicts) > 0 {
 		b.WriteString(", in:\n\n")
 		for _, p := range stop.Conflicts {
@@ -711,10 +724,19 @@ func sentBackText(story, branch string, stop *syncStopped) string {
 		b.WriteString(".\n\n")
 	}
 	fmt.Fprintf(&b, "flai aborted the rebase, so `%s` and `%s` are as they were, and moved %s back to in-progress. "+
+		"This thread is for %s's agent, which settles the conflicts; the operator does not. "+
 		"In its worktree, run `flai stream sync %s`, resolve each path it stops on, `git add` it, and run `git rebase --continue`; "+
 		"then close out and move %s to review again. flai serve resolves this thread once %s is back in review.",
-		branch, stop.Base, story, story, story, story)
+		branch, stop.Base, story, story, story, story, story)
 	return b.String()
+}
+
+// capitalize is s with its first letter upper-cased, to open a sentence.
+func capitalize(s string) string {
+	if s == "" {
+		return s
+	}
+	return strings.ToUpper(s[:1]) + s[1:]
 }
 
 // finishCommit completes the acceptance of it, done and archived, whose
@@ -1248,10 +1270,10 @@ func undoneRefused(id string, blockers []string, left []preview.UndonePath) *und
 }
 
 // acceptRefusal is err as acceptRefused gives it, and under --json, when err
-// is a refusal for paths the branch undoes of main, or the orchestrator's
-// send back of a rebase it could not settle, that refusal printed as
+// is a refusal for paths the branch undoes of main, or the acceptance's send
+// back of a rebase it could not settle, that refusal printed as
 // {"refused": {...}} with exit 4, so the dashboard shows each path (ADR-0155,
-// ADR-0189).
+// ADR-0248).
 func (a *app) acceptRefusal(err error) error {
 	var r *undoneRefusal
 	var s *sentBack

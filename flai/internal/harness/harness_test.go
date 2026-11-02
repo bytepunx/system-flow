@@ -539,16 +539,16 @@ func TestAnAgentTheMergeQueueSentBackIsToldTheQueueBatchesItAgain(t *testing.T) 
 	}
 }
 
-// ADR-0189: an agent whose story the orchestrator's acceptance sent back
-// over a rebase it could not settle is told that flai serve resolves the
-// thread once the story is back in review and the orchestrator accepts it
-// again, not that flai serve pushes the fix or the queue batches it, in its
-// last session and in a new one.
-func TestAnAgentTheOrchestratorsAcceptanceSentBackIsToldItIsAcceptedAgain(t *testing.T) {
+// ADR-0189, ADR-0248: an agent whose story an acceptance sent back over a
+// rebase it could not settle is told that flai serve resolves the thread
+// once the story is back in review and the story is accepted again, not
+// that flai serve pushes the fix or the queue batches it, in its last
+// session and in a new one.
+func TestAnAgentAnAcceptanceSentBackIsToldItIsAcceptedAgain(t *testing.T) {
 	r := req(&manifest.Agent{Harness: ClaudeCode})
 	r.Session = "5f0c7d0e-1b2a-4c3d-8e9f-0a1b2c3d4e5f"
-	r.SentBack = &SentBack{Thread: "TH-0012", What: "the orchestrator's acceptance found that story/S-0104 stopped rebasing onto main on conflicts in cli/x.go", Resumed: true, Acceptance: true}
-	tail := "move S-0104 to review again; flai serve resolves TH-0012 once S-0104 is back in review, and the orchestrator accepts it again."
+	r.SentBack = &SentBack{Thread: "TH-0012", What: "the acceptance of S-0104 found that story/S-0104 stopped rebasing onto main on conflicts in cli/x.go", Resumed: true, Acceptance: true}
+	tail := "move S-0104 to review again; flai serve resolves TH-0012 once S-0104 is back in review, and it is accepted again."
 	for _, resumed := range []bool{true, false} {
 		r.SentBack.Resumed = resumed
 		st, err := (claudeCode{}).Start(r, Host{})
@@ -561,7 +561,7 @@ func TestAnAgentTheOrchestratorsAcceptanceSentBackIsToldItIsAcceptedAgain(t *tes
 		}
 		for _, not := range []string{"pushes the fix", "merge queue", "at a new commit"} {
 			if strings.Contains(p, not) {
-				t.Errorf("resumed %v: the prompt says %q of a story the orchestrator's acceptance sent back:\n%s", resumed, not, p)
+				t.Errorf("resumed %v: the prompt says %q of a story an acceptance sent back:\n%s", resumed, not, p)
 			}
 		}
 	}

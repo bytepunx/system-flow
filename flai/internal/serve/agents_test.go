@@ -3265,25 +3265,26 @@ func TestAStoryTheMergeQueueSentBackIsNotStartedWhenItShouldNotBe(t *testing.T) 
 	waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
 }
 
-// acceptSendBack opens the thread flai accept opens, by flai, when the
-// orchestrator's acceptance of story stops on a conflict in cli/x.go it
-// cannot settle (ADR-0189), at at. The story's move is the test's.
+// acceptSendBack opens the thread flai accept opens, by flai, when an
+// acceptance of story stops on a conflict in cli/x.go it cannot settle
+// (ADR-0248), at at. The story's move is the test's.
 func (lab *agentLab) acceptSendBack(story string, at time.Time) *threads.Thread {
 	lab.t.Helper()
 	th, err := threads.New(lab.repo, threads.NewOptions{Title: storygit.SentBackTitle(storygit.Branch(story), "main", []string{"cli/x.go"}), On: story, Author: storygit.SentBackAuthor,
-		Text: "The orchestrator's acceptance of " + story + " stopped on conflicts in `cli/x.go`.", Now: at})
+		Text: "The acceptance of " + story + " by alex stopped on conflicts in `cli/x.go`.", Now: at})
 	if err != nil {
 		lab.t.Fatal(err)
 	}
 	return th
 }
 
-// ADR-0189: a story the orchestrator's acceptance sent back over a rebase it
-// could not settle gets its agent started once, in its last session, told the
-// thread and the paths; a second look starts no second agent. Once the story
-// is back in review, flai serve resolves the thread, so that it holds the
-// next acceptance no longer.
-func TestAStoryTheOrchestratorsAcceptanceSentBackGetsItsAgentOnce(t *testing.T) {
+// ADR-0248: a story an acceptance, whoever made it, sent back over a rebase
+// it could not settle gets its agent started once, in its last session, told
+// the thread and the paths, with words that name the acceptance and not the
+// orchestrator; a second look starts no second agent. Once the story is back
+// in review, flai serve resolves the thread, so that it holds the next
+// acceptance no longer.
+func TestAStoryAnAcceptanceSentBackGetsItsAgentOnce(t *testing.T) {
 	lab := newAgentLab(t)
 	ctx := context.Background()
 	lab.cfg.Command = nil
@@ -3315,7 +3316,7 @@ func TestAStoryTheOrchestratorsAcceptanceSentBackGetsItsAgentOnce(t *testing.T) 
 	waitFor(t, "the stub was told the thread", func() bool { got, _ := os.ReadFile(out); return strings.Contains(string(got), th.ID) })
 	got, _ := os.ReadFile(out)
 	for _, want := range []string{
-		"flai sent " + id + " back from review to in-progress, on thread " + th.ID + ": the orchestrator's acceptance found that story/" + id + " stopped rebasing onto main on conflicts in cli/x.go",
+		"flai sent " + id + " back from review to in-progress, on thread " + th.ID + ": the acceptance of " + id + " found that story/" + id + " stopped rebasing onto main on conflicts in cli/x.go",
 		"run flai stream sync " + id + " in its worktree and resolve them",
 		"thread_get (flai thread show " + th.ID + " on the host)",
 		"--resume " + first.Session,
@@ -3348,9 +3349,8 @@ func TestAStoryTheOrchestratorsAcceptanceSentBackGetsItsAgentOnce(t *testing.T) 
 	}
 }
 
-// ADR-0189: what the orchestrator's acceptance's send back does not start an
-// agent for.
-func TestAStoryTheOrchestratorsAcceptanceSentBackIsNotStartedWhenItShouldNotBe(t *testing.T) {
+// ADR-0248: what an acceptance's send back does not start an agent for.
+func TestAStoryAnAcceptanceSentBackIsNotStartedWhenItShouldNotBe(t *testing.T) {
 	ctx := context.Background()
 	for _, c := range []struct {
 		name string
@@ -3411,10 +3411,10 @@ func TestAStoryTheOrchestratorsAcceptanceSentBackIsNotStartedWhenItShouldNotBe(t
 	waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
 }
 
-// ADR-0189: while the agent of a story the orchestrator's acceptance sent
-// back still runs, no second one is started beside it; once it ends, the
-// story's agent is started for the send back.
-func TestAStoryTheOrchestratorsAcceptanceSentBackWaitsForItsLiveRun(t *testing.T) {
+// ADR-0248: while the agent of a story an acceptance sent back still runs,
+// no second one is started beside it; once it ends, the story's agent is
+// started for the send back.
+func TestAStoryAnAcceptanceSentBackWaitsForItsLiveRun(t *testing.T) {
 	lab := newAgentLab(t)
 	ctx := context.Background()
 	lab.hold()

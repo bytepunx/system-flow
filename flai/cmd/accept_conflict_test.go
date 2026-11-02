@@ -19,7 +19,9 @@ import (
 // I-0066: a rebase conflict during a story's sync was git-added unresolved,
 // and acceptance fast-forwarded main onto the markers. Acceptance must refuse
 // such a branch, naming each marker's path and line and merging nothing, and
-// accept it once the conflict is resolved and committed (S-0253).
+// accept it once the conflict is resolved and committed (S-0253). The refusal
+// says to send the story back for its agent to resolve them, not to resolve
+// them by hand (ADR-0248).
 func TestAcceptRefusesABranchCarryingConflictMarkers(t *testing.T) {
 	t.Parallel()
 	root, wt, doc := conflictedStoryInReview(t)
@@ -30,10 +32,16 @@ func TestAcceptRefusesABranchCarryingConflictMarkers(t *testing.T) {
 	if code == 0 {
 		t.Fatal("acceptance must refuse a branch carrying conflict markers")
 	}
-	for _, want := range []string{"story/S-0001 carries merge conflict markers at design/x.md:4, design/x.md:8;", ".flai-cache/worktrees/S-0001", "accept again"} {
+	for _, want := range []string{
+		"story/S-0001 carries merge conflict markers at design/x.md:4, design/x.md:8;",
+		"send S-0001 back to in-progress so that its agent resolves each conflict in .flai-cache/worktrees/S-0001, keeping what both sides meant, removes the markers, commits, and moves it to review again (ADR-0248)",
+	} {
 		if !strings.Contains(errOut, want) {
 			t.Errorf("the refusal must say %q:\n%s", want, errOut)
 		}
+	}
+	if strings.Contains(errOut, "accept again") {
+		t.Errorf("the refusal must not ask the operator to resolve the markers:\n%s", errOut)
 	}
 	if strings.Contains(errOut, "design/x.md:6") {
 		t.Errorf("the divider is not a marker:\n%s", errOut)
@@ -84,7 +92,7 @@ func TestAcceptPreviewReportsConflictMarkers(t *testing.T) {
 	if err := json.Unmarshal([]byte(js), &res); err != nil {
 		t.Fatalf("%v: %s", err, js)
 	}
-	want := "story/S-0001 carries merge conflict markers at design/x.md:4, design/x.md:8; resolve each conflict in .flai-cache/worktrees/S-0001"
+	want := "story/S-0001 carries merge conflict markers at design/x.md:4, design/x.md:8; send S-0001 back to in-progress so that its agent resolves each conflict in .flai-cache/worktrees/S-0001"
 	if len(res.Blockers) != 1 || !strings.HasPrefix(res.Blockers[0], want) {
 		t.Errorf("the preview must name each marker as the one blocker, starting %q: %q", want, res.Blockers)
 	}
@@ -114,7 +122,8 @@ func TestAcceptPreviewReportsConflictMarkers(t *testing.T) {
 
 // S-0337: an acceptance whose rebase of the story's branch stops on a
 // conflict is refused, and the stop is a line of the conflict log, met at
-// acceptance.
+// acceptance; the rebase itself is aborted by the send back (ADR-0248), so
+// none waits in the worktree.
 func TestAcceptLogsTheConflictItsRebaseStopsOn(t *testing.T) {
 	t.Parallel()
 	root, wt, doc := conflictedStoryInReview(t)
@@ -136,23 +145,136 @@ func TestAcceptLogsTheConflictItsRebaseStopsOn(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("conflict log: %+v, want %+v", got, want)
 	}
-
-	// accepting again finds the rebase waiting: the same stop, no new line
-	if _, _, code := runIn(t, root, "accept", "S-0001"); code == 0 {
-		t.Fatal("acceptance must refuse a rebase in progress")
-	}
-	if got, _ := storygit.ReadConflicts(filepath.Join(root, ".flai-cache")); !reflect.DeepEqual(got, want) {
-		t.Errorf("conflict log after the second refusal: %+v, want %+v", got, want)
+	if storygit.RebaseInProgress(execx.System{}, wt) {
+		t.Error("the rebase still waits in the worktree")
 	}
 }
 
-// ADR-0189: the orchestrator's acceptance whose rebase stops on a conflict
-// the merge steps cannot settle logs it, aborts the rebase, leaving the
-// worktree clean at the branch's head and main where it was, moves the story
-// back to in-progress as flai with the path in the reason, opens one thread
-// on it naming the path and the branch, and says so, under --json as a
-// refusal that exits 4. The operator's acceptance leaves the stop, as
-// TestAcceptLogsTheConflictItsRebaseStopsOn asserts.
+// ADR-0248: the acceptance by hand, without --by orchestrator, of a story
+// whose rebase stops on a conflict the merge steps cannot settle leaves no
+// rebase for the operator: it aborts the rebase, leaving the worktree clean
+// at the branch's head and main where it was, moves the story back to
+// in-progress as flai with the path in the reason, opens one thread on it by
+// flai naming the path, the branch, and the acceptance, and says the story
+// was sent back without telling the operator to resolve anything; with --json
+// it is the refusal sent_back, exiting 4. Accepted again once the story is
+// back in review, it writes on the same thread.
+func TestAnAcceptanceByHandSendsBackAStoryWhoseRebaseItCannotSettle(t *testing.T) {
+	t.Parallel()
+	root, head := orchestratedStoryInReview(t, false)
+	wt := filepath.Join(root, ".flai-cache", "worktrees", "S-0001")
+	_ = os.WriteFile(filepath.Join(root, "cli", "feature.go"), []byte("package cli\n\n// main's\n"), 0o644)
+	gitIn(t, root, "add", "cli/feature.go")
+	gitIn(t, root, "commit", "-q", "-m", "feat: main's feature")
+	mainBefore := gitIn(t, root, "rev-parse", "main")
+
+	_, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "alex")
+	if code == 0 {
+		t.Fatalf("the send back is not an acceptance: %d %s", code, errOut)
+	}
+	for _, want := range []string{"S-0001 was sent back to in-progress", "stopped on conflicts in cli/feature.go", "which the acceptance of S-0001 by alex cannot settle", "its agent resolves them on TH-"} {
+		if !strings.Contains(errOut, want) {
+			t.Errorf("the refusal must say %q:\n%s", want, errOut)
+		}
+	}
+	for _, no := range []string{"git rebase --continue", "resolve them and", "orchestrator"} {
+		if strings.Contains(errOut, no) {
+			t.Errorf("the refusal must not say %q:\n%s", no, errOut)
+		}
+	}
+
+	// the worktree is clean at the branch's head, and main has not moved
+	if storygit.RebaseInProgress(execx.System{}, wt) {
+		t.Error("the rebase still waits in the worktree")
+	}
+	if st := gitIn(t, wt, "status", "--porcelain"); st != "" {
+		t.Errorf("the worktree is not clean:\n%s", st)
+	}
+	if got := gitIn(t, wt, "rev-parse", "HEAD"); got != head {
+		t.Errorf("the worktree is at %s, want the branch's head %s", got, head)
+	}
+	if got := gitIn(t, root, "rev-parse", "main"); got != mainBefore {
+		t.Errorf("main moved from %s to %s", mainBefore, got)
+	}
+
+	// the story is in progress, moved by flai with the path in the reason
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	story, err := repo.Get("S-0001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	last := story.Transitions[len(story.Transitions)-1]
+	if story.Status != workitem.InProgress || last.To != workitem.InProgress || last.By != "flai" {
+		t.Errorf("the story is sent back by flai: %s, last %+v", story.Status, last)
+	}
+	if want := "moved to in-progress: the rebase of story/S-0001 onto main stopped on conflicts in cli/feature.go, which the acceptance of S-0001 by alex cannot settle, so it aborted the rebase; its agent syncs it"; !strings.Contains(story.Body, want) {
+		t.Errorf("the reason must name the path and the acceptance:\n%s", story.Body)
+	}
+
+	// one thread, by flai, naming the path, the branch, and the acceptance,
+	// addressed to the agent
+	all, err := threads.For(repo, "S-0001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(all) != 1 || !all[0].Open() || all[0].Opener() != "flai" ||
+		all[0].Title != "Acceptance sent back: story/S-0001 stopped rebasing onto main on conflicts in cli/feature.go" {
+		t.Fatalf("threads: %+v", all)
+	}
+	text := all[0].Entries()[0].Text
+	for _, want := range []string{"The acceptance of S-0001 by alex rebased `story/S-0001` onto `main`", "- `cli/feature.go`", "This thread is for S-0001's agent", "run `flai stream sync S-0001`", "move S-0001 to review again"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("the thread must say %q:\n%s", want, text)
+		}
+	}
+
+	// back in review, the dashboard's acceptance, --json, sends it back again
+	// as the refusal sent_back, writing on the same thread; later, since an
+	// entry at the same time by the same author joins the last
+	if _, errOut, code := runIn(t, root, "move", "S-0001", "review"); code != 0 {
+		t.Fatal(errOut)
+	}
+	later := time.Date(2026, 9, 15, 21, 5, 0, 0, time.UTC)
+	out, errOut, code := runInAt(t, root, later, "accept", "S-0001", "--by", "alex", "--json")
+	if code != exitDocRefused {
+		t.Fatalf("the send back exits %d: %d %s\n%s", exitDocRefused, code, errOut, out)
+	}
+	var res struct {
+		Refused sentBack `json:"refused"`
+	}
+	if err := json.Unmarshal([]byte(out), &res); err != nil {
+		t.Fatalf("%v: %s", err, out)
+	}
+	r := res.Refused
+	if r.ID != "S-0001" || !r.SentBack || r.Branch != "story/S-0001" || r.Base != "main" || !reflect.DeepEqual(r.Conflicts, []string{"cli/feature.go"}) || r.Thread != all[0].ID {
+		t.Errorf("--json must say the story was sent back, with the paths and the thread: %+v", r)
+	}
+	if !strings.Contains(r.Reason, "which the acceptance of S-0001 by alex cannot settle") || !strings.Contains(r.Reason, "its agent resolves them on "+all[0].ID) {
+		t.Errorf("the reason names the acceptance and the thread: %s", r.Reason)
+	}
+	if again, _ := threads.For(repo, "S-0001"); len(again) != 1 || len(again[0].Entries()) != 2 || again[0].Entries()[1].Author != "flai" {
+		t.Errorf("the second send back writes on the open thread: %+v", again)
+	}
+	if story, _ = repo.Get("S-0001"); story.Status != workitem.InProgress {
+		t.Errorf("the story is sent back again: %s", story.Status)
+	}
+
+	// each stop is a line of the conflict log
+	got, _ := storygit.ReadConflicts(filepath.Join(root, ".flai-cache"))
+	if len(got) != 2 || got[0].Where != storygit.WhereAccept || got[1].Where != storygit.WhereAccept || !reflect.DeepEqual(got[1].Paths, []string{"cli/feature.go"}) {
+		t.Errorf("conflict log: %+v", got)
+	}
+}
+
+// ADR-0189, ADR-0248: the orchestrator's acceptance whose rebase stops on a
+// conflict the merge steps cannot settle logs it, aborts the rebase, leaving
+// the worktree clean at the branch's head and main where it was, moves the
+// story back to in-progress as flai with the path in the reason, opens one
+// thread on it naming the path and the branch, and says so, under --json as
+// a refusal that exits 4, as the acceptance by hand does.
 func TestTheOrchestratorSendsBackAStoryWhoseRebaseItCannotSettle(t *testing.T) {
 	t.Parallel()
 	root, head := orchestratedStoryInReview(t, true)
@@ -213,7 +335,7 @@ func TestTheOrchestratorSendsBackAStoryWhoseRebaseItCannotSettle(t *testing.T) {
 	if story.Status != workitem.InProgress || last.To != workitem.InProgress || last.By != "flai" {
 		t.Errorf("the story is sent back by flai: %s, last %+v", story.Status, last)
 	}
-	if want := "moved to in-progress: the rebase of story/S-0001 onto main stopped on conflicts in cli/feature.go, which the orchestrator's acceptance cannot settle"; !strings.Contains(story.Body, want) {
+	if want := "moved to in-progress: the rebase of story/S-0001 onto main stopped on conflicts in cli/feature.go, which the acceptance of S-0001 by orchestrator cannot settle"; !strings.Contains(story.Body, want) {
 		t.Errorf("the reason must name the path:\n%s", story.Body)
 	}
 
