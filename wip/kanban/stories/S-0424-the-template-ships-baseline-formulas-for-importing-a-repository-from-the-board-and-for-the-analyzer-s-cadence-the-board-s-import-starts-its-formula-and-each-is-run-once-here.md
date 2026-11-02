@@ -3,11 +3,11 @@ id: S-0424
 type: story
 nature: improvement
 title: The template ships baseline formulas for importing a repository from the board and for the analyzer's cadence, the board's import starts its formula, and each is run once here
-status: ready
+status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:41:19Z
-updated: 2026-11-02T05:13:27Z
+updated: 2026-11-02T05:28:18Z
 transitions:
   - to: ready
     at: 2026-10-30T00:05:31Z
@@ -18,6 +18,9 @@ transitions:
   - to: ready
     at: 2026-11-01T23:44:01Z
     by: alex
+  - to: in-progress
+    at: 2026-11-02T05:28:18Z
+    by: agent-S-0424
 tags: [cli, template, dashboard]
 topics: [cli, orchestration, template, conventions]
 touches: [design/workflows/formulas/analysis-cadence.md, design/workflows/formulas/import.md, template/root/design/workflows/formulas/analysis-cadence.md, template/root/design/workflows/formulas/import.md, template/template.yaml, template/CHANGELOG.md, flai/internal/hostapi/import.go, flai/internal/hostapi/import_test.go, flai/cmd/import.go, flai/cmd/import_commit.go, flai/cmd/import_test.go, flai/cmd/import_commit_test.go, flai/cmd/issue.go, flai/cmd/issue_test.go, flai/cmd/formula.go, flai/cmd/formula_test.go, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/check/check.go, flai/internal/check/formulas_test.go, flai/internal/serve/analysis_schedule.go, flai/internal/serve/analysis_schedule_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, design/system/strategic-agents.md, design/system/continuous-improvement.md, design/system/project-manifest.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flaiover.md, docs/users/flai.md, docs/users/flai-reference.md]
@@ -48,10 +51,10 @@ cost_of_delay:
   at: 2026-10-21T16:11:12Z
 forecast:
   duration: 1h10m
-  delivery: 2026-11-02T06:50:00Z
-  basis: "Its own forecast of 1h10m; 1st in the pull order with an in-progress limit of 5, behind S-0518."
+  delivery: 2026-11-02T07:04:00Z
+  basis: "Its own forecast of 1h10m; 1st in the pull order with an in-progress limit of 5, behind S-0506, S-0516 and S-0518."
   by: flai
-  at: 2026-11-02T05:13:27Z
+  at: 2026-11-02T05:27:46Z
 finalized:
   by: alex
   at: 2026-10-30T00:05:20Z

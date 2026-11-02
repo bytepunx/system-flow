@@ -1,12 +1,13 @@
 ---
 title: Active streams
-updated: 2026-11-02T05:27:43Z
+updated: 2026-11-02T05:30:00Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
+| [S-0424](S-0424.md) | The template ships baseline formulas for importing a repository from the board and for the analyzer's cadence, the board's import starts its formula, and each is run once here | in-progress | agent-S-0424 | 2026-11-02T05:28:18Z |
 | [S-0506](S-0506.md) | flai's HTTP MCP server serves an agent in a container as the stdio server serves one on the host: every tool, permission_prompt under auto-approve for an agent flai serve started, and a listener a container reaches | in-progress | agent-S-0506 | 2026-11-02T05:15:31Z |
 | [S-0516](S-0516.md) | flai serve starts a host agent for a story meant to be worked in a container, since nothing on a story or the host says its agent runs elsewhere | in-progress | agent-S-0516 | 2026-11-02T05:21:44Z |
 | [S-0518](S-0518.md) | flai guard does not run as the hook inside the agent container, and the hook lets every call through when the guard cannot start | in-progress | agent-S-0518 | 2026-11-02T04:24:48Z |
