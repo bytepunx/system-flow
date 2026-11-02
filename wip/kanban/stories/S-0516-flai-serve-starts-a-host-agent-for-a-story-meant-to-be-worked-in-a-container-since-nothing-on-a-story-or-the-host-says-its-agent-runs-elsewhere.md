@@ -3,11 +3,17 @@ id: S-0516
 type: story
 nature: remediation
 title: flai serve starts a host agent for a story meant to be worked in a container, since nothing on a story or the host says its agent runs elsewhere
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-28T12:52:40Z
-updated: 2026-11-02T05:03:22Z
-transitions: []
+updated: 2026-11-02T05:13:40Z
+transitions:
+  - to: ready
+    at: 2026-11-02T05:13:26Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-11-02T05:13:34Z
+    by: agent-S-0516
 tags: [cli, serve]
 topics: [harness]
 touches: [design/adrs, design/adrs/README.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/start.go, flai/internal/serve/start_test.go, flai/internal/serve/restart.go, flai/internal/serve/restart_test.go, flai/internal/serve/commit.go, flai/internal/serve/commit_test.go, docs/users/flai.md, docs/operators/index.md, design/system/agent-adapters.md, design/issues/I-0214-flai-serve-starts-a-host-agent-for-a-story-meant-to-be-worked-in-a-container-since-nothing-on-a-story-or-the-host-says-its-agent-runs-elsewhere.md, design/issues/summary.md]
@@ -22,15 +28,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 239
+      seconds: 248
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 64
-          output: 814
-          cache_read: 13387298
-          cache_write: 63293
-          cost: 2.9542
+          input: 68
+          output: 841
+          cache_read: 13594766
+          cache_write: 66153
+          cost: 3.0034
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 16m
@@ -41,10 +47,10 @@ cost_of_delay:
   at: 2026-10-28T13:12:42Z
 forecast:
   duration: 1h
-  delivery: 2026-11-02T12:11:00Z
-  basis: "Its own forecast of 1h; 15th in the pull order with an in-progress limit of 5, behind S-0423, S-0518, S-0553, S-0424, S-0554, S-0425, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0506, S-0508, S-0509 and S-0510."
+  delivery: 2026-11-02T06:28:00Z
+  basis: "Its own forecast of 1h; 4th in the pull order with an in-progress limit of 5, behind S-0518, S-0424, S-0554 and S-0425."
   by: flai
-  at: 2026-11-02T05:03:22Z
+  at: 2026-11-02T05:13:40Z
 finalized:
   by: orchestrator
   at: 2026-10-30T13:16:16Z

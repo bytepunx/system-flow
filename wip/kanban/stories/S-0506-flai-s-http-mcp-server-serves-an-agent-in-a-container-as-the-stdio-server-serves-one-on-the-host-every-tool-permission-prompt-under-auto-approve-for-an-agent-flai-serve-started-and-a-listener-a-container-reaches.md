@@ -3,12 +3,18 @@ id: S-0506
 type: story
 nature: feature
 title: "flai's HTTP MCP server serves an agent in a container as the stdio server serves one on the host: every tool, permission_prompt under auto-approve for an agent flai serve started, and a listener a container reaches"
-status: backlog
+status: in-progress
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:42:51Z
-updated: 2026-11-02T05:02:52Z
-transitions: []
+updated: 2026-11-02T05:14:17Z
+transitions:
+  - to: ready
+    at: 2026-11-02T05:13:28Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-11-02T05:14:09Z
+    by: agent-S-0506
 tags: [cli, mcp]
 topics: [harness, docker, mcp]
 touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/mcphttp/mcphttp.go, flai/internal/mcphttp/mcphttp_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/cmd/mcp_http_test.go, flai/cmd/host.go, flai/cmd/host_test.go, flai/cmd/serve_mcp.go, flai/cmd/serve_mcp_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, design/adrs/README.md, design/adrs, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, docs/operators/index.md, design/system/flai-cli.md, flai/cmd/serve.go, flai/cmd/serve_settings.go, flai/cmd/serve_settings_test.go, flai/internal/mcpserver/work.go, flai/internal/mcpserver/timing.go, design/issues/I-0228-claude-code-drops-any-call-to-flai-s-http-mcp-server-that-answers-after-60-seconds-so-wait-for-events-wait-for-work-verify-and-a-slow-task-done-fail-for-an-agent-in-a-container.md, design/issues/summary.md]
@@ -34,25 +40,25 @@ usage:
           cache_write: 138160
           cost: 6.5749
     - kind: orchestrator
-      seconds: 646
+      seconds: 655
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 150
-          output: 1109
-          cache_read: 12986216
-          cache_write: 397875
-          cost: 2.9612
+          input: 154
+          output: 1136
+          cache_read: 13193683
+          cache_write: 400734
+          cost: 3.0104
 cost_of_delay:
   value: 33.33
   by: planner-S-0506
   at: 2026-10-31T08:00:25Z
 forecast:
   duration: 2h
-  delivery: 2026-11-02T11:06:00Z
-  basis: "Its own forecast of 2h; 11th in the pull order with an in-progress limit of 5, behind S-0423, S-0518, S-0553, S-0424, S-0554, S-0425, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411 and S-0412."
+  delivery: 2026-11-02T10:58:00Z
+  basis: "Its own forecast of 2h; 12th in the pull order with an in-progress limit of 5, behind S-0518, S-0424, S-0554, S-0425, S-0516, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411 and S-0412."
   by: flai
-  at: 2026-11-02T05:02:52Z
+  at: 2026-11-02T05:14:17Z
 finalized:
   by: orchestrator
   at: 2026-10-31T08:02:32Z
