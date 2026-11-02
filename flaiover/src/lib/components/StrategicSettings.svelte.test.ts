@@ -98,6 +98,47 @@ function strategic(editable: boolean): Strategic {
 	};
 }
 
+/** The strategic block with a role the project defines, reviewer, as settings.get lists it (S-0420). */
+function withReviewer(editable: boolean): Strategic {
+	return {
+		...strategic(editable),
+		roles: [
+			{
+				name: 'reviewer',
+				title: 'Reviewer',
+				path: 'design/workflows/roles/reviewer.md',
+				description: 'Reviews a story against the conventions, for flai serve.',
+				action: 'review',
+				settings: [
+					{
+						key: 'roles.reviewer.agent',
+						kind: 'agent',
+						meaning: 'The agent of the role reviewer, over the project agent.',
+						set: false
+					},
+					{
+						key: 'roles.reviewer.schedule',
+						kind: 'cron',
+						meaning: 'When the role reviewer runs on its schedule.',
+						value: 'daily',
+						set: true
+					},
+					{
+						key: 'roles.reviewer.permissions.publish',
+						kind: 'boolean',
+						values: ['true', 'false'],
+						default: 'false',
+						meaning: 'Lets the role reviewer publish a release.',
+						value: true,
+						set: true,
+						allows: ['release_publish', 'flai release when own-thread']
+					}
+				]
+			}
+		]
+	};
+}
+
 describe('StrategicSettings (S-0229)', () => {
 	let c: ReturnType<typeof mount> | undefined;
 	afterEach(() => {
@@ -260,5 +301,102 @@ describe('StrategicSettings (S-0229)', () => {
 		const said = q('strategic-said')!;
 		expect(said.textContent).toContain('the settings host action is off');
 		expect(said.textContent).toContain('flai serve enable settings');
+	});
+});
+
+describe('StrategicSettings for a role (S-0420)', () => {
+	let c: ReturnType<typeof mount> | undefined;
+	afterEach(() => {
+		if (c) unmount(c);
+		c = undefined;
+		api.mockReset();
+		document.body.innerHTML = '';
+	});
+
+	function show(role: string, s: Strategic, onsaved?: () => void) {
+		c = mount(StrategicSettings, { target: document.body, props: { role, strategic: s, onsaved } });
+		flushSync();
+	}
+
+	it("lists a defined role's agent, schedule, and permissions, each permission with what it allows", () => {
+		show('reviewer', withReviewer(true));
+		const panel = q('strategic-reviewer')!;
+		expect(panel.querySelector('h2')?.textContent).toBe("The reviewer's settings");
+		for (const key of [
+			'roles.reviewer.agent',
+			'roles.reviewer.schedule',
+			'roles.reviewer.permissions.publish'
+		])
+			expect(q(`row-${key}`)).not.toBeNull();
+		expect(q('row-planning.agent')).toBeNull();
+		expect(q('row-orchestration.policy')).toBeNull();
+		expect(q('default-roles.reviewer.agent')?.textContent).toContain("the project's agent");
+		expect(q<HTMLInputElement>('input-roles.reviewer.agent-harness')).not.toBeNull();
+		expect(q<HTMLInputElement>('input-roles.reviewer.schedule')!.value).toBe('daily');
+		const toggle = q<HTMLInputElement>('input-roles.reviewer.permissions.publish')!;
+		expect(toggle.getAttribute('role')).toBe('switch');
+		expect(toggle.checked).toBe(true);
+		expect(document.querySelector(`label[for="${toggle.id}"]`)?.textContent).toBe('publish');
+		const allows = q('allows-roles.reviewer.permissions.publish')!;
+		expect(allows.textContent).toContain('release_publish');
+		expect(allows.textContent).toContain('flai release when own-thread');
+		expect(toggle.getAttribute('aria-describedby')).toContain(allows.id);
+		expect(q('row-roles.reviewer.permissions.publish')!.contains(allows)).toBe(true);
+		expect(panel.querySelector('h3')?.textContent).toBe('permissions');
+	});
+
+	it("saves a defined role's changed keys through settings.manifest while settings is on", async () => {
+		const sent: Record<string, unknown>[] = [];
+		api.mockImplementation(async (_url: string, init?: { body?: string }) => {
+			sent.push(JSON.parse(init!.body!));
+			return answer(200, { set: [], unset: [], commit: 'abcdef123456', warnings: [] });
+		});
+		const onsaved = vi.fn();
+		show('reviewer', withReviewer(true), onsaved);
+		expect(q('strategic-readonly')).toBeNull();
+		type(q<HTMLInputElement>('input-roles.reviewer.schedule')!, '0 6 * * 1');
+		q<HTMLInputElement>('input-roles.reviewer.permissions.publish')!.click();
+		type(q<HTMLInputElement>('input-roles.reviewer.agent-model')!, 'claude-sonnet-5');
+		q<HTMLButtonElement>('strategic-save')!.click();
+		await settle();
+		expect(api).toHaveBeenCalledWith('/api/settings', expect.objectContaining({ method: 'POST' }));
+		expect(sent).toEqual([
+			{
+				kind: 'manifest',
+				set: {
+					'roles.reviewer.agent': { model: 'claude-sonnet-5' },
+					'roles.reviewer.schedule': '0 6 * * 1',
+					'roles.reviewer.permissions.publish': false
+				}
+			}
+		]);
+		expect(onsaved).toHaveBeenCalledOnce();
+		expect(q('strategic-said')?.textContent).toContain('saved in abcdef1');
+	});
+
+	it("shows a defined role's settings read-only while settings is off", () => {
+		show('reviewer', withReviewer(false));
+		expect(q('strategic-readonly')?.textContent).toContain('flai serve enable settings');
+		const inputs = document.querySelectorAll<HTMLInputElement>('[data-testid^="input-"]');
+		expect(inputs.length).toBe(5);
+		for (const el of inputs) expect(el.disabled).toBe(true);
+		expect(q<HTMLButtonElement>('strategic-save')!.disabled).toBe(true);
+		expect(q('allows-roles.reviewer.permissions.publish')).not.toBeNull();
+	});
+
+	it("shows a built-in role's block, and a line for a role flai lists no settings for", () => {
+		show('planner', withReviewer(true));
+		expect(q('strategic-planning')?.querySelector('h2')?.textContent).toBe(
+			"The planner's settings"
+		);
+		expect(q('row-planning.agent')).not.toBeNull();
+		expect(q('row-roles.reviewer.agent')).toBeNull();
+		unmount(c!);
+		document.body.innerHTML = '';
+
+		show('reviewer', strategic(true));
+		expect(q('strategic-none')?.textContent).toContain('no settings for this role');
+		expect(q('strategic-save')).toBeNull();
+		expect(document.querySelectorAll('[data-testid^="input-"]').length).toBe(0);
 	});
 });

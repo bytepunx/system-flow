@@ -1,14 +1,17 @@
 <script lang="ts">
-	// One block of the strategic agents' settings in system-flow.yaml (S-0229): the orchestrator's,
-	// the planner's, or the analyzer's, as settings.get's strategic block lists them. Each key shows
-	// what it does, and a permission what can go wrong while it is on, with an input by its kind and
-	// its default while it is unset. Save writes only the keys that changed through settings.manifest,
-	// an emptied one as an unset; flai's refusal keeps what was typed and says each reason under its
-	// field. While the settings host action is off every input is disabled and the panel says why.
+	// A strategic agent's settings in system-flow.yaml (S-0229, S-0420): one block's, the
+	// orchestrator's, the planner's, the analyzer's, or the curator's, or a role's by name, a built-in
+	// one's being its block's and a defined one's those settings.get's strategic block lists under
+	// roles: its agent, its schedule, and the permissions its file declares, each with the calls it
+	// allows. Each key shows what it does, and a permission what can go wrong while it is on, with an
+	// input by its kind and its default while it is unset. Save writes only the keys that changed
+	// through settings.manifest, an emptied one as an unset; flai's refusal keeps what was typed and
+	// says each reason under its field. While the settings host action is off every input is disabled
+	// and the panel says why. A role with no settings listed says so in a line.
 	import { untrack } from 'svelte';
 	import { api } from '$lib/api';
 	import {
-		inBlock,
+		settingsPanel,
 		strategicChange,
 		strategicForm,
 		unchanged,
@@ -21,24 +24,23 @@
 
 	let {
 		block,
+		role,
 		strategic,
 		onsaved
 	}: {
-		block: StrategicBlock;
+		/** The block whose settings these are; give it or role. */
+		block?: StrategicBlock;
+		/** The role, by name, whose settings these are, when no block is given. */
+		role?: string;
 		/** settings.get's host.strategic. */
 		strategic: StrategicSettings;
 		/** Called after a save that flai took, so that the page reads the settings again. */
 		onsaved?: () => void;
 	} = $props();
 
-	const TITLE: Record<StrategicBlock, string> = {
-		orchestration: "The orchestrator's settings",
-		planning: "The planner's settings",
-		analysis: "The analyzer's settings"
-	};
-
 	const uid = $props.id();
-	const rows = $derived(inBlock(strategic, block));
+	const panel = $derived(settingsPanel(strategic, block ? { block } : { role: role ?? '' }));
+	const rows = $derived(panel.rows);
 	const shown = $derived(new Set(rows.map((s) => s.key)));
 
 	let before = $state<StrategicForm>(untrack(() => strategicForm(rows)));
@@ -64,9 +66,12 @@
 	const elsewhere = $derived(refused.filter((r) => !shown.has(r.field)));
 
 	const name = (key: string) => key.split('.').at(-1) ?? key;
+	/** The group a key is under after the panel's prefix: permissions, or release. */
 	const group = (key: string) => {
-		const parts = key.split('.');
-		return parts.length > 2 ? parts[1] : '';
+		const parts = key.startsWith(panel.prefix)
+			? key.slice(panel.prefix.length).split('.')
+			: key.split('.').slice(1);
+		return parts.length > 1 ? parts[0] : '';
 	};
 	const id = (key: string) => `${uid}-${key}`;
 	const reasons = (key: string) => refused.filter((r) => r.field === key);
@@ -74,6 +79,7 @@
 		[
 			`${id(s.key)}-meaning`,
 			s.risk ? `${id(s.key)}-risk` : '',
+			s.allows?.length ? `${id(s.key)}-allows` : '',
 			reasons(s.key).length ? `${id(s.key)}-refused` : ''
 		]
 			.filter(Boolean)
@@ -143,6 +149,18 @@
 		{#if s.risk}
 			<p id="{id(s.key)}-risk" class="text-warn" data-testid="risk-{s.key}">Risk: {s.risk}</p>
 		{/if}
+		{#if s.allows?.length}
+			<p
+				id="{id(s.key)}-allows"
+				class="flex flex-wrap items-baseline gap-1 text-muted"
+				data-testid="allows-{s.key}"
+			>
+				<span>Allows:</span>
+				{#each s.allows as call, i (i)}
+					<code class="rounded bg-raised px-1">{call}</code>
+				{/each}
+			</p>
+		{/if}
 	</div>
 	{#if reasons(s.key).length}
 		<div id="{id(s.key)}-refused" role="alert" data-testid="refused-{s.key}">
@@ -153,8 +171,18 @@
 	{/if}
 {/snippet}
 
-<section class="space-y-3 text-sm" data-testid="strategic-{block}">
-	<h2 class="font-medium">{TITLE[block]}</h2>
+<section class="space-y-3 text-sm" data-testid="strategic-{panel.id}">
+	<h2 class="font-medium">{panel.title}</h2>
+	{#if rows.length === 0}
+		<p class="text-xs text-muted" data-testid="strategic-none">
+			flai on the host lists no settings for this role: flai may be older than this dashboard.
+		</p>
+	{:else}
+		{@render editor()}
+	{/if}
+</section>
+
+{#snippet editor()}
 	{#if off}
 		<p
 			class="rounded border border-line-strong bg-raised p-3 text-xs"
@@ -316,4 +344,4 @@
 			{/if}
 		</p>
 	{/if}
-</section>
+{/snippet}

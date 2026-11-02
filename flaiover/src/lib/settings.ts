@@ -218,7 +218,15 @@ export type SettingsView = {
 };
 
 /** The blocks of the manifest that hold the strategic agents' settings, a key's first segment. */
-export type StrategicBlock = 'orchestration' | 'planning' | 'analysis';
+export type StrategicBlock = 'orchestration' | 'planning' | 'analysis' | 'digest';
+
+/** The block of each built-in role's settings; a role a project defines has its own under roles. */
+export const ROLE_BLOCKS: Readonly<Record<string, StrategicBlock>> = {
+	orchestrator: 'orchestration',
+	planner: 'planning',
+	analyzer: 'analysis',
+	curator: 'digest'
+};
 
 /** What a strategic setting's value is, and so how it is edited. */
 export type StrategicKind =
@@ -241,6 +249,25 @@ export type StrategicSetting = {
 	/** The value as the manifest has it; absent when unset. */
 	value?: boolean | string | number | Agent;
 	set: boolean;
+	/**
+	 * For a permission of a role a project defines (S-0420), the calls its file lists under it, each
+	 * tool or command as the file names it, one under a condition as "<call> when <condition>".
+	 */
+	allows?: string[];
+};
+
+/**
+ * A role a project defines, as settings.get lists it (S-0420): its file's title, path, description,
+ * and host action, and each key flai manifest set writes for it, roles.<name>.agent, the schedule its
+ * trigger names, and roles.<name>.permissions.<p> for each permission its file declares.
+ */
+export type RoleSettings = {
+	name: string;
+	title: string;
+	path: string;
+	description: string;
+	action: string;
+	settings: StrategicSetting[];
 };
 
 /** settings.get's strategic block: each setting, and whether the dashboard may change them. */
@@ -250,6 +277,8 @@ export type StrategicSettings = {
 	/** The command, run on the host in the project, that makes them editable. */
 	enable: string;
 	settings: StrategicSetting[];
+	/** The roles the project defines, built-in ones left out; absent from a flai before S-0420. */
+	roles?: RoleSettings[];
 };
 
 /** One field flai refused, and why. */
@@ -273,6 +302,42 @@ export type ManifestChange = {
 /** The settings of one block, in catalog order. */
 export function inBlock(s: StrategicSettings, block: StrategicBlock): StrategicSetting[] {
 	return s.settings.filter((x) => x.key.split('.')[0] === block);
+}
+
+/**
+ * The settings panel of a block, or of a role by name: a built-in role's is its block's, and a role
+ * the project defines has the settings its roles entry lists, none when flai lists it not. id names
+ * the panel, prefix is what every key of it begins with, and title is its heading.
+ */
+export type SettingsPanel = {
+	id: string;
+	title: string;
+	prefix: string;
+	rows: StrategicSetting[];
+};
+
+const BLOCK_TITLES: Record<StrategicBlock, string> = {
+	orchestration: "The orchestrator's settings",
+	planning: "The planner's settings",
+	analysis: "The analyzer's settings",
+	digest: "The curator's settings"
+};
+
+export function settingsPanel(
+	s: StrategicSettings,
+	of: { block: StrategicBlock } | { role: string }
+): SettingsPanel {
+	const role = 'role' in of ? of.role : '';
+	const block =
+		'block' in of ? of.block : Object.hasOwn(ROLE_BLOCKS, role) ? ROLE_BLOCKS[role] : undefined;
+	if (block)
+		return { id: block, title: BLOCK_TITLES[block], prefix: `${block}.`, rows: inBlock(s, block) };
+	return {
+		id: role,
+		title: `The ${role.replaceAll('-', ' ')}'s settings`,
+		prefix: `roles.${role}.`,
+		rows: s.roles?.find((r) => r.name === role)?.settings ?? []
+	};
 }
 
 /** The form as the manifest has the settings: an unset key is empty, so that its default shows. */

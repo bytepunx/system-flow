@@ -3,13 +3,17 @@
 	// project defines, on the role page, read from /api/roles/<name>; a role flai does not report says
 	// so in its place. It is asked again when the role's activity document changes, when flai serve
 	// says a run of the role started or ended, which changes no file, and when the path names
-	// another role. A reload that fails says so above what was last shown.
+	// another role. A reload that fails says so above what was last shown. Its settings panel's
+	// settings (S-0229) are read apart, on arrival, after a save, and when system-flow.yaml changes,
+	// so that a reload of the role does not refill the form while the operator types.
 	import { page } from '$app/state';
-	import { untrack } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { api } from '$lib/api';
 	import { debounced, follow, listen } from '$lib/events';
 	import RolePage from '$lib/components/RolePage.svelte';
+	import StrategicSettings from '$lib/components/StrategicSettings.svelte';
 	import { concernsRole, type RoleView } from '$lib/roles';
+	import type { SettingsView, StrategicSettings as Strategic } from '$lib/settings';
 
 	const name = $derived(page.params.role ?? '');
 	/** The role in the page's words: its name with its hyphens as spaces, its first letter capital. */
@@ -20,6 +24,29 @@
 	let view = $state<RoleView | null>(null);
 	let error = $state<string | null>(null);
 	let missing = $state(false);
+	let strategic = $state<Strategic | null>(null);
+	let settingsRead = $state(false);
+	let settingsError = $state<string | null>(null);
+
+	async function loadSettings() {
+		try {
+			const r = await api('/api/settings');
+			const body = await r.json().catch(() => ({}));
+			if (!r.ok) throw new Error(body.error ?? r.statusText);
+			strategic = (body as SettingsView).host?.strategic ?? null;
+			settingsRead = true;
+			settingsError = null;
+		} catch (e) {
+			settingsError = e instanceof Error ? e.message : String(e);
+		}
+	}
+
+	onMount(() => {
+		void loadSettings();
+		return follow(['project'], (changes) => {
+			if (changes.some((c) => c.kind === 'project')) void loadSettings();
+		});
+	});
 
 	async function load(asked: string) {
 		try {
@@ -74,6 +101,26 @@
 
 <svelte:head><title>{title} · flaiover</title></svelte:head>
 
+<!-- its settings come first, under the host action, so they are reached without scrolling (S-0533) -->
+{#snippet settings()}
+	{#if settingsError}
+		<p
+			class="mb-4 rounded border border-danger bg-danger-soft p-3 text-sm text-danger"
+			role="alert"
+		>
+			{settingsError}
+		</p>
+	{/if}
+	{#if strategic}
+		<StrategicSettings role={name} {strategic} onsaved={() => void loadSettings()} />
+	{:else if settingsRead}
+		<p class="text-sm text-muted" data-testid="strategic-absent">
+			flai on the host gave no settings for the {name}: the project may not be open, or flai may be
+			older than this dashboard.
+		</p>
+	{/if}
+{/snippet}
+
 <h1 class="mb-1 text-2xl font-semibold">{title}</h1>
 {#if view}
 	<p class="mb-4 text-sm text-muted">
@@ -95,7 +142,12 @@
 		</p>
 	{/if}
 	{#if view}
-		<RolePage role={view.role} activity={view.activity} onchanged={() => void load(name)} />
+		<RolePage
+			role={view.role}
+			activity={view.activity}
+			onchanged={() => void load(name)}
+			{settings}
+		/>
 	{:else if !error}
 		<p class="text-sm text-muted">Loading…</p>
 	{/if}
