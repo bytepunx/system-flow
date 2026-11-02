@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"maps"
 	"net/http"
@@ -1500,6 +1501,83 @@ func TestSettingsShowAndSaveTheStrategicAgentsSettings(t *testing.T) {
 	}
 	if js, _, _ := runIn(t, root, "serve", "journal"); !strings.Contains(js, "flai manifest set --autocommit --unset=orchestration.policy -- planning.replan=agent") {
 		t.Errorf("the journal names the change as the command it ran:\n%s", js)
+	}
+}
+
+// S-0420: settings.get's strategic block lists each role the project defines
+// that is not built-in, with its agent, the schedule its trigger names, and
+// the permissions its file declares, each with its value and, for a
+// permission, the calls the file lists under it; the strategic agents' keys
+// stay as they were. settings.manifest writes each of them through flai
+// manifest set only with the settings action on.
+func TestSettingsShowAndSaveADefinedRolesSettings(t *testing.T) {
+	scheduled := strings.Replace(reviewerRole, "{schedule: planning.schedule, when: each-ready-story}", "{schedule: roles.reviewer.schedule}", 1)
+	root := rolesProject(t, map[string]string{"reviewer.md": scheduled})
+	inProcess(t)
+	type setting struct {
+		Key    string          `json:"key"`
+		Kind   string          `json:"kind"`
+		Value  json.RawMessage `json:"value"`
+		Set    bool            `json:"set"`
+		Allows []string        `json:"allows"`
+	}
+	type role struct {
+		Name     string    `json:"name"`
+		Action   string    `json:"action"`
+		Settings []setting `json:"settings"`
+	}
+	read := func() (bool, []role, int) {
+		t.Helper()
+		out, _, code := runIn(t, root, "hostapi", "settings.get", `{}`)
+		var got struct {
+			Host struct {
+				Strategic struct {
+					Editable bool              `json:"editable"`
+					Settings []json.RawMessage `json:"settings"`
+					Roles    []role            `json:"roles"`
+				} `json:"strategic"`
+			} `json:"host"`
+		}
+		if err := json.Unmarshal([]byte(out), &got); code != 0 || err != nil {
+			t.Fatalf("settings.get: %d %v %s", code, err, out)
+		}
+		st := got.Host.Strategic
+		return st.Editable, st.Roles, len(st.Settings)
+	}
+	editable, rs, n := read()
+	if editable || n != len(manifest.Settings()) || len(rs) != 1 || rs[0].Name != "reviewer" || rs[0].Action != "review" {
+		t.Fatalf("strategic: editable %v, %d settings, roles %+v; want false, %d, the reviewer alone", editable, n, rs, len(manifest.Settings()))
+	}
+	var keys []string
+	for _, s := range rs[0].Settings {
+		keys = append(keys, s.Key+":"+s.Kind)
+	}
+	if want := []string{"roles.reviewer.agent:agent", "roles.reviewer.schedule:cron", "roles.reviewer.permissions.publish:boolean"}; !slices.Equal(keys, want) {
+		t.Errorf("the reviewer's settings %v, want %v", keys, want)
+	}
+	if s := rs[0].Settings[2]; s.Set || !slices.Equal(s.Allows, []string{"release_publish"}) {
+		t.Errorf("the publish permission: %+v", s)
+	}
+
+	params := `{"set":{"roles.reviewer.agent":{"model":"claude-sonnet-5"},"roles.reviewer.schedule":"daily","roles.reviewer.permissions.publish":true},"request_id":"req-00000191"}`
+	if out, _, code := runIn(t, root, "hostapi", "settings.manifest", params); code == 0 || !strings.Contains(out, "-32012") || !strings.Contains(out, "flai serve enable settings") {
+		t.Errorf("with the settings action off: %d %s", code, out)
+	}
+	runIn(t, root, "serve", "enable", "settings")
+	if out, _, code := runIn(t, root, "hostapi", "settings.manifest", strings.Replace(params, "req-00000191", "req-00000192", 1)); code != 0 {
+		t.Fatalf("a save: %d %s", code, out)
+	}
+	editable, rs, _ = read()
+	got := map[string]string{}
+	for _, s := range rs[0].Settings {
+		got[s.Key] = fmt.Sprintf("%s/%v", s.Value, s.Set)
+	}
+	if !editable || got["roles.reviewer.agent"] != `{"model":"claude-sonnet-5"}/true` || got["roles.reviewer.schedule"] != `"daily"/true` || got["roles.reviewer.permissions.publish"] != "true/true" {
+		t.Errorf("after the save: editable %v, %v", editable, got)
+	}
+	m, err := manifest.Load(filepath.Join(root, manifest.File))
+	if err != nil || m.Roles["reviewer"].Schedule != "daily" || !m.Roles["reviewer"].Permissions.Publish {
+		t.Errorf("the manifest after the save: %+v, %v", m.Roles, err)
 	}
 }
 

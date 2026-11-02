@@ -2,6 +2,7 @@ package manifest
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -733,6 +734,83 @@ func TestEditSettingsWritesARolesSchedule(t *testing.T) {
 		if i := slices.IndexFunc(refused.Problems, func(p Problem) bool { return p.Field == k }); i < 0 || !strings.Contains(refused.Problems[i].Reason, c.reason) {
 			t.Errorf("%s: want %s: ...%s..., got %+v", c.set, k, c.reason, refused.Problems)
 		}
+	}
+}
+
+// S-0420: roles.<name>.permissions.<p>, for a role's kebab-case name and a
+// permission a role file may declare, is a boolean, or answer_threads a
+// choice, written into the role's permissions block and read back as the
+// role's permission; an answer mode flai check refuses, the orchestrator's,
+// and confirm_after are refused naming the key, and a permission that is none
+// is no setting. It is listed before roles.<name>.agent.
+func TestEditSettingsWritesARolesPermission(t *testing.T) {
+	const key = "roles.code-reviewer.permissions.publish"
+	if s, ok := SettingFor(key); !ok || s.Key != key || s.Kind != KindBoolean || s.Default != "false" || !strings.Contains(s.Meaning, "code-reviewer") {
+		t.Fatalf("%s: %+v, %v", key, s, ok)
+	}
+	if s, ok := SettingFor("roles.code-reviewer.permissions.answer_threads"); !ok || s.Kind != KindChoice || !slices.Equal(s.Values, AnswerModes) || s.Default != AnswerOff {
+		t.Errorf("answer_threads: %+v, %v", s, ok)
+	}
+	for _, k := range []string{"roles.code-reviewer.permissions.fly", "roles.Reviewer.permissions.publish", "roles..permissions.publish", "roles.code-reviewer.permissions."} {
+		if _, ok := SettingFor(k); ok {
+			t.Errorf("%s is a setting", k)
+		}
+	}
+	if keys := settingKeys(); !strings.HasPrefix(keys[len(keys)-3], "roles.<name>.permissions.<p>") {
+		t.Errorf("roles.<name>.permissions.<p> is not listed before roles.<name>.agent: %v", keys)
+	}
+	got, err := EditSettings([]byte(settingsFixture), []Assignment{{key, "true"}, {"roles.code-reviewer.permissions.answer_threads", "recommend"}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := loaded(t, got)
+	if p := m.Roles["code-reviewer"].Permissions; !p.Allows(PermitPublish) || p.AnswerMode() != AnswerRecommend || p.Allows(PermitAcceptReviews) {
+		t.Errorf("read back: %+v\n%s", p, got)
+	}
+	unset, err := EditSettings(got, nil, []string{key})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded(t, unset).Roles["code-reviewer"].Permissions.Allows(PermitPublish) {
+		t.Errorf("unset permission still reads:\n%s", unset)
+	}
+	for _, c := range []struct{ set, reason string }{
+		{"roles.code-reviewer.permissions.answer_threads=always", "is not a way of answering threads"},
+		{"roles.orchestrator.permissions.publish=true", "set orchestration.permissions.publish instead"},
+		{"roles.code-reviewer.permissions.confirm_after=1h", "confirms only the orchestrator's recommendations"},
+		{"roles.code-reviewer.permissions.publish=yes", "is not true or false"},
+	} {
+		k, v, _ := strings.Cut(c.set, "=")
+		_, err := EditSettings([]byte(settingsFixture), []Assignment{{k, v}}, nil)
+		var refused *RefusedError
+		if !errors.As(err, &refused) {
+			t.Errorf("%s: want a refusal, got %v", c.set, err)
+			continue
+		}
+		if i := slices.IndexFunc(refused.Problems, func(p Problem) bool { return strings.HasPrefix(p.Field, k) }); i < 0 || !strings.Contains(refused.Problems[i].Reason, c.reason) {
+			t.Errorf("%s: want %s: ...%s..., got %+v", c.set, k, c.reason, refused.Problems)
+		}
+	}
+}
+
+// S-0420: a defined role's settings are its agent, the schedules its
+// triggers name, and the permissions its file declares, each with its value
+// in the manifest, a key named twice once; a built-in role has none here.
+func TestRoleSettingValues(t *testing.T) {
+	m := Manifest{Roles: map[string]RoleSettings{"reviewer": {Schedule: "daily", Permissions: Permissions{Publish: true}}},
+		Analysis: Analysis{Schedule: "0 6 * * *"}}
+	got := m.RoleSettingValues("reviewer", []string{"roles.reviewer.schedule", "analysis.schedule", "roles.reviewer.schedule"}, []string{PermitPublish, PermitAnswerThreads, "fly"})
+	var keys []string
+	for _, v := range got {
+		keys = append(keys, fmt.Sprintf("%s=%v/%v", v.Key, v.Value, v.Set))
+	}
+	want := []string{"roles.reviewer.agent=<nil>/false", "roles.reviewer.schedule=daily/true", "analysis.schedule=0 6 * * */true",
+		"roles.reviewer.permissions.publish=true/true", "roles.reviewer.permissions.answer_threads=<nil>/false"}
+	if !slices.Equal(keys, want) {
+		t.Errorf("got %v\nwant %v", keys, want)
+	}
+	if got := m.RoleSettingValues("planner", []string{"planning.schedule"}, nil); got != nil {
+		t.Errorf("a built-in role's: %v", got)
 	}
 }
 

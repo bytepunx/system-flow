@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/roles"
 )
 
 // The host's settings, changed from the dashboard (S-0105). Until then every
@@ -268,6 +270,77 @@ func manifestEdit(_ channel.Project, raw json.RawMessage) ([]string, string, *ch
 	return args, "", nil
 }
 
+// RoleSettings are one defined role's settings, for its panel on its role
+// page (S-0420): the role's name, its file's title, path, description, and
+// host action, and each key flai manifest set writes for it, which
+// settings.manifest writes while the settings host action is on.
+type RoleSettings struct {
+	Name        string        `json:"name"`
+	Title       string        `json:"title"`
+	Path        string        `json:"path"`
+	Description string        `json:"description"`
+	Action      string        `json:"action"`
+	Settings    []RoleSetting `json:"settings"`
+}
+
+// RoleSetting is a setting of a role's with its value in the manifest, and,
+// for a permission, allows: the calls the role's file lists under it, each
+// tool and command as the file names it, one under a condition as
+// "<call> when <condition>".
+type RoleSetting struct {
+	manifest.SettingValue
+	Allows []string `json:"allows,omitempty"`
+}
+
+// DefinedRoleSettings are the settings of each role the project at root runs
+// that is not built-in, by name (S-0420): roles.<name>.agent, the setting
+// each of its file's schedule triggers names, and
+// roles.<name>.permissions.<p> for each permission its file declares, with
+// their values in m. The built-in roles' settings are their own blocks',
+// which the manifest's SettingValues lists.
+func DefinedRoleSettings(root string, m manifest.Manifest) []RoleSettings {
+	out := []RoleSettings{}
+	for _, f := range ProjectRoles(root) {
+		if manifest.BuiltinRole(f.Name) {
+			continue
+		}
+		var schedules, perms []string
+		for _, t := range f.Trigger {
+			if t.Kind == roles.TriggerSchedule {
+				schedules = append(schedules, t.Schedule)
+			}
+		}
+		allows := map[string][]string{}
+		for _, p := range f.Permissions {
+			perm, owner, ok := roles.ParseSetting(p.Setting)
+			if !ok || owner != f.Name {
+				continue // not the role's own switch, as flai check reports
+			}
+			if _, seen := allows[perm]; !seen {
+				perms = append(perms, perm)
+			}
+			for _, c := range slices.Concat(p.Tools, p.Commands) {
+				call := c.Call
+				if c.When != "" {
+					call += " when " + c.When
+				}
+				allows[perm] = append(allows[perm], call)
+			}
+		}
+		settings := []RoleSetting{}
+		for _, v := range m.RoleSettingValues(f.Name, schedules, perms) {
+			s := RoleSetting{SettingValue: v}
+			if perm, owner, ok := roles.ParseSetting(v.Key); ok && owner == f.Name {
+				s.Allows = allows[perm]
+			}
+			settings = append(settings, s)
+		}
+		out = append(out, RoleSettings{Name: f.Name, Title: f.Title, Path: f.Path, Description: f.Definition.Description,
+			Action: f.Action, Settings: settings})
+	}
+	return out
+}
+
 // subprojectChange is what settings.subproject is asked (S-0491): the edit of
 // the manifest's projects, op, the sub-project it is of, name, and for add
 // and set its path, kind, tags, and for set its new_name. tags absent keeps
@@ -470,7 +543,8 @@ func settingsSpecs() map[string]spec {
 		"settings.shared_check": {reads: true, build: sharedCheck},
 
 		// settings.manifest: the strategic agents' settings in the project's
-		// system-flow.yaml (S-0229), written by flai manifest set with
+		// system-flow.yaml (S-0229), and the defined roles' agents,
+		// schedules, and permissions (S-0420), written by flai manifest set with
 		// --autocommit, which checks the manifest as it would be as flai check
 		// does. flai exits 1 refusing a value, with {"refused": [{field,
 		// reason}]} on standard output: it is answered as Refused, with that

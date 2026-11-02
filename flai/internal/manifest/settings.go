@@ -310,7 +310,8 @@ func Settings() []Setting {
 
 // SettingFor is the setting key names, and whether flai manifest set writes
 // it: a key in the catalog, roles.<name>.agent for a role's kebab-case name
-// (S-0417), or roles.<name>.schedule (S-0418).
+// (S-0417), roles.<name>.schedule (S-0418), or roles.<name>.permissions.<p>
+// (S-0420).
 func SettingFor(key string) (Setting, bool) {
 	i := slices.IndexFunc(catalog, func(s Setting) bool { return s.Key == key })
 	if i >= 0 {
@@ -319,7 +320,88 @@ func SettingFor(key string) (Setting, bool) {
 	if s, ok := roleAgentSetting(key); ok {
 		return s, true
 	}
+	if s, ok := rolePermissionSetting(key); ok {
+		return s, true
+	}
 	return roleScheduleSetting(key)
+}
+
+// BuiltinRole reports whether name is a built-in role's, the planner's, the
+// orchestrator's, the analyzer's, or the curator's, whose agent and schedule
+// are its own block's rather than roles.<name>.agent and
+// roles.<name>.schedule.
+func BuiltinRole(name string) bool {
+	_, ok := builtinAgents[name]
+	return ok
+}
+
+// rolePermissionKey is the pattern of the key a role's permission is set
+// under, as flai manifest set lists it.
+const rolePermissionKey = "roles.<name>.permissions.<p>"
+
+// rolePermissionText is what each permission lets a role a role file defines
+// do, by its name: the calls its file lists under the setting, and what they
+// are for. confirm_after is no role's: nothing reads it but the
+// orchestrator's (withheldReason).
+var rolePermissionText = map[string]string{
+	PermitPlanBacklogEpics:   "such as starting the planner on an epic in the backlog",
+	PermitPlanBacklogStories: "such as starting the planner on a story, giving a story cost of delay inputs, and settling the threads a story's planner opens",
+	PermitSetCostOfDelay:     "such as giving an epic or a story cost of delay inputs",
+	PermitFinalizeDrafts:     "such as finalizing a draft, or creating a story that is not one",
+	PermitPromoteToReady:     "such as moving an item to ready",
+	PermitOrderReady:         "such as writing the order of the ready column by a policy",
+	PermitAcceptReviews:      "such as accepting a story in review, or enqueuing it for the merge queue, as itself",
+	PermitPublish:            "such as publishing a release",
+	PermitEditSubprojects:    "such as changing the manifest's sub-projects",
+}
+
+// rolePermissionSetting is the setting roles.<name>.permissions.<p>, for a
+// role's name in kebab-case other than the orchestrator's and a permission a
+// role file may declare, and whether key is one.
+func rolePermissionSetting(key string) (Setting, bool) {
+	rest, ok := strings.CutPrefix(key, "roles.")
+	if !ok {
+		return Setting{}, false
+	}
+	name, perm, ok := strings.Cut(rest, ".permissions.")
+	if !ok || !roleName.MatchString(name) || name == "orchestrator" {
+		return Setting{}, false
+	}
+	if perm == PermitAnswerThreads {
+		return Setting{Key: key, Kind: KindChoice, Values: AnswerModes, Default: AnswerOff,
+			Meaning: "How the role " + name + ", one a role file defines, may reply on a thread it did not open, with the calls its file lists under this setting: off never, recommend with a recommendation, and autonomous with a recommendation or an answer citing its source.",
+			get:     func(m Manifest) (any, bool) { return text(m.Roles[name].Permissions.AnswerThreads) }}, true
+	}
+	what, ok := rolePermissionText[perm]
+	if !ok {
+		return Setting{}, false
+	}
+	return Setting{Key: key, Kind: KindBoolean, Values: []string{"true", "false"}, Default: "false",
+		Meaning: "Lets the role " + name + ", one a role file defines, make the calls its file lists under this setting, " + what + "; flai guard reads it at each of the role's calls.",
+		get:     func(m Manifest) (any, bool) { on := m.Roles[name].Permissions.Allows(perm); return on, on }}, true
+}
+
+// withheldReason is why flai manifest set refuses key, a key of the
+// strategic blocks or the roles' it does not write for a reason of its own,
+// and whether it is one.
+func withheldReason(key string) (string, bool) {
+	if reason, ok := withheld[key]; ok {
+		return reason, true
+	}
+	rest, ok := strings.CutPrefix(key, "roles.")
+	if !ok {
+		return "", false
+	}
+	name, perm, ok := strings.Cut(rest, ".permissions.")
+	switch {
+	case !ok || !slices.Contains(PermissionNames, perm):
+		return "", false
+	case name == "orchestrator":
+		return "is not read: the orchestrator's permissions are orchestration.permissions; set orchestration.permissions." + perm + " instead", true
+	case perm == PermitConfirmAfter:
+		return "is not read for a role a role file defines: flai serve confirms only the orchestrator's recommendations, after orchestration.permissions.confirm_after", true
+	}
+	return "", false
 }
 
 // roleAgentKey is the pattern of the key a role's agent is set under, as
@@ -366,11 +448,46 @@ func roleScheduleSetting(key string) (Setting, bool) {
 func (m Manifest) SettingValues() []SettingValue {
 	out := make([]SettingValue, len(catalog))
 	for i, s := range catalog {
-		v, set := s.get(m)
-		if !set {
-			v = nil
+		out[i] = m.valueOf(s)
+	}
+	return out
+}
+
+// valueOf is s with its value in m.
+func (m Manifest) valueOf(s Setting) SettingValue {
+	v, set := s.get(m)
+	if !set {
+		v = nil
+	}
+	return SettingValue{Setting: s, Value: v, Set: set}
+}
+
+// RoleSettingValues are the settings flai manifest set writes for the role
+// name, one a role file defines, with their values in m (S-0420):
+// roles.<name>.agent; then each of schedules, the manifest settings its
+// file's schedule triggers name, roles.<name>.schedule or one a built-in
+// role's schedule is shared from; then roles.<name>.permissions.<p> for each
+// of permissions, those its file declares. A key named twice is listed once,
+// and one flai manifest set does not write is left out. None for a built-in
+// role, whose settings are its own block's, in SettingValues.
+func (m Manifest) RoleSettingValues(name string, schedules, permissions []string) []SettingValue {
+	if BuiltinRole(name) || !roleName.MatchString(name) {
+		return nil
+	}
+	keys := []string{"roles." + name + ".agent"}
+	keys = append(keys, schedules...)
+	for _, p := range permissions {
+		keys = append(keys, "roles."+name+".permissions."+p)
+	}
+	var out []SettingValue
+	seen := map[string]bool{}
+	for _, k := range keys {
+		s, ok := SettingFor(k)
+		if !ok || seen[k] {
+			continue
 		}
-		out[i] = SettingValue{Setting: s, Value: v, Set: set}
+		seen[k] = true
+		out = append(out, m.valueOf(s))
 	}
 	return out
 }
@@ -621,7 +738,7 @@ func parseEdits(set []Assignment, unset []string) ([]write, []Problem) {
 		s, ok := SettingFor(key)
 		switch {
 		case !ok:
-			reason, held := withheld[key]
+			reason, held := withheldReason(key)
 			if !held {
 				reason = "is not a setting flai manifest set writes; write one of " + strings.Join(settingKeys(), ", ")
 			}
@@ -654,11 +771,11 @@ func parseEdits(set []Assignment, unset []string) ([]write, []Problem) {
 }
 
 func settingKeys() []string {
-	keys := make([]string, len(catalog), len(catalog)+2)
+	keys := make([]string, len(catalog), len(catalog)+3)
 	for i, s := range catalog {
 		keys[i] = s.Key
 	}
-	return append(keys, roleAgentKey+" (<name> a role's name in kebab-case)", roleScheduleKey)
+	return append(keys, rolePermissionKey+" (<p> a permission the role's file declares)", roleAgentKey+" (<name> a role's name in kebab-case)", roleScheduleKey)
 }
 
 // parse reads a value given for the setting, or says why it is not one of
