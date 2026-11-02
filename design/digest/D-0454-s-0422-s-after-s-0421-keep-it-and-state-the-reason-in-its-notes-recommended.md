@@ -9,7 +9,7 @@ date: 2026-11-02
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0422, TH-0787]
 ---
 
 # D-0454 S-0422's after S-0421: keep it and state the reason in its Notes: Recommended: keep `after: [S-0421]` on S-0422, and add agent-S-0551's line under `### Planning` in S-0422's Notes, as written above
