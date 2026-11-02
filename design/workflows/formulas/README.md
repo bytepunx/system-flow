@@ -2,7 +2,7 @@
 
 One file per formula, `<name>.md`: a repeatable process as data, which `flai formula run` makes an ordinary story from. flai reads every `*.md` here but this README. [ADR-0238](../../adrs/0238-a-formula-is-a-markdown-file-under-design-workflows-formulas-whose-front-matter.md) defines the format.
 
-A formula's front matter names it (`name`, the file's stem), the nature of the story it makes (`nature`, `improvement` by default), that story's goal (`description`), the values a run takes (`inputs`), and its steps (`steps`). Each step has an `id`, a `title`, what it `run`s, and the steps it waits for (`after`). An input is used as `{{name}}` in the title, a step's title, and a step's run. The body is for a reader, with the baseline marker; a project adds its own below it, under `## Project additions`.
+A formula's front matter names it (`name`, the file's stem), the nature of the story it makes (`nature`, `improvement` by default), that story's goal (`description`), the values a run takes (`inputs`), and its steps (`steps`). Each step has an `id`, a `title`, what it `run`s, and the steps it waits for (`after`). An input is used by its name between double curly braces, as ADR-0238 §4 shows, in the title, a step's title, and a step's run. The body is for a reader, with the baseline marker; a project adds its own below it, under `## Project additions`.
 
 A step runs one of three kinds:
 
