@@ -24,16 +24,16 @@ touches: [flaiover/src/routes/workflow/planner/+page.svelte, flaiover/src/routes
 after: [T-1765]
 usage:
   source: log
-  seconds: 1122
+  seconds: 1124
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 186
-      output: 991
-      cache_read: 12953392
-      cache_write: 340309
-      cost: 4.6618
+      input: 167
+      output: 62368
+      cache_read: 13223946
+      cache_write: 305347
+      cost: 5.6562
 ---
 # T-1766 The Planner, Orchestrator, and Analyzer pages become the role page for their roles at the same addresses, and the Workflow menu lists every defined role
 

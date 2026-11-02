@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 69
-      output: 21321
-      cache_read: 5251268
-      cache_write: 111406
-      cost: 2.2013
+      input: 67
+      output: 20293
+      cache_read: 5252743
+      cache_write: 106180
+      cost: 2.1496
 ---
 # T-2351 flai role definition prints a role's generated definition and writes it where the ADR puts it
 

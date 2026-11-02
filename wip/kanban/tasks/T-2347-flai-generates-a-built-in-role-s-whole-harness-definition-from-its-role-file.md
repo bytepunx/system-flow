@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 85
-      output: 26130
-      cache_read: 6435607
-      cache_write: 136532
-      cost: 2.6978
+      input: 82
+      output: 24870
+      cache_read: 6437414
+      cache_write: 130127
+      cost: 2.6345
 ---
 # T-2347 flai generates a built-in role's whole harness definition from its role file, and subAgents passes it with no .claude/agents read
 

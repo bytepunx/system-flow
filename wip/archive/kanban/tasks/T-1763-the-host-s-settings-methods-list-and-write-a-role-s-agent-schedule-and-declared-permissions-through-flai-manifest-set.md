@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1578
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 102
-      output: 550
-      cache_read: 7106713
-      cache_write: 185614
-      cost: 2.5573
+      input: 92
+      output: 34212
+      cache_read: 7254056
+      cache_write: 167500
+      cost: 3.1028
 ---
 # T-1763 The host's settings methods list and write a role's agent, schedule, and declared permissions through flai manifest set
 

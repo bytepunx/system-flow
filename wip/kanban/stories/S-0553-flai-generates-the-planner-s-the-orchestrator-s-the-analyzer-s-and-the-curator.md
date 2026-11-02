@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-10-30T20:45:17Z
-updated: 2026-11-02T01:36:08Z
+updated: 2026-11-02T01:36:58Z
 transitions:
   - to: ready
     at: 2026-11-01T23:44:10Z
@@ -22,6 +22,8 @@ blocked:
   - from: 2026-11-02T01:09:00Z
     until: 2026-11-02T01:36:08Z
     reason: awaiting the operator on TH-0794
+  - from: 2026-11-02T01:36:58Z
+    reason: awaiting the operator on TH-0794
 tags: [cli, template]
 topics: [cli, orchestration, planning, template, conventions]
 touches: [design/adrs, design/adrs/README.md, design/system/agent-adapters.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, template/CHANGELOG.md, flai/internal/roles/definition.go, flai/internal/roles/definition_test.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/guard/writes.go, flai/internal/guard/writes_test.go, flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/cmd/role.go, flai/cmd/role_test.go, ".claude/agents/planner.md", ".claude/agents/orchestrator.md", ".claude/agents/analyzer.md", ".claude/agents/curator.md", template/root/.claude/agents/planner.md, template/root/.claude/agents/orchestrator.md, template/root/.claude/agents/analyzer.md, template/root/.claude/agents/curator.md, flai/internal/harness/harness.go, flai/internal/serve/orchestrate_test.go, design/issues/I-0244-testaheldwaitfailsonatruncatedstory-times-out-instead-of-failing-on-the.md, design/issues/summary.md, docs/operators/settings.md, flai/internal/pilot/run_test.go, flai/internal/serve/plan_test.go, design/issues/I-0245-flai-guard-refuses-a-sub-agent-every-flai-role-subcommand-the-reads-list-show.md]
@@ -33,7 +35,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3364
+  seconds: 3393
   priced_by: harness
   turns:
     - day: 2026-11-01
@@ -41,14 +43,14 @@ usage:
     - day: 2026-11-02
       ceremony: 3
       hand_edits: 2
-      work: 87
+      work: 92
   models:
     - model: claude-opus-5-5
-      input: 486
-      output: 149146
-      cache_read: 36734116
-      cache_write: 779317
-      cost: 15.3988
+      input: 498
+      output: 151406
+      cache_read: 39190857
+      cache_write: 792209
+      cost: 16.0385
   strategic:
     - kind: orchestrator
       seconds: 96

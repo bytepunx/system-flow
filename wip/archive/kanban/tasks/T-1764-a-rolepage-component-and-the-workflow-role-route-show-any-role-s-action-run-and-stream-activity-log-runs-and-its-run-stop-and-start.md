@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1635
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 150
-      output: 878
-      cache_read: 12302219
-      cache_write: 232240
-      cost: 4.3955
+      input: 157
+      output: 58806
+      cache_read: 12468656
+      cache_write: 287907
+      cost: 5.3332
 ---
 # T-1764 A RolePage component and the /workflow/[role] route show any role's action, run and stream, activity log, runs, and its Run, Stop, and Start
 

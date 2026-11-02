@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 5
-      output: 1442
-      cache_read: 355109
-      cache_write: 7534
-      cost: 0.1489
+      output: 1372
+      cache_read: 355208
+      cache_write: 7180
+      cost: 0.1454
 ---
 # T-2423 The tests that read the strategic agents' .claude/agents copies read their generated definitions instead
 

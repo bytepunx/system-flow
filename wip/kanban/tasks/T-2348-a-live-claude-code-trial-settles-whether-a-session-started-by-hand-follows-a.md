@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 14
-      output: 4150
-      cache_read: 1022164
-      cache_write: 21685
-      cost: 0.4285
+      input: 13
+      output: 3950
+      cache_read: 1022451
+      cache_write: 20668
+      cost: 0.4184
 ---
 # T-2348 A live Claude Code trial settles whether a session started by hand follows a symbolic link under .claude/agents, and an ADR refining ADR-0207 § 4 records where the generated definition lives
 

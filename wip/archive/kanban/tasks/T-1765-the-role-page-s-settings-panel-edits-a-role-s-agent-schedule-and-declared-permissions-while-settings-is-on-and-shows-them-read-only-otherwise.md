@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 315
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 58
-      output: 358
-      cache_read: 2821017
-      cache_write: 115918
-      cost: 1.03
+      input: 37
+      output: 13779
+      cache_read: 2921541
+      cache_write: 67460
+      cost: 1.2496
 ---
 # T-1765 The role page's settings panel edits a role's agent, schedule, and declared permissions while settings is on and shows them read-only otherwise
 

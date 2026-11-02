@@ -8,7 +8,6 @@ wip_limits:
   review: 5
 order:
   - S-0423
-  - S-0421
   - S-0424
   - S-0554
   - S-0422

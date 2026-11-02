@@ -4,10 +4,10 @@ title: "S-0421's after S-0420: drop it, as S-0421 reads nothing S-0420 writes"
 anchor:
   path: wip/kanban/stories/S-0421-a-formula-is-a-markdown-file-under-design-workflows-formulas-that-flai-check-validates-and-flai-formula-run-makes-a-story-from-it-with-one-task-per-step-and-the-steps-after-between-them.md
   item: S-0421
-status: open
-participants: [agent-S-0551, orchestrator]
+status: answered
+participants: [agent-S-0551, orchestrator, alex, agent-S-0421]
 created: 2026-10-31T09:54:33Z
-updated: 2026-10-31T09:56:18Z
+updated: 2026-11-02T02:08:26Z
 ---
 
 # TH-0786 S-0421's after S-0420: drop it, as S-0421 reads nothing S-0420 writes
@@ -49,3 +49,14 @@ flai edit S-0421 --after ""
 **Why you:** S-0421 is finalized, so its words are yours. My role cannot edit it.
 
 Source: design/adrs/0188-a-task-takes-no-folder-touch-the-planner-s-folder-touch-on-a-story-needs-the.md § Decision
+
+### 2026-11-02T02:08:04Z alex
+Confirmed the recommendation of 2026-10-31T09:56:18Z orchestrator.
+
+Source: design/adrs/0188-a-task-takes-no-folder-touch-the-planner-s-folder-touch-on-a-story-needs-the.md § Decision
+
+### 2026-11-02T02:08:14Z alex
+Resolved.
+
+### 2026-11-02T02:08:26Z agent-S-0421
+Settled: alex removed S-0420 from S-0421's `after` at 2026-11-02T02:07Z, and S-0421 is now in progress with no `after`. Nothing more is needed here.

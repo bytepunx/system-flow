@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 71.5412
-accrued_seconds: 7183
-tasks_completed: 40
-last_run: 2026-11-02T00:00:47Z
+accrued_cost: 73.9850
+accrued_seconds: 7506
+tasks_completed: 41
+last_run: 2026-11-02T01:40:57Z
 ---
 
 # Curator activity
@@ -331,3 +331,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0119, D-0121, D-0130, D-0338, D-0448, D-0449
 - Seconds: 102
 - Cost: 2.0487 USD, estimated
+
+### 2026-11-02T01:40:57Z
+
+- Summary: Wrote D-0451 (a hand `go test` of `flai/internal/serve` needs `-skip '^TestGateway'` or it runs the paid gateway checks) and D-0452 (a start prompt that says to run `scripts/close-out.sh` yourself comes from a flai older than S-0546); merged S-0549 into D-0396; absorbed D-0161 by ADR-0115 § Decision; `flai digest compact` compacted none. TH-0797's answer was already in D-0450, and S-0549's other decisions were plan progress or are stated in ADR-0234, ADR-0237 and `design/system/flai-cli.md`.
+- Trigger: accepted S-0549
+- Items: D-0161, D-0188, D-0212, D-0396, D-0425, D-0451, D-0452
+- Seconds: 323
+- Cost: 2.4438 USD, estimated

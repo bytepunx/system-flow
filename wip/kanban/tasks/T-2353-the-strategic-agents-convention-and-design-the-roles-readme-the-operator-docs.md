@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 53
-      output: 16170
-      cache_read: 3982543
-      cache_write: 84490
-      cost: 1.6695
+      input: 51
+      output: 15390
+      cache_read: 3983661
+      cache_write: 80526
+      cost: 1.6303
 ---
 # T-2353 The strategic-agents convention and design, the roles README, the operator docs, and the changelog say a strategic agent's definition is generated from its role file and changed there alone
 

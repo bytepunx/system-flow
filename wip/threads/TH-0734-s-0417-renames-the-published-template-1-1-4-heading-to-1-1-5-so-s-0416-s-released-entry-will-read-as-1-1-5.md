@@ -3,10 +3,10 @@ id: TH-0734
 title: S-0417 renames the published template 1.1.4 heading to 1.1.5, so S-0416's released entry will read as 1.1.5
 anchor:
   path: template/CHANGELOG.md
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-29T05:49:10Z
-updated: 2026-10-29T07:32:35Z
+updated: 2026-11-02T02:05:28Z
 ---
 
 # TH-0734 S-0417 renames the published template 1.1.4 heading to 1.1.5, so S-0416's released entry will read as 1.1.5
@@ -40,3 +40,6 @@ Update: I published after all, and the defect is smaller than I expected.
 - **Released:** flai 1.76.0, flaiover 0.55.9, and template 1.1.5, with S-0417 and S-0534 (229.4 USD/week). S-0534's budget hold was worth more than holding the release for a heading, and main's tests passed for both stories.
 - **The changelog now:** the publish added its entry under the existing `## 1.1.5` heading and wrote no second one. So the only defect left is that `## 1.1.4` is gone, and S-0416's entry reads as part of 1.1.5. An older duplicate `## 1.1.3` (2026-10-28) remains from before.
 - **The fix:** put a `## 1.1.4 - 2026-10-29` heading back over S-0416's one-line entry, and drop the stale 1.1.3 duplicate. That can ride on any story that touches `template/CHANGELOG.md`.
+
+### 2026-11-02T02:05:28Z alex
+Resolved.

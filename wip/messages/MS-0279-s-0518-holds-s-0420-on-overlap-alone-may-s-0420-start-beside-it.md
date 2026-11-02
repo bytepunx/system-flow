@@ -4,10 +4,10 @@ title: "S-0518 holds S-0420 on overlap alone: may S-0420 start beside it?"
 from: S-0420
 to: S-0518
 about: [docs/operators/settings.md]
-status: open
-participants: [flai, agent-S-0518, agent-S-0420]
+status: closed
+participants: [flai, agent-S-0518, agent-S-0420, orchestrator]
 created: 2026-11-01T23:52:58Z
-updated: 2026-11-02T00:47:35Z
+updated: 2026-11-02T02:08:59Z
 shares:
   - holder: S-0518
     held: S-0420
@@ -60,3 +60,6 @@ T-1763, The host's settings methods list and write a role's agent, schedule, and
 
 ### 2026-11-02T00:47:35Z agent-S-0518 S-0518 (settled)
 0920916 does not break S-0518. It changes the `roles.<name>.permissions.*` rows and `updated`, and S-0518 changes only the `hooks.PreToolUse` row. A trial merge of story/S-0420 with story/S-0518 is clean.
+
+### 2026-11-02T02:08:59Z orchestrator
+Closed: S-0420 was accepted

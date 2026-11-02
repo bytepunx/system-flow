@@ -3,11 +3,11 @@ id: S-0420
 type: story
 nature: feature
 title: The dashboard's Planner, Orchestrator, and Analyzer pages become one role page per defined role, with its settings panel, its activity document, and its runs, and agent.status carries every role by name
-status: in-progress
+status: done
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:31Z
-updated: 2026-11-02T01:26:16Z
+updated: 2026-11-02T02:08:59Z
 transitions:
   - to: ready
     at: 2026-10-28T13:05:34Z
@@ -21,9 +21,15 @@ transitions:
   - to: in-progress
     at: 2026-11-01T23:59:15Z
     by: agent-S-0420
+  - to: review
+    at: 2026-11-02T01:57:39Z
+    by: agent-S-0420
+  - to: done
+    at: 2026-11-02T02:08:59Z
+    by: orchestrator
 tags: [dashboard, cli]
 topics: [dashboard, planning, orchestration]
-touches: [design/system/flaiover-dashboard.md, docs/users/flaiover.md, flai/internal/hostapi/contract_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/serve/agents.go, flai/internal/serve/stream.go, flai/internal/serve/stream_test.go, flaiover/src/lib/components/RolePage.svelte, flaiover/src/lib/components/RolePage.svelte.test.ts, flaiover/src/lib/components/StrategicAgentPanel.svelte, flaiover/src/lib/components/StrategicSettings.svelte, flaiover/src/lib/components/StrategicSettings.svelte.test.ts, flaiover/src/lib/roles.test.ts, flaiover/src/lib/roles.ts, flaiover/src/lib/settings.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/sitemenu.ts, "flaiover/src/routes/api/roles/[name]/roles.test.ts", "flaiover/src/routes/api/roles/[name]/+server.ts", flaiover/src/routes/workflow/analyzer/analyzer.svelte.test.ts, flaiover/src/routes/workflow/analyzer/+page.svelte, flaiover/src/routes/workflow/orchestrator/orchestrator.svelte.test.ts, flaiover/src/routes/workflow/orchestrator/+page.svelte, flaiover/src/routes/workflow/planner/+page.svelte, flaiover/src/routes/workflow/planner/planner.svelte.test.ts, "flaiover/src/routes/workflow/[role]/+page.svelte", flai/internal/serve/agents_test.go, flaiover/src/lib/server/agent.ts, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go, docs/operators/settings.md, flaiover/src/lib/strategic.ts, flaiover/src/lib/strategic.test.ts, "flaiover/src/routes/api/agent-stream/[story]/+server.ts", "flaiover/src/routes/api/agent-stream/[story]/agent-stream.test.ts", flaiover/src/lib/components/NavRail.svelte, flaiover/src/lib/components/NavRail.svelte.test.ts, flaiover/src/routes/+layout.svelte, flaiover/src/routes/layout.svelte.test.ts, design/system/project-manifest.md, design/system/flai-cli.md, flaiover/src/lib/server/agent.test.ts, design/issues/I-0246-testaheldwaitfailsonatruncatedstory-and-testservestartsadefinedroleonaneventando.md, design/issues/summary.md, flaiover/src/lib/components/AnalyzerPanel.svelte, flaiover/src/lib/components/AnalyzerPanel.svelte.test.ts, flaiover/src/lib/components/OrchestratorPanel.svelte, flaiover/src/lib/components/OrchestratorPanel.svelte.test.ts, flaiover/src/lib/components/PlannerPanel.svelte, flaiover/src/lib/components/PlannerPanel.svelte.test.ts]
+touches: [design/system/flaiover-dashboard.md, docs/users/flaiover.md, flai/internal/hostapi/contract_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/serve/agents.go, flai/internal/serve/stream.go, flai/internal/serve/stream_test.go, flaiover/src/lib/components/RolePage.svelte, flaiover/src/lib/components/RolePage.svelte.test.ts, flaiover/src/lib/components/StrategicAgentPanel.svelte, flaiover/src/lib/components/StrategicSettings.svelte, flaiover/src/lib/components/StrategicSettings.svelte.test.ts, flaiover/src/lib/roles.test.ts, flaiover/src/lib/roles.ts, flaiover/src/lib/settings.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/sitemenu.ts, "flaiover/src/routes/api/roles/[name]/roles.test.ts", "flaiover/src/routes/api/roles/[name]/+server.ts", flaiover/src/routes/workflow/analyzer/analyzer.svelte.test.ts, flaiover/src/routes/workflow/analyzer/+page.svelte, flaiover/src/routes/workflow/orchestrator/orchestrator.svelte.test.ts, flaiover/src/routes/workflow/orchestrator/+page.svelte, flaiover/src/routes/workflow/planner/+page.svelte, flaiover/src/routes/workflow/planner/planner.svelte.test.ts, "flaiover/src/routes/workflow/[role]/+page.svelte", flai/internal/serve/agents_test.go, flaiover/src/lib/server/agent.ts, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go, docs/operators/settings.md, flaiover/src/lib/strategic.ts, flaiover/src/lib/strategic.test.ts, "flaiover/src/routes/api/agent-stream/[story]/+server.ts", "flaiover/src/routes/api/agent-stream/[story]/agent-stream.test.ts", flaiover/src/lib/components/NavRail.svelte, flaiover/src/lib/components/NavRail.svelte.test.ts, flaiover/src/routes/+layout.svelte, flaiover/src/routes/layout.svelte.test.ts, design/system/project-manifest.md, design/system/flai-cli.md, flaiover/src/lib/server/agent.test.ts, design/issues/I-0246-testaheldwaitfailsonatruncatedstory-and-testservestartsadefinedroleonaneventando.md, design/issues/summary.md, flaiover/src/lib/components/AnalyzerPanel.svelte, flaiover/src/lib/components/AnalyzerPanel.svelte.test.ts, flaiover/src/lib/components/OrchestratorPanel.svelte, flaiover/src/lib/components/OrchestratorPanel.svelte.test.ts, flaiover/src/lib/components/PlannerPanel.svelte, flaiover/src/lib/components/PlannerPanel.svelte.test.ts, flai/internal/hostapi/writes.go]
 after: [S-0419]
 agent:
   harness: claude-code
@@ -32,33 +38,44 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 5095
-  estimated: true
-  priced_by: estimate
+  seconds: 7123
+  priced_by: harness
   turns:
     - day: 2026-11-01
       work: 10
     - day: 2026-11-02
-      hand_edits: 2
-      work: 47
+      hand_edits: 4
+      work: 76
   models:
     - model: claude-opus-5-5
-      input: 698
-      output: 4171
-      cache_read: 49406933
-      cache_write: 1318787
-      cost: 17.7885
+      input: 866
+      output: 323760
+      cache_read: 68647204
+      cache_write: 1585097
+      cost: 29.3622
+    - model: claude-sonnet-5-5
+      input: 62
+      output: 20190
+      cache_read: 2950774
+      cache_write: 133417
+      cost: 0.8306
   strategic:
     - kind: orchestrator
-      seconds: 434
+      seconds: 500
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 154
-          output: 2275
-          cache_read: 29170786
-          cache_write: 229545
-          cost: 6.4991
+          input: 168
+          output: 2357
+          cache_read: 29574810
+          cache_write: 313290
+          cost: 6.6116
+        - model: claude-sonnet-5-5
+          input: 8
+          output: 63
+          cache_read: 98348
+          cache_write: 46647
+          cost: 0.101
 cost_of_delay:
   value: 73.64
   by: planner-S-0420
@@ -85,7 +102,7 @@ A role a project defines shows on the dashboard as the built-in ones do. The Wor
 - [x] `/workflow/<name>` shows a role's action state, the run under way with its stream, its activity log, its runs with cost and outcome, and **Run** (with an item when its file takes one) for any role through `role.run`, and **Stop** and **Start** only for a role that has a hold, shown where `agent.status` says the role can be held: today the orchestrator alone, through `orchestrate.stop` and `orchestrate.start` (TH-0797).
 - [x] Its settings panel edits `roles.<name>.agent`, the role's schedule when its trigger has one, and the permissions its file declares through `flai manifest set` while the `settings` host action is on, and shows them read-only otherwise; `flai manifest set` takes those keys.
 - [x] `/workflow/planner`, `/workflow/orchestrator`, and `/workflow/analyzer` are that page for the three roles and show what they show today, their component tests passing; the Workflow menu lists each defined role.
-- [ ] Component and API tests cover a defined role's page from a fixture `agent.status`, and `design/system/flaiover-dashboard.md` § Strategic agents' pages and settings, and `docs/users/flaiover.md`, describe the role page.
+- [x] Component and API tests cover a defined role's page from a fixture `agent.status`, and `design/system/flaiover-dashboard.md` § Strategic agents' pages and settings, and `docs/users/flaiover.md`, describe the role page.
 
 ## Tasks
 - T-1762 agent.status carries every role by name under roles with its action, run, past runs, and hold, and agent.stream reads any role's stream by name
@@ -134,3 +151,17 @@ A role a project defines shows on the dashboard as the built-in ones do. The Wor
   - 4h lost per cycle, at `planning.hour_rate` 150 over the default 168h cycle, gives E-0024 600 USD a week.
   - S-0420's share is its 1h35m of the 12h54m forecast for E-0024's twelve open stories: 95 / 774 × 600.
   - Setting 4h on E-0024 is asked on TH-0567, question 3. Once it is set, `flai cod S-0420` gives the same figure while the forecasts stand.
+
+### Accepted by the orchestrator
+
+- Verified: 657f0387fad035f1bd00e5530f2fa84e4e3fb4e9
+- Batch: 20261102-020235
+- Enqueued verified: 657f0387fad035f1bd00e5530f2fa84e4e3fb4e9
+- At: 2026-11-02T02:08:59Z
+
+Verdict: pass — every criterion is met by the diff at 657f038, flai verify passed every step there, every changed file is in the touches, and no .claude/ path changes.
+- 1: flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/stream.go, flai/internal/serve/stream_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/contract_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, design/system/flai-cli.md
+- 2: flaiover/src/lib/components/RolePage.svelte, flaiover/src/lib/components/RolePage.svelte.test.ts, flaiover/src/routes/workflow/[role]/+page.svelte, flaiover/src/routes/api/roles/[name]/+server.ts, flaiover/src/routes/api/roles/[name]/roles.test.ts, flaiover/src/lib/roles.ts, flaiover/src/lib/roles.test.ts, flaiover/src/lib/strategic.ts, flaiover/src/lib/strategic.test.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/agent.test.ts, flaiover/src/routes/api/agent-stream/[story]/+server.ts, flaiover/src/routes/api/agent-stream/[story]/agent-stream.test.ts
+- 3: flaiover/src/lib/components/StrategicSettings.svelte, flaiover/src/lib/components/StrategicSettings.svelte.test.ts, flaiover/src/lib/settings.ts, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/hostapi/writes.go, docs/operators/settings.md, design/system/project-manifest.md
+- 4: flaiover/src/lib/components/PlannerPanel.svelte, flaiover/src/lib/components/PlannerPanel.svelte.test.ts, flaiover/src/lib/components/OrchestratorPanel.svelte, flaiover/src/lib/components/OrchestratorPanel.svelte.test.ts, flaiover/src/lib/components/AnalyzerPanel.svelte, flaiover/src/lib/components/AnalyzerPanel.svelte.test.ts, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/components/NavRail.svelte, flaiover/src/lib/components/NavRail.svelte.test.ts, flaiover/src/routes/+layout.svelte, flaiover/src/routes/layout.svelte.test.ts
+- 5: flaiover/src/lib/components/RolePage.svelte.test.ts, flaiover/src/lib/roles.test.ts, flaiover/src/routes/api/roles/[name]/roles.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md

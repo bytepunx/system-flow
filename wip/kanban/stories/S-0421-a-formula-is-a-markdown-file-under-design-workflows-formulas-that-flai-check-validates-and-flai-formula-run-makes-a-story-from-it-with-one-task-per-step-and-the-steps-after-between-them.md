@@ -3,11 +3,11 @@ id: S-0421
 type: story
 nature: feature
 title: A formula is a markdown file under design/workflows/formulas that flai check validates, and flai formula run makes a story from it with one task per step and the steps' after between them
-status: ready
+status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:40Z
-updated: 2026-11-02T01:33:08Z
+updated: 2026-11-02T02:07:42Z
 transitions:
   - to: ready
     at: 2026-10-28T13:10:51Z
@@ -18,10 +18,12 @@ transitions:
   - to: ready
     at: 2026-11-01T23:43:52Z
     by: alex
+  - to: in-progress
+    at: 2026-11-02T02:07:42Z
+    by: agent-S-0421
 tags: [cli, template]
 topics: [cli, orchestration, template, conventions]
 touches: [design/adrs, design/adrs/README.md, design/conventions/strategic-agents.md, design/workflows/formulas/README.md, design/workflows/README.md, design/system/repository-layout.md, design/system/strategic-agents.md, design/system/work-hierarchy.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/formula.go, flai/cmd/formula_test.go, flai/cmd/root.go, flai/internal/check/check.go, flai/internal/check/formulas_test.go, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/workitem/fields_test.go, flai/internal/workitem/front-matter-fields.txt, flai/internal/workitem/item.go, template/CHANGELOG.md, template/root/design/conventions/strategic-agents.md, template/root/design/workflows/formulas/README.md, template/root/design/workflows/README.md, template/template.yaml, design/system/flai-cli.md, design/system/project-manifest.md]
-after: [S-0420]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -33,15 +35,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 386
+      seconds: 396
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 115
-          output: 2009
-          cache_read: 28558701
-          cache_write: 36982
-          cost: 6.2892
+          input: 121
+          output: 2049
+          cache_read: 28690653
+          cache_write: 92615
+          cost: 6.3325
 cost_of_delay:
   value: 48.09
   by: planner-S-0421

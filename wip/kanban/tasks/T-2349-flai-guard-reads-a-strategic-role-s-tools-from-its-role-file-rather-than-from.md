@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 21
-      output: 6586
-      cache_read: 1622221
-      cache_write: 34416
-      cost: 0.68
+      output: 6269
+      cache_read: 1622676
+      cache_write: 32801
+      cost: 0.6641
 ---
 # T-2349 flai guard reads a strategic role's tools from its role file rather than from .claude/agents
 
