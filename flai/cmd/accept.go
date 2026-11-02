@@ -678,34 +678,47 @@ func (e *sentBack) Error() string { return e.Reason }
 // which leaves the branch and the main branch as they were, moves the story
 // back to in-progress as flai with a reason naming the paths, and opens one
 // thread on it naming them and the branch, for flai serve to start its agent
-// on; the answer is a *sentBack saying so. Any other err, a rebase found in
-// progress among them, is answered as it is.
+// on; the answer is a *sentBack saying so. A rebase the sync found already in
+// progress in the worktree, which the acceptance did not start, is left as it
+// is and the story sent back the same way, for its agent to finish or abort:
+// no acceptance tells the operator to resolve one. Any other err is answered
+// as it is.
 func (a *app) sendBackUnsettled(repo *workitem.Repo, it *workitem.Item, by string, err error) error {
 	var stop *syncStopped
-	if !errors.As(err, &stop) || !stop.RebaseInProgress || stop.Found {
+	if !errors.As(err, &stop) || !stop.RebaseInProgress {
 		return err
 	}
 	branch, who := storyBranch(it.ID), acceptanceBy(it.ID, by)
 	stopped := fmt.Sprintf("the rebase of %s onto %s stopped", branch, stop.Base)
+	if stop.Found {
+		stopped = fmt.Sprintf("a rebase of %s was already in progress in %s", branch, stop.Worktree)
+	}
 	if len(stop.Conflicts) > 0 {
 		stopped += " on conflicts in " + workitem.Shorten(stop.Conflicts, 10)
 	}
-	if aerr := storygit.AbortRebase(a.runner, repo.WorktreePath(it.ID), branch); aerr != nil {
+	did := "it aborted the rebase"
+	if stop.Found {
+		did = "it left that rebase as it found it"
+	} else if aerr := storygit.AbortRebase(a.runner, repo.WorktreePath(it.ID), branch); aerr != nil {
 		return fmt.Errorf("%w; %s could not send %s back to in-progress, since %w", err, who, it.ID, aerr)
 	}
-	reason := fmt.Sprintf("%s, which %s cannot settle, so it aborted the rebase; its agent syncs it with flai stream sync %s and resolves them", stopped, who, it.ID)
+	reason := fmt.Sprintf("%s, which %s cannot settle, so %s; its agent settles it in the worktree and syncs it with flai stream sync %s", stopped, who, did, it.ID)
 	if _, merr := repo.Transition(it, workitem.InProgress, storygit.SentBackAuthor, reason, a.now()); merr != nil {
-		return fmt.Errorf("%s, and %s aborted the rebase but could not move %s back to in-progress: %w; the operator moves it with flai move %s in-progress --reason %q", stopped, who, it.ID, merr, it.ID, reason)
+		return fmt.Errorf("%s, and %s could not move %s back to in-progress: %w; the operator moves it with flai move %s in-progress --reason %q", stopped, who, it.ID, merr, it.ID, reason)
 	}
 	th, terr := a.openSentBack(repo, it.ID, branch, who, stop)
 	if terr != nil {
-		return fmt.Errorf("%s was sent back to in-progress: %s, and flai aborted the rebase; but its thread could not be opened: %w; tell its agent with flai thread new --on %s", it.ID, stopped, terr, it.ID)
+		return fmt.Errorf("%s was sent back to in-progress: %s, and %s; but its thread could not be opened: %w; tell its agent with flai thread new --on %s", it.ID, stopped, did, terr, it.ID)
 	}
-	a.logger().Info("story sent back from its acceptance", "component", "accept", "item", it.ID, "by", by, "branch", branch, "paths", stop.Conflicts, "thread", th.ID)
+	a.logger().Info("story sent back from its acceptance", "component", "accept", "item", it.ID, "by", by, "branch", branch, "paths", stop.Conflicts, "found", stop.Found, "thread", th.ID)
+	state := fmt.Sprintf("flai aborted the rebase, so %s and %s are as they were", branch, stop.Base)
+	if stop.Found {
+		state = fmt.Sprintf("flai left the rebase in %s as it found it", stop.Worktree)
+	}
 	return &sentBack{
 		ID: it.ID, SentBack: true, Branch: branch, Base: stop.Base, Conflicts: nonNil(stop.Conflicts), Thread: th.ID,
-		Reason: fmt.Sprintf("%s was sent back to in-progress: %s, which %s cannot settle; flai aborted the rebase, so %s and %s are as they were, and its agent resolves them on %s (ADR-0248)",
-			it.ID, stopped, who, branch, stop.Base, th.ID),
+		Reason: fmt.Sprintf("%s was sent back to in-progress: %s, which %s cannot settle; %s, and its agent resolves them on %s (ADR-0248)",
+			it.ID, stopped, who, state, th.ID),
 	}
 }
 
@@ -737,10 +750,15 @@ func (a *app) openSentBack(repo *workitem.Repo, story, branch, who string, stop 
 
 // sentBackText is what the send back's thread tells story's agent: what
 // stopped, by whose acceptance, each path, and how the agent settles them
-// and comes back to review.
+// and comes back to review; for a rebase the acceptance found already in
+// progress, that it left it as it was and how to finish or abort it.
 func sentBackText(story, branch, who string, stop *syncStopped) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s rebased `%s` onto `%s`, and the rebase stopped on conflicts that the merge of the issue files, the ADR index, the issue summary, and the shared markdown files did not settle", capitalize(who), branch, stop.Base)
+	if stop.Found {
+		fmt.Fprintf(&b, "%s found a rebase of `%s` already in progress in `%s`, which it did not start and left as it was", capitalize(who), branch, stop.Worktree)
+	} else {
+		fmt.Fprintf(&b, "%s rebased `%s` onto `%s`, and the rebase stopped on conflicts that the merge of the issue files, the ADR index, the issue summary, and the shared markdown files did not settle", capitalize(who), branch, stop.Base)
+	}
 	if len(stop.Conflicts) > 0 {
 		b.WriteString(", in:\n\n")
 		for _, p := range stop.Conflicts {
@@ -749,6 +767,14 @@ func sentBackText(story, branch, who string, stop *syncStopped) string {
 		b.WriteString("\n")
 	} else {
 		b.WriteString(".\n\n")
+	}
+	if stop.Found {
+		fmt.Fprintf(&b, "flai moved %s back to in-progress. "+
+			"This thread is for %s's agent, which settles the conflicts; the operator does not. "+
+			"In its worktree, resolve each path that still conflicts, `git add` it, and run `git rebase --continue`, or run `git rebase --abort` and then `flai stream sync %s`; "+
+			"then close out and move %s to review again. flai serve resolves this thread once %s is back in review.",
+			story, story, story, story, story)
+		return b.String()
 	}
 	fmt.Fprintf(&b, "flai aborted the rebase, so `%s` and `%s` are as they were, and moved %s back to in-progress. "+
 		"This thread is for %s's agent, which settles the conflicts; the operator does not. "+

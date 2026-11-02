@@ -1575,7 +1575,7 @@ func (l *launcher) startAcceptSentBack(ctx context.Context, cfg AgentConfig, rep
 		if harness.Elsewhere(it.Agent) || (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
 			continue
 		}
-		what := fmt.Sprintf("the acceptance of %s found that %s, which it cannot settle, and aborted the rebase; run flai stream sync %s in its worktree and resolve them",
+		what := fmt.Sprintf("the acceptance of %s found that %s, which it cannot settle, and sent the story back; the thread says how to settle it in its worktree and sync it with flai stream sync %s",
 			it.ID, strings.TrimPrefix(th.Title, storygit.SentBackPrefix), it.ID)
 		s := readyStory{ID: it.ID, Agent: it.Agent, SentBack: &harness.SentBack{Thread: th.ID, What: what, Acceptance: true}}
 		if run.Session != "" {
@@ -1613,8 +1613,8 @@ func (l *launcher) resolveAcceptSentBack(repo *workitem.Repo) {
 }
 
 // acceptSentBackThreads are the open threads flai accept opened on the
-// stories an acceptance sent back (ADR-0248); none when the
-// threads cannot be read, which, as resume does with what it cannot read,
+// stories an acceptance sent back (ADR-0248); none when the threads cannot
+// be read, which, as resume does with what it cannot read,
 // starts and resolves nothing.
 func acceptSentBackThreads(repo *workitem.Repo) []*threads.Thread {
 	all, err := threads.List(repo)

@@ -3317,7 +3317,7 @@ func TestAStoryAnAcceptanceSentBackGetsItsAgentOnce(t *testing.T) {
 	got, _ := os.ReadFile(out)
 	for _, want := range []string{
 		"flai sent " + id + " back from review to in-progress, on thread " + th.ID + ": the acceptance of " + id + " found that story/" + id + " stopped rebasing onto main on conflicts in cli/x.go",
-		"run flai stream sync " + id + " in its worktree and resolve them",
+		"the thread says how to settle it in its worktree and sync it with flai stream sync " + id,
 		"thread_get (flai thread show " + th.ID + " on the host)",
 		"--resume " + first.Session,
 	} {
