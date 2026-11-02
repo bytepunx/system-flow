@@ -416,6 +416,8 @@ flai agent clear
 
 A story's agent says what will work it: the harness that runs the agent (such as `claude-code`), the model, and options for that harness as `key=value`, which flai passes on without reading them ([ADR-0037](../../design/adrs/0037-a-story-carries-its-agent-copied-from-the-project-s-default-when-it-is-made.md)). The project's default lives in `system-flow.yaml` under `agent`. Every story created while it is set gets a copy in its front matter, with whatever `--harness`, `--model`, or `--agent-config` you give on `flai story new` laid over it. The copy belongs to the story. Changing the default later affects only stories made after it; to move an open story to another model, edit it. `flai show` and `flai edit --show` print a story's agent. Epics and tasks have none.
 
+The harness `none` says that the story's agent runs elsewhere, by hand or in a container no harness starts yet, and `flai serve` starts nothing for it ([ADR-0242](../../design/adrs/0242-a-story-s-agent-whose-harness-is-none-runs-elsewhere-and-flai-serve-starts.md)). Set it with `flai edit S-0007 --harness none`, or with `flai agent set --harness none` for every new story. `flai serve` names such a story in `waiting` and starts no agent for it when it enters ready, when its agent ends with it in progress, on an answer, or when it is sent back; `flai serve agent start`, `restart`, and `commit` refuse it. Start its agent yourself, where it runs, with `flai story start S-0007`, which works as it does for any story.
+
 A project with no default and no story with an agent has no `agent` keys at all, and an older flai reads it as before. Once a story has one, use a flai that knows about agents (`flai self-upgrade`).
 
 #### Where its model's calls go: a provider
