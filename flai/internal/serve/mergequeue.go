@@ -6,13 +6,18 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
+	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/verify"
+	"github.com/bytepunx/system-flow/flai/internal/watch"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -40,6 +45,16 @@ import (
 // than by the batch's landing, so that the next look builds it again from the
 // new main. What came of it is logged once a look and kept in the host's
 // journal, a story landed or sent back and a batch dropped an entry each.
+//
+// While the landing's preflight holds the queue on what it found on the main
+// checkout (ADR-0234), the pass keeps one thread to the operator open on the
+// manifest, naming each file and finding, journals the hold once, and, at the
+// look that finds main clean, resolves the thread and journals the clearing.
+// A batch whose landing waits on main, and its landing again with no new
+// verification, are journalled once each. While held, or while the landing
+// waits, any change the watcher sees in the main checkout, and a move of
+// main's head, wake the pass, so that the operator's fix resumes it within
+// seconds.
 
 // queueEvery is how often a project's merge queue is looked at when nothing
 // changed: a story enqueued waits at most this long for a batch to start.
@@ -61,6 +76,15 @@ const (
 	queueAuthor = "flai serve"
 	queueAgent  = "flai-serve"
 )
+
+// holdTitle is the title of the one thread flai serve opens to the operator
+// for the preflight's hold, which is how a later look finds it again.
+const holdTitle = "The merge queue is held: the main checkout has files a landing would fail on"
+
+// mainRefs are the files of the main checkout's git that say where its
+// branches' heads are, relative to its root: the pass watches them, so that
+// a move of main's head wakes it while held.
+var mainRefs = []string{".git/HEAD", ".git/packed-refs", ".git/refs/heads"}
 
 // acceptSaid is how many of a failed landing's last lines on standard error
 // its error carries.
@@ -192,18 +216,31 @@ type queuePass struct {
 	// said is the reason last logged for the queue not running, "" when it
 	// last could run or the action was off.
 	said string
+	// holding says the preflight held the queue, or the batch's landing
+	// waited on main, when the last look ended; heldSince is when the hold
+	// last journalled began; stale says a thread of a hold that cleared may
+	// still be open, as at the first look and after a resolve failed.
+	holding   bool
+	heldSince time.Time
+	stale     bool
 }
 
 // newQueuePass is project e's merge queue pass, one of runs.
 func newQueuePass(o Options, e Entry, runs *queueRuns) *queuePass {
 	return &queuePass{o: o, e: e, runs: runs, every: queueEvery, run: mergequeue.RunBatch, advance: mergequeue.Advance,
-		accepter: flaiAccepter(runCommand, os.Executable), woken: make(chan struct{}, 1)}
+		accepter: flaiAccepter(runCommand, os.Executable), woken: make(chan struct{}, 1), stale: true}
 }
 
 // start looks now, then every p.every and whenever woken, in the background
-// until ctx ends; a batch running is cancelled with ctx.
+// until ctx ends; a batch running is cancelled with ctx. It watches the main
+// checkout's mainRefs meanwhile, so that a move of main's head wakes it
+// while held.
 func (p *queuePass) start(ctx context.Context) {
-	p.runs.wg.Add(1)
+	p.runs.wg.Add(2)
+	go func() {
+		defer p.runs.wg.Done()
+		(&watch.Watcher{Root: p.e.Root, Paths: mainRefs, Every: p.o.WatchEvery}).Run(ctx, p.changed)
+	}()
 	go func() {
 		defer p.runs.wg.Done()
 		for {
@@ -227,10 +264,30 @@ func (p *queuePass) wake() {
 	}
 }
 
+// changed has the pass look again for a change to the project's file rel,
+// relative to its root: one under a kanban or threads folder, where a
+// story's state and an answer to a thread are, and, while the preflight
+// holds the queue or the batch's landing waits on main, any, so that the
+// fix the operator makes resumes it within seconds (ADR-0234).
+func (p *queuePass) changed(rel string) {
+	slashed := filepath.ToSlash(rel)
+	if strings.Contains(slashed, "/kanban/") || strings.Contains(slashed, "/threads/") || p.held() {
+		p.wake()
+	}
+}
+
+// held reports whether the last look ended with the preflight holding the
+// queue or the batch's landing waiting on main.
+func (p *queuePass) held() bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.holding
+}
+
 // look runs one batch of the project's merge queue when the action, the
 // permission, the acceptance mode, and the hold let it, then takes the
-// verified batch on, and logs what came of each. A batch already running for
-// the project is left to finish.
+// verified batch on, logs what came of each, and follows the preflight's
+// hold. A batch already running for the project is left to finish.
 func (p *queuePass) look(ctx context.Context) {
 	if p.o.Host.Enabled == nil || !p.o.Host.Enabled(hostapi.ActionMergeQueue, p.e.Root) {
 		p.mu.Lock()
@@ -288,25 +345,45 @@ func (p *queuePass) look(ctx context.Context) {
 	// a batch verified now, or at an earlier look, waits here to be landed or
 	// bisected: RunBatch begins none while it does
 	p.advanceBatch(ctx, d, repo)
+	if ctx.Err() == nil {
+		p.followHold(repo, st)
+	}
 }
 
 // advanced is what one advance did to the queue, read from its state before
 // and after: the batch it took on, the stories it landed or sent back, each
-// with its outcome, and why it dropped the batch, "" when it did not.
+// with its outcome, and why it dropped the batch, "" when it did not. Stalled
+// is the wait on main the batch's landing came to, and resumed the wait it
+// went on from, with from the heads of the stories it had still to land;
+// each nil when it did not (ADR-0234).
 type advanced struct {
 	batch    string
 	outcomes []mergequeue.Outcome
 	dropped  string
+	stalled  *mergequeue.Stalled
+	resumed  *mergequeue.Stalled
+	from     []mergequeue.Head
 }
 
 // advancedBetween is what changed from was to now: the outcomes landed or
-// failing that now has and was had not, and the drop of was's batch.
+// failing that now has and was had not, the drop of was's batch, the wait on
+// main its landing came to, and the wait it went on from: was's batch
+// waited, not dropped, and now it is gone, landed out, or the same batch
+// waits no longer or waits on another landing.
 func advancedBetween(was, now mergequeue.State) advanced {
 	var a advanced
 	if b := was.Batch; b != nil {
 		a.batch = b.ID
-		if n := now.Batch; n != nil && n.ID == b.ID && n.Dropped != nil && b.Dropped == nil {
+		n := now.Batch
+		same := n != nil && n.ID == b.ID
+		if same && n.Dropped != nil && b.Dropped == nil {
 			a.dropped = n.Dropped.Reason
+		}
+		if b.Stalled != nil && b.Dropped == nil && (!same || !sameStall(n.Stalled, b.Stalled)) {
+			a.resumed, a.from = b.Stalled, unlanded(b)
+		}
+		if same && n.Stalled != nil && !sameStall(n.Stalled, b.Stalled) {
+			a.stalled = n.Stalled
 		}
 	}
 	for _, o := range now.Outcomes {
@@ -320,6 +397,32 @@ func advancedBetween(was, now mergequeue.State) advanced {
 		}
 	}
 	return a
+}
+
+// sameStall reports whether x and y are one wait on main: both set, on one
+// story, from one moment.
+func sameStall(x, y *mergequeue.Stalled) bool {
+	return x != nil && y != nil && x.Story == y.Story && x.At.Equal(y.At)
+}
+
+// unlanded are the heads of b's stories its landing has not landed yet, in
+// the order rebased.
+func unlanded(b *mergequeue.Batch) []mergequeue.Head {
+	var out []mergequeue.Head
+	for _, h := range b.Heads {
+		if b.Landing == nil || !slices.Contains(b.Landing.Landed, h.Story) {
+			out = append(out, h)
+		}
+	}
+	return out
+}
+
+// stallStory is the story s waits at, "" when s is nil.
+func stallStory(s *mergequeue.Stalled) string {
+	if s == nil {
+		return ""
+	}
+	return s.Story
 }
 
 // stories are the stories of a's outcomes that came to outcome, joined with
@@ -336,7 +439,8 @@ func (a advanced) stories(outcome string) string {
 
 // advanceBatch takes the project's verified batch on with p.advance, landing
 // with p.accepter in the main checkout, logs what came of it once, journals
-// each story landed or sent back and the batch dropped, and has the pass look
+// each story landed or sent back, the batch dropped, its landing's wait on
+// main, and its landing again, and has the pass look
 // again at once when it did anything and failed in nothing, so that the
 // stories still enqueued are batched without waiting for the next tick; after
 // a failure the next tick builds the batch again.
@@ -356,13 +460,14 @@ func (p *queuePass) advanceBatch(ctx context.Context, d mergequeue.Deps, repo *w
 	a := advancedBetween(was, now)
 	p.journal(a, err)
 	fields := []any{"component", "serve", "root", p.e.Root, "key", p.e.Key, "batch", a.batch,
-		"landed", a.stories(mergequeue.OutcomeLanded), "sent_back", a.stories(mergequeue.OutcomeFailing), "took", took}
+		"landed", a.stories(mergequeue.OutcomeLanded), "sent_back", a.stories(mergequeue.OutcomeFailing),
+		"stalled", stallStory(a.stalled), "resumed", stallStory(a.resumed), "took", took}
 	switch {
 	case err != nil && a.dropped != "":
 		p.o.Logger.Warn("merge queue batch dropped", append(fields, "reason", a.dropped, "err", err.Error())...)
 	case err != nil:
 		p.o.Logger.Error("merge queue batch not advanced", append(fields, "err", err.Error())...)
-	case did:
+	case did || a.stalled != nil || a.resumed != nil:
 		p.o.Logger.Info("merge queue batch advanced", append(fields, "dropped", a.dropped)...)
 	}
 	if did && err == nil {
@@ -370,25 +475,263 @@ func (p *queuePass) advanceBatch(ctx context.Context, d mergequeue.Deps, repo *w
 	}
 }
 
-// journal keeps in the host's journal each story a landed or sent back, as
-// done, and the batch it dropped, as failed when err stopped the advance.
+// journal keeps in the host's journal the landing a went on with after
+// waiting on main, as done, saying no tier ran; each story a landed or sent
+// back, as done; the wait on main its landing came to, as failed; and the
+// batch it dropped, as failed when err stopped the advance.
 func (p *queuePass) journal(a advanced, err error) {
-	if p.o.Host.Record == nil {
-		return
+	if r := a.resumed; r != nil {
+		p.record(p.o.Now(), "done", fmt.Sprintf("merge queue batch %s lands again at %s after waiting %s on main, from the commits it verified%s, with no new verification: no tier ran",
+			a.batch, r.Story, p.o.Now().Sub(r.At).Round(time.Second), headsText(a.from)))
 	}
-	entry := hostapi.Entry{Action: hostapi.ActionMergeQueue, Method: "serve.merge-queue", Project: p.e.Key, Root: p.e.Root, By: queueAuthor, Outcome: "done"}
 	for _, o := range a.outcomes {
-		entry.At, entry.Detail = o.At.UTC().Format(time.RFC3339), o.Story+": "+o.Detail
-		p.o.Host.Record(entry)
+		p.record(o.At, "done", o.Story+": "+o.Detail)
+	}
+	if s := a.stalled; s != nil {
+		p.record(s.At, "failed", fmt.Sprintf("landing %s from merge queue batch %s waits on main: %s; the batch is kept, and lands on from the commits it verified once a look finds the main checkout clean", s.Story, a.batch, s.Reason))
 	}
 	if a.dropped == "" {
 		return
 	}
-	entry.At, entry.Detail = p.o.Now().UTC().Format(time.RFC3339), fmt.Sprintf("dropped merge queue batch %s: %s", a.batch, a.dropped)
+	outcome := "done"
 	if err != nil {
-		entry.Outcome = "failed"
+		outcome = "failed"
 	}
-	p.o.Host.Record(entry)
+	p.record(p.o.Now(), outcome, fmt.Sprintf("dropped merge queue batch %s: %s", a.batch, a.dropped))
+}
+
+// record keeps one entry of the merge queue's in the host's journal, as flai
+// serve's, at at.
+func (p *queuePass) record(at time.Time, outcome, detail string) {
+	if p.o.Host.Record == nil {
+		return
+	}
+	p.o.Host.Record(hostapi.Entry{At: at.UTC().Format(time.RFC3339), Action: hostapi.ActionMergeQueue, Method: "serve.merge-queue", Project: p.e.Key, Root: p.e.Root,
+		By: queueAuthor, Outcome: outcome, Detail: detail})
+}
+
+// headsText is " (" each head's story at its rebased commit ")", or "" for
+// none.
+func headsText(heads []mergequeue.Head) string {
+	if len(heads) == 0 {
+		return ""
+	}
+	parts := make([]string, 0, len(heads))
+	for _, h := range heads {
+		parts = append(parts, h.Story+" at "+short(h.Rebased))
+	}
+	return " (" + strings.Join(parts, ", ") + ")"
+}
+
+// followHold follows the preflight's hold from was, the queue's state when
+// the look began, to the state the look left (ADR-0234). While the hold
+// stands it keeps one thread to the operator open on it and journals it once,
+// when it begins; once it is gone it resolves the thread, saying why, and
+// journals that it cleared. It notes for changed whether the queue is held
+// or its landing waits on main. A thread it cannot open or resolve is logged
+// at warn and tried again at the next look; nothing here fails the look.
+func (p *queuePass) followHold(repo *workitem.Repo, was mergequeue.State) {
+	now, err := mergequeue.ReadState(repo.CacheDir())
+	if err != nil {
+		p.o.Logger.Warn("merge queue state not read after a look; the next look follows its preflight hold", "component", "serve", "root", p.e.Root, "key", p.e.Key, "err", err.Error())
+		return
+	}
+	p.mu.Lock()
+	p.holding = now.Preflight != nil || (now.Batch != nil && now.Batch.Stalled != nil)
+	journalled, stale := p.heldSince, p.stale
+	p.mu.Unlock()
+	if hold := now.Preflight; hold != nil {
+		thread, recorded := p.holdThread(repo, hold)
+		if (was.Preflight == nil || recorded) && !hold.Since.Equal(journalled) {
+			p.record(hold.Since, "done", holdDetail(hold, thread))
+			p.mu.Lock()
+			p.heldSince = hold.Since
+			p.mu.Unlock()
+		}
+		return
+	}
+	if was.Preflight == nil && !stale {
+		return
+	}
+	at := p.o.Now().UTC()
+	resolved, err := resolveHoldThreads(repo, was.Preflight, at)
+	p.mu.Lock()
+	p.stale = err != nil
+	p.mu.Unlock()
+	if err != nil {
+		p.o.Logger.Warn("merge queue preflight thread not resolved; the next look tries again", "component", "serve", "root", p.e.Root, "key", p.e.Key, "err", err.Error())
+	} else if len(resolved) > 0 {
+		p.o.Logger.Info("merge queue preflight thread resolved", "component", "serve", "root", p.e.Root, "key", p.e.Key, "threads", resolved)
+	}
+	if prev := was.Preflight; prev != nil {
+		detail := fmt.Sprintf("merge queue preflight hold cleared: main is clean after %s held since %s, so the queue builds batches again",
+			at.Sub(prev.Since).Round(time.Second), prev.Since.UTC().Format(time.RFC3339))
+		if len(resolved) > 0 {
+			detail += "; thread " + strings.Join(resolved, ", ") + " resolved"
+		}
+		p.record(at, "done", detail)
+	}
+}
+
+// holdThread is the open thread to the operator of hold, and whether it
+// recorded one on it: the one the hold names while it is open; otherwise
+// the one flai serve opened earlier and left open, or a new one, recorded on
+// the hold. It is "" when none could be opened, which is logged at warn.
+func (p *queuePass) holdThread(repo *workitem.Repo, hold *mergequeue.PreflightHold) (string, bool) {
+	if hold.Thread != "" {
+		if th, err := threads.Get(repo, hold.Thread); err == nil && th.Open() {
+			return hold.Thread, false
+		}
+	}
+	th, err := openHoldThread(repo, hold, p.o.Now())
+	if err != nil {
+		p.o.Logger.Warn("merge queue preflight thread not opened; the next look tries again", "component", "serve", "root", p.e.Root, "key", p.e.Key, "err", err.Error())
+		return "", false
+	}
+	if _, err := mergequeue.SetPreflightThread(repo.CacheDir(), th.ID); err != nil {
+		p.o.Logger.Warn("merge queue preflight thread not recorded on the hold; the next look records it", "component", "serve", "root", p.e.Root, "key", p.e.Key, "thread", th.ID, "err", err.Error())
+	}
+	p.o.Logger.Info("merge queue preflight thread recorded", "component", "serve", "root", p.e.Root, "key", p.e.Key, "thread", th.ID,
+		"files", holdFiles(hold.Findings))
+	return th.ID, true
+}
+
+// openHoldThread is the thread to the operator flai serve opened for a hold
+// and left open, or, when there is none, a new one for hold, anchored on the
+// manifest, as flai serve, at now.
+func openHoldThread(repo *workitem.Repo, hold *mergequeue.PreflightHold, now time.Time) (*threads.Thread, error) {
+	open, err := openHoldThreads(repo)
+	if err != nil {
+		return nil, err
+	}
+	if len(open) > 0 {
+		return open[0], nil
+	}
+	return threads.New(repo, threads.NewOptions{Title: holdTitle, On: manifest.File, Author: queueAuthor, Text: holdText(hold), Now: now})
+}
+
+// openHoldThreads are the open threads flai serve opened on the manifest for
+// a preflight hold, by their title.
+func openHoldThreads(repo *workitem.Repo) ([]*threads.Thread, error) {
+	all, err := threads.For(repo, manifest.File)
+	if err != nil {
+		return nil, fmt.Errorf("read the threads on %s: %w; fix the thread file it names", manifest.File, err)
+	}
+	title := workitem.CleanTitle(holdTitle)
+	var out []*threads.Thread
+	for _, th := range all {
+		if th.Open() && th.Opener() == queueAuthor && th.Title == title {
+			out = append(out, th)
+		}
+	}
+	return out, nil
+}
+
+// resolveHoldThreads resolves, as flai serve at at, each open thread flai
+// serve opened for a preflight hold, and prev's thread when it is open, as
+// main is clean, and answers their IDs.
+func resolveHoldThreads(repo *workitem.Repo, prev *mergequeue.PreflightHold, at time.Time) ([]string, error) {
+	open, err := openHoldThreads(repo)
+	if err != nil {
+		return nil, err
+	}
+	var ids []string
+	for _, th := range open {
+		ids = append(ids, th.ID)
+	}
+	if prev != nil && prev.Thread != "" && !slices.Contains(ids, prev.Thread) {
+		if th, err := threads.Get(repo, prev.Thread); err == nil && th.Open() {
+			ids = append(ids, th.ID)
+		}
+	}
+	why := fmt.Sprintf("main is clean: the merge queue's preflight found nothing at %s, so the queue builds batches again", at.Format(time.RFC3339))
+	var resolved []string
+	for _, id := range ids {
+		if _, err := threads.Resolve(repo, id, queueAuthor, why, at); err != nil {
+			return resolved, fmt.Errorf("resolve the merge queue's preflight thread %s: %w; resolve it with flai thread resolve %s", id, err, id)
+		}
+		resolved = append(resolved, id)
+	}
+	return resolved, nil
+}
+
+// holdText is the text of the thread to the operator for hold: each finding,
+// with its file, line, rule, message, and what found it, that the queue
+// builds no batch until they are fixed and changes none of them, and that the
+// hold clears on its own. Code-like parts are in code spans, with no tab, so
+// that the project's markdown lint passes the thread.
+func holdText(hold *mergequeue.PreflightHold) string {
+	var b strings.Builder
+	b.WriteString("The merge queue's preflight found what a landing would fail on in the main checkout")
+	if hold.Main != "" {
+		fmt.Fprintf(&b, ", at main's head %s", codeSpan(short(hold.Main)))
+	}
+	b.WriteString(":\n\n")
+	for _, f := range hold.Findings {
+		b.WriteString("- " + codeSpan(spanText(f.Path)))
+		if f.Line > 0 {
+			fmt.Fprintf(&b, ", line %d", f.Line)
+		}
+		if f.Rule != "" {
+			b.WriteString(", " + codeSpan(spanText(f.Rule)))
+		}
+		if msg := spanText(f.Message); msg != "" {
+			b.WriteString(": " + codeSpan(msg))
+		}
+		fmt.Fprintf(&b, " (%s)\n", foundBy(f))
+	}
+	b.WriteString("\nThe queue builds no batch and runs no tier until these are fixed. It changes none of these files: they are yours. ")
+	b.WriteString("Fix them in the main checkout. The queue looks again as the main checkout changes and as main's head moves, ")
+	b.WriteString("and the look that finds main clean clears the hold, resolves this thread, and builds batches again, with nothing else asked of you.")
+	return b.String()
+}
+
+// spanText is s on one line, with no tab, for a code span.
+func spanText(s string) string {
+	return strings.Join(strings.Fields(s), " ")
+}
+
+// foundBy says what found f: flai check, or the lint of its tier.
+func foundBy(f verify.FileFinding) string {
+	if f.Tier == mergequeue.PreflightCheckTier {
+		return "flai check"
+	}
+	return "the lint of tier " + codeSpan(spanText(f.Tier))
+}
+
+// holdDetail is the journal's entry for hold beginning: each file with its
+// rules, and thread, or that none is open yet.
+func holdDetail(hold *mergequeue.PreflightHold, thread string) string {
+	detail := "merge queue held by its preflight, so it builds no batch until the main checkout is clean: " + strings.Join(holdFiles(hold.Findings), "; ")
+	if thread == "" {
+		return detail + "; no thread to the operator yet, the next look opens one"
+	}
+	return detail + "; thread " + thread
+}
+
+// holdFiles are the files findings name, in the order first named, each
+// with the rules found in it.
+func holdFiles(findings []verify.FileFinding) []string {
+	var files []string
+	rules := map[string][]string{}
+	for _, f := range findings {
+		if _, ok := rules[f.Path]; !ok {
+			files = append(files, f.Path)
+			rules[f.Path] = nil
+		}
+		if f.Rule != "" && !slices.Contains(rules[f.Path], f.Rule) {
+			rules[f.Path] = append(rules[f.Path], f.Rule)
+		}
+	}
+	out := make([]string, 0, len(files))
+	for _, file := range files {
+		if len(rules[file]) == 0 {
+			out = append(out, file)
+			continue
+		}
+		out = append(out, file+" ("+strings.Join(rules[file], ", ")+")")
+	}
+	return out
 }
 
 // notRun logs once, until the reason changes, that the queue does not run

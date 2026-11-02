@@ -12,6 +12,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
+	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -243,10 +244,11 @@ func (a *app) printQueueChange(ch mergequeue.Change) error {
 	return nil
 }
 
-// printQueue writes q as text: the eligible stories in order, each other
-// story in review with its reasons, the batch, the window the next batch
-// fills in, in place of "batch: none" when there is no batch, and the
-// outcomes; or, when the queue is off, the one line saying why.
+// printQueue writes q as text: the operator's hold and the preflight's,
+// with each finding, the eligible stories in order, each other story in
+// review with its reasons, the batch, the window the next batch fills in, in
+// place of "batch: none" when there is no batch, and the outcomes; or, when
+// the queue is off, the one line saying why.
 func printQueue(w io.Writer, q mergequeue.Queue) {
 	if q.Off {
 		fmt.Fprintf(w, "merge queue off under acceptance.mode %s: %s\n", q.Mode, q.OffReason)
@@ -254,6 +256,16 @@ func printQueue(w io.Writer, q mergequeue.Queue) {
 	}
 	if q.Held {
 		fmt.Fprintf(w, "held by %s at %s: no batch is built until flai queue resume\n", q.HeldBy, q.HeldAt.UTC().Format(time.RFC3339))
+	}
+	if h := q.Preflight; h != nil {
+		line := fmt.Sprintf("held by the preflight since %s: no batch is built until the main checkout is clean of these, and the queue resumes on its own", h.Since.UTC().Format(time.RFC3339))
+		if h.Thread != "" {
+			line += "; thread " + h.Thread
+		}
+		fmt.Fprintln(w, line)
+		for _, f := range h.Findings {
+			fmt.Fprintf(w, "  %s\n", preflightLine(f))
+		}
 	}
 	if len(q.Eligible) == 0 && len(q.Ineligible) == 0 {
 		fmt.Fprintln(w, "no story is in review")
@@ -295,8 +307,9 @@ func printQueue(w io.Writer, q mergequeue.Queue) {
 }
 
 // printBatch writes the batch under verification and its step, and, once
-// it has them, its result, why it was dropped, and the stories its landing
-// holds back with the files that hold them (ADR-0178).
+// it has them, its result, why it was dropped, the story its landing waits
+// on main at (ADR-0234), and the stories its landing holds back with the
+// files that hold them (ADR-0178).
 func printBatch(w io.Writer, b *mergequeue.Batch) {
 	if b == nil {
 		fmt.Fprintln(w, "batch: none")
@@ -320,11 +333,30 @@ func printBatch(w io.Writer, b *mergequeue.Batch) {
 	if d := b.Dropped; d != nil {
 		fmt.Fprintf(w, "  dropped by %s at %s: %s\n", d.By, d.At.UTC().Format(time.RFC3339), d.Reason)
 	}
+	if s := b.Stalled; s != nil {
+		fmt.Fprintf(w, "  landing waits on main at %s since %s: %s\n", s.Story, s.At.UTC().Format(time.RFC3339), s.Reason)
+	}
 	if l := b.Landing; l != nil {
 		for _, h := range l.HeldBack {
 			fmt.Fprintf(w, "  held back: %s, by the main checkout's uncommitted %s; free it: %s\n", h.Story, strings.Join(h.Paths, ", "), mergequeue.FreeCommand(h.Paths))
 		}
 	}
+}
+
+// preflightLine is a finding of the preflight on one line: its file and line,
+// its rule, its message, and what found it.
+func preflightLine(f verify.FileFinding) string {
+	line := f.Path
+	if f.Line > 0 {
+		line += fmt.Sprintf(":%d", f.Line)
+	}
+	if f.Rule != "" {
+		line += " " + f.Rule
+	}
+	if f.Message != "" {
+		line += ": " + f.Message
+	}
+	return line + " (" + f.Tier + ")"
 }
 
 // queueLine is a story in review on one line: its ID, title, when it last

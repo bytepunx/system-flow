@@ -767,6 +767,9 @@ func Run(ctx context.Context, o Options) error {
 					defer looks.Done()
 					watcher.Run(cctx, func(rel string) {
 						r.client.Notify("change", map[string]string{"project": e.Key, "path": rel})
+						// the merge queue looks again on a change under kanban or threads,
+						// and on any while its preflight holds it (ADR-0234)
+						queue.changed(rel)
 						// a story's state is in its file under kanban, and the pull order in the
 						// board; an answer to an agent's question is in its thread
 						if slashed := filepath.ToSlash(rel); strings.Contains(slashed, "/kanban/") || strings.Contains(slashed, "/threads/") {
@@ -779,7 +782,6 @@ func Run(ctx context.Context, o Options) error {
 							roleSchedules.look(cctx)
 							confirming.look(cctx)
 							reminding.soon(cctx)
-							queue.wake()
 						}
 					})
 				}()

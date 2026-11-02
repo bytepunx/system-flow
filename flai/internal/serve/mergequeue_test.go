@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -136,7 +137,7 @@ type queueLab struct {
 func newQueueLab(t *testing.T) *queueLab {
 	t.Helper()
 	root := t.TempDir()
-	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents"} {
+	for _, d := range []string{"docs", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents"} {
 		if err := os.MkdirAll(filepath.Join(root, d), 0o755); err != nil {
 			t.Fatal(err)
 		}
@@ -540,6 +541,308 @@ func TestEachStoryLandedOrSentBackIsJournalled(t *testing.T) {
 	lab.look() // nothing new: nothing journalled again
 	if got := lab.entries(); len(got) != 2 {
 		t.Fatalf("journal after a look that changed nothing = %+v, want the two entries alone", got)
+	}
+}
+
+// holdFindings are a preflight's findings on the main checkout: a task note
+// whose link and message carry what Markdown would read as code, a link, and
+// a tab, and an error of flai check.
+var holdFindings = []verify.FileFinding{
+	{Tier: "markdown", Checkout: verify.CheckoutMain, Path: "wip/kanban/tasks/T-0001-x.md", Line: 12, Rule: "MD051", Message: "Link fragments should be valid [Context: \"[see](#nowhere)\"]\tat https://example.com `x`"},
+	{Tier: mergequeue.PreflightCheckTier, Checkout: verify.CheckoutMain, Path: "wip/kanban/stories/S-0001-x.md", Rule: "item.front-matter", Message: "status is not one of the statuses"},
+}
+
+// holdingRun has the lab's batch runs hold the queue on holdFindings since
+// since while held is set, and clear the hold otherwise, as RunBatch's
+// preflight does, beginning no batch.
+func (lab *queueLab) holdingRun(held *atomic.Bool, since time.Time) {
+	lab.pass.run = func(_ context.Context, _ mergequeue.Deps, repo *workitem.Repo) (bool, error) {
+		lab.batches.mu.Lock()
+		lab.batches.calls++
+		lab.batches.mu.Unlock()
+		_, err := mergequeue.Update(repo.CacheDir(), func(s *mergequeue.State) error {
+			switch {
+			case !held.Load():
+				s.Preflight = nil
+			case s.Preflight == nil:
+				s.Preflight = &mergequeue.PreflightHold{Since: since, Main: "0123456789abcdef", Findings: holdFindings}
+			}
+			return nil
+		})
+		return false, err
+	}
+}
+
+// holdThreads are the threads on the lab's manifest.
+func (lab *queueLab) holdThreads() []*threads.Thread {
+	lab.t.Helper()
+	all, err := threads.For(lab.repo(), "system-flow.yaml")
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	return all
+}
+
+// state is the lab's merge queue state.
+func (lab *queueLab) state() mergequeue.State {
+	lab.t.Helper()
+	st, err := mergequeue.ReadState(lab.repo().CacheDir())
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	return st
+}
+
+// S-0549 criteria 1, 2, and 3, ADR-0234: a look that finds the queue held by
+// its preflight journals the hold once, naming each file and rule and the
+// thread, and opens one thread to the operator on the manifest, as flai
+// serve, naming each file, line, and rule in text the project's markdown
+// lint passes, saying the queue builds no batch until they are fixed and
+// changes none of them, and records it on the hold; a second look opens none
+// and journals nothing. The look that finds the hold gone resolves the
+// thread, saying main is clean, and journals the clearing, once.
+func TestAPreflightHoldIsJournalledOnceWithOneThreadToTheOperatorResolvedWhenItClears(t *testing.T) {
+	lab := newQueueLab(t)
+	if err := os.WriteFile(filepath.Join(lab.root, ".markdownlint.yaml"), []byte(projectLint), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var held atomic.Bool
+	held.Store(true)
+	since := time.Date(2026, 11, 1, 9, 0, 0, 0, time.UTC)
+	lab.holdingRun(&held, since)
+	lab.look()
+	all := lab.holdThreads()
+	if len(all) != 1 || !all[0].Open() || all[0].Opener() != queueAuthor || all[0].Title != holdTitle {
+		t.Fatalf("threads on the manifest = %+v, want one open, from flai serve, titled %q:\n%s", all, holdTitle, lab.logs.String())
+	}
+	th := all[0]
+	body := th.Marshal()
+	for _, want := range []string{"`wip/kanban/tasks/T-0001-x.md`, line 12, `MD051`: `` Link fragments should be valid [Context: \"[see](#nowhere)\"] at https://example.com `x` ``",
+		"`wip/kanban/stories/S-0001-x.md`, `item.front-matter`: `status is not one of the statuses` (flai check)", "at main's head `0123456789ab`",
+		"builds no batch", "changes none of these files", "clears the hold, resolves this thread"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("the thread does not say %q:\n%s", want, body)
+		}
+	}
+	if got := lab.state().Preflight; got == nil || got.Thread != th.ID {
+		t.Fatalf("the hold = %+v, want its thread %s recorded", got, th.ID)
+	}
+	got := lab.entries()
+	if len(got) != 1 || got[0].Action != hostapi.ActionMergeQueue || got[0].By != queueAuthor || got[0].At != "2026-11-01T09:00:00Z" ||
+		!strings.Contains(got[0].Detail, "wip/kanban/tasks/T-0001-x.md (MD051); wip/kanban/stories/S-0001-x.md (item.front-matter)") || !strings.Contains(got[0].Detail, "thread "+th.ID) {
+		t.Fatalf("journal = %+v, want the hold, with each file and rule and the thread", got)
+	}
+
+	lab.look()
+	if all := lab.holdThreads(); len(all) != 1 {
+		t.Fatalf("threads on the manifest after a second held look = %d, want the one", len(all))
+	}
+	if got := lab.entries(); len(got) != 1 {
+		t.Fatalf("journal after a second held look = %+v, want the hold alone", got)
+	}
+
+	held.Store(false)
+	lab.look()
+	all = lab.holdThreads()
+	if len(all) != 1 || all[0].Open() || !strings.Contains(all[0].Marshal(), "Resolved: main is clean: the merge queue's preflight found nothing at ") {
+		t.Fatalf("threads on the manifest once the hold cleared = %+v, want the one resolved as main is clean", all)
+	}
+	got = lab.entries()
+	if len(got) != 2 || !strings.Contains(got[1].Detail, "merge queue preflight hold cleared: main is clean") || !strings.Contains(got[1].Detail, "thread "+th.ID+" resolved") {
+		t.Fatalf("journal = %+v, want the hold, then its clearing with the thread", got)
+	}
+	lab.look()
+	if got := lab.entries(); len(got) != 2 {
+		t.Fatalf("journal after a clean look = %+v, want nothing new", got)
+	}
+}
+
+// S-0549, ADR-0234: a thread that cannot be opened is logged at warn and
+// fails no look; the hold is journalled once, saying no thread is open yet,
+// and the next look opens the thread and journals nothing again. A hold whose
+// thread was resolved has a new one opened.
+func TestAPreflightThreadNotOpenedIsTriedAgainAtTheNextLook(t *testing.T) {
+	lab := newQueueLab(t)
+	threadsDir := filepath.Join(lab.root, "wip", "threads")
+	if err := os.WriteFile(threadsDir, []byte("not a folder\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var held atomic.Bool
+	held.Store(true)
+	lab.holdingRun(&held, time.Date(2026, 11, 1, 9, 0, 0, 0, time.UTC))
+	lab.look()
+	if recs := lab.records("msg", "merge queue preflight thread not opened; the next look tries again"); len(recs) != 1 || recs[0]["level"] != "WARN" {
+		t.Fatalf("logged the thread not opened as %v, want one warning:\n%s", recs, lab.logs.String())
+	}
+	if got := lab.entries(); len(got) != 1 || !strings.Contains(got[0].Detail, "no thread to the operator yet") {
+		t.Fatalf("journal = %+v, want the hold, with no thread yet", got)
+	}
+	if err := os.Remove(threadsDir); err != nil {
+		t.Fatal(err)
+	}
+	lab.look()
+	all := lab.holdThreads()
+	if len(all) != 1 || lab.state().Preflight.Thread != all[0].ID {
+		t.Fatalf("threads on the manifest = %+v, hold %+v; want one, recorded on the hold", all, lab.state().Preflight)
+	}
+	if got := lab.entries(); len(got) != 1 {
+		t.Fatalf("journal after the thread opened = %+v, want the hold alone", got)
+	}
+	if _, err := threads.Resolve(lab.repo(), all[0].ID, "alex", "seen", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	lab.look()
+	all = lab.holdThreads()
+	if len(all) != 2 || !all[1].Open() || lab.state().Preflight.Thread != all[1].ID {
+		t.Fatalf("threads on the manifest = %+v, want a second, open and recorded, once the first was resolved", all)
+	}
+}
+
+// S-0549 criterion 3, ADR-0234: a batch whose landing waits on main is
+// journalled once, with the story and the reason, and its landing again,
+// once main is clean, is journalled once, with the story it resumed at, how
+// long it waited, the commits, and that no tier ran.
+func TestALandingWaitingOnMainAndItsLandingAgainAreJournalledOnce(t *testing.T) {
+	lab := newQueueLab(t)
+	var held atomic.Bool
+	lab.holdingRun(&held, time.Now())
+	stalledAt := time.Now().Add(-time.Minute).UTC().Truncate(time.Second)
+	if _, err := mergequeue.Update(lab.repo().CacheDir(), func(s *mergequeue.State) error {
+		s.Batch = &mergequeue.Batch{ID: "b1", Stories: []string{"S-0001", "S-0002"}, Step: mergequeue.StepVerified, Result: &mergequeue.Result{Passed: true},
+			Heads: []mergequeue.Head{{Story: "S-0001", Verified: "1111111111111111", Rebased: "aaaaaaaaaaaaaaaa"}, {Story: "S-0002", Verified: "2222222222222222", Rebased: "bbbbbbbbbbbbbbbb"}}}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	stall := func(_ context.Context, repo *workitem.Repo) {
+		if _, err := mergequeue.Update(repo.CacheDir(), func(s *mergequeue.State) error {
+			s.Batch.Landing = &mergequeue.Landing{Stories: []string{"S-0001", "S-0002"}, Landed: []string{"S-0001"}}
+			s.Batch.Stalled = &mergequeue.Stalled{Story: "S-0002", Reason: "flai accept S-0002: exit status 1", At: stalledAt}
+			s.Preflight = &mergequeue.PreflightHold{Since: stalledAt, Findings: holdFindings}
+			return nil
+		}); err != nil {
+			t.Error(err)
+		}
+		held.Store(true)
+	}
+	lab.advances.then = stall
+	lab.look()
+	lab.advances.then = nil
+	lab.look()
+	var stalls []hostapi.Entry
+	for _, e := range lab.entries() {
+		if strings.Contains(e.Detail, "waits on main") {
+			stalls = append(stalls, e)
+		}
+	}
+	if len(stalls) != 1 || stalls[0].Outcome != "failed" || !strings.Contains(stalls[0].Detail, "landing S-0002 from merge queue batch b1 waits on main: flai accept S-0002: exit status 1") {
+		t.Fatalf("journal = %+v, want the wait on main once, failed, with the story and the reason", lab.entries())
+	}
+	if recs := lab.records("stalled", "S-0002"); len(recs) != 1 || recs[0]["msg"] != "merge queue batch advanced" {
+		t.Fatalf("logged the wait as %v, want one line:\n%s", recs, lab.logs.String())
+	}
+
+	before := len(lab.entries())
+	held.Store(false)
+	lab.advances.then = func(_ context.Context, repo *workitem.Repo) {
+		if _, err := mergequeue.Update(repo.CacheDir(), func(s *mergequeue.State) error {
+			s.RecordOutcome(mergequeue.Outcome{Story: "S-0002", Outcome: mergequeue.OutcomeLanded, At: time.Now(), Detail: "landed by merge queue batch b1 as alex"})
+			s.Batch = nil
+			return nil
+		}); err != nil {
+			t.Error(err)
+		}
+	}
+	lab.look()
+	lab.advances.then = nil
+	lab.look()
+	got := lab.entries()[before:]
+	if len(got) != 3 || got[0].Outcome != "done" ||
+		!strings.Contains(got[0].Detail, "merge queue batch b1 lands again at S-0002 after waiting 1m") ||
+		!strings.Contains(got[0].Detail, "(S-0002 at bbbbbbbbbbbb)") || !strings.Contains(got[0].Detail, "with no new verification: no tier ran") ||
+		got[1].Detail != "S-0002: landed by merge queue batch b1 as alex" || !strings.Contains(got[2].Detail, "merge queue preflight hold cleared") {
+		t.Fatalf("journal after main came clean = %+v, want the landing again, the story landed, and the hold cleared, once each", got)
+	}
+}
+
+// S-0549 criterion 2, ADR-0234: while the preflight holds the queue, a
+// change to any file of the main checkout the watcher sees, outside kanban
+// and threads too, and a move of main's head wake the pass; while it does
+// not, only a change under kanban or threads does.
+func TestAChangeInTheMainCheckoutWakesTheQueueWhileTheHoldStands(t *testing.T) {
+	lab := newQueueLab(t)
+	woke := func(rel string) bool {
+		t.Helper()
+		lab.pass.changed(rel)
+		select {
+		case <-lab.pass.woken:
+			return true
+		default:
+			return false
+		}
+	}
+	if woke("wip/agents/S-0001.md") || woke("docs/x.md") || woke(".git/refs/heads/main") {
+		t.Fatal("a change outside kanban and threads woke a queue not held")
+	}
+	if !woke("wip/kanban/tasks/T-0001-x.md") || !woke("wip/threads/TH-0001-x.md") {
+		t.Fatal("a change under kanban or threads did not wake the queue")
+	}
+	var held atomic.Bool
+	held.Store(true)
+	lab.holdingRun(&held, time.Now())
+	lab.look()
+	for _, rel := range []string{"wip/agents/S-0001.md", "docs/x.md", ".git/refs/heads/main", "wip/kanban/tasks/T-0001-x.md"} {
+		if !woke(rel) {
+			t.Errorf("a change to %s did not wake the queue the preflight holds", rel)
+		}
+	}
+	held.Store(false)
+	lab.look()
+	if woke("wip/agents/S-0001.md") {
+		t.Fatal("a change outside kanban and threads woke the queue once its hold cleared")
+	}
+}
+
+// S-0549 criterion 2, ADR-0234: a running pass watches the main checkout's
+// refs, and a move of main's head has it look again while held, and not once
+// the hold cleared.
+func TestAMoveOfMainsHeadWakesARunningPassWhileHeld(t *testing.T) {
+	lab := newQueueLab(t)
+	ref := filepath.Join(lab.root, ".git", "refs", "heads", "main")
+	if err := os.MkdirAll(filepath.Dir(ref), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(ref, []byte("1111111111111111111111111111111111111111\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	lab.pass.every = time.Hour
+	lab.pass.o.WatchEvery = 5 * time.Millisecond
+	var held atomic.Bool
+	held.Store(true)
+	lab.holdingRun(&held, time.Now())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer func() {
+		cancel()
+		lab.runs.wait()
+	}()
+	lab.pass.start(ctx)
+	waitFor(t, "the first look to see the hold", lab.pass.held)
+	n := lab.batches.count()
+	if err := os.WriteFile(ref, []byte("2222222222222222222222222222222222222222\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	waitFor(t, "a look after main's head moved", func() bool { return lab.batches.count() > n })
+	held.Store(false)
+	lab.pass.wake()
+	waitFor(t, "a look that clears the hold", func() bool { return !lab.pass.held() })
+	time.Sleep(50 * time.Millisecond) // the wake's look ends
+	n = lab.batches.count()
+	if err := os.WriteFile(ref, []byte("3333333333333333333333333333333333333333\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(100 * time.Millisecond) // ticks of the watcher
+	if got := lab.batches.count(); got != n {
+		t.Fatalf("looks after main's head moved with no hold = %d, want %d", got, n)
 	}
 }
 
