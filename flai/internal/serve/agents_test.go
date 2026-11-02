@@ -112,7 +112,7 @@ func newAgentLab(t *testing.T) *agentLab {
 	script := "#!/bin/sh\n" +
 		"trap 'touch \"" + lab.outDir + "/ended-$$\"; exit 143' TERM\n" +
 		"out=\"" + lab.outDir + "/$FLAI_STORY.txt\"\n" +
-		"{ echo \"args: $*\"; echo \"dir: $(pwd)\"; echo \"agent: $FLAI_AGENT\"; echo \"story: $FLAI_STORY\"; echo \"session: $FLAI_SESSION\"; echo \"answered: $FLAI_ANSWERED\"; echo \"host: ${FLAI_HOST_URL-unset} ${FLAI_HOST_TOKEN-unset}\"; echo \"config: ${FLAI_CONFIG-unset}\"; echo \"gateway: ${ANTHROPIC_BASE_URL-unset} ${ANTHROPIC_AUTH_TOKEN-unset}\"; echo \"forge: ${GITHUB_TOKEN-unset} ${S0393_FORGE_TOKEN-unset} ${S0393_KEPT-unset}\"; } > \"$out\"\n" +
+		"{ echo \"args: $*\"; echo \"dir: $(pwd)\"; echo \"agent: $FLAI_AGENT\"; echo \"story: $FLAI_STORY\"; echo \"session: $FLAI_SESSION\"; echo \"answered: $FLAI_ANSWERED\"; echo \"host: ${FLAI_HOST_URL-unset} ${FLAI_HOST_TOKEN-unset}\"; echo \"config: ${FLAI_CONFIG-unset}\"; echo \"gateway: ${ANTHROPIC_BASE_URL-unset} ${ANTHROPIC_AUTH_TOKEN-unset}\"; echo \"forge: ${GITHUB_TOKEN-unset} ${S0393_FORGE_TOKEN-unset} ${S0393_KEPT-unset}\"; echo \"mcp: ${FLAI_MCP_URL-unset} ${FLAI_MCP_TOKEN-unset}\"; } > \"$out\"\n" +
 		"while [ -f \"" + lab.outDir + "/hold\" ] && [ ! -f \"" + lab.outDir + "/release-$FLAI_STORY\" ]; do sleep 0.05; done\n" +
 		"touch \"" + lab.outDir + "/ended-$$\"\n"
 	if err := os.WriteFile(lab.stub, []byte(script), 0o755); err != nil {
@@ -2532,6 +2532,79 @@ func TestAStorysProviderKeyReachesItsAgentAlone(t *testing.T) {
 	waitFor(t, "it ended", func() bool { r := lab.run(over); return r != nil && !r.live() })
 	if got, _ := os.ReadFile(filepath.Join(lab.outDir, over+".txt")); !strings.Contains(string(got), "gateway: https://project.example.com "+key+"\n") {
 		t.Errorf("the project's override was not laid over the host's entry:\n%s", got)
+	}
+}
+
+// mcpAskingHarness is the name of mcpAsking, an adapter that asks for the
+// HTTP MCP server: claude-code's start, run by the stub, whose agent reaches
+// the server over HTTP, as one in a container does (S-0506).
+const mcpAskingHarness = "s0506-over-http"
+
+type mcpAsking struct{ harness.Adapter }
+
+func (mcpAsking) MCPOverHTTP() bool { return true }
+
+// S-0506: a start for an adapter that asks for the HTTP MCP server gets its
+// URL, the one the server's state names, and its token in FLAI_MCP_URL and
+// FLAI_MCP_TOKEN, in its environment alone: not its argv, run, record,
+// journal, or flai serve's log. A start for claude-code gets neither, not
+// even the token flai serve was handed itself; and one that asks while the
+// server is not running is refused, saying what to run.
+func TestAnAdapterThatAsksIsHandedTheMCPServerByEnvironment(t *testing.T) {
+	const handed, token, url = "handed-to-serve-sentinel", "mcp-token-sentinel-S0506", "http://127.0.0.1:4299/mcp"
+	t.Setenv(MCPURLEnv, "http://serve.example.com/mcp")
+	t.Setenv(MCPTokenEnv, handed)
+	harness.Adapters[mcpAskingHarness] = mcpAsking{harness.Adapters[harness.ClaudeCode]}
+	t.Cleanup(func() { delete(harness.Adapters, mcpAskingHarness) })
+	lab := providerLab(t)
+	lab.cfg.Harnesses[mcpAskingHarness] = harness.Host{Program: lab.stub}
+	ctx := context.Background()
+	cache := filepath.Join(lab.root, ".flai-cache")
+	if err := os.MkdirAll(cache, 0o700); err != nil {
+		t.Fatal(err)
+	}
+
+	asking := lab.readyWith("Over HTTP before the server", &manifest.Agent{Harness: mcpAskingHarness})
+	lab.l.look(ctx, false)
+	if r := lab.run(asking); r == nil || r.Outcome != OutcomeFailed || r.PID != 0 || !strings.Contains(r.Why, "not running") || !strings.Contains(r.Why, "flai mcp start") {
+		t.Fatalf("started with no server: %+v", r)
+	}
+
+	state := fmt.Sprintf(`{"pid": %d, "url": %q, "updated": %q}`, os.Getpid(), url, time.Now().UTC().Format(time.RFC3339))
+	if err := os.WriteFile(filepath.Join(cache, MCPStateFile), []byte(state), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(cache, MCPTokenFile), []byte(token+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	asking = lab.readyWith("Over HTTP", &manifest.Agent{Harness: mcpAskingHarness})
+	stdio := lab.readyWith("On stdio", &manifest.Agent{Harness: harness.ClaudeCode})
+	lab.l.look(ctx, false)
+	waitFor(t, "both ended", func() bool {
+		a, s := lab.run(asking), lab.run(stdio)
+		return a != nil && !a.live() && s != nil && !s.live()
+	})
+	got, _ := os.ReadFile(filepath.Join(lab.outDir, asking+".txt"))
+	args, _, _ := strings.Cut(string(got), "\n")
+	if !strings.Contains(string(got), "mcp: "+url+" "+token+"\n") || strings.Contains(args, url) || strings.Contains(args, token) {
+		t.Errorf("the asking adapter's agent was not handed the server by environment alone:\n%s", got)
+	}
+	if got, _ := os.ReadFile(filepath.Join(lab.outDir, stdio+".txt")); !strings.Contains(string(got), "mcp: unset unset\n") {
+		t.Errorf("claude-code's agent was handed the server:\n%s", got)
+	}
+	record, _ := os.ReadFile(lab.o.Dir.agents())
+	texts := map[string]string{"serve/agents.json": string(record), "the journal": fmt.Sprintf("%+v", lab.entries()), "flai serve's log": lab.logText()}
+	for _, id := range []string{asking, stdio} {
+		r := lab.run(id)
+		runLog, _ := os.ReadFile(r.Log)
+		texts["the run log of "+id], texts["the run of "+id] = string(runLog), fmt.Sprintf("%+v", *r)
+	}
+	for what, text := range texts {
+		for _, secret := range []string{token, handed} {
+			if strings.Contains(text, secret) {
+				t.Errorf("%s holds the token %q:\n%s", what, secret, text)
+			}
+		}
 	}
 }
 

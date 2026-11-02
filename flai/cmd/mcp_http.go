@@ -35,12 +35,12 @@ import (
 const (
 	mcpDefaultAddr  = "127.0.0.1:4243"
 	mcpPath         = "/mcp"
-	mcpTokenFile    = "mcp.token"
-	mcpStateFile    = "mcp-http.json"
+	mcpTokenFile    = serve.MCPTokenFile
+	mcpStateFile    = serve.MCPStateFile
 	mcpAddrFile     = "mcp-http.addr"
 	mcpLogFile      = "mcp-http.log"
 	mcpStateEvery   = 3 * time.Second
-	mcpStaleAfter   = 10 * time.Second
+	mcpStaleAfter   = serve.MCPStaleAfter
 	mcpShutdownWait = 5 * time.Second
 )
 
@@ -447,9 +447,23 @@ in every request, and TLS is a proxy's or a tunnel's job, not flai's.`,
 		Long: `The token lives at .flai-cache/mcp.token (mode 0600, git-ignored) and is
 created the first time it is needed. It is not the dashboard's token: that
 one opens the dashboard, this one lets an agent act on the project. --rotate
-writes a new one and restarts a running server, which ends every session.`,
+writes a new one and restarts a running server, which ends every session.
+
+In a run flai serve started for a harness that reaches the server over HTTP,
+such as one in a container, the token is handed to the run as ` + serve.MCPTokenEnv + `,
+with the server's URL as ` + serve.MCPURLEnv + ` (S-0506): while ` + serve.MCPTokenEnv + ` is set,
+flai mcp token prints it, the token in force, and reads no file, so that it
+answers where there is no .flai-cache. --rotate ignores ` + serve.MCPTokenEnv + ` and
+rotates the project's file.`,
 		Args: cobra.NoArgs,
 		RunE: func(*cobra.Command, []string) error {
+			if tok := strings.TrimSpace(os.Getenv(serve.MCPTokenEnv)); tok != "" && !rotate {
+				if a.jsonOut {
+					return a.printJSON(map[string]any{"token": tok, "created": false, "rotated": false, "restarted": false, "env": serve.MCPTokenEnv})
+				}
+				fmt.Fprintln(a.out, tok)
+				return nil
+			}
 			repo, err := a.httpMCPProject()
 			if err != nil {
 				return err
@@ -485,7 +499,7 @@ writes a new one and restarts a running server, which ends every session.`,
 			return nil
 		},
 	}
-	token.Flags().BoolVar(&rotate, "rotate", false, "replace the token")
+	token.Flags().BoolVar(&rotate, "rotate", false, "replace the token in the project's file, whatever "+serve.MCPTokenEnv+" holds")
 	return []*cobra.Command{httpCmd, start, stop, status, token}
 }
 

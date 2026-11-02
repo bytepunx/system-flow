@@ -148,7 +148,10 @@ func Handler(opt Options) http.Handler {
 	return h
 }
 
-func (h *handler) refuse(w http.ResponseWriter, status int, message string) {
+// refuse answers r with status and message, and logs the refusal with the
+// agent r names: the agent, never the token or any other header (S-0506).
+func (h *handler) refuse(w http.ResponseWriter, r *http.Request, status int, message string) {
+	h.opt.Logger.Warn("mcp request refused", "agent", SafeAgent(r.Header.Get(AgentHeader)), "method", r.Method, "status", status)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(map[string]any{"jsonrpc": "2.0", "id": nil, "error": map[string]any{"code": -32000, "message": message}})
@@ -161,20 +164,20 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// this server with a token it found or guessed, so an Origin is refused
 	// before the token is looked at.
 	if r.Header.Get("Origin") != "" {
-		h.refuse(w, http.StatusForbidden, "requests from a browser are refused: this endpoint is for agents, which send no Origin header")
+		h.refuse(w, r, http.StatusForbidden, "requests from a browser are refused: this endpoint is for agents, which send no Origin header")
 		return
 	}
 	given, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 	if !ok || h.opt.Token == "" || subtle.ConstantTimeCompare([]byte(strings.TrimSpace(given)), []byte(h.opt.Token)) != 1 {
 		w.Header().Set("WWW-Authenticate", `Bearer realm="flai mcp"`)
-		h.refuse(w, http.StatusUnauthorized, "send the token as Authorization: Bearer <token>; flai mcp token prints it")
+		h.refuse(w, r, http.StatusUnauthorized, "send the token as Authorization: Bearer <token>; flai mcp token prints it")
 		return
 	}
 	select {
 	case h.inFlight <- struct{}{}:
 		defer func() { <-h.inFlight }()
 	default:
-		h.refuse(w, http.StatusServiceUnavailable, "too many requests at once; try again shortly")
+		h.refuse(w, r, http.StatusServiceUnavailable, "too many requests at once; try again shortly")
 		return
 	}
 
@@ -183,9 +186,12 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// may both pass it, which is not worth a lock held across a request.
 	opening := !alone && r.Method == http.MethodPost && r.Header.Get(sessionHeader) == ""
 	if opening && h.stateful.live() >= h.opt.MaxSessions {
-		h.refuse(w, http.StatusServiceUnavailable, "this server already has its limit of MCP sessions; end one with DELETE or wait for an idle one to expire")
+		h.refuse(w, r, http.StatusServiceUnavailable, "this server already has its limit of MCP sessions; end one with DELETE or wait for an idle one to expire")
 		return
 	}
+	// The request's log line names the agent, from X-Flai-Agent where the
+	// request has one, and carries no header's value, the token's least.
+	logged := SafeAgent(r.Header.Get(AgentHeader))
 	if alone || opening {
 		agent := SafeAgent(r.Header.Get(AgentHeader))
 		if agent == "" && r.Method == http.MethodPost {
@@ -195,10 +201,12 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			agent = "agent"
 		}
 		r = r.WithContext(context.WithValue(r.Context(), ctxKey{}, agent))
+		logged = agent
 		if opening {
 			h.opt.Logger.Info("mcp session requested", "agent", agent, "sessions", h.stateful.live())
 		}
 	}
+	h.opt.Logger.Debug("mcp request", "agent", logged, "method", r.Method, "sessionless", alone)
 	if alone {
 		h.alone.ServeHTTP(w, r)
 		return

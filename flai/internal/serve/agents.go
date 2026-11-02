@@ -1828,12 +1828,85 @@ func (r *AgentRun) awaits() string {
 // operator's host. Nor does it carry what marks the session of whoever
 // started it, such as an agent that ran flai plan (S-0208): each run sets
 // FLAI_STORY, or FLAI_ROLE with FLAI_ITEM, FLAI_FOCUS (S-0223), or
-// FLAI_SINCE (ADR-0196), for itself, and has the others unset.
+// FLAI_SINCE (ADR-0196), for itself, and has the others unset. Nor the HTTP
+// MCP server's URL and token flai serve may have been handed itself: a run
+// gets them only when its adapter asks (mcpEnv, S-0506).
 func agentEnv(env []string) []string {
 	return slices.DeleteFunc(slices.Clone(env), func(kv string) bool {
 		name, _, _ := strings.Cut(kv, "=")
-		return name == host.URLEnv || name == host.TokenEnv || name == config.EnvVar || slices.Contains(runMarks, name)
+		return name == host.URLEnv || name == host.TokenEnv || name == config.EnvVar || name == MCPURLEnv || name == MCPTokenEnv || slices.Contains(runMarks, name)
 	})
+}
+
+// The project's HTTP MCP server as flai serve hands it to a run whose
+// adapter asks for it (S-0506): MCPURLEnv and MCPTokenEnv are the run's
+// variables that carry its URL and bearer token, MCPStateFile and
+// MCPTokenFile the files under the project's .flai-cache where flai mcp http
+// says where it listens and keeps its token, and MCPStaleAfter how long its
+// state, rewritten every few seconds while it runs, stays true.
+const (
+	MCPURLEnv     = "FLAI_MCP_URL"
+	MCPTokenEnv   = "FLAI_MCP_TOKEN"
+	MCPStateFile  = "mcp-http.json"
+	MCPTokenFile  = "mcp.token"
+	MCPStaleAfter = 10 * time.Second
+)
+
+// MCPAsker is an adapter whose agent reaches flai's MCP server over HTTP
+// rather than starting flai mcp on stdio, such as one that runs it in a
+// container: flai serve hands each of its runs the project's server's URL
+// and token as MCPURLEnv and MCPTokenEnv, in the run's environment alone,
+// never its argv, a start request, or a log line (S-0506). An adapter that
+// does not implement it, claude-code on the host among them, gets neither.
+type MCPAsker interface {
+	// MCPOverHTTP says whether the adapter's agent reaches the server over HTTP.
+	MCPOverHTTP() bool
+}
+
+// mcpEnv is what a run of adapter, the harness name, is handed of the HTTP
+// MCP server of the project at root: its URL and token, as MCPURLEnv and
+// MCPTokenEnv, when the adapter asks for them (MCPAsker), and nothing
+// otherwise. It refuses a start that asks while the server is not running
+// at now or its token cannot be read, saying what to run and never the
+// token; now is read only for an adapter that asks.
+func mcpEnv(adapter harness.Adapter, name, root string, now func() time.Time) ([]string, error) {
+	if asker, ok := adapter.(MCPAsker); !ok || !asker.MCPOverHTTP() {
+		return nil, nil
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		return nil, fmt.Errorf("open the project at %s for its HTTP MCP server, which harness %s reaches flai through: %w", root, name, err)
+	}
+	url, ok := mcpServerURL(repo.CacheDir(), now())
+	if !ok {
+		return nil, fmt.Errorf("harness %s reaches flai's MCP server over HTTP, and the project's is not running: flai host starts it for every project flai serve serves, or run flai mcp start in the project, and start the agent again", name)
+	}
+	data, err := os.ReadFile(filepath.Join(repo.CacheDir(), MCPTokenFile))
+	token := strings.TrimSpace(string(data))
+	if err != nil || token == "" {
+		return nil, fmt.Errorf("harness %s reaches flai's MCP server over HTTP, and the server's token in %s cannot be read: run flai mcp token in the project, and start the agent again", name, filepath.Join(repo.CacheDir(), MCPTokenFile))
+	}
+	return []string{MCPURLEnv + "=" + url, MCPTokenEnv + "=" + token}, nil
+}
+
+// mcpServerURL is the URL the HTTP MCP server whose state is in cache says it
+// listens at, the address flai host gave it, and whether it is running: its
+// state was rewritten within MCPStaleAfter of now and its process is alive.
+func mcpServerURL(cache string, now time.Time) (string, bool) {
+	var st struct {
+		PID     int    `json:"pid"`
+		URL     string `json:"url"`
+		Updated string `json:"updated"`
+	}
+	data, err := os.ReadFile(filepath.Join(cache, MCPStateFile))
+	if err != nil || json.Unmarshal(data, &st) != nil || st.URL == "" {
+		return "", false
+	}
+	updated, err := time.Parse(time.RFC3339, st.Updated)
+	if err != nil || now.Sub(updated) > MCPStaleAfter {
+		return "", false
+	}
+	return st.URL, Alive(st.PID)
 }
 
 // withoutForgeTokens is env without the variables each forge's token is
@@ -2087,11 +2160,13 @@ func startWhy(story readyStory, run *AgentRun, limit int) string {
 
 // startOf is what adapter starts for req, the run of the harness name, with
 // the provider the agent names resolved into req and recorded on run, and the
-// variables that carry the provider's key into the child (ADR-0129): every
-// start, a story's agent's and a strategic agent's, builds its command here.
-// The keys go to spawn's env and nowhere else, not run, a log line, the
-// journal, or an error, so that a key flai serve holds reaches the child
-// alone. A refusal is the start's failure, as an adapter's refusal is.
+// variables that carry the provider's key into the child (ADR-0129), with the
+// project's HTTP MCP server's URL and token when the adapter asks for them
+// (mcpEnv, S-0506): every start, a story's agent's and a strategic agent's,
+// builds its command here. The keys and the token go to spawn's env and
+// nowhere else, not run, a log line, the journal, or an error, so that a
+// secret flai serve holds reaches the child alone. A refusal is the start's
+// failure, as an adapter's refusal is.
 func (l *launcher) startOf(cfg AgentConfig, run *AgentRun, adapter harness.Adapter, name string, req harness.Request) (harness.Start, []string, error) {
 	if err := l.provide(cfg, run, &req); err != nil {
 		return harness.Start{}, nil, err
@@ -2107,7 +2182,11 @@ func (l *launcher) startOf(cfg AgentConfig, run *AgentRun, adapter harness.Adapt
 	if err != nil {
 		return harness.Start{}, nil, err
 	}
-	return spec, keys, nil
+	mcp, err := mcpEnv(adapter, name, l.entry.Root, l.now)
+	if err != nil {
+		return harness.Start{}, nil, err
+	}
+	return spec, append(keys, mcp...), nil
 }
 
 // builtinFile gives the start of a built-in role, the planner, the

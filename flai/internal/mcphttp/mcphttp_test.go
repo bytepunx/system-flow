@@ -1,9 +1,11 @@
 package mcphttp
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -251,6 +253,48 @@ func TestInFlightCap(t *testing.T) {
 	close(release)
 	if r := <-done; r.status != 200 {
 		t.Errorf("the held request finishes: %d %s", r.status, r.body)
+	}
+}
+
+// S-0506: a request's log lines, served or refused, name the agent from
+// X-Flai-Agent, the session's opening and a call in it alike, and none
+// carries the bearer token, the right one or a wrong one.
+func TestARequestsLogNamesTheAgentAndNeverTheToken(t *testing.T) {
+	var logs bytes.Buffer
+	srv := lab(t, Options{Logger: slog.New(slog.NewJSONHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug}))})
+	named := map[string]string{AgentHeader: "agent-S-0506"}
+	sid := open(t, srv.URL, "whatever", named)
+	if r := send(t, "POST", srv.URL, whoami, map[string]string{AgentHeader: "agent-S-0506", sessionHeader: sid}); r.status != 200 {
+		t.Fatalf("a call in the session: %d %s", r.status, r.body)
+	}
+	const wrong = "wrong-token-sentinel"
+	if r := send(t, "POST", srv.URL, initialize("x"), map[string]string{AgentHeader: "intruder", "Authorization": "Bearer " + wrong}); r.status != 401 {
+		t.Fatalf("a wrong token: %d %s", r.status, r.body)
+	}
+	served, refused := 0, 0
+	for line := range strings.Lines(logs.String()) {
+		var e struct {
+			Msg    string `json:"msg"`
+			Agent  string `json:"agent"`
+			Status int    `json:"status"`
+		}
+		if err := json.Unmarshal([]byte(line), &e); err != nil {
+			t.Fatalf("a log line that is not JSON: %s", line)
+		}
+		switch {
+		case e.Agent == "agent-S-0506":
+			served++
+		case e.Agent == "intruder" && e.Status == 401:
+			refused++
+		}
+	}
+	if served < 3 || refused != 1 {
+		t.Errorf("the request lines name the agent: %d served, %d refused:\n%s", served, refused, logs.String())
+	}
+	for _, secret := range []string{token, wrong} {
+		if strings.Contains(logs.String(), secret) {
+			t.Errorf("the log carries the token %q:\n%s", secret, logs.String())
+		}
 	}
 }
 

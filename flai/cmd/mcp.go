@@ -38,7 +38,10 @@ the project's key.
 An agent that cannot start a process here reaches the same server over
 Streamable HTTP (ADR-0030): flai mcp start runs it in the background for
 this project, flai mcp status says where it listens and what an agent's
-configuration looks like, and flai mcp token prints its bearer token.`,
+configuration looks like, and flai mcp token prints its bearer token. A run
+flai serve starts for a harness that reaches the server over HTTP, such as
+one in a container, is handed its URL and token by environment, as
+FLAI_MCP_URL and FLAI_MCP_TOKEN, never in its arguments (S-0506).`,
 		Example: `  flai mcp              # stdio, as .mcp.json starts it
   flai mcp start        # over HTTP, in the background, on this machine only
   flai mcp status

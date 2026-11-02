@@ -24,6 +24,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/host"
+	"github.com/bytepunx/system-flow/flai/internal/serve"
 )
 
 // sessionEnv are the variables flai reads that the shell running the tests
@@ -32,7 +33,7 @@ import (
 // flai serve, the host, or the operator sets.
 var sessionEnv = []string{
 	"FLAI_AGENT", "FLAI_ROLE", "FLAI_STORY", "FLAI_SESSION", "FLAI_ITEM", "FLAI_FOCUS", "FLAI_SINCE",
-	guard.StartedByEnv, harness.ReasonsEnv, host.URLEnv, host.TokenEnv, pprofEnv,
+	guard.StartedByEnv, harness.ReasonsEnv, host.URLEnv, host.TokenEnv, serve.MCPURLEnv, serve.MCPTokenEnv, pprofEnv,
 	"FLAI_RELEASES_API", "FLAI_INSTALL_DIR", "LOG_LEVEL", "LOG_FORMAT", "GITHUB_TOKEN", "GH_TOKEN",
 }
 
