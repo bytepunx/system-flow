@@ -479,6 +479,109 @@ func TestStatsReportsTheStrategicAgents(t *testing.T) {
 	}
 }
 
+// ADR-0249: flai stats lists every role the project defines by a role file,
+// one with no activity document with zeros, in the order planner,
+// orchestrator, analyzer, curator, then the others by name, and carries a
+// role's use per day and its kind in usage.strategic.kinds by its name.
+func TestStatsReportsEveryDefinedRole(t *testing.T) {
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	at := time.Date(2026, 10, 3, 20, 0, 0, 0, time.UTC)
+	a := func(args ...string) (string, string, int) { return runInAt(t, root, at, args...) }
+	rolesDir := filepath.Join(root, "design", "workflows", "roles")
+	if err := os.MkdirAll(rolesDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"reviewer.md", "auditor.md", "planner.md", "README.md"} {
+		if err := os.WriteFile(filepath.Join(rolesDir, name), []byte("---\ndescription: A role.\n---\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reviewed, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "Reviewed", Owner: "t", Now: at.Add(-48 * time.Hour)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	reviewed.Status = workitem.Done
+	reviewed.Transitions = append(reviewed.Transitions,
+		workitem.Transition{To: workitem.InProgress, At: at.Add(-24 * time.Hour).Format(workitem.TimeFormat), By: "t"},
+		workitem.Transition{To: workitem.Done, At: at.Add(-time.Hour).Format(workitem.TimeFormat), By: "t"})
+	reviewed.Usage = &usage.Usage{Source: usage.SourceSum, Models: []usage.Model{}, Strategic: []usage.Strategic{
+		{Kind: "reviewer", Seconds: 40, Models: []usage.Model{{Model: "claude-opus-5-5", Output: 100, Cost: 0.04}}},
+	}}
+	if err := repo.Save(reviewed); err != nil {
+		t.Fatal(err)
+	}
+	doc := &workitem.Activity{Kind: "reviewer", AccruedCost: 0.1, AccruedSeconds: 100, TasksCompleted: 1, LastRun: "2026-10-03T18:00:00Z",
+		Entries: []workitem.ActivityEntry{{At: time.Date(2026, 10, 3, 18, 0, 0, 0, time.UTC), Summary: "Reviewed", Items: []string{reviewed.ID}, Seconds: 100, Cost: 0.1}}}
+	if err := os.WriteFile(filepath.Join(root, "wip", "agents", "reviewer.md"), []byte(doc.Marshal()), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out, errOut, code := a("stats")
+	want := "\nstrategic agents (all time):\n" +
+		"  planner: 0 activities, 0.0000 USD, 0 s (on items 0.0000 USD, 0 s; on issues 0.0000 USD, 0 s; project 0.0000 USD, 0 s)\n" +
+		"  auditor: 0 activities, 0.0000 USD, 0 s (on items 0.0000 USD, 0 s; on issues 0.0000 USD, 0 s; project 0.0000 USD, 0 s)\n" +
+		"  reviewer: 1 activity, 0.1000 USD, 100 s (on items 0.0400 USD, 40 s; on issues 0.0000 USD, 0 s; project 0.0600 USD, 60 s), last 2026-10-03T18:00:00Z\n"
+	if code != 0 || !strings.Contains(out, want) || strings.Contains(out, "README") {
+		t.Errorf("text: %d %s\n%s", code, errOut, out)
+	}
+	out, errOut, code = a("stats", "--json")
+	var rep struct {
+		Strategic []struct {
+			Kind    string                  `json:"kind"`
+			LastRun string                  `json:"last_run"`
+			Log     []any                   `json:"log"`
+			Items   metrics.StrategicAmount `json:"items"`
+			Project metrics.StrategicAmount `json:"project"`
+		} `json:"strategic"`
+		Usage struct {
+			Strategic struct {
+				Kinds []struct {
+					Kind  string  `json:"kind"`
+					Items int     `json:"items"`
+					Cost  float64 `json:"cost"`
+				} `json:"kinds"`
+			} `json:"strategic"`
+		} `json:"usage"`
+		StrategicDays []struct {
+			Date   string                          `json:"date"`
+			Agents map[string]metrics.StrategicUse `json:"agents"`
+		} `json:"strategic_days"`
+	}
+	if code != 0 || json.Unmarshal([]byte(out), &rep) != nil {
+		t.Fatalf("json: %d %s %s", code, errOut, out)
+	}
+	var kinds []string
+	for _, s := range rep.Strategic {
+		kinds = append(kinds, s.Kind)
+	}
+	if strings.Join(kinds, ",") != "planner,auditor,reviewer" {
+		t.Fatalf("strategic kinds = %v", kinds)
+	}
+	if s := rep.Strategic[1]; s.LastRun != "" || s.Log == nil || len(s.Log) != 0 || s.Items != (metrics.StrategicAmount{}) || s.Project != (metrics.StrategicAmount{}) {
+		t.Errorf("auditor with no document = %+v", s)
+	}
+	if s := rep.Strategic[2]; s.Items != (metrics.StrategicAmount{Cost: 0.04, Seconds: 40}) || s.Project != (metrics.StrategicAmount{Cost: 0.06, Seconds: 60}) || len(s.Log) != 1 {
+		t.Errorf("reviewer = %+v", s)
+	}
+	if k := rep.Usage.Strategic.Kinds; len(k) != 1 || k[0].Kind != "reviewer" || k[0].Items != 1 || k[0].Cost != 0.04 {
+		t.Errorf("usage.strategic.kinds = %+v", k)
+	}
+	var day map[string]metrics.StrategicUse
+	for _, d := range rep.StrategicDays {
+		if d.Date == "2026-10-03" {
+			day = d.Agents
+		}
+	}
+	if len(day) != 1 || day["reviewer"] != (metrics.StrategicUse{Cost: 0.1, Seconds: 100}) {
+		t.Errorf("strategic_days 2026-10-03 agents = %+v", day)
+	}
+}
+
 // S-0227: flai stats reads the issues and reports the analyzer's usage on
 // each, counted in the kind's issues amount until flai issue story makes a
 // story from it, and then once, as the story's, under items; a project with

@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"slices"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/issues"
@@ -138,14 +139,22 @@ func strategicDays(docs []*workitem.Activity, items []*workitem.Item, per map[st
 	return out
 }
 
-// strategic reports each activity document, in the order given, with what
-// of its totals the items carry, what the issues carry that no story does,
-// onIssues, the rest as the project strategic total, and the entries that
-// ended from start to now.
-func strategic(docs []*workitem.Activity, items []*workitem.Item, onIssues map[string]StrategicAmount, start, now time.Time) []StrategicAgent {
+// strategic reports each activity document and each role the project
+// defines, roles, that has none, with zeros, an empty log, and no last run
+// (ADR-0249), in kind order, with what of its totals the items carry, what
+// the issues carry that no story does, onIssues, the rest as the project
+// strategic total, and the entries that ended from start to now.
+func strategic(docs []*workitem.Activity, roles []string, items []*workitem.Item, onIssues map[string]StrategicAmount, start, now time.Time) []StrategicAgent {
 	carried := onItems(items)
-	out := make([]StrategicAgent, 0, len(docs))
-	for _, d := range docs {
+	all := slices.Clone(docs)
+	for _, r := range roles {
+		if !slices.ContainsFunc(all, func(d *workitem.Activity) bool { return d.Kind == r }) {
+			all = append(all, &workitem.Activity{Kind: r})
+		}
+	}
+	slices.SortStableFunc(all, func(a, b *workitem.Activity) int { return kindOrder(a.Kind, b.Kind) })
+	out := make([]StrategicAgent, 0, len(all))
+	for _, d := range all {
 		s := StrategicAgent{Kind: d.Kind, Cost: d.AccruedCost, Seconds: d.AccruedSeconds, Activities: d.TasksCompleted, LastRun: d.LastRun, Log: []StrategicEntry{}}
 		on, is := carried[d.Kind], onIssues[d.Kind]
 		s.Items = StrategicAmount{Cost: round4(on.Cost), Seconds: on.Seconds}

@@ -30,6 +30,10 @@ type Options struct {
 	// Activities are the strategic agents' activity documents, read by the
 	// caller (ADR-0079).
 	Activities []*workitem.Activity
+	// Roles are the roles the project defines by a role file, each listed
+	// under strategic whether or not it has an activity document, read by
+	// the caller (ADR-0249).
+	Roles []string
 	// Threads are the threads the items' agents waited on, read by the caller
 	// (S-0205).
 	Threads []*threads.Thread
@@ -346,7 +350,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	rep.Usage.CostPerAgentHour = rate
 	var onIssues map[string]StrategicAmount
 	rep.StrategicIssues, onIssues = strategicIssues(opt.Issues, all)
-	rep.Strategic = strategic(opt.Activities, all, onIssues, start, opt.Now)
+	rep.Strategic = strategic(opt.Activities, opt.Roles, all, onIssues, start, opt.Now)
 	rep.Forecasts = forecasts(items, perItem, inWindow)
 	rep.CostOfDelay = costOfDelay(items, start, opt.Now)
 	rep.CostOfDelay.Order = costOrder(all, opt)

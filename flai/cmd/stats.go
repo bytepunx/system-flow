@@ -647,7 +647,8 @@ func printStrategicDays(a *app, rep *metrics.Report) {
 }
 
 // printStrategic prints each strategic agent's totals as its activity
-// document holds them, all time (ADR-0079), with what of them the items
+// document holds them, all time (ADR-0079), zeros for a role the project
+// defines with no document yet (ADR-0249), with what of them the items
 // carry, what the issues carry that no story does (S-0227), and the project
 // strategic total (ADR-0095).
 func printStrategic(a *app, agents []metrics.StrategicAgent) {

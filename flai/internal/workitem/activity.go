@@ -60,23 +60,41 @@ var roleName = regexp.MustCompile(`^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$`)
 // as README.md, names no role, and nor does index.md, whose name is wip/
 // agents' index's.
 func (r *Repo) ActivityKinds() ([]string, error) {
+	roles, err := r.Roles()
+	if err != nil {
+		return nil, err
+	}
 	kinds := slices.Clone(ActivityKinds)
+	for _, name := range roles {
+		if !slices.Contains(kinds, name) {
+			kinds = append(kinds, name)
+		}
+	}
+	return kinds, nil
+}
+
+// Roles are the roles the project defines under its design folder's
+// workflows/roles, a file each, by name, the built-in agents' own included
+// when their files are there (ADR-0207, ADR-0249): none when the folder is
+// missing. A role is named for its file as ActivityKinds says.
+func (r *Repo) Roles() ([]string, error) {
 	dir := filepath.Join(r.Manifest.Dir(r.mainRoot(), "design"), rolesFolder)
 	entries, err := os.ReadDir(dir)
 	if errors.Is(err, os.ErrNotExist) {
-		return kinds, nil
+		return nil, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("reading the role files' folder %s for the strategic agents' kinds: %w", dir, err)
 	}
+	var out []string
 	for _, e := range entries {
 		name, ok := strings.CutSuffix(e.Name(), ".md")
-		if e.IsDir() || !ok || !roleName.MatchString(name) || name == "index" || slices.Contains(kinds, name) {
+		if e.IsDir() || !ok || !roleName.MatchString(name) || name == "index" {
 			continue
 		}
-		kinds = append(kinds, name)
+		out = append(out, name)
 	}
-	return kinds, nil
+	return out, nil
 }
 
 // requireActivityKind returns nil when kind is one of the project's

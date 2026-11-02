@@ -330,3 +330,80 @@ func TestStrategicReportsTheCuratorsUseAsTheProjects(t *testing.T) {
 		t.Errorf("curator log = %+v", c.Log)
 	}
 }
+
+// ADR-0249: a role the project defines is reported as the built-in agents
+// are: its document's totals split between the items, the issues, and the
+// project, its use per day under its name, and its kind in
+// usage.strategic.kinds after the built-ins; a defined role with no
+// document is listed with zeros; and strategic is in kind order whatever
+// the order of the documents and roles.
+func TestStrategicReportsEveryRoleTheProjectDefines(t *testing.T) {
+	at := func(s string) time.Time {
+		v, err := time.Parse(workitem.TimeFormat, s)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return v
+	}
+	use := func(kind string, seconds int64, cost float64) usage.Strategic {
+		return usage.Strategic{Kind: kind, Seconds: seconds, Models: []usage.Model{{Model: "m", Output: 10, Cost: cost}}}
+	}
+	done := func(id, day string, s ...usage.Strategic) *workitem.Item {
+		return &workitem.Item{ID: id, Type: workitem.Story, Status: workitem.Done, Created: "2026-08-20T00:00:00Z",
+			Transitions: []workitem.Transition{{To: workitem.InProgress, At: "2026-08-29T13:00:00Z"}, {To: workitem.Done, At: day}},
+			Usage:       &usage.Usage{Source: usage.SourceSum, Models: []usage.Model{}, Strategic: s}}
+	}
+	items := []*workitem.Item{
+		done("S-0001", "2026-08-30T12:00:00Z", use("reviewer", 20, 0.02), use("planner", 10, 0.01)),
+		done("S-0002", "2026-08-31T12:00:00Z", use("reviewer", 10, 0.01)),
+	}
+	list := []*issues.Issue{{ID: "I-0001", Title: "Reviewed", Status: "open", Usage: &usage.Usage{Strategic: []usage.Strategic{use("reviewer", 30, 0.03)}}}}
+	docs := []*workitem.Activity{
+		{Kind: "reviewer", AccruedCost: 0.1, AccruedSeconds: 100, TasksCompleted: 2, LastRun: "2026-08-31T10:00:00Z", Entries: []workitem.ActivityEntry{
+			{At: at("2026-08-30T10:00:00Z"), Summary: "Reviewed S-0001", Items: []string{"S-0001"}, Seconds: 30, Cost: 0.03},
+			{At: at("2026-08-31T10:00:00Z"), Summary: "Reviewed S-0002", Items: []string{"S-0002"}, Seconds: 70, Cost: 0.07, Estimated: true},
+		}},
+		{Kind: workitem.ActivityAnalyzer, AccruedCost: 0.05, AccruedSeconds: 60, TasksCompleted: 1, LastRun: "2026-08-02T00:00:00Z"},
+	}
+	rep := Compute(items, Options{Now: now, Since: threeDays, Activities: docs, Roles: []string{"auditor", "planner", "reviewer"}, Issues: list})
+	var kinds []string
+	for _, s := range rep.Strategic {
+		kinds = append(kinds, s.Kind)
+	}
+	if strings.Join(kinds, ",") != "planner,analyzer,auditor,reviewer" {
+		t.Fatalf("strategic kinds = %v, want planner,analyzer,auditor,reviewer", kinds)
+	}
+	r := rep.Strategic[3]
+	if r.Cost != 0.1 || r.Seconds != 100 || r.Activities != 2 || r.LastRun != "2026-08-31T10:00:00Z" || len(r.Log) != 2 || !r.Log[1].Estimated {
+		t.Errorf("reviewer totals and log = %+v", r)
+	}
+	if r.Items != (StrategicAmount{Cost: 0.03, Seconds: 30}) || r.Issues != (StrategicAmount{Cost: 0.03, Seconds: 30}) || r.Project != (StrategicAmount{Cost: 0.04, Seconds: 40}) {
+		t.Errorf("reviewer: items %+v issues %+v project %+v", r.Items, r.Issues, r.Project)
+	}
+	data, err := json.Marshal(rep.Strategic[2])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w := `{"kind":"auditor","cost":0,"seconds":0,"activities":0,"last_run":"","items":{"cost":0,"seconds":0},"issues":{"cost":0,"seconds":0},"project":{"cost":0,"seconds":0},"log":[]}`; string(data) != w {
+		t.Errorf("a role with no document json =\n%s\nwant\n%s", data, w)
+	}
+	// the planner, defined with no document, still has what the items carry
+	if p := rep.Strategic[0]; p.Cost != 0 || p.LastRun != "" || len(p.Log) != 0 || p.Items != (StrategicAmount{Cost: 0.01, Seconds: 10}) || p.Project != (StrategicAmount{}) {
+		t.Errorf("the planner with no document = %+v", p)
+	}
+	byDay := map[string]map[string]StrategicUse{}
+	for _, d := range rep.StrategicDays {
+		byDay[d.Date] = d.Agents
+	}
+	if a := byDay["2026-08-30"]; len(a) != 1 || a["reviewer"] != (StrategicUse{Cost: 0.03, Seconds: 30}) {
+		t.Errorf("2026-08-30 agents = %+v", a)
+	}
+	if a := byDay["2026-08-31"]; len(a) != 1 || a["reviewer"] != (StrategicUse{Cost: 0.07, Seconds: 70, Estimated: true}) {
+		t.Errorf("2026-08-31 agents = %+v", a)
+	}
+	k := rep.Usage.Strategic.Kinds
+	if len(k) != 2 || k[0].Kind != "planner" || k[1].Kind != "reviewer" ||
+		k[1].StrategicSpend != (StrategicSpend{Items: 2, Tokens: 20, Cost: 0.03, Seconds: 30}) {
+		t.Errorf("usage.strategic.kinds = %+v", k)
+	}
+}

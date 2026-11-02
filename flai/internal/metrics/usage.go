@@ -244,22 +244,27 @@ func strategicTotals(items []*workitem.Item, start, now time.Time) StrategicTota
 		}
 	}
 	out := StrategicTotals{StrategicSpend: all.rounded(), Estimated: estimated, Kinds: []StrategicKindSpend{}}
+	slices.SortFunc(names, kindOrder)
+	for _, n := range names {
+		out.Kinds = append(out.Kinds, StrategicKindSpend{Kind: n, StrategicSpend: kinds[n].rounded()})
+	}
+	return out
+}
+
+// kindOrder orders strategic kinds as flai lists them wherever they are
+// listed: the built-in agents in usage.StrategicKinds order, then every
+// other role by name (ADR-0249 §5).
+func kindOrder(a, b string) int {
 	rank := func(kind string) int {
 		if i := slices.Index(usage.StrategicKinds, kind); i >= 0 {
 			return i
 		}
 		return len(usage.StrategicKinds)
 	}
-	slices.SortFunc(names, func(a, b string) int {
-		if d := rank(a) - rank(b); d != 0 {
-			return d
-		}
-		return strings.Compare(a, b)
-	})
-	for _, n := range names {
-		out.Kinds = append(out.Kinds, StrategicKindSpend{Kind: n, StrategicSpend: kinds[n].rounded()})
+	if d := rank(a) - rank(b); d != 0 {
+		return d
 	}
-	return out
+	return strings.Compare(a, b)
 }
 
 // CostPerAgentHour is the project's mean cost of an hour of agent work: the

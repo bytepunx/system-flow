@@ -29,7 +29,8 @@ import (
 )
 
 // Read returns every item, archived ones too, and the options read from the
-// project: the strategic agents' activity documents, the threads, the
+// project: the strategic agents' activity documents and the roles the
+// project's role files define, the threads, the
 // issues, the manifest's projects, the board's in-progress limit and pull
 // order, planning.default_duration, the files each story's commits
 // changed, the conversations between stories, the conflict log, the merge
@@ -53,6 +54,9 @@ func Read(r execx.Runner, repo *workitem.Repo, log *slog.Logger) ([]*workitem.It
 	}
 	if opt.Activities, err = repo.Activities(); err != nil {
 		return nil, opt, fmt.Errorf("cannot read the strategic agents' activity documents: %w; flai writes them, so restore the file from git or run flai check to see what is wrong", err)
+	}
+	if opt.Roles, err = repo.Roles(); err != nil {
+		return nil, opt, err
 	}
 	if opt.Threads, err = threads.List(repo); err != nil {
 		return nil, opt, fmt.Errorf("cannot read the threads: %w; restore the thread from git or run flai check to see what is wrong", err)
