@@ -27,6 +27,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/digest"
 	"github.com/bytepunx/system-flow/flai/internal/experiment"
+	"github.com/bytepunx/system-flow/flai/internal/formulas"
 	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
@@ -125,6 +126,7 @@ func Run(repo *workitem.Repo, now time.Time) (*Result, error) {
 	c.adrIndex()
 	c.conventions()
 	c.roles()
+	c.formulas()
 	c.issues()
 	c.experiments()
 	c.analysis()
@@ -1342,6 +1344,41 @@ func (c *checker) roles() {
 	for _, msg := range c.repo.Manifest.UndeclaredRoleSettings(declaredPermissions(list)) {
 		c.add(Warning, "manifest.roles", mf, keyLine(mf, "roles"), "%s", msg)
 	}
+}
+
+// formulas validates the design folder's formula files (ADR-0238 §6): each
+// problem formulas.Load or formulas.Validate finds is a formulas.file error on
+// its line. A role step is held to the names of the roles the role files
+// define, and a script step to the scripts on disk. A project with no formula
+// files' folder has none to report.
+func (c *checker) formulas() {
+	design := c.repo.Manifest.Layout["design"]
+	list, problems, err := formulas.Load(c.repo.Root, design)
+	if err != nil {
+		c.add(Error, formulas.CodeFile, filepath.Join(c.repo.Root, filepath.FromSlash(formulas.Dir(design))), 1, "%v", err)
+		return
+	}
+	names := formulas.Names{Roles: c.roleNames(), Script: formulas.ScriptOnDisk(c.repo.Root)}
+	for _, p := range append(problems, formulas.Validate(list, names)...) {
+		c.add(Error, p.Code, filepath.Join(c.repo.Root, filepath.FromSlash(p.Path)), p.Line, "%s", p.Message)
+	}
+}
+
+// roleNames are the names of the roles the project's role files define
+// (ADR-0207), which a formula's role step names (ADR-0238 §3), as definedRoles
+// are their verbs. A file that does not parse defines none; c.roles reports it.
+func (c *checker) roleNames() []string {
+	list, _, err := roles.Load(c.repo.Root, c.repo.Manifest.Layout["design"])
+	if err != nil {
+		return nil
+	}
+	var out []string
+	for _, r := range list {
+		if r.Name != "" {
+			out = append(out, r.Name)
+		}
+	}
+	return out
 }
 
 // missingBaselineRoles advises roles.baseline for each role flai carries a
