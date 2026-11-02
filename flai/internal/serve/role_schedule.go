@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/cron"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/roles"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -234,4 +235,66 @@ func scheduleSettingValid(f roles.Role, setting string) error {
 	}
 	return fmt.Errorf("the role %s's file %s names the schedule %s, which is neither roles.%s.schedule nor one of %s, as flai check reports",
 		f.Name, f.Path, setting, f.Name, strings.Join(roles.Schedules, ", "))
+}
+
+// The planner's, the analyzer's, and the curator's launchers follow the
+// settings their role files' schedule entries name by these (ADR-0250 §4).
+
+// startCadences are the cadences of the settings f's schedule entries name,
+// by setting, each following the setting's value in m from now, so that
+// times before now do not come round.
+func startCadences(f roles.Role, m manifest.Manifest, now time.Time) map[string]*cadence {
+	out := map[string]*cadence{}
+	for _, setting := range scheduleSettings(f) {
+		spec, _, _ := m.ScheduleSetting(setting)
+		out[setting] = &cadence{spec: strings.TrimSpace(spec), mark: now}
+	}
+	return out
+}
+
+// followSchedules are the settings f's schedule entries name, by setting,
+// parsed from m, and the cadences that follow them: each setting's from
+// cadences, or a new one from now for a setting newly named, seen at now, so
+// that one set or changed comes round first at its next time from now.
+// Cadences of settings f no longer names are let go. A setting that is
+// unset, that f may not name, or that cannot be parsed is left out of the
+// schedules, and the latter two are passed to warn.
+func followSchedules(f roles.Role, cadences map[string]*cadence, m manifest.Manifest, now time.Time, warn func(error)) (map[string]*cron.Schedule, map[string]*cadence) {
+	scheds, follows := map[string]*cron.Schedule{}, map[string]*cadence{}
+	for _, setting := range scheduleSettings(f) {
+		c := cadences[setting]
+		if c == nil {
+			c = &cadence{mark: now}
+		}
+		follows[setting] = c
+		if err := scheduleSettingValid(f, setting); err != nil {
+			warn(err)
+			continue
+		}
+		spec, sched, err := m.ScheduleSetting(setting)
+		c.see(spec, now)
+		if err != nil {
+			warn(err)
+			continue
+		}
+		if sched != nil {
+			scheds[setting] = sched
+		}
+	}
+	return scheds, follows
+}
+
+// markAll marks each of cadences at now, so that times before now do not
+// come round: what a scheduler does while its host action is off.
+func markAll(cadences map[string]*cadence, now time.Time) {
+	for _, c := range cadences {
+		c.mark = now
+	}
+}
+
+// servedPlainly reports whether o meets an entry among triggers that names
+// no condition: the only entries the analyzer's and the curator's launchers
+// serve, as flai check reports of the others (ADR-0250 §4).
+func servedPlainly(triggers []roles.Trigger, o roles.Occurrence) bool {
+	return slices.ContainsFunc(matching(triggers, o), func(t roles.Trigger) bool { return t.When == "" })
 }

@@ -123,10 +123,7 @@ func newReplanner(o Options, e Entry, starter *launcher) *replanner {
 			r.order = slices.Clone(board.Order)
 		}
 		if planner, _, err := roles.Builtin(repo.Root, repo.Manifest.Layout["design"], workitem.ActivityPlanner); err == nil {
-			for _, setting := range scheduleSettings(planner) {
-				spec, _, _ := repo.Manifest.ScheduleSetting(setting)
-				r.cadences[setting] = &cadence{spec: strings.TrimSpace(spec), mark: now}
-			}
+			r.cadences = startCadences(planner, repo.Manifest, now)
 		}
 	}
 	return r
@@ -171,9 +168,7 @@ func (r *replanner) look(ctx context.Context) {
 	}
 	if !cfg.Plan {
 		r.queue = nil
-		for _, c := range r.cadences {
-			c.mark = now
-		}
+		markAll(r.cadences, now)
 		return
 	}
 	byID := itemsByID(items)
@@ -252,30 +247,9 @@ func (r *replanner) queueAhead(planner roles.Role, a ahead, policy string, writt
 // name, or that cannot be parsed is left out, and the latter two are warned
 // of once. Cadences of settings the file no longer names are let go.
 func (r *replanner) schedules(planner roles.Role, m manifest.Manifest, now time.Time) map[string]*cron.Schedule {
-	out := map[string]*cron.Schedule{}
-	cadences := map[string]*cadence{}
-	for _, setting := range scheduleSettings(planner) {
-		c := r.cadences[setting]
-		if c == nil {
-			c = &cadence{mark: now}
-		}
-		cadences[setting] = c
-		if err := scheduleSettingValid(planner, setting); err != nil {
-			r.warnOnce("planning schedule not valid", err)
-			continue
-		}
-		spec, sched, err := m.ScheduleSetting(setting)
-		c.see(spec, now)
-		if err != nil {
-			r.warnOnce("planning schedule not valid", err)
-			continue
-		}
-		if sched != nil {
-			out[setting] = sched
-		}
-	}
+	scheds, cadences := followSchedules(planner, r.cadences, m, now, func(err error) { r.warnOnce("planning schedule not valid", err) })
 	r.cadences = cadences
-	return out
+	return scheds
 }
 
 // replan plays the board out again after triggers as planning.replan says:
