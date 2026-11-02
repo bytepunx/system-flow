@@ -13,6 +13,15 @@ The template ships four baseline roles. A role file the template does not ship i
 | [analyzer.md](analyzer.md) | `analyze` | `analyze` | Asked; `analysis.schedule` |
 | [curator.md](curator.md) | `curate` | `curate` | Asked; an acceptance; `digest.schedule` |
 
+## The harness definition
+
+flai generates a role's whole harness definition from its file: `name`, `definition.description`, `definition.tools`, `definition.model`, and the body without the marker line as the prompt. `flai serve` puts the role's agent's model over `definition.model` and passes the definition in `--agents` at every start, reading nothing under `.claude/`. So a role's prompt and definition are changed in its file alone ([ADR-0236](../../adrs/0236-a-built-in-role-s-claude-code-definition-is-generated-into-flai-cache-agents-by.md)).
+
+- `flai role definition <name>` prints the generated definition as a Claude Code agent file.
+- `flai role definition --write [<name>...]` writes each named role's definition, or every built-in role's when none is named, to `.flai-cache/agents/<name>.md`, which git ignores. For each built-in role whose `.claude/agents/<name>.md` is not a link to it, it prints the command that makes the link, `ln -sf ../../.flai-cache/agents/<name>.md .claude/agents/<name>.md`. flai never writes under `.claude/`, so the operator runs each command once and commits the links.
+- A session the operator starts by hand reads `.claude/agents/<name>.md`, the link. Never edit the generated file: after a role file changes, run `flai role definition --write` again. Until it runs in a checkout, such as a fresh clone or a story's worktree, the link dangles and a session started there has no such agent.
+- `flai check` reports `roles.definition` for a built-in role's `.claude/agents/<name>.md` that is neither the link nor equal to the generated definition, as a copy made before the template stopped shipping one may be. A missing file or a dangling link is no finding.
+
 ## Triggers
 
 A `trigger` entry is `asked`, `{event: <event>, when?: <condition>}`, or `{schedule: <setting>, when?: <condition>}`. Each event is a change flai's `inbox` and `wait_for_events` report, or one kind of it, such as a move to done. A schedule names the manifest setting that holds it: `planning.schedule`, `analysis.schedule`, `digest.schedule`, `orchestration.schedule`, or the role's own `roles.<name>.schedule`.
