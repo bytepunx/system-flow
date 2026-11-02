@@ -184,7 +184,7 @@ func Design(docs []*Doc, storyTopics []string, sources []Source, briefOver int, 
 // budget leaves with the sections that rank highest against query, and adds
 // the catalog. Whichever part takes it over, the conventions, what the
 // story names, or the briefs, everything named is still loaded and every
-// brief still printed (TH-0032; ADR-0049 refined by TH-0805), and nothing
+// brief still printed (TH-0032, ADR-0241), and nothing
 // is ranked. Which part took it over is in Exceeded.
 func (p *Pack) AddDesign(s *Selection, query string) { p.addDesign(s, query, nil) }
 
@@ -659,7 +659,7 @@ func (p *Pack) Header() string {
 	case p.subAgent() && p.Exceeded == ExceededConventions:
 		b.WriteString("over budget: the role's conventions and the story's goal alone exceed it, so no brief is printed; narrowing the conventions' roles or topics makes room (ADR-0059)\n")
 	case p.Exceeded == ExceededConventions:
-		b.WriteString("over budget: the conventions alone exceed it, so nothing is ranked; everything named and every brief is kept, the digest entries load within their share, and narrowing the conventions' topics makes room (ADR-0049, TH-0805)\n")
+		b.WriteString("over budget: the conventions alone exceed it, so nothing is ranked; everything named and every brief is kept, the digest entries load within their share, and narrowing the conventions' topics makes room (ADR-0049, ADR-0241)\n")
 	case p.Exceeded == ExceededNamed && p.Item != "":
 		fmt.Fprintf(&b, "over budget: the conventions and what %s names exceed it, so nothing is ranked; the digest entries still load within their share (ADR-0049, ADR-0194)\n", p.Item)
 	case p.Exceeded == ExceededNamed:

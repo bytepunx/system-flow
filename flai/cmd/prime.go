@@ -70,10 +70,10 @@ when it fits), in rank order, while the budget has room. Then a catalog of
 every document neither loaded nor briefed, with the outline of those loaded
 in part, and one line per convention section left out, with its topics.
 Nothing prints twice: the first reason wins and the others are listed on it.
-When the conventions alone exceed the budget the pack is the conventions,
-the digest entries within their eighth, and a catalog; when the conventions
-and what is named exceed it, nothing is ranked, and the digest entries still
-load within their eighth; the header says which. --budget sets the size, such as 80KB or 81920
+When the conventions alone, or with what is named, or with the briefs,
+exceed the budget, everything named and every brief is still loaded,
+nothing is ranked, and the digest entries still load within their eighth
+(ADR-0241); the header says which part took it over. --budget sets the size, such as 80KB or 81920
 bytes; the project's default is prime.budget in system-flow.yaml, and
 flai's is 80KB. An archived story gets the pack it would get today.
 
