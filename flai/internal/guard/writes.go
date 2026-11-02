@@ -8,6 +8,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/roles"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -18,11 +20,14 @@ var builtInReaders = []string{"Explore", "Plan"}
 // ReadOnlyAgents says whether a sub-agent of a type is read-only, from the
 // project at root (S-0368, ADR-0141): Explore and Plan are, and so is one
 // whose definition, .claude/agents/<type>.md, has a tools line that names
-// none of Edit, MultiEdit, NotebookEdit, Write, or *. A definition it cannot
-// read, one without a tools line, which grants every tool, or a type that is
-// not a file name is not read-only, and with root "" only Explore and Plan
-// are. It reads the definition on each call, so that a definition given
-// Edit or Write makes its sub-agent a writer at once.
+// none of Edit, MultiEdit, NotebookEdit, Write, or *. The planner, the
+// orchestrator, the analyzer, and the curator are judged by the tools of the
+// definition flai generates from their role files, the project's or the
+// baseline flai carries, never by .claude/agents (ADR-0236). A definition it
+// cannot read, one without a tools line, which grants every tool, or a type
+// that is not a file name is not read-only, and with root "" only Explore
+// and Plan are. It reads the definition on each call, so that a definition
+// given Edit or Write makes its sub-agent a writer at once.
 func ReadOnlyAgents(root string) func(agentType string) bool {
 	return func(agentType string) bool {
 		if slices.Contains(builtInReaders, agentType) {
@@ -30,6 +35,9 @@ func ReadOnlyAgents(root string) func(agentType string) bool {
 		}
 		if root == "" || agentType == "" || strings.ContainsAny(agentType, `/\`) || strings.Contains(agentType, "..") {
 			return false
+		}
+		if tools, ok := builtinRoleTools(root, agentType); ok {
+			return readOnlyTools(tools)
 		}
 		data, err := os.ReadFile(filepath.Join(root, ".claude", "agents", agentType+".md"))
 		if err != nil {
@@ -48,16 +56,52 @@ func ReadOnlyAgents(root string) func(agentType string) bool {
 			if tools == "" {
 				return false
 			}
+			var list []string
 			for tool := range strings.SplitSeq(tools, ",") {
-				tool = strings.Trim(strings.TrimSpace(tool), `"'`)
-				if tool == "*" || slices.Contains(fileWrites, tool) {
-					return false
-				}
+				list = append(list, strings.Trim(strings.TrimSpace(tool), `"'`))
 			}
-			return true
+			return readOnlyTools(list)
 		}
 		return false
 	}
+}
+
+// readOnlyTools says whether a definition's tools name none of Edit,
+// MultiEdit, NotebookEdit, Write, or *; an empty list grants every tool.
+func readOnlyTools(tools []string) bool {
+	if len(tools) == 0 {
+		return false
+	}
+	for _, tool := range tools {
+		if tool == "*" || slices.Contains(fileWrites, tool) {
+			return false
+		}
+	}
+	return true
+}
+
+// builtinRoleTools are the tools of the definition flai generates for the
+// built-in role named name in the project at root, from its role file under
+// the manifest's design folder or the baseline flai carries (ADR-0236), and
+// whether name is a built-in role's. A role whose definition cannot be
+// generated has none, so that it is not read-only.
+func builtinRoleTools(root, name string) ([]string, bool) {
+	design := "design"
+	if m, err := manifest.Load(filepath.Join(root, manifest.File)); err == nil && m.Layout["design"] != "" {
+		design = m.Layout["design"]
+	}
+	if !slices.ContainsFunc(roles.Baseline(design), func(r roles.Role) bool { return r.Name == name }) {
+		return nil, false
+	}
+	f, _, err := roles.Builtin(root, design, name)
+	if err != nil {
+		return nil, true
+	}
+	g, err := roles.Generate(f)
+	if err != nil {
+		return nil, true
+	}
+	return g.Tools, true
 }
 
 // wrappers are the programs that run a command given after their own flags,

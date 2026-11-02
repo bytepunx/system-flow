@@ -3,6 +3,7 @@ package guard
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -143,5 +144,44 @@ func TestReadOnlyAgentsReadsTheDefinitions(t *testing.T) {
 	none := ReadOnlyAgents("")
 	if !none("Explore") || none("verifier") {
 		t.Errorf("with no project only Explore and Plan are read-only")
+	}
+}
+
+// ADR-0236: the planner, the orchestrator, the analyzer, and the curator are
+// judged by the tools of the definition flai generates from their role
+// files, the project's or the baseline, never by .claude/agents.
+func TestReadOnlyAgentsJudgesABuiltinRoleByItsRoleFile(t *testing.T) {
+	root := t.TempDir()
+	readOnly := ReadOnlyAgents(root)
+	for agent, want := range map[string]bool{"planner": true, "orchestrator": true, "curator": true, "analyzer": false} {
+		if got := readOnly(agent); got != want {
+			t.Errorf("baseline %s read-only %v, want %v", agent, got, want)
+		}
+	}
+	dir := filepath.Join(root, ".claude", "agents")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	copyDoc := "---\nname: planner\ndescription: x\ntools: Read, Grep\nmodel: inherit\n---\n\nBody.\n"
+	if err := os.WriteFile(filepath.Join(dir, "planner.md"), []byte(copyDoc), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join("..", "..", "..", "template", "root", "design", "workflows", "roles", "planner.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	doc := strings.Replace(string(data), "  tools: [Read,", "  tools: [Edit, Read,", 1)
+	if doc == string(data) {
+		t.Fatal("the template's planner.md has no definition.tools line to give Edit")
+	}
+	roleDir := filepath.Join(root, "design", "workflows", "roles")
+	if err := os.MkdirAll(roleDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(roleDir, "planner.md"), []byte(doc), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if readOnly("planner") {
+		t.Errorf("a planner whose role file grants Edit is read-only by its .claude/agents copy")
 	}
 }
