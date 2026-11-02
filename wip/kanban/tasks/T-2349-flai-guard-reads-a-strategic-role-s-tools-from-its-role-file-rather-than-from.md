@@ -3,16 +3,37 @@ id: T-2349
 type: task
 nature: improvement
 title: flai guard reads a strategic role's tools from its role file rather than from .claude/agents
-status: backlog
+status: done
 parent: S-0553
 owner: alex
 created: 2026-10-30T20:47:17Z
-updated: 2026-10-30T20:47:17Z
-transitions: []
+updated: 2026-11-02T00:26:58Z
+transitions:
+  - to: ready
+    at: 2026-11-02T00:22:47Z
+    by: agent-S-0553
+  - to: in-progress
+    at: 2026-11-02T00:22:48Z
+    by: agent-S-0553
+  - to: done
+    at: 2026-11-02T00:26:58Z
+    by: agent-S-0553
 stream: S-0553
 tags: [cli]
 touches: [flai/internal/guard/writes.go, flai/internal/guard/writes_test.go]
 after: [T-2347]
+usage:
+  source: log
+  seconds: 250
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 21
+      output: 6586
+      cache_read: 1622221
+      cache_write: 34416
+      cost: 0.68
 ---
 # T-2349 flai guard reads a strategic role's tools from its role file rather than from .claude/agents
 

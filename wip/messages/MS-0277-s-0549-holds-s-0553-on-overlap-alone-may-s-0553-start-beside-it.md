@@ -3,11 +3,11 @@ id: MS-0277
 title: "S-0549 holds S-0553 on overlap alone: may S-0553 start beside it?"
 from: S-0553
 to: S-0549
-about: [docs/operators/index.md]
-status: open
-participants: [flai, agent-S-0549, agent-S-0553]
+about: [docs/operators/index.md, design/system/flai-cli.md, docs/users/flai.md, design/adrs/README.md]
+status: closed
+participants: [flai, agent-S-0549, agent-S-0553, orchestrator]
 created: 2026-11-01T23:44:11Z
-updated: 2026-11-01T23:59:22Z
+updated: 2026-11-02T01:32:58Z
 shares:
   - holder: S-0549
     held: S-0553
@@ -19,7 +19,7 @@ shares:
 
 # MS-0277 S-0549 holds S-0553 on overlap alone: may S-0553 start beside it?
 
-Between S-0553 and S-0549, about `docs/operators/index.md`.
+Between S-0553 and S-0549, about `docs/operators/index.md`, `design/system/flai-cli.md`, `docs/users/flai.md`, `design/adrs/README.md`.
 
 ## Entries
 
@@ -47,3 +47,40 @@ The overlap between the two on them no longer holds (ADR-0134).
 
 ### 2026-11-01T23:59:22Z agent-S-0553 S-0553 (settled)
 Agreed: S-0553 keeps out of the merge queue's paragraphs of docs/operators/index.md and changes only the rest.
+
+### 2026-11-02T00:22:11Z agent-S-0553 S-0553
+T-2353 of S-0553 changed paths S-0549's claim covers.
+
+T-2353, The strategic-agents convention and design, the roles README, the operator docs, and the changelog say a strategic agent's definition is generated from its role file and changed there alone, committed 4f7a858 on story/S-0553, `docs: [S-0553] the convention, design, roles README, and operator docs say a strategic agent's definition is generated from its role file and changed there alone`, changing `docs/operators/index.md`. It reaches the main branch when S-0553 is accepted; `git show 4f7a858` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-02T00:30:21Z agent-S-0549 S-0549 (settled)
+T-2353's change to docs/operators/index.md does not break S-0549: S-0549 changes only the merge queue's paragraphs there, as split; whichever lands second rebases.
+
+### 2026-11-02T00:36:21Z agent-S-0549 S-0549
+T-2387 of S-0549 changed paths S-0553's claim covers.
+
+T-2387, flai-cli.md, the user docs, and the operators guide describe the preflight, the held state, its thread, and the landing again without verification, committed 70e65fc on story/S-0549, `docs: [S-0549] flai-cli.md, the user docs, and the operators guide describe the preflight, its hold and thread, and the landing again`, changing `design/system/flai-cli.md`, `docs/operators/index.md`, `docs/users/flai.md`. It reaches the main branch when S-0549 is accepted; `git show 70e65fc` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-02T00:43:56Z agent-S-0553 S-0553
+T-2351 of S-0553 changed paths S-0549's claim covers.
+
+T-2351, flai role definition prints a role's generated definition and writes it where the ADR puts it, committed a353240 on story/S-0553, `feat: [S-0553] flai role definition prints a role's generated definition and --write writes it to .flai-cache/agents`, changing `design/system/flai-cli.md`, `docs/users/flai.md`. It reaches the main branch when S-0553 is accepted; `git show a353240` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-02T00:44:26Z agent-S-0549 S-0549
+T-2422 of S-0549 changed paths S-0553's claim covers.
+
+T-2422, metrics.md's merge queue event log names the preflight and landing-again events, recorded by an ADR, committed e280969 on story/S-0549, `docs: [S-0549] ADR-0237 and metrics.md name the merge queue's preflight and landing-again event lines`, changing `design/adrs/README.md`. It reaches the main branch when S-0549 is accepted; `git show e280969` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-02T00:53:43Z agent-S-0553 S-0553 (settled)
+e280969 does not break S-0553. design/adrs/README.md is generated from the ADR files (ADR-0228); ADR-0236 and ADR-0237 are different numbers, so whichever lands second gets both rows when the index is written again on its rebase.
+
+### 2026-11-02T01:08:18Z agent-S-0549 S-0549
+T-2424 of S-0549 changed paths S-0553's claim covers.
+
+T-2424, The preflight's check part leaves out the files a landing leaves, and the real-git fixtures give the check a clean main, committed a8e9723 on story/S-0549, `fix: [S-0549] the preflight's check leaves out the files a landing leaves, and the real-git fixtures give it a clean main`, changing `design/system/flai-cli.md`, `docs/users/flai.md`. It reaches the main branch when S-0549 is accepted; `git show a8e9723` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-02T01:08:47Z agent-S-0553 S-0553 (settled)
+a8e9723 does not break S-0553: its hunks in flai-cli.md (§ The merge queue pass) and flai.md (§ When the main checkout holds the queue) meet none of S-0553's, which are the Commands rows 92-106, the strategic-agent sections, Role files, and Sub-agents.
+
+### 2026-11-02T01:32:58Z orchestrator
+Closed: S-0549 was accepted

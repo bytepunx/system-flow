@@ -3,12 +3,18 @@ id: T-1767
 type: task
 nature: feature
 title: The dashboard's design and the user guide describe the role page, its controls, and its settings panel
-status: backlog
+status: in-progress
 parent: S-0420
 owner: alex
 created: 2026-10-16T05:47:05Z
-updated: 2026-10-21T12:26:49Z
-transitions: []
+updated: 2026-11-02T01:26:22Z
+transitions:
+  - to: ready
+    at: 2026-11-02T01:26:21Z
+    by: agent-S-0420
+  - to: in-progress
+    at: 2026-11-02T01:26:22Z
+    by: agent-S-0420
 stream: S-0420
 tags: [dashboard]
 touches: [design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/system/project-manifest.md, design/system/flai-cli.md]

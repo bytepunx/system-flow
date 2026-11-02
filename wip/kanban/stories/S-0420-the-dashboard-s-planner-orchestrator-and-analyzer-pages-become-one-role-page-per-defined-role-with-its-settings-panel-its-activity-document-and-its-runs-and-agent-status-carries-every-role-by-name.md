@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:31Z
-updated: 2026-11-01T23:59:15Z
+updated: 2026-11-02T01:26:16Z
 transitions:
   - to: ready
     at: 2026-10-28T13:05:34Z
@@ -23,7 +23,7 @@ transitions:
     by: agent-S-0420
 tags: [dashboard, cli]
 topics: [dashboard, planning, orchestration]
-touches: [design/system/flaiover-dashboard.md, docs/users/flaiover.md, flai/internal/hostapi/contract_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/serve/agents.go, flai/internal/serve/stream.go, flai/internal/serve/stream_test.go, flaiover/src/lib/components/RolePage.svelte, flaiover/src/lib/components/RolePage.svelte.test.ts, flaiover/src/lib/components/StrategicAgentPanel.svelte, flaiover/src/lib/components/StrategicSettings.svelte, flaiover/src/lib/components/StrategicSettings.svelte.test.ts, flaiover/src/lib/roles.test.ts, flaiover/src/lib/roles.ts, flaiover/src/lib/settings.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/sitemenu.ts, "flaiover/src/routes/api/roles/[name]/roles.test.ts", "flaiover/src/routes/api/roles/[name]/+server.ts", flaiover/src/routes/workflow/analyzer/analyzer.svelte.test.ts, flaiover/src/routes/workflow/analyzer/+page.svelte, flaiover/src/routes/workflow/orchestrator/orchestrator.svelte.test.ts, flaiover/src/routes/workflow/orchestrator/+page.svelte, flaiover/src/routes/workflow/planner/+page.svelte, flaiover/src/routes/workflow/planner/planner.svelte.test.ts, "flaiover/src/routes/workflow/[role]/+page.svelte", flai/internal/serve/agents_test.go, flaiover/src/lib/server/agent.ts, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go, docs/operators/settings.md, flaiover/src/lib/strategic.ts, flaiover/src/lib/strategic.test.ts, "flaiover/src/routes/api/agent-stream/[story]/+server.ts", "flaiover/src/routes/api/agent-stream/[story]/agent-stream.test.ts", flaiover/src/lib/components/NavRail.svelte, flaiover/src/lib/components/NavRail.svelte.test.ts, flaiover/src/routes/+layout.svelte, flaiover/src/routes/layout.svelte.test.ts, design/system/project-manifest.md, design/system/flai-cli.md]
+touches: [design/system/flaiover-dashboard.md, docs/users/flaiover.md, flai/internal/hostapi/contract_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/serve/agents.go, flai/internal/serve/stream.go, flai/internal/serve/stream_test.go, flaiover/src/lib/components/RolePage.svelte, flaiover/src/lib/components/RolePage.svelte.test.ts, flaiover/src/lib/components/StrategicAgentPanel.svelte, flaiover/src/lib/components/StrategicSettings.svelte, flaiover/src/lib/components/StrategicSettings.svelte.test.ts, flaiover/src/lib/roles.test.ts, flaiover/src/lib/roles.ts, flaiover/src/lib/settings.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/sitemenu.ts, "flaiover/src/routes/api/roles/[name]/roles.test.ts", "flaiover/src/routes/api/roles/[name]/+server.ts", flaiover/src/routes/workflow/analyzer/analyzer.svelte.test.ts, flaiover/src/routes/workflow/analyzer/+page.svelte, flaiover/src/routes/workflow/orchestrator/orchestrator.svelte.test.ts, flaiover/src/routes/workflow/orchestrator/+page.svelte, flaiover/src/routes/workflow/planner/+page.svelte, flaiover/src/routes/workflow/planner/planner.svelte.test.ts, "flaiover/src/routes/workflow/[role]/+page.svelte", flai/internal/serve/agents_test.go, flaiover/src/lib/server/agent.ts, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go, docs/operators/settings.md, flaiover/src/lib/strategic.ts, flaiover/src/lib/strategic.test.ts, "flaiover/src/routes/api/agent-stream/[story]/+server.ts", "flaiover/src/routes/api/agent-stream/[story]/agent-stream.test.ts", flaiover/src/lib/components/NavRail.svelte, flaiover/src/lib/components/NavRail.svelte.test.ts, flaiover/src/routes/+layout.svelte, flaiover/src/routes/layout.svelte.test.ts, design/system/project-manifest.md, design/system/flai-cli.md, flaiover/src/lib/server/agent.test.ts, design/issues/I-0246-testaheldwaitfailsonatruncatedstory-and-testservestartsadefinedroleonaneventando.md, design/issues/summary.md, flaiover/src/lib/components/AnalyzerPanel.svelte, flaiover/src/lib/components/AnalyzerPanel.svelte.test.ts, flaiover/src/lib/components/OrchestratorPanel.svelte, flaiover/src/lib/components/OrchestratorPanel.svelte.test.ts, flaiover/src/lib/components/PlannerPanel.svelte, flaiover/src/lib/components/PlannerPanel.svelte.test.ts]
 after: [S-0419]
 agent:
   harness: claude-code
@@ -31,20 +31,34 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 5095
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-01
+      work: 10
+    - day: 2026-11-02
+      hand_edits: 2
+      work: 47
+  models:
+    - model: claude-opus-5-5
+      input: 698
+      output: 4171
+      cache_read: 49406933
+      cache_write: 1318787
+      cost: 17.7885
   strategic:
     - kind: orchestrator
-      seconds: 407
+      seconds: 434
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 146
-          output: 2211
-          cache_read: 28980736
-          cache_write: 170483
-          cost: 6.4417
+          input: 154
+          output: 2275
+          cache_read: 29170786
+          cache_write: 229545
+          cost: 6.4991
 cost_of_delay:
   value: 73.64
   by: planner-S-0420
@@ -67,10 +81,10 @@ A role a project defines shows on the dashboard as the built-in ones do. The Wor
 
 ## Acceptance criteria
 
-- [ ] `agent.status` carries every role by name under `roles`, each with its action's state, its run under way, its past runs (up to 20), and `held`; `agent.stream` reads any role's stream by name; `plans`, `orchestrator`, `analyzer`, `past_orchestrators`, and `past_analyzers` stay for a dashboard older than this flai.
-- [ ] `/workflow/<name>` shows a role's action state, the run under way with its stream, its activity log, its runs with cost and outcome, and **Run** (with an item when its file takes one), **Stop**, and **Start** as its trigger allows, each through `role.run`, `role.stop`, and `role.start`.
-- [ ] Its settings panel edits `roles.<name>.agent`, the role's schedule when its trigger has one, and the permissions its file declares through `flai manifest set` while the `settings` host action is on, and shows them read-only otherwise; `flai manifest set` takes those keys.
-- [ ] `/workflow/planner`, `/workflow/orchestrator`, and `/workflow/analyzer` are that page for the three roles and show what they show today, their component tests passing; the Workflow menu lists each defined role.
+- [x] `agent.status` carries every role by name under `roles`, each with its action's state, its run under way, its past runs (up to 20), and `held`; `agent.stream` reads any role's stream by name; `plans`, `orchestrator`, `analyzer`, `past_orchestrators`, and `past_analyzers` stay for a dashboard older than this flai.
+- [x] `/workflow/<name>` shows a role's action state, the run under way with its stream, its activity log, its runs with cost and outcome, and **Run** (with an item when its file takes one) for any role through `role.run`, and **Stop** and **Start** only for a role that has a hold, shown where `agent.status` says the role can be held: today the orchestrator alone, through `orchestrate.stop` and `orchestrate.start` (TH-0797).
+- [x] Its settings panel edits `roles.<name>.agent`, the role's schedule when its trigger has one, and the permissions its file declares through `flai manifest set` while the `settings` host action is on, and shows them read-only otherwise; `flai manifest set` takes those keys.
+- [x] `/workflow/planner`, `/workflow/orchestrator`, and `/workflow/analyzer` are that page for the three roles and show what they show today, their component tests passing; the Workflow menu lists each defined role.
 - [ ] Component and API tests cover a defined role's page from a fixture `agent.status`, and `design/system/flaiover-dashboard.md` § Strategic agents' pages and settings, and `docs/users/flaiover.md`, describe the role page.
 
 ## Tasks

@@ -4,10 +4,10 @@ title: "S-0420's after S-0419: add the reason to its Notes"
 anchor:
   path: wip/kanban/stories/S-0420-the-dashboard-s-planner-orchestrator-and-analyzer-pages-become-one-role-page-per-defined-role-with-its-settings-panel-its-activity-document-and-its-runs-and-agent-status-carries-every-role-by-name.md
   item: S-0420
-status: answered
-participants: [agent-S-0551, orchestrator, agent-S-0420]
+status: resolved
+participants: [agent-S-0551, orchestrator, agent-S-0420, alex]
 created: 2026-10-31T09:54:30Z
-updated: 2026-11-02T00:01:47Z
+updated: 2026-11-02T00:40:27Z
 ---
 
 # TH-0785 S-0420's after S-0419: add the reason to its Notes
@@ -53,3 +53,6 @@ S-0419 is done, so the `after` holds nothing. The thread is agent-S-0551's to re
 Source: design/adrs/0188-a-task-takes-no-folder-touch-the-planner-s-folder-touch-on-a-story-needs-the.md § Decision
 
 Source: design/adrs/0188-a-task-takes-no-folder-touch-the-planner-s-folder-touch-on-a-story-needs-the.md § Decision
+
+### 2026-11-02T00:40:27Z alex
+Resolved.

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 837
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 134
-      output: 676
-      cache_read: 9179825
-      cache_write: 203386
-      cost: 3.2849
+      input: 114
+      output: 46830
+      cache_read: 9318653
+      cache_write: 201747
+      cost: 4.023
 ---
 # T-2383 The merge queue runs the landing's preflight before it builds a batch and holds itself on a finding, with the files and findings in its state and event log
 

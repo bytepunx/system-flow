@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 313
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 33
-      output: 179
-      cache_read: 1402294
-      cache_write: 82909
-      cost: 0.52
+      input: 18
+      output: 7412
+      cache_read: 1474996
+      cache_write: 31933
+      cost: 0.6368
 ---
 # T-2382 The unfixed-markdown findings move from flai/cmd into flai/internal/verify, so the merge queue reports them as flai accept does
 

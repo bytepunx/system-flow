@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-10-30T20:45:17Z
-updated: 2026-11-01T23:59:11Z
+updated: 2026-11-02T01:09:00Z
 transitions:
   - to: ready
     at: 2026-11-01T23:44:10Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-11-01T23:59:11Z
     by: agent-S-0553
+blocked:
+  - from: 2026-11-02T00:54:49Z
+    until: 2026-11-02T01:08:28Z
+    reason: awaiting the operator on TH-0794
+  - from: 2026-11-02T01:09:00Z
+    reason: awaiting the operator on TH-0794
 tags: [cli, template]
 topics: [cli, orchestration, planning, template, conventions]
-touches: [design/adrs, design/adrs/README.md, design/system/agent-adapters.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, template/CHANGELOG.md, flai/internal/roles/definition.go, flai/internal/roles/definition_test.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/guard/writes.go, flai/internal/guard/writes_test.go, flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/cmd/role.go, flai/cmd/role_test.go, ".claude/agents/planner.md", ".claude/agents/orchestrator.md", ".claude/agents/analyzer.md", ".claude/agents/curator.md", template/root/.claude/agents/planner.md, template/root/.claude/agents/orchestrator.md, template/root/.claude/agents/analyzer.md, template/root/.claude/agents/curator.md]
+touches: [design/adrs, design/adrs/README.md, design/system/agent-adapters.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, template/CHANGELOG.md, flai/internal/roles/definition.go, flai/internal/roles/definition_test.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/guard/writes.go, flai/internal/guard/writes_test.go, flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/cmd/role.go, flai/cmd/role_test.go, ".claude/agents/planner.md", ".claude/agents/orchestrator.md", ".claude/agents/analyzer.md", ".claude/agents/curator.md", template/root/.claude/agents/planner.md, template/root/.claude/agents/orchestrator.md, template/root/.claude/agents/analyzer.md, template/root/.claude/agents/curator.md, flai/internal/harness/harness.go, flai/internal/serve/orchestrate_test.go, design/issues/I-0244-testaheldwaitfailsonatruncatedstory-times-out-instead-of-failing-on-the.md, design/issues/summary.md, docs/operators/settings.md, flai/internal/pilot/run_test.go, flai/internal/serve/plan_test.go, design/issues/I-0245-flai-guard-refuses-a-sub-agent-every-flai-role-subcommand-the-reads-list-show.md]
 after: [S-0419]
 agent:
   harness: claude-code
@@ -26,33 +32,33 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 405
-  estimated: true
-  priced_by: estimate
+  seconds: 3364
+  priced_by: harness
   turns:
     - day: 2026-11-01
       work: 10
     - day: 2026-11-02
-      hand_edits: 1
-      work: 24
+      ceremony: 3
+      hand_edits: 2
+      work: 87
   models:
     - model: claude-opus-5-5
-      input: 74
-      output: 498
-      cache_read: 5203370
-      cache_write: 181743
-      cost: 1.8857
+      input: 486
+      output: 149146
+      cache_read: 36734116
+      cache_write: 779317
+      cost: 15.3988
   strategic:
     - kind: orchestrator
-      seconds: 63
+      seconds: 96
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 23
-          output: 134
-          cache_read: 863799
-          cache_write: 99239
-          cost: 0.2168
+          input: 37
+          output: 204
+          cache_read: 1161770
+          cache_write: 144290
+          cost: 0.2957
 cost_of_delay:
   value: 58.47
   by: planner-E-0024
@@ -75,12 +81,12 @@ S-0419 made each built-in strategic role's file body the prompt of the definitio
 
 ## Acceptance criteria
 
-- [ ] A session `flai serve` starts on `claude-code` for the planner, the orchestrator, the analyzer, or the curator gets its whole definition from its role file, the project's or the embedded baseline: `name`, `definition.description`, `definition.tools`, `definition.model` with the role's agent's model over it, and the body with its project additions as the prompt. It starts with no `.claude/agents/<name>.md` present, and the refusal naming `flai upgrade` for a missing strategic definition is gone.
-- [ ] `TestClaudeCodeStartsThePlanner`, `TestClaudeCodeStartsTheOrchestrator`, `TestClaudeCodeStartsTheAnalyzer`, and `TestClaudeCodeStartsTheCurator` in `flai/internal/harness/harness_test.go` pass with their `.claude/agents` fixtures removed and the same start prompt text.
-- [ ] `flai guard` reads a strategic role's tools from its role file, not from `.claude/agents/<name>.md`, and its guard tests pass unchanged.
-- [ ] A live trial with Claude Code settles whether a session started by hand follows a symbolic link under `.claude/agents`. A new ADR refining ADR-0207 § 4 records the result, where flai writes the generated definition, and what the operator does once. `flai role definition <name>` prints the generated definition, and writes it there.
-- [ ] `flai check` reports `roles.definition` when a built-in role's `.claude/agents/<name>.md` exists and is neither the link the ADR names nor the definition generated from its role file.
-- [ ] D-0411's double edit ends. The strategic-agents convention, here and in the template, says a strategic agent's prompt is changed in its role file alone. `design/system/strategic-agents.md`, `design/system/agent-adapters.md`, `design/workflows/roles/README.md`, `docs/operators/index.md`, and `template/CHANGELOG.md` say how a definition is generated and read.
+- [x] A session `flai serve` starts on `claude-code` for the planner, the orchestrator, the analyzer, or the curator gets its whole definition from its role file, the project's or the embedded baseline: `name`, `definition.description`, `definition.tools`, `definition.model` with the role's agent's model over it, and the body with its project additions as the prompt. It starts with no `.claude/agents/<name>.md` present, and the refusal naming `flai upgrade` for a missing strategic definition is gone.
+- [x] `TestClaudeCodeStartsThePlanner`, `TestClaudeCodeStartsTheOrchestrator`, `TestClaudeCodeStartsTheAnalyzer`, and `TestClaudeCodeStartsTheCurator` in `flai/internal/harness/harness_test.go` pass with their `.claude/agents` fixtures removed and the same start prompt text.
+- [x] `flai guard` reads a strategic role's tools from its role file, not from `.claude/agents/<name>.md`, and its guard tests pass unchanged.
+- [x] A live trial with Claude Code settles whether a session started by hand follows a symbolic link under `.claude/agents`. A new ADR refining ADR-0207 § 4 records the result, where flai writes the generated definition, and what the operator does once. `flai role definition <name>` prints the generated definition, and writes it there.
+- [x] `flai check` reports `roles.definition` when a built-in role's `.claude/agents/<name>.md` exists and is neither the link the ADR names nor the definition generated from its role file.
+- [x] D-0411's double edit ends. The strategic-agents convention, here and in the template, says a strategic agent's prompt is changed in its role file alone. `design/system/strategic-agents.md`, `design/system/agent-adapters.md`, `design/workflows/roles/README.md`, `docs/operators/index.md`, and `template/CHANGELOG.md` say how a definition is generated and read.
 
 ## Tasks
 - T-2347 flai generates a built-in role's whole harness definition from its role file, and subAgents passes it with no .claude/agents read
@@ -90,6 +96,7 @@ S-0419 made each built-in strategic role's file body the prompt of the definitio
 - T-2351 flai role definition prints a role's generated definition and writes it where the ADR puts it
 - T-2352 The planner's, orchestrator's, analyzer's, and curator's .claude/agents files, here and in the template, become what the ADR says, written by the operator
 - T-2353 The strategic-agents convention and design, the roles README, the operator docs, and the changelog say a strategic agent's definition is generated from its role file and changed there alone
+- T-2423 The tests that read the strategic agents' .claude/agents copies read their generated definitions instead
 
 ## Notes
 

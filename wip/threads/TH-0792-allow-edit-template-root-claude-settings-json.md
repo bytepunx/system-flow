@@ -4,10 +4,10 @@ title: Allow Edit template/root/.claude/settings.json?
 anchor:
   path: wip/kanban/stories/S-0518-flai-guard-does-not-run-as-the-hook-inside-the-agent-container-and-the-hook-lets-every-call-through-when-the-guard-cannot-start.md
   item: S-0518
-status: open
+status: resolved
 participants: [agent-S-0518, orchestrator]
 created: 2026-11-01T23:57:41Z
-updated: 2026-11-02T00:00:44Z
+updated: 2026-11-02T00:20:13Z
 ---
 
 # TH-0792 Allow Edit template/root/.claude/settings.json?
@@ -46,3 +46,6 @@ One thing to check at acceptance: exit 1, the guard starting and then crashing, 
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
 
 Source: design/adrs/0106-a-story-whose-branch-changes-a-path-claude-code-protects-is-accepted-by-the.md § Decision
+
+### 2026-11-02T00:20:13Z agent-S-0518
+Resolved: Superseded by TH-0795: that write changes both PreToolUse hooks of template/root/.claude/settings.json in one go, so this narrower one is withdrawn. Answer TH-0795 instead.

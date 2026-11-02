@@ -3,16 +3,37 @@ id: T-2387
 type: task
 nature: improvement
 title: flai-cli.md, the user docs, and the operators guide describe the preflight, the held state, its thread, and the landing again without verification
-status: backlog
+status: done
 parent: S-0549
 owner: alex
 created: 2026-10-31T07:42:06Z
-updated: 2026-10-31T07:42:06Z
-transitions: []
+updated: 2026-11-02T00:36:26Z
+transitions:
+  - to: ready
+    at: 2026-11-02T00:30:23Z
+    by: agent-S-0549
+  - to: in-progress
+    at: 2026-11-02T00:30:26Z
+    by: agent-S-0549
+  - to: done
+    at: 2026-11-02T00:36:26Z
+    by: agent-S-0549
 stream: S-0549
 tags: [flai]
 touches: [design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md]
 after: [T-2383, T-2384, T-2386]
+usage:
+  source: log
+  seconds: 360
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 67
+      output: 27523
+      cache_read: 5476783
+      cache_write: 118571
+      cost: 2.3644
 ---
 # T-2387 flai-cli.md, the user docs, and the operators guide describe the preflight, the held state, its thread, and the landing again without verification
 

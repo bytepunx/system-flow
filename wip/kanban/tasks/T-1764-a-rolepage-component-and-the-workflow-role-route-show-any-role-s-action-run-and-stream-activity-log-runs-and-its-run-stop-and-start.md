@@ -3,16 +3,37 @@ id: T-1764
 type: task
 nature: feature
 title: "A RolePage component and the /workflow/[role] route show any role's action, run and stream, activity log, runs, and its Run, Stop, and Start"
-status: backlog
+status: done
 parent: S-0420
 owner: alex
 created: 2026-10-16T05:46:46Z
-updated: 2026-10-21T12:29:11Z
-transitions: []
+updated: 2026-11-02T00:48:12Z
+transitions:
+  - to: ready
+    at: 2026-11-02T00:20:55Z
+    by: agent-S-0420
+  - to: in-progress
+    at: 2026-11-02T00:20:57Z
+    by: agent-S-0420
+  - to: done
+    at: 2026-11-02T00:48:12Z
+    by: agent-S-0420
 stream: S-0420
 tags: [dashboard]
 touches: [flaiover/src/lib/components/RolePage.svelte, flaiover/src/lib/components/RolePage.svelte.test.ts, flaiover/src/lib/roles.ts, flaiover/src/lib/roles.test.ts, "flaiover/src/routes/workflow/[role]/+page.svelte", "flaiover/src/routes/api/roles/[name]/+server.ts", "flaiover/src/routes/api/roles/[name]/roles.test.ts", flaiover/src/lib/server/agent.ts, flaiover/src/lib/strategic.ts, flaiover/src/lib/strategic.test.ts, "flaiover/src/routes/api/agent-stream/[story]/+server.ts", "flaiover/src/routes/api/agent-stream/[story]/agent-stream.test.ts"]
 after: [T-1762]
+usage:
+  source: log
+  seconds: 1635
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 150
+      output: 878
+      cache_read: 12302219
+      cache_write: 232240
+      cost: 4.3955
 ---
 # T-1764 A RolePage component and the /workflow/[role] route show any role's action, run and stream, activity log, runs, and its Run, Stop, and Start
 

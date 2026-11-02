@@ -23,16 +23,16 @@ tags: [cli]
 touches: [design/adrs/README.md, design/system/agent-adapters.md]
 usage:
   source: log
-  seconds: 117
+  seconds: 122
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 11
-      output: 59
-      cache_read: 1023494
-      cache_write: 8655
-      cost: 0.3614
+      input: 14
+      output: 4150
+      cache_read: 1022164
+      cache_write: 21685
+      cost: 0.4285
 ---
 # T-2348 A live Claude Code trial settles whether a session started by hand follows a symbolic link under .claude/agents, and an ADR refining ADR-0207 § 4 records where the generated definition lives
 

@@ -3,16 +3,37 @@ id: T-2386
 type: task
 nature: improvement
 title: flai serve journals the preflight hold, opens one thread to the operator naming the files, resumes the queue on the change that clears it, and journals a landing again
-status: backlog
+status: done
 parent: S-0549
 owner: alex
 created: 2026-10-31T07:41:58Z
-updated: 2026-10-31T07:41:58Z
-transitions: []
+updated: 2026-11-02T00:29:47Z
+transitions:
+  - to: ready
+    at: 2026-11-02T00:07:24Z
+    by: agent-S-0549
+  - to: in-progress
+    at: 2026-11-02T00:07:26Z
+    by: agent-S-0549
+  - to: done
+    at: 2026-11-02T00:29:47Z
+    by: agent-S-0549
 stream: S-0549
 tags: [flai]
-touches: [flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/internal/serve/serve.go]
+touches: [flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/internal/serve/serve.go, flai/cmd/queue.go, flai/cmd/queue_test.go, flai/cmd/queue_held_test.go]
 after: [T-2383, T-2384]
+usage:
+  source: log
+  seconds: 1341
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 74
+      output: 30363
+      cache_read: 6041911
+      cache_write: 130806
+      cost: 2.6084
 ---
 # T-2386 flai serve journals the preflight hold, opens one thread to the operator naming the files, resumes the queue on the change that clears it, and journals a landing again
 

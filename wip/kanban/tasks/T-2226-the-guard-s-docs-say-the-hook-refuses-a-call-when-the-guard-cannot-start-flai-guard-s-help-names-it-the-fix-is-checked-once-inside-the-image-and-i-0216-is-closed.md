@@ -3,16 +3,37 @@ id: T-2226
 type: task
 nature: remediation
 title: The guard's docs say the hook refuses a call when the guard cannot start, flai guard's help names it, the fix is checked once inside the image, and I-0216 is closed
-status: backlog
+status: done
 parent: S-0518
 owner: alex
 created: 2026-10-28T13:34:33Z
-updated: 2026-10-28T13:34:33Z
-transitions: []
+updated: 2026-11-02T00:46:44Z
+transitions:
+  - to: ready
+    at: 2026-11-02T00:43:41Z
+    by: agent-S-0518
+  - to: in-progress
+    at: 2026-11-02T00:43:42Z
+    by: agent-S-0518
+  - to: done
+    at: 2026-11-02T00:46:44Z
+    by: agent-S-0518
 stream: S-0518
 tags: [cli, template]
 touches: [docs/operators/settings.md, docs/users/flai.md, design/system/agent-adapters.md, flai/cmd/guard.go, docs/users/flai-reference.md, design/issues/I-0216-flai-guard-does-not-run-as-the-hook-inside-the-agent-container-and-the-hook-lets-every-call-through-when-the-guard-cannot-start.md, design/issues/summary.md]
 after: [T-2223, T-2225]
+usage:
+  source: log
+  seconds: 182
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 1330
+      cache_read: 566755
+      cache_write: 8349
+      cost: 0.2068
 ---
 # T-2226 The guard's docs say the hook refuses a call when the guard cannot start, flai guard's help names it, the fix is checked once inside the image, and I-0216 is closed
 

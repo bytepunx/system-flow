@@ -3,16 +3,37 @@ id: T-1763
 type: task
 nature: feature
 title: The host's settings methods list and write a role's agent, schedule, and declared permissions through flai manifest set
-status: backlog
+status: done
 parent: S-0420
 owner: alex
 created: 2026-10-16T05:46:38Z
-updated: 2026-10-21T12:29:34Z
-transitions: []
+updated: 2026-11-02T00:47:11Z
+transitions:
+  - to: ready
+    at: 2026-11-02T00:20:51Z
+    by: agent-S-0420
+  - to: in-progress
+    at: 2026-11-02T00:20:53Z
+    by: agent-S-0420
+  - to: done
+    at: 2026-11-02T00:47:11Z
+    by: agent-S-0420
 stream: S-0420
 tags: [cli]
-touches: [flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go, docs/operators/settings.md]
+touches: [flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go, docs/operators/settings.md, flaiover/src/lib/server/agent.test.ts]
 after: [T-1762]
+usage:
+  source: log
+  seconds: 1578
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 102
+      output: 550
+      cache_read: 7106713
+      cache_write: 185614
+      cost: 2.5573
 ---
 # T-1763 The host's settings methods list and write a role's agent, schedule, and declared permissions through flai manifest set
 

@@ -3,11 +3,11 @@ id: T-2384
 type: task
 nature: improvement
 title: A verified batch whose landing failed on main's state is kept, not dropped, and lands again from its verified commits once main is clean, with no new verification
-status: in-progress
+status: done
 parent: S-0549
 owner: alex
 created: 2026-10-31T07:41:20Z
-updated: 2026-11-01T23:57:23Z
+updated: 2026-11-02T00:06:49Z
 transitions:
   - to: ready
     at: 2026-11-01T23:57:20Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-01T23:57:23Z
     by: agent-S-0549
+  - to: done
+    at: 2026-11-02T00:06:49Z
+    by: agent-S-0549
 stream: S-0549
 tags: [flai]
-touches: [flai/internal/mergequeue/land.go, flai/internal/mergequeue/land_test.go, flai/internal/mergequeue/state.go, flai/internal/mergequeue/log.go]
+touches: [flai/internal/mergequeue/land.go, flai/internal/mergequeue/land_test.go, flai/internal/mergequeue/state.go, flai/internal/mergequeue/log.go, flai/internal/mergequeue/log_test.go]
 after: [T-2383]
+usage:
+  source: log
+  seconds: 566
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 59
+      output: 24208
+      cache_read: 4817257
+      cache_write: 104293
+      cost: 2.0797
 ---
 # T-2384 A verified batch whose landing failed on main's state is kept, not dropped, and lands again from its verified commits once main is clean, with no new verification
 

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 14
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 1
-      output: 22
-      cache_read: 94124
-      cache_write: 261
-      cost: 0.033
+      output: 471
+      cache_read: 93735
+      cache_write: 2029
+      cost: 0.0405
 ---
 # T-2381 An ADR decides the merge queue's preflight of main, its held state, its one thread to the operator, and the landing again without verification
 

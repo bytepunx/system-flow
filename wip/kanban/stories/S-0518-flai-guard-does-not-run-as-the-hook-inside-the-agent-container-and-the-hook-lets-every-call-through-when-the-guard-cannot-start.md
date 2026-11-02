@@ -3,10 +3,10 @@ id: S-0518
 type: story
 nature: remediation
 title: flai guard does not run as the hook inside the agent container, and the hook lets every call through when the guard cannot start
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-28T12:52:56Z
-updated: 2026-11-01T23:54:14Z
+updated: 2026-11-02T01:05:23Z
 transitions:
   - to: ready
     at: 2026-11-01T23:50:02Z
@@ -14,9 +14,25 @@ transitions:
   - to: in-progress
     at: 2026-11-01T23:50:15Z
     by: agent-S-0518
+  - to: review
+    at: 2026-11-02T01:05:23Z
+    by: agent-S-0518
+blocked:
+  - from: 2026-11-02T00:20:51Z
+    until: 2026-11-02T00:20:52Z
+    reason: awaiting the operator on TH-0795
+  - from: 2026-11-02T00:25:57Z
+    until: 2026-11-02T00:25:59Z
+    reason: awaiting the operator on TH-0795
+  - from: 2026-11-02T00:26:35Z
+    until: 2026-11-02T00:36:33Z
+    reason: awaiting the operator on TH-0795
+  - from: 2026-11-02T00:36:59Z
+    until: 2026-11-02T00:39:51Z
+    reason: awaiting the operator on TH-0795
 tags: [cli, template]
 topics: [harness]
-touches: [".claude/settings.json", template/root/.claude/settings.json, template/CHANGELOG.md, scripts/flai.sh, scripts/README.md, flai/cmd/guard_test.go, flai/cmd/guard.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/settings.md, design/system/agent-adapters.md, design/adrs/README.md, design/adrs, design/issues/I-0216-flai-guard-does-not-run-as-the-hook-inside-the-agent-container-and-the-hook-lets-every-call-through-when-the-guard-cannot-start.md, design/issues/summary.md]
+touches: [".claude/settings.json", template/root/.claude/settings.json, template/CHANGELOG.md, scripts/flai.sh, scripts/README.md, flai/cmd/guard_test.go, flai/cmd/guard.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/settings.md, design/system/agent-adapters.md, design/adrs/README.md, design/adrs, design/issues/I-0216-flai-guard-does-not-run-as-the-hook-inside-the-agent-container-and-the-hook-lets-every-call-through-when-the-guard-cannot-start.md, design/issues/summary.md, design/issues/I-0247-testservesaystheflaiisolderthantheproject-and.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,31 +40,39 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 206
-  estimated: true
-  priced_by: estimate
+  seconds: 3715
+  priced_by: harness
   turns:
     - day: 2026-11-01
       hand_edits: 1
-      work: 25
+      work: 34
+    - day: 2026-11-02
+      ceremony: 4
+      work: 51
   models:
     - model: claude-opus-5-5
-      input: 56
-      output: 366
-      cache_read: 3175659
-      cache_write: 148366
-      cost: 1.1637
+      input: 208
+      output: 48406
+      cache_read: 20619984
+      cache_write: 303750
+      cost: 7.5229
   strategic:
     - kind: orchestrator
-      seconds: 986
+      seconds: 1166
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 126
-          output: 1415
-          cache_read: 21513637
-          cache_write: 208929
-          cost: 4.7875
+          input: 180
+          output: 1815
+          cache_read: 22939301
+          cache_write: 414561
+          cost: 5.163
+        - model: claude-sonnet-5-5
+          input: 8
+          output: 54
+          cache_read: 92872
+          cache_write: 52067
+          cost: 0.1008
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -74,8 +98,8 @@ finalized:
 This story remediates [I-0216](../../../design/issues/I-0216-flai-guard-does-not-run-as-the-hook-inside-the-agent-container-and-the-hook-lets-every-call-through-when-the-guard-cannot-start.md), "flai guard does not run as the hook inside the agent container, and the hook lets every call through when the guard cannot start". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0216 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0216 is closed with `flai issue close I-0216 --reason` saying what fixed it
+- [x] The cause I-0216 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0216 is closed with `flai issue close I-0216 --reason` saying what fixed it
 
 ## Tasks
 - T-2223 An ADR refining ADR-0060 and ADR-0203 records that the guard hook refuses a call when flai guard cannot start, and that inside the container the guard is the image's flai through the project's hook

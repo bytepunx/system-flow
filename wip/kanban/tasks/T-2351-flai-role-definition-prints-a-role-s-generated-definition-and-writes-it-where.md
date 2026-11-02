@@ -3,16 +3,37 @@ id: T-2351
 type: task
 nature: improvement
 title: flai role definition prints a role's generated definition and writes it where the ADR puts it
-status: backlog
+status: done
 parent: S-0553
 owner: alex
 created: 2026-10-30T20:47:27Z
-updated: 2026-11-02T00:03:36Z
-transitions: []
+updated: 2026-11-02T00:44:05Z
+transitions:
+  - to: ready
+    at: 2026-11-02T00:33:40Z
+    by: agent-S-0553
+  - to: in-progress
+    at: 2026-11-02T00:33:42Z
+    by: agent-S-0553
+  - to: done
+    at: 2026-11-02T00:44:05Z
+    by: agent-S-0553
 stream: S-0553
 tags: [cli]
-touches: [flai/cmd/role.go, flai/cmd/role_test.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md]
+touches: [flai/cmd/role.go, flai/cmd/role_test.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md, docs/operators/settings.md]
 after: [T-2347, T-2348, T-2350]
+usage:
+  source: log
+  seconds: 623
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 69
+      output: 21321
+      cache_read: 5251268
+      cache_write: 111406
+      cost: 2.2013
 ---
 # T-2351 flai role definition prints a role's generated definition and writes it where the ADR puts it
 

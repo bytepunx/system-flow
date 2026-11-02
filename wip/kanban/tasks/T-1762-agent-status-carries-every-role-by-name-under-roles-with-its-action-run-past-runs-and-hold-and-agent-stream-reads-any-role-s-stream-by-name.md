@@ -3,11 +3,11 @@ id: T-1762
 type: task
 nature: feature
 title: agent.status carries every role by name under roles with its action, run, past runs, and hold, and agent.stream reads any role's stream by name
-status: in-progress
+status: done
 parent: S-0420
 owner: alex
 created: 2026-10-16T05:46:34Z
-updated: 2026-11-02T00:00:59Z
+updated: 2026-11-02T00:15:57Z
 transitions:
   - to: ready
     at: 2026-11-02T00:00:57Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-02T00:00:59Z
     by: agent-S-0420
+  - to: done
+    at: 2026-11-02T00:15:57Z
+    by: agent-S-0420
 stream: S-0420
 tags: [cli]
 touches: [flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/contract_test.go, flai/internal/serve/stream.go, flai/internal/serve/stream_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go]
+usage:
+  source: log
+  seconds: 898
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 136
+      output: 929
+      cache_read: 8579880
+      cache_write: 206106
+      cost: 3.0811
 ---
 # T-1762 agent.status carries every role by name under roles with its action, run, past runs, and hold, and agent.stream reads any role's stream by name
 

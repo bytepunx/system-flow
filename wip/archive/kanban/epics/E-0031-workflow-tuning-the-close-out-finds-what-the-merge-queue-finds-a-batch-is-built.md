@@ -3,10 +3,10 @@ id: E-0031
 type: epic
 nature: improvement
 title: "Workflow tuning: the close-out finds what the merge queue finds, a batch is built against a clean main, hub files merge without conflict, and stories run in parallel with a trial merge instead of a hold"
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-30T01:48:50Z
-updated: 2026-10-31T07:22:05Z
+updated: 2026-11-02T01:32:58Z
 transitions:
   - to: ready
     at: 2026-10-31T07:21:29Z
@@ -14,13 +14,18 @@ transitions:
   - to: in-progress
     at: 2026-10-31T07:21:39Z
     by: agent-S-0548
+  - to: review
+    at: 2026-11-02T01:20:32Z
+    by: agent-S-0549
+  - to: done
+    at: 2026-11-02T01:32:58Z
+    by: orchestrator
 tags: [flai]
 topics: [testing, git, orchestration, planning]
 usage:
   source: sum
-  seconds: 44577
-  estimated: true
-  priced_by: estimate
+  seconds: 49632
+  priced_by: harness
   turns:
     - day: 2026-10-31
       ceremony: 26
@@ -31,6 +36,11 @@ usage:
       ceremony: 10
       test_runs: 4
       hand_edits: 3
+      work: 63
+    - day: 2026-11-02
+      ceremony: 2
+      test_runs: 8
+      hand_edits: 1
       work: 59
   models:
     - model: claude-haiku-5-5
@@ -40,11 +50,11 @@ usage:
       cache_write: 436437
       cost: 0.9727
     - model: claude-opus-5-5
-      input: 5594
-      output: 1805243
-      cache_read: 405587031
-      cache_write: 14431345
-      cost: 199.951
+      input: 6058
+      output: 2084634
+      cache_read: 447800993
+      cache_write: 15175916
+      cost: 219.1229
   strategic:
     - kind: planner
       seconds: 538
@@ -57,21 +67,21 @@ usage:
           cache_write: 180629
           cost: 3.4605
     - kind: orchestrator
-      seconds: 1531
+      seconds: 1599
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 360
-          output: 2572
-          cache_read: 10284696
-          cache_write: 1796623
-          cost: 2.7499
+          input: 372
+          output: 2639
+          cache_read: 10626877
+          cache_write: 1854894
+          cost: 2.8422
         - model: claude-sonnet-5-5
-          input: 14
-          output: 83
-          cache_read: 229890
-          cache_write: 58427
-          cost: 0.2006
+          input: 24
+          output: 141
+          cache_read: 390823
+          cache_write: 123535
+          cost: 0.358
 ---
 # E-0031 Workflow tuning: the close-out finds what the merge queue finds, a batch is built against a clean main, hub files merge without conflict, and stories run in parallel with a trial merge instead of a hold
 
@@ -98,3 +108,5 @@ When this epic is done, a story's close-out finds what the merge queue would fin
 Asked by the operator in conversation on 2026-10-29 after the analysis, which lives in that conversation; the figures above are its evidence. The orchestrator's own wake cost is E-0030's and ADR-0209's, not this epic's.
 - 2026-10-31T07:21:29Z: moved to ready: follows S-0548, which moved to ready
 - 2026-10-31T07:21:39Z: moved to in-progress: follows S-0548, which moved to in-progress
+- 2026-11-02T01:20:32Z: moved to review: follows S-0549, which moved to review
+- 2026-11-02T01:32:58Z: moved to done: follows S-0549, which moved to done

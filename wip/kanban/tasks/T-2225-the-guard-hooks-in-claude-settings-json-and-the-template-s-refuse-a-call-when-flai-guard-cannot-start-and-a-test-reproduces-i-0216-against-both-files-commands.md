@@ -3,11 +3,11 @@ id: T-2225
 type: task
 nature: remediation
 title: The guard hooks in .claude/settings.json and the template's refuse a call when flai guard cannot start, and a test reproduces I-0216 against both files' commands
-status: in-progress
+status: done
 parent: S-0518
 owner: alex
 created: 2026-10-28T13:34:09Z
-updated: 2026-11-01T23:54:30Z
+updated: 2026-11-02T00:43:29Z
 transitions:
   - to: ready
     at: 2026-11-01T23:54:29Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-01T23:54:30Z
     by: agent-S-0518
+  - to: done
+    at: 2026-11-02T00:43:29Z
+    by: agent-S-0518
 stream: S-0518
 tags: [cli, template]
 touches: [".claude/settings.json", template/root/.claude/settings.json, flai/cmd/guard_test.go, template/CHANGELOG.md]
 after: [T-2224]
+usage:
+  source: log
+  seconds: 2130
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 105
+      output: 24324
+      cache_read: 10361687
+      cache_write: 152637
+      cost: 3.7803
 ---
 # T-2225 The guard hooks in .claude/settings.json and the template's refuse a call when flai guard cannot start, and a test reproduces I-0216 against both files' commands
 

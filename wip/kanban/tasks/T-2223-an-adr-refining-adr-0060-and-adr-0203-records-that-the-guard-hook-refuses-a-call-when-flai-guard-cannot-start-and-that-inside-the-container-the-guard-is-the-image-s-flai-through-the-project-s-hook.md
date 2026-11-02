@@ -23,16 +23,16 @@ tags: [cli, template]
 touches: [design/adrs/README.md, design/adrs/0235-the-guard-hook-refuses-a-call-when-flai-guard-cannot-start-exit-126-or-127-and.md]
 usage:
   source: log
-  seconds: 107
+  seconds: 111
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 12
-      output: 58
-      cache_read: 851938
-      cache_write: 8008
-      cost: 0.301
+      input: 9
+      output: 1989
+      cache_read: 847460
+      cache_write: 12484
+      cost: 0.3092
 ---
 # T-2223 An ADR refining ADR-0060 and ADR-0203 records that the guard hook refuses a call when flai guard cannot start, and that inside the container the guard is the image's flai through the project's hook
 
