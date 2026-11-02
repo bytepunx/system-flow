@@ -66,11 +66,12 @@ func Preflight(ctx context.Context, r execx.Runner, repo *workitem.Repo, now tim
 	if log == nil {
 		log = slog.New(slog.DiscardHandler)
 	}
-	lint, err := preflightLint(ctx, r, repo, log)
+	left := storygit.DirtyOutsideWip(r, repo)
+	lint, err := preflightLint(ctx, r, repo, left, log)
 	if err != nil {
 		return nil, err
 	}
-	checked, err := preflightCheck(repo, now)
+	checked, err := preflightCheck(repo, now, left)
 	if err != nil {
 		return nil, err
 	}
@@ -78,16 +79,16 @@ func Preflight(ctx context.Context, r execx.Runner, repo *workitem.Repo, now tim
 }
 
 // preflightLint is what the lint of the tiers that fix leaves in the main
-// checkout's uncommitted files that a landing commits: nothing when the
-// lint passes in place, and otherwise what still fails once the fix ran on
-// copies of them in the scratch worktree.
-func preflightLint(ctx context.Context, r execx.Runner, repo *workitem.Repo, log *slog.Logger) ([]verify.FileFinding, error) {
+// checkout's uncommitted files that a landing commits, all but left: nothing
+// when the lint passes in place, and otherwise what still fails once the fix
+// ran on copies of them in the scratch worktree.
+func preflightLint(ctx context.Context, r execx.Runner, repo *workitem.Repo, left []string, log *slog.Logger) ([]verify.FileFinding, error) {
 	root := repo.MainRoot
 	changed, err := verify.ChangedPaths(r, root, "")
 	if err != nil {
 		return nil, fmt.Errorf("run the merge queue's preflight: %w; check that git can read the main checkout %s", err, root)
 	}
-	paths := verify.WithoutLeft(changed, storygit.DirtyOutsideWip(r, repo))
+	paths := verify.WithoutLeft(changed, left)
 	if len(paths) == 0 {
 		return nil, nil
 	}
@@ -207,8 +208,10 @@ func removeScratch(r execx.Runner, root, path string) error {
 }
 
 // preflightCheck is each error-level finding of flai check on repo's main
-// checkout, unscoped, judged at now.
-func preflightCheck(repo *workitem.Repo, now time.Time) ([]verify.FileFinding, error) {
+// checkout, unscoped, judged at now, but those on left, the uncommitted
+// files outside wip/ a landing leaves as they are (ADR-0178): neither the
+// batch, built from main's commit, nor the landing sees them.
+func preflightCheck(repo *workitem.Repo, now time.Time, left []string) ([]verify.FileFinding, error) {
 	main := repo
 	if repo.Root != repo.MainRoot {
 		var err error
@@ -220,15 +223,16 @@ func preflightCheck(repo *workitem.Repo, now time.Time) ([]verify.FileFinding, e
 	if err != nil {
 		return nil, fmt.Errorf("run the merge queue's preflight: run flai check on the main checkout %s: %w; run flai check there and fix what it names", main.Root, err)
 	}
-	return checkFindings(res), nil
+	return checkFindings(res, left), nil
 }
 
 // checkFindings are res's error-level findings as preflight findings, in
-// their order, each path slash-separated.
-func checkFindings(res *check.Result) []verify.FileFinding {
+// their order, each path slash-separated, but those on a path left names or
+// holds.
+func checkFindings(res *check.Result, left []string) []verify.FileFinding {
 	var got []verify.FileFinding
 	for _, f := range res.Findings {
-		if f.Level != check.Error {
+		if f.Level != check.Error || verify.IsLeft(filepath.ToSlash(f.Path), left) {
 			continue
 		}
 		got = append(got, verify.FileFinding{Tier: PreflightCheckTier, Checkout: verify.CheckoutMain, Path: filepath.ToSlash(f.Path), Line: f.Line,

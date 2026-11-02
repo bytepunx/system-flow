@@ -117,7 +117,23 @@ func TestThePreflightKeepsOnlyFlaiChecksErrors(t *testing.T) {
 		{Level: check.Warning, Rule: "issues.no-story", Path: "design/issues/I-0001-a.md", Message: "no story"},
 	}}
 	want := []verify.FileFinding{{Tier: PreflightCheckTier, Checkout: verify.CheckoutMain, Path: "system-flow.yaml", Line: 4, Level: check.Error, Rule: "manifest.roles", Message: "a role is not valid"}}
-	if got := checkFindings(res); !reflect.DeepEqual(got, want) {
+	if got := checkFindings(res, nil); !reflect.DeepEqual(got, want) {
+		t.Errorf("findings %+v, want %+v", got, want)
+	}
+}
+
+// S-0549: an error of flai check on an uncommitted file outside wip/, which
+// a landing leaves as it is (ADR-0178) and the batch never sees, holds
+// nothing; one on a committed file, or with no file, still holds.
+func TestThePreflightLeavesTheChecksErrorsOnFilesALandingLeaves(t *testing.T) {
+	res := &check.Result{Findings: []check.Finding{
+		{Level: check.Error, Rule: "issue.front-matter", Path: "design/issues/I-0150-x.md", Line: 1, Message: "no front matter"},
+		{Level: check.Error, Rule: "doc.front-matter", Path: "design/analysis/2026-10-19-all.md", Line: 1, Message: "no front matter"},
+		{Level: check.Error, Rule: "layout.folder", Path: ".", Line: 1, Message: "no design folder"},
+	}}
+	left := []string{"design/issues/I-0150-x.md", "design/analysis/"}
+	want := []verify.FileFinding{{Tier: PreflightCheckTier, Checkout: verify.CheckoutMain, Path: ".", Line: 1, Level: check.Error, Rule: "layout.folder", Message: "no design folder"}}
+	if got := checkFindings(res, left); !reflect.DeepEqual(got, want) {
 		t.Errorf("findings %+v, want %+v", got, want)
 	}
 }

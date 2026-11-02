@@ -99,7 +99,7 @@ func gitProject(t *testing.T, extra string) (*workitem.Repo, *tierProc) {
 	runGit(t, root, "config", "commit.gpgsign", "false")
 	runGit(t, root, "add", "-A")
 	runGit(t, root, "commit", "-q", "-m", "init")
-	for _, d := range []string{"docs", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents"} {
+	for _, d := range []string{"design", "docs", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents"} {
 		if err := os.MkdirAll(filepath.Join(root, d), 0o755); err != nil {
 			t.Fatal(err)
 		}
@@ -147,6 +147,11 @@ func readyStory(t *testing.T, repo *workitem.Repo, title string, review time.Tim
 func readyStoryChanging(t *testing.T, repo *workitem.Repo, title string, review time.Time, change func(id, wt string)) (string, string) {
 	t.Helper()
 	s, _ := story(t, repo, title, []bool{true}, review)
+	// a story in review has its narrative, or flai check's narrative.missing
+	// error on main holds the queue in the landing's preflight (ADR-0234)
+	if _, err := repo.OpenStream(s, workitem.StreamOptions{Agent: "agent-" + s.ID, Now: t0}); err != nil {
+		t.Fatal(err)
+	}
 	wt := repo.WorktreePath(s.ID)
 	runGit(t, repo.MainRoot, "worktree", "add", "-q", "-b", storygit.Branch(s.ID), wt, "main")
 	change(s.ID, wt)

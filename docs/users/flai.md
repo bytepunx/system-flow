@@ -3070,7 +3070,7 @@ Before it builds a batch, the queue checks the main checkout for what a landing 
 | Check | What holds the queue |
 |-------|----------------------|
 | The lint the landing runs, the tiers with a `fix_command`, over the main checkout's uncommitted files that a landing commits; it leaves those outside `wip/` ([Landing and sending back](#landing-and-sending-back)) | What the fix leaves. The queue runs the fix on copies of the files in a scratch worktree, `.flai-cache/worktrees/merge-queue-preflight`, and lints them there, so a finding the fix clears holds nothing |
-| `flai check` on the main checkout | Each error-level finding. A warning never holds the queue |
+| `flai check` on the main checkout | Each error-level finding, but one on an uncommitted file outside `wip/`, which a landing leaves as it is. A warning never holds the queue |
 
 The preflight changes none of your files. On a finding, the queue holds itself: it builds no batch and runs no tier. This hold is not yours: `flai queue hold` and `flai queue resume` neither set nor clear it, and while it alone holds the queue your acceptance still enqueues the story. `flai queue` shows it, with a line per finding, its file and line, rule, message, and the tier or `flai-check` that found it:
 

@@ -137,7 +137,7 @@ type queueLab struct {
 func newQueueLab(t *testing.T) *queueLab {
 	t.Helper()
 	root := t.TempDir()
-	for _, d := range []string{"docs", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents"} {
+	for _, d := range []string{"design", "docs", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents"} {
 		if err := os.MkdirAll(filepath.Join(root, d), 0o755); err != nil {
 			t.Fatal(err)
 		}
@@ -983,6 +983,11 @@ func TestAPassLandsAndSendsBackThroughTheRealAdvance(t *testing.T) {
 			}
 		}
 		if _, err := repo.Transition(s, workitem.Review, "alex", "", review); err != nil {
+			t.Fatal(err)
+		}
+		// a story in review has its narrative, or flai check's narrative.missing
+		// error on main holds the queue in the landing's preflight (ADR-0234)
+		if _, err := repo.OpenStream(s, workitem.StreamOptions{Agent: "agent-" + s.ID, Now: review}); err != nil {
 			t.Fatal(err)
 		}
 		wt := repo.WorktreePath(s.ID)
