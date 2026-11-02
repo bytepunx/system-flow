@@ -416,6 +416,7 @@ steps:
       role: reviewer
       prompt: Review {{area}} and say what it lacks.
     after: [check]
+---
 
 # Review check
 `
@@ -516,6 +517,8 @@ func TestAFormulaInstancesAgentStartsItsRoleStep(t *testing.T) {
 		if strings.Contains(js, refused) {
 			t.Errorf("a refused agent is journalled (%s): %s", refused, js)
 		}
+	}
+}
 
 // ADR-0236: flai role definition prints the definition flai generates from a
 // role's file as a Claude Code agent file, for a built-in role from the
