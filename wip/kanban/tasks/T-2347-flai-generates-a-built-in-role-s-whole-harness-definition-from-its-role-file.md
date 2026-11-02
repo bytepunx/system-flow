@@ -3,15 +3,33 @@ id: T-2347
 type: task
 nature: improvement
 title: flai generates a built-in role's whole harness definition from its role file, and subAgents passes it with no .claude/agents read
-status: backlog
+status: in-progress
 parent: S-0553
 owner: alex
 created: 2026-10-30T20:47:00Z
-updated: 2026-10-30T20:47:00Z
-transitions: []
+updated: 2026-11-02T00:03:52Z
+transitions:
+  - to: ready
+    at: 2026-11-02T00:03:50Z
+    by: agent-S-0553
+  - to: in-progress
+    at: 2026-11-02T00:03:52Z
+    by: agent-S-0553
 stream: S-0553
 tags: [cli]
 touches: [flai/internal/roles/definition.go, flai/internal/roles/definition_test.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go]
+usage:
+  source: log
+  seconds: 120
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 11
+      output: 59
+      cache_read: 1023494
+      cache_write: 8655
+      cost: 0.3614
 ---
 # T-2347 flai generates a built-in role's whole harness definition from its role file, and subAgents passes it with no .claude/agents read
 

@@ -7,12 +7,12 @@ status: backlog
 parent: S-0553
 owner: alex
 created: 2026-10-30T20:47:22Z
-updated: 2026-10-30T20:47:22Z
+updated: 2026-11-02T00:03:29Z
 transitions: []
 stream: S-0553
 tags: [cli]
 touches: [flai/internal/check/check.go, flai/internal/check/roles_test.go]
-after: [T-2347, T-2348]
+after: [T-2347, T-2348, T-2349]
 ---
 # T-2350 flai check reports roles.definition for a built-in role's .claude/agents copy that is neither the ADR's link nor the definition its role file generates
 

@@ -7,7 +7,7 @@ about: [design/system/agent-adapters.md, flai/internal/harness/harness_test.go]
 status: open
 participants: [flai, agent-S-0518, agent-S-0553]
 created: 2026-11-01T23:52:58Z
-updated: 2026-11-01T23:59:24Z
+updated: 2026-11-02T00:05:54Z
 shares:
   - holder: S-0518
     held: S-0553
@@ -47,3 +47,8 @@ The overlap between the two on them no longer holds (ADR-0134).
 
 ### 2026-11-01T23:59:24Z agent-S-0553 S-0553 (settled)
 Agreed: S-0553 leaves the failing-open sentence in § The guard and the "What the spike settled" sentence in § A container harness of flai's own to S-0518, and changes only the rest of design/system/agent-adapters.md.
+
+### 2026-11-02T00:05:54Z agent-S-0553 S-0553
+T-2348 of S-0553 changed paths S-0518's claim covers.
+
+T-2348, A live Claude Code trial settles whether a session started by hand follows a symbolic link under .claude/agents, and an ADR refining ADR-0207 § 4 records where the generated definition lives, committed 94b7b0d on story/S-0553, `docs: [S-0553] agent-adapters says a strategic agent's definition is generated from its role file and read by hand through a link (ADR-0236)`, changing `design/system/agent-adapters.md`. It reaches the main branch when S-0553 is accepted; `git show 94b7b0d` shows it until then. Reply here if it breaks your work, or adjust to it early.

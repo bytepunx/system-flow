@@ -3,15 +3,36 @@ id: T-2348
 type: task
 nature: research
 title: "A live Claude Code trial settles whether a session started by hand follows a symbolic link under .claude/agents, and an ADR refining ADR-0207 § 4 records where the generated definition lives"
-status: backlog
+status: done
 parent: S-0553
 owner: alex
 created: 2026-10-30T20:47:05Z
-updated: 2026-10-30T20:47:05Z
-transitions: []
+updated: 2026-11-02T00:05:57Z
+transitions:
+  - to: ready
+    at: 2026-11-02T00:03:53Z
+    by: agent-S-0553
+  - to: in-progress
+    at: 2026-11-02T00:03:55Z
+    by: agent-S-0553
+  - to: done
+    at: 2026-11-02T00:05:57Z
+    by: agent-S-0553
 stream: S-0553
 tags: [cli]
 touches: [design/adrs/README.md, design/system/agent-adapters.md]
+usage:
+  source: log
+  seconds: 117
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 11
+      output: 59
+      cache_read: 1023494
+      cache_write: 8655
+      cost: 0.3614
 ---
 # T-2348 A live Claude Code trial settles whether a session started by hand follows a symbolic link under .claude/agents, and an ADR refining ADR-0207 § 4 records where the generated definition lives
 

@@ -7,12 +7,12 @@ status: backlog
 parent: S-0553
 owner: alex
 created: 2026-10-30T20:47:44Z
-updated: 2026-10-30T20:47:44Z
+updated: 2026-11-02T00:03:44Z
 transitions: []
 stream: S-0553
 tags: [template]
 touches: [design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/operators/index.md, template/CHANGELOG.md]
-after: [T-2348, T-2351]
+after: [T-2348]
 ---
 # T-2353 The strategic-agents convention and design, the roles README, the operator docs, and the changelog say a strategic agent's definition is generated from its role file and changed there alone
 

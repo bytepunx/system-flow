@@ -9,7 +9,7 @@ date: 2026-10-21
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0549]
 ---
 
 # D-0338 The merge queue failed both its batches at smoke on stories whose own verify passed: recommend holding it until S-0457 shows why: Recommendation: hold the queue (`flai queue hold`) until one of the…

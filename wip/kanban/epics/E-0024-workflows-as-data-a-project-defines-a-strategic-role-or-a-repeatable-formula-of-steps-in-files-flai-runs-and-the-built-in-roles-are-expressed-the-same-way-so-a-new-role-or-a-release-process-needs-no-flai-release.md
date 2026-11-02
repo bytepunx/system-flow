@@ -25,8 +25,9 @@ topics: [cli, orchestration, planning, template, conventions]
 touches: [flai/internal/serve, flai/internal/guard, flai/internal/context, flai/internal/hostapi, flai/cmd, flaiover/src, design/system/strategic-agents.md, design/system/metrics.md, design/conventions/strategic-agents.md, ".claude/agents", docs/operators/index.md, docs/users/flai.md, template]
 usage:
   source: sum
-  seconds: 35381
-  priced_by: harness
+  seconds: 35786
+  estimated: true
+  priced_by: estimate
   turns:
     - day: 2026-10-28
       ceremony: 9
@@ -42,6 +43,11 @@ usage:
       test_runs: 2
       hand_edits: 3
       work: 127
+    - day: 2026-11-01
+      work: 10
+    - day: 2026-11-02
+      hand_edits: 1
+      work: 24
   models:
     - model: claude-haiku-5-5
       input: 74
@@ -50,11 +56,11 @@ usage:
       cache_write: 212627
       cost: 0.3577
     - model: claude-opus-5-5
-      input: 3554
-      output: 1302483
-      cache_read: 268666395
-      cache_write: 9888511
-      cost: 137.6632
+      input: 3628
+      output: 1302981
+      cache_read: 273869765
+      cache_write: 10070254
+      cost: 139.5489
   strategic:
     - kind: planner
       seconds: 2502
@@ -79,15 +85,15 @@ usage:
           cache_write: 471093
           cost: 4.2564
     - kind: orchestrator
-      seconds: 16145
+      seconds: 16164
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2381
-          output: 36016
-          cache_read: 512560257
-          cache_write: 1678569
-          cost: 115.3522
+          input: 2389
+          output: 36081
+          cache_read: 512750437
+          cache_write: 1738475
+          cost: 115.4097
         - model: claude-sonnet-5-5
           input: 94
           output: 439

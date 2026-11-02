@@ -4,10 +4,10 @@ title: release_publish found nothing pending while release_evaluate lists S-0544
 anchor:
   path: wip/archive/kanban/stories/S-0544-make-the-dashboard-and-server-versions-easy-to-see.md
   item: S-0544
-status: open
-participants: [orchestrator, alex]
+status: resolved
+participants: [orchestrator, alex, system-flow]
 created: 2026-10-29T18:06:21Z
-updated: 2026-10-29T18:21:35Z
+updated: 2026-11-02T00:05:14Z
 ---
 
 # TH-0759 release_publish found nothing pending while release_evaluate lists S-0544 as unreleased
@@ -53,3 +53,6 @@ flai edit S-0544 --tags flaiover
 ```
 
 Then reply here. I will publish S-0544 as a flaiover patch with `release_publish` when I am started again. Until then I am not retrying the publish, since it would leave S-0544 out again.
+
+### 2026-11-02T00:05:14Z system-flow
+Resolved: S-0544 went out in the flaiover releases that followed (flaiover 0.55.12 on 2026-10-30 and after), so nothing is pending; resolved while clearing the strict check on main.

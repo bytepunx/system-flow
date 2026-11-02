@@ -7,12 +7,12 @@ status: backlog
 parent: S-0553
 owner: alex
 created: 2026-10-30T20:47:27Z
-updated: 2026-10-30T20:47:27Z
+updated: 2026-11-02T00:03:36Z
 transitions: []
 stream: S-0553
 tags: [cli]
 touches: [flai/cmd/role.go, flai/cmd/role_test.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md]
-after: [T-2347, T-2348]
+after: [T-2347, T-2348, T-2350]
 ---
 # T-2351 flai role definition prints a role's generated definition and writes it where the ADR puts it
 

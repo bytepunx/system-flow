@@ -36,15 +36,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 388
+      seconds: 407
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 138
-          output: 2146
-          cache_read: 28790556
-          cache_write: 110577
-          cost: 6.3842
+          input: 146
+          output: 2211
+          cache_read: 28980736
+          cache_write: 170483
+          cost: 6.4417
 cost_of_delay:
   value: 73.64
   by: planner-S-0420
@@ -88,6 +88,7 @@ A role a project defines shows on the dashboard as the built-in ones do. The Wor
 
 ### Planning
 
+- **After S-0419.** S-0420 reads the built-in roles' start path that S-0419 moved onto the defined-role path. That path puts the planner, the orchestrator, and the analyzer in `agent.status`'s roles record by name, and the role page shows them from it.
 - **Plan thread.** TH-0580, replanned 2026-10-21, approved and resolved by the orchestrator. It settled three things:
   - `roles.<name>.schedule` is a manifest key that overrides the role file's schedule, as `analysis.schedule` sets the analyzer's. T-1763 adds it.
   - T-1764's and T-1766's Work bullets were rewritten to `strategic.ts` with the agent-stream route, and to the rail's Agents group.
