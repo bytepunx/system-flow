@@ -18,6 +18,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -648,5 +649,21 @@ func TestAnAnalyzeIsRefusedWhileTheBudgetStateHoldsItsProvider(t *testing.T) {
 	lab.budgetCleared()
 	if _, err := lab.analyze("", TriggerAsked); err != nil {
 		t.Errorf("once the state cleared: %v", err)
+	}
+}
+
+// S-0509, ADR-0247: an analyzer whose agent names the container harness is
+// started in a container of its role, mounting the main checkout, and pilot's
+// start request names its focus.
+func TestAnAnalyzerOnTheContainerHarnessIsStartedInAContainerOfItsRole(t *testing.T) {
+	lab, _ := roleContainerLab(t)
+	lab.l.mu.Lock()
+	started, _ := lab.l.analyze(context.Background(), lab.cfg, &manifest.Agent{Harness: harness.Container}, "risk", TriggerAsked)
+	lab.l.mu.Unlock()
+	if !started {
+		t.Fatalf("not started: %+v", lab.state().Analyzer)
+	}
+	if req := lab.roleContainerStarted(conventions.RoleAnalyze, lab.state().Analyzer); req.Focus != "risk" {
+		t.Errorf("the start request's focus is %q, not risk", req.Focus)
 	}
 }

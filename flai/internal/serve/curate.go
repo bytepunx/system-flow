@@ -205,7 +205,7 @@ func (l *launcher) curate(ctx context.Context, cfg AgentConfig, agent *manifest.
 	if err != nil {
 		return fail(err)
 	}
-	cmd, out, held, err := l.spawnGated(ctx, run, spec.Argv, workitem.ActivityCurator, now, append(spec.Env, keys...))
+	cmd, out, held, err := l.spawnGatedWith(ctx, run, spec.Argv, workitem.ActivityCurator, now, append(spec.Env, keys...), spec.Stdin)
 	if held != nil {
 		return false, held
 	}

@@ -235,7 +235,7 @@ func (l *launcher) analyzeOn(ctx context.Context, cfg AgentConfig, agent *manife
 	if err != nil {
 		return fail(err)
 	}
-	cmd, out, held, err := l.spawnGated(ctx, run, spec.Argv, workitem.ActivityAnalyzer, now, append(spec.Env, keys...))
+	cmd, out, held, err := l.spawnGatedWith(ctx, run, spec.Argv, workitem.ActivityAnalyzer, now, append(spec.Env, keys...), spec.Stdin)
 	if held != nil {
 		return false, held
 	}

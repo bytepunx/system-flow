@@ -2025,16 +2025,6 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 	if err != nil {
 		return fail(err)
 	}
-	if name == harness.Container {
-		if err := l.containerAllowed(cfg, story.Agent); err != nil {
-			return fail(err)
-		}
-		// The adapter reads the worktree's git to mount it (ADR-0246), so the
-		// worktree is opened before it is asked.
-		if err := l.containerWorktree(story.ID); err != nil {
-			return fail(err)
-		}
-	}
 	var shares []harness.Share
 	if story.Asked == nil && story.Resume == nil && story.Commit == "" {
 		shares = sharedWith(l.entry.Root, story.ID) // a resumed session knows them; a commit needs none
@@ -2048,11 +2038,6 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 		Shares: shares, Formula: formulaOf(l.entry.Root, story)})
 	if err != nil {
 		return fail(err)
-	}
-	if name == harness.Container {
-		if err := l.containerReady(cfg, run, story.Agent); err != nil {
-			return fail(err)
-		}
 	}
 	spend := l.spendAtStart(ctx, cfg, run) // before its first call is charged
 	cmd, out, err := l.spawnWith(ctx, run, spec.Argv, story.ID, now, slices.Concat([]string{"FLAI_STORY=" + story.ID}, spec.Env, keys), spec.Stdin)
@@ -2193,11 +2178,26 @@ func startWhy(story readyStory, run *AgentRun, limit int) string {
 // (mcpEnv, S-0506), the URL's host the container's own name for the host
 // when the container harness's network is not the host's (S-0508): every
 // start, a story's agent's and a strategic agent's, builds its command here.
-// The keys and the token go to spawn's env and nowhere else, not run, a log
+// On the container harness it readies the host for the start too, a story's
+// and a strategic agent's alike (S-0508, S-0509): containerAllowed before
+// the adapter is asked, containerReady once it has taken the start.
+// The keys and the token go to spawnWith's env and nowhere else, not run, a log
 // line, the journal, or an error, so that a secret flai serve holds reaches
 // the child alone. A refusal is the start's
 // failure, as an adapter's refusal is.
 func (l *launcher) startOf(cfg AgentConfig, run *AgentRun, adapter harness.Adapter, name string, req harness.Request) (harness.Start, []string, error) {
+	if name == harness.Container {
+		if err := l.containerAllowed(cfg, req.Agent); err != nil {
+			return harness.Start{}, nil, err
+		}
+		// The adapter reads a story's worktree's git to mount it (ADR-0246),
+		// so the worktree is opened before it is asked.
+		if req.Story != "" {
+			if err := l.containerWorktree(req.Story); err != nil {
+				return harness.Start{}, nil, err
+			}
+		}
+	}
 	if err := l.provide(cfg, run, &req); err != nil {
 		return harness.Start{}, nil, err
 	}
@@ -2218,6 +2218,9 @@ func (l *launcher) startOf(cfg AgentConfig, run *AgentRun, adapter harness.Adapt
 	}
 	if name == harness.Container {
 		mcp = containerMCP(mcp, cfg.host(name).Network)
+		if err := l.containerReady(cfg, run, req); err != nil {
+			return harness.Start{}, nil, err
+		}
 	}
 	return spec, append(keys, mcp...), nil
 }
@@ -2368,7 +2371,7 @@ func (l *launcher) openLog(subject string, at time.Time) (*os.File, error) {
 	}
 }
 
-// spawn starts argv as run's process, in the project's directory, its
+// spawnWith starts argv as run's process, in the project's directory, its
 // output in the log openLog opens for subject, and its environment flai
 // serve's without the host's address, token, and config, the providers'
 // spend keys, and the forges' tokens, with FLAI_AGENT,
@@ -2377,14 +2380,9 @@ func (l *launcher) openLog(subject string, at time.Time) (*os.File, error) {
 // hands its agents over. It records nothing: the caller does, as started or
 // as failed with the error. env may carry a provider's key (startOf), so it
 // goes into the child's environment and nowhere else: not the log, run, or
-// an error.
-func (l *launcher) spawn(ctx context.Context, run *AgentRun, argv []string, subject string, at time.Time, env []string) (*exec.Cmd, *os.File, error) {
-	return l.spawnWith(ctx, run, argv, subject, at, env, nil)
-}
-
-// spawnWith is spawn with stdin written to the child's standard input, then
-// closed: the container harness's start request for pilot (S-0508). With no
-// stdin the child's standard input is the null device, as spawn's is.
+// an error. stdin is written to the child's standard input, then closed: the
+// container harness's start request for pilot (S-0508). With no stdin the
+// child's standard input is the null device.
 func (l *launcher) spawnWith(ctx context.Context, run *AgentRun, argv []string, subject string, at time.Time, env []string, stdin []byte) (*exec.Cmd, *os.File, error) {
 	run.Command = filepath.Base(argv[0])
 	out, err := l.openLog(subject, at)
@@ -2455,7 +2453,7 @@ func writeStdin(w *os.File, data []byte) error {
 	return err
 }
 
-// await waits in the background for the process spawn started, has end
+// await waits in the background for the process spawnWith started, has end
 // record how it ended from its exit code, and has the launcher look again;
 // a launcher that hands its agents over lets it go instead, for the serving
 // flai to settle once it is gone.

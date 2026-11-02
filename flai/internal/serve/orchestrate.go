@@ -379,9 +379,10 @@ type halted struct {
 // halt ends run, the orchestrator's, as Stop ends a story's agent: mark
 // marks it first, at the time given, so that whoever settles it records why
 // it was stopped and not a failure, its process group is asked to end while
-// it is still the one flai started, and made to once o.StopGrace has passed.
-// The launcher waiting for it settles its end; when none does, it is settled
-// here. Its caller journals and logs the stop.
+// it is still the one flai started, and made to once o.StopGrace has passed,
+// and a run on the container harness has its container stopped by its name
+// (stopContainer, ADR-0247 §2). The launcher waiting for it settles its end;
+// when none does, it is settled here. Its caller journals and logs the stop.
 func (r *orchestrator) halt(run *AgentRun, mark func(marked *AgentRun, at string)) halted {
 	l := r.starter
 	h := halted{at: r.o.Now().UTC().Format(time.RFC3339)}
@@ -401,6 +402,15 @@ func (r *orchestrator) halt(run *AgentRun, mark func(marked *AgentRun, at string
 			gone(run.PID, 2*time.Second)
 		}
 	}
+	// the container's docker client was signalled; the container goes by its name
+	contained := ""
+	if run.live() && run.Harness == harness.Container {
+		var cfg AgentConfig
+		if r.o.Agent != nil {
+			cfg = r.o.Agent(r.e.Root)
+		}
+		contained = l.stopContainer(cfg, run)
+	}
 	l.mu.Lock()
 	if cur := r.o.Dir.AgentStates()[r.e.Root].Orchestrator; cur.same(run) && cur.live() && !l.waiting[run.PID] {
 		l.orchestrateEnded(cur, nil)
@@ -413,6 +423,9 @@ func (r *orchestrator) halt(run *AgentRun, mark func(marked *AgentRun, at string
 		h.what = fmt.Sprintf("ended its process group (pid %d)", run.PID)
 	default:
 		h.what = fmt.Sprintf("recorded it as stopped: pid %d is no longer the orchestrator flai started", run.PID)
+	}
+	if contained != "" {
+		h.what += "; " + contained
 	}
 	return h
 }
@@ -484,7 +497,7 @@ func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *mani
 	if err != nil {
 		return refuse(err)
 	}
-	cmd, out, held, err := l.spawnGated(ctx, run, spec.Argv, workitem.ActivityOrchestrator, now, append(spec.Env, keys...))
+	cmd, out, held, err := l.spawnGatedWith(ctx, run, spec.Argv, workitem.ActivityOrchestrator, now, append(spec.Env, keys...), spec.Stdin)
 	if held != nil {
 		why := budgetHeldWhy(*held, now)
 		if why != said {

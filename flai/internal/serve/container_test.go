@@ -13,24 +13,33 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-// containerLab is providerLab with a fake docker first on PATH, the
-// container harness's login set, and the project's HTTP MCP server running,
-// as flai host keeps it, at a loopback URL with a token. The fake answers
-// image inspect, unless a file no-image is in the lab's output folder; a run
-// with --entrypoint, as claude --version in the image; and stop, recording
-// the name, failing when a file stop-fails is there. Any other run is the
-// agent's: it records its arguments and environment in <story>.txt once it
-// has read its standard input whole into <story>.stdin, and holds as the
-// stub does.
+// containerLab is providerLab with containerOn.
 func containerLab(t *testing.T) (*agentLab, string) {
 	t.Helper()
 	lab := providerLab(t)
+	return lab, containerOn(lab)
+}
+
+// containerOn puts a fake docker first on PATH for lab, sets the container
+// harness's login, and runs the project's HTTP MCP server, as flai host keeps
+// it, at a loopback URL with a token, which it returns. The fake answers
+// image inspect, unless a file no-image is in the lab's output folder; a run
+// with --entrypoint, as claude --version in the image; and stop, recording
+// the name, failing when a file stop-fails is there. Any other run is the
+// agent's, for its subject, FLAI_STORY's value, else FLAI_ROLE's: it reads
+// its standard input whole into <subject>.stdin, prints stream-<subject> as
+// its output when there is one, records its arguments and environment in
+// <subject>.txt, and holds as the stub does.
+func containerOn(lab *agentLab) string {
+	t := lab.t
+	t.Helper()
 	bin := t.TempDir()
 	out := lab.outDir
 	fake := "#!/bin/sh\n" +
@@ -41,16 +50,20 @@ func containerLab(t *testing.T) (*agentLab, string) {
 		"esac\n" +
 		"for a in \"$@\"; do [ \"$a\" = --entrypoint ] && { echo \"2.1.312 (Claude Code)\"; exit 0; }; done\n" +
 		"trap 'touch \"$out/ended-$$\"; exit 143' TERM\n" +
-		"cat > \"$out/$FLAI_STORY.stdin\"\n" +
-		"{ echo \"args: $*\"; echo \"story: $FLAI_STORY\"; echo \"agent: $FLAI_AGENT\"; echo \"session: $FLAI_SESSION\"; echo \"started_by: $FLAI_STARTED_BY\"; echo \"mcp: ${FLAI_MCP_URL-unset} ${FLAI_MCP_TOKEN-unset}\"; echo \"key: ${S0350_GATEWAY_KEY-unset}\"; echo \"config: ${FLAI_CONFIG-unset}\"; } > \"$out/$FLAI_STORY.txt\"\n" +
-		"while [ -f \"$out/hold\" ] && [ ! -f \"$out/release-$FLAI_STORY\" ]; do sleep 0.05; done\n" +
+		"subject=\"${FLAI_STORY:-$FLAI_ROLE}\"\n" +
+		"cat > \"$out/$subject.stdin\"\n" +
+		"[ -f \"$out/stream-$subject\" ] && cat \"$out/stream-$subject\"\n" +
+		"{ echo \"args: $*\"; echo \"story: ${FLAI_STORY-unset}\"; echo \"role: ${FLAI_ROLE-unset}\"; echo \"agent: $FLAI_AGENT\"; echo \"session: $FLAI_SESSION\"; echo \"started_by: $FLAI_STARTED_BY\"; echo \"mcp: ${FLAI_MCP_URL-unset} ${FLAI_MCP_TOKEN-unset}\"; echo \"key: ${S0350_GATEWAY_KEY-unset}\"; echo \"config: ${FLAI_CONFIG-unset}\"; } > \"$out/$subject.txt\"\n" +
+		"while [ -f \"$out/hold\" ] && [ ! -f \"$out/release-$subject\" ]; do sleep 0.05; done\n" +
 		"touch \"$out/ended-$$\"\n"
 	if err := os.WriteFile(filepath.Join(bin, "docker"), []byte(fake), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
-	login := t.TempDir()
-	lab.cfg.Harnesses[harness.Container] = harness.Host{Login: login}
+	if lab.cfg.Harnesses == nil {
+		lab.cfg.Harnesses = map[string]harness.Host{}
+	}
+	lab.cfg.Harnesses[harness.Container] = harness.Host{Login: t.TempDir()}
 	cache := filepath.Join(lab.root, ".flai-cache")
 	if err := os.MkdirAll(cache, 0o700); err != nil {
 		t.Fatal(err)
@@ -63,7 +76,7 @@ func containerLab(t *testing.T) (*agentLab, string) {
 	if err := os.WriteFile(filepath.Join(cache, MCPTokenFile), []byte(token+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	return lab, token
+	return token
 }
 
 // containerStory makes a story on the container harness with its worktree,
@@ -341,4 +354,186 @@ func TestAContainerAgentThatEndedAskingResumesInItsSessionAndCache(t *testing.T)
 	}
 	lab.release(id)
 	waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+}
+
+// roleContainerLab is containerLab for a strategic agent (S-0509): the
+// project is a git checkout whose .git has no hooks folder yet, and holds the
+// four roles' Claude Code definitions.
+func roleContainerLab(t *testing.T) (*agentLab, string) {
+	t.Helper()
+	lab, token := containerLab(t)
+	lab.roleContainerReady()
+	return lab, token
+}
+
+// roleContainerReady makes the lab's project a git checkout with no hooks
+// folder, and gives it the four roles' Claude Code definitions, which the
+// inner harness's start reads.
+func (lab *agentLab) roleContainerReady() {
+	lab.t.Helper()
+	if err := os.MkdirAll(filepath.Join(lab.root, ".git"), 0o755); err != nil {
+		lab.t.Fatal(err)
+	}
+	defs := filepath.Join(lab.root, ".claude", "agents")
+	if err := os.MkdirAll(defs, 0o755); err != nil {
+		lab.t.Fatal(err)
+	}
+	for _, def := range []string{"planner", "orchestrator", "analyzer", "curator"} {
+		if err := os.WriteFile(filepath.Join(defs, def+".md"), []byte("---\nname: "+def+"\ndescription: The "+def+".\ntools: Read\n---\n\nYou are the "+def+".\n"), 0o644); err != nil {
+			lab.t.Fatal(err)
+		}
+	}
+}
+
+// roleContainerStarted checks that run, the strategic agent's in role, was
+// started on the container harness as ADR-0247 says, and returns pilot's
+// start request: docker run of the container named for the role and the
+// session, mounting the main checkout read-write at its path as the working
+// directory, its .git/hooks read-only, and the role's cache folder, and no
+// story's worktree; FLAI_ROLE passed by name and FLAI_STORY not at all; the
+// hooks folder and the cache folder, with the link to the login, made; and
+// the image's Claude Code version recorded on the run.
+func (lab *agentLab) roleContainerStarted(role string, run *AgentRun) harness.Request {
+	t := lab.t
+	t.Helper()
+	if run == nil || run.Error != "" || run.PID == 0 || run.Command != "docker" || run.Harness != harness.Container || run.HarnessVersion != "2.1.312" {
+		t.Fatalf("run: %+v", run)
+	}
+	out := filepath.Join(lab.outDir, role+".txt")
+	waitFor(t, "the "+role+" container ran", func() bool {
+		data, _ := os.ReadFile(out)
+		return strings.Contains(string(data), "config: ")
+	})
+	got, _ := os.ReadFile(out)
+	args, _, _ := strings.Cut(string(got), "\n")
+	root := lab.root
+	hooks := filepath.Join(root, ".git", "hooks")
+	cache := harness.ContainerCache(root, role)
+	for _, want := range []string{"--name " + harness.ContainerName(role, run.Session) + " ", " -v " + root + ":" + root + " ", " -w " + root + " ",
+		" -v " + hooks + ":" + hooks + ":ro ", " -v " + cache + ":" + cache + " ", " -e FLAI_ROLE ", " flai-agent-claude-code:local"} {
+		if !strings.Contains(args, want) {
+			t.Errorf("docker's arguments lack %q: %s", want, args)
+		}
+	}
+	for _, never := range []string{"FLAI_STORY", filepath.Join(root, ".flai-cache", "worktrees")} {
+		if strings.Contains(args, never) {
+			t.Errorf("docker's arguments hold %q: %s", never, args)
+		}
+	}
+	for _, want := range []string{"story: unset\n", "role: " + role + "\n", "agent: " + run.Agent + "\n", "started_by: flai-serve\n"} {
+		if !strings.Contains(string(got), want) {
+			t.Errorf("docker's environment lacks %q:\n%s", want, got)
+		}
+	}
+	if fi, err := os.Stat(hooks); err != nil || !fi.IsDir() {
+		t.Errorf("no .git/hooks folder was made: %v", err)
+	}
+	if fi, err := os.Stat(cache); err != nil || fi.Mode().Perm() != 0o700 {
+		t.Errorf("the role's cache folder is not the user's alone: %v %v", fi, err)
+	}
+	if to, err := os.Readlink(filepath.Join(cache, "claude", ".credentials.json")); err != nil || to != harness.ContainerLogin+"/.credentials.json" {
+		t.Errorf("the login's link: %q %v", to, err)
+	}
+	if record, _ := os.ReadFile(lab.o.Dir.agents()); !strings.Contains(string(record), `"harness_version": "2.1.312"`) {
+		t.Errorf("the run's record has no version:\n%s", record)
+	}
+	req := lab.pilotRequest(role)
+	if req.Role != role || req.Story != "" || req.Root != root || req.Session != run.Session || req.Inner != harness.ClaudeCode || req.Cache != cache || req.Agent == nil || req.Agent.Harness != harness.ClaudeCode {
+		t.Errorf("the start request: %+v", req)
+	}
+	return req
+}
+
+// S-0509, ADR-0247 §2: turning the orchestrate action off stops the
+// orchestrator's run on the container harness, its docker client signalled
+// and its container stopped by the name the adapter gave it, for the role and
+// the session, and the stop's journal entry says so.
+func TestTheOrchestratorsContainerIsStoppedWhenTheActionIsTurnedOff(t *testing.T) {
+	lab := newOrchestrateLab(t)
+	containerOn(lab.agentLab)
+	lab.roleContainerReady()
+	m := filepath.Join(lab.root, manifest.File)
+	data, err := os.ReadFile(m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(m, append(data, "orchestration:\n  agent:\n    harness: container\n"...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	lab.hold()
+	lab.cfg.Orchestrate = true
+	lab.look()
+	run := lab.orchestrator()
+	lab.roleContainerStarted(conventions.RoleOrchestrate, run)
+	lab.cfg.Orchestrate = false
+	lab.look()
+	stopped := lab.ended(run.Session)
+	if stopped.Outcome != OutcomeStopped || Alive(run.PID) {
+		t.Errorf("not stopped: %+v", stopped)
+	}
+	name := harness.ContainerName(conventions.RoleOrchestrate, run.Session)
+	if got, _ := os.ReadFile(filepath.Join(lab.outDir, "docker-stopped")); string(got) != name+"\n" {
+		t.Errorf("docker stop was given %q, not %s", got, name)
+	}
+	j := lab.orchestrateEntries()
+	if last := j[len(j)-1]; !strings.Contains(last.Detail, "since orchestrate was turned off") || !strings.Contains(last.Detail, "; stopped its container "+name) {
+		t.Errorf("journal: %+v", last)
+	}
+}
+
+// S-0509, ADR-0247 §2: the operator's stop of an orchestrator on the
+// container harness stops its container by its name too, and journals it.
+func TestTheOperatorsStopOfTheOrchestratorStopsItsContainer(t *testing.T) {
+	lab := newOrchestrateLab(t)
+	containerOn(lab.agentLab)
+	lab.roleContainerReady()
+	m := filepath.Join(lab.root, manifest.File)
+	data, err := os.ReadFile(m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(m, append(data, "orchestration:\n  agent:\n    harness: container\n"...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	lab.hold()
+	lab.cfg.Orchestrate = true
+	lab.look()
+	run := lab.orchestrator()
+	lab.roleContainerStarted(conventions.RoleOrchestrate, run)
+	if _, err := OrchestratorStop(lab.o, lab.entry()); err != nil {
+		t.Fatal(err)
+	}
+	name := harness.ContainerName(conventions.RoleOrchestrate, run.Session)
+	if got, _ := os.ReadFile(filepath.Join(lab.outDir, "docker-stopped")); string(got) != name+"\n" {
+		t.Errorf("docker stop was given %q, not %s", got, name)
+	}
+	j := lab.orchestrateEntries()
+	if last := j[len(j)-1]; !strings.Contains(last.Detail, "on the operator's word") || !strings.Contains(last.Detail, "; stopped its container "+name) {
+		t.Errorf("journal: %+v", last)
+	}
+}
+
+// S-0509, ADR-0247 §5: a project whose strategic agents run on the container
+// harness has the host's claude checked for none of them, since the image's
+// Claude Code version is the one read and recorded.
+func TestStrategicAgentsInContainersAreNoCauseToCheckTheHostsClaude(t *testing.T) {
+	root := t.TempDir()
+	manifestOn := func(agents string) {
+		t.Helper()
+		m := filepath.Join(root, manifest.File)
+		if err := os.WriteFile(m, []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"+agents), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := manifest.Load(m); err != nil {
+			t.Fatal(err)
+		}
+	}
+	manifestOn("agent:\n  harness: container\nplanning:\n  agent:\n    harness: container\norchestration:\n  agent:\n    harness: container\nanalysis:\n  agent:\n    harness: container\ndigest:\n  agent:\n    harness: container\n")
+	if _, uses := claudeCodeProject(root); uses {
+		t.Error("a project whose agents all run in containers has the host's claude checked")
+	}
+	manifestOn("agent:\n  harness: container\nplanning:\n  agent:\n    harness: claude-code\n")
+	if _, uses := claudeCodeProject(root); !uses {
+		t.Error("a planner on the host's claude-code does not have it checked")
+	}
 }

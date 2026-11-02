@@ -203,7 +203,7 @@ func (l *launcher) plan(ctx context.Context, cfg AgentConfig, item string, agent
 	if err != nil {
 		return fail(err)
 	}
-	cmd, out, held, err := l.spawnGated(ctx, run, spec.Argv, workitem.ActivityPlanner, now, append(spec.Env, keys...))
+	cmd, out, held, err := l.spawnGatedWith(ctx, run, spec.Argv, workitem.ActivityPlanner, now, append(spec.Env, keys...), spec.Stdin)
 	if held != nil {
 		return false, held
 	}
@@ -271,17 +271,24 @@ func (l *launcher) planEnded(run *AgentRun, exit *int) {
 	}
 }
 
-// spawnGated is spawn behind the budget gate (budgetStart, S-0534), for a
-// strategic role's run whose harness and provider are resolved: a start the
-// budget state of its provider holds is not spawned, and held is that state,
-// nil when it went. The probe's spawn that fails frees the probe for the next
-// start, and the one that succeeds is recorded with its process.
+// spawnGated is spawnGatedWith with nothing on the child's standard input.
 func (l *launcher) spawnGated(ctx context.Context, run *AgentRun, argv []string, subject string, at time.Time, env []string) (cmd *exec.Cmd, out *os.File, held *Budget, err error) {
+	return l.spawnGatedWith(ctx, run, argv, subject, at, env, nil)
+}
+
+// spawnGatedWith is spawnWith behind the budget gate (budgetStart, S-0534),
+// for a strategic role's run whose harness and provider are resolved, stdin
+// the container harness's start request for pilot when it runs in a
+// container (S-0509): a start the budget state of its provider holds is not
+// spawned, and held is that state, nil when it went. The probe's spawn that
+// fails frees the probe for the next start, and the one that succeeds is
+// recorded with its process.
+func (l *launcher) spawnGatedWith(ctx context.Context, run *AgentRun, argv []string, subject string, at time.Time, env []string, stdin []byte) (cmd *exec.Cmd, out *os.File, held *Budget, err error) {
 	gate := l.budgetStart(run)
 	if !gate.Go {
 		return nil, nil, &gate.State, nil
 	}
-	cmd, out, err = l.spawn(ctx, run, argv, subject, at, env)
+	cmd, out, err = l.spawnWith(ctx, run, argv, subject, at, env, stdin)
 	switch {
 	case !gate.Probe:
 	case err != nil:

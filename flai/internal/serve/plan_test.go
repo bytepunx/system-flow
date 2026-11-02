@@ -770,3 +770,94 @@ func TestAPlannerStartTheBudgetStateHoldsRecordsNothing(t *testing.T) {
 		t.Errorf("a held start recorded %+v, journalled %+v", r, lab.entries())
 	}
 }
+
+// planInContainer has the lab's launcher start the planner for item on the
+// container harness, as the operator asked, and says whether it started.
+func (lab *agentLab) planInContainer(item string) bool {
+	lab.l.mu.Lock()
+	defer lab.l.mu.Unlock()
+	started, _ := lab.l.plan(context.Background(), lab.cfg, item, &manifest.Agent{Harness: harness.Container}, TriggerAsked)
+	return started
+}
+
+// S-0509, ADR-0247: a planner whose agent names the container harness is
+// started in a container of its role, mounting the main checkout, and pilot's
+// start request names the item it plans.
+func TestAPlannerOnTheContainerHarnessIsStartedInAContainerOfItsRole(t *testing.T) {
+	lab, _ := roleContainerLab(t)
+	id := lab.epic.ID
+	if !lab.planInContainer(id) {
+		t.Fatalf("not started: %+v", lab.planRun(id))
+	}
+	if req := lab.roleContainerStarted(conventions.RolePlan, lab.planRun(id)); req.Item != id {
+		t.Errorf("the start request names item %q, not %s", req.Item, id)
+	}
+}
+
+// S-0509: a planner run in a container logs its activity with the seconds
+// and the cost its log holds, as a host run's does, the inner harness's
+// output being relayed into the log unchanged.
+func TestAPlannerRunInAContainerLogsItsActivityFromItsLog(t *testing.T) {
+	lab, _ := roleContainerLab(t)
+	id := lab.epic.ID
+	stream := strings.Join([]string{streamCall("s", "m1", runStart, 999), streamCall("s", "m2", runStart.Add(time.Minute), 999), streamFinal("Drafted two stories for "+id+".", 2000, 0.5)}, "\n") + "\n"
+	if err := os.WriteFile(filepath.Join(lab.outDir, "stream-"+conventions.RolePlan), []byte(stream), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if !lab.planInContainer(id) {
+		t.Fatalf("not started: %+v", lab.planRun(id))
+	}
+	waitFor(t, "the planner run ended", func() bool { r := lab.planRun(id); return r != nil && r.Ended != "" })
+	if run := lab.planRun(id); run.Outcome != OutcomeWorked || run.Harness != harness.Container {
+		t.Errorf("run = %+v, want worked on the container harness", run)
+	}
+	waitFor(t, "its activity logged", func() bool {
+		doc, err := lab.repo.Activity(workitem.ActivityPlanner)
+		return err == nil && len(doc.Entries) == 1
+	})
+	doc, _ := lab.repo.Activity(workitem.ActivityPlanner)
+	if e := doc.Entries[0]; e.Summary != "Drafted two stories for "+id+"." || e.Trigger != "asked" || e.Cost != 0.5 || e.Seconds != 61 {
+		t.Errorf("activity = %+v, want the run's summary, asked, its 0.5 USD, and its 61 s", e)
+	}
+}
+
+// S-0509: a strategic agent's start on the container harness is refused
+// before anything runs, saying what to do, when docker is not on PATH, when
+// the inner harness's image is not on this host, and when the project is no
+// git checkout, whose .git/hooks the container mounts.
+func TestAPlannerInAContainerIsRefusedWhatItLacks(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		set  func(lab *agentLab)
+		says []string
+	}{
+		{name: "no docker", set: func(lab *agentLab) {
+			lab.cfg.Harnesses[harness.Container] = harness.Host{Program: filepath.Join(t.TempDir(), "docker"), Login: lab.cfg.Harnesses[harness.Container].Login}
+		}, says: []string{"not on flai serve's PATH", "flai serve agent harness container --program"}},
+		{name: "no image", set: func(lab *agentLab) { _ = os.WriteFile(filepath.Join(lab.outDir, "no-image"), nil, 0o644) },
+			says: []string{"flai-agent-claude-code:local", "No such image", "make agent-images", "--image claude-code=<image>"}},
+		{name: "no git", set: func(lab *agentLab) { _ = os.RemoveAll(filepath.Join(lab.root, ".git")) },
+			says: []string{"has no .git folder", "run it on another harness"}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			lab, _ := roleContainerLab(t)
+			c.set(lab)
+			id := lab.epic.ID
+			if lab.planInContainer(id) {
+				t.Fatal("started")
+			}
+			r := lab.planRun(id)
+			if r == nil || r.Outcome != OutcomeFailed || r.PID != 0 {
+				t.Fatalf("run: %+v", r)
+			}
+			for _, s := range c.says {
+				if !strings.Contains(r.Why, s) {
+					t.Errorf("the refusal does not say %q: %s", s, r.Why)
+				}
+			}
+			if _, err := os.Stat(filepath.Join(lab.outDir, conventions.RolePlan+".stdin")); err == nil {
+				t.Error("the planner's container was run")
+			}
+		})
+	}
+}

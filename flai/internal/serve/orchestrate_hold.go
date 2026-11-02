@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -86,6 +87,15 @@ func OrchestratorStop(o Options, e Entry) (*AgentRun, error) {
 			gone(run.PID, 2*time.Second)
 		}
 	}
+	// the container's docker client was signalled; the container goes by its name
+	contained := ""
+	if run.live() && run.Harness == harness.Container {
+		var cfg AgentConfig
+		if o.Agent != nil {
+			cfg = o.Agent(e.Root)
+		}
+		contained = l.stopContainer(cfg, run)
+	}
 	if run.live() && !settled(o, e, run) {
 		if cur := o.Dir.AgentStates()[e.Root].Orchestrator; cur.same(run) && cur.live() {
 			l.orchestrateEnded(cur, nil)
@@ -99,6 +109,9 @@ func OrchestratorStop(o Options, e Entry) (*AgentRun, error) {
 		what = fmt.Sprintf("ended its process group (pid %d)", run.PID)
 	case run.live():
 		what = fmt.Sprintf("recorded it as stopped: pid %d is no longer the orchestrator flai started", run.PID)
+	}
+	if contained != "" {
+		what += "; " + contained
 	}
 	if o.Host.Record != nil {
 		o.Host.Record(hostapi.Entry{At: at, Action: hostapi.ActionOrchestrate, Method: "serve.orchestrate", Project: e.Key, Root: e.Root, By: "flai serve",

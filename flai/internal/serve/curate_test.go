@@ -19,6 +19,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -791,5 +792,22 @@ func TestACurateIsRefusedWhileTheBudgetStateHoldsItsProvider(t *testing.T) {
 	lab.budgetCleared()
 	if _, err := lab.curate(""); err != nil {
 		t.Errorf("once the state cleared: %v", err)
+	}
+}
+
+// S-0509, ADR-0247: a curator whose agent names the container harness is
+// started in a container of its role, mounting the main checkout, and pilot's
+// start request names when it takes in from.
+func TestACuratorOnTheContainerHarnessIsStartedInAContainerOfItsRole(t *testing.T) {
+	lab, _ := roleContainerLab(t)
+	const since = "2026-10-01T00:00:00Z"
+	lab.l.mu.Lock()
+	started, _ := lab.l.curate(context.Background(), lab.cfg, &manifest.Agent{Harness: harness.Container}, since, TriggerAsked, "")
+	lab.l.mu.Unlock()
+	if !started {
+		t.Fatalf("not started: %+v", lab.state().Curator)
+	}
+	if req := lab.roleContainerStarted(conventions.RoleCurate, lab.state().Curator); req.Since != since {
+		t.Errorf("the start request's since is %q, not %s", req.Since, since)
 	}
 }

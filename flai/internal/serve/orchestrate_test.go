@@ -548,3 +548,20 @@ func TestTheOrchestratorWaitsWhileTheBudgetStateHoldsItsProvider(t *testing.T) {
 	}
 	lab.settle()
 }
+
+// S-0509, ADR-0247: an orchestrator whose agent names the container harness
+// is started in a container of its role, mounting the main checkout, and
+// pilot's start request carries its reasons.
+func TestAnOrchestratorOnTheContainerHarnessIsStartedInAContainerOfItsRole(t *testing.T) {
+	lab, _ := roleContainerLab(t)
+	lab.l.mu.Lock()
+	said, held := lab.l.orchestrate(context.Background(), lab.cfg, &manifest.Agent{Harness: harness.Container}, "", false, []orchestrateReason{reviewReason})
+	lab.l.mu.Unlock()
+	if said != "" || held != nil {
+		t.Fatalf("not started: %s %+v", said, lab.state().Orchestrator)
+	}
+	req := lab.roleContainerStarted(conventions.RoleOrchestrate, lab.state().Orchestrator)
+	if len(req.Reasons) != 1 || !strings.Contains(req.Reasons[0], "S-0001") {
+		t.Errorf("the start request's reasons: %q", req.Reasons)
+	}
+}
