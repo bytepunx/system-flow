@@ -3,7 +3,7 @@ id: I-0246
 title: TestAHeldWaitFailsOnATruncatedStory and TestServeStartsADefinedRoleOnAnEventAndOnASchedule time out under flai test's Go run when the host's load is near 80
 class: defect
 status: open
-count: 5
+count: 7
 cost: 6m
 first_reported: 2026-11-02T00:55:15Z
 last_reported: 2026-11-02T19:52:44Z
@@ -32,6 +32,10 @@ S-0422's close-out at 93b29b8 stopped at integration on TestServeStartsADefinedR
 ### 2026-11-02T05:04:45Z
 Story: S-0423.
 S-0423's close-out at 8ac61fd stopped at integration on TestServeStartsADefinedRoleOnAnEventAndOnASchedule (flai/internal/serve/serve_test.go:1009: never happened: the watcher's run for the move ended). S-0423 does not change flai/internal/serve. The host was running three other stories' agents and close-outs at the time.
+
+### 2026-11-02T06:01:43Z
+Story: S-0553.
+S-0553's close-out after its rebase onto main stopped at integration twice in a row, at e616012a: first on TestWaitForWorkPassesOverAHeldStory (flai/internal/mcpserver/work_test.go:266, the wait answered timed_out after the held story cleared), then on TestAHeldWaitFailsOnATruncatedStory (folder_test.go:270, timed_out instead of the truncated read's error). Each passes alone three times over. The host's load average was 93 on 24 cores, with three other stories' cmd.test and mcpserver.test runs going at the same time. S-0553 does not change flai/internal/mcpserver.
 
 ### 2026-11-02T06:36:55Z
 Story: S-0424.
