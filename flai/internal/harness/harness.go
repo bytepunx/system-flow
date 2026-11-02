@@ -308,6 +308,14 @@ type Host struct {
 	// Args are the operator's own arguments: what the agent may do. Nil means
 	// the adapter's default; an empty list means none.
 	Args []string
+	// Images are the container harness's image per inner harness, by the
+	// inner harness's name; DefaultImages where it names none.
+	Images map[string]string // container: the image per inner harness
+	// Network is the container harness's Docker network; bridge when empty.
+	Network string
+	// Login is the folder of the operator's login to the inner harness, which
+	// the container harness mounts read-only at ContainerLogin.
+	Login string
 }
 
 // Start is what to run.
@@ -325,6 +333,10 @@ type Start struct {
 	// file of an agent in a container, which pilot writes (S-0507). None for
 	// a start on the host.
 	Files []File
+	// Stdin is what the starter writes to the child's standard input, then
+	// closes: pilot's start request, for the container harness. Empty for
+	// every other adapter.
+	Stdin []byte
 }
 
 // File is a file a Start needs written before its child is spawned: where,
@@ -377,6 +389,7 @@ type Adapter interface {
 var Adapters = map[string]Adapter{
 	ClaudeCode: claudeCode{},
 	Command:    command{},
+	Container:  container{},
 }
 
 // Names are the adapters' names, sorted.
@@ -391,7 +404,9 @@ func Names() []string {
 
 // For is the adapter a story's agent is started with, and its name. A story
 // that names no harness is started with the operator's command, when one is
-// set; one whose agent runs elsewhere is refused.
+// set; one whose agent runs elsewhere is refused. A container's adapter is
+// the inner harness's its config.inner names, as Capabilities and Reader
+// answer, and an inner harness it cannot run is refused.
 func For(a *manifest.Agent, commandSet bool) (string, Adapter, error) {
 	if Elsewhere(a) {
 		return "", nil, errors.New(ElsewhereRefusal(""))
@@ -412,6 +427,13 @@ func For(a *manifest.Agent, commandSet bool) (string, Adapter, error) {
 	}
 	if name == Command && !commandSet {
 		return "", nil, fmt.Errorf("the story's harness is the host's command, and none is set (flai serve agent set -- <program> [args...])")
+	}
+	if name == Container {
+		inner, err := innerOf(a)
+		if err != nil {
+			return "", nil, err
+		}
+		ad = container{inner: inner}
 	}
 	return name, ad, nil
 }

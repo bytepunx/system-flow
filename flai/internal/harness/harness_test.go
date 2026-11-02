@@ -119,7 +119,7 @@ func TestAStoryNamesTunablesNeverFlags(t *testing.T) {
 }
 
 func TestWhichAdapterAStoryGets(t *testing.T) {
-	if _, _, err := For(&manifest.Agent{Harness: "cursor"}, true); err == nil || !strings.Contains(err.Error(), `cannot start harness "cursor"; it can start claude-code, command`) {
+	if _, _, err := For(&manifest.Agent{Harness: "cursor"}, true); err == nil || !strings.Contains(err.Error(), `cannot start harness "cursor"; it can start claude-code, command, container`) {
 		t.Fatalf("unknown: %v", err)
 	}
 	if name, _, err := For(nil, true); err != nil || name != Command {
@@ -163,6 +163,7 @@ func TestEachAdapterStatesItsCapabilities(t *testing.T) {
 	want := map[string]Capabilities{
 		ClaudeCode: {Resume: true, Guard: true, Ask: true, RoleModels: true, StrategicAgents: true, Cost: true},
 		Command:    {},
+		Container:  {Resume: true, Guard: true, Ask: true, RoleModels: true, StrategicAgents: true, Cost: true},
 	}
 	for _, name := range Names() {
 		w, ok := want[name]
