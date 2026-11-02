@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-11-01
+updated: 2026-11-02
 status: active
 ---
 
@@ -303,9 +303,33 @@ When `flai serve` started an agent for the story, the card also shows the agent'
 
 **The orchestrator.** When the operator has turned on the `orchestrate` host action (`flai serve enable orchestrate`), `flai serve` runs the project's orchestrator, and its newest run has a card above the stories: what it is doing (working, or stopped by the operator, ended, or failed, and why), its agent, harness, and model, its session, and when it started and ended, with its stream window, open while it runs. A run that could not be started says why and has no window. The page reads it again when the orchestrator starts or ends. Its decisions, its runs, and **Stop** and **Start** are on the [Orchestrator](#orchestrator) page.
 
+## A role's page
+
+Each strategic role the project runs has a page of its own: the orchestrator, the planner, the analyzer, and the curator that flai has built in, and each role you define in a file under `design/workflows/roles/` ([Role files](flai.md#role-files)). Find them in the rail's Agents group: Orchestration, Planning, and Analysis first, then the others by name, such as Curator. A role's page is at `/workflow/<name>`. The Planner, Orchestrator, and Analyzer pages below are this page for their roles, each with its own controls. Your flai on the host needs to be as new as the dashboard for the rail to list the others; an older one lists the three it always did.
+
+- **The host action** its file names says whether `flai serve` runs the role here, and what starts it: when you Run it, on the events its file names, or when its schedule comes round. While it is off, the page gives the command that turns it on, to run on the host in the project: `flai serve enable <action>`.
+- **Run** starts the role now, for a role whose file lets you ask for it ([Running a role your project defines](flai.md#running-a-role-your-project-defines)). A role whose run takes an epic or a story has an **Item** field for its ID, and Run waits for one. The page says what flai answered: the run it started, or why it refused. A role that runs on no item runs one at a time, so Run is disabled while one runs. Run is disabled while the host action is off too, and the page says which.
+- **Stop** and **Start** are the orchestrator's alone, since it is the one role you can hold stopped ([Orchestrator](#orchestrator)).
+- **Settings** come next, under the controls, edited as [Editing a strategic agent's settings](#editing-a-strategic-agents-settings) says. For a role you define, they are its agent, its schedule when its trigger names one, and each permission its file declares. Beside each permission the page says what it lets the role do, and **Allows:** lists the calls its file lists under it. For the curator, they are the `digest` keys of `system-flow.yaml`. A role flai lists no settings for says so in one line.
+- **Running now** shows the run under way, if there is one: its item, when its run takes one, its agent, when it started, why it started, and its stream window, as the Activity page shows a story's agent's.
+- **Activity** is the role's activity document, `wip/agents/<name>.md`: its totals, then each activity, newest first, with what it did, why it started, the items it changed, how long it took, and what it cost.
+- **Runs** lists its runs, newest first: those under way, and up to 20 that ended. Each shows its item, when its run takes one, when it started and ended, how it went, what it cost, and why it failed.
+
+The page reads itself again when the role's document changes, and when a run of it starts or ends. A name the project runs no role by says so, naming the roles it does run.
+
+A role you define has these settings:
+
+| Setting | What it does |
+|---------|--------------|
+| `roles.<name>.agent` | The role's agent, over the project's: what it sets wins, and what it leaves out is the project's agent's |
+| `roles.<name>.schedule` | When `flai serve` starts the role on its schedule, for a role whose trigger names this setting: a five-field cron expression in UTC, or `daily`; unset, there is no schedule |
+| `roles.<name>.permissions.<p>` | Lets the role make the calls its file lists under the permission, such as starting the planner or accepting a story in review. Off until you turn it on. `answer_threads` is `off`, `recommend`, or `autonomous` instead |
+
+A permission grants only the role it names; the orchestrator's are its own, on its page. `confirm_after` is not among a defined role's: only the orchestrator's recommendations are confirmed for you.
+
 ## Planner
 
-Planner shows the agent that plans epics and stories: its settings, then what it is doing, what it has done, and what that cost. Find it in the rail's Agents group as Planning, after Orchestration.
+Planner is the role page for the agent that plans epics and stories: its settings, then what it is doing, what it has done, and what that cost. Find it in the rail's Agents group as Planning, after Orchestration.
 
 - **The plan host action** says whether `flai serve` starts the planner here. While it is off, the page gives the command that turns it on, to run on the host in the project: `flai serve enable plan`.
 - **The planner's settings**, under the host action, are the `planning` keys of `system-flow.yaml` but `currency`, edited here as [Editing a strategic agent's settings](#editing-a-strategic-agents-settings) says:
@@ -329,7 +353,7 @@ The page follows the planner as it works: it reads itself again when the planner
 
 ## Orchestrator
 
-Orchestrator shows the agent that keeps the project's work moving: whether it runs, its settings, then what it is doing, what it has decided, and what that cost. Find it first in the rail's Agents group, as Orchestration. The orchestrator runs while the operator has the `orchestrate` host action on ([Running the orchestrator](flai.md#running-the-orchestrator)).
+Orchestrator is the role page for the agent that keeps the project's work moving: whether it runs, its settings, then what it is doing, what it has decided, and what that cost. Find it first in the rail's Agents group, as Orchestration. The orchestrator runs while the operator has the `orchestrate` host action on ([Running the orchestrator](flai.md#running-the-orchestrator)).
 
 - **The orchestrate host action** says whether `flai serve` runs the orchestrator: on; off, with the command that turns it on, `flai serve enable orchestrate`; or held, because you stopped it.
 - **Stop** ends the orchestrator's run and holds it stopped. While the action is on, `flai serve` starts the orchestrator for the reasons the project's events give, and each run ends when its reasons are done ([ADR-0209](../../design/adrs/0209-the-orchestrator-runs-for-a-reason-and-ends-started-by-flai-serve-on-the-events.md)); while it is held, it starts none. **Start** lifts the hold, if there is one, and starts a run at once for your asked reason, with any reasons queued. Stop shows while the orchestrator is not held, and Start while it is. Both need the `orchestrate` host action on, and are disabled, saying so, while it is off. The page says what flai did, or why it refused, such as an orchestrator already held. The run you stopped logs its activity as `stopped: stopped from the dashboard`. Turning the action off and on again lifts the hold too. On the host, `flai serve orchestrate stop` and `flai serve orchestrate start` do the same.
@@ -372,7 +396,7 @@ The orchestrator's own agent is set by hand in `system-flow.yaml`, under `orches
 
 ## Analyzer
 
-Analyzer shows the agent that looks at the whole project and writes a report under `design/analysis/` ([Running the analyzer](flai.md#running-the-analyzer)): whether it may run, its settings, then what it is doing, what it has found, and what that cost. Find it in the rail's Agents group as Analysis, after Planning. Its reports are on the [Docs](#docs) page.
+Analyzer is the role page for the agent that looks at the whole project and writes a report under `design/analysis/` ([Running the analyzer](flai.md#running-the-analyzer)): whether it may run, its settings, then what it is doing, what it has found, and what that cost. Find it in the rail's Agents group as Analysis, after Planning. Its reports are on the [Docs](#docs) page.
 
 - **The analyze host action** says whether `flai serve` may start the analyzer here. While it is off, the page gives the command that turns it on: `flai serve enable analyze`.
 - **Run** starts the analyzer now, looking for the **Focus** you choose: `bottlenecks`, `intent`, `risk`, or all three, the default. The page says what flai answered: the run it started, or why it refused. One analyzer runs at a time, so Run is disabled while one runs, and while the host action is off. The page says which.
@@ -392,7 +416,7 @@ Its settings are the `analysis` keys of `system-flow.yaml`, edited as the next s
 
 ### Editing a strategic agent's settings
 
-The Planner, Orchestrator, and Analyzer pages edit their agents' settings the same way. Each setting shows its value, or while it is unset its default, and what it does.
+Every role's page edits its role's settings the same way: the Planner, Orchestrator, and Analyzer pages, the curator's, and each defined role's. Each setting shows its value, or while it is unset its default, and what it does.
 
 - **Read-only until the operator allows it.** The settings change `system-flow.yaml`, so they can be changed here only while the operator has turned on the `settings` host action for the project. Until then every field is disabled, and the page says why and gives the command to run on the host, in the project: `flai serve enable settings`.
 - **Save** writes only the settings you changed, through flai on the host, and commits `system-flow.yaml` with the dashboard's trailer; the page then says the commit. A field you empty is removed from the file, so its default applies. For an agent, give its harness, its model, and its options, one `key=value` a line; empty all three to remove it. Its sub-agents' roles are kept as they are.

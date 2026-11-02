@@ -545,8 +545,9 @@ type Host struct {
 	// RoleStream reads the stream of the newest run of a strategic role flai
 	// serve started for the project, as AgentStream reads a story's agent's:
 	// the orchestrator's for orchestrate (S-0218), the analyzer's for analyze
-	// (S-0228); ErrNoAgent, wrapped, when it started none. Nil when nothing
-	// starts agents here.
+	// (S-0228), and for any role's name the newest run of that role, on
+	// whatever item (S-0420); ErrNoAgent, wrapped, when it started none. Nil
+	// when nothing starts agents here.
 	RoleStream func(root, role string, after int64) (any, error)
 	// Settings reports the host's settings as they apply to a project
 	// (S-0105), for the dashboard's settings page. Nil when there are none.
