@@ -586,7 +586,12 @@ func (c *checker) overlap() {
 			if len(mine) == 0 {
 				continue
 			}
-			c.add(Warning, "wip.overlap", a.it.Path, keyLine(a.it.Path, "touches"), "%s touches %s, which %s (in progress) also touches as %s", a.it.ID, andList(mine), b.it.ID, andList(theirs))
+			// advisory since ADR-0230: a ready story that overlaps a story in
+			// progress starts on a clean trial merge, so two stories in progress
+			// overlap by design, and the trial merge at sync settles what
+			// conflicts between them; --strict on the main branch must not fail
+			// on the state the board is in
+			c.advise("wip.overlap", a.it.Path, keyLine(a.it.Path, "touches"), "%s touches %s, which %s (in progress) also touches as %s", a.it.ID, andList(mine), b.it.ID, andList(theirs))
 			c.res.Findings[len(c.res.Findings)-1].Stories = []string{a.it.ID, b.it.ID}
 		}
 	}
