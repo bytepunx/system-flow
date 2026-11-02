@@ -41,6 +41,8 @@ tests: # the test tiers, cheapest first, that flai test runs for the paths each 
 #   harness: claude-code
 #   model: claude-opus-5-5
 #   provider: litellm # where the model's calls go: an entry flai serve agent provider sets on the host; unset, the harness's own
+#   image: # the project's alone, never copied into a story; the template ships no Dockerfile
+#     layer: images/agent/Dockerfile # a Dockerfile, from the root, adding your test tiers' tools over the harness's image; built as flai-agent-<key>-<inner>:local
 # providers: # this project's override of a host's provider entry: api, base_url, and models only; key_env is the host's
 #   litellm:
 #     api: anthropic-messages # anthropic-messages, openai-chat, or openai-responses

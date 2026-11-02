@@ -2248,3 +2248,60 @@ func TestTestErrorsWhen(t *testing.T) {
 		})
 	}
 }
+
+// S-0510: agent.image.layer reads from the manifest, names the project's
+// layer and its image's tag, and is the project's alone: neither a story's
+// agent nor a strategic role's carries it.
+func TestAgentImageLayer(t *testing.T) {
+	head := "version: 1\nname: demo\nkey: sf\nlayout:\n  design: d\n  docs: docs\n  wip: wip\n"
+	m := loaded(t, []byte(head+"agent:\n  harness: claude-code\n  image:\n    layer: flai/images/system-flow/Dockerfile\nplanning:\n  agent:\n    model: claude-sonnet-5\n"))
+	if errs := m.Agent.Problems(); len(errs) != 0 {
+		t.Errorf("a valid layer: %v", errs)
+	}
+	for _, c := range []struct {
+		name      string
+		m         Manifest
+		layer     string
+		image     string
+		otherKind string
+	}{
+		{"named", m, "flai/images/system-flow/Dockerfile", "flai-agent-sf-claude-code:local", "flai-agent-sf-codex:local"},
+		{"an upper-case key", Manifest{Key: "SF", Agent: m.Agent}, "flai/images/system-flow/Dockerfile", "flai-agent-sf-claude-code:local", "flai-agent-sf-codex:local"},
+		{"only an image", loaded(t, []byte(head+"agent:\n  image:\n    layer: Dockerfile\n")), "Dockerfile", "flai-agent-sf-claude-code:local", "flai-agent-sf-codex:local"},
+		{"an agent without one", loaded(t, []byte(head+"agent:\n  harness: claude-code\n")), "", "", ""},
+		{"no agent", loaded(t, []byte(head)), "", "", ""},
+	} {
+		if got := c.m.Layer(); got != c.layer {
+			t.Errorf("%s: Layer = %q, want %q", c.name, got, c.layer)
+		}
+		if got := c.m.LayerImage("claude-code"); got != c.image {
+			t.Errorf("%s: LayerImage = %q, want %q", c.name, got, c.image)
+		}
+		if got := c.m.LayerImage("codex"); got != c.otherKind {
+			t.Errorf("%s: LayerImage(codex) = %q, want %q", c.name, got, c.otherKind)
+		}
+	}
+	for name, a := range map[string]*Agent{
+		"a new story's":    m.Agent.With(nil),
+		"the planner's":    m.PlanningAgent(),
+		"the analyzer's":   m.AnalysisAgent(),
+		"the curator's":    m.DigestAgent(),
+		"the orchestrator": m.OrchestrationAgent(),
+		"a role's":         m.RoleAgent("reviewer"),
+	} {
+		if a == nil || a.Image != nil || a.Harness != "claude-code" {
+			t.Errorf("%s agent: %+v", name, a)
+		}
+	}
+	data, err := json.Marshal(m.Agent)
+	if err != nil || !strings.Contains(string(data), `"image":{"layer":"flai/images/system-flow/Dockerfile"}`) {
+		t.Errorf("JSON: %s %v", data, err)
+	}
+	var back Agent
+	if err := json.Unmarshal(data, &back); err != nil || !back.Same(m.Agent) {
+		t.Errorf("JSON round trip: %+v %v", back, err)
+	}
+	if got := strings.Join(loaded(t, []byte(head+"planning:\n  agent:\n    image:\n      layer: Dockerfile\n")).Planning.Errors(), "; "); !strings.Contains(got, "planning.agent image is the project's alone") {
+		t.Errorf("planning.agent naming an image: %q", got)
+	}
+}

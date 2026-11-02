@@ -2049,3 +2049,19 @@ func Find(start string) (string, error) {
 func (m Manifest) Dir(root, key string) string {
 	return filepath.Join(root, m.Layout[key])
 }
+
+// Layer is the Dockerfile agent.image.layer names, from the repository root, or "".
+func (m Manifest) Layer() string {
+	if m.Agent == nil || m.Agent.Image == nil {
+		return ""
+	}
+	return m.Agent.Image.Layer
+}
+
+// LayerImage is the project's layer image for the inner harness, flai-agent-<key>-<inner>:local, or "".
+func (m Manifest) LayerImage(inner string) string {
+	if m.Layer() == "" {
+		return ""
+	}
+	return "flai-agent-" + strings.ToLower(m.Key) + "-" + inner + ":local"
+}

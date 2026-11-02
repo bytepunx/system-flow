@@ -215,3 +215,95 @@ func TestWriteAgentKeepsEverythingElse(t *testing.T) {
 		t.Error("an invalid agent was written")
 	}
 }
+
+// S-0510: the project's agent names an image layer, which counts as set,
+// copies and compares, and is never carried by a merge into a story's agent
+// or a strategic role's.
+func TestAgentImage(t *testing.T) {
+	def := &Agent{Harness: "claude-code", Model: "claude-opus-5-5", Image: &AgentImage{Layer: "images/agent/Dockerfile"}}
+	if (&Agent{Image: &AgentImage{Layer: "Dockerfile"}}).IsZero() {
+		t.Error("an agent with only an image is not empty")
+	}
+	if c := def.Clone(); !c.Same(def) || c.Image == def.Image {
+		t.Errorf("clone shares or loses the image: %+v", c)
+	}
+	if def.Same(&Agent{Harness: "claude-code", Model: "claude-opus-5-5"}) || def.Same(&Agent{Harness: "claude-code", Model: "claude-opus-5-5", Image: &AgentImage{Layer: "other/Dockerfile"}}) {
+		t.Error("Same does not compare images")
+	}
+	for _, c := range []struct {
+		name string
+		got  *Agent
+	}{
+		{"a story with nothing of its own", def.With(nil)},
+		{"a story with a model of its own", def.With(&Agent{Model: "claude-sonnet-5"})},
+		{"an override that names an image", (&Agent{Model: "claude-sonnet-5"}).With(def)},
+	} {
+		if c.got == nil || c.got.Image != nil || c.got.Harness != "claude-code" {
+			t.Errorf("%s: %+v", c.name, c.got)
+		}
+	}
+	if got := (&Agent{Image: def.Image}).With(nil); got != nil {
+		t.Errorf("an agent of only an image merged into a story: %+v", got)
+	}
+}
+
+// S-0510: agent.image.layer is a clean path inside the repository on one
+// line, an image block sets it, and only the project's agent names one.
+func TestAgentImageProblems(t *testing.T) {
+	for _, c := range []struct {
+		what  string
+		layer *AgentImage
+		want  string
+	}{
+		{"agent", &AgentImage{Layer: "flai/images/system-flow/Dockerfile"}, ""},
+		{"agent", &AgentImage{Layer: "Dockerfile"}, ""},
+		{"agent", &AgentImage{}, "agent image sets nothing; name a Dockerfile with layer"},
+		{"agent", &AgentImage{Layer: "/srv/Dockerfile"}, `agent image layer "/srv/Dockerfile" is an absolute path`},
+		{"agent", &AgentImage{Layer: "C:/images/Dockerfile"}, `agent image layer "C:/images/Dockerfile" is an absolute path`},
+		{"agent", &AgentImage{Layer: "../other/Dockerfile"}, `agent image layer "../other/Dockerfile" leaves the repository`},
+		{"agent", &AgentImage{Layer: ".."}, `agent image layer ".." leaves the repository`},
+		{"agent", &AgentImage{Layer: "images//Dockerfile"}, `agent image layer "images//Dockerfile" is not a clean path`},
+		{"agent", &AgentImage{Layer: "./Dockerfile"}, `agent image layer "./Dockerfile" is not a clean path`},
+		{"agent", &AgentImage{Layer: `images\Dockerfile`}, `agent image layer "images\\Dockerfile" is not a clean path; write it with forward slashes`},
+		{"agent", &AgentImage{Layer: "images/\nDockerfile"}, "agent image layer spans lines"},
+		{"planning.agent", &AgentImage{Layer: "Dockerfile"}, "planning.agent image is the project's alone; name the layer under agent.image"},
+	} {
+		got := strings.Join((&Agent{Image: c.layer}).problems(c.what), "; ")
+		if c.want == "" && got != "" || !strings.Contains(got, c.want) {
+			t.Errorf("%s %q: got %q, want %q", c.what, c.layer.Layer, got, c.want)
+		}
+	}
+}
+
+// S-0510: the image is written under the agent block, reads back as written,
+// and stays when flai agent set or clear rewrites the block without one.
+func TestWriteAgentKeepsTheImage(t *testing.T) {
+	path := filepath.Join(t.TempDir(), File)
+	orig := "version: 1\nname: Harbour\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"
+	if err := os.WriteFile(path, []byte(orig), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	image := &AgentImage{Layer: "images/agent/Dockerfile"}
+	for _, c := range []struct {
+		name  string
+		write *Agent
+		want  *Agent
+	}{
+		{"only an image", &Agent{Image: image}, &Agent{Image: image}},
+		{"an agent set without one", &Agent{Model: "claude-opus-5-5"}, &Agent{Model: "claude-opus-5-5", Image: image}},
+		{"the agent cleared", nil, &Agent{Image: image}},
+		{"another image", &Agent{Harness: "claude-code", Image: &AgentImage{Layer: "Dockerfile"}}, &Agent{Harness: "claude-code", Image: &AgentImage{Layer: "Dockerfile"}}},
+	} {
+		if err := WriteAgent(path, c.write); err != nil {
+			t.Fatalf("%s: %v", c.name, err)
+		}
+		m, err := Load(path)
+		data, _ := os.ReadFile(path)
+		if err != nil || !m.Agent.Same(c.want) || strings.Count(string(data), "image:") != 1 {
+			t.Errorf("%s: read back %+v, %v, from:\n%s", c.name, m.Agent, err, data)
+		}
+	}
+	if err := WriteAgent(path, &Agent{Image: &AgentImage{Layer: "/abs/Dockerfile"}}); err == nil {
+		t.Error("an invalid image was written")
+	}
+}

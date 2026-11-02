@@ -300,7 +300,7 @@ func TestCloneSharesNothing(t *testing.T) {
 	it := &Item{
 		ID: "S-0001", Transitions: []Transition{{To: Ready}}, Blocked: []Block{{Reason: "r"}},
 		Tags: []string{"t"}, Touches: []string{"p"}, Topics: []string{"x"}, After: []string{"S-0002"},
-		Agent:   &manifest.Agent{Model: "m", Config: map[string]string{"k": "v"}, Roles: map[string]manifest.Role{"verify": {Model: "s", Config: map[string]string{"k": "v"}}}},
+		Agent:   &manifest.Agent{Model: "m", Config: map[string]string{"k": "v"}, Roles: map[string]manifest.Role{"verify": {Model: "s", Config: map[string]string{"k": "v"}}}, Image: &manifest.AgentImage{Layer: "Dockerfile"}},
 		Usage:   &usage.Usage{Models: []usage.Model{{Model: "m"}}, Strategic: []usage.Strategic{{Kind: "planner", Models: []usage.Model{{Model: "m"}}}}, Turns: []usage.TurnDay{{Day: "2026-10-04", Work: 1}}},
 		Unknown: []Field{{Name: "hold", Raw: "hold: x\n"}},
 		CostOfDelay: &CostOfDelay{

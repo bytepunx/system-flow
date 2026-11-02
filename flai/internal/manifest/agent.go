@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"maps"
 	"os"
+	"path"
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/goccy/go-yaml"
 )
 
 // Agent is who works a story (S-0103, E-0008): the harness that runs it (a
@@ -21,14 +24,28 @@ import (
 // explore and verify, by role name, each a harness, a model, and config of
 // its own; the fields above are the story's own. Provider names the host's
 // provider the model's calls go to (ADR-0129); empty leaves the harness's
-// own default.
+// own default. Image is the project's own image for its agents (S-0510): it
+// belongs to the project's agent alone, and With never carries it into a
+// story's agent or a strategic role's.
 type Agent struct {
 	Harness  string            `yaml:"harness,omitempty" json:"harness,omitempty"`
 	Model    string            `yaml:"model,omitempty" json:"model,omitempty"`
 	Provider string            `yaml:"provider,omitempty" json:"provider,omitempty"`
 	Config   map[string]string `yaml:"config,omitempty" json:"config,omitempty"`
 	Roles    map[string]Role   `yaml:"roles,omitempty" json:"roles,omitempty"`
+	Image    *AgentImage       `yaml:"image,omitempty" json:"image,omitempty"`
 }
+
+// AgentImage is the project's say about the image its agents run in
+// (S-0510, ADR-0203's one layer a project may add): Layer is a Dockerfile,
+// relative to the repository root, built over the harness's image with the
+// tools the project's test tiers need.
+type AgentImage struct {
+	Layer string `yaml:"layer,omitempty" json:"layer,omitempty"`
+}
+
+// exampleLayer is the Dockerfile a problem with agent.image.layer suggests.
+const exampleLayer = "images/agent/Dockerfile"
 
 // Role is the agent for one role of a story's work other than the story's
 // own: what a sub-agent in that role runs (S-0189).
@@ -54,7 +71,7 @@ var (
 
 // IsZero reports whether nothing is set.
 func (a *Agent) IsZero() bool {
-	return a == nil || a.Harness == "" && a.Model == "" && a.Provider == "" && len(a.Config) == 0 && len(a.Roles) == 0
+	return a == nil || a.Harness == "" && a.Model == "" && a.Provider == "" && len(a.Config) == 0 && len(a.Roles) == 0 && a.Image == nil
 }
 
 // ConfigKeys are the role's config keys in order.
@@ -105,7 +122,29 @@ func (a *Agent) problems(what string) []string {
 			errs = append(errs, validate(what+" role "+n, r.Harness, r.Model, r.Config)...)
 		}
 	}
-	return errs
+	return append(errs, a.Image.problems(what)...)
+}
+
+// problems are what is wrong with the image under the block what: an image
+// only the project's agent names, which names a layer that is a clean path
+// inside the repository on one line.
+func (i *AgentImage) problems(what string) []string {
+	switch {
+	case i == nil:
+		return nil
+	case what != "agent":
+		return []string{fmt.Sprintf("%s image is the project's alone; name the layer under agent.image in %s, or leave it out here", what, File)}
+	case i.Layer == "":
+		return []string{fmt.Sprintf("%s image sets nothing; name a Dockerfile with layer, such as %s, or leave image out", what, exampleLayer)}
+	case strings.ContainsAny(i.Layer, "\n\r"):
+		return []string{fmt.Sprintf("%s image layer spans lines; a path is one line", what)}
+	case strings.Contains(i.Layer, `\`):
+		return []string{fmt.Sprintf("%s image layer %q is not a clean path; write it with forward slashes, such as %s", what, i.Layer, exampleLayer)}
+	}
+	if r := repoPathProblem(i.Layer, "a Dockerfile", exampleLayer, path.Clean(i.Layer)); r != "" {
+		return []string{fmt.Sprintf("%s image layer %q %s", what, i.Layer, r)}
+	}
+	return nil
 }
 
 func validate(what, harness, model string, config map[string]string) []string {
@@ -133,7 +172,7 @@ func (a *Agent) Same(b *Agent) bool {
 	if a.IsZero() || b.IsZero() {
 		return a.IsZero() && b.IsZero()
 	}
-	if a.Harness != b.Harness || a.Model != b.Model || a.Provider != b.Provider || !sameConfig(a.Config, b.Config) || len(a.Roles) != len(b.Roles) {
+	if a.Harness != b.Harness || a.Model != b.Model || a.Provider != b.Provider || !sameConfig(a.Config, b.Config) || len(a.Roles) != len(b.Roles) || !sameImage(a.Image, b.Image) {
 		return false
 	}
 	for n, r := range a.Roles {
@@ -143,6 +182,13 @@ func (a *Agent) Same(b *Agent) bool {
 		}
 	}
 	return true
+}
+
+func sameImage(a, b *AgentImage) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return *a == *b
 }
 
 func sameConfig(a, b map[string]string) bool {
@@ -170,6 +216,10 @@ func (a *Agent) Clone() *Agent {
 			r.Config = maps.Clone(r.Config)
 			c.Roles[n] = r
 		}
+	}
+	if a.Image != nil {
+		image := *a.Image
+		c.Image = &image
 	}
 	return &c
 }
@@ -201,7 +251,8 @@ func (a *Agent) ConfigKeys() []string {
 
 // With is a with over's harness, model, and provider where over sets them,
 // and their configs merged key by key, over's winning; each role is merged
-// the same way, role by role. Nil when the result is empty.
+// the same way, role by role. Neither side's image is carried: it is the
+// project's alone. Nil when the result is empty.
 func (a *Agent) With(over *Agent) *Agent {
 	out := &Agent{}
 	for _, x := range []*Agent{a, over} {
@@ -345,13 +396,30 @@ func ParseRoles(harnesses, models, configs []string) (map[string]Role, error) {
 
 // WriteAgent rewrites the top-level agent block of the manifest at path, or
 // removes it when a is empty, leaving every other line as it was: flai owns
-// this key, and the rest of the file is the operator's.
+// this key, and the rest of the file is the operator's. An image a does not
+// name is kept as the file names it, since setting or clearing the agent that
+// works the stories leaves the project's image alone (S-0510).
 func WriteAgent(path string, a *Agent) error {
-	if err := a.Validate(); err != nil {
-		return err
-	}
 	data, err := os.ReadFile(path)
 	if err != nil {
+		return err
+	}
+	if a == nil || a.Image == nil {
+		var was struct {
+			Agent *Agent `yaml:"agent"`
+		}
+		if err := yaml.Unmarshal(data, &was); err != nil {
+			return fmt.Errorf("read the agent image %s names: %w; fix its YAML by hand, then run this again", path, err)
+		}
+		if was.Agent != nil && was.Agent.Image != nil {
+			a = a.Clone()
+			if a == nil {
+				a = &Agent{}
+			}
+			a.Image = was.Agent.Image
+		}
+	}
+	if err := a.Validate(); err != nil {
 		return err
 	}
 	lines := strings.Split(strings.TrimRight(string(data), "\n"), "\n")
@@ -388,6 +456,12 @@ func AgentBlock(a *Agent, indent string) string {
 			r := a.Roles[n]
 			fmt.Fprintf(&b, "%s    %s:\n", indent, n)
 			fields(&b, indent+"      ", r.Harness, r.Model, "", r.Config)
+		}
+	}
+	if a.Image != nil {
+		fmt.Fprintf(&b, "%s  image:\n", indent)
+		if a.Image.Layer != "" {
+			fmt.Fprintf(&b, "%s    layer: %s\n", indent, yamlScalar(a.Image.Layer))
 		}
 	}
 	return b.String()
