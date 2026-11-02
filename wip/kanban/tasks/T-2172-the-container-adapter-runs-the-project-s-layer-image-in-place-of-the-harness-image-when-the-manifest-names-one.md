@@ -3,16 +3,37 @@ id: T-2172
 type: task
 nature: feature
 title: The container adapter runs the project's layer image in place of the harness image when the manifest names one
-status: backlog
+status: done
 parent: S-0510
 owner: alex
 created: 2026-10-26T04:51:02Z
-updated: 2026-10-26T04:51:02Z
-transitions: []
+updated: 2026-11-02T18:46:40Z
+transitions:
+  - to: ready
+    at: 2026-11-02T18:33:48Z
+    by: agent-S-0510
+  - to: in-progress
+    at: 2026-11-02T18:33:49Z
+    by: agent-S-0510
+  - to: done
+    at: 2026-11-02T18:46:40Z
+    by: agent-S-0510
 stream: S-0510
 tags: [cli, docker]
-touches: [flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go]
+touches: [flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go]
 after: [T-2164]
+usage:
+  source: log
+  seconds: 749
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 56
+      output: 293
+      cache_read: 2399097
+      cache_write: 95292
+      cost: 0.8832
 ---
 # T-2172 The container adapter runs the project's layer image in place of the harness image when the manifest names one
 

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 597
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 241
-      cache_read: 1838544
-      cache_write: 70416
-      cost: 0.6758
+      input: 26
+      output: 8664
+      cache_read: 1881886
+      cache_write: 56016
+      cost: 0.9185
 ---
 # T-2219 storygit.GitMounts gives a story worktree's two git mounts, the common dir read-only and its registration read-write, with a real-git test that reproduces I-0215
 

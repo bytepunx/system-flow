@@ -3,11 +3,11 @@ id: T-2165
 type: task
 nature: feature
 title: scripts/agent-image.sh --layer builds a project's layer over the harness image, make agent-images builds it when named, and this repository's layer carries Go, golangci-lint, Node, and pnpm
-status: in-progress
+status: done
 parent: S-0510
 owner: alex
 created: 2026-10-26T04:49:45Z
-updated: 2026-11-02T18:18:31Z
+updated: 2026-11-02T18:33:08Z
 transitions:
   - to: ready
     at: 2026-11-02T18:18:30Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-02T18:18:31Z
     by: agent-S-0510
+  - to: done
+    at: 2026-11-02T18:33:08Z
+    by: agent-S-0510
 stream: S-0510
 tags: [cli, docker]
 touches: [scripts/agent-image.sh, Makefile, flai/images/system-flow/Dockerfile, system-flow.yaml, scripts/README.md, scripts/agent-image-test.sh]
+usage:
+  source: log
+  seconds: 877
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 25
+      output: 179
+      cache_read: 3475504
+      cache_write: 34065
+      cost: 1.2425
 ---
 # T-2165 scripts/agent-image.sh --layer builds a project's layer over the harness image, make agent-images builds it when named, and this repository's layer carries Go, golangci-lint, Node, and pnpm
 

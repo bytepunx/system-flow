@@ -24,16 +24,16 @@ touches: [scripts/agent-container.sh, docs/operators/runbooks/agent-container.md
 after: [T-2218]
 usage:
   source: log
-  seconds: 595
+  seconds: 614
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 54
-      output: 266
-      cache_read: 2372975
-      cache_write: 78134
-      cost: 0.8677
+      input: 47
+      output: 15358
+      cache_read: 3335825
+      cache_write: 99293
+      cost: 1.6281
 ---
 # T-2220 scripts/agent-container.sh mounts the main checkout's .git read-only and the story's registration read-write by default, and FLAI_AGENT_GIT_MOUNT goes
 

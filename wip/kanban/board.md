@@ -8,7 +8,6 @@ wip_limits:
   review: 5
 order:
   - S-0554
-  - S-0425
   - S-0406
   - S-0407
   - S-0408
@@ -17,10 +16,6 @@ order:
   - S-0411
   - S-0412
   - S-0520
-placed:
-  S-0425:
-    by: flaiover
-    at: 2026-10-31T07:25:02Z
 ---
 
 # Board

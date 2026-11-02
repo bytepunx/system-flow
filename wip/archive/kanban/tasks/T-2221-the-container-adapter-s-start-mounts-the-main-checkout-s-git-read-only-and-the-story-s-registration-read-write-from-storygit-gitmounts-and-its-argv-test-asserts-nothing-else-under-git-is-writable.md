@@ -3,11 +3,11 @@ id: T-2221
 type: task
 nature: remediation
 title: The container adapter's Start mounts the main checkout's .git read-only and the story's registration read-write from storygit.GitMounts, and its argv test asserts nothing else under .git is writable
-status: in-progress
+status: done
 parent: S-0517
 owner: alex
 created: 2026-10-28T13:20:55Z
-updated: 2026-11-02T18:28:23Z
+updated: 2026-11-02T18:39:10Z
 transitions:
   - to: ready
     at: 2026-11-02T18:28:22Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-02T18:28:23Z
     by: agent-S-0517
+  - to: done
+    at: 2026-11-02T18:39:09Z
+    by: agent-S-0517
 stream: S-0517
 tags: [cli, docker]
-touches: [flai/internal/harness/container.go, flai/internal/harness/container_test.go]
+touches: [flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/serve/agents.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go]
 after: [T-2219]
+usage:
+  source: log
+  seconds: 646
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 50
+      output: 16606
+      cache_read: 3606948
+      cache_write: 107363
+      cost: 1.7605
 ---
 # T-2221 The container adapter's Start mounts the main checkout's .git read-only and the story's registration read-write from storygit.GitMounts, and its argv test asserts nothing else under .git is writable
 

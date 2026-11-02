@@ -3,16 +3,37 @@ id: T-2171
 type: task
 nature: feature
 title: flai check reports agent.image when the manifest names a layer that is not built or whose Dockerfile is missing, and notes when docker is not on PATH
-status: backlog
+status: done
 parent: S-0510
 owner: alex
 created: 2026-10-26T04:50:56Z
-updated: 2026-10-26T04:50:56Z
-transitions: []
+updated: 2026-11-02T18:46:18Z
+transitions:
+  - to: ready
+    at: 2026-11-02T18:33:45Z
+    by: agent-S-0510
+  - to: in-progress
+    at: 2026-11-02T18:33:46Z
+    by: agent-S-0510
+  - to: done
+    at: 2026-11-02T18:46:18Z
+    by: agent-S-0510
 stream: S-0510
 tags: [cli, docker]
-touches: [flai/internal/check/check.go, flai/internal/check/image.go, flai/internal/check/image_test.go]
+touches: [flai/internal/check/check.go, flai/internal/check/image.go, flai/internal/check/image_test.go, flai/internal/check/story.go, flai/cmd/check.go, flai/cmd/check_stats_test.go, flai/internal/verify/story.go]
 after: [T-2164]
+usage:
+  source: log
+  seconds: 752
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 72
+      output: 364
+      cache_read: 2825431
+      cache_write: 89796
+      cost: 1.0322
 ---
 # T-2171 flai check reports agent.image when the manifest names a layer that is not built or whose Dockerfile is missing, and notes when docker is not on PATH
 

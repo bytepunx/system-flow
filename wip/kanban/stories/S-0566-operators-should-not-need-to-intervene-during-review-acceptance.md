@@ -6,7 +6,7 @@ title: Operators should not need to intervene during review acceptance
 status: in-progress
 owner: alex
 created: 2026-11-02T18:21:16Z
-updated: 2026-11-02T18:26:18Z
+updated: 2026-11-02T18:36:36Z
 transitions:
   - to: ready
     at: 2026-11-02T18:21:38Z
@@ -15,7 +15,7 @@ transitions:
     at: 2026-11-02T18:26:18Z
     by: agent-S-0566
 tags: [cli]
-touches: [flai/cmd]
+touches: [flai/cmd, design/adrs/0248-every-acceptance-commits-the-main-checkout-s-uncommitted-files-under-wip-design.md, design/adrs/README.md]
 agent:
   harness: claude-code
   model: claude-fable-5-1
@@ -41,5 +41,9 @@ flai exists to automate the development process. It should automatically resolve
 - [ ] files in shared folders like wip and design should always get checked in on review acceptance - there doesn’t need to be a checkbox/permission request since flai can do this directly
 
 ## Tasks
+- T-2436 flai accept sends a story whose rebase it cannot settle back to its agent, whoever accepts
+- T-2437 Every acceptance commits the main checkout's uncommitted files under wip, design, and the shared paths, and leaves the rest as they are
+- T-2438 The dashboard's acceptance drops the checkbox for uncommitted files, shows the shared set it commits, and shows a send back as such
+- T-2439 The design and the user guides say every acceptance commits the shared set, leaves the rest, and sends an unsettled rebase back to the agent
 
 ## Notes

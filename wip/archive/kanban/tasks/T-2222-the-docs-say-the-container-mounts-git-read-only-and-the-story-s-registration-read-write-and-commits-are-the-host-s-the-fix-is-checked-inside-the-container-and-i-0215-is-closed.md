@@ -3,16 +3,37 @@ id: T-2222
 type: task
 nature: remediation
 title: The docs say the container mounts .git read-only and the story's registration read-write and commits are the host's, the fix is checked inside the container, and I-0215 is closed
-status: backlog
+status: done
 parent: S-0517
 owner: alex
 created: 2026-10-28T13:21:41Z
-updated: 2026-10-28T13:21:41Z
-transitions: []
+updated: 2026-11-02T18:43:00Z
+transitions:
+  - to: ready
+    at: 2026-11-02T18:40:02Z
+    by: agent-S-0517
+  - to: in-progress
+    at: 2026-11-02T18:40:04Z
+    by: agent-S-0517
+  - to: done
+    at: 2026-11-02T18:43:00Z
+    by: agent-S-0517
 stream: S-0517
 tags: [cli, docker, docs]
-touches: [docs/users/flai.md, design/system/agent-adapters.md, design/tech/docker.md, design/issues/I-0215-a-story-s-worktree-mounted-alone-into-a-container-is-not-a-git-repository-since-its-git-file-names-the-main-checkout-s-git-worktrees-folder.md, design/issues/summary.md]
+touches: [docs/users/flai.md, design/system/agent-adapters.md, design/tech/docker.md, design/issues/I-0215-a-story-s-worktree-mounted-alone-into-a-container-is-not-a-git-repository-since-its-git-file-names-the-main-checkout-s-git-worktrees-folder.md, design/issues/summary.md, design/system/flai-cli.md, docs/operators/runbooks/agent-container.md]
 after: [T-2221, T-2220]
+usage:
+  source: log
+  seconds: 176
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 40
+      output: 13251
+      cache_read: 2878044
+      cache_write: 85667
+      cost: 1.4047
 ---
 # T-2222 The docs say the container mounts .git read-only and the story's registration read-write and commits are the host's, the fix is checked inside the container, and I-0215 is closed
 

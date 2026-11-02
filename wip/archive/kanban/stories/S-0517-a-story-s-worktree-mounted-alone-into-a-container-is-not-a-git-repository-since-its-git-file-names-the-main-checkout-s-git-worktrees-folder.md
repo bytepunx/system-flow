@@ -3,10 +3,10 @@ id: S-0517
 type: story
 nature: remediation
 title: A story's worktree mounted alone into a container is not a git repository, since its .git file names the main checkout's .git/worktrees folder
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-28T12:52:47Z
-updated: 2026-11-02T18:13:54Z
+updated: 2026-11-02T18:54:13Z
 transitions:
   - to: ready
     at: 2026-11-02T18:12:39Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-11-02T18:13:54Z
     by: agent-S-0517
+  - to: review
+    at: 2026-11-02T18:52:15Z
+    by: agent-S-0517
+  - to: done
+    at: 2026-11-02T18:54:13Z
+    by: orchestrator
 tags: [cli, docker]
 topics: [harness, docker]
-touches: [design/adrs, design/adrs/README.md, flai/internal/storygit/mounts.go, flai/internal/storygit/mounts_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, scripts/agent-container.sh, scripts/README.md, docs/operators/runbooks/agent-container.md, docs/users/flai.md, design/system/agent-adapters.md, design/tech/docker.md, design/issues/I-0215-a-story-s-worktree-mounted-alone-into-a-container-is-not-a-git-repository-since-its-git-file-names-the-main-checkout-s-git-worktrees-folder.md, design/issues/summary.md]
+touches: [design/adrs, design/adrs/README.md, flai/internal/storygit/mounts.go, flai/internal/storygit/mounts_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, scripts/agent-container.sh, scripts/README.md, docs/operators/runbooks/agent-container.md, docs/users/flai.md, design/system/agent-adapters.md, design/tech/docker.md, design/issues/I-0215-a-story-s-worktree-mounted-alone-into-a-container-is-not-a-git-repository-since-its-git-file-names-the-main-checkout-s-git-worktrees-folder.md, design/issues/summary.md, flai/internal/serve/agents.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, design/system/flai-cli.md]
 after: [S-0508]
 agent:
   harness: claude-code
@@ -25,20 +31,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 840
-  estimated: true
-  priced_by: estimate
+  seconds: 2314
+  priced_by: harness
   turns:
     - day: 2026-11-02
-      hand_edits: 1
-      work: 24
+      ceremony: 3
+      hand_edits: 2
+      work: 57
   models:
     - model: claude-opus-5-5
-      input: 158
-      output: 824
-      cache_read: 7781689
-      cache_write: 481692
-      cost: 2.9253
+      input: 336
+      output: 110731
+      cache_read: 24050988
+      cache_write: 715895
+      cost: 11.7387
   strategic:
     - kind: orchestrator
       seconds: 407
@@ -75,8 +81,8 @@ finalized:
 This story remediates [I-0215](../../../design/issues/I-0215-a-story-s-worktree-mounted-alone-into-a-container-is-not-a-git-repository-since-its-git-file-names-the-main-checkout-s-git-worktrees-folder.md), "A story's worktree mounted alone into a container is not a git repository, since its .git file names the main checkout's .git/worktrees folder". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0215 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0215 is closed with `flai issue close I-0215 --reason` saying what fixed it
+- [x] The cause I-0215 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0215 is closed with `flai issue close I-0215 --reason` saying what fixed it
 
 ## Tasks
 - T-2218 An ADR records the remediation proposed from I-0215's instance: the container mounts the main checkout's .git read-only and the story's worktree registration read-write, and commits stay the host's
@@ -111,3 +117,12 @@ Touches. The story declared none, so `flai touches suggest S-0517` ran on four s
 Forecast. `flai forecast S-0517` gives 4m (median 119 s per unit of size over 13 done remediation stories on claude-opus-5-5 in the small band; size 2: 2 criteria, 0 touches) and delivery 2026-10-29T01:30Z, 30th in the pull order. Raised to 1h15m: the size flai measured had no touches, and with 14 the band's median alone gives about 30m; the story writes an ADR, a helper with a real-git test that reproduces the issue, changes the adapter's argv and its test and the script, checks the fix by hand inside `flai-agent-claude-code:local` (`scripts/agent-container.sh S-nnnn -- git status`, which needs the image built), and changes four documents. The delivery written is flai's play-out start, 2026-10-29T01:30Z less 4m, plus 1h15m: 2026-10-29T02:41Z.
 
 Cost of delay. `flai cod S-0517` gives 37.50 USD a week: 15m of time lost per 168h cycle (the input flai set from I-0215) at 150 USD an hour, one cycle a week. Written as flai gives it: the issue has one instance, and nothing argues for another input.
+
+### Accepted by the orchestrator
+
+- Verified: e97c245921cdad7271aec58d034fdd170c72788e
+- At: 2026-11-02T18:54:13Z
+
+Verdict: pass. Both criteria are met at e97c245, every changed file is under the story's touches, and flai verify passed every step there.
+- 1: flai/internal/storygit/mounts.go, flai/internal/storygit/mounts_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/serve/agents.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, scripts/agent-container.sh, design/adrs/0246-a-container-that-runs-a-story-s-agent-mounts-the-main-checkout-s-git-read-only.md
+- 2: design/issues/I-0215-a-story-s-worktree-mounted-alone-into-a-container-is-not-a-git-repository-since-its-git-file-names-the-main-checkout-s-git-worktrees-folder.md, design/issues/summary.md

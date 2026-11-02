@@ -23,7 +23,7 @@ tags: [cli, docker]
 touches: [design/adrs/README.md, design/system/strategic-agents.md, design/adrs/0247-a-strategic-agent-s-container-mounts-the-main-checkout-read-write-at-its-host.md]
 usage:
   source: log
-  seconds: 123
+  seconds: 129
   estimated: true
   priced_by: estimate
   models:
@@ -32,7 +32,7 @@ usage:
       output: 144
       cache_read: 3675283
       cache_write: 24734
-      cost: 1.309
+      cost: 1.31
 ---
 # T-2158 An ADR settles what a strategic agent's container mounts and the rule for its writes
 

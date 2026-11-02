@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:44:48Z
-updated: 2026-11-02T18:20:41Z
+updated: 2026-11-02T18:53:30Z
 transitions:
   - to: ready
     at: 2026-11-02T18:12:39Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0509
 tags: [cli, docker]
 topics: [harness, docker, planning]
-touches: [flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/pilot/run.go, flai/internal/pilot/run_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/activity.go, flai/internal/serve/claudecheck.go, design/adrs/README.md, design/adrs, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, design/issues/summary.md, design/issues, flai/internal/serve/container.go, flai/internal/serve/container_test.go]
+touches: [flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/pilot/run.go, flai/internal/pilot/run_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/activity.go, flai/internal/serve/claudecheck.go, design/adrs/README.md, design/adrs, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, design/issues/summary.md, design/issues, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/orchestrate_hold.go]
 after: [S-0508]
 agent:
   harness: claude-code
@@ -26,21 +26,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 263
+  seconds: 1048
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-02
       ceremony: 1
       hand_edits: 1
-      work: 31
+      work: 37
   models:
     - model: claude-opus-5-5
-      input: 70
-      output: 369
-      cache_read: 7793285
-      cache_write: 304134
-      cost: 2.8647
+      input: 148
+      output: 835
+      cache_read: 12716334
+      cache_write: 452217
+      cost: 4.6624
   strategic:
     - kind: planner
       seconds: 190

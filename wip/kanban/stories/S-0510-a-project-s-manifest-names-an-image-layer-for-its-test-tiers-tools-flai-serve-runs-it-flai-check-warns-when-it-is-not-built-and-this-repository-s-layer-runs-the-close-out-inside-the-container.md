@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:46:53Z
-updated: 2026-11-02T18:16:07Z
+updated: 2026-11-02T18:50:42Z
 transitions:
   - to: ready
     at: 2026-11-02T18:12:39Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0510
 tags: [cli, docker]
 topics: [harness, docker, manifest]
-touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/check/check.go, flai/internal/check/image.go, flai/internal/check/image_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, scripts/agent-image.sh, Makefile, scripts/README.md, flai/images/system-flow/Dockerfile, system-flow.yaml, design/system/project-manifest.md, docs/operators/settings.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, docs/users/flai.md, docs/operators/index.md, docs/operators/runbooks/install.md, design/system/flai-cli.md, design/tech/docker.md, design/issues/summary.md, design/issues]
+touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/check/check.go, flai/internal/check/image.go, flai/internal/check/image_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, scripts/agent-image.sh, Makefile, scripts/README.md, flai/images/system-flow/Dockerfile, system-flow.yaml, design/system/project-manifest.md, docs/operators/settings.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, docs/users/flai.md, docs/operators/index.md, docs/operators/runbooks/install.md, design/system/flai-cli.md, design/tech/docker.md, design/issues/summary.md, design/issues, flai/internal/manifest/agent.go, flai/internal/manifest/agent_test.go, flai/internal/workitem/front-matter-fields.txt, flai/internal/workitem/store_test.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/cmd/check.go, flai/cmd/check_stats_test.go, flai/internal/check/story.go, flai/internal/verify/story.go]
 after: [S-0508]
 agent:
   harness: claude-code
@@ -25,9 +25,23 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1812
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-02
+      ceremony: 1
+      test_runs: 2
+      hand_edits: 1
+      work: 45
+  models:
+    - model: claude-opus-5-5
+      input: 326
+      output: 1833
+      cache_read: 20704016
+      cache_write: 636388
+      cost: 7.5558
   strategic:
     - kind: orchestrator
       seconds: 215
@@ -61,9 +75,9 @@ ADR-0203's limitation: only the worktree's files are the container's to write, a
 
 ## Acceptance criteria
 
-- [ ] `agent.image.layer` in `system-flow.yaml` names a Dockerfile path relative to the repository root, read by `flai/internal/manifest`, documented in `design/system/project-manifest.md` and `docs/operators/settings.md`, and left as a comment in `template/root/system-flow.yaml.tmpl` with `template/CHANGELOG.md` saying so
+- [x] `agent.image.layer` in `system-flow.yaml` names a Dockerfile path relative to the repository root, read by `flai/internal/manifest`, documented in `design/system/project-manifest.md` and `docs/operators/settings.md`, and left as a comment in `template/root/system-flow.yaml.tmpl` with `template/CHANGELOG.md` saying so
 - [ ] `scripts/agent-image.sh --layer` builds the named Dockerfile with the harness image as its base argument and tags it `flai-agent-<project key>-<inner>:local`, `make agent-images` builds it after the two base images when the manifest names one, and the container adapter runs that image in place of the harness image for the project's agents when it is named
-- [ ] `flai check` reports `agent.image` when the manifest names a layer whose image is not built or whose Dockerfile does not exist, as a warning that names `make agent-images`, and stays silent when the manifest names none or `docker` is not on `PATH`, saying so as a note
+- [x] `flai check` reports `agent.image` when the manifest names a layer whose image is not built or whose Dockerfile does not exist, as a warning that names `make agent-images`, and stays silent when the manifest names none or `docker` is not on `PATH`, saying so as a note
 - [ ] `flai/images/system-flow/Dockerfile` carries Go at `flai/go.mod`'s version, golangci-lint v2 at the version `scripts/install-tools.sh` installs, Node 24, and pnpm, and `system-flow.yaml` names it, so that `scripts/flai.sh test` and `scripts/close-out.sh` run every tier the manifest's `tests` select inside the container
 - [ ] One story of this repository that changes Go is worked end to end by `flai serve` on `harness: container` with this layer, its close-out passing inside the container, and each limitation met is an issue under `design/issues`
 - [ ] `docs/users/flai.md`, `docs/operators/index.md`, `docs/operators/runbooks/install.md`, `design/system/flai-cli.md`, and `design/tech/docker.md` describe the layer, how it is built, and what this repository's carries

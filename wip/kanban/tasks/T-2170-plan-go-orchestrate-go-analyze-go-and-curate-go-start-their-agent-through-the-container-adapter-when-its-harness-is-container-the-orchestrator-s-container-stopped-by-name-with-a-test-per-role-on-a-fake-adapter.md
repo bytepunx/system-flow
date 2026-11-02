@@ -3,15 +3,21 @@ id: T-2170
 type: task
 nature: feature
 title: plan.go, orchestrate.go, analyze.go, and curate.go start their agent through the container adapter when its harness is container, the orchestrator's container stopped by name, with a test per role on a fake adapter
-status: backlog
+status: in-progress
 parent: S-0509
 owner: alex
 created: 2026-10-26T04:50:48Z
-updated: 2026-11-02T18:18:15Z
-transitions: []
+updated: 2026-11-02T18:53:29Z
+transitions:
+  - to: ready
+    at: 2026-11-02T18:36:21Z
+    by: agent-S-0509
+  - to: in-progress
+    at: 2026-11-02T18:36:22Z
+    by: agent-S-0509
 stream: S-0509
 tags: [cli, docker]
-touches: [flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/activity.go, flai/internal/serve/claudecheck.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go]
+touches: [flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/activity.go, flai/internal/serve/claudecheck.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/orchestrate_hold.go]
 after: [T-2163]
 ---
 # T-2170 plan.go, orchestrate.go, analyze.go, and curate.go start their agent through the container adapter when its harness is container, the orchestrator's container stopped by name, with a test per role on a fake adapter

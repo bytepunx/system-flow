@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 155
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 34
-      output: 150
-      cache_read: 1431955
-      cache_write: 76995
-      cost: 0.5342
+      input: 21
+      output: 6849
+      cache_read: 1487555
+      cache_write: 44278
+      cost: 0.726
 ---
 # T-2218 An ADR records the remediation proposed from I-0215's instance: the container mounts the main checkout's .git read-only and the story's worktree registration read-write, and commits stay the host's
 

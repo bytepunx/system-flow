@@ -3,15 +3,18 @@ id: S-0425
 type: story
 nature: feature
 title: metrics.md generalizes strategic usage per kind to usage per role by an ADR, so a project's own role is charged on its items, reported by flai stats, and charted as the built-in roles are
-status: ready
+status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:41:28Z
-updated: 2026-11-02T18:29:41Z
+updated: 2026-11-02T18:53:29Z
 transitions:
   - to: ready
     at: 2026-10-30T00:05:56Z
     by: alex
+  - to: in-progress
+    at: 2026-11-02T18:52:28Z
+    by: agent-S-0425
 tags: [cli, dashboard]
 topics: [cli, dashboard, planning, orchestration, template]
 touches: [design/adrs, design/adrs/README.md, design/system/flaiover-dashboard.md, design/system/metrics.md, design/system/work-hierarchy.md, design/system/strategic-agents.md, design/system/continuous-improvement.md, design/system/flai-cli.md, design/tech/charts.md, docs/users/flai.md, docs/users/flaiover.md, design/workflows/roles/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/analyzer.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/analyzer.md, template/CHANGELOG.md, flai/cmd/activity.go, flai/cmd/activity_test.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/internal/issues/usage.go, flai/internal/issues/usage_test.go, flai/internal/mcpserver/activity.go, flai/internal/mcpserver/activity_test.go, flai/internal/metrics/strategic.go, flai/internal/metrics/strategic_test.go, flai/internal/metrics/usage.go, flai/internal/metrics/usage_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, flai/internal/statsread/statsread.go, flai/internal/usage/usage.go, flai/internal/usage/usage_test.go, flai/internal/workitem/usage.go, flai/internal/workitem/usage_test.go, flaiover/src/lib/components/RolePage.svelte, flaiover/src/lib/components/RolePage.svelte.test.ts, flaiover/src/lib/strategic.test.ts, flaiover/src/lib/strategic.ts, flaiover/src/lib/usage.test.ts, flaiover/src/lib/usage.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/viz/charts.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts"]
@@ -59,7 +62,7 @@ What a defined role spends counts as the built-in roles' spend does. An ADR gene
 ## Acceptance criteria
 
 - [ ] An ADR, refining ADR-0083, ADR-0095, and ADR-0100, defines strategic usage per role: the kinds are the roles a project defines, each charged by the rule its role file names (`item`, `named`, or `issues`), the planner's, the orchestrator's, and the analyzer's being the rules they have today; `design/system/metrics.md` § Strategic usage and § Strategic agents say the same.
-- [ ] A defined role's activity, logged at its run's end or through `activity_log`, is charged by its rule under its name in `usage.strategic` on the items or issues it reaches and every item above them, and what no item carries stays in its project strategic total.
+- [ ] A defined role's activity, logged at its run's end or through `activity_log`, is charged by its rule under its name in `usage.strategic` on the items or issues it reaches and every item above them, and what no item carries stays in its project strategic total, including a formula's role step, charged to the instance its run was started for.
 - [ ] `flai stats --json` reports `strategic` for every role a project defines, with its document's totals, `items`, `issues`, and `project`, and strategic use per day by role; the existing stats tests for the three kinds pass unchanged.
 - [ ] The dashboard's Strategic Cost and Strategic Use charts, and each role's page, draw a series per role from `flai stats`, shown by a component test with a fixture role.
 - [ ] `docs/users/flai.md`, `docs/users/flaiover.md`, and `design/system/flaiover-dashboard.md` § Views say that strategic usage is per role.

@@ -4,10 +4,10 @@ title: S-0425 is a complete draft, but its value is hand-worked while E-0024 has
 anchor:
   path: wip/kanban/stories/S-0425-metrics-md-generalizes-strategic-usage-per-kind-to-usage-per-role-by-an-adr-so-a-project-s-own-role-is-charged-on-its-items-reported-by-flai-stats-and-charted-as-the-built-in-roles-are.md
   item: S-0425
-status: open
-participants: [orchestrator]
+status: answered
+participants: [orchestrator, agent-S-0425]
 created: 2026-10-29T00:13:34Z
-updated: 2026-10-29T00:13:34Z
+updated: 2026-11-02T18:53:48Z
 ---
 
 # TH-0725 S-0425 is a complete draft, but its value is hand-worked while E-0024 has no cost of delay input (as TH-0587)
@@ -25,3 +25,6 @@ On wip/kanban/stories/S-0425-metrics-md-generalizes-strategic-usage-per-kind-to-
 - `flai promote --drafts` lists S-0425 as complete, and its criteria, touches, and 1h30m forecast fit its plan.
 - Its value, 62.36 USD a week (by planner-S-0425, 2026-10-23T15:35:46Z), does not come from flai. `flai cod` refuses while E-0024 has no input, so the planner worked out the story's share by hand. TH-0587 holds S-0414 to S-0422 back for the same reason. This thread covers S-0425, which TH-0587 does not name.
 - S-0425 also waits on S-0423 and S-0424 (`after`), which you moved back to the backlog. Finalizing it now would not get it pulled any sooner.
+
+### 2026-11-02T18:53:48Z agent-S-0425
+Overtaken: the operator finalized S-0425 and moved it to ready on 2026-10-30, and it is in progress now. Its cost of delay stays the planner's 62.36 USD a week. Putting an input on E-0024 is still TH-0587's question and needs nothing from S-0425. Nothing is owed on this thread from the story's side.
