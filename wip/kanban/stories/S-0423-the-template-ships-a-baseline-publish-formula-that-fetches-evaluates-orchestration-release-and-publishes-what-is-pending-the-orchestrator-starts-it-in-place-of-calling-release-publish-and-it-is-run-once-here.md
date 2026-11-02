@@ -3,11 +3,11 @@ id: S-0423
 type: story
 nature: improvement
 title: The template ships a baseline publish formula that fetches, evaluates orchestration.release, and publishes what is pending, the orchestrator starts it in place of calling release_publish, and it is run once here
-status: ready
+status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:41:11Z
-updated: 2026-11-02T04:07:14Z
+updated: 2026-11-02T04:10:48Z
 transitions:
   - to: ready
     at: 2026-10-28T13:11:59Z
@@ -18,6 +18,9 @@ transitions:
   - to: ready
     at: 2026-11-01T23:43:57Z
     by: alex
+  - to: in-progress
+    at: 2026-11-02T04:10:48Z
+    by: agent-S-0423
 tags: [cli, template]
 topics: [cli, orchestration, template, conventions]
 touches: [design/adrs, design/adrs/README.md, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, template/template.yaml, template/CHANGELOG.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/release.go, flai/cmd/release_evaluate_test.go, flai/cmd/release_push_action_test.go, flai/cmd/orchestrate_permissions_test.go, flai/cmd/formula.go, flai/cmd/formula_test.go, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/check/check.go, flai/internal/check/formulas_test.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/mcpserver/orchestrate.go, flai/internal/mcpserver/orchestrate_test.go]

@@ -54,7 +54,7 @@ claims:
     - design/issues
     - template/CHANGELOG.md
 flai:
-  minimum: 1.48.0
+  minimum: 1.79.0
   command: scripts/flai.sh
 tests:
   - name: gofmt
