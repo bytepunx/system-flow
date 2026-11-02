@@ -317,8 +317,17 @@ func TestPrimeStoryDesign(t *testing.T) {
 	}
 
 	out, _, code = runIn(t, root, "prime", "--story", "S-0001", "--budget", "1")
-	if code != 0 || !strings.Contains(out, "; budget 1 bytes\nover budget: the conventions alone exceed it") || strings.Contains(out, "reason:") {
+	if code != 0 || !strings.Contains(out, "; budget 1 bytes\nover budget: the conventions alone exceed it") {
 		t.Errorf("--budget 1 (%d):\n%s", code, out)
+	}
+	// TH-0805: what is named and every brief are kept, and nothing is ranked.
+	out, _, code = runIn(t, root, "prime", "--story", "S-0001", "--budget", "1", "--json")
+	v.Items = nil
+	if err := json.Unmarshal([]byte(out), &v); code != 0 || err != nil {
+		t.Fatalf("--budget 1 --json (%d): %v %s", code, err, out)
+	}
+	if len(v.Items) != 3 || v.Items[0].Step != "named" || v.Items[1].Step != "briefed" || v.Items[2].ID != "ADR-0002" {
+		t.Errorf("--budget 1 items: %+v", v.Items)
 	}
 	mf := filepath.Join(root, "system-flow.yaml")
 	data, err = os.ReadFile(mf)

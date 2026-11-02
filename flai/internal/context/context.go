@@ -182,31 +182,24 @@ func Design(docs []*Doc, storyTopics []string, sources []Source, briefOver int, 
 
 // AddDesign puts what a selection chose into the pack, fills what the
 // budget leaves with the sections that rank highest against query, and adds
-// the catalog. When the conventions alone exceed the budget the pack is
-// the conventions and a catalog of every document; when the conventions and
-// what the story names exceed it, everything named is still loaded; when
-// the briefs take it over, every brief is still printed (TH-0032). In the
-// last two nothing is ranked. Which part took it over is in Exceeded.
+// the catalog. Whichever part takes it over, the conventions, what the
+// story names, or the briefs, everything named is still loaded and every
+// brief still printed (TH-0032; ADR-0049 refined by TH-0805), and nothing
+// is ranked. Which part took it over is in Exceeded.
 func (p *Pack) AddDesign(s *Selection, query string) { p.addDesign(s, query, nil) }
 
 // addDesign is AddDesign with the digest step (ADR-0194) after the briefs
 // and before the ranked sections: the digest items, best first, as
 // digestFor gives them, loaded as addDigest loads them. Unlike the ranked
-// step, it runs when Exceeded is set too, within its share alone (TH-0624):
-// on a pack whose conventions exceed the budget, the digest items follow
-// the conventions.
+// step, it runs when Exceeded is set too, within its share alone (TH-0624).
 func (p *Pack) addDesign(s *Selection, query string, digest []Item) {
 	p.size()
 	if p.Size.Bytes > p.Budget {
 		p.Exceeded = ExceededConventions
-		p.Catalog.NotLoaded, p.Catalog.InPart = NewSelection(s.Docs).Catalog()
-		p.addDigest(digest, true)
-		p.size()
-		return
 	}
 	p.Items = s.loaded(StepNamed)
 	p.size()
-	if p.Size.Bytes > p.Budget {
+	if p.Exceeded == "" && p.Size.Bytes > p.Budget {
 		p.Exceeded = ExceededNamed
 	}
 	p.take(s, nil)
@@ -666,7 +659,7 @@ func (p *Pack) Header() string {
 	case p.subAgent() && p.Exceeded == ExceededConventions:
 		b.WriteString("over budget: the role's conventions and the story's goal alone exceed it, so no brief is printed; narrowing the conventions' roles or topics makes room (ADR-0059)\n")
 	case p.Exceeded == ExceededConventions:
-		b.WriteString("over budget: the conventions alone exceed it, so the pack is the conventions, the digest entries within their share, and a catalog; narrowing the conventions' topics makes room (ADR-0049)\n")
+		b.WriteString("over budget: the conventions alone exceed it, so nothing is ranked; everything named and every brief is kept, the digest entries load within their share, and narrowing the conventions' topics makes room (ADR-0049, TH-0805)\n")
 	case p.Exceeded == ExceededNamed && p.Item != "":
 		fmt.Fprintf(&b, "over budget: the conventions and what %s names exceed it, so nothing is ranked; the digest entries still load within their share (ADR-0049, ADR-0194)\n", p.Item)
 	case p.Exceeded == ExceededNamed:

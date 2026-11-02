@@ -1,6 +1,7 @@
 package context
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -166,12 +167,36 @@ func TestTheBriefsAreKeptWhenTheyTakeThePackOverTheBudget(t *testing.T) {
 	}
 }
 
+// TH-0805, I-0250: a pack whose conventions alone exceed the budget still
+// loads what is named and every brief, as one the briefs take over does
+// (TH-0032), and ranks nothing; it no longer drops to the conventions and a
+// catalog of every document.
 func TestTheHeaderSaysWhatAloneExceedsTheBudget(t *testing.T) {
-	p, _ := budgetPack(t, 1, []string{"cli"}, []Source{{ID: "S-0001", Path: "wip/kanban/stories/S-0001-x.md", Body: "ADR-0002"}}, "herons")
-	if p.Exceeded != ExceededConventions || len(p.Items) != 0 || len(p.Catalog.NotLoaded) != 17 {
-		t.Errorf("exceeded %q, %d items, catalog %d", p.Exceeded, len(p.Items), len(p.Catalog.NotLoaded))
+	p, s := budgetPack(t, 1, []string{"cli"}, []Source{{ID: "S-0001", Path: "wip/kanban/stories/S-0001-x.md", Body: "ADR-0002"}}, "herons")
+	var want, named, briefed []string
+	for _, it := range s.Items() {
+		if it.Step != StepRanked {
+			want = append(want, it.Step+" "+it.Path)
+		}
 	}
-	if !strings.Contains(p.Header(), "over budget: the conventions alone exceed it") {
+	for _, it := range p.Items {
+		switch it.Step {
+		case StepNamed:
+			named = append(named, it.Path)
+		case StepBriefed:
+			briefed = append(briefed, it.Path)
+		}
+	}
+	if p.Exceeded != ExceededConventions || len(p.Items) != len(want) || len(ranked(p)) != 0 {
+		t.Errorf("exceeded %q, %d items, want %d: %v; ranked %v", p.Exceeded, len(p.Items), len(want), want, ranked(p))
+	}
+	if !slices.Contains(named, "design/adrs/0002-second.md") || len(briefed) == 0 {
+		t.Errorf("named %v, briefed %v; want ADR-0002 named and the briefs kept", named, briefed)
+	}
+	if len(p.Catalog.NotLoaded) >= 17 {
+		t.Errorf("catalog holds %d documents, every one; want what is named or briefed left out of it", len(p.Catalog.NotLoaded))
+	}
+	if !strings.Contains(p.Header(), "over budget: the conventions alone exceed it, so nothing is ranked; everything named and every brief is kept") {
 		t.Errorf("header:\n%s", p.Header())
 	}
 
