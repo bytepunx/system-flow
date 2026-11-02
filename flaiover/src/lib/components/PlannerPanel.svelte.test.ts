@@ -288,4 +288,14 @@ describe('the planner panel (S-0259)', () => {
 		);
 		expect(planned).toBe(0);
 	});
+
+	// S-0420: the panel is the role page for the planner, its form after the runs standing for Run
+	it("is the planner's role page, with its form and none of the role page's Run", async () => {
+		await show(view({ runs: [worked] }));
+		expect(one('planner-run-now')).toBeNull();
+		expect(one('planner-item')).toBeNull();
+		expect(text(one('planner-run-item'))).toBe('S-0259');
+		expect(one('planner-run-item')!.querySelector('a')!.getAttribute('href')).toBe('/items/S-0259');
+		expect(one('planner-ask')).not.toBeNull();
+	});
 });

@@ -16,6 +16,7 @@
 	import ImportPrompt from '$lib/components/ImportPrompt.svelte';
 	import EditorDialog from '$lib/components/EditorDialog.svelte';
 	import { withProject } from '$lib/sitemenu';
+	import { api } from '$lib/api';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { afterNavigate } from '$app/navigation';
@@ -72,6 +73,31 @@
 		shownProject = current;
 	});
 
+	// The roles agent.status reports, by name, for the rail's Agents group (S-0420): read once a flai
+	// answers for the project, and again for each project switched to. A flai older than the role
+	// page reports none, and the rail then lists the three it always did, as it does until they are
+	// read and when they cannot be.
+	let roles = $state<string[] | null>(null);
+	// a boolean, so that hostFlai's poll, which replaces its status, does not read the roles again
+	const answering = $derived(signedIn && hostFlai.usable);
+	async function loadRoles(project: string | null) {
+		let named: string[] | null = null;
+		try {
+			const r = await api('/api/host-agent');
+			const body = (await r.json().catch(() => ({}))) as {
+				state?: { roles?: Record<string, unknown> | null };
+			};
+			if (r.ok) named = Object.keys(body.state?.roles ?? {});
+		} catch {
+			// the rail lists the three; the banner says why flai cannot be asked
+		}
+		if (project === projectState.current) roles = named;
+	}
+	$effect(() => {
+		const project = projectState.current;
+		if (answering) void loadRoles(project);
+	});
+
 	// The nav rail (S-0458): docked at the left from Tailwind's md width, and below it a drawer the
 	// menu button opens. The drawer is a native <dialog> opened modal: the browser closes it on Escape,
 	// keeps focus inside it, makes the page behind it inert, and draws it in the top layer, so closed
@@ -122,7 +148,7 @@ sit beside it; the column is min-w-0 so a wide page cannot push the window sidew
 <div class="flex min-h-dvh bg-ground text-ink">
 	{#if signedIn && !drawerOpen}
 		<aside class="hidden w-56 shrink-0 border-r border-line bg-surface md:block" data-nav-docked>
-			<div class="sticky top-0 h-dvh overflow-y-auto"><NavRail /></div>
+			<div class="sticky top-0 h-dvh overflow-y-auto"><NavRail {roles} /></div>
 		</aside>
 	{/if}
 	<div class="min-w-0 flex-1">
@@ -187,7 +213,7 @@ sit beside it; the column is min-w-0 so a wide page cannot push the window sidew
 			onclose={closed}
 			onclick={(e) => e.target === e.currentTarget && closeDrawer()}
 		>
-			{#if drawerOpen}<NavRail onnavigate={chosen} />{/if}
+			{#if drawerOpen}<NavRail onnavigate={chosen} {roles} />{/if}
 		</dialog>
 	{/if}
 	<!-- The document editor over any page: links open it with openEditor (S-0378). -->

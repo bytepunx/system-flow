@@ -9,7 +9,7 @@ vi.mock('$app/paths', () => ({
 import ActivityIcon from '@lucide/svelte/icons/activity';
 import InboxIcon from '@lucide/svelte/icons/inbox';
 import { KINDS, TITLES } from './viz/catalog';
-import { SITE_MENU, groupBadges, locate, withProject } from './sitemenu';
+import { SITE_MENU, groupBadges, locate, siteMenu, withProject } from './sitemenu';
 
 describe('the nav rail (S-0458)', () => {
 	it('has Flow, Agents, Design, Documentation, and Configuration, each with its pages', () => {
@@ -233,5 +233,67 @@ describe('the nav rail (S-0458)', () => {
 		expect(withProject('/board', null)).toBe('/board');
 		expect(withProject('/board', 'harbour')).toBe('/board?project=harbour');
 		expect(withProject('/settings/agents', 'a b')).toBe('/settings/agents?project=a%20b');
+	});
+});
+
+// S-0420: the Agents group lists a page for each role agent.status reports, the orchestrator's, the
+// planner's, and the analyzer's first, then the rest by name, each at /workflow/<name>.
+describe('the Agents group with the roles agent.status reports (S-0420)', () => {
+	/** The roles of a fixture agent.status, in its map's order: a defined role, reviewer, among them. */
+	const ROLES = ['reviewer', 'curator', 'analyzer', 'orchestrator', 'planner', 'release-notes'];
+	const agents = (roles: string[] | null) => siteMenu(roles).find((g) => g.key === 'agents')!;
+
+	it('is the menu as it was while no roles are known', () => {
+		expect(siteMenu(null)).toBe(SITE_MENU);
+		expect(siteMenu(undefined)).toBe(SITE_MENU);
+		expect(siteMenu([])).toBe(SITE_MENU);
+	});
+
+	it('lists the three first, then the curator and the defined roles by name', () => {
+		expect(agents(ROLES).pages.map((p) => [p.key, p.label, p.href])).toEqual([
+			['orchestration', 'Orchestration', '/workflow/orchestrator'],
+			['planning', 'Planning', '/workflow/planner'],
+			['analysis', 'Analysis', '/workflow/analyzer'],
+			['role:curator', 'Curator', '/workflow/curator'],
+			['role:release-notes', 'Release notes', '/workflow/release-notes'],
+			['role:reviewer', 'Reviewer', '/workflow/reviewer'],
+			['activity', 'Activity', '/activity'],
+			['threads', 'Threads', '/threads'],
+			['messages', 'Messages', '/messages']
+		]);
+		for (const p of agents(ROLES).pages) expect(p.icon, p.label).toBeTypeOf('function');
+		const keys = siteMenu(ROLES).flatMap((g) => g.pages.map((p) => p.key));
+		expect(new Set(keys).size).toBe(keys.length);
+	});
+
+	it('changes no other group', () => {
+		const others = (menu: typeof SITE_MENU) => menu.filter((g) => g.key !== 'agents');
+		expect(others(siteMenu(ROLES))).toEqual(others(SITE_MENU));
+	});
+
+	it('lists only the roles reported, and leaves out a name that is not a role’s', () => {
+		expect(agents(['planner', 'reviewer', 'Bad Name', '../x']).pages.map((p) => p.label)).toEqual([
+			'Planning',
+			'Reviewer',
+			'Activity',
+			'Threads',
+			'Messages'
+		]);
+	});
+
+	it('places a role’s page in Agents, and one it does not list in the group with no page', () => {
+		const menu = siteMenu(ROLES);
+		expect(locate('/workflow/reviewer', menu)).toEqual({
+			group: 'agents',
+			page: 'role:reviewer',
+			child: null
+		});
+		expect(locate('/workflow/planner', menu)).toEqual({
+			group: 'agents',
+			page: 'planning',
+			child: null
+		});
+		expect(locate('/workflow/reviewer')).toEqual({ group: 'agents', page: null, child: null });
+		expect(locate('/workflow/nobody', menu)).toEqual({ group: 'agents', page: null, child: null });
 	});
 });

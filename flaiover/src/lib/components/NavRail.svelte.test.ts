@@ -57,7 +57,7 @@ describe('the nav rail (S-0458)', () => {
 		localStorage.clear();
 		document.body.innerHTML = '';
 	});
-	const show = (path: string, props: { onnavigate?: () => void } = {}) => {
+	const show = (path: string, props: { onnavigate?: () => void; roles?: string[] | null } = {}) => {
 		where.url = new URL(`http://localhost${path}`);
 		c = mount(NavRail, { target: document.body, props: { rail, ...props } });
 		flushSync();
@@ -79,6 +79,33 @@ describe('the nav rail (S-0458)', () => {
 			expect(b.getAttribute('aria-expanded')).toBe('false');
 			expect(document.getElementById(b.getAttribute('aria-controls')!)).not.toBeNull();
 		}
+	});
+
+	// S-0420: with the roles agent.status reports, Agents lists a page for each, a defined role's too.
+	it('lists a page in Agents for each role reported, current when open (S-0420)', () => {
+		show('/workflow/reviewer', { roles: ['planner', 'orchestrator', 'analyzer', 'reviewer'] });
+		expect(group('agents').getAttribute('aria-expanded')).toBe('true');
+		const links = [...pages('agents').querySelectorAll('a')];
+		expect(links.map((a) => [a.textContent!.trim(), a.getAttribute('href')])).toEqual([
+			['Orchestration', '/workflow/orchestrator'],
+			['Planning', '/workflow/planner'],
+			['Analysis', '/workflow/analyzer'],
+			['Reviewer', '/workflow/reviewer'],
+			['Activity', '/activity'],
+			['Threads', '/threads'],
+			['Messages', '/messages']
+		]);
+		const current = document.querySelectorAll('[aria-current="page"]');
+		expect(current).toHaveLength(1);
+		expect(current[0]).toBe(pages('agents').querySelector('[data-rail-page="role:reviewer"]'));
+		expect(current[0].querySelector('svg')).not.toBeNull();
+	});
+
+	it('expands Agents on a role’s page it does not list, with no page current (S-0420)', () => {
+		show('/workflow/reviewer');
+		expect(group('agents').getAttribute('aria-expanded')).toBe('true');
+		expect(document.querySelector('[aria-current="page"]')).toBeNull();
+		expect(pages('agents').querySelector('[data-rail-page^="role:"]')).toBeNull();
 	});
 
 	it('shows or hides a group’s pages when its button is pressed', () => {

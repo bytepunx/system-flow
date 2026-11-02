@@ -1,6 +1,7 @@
 // The nav rail's groups and pages (S-0458, replacing S-0172's two-tier header menu): five groups,
 // each with its icon and its pages in order, and which group and page a path belongs to. The Charts
 // page carries its charts by group from the catalogue, and a path names the chart it shows (S-0484).
+// The Agents group lists a page for each role agent.status reports, at /workflow/<name> (S-0420).
 import { resolve } from '$app/paths';
 import type { LucideIcon } from '@lucide/svelte';
 // Each icon by its own module, so dev and tests load the icons used and not the whole library.
@@ -34,6 +35,7 @@ import WavesIcon from '@lucide/svelte/icons/waves';
 import WorkflowIcon from '@lucide/svelte/icons/workflow';
 // The catalogue, not viz/charts, so the layout's bundle does not take in the charts' builders.
 import { CHART_GROUPS, TITLES, type ChartGroupKey, type Kind } from '$lib/viz/catalog';
+import { ROLE_NAME } from '$lib/strategic';
 
 /** A page the rail links to: the paths it answers, and the href that opens it. */
 export type LinkedPage = {
@@ -98,7 +100,74 @@ export type PageKey =
 	| 'file-system'
 	| 'projects'
 	| 'harnesses'
-	| 'host';
+	| 'host'
+	/** The page of a role other than the orchestrator, the planner, and the analyzer (S-0420). */
+	| `role:${string}`;
+
+/**
+ * The orchestrator's, the planner's, and the analyzer's pages, by the role each shows, in the rail's
+ * order: their state, activity, and runs (S-0228, S-0259), and what the operator can have flai do to
+ * each.
+ */
+const BUILT_IN_ROLES: [string, LinkedPage][] = [
+	[
+		'orchestrator',
+		{
+			key: 'orchestration',
+			label: 'Orchestration',
+			icon: NetworkIcon,
+			path: '/workflow/orchestrator',
+			href: resolve('/workflow/orchestrator')
+		}
+	],
+	[
+		'planner',
+		{
+			key: 'planning',
+			label: 'Planning',
+			icon: ClipboardListIcon,
+			path: '/workflow/planner',
+			href: resolve('/workflow/planner')
+		}
+	],
+	[
+		'analyzer',
+		{
+			key: 'analysis',
+			label: 'Analysis',
+			icon: MicroscopeIcon,
+			path: '/workflow/analyzer',
+			href: resolve('/workflow/analyzer')
+		}
+	]
+];
+
+/** The Agents group's pages after its roles'. */
+const AGENT_PAGES: LinkedPage[] = [
+	{
+		key: 'activity',
+		label: 'Activity',
+		icon: ActivityIcon,
+		path: '/activity',
+		href: resolve('/activity')
+	},
+	// Every open thread, where a thread on no item is answered (S-0173, TH-0041).
+	{
+		key: 'threads',
+		label: 'Threads',
+		icon: MessagesSquareIcon,
+		path: '/threads',
+		href: resolve('/threads')
+	},
+	// The conversations between stories' agents, which never count in the inbox (S-0336).
+	{
+		key: 'messages',
+		label: 'Messages',
+		icon: MailIcon,
+		path: '/messages',
+		href: resolve('/messages')
+	}
+];
 
 export const SITE_MENU: MenuGroup[] = [
 	{
@@ -146,54 +215,10 @@ export const SITE_MENU: MenuGroup[] = [
 		key: 'agents',
 		label: 'Agents',
 		icon: BotIcon,
-		pages: [
-			// The orchestrator's, the planner's, and the analyzer's state, activity, and runs (S-0228,
-			// S-0259), and what the operator can have flai do to each.
-			{
-				key: 'orchestration',
-				label: 'Orchestration',
-				icon: NetworkIcon,
-				path: '/workflow/orchestrator',
-				href: resolve('/workflow/orchestrator')
-			},
-			{
-				key: 'planning',
-				label: 'Planning',
-				icon: ClipboardListIcon,
-				path: '/workflow/planner',
-				href: resolve('/workflow/planner')
-			},
-			{
-				key: 'analysis',
-				label: 'Analysis',
-				icon: MicroscopeIcon,
-				path: '/workflow/analyzer',
-				href: resolve('/workflow/analyzer')
-			},
-			{
-				key: 'activity',
-				label: 'Activity',
-				icon: ActivityIcon,
-				path: '/activity',
-				href: resolve('/activity')
-			},
-			// Every open thread, where a thread on no item is answered (S-0173, TH-0041).
-			{
-				key: 'threads',
-				label: 'Threads',
-				icon: MessagesSquareIcon,
-				path: '/threads',
-				href: resolve('/threads')
-			},
-			// The conversations between stories' agents, which never count in the inbox (S-0336).
-			{
-				key: 'messages',
-				label: 'Messages',
-				icon: MailIcon,
-				path: '/messages',
-				href: resolve('/messages')
-			}
-		]
+		// Until agent.status names the roles, the three that every project runs (siteMenu).
+		pages: [...BUILT_IN_ROLES.map(([, p]) => p), ...AGENT_PAGES],
+		// A role's page the rail does not list, such as one flai has not reported yet.
+		also: ['/workflow']
 	},
 	{
 		key: 'design',
@@ -308,6 +333,39 @@ export const SITE_MENU: MenuGroup[] = [
 	}
 ];
 
+/** The page of a role besides the three, labelled by its name, capitalised, its hyphens as spaces. */
+function rolePage(name: string): LinkedPage {
+	return {
+		key: `role:${name}`,
+		label: `${name[0].toUpperCase()}${name.slice(1).replaceAll('-', ' ')}`,
+		icon: BotIcon,
+		path: `/workflow/${name}`,
+		href: resolve('/workflow/[role]', { role: name })
+	};
+}
+
+/**
+ * The rail's groups with a page in Agents for each role agent.status reports (S-0420): the
+ * orchestrator's, the planner's, and the analyzer's first, as the rail has always listed them, then
+ * the rest, the curator and the roles the project defines, by name, each at /workflow/<name>. A name
+ * that is not a role's is left out. With no roles known, from a flai older than the role page or
+ * before one answers, it is SITE_MENU.
+ */
+export function siteMenu(roles?: readonly string[] | null): MenuGroup[] {
+	if (!roles?.length) return SITE_MENU;
+	const reported = new Set(roles);
+	const builtIn = new Set(BUILT_IN_ROLES.map(([name]) => name));
+	const others = [...reported]
+		.filter((name) => !builtIn.has(name) && ROLE_NAME.test(name))
+		.sort((a, b) => a.localeCompare(b));
+	const pages = [
+		...BUILT_IN_ROLES.filter(([name]) => reported.has(name)).map(([, p]) => p),
+		...others.map(rolePage),
+		...AGENT_PAGES
+	];
+	return SITE_MENU.map((g) => (g.key === 'agents' ? { ...g, pages } : g));
+}
+
 function under(pathname: string, path: string): boolean {
 	return pathname === path || pathname.startsWith(`${path}/`);
 }
@@ -327,9 +385,10 @@ export type Located = { group: GroupKey | null; page: PageKey | null; child: Kin
  * system at /design. The child is the page's child whose href the path is or is under, so
  * /charts/throughput names its chart and /charts/nope none (S-0484). The path is compared with the
  * hrefs as given, as the License link is: both carry the base path, which the page paths leave out.
+ * The menu is SITE_MENU, or siteMenu's with the roles agent.status reports.
  */
-export function locate(pathname: string): Located {
-	for (const g of SITE_MENU) {
+export function locate(pathname: string, menu: MenuGroup[] = SITE_MENU): Located {
+	for (const g of menu) {
 		const page = g.pages
 			.filter((p): p is LinkedPage => !p.soon)
 			.filter((p) => under(pathname, p.path))

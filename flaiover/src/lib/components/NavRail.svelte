@@ -10,7 +10,8 @@
 	// expands on arrival at a chart and keeps the operator's choice as a group does, and collapsed,
 	// nothing below it is drawn. The rail fills the width its container gives it. Under License, the
 	// versions running (S-0544): the connected flai's and this dashboard's, one to a line, each only
-	// once /api/agent has named it.
+	// once /api/agent has named it. Agents lists a page for each role the layout says agent.status
+	// reports, and the three it always ran while it says none (S-0420).
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
@@ -21,6 +22,7 @@
 		SITE_MENU,
 		groupBadges,
 		locate,
+		siteMenu,
 		withProject,
 		type LinkedPage,
 		type MenuPage,
@@ -29,11 +31,21 @@
 	} from '$lib/sitemenu';
 	import InboxBadge from './InboxBadge.svelte';
 
-	let { onnavigate, rail = navRail }: { onnavigate?: () => void; rail?: NavRailState } = $props();
+	let {
+		onnavigate,
+		rail = navRail,
+		roles = null
+	}: {
+		onnavigate?: () => void;
+		rail?: NavRailState;
+		/** The roles agent.status reports, by name; null or none while none are known. */
+		roles?: readonly string[] | null;
+	} = $props();
 
 	const BADGE = { inbox: InboxBadge };
 	const LICENSE = resolve('/license');
-	const here = $derived(locate(page.url.pathname));
+	const menu = $derived(siteMenu(roles));
+	const here = $derived(locate(page.url.pathname, menu));
 	const versions = $derived(
 		[
 			hostFlai.status?.flai && `flai ${hostFlai.status.flai}`,
@@ -60,7 +72,7 @@
 
 <nav class="flex h-full min-w-0 flex-col gap-4 p-2 text-sm" aria-label="Site" data-nav-rail>
 	<ul class="flex flex-col gap-1">
-		{#each SITE_MENU as g (g.key)}
+		{#each menu as g (g.key)}
 			{@const open = rail.isExpanded(g.key)}
 			<li>
 				<button

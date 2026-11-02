@@ -1,3 +1,26 @@
+<script module lang="ts">
+	import type { RoleState } from '$lib/roles';
+	import { currentRun, type RoleRun } from '$lib/strategic';
+
+	/**
+	 * A role's state from a page that has every run of it in one list, as the Planner,
+	 * Orchestrator, and Analyzer pages' views do: those under way, the newest of them its run, and
+	 * those that ended.
+	 */
+	export function roleWithRuns<R extends RoleRun>(
+		role: Omit<RoleState<R>, 'run' | 'running' | 'runs'>,
+		runs: R[]
+	): RoleState<R> {
+		const going = (r: R) => !r.ended && !r.error;
+		return {
+			...role,
+			run: currentRun(runs),
+			running: runs.filter(going),
+			runs: runs.filter((r) => !going(r))
+		};
+	}
+</script>
+
 <script lang="ts" generics="R extends RoleRun">
 	// A role's page (S-0420), for any role agent.status reports, the built-in ones and those the
 	// project defines, on what the Planner, Orchestrator, and Analyzer pages share
@@ -8,20 +31,14 @@
 	// run takes one, and Stop and Start for the orchestrator, the one role with a hold. Each goes
 	// through /api/roles/<name>, says what flai answered, and asks the page to load again; each is
 	// disabled, saying why, while the host action is off. A page with its own controls gives them as
-	// actions in their place, and its settings, the fields of its run, its runs' columns, what an
-	// entry shows besides its own, and sections before the log and after the runs as the panel's
-	// snippets.
+	// actions in their place, or none there when it shows them elsewhere, and its settings, the
+	// fields of its run, its runs' columns, what an entry shows besides its own, and sections before
+	// the log and after the runs as the panel's snippets.
 	import type { Snippet } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { api } from '$lib/api';
-	import {
-		roleControls,
-		roleStream,
-		triggerLine,
-		type RoleActionName,
-		type RoleState
-	} from '$lib/roles';
-	import type { ActivityDocument, ActivityEntry, RoleRun } from '$lib/strategic';
+	import { roleControls, roleStream, triggerLine, type RoleActionName } from '$lib/roles';
+	import type { ActivityDocument, ActivityEntry } from '$lib/strategic';
 	import StrategicAgentPanel, { enableCommand } from './StrategicAgentPanel.svelte';
 
 	let {
@@ -46,8 +63,8 @@
 		onchanged?: () => void;
 		/** What the action's state says after "On:", in place of what its triggers say. */
 		on?: string;
-		/** The page's own controls, in place of Run, Stop, and Start. */
-		actions?: Snippet;
+		/** The page's own controls, in place of Run, Stop, and Start; null for none there. */
+		actions?: Snippet | null;
 		/** The role's settings, between the host action and the run under way. */
 		settings?: Snippet;
 		/** dt/dd pairs of the run under way, after its item and before its agent. */
@@ -215,7 +232,7 @@
 	{runs}
 	stream={(r) => roleStream(role, r)}
 	actionState={role.held ? held : undefined}
-	actions={actions ?? controls}
+	actions={actions === undefined ? controls : (actions ?? undefined)}
 	{settings}
 	currentFields={currentItem}
 	runHead={itemHead}

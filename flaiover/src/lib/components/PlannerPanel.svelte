@@ -1,17 +1,17 @@
 <script lang="ts">
-	// The planner's page (S-0259): whether the plan host action is on and how to turn it on, the run
-	// under way with its stream, the planner's activity document with its totals and its log newest
-	// first, each past run with what its log entries say it cost and how it went, and a form that asks
-	// flai serve to plan an epic or a story. What flai answered the form is said in its status line,
-	// as PlanAction words it, and the page is asked to load again. What it shares with the
-	// Orchestrator and Analyzer pages is StrategicAgentPanel's (S-0228); the item a run plans, and
-	// the form, are its own.
-	import { resolve } from '$app/paths';
+	// The planner's page (S-0259), the role page for the planner (S-0420): whether the plan host
+	// action is on and how to turn it on, the run under way with its item and its stream, the
+	// planner's activity document with its totals and its log newest first, each past run with its
+	// item and what its log entries say it cost and how it went, and a form after them that asks flai
+	// serve to plan an epic or a story. What flai answered the form is said in its status line, as
+	// PlanAction words it, and the page is asked to load again. The form is its own and stands for
+	// the role page's Run, which it does not show; the rest is the role page's.
 	import { api } from '$lib/api';
 	import type { PlanRun } from '$lib/activity';
 	import type { PlannerView } from '$lib/planner';
 	import type { Snippet } from 'svelte';
-	import StrategicAgentPanel, { enableCommand } from './StrategicAgentPanel.svelte';
+	import RolePage, { roleWithRuns } from './RolePage.svelte';
+	import { enableCommand } from './StrategicAgentPanel.svelte';
 
 	let {
 		view,
@@ -23,6 +23,22 @@
 		/** The planner's settings, shown under the plan host action (S-0533). */
 		settings?: Snippet;
 	} = $props();
+
+	/** The planner as the role page reads a role, from its file and from what the view says. */
+	const role = $derived(
+		roleWithRuns(
+			{
+				name: 'planner',
+				role: 'plan',
+				path: 'design/workflows/roles/planner.md',
+				item: ['epic', 'story'],
+				trigger: ['asked', 'event', 'schedule'],
+				action: { name: 'plan', enabled: view.plan_enabled },
+				held: false
+			},
+			view.runs
+		)
+	);
 
 	let id = $state('');
 	let said = $state<string | null>(null);
@@ -53,35 +69,12 @@
 	}
 </script>
 
-{#snippet item(run: PlanRun)}
-	<dt class="text-muted">Item</dt>
-	<dd data-testid="planner-current-item">{@render itemLink(run.item)}</dd>
-{/snippet}
-
-{#snippet itemHead()}
-	<th class="py-1 pr-4 font-normal">Item</th>
-{/snippet}
-
-{#snippet itemCell(run: PlanRun)}
-	<td class="py-1 pr-4">{@render itemLink(run.item)}</td>
-{/snippet}
-
-{#snippet itemLink(id: string)}
-	<a class="underline" href={resolve('/items/[id]', { id })}>{id}</a>
-{/snippet}
-
-<StrategicAgentPanel
-	kind="planner"
-	action="plan"
-	enabled={view.plan_enabled}
-	on="flai serve starts the planner when you ask."
+<RolePage
+	{role}
 	activity={view.activity}
-	runs={view.runs}
-	stream={(run) => ({ story: run.item, plan: true })}
+	on="flai serve starts the planner when you ask."
+	actions={null}
 	{settings}
-	currentFields={item}
-	runHead={itemHead}
-	runCells={itemCell}
 >
 	<section class="rounded border border-line bg-surface p-4" data-testid="planner-ask">
 		<h2 class="font-semibold text-ink">Plan an epic or a story</h2>
@@ -113,4 +106,4 @@
 			<p class="mt-2" role="status" data-testid="planner-said">{said}</p>
 		{/if}
 	</section>
-</StrategicAgentPanel>
+</RolePage>

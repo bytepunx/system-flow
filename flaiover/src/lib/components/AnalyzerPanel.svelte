@@ -1,11 +1,11 @@
 <script lang="ts">
-	// The analyzer's page (S-0228), on what it shares with the Planner and Orchestrator pages
-	// (StrategicAgentPanel): whether the analyze host action is on, or off with the command that turns
-	// it on; the run under way with its focus and its stream; its activity log, each entry with the
-	// report it wrote linked on the documents page; and its runs, each with its focus and report. Run
-	// starts it, looking for the focus chosen or for all of them, through /api/analyzer, saying what
-	// flai answered, and the page is asked to load again. Run is disabled, saying why, while the
-	// action is off or a run goes.
+	// The analyzer's page (S-0228), the role page for the analyzer (S-0420): whether the analyze host
+	// action is on, or off with the command that turns it on; the run under way with its focus and
+	// its stream; its activity log, each entry with the report it wrote linked on the documents page;
+	// and its runs, each with its focus and report. Its Run, with a focus, stands for the role
+	// page's: it starts the analyzer, looking for the focus chosen or for all of them, through
+	// /api/analyzer, saying what flai answered, and the page is asked to load again. Run is
+	// disabled, saying why, while the action is off or a run goes.
 	import { resolve } from '$app/paths';
 	import { api } from '$lib/api';
 	import { editLink } from '$lib/filelinks';
@@ -17,7 +17,8 @@
 		type AnalyzerView
 	} from '$lib/strategic';
 	import type { Snippet } from 'svelte';
-	import StrategicAgentPanel, { enableCommand } from './StrategicAgentPanel.svelte';
+	import RolePage, { roleWithRuns } from './RolePage.svelte';
+	import { enableCommand } from './StrategicAgentPanel.svelte';
 
 	let {
 		view,
@@ -29,6 +30,22 @@
 		/** The analyzer's settings, shown under Run (S-0533). */
 		settings?: Snippet;
 	} = $props();
+
+	/** The analyzer as the role page reads a role, from its file and from what the view says. */
+	const role = $derived(
+		roleWithRuns(
+			{
+				name: 'analyzer',
+				role: 'analyze',
+				path: 'design/workflows/roles/analyzer.md',
+				item: [],
+				trigger: ['asked', 'schedule'],
+				action: { name: 'analyze', enabled: view.enabled },
+				held: false
+			},
+			view.runs
+		)
+	);
 
 	/** The focus asked for; '' asks for all of them. */
 	let focus = $state('');
@@ -161,14 +178,10 @@
 	</p>
 {/snippet}
 
-<StrategicAgentPanel
-	kind="analyzer"
-	action="analyze"
-	enabled={view.enabled}
-	on="flai serve starts the analyzer when you Run it, and when analysis.schedule comes round."
+<RolePage
+	{role}
 	activity={view.activity}
-	runs={view.runs}
-	stream={() => ({ story: 'analyzer', role: 'analyze' })}
+	on="flai serve starts the analyzer when you Run it, and when analysis.schedule comes round."
 	actions={controls}
 	{settings}
 	currentFields={currentFocus}

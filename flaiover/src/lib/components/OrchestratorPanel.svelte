@@ -1,10 +1,11 @@
 <script lang="ts">
-	// The orchestrator's page (S-0228), on what it shares with the Planner page (StrategicAgentPanel):
-	// whether the orchestrate host action is on, off with the command that turns it on, or held after
-	// the operator's Stop; the run under way with its stream; its last decisions, each with its
-	// reason, above its whole log; and its runs. Stop ends the run and holds it stopped, and Start
-	// lifts the hold, each through /api/orchestrator, saying what flai answered, and the page is
-	// asked to load again. Both are disabled, saying why, while the action is off.
+	// The orchestrator's page (S-0228), the role page for the orchestrator (S-0420): whether the
+	// orchestrate host action is on, off with the command that turns it on, or held after the
+	// operator's Stop; the run under way with its stream; its last decisions, each with its reason,
+	// above its whole log; and its runs. Its Stop and Start stand for the role page's: Stop ends the
+	// run and holds it stopped, and Start lifts the hold, each through /api/orchestrator, saying what
+	// flai answered, and the page is asked to load again. Both are disabled, saying why, while the
+	// action is off.
 	import { api } from '$lib/api';
 	import { localTime } from '$lib/localtime';
 	import {
@@ -14,7 +15,8 @@
 		type OrchestratorView
 	} from '$lib/strategic';
 	import type { Snippet } from 'svelte';
-	import StrategicAgentPanel, { enableCommand } from './StrategicAgentPanel.svelte';
+	import RolePage, { roleWithRuns } from './RolePage.svelte';
+	import { enableCommand } from './StrategicAgentPanel.svelte';
 
 	let {
 		view,
@@ -26,6 +28,22 @@
 		/** The orchestrator's settings, shown under Stop and Start (S-0533). */
 		settings?: Snippet;
 	} = $props();
+
+	/** The orchestrator as the role page reads a role, from its file and from what the view says. */
+	const role = $derived(
+		roleWithRuns(
+			{
+				name: 'orchestrator',
+				role: 'orchestrate',
+				path: 'design/workflows/roles/orchestrator.md',
+				item: [],
+				trigger: ['asked', 'event', 'schedule'],
+				action: { name: 'orchestrate', enabled: view.enabled },
+				held: view.held
+			},
+			view.runs
+		)
+	);
 
 	/** How many of the newest entries are shown as its last decisions. */
 	const DECISIONS = 5;
@@ -66,12 +84,6 @@
 		onchanged?.();
 	}
 </script>
-
-{#snippet held()}
-	<p class="mt-1 text-warn" data-testid="orchestrator-action-held">
-		Held: you stopped the orchestrator, and flai serve does not start it again until you Start it.
-	</p>
-{/snippet}
 
 {#snippet button(action: OrchestratorAction, label: string, disabled: boolean)}
 	<button
@@ -125,15 +137,9 @@
 	</section>
 {/snippet}
 
-<StrategicAgentPanel
-	kind="orchestrator"
-	action="orchestrate"
-	enabled={view.enabled}
-	on="flai serve runs the orchestrator for as long as the action stays on, and starts it again when a run ends."
+<RolePage
+	{role}
 	activity={view.activity}
-	runs={view.runs}
-	stream={() => ({ story: 'orchestrator', role: 'orchestrate' })}
-	actionState={view.held ? held : undefined}
 	actions={controls}
 	{settings}
 	beforeActivity={lastDecisions}

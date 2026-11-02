@@ -351,4 +351,15 @@ describe('the analyzer panel (S-0228)', () => {
 			expect(button('analyzer-run')!.disabled).toBe(false);
 		});
 	});
+
+	// S-0420: the panel is the role page for the analyzer, its Run with a focus standing for the
+	// role page's
+	it("is the analyzer's role page, with its Run and none of the role page's", async () => {
+		// with no runs, so that no row of the runs table is named analyzer-run too
+		await show(view());
+		expect(one('analyzer-run-now')).toBeNull();
+		expect(one('analyzer-item')).toBeNull();
+		expect(all('analyzer-run')).toHaveLength(1);
+		expect(one('analyzer-run')!.tagName).toBe('BUTTON');
+	});
 });

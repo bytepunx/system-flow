@@ -351,4 +351,15 @@ describe('the orchestrator panel (S-0228)', () => {
 			expect(button('orchestrator-start')!.disabled).toBe(false);
 		});
 	});
+
+	// S-0420: the panel is the role page for the orchestrator, its Stop and Start standing for the
+	// role page's controls
+	it("is the orchestrator's role page, with its Stop and none of the role page's Run", async () => {
+		api.mockResolvedValue(answer({ entries: [], running: true, from: 0, next: 0, size: 0 }));
+		await show(view({ run: running, runs: [running, stopped] }));
+		expect(one('orchestrator-run-now')).toBeNull();
+		expect(all('orchestrator-stop')).toHaveLength(1);
+		expect(one('orchestrator-current-item')).toBeNull();
+		expect(one('orchestrator-run-item')).toBeNull();
+	});
 });

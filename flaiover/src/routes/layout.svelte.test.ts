@@ -212,6 +212,56 @@ describe('the layout’s top bar and nav rail (S-0458)', () => {
 		expect(q('[data-budget-banner]')).toBeNull();
 	});
 
+	// S-0420: the rail's Agents group lists each role agent.status reports, read from /api/host-agent
+	// once flai answers, and the three it always listed while flai reports none.
+	const agentsLinks = () =>
+		[...document.querySelectorAll('[data-nav-docked] [data-rail-pages="agents"] a')].map((a) =>
+			a.textContent!.trim()
+		);
+	const settle = async () => {
+		for (let i = 0; i < 5; i++) await Promise.resolve();
+		flushSync();
+	};
+
+	it('lists each role agent.status reports in the rail’s Agents group (S-0420)', async () => {
+		const fetch = vi.fn(async (url: string) => ({
+			ok: true,
+			json: async () =>
+				url.startsWith('/api/host-agent')
+					? { state: { roles: { planner: {}, orchestrator: {}, analyzer: {}, reviewer: {} } } }
+					: {}
+		}));
+		vi.stubGlobal('fetch', fetch);
+		show('/workflow/reviewer');
+		await settle();
+		expect(fetch.mock.calls.map(([url]) => url)).toContain('/api/host-agent');
+		expect(agentsLinks()).toEqual([
+			'Orchestration',
+			'Planning',
+			'Analysis',
+			'Reviewer',
+			'Activity',
+			'Threads',
+			'Messages'
+		]);
+		expect(q('[data-nav-docked] [aria-current="page"]')!.getAttribute('href')).toBe(
+			'/workflow/reviewer'
+		);
+	});
+
+	it('lists the three it always did while flai reports no roles (S-0420)', async () => {
+		show('/board');
+		await settle();
+		expect(agentsLinks()).toEqual([
+			'Orchestration',
+			'Planning',
+			'Analysis',
+			'Activity',
+			'Threads',
+			'Messages'
+		]);
+	});
+
 	it('shows no budget banner on the login page', () => {
 		hostFlai.status = { ...hostFlai.status!, budget: [held] };
 		show('/login');
