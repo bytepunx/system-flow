@@ -12,6 +12,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/formulas"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
@@ -32,7 +33,7 @@ const promoteCandidatesDescription = "The backlog stories that could go to ready
 
 const releaseEvaluateDescription = "Whether the project's release policy, orchestration.release in system-flow.yaml, is met, with its figures, as flai release --evaluate --json prints it (S-0217). It weighs the stories accepted and not yet released (pending): their count and their cost of delay values summed per week, naming those with no value in unvalued. threshold is met when that summed value is at or over the manifest's value, or the count at or over its count. theme is met when every story of its epic or tag, cancelled ones left out, is accepted and one at least is not yet released; not_accepted names the rest. judgement, the default when no policy is set, is never met by itself: the call is the orchestrator's or the operator's. reason says why in one sentence. It tags, bumps, and pushes nothing: releasing is the operator's."
 
-const releasePublishDescription = "Publish what is accepted and not yet released, by the project's release policy (S-0222), as the dashboard's Publish does (publish.run): flai release --pending on the host, under the push host action, never forced, which applies, tags, and pushes everything accepted and unreleased. The host's journal records the run with the orchestrator as who asked and reason as why, apart from the operator's. reason is one sentence, which you also log: the figure that was met, or under judgement why the unreleased work is coherent and complete; under threshold or theme it is the evaluation's reason when left out. It weighs the batch first, as release_evaluate does, and refuses, changing nothing, saying why and what would allow it: while nothing is accepted and not yet released; while orchestration.release.whole_epics holds the batch back, naming each story held and its epic; under threshold or theme, while the policy is not met, with its figures; under judgement, without a reason; and while the push host action is off, which publish.run needs (flai serve enable push). When flai release --pending refuses with exit 3, because the remote has release tags newer than this clone's (S-0174) or its branch moved, the refusal is flai's message, unchanged, beginning conflict:. It returns the policy and the evaluation published by, with its figures, the versions and tags released, and the items bundled. The orchestrator's alone, while orchestration.permissions.publish is on."
+const releasePublishDescription = "Publish what is accepted and not yet released, by the project's release policy (S-0222), as the dashboard's Publish does (publish.run): flai release --pending on the host, under the push host action, never forced, which applies, tags, and pushes everything accepted and unreleased. The host's journal records the run with the orchestrator as who asked and reason as why, apart from the operator's. reason is one sentence, which you also log: the figure that was met, or under judgement why the unreleased work is coherent and complete; under threshold or theme it is the evaluation's reason when left out. It weighs the batch first, as release_evaluate does, and refuses, changing nothing, saying why and what would allow it: while nothing is accepted and not yet released; while orchestration.release.whole_epics holds the batch back, naming each story held and its epic; under threshold or theme, while the policy is not met, with its figures; under judgement, without a reason; and while the push host action is off, which publish.run needs (flai serve enable push). When flai release --pending refuses with exit 3, because the remote has release tags newer than this clone's (S-0174) or its branch moved, the refusal is flai's message, unchanged, beginning conflict:. It returns the policy and the evaluation published by, with its figures, the versions and tags released, and the items bundled. It refuses, changing nothing, while the project defines a publish formula (design/workflows/formulas/publish.md): publishing there is that formula, which you start with flai formula run publish --ready --autocommit when release_evaluate is met (ADR-0240); it stays for a project with none. The orchestrator's alone, while orchestration.permissions.publish is on."
 
 // OrderByPolicyIn names the policy to order the ready column by.
 type OrderByPolicyIn struct {
@@ -146,6 +147,9 @@ func (s *server) releasePublish(ctx context.Context, _ *mcp.CallToolRequest, in 
 	if err := s.repo.OrchestratorPermits(manifest.PermitPublish, "publishes", "the most recently accepted story"); err != nil {
 		return nil, ReleasePublished{}, err
 	}
+	if err := s.noPublishFormula(); err != nil {
+		return nil, ReleasePublished{}, err
+	}
 	if s.runner == nil {
 		return nil, ReleasePublished{}, fmt.Errorf("this flai mcp reads no git history, so it cannot say what is released; on the host run flai release --evaluate")
 	}
@@ -182,6 +186,23 @@ func (s *server) releasePublish(ctx context.Context, _ *mcp.CallToolRequest, in 
 		return nil, ReleasePublished{}, errors.New(e.Message)
 	}
 	return released(ev, reason, w)
+}
+
+// noPublishFormula refuses release_publish while the project defines a
+// publish formula, which is then the one way to publish (ADR-0240). Only a
+// formula file that parses counts: one that does not is flai check's to
+// report, and a folder that cannot be read is refused with what failed.
+func (s *server) noPublishFormula() error {
+	list, _, err := formulas.Load(s.repo.Root, s.repo.Manifest.Layout["design"])
+	if err != nil {
+		return fmt.Errorf("release_publish reads the project's formulas first, as publishing is the publish formula where one is defined: %w", err)
+	}
+	for _, f := range list {
+		if f.Name == "publish" {
+			return fmt.Errorf("publishing in this project is the publish formula, %s, so release_publish publishes nothing: start it with flai formula run publish --ready --autocommit, as your role file says under publish, when release_evaluate is met (ADR-0240)", f.Path)
+		}
+	}
+	return nil
 }
 
 // mayPublish says why the batch ev weighs is not published for reason, or

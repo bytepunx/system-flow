@@ -447,6 +447,82 @@ func TestReleasePublishRefusesWhenThePolicyIsNotMet(t *testing.T) {
 	})
 }
 
+// publishFormula is a publish formula with the three steps ADR-0240 names,
+// without their in: main, which the refusal does not read.
+const publishFormula = `---
+title: Publish
+updated: 2026-11-01
+status: active
+name: publish
+description: Publishes what is accepted and not yet released.
+steps:
+  - id: fetch
+    title: Fetch
+    run:
+      script: git fetch
+  - id: evaluate
+    title: Evaluate the release policy
+    run:
+      flai: release --evaluate --require-met
+    after: [fetch]
+  - id: publish
+    title: Publish
+    run:
+      flai: release --pending --json
+    after: [evaluate]
+---
+
+# Publish
+`
+
+// S-0423: release_publish refuses, changing nothing, while the project
+// defines a publish formula, and names flai formula run publish (ADR-0240);
+// another formula, or a formula file that does not parse, leaves it
+// publishing.
+func TestReleasePublishRefusesWhileTheProjectDefinesAPublishFormula(t *testing.T) {
+	// flai serve sets the orchestrator's role in its session (S-0219), once
+	// for every publishProject, so that the cases run in parallel (S-0548)
+	t.Setenv("FLAI_ROLE", guard.RoleOrchestrate)
+	value := 300.0
+	formula := func(t *testing.T, pf *publishing, name, body string) {
+		t.Helper()
+		dir := filepath.Join(pf.root, "design", "workflows", "formulas")
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Run("a publish formula", func(t *testing.T) {
+		t.Parallel()
+		pf := publishProject(t, true)
+		pf.policy(manifest.Release{Policy: manifest.ReleaseThreshold, Value: &value})
+		formula(t, pf, "publish.md", publishFormula)
+		before := pf.state(t)
+		_, failed := pf.call(t, "release_publish", map[string]any{})
+		for _, w := range []string{"publishing in this project is the publish formula, design/workflows/formulas/publish.md", "flai formula run publish --ready", "ADR-0240"} {
+			if !strings.Contains(failed, w) {
+				t.Errorf("the refusal says %q: %q", w, failed)
+			}
+		}
+		if pf.ran != 0 || len(pf.journal) != 0 || pf.state(t) != before {
+			t.Errorf("the refusal runs no flai release --pending, journals nothing, and changes no file, tag, or remote: ran %d, journal %+v", pf.ran, pf.journal)
+		}
+	})
+	t.Run("another formula and one that does not parse", func(t *testing.T) {
+		t.Parallel()
+		pf := publishProject(t, true)
+		pf.policy(manifest.Release{Policy: manifest.ReleaseThreshold, Value: &value})
+		formula(t, pf, "release.md", strings.Replace(publishFormula, "name: publish", "name: release", 1))
+		formula(t, pf, "publish.md", "no front matter\n")
+		out, failed := pf.call(t, "release_publish", map[string]any{})
+		if failed != "" || pf.ran != 1 || strings.Join(toStrings(out["tags"]), " ") != "cli/v1.1.0" {
+			t.Errorf("with no publish formula that parses, it publishes: %v %q, ran %d", out, failed, pf.ran)
+		}
+	})
+}
+
 // S-0222: when flai release --pending refuses with exit 3, because the remote
 // has release tags newer than the clone's (S-0174) or its branch moved,
 // release_publish returns flai's message unchanged as a conflict, and
