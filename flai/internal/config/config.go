@@ -15,9 +15,11 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 )
@@ -336,24 +338,75 @@ type HarnessHost struct {
 	// harness already deny the protected paths in the harness's own
 	// vocabulary, which flai cannot read (ADR-0131).
 	DenyProtected bool `json:"deny_protected,omitempty"`
+	// Images are the container harness's image for each inner harness, by
+	// the inner harness's name; one not here runs in DefaultImage's (S-0508).
+	Images map[string]string `json:"images,omitempty"`
+	// Network is the Docker network the container harness's agents join;
+	// empty is Docker's default bridge, the host reached through Docker's
+	// host gateway.
+	Network string `json:"network,omitempty"`
+	// Login is the absolute path of the folder holding the operator's Claude
+	// login, which the container harness mounts read-only.
+	Login string `json:"login,omitempty"`
+}
+
+// IsZero reports whether the entry sets nothing.
+func (h HarnessHost) IsZero() bool {
+	return h.Program == "" && h.Args == nil && h.Guard == "" && !h.DenyProtected && len(h.Images) == 0 && h.Network == "" && h.Login == ""
+}
+
+// Image is the container harness's image for the inner harness: the one
+// Images sets, else DefaultImage's.
+func (h HarnessHost) Image(inner string) string {
+	if ref := h.Images[inner]; ref != "" {
+		return ref
+	}
+	return DefaultImage(inner)
+}
+
+// ShownImages are the container harness's image for every inner harness it
+// runs, the defaults filled in, as flai shows them.
+func (h HarnessHost) ShownImages() map[string]string {
+	out := map[string]string{}
+	for _, inner := range containerInners {
+		out[inner] = h.Image(inner)
+	}
+	return out
 }
 
 // GuardNone is the one value HarnessHost.Guard takes: the harness's story
 // sub-agents run unguarded.
 const GuardNone = "none"
 
+// ContainerHarness is the harness that runs an inner harness in a Docker
+// container, harness.Container; config cannot import harness, which imports
+// config through template.
+const ContainerHarness = "container"
+
+// containerInners are the harnesses flai runs inside the container, the
+// container adapter's inner harnesses among harness.Names, kept here for the
+// same reason as ContainerHarness.
+var containerInners = []string{"claude-code"}
+
+// ContainerInners are the harnesses flai runs inside the container.
+func ContainerInners() []string { return slices.Clone(containerInners) }
+
+// DefaultImage is the image the container harness runs the inner harness in
+// while Images names none: the one make agent-images builds.
+func DefaultImage(inner string) string { return "flai-agent-" + inner + ":local" }
+
 // WithHarness returns the settings with the harness name's entry set to h,
-// refusing a guard that is not GuardNone or empty; an entry that sets
-// nothing is removed. The map is copied.
+// refusing an entry checkHarnesses refuses; an entry that sets nothing is
+// removed. The map is copied.
 func (a AgentStart) WithHarness(name string, h HarnessHost) (AgentStart, error) {
-	if err := checkGuard(name, h.Guard); err != nil {
+	if err := checkHarnesses(map[string]HarnessHost{name: h}); err != nil {
 		return a, err
 	}
 	next := maps.Clone(a.Harnesses)
 	if next == nil {
 		next = map[string]HarnessHost{}
 	}
-	if h == (HarnessHost{}) {
+	if h.IsZero() {
 		delete(next, name)
 	} else {
 		next[name] = h
@@ -365,19 +418,59 @@ func (a AgentStart) WithHarness(name string, h HarnessHost) (AgentStart, error) 
 	return a, nil
 }
 
-// checkHarnesses refuses a harness entry whose guard checkGuard refuses.
+// checkHarnesses refuses a harness entry whose guard checkGuard refuses or
+// whose container settings checkContainer refuses.
 func checkHarnesses(harnesses map[string]HarnessHost) error {
 	var errs []string
 	for _, name := range slices.Sorted(maps.Keys(harnesses)) {
 		if err := checkGuard(name, harnesses[name].Guard); err != nil {
 			errs = append(errs, err.Error())
 		}
+		errs = append(errs, checkContainer(name, harnesses[name])...)
 	}
 	if len(errs) > 0 {
 		return errors.New(strings.Join(errs, "; "))
 	}
 	return nil
 }
+
+// checkContainer refuses the container settings of the harness name's entry
+// h: any on a harness other than ContainerHarness, an image for a harness
+// flai does not run inside the container, an image reference that is empty,
+// holds a space, or starts with "-", a network that is no Docker network
+// name, and a login path that is not absolute.
+func checkContainer(name string, h HarnessHost) []string {
+	if name != ContainerHarness {
+		if len(h.Images) > 0 || h.Network != "" || h.Login != "" {
+			return []string{fmt.Sprintf("agent.harnesses.%s sets images, network, or login, which only the %s harness takes: remove them from agent.harnesses.%s in the configuration file; flai serve agent harness %s --image, --network, and --login set the container's", name, ContainerHarness, name, ContainerHarness)}
+		}
+		return nil
+	}
+	var errs []string
+	for _, inner := range slices.Sorted(maps.Keys(h.Images)) {
+		ref := h.Images[inner]
+		key := fmt.Sprintf("agent.harnesses.%s.images.%s", name, inner)
+		switch {
+		case !slices.Contains(containerInners, inner):
+			errs = append(errs, fmt.Sprintf("%s: flai runs no harness %q inside the container, only %s; set an image with flai serve agent harness %s --image <inner>=<image>, or --reset", key, inner, strings.Join(containerInners, ", "), name))
+		case ref == "":
+			errs = append(errs, fmt.Sprintf("%s is empty: give the image reference, as --image %s=%s, or leave it unset for that default", key, inner, DefaultImage(inner)))
+		case strings.HasPrefix(ref, "-") || strings.ContainsFunc(ref, unicode.IsSpace):
+			errs = append(errs, fmt.Sprintf("%s is %q, which is no image reference: give one such as %s with flai serve agent harness %s --image %s=<image>", key, ref, DefaultImage(inner), name, inner))
+		}
+	}
+	if h.Network != "" && !dockerName.MatchString(h.Network) {
+		errs = append(errs, fmt.Sprintf("agent.harnesses.%s.network is %q, which is no Docker network name: name one docker network ls lists with flai serve agent harness %s --network <name>, or clear it with --network \"\" for Docker's default bridge", name, h.Network, name))
+	}
+	if h.Login != "" && !filepath.IsAbs(h.Login) {
+		errs = append(errs, fmt.Sprintf("agent.harnesses.%s.login is %q, which is not an absolute path: set the folder holding your Claude login with flai serve agent harness %s --login ~/.claude", name, h.Login, name))
+	}
+	return errs
+}
+
+// dockerName is what Docker takes as a network's name, and the container:
+// form that joins another container's network.
+var dockerName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.:-]*$`)
 
 // checkGuard refuses a harness's guard that is neither GuardNone nor empty.
 func checkGuard(name, guard string) error {
@@ -744,7 +837,7 @@ func Load(path string) (cfg Config, created bool, err error) {
 }
 
 // Parse decodes JSON into a Config, rejecting unknown keys, a negative
-// agent.auto_restarts, an agent.harnesses guard other than none, an
+// agent.auto_restarts, an agent.harnesses entry checkHarnesses refuses, an
 // agent.providers entry that is not whole or sets a value flai refuses, a
 // forges entry checkForges refuses, a dashboard.allowed_hosts entry that is
 // not a host name with an optional port, a notify channel checkNotify
@@ -784,7 +877,8 @@ func Parse(data []byte) (Config, error) {
 }
 
 // Save writes cfg to path atomically, creating parent directories. It
-// refuses an agent.harnesses guard other than none, which Load would refuse.
+// refuses an agent.harnesses entry checkHarnesses refuses, which Load would
+// refuse.
 func Save(path string, cfg Config) error {
 	if err := checkHarnesses(cfg.Agent.Harnesses); err != nil {
 		return err

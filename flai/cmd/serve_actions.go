@@ -567,22 +567,32 @@ func (a *app) showAgentCommand() error {
 		if cmd == nil {
 			cmd = []string{}
 		}
+		// the program and arguments keep the names they had while shown
+		// embedded harness.Host
 		type shown struct {
-			harness.Host
-			Guard         string `json:"guard,omitempty"`
-			DenyProtected bool   `json:"deny_protected,omitempty"`
+			Program       string            `json:"Program"`
+			Args          []string          `json:"Args"`
+			Guard         string            `json:"guard,omitempty"`
+			DenyProtected bool              `json:"deny_protected,omitempty"`
+			Images        map[string]string `json:"images,omitempty"`
+			Network       string            `json:"network,omitempty"`
+			Login         string            `json:"login,omitempty"`
 		}
 		hosts := map[string]shown{}
 		for _, name := range settable() {
-			set := cfg.Agent.Harnesses[name]
-			hosts[name] = shown{a.harnessHost(cfg, name), set.Guard, set.DenyProtected}
+			set, h := cfg.Agent.Harnesses[name], a.harnessHost(cfg, name)
+			s := shown{Program: h.Program, Args: h.Args, Guard: set.Guard, DenyProtected: set.DenyProtected}
+			if name == config.ContainerHarness {
+				s.Images, s.Network, s.Login = set.ShownImages(), set.Network, set.Login
+			}
+			hosts[name] = s
 		}
 		if set, ok := cfg.Agent.Harnesses[harness.Command]; ok {
-			var h harness.Host
+			s := shown{Guard: set.Guard, DenyProtected: set.DenyProtected}
 			if len(cfg.Agent.Command) > 0 {
-				h = harness.Host{Program: cfg.Agent.Command[0], Args: cfg.Agent.Command[1:]}
+				s.Program, s.Args = cfg.Agent.Command[0], cfg.Agent.Command[1:]
 			}
-			hosts[harness.Command] = shown{h, set.Guard, set.DenyProtected}
+			hosts[harness.Command] = s
 		}
 		return a.printJSON(map[string]any{"command": cmd, "name": cfg.Agent.Name, "harnesses": hosts, "auto_restarts": cfg.Agent.AutoRestartLimit(), "enabled_here": enabled})
 	}
@@ -599,6 +609,9 @@ func (a *app) showAgentCommand() error {
 		h := a.harnessHost(cfg, name)
 		fmt.Fprintf(a.out, "harness %s: %s\n", name, quoteArgs(append([]string{h.Program}, h.Args...)))
 		printLifts(a, cfg.Agent.Harnesses[name])
+		if name == config.ContainerHarness {
+			printContainer(a, cfg.Agent.Harnesses[name])
+		}
 	}
 	fmt.Fprintf(a.out, "automatic restarts: %s\n  of a story's agent that ends with its story in progress; set with --auto-restarts\n", autoRestartsSaid(cfg.Agent))
 	if here != "" {
@@ -619,6 +632,30 @@ func printLifts(a *app, set config.HarnessHost) {
 	}
 	if set.DenyProtected {
 		fmt.Fprintln(a.out, "  deny_protected: your arguments deny the protected paths, so flai starts the agent where the harness cannot ask before a protected write")
+	}
+}
+
+// printContainer prints the container harness's settings under its line in
+// show: the image for each inner harness, the network, and the login folder,
+// each saying whether it is the default.
+func printContainer(a *app, set config.HarnessHost) {
+	images := set.ShownImages()
+	for _, inner := range slices.Sorted(maps.Keys(images)) {
+		from := "set"
+		if set.Images[inner] == "" {
+			from = "default, built by make agent-images"
+		}
+		fmt.Fprintf(a.out, "  image %s: %s (%s)\n", inner, images[inner], from)
+	}
+	if set.Network == "" {
+		fmt.Fprintln(a.out, "  network: Docker's default bridge, the host reached through Docker's host gateway")
+	} else {
+		fmt.Fprintf(a.out, "  network: %s\n", set.Network)
+	}
+	if set.Login == "" {
+		fmt.Fprintln(a.out, "  login: not set; set the folder holding your Claude login with --login ~/.claude")
+	} else {
+		fmt.Fprintf(a.out, "  login: %s, mounted read-only\n", set.Login)
 	}
 }
 
@@ -1063,7 +1100,9 @@ func shortDuration(d time.Duration) string {
 }
 
 // harnessHost is the program and arguments a harness runs with here: the
-// operator's where set, the adapter's defaults where not (S-0104).
+// operator's where set, the adapter's defaults where not (S-0104); and the
+// container harness's images, network, and login as the operator sets them,
+// whose defaults the adapter applies (S-0508).
 func (a *app) harnessHost(cfg config.Config, name string) harness.Host {
 	h := harness.Adapters[name].DefaultHost()
 	set := cfg.Agent.Harnesses[name]
@@ -1073,6 +1112,7 @@ func (a *app) harnessHost(cfg config.Config, name string) harness.Host {
 	if set.Args != nil {
 		h.Args = *set.Args
 	}
+	h.Images, h.Network, h.Login = maps.Clone(set.Images), set.Network, set.Login
 	return h
 }
 
@@ -1089,12 +1129,14 @@ func quoteArgs(args []string) string {
 // Arguments after -- replace the adapter's defaults, even with none; --guard
 // and --deny-protected change only themselves; --reset goes back to the
 // defaults and lifts nothing. The command takes only --guard,
-// --deny-protected, and --reset: its program is flai serve agent set's.
+// --deny-protected, and --reset: its program is flai serve agent set's. Only
+// the container harness takes --image, --network, and --login (S-0508).
 func newServeAgentHarnessCmd(a *app) *cobra.Command {
-	var program, guard string
+	var program, guard, network, login string
+	var images []string
 	var reset, denyProtected bool
 	c := &cobra.Command{
-		Use:   "harness [<name>] [--program <path>] [--guard none|\"\"] [--deny-protected=true|false] [--reset] [-- args...]",
+		Use:   "harness [<name>] [--program <path>] [--guard none|\"\"] [--deny-protected=true|false] [--image <inner>=<image>]... [--network <name>] [--login <path>] [--reset] [-- args...]",
 		Short: "Set the program a harness is, the arguments that say what its agent may do, and what you lift on it",
 		Long: `A story names its harness, such as claude-code; you say here what that is on
 this host. --program is what is run, and the arguments after -- replace the
@@ -1116,6 +1158,16 @@ own vocabulary, which flai cannot read, so flai starts the agent on a harness
 that cannot ask before a protected write; --deny-protected=false takes it
 back.
 
+The container harness runs an inner harness, claude-code, in a Docker
+container, and only it takes --image, --network, and --login.
+--image <inner>=<image> is the image the inner harness runs in,
+flai-agent-<inner>:local (make agent-images) unless set; repeat it for each
+inner harness. --network is the Docker network the container joins, Docker's
+default bridge with the host reached through Docker's host gateway unless
+set; --network "" goes back to it. --login is the folder holding your Claude
+login, mounted read-only, an existing folder given as an absolute path or
+under ~/; --login "" clears it.
+
 The command harness takes only --guard, --deny-protected, and --reset: its
 program and arguments are set with flai serve agent set.`,
 		Example: `  flai serve agent harness
@@ -1125,9 +1177,13 @@ program and arguments are set with flai serve agent set.`,
   flai serve agent harness command --guard none
   flai serve agent harness command --guard ""
   flai serve agent harness command --deny-protected
-  flai serve agent harness command --deny-protected=false`,
+  flai serve agent harness command --deny-protected=false
+  flai serve agent harness container --image claude-code=flai-agent-claude-code:local --login ~/.claude
+  flai serve agent harness container --network flai-agents`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			guardSet, denySet := cmd.Flags().Changed("guard"), cmd.Flags().Changed("deny-protected")
+			imageSet, networkSet, loginSet := cmd.Flags().Changed("image"), cmd.Flags().Changed("network"), cmd.Flags().Changed("login")
+			containerSet := imageSet || networkSet || loginSet
 			dash := cmd.ArgsLenAtDash()
 			names, rest := args, []string(nil)
 			if dash >= 0 {
@@ -1135,7 +1191,7 @@ program and arguments are set with flai serve agent set.`,
 			}
 			known := append(settable(), harness.Command)
 			if len(names) == 0 {
-				if dash >= 0 || program != "" || reset || guardSet || denySet {
+				if dash >= 0 || program != "" || reset || guardSet || denySet || containerSet {
 					return fmt.Errorf("name the harness: %s", strings.Join(known, ", "))
 				}
 				return a.showAgentCommand()
@@ -1150,8 +1206,20 @@ program and arguments are set with flai serve agent set.`,
 			if name == harness.Command && (program != "" || dash >= 0) {
 				return fmt.Errorf("the command's program and arguments are set with flai serve agent set -- <program> [args...]; flai serve agent harness command takes only --guard, --deny-protected, and --reset")
 			}
-			if reset && (program != "" || dash >= 0 || guardSet || denySet) {
-				return fmt.Errorf("--reset takes neither --program, --guard, --deny-protected, nor arguments")
+			if containerSet && name != config.ContainerHarness {
+				return fmt.Errorf("--image, --network, and --login are the %s harness's, which %s is not; set them with flai serve agent harness %s", config.ContainerHarness, name, config.ContainerHarness)
+			}
+			if reset && (program != "" || dash >= 0 || guardSet || denySet || containerSet) {
+				return fmt.Errorf("--reset takes neither --program, --guard, --deny-protected, --image, --network, --login, nor arguments")
+			}
+			setImages, err := parseImages(images)
+			if err != nil {
+				return err
+			}
+			if loginSet && login != "" {
+				if login, err = loginFolder(login); err != nil {
+					return err
+				}
 			}
 			cfg, path, err := a.loadConfig()
 			if err != nil {
@@ -1160,6 +1228,19 @@ program and arguments are set with flai serve agent set.`,
 			h := cfg.Agent.Harnesses[name]
 			if reset {
 				h = config.HarnessHost{}
+			}
+			if imageSet {
+				h.Images = maps.Clone(h.Images)
+				if h.Images == nil {
+					h.Images = map[string]string{}
+				}
+				maps.Copy(h.Images, setImages)
+			}
+			if networkSet {
+				h.Network = network
+			}
+			if loginSet {
+				h.Login = login
 			}
 			if program != "" {
 				h.Program = program
@@ -1186,8 +1267,43 @@ program and arguments are set with flai serve agent set.`,
 	c.Flags().StringVar(&program, "program", "", "the program the harness is on this host")
 	c.Flags().StringVar(&guard, "guard", "", `none lets a story's sub-agents run unguarded on a harness that cannot run flai guard; "" puts the refusal back`)
 	c.Flags().BoolVar(&denyProtected, "deny-protected", false, "your arguments for the harness deny the protected paths, so flai starts the agent on a harness that cannot ask before a protected write")
+	c.Flags().StringArrayVar(&images, "image", nil, "the container harness's image for an inner harness, as <inner>=<image>; repeat for each (flai-agent-<inner>:local unless set)")
+	c.Flags().StringVar(&network, "network", "", `the Docker network the container harness's agents join; "" is Docker's default bridge`)
+	c.Flags().StringVar(&login, "login", "", `the folder holding your Claude login, which the container harness mounts read-only; "" clears it`)
 	c.Flags().BoolVar(&reset, "reset", false, "go back to the adapter's program and arguments, and lift nothing")
 	return c
+}
+
+// parseImages reads the --image flags, each <inner>=<image>, into the images
+// they set; config refuses an inner harness or an image it does not take.
+func parseImages(flags []string) (map[string]string, error) {
+	out := map[string]string{}
+	for _, f := range flags {
+		inner, ref, ok := strings.Cut(f, "=")
+		if !ok || inner == "" {
+			return nil, fmt.Errorf("--image %q is not <inner>=<image>: give the inner harness and its image, as --image claude-code=%s", f, config.DefaultImage("claude-code"))
+		}
+		out[inner] = ref
+	}
+	return out, nil
+}
+
+// loginFolder is the --login folder as an absolute path, ~/ expanded,
+// refusing one that is not an existing folder: Docker would create a missing
+// one, empty, for the mount.
+func loginFolder(p string) (string, error) {
+	expanded := config.ExpandHome(p)
+	if strings.HasPrefix(expanded, "~") {
+		return "", fmt.Errorf("--login %q: give the folder holding your Claude login as an absolute path or under ~/, as --login ~/.claude", p)
+	}
+	abs, err := filepath.Abs(expanded)
+	if err != nil {
+		return "", fmt.Errorf("--login %q: resolve it to an absolute path: %w", p, err)
+	}
+	if info, err := os.Stat(abs); err != nil || !info.IsDir() {
+		return "", fmt.Errorf("--login %q: %s is not a folder; give the folder holding your Claude login, as --login ~/.claude", p, abs)
+	}
+	return abs, nil
 }
 
 // settable are the harnesses the operator sets with flai serve agent harness:
@@ -1708,8 +1824,10 @@ func hostProviders(set map[string]manifest.Provider, lookup func(string) (string
 // program and arguments, with set saying whether the host gives either rather
 // than the adapter's defaults; its guard and deny_protected (ADR-0131); and
 // whether its adapter runs flai guard and can ask before a protected write,
-// where neither lifts anything. The command's program and arguments are flai
-// serve agent set's command, never set here.
+// where neither lifts anything; and the container harness's image for each
+// inner harness, the defaults filled in, its network, and its login folder
+// (S-0508). The command's program and arguments are flai serve agent set's
+// command, never set here.
 func (a *app) hostHarnesses(cfg config.Config) map[string]any {
 	out := map[string]any{}
 	for _, n := range append(settable(), harness.Command) {
@@ -1725,8 +1843,12 @@ func (a *app) hostHarnesses(cfg config.Config) map[string]any {
 		}
 		set := cfg.Agent.Harnesses[n]
 		caps := harness.Adapters[n].Capabilities()
-		out[n] = map[string]any{"program": h.Program, "args": args, "set": set.Program != "" || set.Args != nil,
+		entry := map[string]any{"program": h.Program, "args": args, "set": set.Program != "" || set.Args != nil,
 			"guard": set.Guard, "deny_protected": set.DenyProtected, "guard_capable": caps.Guard, "ask_capable": caps.Ask}
+		if n == config.ContainerHarness {
+			entry["images"], entry["network"], entry["login"] = set.ShownImages(), set.Network, set.Login
+		}
+		out[n] = entry
 	}
 	return out
 }

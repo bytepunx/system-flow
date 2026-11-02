@@ -3641,7 +3641,7 @@ flai serve agent commit S-0140
 Set the program a harness is, the arguments that say what its agent may do, and what you lift on it.
 
 ```text
-flai serve agent harness [<name>] [--program <path>] [--guard none|""] [--deny-protected=true|false] [--reset] [-- args...] [flags]
+flai serve agent harness [<name>] [--program <path>] [--guard none|""] [--deny-protected=true|false] [--image <inner>=<image>]... [--network <name>] [--login <path>] [--reset] [-- args...] [flags]
 ```
 
 A story names its harness, such as claude-code; you say here what that is on this host. --program is what is run, and the arguments after -- replace the adapter's defaults, which say what the agent may do (for claude-code: --permission-mode acceptEdits --allowedTools Bash,mcp\_\_flai). "--" with nothing after it runs it with none. --reset goes back to the defaults and clears --guard and --deny-protected. With no name, every harness is shown.
@@ -3649,6 +3649,8 @@ A story names its harness, such as claude-code; you say here what that is on thi
 On a harness that cannot run flai guard, a story whose agent has roles is refused (ADR-0131). --guard none lifts that: the story's sub-agents run unguarded, so a sub-agent could move items, write threads, or commit, which only the story's agent should. --guard "" puts the refusal back; no other value is taken.
 
 On a harness that cannot ask before a protected write, a start is refused unless the project's auto-approve host action is on. --deny-protected says that your arguments for the harness already deny the protected paths in its own vocabulary, which flai cannot read, so flai starts the agent on a harness that cannot ask before a protected write; --deny-protected=false takes it back.
+
+The container harness runs an inner harness, claude-code, in a Docker container, and only it takes --image, --network, and --login. --image &lt;inner&gt;=&lt;image&gt; is the image the inner harness runs in, flai-agent-&lt;inner&gt;:local (make agent-images) unless set; repeat it for each inner harness. --network is the Docker network the container joins, Docker's default bridge with the host reached through Docker's host gateway unless set; --network "" goes back to it. --login is the folder holding your Claude login, mounted read-only, an existing folder given as an absolute path or under ~/; --login "" clears it.
 
 The command harness takes only --guard, --deny-protected, and --reset: its program and arguments are set with flai serve agent set.
 
@@ -3663,6 +3665,8 @@ flai serve agent harness command --guard none
 flai serve agent harness command --guard ""
 flai serve agent harness command --deny-protected
 flai serve agent harness command --deny-protected=false
+flai serve agent harness container --image claude-code=flai-agent-claude-code:local --login ~/.claude
+flai serve agent harness container --network flai-agents
 ```
 
 Flags:
@@ -3671,6 +3675,9 @@ Flags:
 |------|---------|
 | `--deny-protected` | your arguments for the harness deny the protected paths, so flai starts the agent on a harness that cannot ask before a protected write |
 | `--guard` string | none lets a story's sub-agents run unguarded on a harness that cannot run flai guard; "" puts the refusal back |
+| `--image` stringArray | the container harness's image for an inner harness, as &lt;inner&gt;=&lt;image&gt;; repeat for each (flai-agent-&lt;inner&gt;:local unless set) |
+| `--login` string | the folder holding your Claude login, which the container harness mounts read-only; "" clears it |
+| `--network` string | the Docker network the container harness's agents join; "" is Docker's default bridge |
 | `--program` string | the program the harness is on this host |
 | `--reset` | go back to the adapter's program and arguments, and lift nothing |
 

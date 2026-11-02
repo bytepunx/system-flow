@@ -527,7 +527,7 @@ func TestHarnessGuardAndDenyProtected(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := back.Agent.Harnesses["command"]; got != (HarnessHost{Guard: GuardNone, DenyProtected: true}) {
+	if got := back.Agent.Harnesses["command"]; !reflect.DeepEqual(got, HarnessHost{Guard: GuardNone, DenyProtected: true}) {
 		t.Errorf("round trip: %+v", back.Agent.Harnesses)
 	}
 	data, err := os.ReadFile(path)
@@ -555,6 +555,103 @@ func TestHarnessGuardAndDenyProtected(t *testing.T) {
 	}
 	if again, _, err := Load(path); err != nil || again.Agent.Harnesses["command"].Guard != GuardNone {
 		t.Errorf("a refused save leaves the file: %+v %v", again.Agent.Harnesses, err)
+	}
+}
+
+// S-0508: the container harness's images, network, and login round-trip
+// through a save and a load, the image defaults are shown but not written,
+// and an entry that sets only them is kept.
+func TestContainerHarnessSettings(t *testing.T) {
+	c := Default()
+	set := HarnessHost{Images: map[string]string{"claude-code": "registry.example/agent:1"}, Network: "flai-net", Login: "/home/op/.claude"}
+	agent, err := c.Agent.WithHarness(ContainerHarness, set)
+	if err != nil {
+		t.Fatalf("container settings: %v", err)
+	}
+	c.Agent = agent
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := Save(path, c); err != nil {
+		t.Fatal(err)
+	}
+	back, _, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := back.Agent.Harnesses[ContainerHarness]; !reflect.DeepEqual(got, set) {
+		t.Errorf("round trip: %+v", back.Agent.Harnesses)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"images": {`, `"claude-code": "registry.example/agent:1"`, `"network": "flai-net"`, `"login": "/home/op/.claude"`} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf("written as agent.harnesses.container: no %s in %s", want, data)
+		}
+	}
+	if got := back.Agent.Harnesses[ContainerHarness].Image("claude-code"); got != "registry.example/agent:1" {
+		t.Errorf("the image set: %q", got)
+	}
+	var unset HarnessHost
+	if got := unset.ShownImages(); !reflect.DeepEqual(got, map[string]string{"claude-code": "flai-agent-claude-code:local"}) {
+		t.Errorf("the default image is shown: %v", got)
+	}
+	if !unset.IsZero() || set.IsZero() || (HarnessHost{Network: "n"}).IsZero() || (HarnessHost{Login: "/l"}).IsZero() {
+		t.Error("IsZero is whether an entry sets nothing")
+	}
+	if strings.Contains(string(data), "flai-agent-") {
+		t.Errorf("the default image is not written: %s", data)
+	}
+	if got := ContainerInners(); !reflect.DeepEqual(got, []string{"claude-code"}) {
+		t.Errorf("inner harnesses: %v", got)
+	}
+}
+
+// S-0508: checkHarnesses refuses an image for a harness flai does not run in
+// the container, an empty or malformed image reference, a network that is no
+// Docker name, a login that is not absolute, and any of them on a harness
+// other than the container, each when set, saved, and loaded, saying what to
+// do.
+func TestContainerHarnessSettingsRefused(t *testing.T) {
+	cases := []struct {
+		name string
+		h    HarnessHost
+		json string
+		want []string
+	}{
+		{ContainerHarness, HarnessHost{Images: map[string]string{"codex": "x:1"}}, `{"images":{"codex":"x:1"}}`,
+			[]string{`agent.harnesses.container.images.codex`, `flai runs no harness "codex" inside the container, only claude-code`}},
+		{ContainerHarness, HarnessHost{Images: map[string]string{"claude-code": ""}}, `{"images":{"claude-code":""}}`,
+			[]string{`agent.harnesses.container.images.claude-code is empty`, `--image claude-code=flai-agent-claude-code:local`}},
+		{ContainerHarness, HarnessHost{Images: map[string]string{"claude-code": "-v /:/host"}}, `{"images":{"claude-code":"-v /:/host"}}`,
+			[]string{`which is no image reference`}},
+		{ContainerHarness, HarnessHost{Network: "--privileged"}, `{"network":"--privileged"}`,
+			[]string{`agent.harnesses.container.network is "--privileged"`, `--network ""`}},
+		{ContainerHarness, HarnessHost{Login: "~/.claude"}, `{"login":"~/.claude"}`,
+			[]string{`agent.harnesses.container.login is "~/.claude", which is not an absolute path`, `--login ~/.claude`}},
+		{"claude-code", HarnessHost{Network: "flai-net"}, `{"network":"flai-net"}`,
+			[]string{`agent.harnesses.claude-code sets images, network, or login, which only the container harness takes`}},
+	}
+	for _, tc := range cases {
+		check := func(how string, err error) {
+			t.Helper()
+			if err == nil {
+				t.Errorf("%s %+v: not refused", how, tc.h)
+				return
+			}
+			for _, w := range tc.want {
+				if !strings.Contains(err.Error(), w) {
+					t.Errorf("%s %+v: %v, want %q", how, tc.h, err, w)
+				}
+			}
+		}
+		_, err := Default().Agent.WithHarness(tc.name, tc.h)
+		check("set", err)
+		_, err = Parse([]byte(`{"agent":{"harnesses":{"` + tc.name + `":` + tc.json + `}}}`))
+		check("loaded", err)
+		bad := Default()
+		bad.Agent.Harnesses = map[string]HarnessHost{tc.name: tc.h}
+		check("saved", Save(filepath.Join(t.TempDir(), "config.json"), bad))
 	}
 }
 

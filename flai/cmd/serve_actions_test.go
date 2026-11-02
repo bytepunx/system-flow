@@ -20,6 +20,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/config"
+	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
@@ -600,6 +601,126 @@ func TestServeAgentHarness(t *testing.T) {
 	}
 }
 
+// S-0508: flai serve agent harness container keeps the image per inner
+// harness, the network, and the login folder, ~/ resolved, in the host's
+// configuration; flai serve agent harness and flai serve settings show them,
+// the default image filled in; flai serve is given them; and the next --image
+// keeps the images already set. Not parallel: it sets HOME for ~/.
+func TestServeAgentHarnessContainer(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	login := filepath.Join(home, ".claude")
+	if err := os.Mkdir(login, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	out, _, _ := runIn(t, root, "serve", "agent", "harness")
+	if !strings.Contains(out, "harness container: \"docker\"\n  image claude-code: flai-agent-claude-code:local (default, built by make agent-images)\n  network: Docker's default bridge, the host reached through Docker's host gateway\n  login: not set; set the folder holding your Claude login with --login ~/.claude\n") {
+		t.Errorf("the defaults: %s", out)
+	}
+	out, errOut, code := runIn(t, root, "serve", "agent", "harness", "container", "--image", "claude-code=flai-agent-claude-code:local", "--login", "~/.claude")
+	if code != 0 || !strings.Contains(out, "  image claude-code: flai-agent-claude-code:local (set)\n") || !strings.Contains(out, "  login: "+login+", mounted read-only\n") {
+		t.Fatalf("set: %d %s %s", code, out, errOut)
+	}
+	cfg, _, err := (&app{configPath: configOf(t)}).loadConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := config.HarnessHost{Images: map[string]string{"claude-code": "flai-agent-claude-code:local"}, Login: login}
+	if got := cfg.Agent.Harnesses[config.ContainerHarness]; !reflect.DeepEqual(got, want) {
+		t.Errorf("kept in the host configuration: %+v", got)
+	}
+	runIn(t, root, "serve", "agent", "harness", "container", "--network", "flai-agents")
+	if got := (&app{configPath: configOf(t)}).agentConfig(root).Harnesses[config.ContainerHarness]; got.Network != "flai-agents" || got.Login != login || got.Images["claude-code"] != "flai-agent-claude-code:local" {
+		t.Errorf("what flai serve is given, the images kept: %+v", got)
+	}
+	out, _, _ = runIn(t, root, "serve", "settings")
+	if !strings.Contains(out, "harness container: docker") || !strings.Contains(out, "    image claude-code: flai-agent-claude-code:local\n") || !strings.Contains(out, "    network flai-agents, login "+login+"\n") {
+		t.Errorf("flai serve settings: %s", out)
+	}
+	js, errOut, code := runIn(t, root, "serve", "settings", "--json")
+	var settings struct {
+		Agent struct {
+			Harnesses map[string]struct {
+				Images  map[string]string `json:"images"`
+				Network string            `json:"network"`
+				Login   string            `json:"login"`
+			} `json:"harnesses"`
+		} `json:"agent"`
+	}
+	if err := json.Unmarshal([]byte(js), &settings); err != nil || code != 0 {
+		t.Fatalf("flai serve settings --json: %d %v %s %s", code, err, js, errOut)
+	}
+	if got := settings.Agent.Harnesses[config.ContainerHarness]; got.Images["claude-code"] != "flai-agent-claude-code:local" || got.Network != "flai-agents" || got.Login != login {
+		t.Errorf("flai serve settings --json: %+v", got)
+	}
+	js, _, _ = runIn(t, root, "serve", "agent", "show", "--json")
+	if err := json.Unmarshal([]byte(js), &settings.Agent); err != nil {
+		t.Fatal(err)
+	}
+	if got := settings.Agent.Harnesses[config.ContainerHarness]; got.Network != "flai-agents" || got.Login != login || len(got.Images) != 1 {
+		t.Errorf("flai serve agent show --json: %s", js)
+	}
+	runIn(t, root, "serve", "agent", "harness", "container", "--network", "", "--login", "")
+	if got := (&app{configPath: configOf(t)}).agentConfig(root).Harnesses[config.ContainerHarness]; got.Network != "" || got.Login != "" || len(got.Images) != 1 {
+		t.Errorf(`--network "" and --login "" clear only themselves: %+v`, got)
+	}
+	runIn(t, root, "serve", "agent", "harness", "container", "--reset")
+	if cfg, _, _ := (&app{configPath: configOf(t)}).loadConfig(); cfg.Agent.Harnesses != nil {
+		t.Errorf("--reset removes the entry: %+v", cfg.Agent.Harnesses)
+	}
+}
+
+// S-0508: --image, --network, and --login are refused on another harness, a
+// malformed or empty --image, one for an inner harness flai does not run in
+// the container, a --login that is not a folder, and with --reset, each saying
+// what to do and changing nothing.
+func TestServeAgentHarnessContainerRefusals(t *testing.T) {
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	for _, tc := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"claude-code", "--network", "flai-agents"}, "--image, --network, and --login are the container harness's, which claude-code is not"},
+		{[]string{"command", "--login", "/tmp"}, "which command is not"},
+		{[]string{"--image", "claude-code=x"}, "name the harness"},
+		{[]string{"container", "--image", "claude-code"}, "is not <inner>=<image>: give the inner harness and its image"},
+		{[]string{"container", "--image", "=x"}, "=x\\\" is not <inner>=<image>"},
+		{[]string{"container", "--image", "claude-code="}, "agent.harnesses.container.images.claude-code is empty"},
+		{[]string{"container", "--image", "codex=x:1"}, "inside the container, only claude-code"},
+		{[]string{"container", "--login", filepath.Join(t.TempDir(), "missing")}, "is not a folder; give the folder holding your Claude login"},
+		{[]string{"container", "--reset", "--network", "n"}, "--reset takes neither"},
+	} {
+		if _, errOut, code := runIn(t, root, append([]string{"serve", "agent", "harness"}, tc.args...)...); code == 0 || !strings.Contains(errOut, tc.want) {
+			t.Errorf("%q: %d %s, want %q", tc.args, code, errOut, tc.want)
+		}
+	}
+	if cfg, _, _ := (&app{configPath: configOf(t)}).loadConfig(); cfg.Agent.Harnesses != nil {
+		t.Errorf("a refusal changes nothing: %+v", cfg.Agent.Harnesses)
+	}
+}
+
+// S-0508: config names the container harness and its inner harnesses
+// itself, since it cannot import harness; they are harness's.
+func TestConfigContainerNamesAreTheHarnesss(t *testing.T) {
+	t.Parallel()
+	if config.ContainerHarness != harness.Container {
+		t.Errorf("config.ContainerHarness %q, harness.Container %q", config.ContainerHarness, harness.Container)
+	}
+	inners := slices.DeleteFunc(harness.Names(), func(n string) bool { return n == harness.Container || n == harness.Command })
+	if got := config.ContainerInners(); !slices.Equal(got, inners) {
+		t.Errorf("config.ContainerInners %v, harness's %v", got, inners)
+	}
+	for _, inner := range inners {
+		if got := config.DefaultImage(inner); got != harness.DefaultImages[inner] {
+			t.Errorf("default image of %s: config %q, harness %q", inner, got, harness.DefaultImages[inner])
+		}
+	}
+}
+
 // S-0355 (ADR-0131): a harness's guard none and deny_protected are set and
 // cleared on the host, the command's among them, each flag changing only its
 // own field; --reset clears both; the command's program stays flai serve agent
@@ -621,7 +742,7 @@ func TestServeAgentHarnessGuardAndDenyProtected(t *testing.T) {
 		t.Fatalf("guard none on the command: %d %s %s", code, out, errOut)
 	}
 	out, _, _ = runIn(t, root, "serve", "agent", "harness", "command", "--deny-protected")
-	if got := harnesses()["command"]; got != (config.HarnessHost{Guard: config.GuardNone, DenyProtected: true}) {
+	if got := harnesses()["command"]; !reflect.DeepEqual(got, config.HarnessHost{Guard: config.GuardNone, DenyProtected: true}) {
 		t.Errorf("--deny-protected keeps the guard: %+v", got)
 	}
 	if !strings.Contains(out, "  deny_protected: your arguments deny the protected paths") {
@@ -646,7 +767,7 @@ func TestServeAgentHarnessGuardAndDenyProtected(t *testing.T) {
 		t.Errorf("show --json gives the command's guard and deny_protected: %s", out)
 	}
 	runIn(t, root, "serve", "agent", "harness", "command", "--guard", "")
-	if got := harnesses()["command"]; got != (config.HarnessHost{DenyProtected: true}) {
+	if got := harnesses()["command"]; !reflect.DeepEqual(got, config.HarnessHost{DenyProtected: true}) {
 		t.Errorf(`--guard "" clears only the guard: %+v`, got)
 	}
 	runIn(t, root, "serve", "agent", "harness", "command", "--deny-protected=false")

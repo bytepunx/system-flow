@@ -73,9 +73,12 @@ type hostSettingsView struct {
 		Name      string   `json:"name"`
 		Command   []string `json:"command"`
 		Harnesses map[string]struct {
-			Program string   `json:"program"`
-			Args    []string `json:"args"`
-			Set     bool     `json:"set"`
+			Program string            `json:"program"`
+			Args    []string          `json:"args"`
+			Set     bool              `json:"set"`
+			Images  map[string]string `json:"images"`
+			Network string            `json:"network"`
+			Login   string            `json:"login"`
 		} `json:"harnesses"`
 		Providers map[string]struct {
 			API    string `json:"api"`
@@ -143,6 +146,21 @@ func writeHostSettings(w io.Writer, name, root string, v hostSettingsView) {
 			from = "set"
 		}
 		fmt.Fprintf(w, "  harness %s: %s (%s)\n", n, strings.TrimSpace(h.Program+" "+strings.Join(h.Args, " ")), from)
+		if n != config.ContainerHarness {
+			continue
+		}
+		for _, inner := range slices.Sorted(maps.Keys(h.Images)) {
+			fmt.Fprintf(w, "    image %s: %s\n", inner, h.Images[inner])
+		}
+		network := h.Network
+		if network == "" {
+			network = "Docker's default bridge"
+		}
+		login := h.Login
+		if login == "" {
+			login = "not set"
+		}
+		fmt.Fprintf(w, "    network %s, login %s\n", network, login)
 	}
 	for _, n := range slices.Sorted(maps.Keys(v.Agent.Providers)) {
 		p := v.Agent.Providers[n]
