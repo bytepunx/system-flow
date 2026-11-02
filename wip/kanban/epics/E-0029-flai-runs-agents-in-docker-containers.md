@@ -6,7 +6,7 @@ title: flai runs agents in Docker containers
 status: in-progress
 owner: alex
 created: 2026-10-26T04:31:29Z
-updated: 2026-10-28T12:14:47Z
+updated: 2026-11-02T18:08:56Z
 transitions:
   - to: ready
     at: 2026-10-26T04:31:36Z
@@ -17,7 +17,7 @@ transitions:
 tags: []
 usage:
   source: sum
-  seconds: 8735
+  seconds: 11432
   priced_by: harness
   turns:
     - day: 2026-10-28
@@ -25,16 +25,17 @@ usage:
       hand_edits: 9
       work: 174
     - day: 2026-11-02
-      ceremony: 2
-      hand_edits: 3
-      work: 59
+      ceremony: 7
+      test_runs: 1
+      hand_edits: 9
+      work: 126
   models:
     - model: claude-opus-5-5
-      input: 1496
-      output: 491292
-      cache_read: 90629302
-      cache_write: 2504001
-      cost: 43.7955
+      input: 2028
+      output: 685306
+      cache_read: 134930625
+      cache_write: 3976298
+      cost: 66.4467
   strategic:
     - kind: planner
       seconds: 486
@@ -53,15 +54,15 @@ usage:
           cache_write: 138160
           cost: 6.5749
     - kind: orchestrator
-      seconds: 30129
+      seconds: 30205
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 797
-          output: 10585
-          cache_read: 143173635
-          cache_write: 793723
-          cost: 31.6595
+          input: 823
+          output: 10746
+          cache_read: 143996273
+          cache_write: 938401
+          cost: 31.8867
         - model: claude-sonnet-5-5
           input: 50
           output: 293
@@ -90,6 +91,7 @@ The one refinement to make to the ADR as proposed is to look at creating multipl
 - S-0509 The planner, the orchestrator, the analyzer, and the curator run in a container when their harness is container, with the main checkout mounted as an ADR settles, pilot passing their role, and their activity logged as on the host
 - S-0510 A project's manifest names an image layer for its test tiers' tools, flai serve runs it, flai check warns when it is not built, and this repository's layer runs the close-out inside the container
 - S-0513 docs/operators/runbooks gains a runbook for building the agent images and running a story's agent in a container by hand
+- S-0565 One story of this repository is worked end to end by flai serve on harness container, from story_start to review, once S-0508's container harness is in the installed flai
 
 ## Notes
 

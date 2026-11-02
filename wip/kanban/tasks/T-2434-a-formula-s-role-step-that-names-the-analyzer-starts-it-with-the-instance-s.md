@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 141
-      output: 43653
-      cache_read: 8734021
-      cache_write: 271917
-      cost: 4.1486
+      input: 132
+      output: 40289
+      cache_read: 8740977
+      cache_write: 250644
+      cost: 3.9741
 ---
 # T-2434 A formula's role step that names the analyzer starts it with the instance's focus on the instance, and its end is the agent event on the instance
 

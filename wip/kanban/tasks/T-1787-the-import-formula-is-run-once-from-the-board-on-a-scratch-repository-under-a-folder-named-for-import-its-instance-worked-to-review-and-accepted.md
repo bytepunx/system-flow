@@ -3,12 +3,15 @@ id: T-1787
 type: task
 nature: improvement
 title: The import formula is run once from the board on a scratch repository under a folder named for import, its instance worked to review and accepted
-status: backlog
+status: cancelled
 parent: S-0424
 owner: alex
 created: 2026-10-16T05:49:05Z
-updated: 2026-10-21T16:12:38Z
-transitions: []
+updated: 2026-11-02T18:08:59Z
+transitions:
+  - to: cancelled
+    at: 2026-11-02T18:08:59Z
+    by: agent-S-0424
 stream: S-0424
 tags: [cli, dashboard]
 after: [T-1785]
@@ -30,3 +33,4 @@ The instance is accepted and archived, and this story's Notes record the run.
 The run changes no file of this story, so the task touches nothing.
 
 Rewritten on 2026-10-21 by the planner of S-0424 for TH-0471's answer 5, a story's agent working the instance in place of `flai serve`, as approved on TH-0588.
+- 2026-11-02T18:08:59Z: moved to cancelled: moved to S-0564 on TH-0810: the run needs S-0424 on the main branch

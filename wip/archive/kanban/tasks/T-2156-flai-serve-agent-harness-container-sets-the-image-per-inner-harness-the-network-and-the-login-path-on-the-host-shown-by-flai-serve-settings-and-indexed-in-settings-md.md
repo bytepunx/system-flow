@@ -3,15 +3,36 @@ id: T-2156
 type: task
 nature: feature
 title: flai serve agent harness container sets the image per inner harness, the network, and the login path on the host, shown by flai serve settings and indexed in settings.md
-status: backlog
+status: done
 parent: S-0508
 owner: alex
 created: 2026-10-26T04:48:11Z
-updated: 2026-10-26T04:48:11Z
-transitions: []
+updated: 2026-11-02T07:10:02Z
+transitions:
+  - to: ready
+    at: 2026-11-02T06:53:42Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-02T06:53:43Z
+    by: system-flow
+  - to: done
+    at: 2026-11-02T07:10:02Z
+    by: agent-S-0508
 stream: S-0508
 tags: [cli, docker]
-touches: [flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, docs/operators/settings.md, docs/users/flai-reference.md]
+touches: [flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, docs/operators/settings.md, docs/users/flai-reference.md, flai/cmd/serve_settings.go]
+usage:
+  source: log
+  seconds: 979
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 74
+      output: 26852
+      cache_read: 6131430
+      cache_write: 203770
+      cost: 3.135
 ---
 # T-2156 flai serve agent harness container sets the image per inner harness, the network, and the login path on the host, shown by flai serve settings and indexed in settings.md
 

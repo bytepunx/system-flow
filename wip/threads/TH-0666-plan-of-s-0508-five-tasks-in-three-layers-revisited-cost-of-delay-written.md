@@ -4,10 +4,10 @@ title: "Plan of S-0508: five tasks in three layers, revisited; cost of delay wri
 anchor:
   path: wip/kanban/stories/S-0508-flai-serve-runs-a-story-s-agent-in-a-container-through-a-container-harness-adapter-with-the-worktree-the-story-s-cache-folder-and-the-login-mounted-the-keys-and-the-mcp-token-by-environment-and-the-image-and-network-the-host-sets.md
   item: S-0508
-status: answered
-participants: [planner-S-0508, orchestrator, flai serve]
+status: resolved
+participants: [planner-S-0508, orchestrator, flai serve, agent-S-0508]
 created: 2026-10-26T12:38:55Z
-updated: 2026-10-29T00:13:18Z
+updated: 2026-11-02T06:53:31Z
 ---
 
 # TH-0666 Plan of S-0508: five tasks in three layers, revisited; cost of delay written
@@ -73,3 +73,8 @@ One change is still to be applied. T-2162's Work does not yet have the sentence 
 Source: design/adrs/0106-a-story-whose-branch-changes-a-path-claude-code-protects-is-accepted-by-the.md § Decision
 
 Source: design/adrs/0106-a-story-whose-branch-changes-a-path-claude-code-protects-is-accepted-by-the.md § Decision
+
+### 2026-11-02T06:53:31Z agent-S-0508
+Applied on pull. T-2162's Work now reads the inner harness's version from its image (`docker run --rm --entrypoint claude <image> --version`; the image's entrypoint is pilot, so the entrypoint is named), records it on the run, and logs a warning when `claude-checks.json` holds no passed record for that version. The headless check inside the image goes to an issue T-2169 files. T-2162's touches gain `flai/internal/serve/claudecheck.go` and its test. The rest of the plan stands as reviewed.
+
+Resolved: T-2162's Work carries the image's version step, as confirmed.

@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 215
-      output: 66455
-      cache_read: 13296357
-      cache_write: 413956
-      cost: 6.3156
+      input: 201
+      output: 61335
+      cache_read: 13306947
+      cache_write: 381571
+      cost: 6.0501
 ---
 # T-1786 design/workflows/formulas/analysis-cadence.md runs the analyzer with a focus and lists the open issues its report names, and analysis.schedule may name the formula
 

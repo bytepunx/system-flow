@@ -3,16 +3,37 @@ id: T-2169
 type: task
 nature: feature
 title: One story of this repository is worked end to end by flai serve on harness container, and the docs describe the adapter, its settings, its mounts, and what it never mounts
-status: backlog
+status: done
 parent: S-0508
 owner: alex
 created: 2026-10-26T04:50:37Z
-updated: 2026-10-26T04:50:37Z
-transitions: []
+updated: 2026-11-02T07:30:37Z
+transitions:
+  - to: ready
+    at: 2026-11-02T07:25:53Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-02T07:25:54Z
+    by: system-flow
+  - to: done
+    at: 2026-11-02T07:30:37Z
+    by: agent-S-0508
 stream: S-0508
 tags: [cli, docker]
-touches: [docs/users/flai.md, docs/operators/index.md, docs/operators/runbooks/install.md, design/system/flai-cli.md, design/system/agent-adapters.md, design/tech/docker.md, design/issues/summary.md]
+touches: [docs/users/flai.md, docs/operators/index.md, docs/operators/runbooks/install.md, design/system/flai-cli.md, design/system/agent-adapters.md, design/tech/docker.md, design/issues/summary.md, docs/operators/runbooks/agent-container.md]
 after: [T-2162, T-2157]
+usage:
+  source: log
+  seconds: 283
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 82
+      output: 29808
+      cache_read: 6806329
+      cache_write: 226200
+      cost: 3.4801
 ---
 # T-2169 One story of this repository is worked end to end by flai serve on harness container, and the docs describe the adapter, its settings, its mounts, and what it never mounts
 

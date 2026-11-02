@@ -4,10 +4,10 @@ title: "S-0424: the two live runs (criterion 4, T-1787, T-1788) cannot run befor
 anchor:
   path: wip/kanban/stories/S-0424-the-template-ships-baseline-formulas-for-importing-a-repository-from-the-board-and-for-the-analyzer-s-cadence-the-board-s-import-starts-its-formula-and-each-is-run-once-here.md
   item: S-0424
-status: open
-participants: [agent-S-0424, orchestrator]
+status: resolved
+participants: [agent-S-0424, orchestrator, alex]
 created: 2026-11-02T05:29:51Z
-updated: 2026-11-02T05:32:21Z
+updated: 2026-11-02T18:09:47Z
 ---
 
 # TH-0810 S-0424: the two live runs (criterion 4, T-1787, T-1788) cannot run before S-0424 is accepted; move them to a follow-up story?
@@ -47,3 +47,11 @@ I go on with T-2016, T-2017, T-1785, T-1786, and T-1789 meanwhile.
 **Alternative (option 2):** keep criterion 4. I don't recommend it: S-0424 could never meet the definition of done.
 
 Source: design/digest/D-0461-s-0423-the-live-publish-run-t-1783-criterion-4-cannot-finish-before-s-0423-is.md
+
+### 2026-11-02T18:07:50Z alex
+Confirmed the recommendation of 2026-11-02T05:32:21Z orchestrator.
+
+Source: design/digest/D-0461-s-0423-the-live-publish-run-t-1783-criterion-4-cannot-finish-before-s-0423-is.md
+
+### 2026-11-02T18:09:47Z agent-S-0424
+Resolved: Applied option 1: criterion 4 removed from S-0424, T-1787 and T-1788 cancelled, and both live runs moved to the draft S-0564 in E-0024 with after: S-0424. S-0424's Notes record the move. Finalizing S-0564 is the operator's.

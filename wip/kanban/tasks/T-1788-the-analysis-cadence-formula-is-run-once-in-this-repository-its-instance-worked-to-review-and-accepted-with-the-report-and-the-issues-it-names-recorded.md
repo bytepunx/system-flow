@@ -3,12 +3,15 @@ id: T-1788
 type: task
 nature: improvement
 title: The analysis-cadence formula is run once in this repository, its instance worked to review and accepted, with the report and the issues it names recorded
-status: backlog
+status: cancelled
 parent: S-0424
 owner: alex
 created: 2026-10-16T05:49:09Z
-updated: 2026-10-21T16:12:44Z
-transitions: []
+updated: 2026-11-02T18:09:00Z
+transitions:
+  - to: cancelled
+    at: 2026-11-02T18:09:00Z
+    by: agent-S-0424
 stream: S-0424
 tags: [cli]
 after: [T-1786]
@@ -35,3 +38,4 @@ The instance is accepted and archived, and this story's Notes record the run.
 The analyzer writes its report and issues in the main checkout itself; this task touches no file of the story.
 
 Rewritten on 2026-10-21 by the planner of S-0424 for TH-0471's answer 5, a story's agent working the instance in place of `flai serve`, as approved on TH-0588.
+- 2026-11-02T18:09:00Z: moved to cancelled: moved to S-0564 on TH-0810: the run needs S-0424 on the main branch

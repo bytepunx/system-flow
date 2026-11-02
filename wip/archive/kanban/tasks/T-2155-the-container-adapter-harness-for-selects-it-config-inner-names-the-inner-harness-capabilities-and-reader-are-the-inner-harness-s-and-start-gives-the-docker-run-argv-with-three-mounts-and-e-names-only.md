@@ -3,15 +3,36 @@ id: T-2155
 type: task
 nature: feature
 title: "The container adapter: harness.For selects it, config.inner names the inner harness, Capabilities and Reader are the inner harness's, and Start gives the docker run argv with three mounts and -e names only"
-status: backlog
+status: done
 parent: S-0508
 owner: alex
 created: 2026-10-26T04:48:02Z
-updated: 2026-10-26T04:48:02Z
-transitions: []
+updated: 2026-11-02T07:09:44Z
+transitions:
+  - to: ready
+    at: 2026-11-02T06:53:40Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-02T06:53:41Z
+    by: system-flow
+  - to: done
+    at: 2026-11-02T07:09:44Z
+    by: agent-S-0508
 stream: S-0508
 tags: [cli, docker]
 touches: [flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go]
+usage:
+  source: log
+  seconds: 963
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 54
+      output: 19728
+      cache_read: 4504699
+      cache_write: 149708
+      cost: 2.3032
 ---
 # T-2155 The container adapter: harness.For selects it, config.inner names the inner harness, Capabilities and Reader are the inner harness's, and Start gives the docker run argv with three mounts and -e names only
 

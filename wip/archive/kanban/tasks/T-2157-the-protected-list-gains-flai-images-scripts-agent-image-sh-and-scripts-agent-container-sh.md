@@ -3,15 +3,36 @@ id: T-2157
 type: task
 nature: feature
 title: The protected list gains flai/images, scripts/agent-image.sh, and scripts/agent-container.sh
-status: backlog
+status: done
 parent: S-0508
 owner: alex
 created: 2026-10-26T04:48:17Z
-updated: 2026-10-26T04:48:17Z
-transitions: []
+updated: 2026-11-02T07:09:52Z
+transitions:
+  - to: ready
+    at: 2026-11-02T06:53:44Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-02T06:53:45Z
+    by: system-flow
+  - to: done
+    at: 2026-11-02T07:09:52Z
+    by: agent-S-0508
 stream: S-0508
 tags: [cli, docker]
-touches: [flai/internal/protected/protected.go, flai/internal/protected/protected_test.go]
+touches: [flai/internal/protected/protected.go, flai/internal/protected/protected_test.go, flai/internal/guard/call.go, flai/internal/guard/call_test.go]
+usage:
+  source: log
+  seconds: 967
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 28
+      output: 10381
+      cache_read: 2370296
+      cache_write: 78774
+      cost: 1.2119
 ---
 # T-2157 The protected list gains flai/images, scripts/agent-image.sh, and scripts/agent-container.sh
 

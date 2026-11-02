@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:41:19Z
-updated: 2026-11-02T06:49:30Z
+updated: 2026-11-02T18:09:07Z
 transitions:
   - to: ready
     at: 2026-10-30T00:05:31Z
@@ -23,6 +23,16 @@ transitions:
     by: agent-S-0424
 blocked:
   - from: 2026-11-02T06:49:30Z
+    until: 2026-11-02T07:10:03Z
+    reason: awaiting the operator on TH-0810
+  - from: 2026-11-02T07:10:47Z
+    until: 2026-11-02T07:25:46Z
+    reason: awaiting the operator on TH-0810
+  - from: 2026-11-02T07:26:07Z
+    until: 2026-11-02T07:30:42Z
+    reason: awaiting the operator on TH-0810
+  - from: 2026-11-02T07:31:05Z
+    until: 2026-11-02T18:07:50Z
     reason: awaiting the operator on TH-0810
 tags: [cli, template, dashboard]
 topics: [cli, orchestration, template, conventions]
@@ -35,31 +45,31 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 4881
+  seconds: 4942
   priced_by: harness
   turns:
     - day: 2026-11-02
       ceremony: 1
       hand_edits: 4
-      work: 80
+      work: 92
   models:
     - model: claude-opus-5-5
-      input: 808
-      output: 250070
-      cache_read: 50034078
-      cache_write: 1557714
-      cost: 23.7656
+      input: 838
+      output: 255103
+      cache_read: 55345707
+      cache_write: 1587014
+      cost: 25.1631
   strategic:
     - kind: orchestrator
-      seconds: 786
+      seconds: 802
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 109
-          output: 1568
-          cache_read: 24643133
-          cache_write: 55665
-          cost: 5.4587
+          input: 117
+          output: 1614
+          cache_read: 24813636
+          cache_write: 135840
+          cost: 5.5176
 cost_of_delay:
   value: 50.85
   by: planner-S-0424
@@ -85,7 +95,6 @@ Two more processes that live in prose and Go become formulas. `import` brings a 
 - [x] `design/workflows/formulas/import.md`, in the template and here, takes the input `path` and has the steps the import runs after its commit, `flai check --strict` and `flai import test`; `flai import --formula` commits the import before any test and starts the formula in the new project, and the host API's import runs `flai import --formula`, so its progress shows as a story; the import tests pass.
 - [x] `design/workflows/formulas/analysis-cadence.md`, in the template and here, takes the input `focus` and has a role step that runs the analyzer with it and a step that lists the open issues its report names, for the operator to choose stories from at acceptance; the analysis schedule may name the formula in place of the analyzer.
 - [x] `flai check --strict` reports nothing on either formula, here and in a project made from the template.
-- [ ] Each formula is run once in this repository: an import of a scratch repository under a folder named for import, and one analyzer cadence, each instance worked to review and accepted, with its Notes naming what it produced.
 - [x] `design/system/strategic-agents.md` § The analysis schedule, `design/system/continuous-improvement.md` § Cadence, `docs/operators/index.md`, `docs/users/flaiover.md` where it describes Import, and `template/CHANGELOG.md` say that both are formulas.
 
 ## Tasks
@@ -101,7 +110,7 @@ Two more processes that live in prose and Go become formulas. `import` brings a 
 
 ## Notes
 
-- Criterion 4 is unticked: neither live run can start before S-0424 is accepted. The two formula files, `flai import --formula`, and `flai issue list --report` exist only on `story/S-0424`, and the board's Import runs the installed flai. TH-0810 asks to move T-1787 and T-1788 to a follow-up story, as D-0461 did for S-0423.
+- Criterion 4, each formula run once here with its instance accepted, moved to the draft S-0564 with T-1787's and T-1788's Work, on TH-0810, which the operator confirmed on 2026-11-02 (as D-0461 did for S-0423). Neither run could start before S-0424 is accepted: the formula files, `flai import --formula`, and `flai issue list --report` exist only on `story/S-0424`, and the board's Import runs the installed flai. T-1787 and T-1788 are cancelled.
 - Criterion 1 reworded by agent-S-0424 on 2026-11-02 to TH-0588's answer to question 1, which flai serve confirmed on 2026-10-28 and the operator resolved on 2026-10-31: the import is committed before its tests, and the formula's steps are the check and the tests.
 - Drafted by the planner for E-0024. Waits for the story that works a formula's instance; runs beside the publish formula story, with which it shares only the shared docs.
 - The analyzer's cadence run spends a model session; the operator chooses its focus when finalizing this story, or the run takes none, which looks for all three.

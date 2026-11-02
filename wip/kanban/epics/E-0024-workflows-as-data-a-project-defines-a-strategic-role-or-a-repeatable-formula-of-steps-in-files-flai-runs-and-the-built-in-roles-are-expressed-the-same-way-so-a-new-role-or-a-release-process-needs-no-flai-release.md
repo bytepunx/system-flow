@@ -6,7 +6,7 @@ title: "Workflows as data: a project defines a strategic role or a repeatable fo
 status: in-progress
 owner: alex
 created: 2026-10-16T04:28:02Z
-updated: 2026-11-02T04:14:44Z
+updated: 2026-11-02T18:08:35Z
 transitions:
   - to: ready
     at: 2026-10-20T19:01:17Z
@@ -25,7 +25,7 @@ topics: [cli, orchestration, planning, template, conventions]
 touches: [flai/internal/serve, flai/internal/guard, flai/internal/context, flai/internal/hostapi, flai/cmd, flaiover/src, design/system/strategic-agents.md, design/system/metrics.md, design/conventions/strategic-agents.md, ".claude/agents", docs/operators/index.md, docs/users/flai.md, template]
 usage:
   source: sum
-  seconds: 60880
+  seconds: 60941
   priced_by: harness
   turns:
     - day: 2026-10-28
@@ -48,7 +48,7 @@ usage:
       ceremony: 23
       test_runs: 1
       hand_edits: 21
-      work: 504
+      work: 516
   models:
     - model: claude-haiku-5-5
       input: 74
@@ -57,11 +57,11 @@ usage:
       cache_write: 212627
       cost: 0.3577
     - model: claude-opus-5-5
-      input: 7764
-      output: 2650695
-      cache_read: 574662833
-      cache_write: 17119986
-      cost: 268.64
+      input: 7794
+      output: 2655728
+      cache_read: 579974462
+      cache_write: 17149286
+      cost: 270.0375
     - model: claude-sonnet-5-5
       input: 62
       output: 20190
@@ -92,15 +92,15 @@ usage:
           cache_write: 471093
           cost: 4.2564
     - kind: orchestrator
-      seconds: 17118
+      seconds: 17134
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2675
-          output: 38047
-          cache_read: 521175573
-          cache_write: 3307304
-          cost: 117.7306
+          input: 2683
+          output: 38093
+          cache_read: 521346076
+          cache_write: 3387479
+          cost: 117.7895
         - model: claude-sonnet-5-5
           input: 144
           output: 756
@@ -141,6 +141,7 @@ To be drafted by the planner. Order: the role file format and its validation fir
 - S-0553 flai generates the planner's, the orchestrator's, the analyzer's, and the curator's harness definitions from their role files alone, flai check holds a .claude/agents copy to them, and a session started by hand reads the same definition
 - S-0554 A role file's start prompt and its triggers replace the planner's, the orchestrator's, the analyzer's, and the curator's start prompts and schedules in Go, so the built-in roles are defined by their files alone
 - S-0562 The publish formula is run once in this repository, its instance worked to review and accepted, and the release or the evaluation that stopped it recorded
+- S-0564 The import and analysis-cadence formulas are each run once in this repository, each instance worked to review and accepted
 
 ## Notes
 

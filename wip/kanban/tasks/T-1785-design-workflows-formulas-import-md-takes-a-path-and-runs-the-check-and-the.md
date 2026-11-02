@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 48
-      output: 14934
-      cache_read: 2988072
-      cache_write: 93028
-      cost: 1.4193
+      input: 45
+      output: 13784
+      cache_read: 2990452
+      cache_write: 85750
+      cost: 1.3596
 ---
 # T-1785 design/workflows/formulas/import.md takes a path and runs the check and the tests after the import's commit, and the host API's import runs flai import --formula so its progress shows as a story
 
