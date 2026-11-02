@@ -3,6 +3,7 @@ package serve
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -13,29 +14,50 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/mdlint"
+	"github.com/bytepunx/system-flow/flai/internal/roles"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // What the strategic agents did (S-0206, ADR-0079). flai serve keeps the log
 // of each run of the planner, the orchestrator, the analyzer, the curator,
-// and each role the project defines (ADR-0207) as it does a story's agent's, named for the project's key, the kind, and the time it
-// started. An activity ends when the agent reports it or when its run ends;
-// its span runs from the later of the newest run's start and the document's
-// last entry to its end, and its cost is what the kind's logs say was spent,
+// and each role the project defines (ADR-0207) as it does a story's agent's,
+// named for the project's key, the kind, and the time it started. An
+// activity ends when the agent reports it or when its run ends; its span
+// runs from the later of the newest run's start and the document's last
+// entry to its end, and its cost is what the kind's logs say was spent,
 // apportioned to that span as a task's is to its intervals (ADR-0051), so a
-// session resumed in a later run is charged only its share. A planner's
-// activity is also charged, that same share, to the item its run was started
-// for and every item above it, under usage.strategic (S-0225, ADR-0083); an
-// orchestrator's is split evenly between the work items its entry names and
-// charged to each and every item above it (S-0226, ADR-0095); an analyzer's
-// is split evenly between the issues its entry names and charged to each
-// (S-0227). An analyzer run's end names the report the run wrote, or says it
-// wrote none (S-0223), and names the issues that name the report, so its
-// cost is split between them (S-0227). A curator's names the digest entries
-// its run wrote or changed, which are no work items, and charges nothing: its
-// cost stays in its kind's project strategic total (S-0431, ADR-0196), as a
-// defined role's does.
+// session resumed in a later run is charged only its share. That same share
+// is charged under usage.strategic, under the kind's name, by the rule the
+// kind's role file names in charge (ADR-0249): item, to the item its run was
+// started for and every item above it (S-0225, ADR-0083); named, split evenly
+// between the work items its entry names and charged to each and every item
+// above it (S-0226, ADR-0095); issues, split evenly between the issues its
+// entry names and charged to each (S-0227); none, to nothing (S-0431,
+// ADR-0196). A built-in agent with no role file keeps its rule by its name:
+// item for the planner, named for the orchestrator, issues for the analyzer,
+// and none for the curator. What no item or issue takes stays in the kind's
+// project strategic total. An analyzer run's end names the report the run
+// wrote, or says it wrote none (S-0223), and names the issues that name the
+// report, so its cost is split between them (S-0227). A curator's names the
+// digest entries its run wrote or changed, which are no work items.
+
+// The rules a role file's charge names (ADR-0249 §1), roles.Charges.
+const (
+	chargeItem   = "item"
+	chargeNamed  = "named"
+	chargeIssues = "issues"
+	chargeNone   = "none"
+)
+
+// builtinCharges are the rules of the built-in strategic agents, by name,
+// which each keeps when the project has no role file for it (ADR-0249 §2).
+var builtinCharges = map[string]string{
+	workitem.ActivityPlanner:      chargeItem,
+	workitem.ActivityOrchestrator: chargeNamed,
+	workitem.ActivityAnalyzer:     chargeIssues,
+	workitem.ActivityCurator:      chargeNone,
+}
 
 // ActivityLogs are the logs flai serve keeps of the runs of the built-in
 // strategic agent kind in the project named key, oldest first. A role the
@@ -65,12 +87,13 @@ type Logged struct {
 	Entry    workitem.ActivityEntry `json:"entry"`
 	Activity *workitem.Activity     `json:"activity"`
 	Logs     []string               `json:"logs"`
-	// Planned is the item a planner's activity was charged to (ADR-0083),
-	// and Shared the work items an orchestrator's activity named, or the
-	// issues an analyzer's named, that each took a share of it (ADR-0095,
-	// S-0227). Charged are the items or issues whose usage the charge
-	// changed, each item charged first and then upward, each once. All are
-	// empty when nothing was charged.
+	// Planned is the item an activity charged by the item rule was charged
+	// to, the item its run was started for (ADR-0083, ADR-0249), and Shared
+	// the work items an activity charged by the named rule named, or the
+	// issues one charged by the issues rule named, that each took a share of
+	// it (ADR-0095, S-0227). Charged are the items or issues whose usage the
+	// charge changed, each item charged first and then upward, each once.
+	// All are empty when nothing was charged.
 	Planned string   `json:"planned,omitempty"`
 	Shared  []string `json:"shared,omitempty"`
 	Charged []string `json:"charged,omitempty"`
@@ -270,36 +293,59 @@ func (m *activityMeasure) spent(s usage.Span) *usage.Usage {
 
 // charge charges u, what an activity in run spent, with the entry's
 // seconds, so that the items and the activity document are two views of one
-// spend: a planner's to the item it planned, an orchestrator's to the work
-// items its entry names, an analyzer's to the issues its entry names. A
-// curator's, whose entry names digest entries, charges nothing (ADR-0196),
-// nor does a role's the project defines, and nor does a u that spent
-// nothing. It notes what it charged on logged.
+// spend, by the rule the kind's role file names in charge (ADR-0249): item,
+// to the item run was started for; named, to the work items the entry
+// names; issues, to the issues the entry names; none, to nothing. A u that
+// spent nothing charges nothing. It notes what it charged on logged.
 func (m *activityMeasure) charge(logged *Logged, run usage.Run, u *usage.Usage) error {
 	if u == nil || len(u.Models) == 0 {
 		return nil
 	}
+	rule, err := m.rule()
+	if err != nil {
+		return fmt.Errorf("the %s's activity was logged, but its cost could not be charged: %w", m.kind, err)
+	}
 	c := u.Clone()
 	c.Seconds = logged.Entry.Seconds
-	switch m.kind {
-	case workitem.ActivityPlanner:
-		return m.chargePlanned(logged, run, c)
-	case workitem.ActivityOrchestrator:
+	switch rule {
+	case chargeItem:
+		return m.chargeItem(logged, run, c)
+	case chargeNamed:
 		return m.chargeNamed(logged, c)
-	case workitem.ActivityAnalyzer:
+	case chargeIssues:
 		return m.chargeIssues(logged, c)
 	}
-	// workitem.ActivityCurator: digest entries are no items to charge; nor
-	// does a defined role's activity name any
+	// chargeNone, or a rule flai check reports: the cost stays in the
+	// kind's project strategic total
 	return nil
 }
 
-// chargePlanned charges u to the item run was started for, as
-// serve/agents.json records it under plans, and to every item above it
-// (ADR-0083). It charges nothing for a run no item's newest planner run is,
-// such as one a person ran by hand.
-func (m *activityMeasure) chargePlanned(logged *Logged, run usage.Run, u *usage.Usage) error {
-	item := m.planned(run)
+// rule is the rule the kind's activity is charged by: its role file's
+// charge, read from the project's design folder; a built-in agent's by its
+// name when the project has no role file for it, or one that does not load;
+// and chargeNone for any other kind with none.
+func (m *activityMeasure) rule() (string, error) {
+	all, _, err := roles.Load(m.repo.Root, m.repo.Manifest.Layout["design"])
+	if err != nil {
+		return "", fmt.Errorf("reading the %s's charge rule: %w", m.kind, err)
+	}
+	for _, f := range all {
+		if f.Name == m.kind {
+			return f.Charge, nil
+		}
+	}
+	if rule, ok := builtinCharges[m.kind]; ok {
+		return rule, nil
+	}
+	return chargeNone, nil
+}
+
+// chargeItem charges u to the item run was started for, as serve/agents.json
+// records the run, and to every item above it (ADR-0083, ADR-0249). It
+// charges nothing for a run with no item recorded, such as one a person ran
+// by hand.
+func (m *activityMeasure) chargeItem(logged *Logged, run usage.Run, u *usage.Usage) error {
+	item := m.startedFor(run)
 	if item == "" {
 		return nil
 	}
@@ -422,17 +468,30 @@ func (m *activityMeasure) issues(named []string) []string {
 	return ids
 }
 
-// planned is the item whose newest planner run kept its log in run's, or ""
-// when there is none. The log is told by its name, which holds the
-// project's key, so that the form a root or the serve folder is written in
-// does not matter.
-func (m *activityMeasure) planned(run usage.Run) string {
+// startedFor is the item the kind's run that kept its log in run's was
+// started for, as serve/agents.json records it, or "" when there is none:
+// for the planner, the item whose newest planner run it is (ADR-0083); for
+// any other kind, the item of any of its runs recorded, or the formula's
+// instance an analyzer run was started for (ADR-0249 §3). The log is told by
+// its name, which holds the project's key, so that the form a root or the
+// serve folder is written in does not matter.
+func (m *activityMeasure) startedFor(run usage.Run) string {
 	name := filepath.Base(run.Path)
 	for _, st := range m.dir.AgentStates() {
-		for item, r := range st.Plans {
-			if r != nil && r.Log != "" && filepath.Base(r.Log) == name {
-				return item
+		var runs []*AgentRun
+		if m.kind == workitem.ActivityPlanner {
+			runs = slices.Collect(maps.Values(st.Plans))
+		} else {
+			runs = st.roleRuns(m.kind)
+		}
+		for _, r := range runs {
+			if r == nil || r.Log == "" || filepath.Base(r.Log) != name {
+				continue
 			}
+			if r.Item != "" {
+				return r.Item
+			}
+			return r.Instance
 		}
 	}
 	return ""

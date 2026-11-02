@@ -761,3 +761,203 @@ func TestAnUnknownIssueTakesNoShareOfAnAnalyzerActivity(t *testing.T) {
 		t.Errorf("%s's analyzer usage = %+v, want the whole 2302 tokens over 61 s, 0.5 USD", ids[0], s)
 	}
 }
+
+// defineRole writes the project's role file for name, whose charge is the
+// rule given, "" for none written, and whose runs take item, "none" for no
+// item, as ADR-0207 §2 gives them.
+func (lab *activityLab) defineRole(name, item, charge string) {
+	lab.t.Helper()
+	dir := filepath.Join(lab.root, "design", "workflows", "roles")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		lab.t.Fatal(err)
+	}
+	doc := fmt.Sprintf("---\ntitle: %[1]s\nupdated: 2026-10-03\nstatus: active\nname: %[1]s\nrole: %[1]s\naction: %[1]s\nitem: %[2]s\n", name, item)
+	if charge != "" {
+		doc += "charge: " + charge + "\n"
+	}
+	if err := os.WriteFile(filepath.Join(dir, name+".md"), []byte(doc+"---\n\nDoes its work.\n"), 0o644); err != nil {
+		lab.t.Fatal(err)
+	}
+}
+
+// roleRun records in serve/agents.json, as flai serve does, that a run of
+// the defined role name on item, "" for none, kept its log in log.
+func (lab *activityLab) roleRun(name, item, log string) {
+	lab.dir.updateAgent(lab.root, func(s *AgentState) {
+		s.put(&AgentRun{RoleName: name, Role: name, Action: name, Item: item, Agent: name, Started: runStart.Format(time.RFC3339), Log: filepath.Join(string(lab.dir), "agents", log)})
+	})
+}
+
+// roleLog logs a run of the role name of two calls a minute apart that
+// spent 0.5 USD over 2 input, 300 output, and 2000 cache read tokens, and
+// returns the log's name.
+func (lab *activityLab) roleLog(name string) string {
+	log := "t-" + name + "-20261003T100000Z.log"
+	lab.log(log,
+		streamCall("s", "m1", runStart, 999),
+		streamCall("s", "m2", runStart.Add(time.Minute), 999),
+		streamFinal("Done.", 2000, 0.5))
+	return log
+}
+
+// ADR-0249 §1, §3: a defined role whose rule is item is charged, under its
+// name, to the item its run was started for, such as a formula's instance,
+// and to every item above it; a run it replaced on that item is still told
+// by its log, and a run on no item charges nothing.
+func TestADefinedRoleChargedByItemIsChargedToItsRunsItemAndAbove(t *testing.T) {
+	lab := newActivityLab(t)
+	lab.defineRole("reviewer", "[story]", "item")
+	epic, story := lab.planned()
+	log := lab.roleLog("reviewer")
+	lab.roleRun("reviewer", story, log)
+	got, err := LogRunEnd(lab.dir, lab.root, "t", "reviewer", []string{story})
+	if err != nil || got == nil {
+		t.Fatalf("run end = %+v (%v), want logged", got, err)
+	}
+	if got.Planned != story || strings.Join(got.Charged, ",") != story+","+epic || got.Shared != nil {
+		t.Errorf("charged %s: %v, shared %v; want %s and its epic", got.Planned, got.Charged, got.Shared, story)
+	}
+	for _, id := range []string{story, epic} {
+		s := lab.strategicOf(id, "reviewer")
+		if s == nil || s.Cost() != 0.5 || s.Seconds != got.Entry.Seconds || !s.Estimated || s.Tokens() != 2+300+2000 {
+			t.Errorf("%s's reviewer usage = %+v, want the entry's 0.5 USD over %d s and the run's 2302 tokens", id, s, got.Entry.Seconds)
+		}
+		if p := lab.strategic(id); p != nil {
+			t.Errorf("%s's planner usage = %+v, want none", id, p)
+		}
+	}
+
+	// a newer run on the story puts this one among the role's past runs
+	later := runStart.Add(time.Hour)
+	lab.dir.updateAgent(lab.root, func(s *AgentState) {
+		s.put(&AgentRun{RoleName: "reviewer", Role: "reviewer", Action: "reviewer", Item: story, Agent: "reviewer", Started: later.Format(time.RFC3339), Log: filepath.Join(string(lab.dir), "agents", "t-reviewer-20261003T110000Z.log")})
+	})
+	lab.log(log,
+		streamCall("s", "m1", runStart, 999),
+		streamCall("s", "m2", runStart.Add(time.Minute), 999),
+		streamFinal("Done.", 2000, 0.5),
+		streamCall("s", "m3", later, 999),
+		streamFinal("Done again.", 3000, 1.0))
+	if got, err = LogRunEnd(lab.dir, lab.root, "t", "reviewer", nil); err != nil || got == nil || got.Planned != story {
+		t.Fatalf("a past run's end = %+v (%v), want charged to %s", got, err, story)
+	}
+	if s := lab.strategicOf(story, "reviewer"); s == nil || got.Entry.Cost == 0 || s.Cost() != toTheCentsHundredth(0.5+got.Entry.Cost) {
+		t.Errorf("%s's reviewer usage = %+v, want both activities' cost, 0.5 and %v USD", story, s, got.Entry.Cost)
+	}
+
+	// a run on no item, such as one a person ran by hand
+	lab2 := newActivityLab(t)
+	lab2.defineRole("reviewer", "none", "item")
+	_, other := lab2.planned()
+	lab2.roleRun("reviewer", "", lab2.roleLog("reviewer"))
+	got, err = LogRunEnd(lab2.dir, lab2.root, "t", "reviewer", []string{other})
+	if err != nil || got == nil || got.Entry.Cost != 0.5 || got.Planned != "" || got.Charged != nil {
+		t.Fatalf("a run on no item = %+v (%v), want logged and nothing charged", got, err)
+	}
+	if u := lab2.usageOf(other); u != nil {
+		t.Errorf("%s's usage = %+v, want none", other, u)
+	}
+}
+
+// ADR-0249 §1: a defined role whose rule is named is charged, under its
+// name, evenly to the work items its entry names and every item above them.
+func TestADefinedRoleChargedByNamedIsChargedToTheItemsItNamed(t *testing.T) {
+	lab := newActivityLab(t)
+	lab.defineRole("coordinator", "none", "named")
+	epic, story, task, otherEpic, _ := lab.orchestrated()
+	lab.roleRun("coordinator", "", lab.roleLog("coordinator"))
+	got, err := LogRunEnd(lab.dir, lab.root, "t", "coordinator", []string{task, "TH-0001", otherEpic})
+	if err != nil || got == nil {
+		t.Fatalf("run end = %+v (%v), want logged", got, err)
+	}
+	if strings.Join(got.Shared, ",") != task+","+otherEpic || strings.Join(got.Charged, ",") != strings.Join([]string{task, story, epic, otherEpic}, ",") || got.Planned != "" {
+		t.Errorf("shared %v, charged %v, planned %q", got.Shared, got.Charged, got.Planned)
+	}
+	for _, id := range []string{task, story, epic, otherEpic} {
+		if s := lab.strategicOf(id, "coordinator"); s == nil || s.Cost() != 0.25 || !s.Estimated {
+			t.Errorf("%s's coordinator usage = %+v, want half of 0.5 USD", id, s)
+		}
+	}
+}
+
+// ADR-0249 §1: a defined role whose rule is issues is charged, under its
+// name, evenly to the issues its entry names; the work items it names take
+// no share.
+func TestADefinedRoleChargedByIssuesIsChargedToTheIssuesItNamed(t *testing.T) {
+	lab := newActivityLab(t)
+	lab.defineRole("triager", "none", "issues")
+	_, story := lab.planned()
+	ids := lab.filed("Slow review", "Flaky test")
+	lab.roleRun("triager", "", lab.roleLog("triager"))
+	got, err := LogRunEnd(lab.dir, lab.root, "t", "triager", []string{story, ids[1], ids[0]})
+	if err != nil || got == nil {
+		t.Fatalf("run end = %+v (%v), want logged", got, err)
+	}
+	if want := ids[1] + "," + ids[0]; strings.Join(got.Shared, ",") != want || strings.Join(got.Charged, ",") != want {
+		t.Errorf("shared %v, charged %v, want %s", got.Shared, got.Charged, want)
+	}
+	for _, id := range ids {
+		u := lab.issueUsage(id)
+		if u == nil || len(u.Strategic) != 1 || u.Strategic[0].Kind != "triager" || u.Strategic[0].Cost() != 0.25 {
+			t.Errorf("%s's usage = %+v, want the triager's 0.25 USD alone", id, u)
+		}
+	}
+	if u := lab.usageOf(story); u != nil {
+		t.Errorf("%s's usage = %+v, want none", story, u)
+	}
+}
+
+// ADR-0249 §1, §4: a defined role whose rule is none, or whose file names
+// no rule, charges nothing, even on the item its run was started for; its
+// cost stays in its project strategic total.
+func TestADefinedRoleChargedByNoneChargesNothing(t *testing.T) {
+	for _, charge := range []string{"none", ""} {
+		lab := newActivityLab(t)
+		lab.defineRole("scribe", "[story]", charge)
+		epic, story := lab.planned()
+		lab.roleRun("scribe", story, lab.roleLog("scribe"))
+		got, err := LogRunEnd(lab.dir, lab.root, "t", "scribe", []string{story})
+		if err != nil || got == nil || got.Entry.Cost != 0.5 {
+			t.Fatalf("charge %q: run end = %+v (%v), want logged at 0.5 USD", charge, got, err)
+		}
+		if got.Planned != "" || got.Shared != nil || got.Charged != nil {
+			t.Errorf("charge %q: charged %q, %v, %v; want nothing", charge, got.Planned, got.Shared, got.Charged)
+		}
+		for _, id := range []string{story, epic} {
+			if u := lab.usageOf(id); u != nil {
+				t.Errorf("charge %q: %s's usage = %+v, want none", charge, id, u)
+			}
+		}
+	}
+}
+
+// ADR-0249 §2, §3: a built-in agent's role file names its rule, over the
+// one it keeps by its name: an orchestrator whose file says none charges
+// nothing; an analyzer whose file says item, started for a formula's
+// instance, is charged to the instance and the items above it.
+func TestABuiltInAgentsRoleFileNamesItsRule(t *testing.T) {
+	lab := newActivityLab(t)
+	lab.defineRole(workitem.ActivityOrchestrator, "none", "none")
+	epic, story := lab.planned()
+	lab.roleLog(workitem.ActivityOrchestrator)
+	got, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityOrchestrator, []string{story})
+	if err != nil || got == nil || got.Entry.Cost != 0.5 || got.Shared != nil || got.Charged != nil {
+		t.Fatalf("orchestrator under none = %+v (%v), want logged and nothing charged", got, err)
+	}
+
+	lab.defineRole(workitem.ActivityAnalyzer, "none", "item")
+	log := lab.roleLog(workitem.ActivityAnalyzer)
+	lab.dir.updateAgent(lab.root, func(s *AgentState) {
+		s.put(&AgentRun{Focus: "all", Instance: story, Agent: "analyzer", Started: runStart.Format(time.RFC3339), Log: filepath.Join(string(lab.dir), "agents", log)})
+	})
+	got, err = LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityAnalyzer, nil)
+	if err != nil || got == nil || got.Planned != story || strings.Join(got.Charged, ",") != story+","+epic {
+		t.Fatalf("analyzer under item = %+v (%v), want charged to %s and its epic", got, err, story)
+	}
+	if s := lab.strategicOf(story, workitem.ActivityAnalyzer); s == nil || s.Cost() != 0.5 {
+		t.Errorf("%s's analyzer usage = %+v, want 0.5 USD", story, s)
+	}
+	if s := lab.strategicOf(story, workitem.ActivityOrchestrator); s != nil {
+		t.Errorf("%s's orchestrator usage = %+v, want none", story, s)
+	}
+}

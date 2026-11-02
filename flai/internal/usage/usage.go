@@ -105,14 +105,16 @@ type Usage struct {
 	// Models are what each model spent, in order of name.
 	Models []Model `yaml:"models" json:"models"`
 	// Strategic is what strategic agents spent on the item, one entry per
-	// kind in StrategicKinds order (S-0225). It is kept apart from the
+	// kind, the built-in agents in StrategicKinds order and then each role
+	// the project defines by name (S-0225, ADR-0249). It is kept apart from the
 	// agents' figures above: Tokens, Cost, Add, and Sum leave it out.
 	Strategic []Strategic `yaml:"strategic,omitempty" json:"strategic,omitempty"`
 }
 
-// StrategicKinds are the kinds of strategic agent whose spending an item
-// may carry, in the order it is written: workitem.ActivityKinds, which this
-// package cannot import.
+// StrategicKinds are the built-in strategic agents' kinds, in the order an
+// item's spending is written, before any role's the project defines, which
+// follow by name (ADR-0249 §5): workitem.ActivityKinds, which this package
+// cannot import.
 var StrategicKinds = []string{"planner", "orchestrator", "analyzer", "curator"}
 
 // Strategic is what one kind of strategic agent spent on an item: the part
@@ -338,7 +340,8 @@ func addModel(ms []Model, m Model) []Model {
 // Tidy sorts the models by name, drops those that spent nothing, and rounds
 // each cost to a hundredth of a cent, so that the same usage is always
 // written the same way; and does the same to each strategic entry, kept in
-// StrategicKinds order. Its turns are sorted by day, a day with none dropped.
+// StrategicKinds order, any other kind after them by name. Its turns are
+// sorted by day, a day with none dropped.
 func (u *Usage) Tidy() {
 	u.Models = tidyModels(u.Models)
 	u.Turns = tidyTurns(u.Turns)

@@ -2,6 +2,7 @@ package issues
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -117,13 +118,47 @@ func TestChargingNothingOrAnUnknownIssue(t *testing.T) {
 	}
 }
 
+// ADR-0249 §5: a role the project defines is charged to an issue under its
+// name; a name that is neither a built-in agent nor a defined role is
+// refused, naming the kinds there are.
+func TestADefinedRoleIsChargedToAnIssueUnderItsName(t *testing.T) {
+	r := repo(t)
+	dir := filepath.Join(r.Root, "design", "workflows", "roles")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "triager.md"), []byte("---\nname: triager\ncharge: issues\n---\n\nTriage.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	is, err := New(r, NewOptions{Title: "One", Class: "defect", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ChargeStrategic(r, is.ID, "triager", analyzed(30, 0.3)); err != nil {
+		t.Fatal(err)
+	}
+	back, err := Read(is.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st := back.Usage.Strategic; len(st) != 1 || st[0].Kind != "triager" || st[0].Seconds != 30 || st[0].Cost() != 0.3 {
+		t.Errorf("strategic = %+v, want the triager's 30 s and 0.3 USD", st)
+	}
+	if err := back.Validate(); err != nil {
+		t.Error(err)
+	}
+	if _, err := ChargeStrategic(r, is.ID, "auditor", analyzed(1, 0.1)); err == nil || !strings.Contains(err.Error(), "planner, orchestrator, analyzer, curator, triager") {
+		t.Errorf("charging auditor: %v, want refused naming the kinds there are", err)
+	}
+}
+
 func TestAnIssuesUsageIsValidated(t *testing.T) {
 	good := &Issue{ID: "I-0001", Title: "t", Class: "defect", Status: "open", Count: 1, FirstReported: "2026-09-16T10:00:00Z", LastReported: "2026-09-16T10:00:00Z", Updated: "2026-09-16T10:00:00Z"}
 	bad := *good
 	bad.Usage = &usage.Usage{Source: usage.SourceLog, Seconds: 3, Models: []usage.Model{{Model: "m", Output: 1}}, Strategic: []usage.Strategic{
 		{Kind: "analyzer", Seconds: -1, Estimated: true, Models: []usage.Model{{Model: "m", Output: -1}, {Model: "m"}, {}}},
 		{Kind: "analyzer", Estimated: true},
-		{Kind: "guesser", Estimated: true},
+		{Kind: "guesser kind", Estimated: true},
 		{Kind: "planner"},
 	}}
 	err := bad.Validate()
@@ -137,7 +172,7 @@ func TestAnIssuesUsageIsValidated(t *testing.T) {
 		"usage.strategic[0].models[1].model m is listed twice",
 		"usage.strategic[0].models[2].model is required",
 		"usage.strategic[1].kind analyzer is listed twice",
-		`usage.strategic[2].kind "guesser" must be one of planner, orchestrator, analyzer`,
+		`usage.strategic[2].kind "guesser kind" must be a strategic agent's name in kebab-case: one of planner, orchestrator, analyzer`,
 		"usage.strategic[3].estimated must be true",
 	} {
 		if !strings.Contains(err.Error(), want) {
@@ -147,5 +182,10 @@ func TestAnIssuesUsageIsValidated(t *testing.T) {
 	good.Usage = &usage.Usage{Strategic: []usage.Strategic{{Kind: "analyzer", Seconds: 2, Estimated: true, Models: []usage.Model{}}}}
 	if err := good.Validate(); err != nil {
 		t.Errorf("an issue with an analyzer entry alone: %v", err)
+	}
+	// ADR-0249 §5: a role's name, defined now or not, is a kind
+	good.Usage.Strategic = append(good.Usage.Strategic, usage.Strategic{Kind: "triager", Seconds: 1, Estimated: true, Models: []usage.Model{}})
+	if err := good.Validate(); err != nil {
+		t.Errorf("an issue with a role's entry: %v", err)
 	}
 }

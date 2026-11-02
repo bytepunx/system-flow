@@ -42,8 +42,11 @@ tool activity_log does (S-0417): flai measures its wall-clock seconds and
 cost from the kind's run log, from the later of the run's start and the
 last entry to now, appends the entry with the summary and each --item, and
 adds it to the document's totals. The cost is charged under
-usage.strategic as activity_log charges it; what no item takes is left in
-the kind's project strategic total. An activity outside a run flai serve
+usage.strategic, under the kind's name, by the rule its role file names in
+charge (ADR-0249), as activity_log charges it: item, to the item its run
+was started for; named, evenly to the epics, stories, and tasks named;
+issues, evenly to the issues named; none, to nothing. What no item or
+issue takes is left in the kind's project strategic total. An activity outside a run flai serve
 logged is logged with no seconds and no cost. A kind that is none of these
 is refused, naming those there are. Nothing is committed.`,
 		Example: `  flai activity log reviewer "reviewed S-0042 against its criteria" --item S-0042
@@ -86,8 +89,8 @@ is refused, naming those there are. Nothing is committed.`,
 // activity_log (S-0206, ADR-0079), and for flai activity log (S-0417):
 // measured from the kind's run logs in the
 // serve folder, appended to wip/agents/<kind>.md in the project's main
-// checkout, charged to the items or issues it concerned (ADR-0083,
-// ADR-0095, S-0227), and returned with the document's totals rather than
+// checkout, charged by the kind's rule to the items or issues it concerned
+// (ADR-0083, ADR-0095, S-0227, ADR-0249), and returned with the document's totals rather than
 // every entry and with what it was charged to.
 func (a *app) mcpActivity(_ context.Context, root, kind, summary string, items []string, by string) (mcpserver.ActivityLogged, error) {
 	repo, err := workitem.Open(root)
@@ -118,24 +121,29 @@ func (a *app) mcpActivity(_ context.Context, root, kind, summary string, items [
 	}, nil
 }
 
-// chargedTo are the items a logged activity's cost was charged to, and a
-// line saying so: the item a planner's run planned, the work items an
-// orchestrator's activity named, the issues an analyzer's named (S-0227),
-// or, when none took any of a cost, the kind's project strategic total
-// (ADR-0095). The line is empty when the activity cost nothing; failed, the
-// charge's error, when it failed.
+// chargedTo are the items or issues a logged activity's cost was charged
+// to, and a line saying so, by the rule the kind's role file names in charge
+// (ADR-0249) rather than by its kind: under item, the item its run was
+// started for (ADR-0083); under named, the work items its entry named
+// (ADR-0095); under issues, the issues its entry named (S-0227); or, when
+// none took any of a cost, under none among them, the kind's project
+// strategic total. The line is empty when the activity cost nothing;
+// failed, the charge's error, when it failed.
 func chargedTo(logged *serve.Logged, failed error) ([]string, string) {
 	kind := logged.Activity.Kind
+	// only the issues rule shares a cost between issues, which are no work
+	// items
+	issues := len(logged.Shared) > 0 && workitem.TypeOfID(logged.Shared[0]) == ""
 	var to []string
 	var line string
 	switch {
 	case logged.Planned != "":
 		to = []string{logged.Planned}
-		line = fmt.Sprintf("charged to %s, the item its run planned, and the items above it", logged.Planned)
-	case kind == workitem.ActivityAnalyzer && len(logged.Shared) == 1:
+		line = fmt.Sprintf("charged to %s, the item its run was started for, and the items above it", logged.Planned)
+	case issues && len(logged.Shared) == 1:
 		to = logged.Shared
 		line = fmt.Sprintf("charged to %s, the issue it named", logged.Shared[0])
-	case kind == workitem.ActivityAnalyzer && len(logged.Shared) > 1:
+	case issues:
 		to = logged.Shared
 		line = fmt.Sprintf("charged evenly to %s, the issues it named", strings.Join(logged.Shared, ", "))
 	case len(logged.Shared) == 1:

@@ -139,8 +139,11 @@ The run is recorded where flai serve tracks agents, under roles by the
 role's name and item, and its output goes to a log beside flai serve's
 state. Once it ends, the serving flai records how (worked, asked, or
 failed), journals it under the role's action, and logs its activity in
-wip/agents/<name>.md, which charges nothing. It is no story's agent: the
-in-progress limit does not count it, and it holds no story back.
+wip/agents/<name>.md, its cost charged under usage.strategic by the rule
+its file names in charge (ADR-0249): item, to <item> and the items above
+it; named, to the work items the entry names; issues, to the issues it
+names; none, to nothing. It is no story's agent: the in-progress limit does
+not count it, and it holds no story back.
 
 It is behind the host action its file names, off until you enable it (flai
 serve enable <action>). It refuses, and says why, for a built-in role

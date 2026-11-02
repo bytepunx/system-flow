@@ -17,9 +17,10 @@ import (
 // item above it that was not measured is summed again, up to its epic.
 //
 // Apart from that, an item carries what strategic agents spent on it
-// (S-0225): a planner's activity is charged to the item it planned and to
-// every item above it at once, and neither a roll-up nor a measurement
-// changes it.
+// (S-0225): an activity of a built-in agent or of a role the project defines
+// is charged by its rule to the items it reaches and to every item above
+// them at once, under the role's name (ADR-0249), and neither a roll-up nor
+// a measurement changes it.
 
 // usageBlock is an item's usage as front matter.
 func usageBlock(u *usage.Usage) string {
@@ -135,15 +136,17 @@ func turnErrors(days []usage.TurnDay) []string {
 }
 
 // StrategicErrors are what is wrong with a usage's strategic entries, on
-// what is charged, such as "an item" or "an issue".
+// what is charged, such as "an item" or "an issue". An entry's kind may be
+// any role's name, kebab-case, whether or not a role file defines it now,
+// since a charge outlives the role file it was made under (ADR-0249 §5).
 func StrategicErrors(entries []usage.Strategic, on string) []string {
 	var errs []string
 	kinds := map[string]bool{}
 	for i, s := range entries {
 		at := fmt.Sprintf("usage.strategic[%d]", i)
 		switch {
-		case !IsActivityKind(s.Kind):
-			errs = append(errs, fmt.Sprintf("%s.kind %q must be one of %s", at, s.Kind, strings.Join(ActivityKinds, ", ")))
+		case !roleName.MatchString(s.Kind):
+			errs = append(errs, fmt.Sprintf("%s.kind %q must be a strategic agent's name in kebab-case: one of %s, or a role's", at, s.Kind, strings.Join(ActivityKinds, ", ")))
 		case kinds[s.Kind]:
 			errs = append(errs, fmt.Sprintf("%s.kind %s is listed twice", at, s.Kind))
 		}
@@ -235,16 +238,18 @@ func (r *Repo) RollUp(it *Item) ([]string, error) {
 // ChargeStrategic adds what the strategic agent kind spent on the item with
 // id, the agents' figures of u as apportioned to it, to that item's
 // strategic usage and to each item's above it, up to its epic, archived
-// items included (S-0225). An item with no usage is given empty agents'
-// figures summed from nothing. Each item is read again just before it is
-// saved. It returns the IDs of the items it changed, the item's first and
-// then upward; a u that spent nothing charges nothing.
+// items included (S-0225). The kind is a built-in agent or a role the
+// project defines (ADR-0249 §5); any other is refused, naming those there
+// are. An item with no usage is given empty agents' figures summed from
+// nothing. Each item is read again just before it is saved. It returns the
+// IDs of the items it changed, the item's first and then upward; a u that
+// spent nothing charges nothing.
 func (r *Repo) ChargeStrategic(id, kind string, u *usage.Usage) ([]string, error) {
 	if u.Empty() {
 		return nil, nil
 	}
-	if !IsActivityKind(kind) {
-		return nil, fmt.Errorf("%s is not a strategic agent's kind: %s", kind, strings.Join(ActivityKinds, ", "))
+	if err := r.requireActivityKind(kind); err != nil {
+		return nil, fmt.Errorf("charge the %s's usage to %s: %w", kind, id, err)
 	}
 	var changed []string
 	seen := map[string]bool{}

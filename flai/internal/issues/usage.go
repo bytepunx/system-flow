@@ -2,28 +2,36 @@ package issues
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-// What strategic agents spent on an issue (S-0227): an analyzer's activity
-// is charged to the issues it named, in the shape ADR-0083 gives an item's
-// strategic usage. An issue has no agents' figures of its own, so its usage
+// What strategic agents spent on an issue (S-0227): an activity charged by
+// the issues rule, the analyzer's or a role's the project defines
+// (ADR-0249), is charged to the issues it named, in the shape ADR-0083 gives
+// an item's strategic usage. An issue has no agents' figures of its own, so its usage
 // carries nothing but strategic entries.
 
 // ChargeStrategic adds what the strategic agent kind spent on the issue with
 // id, the agents' figures of u as apportioned to it, to that issue's
-// strategic usage, and saves it. The issue is read just before it is saved,
-// and its updated is left as it is, as an item's is. It returns the issue
-// charged, or nil when u spent nothing.
+// strategic usage, and saves it. The kind is a built-in agent or a role the
+// project defines (ADR-0249 §5); any other is refused, naming those there
+// are. The issue is read just before it is saved, and its updated is left as
+// it is, as an item's is. It returns the issue charged, or nil when u spent
+// nothing.
 func ChargeStrategic(r *workitem.Repo, id, kind string, u *usage.Usage) (*Issue, error) {
 	if u.Empty() {
 		return nil, nil
 	}
-	if !workitem.IsActivityKind(kind) {
-		return nil, fmt.Errorf("%s is not a strategic agent's kind: %s", kind, strings.Join(workitem.ActivityKinds, ", "))
+	kinds, err := r.ActivityKinds()
+	if err != nil {
+		return nil, fmt.Errorf("charge the %s's usage to issue %s: %w", kind, id, err)
+	}
+	if !slices.Contains(kinds, kind) {
+		return nil, fmt.Errorf("charge the %s's usage to issue %s: %s is not a strategic agent's kind: use one of %s", kind, id, kind, strings.Join(kinds, ", "))
 	}
 	is, err := Get(r, id)
 	if err != nil {

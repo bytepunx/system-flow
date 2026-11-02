@@ -155,9 +155,10 @@ func TestTheMCPServerLogsADefinedRolesActivity(t *testing.T) {
 	}
 }
 
-// ADR-0083, ADR-0095, S-0227: activity_log says what an activity's cost was
-// charged to: the item a planner planned, the items an orchestrator named,
-// the issues an analyzer named, or the kind's project strategic total.
+// ADR-0083, ADR-0095, S-0227, ADR-0249: activity_log says what an
+// activity's cost was charged to, by its rule: the item its run was started
+// for, the items it named, the issues it named, or the kind's project
+// strategic total.
 func TestActivityLogSaysWhatTheCostWasChargedTo(t *testing.T) {
 	t.Parallel()
 	logged := func(kind string, cost float64, planned string, shared ...string) *serve.Logged {
@@ -170,7 +171,7 @@ func TestActivityLogSaysWhatTheCostWasChargedTo(t *testing.T) {
 		to     string
 		line   string
 	}{
-		{"planned", logged("planner", 1, "S-0001"), nil, "S-0001", "charged to S-0001, the item its run planned, and the items above it"},
+		{"planned", logged("planner", 1, "S-0001"), nil, "S-0001", "charged to S-0001, the item its run was started for, and the items above it"},
 		{"one named", logged("orchestrator", 1, "", "T-0001"), nil, "T-0001", "charged to T-0001 and the items above it"},
 		{"named", logged("orchestrator", 1, "", "T-0001", "S-0002"), nil, "T-0001,S-0002", "charged evenly to T-0001, S-0002 and the items above them"},
 		{"none named", logged("orchestrator", 1, ""), nil, "", "charged to no item: left in the orchestrator's project strategic total"},
@@ -179,6 +180,13 @@ func TestActivityLogSaysWhatTheCostWasChargedTo(t *testing.T) {
 		{"issues", logged("analyzer", 1, "", "I-0001", "I-0002"), nil, "I-0001,I-0002", "charged evenly to I-0001, I-0002, the issues it named"},
 		{"issue failed", logged("analyzer", 1, "", "I-0001"), errors.New("I-0002: locked"), "I-0001", "charged to I-0001, the issue it named; I-0002: locked; what was not charged is left in the project strategic total"},
 		{"nothing spent", logged("orchestrator", 0, ""), nil, "", ""},
+		// ADR-0249: by the rule the activity was charged by, not its kind
+		{"a role's item", logged("reviewer", 1, "S-0003"), nil, "S-0003", "charged to S-0003, the item its run was started for, and the items above it"},
+		{"a role's named", logged("reviewer", 1, "", "T-0001", "S-0002"), nil, "T-0001,S-0002", "charged evenly to T-0001, S-0002 and the items above them"},
+		{"a role's issue", logged("triager", 1, "", "I-0001"), nil, "I-0001", "charged to I-0001, the issue it named"},
+		{"a role's issues", logged("triager", 1, "", "I-0001", "I-0002"), nil, "I-0001,I-0002", "charged evenly to I-0001, I-0002, the issues it named"},
+		{"the orchestrator's issues", logged("orchestrator", 1, "", "I-0001", "I-0002"), nil, "I-0001,I-0002", "charged evenly to I-0001, I-0002, the issues it named"},
+		{"a role's none", logged("reviewer", 1, ""), nil, "", "charged to no item: left in the reviewer's project strategic total"},
 		{"failed", logged("orchestrator", 1, "", "T-0001"), errors.New("S-0002: locked"), "T-0001", "charged to T-0001 and the items above it; S-0002: locked; what was not charged is left in the project strategic total"},
 		{"failed, nothing spent", logged("planner", 0, ""), errors.New("locked"), "", "locked; what was not charged is left in the project strategic total"},
 	} {

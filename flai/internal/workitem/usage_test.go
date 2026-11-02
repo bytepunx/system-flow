@@ -390,9 +390,10 @@ func TestStrategicUsageIsValidated(t *testing.T) {
 	u := &usage.Usage{Source: usage.SourceSum, Models: []usage.Model{}, Strategic: []usage.Strategic{
 		{Kind: "planner", Seconds: -1, Estimated: true, Models: []usage.Model{{Model: "m", Output: -1}, {Model: "m"}, {}}},
 		{Kind: "planner", Estimated: true},
-		{Kind: "guesser", Estimated: true},
+		{Kind: "Guesser!", Estimated: true},
 		{Kind: "analyzer"},
 		{Kind: "curator", Estimated: true},
+		{Kind: "release-notes", Estimated: true},
 	}}
 	got := strings.Join(usageErrors(u), "; ")
 	for _, want := range []string{
@@ -401,7 +402,7 @@ func TestStrategicUsageIsValidated(t *testing.T) {
 		"usage.strategic[0].models[1].model m is listed twice",
 		"usage.strategic[0].models[2].model is required",
 		"usage.strategic[1].kind planner is listed twice",
-		`usage.strategic[2].kind "guesser" must be one of planner, orchestrator, analyzer, curator`,
+		`usage.strategic[2].kind "Guesser!" must be a strategic agent's name in kebab-case: one of planner, orchestrator, analyzer, curator, or a role's`,
 		"usage.strategic[3].estimated must be true",
 	} {
 		if !strings.Contains(got, want) {
@@ -410,6 +411,11 @@ func TestStrategicUsageIsValidated(t *testing.T) {
 	}
 	if strings.Contains(got, "usage.strategic[4]") {
 		t.Errorf("the curator's entry is a strategic agent's (ADR-0196): %q", got)
+	}
+	// ADR-0249 §5: a role's name is a kind, whether a role file defines it
+	// now or not, since a charge outlives the file
+	if strings.Contains(got, "usage.strategic[5]") {
+		t.Errorf("a role's entry is a strategic agent's (ADR-0249): %q", got)
 	}
 }
 
@@ -462,6 +468,40 @@ func TestPlanningAStoryChargesItAndItsEpic(t *testing.T) {
 	}
 	if _, err := r.ChargeStrategic(s.ID, "guesser", planned(1, 1)); err == nil {
 		t.Error("an unknown kind was charged")
+	}
+}
+
+// ADR-0249 §5: a role the project defines is charged under its name, after
+// the built-in agents; a name that is neither is refused, naming the kinds
+// there are, and nothing is written.
+func TestADefinedRoleIsChargedUnderItsName(t *testing.T) {
+	r := newProject(t)
+	defineRoles(t, r, "reviewer")
+	mustCreate(t, r, Epic, "E", "")
+	s := mustCreate(t, r, Story, "S", "E-0001")
+	if _, err := r.ChargeStrategic(s.ID, ActivityPlanner, planned(5, 0.1)); err != nil {
+		t.Fatal(err)
+	}
+	changed, err := r.ChargeStrategic(s.ID, "reviewer", planned(400, 0.8))
+	if err != nil || strings.Join(changed, ",") != "S-0001,E-0001" {
+		t.Fatalf("reviewer's charge changed %v (%v), want the story then its epic", changed, err)
+	}
+	for _, id := range []string{"S-0001", "E-0001"} {
+		it, _ := r.Get(id)
+		if st := it.Usage.Strategic; len(st) != 2 || st[0].Kind != ActivityPlanner || st[1].Kind != "reviewer" || st[1].Seconds != 400 || st[1].Cost() != 0.8 {
+			t.Errorf("%s strategic = %+v, want the planner's, then the reviewer's 400 s and 0.8 USD", id, st)
+		}
+		if err := it.Validate(); err != nil {
+			t.Error(err)
+		}
+	}
+	before, _ := os.ReadFile(s.Path)
+	_, err = r.ChargeStrategic(s.ID, "auditor", planned(1, 1))
+	if err == nil || !strings.Contains(err.Error(), "auditor") || !strings.Contains(err.Error(), "planner, orchestrator, analyzer, curator, reviewer") {
+		t.Errorf("charging auditor: %v, want refused naming the kinds there are", err)
+	}
+	if after, _ := os.ReadFile(s.Path); string(after) != string(before) {
+		t.Errorf("a refused charge was written:\n%s", after)
 	}
 }
 

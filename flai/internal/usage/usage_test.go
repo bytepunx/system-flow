@@ -3,6 +3,7 @@ package usage
 import (
 	"math"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -59,6 +60,26 @@ func TestAddStrategicMergesByKindAndModel(t *testing.T) {
 	}
 	if a := u.Strategic[1]; a.Models[0].Cost != 0 || !a.Estimated {
 		t.Errorf("analyzer = %+v", a)
+	}
+}
+
+// ADR-0249 §5: a role the project defines is a kind of its own, ordered
+// after the built-in agents, by name.
+func TestADefinedRolesStrategicEntryFollowsTheBuiltInAgents(t *testing.T) {
+	u := &Usage{Source: SourceSum, Models: []Model{}}
+	for _, kind := range []string{"reviewer", "curator", "auditor", "planner"} {
+		u.AddStrategic(kind, agents(1, Model{Model: "a", Input: 1}))
+	}
+	u.AddStrategic("reviewer", agents(2, Model{Model: "a", Input: 1}))
+	var kinds []string
+	for _, s := range u.Strategic {
+		kinds = append(kinds, s.Kind)
+	}
+	if strings.Join(kinds, ",") != "planner,curator,auditor,reviewer" {
+		t.Errorf("kinds = %v, want planner, curator, then auditor and reviewer by name", kinds)
+	}
+	if r := u.Strategic[3]; r.Seconds != 3 || r.Models[0].Input != 2 {
+		t.Errorf("reviewer = %+v, want its two charges added", r)
 	}
 }
 
