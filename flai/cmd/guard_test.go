@@ -443,7 +443,9 @@ func checkGuardHooks(t *testing.T, path string, data []byte) {
 // no go and no bin/flai: there it runs the installed flai, or exits 127 when
 // there is none, where the old hook let every call through.
 func TestTheGuardHooksRefuseACallWhenTheGuardCannotStart(t *testing.T) {
-	t.Parallel()
+	// Every file this test executes is written before t.Parallel: a write
+	// made while a parallel test forks can leave the file's descriptor open in
+	// that child, and executing the file then fails with "text file busy".
 	// The tools scripts/flai.sh and scripts/env.sh need, without go.
 	tools := t.TempDir()
 	for _, name := range []string{"sh", "dirname", "mkdir", "find", "head", "sed"} {
@@ -484,6 +486,24 @@ func TestTheGuardHooksRefuseACallWhenTheGuardCannotStart(t *testing.T) {
 		}
 		return dir
 	}
+	cases := []struct {
+		guard int
+		out   string
+		want  int
+		err   string
+	}{
+		{0, "", 0, ""},
+		{2, "refused by the fake guard", 2, "refused by the fake guard"},
+		{1, "flai: unknown command guard", 0, ""},
+		{126, "", 2, "flai guard did not run (exit 126)"},
+		{-1, "", 2, "flai guard did not run (exit 127)"},
+	}
+	fakes := make([]string, len(cases))
+	for i, c := range cases {
+		fakes[i] = fake(c.guard, c.out)
+	}
+	none := fake(-1, "")
+	t.Parallel()
 	run := func(command, flaiDir string) (int, string) {
 		t.Helper()
 		sh := exec.Command(filepath.Join(tools, "sh"), "-c", command)
@@ -505,18 +525,6 @@ func TestTheGuardHooksRefuseACallWhenTheGuardCannotStart(t *testing.T) {
 		}
 		return code, errOut.String()
 	}
-	cases := []struct {
-		guard int
-		out   string
-		want  int
-		err   string
-	}{
-		{0, "", 0, ""},
-		{2, "refused by the fake guard", 2, "refused by the fake guard"},
-		{1, "flai: unknown command guard", 0, ""},
-		{126, "", 2, "flai guard did not run (exit 126)"},
-		{-1, "", 2, "flai guard did not run (exit 127)"},
-	}
 	for _, path := range []string{filepath.Join("..", "..", ".claude", "settings.json"), filepath.Join("..", "..", "template", "root", ".claude", "settings.json")} {
 		data, err := os.ReadFile(path)
 		if err != nil {
@@ -534,8 +542,8 @@ func TestTheGuardHooksRefuseACallWhenTheGuardCannotStart(t *testing.T) {
 			t.Fatalf("%s: %v", path, err)
 		}
 		for _, h := range settings.Hooks["PreToolUse"] {
-			for _, c := range cases {
-				code, errOut := run(h.Hooks[0].Command, fake(c.guard, c.out))
+			for i, c := range cases {
+				code, errOut := run(h.Hooks[0].Command, fakes[i])
 				if code != c.want || !strings.Contains(errOut, c.err) || (c.want == 2 && c.err == "") {
 					t.Errorf("%s %s: with a guard that exits %d the hook exits %d, stderr %q; want %d and %q", path, h.Matcher, c.guard, code, errOut, c.want, c.err)
 				}
@@ -544,7 +552,7 @@ func TestTheGuardHooksRefuseACallWhenTheGuardCannotStart(t *testing.T) {
 	}
 	// The hook I-0216 found: with no guard to run, it let the call through.
 	old := `out=$("$CLAUDE_PROJECT_DIR"/scripts/flai.sh guard 2>&1); [ $? -eq 2 ] || exit 0; echo "$out" >&2; exit 2`
-	if code, _ := run(old, fake(-1, "")); code != 0 {
+	if code, _ := run(old, none); code != 0 {
 		t.Errorf("the old hook exits %d with no guard, want 0, the cause I-0216 records", code)
 	}
 }
