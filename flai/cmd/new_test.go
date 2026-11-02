@@ -16,6 +16,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/lock"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/prompt"
+	"github.com/bytepunx/system-flow/flai/internal/roles"
 	"github.com/bytepunx/system-flow/flai/internal/template"
 )
 
@@ -197,7 +198,7 @@ func TestRenderPrototypeTemplate(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		if strings.HasSuffix(path, ".tmpl") || strings.Contains(withoutFormulaInputs(filepath.ToSlash(rel), s), "{{") {
+		if strings.HasSuffix(path, ".tmpl") || strings.Contains(withoutRoleStart(filepath.ToSlash(rel), withoutFormulaInputs(filepath.ToSlash(rel), s)), "{{") {
 			t.Errorf("unrendered template content in %s", path)
 		}
 		if strings.HasSuffix(path, ".md") && strings.HasPrefix(s, "---\n") {
@@ -256,6 +257,54 @@ func TestWithoutFormulaInputs(t *testing.T) {
 	} {
 		if got := withoutFormulaInputs(tc.rel, tc.s); got != tc.want {
 			t.Errorf("%s: withoutFormulaInputs(%q, %q) = %q, want %q", tc.name, tc.rel, tc.s, got, tc.want)
+		}
+	}
+}
+
+// withoutRoleStart is s, a file the template rendered at rel, with a role
+// file's start field left out: its start prompt is a Go text/template flai
+// renders at each run (ADR-0250), not template syntax the template's render
+// left behind. Any other file, and a role file that does not parse, is s.
+func withoutRoleStart(rel, s string) string {
+	if !strings.HasPrefix(rel, roles.Dir("design")+"/") || !strings.HasSuffix(rel, ".md") {
+		return s
+	}
+	if r, problem := roles.Parse(rel, s); problem != nil || r.Start == "" {
+		return s
+	}
+	var out []string
+	in := false
+	for _, l := range strings.Split(s, "\n") {
+		switch {
+		case strings.HasPrefix(l, "start:"):
+			in = true
+			continue
+		case in && (l == "" || strings.HasPrefix(l, " ")):
+			continue
+		}
+		in = false
+		out = append(out, l)
+	}
+	return strings.Join(out, "\n")
+}
+
+func TestWithoutRoleStart(t *testing.T) {
+	t.Parallel()
+	const role = "---\ntitle: R\nupdated: 2026-11-02\nstatus: active\nname: r\nrole: r\n" +
+		"definition: {description: d, tools: [Read]}\naction: r\ntrigger: [asked]\nitem: none\n" +
+		"start: |\n  You are {{.Name}}.\n\n  {{if .Item}}On {{.Item}}.{{end}}\n---\n\n"
+	const without = "---\ntitle: R\nupdated: 2026-11-02\nstatus: active\nname: r\nrole: r\n" +
+		"definition: {description: d, tools: [Read]}\naction: r\ntrigger: [asked]\nitem: none\n---\n\n"
+	for _, tc := range []struct {
+		name, rel, s, want string
+	}{
+		{"a role file's start", "design/workflows/roles/r.md", role + "Body.\n", without + "Body.\n"},
+		{"template syntax in a role file's body", "design/workflows/roles/r.md", role + "{{ .today }}\n", without + "{{ .today }}\n"},
+		{"a role file that does not parse", "design/workflows/roles/r.md", "{{.Name}}\n", "{{.Name}}\n"},
+		{"a start outside the roles folder", "design/system/overview.md", role, role},
+	} {
+		if got := withoutRoleStart(tc.rel, tc.s); got != tc.want {
+			t.Errorf("%s: withoutRoleStart(%q, %q) = %q, want %q", tc.name, tc.rel, tc.s, got, tc.want)
 		}
 	}
 }
