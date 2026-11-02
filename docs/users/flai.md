@@ -2760,6 +2760,15 @@ harness command cannot run flai guard, so the story's roles (explore, verify) ca
 
 A story with no roles is not refused for this. `flai serve agent harness <name> --guard none`, or the guard choice in that harness's box on the dashboard's Settings page, lifts it for that harness on this host; `--guard ""` puts it back. The risk is yours: the story's sub-agents then run unguarded, and one could move items, write threads, or commit, which only the story's agent should. Each such start says so in its journal entry and log line, such as `its roles (explore, verify) run without flai guard (guard: none on harness command, ADR-0131)`. Claude Code runs the guard, so nothing changes for it. Your own command (`flai serve agent set`) does not, so today a story it works with roles needs `flai serve agent harness command --guard none`. How a refused start shows is in [flai serve](#flai-serve-flai-on-the-host-for-the-dashboards).
 
+The hook refuses a call when it cannot start the guard, rather than let it through unguarded ([ADR-0235](../../design/adrs/0235-the-guard-hook-refuses-a-call-when-flai-guard-cannot-start-exit-126-or-127-and.md)). When `flai` is not on `PATH`, or is not executable, every `Bash` call and flai MCP tool call, and in a session `flai serve` started every file write, is refused with:
+
+```text
+flai guard did not run (exit 127): sh: 1: flai: not found
+no guarded call passes until flai is installed and on PATH
+```
+
+Install flai, or put it on `PATH`, and the calls pass again. A guard that ran and exited with anything but 2, such as an older flai that has no `guard`, still lets the call through, as before. Inside the agent container the image's flai is the guard: the template's hook runs `flai` from `PATH`, and this repository's runs `scripts/flai.sh`, which runs the installed flai, with a warning, when the image has no `go` to build the tree's.
+
 ## Record recurring friction
 
 ```bash

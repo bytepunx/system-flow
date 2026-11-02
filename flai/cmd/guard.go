@@ -54,6 +54,12 @@ PreToolUse's, named or not. It is not a shell, and
 a command hidden on purpose (a backslash in its name, a variable holding
 it) gets past it.
 
+The hooks in .claude/settings.json judge the guard's exit code: 0 and any
+exit but 2, 126, and 127 pass the call; 2 refuses it with the guard's
+output; 126 and 127, the guard not found or not executable, refuse it with
+"flai guard did not run (exit N)", so a host or an image without flai on
+PATH is not left unguarded (ADR-0235).
+
 --harness names the harness whose hook runs it, and so the reader of the
 hook's input and of the answer it expects (S-0353). claude-code, the
 default and the only reader there is, reads a Claude Code hook's input, as
