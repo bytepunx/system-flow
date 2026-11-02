@@ -134,9 +134,20 @@ func mcpURL(addr net.Addr) string {
 
 // mcpHTTPOptions are the options of the server an agent reaches over HTTP:
 // permission_prompt holds a write at most mcpserver.HTTPPermissionHold, below
-// the 60 seconds after which Claude Code drops a call there (ADR-0215).
+// the 60 seconds after which Claude Code drops a call there (ADR-0215). It
+// allows a protected write without asking only under the auto-approve host
+// action and only for the agent flai serve runs for the story (ADR-0243).
 func (a *app) mcpHTTPOptions(repo *workitem.Repo, agent string, closing <-chan struct{}, installed string) mcpserver.Options {
-	return mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Closing: closing, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Analyses: a.mcpAnalyze, Curations: a.mcpCurate, Roles: a.mcpRoleRun, Activities: a.mcpActivity, Publish: a.mcpPublisher(), RelativePaths: a.relativeWorktrees, Installed: installed, PermissionHold: mcpserver.HTTPPermissionHold, Budgets: a.mcpBudgets()}
+	return mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Closing: closing, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Analyses: a.mcpAnalyze, Curations: a.mcpCurate, Roles: a.mcpRoleRun, Activities: a.mcpActivity, AutoApprove: a.mcpAutoApprove, ServedAgent: a.mcpServedAgent, Publish: a.mcpPublisher(), RelativePaths: a.relativeWorktrees, Installed: installed, PermissionHold: mcpserver.HTTPPermissionHold, Budgets: a.mcpBudgets()}
+}
+
+// mcpServedAgent reports whether agent is the name of the run flai serve
+// records, in its folder beside the configuration, as started for story in
+// the project at root and still running: the process it started is alive and
+// is the one it started (ADR-0243). A state it cannot read names no run.
+func (a *app) mcpServedAgent(root, agent, story string) bool {
+	run := a.serveDir().AgentStates()[root].Stories[story]
+	return run != nil && run.Agent == agent && run.Ended == "" && run.Error == "" && run.PID > 0 && serve.Owns(run.PID, run.Start)
 }
 
 // serveMCPHTTP runs the server until ctx ends.

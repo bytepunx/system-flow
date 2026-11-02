@@ -259,6 +259,62 @@ func TestPermissionPromptAutoApprovesWithoutAThread(t *testing.T) {
 	noThreads(t, f.repo)
 }
 
+// ADR-0243: a server that narrows auto-approve to the agents flai serve
+// started, as the one over HTTP does, allows the write of the agent it
+// started for the story without a thread, asking ServedAgent with the
+// project's root, the caller's name, and the story.
+func TestPermissionPromptAutoApprovesTheAgentFlaiServeStarted(t *testing.T) {
+	t.Parallel()
+	var root, agent, story string
+	var logged bytes.Buffer
+	f := setupWith(t, func(o *Options) {
+		o.Agent = "agent-S-0001"
+		o.AutoApprove = func(string) bool { return true }
+		o.ServedAgent = func(r, a, s string) bool { root, agent, story = r, a, s; return true }
+		o.Logger = slog.New(slog.NewTextHandler(&logged, nil))
+	})
+	input := map[string]any{"file_path": f.worktreeFile(".claude/settings.json"), "content": "{}\n"}
+	out := f.askPermission(t, context.Background(), "Write", input)
+	if out.Behavior != "allow" || !reflect.DeepEqual(out.UpdatedInput, input) {
+		t.Errorf("auto-approve allows the agent flai serve started for the story: %+v", out)
+	}
+	if root != f.repo.Root || agent != "agent-S-0001" || story != f.story.ID {
+		t.Errorf("ServedAgent is asked with %s, agent-S-0001, and %s, got %q, %q, %q", f.repo.Root, f.story.ID, root, agent, story)
+	}
+	if line := logged.String(); !strings.Contains(line, "permission allowed without asking") || !strings.Contains(line, "agent=agent-S-0001") {
+		t.Errorf("the log does not name the agent allowed: %s", line)
+	}
+	noThreads(t, f.repo)
+}
+
+// ADR-0243: on such a server, under auto-approve, an agent flai serve did not
+// start for the story is asked on a thread as if auto-approve were off, and
+// the log says why; with auto-approve off ServedAgent is never asked.
+func TestPermissionPromptAsksAnAgentFlaiServeDidNotStart(t *testing.T) {
+	t.Parallel()
+	f := setup(t)
+	var logged bytes.Buffer
+	served := 0
+	opt := Options{Repo: f.repo, Agent: "claude", Now: func() time.Time { return t0.Add(time.Minute) }, PermissionHold: -1, Logger: slog.New(slog.NewTextHandler(&logged, nil)),
+		AutoApprove: func(string) bool { return true },
+		ServedAgent: func(string, string, string) bool { served++; return false }}
+	in := PermissionIn{ToolName: "Write", Input: map[string]any{"file_path": f.worktreeFile(".claude/settings.json"), "content": heldContent}}
+	out := newServer(opt, f.repo).permissionPrompt(context.Background(), in)
+	th := onlyThread(t, f.repo)
+	unanswered(t, out, th.ID)
+	if served != 1 {
+		t.Errorf("ServedAgent is asked once under auto-approve, asked %d times", served)
+	}
+	if line := logged.String(); !strings.Contains(line, "flai serve runs no agent of this name for the story") || !strings.Contains(line, "agent=claude") {
+		t.Errorf("the log does not say why it asks: %s", line)
+	}
+	opt.AutoApprove = func(string) bool { return false }
+	_ = newServer(opt, f.repo).permissionPrompt(context.Background(), in)
+	if served != 1 {
+		t.Errorf("with auto-approve off ServedAgent is not asked, asked %d times", served)
+	}
+}
+
 // I-0223: Claude Code drops trailing whitespace from an Edit's new string, so
 // S-0416's agent, editing the guard hook's condition in .claude/settings.json
 // with both strings ending in "exit 0; ", was asked to allow a new string

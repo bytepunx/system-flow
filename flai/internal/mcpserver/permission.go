@@ -29,6 +29,10 @@ import (
 // allow a write to a protected path without asking the operator.
 type AutoApprove func(root string) bool
 
+// ServedAgent reports whether agent names the run flai serve started, and
+// still runs, for story in the project at root.
+type ServedAgent func(root, agent, story string) bool
+
 // StdioPermissionHold is the longest permission_prompt holds a write for the
 // operator's answer over stdio (ADR-0215): below Claude Code's 30-minute
 // idle timeout for an MCP call there (I-0103).
@@ -206,13 +210,31 @@ func (s *server) permissionPrompt(ctx context.Context, in PermissionIn) Permissi
 	if which, ok := trimmedEdit(in); ok {
 		return deny("%s's new string ends without the space or tab its old string ends with, which Claude Code drops from the end of a new string, so the write would lose it (I-0223): make the edit again with both strings ending on a character that is not a space or a tab, such as the next word", which)
 	}
-	if s.autoApprove != nil && s.autoApprove(projectRoot(s.repo)) {
+	if s.autoApproves(it.ID) {
 		if s.logger != nil {
 			s.logger.Info("permission allowed without asking", "component", "mcp", "agent", s.agent, "tool", in.ToolName, "path", path, "story", it.ID)
 		}
 		return allow(in.Input)
 	}
 	return s.askOperator(ctx, it, in, shown)
+}
+
+// autoApproves reports whether a protected write in story's worktree is
+// allowed without asking: the host's auto-approve is on and, on a server that
+// narrows it to the agents flai serve started (ADR-0243), the caller is the
+// one it started for story.
+func (s *server) autoApproves(story string) bool {
+	root := projectRoot(s.repo)
+	if s.autoApprove == nil || !s.autoApprove(root) {
+		return false
+	}
+	if s.servedAgent == nil || s.servedAgent(root, s.agent, story) {
+		return true
+	}
+	if s.logger != nil {
+		s.logger.Info("auto-approve is on, but flai serve runs no agent of this name for the story, so permission_prompt asks", "component", "mcp", "agent", s.agent, "story", story)
+	}
+	return false
 }
 
 // trimmedEdit names the edit of an Edit or MultiEdit whose old string ends in

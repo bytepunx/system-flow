@@ -96,6 +96,12 @@ type Options struct {
 	// story's worktree without asking the operator on a thread when it
 	// returns true (S-0257); nil asks every time.
 	AutoApprove AutoApprove
+	// ServedAgent, when set, narrows AutoApprove to the callers it returns
+	// true for, given the project's root, the caller's name, and the story
+	// whose worktree the write is in: the server over HTTP sets it, which
+	// every holder of its token shares and where a name is only a claim
+	// (ADR-0243); nil, as over stdio, leaves AutoApprove as it is.
+	ServedAgent ServedAgent
 	// Publish publishes as publish.run does, under the push host action, for
 	// the orchestrator's tool release_publish (S-0222); without it the tool
 	// says it cannot.
@@ -164,6 +170,9 @@ type server struct {
 	version    string // the running flai's, compared with the project's newest flai tag (S-0181)
 	// autoApprove lets permission_prompt allow without asking (S-0257)
 	autoApprove AutoApprove
+	// servedAgent narrows autoApprove to the agents flai serve started
+	// (ADR-0243); nil narrows nothing
+	servedAgent ServedAgent
 	publish     *hostapi.Publisher // publishes for release_publish (S-0222)
 	// relativePaths says whether story_start links a new worktree with
 	// relative paths (S-0274)
@@ -184,7 +193,7 @@ type server struct {
 
 // newServer is the server for one project, with the defaults filled in.
 func newServer(opt Options, repo *workitem.Repo) *server {
-	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, analyses: opt.Analyses, curations: opt.Curations, roles: opt.Roles, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, publish: opt.Publish, relativePaths: opt.RelativePaths, logger: opt.Logger, installed: opt.Installed, permissionHold: permissionHoldOf(opt), budgets: opt.Budgets}
+	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, analyses: opt.Analyses, curations: opt.Curations, roles: opt.Roles, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, servedAgent: opt.ServedAgent, publish: opt.Publish, relativePaths: opt.RelativePaths, logger: opt.Logger, installed: opt.Installed, permissionHold: permissionHoldOf(opt), budgets: opt.Budgets}
 	if repo.Git == nil {
 		repo.Git = opt.Runner // item_move asks git whether a story's worktree is committed (S-0140)
 	}
