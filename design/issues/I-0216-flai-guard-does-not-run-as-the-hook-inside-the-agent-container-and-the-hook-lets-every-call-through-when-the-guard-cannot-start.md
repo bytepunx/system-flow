@@ -2,12 +2,12 @@
 id: I-0216
 title: flai guard does not run as the hook inside the agent container, and the hook lets every call through when the guard cannot start
 class: defect
-status: open
+status: closed
 count: 2
 cost: 10m
 first_reported: 2026-10-28T12:30:51Z
 last_reported: 2026-11-02T19:06:46Z
-updated: 2026-11-02T19:06:46Z
+updated: 2026-11-02T20:35:21Z
 ---
 
 # I-0216 flai guard does not run as the hook inside the agent container, and the hook lets every call through when the guard cannot start
@@ -28,3 +28,4 @@ S-0509 runs the planner, the orchestrator, the analyzer, and the curator in the 
 ## Remediation
 
 Story S-0518 remediates this issue, created from it at 2026-10-28T12:52:56Z.
+Closed 2026-11-02T20:35:21Z: S-0518 fixed it (ADR-0235): the PreToolUse guard hooks in this repository's and the template's .claude/settings.json refuse a call with 'flai guard did not run (exit N)' when the guard exits 126 or 127, not found or not executable, where they let every exit but 2 through; and scripts/flai.sh, with no go, runs bin/flai as it is, else the installed flai with a warning, else exits 127, so inside the agent image this repository's hook reaches the image's flai. That covers S-0509's instance too: a strategic agent's container runs the same hook from the mounted checkout. TestTheGuardHooksRefuseACallWhenTheGuardCannotStart reproduces the case; the check inside flai-agent-claude-code:local is in S-0518's narrative.
