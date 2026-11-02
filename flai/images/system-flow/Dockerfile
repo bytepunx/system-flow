@@ -44,8 +44,11 @@ COPY --from=go /out/golangci-lint /usr/local/bin/golangci-lint
 COPY --from=go /opt/go/mod /opt/go/mod
 COPY --from=shellcheck /bin/shellcheck /usr/local/bin/shellcheck
 # The toolchain the image holds, never one go downloads; the module cache read-only, filled above;
-# the build cache in the home any uid can write.
+# the build cache in the home any uid can write. No VCS stamp: in the container go build's stamping
+# fails with git's exit status 128 though git itself answers there (I-0255), and a test's
+# build needs none.
 ENV PATH=/usr/local/go/bin:$PATH \
     GOTOOLCHAIN=local \
-    GOMODCACHE=/opt/go/mod
+    GOMODCACHE=/opt/go/mod \
+    GOFLAGS=-buildvcs=false
 USER 65532:65532

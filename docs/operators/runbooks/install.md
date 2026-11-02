@@ -90,10 +90,22 @@ Only if a story's agent is to run on the `container` harness ([In a container](.
 2. Build the images, in a checkout of system-flow's repository, with Docker running:
 
    ```bash
-   make agent-images     # flai-agent-bedrock:local and flai-agent-claude-code:local
+   make agent-images     # flai-agent-bedrock:local and flai-agent-claude-code:local, then the project's layer
    ```
 
-   They are built on this machine, from the checked-out tree; nothing publishes them ([Run a story's agent in a container](agent-container.md#build)).
+   They are built on this machine, from the checked-out tree; nothing publishes them ([Run a story's agent in a container](agent-container.md#build)). When the checkout's `system-flow.yaml` names a Dockerfile under `agent.image.layer`, the same command builds it last, over `flai-agent-claude-code:local`, as `flai-agent-<key>-claude-code:local` ([settings](../settings.md#project-manifest)). In system-flow's repository that is `flai-agent-sf-claude-code:local`, with the tools its tests run, about 1.56 GB; its first build also downloads the Go and ShellCheck images, golangci-lint's source, and flai's modules. After a change to the layer alone, rebuild just it:
+
+   ```bash
+   scripts/agent-image.sh --layer     # over the flai-agent-claude-code:local already built
+   ```
+
+   A project of your own that names a layer has no `make agent-images`. Build its layer from its root, over the harness image built above, with the tag `flai serve` looks for:
+
+   ```bash
+   docker build -f <layer> -t flai-agent-<key>-claude-code:local --build-arg BASE=flai-agent-claude-code:local .
+   ```
+
+   `flai check` warns `agent.image` until the layer's image is built on this host.
 3. Name the folder of your login, which the container mounts read-only:
 
    ```bash
