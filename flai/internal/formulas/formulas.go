@@ -672,8 +672,10 @@ func (c *checker) inputs(f Formula) map[string]bool {
 	return declared
 }
 
-// schedule checks the formula's schedule: one that parses, on a formula that
-// declares no inputs, since a run its schedule starts is given none.
+// schedule checks the formula's schedule: one that parses, on a formula whose
+// every input carries a default, since a run its schedule starts is given no
+// inputs and takes each input's default (S-0424); each input with none is
+// named.
 func (c *checker) schedule(f Formula) {
 	if strings.TrimSpace(f.Schedule) == "" {
 		return
@@ -681,12 +683,18 @@ func (c *checker) schedule(f Formula) {
 	if _, err := f.Scheduled(); err != nil {
 		c.add(f, f.line("schedule"), "%v", err)
 	}
-	if len(f.Inputs) > 0 {
-		names := make([]string, len(f.Inputs))
-		for i, in := range f.Inputs {
-			names[i] = in.Name
+	var names []string
+	for _, in := range f.Inputs {
+		if in.Required() {
+			names = append(names, in.Name)
 		}
-		c.add(f, f.line("schedule"), "schedule starts the formula with no inputs, as nobody is there to give them, but it declares %s; remove the schedule, or the inputs and their uses", strings.Join(names, ", "))
+	}
+	if len(names) > 0 {
+		has, it := "has", "it"
+		if len(names) > 1 {
+			has, it = "have", "each"
+		}
+		c.add(f, f.line("schedule"), "schedule starts the formula with no inputs, as nobody is there to give them, but %s %s no default; give %s a default, or remove the schedule", strings.Join(names, ", "), has, it)
 	}
 }
 

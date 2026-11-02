@@ -196,7 +196,9 @@ func TestValidateReportsEachProblem(t *testing.T) {
 		{"input description missing", head + "inputs:\n  - name: who\n" + oneStep, "input who needs description", 8},
 		{"schedule not parsed", head + "schedule: every day\n" + oneStep, `schedule "every day" has 2 fields, not five`, 7},
 		{"schedule out of range", head + "schedule: \"0 25 * * *\"\n" + oneStep, `schedule "0 25 * * *"`, 7},
-		{"schedule with inputs", head + "schedule: daily\ninputs:\n  - {name: who, description: d, default: me}\n" + oneStep, "schedule starts the formula with no inputs, as nobody is there to give them, but it declares who", 7},
+		{"schedule with inputs", head + "schedule: daily\ninputs:\n  - {name: who, description: d}\n" + oneStep, "schedule starts the formula with no inputs, as nobody is there to give them, but who has no default; give it a default, or remove the schedule", 7},
+		{"schedule with an input of no default among defaults", head + "schedule: daily\ninputs:\n  - {name: who, description: d, default: me}\n  - {name: what, description: d}\n  - {name: when, description: d, default: \"\"}\n" + oneStep, "but what has no default;", 7},
+		{"schedule with inputs of no default", head + "schedule: daily\ninputs:\n  - {name: who, description: d}\n  - {name: what, description: d, default: it}\n  - {name: when, description: d}\n" + oneStep, "but who, when have no default; give each a default", 7},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			got := problems(t, tc.content)
@@ -262,6 +264,17 @@ func TestScheduleParses(t *testing.T) {
 	}
 	if sched, err := parse(t, "design/workflows/formulas/x.md", head+oneStep).Scheduled(); sched != nil || err != nil {
 		t.Errorf("no schedule: %v, %v", sched, err)
+	}
+}
+
+// S-0424: a scheduled formula may declare inputs when each carries a default,
+// an empty one included, since the run its schedule starts takes them.
+func TestAScheduledFormulaMayDeclareInputsWithDefaults(t *testing.T) {
+	content := "---\ntitle: X {{focus}}\nupdated: 2026-11-01\nstatus: active\nname: x\ndescription: d\nschedule: daily\n" +
+		"inputs:\n  - {name: focus, description: d, default: all}\n  - {name: note, description: d, default: \"\"}\n" +
+		"steps: [{id: a, title: A, run: {flai: \"analyze --focus {{focus}} {{note}}\"}}]\n---\n"
+	if got := problems(t, content); len(got) != 0 {
+		t.Errorf("Validate = %v, want none", got)
 	}
 }
 

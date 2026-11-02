@@ -12,6 +12,7 @@ import (
 	"github.com/goccy/go-yaml"
 
 	"github.com/bytepunx/system-flow/flai/internal/config"
+	"github.com/bytepunx/system-flow/flai/internal/formulas"
 	"github.com/bytepunx/system-flow/flai/internal/lock"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/prompt"
@@ -192,7 +193,11 @@ func TestRenderPrototypeTemplate(t *testing.T) {
 		}
 		b, _ := os.ReadFile(path)
 		s := string(b)
-		if strings.HasSuffix(path, ".tmpl") || strings.Contains(s, "{{") {
+		rel, err := filepath.Rel(dest, path)
+		if err != nil {
+			return err
+		}
+		if strings.HasSuffix(path, ".tmpl") || strings.Contains(withoutFormulaInputs(filepath.ToSlash(rel), s), "{{") {
 			t.Errorf("unrendered template content in %s", path)
 		}
 		if strings.HasSuffix(path, ".md") && strings.HasPrefix(s, "---\n") {
@@ -210,6 +215,48 @@ func TestRenderPrototypeTemplate(t *testing.T) {
 	claude, _ := os.ReadFile(filepath.Join(dest, "CLAUDE.md"))
 	if !strings.Contains(string(claude), "# sample") || !strings.Contains(string(claude), "system-flow:end-of-baseline") {
 		t.Error("CLAUDE.md baseline not rendered as expected")
+	}
+}
+
+// withoutFormulaInputs is s, the file rel, slash separated from the project
+// root, with the {{name}} placeholders of the inputs it declares removed when
+// it is a formula file in the design folder's formulas folder (ADR-0238 §4,
+// I-0249), so that a check for template syntax left behind passes over them
+// and still finds any other {{ there, such as {{ .today }}, or anywhere else.
+func withoutFormulaInputs(rel, s string) string {
+	if !strings.HasPrefix(rel, formulas.Dir("design")+"/") || !strings.HasSuffix(rel, ".md") {
+		return s
+	}
+	f, problem := formulas.Parse(rel, s)
+	if problem != nil {
+		return s
+	}
+	gone := map[string]string{}
+	for _, in := range f.Inputs {
+		gone[in.Name] = ""
+	}
+	return formulas.Fill(s, gone)
+}
+
+func TestWithoutFormulaInputs(t *testing.T) {
+	t.Parallel()
+	const formula = "---\ntitle: Import {{path}}\nupdated: 2026-11-01\nstatus: active\nname: import\ndescription: d\n" +
+		"inputs:\n  - {name: path, description: d}\n  - {name: focus, description: d, default: all}\n" +
+		"steps: [{id: a, title: A, run: {flai: \"import {{ path }} --focus {{focus}}\"}}]\n---\n\n"
+	for _, tc := range []struct {
+		name, rel, s, want string
+	}{
+		{"a formula's placeholders", "design/workflows/formulas/import.md", formula + "Imports {{path}}.\n",
+			strings.NewReplacer("{{path}}", "", "{{ path }}", "", "{{focus}}", "").Replace(formula) + "Imports .\n"},
+		{"stray template syntax in a formula", "design/workflows/formulas/import.md", formula + "{{ .today }} {{other}} {{- end }}\n",
+			strings.NewReplacer("{{path}}", "", "{{ path }}", "", "{{focus}}", "").Replace(formula) + "{{ .today }} {{other}} {{- end }}\n"},
+		{"a formula file that does not parse", "design/workflows/formulas/import.md", "Imports {{path}}.\n", "Imports {{path}}.\n"},
+		{"a placeholder outside the formulas folder", "design/system/overview.md", formula, formula},
+		{"a formulas folder file that is not markdown", "design/workflows/formulas/import.yaml", formula, formula},
+	} {
+		if got := withoutFormulaInputs(tc.rel, tc.s); got != tc.want {
+			t.Errorf("%s: withoutFormulaInputs(%q, %q) = %q, want %q", tc.name, tc.rel, tc.s, got, tc.want)
+		}
 	}
 }
 

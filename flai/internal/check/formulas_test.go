@@ -149,7 +149,7 @@ func TestFormulaProblemsAreErrorsOnTheirLine(t *testing.T) {
 		{"an input a prompt uses undeclared", "for {{version}}.", "for {{release}}.", 17, "uses {{release}}, which the formula's inputs do not declare"},
 		{"an input a title uses undeclared", "title: Tag {{version}}", "title: Tag {{tag}}", 21, "uses {{tag}}, which the formula's inputs do not declare"},
 		{"an in that is neither place", "    after: [check, notes]\n", "    after: [check, notes]\n    in: elsewhere\n", 25, `step tag's in is "elsewhere", which is none of worktree, main`},
-		{"a schedule on a formula with inputs", "description: Cuts a release.\n", "description: Cuts a release.\nschedule: daily\n", 7, "schedule starts the formula with no inputs, as nobody is there to give them, but it declares version"},
+		{"a schedule on a formula with inputs", "description: Cuts a release.\n", "description: Cuts a release.\nschedule: daily\n", 7, "schedule starts the formula with no inputs, as nobody is there to give them, but version has no default"},
 	} {
 		if !strings.Contains(formulaFile, tc.old) {
 			t.Fatalf("%s: the fixture has no %q", tc.name, tc.old)
@@ -202,6 +202,25 @@ func TestAFormulasScheduleIsChecked(t *testing.T) {
 	got := findings(t, repo, formulas.CodeFile)
 	if len(got) != 1 || got[0].Level != Error || got[0].Path != path || got[0].Line != 7 || !strings.Contains(got[0].Message, `schedule "nightly" has 1 fields, not five`) {
 		t.Errorf("a schedule that does not parse: %+v", got)
+	}
+}
+
+// S-0424: a scheduled formula whose every input carries a default passes, and
+// one with an input of no default is a formulas.file error on the schedule's
+// line naming that input.
+func TestAScheduledFormulasInputsNeedDefaults(t *testing.T) {
+	defaulted := strings.Replace(formulaFile, "description: Cuts a release.\n", "description: Cuts a release.\nschedule: daily\n", 1)
+	defaulted = strings.Replace(defaulted, "    description: The version to release.\n", "    description: The version to release.\n    default: next\n", 1)
+	repo := formulasProject(t, map[string]string{"release.md": defaulted})
+	if got := findings(t, repo, formulas.CodeFile); len(got) != 0 {
+		t.Errorf("inputs that all carry a default: %+v", got)
+	}
+	twoInputs := strings.Replace(defaulted, "steps:\n", "  - name: channel\n    description: Where to announce it.\nsteps:\n", 1)
+	repo = formulasProject(t, map[string]string{"release.md": twoInputs})
+	got := findings(t, repo, formulas.CodeFile)
+	if len(got) != 1 || got[0].Level != Error || got[0].Path != formulaPath || got[0].Line != 7 ||
+		!strings.Contains(got[0].Message, "but channel has no default; give it a default, or remove the schedule") {
+		t.Errorf("an input with no default: %+v", got)
 	}
 }
 
