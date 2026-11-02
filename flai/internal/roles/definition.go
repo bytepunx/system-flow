@@ -138,11 +138,17 @@ func toolList(v any) ([]string, error) {
 
 // Prompt is a role file's body as its definition's prompt (ADR-0207 §4):
 // the baseline text and the project's additions, without the marker's line
-// and the blank lines that followed it, trimmed.
+// and the blank lines that followed it, and without the additions' Start
+// prompt section, which is the start prompt's (ADR-0250 §1), trimmed.
 func Prompt(body string) string {
+	body = strings.ReplaceAll(body, "\r\n", "\n")
+	if i := strings.Index(body, Marker); i >= 0 {
+		rest, _, _ := cutStart(body[i:])
+		body = body[:i] + rest
+	}
 	var out []string
 	skip := false
-	for _, l := range strings.Split(strings.ReplaceAll(body, "\r\n", "\n"), "\n") {
+	for _, l := range strings.Split(body, "\n") {
 		blank := strings.TrimSpace(l) == ""
 		switch {
 		case strings.TrimSpace(l) == Marker:

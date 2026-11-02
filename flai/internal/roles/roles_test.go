@@ -446,6 +446,9 @@ func TestValidateReportsEachProblem(t *testing.T) {
 		{"definition tools missing", "planner.md", plannerFile, "  tools: [Read, Grep, Bash, mcp__flai__prime, mcp__flai__item_new, mcp__flai__item_edit, mcp__flai__item_move]\n", "", CodeDefinition, 7, "needs tools"},
 		{"definition lists a refused tool", "planner.md", plannerFile, "mcp__flai__item_move]", "mcp__flai__item_move, mcp__flai__release_publish]", CodeDefinition, 9, "mcp__flai__release_publish, which the role's rules refuse"},
 		{"Edit with no files", "planner.md", plannerFile, "tools: [Read, Grep,", "tools: [Read, Edit, Grep,", CodeDefinition, 9, "lists Edit, but files names no folder"},
+		{"start does not parse", "planner.md", plannerFile, "charge: item\n", "charge: item\nstart: |\n  Plan {{.Item}.\n", CodeFile, 21, "start does not parse: template: start:1: "},
+		{"start names an unknown field", "planner.md", plannerFile, "charge: item\n", "charge: item\nstart: |\n  Plan {{.Item}}.\n  {{if .Item}}Read {{.Story}}.{{end}}\n", CodeFile, 21, "can't evaluate field Story"},
+		{"start additions name an unknown field", "planner.md", plannerFile, "Plan small.\n", "Plan small.\n\n### Start prompt\n\nPlan {{.Nope}} first.\n", CodeFile, 51, "the ### Start prompt section does not render over a run's fields"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -570,5 +573,33 @@ func TestDesignFolderFromTheManifest(t *testing.T) {
 	got := Validate(rs, "docs/design", vocab)
 	if len(got) != 1 || !strings.Contains(got[0].Message, "docs/design/workflows/") {
 		t.Errorf("Validate = %v, want the files entry reaching docs/design/workflows/", got)
+	}
+}
+
+// ADR-0250 §1: a role file's start is read from its front matter, and its
+// Start prompt section from its additions, with the heading's line, and
+// both validate clean when they name only the run's fields.
+func TestStartAndItsAdditionsAreRead(t *testing.T) {
+	f := edit(t, edit(t, plannerFile, "charge: item\n", "charge: item\nstart: |\n  You are {{.Name}}; plan {{.Item}}.\n"),
+		"Plan small.\n", "Plan small.\n\n### Start prompt\n\nPlan {{.Kind}} {{.Item}} small.\n")
+	rs, problems := load(t, map[string]string{"planner.md": f})
+	if len(problems) != 0 {
+		t.Fatalf("load problems: %v", problems)
+	}
+	if got := Validate(rs, "design", vocab); len(got) != 0 {
+		t.Fatalf("Validate = %v, want none", got)
+	}
+	r := rs[0]
+	if r.Start != "You are {{.Name}}; plan {{.Item}}.\n" || r.Lines["start"] != 21 {
+		t.Errorf("start %q at line %d", r.Start, r.Lines["start"])
+	}
+	if r.StartAdditions != "Plan {{.Kind}} {{.Item}} small." || r.StartAdditionsLine != 53 {
+		t.Errorf("start additions %q at line %d", r.StartAdditions, r.StartAdditionsLine)
+	}
+	if got, err := r.RenderStart("design", StartFields{Name: "planner-S-0001", Item: "S-0001", Kind: "story"}); err != nil || got != "You are planner-S-0001; plan S-0001.\n\nPlan story S-0001 small." {
+		t.Errorf("RenderStart = %q, %v", got, err)
+	}
+	if p, _ := Parse(r.Path, plannerFile); p.Start != "" || p.StartAdditions != "" || p.StartAdditionsLine != 0 {
+		t.Errorf("a file with neither: start %q, additions %q at %d", p.Start, p.StartAdditions, p.StartAdditionsLine)
 	}
 }

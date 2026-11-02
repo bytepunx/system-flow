@@ -133,12 +133,15 @@ func TestGenerateRefusesWhatTheDefinitionLacks(t *testing.T) {
 
 // ADR-0207 §4: a role file's body is its definition's prompt without the
 // marker's line and the blank lines after it; a body with no marker is
-// itself, trimmed.
+// itself, trimmed. ADR-0250 §1: the additions' Start prompt section is left
+// out, and a heading of that name above the marker kept.
 func TestPromptIsTheBodyWithoutTheMarker(t *testing.T) {
 	for _, c := range []struct{ body, want string }{
 		{"\nBaseline.\n\n" + Marker + "\n\n## Project additions\n\nMore.\n", "Baseline.\n\n## Project additions\n\nMore."},
 		{"\r\nBaseline.\r\n" + Marker + "\r\n## Project additions\r\n", "Baseline.\n## Project additions"},
 		{"\nNo marker.\n\n", "No marker."},
+		{"\nBaseline.\n\n" + Marker + "\n\n## Project additions\n\nMore.\n\n### Start prompt\n\nTell it {{.Item}}.\n\n### Kept\n\nYes.\n", "Baseline.\n\n## Project additions\n\nMore.\n\n### Kept\n\nYes."},
+		{"\nBaseline.\n\n### Start prompt\n\nAbove the marker.\n\n" + Marker + "\n\n## Project additions\n\n### Start prompt\n\nGone.\n", "Baseline.\n\n### Start prompt\n\nAbove the marker.\n\n## Project additions"},
 	} {
 		if got := Prompt(c.body); got != c.want {
 			t.Errorf("Prompt(%q) = %q, want %q", c.body, got, c.want)

@@ -108,6 +108,9 @@ type Role struct {
 	Commands    []Call       `yaml:"commands" json:"commands"`
 	Files       []string     `yaml:"files" json:"files"`
 	Permissions []Permission `yaml:"permissions" json:"permissions"`
+	// Start is the start prompt, a Go text/template rendered over a run's
+	// StartFields, empty when the file has none (ADR-0250 §1).
+	Start string `yaml:"start" json:"start,omitempty"`
 
 	// Body is the text after the front matter.
 	Body string `yaml:"-" json:"-"`
@@ -115,6 +118,13 @@ type Role struct {
 	Baseline string `yaml:"-" json:"-"`
 	// Additions is the body from the marker on, empty when it has none.
 	Additions string `yaml:"-" json:"-"`
+	// StartAdditions is the project's additions to the start prompt: the
+	// text under the Start prompt heading in Additions, trimmed, empty when
+	// it has none (ADR-0250 §1).
+	StartAdditions string `yaml:"-" json:"-"`
+	// StartAdditionsLine is the file line of the Start prompt heading, 0
+	// when there is none.
+	StartAdditionsLine int `yaml:"-" json:"-"`
 	// Lines are the file lines of the front matter's top-level keys, and of
 	// definition's as definition.<key>; a key not there is absent.
 	Lines map[string]int `yaml:"-" json:"-"`
@@ -266,6 +276,11 @@ func Parse(rel, content string) (Role, *Problem) {
 	r.Path, r.Body, r.Baseline = rel, body, body
 	if i := strings.Index(body, Marker); i >= 0 {
 		r.Baseline, r.Additions = body[:i], body[i:]
+		if _, section, at := cutStart(strings.ReplaceAll(r.Additions, "\r\n", "\n")); at >= 0 {
+			// The body starts on the line after the front matter's close.
+			first := strings.Count(content[:len(content)-len(body)], "\n") + 1
+			r.StartAdditions, r.StartAdditionsLine = section, first+strings.Count(body[:i], "\n")+at
+		}
 	}
 	r.fill()
 	return r, nil
@@ -544,6 +559,27 @@ func (c *checker) role(r Role) {
 		c.add(r, CodeFile, 1, "the baseline marker appears %d times; keep exactly one", n)
 	}
 	c.definition(r)
+	c.start(r)
+}
+
+// start checks the file's start prompt and its additions' Start prompt
+// section: each parses and names only the fields ADR-0250 §2 lists.
+func (c *checker) start(r Role) {
+	fields := strings.Join(StartFieldNames(), ", ")
+	if r.Start != "" {
+		if err := ValidateStart(r.Start); err != nil {
+			c.add(r, CodeFile, r.line("start"), "start %v; write it as a Go text/template naming only %s, with no functions beyond text/template's built-ins (ADR-0250 §2)", err, fields)
+		}
+	}
+	if r.StartAdditions != "" {
+		at := r.StartAdditionsLine
+		if at == 0 {
+			at = r.line("start")
+		}
+		if err := ValidateStart(r.StartAdditions); err != nil {
+			c.add(r, CodeFile, at, "the %s section %v; write it as a Go text/template naming only %s, with no functions beyond text/template's built-ins (ADR-0250 §2)", StartHeading, err, fields)
+		}
+	}
 }
 
 func (c *checker) action(r Role) {
