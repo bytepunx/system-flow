@@ -2003,8 +2003,9 @@ func TestTheOrchestratorsPromptSaysToEnqueueWhileTheQueueRuns(t *testing.T) {
 	}
 }
 
-// S-0222: while publish is on, the orchestrator evaluates the release policy
-// after each acceptance and publishes through release_publish when a
+// S-0222, S-0423: while publish is on, the orchestrator evaluates the release
+// policy after each acceptance and publishes, through the publish formula or,
+// where the project has none, release_publish (ADR-0240), when a
 // threshold or theme is met, or under judgement when it judges the batch
 // coherent and complete, never a batch whole_epics holds back; it logs each
 // release from what release_publish returned, each decision not to publish,
@@ -2015,21 +2016,25 @@ func TestTheOrchestratorsPromptSaysHowItPublishes(t *testing.T) {
 	for _, w := range []string{
 		"While publish is on, after each acceptance, yours or one wait_for_events reports as a story moved to done, call the flai MCP tool release_evaluate",
 		// threshold and theme
-		"Under the threshold or theme policy, when the evaluation is met, call the flai MCP tool release_publish with the figure that was met as its reason",
+		"Under the threshold or theme policy, publish when the evaluation is met, with the figure that was met as the reason",
 		// judgement
-		"Under judgement, call release_publish only when you judge the unreleased work coherent and complete, with that reasoning as its reason",
+		"Under judgement, publish only when you judge the unreleased work coherent and complete, with that reasoning as the reason",
+		// the publish formula, and release_publish where there is none
+		"To publish where the project has a publish formula (flai formula list shows publish), run flai formula run publish --ready --autocommit",
+		"Where it has none, call the flai MCP tool release_publish with the reason",
 		// whole_epics
 		"Under any policy, never publish a batch the evaluation holds back under whole_epics, the stories it names in held_by_epic",
 		// the log of a release and of a decision not to publish
-		"Log each release with activity_log: the policy, its figures, the versions and tags, and the items bundled, all as release_publish returned them",
+		"log each release with activity_log: the policy, its figures, the versions and tags, and the items bundled, all as release_publish returned them",
+		"log with activity_log the instance's story ID, the policy, and its figures or your reasoning",
 		"Log a decision not to publish too, with the evaluation's figures",
 		// a refusal: its log and its thread
-		"When release_publish refuses, log the refusal with activity_log",
+		"When flai formula run or release_publish refuses, log the refusal with activity_log",
 		"open a thread to the operator with the flai MCP tool thread_open on the most recently accepted story of the batch, with the refusal's words and what fixes it",
 		"do not try again until that thread is answered or the next acceptance",
 		// off, and no other route
 		"While publish is off, neither evaluate nor publish",
-		"Publish only through release_publish: flai guard refuses you flai release other than --evaluate, flai push, git push, and git tag, whatever your permissions",
+		"Publish only through the publish formula or, where there is none, release_publish: flai refuses you any other formula, and flai guard refuses you flai release other than --evaluate, flai push, git push, and git tag, whatever your permissions",
 	} {
 		if !strings.Contains(p, w) {
 			t.Errorf("the orchestrator's prompt lacks %q:\n%s", w, p)

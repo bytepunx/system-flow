@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- S-0423 Publishing is the baseline `publish` formula (patch, ADR-0240): the template ships `design/workflows/formulas/publish.md`, whose three steps, each `in: main`, run `scripts/fetch.sh`, `flai release --evaluate --require-met`, and `flai release --pending --json`, and ships `scripts/fetch.sh`. The orchestrator's role file lists `flai formula run publish` under `orchestration.permissions.publish`, and its rule 13 runs `flai formula run publish --ready --autocommit` when `release_evaluate` is met, calling `release_publish` only where the project has no publish formula. In `strategic-agents.md`, "As the orchestrator" says the same, and a strategic agent runs no formula but the orchestrator's `publish`. In `work-management.md`, the publishing rule says publishing is the `publish` formula's steps, in the main checkout, and that `flai release --pending` refuses an agent `flai serve` started while the `push` host action is off. It needs a flai that has it, the release that carries S-0423: an older flai reads past a step's `in` and runs it in the worktree, has no `--require-met`, and lets a served agent publish with `push` off.
+
 ## 1.1.18 - 2026-11-02
 
 - S-0422 A story's agent works a formula's instance on its branch, a role step runs its role charged to the instance, a failed step asks on a thread, and a formula starts from its schedule or a role (patch).

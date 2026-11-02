@@ -78,6 +78,8 @@ Research and experiment stories are accepted the same way and never count toward
 
 **Publishing, when you choose.** On the host, run `git fetch`, then `flai release --pending`. It tags everything accumulated and unreleased for each component since its last tag (the highest delivery type among what is pending, not a sum), bumps and commits the version files, and pushes the branch and every tag together. Tags go three to a push, the branch last, because GitHub starts no tag-triggered workflow when one push carries more than three. `--dry-run` shows what it would do and changes nothing; run again after a partial failure and it does not redo what already succeeded. It never forces.
 
+These are the steps of the template's `publish` formula, [publish.md](../../design/workflows/formulas/publish.md), which adds `flai release --evaluate --require-met` between them: it exits 2 unless the release policy is met ([ADR-0240](../../design/adrs/0240-under-publish-the-orchestrator-starts-the-baseline-publish-formula-whose-main.md)). `flai formula run publish --ready` makes them a story, which a story's agent works from the main checkout, so the publish is measured and archived as any story.
+
 flai never fetches by itself. Before it plans anything, `flai release --pending` asks the remote for its release tags and for the head of the branch this clone tracks. It refuses (exit 3) before committing or tagging anything when this clone lacks a newer release tag the remote has, or lacks commits on the remote branch, and names what to run:
 
 ```bash
@@ -116,7 +118,7 @@ Enabling and disabling take effect at once, with no restart. The setting is `hos
 
 With it on, the done column's **Publish** button works; its confirmation says what it will do before you click it. It is refused (HTTP 403) and journalled while the action is off, and says what enables it. It never forces a push, and when the remote has moved it is refused with the reason and the command to run by hand.
 
-**The orchestrator publishes under it too** (S-0222). With `orchestration.permissions.publish` on, the orchestrator publishes through the MCP tool `release_publish`, which runs what the **Publish** button runs. It needs the `push` action on for the project as well: while `push` is off, `release_publish` is refused, journalled as `disabled`, and the orchestrator asks you on a thread. Turning `push` on therefore lets the orchestrator publish with your credentials whenever its release policy allows, as well as the dashboard. Each of its runs is in the journal with method `mcp.release_publish`, by `orchestrator`, and the policy and reason it published by ([When the orchestrator publishes](../users/flai.md#when-the-orchestrator-publishes)).
+**The orchestrator publishes under it too** (S-0222). With `orchestration.permissions.publish` on, the orchestrator publishes when its release policy is met. Where the project has the `publish` formula, it runs `flai formula run publish --ready --autocommit`, and the instance's agent runs `flai release --pending`; `release_publish` refuses there (S-0423, [ADR-0240](../../design/adrs/0240-under-publish-the-orchestrator-starts-the-baseline-publish-formula-whose-main.md)). Where it has none, it calls the MCP tool `release_publish`, which runs what the **Publish** button runs. Either way it needs the `push` action on for the project as well. While `push` is off, `flai release --pending` refuses (exit 4) an agent `flai serve` started, naming `flai serve enable push`, and the instance's agent asks you on a thread; `release_publish` is refused, journalled as `disabled`, and the orchestrator asks you on a thread. Your own shell is not held. Turning `push` on therefore lets the orchestrator publish with your credentials whenever its release policy allows, as well as the dashboard. Each `release_publish` run is in the journal with method `mcp.release_publish`, by `orchestrator`, and the policy and reason it published by ([When the orchestrator publishes](../users/flai.md#when-the-orchestrator-publishes)).
 
 The journal is `journal.jsonl` beside `flai serve`'s state (the `serve` folder next to your flai configuration), mode 0600, one line per request: when, the action, the method, the project, for whom (the manifest's `owner`), the request, and the outcome (`done`, `failed`, or `disabled`) with what was pushed and published or why not.
 
@@ -608,7 +610,7 @@ flai serve journal                                    # each start says started 
 
 ### Writing and running a formula (S-0421)
 
-A formula is a process you repeat, written down as one file, `design/workflows/formulas/<name>.md`, in a story you accept ([ADR-0238](../../design/adrs/0238-a-formula-is-a-markdown-file-under-design-workflows-formulas-whose-front-matter.md)). `flai formula run` makes from it an ordinary story with one task per step, which a story's agent works as any story. The template ships the folder's `README.md` and no formula.
+A formula is a process you repeat, written down as one file, `design/workflows/formulas/<name>.md`, in a story you accept ([ADR-0238](../../design/adrs/0238-a-formula-is-a-markdown-file-under-design-workflows-formulas-whose-front-matter.md)). `flai formula run` makes from it an ordinary story with one task per step, which a story's agent works as any story. The template ships the folder's `README.md` and one formula, `publish` ([Publishing, when you choose](#accepting-releases-nothing-publishing-reaches-the-remote-s-0087-s-0195)).
 
 ```markdown
 ---
@@ -651,7 +653,7 @@ Run before a release is published.
 | `description` | The story's goal |
 | `nature` | The story's nature, `improvement` by default |
 | `inputs` | Each a `name`, a `description`, and optionally a `default`; one without a default is required. Use one as `{{name}}` in the title, a step's title, or a step's run |
-| `steps` | Each an `id`, a `title`, a `run`, and optionally the step ids it is `after` |
+| `steps` | Each an `id`, a `title`, a `run`, and optionally the step ids it is `after` and `in: main`, for a step that runs from the project's main checkout rather than the story's worktree |
 | `run` | Exactly one of `flai: <command line after flai>`, `script: <path under scripts/ and its arguments>`, or `role: <name>` with `prompt: <text>` |
 
 ```bash
