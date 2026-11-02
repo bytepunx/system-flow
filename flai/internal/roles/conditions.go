@@ -3,6 +3,10 @@ package roles
 import (
 	"slices"
 	"strings"
+	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // The operator's permissions, the <p> of orchestration.permissions.<p> and
@@ -63,11 +67,14 @@ func (c Cond) OnTrigger() bool { return len(c.Events) > 0 || c.Schedule }
 // OnCall reports whether the condition qualifies a call entry.
 func (c Cond) OnCall() bool { return len(c.Calls) > 0 }
 
-// Occurrence is an event that happened, in roles' own terms, which a
-// trigger condition matches (ADR-0211 §3).
+// Occurrence is an event that happened, or a schedule that came round, in
+// roles' own terms, which a trigger condition matches (ADR-0211 §3).
 type Occurrence struct {
-	// Event is the event's name, one of Events.
+	// Event is the event's name, one of Events; empty for a schedule.
 	Event string
+	// Schedule is the setting a schedule came round on, as
+	// planning.schedule; empty for an event.
+	Schedule string
 	// To is the state a moved item moved to.
 	To string
 	// Draft is whether an edited item is a story that is a draft after the
@@ -76,29 +83,154 @@ type Occurrence struct {
 	// Awaits is whom a thread event's thread awaits: "you" for the reader,
 	// or "operator" (ADR-0181).
 	Awaits string
+	// Item is the item an edited event is on, as read after the edit; nil
+	// when it is not known.
+	Item *workitem.Item
+	// Edit is what an edited event changed, by whom, and when.
+	Edit Edit
+	// Replan is the project's planning.replan as set, empty for its
+	// default.
+	Replan string
+}
+
+// Edit is an edit of an item, as stale-figures judges it (ADR-0084).
+type Edit struct {
+	// Changed are the fields the edit named, as an edit notice names them:
+	// goal, criteria, touches, cost_of_delay, and the others.
+	Changed []string
+	// By is who edited.
+	By string
+	// At is when, a workitem.TimeFormat stamp.
+	At string
+	// Own is the name the edited story's own agent edits by, as
+	// agent-S-0001, whose edit makes nothing due (I-0098); empty for none.
+	Own string
+}
+
+// StaleFields are the fields whose edit makes a planned story's figures
+// stale (ADR-0084), in the order StaleFigures names them; an edit of the
+// cost of delay is judged apart.
+var StaleFields = []string{"goal", "criteria", "touches"}
+
+// CostOfDelayField is the field an edit of a story's cost of delay names.
+const CostOfDelayField = "cost_of_delay"
+
+// StaleFigures are the fields of the edit e that leave the forecast or the
+// cost of delay value of story it stale, so that the planner is due for it
+// again (ADR-0084, ADR-0250 §5): none for an item that is not a backlog or
+// ready story on the board, for a planner's edit (planner-<item>), and for
+// one by the story's own agent, e.Own. Each of goal, criteria, and touches
+// that e changed, in that order, when the story's forecast or its cost of
+// delay value is older than e; then cost_of_delay, when e changed it and its
+// inputs are now newer than its value. A stamp that cannot be read is not
+// older, and an edit whose stamp cannot be read makes nothing due.
+func StaleFigures(it *workitem.Item, e Edit) []string {
+	if it == nil || it.Archived || it.Type != workitem.Story || (it.Status != workitem.Backlog && it.Status != workitem.Ready) ||
+		strings.HasPrefix(e.By, workitem.ActivityPlanner+"-") || (e.Own != "" && e.By == e.Own) {
+		return nil
+	}
+	at, err := time.Parse(workitem.TimeFormat, e.At)
+	if err != nil {
+		return nil
+	}
+	var fields []string
+	if older(forecastAt(it), at) || older(valueAt(it), at) {
+		for _, f := range StaleFields {
+			if slices.Contains(e.Changed, f) {
+				fields = append(fields, f)
+			}
+		}
+	}
+	if slices.Contains(e.Changed, CostOfDelayField) && it.CostOfDelay.Stale() {
+		fields = append(fields, CostOfDelayField)
+	}
+	return fields
+}
+
+// forecastAt is when a story's forecast was written, "" when it has none.
+func forecastAt(it *workitem.Item) string {
+	if it.Forecast.IsZero() {
+		return ""
+	}
+	return it.Forecast.At
+}
+
+// valueAt is when a story's cost of delay value was set, "" when it has
+// none.
+func valueAt(it *workitem.Item) string {
+	if it.CostOfDelay == nil || it.CostOfDelay.Value == nil {
+		return ""
+	}
+	return it.CostOfDelay.At
+}
+
+// older reports whether the stamp is a time before t.
+func older(stamp string, t time.Time) bool {
+	at, err := time.Parse(workitem.TimeFormat, stamp)
+	return err == nil && at.Before(t)
+}
+
+// ReplanAgent are the stories replan-agent starts the planner for after
+// work ahead completes or the order changes, while planning.replan is
+// agent: each story whose forecast delivery the replay moved, in moved's
+// order, once each; none unless replan is agent (ADR-0084, ADR-0250 §5).
+// The event's own item is not among them unless the replay moved it.
+func ReplanAgent(replan string, moved []string) []string {
+	if replan != manifest.ReplanAgent {
+		return nil
+	}
+	return once(moved)
+}
+
+// EachReadyStory are the stories each-ready-story starts the planner for
+// when its schedule comes round: the ready stories among items, in the pull
+// order order gives them, then those it does not name by ID, once each;
+// none when the ready column is empty (ADR-0250 §5).
+func EachReadyStory(order []string, items []*workitem.Item) []string {
+	return workitem.PullSequence(order, items, workitem.Ready)
+}
+
+// once is ids in order with each one's repeats left out.
+func once(ids []string) []string {
+	var out []string
+	for _, id := range ids {
+		if !slices.Contains(out, id) {
+			out = append(out, id)
+		}
+	}
+	return out
 }
 
 // matches are the trigger conditions whose match flai implements against an
-// occurrence, by name; the event is checked against the condition's Events
-// beside it.
+// occurrence, by name; the event, or the schedule, is checked against the
+// condition's Events, or its Schedule, beside it.
 var matches = map[string]func(Occurrence) bool{
 	"to-review":           func(o Occurrence) bool { return o.To == "review" },
 	"to-backlog":          func(o Occurrence) bool { return o.To == "backlog" },
 	"draft-changed":       func(o Occurrence) bool { return o.Draft },
 	"awaits-orchestrator": func(o Occurrence) bool { return o.Awaits == "you" || o.Awaits == "operator" },
+	"stale-figures":       func(o Occurrence) bool { return len(StaleFigures(o.Item, o.Edit)) > 0 },
+	"replan-agent":        func(o Occurrence) bool { return o.Replan == manifest.ReplanAgent },
+	"each-ready-story":    func(Occurrence) bool { return true },
 }
 
-// Matches reports whether the condition holds for the occurrence o: o's
-// event is one the condition qualifies and the condition's match holds.
-// implemented is false for a condition with no match against an occurrence:
-// a call or files condition, and the trigger conditions stale-figures,
-// replan-agent, and each-ready-story, which flai judges otherwise.
+// Matches reports whether the condition holds for the occurrence o: o is an
+// event the condition qualifies, or a schedule for a condition that
+// qualifies one, and the condition's match holds. implemented is false for a
+// condition with no match against an occurrence: a call or files condition.
 // awaits-orchestrator reads the orchestrator as the reader, so a thread that
-// awaits it ("you") or the operator holds.
+// awaits it ("you") or the operator holds. stale-figures holds when
+// StaleFigures names a field of o.Edit on o.Item. replan-agent and
+// each-ready-story say only whether the trigger applies, not on what: a run
+// under replan-agent is on each story ReplanAgent gives, not the event's
+// item, and one under each-ready-story on each story EachReadyStory gives.
 func (c Cond) Matches(o Occurrence) (holds, implemented bool) {
 	match, ok := matches[c.Name]
 	if !ok {
 		return false, false
+	}
+	if c.Schedule {
+		return o.Event == "" && o.Schedule != "" && match(o), true
 	}
 	return slices.Contains(c.Events, o.Event) && match(o), true
 }
@@ -132,9 +264,9 @@ var Conditions = []Cond{
 	{Name: "answer-threads", Calls: []string{"thread_reply", "flai thread reply"}, Allows: "on a thread the role did not open, a recommendation while the setting is recommend, or an answer citing a source while it is autonomous; never resolving it (ADR-0090)", Permission: AnswerThreads},
 	{Name: "accept-as-self", Calls: []string{"flai accept", "flai move"}, Allows: "accepting a story in review, or moving it to done, as the role itself (--by <name>), never with --batch (ADR-0093)", Permission: AcceptReviews},
 	{Name: "enqueue-as-self", Calls: []string{"flai queue add"}, Allows: "enqueuing a story for the merge queue as the role itself (--by <name>)", Permission: AcceptReviews},
-	{Name: "stale-figures", Events: []string{"edited"}, Allows: "only an edit of a backlog or ready story's goal, criteria, or touches by someone other than a planner, when its forecast or cost of delay value is older than the edit"},
-	{Name: "replan-agent", Events: []string{"accepted", "cancelled", "reordered"}, Allows: "only while planning.replan is agent, for each story whose delivery moved"},
-	{Name: "each-ready-story", Schedule: true, Allows: "once for every ready story"},
+	{Name: "stale-figures", Events: []string{"edited"}, Allows: "only an edit of a backlog or ready story's goal, criteria, or touches when its forecast or cost of delay value is older than the edit, or of its cost of delay's inputs after its value, by someone other than a planner or the story's own agent (ADR-0250 §5)"},
+	{Name: "replan-agent", Events: []string{"accepted", "cancelled", "reordered"}, Allows: "only while planning.replan is agent, for each story whose delivery moved, in the order the replay moved them"},
+	{Name: "each-ready-story", Schedule: true, Allows: "once for every ready story, in pull order"},
 	{Name: "to-review", Events: []string{"moved"}, Allows: "only a move to review"},
 	{Name: "draft-changed", Events: []string{"edited"}, Allows: "only an edit of a story that is a draft after the edit"},
 	{Name: "awaits-orchestrator", Events: []string{"thread"}, Allows: "only a thread that awaits the orchestrator or the operator (ADR-0181)"},

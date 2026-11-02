@@ -3,6 +3,8 @@ package roles
 import (
 	"slices"
 	"testing"
+
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 func TestConditionsTableIsWellFormed(t *testing.T) {
@@ -50,8 +52,14 @@ func TestConditionsTableIsWellFormed(t *testing.T) {
 		}
 	}
 	for name := range matches {
-		if c, ok := Condition(name); !ok || len(c.Events) == 0 {
-			t.Errorf("match %s is for no condition that qualifies an event", name)
+		if c, ok := Condition(name); !ok || !c.OnTrigger() {
+			t.Errorf("match %s is for no condition that qualifies a trigger", name)
+		}
+	}
+	// ADR-0250 §5: every trigger condition is judged against an occurrence
+	for _, c := range Conditions {
+		if _, ok := matches[c.Name]; ok != c.OnTrigger() {
+			t.Errorf("condition %s qualifies a trigger %v, has a match %v", c.Name, c.OnTrigger(), ok)
 		}
 	}
 	for _, f := range Never {
@@ -159,10 +167,157 @@ func TestMatches(t *testing.T) {
 			t.Errorf("%s.Matches(%+v) = %v, %v; want %v, true", tc.name, tc.o, holds, implemented, tc.want)
 		}
 	}
-	for _, name := range []string{"stale-figures", "replan-agent", "each-ready-story", "draft-only", "under-folder"} {
+	for _, name := range []string{"draft-only", "under-folder", "cost-inputs"} {
 		if holds, implemented := cond(t, name).Matches(Occurrence{Event: "edited", Draft: true}); holds || implemented {
 			t.Errorf("%s.Matches = %v, %v; want no match implemented", name, holds, implemented)
 		}
+	}
+}
+
+// staleStory is a ready story planned at 09:00, changed by change when it is
+// not nil.
+func staleStory(change func(*workitem.Item)) *workitem.Item {
+	it := &workitem.Item{ID: "S-0001", Type: workitem.Story, Status: workitem.Ready,
+		Forecast: &workitem.Forecast{Duration: "2h", Delivery: "2026-10-05T00:00:00Z", By: "planner-S-0001", At: "2026-10-04T09:00:00Z"}}
+	if change != nil {
+		change(it)
+	}
+	return it
+}
+
+// staleEdit is an edit at 10:00 by by of changed, by a story whose own agent
+// is agent-S-0001.
+func staleEdit(by string, changed ...string) Edit {
+	return Edit{Changed: changed, By: by, At: "2026-10-04T10:00:00Z", Own: "agent-S-0001"}
+}
+
+// ADR-0084, ADR-0250 §5: stale-figures names the fields of an edit that
+// leave a planned backlog or ready story's figures stale, as the replanner's
+// edit trigger does, and none for an edit that does not.
+func TestStaleFigures(t *testing.T) {
+	value := 1000.0
+	cases := []struct {
+		name string
+		it   *workitem.Item
+		e    Edit
+		want []string
+	}{
+		{"goal", staleStory(nil), staleEdit("alex", "goal"), []string{"goal"}},
+		{"criteria", staleStory(nil), staleEdit("alex", "criteria"), []string{"criteria"}},
+		{"touches", staleStory(nil), staleEdit("alex", "touches"), []string{"touches"}},
+		{"several, in their order", staleStory(nil), staleEdit("alex", "touches", "goal", "notes"), []string{"goal", "touches"}},
+		{"no one named", staleStory(nil), staleEdit("", "goal"), []string{"goal"}},
+		{"in backlog", staleStory(func(it *workitem.Item) { it.Status = workitem.Backlog }), staleEdit("alex", "goal"), []string{"goal"}},
+		{"a value older than the edit, no forecast", staleStory(func(it *workitem.Item) {
+			it.Forecast, it.CostOfDelay = nil, &workitem.CostOfDelay{Value: &value, By: "alex", At: "2026-10-04T09:00:00Z"}
+		}), staleEdit("alex", "criteria"), []string{"criteria"}},
+		{"inputs changed after the value", staleStory(func(it *workitem.Item) {
+			it.CostOfDelay = &workitem.CostOfDelay{Inputs: &workitem.CostInputs{RevenuePerWeek: &value, By: "alex", At: "2026-10-04T10:00:00Z"}, Value: &value, By: "planner-S-0001", At: "2026-10-04T09:00:00Z"}
+		}), staleEdit("alex", "cost_of_delay"), []string{"cost_of_delay"}},
+		{"a value written alone", staleStory(func(it *workitem.Item) {
+			it.CostOfDelay = &workitem.CostOfDelay{Inputs: &workitem.CostInputs{RevenuePerWeek: &value, By: "alex", At: "2026-10-04T08:00:00Z"}, Value: &value, By: "alex", At: "2026-10-04T10:00:00Z"}
+		}), staleEdit("alex", "cost_of_delay"), nil},
+		{"a field outside the three", staleStory(nil), staleEdit("alex", "title", "notes", "body", "forecast"), nil},
+		{"a planner's edit", staleStory(nil), staleEdit("planner-S-0001", "goal"), nil},
+		{"another story's planner's edit", staleStory(nil), staleEdit("planner-S-0002", "goal"), nil},
+		{"the story's own agent's edit", staleStory(nil), staleEdit("agent-S-0001", "touches"), nil},
+		{"another story's agent's edit", staleStory(nil), staleEdit("agent-S-0002", "touches"), []string{"touches"}},
+		{"no own agent named", staleStory(nil), Edit{Changed: []string{"touches"}, By: "agent-S-0001", At: "2026-10-04T10:00:00Z"}, []string{"touches"}},
+		{"never planned", staleStory(func(it *workitem.Item) { it.Forecast = nil }), staleEdit("alex", "goal"), nil},
+		{"never planned, inputs only", staleStory(func(it *workitem.Item) {
+			it.Forecast, it.CostOfDelay = nil, &workitem.CostOfDelay{Inputs: &workitem.CostInputs{RevenuePerWeek: &value, By: "alex", At: "2026-10-04T10:00:00Z"}}
+		}), staleEdit("alex", "cost_of_delay"), nil},
+		{"a fresh forecast", staleStory(func(it *workitem.Item) { it.Forecast.At = "2026-10-04T11:00:00Z" }), staleEdit("alex", "goal"), nil},
+		{"a forecast in the edit's second", staleStory(func(it *workitem.Item) { it.Forecast.At = "2026-10-04T10:00:00Z" }), staleEdit("alex", "goal"), nil},
+		{"a forecast with no stamp", staleStory(func(it *workitem.Item) { it.Forecast.At = "" }), staleEdit("alex", "goal"), nil},
+		{"an edit with no stamp", staleStory(nil), Edit{Changed: []string{"goal"}, By: "alex"}, nil},
+		{"in progress", staleStory(func(it *workitem.Item) { it.Status = workitem.InProgress }), staleEdit("alex", "goal"), nil},
+		{"archived", staleStory(func(it *workitem.Item) { it.Archived = true }), staleEdit("alex", "goal"), nil},
+		{"a task", staleStory(func(it *workitem.Item) { it.Type = workitem.Task }), staleEdit("alex", "touches"), nil},
+		{"an item not there", nil, staleEdit("alex", "goal"), nil},
+	}
+	stale := cond(t, "stale-figures")
+	for _, c := range cases {
+		if got := StaleFigures(c.it, c.e); !slices.Equal(got, c.want) {
+			t.Errorf("%s: StaleFigures = %q, want %q", c.name, got, c.want)
+		}
+		holds, implemented := stale.Matches(Occurrence{Event: "edited", Item: c.it, Edit: c.e})
+		if !implemented || holds != (len(c.want) > 0) {
+			t.Errorf("%s: stale-figures.Matches = %v, %v; want %v, true", c.name, holds, implemented, len(c.want) > 0)
+		}
+	}
+	// only on an edit
+	if holds, _ := stale.Matches(Occurrence{Event: "moved", Item: staleStory(nil), Edit: staleEdit("alex", "goal")}); holds {
+		t.Error("stale-figures holds on a move")
+	}
+}
+
+// ADR-0084, ADR-0250 §5: replan-agent holds on an acceptance, a
+// cancellation, or a reorder while planning.replan is agent, and gives each
+// story whose delivery moved, once, rather than the event's item.
+func TestReplanAgent(t *testing.T) {
+	c := cond(t, "replan-agent")
+	for _, event := range []string{"accepted", "cancelled", "reordered"} {
+		for replan, want := range map[string]bool{"agent": true, "deterministic": false, "never": false, "": false} {
+			if holds, implemented := c.Matches(Occurrence{Event: event, Replan: replan}); !implemented || holds != want {
+				t.Errorf("replan-agent.Matches(%s, replan %q) = %v, %v; want %v, true", event, replan, holds, implemented, want)
+			}
+		}
+	}
+	for _, event := range []string{"moved", "edited", "ready", ""} {
+		if holds, _ := c.Matches(Occurrence{Event: event, Replan: "agent"}); holds {
+			t.Errorf("replan-agent holds on %q", event)
+		}
+	}
+	moved := []string{"S-0003", "S-0002", "S-0003"}
+	if got := ReplanAgent("agent", moved); !slices.Equal(got, []string{"S-0003", "S-0002"}) {
+		t.Errorf("ReplanAgent(agent) = %v, want the stories moved in their order, once each", got)
+	}
+	if got := ReplanAgent("agent", nil); len(got) != 0 {
+		t.Errorf("ReplanAgent(agent) with nothing moved = %v, want none", got)
+	}
+	for _, replan := range []string{"deterministic", "never", ""} {
+		if got := ReplanAgent(replan, moved); len(got) != 0 {
+			t.Errorf("ReplanAgent(%q) = %v, want none", replan, got)
+		}
+	}
+}
+
+// ADR-0250 §5: each-ready-story holds on a schedule and gives the ready
+// stories in pull order, once each, and none when the ready column is empty.
+func TestEachReadyStory(t *testing.T) {
+	c := cond(t, "each-ready-story")
+	if holds, implemented := c.Matches(Occurrence{Schedule: "planning.schedule"}); !holds || !implemented {
+		t.Errorf("each-ready-story.Matches(schedule) = %v, %v; want true, true", holds, implemented)
+	}
+	for _, o := range []Occurrence{{}, {Event: "edited"}, {Event: "moved", Schedule: "planning.schedule"}} {
+		if holds, implemented := c.Matches(o); holds || !implemented {
+			t.Errorf("each-ready-story.Matches(%+v) = %v, %v; want false, true", o, holds, implemented)
+		}
+	}
+	// a condition on events holds on no schedule
+	if holds, _ := cond(t, "to-review").Matches(Occurrence{Schedule: "planning.schedule", To: "review"}); holds {
+		t.Error("to-review holds on a schedule")
+	}
+	story := func(id, status string) *workitem.Item {
+		return &workitem.Item{ID: id, Type: workitem.Story, Status: status}
+	}
+	archived := story("S-0006", workitem.Ready)
+	archived.Archived = true
+	items := []*workitem.Item{
+		story("S-0001", workitem.Ready), story("S-0002", workitem.Ready), story("S-0003", workitem.Backlog),
+		story("S-0004", workitem.InProgress), story("S-0005", workitem.Ready), archived,
+		{ID: "T-0001", Type: workitem.Task, Status: workitem.Ready},
+	}
+	order := []string{"S-0002", "S-0003", "S-0001", "S-0002"}
+	if got := EachReadyStory(order, items); !slices.Equal(got, []string{"S-0002", "S-0001", "S-0005"}) {
+		t.Errorf("EachReadyStory = %v, want the ready stories in pull order, then those it does not name", got)
+	}
+	if got := EachReadyStory(order, []*workitem.Item{story("S-0003", workitem.Backlog), story("S-0004", workitem.Review)}); len(got) != 0 {
+		t.Errorf("EachReadyStory on an empty ready column = %v, want none", got)
+	}
+	if got := EachReadyStory(nil, nil); len(got) != 0 {
+		t.Errorf("EachReadyStory with no items = %v, want none", got)
 	}
 }
 
