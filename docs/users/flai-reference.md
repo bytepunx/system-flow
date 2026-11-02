@@ -2338,6 +2338,10 @@ Interactive in a terminal; --yes accepts every default; --dry-run prints the pro
 
 --commit (S-0098) then runs the repository's tests and commits the import: the host's checks when flai serve checks set names any, else what the repository has (its own Makefile's test target, go test, the package manager's test script, cargo test, pytest), and commits exactly the paths the import wrote or moved, only when every test passed or none were found. It needs a git repository with no uncommitted changes. When a test fails, the imported files are left uncommitted, the answer says which failed, and flai exits with code 5.
 
+--formula (S-0424) commits the import's paths as --commit does, with the --trailer lines, but runs no test first. It then runs the template's import formula in the new project, as flai formula run import --input path=&lt;root&gt; --ready --autocommit does there: the instance story, a task per step (flai check --strict, then flai import test), is made, moved to ready, and committed on the project's branch, so that its progress shows as a story and the tests run in its worktree. It needs a git repository with no uncommitted changes, as --commit does, and refuses --commit beside it and a template version that ships no design/workflows/formulas/import.md, before anything changes. --json adds formula, the instance as flai formula run --json gives it, {story, path, status, tasks, ...}. When the instance cannot be made, the import stays committed, the answer says why, and flai exits 1.
+
+flai import test [path] runs the tests --commit runs, in the project at path or the working directory: the host's checks when flai serve checks set names any, else what the repository has, where a Makefile counts as the repository's own unless it is the one the import brought. It prints each outcome and exits with code 5 when one fails; none found passes. It is the import formula's test step. A directory named test is reached as flai import ./test.
+
 Once the manifest is written, a flai host running for this config is told to serve the project (S-0120): it is registered with flai serve as flai dashboard registers it, and the dashboard shows it in its switcher. With no host running, nothing is registered, and flai dashboard in the project serves it.
 
 Examples:
@@ -2348,6 +2352,9 @@ flai import
 flai import ../legacy --yes --layout design=architecture
 flai import --var description="Billing platform" --var owner=core
 flai import ../legacy --yes --commit
+flai import ../legacy --yes --formula
+flai import test
+flai import ./test --dry-run
 ```
 
 Flags:
@@ -2357,11 +2364,35 @@ Flags:
 | `--commit` | then run the repository's tests and commit the import when they pass |
 | `--dry-run` | print the proposal and change nothing |
 | `--force` | proceed even if system-flow.yaml already exists |
+| `--formula` | then commit the import untested and start the template's import formula in the new project, which runs the tests |
 | `--layout` stringArray | name a layout folder, key=name (repeatable); defaults are proposed from what exists |
 | `--ref` string | template branch, tag, or commit; 1.0.60 finds v1.0.60 (default: the newest version tag when config template.ref follows releases, else that ref) |
 | `--template` string | template git URL or local directory (default: config template.repo) |
-| `--trailer` stringArray | trailer line for the import's commit (repeatable, with --commit) |
+| `--trailer` stringArray | trailer line for the import's commit (repeatable, with --commit or --formula) |
 | `--var` stringArray | set a template variable, name=value (repeatable) |
+
+Subcommands:
+
+- [test](#flai-import-test): Run the tests flai import --commit runs, in the project at path or the working directory
+
+#### flai import test
+
+Run the tests flai import --commit runs, in the project at path or the working directory.
+
+```text
+flai import test [path]
+```
+
+Run the tests flai import --commit runs (S-0424), in the project at path or above the working directory, from its root: the host's checks when flai serve checks set names any, else what the repository has, its own Makefile's test target, go test, the package manager's test script, cargo test, or pytest, in the root and in each sub-project system-flow.yaml records. A Makefile counts as the repository's own unless it is the one the import brought: the template's, byte for byte, or one the import's commit added. Every command runs however the ones before it went.
+
+It prints each outcome, with the output of each that failed, and exits with code 5 when one failed; none found passes. --json gives {root, tests\_from, tests, ok}, tests\_from host, repository, or none. It is the step of the import formula that runs the tests in the instance's worktree.
+
+Examples:
+
+```bash
+flai import test
+flai import test ../legacy --json
+```
 
 ### flai issue
 

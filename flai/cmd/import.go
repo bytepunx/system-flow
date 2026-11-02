@@ -21,6 +21,7 @@ type importOptions struct {
 	newOptions
 	dryRun   bool
 	commit   bool
+	formula  bool
 	trailers []string
 }
 
@@ -47,6 +48,27 @@ It needs a git repository with no uncommitted changes. When a test fails,
 the imported files are left uncommitted, the answer says which failed, and
 flai exits with code 5.
 
+--formula (S-0424) commits the import's paths as --commit does, with the
+--trailer lines, but runs no test first. It then runs the template's import
+formula in the new project, as flai formula run import --input path=<root>
+--ready --autocommit does there: the instance story, a task per step (flai
+check --strict, then flai import test), is made, moved to ready, and
+committed on the project's branch, so that its progress shows as a story
+and the tests run in its worktree. It needs a git repository with no
+uncommitted changes, as --commit does, and refuses --commit beside it and a
+template version that ships no design/workflows/formulas/import.md, before
+anything changes. --json adds formula, the instance as flai formula run
+--json gives it, {story, path, status, tasks, ...}. When the instance cannot
+be made, the import stays committed, the answer says why, and flai exits 1.
+
+flai import test [path] runs the tests --commit runs, in the project at path
+or the working directory: the host's checks when flai serve checks set names
+any, else what the repository has, where a Makefile counts as the
+repository's own unless it is the one the import brought. It prints each
+outcome and exits with code 5 when one fails; none found passes. It is the
+import formula's test step. A directory named test is reached as
+flai import ./test.
+
 Once the manifest is written, a flai host running for this config is told
 to serve the project (S-0120): it is registered with flai serve as flai
 dashboard registers it, and the dashboard shows it in its switcher. With no
@@ -56,7 +78,10 @@ serves it.`,
   flai import
   flai import ../legacy --yes --layout design=architecture
   flai import --var description="Billing platform" --var owner=core
-  flai import ../legacy --yes --commit`,
+  flai import ../legacy --yes --commit
+  flai import ../legacy --yes --formula
+  flai import test
+  flai import ./test --dry-run`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dir := "."
@@ -74,11 +99,46 @@ serves it.`,
 	f.BoolVar(&o.dryRun, "dry-run", false, "print the proposal and change nothing")
 	f.BoolVar(&o.force, "force", false, "proceed even if system-flow.yaml already exists")
 	f.BoolVar(&o.commit, "commit", false, "then run the repository's tests and commit the import when they pass")
-	f.StringArrayVar(&o.trailers, "trailer", nil, "trailer line for the import's commit (repeatable, with --commit)")
+	f.BoolVar(&o.formula, "formula", false, "then commit the import untested and start the template's import formula in the new project, which runs the tests")
+	f.StringArrayVar(&o.trailers, "trailer", nil, "trailer line for the import's commit (repeatable, with --commit or --formula)")
+	c.AddCommand(newImportTestCmd(a))
 	return c
 }
 
+func newImportTestCmd(a *app) *cobra.Command {
+	return &cobra.Command{
+		Use:   "test [path]",
+		Short: "Run the tests flai import --commit runs, in the project at path or the working directory",
+		Long: `Run the tests flai import --commit runs (S-0424), in the project at path or
+above the working directory, from its root: the host's checks when flai
+serve checks set names any, else what the repository has, its own
+Makefile's test target, go test, the package manager's test script, cargo
+test, or pytest, in the root and in each sub-project system-flow.yaml
+records. A Makefile counts as the repository's own unless it is the one
+the import brought: the template's, byte for byte, or one the import's
+commit added. Every command runs however the ones before it went.
+
+It prints each outcome, with the output of each that failed, and exits with
+code 5 when one failed; none found passes. --json gives {root, tests_from,
+tests, ok}, tests_from host, repository, or none. It is the step of the
+import formula that runs the tests in the instance's worktree.`,
+		Example: `  flai import test
+  flai import test ../legacy --json`,
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			dir := "."
+			if len(args) == 1 {
+				dir = args[0]
+			}
+			return a.runImportTest(dir)
+		},
+	}
+}
+
 func (a *app) runImport(dir string, o importOptions) error {
+	if o.commit && o.formula {
+		return fmt.Errorf("--formula and --commit are two ways to finish an import: --commit runs the tests and then commits, --formula commits and leaves the tests to the import formula's instance; give one of them")
+	}
 	if _, err := givenVars(o.vars); err != nil {
 		return err
 	}
@@ -89,8 +149,12 @@ func (a *app) runImport(dir string, o importOptions) error {
 	if an.Manifest && !o.force {
 		return fmt.Errorf("%s already has %s; use flai check, or --force to re-import", an.Root, manifest.File)
 	}
-	if o.commit && !o.dryRun {
-		if err := a.importPreflight(an); err != nil {
+	if (o.commit || o.formula) && !o.dryRun {
+		flag := "--commit"
+		if o.formula {
+			flag = "--formula"
+		}
+		if err := a.importPreflight(an, flag); err != nil {
 			return err
 		}
 	}
@@ -102,6 +166,11 @@ func (a *app) runImport(dir string, o importOptions) error {
 	src, m, err := a.resolveTemplate(tplRepo, ref, false)
 	if err != nil {
 		return err
+	}
+	if o.formula {
+		if err := importFormulaShipped(m, src); err != nil {
+			return err
+		}
 	}
 	tplOut := map[string]any{"repo": src.Repo, "ref": src.Ref, "version": m.Version, "newest_release": newest}
 	interactive := !a.yes && !o.dryRun && a.isTerminal()
@@ -247,12 +316,28 @@ func (a *app) runImport(dir string, o importOptions) error {
 		return err
 	}
 	var committed *importCommit
-	if o.commit {
+	var instance *formulaRunResult
+	var instanceErr error
+	switch {
+	case o.commit:
 		c, err := a.commitImport(an.Root, ownMakefile, plan.Projects, res.Written, moved, o.trailers)
 		if err != nil {
 			return err
 		}
 		committed = &c
+	case o.formula:
+		// S-0424: committed untested, the tests being the instance's to run
+		c, err := a.commitImportUntested(an.Root, res.Written, moved, o.trailers)
+		if err != nil {
+			return err
+		}
+		committed = &c
+		run, err := a.runImportFormula(an.Root, o.trailers)
+		if err != nil {
+			instanceErr = &exitError{code: 1, msg: fmt.Sprintf("the import is committed as %s, but the %s formula's instance was not made: %v; make it with flai formula run %s --input path=%s --ready --autocommit in %s", c.Commit, importFormula, err, importFormula, an.Root, an.Root)}
+		} else {
+			instance = &run
+		}
 	}
 	// 6. served by the host flai, so that the dashboard shows it (S-0120)
 	served := a.serveImported(repo)
@@ -263,13 +348,19 @@ func (a *app) runImport(dir string, o importOptions) error {
 			out["name"] = repo.Manifest.Name
 			out["commit"] = committed
 		}
+		if instance != nil {
+			out["formula"] = instance
+		}
+		if instanceErr != nil {
+			out["formula"] = map[string]string{"error": instanceErr.Error()}
+		}
 		if err := a.printJSON(out); err != nil {
 			return err
 		}
 		if committed != nil && !committed.Committed {
 			return &exitError{code: exitImportNotCommitted, msg: committed.Reason}
 		}
-		return nil
+		return instanceErr
 	}
 	fmt.Fprintf(a.out, "\nImported %s\n  %d template files written, %d existing files kept\n", an.Root, len(res.Written), len(res.Skipped))
 	for _, mv := range moved {
@@ -291,6 +382,14 @@ func (a *app) runImport(dir string, o importOptions) error {
 		if !committed.Committed {
 			return &exitError{code: exitImportNotCommitted, msg: committed.Reason}
 		}
+		if instanceErr != nil {
+			return instanceErr
+		}
+		if instance != nil {
+			a.printImportInstance(*instance)
+			fmt.Fprintf(a.out, "\nNext:\n  %s's agent checks the import and runs its tests (flai serve starts it)\n  read %s/conventions/README.md\n", instance.Story, layout["design"])
+			return nil
+		}
 		fmt.Fprintf(a.out, "\nNext:\n  read %s/conventions/README.md\n  flai epic new \"First deliverable\"\n", layout["design"])
 		return nil
 	}
@@ -299,13 +398,41 @@ func (a *app) runImport(dir string, o importOptions) error {
 }
 
 func (a *app) printImportCommit(c importCommit) {
-	switch c.Source {
-	case "none":
-		fmt.Fprintln(a.out, "  tests: none found (no Makefile test target, go.mod, package.json test script, Cargo.toml, or pytest setup)")
-	case "host":
-		fmt.Fprintln(a.out, "  tests: the checks this host names (flai serve checks)")
+	a.printImportTests(c.Source, c.Tests)
+	if c.Committed {
+		fmt.Fprintf(a.out, "  committed as %s\n", c.Commit)
+	} else {
+		fmt.Fprintf(a.out, "  not committed: %s\n", c.Reason)
 	}
-	for _, t := range c.Tests {
+}
+
+// printImportInstance says what --formula made in the new project (S-0424).
+func (a *app) printImportInstance(run formulaRunResult) {
+	tasks := make([]string, len(run.Tasks))
+	for i, t := range run.Tasks {
+		tasks[i] = fmt.Sprintf("%s (%s)", t.ID, t.Step)
+	}
+	fmt.Fprintf(a.out, "  %s formula: %s %s, tasks %s\n", run.Formula, run.Story, run.Status, strings.Join(tasks, ", "))
+	switch {
+	case run.Commit != "":
+		fmt.Fprintf(a.out, "    committed %s\n", run.Commit)
+	case run.CommitError != "":
+		fmt.Fprintf(a.out, "    NOT committed (%s)\n", firstLine(run.CommitError))
+	}
+}
+
+// printImportTests says where the tests came from and how each went, with
+// the output of each that failed.
+func (a *app) printImportTests(source string, tests []importTestResult) {
+	switch source {
+	case importTestsNone:
+		fmt.Fprintln(a.out, "  tests: none found (no Makefile test target, go.mod, package.json test script, Cargo.toml, or pytest setup)")
+	case importTestsHost:
+		fmt.Fprintln(a.out, "  tests: the checks this host names (flai serve checks)")
+	case importTestsFormula:
+		fmt.Fprintln(a.out, "  tests: not run before the commit; the import formula's instance runs them (flai import test)")
+	}
+	for _, t := range tests {
 		state := "passed"
 		if !t.OK {
 			state = fmt.Sprintf("FAILED (exit %d)", t.ExitCode)
@@ -316,11 +443,6 @@ func (a *app) printImportCommit(c importCommit) {
 				fmt.Fprintf(a.out, "      %s\n", line)
 			}
 		}
-	}
-	if c.Committed {
-		fmt.Fprintf(a.out, "  committed as %s\n", c.Commit)
-	} else {
-		fmt.Fprintf(a.out, "  not committed: %s\n", c.Reason)
 	}
 }
 
