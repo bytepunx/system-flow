@@ -1335,6 +1335,7 @@ func (c *checker) roles() {
 		return
 	}
 	c.missingBaselineRoles(design)
+	c.agentCopies(design)
 	for _, p := range append(problems, roles.Validate(list, design, RolesVocabulary())...) {
 		c.add(Error, p.Code, filepath.Join(c.repo.Root, filepath.FromSlash(p.Path)), p.Line, "%s", p.Message)
 	}
@@ -1423,6 +1424,101 @@ func (c *checker) missingBaselineRoles(design string) {
 		}
 		c.advise(roles.CodeBaseline, path, 1, "%s is missing: flai runs the %s from the baseline it carries; run flai upgrade to add the file from the template", r.Path, r.Name)
 	}
+}
+
+// agentCopies warns roles.definition for each built-in role whose
+// .claude/agents/<name>.md exists and is neither the link ADR-0236 names,
+// ../../.flai-cache/agents/<name>.md, whether or not its target exists, nor
+// a file whose description, tools, model, and prompt equal the definition
+// flai generates from the role's file, naming the first that differs. A
+// missing file is no finding, and neither is a role whose own definition
+// cannot be generated: the role file's findings cover it. A warning, since
+// only a session started by hand reads the file, so --strict fails on it.
+func (c *checker) agentCopies(design string) {
+	for _, base := range roles.Baseline(design) {
+		name := base.Name
+		rel := filepath.Join(".claude", "agents", name+".md")
+		path := filepath.Join(c.repo.Root, rel)
+		link := "../../.flai-cache/agents/" + name + ".md"
+		fix := fmt.Sprintf("run flai role definition --write, then ln -sf %s %s (ADR-0236)", link, filepath.ToSlash(rel))
+		info, err := os.Lstat(path)
+		switch {
+		case errors.Is(err, os.ErrNotExist):
+			continue
+		case err != nil:
+			c.add(Warning, roles.CodeDefinition, path, 1, "%s cannot be read: %v; it should be the link %s: %s", filepath.ToSlash(rel), err, link, fix)
+			continue
+		case info.Mode()&os.ModeSymlink != 0:
+			target, err := os.Readlink(path)
+			if err == nil && target == link {
+				continue
+			}
+			if err != nil {
+				target = fmt.Sprintf("a target that cannot be read (%v)", err)
+			}
+			c.add(Warning, roles.CodeDefinition, path, 1, "%s is a symbolic link to %s; it should be the link %s, to the definition flai generates for the %s: %s", filepath.ToSlash(rel), target, link, name, fix)
+			continue
+		case !info.Mode().IsRegular():
+			c.add(Warning, roles.CodeDefinition, path, 1, "%s is neither a file nor a symbolic link; it should be the link %s: %s", filepath.ToSlash(rel), link, fix)
+			continue
+		}
+		r, fromBaseline, err := roles.Builtin(c.repo.Root, design, name)
+		if err != nil {
+			continue
+		}
+		if fromBaseline {
+			if _, err := os.Stat(filepath.Join(c.repo.Root, filepath.FromSlash(r.Path))); err == nil {
+				continue // the role file does not parse, which its roles.file error reports
+			}
+		}
+		want, err := roles.Generate(r)
+		if err != nil {
+			continue // the role file's own roles.definition errors report it
+		}
+		source := "its role file " + r.Path
+		if fromBaseline {
+			source = "the baseline flai carries for " + r.Path
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			c.add(Warning, roles.CodeDefinition, path, 1, "%s cannot be read: %v; replace it with the link to the definition flai generates for the %s: %s", filepath.ToSlash(rel), err, name, fix)
+			continue
+		}
+		got, err := roles.ParseAgentFile(data)
+		if err != nil {
+			c.add(Warning, roles.CodeDefinition, path, 1, "%s is not a Claude Code agent file: %v; replace it with the link to the definition flai generates from %s: %s", filepath.ToSlash(rel), err, source, fix)
+			continue
+		}
+		field, line := agentDiff(got, want, path)
+		if field == "" {
+			continue
+		}
+		c.add(Warning, roles.CodeDefinition, path, line, "%s is a copy whose %s differs from the definition flai generates for the %s from %s; replace it with the link to that definition: %s", filepath.ToSlash(rel), field, name, source, fix)
+	}
+}
+
+// agentDiff is the first of description, tools, model, and prompt in which
+// the agent file at path, read as got, differs from the definition want, and
+// its line there: the key's in the front matter, or 1 for the prompt. An
+// empty field means none differs.
+func agentDiff(got, want roles.Generated, path string) (string, int) {
+	model := func(m string) string {
+		if m == "" {
+			return roles.Inherit
+		}
+		return m
+	}
+	switch {
+	case strings.TrimSpace(got.Description) != strings.TrimSpace(want.Description):
+		return "description", keyLine(path, "description")
+	case !slices.Equal(got.Tools, want.Tools):
+		return "tools", keyLine(path, "tools")
+	case model(got.Model) != model(want.Model):
+		return "model", keyLine(path, "model")
+	case strings.TrimSpace(got.Prompt) != strings.TrimSpace(want.Prompt):
+		return "prompt", 1
+	}
+	return "", 0
 }
 
 // declaredPermissions are, by the name of each role the files define, the

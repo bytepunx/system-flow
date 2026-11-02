@@ -296,3 +296,88 @@ func TestShippedRoleFilesAreClean(t *testing.T) {
 		t.Errorf("%s:%d: %s: %s", f.Path, f.Line, f.Rule, f.Message)
 	}
 }
+
+// S-0553: a built-in role's .claude/agents/<name>.md is warned
+// roles.definition when it is neither the link ADR-0236 names, its target
+// there or not, nor a copy equal to the definition generated from the role
+// file, naming the first field that differs; a missing file is no finding.
+func TestBuiltinAgentCopyIsTheLinkOrTheGeneratedDefinition(t *testing.T) {
+	generated := func(t *testing.T, root, name string) roles.Generated {
+		t.Helper()
+		r, _, err := roles.Builtin(root, "design", name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		g, err := roles.Generate(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return g
+	}
+	cases := []struct {
+		name  string
+		write func(t *testing.T, path string, g roles.Generated)
+		want  []string // what the finding's message holds; nil means no finding
+		line  int
+	}{
+		{"matching copy", func(t *testing.T, path string, g roles.Generated) {
+			writeFile(t, path, string(g.File()))
+		}, nil, 0},
+		{"drifted description", func(t *testing.T, path string, g roles.Generated) {
+			g.Description = "Plans whatever it likes."
+			writeFile(t, path, string(g.File()))
+		}, []string{".claude/agents/planner.md is a copy whose description differs", "design/workflows/roles/planner.md", "flai role definition --write", "ln -sf ../../.flai-cache/agents/planner.md .claude/agents/planner.md (ADR-0236)"}, 3},
+		{"drifted prompt", func(t *testing.T, path string, g roles.Generated) {
+			g.Prompt += "\n\nAlso do something else."
+			writeFile(t, path, string(g.File()))
+		}, []string{"whose prompt differs"}, 1},
+		{"accepted link, target missing", func(t *testing.T, path string, _ roles.Generated) {
+			if err := os.Symlink("../../.flai-cache/agents/planner.md", path); err != nil {
+				t.Fatal(err)
+			}
+		}, nil, 0},
+		{"link elsewhere", func(t *testing.T, path string, _ roles.Generated) {
+			if err := os.Symlink("../../design/workflows/roles/planner.md", path); err != nil {
+				t.Fatal(err)
+			}
+		}, []string{"is a symbolic link to ../../design/workflows/roles/planner.md", "it should be the link ../../.flai-cache/agents/planner.md", "(ADR-0236)"}, 1},
+		{"missing file", nil, nil, 0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := planningProject(t, "")
+			writeTemplateRoles(t, repo.Root)
+			dir := filepath.Join(repo.Root, ".claude", "agents")
+			if err := os.MkdirAll(dir, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if tc.write != nil {
+				tc.write(t, filepath.Join(dir, "planner.md"), generated(t, repo.Root, "planner"))
+			}
+			var got []Finding
+			for _, f := range roleFindings(repo) {
+				if f.Rule == roles.CodeDefinition {
+					got = append(got, f)
+				}
+			}
+			if tc.want == nil {
+				if len(got) != 0 {
+					t.Fatalf("want no finding: %+v", got)
+				}
+				return
+			}
+			if len(got) != 1 {
+				t.Fatalf("want one roles.definition finding: %+v", got)
+			}
+			f := got[0]
+			if f.Level != Warning || f.advisory || f.Path != filepath.Join(".claude", "agents", "planner.md") || f.Line != tc.line {
+				t.Errorf("finding: %+v", f)
+			}
+			for _, w := range tc.want {
+				if !strings.Contains(f.Message, w) {
+					t.Errorf("message %q lacks %q", f.Message, w)
+				}
+			}
+		})
+	}
+}
