@@ -3,12 +3,15 @@ id: S-0509
 type: story
 nature: feature
 title: The planner, the orchestrator, the analyzer, and the curator run in a container when their harness is container, with the main checkout mounted as an ADR settles, pilot passing their role, and their activity logged as on the host
-status: backlog
+status: ready
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:44:48Z
-updated: 2026-11-02T06:53:21Z
-transitions: []
+updated: 2026-11-02T18:12:47Z
+transitions:
+  - to: ready
+    at: 2026-11-02T18:12:39Z
+    by: orchestrator
 tags: [cli, docker]
 topics: [harness, docker, planning]
 touches: [flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/pilot/run.go, flai/internal/pilot/run_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/activity.go, flai/internal/serve/claudecheck.go, design/adrs/README.md, design/adrs, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, design/issues/summary.md, design/issues]
@@ -34,25 +37,25 @@ usage:
           cache_write: 204659
           cost: 8.1773
     - kind: orchestrator
-      seconds: 127
+      seconds: 133
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 34
-          output: 265
-          cache_read: 1884393
-          cache_write: 125641
-          cost: 0.4414
+          input: 36
+          output: 274
+          cache_read: 2015653
+          cache_write: 127441
+          cost: 0.4727
 cost_of_delay:
   value: 22.22
   by: planner-S-0509
   at: 2026-10-26T12:41:56Z
 forecast:
   duration: 2h
-  delivery: 2026-11-02T12:37:00Z
-  basis: "Its own forecast of 2h; 10th in the pull order with an in-progress limit of 5, behind S-0424, S-0508, S-0518, S-0554, S-0425, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411 and S-0412."
+  delivery: 2026-11-02T23:56:00Z
+  basis: "Its own forecast of 2h; 10th in the pull order with an in-progress limit of 5, behind S-0424, S-0518, S-0554, S-0425, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411 and S-0412."
   by: flai
-  at: 2026-11-02T06:53:21Z
+  at: 2026-11-02T18:12:47Z
 finalized:
   by: orchestrator
   at: 2026-10-28T08:03:28Z

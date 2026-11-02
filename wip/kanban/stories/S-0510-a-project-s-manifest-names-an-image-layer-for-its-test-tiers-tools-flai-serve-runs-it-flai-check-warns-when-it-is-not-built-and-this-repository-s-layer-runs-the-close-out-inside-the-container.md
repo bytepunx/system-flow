@@ -3,12 +3,15 @@ id: S-0510
 type: story
 nature: feature
 title: A project's manifest names an image layer for its test tiers' tools, flai serve runs it, flai check warns when it is not built, and this repository's layer runs the close-out inside the container
-status: backlog
+status: ready
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:46:53Z
-updated: 2026-11-02T06:53:26Z
-transitions: []
+updated: 2026-11-02T18:12:52Z
+transitions:
+  - to: ready
+    at: 2026-11-02T18:12:39Z
+    by: orchestrator
 tags: [cli, docker]
 topics: [harness, docker, manifest]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/check/check.go, flai/internal/check/image.go, flai/internal/check/image_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, scripts/agent-image.sh, Makefile, scripts/README.md, flai/images/system-flow/Dockerfile, system-flow.yaml, design/system/project-manifest.md, docs/operators/settings.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, docs/users/flai.md, docs/operators/index.md, docs/operators/runbooks/install.md, design/system/flai-cli.md, design/tech/docker.md, design/issues/summary.md, design/issues]
@@ -24,25 +27,25 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 177
+      seconds: 183
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 21
-          output: 219
-          cache_read: 1803760
-          cache_write: 14687
-          cost: 0.3993
+          input: 23
+          output: 228
+          cache_read: 1935020
+          cache_write: 16486
+          cost: 0.4306
 cost_of_delay:
   value: 27.78
   by: planner-S-0510
   at: 2026-10-28T08:06:14Z
 forecast:
   duration: 2h30m
-  delivery: 2026-11-02T14:05:00Z
-  basis: "Its own forecast of 2h30m; 11th in the pull order with an in-progress limit of 5, behind S-0424, S-0508, S-0518, S-0554, S-0425, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412 and S-0509."
+  delivery: 2026-11-03T01:24:00Z
+  basis: "Its own forecast of 2h30m; 11th in the pull order with an in-progress limit of 5, behind S-0424, S-0518, S-0554, S-0425, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412 and S-0509."
   by: flai
-  at: 2026-11-02T06:53:26Z
+  at: 2026-11-02T18:12:52Z
 finalized:
   by: orchestrator
   at: 2026-10-28T08:07:13Z

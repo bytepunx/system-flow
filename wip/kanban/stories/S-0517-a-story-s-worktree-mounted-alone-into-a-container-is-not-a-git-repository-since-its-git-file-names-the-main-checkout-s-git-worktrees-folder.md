@@ -3,11 +3,14 @@ id: S-0517
 type: story
 nature: remediation
 title: A story's worktree mounted alone into a container is not a git repository, since its .git file names the main checkout's .git/worktrees folder
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-28T12:52:47Z
-updated: 2026-11-02T06:53:31Z
-transitions: []
+updated: 2026-11-02T18:12:56Z
+transitions:
+  - to: ready
+    at: 2026-11-02T18:12:39Z
+    by: orchestrator
 tags: [cli, docker]
 topics: [harness, docker]
 touches: [design/adrs, design/adrs/README.md, flai/internal/storygit/mounts.go, flai/internal/storygit/mounts_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, scripts/agent-container.sh, scripts/README.md, docs/operators/runbooks/agent-container.md, docs/users/flai.md, design/system/agent-adapters.md, design/tech/docker.md, design/issues/I-0215-a-story-s-worktree-mounted-alone-into-a-container-is-not-a-git-repository-since-its-git-file-names-the-main-checkout-s-git-worktrees-folder.md, design/issues/summary.md]
@@ -23,15 +26,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 401
+      seconds: 407
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 46
-          output: 651
-          cache_read: 10915854
-          cache_write: 46563
-          cost: 2.4071
+          input: 48
+          output: 660
+          cache_read: 11047114
+          cache_write: 48363
+          cost: 2.4384
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -42,10 +45,10 @@ cost_of_delay:
   at: 2026-10-28T13:19:45Z
 forecast:
   duration: 1h15m
-  delivery: 2026-11-02T13:34:00Z
-  basis: "Its own forecast of 1h15m; 12th in the pull order with an in-progress limit of 5, behind S-0424, S-0508, S-0518, S-0554, S-0425, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0509 and S-0510."
+  delivery: 2026-11-03T00:53:00Z
+  basis: "Its own forecast of 1h15m; 12th in the pull order with an in-progress limit of 5, behind S-0424, S-0518, S-0554, S-0425, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0509 and S-0510."
   by: flai
-  at: 2026-11-02T06:53:31Z
+  at: 2026-11-02T18:12:56Z
 finalized:
   by: alex
   at: 2026-10-28T12:53:25Z
