@@ -134,6 +134,29 @@ func TestWhichAdapterAStoryGets(t *testing.T) {
 	if _, _, err := For(&manifest.Agent{Harness: Command}, false); err == nil || !strings.Contains(err.Error(), "none is set") {
 		t.Fatalf("command harness with no command: %v", err)
 	}
+	for _, commandSet := range []bool{true, false} {
+		name, ad, err := For(&manifest.Agent{Harness: None}, commandSet)
+		if err == nil || name != "" || ad != nil || !strings.Contains(err.Error(), "runs elsewhere (harness none), so flai serve starts nothing for it: start it yourself with flai story start") {
+			t.Fatalf("harness none, command set %v: %q %v %v", commandSet, name, ad, err)
+		}
+	}
+}
+
+func TestAnAgentRunsElsewhereOnlyWhenItsHarnessIsNone(t *testing.T) {
+	if !Elsewhere(&manifest.Agent{Harness: None, Model: "m"}) {
+		t.Fatal("harness none: not elsewhere")
+	}
+	for _, a := range []*manifest.Agent{nil, {}, {Model: "m"}, {Harness: ClaudeCode}, {Harness: Command}, {Harness: "nonesuch"}} {
+		if Elsewhere(a) {
+			t.Errorf("%+v: elsewhere", a)
+		}
+	}
+	if _, ok := Adapters[None]; ok || slices.Contains(Names(), None) {
+		t.Fatal("none is an adapter")
+	}
+	if got := ElsewhereRefusal("S-0513"); !strings.HasPrefix(got, "S-0513's agent runs elsewhere (harness none)") || !strings.Contains(got, "flai story start S-0513") {
+		t.Fatalf("refusal: %s", got)
+	}
 }
 
 func TestEachAdapterStatesItsCapabilities(t *testing.T) {

@@ -12,6 +12,7 @@
 package harness
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -29,6 +30,28 @@ import (
 
 // Command is the harness that runs the operator's own command (S-0079).
 const Command = "command"
+
+// None is the reserved harness of an agent that runs elsewhere, by hand or in
+// a container no harness starts, for which flai serve starts nothing
+// (ADR-0242). It is no adapter.
+const None = "none"
+
+// Elsewhere reports whether an agent runs elsewhere: whether its harness is
+// None.
+func Elsewhere(a *manifest.Agent) bool {
+	return a != nil && a.Harness == None
+}
+
+// ElsewhereRefusal says why flai serve starts nothing for a story whose agent
+// runs elsewhere, and what to do instead; story is its ID, or empty when the
+// caller has none.
+func ElsewhereRefusal(story string) string {
+	who, start := "the story", "flai story start <story>"
+	if story != "" {
+		who, start = story, "flai story start "+story
+	}
+	return fmt.Sprintf("%s's agent runs elsewhere (harness none), so flai serve starts nothing for it: start it yourself with %s, or name a harness flai serve can start", who, start)
+}
 
 // Request is what an agent is started for: a story, or, for the planner, an
 // epic or a story to plan (S-0208), or, for the orchestrator, the whole
@@ -368,8 +391,11 @@ func Names() []string {
 
 // For is the adapter a story's agent is started with, and its name. A story
 // that names no harness is started with the operator's command, when one is
-// set.
+// set; one whose agent runs elsewhere is refused.
 func For(a *manifest.Agent, commandSet bool) (string, Adapter, error) {
+	if Elsewhere(a) {
+		return "", nil, errors.New(ElsewhereRefusal(""))
+	}
 	name := ""
 	if a != nil {
 		name = a.Harness
