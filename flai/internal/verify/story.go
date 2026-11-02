@@ -806,6 +806,8 @@ func (v *storyRun) check(rep *Report) []Finding {
 	if installed, err := gitver.Installed(v.opts.Git); err == nil {
 		check.GitCompat(res, repo, installed)
 	}
+	// The project's agent image layer, when it names one (S-0510).
+	check.AgentImage(res, repo, check.DockerImage(v.opts.Git))
 	changed, err := storygit.StoryChanges(v.opts.Git, repo, v.story)
 	if err != nil {
 		return []Finding{{Name: StepCheck, Message: fmt.Sprintf("scope the check to %s: %v", v.story, err)}}

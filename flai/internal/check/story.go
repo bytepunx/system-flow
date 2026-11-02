@@ -11,9 +11,9 @@ import (
 )
 
 // RunScoped runs the check on repo as flai check does: with the findings of
-// the installed git's version, and, given stories, each finding outside what
-// every one of them owns or changes marked a note (ADR-0085). Given none,
-// every finding counts.
+// the installed git's version and of the agent image docker has or lacks,
+// and, given stories, each finding outside what every one of them owns or
+// changes marked a note (ADR-0085). Given none, every finding counts.
 func RunScoped(repo *workitem.Repo, r execx.Runner, now time.Time, stories ...string) (*Result, error) {
 	res, err := Run(repo, now)
 	if err != nil {
@@ -24,6 +24,8 @@ func RunScoped(repo *workitem.Repo, r execx.Runner, now time.Time, stories ...st
 	if v, err := gitver.Installed(r); err == nil {
 		GitCompat(res, repo, v)
 	}
+	// The project's agent image layer, when it names one (S-0510).
+	AgentImage(res, repo, DockerImage(r))
 	if len(stories) == 0 {
 		return res, nil
 	}
