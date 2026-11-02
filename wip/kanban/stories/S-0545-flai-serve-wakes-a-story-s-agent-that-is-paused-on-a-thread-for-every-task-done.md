@@ -6,7 +6,7 @@ title: flai serve wakes a story's agent that is paused on a thread for every tas
 status: backlog
 owner: alex
 created: 2026-10-29T18:11:17Z
-updated: 2026-11-02T20:08:22Z
+updated: 2026-11-02T20:33:19Z
 transitions: []
 tags: [flai, template]
 topics: [cli]
@@ -57,10 +57,10 @@ cost_of_delay:
   at: 2026-11-02T20:05:05Z
 forecast:
   duration: 50m
-  delivery: 2026-11-03T02:05:00Z
-  basis: flai forecast's 28m (91 s per unit over 117 large improvement stories, size 18) raised to 50m after S-0372, which built ADR-0154's settled mark across messages, serve, conventions, and docs in 55m of agent time.
-  by: planner-S-0545
-  at: 2026-11-02T20:05:05Z
+  delivery: 2026-11-03T02:40:00Z
+  basis: "Its own forecast of 50m; 12th in the pull order with an in-progress limit of 5, behind S-0510, S-0518, S-0566, S-0554, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0520, S-0241 and S-0543."
+  by: flai
+  at: 2026-11-02T20:33:19Z
 finalized:
   by: orchestrator
   at: 2026-11-02T20:07:21Z
