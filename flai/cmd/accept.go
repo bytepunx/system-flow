@@ -143,7 +143,9 @@ other acceptance is allowed. It is refused, before anything is merged, unless
 ticked, every file the branch changes is under the story's touches and on no
 path Claude Code protects, no thread on the story or its tasks is open, and
 --evidence, a Verdict: line and one item "- <n>: <files>" per criterion,
-names a changed file for each of them.
+names a changed file for each of them. For a formula's instance, whose
+branch may change nothing, each item is "- <n>: T-nnnn done" instead,
+naming the done task of the criterion's step (S-0422, ADR-0239).
 It leaves the main checkout's uncommitted files outside wip as the merge
 queue's landing does, --yes or not: out of the lint fix and the acceptance
 commit. It is refused only while the story's change, main...story/<id>,
@@ -273,7 +275,7 @@ func addAcceptFlags(c *cobra.Command, o *acceptOptions) {
 	}
 	c.Flags().StringArrayVar(&o.trailers, "trailer", nil, "line appended to the commit message (repeatable)")
 	c.Flags().StringVar(&o.verified, "verified", "", "with --by orchestrator: the commit its verifier passed, the story branch's head")
-	c.Flags().StringVar(&o.evidence, "evidence", "", "with --by orchestrator: file holding its evidence, a Verdict: line and - <n>: <files> per criterion (- reads standard input)")
+	c.Flags().StringVar(&o.evidence, "evidence", "", "with --by orchestrator: file holding its evidence, a Verdict: line and - <n>: <files> per criterion, or - <n>: T-nnnn done for a formula's instance (- reads standard input)")
 	c.Flags().BoolVar(&o.withoutQueueTiers, "without-queue-tiers", false, "as the operator: accept while the merge queue batches though the tiers marked queue did not run at the story's head, recorded in its Notes (ADR-0221)")
 	c.Flags().StringArrayVar(&o.keepRemovals, "keep-removal", nil, "as the operator: accept the branch's removal of the main branch's lines at this recorded path, with --reason (repeatable)")
 	if f := c.Flags().Lookup("reason"); f == nil {

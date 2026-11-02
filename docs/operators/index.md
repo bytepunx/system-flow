@@ -660,7 +660,37 @@ flai formula show release-check                    # its inputs, its steps, and 
 flai formula run release-check --input version=1.4.0  # the story and its tasks, in the backlog
 ```
 
-**Understand what a formula means.** A formula file is code you run, as a role file is: review a change to one as you would a script's, and let it reach main only through a story you accept. No role may edit `design/workflows/`, and only a story's agent and you may run `flai formula run`. An input is filled in as text, so a value with shell characters reaches a script's or a flai command line as written: quote it in the formula where it matters. `flai check` does not catch a flai command that does not exist; that step fails when its task is worked. [A story from a formula](../users/flai.md#a-story-from-a-formula) says what the story holds.
+**Understand what a formula means.** A formula file is code you run, as a role file is: review a change to one as you would a script's, and let it reach main only through a story you accept. No role may edit `design/workflows/`, and only a story's agent, you, and a role whose file names the formula may run `flai formula run`. An input is filled in as text, so a value with shell characters reaches a script's or a flai command line as written: quote it in the formula where it matters. `flai check` does not catch a flai command that does not exist; that step fails when its task is worked. [A story from a formula](../users/flai.md#a-story-from-a-formula) says what the story holds.
+
+### The formula host action: a formula on its schedule (S-0422)
+
+A formula's file may name a `schedule`, and `flai serve` then makes its instance each time the schedule comes round, while the `formula` host action is on for the project ([ADR-0239](../../design/adrs/0239-a-formula-s-instance-is-worked-by-its-story-s-agent-step-by-step-a-role-step.md)). The action is off until you enable it. The schedule is a front-matter field of the formula, so it changes only through a story you accept:
+
+```yaml
+# design/workflows/formulas/publish.md, in its front matter
+schedule: "0 6 * * 1"   # Mondays 06:00 UTC; daily is 00:00 UTC
+```
+
+```bash
+flai check                    # formulas.file on a schedule that does not parse, or on a formula with inputs
+flai serve enable formula     # for the project in the working directory; --all-projects for every project
+flai serve journal            # each instance made, under formula, saying started by schedule <spec>
+flai serve disable formula    # no more scheduled instances
+```
+
+Each time the schedule comes round, `flai serve` runs `flai formula run <name> --ready --autocommit --json` in the project's main checkout, with no inputs. The instance is committed in ready, and `flai serve` starts its story's agent as for any ready story, within the in-progress limit. A run `flai formula run` refuses, such as for a formula `flai check` refuses, is logged in `serve.log` with what it said, and tried again at the schedule's next time. Times missed between two of its looks come round once; a time missed while `flai serve` was stopped makes nothing, as it keeps what it has seen in memory only. While the action is off the schedule makes nothing, and turning it on does not make what was missed. `flai formula run <name> --ready` does the same by hand, at any time.
+
+**Understand what enabling it means.** Each scheduled instance spends what one story's agent costs to work it, without you asking, on your machine, as you. Whoever can change a formula's file on main decides what runs on this host, and when: review a change to a schedule as you would a cron job's. A formula with inputs cannot take a schedule, since nobody is there to give them.
+
+**Reading a blocked instance.** When a step fails, the story's agent blocks that step's task, writes the step's exit and the last 40 lines of its output in the task's `## Notes`, opens a thread on the story naming the step, runs nothing after it, and ends. The board shows the task blocked, and the thread awaits you:
+
+```bash
+flai show T-0123              # the blocked task: its reason, and the exit and output in its Notes
+flai thread show TH-0456      # the agent's question about the step
+flai thread reply TH-0456 "Run it again; the registry is back."
+```
+
+Answer the thread, and `flai serve` starts the agent again: it unblocks the task, runs that step again as you said, and goes on with the steps after it. A role step that ended `failed` or `asked` fails the step the same way; its own run is under the role's name in `serve/agents.json` and its log under `serve/agents/` ([The host action a role names](#the-host-action-a-role-names-running-a-role-you-define-s-0417)).
 
 ### The settings host action: changing the host's settings from the dashboard (S-0105)
 

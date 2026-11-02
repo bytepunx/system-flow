@@ -158,7 +158,15 @@ orchestration.coalesce has passed since the first, with every event seen
 meanwhile, one run per item for a role that takes items; and on a schedule,
 {schedule: roles.<name>.schedule}, a cron expression in UTC or daily in
 system-flow.yaml, on no item. The run records what started it: asked,
-<event> <ID>, or schedule <spec>, joined by semicolons when coalesced.`,
+<event> <ID>, or schedule <spec>, joined by semicolons when coalesced.
+
+An agent flai serve started is refused, as running a role is the
+operator's to ask for, save one (S-0422, ADR-0239): the agent of a
+formula's instance, for a role a role step of its formula names, on the
+instance as <item>. Its story is FLAI_STORY, else the S-nnnn of its name
+agent-S-nnnn. Its run records the trigger formula <name> <S-nnnn>, and its
+end is an agent event on the instance, which that agent's wait_for_events
+reports.`,
 		Example: `  flai role list
   flai serve enable review
   flai role run reviewer S-0042

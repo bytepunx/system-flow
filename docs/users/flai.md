@@ -206,7 +206,7 @@ The same file holds what `flai serve` may do on this host. These keys are not re
 
 | Key | Set with | Meaning |
 |-----|----------|---------|
-| `host_actions` | `flai serve enable <action>`, `flai serve disable <action>` | For each host action (`push`, `forge`, `auto-publish`, `agent`, `dashboard`, `checks`, `components`, `settings`, `host`, `plan`, `orchestrate`, `analyze`, `curate`, `merge-queue`, `auto-approve`, `auto-upgrade`), the projects it is on for: main checkout paths, or `*` for every project. Absent means none. `flai serve actions` says what each lets a dashboard do; `auto-publish`, `auto-approve`, and `auto-upgrade` are shell only, and the dashboard neither shows nor changes them |
+| `host_actions` | `flai serve enable <action>`, `flai serve disable <action>` | For each host action (`push`, `forge`, `auto-publish`, `agent`, `dashboard`, `checks`, `components`, `settings`, `host`, `plan`, `orchestrate`, `analyze`, `curate`, `merge-queue`, `formula`, `auto-approve`, `auto-upgrade`), the projects it is on for: main checkout paths, or `*` for every project. Absent means none. `flai serve actions` says what each lets a dashboard do; `auto-publish`, `auto-approve`, and `auto-upgrade` are shell only, and the dashboard neither shows nor changes them |
 | `agent.command` | `flai serve agent set -- <program> [args...]`, `flai serve agent clear` | What is started for a ready story that names no harness: an argument list, never run through a shell, with `{story}`, `{root}`, `{model}`, `{harness}`, and `{provider}` replaced |
 | `agent.name` | `flai serve agent set --name` | The `FLAI_AGENT` prefix of the agents it starts, `agent` when empty; the story is appended, as in `agent-S-0104` |
 | `agent.auto_restarts` | `flai serve agent set --auto-restarts <n>` | How many times in a row `flai serve` restarts a story's agent on its own after it fails with its story in progress, 2 when unset, 0 never; past it, `flai serve` opens a thread on the story for you ([ADR-0108](../../design/adrs/0108-flai-serve-restarts-a-story-s-agent-that-ended-with-its-story-in-progress-up-to.md)); since S-0532 the thread lists the story's `agent` events from the start of the first run it counted, oldest first, each with its time, `to`, and `why` |
@@ -371,6 +371,7 @@ flai formula list                                           # each formula: its 
 flai formula show release-check                             # its inputs, its steps and what each runs, and the steps' layers
 flai formula run release-check --input version=1.4.0        # a backlog story and its tasks; prints the story's ID
 flai formula run release-check --input version=1.4.0 --epic E-0007 --autocommit --json
+flai formula run publish --ready --autocommit                # the story in ready, so flai serve starts its agent
 ```
 
 | Part of the story | From the formula |
@@ -383,9 +384,19 @@ flai formula run release-check --input version=1.4.0 --epic E-0007 --autocommit 
 | Notes | The formula's file and the inputs the run took |
 | Tasks | One per step: the step's title, `## Work` naming what it runs, `## Done when` its exit (the command or script exits 0, or the role's run ends with its work done), and the step's `after` as the task's |
 
-`--input name=value` gives one input; give it once per input. An input you leave out takes its default. `run` refuses, before it writes anything, a formula `flai check` reports a problem in, an input the formula does not declare, an input given twice or not as `name=value`, and a required input you did not give. Each item is checked as `flai story new --body-stdin` checks one; if one is refused, the story and the tasks made before it are removed (exit 4). `--autocommit` commits them in one commit; nothing is pushed.
+`--input name=value` gives one input; give it once per input. An input you leave out takes its default. `run` refuses, before it writes anything, a formula `flai check` reports a problem in, an input the formula does not declare, an input given twice or not as `name=value`, and a required input you did not give. Each item is checked as `flai story new --body-stdin` checks one; if one is refused, the story and the tasks made before it are removed (exit 4). `--ready` then moves the story to ready as `flai move` does, so that `flai serve` starts its agent; a move the workflow rules refuse removes what the run made too. `--autocommit` commits them, and the move, in one commit; nothing is pushed.
 
-The story is ordered, pulled, worked, and accepted as any story. A story's agent and you may run `flai formula run`; every agent may run `list` and `show`. `flai check` reports `formulas.file` on a formula that could not run. [Writing a formula](../operators/index.md#writing-and-running-a-formula-s-0421) says how to write one.
+The story is ordered, pulled, worked, and accepted as any story. A story's agent, you, and a role whose file names the formula may run `flai formula run`; every agent may run `list` and `show`. `flai check` reports `formulas.file` on a formula that could not run. [Writing a formula](../operators/index.md#writing-and-running-a-formula-s-0421) says how to write one.
+
+**How its agent works it** (S-0422, [ADR-0239](../../design/adrs/0239-a-formula-s-instance-is-worked-by-its-story-s-agent-step-by-step-a-role-step.md)). The story's agent is told the story is the formula's instance. It works the tasks as the steps, layer by layer, each as its `## Work` names it, and runs each step itself: a flai command or a script from the root of the story's worktree, a role step with `role_run` (or `flai role run`) on the story, with the step's prompt and inputs. It adds, rewrites, and cancels no task. When a step exits 0, or its role run ends `worked`, it writes the exit in the task's Notes and closes the task. When every task is done, it moves the story to review.
+
+- **A role step.** An agent `flai serve` started may not start a role, save this one: the agent of a formula's instance, on its instance, for a role a role step of its formula names. The role's host action must be on. The run's trigger is `formula <name> <S-nnnn>`, and its end wakes the agent. Its cost stays in the role's project total for now; S-0425 charges it to the instance.
+- **A step that fails.** Its command or script exits other than 0, or its role run ends `failed` or `asked`. The agent runs nothing after it: it blocks the task, writes the exit and the last 40 lines of the output in the task's Notes, opens a thread on the story naming the step, and ends. Answer the thread; `flai serve` starts the agent again, and it unblocks the task, runs that step again as you said, and goes on.
+- **Its acceptance.** An instance is accepted even when its branch changes nothing. The orchestrator's evidence names each step's task in place of files ([When the orchestrator accepts](#when-the-orchestrator-accepts)).
+
+**On a schedule.** A formula's file may name a `schedule`: a five-field cron expression in UTC, such as `0 6 * * 1`, or `daily` for 00:00 UTC. While the `formula` host action is on for the project, `flai serve` runs `flai formula run <name> --ready --autocommit` in the main checkout each time it comes round, with no inputs, so the instance is committed in ready and its agent starts. `flai check` refuses a schedule that does not parse, and one on a formula that declares inputs. [The formula host action](../operators/index.md#the-formula-host-action-a-formula-on-its-schedule-s-0422) says how to turn it on.
+
+**From a role.** A role file whose `commands` list `flai formula run <name>` lets the role run that formula alone, with no flag but `--ready`, `--input`, `--autocommit`, and `--json`.
 
 ### Who works a story: its agent
 
@@ -2471,7 +2482,7 @@ flai serve journal                               # every run started, ended, or 
 
 The MCP tool `role_run` from your own agent does the same, and so does the host API's `role.run` for a dashboard. `flai serve actions` lists the actions your roles' files name beside flai's own, and the dashboard's Settings page turns them on and off while `settings` is on. Each `--input` is `name=value`, given once per input; the role's prompt names them in the order you gave them. `flai role run` needs `flai serve` running to record how the run ended and log what it did; without one it says so, and the role still runs.
 
-flai refuses, and says why: a built-in role's name (`flai plan`, `flai analyze`, `flai curate`, and the `orchestrate` action start those); a name no role file gives, or a file that does not load; while the role's action is off; an item when its file takes none, no item when it takes some, an item of a kind it does not take, or one done, cancelled, or archived; while the role already runs on the same item, or on none; and when the role's agent names no harness and no command is set.
+flai refuses, and says why: a built-in role's name (`flai plan`, `flai analyze`, `flai curate`, and the `orchestrate` action start those); a name no role file gives, or a file that does not load; while the role's action is off; an item when its file takes none, no item when it takes some, an item of a kind it does not take, or one done, cancelled, or archived; while the role already runs on the same item, or on none; and when the role's agent names no harness and no command is set. An agent `flai serve` started is refused too, save the agent of a formula's instance for a role step of its formula ([A story from a formula](#a-story-from-a-formula)).
 
 The role runs in the project's main checkout, as its name, or `<name>-<item>` on an item, such as `reviewer-S-0042`, with its agent: `roles.<name>.agent` in `system-flow.yaml`, laid over the project's `agent` as `planning.agent` is for the planner. You set it with `flai manifest set` or by hand:
 
@@ -2940,6 +2951,14 @@ Verdict: pass, tests and lint clean
 - 2: `docs/users/flai.md` (the new section)
 ```
 
+A formula's instance may change no file, so its evidence names each step's task and its done transition in place of files, one item per criterion ([A story from a formula](#a-story-from-a-formula)):
+
+```markdown
+Verdict: pass, every step's task done
+- 1: T-0123 done
+- 2: T-0124 done
+```
+
 The preview adds these blockers to an acceptance by the orchestrator, and `flai accept` refuses on any of them before it merges anything. `--json` lists them in `orchestrator_blockers` as `{code, message}`, and each is in `blockers` too.
 
 | Code | Blocks when |
@@ -2950,7 +2969,7 @@ The preview adds these blockers to an acceptance by the orchestrator, and `flai 
 | `thread_open` | A thread on the story or one of its tasks is not resolved, and someone besides the orchestrator opened it or wrote on it |
 | `own_thread_open` | A thread on the story or one of its tasks that the orchestrator opened and nobody else wrote on is not resolved. The orchestrator resolves it with a reason once its concern is gone |
 | `dirty_main` | The story's change would overwrite a file the main checkout has not committed outside `wip/`, or an untracked one. The message names the files and the command that sets them aside, `git stash push -- <files>`; commit them or run it |
-| `criterion_unevidenced` | The evidence has no item for a criterion, or its item names no file the branch changes |
+| `criterion_unevidenced` | The evidence has no item for a criterion, or its item names no file the branch changes. For a formula's instance, its item names no task of the story, or one that is not done |
 | `protected_paths` | The branch changes a path Claude Code protects, which only you accept |
 | `not_story` | The item is an epic, which is yours to accept |
 
