@@ -3,11 +3,11 @@ id: T-2438
 type: task
 nature: feature
 title: The dashboard's acceptance drops the checkbox for uncommitted files, shows the shared set it commits, and shows a send back as such
-status: in-progress
+status: done
 parent: S-0566
 owner: alex
 created: 2026-11-02T18:36:14Z
-updated: 2026-11-02T18:36:55Z
+updated: 2026-11-02T19:02:26Z
 transitions:
   - to: ready
     at: 2026-11-02T18:36:53Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-02T18:36:55Z
     by: system-flow
+  - to: done
+    at: 2026-11-02T19:02:26Z
+    by: agent-S-0566
 stream: S-0566
 tags: []
 touches: [flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/components/AcceptConfirm.svelte, flaiover/src/lib/components/AcceptConfirm.svelte.test.ts, "flaiover/src/routes/api/items/[id]/accept/+server.ts", "flaiover/src/routes/api/items/[id]/accept/accept.test.ts", "flaiover/src/routes/api/items/[id]/move/+server.ts", flaiover/src/routes/board/+page.svelte, "flaiover/src/routes/items/[id]/+page.svelte"]
+usage:
+  source: log
+  seconds: 1492
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-fable-5-1
+      input: 623
+      output: 291
+      cache_read: 2678293
+      cache_write: 152010
+      cost: 4.2922
 ---
 # T-2438 The dashboard's acceptance drops the checkbox for uncommitted files, shows the shared set it commits, and shows a send back as such
 

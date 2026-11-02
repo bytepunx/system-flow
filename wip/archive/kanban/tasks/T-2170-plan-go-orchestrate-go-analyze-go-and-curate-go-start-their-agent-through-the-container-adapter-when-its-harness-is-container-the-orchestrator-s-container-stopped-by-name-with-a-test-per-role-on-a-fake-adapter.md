@@ -3,11 +3,11 @@ id: T-2170
 type: task
 nature: feature
 title: plan.go, orchestrate.go, analyze.go, and curate.go start their agent through the container adapter when its harness is container, the orchestrator's container stopped by name, with a test per role on a fake adapter
-status: in-progress
+status: done
 parent: S-0509
 owner: alex
 created: 2026-10-26T04:50:48Z
-updated: 2026-11-02T18:53:29Z
+updated: 2026-11-02T19:01:32Z
 transitions:
   - to: ready
     at: 2026-11-02T18:36:21Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-02T18:36:22Z
     by: agent-S-0509
+  - to: done
+    at: 2026-11-02T19:01:32Z
+    by: agent-S-0509
 stream: S-0509
 tags: [cli, docker]
 touches: [flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/activity.go, flai/internal/serve/claudecheck.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/orchestrate_hold.go]
 after: [T-2163]
+usage:
+  source: log
+  seconds: 1510
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 164
+      output: 55481
+      cache_read: 18036994
+      cache_write: 304425
+      cost: 6.7224
 ---
 # T-2170 plan.go, orchestrate.go, analyze.go, and curate.go start their agent through the container adapter when its harness is container, the orchestrator's container stopped by name, with a test per role on a fake adapter
 

@@ -4,10 +4,10 @@ title: "S-0509 criterion 4: how to run the planner-in-a-container proof before t
 anchor:
   path: wip/kanban/stories/S-0509-the-planner-the-orchestrator-the-analyzer-and-the-curator-run-in-a-container-when-their-harness-is-container-with-the-main-checkout-mounted-as-an-adr-settles-pilot-passing-their-role-and-their-activity-logged-as-on-the-host.md
   item: S-0509
-status: open
-participants: [agent-S-0509, orchestrator]
+status: resolved
+participants: [agent-S-0509, orchestrator, alex]
 created: 2026-11-02T18:18:27Z
-updated: 2026-11-02T18:19:28Z
+updated: 2026-11-02T19:02:24Z
 ---
 
 # TH-0815 S-0509 criterion 4: how to run the planner-in-a-container proof before this code is released
@@ -47,3 +47,11 @@ Layers 1 to 3 (ADR, adapter, start paths) do not wait on this. I am working them
 **Why I recommend rather than answer:** it changes a finalized story's criteria and adds a story. That is your call, and so is finalizing the draft.
 
 Source: design/digest/D-0466-s-0508-the-live-container-run-criterion-6-t-2169-s-first-half-cannot-run-before.md
+
+### 2026-11-02T18:56:22Z alex
+Confirmed the recommendation of 2026-11-02T18:19:28Z orchestrator.
+
+Source: design/digest/D-0466-s-0508-the-live-container-run-criterion-6-t-2169-s-first-half-cannot-run-before.md
+
+### 2026-11-02T19:02:24Z agent-S-0509
+Resolved: Done as confirmed: criterion 4 now covers a planner's container run with docker faked, logged with duration and cost, plus the other three start paths on fakes. The live flai-serve planner run moved to draft S-0567 in E-0029, after S-0509. S-0509's Notes record the move.

@@ -6,7 +6,7 @@ title: Operators should not need to intervene during review acceptance
 status: in-progress
 owner: alex
 created: 2026-11-02T18:21:16Z
-updated: 2026-11-02T18:36:36Z
+updated: 2026-11-02T19:08:19Z
 transitions:
   - to: ready
     at: 2026-11-02T18:21:38Z
@@ -15,12 +15,28 @@ transitions:
     at: 2026-11-02T18:26:18Z
     by: agent-S-0566
 tags: [cli]
-touches: [flai/cmd, design/adrs/0248-every-acceptance-commits-the-main-checkout-s-uncommitted-files-under-wip-design.md, design/adrs/README.md]
+touches: [flai/cmd, design/adrs/0248-every-acceptance-commits-the-main-checkout-s-uncommitted-files-under-wip-design.md, design/adrs/README.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/storygit/sync.go, design/system/flai-cli.md, design/system/strategic-agents.md, design/system/workflow.md, docs/users/flai.md, docs/users/flaiover.md, flaiover/src/lib/components/AcceptConfirm.svelte, flaiover/src/lib/components/AcceptConfirm.svelte.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, "flaiover/src/routes/api/items/[id]/accept/+server.ts", "flaiover/src/routes/api/items/[id]/accept/accept.test.ts", "flaiover/src/routes/api/items/[id]/move/+server.ts", flaiover/src/routes/board/+page.svelte, "flaiover/src/routes/items/[id]/+page.svelte"]
 agent:
   harness: claude-code
   model: claude-fable-5-1
   config:
     effort: high
+usage:
+  source: log
+  seconds: 2134
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-02
+      hand_edits: 1
+      work: 26
+  models:
+    - model: claude-fable-5-1
+      input: 2824
+      output: 1118
+      cache_read: 14386337
+      cache_write: 991714
+      cost: 23.3198
 cost_of_delay:
   inputs:
     penalty_per_week: 600
@@ -36,8 +52,8 @@ Right now, nearly every story that lands in review fails to merge because it is 
 flai exists to automate the development process. It should automatically resolve the rebase on main including any merge conflicts that arise from this operation.
 
 ## Acceptance criteria
-- [ ] An operator is never instructed to rebase the story’s worktree onto main since flai should do this
-- [ ] An operator is never told to resolve merge conflicts during rebase, the story agent should do this
+- [x] An operator is never instructed to rebase the story’s worktree onto main since flai should do this
+- [x] An operator is never told to resolve merge conflicts during rebase, the story agent should do this
 - [ ] files in shared folders like wip and design should always get checked in on review acceptance - there doesn’t need to be a checkbox/permission request since flai can do this directly
 
 ## Tasks

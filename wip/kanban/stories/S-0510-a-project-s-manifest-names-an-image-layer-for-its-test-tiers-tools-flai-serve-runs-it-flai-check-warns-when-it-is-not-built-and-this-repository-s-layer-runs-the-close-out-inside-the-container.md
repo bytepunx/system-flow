@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:46:53Z
-updated: 2026-11-02T18:50:42Z
+updated: 2026-11-02T19:15:33Z
 transitions:
   - to: ready
     at: 2026-11-02T18:12:39Z
@@ -26,22 +26,22 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1812
+  seconds: 3334
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-02
-      ceremony: 1
+      ceremony: 2
       test_runs: 2
       hand_edits: 1
-      work: 45
+      work: 102
   models:
     - model: claude-opus-5-5
-      input: 326
-      output: 1833
-      cache_read: 20704016
-      cache_write: 636388
-      cost: 7.5558
+      input: 518
+      output: 3030
+      cache_read: 48206599
+      cache_write: 831862
+      cost: 17.3696
   strategic:
     - kind: orchestrator
       seconds: 215
@@ -76,22 +76,34 @@ ADR-0203's limitation: only the worktree's files are the container's to write, a
 ## Acceptance criteria
 
 - [x] `agent.image.layer` in `system-flow.yaml` names a Dockerfile path relative to the repository root, read by `flai/internal/manifest`, documented in `design/system/project-manifest.md` and `docs/operators/settings.md`, and left as a comment in `template/root/system-flow.yaml.tmpl` with `template/CHANGELOG.md` saying so
-- [ ] `scripts/agent-image.sh --layer` builds the named Dockerfile with the harness image as its base argument and tags it `flai-agent-<project key>-<inner>:local`, `make agent-images` builds it after the two base images when the manifest names one, and the container adapter runs that image in place of the harness image for the project's agents when it is named
+- [x] `scripts/agent-image.sh --layer` builds the named Dockerfile with the harness image as its base argument and tags it `flai-agent-<project key>-<inner>:local`, `make agent-images` builds it after the two base images when the manifest names one, and the container adapter runs that image in place of the harness image for the project's agents when it is named
 - [x] `flai check` reports `agent.image` when the manifest names a layer whose image is not built or whose Dockerfile does not exist, as a warning that names `make agent-images`, and stays silent when the manifest names none or `docker` is not on `PATH`, saying so as a note
 - [ ] `flai/images/system-flow/Dockerfile` carries Go at `flai/go.mod`'s version, golangci-lint v2 at the version `scripts/install-tools.sh` installs, Node 24, and pnpm, and `system-flow.yaml` names it, so that `scripts/flai.sh test` and `scripts/close-out.sh` run every tier the manifest's `tests` select inside the container
 - [ ] One story of this repository that changes Go is worked end to end by `flai serve` on `harness: container` with this layer, its close-out passing inside the container, and each limitation met is an issue under `design/issues`
-- [ ] `docs/users/flai.md`, `docs/operators/index.md`, `docs/operators/runbooks/install.md`, `design/system/flai-cli.md`, and `design/tech/docker.md` describe the layer, how it is built, and what this repository's carries
+- [x] `docs/users/flai.md`, `docs/operators/index.md`, `docs/operators/runbooks/install.md`, `design/system/flai-cli.md`, and `design/tech/docker.md` describe the layer, how it is built, and what this repository's carries
 
 ## Tasks
 - T-2164 agent.image.layer in the manifest names a project's Dockerfile, read by flai and documented in project-manifest.md, settings.md, and the template
 - T-2165 scripts/agent-image.sh --layer builds a project's layer over the harness image, make agent-images builds it when named, and this repository's layer carries Go, golangci-lint, Node, and pnpm
 - T-2171 flai check reports agent.image when the manifest names a layer that is not built or whose Dockerfile is missing, and notes when docker is not on PATH
 - T-2172 The container adapter runs the project's layer image in place of the harness image when the manifest names one
-- T-2176 One Go-changing story of this repository is worked end to end inside the layered container with its close-out passing, and the docs describe the layer
+- T-2176 flai test runs every per-path tier inside the layered container on this story's worktree, each limitation met is an issue, and the docs describe the layer
 
 ## Notes
 
 Waits on S-0508 for the adapter that runs the image. The layer is the project's risk, as ADR-0203 says; the warning on an unsigned layer it foresees waits for the signed image, which is outside E-0029. A layer's tools are a project's: the template ships none.
+
+### In the container (T-2176)
+
+On 2026-11-02, `make agent-images` built `flai-agent-bedrock:local`, `flai-agent-claude-code:local`, and the layer `flai-agent-sf-claude-code:local`, 1.56 GB. The layer holds Go 1.26.0, golangci-lint 2.5.0 built with go1.26.0, ShellCheck 0.10.0, Node v24.22.1, and pnpm 10.34.5.
+
+`scripts/flai.sh test` then ran inside the layer by hand, as the operator's uid. The mounts were this story's worktree read-write, the main checkout's `.git` read-only, and the story's registration read-write. The paths given selected every per-path tier. All passed: gofmt, vet, golangci-lint, go-test with `-race` (4m10s), flaiover-lint, vitest, svelte-check, ShellCheck, and the markdown lint. Three things stopped it at first, and this story fixed each:
+
+- The worktree's `bin/flai` was built with cgo on the host, so it did not run on the image's musl. `scripts/flai-build.sh` now builds it with `CGO_ENABLED=0`.
+- `scripts/env.sh` kept the npm and pnpm caches in the main checkout's `.flai-cache`, which the container does not mount, and npm failed with EACCES. They now go to the home when that folder is not writable.
+- `go build`'s VCS stamping failed with git's exit status 128, though git answers each of its commands by hand there. The layer sets `GOFLAGS=-buildvcs=false`, and I-0255 records it.
+
+Not run inside: `scripts/close-out.sh`, which commits, and only the host commits (S-0517, S-0520); the `--all` tiers `integration` and `smoke`; and criterion 5's live run by `flai serve`, which TH-0814 asks about.
 
 ### Planning
 

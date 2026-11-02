@@ -6,7 +6,7 @@ title: flai runs agents in Docker containers
 status: in-progress
 owner: alex
 created: 2026-10-26T04:31:29Z
-updated: 2026-11-02T18:08:56Z
+updated: 2026-11-02T19:02:15Z
 transitions:
   - to: ready
     at: 2026-10-26T04:31:36Z
@@ -17,7 +17,7 @@ transitions:
 tags: []
 usage:
   source: sum
-  seconds: 14292
+  seconds: 18227
   estimated: true
   priced_by: estimate
   turns:
@@ -26,17 +26,17 @@ usage:
       hand_edits: 9
       work: 174
     - day: 2026-11-02
-      ceremony: 9
-      test_runs: 3
-      hand_edits: 11
-      work: 208
+      ceremony: 13
+      test_runs: 5
+      hand_edits: 15
+      work: 324
   models:
     - model: claude-opus-5-5
-      input: 2502
-      output: 687974
-      cache_read: 168350975
-      cache_write: 5064903
-      cost: 78.6649
+      input: 3036
+      output: 854490
+      cache_read: 237154440
+      cache_write: 5719853
+      cost: 103.9486
   strategic:
     - kind: planner
       seconds: 486
@@ -55,15 +55,15 @@ usage:
           cache_write: 138160
           cost: 6.5749
     - kind: orchestrator
-      seconds: 30310
+      seconds: 30329
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 851
-          output: 10946
-          cache_read: 145337490
-          cache_write: 1007759
-          cost: 32.2185
+          input: 861
+          output: 11019
+          cache_read: 145577485
+          cache_write: 1053131
+          cost: 32.2858
         - model: claude-sonnet-5-5
           input: 50
           output: 293
@@ -93,6 +93,7 @@ The one refinement to make to the ADR as proposed is to look at creating multipl
 - S-0510 A project's manifest names an image layer for its test tiers' tools, flai serve runs it, flai check warns when it is not built, and this repository's layer runs the close-out inside the container
 - S-0513 docs/operators/runbooks gains a runbook for building the agent images and running a story's agent in a container by hand
 - S-0565 One story of this repository is worked end to end by flai serve on harness container, from story_start to review, once S-0508's container harness is in the installed flai
+- S-0567 flai serve starts the planner in a container on harness container, and it plans one backlog story of this repository with its activity logged
 
 ## Notes
 

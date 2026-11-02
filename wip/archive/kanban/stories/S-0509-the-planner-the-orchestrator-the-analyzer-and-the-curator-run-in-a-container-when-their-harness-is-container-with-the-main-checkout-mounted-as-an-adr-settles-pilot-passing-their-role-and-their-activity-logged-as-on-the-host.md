@@ -3,11 +3,11 @@ id: S-0509
 type: story
 nature: feature
 title: The planner, the orchestrator, the analyzer, and the curator run in a container when their harness is container, with the main checkout mounted as an ADR settles, pilot passing their role, and their activity logged as on the host
-status: in-progress
+status: done
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:44:48Z
-updated: 2026-11-02T18:53:30Z
+updated: 2026-11-02T19:15:47Z
 transitions:
   - to: ready
     at: 2026-11-02T18:12:39Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-11-02T18:16:00Z
     by: agent-S-0509
+  - to: review
+    at: 2026-11-02T19:13:24Z
+    by: agent-S-0509
+  - to: done
+    at: 2026-11-02T19:15:47Z
+    by: orchestrator
 tags: [cli, docker]
 topics: [harness, docker, planning]
-touches: [flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/pilot/run.go, flai/internal/pilot/run_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/activity.go, flai/internal/serve/claudecheck.go, design/adrs/README.md, design/adrs, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, design/issues/summary.md, design/issues, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/orchestrate_hold.go]
+touches: [flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/pilot/run.go, flai/internal/pilot/run_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/analyze.go, flai/internal/serve/analyze_test.go, flai/internal/serve/curate.go, flai/internal/serve/curate_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/activity.go, flai/internal/serve/claudecheck.go, design/adrs/README.md, design/adrs, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, design/issues/summary.md, design/issues, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/orchestrate_hold.go, design/system/agent-adapters.md]
 after: [S-0508]
 agent:
   harness: claude-code
@@ -26,21 +32,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1048
-  estimated: true
-  priced_by: estimate
+  seconds: 3461
+  priced_by: harness
   turns:
     - day: 2026-11-02
-      ceremony: 1
-      hand_edits: 1
-      work: 37
+      ceremony: 4
+      test_runs: 2
+      hand_edits: 5
+      work: 96
   models:
     - model: claude-opus-5-5
-      input: 148
-      output: 835
-      cache_read: 12716334
-      cache_write: 452217
-      cost: 4.6624
+      input: 490
+      output: 166154
+      cache_read: 54017216
+      cache_write: 911693
+      cost: 20.1323
   strategic:
     - kind: planner
       seconds: 190
@@ -53,15 +59,15 @@ usage:
           cache_write: 204659
           cost: 8.1773
     - kind: orchestrator
-      seconds: 133
+      seconds: 152
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 36
-          output: 274
-          cache_read: 2015653
-          cache_write: 127441
-          cost: 0.4727
+          input: 46
+          output: 347
+          cache_read: 2255648
+          cache_write: 172813
+          cost: 0.54
 cost_of_delay:
   value: 22.22
   by: planner-S-0509
@@ -85,10 +91,10 @@ E-0029 asks that flai start the right image as a container for every kind of age
 ## Acceptance criteria
 
 - [x] An ADR refining ADR-0203 settles the mounts of a strategic agent's container and the rule for its writes, choosing between the main checkout read-write at its host path and read-only with writes over MCP, with the reason, the risk each carries, and what the guard refuses inside the container for each role
-- [ ] `plan.go`, `orchestrate.go`, `analyze.go`, and `curate.go` start their agent through `harness.For` as today and, when the harness is `container`, the adapter's `Start` gives `docker run` with the mounts the ADR names for a strategic role in place of a story's worktree, the role's cache folder `.flai-cache/agents/<role>` for the session, and pilot's start request carrying `Role`, `Item`, and `Focus` so the inner harness is started with `--agent <role>` as on the host
-- [ ] The guard runs inside the container on each role's calls as it does on the host, holding the planner to planning, the orchestrator to its permissions, the analyzer to its report, and the curator to `flai digest`, with the role read from the request as `flai guard` reads it today, and a test per role checks the argv and the mounts
-- [ ] A planner run in a container plans one story of this repository and `wip/agents/planner.md` gains its activity entry with duration and cost measured from the container's log as from a host run; the orchestrator's, the analyzer's, and the curator's start paths are tested with a fake adapter, and each limitation met is an issue under `design/issues`
-- [ ] `design/system/strategic-agents.md` (each role's "Its agent" section), `design/system/flai-cli.md`, `docs/users/flai.md`, and `docs/operators/index.md` say how a strategic agent runs in a container and what it mounts
+- [x] `plan.go`, `orchestrate.go`, `analyze.go`, and `curate.go` start their agent through `harness.For` as today and, when the harness is `container`, the adapter's `Start` gives `docker run` with the mounts the ADR names for a strategic role in place of a story's worktree, the role's cache folder `.flai-cache/agents/<role>` for the session, and pilot's start request carrying `Role`, `Item`, and `Focus` so the inner harness is started with `--agent <role>` as on the host
+- [x] The guard runs inside the container on each role's calls as it does on the host, holding the planner to planning, the orchestrator to its permissions, the analyzer to its report, and the curator to `flai digest`, with the role read from the request as `flai guard` reads it today, and a test per role checks the argv and the mounts
+- [x] A planner's container run, with docker faked, is logged in `wip/agents/planner.md` with its duration and cost measured from the container's log as from a host run; the orchestrator's, the analyzer's, and the curator's start paths are tested with a fake adapter, and each limitation met is an issue under `design/issues`
+- [x] `design/system/strategic-agents.md` (each role's "Its agent" section), `design/system/flai-cli.md`, `docs/users/flai.md`, and `docs/operators/index.md` say how a strategic agent runs in a container and what it mounts
 
 ## Tasks
 - T-2158 An ADR settles what a strategic agent's container mounts and the rule for its writes
@@ -99,6 +105,14 @@ E-0029 asks that flai start the right image as a container for every kind of age
 ## Notes
 
 Waits on S-0508 for the adapter. The orchestrator is long-running: a container of its own for as long as the `orchestrate` host action is on, stopped by name as a story's is. `flai serve`'s claude check (`claudecheck.go`) reads the claude-code adapter directly; whether it probes the image's `claude` or the host's is for the ADR to say.
+
+### Criterion 4 narrowed (TH-0815)
+
+The operator confirmed on TH-0815, 2026-11-02, the orchestrator's recommendation, as on TH-0812 for S-0508 (D-0466). Criterion 4 keeps what S-0509 can prove: the four start paths on a fake adapter, and a planner's container run, with docker faked, logged with its duration and cost. The live part moves to a draft story in E-0029 that waits for S-0509: `flai serve` starts a planner on `harness: container`, and it plans one backlog story of this repository. That run needs this code released and the host's container harness settings, neither of which this story can do. The host runs the installed flai 1.80.2, and its configuration is the operator's (ADR-0220).
+
+### Criterion 3, as verified
+
+The tests check that each role's container gets `FLAI_ROLE` and its role file, so the inner Claude Code starts with `--agent <role>`, and they check each role's argv and mounts. The guard therefore reads the role as it does on the host. Whether the guard hook starts inside the image at all is I-0216's (S-0518): this repository's hook runs `scripts/flai.sh`, which needs `go`. The live check of a refusal inside the container is S-0567's criterion 3.
 
 ### Planning
 
@@ -116,3 +130,15 @@ Touches. Every touch declared before this run is kept. `flai touches suggest S-0
 Forecast. `flai forecast S-0509` gives 49m (median 107 s per unit over 93 done feature stories on claude-opus-5-5 in the large band; size 27: 5 criteria, 22 touches) and delivery 2026-10-28T05:42Z, 27th in the pull order with an in-progress limit of 5. Kept at 2h, as the epic's plan set it: the ADR settles a real choice on the main checkout's mount, four start paths change with a test each, and the proof is a planner session inside a container that the story's agent waits for. Delivery 2026-10-28T06:53Z: flai's playout, plus the 1h11m the 2h adds in the story's own place.
 
 Cost of delay. `flai cod S-0509` gives 22.22 USD a week: the story's share of E-0029's `penalty_per_week` of 150 USD, set by the operator on 2026-10-26 (TH-0657), 2h of the 13h30m forecast over the epic's six open stories without inputs. Written as given: nothing on the story argues for inputs of its own.
+
+### Accepted by the orchestrator
+
+- Verified: 599616ad133c60db5c303cf916e5ddef35e67766
+- At: 2026-11-02T19:15:47Z
+
+Verdict: pass at 599616ad133c60db5c303cf916e5ddef35e67766
+- 1: design/adrs/0247-a-strategic-agent-s-container-mounts-the-main-checkout-read-write-at-its-host.md, design/adrs/README.md
+- 2: flai/internal/harness/container.go, flai/internal/pilot/run.go, flai/internal/serve/container.go, flai/internal/serve/agents.go, flai/internal/serve/plan.go, flai/internal/serve/orchestrate.go, flai/internal/serve/analyze.go, flai/internal/serve/curate.go
+- 3: flai/internal/harness/container_test.go, flai/internal/pilot/run_test.go, flai/internal/serve/plan_test.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/analyze_test.go, flai/internal/serve/curate_test.go, flai/internal/serve/container_test.go
+- 4: flai/internal/serve/plan_test.go, flai/internal/serve/orchestrate_hold.go, design/issues/I-0216-flai-guard-does-not-run-as-the-hook-inside-the-agent-container-and-the-hook-lets-every-call-through-when-the-guard-cannot-start.md, design/issues/I-0256-a-strategic-agent-s-container-runs-flai-with-no-host-configuration-so-the.md, design/issues/I-0257-a-strategic-agent-s-container-can-write-the-main-checkout-s-git-config-which.md, design/issues/I-0258-a-role-a-project-defines-in-a-role-file-of-its-own-cannot-run-on-the-container.md, design/issues/summary.md
+- 5: design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md

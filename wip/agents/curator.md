@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 89.2022
-accrued_seconds: 8593
-tasks_completed: 51
-last_run: 2026-11-02T18:32:50Z
+accrued_cost: 90.1550
+accrued_seconds: 8682
+tasks_completed: 52
+last_run: 2026-11-02T18:57:02Z
 ---
 
 # Curator activity
@@ -419,3 +419,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0456, D-0459, D-0461, D-0465, D-0466
 - Seconds: 132
 - Cost: 1.6910 USD, estimated
+
+### 2026-11-02T18:57:02Z
+
+- Summary: I wrote D-0468, merged nothing, absorbed nothing, and `flai digest compact` compacted nothing; it recorded citers on 1 entry. ADR-0246 and `design/system/flai-cli.md` already state I-0215's cause and fix, S-0517's other decisions are plan and progress notes or already in the design, and no active entry is stated by today's container-mount design changes.
+- Trigger: accepted S-0517
+- Items: D-0436, D-0467, D-0468
+- Seconds: 89
+- Cost: 0.9528 USD, estimated

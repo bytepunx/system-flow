@@ -3,12 +3,18 @@ id: T-2437
 type: task
 nature: feature
 title: Every acceptance commits the main checkout's uncommitted files under wip, design, and the shared paths, and leaves the rest as they are
-status: backlog
+status: in-progress
 parent: S-0566
 owner: alex
 created: 2026-11-02T18:35:38Z
-updated: 2026-11-02T18:36:42Z
-transitions: []
+updated: 2026-11-02T19:03:08Z
+transitions:
+  - to: ready
+    at: 2026-11-02T19:03:07Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-02T19:03:08Z
+    by: system-flow
 stream: S-0566
 tags: []
 touches: [flai/internal/storygit/storygit.go, flai/internal/storygit/storygit_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/cmd/accept.go, flai/cmd/accept_batch_dirty.go, flai/cmd/accept_batch_dirty_test.go, flai/cmd/accept_markdown.go, flai/cmd/accept_uncommitted_test.go, flai/cmd/accept_orchestrator_dirty_test.go, flai/cmd/accept_test.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/internal/mergequeue/land.go, flai/internal/mergequeue/land_test.go, flai/internal/mergequeue/preflight.go, flai/internal/mergequeue/preflight_test.go, flai/internal/hostapi/writes.go]

@@ -32,7 +32,7 @@ usage:
       output: 687
       cache_read: 6752543
       cache_write: 144744
-      cost: 2.4421
+      cost: 2.4431
 ---
 # T-2164 agent.image.layer in the manifest names a project's Dockerfile, read by flai and documented in project-manifest.md, settings.md, and the template
 

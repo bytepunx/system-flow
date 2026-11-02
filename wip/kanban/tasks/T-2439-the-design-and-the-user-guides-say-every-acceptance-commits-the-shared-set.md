@@ -3,11 +3,11 @@ id: T-2439
 type: task
 nature: feature
 title: The design and the user guides say every acceptance commits the shared set, leaves the rest, and sends an unsettled rebase back to the agent
-status: in-progress
+status: done
 parent: S-0566
 owner: alex
 created: 2026-11-02T18:36:36Z
-updated: 2026-11-02T18:36:57Z
+updated: 2026-11-02T19:02:14Z
 transitions:
   - to: ready
     at: 2026-11-02T18:36:56Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-02T18:36:57Z
     by: system-flow
+  - to: done
+    at: 2026-11-02T19:02:14Z
+    by: agent-S-0566
 stream: S-0566
 tags: []
 touches: [design/system/flai-cli.md, design/system/workflow.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flaiover.md]
+usage:
+  source: log
+  seconds: 1490
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-fable-5-1
+      input: 623
+      output: 313
+      cache_read: 2921934
+      cache_write: 171890
+      cost: 4.6918
 ---
 # T-2439 The design and the user guides say every acceptance commits the shared set, leaves the rest, and sends an unsettled rebase back to the agent
 

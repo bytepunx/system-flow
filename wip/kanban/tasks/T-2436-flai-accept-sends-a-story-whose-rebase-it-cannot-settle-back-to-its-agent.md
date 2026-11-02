@@ -3,11 +3,11 @@ id: T-2436
 type: task
 nature: feature
 title: flai accept sends a story whose rebase it cannot settle back to its agent, whoever accepts
-status: in-progress
+status: done
 parent: S-0566
 owner: alex
 created: 2026-11-02T18:35:08Z
-updated: 2026-11-02T18:36:52Z
+updated: 2026-11-02T19:01:48Z
 transitions:
   - to: ready
     at: 2026-11-02T18:36:51Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-02T18:36:52Z
     by: system-flow
+  - to: done
+    at: 2026-11-02T19:01:48Z
+    by: agent-S-0566
 stream: S-0566
 tags: []
-touches: [flai/cmd/accept.go, flai/cmd/accept_conflict_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/storygit/sync.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go]
+touches: [flai/cmd/accept.go, flai/cmd/accept_conflict_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/storygit/sync.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go]
+usage:
+  source: log
+  seconds: 1495
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-fable-5-1
+      input: 975
+      output: 307
+      cache_read: 4311389
+      cache_write: 323627
+      cost: 7.0288
 ---
 # T-2436 flai accept sends a story whose rebase it cannot settle back to its agent, whoever accepts
 

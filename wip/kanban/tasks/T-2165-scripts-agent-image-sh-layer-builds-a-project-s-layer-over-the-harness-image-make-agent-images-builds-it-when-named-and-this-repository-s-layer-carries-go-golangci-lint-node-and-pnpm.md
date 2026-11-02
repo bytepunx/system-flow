@@ -32,7 +32,7 @@ usage:
       output: 179
       cache_read: 3475504
       cache_write: 34065
-      cost: 1.2425
+      cost: 1.2431
 ---
 # T-2165 scripts/agent-image.sh --layer builds a project's layer over the harness image, make agent-images builds it when named, and this repository's layer carries Go, golangci-lint, Node, and pnpm
 

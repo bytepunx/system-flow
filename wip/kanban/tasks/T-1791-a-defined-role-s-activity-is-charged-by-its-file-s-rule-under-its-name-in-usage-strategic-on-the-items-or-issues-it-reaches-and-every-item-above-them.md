@@ -3,16 +3,34 @@ id: T-1791
 type: task
 nature: feature
 title: A defined role's activity is charged by its file's rule under its name in usage.strategic, on the items or issues it reaches and every item above them
-status: backlog
+status: in-progress
 parent: S-0425
 owner: alex
 created: 2026-10-16T05:49:23Z
-updated: 2026-10-23T15:36:40Z
-transitions: []
+updated: 2026-11-02T19:02:08Z
+transitions:
+  - to: ready
+    at: 2026-11-02T19:02:07Z
+    by: agent-S-0425
+  - to: in-progress
+    at: 2026-11-02T19:02:08Z
+    by: agent-S-0425
 stream: S-0425
 tags: [cli]
-touches: [flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, flai/internal/workitem/usage.go, flai/internal/workitem/usage_test.go, flai/internal/usage/usage.go, flai/internal/usage/usage_test.go, flai/internal/issues/usage.go, flai/internal/issues/usage_test.go, flai/cmd/activity.go, flai/cmd/activity_test.go, flai/internal/mcpserver/activity.go, flai/internal/mcpserver/activity_test.go]
-after: [T-1790, T-2073]
+touches: [flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, flai/internal/workitem/usage.go, flai/internal/workitem/usage_test.go, flai/internal/usage/usage.go, flai/internal/usage/usage_test.go, flai/internal/issues/usage.go, flai/internal/issues/usage_test.go, flai/cmd/activity.go, flai/cmd/activity_test.go, flai/internal/mcpserver/activity.go, flai/internal/mcpserver/activity_test.go, flai/cmd/role.go]
+after: [T-1790]
+usage:
+  source: log
+  seconds: 0
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-haiku-5-5
+      input: 70
+      output: 335
+      cache_read: 3315839
+      cache_write: 155351
+      cost: 0.2499
 ---
 # T-1791 A defined role's activity is charged by its file's rule under its name in usage.strategic, on the items or issues it reaches and every item above them
 

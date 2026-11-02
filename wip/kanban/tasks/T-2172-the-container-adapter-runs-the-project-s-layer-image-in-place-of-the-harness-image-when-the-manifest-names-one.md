@@ -24,16 +24,16 @@ touches: [flai/internal/serve/container.go, flai/internal/serve/container_test.g
 after: [T-2164]
 usage:
   source: log
-  seconds: 749
+  seconds: 771
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 56
-      output: 293
-      cache_read: 2399097
-      cache_write: 95292
-      cost: 0.8832
+      input: 58
+      output: 301
+      cache_read: 2756246
+      cache_write: 108692
+      cost: 1.0148
 ---
 # T-2172 The container adapter runs the project's layer image in place of the harness image when the manifest names one
 

@@ -24,16 +24,16 @@ touches: [flai/internal/harness/container.go, flai/internal/harness/container_te
 after: [T-2158]
 usage:
   source: log
-  seconds: 739
+  seconds: 745
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 70
-      output: 430
-      cache_read: 3946785
-      cache_write: 134436
-      cost: 1.445
+      input: 37
+      output: 12448
+      cache_read: 4046933
+      cache_write: 68303
+      cost: 1.5083
 ---
 # T-2163 The container adapter mounts a strategic role's checkout and cache folder as the ADR says, and pilot's request carries Role, Item, and Focus so the inner harness starts with --agent
 

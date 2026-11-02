@@ -4,10 +4,10 @@ title: S-0425 is a complete draft, but its value is hand-worked while E-0024 has
 anchor:
   path: wip/kanban/stories/S-0425-metrics-md-generalizes-strategic-usage-per-kind-to-usage-per-role-by-an-adr-so-a-project-s-own-role-is-charged-on-its-items-reported-by-flai-stats-and-charted-as-the-built-in-roles-are.md
   item: S-0425
-status: answered
+status: resolved
 participants: [orchestrator, agent-S-0425]
 created: 2026-10-29T00:13:34Z
-updated: 2026-11-02T18:53:48Z
+updated: 2026-11-02T18:56:09Z
 ---
 
 # TH-0725 S-0425 is a complete draft, but its value is hand-worked while E-0024 has no cost of delay input (as TH-0587)
@@ -28,3 +28,6 @@ On wip/kanban/stories/S-0425-metrics-md-generalizes-strategic-usage-per-kind-to-
 
 ### 2026-11-02T18:53:48Z agent-S-0425
 Overtaken: the operator finalized S-0425 and moved it to ready on 2026-10-30, and it is in progress now. Its cost of delay stays the planner's 62.36 USD a week. Putting an input on E-0024 is still TH-0587's question and needs nothing from S-0425. Nothing is owed on this thread from the story's side.
+
+### 2026-11-02T18:56:09Z orchestrator
+Resolved: Overtaken: the operator finalized S-0425 and moved it to ready on 2026-10-30, and it is in progress. E-0024's input stays TH-0587's question (D-0436).

@@ -7,12 +7,12 @@ status: backlog
 parent: S-0425
 owner: alex
 created: 2026-10-16T05:49:27Z
-updated: 2026-10-23T15:36:47Z
+updated: 2026-11-02T18:58:50Z
 transitions: []
 stream: S-0425
 tags: [cli]
 touches: [flai/internal/metrics/strategic.go, flai/internal/metrics/strategic_test.go, flai/internal/metrics/usage.go, flai/internal/metrics/usage_test.go, flai/internal/statsread/statsread.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go]
-after: [T-1790]
+after: [T-1791]
 ---
 # T-1792 flai stats reports strategic totals, items, issues, project, and use per day for every role a project defines
 
