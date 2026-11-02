@@ -346,6 +346,19 @@ type running struct {
 }
 
 // halt stops the project's client and waits for it.
+// sayRemoved tells the dashboard the project is removed, before its
+// connection ends. The dashboard holds a connection proven from the moment
+// it reads this flai's proof, while the client can notify on it only once
+// the send of that proof has returned and the sender is installed, so a
+// notice that finds no sender in that moment is tried again, briefly: a
+// removal while the dashboard is not connected gives up after that.
+func (r *running) sayRemoved() {
+	params := map[string]string{"project": r.entry.Key}
+	for i := 0; i < 20 && !r.client.Notify(Removed, params); i++ {
+		time.Sleep(5 * time.Millisecond)
+	}
+}
+
 func (r *running) halt() {
 	r.stop()
 	<-r.done
@@ -622,7 +635,7 @@ func Run(ctx context.Context, o Options) error {
 			// it rather than show it as waiting for flai (S-0121).
 			why := "its registry entry changed"
 			if !ok || e.Key != r.entry.Key {
-				r.client.Notify(Removed, map[string]string{"project": r.entry.Key})
+				r.sayRemoved()
 				why = "it left the registry"
 				if ok {
 					why = "it is served under another key"
@@ -635,7 +648,7 @@ func Run(ctx context.Context, o Options) error {
 			// one removed while it drains stops at once, as any removed project does
 			_, back := want[root]
 			if _, still := gone[root]; !back && !still {
-				r.client.Notify(Removed, map[string]string{"project": r.entry.Key})
+				r.sayRemoved()
 				r.stop()
 			}
 		}
