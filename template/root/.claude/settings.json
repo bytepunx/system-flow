@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "out=$(flai guard 2>&1); [ $? -eq 2 ] || exit 0; echo \"$out\" >&2; exit 2"
+            "command": "out=$(flai guard 2>&1); s=$?; [ \"$s\" -eq 2 ] && { echo \"$out\" >&2; exit 2; }; case \"$s\" in 126|127) printf 'flai guard did not run (exit %s): %s\\nno guarded call passes until flai is installed and on PATH\\n' \"$s\" \"$out\" >&2; exit 2;; esac; exit 0"
           }
         ]
       },
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ -n \"$FLAI_ROLE\" ] || [ -n \"$FLAI_STORY\" ] || exit 0; out=$(flai guard 2>&1); [ $? -eq 2 ] || exit 0; echo \"$out\" >&2; exit 2"
+            "command": "[ -n \"$FLAI_ROLE\" ] || [ -n \"$FLAI_STORY\" ] || exit 0; out=$(flai guard 2>&1); s=$?; [ \"$s\" -eq 2 ] && { echo \"$out\" >&2; exit 2; }; case \"$s\" in 126|127) printf 'flai guard did not run (exit %s): %s\\nno guarded call passes until flai is installed and on PATH\\n' \"$s\" \"$out\" >&2; exit 2;; esac; exit 0"
           }
         ]
       }

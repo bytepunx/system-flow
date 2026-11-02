@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -432,6 +433,119 @@ func checkGuardHooks(t *testing.T, path string, data []byte) {
 		if code != s.want {
 			t.Errorf("%s: with %v the edit hook exits %d before the guard, want %d", path, s.env, code, s.want)
 		}
+	}
+}
+
+// I-0216, ADR-0235: the guard hooks of this repository's settings and the
+// template's refuse a call when the guard cannot start, exit 126 or 127, and
+// still pass one the guard allowed or ended otherwise. This repository's hook
+// reaches the guard through scripts/flai.sh, which inside the agent image has
+// no go and no bin/flai: there it runs the installed flai, or exits 127 when
+// there is none, where the old hook let every call through.
+func TestTheGuardHooksRefuseACallWhenTheGuardCannotStart(t *testing.T) {
+	t.Parallel()
+	// The tools scripts/flai.sh and scripts/env.sh need, without go.
+	tools := t.TempDir()
+	for _, name := range []string{"sh", "dirname", "mkdir", "find", "head", "sed"} {
+		p, err := exec.LookPath(name)
+		if err != nil {
+			t.Skipf("%s not found: %v", name, err)
+		}
+		if err := os.Symlink(p, filepath.Join(tools, name)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// A project with this tree's scripts, an empty flai/, and no bin/.
+	project := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(project, "scripts"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(project, "flai"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"flai.sh", "env.sh", "flai-build.sh"} {
+		data, err := os.ReadFile(filepath.Join("..", "..", "scripts", name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(project, "scripts", name), data, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// fake is a folder holding a flai that prints out and exits code, or an
+	// empty folder when code is negative: no flai on PATH.
+	fake := func(code int, out string) string {
+		dir := t.TempDir()
+		if code >= 0 {
+			script := "#!/bin/sh\necho '" + out + "'\nexit " + strconv.Itoa(code) + "\n"
+			if err := os.WriteFile(filepath.Join(dir, "flai"), []byte(script), 0o755); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return dir
+	}
+	run := func(command, flaiDir string) (int, string) {
+		t.Helper()
+		sh := exec.Command(filepath.Join(tools, "sh"), "-c", command)
+		sh.Env = []string{
+			"PATH=" + tools + string(os.PathListSeparator) + flaiDir,
+			"HOME=" + t.TempDir(),
+			"CLAUDE_PROJECT_DIR=" + project,
+			"FLAI_STORY=S-0518",
+		}
+		sh.Stdin = strings.NewReader(`{"tool_name":"Bash","tool_input":{"command":"ls"}}`)
+		var errOut strings.Builder
+		sh.Stderr = &errOut
+		code := 0
+		var exit *exec.ExitError
+		if err := sh.Run(); errors.As(err, &exit) {
+			code = exit.ExitCode()
+		} else if err != nil {
+			t.Fatal(err)
+		}
+		return code, errOut.String()
+	}
+	cases := []struct {
+		guard int
+		out   string
+		want  int
+		err   string
+	}{
+		{0, "", 0, ""},
+		{2, "refused by the fake guard", 2, "refused by the fake guard"},
+		{1, "flai: unknown command guard", 0, ""},
+		{126, "", 2, "flai guard did not run (exit 126)"},
+		{-1, "", 2, "flai guard did not run (exit 127)"},
+	}
+	for _, path := range []string{filepath.Join("..", "..", ".claude", "settings.json"), filepath.Join("..", "..", "template", "root", ".claude", "settings.json")} {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var settings struct {
+			Hooks map[string][]struct {
+				Matcher string `json:"matcher"`
+				Hooks   []struct {
+					Command string `json:"command"`
+				} `json:"hooks"`
+			} `json:"hooks"`
+		}
+		if err := json.Unmarshal(data, &settings); err != nil {
+			t.Fatalf("%s: %v", path, err)
+		}
+		for _, h := range settings.Hooks["PreToolUse"] {
+			for _, c := range cases {
+				code, errOut := run(h.Hooks[0].Command, fake(c.guard, c.out))
+				if code != c.want || !strings.Contains(errOut, c.err) || (c.want == 2 && c.err == "") {
+					t.Errorf("%s %s: with a guard that exits %d the hook exits %d, stderr %q; want %d and %q", path, h.Matcher, c.guard, code, errOut, c.want, c.err)
+				}
+			}
+		}
+	}
+	// The hook I-0216 found: with no guard to run, it let the call through.
+	old := `out=$("$CLAUDE_PROJECT_DIR"/scripts/flai.sh guard 2>&1); [ $? -eq 2 ] || exit 0; echo "$out" >&2; exit 2`
+	if code, _ := run(old, fake(-1, "")); code != 0 {
+		t.Errorf("the old hook exits %d with no guard, want 0, the cause I-0216 records", code)
 	}
 }
 
