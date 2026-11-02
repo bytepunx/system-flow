@@ -4,10 +4,10 @@ title: "S-0518 is ready to accept, but only the operator can: the branch changes
 anchor:
   path: wip/kanban/stories/S-0518-flai-guard-does-not-run-as-the-hook-inside-the-agent-container-and-the-hook-lets-every-call-through-when-the-guard-cannot-start.md
   item: S-0518
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-02T01:07:14Z
-updated: 2026-11-02T01:07:14Z
+updated: 2026-11-02T03:52:59Z
 ---
 
 # TH-0798 S-0518 is ready to accept, but only the operator can: the branch changes protected .claude/settings.json files
@@ -38,3 +38,6 @@ Before you accept, review the two hook commands. The verifier found these edges:
 - In a project made from the template, where `flai` is not on PATH, every `Bash` and `mcp__flai__*` call is refused. That includes an interactive session, because the first hook has no `FLAI_*` gate. ADR-0235 accepts this.
 - These exits still let the call through, as designed: exit 1 (such as a failed `go build`), a signal kill (137 or 139), and a timeout.
 - The in-image check inside `flai-agent-claude-code:local` rests only on the narrative. The verifier could not reproduce it.
+
+### 2026-11-02T03:52:59Z alex
+Resolved.

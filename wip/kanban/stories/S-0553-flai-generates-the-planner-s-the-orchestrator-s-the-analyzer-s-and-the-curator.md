@@ -3,11 +3,11 @@ id: S-0553
 type: story
 nature: improvement
 title: flai generates the planner's, the orchestrator's, the analyzer's, and the curator's harness definitions from their role files alone, flai check holds a .claude/agents copy to them, and a session started by hand reads the same definition
-status: review
+status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-10-30T20:45:17Z
-updated: 2026-11-02T02:36:31Z
+updated: 2026-11-02T03:56:16Z
 transitions:
   - to: ready
     at: 2026-11-01T23:44:10Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-11-02T02:36:24Z
     by: agent-S-0553
+  - to: in-progress
+    at: 2026-11-02T03:56:16Z
+    by: flai
 blocked:
   - from: 2026-11-02T00:54:49Z
     until: 2026-11-02T01:08:28Z
@@ -128,3 +131,4 @@ S-0419 made each built-in strategic role's file body the prompt of the definitio
   - **Folder touch kept:** `design/adrs`, since the new ADR's file name is not known until it is written.
 - **Forecast.** flai's 54m raised to 1h5m for the live trial, a short Claude Code session the touches do not count, as S-0423 and S-0424 were raised for their live runs. The delivery is flai's play-out, 33rd in the pull order, moved by the 11 minutes times the cycle factor 1.15.
 - **Cost of delay.** 58.47 USD a week, worked out by hand as the planners of S-0414 to S-0425 did, because `flai cod` refuses while E-0024 has no inputs (TH-0567, question 3, confirmed; TH-0587 asks the operator to write 4h on the epic). 4h lost per cycle at `planning.hour_rate` 150 over the default 168h cycle gives E-0024 600 USD a week. S-0553's share is its 1h5m of the 11h7m forecast for E-0024's nine open stories, S-0419 to S-0425, S-0553, and S-0554: 65 / 667 × 600.
+- 2026-11-02T03:56:16Z: moved to in-progress: the merge queue's batch 20261102-035614 could not rebase it onto main: conflicts in design/conventions/strategic-agents.md, design/system/strategic-agents.md, template/root/design/conventions/strategic-agents.md; sync it with flai stream sync S-0553

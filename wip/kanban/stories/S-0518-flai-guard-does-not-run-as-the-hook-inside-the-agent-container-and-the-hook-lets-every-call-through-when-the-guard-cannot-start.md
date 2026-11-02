@@ -3,10 +3,10 @@ id: S-0518
 type: story
 nature: remediation
 title: flai guard does not run as the hook inside the agent container, and the hook lets every call through when the guard cannot start
-status: review
+status: in-progress
 owner: alex
 created: 2026-10-28T12:52:56Z
-updated: 2026-11-02T01:05:23Z
+updated: 2026-11-02T03:57:40Z
 transitions:
   - to: ready
     at: 2026-11-01T23:50:02Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-02T01:05:23Z
     by: agent-S-0518
+  - to: in-progress
+    at: 2026-11-02T03:56:41Z
+    by: flai
 blocked:
   - from: 2026-11-02T00:20:51Z
     until: 2026-11-02T00:20:52Z
@@ -32,7 +35,7 @@ blocked:
     reason: awaiting the operator on TH-0795
 tags: [cli, template]
 topics: [harness]
-touches: [".claude/settings.json", template/root/.claude/settings.json, template/CHANGELOG.md, scripts/flai.sh, scripts/README.md, flai/cmd/guard_test.go, flai/cmd/guard.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/settings.md, design/system/agent-adapters.md, design/adrs/README.md, design/adrs, design/issues/I-0216-flai-guard-does-not-run-as-the-hook-inside-the-agent-container-and-the-hook-lets-every-call-through-when-the-guard-cannot-start.md, design/issues/summary.md, design/issues/I-0247-testservesaystheflaiisolderthantheproject-and.md]
+touches: [".claude/settings.json", template/root/.claude/settings.json, template/CHANGELOG.md, scripts/flai.sh, scripts/README.md, flai/cmd/guard_test.go, flai/cmd/guard.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/settings.md, design/system/agent-adapters.md, design/adrs/README.md, design/adrs, design/issues/I-0216-flai-guard-does-not-run-as-the-hook-inside-the-agent-container-and-the-hook-lets-every-call-through-when-the-guard-cannot-start.md, design/issues/summary.md, design/issues/I-0247-testservesaystheflaiisolderthantheproject-and.md, design/issues/I-0251-a-story-branch-rebased-across-a-release-brings-back-the-changelog-s-old.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -40,33 +43,35 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3715
-  priced_by: harness
+  seconds: 3776
+  estimated: true
+  priced_by: estimate
   turns:
     - day: 2026-11-01
       hand_edits: 1
       work: 34
     - day: 2026-11-02
       ceremony: 4
-      work: 51
+      hand_edits: 1
+      work: 60
   models:
     - model: claude-opus-5-5
-      input: 208
-      output: 48406
-      cache_read: 20619984
-      cache_write: 303750
-      cost: 7.5229
+      input: 230
+      output: 48568
+      cache_read: 23579167
+      cache_write: 637058
+      cost: 8.7041
   strategic:
     - kind: orchestrator
-      seconds: 1166
+      seconds: 1179
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 180
-          output: 1815
-          cache_read: 22939301
-          cache_write: 414561
-          cost: 5.163
+          input: 186
+          output: 1856
+          cache_read: 23067927
+          cache_write: 460127
+          cost: 5.2034
         - model: claude-sonnet-5-5
           input: 8
           output: 54
@@ -106,6 +111,7 @@ This story remediates [I-0216](../../../design/issues/I-0216-flai-guard-does-not
 - T-2224 scripts/flai.sh runs the installed flai, with a warning, when go is absent and bin/flai is not built, so this repository's guard hook reaches the image's flai inside the container
 - T-2225 The guard hooks in .claude/settings.json and the template's refuse a call when flai guard cannot start, and a test reproduces I-0216 against both files' commands
 - T-2226 The guard's docs say the hook refuses a call when the guard cannot start, flai guard's help names it, the fix is checked once inside the image, and I-0216 is closed
+- T-2425 template/CHANGELOG.md has one Unreleased section, with S-0518's line under it, after the rebase across release 1.1.17
 
 ## Notes
 
@@ -133,3 +139,4 @@ Overlaps on 2026-10-28: `docs/users/flai.md` is touched by S-0414, S-0502, and S
 Forecast. `flai forecast S-0518` gives 4m (median 119 s per unit over 13 done remediation stories on claude-opus-5-5 in the small band; size 2: 2 criteria, 0 touches) and delivery 2026-10-29T01:41Z, 31st in the pull order. Raised to 1h15m: the size flai measured had no touches, and with 16 the band's median alone gives about 36m; the story writes an ADR, a shell-level test matrix over two settings files and a copy of the scripts tree, two protected writes that each wait on the operator's answer on a thread and are made again after it, the generated reference, and a check by hand inside `flai-agent-claude-code:local`, which needs `make agent-images` built from the tree. The delivery written is flai's play-out start, 2026-10-29T01:41Z less 4m, plus 1h15m: 2026-10-29T02:52Z.
 
 Cost of delay. `flai cod S-0518` gives 37.50 USD a week: 15m lost per 168h cycle at 150 USD an hour, from the input flai set from I-0216. Written as flai gives it: the issue has one instance, and the input is the operator's to raise if a guard silently off in every container run of this repository weighs more than its one occurrence.
+- 2026-11-02T03:56:41Z: moved to in-progress: merge queue batch 20261102-035614 fails with S-0518 at aec32de7338a: markdown failed: markdown: lint-md: markdownlint-cli2 0.20.0

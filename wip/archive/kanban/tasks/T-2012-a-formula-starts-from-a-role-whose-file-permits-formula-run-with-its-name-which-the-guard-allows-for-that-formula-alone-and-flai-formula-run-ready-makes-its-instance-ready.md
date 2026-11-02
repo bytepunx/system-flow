@@ -3,11 +3,11 @@ id: T-2012
 type: task
 nature: feature
 title: A formula starts from a role whose file permits formula run with its name, which the guard allows for that formula alone, and flai formula run --ready makes its instance ready
-status: in-progress
+status: done
 parent: S-0422
 owner: alex
 created: 2026-10-21T12:53:13Z
-updated: 2026-11-02T03:04:32Z
+updated: 2026-11-02T03:19:45Z
 transitions:
   - to: ready
     at: 2026-11-02T03:04:31Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-02T03:04:32Z
     by: system-flow
+  - to: done
+    at: 2026-11-02T03:19:45Z
+    by: agent-S-0422
 stream: S-0422
 tags: [cli]
 touches: [flai/cmd/formula.go, flai/cmd/formula_test.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, docs/users/flai-reference.md, docs/operators/settings.md]
+usage:
+  source: log
+  seconds: 913
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 99
+      output: 28316
+      cache_read: 7193445
+      cache_write: 151510
+      cost: 2.8878
 ---
 # T-2012 A formula starts from a role whose file permits formula run with its name, which the guard allows for that formula alone, and flai formula run --ready makes its instance ready
 

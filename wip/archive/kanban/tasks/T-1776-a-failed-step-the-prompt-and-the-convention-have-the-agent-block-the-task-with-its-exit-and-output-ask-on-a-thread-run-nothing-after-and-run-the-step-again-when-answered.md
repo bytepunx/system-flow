@@ -3,16 +3,37 @@ id: T-1776
 type: task
 nature: feature
 title: "A failed step: the prompt and the convention have the agent block the task with its exit and output, ask on a thread, run nothing after, and run the step again when answered"
-status: backlog
+status: done
 parent: S-0422
 owner: alex
 created: 2026-10-16T05:47:50Z
-updated: 2026-10-21T12:59:28Z
-transitions: []
+updated: 2026-11-02T03:46:16Z
+transitions:
+  - to: ready
+    at: 2026-11-02T03:22:25Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-02T03:22:25Z
+    by: system-flow
+  - to: done
+    at: 2026-11-02T03:31:30Z
+    by: agent-S-0422
 stream: S-0422
 tags: [cli]
-touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md]
+touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md]
 after: [T-1774]
+usage:
+  source: log
+  seconds: 545
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 22
+      output: 6218
+      cache_read: 1579690
+      cache_write: 33272
+      cost: 0.6342
 ---
 # T-1776 A failed step: the prompt and the convention have the agent block the task with its exit and output, ask on a thread, run nothing after, and run the step again when answered
 

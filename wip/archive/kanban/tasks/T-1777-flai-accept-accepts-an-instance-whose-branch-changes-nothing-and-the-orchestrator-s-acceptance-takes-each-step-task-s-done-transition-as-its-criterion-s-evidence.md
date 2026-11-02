@@ -3,11 +3,11 @@ id: T-1777
 type: task
 nature: feature
 title: flai accept accepts an instance whose branch changes nothing, and the orchestrator's acceptance takes each step task's done transition as its criterion's evidence
-status: in-progress
+status: done
 parent: S-0422
 owner: alex
 created: 2026-10-16T05:47:54Z
-updated: 2026-11-02T03:04:29Z
+updated: 2026-11-02T03:19:38Z
 transitions:
   - to: ready
     at: 2026-11-02T03:04:28Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-02T03:04:29Z
     by: system-flow
+  - to: done
+    at: 2026-11-02T03:19:38Z
+    by: agent-S-0422
 stream: S-0422
 tags: [cli]
 touches: [flai/cmd/accept.go, flai/cmd/accept_formula_test.go, flai/internal/preview/orchestrator.go, flai/internal/preview/accept_test.go, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md]
+usage:
+  source: log
+  seconds: 909
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 65
+      output: 18736
+      cache_read: 4759831
+      cache_write: 100253
+      cost: 1.9109
 ---
 # T-1777 flai accept accepts an instance whose branch changes nothing, and the orchestrator's acceptance takes each step task's done transition as its criterion's evidence
 

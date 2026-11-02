@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 75.1654
-accrued_seconds: 7588
-tasks_completed: 42
-last_run: 2026-11-02T02:12:01Z
+accrued_cost: 77.3083
+accrued_seconds: 7767
+tasks_completed: 43
+last_run: 2026-11-02T03:07:14Z
 ---
 
 # Curator activity
@@ -347,3 +347,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0450, D-0452
 - Seconds: 82
 - Cost: 1.1804 USD, estimated
+
+### 2026-11-02T03:07:14Z
+
+- Summary: Wrote D-0456 (a story that changes `template/` leaves `template/template.yaml`'s version alone, since `flai release` bumps it at publish); merged none; absorbed none; `flai digest compact` compacted none. The answers on TH-0787 and TH-0794 were already in D-0454 and D-0455, and S-0421's other decisions are plan progress or already stated in ADR-0238, `design/system/strategic-agents.md`, `design/system/flai-cli.md` and `docs/users/flai-reference.md`. `flai guard` wrongly refuses the curator `--topic git --topic <more>`, reading it as a git command, so give topics comma-separated until that is fixed.
+- Trigger: accepted S-0421
+- Items: D-0454, D-0456
+- Seconds: 179
+- Cost: 2.1429 USD, estimated

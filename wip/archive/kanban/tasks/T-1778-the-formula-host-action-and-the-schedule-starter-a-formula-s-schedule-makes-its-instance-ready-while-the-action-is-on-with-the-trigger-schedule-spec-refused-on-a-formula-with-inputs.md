@@ -3,16 +3,37 @@ id: T-1778
 type: task
 nature: feature
 title: "The formula host action and the schedule starter: a formula's schedule makes its instance ready while the action is on, with the trigger schedule spec, refused on a formula with inputs"
-status: backlog
+status: done
 parent: S-0422
 owner: alex
 created: 2026-10-16T05:48:01Z
-updated: 2026-11-02T03:04:09Z
-transitions: []
+updated: 2026-11-02T03:31:51Z
+transitions:
+  - to: ready
+    at: 2026-11-02T03:22:26Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-02T03:22:28Z
+    by: system-flow
+  - to: done
+    at: 2026-11-02T03:31:51Z
+    by: agent-S-0422
 stream: S-0422
 tags: [cli]
-touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/serve/formula_schedule.go, flai/internal/serve/formula_schedule_test.go, flai/internal/serve/serve.go, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/check/check.go, flai/internal/check/formulas_test.go]
+touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/serve/formula_schedule.go, flai/internal/serve/formula_schedule_test.go, flai/internal/serve/serve.go, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/check/check.go, flai/internal/check/formulas_test.go, flai/internal/roles/roles.go]
 after: [T-2012]
+usage:
+  source: log
+  seconds: 563
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 119
+      output: 34017
+      cache_read: 8641757
+      cache_write: 182015
+      cost: 3.4693
 ---
 # T-1778 The formula host action and the schedule starter: a formula's schedule makes its instance ready while the action is on, with the trigger schedule spec, refused on a formula with inputs
 
