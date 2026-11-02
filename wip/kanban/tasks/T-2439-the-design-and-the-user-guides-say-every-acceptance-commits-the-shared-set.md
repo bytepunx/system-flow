@@ -23,16 +23,16 @@ tags: []
 touches: [design/system/flai-cli.md, design/system/workflow.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flaiover.md]
 usage:
   source: log
-  seconds: 1490
+  seconds: 1517
   estimated: true
   priced_by: estimate
   models:
     - model: claude-fable-5-1
-      input: 623
-      output: 313
-      cache_read: 2921934
-      cache_write: 171890
-      cost: 4.6918
+      input: 639
+      output: 317
+      cache_read: 3113040
+      cache_write: 178852
+      cost: 4.9921
 ---
 # T-2439 The design and the user guides say every acceptance commits the shared set, leaves the rest, and sends an unsettled rebase back to the agent
 

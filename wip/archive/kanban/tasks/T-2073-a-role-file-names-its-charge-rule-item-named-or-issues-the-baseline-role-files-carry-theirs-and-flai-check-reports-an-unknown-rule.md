@@ -3,11 +3,11 @@ id: T-2073
 type: task
 nature: feature
 title: A role file names its charge rule, item, named, or issues, the baseline role files carry theirs, and flai check reports an unknown rule
-status: in-progress
+status: done
 parent: S-0425
 owner: alex
 created: 2026-10-23T15:34:05Z
-updated: 2026-11-02T19:02:10Z
+updated: 2026-11-02T19:17:57Z
 transitions:
   - to: ready
     at: 2026-11-02T19:02:09Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-02T19:02:10Z
     by: agent-S-0425
+  - to: done
+    at: 2026-11-02T19:17:57Z
+    by: agent-S-0425
 stream: S-0425
 tags: [cli, template]
 touches: [flai/internal/roles/roles.go, flai/internal/roles/roles_test.go]
 after: [T-1790]
+usage:
+  source: log
+  seconds: 947
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 9
+      output: 2835
+      cache_read: 508632
+      cache_write: 13409
+      cost: 0.2383
 ---
 # T-2073 A role file names its charge rule, item, named, or issues, the baseline role files carry theirs, and flai check reports an unknown rule
 

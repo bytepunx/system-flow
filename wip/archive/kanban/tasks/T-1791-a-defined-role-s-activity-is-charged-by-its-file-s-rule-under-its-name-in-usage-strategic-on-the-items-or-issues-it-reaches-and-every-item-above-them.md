@@ -3,11 +3,11 @@ id: T-1791
 type: task
 nature: feature
 title: A defined role's activity is charged by its file's rule under its name in usage.strategic, on the items or issues it reaches and every item above them
-status: in-progress
+status: done
 parent: S-0425
 owner: alex
 created: 2026-10-16T05:49:23Z
-updated: 2026-11-02T19:02:08Z
+updated: 2026-11-02T19:52:43Z
 transitions:
   - to: ready
     at: 2026-11-02T19:02:07Z
@@ -15,22 +15,31 @@ transitions:
   - to: in-progress
     at: 2026-11-02T19:02:08Z
     by: agent-S-0425
+  - to: done
+    at: 2026-11-02T19:18:13Z
+    by: agent-S-0425
 stream: S-0425
 tags: [cli]
-touches: [flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, flai/internal/workitem/usage.go, flai/internal/workitem/usage_test.go, flai/internal/usage/usage.go, flai/internal/usage/usage_test.go, flai/internal/issues/usage.go, flai/internal/issues/usage_test.go, flai/cmd/activity.go, flai/cmd/activity_test.go, flai/internal/mcpserver/activity.go, flai/internal/mcpserver/activity_test.go, flai/cmd/role.go]
+touches: [flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, flai/internal/workitem/usage.go, flai/internal/workitem/usage_test.go, flai/internal/usage/usage.go, flai/internal/usage/usage_test.go, flai/internal/issues/usage.go, flai/internal/issues/usage_test.go, flai/cmd/activity.go, flai/cmd/activity_test.go, flai/internal/mcpserver/activity.go, flai/internal/mcpserver/activity_test.go, flai/cmd/role.go, docs/users/flai-reference.md]
 after: [T-1790]
 usage:
   source: log
-  seconds: 0
+  seconds: 965
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-haiku-5-5
-      input: 70
-      output: 335
-      cache_read: 3315839
-      cache_write: 155351
-      cost: 0.2499
+      input: 72
+      output: 33635
+      cache_read: 3471190
+      cache_write: 159635
+      cost: 0.2467
+    - model: claude-opus-5-5
+      input: 72
+      output: 23842
+      cache_read: 4278147
+      cache_write: 112785
+      cost: 2.0044
 ---
 # T-1791 A defined role's activity is charged by its file's rule under its name in usage.strategic, on the items or issues it reaches and every item above them
 

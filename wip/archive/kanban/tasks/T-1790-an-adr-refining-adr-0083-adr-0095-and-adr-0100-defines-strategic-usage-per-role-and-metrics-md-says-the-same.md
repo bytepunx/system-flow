@@ -23,16 +23,16 @@ tags: [cli]
 touches: [design/adrs, design/adrs/README.md, design/system/metrics.md, design/system/work-hierarchy.md]
 usage:
   source: log
-  seconds: 99
+  seconds: 103
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 22
-      output: 114
-      cache_read: 1780579
-      cache_write: 15534
-      cost: 0.6362
+      input: 30
+      output: 9934
+      cache_read: 1782470
+      cache_write: 46991
+      cost: 0.8351
 ---
 # T-1790 An ADR refining ADR-0083, ADR-0095, and ADR-0100 defines strategic usage per role, and metrics.md says the same
 

@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:46:53Z
-updated: 2026-11-02T19:15:33Z
+updated: 2026-11-02T19:53:10Z
 transitions:
   - to: ready
     at: 2026-11-02T18:12:39Z
@@ -15,9 +15,21 @@ transitions:
   - to: in-progress
     at: 2026-11-02T18:16:07Z
     by: agent-S-0510
+blocked:
+  - from: 2026-11-02T19:32:01Z
+    until: 2026-11-02T19:34:36Z
+    reason: awaiting the operator on TH-0814
+  - from: 2026-11-02T19:35:01Z
+    until: 2026-11-02T19:42:28Z
+    reason: awaiting the operator on TH-0814
+  - from: 2026-11-02T19:42:56Z
+    until: 2026-11-02T19:52:45Z
+    reason: awaiting the operator on TH-0814
+  - from: 2026-11-02T19:53:10Z
+    reason: awaiting the operator on TH-0814
 tags: [cli, docker]
 topics: [harness, docker, manifest]
-touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/check/check.go, flai/internal/check/image.go, flai/internal/check/image_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, scripts/agent-image.sh, Makefile, scripts/README.md, flai/images/system-flow/Dockerfile, system-flow.yaml, design/system/project-manifest.md, docs/operators/settings.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, docs/users/flai.md, docs/operators/index.md, docs/operators/runbooks/install.md, design/system/flai-cli.md, design/tech/docker.md, design/issues/summary.md, design/issues, flai/internal/manifest/agent.go, flai/internal/manifest/agent_test.go, flai/internal/workitem/front-matter-fields.txt, flai/internal/workitem/store_test.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/cmd/check.go, flai/cmd/check_stats_test.go, flai/internal/check/story.go, flai/internal/verify/story.go]
+touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/check/check.go, flai/internal/check/image.go, flai/internal/check/image_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, scripts/agent-image.sh, Makefile, scripts/README.md, flai/images/system-flow/Dockerfile, system-flow.yaml, design/system/project-manifest.md, docs/operators/settings.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, docs/users/flai.md, docs/operators/index.md, docs/operators/runbooks/install.md, design/system/flai-cli.md, design/tech/docker.md, design/issues/summary.md, design/issues, flai/internal/manifest/agent.go, flai/internal/manifest/agent_test.go, flai/internal/workitem/front-matter-fields.txt, flai/internal/workitem/store_test.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/cmd/check.go, flai/cmd/check_stats_test.go, flai/internal/check/story.go, flai/internal/verify/story.go, design/issues/I-0255-go-build-s-vcs-stamping-fails-with-git-exit-status-128-inside-the-agent.md, scripts/env.sh, scripts/flai-build.sh]
 after: [S-0508]
 agent:
   harness: claude-code
@@ -26,22 +38,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3334
-  estimated: true
-  priced_by: estimate
+  seconds: 4592
+  priced_by: harness
   turns:
     - day: 2026-11-02
-      ceremony: 2
-      test_runs: 2
-      hand_edits: 1
-      work: 102
+      ceremony: 5
+      test_runs: 5
+      hand_edits: 3
+      work: 140
   models:
     - model: claude-opus-5-5
-      input: 518
-      output: 3030
-      cache_read: 48206599
-      cache_write: 831862
-      cost: 17.3696
+      input: 632
+      output: 171927
+      cache_read: 74676454
+      cache_write: 916943
+      cost: 24.5633
   strategic:
     - kind: orchestrator
       seconds: 215

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 877
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 25
-      output: 179
-      cache_read: 3475504
-      cache_write: 34065
-      cost: 1.2431
+      input: 30
+      output: 8026
+      cache_read: 3486097
+      cache_write: 42805
+      cost: 1.1467
 ---
 # T-2165 scripts/agent-image.sh --layer builds a project's layer over the harness image, make agent-images builds it when named, and this repository's layer carries Go, golangci-lint, Node, and pnpm
 

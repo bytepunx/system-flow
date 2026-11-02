@@ -23,7 +23,7 @@ tags: []
 touches: [flai/cmd/accept.go, flai/cmd/accept_conflict_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/storygit/sync.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go]
 usage:
   source: log
-  seconds: 1495
+  seconds: 1496
   estimated: true
   priced_by: estimate
   models:

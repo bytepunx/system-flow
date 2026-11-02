@@ -3,11 +3,11 @@ id: T-2437
 type: task
 nature: feature
 title: Every acceptance commits the main checkout's uncommitted files under wip, design, and the shared paths, and leaves the rest as they are
-status: in-progress
+status: done
 parent: S-0566
 owner: alex
 created: 2026-11-02T18:35:38Z
-updated: 2026-11-02T19:03:08Z
+updated: 2026-11-02T19:52:15Z
 transitions:
   - to: ready
     at: 2026-11-02T19:03:07Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-02T19:03:08Z
     by: system-flow
+  - to: done
+    at: 2026-11-02T19:52:15Z
+    by: agent-S-0566
 stream: S-0566
 tags: []
-touches: [flai/internal/storygit/storygit.go, flai/internal/storygit/storygit_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/cmd/accept.go, flai/cmd/accept_batch_dirty.go, flai/cmd/accept_batch_dirty_test.go, flai/cmd/accept_markdown.go, flai/cmd/accept_uncommitted_test.go, flai/cmd/accept_orchestrator_dirty_test.go, flai/cmd/accept_test.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/internal/mergequeue/land.go, flai/internal/mergequeue/land_test.go, flai/internal/mergequeue/preflight.go, flai/internal/mergequeue/preflight_test.go, flai/internal/hostapi/writes.go]
+touches: [flai/internal/storygit/storygit.go, flai/internal/storygit/storygit_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/cmd/accept.go, flai/cmd/accept_batch_dirty.go, flai/cmd/accept_batch_dirty_test.go, flai/cmd/accept_markdown.go, flai/cmd/accept_uncommitted_test.go, flai/cmd/accept_orchestrator_dirty_test.go, flai/cmd/accept_test.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/internal/mergequeue/land.go, flai/internal/mergequeue/land_test.go, flai/internal/mergequeue/preflight.go, flai/internal/mergequeue/preflight_test.go, flai/internal/hostapi/writes.go, docs/users/flai-reference.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go]
 after: [T-2436]
+usage:
+  source: log
+  seconds: 2934
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-fable-5-1
+      input: 3274
+      output: 1255
+      cache_read: 26034200
+      cache_write: 343968
+      cost: 39.9973
 ---
 # T-2437 Every acceptance commits the main checkout's uncommitted files under wip, design, and the shared paths, and leaves the rest as they are
 
