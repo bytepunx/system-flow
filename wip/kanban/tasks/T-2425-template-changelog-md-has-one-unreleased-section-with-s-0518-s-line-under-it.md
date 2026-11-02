@@ -23,16 +23,16 @@ tags: []
 touches: [template/CHANGELOG.md]
 usage:
   source: log
-  seconds: 5
+  seconds: 10
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 2
-      output: 24
-      cache_read: 332430
-      cache_write: 878
-      cost: 0.1196
+      input: 3
+      output: 590
+      cache_read: 327543
+      cache_write: 5764
+      cost: 0.1234
 ---
 
 # T-2425 template/CHANGELOG.md has one Unreleased section, with S-0518's line under it, after the rebase across release 1.1.17

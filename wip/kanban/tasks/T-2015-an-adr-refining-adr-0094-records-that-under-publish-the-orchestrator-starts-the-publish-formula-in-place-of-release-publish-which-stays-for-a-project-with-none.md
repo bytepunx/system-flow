@@ -3,15 +3,36 @@ id: T-2015
 type: task
 nature: improvement
 title: An ADR refining ADR-0094 records that under publish the orchestrator starts the publish formula in place of release_publish, which stays for a project with none
-status: backlog
+status: done
 parent: S-0423
 owner: alex
 created: 2026-10-21T13:26:22Z
-updated: 2026-10-21T13:26:22Z
-transitions: []
+updated: 2026-11-02T04:14:08Z
+transitions:
+  - to: ready
+    at: 2026-11-02T04:13:25Z
+    by: agent-S-0423
+  - to: in-progress
+    at: 2026-11-02T04:13:26Z
+    by: agent-S-0423
+  - to: done
+    at: 2026-11-02T04:14:08Z
+    by: agent-S-0423
 stream: S-0423
 tags: [cli, template]
 touches: [design/adrs, design/adrs/README.md]
+usage:
+  source: log
+  seconds: 42
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 3
+      output: 5
+      cache_read: 189580
+      cache_write: 1641
+      cost: 0.0673
 ---
 # T-2015 An ADR refining ADR-0094 records that under publish the orchestrator starts the publish formula in place of release_publish, which stays for a project with none
 

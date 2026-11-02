@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 2130
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 105
-      output: 24324
-      cache_read: 10361687
-      cache_write: 152637
-      cost: 3.7803
+      input: 82
+      output: 18621
+      cache_read: 10332507
+      cache_write: 181839
+      cost: 3.894
 ---
 # T-2225 The guard hooks in .claude/settings.json and the template's refuse a call when flai guard cannot start, and a test reproduces I-0216 against both files' commands
 

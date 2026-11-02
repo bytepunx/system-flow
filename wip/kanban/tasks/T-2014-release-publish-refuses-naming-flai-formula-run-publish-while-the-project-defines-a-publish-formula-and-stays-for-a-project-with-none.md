@@ -3,16 +3,36 @@ id: T-2014
 type: task
 nature: improvement
 title: release_publish refuses, naming flai formula run publish, while the project defines a publish formula, and stays for a project with none
-status: backlog
+status: done
 parent: S-0423
 owner: alex
 created: 2026-10-21T13:10:20Z
-updated: 2026-10-21T13:27:19Z
-transitions: []
+updated: 2026-11-02T04:22:49Z
+transitions:
+  - to: ready
+    at: 2026-11-02T04:13:22Z
+    by: agent-S-0423
+  - to: in-progress
+    at: 2026-11-02T04:13:24Z
+    by: agent-S-0423
+  - to: done
+    at: 2026-11-02T04:22:49Z
+    by: agent-S-0423
 stream: S-0423
 tags: [cli]
 touches: [flai/internal/mcpserver/orchestrate.go, flai/internal/mcpserver/orchestrate_test.go]
-after: [T-2015]
+usage:
+  source: log
+  seconds: 565
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 57
+      output: 289
+      cache_read: 2984065
+      cache_write: 123034
+      cost: 1.0934
 ---
 # T-2014 release_publish refuses, naming flai formula run publish, while the project defines a publish formula, and stays for a project with none
 

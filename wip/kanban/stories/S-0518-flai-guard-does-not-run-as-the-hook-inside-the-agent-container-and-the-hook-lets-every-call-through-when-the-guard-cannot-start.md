@@ -6,7 +6,7 @@ title: flai guard does not run as the hook inside the agent container, and the h
 status: in-progress
 owner: alex
 created: 2026-10-28T12:52:56Z
-updated: 2026-11-02T03:57:40Z
+updated: 2026-11-02T04:22:46Z
 transitions:
   - to: ready
     at: 2026-11-01T23:50:02Z
@@ -33,9 +33,14 @@ blocked:
   - from: 2026-11-02T00:36:59Z
     until: 2026-11-02T00:39:51Z
     reason: awaiting the operator on TH-0795
+  - from: 2026-11-02T04:18:09Z
+    until: 2026-11-02T04:21:06Z
+    reason: awaiting the operator on TH-0804
+  - from: 2026-11-02T04:22:46Z
+    reason: "waiting for S-0563 to fix I-0250 on main: TestAThreadPackIsUnderAQuarterOfTheGeneralPack fails the integration tier of S-0518's close-out and of the merge queue's batch until then (TH-0804, option 1)"
 tags: [cli, template]
 topics: [harness]
-touches: [".claude/settings.json", template/root/.claude/settings.json, template/CHANGELOG.md, scripts/flai.sh, scripts/README.md, flai/cmd/guard_test.go, flai/cmd/guard.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/settings.md, design/system/agent-adapters.md, design/adrs/README.md, design/adrs, design/issues/I-0216-flai-guard-does-not-run-as-the-hook-inside-the-agent-container-and-the-hook-lets-every-call-through-when-the-guard-cannot-start.md, design/issues/summary.md, design/issues/I-0247-testservesaystheflaiisolderthantheproject-and.md, design/issues/I-0251-a-story-branch-rebased-across-a-release-brings-back-the-changelog-s-old.md]
+touches: [".claude/settings.json", template/root/.claude/settings.json, template/CHANGELOG.md, scripts/flai.sh, scripts/README.md, flai/cmd/guard_test.go, flai/cmd/guard.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/settings.md, design/system/agent-adapters.md, design/adrs/README.md, design/adrs, design/issues/I-0216-flai-guard-does-not-run-as-the-hook-inside-the-agent-container-and-the-hook-lets-every-call-through-when-the-guard-cannot-start.md, design/issues/summary.md, design/issues/I-0247-testservesaystheflaiisolderthantheproject-and.md, design/issues/I-0251-a-story-branch-rebased-across-a-release-brings-back-the-changelog-s-old.md, design/issues/I-0250-the-orchestrator-s-conventions-sit-within-about-1-5kb-of-its-80kb-pack-budget.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -43,35 +48,34 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3776
-  estimated: true
-  priced_by: estimate
+  seconds: 5105
+  priced_by: harness
   turns:
     - day: 2026-11-01
       hand_edits: 1
       work: 34
     - day: 2026-11-02
       ceremony: 4
-      hand_edits: 1
-      work: 60
+      hand_edits: 5
+      work: 99
   models:
     - model: claude-opus-5-5
-      input: 230
-      output: 48568
-      cache_read: 23579167
-      cache_write: 637058
-      cost: 8.7041
+      input: 328
+      output: 74222
+      cache_read: 41184964
+      cache_write: 724802
+      cost: 15.5212
   strategic:
     - kind: orchestrator
-      seconds: 1179
+      seconds: 1296
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 186
-          output: 1856
-          cache_read: 23067927
-          cache_write: 460127
-          cost: 5.2034
+          input: 224
+          output: 2066
+          cache_read: 24408734
+          cache_write: 613063
+          cost: 5.5507
         - model: claude-sonnet-5-5
           input: 8
           output: 54
@@ -112,6 +116,9 @@ This story remediates [I-0216](../../../design/issues/I-0216-flai-guard-does-not
 - T-2225 The guard hooks in .claude/settings.json and the template's refuse a call when flai guard cannot start, and a test reproduces I-0216 against both files' commands
 - T-2226 The guard's docs say the hook refuses a call when the guard cannot start, flai guard's help names it, the fix is checked once inside the image, and I-0216 is closed
 - T-2425 template/CHANGELOG.md has one Unreleased section, with S-0518's line under it, after the rebase across release 1.1.17
+- T-2426 TestTheGuardHooksRefuseACallWhenTheGuardCannotStart writes every file it executes before t.Parallel, so a parallel test's fork cannot make one text file busy
+- T-2427 template/CHANGELOG.md matches main but for S-0518's line under the top Unreleased, after the rebase across release 1.1.18
+- T-2428 I-0250's Remediation names S-0563, made from it on TH-0804, on S-0518's branch
 
 ## Notes
 

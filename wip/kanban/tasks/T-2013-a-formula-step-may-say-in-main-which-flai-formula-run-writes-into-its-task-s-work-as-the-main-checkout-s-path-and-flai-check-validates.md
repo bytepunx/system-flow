@@ -3,15 +3,36 @@ id: T-2013
 type: task
 nature: improvement
 title: "A formula step may say in: main, which flai formula run writes into its task's Work as the main checkout's path and flai check validates"
-status: backlog
+status: done
 parent: S-0423
 owner: alex
 created: 2026-10-21T13:10:10Z
-updated: 2026-10-21T13:10:10Z
-transitions: []
+updated: 2026-11-02T04:22:41Z
+transitions:
+  - to: ready
+    at: 2026-11-02T04:13:20Z
+    by: agent-S-0423
+  - to: in-progress
+    at: 2026-11-02T04:13:21Z
+    by: agent-S-0423
+  - to: done
+    at: 2026-11-02T04:22:41Z
+    by: agent-S-0423
 stream: S-0423
 tags: [cli]
 touches: [flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/check/check.go, flai/internal/check/formulas_test.go, flai/cmd/formula.go, flai/cmd/formula_test.go]
+usage:
+  source: log
+  seconds: 560
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 73
+      output: 396
+      cache_read: 4006074
+      cache_write: 147134
+      cost: 1.4616
 ---
 # T-2013 A formula step may say in: main, which flai formula run writes into its task's Work as the main checkout's path and flai check validates
 

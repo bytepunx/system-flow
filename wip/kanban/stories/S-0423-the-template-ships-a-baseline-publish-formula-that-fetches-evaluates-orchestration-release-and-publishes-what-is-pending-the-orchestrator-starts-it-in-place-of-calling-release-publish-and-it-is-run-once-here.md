@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:41:11Z
-updated: 2026-11-02T04:10:48Z
+updated: 2026-11-02T05:01:36Z
 transitions:
   - to: ready
     at: 2026-10-28T13:11:59Z
@@ -21,9 +21,15 @@ transitions:
   - to: in-progress
     at: 2026-11-02T04:10:48Z
     by: agent-S-0423
+  - to: review
+    at: 2026-11-02T05:00:02Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-02T05:01:22Z
+    by: agent-S-0423
 tags: [cli, template]
 topics: [cli, orchestration, template, conventions]
-touches: [design/adrs, design/adrs/README.md, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, template/template.yaml, template/CHANGELOG.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/release.go, flai/cmd/release_evaluate_test.go, flai/cmd/release_push_action_test.go, flai/cmd/orchestrate_permissions_test.go, flai/cmd/formula.go, flai/cmd/formula_test.go, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/check/check.go, flai/internal/check/formulas_test.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/mcpserver/orchestrate.go, flai/internal/mcpserver/orchestrate_test.go]
+touches: [design/adrs, design/adrs/README.md, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, template/template.yaml, template/CHANGELOG.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/release.go, flai/cmd/release_evaluate_test.go, flai/cmd/release_push_action_test.go, flai/cmd/orchestrate_permissions_test.go, flai/cmd/formula.go, flai/cmd/formula_test.go, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/check/check.go, flai/internal/check/formulas_test.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/mcpserver/orchestrate.go, flai/internal/mcpserver/orchestrate_test.go, design/workflows/formulas/README.md, docs/operators/settings.md, scripts/README.md, scripts/fetch.sh, template/root/design/workflows/formulas/README.md, template/root/scripts/README.md, template/root/scripts/fetch.sh, flai/internal/roles/baseline/orchestrator.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go]
 after: [S-0422]
 agent:
   harness: claude-code
@@ -31,9 +37,22 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2721
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-02
+      ceremony: 3
+      hand_edits: 4
+      work: 60
+  models:
+    - model: claude-opus-5-5
+      input: 514
+      output: 2939
+      cache_read: 31235844
+      cache_write: 958397
+      cost: 11.3297
   strategic:
     - kind: planner
       seconds: 1746
@@ -52,15 +71,15 @@ usage:
           cache_write: 109701
           cost: 0.123
     - kind: orchestrator
-      seconds: 858
+      seconds: 971
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 224
-          output: 3682
-          cache_read: 69868417
-          cache_write: 52659
-          cost: 15.4304
+          input: 272
+          output: 3979
+          cache_read: 71318340
+          cache_write: 280120
+          cost: 15.8209
 cost_of_delay:
   value: 44.67
   by: planner-S-0423
@@ -83,21 +102,21 @@ Publishing a release stops being prose. A baseline formula, `publish`, spells ou
 
 ## Acceptance criteria
 
-- [ ] `design/workflows/formulas/publish.md`, in the template and here, has the steps `git fetch`, `flai release --evaluate` (which passes only when the policy is met), `flai release --pending`, and a last step that records the versions and tags on the instance, each after the one before, and `flai check --strict` reports nothing on it.
-- [ ] A formula step of `flai release --pending` is refused, as `release_publish` is, while the `push` host action is off, and a publish refused for a moved remote stops the instance with flai's `conflict:` message on its task and a thread on the story.
-- [ ] Under `publish`, the orchestrator's role file and the convention tell it to run `flai formula run publish` when `release_evaluate` is met, the guard lets it run that formula and no other way to the remote, and `release_publish` stays for a project with no `publish` formula; the orchestrator tests pass.
-- [ ] The formula is run once in this repository: its instance story is worked to review and accepted, and its Notes name the release it published, or, when nothing was pending, the evaluation that stopped it.
-- [ ] `design/system/strategic-agents.md` § Publishing a release, the convention `strategic-agents.md` and `work-management.md` where they describe publishing, `docs/operators/index.md`, and `template/CHANGELOG.md` say that publishing is the `publish` formula.
+- [x] `design/workflows/formulas/publish.md`, in the template and here, has three steps, each `in: main` and each after the one before: `git fetch`, `flai release --evaluate --require-met` (which passes only when the policy is met), and `flai release --pending --json`; its body tells the instance's agent to record the versions and tags in the instance's Notes; and `flai check --strict` reports nothing on it.
+- [x] A formula step of `flai release --pending` is refused, as `release_publish` is, while the `push` host action is off, and a publish refused for a moved remote stops the instance with flai's `conflict:` message on its task and a thread on the story.
+- [x] Under `publish`, the orchestrator's role file and the convention tell it to run `flai formula run publish` when `release_evaluate` is met, the guard lets it run that formula and no other way to the remote, and `release_publish` stays for a project with no `publish` formula; the orchestrator tests pass.
+- [x] `design/system/strategic-agents.md` § Publishing a release, the convention `strategic-agents.md` and `work-management.md` where they describe publishing, `docs/operators/index.md`, and `template/CHANGELOG.md` say that publishing is the `publish` formula.
 
 ## Tasks
 - T-1780 design/workflows/formulas/publish.md, in the template and here, fetches, evaluates the release policy, publishes what is pending, and records the versions and tags
-- T-1781 A formula step that publishes is refused while the push host action is off, and a publish refused for a moved remote stops the instance with flai's conflict message
+- T-1781 flai release --pending refuses an agent flai serve started while the push host action is off, and a publish refused for a moved remote stops the instance with flai's conflict message
 - T-1782 Under publish, the orchestrator's role file tells it to run flai formula run publish when release_evaluate is met, and the guard lets it run that formula
 - T-1783 The publish formula is run once in this repository, its instance worked to review and accepted, and the release or the evaluation that stopped it recorded
 - T-1784 The design, the conventions that describe publishing, the operator docs, and the changelog say that publishing is the publish formula
 - T-2013 A formula step may say in: main, which flai formula run writes into its task's Work as the main checkout's path and flai check validates
 - T-2014 release_publish refuses, naming flai formula run publish, while the project defines a publish formula, and stays for a project with none
 - T-2015 An ADR refining ADR-0094 records that under publish the orchestrator starts the publish formula in place of release_publish, which stays for a project with none
+- T-2432 roles.Validate knows a flai formula run <name> entry as the command flai formula run, so the shipped orchestrator role passes TestShippedRolesNameFlaisToolsAndCommands
 
 ## Notes
 
@@ -105,6 +124,8 @@ Publishing a release stops being prose. A baseline formula, `publish`, spells ou
 - Replanned on 2026-10-21 on TH-0471's answers 2 and 5: the formula lives under `design/workflows/formulas/`, and its instance is worked by a story's agent on its branch and worktree, as any story (S-0422). Criterion 1's path changed with answer 2.
 - `flai release --pending` acts with the host's credentials on the main branch, never from a story's worktree: it tags and pushes the branch that is checked out. How a step says it runs in the main checkout is asked on TH-0583, question 1; the plan assumes `in: main` on the step (T-2013).
 - Criterion 4 needs the operator's `push` host action on and an accepted, unreleased story to publish; with none pending, the run shows the evaluation stopping the instance cleanly.
+
+- Criterion 4, the live run of the formula, and its task T-1783 moved to the draft S-0562 on TH-0803 (2026-11-02): the run needs this story's flai on main, and the instance's acceptance is the operator's (D-0422).
 
 ### Planning
 
@@ -122,3 +143,4 @@ Publishing a release stops being prose. A baseline formula, `publish`, spells ou
   - **Folder touch kept:** `design/adrs`, on T-2015, because the ADR's file name is known only once `flai adr new` makes it. The folder is in `claims.shared`, so it holds no story.
 - **Forecast.** flai's 38m was for size 25; at size 36 (5 criteria, 31 touches) the same 89 s a unit gives 53m, raised to 1h because T-1783 waits on an instance another agent works and on its acceptance, which no touch counts, as the earlier plan raised it by 14m for the same reason. The delivery is flai's play-out after S-0422, 18th in the pull order, with the duration times the cycle factor 1.15: 2026-10-22T04:59Z.
 - **Cost of delay.** 44.67 USD a week, worked out by hand from TH-0471's answer 1, as the planners of S-0414 to S-0422 did, because `flai cod` refuses while E-0024 has no inputs (TH-0567, question 3, confirmed and not yet written on the epic). 4h lost per cycle at `planning.hour_rate` 150 over the default 168h cycle gives E-0024 600 USD a week; S-0423's share is its 1h of the 13h26m forecast for E-0024's twelve open stories: 60 / 806 × 600. Once the input is on E-0024, `flai cod S-0423` gives the same figure while the forecasts stand.
+- 2026-11-02T05:01:22Z: moved to in-progress: close-out stopped at integration: TestShippedRolesNameFlaisToolsAndCommands refuses the role file's flai formula run publish entry; fixing it in a task

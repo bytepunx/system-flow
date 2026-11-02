@@ -6,7 +6,7 @@ title: "Workflows as data: a project defines a strategic role or a repeatable fo
 status: in-progress
 owner: alex
 created: 2026-10-16T04:28:02Z
-updated: 2026-10-30T20:45:40Z
+updated: 2026-11-02T04:14:44Z
 transitions:
   - to: ready
     at: 2026-10-20T19:01:17Z
@@ -25,8 +25,9 @@ topics: [cli, orchestration, planning, template, conventions]
 touches: [flai/internal/serve, flai/internal/guard, flai/internal/context, flai/internal/hostapi, flai/cmd, flaiover/src, design/system/strategic-agents.md, design/system/metrics.md, design/conventions/strategic-agents.md, ".claude/agents", docs/operators/index.md, docs/users/flai.md, template]
 usage:
   source: sum
-  seconds: 52469
-  priced_by: harness
+  seconds: 55190
+  estimated: true
+  priced_by: estimate
   turns:
     - day: 2026-10-28
       ceremony: 9
@@ -45,10 +46,10 @@ usage:
     - day: 2026-11-01
       work: 20
     - day: 2026-11-02
-      ceremony: 16
+      ceremony: 19
       test_runs: 1
-      hand_edits: 12
-      work: 333
+      hand_edits: 16
+      work: 393
   models:
     - model: claude-haiku-5-5
       input: 74
@@ -57,11 +58,11 @@ usage:
       cache_write: 212627
       cost: 0.3577
     - model: claude-opus-5-5
-      input: 6352
-      output: 2226209
-      cache_read: 478830676
-      cache_write: 14537810
-      cost: 225.9299
+      input: 6866
+      output: 2229148
+      cache_read: 510066520
+      cache_write: 15496207
+      cost: 237.2596
     - model: claude-sonnet-5-5
       input: 62
       output: 20190
@@ -92,15 +93,15 @@ usage:
           cache_write: 471093
           cost: 4.2564
     - kind: orchestrator
-      seconds: 16677
+      seconds: 16861
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2531
-          output: 37032
-          cache_read: 516610780
-          cache_write: 2561143
-          cost: 116.4922
+          input: 2609
+          output: 37521
+          cache_read: 518923317
+          cache_write: 3003165
+          cost: 117.133
         - model: claude-sonnet-5-5
           input: 134
           output: 690
@@ -140,6 +141,7 @@ To be drafted by the planner. Order: the role file format and its validation fir
 - S-0425 metrics.md generalizes strategic usage per kind to usage per role by an ADR, so a project's own role is charged on its items, reported by flai stats, and charted as the built-in roles are
 - S-0553 flai generates the planner's, the orchestrator's, the analyzer's, and the curator's harness definitions from their role files alone, flai check holds a .claude/agents copy to them, and a session started by hand reads the same definition
 - S-0554 A role file's start prompt and its triggers replace the planner's, the orchestrator's, the analyzer's, and the curator's start prompts and schedules in Go, so the built-in roles are defined by their files alone
+- S-0562 The publish formula is run once in this repository, its instance worked to review and accepted, and the release or the evaluation that stopped it recorded
 
 ## Notes
 

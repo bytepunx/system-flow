@@ -4,10 +4,10 @@ title: Merge queue batch 20261102-035614 fails with S-0518 at markdown
 anchor:
   path: wip/kanban/stories/S-0518-flai-guard-does-not-run-as-the-hook-inside-the-agent-container-and-the-hook-lets-every-call-through-when-the-guard-cannot-start.md
   item: S-0518
-status: open
-participants: [flai serve]
+status: resolved
+participants: [flai serve, alex]
 created: 2026-11-02T03:56:41Z
-updated: 2026-11-02T03:56:41Z
+updated: 2026-11-02T04:16:18Z
 ---
 
 # TH-0802 Merge queue batch 20261102-035614 fails with S-0518 at markdown
@@ -33,3 +33,6 @@ markdown: lint-md: markdownlint-cli2 0.20.0
 The whole output of each tier it ran is in `.flai-cache/merge-queue/batches/20261102-035614`.
 
 flai moved S-0518 back to in-progress and took it out of the merge queue. Fix it on `story/S-0518`, run flai verify S-0518, move it to review, and enqueue it again with flai queue add S-0518.
+
+### 2026-11-02T04:16:18Z alex
+Resolved.

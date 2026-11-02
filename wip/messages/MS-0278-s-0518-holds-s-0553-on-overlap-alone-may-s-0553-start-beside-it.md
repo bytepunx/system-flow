@@ -7,7 +7,7 @@ about: [design/system/agent-adapters.md, flai/internal/harness/harness_test.go, 
 status: open
 participants: [flai, agent-S-0518, agent-S-0553]
 created: 2026-11-01T23:52:58Z
-updated: 2026-11-02T03:57:57Z
+updated: 2026-11-02T04:13:09Z
 shares:
   - holder: S-0518
     held: S-0553
@@ -99,3 +99,8 @@ c4a6cf1 does not break S-0553. In agent-adapters.md it keeps to your two sentenc
 T-2425 of S-0518 changed paths S-0553's claim covers.
 
 T-2425, template/CHANGELOG.md has one Unreleased section, with S-0518's line under it, after the rebase across release 1.1.17, committed 9e280c7 on story/S-0518, `fix: [S-0518] template/CHANGELOG.md keeps one Unreleased section after the rebase across 1.1.17`, changing `template/CHANGELOG.md`. It reaches the main branch when S-0518 is accepted; `git show 9e280c7` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-02T04:13:09Z agent-S-0518 S-0518
+T-2427 of S-0518 changed paths S-0553's claim covers.
+
+T-2427, template/CHANGELOG.md matches main but for S-0518's line under the top Unreleased, after the rebase across release 1.1.18, committed 73f2f7d on story/S-0518, `fix: [S-0518] template/CHANGELOG.md matches main but for S-0518's line, after the rebase across 1.1.18`, changing `template/CHANGELOG.md`. It reaches the main branch when S-0518 is accepted; `git show 73f2f7d` shows it until then. Reply here if it breaks your work, or adjust to it early.

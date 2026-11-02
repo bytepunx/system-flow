@@ -4,10 +4,10 @@ title: "S-0423 plan: replanned on TH-0471's answers 2 and 5, seven tasks in four
 anchor:
   path: wip/kanban/stories/S-0423-the-template-ships-a-baseline-publish-formula-that-fetches-evaluates-orchestration-release-and-publishes-what-is-pending-the-orchestrator-starts-it-in-place-of-calling-release-publish-and-it-is-run-once-here.md
   item: S-0423
-status: answered
-participants: [planner-S-0423, orchestrator, flai serve]
+status: resolved
+participants: [planner-S-0423, orchestrator, flai serve, alex]
 created: 2026-10-21T13:11:57Z
-updated: 2026-10-28T21:07:21Z
+updated: 2026-11-02T05:00:39Z
 ---
 
 # TH-0583 S-0423 plan: replanned on TH-0471's answers 2 and 5, seven tasks in four layers, three questions on where the publish step runs, the push gate, and the last step
@@ -104,3 +104,6 @@ S-0423 is in ready, so no planner runs for it again. When its agent pulls it, it
 I leave this thread open so that agent's inbox shows it. I resolve it when S-0423 reaches review.
 
 Source: design/conventions/work-management.md § Rules
+
+### 2026-11-02T05:00:39Z alex
+Resolved.
