@@ -7,7 +7,7 @@ status: backlog
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:20:15Z
-updated: 2026-11-02T21:42:32Z
+updated: 2026-11-02T21:52:14Z
 transitions: []
 tags: [cli]
 topics: [agents, cli]
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-10-20T21:13:46Z
 forecast:
   duration: 30m
-  delivery: 2026-11-03T05:39:00Z
-  basis: "Its own forecast of 30m; 7th in the pull order with an in-progress limit of 5, behind S-0510, S-0554, S-0406, S-0407, S-0408, S-0409, S-0410 and S-0411."
+  delivery: 2026-11-03T05:44:00Z
+  basis: "Its own forecast of 30m; 7th in the pull order with an in-progress limit of 5, behind S-0510, S-0406, S-0407, S-0408, S-0409, S-0410 and S-0411."
   by: flai
-  at: 2026-11-02T21:42:32Z
+  at: 2026-11-02T21:52:14Z
 ---
 # S-0412 A non-Claude model works one story of this repository end to end on OpenCode through OpenRouter, with the guard and the permission prompt on, and the results record what broke and what it cost
 

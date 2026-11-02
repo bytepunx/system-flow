@@ -6,7 +6,7 @@ title: flai serve wakes a story's agent that is paused on a thread for every tas
 status: backlog
 owner: alex
 created: 2026-10-29T18:11:17Z
-updated: 2026-11-02T21:42:53Z
+updated: 2026-11-02T21:52:35Z
 transitions: []
 tags: [flai, template]
 topics: [cli]
@@ -57,10 +57,10 @@ cost_of_delay:
   at: 2026-11-02T20:05:05Z
 forecast:
   duration: 50m
-  delivery: 2026-11-03T03:50:00Z
-  basis: "Its own forecast of 50m; 11th in the pull order with an in-progress limit of 5, behind S-0510, S-0554, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0520, S-0241 and S-0543."
+  delivery: 2026-11-03T03:58:00Z
+  basis: "Its own forecast of 50m; 11th in the pull order with an in-progress limit of 5, behind S-0510, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0520, S-0241 and S-0543."
   by: flai
-  at: 2026-11-02T21:42:53Z
+  at: 2026-11-02T21:52:35Z
 finalized:
   by: orchestrator
   at: 2026-11-02T20:07:21Z
