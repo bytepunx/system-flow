@@ -10,9 +10,11 @@ import {
 	pastRuns,
 	runCost,
 	runsNewestFirst,
+	streamRole,
 	type ActivityEntry,
 	type AnalyzerRun,
-	type OrchestratorRun
+	type OrchestratorRun,
+	type RoleRun
 } from './strategic';
 
 const entry = (at: string, cost: number, seconds: number, estimated = false): ActivityEntry => ({
@@ -151,5 +153,37 @@ describe('strategic (S-0228)', () => {
 		);
 		expect(outcomeWord(analyzer(at, { ...done, outcome: 'worked' }))).toBe('worked');
 		expect(outcomeWord(analyzer(at, done))).toBe('ended');
+	});
+
+	// S-0420: a role page reads any role's stream by its name, and its runs as any other's
+	it("reads a stream by the orchestrator's or the analyzer's verb, or by any role's name", () => {
+		for (const role of ['orchestrate', 'analyze', 'reviewer', 'code-reviewer', 'a1'])
+			expect(streamRole(role)).toBe(true);
+		for (const role of ['', 'Reviewer', '-x', 'x-', 'a b', 'a/b', 'a_b'])
+			expect(streamRole(role)).toBe(false);
+	});
+
+	it("costs a role's run on an item, and finds it under way, as any other's", () => {
+		const run: RoleRun = {
+			item: 'S-0001',
+			role: 'review',
+			role_name: 'reviewer',
+			agent: 'reviewer',
+			command: 'claude',
+			started: '2026-10-03T10:00:00Z'
+		};
+		const ended: RoleRun = {
+			...run,
+			started: '2026-10-03T09:00:00Z',
+			ended: '2026-10-03T09:10:00Z'
+		};
+		expect(currentRun([ended, run])).toBe(run);
+		expect(runCost(ended, [entry('2026-10-03T09:05:00Z', 0.5, 60)])).toEqual({
+			cost: 0.5,
+			seconds: 60,
+			estimated: false,
+			count: 1
+		});
+		expect(outcomeWord(ended)).toBe('ended');
 	});
 });

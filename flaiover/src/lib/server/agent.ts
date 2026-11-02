@@ -36,6 +36,7 @@ import {
 } from './release';
 import type { PlanRun } from '$lib/activity';
 import type { BudgetHold } from '$lib/hostflai.svelte';
+import type { RoleState } from '$lib/roles';
 import type { AnalyzerRun, OrchestratorRun } from '$lib/strategic';
 
 export const AGENT_PATH = '/agent';
@@ -47,6 +48,8 @@ const UNSTAMPED_PROTOCOL = 1;
 export const ORCHESTRATOR = 'orchestrator';
 /** What an 'agent' event names in place of a story when the project's analyzer started or ended. */
 export const ANALYZER = 'analyzer';
+/** What an 'agent' event names in place of a story when the project's curator started or ended. */
+export const CURATOR = 'curator';
 /** Where a flai command's output was capped (flai.ts maxBuffer). */
 export const MAX_MESSAGE = 16 * 1024 * 1024;
 
@@ -221,11 +224,13 @@ export const REQUIRED_METHODS = [
 /**
  * agent.status's answer as the strategic agents' pages read it (S-0228): each item's newest planner
  * run, and the project's newest orchestrator run, with whether the operator holds it stopped, and
- * newest analyzer run, each with the runs before it, newest first (flai keeps twenty).
+ * newest analyzer run, each with the runs before it, newest first (flai keeps twenty); and every
+ * role the project runs by its name, the built-in ones included (S-0420), absent from an older flai.
  */
 export type StrategicStatus = {
 	enabled: boolean;
 	state?: {
+		roles?: Record<string, RoleState> | null;
 		plans?: Record<string, PlanRun>;
 		orchestrator?: OrchestratorRun | null;
 		analyzer?: AnalyzerRun | null;
@@ -398,8 +403,9 @@ function same(a: string, b: string): boolean {
  * Emits 'connected' when a flai has proven itself, 'gone' when it is lost, 'change' with a
  * repo-relative path when flai says a file of the project changed (S-0073), and 'agent' with a
  * story's ID when flai serve says that story's agent started or ended (S-0154), an epic's or a story's
- * for its planner (S-0208), ORCHESTRATOR for the project's orchestrator (S-0218), or ANALYZER for its
- * analyzer (S-0228). An AgentHub never does
+ * for its planner (S-0208), ORCHESTRATOR for the project's orchestrator (S-0218), ANALYZER for its
+ * analyzer (S-0228), CURATOR for its curator, or a defined role's name for its run on no item
+ * (S-0420). An AgentHub never does
  * its own handshake: a registry proves the shared credential and hands it a socket already proven,
  * so "no host flai has ever named this project" (unknown) can be told apart from "flai is not
  * connected right now" (this hub exists, `status().connected` is false).
@@ -564,11 +570,21 @@ export class AgentHub extends EventEmitter {
 		// a story's agent started or ended, which changes no file (S-0154), the planner for an epic
 		// or a story, which names the item in place of the story (S-0208), or the project's
 		// orchestrator, which names neither and has the role orchestrate (S-0218), or its analyzer,
-		// with the role analyze (S-0228)
+		// with the role analyze (S-0228), or its curator, with the role curate; a role the project
+		// defines names its item when its run is on one, and otherwise its name (S-0420)
 		if (m.method === 'agent' && m.id === undefined) {
-			const p = m.params as { story?: unknown; item?: unknown; role?: unknown } | undefined;
-			const role = p?.role === 'orchestrate' ? ORCHESTRATOR : p?.role === 'analyze' ? ANALYZER : '';
-			const id = p?.story || p?.item || role;
+			const p = m.params as
+				{ story?: unknown; item?: unknown; role?: unknown; name?: unknown } | undefined;
+			const role = p?.name
+				? ''
+				: p?.role === 'orchestrate'
+					? ORCHESTRATOR
+					: p?.role === 'analyze'
+						? ANALYZER
+						: p?.role === 'curate'
+							? CURATOR
+							: '';
+			const id = p?.story || p?.item || role || p?.name;
 			if (typeof id === 'string' && id) this.emit('agent', id);
 			return;
 		}

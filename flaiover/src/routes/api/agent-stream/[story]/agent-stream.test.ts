@@ -102,11 +102,38 @@ describe('/api/agent-stream/[story]', () => {
 		expect((await r.json()).error).toContain('no analyzer');
 	});
 
-	it('refuses a role that is not one, asking flai nothing', async () => {
-		for (const query of ['?role=plan', '?role=', '?role=orchestrator']) {
+	// S-0420: a role page reads any role's newest run by the role's name, and flai judges the name
+	it("asks flai for a role's newest run by its name, and passes on flai's refusal of one it does not run", async () => {
+		answer = {
+			story: '',
+			item: 'S-0001',
+			role: 'review',
+			running: true,
+			from: 0,
+			next: 10,
+			entries: []
+		};
+		let r = await doGet('reviewer', '?role=reviewer&after=128');
+		expect(r.status).toBe(200);
+		expect(await r.json()).toMatchObject(answer as object);
+		expect(asked.filter((a) => a.method === 'agent.stream')).toEqual([
+			{ method: 'agent.stream', params: { role: 'reviewer', after: 128 } }
+		]);
+		refuse = new AgentError(
+			502,
+			'role must be orchestrate, for the orchestrator, ...; not "ghost"',
+			-32602
+		);
+		r = await doGet('ghost', '?role=ghost');
+		expect(r.status).toBe(400);
+		expect((await r.json()).error).toContain('not "ghost"');
+	});
+
+	it('refuses a role that is not a name in kebab case, asking flai nothing', async () => {
+		for (const query of ['?role=', '?role=Reviewer', '?role=-x', '?role=a%20b', '?role=a/b']) {
 			const r = await doGet('analyzer', query);
 			expect(r.status).toBe(400);
-			expect((await r.json()).error).toContain('role must be one of orchestrate, analyze');
+			expect((await r.json()).error).toContain('role must be orchestrate, analyze, or a role');
 		}
 		expect(asked.filter((a) => a.method === 'agent.stream')).toEqual([]);
 	});

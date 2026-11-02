@@ -1,13 +1,16 @@
 // The strategic agents' pages (S-0259, S-0228): a strategic agent's activity document as flai
-// answers it for activity.document, the planner's, the orchestrator's, and the analyzer's runs as
-// agent.status reports them, the /api/orchestrator and /api/analyzer answers, and how the pages read
-// them: the log newest first, each run with what its log entries say it cost, the run under way,
-// and each run's outcome.
+// answers it for activity.document, the planner's, the orchestrator's, the analyzer's, and any
+// role's runs as agent.status reports them (S-0420), the /api/orchestrator and /api/analyzer
+// answers, and how the pages read them: the log newest first, each run with what its log entries
+// say it cost, the run under way, and each run's outcome.
 
 import type { AgentRun } from './activity';
 
-/** The strategic agents that keep an activity document, wip/agents/<kind>.md. */
-export type StrategicKind = 'planner' | 'orchestrator' | 'analyzer';
+/**
+ * A strategic agent that keeps an activity document, wip/agents/<kind>.md, by its role's name: a
+ * built-in's, planner, orchestrator, analyzer, or curator, or a role the project defines (S-0420).
+ */
+export type StrategicKind = string;
 
 /** One entry of a strategic agent's activity log: when it ended, what it did, and what that cost. */
 export type ActivityEntry = {
@@ -69,6 +72,22 @@ export type OrchestratorRun = AgentRun & { held?: boolean };
  */
 export type AnalyzerRun = AgentRun & { focus: string; trigger?: string; report?: string };
 
+/**
+ * A run of any role as agent.status's roles carry it (S-0420): no story's, on the item its role
+ * takes when it takes one, with its role's verb and, for a role the project defines, its name.
+ */
+export type RoleRun = Omit<AgentRun, 'story'> & {
+	story?: string;
+	/** The epic or story it is on, for a role that takes one. */
+	item?: string;
+	/** Its role's verb, on a defined role's run and the curator's. */
+	role?: string;
+	/** The name of the role the project defines whose run it is. */
+	role_name?: string;
+	/** What started it: asked, the orchestrator, an event, or a schedule. */
+	trigger?: string;
+};
+
 /** What the operator may have flai do to the orchestrator from its page. */
 export const ORCHESTRATOR_ACTIONS = ['stop', 'start'] as const;
 export type OrchestratorAction = (typeof ORCHESTRATOR_ACTIONS)[number];
@@ -77,9 +96,17 @@ export type OrchestratorAction = (typeof ORCHESTRATOR_ACTIONS)[number];
 export const ANALYZER_FOCUSES = ['bottlenecks', 'intent', 'risk'] as const;
 export type AnalyzerFocus = (typeof ANALYZER_FOCUSES)[number];
 
-/** The strategic roles whose newest run agent.stream reads by role. */
-export const STREAM_ROLES = ['orchestrate', 'analyze'] as const;
-export type StreamRole = (typeof STREAM_ROLES)[number];
+/**
+ * What agent.stream reads a project's newest run of by role: the orchestrator's or the analyzer's by
+ * its verb (S-0228), or any role the project runs by its name (S-0420), which flai judges.
+ */
+export type StreamRole = string;
+
+/** A role's name as a role file gives it, in kebab case, as flai reads one. */
+export const ROLE_NAME = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
+
+/** Whether role is what agent.stream may be asked to read by role: one word or a role's name. */
+export const streamRole = (role: string): boolean => ROLE_NAME.test(role);
 
 /**
  * The /api/orchestrator answer: whether the orchestrate host action is on, whether the operator

@@ -2,7 +2,7 @@ import { repo, RepoError } from '$lib/server/repo';
 import { respond } from '$lib/server/respond';
 import type { RequestHandler } from './$types';
 import type { AgentStreamRead } from '$lib/activity';
-import { STREAM_ROLES, type StreamRole } from '$lib/strategic';
+import { streamRole } from '$lib/strategic';
 
 /**
  * GET ?after=N: what the newest agent flai serve started for a story said and did, read by flai on
@@ -16,18 +16,20 @@ import { STREAM_ROLES, type StreamRole } from '$lib/strategic';
  * GET ?orchestrator&after=N: the same of the project's newest orchestrator run (S-0218), whatever the
  * path names; 404 when flai started no orchestrator for the project.
  *
- * GET ?role=orchestrate|analyze&after=N: the same of the project's newest run of that strategic role
- * (S-0228), whatever the path names; 404 when flai started none, 400 for any other role.
+ * GET ?role=<role>&after=N: the same of the project's newest run of that strategic role, orchestrate
+ * or analyze by its verb (S-0228), or any role the project runs by its name (S-0420), whatever the
+ * path names; 404 when flai started none. A role that is not one word in kebab case is 400 here, and
+ * one the project does not run is flai's 400.
  */
 export const GET: RequestHandler = ({ params, url }) =>
 	respond(async () => {
 		const raw = url.searchParams.get('after');
 		const after = raw === null ? undefined : Math.max(0, Math.floor(Number(raw)) || 0);
 		const role = url.searchParams.get('role');
-		if (role !== null && !STREAM_ROLES.includes(role as StreamRole))
+		if (role !== null && !streamRole(role))
 			throw new RepoError(
 				400,
-				`role must be one of ${STREAM_ROLES.join(', ')}, not ${JSON.stringify(role)}`
+				`role must be orchestrate, analyze, or a role's name in kebab case, such as reviewer, not ${JSON.stringify(role)}`
 			);
 		const subject =
 			role !== null
