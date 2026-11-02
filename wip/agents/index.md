@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-02T21:50:33Z
+updated: 2026-11-02T21:51:43Z
 ---
 
 # Active streams
@@ -8,7 +8,6 @@ updated: 2026-11-02T21:50:33Z
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
 | [S-0510](S-0510.md) | A project's manifest names an image layer for its test tiers' tools, flai serve runs it, flai check warns when it is not built, and this repository's layer runs the close-out inside the container | in-progress | agent-S-0510 | 2026-11-02T19:42:48Z |
-| [S-0554](S-0554.md) | A role file's start prompt and its triggers replace the planner's, the orchestrator's, the analyzer's, and the curator's start prompts and schedules in Go, so the built-in roles are defined by their files alone | review | agent-S-0554 | 2026-11-02T21:50:31Z |
 
 ## Strategic agents
 
