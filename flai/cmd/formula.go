@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"maps"
 	"os"
 	"path"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -165,10 +167,10 @@ func (a *app) printFormula(f formulas.Formula, layers [][]string) {
 func newFormulaRunCmd(a *app) *cobra.Command {
 	var inputs, trailers []string
 	var epic string
-	var autocommit bool
+	var autocommit, ready bool
 	c := &cobra.Command{
 		Use:   "run <name>",
-		Short: "Make a story from a formula, with one task per step, in backlog",
+		Short: "Make a story from a formula, with one task per step, in backlog or, with --ready, in ready",
 		Long: `Make the formula's instance (ADR-0238 §7): one story in backlog, as flai
 story new makes it, and one task of it per step. Each --input, name=value,
 gives one of the formula's inputs; an input not given takes its default.
@@ -189,25 +191,33 @@ the steps'. The tasks are made in file order, each after those it waits for.
 
 Each item is checked as flai story new --body-stdin checks one: a finding it
 brings refuses it, and the story and the tasks made before it are removed
-(exit 4). --autocommit commits the story, its tasks, and its epic in one
-commit, unless the project sets dashboard.autocommit: false. Nothing is
-pushed. It prints the story's ID, path, and tasks; --json gives {story,
-path, tasks: [{id, step}], formula, inputs}, with commit when it committed.`,
+(exit 4). --ready then moves the story to ready as flai move does, by
+FLAI_AGENT when set, its epic following and the board placing it last, so
+that flai serve starts its agent; a move the workflow rules refuse removes
+what it made too. Without --ready the story stays in backlog. --autocommit
+commits the story, its tasks, its epic, and, with --ready, the board and the
+stream index the move wrote, in one commit, unless the project sets
+dashboard.autocommit: false. Nothing is pushed. It prints the story's ID,
+path, and tasks; --json gives {story, path, status, tasks: [{id, step}],
+formula, inputs}, status backlog or ready, with followed when the epic moved
+with it and commit when it committed.`,
 		Example: `  flai formula list
   flai formula show release-check
-  flai formula run release-check --input version=1.4.0 --epic E-0007`,
+  flai formula run release-check --input version=1.4.0 --epic E-0007
+  flai formula run publish --ready --autocommit`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			given, err := formulaInputs(inputs)
 			if err != nil {
 				return err
 			}
-			return a.formulaRun(args[0], given, epic, autocommit, trailers)
+			return a.formulaRun(args[0], given, epic, formulaRunOptions{ready: ready, autocommit: autocommit, trailers: trailers})
 		},
 	}
 	c.Flags().StringArrayVar(&inputs, "input", nil, "one of the formula's inputs, as name=value (repeatable)")
 	c.Flags().StringVar(&epic, "epic", "", "the epic the story belongs to (optional: a story need not belong to one)")
-	c.Flags().BoolVar(&autocommit, "autocommit", false, "commit the story, its tasks, and its epic in one commit, unless dashboard.autocommit is false")
+	c.Flags().BoolVar(&ready, "ready", false, "move the story to ready once it and its tasks are made, so that flai serve starts its agent")
+	c.Flags().BoolVar(&autocommit, "autocommit", false, "commit the story, its tasks, its epic, and the move to ready in one commit, unless dashboard.autocommit is false")
 	c.Flags().StringArrayVar(&trailers, "trailer", nil, "trailer line for the commit (repeatable)")
 	return c
 }
@@ -229,11 +239,18 @@ func formulaInputs(given []string) (map[string]string, error) {
 	return out, nil
 }
 
+// formulaRunOptions are how flai formula run leaves the instance: moved to
+// ready or not, and committed or not, with the trailers.
+type formulaRunOptions struct {
+	ready, autocommit bool
+	trailers          []string
+}
+
 // formulaRun makes the instance of the formula name with the inputs given,
 // in epic when it is set: the story, then a task per step, each checked as
-// it is made, and on a refusal removes what it made. It commits them when
-// asked, and prints them.
-func (a *app) formulaRun(name string, given map[string]string, epic string, autocommit bool, trailers []string) error {
+// it is made, then, when asked, the story's move to ready, and on a refusal
+// removes what it made. It commits them when asked, and prints them.
+func (a *app) formulaRun(name string, given map[string]string, epic string, opt formulaRunOptions) error {
 	repo, f, err := a.formula(name)
 	if err != nil {
 		return err
@@ -292,7 +309,7 @@ func (a *app) formulaRun(name string, given map[string]string, epic string, auto
 		return undo(err)
 	}
 	ids := map[string]string{}
-	run := formulaRunResult{Story: story.Item.ID, Path: story.Path, Tasks: []formulaTask{}, Formula: f.Name, Inputs: values}
+	run := formulaRunResult{Story: story.Item.ID, Path: story.Path, Status: workitem.Backlog, Tasks: []formulaTask{}, Formula: f.Name, Inputs: values}
 	after := map[string][]string{}
 	for _, s := range creationOrder(filled) {
 		for _, step := range s.After {
@@ -317,7 +334,20 @@ func (a *app) formulaRun(name string, given map[string]string, epic string, auto
 	if epicPath != "" {
 		paths = append(paths, epicPath)
 	}
-	run.Commit, run.CommitError = a.commitFormulaRun(repo, autocommit, fmt.Sprintf("chore: [%s] create story: %s, from formula %s", story.Item.ID, story.Item.Title, f.Name), trailers, paths)
+	msg := fmt.Sprintf("chore: [%s] create story: %s, from formula %s", story.Item.ID, story.Item.Title, f.Name)
+	if opt.ready {
+		wrote, err := a.formulaReady(repo, story.Item.ID, &run)
+		if err != nil {
+			return undo(fmt.Errorf("moving the story %s of formula %s to ready, so it and its tasks were removed: %w", story.Item.ID, f.Name, err))
+		}
+		for _, p := range wrote {
+			if !slices.Contains(paths, p) {
+				paths = append(paths, p)
+			}
+		}
+		msg += ", ready"
+	}
+	run.Commit, run.CommitError = a.commitFormulaRun(repo, opt.autocommit, msg, opt.trailers, paths)
 	if a.jsonOut {
 		return a.printJSON(run)
 	}
@@ -329,6 +359,10 @@ func (a *app) formulaRun(name string, given map[string]string, epic string, auto
 		}
 		fmt.Fprintln(a.out, line)
 	}
+	if run.Status == workitem.Ready {
+		fmt.Fprintf(a.out, "  %s → %s\n", run.Story, run.Status)
+		a.printFollowed(run.Followed)
+	}
 	switch {
 	case run.Commit != "":
 		fmt.Fprintf(a.out, "  committed %s\n", run.Commit)
@@ -338,16 +372,64 @@ func (a *app) formulaRun(name string, given map[string]string, epic string, auto
 	return nil
 }
 
-// formulaRunResult is what flai formula run made: the story, its file, a
-// task per step, the formula, the inputs the run took, and its commit.
+// formulaRunResult is what flai formula run made: the story, its file, its
+// status, a task per step, the formula, the inputs the run took, the epic's
+// move with the story's to ready, and its commit.
 type formulaRunResult struct {
-	Story       string            `json:"story"`
-	Path        string            `json:"path"`
-	Tasks       []formulaTask     `json:"tasks"`
-	Formula     string            `json:"formula"`
-	Inputs      map[string]string `json:"inputs"`
-	Commit      string            `json:"commit,omitempty"`
-	CommitError string            `json:"commit_error,omitempty"`
+	Story       string             `json:"story"`
+	Path        string             `json:"path"`
+	Status      string             `json:"status"`
+	Tasks       []formulaTask      `json:"tasks"`
+	Formula     string             `json:"formula"`
+	Inputs      map[string]string  `json:"inputs"`
+	Followed    *workitem.Followed `json:"followed,omitempty"`
+	Commit      string             `json:"commit,omitempty"`
+	CommitError string             `json:"commit_error,omitempty"`
+}
+
+// formulaReady moves the instance story id to ready as flai move does, by
+// FLAI_AGENT when set, under the workflow rules, its epic following and the
+// board placing it last, and records the move in run. It returns the files
+// the move wrote beside the story: the board, the epic when it followed, and
+// the stream index when its text changed. A refused move writes nothing; a
+// move that fails part way puts the board and the index back as they were.
+func (a *app) formulaReady(repo *workitem.Repo, id string, run *formulaRunResult) ([]string, error) {
+	it, err := repo.Get(id)
+	if err != nil {
+		return nil, err
+	}
+	board, index := filepath.Join(repo.KanbanDir(), workitem.BoardFile), filepath.Join(repo.AgentsDir(), "index.md")
+	boardWas, boardErr := os.ReadFile(board)
+	indexWas, indexErr := os.ReadFile(index)
+	res, err := repo.TransitionAll(it, workitem.Ready, a.movedBy(""), "", a.now(), false)
+	if err != nil {
+		for _, f := range []struct {
+			path string
+			was  []byte
+			err  error
+		}{{board, boardWas, boardErr}, {index, indexWas, indexErr}} {
+			if f.err == nil {
+				_ = atomicfile.WriteFile(f.path, f.was, 0o644)
+			} else if os.IsNotExist(f.err) {
+				_ = os.Remove(f.path)
+			}
+		}
+		return nil, err
+	}
+	for _, w := range res.Warnings {
+		a.logger().Warn("workflow policy warning", "component", "workitem", "item", it.ID, "detail", w)
+	}
+	run.Status, run.Followed = it.Status, res.Followed
+	wrote := []string{board}
+	if res.Followed != nil {
+		if e, err := repo.Get(res.Followed.ID); err == nil {
+			wrote = append(wrote, e.Path)
+		}
+	}
+	if now, err := os.ReadFile(index); err == nil && (indexErr != nil || !bytes.Equal(now, indexWas)) {
+		wrote = append(wrote, index)
+	}
+	return wrote, nil
 }
 
 // formulaTask is a task flai formula run made and the step it is for.

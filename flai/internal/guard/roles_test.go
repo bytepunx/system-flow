@@ -301,6 +301,78 @@ func TestADefinedRolesCommandEntriesMatchTheCommandTree(t *testing.T) {
 	}
 }
 
+// S-0422: a role whose file lists flai formula run publish runs that formula,
+// with --ready, --input, --autocommit, and --json, and no other formula, no
+// other flag, and no other flai formula write; a role whose file names no
+// formula runs none.
+func TestADefinedRoleRunsOnlyTheFormulasItsFileNames(t *testing.T) {
+	r, problem := roles.Parse(reviewerPath, strings.Replace(reviewerFile, "  - flai issue new\n", "  - flai issue new\n  - flai formula run publish\n", 1))
+	if problem != nil {
+		t.Fatal(problem)
+	}
+	if ps := roles.Validate([]roles.Role{r}, "design", roles.Vocabulary{}); slices.ContainsFunc(ps, func(p roles.Problem) bool { return strings.Contains(p.Message, "formula") }) {
+		t.Errorf("the role file's formula run entry is reported: %v", ps)
+	}
+	gr := reviewer(t, t.TempDir(), manifest.Permissions{})
+	gr.RoleFile, gr.Commands = &r, append(gr.Commands, "formula")
+	for _, c := range []string{
+		"flai formula run publish",
+		"flai formula run publish --ready",
+		"flai formula run publish --ready --autocommit --json --input version=1.4.0 --input area=docs",
+		"flai formula run publish --input=version=1.4.0 --ready=true",
+		"flai --json formula run publish --ready",
+		"scripts/flai.sh formula run publish --ready --autocommit",
+		"flai formula list && flai formula show import",
+	} {
+		if v := Decide(gr, roleShell(c)); v.Outcome != Allow {
+			t.Errorf("%s refused: %s", c, v.Reason)
+		}
+	}
+	for _, c := range []string{
+		"flai formula run import",
+		"flai formula run import --ready",
+		"flai formula run publish --epic E-0001",
+		"flai formula run publish --ready --trailer x",
+		"flai formula run publish import",
+		"flai formula run",
+		"flai board && flai formula run import --input version=1",
+	} {
+		v := Decide(gr, roleShell(c))
+		if v.Outcome != Deny || !strings.Contains(v.Reason, "its role file lets it run only the formula publish, with no flag but --ready, --input, --autocommit, and --json") || !strings.HasPrefix(v.Call, "flai formula run") {
+			t.Errorf("%s: %+v", c, v)
+		}
+	}
+	// the entry names run, so that a plain flai formula entry does not reach it
+	if h := gr.roleHeld("review"); !slices.Contains(h.subcommandsOf("formula"), "run") {
+		t.Errorf("the entry's subcommand is not run: %v", h.subcommandsOf("formula"))
+	}
+	plain := reviewer(t, t.TempDir(), manifest.Permissions{})
+	plain.Commands = append(plain.Commands, "formula")
+	if v := Decide(plain, roleShell("flai formula run publish --ready")); v.Outcome != Deny || !strings.Contains(v.Reason, ": its role file lists no such call.") {
+		t.Errorf("a role whose file names no formula: %+v", v)
+	}
+}
+
+// S-0422: the orchestrator whose role file lists flai formula run publish
+// runs that formula, ready and committed, and no other.
+func TestTheOrchestratorRunsTheFormulaItsRoleFileNames(t *testing.T) {
+	gr := orchestrating(allOn, builtInFile(t, "orchestrator", "  - flai issue new\n", "  - flai issue new\n  - flai formula run publish\n"))
+	gr.Commands = append(gr.Commands, "formula")
+	if v := Decide(gr, Call{Role: RoleOrchestrate, Kind: Shell, Command: "flai formula run publish --ready --autocommit --json"}); v.Outcome != Allow {
+		t.Errorf("flai formula run publish refused: %s", v.Reason)
+	}
+	for _, c := range []string{"flai formula run import --ready", "flai formula run publish --epic E-0001"} {
+		if v := Decide(gr, Call{Role: RoleOrchestrate, Kind: Shell, Command: c}); v.Outcome != Deny {
+			t.Errorf("%s allowed", c)
+		}
+	}
+	baseline := orchestrating(allOn, nil)
+	baseline.Commands = gr.Commands
+	if v := Decide(baseline, Call{Role: RoleOrchestrate, Kind: Shell, Command: "flai formula run publish --ready"}); v.Outcome != Deny {
+		t.Error("the baseline file, which names no formula, let the orchestrator run one")
+	}
+}
+
 // TestUngatedEditLeavesOutOnlyAFinalizingAndTheCostInputs: ungated-edit lets
 // an edit set a cost of delay value but refuses one that finalizes a draft,
 // sets a cost of delay input, or clears the cost of delay (ADR-0207 §5).

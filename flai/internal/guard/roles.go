@@ -293,7 +293,7 @@ func (h held) judge(es []entry, names func(string) bool, holds func(cond, perm s
 		}
 		return "it may make it only under " + strings.Join(under, ", or "), ""
 	}
-	return "its role file lists no such call", ""
+	return noSuchCall, ""
 }
 
 // tool says why the role's file refuses a flai tool with its arguments, and
@@ -346,14 +346,85 @@ func (h held) rules() rules {
 			if reads(cmd, sub, rest) {
 				return "", ""
 			}
-			return h.judge(es,
-				func(call string) bool { return h.matches(call, cmd, sub) },
+			why, needs := h.judge(es,
+				func(call string) bool { return h.names(call, cmd, sub, rest) },
 				func(cond, perm string, p manifest.Permissions) bool {
 					return h.commandHolds(cond, perm, p, cmd, sub, rest)
 				})
+			if why == noSuchCall && cmd == "formula" && sub == "run" {
+				why = h.formulasOnly(es)
+			}
+			return why, needs
 		},
 		git: func(string) string { return "it runs only git's reads" },
 	}
+}
+
+// noSuchCall is judge's reason when no entry names the call.
+const noSuchCall = "its role file lists no such call"
+
+// formulaRunFlags are the flags a role's flai formula run <name> entry lets
+// the run give (S-0422): --ready, --input, --autocommit, and flai's --json
+// and --config, each true for one that takes a value as the next word.
+var formulaRunFlags = map[string]bool{"--autocommit": false, "--config": true, "--input": true, "--json": false, "--ready": false}
+
+// formulaEntry is the formula a command entry flai formula run <name> names,
+// and whether the entry is one (S-0422).
+func formulaEntry(call string) (string, bool) {
+	w := strings.Fields(call)
+	if len(w) != 4 || w[0] != "flai" || w[1] != "formula" || w[2] != "run" || w[3] == "*" {
+		return "", false
+	}
+	return w[3], true
+}
+
+// names says whether a command entry names flai's command cmd run with sub
+// and the words after flai, rest: an entry flai formula run <name> names a
+// run of that formula alone, given no flag but formulaRunFlags (S-0422), and
+// every other entry names what matches says.
+func (h held) names(call, cmd, sub string, rest []string) bool {
+	if name, ok := formulaEntry(call); ok {
+		return cmd == "formula" && sub == "run" && runsFormula(rest, name)
+	}
+	return h.matches(call, cmd, sub)
+}
+
+// runsFormula says whether the words after flai, rest, run flai formula run
+// name and nothing else, with no flag but formulaRunFlags.
+func runsFormula(rest []string, name string) bool {
+	var args []string
+	for i := 0; i < len(rest); i++ {
+		w := rest[i]
+		if !strings.HasPrefix(w, "-") {
+			args = append(args, w)
+			continue
+		}
+		flag, _, valued := strings.Cut(w, "=")
+		takes, ok := formulaRunFlags[flag]
+		if !ok {
+			return false
+		}
+		if takes && !valued {
+			i++
+		}
+	}
+	return slices.Equal(args, []string{"formula", "run", name})
+}
+
+// formulasOnly says why the role's file refuses a flai formula run that no
+// entry names: the formulas its entries name, with the flags they allow, or
+// that it lists no such call when they name none.
+func (h held) formulasOnly(es []entry) string {
+	var names []string
+	for _, e := range es {
+		if name, ok := formulaEntry(e.call.Call); ok && !slices.Contains(names, name) {
+			names = append(names, name)
+		}
+	}
+	if len(names) == 0 {
+		return noSuchCall
+	}
+	return fmt.Sprintf("its role file lets it run only the formula %s, with no flag but --ready, --input, --autocommit, and --json", strings.Join(names, " or "))
 }
 
 // matches says whether a command entry names flai's command cmd run with
@@ -386,7 +457,8 @@ func (h held) subcommandsOf(cmd string) []string {
 	}
 	var out []string
 	add := func(call string) {
-		if w := strings.Fields(call); len(w) == 3 && w[0] == "flai" && w[1] == cmd && w[2] != "*" {
+		// flai formula run <name> names run as well (S-0422)
+		if w := strings.Fields(call); len(w) >= 3 && w[0] == "flai" && w[1] == cmd && w[2] != "*" {
 			out = append(out, w[2])
 		}
 	}

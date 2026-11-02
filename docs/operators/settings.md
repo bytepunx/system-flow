@@ -469,6 +469,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--publish` | [flai push](../users/flai-reference.md#flai-push) |
 | `--published` | [flai dashboard upgrade](../users/flai-reference.md#flai-dashboard-upgrade) |
 | `--pull` | [flai dashboard](../users/flai-reference.md#flai-dashboard) |
+| `--ready` | [flai formula run](../users/flai-reference.md#flai-formula-run) |
 | `--reason` | [flai accept](../users/flai-reference.md#flai-accept), [flai block](../users/flai-reference.md#flai-block), [flai issue close](../users/flai-reference.md#flai-issue-close), [flai move](../users/flai-reference.md#flai-move), [flai prime](../users/flai-reference.md#flai-prime), [flai thread resolve](../users/flai-reference.md#flai-thread-resolve) |
 | `--recommend` | [flai thread reply](../users/flai-reference.md#flai-thread-reply) |
 | `--record-issues` | [flai check](../users/flai-reference.md#flai-check), [flai verify](../users/flai-reference.md#flai-verify) |

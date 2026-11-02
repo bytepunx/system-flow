@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -215,8 +216,8 @@ func TestFormulaRun(t *testing.T) {
 		t.Fatalf("formula run --json: %v %s", err, js)
 	}
 	wantTasks := []formulaTask{{ID: "T-0001", Step: "test"}, {ID: "T-0002", Step: "evaluate"}, {ID: "T-0003", Step: "risk"}}
-	if got.Story != "S-0001" || got.Formula != "release-check" || !slices.Equal(got.Tasks, wantTasks) ||
-		got.Inputs["version"] != "1.4.0" || got.Inputs["area"] != "the changes since the last release" || got.Commit != "" {
+	if got.Story != "S-0001" || got.Status != "backlog" || got.Formula != "release-check" || !slices.Equal(got.Tasks, wantTasks) ||
+		got.Inputs["version"] != "1.4.0" || got.Inputs["area"] != "the changes since the last release" || got.Commit != "" || got.Followed != nil {
 		t.Errorf("formula run --json: %+v", got)
 	}
 	story := itemFile(t, root, "S-0001")
@@ -314,6 +315,121 @@ func TestFormulaRunRefuses(t *testing.T) {
 	}
 	if epic := itemFile(t, root, "E-0001"); epic != epicWas {
 		t.Errorf("the epic was not restored:\n%s", epic)
+	}
+}
+
+// S-0422: flai formula run --ready moves the instance to ready once it and
+// its tasks are made, as flai move does: the transition recorded, the epic
+// following, the board placing it in its order; --json says the status, and
+// the output names the move.
+func TestFormulaRunReady(t *testing.T) {
+	t.Parallel()
+	root := formulaProject(t, map[string]string{"release-check.md": releaseCheck})
+	if _, errOut, code := runIn(t, root, "epic", "new", "Releases"); code != 0 {
+		t.Fatal(errOut)
+	}
+	js, errOut, code := runIn(t, root, "formula", "run", "release-check", "--input", "version=1.4.0", "--epic", "E-0001", "--ready", "--json")
+	if code != 0 {
+		t.Fatalf("formula run --ready: %d %s %s", code, js, errOut)
+	}
+	var got formulaRunResult
+	if err := json.Unmarshal([]byte(js), &got); err != nil {
+		t.Fatalf("formula run --ready --json: %v %s", err, js)
+	}
+	if got.Story != "S-0001" || got.Status != "ready" || len(got.Tasks) != 3 || got.Followed == nil || got.Followed.ID != "E-0001" || got.Followed.To != "ready" {
+		t.Errorf("formula run --ready --json: %+v", got)
+	}
+	story := itemFile(t, root, "S-0001")
+	if !strings.Contains(story, "\nstatus: ready\n") || !strings.Contains(story, "  - to: ready\n") {
+		t.Errorf("the story is not ready, with its transition:\n%s", story)
+	}
+	for _, id := range []string{"T-0001", "T-0002", "T-0003"} {
+		if !strings.Contains(itemFile(t, root, id), "\nstatus: backlog\n") {
+			t.Errorf("%s left backlog:\n%s", id, itemFile(t, root, id))
+		}
+	}
+	if epic := itemFile(t, root, "E-0001"); !strings.Contains(epic, "\nstatus: ready\n") {
+		t.Errorf("the epic did not follow the story:\n%s", epic)
+	}
+	if board, err := os.ReadFile(filepath.Join(root, "wip", "kanban", "board.md")); err != nil || !strings.Contains(string(board), "S-0001") {
+		t.Errorf("the board does not order the story: %v\n%s", err, board)
+	}
+	out, errOut, code := runIn(t, root, "formula", "run", "release-check", "--input", "version=2.0.0", "--ready")
+	if code != 0 || !strings.HasPrefix(out, "S-0002 Release check for 2.0.0\n") || !strings.Contains(out, "\n  S-0002 → ready\n") {
+		t.Errorf("formula run --ready: %d %s\n%s", code, errOut, out)
+	}
+	if out, errOut, code := runIn(t, root, "check", "--strict", "--story", "S-0002"); code != 0 {
+		t.Errorf("check --strict on the ready instance: %d\n%s%s", code, out, errOut)
+	}
+}
+
+// S-0422: flai formula run --ready --autocommit, as flai serve runs it in
+// the main checkout, commits the story, its tasks, its epic, the board, and
+// the stream index in the one commit, leaving nothing uncommitted.
+func TestFormulaRunReadyAutocommit(t *testing.T) {
+	t.Parallel()
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	root := formulaProject(t, map[string]string{"release-check.md": releaseCheck})
+	if _, errOut, code := runIn(t, root, "epic", "new", "Releases"); code != 0 {
+		t.Fatal(errOut)
+	}
+	_ = os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".flai-cache/\n"), 0o644)
+	gitIn(t, root, "init", "-q", "-b", "main")
+	gitIn(t, root, "config", "user.email", "olive@example.invalid")
+	gitIn(t, root, "config", "user.name", "Olive")
+	gitIn(t, root, "add", "-A")
+	gitIn(t, root, "commit", "-q", "-m", "init")
+	js, errOut, code := runIn(t, root, "formula", "run", "release-check", "--input", "version=1.4.0", "--epic", "E-0001", "--ready", "--autocommit", "--trailer", "Co-Authored-By: flai <flai@localhost>", "--json")
+	if code != 0 {
+		t.Fatalf("formula run --ready --autocommit: %d %s %s", code, js, errOut)
+	}
+	var got formulaRunResult
+	if err := json.Unmarshal([]byte(js), &got); err != nil || got.Status != "ready" || got.Commit == "" || got.CommitError != "" {
+		t.Fatalf("formula run --ready --autocommit --json: %v %s", err, js)
+	}
+	if st := gitIn(t, root, "status", "--porcelain"); st != "" {
+		t.Errorf("the run left files uncommitted: %q", st)
+	}
+	files := gitIn(t, root, "show", "--name-only", "--format=%B", "HEAD")
+	for _, want := range []string{
+		"chore: [S-0001] create story: Release check for 1.4.0, from formula release-check, ready\n",
+		"Co-Authored-By: flai <flai@localhost>",
+		"wip/kanban/stories/S-0001-", "wip/kanban/tasks/T-0003-", "wip/kanban/epics/E-0001-", "wip/kanban/board.md",
+	} {
+		if !strings.Contains(files, want) {
+			t.Errorf("the commit lacks %q:\n%s", want, files)
+		}
+	}
+	if story := gitIn(t, root, "show", "HEAD:"+got.Path); !strings.Contains(story, "\nstatus: ready\n") {
+		t.Errorf("the committed story is not ready:\n%s", story)
+	}
+}
+
+// S-0422: with --ready, a missing or undeclared input is refused before
+// anything is written: no item, no board, and no move.
+func TestFormulaRunReadyRefusesBeforeWriting(t *testing.T) {
+	t.Parallel()
+	root := formulaProject(t, map[string]string{"release-check.md": releaseCheck})
+	for _, tc := range []struct {
+		name string
+		args []string
+		says string
+	}{
+		{"missing", []string{"release-check", "--ready"}, "formula release-check needs input version, which has no default"},
+		{"undeclared", []string{"release-check", "--input", "version=1", "--input", "colour=red", "--ready", "--autocommit"}, "formula release-check declares no input colour"},
+	} {
+		_, errOut, code := runIn(t, root, append([]string{"formula", "run"}, tc.args...)...)
+		if code == 0 || !strings.Contains(errOut, tc.says) {
+			t.Errorf("%s: %d %s, want %q", tc.name, code, errOut, tc.says)
+		}
+		if made := itemFiles(t, root); len(made) != 0 {
+			t.Errorf("%s: wrote %v", tc.name, made)
+		}
+		if _, err := os.Stat(filepath.Join(root, "wip", "kanban", "board.md")); !os.IsNotExist(err) {
+			t.Errorf("%s: the board was written: %v", tc.name, err)
+		}
 	}
 }
 

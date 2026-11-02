@@ -2074,7 +2074,7 @@ flai formula run makes from a formula one ordinary story in backlog, with one ta
 Subcommands:
 
 - [list](#flai-formula-list): List the project's formulas with their nature, step count, file, and title
-- [run](#flai-formula-run): Make a story from a formula, with one task per step, in backlog
+- [run](#flai-formula-run): Make a story from a formula, with one task per step, in backlog or, with --ready, in ready
 - [show](#flai-formula-show): Print a formula: its inputs, its steps and what each runs, and the steps' layers
 
 #### flai formula list
@@ -2089,7 +2089,7 @@ List the formulas in this checkout's design folder's workflows/formulas, in file
 
 #### flai formula run
 
-Make a story from a formula, with one task per step, in backlog.
+Make a story from a formula, with one task per step, in backlog or, with --ready, in ready.
 
 ```text
 flai formula run <name> [flags]
@@ -2101,7 +2101,7 @@ Before it writes anything it refuses a formula flai check reports a problem in, 
 
 The story has the formula's nature, formula: &lt;name&gt; in its front matter, the formula's title with the inputs filled as its title, the description as its goal, one acceptance criterion per step, and notes naming the formula file and the inputs the run took. --epic makes it a story of that epic; a story need not belong to one. Each task has the step's title, a Work section naming what the step runs, a Done when section that is its exit (the command or script exits 0, or the role's run ends with its work done), and the tasks of the step's after as its after, so that the tasks' layers are the steps'. The tasks are made in file order, each after those it waits for.
 
-Each item is checked as flai story new --body-stdin checks one: a finding it brings refuses it, and the story and the tasks made before it are removed (exit 4). --autocommit commits the story, its tasks, and its epic in one commit, unless the project sets dashboard.autocommit: false. Nothing is pushed. It prints the story's ID, path, and tasks; --json gives {story, path, tasks: [{id, step}], formula, inputs}, with commit when it committed.
+Each item is checked as flai story new --body-stdin checks one: a finding it brings refuses it, and the story and the tasks made before it are removed (exit 4). --ready then moves the story to ready as flai move does, by FLAI\_AGENT when set, its epic following and the board placing it last, so that flai serve starts its agent; a move the workflow rules refuse removes what it made too. Without --ready the story stays in backlog. --autocommit commits the story, its tasks, its epic, and, with --ready, the board and the stream index the move wrote, in one commit, unless the project sets dashboard.autocommit: false. Nothing is pushed. It prints the story's ID, path, and tasks; --json gives {story, path, status, tasks: [{id, step}], formula, inputs}, status backlog or ready, with followed when the epic moved with it and commit when it committed.
 
 Examples:
 
@@ -2109,15 +2109,17 @@ Examples:
 flai formula list
 flai formula show release-check
 flai formula run release-check --input version=1.4.0 --epic E-0007
+flai formula run publish --ready --autocommit
 ```
 
 Flags:
 
 | Flag | Meaning |
 |------|---------|
-| `--autocommit` | commit the story, its tasks, and its epic in one commit, unless dashboard.autocommit is false |
+| `--autocommit` | commit the story, its tasks, its epic, and the move to ready in one commit, unless dashboard.autocommit is false |
 | `--epic` string | the epic the story belongs to (optional: a story need not belong to one) |
 | `--input` stringArray | one of the formula's inputs, as name=value (repeatable) |
+| `--ready` | move the story to ready once it and its tasks are made, so that flai serve starts its agent |
 | `--trailer` stringArray | trailer line for the commit (repeatable) |
 
 #### flai formula show
