@@ -416,7 +416,6 @@ steps:
       role: reviewer
       prompt: Review {{area}} and say what it lacks.
     after: [check]
----
 
 # Review check
 `
@@ -517,6 +516,139 @@ func TestAFormulaInstancesAgentStartsItsRoleStep(t *testing.T) {
 		if strings.Contains(js, refused) {
 			t.Errorf("a refused agent is journalled (%s): %s", refused, js)
 		}
+
+// ADR-0236: flai role definition prints the definition flai generates from a
+// role's file as a Claude Code agent file, for a built-in role from the
+// project's file or the baseline flai carries and for a role the project
+// defines; it refuses an unknown name, naming the roles there are, and no
+// name without --write.
+func TestRoleDefinitionPrintsTheGeneratedDefinition(t *testing.T) {
+	t.Parallel()
+	analyzer := strings.Replace(reviewerRole, "name: reviewer", "name: analyzer", 1)
+	root := rolesProject(t, map[string]string{"reviewer.md": reviewerRole, "analyzer.md": analyzer})
+	design := "design"
+	parsed := func(name, content string) roles.Role {
+		t.Helper()
+		r, p := roles.Parse("design/workflows/roles/"+name+".md", content)
+		if p != nil {
+			t.Fatal(p)
+		}
+		return r
+	}
+	planner, _, err := roles.Builtin(root, design, "planner")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct {
+		name string
+		role roles.Role
+	}{{"planner", planner}, {"analyzer", parsed("analyzer", analyzer)}, {"reviewer", parsed("reviewer", reviewerRole)}} {
+		want, err := roles.Generate(c.role)
+		if err != nil {
+			t.Fatal(err)
+		}
+		out, errOut, code := runIn(t, root, "role", "definition", c.name)
+		if code != 0 || out != string(want.File()) {
+			t.Errorf("role definition %s: %d %s\n%s\nwant\n%s", c.name, code, errOut, out, want.File())
+		}
+	}
+	if out, _, _ := runIn(t, root, "role", "definition", "reviewer"); !strings.HasPrefix(out, "---\nname: reviewer\ndescription: Reviews what is asked.\ntools: Read, mcp__flai__board, mcp__flai__inbox\nmodel: inherit\n---\n\nYou are the reviewer.\n\n## Project additions\n") {
+		t.Errorf("the agent file: %q", out)
+	}
+	js, _, _ := runIn(t, root, "role", "definition", "reviewer", "--json")
+	var got struct {
+		Name, Description, Model, Prompt string
+		Tools                            []string
+	}
+	if err := json.Unmarshal([]byte(js), &got); err != nil || got.Name != "reviewer" || got.Model != "inherit" || len(got.Tools) != 3 || !strings.HasPrefix(got.Prompt, "You are the reviewer.") {
+		t.Errorf("role definition --json: %v %s", err, js)
+	}
+	if _, errOut, code := runIn(t, root, "role", "definition", "auditor"); code == 0 || !strings.Contains(errOut, "no role auditor; the roles are planner, orchestrator, analyzer, curator, reviewer") {
+		t.Errorf("an unknown role: %d %s", code, errOut)
+	}
+	if _, errOut, code := runIn(t, root, "role", "definition"); code == 0 || !strings.Contains(errOut, "give one role's name, or --write") {
+		t.Errorf("no name: %d %s", code, errOut)
+	}
+	thin := rolesProject(t, map[string]string{"reviewer.md": strings.Replace(reviewerRole, "  tools: [Read, mcp__flai__board, mcp__flai__inbox]\n", "", 1)})
+	if _, errOut, code := runIn(t, thin, "role", "definition", "reviewer"); code == 0 || !strings.Contains(errOut, "has no definition.tools") {
+		t.Errorf("a definition that cannot be generated: %d %s", code, errOut)
+	}
+}
+
+// ADR-0236: flai role definition --write writes every built-in role's
+// definition, or each named role's, to .flai-cache/agents/<name>.md, writes
+// nothing under .claude/, and prints the command that links each built-in
+// role's .claude/agents/<name>.md that is not the link already.
+func TestRoleDefinitionWriteWritesIntoTheCache(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("makes symbolic links")
+	}
+	t.Parallel()
+	root := rolesProject(t, map[string]string{"reviewer.md": reviewerRole})
+	builtins := []string{"planner", "orchestrator", "analyzer", "curator"}
+	link := func(name string) string { return "../../.flai-cache/agents/" + name + ".md" }
+	lnLine := func(name string) string { return "  ln -sf " + link(name) + " .claude/agents/" + name + ".md\n" }
+	out, errOut, code := runIn(t, root, "role", "definition", "--write")
+	if code != 0 {
+		t.Fatalf("role definition --write: %d %s %s", code, out, errOut)
+	}
+	for _, name := range builtins {
+		r, _, err := roles.Builtin(root, "design", name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want, err := roles.Generate(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		path := filepath.Join(root, ".flai-cache", "agents", name+".md")
+		if data, err := os.ReadFile(path); err != nil || string(data) != string(want.File()) {
+			t.Errorf("%s: %v\n%s", path, err, data)
+		}
+		if !strings.Contains(out, "wrote "+path+"\n") || !strings.Contains(out, lnLine(name)) {
+			t.Errorf("--write does not print %s's path and link command:\n%s", name, out)
+		}
+	}
+	if !strings.Contains(out, "  mkdir -p .claude/agents\n") || !strings.Contains(out, "run this once in "+root+" and commit the links") {
+		t.Errorf("--write does not say what the operator runs:\n%s", out)
+	}
+	if strings.Contains(out, "reviewer") {
+		t.Errorf("a role the project defines is written only when named:\n%s", out)
+	}
+	if _, err := os.Lstat(filepath.Join(root, ".claude")); !os.IsNotExist(err) {
+		t.Errorf("flai wrote under .claude/: %v", err)
+	}
+	agents := filepath.Join(root, ".claude", "agents")
+	if err := os.MkdirAll(agents, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(link("planner"), filepath.Join(agents, "planner.md")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("../../elsewhere/orchestrator.md", filepath.Join(agents, "orchestrator.md")); err != nil {
+		t.Fatal(err)
+	}
+	out, _, code = runIn(t, root, "role", "definition", "--write")
+	if code != 0 || strings.Contains(out, lnLine("planner")) || !strings.Contains(out, lnLine("orchestrator")) || !strings.Contains(out, lnLine("curator")) || strings.Contains(out, "mkdir") {
+		t.Errorf("--write with the planner's link made: %d\n%s", code, out)
+	}
+	out, _, code = runIn(t, root, "role", "definition", "--write", "reviewer", "planner")
+	if code != 0 || out != "wrote "+filepath.Join(root, ".flai-cache", "agents", "reviewer.md")+"\nwrote "+filepath.Join(root, ".flai-cache", "agents", "planner.md")+"\n" {
+		t.Errorf("--write reviewer planner: %d\n%s", code, out)
+	}
+	js, _, _ := runIn(t, root, "role", "definition", "--write", "curator", "--json")
+	var got struct {
+		Written, Links []string
+	}
+	if err := json.Unmarshal([]byte(js), &got); err != nil || len(got.Written) != 1 || len(got.Links) != 1 || got.Links[0] != strings.TrimSpace(lnLine("curator")) {
+		t.Errorf("--write --json: %v %s", err, js)
+	}
+	none := rolesProject(t, nil)
+	if _, errOut, code := runIn(t, none, "role", "definition", "--write", "planner", "auditor"); code == 0 || !strings.Contains(errOut, "no role auditor") {
+		t.Errorf("--write an unknown role: %d %s", code, errOut)
+	}
+	if _, err := os.Stat(filepath.Join(none, ".flai-cache", "agents")); !os.IsNotExist(err) {
+		t.Errorf("--write wrote something though a name is unknown: %v", err)
 	}
 }
 

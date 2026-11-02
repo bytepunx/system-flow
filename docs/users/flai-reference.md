@@ -3459,9 +3459,38 @@ A strategic role is one markdown file, &lt;name&gt;.md, in the design folder's w
 
 Subcommands:
 
+- [definition](#flai-role-definition): Print a role's harness definition generated from its role file, or write it into .flai-cache/agents
 - [list](#flai-role-list): List the project's roles with their action, triggers, items, topics, charge, calls, and permissions
 - [run](#flai-role-run): Start a role the project defines, on an item its file takes or on none, behind the host action its file names
 - [show](#flai-role-show): Print a role: its front matter, its harness definition, and its body
+
+#### flai role definition
+
+Print a role's harness definition generated from its role file, or write it into .flai-cache/agents.
+
+```text
+flai role definition <name> | --write [<name>...] [flags]
+```
+
+Print the harness definition flai generates from the role file of the role named &lt;name&gt; (ADR-0207 §4, ADR-0236), as a Claude Code agent file: front matter with name, description, tools on one comma-separated line, and model, then the prompt, the file's body without the marker's line. The model is the file's definition.model, inherit when it names none; flai serve puts the role's agent's model over it at start. A built-in role (planner, orchestrator, analyzer, curator) is generated from the project's role file, or from the baseline flai carries when the project has none; a role the project defines is generated from its file under the design folder's workflows/roles. An unknown name is refused, naming the roles there are, and so is a role file that lacks a description, tools, or a body.
+
+With --write it writes the definition of each named role, or of every built-in role when none is named, to .flai-cache/agents/&lt;name&gt;.md in the checkout it runs in, a story's worktree included, which is git-ignored, and prints each path it wrote. Run it again after a role file changes: the generated file is never edited by hand. A session started by hand reads a built-in role's definition through .claude/agents/&lt;name&gt;.md, a committed symbolic link to ../../.flai-cache/agents/&lt;name&gt;.md. For each built-in role written whose .claude/agents/&lt;name&gt;.md is not that link, it prints the command that makes it, for you to run once in the checkout's root and commit; flai writes nothing under .claude/. flai serve does not read the written file: it generates the definition at every start.
+
+--json gives the definition, its name, description, tools, model, and prompt; with --write, the paths written and the link commands.
+
+Examples:
+
+```bash
+flai role definition planner
+flai role definition --write
+flai role definition --write reviewer
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--write` | write each named role's definition, or every built-in role's, to .flai-cache/agents/&lt;name&gt;.md |
 
 #### flai role list
 

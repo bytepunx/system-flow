@@ -5,14 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
-
 	"github.com/bytepunx/system-flow/flai/internal/formulas"
 	"github.com/bytepunx/system-flow/flai/internal/guard"
+	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
@@ -36,8 +37,197 @@ roles.file, roles.grant, or roles.definition. flai role run starts a role
 the project defines, behind the host action its file names, and flai serve
 starts it on the events and the schedules its trigger names (S-0418).`,
 	}
-	c.AddCommand(newRoleListCmd(a), newRoleShowCmd(a), newRoleRunCmd(a))
+	c.AddCommand(newRoleListCmd(a), newRoleShowCmd(a), newRoleDefinitionCmd(a), newRoleRunCmd(a))
 	return c
+}
+
+// flai role definition: a role's harness definition, generated from its
+// file, printed or written into .flai-cache/agents (ADR-0236).
+func newRoleDefinitionCmd(a *app) *cobra.Command {
+	var write bool
+	c := &cobra.Command{
+		Use:   "definition <name> | --write [<name>...]",
+		Short: "Print a role's harness definition generated from its role file, or write it into .flai-cache/agents",
+		Long: `Print the harness definition flai generates from the role file of the role
+named <name> (ADR-0207 §4, ADR-0236), as a Claude Code agent file: front
+matter with name, description, tools on one comma-separated line, and model,
+then the prompt, the file's body without the marker's line. The model is the
+file's definition.model, inherit when it names none; flai serve puts the
+role's agent's model over it at start. A built-in role (planner,
+orchestrator, analyzer, curator) is generated from the project's role file,
+or from the baseline flai carries when the project has none; a role the
+project defines is generated from its file under the design folder's
+workflows/roles. An unknown name is refused, naming the roles there are, and
+so is a role file that lacks a description, tools, or a body.
+
+With --write it writes the definition of each named role, or of every
+built-in role when none is named, to .flai-cache/agents/<name>.md in the
+checkout it runs in, a story's worktree included, which is git-ignored, and
+prints each path it wrote. Run it again after a role file changes: the
+generated file is never edited by hand. A session started by hand reads a
+built-in role's definition through .claude/agents/<name>.md, a committed
+symbolic link to ../../.flai-cache/agents/<name>.md. For each built-in role
+written whose .claude/agents/<name>.md is not that link, it prints the
+command that makes it, for you to run once in the checkout's root and commit;
+flai writes nothing under .claude/. flai serve does not read the written
+file: it generates the definition at every start.
+
+--json gives the definition, its name, description, tools, model, and prompt;
+with --write, the paths written and the link commands.`,
+		Example: `  flai role definition planner
+  flai role definition --write
+  flai role definition --write reviewer`,
+		RunE: func(_ *cobra.Command, args []string) error {
+			if write {
+				return a.roleDefinitionWrite(args)
+			}
+			if len(args) != 1 {
+				return fmt.Errorf("give one role's name, or --write: usage: flai role definition <name> | --write [<name>...], which writes every built-in role's definition when no name is given")
+			}
+			return a.roleDefinitionPrint(args[0])
+		},
+	}
+	c.Flags().BoolVar(&write, "write", false, "write each named role's definition, or every built-in role's, to .flai-cache/agents/<name>.md")
+	return c
+}
+
+// agentsDir is where flai role definition --write puts the generated
+// definitions, relative to the checkout's root (ADR-0236).
+const agentsDir = ".flai-cache/agents"
+
+// roleDefinitionPrint prints the definition generated for the role name.
+func (a *app) roleDefinitionPrint(name string) error {
+	repo, err := a.project()
+	if err != nil {
+		return err
+	}
+	g, err := a.roleDefinition(repo, name)
+	if err != nil {
+		return err
+	}
+	if a.jsonOut {
+		return a.printJSON(map[string]any{"name": g.Name, "description": g.Description, "tools": g.Tools, "model": g.Model, "prompt": g.Prompt})
+	}
+	_, err = a.out.Write(g.File())
+	return err
+}
+
+// roleDefinitionWrite writes the definitions of names, or of every built-in
+// role when names is empty, into .flai-cache/agents, prints each path, and
+// then the command that links each built-in one's .claude/agents/<name>.md
+// that is not the link already.
+func (a *app) roleDefinitionWrite(names []string) error {
+	repo, err := a.project()
+	if err != nil {
+		return err
+	}
+	design := repo.Manifest.Layout["design"]
+	builtin := map[string]bool{}
+	var all []string
+	for _, r := range roles.Baseline(design) {
+		builtin[r.Name] = true
+		all = append(all, r.Name)
+	}
+	if len(names) == 0 {
+		names = all
+	}
+	// every name first, so that one that fails writes nothing
+	defs := make([]roles.Generated, 0, len(names))
+	for _, name := range names {
+		g, err := a.roleDefinition(repo, name)
+		if err != nil {
+			return err
+		}
+		defs = append(defs, g)
+	}
+	dir := filepath.Join(repo.Root, filepath.FromSlash(agentsDir))
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("making %s: %w", agentsDir, err)
+	}
+	var written, links []string
+	mkdir := false
+	for _, g := range defs {
+		path := filepath.Join(dir, g.Name+".md")
+		if err := atomicfile.WriteFile(path, g.File(), 0o644); err != nil {
+			return fmt.Errorf("writing %s/%s.md: %w", agentsDir, g.Name, err)
+		}
+		written = append(written, path)
+		if !builtin[g.Name] {
+			continue
+		}
+		link := "../../" + agentsDir + "/" + g.Name + ".md"
+		at := filepath.Join(repo.Root, ".claude", "agents", g.Name+".md")
+		if target, err := os.Readlink(at); err == nil && target == link {
+			continue
+		}
+		if _, err := os.Stat(filepath.Dir(at)); errors.Is(err, os.ErrNotExist) {
+			mkdir = true
+		}
+		links = append(links, fmt.Sprintf("ln -sf %s .claude/agents/%s.md", link, g.Name))
+	}
+	if mkdir {
+		links = append([]string{"mkdir -p .claude/agents"}, links...)
+	}
+	if a.jsonOut {
+		return a.printJSON(map[string]any{"written": written, "root": repo.Root, "links": orEmpty(links)})
+	}
+	for _, p := range written {
+		fmt.Fprintf(a.out, "wrote %s\n", p)
+	}
+	if len(links) > 0 {
+		fmt.Fprintf(a.out, "\nA session started by hand reads a built-in role through .claude/agents/<name>.md, a link to its generated definition, and flai writes nothing under .claude/: run this once in %s and commit the links:\n\n", repo.Root)
+		for _, l := range links {
+			fmt.Fprintf(a.out, "  %s\n", l)
+		}
+	}
+	return nil
+}
+
+// orEmpty is list, or an empty list for none, so that JSON gives [].
+func orEmpty(list []string) []string {
+	if list == nil {
+		return []string{}
+	}
+	return list
+}
+
+// roleDefinition is the definition flai generates for the role name in repo:
+// a built-in role's from the project's file or the baseline flai carries, a
+// defined role's from its file. An unknown name is refused, naming the roles
+// there are.
+func (a *app) roleDefinition(repo *workitem.Repo, name string) (roles.Generated, error) {
+	design := repo.Manifest.Layout["design"]
+	var known []string
+	for _, r := range roles.Baseline(design) {
+		known = append(known, r.Name)
+		if r.Name != name {
+			continue
+		}
+		r, fromBaseline, err := roles.Builtin(repo.Root, design, name)
+		if err != nil {
+			return roles.Generated{}, err
+		}
+		if _, err := os.Stat(filepath.Join(repo.Root, filepath.FromSlash(r.Path))); fromBaseline && err == nil {
+			fmt.Fprintf(a.errOut, "%s does not parse, so flai runs the %s from the baseline it carries, which this is; flai check says why\n", r.Path, name)
+		}
+		return roles.Generate(r)
+	}
+	list, problems, err := roles.Load(repo.Root, design)
+	if err != nil {
+		return roles.Generated{}, err
+	}
+	for _, r := range list {
+		if r.Name == name {
+			return roles.Generate(r)
+		}
+		if !slices.Contains(known, r.Name) {
+			known = append(known, r.Name)
+		}
+	}
+	for _, p := range problems {
+		fmt.Fprintf(a.errOut, "%s (left out)\n", p)
+	}
+	return roles.Generated{}, fmt.Errorf("no role %s; the roles are %s", name, strings.Join(known, ", "))
 }
 
 func newRoleListCmd(a *app) *cobra.Command {
