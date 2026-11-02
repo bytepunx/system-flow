@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"cmp"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -156,7 +158,27 @@ func queueSummary(q *mergequeue.Queue) string {
 	if q.Batch != nil {
 		batch = strings.Join(q.Batch.Stories, ", ") + ", step " + q.Batch.Step
 	}
-	return "queue: " + order + "; batch: " + batch
+	return "queue: " + order + "; batch: " + batch + preflightSummary(q.Preflight)
+}
+
+// preflightSummary is the preflight's hold on the queue line (ADR-0234): the
+// files its findings name, each once in their order, and its thread once
+// flai serve has opened it; "" while it does not hold the queue.
+func preflightSummary(p *mergequeue.PreflightHold) string {
+	if p == nil {
+		return ""
+	}
+	var files []string
+	for _, f := range p.Findings {
+		if name := cmp.Or(f.Path, f.Tier); !slices.Contains(files, name) {
+			files = append(files, name)
+		}
+	}
+	line := "; held by the preflight on " + strings.Join(files, ", ")
+	if p.Thread != "" {
+		line += ", thread " + p.Thread
+	}
+	return line
 }
 
 // heldBackLines are the stories in review the main checkout's uncommitted
