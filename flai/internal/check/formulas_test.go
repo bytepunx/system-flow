@@ -137,6 +137,7 @@ func TestFormulaProblemsAreErrorsOnTheirLine(t *testing.T) {
 		{"a duplicate step id", "  - id: tag\n", "  - id: notes\n", 20, "step id notes is also an earlier step's"},
 		{"an input a prompt uses undeclared", "for {{version}}.", "for {{release}}.", 17, "uses {{release}}, which the formula's inputs do not declare"},
 		{"an input a title uses undeclared", "title: Tag {{version}}", "title: Tag {{tag}}", 21, "uses {{tag}}, which the formula's inputs do not declare"},
+		{"a schedule on a formula with inputs", "description: Cuts a release.\n", "description: Cuts a release.\nschedule: daily\n", 7, "schedule starts the formula with no inputs, as nobody is there to give them, but it declares version"},
 	} {
 		if !strings.Contains(formulaFile, tc.old) {
 			t.Fatalf("%s: the fixture has no %q", tc.name, tc.old)
@@ -154,6 +155,41 @@ func TestFormulaProblemsAreErrorsOnTheirLine(t *testing.T) {
 		if all := findings(t, repo, formulas.CodeFile); len(all) != 1 {
 			t.Errorf("%s: flai check gives %+v under %s", tc.name, all, formulas.CodeFile)
 		}
+	}
+}
+
+// scheduledFile is a formula with no inputs that names a schedule, on line
+// 7, for flai serve to make its instance on.
+const scheduledFile = `---
+title: Nightly check
+updated: 2026-11-01
+status: active
+name: nightly
+description: Checks the tree every night.
+schedule: "0 2 * * *"
+steps:
+  - id: check
+    title: Check the tree
+    run:
+      script: scripts/check.sh --strict
+---
+
+# Nightly
+`
+
+// S-0422: a formula with no inputs may name a schedule, which flai check
+// reads as planning.schedule is read, and one it cannot parse is a
+// formulas.file error on the schedule's line.
+func TestAFormulasScheduleIsChecked(t *testing.T) {
+	const path = "design/workflows/formulas/nightly.md"
+	repo := formulasProject(t, map[string]string{"nightly.md": scheduledFile})
+	if got := formulaFindings(repo); len(got) != 0 {
+		t.Errorf("a valid schedule: %+v", got)
+	}
+	repo = formulasProject(t, map[string]string{"nightly.md": strings.Replace(scheduledFile, `"0 2 * * *"`, "nightly", 1)})
+	got := findings(t, repo, formulas.CodeFile)
+	if len(got) != 1 || got[0].Level != Error || got[0].Path != path || got[0].Line != 7 || !strings.Contains(got[0].Message, `schedule "nightly" has 1 fields, not five`) {
+		t.Errorf("a schedule that does not parse: %+v", got)
 	}
 }
 

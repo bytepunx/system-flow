@@ -73,7 +73,7 @@ var (
 	// role's, by role name.
 	BuiltinActions = map[string]string{"plan": "planner", "orchestrate": Orchestrator, "analyze": "analyzer", "curate": "curator"}
 	// ReservedActions are host actions that are no role's.
-	ReservedActions = []string{"push", "forge", "auto-publish", "auto-approve", "auto-upgrade", "agent", "dashboard", "checks", "host", "settings", "components", "merge-queue"}
+	ReservedActions = []string{"push", "forge", "auto-publish", "auto-approve", "auto-upgrade", "agent", "dashboard", "checks", "host", "settings", "components", "merge-queue", "formula"}
 	// ReservedNames are the sub-agents' definitions, which no role takes.
 	ReservedNames = []string{"explorer", "verifier"}
 	// ReservedRoles are the verbs of the story's agent and its sub-agents.

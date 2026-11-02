@@ -385,6 +385,14 @@ const ActionAnalyze = "analyze"
 // One curator runs per project at a time; nothing starts it on a schedule.
 const ActionCurate = "curate"
 
+// ActionFormula is the host action under which flai serve makes a formula's
+// instance each time the schedule its file names comes round (S-0422,
+// ADR-0238): it runs flai formula run <name> --ready --autocommit in the
+// project's main checkout, so that the instance's agent starts as any ready
+// story's does. flai serve does it from what it sees in the project's files;
+// no method asks for it. Off, which is the default, no schedule makes one.
+const ActionFormula = "formula"
+
 // ActionComponents is the host action under which flai serve runs a
 // sub-project's own Vite dev server, with flai's component harness, on
 // 127.0.0.1 (S-0438, ADR-0163): components.start and components.stop ask
@@ -419,6 +427,7 @@ var Actions = map[string]string{
 	ActionMergeQueue:  "run the merge queue in flai serve, with no model, on this machine and as you, while orchestration.permissions.accept_reviews in system-flow.yaml is on and acceptance.mode is local: it takes up to merge_queue.batch_max (4 by default) eligible stories enqueued in review, in queue order, rebases each one's branch onto the one before it from the main branch, in a worktree of its own under .flai-cache/worktrees, and verifies the batch once with the tiers flai verify runs, running the project's tests on this host; a story whose rebase stops is left out of the batch. No batch starts while flai queue hold holds the queue. Off, or under pull-request acceptance, no batch starts and enqueued stories wait",
 	ActionAnalyze:     "start the analyzer, with the project's analysis agent (analysis.agent over agent in system-flow.yaml) and the harnesses and the command you set with flai serve agent, on this machine and as you, in the project's main checkout, when you run flai analyze or call analyze.run, looking for bottlenecks, intent, or risk, or all three, and for all three each time analysis.schedule in system-flow.yaml comes round; it writes one report under design/analysis and edits nothing else, and one runs per project at a time; a holder of the dashboard token can then start it whenever none runs",
 	ActionCurate:      "start the curator, with the project's digest agent (digest.agent over agent in system-flow.yaml) and the harnesses and the command you set with flai serve agent, on this machine and as you, in the project's main checkout, when you run flai curate or call curate.run; it takes in what the archive and the threads gained since the day or time you give, or since its last run, as digest entries written through flai digest new and edit alone, edits no file, authors no work item, and leaves its entries uncommitted, and one runs per project at a time; a holder of the dashboard token can then start it whenever none runs",
+	ActionFormula:     "make a formula's instance each time the schedule its file under design/workflows/formulas names comes round, by running flai formula run <name> --ready --autocommit in the project's main checkout, on this machine and as you, with no inputs, so that the instance is committed in ready and its story's agent starts as any ready story's does; a formula flai check refuses is not made and is tried again when its schedule next comes round. Whoever can change a formula's file on the main branch then decides what runs on this host, and when",
 }
 
 // shellOnly are the host actions kept to the operator's shell (ADR-0067):

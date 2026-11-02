@@ -85,7 +85,7 @@ func TestHostActionPush(t *testing.T) {
 		t.Fatalf("disabled: %d %s", code, out)
 	}
 
-	if _, errOut, code := runIn(t, root, "serve", "enable", "pull"); code == 0 || !strings.Contains(errOut, "there are: agent, analyze, auto-approve, auto-publish, auto-upgrade, checks, components, curate, dashboard, forge, host, merge-queue, orchestrate, plan, push") {
+	if _, errOut, code := runIn(t, root, "serve", "enable", "pull"); code == 0 || !strings.Contains(errOut, "there are: agent, analyze, auto-approve, auto-publish, auto-upgrade, checks, components, curate, dashboard, forge, formula, host, merge-queue, orchestrate, plan, push") {
 		t.Errorf("an action there is not: %d %s", code, errOut)
 	}
 	out, _, code = runIn(t, root, "serve", "enable", "push")
@@ -379,6 +379,66 @@ func TestServeMergeQueueAction(t *testing.T) {
 		t.Errorf("the settings page lists it, on: %v", a)
 	}
 	if out, errOut, code := runIn(t, root, "serve", "disable", "merge-queue"); code != 0 || !strings.Contains(out, "merge-queue disabled for t") {
+		t.Fatalf("disable: %d %s %s", code, out, errOut)
+	}
+	if enabled() {
+		t.Error("disabled, the host's configuration still has it on")
+	}
+}
+
+// S-0422: formula is off until the operator enables it, flai serve actions
+// names it and what it means, the dashboard's settings page lists it, and
+// enable and disable turn it on and off for the project.
+func TestServeFormulaAction(t *testing.T) {
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	enabled := func() bool {
+		t.Helper()
+		cfg, _, err := (&app{configPath: configOf(t)}).loadConfig()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return cfg.ActionEnabled(hostapi.ActionFormula, root)
+	}
+	listed := func() map[string]any {
+		t.Helper()
+		got, err := json.Marshal((&app{configPath: configOf(t)}).hostSettings(root))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var settings struct {
+			Actions []map[string]any `json:"actions"`
+		}
+		if err := json.Unmarshal(got, &settings); err != nil {
+			t.Fatal(err)
+		}
+		for _, a := range settings.Actions {
+			if a["name"] == hostapi.ActionFormula {
+				return a
+			}
+		}
+		return nil
+	}
+	if out, _, _ := runIn(t, root, "serve", "actions"); !strings.Contains(out, "formula: off everywhere") || !strings.Contains(out, "flai formula run <name> --ready --autocommit") {
+		t.Errorf("actions names it and what it means: %s", out)
+	}
+	if enabled() {
+		t.Error("formula is on by default")
+	}
+	if a := listed(); a == nil || a["here"] != false || a["everywhere"] != false {
+		t.Errorf("the settings page lists it, off: %v", a)
+	}
+	if out, errOut, code := runIn(t, root, "serve", "enable", "formula"); code != 0 || !strings.Contains(out, "formula enabled for t") || !strings.Contains(out, "flai serve disable formula") {
+		t.Fatalf("enable: %d %s %s", code, out, errOut)
+	}
+	if !enabled() {
+		t.Error("enabled, the host's configuration does not say so")
+	}
+	if a := listed(); a == nil || a["here"] != true {
+		t.Errorf("the settings page lists it, on: %v", a)
+	}
+	if out, errOut, code := runIn(t, root, "serve", "disable", "formula"); code != 0 || !strings.Contains(out, "formula disabled for t") {
 		t.Fatalf("disable: %d %s %s", code, out, errOut)
 	}
 	if enabled() {

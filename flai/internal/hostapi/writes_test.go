@@ -1899,6 +1899,24 @@ func TestCurateRunNeedsTheCurateAction(t *testing.T) {
 	}
 }
 
+// S-0422: formula is a host action the dashboard sees, so that the settings
+// page turns it on and off, off by default; flai serve acts on it from the
+// formulas' schedules, so no method asks for it.
+func TestTheFormulaActionIsSeenAndOffByDefault(t *testing.T) {
+	p := withDocs(t)
+	if !DashboardSees(ActionFormula) || !strings.Contains(Actions[ActionFormula], "flai formula run <name> --ready --autocommit") {
+		t.Errorf("the dashboard is not told what the formula action does: %q", Actions[ActionFormula])
+	}
+	if on, ok := enabledActions(Host{}, p.Root)[ActionFormula]; !ok || on {
+		t.Errorf("project.info names formula, off by default: %v %v", on, ok)
+	}
+	for name := range MethodsFor("test", nil, Host{Enabled: func(string, string) bool { return true }}) {
+		if strings.HasPrefix(name, "formula.") {
+			t.Errorf("a method asks for the formula action: %s", name)
+		}
+	}
+}
+
 // S-0218: orchestrate is a host action the dashboard sees, as plan is, off
 // until the operator turns it on, and turned on and off from the settings
 // page as the others are; of its own, only the stop and the start ask for

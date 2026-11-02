@@ -696,12 +696,15 @@ func Run(ctx context.Context, o Options) error {
 			// trigger names an event and start a run for them, and look again
 			// when the reasons they hold come due between looks; and the role
 			// scheduler sees each schedule a role's trigger names come round.
+			// The formula scheduler sees each schedule a formula's file names
+			// come round, and makes its instance (S-0422).
 			replanner := newReplanner(o, e, starter)
 			orch := newOrchestrator(o, e, starter)
 			analyst := newAnalysisScheduler(o, e, starter)
 			curation := newCurateScheduler(o, e, starter)
 			roleStarts := newRoleEvents(o, e, starter)
 			roleSchedules := newRoleScheduler(o, e, starter)
+			formulaSchedules := newFormulaScheduler(o, e, starter)
 			// The thread reminder looks on the same changes and every minute,
 			// in the background, as a send may wait seconds (ADR-0205).
 			reminding := newReminder(o, e, &reminds)
@@ -718,6 +721,7 @@ func Run(ctx context.Context, o Options) error {
 			curation.look(cctx)
 			roleStarts.look(cctx)
 			roleSchedules.look(cctx)
+			formulaSchedules.look(cctx)
 			confirming.look(cctx)
 			reminding.soon(cctx)
 			newForgePass(o, e, &forgeLooks).start(cctx)
@@ -757,6 +761,7 @@ func Run(ctx context.Context, o Options) error {
 					curation.look(cctx)
 					roleStarts.look(cctx)
 					roleSchedules.look(cctx)
+					formulaSchedules.look(cctx)
 					confirming.look(cctx)
 					reminding.soon(cctx)
 				}
@@ -780,6 +785,7 @@ func Run(ctx context.Context, o Options) error {
 							curation.look(cctx)
 							roleStarts.look(cctx)
 							roleSchedules.look(cctx)
+							formulaSchedules.look(cctx)
 							confirming.look(cctx)
 							reminding.soon(cctx)
 						}

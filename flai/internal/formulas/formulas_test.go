@@ -193,6 +193,9 @@ func TestValidateReportsEachProblem(t *testing.T) {
 		{"input name invalid", head + "inputs:\n  - {name: Who, description: d}\n" + oneStep, `input name "Who"`, 8},
 		{"input name missing", head + "inputs:\n  - description: d\n" + oneStep, "needs name", 8},
 		{"input description missing", head + "inputs:\n  - name: who\n" + oneStep, "input who needs description", 8},
+		{"schedule not parsed", head + "schedule: every day\n" + oneStep, `schedule "every day" has 2 fields, not five`, 7},
+		{"schedule out of range", head + "schedule: \"0 25 * * *\"\n" + oneStep, `schedule "0 25 * * *"`, 7},
+		{"schedule with inputs", head + "schedule: daily\ninputs:\n  - {name: who, description: d, default: me}\n" + oneStep, "schedule starts the formula with no inputs, as nobody is there to give them, but it declares who", 7},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			got := problems(t, tc.content)
@@ -200,6 +203,26 @@ func TestValidateReportsEachProblem(t *testing.T) {
 				t.Errorf("Validate = %v, want one on line %d saying %q", got, tc.line, tc.says)
 			}
 		})
+	}
+}
+
+// S-0422: a formula's schedule is read as planning.schedule is, a cron
+// expression in UTC or daily, and none is no schedule.
+func TestScheduleParses(t *testing.T) {
+	const head = "---\ntitle: X\nupdated: 2026-11-01\nstatus: active\nname: x\ndescription: d\n"
+	const oneStep = "steps: [{id: a, title: A, run: {flai: check}}]\n---\n"
+	for _, spec := range []string{"daily", "0 6 * * 1-5"} {
+		content := head + "schedule: \"" + spec + "\"\n" + oneStep
+		if got := problems(t, content); len(got) != 0 {
+			t.Errorf("schedule %s: %v", spec, got)
+		}
+		sched, err := parse(t, "design/workflows/formulas/x.md", content).Scheduled()
+		if err != nil || sched == nil || sched.String() != spec {
+			t.Errorf("Scheduled() for %s = %v, %v", spec, sched, err)
+		}
+	}
+	if sched, err := parse(t, "design/workflows/formulas/x.md", head+oneStep).Scheduled(); sched != nil || err != nil {
+		t.Errorf("no schedule: %v, %v", sched, err)
 	}
 }
 

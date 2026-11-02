@@ -3,7 +3,7 @@
 // whose front matter names the formula, its nature, its inputs, and its
 // steps, each a flai command, a script, or a role with its prompt, and whose
 // body says what the formula is for. flai formula run makes a story of one, a
-// task a step.
+// task a step; flai serve makes one on the schedule its file names (S-0422).
 package formulas
 
 import (
@@ -21,6 +21,7 @@ import (
 	"github.com/goccy/go-yaml/ast"
 	"github.com/goccy/go-yaml/parser"
 
+	"github.com/bytepunx/system-flow/flai/internal/cron"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -72,6 +73,10 @@ type Formula struct {
 	Nature      string  `yaml:"nature" json:"nature"`
 	Inputs      []Input `yaml:"inputs" json:"inputs"`
 	Steps       []Step  `yaml:"steps" json:"steps"`
+	// Schedule is when flai serve makes the formula's instance while the
+	// formula host action is on (S-0422): a five-field cron expression in
+	// UTC or daily, as planning.schedule is; empty is no schedule.
+	Schedule string `yaml:"schedule" json:"schedule,omitempty"`
 
 	// Body is the text after the front matter.
 	Body string `yaml:"-" json:"-"`
@@ -88,6 +93,20 @@ type Input struct {
 	Default     *string `yaml:"default" json:"default,omitempty"`
 	// Line is the entry's file line.
 	Line int `yaml:"-" json:"-"`
+}
+
+// Scheduled is the formula's schedule parsed, as planning.schedule is: nil
+// when it has none.
+func (f Formula) Scheduled() (*cron.Schedule, error) {
+	spec := strings.TrimSpace(f.Schedule)
+	if spec == "" {
+		return nil, nil
+	}
+	sched, err := cron.Parse(spec)
+	if err != nil {
+		return nil, err
+	}
+	return &sched, nil
 }
 
 // Required reports whether the input has no default, so a run must give it.
@@ -593,6 +612,7 @@ func (c *checker) formula(f Formula) {
 		file("nature", "nature is %q, which is none of %s", f.Nature, strings.Join(workitem.Natures, ", "))
 	}
 	declared := c.inputs(f)
+	c.schedule(f)
 	c.uses(f, f.line("title"), "title", f.Title, declared)
 	c.uses(f, f.line("description"), "description", f.Description, declared)
 	if len(f.Steps) == 0 {
@@ -632,6 +652,24 @@ func (c *checker) inputs(f Formula) map[string]bool {
 		declared[in.Name] = true
 	}
 	return declared
+}
+
+// schedule checks the formula's schedule: one that parses, on a formula that
+// declares no inputs, since a run its schedule starts is given none.
+func (c *checker) schedule(f Formula) {
+	if strings.TrimSpace(f.Schedule) == "" {
+		return
+	}
+	if _, err := f.Scheduled(); err != nil {
+		c.add(f, f.line("schedule"), "%v", err)
+	}
+	if len(f.Inputs) > 0 {
+		names := make([]string, len(f.Inputs))
+		for i, in := range f.Inputs {
+			names[i] = in.Name
+		}
+		c.add(f, f.line("schedule"), "schedule starts the formula with no inputs, as nobody is there to give them, but it declares %s; remove the schedule, or the inputs and their uses", strings.Join(names, ", "))
+	}
 }
 
 // uses checks that text, the formula's field what on line line, uses only
