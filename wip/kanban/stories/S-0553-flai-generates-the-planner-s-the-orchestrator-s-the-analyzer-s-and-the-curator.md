@@ -3,15 +3,18 @@ id: S-0553
 type: story
 nature: improvement
 title: flai generates the planner's, the orchestrator's, the analyzer's, and the curator's harness definitions from their role files alone, flai check holds a .claude/agents copy to them, and a session started by hand reads the same definition
-status: ready
+status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-10-30T20:45:17Z
-updated: 2026-11-01T23:56:57Z
+updated: 2026-11-01T23:59:11Z
 transitions:
   - to: ready
     at: 2026-11-01T23:44:10Z
     by: alex
+  - to: in-progress
+    at: 2026-11-01T23:59:11Z
+    by: agent-S-0553
 tags: [cli, template]
 topics: [cli, orchestration, planning, template, conventions]
 touches: [design/adrs, design/adrs/README.md, design/system/agent-adapters.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, template/CHANGELOG.md, flai/internal/roles/definition.go, flai/internal/roles/definition_test.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/guard/writes.go, flai/internal/guard/writes_test.go, flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/cmd/role.go, flai/cmd/role_test.go, ".claude/agents/planner.md", ".claude/agents/orchestrator.md", ".claude/agents/analyzer.md", ".claude/agents/curator.md", template/root/.claude/agents/planner.md, template/root/.claude/agents/orchestrator.md, template/root/.claude/agents/analyzer.md, template/root/.claude/agents/curator.md]

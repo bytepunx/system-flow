@@ -3,12 +3,18 @@ id: T-2385
 type: task
 nature: improvement
 title: The board's queue and the dashboard's merge queue panel show the preflight hold with its files and findings and its thread
-status: backlog
+status: in-progress
 parent: S-0549
 owner: alex
 created: 2026-10-31T07:41:30Z
-updated: 2026-10-31T08:05:50Z
-transitions: []
+updated: 2026-11-01T23:57:28Z
+transitions:
+  - to: ready
+    at: 2026-11-01T23:57:26Z
+    by: agent-S-0549
+  - to: in-progress
+    at: 2026-11-01T23:57:28Z
+    by: agent-S-0549
 stream: S-0549
 tags: [flai, flaiover]
 touches: [flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flaiover/src/lib/components/MergeQueue.svelte, flaiover/src/lib/components/MergeQueue.svelte.test.ts, design/components/flaiover/src/lib/components/MergeQueue.examples.json, design/system/flaiover-dashboard.md, docs/users/flaiover.md]

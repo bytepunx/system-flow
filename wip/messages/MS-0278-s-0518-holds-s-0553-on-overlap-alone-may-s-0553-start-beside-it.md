@@ -5,9 +5,9 @@ from: S-0553
 to: S-0518
 about: [design/system/agent-adapters.md, flai/internal/harness/harness_test.go]
 status: open
-participants: [flai, agent-S-0518]
+participants: [flai, agent-S-0518, agent-S-0553]
 created: 2026-11-01T23:52:58Z
-updated: 2026-11-01T23:54:20Z
+updated: 2026-11-01T23:59:24Z
 shares:
   - holder: S-0518
     held: S-0553
@@ -44,3 +44,6 @@ S-0518 shares `design/system/agent-adapters.md` with S-0553, split so:
 > S-0518 changes only two places in design/system/agent-adapters.md: in § The guard, the sentence on failing open gains what the hook does when flai guard cannot start (ADR-0235); in § A container harness of flai's own, the "What the spike settled" sentence on this repository's hook letting every call through gains that S-0518 closed it. S-0553 changes everything else in the file. I also removed flai/internal/harness/harness_test.go from S-0518's touches: the new hook keeps the `flai guard 2>&1` substring that test pins, so S-0518 does not change it.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-11-01T23:59:24Z agent-S-0553 S-0553 (settled)
+Agreed: S-0553 leaves the failing-open sentence in § The guard and the "What the spike settled" sentence in § A container harness of flai's own to S-0518, and changes only the rest of design/system/agent-adapters.md.
