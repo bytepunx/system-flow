@@ -1053,6 +1053,11 @@ func TestAnInstancesPromptSaysHowItsStepsAreWorked(t *testing.T) {
 		"Run a flai command or a script under scripts/ from the root of S-0104's worktree, and read its output.",
 		"Start a role step with the flai MCP tool role_run (flai role run on the host), with the role the step names, the step's prompt and inputs, and S-0104 as the run's item, then hold the flai MCP tool wait_for_events until the run ends.",
 		`When a step exits 0, or its role run ends worked, write its exit in the task's ## Notes and close the task with the flai MCP tool task_done (flai task done T-nnnn -m "<message>" in the worktree).`,
+		"The end of a role run you started for a step reaches wait_for_events as a change of kind agent on S-0104 by the role's agent: to failed when the run failed, and to ended when it asked, its why waiting for an answer to a thread, or when it worked, its why ended with its work done.",
+		"That change is the step's exit: do not let it pass, though its summary says a story's agent may.",
+		"When a step fails, a command or script that exits other than 0, or a role run that ends failed or asked, run nothing after it.",
+		`Block its task with flai block T-nnnn --reason "<the step and its exit>" in the worktree, write the exit and the last 40 lines of the step's output in the task's ## Notes with the flai MCP tool item_edit, or by editing the task's body, and open a thread on S-0104 with the flai MCP tool thread_open naming the step and its exit.`,
+		"Then write the narrative's Current state and Next steps with the flai MCP tool stream_state, and end the session, as for any question: flai serve starts you again when the thread is answered.",
 		"When every task is done, close S-0104 out with verify and move it to review as any story.",
 		"Invent no step, and change no step's words.",
 	} {
@@ -1073,6 +1078,35 @@ func TestAnInstancesPromptSaysHowItsStepsAreWorked(t *testing.T) {
 	}
 	if instance(r) != "" || strings.Contains(plain, "formula") {
 		t.Errorf("a story with no formula is told of one:\n%s", plain)
+	}
+}
+
+// S-0422, T-1776: the agent of a formula's instance started again on the
+// answer to its question is told, after the answer, that when it asked
+// because a step failed it unblocks that step's task, runs the step again as
+// the answer says, and goes on with the layers; a story with no formula gets
+// the answered prompt it got before, and one started on a message is told
+// nothing of a step.
+func TestAnAnsweredInstanceRunsItsBlockedStepAgain(t *testing.T) {
+	r := req(&manifest.Agent{Harness: ClaudeCode})
+	r.Answered = "TH-0001"
+	plain := Prompt(r)
+	if want := "The designer has answered your question TH-0001 on S-0104. Read the answer with the flai MCP tool thread_get (or flai thread show TH-0001), then go on working S-0104 to review as before.\n\n" + rules(r); plain != want {
+		t.Errorf("a story with no formula is told something new when answered:\n%s\nwant:\n%s", plain, want)
+	}
+	in := r
+	in.Formula = "release"
+	p := Prompt(in)
+	step := " S-0104 is an instance of the formula release: if you asked TH-0001 because a step failed, unblock its task with flai unblock T-nnnn in the worktree, run that step again as the answer says, and go on with the layers from there, closing its task with task_done when it passes."
+	if !strings.Contains(p, "go on working S-0104 to review as before."+step+"\n\n") {
+		t.Errorf("an answered instance is not told to run its blocked step again:\n%s", p)
+	}
+	if got := strings.Replace(p, step, "", 1); got != plain {
+		t.Errorf("an answered instance's prompt is not the story's with the step's sentence added:\n%s\nwant:\n%s", got, plain)
+	}
+	in.Answered = "MS-0002"
+	if p := Prompt(in); strings.Contains(p, "unblock") || strings.Contains(p, "formula") {
+		t.Errorf("an instance started on a message is told of a blocked step:\n%s", p)
 	}
 }
 

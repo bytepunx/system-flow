@@ -440,7 +440,9 @@ func options(harness string, config map[string]string, takes map[string]option) 
 // up with flai stream open. One started on a share that cleared a hold on
 // its story is told the share's conversation, paths, and split (ADR-0134,
 // shared). One whose story is a formula's instance is told to work its tasks
-// as the formula's steps (S-0422, instance). The planner is asked to plan its item instead
+// as the formula's steps and what to do when one fails (S-0422, instance),
+// and, answered, to run a failed step again (answeredStep). The planner is
+// asked to plan its item instead
 // (planPrompt), the orchestrator to keep the project's work moving
 // (orchestratePrompt), the analyzer to write a report (analyzePrompt), the
 // curator to keep the digest (curatePrompt), and a role the project defines
@@ -474,9 +476,9 @@ If a change cannot be committed without the designer deciding something, ask wit
 %[4]s`, r.Name, r.Story, r.Answered, rules(r))
 	}
 	if r.Answered != "" {
-		return fmt.Sprintf(`The designer has answered your question %[3]s on %[2]s. Read the answer with the flai MCP tool thread_get (or flai thread show %[3]s), then go on working %[2]s to review as before.
+		return fmt.Sprintf(`The designer has answered your question %[3]s on %[2]s. Read the answer with the flai MCP tool thread_get (or flai thread show %[3]s), then go on working %[2]s to review as before.%[5]s
 
-%[4]s`, r.Name, r.Story, r.Answered, rules(r))
+%[4]s`, r.Name, r.Story, r.Answered, rules(r), answeredStep(r))
 	}
 	if b := r.SentBack; b != nil && b.Resumed {
 		return fmt.Sprintf(`flai sent %[1]s back from review to in-progress, on thread %[2]s: %[3]s. Read the thread with the flai MCP tool thread_get (flai thread show %[2]s on the host); your inbox lists it, awaiting you. Fix the branch in %[1]s's worktree, close out, and move %[1]s to review again; %[5]s.
@@ -526,16 +528,36 @@ Work %[2]s to review, and no other story. Follow CLAUDE.md, or AGENTS.md where t
 // and its output read, and a role step is started with role_run on the
 // instance, the agent holding wait_for_events until the run ends; a task is
 // closed with task_done when its step exits 0, or its role run ends worked,
-// with the exit in its Notes; the story goes to review, closed out with
-// verify, when every task is done; and no step is invented or reworded.
-// Empty for a story that is no instance, whose prompt is then as before.
+// with the exit in its Notes; the end of a role run it started, a change of
+// kind agent on the instance whose summary says a story's agent may let it
+// pass, is the step's exit and not let pass (T-1775); a step that fails, a
+// command or script that exits non-zero or a role run that ends failed or
+// asked, runs nothing after it: its task is blocked with its exit, the exit
+// and the last 40 lines of its output go in its Notes, a thread on the story
+// names the step and the exit, and the agent writes its Current state and
+// Next steps and ends, as for any question (T-1776, answeredStep); the story
+// goes to review, closed out with verify, when every task is done; and no
+// step is invented or reworded. Empty for a story that is no instance, whose
+// prompt is then as before.
 func instance(r Request) string {
 	if r.Formula == "" {
 		return ""
 	}
 	return fmt.Sprintf(`
 
-%[1]s is an instance of the formula %[2]s, which flai formula run made from design/workflows/formulas/%[2]s.md: its tasks are the formula's steps, written already, so write, review, add, rewrite, or cancel none of them. Work them in their layers, a layer only once every task of the one before is done, and in no other order, each as its task's ## Work names it, and run each step yourself rather than through a task sub-agent. Run a flai command or a script under scripts/ from the root of %[1]s's worktree, and read its output. Start a role step with the flai MCP tool role_run (flai role run on the host), with the role the step names, the step's prompt and inputs, and %[1]s as the run's item, then hold the flai MCP tool wait_for_events until the run ends. When a step exits 0, or its role run ends worked, write its exit in the task's ## Notes and close the task with the flai MCP tool task_done (flai task done T-nnnn -m "<message>" in the worktree). When every task is done, close %[1]s out with verify and move it to review as any story. Invent no step, and change no step's words.`, r.Story, r.Formula)
+%[1]s is an instance of the formula %[2]s, which flai formula run made from design/workflows/formulas/%[2]s.md: its tasks are the formula's steps, written already, so write, review, add, rewrite, or cancel none of them. Work them in their layers, a layer only once every task of the one before is done, and in no other order, each as its task's ## Work names it, and run each step yourself rather than through a task sub-agent. Run a flai command or a script under scripts/ from the root of %[1]s's worktree, and read its output. Start a role step with the flai MCP tool role_run (flai role run on the host), with the role the step names, the step's prompt and inputs, and %[1]s as the run's item, then hold the flai MCP tool wait_for_events until the run ends. When a step exits 0, or its role run ends worked, write its exit in the task's ## Notes and close the task with the flai MCP tool task_done (flai task done T-nnnn -m "<message>" in the worktree). The end of a role run you started for a step reaches wait_for_events as a change of kind agent on %[1]s by the role's agent: to failed when the run failed, and to ended when it asked, its why waiting for an answer to a thread, or when it worked, its why ended with its work done. That change is the step's exit: do not let it pass, though its summary says a story's agent may. When a step fails, a command or script that exits other than 0, or a role run that ends failed or asked, run nothing after it. Block its task with flai block T-nnnn --reason "<the step and its exit>" in the worktree, write the exit and the last 40 lines of the step's output in the task's ## Notes with the flai MCP tool item_edit, or by editing the task's body, and open a thread on %[1]s with the flai MCP tool thread_open naming the step and its exit. Then write the narrative's Current state and Next steps with the flai MCP tool stream_state, and end the session, as for any question: flai serve starts you again when the thread is answered. When every task is done, close %[1]s out with verify and move it to review as any story. Invent no step, and change no step's words.`, r.Story, r.Formula)
+}
+
+// answeredStep tells the agent of a formula's instance, started again on the
+// answer to its question (T-1776), that when it asked because a step failed
+// it unblocks that step's task, runs the step again as the answer says, and
+// goes on with the layers. Empty for a story that is no instance, whose
+// answered prompt is then as before.
+func answeredStep(r Request) string {
+	if r.Formula == "" {
+		return ""
+	}
+	return fmt.Sprintf(` %[1]s is an instance of the formula %[2]s: if you asked %[3]s because a step failed, unblock its task with flai unblock T-nnnn in the worktree, run that step again as the answer says, and go on with the layers from there, closing its task with task_done when it passes.`, r.Story, r.Formula, r.Answered)
 }
 
 // shared tells an agent started on shares (ADR-0134), as a paragraph of its
