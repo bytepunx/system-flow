@@ -762,6 +762,24 @@ type readyStory struct {
 	item       *workitem.Item
 }
 
+// formulaOf is the formula story is an instance of (S-0422): its item's
+// formula when the board read it, else the story's as root holds it, and
+// empty when it is no instance or cannot be read.
+func formulaOf(root string, story readyStory) string {
+	if story.item != nil {
+		return story.item.Formula
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		return ""
+	}
+	it, err := repo.Get(story.ID)
+	if err != nil {
+		return ""
+	}
+	return it.Formula
+}
+
 // withTrial has repo hold a ready story on overlap only when a trial merge,
 // asked of git, the system's when nil, conflicts (ADR-0230); outside a git
 // checkout NewTrialJudge gives none, and an overlap holds as before.
@@ -1922,7 +1940,7 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 	}
 	spec, keys, err := l.startOf(cfg, run, adapter, name, harness.Request{Story: story.ID, Root: l.entry.Root, Project: l.entry.Key, Agent: story.Agent, Name: run.Agent, Flai: cfg.Flai,
 		Session: run.Session, Answered: run.Answered, SentBack: story.SentBack, Restart: story.Restart, AutoRestart: auto, AfterLimit: story.AfterLimit, Commit: story.Commit, Started: story.Started, Past: story.Past, Begun: story.Begun,
-		Shares: shares})
+		Shares: shares, Formula: formulaOf(l.entry.Root, story)})
 	if err != nil {
 		return fail(err)
 	}

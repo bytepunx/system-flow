@@ -128,6 +128,11 @@ type Request struct {
 	// Shares are the shares in force that cleared a hold on the story, each
 	// made by the agent of the story that held it (ADR-0134); none otherwise.
 	Shares []Share
+	// Formula is the formula the story is an instance of, its formula front
+	// matter, which flai formula run wrote (S-0421): its agent works the
+	// story's tasks as the formula's steps (S-0422). Empty for a story made
+	// any other way, and for any other agent.
+	Formula string
 	// ProviderName and Provider are where the agent's model calls go, the
 	// provider its agent names, resolved and checked by the caller
 	// (ADR-0129); empty and nil when it names none, and the harness calls
@@ -434,7 +439,8 @@ func options(harness string, config map[string]string, takes map[string]option) 
 // story already in progress, which story_start refuses, primes and takes it
 // up with flai stream open. One started on a share that cleared a hold on
 // its story is told the share's conversation, paths, and split (ADR-0134,
-// shared). The planner is asked to plan its item instead
+// shared). One whose story is a formula's instance is told to work its tasks
+// as the formula's steps (S-0422, instance). The planner is asked to plan its item instead
 // (planPrompt), the orchestrator to keep the project's work moving
 // (orchestratePrompt), the analyzer to write a report (analyzePrompt), the
 // curator to keep the digest (curatePrompt), and a role the project defines
@@ -505,11 +511,31 @@ If a change cannot be committed without the designer deciding something, ask wit
 	}
 	return fmt.Sprintf(`You are %[1]s, started by flai serve on this host to work story %[2]s in the project at %[3]s, %[5]s%[8]s
 
-Work %[2]s to review, and no other story. Follow CLAUDE.md, or AGENTS.md where there is no CLAUDE.md. %[7]s A brief is not the document: when one bears on the story, read it, or its section that does, with the flai MCP tool doc_get and its heading (flai doc show --heading on the host) before relying on it or changing what it describes, and find sections by their words with doc_search. Write the story's tasks if it has none, or review the ones the planner drafted, and work them in that worktree. When a task is done, close it with flai task done T-nnnn -m "<message>" in the worktree (or the flai MCP tool task_done), with its docs and work-item updates in the change: it commits on story/%[2]s, runs flai stream sync %[2]s, moves the task to done, logs it in the narrative, widens the touches, runs flai check, and answers your inbox, stopping at the first step that fails. When the sync stops on conflicts, resolve each path it lists in the worktree, git add it, and git rebase --continue, then call it again; when the check stops, fix what it found and call it again. Then run the task's tests with flai test and the paths it changed (or the flai MCP tool test with them), and close any fix they need by calling flai task done again. flai stream sync does the branch's git work and refuses while anything is uncommitted: never start a rebase or merge by hand. Keep the narrative's Current state and Next steps true: rewrite them at every task transition with flai stream state %[2]s --current "<text>" --next "<text>" (or the flai MCP tool stream_state), never by editing the narrative.
+Work %[2]s to review, and no other story. Follow CLAUDE.md, or AGENTS.md where there is no CLAUDE.md. %[7]s A brief is not the document: when one bears on the story, read it, or its section that does, with the flai MCP tool doc_get and its heading (flai doc show --heading on the host) before relying on it or changing what it describes, and find sections by their words with doc_search. Write the story's tasks if it has none, or review the ones the planner drafted, and work them in that worktree. When a task is done, close it with flai task done T-nnnn -m "<message>" in the worktree (or the flai MCP tool task_done), with its docs and work-item updates in the change: it commits on story/%[2]s, runs flai stream sync %[2]s, moves the task to done, logs it in the narrative, widens the touches, runs flai check, and answers your inbox, stopping at the first step that fails. When the sync stops on conflicts, resolve each path it lists in the worktree, git add it, and git rebase --continue, then call it again; when the check stops, fix what it found and call it again. Then run the task's tests with flai test and the paths it changed (or the flai MCP tool test with them), and close any fix they need by calling flai task done again. flai stream sync does the branch's git work and refuses while anything is uncommitted: never start a rebase or merge by hand. Keep the narrative's Current state and Next steps true: rewrite them at every task transition with flai stream state %[2]s --current "<text>" --next "<text>" (or the flai MCP tool stream_state), never by editing the narrative.%[9]s
 
 %[6]s
 
-%[4]s`, r.Name, r.Story, r.Root, rules(r), why, delegation(r), open, shared(r))
+%[4]s`, r.Name, r.Story, r.Root, rules(r), why, delegation(r), open, shared(r), instance(r))
+}
+
+// instance tells the agent of a formula's instance, a story flai formula run
+// made (S-0421), as a paragraph of its own, how to work it (S-0422, TH-0471):
+// its tasks are the formula's steps, already written, worked in their layers
+// and in no other order, each as its task's Work names it, by the agent
+// itself; a flai command or a script under scripts/ is run from the worktree
+// and its output read, and a role step is started with role_run on the
+// instance, the agent holding wait_for_events until the run ends; a task is
+// closed with task_done when its step exits 0, or its role run ends worked,
+// with the exit in its Notes; the story goes to review, closed out with
+// verify, when every task is done; and no step is invented or reworded.
+// Empty for a story that is no instance, whose prompt is then as before.
+func instance(r Request) string {
+	if r.Formula == "" {
+		return ""
+	}
+	return fmt.Sprintf(`
+
+%[1]s is an instance of the formula %[2]s, which flai formula run made from design/workflows/formulas/%[2]s.md: its tasks are the formula's steps, written already, so write, review, add, rewrite, or cancel none of them. Work them in their layers, a layer only once every task of the one before is done, and in no other order, each as its task's ## Work names it, and run each step yourself rather than through a task sub-agent. Run a flai command or a script under scripts/ from the root of %[1]s's worktree, and read its output. Start a role step with the flai MCP tool role_run (flai role run on the host), with the role the step names, the step's prompt and inputs, and %[1]s as the run's item, then hold the flai MCP tool wait_for_events until the run ends. When a step exits 0, or its role run ends worked, write its exit in the task's ## Notes and close the task with the flai MCP tool task_done (flai task done T-nnnn -m "<message>" in the worktree). When every task is done, close %[1]s out with verify and move it to review as any story. Invent no step, and change no step's words.`, r.Story, r.Formula)
 }
 
 // shared tells an agent started on shares (ADR-0134), as a paragraph of its

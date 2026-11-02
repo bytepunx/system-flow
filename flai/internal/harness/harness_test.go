@@ -1037,6 +1037,45 @@ func TestThePromptSaysThePerTaskCycle(t *testing.T) {
 	}
 }
 
+// S-0422: the agent of a formula's instance is told, in a paragraph of its
+// own between the work and the delegation, that its story is an instance of
+// the formula and how its steps are worked; a story with no formula gets the
+// prompt it got before, which the instance's is with that paragraph taken out.
+func TestAnInstancesPromptSaysHowItsStepsAreWorked(t *testing.T) {
+	r := req(&manifest.Agent{Harness: ClaudeCode})
+	plain := Prompt(r)
+	in := r
+	in.Formula = "release"
+	p := Prompt(in)
+	for _, w := range []string{
+		"S-0104 is an instance of the formula release, which flai formula run made from design/workflows/formulas/release.md: its tasks are the formula's steps, written already, so write, review, add, rewrite, or cancel none of them.",
+		"Work them in their layers, a layer only once every task of the one before is done, and in no other order, each as its task's ## Work names it, and run each step yourself rather than through a task sub-agent.",
+		"Run a flai command or a script under scripts/ from the root of S-0104's worktree, and read its output.",
+		"Start a role step with the flai MCP tool role_run (flai role run on the host), with the role the step names, the step's prompt and inputs, and S-0104 as the run's item, then hold the flai MCP tool wait_for_events until the run ends.",
+		`When a step exits 0, or its role run ends worked, write its exit in the task's ## Notes and close the task with the flai MCP tool task_done (flai task done T-nnnn -m "<message>" in the worktree).`,
+		"When every task is done, close S-0104 out with verify and move it to review as any story.",
+		"Invent no step, and change no step's words.",
+	} {
+		if !strings.Contains(p, w) {
+			t.Errorf("an instance's prompt lacks %q:\n%s", w, p)
+		}
+	}
+	para := instance(in)
+	if !strings.HasPrefix(para, "\n\nS-0104 is an instance") {
+		t.Fatalf("the instance's paragraph is not a paragraph of its own: %q", para)
+	}
+	work := strings.Index(p, "never by editing the narrative.\n\nS-0104 is an instance")
+	if work < 0 || work > strings.Index(p, "Keep your own context for decisions and edits") {
+		t.Errorf("the instance's paragraph does not follow the work and come before the delegation:\n%s", p)
+	}
+	if got := strings.Replace(p, para, "", 1); got != plain {
+		t.Errorf("an instance's prompt is not the story's with its paragraph added:\n%s\nwant:\n%s", got, plain)
+	}
+	if instance(r) != "" || strings.Contains(plain, "formula") {
+		t.Errorf("a story with no formula is told of one:\n%s", plain)
+	}
+}
+
 // S-0282, ADR-0089: every run working a story is told to tick each acceptance
 // criterion through flai once it has verified it, never by editing the
 // story's file; a full run is also told to ask each task sub-agent which
