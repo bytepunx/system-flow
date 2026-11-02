@@ -8,7 +8,7 @@
 # TestFieldsFileIsTheCode keeps it equal to the code: change it with any
 # field added or removed. Publishing a flai release that changed it raises
 # system-flow.yaml's flai.minimum to that release (release.RaiseMinimum).
-item: after agent blocked cost_of_delay created draft estimate finalized forecast id nature owner parent status stream tags title topics touches transitions type updated usage
+item: after agent blocked cost_of_delay created draft estimate finalized forecast formula id nature owner parent status stream tags title topics touches transitions type updated usage
 thread: anchor created id participants status title updated
 issue: class cost count first_reported id last_reported status title updated usage
 item.agent: config harness model provider roles

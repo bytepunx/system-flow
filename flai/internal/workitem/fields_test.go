@@ -2,6 +2,7 @@ package workitem_test
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -57,5 +58,68 @@ func TestFieldsFileIsTheCode(t *testing.T) {
 	}
 	if !strings.HasSuffix(release.FieldsFile, "internal/workitem/front-matter-fields.txt") {
 		t.Errorf("release.FieldsFile is %s", release.FieldsFile)
+	}
+}
+
+const formulaStory = `---
+id: S-0001
+type: story
+nature: feature
+title: Release 1.4.0
+status: backlog
+owner: alex
+created: 2026-11-02T09:00:00Z
+updated: 2026-11-02T09:00:00Z
+transitions: []
+tags: []
+draft: true
+formula: release
+---
+
+# S-0001: Release 1.4.0
+`
+
+// S-0421: a story names the formula flai formula run made it from, and reads
+// and saves back byte for byte, written after the planning fields, where an
+// older flai writes back a key it does not know; only a story carries one.
+func TestFormulaRoundTrips(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(root, "wip", "kanban", "stories", "S-0001-release-1-4-0.md")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(formulaStory), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	r, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	it, err := workitem.ReadItem(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if it.Formula != "release" || len(it.Unknown) > 0 {
+		t.Errorf("read formula %q, unknown %v", it.Formula, it.Unknown)
+	}
+	if err := it.Validate(); err != nil {
+		t.Errorf("a story with a formula: %v", err)
+	}
+	if err := r.Save(it); err != nil {
+		t.Fatal(err)
+	}
+	if data, _ := os.ReadFile(path); string(data) != formulaStory {
+		t.Errorf("saved as:\n%s\nwant:\n%s", data, formulaStory)
+	}
+
+	task, err := workitem.ParseItem(strings.Replace(strings.Replace(formulaStory, "S-0001", "T-0001", 2), "type: story\n", "type: task\nparent: S-0001\n", 1))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := task.Validate(); err == nil || !strings.Contains(err.Error(), "only a story carries a formula") {
+		t.Errorf("a task with a formula: %v", err)
 	}
 }

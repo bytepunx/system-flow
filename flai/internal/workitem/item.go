@@ -102,6 +102,10 @@ type Item struct {
 	// Finalized is who cleared the story's draft flag, and when (S-0201).
 	// Stories only.
 	Finalized *Finalized `yaml:"finalized" json:"finalized,omitempty"`
+	// Formula names the formula under design/workflows/formulas that flai
+	// formula run made the story from (S-0421). Stories only; written last,
+	// where an older flai writes back a key it does not know.
+	Formula string `yaml:"formula" json:"formula,omitempty"`
 	// Unknown is the front matter this flai does not know, kept for writing
 	// back (S-0181).
 	Unknown []Field `yaml:"-" json:"-"`
@@ -218,6 +222,9 @@ func (it *Item) Validate() error {
 		if !ValidTopic(t) {
 			errs = append(errs, fmt.Sprintf("topics[%d] %q is not one word of letters, digits, dot, dash, or underscore", i, t))
 		}
+	}
+	if it.Formula != "" && it.Type != Story {
+		errs = append(errs, "only a story carries a formula, and this is "+articled(it.Type))
 	}
 	for _, name := range []string{"created", "updated"} {
 		v := it.Created
@@ -398,6 +405,9 @@ func (it *Item) Marshal() string {
 		b.WriteString(usageBlock(it.Usage))
 	}
 	b.WriteString(planningBlock(it))
+	if it.Formula != "" {
+		fmt.Fprintf(&b, "formula: %s\n", Scalar(it.Formula))
+	}
 	WriteFields(&b, it.Unknown)
 	b.WriteString("---\n")
 	b.WriteString(it.Body)
