@@ -409,10 +409,20 @@ type AgentState struct {
 	// (S-0228): what the dashboard's pages list as past runs.
 	PastOrchestrators []*AgentRun `json:"past_orchestrators,omitempty"`
 	PastAnalyzers     []*AgentRun `json:"past_analyzers,omitempty"`
+	// PastPlans and PastCurators are the planner runs a newer run on the same
+	// item replaced in Plans, and the curator runs Curator named before, and
+	// PastRoles the runs of each role the project defines that a newer run on
+	// the same item replaced in Roles, by the role's name: each newest first,
+	// at most pastRuns, kept as PastOrchestrators are, so that agent.status
+	// lists every role's past runs (S-0420).
+	PastPlans    []*AgentRun            `json:"past_plans,omitempty"`
+	PastCurators []*AgentRun            `json:"past_curators,omitempty"`
+	PastRoles    map[string][]*AgentRun `json:"past_roles,omitempty"`
 }
 
-// pastRuns is how many of the orchestrator's and the analyzer's earlier runs
-// are kept.
+// pastRuns is how many of a role's earlier runs are kept: the orchestrator's
+// and the analyzer's (S-0228), and the planner's, the curator's, and each
+// defined role's (S-0420).
 const pastRuns = 20
 
 // keep is past with was, the run a new one replaces, put first and the
@@ -426,6 +436,79 @@ func keep(past []*AgentRun, was, r *AgentRun) []*AgentRun {
 	if len(out) > pastRuns {
 		out = out[:pastRuns]
 	}
+	return out
+}
+
+// RoleState is one role as agent.status carries it under roles, by its name,
+// with its runs as flai serve records them (S-0420).
+type RoleState = hostapi.RoleState[AgentRun]
+
+// RoleStates are the roles files gives, by name, each as st records its
+// runs, with enabled saying whether a host action is on for the project
+// (S-0420): its runs under way newest first, Run the first of them, and its
+// ended runs newest first, at most pastRuns; held on the orchestrator alone,
+// while the operator holds it stopped (S-0228). A built-in role's runs are those st keeps for it apart, the
+// planner's in Plans, the orchestrator's, the analyzer's, and the curator's
+// each in its own field, with their past runs; any other role's are under
+// Roles and PastRoles by its name.
+func RoleStates(st AgentState, files []roles.Role, enabled func(action string) bool) map[string]RoleState {
+	out := make(map[string]RoleState, len(files))
+	for _, f := range files {
+		r := RoleState{Name: f.Name, Role: f.Role, Path: f.Path, Item: slices.Clone(f.Item), Trigger: []string{}, Running: []*AgentRun{}, Runs: []*AgentRun{}}
+		r.Action = hostapi.RoleAction{Name: f.Action, Enabled: f.Action != "" && enabled != nil && enabled(f.Action)}
+		if r.Item == nil {
+			r.Item = []string{}
+		}
+		for _, t := range f.Trigger {
+			if !slices.Contains(r.Trigger, t.Kind) {
+				r.Trigger = append(r.Trigger, t.Kind)
+			}
+		}
+		for _, run := range st.roleRuns(f.Name) {
+			if run.live() {
+				r.Running = append(r.Running, run)
+			} else if len(r.Runs) < pastRuns {
+				r.Runs = append(r.Runs, run)
+			}
+		}
+		if len(r.Running) > 0 {
+			r.Run = r.Running[0]
+		}
+		r.Held = f.Name == roles.Orchestrator && st.Orchestrator != nil && st.Orchestrator.Held
+		out[f.Name] = r
+	}
+	return out
+}
+
+// roleRuns are every run st records of the role name, newest first by when
+// each started, then by item, each once: a built-in role's from the fields
+// kept for it, any other's from Roles and PastRoles (S-0420).
+func (s AgentState) roleRuns(name string) []*AgentRun {
+	var newest, past []*AgentRun
+	switch name {
+	case workitem.ActivityPlanner:
+		newest, past = slices.Collect(maps.Values(s.Plans)), s.PastPlans
+	case workitem.ActivityOrchestrator:
+		newest, past = []*AgentRun{s.Orchestrator}, s.PastOrchestrators
+	case workitem.ActivityAnalyzer:
+		newest, past = []*AgentRun{s.Analyzer}, s.PastAnalyzers
+	case workitem.ActivityCurator:
+		newest, past = []*AgentRun{s.Curator}, s.PastCurators
+	default:
+		newest, past = slices.Collect(maps.Values(s.Roles[name])), s.PastRoles[name]
+	}
+	var out []*AgentRun
+	for _, r := range append(newest, past...) {
+		if r != nil && !slices.ContainsFunc(out, r.same) {
+			out = append(out, r)
+		}
+	}
+	slices.SortStableFunc(out, func(a, b *AgentRun) int {
+		if c := strings.Compare(b.Started, a.Started); c != 0 {
+			return c
+		}
+		return strings.Compare(a.Item, b.Item)
+	})
 	return out
 }
 
@@ -452,10 +535,10 @@ func (s *AgentState) of(r *AgentRun) *AgentRun {
 }
 
 // put records a run as its story's newest, and keeps Running and Last true,
-// a planner run as its item's newest, the orchestrator's or the analyzer's
-// as the newest, the one it replaces kept among their past runs, the
-// curator's as the newest alone, or a defined role's as its newest on its
-// item.
+// a planner run as its item's newest, the orchestrator's, the analyzer's, or
+// the curator's as the newest, or a defined role's as its newest on its
+// item; the run it replaces, but a story's agent's, is kept among its role's
+// past runs (S-0228, S-0420).
 func (s *AgentState) put(r *AgentRun) {
 	if r.defined() {
 		if s.Roles == nil {
@@ -464,10 +547,17 @@ func (s *AgentState) put(r *AgentRun) {
 		if s.Roles[r.RoleName] == nil {
 			s.Roles[r.RoleName] = map[string]*AgentRun{}
 		}
+		if past := keep(s.PastRoles[r.RoleName], s.Roles[r.RoleName][r.Item], r); len(past) > 0 {
+			if s.PastRoles == nil {
+				s.PastRoles = map[string][]*AgentRun{}
+			}
+			s.PastRoles[r.RoleName] = past
+		}
 		s.Roles[r.RoleName][r.Item] = r
 		return
 	}
 	if r.curates() {
+		s.PastCurators = keep(s.PastCurators, s.Curator, r)
 		s.Curator = r
 		return
 	}
@@ -485,6 +575,7 @@ func (s *AgentState) put(r *AgentRun) {
 		if s.Plans == nil {
 			s.Plans = map[string]*AgentRun{}
 		}
+		s.PastPlans = keep(s.PastPlans, s.Plans[r.Item], r)
 		s.Plans[r.Item] = r
 		return
 	}

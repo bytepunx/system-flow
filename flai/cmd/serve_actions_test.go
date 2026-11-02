@@ -5,11 +5,13 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -2069,7 +2071,8 @@ func TestServeNotify(t *testing.T) {
 // S-0417: the host action a role the project defines names is one flai
 // serve enable and disable take for the project, flai serve actions and the
 // settings page list it, flai serve is told whether it is on, and
-// agent.status carries the role's runs under roles, by name and item.
+// agent.status carries the role under roles, by name, with its action's
+// state and its run (S-0420).
 func TestServeEnableTakesADefinedRolesAction(t *testing.T) {
 	t.Parallel()
 	root := rolesProject(t, map[string]string{"reviewer.md": reviewerRole})
@@ -2088,7 +2091,7 @@ func TestServeEnableTakesADefinedRolesAction(t *testing.T) {
 		}
 		return string(got)
 	}
-	if got := status(); !strings.Contains(got, `"roles":{}`) {
+	if got := status(); !strings.Contains(got, `"reviewer":{"name":"reviewer","role":"review","path":"design/workflows/roles/reviewer.md","item":["story"],"trigger":["asked","schedule"],"action":{"name":"review","enabled":false},"run":null,"running":[],"runs":[],"held":false}`) {
 		t.Errorf("agent.status before any run: %s", got)
 	}
 	if _, errOut, code := runIn(t, root, "serve", "enable", "audit"); code == 0 || !strings.Contains(errOut, `there is no host action \"audit\"`) || !strings.Contains(errOut, ", review, ") {
@@ -2112,7 +2115,7 @@ func TestServeEnableTakesADefinedRolesAction(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "agents.json"), []byte(run), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if got := status(); !strings.Contains(got, `"roles":{"reviewer":{"S-0001":{`) || !strings.Contains(got, `"role_name":"reviewer"`) || !strings.Contains(got, `"agent":"reviewer-S-0001"`) {
+	if got := status(); !strings.Contains(got, `"action":{"name":"review","enabled":true},"run":{"story":"","item":"S-0001",`) || !strings.Contains(got, `"role_name":"reviewer"`) || !strings.Contains(got, `"agent":"reviewer-S-0001"`) {
 		t.Errorf("agent.status with a run: %s", got)
 	}
 	// a role file gone, its action is still turned off
@@ -2124,6 +2127,115 @@ func TestServeEnableTakesADefinedRolesAction(t *testing.T) {
 	}
 	if _, errOut, code := runIn(t, root, "serve", "enable", "review"); code == 0 || !strings.Contains(errOut, `there is no host action \"review\"`) {
 		t.Errorf("enable once its role is gone: %d %s", code, errOut)
+	}
+}
+
+// S-0420: agent.status carries every role the project runs under roles, by
+// name, the built-in ones from flai's baseline when the project has no file
+// for them: each with its action's state, its run under way, its past runs
+// newest first, and held, the orchestrator's hold; plans, orchestrator,
+// analyzer, curator, past_orchestrators, and past_analyzers stay beside it.
+func TestAgentStatusCarriesEveryRoleByName(t *testing.T) {
+	t.Parallel()
+	root := rolesProject(t, map[string]string{"reviewer.md": reviewerRole})
+	cfgPath := configOf(t)
+	if _, errOut, code := runIn(t, root, "serve", "enable", "review"); code != 0 {
+		t.Fatalf("enable review: %d %s", code, errOut)
+	}
+	if _, errOut, code := runIn(t, root, "serve", "enable", "plan"); code != 0 {
+		t.Fatalf("enable plan: %d %s", code, errOut)
+	}
+	run := func(started, ended, item string, pid int, extra string) string {
+		r := `{"story":"","item":"` + item + `","agent":"a","pid":` + strconv.Itoa(pid) + `,"started":"` + started + `"`
+		if ended != "" {
+			r += `,"ended":"` + ended + `","outcome":"done"`
+		}
+		return r + extra + `}`
+	}
+	defined := `,"role":"review","role_name":"reviewer","action":"review"`
+	state := `{"` + root + `":{` +
+		`"plans":{"S-0001":` + run("2026-10-28T09:00:00Z", "", "S-0001", 41, "") + `,"E-0001":` + run("2026-10-28T08:00:00Z", "2026-10-28T08:10:00Z", "E-0001", 40, "") + `},` +
+		`"past_plans":[` + run("2026-10-27T08:00:00Z", "2026-10-27T08:10:00Z", "E-0001", 39, "") + `],` +
+		`"orchestrator":` + run("2026-10-28T07:00:00Z", "2026-10-28T07:05:00Z", "", 30, `,"held":true`) + `,` +
+		`"past_orchestrators":[` + run("2026-10-27T07:00:00Z", "2026-10-27T07:05:00Z", "", 29, "") + `],` +
+		`"analyzer":` + run("2026-10-28T06:00:00Z", "", "", 20, `,"focus":"risk"`) + `,` +
+		`"roles":{"reviewer":{"S-0001":` + run("2026-10-28T10:00:00Z", "", "S-0001", 42, defined) + `,"S-0003":` + run("2026-10-28T05:00:00Z", "2026-10-28T05:30:00Z", "S-0003", 43, defined) + `}},` +
+		`"past_roles":{"reviewer":[` + run("2026-10-27T10:00:00Z", "2026-10-27T10:30:00Z", "S-0001", 44, defined) + `]}}}`
+	dir := string(serve.DirFor(cfgPath))
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "agents.json"), []byte(state), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := json.Marshal((&app{configPath: cfgPath}).host().Agent(root))
+	if err != nil {
+		t.Fatal(err)
+	}
+	type runOf struct {
+		Item    string `json:"item"`
+		PID     int    `json:"pid"`
+		Started string `json:"started"`
+	}
+	var got struct {
+		Roles map[string]struct {
+			Name    string   `json:"name"`
+			Role    string   `json:"role"`
+			Path    string   `json:"path"`
+			Item    []string `json:"item"`
+			Trigger []string `json:"trigger"`
+			Action  struct {
+				Name    string `json:"name"`
+				Enabled bool   `json:"enabled"`
+			} `json:"action"`
+			Run     *runOf  `json:"run"`
+			Running []runOf `json:"running"`
+			Runs    []runOf `json:"runs"`
+			Held    bool    `json:"held"`
+		} `json:"roles"`
+		Plans             map[string]runOf `json:"plans"`
+		Orchestrator      *runOf           `json:"orchestrator"`
+		Analyzer          *runOf           `json:"analyzer"`
+		PastOrchestrators []runOf          `json:"past_orchestrators"`
+		PastAnalyzers     []runOf          `json:"past_analyzers"`
+	}
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatal(err)
+	}
+	if names := slices.Sorted(maps.Keys(got.Roles)); !slices.Equal(names, []string{"analyzer", "curator", "orchestrator", "planner", "reviewer"}) {
+		t.Fatalf("roles %v, want the four built-in ones and reviewer: %s", names, raw)
+	}
+	pids := func(runs []runOf) []int {
+		out := []int{}
+		for _, r := range runs {
+			out = append(out, r.PID)
+		}
+		return out
+	}
+	r := got.Roles["reviewer"]
+	if r.Name != "reviewer" || r.Role != "review" || r.Path != "design/workflows/roles/reviewer.md" || !slices.Equal(r.Item, []string{"story"}) ||
+		!slices.Equal(r.Trigger, []string{"asked", "schedule"}) || r.Action.Name != "review" || !r.Action.Enabled || r.Held {
+		t.Errorf("reviewer = %+v", r)
+	}
+	if r.Run == nil || r.Run.PID != 42 || r.Run.Item != "S-0001" || !slices.Equal(pids(r.Running), []int{42}) || !slices.Equal(pids(r.Runs), []int{43, 44}) {
+		t.Errorf("reviewer's runs: run %+v, running %v, runs %v; want 42 under way, then 43 and 44 ended, newest first", r.Run, pids(r.Running), pids(r.Runs))
+	}
+	p := got.Roles["planner"]
+	if p.Role != "plan" || p.Action.Name != "plan" || !p.Action.Enabled || p.Run == nil || p.Run.PID != 41 || !slices.Equal(pids(p.Runs), []int{40, 39}) || p.Held {
+		t.Errorf("planner = %+v", p)
+	}
+	o := got.Roles["orchestrator"]
+	if o.Action.Name != "orchestrate" || o.Action.Enabled || o.Run != nil || !slices.Equal(pids(o.Runs), []int{30, 29}) || !o.Held || len(o.Item) != 0 {
+		t.Errorf("orchestrator = %+v; want its two ended runs, and held", o)
+	}
+	if a := got.Roles["analyzer"]; a.Action.Name != "analyze" || a.Run == nil || a.Run.PID != 20 || len(a.Runs) != 0 || a.Held {
+		t.Errorf("analyzer = %+v", a)
+	}
+	if c := got.Roles["curator"]; c.Action.Name != "curate" || c.Run != nil || len(c.Runs) != 0 || c.Running == nil || c.Runs == nil {
+		t.Errorf("curator = %+v; want no runs, as empty lists", c)
+	}
+	if len(got.Plans) != 2 || got.Orchestrator == nil || got.Orchestrator.PID != 30 || got.Analyzer == nil || !slices.Equal(pids(got.PastOrchestrators), []int{29}) || got.PastAnalyzers == nil {
+		t.Errorf("the fields an older dashboard reads: %s", raw)
 	}
 }
 

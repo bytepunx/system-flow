@@ -246,7 +246,8 @@ func TestPlanStreamReadsAPlannerRun(t *testing.T) {
 
 // S-0218, S-0228: a strategic role's stream is read from the project's
 // newest run of it, the orchestrator's or the analyzer's, and names the role;
-// a project with none has no stream, and no other role has one.
+// a project with none has no stream, nor does a role of another name with no
+// run (S-0420).
 func TestRoleStreamReadsTheNewestRunOfTheRole(t *testing.T) {
 	text := strings.Join(sessionLines, "\n") + "\n"
 	st, log := streamState(t, text, false)
@@ -277,8 +278,61 @@ func TestRoleStreamReadsTheNewestRunOfTheRole(t *testing.T) {
 	if got.Role != "analyze" || got.Agent != "analyzer" || got.Running || got.Outcome != OutcomeWorked || got.Ended != "2026-09-29T07:05:00Z" {
 		t.Errorf("analyzer run = %+v", got)
 	}
-	if _, err := RoleStream(st, "plan", -1); err == nil || errors.Is(err, hostapi.ErrNoAgent) || !strings.Contains(err.Error(), `there is no stream for the role "plan"`) {
-		t.Errorf("another role: err = %v, want a refusal that is not hostapi.ErrNoAgent", err)
+	// any other name is a role's, which agent.stream has judged the project
+	// runs (S-0420): with no run of it, there is no stream
+	if _, err := RoleStream(st, "plan", -1); !errors.Is(err, hostapi.ErrNoAgent) || err.Error() != "flai serve has started no run of the role plan for this project" {
+		t.Errorf("a role with no run: err = %v, want hostapi.ErrNoAgent naming it", err)
+	}
+}
+
+// S-0420: a role's stream by its name is read from its newest run, on
+// whatever item: a defined role's from those under Roles and PastRoles, a
+// built-in role's from the fields kept for it; it names the role and the
+// run's item.
+func TestRoleStreamReadsAnyRolesNewestRunByName(t *testing.T) {
+	text := strings.Join(sessionLines, "\n") + "\n"
+	st, log := streamState(t, text, false)
+	other := filepath.Join(t.TempDir(), "other.log")
+	if err := os.WriteFile(other, []byte("not this one\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RoleStream(st, "reviewer", -1); !errors.Is(err, hostapi.ErrNoAgent) || err.Error() != "flai serve has started no run of the role reviewer for this project" {
+		t.Errorf("no reviewer run: err = %v, want hostapi.ErrNoAgent naming the role", err)
+	}
+	reviewer := func(item, started, log string, pid int) *AgentRun {
+		return &AgentRun{Item: item, Agent: "reviewer-" + item, Role: "review", RoleName: "reviewer", Action: "review", Started: started, Log: log, PID: pid}
+	}
+	st.Roles = map[string]map[string]*AgentRun{"reviewer": {
+		"S-0001": reviewer("S-0001", "2026-09-29T05:00:00Z", other, 50),
+		"S-0003": reviewer("S-0003", "2026-09-29T06:00:00Z", log, 51),
+	}}
+	st.PastRoles = map[string][]*AgentRun{"reviewer": {reviewer("S-0003", "2026-09-29T04:00:00Z", other, 49)}}
+	got, err := RoleStream(st, "reviewer", -1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sameEntries(t, got.Entries, sessionEntries)
+	if got.Role != "reviewer" || got.Item != "S-0003" || got.Story != "" || got.Agent != "reviewer-S-0003" || !got.Running || got.Next != int64(len(text)) {
+		t.Errorf("reviewer run = %+v, want its newest, on S-0003", got)
+	}
+	st.Plans = map[string]*AgentRun{
+		"E-0001": {Item: "E-0001", Agent: "planner-E-0001", Started: "2026-09-29T07:00:00Z", Log: other, PID: 52},
+		"S-0002": {Item: "S-0002", Agent: "planner-S-0002", Started: "2026-09-29T03:00:00Z", Log: log, PID: 53},
+	}
+	got, err = RoleStream(st, "planner", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sameEntries(t, got.Entries, []StreamEntry{{Kind: StreamOutput, Text: "not this one"}})
+	if got.Role != "planner" || got.Item != "E-0001" || got.Agent != "planner-E-0001" {
+		t.Errorf("planner run = %+v, want its newest, on E-0001", got)
+	}
+	st.Orchestrator = &AgentRun{Agent: "orchestrator", Started: "2026-09-29T06:00:00Z", Log: log, PID: 44}
+	if got, err = RoleStream(st, "orchestrator", -1); err != nil || got.Role != "orchestrator" || got.Agent != "orchestrator" {
+		t.Errorf("orchestrator by its name: %+v, %v", got, err)
+	}
+	if _, err := RoleStream(st, "curator", -1); !errors.Is(err, hostapi.ErrNoAgent) {
+		t.Errorf("no curator run: err = %v, want hostapi.ErrNoAgent", err)
 	}
 }
 

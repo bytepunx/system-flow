@@ -606,3 +606,67 @@ func TestBudgetIsTheShapeTheDashboardReads(t *testing.T) {
 		}
 	}
 }
+
+// S-0420: agent.stream takes the name of any role the project runs as role,
+// a role it defines, such as reviewer, and the built-in ones by name, from
+// flai's baseline when the project has no file for them, besides orchestrate
+// and analyze as before; a name it does not run is refused, naming those it
+// does, and reaches no host.
+func TestAgentStreamReadsAnyRoleByName(t *testing.T) {
+	p := withRoles(t, withDocs(t))
+	var asked []string
+	host := Host{RoleStream: func(root, role string, after int64) (any, error) {
+		asked = append(asked, role)
+		return map[string]any{"role": role, "after": after}, nil
+	}}
+	m := MethodsFor("test", nil, host)["agent.stream"]
+	for _, role := range []string{"reviewer", "planner", "orchestrator", "analyzer", "curator", "pusher", "orchestrate", "analyze"} {
+		res, e := m(context.Background(), p, json.RawMessage(`{"role":"`+role+`","after":3}`))
+		if e != nil {
+			t.Fatalf("%s: %+v", role, e)
+		}
+		if b, _ := json.Marshal(res); string(b) != `{"after":3,"role":"`+role+`"}` {
+			t.Errorf("%s answered %s", role, b)
+		}
+	}
+	if len(asked) != 8 {
+		t.Errorf("asked the host for %v", asked)
+	}
+	_, e := m(context.Background(), p, json.RawMessage(`{"role":"auditor"}`))
+	if e == nil || e.Code != channel.CodeInvalidParams || !strings.Contains(e.Message, "one of analyzer, curator, orchestrator, planner, pusher, reviewer; not \"auditor\"") {
+		t.Errorf("a role the project does not run: %+v", e)
+	}
+	if len(asked) != 8 {
+		t.Errorf("a refused read reached the host: %v", asked)
+	}
+}
+
+// S-0420: ProjectRoles are every role file that loads, by name, and the
+// baseline of each built-in role the project has no file for; a project's own
+// file for a built-in role takes the baseline's place.
+func TestProjectRolesAddTheBaselineOfEachBuiltInRole(t *testing.T) {
+	p := withDocs(t)
+	names := func() []string {
+		var out []string
+		for _, f := range ProjectRoles(p.Root) {
+			out = append(out, f.Name+":"+f.Action)
+		}
+		return out
+	}
+	if got := names(); !slices.Equal(got, []string{"analyzer:analyze", "curator:curate", "orchestrator:orchestrate", "planner:plan"}) {
+		t.Errorf("with no role files: %v", got)
+	}
+	withRoles(t, p)
+	planner := strings.NewReplacer("name: reviewer", "name: planner", "role: review", "role: plan", "action: review", "action: plan").Replace(reviewerRole)
+	if err := os.WriteFile(filepath.Join(p.Root, "design", "workflows", "roles", "planner.md"), []byte(planner), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := names(); !slices.Equal(got, []string{"analyzer:analyze", "curator:curate", "orchestrator:orchestrate", "planner:plan", "pusher:push", "reviewer:review"}) {
+		t.Errorf("with role files: %v", got)
+	}
+	for _, f := range ProjectRoles(p.Root) {
+		if f.Name == "planner" && !strings.Contains(f.Body, "You are the reviewer") {
+			t.Errorf("the project's planner file did not take the baseline's place: %q", f.Body)
+		}
+	}
+}

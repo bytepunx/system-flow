@@ -5,6 +5,7 @@ package serve
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -28,6 +29,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
+	"github.com/bytepunx/system-flow/flai/internal/roles"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -1749,6 +1751,101 @@ func TestTheOrchestratorsAndTheAnalyzersEarlierRunsAreKeptNewestFirst(t *testing
 	}
 	if s.Orchestrator.PID != pastRuns+2 || s.Orchestrator.Ended == "" {
 		t.Errorf("newest orchestrator run = %+v, want pid %d ended", s.Orchestrator, pastRuns+2)
+	}
+}
+
+// S-0420: a planner run, a curator run, and a defined role's run that a newer
+// run of the same role on the same item replaces are kept among that role's
+// past runs, newest first, at most pastRuns; a run recorded again, as when it
+// ends, is no past run, and a run on another item replaces none.
+func TestEveryRolesEarlierRunsAreKept(t *testing.T) {
+	var s AgentState
+	for i := 1; i <= pastRuns+2; i++ {
+		started := fmt.Sprintf("2026-10-07T00:%02d:00Z", i)
+		s.put(&AgentRun{Item: "E-0001", Agent: "planner-E-0001", Started: started, PID: i})
+		s.put(&AgentRun{Agent: "curator", Role: conventions.RoleCurate, Started: started, PID: i})
+		s.put(&AgentRun{Item: "S-0001", RoleName: "reviewer", Role: "review", Action: "review", Started: started, PID: i})
+	}
+	s.put(&AgentRun{Item: "S-0002", Agent: "planner-S-0002", Started: "2026-10-07T01:00:00Z", PID: 99})
+	s.put(&AgentRun{Item: "S-0002", RoleName: "reviewer", Role: "review", Action: "review", Started: "2026-10-07T01:00:00Z", PID: 99})
+	ended := *s.Roles["reviewer"]["S-0001"]
+	ended.Ended = "2026-10-07T01:00:00Z"
+	s.put(&ended)
+	for name, past := range map[string][]*AgentRun{"planner": s.PastPlans, "curator": s.PastCurators, "reviewer": s.PastRoles["reviewer"]} {
+		if len(past) != pastRuns {
+			t.Fatalf("%s: kept %d earlier runs, want %d", name, len(past), pastRuns)
+		}
+		if past[0].PID != pastRuns+1 || past[pastRuns-1].PID != 2 {
+			t.Errorf("%s: earlier runs from pid %d to %d, want %d newest first to 2", name, past[0].PID, past[pastRuns-1].PID, pastRuns+1)
+		}
+	}
+	if r := s.Roles["reviewer"]["S-0001"]; r.PID != pastRuns+2 || r.Ended == "" || s.Roles["reviewer"]["S-0002"].PID != 99 || s.Plans["S-0002"].PID != 99 {
+		t.Errorf("the newest runs = %+v, want pid %d ended on S-0001 and pid 99 on S-0002", s.Roles["reviewer"], pastRuns+2)
+	}
+}
+
+// S-0420: RoleStates gives each role the files name, by name, with its file's
+// verb, path, items, and trigger kinds, its action's state, its newest run
+// under way, every run under way, its ended runs newest first and at most
+// pastRuns, and held, the orchestrator's alone; a built-in role's runs come
+// from the fields kept for it, a defined role's from Roles and PastRoles.
+func TestRoleStatesCarryEveryRolesRuns(t *testing.T) {
+	ended := func(item string, minute, pid int) *AgentRun {
+		at := fmt.Sprintf("2026-10-07T00:%02d:00Z", minute)
+		return &AgentRun{Item: item, Started: at, Ended: at, Outcome: OutcomeWorked, PID: pid}
+	}
+	running := func(item string, minute, pid int) *AgentRun {
+		return &AgentRun{Item: item, Started: fmt.Sprintf("2026-10-07T00:%02d:00Z", minute), PID: pid}
+	}
+	st := AgentState{
+		Plans:             map[string]*AgentRun{"E-0001": running("E-0001", 50, 1), "S-0001": running("S-0001", 55, 2), "S-0002": ended("S-0002", 40, 3)},
+		PastPlans:         []*AgentRun{ended("E-0001", 30, 4)},
+		Orchestrator:      &AgentRun{Started: "2026-10-07T00:20:00Z", Ended: "2026-10-07T00:21:00Z", PID: 5, Held: true},
+		PastOrchestrators: []*AgentRun{ended("", 10, 6)},
+		Roles:             map[string]map[string]*AgentRun{"reviewer": {"S-0001": running("S-0001", 45, 7)}},
+		PastRoles:         map[string][]*AgentRun{"reviewer": {}},
+	}
+	for i := range pastRuns + 3 {
+		st.PastRoles["reviewer"] = append(st.PastRoles["reviewer"], ended("S-0001", 44-i, 100+i))
+	}
+	files := []roles.Role{
+		{Name: "planner", Role: "plan", Path: "design/workflows/roles/planner.md", Action: "plan", Item: roles.Kinds{"epic", "story"}, Trigger: []roles.Trigger{{Kind: roles.TriggerAsked}, {Kind: roles.TriggerEvent, Event: "ready"}, {Kind: roles.TriggerEvent, Event: "edited"}}},
+		{Name: "orchestrator", Role: "orchestrate", Path: "design/workflows/roles/orchestrator.md", Action: "orchestrate"},
+		{Name: "curator", Role: "curate", Path: "design/workflows/roles/curator.md", Action: "curate"},
+		{Name: "reviewer", Role: "review", Path: "design/workflows/roles/reviewer.md", Action: "review", Item: roles.Kinds{"story"}, Trigger: []roles.Trigger{{Kind: roles.TriggerAsked}}},
+	}
+	got := RoleStates(st, files, func(action string) bool { return action == "plan" || action == "review" })
+	if len(got) != len(files) {
+		t.Fatalf("%d roles, want %d: %+v", len(got), len(files), got)
+	}
+	pids := func(runs []*AgentRun) []int {
+		var out []int
+		for _, r := range runs {
+			out = append(out, r.PID)
+		}
+		return out
+	}
+	p := got["planner"]
+	if p.Name != "planner" || p.Role != "plan" || p.Path != "design/workflows/roles/planner.md" || !slices.Equal(p.Item, []string{"epic", "story"}) ||
+		!slices.Equal(p.Trigger, []string{"asked", "event"}) || p.Action != (hostapi.RoleAction{Name: "plan", Enabled: true}) || p.Held {
+		t.Errorf("planner = %+v", p)
+	}
+	if p.Run == nil || p.Run.PID != 2 || !slices.Equal(pids(p.Running), []int{2, 1}) || !slices.Equal(pids(p.Runs), []int{3, 4}) {
+		t.Errorf("planner's runs: run %+v, running %v, runs %v; want 2, then 2 and 1 under way, then 3 and 4 ended", p.Run, pids(p.Running), pids(p.Runs))
+	}
+	o := got["orchestrator"]
+	if o.Action != (hostapi.RoleAction{Name: "orchestrate"}) || o.Run != nil || len(o.Running) != 0 || !slices.Equal(pids(o.Runs), []int{5, 6}) || !o.Held || o.Item == nil || len(o.Item) != 0 || o.Trigger == nil {
+		t.Errorf("orchestrator = %+v; want its two ended runs, held, and empty lists", o)
+	}
+	if c := got["curator"]; c.Run != nil || c.Running == nil || c.Runs == nil || len(c.Runs) != 0 || c.Held {
+		t.Errorf("curator = %+v; want no runs, as empty lists", c)
+	}
+	r := got["reviewer"]
+	if r.Run == nil || r.Run.PID != 7 || len(r.Runs) != pastRuns || r.Runs[0].PID != 100 || r.Runs[pastRuns-1].PID != 100+pastRuns-1 || r.Held || !r.Action.Enabled {
+		t.Errorf("reviewer = run %+v, %d runs from %v; want 7 under way and the %d newest ended", r.Run, len(r.Runs), pids(r.Runs), pastRuns)
+	}
+	if b, err := json.Marshal(got["curator"]); err != nil || string(b) != `{"name":"curator","role":"curate","path":"design/workflows/roles/curator.md","item":[],"trigger":[],"action":{"name":"curate","enabled":false},"run":null,"running":[],"runs":[],"held":false}` {
+		t.Errorf("a role with no runs reads %s, %v", b, err)
 	}
 }
 

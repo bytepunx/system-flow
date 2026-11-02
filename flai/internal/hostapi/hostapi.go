@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
@@ -27,6 +28,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/metrics"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/release"
+	"github.com/bytepunx/system-flow/flai/internal/roles"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -113,6 +115,45 @@ type Budget struct {
 	Until string `json:"until"`
 	// Probing is set while a start that went through as the probe runs.
 	Probing bool `json:"probing,omitempty"`
+}
+
+// RoleState is one role as agent.status's state carries it under roles, by
+// its name (S-0420): every role the project runs, the built-in ones
+// included, with what its file says of how it is started, its host action's
+// state, and its runs, each an R, the run flai serve records.
+type RoleState[R any] struct {
+	// Name is the role's name, Role its verb, and Path its file, relative to
+	// the project's root: the baseline's path for a built-in role whose file
+	// the project lacks.
+	Name string `json:"name"`
+	Role string `json:"role"`
+	Path string `json:"path"`
+	// Item are the item kinds its run takes, empty for a role that runs on
+	// none, and Trigger the kinds of its triggers (asked, event, schedule),
+	// each once, in its file's order.
+	Item    []string `json:"item"`
+	Trigger []string `json:"trigger"`
+	// Action is the host action its file names, and whether the operator has
+	// it on for the project.
+	Action RoleAction `json:"action"`
+	// Run is its newest run under way, null when none is; Running is every
+	// run of it under way, newest first, more than Run for a role that runs
+	// one at a time per item, as the planner does.
+	Run     *R   `json:"run"`
+	Running []*R `json:"running"`
+	// Runs are its runs that have ended, newest first, at most twenty.
+	Runs []*R `json:"runs"`
+	// Held is set while the operator holds the role stopped, so that flai
+	// serve does not start it again: the orchestrator's hold (S-0228). No
+	// other role has one.
+	Held bool `json:"held"`
+}
+
+// RoleAction is a role's host action by name, and whether the operator has
+// it on for the project.
+type RoleAction struct {
+	Name    string `json:"name"`
+	Enabled bool   `json:"enabled"`
 }
 
 var (
@@ -212,6 +253,37 @@ func enabledActions(host Host, root string) map[string]bool {
 	return out
 }
 
+// ProjectRoles are the roles the project at root runs (S-0420), sorted by
+// name: each role file under the design folder's workflows/roles that loads,
+// and the baseline flai carries of each built-in role whose file the project
+// lacks or that does not load, as roles.Builtin runs it. A project whose
+// manifest or role file folder cannot be read runs the baseline's alone.
+func ProjectRoles(root string) []roles.Role {
+	design := "design"
+	if m, err := manifest.Load(filepath.Join(root, manifest.File)); err == nil && m.Layout["design"] != "" {
+		design = m.Layout["design"]
+	}
+	files, _, _ := roles.Load(root, design)
+	for _, b := range roles.Baseline(design) {
+		if !slices.ContainsFunc(files, func(f roles.Role) bool { return f.Name == b.Name }) {
+			files = append(files, b)
+		}
+	}
+	slices.SortFunc(files, func(a, b roles.Role) int { return strings.Compare(a.Name, b.Name) })
+	return files
+}
+
+// streamRoles are the roles agent.stream reads by role at root (S-0420):
+// conventions.RoleOrchestrate and conventions.RoleAnalyze, as before it, then
+// the name of every role the project runs.
+func streamRoles(root string) []string {
+	out := []string{conventions.RoleOrchestrate, conventions.RoleAnalyze}
+	for _, f := range ProjectRoles(root) {
+		out = append(out, f.Name)
+	}
+	return out
+}
+
 // Methods is the table flai serve offers, with no host action enabled.
 func Methods(version string, now func() time.Time) map[string]channel.Method {
 	return MethodsFor(version, now, Host{})
@@ -251,8 +323,11 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 
 		// agent.status: whether flai serve starts an agent when a story becomes
 		// ready here (S-0079), what it started, and why a ready story waits;
-		// the runs of the roles the project defines among it, under roles by
-		// name and item (S-0417); and, in its state's budget, each provider
+		// every role the project runs, the built-in ones included, under roles
+		// by name, each with its host action's state, its run under way, its
+		// past runs, and held (S-0420), beside plans, orchestrator, analyzer,
+		// curator, past_orchestrators, and past_analyzers for a dashboard older
+		// than it; and, in its state's budget, each provider
 		// the host holds out of budget (S-0534), as Budget entries, left out
 		// when none is. It is read-only, like everything about host actions: the dashboard shows
 		// it, and cannot start, stop, or configure anything.
@@ -291,8 +366,11 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 		// tail when after is absent (S-0142); with plan in place of story, the
 		// newest planner flai serve started for that epic or story (S-0259);
 		// with role, orchestrate or analyze, the project's newest run of that
-		// strategic role (S-0228), and with orchestrator true, as before it,
-		// the newest orchestrator's (S-0218). Read-only, like agent.status.
+		// strategic role (S-0228), or the name of a role the project runs, the
+		// newest run of that role, on whatever item (S-0420); and with
+		// orchestrator true, as before it, the newest orchestrator's (S-0218).
+		// A role neither names is refused, naming those that are. Read-only,
+		// like agent.status.
 		"agent.stream": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			var in struct {
 				Story        string `json:"story"`
@@ -311,7 +389,7 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 				}
 			}
 			if given != 1 {
-				return nil, bad("give one of story, for a story's agent, plan, for the planner of an epic or a story, and role, %s or %s, for the project's orchestrator or analyzer", conventions.RoleOrchestrate, conventions.RoleAnalyze)
+				return nil, bad("give one of story, for a story's agent, plan, for the planner of an epic or a story, and role, %s or %s, for the project's orchestrator or analyzer, or a role's name, for its newest run", conventions.RoleOrchestrate, conventions.RoleAnalyze)
 			}
 			if in.Orchestrator {
 				in.Role = conventions.RoleOrchestrate
@@ -319,8 +397,8 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 			id, read := in.Story, host.AgentStream
 			switch {
 			case in.Role != "":
-				if in.Role != conventions.RoleOrchestrate && in.Role != conventions.RoleAnalyze {
-					return nil, bad("role must be %s, for the orchestrator, or %s, for the analyzer, not %q", conventions.RoleOrchestrate, conventions.RoleAnalyze, in.Role)
+				if known := streamRoles(p.Root); !slices.Contains(known, in.Role) {
+					return nil, bad("role must be %s, for the orchestrator, %s, for the analyzer, or the name of a role the project runs, one of %s; not %q", conventions.RoleOrchestrate, conventions.RoleAnalyze, strings.Join(known[2:], ", "), in.Role)
 				}
 				id, read = in.Role, host.RoleStream
 			case in.Plan != "":

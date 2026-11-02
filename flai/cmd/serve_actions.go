@@ -44,7 +44,7 @@ func (a *app) host() hostapi.Host {
 			return err == nil && cfg.ActionEnabled(action, root)
 		},
 		Agent: func(root string) any {
-			cfg, _, _ := a.loadConfig()
+			cfg, _, cfgErr := a.loadConfig()
 			st := a.serveDir().AgentStates()[root]
 			command := ""
 			if len(cfg.Agent.Command) > 0 {
@@ -54,18 +54,28 @@ func (a *app) host() hostapi.Host {
 			if plans == nil {
 				plans = map[string]*serve.AgentRun{}
 			}
-			// the newest run of each role the project defines, by its name and
-			// then its item, "" for none (S-0417)
-			defined := st.Roles
-			if defined == nil {
-				defined = map[string]map[string]*serve.AgentRun{}
+			// every role the project runs, the built-in ones included, by its
+			// name: its host action's state, its run under way, its past runs,
+			// and held (S-0420)
+			defined := serve.RoleStates(st, hostapi.ProjectRoles(root), func(action string) bool {
+				return cfgErr == nil && cfg.ActionEnabled(action, root)
+			})
+			// the orchestrator's and the analyzer's runs before their newest,
+			// newest first (S-0228), which the dashboard's pages list
+			pastOrchestrators, pastAnalyzers := st.PastOrchestrators, st.PastAnalyzers
+			if pastOrchestrators == nil {
+				pastOrchestrators = []*serve.AgentRun{}
+			}
+			if pastAnalyzers == nil {
+				pastAnalyzers = []*serve.AgentRun{}
 			}
 			// the newest orchestrator run, null before the first (S-0218), with
 			// held while the operator holds it stopped (S-0228), and the newest
 			// analyzer run, its focus and report among it (S-0223), and the
 			// newest curator run, its since and entries among it (S-0431)
 			out := map[string]any{"command": command, "running": st.Running, "last": st.Last, "waiting": st.Waiting, "stories": serve.Activity(root, st), "plans": plans,
-				"orchestrator": st.Orchestrator, "analyzer": st.Analyzer, "curator": st.Curator, "roles": defined}
+				"orchestrator": st.Orchestrator, "analyzer": st.Analyzer, "curator": st.Curator, "roles": defined,
+				"past_orchestrators": pastOrchestrators, "past_analyzers": pastAnalyzers}
 			if budget := a.hostBudget(); len(budget) > 0 {
 				out["budget"] = budget // the host's, the same for every project (S-0534)
 			}
