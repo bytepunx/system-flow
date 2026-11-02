@@ -71,6 +71,7 @@ func TestAsTheOrchestrator(t *testing.T) {
 		testTheOrchestratorPlansABacklogStoryOnlyWithPlanBacklogStories,
 		testTheOrchestratorSetsCostOfDelayInputsOnlyWithSetCostOfDelay,
 		testTheOrchestratorSettlesAStoryPlannersThreadOnlyWithPlanBacklogStories,
+		testTheOrchestratorRunsThePublishFormulaOnlyWithPublish,
 	)
 }
 
@@ -933,5 +934,83 @@ func testTheOrchestratorSettlesAStoryPlannersThreadOnlyWithPlanBacklogStories(t 
 		o.guardRefuses("thread_reply", map[string]any{"id": "TH-0001", "text": "Take 500 a week."})(want, needs)
 		o.guardRefuses(bash("flai thread reply TH-0001 --recommend 400"))(want, needs)
 		o.guardRefuses("thread_resolve", map[string]any{"id": "TH-0001"})(want, needs)
+	})
+}
+
+// formulaFile is a formula file named name whose one step runs flai board.
+func formulaFile(name string) string {
+	return "---\ntitle: Run " + name + "\nupdated: 2026-11-02\nstatus: active\nname: " + name +
+		"\ndescription: Run " + name + ".\nnature: improvement\nsteps:\n  - id: look\n    title: Look at the board\n    run: {flai: board}\n---\n\n# " + name + "\n"
+}
+
+// S-0423, ADR-0240: on the fixture board, with this project's orchestrator
+// role file and the formulas publish and import, the orchestrator with
+// publish runs flai formula run publish, which makes its instance in ready,
+// and neither the guard nor flai lets it run import; without publish the
+// guard refuses the publish run naming the permission, flai past the guard
+// refuses it too, and nothing changes. The operator's runs are
+// TestFormulaRunUnderNoRole's.
+func testTheOrchestratorRunsThePublishFormulaOnlyWithPublish(t *testing.T) {
+	role, err := os.ReadFile(filepath.Join("..", "..", "design", "workflows", "roles", "orchestrator.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// withFormulas is the fixture with the role file and the two formulas
+	withFormulas := func(t *testing.T) *orchestration {
+		o := newOrchestration(t)
+		for path, content := range map[string]string{
+			"design/workflows/roles/orchestrator.md": string(role),
+			"design/workflows/formulas/publish.md":   formulaFile("publish"),
+			"design/workflows/formulas/import.md":    formulaFile("import"),
+		} {
+			if err := os.MkdirAll(filepath.Dir(filepath.Join(o.root, path)), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(o.root, path), []byte(content), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return o
+	}
+	const onlyPublish = "rule: the orchestrator runs only the formula publish, under orchestration.permissions.publish, and no other"
+	t.Run("on", func(t *testing.T) {
+		t.Parallel()
+		o := withFormulas(t)
+		o.permit(manifest.PermitPublish)
+		o.guardRefuses(bash("flai formula run import --ready"))("its role file lets it run only the formula publish", "")
+		before := treeOf(t, o.root)
+		// flai, past the guard, holds the orchestrator to the publish formula too
+		if _, errOut, code := runIn(t, o.root, "formula", "run", "import", "--ready"); code == 0 || !strings.Contains(errOut, onlyPublish) {
+			t.Errorf("flai formula run import past the guard: exit %d %s", code, errOut)
+		}
+		if !reflect.DeepEqual(treeOf(t, o.root), before) {
+			t.Error("a refused run of import changed the board")
+		}
+		out := o.passes(bash("flai formula run publish --ready"))
+		if !strings.HasPrefix(out, "S-0011 Run publish\n") || !strings.Contains(out, "S-0011 → ready") {
+			t.Errorf("flai formula run publish --ready:\n%s", out)
+		}
+		if it := o.item("S-0011"); it.Status != workitem.Ready || it.Formula != "publish" {
+			t.Errorf("the instance: %s, formula %q", it.Status, it.Formula)
+		}
+	})
+	t.Run("off", func(t *testing.T) {
+		t.Parallel()
+		o := withFormulas(t)
+		o.permit(allBut(manifest.PermitPublish)...)
+		want, needs := offRefusal(manifest.PermitPublish)
+		o.guardRefuses(bash("flai formula run publish --ready"))(want, needs)
+		before := treeOf(t, o.root)
+		for _, args := range [][]string{{"formula", "run", "publish", "--ready"}, {"formula", "run", "publish"}} {
+			if _, errOut, code := runIn(t, o.root, args...); code == 0 || !strings.Contains(errOut, "rule: the orchestrator runs the publish formula only with orchestration.permissions.publish, which is off") {
+				t.Errorf("flai %v past the guard: exit %d %s", args, code, errOut)
+			}
+		}
+		if _, errOut, code := runIn(t, o.root, "formula", "run", "import"); code == 0 || !strings.Contains(errOut, onlyPublish) {
+			t.Errorf("flai formula run import past the guard: exit %d %s", code, errOut)
+		}
+		if !reflect.DeepEqual(treeOf(t, o.root), before) {
+			t.Error("a refused run changed the board")
+		}
 	})
 }

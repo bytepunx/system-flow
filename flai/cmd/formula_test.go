@@ -433,6 +433,20 @@ func TestFormulaRunReady(t *testing.T) {
 	}
 }
 
+// S-0423, ADR-0240: outside the orchestrator's role, the operator or a
+// story's agent runs any formula, publish among them, whatever
+// orchestration.permissions.publish says; only the orchestrator is held to it
+// (testTheOrchestratorRunsThePublishFormulaOnlyWithPublish).
+func TestFormulaRunUnderNoRole(t *testing.T) {
+	t.Parallel()
+	root := formulaProject(t, map[string]string{"publish.md": formulaFile("publish"), "import.md": formulaFile("import")})
+	for _, name := range []string{"publish", "import"} {
+		if out, errOut, code := runIn(t, root, "formula", "run", name, "--ready"); code != 0 || !strings.Contains(out, " → ready\n") {
+			t.Errorf("formula run %s --ready: %d %s\n%s", name, code, errOut, out)
+		}
+	}
+}
+
 // S-0422: flai formula run --ready --autocommit, as flai serve runs it in
 // the main checkout, commits the story, its tasks, its epic, the board, and
 // the stream index in the one commit, leaving nothing uncommitted.

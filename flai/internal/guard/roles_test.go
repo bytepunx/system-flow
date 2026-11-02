@@ -366,11 +366,67 @@ func TestTheOrchestratorRunsTheFormulaItsRoleFileNames(t *testing.T) {
 			t.Errorf("%s allowed", c)
 		}
 	}
-	baseline := orchestrating(allOn, nil)
-	baseline.Commands = gr.Commands
-	if v := Decide(baseline, Call{Role: RoleOrchestrate, Kind: Shell, Command: "flai formula run publish --ready"}); v.Outcome != Deny {
-		t.Error("the baseline file, which names no formula, let the orchestrator run one")
+	// S-0423: a file that names no formula, the project's with its publish
+	// entry left out, lets the orchestrator run none
+	none := orchestrating(allOn, projectOrchestrator(t, "    commands: [flai formula run publish]\n", ""))
+	none.Commands = gr.Commands
+	if v := Decide(none, Call{Role: RoleOrchestrate, Kind: Shell, Command: "flai formula run publish --ready"}); v.Outcome != Deny {
+		t.Error("a file that names no formula let the orchestrator run one")
 	}
+}
+
+// S-0423, ADR-0240: the project's orchestrator role file lists flai formula
+// run publish under orchestration.permissions.publish, so the orchestrator
+// runs the publish formula, ready and committed, while publish is on and not
+// while it is off, and no other formula either way; release_publish stays
+// under publish for a project with no publish formula.
+func TestTheOrchestratorRunsThePublishFormulaOnlyWithPublish(t *testing.T) {
+	file := projectOrchestrator(t)
+	run := Call{Role: RoleOrchestrate, Kind: Shell, Command: "flai formula run publish --ready --autocommit"}
+	on := orchestrating(allOn, file)
+	on.Commands = append(on.Commands, "formula")
+	if v := Decide(on, run); v.Outcome != Allow {
+		t.Errorf("flai formula run publish, publish on: refused: %s", v.Reason)
+	}
+	if v := Decide(on, Call{Role: RoleOrchestrate, Kind: FlaiTool, Tool: ReleasePublish}); v.Outcome != Allow {
+		t.Errorf("release_publish, publish on: refused: %s", v.Reason)
+	}
+	// the file, not the orchestrator's rule in Go, words the refusal of a
+	// formula run
+	for _, c := range []string{"flai formula run import --ready --autocommit", "flai formula run publish --epic E-0001"} {
+		if v := Decide(on, Call{Role: RoleOrchestrate, Kind: Shell, Command: c}); v.Outcome != Deny || v.Call != c || v.Needs != "" ||
+			!strings.Contains(v.Reason, "its role file lets it run only the formula publish, with no flag but") {
+			t.Errorf("%s, publish on: %+v", c, v)
+		}
+	}
+	off := orchestrating(except(manifest.PermitPublish), file)
+	off.Commands = on.Commands
+	if v := Decide(off, run); v.Outcome != Deny || !strings.Contains(v.Reason, "it needs orchestration.permissions.publish, which is off") || v.Needs != "orchestration.permissions.publish" {
+		t.Errorf("flai formula run publish, publish off: %+v", v)
+	}
+}
+
+// projectOrchestrator is this project's orchestrator role file,
+// design/workflows/roles/orchestrator.md, with each of edits, old and new in
+// turn, made to it.
+func projectOrchestrator(t *testing.T, edits ...string) *roles.Role {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("..", "..", "..", "design", "workflows", "roles", "orchestrator.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := string(data)
+	for i := 0; i+1 < len(edits); i += 2 {
+		if !strings.Contains(content, edits[i]) {
+			t.Fatalf("orchestrator.md has no %q", edits[i])
+		}
+		content = strings.Replace(content, edits[i], edits[i+1], 1)
+	}
+	r, problem := roles.Parse("design/workflows/roles/orchestrator.md", content)
+	if problem != nil {
+		t.Fatal(problem)
+	}
+	return &r
 }
 
 // TestUngatedEditLeavesOutOnlyAFinalizingAndTheCostInputs: ungated-edit lets
@@ -611,7 +667,7 @@ func orchestratorOpeners(id string) (string, error) {
 // Go refused it.
 func TestTheOrchestratorIsHeldToItsRoleFile(t *testing.T) {
 	publish := Call{Role: RoleOrchestrate, Kind: FlaiTool, Tool: ReleasePublish}
-	noPublish := orchestrating(allOn, builtInFile(t, "orchestrator", "  - setting: orchestration.permissions.publish\n    tools: [release_publish]\n", ""))
+	noPublish := orchestrating(allOn, builtInFile(t, "orchestrator", "  - setting: orchestration.permissions.publish\n    tools: [release_publish]\n    commands: [flai formula run publish]\n", ""))
 	want := "the role orchestrator cannot call release_publish: its role file lists no such call. Ask the operator with thread_open on the item if it needs doing (design/workflows/roles/orchestrator.md, ADR-0207)."
 	if v := Decide(noPublish, publish); v.Outcome != Deny || v.Reason != want || v.Call != ReleasePublish || v.Needs != "" {
 		t.Errorf("release_publish left out of the file, publish on: %+v", v)

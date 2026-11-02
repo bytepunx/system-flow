@@ -14,7 +14,9 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 	"github.com/bytepunx/system-flow/flai/internal/formulas"
+	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/itemnew"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/roles"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -260,6 +262,11 @@ type formulaRunOptions struct {
 // it is made, then, when asked, the story's move to ready, and on a refusal
 // removes what it made. It commits them when asked, and prints them.
 func (a *app) formulaRun(name string, given map[string]string, epic string, opt formulaRunOptions) error {
+	if os.Getenv("FLAI_ROLE") == guard.RoleOrchestrate {
+		if err := a.orchestratorRunsFormula(name); err != nil {
+			return err
+		}
+	}
 	repo, f, err := a.formula(name)
 	if err != nil {
 		return err
@@ -377,6 +384,29 @@ func (a *app) formulaRun(name string, given map[string]string, epic string, opt 
 		fmt.Fprintf(a.out, "  committed %s\n", run.Commit)
 	case run.CommitError != "":
 		fmt.Fprintf(a.out, "  NOT committed (%s)\n", firstLine(run.CommitError))
+	}
+	return nil
+}
+
+// publishFormula is the formula the orchestrator runs to publish, under
+// orchestration.permissions.publish (ADR-0240).
+const publishFormula = "publish"
+
+// orchestratorRunsFormula says why the orchestrator may not run the formula
+// name, or nil when it may (S-0423, ADR-0240): flai holds the run itself, as
+// it holds the orchestrator's other writes, past flai guard. It runs the
+// publish formula alone, and that only while orchestration.permissions.publish
+// is on. The refusal changes nothing.
+func (a *app) orchestratorRunsFormula(name string) error {
+	if name != publishFormula {
+		return fmt.Errorf("rule: the orchestrator runs only the formula %s, under orchestration.permissions.%s, and no other: running %s is the operator's or a story's agent's; ask the operator with thread_open on the item it concerns (ADR-0240)", publishFormula, manifest.PermitPublish, name)
+	}
+	repo, err := a.project()
+	if err != nil {
+		return err
+	}
+	if err := repo.OrchestratorPermits(manifest.PermitPublish, "runs the publish formula", "the most recently accepted story"); err != nil {
+		return fmt.Errorf("rule: %w", err)
 	}
 	return nil
 }

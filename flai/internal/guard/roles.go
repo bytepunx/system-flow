@@ -131,11 +131,14 @@ func (g Guard) designFolder() string {
 // asRole decides on the own call of a session whose role a role file
 // defines, or of a built-in role's, held to its file: a refusal of the
 // file's is worded by the built-in role's rule in Go when that rule refuses
-// the call too, and by the file otherwise, naming the call and the setting
-// that would allow it.
+// the call too, and by the file otherwise or for a flai formula run, naming
+// the call and the setting that would allow it.
 func (g Guard) asRole(c Call) Verdict {
 	h := g.roleHeld(c.Role)
 	var call, what, why, needs string
+	// formula says the refused command is a flai formula run, which a
+	// built-in role's rule in Go knows nothing of (S-0423)
+	formula := false
 	switch c.Kind {
 	case FlaiTool:
 		if slices.Contains(MCPReads, c.Tool) {
@@ -145,6 +148,12 @@ func (g Guard) asRole(c Call) Verdict {
 		why, needs = h.tool(c.Tool, c.Args)
 	case Shell:
 		r := h.rules()
+		judged := r.flai
+		r.flai = func(cmd, sub string, rest []string) (string, string) {
+			why, needs := judged(cmd, sub, rest)
+			formula = why != "" && cmd == "formula" && sub == "run"
+			return why, needs
+		}
 		for _, words := range commands(c.Command) {
 			if why, needs = g.refuse(words, r); why != "" {
 				call = strings.Join(words, " ")
@@ -159,7 +168,10 @@ func (g Guard) asRole(c Call) Verdict {
 	if why == "" {
 		return Verdict{}
 	}
-	if explain, ok := explains[c.Role]; ok && h.problem == "" {
+	// S-0423: the file words a refusal of a formula run, naming the formulas
+	// it lets the role run or the setting that would allow it, as the
+	// orchestrator's publish under orchestration.permissions.publish
+	if explain, ok := explains[c.Role]; ok && h.problem == "" && !formula {
 		if v := explain(g, c); v.Outcome != Allow {
 			return v
 		}
