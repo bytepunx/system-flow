@@ -162,7 +162,8 @@ describe('the planner panel (S-0259)', () => {
 		await show(view({ runs: [worked, failed] }));
 		expect(text(one('planner-current-none'))).toBe('No planner is running.');
 		expect(document.querySelector('[data-testid="agent-stream"]')).toBeNull();
-		expect(api).not.toHaveBeenCalled();
+		// of flai it asks only for the role's cost and use per day (ADR-0249)
+		expect(api.mock.calls.filter(([url]) => !String(url).startsWith('/api/stats'))).toEqual([]);
 	});
 
 	it('shows the totals and the entries newest first, with items, duration, and cost', async () => {
@@ -282,7 +283,8 @@ describe('the planner panel (S-0259)', () => {
 		input.dispatchEvent(new Event('input'));
 		one('planner-plan')!.click();
 		await settle();
-		expect(api).not.toHaveBeenCalled();
+		// of flai it asks only for the role's cost and use per day (ADR-0249)
+		expect(api.mock.calls.filter(([url]) => !String(url).startsWith('/api/stats'))).toEqual([]);
 		expect(text(one('planner-said'))).toBe(
 			"T-0838 is not an epic's or a story's ID; give one such as E-0001 or S-0001"
 		);

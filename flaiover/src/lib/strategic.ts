@@ -12,6 +12,21 @@ import type { AgentRun } from './activity';
  */
 export type StrategicKind = string;
 
+/** The built-in strategic agents, in the order every list of strategic kinds starts with (ADR-0249). */
+export const BUILT_IN_KINDS = ['planner', 'orchestrator', 'analyzer', 'curator'] as const;
+
+/**
+ * Strategic kinds in the order flai lists them wherever it does (ADR-0249 §5): the planner, the
+ * orchestrator, the analyzer, and the curator, then every other role by name; each once.
+ */
+export function kindOrder(kinds: Iterable<StrategicKind>): StrategicKind[] {
+	const rank = (k: string) => {
+		const i = (BUILT_IN_KINDS as readonly string[]).indexOf(k);
+		return i < 0 ? BUILT_IN_KINDS.length : i;
+	};
+	return [...new Set(kinds)].sort((a, b) => rank(a) - rank(b) || (a < b ? -1 : a > b ? 1 : 0));
+}
+
 /** One entry of a strategic agent's activity log: when it ended, what it did, and what that cost. */
 export type ActivityEntry = {
 	at: string;

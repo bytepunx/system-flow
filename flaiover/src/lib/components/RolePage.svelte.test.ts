@@ -5,11 +5,14 @@
 // /api/roles/reviewer, saying what flai answered; Stop and Start for the orchestrator alone; and the
 // page's own controls and settings in their places. Then /workflow/<name>, which shows a role flai
 // reports and says so for one it does not, and loads again when a run of the role starts or ends.
+// ADR-0249: the page draws the role's own cost and use per day from flai stats, in its strategic
+// colour, before its log.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createRawSnippet, flushSync, mount, unmount } from 'svelte';
 import type { RoleState, RoleView } from '$lib/roles';
 import type { ActivityDocument, RoleRun } from '$lib/strategic';
 import type { Change } from '$lib/changes';
+import { CATEGORICAL } from '$lib/viz/palette';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
@@ -40,6 +43,26 @@ vi.mock('$lib/events', () => ({
 	},
 	debounced: (f: () => void) => Object.assign(() => f(), { stop: () => {} })
 }));
+
+// the role's charts draw on ECharts, whose option is what the test reads
+const setOption = vi.fn();
+vi.mock('echarts/core', () => ({
+	use: vi.fn(),
+	init: vi.fn(() => ({ setOption, resize: vi.fn(), dispose: vi.fn() }))
+}));
+vi.mock('echarts/charts', () => ({ ScatterChart: {}, LineChart: {}, BarChart: {} }));
+vi.mock('echarts/components', () => ({
+	GridComponent: {},
+	TooltipComponent: {},
+	LegendComponent: {},
+	MarkLineComponent: {}
+}));
+vi.mock('echarts/renderers', () => ({ CanvasRenderer: {} }));
+globalThis.ResizeObserver ??= class {
+	observe() {}
+	disconnect() {}
+	unobserve() {}
+} as unknown as typeof ResizeObserver;
 
 import RolePage from './RolePage.svelte';
 import RoleRoute from '../../routes/workflow/[role]/+page.svelte';
@@ -286,6 +309,115 @@ describe('the role page (S-0420)', () => {
 			one('reviewer-settings')!.compareDocumentPosition(one('reviewer-current')!) &
 				Node.DOCUMENT_POSITION_FOLLOWING
 		).toBeTruthy();
+	});
+});
+
+describe("the role's cost and use per day (ADR-0249)", () => {
+	let c: ReturnType<typeof mount> | undefined;
+	afterEach(() => {
+		if (c) unmount(c);
+		c = undefined;
+		api.mockReset();
+		setOption.mockClear();
+		document.body.innerHTML = '';
+	});
+	// three days of the window: the planner on the first two, the reviewer, a fixture role the
+	// project defines, on the last two, estimated in part on the last
+	const report = {
+		window_start: '2026-10-25T00:00:00Z',
+		generated_at: '2026-10-27T12:00:00Z',
+		type: 'story',
+		items: [],
+		strategic_days: [
+			{
+				date: '2026-10-25',
+				agents: { planner: { cost: 1, seconds: 600 } },
+				cost: 1,
+				seconds: 600,
+				completed: 0
+			},
+			{
+				date: '2026-10-26',
+				agents: {
+					planner: { cost: 0.5, seconds: 300 },
+					reviewer: { cost: 0.4, seconds: 1800 }
+				},
+				cost: 0.9,
+				seconds: 2100,
+				completed: 1
+			},
+			{
+				date: '2026-10-27',
+				agents: { reviewer: { cost: 0.5, seconds: 1800, estimated: true } },
+				cost: 0.5,
+				seconds: 1800,
+				completed: 0
+			}
+		]
+	};
+	const stats = (body: unknown, status = 200) =>
+		api.mockImplementation(async (url: string) =>
+			url.startsWith('/api/stats') ? answer(body, status) : answer(stream)
+		);
+	const show = async (role: RoleState = reviewer()) => {
+		c = mount(RolePage, { target: document.body, props: { role, activity: activity() } });
+		await settle();
+	};
+	type Drawn = {
+		series: { name: string; itemStyle: { color: string }; data: { value: [number, number] }[] }[];
+		yAxis: { name: string };
+	};
+	const drawn = () => setOption.mock.calls.map(([o]) => o as Drawn);
+
+	it("draws the reviewer's own cost and hours per day from flai stats, before its log", async () => {
+		stats(report);
+		await show();
+		expect(api).toHaveBeenCalledWith('/api/stats?since=30d&type=story&bucket=day');
+		expect(text(one('reviewer-usage-summary'))).toBe(
+			'Over the last 30d the reviewer spent $0.900 and worked 1h, on 2 days.'
+		);
+		// what it spent each day, its own series alone, though the planner spent beside it
+		await vi.waitFor(() => expect(setOption).toHaveBeenCalled());
+		const cost = drawn().at(-1)!;
+		expect(cost.yAxis.name).toBe('US dollars');
+		expect(cost.series.map((s) => s.name)).toEqual(['reviewer']);
+		expect(cost.series[0].data.map((d) => d.value[1])).toEqual([0, 0.4, 0.5]);
+		// in the colour Strategic Cost gives it beside the planner: the first slot after the built-ins'
+		expect(cost.series[0].itemStyle.color).toBe(CATEGORICAL.light[2]);
+		expect(button('reviewer-usage-cost')!.getAttribute('aria-pressed')).toBe('true');
+		// and the hours it worked
+		button('reviewer-usage-use')!.click();
+		await settle();
+		const use = drawn().at(-1)!;
+		expect(use.yAxis.name).toBe('hours');
+		expect(use.series.map((s) => s.name)).toEqual(['reviewer']);
+		expect(use.series[0].data.map((d) => d.value[1])).toEqual([0, 0.5, 0.5]);
+		expect(use.series[0].itemStyle.color).toBe(CATEGORICAL.light[2]);
+		expect(button('reviewer-usage-use')!.getAttribute('aria-pressed')).toBe('true');
+		expect(
+			one('reviewer-usage')!.compareDocumentPosition(one('reviewer-activity')!) &
+				Node.DOCUMENT_POSITION_FOLLOWING
+		).toBeTruthy();
+		expect(one('reviewer-usage-error')).toBeNull();
+	});
+
+	it('says the role has no activity in the window, an older flai, or what flai stats refused', async () => {
+		stats(report);
+		await show(reviewer({ name: 'auditor' }));
+		expect(text(one('auditor-usage-none'))).toBe(
+			'No activity of the auditor ended in the last 30d.'
+		);
+		expect(setOption).not.toHaveBeenCalled();
+		unmount(c!);
+		document.body.innerHTML = '';
+		stats({ ...report, strategic_days: undefined });
+		await show();
+		expect(text(one('reviewer-usage-older'))).toContain('flai self-upgrade');
+		unmount(c!);
+		document.body.innerHTML = '';
+		stats({ error: 'flai is away' }, 502);
+		await show();
+		expect(text(one('reviewer-usage-error'))).toBe('flai stats could not be read: flai is away');
 	});
 });
 

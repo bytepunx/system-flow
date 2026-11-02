@@ -44,8 +44,8 @@
 		SPEND_KINDS,
 		shareTotals,
 		spendRows,
-		STRATEGIC_AGENTS,
 		STRATEGIC_KINDS,
+		strategicKinds,
 		strategicRatio,
 		strategicRows,
 		titleOf,
@@ -198,6 +198,8 @@
 	// flai sends a day for every day of the window: none at all is a flai older than S-0205 (S-0216)
 	const strategic = $derived(report && strategicKind ? strategicRows(report) : []);
 	const ratio = $derived(report && strategicKind ? strategicRatio(report) : undefined);
+	/** The kinds the window's days carry, a column each, in the charts' order (ADR-0249). */
+	const strategicColumns = $derived(strategicKinds(strategic));
 	/** What the strategic agents spent and worked over the window, and the items completed in it. */
 	const strategicTotal = $derived({
 		cost: strategic.reduce((n, d) => n + d.cost, 0),
@@ -742,7 +744,7 @@
 				<table class="min-w-full" data-testid="strategic-table">
 					<thead
 						><tr class="text-left text-muted"
-							><th class="pr-4">day</th>{#each STRATEGIC_AGENTS as a (a)}<th class="pr-4">{a}</th
+							><th class="pr-4">day</th>{#each strategicColumns as a (a)}<th class="pr-4">{a}</th
 								>{/each}<th class="pr-4">total</th><th class="pr-4">completed</th
 							>{#if kind === 'strategic-cost'}<th>mean per {report.type}</th>{:else}<th class="pr-4"
 									>mean cycle time</th
@@ -750,7 +752,7 @@
 						></thead
 					><tbody
 						>{#each strategic as d (d.date)}<tr
-								><td class="pr-4 font-mono">{d.date}</td>{#each STRATEGIC_AGENTS as a (a)}<td
+								><td class="pr-4 font-mono">{d.date}</td>{#each strategicColumns as a (a)}<td
 										class="pr-4">{agentDay(d.agents[a])}</td
 									>{/each}<td class="pr-4"
 									>{kind === 'strategic-cost' ? dollars(d.cost) : inHours(d.seconds)}</td

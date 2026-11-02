@@ -193,7 +193,8 @@ describe('the orchestrator panel (S-0228)', () => {
 	it('says no orchestrator is running when none goes', async () => {
 		await show(view({ runs: [stopped] }));
 		expect(text(one('orchestrator-current-none'))).toBe('No orchestrator is running.');
-		expect(api).not.toHaveBeenCalled();
+		// of flai it asks only for the role's cost and use per day (ADR-0249)
+		expect(api.mock.calls.filter(([url]) => !String(url).startsWith('/api/stats'))).toEqual([]);
 	});
 
 	it('shows its last decisions newest first, with their reasons, above the whole log', async () => {

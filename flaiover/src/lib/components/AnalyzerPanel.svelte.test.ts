@@ -210,7 +210,8 @@ describe('the analyzer panel (S-0228)', () => {
 	it('says no analyzer is running when none goes', async () => {
 		await show(view({ runs: [worked] }));
 		expect(text(one('analyzer-current-none'))).toBe('No analyzer is running.');
-		expect(api).not.toHaveBeenCalled();
+		// of flai it asks only for the role's cost and use per day (ADR-0249)
+		expect(api.mock.calls.filter(([url]) => !String(url).startsWith('/api/stats'))).toEqual([]);
 	});
 
 	it('shows the totals of its activity document', async () => {

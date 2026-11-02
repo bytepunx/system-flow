@@ -52,6 +52,9 @@ import {
 	spendRows,
 	strategicRatio,
 	strategicRows,
+	strategicKinds,
+	strategicSlots,
+	roleByDay,
 	STRATEGIC_KINDS,
 	withUsage,
 	COD_COLUMNS,
@@ -3597,6 +3600,99 @@ describe('strategic charts', () => {
 		);
 		// the strategic ratio counts it
 		expect(strategicRatio(analyzed)!.cost).toBe(138.1046);
+	});
+	// ADR-0249: a series per role strategic_days carries, the built-in agents first in their slots,
+	// the curator the next, and each role the project defines, by name, in the next slot after
+	const roled: Report = {
+		...strategic,
+		strategic_days: strategicDays.map((d) =>
+			d.date === '2026-10-03'
+				? {
+						...d,
+						agents: {
+							reviewer: { cost: 0.75, seconds: 900, estimated: true },
+							curator: { cost: 0.5, seconds: 300 },
+							auditor: { cost: 0.25, seconds: 600 },
+							...d.agents
+						}
+					}
+				: d
+		)
+	};
+	it('strategic cost and use draw a series per role the days carry, each other role in the next slot (ADR-0249)', () => {
+		expect(strategicKinds(roled.strategic_days!)).toEqual([
+			'planner',
+			'orchestrator',
+			'curator',
+			'auditor',
+			'reviewer'
+		]);
+		expect(strategicSlots(['planner', 'orchestrator', 'analyzer', 'curator', 'b', 'a'])).toEqual({
+			planner: 6,
+			orchestrator: 5,
+			analyzer: 4,
+			curator: 3,
+			b: 2,
+			a: 1
+		});
+		// past the last slot a role takes the first again
+		expect(strategicSlots(['r1', 'r2', 'r3', 'r4', 'r5'])).toEqual({
+			r1: 2,
+			r2: 1,
+			r3: 0,
+			r4: 7,
+			r5: 2
+		});
+		const o = build('strategic-cost', roled, light) as Strategic;
+		expect(o.series.map((s) => s.name)).toEqual([
+			'planner',
+			'orchestrator',
+			'curator',
+			'auditor',
+			'reviewer',
+			'mean per story'
+		]);
+		expect(o.series.slice(0, 5).map((s) => s.itemStyle.color)).toEqual([
+			CATEGORICAL.light[6],
+			CATEGORICAL.light[5],
+			CATEGORICAL.light[3],
+			CATEGORICAL.light[2],
+			CATEGORICAL.light[1]
+		]);
+		expect(new Set(o.series.slice(0, 5).map((s) => s.stack))).toEqual(new Set(['strategic']));
+		const reviewer = o.series[4];
+		expect(reviewer.data.map((d) => d.value[1])).toEqual([...Array(7).fill(0), 0.75, 0, 0, 0, 0]);
+		expect(reviewer.data[7].estimated).toBe(true);
+		const use = build('strategic-use', roled, light) as Strategic;
+		expect(use.series.slice(0, 5).map((s) => s.name)).toEqual(
+			o.series.slice(0, 5).map((s) => s.name)
+		);
+		expect(use.series.slice(0, 5).map((s) => s.itemStyle.color)).toEqual(
+			o.series.slice(0, 5).map((s) => s.itemStyle.color)
+		);
+		expect(use.series[4].data[7].value[1]).toBe(0.25);
+	});
+	it("a role's page draws its own cost and use per day in its strategic colour (ADR-0249)", () => {
+		const cost = roleByDay(roled, light, 'reviewer', 'cost') as unknown as Strategic;
+		expect(cost.series.map((s) => [s.name, s.type])).toEqual([['reviewer', 'bar']]);
+		expect(cost.series[0].itemStyle.color).toBe(CATEGORICAL.light[1]);
+		expect(cost.series[0].data.map((d) => d.at)).toEqual(
+			strategicDays.map((d) => `${d.date}T00:00:00Z`)
+		);
+		expect(cost.series[0].data[7].value[1]).toBe(0.75);
+		expect(cost.yAxis.name).toBe('US dollars');
+		expect(cost.legend.show).toBe(false);
+		expect(cost.tooltip.formatter([{ seriesName: 'reviewer', data: cost.series[0].data[7] }])).toBe(
+			'2026-10-03<br/>reviewer: $0.750 (estimated in part)'
+		);
+		const use = roleByDay(roled, dark, 'reviewer', 'use') as unknown as Strategic;
+		expect(use.yAxis.name).toBe('hours');
+		expect(use.series[0].itemStyle.color).toBe(CATEGORICAL.dark[1]);
+		expect(use.series[0].data[7].value[1]).toBe(0.25);
+		const planner = roleByDay(roled, light, 'planner', 'cost') as unknown as Strategic;
+		expect(planner.series[0].itemStyle.color).toBe(CATEGORICAL.light[6]);
+		// a role with no entry in the window has no series
+		expect((roleByDay(roled, light, 'scribe', 'cost') as unknown as Strategic).series).toEqual([]);
 	});
 	it('draws an empty strategic cost from a flai older than S-0205', () => {
 		const older = { ...strategic, strategic_days: undefined };

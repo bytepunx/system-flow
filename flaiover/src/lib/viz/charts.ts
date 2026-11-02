@@ -20,6 +20,7 @@ import {
 import { amount } from '$lib/planning';
 import { count, dollars, type PricedBy } from '$lib/usage';
 import { localDate, localTime } from '$lib/localtime';
+import { kindOrder } from '$lib/strategic';
 import {
 	CLAIMS_KINDS,
 	COD_KINDS,
@@ -2551,31 +2552,59 @@ export function touchesDrift(r: Report, t: Theme): Opt {
 	});
 }
 
-/** The strategic agents, in the order the strategic charts stack them. */
-export const STRATEGIC_AGENTS = ['planner', 'orchestrator', 'analyzer'] as const;
 /**
- * A strategic agent's fixed slot: the three that stay apart from each other in both modes for every
- * pair, as the item types' do.
+ * The kinds of strategic usage the days carry under `agents`, a series each on the strategic charts
+ * and a column each in their table, in flai's order (ADR-0249): the planner, the orchestrator, the
+ * analyzer, and the curator, then every other role by name.
  */
-const AGENT_SLOT: Record<string, number> = { planner: 6, orchestrator: 5, analyzer: 4 };
+export const strategicKinds = (days: StrategicDay[]): string[] =>
+	kindOrder(days.flatMap((d) => Object.keys(d.agents ?? {})));
+/**
+ * A built-in strategic agent's fixed slot: the planner, the orchestrator, and the analyzer the
+ * three that stay apart from each other in both modes for every pair, as the item types' do, and
+ * the curator the next.
+ */
+const AGENT_SLOT: Record<string, number> = { planner: 6, orchestrator: 5, analyzer: 4, curator: 3 };
+/** The slots the other roles take in turn, by name, after the built-in agents' (ADR-0249 §7). */
+const ROLE_SLOTS = [2, 1, 0, 7];
+/**
+ * Each kind's palette slot among `kinds`: a built-in agent's own, and each other role, in the order
+ * `kinds` has them, the next of `ROLE_SLOTS`, around again past the last.
+ */
+export function strategicSlots(kinds: string[]): Record<string, number> {
+	const others = kinds.filter((k) => AGENT_SLOT[k] === undefined);
+	return Object.fromEntries(
+		kinds.map((k) => [k, AGENT_SLOT[k] ?? ROLE_SLOTS[others.indexOf(k) % ROLE_SLOTS.length]])
+	);
+}
 /** A strategic day's moment: the start of its UTC day, drawn on its date's tick. */
 const dayOf = (d: StrategicDay) => `${d.date}T00:00:00Z`;
 /**
- * One bar series per strategic agent with an entry in the window, in their fixed order and colours,
- * stacked, with a bar on every day, 0 on a day it has none, estimated as its entries were.
+ * One bar series per kind of strategic usage, of `only` those when given, with an entry in the
+ * window, in flai's order and in the colour each has among every kind the window carries, stacked,
+ * with a bar on every day, 0 on a day it has none, estimated as its entries were.
  */
-function agentBars(t: Theme, days: StrategicDay[], value: (u: StrategicUse) => number) {
-	return STRATEGIC_AGENTS.filter((k) => days.some((d) => d.agents[k])).map((k) => ({
-		name: k,
-		type: 'bar',
-		stack: 'strategic',
-		barMaxWidth: 24,
-		itemStyle: { color: colorFor(t, AGENT_SLOT, k, 0), borderColor: t.surface, borderWidth: 1 },
-		data: days.map((d): Point => {
-			const u = d.agents[k];
-			return pointAt(dayOf(d), 'day', u ? value(u) : 0, 0, u?.estimated);
-		})
-	}));
+function agentBars(
+	t: Theme,
+	days: StrategicDay[],
+	value: (u: StrategicUse) => number,
+	only?: string
+) {
+	const kinds = strategicKinds(days);
+	const slots = strategicSlots(kinds);
+	return kinds
+		.filter((k) => only === undefined || k === only)
+		.map((k) => ({
+			name: k,
+			type: 'bar',
+			stack: 'strategic',
+			barMaxWidth: 24,
+			itemStyle: { color: colorFor(t, slots, k, 0), borderColor: t.surface, borderWidth: 1 },
+			data: days.map((d): Point => {
+				const u = d.agents[k];
+				return pointAt(dayOf(d), 'day', u ? value(u) : 0, 0, u?.estimated);
+			})
+		}));
 }
 /** What the strategic agents spent over the window against what the agents spent per item. */
 export type StrategicRatio = {
@@ -2613,8 +2642,9 @@ export function strategicRatio(report: Report): StrategicRatio | undefined {
 	};
 }
 /**
- * Strategic Cost (S-0216): one bar per day of the window, what the planner, the orchestrator, and
- * the analyzer spent that day stacked, a kind's estimated in part when any of its entries was. On
+ * Strategic Cost (S-0216): one bar per day of the window, what each kind of strategic usage, each
+ * role by name (ADR-0249), spent that day stacked, a kind's estimated in part when any of its
+ * entries was. On
  * the same axis, the agents' mean cost per item completed that day, with no point on a day without
  * one, and a dashed line at what the strategic agents spent per item completed over the window,
  * labelled with its share of the agents' mean cost per item.
@@ -2685,8 +2715,9 @@ export function strategicRows(report: Report): StrategicRow[] {
 /** Hours on an axis and in a tooltip, to a tenth. */
 const inHours = (h: number) => `${Math.round(h * 10) / 10}h`;
 /**
- * Strategic Use (S-0216): one bar per day of the window, the hours the planner, the orchestrator,
- * and the analyzer worked that day stacked, a kind's estimated in part when any of its entries was.
+ * Strategic Use (S-0216): one bar per day of the window, the hours each kind of strategic usage,
+ * each role by name (ADR-0249), worked that day stacked, in Strategic Cost's order and colours, a
+ * kind's estimated in part when any of its entries was.
  * On the same axis, in hours, the mean cycle time and the mean waiting of the items done that day,
  * with no point on a day without one.
  */
@@ -2727,6 +2758,32 @@ export function strategicUseByDay(r: Report, t: Theme): Opt {
 			'hours',
 			inHours,
 			hover('day', inHours, '')
+		),
+		series
+	});
+}
+/** What a role's page draws of it per day: what it spent, or the hours it worked. */
+export type RoleMeasure = 'cost' | 'use';
+/**
+ * A role's own cost or use per day (ADR-0249 §7), for its page: one bar per day of the window, what
+ * the role spent that day or the hours it worked, in the colour the strategic charts give it over
+ * the same window, estimated in part when any of its entries was. None when it has no entry in it.
+ */
+export function roleByDay(r: Report, t: Theme, kind: string, measure: RoleMeasure): Opt {
+	const days = r.strategic_days ?? [];
+	const cost = measure === 'cost';
+	const say = cost ? dollars : inHours;
+	const series = agentBars(t, days, (u) => (cost ? u.cost : u.seconds / 3600), kind);
+	return base(t, {
+		...bucketAxes(
+			t,
+			r,
+			'day',
+			days.map((d) => Date.parse(dayOf(d))),
+			false,
+			cost ? 'US dollars' : 'hours',
+			say,
+			hover('day', say, '')
 		),
 		series
 	});

@@ -33,12 +33,21 @@
 	// disabled, saying why, while the host action is off. A page with its own controls gives them as
 	// actions in their place, or none there when it shows them elsewhere, and its settings, the
 	// fields of its run, its runs' columns, what an entry shows besides its own, and sections before
-	// the log and after the runs as the panel's snippets.
-	import type { Snippet } from 'svelte';
+	// the log and after the runs as the panel's snippets. Before the log, what the role spent and the
+	// hours it worked each day of the charts' window, read from flai stats (ADR-0249), drawn in the
+	// colour the Strategic Cost and Strategic Use charts give it, and read again when its activity
+	// document's totals change.
+	import { untrack, type Snippet } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { api } from '$lib/api';
 	import { roleControls, roleRuns, roleStream, triggerLine, type RoleActionName } from '$lib/roles';
 	import type { ActivityDocument, ActivityEntry } from '$lib/strategic';
+	import { dollars } from '$lib/usage';
+	import { chartWindow } from '$lib/chartwindow.svelte';
+	import { themeState } from '$lib/theme.svelte';
+	import { theme } from '$lib/viz/palette';
+	import { hours, normalise, roleByDay, type Report, type RoleMeasure } from '$lib/viz/charts';
+	import Chart from './Chart.svelte';
 	import StrategicAgentPanel, { enableCommand } from './StrategicAgentPanel.svelte';
 
 	let {
@@ -94,6 +103,45 @@
 	let item = $state('');
 	let asking = $state<RoleActionName | null>(null);
 	let said = $state<string | null>(null);
+
+	/** The charts' window's flai stats report, null until it is read, and why it could not be. */
+	let report = $state<Report | null>(null);
+	let statsError = $state<string | null>(null);
+	const since = $derived(chartWindow.since);
+	const t = $derived(theme(themeState.dark));
+	/** The window's days: flai sends one for every day of it, so none is a flai older than S-0205. */
+	const days = $derived(report?.strategic_days ?? []);
+	/** The role's own days in the window, those it has an entry that ended on. */
+	const own = $derived(days.flatMap((d) => (d.agents[role.name] ? [d.agents[role.name]] : [])));
+	const ownCost = $derived(Math.round(own.reduce((n, u) => n + u.cost, 0) * 1e4) / 1e4);
+	const ownSeconds = $derived(own.reduce((n, u) => n + u.seconds, 0));
+	/** What the chart draws: what the role spent each day, or the hours it worked. */
+	let measure = $state<RoleMeasure>('cost');
+	const measures: { measure: RoleMeasure; label: string }[] = [
+		{ measure: 'cost', label: 'Cost' },
+		{ measure: 'use', label: 'Use' }
+	];
+
+	let asked = 0;
+	async function loadStats(window: string) {
+		const mine = ++asked;
+		try {
+			const r = await api(`/api/stats?since=${window}&type=story&bucket=day`);
+			const body = await r.json().catch(() => ({}));
+			if (mine !== asked) return;
+			if (!r.ok) throw new Error(body.error ?? r.statusText);
+			report = normalise(body as Report);
+			statsError = null;
+		} catch (e) {
+			if (mine === asked) statsError = e instanceof Error ? e.message : String(e);
+		}
+	}
+	// asked again for another role or window, and when the role's totals change: a run that ended
+	$effect(() => {
+		void [role.name, activity.accrued_cost, activity.accrued_seconds];
+		const window = since;
+		untrack(() => void loadStats(window));
+	});
 
 	type Answer = {
 		item?: string;
@@ -197,6 +245,63 @@
 	{/if}
 {/snippet}
 
+<!-- what the role spent and worked per day of the charts' window, before the log -->
+{#snippet usage()}
+	<section class="rounded border border-line bg-surface p-4" data-testid="{role.name}-usage">
+		<h2 class="font-semibold text-ink">Cost and use per day</h2>
+		{#if statsError}
+			<p class="mt-2 text-danger" role="alert" data-testid="{role.name}-usage-error">
+				flai stats could not be read: {statsError}
+			</p>
+		{:else if !report}
+			<p class="mt-2 text-muted">Loading…</p>
+		{:else if days.length === 0}
+			<p class="mt-2 text-muted" data-testid="{role.name}-usage-older">
+				The flai on the host sends no strategic use per day: it is older than the dashboard. Upgrade
+				it with <code>flai self-upgrade</code>.
+			</p>
+		{:else if own.length === 0}
+			<p class="mt-2 text-muted" data-testid="{role.name}-usage-none">
+				No activity of the {role.name} ended in the last {since}.
+			</p>
+		{:else}
+			<p class="mt-2 text-muted" data-testid="{role.name}-usage-summary">
+				Over the last {since} the {role.name} spent {dollars(ownCost)} and worked {hours(
+					ownSeconds
+				)}h, on {own.length}
+				{own.length === 1 ? 'day' : 'days'}.
+			</p>
+			<div class="mt-2 flex gap-1" role="group" aria-label="What the chart draws">
+				{#each measures as m (m.measure)}
+					<button
+						type="button"
+						class="rounded border px-3 py-1 text-sm {measure === m.measure
+							? 'border-primary bg-primary-soft'
+							: 'border-line'}"
+						aria-pressed={measure === m.measure}
+						onclick={() => (measure = m.measure)}
+						data-testid="{role.name}-usage-{m.measure}">{m.label}</button
+					>
+				{/each}
+			</div>
+			<div class="mt-2" data-testid="{role.name}-usage-chart">
+				<Chart option={roleByDay(report, t, role.name, measure)} theme={t} height={240} />
+			</div>
+		{/if}
+		<p class="mt-2 text-sm text-muted">
+			Beside the other roles on <a
+				class="underline"
+				href={resolve('/charts/[kind]', { kind: 'strategic-cost' })}>Strategic Cost</a
+			>
+			and
+			<a class="underline" href={resolve('/charts/[kind]', { kind: 'strategic-use' })}
+				>Strategic Use</a
+			>.
+		</p>
+	</section>
+	{@render beforeActivity?.()}
+{/snippet}
+
 {#snippet currentItem(r: R)}
 	{#if takesItem}
 		<dt class="text-muted">Item</dt>
@@ -238,6 +343,6 @@
 	runHead={itemHead}
 	runCells={itemCells}
 	{entryExtra}
-	{beforeActivity}
+	beforeActivity={usage}
 	{children}
 />

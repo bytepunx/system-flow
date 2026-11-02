@@ -1734,6 +1734,41 @@ describe('the strategic charts (S-0216)', () => {
 		expect(text('[data-testid="explainer-what"]')).toContain('of the tasks completed that day');
 	});
 
+	it('draws a series and a column per role the days carry, the built-in agents first (ADR-0249)', async () => {
+		answered = {
+			items,
+			strategic_days: days.map((d) =>
+				d.date === '2026-09-29'
+					? {
+							...d,
+							agents: { reviewer: { cost: 0.5, seconds: 1800 }, ...d.agents },
+							cost: 1,
+							seconds: 5400
+						}
+					: d
+			)
+		};
+		await open('strategic-cost');
+		expect(series()).toEqual(['planner', 'orchestrator', 'analyzer', 'reviewer', 'mean per story']);
+		const bars = (setOption.mock.calls.at(-1)![0] as { series: { itemStyle: { color: string } }[] })
+			.series;
+		expect(new Set(bars.slice(0, 4).map((s) => s.itemStyle.color)).size).toBe(4);
+		expect(heads().slice(0, 6)).toEqual([
+			'day',
+			'planner',
+			'orchestrator',
+			'analyzer',
+			'reviewer',
+			'total'
+		]);
+		expect(rows()[2]).toEqual(['2026-09-29', '-', '-', '$0.500', '$0.500', '$1.00', '2', '$5.50']);
+		unmount(c!);
+		document.body.innerHTML = '';
+		await open('strategic-use');
+		expect(series().slice(0, 4)).toEqual(['planner', 'orchestrator', 'analyzer', 'reviewer']);
+		expect(rows()[2].slice(0, 6)).toEqual(['2026-09-29', '-', '-', '1h', '0.5h', '1.5h']);
+	});
+
 	it('says why there is no ratio', async () => {
 		answered = { items: [], strategic_days: days.map((d) => ({ ...d, completed: 0 })) };
 		await open('strategic-cost');
