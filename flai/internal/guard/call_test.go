@@ -112,6 +112,13 @@ func TestDecideAsksForAStoryAgentsProtectedWriteInItsWorktree(t *testing.T) {
 		{"a protected file nested in the worktree", story, write(wt + "/template/root/.mcp.json"), Ask},
 		{"auto-approve on", Guard{Commands: g.Commands, Served: true, AutoApprove: true}, write(wt + "/.claude/settings.json"), Allow},
 		{"a sub-agent's protected write", story, sub, Deny},
+		{"a sub-agent's write to a path protected from the root", story, func() Call {
+			c := write(wt + "/scripts/agent-container.sh")
+			c.Subagent, c.Agent = true, "general-purpose"
+			return c
+		}(), Deny},
+		{"the story's agent's write to an image's Dockerfile", story, write(wt + "/flai/images/claude-code/Dockerfile"), Ask},
+		{"a root path nested below the worktree's root", story, write(wt + "/template/root/scripts/agent-image.sh"), Allow},
 		{"an unprotected path", story, write(wt + "/flai/cmd/guard.go"), Allow},
 		{"a path in .git", story, write(wt + "/.git/config"), Allow},
 		{"the main checkout's protected path", story, write("/home/op/proj/.claude/settings.json"), Allow},

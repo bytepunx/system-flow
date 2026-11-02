@@ -256,10 +256,15 @@ func (g Guard) asSubAgent(c Call) Verdict {
 }
 
 // protectedWrite says whether c writes a protected path other than one in
-// .git, and which file, as ProtectedWrite describes.
+// .git, and which file, as ProtectedWrite describes. A path in the story's
+// worktree is read from the worktree's root too, so that the paths protected
+// from the repository's root, such as flai/images, match there (S-0508).
 func protectedWrite(c Call) (string, bool) {
 	if c.Kind != FileWrite || c.Path == "" {
 		return "", false
+	}
+	if rel, ok := inWorktree(c); ok && protected.Path(rel) && !protected.Git(rel) {
+		return c.Path, true
 	}
 	clean := filepath.Clean(c.Path)
 	return c.Path, protected.Path(clean) && !protected.Git(clean)

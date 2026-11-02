@@ -66,6 +66,28 @@ func TestGitFindsAGitFolderOrFile(t *testing.T) {
 	}
 }
 
+func TestPathMatchesTheContainerPathsFromTheRootOnly(t *testing.T) {
+	for _, p := range []string{
+		"flai/images/bedrock/Dockerfile", "flai/images/claude-code/Dockerfile", "flai/images/x",
+		"scripts/agent-image.sh", "scripts/agent-container.sh", "./scripts/agent-image.sh", "flai//images/a",
+		filepath.Join("flai", "images", "claude-code", "Dockerfile"), filepath.Join("scripts", "agent-container.sh"),
+	} {
+		if !Path(p) {
+			t.Errorf("Path(%q) = false, want true: the container harness protects it", p)
+		}
+	}
+	for _, p := range []string{
+		"flai/images", "flai/imagesx/a", "flai/image/Dockerfile", "images/Dockerfile", "flai/x/images/Dockerfile",
+		"scripts/agent-image.sh.bak", "scripts/other.sh", "scripts", "agent-image.sh", "scripts/agent-image.sh/x",
+		"foo/scripts/agent-image.sh", "template/root/flai/images/bedrock/Dockerfile", "foo/flai/images/x",
+		"/home/a/flai/images/x", "/home/a/scripts/agent-container.sh",
+	} {
+		if Path(p) {
+			t.Errorf("Path(%q) = true, want false: it is not one of the container harness's paths from the root", p)
+		}
+	}
+}
+
 func TestPathTakesEitherSeparator(t *testing.T) {
 	for _, p := range []string{filepath.Join("template", "root", ".mcp.json"), filepath.Join(".claude", "settings.json"), "./.vscode/settings.json", "a//.idea/x"} {
 		if !Path(p) {
@@ -75,8 +97,8 @@ func TestPathTakesEitherSeparator(t *testing.T) {
 }
 
 func TestChangedKeepsTheProtectedInOrder(t *testing.T) {
-	in := []string{"flai/main.go", ".mcp.json", "docs/x.md", "template/root/.claude/settings.json", ".claudeignore", ".vscode/settings.json"}
-	want := []string{".mcp.json", "template/root/.claude/settings.json", ".vscode/settings.json"}
+	in := []string{"flai/main.go", ".mcp.json", "docs/x.md", "flai/images/bedrock/Dockerfile", "template/root/.claude/settings.json", ".claudeignore", "scripts/agent-image.sh", ".vscode/settings.json", "scripts/flai.sh"}
+	want := []string{".mcp.json", "flai/images/bedrock/Dockerfile", "template/root/.claude/settings.json", "scripts/agent-image.sh", ".vscode/settings.json"}
 	if got := Changed(in); !slices.Equal(got, want) {
 		t.Errorf("Changed = %q, want %q", got, want)
 	}
@@ -107,17 +129,35 @@ func TestForPinsClaudeCodesList(t *testing.T) {
 	}
 }
 
+func TestForPinsTheContainersList(t *testing.T) {
+	l := For("container")
+	if len(l.Folders) != 0 || len(l.Files) != 0 {
+		t.Errorf("For(container) = %+v, want no folders or files by name", l)
+	}
+	if want := []string{"flai/images"}; !slices.Equal(l.RootFolders, want) {
+		t.Errorf("For(container).RootFolders = %q, want %q", l.RootFolders, want)
+	}
+	if want := []string{"scripts/agent-image.sh", "scripts/agent-container.sh"}; !slices.Equal(l.RootFiles, want) {
+		t.Errorf("For(container).RootFiles = %q, want %q", l.RootFiles, want)
+	}
+}
+
 func TestForReturnsACopy(t *testing.T) {
 	l := For(ClaudeCode)
 	l.Folders[0], l.Files[0] = "x", "y"
 	if again := For(ClaudeCode); again.Folders[0] != ".git" || again.Files[0] != ".gitconfig" {
 		t.Errorf("For(%s) after changing a copy = %q, %q: the copy changed the list", ClaudeCode, again.Folders[0], again.Files[0])
 	}
+	c := For(Container)
+	c.RootFolders[0], c.RootFiles[0] = "x", "y"
+	if again := For(Container); again.RootFolders[0] != "flai/images" || again.RootFiles[0] != "scripts/agent-image.sh" {
+		t.Errorf("For(%s) after changing a copy = %q, %q: the copy changed the list", Container, again.RootFolders[0], again.RootFiles[0])
+	}
 }
 
-func TestHarnessesIsClaudeCode(t *testing.T) {
-	if got := Harnesses(); !slices.Equal(got, []string{"claude-code"}) {
-		t.Errorf("Harnesses() = %q, want [claude-code]", got)
+func TestHarnessesAreClaudeCodeAndContainer(t *testing.T) {
+	if got := Harnesses(); !slices.Equal(got, []string{"claude-code", "container"}) {
+		t.Errorf("Harnesses() = %q, want [claude-code container]", got)
 	}
 }
 

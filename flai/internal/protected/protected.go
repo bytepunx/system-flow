@@ -5,7 +5,10 @@
 // follows "Protected paths" in Claude Code's documentation as of Claude Code
 // 2.1.290 (ADR-0106). A harness's own files, such as .codex/, .opencode/,
 // .agents/plugins/, or AGENTS.md, join the list with that harness's adapter,
-// not before. Path and Changed answer for every harness's list at once. .git
+// not before. The container harness's list holds this repository's files
+// that change what a containerised agent may do, the images and the scripts
+// that build and run them (ADR-0203), by their path from the repository root.
+// Path and Changed answer for every harness's list at once. .git
 // stays apart, in Git, because permission_prompt never approves it whichever
 // the harness.
 package protected
@@ -21,6 +24,10 @@ import (
 // names; protected cannot import guard, which imports it.
 const ClaudeCode = "claude-code"
 
+// Container is the harness name of the container adapter, which runs another
+// harness in a container (ADR-0203).
+const Container = "container"
+
 // List is one harness's protected paths.
 type List struct {
 	// Folders are the protected folders: every path below one is protected.
@@ -28,6 +35,12 @@ type List struct {
 	Folders []string
 	// Files are the protected files, by base name, wherever they lie.
 	Files []string
+	// RootFolders are protected folders by their path from the repository
+	// root: every path below one is protected, and a folder of the same
+	// path below another folder is not.
+	RootFolders []string
+	// RootFiles are protected files by their path from the repository root.
+	RootFiles []string
 }
 
 // lists are the protected paths of each harness, by harness name.
@@ -46,13 +59,17 @@ var lists = map[string]List{
 			".mcp.json", ".claude.json",
 		},
 	},
+	Container: {
+		RootFolders: []string{"flai/images"},
+		RootFiles:   []string{"scripts/agent-image.sh", "scripts/agent-container.sh"},
+	},
 }
 
 // For returns a copy of harness's protected paths, empty for a harness with
 // no list.
 func For(harness string) List {
 	l := lists[harness]
-	return List{Folders: slices.Clone(l.Folders), Files: slices.Clone(l.Files)}
+	return List{Folders: slices.Clone(l.Folders), Files: slices.Clone(l.Files), RootFolders: slices.Clone(l.RootFolders), RootFiles: slices.Clone(l.RootFiles)}
 }
 
 // Harnesses are the names of the harnesses with a list, sorted.
@@ -70,11 +87,22 @@ func parts(rel string) []string {
 	return out
 }
 
-// has reports whether names, a path's names, is a path of l: its base name
-// is one of l's files, or one of its folders is one of l's folders.
+// has reports whether names, a path's names from the root, is a path of l:
+// its base name is one of l's files, one of its folders is one of l's
+// folders, it is one of l's root files, or it lies below one of l's root
+// folders.
 func (l List) has(names []string) bool {
 	if slices.Contains(l.Files, names[len(names)-1]) {
 		return true
+	}
+	path := strings.Join(names, "/")
+	if slices.Contains(l.RootFiles, path) {
+		return true
+	}
+	for _, f := range l.RootFolders {
+		if strings.HasPrefix(path, f+"/") {
+			return true
+		}
 	}
 	dirs := names[:len(names)-1]
 	for _, f := range l.Folders {
@@ -90,7 +118,9 @@ func (l List) has(names []string) bool {
 
 // Path reports whether rel, a path relative to a worktree or repository root,
 // is protected for some harness: one of its folders is a protected folder,
-// its base name is a protected file, or it is or lies in .git.
+// its base name is a protected file, it is a protected root file or lies
+// below a protected root folder, or it is or lies in .git. An absolute path
+// matches the folders and files but not the root ones.
 func Path(rel string) bool {
 	names := parts(rel)
 	if len(names) == 0 {
