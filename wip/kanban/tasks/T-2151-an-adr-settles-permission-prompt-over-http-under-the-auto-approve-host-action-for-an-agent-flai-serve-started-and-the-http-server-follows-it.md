@@ -23,7 +23,7 @@ tags: [cli, mcp]
 touches: [design/adrs/README.md, flai/cmd/mcp_http.go, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/mcphttp/mcphttp.go, flai/cmd/mcp_http_permission_test.go, design/adrs/0243-over-http-permission-prompt-honours-the-auto-approve-host-action-only-for-the.md, flai/internal/mcpserver/server.go]
 usage:
   source: log
-  seconds: 916
+  seconds: 918
   estimated: true
   priced_by: estimate
   models:
@@ -32,7 +32,7 @@ usage:
       output: 588
       cache_read: 4671748
       cache_write: 131384
-      cost: 1.6913
+      cost: 1.692
 ---
 # T-2151 An ADR settles permission_prompt over HTTP under the auto-approve host action for an agent flai serve started, and the HTTP server follows it
 

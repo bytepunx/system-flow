@@ -17,6 +17,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 10
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 2
+          output: 15
+          cache_read: 97100
+          cache_write: 1576
+          cost: 0.0231
 draft: true
 ---
 # S-0562 The publish formula is run once in this repository, its instance worked to review and accepted, and the release or the evaluation that stopped it recorded

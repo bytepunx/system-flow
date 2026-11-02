@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 90
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 12
-      output: 98
-      cache_read: 933562
-      cache_write: 6628
-      cost: 0.3311
+      input: 18
+      output: 4705
+      cache_read: 921700
+      cache_write: 37977
+      cost: 0.53
 ---
 # T-2213 An ADR records the remediation proposed from I-0214's instances: harness none on a story's agent says its agent runs elsewhere, and flai serve starts nothing for it
 

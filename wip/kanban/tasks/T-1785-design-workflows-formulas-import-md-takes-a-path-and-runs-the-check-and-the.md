@@ -3,12 +3,18 @@ id: T-1785
 type: task
 nature: improvement
 title: design/workflows/formulas/import.md takes a path and runs the check and the tests after the import's commit, and the host API's import runs flai import --formula so its progress shows as a story
-status: backlog
+status: in-progress
 parent: S-0424
 owner: alex
 created: 2026-10-16T05:48:54Z
-updated: 2026-11-02T05:30:51Z
-transitions: []
+updated: 2026-11-02T05:52:04Z
+transitions:
+  - to: ready
+    at: 2026-11-02T05:52:01Z
+    by: agent-S-0424
+  - to: in-progress
+    at: 2026-11-02T05:52:04Z
+    by: agent-S-0424
 stream: S-0424
 tags: [cli, template, dashboard]
 touches: [design/workflows/formulas/import.md, template/root/design/workflows/formulas/import.md, flai/internal/hostapi/import.go, flai/internal/hostapi/import_test.go]

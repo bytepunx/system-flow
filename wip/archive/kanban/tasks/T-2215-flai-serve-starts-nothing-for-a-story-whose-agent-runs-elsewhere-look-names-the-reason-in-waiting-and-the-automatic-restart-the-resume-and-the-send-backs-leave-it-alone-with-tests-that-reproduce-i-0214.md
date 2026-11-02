@@ -3,11 +3,11 @@ id: T-2215
 type: task
 nature: remediation
 title: "flai serve starts nothing for a story whose agent runs elsewhere: look names the reason in waiting, and the automatic restart, the resume, and the send backs leave it alone, with tests that reproduce I-0214"
-status: in-progress
+status: done
 parent: S-0516
 owner: alex
 created: 2026-10-28T13:13:47Z
-updated: 2026-11-02T05:21:18Z
+updated: 2026-11-02T05:32:54Z
 transitions:
   - to: ready
     at: 2026-11-02T05:21:17Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-02T05:21:18Z
     by: agent-S-0516
+  - to: done
+    at: 2026-11-02T05:32:54Z
+    by: agent-S-0516
 stream: S-0516
 tags: [cli, serve]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go]
 after: [T-2214]
+usage:
+  source: log
+  seconds: 696
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 30
+      output: 8034
+      cache_read: 1573761
+      cache_write: 64845
+      cost: 0.905
 ---
 # T-2215 flai serve starts nothing for a story whose agent runs elsewhere: look names the reason in waiting, and the automatic restart, the resume, and the send backs leave it alone, with tests that reproduce I-0214
 

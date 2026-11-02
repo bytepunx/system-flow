@@ -3,15 +3,21 @@ id: T-1786
 type: task
 nature: improvement
 title: design/workflows/formulas/analysis-cadence.md runs the analyzer with a focus and lists the open issues its report names, and analysis.schedule may name the formula
-status: backlog
+status: in-progress
 parent: S-0424
 owner: alex
 created: 2026-10-16T05:48:59Z
-updated: 2026-11-02T05:31:11Z
-transitions: []
+updated: 2026-11-02T05:52:07Z
+transitions:
+  - to: ready
+    at: 2026-11-02T05:52:06Z
+    by: agent-S-0424
+  - to: in-progress
+    at: 2026-11-02T05:52:07Z
+    by: agent-S-0424
 stream: S-0424
 tags: [cli, template]
-touches: [design/workflows/formulas/analysis-cadence.md, template/root/design/workflows/formulas/analysis-cadence.md, flai/internal/serve/analysis_schedule.go, flai/internal/serve/analysis_schedule_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, template/template.yaml, flai/cmd/issue.go, flai/cmd/issue_test.go, docs/users/flai-reference.md, flai/internal/check/check.go, flai/internal/check/formulas_test.go]
+touches: [design/workflows/formulas/analysis-cadence.md, template/root/design/workflows/formulas/analysis-cadence.md, flai/internal/serve/analysis_schedule.go, flai/internal/serve/analysis_schedule_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, template/template.yaml, flai/cmd/issue.go, flai/cmd/issue_test.go, docs/users/flai-reference.md, docs/operators/settings.md, flai/internal/check/check.go, flai/internal/check/formulas_test.go]
 after: [T-2016]
 ---
 # T-1786 design/workflows/formulas/analysis-cadence.md runs the analyzer with a focus and lists the open issues its report names, and analysis.schedule may name the formula

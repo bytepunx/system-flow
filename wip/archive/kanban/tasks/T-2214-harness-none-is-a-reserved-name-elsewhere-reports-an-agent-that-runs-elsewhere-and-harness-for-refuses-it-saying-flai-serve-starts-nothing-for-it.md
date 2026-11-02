@@ -24,16 +24,16 @@ touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.g
 after: [T-2213]
 usage:
   source: log
-  seconds: 237
+  seconds: 239
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 10
-      output: 60
-      cache_read: 868147
-      cache_write: 6541
-      cost: 0.308
+      input: 16
+      output: 4378
+      cache_read: 857485
+      cache_write: 35331
+      cost: 0.4931
 ---
 # T-2214 harness.None is a reserved name: Elsewhere reports an agent that runs elsewhere, and harness.For refuses it saying flai serve starts nothing for it
 

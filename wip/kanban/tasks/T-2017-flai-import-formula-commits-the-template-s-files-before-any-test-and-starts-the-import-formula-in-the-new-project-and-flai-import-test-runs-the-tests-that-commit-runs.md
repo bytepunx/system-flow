@@ -3,15 +3,36 @@ id: T-2017
 type: task
 nature: improvement
 title: flai import --formula commits the template's files before any test and starts the import formula in the new project, and flai import test runs the tests that --commit runs
-status: backlog
+status: done
 parent: S-0424
 owner: alex
 created: 2026-10-21T16:09:19Z
-updated: 2026-11-02T05:30:45Z
-transitions: []
+updated: 2026-11-02T05:48:48Z
+transitions:
+  - to: ready
+    at: 2026-11-02T05:31:59Z
+    by: agent-S-0424
+  - to: in-progress
+    at: 2026-11-02T05:32:02Z
+    by: agent-S-0424
+  - to: done
+    at: 2026-11-02T05:48:48Z
+    by: agent-S-0424
 stream: S-0424
 tags: [cli]
-touches: [flai/cmd/import.go, flai/cmd/import_commit.go, flai/cmd/import_test.go, flai/cmd/import_commit_test.go, docs/users/flai-reference.md]
+touches: [flai/cmd/import.go, flai/cmd/import_commit.go, flai/cmd/import_test.go, flai/cmd/import_commit_test.go, docs/users/flai-reference.md, docs/operators/settings.md]
+usage:
+  source: log
+  seconds: 978
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 78
+      output: 445
+      cache_read: 3306033
+      cache_write: 225785
+      cost: 1.2441
 ---
 # T-2017 flai import --formula commits the template's files before any test and starts the import formula in the new project, and flai import test runs the tests that --commit runs
 

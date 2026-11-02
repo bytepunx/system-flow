@@ -3,16 +3,37 @@ id: T-2217
 type: task
 nature: remediation
 title: The users guide, the operators guide, and agent-adapters.md describe harness none, and I-0214 is closed saying what fixed it
-status: backlog
+status: done
 parent: S-0516
 owner: alex
 created: 2026-10-28T13:14:28Z
-updated: 2026-10-28T13:14:28Z
-transitions: []
+updated: 2026-11-02T05:38:49Z
+transitions:
+  - to: ready
+    at: 2026-11-02T05:33:28Z
+    by: agent-S-0516
+  - to: in-progress
+    at: 2026-11-02T05:33:29Z
+    by: agent-S-0516
+  - to: done
+    at: 2026-11-02T05:38:49Z
+    by: agent-S-0516
 stream: S-0516
 tags: [cli, serve, docs]
 touches: [docs/users/flai.md, docs/operators/index.md, design/system/agent-adapters.md, design/issues/I-0214-flai-serve-starts-a-host-agent-for-a-story-meant-to-be-worked-in-a-container-since-nothing-on-a-story-or-the-host-says-its-agent-runs-elsewhere.md, design/issues/summary.md]
 after: [T-2215, T-2216]
+usage:
+  source: log
+  seconds: 320
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 30
+      output: 7961
+      cache_read: 1559430
+      cache_write: 64254
+      cost: 0.8967
 ---
 # T-2217 The users guide, the operators guide, and agent-adapters.md describe harness none, and I-0214 is closed saying what fixed it
 

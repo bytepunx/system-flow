@@ -3,16 +3,37 @@ id: T-2418
 type: task
 nature: feature
 title: flai serve settings prints the host settings the dashboard's settings.get gives, its mcp block naming the bind address flai serve mcp sets
-status: backlog
+status: done
 parent: S-0506
 owner: alex
 created: 2026-10-31T07:58:50Z
-updated: 2026-10-31T07:58:50Z
-transitions: []
+updated: 2026-11-02T05:56:41Z
+transitions:
+  - to: ready
+    at: 2026-11-02T05:35:52Z
+    by: agent-S-0506
+  - to: in-progress
+    at: 2026-11-02T05:35:54Z
+    by: agent-S-0506
+  - to: done
+    at: 2026-11-02T05:56:41Z
+    by: agent-S-0506
 stream: S-0506
 tags: [cli, mcp]
 touches: [flai/cmd/serve_settings.go, flai/cmd/serve_settings_test.go, flai/cmd/serve.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md]
 after: [T-2152]
+usage:
+  source: log
+  seconds: 1220
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 79
+      output: 393
+      cache_read: 3129240
+      cache_write: 97725
+      cost: 1.1368
 ---
 # T-2418 flai serve settings prints the host settings the dashboard's settings.get gives, its mcp block naming the bind address flai serve mcp sets
 

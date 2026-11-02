@@ -3,15 +3,36 @@ id: T-2016
 type: task
 nature: improvement
 title: A scheduled formula may declare inputs that all carry a default, and the template test passes over a formula's input placeholders
-status: backlog
+status: done
 parent: S-0424
 owner: alex
 created: 2026-10-21T16:09:10Z
-updated: 2026-11-02T05:30:28Z
-transitions: []
+updated: 2026-11-02T05:48:20Z
+transitions:
+  - to: ready
+    at: 2026-11-02T05:31:52Z
+    by: agent-S-0424
+  - to: in-progress
+    at: 2026-11-02T05:31:55Z
+    by: agent-S-0424
+  - to: done
+    at: 2026-11-02T05:48:20Z
+    by: agent-S-0424
 stream: S-0424
 tags: [cli]
 touches: [flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/cmd/formula.go, flai/cmd/formula_test.go, flai/internal/check/check.go, flai/internal/check/formulas_test.go, flai/cmd/new_test.go]
+usage:
+  source: log
+  seconds: 985
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 56
+      output: 254
+      cache_read: 1614966
+      cache_write: 131329
+      cost: 0.6151
 ---
 # T-2016 A scheduled formula may declare inputs that all carry a default, and the template test passes over a formula's input placeholders
 

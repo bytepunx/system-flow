@@ -3,10 +3,10 @@ id: S-0516
 type: story
 nature: remediation
 title: flai serve starts a host agent for a story meant to be worked in a container, since nothing on a story or the host says its agent runs elsewhere
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-28T12:52:40Z
-updated: 2026-11-02T05:13:40Z
+updated: 2026-11-02T06:02:01Z
 transitions:
   - to: ready
     at: 2026-11-02T05:13:26Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-02T05:13:34Z
     by: agent-S-0516
+  - to: review
+    at: 2026-11-02T05:47:01Z
+    by: agent-S-0516
+  - to: done
+    at: 2026-11-02T06:02:01Z
+    by: orchestrator
 tags: [cli, serve]
 topics: [harness]
 touches: [design/adrs, design/adrs/README.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/start.go, flai/internal/serve/start_test.go, flai/internal/serve/restart.go, flai/internal/serve/restart_test.go, flai/internal/serve/commit.go, flai/internal/serve/commit_test.go, docs/users/flai.md, docs/operators/index.md, design/system/agent-adapters.md, design/issues/I-0214-flai-serve-starts-a-host-agent-for-a-story-meant-to-be-worked-in-a-container-since-nothing-on-a-story-or-the-host-says-its-agent-runs-elsewhere.md, design/issues/summary.md]
@@ -24,31 +30,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 446
-  estimated: true
-  priced_by: estimate
+  seconds: 2020
+  priced_by: harness
   turns:
     - day: 2026-11-02
-      hand_edits: 1
-      work: 23
+      ceremony: 1
+      hand_edits: 2
+      work: 41
   models:
     - model: claude-opus-5-5
-      input: 52
-      output: 334
-      cache_read: 3224896
-      cache_write: 163016
-      cost: 1.193
+      input: 202
+      output: 54218
+      cache_read: 10620435
+      cache_write: 437600
+      cost: 6.1072
   strategic:
     - kind: orchestrator
-      seconds: 248
+      seconds: 327
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 68
-          output: 841
-          cache_read: 13594766
-          cache_write: 66153
-          cost: 3.0034
+          input: 80
+          output: 933
+          cache_read: 13973229
+          cache_write: 182047
+          cost: 3.1191
+        - model: claude-sonnet-5-5
+          input: 14
+          output: 78
+          cache_read: 203888
+          cache_write: 45387
+          cost: 0.1744
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 16m
@@ -74,8 +86,8 @@ finalized:
 This story remediates [I-0214](../../../design/issues/I-0214-flai-serve-starts-a-host-agent-for-a-story-meant-to-be-worked-in-a-container-since-nothing-on-a-story-or-the-host-says-its-agent-runs-elsewhere.md), "flai serve starts a host agent for a story meant to be worked in a container, since nothing on a story or the host says its agent runs elsewhere". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0214 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0214 is closed with `flai issue close I-0214 --reason` saying what fixed it
+- [x] The cause I-0214 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0214 is closed with `flai issue close I-0214 --reason` saying what fixed it
 
 ## Tasks
 - T-2213 An ADR records the remediation proposed from I-0214's instances: harness none on a story's agent says its agent runs elsewhere, and flai serve starts nothing for it
@@ -106,3 +118,14 @@ Overlaps on 2026-10-28: S-0502, in progress, touches `harness.go` and `harness_t
 Forecast. `flai forecast S-0516` gives 31m (median 95 s per unit of size over 38 done remediation stories on claude-opus-5-5 in the large band; size 19: 2 criteria, 17 touches) and delivery 2026-10-29T01:59Z, 29th in the pull order. Raised to 1h: the story writes an ADR, threads one reserved name through nine start paths in `flai serve` (six automatic, three the operator's) with tests that reproduce both instances in `agents_test.go`, flai's largest test file, and changes three documents. The delivery written is flai's play-out start, 2026-10-29T01:59Z less 31m, plus 1h: 2026-10-29T02:28Z.
 
 Cost of delay. `flai cod S-0516` gives 40.00 USD a week: 16m of time lost per 168h cycle (the inputs flai set from I-0214) at 150 USD an hour, one cycle a week. Written as flai gives it.
+
+### Accepted by the orchestrator
+
+- Verified: 09202849f44be6713f378775b026321b005b2d58
+- Batch: 20261102-055211
+- Enqueued verified: 09202849f44be6713f378775b026321b005b2d58
+- At: 2026-11-02T06:02:01Z
+
+Verdict: pass at 09202849f44be6713f378775b026321b005b2d58
+- 1: flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/start.go, flai/internal/serve/start_test.go, flai/internal/serve/restart.go, flai/internal/serve/restart_test.go, flai/internal/serve/commit.go, flai/internal/serve/commit_test.go
+- 2: design/issues/I-0214-flai-serve-starts-a-host-agent-for-a-story-meant-to-be-worked-in-a-container-since-nothing-on-a-story-or-the-host-says-its-agent-runs-elsewhere.md, design/issues/summary.md

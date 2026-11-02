@@ -3,16 +3,37 @@ id: T-2160
 type: task
 nature: feature
 title: FLAI_MCP_URL and FLAI_MCP_TOKEN hand a run the server and its token by environment, flai mcp token prints the one in force, and the log names the agent and never the token
-status: backlog
+status: done
 parent: S-0506
 owner: alex
 created: 2026-10-26T04:49:04Z
-updated: 2026-10-26T04:49:04Z
-transitions: []
+updated: 2026-11-02T05:56:15Z
+transitions:
+  - to: ready
+    at: 2026-11-02T05:35:48Z
+    by: agent-S-0506
+  - to: in-progress
+    at: 2026-11-02T05:35:49Z
+    by: agent-S-0506
+  - to: done
+    at: 2026-11-02T05:56:15Z
+    by: agent-S-0506
 stream: S-0506
 tags: [cli, mcp]
-touches: [flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/internal/mcphttp/mcphttp.go, flai/internal/mcphttp/mcphttp_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go]
+touches: [flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/internal/mcphttp/mcphttp.go, flai/internal/mcphttp/mcphttp_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/cmd/cmd_test.go, flai/cmd/mcp_token_env_test.go]
 after: [T-2151]
+usage:
+  source: log
+  seconds: 1225
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 99
+      output: 480
+      cache_read: 5833252
+      cache_write: 156403
+      cost: 2.1099
 ---
 # T-2160 FLAI_MCP_URL and FLAI_MCP_TOKEN hand a run the server and its token by environment, flai mcp token prints the one in force, and the log names the agent and never the token
 
