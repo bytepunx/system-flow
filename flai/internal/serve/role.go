@@ -32,7 +32,11 @@ import (
 // serving flai settles the run once its process is gone, judges how it went
 // as a planner run's is, journals its end, and logs its activity in
 // wip/agents/<name>.md, which charges nothing. It is no story's agent: it is
-// not counted against the in-progress limit, and holds no story back.
+// not counted against the in-progress limit, and holds no story back. The
+// agent of a formula's instance starts one too, for a role step of its
+// formula, on the instance, through the same start with the trigger
+// FormulaTrigger gives (S-0422); its end is an agent event on the instance,
+// which that agent's wait_for_events reports.
 
 // MethodRole is the method a defined role's start and end are journalled
 // under, with the host action its file names as the entry's action.
@@ -49,9 +53,15 @@ var builtinRoles = map[string]string{
 	workitem.ActivityCurator:      "flai curate",
 }
 
+// FormulaTrigger is the trigger of a role's run that the agent of story, an
+// instance of the formula name, started for a role step of it (S-0422).
+func FormulaTrigger(name, story string) string { return "formula " + name + " " + story }
+
 // RunRole starts name, a role project e defines in its role file, on item
 // when its file takes one, with inputs, the run's inputs in the order given,
-// and returns its run as recorded, its trigger asked. It is refused, as a
+// and returns its run as recorded, with trigger as what started it:
+// TriggerAsked for the operator's asking, FormulaTrigger's for the agent of
+// a formula's instance (S-0422). It is refused, as a
 // *Refused, for a built-in role's name, a name no role file gives, or one
 // whose file does not load; while the host action the file names is off for
 // the project; for an item when the file takes none, without one when it
@@ -62,7 +72,7 @@ var builtinRoles = map[string]string{
 // start, naming the provider and until, with nothing recorded (S-0534). It
 // does not wait for the run: the serving flai settles it once the process is
 // gone.
-func RunRole(ctx context.Context, o Options, e Entry, name, item string, inputs []harness.Input) (*AgentRun, error) {
+func RunRole(ctx context.Context, o Options, e Entry, name, item string, inputs []harness.Input, trigger string) (*AgentRun, error) {
 	rs, err := roleCheck(o, e, name, item)
 	if err != nil {
 		return nil, err
@@ -72,7 +82,7 @@ func RunRole(ctx context.Context, o Options, e Entry, name, item string, inputs 
 	if err := l.budgetRefusal(rs.cfg, rs.agent); err != nil {
 		return nil, err
 	}
-	if _, held := l.role(ctx, rs.cfg, rs.file, rs.item, rs.agent, inputs, TriggerAsked); held != nil {
+	if _, held := l.role(ctx, rs.cfg, rs.file, rs.item, rs.agent, inputs, trigger); held != nil {
 		return nil, l.budgetRefused(*held)
 	}
 	run := o.Dir.AgentStates()[e.Root].Roles[rs.file.Name][rs.item]
@@ -216,8 +226,9 @@ func roleItem(repo *workitem.Repo, f roles.Role, item string) (string, error) {
 
 // role starts the role f on item with agent and inputs, records the run
 // with trigger, what started it (asked, "<event> <ID>", or "schedule
-// <spec>", joined by semicolons when coalesced), journals it under f's
-// action, and says whether it started. A start
+// <spec>", joined by semicolons when coalesced, or "formula <name>
+// <S-nnnn>"), journals it under f's action, and says whether it started. A
+// start
 // the budget state of its provider holds is not made and nothing is
 // recorded: held is that state, nil when it was not held (spawnGated,
 // S-0534).

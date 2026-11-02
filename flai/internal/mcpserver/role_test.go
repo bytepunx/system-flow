@@ -54,6 +54,28 @@ func TestADefinedRoleIsStartedThroughTheServer(t *testing.T) {
 	}
 }
 
+// S-0422: the agent of a formula's instance asks with its own name, which
+// the host judges it by, and the run's trigger, formula <name> <S-nnnn>,
+// comes back in the answer.
+func TestAnInstancesAgentIsAnsweredWithTheFormulaTrigger(t *testing.T) {
+	t.Parallel()
+	var by string
+	f := setupWith(t, func(o *Options) {
+		o.Agent = "agent-S-0042"
+		o.Roles = func(_ context.Context, _, name, item string, _ []harness.Input, asker string) (RoleStarted, error) {
+			by = asker
+			return RoleStarted{Role: name, Item: item, Action: "review", Agent: "reviewer-" + item, PID: 42, Trigger: "formula release-check " + item}, nil
+		}
+	})
+	out, failed := f.call(t, "role_run", map[string]any{"name": "reviewer", "item": "S-0042", "inputs": []map[string]any{{"name": "prompt", "value": "Report the risk."}}})
+	if failed != "" || out["trigger"] != "formula release-check S-0042" || by != "agent-S-0042" {
+		t.Errorf("role_run by the instance's agent: %v %q, asked by %q", out, failed, by)
+	}
+	if !strings.Contains(roleRunDescription, "save the agent of a formula's instance") || !strings.Contains(roleRunDescription, "formula <name> <S-nnnn>") {
+		t.Errorf("the tool's description does not say an instance's agent may start a role step's role")
+	}
+}
+
 func TestAServerThatCannotStartARoleSaysHow(t *testing.T) {
 	t.Parallel()
 	f := setup(t)

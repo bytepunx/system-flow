@@ -5,11 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 
+	"github.com/bytepunx/system-flow/flai/internal/formulas"
+	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
@@ -193,15 +196,24 @@ func roleInputs(given []string) ([]harness.Input, error) {
 
 // roleRun starts the role name the project defines on item, or on none,
 // with inputs, prints the run, and says on standard error when no flai
-// serve is running to settle it, as flai plan does.
+// serve is running to settle it, as flai plan does. An agent flai serve
+// started is refused, save a formula instance's agent for a role step of its
+// formula (runTrigger).
 func (a *app) roleRun(name, item string, inputs []harness.Input) error {
 	repo, err := a.project()
 	if err != nil {
 		return err
 	}
-	o, e := a.planOn(repo)
-	run, err := serve.RunRole(context.Background(), o, e, name, item, inputs)
+	trigger, err := runTrigger(repo.Root, name, item, os.Getenv("FLAI_AGENT"))
 	var no *serve.Refused
+	if errors.As(err, &no) {
+		return fmt.Errorf("rule: %s", no.Why)
+	}
+	if err != nil {
+		return err
+	}
+	o, e := a.planOn(repo)
+	run, err := serve.RunRole(context.Background(), o, e, name, item, inputs, trigger)
 	if errors.As(err, &no) {
 		return fmt.Errorf("rule: %s", no.Why)
 	}
@@ -226,20 +238,23 @@ func (a *app) roleRun(name, item string, inputs []harness.Input) error {
 // mcpRoleRun starts the role name the project defines on item, or on none,
 // with inputs, for flai mcp's tool role_run (S-0417), as flai role run does,
 // under the host action its file names, and journals who asked and what came
-// of it under that action. No agent flai serve started may ask: a role is
-// the operator's to start. A name the project defines no role by, a built-in
-// role's among them, names no action, and its refusal is journalled nowhere,
-// as role.run's is not.
+// of it under that action. No agent flai serve started may ask, as a role is
+// the operator's to start, save the agent of a formula's instance for a role
+// step of its formula, on the instance (runTrigger, S-0422); a refusal of
+// any other is journalled nowhere. A name the project defines no role by, a
+// built-in role's among them, names no action, and its refusal is journalled
+// nowhere, as role.run's is not.
 func (a *app) mcpRoleRun(ctx context.Context, root, name, item string, inputs []harness.Input, by string) (mcpserver.RoleStarted, error) {
-	if os.Getenv("FLAI_STARTED_BY") == "flai-serve" {
-		return mcpserver.RoleStarted{}, fmt.Errorf("an agent flai serve started does not start a role: running the role %s is the operator's to ask for, from the dashboard or with flai role run %s on the host", name, name)
+	trigger, err := runTrigger(root, name, item, by)
+	if err != nil {
+		return mcpserver.RoleStarted{}, err
 	}
 	repo, err := workitem.Open(root)
 	if err != nil {
 		return mcpserver.RoleStarted{}, err
 	}
 	o, e := a.planOn(repo)
-	run, err := serve.RunRole(ctx, o, e, name, item, inputs)
+	run, err := serve.RunRole(ctx, o, e, name, item, inputs, trigger)
 	asked := fmt.Sprintf("%s asked to run the role %s", by, name)
 	if item != "" {
 		asked += " on " + item
@@ -262,6 +277,77 @@ func (a *app) mcpRoleRun(ctx context.Context, root, name, item string, inputs []
 	}
 	return mcpserver.RoleStarted{Role: run.RoleName, Item: run.Item, Action: run.Action, Agent: run.Agent, Harness: run.Harness, Command: run.Command, PID: run.PID,
 		Log: run.Log, Session: run.Session, Started: run.Started, Trigger: run.Trigger}, nil
+}
+
+// runTrigger is the trigger of the run of the role name on item that the
+// session asks for, by being its agent's name: asked, for a session flai
+// serve did not start (the operator's own), and, for one it did, formula
+// <name> <S-nnnn> when the session is the agent of a formula's instance
+// (S-0421), item is that instance, and a role step of its formula names the
+// role (S-0422). The session's story is FLAI_STORY, else the S-nnnn of by
+// when by is agent-S-nnnn. Any other session flai serve started is refused,
+// as a *serve.Refused that says why; a story or a formula that cannot be read
+// is an error.
+func runTrigger(root, name, item, by string) (string, error) {
+	if os.Getenv(guard.StartedByEnv) != guard.StartedByServe {
+		return serve.TriggerAsked, nil
+	}
+	operators := fmt.Sprintf("running the role %s is the operator's to ask for, from the dashboard or with flai role run %s on the host", name, name)
+	story := recordingStory("", func(key string) string {
+		if key == "FLAI_AGENT" {
+			return by
+		}
+		return os.Getenv(key)
+	}, func() string { return "" })
+	if story == "" {
+		return "", &serve.Refused{Why: "an agent flai serve started does not start a role, save the agent of a formula's instance for a role step of its formula, and this one works no story (no FLAI_STORY, and no agent name of the form agent-S-nnnn): " + operators}
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		return "", err
+	}
+	it, err := repo.Get(story)
+	if err != nil {
+		return "", fmt.Errorf("reading %s, the story of the agent that asked to run the role %s: %w", story, name, err)
+	}
+	if it.Formula == "" {
+		return "", &serve.Refused{Why: fmt.Sprintf("an agent flai serve started does not start a role, save the agent of a formula's instance for a role step of its formula, and %s is no formula's instance (it names no formula): %s", it.ID, operators)}
+	}
+	if workitem.CanonicalID(item) != it.ID {
+		return "", &serve.Refused{Why: fmt.Sprintf("the agent of %s, an instance of the formula %s, starts a role step's role on %s alone, and asked to run the role %s %s: give the item %s", it.ID, it.Formula, it.ID, name, onItem(item), it.ID)}
+	}
+	list, _, err := formulas.Load(repo.Root, repo.Manifest.Layout["design"])
+	if err != nil {
+		return "", err
+	}
+	f, err := formulas.Find(list, it.Formula)
+	if err != nil {
+		return "", fmt.Errorf("%s is an instance of the formula %s, whose file does not load: %w; fix it, as flai check reports it", it.ID, it.Formula, err)
+	}
+	var named []string
+	for _, s := range f.Steps {
+		if s.Kind() != formulas.KindRole {
+			continue
+		}
+		if s.Run.Role == name {
+			return serve.FormulaTrigger(f.Name, it.ID), nil
+		}
+		if !slices.Contains(named, s.Run.Role) {
+			named = append(named, s.Run.Role)
+		}
+	}
+	if len(named) == 0 {
+		return "", &serve.Refused{Why: fmt.Sprintf("the formula %s, which %s is an instance of, has no role step, so its agent starts no role, and not %s: %s", f.Name, it.ID, name, operators)}
+	}
+	return "", &serve.Refused{Why: fmt.Sprintf("the formula %s, which %s is an instance of, names the role %s in its steps and not %s: its agent starts those alone, and %s", f.Name, it.ID, strings.Join(named, ", "), name, operators)}
+}
+
+// onItem says where a role's run is asked for: on its item, or on no item.
+func onItem(item string) string {
+	if item == "" {
+		return "on no item"
+	}
+	return "on " + item
 }
 
 // definedRoleAction is the host action the file of name, a role the project

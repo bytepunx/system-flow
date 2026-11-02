@@ -125,7 +125,12 @@ func roleLab(t *testing.T) *agentLab {
 }
 
 func (lab *agentLab) runRole(name, item string, inputs ...harness.Input) (*AgentRun, error) {
-	return RunRole(context.Background(), lab.o, Entry{Key: "t", Name: "t", Root: lab.root}, name, item, inputs)
+	return lab.runRoleBy(name, item, TriggerAsked, inputs...)
+}
+
+// runRoleBy runs the role name on item through RunRole with trigger.
+func (lab *agentLab) runRoleBy(name, item, trigger string, inputs ...harness.Input) (*AgentRun, error) {
+	return RunRole(context.Background(), lab.o, Entry{Key: "t", Name: "t", Root: lab.root}, name, item, inputs, trigger)
 }
 
 // roleHere has the lab's launcher start the role name on item, as the
@@ -407,6 +412,91 @@ func TestADefinedRoleRunThatEndsIsRecordedAndItsActivityLogged(t *testing.T) {
 	}
 	if strings.Join(tos, ",") != inbox.AgentStarted+","+inbox.AgentEnded {
 		t.Errorf("agent events = %v, want started, ended", tos)
+	}
+}
+
+// S-0422: RunRole records the trigger it is given, the one a formula
+// instance's agent's run takes, on the run in serve/agents.json and in its
+// start's journal entry.
+func TestRunRoleRecordsTheTriggerItIsGiven(t *testing.T) {
+	lab := roleLab(t)
+	lab.hold()
+	story := lab.backlog("Instance", nil)
+	trigger := FormulaTrigger("release-check", story)
+	if trigger != "formula release-check "+story {
+		t.Fatalf("FormulaTrigger = %q", trigger)
+	}
+	run, err := lab.runRoleBy("reviewer", story, trigger, harness.Input{Name: "prompt", Value: "Report the risk."})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if run.Trigger != trigger || lab.roleRun("reviewer", story).Trigger != trigger {
+		t.Errorf("run = %+v, recorded %+v; want the trigger %q", run, lab.roleRun("reviewer", story), trigger)
+	}
+	if !strings.Contains(lab.roleGiven("reviewer-"+story), `inputs: [{"name":"prompt","value":"Report the risk."}]`) {
+		t.Errorf("the step's prompt is not the run's input: %s", lab.roleGiven("reviewer-"+story))
+	}
+	if j := lab.entries(); len(j) != 1 || !strings.Contains(j[0].Detail, "started by "+trigger) {
+		t.Errorf("journal: %+v", j)
+	}
+	lab.release("reviewer-" + story)
+}
+
+// S-0422: the end of a role's run that a formula instance's agent started
+// on its instance is an agent event on the instance, by the role's run, which
+// the instance's agent is told of when its inbox catches up, as its
+// wait_for_events does: failed when the run failed, and ended otherwise, its
+// why saying whether it worked or asked; the activity the run logs names its
+// trigger.
+func TestAFormulaRoleStepsEndIsToldToTheInstancesAgent(t *testing.T) {
+	lab := roleLab(t)
+	worked, asks, fails := lab.backlog("Worked", nil), lab.backlog("Asks", nil), lab.backlog("Fails", nil)
+	stream := strings.Join([]string{streamCall("s", "m1", runStart, 999), streamFinal("Reviewed "+worked+".", 2000, 0.5)}, "\n") + "\n"
+	if err := os.WriteFile(filepath.Join(lab.outDir, "stream-reviewer-"+worked), []byte(stream), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	th, err := threads.New(lab.repo, threads.NewOptions{Title: "Which risk counts?", On: asks, Author: "reviewer-" + asks, Text: "The scope is unclear.", Now: lab.now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(lab.outDir, "exit-reviewer-"+fails), []byte("3"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{worked, asks, fails} {
+		if !lab.roleHereBy("reviewer", id, FormulaTrigger("release-check", id)) {
+			t.Fatalf("%s not started: %+v", id, lab.roleRun("reviewer", id))
+		}
+		waitFor(t, id+"'s run ended", func() bool { r := lab.roleRun("reviewer", id); return r != nil && r.Ended != "" })
+	}
+	items, err := lab.repo.List(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct{ story, to, why string }{
+		{worked, inbox.AgentEnded, "ended with its work done"},
+		{asks, inbox.AgentEnded, "waiting for an answer to " + th.ID + ": Which risk counts?"},
+		{fails, inbox.AgentFailed, "ended (exit 3) running the role reviewer on " + fails},
+	} {
+		events, _, err := inbox.CatchUp(lab.repo, inbox.Reader{Agent: "agent-" + c.story}, c.story, false, time.Now(), items)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var ends []inbox.Event
+		for _, e := range events {
+			if e.Kind == inbox.Agent && e.ID == c.story && e.To != inbox.AgentStarted {
+				ends = append(ends, e)
+			}
+		}
+		if len(ends) != 1 || ends[0].By != "reviewer-"+c.story || ends[0].To != c.to || !strings.HasPrefix(ends[0].Fields[inbox.FieldWhy], c.why) {
+			t.Errorf("agent-%s is told of %+v, want one end of reviewer-%s, %s: %s", c.story, ends, c.story, c.to, c.why)
+		}
+	}
+	waitFor(t, "the worked run's activity logged", func() bool {
+		doc, err := lab.repo.Activity("reviewer")
+		return err == nil && len(doc.Entries) == 1
+	})
+	if doc, _ := lab.repo.Activity("reviewer"); doc.Entries[0].Trigger != FormulaTrigger("release-check", worked) || strings.Join(doc.Entries[0].Items, ",") != worked {
+		t.Errorf("activity = %+v, want the trigger formula release-check %s and its item", doc.Entries[0], worked)
 	}
 }
 

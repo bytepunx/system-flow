@@ -239,6 +239,7 @@ func TestRoleRunStartsADefinedRole(t *testing.T) {
 		t.Skip("starts true as the agent's command")
 	}
 	root := rolesProject(t, map[string]string{"reviewer.md": reviewerRole})
+	t.Setenv("FLAI_STARTED_BY", "") // the operator, whoever runs the tests
 	cfg := configOf(t)
 	inProcess(t)
 	for _, title := range []string{"Slice", "Gone", "Other"} {
@@ -378,6 +379,7 @@ func TestTheMCPServerStartsADefinedRoleUnderItsAction(t *testing.T) {
 		t.Fatalf("role_run: %+v %v", got, err)
 	}
 	t.Setenv("FLAI_STARTED_BY", "flai-serve")
+	t.Setenv("FLAI_STORY", "")
 	if _, err := a.mcpRoleRun(ctx, root, "reviewer", "S-1", nil, "agent-S-0001"); err == nil || !strings.Contains(err.Error(), "an agent flai serve started does not start a role") {
 		t.Errorf("an agent flai serve started: %v", err)
 	}
@@ -390,5 +392,130 @@ func TestTheMCPServerStartsADefinedRoleUnderItsAction(t *testing.T) {
 	}
 	if strings.Contains(js, "auditor") {
 		t.Errorf("a role the project does not define is journalled under no action: %s", js)
+	}
+}
+
+// reviewCheck is a formula with a flai step and, after it, a role step that
+// runs the reviewer with a prompt that names its input.
+const reviewCheck = `---
+title: "Review check of {{area}}"
+updated: 2026-11-01
+status: active
+name: review-check
+description: "Check {{area}} and have it reviewed."
+inputs:
+  - name: area
+    description: What the reviewer looks at.
+steps:
+  - id: check
+    title: The project checks clean
+    run: {flai: check}
+  - id: review
+    title: The reviewer reviews {{area}}
+    run:
+      role: reviewer
+      prompt: Review {{area}} and say what it lacks.
+    after: [check]
+---
+
+# Review check
+`
+
+// S-0422: the agent of a formula's instance, though flai serve started it,
+// starts the role a role step of its formula names, on the instance, through
+// role_run and flai role run, its run recording the trigger formula <name>
+// <S-nnnn> where flai serve tracks agents; it is refused another role and
+// another item, its story read from FLAI_STORY or else its name, and every
+// other agent flai serve started is refused still, nothing journalled.
+func TestAFormulaInstancesAgentStartsItsRoleStep(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("starts true as the agent's command")
+	}
+	root := rolesProject(t, map[string]string{"reviewer.md": reviewerRole})
+	dir := filepath.Join(root, "design", "workflows", "formulas")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "review-check.md"), []byte(reviewCheck), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("FLAI_STARTED_BY", "")
+	t.Setenv("FLAI_STORY", "")
+	cfg := configOf(t)
+	runIn(t, root, "story", "new", "Ordinary")
+	for range 2 {
+		if out, errOut, code := runIn(t, root, "formula", "run", "review-check", "--input", "area=the docs"); code != 0 {
+			t.Fatalf("formula run: %d %s %s", code, out, errOut)
+		}
+	}
+	runIn(t, root, "serve", "enable", "review")
+	runIn(t, root, "serve", "agent", "set", "--", "true")
+	a := &app{configPath: cfg, out: &bytes.Buffer{}, errOut: &bytes.Buffer{}, cwd: root, clock: func() time.Time { return time.Date(2026, 11, 2, 10, 0, 0, 0, time.UTC) }}
+	ctx := context.Background()
+
+	t.Setenv("FLAI_STARTED_BY", "flai-serve")
+	t.Setenv("FLAI_STORY", "S-0002")
+	prompt := []harness.Input{{Name: "prompt", Value: "Review the docs and say what they lack."}, {Name: "area", Value: "the docs"}}
+	got, err := a.mcpRoleRun(ctx, root, "reviewer", "S-2", prompt, "agent-S-0002")
+	if err != nil || got.Role != "reviewer" || got.Item != "S-0002" || got.Agent != "reviewer-S-0002" || got.PID == 0 || got.Trigger != "formula review-check S-0002" {
+		t.Fatalf("role_run by the instance's agent: %+v %v", got, err)
+	}
+	for _, r := range []struct{ story, by, name, item, want string }{
+		{"S-0002", "agent-S-0002", "auditor", "S-0002", "the formula review-check, which S-0002 is an instance of, names the role reviewer in its steps and not auditor: its agent starts those alone"},
+		{"S-0002", "agent-S-0002", "reviewer", "S-0003", "the agent of S-0002, an instance of the formula review-check, starts a role step's role on S-0002 alone, and asked to run the role reviewer on S-0003: give the item S-0002"},
+		{"S-0002", "agent-S-0002", "reviewer", "", "asked to run the role reviewer on no item"},
+		// with no FLAI_STORY, the story is the one in its name
+		{"", "agent-S-0002", "reviewer", "S-0001", "the agent of S-0002, an instance of the formula review-check, starts a role step's role on S-0002 alone"},
+		// a served agent of an ordinary story, or of none
+		{"S-0001", "agent-S-0001", "reviewer", "S-0001", "an agent flai serve started does not start a role, save the agent of a formula's instance for a role step of its formula, and S-0001 is no formula's instance"},
+		{"", "agent-S-0001", "reviewer", "S-0001", "S-0001 is no formula's instance (it names no formula): running the role reviewer is the operator's to ask for"},
+		{"", "orchestrator", "reviewer", "S-0002", "and this one works no story (no FLAI_STORY, and no agent name of the form agent-S-nnnn)"},
+	} {
+		t.Setenv("FLAI_STORY", r.story)
+		if _, err := a.mcpRoleRun(ctx, root, r.name, r.item, nil, r.by); err == nil || !strings.Contains(err.Error(), r.want) {
+			t.Errorf("%s (FLAI_STORY %q) asks for %s on %q: %v, want refused for %q", r.by, r.story, r.name, r.item, err, r.want)
+		}
+	}
+
+	// flai role run, as the agent's shell runs it
+	t.Setenv("FLAI_AGENT", "agent-S-0001")
+	t.Setenv("FLAI_STORY", "S-0001")
+	if _, errOut, code := runIn(t, root, "role", "run", "reviewer", "S-1"); code == 0 || !strings.Contains(errOut, "rule: an agent flai serve started does not start a role") {
+		t.Errorf("flai role run by an ordinary story's served agent: %d %s", code, errOut)
+	}
+	t.Setenv("FLAI_AGENT", "agent-S-0003")
+	t.Setenv("FLAI_STORY", "S-0003")
+	if _, errOut, code := runIn(t, root, "role", "run", "auditor", "S-3"); code == 0 || !strings.Contains(errOut, "rule: the formula review-check, which S-0003 is an instance of, names the role reviewer in its steps and not auditor") {
+		t.Errorf("flai role run of another role: %d %s", code, errOut)
+	}
+	out, errOut, code := runIn(t, root, "role", "run", "reviewer", "S-3", "--input", "area=the docs", "--json")
+	var started struct{ Item, Agent, Trigger string }
+	if err := json.Unmarshal([]byte(out), &started); code != 0 || err != nil || started.Item != "S-0003" || started.Agent != "reviewer-S-0003" || started.Trigger != "formula review-check S-0003" {
+		t.Fatalf("flai role run by the instance's agent: %d %s %s", code, out, errOut)
+	}
+
+	var all map[string]serve.AgentState
+	data, _ := os.ReadFile(filepath.Join(string(serve.DirFor(cfg)), "agents.json"))
+	if err := json.Unmarshal(data, &all); err != nil {
+		t.Fatal(err)
+	}
+	for _, st := range all {
+		for _, id := range []string{"S-0002", "S-0003"} {
+			if run := st.Roles["reviewer"][id]; run == nil || run.Trigger != serve.FormulaTrigger("review-check", id) {
+				t.Errorf("the run on %s = %+v, want recorded with the trigger formula review-check %s", id, run, id)
+			}
+		}
+		if len(st.Roles["reviewer"]) != 2 {
+			t.Errorf("runs = %+v, want the two instances' alone", st.Roles)
+		}
+	}
+	js, _, _ := runIn(t, root, "serve", "journal", "--json")
+	if !strings.Contains(js, "agent-S-0002 asked to run the role reviewer on S-2: started true as reviewer-S-0002") {
+		t.Errorf("the instance's agent's start is not journalled: %s", js)
+	}
+	for _, refused := range []string{"auditor", "agent-S-0001"} {
+		if strings.Contains(js, refused) {
+			t.Errorf("a refused agent is journalled (%s): %s", refused, js)
+		}
 	}
 }
