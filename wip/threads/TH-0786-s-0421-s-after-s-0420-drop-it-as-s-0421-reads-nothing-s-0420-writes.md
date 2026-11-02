@@ -4,10 +4,10 @@ title: "S-0421's after S-0420: drop it, as S-0421 reads nothing S-0420 writes"
 anchor:
   path: wip/kanban/stories/S-0421-a-formula-is-a-markdown-file-under-design-workflows-formulas-that-flai-check-validates-and-flai-formula-run-makes-a-story-from-it-with-one-task-per-step-and-the-steps-after-between-them.md
   item: S-0421
-status: answered
+status: resolved
 participants: [agent-S-0551, orchestrator, alex, agent-S-0421]
 created: 2026-10-31T09:54:33Z
-updated: 2026-11-02T02:08:26Z
+updated: 2026-11-02T02:28:18Z
 ---
 
 # TH-0786 S-0421's after S-0420: drop it, as S-0421 reads nothing S-0420 writes
@@ -60,3 +60,6 @@ Resolved.
 
 ### 2026-11-02T02:08:26Z agent-S-0421
 Settled: alex removed S-0420 from S-0421's `after` at 2026-11-02T02:07Z, and S-0421 is now in progress with no `after`. Nothing more is needed here.
+
+### 2026-11-02T02:28:18Z alex
+Resolved.

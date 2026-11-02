@@ -3,11 +3,11 @@ id: S-0421
 type: story
 nature: feature
 title: A formula is a markdown file under design/workflows/formulas that flai check validates, and flai formula run makes a story from it with one task per step and the steps' after between them
-status: in-progress
+status: done
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:40Z
-updated: 2026-11-02T02:07:42Z
+updated: 2026-11-02T03:02:37Z
 transitions:
   - to: ready
     at: 2026-10-28T13:10:51Z
@@ -21,29 +21,53 @@ transitions:
   - to: in-progress
     at: 2026-11-02T02:07:42Z
     by: agent-S-0421
+  - to: review
+    at: 2026-11-02T02:53:39Z
+    by: system-flow
+  - to: done
+    at: 2026-11-02T03:02:37Z
+    by: orchestrator
 tags: [cli, template]
 topics: [cli, orchestration, template, conventions]
-touches: [design/adrs, design/adrs/README.md, design/conventions/strategic-agents.md, design/workflows/formulas/README.md, design/workflows/README.md, design/system/repository-layout.md, design/system/strategic-agents.md, design/system/work-hierarchy.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/formula.go, flai/cmd/formula_test.go, flai/cmd/root.go, flai/internal/check/check.go, flai/internal/check/formulas_test.go, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/workitem/fields_test.go, flai/internal/workitem/front-matter-fields.txt, flai/internal/workitem/item.go, template/CHANGELOG.md, template/root/design/conventions/strategic-agents.md, template/root/design/workflows/formulas/README.md, template/root/design/workflows/README.md, template/template.yaml, design/system/flai-cli.md, design/system/project-manifest.md]
+touches: [design/adrs, design/adrs/README.md, design/conventions/strategic-agents.md, design/workflows/formulas/README.md, design/workflows/README.md, design/system/repository-layout.md, design/system/strategic-agents.md, design/system/work-hierarchy.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/formula.go, flai/cmd/formula_test.go, flai/cmd/root.go, flai/internal/check/check.go, flai/internal/check/formulas_test.go, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/workitem/fields_test.go, flai/internal/workitem/front-matter-fields.txt, flai/internal/workitem/item.go, template/CHANGELOG.md, template/root/design/conventions/strategic-agents.md, template/root/design/workflows/formulas/README.md, template/root/design/workflows/README.md, template/template.yaml, design/system/flai-cli.md, design/system/project-manifest.md, flai/internal/guard/formula_test.go, flai/internal/guard/guard.go, flai/internal/workitem/create.go, CLAUDE.md, design/issues/I-0248-testtheoperatorsstopisonestoppedagentevent-s-waiting-for-an-answer-case-fails.md, design/issues/summary.md, design/issues/I-0249-testrenderprototypetemplate-refuses-any-double-curly-brace-in-a-rendered.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2776
+  priced_by: harness
+  turns:
+    - day: 2026-11-02
+      ceremony: 5
+      hand_edits: 2
+      work: 58
+  models:
+    - model: claude-opus-5-5
+      input: 476
+      output: 178214
+      cache_read: 26790079
+      cache_write: 839113
+      cost: 13.9303
   strategic:
     - kind: orchestrator
-      seconds: 396
+      seconds: 452
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 121
-          output: 2049
-          cache_read: 28690653
-          cache_write: 92615
-          cost: 6.3325
+          input: 131
+          output: 2158
+          cache_read: 28965306
+          cache_write: 162226
+          cost: 6.4121
+        - model: claude-sonnet-5-5
+          input: 12
+          output: 72
+          cache_read: 172697
+          cache_write: 55761
+          cost: 0.1592
 cost_of_delay:
   value: 48.09
   by: planner-S-0421
@@ -66,12 +90,12 @@ A repeatable process is a file, not prose. A formula under `design/workflows/for
 
 ## Acceptance criteria
 
-- [ ] An ADR records the formula file: where it lives (`design/workflows/formulas/<name>.md`, in the `design/workflows/` folder TH-0471 settled and S-0414's ADR adds to the layout), its front matter (name, description, nature, inputs, and steps with `id`, `title`, `run` as a flai command, a script, or a role with its prompt, and `after`), its body as the formula's description, the baseline marker, the instance's nature (the formula's, `improvement` by default, no new nature) and its `formula: <name>` field, and that a story's agent works the instance on its branch as any story, as TH-0471 settled them.
-- [ ] `flai/internal/formulas` reads a project's formulas, and `flai formula list [--json]` and `flai formula show <name> [--json]` print each with its steps and layers.
-- [ ] `flai formula run <name> [--input key=value]... [--epic E-nnnn] [--json]` makes a story with the formula's nature and `formula: <name>`, one task per step with `## Work` naming what the step runs and `## Done when` its exit, the steps' `after` as the tasks' `after`, through `itemnew` so that `flai check --strict` passes on it, and prints the story's ID. A missing input, or one the formula does not declare, is refused before anything is written.
-- [ ] `flai check` reports `formulas.file` for a formula that does not parse or misses a field, a step whose `run` is none of the three kinds, a script not under `scripts/`, a role no file defines, an `after` naming no step, a cycle, and an input a step uses that the formula does not declare.
-- [ ] `formula` is listed in `front-matter-fields.txt` and in `design/system/work-hierarchy.md`'s schema, and an older flai reads past it.
-- [ ] `design/system/repository-layout.md`, a new section of `design/system/strategic-agents.md` or a design document of its own, `docs/users/flai.md` with `flai-reference.md`, `docs/operators/index.md`, the convention `strategic-agents.md`, and `template/CHANGELOG.md` with the template's `design/workflows/formulas/README.md` say what a formula holds and how to run one.
+- [x] An ADR records the formula file: where it lives (`design/workflows/formulas/<name>.md`, in the `design/workflows/` folder TH-0471 settled and S-0414's ADR adds to the layout), its front matter (name, description, nature, inputs, and steps with `id`, `title`, `run` as a flai command, a script, or a role with its prompt, and `after`), its body as the formula's description, the baseline marker, the instance's nature (the formula's, `improvement` by default, no new nature) and its `formula: <name>` field, and that a story's agent works the instance on its branch as any story, as TH-0471 settled them.
+- [x] `flai/internal/formulas` reads a project's formulas, and `flai formula list [--json]` and `flai formula show <name> [--json]` print each with its steps and layers.
+- [x] `flai formula run <name> [--input key=value]... [--epic E-nnnn] [--json]` makes a story with the formula's nature and `formula: <name>`, one task per step with `## Work` naming what the step runs and `## Done when` its exit, the steps' `after` as the tasks' `after`, through `itemnew` so that `flai check --strict` passes on it, and prints the story's ID. A missing input, or one the formula does not declare, is refused before anything is written.
+- [x] `flai check` reports `formulas.file` for a formula that does not parse or misses a field, a step whose `run` is none of the three kinds, a script not under `scripts/`, a role no file defines, an `after` naming no step, a cycle, and an input a step uses that the formula does not declare.
+- [x] `formula` is listed in `front-matter-fields.txt` and in `design/system/work-hierarchy.md`'s schema, and an older flai reads past it.
+- [x] `design/system/repository-layout.md`, a new section of `design/system/strategic-agents.md` or a design document of its own, `docs/users/flai.md` with `flai-reference.md`, `docs/operators/index.md`, the convention `strategic-agents.md`, and `template/CHANGELOG.md` with the template's `design/workflows/formulas/README.md` say what a formula holds and how to run one.
 
 ## Tasks
 - T-1768 An ADR records the formula file: where it lives, its steps and inputs, its body, its marker, and the instance's nature and formula field
@@ -107,3 +131,18 @@ A repeatable process is a file, not prose. A formula under `design/workflows/for
   - 4h lost per cycle at `planning.hour_rate` 150 over the default 168h cycle gives E-0024 600 USD a week.
   - S-0421's share is its 1h3m of the 13h6m forecast for E-0024's twelve open stories: 63 / 786 × 600.
   - Once the input is on E-0024, `flai cod S-0421` gives the same figure while the forecasts stand.
+
+### Accepted by the orchestrator
+
+- Verified: cc6ac24be5eff4ba9a6134bb0d47115665974936
+- Batch: 20261102-025823
+- Enqueued verified: cc6ac24be5eff4ba9a6134bb0d47115665974936
+- At: 2026-11-02T03:02:37Z
+
+Verdict: meets all criteria (verified at commit cc6ac24be5eff4ba9a6134bb0d47115665974936)
+- 1: design/adrs/0238-a-formula-is-a-markdown-file-under-design-workflows-formulas-whose-front-matter.md, design/adrs/README.md
+- 2: flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/cmd/formula.go, flai/cmd/formula_test.go
+- 3: flai/cmd/formula.go, flai/cmd/formula_test.go, flai/cmd/root.go, flai/internal/workitem/create.go, flai/internal/guard/guard.go, flai/internal/guard/formula_test.go
+- 4: flai/internal/check/check.go, flai/internal/check/formulas_test.go, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go
+- 5: flai/internal/workitem/front-matter-fields.txt, flai/internal/workitem/item.go, flai/internal/workitem/fields_test.go, design/system/work-hierarchy.md
+- 6: design/system/repository-layout.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, template/root/design/workflows/formulas/README.md, template/root/design/workflows/README.md, design/workflows/formulas/README.md, design/workflows/README.md

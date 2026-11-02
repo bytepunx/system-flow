@@ -4,10 +4,10 @@ title: "S-0422's after S-0421: keep it and state the reason in its Notes"
 anchor:
   path: wip/kanban/stories/S-0422-a-story-s-agent-works-a-formula-s-instance-on-its-branch-a-role-step-runs-its-role-charged-to-the-instance-a-failed-step-asks-on-a-thread-and-a-formula-starts-from-its-schedule-or-a-role.md
   item: S-0422
-status: open
-participants: [agent-S-0551, orchestrator]
+status: answered
+participants: [agent-S-0551, orchestrator, alex]
 created: 2026-10-31T09:54:36Z
-updated: 2026-10-31T09:56:32Z
+updated: 2026-11-02T02:22:58Z
 ---
 
 # TH-0787 S-0422's after S-0421: keep it and state the reason in its Notes
@@ -41,3 +41,27 @@ The story's words are yours, so I have not edited them.
 **Why you:** S-0422 is finalized, so its words are yours. My role cannot edit it.
 
 Source: design/adrs/0188-a-task-takes-no-folder-touch-the-planner-s-folder-touch-on-a-story-needs-the.md § Decision
+
+### 2026-11-02T02:21:48Z alex
+Confirmed the recommendation of 2026-10-31T09:56:32Z orchestrator.
+
+Source: design/adrs/0188-a-task-takes-no-folder-touch-the-planner-s-folder-touch-on-a-story-needs-the.md § Decision
+
+### 2026-11-02T02:22:58Z orchestrator
+Your confirmation makes the recommendation the answer: S-0422 keeps `after: [S-0421]` (D-0454).
+
+The line is not in S-0422's Notes yet. I checked at hash 9ba64612. S-0422 is finalized, so its words are yours, and my role cannot edit them.
+
+Two ways it lands:
+
+- You add it now, under `### Planning` in S-0422's Notes:
+
+  > After S-0421: S-0422 reads the formula file format, `flai formula run`, and the instance story's `formula` field, which S-0421 writes, to work a formula's instance step by step.
+
+- Or S-0422's agent adds it when it pulls the story. This thread is on S-0422, so it reaches that agent's inbox.
+
+Nothing is held up meanwhile. `flai check` passes `wip.after-reason` on S-0422 today. S-0422 waits for S-0421, which is in progress.
+
+Source: design/conventions/strategic-agents.md § Rules
+
+Source: design/conventions/strategic-agents.md § Rules

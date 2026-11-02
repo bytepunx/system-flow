@@ -3,16 +3,37 @@ id: T-1771
 type: task
 nature: feature
 title: flai check reports formulas.file on each formula that could not run
-status: backlog
+status: done
 parent: S-0421
 owner: alex
 created: 2026-10-16T05:47:23Z
-updated: 2026-10-16T05:47:23Z
-transitions: []
+updated: 2026-11-02T02:40:09Z
+transitions:
+  - to: ready
+    at: 2026-11-02T02:20:50Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-02T02:20:51Z
+    by: system-flow
+  - to: done
+    at: 2026-11-02T02:40:09Z
+    by: agent-S-0421
 stream: S-0421
 tags: [cli]
 touches: [flai/internal/check/check.go, flai/internal/check/formulas_test.go]
 after: [T-1769]
+usage:
+  source: log
+  seconds: 1158
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 45
+      output: 16769
+      cache_read: 2520826
+      cache_write: 78957
+      cost: 1.3108
 ---
 # T-1771 flai check reports formulas.file on each formula that could not run
 

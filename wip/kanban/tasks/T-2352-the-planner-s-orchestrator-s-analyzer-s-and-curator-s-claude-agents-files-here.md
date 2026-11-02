@@ -3,16 +3,48 @@ id: T-2352
 type: task
 nature: improvement
 title: The planner's, orchestrator's, analyzer's, and curator's .claude/agents files, here and in the template, become what the ADR says, written by the operator
-status: backlog
+status: done
 parent: S-0553
 owner: alex
 created: 2026-10-30T20:47:39Z
-updated: 2026-10-30T20:47:39Z
-transitions: []
+updated: 2026-11-02T02:27:05Z
+transitions:
+  - to: ready
+    at: 2026-11-02T02:26:06Z
+    by: agent-S-0553
+  - to: in-progress
+    at: 2026-11-02T02:26:07Z
+    by: agent-S-0553
+  - to: done
+    at: 2026-11-02T02:27:05Z
+    by: agent-S-0553
 stream: S-0553
 tags: [template]
 touches: [".claude/agents/planner.md", ".claude/agents/orchestrator.md", ".claude/agents/analyzer.md", ".claude/agents/curator.md", template/root/.claude/agents/planner.md, template/root/.claude/agents/orchestrator.md, template/root/.claude/agents/analyzer.md, template/root/.claude/agents/curator.md]
 after: [T-2348, T-2351]
+usage:
+  source: log
+  seconds: 58
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 43
+      output: 12558
+      cache_read: 3784978
+      cache_write: 64718
+      cost: 1.4345
+  strategic:
+    - kind: orchestrator
+      seconds: 11
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 5
+          output: 32
+          cache_read: 120489
+          cache_write: 25052
+          cost: 0.0337
 ---
 # T-2352 The planner's, orchestrator's, analyzer's, and curator's .claude/agents files, here and in the template, become what the ADR says, written by the operator
 

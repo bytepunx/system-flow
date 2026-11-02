@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 73.9850
-accrued_seconds: 7506
-tasks_completed: 41
-last_run: 2026-11-02T01:40:57Z
+accrued_cost: 75.1654
+accrued_seconds: 7588
+tasks_completed: 42
+last_run: 2026-11-02T02:12:01Z
 ---
 
 # Curator activity
@@ -339,3 +339,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0161, D-0188, D-0212, D-0396, D-0425, D-0451, D-0452
 - Seconds: 323
 - Cost: 2.4438 USD, estimated
+
+### 2026-11-02T02:12:01Z
+
+- Summary: I wrote no new entries. I merged S-0420 into D-0450 and D-0452, absorbed D-0450 into `design/system/flaiover-dashboard.md` § "Strategic agents' pages (S-0259, S-0228, S-0420)", and `flai digest compact` compacted nothing. TH-0786 was already in D-0453, and S-0420's other decisions were plan progress or are stated in `design/system/flaiover-dashboard.md`.
+- Trigger: accepted S-0420
+- Items: D-0450, D-0452
+- Seconds: 82
+- Cost: 1.1804 USD, estimated

@@ -3,17 +3,20 @@ id: S-0553
 type: story
 nature: improvement
 title: flai generates the planner's, the orchestrator's, the analyzer's, and the curator's harness definitions from their role files alone, flai check holds a .claude/agents copy to them, and a session started by hand reads the same definition
-status: in-progress
+status: review
 parent: E-0024
 owner: alex
 created: 2026-10-30T20:45:17Z
-updated: 2026-11-02T01:36:58Z
+updated: 2026-11-02T02:36:31Z
 transitions:
   - to: ready
     at: 2026-11-01T23:44:10Z
     by: alex
   - to: in-progress
     at: 2026-11-01T23:59:11Z
+    by: agent-S-0553
+  - to: review
+    at: 2026-11-02T02:36:24Z
     by: agent-S-0553
 blocked:
   - from: 2026-11-02T00:54:49Z
@@ -23,10 +26,11 @@ blocked:
     until: 2026-11-02T01:36:08Z
     reason: awaiting the operator on TH-0794
   - from: 2026-11-02T01:36:58Z
+    until: 2026-11-02T02:25:49Z
     reason: awaiting the operator on TH-0794
 tags: [cli, template]
 topics: [cli, orchestration, planning, template, conventions]
-touches: [design/adrs, design/adrs/README.md, design/system/agent-adapters.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, template/CHANGELOG.md, flai/internal/roles/definition.go, flai/internal/roles/definition_test.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/guard/writes.go, flai/internal/guard/writes_test.go, flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/cmd/role.go, flai/cmd/role_test.go, ".claude/agents/planner.md", ".claude/agents/orchestrator.md", ".claude/agents/analyzer.md", ".claude/agents/curator.md", template/root/.claude/agents/planner.md, template/root/.claude/agents/orchestrator.md, template/root/.claude/agents/analyzer.md, template/root/.claude/agents/curator.md, flai/internal/harness/harness.go, flai/internal/serve/orchestrate_test.go, design/issues/I-0244-testaheldwaitfailsonatruncatedstory-times-out-instead-of-failing-on-the.md, design/issues/summary.md, docs/operators/settings.md, flai/internal/pilot/run_test.go, flai/internal/serve/plan_test.go, design/issues/I-0245-flai-guard-refuses-a-sub-agent-every-flai-role-subcommand-the-reads-list-show.md]
+touches: [design/adrs, design/adrs/README.md, design/system/agent-adapters.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, template/CHANGELOG.md, flai/internal/roles/definition.go, flai/internal/roles/definition_test.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/guard/writes.go, flai/internal/guard/writes_test.go, flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/cmd/role.go, flai/cmd/role_test.go, ".claude/agents/planner.md", ".claude/agents/orchestrator.md", ".claude/agents/analyzer.md", ".claude/agents/curator.md", template/root/.claude/agents/planner.md, template/root/.claude/agents/orchestrator.md, template/root/.claude/agents/analyzer.md, template/root/.claude/agents/curator.md, flai/internal/harness/harness.go, flai/internal/serve/orchestrate_test.go, design/issues/I-0244-testaheldwaitfailsonatruncatedstory-times-out-instead-of-failing-on-the.md, design/issues/summary.md, docs/operators/settings.md, flai/internal/pilot/run_test.go, flai/internal/serve/plan_test.go, design/issues/I-0245-flai-guard-refuses-a-sub-agent-every-flai-role-subcommand-the-reads-list-show.md, design/issues/I-0246-testaheldwaitfailsonatruncatedstory-and-testservestartsadefinedroleonaneventando.md, design/adrs/0236-a-built-in-role-s-claude-code-definition-is-generated-into-flai-cache-agents-by.md]
 after: [S-0419]
 agent:
   harness: claude-code
@@ -35,33 +39,39 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3393
+  seconds: 4032
   priced_by: harness
   turns:
     - day: 2026-11-01
       work: 10
     - day: 2026-11-02
-      ceremony: 3
+      ceremony: 6
       hand_edits: 2
-      work: 92
+      work: 109
   models:
     - model: claude-opus-5-5
-      input: 498
-      output: 151406
-      cache_read: 39190857
-      cache_write: 792209
-      cost: 16.0385
+      input: 542
+      output: 160149
+      cache_read: 48267872
+      cache_write: 825310
+      cost: 18.2938
   strategic:
     - kind: orchestrator
-      seconds: 96
+      seconds: 197
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 37
-          output: 204
-          cache_read: 1161770
-          cache_write: 144290
-          cost: 0.2957
+          input: 59
+          output: 348
+          cache_read: 1808732
+          cache_write: 287008
+          cost: 0.4784
+        - model: claude-sonnet-5-5
+          input: 14
+          output: 83
+          cache_read: 268956
+          cache_write: 61888
+          cost: 0.2308
 cost_of_delay:
   value: 58.47
   by: planner-E-0024

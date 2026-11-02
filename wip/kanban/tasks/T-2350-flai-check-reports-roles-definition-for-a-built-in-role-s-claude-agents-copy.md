@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 25
-      output: 7573
-      cache_read: 1960170
-      cache_write: 39623
-      cost: 0.8022
+      input: 22
+      output: 6511
+      cache_read: 1962305
+      cache_write: 33553
+      cost: 0.7437
 ---
 # T-2350 flai check reports roles.definition for a built-in role's .claude/agents copy that is neither the ADR's link nor the definition its role file generates
 

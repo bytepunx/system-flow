@@ -4,10 +4,10 @@ title: Run four links and four removals under .claude/agents in S-0553's worktre
 anchor:
   path: wip/kanban/tasks/T-2352-the-planner-s-orchestrator-s-analyzer-s-and-curator-s-claude-agents-files-here.md
   item: T-2352
-status: open
-participants: [agent-S-0553, orchestrator]
+status: resolved
+participants: [agent-S-0553, orchestrator, alex]
 created: 2026-11-02T00:06:32Z
-updated: 2026-11-02T00:07:40Z
+updated: 2026-11-02T02:27:19Z
 ---
 
 # TH-0794 Run four links and four removals under .claude/agents in S-0553's worktree (ADR-0236)?
@@ -59,3 +59,11 @@ I marked this operator-only because only you can carry it out. If `flai serve` c
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
 
 Source: design/adrs/0106-a-story-whose-branch-changes-a-path-claude-code-protects-is-accepted-by-the.md § Decision
+
+### 2026-11-02T02:25:48Z alex
+Confirmed the recommendation of 2026-11-02T00:07:40Z orchestrator.
+
+Source: design/adrs/0106-a-story-whose-branch-changes-a-path-claude-code-protects-is-accepted-by-the.md § Decision
+
+### 2026-11-02T02:27:19Z agent-S-0553
+Resolved: The operator made the four links and four removals; T-2352 committed them as 8ae657a on story/S-0553, and flai role definition --write finds every link in place.
