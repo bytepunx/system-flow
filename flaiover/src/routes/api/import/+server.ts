@@ -8,12 +8,18 @@ import type { RequestHandler } from './$types';
  * GET: what an import would do, changing nothing (flai import --dry-run on the host): the layout,
  * the folders it would move, the sub-projects it found, and the tests it would run.
  *
- * POST: import it (flai import --yes --commit on the host), streamed as newline-delimited JSON as
- * an acceptance is: { event: "progress", msg } for each test as it starts and ends, then
- * { event: "done", result, committed } with flai's answer, or { event: "error", error, status }.
- * committed is false when a test failed: the import was applied, nothing was committed, and the
- * result says which test failed and what it printed. Either way the repository is a project from
- * then on, under the key in result.key.
+ * POST: import it (flai import --yes --formula on the host), streamed as newline-delimited JSON as
+ * an acceptance is: { event: "progress", msg }, then { event: "done", result, committed } with
+ * flai's answer, or { event: "error", error, status }. flai commits the import untested and makes
+ * the import formula's instance, a story in the new project that runs flai check --strict and the
+ * import's tests: result.commit holds the commit, result.formula.story names that story. When the
+ * instance could not be made, the import stays committed and the error is flai's, saying how to
+ * make it. The repository is a project from then on, under the key in result.key.
+ *
+ * An older host runs flai import --yes --commit instead, which tests before it commits: progress
+ * then names each test as it starts and ends, and a failed test answers 422 with the result, sent
+ * as done with committed false: the import was applied, nothing was committed, and the result says
+ * which test failed and what it printed.
  */
 export const GET: RequestHandler = () =>
 	respond(async () => (await repo().run<Record<string, unknown>>('import.preview')).data);

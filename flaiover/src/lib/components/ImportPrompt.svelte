@@ -1,8 +1,9 @@
 <script lang="ts">
 	// A repository the host offers for import, picked in the switcher (S-0098). It is not a
 	// system-flow project yet, so there is no board or inbox to show: this asks whether to import it.
-	// Declining is not remembered, so picking it again asks again; importing runs flai import --commit
-	// on the host and, once it has been applied, switches to the project it became.
+	// Declining is not remembered, so picking it again asks again. Importing runs flai import
+	// --formula on the host, which commits the import untested and starts the import formula's story,
+	// which checks it and runs its tests, in the project it became; then this switches to it.
 	import { onDestroy, onMount } from 'svelte';
 	import { api } from '$lib/api';
 	import { projectState, type Project } from '$lib/project.svelte';
@@ -26,6 +27,7 @@
 	type Result = {
 		key?: string;
 		commit?: { tests?: TestResult[]; committed?: boolean; commit?: string; reason?: string };
+		formula?: { story?: string };
 	};
 
 	let preview = $state<Preview | null>(null);
@@ -112,6 +114,9 @@
 		{#if committed}
 			<p class="mt-4" data-testid="import-done">
 				Imported and committed as <code>{result.commit?.commit}</code>.
+				{#if result.formula?.story}
+					<code>{result.formula.story}</code> checks it and runs its tests.
+				{/if}
 				{opening ? 'Opening it…' : ''}
 			</p>
 		{:else}
@@ -150,20 +155,21 @@
 		<p class="mt-4">Import it into system-flow? flai on the host will:</p>
 		<ul class="mt-2 list-disc pl-6 text-sm">
 			<li>add the standard's folders and files to it, overwriting nothing that is there;</li>
-			{#if previewError}
-				<li>run the tests it finds (it could not say which: {previewError});</li>
-			{:else if !preview}
-				<li>run the tests it finds…</li>
-			{:else if (preview.tests ?? []).length === 0}
-				<li>run its tests: none were found, so none will run;</li>
-			{:else}
-				<li>
-					run {preview.tests_from === 'host' ? 'the checks this host names' : 'its tests'}:
+			<li>commit the import, before any test runs;</li>
+			<li>
+				start a story in the new project that runs <code>flai check --strict</code> and
+				{#if previewError}
+					the tests it finds (it could not say which: {previewError}).
+				{:else if !preview}
+					the tests it finds…
+				{:else if (preview.tests ?? []).length === 0}
+					its tests: none were found, so it runs the check alone.
+				{:else}
+					{preview.tests_from === 'host' ? 'the checks this host names' : 'its tests'}:
 					{#each preview.tests ?? [] as t, i (t.name)}{i > 0 ? ', ' : ''}<code>{t.name}</code
-						>{/each};
-				</li>
-			{/if}
-			<li>commit the import if they pass, and leave it uncommitted if one fails.</li>
+						>{/each}.
+				{/if}
+			</li>
 		</ul>
 		<p class="mt-2 text-sm text-muted">
 			The repository must have no uncommitted changes; the commit holds the import and nothing else.

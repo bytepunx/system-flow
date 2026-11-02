@@ -34,6 +34,7 @@ describe('ImportPrompt (S-0098)', () => {
 		flushSync();
 	};
 	const text = () => document.body.textContent ?? '';
+	const squash = (s: string | null | undefined) => (s ?? '').replace(/\s+/g, ' ').trim();
 	const button = (label: string) =>
 		[...document.querySelectorAll('button')].find((b) => b.textContent?.trim() === label)!;
 
@@ -71,7 +72,21 @@ describe('ImportPrompt (S-0098)', () => {
 		await settle();
 		expect(text()).toContain('not a system-flow project yet (/home/op/git/widget)');
 		expect(text()).toContain('go test ./...');
-		expect(text()).toContain('leave it uncommitted if one fails');
+		expect(text()).toContain('commit the import, before any test runs');
+	});
+
+	it('says the import is committed first, then a story runs the check and its tests', async () => {
+		c = mount(ImportPrompt, { target: document.body, props: { project: candidate } });
+		await settle();
+		const steps = [...document.querySelectorAll('ul li')].map((li) => squash(li.textContent));
+		const commit = steps.indexOf('commit the import, before any test runs;');
+		const story = steps.indexOf(
+			'start a story in the new project that runs flai check --strict and its tests: go test ./....'
+		);
+		expect(commit).toBeGreaterThan(-1);
+		expect(story).toBeGreaterThan(commit);
+		expect(text()).not.toContain('leave it uncommitted');
+		expect(text()).toContain('must have no uncommitted changes');
 	});
 
 	it('a decline says to pick a different project, and imports nothing', async () => {
@@ -147,6 +162,30 @@ describe('ImportPrompt (S-0098)', () => {
 		button('Import').click();
 		await settle();
 		expect(text()).toContain('Imported and committed as abc1234');
+		expect(text()).not.toContain('checks it and runs its tests');
 		expect(projectState.current).toBe('widget');
+	});
+
+	it('a committed import names the story the import formula started to check it', async () => {
+		importAnswer = [
+			{ event: 'progress', msg: 'importing' },
+			{
+				event: 'done',
+				committed: true,
+				result: {
+					key: 'widget',
+					commit: { committed: true, commit: 'abc1234', tests_from: 'formula', tests: [] },
+					formula: { story: 'S-0001', status: 'ready', tasks: [] }
+				}
+			}
+		];
+		projects = [{ key: 'widget', name: 'widget', connected: true }];
+		c = mount(ImportPrompt, { target: document.body, props: { project: candidate } });
+		await settle();
+		button('Import').click();
+		await settle();
+		const done = squash(document.querySelector('[data-testid="import-done"]')?.textContent);
+		expect(done).toContain('committed as abc1234. S-0001 checks it and runs its tests.');
+		expect(document.querySelector('[data-testid="import-not-committed"]')).toBeNull();
 	});
 });
