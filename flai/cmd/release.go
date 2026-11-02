@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -11,6 +12,8 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/guard"
+	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/pending"
 	"github.com/bytepunx/system-flow/flai/internal/preview"
 	"github.com/bytepunx/system-flow/flai/internal/release"
@@ -110,6 +113,14 @@ already went), verify, and flai release --pending again tags again
 no remote publishes locally. An accepted item no plan can
 cover, such as one touching two components with no tag saying which it
 delivers to, is named with the reason (I-0024).
+
+An agent flai serve started (FLAI_STARTED_BY=flai-serve, or FLAI_STORY set),
+such as the publish formula's (ADR-0240), is refused --pending while the
+project's push host action is off, which publishing needs: nothing is
+applied, tagged, or pushed, and the exit is 4. The push host action is the
+operator's to turn on, with flai serve enable push on the host. The
+operator's own shell, with neither set, is not held, and neither is
+--dry-run, which publishes nothing (S-0423).
 
 flai release --evaluate says whether system-flow.yaml's orchestration.release
 policy is met, why, and the figures it rests on (S-0217): the stories
@@ -412,9 +423,38 @@ func (a *app) remoteTagsInStep(root string, repo *workitem.Repo) error {
 	return nil
 }
 
+// exitReleasePushOff is flai release --pending's exit status when an agent
+// flai serve started publishes while the project's push host action is off
+// (S-0423): 4, apart from 2, a release policy not met, and 3, a remote that
+// moved, so that the publish formula's step fails down its failure path
+// (ADR-0240).
+const exitReleasePushOff = 4
+
+// servedPublishHeld refuses flai release --pending to an agent flai serve
+// started, FLAI_STARTED_BY=flai-serve or FLAI_STORY set, while the push host
+// action is off for the project at root (S-0423, ADR-0240): the publish
+// formula's agent runs it, and the push host action, the operator's to turn
+// on, is the gate on the remote, as it is for release_publish and the
+// dashboard's Publish. The operator's own shell, with neither set, is not
+// held, and is not asked to read the configuration.
+func (a *app) servedPublishHeld(root string) error {
+	if os.Getenv(guard.StartedByEnv) != guard.StartedByServe && os.Getenv("FLAI_STORY") == "" {
+		return nil
+	}
+	on, err := a.hostActionOn(hostapi.ActionPush, root)
+	if err != nil {
+		return &exitError{code: exitReleasePushOff, msg: fmt.Sprintf("an agent flai serve started publishes only while the %s host action is on, and whether it is cannot be read: %v", hostapi.ActionPush, err)}
+	}
+	if !on {
+		return &exitError{code: exitReleasePushOff, msg: fmt.Sprintf("the %s host action is off for %s, which publishing by an agent flai serve started needs, so nothing was applied, tagged, or pushed: it is the operator's to turn on, with %s on the host (ADR-0240)", hostapi.ActionPush, root, hostapi.EnableCommand(hostapi.ActionPush))}
+	}
+	return nil
+}
+
 // publishPending is flai release --pending (S-0087): everything
 // computeApplyAndTagPending finds, applied and tagged, pushed together,
-// resumable on partial failure.
+// resumable on partial failure. An agent flai serve started is held while
+// the push host action is off (S-0423), its dry run aside.
 func (a *app) publishPending(dryRun bool) error {
 	if err := execx.Require(a.runner, "git", "Releases are git tags; install git."); err != nil {
 		return err
@@ -450,6 +490,9 @@ func (a *app) publishPending(dryRun bool) error {
 		}
 		fmt.Fprintln(a.out, "dry run: nothing changed")
 		return nil
+	}
+	if err := a.servedPublishHeld(repo.Root); err != nil {
+		return err
 	}
 	plans, tags, err := a.computeApplyAndTagPending(repo.Root, repo)
 	if err != nil {
