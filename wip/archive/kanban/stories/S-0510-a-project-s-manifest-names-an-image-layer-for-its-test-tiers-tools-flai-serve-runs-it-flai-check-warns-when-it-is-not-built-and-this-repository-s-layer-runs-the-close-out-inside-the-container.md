@@ -3,11 +3,11 @@ id: S-0510
 type: story
 nature: feature
 title: A project's manifest names an image layer for its test tiers' tools, flai serve runs it, flai check warns when it is not built, and this repository's layer runs the close-out inside the container
-status: in-progress
+status: done
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:46:53Z
-updated: 2026-11-02T23:25:31Z
+updated: 2026-11-03T02:39:15Z
 transitions:
   - to: ready
     at: 2026-11-02T18:12:39Z
@@ -15,6 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-11-02T18:16:07Z
     by: agent-S-0510
+  - to: review
+    at: 2026-11-03T01:26:52Z
+    by: agent-S-0510
+  - to: done
+    at: 2026-11-03T02:39:15Z
+    by: alex
 blocked:
   - from: 2026-11-02T19:32:01Z
     until: 2026-11-02T19:34:36Z
@@ -42,7 +48,7 @@ blocked:
     reason: awaiting the operator on TH-0814
 tags: [cli, docker]
 topics: [harness, docker, manifest]
-touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/check/check.go, flai/internal/check/image.go, flai/internal/check/image_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, scripts/agent-image.sh, Makefile, scripts/README.md, flai/images/system-flow/Dockerfile, system-flow.yaml, design/system/project-manifest.md, docs/operators/settings.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, docs/users/flai.md, docs/operators/index.md, docs/operators/runbooks/install.md, design/system/flai-cli.md, design/tech/docker.md, design/issues/summary.md, design/issues, flai/internal/manifest/agent.go, flai/internal/manifest/agent_test.go, flai/internal/workitem/front-matter-fields.txt, flai/internal/workitem/store_test.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/cmd/check.go, flai/cmd/check_stats_test.go, flai/internal/check/story.go, flai/internal/verify/story.go, design/issues/I-0255-go-build-s-vcs-stamping-fails-with-git-exit-status-128-inside-the-agent.md, scripts/env.sh, scripts/flai-build.sh]
+touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/check/check.go, flai/internal/check/image.go, flai/internal/check/image_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, scripts/agent-image.sh, Makefile, scripts/README.md, flai/images/system-flow/Dockerfile, system-flow.yaml, design/system/project-manifest.md, docs/operators/settings.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, docs/users/flai.md, docs/operators/index.md, docs/operators/runbooks/install.md, design/system/flai-cli.md, design/tech/docker.md, design/issues/summary.md, design/issues, flai/internal/manifest/agent.go, flai/internal/manifest/agent_test.go, flai/internal/workitem/front-matter-fields.txt, flai/internal/workitem/store_test.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/cmd/check.go, flai/cmd/check_stats_test.go, flai/internal/check/story.go, flai/internal/verify/story.go, design/issues/I-0255-go-build-s-vcs-stamping-fails-with-git-exit-status-128-inside-the-agent.md, scripts/env.sh, scripts/flai-build.sh, design/issues/I-0259-a-story-worktree-s-flaiover-node-modules-installed-inside-the-alpine-agent.md]
 after: [S-0508]
 agent:
   harness: claude-code
@@ -51,7 +57,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 4635
+  seconds: 5201
   priced_by: harness
   turns:
     - day: 2026-11-02
@@ -59,24 +65,33 @@ usage:
       test_runs: 5
       hand_edits: 3
       work: 148
+    - day: 2026-11-03
+      ceremony: 4
+      work: 43
   models:
     - model: claude-opus-5-5
-      input: 664
-      output: 175189
-      cache_read: 80786816
-      cache_write: 1475492
-      cost: 30.3192
+      input: 764
+      output: 190568
+      cache_read: 84941918
+      cache_write: 1563893
+      cost: 32.1654
   strategic:
     - kind: orchestrator
-      seconds: 215
+      seconds: 296
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 31
-          output: 286
-          cache_read: 2126200
-          cache_write: 72043
-          cost: 0.4887
+          input: 53
+          output: 472
+          cache_read: 2922747
+          cache_write: 194919
+          cost: 0.7066
+        - model: claude-sonnet-5-5
+          input: 10
+          output: 66
+          cache_read: 144168
+          cache_write: 60576
+          cost: 0.1441
 cost_of_delay:
   value: 27.78
   by: planner-S-0510
@@ -95,15 +110,14 @@ finalized:
 
 ## Goal
 
-ADR-0203's limitation: only the worktree's files are the container's to write, and a test that needs a tool outside the image fails inside it until the project's layer carries the tool. The bedrock and claude-code images carry no Go toolchain, no golangci-lint, and no pnpm, so a story of this repository that changes Go or Svelte cannot run `flai test` or `scripts/close-out.sh` inside the container; S-0505's results name each tier that failed for that reason. This story gives a project one image layer of its own: the manifest names a Dockerfile under `agent.image.layer`, `scripts/agent-image.sh` builds it over the harness image as `flai-agent-<project key>-<inner>:local`, `flai serve` runs that image for the project's agents when it is named, and `flai check` warns, as `agent.image`, when the manifest names a layer that is not built, since `docker image inspect` finds no such image. This repository's layer, `flai/images/system-flow/Dockerfile`, carries Go at the version `flai/go.mod` names, golangci-lint v2, Node, and pnpm, so that `flai test` and the close-out run inside the container, which one Go-changing story worked end to end on `harness: container` proves.
+ADR-0203's limitation: only the worktree's files are the container's to write, and a test that needs a tool outside the image fails inside it until the project's layer carries the tool. The bedrock and claude-code images carry no Go toolchain, no golangci-lint, and no pnpm, so a story of this repository that changes Go or Svelte cannot run `flai test` or `scripts/close-out.sh` inside the container; S-0505's results name each tier that failed for that reason. This story gives a project one image layer of its own: the manifest names a Dockerfile under `agent.image.layer`, `scripts/agent-image.sh` builds it over the harness image as `flai-agent-<project key>-<inner>:local`, `flai serve` runs that image for the project's agents when it is named, and `flai check` warns, as `agent.image`, when the manifest names a layer that is not built, since `docker image inspect` finds no such image. This repository's layer, `flai/images/system-flow/Dockerfile`, carries Go at the version `flai/go.mod` names, golangci-lint v2, Node, and pnpm, so that `flai test` runs every per-path tier inside the container. The close-out inside the container, and a Go-changing story worked end to end on `harness: container` with the layer, moved to S-0565 on TH-0814.
 
 ## Acceptance criteria
 
 - [x] `agent.image.layer` in `system-flow.yaml` names a Dockerfile path relative to the repository root, read by `flai/internal/manifest`, documented in `design/system/project-manifest.md` and `docs/operators/settings.md`, and left as a comment in `template/root/system-flow.yaml.tmpl` with `template/CHANGELOG.md` saying so
 - [x] `scripts/agent-image.sh --layer` builds the named Dockerfile with the harness image as its base argument and tags it `flai-agent-<project key>-<inner>:local`, `make agent-images` builds it after the two base images when the manifest names one, and the container adapter runs that image in place of the harness image for the project's agents when it is named
 - [x] `flai check` reports `agent.image` when the manifest names a layer whose image is not built or whose Dockerfile does not exist, as a warning that names `make agent-images`, and stays silent when the manifest names none or `docker` is not on `PATH`, saying so as a note
-- [ ] `flai/images/system-flow/Dockerfile` carries Go at `flai/go.mod`'s version, golangci-lint v2 at the version `scripts/install-tools.sh` installs, Node 24, and pnpm, and `system-flow.yaml` names it, so that `scripts/flai.sh test` and `scripts/close-out.sh` run every tier the manifest's `tests` select inside the container
-- [ ] One story of this repository that changes Go is worked end to end by `flai serve` on `harness: container` with this layer, its close-out passing inside the container, and each limitation met is an issue under `design/issues`
+- [x] `flai/images/system-flow/Dockerfile` carries Go at `flai/go.mod`'s version, golangci-lint v2 at the version `scripts/install-tools.sh` installs, Node 24, and pnpm, and `system-flow.yaml` names it, so that `scripts/flai.sh test`, run by hand inside the layered image on this story's worktree, runs every per-path tier the manifest's `tests` select, each tier's outcome recorded in this story's notes
 - [x] `docs/users/flai.md`, `docs/operators/index.md`, `docs/operators/runbooks/install.md`, `design/system/flai-cli.md`, and `design/tech/docker.md` describe the layer, how it is built, and what this repository's carries
 
 ## Tasks
@@ -117,6 +131,10 @@ ADR-0203's limitation: only the worktree's files are the container's to write, a
 
 Waits on S-0508 for the adapter that runs the image. The layer is the project's risk, as ADR-0203 says; the warning on an unsigned layer it foresees waits for the signed image, which is outside E-0029. A layer's tools are a project's: the template ships none.
 
+### Moved to S-0565 (TH-0814)
+
+On 2026-11-02 the operator confirmed, on TH-0814, the orchestrator's recommendation, as D-0466 records for S-0508. The former criterion 5 (one Go-changing story of this repository worked end to end by `flai serve` on `harness: container` with this layer, its close-out passing inside the container, each limitation an issue) and criterion 4's close-out half (`scripts/close-out.sh` running inside the container) moved to S-0565 as its criterion 3, and S-0565's `after` gained S-0510 and S-0517. The reasons: this host's `flai serve` is the installed release, which gains the layer only once S-0510 is accepted and published, and the close-out runs git, which does not work inside the container until S-0517 (I-0215). Criterion 4 here is the hand run of `flai test` inside the layer, below. The title still says the close-out; S-0565 carries that part.
+
 ### In the container (T-2176)
 
 On 2026-11-02, `make agent-images` built `flai-agent-bedrock:local`, `flai-agent-claude-code:local`, and the layer `flai-agent-sf-claude-code:local`, 1.56 GB. The layer holds Go 1.26.0, golangci-lint 2.5.0 built with go1.26.0, ShellCheck 0.10.0, Node v24.22.1, and pnpm 10.34.5.
@@ -127,7 +145,7 @@ On 2026-11-02, `make agent-images` built `flai-agent-bedrock:local`, `flai-agent
 - `scripts/env.sh` kept the npm and pnpm caches in the main checkout's `.flai-cache`, which the container does not mount, and npm failed with EACCES. They now go to the home when that folder is not writable.
 - `go build`'s VCS stamping failed with git's exit status 128, though git answers each of its commands by hand there. The layer sets `GOFLAGS=-buildvcs=false`, and I-0255 records it.
 
-Not run inside: `scripts/close-out.sh`, which commits, and only the host commits (S-0517, S-0520); the `--all` tiers `integration` and `smoke`; and criterion 5's live run by `flai serve`, which TH-0814 asks about.
+Not run inside: `scripts/close-out.sh`, which commits, and only the host commits (S-0517, S-0520); and the `--all` tiers `integration` and `smoke`. Both are S-0565's now, with the live run by `flai serve`.
 
 ### Planning
 

@@ -4,10 +4,10 @@ title: "S-0510 criteria 4 and 5: the live run needs the installed flai serve and
 anchor:
   path: wip/kanban/stories/S-0510-a-project-s-manifest-names-an-image-layer-for-its-test-tiers-tools-flai-serve-runs-it-flai-check-warns-when-it-is-not-built-and-this-repository-s-layer-runs-the-close-out-inside-the-container.md
   item: S-0510
-status: answered
+status: resolved
 participants: [agent-S-0510, orchestrator, alex]
 created: 2026-11-02T18:18:11Z
-updated: 2026-11-02T23:25:31Z
+updated: 2026-11-03T01:19:02Z
 ---
 
 # TH-0814 S-0510 criteria 4 and 5: the live run needs the installed flai serve and git in the container, so move it to S-0565?
@@ -57,3 +57,6 @@ Source: design/digest/D-0466-s-0508-the-live-container-run-criterion-6-t-2169-s-
 Confirmed the recommendation of 2026-11-02T18:19:19Z orchestrator.
 
 Source: design/digest/D-0466-s-0508-the-live-container-run-criterion-6-t-2169-s-first-half-cannot-run-before.md
+
+### 2026-11-03T01:19:02Z agent-S-0510
+Resolved: Done as confirmed: S-0510's criterion 5 and criterion 4's close-out half are S-0565's criterion 3; S-0565's after gains S-0510 and S-0517; both stories' Notes record the move. S-0510's criterion 4 is now the hand run of flai test inside the layer, ticked.
