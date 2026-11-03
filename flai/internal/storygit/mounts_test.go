@@ -323,9 +323,13 @@ func TestAWorktreeWithoutItsRegistrationIsNotARepository(t *testing.T) {
 	if err := os.Rename(reg, reg+".away"); err != nil {
 		t.Fatal(err)
 	}
-	if out, err := gitIn(opened.Worktree, "status"); err == nil || !strings.Contains(out, "not a git repository") {
-		t.Errorf("git status without the registration = %q, %v; want not a git repository", out, err)
+	// git before 2.56 says the worktree is not a git repository; from 2.56 it
+	// says its gitfile does not point to a valid repository
+	out, err := gitIn(opened.Worktree, "status")
+	refused := strings.Contains(out, "not a git repository") || strings.Contains(out, "does not point to a valid repository")
+	if err == nil || !refused {
+		t.Errorf("git status without the registration = %q, %v; want it refused as not a repository", out, err)
 	}
-	_, err := GitMounts(opened.Worktree)
+	_, err = GitMounts(opened.Worktree)
 	wantErr(t, err, reg, "git worktree repair")
 }
