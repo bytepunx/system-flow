@@ -33,23 +33,27 @@ func TestMCPAddrForAProjectFlaiServeStarts(t *testing.T) {
 		p, _ := strconv.Atoi(port)
 		return err == nil && host == "127.0.0.1" && p >= 4243 && p < 4243+mcpPorts
 	}
-	first, err := mcpAddrFor(repo, "127.0.0.1", nil, nil)
-	if err != nil || !inRange(first) {
-		t.Fatalf("first free: %q %v", first, err)
+	// a port in the range taken, as by another project's server. The test
+	// holds it before it asks, not after: the tests that run alongside probe
+	// the same range by listening and closing, so a port mcpAddrFor found
+	// free is not one the test can count on taking a moment later (CI, macOS).
+	var held net.Listener
+	for p := 4243; p < 4243+mcpPorts && held == nil; p++ {
+		held, _ = net.Listen("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(p)))
 	}
-	// given to another project and not yet listening: not given again
-	if other, err := mcpAddrFor(repo, "127.0.0.1", map[string]bool{first: true}, nil); err != nil || other == first || !inRange(other) {
-		t.Errorf("with %s given to another: %q %v", first, other, err)
-	}
-	// that port taken (another project's server): the next free one
-	held, err := net.Listen("tcp", first)
-	if err != nil {
-		t.Fatal(err)
+	if held == nil {
+		t.Fatalf("no port between 4243 and %d to hold", 4243+mcpPorts-1)
 	}
 	defer func() { _ = held.Close() }()
-	second, err := mcpAddrFor(repo, "127.0.0.1", nil, nil)
-	if err != nil || !inRange(second) || second == first {
-		t.Errorf("with %s taken: %q %v", first, second, err)
+	taken := held.Addr().String()
+	// the first free one, past the taken port
+	first, err := mcpAddrFor(repo, "127.0.0.1", nil, nil)
+	if err != nil || !inRange(first) || first == taken {
+		t.Fatalf("first free, with %s taken: %q %v", taken, first, err)
+	}
+	// given to another project and not yet listening: not given again
+	if other, err := mcpAddrFor(repo, "127.0.0.1", map[string]bool{first: true}, nil); err != nil || other == first || other == taken || !inRange(other) {
+		t.Errorf("with %s given to another and %s taken: %q %v", first, taken, other, err)
 	}
 	// once a project has used an address, it keeps it
 	if err := os.MkdirAll(repo.CacheDir(), 0o700); err != nil {
