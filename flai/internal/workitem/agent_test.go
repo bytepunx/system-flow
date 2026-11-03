@@ -84,3 +84,56 @@ func TestAStoryGetsTheProjectsRoles(t *testing.T) {
 		t.Errorf("written:\n%s", data)
 	}
 }
+
+// S-0573, ADR-0251: a story whose agent names no harness starts with the
+// project's default as it is now, under what its own agent does say; one that
+// names a harness keeps its own whole.
+func TestAgentOfFallsBackToTheDefaultForAStoryThatNamesNoHarness(t *testing.T) {
+	r := newProject(t)
+	bare := mustCreate(t, r, Story, "Made before any default", "")
+	if bare.Agent != nil {
+		t.Fatalf("no default, no agent: %+v", bare.Agent)
+	}
+	if got := r.AgentOf(bare); got != nil {
+		t.Errorf("no agent and no default: %+v", got)
+	}
+	if got := r.AgentOf(nil); got != nil {
+		t.Errorf("no item: %+v", got)
+	}
+
+	// the default is set after the story was made, so creation copied nothing
+	r.Manifest.Agent = &manifest.Agent{
+		Harness: "claude-code",
+		Model:   "claude-opus-5-5",
+		Config:  map[string]string{"effort": "high"},
+		Roles:   map[string]manifest.Role{"explore": {Model: "haiku"}},
+	}
+	got := r.AgentOf(bare)
+	if got == nil || got.Harness != "claude-code" || got.Model != "claude-opus-5-5" || got.Config["effort"] != "high" || got.Roles["explore"].Model != "haiku" {
+		t.Errorf("no agent, a default: %+v", got)
+	}
+	if again, err := r.Get(bare.ID); err != nil || again.Agent != nil {
+		t.Errorf("the story was written: %+v, %v", again, err)
+	}
+
+	modelOnly := &Item{ID: "S-9001", Type: Story, Agent: &manifest.Agent{Model: "claude-sonnet-5", Config: map[string]string{"max_turns": "20"}}}
+	got = r.AgentOf(modelOnly)
+	if got == nil || got.Harness != "claude-code" || got.Model != "claude-sonnet-5" || got.Config["effort"] != "high" || got.Config["max_turns"] != "20" {
+		t.Errorf("only a model: %+v", got)
+	}
+	if modelOnly.Agent.Harness != "" || len(modelOnly.Agent.Config) != 1 {
+		t.Errorf("the story's own agent was changed: %+v", modelOnly.Agent)
+	}
+
+	for _, harness := range []string{"claude-code", "none"} {
+		own := &manifest.Agent{Harness: harness, Model: "claude-sonnet-5"}
+		named := &Item{ID: "S-9002", Type: Story, Agent: own}
+		got := r.AgentOf(named)
+		if !got.Same(&manifest.Agent{Harness: harness, Model: "claude-sonnet-5"}) {
+			t.Errorf("harness %s: %+v", harness, got)
+		}
+		if len(got.Config) != 0 || len(got.Roles) != 0 {
+			t.Errorf("harness %s took the default's config or roles: %+v", harness, got)
+		}
+	}
+}
