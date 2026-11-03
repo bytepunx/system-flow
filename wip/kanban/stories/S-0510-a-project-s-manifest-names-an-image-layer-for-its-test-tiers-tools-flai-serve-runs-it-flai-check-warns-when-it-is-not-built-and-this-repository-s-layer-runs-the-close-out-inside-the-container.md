@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0029
 owner: alex
 created: 2026-10-26T04:46:53Z
-updated: 2026-11-02T21:38:08Z
+updated: 2026-11-02T23:25:31Z
 transitions:
   - to: ready
     at: 2026-11-02T18:12:39Z
@@ -38,6 +38,7 @@ blocked:
     until: 2026-11-02T21:37:57Z
     reason: awaiting the operator on TH-0814
   - from: 2026-11-02T21:38:08Z
+    until: 2026-11-02T23:25:31Z
     reason: awaiting the operator on TH-0814
 tags: [cli, docker]
 topics: [harness, docker, manifest]

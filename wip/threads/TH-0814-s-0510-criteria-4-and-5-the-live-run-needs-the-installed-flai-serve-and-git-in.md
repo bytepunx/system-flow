@@ -4,10 +4,10 @@ title: "S-0510 criteria 4 and 5: the live run needs the installed flai serve and
 anchor:
   path: wip/kanban/stories/S-0510-a-project-s-manifest-names-an-image-layer-for-its-test-tiers-tools-flai-serve-runs-it-flai-check-warns-when-it-is-not-built-and-this-repository-s-layer-runs-the-close-out-inside-the-container.md
   item: S-0510
-status: open
-participants: [agent-S-0510, orchestrator]
+status: answered
+participants: [agent-S-0510, orchestrator, alex]
 created: 2026-11-02T18:18:11Z
-updated: 2026-11-02T18:19:19Z
+updated: 2026-11-02T23:25:31Z
 ---
 
 # TH-0814 S-0510 criteria 4 and 5: the live run needs the installed flai serve and git in the container, so move it to S-0565?
@@ -50,5 +50,10 @@ S-0510 goes on meanwhile with T-2164, T-2165, T-2171, and T-2172. Only T-2176's 
 **Why I recommend rather than answer:** this takes a criterion out of a finalized story and widens another. That changes scope, so it is your call. Finalizing S-0565 stays yours.
 
 **Alternative:** keep criterion 5. I don't recommend it: S-0510 would wait in review until S-0517 lands and S-0510 is published.
+
+Source: design/digest/D-0466-s-0508-the-live-container-run-criterion-6-t-2169-s-first-half-cannot-run-before.md
+
+### 2026-11-02T23:25:31Z alex
+Confirmed the recommendation of 2026-11-02T18:19:19Z orchestrator.
 
 Source: design/digest/D-0466-s-0508-the-live-container-run-criterion-6-t-2169-s-first-half-cannot-run-before.md
