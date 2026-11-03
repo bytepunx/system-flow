@@ -16,12 +16,14 @@ import (
 
 // markdownTier is a markdown tier that fails on a line holding BAD or
 // FIXABLE, naming it as markdownlint-cli2 names a broken link fragment, and
-// whose fix makes FIXABLE fixed and leaves BAD.
+// whose fix makes FIXABLE fixed and leaves BAD. The fix writes each file
+// through a temporary one rather than with sed -i, whose argument BSD sed on
+// macOS reads as a backup suffix, so that it runs the same on every host.
 const markdownTier = `tests:
   - name: markdown
     command: [sh, -c, 's=0; for f in "$@"; do if grep -q -e BAD -e FIXABLE "$f"; then echo "$f:1 error MD051/link-fragments Link fragments should be valid"; s=1; fi; done; exit $s', sh, "{files}"]
     paths: ["**/*.md"]
-    fix_command: [sh, -c, 'sed -i s/FIXABLE/fixed/ "$@"', sh, "{files}"]
+    fix_command: [sh, -c, 'for f in "$@"; do sed s/FIXABLE/fixed/ "$f" > "$f.tmp" && mv "$f.tmp" "$f"; done', sh, "{files}"]
 `
 
 // mainGit is git for the preflight's tests, with no repository: the main
