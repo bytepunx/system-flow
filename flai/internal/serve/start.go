@@ -57,13 +57,15 @@ func Start(ctx context.Context, o Options, e Entry, story string) (*AgentRun, er
 	case run != nil && run.Outcome == OutcomeAsked:
 		return nil, refused("%s's agent is %s; flai serve starts it again when that comes", it.ID, run.awaits())
 	}
-	if harness.Elsewhere(it.Agent) {
+	// the project's default when the story's agent names no harness (ADR-0251)
+	agent := repo.AgentOf(it)
+	if harness.Elsewhere(agent) {
 		return nil, refused("%s", harness.ElsewhereRefusal(it.ID))
 	}
-	if (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
+	if (agent == nil || agent.Harness == "") && cfg.host(harness.Command).Program == "" {
 		return nil, refused("%s names no harness, and no command is set on the host (flai serve agent set -- <program> [args...])", it.ID)
 	}
-	if err := heldStart(o, e, cfg, it.ID, it.Agent); err != nil {
+	if err := heldStart(o, e, cfg, it.ID, agent); err != nil {
 		return nil, err
 	}
 	ok, review, hold, err := room(repo, st, it.ID)

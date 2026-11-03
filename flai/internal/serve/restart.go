@@ -44,7 +44,8 @@ func StartNow(ctx context.Context, o Options, e Entry, story, restart string) (*
 	return startNow(ctx, o, e, readyStory{ID: story, Restart: restart})
 }
 
-// startNow is StartNow for what want says, its agent read from the story. A
+// startNow is StartNow for what want says, its agent read from the story,
+// the project's default when it names no harness (ADR-0251). A
 // start the host's budget state holds is refused, with nothing recorded
 // (S-0534).
 func startNow(ctx context.Context, o Options, e Entry, want readyStory) (*AgentRun, error) {
@@ -59,7 +60,7 @@ func startNow(ctx context.Context, o Options, e Entry, want readyStory) (*AgentR
 	if err != nil {
 		return nil, err
 	}
-	want.ID, want.Agent = it.ID, it.Agent
+	want.ID, want.Agent = it.ID, repo.AgentOf(it) // the default under it, ADR-0251
 	l := newLauncher(o, e)
 	l.handOver = true
 	if !l.start(ctx, o.Agent(e.Root), want) {
@@ -144,13 +145,15 @@ func Restart(ctx context.Context, o Options, e Entry, story string) (*AgentRun, 
 	case run.Queued != "" && it.Status == workitem.Ready:
 		return nil, refused("another agent for %s is already queued (since %s); flai serve starts it when there is room", it.ID, run.Queued)
 	}
-	if harness.Elsewhere(it.Agent) {
+	// the project's default when the story's agent names no harness (ADR-0251)
+	agent := repo.AgentOf(it)
+	if harness.Elsewhere(agent) {
 		return nil, refused("%s", harness.ElsewhereRefusal(it.ID))
 	}
-	if (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
+	if (agent == nil || agent.Harness == "") && cfg.host(harness.Command).Program == "" {
 		return nil, refused("%s names no harness, and no command is set on the host (flai serve agent set -- <program> [args...])", it.ID)
 	}
-	if err := heldStart(o, e, cfg, it.ID, it.Agent); err != nil {
+	if err := heldStart(o, e, cfg, it.ID, agent); err != nil {
 		return nil, err
 	}
 	if it.Status == workitem.Ready {

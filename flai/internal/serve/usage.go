@@ -78,11 +78,13 @@ func (d Dir) Rates() (usage.Rates, error) {
 	return usage.ReadRates(harness.Adapters[harness.ClaudeCode].Reader(), paths...)
 }
 
-// logReader is the reader of the logs of story's agent: that of the harness
-// its newest run recorded, or when none did, of the harness its agent names,
-// as harness.For resolves it, the operator's command when it names none.
-func logReader(d Dir, root string, story *workitem.Item) (usage.Reader, error) {
-	a := story.Agent
+// logReader is the reader of the logs of story's agent, in repo, the
+// project at root: that of the harness its newest run recorded, or when none
+// did, of the harness it starts with, the project's default under its own
+// when that names none (ADR-0251), as harness.For resolves it, the
+// operator's command when neither names one.
+func logReader(d Dir, root string, repo *workitem.Repo, story *workitem.Item) (usage.Reader, error) {
+	a := repo.AgentOf(story)
 	if run := d.AgentStates()[root].Stories[story.ID]; run != nil && run.Harness != "" {
 		a = &manifest.Agent{Harness: run.Harness}
 	}
@@ -145,7 +147,7 @@ func Measure(d Dir, root, key, story string, providers map[string]manifest.Provi
 	if len(logs) == 0 {
 		return out, nil
 	}
-	r, err := logReader(d, root, it)
+	r, err := logReader(d, root, repo, it)
 	if err != nil {
 		return nil, err
 	}

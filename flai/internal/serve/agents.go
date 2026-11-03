@@ -278,8 +278,9 @@ type AgentRun struct {
 	Conversations []string `json:"conversations,omitempty"`
 	WaitsOn       []string `json:"waits_on,omitempty"`
 	// StoryAgent is the story's agent as it was when this run was started,
-	// empty when it named none, and nil on runs recorded before S-0116: a
-	// story whose agent has changed since is started again.
+	// the project's default under it when it named no harness (ADR-0251),
+	// empty when neither named anything, and nil on runs recorded before
+	// S-0116: a story whose agent has changed since is started again.
 	StoryAgent *manifest.Agent `json:"story_agent,omitempty"`
 	// Queued is when the operator asked for another agent after this one
 	// ended, for its story in ready while the in-progress limit was full:
@@ -806,7 +807,9 @@ func withTrial(repo *workitem.Repo, git execx.Runner) {
 // readyStories are the ready stories in pull order, the claims of the open
 // stories they are held by, how many more stories the in-progress limit
 // leaves room for, -1 when there is none, why review being full holds every
-// one back, "" when it does not (S-0243), and the items read, by ID.
+// one back, "" when it does not (S-0243), and the items read, by ID. Each
+// story's agent is the one it starts with: the project's default under it
+// when it names no harness (ADR-0251).
 func readyStories(repo *workitem.Repo) (ready []readyStory, holds *workitem.Holds, free int, review string, byID map[string]*workitem.Item, err error) {
 	items, err := repo.List(false)
 	if err != nil {
@@ -826,7 +829,7 @@ func readyStories(repo *workitem.Repo) (ready []readyStory, holds *workitem.Hold
 	view := workitem.NewBoardView(items, board, time.Now(), false, nil, holds)
 	for _, c := range view.ReadyInPullOrder() {
 		if it := byID[c.ID]; it != nil && c.Type == workitem.Story && !c.Blocked {
-			ready = append(ready, readyStory{ID: c.ID, Agent: it.Agent, Entered: it.EnteredAt(), item: it})
+			ready = append(ready, readyStory{ID: c.ID, Agent: repo.AgentOf(it), Entered: it.EnteredAt(), item: it})
 		}
 	}
 	free = -1
@@ -1431,7 +1434,7 @@ func (l *launcher) resume(ctx context.Context, cfg AgentConfig, repo *workitem.R
 			continue
 		}
 		it, err := repo.Get(id)
-		if err != nil || (it.Status != workitem.InProgress && it.Status != workitem.Review) || harness.Elsewhere(it.Agent) {
+		if err != nil || (it.Status != workitem.InProgress && it.Status != workitem.Review) || harness.Elsewhere(repo.AgentOf(it)) {
 			continue
 		}
 		own := run.Thread != "" && askedOn(it) == run.Thread
@@ -1447,7 +1450,7 @@ func (l *launcher) resume(ctx context.Context, cfg AgentConfig, repo *workitem.R
 				l.log("story unblocked for its agent's answer", "story", id, "thread", run.Thread, "answer", answer)
 			}
 		}
-		l.start(ctx, cfg, readyStory{ID: id, Agent: it.Agent, Asked: run, Answer: answer})
+		l.start(ctx, cfg, readyStory{ID: id, Agent: repo.AgentOf(it), Asked: run, Answer: answer})
 	}
 }
 
@@ -1483,10 +1486,11 @@ func (l *launcher) startSentBack(ctx context.Context, cfg AgentConfig, repo *wor
 		if at, err := time.Parse(time.RFC3339, b.At); err != nil || !startedBefore(run, at) {
 			continue
 		}
-		if harness.Elsewhere(it.Agent) || (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
+		agent := repo.AgentOf(it) // the default under it, ADR-0251
+		if harness.Elsewhere(agent) || (agent == nil || agent.Harness == "") && cfg.host(harness.Command).Program == "" {
 			continue
 		}
-		s := readyStory{ID: it.ID, Agent: it.Agent, SentBack: &harness.SentBack{Thread: b.Thread, What: what}}
+		s := readyStory{ID: it.ID, Agent: agent, SentBack: &harness.SentBack{Thread: b.Thread, What: what}}
 		if run.Session != "" {
 			s.Resume, s.SentBack.Resumed = run, true
 		}
@@ -1524,10 +1528,11 @@ func (l *launcher) startQueueSentBack(ctx context.Context, cfg AgentConfig, repo
 		if !ok {
 			continue
 		}
-		if harness.Elsewhere(it.Agent) || (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
+		agent := repo.AgentOf(it) // the default under it, ADR-0251
+		if harness.Elsewhere(agent) || (agent == nil || agent.Harness == "") && cfg.host(harness.Command).Program == "" {
 			continue
 		}
-		s := readyStory{ID: it.ID, Agent: it.Agent, SentBack: &harness.SentBack{Thread: thread, What: strings.TrimPrefix(o.Detail, "sent back to in-progress: "), Queue: true}}
+		s := readyStory{ID: it.ID, Agent: agent, SentBack: &harness.SentBack{Thread: thread, What: strings.TrimPrefix(o.Detail, "sent back to in-progress: "), Queue: true}}
 		if run.Session != "" {
 			s.Resume, s.SentBack.Resumed = run, true
 		}
@@ -1572,12 +1577,13 @@ func (l *launcher) startAcceptSentBack(ctx context.Context, cfg AgentConfig, rep
 		if run == nil || run.live() || run.Stopped != "" || !startedBefore(run, at) {
 			continue
 		}
-		if harness.Elsewhere(it.Agent) || (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
+		agent := repo.AgentOf(it) // the default under it, ADR-0251
+		if harness.Elsewhere(agent) || (agent == nil || agent.Harness == "") && cfg.host(harness.Command).Program == "" {
 			continue
 		}
 		what := fmt.Sprintf("the acceptance of %s found that %s, which it cannot settle, and sent the story back; the thread says how to settle it in its worktree and sync it with flai stream sync %s",
 			it.ID, strings.TrimPrefix(th.Title, storygit.SentBackPrefix), it.ID)
-		s := readyStory{ID: it.ID, Agent: it.Agent, SentBack: &harness.SentBack{Thread: th.ID, What: what, Acceptance: true}}
+		s := readyStory{ID: it.ID, Agent: agent, SentBack: &harness.SentBack{Thread: th.ID, What: what, Acceptance: true}}
 		if run.Session != "" {
 			s.Resume, s.SentBack.Resumed = run, true
 		}
@@ -1678,11 +1684,12 @@ func (l *launcher) restartEnded(ctx context.Context, cfg AgentConfig, repo *work
 		if err != nil || it.Status != workitem.InProgress || it.IsBlocked() {
 			continue
 		}
-		if harness.Elsewhere(it.Agent) || (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
+		agent := repo.AgentOf(it) // the default under it, ADR-0251
+		if harness.Elsewhere(agent) || (agent == nil || agent.Harness == "") && cfg.host(harness.Command).Program == "" {
 			continue
 		}
 		if again {
-			l.start(ctx, cfg, readyStory{ID: id, Agent: it.Agent, AutoRestarts: run.AutoRestarts, AfterLimit: true, Restart: restartWhy(run)})
+			l.start(ctx, cfg, readyStory{ID: id, Agent: agent, AutoRestarts: run.AutoRestarts, AfterLimit: true, Restart: restartWhy(run)})
 			continue
 		}
 		if run.AutoRestarts >= cfg.AutoRestarts {
@@ -1690,7 +1697,7 @@ func (l *launcher) restartEnded(ctx context.Context, cfg AgentConfig, repo *work
 			continue
 		}
 		n := run.AutoRestarts + 1
-		if l.start(ctx, cfg, readyStory{ID: id, Agent: it.Agent, AutoRestarts: n, Restart: restartWhy(run)}) {
+		if l.start(ctx, cfg, readyStory{ID: id, Agent: agent, AutoRestarts: n, Restart: restartWhy(run)}) {
 			l.log("agent restarted on its own", "story", id, "restart", n, "limit", cfg.AutoRestarts)
 		}
 	}
@@ -2598,14 +2605,17 @@ func Activity(root string, st AgentState) map[string]StoryActivity {
 }
 
 // standIn is story's newest run, or, when it has none, one that names only
-// the story, the agent given, and the harness and model the story asks for.
+// the story, the agent given, and the harness and model the story will start
+// with, the project's default's when its own names no harness (ADR-0251).
 func standIn(repo *workitem.Repo, st AgentState, story, agent string) *AgentRun {
 	if run := st.Stories[story]; run != nil {
 		return run
 	}
 	run := &AgentRun{Story: story, Agent: agent}
-	if it, err := repo.Get(story); err == nil && it.Agent != nil {
-		run.Harness, run.Model = it.Agent.Harness, it.Agent.Model
+	if it, err := repo.Get(story); err == nil {
+		if a := repo.AgentOf(it); a != nil {
+			run.Harness, run.Model = a.Harness, a.Model
+		}
 	}
 	return run
 }
