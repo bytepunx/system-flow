@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 1.1.21 - 2026-11-03
+
+- S-0554 A role file's start prompt and its triggers replace the planner's, the orchestrator's, the analyzer's, and the curator's start prompts and schedules in Go, so the built-in roles are defined by their files alone (patch).
+
 ## 1.1.20 - 2026-11-02
 
 - S-0424 The template ships baseline formulas for importing a repository from the board and for the analyzer's cadence, the board's import starts its formula, and each is run once here (patch).
