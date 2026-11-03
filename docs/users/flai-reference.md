@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-11-02
+updated: 2026-11-03
 status: active
 ---
 
@@ -385,7 +385,7 @@ The project's default agent: the harness, model, and options every new story get
 flai agent
 ```
 
-Who works a story is an agent: a harness (the command line or API that runs it, such as claude-code), a model (such as claude-opus-5-5), and options for that harness (config, key=value). It may name a provider, the endpoint the model's calls go to, by a name the host sets with flai serve agent provider &lt;name&gt; (ADR-0129); with none, the harness's own. The project's default is kept in system-flow.yaml; every story created while it is set gets a copy in its front matter, which flai story new --harness/--model/--provider/--agent-config and flai edit override for that story. Stories created before, or with no default set, carry none.
+Who works a story is an agent: a harness (the command line or API that runs it, such as claude-code), a model (such as claude-opus-5-5), and options for that harness (config, key=value). It may name a provider, the endpoint the model's calls go to, by a name the host sets with flai serve agent provider &lt;name&gt; (ADR-0129); with none, the harness's own. The project's default is kept in system-flow.yaml; every story created while it is set gets a copy in its front matter, which flai story new --harness/--model/--provider/--agent-config and flai edit override for that story. Stories created before, or with no default set, carry none. flai serve starts a story whose agent names no harness with the default as it is then, under what the story's agent does say; a story that names a harness keeps its own (ADR-0251).
 
 An agent may also name roles: the agents for the work a story's agent hands to sub-agents, explore and verify (S-0189), each with a harness, model, and config of its own (--role-harness, --role-model, --role-config). flai serve starts claude-code with each role's model over the project's sub-agent definition for it.
 

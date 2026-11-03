@@ -636,7 +636,7 @@
 
 		{#if shows('default-agent')}
 			<section data-testid="section-default-agent">
-				<h2 class="mb-2 font-medium">Default agent, for this project's new stories</h2>
+				<h2 class="mb-2 font-medium">Default agent, for stories that name none of their own</h2>
 				{@render gate('default_agent')}
 				<AgentFields
 					bind:harness={dHarness}

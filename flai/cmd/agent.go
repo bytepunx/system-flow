@@ -26,7 +26,9 @@ model's calls go to, by a name the host sets with flai serve agent provider
 in system-flow.yaml; every story created while it is set gets a copy in its
 front matter, which flai story new --harness/--model/--provider/--agent-config
 and flai edit override for that story. Stories created before, or with no
-default set, carry none.
+default set, carry none. flai serve starts a story whose agent names no harness
+with the default as it is then, under what the story's agent does say; a story
+that names a harness keeps its own (ADR-0251).
 
 An agent may also name roles: the agents for the work a story's agent hands
 to sub-agents, explore and verify (S-0189), each with a harness, model, and
@@ -169,7 +171,7 @@ func (a *app) showAgent(commit string) error {
 		fmt.Fprintln(a.out, "no default agent; new stories carry none (flai agent set --harness ... --model ...)")
 		return nil
 	}
-	fmt.Fprintf(a.out, "default agent: %s\n  every story created from now on gets it; flai story new and flai edit override it for one story\n", m.Agent)
+	fmt.Fprintf(a.out, "default agent: %s\n  every story created from now on gets a copy, and flai serve starts any story whose agent names no harness with it; flai story new and flai edit override it for one story\n", m.Agent)
 	return nil
 }
 

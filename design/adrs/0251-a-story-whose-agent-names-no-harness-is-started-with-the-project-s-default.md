@@ -25,7 +25,7 @@ The planner, the orchestrator, the analyzer, the curator, and the roles a projec
 - A story whose agent names a harness keeps that agent whole. A later change to the default does not reach it, as ADR-0037 says: a story already worked does not change model under its agent.
 - A story with no agent and a project with no default still names no harness. The host's command (`flai serve agent set -- <program>`) starts it, as before, and with neither the start is refused, as before.
 - Nothing is written to the story. Its front matter still says only what was given for it, and `flai story new` still copies the default into a new story.
-- A story whose agent says `harness: none` names a harness, so it is still run elsewhere ([ADR-0242](0242-a-story-whose-agent-names-harness-none-is-worked-by-an-agent-flai-does-not.md)).
+- A story whose agent says `harness: none` names a harness, so it is still run elsewhere ([ADR-0242](0242-a-story-s-agent-whose-harness-is-none-runs-elsewhere-and-flai-serve-starts.md)).
 
 ## Consequences
 
