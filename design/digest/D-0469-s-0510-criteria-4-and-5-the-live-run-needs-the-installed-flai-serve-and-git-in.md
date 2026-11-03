@@ -2,14 +2,14 @@
 id: D-0469
 title: "S-0510 criteria 4 and 5: the live run needs the installed flai serve and git in the container, so move it to S-0565: Recommended: say yes, as you answered for S-0508 on TH-0812 (D-0466) and for…"
 kind: answer
-sources: [TH-0814]
+sources: [TH-0814, S-0510]
 topics: [harness, docker, manifest, flai, cli, go, template, conventions, code, all]
 paths: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/check/check.go, flai/internal/check/image.go, flai/internal/check/image_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, scripts/agent-image.sh, Makefile, scripts/README.md, flai/images/system-flow/Dockerfile, system-flow.yaml, design/system/project-manifest.md, docs/operators/settings.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, docs/users/flai.md, docs/operators/index.md, docs/operators/runbooks/install.md, design/system/flai-cli.md, design/tech/docker.md, design/issues/summary.md, design/issues, flai/internal/manifest/agent.go, flai/internal/manifest/agent_test.go, flai/internal/workitem/front-matter-fields.txt, flai/internal/workitem/store_test.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/cmd/check.go, flai/cmd/check_stats_test.go, flai/internal/check/story.go, flai/internal/verify/story.go, design/issues/I-0255-go-build-s-vcs-stamping-fails-with-git-exit-status-128-inside-the-agent.md, scripts/env.sh, scripts/flai-build.sh]
 date: 2026-11-02
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-0820, TH-0822]
 ---
 
 # D-0469 S-0510 criteria 4 and 5: the live run needs the installed flai serve and git in the container, so move it to S-0565: Recommended: say yes, as you answered for S-0508 on TH-0812 (D-0466) and for…
@@ -40,4 +40,6 @@ The answer:
 Source: design/digest/D-0466-s-0508-the-live-container-run-criterion-6-t-2169-s-first-half-cannot-run-before.md
 ```
 
-Source: TH-0814.
+S-0510's narrative records the move. From its Decisions (`wip/archive/agents/S-0510.md`): "Criterion 5's live run needs the installed `flai serve` to carry the layer, and the close-out needs git inside the container (I-0215, S-0517)", and "T-2176 was retitled to the hand run and the docs. The live run is TH-0814's to place."
+
+Sources: TH-0814, S-0510.

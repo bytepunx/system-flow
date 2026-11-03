@@ -2,7 +2,7 @@
 id: D-0455
 title: "Run four links and four removals under .claude/agents in S-0553's worktree (ADR-0236): Recommended: alex, run agent-S-0553's commands as written in…"
 kind: answer
-sources: [TH-0794]
+sources: [TH-0794, S-0553]
 topics: [cli, orchestration, planning, template, conventions, flai, go, code, all]
 paths: [design/adrs, design/adrs/README.md, design/system/agent-adapters.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, template/CHANGELOG.md, flai/internal/roles/definition.go, flai/internal/roles/definition_test.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/guard/writes.go, flai/internal/guard/writes_test.go, flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/cmd/role.go, flai/cmd/role_test.go, ".claude/agents/planner.md", ".claude/agents/orchestrator.md", ".claude/agents/analyzer.md", ".claude/agents/curator.md", template/root/.claude/agents/planner.md, template/root/.claude/agents/orchestrator.md, template/root/.claude/agents/analyzer.md, template/root/.claude/agents/curator.md, flai/internal/harness/harness.go, flai/internal/serve/orchestrate_test.go, design/issues/I-0244-testaheldwaitfailsonatruncatedstory-times-out-instead-of-failing-on-the.md, design/issues/summary.md, docs/operators/settings.md, flai/internal/pilot/run_test.go, flai/internal/serve/plan_test.go, design/issues/I-0245-flai-guard-refuses-a-sub-agent-every-flai-role-subcommand-the-reads-list-show.md]
 date: 2026-11-02
@@ -43,4 +43,6 @@ For the operator alone: flai serve does not confirm this after orchestration.per
 Source: design/adrs/0106-a-story-whose-branch-changes-a-path-claude-code-protects-is-accepted-by-the.md § Decision
 ```
 
-Source: TH-0794.
+S-0553's narrative gives the reason the operator ran them. From its Decisions (`wip/archive/agents/S-0553.md`): "T-2352's writes are the operator's (TH-0794): a symbolic link and a `git rm` cannot go through `permission_prompt`, and the conventions forbid writing `.claude/` through the shell." A later story that must add, move, or remove a link or a file under `.claude/` hands those commands to the operator the same way.
+
+Sources: TH-0794, S-0553.

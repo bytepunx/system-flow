@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1967.8622
-accrued_seconds: 1507342
-tasks_completed: 1777
-last_run: 2026-11-03T01:31:09Z
+accrued_cost: 1968.1997
+accrued_seconds: 1507390
+tasks_completed: 1779
+last_run: 2026-11-03T02:41:28Z
 ---
 
 # Orchestrator activity
@@ -12467,6 +12467,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 12
 - Cost: 0.1762 USD, estimated
+
+### 2026-11-03T02:41:15Z
+
+- Summary: release-due S-0510: did not publish. Under judgement (1 story, 27.78 USD/week, met false) I judged the batch releasable. release_publish refused because the project has a publish formula (ADR-0240). I did not run the formula: its step 2, --require-met, always stops under judgement (TH-0811, unanswered). I opened a thread on S-0510 asking the operator to answer TH-0811 or publish by hand.
+- Items: S-0510
+- Seconds: 35
+- Cost: 0.1222 USD, estimated
+
+### 2026-11-03T02:41:28Z
+
+- Summary: S-0510 is still not released. Nothing in this project can publish it while the release policy is judgement.
+- Items: none
+- Seconds: 13
+- Cost: 0.2153 USD, estimated
 
 ## Refusals
 

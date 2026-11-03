@@ -6,8 +6,8 @@ sources: [S-0419]
 topics: [planning, orchestration, analysis, template, go, code]
 paths: [flai/internal/roles/baseline/planner.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/roles/baseline/analyzer.md, flai/internal/roles/baseline/curator.md, flai/internal/roles/baseline_test.go, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/analyzer.md, template/root/design/workflows/roles/curator.md]
 date: 2026-10-31
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0250-a-role-file-s-start-prompt-is-a-text-template-in-its-front-matter-s-start-field.md#consequences"
 asked_again: []
 cited: []
 ---
