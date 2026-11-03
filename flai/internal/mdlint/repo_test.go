@@ -223,6 +223,14 @@ func lintTree(root string, changed []string) (failing, outside []string, n int, 
 		if !strings.HasSuffix(path, ".md") {
 			return nil
 		}
+		// A link whose target is missing, as the strategic agents' committed
+		// links into .flai-cache/agents are until flai role definition --write
+		// runs (ADR-0236), is left out, as markdownlint-cli2 leaves it out.
+		if e.Type()&os.ModeSymlink != 0 {
+			if _, err := os.Stat(path); os.IsNotExist(err) {
+				return nil
+			}
+		}
 		data, err := os.ReadFile(path)
 		if err != nil {
 			return err
