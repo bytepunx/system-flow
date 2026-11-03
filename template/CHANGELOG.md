@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 1.1.22 - 2026-11-03
+
+- S-0510 A project's manifest names an image layer for its test tiers' tools, flai serve runs it, flai check warns when it is not built, and this repository's layer runs the close-out inside the container (patch).
+
 ## 1.1.21 - 2026-11-03
 
 - S-0554 A role file's start prompt and its triggers replace the planner's, the orchestrator's, the analyzer's, and the curator's start prompts and schedules in Go, so the built-in roles are defined by their files alone (patch).
