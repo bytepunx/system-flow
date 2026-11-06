@@ -7,7 +7,7 @@ status: backlog
 parent: E-0032
 owner: alex
 created: 2026-11-06T21:39:42Z
-updated: 2026-11-06T21:57:57Z
+updated: 2026-11-06T22:37:10Z
 transitions: []
 tags: [kluster, flai, cli]
 topics: [kluster, manifest, host-actions]
@@ -39,10 +39,10 @@ cost_of_delay:
   at: 2026-11-06T21:50:05Z
 forecast:
   duration: 47m
-  delivery: 2026-11-07T12:22:00Z
-  basis: "Its own forecast of 47m; 29th in the pull order with an in-progress limit of 5, behind S-0545, S-0520, S-0575, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0241, S-0543, S-0555, S-0556, S-0557, S-0558, S-0559, S-0560, S-0561, S-0562, S-0564, S-0565, S-0567, S-0568, S-0569, S-0570, S-0571 and S-0576."
+  delivery: 2026-11-07T12:24:00Z
+  basis: "Its own forecast of 47m; 26th in the pull order with an in-progress limit of 5, behind S-0520, S-0575, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0241, S-0543, S-0555, S-0556, S-0557, S-0558, S-0559, S-0560, S-0561, S-0562, S-0564, S-0565, S-0567, S-0568, S-0569, S-0570, S-0571 and S-0576."
   by: flai
-  at: 2026-11-06T21:57:57Z
+  at: 2026-11-06T22:37:10Z
 finalized:
   by: orchestrator
   at: 2026-11-06T21:53:26Z
