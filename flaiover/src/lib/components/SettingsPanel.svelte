@@ -8,6 +8,7 @@
 	import { resolve } from '$app/paths';
 	import { api } from '$lib/api';
 	import { agentFrom, configText, parseConfig } from '$lib/agent';
+	import { rebase } from '$lib/form';
 	import { localTime } from '$lib/localtime';
 	import { projectState } from '$lib/project.svelte';
 	import {
@@ -51,7 +52,8 @@
 	/** A rotated token's login link or MCP token, shown once. */
 	let once = $state<Record<string, string>>({});
 
-	// the forms, filled from what flai said
+	// the forms, filled from what flai said; a read after a save keeps what was typed and not saved
+	// in the other sections (S-0574)
 	let dHarness = $state('');
 	let dModel = $state('');
 	let dProvider = $state('');
@@ -89,34 +91,109 @@
 	/** The name of the sub-project whose Remove is waiting for a yes. */
 	let confirmingSub = $state<string | null>(null);
 
-	function fill(v: SettingsView) {
-		const h = v.host;
-		if (!h) return;
-		dHarness = h.default_agent?.harness ?? '';
-		dModel = h.default_agent?.model ?? '';
-		dProvider = h.default_agent?.provider ?? '';
-		dConfig = configText(h.default_agent?.config);
-		aName = h.agent.name ?? '';
-		aCommand = lines(h.agent.command);
-		harnessForm = Object.fromEntries(
-			Object.entries(h.agent.harnesses).map(([n, x]) => [
-				n,
-				{
-					program: x.program,
-					args: lines(x.args),
-					guard: x.guard ?? '',
-					deny_protected: x.deny_protected ?? false
-				}
-			])
-		);
-		providerForms = Object.fromEntries(
-			Object.entries(h.agent.providers ?? {}).map(([n, p]) => [n, providerForm(p)])
-		);
-		checkForm = Object.fromEntries(h.checks.commands.map((c) => [c.name, lines(c.command)]));
-		timeout = String(h.checks.timeout_minutes);
+	/** Every field fill writes, as one value, so that a read can be laid under what was typed. */
+	type Filled = {
+		dHarness: string;
+		dModel: string;
+		dProvider: string;
+		dConfig: string;
+		aName: string;
+		aCommand: string;
+		harnessForm: Record<string, HarnessForm>;
+		providerForms: Record<string, ProviderForm>;
+		checkForm: Record<string, string>;
+		timeout: string;
+	};
+	/** What fill last wrote: a field that differs from it now was typed and not yet saved. */
+	let seed: Filled | null = null;
+
+	function filled(h: NonNullable<SettingsView['host']>): Filled {
+		return {
+			dHarness: h.default_agent?.harness ?? '',
+			dModel: h.default_agent?.model ?? '',
+			dProvider: h.default_agent?.provider ?? '',
+			dConfig: configText(h.default_agent?.config),
+			aName: h.agent.name ?? '',
+			aCommand: lines(h.agent.command),
+			harnessForm: Object.fromEntries(
+				Object.entries(h.agent.harnesses).map(([n, x]) => [
+					n,
+					{
+						program: x.program,
+						args: lines(x.args),
+						guard: x.guard ?? '',
+						deny_protected: x.deny_protected ?? false
+					}
+				])
+			),
+			providerForms: Object.fromEntries(
+				Object.entries(h.agent.providers ?? {}).map(([n, p]) => [n, providerForm(p)])
+			),
+			checkForm: Object.fromEntries(h.checks.commands.map((c) => [c.name, lines(c.command)])),
+			timeout: String(h.checks.timeout_minutes)
+		};
 	}
 
-	async function load() {
+	function current(): Filled {
+		return $state.snapshot({
+			dHarness,
+			dModel,
+			dProvider,
+			dConfig,
+			aName,
+			aCommand,
+			harnessForm,
+			providerForms,
+			checkForm,
+			timeout
+		});
+	}
+
+	/** The saved section's own fields take what flai answered, a reset's defaults included. */
+	function takeSaved(out: Filled, fresh: Filled, section: string) {
+		fresh = structuredClone(fresh);
+		if (section === 'default') {
+			out.dHarness = fresh.dHarness;
+			out.dModel = fresh.dModel;
+			out.dProvider = fresh.dProvider;
+			out.dConfig = fresh.dConfig;
+		} else if (section === 'agent') {
+			out.aName = fresh.aName;
+			out.aCommand = fresh.aCommand;
+		} else if (section === 'checks') {
+			out.checkForm = fresh.checkForm;
+			out.timeout = fresh.timeout;
+		} else if (section.startsWith('harness-')) {
+			const name = section.slice('harness-'.length);
+			if (name in fresh.harnessForm) out.harnessForm[name] = fresh.harnessForm[name];
+		} else if (section.startsWith('provider-')) {
+			const name = section.slice('provider-'.length);
+			if (name in fresh.providerForms) out.providerForms[name] = fresh.providerForms[name];
+		}
+	}
+
+	/** Fills the forms from a read, keeping what was typed and not saved outside saved, the section
+	 * whose save led to the read (S-0574). */
+	function fill(v: SettingsView, saved?: string) {
+		const h = v.host;
+		if (!h) return;
+		const fresh = filled(h);
+		const out = seed ? rebase(seed, current(), fresh) : structuredClone(fresh);
+		if (saved) takeSaved(out, fresh, saved);
+		seed = fresh;
+		dHarness = out.dHarness;
+		dModel = out.dModel;
+		dProvider = out.dProvider;
+		dConfig = out.dConfig;
+		aName = out.aName;
+		aCommand = out.aCommand;
+		harnessForm = out.harnessForm;
+		providerForms = out.providerForms;
+		checkForm = out.checkForm;
+		timeout = out.timeout;
+	}
+
+	async function load(saved?: string) {
 		try {
 			const r = await api('/api/settings');
 			const body = await r.json();
@@ -126,7 +203,7 @@
 			}
 			error = null;
 			view = body;
-			fill(body);
+			fill(body, saved);
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
 		}
@@ -150,7 +227,7 @@
 				return null;
 			}
 			said[section] = { ok: true, text: 'saved' };
-			await load();
+			await load(section);
 			return body;
 		} finally {
 			busy = null;

@@ -1204,4 +1204,84 @@ describe('SettingsPanel (S-0105)', () => {
 			expect(q('section-planning')).toBeNull();
 		});
 	});
+
+	// S-0574: a save reads the settings again; what was typed and not saved elsewhere stays.
+	describe('a read after a save', () => {
+		/** The backend, with flai's own answer to a harness save written into what it reads next. */
+		const answering = (v: SettingsView, onHarness: (sent: Sent) => void) => {
+			const sent = backend(v);
+			const plain = api.getMockImplementation()!;
+			api.mockImplementation(async (url: string, init?: { method?: string; body?: string }) => {
+				if (init?.method === 'POST') {
+					const body = JSON.parse(init.body!) as Sent;
+					if (body.kind === 'harness') onHarness(body);
+				}
+				return plain(url, init);
+			});
+			return sent;
+		};
+		const harness = <T extends HTMLElement>(id: string) =>
+			q('harness-claude-code')!.querySelector<T>(`[data-testid="${id}"]`)!;
+		const type = (el: HTMLInputElement | HTMLTextAreaElement, value: string) => {
+			el.value = value;
+			el.dispatchEvent(new Event('input', { bubbles: true }));
+		};
+
+		it('keeps an unsaved edit in another section as typed', async () => {
+			const v = view(true, true);
+			const sent = answering(v, () => {});
+			await show('harnesses');
+			type(q<HTMLTextAreaElement>('agent-command')!, 'claude\n-p\nnew');
+			type(q<HTMLInputElement>('agent-name')!, 'renamed');
+			type(harness<HTMLTextAreaElement>('harness-args'), '--verbose');
+			harness<HTMLButtonElement>('save-harness').click();
+			await settle();
+			expect(sent[0]).toMatchObject({ kind: 'harness', name: 'claude-code' });
+			expect(api.mock.calls.filter(([, init]) => !init?.method).length).toBeGreaterThan(1);
+			expect(q<HTMLTextAreaElement>('agent-command')!.value).toBe('claude\n-p\nnew');
+			expect(q<HTMLInputElement>('agent-name')!.value).toBe('renamed');
+		});
+
+		it('shows what flai answered in the section saved', async () => {
+			const v = view(true, true);
+			answering(v, () => {
+				v.host!.agent.harnesses['claude-code'] = {
+					...v.host!.agent.harnesses['claude-code'],
+					args: ['--verbose', '--as-flai-wrote-it'],
+					set: true
+				};
+			});
+			await show('harnesses');
+			type(harness<HTMLTextAreaElement>('harness-args'), '--verbose');
+			harness<HTMLButtonElement>('save-harness').click();
+			await settle();
+			expect(harness<HTMLTextAreaElement>('harness-args').value).toBe(
+				'--verbose\n--as-flai-wrote-it'
+			);
+		});
+
+		it('shows the defaults after Back to the defaults, over what was typed', async () => {
+			const v = view(true, true);
+			v.host!.agent.harnesses['claude-code'] = {
+				...v.host!.agent.harnesses['claude-code'],
+				args: ['--set-by-the-host'],
+				set: true
+			};
+			answering(v, (body) => {
+				if (body.reset)
+					v.host!.agent.harnesses['claude-code'] = {
+						program: 'claude',
+						args: ['--permission-mode', 'acceptEdits'],
+						set: false
+					};
+			});
+			await show('harnesses');
+			type(harness<HTMLTextAreaElement>('harness-args'), '--typed');
+			harness<HTMLButtonElement>('reset-harness').click();
+			await settle();
+			expect(harness<HTMLTextAreaElement>('harness-args').value).toBe(
+				'--permission-mode\nacceptEdits'
+			);
+		});
+	});
 });
