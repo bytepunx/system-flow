@@ -6,7 +6,7 @@ title: flai guard still lists the verify MCP tool among a sub-agent's reads, tho
 status: backlog
 owner: alex
 created: 2026-11-01T10:44:38Z
-updated: 2026-11-05T01:43:38Z
+updated: 2026-11-06T18:15:23Z
 transitions: []
 tags: [flai, template]
 topics: [guard, testing]
@@ -51,10 +51,10 @@ cost_of_delay:
   at: 2026-11-05T01:41:54Z
 forecast:
   duration: 40m
-  delivery: 2026-11-05T07:31:00Z
-  basis: "flai forecast's 22m (median 92 s per unit of size over 118 large-band improvement stories, size 14), raised to 40m because the story first proposes narrowing a guard rule a recorded decision (D-0446) kept and keeps three copies of the orchestrator's role file in step; delivery is flai's 07:13Z moved by the 18m added, 13th in the pull order."
-  by: planner-S-0556
-  at: 2026-11-05T01:41:54Z
+  delivery: 2026-11-07T00:16:00Z
+  basis: "Its own forecast of 40m; 13th in the pull order with an in-progress limit of 5, behind S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0520, S-0241, S-0543, S-0545 and S-0555."
+  by: flai
+  at: 2026-11-06T18:15:23Z
 finalized:
   by: orchestrator
   at: 2026-11-05T01:43:38Z
