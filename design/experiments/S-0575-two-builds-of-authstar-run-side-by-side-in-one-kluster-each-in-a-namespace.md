@@ -97,6 +97,12 @@ The golden path ran from a copy of the commit's `integration/scripts` in `bin/s-
 
 `bin/s-0575/golden.sh <namespace> <tokens> <log>` sets both variables and the namespace's operator tokens, runs the scenario, and kills the port-forwards it leaves behind.
 
+### Teardown and promotion
+
+`bin/s-0575/ns-down.sh s-0901 <logs>` deletes the namespace and waits for it to go, deletes its RabbitMQ vhost and user, and drops its three Postgres databases and its ClickHouse database. It leaves the namespace's signet bundles and policies, for want of a delete (below). The golden path was then run against `s-0902` again.
+
+`bin/s-0575/promote.sh s-0901 /tmp/S-0575/src-A <logs>` promotes build A as an acceptance would. It deletes the Deployments and CronJobs kluster made in `authstar`, since `kubectl apply` would only merge into those, then runs `ns-up.sh authstar s-0901 …`. In `authstar` the database prefix is empty, so it reuses kluster's `tower`, `keep`, `herald`, and `chronicle` databases and the `authstar` vhost, with a new RabbitMQ user `authstar`. The golden path then ran against `authstar` and against `s-0902`.
+
 ## Results
 
 ### Bring-up
@@ -227,9 +233,80 @@ Two more cost runs:
 - The scenario's port-forwards outlive it. `port_forward` `disown`s each one, so the EXIT trap's `kill $(jobs -p)` never reaches them. A second run then reached the first run's namespace on the same local ports, and passed or failed against the wrong build. `golden.sh` kills them after each run, and two namespaces' scenarios cannot run at once on the default ports.
 - Any curl transport error ends the scenario under `set -e`, with no `FAIL` line and no summary.
 
+### Teardown
+
+Deleting `s-0901` with its eight services running took 69 seconds, and 70 in the run before. Two earlier teardowns, after deploys that had stopped before any pod started, took 40 and 37 seconds, 7 and 6 of them for the namespace. The last run:
+
+| Step | Seconds |
+|------|---------|
+| Delete the namespace and wait for it to go | 37 |
+| Delete the RabbitMQ vhost and user | 28 |
+| Drop three Postgres and one ClickHouse database | 4 |
+
+Afterwards `s-0901`, its vhost, and its databases were gone, and `s-0902`'s and the default namespace's remained. Every pod in the cluster was `Running` or `Completed`. The golden path against `s-0902` passed again, exit 0 in 11 seconds.
+
+Signet still holds `s-0901`'s four policies, as `signet policy list` showed after the teardown, each once though two of the namespace's deploys ensured them. Its eight bundles stay too, since nothing deleted them. Only a workload whose SPIFFE ID names `s-0901` could use them. But a story serial is never reused, so they only accumulate.
+
+tower and herald in `s-0902` had restarted three and two times, with exit 0. That is their design: each golden-path run's herald key rotation changes their signet bundles, and each logs `signet bundle changed -- acquired restart lock, shutting down for Kubernetes to restart` about 10 seconds after `rotate-keys`.
+
+### Promotion
+
+| Step | Seconds |
+|------|---------|
+| Delete kluster's Deployments and CronJobs in `authstar` | 0 |
+| Load eight images | 33 |
+| Namespace, RabbitMQ user, databases, signet | 35 |
+| Apply manifests and wait for eight rollouts | 19 |
+| **Total** | **87** |
+
+All eight services in `authstar` then ran build A's images, `docker.io/bytepunx/authstar-<service>:s-0901`. The first golden path against `authstar` failed one step:
+
+```text
+FAIL: herald send-and-verify -- unexpected outcome (communication.failed):
+payload decryption failed: error:02000079:rsa routines::oaep decoding error
+```
+
+The same run's step 4 had rotated herald's key, and tower took the new key only on its restart about 10 seconds later. The scenario sends the invite within a second of the rotation, so tower encrypted it to the old key. A second run 45 seconds later passed, exit 0 in 8 seconds, and `s-0902` passed alongside it, exit 0 in 7 seconds. `s-0901` and `s-0902` never showed this because the scenario's earlier runs there had rotated the key already. It is a race in the scenario's first run after any fresh deploy, not a cost of the namespace.
+
+### What kluster lacks
+
+For flai to do the above with no hand work, as S-0577 to S-0579 mean it to:
+
+| # | Lack | What the experiment did instead |
+|---|------|---------------------------------|
+| 1 | An image import. There is no `kluster load` or equivalent; `kluster --help` lists `charts`, `down`, `kubeconfig`, `setup`, `status`, `up`, and `use`. | `docker save` into `ctr -n k8s.io images import` in the k3d node container, 31s to 34s for eight images |
+| 2 | A deploy into a namespace. The `authstar` profile deploys authstar itself, in Go, into the constant `authStarNamespace = "authstar"`, from Docker Hub's `latest`. | The commit's own manifests, renamed, through `kubectl apply` |
+| 3 | Per-namespace shared-service setup: a vhost and user, databases, signet bundles and policies for a namespace it was not built for. kluster-lib has `SeedSignetBundle` and `EnsureSignetPolicy`, but no command offers them. | `rabbitmqctl`, `psql`, and `clickhouse-client` through `kubectl exec`, and `storens` over kluster-lib |
+| 4 | A teardown of a namespace and what it made in the shared services, signet's bundles and policies included | `ns-down.sh`, with signet's left behind |
+| 5 | Machine-readable status. `kluster status` has no flag beyond `--help` and prints a table of `NAME`, `RUNNING`, and `AGE`; `kluster up` reports progress in prose. Neither says whether an addon answers. | `kubectl` and each service's own client, by hand |
+| 6 | A pinned signet. `kluster charts list` pins every addon but signet; `up` warned `no pinned version for addon "signet"` and installed chart 0.11.3. The `authstar` profile's `latest` images do not provision a tenant against it. | Local builds |
+| 7 | A Dex that works for authstar's tenant: no `https://acme.authstar.app/oauth2/dex/callback` redirect URI, and a password hash that does not match `password` | Both changed in the cluster's Dex secret |
+
+Three lacks are outside kluster. In signet, a bundle with config and no secrets fails `SyncBundle`, so kluster-lib's `SeedSignetBundle` cannot seed steward or web. Also in signet, the CLI cannot delete a bundle's secrets or config, though the admin API has `DeleteSecret` and `DeleteConfig`. In authstar, the harness has drifted from its services: the four changes under [What it took](#what-it-took), the README's claim that steward and web do not read signet, the scenario's leaked port-forwards, and the tenant host fixed at `acme.authstar.app`.
+
+### What was read and what was changed
+
+Nothing was committed in authstar, signet, or kluster. At the end each stood at the commit it had at the start, with no commit made since 21:57Z on any branch: authstar `e02e430`, signet `8389600`, kluster `6d7a87c`. No file in any of the three changed after the story started. authstar's 26 and signet's one uncommitted changes, all under `design/digest` and `wip`, predate it (last written 21:13Z and 17:29Z), and kluster's checkout is clean.
+
+| Repository | Read | Run | Changed, in a copy outside it |
+|------------|------|-----|-------------------------------|
+| authstar | Sources at `e02e430` and `af55c04`, by `git archive`; `integration/` | Each service's `Dockerfile`; the scenario, from the copy | `lib.sh` and `scenario-golden-path.sh` in `bin/s-0575/scripts`, by variables; the manifests and config, renamed on their way into the cluster |
+| signet | The server's sync, bundle, and listener code; the chart's values | The installed CLI 0.10.3, for `status` | Nothing |
+| kluster | The `authstar`, `signet`, `spire`, and `dex` profiles and addons | The installed `kluster` 1.3.1, for `up`, `kubeconfig`, and `charts list` | `kluster-lib` in `bin/s-0575/kluster-lib`: one function, and the added `storens` |
+
 ## Recommendation
 
-Not settled yet. The choice between adopt, adapt, and drop rests on the story namespaces, which T-2467 and T-2468 try.
+**Adapt.** A namespace per story over one shared kluster works for authstar. Two builds ran at once, each passed the golden path on its own vhost, databases, and signet bundles, and one was torn down and another promoted with the rest still working. A story costs about 90 seconds to deploy and 70 to tear down, plus whatever its change rebuilds, against 11m31s for the cluster. So S-0576's ADR should take one cluster per project and a namespace per story, named for the story's serial, with these per-namespace settings:
+
+- a RabbitMQ vhost and user of the namespace's name
+- databases named with the namespace's prefix
+- signet bundles and policies under a signet namespace equal to the Kubernetes namespace, with fresh keys and operator tokens
+
+Adapt rather than adopt, for three reasons:
+
+- **The deploy is the project's, not kluster's.** What made a namespace was authstar's manifests and config with the namespace substituted, and per-service settings only authstar knows: which databases, which secrets are keys, which services grant which writes. The ADR should have a project name a deploy command that takes the namespace, its image tag, and the shared services' endpoints, as S-0578 plans, and flai should run it. kluster should keep the cluster and the shared services, and gain an image import, a namespace setup and teardown for the shared services, signet's included, and a JSON status, lacks 1 and 3 to 5 above. Those changes are kluster's, made in kluster.
+- **A baseline has to pass before any namespace means anything.** kluster's own `authstar` deployment failed at step 1, and the golden path passed only after six fixes to drift between authstar, signet, and kluster. Those go to the three repositories as issues. Until they land, flai's review check against a namespace would fail for reasons that have nothing to do with the story.
+- **Two things a namespace cannot own today.** The tenant's host is fixed at `acme.authstar.app`, so a browser demo of two namespaces at once needs a host per namespace in portcullis's config and Dex's client. And the scenario's fixed local ports and leaked port-forwards stop two namespaces' checks running at once. S-0579's review checks should run one namespace at a time, or give each its own ports, until authstar changes.
 
 ## Scripts
 
@@ -521,8 +598,9 @@ func main() {
 # S-0575: tear down a story namespace and what it made in the shared services,
 # timing it into <logs>/ns-<namespace>-down.times.
 #   ns-down.sh <namespace> <logs dir>
-# Signet keeps the namespace's bundles and policies: neither the signet CLI nor
-# kluster-lib offers a delete for them.
+# Signet keeps the namespace's bundles and policies. Its admin API has
+# DeleteSecret, DeleteConfig, and DeletePolicy, but the signet CLI 0.10.3
+# removes only a policy, by ID, and kluster-lib exposes none of the three.
 set -euo pipefail
 ns="$1" logs="$2"
 prefix="${ns//-/}_"
