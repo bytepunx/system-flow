@@ -6,7 +6,7 @@ status: open
 count: 1
 first_reported: 2026-11-06T22:37:17Z
 last_reported: 2026-11-06T22:37:17Z
-updated: 2026-11-06T22:37:17Z
+updated: 2026-11-06T23:25:47Z
 ---
 
 # I-0264 flai check finds `agent.image` outside the story at close-out
@@ -24,3 +24,5 @@ flai check found outside the story:
 It came from `scripts/close-out.sh S-0520` run by hand inside `flai-agent-claude-code:local` (`scripts/agent-container.sh S-0520 -- scripts/close-out.sh S-0520`), where `docker` is never on `PATH`. So every close-out inside an agent container records this note as an issue through `--record-issues`, and its commit step then stops on the uncommitted issue file, since commits are the host's (ADR-0253). A check that knows it runs inside a container, or one scoped to a story that changes neither the manifest's `agent.image.layer` nor its Dockerfile, could leave the note out as ADR-0171 does for `components.examples`.
 
 ## Remediation
+
+Story S-0582 remediates this issue, created from it at 2026-11-06T23:25:47Z.
