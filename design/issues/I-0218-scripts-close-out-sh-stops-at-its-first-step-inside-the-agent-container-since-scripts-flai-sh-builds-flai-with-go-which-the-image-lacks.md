@@ -2,12 +2,12 @@
 id: I-0218
 title: scripts/close-out.sh stops at its first step inside the agent container, since scripts/flai.sh builds flai with go, which the image lacks
 class: blocker
-status: open
+status: closed
 count: 1
 cost: 10m
 first_reported: 2026-10-28T12:31:00Z
 last_reported: 2026-10-28T12:31:00Z
-updated: 2026-10-28T12:53:17Z
+updated: 2026-11-06T22:38:55Z
 ---
 
 # I-0218 scripts/close-out.sh stops at its first step inside the agent container, since scripts/flai.sh builds flai with go, which the image lacks
@@ -24,3 +24,4 @@ S-0505 T-2166: agent-S-0513 ran `scripts/close-out.sh S-0513` in flai-agent-clau
 ## Remediation
 
 Story S-0520 remediates this issue, created from it at 2026-10-28T12:53:17Z.
+Closed 2026-11-06T22:38:55Z: fixed in three parts. S-0518: scripts/flai.sh runs the worktree's bin/flai or the installed flai when go is absent, in place of building with go. S-0520: ADR-0253's mounts of the main checkout's wip and system-flow.yaml read-only and .flai-cache/verify read-write, plus git safe.directory for the main checkout, in the container adapter (storygit.MainMounts, TestTheContainerRunsDockerWithEightMountsFiveOfTheMainCheckoutsAndVariablesByName) and in scripts/agent-container.sh, and the markdown lint's fallback to the worktree's configuration (TestVerifyRunsWithAMainCheckoutOfOnlyGitWipAndManifest). S-0510: the project's layer image for the tiers' tools. Checked by hand on 2026-11-06: the close-out inside flai-agent-claude-code:local passed rebase, sync, narrative, and check and stopped only at the gofmt tier, which that image lacks.
