@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 76
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 10
-      output: 82
-      cache_read: 1361590
-      cache_write: 9078
-      cost: 0.4885
+      input: 14
+      output: 4671
+      cache_read: 1349380
+      cache_write: 30767
+      cost: 0.5723
 ---
 # T-2232 An ADR refining ADR-0203 records that a story's container mounts the main checkout's wip and manifest read-only and its verify folder read-write, so flai verify and the close-out run inside it against the main checkout's state
 

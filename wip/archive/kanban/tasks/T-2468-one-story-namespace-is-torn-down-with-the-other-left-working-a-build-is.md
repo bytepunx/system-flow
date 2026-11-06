@@ -3,16 +3,37 @@ id: T-2468
 type: task
 nature: experiment
 title: One story namespace is torn down with the other left working, a build is promoted to the default namespace, and the results and recommendation name what kluster lacks
-status: backlog
+status: done
 parent: S-0575
 owner: alex
 created: 2026-11-06T21:41:42Z
-updated: 2026-11-06T21:41:42Z
-transitions: []
+updated: 2026-11-06T23:16:36Z
+transitions:
+  - to: ready
+    at: 2026-11-06T23:08:05Z
+    by: agent-S-0575
+  - to: in-progress
+    at: 2026-11-06T23:08:06Z
+    by: agent-S-0575
+  - to: done
+    at: 2026-11-06T23:16:36Z
+    by: agent-S-0575
 stream: S-0575
 tags: [kluster, experiment]
-touches: [design/experiments/S-0575-two-builds-of-authstar-run-side-by-side-in-one-kluster-each-in-a-namespace.md]
+touches: [design/experiments/S-0575-two-builds-of-authstar-run-side-by-side-in-one-kluster-each-in-a-namespace.md, design/experiments/README.md]
 after: [T-2467]
+usage:
+  source: log
+  seconds: 510
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 78
+      output: 23350
+      cache_read: 10775618
+      cache_write: 76025
+      cost: 3.2306
 ---
 # T-2468 One story namespace is torn down with the other left working, a build is promoted to the default namespace, and the results and recommendation name what kluster lacks
 

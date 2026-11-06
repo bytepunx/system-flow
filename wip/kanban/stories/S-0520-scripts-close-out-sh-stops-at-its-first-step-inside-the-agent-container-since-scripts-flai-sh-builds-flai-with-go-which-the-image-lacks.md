@@ -3,10 +3,10 @@ id: S-0520
 type: story
 nature: remediation
 title: scripts/close-out.sh stops at its first step inside the agent container, since scripts/flai.sh builds flai with go, which the image lacks
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-28T12:53:17Z
-updated: 2026-11-06T21:56:55Z
+updated: 2026-11-06T22:45:14Z
 transitions:
   - to: ready
     at: 2026-11-06T21:56:36Z
@@ -14,9 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-06T21:56:55Z
     by: agent-S-0520
+  - to: review
+    at: 2026-11-06T22:45:08Z
+    by: agent-S-0520
 tags: [cli, docker]
 topics: [harness, docker]
-touches: [design/adrs, design/adrs/README.md, flai/internal/storygit/mounts.go, flai/internal/storygit/mounts_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/check/check.go, flai/internal/check/check_test.go, flai/cmd/verify_test.go, scripts/agent-container.sh, scripts/README.md, docs/operators/runbooks/agent-container.md, docs/users/flai.md, design/system/flai-cli.md, design/system/agent-adapters.md, design/issues/I-0218-scripts-close-out-sh-stops-at-its-first-step-inside-the-agent-container-since-scripts-flai-sh-builds-flai-with-go-which-the-image-lacks.md, design/issues/summary.md]
+touches: [design/adrs, design/adrs/README.md, flai/internal/storygit/mounts.go, flai/internal/storygit/mounts_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/check/check.go, flai/internal/check/check_test.go, flai/cmd/verify_test.go, scripts/agent-container.sh, scripts/README.md, docs/operators/runbooks/agent-container.md, docs/users/flai.md, design/system/flai-cli.md, design/system/agent-adapters.md, design/issues/I-0218-scripts-close-out-sh-stops-at-its-first-step-inside-the-agent-container-since-scripts-flai-sh-builds-flai-with-go-which-the-image-lacks.md, design/issues/summary.md, design/issues/I-0264-flai-check-finds-agent-image-outside-the-story-at-close-out.md, design/tech/docker.md]
 after: [S-0517, S-0518, S-0521]
 agent:
   harness: claude-code
@@ -25,32 +28,38 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1863
-  estimated: true
-  priced_by: estimate
+  seconds: 2922
+  priced_by: harness
   turns:
     - day: 2026-11-06
-      test_runs: 3
-      hand_edits: 1
-      work: 33
+      ceremony: 1
+      test_runs: 4
+      hand_edits: 2
+      work: 71
   models:
     - model: claude-opus-5-5
-      input: 190
-      output: 1044
-      cache_read: 12146314
-      cache_write: 549494
-      cost: 4.5244
+      input: 280
+      output: 93538
+      cache_read: 27022077
+      cache_write: 616129
+      cost: 11.4597
   strategic:
     - kind: orchestrator
-      seconds: 152
+      seconds: 200
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 54
-          output: 645
-          cache_read: 10210262
-          cache_write: 82118
-          cost: 2.2675
+          input: 68
+          output: 773
+          cache_read: 10653802
+          cache_write: 146233
+          cost: 2.3893
+        - model: claude-sonnet-5-5
+          input: 4
+          output: 27
+          cache_read: 12460
+          cache_write: 34970
+          cost: 0.0336
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -76,8 +85,8 @@ finalized:
 This story remediates [I-0218](../../../design/issues/I-0218-scripts-close-out-sh-stops-at-its-first-step-inside-the-agent-container-since-scripts-flai-sh-builds-flai-with-go-which-the-image-lacks.md), "scripts/close-out.sh stops at its first step inside the agent container, since scripts/flai.sh builds flai with go, which the image lacks". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0218 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0218 is closed with `flai issue close I-0218 --reason` saying what fixed it
+- [x] The cause I-0218 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0218 is closed with `flai issue close I-0218 --reason` saying what fixed it
 
 ## Tasks
 - T-2232 An ADR refining ADR-0203 records that a story's container mounts the main checkout's wip and manifest read-only and its verify folder read-write, so flai verify and the close-out run inside it against the main checkout's state

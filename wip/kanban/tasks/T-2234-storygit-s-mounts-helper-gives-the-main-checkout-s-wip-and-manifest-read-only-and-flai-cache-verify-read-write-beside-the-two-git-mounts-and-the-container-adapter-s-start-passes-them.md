@@ -24,16 +24,16 @@ touches: [flai/internal/storygit/mounts.go, flai/internal/storygit/mounts_test.g
 after: [T-2232]
 usage:
   source: log
-  seconds: 1554
+  seconds: 1555
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 70
-      output: 274
-      cache_read: 3258793
-      cache_write: 107471
-      cost: 1.1997
+      input: 34
+      output: 11472
+      cache_read: 3314023
+      cache_write: 75563
+      cost: 1.4054
 ---
 # T-2234 storygit's mounts helper gives the main checkout's wip and manifest read-only and .flai-cache/verify read-write beside the two git mounts, and the container adapter's Start passes them
 

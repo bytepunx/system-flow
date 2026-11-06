@@ -9,7 +9,7 @@ date: 2026-10-26
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-0830]
 ---
 
 # D-0384 Plan for E-0029: six draft stories, their order, their tasks, and the assumptions: Recommended for the operator: approve the plan as drafted, and take the planner's three proposals

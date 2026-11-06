@@ -9,7 +9,7 @@ date: 2026-10-21
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-0829]
 ---
 
 # D-0342 E-0024 needs a cost of delay input and five design answers: recommend 4h lost per cycle, files under design/roles and design/formulas, flai serve runs formula steps: 1 - use the recommended 4h 2…

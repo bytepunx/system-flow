@@ -23,16 +23,16 @@ tags: [kluster, experiment]
 touches: [design/experiments/S-0575-two-builds-of-authstar-run-side-by-side-in-one-kluster-each-in-a-namespace.md, design/experiments/README.md]
 usage:
   source: log
-  seconds: 856
+  seconds: 859
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 74
-      output: 387
-      cache_read: 7950688
-      cache_write: 46836
-      cost: 2.85
+      input: 57
+      output: 17209
+      cache_read: 7941511
+      cache_write: 56030
+      cost: 2.3809
 ---
 # T-2466 The results document states the hypothesis and success measure, and records one authstar-profile kluster brought up with its shared services answering and the time it took
 

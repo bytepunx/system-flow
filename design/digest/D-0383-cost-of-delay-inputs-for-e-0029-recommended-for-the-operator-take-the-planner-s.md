@@ -9,7 +9,7 @@ date: 2026-10-26
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-0829]
 ---
 
 # D-0383 Cost of delay inputs for E-0029: Recommended for the operator: take the planner's figure, `penalty_per_week: 150` USD on E-0029

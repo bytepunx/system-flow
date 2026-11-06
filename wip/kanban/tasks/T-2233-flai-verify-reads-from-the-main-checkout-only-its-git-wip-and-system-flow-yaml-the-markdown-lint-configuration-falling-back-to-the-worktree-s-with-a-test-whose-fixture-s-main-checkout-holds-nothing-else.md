@@ -24,16 +24,16 @@ touches: [flai/internal/check/check.go, flai/internal/check/check_test.go, flai/
 after: [T-2232]
 usage:
   source: log
-  seconds: 1556
+  seconds: 1577
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 66
-      output: 312
-      cache_read: 2582353
-      cache_write: 160197
-      cost: 0.9774
+      input: 30
+      output: 9890
+      cache_read: 2857165
+      cache_write: 65146
+      cost: 1.2117
 ---
 # T-2233 flai verify reads from the main checkout only its .git, wip, and system-flow.yaml, the markdown lint configuration falling back to the worktree's, with a test whose fixture's main checkout holds nothing else
 

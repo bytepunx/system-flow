@@ -3,16 +3,37 @@ id: T-2236
 type: task
 nature: remediation
 title: The docs say flai verify and the close-out run inside the container with the main checkout's wip, manifest, and verify folder mounted, the fix is checked once inside the container, and I-0218 is closed
-status: backlog
+status: done
 parent: S-0520
 owner: alex
 created: 2026-10-28T13:58:16Z
-updated: 2026-10-28T13:58:16Z
-transitions: []
+updated: 2026-11-06T22:39:20Z
+transitions:
+  - to: ready
+    at: 2026-11-06T22:39:12Z
+    by: agent-S-0520
+  - to: in-progress
+    at: 2026-11-06T22:39:13Z
+    by: agent-S-0520
+  - to: done
+    at: 2026-11-06T22:39:20Z
+    by: agent-S-0520
 stream: S-0520
 tags: [cli, docker, docs]
-touches: [docs/users/flai.md, design/system/flai-cli.md, design/system/agent-adapters.md, design/issues/I-0218-scripts-close-out-sh-stops-at-its-first-step-inside-the-agent-container-since-scripts-flai-sh-builds-flai-with-go-which-the-image-lacks.md, design/issues/summary.md]
+touches: [docs/users/flai.md, design/system/flai-cli.md, design/system/agent-adapters.md, design/issues/I-0218-scripts-close-out-sh-stops-at-its-first-step-inside-the-agent-container-since-scripts-flai-sh-builds-flai-with-go-which-the-image-lacks.md, design/issues/summary.md, design/tech/docker.md, design/issues/I-0264-flai-check-finds-agent-image-outside-the-story-at-close-out.md]
 after: [T-2233, T-2234, T-2235]
+usage:
+  source: log
+  seconds: 7
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 1266
+      cache_read: 365827
+      cache_write: 8341
+      cost: 0.1551
 ---
 # T-2236 The docs say flai verify and the close-out run inside the container with the main checkout's wip, manifest, and verify folder mounted, the fix is checked once inside the container, and I-0218 is closed
 
