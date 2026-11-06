@@ -3,20 +3,37 @@ id: T-2441
 type: task
 nature: improvement
 title: Mark the notice flai task done sends as a notice in its conversation entry
-status: backlog
+status: done
 parent: S-0545
 owner: alex
 created: 2026-11-02T20:06:03Z
-updated: 2026-11-02T20:06:03Z
-transitions: []
+updated: 2026-11-06T22:09:39Z
+transitions:
+  - to: ready
+    at: 2026-11-06T22:00:46Z
+    by: agent-S-0545
+  - to: in-progress
+    at: 2026-11-06T22:00:47Z
+    by: agent-S-0545
+  - to: done
+    at: 2026-11-06T22:09:39Z
+    by: agent-S-0545
 stream: S-0545
 tags: [flai]
-touches: [flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go]
+touches: [flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/message.go, docs/users/flai-reference.md]
 after: [T-2440]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 532
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 45
+      output: 11267
+      cache_read: 5880209
+      cache_write: 87264
+      cost: 2.0546
   strategic:
     - kind: orchestrator
       seconds: 3

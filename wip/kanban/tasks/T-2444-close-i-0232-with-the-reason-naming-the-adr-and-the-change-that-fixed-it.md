@@ -3,20 +3,37 @@ id: T-2444
 type: task
 nature: remediation
 title: Close I-0232 with the reason naming the ADR and the change that fixed it
-status: backlog
+status: done
 parent: S-0545
 owner: alex
 created: 2026-11-02T20:06:49Z
-updated: 2026-11-02T20:06:49Z
-transitions: []
+updated: 2026-11-06T22:27:34Z
+transitions:
+  - to: ready
+    at: 2026-11-06T22:27:23Z
+    by: agent-S-0545
+  - to: in-progress
+    at: 2026-11-06T22:27:26Z
+    by: agent-S-0545
+  - to: done
+    at: 2026-11-06T22:27:34Z
+    by: agent-S-0545
 stream: S-0545
 tags: [flai]
 touches: [design/issues/I-0232-flai-serve-wakes-a-story-s-agent-that-is-paused-on-a-thread-for-every-task-done-message-from-another-story-each-needing-only-a-settled-reply.md, design/issues/summary.md]
 after: [T-2442, T-2443]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 8
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 2
+      output: 610
+      cache_read: 318567
+      cache_write: 4728
+      cost: 0.1113
   strategic:
     - kind: orchestrator
       seconds: 3

@@ -3,20 +3,37 @@ id: T-2443
 type: task
 nature: improvement
 title: flai serve does not start an agent paused on its own question for a conversation that holds only task-done notices, with a test reproducing I-0232
-status: backlog
+status: done
 parent: S-0545
 owner: alex
 created: 2026-11-02T20:06:36Z
-updated: 2026-11-02T20:06:36Z
-transitions: []
+updated: 2026-11-06T22:24:35Z
+transitions:
+  - to: ready
+    at: 2026-11-06T22:14:24Z
+    by: agent-S-0545
+  - to: in-progress
+    at: 2026-11-06T22:14:26Z
+    by: agent-S-0545
+  - to: done
+    at: 2026-11-06T22:24:35Z
+    by: agent-S-0545
 stream: S-0545
 tags: [flai]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go]
 after: [T-2441]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 609
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 9299
+      cache_read: 4853037
+      cache_write: 72020
+      cost: 1.6957
   strategic:
     - kind: orchestrator
       seconds: 3

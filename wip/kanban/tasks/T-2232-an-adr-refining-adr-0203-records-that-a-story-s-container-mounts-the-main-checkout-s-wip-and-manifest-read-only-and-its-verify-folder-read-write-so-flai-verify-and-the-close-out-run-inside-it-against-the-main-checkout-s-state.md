@@ -3,15 +3,36 @@ id: T-2232
 type: task
 nature: remediation
 title: An ADR refining ADR-0203 records that a story's container mounts the main checkout's wip and manifest read-only and its verify folder read-write, so flai verify and the close-out run inside it against the main checkout's state
-status: backlog
+status: done
 parent: S-0520
 owner: alex
 created: 2026-10-28T13:57:07Z
-updated: 2026-10-28T13:57:07Z
-transitions: []
+updated: 2026-11-06T22:01:31Z
+transitions:
+  - to: ready
+    at: 2026-11-06T22:00:14Z
+    by: agent-S-0520
+  - to: in-progress
+    at: 2026-11-06T22:00:15Z
+    by: agent-S-0520
+  - to: done
+    at: 2026-11-06T22:01:31Z
+    by: agent-S-0520
 stream: S-0520
 tags: [cli, docker]
-touches: [design/adrs/README.md]
+touches: [design/adrs/README.md, design/adrs/0253-a-container-that-runs-a-story-s-agent-mounts-the-main-checkout-s-wip-and-system.md]
+usage:
+  source: log
+  seconds: 76
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 10
+      output: 82
+      cache_read: 1361590
+      cache_write: 9078
+      cost: 0.4885
 ---
 # T-2232 An ADR refining ADR-0203 records that a story's container mounts the main checkout's wip and manifest read-only and its verify folder read-write, so flai verify and the close-out run inside it against the main checkout's state
 

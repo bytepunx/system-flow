@@ -3,10 +3,10 @@ id: S-0545
 type: story
 nature: improvement
 title: flai serve wakes a story's agent that is paused on a thread for every task-done message from another story, each needing only a settled reply
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-29T18:11:17Z
-updated: 2026-11-06T21:56:54Z
+updated: 2026-11-06T22:33:30Z
 transitions:
   - to: ready
     at: 2026-11-06T21:56:35Z
@@ -14,18 +14,33 @@ transitions:
   - to: in-progress
     at: 2026-11-06T21:56:54Z
     by: agent-S-0545
+  - to: review
+    at: 2026-11-06T22:33:30Z
+    by: agent-S-0545
 tags: [flai, template]
 topics: [cli]
-touches: [design/adrs, design/adrs/README.md, design/system/workflow.md, design/system/agent-coordination.md, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md, docs/users/flai.md, template/CHANGELOG.md, design/issues/I-0232-flai-serve-wakes-a-story-s-agent-that-is-paused-on-a-thread-for-every-task-done-message-from-another-story-each-needing-only-a-settled-reply.md, design/issues/summary.md]
+touches: [design/adrs, design/adrs/README.md, design/system/workflow.md, design/system/agent-coordination.md, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md, docs/users/flai.md, template/CHANGELOG.md, design/issues/I-0232-flai-serve-wakes-a-story-s-agent-that-is-paused-on-a-thread-for-every-task-done-message-from-another-story-each-needing-only-a-settled-reply.md, design/issues/summary.md, docs/users/flai-reference.md, flai/cmd/message.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2219
+  priced_by: harness
+  turns:
+    - day: 2026-11-06
+      ceremony: 2
+      hand_edits: 1
+      work: 48
+  models:
+    - model: claude-opus-5-5
+      input: 192
+      output: 47835
+      cache_read: 24964021
+      cache_write: 370472
+      cost: 8.7225
   strategic:
     - kind: planner
       seconds: 451
@@ -78,8 +93,8 @@ finalized:
 This story remediates [I-0232](../../../design/issues/I-0232-flai-serve-wakes-a-story-s-agent-that-is-paused-on-a-thread-for-every-task-done-message-from-another-story-each-needing-only-a-settled-reply.md), "flai serve wakes a story's agent that is paused on a thread for every task-done message from another story, each needing only a settled reply". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0232 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0232 is closed with `flai issue close I-0232 --reason` saying what fixed it
+- [x] The cause I-0232 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0232 is closed with `flai issue close I-0232 --reason` saying what fixed it
 
 ## Tasks
 - T-2440 Decide in an ADR refining ADR-0154 that a task-done notice does not start an agent paused on its own question, and say so in the design

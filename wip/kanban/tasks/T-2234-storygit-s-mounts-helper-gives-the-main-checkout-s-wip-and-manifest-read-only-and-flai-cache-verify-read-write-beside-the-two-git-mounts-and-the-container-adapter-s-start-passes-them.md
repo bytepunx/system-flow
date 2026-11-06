@@ -3,16 +3,37 @@ id: T-2234
 type: task
 nature: remediation
 title: storygit's mounts helper gives the main checkout's wip and manifest read-only and .flai-cache/verify read-write beside the two git mounts, and the container adapter's Start passes them
-status: backlog
+status: done
 parent: S-0520
 owner: alex
 created: 2026-10-28T13:57:41Z
-updated: 2026-10-28T13:57:41Z
-transitions: []
+updated: 2026-11-06T22:27:46Z
+transitions:
+  - to: ready
+    at: 2026-11-06T22:01:50Z
+    by: agent-S-0520
+  - to: in-progress
+    at: 2026-11-06T22:01:51Z
+    by: agent-S-0520
+  - to: done
+    at: 2026-11-06T22:27:46Z
+    by: agent-S-0520
 stream: S-0520
 tags: [cli, docker]
 touches: [flai/internal/storygit/mounts.go, flai/internal/storygit/mounts_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go]
 after: [T-2232]
+usage:
+  source: log
+  seconds: 1554
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 70
+      output: 274
+      cache_read: 3258793
+      cache_write: 107471
+      cost: 1.1997
 ---
 # T-2234 storygit's mounts helper gives the main checkout's wip and manifest read-only and .flai-cache/verify read-write beside the two git mounts, and the container adapter's Start passes them
 

@@ -3,19 +3,36 @@ id: T-2440
 type: task
 nature: improvement
 title: Decide in an ADR refining ADR-0154 that a task-done notice does not start an agent paused on its own question, and say so in the design
-status: backlog
+status: done
 parent: S-0545
 owner: alex
 created: 2026-11-02T20:05:46Z
-updated: 2026-11-02T20:05:46Z
-transitions: []
+updated: 2026-11-06T22:00:30Z
+transitions:
+  - to: ready
+    at: 2026-11-06T21:59:35Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-06T21:59:36Z
+    by: system-flow
+  - to: done
+    at: 2026-11-06T22:00:30Z
+    by: agent-S-0545
 stream: S-0545
 tags: [flai]
 touches: [design/adrs/README.md, design/system/workflow.md, design/system/agent-coordination.md]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 54
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 13
+      output: 3163
+      cache_read: 1650778
+      cache_write: 24498
+      cost: 0.5768
   strategic:
     - kind: orchestrator
       seconds: 3

@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0032
 owner: alex
 created: 2026-11-06T21:39:06Z
-updated: 2026-11-06T21:57:39Z
+updated: 2026-11-06T22:17:21Z
 transitions:
   - to: ready
     at: 2026-11-06T21:56:36Z
@@ -24,9 +24,27 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1134
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-06
+      hand_edits: 1
+      work: 70
+  models:
+    - model: claude-haiku-5-5
+      input: 8
+      output: 19
+      cache_read: 60859
+      cache_write: 24589
+      cost: 0.0061
+    - model: claude-opus-5-5
+      input: 148
+      output: 832
+      cache_read: 13496148
+      cache_write: 234293
+      cost: 4.893
   strategic:
     - kind: orchestrator
       seconds: 144
@@ -62,7 +80,7 @@ This experiment tries the idea by hand on authstar before flai automates it. Two
 
 ## Acceptance criteria
 
-- [ ] One kluster is brought up with authstar's `integration/kluster.yaml` (profile `authstar`). The results record the time from `kluster up` to a cluster whose shared signet, RabbitMQ, Postgres, and ClickHouse answer.
+- [x] One kluster is brought up with authstar's `integration/kluster.yaml` (profile `authstar`). The results record the time from `kluster up` to a cluster whose shared signet, RabbitMQ, Postgres, and ClickHouse answer.
 - [ ] Two builds of authstar's services, from two different commits of `~/git/bytepunx/authstar`, are built locally, loaded into the cluster, and deployed into two namespaces named as a story's serial would name them (such as `s-0901` and `s-0902`). Each namespace gets its own RabbitMQ vhost, Postgres database, and signet keys or authstar tenant, as far as authstar allows. The results list each per-namespace setting and how it was made.
 - [ ] authstar's golden-path scenario (`integration/scripts/scenario-golden-path.sh`) is run against each namespace. The results say whether it passed, or which step failed and why.
 - [ ] Deleting one story namespace leaves the other namespace and the shared infrastructure working. One build is then deployed to the default `authstar` namespace, as an acceptance would promote it. The results record the time of each load, deploy, and teardown.

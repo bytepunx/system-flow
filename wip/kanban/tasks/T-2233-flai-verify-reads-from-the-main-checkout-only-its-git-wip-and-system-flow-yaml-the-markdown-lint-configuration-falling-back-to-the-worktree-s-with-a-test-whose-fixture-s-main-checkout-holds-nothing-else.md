@@ -3,16 +3,37 @@ id: T-2233
 type: task
 nature: remediation
 title: flai verify reads from the main checkout only its .git, wip, and system-flow.yaml, the markdown lint configuration falling back to the worktree's, with a test whose fixture's main checkout holds nothing else
-status: backlog
+status: done
 parent: S-0520
 owner: alex
 created: 2026-10-28T13:57:28Z
-updated: 2026-10-28T13:57:28Z
-transitions: []
+updated: 2026-11-06T22:28:06Z
+transitions:
+  - to: ready
+    at: 2026-11-06T22:01:48Z
+    by: agent-S-0520
+  - to: in-progress
+    at: 2026-11-06T22:01:49Z
+    by: agent-S-0520
+  - to: done
+    at: 2026-11-06T22:28:06Z
+    by: agent-S-0520
 stream: S-0520
 tags: [cli]
 touches: [flai/internal/check/check.go, flai/internal/check/check_test.go, flai/cmd/verify_test.go]
 after: [T-2232]
+usage:
+  source: log
+  seconds: 1556
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 66
+      output: 312
+      cache_read: 2582353
+      cache_write: 160197
+      cost: 0.9774
 ---
 # T-2233 flai verify reads from the main checkout only its .git, wip, and system-flow.yaml, the markdown lint configuration falling back to the worktree's, with a test whose fixture's main checkout holds nothing else
 

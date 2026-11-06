@@ -3,16 +3,34 @@ id: T-2235
 type: task
 nature: remediation
 title: scripts/agent-container.sh mounts the main checkout's wip and manifest read-only and .flai-cache/verify read-write, creating the verify folder first, and the runbook and scripts index say so
-status: backlog
+status: in-progress
 parent: S-0520
 owner: alex
 created: 2026-10-28T13:57:52Z
-updated: 2026-10-28T13:57:52Z
-transitions: []
+updated: 2026-11-06T22:01:54Z
+transitions:
+  - to: ready
+    at: 2026-11-06T22:01:53Z
+    by: agent-S-0520
+  - to: in-progress
+    at: 2026-11-06T22:01:54Z
+    by: agent-S-0520
 stream: S-0520
 tags: [docker]
 touches: [scripts/agent-container.sh, scripts/README.md, docs/operators/runbooks/agent-container.md]
 after: [T-2232]
+usage:
+  source: log
+  seconds: 1551
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 45
+      cache_read: 1214992
+      cache_write: 9975
+      cost: 0.4365
 ---
 # T-2235 scripts/agent-container.sh mounts the main checkout's wip and manifest read-only and .flai-cache/verify read-write, creating the verify folder first, and the runbook and scripts index say so
 

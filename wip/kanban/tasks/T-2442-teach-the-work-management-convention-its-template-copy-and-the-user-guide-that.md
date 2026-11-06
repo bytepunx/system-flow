@@ -3,20 +3,37 @@ id: T-2442
 type: task
 nature: improvement
 title: Teach the work-management convention, its template copy, and the user guide that a notice waits for a paused agent's answer
-status: backlog
+status: done
 parent: S-0545
 owner: alex
 created: 2026-11-02T20:06:16Z
-updated: 2026-11-02T20:07:01Z
-transitions: []
+updated: 2026-11-06T22:10:08Z
+transitions:
+  - to: ready
+    at: 2026-11-06T22:00:48Z
+    by: agent-S-0545
+  - to: in-progress
+    at: 2026-11-06T22:00:49Z
+    by: agent-S-0545
+  - to: done
+    at: 2026-11-06T22:10:08Z
+    by: agent-S-0545
 stream: S-0545
 tags: [template]
 touches: [design/conventions/work-management.md, template/root/design/conventions/work-management.md, docs/users/flai.md, template/CHANGELOG.md]
 after: [T-2440]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 559
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 24
+      output: 5950
+      cache_read: 3105139
+      cache_write: 46081
+      cost: 1.0849
   strategic:
     - kind: orchestrator
       seconds: 3
