@@ -1877,14 +1877,22 @@ func LintFindings(e *mdlint.Error) []Finding {
 // markdownlint configuration (S-0179). flai writes them in the main
 // checkout, where no story's lint runs (ADR-0019), so they reach main unlinted
 // unless flai check says so first. Findings are warnings: --strict fails on
-// them, and the commands that write refuse a change that brings one. A
-// project without a markdownlint configuration is not linted.
+// them, and the commands that write refuse a change that brings one. The
+// configuration is the main checkout's, or the worktree's when the main
+// checkout's root holds none, as in an agent container that mounts only its
+// .git, wip, and system-flow.yaml (ADR-0253); in the main checkout the two
+// are the same. A project without a markdownlint configuration is not
+// linted.
 func (c *checker) markdown() {
 	root := c.repo.MainRoot
 	if root == "" {
 		root = c.repo.Root
 	}
 	cfg, err := mdlint.Load(root)
+	if err == nil && cfg == nil && root != c.repo.Root {
+		root = c.repo.Root
+		cfg, err = mdlint.Load(root)
+	}
 	if err != nil {
 		c.add(Warning, "markdown.config", root, 1, "the markdownlint configuration cannot be read, so wip is not linted: %v", err)
 		return

@@ -955,6 +955,54 @@ func TestMarkdownRules(t *testing.T) {
 	}
 }
 
+// I-0218, ADR-0253: in an agent container the main checkout's root holds only
+// its .git, wip, and system-flow.yaml, so wip is linted with the worktree's
+// markdownlint configuration rather than left unlinted.
+func TestMarkdownFallsBackToTheWorktreesConfiguration(t *testing.T) {
+	dir := t.TempDir()
+	main, worktree := filepath.Join(dir, "main"), filepath.Join(dir, "S-0001")
+	manifest := "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"
+	for _, d := range []string{"design/adrs", "design/system", "design/tech", "design/conventions", "docs"} {
+		_ = os.MkdirAll(filepath.Join(worktree, d), 0o755)
+	}
+	for _, d := range []string{".git/worktrees/S-0001", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", "wip/threads"} {
+		_ = os.MkdirAll(filepath.Join(main, d), 0o755)
+	}
+	thread := "---\nid: TH-0001\ntitle: T\nanchor:\n  path: docs/guide.md\nstatus: open\nparticipants: [alex]\ncreated: 2026-09-01T12:00:00Z\nupdated: 2026-09-01T12:00:00Z\n---\n\n# TH-0001 T\n\n## Entries\n\n### 2026-09-01T12:00:00Z alex\nhi\n\n### 2026-09-01T12:00:00Z alex\nagain\n"
+	write := func(path, body string) {
+		t.Helper()
+		if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write(filepath.Join(main, "system-flow.yaml"), manifest)
+	write(filepath.Join(main, "wip/threads/TH-0001-t.md"), thread)
+	write(filepath.Join(worktree, "system-flow.yaml"), manifest)
+	write(filepath.Join(worktree, ".git"), "gitdir: "+filepath.Join(main, ".git", "worktrees", "S-0001")+"\n")
+	write(filepath.Join(worktree, "docs/guide.md"), "---\ntitle: Guide\n---\n\n# Guide\n")
+	write(filepath.Join(worktree, ".markdownlint.yaml"), "default: true\nMD022:\n  lines_below: 0\nMD024:\n  siblings_only: true\nMD025:\n  front_matter_title: \"\"\n")
+	repo, err := workitem.Open(worktree)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if repo.MainRoot != main || repo.Root != worktree {
+		t.Fatalf("the worktree opens with main %s and root %s, want %s and %s", repo.MainRoot, repo.Root, main, worktree)
+	}
+	res, err := Run(repo, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []Finding
+	for _, f := range res.Findings {
+		if strings.HasPrefix(f.Rule, "markdown.") {
+			got = append(got, f)
+		}
+	}
+	if len(got) != 1 || got[0].Rule != "markdown.MD024" || got[0].Line != 19 || filepath.Join(worktree, got[0].Path) != filepath.Join(main, "wip/threads/TH-0001-t.md") {
+		t.Errorf("want the main checkout's thread's duplicate heading, linted with the worktree's configuration: %v", got)
+	}
+}
+
 // S-0253, I-0066: a conflict git-added unresolved reached main in a design
 // document. Each line that opens or closes a conflict, in the markdown under
 // design, docs, and wip and at the root, is an error; the divider is not, as

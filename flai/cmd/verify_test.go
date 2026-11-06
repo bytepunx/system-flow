@@ -491,6 +491,93 @@ func TestVerifyRefusesAWorktreeWhoseMainCheckoutIsAbsent(t *testing.T) {
 	}
 }
 
+// I-0218, ADR-0253: an agent container mounts of the main checkout only its
+// .git, wip/, and system-flow.yaml, read-only, and its .flai-cache/verify,
+// read-write, beside the worktree. flai verify run in the worktree over such a
+// main checkout passes, --sync-only too, linting wip/ with the worktree's
+// markdownlint configuration, and writes nothing in the main checkout but its
+// report, which --last reads. A new read of anything else there fails here.
+func TestVerifyRunsWithAMainCheckoutOfOnlyGitWipAndManifest(t *testing.T) {
+	t.Parallel()
+	root, worktree := verifyFixture(t, "test -f \"$1\"")
+	mounted := map[string]bool{".git": true, "wip": true, "system-flow.yaml": true, ".flai-cache": true}
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		if !mounted[e.Name()] {
+			if err := os.RemoveAll(filepath.Join(root, e.Name())); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	// .flai-cache stays only as the worktree's parent: nothing else of it is mounted
+	cache := filepath.Join(root, ".flai-cache")
+	if entries, err = os.ReadDir(cache); err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		if e.Name() != "worktrees" {
+			if err := os.RemoveAll(filepath.Join(cache, e.Name())); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	// the worktree's tracked configuration, which the root no longer has
+	lint := "default: true\nMD022:\n  lines_below: 0\nMD024:\n  siblings_only: true\nMD025:\n  front_matter_title: \"\"\n"
+	if err := os.WriteFile(filepath.Join(worktree, ".markdownlint.yaml"), []byte(lint), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	narrative, err := os.ReadFile(filepath.Join(root, "wip", "agents", "S-004.md"))
+	if err != nil || !strings.Contains(string(narrative), "## Current state\ns\n") || !strings.Contains(string(narrative), "## Next steps\n1. n\n") {
+		t.Fatalf("the main checkout's narrative should have its current state and next steps written: %v\n%s", err, narrative)
+	}
+
+	out, errOut, code := runVerify(t, worktree, verifyGit{}, "verify", "S-004", "--sync-only")
+	if code != 0 || lastLine(out) != "verify: S-004 passed every step" {
+		t.Fatalf("--sync-only: exit %d\n%s%s", code, out, errOut)
+	}
+	rep := verifyReport(t, worktree, 0, "S-004")
+	if want := "rebase:passed,sync:passed,narrative:passed,check:passed,tier unit:passed"; stepStates(rep) != want || !rep.Passed {
+		t.Fatalf("report %+v, steps %s, want %s", rep, stepStates(rep), want)
+	}
+	report := filepath.Join(root, ".flai-cache", "verify", "S-004.json")
+	if got := verify.ReportPath(openProject(t, worktree), "S-004"); got != report {
+		t.Errorf("the report is stored at %s, want %s", got, report)
+	}
+	if _, err := os.Stat(report); err != nil {
+		t.Errorf("no report in the main checkout's verify folder: %v", err)
+	}
+	out, errOut, code = runVerify(t, worktree, gitScript{}, "--json", "verify", "S-004", "--last")
+	var last verify.Report
+	if err := json.Unmarshal([]byte(out), &last); err != nil || code != 0 {
+		t.Fatalf("--last: exit %d %v\n%s%s", code, err, out, errOut)
+	}
+	if !last.Passed || !last.RanAt.Equal(rep.RanAt) || stepStates(last) != stepStates(rep) {
+		t.Errorf("--last read %+v, ran %+v", last, rep)
+	}
+
+	if entries, err = os.ReadDir(cache); err != nil {
+		t.Fatal(err)
+	}
+	var wrote []string
+	for _, e := range entries {
+		wrote = append(wrote, e.Name())
+	}
+	if strings.Join(wrote, ",") != "verify,worktrees" {
+		t.Errorf("flai verify wrote in the main checkout's .flai-cache %v, want only verify beside worktrees", wrote)
+	}
+	if entries, err = os.ReadDir(root); err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		if !mounted[e.Name()] {
+			t.Errorf("flai verify wrote %s in the main checkout, which the container does not mount", e.Name())
+		}
+	}
+}
+
 // I-0119, ADR-0135: the close-out's last check, flai verify --sync-only,
 // passes over commits flai made on main's wip/ while the close-out ran, and
 // says so under the sync step; a commit outside wip/ still fails it, naming
