@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-11-02
+updated: 2026-11-06
 status: active
 topics: [dashboard]
 ---
@@ -372,6 +372,10 @@ flaiover/
 ### Times (S-0329)
 
 flai records and returns every time in UTC, `YYYY-MM-DDTHH:MM:SSZ`, and the dashboard shows each in the browser's zone through `src/lib/localtime.ts`: `localTime` to the minute with the zone's short name (`2026-10-07 15:35 EDT`), `localDate` as the date there, and `localTimes` for each time inside a text flai wrote, which `DismissibleNotice.svelte` applies to every notice. No component formats a time of its own. What goes back to the API, and keys and comparisons, stay UTC; a document's text and front matter show as written. The charts keep flai's buckets, per UTC day and per UTC week from Monday ([metrics.md](metrics.md), [ADR-0056](../adrs/0056-time-in-state-is-one-stacked-bar-per-day-of-the-window-the-mean-hours-per-state.md)), and set no `useUTC`: `place` in `charts.ts` draws a day or a week at the local midnight of its own date, so its mark sits on that date's tick in any zone, an hour at its moment, and `bucketLabel` names an hour in local time and a day or a week by its date. The tests run in `America/New_York` (`vite.config.ts`), so a time shown in UTC fails them.
+
+### Forms read again (S-0574)
+
+A page reads its data again on a live push, on a reconnect of the live events, and after a save. A form filled from that data never refills from the new read over what the user typed: `rebase(seed, current, fresh)` in `src/lib/form.ts` takes each field from the new read except one whose value differs from the read it was filled from, which the user changed and keeps. A field the new read no longer has goes. The strategic agents' settings (`StrategicSettings.svelte`) rebase on every read, so a change to `system-flow.yaml` or a reconnect leaves an edit in progress as typed. The host settings (`SettingsPanel.svelte`) rebase on the read after a save, and only the saved section takes the read whole, so unsaved edits in the other sections stay. Forms filled once, when they open, need no rebase.
 
 ## What the container can reach (S-0077, [ADR-0031](../adrs/0031-the-dashboard-s-container-holds-nothing-of-the-project-a-port-and-two-secrets.md))
 
