@@ -61,6 +61,42 @@ signet --server localhost:18444 status --token "$(kubectl create token signet-ad
 
 A baseline golden-path run against kluster's own `authstar` namespace followed. It used the operator tokens kluster writes to `~/.config/kluster/authstar-integration-authstar-tokens.yaml`, passed in as `TOWER_OPERATOR_TOKEN` and `HERALD_OPERATOR_TOKEN`.
 
+### Builds
+
+`bin/s-0575/build.sh` builds each service's own `Dockerfile` from the exported tree, tagged with the namespace it is for:
+
+```sh
+bash bin/s-0575/build.sh /tmp/S-0575/src-A s-0901 /tmp/S-0575/logs   # docker.io/bytepunx/authstar-<service>:s-0901
+bash bin/s-0575/build.sh /tmp/S-0575/src-B s-0902 /tmp/S-0575/logs   # docker.io/bytepunx/authstar-<service>:s-0902
+```
+
+### Story namespaces
+
+`bin/s-0575/ns-up.sh <namespace> <tag> <source> <logs>` makes one story namespace in six timed steps. The scripts are written out under [Scripts](#scripts).
+
+1. **Load.** `docker save` each of the eight images and `ctr -n k8s.io images import` it into the k3d node, as authstar's `deploy-local.sh` does. kluster has no image import.
+2. **Namespace.** The commit's `manifests/00-namespace.yaml`, renamed: the namespace and its eight service accounts. SPIRE's `ClusterSPIFFEID` from kluster's `spire` profile selects every namespace but six system ones, so the pods get `spiffe://authstar.cluster.local/ns/<namespace>/sa/<service>` with nothing more.
+3. **RabbitMQ.** `rabbitmqctl add_vhost <namespace>`, `add_user <namespace> <random password>`, and `set_permissions` on that vhost alone.
+4. **Databases.** Postgres `CREATE DATABASE <prefix>tower`, `<prefix>keep`, and `<prefix>herald`, and ClickHouse `CREATE DATABASE <prefix>chronicle`, where `s-0901`'s prefix is `s0901_`. The commit's `01-db-init-job.yaml` is not used: it creates the fixed names.
+5. **Signet.** `bin/s-0575/spec.sh` builds each service's bundle from the commit's own `config/authstar/<service>.yaml` and `scripts/lib-secrets.sh`, with the namespace's values put in. `storens`, a scratch command over kluster-lib's exported `addon.SeedSignetBundle` and `addon.EnsureSignetPolicy`, pushes them through signet's admin API under signet namespace `<namespace>`, with the four cross-service grants authstar's `provision.sh` makes: herald puts into tower, keep, and portcullis, and tower into portcullis.
+6. **Deploy.** The commit's `manifests/1[0-7]-*.yaml`, renamed, then `kubectl rollout status` for each of the eight Deployments.
+
+Every manifest passes through one `sed` rename:
+
+| Rule | Why |
+|------|-----|
+| `namespace: authstar`, `name: authstar`, and `value: authstar` become the namespace | The objects' namespace and each service's `SIGNET_NAMESPACE` |
+| `.authstar.svc.cluster.local` becomes `.<namespace>.svc.cluster.local` | steward's and web's upstreams |
+| `image: bytepunx/authstar-<service>:latest` becomes `docker.io/bytepunx/authstar-<service>:<tag>`, and `imagePullPolicy: Always` becomes `IfNotPresent` | The loaded build, never a pull |
+| `signet.signet.svc.cluster.local:8444` becomes `:8443` | A drift in authstar, below |
+
+The golden path ran from a copy of the commit's `integration/scripts` in `bin/s-0575/scripts`, with two changes made through variables:
+
+- `lib.sh`'s `AUTHSTAR_NAMESPACE="authstar"` became `"${AUTHSTAR_NAMESPACE:-authstar}"`.
+- `scenario-golden-path.sh`'s `psql -d tower` and `-d herald` became `-d "${DB_PREFIX:-}tower"` and `"${DB_PREFIX:-}herald"`.
+
+`bin/s-0575/golden.sh <namespace> <tokens> <log>` sets both variables and the namespace's operator tokens, runs the scenario, and kills the port-forwards it leaves behind.
+
 ## Results
 
 ### Bring-up
@@ -100,8 +136,521 @@ FAIL: tenant provisioning (HTTP 500): 14 UNAVAILABLE: No connection established.
 Last error: SSL routines:tls_validate_record_header:wrong version number
 ```
 
-Tower answered `POST /tenants` with a TLS call to a port that answers in plain text. So the `latest` images kluster pulls do not match the signet chart it installs, unpinned, today. kluster's own deployment of authstar is not a known-good baseline. Each story namespace therefore deploys a local build.
+Tower answered `POST /tenants` with a TLS call to a port that answers in plain text. So the `latest` images kluster pulls do not match the signet chart it installs, unpinned, today. kluster's own deployment of authstar is not a known-good baseline. Each story namespace therefore deploys a local build. The same failure came back with build A in `s-0901`, so its cause is not the images; it is the first drift listed under [What it took](#what-it-took).
+
+### Builds
+
+| Build | Commit | Total | Per service |
+|-------|--------|-------|-------------|
+| A, tag `s-0901` | `e02e430` | 1097s | portcullis 793s (Rust, cold), tower 74s, keep 48s, herald 50s, web 47s, steward 30s, chronicle 29s, lookout 26s |
+| B, tag `s-0902` | `af55c04` | 41s | chronicle 30s; the other seven 1s to 2s each from Docker's layer cache |
+
+Only chronicle differs between the two commits, so build B rebuilt chronicle alone. A story's build costs what its change rebuilds, once the host's cache is warm. A cold portcullis costs 13 minutes.
+
+### Per-namespace settings
+
+Each namespace had these of its own, all made by `ns-up.sh`:
+
+| Setting | `s-0901` | `s-0902` | How it was made |
+|---------|----------|----------|-----------------|
+| Kubernetes namespace and eight service accounts | `s-0901` | `s-0902` | The commit's `00-namespace.yaml`, renamed |
+| SPIFFE IDs | `…/ns/s-0901/sa/<service>` | `…/ns/s-0902/sa/<service>` | kluster's `ClusterSPIFFEID`, unchanged |
+| RabbitMQ vhost and user | `s-0901`, user `s-0901` | `s-0902`, user `s-0902` | `rabbitmqctl`, permissions on its own vhost only |
+| Postgres databases | `s0901_tower`, `s0901_keep`, `s0901_herald` | `s0902_…` | `CREATE DATABASE`, on the shared superuser |
+| ClickHouse database | `s0901_chronicle` | `s0902_chronicle` | `CREATE DATABASE`; chronicle's `clickhouseDatabase` names it |
+| Signet bundles | eight, under signet namespace `s-0901` | eight, under `s-0902` | `storens`, from the commit's own config and secrets |
+| Signet policies | four, for `…/ns/s-0901/sa/herald` and `/sa/tower` | four, for `s-0902` | `storens`, through `EnsureSignetPolicy` |
+| Operator tokens | fresh `towerOperatorToken`, `heraldOperatorToken` | fresh | `openssl rand -hex 32`, kept in `/tmp/S-0575/logs/<namespace>.tokens` |
+| Signet keys | fresh `tenant-acme-session-key` and `-internal-key` (EC P-256), identity hash key, peppers, salt | fresh | `spec.sh`: `openssl ecparam -name prime256v1 -genkey` for each EC key, random values for the rest |
+| authstar tenant | `acme`, on host `acme.authstar.app` | `acme`, on the same host | The golden path provisions it; each namespace's own tower and portcullis hold it |
+
+The tenant is the one setting authstar does not let a namespace own. Its host, `acme.authstar.app`, is fixed in portcullis's config, in Dex's redirect URI, and in the golden path's `Host:` header. The scenario reaches each namespace through port-forwards, so the two never met. A browser demo of two namespaces at once would need a host per namespace, such as `acme.s-0901.authstar.app`, in portcullis's config and in Dex's client.
+
+Both namespaces ran at once, with all eight services in each `Running` and no restarts. Each used only its own shared-service settings:
+
+| Check | `authstar` | `s-0901` | `s-0902` |
+|-------|------------|----------|----------|
+| RabbitMQ queues in its vhost | 6 | 6 | 6 |
+| RabbitMQ connections to its vhost, and their user | 7, kluster's `rmq-…` | 7, `s-0901` | 7, `s-0902` |
+| `tenant_event` rows in its tower database | 1 | 3 | 3 |
+| Tables in its chronicle database | 1 | 1 | 1 |
+
+### Load and deploy times
+
+From the last, clean run of each, in seconds:
+
+| Step | `s-0901` (build A) | `s-0902` (build B) |
+|------|--------------------|--------------------|
+| Load eight images into the node | 31 | 32 |
+| Namespace and service accounts | 1 | 0 |
+| RabbitMQ vhost, user, permissions | 34 | 34 |
+| Postgres and ClickHouse databases | 8 | 8 |
+| Signet bundles and policies | 4 | 4 |
+| Apply manifests and wait for eight rollouts | 11 | 12 |
+| **Total** | **89** | **90** |
+
+About a minute and a half per story namespace, against 11m31s for the cluster. The RabbitMQ step is four `rabbitmqctl` calls in one `kubectl exec`, and each call starts an Erlang VM. RabbitMQ's HTTP management API, or the topology operator's `Vhost` and `Permission` resources that kluster itself uses, were not timed.
+
+### Golden path
+
+Final runs, both after the changes under [What it took](#what-it-took):
+
+| Step | `s-0901` (build A) | `s-0902` (build B) |
+|------|--------------------|--------------------|
+| 1. Tenant provisioning | PASS (201) | PASS (201) |
+| 2. portcullis and Dex login | PASS | PASS |
+| 2. tower resolves the account | PASS | PASS |
+| 3. keep billing webhook | PASS | PASS |
+| 4. herald key rotation | PASS | PASS |
+| 5. herald send and verify | PASS: the invite decrypted; the send fails as expected, with no send adapter | PASS, the same |
+| 6. chronicle refuses the report without a token (401) | PASS | PASS |
+| 6. chronicle report read with a forwarded token | SKIP: the scenario defers it to authstar S-0017 | SKIP |
+| Exit, time | 0, 7s | 0, 8s |
+
+Build B passes step 6 as build A does. The 401 check does not tell chronicle's old token check from its new one, and the step that would is skipped.
+
+### What it took
+
+The golden path passed in both namespaces only after six changes. None is about namespaces: each would stop the default `authstar` namespace too. Each was made outside the three repositories.
+
+| # | What failed | Where the fault is | What the experiment did |
+|---|-------------|--------------------|-------------------------|
+| 1 | Tenant provisioning, HTTP 500, `SSL routines:tls_validate_record_header:wrong version number` | authstar: `integration/manifests/1x-*.yaml` set `SIGNET_ADMIN_ADDR` to signet's admin port 8444. Since ADR 0103 tower writes through workload mTLS (`tower/src/lib/signet-admin.ts`), which signetd serves on 8443, and kluster serves 8444 without TLS. | Renamed `:8444` to `:8443` in the manifests |
+| 2 | tower crash-loops: `signet bundle missing provisioning.defaultProvider.scope` | authstar: `integration/config/authstar/tower.yaml` gives `scope: openid email`, a string; tower wants a list | `spec.sh` writes `scope: [openid, email]` |
+| 3 | steward and web crash-loop: their signet bundle lacks `towerUrl` or `towerBaseUrl` | authstar's README says both read plain environment variables; both are in Signet-Configured Mode now. signet: a bundle with config and no secrets fails `SyncBundle` with `walk secrets dir: lstat …/secrets: no such file or directory`, and `extractTarGz` in `internal/api/bundle.go` keeps regular files only, so an empty folder entry does not help. | Patched the scratch copy of kluster-lib's `tarGzMultiFile` to add an empty `secrets/.keep` to every bundle; signetd's walk skips it as not `.yaml` |
+| 4 | Step 2 stops the scenario with no message: Dex answers `Unregistered redirect_uri ("https://acme.authstar.app/oauth2/dex/callback")` | kluster: `addon/dex.go`'s static client lists only `http://localhost:8080/auth/callback` and `http://localhost:3000/callback` | Added the tenant's callback to the cluster's Dex config secret and restarted Dex |
+| 5 | Step 2 again: Dex answers `Invalid Email Address and password` | kluster: `addon/dex.go`'s comment says its hash is bcrypt of `password`, but Python's `bcrypt.checkpw` rejects `password`, `Password`, and `admin` | Put a fresh bcrypt hash of `password` in the cluster's Dex config |
+| 6 | Step 5 times out: no `communication.sent` or `communication.failed` within 10s | authstar: `scenario-golden-path.sh` reads Postgres databases `tower` and `herald` by name | `DB_PREFIX` in the scratch copy |
+
+Two more cost runs:
+
+- The scenario's port-forwards outlive it. `port_forward` `disown`s each one, so the EXIT trap's `kill $(jobs -p)` never reaches them. A second run then reached the first run's namespace on the same local ports, and passed or failed against the wrong build. `golden.sh` kills them after each run, and two namespaces' scenarios cannot run at once on the default ports.
+- Any curl transport error ends the scenario under `set -e`, with no `FAIL` line and no summary.
 
 ## Recommendation
 
 Not settled yet. The choice between adopt, adapt, and drop rests on the story namespaces, which T-2467 and T-2468 try.
+
+## Scripts
+
+What the experiment ran, from the worktree's git-ignored `bin/s-0575/`. Logs and secrets stayed in `/tmp/S-0575`. Tabs are shown as four spaces.
+
+### bin/s-0575/build.sh
+
+```sh
+#!/usr/bin/env bash
+# S-0575: build authstar's eight service images from an exported commit,
+# tagged for a story namespace, timing each build.
+#   build.sh <source dir> <tag> <log dir>
+set -euo pipefail
+src="$1" tag="$2" logs="$3"
+times="$logs/build-$tag.times"
+: > "$times"
+for svc in tower keep herald lookout chronicle steward web portcullis; do
+  ref="docker.io/bytepunx/authstar-${svc}:${tag}"
+  s=$(date +%s)
+  if (cd "$src/$svc" && docker build -t "$ref" .) > "$logs/build-$tag-$svc.log" 2>&1; then
+    echo "$svc ok $(( $(date +%s) - s ))s" >> "$times"
+  else
+    echo "$svc FAILED $(( $(date +%s) - s ))s" >> "$times"
+  fi
+done
+echo "done $(date -u +%FT%TZ)" >> "$times"
+```
+
+### bin/s-0575/ns-up.sh
+
+```sh
+#!/usr/bin/env bash
+# S-0575: load one build into the kluster and deploy it into a story namespace
+# over the shared services, timing each step into <logs>/ns-<namespace>.times.
+#   ns-up.sh <namespace> <image tag> <source dir> <logs dir>
+# Needs KUBECONFIG pointing at the authstar-integration cluster.
+set -euo pipefail
+ns="$1" tag="$2" src="$3" logs="$4"
+here="$(cd "$(dirname "$0")" && pwd)"
+prefix="${ns//-/}_"                      # s-0901 -> s0901_
+[ "$ns" = authstar ] && prefix=""        # main's namespace keeps kluster's names
+services=(tower keep herald lookout chronicle steward web portcullis)
+times="$logs/ns-$ns.times"
+: > "$times"
+step() { local name="$1"; shift; local s; s=$(date +%s); "$@"; echo "$name $(( $(date +%s) - s ))s" >> "$times"; }
+
+load() {
+  for svc in "${services[@]}"; do
+    docker save "docker.io/bytepunx/authstar-${svc}:${tag}" \
+      | docker exec -i k3d-authstar-integration-server-0 ctr -n k8s.io images import - > /dev/null
+  done
+}
+
+rename() {
+  sed -e "s/^\(\s*namespace:\) authstar$/\1 ${ns}/" \
+      -e "s/^\(\s*name:\) authstar$/\1 ${ns}/" \
+      -e "s/^\(\s*value:\) authstar$/\1 ${ns}/" \
+      -e "s/\.authstar\.svc\.cluster\.local/.${ns}.svc.cluster.local/g" \
+      -e "s#image: bytepunx/authstar-\([a-z]*\):latest#image: docker.io/bytepunx/authstar-\1:${tag}#" \
+      -e "s/imagePullPolicy: Always/imagePullPolicy: IfNotPresent/" \
+      -e "s/signet\.signet\.svc\.cluster\.local:8444/signet.signet.svc.cluster.local:8443/"
+  # The last rule: since ADR 0103 the services write through workload mTLS,
+  # which signetd serves on 8443; the committed manifests still name the
+  # admin port, which kluster serves without TLS.
+}
+
+namespace() { rename < "$src/integration/manifests/00-namespace.yaml" | kubectl apply -f - > /dev/null; }
+
+rabbitmq() {
+  local pw; pw="$(openssl rand -hex 24)"
+  kubectl -n rabbitmq exec rabbitmq-0 -c rabbitmq -- sh -c "
+    rabbitmqctl -q list_vhosts | grep -qx '$ns' || rabbitmqctl -q add_vhost '$ns'
+    if rabbitmqctl -q list_users | cut -f1 | grep -qx '$ns'; then
+      rabbitmqctl -q change_password '$ns' '$pw'
+    else
+      rabbitmqctl -q add_user '$ns' '$pw'
+    fi
+    rabbitmqctl -q set_permissions -p '$ns' '$ns' '.*' '.*' '.*'" > /dev/null
+  printf 'amqp://%s:%s@rabbitmq.rabbitmq.svc.cluster.local:5672/%s' "$ns" "$pw" "$ns" > "$logs/$ns.amqp"
+}
+
+databases() {
+  local psql=(kubectl -n postgres exec postgresql-0 -- env PGPASSWORD=postgres psql -U postgres -tAq)
+  for db in tower keep herald; do
+    if [ -z "$("${psql[@]}" -c "SELECT 1 FROM pg_database WHERE datname='${prefix}${db}'")" ]; then
+      "${psql[@]}" -c "CREATE DATABASE ${prefix}${db}" > /dev/null
+    fi
+  done
+  kubectl -n clickhouse exec clickhouse-shard0-0 -- clickhouse-client --password clickhouse -q "CREATE DATABASE IF NOT EXISTS ${prefix}chronicle"
+}
+
+signet() {
+  local tt ht
+  tt="$(openssl rand -hex 32)" ht="$(openssl rand -hex 32)"
+  printf 'TOWER_OPERATOR_TOKEN=%s\nHERALD_OPERATOR_TOKEN=%s\n' "$tt" "$ht" > "$logs/$ns.tokens"
+  bash "$here/spec.sh" "$src" "$ns" "$prefix" "$(cat "$logs/$ns.amqp")" "$tt" "$ht" > "$logs/$ns.spec.json"
+  "$here/storens" -kubeconfig "$KUBECONFIG" < "$logs/$ns.spec.json" 2> "$logs/$ns.storens.log"
+}
+
+deploy() {
+  for f in "$src"/integration/manifests/1[0-7]-*.yaml; do
+    rename < "$f" | kubectl apply -f - > /dev/null
+  done
+  for svc in "${services[@]}"; do
+    kubectl rollout status "deployment/$svc" -n "$ns" --timeout=300s > /dev/null
+  done
+}
+
+step load load
+step namespace namespace
+step rabbitmq rabbitmq
+step databases databases
+step signet signet
+step deploy deploy
+echo "done $(date -u +%FT%TZ)" >> "$times"
+```
+
+### bin/s-0575/spec.sh
+
+```sh
+#!/usr/bin/env bash
+# S-0575: print the storens spec for one story namespace, from one commit's
+# own integration/config/authstar/*.yaml and integration/scripts/lib-secrets.sh,
+# with the namespace's own values in place of the authstar namespace's:
+#   spec.sh <source dir> <namespace> <db prefix> <amqp url> <tower token> <herald token>
+# - every *.authstar.svc.cluster.local host becomes *.<namespace>.svc.cluster.local
+# - dbConnectionString points at <db prefix><service> on kluster's Postgres
+# - rabbitmqUrl is the namespace's own user on its own vhost
+# - operatorToken is the namespace's own, given on the command line
+# - every EC private key, dev-placeholder pepper, salt, or key, and hex secret
+#   is generated fresh, so no two namespaces share key material
+# - chronicle's clickhouseDatabase is <db prefix>chronicle
+set -euo pipefail
+src="$1" ns="$2" prefix="$3" amqp="$4" tower_token="$5" herald_token="$6"
+h="$src/integration"
+
+# shellcheck source=/dev/null
+source "$h/scripts/lib-secrets.sh"
+
+rename_hosts() { sed "s/\.authstar\.svc\.cluster\.local/.${ns}.svc.cluster.local/g"; }
+fresh_placeholder() { printf 'dev-%s-%s' "$ns" "$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=\n')"; }
+
+secrets='{}'
+for entry in "${SECRET_ENTRIES[@]}"; do
+  svc="${entry%%/*}" name="${entry#*/}"
+  var="SECRET_VALUE__${svc}__${name}"; var="${var//-/_}"
+  value="${!var}"
+  case "$name" in
+    dbConnectionString) value="postgres://postgres:postgres@postgresql.postgres.svc.cluster.local:5432/${prefix}${svc}?sslmode=disable" ;;
+    rabbitmqUrl) value="$amqp" ;;
+    operatorToken) [ "$svc" = tower ] && value="$tower_token" || value="$herald_token" ;;
+    *)
+      case "$value" in
+        "-----BEGIN EC PRIVATE KEY-----"*) value="$(openssl ecparam -name prime256v1 -genkey -noout 2>/dev/null)" ;;
+        dev-placeholder-*) value="$(fresh_placeholder)" ;;
+        *) if printf %s "$value" | grep -Eq '^[0-9a-f]{32,}$'; then value="$(openssl rand -hex $(( ${#value} / 2 )))"; fi ;;
+      esac
+      value="$(printf %s "$value" | rename_hosts)" ;;
+  esac
+  secrets="$(jq --arg s "$svc" --arg k "$name" --arg v "$value" '.[$s][$k] = $v' <<<"$secrets")"
+done
+
+bundles='{}'
+for f in "$h"/config/authstar/*.yaml; do
+  svc="$(basename "$f" .yaml)"
+  # tower wants defaultProvider.scope as a list; the committed config gives a string.
+  config="$(rename_hosts < "$f" | sed -e "s/^clickhouseDatabase: chronicle$/clickhouseDatabase: ${prefix}chronicle/" \
+    -e "s/^\(\s*scope:\) openid email$/\1 [openid, email]/")"
+  bundles="$(jq --arg s "$svc" --arg c "$config" --argjson sec "$(jq --arg s "$svc" '.[$s] // {}' <<<"$secrets")" \
+    '.[$s] = {secrets: $sec, config: $c}' <<<"$bundles")"
+done
+
+jq -n --arg ns "$ns" --argjson b "$bundles" \
+  '{ns: $ns, bundles: $b, policies: [["herald","tower"],["herald","keep"],["herald","portcullis"],["tower","portcullis"]]}'
+```
+
+### bin/s-0575/kluster-lib/cmd/storens/main.go
+
+```go
+// Command storens seeds signet for one story namespace of S-0575's experiment,
+// with kluster-lib's own SeedSignetBundle and EnsureSignetPolicy, from a JSON
+// spec on standard input:
+//
+//  {"ns": "s-0901",
+//   "bundles": {"tower": {"secrets": {"k": "v"}, "config": "<yaml>"}},
+//   "policies": [["herald", "tower"]]}
+//
+// A policy [source, target] lets spiffe://<trust domain>/ns/<ns>/sa/<source>
+// put into <ns>/<target>, as kluster's authstar profile grants in "authstar".
+package main
+
+import (
+    "context"
+    "encoding/json"
+    "flag"
+    "fmt"
+    "os"
+    "sort"
+
+    "github.com/bytepunx/kluster-lib/addon"
+    "github.com/bytepunx/kluster-lib/provider"
+    "k8s.io/client-go/tools/clientcmd"
+)
+
+type bundle struct {
+    Secrets map[string]string `json:"secrets"`
+    Config  *string           `json:"config"`
+}
+
+type spec struct {
+    NS       string            `json:"ns"`
+    Bundles  map[string]bundle `json:"bundles"`
+    Policies [][2]string       `json:"policies"`
+}
+
+func must(err error, what string) {
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "storens: %s: %v\n", what, err)
+        os.Exit(1)
+    }
+}
+
+func main() {
+    kubeconfig := flag.String("kubeconfig", "", "kubeconfig file")
+    trustDomain := flag.String("trust-domain", "authstar.cluster.local", "SPIFFE trust domain")
+    flag.Parse()
+
+    var s spec
+    must(json.NewDecoder(os.Stdin).Decode(&s), "read spec")
+    if s.NS == "" || *kubeconfig == "" {
+        fmt.Fprintln(os.Stderr, "storens: the spec's ns and -kubeconfig are required")
+        os.Exit(2)
+    }
+
+    rc, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
+    must(err, "load kubeconfig")
+    h, err := addon.NewClusterHandle(rc, provider.ClusterConfig{Name: "authstar-integration", TrustDomain: *trustDomain})
+    must(err, "cluster handle")
+    ctx := context.Background()
+
+    services := make([]string, 0, len(s.Bundles))
+    for svc := range s.Bundles {
+        services = append(services, svc)
+    }
+    sort.Strings(services)
+    for _, svc := range services {
+        b := s.Bundles[svc]
+        var config []byte
+        if b.Config != nil {
+            config = []byte(*b.Config)
+        }
+        must(addon.SeedSignetBundle(ctx, h, s.NS, svc, b.Secrets, config), "seed "+svc)
+        fmt.Fprintf(os.Stderr, "seeded %s/%s: %d secrets, config %t\n", s.NS, svc, len(b.Secrets), config != nil)
+    }
+    for _, p := range s.Policies {
+        id := fmt.Sprintf("spiffe://%s/ns/%s/sa/%s", *trustDomain, s.NS, p[0])
+        must(addon.EnsureSignetPolicy(ctx, h, id, s.NS, p[1], []string{"put"}), "policy "+p[0]+"->"+p[1])
+        fmt.Fprintf(os.Stderr, "policy %s -> put on %s/%s/*\n", id, s.NS, p[1])
+    }
+}
+```
+
+### The scratch change to kluster-lib
+
+`bin/s-0575/kluster-lib` is a copy of kluster 1.3.1's `kluster-lib`, built with Go 1.26.3 in scratch caches (`GOPATH=/tmp/S-0575/gopath GOTOOLCHAIN=go1.26.3`). Besides the added `cmd/storens` above, this is its whole difference from the original:
+
+```diff
+--- kluster/kluster-lib/addon/signet_admin.go
++++ bin/s-0575/kluster-lib/addon/signet_admin.go
+@@ -323,6 +323,12 @@
+    gz := gzip.NewWriter(&buf)
+    tw := tar.NewWriter(gz)
+ 
++   // S-0575 scratch change: signetd's SyncBundle fails on a bundle with no
++   // secrets folder and extracts regular files only, so every bundle carries
++   // an empty secrets/.keep, which its walk skips as not .yaml.
++   if err := tw.WriteHeader(&tar.Header{Name: "secrets/.keep", Mode: 0o600, Size: 0}); err != nil {
++       return nil, fmt.Errorf("tar header for secrets/.keep: %w", err)
++   }
+    for name, content := range files {
+        hdr := &tar.Header{Name: name, Mode: 0o600, Size: int64(len(content))}
+        if err := tw.WriteHeader(hdr); err != nil {
+```
+
+### bin/s-0575/ns-down.sh
+
+```sh
+#!/usr/bin/env bash
+# S-0575: tear down a story namespace and what it made in the shared services,
+# timing it into <logs>/ns-<namespace>-down.times.
+#   ns-down.sh <namespace> <logs dir>
+# Signet keeps the namespace's bundles and policies: neither the signet CLI nor
+# kluster-lib offers a delete for them.
+set -euo pipefail
+ns="$1" logs="$2"
+prefix="${ns//-/}_"
+times="$logs/ns-$ns-down.times"
+: > "$times"
+step() { local name="$1"; shift; local s; s=$(date +%s); "$@"; echo "$name $(( $(date +%s) - s ))s" >> "$times"; }
+
+namespace() { kubectl delete namespace "$ns" --wait=true --timeout=300s > /dev/null; }
+
+rabbitmq() {
+  kubectl -n rabbitmq exec rabbitmq-0 -c rabbitmq -- sh -c "
+    rabbitmqctl -q list_vhosts | grep -qx '$ns' && rabbitmqctl -q delete_vhost '$ns'
+    rabbitmqctl -q list_users | cut -f1 | grep -qx '$ns' && rabbitmqctl -q delete_user '$ns'
+    true" > /dev/null
+}
+
+databases() {
+  for db in tower keep herald; do
+    kubectl -n postgres exec postgresql-0 -- env PGPASSWORD=postgres psql -U postgres -qc "DROP DATABASE IF EXISTS ${prefix}${db} WITH (FORCE)" > /dev/null
+  done
+  kubectl -n clickhouse exec clickhouse-shard0-0 -- clickhouse-client --password clickhouse -q "DROP DATABASE IF EXISTS ${prefix}chronicle"
+}
+
+step namespace namespace
+step rabbitmq rabbitmq
+step databases databases
+echo "done $(date -u +%FT%TZ)" >> "$times"
+```
+
+### bin/s-0575/promote.sh
+
+```sh
+#!/usr/bin/env bash
+# S-0575: promote a story's build to the default authstar namespace, as an
+# acceptance would: remove the Deployments and CronJobs kluster made there,
+# whose specs a kubectl apply would only merge into, then deploy the build
+# with ns-up.sh, timing the removal into <logs>/promote.times.
+#   promote.sh <image tag> <source dir> <logs dir>
+set -euo pipefail
+tag="$1" src="$2" logs="$3"
+here="$(cd "$(dirname "$0")" && pwd)"
+s=$(date +%s)
+kubectl -n authstar delete deployment,cronjob --all --wait=true --timeout=300s > /dev/null
+echo "remove $(( $(date +%s) - s ))s" > "$logs/promote.times"
+bash "$here/ns-up.sh" authstar "$tag" "$src" "$logs"
+```
+
+### bin/s-0575/golden.sh
+
+```sh
+#!/usr/bin/env bash
+# S-0575: run authstar's golden path against one namespace, with that
+# namespace's operator tokens, and kill the port-forwards the scenario leaves
+# behind when it stops early (its EXIT trap does not reach them).
+#   golden.sh <namespace> <tokens file> <log file>
+set -uo pipefail
+ns="$1" tokens="$2" log="$3"
+here="$(cd "$(dirname "$0")" && pwd)"
+set -a
+# shellcheck source=/dev/null
+. "$tokens"
+set +a
+export AUTHSTAR_NAMESPACE="$ns"
+[ "$ns" = authstar ] && export DB_PREFIX="" || export DB_PREFIX="${ns//-/}_"
+s=$(date +%s)
+bash "$here/scripts/scenario-golden-path.sh" > "$log" 2>&1
+rc=$?
+echo "rc=$rc seconds=$(( $(date +%s) - s ))" >> "$log"
+pkill -f "kubectl port-forward -n ($ns|dex) " || true
+exit "$rc"
+```
+
+### bin/s-0575/path/nc
+
+```sh
+#!/usr/bin/env bash
+# nc shim for S-0575: the host has no nc, and authstar's scripts only call
+# `nc -z <host> <port>` to wait for a port-forward.
+[ "${1:-}" = "-z" ] || { echo "nc shim: only -z is supported" >&2; exit 2; }
+exec 3<>"/dev/tcp/$2/$3" || exit 1
+exec 3>&-
+```
+
+### The changes to the copy of authstar's scripts
+
+`bin/s-0575/scripts` is `integration/scripts` at `e02e430`. Its whole difference:
+
+```diff
+--- authstar/integration/scripts/lib.sh
++++ bin/s-0575/scripts/lib.sh
+@@ -14,7 +14,7 @@
+ # from the environment with no hardcoded default, so this is the value this
+ # harness's manifests (a later task) will set for them. lookout/chronicle/
+ # steward/web have no live signet wiring yet — see README.md.
+-AUTHSTAR_NAMESPACE="authstar"
++AUTHSTAR_NAMESPACE="${AUTHSTAR_NAMESPACE:-authstar}"
+ 
+ # The 8 authstar services, in the order they're discussed in claude.md.
+ # scripts/provision.sh iterates this for --config-path layout only; which
+--- authstar/integration/scripts/scenario-golden-path.sh
++++ bin/s-0575/scripts/scenario-golden-path.sh
+@@ -238,7 +238,7 @@
+ # adminEmail) (provisioning.ts) into tower's own `contacts` table -- query
+ # it directly instead, same technique step 5's own herald verification uses
+ # below.
+-contact_id="$(kubectl exec -n postgres statefulset/postgresql -- env PGPASSWORD=postgres psql -U postgres -d tower -tA -c \
++contact_id="$(kubectl exec -n postgres statefulset/postgresql -- env PGPASSWORD=postgres psql -U postgres -d "${DB_PREFIX:-}tower" -tA -c \
+   "select id from contacts where tenant = '${TENANT_SLUG}' and email = '${DEX_LOGIN}' limit 1;" 2>/dev/null || echo "")"
+ 
+ if [[ -z "$contact_id" ]]; then
+@@ -267,7 +267,7 @@
+     outcome_type=""
+     outcome_error=""
+     for _ in $(seq 1 10); do
+-      row="$(kubectl exec -n postgres statefulset/postgresql -- env PGPASSWORD=postgres psql -U postgres -d herald -tA -F'|' -c "$sql" 2>/dev/null || echo "")"
++      row="$(kubectl exec -n postgres statefulset/postgresql -- env PGPASSWORD=postgres psql -U postgres -d "${DB_PREFIX:-}herald" -tA -F'|' -c "$sql" 2>/dev/null || echo "")"
+       if [[ -n "$row" ]]; then
+         outcome_type="${row%%|*}"
+         outcome_error="${row#*|}"
+```
+
+### The changes to the cluster's Dex
+
+```sh
+kubectl -n dex get secret dex -o jsonpath='{.data.config\.yaml}' | base64 -d > /tmp/S-0575/dex-config.yaml
+# 1. under staticClients[authstar].redirectURIs, add:   - https://acme.authstar.app/oauth2/dex/callback
+# 2. replace staticPasswords[admin@example.com].hash with a fresh one, checked first:
+python3 -I -c "import bcrypt; h=bcrypt.hashpw(b'password', bcrypt.gensalt(10)); assert bcrypt.checkpw(b'password', h); print(h.decode())"
+kubectl -n dex create secret generic dex --from-file=config.yaml=/tmp/S-0575/dex-config.yaml --dry-run=client -o yaml | kubectl -n dex apply -f -
+kubectl -n dex rollout restart deploy/dex
+```
