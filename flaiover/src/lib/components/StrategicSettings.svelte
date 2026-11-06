@@ -10,6 +10,7 @@
 	// and the panel says why. A role with no settings listed says so in a line.
 	import { untrack } from 'svelte';
 	import { api } from '$lib/api';
+	import { rebase } from '$lib/form';
 	import {
 		settingsPanel,
 		strategicChange,
@@ -49,13 +50,17 @@
 	let said = $state<{ ok: boolean; text: string; enable?: string } | null>(null);
 	let busy = $state(false);
 
-	// The settings read again replace what the form holds.
+	// The settings read again, on a change to system-flow.yaml, a reconnect, or after a save, are
+	// rebased under the form (S-0574): a field the operator changed keeps what they typed, the rest
+	// shows the read, and a refusal stays while an edit it was about may still be there.
 	$effect(() => {
 		const read = rows;
 		untrack(() => {
-			before = strategicForm(read);
-			form = strategicForm(read);
-			refused = [];
+			const fresh = strategicForm(read);
+			form = rebase($state.snapshot(before), $state.snapshot(form), fresh);
+			before = fresh;
+			const left = strategicChange(read, before, form);
+			if (!('refused' in left) && unchanged(left)) refused = [];
 		});
 	});
 

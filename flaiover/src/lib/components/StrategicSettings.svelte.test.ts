@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import StrategicSettings from './StrategicSettings.svelte';
-import type { StrategicBlock, StrategicSettings as Strategic } from '$lib/settings';
+import type {
+	StrategicBlock,
+	StrategicSetting,
+	StrategicSettings as Strategic
+} from '$lib/settings';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
@@ -398,5 +402,83 @@ describe('StrategicSettings for a role (S-0420)', () => {
 		expect(q('strategic-none')?.textContent).toContain('no settings for this role');
 		expect(q('strategic-save')).toBeNull();
 		expect(document.querySelectorAll('[data-testid^="input-"]').length).toBe(0);
+	});
+});
+
+describe('StrategicSettings read again (S-0574)', () => {
+	let c: ReturnType<typeof mount> | undefined;
+	afterEach(() => {
+		if (c) unmount(c);
+		c = undefined;
+		api.mockReset();
+		document.body.innerHTML = '';
+	});
+
+	/** Mounts the panel with props a test changes, as a page does when it reads the settings again. */
+	function show(block: StrategicBlock, s: Strategic, onsaved?: () => void) {
+		const props = $state({ block, strategic: s, onsaved });
+		c = mount(StrategicSettings, { target: document.body, props });
+		flushSync();
+		return props;
+	}
+	/** The settings as read again after a push: one key's value changed. */
+	function readAgain(s: Strategic, key: string, value: StrategicSetting['value']): Strategic {
+		return {
+			...s,
+			settings: s.settings.map((x) => (x.key === key ? { ...x, value, set: true } : x))
+		};
+	}
+
+	it('keeps what the operator typed when the settings are read again, and shows the rest as read', () => {
+		const props = show('planning', strategic(true));
+		type(q<HTMLInputElement>('input-planning.schedule')!, '0 6 * * 1');
+		type(q<HTMLInputElement>('input-planning.agent-model')!, 'claude-opus-5');
+		props.strategic = readAgain(strategic(true), 'planning.cycle', '72h');
+		flushSync();
+		expect(q<HTMLInputElement>('input-planning.schedule')!.value).toBe('0 6 * * 1');
+		expect(q<HTMLInputElement>('input-planning.agent-model')!.value).toBe('claude-opus-5');
+		expect(q<HTMLInputElement>('input-planning.cycle')!.value).toBe('72h');
+		expect(q<HTMLButtonElement>('strategic-save')!.disabled).toBe(false);
+	});
+
+	it('shows a new read whole while nothing was typed', () => {
+		const props = show('planning', strategic(true));
+		props.strategic = readAgain(strategic(true), 'planning.schedule', 'weekly');
+		flushSync();
+		expect(q<HTMLInputElement>('input-planning.schedule')!.value).toBe('weekly');
+		expect(q<HTMLButtonElement>('strategic-save')!.disabled).toBe(true);
+	});
+
+	it('keeps a refusal while the edit it was about is still there', async () => {
+		api.mockResolvedValue(
+			answer(422, {
+				refused: [{ field: 'orchestration.release.count', reason: 'must be a whole number' }]
+			})
+		);
+		const props = show('orchestration', strategic(true));
+		type(q<HTMLInputElement>('input-orchestration.release.count')!, '2.5');
+		q<HTMLButtonElement>('strategic-save')!.click();
+		await settle();
+		props.strategic = readAgain(strategic(true), 'orchestration.policy', 'wsjf');
+		flushSync();
+		expect(q<HTMLInputElement>('input-orchestration.release.count')!.value).toBe('2.5');
+		expect(q('refused-orchestration.release.count')?.textContent).toContain(
+			'must be a whole number'
+		);
+		expect(q<HTMLSelectElement>('input-orchestration.policy')!.value).toBe('wsjf');
+	});
+
+	it('shows the read that follows a save, with nothing left to save', async () => {
+		api.mockResolvedValue(answer(200, { set: [], unset: [], commit: 'abc1234', warnings: [] }));
+		const page: { props?: ReturnType<typeof show> } = {};
+		const onsaved = () => {
+			page.props!.strategic = readAgain(strategic(true), 'planning.schedule', '0 6 * * 1');
+		};
+		page.props = show('planning', strategic(true), onsaved);
+		type(q<HTMLInputElement>('input-planning.schedule')!, '0 6 * * 1');
+		q<HTMLButtonElement>('strategic-save')!.click();
+		await settle();
+		expect(q<HTMLInputElement>('input-planning.schedule')!.value).toBe('0 6 * * 1');
+		expect(q<HTMLButtonElement>('strategic-save')!.disabled).toBe(true);
 	});
 });

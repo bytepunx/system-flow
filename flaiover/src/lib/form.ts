@@ -23,15 +23,19 @@ function same(a: unknown, b: unknown): boolean {
  * The form's values on a new read of its data: each field of fresh, except where current differs
  * from seed, the read current was filled from, which the user changed and keeps. Plain objects are
  * walked key by key; any other value, an array included, is one field. A key fresh lacks is gone,
- * whatever was typed in it; a key fresh adds comes in as read.
+ * whatever was typed in it; a key fresh adds comes in as read. What it returns shares no object
+ * with its arguments, so a form bound to it never writes into the seed it is compared with.
  */
 export function rebase<T>(seed: T, current: T, fresh: T): T {
 	if (plain(seed) && plain(current) && plain(fresh)) {
 		const out: Plain = {};
 		for (const k of Object.keys(fresh)) {
-			out[k] = k in seed && k in current ? rebase(seed[k], current[k], fresh[k]) : fresh[k];
+			out[k] =
+				k in seed && k in current
+					? rebase(seed[k], current[k], fresh[k])
+					: structuredClone(fresh[k]);
 		}
 		return out as T;
 	}
-	return same(current, seed) ? fresh : current;
+	return structuredClone(same(current, seed) ? fresh : current);
 }

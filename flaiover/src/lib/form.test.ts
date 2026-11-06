@@ -43,6 +43,14 @@ describe('rebase', () => {
 		expect(rebase(seed, current, fresh)).toEqual({ args: ['a', 'b'], on: true });
 	});
 
+	it('shares no object with the read it takes from', () => {
+		const seed: Record<string, { args: string }> = {};
+		const fresh: Record<string, { args: string }> = { claude: { args: 'a' } };
+		const out = rebase(seed, {}, fresh);
+		out.claude.args = 'typed';
+		expect(fresh.claude.args).toBe('a');
+	});
+
 	it('rebases a single value', () => {
 		expect(rebase('a', 'a', 'b')).toBe('b');
 		expect(rebase('a', 'typed', 'b')).toBe('typed');
