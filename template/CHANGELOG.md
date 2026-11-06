@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- S-0545 A task-done notice is marked `(notice)`, and an agent ended on its own question is not started again for notices alone (patch, ADR-0252): the work-management rule on a task-done notice says its heading ends in `(notice)`, and that while you have ended on your own question to the designer, `flai serve` starts you again only on the answer, with the notices in your first `inbox` to answer then.
+
 ## 1.1.22 - 2026-11-03
 
 - S-0510 A project's manifest names an image layer for its test tiers' tools, flai serve runs it, flai check warns when it is not built, and this repository's layer runs the close-out inside the container (patch).
