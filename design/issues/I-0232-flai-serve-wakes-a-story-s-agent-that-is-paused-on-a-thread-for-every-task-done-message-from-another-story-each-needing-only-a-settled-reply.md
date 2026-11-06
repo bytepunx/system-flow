@@ -2,12 +2,12 @@
 id: I-0232
 title: flai serve wakes a story's agent that is paused on a thread for every task-done message from another story, each needing only a settled reply
 class: efficiency
-status: open
+status: closed
 count: 2
 cost: 4m
 first_reported: 2026-10-29T15:42:30Z
 last_reported: 2026-10-29T16:27:03Z
-updated: 2026-10-29T18:11:17Z
+updated: 2026-11-06T22:27:28Z
 ---
 
 # I-0232 flai serve wakes a story's agent that is paused on a thread for every task-done message from another story, each needing only a settled reply
@@ -28,3 +28,4 @@ At 16:26Z S-0537's T-2314 notice (3832f99) restarted S-0418's agent again while 
 ## Remediation
 
 Story S-0545 remediates this issue, created from it at 2026-10-29T18:11:17Z.
+Closed 2026-11-06T22:27:28Z: S-0545: flai task done's notice is headed (notice) (T-2441), and while a run's own question to the operator is unanswered flai serve no longer starts it for a conversation the other story wrote only notices on since the run ended; one plain entry still starts it, and the answer starts it with the notices in its inbox (ADR-0252, T-2443). TestATaskDoneNoticeDoesNotStartAnAgentThatEndedForAThread reproduces it.
