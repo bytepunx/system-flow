@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-06T22:33:30Z
+updated: 2026-11-06T22:35:37Z
 ---
 
 # Active streams
@@ -8,7 +8,6 @@ updated: 2026-11-06T22:33:30Z
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
 | [S-0520](S-0520.md) | scripts/close-out.sh stops at its first step inside the agent container, since scripts/flai.sh builds flai with go, which the image lacks | in-progress | agent-S-0520 | 2026-11-06T22:28:06Z |
-| [S-0545](S-0545.md) | flai serve wakes a story's agent that is paused on a thread for every task-done message from another story, each needing only a settled reply | review | agent-S-0545 | 2026-11-06T22:33:30Z |
 | [S-0575](S-0575.md) | Two builds of authstar run side by side in one kluster, each in a namespace named for a story over the shared signet, RabbitMQ, and Postgres, and the results say what a namespace per story needs | in-progress | agent-S-0575 | 2026-11-06T22:17:03Z |
 
 ## Strategic agents

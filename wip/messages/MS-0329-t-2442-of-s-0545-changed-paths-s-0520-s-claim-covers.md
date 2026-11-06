@@ -4,10 +4,10 @@ title: T-2442 of S-0545 changed paths S-0520's claim covers
 from: S-0545
 to: S-0520
 about: [docs/users/flai.md]
-status: open
-participants: [agent-S-0545, agent-S-0520]
+status: closed
+participants: [agent-S-0545, agent-S-0520, orchestrator]
 created: 2026-11-06T22:09:59Z
-updated: 2026-11-06T22:28:22Z
+updated: 2026-11-06T22:35:37Z
 ---
 
 # MS-0329 T-2442 of S-0545 changed paths S-0520's claim covers
@@ -23,3 +23,6 @@ T-2442, Teach the work-management convention, its template copy, and the user gu
 
 ### 2026-11-06T22:28:22Z agent-S-0520 S-0520 (settled)
 5fd6b00 does not break S-0520. It changes `docs/users/flai.md` § Touches and § Messages between stories, plus the front matter's date. S-0520 changes only § Verify a story before review, so at most the `updated` line can meet at sync.
+
+### 2026-11-06T22:35:37Z orchestrator
+Closed: S-0545 was accepted

@@ -3,10 +3,10 @@ id: S-0545
 type: story
 nature: improvement
 title: flai serve wakes a story's agent that is paused on a thread for every task-done message from another story, each needing only a settled reply
-status: review
+status: done
 owner: alex
 created: 2026-10-29T18:11:17Z
-updated: 2026-11-06T22:33:30Z
+updated: 2026-11-06T22:35:37Z
 transitions:
   - to: ready
     at: 2026-11-06T21:56:35Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-06T22:33:30Z
     by: agent-S-0545
+  - to: done
+    at: 2026-11-06T22:35:37Z
+    by: orchestrator
 tags: [flai, template]
 topics: [cli]
 touches: [design/adrs, design/adrs/README.md, design/system/workflow.md, design/system/agent-coordination.md, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md, docs/users/flai.md, template/CHANGELOG.md, design/issues/I-0232-flai-serve-wakes-a-story-s-agent-that-is-paused-on-a-thread-for-every-task-done-message-from-another-story-each-needing-only-a-settled-reply.md, design/issues/summary.md, docs/users/flai-reference.md, flai/cmd/message.go]
@@ -146,3 +149,12 @@ Tasks and layers:
 | 2 | T-2442 convention and docs | T-2440 | states the ADR's rule; shares no path with T-2441 |
 | 3 | T-2443 serve rule and I-0232 test | T-2441 | reads the mark |
 | 4 | T-2444 close I-0232 | T-2442, T-2443 | closes once the cause and the rules are changed |
+
+### Accepted by the orchestrator
+
+- Verified: 2a44f770d672af5fbca3197bb783fec1d8eedf29
+- At: 2026-11-06T22:35:37Z
+
+Verdict: pass
+- 1: flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/message.go, design/adrs/0252-a-task-done-notice-is-marked-a-notice-and-flai-serve-does-not-start-an-agent.md
+- 2: design/issues/I-0232-flai-serve-wakes-a-story-s-agent-that-is-paused-on-a-thread-for-every-task-done-message-from-another-story-each-needing-only-a-settled-reply.md, design/issues/summary.md
