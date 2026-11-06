@@ -1220,6 +1220,10 @@ func TestRunTellsEachOpenStoryWhoseClaimCoversTheCommit(t *testing.T) {
 	if es := c.Entries(); c.From != "S-004" || c.To != "S-006" || strings.Join(c.About, ",") != "README.md" || len(es) != 1 || es[0].Author != "agent-S-004" || es[0].Text != text {
 		t.Errorf("MS-0001: %+v\n%s", c, c.Body)
 	}
+	// ADR-0252: the notice is marked a notice, and awaits the told story
+	if es := c.Entries(); len(es) != 1 || !es[0].Notice || es[0].Settled || c.Awaiting() != "S-006" || !strings.Contains(c.Body, " agent-S-004 S-004 (notice)\n") {
+		t.Errorf("MS-0001's entry is not a notice awaiting S-006: %+v\n%s", es, c.Body)
+	}
 	if err := c.Validate(); err != nil {
 		t.Error(err)
 	}

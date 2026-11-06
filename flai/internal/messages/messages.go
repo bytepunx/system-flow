@@ -45,6 +45,10 @@ const closedPrefix = "Closed: "
 // settledMark ends the heading of a settled entry, after its story (ADR-0154).
 const settledMark = " (settled)"
 
+// noticeMark ends the heading of the notice flai task done sends, after its
+// story (ADR-0252).
+const noticeMark = " (notice)"
+
 // Conversation is one file: the messages between two stories.
 type Conversation struct {
 	ID           string   `yaml:"id" json:"id"`
@@ -71,28 +75,34 @@ type Conversation struct {
 
 // Entry is one dated contribution parsed from the body: its time, its
 // author, the story it was written for, empty on an entry that closes the
-// conversation, its text, and whether it is settled: a reply after which the
-// conversation awaits neither story (ADR-0154). The fields are in the order
-// of their JSON keys, sorted, as a decoded object writes them.
+// conversation, its text, whether it is settled: a reply after which the
+// conversation awaits neither story (ADR-0154), and whether it is a notice:
+// the message flai task done sends of a commit, which awaits a reply as any
+// message does (ADR-0252). The fields are in the order of their JSON keys,
+// sorted, as a decoded object writes them.
 type Entry struct {
 	At      string `json:"at"`
 	Author  string `json:"author"`
+	Notice  bool   `json:"notice"`
 	Settled bool   `json:"settled"`
 	Story   string `json:"story"`
 	Text    string `json:"text"`
 }
 
-// Marks are the optional marks of a reply: that it settles the conversation.
-// The zero value is a plain reply.
+// Marks are the optional marks of an entry: that a reply settles the
+// conversation, or that a message is flai task done's notice of a commit
+// (ADR-0252). The zero value is a plain entry. A notice is never settled:
+// with both set, the entry is a notice.
 type Marks struct {
 	Settled bool
+	Notice  bool
 }
 
 var (
 	idPattern    = regexp.MustCompile(`^MS-\d{4,}$`)
 	looseID      = regexp.MustCompile(`^(?:(?i:ms)-?)?0*(\d+)$`)
 	storyPattern = regexp.MustCompile(`^S-\d{3,}$`)
-	entryHeading = regexp.MustCompile(`(?m)^### (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z) (.+?)(?: (S-\d{3,})( \(settled\))?)?$`)
+	entryHeading = regexp.MustCompile(`(?m)^### (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z) (.+?)(?: (S-\d{3,})(?: \((settled|notice)\))?)?$`)
 )
 
 // Dir is <layout.wip>/messages, always in the main checkout.
@@ -218,7 +228,8 @@ func (c *Conversation) Save() error {
 
 // Entries parses the dated entries from the body, in order. An entry headed
 // with no story is one that closed the conversation; one whose heading ends
-// in the settled mark after its story is settled.
+// in the settled mark after its story is settled, and one whose heading ends
+// in the notice mark is a notice.
 func (c *Conversation) Entries() []Entry {
 	locs := entryHeading.FindAllStringSubmatchIndex(c.Body, -1)
 	var out []Entry
@@ -231,7 +242,11 @@ func (c *Conversation) Entries() []Entry {
 		if loc[6] >= 0 {
 			e.Story = c.Body[loc[6]:loc[7]]
 		}
-		e.Settled = loc[8] >= 0
+		if loc[8] >= 0 {
+			mark := c.Body[loc[8]:loc[9]]
+			e.Settled = mark == "settled"
+			e.Notice = mark == "notice"
+		}
 		out = append(out, e)
 	}
 	return out
@@ -437,6 +452,10 @@ type SendOptions struct {
 	Text   string   // the message
 	About  []string // repository paths the conversation is about
 	Now    time.Time
+
+	// Notice marks the entry as flai task done's notice of a commit
+	// (ADR-0252); only Notify writes it.
+	Notice bool
 }
 
 // Send starts a conversation between two stories in progress or in review
@@ -460,8 +479,9 @@ func Send(r *workitem.Repo, opt SendOptions) (*Conversation, error) {
 // does. Unlike Send, it takes the about paths as given, cleaned, without
 // asking that each exist: flai sends it for what git reports, and a path a
 // commit deleted, or one only a story's worktree holds, is still one the
-// message is about. The file is refused, and nothing written, when the
-// project's lint rejects it.
+// message is about. With opt.Notice the entry, a first one too, is headed
+// with the notice mark (ADR-0252). The file is refused, and nothing written,
+// when the project's lint rejects it.
 func Notify(r *workitem.Repo, opt SendOptions) (*Conversation, error) {
 	m, err := prepare(r, opt)
 	if err != nil {
@@ -470,6 +490,7 @@ func Notify(r *workitem.Repo, opt SendOptions) (*Conversation, error) {
 	if m.about, err = cleanAbout(opt.About); err != nil {
 		return nil, err
 	}
+	m.marks = Marks{Notice: opt.Notice}
 	c, err := openBetween(r, m.from.ID, m.to.ID)
 	if err != nil {
 		return nil, err
@@ -485,18 +506,19 @@ func Notify(r *workitem.Repo, opt SendOptions) (*Conversation, error) {
 		}
 	}
 	c.Body = strings.Replace(c.Body, "\n"+before+"\n", "\n"+betweenLine(c.From, c.To, c.About)+"\n", 1)
-	c.add(m.now, m.author, storyOf(c, m.from.ID), m.text)
+	c.addWith(m.now, m.author, storyOf(c, m.from.ID), m.text, m.marks)
 	return c, save(r, c, was)
 }
 
 // message is a first message, or a notice, checked and ready to write. id is
 // the conversation's ID when the text names it before it is written; begin
-// allocates one when it is empty.
+// allocates one when it is empty. marks are its heading's marks.
 type message struct {
 	id, text, author string
 	from, to         *workitem.Item
 	about            []string
 	now              string
+	marks            Marks
 }
 
 // prepare checks what Send and Notify share: the text, the author, and two
@@ -533,7 +555,7 @@ func begin(r *workitem.Repo, m message) (*Conversation, error) {
 		Status: StatusOpen, Participants: []string{m.author}, Created: m.now, Updated: m.now,
 	}
 	c.Path = filepath.Join(Dir(r), c.ID+"-"+orSlug(c.Title)+".md")
-	c.Body = fmt.Sprintf("\n# %s %s\n\n%s\n\n## Entries\n\n### %s %s %s\n%s\n", c.ID, c.Title, betweenLine(c.From, c.To, c.About), m.now, m.author, c.From, m.text)
+	c.Body = fmt.Sprintf("\n# %s %s\n\n%s\n\n## Entries\n\n### %s\n%s\n", c.ID, c.Title, betweenLine(c.From, c.To, c.About), entryHeadingOf(m.now, m.author, c.From, m.marks), m.text)
 	if err := r.LintGuard(c.Path, "", c.Marshal()); err != nil {
 		return nil, err
 	}
@@ -726,18 +748,28 @@ func (c *Conversation) add(stamp, author, story, text string) {
 	c.addWith(stamp, author, story, text, Marks{})
 }
 
-// addWith appends an entry as add does, its heading ending in the settled
-// mark when marks settle it.
+// addWith appends an entry as add does, its heading ending in the mark
+// marks give it.
 func (c *Conversation) addWith(stamp, author, story, text string, marks Marks) {
-	heading := stamp + " " + author + " " + story
-	if marks.Settled {
-		heading += settledMark
-	}
-	c.Body = appendEntry(c.Body, heading, text)
+	c.Body = appendEntry(c.Body, entryHeadingOf(stamp, author, story, marks), text)
 	if !contains(c.Participants, author) {
 		c.Participants = append(c.Participants, author)
 	}
 	c.Updated = stamp
+}
+
+// entryHeadingOf is an entry's heading without its hashes: the time, the
+// author, the story, and the notice mark or the settled mark; a notice is
+// never settled, so with both set it is a notice.
+func entryHeadingOf(stamp, author, story string, marks Marks) string {
+	heading := stamp + " " + author + " " + story
+	switch {
+	case marks.Notice:
+		heading += noticeMark
+	case marks.Settled:
+		heading += settledMark
+	}
+	return heading
 }
 
 // Close closes a conversation that is still stored open, with an entry by
@@ -964,7 +996,7 @@ func titleOf(text, from string) string {
 func cleanAuthor(s string) string { return strings.Join(strings.Fields(s), " ") }
 
 // appendEntry adds a dated entry under its heading, the time, author, and
-// story, and the settled mark on a settled entry. One with the same heading
+// story, and the mark of a marked entry. One with the same heading
 // as the last entry joins it, as threads' entries do (I-0043): a second
 // identical heading fails the duplicate-heading rule (MD024).
 func appendEntry(body, heading, text string) string {

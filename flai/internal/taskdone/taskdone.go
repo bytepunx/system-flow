@@ -545,7 +545,7 @@ func (r *run) tell() error {
 	}
 	for _, cov := range itemedit.Covering(items, r.o.Repo.Manifest.Projects, r.story.ID, paths) {
 		conv, err := messages.Notify(r.o.Repo, messages.SendOptions{
-			From: r.story.ID, To: cov.ID, Author: r.o.Agent, Text: r.notice(cov), About: cov.Paths, Now: r.o.Now(),
+			From: r.story.ID, To: cov.ID, Author: r.o.Agent, Text: r.notice(cov), About: cov.Paths, Now: r.o.Now(), Notice: true,
 		})
 		if err != nil {
 			r.logger.Warn("change notice not sent", "component", "taskdone", "task", r.task.ID, "item", cov.ID, "err", err)

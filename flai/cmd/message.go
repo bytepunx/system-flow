@@ -307,7 +307,7 @@ func newMessageShowCmd(a *app) *cobra.Command {
 	return &cobra.Command{
 		Use:   "show <MS-nnnn>",
 		Short: "Print a conversation with every message",
-		Long:  `Prints the conversation <MS-nnnn>: its ID and title; the two stories, its status, and the story it awaits, settled when it awaits neither, or why it reads as closed; the paths it is about; and every entry, with its time, author, story, (settled) on a settled reply (ADR-0154), and text. The ID may be given in any padding, such as ms-4.`,
+		Long:  `Prints the conversation <MS-nnnn>: its ID and title; the two stories, its status, and the story it awaits, settled when it awaits neither, or why it reads as closed; the paths it is about; and every entry, with its time, author, story, (settled) on a settled reply (ADR-0154) or (notice) on flai task done's notice of a commit (ADR-0252), and text. The ID may be given in any padding, such as ms-4.`,
 		Example: `  flai message show MS-0004
   flai message show ms-4 --json`,
 		Args: cobra.ExactArgs(1),
@@ -333,7 +333,10 @@ func newMessageShowCmd(a *app) *cobra.Command {
 			}
 			for _, e := range c.Entries() {
 				heading := strings.TrimSpace(e.At + " " + e.Author + " " + e.Story)
-				if e.Settled {
+				switch {
+				case e.Notice:
+					heading += " (notice)"
+				case e.Settled:
 					heading += " (settled)"
 				}
 				fmt.Fprintf(a.out, "\n%s\n%s\n", heading, e.Text)

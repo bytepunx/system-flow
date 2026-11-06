@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-11-03
+updated: 2026-11-06
 status: active
 ---
 
@@ -2990,7 +2990,7 @@ Print a conversation with every message.
 flai message show <MS-nnnn>
 ```
 
-Prints the conversation &lt;MS-nnnn&gt;: its ID and title; the two stories, its status, and the story it awaits, settled when it awaits neither, or why it reads as closed; the paths it is about; and every entry, with its time, author, story, (settled) on a settled reply (ADR-0154), and text. The ID may be given in any padding, such as ms-4.
+Prints the conversation &lt;MS-nnnn&gt;: its ID and title; the two stories, its status, and the story it awaits, settled when it awaits neither, or why it reads as closed; the paths it is about; and every entry, with its time, author, story, (settled) on a settled reply (ADR-0154) or (notice) on flai task done's notice of a commit (ADR-0252), and text. The ID may be given in any padding, such as ms-4.
 
 Examples:
 

@@ -622,6 +622,79 @@ func TestNotifyStartsAConversation(t *testing.T) {
 	lintClean(t, r, c)
 }
 
+// ADR-0252, I-0232: a notice is headed with the notice mark after its story,
+// on a new conversation and on the open one, is read back a notice and not
+// settled, and still awaits the told story; Notify without Notice, as the
+// conflict and grown-claim messages call it, writes no mark.
+func TestANoticeIsMarkedAndAwaitsTheToldStory(t *testing.T) {
+	r := project(t)
+	c, err := Notify(r, SendOptions{From: "S-0001", To: "S-0002", Author: "agent-S-0001", Text: "T-0001 of S-0001 changed board.go.", About: []string{"board.go"}, Now: t0, Notice: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Awaiting() != "S-0002" {
+		t.Errorf("a first notice awaits %q, want S-0002", c.Awaiting())
+	}
+	at := t0.Add(time.Minute)
+	if _, err := Reply(r, c.ID, "S-0002", "agent-S-0002", "Does it change the API?", at); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = Notify(r, SendOptions{From: "S-0001", To: "S-0002", Author: "agent-S-0001", Text: "T-0002 of S-0001 changed board.go.", About: []string{"board.go"}, Now: at.Add(time.Minute), Notice: true}); err != nil {
+		t.Fatal(err)
+	}
+	if c, err = Notify(r, SendOptions{From: "S-0002", To: "S-0001", Author: "flai", Text: "Your branch conflicts with S-0002's on board.go.", About: []string{"board.go"}, Now: at.Add(2 * time.Minute)}); err != nil {
+		t.Fatal(err)
+	}
+	body := readFile(t, c.Path)
+	for _, want := range []string{
+		"\n### 2026-10-07T09:00:00Z agent-S-0001 S-0001 (notice)\nT-0001 of S-0001 changed board.go.\n",
+		"\n### 2026-10-07T09:02:00Z agent-S-0001 S-0001 (notice)\nT-0002 of S-0001 changed board.go.\n",
+		"\n### 2026-10-07T09:03:00Z flai S-0002\nYour branch",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("file lacks %q:\n%s", want, body)
+		}
+	}
+	back, err := Read(c.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	es := back.Entries()
+	if len(es) != 4 || !es[0].Notice || es[0].Settled || es[0].Story != "S-0001" || es[1].Notice || !es[2].Notice || es[2].Settled || es[3].Notice || es[3].Settled {
+		t.Fatalf("entries read back: %+v", es)
+	}
+	if back.Marshal() != c.Marshal() {
+		t.Errorf("the file round-trips:\n%s", back.Marshal())
+	}
+	if err := back.Validate(); err != nil {
+		t.Error(err)
+	}
+	lintClean(t, r, back)
+
+	r2 := project(t)
+	n, err := Notify(r2, SendOptions{From: "S-0001", To: "S-0002", Author: "agent-S-0001", Text: "T-0003 of S-0001 changed board.go.", About: []string{"board.go"}, Now: t0, Notice: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n.Awaiting() != "S-0002" {
+		t.Errorf("a notice awaits %q, want the told story S-0002", n.Awaiting())
+	}
+	if list, err := AwaitingOther(r2, "S-0001"); err != nil || ids(list) != n.ID {
+		t.Errorf("S-0001 awaits S-0002's reply to its notice: %s %v", ids(list), err)
+	}
+	data, err := json.Marshal(View(r2, n))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"notice":true`) {
+		t.Errorf("json: %s", data)
+	}
+
+	if got := entryHeadingOf("2026-10-07T09:00:00Z", "a", "S-0001", Marks{Notice: true, Settled: true}); got != "2026-10-07T09:00:00Z a S-0001 (notice)" {
+		t.Errorf("a notice is never settled: %q", got)
+	}
+}
+
 // S-0333: Notify writes on the conversation open between the two stories,
 // whichever started it, adding the about paths it does not name yet; a
 // conversation stored closed is not written on again, and one is started in
