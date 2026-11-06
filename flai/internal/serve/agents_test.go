@@ -1261,7 +1261,7 @@ func TestAMessageInTheSecondARunEndedIsNew(t *testing.T) {
 	if _, err := messages.Reply(lab.repo, answeredThen.ID, id, run.Agent, "Noted.", ended); err != nil {
 		t.Fatal(err)
 	}
-	if got := messaged(lab.repo, &run); got != "" {
+	if got := messaged(lab.repo, &run, true); got != "" {
 		t.Fatalf("%s and %s are not new to it, yet %q is", before.ID, answeredThen.ID, got)
 	}
 	then, err := messages.Send(lab.repo, messages.SendOptions{From: other, To: id, Author: "builder-" + other, Text: "Then.", Now: ended})
@@ -1383,6 +1383,130 @@ func TestASettledReplyStartsTheAgentWaitingOnItOnce(t *testing.T) {
 	alone := AgentRun{Story: id, Agent: "someone-else", Started: started.Format(time.RFC3339)}
 	if judgeRun(lab.root, &alone, new(int)); alone.Outcome != OutcomeFailed || len(alone.Conversations) != 0 {
 		t.Errorf("judged on a settled conversation: %+v", alone)
+	}
+}
+
+// notice writes from's task-done notice to story to, by from's agent, at at,
+// as flai task done does (ADR-0252).
+func (lab *agentLab) notice(from, to, text string, at time.Time) *messages.Conversation {
+	lab.t.Helper()
+	c, err := messages.Notify(lab.repo, messages.SendOptions{From: from, To: to, Author: "builder-" + from, Text: text, Now: at, Notice: true})
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	return c
+}
+
+// S-0545, I-0232: a task-done notice to a story whose agent ended asking the
+// operator does not start it again, as MS-0323 and MS-0315 started S-0510's
+// agent on 2026-11-02 while TH-0814 was open; nor does a second. The answer
+// to its question starts it once, for the thread, with the notices still
+// awaiting its reply (ADR-0252).
+func TestATaskDoneNoticeDoesNotStartAnAgentThatEndedForAThread(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.hold()
+	other := lab.inProgress("Other")
+	id := lab.putEnded("Waits on the operator", AgentRun{Outcome: OutcomeAsked})
+	th := lab.asksOn(id, time.Now().Add(-2*time.Minute))
+	lab.endedAgo(id, time.Minute)
+
+	now := time.Now()
+	c := lab.notice(other, id, "T-0001 of "+other+" changed paths "+id+"'s claim covers.", now)
+	lab.l.look(ctx, false)
+	if r := lab.run(id); r.live() || r.Session != "earlier" || len(lab.entries()) != 0 {
+		t.Fatalf("started again for a notice: %+v, journal %+v", r, lab.entries())
+	}
+	lab.notice(other, id, "T-0002 of "+other+" changed paths "+id+"'s claim covers.", now.Add(time.Second))
+	lab.l.look(ctx, false)
+	if r := lab.run(id); r.live() || len(lab.entries()) != 0 {
+		t.Fatalf("started again for a second notice: %+v, journal %+v", r, lab.entries())
+	}
+
+	if _, err := threads.Reply(lab.repo, th.ID, "alex", "Nine.", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs again for the answer", func() bool { return lab.run(id).Answered == th.ID })
+	if again := lab.run(id); again.Session != "earlier" || len(lab.entries()) != 1 {
+		t.Errorf("started once, in its session: %+v, journal %+v", again, lab.entries())
+	}
+	if got, err := messages.Get(lab.repo, c.ID); err != nil || !owesReply(got, id) {
+		t.Errorf("the notices no longer await its reply: %v", err)
+	}
+	lab.release(id)
+	waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+}
+
+// S-0545: what answers a run that ended asking, given what the other story
+// wrote after it ended, while its question to the operator is unanswered or
+// with none: notices alone answer nothing while it asks, on a new
+// conversation or on one it ended waiting on; anything else answers as
+// before (ADR-0252).
+func TestOnlyNoticesDoNotAnswerARunAskingTheOperator(t *testing.T) {
+	cases := []struct {
+		name string
+		// waited sends the run's message to the other story before the end,
+		// so the run ended waiting on that conversation
+		waited, noThread, answer bool
+		// after are what the other story writes after the end, in order:
+		// true a notice, false a plain message
+		after []bool
+		want  string // "thread", "conversation", or ""
+	}{
+		{name: "a notice alone", after: []bool{true}},
+		{name: "two notices", after: []bool{true, true}},
+		{name: "a plain message", after: []bool{false}, want: "conversation"},
+		{name: "a notice, then a plain message", after: []bool{true, false}, want: "conversation"},
+		{name: "a notice on the conversation it waited on", waited: true, after: []bool{true}},
+		{name: "a notice on the conversation it waited on, with no thread", waited: true, noThread: true, after: []bool{true}, want: "conversation"},
+		{name: "a notice with no thread", noThread: true, after: []bool{true}, want: "conversation"},
+		{name: "a notice, with its question answered", after: []bool{true}, answer: true, want: "thread"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			lab := newAgentLab(t)
+			other, id := lab.inProgress("Other"), lab.inProgress("Asks")
+			agent := "builder-" + id
+			ended := time.Now().UTC().Truncate(time.Second).Add(-time.Minute)
+			run := AgentRun{Story: id, Agent: agent, Started: ended.Add(-time.Hour).Format(time.RFC3339), Ended: ended.Format(time.RFC3339), Outcome: OutcomeAsked}
+			th, err := threads.New(lab.repo, threads.NewOptions{Title: "Which port?", On: id, Author: agent, Text: "Eight or nine?", Now: ended.Add(-time.Minute)})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !tc.noThread {
+				run.Thread = th.ID
+			}
+			if tc.waited {
+				c, err := messages.Send(lab.repo, messages.SendOptions{From: id, To: other, Author: agent, Text: "Do you change flai/cmd?", Now: ended.Add(-10 * time.Second)})
+				if err != nil {
+					t.Fatal(err)
+				}
+				run.Conversations = []string{c.ID}
+			}
+			var conv string
+			for i, notice := range tc.after {
+				at := ended.Add(time.Duration(10*(i+1)) * time.Second)
+				if notice {
+					conv = lab.notice(other, id, fmt.Sprintf("T-%04d of %s changed paths %s's claim covers.", i+1, other, id), at).ID
+					continue
+				}
+				c, err := messages.Notify(lab.repo, messages.SendOptions{From: other, To: id, Author: "builder-" + other, Text: "Which file do you change?", Now: at})
+				if err != nil {
+					t.Fatal(err)
+				}
+				conv = c.ID
+			}
+			if tc.answer {
+				if _, err := threads.Reply(lab.repo, th.ID, "alex", "Nine.", ended.Add(time.Minute)); err != nil {
+					t.Fatal(err)
+				}
+			}
+			want := map[string]string{"thread": th.ID, "conversation": conv}[tc.want]
+			if got := answered(lab.repo, &run); got != want {
+				t.Errorf("answered by %q, want %q", got, want)
+			}
+		})
 	}
 }
 

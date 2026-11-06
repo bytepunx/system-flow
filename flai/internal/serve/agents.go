@@ -2805,50 +2805,105 @@ func askedAnswered(repo *workitem.Repo, run *AgentRun) *threads.Thread {
 // agent has written last on it, a settled reply among what it writes, which
 // leaves it awaiting neither story (ADR-0154); or a conversation on which a
 // message to its story came after it ended (messaged), even while its
-// question to the operator is unanswered.
+// question to the operator is unanswered. While that question is unanswered,
+// a conversation the other story wrote only task-done notices on since the
+// run ended answers nothing: the answer starts the agent, and it answers the
+// notices then (ADR-0252).
 func answered(repo *workitem.Repo, run *AgentRun) string {
-	if run.Thread != "" && threadAnswered(repo, run) {
-		return run.Thread
+	asking := false
+	if run.Thread != "" {
+		if threadAnswered(repo, run) {
+			return run.Thread
+		}
+		asking = true
 	}
 	for _, id := range run.Conversations {
 		c, err := messages.Get(repo, id)
 		if err != nil {
 			continue
 		}
-		if closed, _ := c.Closed(repo); closed || c.Awaiting() == "" || owesReply(c, run.Story) {
+		if closed, _ := c.Closed(repo); closed || c.Awaiting() == "" {
+			return c.ID
+		}
+		if wakes(c, run, asking) {
 			return c.ID
 		}
 	}
-	return messaged(repo, run)
+	return messaged(repo, run, asking)
 }
 
 // messaged is the first conversation of run's story, which ended asking,
 // that awaits its reply to a message the other story's agent wrote after the
-// run ended, or "". It looks from a second before the end, as times are kept
-// to the second: a message written in the second the run ended, after
-// judgeRun read the conversations, is new to it too, while one its agent
-// answered in that second no longer awaits its reply. It never looks before
-// the run started: the message it was started again for is not new to it. A
-// settled reply awaits no one, so it is passed over (ADR-0154).
-func messaged(repo *workitem.Repo, run *AgentRun) string {
-	ended, err := time.Parse(time.RFC3339, run.Ended)
-	if err != nil {
+// run ended (sinceEnd), or "". It never looks before the run started: the
+// message it was started again for is not new to it. A settled reply awaits
+// no one, so it is passed over (ADR-0154); so is a conversation that gained
+// only task-done notices since the end while the run is asking, its own
+// question unanswered (ADR-0252).
+func messaged(repo *workitem.Repo, run *AgentRun, asking bool) string {
+	since, ok := sinceEnd(run)
+	if !ok {
 		return ""
-	}
-	since := ended.Add(-time.Second)
-	if started, err := time.Parse(time.RFC3339, run.Started); err == nil && started.After(since) {
-		since = started
 	}
 	cs, err := messages.ToSince(repo, run.Story, since)
 	if err != nil {
 		return ""
 	}
 	for _, c := range cs {
-		if owesReply(c, run.Story) {
+		if wakes(c, run, asking) {
 			return c.ID
 		}
 	}
 	return ""
+}
+
+// wakes reports whether c, which may await run's story, starts its ended run
+// again: it awaits the story's reply, and, while the run is asking, its own
+// question unanswered, the other story wrote more than task-done notices on
+// it since the end (ADR-0252).
+func wakes(c *messages.Conversation, run *AgentRun, asking bool) bool {
+	return owesReply(c, run.Story) && (!asking || !onlyNoticesSinceEnd(c, run))
+}
+
+// sinceEnd is the time after which a message to run's story is new to its
+// ended run: a second before the end, as times are kept to the second, so a
+// message written in the second the run ended, after judgeRun read the
+// conversations, is new to it too, while one its agent answered in that
+// second no longer awaits its reply; but never before the run started. ok is
+// false when the end cannot be read.
+func sinceEnd(run *AgentRun) (time.Time, bool) {
+	ended, err := time.Parse(time.RFC3339, run.Ended)
+	if err != nil {
+		return time.Time{}, false
+	}
+	since := ended.Add(-time.Second)
+	if started, err := time.Parse(time.RFC3339, run.Started); err == nil && started.After(since) {
+		since = started
+	}
+	return since, true
+}
+
+// onlyNoticesSinceEnd reports whether the other story's entries on c after
+// sinceEnd are at least one and every one of them a task-done notice
+// (ADR-0252), so that they need not start a run whose own question to the
+// operator is unanswered. One entry that is not a notice says no.
+func onlyNoticesSinceEnd(c *messages.Conversation, run *AgentRun) bool {
+	since, ok := sinceEnd(run)
+	if !ok {
+		return false
+	}
+	other := workitem.CanonicalID(c.Other(run.Story))
+	seen := false
+	for _, e := range c.Entries() {
+		at, err := time.Parse(workitem.TimeFormat, e.At)
+		if err != nil || !at.After(since) || workitem.CanonicalID(e.Story) != other {
+			continue
+		}
+		if !e.Notice {
+			return false
+		}
+		seen = true
+	}
+	return seen
 }
 
 // threadAnswered says whether the question on the thread a run ended
