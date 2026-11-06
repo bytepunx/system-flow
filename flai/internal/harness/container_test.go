@@ -33,16 +33,19 @@ func containerReq(t *testing.T, a *manifest.Agent) (harness.Request, harness.Hos
 
 // linkedWorktree makes story's worktree under the project at root as git
 // worktree add leaves it: a .git file naming the story's registration in the
-// main checkout's .git, whose commondir names that .git, and returns the
-// registration.
+// main checkout's .git, whose commondir names that .git, beside the main
+// checkout's wip and system-flow.yaml, and returns the registration.
 func linkedWorktree(t *testing.T, root, story string) string {
 	t.Helper()
 	reg := filepath.Join(root, ".git", "worktrees", story)
 	worktree := filepath.Join(root, ".flai-cache", "worktrees", story)
-	for _, d := range []string{reg, worktree} {
+	for _, d := range []string{reg, worktree, filepath.Join(root, "wip")} {
 		if err := os.MkdirAll(d, 0o755); err != nil {
 			t.Fatal(err)
 		}
+	}
+	if err := os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: flow\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644); err != nil {
+		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(reg, "commondir"), []byte("../..\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -90,12 +93,18 @@ func TestForRefusesAnInnerHarnessAContainerCannotRun(t *testing.T) {
 	}
 }
 
-// The container mounts five folders: the worktree; the main checkout's .git
+// The container mounts eight paths: the worktree; the main checkout's .git
 // read-only and the story's registration under it read-write, after it, so
 // git works in the worktree and can write nothing of the repository's but
-// the story's own index, HEAD, and logs (ADR-0246, I-0215); the cache; and the
-// login read-only. Nothing else under .git is mounted.
-func TestTheContainerRunsDockerWithFiveMountsTwoOfThemGitsAndVariablesByName(t *testing.T) {
+// the story's own index, HEAD, and logs (ADR-0246, I-0215); the main
+// checkout's wip and system-flow.yaml read-only and its .flai-cache/verify
+// read-write, made on the host when absent, so flai verify runs in the
+// container against the main checkout's state and records its report where
+// the host reads it (ADR-0253, I-0218); the cache; and the login read-only.
+// The mounts are an allow-list: nothing else of the main checkout, nothing
+// under .flai-cache but the story's worktree, its agent folder, and verify,
+// and no Docker socket.
+func TestTheContainerRunsDockerWithEightMountsFiveOfTheMainCheckoutsAndVariablesByName(t *testing.T) {
 	a := &manifest.Agent{Harness: harness.Container, Model: "claude-opus-5-5", Provider: "gateway", Config: map[string]string{"inner": harness.ClaudeCode, "effort": "high"}}
 	r, host := containerReq(t, a)
 	r.ProviderName, r.Provider = "gateway", &manifest.Provider{API: manifest.APIAnthropicMessages, BaseURL: "https://gw.example", KeyEnv: "GATEWAY_KEY"}
@@ -103,46 +112,60 @@ func TestTheContainerRunsDockerWithFiveMountsTwoOfThemGitsAndVariablesByName(t *
 	if err != nil {
 		t.Fatal(err)
 	}
+	verify := filepath.Join(r.Root, ".flai-cache", "verify")
+	if _, err := os.Stat(verify); !os.IsNotExist(err) {
+		t.Fatalf("the verify folder should be absent before the start: %v", err)
+	}
 	st, err := ad.Start(r, host)
 	if err != nil {
 		t.Fatal(err)
 	}
+	if info, err := os.Stat(verify); err != nil || !info.IsDir() || info.Mode().Perm() != 0o755 {
+		t.Errorf("the start should make the verify folder on the host, 0755, before docker makes it as root: %v %v", info, err)
+	}
 	worktree := filepath.Join(r.Root, ".flai-cache", "worktrees", "S-0508")
 	cache := filepath.Join(r.Root, ".flai-cache", "agents", "S-0508")
 	common, reg := filepath.Join(r.Root, ".git"), filepath.Join(r.Root, ".git", "worktrees", "S-0508")
+	wip, flow := filepath.Join(r.Root, "wip"), filepath.Join(r.Root, "system-flow.yaml")
 	user := strconv.Itoa(os.Getuid()) + ":" + strconv.Itoa(os.Getgid())
 	want := []string{"docker", "run", "--rm", "-i", "--name", "flai-agent-S-0508-3f2a-b1", "--user", user,
 		"--network", "bridge", "--add-host", "host.docker.internal:host-gateway",
 		"-v", worktree + ":" + worktree, "-w", worktree, "-v", common + ":" + common + ":ro", "-v", reg + ":" + reg,
+		"-v", wip + ":" + wip + ":ro", "-v", flow + ":" + flow + ":ro", "-v", verify + ":" + verify,
 		"-v", cache + ":" + cache, "-v", host.Login + ":/run/claude-login:ro",
 		"-e", "FLAI_AGENT", "-e", "FLAI_SESSION", "-e", "FLAI_STORY", "-e", "FLAI_STARTED_BY", "-e", "FLAI_MCP_URL", "-e", "FLAI_MCP_TOKEN",
 		"-e", "FLAI_CONFIG", "-e", "FLAI_CACHE_DIR", "-e", "GATEWAY_KEY", "flai-agent-claude-code:local"}
 	if st.Harness != harness.Container || !slices.Equal(st.Argv, want) {
 		t.Fatalf("harness %q argv\n%q\nwant\n%q", st.Harness, st.Argv, want)
 	}
-	home, _ := os.UserHomeDir()
+	allowed := map[string]string{
+		worktree:   worktree + ":" + worktree,
+		common:     common + ":" + common + ":ro",
+		reg:        reg + ":" + reg,
+		wip:        wip + ":" + wip + ":ro",
+		flow:       flow + ":" + flow + ":ro",
+		verify:     verify + ":" + verify,
+		cache:      cache + ":" + cache,
+		host.Login: host.Login + ":/run/claude-login:ro",
+	}
+	mounts := 0
 	for i, arg := range st.Argv {
 		if i > 0 && st.Argv[i-1] == "-e" && strings.Contains(arg, "=") {
 			t.Errorf("-e %s carries a value", arg)
 		}
 		if i > 0 && st.Argv[i-1] == "-v" {
+			mounts++
 			src, _, _ := strings.Cut(arg, ":")
-			for _, never := range []string{home, filepath.Join(home, ".flai"), r.Root} {
-				if src == never {
-					t.Errorf("mounts %s", src)
-				}
-			}
-			if underGit := src == common || strings.HasPrefix(src, common+string(filepath.Separator)); underGit &&
-				arg != common+":"+common+":ro" && arg != reg+":"+reg {
-				t.Errorf("mounts %s, under .git, beyond the common dir read-only and the story's registration", arg)
+			if allowed[src] != arg {
+				t.Errorf("mounts %s, which is not one of the eight the container's mounts allow, in its mode", arg)
 			}
 		}
 		if strings.Contains(arg, "docker.sock") {
 			t.Errorf("mounts the Docker socket: %s", arg)
 		}
 	}
-	if n := strings.Count(strings.Join(st.Argv, "\x00"), "\x00-v\x00"); n != 5 {
-		t.Errorf("%d mounts, want 5: the worktree, its two git mounts, the cache, and the login", n)
+	if mounts != len(allowed) {
+		t.Errorf("%d mounts, want %d: the worktree, its two git mounts, the main checkout's wip, system-flow.yaml, and verify folder, the cache, and the login", mounts, len(allowed))
 	}
 	whole := strings.Join(st.Argv, " ") + strings.Join(st.Env, " ") + string(st.Stdin) + strings.Join(slices.Collect(maps.Values(st.EnvFrom)), " ")
 	for _, secret := range []string{"token-value-never-shown", "key-value-never-shown"} {
@@ -270,8 +293,49 @@ func TestTheContainerRefusesAWorktreeWhoseGitItCannotMount(t *testing.T) {
 	}
 }
 
+// ADR-0253: a verify folder the host already has is mounted as it is, and
+// a main checkout the container cannot run flai verify against, one with no
+// system-flow.yaml or no wip, fails the start naming the path, and makes no
+// verify folder.
+func TestTheContainerMountsTheMainCheckoutOrRefusesWhatItLacks(t *testing.T) {
+	r, host := containerReq(t, &manifest.Agent{Harness: harness.Container})
+	verify := filepath.Join(r.Root, ".flai-cache", "verify")
+	if err := os.MkdirAll(verify, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	report := filepath.Join(verify, "S-0508.json")
+	if err := os.WriteFile(report, []byte("{}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	st, err := harness.Adapters[harness.Container].Start(r, host)
+	if err != nil || !slices.Contains(st.Argv, verify+":"+verify) {
+		t.Fatalf("start %q %v, want the verify folder mounted read-write", st.Argv, err)
+	}
+	if _, err := os.Stat(report); err != nil {
+		t.Errorf("the start lost the report the folder held: %v", err)
+	}
+
+	for _, missing := range []string{"system-flow.yaml", "wip"} {
+		r, host := containerReq(t, &manifest.Agent{Harness: harness.Container})
+		gone := filepath.Join(r.Root, missing)
+		if err := os.RemoveAll(gone); err != nil {
+			t.Fatal(err)
+		}
+		st, err := harness.Adapters[harness.Container].Start(r, host)
+		if err == nil || !strings.Contains(err.Error(), "has no main checkout for the container") || !strings.Contains(err.Error(), gone) {
+			t.Errorf("without %s: start %v, want it named", missing, err)
+		}
+		if st.Argv != nil {
+			t.Errorf("without %s: start %q, want none", missing, st.Argv)
+		}
+		if _, err := os.Stat(filepath.Join(r.Root, ".flai-cache", "verify")); !os.IsNotExist(err) {
+			t.Errorf("without %s: a refused start made the verify folder: %v", missing, err)
+		}
+	}
+}
+
 // A worktree whose .git is a folder carries its repository, so the container
-// mounts no git beside it.
+// mounts no git and no main checkout beside it.
 func TestTheContainerMountsNoGitBesideAWorktreeThatCarriesItsOwn(t *testing.T) {
 	r, host := containerReq(t, &manifest.Agent{Harness: harness.Container})
 	worktree := filepath.Join(r.Root, ".flai-cache", "worktrees", "S-0508")
@@ -285,7 +349,9 @@ func TestTheContainerMountsNoGitBesideAWorktreeThatCarriesItsOwn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if n := strings.Count(strings.Join(st.Argv, "\x00"), "\x00-v\x00"); n != 3 || strings.Contains(strings.Join(st.Argv, " "), filepath.Join(r.Root, ".git")) {
+	whole := strings.Join(st.Argv, " ")
+	if n := strings.Count(strings.Join(st.Argv, "\x00"), "\x00-v\x00"); n != 3 || strings.Contains(whole, filepath.Join(r.Root, ".git")) ||
+		strings.Contains(whole, filepath.Join(r.Root, "wip")) || strings.Contains(whole, filepath.Join(r.Root, "system-flow.yaml")) {
 		t.Errorf("argv %q, want the worktree, the cache, and the login alone", st.Argv)
 	}
 }

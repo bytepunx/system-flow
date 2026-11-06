@@ -147,6 +147,138 @@ func wantErr(t *testing.T, err error, parts ...string) {
 	}
 }
 
+// projectFiles gives the main checkout main the system-flow.yaml and the
+// wip folder a system-flow project's main checkout holds.
+func projectFiles(t *testing.T, main string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Join(main, "wip"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	write(t, main, "system-flow.yaml", "version: 1\nname: flow\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n")
+}
+
+// wantMainMounts is the main checkout's wip read-only, its system-flow.yaml
+// read-only, then its .flai-cache/verify read-write, to be created (ADR-0253).
+func wantMainMounts(main string) []Mount {
+	return []Mount{
+		{Path: filepath.Join(main, "wip"), ReadOnly: true},
+		{Path: filepath.Join(main, "system-flow.yaml"), ReadOnly: true},
+		{Path: filepath.Join(main, ".flai-cache", "verify"), Create: true},
+	}
+}
+
+// ADR-0253: the main checkout is the folder that holds the common dir the
+// worktree's .git and commondir name, however they name it, and its wip,
+// system-flow.yaml, and verify folder are the mounts, in that order, the
+// verify folder named though it is absent and left absent, since MainMounts
+// reads files only.
+func TestMainMountsAreTheMainCheckoutsWipManifestAndVerifyFolder(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		gitdir    func(reg, wt string) string
+		commondir func(common string) string
+	}{
+		{"absolute gitdir", absGitdir, upTwo},
+		{"relative gitdir", relGitdir, upTwo},
+		{"absolute commondir", relGitdir, func(common string) string { return common + "/" }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			wt, common, _ := handLinked(t, tc.gitdir, tc.commondir)
+			main := filepath.Dir(common)
+			projectFiles(t, main)
+			got, err := MainMounts(wt)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if want := wantMainMounts(main); !reflect.DeepEqual(got, want) {
+				t.Errorf("MainMounts = %+v, want %+v", got, want)
+			}
+			if _, err := os.Stat(filepath.Join(main, ".flai-cache", "verify")); !os.IsNotExist(err) {
+				t.Errorf("MainMounts made the verify folder, or it was there: %v", err)
+			}
+		})
+	}
+}
+
+// A worktree whose .git is a folder carries its repository, and has no main
+// checkout to mount.
+// TestMainMountsMountsTheWipFolderTheManifestNames: a project whose
+// manifest names another wip folder has that folder mounted (ADR-0011).
+func TestMainMountsMountsTheWipFolderTheManifestNames(t *testing.T) {
+	wt, common, _ := handLinked(t, absGitdir, upTwo)
+	main := filepath.Dir(common)
+	if err := os.MkdirAll(filepath.Join(main, "work"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	write(t, main, "system-flow.yaml", "version: 1\nname: flow\nlayout:\n  design: design\n  docs: docs\n  wip: work\n")
+	got, err := MainMounts(wt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := filepath.Join(main, "work"); len(got) == 0 || got[0].Path != want || !got[0].ReadOnly {
+		t.Errorf("MainMounts = %+v, want %s read-only first", got, want)
+	}
+}
+
+func TestMainMountsOfANormalCheckoutIsNone(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := MainMounts(dir); err != nil || got != nil {
+		t.Errorf("MainMounts = %+v, %v; want none", got, err)
+	}
+}
+
+// What would start a container where flai verify cannot run is an error
+// naming the path at fault and what to do.
+func TestMainMountsNamesWhatIsMissing(t *testing.T) {
+	t.Run("no .git", func(t *testing.T) {
+		dir := t.TempDir()
+		_, err := MainMounts(dir)
+		wantErr(t, err, filepath.Join(dir, ".git"), "flai stream open")
+	})
+	t.Run("registration absent", func(t *testing.T) {
+		wt, common, reg := handLinked(t, absGitdir, upTwo)
+		projectFiles(t, filepath.Dir(common))
+		if err := os.RemoveAll(reg); err != nil {
+			t.Fatal(err)
+		}
+		_, err := MainMounts(wt)
+		wantErr(t, err, reg, "git worktree repair")
+	})
+	t.Run("a repository that is no main checkout's .git", func(t *testing.T) {
+		wt, common, reg := handLinked(t, absGitdir, upTwo)
+		bare := filepath.Join(filepath.Dir(common), "flow.git")
+		if err := os.Mkdir(bare, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		write(t, reg, "commondir", bare+"\n")
+		_, err := MainMounts(wt)
+		wantErr(t, err, bare, "is not a main checkout's .git", "flai stream open")
+	})
+	t.Run("no system-flow.yaml", func(t *testing.T) {
+		wt, common, _ := handLinked(t, absGitdir, upTwo)
+		main := filepath.Dir(common)
+		projectFiles(t, main)
+		if err := os.Remove(filepath.Join(main, "system-flow.yaml")); err != nil {
+			t.Fatal(err)
+		}
+		_, err := MainMounts(wt)
+		wantErr(t, err, filepath.Join(main, "system-flow.yaml"), "main checkout")
+	})
+	t.Run("no wip", func(t *testing.T) {
+		wt, common, _ := handLinked(t, absGitdir, upTwo)
+		main := filepath.Dir(common)
+		projectFiles(t, main)
+		if err := os.Remove(filepath.Join(main, "wip")); err != nil {
+			t.Fatal(err)
+		}
+		_, err := MainMounts(wt)
+		wantErr(t, err, filepath.Join(main, "wip"), "git checkout in")
+	})
+}
+
 // isolateGit keeps the host's system and global git config, which may link
 // worktrees relatively or sign commits, out of a real-git test.
 func isolateGit(t *testing.T) {
@@ -168,17 +300,19 @@ func openedStory(t *testing.T, relative bool) (*workitem.Repo, Opened) {
 	return repo, opened
 }
 
-// realPaths is ms with each path's symlinks resolved, as a temporary folder
-// may sit behind one.
+// realPaths is ms with the symlinks of the folder that holds each path
+// resolved, as a temporary folder may sit behind one and a path to be
+// created is not there yet.
 func realPaths(t *testing.T, ms []Mount) []Mount {
 	t.Helper()
 	out := make([]Mount, len(ms))
 	for i, m := range ms {
-		p, err := filepath.EvalSymlinks(m.Path)
+		dir, err := filepath.EvalSymlinks(filepath.Dir(m.Path))
 		if err != nil {
 			t.Fatal(err)
 		}
-		out[i] = Mount{Path: p, ReadOnly: m.ReadOnly}
+		m.Path = filepath.Join(dir, filepath.Base(m.Path))
+		out[i] = m
 	}
 	return out
 }
@@ -214,6 +348,33 @@ func TestGitMountsOfAWorktreeGitAdded(t *testing.T) {
 	}
 	if want := storyMounts(t, repo); !reflect.DeepEqual(realPaths(t, got), want) {
 		t.Errorf("GitMounts = %+v, want %+v", got, want)
+	}
+}
+
+// ADR-0253: a worktree git worktree add made, as flai stream open makes it,
+// gives its main checkout's wip and system-flow.yaml read-only and its
+// .flai-cache/verify read-write, which may be absent; none of them lies over
+// another or over the .git GitMounts gives. Integration: it runs real git.
+func TestMainMountsOfAWorktreeGitAdded(t *testing.T) {
+	repo, opened := openedStory(t, false)
+	projectFiles(t, repo.MainRoot)
+	got, err := MainMounts(opened.Worktree)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := realPaths(t, wantMainMounts(repo.MainRoot)); !reflect.DeepEqual(realPaths(t, got), want) {
+		t.Errorf("MainMounts = %+v, want %+v", got, want)
+	}
+	gitMounts, err := GitMounts(opened.Worktree)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, m := range got {
+		for _, g := range append(gitMounts, got...) {
+			if g.Path != m.Path && strings.HasPrefix(m.Path, g.Path+string(filepath.Separator)) {
+				t.Errorf("%s lies under %s, which a container would mount over it", m.Path, g.Path)
+			}
+		}
 	}
 }
 

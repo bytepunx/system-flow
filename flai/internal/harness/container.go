@@ -125,8 +125,12 @@ func ContainerCache(root, subject string) string {
 
 // Start runs docker with the story's worktree; the two git mounts
 // storygit.GitMounts gives it, the main checkout's .git read-only and the
-// story's registration under it read-write (ADR-0246); its cache folder; and
-// the operator's login read-only, mounted and nothing else; the variables of
+// story's registration under it read-write (ADR-0246); the three of the main
+// checkout storygit.MainMounts gives it, its wip and system-flow.yaml
+// read-only and its .flai-cache/verify read-write, which Start makes on the
+// host when it is absent, so flai verify runs in the container (ADR-0253);
+// its cache folder; and the operator's login read-only, mounted in that
+// order and nothing else; the variables of
 // containerEnv and the provider's key passed by name alone, the values in the
 // docker client's environment; and pilot's start request on standard input,
 // which names the inner harness, the cache, and the MCP server's variables,
@@ -134,8 +138,8 @@ func ContainerCache(root, subject string) string {
 // (roleStart). It refuses a request that is neither a story's agent's nor a
 // built-in strategic agent's (containerSubject), the operator's arguments, an
 // inner harness with no image, a login the inner harness needs and the host
-// has not set, a worktree whose git it cannot mount, and what the inner
-// harness itself refuses of the request, as pilot would.
+// has not set, a worktree whose git or main checkout it cannot mount, and
+// what the inner harness itself refuses of the request, as pilot would.
 func (container) Start(r Request, host Host) (Start, error) {
 	if err := containerSubject(r); err != nil {
 		return Start{}, err
@@ -175,26 +179,64 @@ func (container) Start(r Request, host Host) (Start, error) {
 	if err != nil {
 		return Start{}, fmt.Errorf("the story's worktree %s has no git for the container: %w", worktree, err)
 	}
-	var gitArgs []string
-	for _, m := range gitMounts {
-		if strings.Contains(m.Path, ":") {
-			return Start{}, fmt.Errorf("the path %q holds a colon, which a mount cannot carry", m.Path)
-		}
-		v := m.Path + ":" + m.Path
-		if m.ReadOnly {
-			v += ":ro"
-		}
-		gitArgs = append(gitArgs, "-v", v)
+	gitArgs, err := mountArgs(gitMounts)
+	if err != nil {
+		return Start{}, err
+	}
+	mainMounts, err := storygit.MainMounts(worktree)
+	if err != nil {
+		return Start{}, fmt.Errorf("the story's worktree %s has no main checkout for the container, so flai verify could not run in it: %w", worktree, err)
+	}
+	mainArgs, err := mountArgs(mainMounts)
+	if err != nil {
+		return Start{}, err
 	}
 	stdin, err := pilotStdin(pilotRequest(r, inner, worktree, cache))
 	if err != nil {
 		return Start{}, err
 	}
+	if err := createMounts(mainMounts); err != nil {
+		return Start{}, err
+	}
 	argv := append(dockerRun(host, ContainerName(r.Story, r.Session)),
 		"-v", worktree+":"+worktree, "-w", worktree)
 	argv = append(argv, gitArgs...)
+	argv = append(argv, mainArgs...)
 	argv = append(argv, "-v", cache+":"+cache)
 	return containerStart(argv, containerEnv, r, host, image, cache, stdin)
+}
+
+// mountArgs is docker's -v of each of ms at its host path, in order, :ro on
+// the read-only ones. It refuses a path with a colon, which a mount cannot
+// carry.
+func mountArgs(ms []storygit.Mount) ([]string, error) {
+	var args []string
+	for _, m := range ms {
+		if strings.Contains(m.Path, ":") {
+			return nil, fmt.Errorf("the path %q holds a colon, which a mount cannot carry", m.Path)
+		}
+		v := m.Path + ":" + m.Path
+		if m.ReadOnly {
+			v += ":ro"
+		}
+		args = append(args, "-v", v)
+	}
+	return args, nil
+}
+
+// createMounts makes on the host each folder of ms that carries Create and is
+// absent, as the operator's, since Docker would make it as root and the
+// container's user could not write to it (ADR-0253 §1).
+func createMounts(ms []storygit.Mount) error {
+	for _, m := range ms {
+		if !m.Create {
+			continue
+		}
+		if err := os.MkdirAll(m.Path, 0o755); err != nil {
+			return fmt.Errorf("making %s on the host, which the container mounts read-write: %w; make it, owned by the user flai serve runs as", m.Path, err)
+		}
+	}
+	return nil
 }
 
 // roleStart is Start for a strategic agent, the planner, the orchestrator,
@@ -331,9 +373,11 @@ func pilotRequest(r Request, inner, root, cache string) Request {
 // mountable refuses a login that reaches what a container never mounts: the
 // home, ~/.flai, the main checkout, or the Docker socket; and a path that a
 // mount's colon-separated form cannot carry. A story's agent's start mounts
-// none of the main checkout's files; of it, Start mounts only its .git,
-// read-only, with the story's registration under it read-write (ADR-0246). A
-// strategic agent's mounts the main checkout itself (ADR-0247).
+// of the main checkout only its .git, read-only, with the story's
+// registration under it read-write (ADR-0246), and its wip and
+// system-flow.yaml read-only and its .flai-cache/verify read-write
+// (ADR-0253), beside the story's worktree and cache folder. A strategic
+// agent's mounts the main checkout itself (ADR-0247).
 func mountable(root, worktree, cache, login string) error {
 	for _, p := range []string{worktree, cache, login} {
 		if strings.Contains(p, ":") {
