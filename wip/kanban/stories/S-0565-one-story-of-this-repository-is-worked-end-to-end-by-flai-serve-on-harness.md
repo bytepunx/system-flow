@@ -7,7 +7,7 @@ status: backlog
 parent: E-0029
 owner: alex
 created: 2026-11-02T18:08:56Z
-updated: 2026-11-06T18:15:32Z
+updated: 2026-11-06T21:57:48Z
 transitions: []
 tags: []
 topics: [harness, docker]
@@ -50,10 +50,10 @@ cost_of_delay:
   at: 2026-11-03T01:23:20Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-07T06:19:00Z
-  basis: "Its own forecast of 1h30m; 21st in the pull order with an in-progress limit of 5, behind S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0520, S-0241, S-0543, S-0545, S-0555, S-0556, S-0557, S-0558, S-0559, S-0560, S-0561, S-0562 and S-0564."
+  delivery: 2026-11-07T09:24:00Z
+  basis: "Its own forecast of 1h30m; 22nd in the pull order with an in-progress limit of 5, behind S-0545, S-0520, S-0575, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0241, S-0543, S-0555, S-0556, S-0557, S-0558, S-0559, S-0560, S-0561, S-0562 and S-0564."
   by: flai
-  at: 2026-11-06T18:15:32Z
+  at: 2026-11-06T21:57:48Z
 ---
 # S-0565 One story of this repository is worked end to end by flai serve on harness container, from story_start to review, once S-0508's container harness is in the installed flai
 

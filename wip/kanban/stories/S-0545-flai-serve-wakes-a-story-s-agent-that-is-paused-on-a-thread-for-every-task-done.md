@@ -3,11 +3,17 @@ id: S-0545
 type: story
 nature: improvement
 title: flai serve wakes a story's agent that is paused on a thread for every task-done message from another story, each needing only a settled reply
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-29T18:11:17Z
-updated: 2026-11-06T18:15:19Z
-transitions: []
+updated: 2026-11-06T21:56:54Z
+transitions:
+  - to: ready
+    at: 2026-11-06T21:56:35Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-11-06T21:56:54Z
+    by: agent-S-0545
 tags: [flai, template]
 topics: [cli]
 touches: [design/adrs, design/adrs/README.md, design/system/workflow.md, design/system/agent-coordination.md, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md, docs/users/flai.md, template/CHANGELOG.md, design/issues/I-0232-flai-serve-wakes-a-story-s-agent-that-is-paused-on-a-thread-for-every-task-done-message-from-another-story-each-needing-only-a-settled-reply.md, design/issues/summary.md]
@@ -32,15 +38,15 @@ usage:
           cache_write: 194118
           cost: 3.609
     - kind: orchestrator
-      seconds: 104
+      seconds: 120
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 33
-          output: 194
-          cache_read: 1053883
-          cache_write: 165172
-          cost: 0.2882
+          input: 37
+          output: 204
+          cache_read: 1312539
+          cache_write: 174097
+          cost: 0.3523
         - model: claude-sonnet-5-5
           input: 4
           output: 20
@@ -57,10 +63,10 @@ cost_of_delay:
   at: 2026-11-02T20:05:05Z
 forecast:
   duration: 50m
-  delivery: 2026-11-07T00:23:00Z
-  basis: "Its own forecast of 50m; 11th in the pull order with an in-progress limit of 5, behind S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0520, S-0241 and S-0543."
+  delivery: 2026-11-06T23:06:00Z
+  basis: "Its own forecast of 50m; 1st in the pull order with an in-progress limit of 5, with nothing ahead of it."
   by: flai
-  at: 2026-11-06T18:15:19Z
+  at: 2026-11-06T21:56:37Z
 finalized:
   by: orchestrator
   at: 2026-11-02T20:07:21Z

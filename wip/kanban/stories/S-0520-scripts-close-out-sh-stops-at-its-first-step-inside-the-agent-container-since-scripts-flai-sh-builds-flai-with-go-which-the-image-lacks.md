@@ -3,11 +3,17 @@ id: S-0520
 type: story
 nature: remediation
 title: scripts/close-out.sh stops at its first step inside the agent container, since scripts/flai.sh builds flai with go, which the image lacks
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-28T12:53:17Z
-updated: 2026-11-06T18:15:04Z
-transitions: []
+updated: 2026-11-06T21:56:55Z
+transitions:
+  - to: ready
+    at: 2026-11-06T21:56:36Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-11-06T21:56:55Z
+    by: agent-S-0520
 tags: [cli, docker]
 topics: [harness, docker]
 touches: [design/adrs, design/adrs/README.md, flai/internal/storygit/mounts.go, flai/internal/storygit/mounts_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/check/check.go, flai/internal/check/check_test.go, flai/cmd/verify_test.go, scripts/agent-container.sh, scripts/README.md, docs/operators/runbooks/agent-container.md, docs/users/flai.md, design/system/flai-cli.md, design/system/agent-adapters.md, design/issues/I-0218-scripts-close-out-sh-stops-at-its-first-step-inside-the-agent-container-since-scripts-flai-sh-builds-flai-with-go-which-the-image-lacks.md, design/issues/summary.md]
@@ -23,15 +29,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 137
+      seconds: 152
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 50
-          output: 635
-          cache_read: 9951606
-          cache_write: 73193
-          cost: 2.2034
+          input: 54
+          output: 645
+          cache_read: 10210262
+          cache_write: 82118
+          cost: 2.2675
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -42,10 +48,10 @@ cost_of_delay:
   at: 2026-10-28T13:56:47Z
 forecast:
   duration: 1h15m
-  delivery: 2026-11-06T23:02:00Z
-  basis: "Its own forecast of 1h15m; 8th in the pull order with an in-progress limit of 5, behind S-0406, S-0407, S-0408, S-0409, S-0410, S-0411 and S-0412."
+  delivery: 2026-11-06T23:30:00Z
+  basis: "Its own forecast of 1h15m; 2nd in the pull order with an in-progress limit of 5, behind S-0545."
   by: flai
-  at: 2026-11-06T18:15:04Z
+  at: 2026-11-06T21:56:42Z
 finalized:
   by: orchestrator
   at: 2026-10-30T14:12:19Z
