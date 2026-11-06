@@ -9,7 +9,7 @@ date: 2026-11-01
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0556, T-2459, TH-0827]
 ---
 
 # D-0446 S-0546 kept the MCP verify tool among flai guard's reads, since a call at a verified commit answers from the record and a story in review has nothing to commit; I-0240 records that a sub-agent can still start a committing close-out

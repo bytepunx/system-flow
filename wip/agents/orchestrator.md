@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1971.3915
-accrued_seconds: 1508086
-tasks_completed: 1805
-last_run: 2026-11-05T01:44:40Z
+accrued_cost: 1971.9501
+accrued_seconds: 1508203
+tasks_completed: 1810
+last_run: 2026-11-06T18:16:41Z
 ---
 
 # Orchestrator activity
@@ -12665,6 +12665,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 16
 - Cost: 0.2028 USD, estimated
+
+### 2026-11-06T18:14:30Z
+
+- Summary: Accepted S-0574 at b1b1711f26e8 under accept_reviews: close-out passed at the branch head, verifier matched criterion 1 to form.ts, StrategicSettings.svelte, SettingsPanel.svelte and their tests, dry run had no blockers.
+- Items: S-0574
+- Seconds: 54
+- Cost: 0.1109 USD, estimated
+
+### 2026-11-06T18:14:47Z
+
+- Summary: Did not publish after S-0574: release_evaluate under judgement shows 1 accepted story unreleased, 0 USD/week (S-0574 unvalued). The publish formula's evaluate step (release --evaluate --require-met) always stops under judgement, and TH-0811, which asks the operator to settle this, is still unanswered, so no instance was started.
+- Items: S-0574
+- Seconds: 17
+- Cost: 0.0907 USD, estimated
+
+### 2026-11-06T18:15:02Z
+
+- Summary: I accepted S-0574 ("Forms should not empty after a user has made changes"), but did not publish it, because publishing is stuck until you answer TH-0811.
+- Items: none
+- Seconds: 15
+- Cost: 0.1636 USD, estimated
+
+### 2026-11-06T18:16:28Z
+
+- Summary: release-due S-0574: did not publish. release_evaluate: policy judgement, met false, count 1, 0 USD/week (S-0574 unvalued), nothing held_by_epic. S-0574 alone is a coherent, complete flaiover fix, but this project has a publish formula, whose step 2 (release --evaluate --require-met) always stops under judgement, and release_publish refuses beside the formula (ADR-0240). TH-0811 still awaits the operator; no instance started, no new thread.
+- Items: S-0574
+- Seconds: 18
+- Cost: 0.0829 USD, estimated
+
+### 2026-11-06T18:16:41Z
+
+- Summary: S-0574 ("Forms should not empty after a user has made changes") is accepted but not released, and I did not publish it. Nothing in this project can publish while the release policy is `judgement`.
+- Items: none
+- Seconds: 13
+- Cost: 0.1105 USD, estimated
 
 ## Refusals
 

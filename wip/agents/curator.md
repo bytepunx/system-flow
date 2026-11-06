@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 98.4405
-accrued_seconds: 9837
-tasks_completed: 56
-last_run: 2026-11-03T17:59:26Z
+accrued_cost: 99.6807
+accrued_seconds: 9894
+tasks_completed: 57
+last_run: 2026-11-06T18:16:38Z
 ---
 
 # Curator activity
@@ -459,3 +459,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0478
 - Seconds: 153
 - Cost: 1.9665 USD, estimated
+
+### 2026-11-06T18:16:38Z
+
+- Summary: No new entries this run. All three S-0574 candidates are already in the design, nothing was merged or absorbed, and `flai digest compact` compacted 44 entries.
+- Trigger: accepted S-0574
+- Items: D-0148, D-0149, D-0150, D-0152, D-0153, D-0156, D-0157, D-0163, D-0164, D-0165, D-0169, D-0170, D-0171, D-0173, D-0175, D-0176, D-0177, D-0179, D-0180, D-0181, D-0182, D-0187, D-0189, D-0192, D-0193, D-0195, D-0196, D-0197, D-0199, D-0202, D-0206, D-0207, D-0208, D-0213, D-0214, D-0215, D-0217, D-0218, D-0219, D-0221, D-0222, D-0223, D-0224, D-0226, D-0446
+- Seconds: 57
+- Cost: 1.2402 USD, estimated
