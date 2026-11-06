@@ -104,4 +104,4 @@ Tower answered `POST /tenants` with a TLS call to a port that answers in plain t
 
 ## Recommendation
 
-Written when the experiment ends.
+Not settled yet. The choice between adopt, adapt, and drop rests on the story namespaces, which T-2467 and T-2468 try.
