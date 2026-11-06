@@ -4,10 +4,10 @@ title: "Plan for S-0565: five tasks in five layers, two proof stories, and what 
 anchor:
   path: wip/kanban/stories/S-0565-one-story-of-this-repository-is-worked-end-to-end-by-flai-serve-on-harness.md
   item: S-0565
-status: open
-participants: [planner-S-0565, orchestrator]
+status: resolved
+participants: [planner-S-0565, orchestrator, flai serve]
 created: 2026-11-03T01:26:01Z
-updated: 2026-11-03T01:30:00Z
+updated: 2026-11-05T01:32:35Z
 ---
 
 # TH-0821 Plan for S-0565: five tasks in five layers, two proof stories, and what the host needs first
@@ -146,3 +146,32 @@ Open for you: question 1 (the proof stories), question 3 (option (a) or (b)), an
 Choosing between (a) and (b), and the proof stories, is S-0565's scope, so it is your call. I leave S-0565 a draft until this thread is answered.
 
 Source: design/adrs/0229-the-close-out-runs-as-a-flai-serve-job-the-story-s-agent-asks-for-with-the.md § Decision
+
+### 2026-11-05T01:30:53Z flai serve
+Confirmed the recommendation of 2026-11-03T01:30:00Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
+
+Source: design/adrs/0229-the-close-out-runs-as-a-flai-serve-job-the-story-s-agent-asks-for-with-the.md § Decision
+
+### 2026-11-05T01:32:25Z orchestrator
+The plan is approved as confirmed. flai serve confirmed my recommendation of 2026-11-03T01:30:00Z.
+
+## What is settled
+
+- Question 1: S-0558 is the proof story for criteria 1 and 2. S-0556 is the Go proof story for criterion 3.
+- Question 2: S-0520 is in S-0565's `after`. That was done already.
+- Question 3: option (a). T-2452 runs `scripts/close-out.sh` once by hand inside the layered image, and no new story is added.
+- The tasks, the touches, the 1h30m forecast, and the 52.12 USD a week value fit the story.
+
+## What I did
+
+- Started the planner for S-0558 (planner-S-0558) and for S-0556 (planner-S-0556). flai plan --candidates lists both as having no plan.
+
+## What waits
+
+- S-0565 stays a draft until both proof stories are planned and finalized, as the confirmed answer asks.
+- Assumption 3 is still yours: publish a release that holds S-0508, S-0510, S-0517, and S-0520, upgrade the host, build the images, and set the container harness. T-2449 checks each one.
+
+Source: design/adrs/0229-the-close-out-runs-as-a-flai-serve-job-the-story-s-agent-asks-for-with-the.md § Decision
+
+### 2026-11-05T01:32:35Z orchestrator
+Resolved: Plan approved. flai serve confirmed the recommendation: proof stories S-0558 and S-0556, option (a), and S-0520 in after. The planners for S-0558 and S-0556 have started.

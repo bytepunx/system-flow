@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 96.4740
-accrued_seconds: 9684
-tasks_completed: 55
-last_run: 2026-11-03T02:48:27Z
+accrued_cost: 98.4405
+accrued_seconds: 9837
+tasks_completed: 56
+last_run: 2026-11-03T17:59:26Z
 ---
 
 # Curator activity
@@ -451,3 +451,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0132, D-0133, D-0134, D-0135, D-0137, D-0138, D-0139, D-0140, D-0141, D-0143, D-0146, D-0433, D-0455, D-0466, D-0468, D-0469, D-0470, D-0471, D-0472, D-0473, D-0474, D-0475, D-0476, D-0477
 - Seconds: 495
 - Cost: 3.5074 USD, estimated
+
+### 2026-11-03T17:59:26Z
+
+- Summary: Wrote D-0478 from S-0573's decisions; merged, absorbed, and compacted nothing; the guard refused a second S-0573 entry, which I did not retry.
+- Trigger: accepted S-0573
+- Items: D-0478
+- Seconds: 153
+- Cost: 1.9665 USD, estimated
