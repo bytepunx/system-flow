@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 101.2530
-accrued_seconds: 9989
-tasks_completed: 58
-last_run: 2026-11-06T22:39:18Z
+accrued_cost: 102.7696
+accrued_seconds: 10083
+tasks_completed: 59
+last_run: 2026-11-06T23:22:16Z
 ---
 
 # Curator activity
@@ -475,3 +475,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0342, D-0383, D-0384, D-0468, D-0479
 - Seconds: 95
 - Cost: 1.5723 USD, estimated
+
+### 2026-11-06T23:22:16Z
+
+- Summary: The run wrote one new entry, D-0480, from S-0575. It merged nothing, absorbed nothing, and `flai digest compact` compacted nothing.
+- Trigger: accepted S-0575
+- Items: D-0480
+- Seconds: 94
+- Cost: 1.5166 USD, estimated

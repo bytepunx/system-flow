@@ -4,10 +4,10 @@ title: "S-0520 is verified and ready to accept, but only you can accept it: its 
 anchor:
   path: wip/kanban/stories/S-0520-scripts-close-out-sh-stops-at-its-first-step-inside-the-agent-container-since-scripts-flai-sh-builds-flai-with-go-which-the-image-lacks.md
   item: S-0520
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-06T22:46:30Z
-updated: 2026-11-06T22:46:30Z
+updated: 2026-11-06T23:25:31Z
 ---
 
 # TH-0831 S-0520 is verified and ready to accept, but only you can accept it: its branch changes scripts/agent-container.sh, a path Claude Code protects
@@ -40,3 +40,6 @@ That rule is ADR-0106. Nothing else blocks the acceptance.
 - All 19 changed files are within the story's touches.
 
 **One thing to look at:** the verifier did not confirm the `safe.directory` setting that a new comment in `scripts/agent-container.sh` describes. Its diff view was cut short before the `run()` body.
+
+### 2026-11-06T23:25:31Z alex
+Resolved: S-0520 was accepted

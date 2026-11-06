@@ -3,10 +3,10 @@ id: S-0520
 type: story
 nature: remediation
 title: scripts/close-out.sh stops at its first step inside the agent container, since scripts/flai.sh builds flai with go, which the image lacks
-status: review
+status: done
 owner: alex
 created: 2026-10-28T12:53:17Z
-updated: 2026-11-06T22:45:14Z
+updated: 2026-11-06T23:25:31Z
 transitions:
   - to: ready
     at: 2026-11-06T21:56:36Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-06T22:45:08Z
     by: agent-S-0520
+  - to: done
+    at: 2026-11-06T23:25:31Z
+    by: alex
 tags: [cli, docker]
 topics: [harness, docker]
 touches: [design/adrs, design/adrs/README.md, flai/internal/storygit/mounts.go, flai/internal/storygit/mounts_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/check/check.go, flai/internal/check/check_test.go, flai/cmd/verify_test.go, scripts/agent-container.sh, scripts/README.md, docs/operators/runbooks/agent-container.md, docs/users/flai.md, design/system/flai-cli.md, design/system/agent-adapters.md, design/issues/I-0218-scripts-close-out-sh-stops-at-its-first-step-inside-the-agent-container-since-scripts-flai-sh-builds-flai-with-go-which-the-image-lacks.md, design/issues/summary.md, design/issues/I-0264-flai-check-finds-agent-image-outside-the-story-at-close-out.md, design/tech/docker.md]

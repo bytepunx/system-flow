@@ -3,12 +3,18 @@ id: S-0576
 type: story
 nature: research
 title: "An ADR settles how flai runs a project's kluster for a story in review: one shared cluster, a namespace per story, the story's own settings, promotion on acceptance, and the manifest block a project fills in"
-status: backlog
+status: in-progress
 parent: E-0032
 owner: alex
 created: 2026-11-06T21:39:23Z
-updated: 2026-11-06T23:20:09Z
-transitions: []
+updated: 2026-11-06T23:25:06Z
+transitions:
+  - to: ready
+    at: 2026-11-06T23:24:57Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-06T23:25:06Z
+    by: agent-S-0576
 tags: [kluster, adr]
 topics: [kluster, testing, deployment, manifest]
 touches: [design/adrs, design/adrs/README.md, design/system/kluster.md, design/system/README.md, design/conventions/tooling.md]

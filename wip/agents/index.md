@@ -1,13 +1,13 @@
 ---
 title: Active streams
-updated: 2026-11-06T23:20:33Z
+updated: 2026-11-06T23:25:42Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0520](S-0520.md) | scripts/close-out.sh stops at its first step inside the agent container, since scripts/flai.sh builds flai with go, which the image lacks | review | agent-S-0520 | 2026-11-06T22:45:02Z |
+| [S-0576](S-0576.md) | An ADR settles how flai runs a project's kluster for a story in review: one shared cluster, a namespace per story, the story's own settings, promotion on acceptance, and the manifest block a project fills in | in-progress | agent-S-0576 | 2026-11-06T23:25:06Z |
 
 ## Strategic agents
 
@@ -16,4 +16,4 @@ updated: 2026-11-06T23:20:33Z
 | [planner](planner.md) | 127 | 977.3746 USD | 133226 | 2026-11-06T21:53:14Z |
 | [orchestrator](orchestrator.md) | 1843 | 1976.4928 USD | 1509153 | 2026-11-06T23:19:48Z |
 | [analyzer](analyzer.md) | 1 | 5.0040 USD | 454 | 2026-10-15T22:49:08Z |
-| [curator](curator.md) | 58 | 101.2530 USD | 9989 | 2026-11-06T22:39:18Z |
+| [curator](curator.md) | 59 | 102.7696 USD | 10083 | 2026-11-06T23:22:16Z |
