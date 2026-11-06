@@ -9,11 +9,14 @@
 # prompt included; its log is claude's stream-json, as on the host.
 # Mounts, each at its host path, the story's worktree read-write (the working directory), the main
 # checkout's .git read-only and the story's registration in it, .git/worktrees/S-nnnn, read-write
-# over it (ADR-0246), and .flai-cache/agents/S-nnnn read-write as the cache (claude's configuration
-# in its claude folder); and the operator's Claude login (FLAI_CLAUDE_LOGIN, default ~/.claude)
-# read-only at /run/claude-login; nothing else, never the Docker socket. Git in the worktree reads
-# and refreshes its index; a commit fails on the read-only objects, since commits are the host's,
-# through task_done and the close-out. The server is the one `flai mcp status` names, with the
+# over it (ADR-0246), the main checkout's wip folder and system-flow.yaml read-only and its
+# .flai-cache/verify read-write, made first so it is the operator's, so flai verify and the
+# close-out run inside against the main checkout's narrative and board and write the report the
+# host reads (ADR-0253), and .flai-cache/agents/S-nnnn read-write as the cache (claude's
+# configuration in its claude folder); and the operator's Claude login (FLAI_CLAUDE_LOGIN, default
+# ~/.claude) read-only at /run/claude-login; nothing else, never the Docker socket. Git in the
+# worktree reads and refreshes its index; a commit fails on the read-only objects, since commits
+# are the host's, through task_done. The server is the one `flai mcp status` names, with the
 # token from `flai mcp token`, passed by environment, never in an argument.
 # The container's flai keeps its config and cache under .flai-cache/agents/S-nnnn/flai (FLAI_CONFIG,
 # FLAI_CACHE_DIR), so nothing is written under the container's home.
@@ -48,6 +51,13 @@ LOGIN="${FLAI_CLAUDE_LOGIN:-$HOME/.claude}"
 GIT_COMMON="$CACHE_ROOT/.git"
 REGISTRATION="$GIT_COMMON/worktrees/$STORY"
 [ -d "$REGISTRATION" ] || { echo "no worktree registration at $REGISTRATION: git in the container needs it; flai story start $STORY opens the worktree with it" >&2; exit 1; }
+# What flai verify reads and writes of the main checkout (ADR-0253): its wip folder, as the
+# manifest's layout names it, its manifest, and the folder its report goes in.
+MANIFEST="$CACHE_ROOT/system-flow.yaml"
+WIP_NAME="$(sed -n '/^layout:/,/^[^ ]/s/^  wip: *//p' "$MANIFEST" | head -n 1)"
+WIP="$CACHE_ROOT/${WIP_NAME:-wip}"
+VERIFY="$CACHE_ROOT/.flai-cache/verify"
+[ -d "$WIP" ] || { echo "no wip folder at $WIP: flai verify in the container reads the main checkout's" >&2; exit 1; }
 [ -f "$LOGIN/.credentials.json" ] || { echo "no Claude login at $LOGIN/.credentials.json: sign in with claude on the host, or set FLAI_CLAUDE_LOGIN" >&2; exit 1; }
 [ -x "${FLAI_BIN:-/nonexistent}" ] || { echo "no flai to ask for the MCP server: install it, or set FLAI_BIN" >&2; exit 1; }
 # The operator's host's server: its state is the main checkout's .flai-cache/mcp-http.json, whatever
@@ -75,7 +85,7 @@ SESSION="${FLAI_AGENT_SESSION:-$(cat /proc/sys/kernel/random/uuid 2>/dev/null ||
 case "$WORKTREE$AGENT_DIR" in
   *[\\\"]*) echo "the worktree or cache path holds a quote or a backslash, which the start request cannot carry" >&2; exit 2 ;;
 esac
-mkdir -p "$AGENT_DIR/flai" "$AGENT_DIR/claude"
+mkdir -p "$AGENT_DIR/flai" "$AGENT_DIR/claude" "$VERIFY"
 chmod 700 "$AGENT_DIR"
 # Claude Code finds its login in CLAUDE_CONFIG_DIR, the cache's claude folder: a link to the
 # read-only mount, not a copy.
@@ -96,6 +106,9 @@ REQUEST="$(printf '{"Story":"%s","Root":"%s","Project":"%s","Name":"%s","Session
 # every argument.
 FLAI_MCP_URL="$URL" FLAI_MCP_TOKEN="$TOKEN" FLAI_MCP_HOST="$HOST_HEADER"
 export FLAI_MCP_URL FLAI_MCP_TOKEN FLAI_MCP_HOST
+# Docker makes the main checkout's own folder as root, as its mounts' parent, so git there, as
+# flai verify runs it to find the main branch, is told by command-line configuration that the
+# folder is safe (ADR-0253).
 # NET_ARGS splits on spaces by design: it holds no path. The registration's mount comes after the
 # read-only .git's, the shorter destination first, so that Docker nests it over its parent.
 run() {
@@ -104,10 +117,14 @@ run() {
     -v "$WORKTREE:$WORKTREE" -w "$WORKTREE" \
     -v "$GIT_COMMON:$GIT_COMMON:ro" \
     -v "$REGISTRATION:$REGISTRATION" \
+    -v "$WIP:$WIP:ro" \
+    -v "$MANIFEST:$MANIFEST:ro" \
+    -v "$VERIFY:$VERIFY" \
     -v "$AGENT_DIR:$AGENT_DIR" \
     -v "$LOGIN:$LOGIN_IN:ro" \
     -e FLAI_MCP_URL -e FLAI_MCP_TOKEN -e FLAI_MCP_HOST \
     -e "FLAI_CONFIG=$AGENT_DIR/flai/config.json" -e "FLAI_CACHE_DIR=$AGENT_DIR/flai/cache" \
+    -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e "GIT_CONFIG_VALUE_0=$CACHE_ROOT" \
     "$@"
 }
 if [ "$#" -gt 0 ]; then

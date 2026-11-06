@@ -134,7 +134,8 @@ func TestTheContainerRunsDockerWithEightMountsFiveOfTheMainCheckoutsAndVariables
 		"-v", wip + ":" + wip + ":ro", "-v", flow + ":" + flow + ":ro", "-v", verify + ":" + verify,
 		"-v", cache + ":" + cache, "-v", host.Login + ":/run/claude-login:ro",
 		"-e", "FLAI_AGENT", "-e", "FLAI_SESSION", "-e", "FLAI_STORY", "-e", "FLAI_STARTED_BY", "-e", "FLAI_MCP_URL", "-e", "FLAI_MCP_TOKEN",
-		"-e", "FLAI_CONFIG", "-e", "FLAI_CACHE_DIR", "-e", "GATEWAY_KEY", "flai-agent-claude-code:local"}
+		"-e", "FLAI_CONFIG", "-e", "FLAI_CACHE_DIR", "-e", "GIT_CONFIG_COUNT", "-e", "GIT_CONFIG_KEY_0", "-e", "GIT_CONFIG_VALUE_0",
+		"-e", "GATEWAY_KEY", "flai-agent-claude-code:local"}
 	if st.Harness != harness.Container || !slices.Equal(st.Argv, want) {
 		t.Fatalf("harness %q argv\n%q\nwant\n%q", st.Harness, st.Argv, want)
 	}
@@ -176,7 +177,11 @@ func TestTheContainerRunsDockerWithEightMountsFiveOfTheMainCheckoutsAndVariables
 	if !maps.Equal(st.EnvFrom, map[string]string{"GATEWAY_KEY": "GATEWAY_KEY"}) {
 		t.Errorf("EnvFrom %v, want the key's variable copied by its own name", st.EnvFrom)
 	}
-	if wantEnv := []string{"FLAI_CONFIG=" + cache + "/flai/config.json", "FLAI_CACHE_DIR=" + cache + "/flai/cache"}; !slices.Equal(st.Env, wantEnv) {
+	// Docker makes the main checkout's folder as root, as its mounts'
+	// parent, so git is told it is safe there, by command-line configuration.
+	wantEnv := []string{"FLAI_CONFIG=" + cache + "/flai/config.json", "FLAI_CACHE_DIR=" + cache + "/flai/cache",
+		"GIT_CONFIG_COUNT=1", "GIT_CONFIG_KEY_0=safe.directory", "GIT_CONFIG_VALUE_0=" + r.Root}
+	if !slices.Equal(st.Env, wantEnv) {
 		t.Errorf("env %q, want %q", st.Env, wantEnv)
 	}
 	if len(st.Files) != 0 {

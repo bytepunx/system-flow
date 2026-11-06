@@ -1,6 +1,6 @@
 ---
 title: "Runbook: run a story's agent in a container"
-updated: 2026-11-02
+updated: 2026-11-06
 status: active
 ---
 
@@ -61,6 +61,9 @@ Before the run it writes two things to `.flai-cache/agents/S-nnnn/`, which is gi
 | `.flai-cache/worktrees/S-nnnn` | the same path, the working directory | read-write | the story's worktree |
 | `.git` of the main checkout | the same path | read-only | git in the worktree reads the objects, refs, and `config` from it |
 | `.git/worktrees/S-nnnn` of the main checkout, the story's registration | the same path, over the read-only `.git` | read-write | the worktree's own `index`, `HEAD`, logs, and locks, which its `.git` file names |
+| `wip/` of the main checkout, as the manifest's `layout.wip` names it | the same path | read-only | the narrative, the board, the items, the threads, and the messages that `flai verify` checks ([ADR-0253](../../../design/adrs/0253-a-container-that-runs-a-story-s-agent-mounts-the-main-checkout-s-wip-and-system.md)) |
+| `system-flow.yaml` of the main checkout | the same path | read-only | by it flai knows the main checkout is there, so `flai verify` runs rather than refusing |
+| `.flai-cache/verify` of the main checkout, made first so it is yours | the same path | read-write | the report `flai verify` writes, which `flai verify --last` reads on the host |
 | `.flai-cache/agents/S-nnnn` | the same path, as `CLAUDE_CONFIG_DIR` | read-write | Claude Code's state: settings, transcript, caches; and in `flai/`, the container's flai config and cache |
 | `~/.claude` (`FLAI_CLAUDE_LOGIN`) | `/run/claude-login` | read-only | the login; only `.credentials.json` is read |
 
@@ -118,4 +121,4 @@ If a token in an `mcp.json` may have been copied elsewhere, rotate it with `flai
 
 ## Limitations
 
-S-0505's results document records what was tried, what worked, and what is still open, among them the network attempts, the login's OAuth refresh, which was not exercised, and git inside the container, which ADR-0246's two git mounts have since settled. Read it before relying on this runbook for long runs: [S-0505's results](../../../design/experiments/S-0505-claude-code-works-one-story-of-this-repository-inside-a-hand-built-container-from-a-bedrock-image-and-a-claude-code-layer-and-the-results-settle-what-adr-0203-leaves-open.md).
+S-0505's results document records what was tried, what worked, and what is still open, among them the network attempts, the login's OAuth refresh, which was not exercised, and git inside the container, which ADR-0246's two git mounts have since settled. The close-out runs inside the container past `flai verify`'s own steps, since the main checkout's `wip/`, `system-flow.yaml`, and `.flai-cache/verify` are mounted (ADR-0253, I-0218). Its tiers need the project's layer image, `flai-agent-sf-claude-code:local` here (S-0510), which this script does not run: in `flai-agent-claude-code:local` the close-out stops at the first tier that needs `go`. Its commit step stops inside the container whenever anything is uncommitted, such as an issue `--record-issues` recorded, since commits are the host's: commit through `task_done` and ask for the close-out from the host. Read S-0505's results before relying on this runbook for long runs: [S-0505's results](../../../design/experiments/S-0505-claude-code-works-one-story-of-this-repository-inside-a-hand-built-container-from-a-bedrock-image-and-a-claude-code-layer-and-the-results-settle-what-adr-0203-leaves-open.md).

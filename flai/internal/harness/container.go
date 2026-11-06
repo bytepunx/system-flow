@@ -203,7 +203,22 @@ func (container) Start(r Request, host Host) (Start, error) {
 	argv = append(argv, gitArgs...)
 	argv = append(argv, mainArgs...)
 	argv = append(argv, "-v", cache+":"+cache)
-	return containerStart(argv, containerEnv, r, host, image, cache, stdin)
+	return containerStart(argv, containerEnv, safeMain(mainMounts), r, host, image, cache, stdin)
+}
+
+// safeMain is git's safe.directory for the main checkout of a story's
+// container, given as command-line configuration through GIT_CONFIG_COUNT,
+// GIT_CONFIG_KEY_0, and GIT_CONFIG_VALUE_0, which git honours for it. Docker
+// makes the main checkout's own folder as root, as the parent of its mounts,
+// so git refuses to run there, as flai verify does to find the main branch,
+// for dubious ownership (ADR-0253). None when ms names no main checkout.
+func safeMain(ms []storygit.Mount) []string {
+	for _, m := range ms {
+		if filepath.Base(m.Path) == "system-flow.yaml" {
+			return []string{"GIT_CONFIG_COUNT=1", "GIT_CONFIG_KEY_0=safe.directory", "GIT_CONFIG_VALUE_0=" + filepath.Dir(m.Path)}
+		}
+	}
+	return nil
 }
 
 // mountArgs is docker's -v of each of ms at its host path, in order, :ro on
@@ -261,7 +276,7 @@ func roleStart(r Request, host Host, inner, image string) (Start, error) {
 		"-v", r.Root+":"+r.Root, "-w", r.Root,
 		"-v", hooks+":"+hooks+":ro",
 		"-v", cache+":"+cache)
-	st, err := containerStart(argv, roleContainerEnv, r, host, image, cache, stdin)
+	st, err := containerStart(argv, roleContainerEnv, nil, r, host, image, cache, stdin)
 	if err != nil {
 		return Start{}, err
 	}
@@ -324,15 +339,20 @@ func dockerRun(host Host, name string) []string {
 
 // containerStart is the Start of argv, docker's run with its mounts, after
 // which it mounts the operator's login read-only when the host names one,
-// passes the variables of names and the provider's key by name alone, and
-// runs image; its environment points the container's flai into cache, and
-// stdin is pilot's start request. It refuses a provider's key_env that is not
-// a variable's name.
-func containerStart(argv, names []string, r Request, host Host, image, cache string, stdin []byte) (Start, error) {
+// passes the variables of names, those of extra (NAME=value, none a secret),
+// and the provider's key by name alone, and runs image; its environment points
+// the container's flai into cache and holds extra's values, and stdin is
+// pilot's start request. It refuses a provider's key_env that is not a
+// variable's name.
+func containerStart(argv, names, extra []string, r Request, host Host, image, cache string, stdin []byte) (Start, error) {
 	if host.Login != "" {
 		argv = append(argv, "-v", host.Login+":"+ContainerLogin+":ro")
 	}
 	for _, name := range names {
+		argv = append(argv, "-e", name)
+	}
+	for _, kv := range extra {
+		name, _, _ := strings.Cut(kv, "=")
 		argv = append(argv, "-e", name)
 	}
 	var from map[string]string
@@ -344,7 +364,7 @@ func containerStart(argv, names []string, r Request, host Host, image, cache str
 		from = map[string]string{p.KeyEnv: p.KeyEnv}
 	}
 	argv = append(argv, image)
-	env := []string{containerConfig + "=" + filepath.Join(cache, "flai", "config.json"), containerCacheDir + "=" + filepath.Join(cache, "flai", "cache")}
+	env := append([]string{containerConfig + "=" + filepath.Join(cache, "flai", "config.json"), containerCacheDir + "=" + filepath.Join(cache, "flai", "cache")}, extra...)
 	return Start{Harness: Container, Argv: argv, Env: env, EnvFrom: from, Stdin: stdin}, nil
 }
 
