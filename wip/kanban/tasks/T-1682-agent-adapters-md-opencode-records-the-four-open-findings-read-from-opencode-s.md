@@ -18,6 +18,18 @@ transitions:
 stream: S-0406
 tags: [cli]
 touches: [design/system/agent-adapters.md]
+usage:
+  source: log
+  seconds: 1638
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 172
+      output: 985
+      cache_read: 10404179
+      cache_write: 204379
+      cost: 3.8035
 ---
 # T-1682 agent-adapters.md § OpenCode records the four open findings, read from OpenCode's source and documentation at a pinned release
 

@@ -3,11 +3,11 @@ id: T-1683
 type: task
 nature: feature
 title: The protected list holds an opencode entry with Claude Code's paths plus .opencode/, opencode.json, and AGENTS.md
-status: in-progress
+status: done
 parent: S-0406
 owner: alex
 created: 2026-10-16T05:14:03Z
-updated: 2026-11-07T09:40:14Z
+updated: 2026-11-07T10:07:30Z
 transitions:
   - to: ready
     at: 2026-11-07T09:40:12Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-07T09:40:14Z
     by: system-flow
+  - to: done
+    at: 2026-11-07T10:07:30Z
+    by: agent-S-0406
 stream: S-0406
 tags: [cli]
 touches: [flai/internal/protected/protected.go, flai/internal/protected/protected_test.go]
+usage:
+  source: log
+  seconds: 1635
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 44
+      output: 271
+      cache_read: 1347008
+      cache_write: 87758
+      cost: 0.5145
 ---
 # T-1683 The protected list holds an opencode entry with Claude Code's paths plus .opencode/, opencode.json, and AGENTS.md
 

@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 133.1238
-accrued_seconds: 12723
-tasks_completed: 80
-last_run: 2026-11-07T09:46:51Z
+accrued_cost: 134.7064
+accrued_seconds: 12829
+tasks_completed: 81
+last_run: 2026-11-07T10:00:56Z
 ---
 
 # Curator activity
@@ -651,3 +651,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0503, D-0505, D-0508, D-0510
 - Seconds: 102
 - Cost: 0.7406 USD, estimated
+
+### 2026-11-07T10:00:56Z
+
+- Summary: I wrote no new entries this run, merged TH-0861's settled outcome into D-0511, absorbed none, and `flai digest compact` compacted none (it recorded citers on 1 entry); S-0562's four decisions added nothing, because ADR-0239 § 5 already states the one worth keeping and the other three only record progress.
+- Trigger: accepted S-0562
+- Items: D-0511
+- Seconds: 106
+- Cost: 1.5826 USD, estimated

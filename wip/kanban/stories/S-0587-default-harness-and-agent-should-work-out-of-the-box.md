@@ -22,16 +22,32 @@ usage:
   seconds: 0
   models: []
   strategic:
+    - kind: planner
+      seconds: 76
+      estimated: true
+      models:
+        - model: claude-haiku-5-5
+          input: 16
+          output: 55
+          cache_read: 279452
+          cache_write: 56070
+          cost: 0.0221
+        - model: claude-opus-5-5
+          input: 47
+          output: 1729
+          cache_read: 2731038
+          cache_write: 147559
+          cost: 0.8328
     - kind: orchestrator
-      seconds: 6
+      seconds: 30
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 26
-          cache_read: 46824
-          cache_write: 764
-          cost: 0.0118
+          input: 4
+          output: 58
+          cache_read: 123509
+          cache_write: 3345
+          cost: 0.0317
 ---
 # S-0587 Default harness and agent should work out of the box
 

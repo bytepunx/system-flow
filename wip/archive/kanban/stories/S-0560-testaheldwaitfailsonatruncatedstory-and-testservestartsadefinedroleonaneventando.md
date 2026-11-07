@@ -3,10 +3,10 @@ id: S-0560
 type: story
 nature: remediation
 title: TestAHeldWaitFailsOnATruncatedStory and TestServeStartsADefinedRoleOnAnEventAndOnASchedule time out under flai test's Go run when the host's load is near 80
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-02T03:55:02Z
-updated: 2026-11-07T09:52:54Z
+updated: 2026-11-07T10:07:59Z
 transitions:
   - to: ready
     at: 2026-11-07T08:22:47Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-07T08:34:41Z
     by: agent-S-0560
+  - to: review
+    at: 2026-11-07T10:05:43Z
+    by: agent-S-0560
+  - to: done
+    at: 2026-11-07T10:07:59Z
+    by: alex
 tags: [flai, tests]
 topics: [testing]
 touches: [flai/internal/mcpserver/work.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/timing_test.go, flai/internal/mcpserver/work_test.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/messages_test.go, flai/internal/mcpserver/orchestrator_threads_test.go, flai/internal/serve/candidates.go, flai/internal/serve/candidates_test.go, flai/internal/hostapi/import.go, design/issues/I-0246-testaheldwaitfailsonatruncatedstory-and-testservestartsadefinedroleonaneventando.md, design/issues/summary.md]
@@ -24,22 +30,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 4703
-  estimated: true
-  priced_by: estimate
+  seconds: 5474
+  priced_by: harness
   turns:
     - day: 2026-11-07
-      ceremony: 1
+      ceremony: 2
       test_runs: 1
       hand_edits: 2
-      work: 30
+      work: 93
   models:
     - model: claude-opus-5-5
-      input: 228
-      output: 1541
-      cache_read: 26498490
-      cache_write: 2057636
-      cost: 10.231
+      input: 364
+      output: 76967
+      cache_read: 47540134
+      cache_write: 2089023
+      cost: 22.4121
   strategic:
     - kind: orchestrator
       seconds: 21

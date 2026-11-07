@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 661
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 45
-      output: 339
-      cache_read: 5193678
-      cache_write: 52804
-      cost: 1.8797
+      input: 39
+      output: 8289
+      cache_read: 5119997
+      cache_write: 224984
+      cost: 2.4137
 ---
 # T-2556 An import.run answer reaches the dashboard before flai serve halts the candidate's connection, so TestARepositoryIsOfferedImportedAndThenServed gets no EOF
 

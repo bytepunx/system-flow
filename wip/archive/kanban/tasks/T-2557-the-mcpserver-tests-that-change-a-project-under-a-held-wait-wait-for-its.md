@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 3572
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 78
-      output: 378
-      cache_read: 9487791
-      cache_write: 1688213
-      cost: 4.004
+      input: 84
+      output: 17658
+      cache_read: 10906555
+      cache_write: 479259
+      cost: 5.1417
 ---
 # T-2557 The mcpserver tests that change a project under a held wait wait for its heartbeat instead of sleeping 150 ms, and hold up to 30 s
 

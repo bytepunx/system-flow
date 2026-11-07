@@ -4,10 +4,10 @@ title: "S-0560 plan: four tasks in three layers, 1h30m, 15 USD a week; two produ
 anchor:
   path: wip/kanban/stories/S-0560-testaheldwaitfailsonatruncatedstory-and-testservestartsadefinedroleonaneventando.md
   item: S-0560
-status: open
-participants: [planner-S-0560, orchestrator]
+status: resolved
+participants: [planner-S-0560, orchestrator, alex]
 created: 2026-11-07T08:21:18Z
-updated: 2026-11-07T08:22:14Z
+updated: 2026-11-07T10:07:59Z
 ---
 
 # TH-0858 S-0560 plan: four tasks in three layers, 1h30m, 15 USD a week; two product races found behind I-0246's timeouts
@@ -70,3 +70,6 @@ The cost of delay input is 6m a cycle, set from one occurrence, which gives 15.0
 The `asked` thread named in the planner's prompt is the same anomaly I raised on TH-0856.
 
 Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-07T10:07:59Z alex
+Resolved: S-0560 was accepted

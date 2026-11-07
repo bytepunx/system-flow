@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:13:48Z
-updated: 2026-11-07T09:38:06Z
+updated: 2026-11-07T10:07:52Z
 transitions:
   - to: ready
     at: 2026-11-07T09:38:00Z
@@ -17,16 +17,29 @@ transitions:
     by: agent-S-0406
 tags: [cli, template]
 topics: [agents, cli, template]
-touches: [flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go, flai/internal/harness/opencodeconfig.go, flai/internal/harness/opencodeconfig_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/protected/protected.go, flai/internal/protected/protected_test.go, flai/internal/check/instructions.go, flai/internal/check/instructions_test.go, flai/internal/check/check.go, flai/internal/serve/agents_test.go, flai/internal/serve/testdata/opencode-run.jsonl, design/adrs, design/system/agent-adapters.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, template/root/opencode.json, template/CHANGELOG.md]
+touches: [flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go, flai/internal/harness/opencodeconfig.go, flai/internal/harness/opencodeconfig_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/protected/protected.go, flai/internal/protected/protected_test.go, flai/internal/check/instructions.go, flai/internal/check/instructions_test.go, flai/internal/check/check.go, flai/internal/serve/agents_test.go, flai/internal/serve/testdata/opencode-run.jsonl, design/adrs, design/system/agent-adapters.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, template/root/opencode.json, template/CHANGELOG.md, flai/internal/metrics/testdata/good/CLAUDE.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1765
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-07
+      ceremony: 1
+      hand_edits: 1
+      work: 26
+  models:
+    - model: claude-opus-5-5
+      input: 306
+      output: 1824
+      cache_read: 17431015
+      cache_write: 638700
+      cost: 6.4787
   strategic:
     - kind: orchestrator
       seconds: 245

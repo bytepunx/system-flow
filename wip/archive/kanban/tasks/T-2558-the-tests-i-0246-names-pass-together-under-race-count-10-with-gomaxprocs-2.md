@@ -24,16 +24,16 @@ touches: [design/issues/I-0246-testaheldwaitfailsonatruncatedstory-and-testserve
 after: [T-2556, T-2557]
 usage:
   source: log
-  seconds: 137
+  seconds: 138
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 24
-      output: 95
-      cache_read: 3211280
-      cache_write: 12688
-      cost: 1.155
+      output: 5094
+      cache_read: 3146241
+      cache_write: 138253
+      cost: 1.4833
 ---
 # T-2558 The tests I-0246 names pass together under -race -count=10 with GOMAXPROCS=2 beside a CPU load, and I-0246 is closed with what fixed each
 

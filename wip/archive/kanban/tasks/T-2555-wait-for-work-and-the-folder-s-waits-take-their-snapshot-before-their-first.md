@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 609
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 51
-      output: 430
-      cache_read: 6289533
-      cache_write: 64341
-      cost: 2.2765
+      input: 47
+      output: 10039
+      cache_read: 6200689
+      cache_write: 272473
+      cost: 2.9232
 ---
 # T-2555 wait_for_work and the folder's waits take their snapshot before their first check, so a change made between the two wakes the wait
 

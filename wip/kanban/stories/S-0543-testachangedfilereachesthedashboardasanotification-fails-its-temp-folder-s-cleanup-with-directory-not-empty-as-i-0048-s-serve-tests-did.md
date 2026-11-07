@@ -3,11 +3,17 @@ id: S-0543
 type: story
 nature: remediation
 title: "TestAChangedFileReachesTheDashboardAsANotification fails its temp folder's cleanup with \"directory not empty\", as I-0048's serve tests did"
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-29T17:25:41Z
-updated: 2026-11-07T10:02:03Z
-transitions: []
+updated: 2026-11-07T10:02:39Z
+transitions:
+  - to: ready
+    at: 2026-11-07T10:02:26Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-07T10:02:39Z
+    by: agent-S-0543
 tags: [flai, serve, test]
 touches: [flai/internal/serve/serve.go, flai/internal/serve/serve_test.go]
 agent:

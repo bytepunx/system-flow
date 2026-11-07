@@ -9,35 +9,19 @@ date: 2026-11-07
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0586, T-2569, TH-0861, TH-0869]
 ---
 
 # D-0511 S-0586 plan: six code and docs tasks plus an ADR in five layers, 3h, 1250 USD a week; three questions on what stays outside the dashboard: everything is good except I would prefer for #3 to change to…
 
-The operator, alex, answered TH-0861 at 2026-11-07T09:51:27Z.
+The operator, alex, answered TH-0861 on S-0586 (the kluster first-time setup wizard) at 2026-11-07T09:51:27Z, taking the orchestrator's recommendation of 08:40:05Z except its answer 3.
 
-What was asked:
+What was settled, as the orchestrator summarised it on the thread at 09:52:54Z:
 
-```text
-S-0586 is planned, except for three decisions that are yours. Each one decides whether criterion 3 holds in full. Tasks for questions 2 and 3 are not written yet.
-```
-
-The recommendation it overruled:
-
-```text
-**Recommended:** take agent-S-0586's four answers as they stand. I withdraw my own answer 2.
-
-1. **Yes:** `settings` stays the one shell step (ADR-0039).
-2. **No Install button.** The page reports what is missing and gives the install sentence. kluster's own install puts its binary in `/usr/local/bin`, and `kluster setup` installs `kubectl` with `sudo` on Linux. A button in `flai serve` would hang or fail without passwordless sudo, and Docker cannot be installed that way at all.
-3. **Yes:** Start and Stop for each port-forward on the Deployments page, bound to `127.0.0.1`.
-4. **`profile: spire`**, written out in the scaffold and changeable on the Klusters page. kluster v1.3.1 has no empty cluster, and `spire` is its default.
-
-**What this means for criterion 3:** with answer 2, two steps stay outside the dashboard: turning on `settings`, and installing Docker, `kluster`, and `kubectl` on the host. T-2565 lists both in the docs. Both are host changes, so they are yours to accept.
-
-For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
-
-Source: design/tech/kluster.md
-```
+1. The `settings` host action stays the one step turned on in a shell (ADR-0039). A hosted flai turns it on at provisioning.
+2. No Install button for `kluster` or `kubectl`. The Klusters page reports the missing tools and gives the install sentence, since kluster installs to `/usr/local/bin` and `kluster setup` installs `kubectl` with `sudo`; Docker stays a stated prerequisite.
+3. The Deployments page starts and stops each service's port-forward, which flai serve runs bound to `0.0.0.0`, not `127.0.0.1`, because the operator means flai to run in the cloud. A forward on `0.0.0.0` has no auth of its own, so the docs say so.
+4. The scaffold writes `profile: spire`, changeable on the Klusters page: kluster v1.3.1 has no empty cluster, and `spire` is its default.
 
 The operator's answer:
 
@@ -45,4 +29,10 @@ The operator's answer:
 everything is good except I would prefer for #3 to change to binding to `0.0.0.0` (again, the future is running this in the cloud)
 ```
 
-Source: TH-0861.
+The recommendation it overruled in part:
+
+```text
+3. **Yes:** Start and Stop for each port-forward on the Deployments page, bound to `127.0.0.1`.
+```
+
+Source: TH-0861. T-2569 carries answer 3.

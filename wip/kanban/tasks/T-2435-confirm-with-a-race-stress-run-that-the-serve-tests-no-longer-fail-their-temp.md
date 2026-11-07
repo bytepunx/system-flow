@@ -3,12 +3,18 @@ id: T-2435
 type: task
 nature: remediation
 title: Confirm with a race stress run that the serve tests no longer fail their temp folder's cleanup, and fix the writer if one still does
-status: backlog
+status: in-progress
 parent: S-0543
 owner: alex
 created: 2026-11-02T18:12:56Z
-updated: 2026-11-02T18:12:56Z
-transitions: []
+updated: 2026-11-07T10:03:55Z
+transitions:
+  - to: ready
+    at: 2026-11-07T10:03:51Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T10:03:55Z
+    by: system-flow
 stream: S-0543
 tags: [flai, serve, test]
 touches: [flai/internal/serve/serve.go, flai/internal/serve/serve_test.go]
