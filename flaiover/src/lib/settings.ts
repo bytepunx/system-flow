@@ -293,9 +293,12 @@ export type AgentForm = { harness: string; model: string; provider: string; conf
 /** A block's settings as typed: a boolean as true or false, an agent by its fields, the rest as text. */
 export type StrategicForm = { values: Record<string, string>; agents: Record<string, AgentForm> };
 
-/** What settings.manifest is asked: the keys to write with their values, and the keys to remove. */
+/**
+ * What settings.manifest is asked: the keys to write with their values, a command as its argument
+ * list (S-0586), and the keys to remove.
+ */
 export type ManifestChange = {
-	set: Record<string, boolean | number | string | Agent>;
+	set: Record<string, boolean | number | string | string[] | Agent>;
 	unset: string[];
 };
 
