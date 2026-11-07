@@ -9,7 +9,7 @@ date: 2026-11-07
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-0843]
 ---
 
 # D-0493 S-0567 live planner run: set the container login and the planner's harness, then plan S-0559 from the dashboard: Recommended: do agent-S-0567's three steps in its order, then set `planning.agent`…

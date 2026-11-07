@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0029
 owner: alex
 created: 2026-11-02T18:08:56Z
-updated: 2026-11-07T04:48:18Z
+updated: 2026-11-07T06:53:04Z
 transitions:
   - to: ready
     at: 2026-11-07T03:40:51Z
@@ -20,6 +20,10 @@ blocked:
     until: 2026-11-07T04:19:08Z
     reason: awaiting the operator on TH-0836
   - from: 2026-11-07T04:48:18Z
+    until: 2026-11-07T06:10:18Z
+    reason: awaiting the operator on TH-0836
+  - from: 2026-11-07T06:12:37Z
+    until: 2026-11-07T06:18:00Z
     reason: awaiting the operator on TH-0836
 tags: []
 topics: [harness, docker]
@@ -32,20 +36,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1979
+  seconds: 2106
   priced_by: harness
   turns:
     - day: 2026-11-07
-      ceremony: 3
+      ceremony: 4
       hand_edits: 2
-      work: 141
+      work: 160
   models:
     - model: claude-opus-5-5
-      input: 306
-      output: 47713
-      cache_read: 36825961
-      cache_write: 316861
-      cost: 10.8556
+      input: 350
+      output: 53122
+      cache_read: 43784592
+      cache_write: 663101
+      cost: 15.1256
   strategic:
     - kind: planner
       seconds: 761
@@ -58,15 +62,15 @@ usage:
           cache_write: 483216
           cost: 6.2582
     - kind: orchestrator
-      seconds: 606
+      seconds: 786
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 161
-          output: 1092
-          cache_read: 5876314
-          cache_write: 644886
-          cost: 1.5642
+          input: 232
+          output: 1598
+          cache_read: 7873973
+          cache_write: 1044398
+          cost: 2.1524
 cost_of_delay:
   value: 123.85
   by: planner-S-0565
@@ -90,7 +94,7 @@ Prove the container harness S-0508 built in the place it is meant for: `flai ser
 ## Acceptance criteria
 
 - [x] One story of this repository is worked end to end by `flai serve` with `harness: container` on its agent, from `story_start` to review, its usage measured and its card's status shown as for a host run, and each limitation met is an issue under `design/issues`
-- [ ] A stop from the dashboard and a restart after a thread is answered are each tried once on that story's container, and what happened is recorded in this story's notes
+- [x] A stop from the dashboard and a restart after a thread is answered are each tried once on that story's container, and what happened is recorded in this story's notes
 - [ ] One story of this repository that changes Go is worked end to end by `flai serve` on `harness: container` with the project's image layer (`flai/images/system-flow/Dockerfile`, S-0510), and `scripts/close-out.sh` runs every tier the manifest's `tests` select and passes inside the container, and each limitation met is an issue under `design/issues`
 
 ## Tasks
@@ -107,6 +111,25 @@ Moved out of S-0508 (its criterion 6 and the live-run half of T-2169) on TH-0812
 The work, from T-2169: with the host settings in place (`flai serve agent harness container --login ~/.claude`) and the images built (`make agent-images`), set `harness: container` on one small story of this repository (`flai edit S-nnnn --harness container`), and let `flai serve` start it. The proof story should change documentation or shell only: the Go tiers and the close-out need the project's image layer (S-0510, S-0520), and git does not work in the container yet (S-0517). Record each limitation met with `flai issue new`, naming the story of E-0029 that carries it on; I-0253 and I-0254 are S-0508's already.
 
 Criterion 3 moved here from S-0510 on TH-0814 (its criterion 5, and the close-out half of its criterion 4), as D-0466 records for S-0508. `after` gains `S-0510`, whose layer reaches this host's `flai serve` only once it is accepted and published, and `S-0517`, which makes git work in the container so the close-out can sync, commit, and check the branch (I-0215). S-0510 ran `flai test` by hand inside the layered image on its own worktree, and every per-path tier passed (S-0510's notes); what is left is a Go-changing story worked by `flai serve` with the layer, its close-out passing inside the container. Mind I-0259: installing `flaiover/node_modules` inside the Alpine container leaves only musl bindings, so the host's flaiover tier then fails.
+
+### The stop and the restart (T-2450)
+
+Tried on S-0556's container, not S-0558's. S-0558 reached review six minutes after its start, five minutes after the operator was asked for the stop, and its agent asked nothing on a thread (TH-0836). S-0556 was also worked on `harness: container` from `story_start` on. The operator added a line to its Notes asking its agent to confirm on a thread before its close-out, so that it would end on a question.
+
+The stop from the dashboard:
+
+- 06:17:41Z: `flai serve` started S-0556's container, `flai-agent-S-0556-fc3d3d78-a68a-4209-9f07-edf43d26d84b`, on `flai-agent-sf-claude-code:local`, in session `fc3d3d78-…`. Its agent moved S-0556 to in-progress at 06:18:19Z.
+- 06:24:57Z: the operator pressed Stop. The `agent` event was `stopped`, why "stopped by the operator at 2026-11-07T06:24:57Z". The run ended at 06:25:00Z, outcome `stopped`, exit 143. The journal says "ended its process group … its container … had ended with it". `docker ps -a` no longer listed the container at 06:25:08Z. A forked task sub-agent (T-2459) was mid-call and ended with it.
+- The card and the story's agent page showed the agent "stopped by the operator". The page offered no Retry; the card's right-click menu did (the operator's report on TH-0836). Filed as I-0278. Both use `retryable()` in `flaiover/src/lib/activity.ts`, which does not look at the harness.
+- 06:25:30Z: Retry from the card's menu. The event was `started`, why "the operator restarted it: its last agent stopped by the operator at 2026-11-07T06:24:57Z". It started a new container in a new session, `c8242e4c-…` ("pilot: starting claude-code in a new session"). That is what Retry does on a host too: a new agent, told how the last one ended, that goes on from the narrative (`docs/users/flai.md`). The new agent went on with T-2459 and closed it at 06:32:09Z.
+
+The restart after an answered thread:
+
+- 06:50:26Z: S-0556's agent asked on TH-0849, as its Notes asked. Its run ended at 06:51:36Z, why "waiting for an answer to TH-0849". `flai serve` blocked S-0556, reason "awaiting the operator on TH-0849" (ADR-0205), and the container was gone. The session's store stayed in the story's writable Claude Code folder, `.flai-cache/agents/S-0556/claude/projects/…/c8242e4c-….jsonl` (ADR-0203).
+- 06:51:54Z: the operator confirmed the orchestrator's recommendation on TH-0849. At 06:51:55Z `flai serve` unblocked S-0556 and started its container again, why "started again in its session, TH-0849 answered". The container kept the session's name, `flai-agent-S-0556-c8242e4c-…`, and the log says "pilot: starting claude-code resuming its session", with session `c8242e4c-…` throughout.
+- The agent went on from where it stopped: its first calls read TH-0849 and its inbox, and it said it would sync and ask for the close-out.
+
+Limitations met: I-0278 (no Retry on the agent page after a stop). The restart in the same session and the stop of the container needed nothing a host run does not.
 
 ### Planning
 

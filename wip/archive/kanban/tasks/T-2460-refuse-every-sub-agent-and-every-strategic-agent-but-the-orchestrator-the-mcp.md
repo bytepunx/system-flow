@@ -3,20 +3,37 @@ id: T-2460
 type: task
 nature: remediation
 title: Refuse every sub-agent, and every strategic agent but the orchestrator, the MCP verify tool and flai verify --job
-status: backlog
+status: done
 parent: S-0556
 owner: alex
 created: 2026-11-05T01:37:13Z
-updated: 2026-11-05T01:37:13Z
-transitions: []
+updated: 2026-11-07T06:47:04Z
+transitions:
+  - to: ready
+    at: 2026-11-07T06:32:14Z
+    by: agent-S-0556
+  - to: in-progress
+    at: 2026-11-07T06:32:17Z
+    by: agent-S-0556
+  - to: done
+    at: 2026-11-07T06:47:04Z
+    by: agent-S-0556
 stream: S-0556
 tags: [flai]
-touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go]
+touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/internal/metrics/testdata/good/design/workflows/roles/orchestrator.md]
 after: [T-2459]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 887
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 35
+      output: 10613
+      cache_read: 4287694
+      cache_write: 77501
+      cost: 1.6501
   strategic:
     - kind: orchestrator
       seconds: 6

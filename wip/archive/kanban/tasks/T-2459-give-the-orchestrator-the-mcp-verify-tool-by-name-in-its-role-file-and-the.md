@@ -3,19 +3,36 @@ id: T-2459
 type: task
 nature: remediation
 title: Give the orchestrator the MCP verify tool by name, in its role file and the guard, before verify leaves the reads
-status: backlog
+status: done
 parent: S-0556
 owner: alex
 created: 2026-11-05T01:36:58Z
-updated: 2026-11-05T01:36:58Z
-transitions: []
+updated: 2026-11-07T06:32:09Z
+transitions:
+  - to: ready
+    at: 2026-11-07T06:20:23Z
+    by: agent-S-0556
+  - to: in-progress
+    at: 2026-11-07T06:20:39Z
+    by: agent-S-0556
+  - to: done
+    at: 2026-11-07T06:32:09Z
+    by: agent-S-0556
 stream: S-0556
 tags: [flai, template]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/orchestrate_test.go, flai/internal/roles/baseline/orchestrator.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 654
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 27
+      output: 2879
+      cache_read: 3417077
+      cache_write: 41264
+      cost: 1.3052
   strategic:
     - kind: orchestrator
       seconds: 6
@@ -49,3 +66,11 @@ This task waits for nothing.
 - The narrative's `## Decisions` holds the proposed fix, citing D-0446
 
 ## Notes
+
+These decisions belong in the narrative's `## Decisions`. They are here because the narrative is read-only in this story's container and no flai tool writes that section.
+
+- **Proposed fix (D-0446, I-0240):** `verify` leaves `guard.MCPReads`, and a sub-agent is refused `flai verify --job`. The story's agent keeps both, since the guard passes its own calls. The orchestrator keeps the MCP tool by name. This narrows what S-0546 kept, as D-0446 anticipated. Of the two calls S-0546 kept the tool for, the orchestrator's verify of a story in review stays through the tool, and a reader's look at the record stays through `flai verify --last`.
+- **The orchestrator's command line:** it holds the MCP tool, not `flai verify --job`. Its prompt names only the tool and plain `flai verify`, so nothing it is told to do needs the flag.
+- **The tool is in `tools:`, not under a permission:** this follows the plan and `guard.MCPOrchestrates`, which holds what the orchestrator may call whatever its permissions.
+- **Plan reviewed and kept, four layers of one task each:** T-2459, then T-2460, then T-2461, then T-2462. T-2460 waits because the orchestrator must hold `verify` by name before it leaves the reads, and both change `guard.go`. T-2461 waits because it describes the refusals T-2460 builds. T-2462 waits so that the close reason describes what was built and documented. T-2462 is mine, since a sub-agent cannot close an issue.
+- **Operator's note on S-0556:** the confirmation thread on the guard's read list comes before the close-out, after T-2462.

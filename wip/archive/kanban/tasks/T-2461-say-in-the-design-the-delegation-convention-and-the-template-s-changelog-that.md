@@ -3,20 +3,37 @@ id: T-2461
 type: task
 nature: remediation
 title: Say in the design, the delegation convention, and the template's changelog that the guard refuses a sub-agent the close-out job
-status: backlog
+status: done
 parent: S-0556
 owner: alex
 created: 2026-11-05T01:37:28Z
-updated: 2026-11-05T01:37:28Z
-transitions: []
+updated: 2026-11-07T06:50:02Z
+transitions:
+  - to: ready
+    at: 2026-11-07T06:47:13Z
+    by: agent-S-0556
+  - to: in-progress
+    at: 2026-11-07T06:47:16Z
+    by: agent-S-0556
+  - to: done
+    at: 2026-11-07T06:50:02Z
+    by: agent-S-0556
 stream: S-0556
 tags: [flai, template]
-touches: [design/system/flai-cli.md, design/system/strategic-agents.md, design/conventions/delegation.md, template/root/design/conventions/delegation.md, template/CHANGELOG.md]
+touches: [design/system/flai-cli.md, design/system/strategic-agents.md, design/conventions/delegation.md, template/root/design/conventions/delegation.md, template/CHANGELOG.md, docs/users/flai.md]
 after: [T-2460]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 166
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 36
+      output: 11100
+      cache_read: 4484441
+      cache_write: 81057
+      cost: 1.7258
   strategic:
     - kind: orchestrator
       seconds: 6

@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 28
-      output: 4413
-      cache_read: 3406102
-      cache_write: 29307
-      cost: 1.0041
+      input: 27
+      output: 4106
+      cache_read: 3384158
+      cache_write: 51252
+      cost: 1.1691
 ---
 # T-2449 The results document is started with the hypothesis, the success measure, and the host's preconditions, and the two proof stories carry harness container
 

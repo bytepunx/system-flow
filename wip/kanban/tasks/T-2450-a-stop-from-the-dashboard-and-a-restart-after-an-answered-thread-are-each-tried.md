@@ -3,11 +3,11 @@ id: T-2450
 type: task
 nature: experiment
 title: A stop from the dashboard and a restart after an answered thread are each tried once on the first proof story's container, and what happened is in S-0565's Notes
-status: ready
+status: done
 parent: S-0565
 owner: alex
 created: 2026-11-03T01:24:29Z
-updated: 2026-11-07T04:45:05Z
+updated: 2026-11-07T06:52:46Z
 transitions:
   - to: ready
     at: 2026-11-07T04:21:30Z
@@ -18,21 +18,33 @@ transitions:
   - to: ready
     at: 2026-11-07T04:44:55Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-07T06:10:43Z
+    by: system-flow
+  - to: ready
+    at: 2026-11-07T06:12:19Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T06:18:18Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T06:52:46Z
+    by: agent-S-0565
 stream: S-0565
 tags: [docker]
 after: [T-2451]
 usage:
   source: log
-  seconds: 1398
+  seconds: 1494
   estimated: true
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 215
-      output: 33563
-      cache_read: 25904906
-      cache_write: 222893
-      cost: 7.6363
+      input: 250
+      output: 37897
+      cache_read: 31235618
+      cache_write: 473052
+      cost: 10.7905
 ---
 # T-2450 A stop from the dashboard and a restart after an answered thread are each tried once on the first proof story's container, and what happened is in S-0565's Notes
 
@@ -54,3 +66,4 @@ Write what happened in S-0565's `## Notes` under a heading of its own with `flai
 
 ## Notes
 - 2026-11-07T04:44:55Z: moved to ready: S-0558 reached review before the stop; T-2450 moves to S-0556's run, after T-2451
+- 2026-11-07T06:12:19Z: moved to ready: waiting on the operator's word on TH-0836 to start S-0556

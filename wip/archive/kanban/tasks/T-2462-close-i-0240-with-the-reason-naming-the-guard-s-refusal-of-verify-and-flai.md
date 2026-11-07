@@ -3,20 +3,37 @@ id: T-2462
 type: task
 nature: remediation
 title: Close I-0240 with the reason naming the guard's refusal of verify and flai verify --job
-status: backlog
+status: done
 parent: S-0556
 owner: alex
 created: 2026-11-05T01:37:33Z
-updated: 2026-11-05T01:37:33Z
-transitions: []
+updated: 2026-11-07T06:50:17Z
+transitions:
+  - to: ready
+    at: 2026-11-07T06:50:06Z
+    by: agent-S-0556
+  - to: in-progress
+    at: 2026-11-07T06:50:08Z
+    by: agent-S-0556
+  - to: done
+    at: 2026-11-07T06:50:17Z
+    by: agent-S-0556
 stream: S-0556
 tags: [flai]
 touches: [design/issues/I-0240-flai-guard-still-lists-the-verify-mcp-tool-among-a-sub-agent-s-reads-though-it.md, design/issues/summary.md]
 after: [T-2461]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 9
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 1370
+      cache_read: 553365
+      cache_write: 10002
+      cost: 0.213
   strategic:
     - kind: orchestrator
       seconds: 6

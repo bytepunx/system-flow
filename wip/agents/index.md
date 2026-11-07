@@ -1,19 +1,19 @@
 ---
 title: Active streams
-updated: 2026-11-07T06:17:24Z
+updated: 2026-11-07T06:59:12Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0565](S-0565.md) | One story of this repository is worked end to end by flai serve on harness container, from story_start to review, once S-0508's container harness is in the installed flai | in-progress | agent-S-0565 | 2026-11-07T06:12:29Z |
+| [S-0565](S-0565.md) | One story of this repository is worked end to end by flai serve on harness container, from story_start to review, once S-0508's container harness is in the installed flai | in-progress | agent-S-0565 | 2026-11-07T06:52:46Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 136 | 991.0913 USD | 134167 | 2026-11-07T05:09:49Z |
-| [orchestrator](orchestrator.md) | 1984 | 1992.4748 USD | 1513117 | 2026-11-07T06:13:21Z |
+| [orchestrator](orchestrator.md) | 2006 | 1994.8017 USD | 1513547 | 2026-11-07T06:55:47Z |
 | [analyzer](analyzer.md) | 1 | 5.0040 USD | 454 | 2026-10-15T22:49:08Z |
 | [curator](curator.md) | 73 | 124.4240 USD | 11879 | 2026-11-07T06:12:02Z |

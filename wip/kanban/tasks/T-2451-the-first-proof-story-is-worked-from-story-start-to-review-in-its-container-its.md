@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 16
-      output: 2436
-      cache_read: 1879993
-      cache_write: 16176
-      cost: 0.5542
+      input: 15
+      output: 2266
+      cache_read: 1867882
+      cache_write: 28288
+      cost: 0.6453
 ---
 # T-2451 The first proof story is worked from story_start to review in its container, its usage measured and its card's status shown as for a host run, and each limitation met is an issue
 
