@@ -3,12 +3,18 @@ id: T-2554
 type: task
 nature: improvement
 title: Close I-0245 saying what fixed it
-status: backlog
+status: in-progress
 parent: S-0568
 owner: alex
 created: 2026-11-07T08:19:20Z
-updated: 2026-11-07T08:19:20Z
-transitions: []
+updated: 2026-11-07T08:37:00Z
+transitions:
+  - to: ready
+    at: 2026-11-07T08:36:59Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T08:37:00Z
+    by: system-flow
 stream: S-0568
 tags: [flai, issues]
 touches: [design/issues/I-0245-flai-guard-refuses-a-sub-agent-every-flai-role-subcommand-the-reads-list-show.md, design/issues/summary.md]

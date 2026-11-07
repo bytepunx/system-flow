@@ -3,10 +3,10 @@ id: S-0584
 type: story
 nature: improvement
 title: Analyze the project and list the issues the report names
-status: review
+status: done
 owner: alex
 created: 2026-11-07T08:03:23Z
-updated: 2026-11-07T08:34:34Z
+updated: 2026-11-07T08:37:11Z
 transitions:
   - to: ready
     at: 2026-11-07T08:03:40Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-07T08:34:34Z
     by: agent-S-0584
+  - to: done
+    at: 2026-11-07T08:37:11Z
+    by: orchestrator
 blocked:
   - from: 2026-11-07T08:22:38Z
     until: 2026-11-07T08:32:15Z
@@ -112,3 +115,12 @@ The operator chooses at acceptance which of them become stories.
 ### Recorded while working
 
 - I-0299 (defect): a role run that the stdio MCP server starts through `role_run` is never reaped, so flai serve counts its zombie as running and never settles it. The analyzer's run stayed unsettled from about 08:18Z until this agent's session ended (TH-0859).
+
+### Accepted by the orchestrator
+
+- Verified: d0de49ea6f235e0c8cb68f8a493b8bc24d9d067f
+- At: 2026-11-07T08:37:11Z
+
+Verdict: pass. Both steps are done and both criteria are met at commit d0de49ea6f235e0c8cb68f8a493b8bc24d9d067f; the close-out passed every step there.
+- 1: T-2545 done
+- 2: T-2547 done
