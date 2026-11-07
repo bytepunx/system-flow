@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/mcphttp"
 	"github.com/bytepunx/system-flow/flai/internal/roles"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 )
@@ -3039,6 +3040,10 @@ func TestClaudeCodeInAContainerReachesTheHostsHTTPServer(t *testing.T) {
 	if host.Files != nil || slices.ContainsFunc(host.Env, func(e string) bool { return strings.HasPrefix(e, "CLAUDE_CONFIG_DIR=") }) {
 		t.Fatalf("a start on the host writes no file and keeps claude's own configuration: %v %q", host.Files, host.Env)
 	}
+	// over stdio no 60-second limit applies, so the host's configuration names no timeout
+	if stdio := after(host.Argv, "--mcp-config"); stdio == "" || strings.Contains(stdio, "timeout") {
+		t.Errorf("the stdio MCP configuration %q names a timeout, or is missing", stdio)
+	}
 	for _, mcpHost := range []string{"", "FLAI_MCP_HOST"} {
 		r := containerReq(a)
 		r.MCPHostEnv = mcpHost
@@ -3065,12 +3070,17 @@ func TestClaudeCodeInAContainerReachesTheHostsHTTPServer(t *testing.T) {
 				Type    string            `json:"type"`
 				URL     string            `json:"url"`
 				Headers map[string]string `json:"headers"`
+				Timeout int64             `json:"timeout"`
 			} `json:"mcpServers"`
 		}
 		if err := json.Unmarshal(st.Files[0].Data, &mcp); err != nil || len(mcp.MCPServers) != 1 {
 			t.Fatalf("mcp file %s: %v", st.Files[0].Data, err)
 		}
 		flai := mcp.MCPServers["flai"]
+		// ADR-0258: the per-server timeout lifts Claude Code's 60 seconds for a call that does work
+		if flai.Timeout != 1800000 || flai.Timeout != mcphttp.ClientTimeout.Milliseconds() {
+			t.Errorf("the MCP file's timeout is %d ms, want mcphttp.ClientTimeout, 1800000: %s", flai.Timeout, st.Files[0].Data)
+		}
 		want := map[string]string{"Authorization": "Bearer ${FLAI_MCP_TOKEN}", "X-Flai-Agent": "agent-S-0104"}
 		if mcpHost != "" {
 			want["Host"] = "${FLAI_MCP_HOST}"

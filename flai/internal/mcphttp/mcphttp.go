@@ -29,6 +29,10 @@ import (
 const (
 	// AgentHeader names the agent behind a session or a request.
 	AgentHeader = "X-Flai-Agent"
+	// ClientTimeout is the per-server timeout the MCP file flai writes for
+	// this server names, so that a call that does work runs past Claude
+	// Code's 60 seconds; written in milliseconds (ADR-0258).
+	ClientTimeout = 30 * time.Minute
 	// ProjectKeyHeader names the project on every answer (ADR-0024, kept by
 	// ADR-0030).
 	ProjectKeyHeader = "X-Flai-Project-Key"

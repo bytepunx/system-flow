@@ -289,9 +289,12 @@ func (a *app) stopMCPHTTP(repo *workitem.Repo) (mcpState, bool, error) {
 	return st, true, nil
 }
 
+// mcpClientConfig is the sample client configuration flai mcp status prints,
+// naming the per-server timeout flai's own MCP file names (ADR-0258).
 func mcpClientConfig(url string) string {
 	return fmt.Sprintf(`{ "mcpServers": { "flai": { "type": "http", "url": %q,
-    "headers": { "Authorization": "Bearer <flai mcp token>", "X-Flai-Agent": "<the agent's name>" } } } }`, url)
+    "headers": { "Authorization": "Bearer <flai mcp token>", "X-Flai-Agent": "<the agent's name>" },
+    "timeout": %d } } }`, url, mcphttp.ClientTimeout.Milliseconds())
 }
 
 func newMCPHTTPCmds(a *app) []*cobra.Command {

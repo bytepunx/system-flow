@@ -259,6 +259,18 @@ func TestRunWritesTheMCPFileWithoutTheToken(t *testing.T) {
 	if strings.Contains(string(data), tokenValue) || !strings.Contains(string(data), "${FLAI_MCP_TOKEN}") {
 		t.Errorf("the MCP file holds the token's value, or does not name its variable: %s", data)
 	}
+	// ADR-0258: the file names the per-server timeout, so a slow task_done or test outlives Claude Code's 60 seconds
+	var file struct {
+		MCPServers map[string]struct {
+			Timeout int64 `json:"timeout"`
+		} `json:"mcpServers"`
+	}
+	if err := json.Unmarshal(data, &file); err != nil {
+		t.Fatalf("the MCP file is not JSON: %v: %s", err, data)
+	}
+	if got := file.MCPServers["flai"].Timeout; got != 1800000 {
+		t.Errorf("the MCP file's timeout for flai is %d ms, want 1800000: %s", got, data)
+	}
 }
 
 func TestRunGivesTheHarnessItsEnvironment(t *testing.T) {

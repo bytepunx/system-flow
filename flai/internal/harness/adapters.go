@@ -205,7 +205,10 @@ func checkContainer(r Request) error {
 // server named flai: its URL, its bearer token, and the Host it listens
 // under each as ${NAME} of the variable r names, which claude expands as it
 // reads the file, so that no token is ever written; and the agent's name in
-// X-Flai-Agent, which the server names the session by.
+// X-Flai-Agent, which the server names the session by; and the per-server
+// timeout, mcphttp.ClientTimeout in milliseconds, so that a call that does
+// work, such as task_done or test, runs past Claude Code's 60 seconds
+// (ADR-0258).
 func httpMCPConfig(r Request) ([]byte, error) {
 	headers := map[string]string{"Authorization": "Bearer ${" + r.MCPTokenEnv + "}"}
 	if r.Name != "" {
@@ -214,7 +217,7 @@ func httpMCPConfig(r Request) ([]byte, error) {
 	if r.MCPHostEnv != "" {
 		headers["Host"] = "${" + r.MCPHostEnv + "}"
 	}
-	mcp, err := json.Marshal(map[string]any{"mcpServers": map[string]any{"flai": map[string]any{"type": "http", "url": "${" + r.MCPURLEnv + "}", "headers": headers}}})
+	mcp, err := json.Marshal(map[string]any{"mcpServers": map[string]any{"flai": map[string]any{"type": "http", "url": "${" + r.MCPURLEnv + "}", "headers": headers, "timeout": mcphttp.ClientTimeout.Milliseconds()}}})
 	if err != nil {
 		return nil, fmt.Errorf("the MCP configuration for the host's HTTP server: %w", err)
 	}

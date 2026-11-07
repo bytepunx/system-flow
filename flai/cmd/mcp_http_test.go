@@ -181,6 +181,27 @@ func testMCPOverHTTP(t *testing.T) {
 	}
 }
 
+// S-0583, ADR-0258: the sample flai mcp status prints names the per-server
+// timeout flai's own MCP file names, so that a hand-written client copies it.
+func TestTheClientSampleNamesThePerServerTimeout(t *testing.T) {
+	t.Parallel()
+	var sample struct {
+		MCPServers map[string]struct {
+			Type    string `json:"type"`
+			URL     string `json:"url"`
+			Timeout int64  `json:"timeout"`
+		} `json:"mcpServers"`
+	}
+	text := mcpClientConfig("http://127.0.0.1:4242/mcp")
+	if err := json.Unmarshal([]byte(text), &sample); err != nil {
+		t.Fatalf("the sample is not JSON: %v: %s", err, text)
+	}
+	flai := sample.MCPServers["flai"]
+	if flai.Type != "http" || flai.URL != "http://127.0.0.1:4242/mcp" || flai.Timeout != 1800000 || flai.Timeout != mcphttp.ClientTimeout.Milliseconds() {
+		t.Errorf("the sample's server is %+v, want type http, the URL, and timeout 1800000: %s", flai, text)
+	}
+}
+
 func TestMCPStateGoesStale(t *testing.T) {
 	t.Parallel()
 	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
