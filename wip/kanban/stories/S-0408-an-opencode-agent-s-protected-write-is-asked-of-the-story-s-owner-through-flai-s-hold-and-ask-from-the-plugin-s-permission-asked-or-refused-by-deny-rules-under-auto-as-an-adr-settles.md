@@ -3,15 +3,18 @@ id: S-0408
 type: story
 nature: feature
 title: An OpenCode agent's protected write is asked of the story's owner through flai's hold-and-ask from the plugin's permission.asked, or refused by deny rules under --auto, as an ADR settles
-status: ready
+status: in-progress
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:16:14Z
-updated: 2026-11-07T20:43:08Z
+updated: 2026-11-07T21:46:09Z
 transitions:
   - to: ready
     at: 2026-11-07T20:43:08Z
     by: alex
+  - to: in-progress
+    at: 2026-11-07T21:46:09Z
+    by: agent-S-0408
 tags: [cli, template]
 topics: [agents, cli, template]
 touches: [flai/cmd/guard.go, flai/cmd/guard_test.go, flai/internal/guard/call.go, flai/internal/guard/call_test.go, flai/internal/guard/opencode.go, flai/internal/guard/opencode_test.go, flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go, flai/internal/harness/opencodeconfig.go, flai/internal/harness/opencodeconfig_test.go, ".opencode/plugins/flai-guard.js", template/root/.opencode/plugins/flai-guard.js, flai/tests/integration/opencode_test.go, design/adrs, design/system/agent-adapters.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, template/CHANGELOG.md, flai/internal/harness/harness_test.go]
@@ -42,10 +45,10 @@ cost_of_delay:
   at: 2026-10-20T21:13:40Z
 forecast:
   duration: 50m
-  delivery: 2026-11-07T17:12:00Z
-  basis: "Its own forecast of 50m; 2nd in the pull order with an in-progress limit of 5, behind S-0407."
+  delivery: 2026-11-07T22:45:00Z
+  basis: "Its own forecast of 50m; 1st in the pull order with an in-progress limit of 5, with nothing ahead of it."
   by: flai
-  at: 2026-11-07T15:21:13Z
+  at: 2026-11-07T21:45:57Z
 finalized:
   by: orchestrator
   at: 2026-10-20T21:14:05Z
