@@ -2,12 +2,12 @@
 id: I-0251
 title: A story branch rebased across a release brings back the changelog's old Unreleased heading and the lines the release moved, since union merge keeps both sides
 class: defect
-status: open
+status: closed
 count: 2
 cost: 13m
 first_reported: 2026-11-02T03:57:28Z
 last_reported: 2026-11-02T04:12:45Z
-updated: 2026-11-02T21:41:52Z
+updated: 2026-11-07T04:54:51Z
 ---
 
 # I-0251 A story branch rebased across a release brings back the changelog's old Unreleased heading and the lines the release moved, since union merge keeps both sides
@@ -28,3 +28,4 @@ It happened again within the hour. Release 1.1.18 on main renamed the top `## Un
 ## Remediation
 
 Story S-0570 remediates this issue, created from it at 2026-11-02T21:41:52Z.
+Closed 2026-11-07T04:54:51Z: S-0570, ADR-0257: after each clean rebase, storygit.Rebase (flai stream sync, task done's sync, flai accept) and the merge queue's batch write each CHANGELOG.md the branch changed as main has it, with the branch's own added lines under main's top ## Unreleased (release.SettleChangelog), and commit it, before the undone check. Real-git tests reproduce both instances.
