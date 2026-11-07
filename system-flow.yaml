@@ -156,6 +156,7 @@ orchestration:
   release:
     value: 1000
     count: 1
+    policy: threshold
 analysis:
   agent:
     harness: claude-code
