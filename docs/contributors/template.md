@@ -1,6 +1,6 @@
 ---
 title: Template guide
-updated: 2026-10-31
+updated: 2026-11-07
 status: active
 ---
 
@@ -199,7 +199,7 @@ In this monorepo, `make smoke` renders `template/` and checks it, and CI runs it
 
 ## Versioning
 
-The version is the `version` line of `template.yaml`, with an entry in `CHANGELOG.md` for each one. Changes not yet released are listed under `## Unreleased` at the top of the changelog, never under a version heading. `CHANGELOG.md` merges by union (`CHANGELOG.md merge=union` in `.gitattributes`), so two branches that each add lines there never conflict ([ADR-0228](../../design/adrs/0228-flai-generates-the-adr-index-from-the-adr-files-and-checks-the-issues-summary.md)).
+The version is the `version` line of `template.yaml`, with an entry in `CHANGELOG.md` for each one. Changes not yet released are listed under `## Unreleased` at the top of the changelog, never under a version heading. `CHANGELOG.md` merges by union (`CHANGELOG.md merge=union` in `.gitattributes`), so two branches that each add lines there never conflict ([ADR-0228](../../design/adrs/0228-flai-generates-the-adr-index-from-the-adr-files-and-checks-the-issues-summary.md)). A branch rebased across a release has its lines put back under the top `## Unreleased` by `flai stream sync` and `flai accept`, since union alone would keep the released section's old heading ([ADR-0257](../../design/adrs/0257-a-rebase-of-a-story-branch-puts-the-branch-s-own-changelog-lines-back-under-the.md)).
 
 | Change | Bump |
 |--------|------|

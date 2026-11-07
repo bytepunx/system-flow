@@ -6,6 +6,7 @@
 - S-0555 flai check finds `narrative.missing` outside the story at close-out (patch).
 - S-0555 A close-out records no `narrative.missing` outside the story (patch, ADR-0256): the close-out rule in `work-management.md` says that a `narrative.missing` on another story, one in progress or in review with no narrative, is left out of a close-out's check and recorded in no issue, since only that story's agent or the operator clears it, with `flai stream open` on that story, and the main checkout's check still reports it.
 - S-0558 `safety.md` no longer says every force push needs confirmation against `git.md`'s exception (patch): the clause says an agent's force push always needs it, and names `flai serve`'s `--force-with-lease` push of a story's own branch under pull-request acceptance as the one force push that needs none, linking `git.md`.
+- S-0570 A story's changelog lines stay under `## Unreleased` across a release (patch, ADR-0257): the `CHANGELOG.md` rule in `git.md` says that after each clean rebase `flai stream sync`, `flai accept`, and the merge queue's batch write the changelog as the main branch has it with the branch's own lines under its top `## Unreleased`, so a story never puts them back by hand or changes a released line.
 
 ## 1.1.23 - 2026-11-07
 
