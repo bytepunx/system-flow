@@ -3,23 +3,63 @@ id: S-0591
 type: story
 nature: remediation
 title: "TestGatewayLiteLLM fails its setup check: the template's settings run flai guard 6 times, and it wants 4"
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-07T15:15:23Z
-updated: 2026-11-07T15:15:23Z
-transitions: []
-tags: []
+updated: 2026-11-07T21:49:27Z
+transitions:
+  - to: ready
+    at: 2026-11-07T21:49:23Z
+    by: orchestrator
+tags: [flai, test]
+touches: [flai/internal/serve/gateway_test.go, design/issues/I-0303-testgatewaylitellm-fails-its-setup-check-the-template-s-settings-run-flai-guard.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: planner
+      seconds: 199
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 42
+          output: 12652
+          cache_read: 2578669
+          cache_write: 155960
+          cost: 2.0166
+    - kind: orchestrator
+      seconds: 67
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 31
+          output: 214
+          cache_read: 1232130
+          cache_write: 70782
+          cost: 0.3291
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
     by: flai
     at: 2026-11-07T15:15:23Z
+  value: 12.5
+  by: planner-S-0591
+  at: 2026-11-07T21:47:34Z
+forecast:
+  duration: 12m
+  delivery: 2026-11-07T22:05:00Z
+  basis: "Its own forecast of 12m; 1st in the pull order with an in-progress limit of 5, behind S-0408, S-0409 and S-0410."
+  by: flai
+  at: 2026-11-07T21:49:27Z
+finalized:
+  by: orchestrator
+  at: 2026-11-07T21:49:11Z
 ---
 # S-0591 TestGatewayLiteLLM fails its setup check: the template's settings run flai guard 6 times, and it wants 4
 
@@ -32,7 +72,27 @@ This story remediates [I-0303](../../../design/issues/I-0303-testgatewaylitellm-
 - [ ] I-0303 is closed with `flai issue close I-0303 --reason` saying what fixed it
 
 ## Tasks
+- T-2592 guardSettings counts and rewrites only the hooks' flai guard invocations, with a test on the template's settings that -short runs
+- T-2593 Close I-0303 with the reason naming the guardSettings fix and its test
 
 ## Notes
 
 Cost of delay inputs set by flai from I-0303. time_lost_per_cycle 5m: 5m per occurrence × 1 occurrence ÷ 1 cycle of 168h (first reported 2026-11-07T10:19:48Z, 0.2 days before this story; under one cycle counts as one).
+
+### Planning
+
+Proposed fix, from the instance and the code. `guardSettings` in `flai/internal/serve/gateway_test.go` counts every `flai guard` substring in `template/root/.claude/settings.json` and wants 4. S-0518 (commit ece3f9e69) added the message `flai guard did not run (exit %s)` to the two refusing hooks, so the file now holds four invocations and two messages: 6. The same `strings.ReplaceAll` also rewrites the two messages to name the built flai's path. The settings are right; the test's count is wrong. So the fix is in the test: count and rewrite only the hooks' invocations of `flai guard` (the command, not the text of the message), and add a test that runs without `-short` skipping it, on the template's real settings, so the ordinary Go tier catches the next drift instead of the manual `gateway` tier. TestGatewayOpenRouter goes through the same `checkGateway` and `guardSettings`, so it fails the same way and this fixes it too. Changing the settings' message instead was rejected: it is the guard's own error text, which `flai/cmd/guard_test.go` checks, and a change to `template/` needs a changelog line and a template release for a test's sake.
+
+Touches:
+
+| Path | From | Why |
+|------|------|-----|
+| `flai/internal/serve/gateway_test.go` | layout | holds `guardSettings` and the gateway checks; the new test goes beside them |
+| `design/issues/I-0303-testgatewaylitellm-fails-its-setup-check-the-template-s-settings-run-flai-guard.md` | design (criterion 2) | `flai issue close` writes it |
+| `design/issues/summary.md` | design (criterion 2) | `flai issue close` regenerates it |
+
+`flai touches suggest` on the test file and the template's settings listed `.claude/settings.json`, `flai/cmd/guard_test.go`, `flai/cmd/guard.go`, `scripts/litellm.sh`, the docs, and `template/CHANGELOG.md` by co-change; none is kept, since the fix changes neither the settings, the guard, nor what an operator or user sees.
+
+Forecast: see the plan's thread for the review of flai's figure; the basis written with the forecast says why it stands or moved.
+
+Cost of delay: 12.50 USD a week, flai's figure from the operator's input of 5m lost per 168h cycle at 150 USD an hour, kept: the gateway tier is manual and runs weekly at most, so one failure a cycle is what the input says.

@@ -7,7 +7,7 @@ status: ready
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:19:30Z
-updated: 2026-11-07T21:46:13Z
+updated: 2026-11-07T21:49:32Z
 transitions:
   - to: ready
     at: 2026-11-07T20:43:20Z
@@ -27,25 +27,25 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 148
+      seconds: 158
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 7
-          output: 135
-          cache_read: 2226442
-          cache_write: 1761
-          cost: 0.5586
+          input: 9
+          output: 149
+          cache_read: 2294608
+          cache_write: 13544
+          cost: 0.5788
 cost_of_delay:
   value: 53.85
   by: planner-E-0023
   at: 2026-10-20T21:13:44Z
 forecast:
   duration: 35m
-  delivery: 2026-11-07T22:27:00Z
-  basis: "Its own forecast of 35m; 3rd in the pull order with an in-progress limit of 5, behind S-0408 and S-0409."
+  delivery: 2026-11-07T22:31:00Z
+  basis: "Its own forecast of 35m; 2nd in the pull order with an in-progress limit of 5, behind S-0408, S-0409, S-0410 and S-0591."
   by: flai
-  at: 2026-11-07T21:46:13Z
+  at: 2026-11-07T21:49:32Z
 finalized:
   by: orchestrator
   at: 2026-10-20T21:14:09Z
