@@ -3,11 +3,11 @@ id: I-0246
 title: TestAHeldWaitFailsOnATruncatedStory and TestServeStartsADefinedRoleOnAnEventAndOnASchedule time out under flai test's Go run when the host's load is near 80
 class: defect
 status: open
-count: 7
+count: 8
 cost: 6m
 first_reported: 2026-11-02T00:55:15Z
-last_reported: 2026-11-02T19:52:44Z
-updated: 2026-11-02T19:52:44Z
+last_reported: 2026-11-07T02:07:15Z
+updated: 2026-11-07T02:07:15Z
 ---
 
 # I-0246 TestAHeldWaitFailsOnATruncatedStory and TestServeStartsADefinedRoleOnAnEventAndOnASchedule time out under flai test's Go run when the host's load is near 80
@@ -44,6 +44,10 @@ S-0424's `flai test` over the branch's changes failed only on TestServeStartsADe
 ### 2026-11-02T19:52:44Z
 Story: S-0425.
 S-0425's close-out at e6040b6 stopped at integration on TestServeStartsADefinedRoleOnAnEventAndOnASchedule (serve_test.go:1009, "never happened: the watcher's run for the move ended"), with S-0510, S-0518, and S-0566 agents running on the host. The same test passed in S-0425's flai test run of flai/internal/serve at 19:20Z, after T-1791 changed serve/activity.go's charge.
+
+### 2026-11-07T02:07:15Z
+Story: S-0580.
+S-0580's close-out at 27220c8 stopped at integration on TestServeStartsADefinedRoleOnAnEventAndOnASchedule (flai/internal/serve/serve_test.go:1009: never happened: the watcher's run for the move ended). S-0580 does not change flai/internal/serve. The host's load average was 53 over the last five minutes, with S-0578's agent working too.
 
 ## Remediation
 
