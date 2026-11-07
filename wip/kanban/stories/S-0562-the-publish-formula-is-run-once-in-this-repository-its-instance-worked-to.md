@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-11-02T04:14:44Z
-updated: 2026-11-07T07:55:49Z
+updated: 2026-11-07T08:01:33Z
 transitions: []
 tags: [template]
 topics: [orchestration]
@@ -33,7 +33,6 @@ usage:
           cache_read: 761554
           cache_write: 10270
           cost: 0.1863
-draft: true
 cost_of_delay:
   inputs:
     penalty_per_week: 25
@@ -45,6 +44,9 @@ forecast:
   basis: "Its own forecast of 45m; 12th in the pull order with an in-progress limit of 5, behind S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0241, S-0543, S-0560 and S-0561."
   by: flai
   at: 2026-11-07T07:55:49Z
+finalized:
+  by: alex
+  at: 2026-11-07T08:01:33Z
 ---
 # S-0562 The publish formula is run once in this repository, its instance worked to review and accepted, and the release or the evaluation that stopped it recorded
 
