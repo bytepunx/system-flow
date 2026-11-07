@@ -3,15 +3,18 @@ id: S-0578
 type: story
 nature: feature
 title: flai kluster deploy builds a story's image, loads it into the project's kluster, and runs the project's deploy command in the story's namespace, and teardown and promote remove it and deploy main to the default namespace
-status: ready
+status: in-progress
 parent: E-0032
 owner: alex
 created: 2026-11-06T21:39:56Z
-updated: 2026-11-07T00:51:57Z
+updated: 2026-11-07T01:32:23Z
 transitions:
   - to: ready
     at: 2026-11-07T00:51:57Z
     by: alex
+  - to: in-progress
+    at: 2026-11-07T01:32:23Z
+    by: agent-S-0578
 tags: [kluster, flai, cli]
 topics: [kluster, deployment, testing]
 touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, design/system/kluster.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
@@ -42,10 +45,10 @@ cost_of_delay:
   at: 2026-11-06T21:50:10Z
 forecast:
   duration: 27m
-  delivery: 2026-11-07T08:01:00Z
-  basis: "Its own forecast of 27m; 26th in the pull order with an in-progress limit of 5, behind S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0241, S-0543, S-0555, S-0556, S-0557, S-0558, S-0559, S-0560, S-0561, S-0562, S-0564, S-0565, S-0567, S-0568, S-0569, S-0570, S-0571 and S-0577."
+  delivery: 2026-11-07T02:05:00Z
+  basis: "Its own forecast of 27m; 1st in the pull order with an in-progress limit of 5, with nothing ahead of it."
   by: flai
-  at: 2026-11-07T00:50:06Z
+  at: 2026-11-07T01:32:10Z
 finalized:
   by: orchestrator
   at: 2026-11-06T21:53:31Z

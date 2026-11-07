@@ -3,15 +3,18 @@ id: S-0580
 type: story
 nature: feature
 title: The rail gains an Ops group whose Klusters page shows the project's kluster and brings it up or takes it down through flai, behind the kluster host action
-status: ready
+status: in-progress
 parent: E-0032
 owner: alex
 created: 2026-11-06T21:40:27Z
-updated: 2026-11-07T00:52:04Z
+updated: 2026-11-07T01:32:36Z
 transitions:
   - to: ready
     at: 2026-11-07T00:52:04Z
     by: alex
+  - to: in-progress
+    at: 2026-11-07T01:32:36Z
+    by: agent-S-0580
 tags: [kluster, flaiover, hostapi]
 topics: [kluster, dashboard, host-actions]
 touches: [flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, flai/internal/hostapi/writes.go, flai/cmd/serve_actions.go, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/navrail.svelte.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/repo.ts, flaiover/src/routes/api/kluster/+server.ts, flaiover/src/routes/api/kluster/up/+server.ts, flaiover/src/routes/api/kluster/down/+server.ts, flaiover/src/routes/api/kluster/kluster.test.ts, flaiover/src/routes/ops/klusters/+page.svelte, flaiover/src/routes/ops/klusters/klusters.svelte.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/system/kluster.md]
@@ -42,10 +45,10 @@ cost_of_delay:
   at: 2026-11-06T21:50:19Z
 forecast:
   duration: 43m
-  delivery: 2026-11-07T08:21:00Z
-  basis: "Its own forecast of 43m; 28th in the pull order with an in-progress limit of 5, behind S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0241, S-0543, S-0555, S-0556, S-0557, S-0558, S-0559, S-0560, S-0561, S-0562, S-0564, S-0565, S-0567, S-0568, S-0569, S-0570, S-0571, S-0577, S-0578 and S-0579."
+  delivery: 2026-11-07T02:24:00Z
+  basis: "Its own forecast of 43m; 3rd in the pull order with an in-progress limit of 5, behind S-0578 and S-0579."
   by: flai
-  at: 2026-11-07T00:50:16Z
+  at: 2026-11-07T01:32:23Z
 finalized:
   by: orchestrator
   at: 2026-11-06T21:53:41Z
