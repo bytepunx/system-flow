@@ -112,6 +112,7 @@ func TestAsTester(t *testing.T) {
 		testSyncTrialMergeLeavesOutIssueFiles,
 		testSyncMergesTwoStoriesChangelogLinesByUnion,
 		testSyncTrialMergeReadsMergeUnionFromTheMainCheckout,
+		testSyncPutsTheBranchsChangelogLinesBackUnderUnreleased,
 		testAcceptMergesAnIssueBothSidesBumped,
 		testSyncMergesABumpIntoTheIssueMainClosed,
 		testSyncWarnsOnAPathTheRebasedBranchUndoesOfMain,
@@ -1714,6 +1715,69 @@ func testSyncMergesTwoStoriesChangelogLinesByUnion(t *testing.T) {
 		t.Fatal(err)
 	}
 	hasBothLines(t, "the rebased worktree", string(got))
+}
+
+// I-0251, ADR-0257: a release on main between two syncs names the
+// "## Unreleased" a story's line is under; flai stream sync puts the line
+// back under main's new top "## Unreleased", where union alone would keep the
+// old heading or the line inside the version's section, and says so.
+func testSyncPutsTheBranchsChangelogLinesBackUnderUnreleased(t *testing.T) {
+	root, b := unionStories(t, true)
+	released := "# Changelog\n\n## Unreleased\n\n## 1.1.0 - 2026-11-02\n\n- S-0000 An earlier line (patch).\n\n## 1.0.0 - 2026-01-01\n\n- start\n"
+	if err := os.WriteFile(filepath.Join(root, "CHANGELOG.md"), []byte(released), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitIn(t, root, "add", "CHANGELOG.md")
+	gitIn(t, root, "commit", "-q", "-m", "chore: publish 1.1.0")
+
+	out, errOut, code := runIn(t, b, "stream", "sync", "S-0002")
+	if code != 0 {
+		t.Fatalf("sync across the release: %d %s %s", code, out, errOut)
+	}
+	if !strings.Contains(out, "put the branch's changelog lines under ## Unreleased in CHANGELOG.md and committed it\n") {
+		t.Errorf("sync output:\n%s", out)
+	}
+	got, err := os.ReadFile(filepath.Join(b, "CHANGELOG.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := strings.Replace(released, "## Unreleased\n\n", "## Unreleased\n\n- S-0002 Another story's line (patch).\n\n", 1)
+	if string(got) != want {
+		t.Errorf("changelog:\n%s\nwant:\n%s", got, want)
+	}
+	if subject := gitIn(t, b, "log", "-1", "--format=%s"); subject != "docs: [S-0002] put the changelog lines under ## Unreleased" {
+		t.Errorf("head: %q", subject)
+	}
+
+	// a second release, of another story's line, as I-0251's second instance:
+	// --json names the changelog it put back
+	again := strings.Replace(released, "## Unreleased\n\n", "## Unreleased\n\n## 1.2.0 - 2026-11-03\n\n- S-0003 A third story's line (patch).\n\n", 1)
+	if err := os.WriteFile(filepath.Join(root, "CHANGELOG.md"), []byte(again), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitIn(t, root, "add", "CHANGELOG.md")
+	gitIn(t, root, "commit", "-q", "-m", "chore: publish 1.2.0")
+	out, errOut, code = runIn(t, b, "stream", "sync", "S-0002", "--json")
+	if code != 0 {
+		t.Fatalf("sync across the second release: %d %s %s", code, out, errOut)
+	}
+	var res struct {
+		Changelogs []string `json:"changelogs"`
+	}
+	if err := json.Unmarshal([]byte(out), &res); err != nil {
+		t.Fatalf("sync --json: %v\n%s", err, out)
+	}
+	if !slices.Equal(res.Changelogs, []string{"CHANGELOG.md"}) {
+		t.Errorf("changelogs: %v\n%s", res.Changelogs, out)
+	}
+	got, err = os.ReadFile(filepath.Join(b, "CHANGELOG.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want = strings.Replace(again, "## Unreleased\n\n", "## Unreleased\n\n- S-0002 Another story's line (patch).\n\n", 1)
+	if string(got) != want {
+		t.Errorf("changelog after the second release:\n%s\nwant:\n%s", got, want)
+	}
 }
 
 // git merge-tree reads merge attributes from the .gitattributes files of the

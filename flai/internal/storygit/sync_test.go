@@ -1070,3 +1070,132 @@ func TestSyncFindsNothingUndoneOnABranchThatKeepsMainsChanges(t *testing.T) {
 		t.Errorf("a record was written: %v", err)
 	}
 }
+
+// releasedChangelog is a changelog as flai release leaves it, its top
+// "## Unreleased" empty above the version it named, with older sections
+// below, main's duplicate "## 1.1.3" heading among them (I-0251).
+func releasedChangelog(sections string) string {
+	return "# Changelog\n\n## Unreleased\n\n" + sections +
+		"## 1.1.14 - 2026-10-30\n\n- S-0300 Old line (patch).\n\n" +
+		"## 1.1.3 - 2026-10-28\n\n- S-0200 One (patch).\n\n## 1.1.3 - 2026-10-28\n\n- S-0201 Two (patch).\n"
+}
+
+// changelogProject is syncProject with .gitattributes giving CHANGELOG.md
+// merge=union on main and a changelog whose "## Unreleased" holds S-0400's
+// line, and story S-0518 in progress, whose branch adds its line under it.
+func changelogProject(t *testing.T) (*workitem.Repo, *workitem.Item, string) {
+	t.Helper()
+	repo := syncProject(t)
+	write(t, repo.MainRoot, ".gitattributes", "CHANGELOG.md merge=union\n")
+	write(t, repo.MainRoot, "CHANGELOG.md", releasedChangelog("- S-0400 An earlier line (patch).\n\n"))
+	git(t, repo.MainRoot, "add", "-A")
+	git(t, repo.MainRoot, "commit", "-q", "-m", "docs: changelog")
+	story, wt := openStory(t, repo, "S-0518", "CHANGELOG.md")
+	write(t, wt, "CHANGELOG.md", releasedChangelog("- S-0400 An earlier line (patch).\n- S-0518 A story's line (patch).\n\n"))
+	git(t, wt, "commit", "-q", "-am", "docs: [S-0518] changelog line")
+	return repo, story, wt
+}
+
+// release names main's "## Unreleased" version, as flai release does,
+// with lines its body held, and commits it.
+func releaseOnMain(t *testing.T, repo *workitem.Repo, version, lines string) {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(repo.MainRoot, "CHANGELOG.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := strings.Replace(string(data), "## Unreleased\n\n"+lines, "## Unreleased\n\n## "+version+" - 2026-11-02\n\n"+lines, 1)
+	if s == string(data) {
+		t.Fatalf("main's changelog has no ## Unreleased holding %q:\n%s", lines, data)
+	}
+	write(t, repo.MainRoot, "CHANGELOG.md", s)
+	git(t, repo.MainRoot, "commit", "-q", "-am", "chore: publish "+version)
+}
+
+// settledAs fails t unless the rebased worktree wt holds want as its
+// changelog, with one "## Unreleased", the sync named the changelog and
+// undoes nothing of main, and the settle commit is on top with nothing left
+// uncommitted.
+func settledAs(t *testing.T, wt, want string, res SyncResult) {
+	t.Helper()
+	got, err := os.ReadFile(filepath.Join(wt, "CHANGELOG.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != want || strings.Count(string(got), "## Unreleased") != 1 {
+		t.Errorf("changelog:\n%s\nwant:\n%s", got, want)
+	}
+	if strings.Join(res.Changelogs, ",") != "CHANGELOG.md" || len(res.UndoesMain) != 0 {
+		t.Errorf("changelogs %q, undoes main %+v", res.Changelogs, res.UndoesMain)
+	}
+	if subject, _ := (execx.System{}).Run(wt, "git", "log", "-1", "--format=%s"); subject != "docs: [S-0518] put the changelog lines under ## Unreleased" {
+		t.Errorf("head: %q", subject)
+	}
+	if dirty, err := Uncommitted(execx.System{}, wt); err != nil || len(dirty) != 0 {
+		t.Errorf("uncommitted: %v %v", dirty, err)
+	}
+}
+
+// I-0251, ADR-0257: a branch rebased across a release that named the
+// "## Unreleased" its line is under keeps its line under main's new top
+// "## Unreleased", where union kept the old heading with the released lines
+// too; and across a second release, which would rebase the line into the
+// version's section and drop main's second "## 1.1.3", it keeps it there
+// again, undoing nothing of main.
+func TestSyncPutsTheBranchsChangelogLinesUnderMainsTopUnreleased(t *testing.T) {
+	repo, story, wt := changelogProject(t)
+	releaseOnMain(t, repo, "1.1.17", "- S-0400 An earlier line (patch).\n")
+
+	res, err := Sync(syncOptions(repo, story))
+	if err != nil || !res.Synced {
+		t.Fatalf("sync: %+v %v", res, err)
+	}
+	settledAs(t, wt, releasedChangelog("- S-0518 A story's line (patch).\n\n## 1.1.17 - 2026-11-02\n\n- S-0400 An earlier line (patch).\n\n"), res)
+	data, _ := json.Marshal(res)
+	if !strings.Contains(string(data), `"changelogs":["CHANGELOG.md"]`) {
+		t.Errorf("json: %s", data)
+	}
+
+	main, err := os.ReadFile(filepath.Join(repo.MainRoot, "CHANGELOG.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	write(t, repo.MainRoot, "CHANGELOG.md", strings.Replace(string(main), "## Unreleased\n\n", "## Unreleased\n\n- S-0422 Another story's line (patch).\n\n", 1))
+	git(t, repo.MainRoot, "commit", "-q", "-am", "feat: [S-0422] accepted")
+	res, err = Sync(syncOptions(repo, story))
+	if err != nil || !res.Synced {
+		t.Fatalf("sync over S-0422: %+v %v", res, err)
+	}
+	releaseOnMain(t, repo, "1.1.18", "- S-0422 Another story's line (patch).\n")
+
+	res, err = Sync(syncOptions(repo, story))
+	if err != nil || !res.Synced {
+		t.Fatalf("sync across 1.1.18: %+v %v", res, err)
+	}
+	settledAs(t, wt, releasedChangelog("- S-0518 A story's line (patch).\n\n## 1.1.18 - 2026-11-02\n\n- S-0422 Another story's line (patch).\n\n## 1.1.17 - 2026-11-02\n\n- S-0400 An earlier line (patch).\n\n"), res)
+}
+
+// A branch that does not change the changelog gets no commit across a
+// release, and the sync names no changelog.
+func TestSyncLeavesAChangelogTheBranchDidNotChange(t *testing.T) {
+	repo, _, _ := changelogProject(t)
+	story, wt := openStory(t, repo, "S-0519", "docs")
+	commitFiles(t, wt, "feat: [S-0519] guide", "docs/guide.md")
+	releaseOnMain(t, repo, "1.1.17", "- S-0400 An earlier line (patch).\n")
+
+	res, err := Sync(syncOptions(repo, story))
+	if err != nil || !res.Synced {
+		t.Fatalf("sync: %+v %v", res, err)
+	}
+	if len(res.Changelogs) != 0 {
+		t.Errorf("changelogs: %q", res.Changelogs)
+	}
+	if subject, _ := (execx.System{}).Run(wt, "git", "log", "-1", "--format=%s"); subject != "feat: [S-0519] guide" {
+		t.Errorf("head: %q", subject)
+	}
+	got, _ := os.ReadFile(filepath.Join(wt, "CHANGELOG.md"))
+	main, _ := os.ReadFile(filepath.Join(repo.MainRoot, "CHANGELOG.md"))
+	if string(got) != string(main) {
+		t.Errorf("changelog:\n%s\nmain's:\n%s", got, main)
+	}
+}

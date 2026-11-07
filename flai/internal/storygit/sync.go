@@ -16,6 +16,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/gitver"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
+	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -313,6 +314,10 @@ type SyncResult struct {
 	// merged by sections among them, once for each stop on them (ADR-0126,
 	// ADR-0175).
 	Merged []string `json:"merged"`
+	// Changelogs is the CHANGELOG.md files the clean rebase left otherwise
+	// than main's file with the branch's own lines under its top
+	// "## Unreleased", written so and committed on the branch (ADR-0257).
+	Changelogs []string `json:"changelogs"`
 	// Folded is what the fold after the clean rebase folded and committed on
 	// the branch (ADR-0126).
 	Folded []Folded `json:"folded"`
@@ -347,7 +352,9 @@ func (s SyncResult) RebaseInProgress() bool {
 // is a result, with how to continue and abort; an error is a sync that could
 // not be tried, a rebase git failed without stopping, or a fold written but
 // not committed, or a lint fix written but not committed. After a clean
-// rebase it folds what the branch added into what the main branch has,
+// rebase it puts the branch's own changelog lines back under the main
+// branch's top "## Unreleased" (ADR-0257), folds what the branch added into
+// what the main branch has,
 // committing the fold on the branch, runs the project's fix commands over the
 // files the branch changes, committing what they rewrote (S-0367), then
 // trial-merges the branch with
@@ -385,8 +392,10 @@ func Sync(o SyncOptions) (SyncResult, error) {
 
 // Rebase is Sync's rebase, fold, and lint fix without the checks after them,
 // as flai accept runs it before merging the branch. After a clean rebase it
-// finds the paths where the branch now undoes the main branch's change and
-// records them for the story (ADR-0155). It writes no line of the conflict
+// puts the branch's own changelog lines back under the main branch's top
+// "## Unreleased", committing that on the branch (ADR-0257), then finds the
+// paths where the branch now undoes the main branch's change and records them
+// for the story (ADR-0155). It writes no line of the conflict
 // log, which its caller writes with where the stop was met.
 func Rebase(o SyncOptions) (SyncResult, error) {
 	if o.Log == nil {
@@ -395,7 +404,7 @@ func Rebase(o SyncOptions) (SyncResult, error) {
 	repo, id := o.Repo, o.Story.ID
 	path := repo.WorktreePath(id)
 	res := SyncResult{Story: id, Branch: Branch(id), Worktree: relPath(repo.MainRoot, path),
-		Uncommitted: []string{}, Conflicts: []string{}, Regenerated: []string{}, Merged: []string{}, Folded: []Folded{}, Fixed: []string{}, Branches: []BranchCheck{}, Outside: []string{}, UndoesMain: []Undone{}}
+		Uncommitted: []string{}, Conflicts: []string{}, Regenerated: []string{}, Merged: []string{}, Changelogs: []string{}, Folded: []Folded{}, Fixed: []string{}, Branches: []BranchCheck{}, Outside: []string{}, UndoesMain: []Undone{}}
 	if _, err := os.Stat(path); err != nil {
 		return res, fmt.Errorf("%s has no worktree at %s; open one with flai stream open %s", id, res.Worktree, id)
 	}
@@ -422,6 +431,12 @@ func Rebase(o SyncOptions) (SyncResult, error) {
 		o.Log.Warn("the branch's base not read, so what the rebase undoes of the main branch is not checked", "component", "git", "story", id, "err", err)
 		oldBase = ""
 	}
+	// ADR-0257: the branch before the rebase, to find its own changelog lines
+	oldHead, err := o.Runner.Run(path, "git", "rev-parse", "HEAD")
+	if err != nil {
+		o.Log.Warn("the branch's head not read, so its changelog lines are not put back under Unreleased", "component", "git", "story", id, "err", err)
+		oldHead = ""
+	}
 	if _, err := o.Runner.Run(path, "git", "rebase", base); err != nil {
 		if !RebaseInProgress(o.Runner, path) {
 			return res, err
@@ -435,11 +450,114 @@ func Rebase(o SyncOptions) (SyncResult, error) {
 		}
 	}
 	res.Synced = true
+	if err := settleChangelogs(o, path, oldBase, oldHead, &res); err != nil {
+		return res, err
+	}
 	checkUndone(o, path, oldBase, &res)
 	if err := fold(o, path, &res); err != nil {
 		return res, err
 	}
 	return res, fix(o, path, &res)
+}
+
+// settleChangelogs runs SettleChangelogs after the clean rebase in the
+// story's worktree at path and sets res.Changelogs (ADR-0257). One it could
+// not read for is logged and the sync stands; files it wrote but did not
+// commit are an error saying what to commit.
+func settleChangelogs(o SyncOptions, path, oldBase, oldHead string, res *SyncResult) error {
+	id := o.Story.ID
+	written, err := SettleChangelogs(o.Runner, path, res.Base, oldBase, oldHead, id)
+	if err != nil && len(written) == 0 {
+		o.Log.Warn("the branch's changelog lines not put back under Unreleased; the sync stands", "component", "git", "story", id, "err", err)
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("%w; then run %s again", err, again(o))
+	}
+	res.Changelogs = append(res.Changelogs, written...)
+	for _, p := range written {
+		o.Log.Info("changelog lines put back under Unreleased", "component", "git", "story", id, "path", p)
+	}
+	return nil
+}
+
+// changelogSubject is the subject of the commit that puts story's
+// changelog lines back under "## Unreleased" (ADR-0257).
+func changelogSubject(story string) string {
+	return fmt.Sprintf("docs: [%s] put the changelog lines under ## Unreleased", story)
+}
+
+// SettleChangelogs puts the branch's own changelog lines back under base's
+// top "## Unreleased" after a clean rebase onto base in the worktree at dir
+// (ADR-0257). For each CHANGELOG.md the branch changed between oldBase, its
+// merge base with base before the rebase, and oldHead, its head then, it
+// writes base's file with the lines oldHead's holds beyond oldBase's, as
+// release.SettleChangelog makes it, where the worktree's differs, and
+// commits what it wrote on the branch. A changelog base or oldHead does not
+// have is left as the rebase made it. It returns the paths written, as git
+// names them, sorted; with an error they are the paths written and not
+// committed, none when nothing was written.
+func SettleChangelogs(r execx.Runner, dir, base, oldBase, oldHead, story string) ([]string, error) {
+	if oldBase == "" || oldHead == "" {
+		return nil, nil
+	}
+	changed, err := nameOnly(r, dir, nameOnlyArgs(oldBase, oldHead)...)
+	if err != nil {
+		return nil, fmt.Errorf("list the paths the branch in %s changed since %s: %w", dir, oldBase, err)
+	}
+	var written []string
+	for _, p := range changed {
+		if p != "CHANGELOG.md" && !strings.HasSuffix(p, "/CHANGELOG.md") {
+			continue
+		}
+		main, ok := showFile(r, dir, base, p)
+		if !ok {
+			continue
+		}
+		branch, ok := showFile(r, dir, oldHead, p)
+		if !ok {
+			continue
+		}
+		old, _ := showFile(r, dir, oldBase, p)
+		want := release.SettleChangelog(main, old, branch)
+		file := filepath.Join(dir, filepath.FromSlash(p))
+		if got, err := os.ReadFile(file); err == nil && string(got) == want {
+			continue
+		}
+		if err := os.WriteFile(file, []byte(want), 0o644); err != nil {
+			return written, fmt.Errorf("write %s with the branch's changelog lines under ## Unreleased in %s: %w", p, dir, err)
+		}
+		written = append(written, p)
+	}
+	if len(written) == 0 {
+		return nil, nil
+	}
+	sort.Strings(written)
+	undone := func(step string, err error) error {
+		return fmt.Errorf("%s %s with the branch's changelog lines under ## Unreleased: %w; in %s, git add -- %s and commit it as %q",
+			step, strings.Join(written, ", "), err, dir, strings.Join(written, " "), changelogSubject(story))
+	}
+	if _, err := r.Run(dir, "git", append([]string{"add", "--"}, written...)...); err != nil {
+		return written, undone("stage", err)
+	}
+	if _, err := r.Run(dir, "git", "commit", "-q", "-m", changelogSubject(story)); err != nil {
+		return written, undone("commit", err)
+	}
+	return written, nil
+}
+
+// showFile is the file p, as git names it, at rev, read in the checkout at
+// dir, ending in one newline as Stages gives a version; ok is false when git
+// cannot show it, as when rev has no such file.
+func showFile(r execx.Runner, dir, rev, p string) (string, bool) {
+	out, err := r.Run(dir, "git", "show", rev+":"+p)
+	if err != nil {
+		return "", false
+	}
+	if out != "" {
+		out += "\n"
+	}
+	return out, true
 }
 
 // fold runs the fold after the clean rebase in the story's worktree at path

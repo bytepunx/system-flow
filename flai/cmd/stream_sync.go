@@ -34,8 +34,8 @@ func mergedWhat(p string) string {
 
 // printSyncChecks says, one line each, the files the rebase merged, issue
 // files by their instances and the shared markdown files by their sections
-// (ADR-0175), and the
-// issues it folded (ADR-0126), the files whose lint it fixed (S-0367),
+// (ADR-0175), the changelogs whose lines it put back under "## Unreleased"
+// (ADR-0257), the issues it folded (ADR-0126), the files whose lint it fixed (S-0367),
 // how story's branch merges with the other open branches, with the
 // conversation that tells a conflicting pair and the old conflict thread a
 // clean pair resolved, each path where the branch undoes the main branch's
@@ -44,6 +44,9 @@ func printSyncChecks(w io.Writer, story *workitem.Item, res storygit.SyncResult)
 	mine := storyBranch(story.ID)
 	for _, p := range res.Merged {
 		fmt.Fprintf(w, "merged %s: kept both sides' %s\n", p, mergedWhat(p))
+	}
+	for _, p := range res.Changelogs {
+		fmt.Fprintf(w, "put the branch's changelog lines under ## Unreleased in %s and committed it\n", p)
 	}
 	for _, f := range res.Folded {
 		fmt.Fprintf(w, "folded %s into %s\n", f.From, f.Into)
