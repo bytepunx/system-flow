@@ -3,8 +3,8 @@ id: I-0228
 title: Claude Code drops any call to flai's HTTP MCP server that answers after 60 seconds, so wait_for_events, wait_for_work, verify, and a slow task_done fail for an agent in a container
 class: defect
 status: closed
-count: 3
-cost: 5m
+count: 4
+cost: 4m
 first_reported: 2026-10-29T00:56:36Z
 last_reported: 2026-11-07T06:52:33Z
 updated: 2026-11-07T07:35:06Z
@@ -24,6 +24,10 @@ Measured by S-0519 T-2227 with a scratch MCP server answering in JSON response m
 ### 2026-11-02T06:19:02Z
 Story: S-0506.
 S-0506 T-2419 remediated the waits: over HTTP, wait_for_events and wait_for_work now hold a call at most 45 seconds and answer timed_out (ADR-0244), and verify has answered at once since S-0546 made the close-out a flai serve job (ADR-0229). Still open: a task_done or story_start slower than 60 seconds over HTTP, and the per-server timeout in the MCP file the container adapter writes (S-0508).
+
+### 2026-11-07T04:45:40Z
+Story: S-0565.
+Met again under flai serve on harness container, S-0558's run of 2026-11-07 (session 47f3eec4), worked to review in its container. No call failed, but the slow ones came near the 60 s limit. `story_start` took 41.8 s over HTTP, called at 04:36:34Z and answered at 04:37:16Z. A host run's took 4.9 s over stdio (S-0570, 04:14:43Z). Its three `task_done` calls took 26.2 s, 21.6 s, and 14.2 s. The MCP file the container adapter wrote, `.flai-cache/agents/S-0558/mcp.json`, has no per-server `timeout`, so Claude Code's 60 s default holds. A slower host, or a story with more open branches to trial-merge, would push `story_start` past it. Recorded in S-0565's results document.
 
 ### 2026-11-07T06:52:33Z
 Story: S-0556.
