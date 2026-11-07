@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- S-0587 A new project names a default agent (patch, ADR-0261): `system-flow.yaml` ships `agent: { harness: claude-code }` set rather than commented out, with no model, so the harness's own default model is used. `flai new` and `flai import` write it, and every story made then carries a copy of it.
+
 ## 1.1.25 - 2026-11-07
 
 - S-0406 A story's agent may run on OpenCode headless with flai's MCP server, no guard, and no roles, tested on fixtures, with the open OpenCode findings settled from its source at a pinned release (patch).
@@ -9,7 +11,6 @@
 - S-0406 The template ships `opencode.json` for the `opencode` harness (minor, ADR-0260): a skeleton holding only `$schema`, with no MCP entry and no key, since `flai serve` gives a story's OpenCode flai's MCP entry, and under `--deny-protected` its deny rules, through the environment at each start, and OpenCode merges the project's file under them. The template keeps `CLAUDE.md` as the map, which OpenCode reads when there is no `AGENTS.md`.
 - S-0406 `flai check` warns `instructions.missing` when the project's root has neither `AGENTS.md` nor `CLAUDE.md` (minor): a project made from the template has `CLAUDE.md` and gets no warning.
 - S-0406 OpenCode's own files are protected paths whatever the harness (minor, ADR-0130): `.opencode/`, `opencode.json`, `opencode.jsonc`, and `AGENTS.md` join Claude Code's list, so while `auto-approve` is off a story's agent writes one only with the owner's approval on a thread, and a story whose branch changes one is accepted by the operator alone (ADR-0106).
-- S-0587 A new project names a default agent (patch, ADR-0261): `system-flow.yaml` ships `agent: { harness: claude-code }` set rather than commented out, with no model, so the harness's own default model is used. `flai new` and `flai import` write it, and every story made then carries a copy of it.
 
 ## 1.1.24 - 2026-11-07
 
