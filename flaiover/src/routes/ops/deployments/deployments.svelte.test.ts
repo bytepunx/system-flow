@@ -3,7 +3,9 @@
 // commit, when it was deployed, its outcome, each step's log, and how to reach it for a demo; it
 // deploys a story only where that fits, tears one down once confirmed, and promotes main, through
 // /api/kluster/*; says while a job runs and asks again until it ends; shows flai's refusal word for
-// word; and says when the kluster host action is off or nothing is deployed.
+// word; and says when the kluster host action is off or nothing is deployed. S-0586: the notices
+// link the Klusters page's setup and name no command, and with no deploy set the page says deploys
+// are not set up yet in place of Deploy and Promote.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import type { KlusterDeployment, KlusterDeployments, KlusterJob } from '$lib/server/repo';
@@ -134,6 +136,8 @@ describe('Deployments page (S-0581)', () => {
 	// the answers GET /api/kluster/deployments gives, in turn; the last is kept
 	let reads: ReturnType<typeof answer>[] = [];
 	let writes: Record<string, ReturnType<typeof answer>> = {};
+	// what GET /api/kluster, kluster.status, answers: only block and deployable are read here
+	let status: ReturnType<typeof answer> = answer({ block: true, deployable: true });
 
 	const show = async () => {
 		c = mount(DeploymentsPage, { target: document.body });
@@ -143,9 +147,11 @@ describe('Deployments page (S-0581)', () => {
 	beforeEach(() => {
 		reads = [answer(list())];
 		writes = {};
+		status = answer({ block: true, deployable: true });
 		api.mockReset();
 		api.mockImplementation(async (path: string) => {
 			if (path === '/api/kluster/deployments') return reads.length > 1 ? reads.shift()! : reads[0];
+			if (path === '/api/kluster') return status;
 			const w = writes[path];
 			if (!w) throw new Error(`unexpected ${path}`);
 			return w;
@@ -352,19 +358,19 @@ describe('Deployments page (S-0581)', () => {
 		expect(q('deployments-action-error')!.textContent!.trim()).toBe(running);
 	});
 
-	it('says the host action is off, linking the Features page, and disables every action', async () => {
+	it("says the host action is off, linking the Klusters page's setup with no command, and disables every action", async () => {
 		reads = [answer(list({ enabled: false }))];
 		await show();
 		const off = q('deployments-off')!;
-		expect(off.textContent).toContain(ENABLE);
-		expect(off.querySelector('a')!.getAttribute('href')).toBe('/settings/features');
+		expect(off.textContent).not.toContain('flai ');
+		expect(off.querySelector('a')!.getAttribute('href')).toBe('/ops/klusters');
 		for (const b of document.querySelectorAll<HTMLButtonElement>(
 			'[data-testid="deployment-row"] button'
 		))
 			expect(b.disabled).toBe(true);
 	});
 
-	it('takes a 403 on a write as the host action off, with its command', async () => {
+	it("takes a 403 on a write as the host action off, with flai's refusal word for word", async () => {
 		await show();
 		writes['/api/kluster/promote'] = answer(
 			{
@@ -376,23 +382,56 @@ describe('Deployments page (S-0581)', () => {
 		);
 		buttonIn(rowOf('main'), 'Promote')!.click();
 		await settle();
-		expect(q('deployments-off')!.textContent).toContain(ENABLE);
-		expect(q('deployments-action-error')!.textContent).toContain('not enabled');
+		expect(q('deployments-off')!.textContent).not.toContain('flai ');
+		expect(q('deployments-off')!.querySelector('a')!.getAttribute('href')).toBe('/ops/klusters');
+		expect(q('deployments-action-error')!.textContent!.trim()).toBe(
+			`the host action "kluster" is not enabled for this project. On the host, in the project, run: ${ENABLE}`
+		);
 	});
 
-	it('says when the project has no kluster: block, linking the design', async () => {
+	it("says when the project has no kluster: block, linking the Klusters page's setup with no command", async () => {
 		reads = [
 			answer({
 				...list({ deployments: [], review: [] }),
 				block: false,
-				no_block: 'add a kluster: block'
+				no_block: `this project's system-flow.yaml has no kluster: block; turn the kluster host action on, with ${ENABLE}`
 			})
 		];
+		status = answer({ block: false });
 		await show();
 		const nb = q('deployments-no-block')!;
-		expect(nb.textContent).toContain('add a kluster: block');
-		expect(nb.querySelector('a')!.getAttribute('href')).toBe('/docs/design/system/kluster.md');
+		expect(nb.textContent).toContain('not set up yet');
+		expect(nb.textContent).not.toContain('flai ');
+		expect(nb.textContent).not.toContain('system-flow.yaml');
+		expect(nb.querySelector('a')!.getAttribute('href')).toBe('/ops/klusters');
 		expect(all('deployment-row')).toEqual([]);
+	});
+
+	it('with no deploy set, says deploys are not set up yet, linking the setup, in place of Deploy and Promote', async () => {
+		status = answer({ block: true, deployable: false });
+		await show();
+		const nd = q('deployments-no-deploy')!;
+		expect(nd.textContent).toContain('Deploys are not set up yet');
+		expect(nd.textContent).not.toContain('flai ');
+		expect(nd.querySelector('a')!.getAttribute('href')).toBe('/ops/klusters');
+		expect(buttonIn(document, 'Deploy')).toBeUndefined();
+		expect(buttonIn(document, 'Promote')).toBeUndefined();
+		// a deployed story's namespace can still be torn down
+		expect(buttonIn(rowOf('S-0581'), 'Teardown')).toBeDefined();
+		reads = [answer(list({ deployments: [], review: [] }))];
+		if (c) unmount(c);
+		document.body.innerHTML = '';
+		await show();
+		expect(q('deployments-no-main')).not.toBeNull();
+		expect(buttonIn(q('deployments-no-main')!, 'Promote')).toBeUndefined();
+	});
+
+	it('offers Deploy and Promote when kluster.status cannot be read, as from an older flai', async () => {
+		status = answer({ error: 'no such method' }, 501);
+		await show();
+		expect(q('deployments-no-deploy')).toBeNull();
+		expect(buttonIn(rowOf('S-0584'), 'Deploy')).toBeDefined();
+		expect(buttonIn(rowOf('main'), 'Promote')).toBeDefined();
 	});
 
 	it('says an empty cluster has nothing deployed, and offers Promote', async () => {

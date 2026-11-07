@@ -236,6 +236,28 @@
 
 	const can = (kind: SettingsKind) => (view ? allowed(view, kind) : { ok: false, enable: '' });
 
+	/** flai's refusal of the last toggle of a host action, said beside that action's row (S-0586). */
+	let actionRefused = $state<{ name: string; text: string } | null>(null);
+	/** Whether flai holds the host action on for this project, as it last said. */
+	const actionOn = (name: string) => {
+		const a = view?.host?.actions.find((x) => x.name === name);
+		return !!a && (a.here || a.everywhere);
+	};
+	/** Turns a host action on or off through flai. A refusal puts the box back at once to the state
+	 * flai holds, read again, with flai's sentence beside the row rather than below the section. */
+	async function toggleAction(name: string, box: HTMLInputElement) {
+		const body = await change('actions', 'action', { action: name, on: box.checked });
+		if (body) {
+			actionRefused = null;
+			return;
+		}
+		actionRefused = { name, text: said.actions?.text ?? '' };
+		delete said.actions;
+		box.checked = actionOn(name);
+		await load();
+		box.checked = actionOn(name);
+	}
+
 	function saveDefaultAgent() {
 		const parsed = parseConfig(dConfig);
 		if ('error' in parsed) {
@@ -608,8 +630,7 @@
 									busy !== null}
 								aria-label="{a.name} on for this project"
 								data-testid="action-{a.name}"
-								onchange={(e) =>
-									change('actions', 'action', { action: a.name, on: e.currentTarget.checked })}
+								onchange={(e) => toggleAction(a.name, e.currentTarget)}
 							/>
 							<div>
 								<span class="font-mono">{a.name}</span>
@@ -618,6 +639,11 @@
 										changed only in a shell</span
 									>{/if}
 								<p class="text-xs text-muted">{a.means}</p>
+								{#if actionRefused?.name === a.name}
+									<p class="text-xs text-danger" role="alert" data-testid="action-{a.name}-said">
+										{actionRefused.text}
+									</p>
+								{/if}
 							</div>
 						</li>
 					{/each}

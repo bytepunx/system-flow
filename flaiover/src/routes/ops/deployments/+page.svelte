@@ -10,20 +10,21 @@
 	// background and answers at once, so while one runs the page says so, shows the end of its log,
 	// and asks again every few seconds until it ends. flai's refusal or error is shown word for word.
 	// With the kluster host action off, or no kluster: block, the page says which in place of the
-	// actions, as the Klusters page does.
+	// actions and links the Klusters page's setup, naming no command and no file to edit (S-0586).
+	// With a block that names no deploy, which kluster.status says (deployable), Deploy and Promote
+	// give way to a sentence that deploys are not set up yet, linking the same setup.
 	import type {
 		KlusterDeployment,
 		KlusterDeployments,
 		KlusterJob,
-		KlusterReview
+		KlusterReview,
+		KlusterStatus
 	} from '$lib/server/repo';
 	import { api } from '$lib/api';
 	import { localTime } from '$lib/localtime';
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
 
-	const ENABLE = 'flai serve enable kluster';
-	const DESIGN = 'design/system/kluster.md';
 	// How often the page asks again while a deploy, a teardown, or a promotion runs; each takes minutes.
 	const POLL_MS = 3000;
 	const button = 'rounded px-3 py-1 text-sm disabled:opacity-50';
@@ -32,15 +33,20 @@
 	let error = $state<string | null>(null);
 	// The host's flai answered 501: its message, which says what it cannot do.
 	let tooOld = $state<string | null>(null);
-	// The host action was refused (403) on a write: what the operator runs to turn it on.
-	let refused = $state<string | null>(null);
+	// The host action was refused (403) on a write.
+	let refused = $state(false);
+	// Whether the block names a deploy, as kluster.status says; undefined from a flai older than
+	// S-0586, or when it could not be read, and then Deploy and Promote are offered as before.
+	let deployable = $state<boolean | undefined>(undefined);
 	// flai's refusal or error for the last action, word for word.
 	let actionError = $state<string | null>(null);
 	let busy = $state(false);
 	// The story whose teardown awaits the operator's confirmation.
 	let confirming = $state<string | null>(null);
 
-	const off = $derived(refused ?? (data && !data.enabled ? data.enable || ENABLE : null));
+	const off = $derived(refused || (!!data && !data.enabled));
+	// no deploy command yet: flai deploys and promotes nothing, so neither is offered
+	const undeployable = $derived(deployable === false);
 	// a job runs: one this flai serve started, or one that holds kluster's lock against a namespace
 	const lockJob = $derived(data?.deployments.find((d) => d.job)?.job);
 	const runs = $derived(
@@ -82,9 +88,21 @@
 			if (!r.ok) throw new Error(body.error ?? r.statusText);
 			data = body as KlusterDeployments;
 			tooOld = error = null;
-			if (data.enabled) refused = null;
+			if (data.enabled) refused = false;
 		} catch (e) {
 			error = `Could not read the deployments: ${errorText(e)}`;
+		}
+	}
+
+	/** Reads whether the block names a deploy from kluster.status; a failed read leaves it unknown. */
+	async function loadStatus() {
+		try {
+			const r = await api('/api/kluster');
+			if (!r.ok) return;
+			const body = (await r.json()) as KlusterStatus;
+			deployable = body.block ? body.deployable : undefined;
+		} catch {
+			// unknown: Deploy and Promote stay offered, and flai refuses them if it must
 		}
 	}
 
@@ -107,7 +125,7 @@
 			}
 			if (r.status === 501) tooOld = body.error ?? r.statusText;
 			else {
-				if (r.status === 403) refused = body.enable ?? ENABLE;
+				if (r.status === 403) refused = true;
 				actionError = body.error ?? r.statusText;
 			}
 		} catch (e) {
@@ -119,6 +137,7 @@
 
 	onMount(() => {
 		void load();
+		void loadStatus();
 		// asked again only while a job runs: nothing else here changes without the page asking
 		const timer = setInterval(() => {
 			if (runs) void load();
@@ -133,13 +152,30 @@
 	{#if title}<span class="ml-1">{title}</span>{/if}
 {/snippet}
 
+{#snippet setup(text: string)}
+	<a class="underline" href={resolve('/ops/klusters')} data-testid="deployments-setup">{text}</a>
+{/snippet}
+
 {#snippet deployButton(story: string)}
-	<button
-		type="button"
-		class="{button} bg-primary text-on-primary"
-		{disabled}
-		onclick={() => act('deploy', story)}>Deploy</button
-	>
+	{#if !undeployable}
+		<button
+			type="button"
+			class="{button} bg-primary text-on-primary"
+			{disabled}
+			onclick={() => act('deploy', story)}>Deploy</button
+		>
+	{/if}
+{/snippet}
+
+{#snippet promoteButton()}
+	{#if !undeployable}
+		<button
+			type="button"
+			class="{button} bg-primary text-on-primary"
+			{disabled}
+			onclick={() => act('promote')}>Promote</button
+		>
+	{/if}
 {/snippet}
 
 {#snippet job(j: KlusterJob, now: boolean)}
@@ -233,12 +269,7 @@
 			</p>
 			<div class="flex flex-wrap gap-2">
 				{#if d.default}
-					<button
-						type="button"
-						class="{button} bg-primary text-on-primary"
-						{disabled}
-						onclick={() => act('promote')}>Promote</button
-					>
+					{@render promoteButton()}
 				{:else}
 					{#if redeployable(d)}{@render deployButton(d.story)}{/if}
 					<button
@@ -377,14 +408,8 @@
 		role="status"
 		data-testid="deployments-no-block"
 	>
-		<p>This project has no kluster: block, so flai deploys nothing for it.</p>
-		{#if data.no_block}
-			<p class="mt-1">{data.no_block}</p>
-		{/if}
-		<p class="mt-1">
-			Add the block to <code class="font-mono">system-flow.yaml</code>, as
-			<a class="underline" href={resolve('/docs/[...path]', { path: DESIGN })}>{DESIGN}</a> describes.
-		</p>
+		<p>The project's kluster is not set up yet, so nothing is deployed for it.</p>
+		<p class="mt-1">Set it up from the {@render setup("Klusters page's setup")}.</p>
 	</div>
 {:else}
 	{#if data.status_error}
@@ -403,12 +428,20 @@
 			data-testid="deployments-off"
 		>
 			<p>The kluster host action is off, so the dashboard cannot deploy, tear down, or promote.</p>
-			<p class="mt-1">
-				Turn it on from the
-				<a class="underline" href={resolve('/settings/[page]', { page: 'features' })}
-					>Features page</a
-				>, or run <code class="font-mono">{off}</code> on the host, in the project.
+			<p class="mt-1">Turn it on from the {@render setup("Klusters page's setup")}.</p>
+		</div>
+	{/if}
+	{#if undeployable}
+		<div
+			class="mt-4 rounded border border-line p-3 text-sm"
+			role="status"
+			data-testid="deployments-no-deploy"
+		>
+			<p>
+				Deploys are not set up yet: the cluster can run, but no story is deployed and main is not
+				promoted until the project names its deploy command.
 			</p>
+			<p class="mt-1">Name it on the {@render setup("Klusters page's setup")}.</p>
 		</div>
 	{/if}
 	{#if actionError}
@@ -448,12 +481,7 @@
 					? ` to the namespace ${data.default_namespace}`
 					: ''}.
 			</p>
-			<button
-				type="button"
-				class="{button} bg-primary text-on-primary"
-				{disabled}
-				onclick={() => act('promote')}>Promote</button
-			>
+			{@render promoteButton()}
 		</div>
 	{/if}
 	{#if !nothing}

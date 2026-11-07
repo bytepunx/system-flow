@@ -190,6 +190,40 @@ describe('SettingsPanel (S-0105)', () => {
 		expect(q('said-default')!.textContent).toContain('saved');
 	});
 
+	it('puts a toggle flai refuses back to the state flai holds at once, with its sentence beside that row (S-0586)', async () => {
+		const refusal = 'kluster: the project has no kluster: block';
+		const v = view(true, false);
+		v.host!.actions.splice(1, 0, {
+			name: 'kluster',
+			means: 'run the project kluster',
+			here: false,
+			everywhere: false
+		});
+		const sent = backend(v, { action: [400, { error: refusal }] });
+		await show('features');
+		const box = q<HTMLInputElement>('action-kluster')!;
+		box.checked = true;
+		box.dispatchEvent(new Event('change', { bubbles: true }));
+		await settle();
+		expect(sent[0]).toEqual({ kind: 'action', action: 'kluster', on: true });
+		// no refresh: the box shows what flai holds, off, as soon as flai refused
+		expect(q<HTMLInputElement>('action-kluster')!.checked).toBe(false);
+		const beside = q('action-kluster-said')!;
+		expect(beside.textContent!.trim()).toBe(refusal);
+		expect(beside.closest('li')!.contains(q('action-kluster'))).toBe(true);
+		// not at the bottom of the section
+		expect(q('said-actions')).toBeNull();
+		// the other rows say nothing
+		expect(q('action-push-said')).toBeNull();
+		// a later toggle flai takes clears the refusal beside the row
+		backend(v);
+		const push = q<HTMLInputElement>('action-push')!;
+		push.checked = true;
+		push.dispatchEvent(new Event('change', { bubbles: true }));
+		await settle();
+		expect(q('action-kluster-said')).toBeNull();
+	});
+
 	it('changes the host-wide settings when settings is on everywhere, and says a refusal', async () => {
 		const sent = backend(view(true, true), {
 			import: [400, { error: '"relative" is not an absolute, clean path' }],
