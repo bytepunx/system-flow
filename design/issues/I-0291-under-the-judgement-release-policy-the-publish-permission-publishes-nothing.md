@@ -6,7 +6,7 @@ status: open
 count: 1
 first_reported: 2026-11-07T08:17:36Z
 last_reported: 2026-11-07T08:17:36Z
-updated: 2026-11-07T08:17:36Z
+updated: 2026-11-07T23:40:15Z
 usage:
   strategic:
     - kind: analyzer
@@ -44,3 +44,5 @@ serve journal push entries since 2026-11-02T05:31 (last mcp.release_publish by t
 ## Remediation
 
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
+
+Story S-0625 remediates this issue, created from it at 2026-11-07T23:40:15Z.
