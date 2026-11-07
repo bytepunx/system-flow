@@ -3,12 +3,15 @@ id: S-0581
 type: story
 nature: feature
 title: The Ops group's Deployments page lists main's namespace and each story's, with its commit, outcome, log, and how to reach it for a demo, and deploys, tears down, or promotes through flai
-status: backlog
+status: ready
 parent: E-0032
 owner: alex
 created: 2026-11-06T21:40:41Z
-updated: 2026-11-07T00:50:21Z
-transitions: []
+updated: 2026-11-07T00:52:07Z
+transitions:
+  - to: ready
+    at: 2026-11-07T00:52:07Z
+    by: alex
 tags: [kluster, flaiover, hostapi]
 topics: [kluster, dashboard, deployment]
 touches: [flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/repo.ts, flaiover/src/routes/api/kluster/deployments/+server.ts, flaiover/src/routes/api/kluster/deploy/+server.ts, flaiover/src/routes/api/kluster/teardown/+server.ts, flaiover/src/routes/api/kluster/promote/+server.ts, flaiover/src/routes/api/kluster/deployments.test.ts, flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/routes/ops/deployments/deployments.svelte.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/system/kluster.md]

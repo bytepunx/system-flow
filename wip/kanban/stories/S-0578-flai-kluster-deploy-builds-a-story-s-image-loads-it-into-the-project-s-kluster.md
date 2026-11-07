@@ -3,12 +3,15 @@ id: S-0578
 type: story
 nature: feature
 title: flai kluster deploy builds a story's image, loads it into the project's kluster, and runs the project's deploy command in the story's namespace, and teardown and promote remove it and deploy main to the default namespace
-status: backlog
+status: ready
 parent: E-0032
 owner: alex
 created: 2026-11-06T21:39:56Z
-updated: 2026-11-07T00:50:06Z
-transitions: []
+updated: 2026-11-07T00:51:57Z
+transitions:
+  - to: ready
+    at: 2026-11-07T00:51:57Z
+    by: alex
 tags: [kluster, flai, cli]
 topics: [kluster, deployment, testing]
 touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, design/system/kluster.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]

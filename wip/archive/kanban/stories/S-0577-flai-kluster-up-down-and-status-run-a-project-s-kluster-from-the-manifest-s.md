@@ -3,15 +3,27 @@ id: S-0577
 type: story
 nature: feature
 title: flai kluster up, down, and status run a project's kluster from the manifest's kluster block, flai check validates the block, and a kluster host action, off by default, appears on the Features page
-status: backlog
+status: done
 parent: E-0032
 owner: alex
 created: 2026-11-06T21:39:42Z
-updated: 2026-11-07T00:50:01Z
-transitions: []
+updated: 2026-11-07T01:32:09Z
+transitions:
+  - to: ready
+    at: 2026-11-07T00:51:50Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-07T00:52:00Z
+    by: agent-S-0577
+  - to: review
+    at: 2026-11-07T01:30:58Z
+    by: agent-S-0577
+  - to: done
+    at: 2026-11-07T01:32:09Z
+    by: alex
 tags: [kluster, flai, cli]
 topics: [kluster, manifest, host-actions]
-touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/check/check.go, flai/internal/check/kluster_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/kluster/kluster.go, flai/internal/kluster/kluster_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flai/cmd/root.go, design/system/project-manifest.md, design/system/flai-cli.md, design/system/kluster.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, docs/operators/index.md, design/tech/kluster.md, design/tech/README.md]
+touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/check/check.go, flai/internal/check/kluster_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/kluster/kluster.go, flai/internal/kluster/kluster_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flai/cmd/root.go, design/system/project-manifest.md, design/system/flai-cli.md, design/system/kluster.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, docs/operators/index.md, design/tech/kluster.md, design/tech/README.md, flai/internal/guard/guard.go, flai/internal/guard/kluster_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/guard/call.go]
 after: [S-0576]
 agent:
   harness: claude-code
@@ -19,9 +31,22 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2353
+  priced_by: harness
+  turns:
+    - day: 2026-11-07
+      ceremony: 2
+      test_runs: 1
+      hand_edits: 5
+      work: 63
+  models:
+    - model: claude-opus-5-5
+      input: 314
+      output: 99438
+      cache_read: 44417253
+      cache_write: 496562
+      cost: 14.3748
   strategic:
     - kind: orchestrator
       seconds: 38
@@ -55,12 +80,12 @@ A project such as signet or authstar names its kluster in `system-flow.yaml`, an
 
 ## Acceptance criteria
 
-- [ ] `system-flow.yaml` takes the `kluster:` block as the ADR from S-0576 names it. flai's manifest reads it, and `flai check` reports an invalid block, such as a config path that does not exist or an unknown key, as a finding of its own with the key and the reason.
-- [ ] `flai kluster up` runs `kluster up` with the block's config. `flai kluster down` runs `kluster down` without kluster's own prompt. `flai kluster status` reports the cluster's name, whether it runs, and its age, parsed from `kluster status`, and `--json` prints them as an object.
-- [ ] A missing `kluster` binary, or a project with no `kluster:` block, is refused with a sentence that says how to install kluster or which block to add, not a stack trace.
-- [ ] A host action `kluster`, off by default, is in flai's list of host actions with a plain description. `flai serve enable kluster` turns it on for a project, and the Features page lists it with no change to the dashboard.
-- [ ] The tests run with `kluster` faked on `PATH`. No test needs a real cluster or Docker.
-- [ ] `design/system/project-manifest.md`, `design/system/flai-cli.md`, `docs/users/flai.md`, the generated `docs/users/flai-reference.md`, and `docs/operators/settings.md` describe the block, the commands, and the host action. `design/tech/kluster.md`, a new tech file indexed in `design/tech/README.md`, records kluster, the version tested, where flai uses it, and why.
+- [x] `system-flow.yaml` takes the `kluster:` block as the ADR from S-0576 names it. flai's manifest reads it, and `flai check` reports an invalid block, such as a config path that does not exist or an unknown key, as a finding of its own with the key and the reason.
+- [x] `flai kluster up` runs `kluster up` with the block's config. `flai kluster down` runs `kluster down` without kluster's own prompt. `flai kluster status` reports the cluster's name, whether it runs, and its age, parsed from `kluster status`, and `--json` prints them as an object.
+- [x] A missing `kluster` binary, or a project with no `kluster:` block, is refused with a sentence that says how to install kluster or which block to add, not a stack trace.
+- [x] A host action `kluster`, off by default, is in flai's list of host actions with a plain description. `flai serve enable kluster` turns it on for a project, and the Features page lists it with no change to the dashboard.
+- [x] The tests run with `kluster` faked on `PATH`. No test needs a real cluster or Docker.
+- [x] `design/system/project-manifest.md`, `design/system/flai-cli.md`, `docs/users/flai.md`, the generated `docs/users/flai-reference.md`, and `docs/operators/settings.md` describe the block, the commands, and the host action. `design/tech/kluster.md`, a new tech file indexed in `design/tech/README.md`, records kluster, the version tested, where flai uses it, and why.
 
 ## Tasks
 
@@ -69,6 +94,7 @@ A project such as signet or authstar names its kluster in `system-flow.yaml`, an
 - T-2474 A kluster package runs kluster up, down, and status from the manifest's block, parses status into data, and says how to install kluster when it is missing
 - T-2475 flai kluster up, down, and status are commands, status with --json, refusing a project with no kluster block with the block to add
 - T-2476 The manifest, CLI, user, operator, and tech documents describe the kluster block, the three commands, and the kluster host action
+- T-2497 flai guard refuses every agent and sub-agent the flai kluster commands that write, and lets each run flai kluster status
 
 ## Notes
 

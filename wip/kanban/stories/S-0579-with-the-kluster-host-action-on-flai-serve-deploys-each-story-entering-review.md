@@ -3,12 +3,15 @@ id: S-0579
 type: story
 nature: feature
 title: With the kluster host action on, flai serve deploys each story entering review into its namespace, runs the review checks against it, tears it down when the story leaves review, and promotes main on acceptance
-status: backlog
+status: ready
 parent: E-0032
 owner: alex
 created: 2026-11-06T21:40:13Z
-updated: 2026-11-07T00:50:11Z
-transitions: []
+updated: 2026-11-07T00:52:00Z
+transitions:
+  - to: ready
+    at: 2026-11-07T00:52:00Z
+    by: alex
 tags: [kluster, flai, serve]
 topics: [kluster, deployment, testing, review, host-actions]
 touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/serve.go, flai/cmd/serve_actions.go, flai/internal/serve/checks.go, flai/internal/serve/checks_test.go, docs/operators/index.md, design/system/kluster.md, docs/users/flaiover.md]

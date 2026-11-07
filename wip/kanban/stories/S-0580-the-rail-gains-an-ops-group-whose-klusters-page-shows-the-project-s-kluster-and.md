@@ -3,12 +3,15 @@ id: S-0580
 type: story
 nature: feature
 title: The rail gains an Ops group whose Klusters page shows the project's kluster and brings it up or takes it down through flai, behind the kluster host action
-status: backlog
+status: ready
 parent: E-0032
 owner: alex
 created: 2026-11-06T21:40:27Z
-updated: 2026-11-07T00:50:16Z
-transitions: []
+updated: 2026-11-07T00:52:04Z
+transitions:
+  - to: ready
+    at: 2026-11-07T00:52:04Z
+    by: alex
 tags: [kluster, flaiover, hostapi]
 topics: [kluster, dashboard, host-actions]
 touches: [flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, flai/internal/hostapi/writes.go, flai/cmd/serve_actions.go, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/navrail.svelte.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/repo.ts, flaiover/src/routes/api/kluster/+server.ts, flaiover/src/routes/api/kluster/up/+server.ts, flaiover/src/routes/api/kluster/down/+server.ts, flaiover/src/routes/api/kluster/kluster.test.ts, flaiover/src/routes/ops/klusters/+page.svelte, flaiover/src/routes/ops/klusters/klusters.svelte.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/system/kluster.md]

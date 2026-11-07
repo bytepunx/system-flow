@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 105.0886
-accrued_seconds: 10277
-tasks_completed: 61
-last_run: 2026-11-07T00:16:07Z
+accrued_cost: 105.8645
+accrued_seconds: 10335
+tasks_completed: 62
+last_run: 2026-11-07T00:51:29Z
 ---
 
 # Curator activity
@@ -499,3 +499,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0231, D-0233, D-0234, D-0237, D-0238, D-0239, D-0240, D-0241, D-0243, D-0249, D-0251, D-0253, D-0254, D-0255, D-0259, D-0261, D-0262, D-0265, D-0430, D-0481
 - Seconds: 91
 - Cost: 1.4655 USD, estimated
+
+### 2026-11-07T00:51:29Z
+
+- Summary: No entries written, merged, or absorbed; the 5 S-0582 candidates (I-0264's cause and fix, 4 narrative decisions) are already in ADR-0255 or are progress notes; `flai digest compact` compacted nothing and updated one entry's citers.
+- Trigger: accepted S-0582
+- Items: D-0441
+- Seconds: 58
+- Cost: 0.7759 USD, estimated
