@@ -830,3 +830,77 @@ func TestNoTeardownOrPromotionRunsWithTheActionOff(t *testing.T) {
 		}
 	}
 }
+
+// withConfig writes the kluster config file the lab's block names, so that
+// the cluster can be named, as KlusterEnv needs.
+func (lab *klusterLab) withConfig() {
+	lab.t.Helper()
+	path := filepath.Join(lab.root, "integration", "kluster.yaml")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		lab.t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("name: t-int\nprovider: k3d\n"), 0o644); err != nil {
+		lab.t.Fatal(err)
+	}
+}
+
+// envOf is KlusterEnv for story in the lab, failing the test on an error.
+func (lab *klusterLab) envOf(story string) (string, []string) {
+	lab.t.Helper()
+	ns, env, err := KlusterEnv(lab.repo, story, lab.git, lab.opts.Host.Enabled)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	return ns, env
+}
+
+func TestAStoryDeployedAtItsHeadGetsItsNamespacesVariablesForItsChecks(t *testing.T) {
+	lab := newKlusterLab(t, klusterBlock)
+	lab.withConfig()
+	story := lab.inReview("Checked", klHeadA)
+	if _, env := lab.envOf(story); env != nil {
+		t.Fatalf("a story not deployed yet got %v", env)
+	}
+
+	lab.round()
+	ns, env := lab.envOf(story)
+	want := map[string]string{
+		"FLAI_STORY":             story,
+		"FLAI_KLUSTER_NAMESPACE": ns,
+		"FLAI_KLUSTER_NAME":      "t-int",
+		"FLAI_KLUSTER_COMMIT":    klHeadA,
+		"FLAI_KLUSTER_CONTEXT":   "k3d-t-int",
+		"KUBECONFIG":             kluster.KubeconfigPath(lab.root),
+	}
+	if ns != strings.ToLower(story) {
+		t.Errorf("namespace = %q, want %q", ns, strings.ToLower(story))
+	}
+	for name, value := range want {
+		if got := envValue(env, name); got != value {
+			t.Errorf("%s = %q, want %q (env %v)", name, got, value, env)
+		}
+	}
+
+	lab.git.set(story, klHeadB) // a new head, not deployed yet
+	if _, env := lab.envOf(story); env != nil {
+		t.Errorf("a story at a head its namespace was not deployed at got %v", env)
+	}
+	lab.git.set(story, klHeadA)
+	lab.setOn(false)
+	if _, env := lab.envOf(story); env != nil {
+		t.Errorf("with the kluster action off a story got %v", env)
+	}
+}
+
+func TestAStoryWhoseDeployFailedGetsNoNamespaceForItsChecks(t *testing.T) {
+	lab := newKlusterLab(t, klusterBlock)
+	lab.withConfig()
+	lab.kluster.fail = func(string, string) error {
+		return &kluster.StepError{Step: "deploy", ExitCode: 2, Err: errors.New("exit status 2")}
+	}
+	story := lab.inReview("Broken", klHeadA)
+	lab.round()
+	if _, env := lab.envOf(story); env != nil {
+		t.Errorf("a story whose deploy failed got %v", env)
+	}
+}

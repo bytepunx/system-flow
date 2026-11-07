@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -54,8 +55,17 @@ func (a *app) runChecksRun(story string) error {
 	if err != nil {
 		return err
 	}
+	// a story deployed into its kluster namespace at its head is checked
+	// against it, with the namespace's variables (S-0579, ADR-0254 §8)
+	ns, env, err := serve.KlusterEnv(repo, story, a.runner, a.host().Enabled)
+	if err != nil {
+		return err
+	}
+	if env != nil {
+		fmt.Fprintf(a.errOut, "%s: checks run against its kluster namespace %s\n", story, ns)
+	}
 	worktree := repo.WorktreePath(story)
-	run, err := a.serveDir().RunChecks(story, mainRootOf(repo), worktree, cfg, a.now)
+	run, err := a.serveDir().RunChecksWith(context.Background(), story, mainRootOf(repo), worktree, cfg, env, a.now)
 	if err != nil {
 		return err
 	}

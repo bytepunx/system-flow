@@ -109,6 +109,14 @@ func (d Dir) CancelChecks(story string, grace time.Duration, sleep func(time.Dur
 // file as it goes so any process asking (flai checks status, flai checks
 // tail, a concurrent cancel) sees it live, not only once this returns.
 func (d Dir) RunChecks(story, root, worktree string, cfg ChecksConfig, now func() time.Time) (ChecksRun, error) {
+	return d.RunChecksWith(context.Background(), story, root, worktree, cfg, nil, now)
+}
+
+// RunChecksWith is RunChecks with env added to each check's environment,
+// over flai's own, such as a kluster namespace's variables (S-0579,
+// ADR-0254 §8), and cut short, as cancelled, when ctx ends. With no env each
+// check gets flai's environment as it is.
+func (d Dir) RunChecksWith(ctx context.Context, story, root, worktree string, cfg ChecksConfig, env []string, now func() time.Time) (ChecksRun, error) {
 	if existing, ok := d.ChecksState(story); ok && existing.Running && Alive(existing.PID) {
 		return ChecksRun{}, fmt.Errorf("a checks run for %s is already active (pid %d); flai checks status %s says more", story, existing.PID, story)
 	}
@@ -135,8 +143,11 @@ func (d Dir) RunChecks(story, root, worktree string, cfg ChecksConfig, now func(
 		return ChecksRun{}, err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), cfg.Timeout)
+	ctx, cancel := context.WithTimeout(ctx, cfg.Timeout)
 	defer cancel()
+	if ns := envValue(env, "FLAI_KLUSTER_NAMESPACE"); ns != "" {
+		fmt.Fprintf(logFile, "=== against the kluster namespace %s ===\n", ns)
+	}
 
 	outcome := "passed"
 stepLoop:
@@ -154,7 +165,7 @@ stepLoop:
 			run.PID, run.Current = pid, nc.Name
 			_ = d.writeChecksState(run)
 		}
-		exitCode, killedBy, startErr := runOneCheck(ctx, d.checksCancel(story), worktree, argv, logFile, onStart)
+		exitCode, killedBy, startErr := runOneCheck(ctx, d.checksCancel(story), worktree, argv, env, logFile, onStart)
 		step.Ended = now().UTC().Format(time.RFC3339)
 		step.Exit = exitCode
 		run.Steps = append(run.Steps, step)
@@ -184,13 +195,17 @@ stepLoop:
 	return run, nil
 }
 
-// runOneCheck runs one command, in its own process group so cancelling it
-// reaches anything it spawned. It ends the process (terminate, then kill)
-// the moment ctx ends (a time limit) or the cancel file appears (an
+// runOneCheck runs one command, with env over flai's environment when there
+// is any, in its own process group so cancelling it reaches anything it
+// spawned. It ends the process (terminate, then kill) the moment ctx ends (a
+// time limit, or flai serve stopping) or the cancel file appears (an
 // operator's cancel), and says which; otherwise it returns the exit code.
-func runOneCheck(ctx context.Context, cancelFile, dir string, argv []string, out io.Writer, onStart func(pid int)) (exitCode *int, killedBy string, err error) {
+func runOneCheck(ctx context.Context, cancelFile, dir string, argv, env []string, out io.Writer, onStart func(pid int)) (exitCode *int, killedBy string, err error) {
 	cmd := exec.Command(argv[0], argv[1:]...)
 	cmd.Dir = dir
+	if len(env) > 0 {
+		cmd.Env = append(os.Environ(), env...)
+	}
 	cmd.Stdout, cmd.Stderr = out, out
 	Detach(cmd)
 	if err := cmd.Start(); err != nil {
@@ -210,6 +225,9 @@ watch:
 			return exitCodeOf(waitErr), "", nil
 		case <-ctx.Done():
 			killedBy = "timed-out"
+			if errors.Is(ctx.Err(), context.Canceled) {
+				killedBy = "cancelled"
+			}
 			break watch
 		case <-ticker.C:
 			if _, statErr := os.Stat(cancelFile); statErr == nil {
@@ -246,4 +264,16 @@ func exitCodeOf(err error) *int {
 		code = -1
 	}
 	return &code
+}
+
+// envValue is the value env, a list of NAME=value, gives name, the last
+// when it gives it twice; empty when it gives none.
+func envValue(env []string, name string) string {
+	value := ""
+	for _, kv := range env {
+		if k, v, ok := strings.Cut(kv, "="); ok && k == name {
+			value = v
+		}
+	}
+	return value
 }

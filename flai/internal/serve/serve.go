@@ -30,6 +30,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/watch"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // Entry is one registered project: where it is, and the dashboard to dial.
@@ -297,6 +298,11 @@ type Options struct {
 	// stories in review, behind the kluster host action (S-0579, ADR-0254);
 	// SystemKluster when nil.
 	Kluster KlusterRunner
+	// Checks is the operator's say about running checks for a project's
+	// stories, which the kluster pass reads to run a story's checks against
+	// its namespace once its deploy passed (S-0579, ADR-0254 §8); nil runs
+	// none.
+	Checks func(repo *workitem.Repo) (ChecksConfig, error)
 }
 
 // allowsUnsigned is whether the allowance is in force for the project at

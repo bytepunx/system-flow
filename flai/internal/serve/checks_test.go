@@ -3,14 +3,18 @@
 package serve
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 func checksLab(t *testing.T) (dir Dir, worktree string) {
@@ -222,4 +226,132 @@ func parsePID(t *testing.T, data []byte) int {
 		t.Fatalf("not a pid: %q", data)
 	}
 	return n
+}
+
+func TestRunChecksWithGivesEachCheckTheEnvironment(t *testing.T) {
+	t.Setenv("FLAI_KLUSTER_NAMESPACE", "")
+	dir, worktree := checksLab(t)
+	out := filepath.Join(worktree, "ns.txt")
+	cfg := ChecksConfig{
+		Commands: []manifest.NamedCommand{{Name: "ns", Command: []string{"sh", "-c", `printf %s "$FLAI_KLUSTER_NAMESPACE" > ` + out}}},
+		Timeout:  time.Minute,
+	}
+	run, err := dir.RunChecksWith(t.Context(), "S-0003", "/root", worktree, cfg, []string{"FLAI_KLUSTER_NAMESPACE=s-0003"}, nowFixed)
+	if err != nil || run.Outcome != "passed" {
+		t.Fatalf("run: %+v %v", run, err)
+	}
+	if data, _ := os.ReadFile(out); string(data) != "s-0003" {
+		t.Errorf("the check saw FLAI_KLUSTER_NAMESPACE %q, want s-0003", data)
+	}
+	if log, _ := os.ReadFile(run.Log); !strings.Contains(string(log), "against the kluster namespace s-0003") {
+		t.Errorf("the run's log does not name the namespace:\n%s", log)
+	}
+
+	run, err = dir.RunChecks("S-0004", "/root", worktree, cfg, nowFixed)
+	if err != nil || run.Outcome != "passed" {
+		t.Fatalf("run: %+v %v", run, err)
+	}
+	if data, _ := os.ReadFile(out); string(data) != "" {
+		t.Errorf("a run with no environment added saw FLAI_KLUSTER_NAMESPACE %q", data)
+	}
+}
+
+// withChecks has the lab's pass run cfg's checks, with their state in a
+// folder of the test's own, as flai serve's options name them.
+func (lab *klusterLab) withChecks(cfg ChecksConfig) {
+	lab.t.Helper()
+	lab.withConfig()
+	lab.opts.Dir = Dir(lab.t.TempDir())
+	lab.opts.Checks = func(*workitem.Repo) (ChecksConfig, error) { return cfg, nil }
+	lab.pass = newKlusterPass(lab.opts, Entry{Key: "t", Name: "t", Root: lab.root}, &sync.WaitGroup{})
+}
+
+// nsCheck is a check that writes the namespace it sees to a file, and exits
+// with exit.
+func nsCheck(t *testing.T, exit int) (ChecksConfig, string) {
+	out := filepath.Join(t.TempDir(), "ns.txt")
+	return ChecksConfig{
+		Enabled:  true,
+		Commands: []manifest.NamedCommand{{Name: "golden", Command: []string{"sh", "-c", `printf %s "$FLAI_KLUSTER_NAMESPACE" > ` + out + "; exit " + strconv.Itoa(exit)}}},
+		Timeout:  time.Minute,
+	}, out
+}
+
+func TestThePassRunsAStorysChecksAgainstItsNamespaceOnceItsDeployPassed(t *testing.T) {
+	lab := newKlusterLab(t, klusterBlock)
+	cfg, out := nsCheck(t, 0)
+	lab.withChecks(cfg)
+	story := lab.inReview("Checked", klHeadA)
+
+	lab.round()
+	if data, _ := os.ReadFile(out); string(data) != strings.ToLower(story) {
+		t.Fatalf("the checks saw the namespace %q, want %q", data, strings.ToLower(story))
+	}
+	var details []string
+	for _, e := range lab.entries() {
+		details = append(details, e.Outcome+": "+e.Detail)
+	}
+	if got := strings.Join(details, "\n"); !strings.Contains(got, "started: checks of "+story) || !strings.Contains(got, "done: checks of "+story) {
+		t.Errorf("the journal does not hold the checks run's start and end:\n%s", got)
+	}
+	if run, ok := lab.opts.Dir.ChecksState(story); !ok || run.Outcome != "passed" {
+		t.Errorf("checks state = %+v, %v; want a passed run", run, ok)
+	}
+}
+
+func TestThePassRunsNoChecksWithChecksOffOrAfterAFailedDeploy(t *testing.T) {
+	t.Run("checks off", func(t *testing.T) {
+		lab := newKlusterLab(t, klusterBlock)
+		cfg, out := nsCheck(t, 0)
+		cfg.Enabled = false
+		lab.withChecks(cfg)
+		lab.inReview("Unchecked", klHeadA)
+		lab.round()
+		if len(lab.kluster.deploys()) != 1 {
+			t.Fatalf("deploys = %v, want one", lab.kluster.deploys())
+		}
+		if _, err := os.Stat(out); err == nil {
+			t.Error("checks ran with the checks host action off")
+		}
+	})
+	t.Run("failed deploy", func(t *testing.T) {
+		lab := newKlusterLab(t, klusterBlock)
+		cfg, out := nsCheck(t, 0)
+		lab.withChecks(cfg)
+		lab.kluster.fail = func(string, string) error {
+			return &kluster.StepError{Step: "deploy", ExitCode: 1, Err: errors.New("exit status 1")}
+		}
+		lab.inReview("Broken", klHeadA)
+		lab.round()
+		if _, err := os.Stat(out); err == nil {
+			t.Error("checks ran after a failed deploy")
+		}
+	})
+}
+
+func TestFailingChecksAgainstTheNamespaceOpenOneThreadAndMoveNothing(t *testing.T) {
+	lab := newKlusterLab(t, klusterBlock)
+	cfg, _ := nsCheck(t, 3)
+	lab.withChecks(cfg)
+	story := lab.inReview("Failing", klHeadA)
+
+	lab.round()
+	ths := lab.titled(story, checksFailureTitle(story))
+	if len(ths) != 1 || !ths[0].Open() {
+		t.Fatalf("checks failure threads = %d, want one open", len(ths))
+	}
+	body := ths[0].Entries()[0].Text
+	for _, want := range []string{"failed", "golden", klHeadA, ".log"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("the thread does not name %q:\n%s", want, body)
+		}
+	}
+	if got := lab.status(story); got != workitem.Review {
+		t.Errorf("the story moved to %s, want it left in review", got)
+	}
+
+	lab.round()
+	if got := lab.titled(story, checksFailureTitle(story)); len(got) != 1 {
+		t.Errorf("a second look opened another thread: %d", len(got))
+	}
 }
