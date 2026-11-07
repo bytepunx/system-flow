@@ -85,6 +85,50 @@ func TestAStoryGetsTheProjectsRoles(t *testing.T) {
 	}
 }
 
+// ADR-0261: with neither the story, the project, nor the host's command
+// naming a harness, a story starts with flai's built-in default under its own
+// words; with a command set it names none, so the command starts it; a story
+// or a project that names a harness keeps it.
+func TestStartAgentOfFallsBackToTheBuiltinWithNoCommand(t *testing.T) {
+	r := newProject(t)
+	if r.Manifest.Agent != nil {
+		t.Fatalf("the fixture has a default: %+v", r.Manifest.Agent)
+	}
+	bare := mustCreate(t, r, Story, "No agent anywhere", "")
+	if got := r.StartAgentOf(bare, false); !got.Same(&manifest.Agent{Harness: "claude-code"}) {
+		t.Errorf("no agent, no default, no command: %+v", got)
+	}
+	if got := r.StartAgentOf(bare, true); got != nil {
+		t.Errorf("no agent, no default, a command: %+v", got)
+	}
+	if again, err := r.Get(bare.ID); err != nil || again.Agent != nil {
+		t.Errorf("the story was written: %+v, %v", again, err)
+	}
+	if got := r.StartAgentOf(nil, false); got != nil {
+		t.Errorf("no item: %+v", got)
+	}
+
+	modelOnly := &Item{ID: "S-9001", Type: Story, Agent: &manifest.Agent{Model: "claude-sonnet-5"}}
+	if got := r.StartAgentOf(modelOnly, false); !got.Same(&manifest.Agent{Harness: "claude-code", Model: "claude-sonnet-5"}) {
+		t.Errorf("only a model, no command: %+v", got)
+	}
+	if got := r.StartAgentOf(modelOnly, true); !got.Same(&manifest.Agent{Model: "claude-sonnet-5"}) {
+		t.Errorf("only a model, a command: %+v", got)
+	}
+
+	named := &Item{ID: "S-9002", Type: Story, Agent: &manifest.Agent{Harness: "none"}}
+	for _, cmd := range []bool{false, true} {
+		if got := r.StartAgentOf(named, cmd); !got.Same(&manifest.Agent{Harness: "none"}) {
+			t.Errorf("harness none, command %v: %+v", cmd, got)
+		}
+	}
+
+	r.Manifest.Agent = &manifest.Agent{Harness: "command"}
+	if got := r.StartAgentOf(bare, false); !got.Same(&manifest.Agent{Harness: "command"}) {
+		t.Errorf("the project names a harness: %+v", got)
+	}
+}
+
 // S-0573, ADR-0251: a story whose agent names no harness starts with the
 // project's default as it is now, under what its own agent does say; one that
 // names a harness keeps its own whole.

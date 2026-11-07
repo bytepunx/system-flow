@@ -278,6 +278,34 @@ func (a *Agent) With(over *Agent) *Agent {
 	return out
 }
 
+// BuiltinHarness is the harness of flai's built-in default agent
+// (ADR-0261): the claude-code adapter's name.
+const BuiltinHarness = "claude-code"
+
+// Builtin is flai's built-in default agent (ADR-0261): harness claude-code,
+// no model, so the harness runs its own default model, and no config. An
+// agent that names no harness, under neither a story, a role, the project's
+// default, nor the host's command, is started with it. It is never written
+// into a story or a manifest.
+func Builtin() *Agent {
+	return &Agent{Harness: BuiltinHarness}
+}
+
+// OrBuiltin is the agent itself when it names a harness, and otherwise flai's
+// built-in default with what a does say, model, provider, config, and roles,
+// laid over it, and a's image kept (ADR-0261). a is not changed.
+func (a *Agent) OrBuiltin() *Agent {
+	if a != nil && a.Harness != "" {
+		return a
+	}
+	out := Builtin().With(a)
+	if a != nil && a.Image != nil {
+		img := *a.Image
+		out.Image = &img
+	}
+	return out
+}
+
 // merge lays harness, model, and config over the ones before, into a new
 // config map so that neither side's is shared.
 func merge(harness, model string, config map[string]string, h, m string, c map[string]string) (string, string, map[string]string) {

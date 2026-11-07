@@ -7,6 +7,39 @@ import (
 	"testing"
 )
 
+// ADR-0261: an agent that names no harness falls back to flai's built-in
+// default, claude-code with no model, under its own words; one that names a
+// harness is itself.
+func TestOrBuiltinFallsBackToClaudeCodeOnlyWhenNoHarnessIsNamed(t *testing.T) {
+	var none *Agent
+	if got := none.OrBuiltin(); !got.Same(&Agent{Harness: "claude-code"}) {
+		t.Errorf("nil: %+v", got)
+	}
+	if b := Builtin(); b.Harness != BuiltinHarness || b.Model != "" || len(b.Config) != 0 || len(b.Roles) != 0 {
+		t.Errorf("built-in: %+v", b)
+	}
+
+	own := &Agent{Model: "claude-sonnet-5", Provider: "litellm", Config: map[string]string{"effort": "high"},
+		Roles: map[string]Role{"explore": {Model: "haiku"}}, Image: &AgentImage{Layer: "images/agent/Dockerfile"}}
+	got := own.OrBuiltin()
+	if got.Harness != "claude-code" || got.Model != "claude-sonnet-5" || got.Provider != "litellm" || got.Config["effort"] != "high" || got.Roles["explore"].Model != "haiku" {
+		t.Errorf("only a model: %+v", got)
+	}
+	if got.Image == nil || got.Image.Layer != "images/agent/Dockerfile" {
+		t.Errorf("the image was not kept: %+v", got.Image)
+	}
+	if own.Harness != "" {
+		t.Errorf("the agent was changed: %+v", own)
+	}
+
+	for _, h := range []string{"command", "none", "claude-code"} {
+		named := &Agent{Harness: h, Model: "m"}
+		if got := named.OrBuiltin(); got != named {
+			t.Errorf("harness %s: %+v", h, got)
+		}
+	}
+}
+
 func TestAgentWithMergesAndOverrides(t *testing.T) {
 	def := &Agent{Harness: "claude-code", Model: "claude-opus-5-5", Config: map[string]string{"effort": "high", "max_turns": "50"}}
 	got := def.With(&Agent{Model: "claude-sonnet-5", Config: map[string]string{"effort": "low"}})

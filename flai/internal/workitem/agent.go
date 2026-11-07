@@ -20,3 +20,20 @@ func (r *Repo) AgentOf(it *Item) *manifest.Agent {
 	}
 	return r.Manifest.Agent.With(it.Agent)
 }
+
+// StartAgentOf is the agent flai serve starts for the story it (ADR-0261):
+// AgentOf, and, when that names no harness and commandSet is false, flai's
+// built-in default agent under it. With commandSet true, a story whose agent
+// and project name no harness is left naming none, so the host's command
+// starts it as ADR-0251 kept. Nil only for a nil item. Nothing is written to
+// the story.
+func (r *Repo) StartAgentOf(it *Item, commandSet bool) *manifest.Agent {
+	if it == nil {
+		return nil
+	}
+	a := r.AgentOf(it)
+	if commandSet {
+		return a
+	}
+	return a.OrBuiltin()
+}
