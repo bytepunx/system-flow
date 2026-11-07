@@ -7,7 +7,7 @@ count: 3
 cost: 8m
 first_reported: 2026-11-07T08:16:08Z
 last_reported: 2026-11-07T09:46:15Z
-updated: 2026-11-07T09:46:15Z
+updated: 2026-11-07T23:39:50Z
 ---
 
 # I-0283 A publish instance with nothing to release stops at its evaluate step down the failure path, blocking and asking the operator every time
@@ -30,3 +30,5 @@ Story: S-0562.
 Even after the operator ticked S-0585's criterion 3 at 08:54, the orchestrator still could not accept the instance. Its branch, story/S-0585, no longer existed, and `flai accept --by orchestrator --dry-run` answered "the operator accepts it" (TH-0867, TH-0868). The operator accepted S-0585 by hand at 09:43:02Z, about 86 minutes after it reached review. So an instance stopped at step 2 needed the operator three times: TH-0854, the criterion tick, and the acceptance. A publish under the orchestrator's `publish` permission should reach done with none.
 
 ## Remediation
+
+Story S-0621 remediates this issue, created from it at 2026-11-07T23:39:50Z.
