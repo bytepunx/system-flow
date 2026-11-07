@@ -1,13 +1,13 @@
 ---
 title: Server-side response times
-updated: 2026-10-28
+updated: 2026-11-07
 status: active
 topics: [server-side, back-end, cli, dashboard]
 ---
 
 # Server-side response times
 
-The finding of S-0152, for E-0012. The board and other pages pause for long moments while they load. This document says how the time a request takes is now measured beneath its transport, what was measured on this repository, where the time goes, and what would take it away. Each cause has a story under E-0012.
+The finding of S-0152, for E-0012. The board and other pages pause for long moments while they load. This document says how the time a request takes is now measured beneath its transport, what was measured on this repository, where the time goes, and what would take it away. Each cause has a story under E-0012. [A second pass at 596 stories (S-0596)](#a-second-pass-at-596-stories-s-0596) measures it again and names causes 8 to 21.
 
 > Since S-0195 ([ADR-0067](../adrs/0067-accepted-work-reaches-the-remote-only-when-it-is-published-and-agents-publish.md)) the dashboard has no unpushed notice: the method `push.pending` and the route `/api/unpushed` are gone, and a board load no longer asks for them. The measurements below keep them as they were measured.
 
@@ -264,6 +264,83 @@ A fresh process no longer reads the log while no branch moves. A cold `stats.get
 `main`'s median `stats.compute` less its median log was 1,527 ms; S-0531's median `stats.compute` was 1,672 ms. The difference includes reading and parsing the kept file, and is within the spread of S-0531's three runs, 1,590 to 1,753 ms. This round took no profile to split it.
 
 The two binaries give the same report. In each of the six pairs compared, three of `stats.get` and three of `flai stats --json`, run about two seconds apart, `claims.drift`, all 491 entries, and `claims.days` are identical. `claims.weeks` differs only in the current week's held seconds, `after` and `overlap`, by 1 to 14 seconds, which grow with now while a story is held: `main` ran first in each pair, and S-0531's figures are the larger.
+
+## A second pass at 596 stories (S-0596)
+
+The operator found flai slow again with 596 stories: the board, creating and editing items, the charts (especially over windows longer than 7 days), the close-out, and acceptance. S-0596 measured where the time goes now. Causes 1 to 7 above stay fixed. The time now goes to work that grows with the number of files, and to steps that run one after another.
+
+### How it was measured
+
+- The operator's serve log, `~/.flai/serve/serve.log`, from 2026-11-04 to 2026-11-07: its `request answered` events. It logs at `INFO` only the requests at or over `FLAI_SLOW_REQUEST`, so its percentiles are of the slow requests.
+- In-process Go programs, built with `go build -overlay` under `/tmp`, that call what each method calls. They ran on the main checkout and wrote nothing. `flai guard` refuses `flai hostapi` to a sub-agent, so the programs stood in for `hostapi --timing`.
+- The writes were run in a scratch copy of the main checkout under `/tmp`, with a profiling build of flai and shims that log every process it starts.
+- The close-out's figures come from the serve journal and the job logs of the week before: 112 jobs, 83 passed.
+- The repository then held 3,233 work items, 3,179 of them archived; 5,068 markdown files under `wip`; 884 threads, 351 conversations, 521 digest entries, and 295 issues. flai serve served 13 projects.
+- The host was loaded throughout: load average 28 to 78 on 24 cores, with other agents running Go tests. Wall times are inflated about 2 to 3 times; CPU times are given beside them where they were taken.
+
+### What the serve log says
+
+| Method | Slow calls | p50 | p90 | Max | Where the time went (mean) |
+|--------|-----------:|----:|----:|----:|----------------------------|
+| `agent.status` | 84,417 | 796 ms | 2,473 ms | 17.6 s | `agent.state` 1,212 ms; 390 KB answers. 104,000 s over 4 days, about 30% of serve's wall time |
+| `board.get` | 16,641 | 800 ms | 1,822 ms | 8.7 s | `release.pending` 438, `merge.queue` 279, `repo.list` 154, `board.view` 104 |
+| `settings.get` | 4,104 | 825 ms | 2,072 ms | 7.0 s | no phases recorded |
+| `inbox.designer` | 4,054 | 782 ms | 1,700 ms | 5.4 s | `threads.read` 603 |
+| `threads.list` | 748 | 718 ms | 1,287 ms | 4.6 s | `threads.read` 622, `threads.view` 159 |
+| `item.get` | 54 | 612 ms | 860 ms | 1.3 s | `repo.list` 578 |
+| `stats.get` | 121 | 1,178 ms | 2,415 ms | 6.5 s | `stats.compute` 1,428, `exec.git.log` 168 |
+| `item.move` | 35 | 1.3 s | 3.6 s | 6.3 s | `exec.flai.move` 1,808 |
+| `item.new` | 8 | 7.9 s | 32 s | 32 s | `exec.flai.story.new` 10,951 |
+| `item.edit` | 5 | 8.5 s | 12.4 s | 12.4 s | `exec.flai.edit` 8,598 |
+| `item.finalize` | 10 | 6.2 s | 18.8 s | 18.8 s | `exec.flai.edit` 10,046 |
+| `issue.story` | 5 | 10.4 s | 19 s | 19 s | `exec.flai.issue.story` 11,562 |
+| `accept.run` | 20 | 16.6 s | 40 s | 42 s | `exec.flai.accept` 17,029 |
+
+On the same day an MCP `item_new` of a task took about 20 s.
+
+### Where the time goes
+
+Each cause is numbered after causes 1 to 7. Each "fix" below keeps the files under `wip/` and `design/` as they are, with the same schema. What it keeps is in memory, or in a cache under `.flai-cache` that can be rebuilt from those files.
+
+| # | Cause | Measured | Proposed fix | Estimated saving |
+|---|-------|----------|--------------|------------------|
+| 8 | A checked write runs the whole of `flai check` twice, before and after (`flai/internal/itemnew/itemnew.go` `Create`, `flai/internal/itemedit/itemedit.go` `Apply`). Each run lists all 3,233 items cold, lints all 5,068 markdown files under `wip`, starts `node` for the component examples, and scans the digest for secrets. An edit also lists the items again and rewrites `wip/agents/index.md`. | `story new`, `epic new`, `task new`, `edit`, finalize, `criteria tick`, `issue story`: 7 to 18 s wall, 8 to 12.7 s CPU, about 97% of it in the two checks | Run only the rules an item write can affect: the written items and their parent, the after, overlap, and touches graph, the board, the story's narrative, and the lint and conflict markers of the written files. Compute the "before" result for those rules only. | 7 to 13 s down to about 1.5 to 2 s a write |
+| 9 | flai serve's replanner writes each forecast it moves through `itemedit.Apply`, one after another (`flai/internal/serve/replan.go`, `replan`), so each moved forecast pays cause 8's two checks. | 5 to 6.4 s a forecast. Over the week, 98 replans moved 1,200 forecasts, about 1.7 to 2 h of serve CPU. An acceptance's replan commit lands p50 80 s and p90 127 s after the acceptance. | Write every moved forecast in one pass, with one scoped check and one index write. | About 80 s down to under 5 s a replan |
+| 10 | Every flai process starts cold. The item cache S-0156 added lives in flai serve's memory, so each `flai` a write starts, each `flai check`, and each `flai move` parses all 3,233 items, one file after another (`flai/internal/workitem/store.go` `list`). `flai move` lists the archive only so that `Follow` sees an epic's archived stories (`flai/internal/workitem/transition.go`). | Item parse 1.1 to 1.5 s cold: 1.28 s with one worker, 0.65 s with 8, 0.49 s with 16. `move` 1 to 2.5 s, 80% of it the list. The lint of `wip`: 0.98 s, 0.25 s on 8 workers. | Parse on a bounded pool of workers. Keep parsed items and lint results under `.flai-cache`, keyed by path, size, and modification time, as S-0531 keeps the stories' commits. | About 1 s a `move`; 1.5 to 2 s a check run |
+| 11 | `check.Run` runs its rules one after another (`flai/internal/check/check.go` `Run`), and `componentExamples` starts `node` on every run (`flai/internal/components/props.go`). | Whole check: 3.3 s cold and 1.8 s warm without `node`; 7.4 to 8 s cold and 2.6 s warm with it. `node` alone: 0.6 to 4.2 s. | Run the rules at once; they only read, so the findings need one lock. Keep the props `node` read, keyed by the component files' stat. | Whole check to about 1.2 to 1.5 s; helps `flai verify` and `flai task done` too |
+| 12 | `agent.status` reads the host's whole `agents.json`, 663 KB for 14 projects, under one host-wide `agentsMu` (`flai/internal/serve/agents.go` `AgentStates`). It then reads all 884 threads, and all 351 conversations once for each live run, through `awaitingOther`, and again for `held` (`Repo.Holds`). It answers 437 finished runs and 288 planner runs. The dashboard asks for it every 30 s for all 13 projects at once, and the board, the activity page, and a story's agent panel every 15 s. | 1.4 to 2.4 s wall, about 450 ms CPU, 392 KB per call. 8 calls at once: 435 ms each; 32 at once: 1,185 ms. A project with a 1 KB answer still takes p50 780 ms. | Keep `agents.json` parsed, checked by size and modification time. Read the conversations once per call. | 15 to 150 ms and the lock queue; with cause 13, agent.state's CPU from about 450 to under 60 ms |
+| 13 | Threads, conversations, digest entries, issues, and activity documents are read and parsed again on every call (`flai/internal/threads/threads.go` `List`, `flai/internal/messages`, `flai/internal/digest`, `flai/internal/issues`). Readers: `agent.state`, `inbox.designer`, `threads.list`, `messages.list`, `board.get`'s `merge.queue`, and `stats.get`. | Threads 80 to 110 ms, conversations 35 to 50 ms, digest 60 to 85 ms, issues 22 to 30 ms per read; YAML parsing is about a fifth of the CPU. | Keep them parsed between requests as S-0156 keeps items: stat each file, and parse again only the files that changed. | About 90 ms down to about 5 ms per thread read; about 180 to 200 ms a `stats.get` |
+| 14 | `board.get` holds `release`'s `kept` mutex, one for every repository, across a git process (`flai/internal/release/history.go`), so the 13 projects' boards queue on it. It runs `git show-ref` on every call. `merge.queue` reads all threads even with no story in review (`flai/internal/mergequeue/eligible.go`). It reads each story's undone paths one after another (`flai/internal/hostapi/hostapi.go`). | `release.pending` 23 to 88 ms, 250 ms with 8 at once; `merge.queue` 185 to 630 ms, 94% of it threads; `repo.Holds` 82 to 195 ms | One lock per repository root. Skip `show-ref` while the main-refs watcher saw no change. Read no threads when no story is in review. Read the undone paths at once. | 100 to 500 ms a board under load |
+| 15 | `settings.get` works out, for each of the 13 served projects, which projects are below the import folders (`flai/cmd/serve_actions.go` `servedView`, `flai/internal/serve/below.go` `FindBelow`): 13 walks and 169 manifest loads a request. It takes no context, so it records no phases. | 13 × 45 to 85 ms, which matches its p50 of 825 ms | Find them once per request, or take what the running flai serve already found. | About 750 ms a call |
+| 16 | `item.get` lists every item, the archive included, to answer one (`flai/internal/hostapi/hostapi.go`), and each folder's lock in the item store is held across its whole stat loop (`flai/internal/workitem/store.go`). The file watcher stats 6,302 files every 300 ms for this project alone, about 3,800 of them under `wip/archive` (`flai/internal/watch/watch.go`). | `item.get` 27 to 41 ms warm, 109 ms with 8 at once, 423 ms with 32. A watcher walk 104 to 217 ms under load, a third to two thirds of a core. | Keep one snapshot of the item list, refreshed when the watcher sees a change. Stat `wip/archive` by its folders rather than its files. | Up to about 500 ms an `item.get` under load; most of a core |
+| 17 | `stats.get` runs its 11 reads one after another (`flai/internal/statsread/statsread.go` `Read`), then its sections one after another (`flai/internal/metrics/metrics.go` `Compute`), and two identical requests in a burst each compute in full. The dashboard asks again on every item change. | Warm 0.63 to 1.1 s, cold 1.8 to 4 s; about 200 MB allocated a warm call. Of the 120 slow calls in the serve log, 73 came within 3 s of the one before. | Run the reads at once, then the sections at once; `claims` waits only for `replayHolds`. Answer identical requests in flight once. | Reads 230 to 90 ms; compute about 450 to 280 ms at 30 days |
+| 18 | `replayHolds` replays all history on every call, whatever the window (`flai/internal/metrics/claims.go`). `costOfDelay` and `claims` loop day by day over every item, parse every transition's time again each day (`stateAt`), and start at the window's start even before the first item existed. Thread entries are parsed twice, and `costOrder` builds its forecaster three times. | `replayHolds` 175 to 310 ms; `costOfDelay` 2 ms at 1 day up to 170 to 217 ms at 365 days; `time.Parse` about 9% of the CPU | Keep `replayHolds` and `touchDrift` until the items or the commits change. Parse each item's transitions once and sweep the days once; answer the days before the first item without a loop. Parse entries once and build the forecaster once. | About 200 to 250 ms warm; at 365 days, about 290 ms down to about 30 ms |
+| 19 | `flai accept` runs `scripts/lint-md.sh` five times, one after another, each through `npx --yes markdownlint-cli2` (`flai/cmd/accept_markdown.go`), and checks again after each `--fix`. `flai task done` runs it through `npx` twice. `accept` starts 58 git processes, `git status --porcelain` six times, and lists all items for `EpicWalk`. | Each lint call 1.0 to 1.2 s, of which markdownlint is 0.27 to 0.36 s. `accept` 8.7 to 16.2 s in the scratch copy; serve log p50 16.6 s. | Run the installed `markdownlint-cli2` directly, once for the uncommitted and branch sets, and drop the check after `--fix`. | About 4 s an acceptance, about 1.5 s a task done |
+| 20 | The close-out runs its tiers one after another (`flai/internal/verify/run.go`). The `flaiover` tier, which is node, waits for `integration`, which is Go, and `smoke` waits for both. `smoke` runs the template test, the check, and the markdown lint again after the close-out's own tiers ran them. | Passed jobs p50 247 s, p90 510 s, max 1,408 s. `integration` mean 238 s; `flaiover` mean 176 s on 12 of 60 jobs; `smoke` mean 44 s. | Run independent tiers at once, and cancel the rest when one fails. Skip the steps of `smoke` the close-out already ran. | About 150 s on a story that runs `flaiover`; about 40 s on every story that runs `smoke` |
+| 21 | Two answers are large: `threads.list` with `all: true` is 3.28 MB, since the dashboard asks for resolved threads too (`flaiover/src/lib/server/repo.ts`), and `agent.status` carries every finished run. Each holds its connection's one write lock while it is written (`flai/internal/channel/channel.go`), and that time is not in `duration_ms`, which is logged before the send. | 3.28 MB and 392 KB a call | Ask for open threads, and the resolved ones when the page shows them. Send finished runs only to the pages that show them. Log the send time with the request. | About 3.2 MB down to under 100 KB a thread list |
+
+### Serial I/O that could run in parallel
+
+The channel does not answer one request at a time. Each connection has one read loop, but each request runs in its own goroutine (`flai/internal/channel/channel.go`). What serializes the work is elsewhere:
+
+- **Shared locks.** `agentsMu` serializes every project's `agent.status` (cause 12). `release`'s `kept` mutex serializes every project's `board.get` and `publish.preview`, git included (cause 14). The item store's folder locks are held across a whole stat loop (cause 16). Each connection's write lock serializes large answers (cause 21).
+- **One file at a time.** Items, threads, conversations, digest entries, and issues are each read and parsed in a loop over their files (causes 10 and 13), as is the markdown lint of `wip` (cause 10).
+- **One step at a time.** `check.Run`'s rules (cause 11), `stats.get`'s reads and sections (cause 17), the replanner's forecasts (cause 9), `accept`'s lint calls and its last steps, `releaseDue`, `tellAccepted`, and `installAccepted` (cause 19), and the close-out's tiers (cause 20).
+
+On this loaded host, keeping a parse beats running it in parallel. Parallel parsing pays most on a cold start: a one-shot `flai` command, or the first request after flai serve starts.
+
+### What would need a change to how flai keeps state
+
+No cause above needs one. Two fixes the exploration weighed would need one, and no story proposes them:
+
+- One agent state file per project instead of the host-wide `~/.flai/serve/agents.json`. Cause 12's fix removes most of the cost without it.
+- A database or an index as the canonical store for work items, threads, and conversations. The kept parses and the rebuildable caches under `.flai-cache` take most of what it would.
+
+Two choices are the operator's and need no story. Turning the `merge-queue` host action on leaves `integration` and `smoke` to the merge queue's batch (ADR-0174), so a close-out passes in seconds rather than minutes. Letting a chart ask for only the sections it shows would change the `stats.get` answer, which `metrics.md` makes a contract, so it needs an ADR first.
+
+### Stories
+
+Each cause from 8 to 21 has a draft story, with its numbers and its proposed fix, under the epic this section's table names.
 
 ## Stories
 
