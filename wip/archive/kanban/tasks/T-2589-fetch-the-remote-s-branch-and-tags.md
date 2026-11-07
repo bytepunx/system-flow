@@ -22,16 +22,16 @@ stream: S-0594
 tags: []
 usage:
   source: log
-  seconds: 47
+  seconds: 51
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 10
-      output: 74
-      cache_read: 760585
-      cache_write: 5346
-      cost: 0.2747
+      input: 11
+      output: 1453
+      cache_read: 740113
+      cache_write: 25817
+      cost: 0.3837
 ---
 # T-2589 Fetch the remote's branch and tags
 

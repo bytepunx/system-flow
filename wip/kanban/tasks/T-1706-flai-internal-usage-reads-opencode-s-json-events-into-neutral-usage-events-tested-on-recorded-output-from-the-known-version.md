@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 54
-      output: 20242
-      cache_read: 8238803
-      cache_write: 162002
-      cost: 3.0543
+      input: 53
+      output: 18313
+      cache_read: 8197087
+      cache_write: 143434
+      cost: 2.9069
 ---
 # T-1706 flai/internal/usage reads OpenCode's JSON events into neutral usage events, tested on recorded output from the known version
 

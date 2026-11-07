@@ -3,11 +3,17 @@ id: S-0595
 type: story
 nature: feature
 title: Build in-depth Deploy UI
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-11-07T22:00:05Z
-updated: 2026-11-07T22:00:05Z
-transitions: []
+updated: 2026-11-07T22:01:20Z
+transitions:
+  - to: ready
+    at: 2026-11-07T22:00:38Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-07T22:01:20Z
+    by: agent-S-0595
 tags: [dashboard, cli]
 touches: [flaiover/src, flai/cmd]
 agent:

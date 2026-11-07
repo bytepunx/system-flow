@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 23
-      output: 8700
-      cache_read: 3541028
-      cache_write: 69628
-      cost: 1.3128
+      output: 7871
+      cache_read: 3523099
+      cache_write: 61648
+      cost: 1.2494
 ---
 # T-1707 The opencode configuration carries a provider entry derived from the host's providers map, with the key named and never written, and refuses an api OpenCode cannot speak
 

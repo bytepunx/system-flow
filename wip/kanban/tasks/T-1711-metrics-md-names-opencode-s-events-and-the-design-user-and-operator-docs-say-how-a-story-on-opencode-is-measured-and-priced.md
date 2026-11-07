@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 40
-      output: 14760
-      cache_read: 6007664
-      cache_write: 118130
-      cost: 2.2272
+      input: 38
+      output: 13354
+      cache_read: 5977246
+      cache_write: 104591
+      cost: 2.1197
 ---
 # T-1711 metrics.md names OpenCode's events, and the design, user, and operator docs say how a story on OpenCode is measured and priced
 

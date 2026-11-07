@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 37
-      output: 13846
-      cache_read: 5635565
-      cache_write: 110814
-      cost: 2.0893
+      input: 36
+      output: 12527
+      cache_read: 5607031
+      cache_write: 98113
+      cost: 1.9884
 ---
 # T-1710 A gateway test runs a story's agent on OpenCode through OpenRouter only where the key and the known opencode are present, and asserts a gateway-priced cost
 

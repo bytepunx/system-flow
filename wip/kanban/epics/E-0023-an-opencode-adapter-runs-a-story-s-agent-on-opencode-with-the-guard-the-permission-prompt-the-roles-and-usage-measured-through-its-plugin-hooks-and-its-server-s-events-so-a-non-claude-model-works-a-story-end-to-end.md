@@ -22,22 +22,22 @@ topics: [cli, agents, template]
 touches: [flai/internal/harness, flai/internal/guard, flai/internal/usage, flai/internal/mcpserver, flai/internal/serve, flai/internal/manifest, design/system/agent-adapters.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, template]
 usage:
   source: sum
-  seconds: 13047
+  seconds: 13627
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-07
-      ceremony: 10
-      test_runs: 1
+      ceremony: 12
+      test_runs: 5
       hand_edits: 8
-      work: 186
+      work: 201
   models:
     - model: claude-opus-5-5
-      input: 1380
-      output: 468079
-      cache_read: 142672698
-      cache_write: 3172813
-      cost: 56.6606
+      input: 1428
+      output: 477508
+      cache_read: 151628309
+      cache_write: 3226701
+      cost: 59.0716
   strategic:
     - kind: planner
       seconds: 501
@@ -50,15 +50,15 @@ usage:
           cache_write: 231064
           cost: 3.992
     - kind: orchestrator
-      seconds: 3113
+      seconds: 3194
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 477
-          output: 6653
-          cache_read: 109435455
-          cache_write: 876114
-          cost: 27.6541
+          input: 495
+          output: 6769
+          cache_read: 110043036
+          cache_write: 951793
+          cost: 27.8269
         - model: claude-sonnet-5-5
           input: 16
           output: 94

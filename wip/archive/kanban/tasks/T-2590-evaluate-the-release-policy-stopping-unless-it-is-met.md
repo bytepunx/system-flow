@@ -21,6 +21,18 @@ transitions:
 stream: S-0594
 tags: []
 after: [T-2589]
+usage:
+  source: log
+  seconds: 56
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 7
+      output: 902
+      cache_read: 459145
+      cache_write: 16016
+      cost: 0.238
 ---
 # T-2590 Evaluate the release policy, stopping unless it is met
 

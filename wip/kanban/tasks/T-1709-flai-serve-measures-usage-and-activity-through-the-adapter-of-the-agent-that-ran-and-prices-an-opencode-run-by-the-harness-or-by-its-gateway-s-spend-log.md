@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 64
-      output: 23869
-      cache_read: 9715236
-      cache_write: 191033
-      cost: 3.6017
+      input: 62
+      output: 21595
+      cache_read: 9666045
+      cache_write: 169139
+      cost: 3.4278
 ---
 # T-1709 flai serve measures usage and activity through the adapter of the agent that ran, and prices an OpenCode run by the harness or by its gateway's spend log
 

@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 33
-      output: 12364
-      cache_read: 5032605
-      cache_write: 98957
-      cost: 1.8657
+      input: 32
+      output: 11186
+      cache_read: 5007124
+      cache_write: 87616
+      cost: 1.7756
 ---
 # T-1708 The opencode adapter returns the OpenCode usage reader and states that it reports cost
 
