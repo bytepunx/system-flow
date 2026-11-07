@@ -6,7 +6,7 @@ status: open
 count: 1
 first_reported: 2026-11-07T08:17:37Z
 last_reported: 2026-11-07T08:17:37Z
-updated: 2026-11-07T08:17:37Z
+updated: 2026-11-07T23:40:53Z
 usage:
   strategic:
     - kind: analyzer
@@ -44,3 +44,5 @@ flai/internal/hostapi/writes.go 3,582 lines, flai/internal/serve/agents.go 2,935
 ## Remediation
 
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
+
+Story S-0631 remediates this issue, created from it at 2026-11-07T23:40:53Z.
