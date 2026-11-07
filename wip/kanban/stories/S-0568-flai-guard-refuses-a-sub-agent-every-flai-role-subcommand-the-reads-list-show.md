@@ -6,7 +6,7 @@ title: flai guard refuses a sub-agent every flai role subcommand, the reads list
 status: backlog
 owner: alex
 created: 2026-11-02T20:31:49Z
-updated: 2026-11-02T20:31:49Z
+updated: 2026-11-07T08:01:38Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
     by: flai
     at: 2026-11-02T20:31:49Z
+finalized:
+  by: alex
+  at: 2026-11-07T08:01:38Z
 ---
 # S-0568 flai guard refuses a sub-agent every flai role subcommand, the reads list, show, and definition among them
 
