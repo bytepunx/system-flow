@@ -3,11 +3,11 @@ id: I-0246
 title: TestAHeldWaitFailsOnATruncatedStory and TestServeStartsADefinedRoleOnAnEventAndOnASchedule time out under flai test's Go run when the host's load is near 80
 class: defect
 status: open
-count: 8
+count: 9
 cost: 6m
 first_reported: 2026-11-02T00:55:15Z
-last_reported: 2026-11-07T02:07:15Z
-updated: 2026-11-07T02:07:15Z
+last_reported: 2026-11-07T04:28:27Z
+updated: 2026-11-07T04:28:27Z
 ---
 
 # I-0246 TestAHeldWaitFailsOnATruncatedStory and TestServeStartsADefinedRoleOnAnEventAndOnASchedule time out under flai test's Go run when the host's load is near 80
@@ -48,6 +48,10 @@ S-0425's close-out at e6040b6 stopped at integration on TestServeStartsADefinedR
 ### 2026-11-07T02:07:15Z
 Story: S-0580.
 S-0580's close-out at 27220c8 stopped at integration on TestServeStartsADefinedRoleOnAnEventAndOnASchedule (flai/internal/serve/serve_test.go:1009: never happened: the watcher's run for the move ended). S-0580 does not change flai/internal/serve. The host's load average was 53 over the last five minutes, with S-0578's agent working too.
+
+### 2026-11-07T04:28:27Z
+Story: S-0555.
+S-0555's close-out at 713c603 stopped at integration after 8m13s on TestWaitForWorkPassesOverAHeldStory (flai/internal/mcpserver/work_test.go:266): the wait answered timed_out after the held story cleared. The host's load average was 87. S-0555 does not change flai/internal/mcpserver. Earlier in the story a task sub-agent's flai test run also failed go-test twice on serve tests it did not touch: TestServeStartsADefinedRoleOnAnEventAndOnASchedule (serve_test.go:1009) and TestARepositoryIsOfferedImportedAndThenServed (candidates_test.go:125, EOF). The same paths passed flai test later.
 
 ## Remediation
 
