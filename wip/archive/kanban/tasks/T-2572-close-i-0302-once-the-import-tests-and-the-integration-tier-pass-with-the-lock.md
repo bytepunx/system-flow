@@ -3,16 +3,37 @@ id: T-2572
 type: task
 nature: remediation
 title: Close I-0302 once the import tests and the integration tier pass with the lock written
-status: backlog
+status: done
 parent: S-0590
 owner: alex
 created: 2026-11-07T10:03:08Z
-updated: 2026-11-07T10:03:08Z
-transitions: []
+updated: 2026-11-07T10:20:29Z
+transitions:
+  - to: ready
+    at: 2026-11-07T10:20:11Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T10:20:13Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T10:20:29Z
+    by: agent-S-0590
 stream: S-0590
 tags: [issues, import]
 touches: [design/issues/I-0302-flai-import-writes-no-system-flow-lock-yaml-so-the-import-formula-s-flai-check.md, design/issues/summary.md]
 after: [T-2570, T-2571]
+usage:
+  source: log
+  seconds: 16
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 5
+      output: 625
+      cache_read: 554648
+      cache_write: 7730
+      cost: 0.1828
 ---
 # T-2572 Close I-0302 once the import tests and the integration tier pass with the lock written
 

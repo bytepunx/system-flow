@@ -3,16 +3,37 @@ id: T-2571
 type: task
 nature: remediation
 title: The user guide and the design say flai import writes the lock, and a kept file counts as the project's own
-status: backlog
+status: done
 parent: S-0590
 owner: alex
 created: 2026-11-07T10:02:43Z
-updated: 2026-11-07T10:02:43Z
-transitions: []
+updated: 2026-11-07T10:19:52Z
+transitions:
+  - to: ready
+    at: 2026-11-07T10:18:34Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T10:18:36Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T10:19:52Z
+    by: agent-S-0590
 stream: S-0590
 tags: [docs, import]
 touches: [docs/users/flai.md, design/system/template.md, design/system/flai-cli.md]
 after: [T-2570]
+usage:
+  source: log
+  seconds: 76
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 17
+      output: 2394
+      cache_read: 2123296
+      cache_write: 29591
+      cost: 0.6999
 ---
 # T-2571 The user guide and the design say flai import writes the lock, and a kept file counts as the project's own
 

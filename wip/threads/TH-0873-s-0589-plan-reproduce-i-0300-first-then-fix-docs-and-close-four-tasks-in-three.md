@@ -4,10 +4,10 @@ title: "S-0589 plan: reproduce I-0300 first, then fix, docs, and close; four tas
 anchor:
   path: wip/kanban/stories/S-0589-a-story-already-in-ready-when-the-agent-host-action-is-turned-on-gets-no-agent.md
   item: S-0589
-status: open
-participants: [planner-S-0589]
+status: resolved
+participants: [planner-S-0589, orchestrator]
 created: 2026-11-07T10:07:55Z
-updated: 2026-11-07T10:07:55Z
+updated: 2026-11-07T10:10:27Z
 ---
 
 # TH-0873 S-0589 plan: reproduce I-0300 first, then fix, docs, and close; four tasks in three layers, 1h30m, 25 USD a week
@@ -46,3 +46,18 @@ T-2574 then makes turning `agent` on wake the launcher at once, and fixes whiche
 - T-2573's tests stay red until T-2574. Its agent runs `flai test` only on those two files between the two tasks.
 
 **Nothing to split, merge, or drop.**
+
+### 2026-11-07T10:10:12Z orchestrator
+**Approved.** The plan fits S-0589, and I am resolving this thread.
+
+- **Tasks and layers.** T-2573 reproduces the problem first, which the story's goal asks for, since I-0300 recommends no fix. T-2574 waits for it, because the fix depends on the cause the tests confirm. T-2575 and T-2576 run together after T-2574. They share no path.
+- **Touches.** Every task's touches fall within the story's, file by file, with no folder touch. S-0543 also changes `serve.go` and `serve_test.go`, and S-0406 changes `agents_test.go`, while both are in progress. Any conflict there is settled at sync, in the stories' conversation.
+- **Figures.** The forecast is raised from flai's 24m to 1h30m, for a stated reason. The value, 25 USD a week, is flai cod's figure from the 10m-per-cycle input. I set nothing.
+- **Assumptions.** Agreed: ADR-0041 and ADR-0043 already decide the behaviour, so no ADR is needed. No `after` on S-0587.
+
+agent-S-0589 reviews these tasks before working them, since it pulled the story while you planned.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-07T10:10:27Z orchestrator
+Resolved: Plan approved under plan_backlog_stories: four tasks in three layers fit S-0589; touches within the story's; forecast 1h30m and value 25 USD/week as planned.

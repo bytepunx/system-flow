@@ -3,11 +3,11 @@ id: T-2569
 type: task
 nature: improvement
 title: The Deployments page starts and stops each service's port-forward, which flai serve runs on the host bound to 0.0.0.0
-status: in-progress
+status: done
 parent: S-0586
 owner: alex
 created: 2026-11-07T09:54:08Z
-updated: 2026-11-07T09:54:48Z
+updated: 2026-11-07T10:12:57Z
 transitions:
   - to: ready
     at: 2026-11-07T09:54:46Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-07T09:54:48Z
     by: agent-S-0586
+  - to: done
+    at: 2026-11-07T10:12:57Z
+    by: agent-S-0586
 stream: S-0586
 tags: [kluster]
-touches: [flai/internal/hostapi/kluster_forward.go, flai/internal/hostapi/kluster_forward_test.go, flai/internal/hostapi/hostapi.go, flaiover/src/routes/api/kluster/forward/+server.ts, flaiover/src/routes/api/kluster/forward/forward.test.ts, flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/routes/ops/deployments/deployments.svelte.test.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/repo.ts]
+touches: [flai/internal/hostapi/kluster_forward.go, flai/internal/hostapi/kluster_forward_test.go, flai/internal/hostapi/hostapi.go, flaiover/src/routes/api/kluster/forward/+server.ts, flaiover/src/routes/api/kluster/forward/forward.test.ts, flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/routes/ops/deployments/deployments.svelte.test.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/repo.ts, flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, design/adrs/0259-enabling-kluster-on-a-project-with-no-kluster-block-writes-one-naming-only-its.md]
+usage:
+  source: log
+  seconds: 1089
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 87
+      output: 650
+      cache_read: 16768231
+      cache_write: 103340
+      cost: 5.8295
 ---
 # T-2569 The Deployments page starts and stops each service's port-forward, which flai serve runs on the host bound to 0.0.0.0
 

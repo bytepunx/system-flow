@@ -3,10 +3,10 @@ id: S-0590
 type: story
 nature: remediation
 title: flai import writes no system-flow.lock.yaml, so the import formula's flai check --strict step fails on layout.lock
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-07T09:44:23Z
-updated: 2026-11-07T10:04:09Z
+updated: 2026-11-07T10:32:44Z
 transitions:
   - to: ready
     at: 2026-11-07T10:02:40Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-07T10:03:02Z
     by: agent-S-0590
+  - to: review
+    at: 2026-11-07T10:30:08Z
+    by: agent-S-0590
+  - to: done
+    at: 2026-11-07T10:32:44Z
+    by: orchestrator
 tags: [flai, import, template]
 topics: [template, import]
 touches: [flai/cmd/import.go, flai/cmd/import_commit.go, flai/cmd/import_test.go, flai/cmd/import_commit_test.go, docs/users/flai-reference.md, docs/users/flai.md, design/system/flai-cli.md, design/system/template.md, design/issues/I-0302-flai-import-writes-no-system-flow-lock-yaml-so-the-import-formula-s-flai-check.md, design/issues/summary.md]
@@ -23,9 +29,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1639
+  priced_by: harness
+  turns:
+    - day: 2026-11-07
+      ceremony: 2
+      hand_edits: 2
+      work: 69
+  models:
+    - model: claude-opus-5-5
+      input: 190
+      output: 26045
+      cache_read: 23101636
+      cache_write: 321956
+      cost: 7.6151
   strategic:
     - kind: orchestrator
       seconds: 60
@@ -62,8 +80,8 @@ finalized:
 This story remediates [I-0302](../../../design/issues/I-0302-flai-import-writes-no-system-flow-lock-yaml-so-the-import-formula-s-flai-check.md), "flai import writes no system-flow.lock.yaml, so the import formula's flai check --strict step fails on layout.lock". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0302 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0302 is closed with `flai issue close I-0302 --reason` saying what fixed it
+- [x] The cause I-0302 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0302 is closed with `flai issue close I-0302 --reason` saying what fixed it
 
 ## Tasks
 - T-2570 flai import writes system-flow.lock.yaml as flai new does and commits it with the import, so the import formula's check finds no layout.lock
@@ -99,3 +117,12 @@ Forecast: flai gave 24m, 117 s per unit of size over 40 done medium-band remedia
 Cost of delay: 25.00 USD a week, as `flai cod` works it out from the 10m input, kept as flai gave it. I-0302 has one instance, but every import from the board meets it, so the true rate may be higher. The input is the operator's, so I left it alone.
 
 No `after`: the story reads no other story's output.
+
+### Accepted by the orchestrator
+
+- Verified: 1b6fd21c3879cae59e711a70b378d47cece52f1b
+- At: 2026-11-07T10:32:44Z
+
+Verdict: pass — the lock is written and committed by import, a test reproduces the failure, and I-0302 is closed; verified at 1b6fd21c3879cae59e711a70b378d47cece52f1b.
+- 1: flai/cmd/import.go, flai/cmd/import_commit.go, flai/cmd/import_commit_test.go, flai/cmd/import_test.go
+- 2: design/issues/I-0302-flai-import-writes-no-system-flow-lock-yaml-so-the-import-formula-s-flai-check.md, design/issues/summary.md

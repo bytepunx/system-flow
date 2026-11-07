@@ -6,7 +6,7 @@ title: Provide first time wizard for kluster setup
 status: in-progress
 owner: alex
 created: 2026-11-07T08:24:44Z
-updated: 2026-11-07T09:54:58Z
+updated: 2026-11-07T10:12:57Z
 transitions:
   - to: ready
     at: 2026-11-07T08:24:52Z
@@ -20,7 +20,7 @@ blocked:
     reason: awaiting the operator on TH-0869
 tags: [flai, flaiover, kluster]
 topics: [kluster, deployment, manifest, dashboard]
-touches: [design/adrs, design/adrs/README.md, design/system/kluster.md, design/system/project-manifest.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/tech/kluster.md, flai/internal/kluster/init.go, flai/internal/kluster/init_test.go, flai/internal/kluster/kluster.go, flai/internal/kluster/kluster_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/check/kluster_test.go, flai/internal/docedit/file.go, flai/internal/docedit/file_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/repo.ts, flaiover/src/routes/api/kluster/workloads/+server.ts, flaiover/src/routes/api/kluster/kluster.test.ts, flaiover/src/routes/ops/klusters/+page.svelte, flaiover/src/routes/ops/klusters/klusters.svelte.test.ts, flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/routes/ops/deployments/deployments.svelte.test.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, docs/users/flaiover.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, docs/operators/settings.md, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, flaiover/src/routes/api/kluster/config/+server.ts, flaiover/src/routes/api/kluster/config/config.test.ts, flaiover/e2e/klusters.e2e.ts, flaiover/src/lib/settings.ts, design/issues/I-0261-a-story-s-prime-pack-came-in-22-parts-most-of-each-part-the-same-topic-sources.md, design/issues/summary.md, design/issues/I-0265-a-story-s-sub-agents-write-and-monitor-are-refused-every-path-outside-its.md]
+touches: [design/adrs, design/adrs/README.md, design/system/kluster.md, design/system/project-manifest.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/tech/kluster.md, flai/internal/kluster/init.go, flai/internal/kluster/init_test.go, flai/internal/kluster/kluster.go, flai/internal/kluster/kluster_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/check/kluster_test.go, flai/internal/docedit/file.go, flai/internal/docedit/file_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/repo.ts, flaiover/src/routes/api/kluster/workloads/+server.ts, flaiover/src/routes/api/kluster/kluster.test.ts, flaiover/src/routes/ops/klusters/+page.svelte, flaiover/src/routes/ops/klusters/klusters.svelte.test.ts, flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/routes/ops/deployments/deployments.svelte.test.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, docs/users/flaiover.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, docs/operators/settings.md, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, flaiover/src/routes/api/kluster/config/+server.ts, flaiover/src/routes/api/kluster/config/config.test.ts, flaiover/e2e/klusters.e2e.ts, flaiover/src/lib/settings.ts, design/issues/I-0261-a-story-s-prime-pack-came-in-22-parts-most-of-each-part-the-same-topic-sources.md, design/issues/summary.md, design/issues/I-0265-a-story-s-sub-agents-write-and-monitor-are-refused-every-path-outside-its.md, flai/internal/hostapi/kluster_forward.go, flai/internal/hostapi/kluster_forward_test.go, flaiover/src/routes/api/kluster/forward/+server.ts, flaiover/src/routes/api/kluster/forward/forward.test.ts]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -28,13 +28,15 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 4367
-  priced_by: harness
+  seconds: 6499
+  estimated: true
+  priced_by: estimate
   turns:
     - day: 2026-11-07
+      ceremony: 1
       test_runs: 1
-      hand_edits: 2
-      work: 92
+      hand_edits: 3
+      work: 107
   models:
     - model: claude-haiku-5-5
       input: 12
@@ -43,11 +45,11 @@ usage:
       cache_write: 52289
       cost: 0.0096
     - model: claude-opus-5-5
-      input: 592
-      output: 195046
-      cache_read: 70926107
-      cache_write: 1194821
-      cost: 24.9859
+      input: 788
+      output: 196402
+      cache_read: 107243242
+      cache_write: 1424299
+      cost: 37.6135
   strategic:
     - kind: planner
       seconds: 1715

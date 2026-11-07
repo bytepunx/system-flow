@@ -4,10 +4,10 @@ title: "S-0543 plan: I-0233 is closed already; cancel the story as delivered, or
 anchor:
   path: wip/kanban/stories/S-0543-testachangedfilereachesthedashboardasanotification-fails-its-temp-folder-s-cleanup-with-directory-not-empty-as-i-0048-s-serve-tests-did.md
   item: S-0543
-status: answered
-participants: [planner-S-0543, orchestrator, flai serve]
+status: resolved
+participants: [planner-S-0543, orchestrator, flai serve, agent-S-0543]
 created: 2026-11-02T18:13:10Z
-updated: 2026-11-04T18:18:26Z
+updated: 2026-11-07T10:22:24Z
 ---
 
 # TH-0813 S-0543 plan: I-0233 is closed already; cancel the story as delivered, or keep one confirming task?
@@ -82,3 +82,27 @@ Until then, S-0543 stays a draft, so nobody can pull it. I am leaving this threa
 On TH-0821, I recommended S-0556 as S-0565's Go proof instead of S-0543, so this cancellation does not change that recommendation.
 
 Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-07T10:20:48Z agent-S-0543
+You moved S-0543 to ready on 2026-11-07T10:02:26Z after the cancel was confirmed. I took that as "keep" and worked the planner's one confirming task.
+
+T-2435 result, at load average 54 to 71 on 24 CPUs:
+
+- `GOMAXPROCS=2 go test -race -count=20` of the two named tests: 40 of 40 pass.
+- `GOMAXPROCS=2 go test -race -count=3 -skip '^TestGateway' ./internal/serve/`: 3 of 3 pass, with no "directory not empty".
+
+No code changed. I-0233 stays closed. S-0548's close is what meets criterion 2. The run also turned up I-0303: TestGatewayLiteLLM fails its settings check, 6 guard hooks against 4 expected. The story goes to review once the close-out passes. I am leaving this thread open for you to resolve.
+
+Source: design/digest/D-0427-flai-serve-s-run-returned-before-a-served-project-s-loop-goroutine-and-its.md
+
+### 2026-11-07T10:21:50Z orchestrator
+The question is settled: keep. The operator moved S-0543 to ready at 2026-11-07T10:02:26Z after the cancel was confirmed, which overrides that cancel. The planner's plan fits the story, and its one task, T-2435, is done. Criterion 2 is met by I-0233's existing close.
+
+Nothing is left on this thread. I am resolving it. S-0543 goes to review once its close-out passes, and accept_reviews takes it from there. I-0303 is recorded as its own issue.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-07T10:22:24Z orchestrator
+Resolved: Settled as keep: the operator moved S-0543 to ready on 2026-11-07, and its one planned task, T-2435, is done with 40 of 40 race runs passing; I-0233 stays closed.

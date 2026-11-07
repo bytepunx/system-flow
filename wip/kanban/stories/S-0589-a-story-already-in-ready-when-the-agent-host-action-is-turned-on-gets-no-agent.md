@@ -3,10 +3,10 @@ id: S-0589
 type: story
 nature: remediation
 title: A story already in ready when the agent host action is turned on gets no agent until someone presses Start agent
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-07T09:44:04Z
-updated: 2026-11-07T10:07:35Z
+updated: 2026-11-07T10:31:48Z
 transitions:
   - to: ready
     at: 2026-11-07T10:02:33Z
@@ -14,13 +14,43 @@ transitions:
   - to: in-progress
     at: 2026-11-07T10:06:00Z
     by: agent-S-0589
+  - to: review
+    at: 2026-11-07T10:31:48Z
+    by: agent-S-0589
 tags: []
-touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, docs/operators/index.md, design/system/flai-cli.md, design/issues/I-0300-a-story-already-in-ready-when-the-agent-host-action-is-turned-on-gets-no-agent.md, design/issues/summary.md]
+touches: [flai/internal/serve/agents_test.go, docs/operators/index.md, design/system/flai-cli.md, design/issues/I-0300-a-story-already-in-ready-when-the-agent-host-action-is-turned-on-gets-no-agent.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 1564
+  priced_by: harness
+  turns:
+    - day: 2026-11-07
+      ceremony: 1
+      hand_edits: 1
+      work: 75
+  models:
+    - model: claude-opus-5-5
+      input: 182
+      output: 30682
+      cache_read: 24477685
+      cache_write: 347612
+      cost: 8.2514
+  strategic:
+    - kind: orchestrator
+      seconds: 70
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 20
+          output: 144
+          cache_read: 719787
+          cache_write: 79564
+          cost: 0.2001
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -46,11 +76,11 @@ finalized:
 This story remediates [I-0300](../../../design/issues/I-0300-a-story-already-in-ready-when-the-agent-host-action-is-turned-on-gets-no-agent.md), "A story already in ready when the agent host action is turned on gets no agent until someone presses Start agent". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0300 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0300 is closed with `flai issue close I-0300 --reason` saying what fixed it
+- [x] The cause I-0300 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0300 is closed with `flai issue close I-0300 --reason` saying what fixed it
 
 ## Tasks
-- T-2573 Reproduce I-0300 in flai serve's tests: a story already in ready gets no agent after the agent action is turned on
+- T-2573 Test that a story ready while the agent action was off gets its agent at the first look once the action is on and its agent names a harness
 - T-2574 Start a story already in ready on the first look after the agent action is turned on for its project
 - T-2575 Say in the operators guide and flai-cli.md that a story already in ready gets its agent once the agent action is turned on
 - T-2576 Close I-0300 with flai issue close, naming the cause and the fix

@@ -3,11 +3,11 @@ id: T-1682
 type: task
 nature: research
 title: "agent-adapters.md § OpenCode records the four open findings, read from OpenCode's source and documentation at a pinned release"
-status: in-progress
+status: done
 parent: S-0406
 owner: alex
 created: 2026-10-16T05:13:59Z
-updated: 2026-11-07T09:40:11Z
+updated: 2026-11-07T10:08:27Z
 transitions:
   - to: ready
     at: 2026-11-07T09:40:10Z
@@ -15,21 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-07T09:40:11Z
     by: system-flow
+  - to: done
+    at: 2026-11-07T10:08:27Z
+    by: agent-S-0406
 stream: S-0406
 tags: [cli]
 touches: [design/system/agent-adapters.md]
 usage:
   source: log
-  seconds: 1638
+  seconds: 1696
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 172
-      output: 985
-      cache_read: 10404179
-      cache_write: 204379
-      cost: 3.8035
+      input: 177
+      output: 1053
+      cache_read: 11158607
+      cache_write: 213688
+      cost: 4.0781
 ---
 # T-1682 agent-adapters.md § OpenCode records the four open findings, read from OpenCode's source and documentation at a pinned release
 

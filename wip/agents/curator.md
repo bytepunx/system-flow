@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 134.7064
-accrued_seconds: 12829
-tasks_completed: 81
-last_run: 2026-11-07T10:00:56Z
+accrued_cost: 135.3662
+accrued_seconds: 12914
+tasks_completed: 82
+last_run: 2026-11-07T10:10:21Z
 ---
 
 # Curator activity
@@ -659,3 +659,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0511
 - Seconds: 106
 - Cost: 1.5826 USD, estimated
+
+### 2026-11-07T10:10:21Z
+
+- Summary: I wrote no new entries, merged S-0560 into D-0492, absorbed none, and `flai digest compact` compacted none. D-0492 now also cites I-0246 and adds S-0560's measurement that one stress pass of the whole `mcpserver` package takes about 385 s on 2 CPUs. S-0560's other four decisions added nothing: three only record planning or progress, and `design/conventions/tooling.md` already states that the close-out runs the integration tier.
+- Trigger: accepted S-0560
+- Items: D-0492
+- Seconds: 85
+- Cost: 0.6598 USD, estimated

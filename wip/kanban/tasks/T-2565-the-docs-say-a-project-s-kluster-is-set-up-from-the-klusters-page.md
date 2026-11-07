@@ -3,16 +3,37 @@ id: T-2565
 type: task
 nature: improvement
 title: The docs say a project's kluster is set up from the Klusters page
-status: backlog
+status: done
 parent: S-0586
 owner: alex
 created: 2026-11-07T08:32:12Z
-updated: 2026-11-07T09:54:25Z
-transitions: []
+updated: 2026-11-07T10:29:26Z
+transitions:
+  - to: ready
+    at: 2026-11-07T10:18:20Z
+    by: agent-S-0586
+  - to: in-progress
+    at: 2026-11-07T10:18:24Z
+    by: agent-S-0586
+  - to: done
+    at: 2026-11-07T10:29:26Z
+    by: agent-S-0586
 stream: S-0586
 tags: [kluster, docs]
 touches: [design/system/kluster.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/tech/kluster.md, docs/users/flaiover.md, docs/users/flai.md, docs/operators/index.md, docs/operators/settings.md]
 after: [T-2559, T-2561, T-2563, T-2564, T-2569]
+usage:
+  source: log
+  seconds: 630
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 56
+      output: 384
+      cache_read: 10646628
+      cache_write: 51972
+      cost: 3.6966
 ---
 # T-2565 The docs say a project's kluster is set up from the Klusters page
 

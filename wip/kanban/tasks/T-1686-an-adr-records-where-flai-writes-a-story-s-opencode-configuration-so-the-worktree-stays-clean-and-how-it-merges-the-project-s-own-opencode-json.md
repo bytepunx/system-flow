@@ -3,16 +3,37 @@ id: T-1686
 type: task
 nature: feature
 title: An ADR records where flai writes a story's OpenCode configuration so the worktree stays clean, and how it merges the project's own opencode.json
-status: backlog
+status: done
 parent: S-0406
 owner: alex
 created: 2026-10-16T05:14:16Z
-updated: 2026-11-07T09:39:33Z
-transitions: []
+updated: 2026-11-07T10:10:24Z
+transitions:
+  - to: ready
+    at: 2026-11-07T10:09:28Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T10:09:32Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T10:10:24Z
+    by: agent-S-0406
 stream: S-0406
 tags: [cli]
 touches: [design/adrs]
 after: [T-1682]
+usage:
+  source: log
+  seconds: 49
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 2
+      output: 6
+      cache_read: 313912
+      cache_write: 6374
+      cost: 0.1148
 ---
 # T-1686 An ADR records where flai writes a story's OpenCode configuration so the worktree stays clean, and how it merges the project's own opencode.json
 

@@ -3,10 +3,10 @@ id: S-0543
 type: story
 nature: remediation
 title: "TestAChangedFileReachesTheDashboardAsANotification fails its temp folder's cleanup with \"directory not empty\", as I-0048's serve tests did"
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-29T17:25:41Z
-updated: 2026-11-07T10:02:39Z
+updated: 2026-11-07T10:21:44Z
 transitions:
   - to: ready
     at: 2026-11-07T10:02:26Z
@@ -14,17 +14,33 @@ transitions:
   - to: in-progress
     at: 2026-11-07T10:02:39Z
     by: agent-S-0543
+  - to: review
+    at: 2026-11-07T10:21:44Z
+    by: agent-S-0543
 tags: [flai, serve, test]
-touches: [flai/internal/serve/serve.go, flai/internal/serve/serve_test.go]
+touches: [flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, design/issues/I-0303-testgatewaylitellm-fails-its-setup-check-the-template-s-settings-run-flai-guard.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1160
+  priced_by: harness
+  turns:
+    - day: 2026-11-07
+      ceremony: 1
+      test_runs: 3
+      hand_edits: 2
+      work: 23
+  models:
+    - model: claude-opus-5-5
+      input: 66
+      output: 12479
+      cache_read: 6025263
+      cache_write: 254928
+      cost: 3.4943
   strategic:
     - kind: planner
       seconds: 141
@@ -37,21 +53,21 @@ usage:
           cache_write: 152281
           cost: 1.9015
     - kind: orchestrator
-      seconds: 113
+      seconds: 288
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 34
-          output: 213
-          cache_read: 1135128
-          cache_write: 208736
-          cost: 0.3169
+          input: 58
+          output: 374
+          cache_read: 1999270
+          cache_write: 358221
+          cost: 0.5712
         - model: claude-sonnet-5-5
-          input: 6
-          output: 23
-          cache_read: 108809
-          cache_write: 37669
-          cost: 0.1025
+          input: 14
+          output: 103
+          cache_read: 186256
+          cache_write: 71169
+          cost: 0.1827
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -77,8 +93,8 @@ finalized:
 This story remediates [I-0233](../../../design/issues/I-0233-testachangedfilereachesthedashboardasanotification-fails-its-temp-folder-s-cleanup-with-directory-not-empty-as-i-0048-s-serve-tests-did.md), "TestAChangedFileReachesTheDashboardAsANotification fails its temp folder's cleanup with "directory not empty", as I-0048's serve tests did". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0233 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0233 is closed with `flai issue close I-0233 --reason` saying what fixed it
+- [x] The cause I-0233 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0233 is closed with `flai issue close I-0233 --reason` saying what fixed it
 
 ## Tasks
 - T-2435 Confirm with a race stress run that the serve tests no longer fail their temp folder's cleanup, and fix the writer if one still does
@@ -101,3 +117,12 @@ Figures:
 
 - Forecast: flai's figure is 4m, from 119 s per unit of size over 13 small remediation stories, times size 2. It is raised to 30m. A `-race -count` stress run of the serve package, plus a close-out whose go-test tier took 7 to 8 minutes on this package in both instances, does not fit in 4m. The delivery is flai's, moved by the extra 26m.
 - Cost of delay: 25.00 USD a week, which is `flai cod` from flai's input of 10m lost per 168h cycle at 150 USD an hour. It stands as the inputs give it. With the cause fixed, that time is no longer being lost.
+
+### Confirmation (T-2435)
+
+On 2026-11-07, on story/S-0543 at 8cb8d4c5e, on a host at load average 54 to 71 on 24 CPUs:
+
+- `GOMAXPROCS=2 go test -race -count=20` of TestAChangedFileReachesTheDashboardAsANotification and TestServeStartsADefinedRoleOnAnEventAndOnASchedule passed 40 of 40 runs.
+- `GOMAXPROCS=2 go test -race -count=3 -skip '^TestGateway' ./internal/serve/` passed 3 of 3 whole-package runs.
+
+No code changed. Criterion 1's test is the existing pair: `Run`'s wait in `serve.go` (fe589e207) and `watcherHasLooked` in `serve_test.go` (c6c0310db). Criterion 2 was met when S-0548 closed I-0233 on 2026-10-31T09:50:17Z, with a reason naming both commits.

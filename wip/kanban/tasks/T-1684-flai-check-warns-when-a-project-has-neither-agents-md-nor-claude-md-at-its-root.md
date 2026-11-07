@@ -23,16 +23,16 @@ tags: [cli]
 touches: [flai/internal/check/instructions.go, flai/internal/check/instructions_test.go, flai/internal/check/check.go, flai/internal/metrics/testdata/good/CLAUDE.md]
 usage:
   source: log
-  seconds: 1633
+  seconds: 1655
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 52
-      output: 307
-      cache_read: 1918011
-      cache_write: 94282
-      cost: 0.7215
+      input: 53
+      output: 311
+      cache_read: 2063648
+      cache_write: 100236
+      cost: 0.776
 ---
 # T-1684 flai check warns when a project has neither AGENTS.md nor CLAUDE.md at its root
 

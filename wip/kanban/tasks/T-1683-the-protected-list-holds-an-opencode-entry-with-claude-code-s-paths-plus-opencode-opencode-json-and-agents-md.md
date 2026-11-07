@@ -23,7 +23,7 @@ tags: [cli]
 touches: [flai/internal/protected/protected.go, flai/internal/protected/protected_test.go]
 usage:
   source: log
-  seconds: 1635
+  seconds: 1636
   estimated: true
   priced_by: estimate
   models:
@@ -32,7 +32,7 @@ usage:
       output: 271
       cache_read: 1347008
       cache_write: 87758
-      cost: 0.5145
+      cost: 0.5146
 ---
 # T-1683 The protected list holds an opencode entry with Claude Code's paths plus .opencode/, opencode.json, and AGENTS.md
 

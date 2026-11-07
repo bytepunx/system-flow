@@ -3,11 +3,11 @@ id: T-2570
 type: task
 nature: remediation
 title: flai import writes system-flow.lock.yaml as flai new does and commits it with the import, so the import formula's check finds no layout.lock
-status: in-progress
+status: done
 parent: S-0590
 owner: alex
 created: 2026-11-07T10:02:21Z
-updated: 2026-11-07T10:04:39Z
+updated: 2026-11-07T10:14:06Z
 transitions:
   - to: ready
     at: 2026-11-07T10:04:37Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-07T10:04:39Z
     by: agent-S-0590
+  - to: done
+    at: 2026-11-07T10:14:06Z
+    by: agent-S-0590
 stream: S-0590
 tags: [flai, import]
 touches: [flai/cmd/import.go, flai/cmd/import_commit.go, flai/cmd/import_test.go, flai/cmd/import_commit_test.go, docs/users/flai-reference.md]
+usage:
+  source: log
+  seconds: 567
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 41
+      output: 5555
+      cache_read: 4927546
+      cache_write: 68673
+      cost: 1.6243
 ---
 # T-2570 flai import writes system-flow.lock.yaml as flai new does and commits it with the import, so the import formula's check finds no layout.lock
 
