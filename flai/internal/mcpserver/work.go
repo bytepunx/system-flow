@@ -141,6 +141,12 @@ func (s *server) waitForWork(ctx context.Context, req *mcp.CallToolRequest, in W
 		s.workMu.Unlock()
 		return out
 	}
+	// The fingerprint comes before the first look, as in waitForEvents: a
+	// change made while the look runs (trial merges make it long on a loaded
+	// host) is then a change to the fingerprint rather than part of it, and
+	// wakes the hold (I-0246). The first heartbeat follows the fingerprint, so
+	// that it says the wait would see a change.
+	before := s.snapshot()
 	out, err := s.work(ctx, since)
 	if err != nil {
 		return nil, WorkOut{}, err
@@ -152,7 +158,6 @@ func (s *server) waitForWork(ctx context.Context, req *mcp.CallToolRequest, in W
 	defer keepAlive(ctx, req, s.beat)()
 	tick := time.NewTicker(s.poll)
 	defer tick.Stop()
-	before := s.snapshot()
 	for {
 		select {
 		case <-ctx.Done():

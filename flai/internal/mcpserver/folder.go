@@ -404,9 +404,12 @@ func (fw *folderWaits) snapshot() map[string]string {
 }
 
 // hold waits until check says it is done, looking again whenever a watched
-// file in any project changes, or a project comes or goes.
-func (fw *folderWaits) hold(ctx context.Context, req *mcp.CallToolRequest, timeout time.Duration, check func(changed []string) (bool, error)) (timedOut bool, err error) {
-	before := fw.snapshot()
+// file in any project changes from before, or a project comes or goes. The
+// caller takes before ahead of its first look, so that a change made while
+// that look runs wakes the hold rather than hiding in its fingerprint
+// (I-0246); the first heartbeat follows it, so that it says the wait would
+// see a change.
+func (fw *folderWaits) hold(ctx context.Context, req *mcp.CallToolRequest, before map[string]string, timeout time.Duration, check func(changed []string) (bool, error)) (timedOut bool, err error) {
 	deadline := fw.after(timeout)
 	defer keepAlive(ctx, req, fw.beat)()
 	tick := time.NewTicker(fw.poll)
@@ -447,11 +450,12 @@ func (fw *folderWaits) work(ctx context.Context, req *mcp.CallToolRequest, in Wo
 		f.workMu.Unlock()
 		return out
 	}
+	before := fw.snapshot()
 	out, err := fw.decide(ctx, since)
 	if err != nil || out.Reason != "" {
 		return nil, answer(out), err
 	}
-	timedOut, err := fw.hold(ctx, req, holdFor(in.TimeoutSeconds, workWait, fw.maxWait), func([]string) (bool, error) {
+	timedOut, err := fw.hold(ctx, req, before, holdFor(in.TimeoutSeconds, workWait, fw.maxWait), func([]string) (bool, error) {
 		next, err := fw.decide(ctx, since)
 		out = next
 		return err == nil && next.Reason != "", err
@@ -480,6 +484,7 @@ func (fw *folderWaits) catchUp(ctx context.Context) ([]Event, int, error) {
 }
 
 func (fw *folderWaits) events(ctx context.Context, req *mcp.CallToolRequest, in WaitIn) (*mcp.CallToolResult, WaitOut, error) {
+	before := fw.snapshot()
 	events, omitted, err := fw.catchUp(ctx)
 	if err != nil {
 		return nil, WaitOut{}, err
@@ -488,7 +493,7 @@ func (fw *folderWaits) events(ctx context.Context, req *mcp.CallToolRequest, in 
 		return nil, WaitOut{Events: events, Omitted: omitted, Changed: []string{}}, nil
 	}
 	out := WaitOut{Events: []Event{}, Changed: []string{}}
-	timedOut, err := fw.hold(ctx, req, holdFor(in.TimeoutSeconds, eventsWait, fw.maxWait), func(changed []string) (bool, error) {
+	timedOut, err := fw.hold(ctx, req, before, holdFor(in.TimeoutSeconds, eventsWait, fw.maxWait), func(changed []string) (bool, error) {
 		// the notices wake a waiting agent and are not a path to show it:
 		// what they say arrives as events
 		notices := map[string]bool{}

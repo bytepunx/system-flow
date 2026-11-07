@@ -401,3 +401,137 @@ func TestWaitsHoldAtMostTheServersBound(t *testing.T) {
 		})
 	}
 }
+
+// pausingClock is a server's Now that, once armed, stops the first look that
+// reads it: it says so on fired and goes on when the test closes resume. A
+// wait reads Now in its first look, after it has listed the items, so a test
+// changes the project there, between the wait's first look and its hold.
+type pausingClock struct {
+	mu     sync.Mutex
+	at     time.Time
+	fired  chan struct{}
+	resume chan struct{}
+}
+
+func (c *pausingClock) now() time.Time {
+	c.mu.Lock()
+	fired, resume := c.fired, c.resume
+	c.fired, c.resume = nil, nil
+	at := c.at
+	c.mu.Unlock()
+	if fired != nil {
+		close(fired)
+		<-resume
+	}
+	return at
+}
+
+// arm has the next read of the clock pause; the test closes resume once it
+// has changed the project.
+func (c *pausingClock) arm() (fired <-chan struct{}, resume chan<- struct{}) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	f, r := make(chan struct{}), make(chan struct{})
+	c.fired, c.resume = f, r
+	return f, r
+}
+
+// heldAcross calls a wait whose first look the clock pauses, makes change
+// there, and returns what the wait answered.
+func heldAcross(t *testing.T, clock *pausingClock, call func() toolAnswer, change func()) toolAnswer {
+	t.Helper()
+	fired, resume := clock.arm()
+	done := make(chan toolAnswer, 1)
+	go func() { done <- call() }()
+	select {
+	case <-fired:
+	case a := <-done:
+		t.Fatalf("the wait answered before its first look read the clock: %v %s", a.out, a.failed)
+	case <-time.After(heldWait):
+		t.Fatal("the wait's first look never read the clock")
+	}
+	change()
+	close(resume)
+	select {
+	case a := <-done:
+		return a
+	case <-time.After(heldWait + 10*time.Second):
+		t.Fatal("the wait never answered")
+	}
+	return toolAnswer{}
+}
+
+// I-0246: a change made after a wait's first look and before its hold
+// fingerprints the project wakes the wait. Each wait once took its
+// fingerprint after its first look, so a change in between was in the
+// fingerprint and unseen by the look, and the wait held to its deadline; a
+// loaded host, whose first look runs trial merges, widened the window.
+func TestAChangeDuringAWaitsFirstLookWakesIt(t *testing.T) {
+	t.Parallel()
+	t.Run("wait_for_work", func(t *testing.T) {
+		t.Parallel()
+		clock := &pausingClock{at: t0.Add(time.Minute)}
+		f := setupWith(t, func(o *Options) { o.Agent, o.Now, o.MaxWait = "idle", clock.now, heldWait })
+		if quiet, failed := f.call(t, "wait_for_work", map[string]any{"timeout_seconds": 1}); failed != "" || quiet["timed_out"] != true {
+			t.Fatalf("nothing ready: %v %s", quiet, failed)
+		}
+		var story *workitem.Item
+		a := heldAcross(t, clock, func() toolAnswer {
+			res, err := f.cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "wait_for_work", Arguments: map[string]any{"timeout_seconds": int(heldWait / time.Second)}})
+			return answerOf("wait_for_work", res, err)
+		}, func() {
+			story = readyStoryIn(t, f.repo, "Made ready meanwhile", t0.Add(2*time.Minute), "docs/users/guide.md")
+		})
+		if s, _ := a.out["story"].(map[string]any); a.failed != "" || a.out["timed_out"] == true || a.out["reason"] != "pull" || s["id"] != story.ID {
+			t.Errorf("a story made ready during the first look: %v %s", a.out, a.failed)
+		}
+	})
+	t.Run("a folder's wait_for_work", func(t *testing.T) {
+		t.Parallel()
+		root := t.TempDir()
+		beta := makeProject(t, filepath.Join(root, "beta"), "beta")
+		clock := &pausingClock{at: t0.Add(time.Minute)}
+		f := folderSetupWith(t, root, func(o *Options) { o.Now, o.MaxWait = clock.now, heldWait })
+		if quiet, failed := f.call(t, "wait_for_work", map[string]any{"timeout_seconds": 1}); failed != "" || quiet["timed_out"] != true {
+			t.Fatalf("nothing ready: %v %s", quiet, failed)
+		}
+		var story *workitem.Item
+		a := heldAcross(t, clock, func() toolAnswer {
+			res, err := f.cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "wait_for_work", Arguments: map[string]any{"timeout_seconds": int(heldWait / time.Second)}})
+			return answerOf("wait_for_work", res, err)
+		}, func() { story = readyStoryIn(t, beta, "Made ready meanwhile", t0.Add(2*time.Minute)) })
+		if s, _ := a.out["story"].(map[string]any); a.failed != "" || a.out["timed_out"] == true || a.out["reason"] != "pull" || a.out["project"] != "beta" || s["id"] != story.ID {
+			t.Errorf("a story made ready during the first look: %v %s", a.out, a.failed)
+		}
+	})
+	t.Run("a folder's wait_for_events", func(t *testing.T) {
+		t.Parallel()
+		root := t.TempDir()
+		alpha := makeProject(t, filepath.Join(root, "alpha"), "alpha")
+		clock := &pausingClock{at: t0.Add(time.Minute)}
+		f := folderSetupWith(t, root, func(o *Options) { o.Now, o.MaxWait = clock.now, heldWait })
+		// the first look reports the epic makeProject wrote; the next holds
+		for i := 0; ; i++ {
+			out, failed := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 1})
+			if failed != "" {
+				t.Fatal(failed)
+			}
+			if out["timed_out"] == true {
+				break
+			}
+			if i == 2 {
+				t.Fatalf("wait_for_events never held with nothing new: %v", out)
+			}
+		}
+		var story *workitem.Item
+		a := heldAcross(t, clock, func() toolAnswer {
+			res, err := f.cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "wait_for_events", Arguments: map[string]any{"timeout_seconds": int(heldWait / time.Second)}})
+			return answerOf("wait_for_events", res, err)
+		}, func() { story = backlogStoryIn(t, alpha, "Written meanwhile", t0.Add(2*time.Minute)) })
+		changed, _ := a.out["changed"].([]any)
+		events, _ := a.out["events"].([]any)
+		if a.failed != "" || a.out["timed_out"] == true || len(changed)+len(events) == 0 {
+			t.Errorf("a story written during the first look (%s): %v %s", story.ID, a.out, a.failed)
+		}
+	})
+}
