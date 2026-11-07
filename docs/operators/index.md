@@ -327,7 +327,7 @@ A story's agent names its harness, the program that runs it. Set it on one story
 | Harness | What `flai serve` runs | What flai can count on it to do |
 |---------|------------------------|---------------------------------|
 | `claude-code` | `claude -p`, headless, in the project's directory | Everything: resume, `flai guard`, ask before a protected write, role models, the strategic agents, cost |
-| `opencode` | `opencode run`, headless, in the project's directory (S-0406) | Resume alone, below |
+| `opencode` | `opencode run`, headless, in the project's directory (S-0406) | Resume and `flai guard`, below |
 | `container` | Its inner harness, `claude-code`, in a Docker container | What the inner harness does (**In a container**, above) |
 | `command`, or no harness | Your command, `flai serve agent set -- ...` | Nothing |
 | `none` | Nothing: the agent runs elsewhere | Nothing |
@@ -339,7 +339,6 @@ flai agent set --harness opencode --model anthropic/claude-opus-5-5 --config eff
 flai edit S-0007 --harness opencode --model openrouter/moonshotai/kimi-k2
 flai serve agent harness opencode --program /opt/opencode/bin/opencode -- --auto
 flai serve agent harness opencode --deny-protected   # or: flai serve enable auto-approve
-flai serve agent harness opencode --guard none       # only for a story whose agent has roles
 ```
 
 - **What it runs.** `opencode run`, your arguments, `--format json`, `--model` with the story's model, `--variant` with its effort, `--session` when it resumes, and the prompt last. flai adds no arguments of its own. `-- --auto` makes OpenCode approve each `ask` rather than refuse it; a `deny` rule still refuses.
@@ -347,6 +346,7 @@ flai serve agent harness opencode --guard none       # only for a story whose ag
 - **Its configuration.** flai writes no file into the project or the worktree. It gives OpenCode its configuration in the environment: `OPENCODE_CONFIG_CONTENT` holds flai's MCP server, `flai mcp --agent <name>`, with a 30-minute call timeout, and `OPENCODE_PERMISSION` holds the deny rules under `--deny-protected`. `OPENCODE_DISABLE_AUTOUPDATE=1` keeps a run from updating your binary. OpenCode merges the project's own `opencode.json` under these. The template ships one holding only `$schema`; put the project's own keys there.
 - **Its map.** OpenCode reads `AGENTS.md` and falls back to `CLAUDE.md`, so the template's `CLAUDE.md` stays the map. `flai check` warns `instructions.missing` when the project's root has neither.
 - **Resume.** `flai serve` reads OpenCode's session ID, `ses_…`, from the run's log, and starts the agent again in that session with `--session`, as after an answer.
+- **The guard** (S-0407). The template's plugin `.opencode/plugins/flai-guard.js` runs `flai guard --harness opencode` before every tool call, and OpenCode refuses the call when the guard does, with the guard's reason. OpenCode runs a sub-agent in a child session of its caller's, and the plugin sends each call with its session's parent, so the guard tells a sub-agent's call from the story's agent's own. Sub-agents are held as on `claude-code`: no change to work items, threads, or history ([Sub-agents](../users/flai.md#sub-agents)). So a story on `opencode` may name roles. A project without the plugin cannot hold them: a story whose agent names roles is refused at start there, and `flai upgrade` brings the plugin in. `.opencode/` is a protected path, so that upgrade needs your approval. With `flai` not on `PATH`, the plugin passes every call and warns once, so a project opened by hand outside `flai serve` still works; in a session `flai serve` started, it refuses every call instead ([ADR-0235](../../design/adrs/0235-the-guard-hook-refuses-a-call-when-flai-guard-cannot-start-exit-126-or-127-and.md)).
 
 What a story on `opencode` has and lacks today:
 
@@ -354,7 +354,7 @@ What a story on `opencode` has and lacks today:
 |------|---------------|-----------|
 | Resume | Yes | |
 | flai's MCP server | Yes | |
-| `flai guard` on each call | No. A story whose agent has roles is refused at start | `--guard none`. OpenCode's own sub-agents then run unguarded, and the roles' models are not applied |
+| `flai guard` on each call | Yes, through the template's plugin. A story whose agent has roles is refused only in a project without it | `flai upgrade` brings the plugin |
 | Ask before a protected write | No. A start is refused while `auto-approve` is off ([ADR-0131](../../design/adrs/0131-a-harness-without-a-guard-hook-runs-a-story-s-agent-but-none-of-its-roles.md)) | `flai serve enable auto-approve`, or `--deny-protected` |
 | Role models | No | S-0409 |
 | The planner, the orchestrator, the analyzer, the curator, a role you define | Refused: run them on `claude-code` | |
@@ -369,11 +369,11 @@ What a story on `opencode` has and lacks today:
 - A project's `agent.<name>.permission.edit` rules come after flai's and beat them.
 - When the project's own `edit` object names a protected pattern before `"*": "allow"`, flai's deny takes that pattern's earlier place, so the later allow wins: OpenCode applies the last rule that matches.
 
-The guard plugin of a later story of E-0023 (S-0407) closes them. Until then, `--deny-protected` is your word that the rest holds.
+The guard plugin closes them for sub-agents: it refuses a sub-agent's write to a protected path through `edit`, `write`, `multiedit`, or `apply_patch` while `auto-approve` is off. A write through `bash` is judged as on `claude-code`: refused for a read-only sub-agent outside the temporary folder ([ADR-0141](../../design/adrs/0141-flai-guard-refuses-a-read-only-sub-agent-a-shell-command-that-writes-a-file.md)), not otherwise. The story's own agent is not asked yet; a later story of E-0023 (S-0408) brings that. Until then, for the story's own agent, `--deny-protected` is your word that the rest holds.
 
 OpenCode's files are protected whatever the harness. On `claude-code` too, while `auto-approve` is off, a story's agent writes `AGENTS.md`, `opencode.json`, `opencode.jsonc`, or a file under `.opencode/` only with your approval on a thread, and a story whose branch changes one is accepted by you alone ([ADR-0106](../../design/adrs/0106-a-story-whose-branch-changes-a-path-claude-code-protects-is-accepted-by-the.md)).
 
-**Tested on fixtures, not on a live OpenCode.** The adapter and `flai serve`'s start, resume, and refusals for it are tested against a stub `opencode` that replays a `--format json` stream, written from OpenCode v1.19.5's source. No test runs a real `opencode`. What flai relies on was read from that release's source, not run: [agent-adapters.md § OpenCode](../../design/system/agent-adapters.md#opencode). A later OpenCode may differ.
+**Tested on fixtures, and the guard on a live OpenCode.** The adapter and `flai serve`'s start, resume, and refusals for it are tested against a stub `opencode` that replays a `--format json` stream, written from OpenCode v1.19.5's source. The guard plugin is tested on a real `opencode` 1.19.5, when one is on `PATH`, against a scripted model: a sub-agent's `flai move` is refused, and the story's agent's own goes through (`TestFlaiGuardPluginOnOpenCode` in `flai/tests/integration`). The rest of what flai relies on was read from that release's source, not run: [agent-adapters.md § OpenCode](../../design/system/agent-adapters.md#opencode). A later OpenCode may differ.
 
 ### When a provider is out of budget (S-0534)
 

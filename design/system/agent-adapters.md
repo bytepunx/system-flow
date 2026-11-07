@@ -239,7 +239,9 @@ OpenCode reaches a gateway through `provider.<id>` in `opencode.json`: `npm: "@a
 | Usage stream | `--format json`: JSONL with `step_start`, `text`, `tool_use`, `step_finish`, `error`, and `reasoning` under `--thinking`; `step_finish` carries tokens (input, output, reasoning, cache read and write) and `cost` priced from OpenCode's own model table, no model, and only the root session's steps (§ Read from the source at v1.19.5) |
 | Instruction files | `AGENTS.md` up the tree and `~/.config/opencode/AGENTS.md`; falls back to `CLAUDE.md` and `~/.claude/CLAUDE.md`, off under `OPENCODE_DISABLE_CLAUDE_CODE`; `instructions` in `opencode.json` adds paths, globs, or URLs ([rules](https://opencode.ai/docs/rules/)) |
 
-Built since S-0406: the `opencode` adapter runs a story's agent with `opencode run`, resume only, and gives OpenCode its configuration through the environment ([ADR-0260](../adrs/0260-the-opencode-adapter-gives-a-story-s-opencode-its-configuration-through-the.md), [flai-cli.md](flai-cli.md#the-opencode-harness-s-0406)).
+Built since S-0406: the `opencode` adapter runs a story's agent with `opencode run`, resumes it, and gives OpenCode its configuration through the environment ([ADR-0260](../adrs/0260-the-opencode-adapter-gives-a-story-s-opencode-its-configuration-through-the.md), [flai-cli.md](flai-cli.md#the-opencode-harness-s-0406)).
+
+Built since S-0407: the guard. The template's plugin `.opencode/plugins/flai-guard.js` runs `flai guard --harness opencode` on `tool.execute.before` and throws the guard's reason when it refuses. It sends each call with its session's `id`, `parentID`, and `agent`, which it reads with the plugin's `client.session.get`, and the guard's `opencode` reader marks a call from a session with a parent as a sub-agent's. Finding 1 below holds on the real 1.19.5: `TestFlaiGuardPluginOnOpenCode` runs `opencode run` against a scripted provider, and the built-in `general` sub-agent's `flai move` is refused while the agent's own goes through. The child session carries both `parentID` and `agent`, and `client.session.get({path: {id}})` answers it. So the adapter states `Guard: true`, and a story on `opencode` may name roles; one is refused only in a project without the plugin. Asking the owner before a protected write is not built (S-0408).
 
 #### Read from the source at v1.19.5 (S-0406)
 
@@ -523,7 +525,7 @@ What is built. Since S-0508 (2026-11-02) `flai serve` starts a story's agent on 
 |---------|-----------------------|-------------|---------------------------|-------------------|--------------------|--------------|------------------|
 | Claude Code over a gateway | yes, `--session-id`, `--resume` | yes, `--mcp-config` | yes, `.claude/agents`, `--agents` | yes, `PreToolUse` with `agent_id` | yes, `--permission-prompt-tool` | yes, stream-json with cost (estimate) | `CLAUDE.md` |
 | Codex CLI | yes, `exec`, `exec resume` | yes, `[mcp_servers]` | yes, `.codex/agents/*.toml` | yes, `PreToolUse`, needs hook trust | partial, `approval_policy`; no external approver | partial, JSONL tokens, no cost | `AGENTS.md` |
-| OpenCode | yes, `run --session` | yes, `mcp.<name>` local | yes, `.opencode/agents` | partial, plugin `tool.execute.before` throws | partial, `permission` map, `--auto`; no external approver | yes, JSONL tokens and cost (**to check**) | `AGENTS.md`, falls back to `CLAUDE.md` |
+| OpenCode | yes, `run --session` | yes, `mcp.<name>` local | yes, `.opencode/agents` | yes, plugin `tool.execute.before` throws; a sub-agent by its session's `parentID` (S-0407) | partial, `permission` map, `--auto`; no external approver | yes, JSONL tokens and cost (**to check**) | `AGENTS.md`, falls back to `CLAUDE.md` |
 | Goose | yes, `run -n`, `-r` | yes, `--with-extension` | yes, `GOOSE_SUBAGENT_*`, recipes | yes, `PreToolUse` hook; no sub-agent ID | partial, `GOOSE_MODE`; headless `approve` **to check** | partial, json/stream-json tokens, no cost | `AGENTS.md`, `.goosehints` |
 | aider | partial, `--message`; no session ID | no (**to check**) | no | no | no | no | `--read` |
 | Docker Agent | yes, `--exec`, `--session <id>` | yes, `toolsets: [{type: mcp}]`; not on a harness agent | yes, `sub_agents`, each a `model` or a `harness` | yes, `pre_tool_use` with `agent_name` | yes, `permission_request` hook answers allow or deny within its timeout | partial, `after_llm_call` tokens and catalogue cost; `--json` fields **to check** | `instruction`, `add_prompt_files`; `CLAUDE.md` through the `claude-code` harness |
@@ -679,7 +681,7 @@ func Decide(c Call, running SubagentRecord) Verdict
 |---------|------|----------------|--------------|
 | Claude Code | `PreToolUse`, exit 2 | `agent_id` | `.claude/settings.json` (today) |
 | Codex | `PreToolUse`, exit 2 or `permissionDecision: deny` | None in the input; a record from `SubagentStart` and `SubagentStop`, as ADR-0092 keeps, **to check** | `.codex/hooks.json`; needs hook trust, `--dangerously-bypass-hook-trust` or a managed hook |
-| OpenCode | A plugin's `tool.execute.before` throws | **To check** | `.opencode/plugins/flai-guard.js`, a few lines that exec `flai guard` |
+| OpenCode | A plugin's `tool.execute.before` throws | The calling session's `parentID`, which the plugin reads (S-0406; built in S-0407) | `.opencode/plugins/flai-guard.js`, which runs `flai guard --harness opencode` |
 | Goose | `PreToolUse` in `hooks.json`, exit 2 or `decision: block` | None; every call looks like the agent's own | `.agents/plugins/flai/hooks/hooks.json` |
 | aider | None | | |
 | flai's loop | `Decide` called before each tool | The loop knows | None |
@@ -790,7 +792,7 @@ No key is stored anywhere: `key_env` is a name. Documentation each changes: `doc
 |--------|---------|---------|----------|--------|---------|------|------|
 | A, Claude Code over a gateway | Start, resume, guard, permission, roles, definitions | Cost (estimate, not the bill) | Provider split; gateway spend reader | Small | Self-hosted LiteLLM in front of Anthropic, Bedrock, Vertex; OpenRouter credits; one key per project | Beta headers dropped by LiteLLM's unified endpoint; Claude models only | Refines 0037, 0038, 0051 |
 | B, Codex CLI | Start, resume, roles, MCP | Guard (sub-agent sign), cost (tokens only) | Adapter, JSONL reader, hooks.json, hold-and-ask in the guard, TOML definitions, hook trust | Medium | OpenAI models and anything OpenAI-shaped through either gateway, self-hosted included | Hook trust in headless runs; `ask` with no approver | Refines 0060, 0065, 0086, 0092, 0106, 0124 |
-| C, OpenCode | Start, resume, roles, MCP, cost | Guard (plugin), permission | Adapter, JSONL reader, plugin, definitions | Medium | Any model either gateway serves | Plugin API stability; sub-agent sign unknown | As B |
+| C, OpenCode | Start, resume, roles, MCP, cost | Guard (plugin), permission | Adapter, JSONL reader, plugin, definitions | Medium | Any model either gateway serves | Plugin API stability; sub-agent sign unknown (since found: the session's `parentID`, S-0406) | As B |
 | D, Goose | Start, resume, MCP | Roles (one model), guard (no sub-agent sign), cost (tokens) | Adapter, reader, hooks, provider mapping | Medium | Both gateways natively | No sub-agent sign: roles refused | As B, and 0071 |
 | E, flai's loop | None | | Everything: MCP client, tool loop, session store, compaction, guard as a function, nested loops, pricing | Large | Any model, any API, exact gateway cost per call | Rebuilds a harness; loses Claude Code's prompt, caching, tools | Supersedes 0060 and 0086 for its own harness |
 
