@@ -2,12 +2,12 @@
 id: I-0246
 title: TestAHeldWaitFailsOnATruncatedStory and TestServeStartsADefinedRoleOnAnEventAndOnASchedule time out under flai test's Go run when the host's load is near 80
 class: defect
-status: open
+status: closed
 count: 10
 cost: 6m
 first_reported: 2026-11-02T00:55:15Z
 last_reported: 2026-11-07T08:17:37Z
-updated: 2026-11-07T08:17:37Z
+updated: 2026-11-07T09:52:45Z
 usage:
   strategic:
     - kind: analyzer
@@ -85,3 +85,4 @@ design/issues/summary.md: I-0246 count 9, I-0248 3, I-0252, I-0267, I-0269 each 
 Story S-0560 remediates this issue, created from it at 2026-11-02T03:55:02Z.
 
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
+Closed 2026-11-07T09:52:45Z: Fixed by S-0560, with S-0569's earlier fixes. TestWaitForWorkPassesOverAHeldStory and TestAHeldWaitFailsOnATruncatedStory: wait_for_work and the folder's wait_for_work and wait_for_events fingerprinted the project after their first look, so a change made during that look (long under load, since it runs trial merges) was missed and the wait answered timed_out; each now fingerprints first, with its first heartbeat after (T-2555, TestAChangeDuringAWaitsFirstLookWakesIt), and the 19 single-project mcpserver tests that slept 150 ms change the project only once the wait's heartbeat says it holds, with a 30 s bound (T-2557; S-0569's T-2522 did the folder tests). TestServeStartsADefinedRoleOnAnEventAndOnASchedule: the test moved the story before serve's watcher took its first snapshot, fixed by S-0569's T-2528; serve's own window stays I-0273. TestARepositoryIsOfferedImportedAndThenServed: serve halted a candidate it stopped offering before import.run's answer was written, so the dashboard read EOF; it now drains it first (T-2556, with a test that reads EOF on the old code). The four tests passed together ten times each under GOMAXPROCS=2 -race at a load of 38 to 42 on 24 CPUs.
