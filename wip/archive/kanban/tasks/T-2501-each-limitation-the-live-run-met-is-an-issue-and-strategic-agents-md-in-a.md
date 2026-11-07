@@ -3,16 +3,37 @@ id: T-2501
 type: task
 nature: feature
 title: "Each limitation the live run met is an issue, and strategic-agents.md § In a container (S-0509) says what the live run showed"
-status: backlog
+status: done
 parent: S-0567
 owner: alex
 created: 2026-11-07T03:43:51Z
-updated: 2026-11-07T03:44:02Z
-transitions: []
+updated: 2026-11-07T05:45:11Z
+transitions:
+  - to: ready
+    at: 2026-11-07T05:44:38Z
+    by: agent-S-0567
+  - to: in-progress
+    at: 2026-11-07T05:44:39Z
+    by: agent-S-0567
+  - to: done
+    at: 2026-11-07T05:45:11Z
+    by: agent-S-0567
 stream: S-0567
 tags: [docker, docs]
 touches: [design/system/strategic-agents.md, design/issues/summary.md]
 after: [T-2499, T-2500]
+usage:
+  source: log
+  seconds: 32
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 11
+      output: 2425
+      cache_read: 1256594
+      cache_write: 27600
+      cost: 0.5207
 ---
 # T-2501 Each limitation the live run met is an issue, and strategic-agents.md § In a container (S-0509) says what the live run showed
 

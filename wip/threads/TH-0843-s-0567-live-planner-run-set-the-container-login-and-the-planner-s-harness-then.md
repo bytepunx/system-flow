@@ -4,10 +4,10 @@ title: "S-0567 live planner run: set the container login and the planner's harne
 anchor:
   path: wip/kanban/stories/S-0567-flai-serve-starts-the-planner-in-a-container-on-harness-container-and-it-plans.md
   item: S-0567
-status: open
-participants: [agent-S-0567, orchestrator]
+status: resolved
+participants: [agent-S-0567, orchestrator, alex]
 created: 2026-11-07T03:49:04Z
-updated: 2026-11-07T03:55:55Z
+updated: 2026-11-07T06:08:55Z
 ---
 
 # TH-0843 S-0567 live planner run: set the container login and the planner's harness, then plan S-0559 from the dashboard
@@ -82,3 +82,41 @@ For the operator alone: this is a host change.
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
 
 Source: design/adrs/0247-a-strategic-agent-s-container-mounts-the-main-checkout-read-write-at-its-host.md
+
+### 2026-11-07T05:38:10Z alex
+Confirmed the recommendation of 2026-11-07T03:55:55Z orchestrator.
+
+Source: design/adrs/0247-a-strategic-agent-s-container-mounts-the-main-checkout-read-write-at-its-host.md
+
+### 2026-11-07T05:44:32Z agent-S-0567
+The live run worked. planner-S-0559 ran on the container harness under pilot, with Claude Code 2.1.312 from the image where the host has 2.1.319. It planned S-0559 through flai alone (T-2539, T-2540, TH-0847), and `wip/agents/planner.md` gained its entry, 239 s and 2.1455 USD from the container's log. Inside the image, `flai guard` refuses the planner what the host refuses it, word for word. Criteria 1 to 3 are ticked. S-0567's Notes, `### Live run`, hold the detail, and I-0274 to I-0276 record what the run could not show.
+
+One step of yours is still open. `system-flow.yaml` still names `harness: container` under `planning.agent`, so every planner run here starts in a container. As recommended, set it back:
+
+```sh
+flai manifest set planning.agent='{"model":"claude-opus-5-5"}'
+```
+
+I go on with T-2501 now: the design section, then the close-out.
+
+### 2026-11-07T05:45:34Z orchestrator (recommendation)
+**Recommended, alex:** set the planner back to the host harness now, as your confirmed answer says (D-0493):
+
+```sh
+flai manifest set planning.agent='{"model":"claude-opus-5-5"}'
+```
+
+**Why now:** planner-S-0559's container run has ended, and agent-S-0567 has ticked criteria 1 to 3. `system-flow.yaml` still has `harness: container` under `planning.agent`. So every planner run starts in a container, including the replans the `plan` host action starts by itself.
+
+**What I do meanwhile:** while `planning.agent` names `container`, I start no planner with `plan`, so none of mine runs in the container. You do not need to answer my hold on S-0559 any more: S-0559 is planned (T-2539, T-2540, TH-0847).
+
+**Why only you:** this is a manifest key and a host setting, and the guard refuses both to agents (ADR-0220).
+
+For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
+
+For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
+
+Source: design/digest/D-0493-s-0567-live-planner-run-set-the-container-login-and-the-planner-s-harness-then.md
+
+### 2026-11-07T06:08:55Z alex
+Resolved: S-0567 was accepted

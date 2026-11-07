@@ -3,15 +3,36 @@ id: T-2499
 type: task
 nature: feature
 title: "The planner's container run is watched to its end: it plans the chosen story through flai, and wip/agents/planner.md gains its entry with duration and cost from the container's log"
-status: backlog
+status: done
 parent: S-0567
 owner: alex
 created: 2026-11-07T03:43:22Z
-updated: 2026-11-07T03:43:22Z
-transitions: []
+updated: 2026-11-07T05:41:32Z
+transitions:
+  - to: ready
+    at: 2026-11-07T05:39:29Z
+    by: agent-S-0567
+  - to: in-progress
+    at: 2026-11-07T05:39:31Z
+    by: agent-S-0567
+  - to: done
+    at: 2026-11-07T05:41:32Z
+    by: agent-S-0567
 stream: S-0567
 tags: [docker]
 after: [T-2498]
+usage:
+  source: log
+  seconds: 121
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 42
+      output: 9712
+      cache_read: 5032651
+      cache_write: 110538
+      cost: 2.0852
 ---
 # T-2499 The planner's container run is watched to its end: it plans the chosen story through flai, and wip/agents/planner.md gains its entry with duration and cost from the container's log
 

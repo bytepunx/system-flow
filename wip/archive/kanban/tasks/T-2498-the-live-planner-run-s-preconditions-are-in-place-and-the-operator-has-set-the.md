@@ -3,11 +3,11 @@ id: T-2498
 type: task
 nature: feature
 title: The live planner run's preconditions are in place, and the operator has set the planner on harness container and asked for a plan of one backlog story
-status: in-progress
+status: done
 parent: S-0567
 owner: alex
 created: 2026-11-07T03:43:08Z
-updated: 2026-11-07T03:45:06Z
+updated: 2026-11-07T05:39:04Z
 transitions:
   - to: ready
     at: 2026-11-07T03:45:05Z
@@ -15,20 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-11-07T03:45:06Z
     by: agent-S-0567
+  - to: done
+    at: 2026-11-07T05:39:04Z
+    by: agent-S-0567
 stream: S-0567
 tags: [docker]
 usage:
   source: log
-  seconds: 378
+  seconds: 421
   estimated: true
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 81
-      output: 16922
-      cache_read: 7087831
-      cache_write: 198825
-      cost: 3.3469
+      input: 75
+      output: 17215
+      cache_read: 8921076
+      cache_write: 195944
+      cost: 3.6964
 ---
 # T-2498 The live planner run's preconditions are in place, and the operator has set the planner on harness container and asked for a plan of one backlog story
 

@@ -3,15 +3,36 @@ id: T-2500
 type: task
 nature: feature
 title: A guard refusal of the planner inside its container is shown from the run's log, or from a call made by hand in the container with the planner's role
-status: backlog
+status: done
 parent: S-0567
 owner: alex
 created: 2026-11-07T03:43:37Z
-updated: 2026-11-07T03:44:14Z
-transitions: []
+updated: 2026-11-07T05:44:16Z
+transitions:
+  - to: ready
+    at: 2026-11-07T05:41:51Z
+    by: agent-S-0567
+  - to: in-progress
+    at: 2026-11-07T05:41:53Z
+    by: agent-S-0567
+  - to: done
+    at: 2026-11-07T05:44:16Z
+    by: agent-S-0567
 stream: S-0567
 tags: [docker, cli]
 after: [T-2499]
+usage:
+  source: log
+  seconds: 143
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 35
+      output: 8050
+      cache_read: 4171561
+      cache_write: 91625
+      cost: 1.7285
 ---
 # T-2500 A guard refusal of the planner inside its container is shown from the run's log, or from a call made by hand in the container with the planner's role
 
