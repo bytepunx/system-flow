@@ -6,7 +6,7 @@ title: Publish what is accepted and not yet released
 status: review
 owner: alex
 created: 2026-11-07T08:03:26Z
-updated: 2026-11-07T08:16:55Z
+updated: 2026-11-07T08:54:34Z
 transitions:
   - to: ready
     at: 2026-11-07T08:03:48Z
@@ -46,15 +46,15 @@ usage:
       cost: 2.6027
   strategic:
     - kind: orchestrator
-      seconds: 44
+      seconds: 48
       estimated: true
       models:
         - model: claude-opus-5-5
           input: 18
-          output: 122
-          cache_read: 502275
-          cache_write: 82840
-          cost: 0.1446
+          output: 124
+          cache_read: 531301
+          cache_write: 83096
+          cost: 0.1519
 formula: publish
 ---
 # S-0585 Publish what is accepted and not yet released
@@ -67,7 +67,7 @@ Publish what is accepted and not yet released, by the project's release policy.
 
 - [x] Fetch the remote's branch and tags
 - [x] Evaluate the release policy, stopping unless it is met
-- [ ] Publish what is accepted and not yet released
+- [x] Publish what is accepted and not yet released
 
 ## Tasks
 - T-2546 Fetch the remote's branch and tags
