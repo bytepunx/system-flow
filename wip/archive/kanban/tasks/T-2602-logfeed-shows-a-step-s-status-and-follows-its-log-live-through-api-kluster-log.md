@@ -3,19 +3,37 @@ id: T-2602
 type: task
 nature: feature
 title: LogFeed shows a step's status and follows its log live through /api/kluster/log
-status: ready
+status: done
 parent: S-0595
 owner: alex
 created: 2026-11-07T22:07:23Z
-updated: 2026-11-07T22:10:44Z
+updated: 2026-11-07T22:36:57Z
 transitions:
   - to: ready
     at: 2026-11-07T22:10:07Z
+    by: agent-S-0595
+  - to: in-progress
+    at: 2026-11-07T22:32:39Z
+    by: agent-S-0595
+  - to: done
+    at: 2026-11-07T22:36:57Z
     by: agent-S-0595
 stream: S-0595
 tags: [dashboard]
 touches: [flaiover/src/lib/components/LogFeed.svelte, flaiover/src/lib/components/LogFeed.svelte.test.ts, design/components/flaiover/src/lib/components/LogFeed.examples.json]
 after: [T-2601]
+usage:
+  source: log
+  seconds: 258
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 41
+      output: 14320
+      cache_read: 6999653
+      cache_write: 55229
+      cost: 2.0465
 ---
 # T-2602 LogFeed shows a step's status and follows its log live through /api/kluster/log
 

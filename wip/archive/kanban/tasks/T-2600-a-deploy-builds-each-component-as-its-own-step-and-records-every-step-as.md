@@ -3,11 +3,11 @@ id: T-2600
 type: task
 nature: feature
 title: A deploy builds each component as its own step and records every step as pending before the first starts
-status: in-progress
+status: done
 parent: S-0595
 owner: alex
 created: 2026-11-07T22:07:00Z
-updated: 2026-11-07T22:24:48Z
+updated: 2026-11-07T22:32:09Z
 transitions:
   - to: ready
     at: 2026-11-07T22:09:59Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-07T22:24:48Z
     by: agent-S-0595
+  - to: done
+    at: 2026-11-07T22:32:09Z
+    by: agent-S-0595
 stream: S-0595
 tags: [cli]
 touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go]
 after: [T-2598]
+usage:
+  source: log
+  seconds: 441
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 32
+      output: 11211
+      cache_read: 5479940
+      cache_write: 43238
+      cost: 1.6022
 ---
 # T-2600 A deploy builds each component as its own step and records every step as pending before the first starts
 

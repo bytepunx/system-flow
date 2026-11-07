@@ -3,19 +3,37 @@ id: T-2603
 type: task
 nature: feature
 title: DeploySettings edits the kluster block's namespace, components, commands, and timeout, and asks an agent to write the scripts
-status: ready
+status: done
 parent: S-0595
 owner: alex
 created: 2026-11-07T22:07:32Z
-updated: 2026-11-07T22:11:01Z
+updated: 2026-11-07T22:37:10Z
 transitions:
   - to: ready
     at: 2026-11-07T22:10:11Z
+    by: agent-S-0595
+  - to: in-progress
+    at: 2026-11-07T22:32:40Z
+    by: agent-S-0595
+  - to: done
+    at: 2026-11-07T22:37:10Z
     by: agent-S-0595
 stream: S-0595
 tags: [dashboard]
 touches: [flaiover/src/lib/components/DeploySettings.svelte, flaiover/src/lib/components/DeploySettings.svelte.test.ts, design/components/flaiover/src/lib/components/DeploySettings.examples.json, flaiover/src/lib/settings.ts, flaiover/src/lib/settings.test.ts]
 after: [T-2601]
+usage:
+  source: log
+  seconds: 270
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 35
+      output: 12288
+      cache_read: 6006312
+      cache_write: 47391
+      cost: 1.7561
 ---
 # T-2603 DeploySettings edits the kluster block's namespace, components, commands, and timeout, and asks an agent to write the scripts
 

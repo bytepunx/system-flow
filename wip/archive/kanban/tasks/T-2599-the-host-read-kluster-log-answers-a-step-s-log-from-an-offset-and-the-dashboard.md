@@ -23,16 +23,16 @@ tags: [cli, dashboard]
 touches: [flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, flaiover/src/lib/server/agent.ts]
 usage:
   source: log
-  seconds: 828
+  seconds: 844
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 43
-      output: 268
-      cache_read: 6718835
-      cache_write: 42675
-      cost: 2.4271
+      output: 14941
+      cache_read: 7303189
+      cache_write: 57624
+      cost: 2.1352
 ---
 # T-2599 The host read kluster.log answers a step's log from an offset, and the dashboard requires it
 

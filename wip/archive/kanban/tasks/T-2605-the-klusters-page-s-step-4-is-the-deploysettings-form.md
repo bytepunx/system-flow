@@ -3,19 +3,37 @@ id: T-2605
 type: task
 nature: feature
 title: The Klusters page's step 4 is the DeploySettings form
-status: ready
+status: done
 parent: S-0595
 owner: alex
 created: 2026-11-07T22:08:21Z
-updated: 2026-11-07T22:11:36Z
+updated: 2026-11-07T22:45:16Z
 transitions:
   - to: ready
     at: 2026-11-07T22:10:19Z
+    by: agent-S-0595
+  - to: in-progress
+    at: 2026-11-07T22:37:21Z
+    by: agent-S-0595
+  - to: done
+    at: 2026-11-07T22:45:16Z
     by: agent-S-0595
 stream: S-0595
 tags: [dashboard]
 touches: [flaiover/src/routes/ops/klusters/+page.svelte, flaiover/src/routes/ops/klusters/klusters.svelte.test.ts]
 after: [T-2603]
+usage:
+  source: log
+  seconds: 475
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 43
+      output: 15262
+      cache_read: 7460218
+      cache_write: 58863
+      cost: 2.1811
 ---
 # T-2605 The Klusters page's step 4 is the DeploySettings form
 

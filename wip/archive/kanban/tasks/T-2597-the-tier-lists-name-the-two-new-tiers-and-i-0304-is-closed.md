@@ -23,9 +23,17 @@ tags: [docs, issues]
 touches: [design/conventions/tooling.md, design/system/devex.md, design/issues/I-0304-flai-test-on-a-change-to-flai-s-host-api-runs-none-of-flaiover-s-server-tests.md, design/issues/summary.md]
 after: [T-2595, T-2596]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 46
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 15
+      output: 2860
+      cache_read: 1724440
+      cache_write: 34992
+      cost: 0.6706
   strategic:
     - kind: orchestrator
       seconds: 7

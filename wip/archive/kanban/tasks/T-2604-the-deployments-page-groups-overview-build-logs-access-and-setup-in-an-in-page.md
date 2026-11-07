@@ -3,19 +3,37 @@ id: T-2604
 type: task
 nature: feature
 title: The Deployments page groups Overview, Build, Logs, Access, and Setup in an in-page rail, with a panel per component build
-status: ready
+status: done
 parent: S-0595
 owner: alex
 created: 2026-11-07T22:08:12Z
-updated: 2026-11-07T22:11:22Z
+updated: 2026-11-07T22:45:06Z
 transitions:
   - to: ready
     at: 2026-11-07T22:10:15Z
+    by: agent-S-0595
+  - to: in-progress
+    at: 2026-11-07T22:37:20Z
+    by: agent-S-0595
+  - to: done
+    at: 2026-11-07T22:45:06Z
     by: agent-S-0595
 stream: S-0595
 tags: [dashboard]
 touches: [flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/routes/ops/deployments/deployments.svelte.test.ts]
 after: [T-2602, T-2603]
+usage:
+  source: log
+  seconds: 466
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 52
+      output: 18097
+      cache_read: 8846118
+      cache_write: 69798
+      cost: 2.5863
 ---
 # T-2604 The Deployments page groups Overview, Build, Logs, Access, and Setup in an in-page rail, with a panel per component build
 

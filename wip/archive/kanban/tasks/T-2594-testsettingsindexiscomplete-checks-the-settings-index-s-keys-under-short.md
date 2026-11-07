@@ -22,9 +22,17 @@ stream: S-0592
 tags: [flai, tests]
 touches: [flai/cmd/settings_doc_test.go]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 772
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 23
+      output: 4343
+      cache_read: 2618728
+      cache_write: 53138
+      cost: 1.0183
   strategic:
     - kind: orchestrator
       seconds: 7

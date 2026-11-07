@@ -3,11 +3,11 @@ id: T-2609
 type: task
 nature: research
 title: "Explore and measure the chart data: stats.get over windows of 7, 30, 90 days and all history"
-status: in-progress
+status: done
 parent: S-0596
 owner: alex
 created: 2026-11-07T22:10:35Z
-updated: 2026-11-07T22:12:58Z
+updated: 2026-11-07T22:36:16Z
 transitions:
   - to: ready
     at: 2026-11-07T22:12:55Z
@@ -15,8 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-11-07T22:12:58Z
     by: agent-S-0596
+  - to: done
+    at: 2026-11-07T22:36:16Z
+    by: agent-S-0596
 stream: S-0596
 tags: [cli]
+usage:
+  source: log
+  seconds: 1398
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 88
+      output: 25447
+      cache_read: 5756836
+      cache_write: 109206
+      cost: 2.344
 ---
 # T-2609 Explore and measure the chart data: stats.get over windows of 7, 30, 90 days and all history
 

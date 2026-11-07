@@ -3,19 +3,37 @@ id: T-2606
 type: task
 nature: feature
 title: The kluster design, the dashboard design, and the user and operator guides describe components, pending steps, kluster.log, and the Deployments page's rail
-status: ready
+status: done
 parent: S-0595
 owner: alex
 created: 2026-11-07T22:08:38Z
-updated: 2026-11-07T22:11:53Z
+updated: 2026-11-07T22:49:19Z
 transitions:
   - to: ready
     at: 2026-11-07T22:10:22Z
+    by: agent-S-0595
+  - to: in-progress
+    at: 2026-11-07T22:45:27Z
+    by: agent-S-0595
+  - to: done
+    at: 2026-11-07T22:49:19Z
     by: agent-S-0595
 stream: S-0595
 tags: [cli, dashboard]
 touches: [design/system/kluster.md, design/system/flaiover-dashboard.md, design/system/project-manifest.md, docs/users/flaiover.md, docs/users/flai.md, docs/operators/index.md]
 after: [T-2600, T-2604, T-2605]
+usage:
+  source: log
+  seconds: 232
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 63
+      output: 22002
+      cache_read: 10754786
+      cache_write: 84857
+      cost: 3.1444
 ---
 # T-2606 The kluster design, the dashboard design, and the user and operator guides describe components, pending steps, kluster.log, and the Deployments page's rail
 

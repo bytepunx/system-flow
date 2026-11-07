@@ -3,11 +3,11 @@ id: T-2607
 type: task
 nature: research
 title: "Explore and measure the dashboard's reads: agent.status, board.get, settings.get, threads, messages, and item.get, and whether flai serve answers channel requests one at a time"
-status: in-progress
+status: done
 parent: S-0596
 owner: alex
 created: 2026-11-07T22:09:51Z
-updated: 2026-11-07T22:12:47Z
+updated: 2026-11-07T22:35:55Z
 transitions:
   - to: ready
     at: 2026-11-07T22:12:44Z
@@ -15,8 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-11-07T22:12:47Z
     by: agent-S-0596
+  - to: done
+    at: 2026-11-07T22:35:55Z
+    by: agent-S-0596
 stream: S-0596
 tags: [cli]
+usage:
+  source: log
+  seconds: 1388
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 148
+      output: 42692
+      cache_read: 9658082
+      cache_write: 183212
+      cost: 3.9324
 ---
 # T-2607 Explore and measure the dashboard's reads: agent.status, board.get, settings.get, threads, messages, and item.get, and whether flai serve answers channel requests one at a time
 

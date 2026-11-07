@@ -7,7 +7,7 @@ status: done
 parent: S-0595
 owner: alex
 created: 2026-11-07T22:06:20Z
-updated: 2026-11-07T22:24:18Z
+updated: 2026-11-07T22:56:36Z
 transitions:
   - to: ready
     at: 2026-11-07T22:09:54Z
@@ -20,19 +20,25 @@ transitions:
     by: agent-S-0595
 stream: S-0595
 tags: [cli]
-touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/check/kluster_test.go, docs/operators/settings.md, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go]
+touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/check/kluster_test.go, docs/operators/settings.md, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, docs/users/flai-reference.md]
 usage:
   source: log
-  seconds: 831
+  seconds: 832
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 73
-      output: 442
-      cache_read: 12175204
-      cache_write: 69747
-      cost: 4.3955
+      output: 25775
+      cache_read: 12599088
+      cache_write: 99409
+      cost: 3.6836
+    - model: claude-sonnet-5-5
+      input: 18
+      output: 4846
+      cache_read: 261666
+      cache_write: 52011
+      cost: 0.2047
 ---
 # T-2598 The kluster block takes components, checked by flai check and written by flai manifest set as a components setting
 

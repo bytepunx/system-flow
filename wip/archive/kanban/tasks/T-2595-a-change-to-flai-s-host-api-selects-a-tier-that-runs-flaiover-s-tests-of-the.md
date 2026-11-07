@@ -22,9 +22,17 @@ stream: S-0592
 tags: [flai, flaiover, tests]
 touches: [system-flow.yaml, flai/internal/verify/select_test.go]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 777
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 31
+      output: 5731
+      cache_read: 3456168
+      cache_write: 70131
+      cost: 1.344
   strategic:
     - kind: orchestrator
       seconds: 7

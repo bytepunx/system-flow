@@ -1,0 +1,44 @@
+---
+id: T-2617
+type: task
+nature: improvement
+title: item.get finds its item, children, and plan in one list of the kept snapshot, with no glob and no second list
+status: backlog
+parent: S-0606
+owner: alex
+created: 2026-11-07T22:49:16Z
+updated: 2026-11-07T22:49:16Z
+transitions: []
+stream: S-0606
+tags: [cli]
+touches: [flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go]
+after: [T-2615]
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 8
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 2
+          output: 12
+          cache_read: 62744
+          cache_write: 12650
+          cost: 0.0192
+---
+# T-2617 item.get finds its item, children, and plan in one list of the kept snapshot, with no glob and no second list
+
+## Work
+
+`item.get` in `flai/internal/hostapi/hostapi.go` calls `repo.Get`, which globs the kanban and archive folders, then `repo.List(true)` for the children, the plan, and `metrics.CostPerAgentHour`. Make it list once and find the item, its children, and its plan in that list, so that with the store's snapshot on it reads no file and stats nothing. Its answer stays the same field for field. The other methods that list every item, `board.get`, `items.list`, `items.count`, and those reached through `reads.go`, already go through `Repo.List` and read the snapshot without a change here.
+
+Waits for T-2615, whose snapshot mode it reads.
+
+## Done when
+
+- [ ] A test in `flai/internal/hostapi/hostapi_test.go` shows `item.get` answers the same as before for a story with tasks, an archived item, and an unknown ID, and lists the items once a call.
+
+## Notes

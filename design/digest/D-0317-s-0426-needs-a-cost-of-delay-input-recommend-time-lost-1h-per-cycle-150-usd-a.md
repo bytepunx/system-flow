@@ -9,7 +9,7 @@ date: 2026-10-16
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-0884]
 ---
 
 # D-0317 S-0426 needs a cost of delay input: recommend time lost 1h per cycle (150 USD a week): Recommendation: set `time_lost_per_cycle: 1h` on S-0426 (150 USD a week), as the planner recommends: `flai edit…

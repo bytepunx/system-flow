@@ -3,10 +3,10 @@ id: S-0595
 type: story
 nature: feature
 title: Build in-depth Deploy UI
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-07T22:00:05Z
-updated: 2026-11-07T22:24:18Z
+updated: 2026-11-07T23:06:27Z
 transitions:
   - to: ready
     at: 2026-11-07T22:00:38Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-11-07T22:01:20Z
     by: agent-S-0595
+  - to: review
+    at: 2026-11-07T23:04:40Z
+    by: agent-S-0595
+  - to: done
+    at: 2026-11-07T23:06:27Z
+    by: orchestrator
 tags: [dashboard, cli]
 topics: [kluster, deployment, manifest]
-touches: [flaiover/src, design/adrs/0263-a-kluster-block-may-list-components-each-built-as-its-own-step-with-its-own-log.md, design/adrs/README.md, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/check/kluster_test.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, design/components/flaiover/src/lib/components/LogFeed.examples.json, design/components/flaiover/src/lib/components/DeploySettings.examples.json, design/system/kluster.md, design/system/flaiover-dashboard.md, design/system/project-manifest.md, docs/users/flaiover.md, docs/users/flai.md, docs/operators/index.md, docs/operators/settings.md, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go]
+touches: [flaiover/src, design/adrs/0263-a-kluster-block-may-list-components-each-built-as-its-own-step-with-its-own-log.md, design/adrs/README.md, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/check/kluster_test.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, design/components/flaiover/src/lib/components/LogFeed.examples.json, design/components/flaiover/src/lib/components/DeploySettings.examples.json, design/system/kluster.md, design/system/flaiover-dashboard.md, design/system/project-manifest.md, docs/users/flaiover.md, docs/users/flai.md, docs/operators/index.md, docs/operators/settings.md, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, docs/users/flai-reference.md, design/issues/I-0308-flai-test-on-a-change-to-the-manifest-s-settings-catalog-does-not-run.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,27 +30,32 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1380
-  estimated: true
-  priced_by: estimate
+  seconds: 3820
+  priced_by: harness
   turns:
     - day: 2026-11-07
-      ceremony: 1
-      hand_edits: 1
-      work: 32
+      ceremony: 4
+      hand_edits: 2
+      work: 92
   models:
     - model: claude-haiku-5-5
-      input: 44
-      output: 167
-      cache_read: 1124606
-      cache_write: 169868
-      cost: 0.0928
+      input: 48
+      output: 26415
+      cache_read: 1301192
+      cache_write: 173117
+      cost: 0.0479
     - model: claude-opus-5-5
-      input: 170
-      output: 1019
-      cache_read: 24009344
-      cache_write: 407335
-      cost: 8.7647
+      input: 572
+      output: 200946
+      cache_read: 98223108
+      cache_write: 775000
+      cost: 28.7173
+    - model: claude-sonnet-5-5
+      input: 18
+      output: 4846
+      cache_read: 261666
+      cache_write: 52011
+      cost: 0.2047
   strategic:
     - kind: planner
       seconds: 198
@@ -100,10 +111,10 @@ the kluster: block of system-flow.yaml names no deploy command; write kluster.de
 The deployment screen should have the controls necessary to set up build and deploy machinery for a project's services and configuration.
 
 ## Acceptance criteria
-- [ ] The operator never has to edit system-flow.yaml directly to control or setup deployments
-- [ ] The UI/UX allow the operator to create or make any changes needed to control their projects deployments to the kluster managed kubernetes cluster
-- [ ] The Deployment page should use the vertical nav rail in page to group controls, livestream logs, and other status indicators for a given deployment
-- [ ] a Build sub-page should show both the status and an expandable live feed of each component's build. If there are 3 Docker images (for example), there should be 3 different component build panels with status indicators so that the operator can see which steps have completed, are still running, or have failed.
+- [x] The operator never has to edit system-flow.yaml directly to control or setup deployments
+- [x] The UI/UX allow the operator to create or make any changes needed to control their projects deployments to the kluster managed kubernetes cluster
+- [x] The Deployment page should use the vertical nav rail in page to group controls, livestream logs, and other status indicators for a given deployment
+- [x] a Build sub-page should show both the status and an expandable live feed of each component's build. If there are 3 Docker images (for example), there should be 3 different component build panels with status indicators so that the operator can see which steps have completed, are still running, or have failed.
 
 ## Tasks
 - T-2598 The kluster block takes components, checked by flai check and written by flai manifest set as a components setting
@@ -142,3 +153,14 @@ Figures:
 - Cost of delay: 1250 USD a week, as `flai cod` gives it from the operator's revenue input. No penalty or time lost was given, so the figure stands.
 
 No `after`: the story reads no output of an open story. It builds on S-0580 and S-0581, which are done.
+
+### Accepted by the orchestrator
+
+- Verified: f39e371e083ea07aba5e01bb0e9e2181f708dac6
+- At: 2026-11-07T23:06:27Z
+
+Verdict: pass at f39e371e083ea07aba5e01bb0e9e2181f708dac6
+- 1: flaiover/src/lib/components/DeploySettings.svelte, flaiover/src/lib/settings.ts, flaiover/src/lib/server/repo.ts, flai/internal/manifest/manifest.go, flai/internal/manifest/settings.go, flai/internal/hostapi/settings.go, flaiover/src/routes/ops/deployments/+page.svelte
+- 2: flaiover/src/lib/components/DeploySettings.svelte, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flaiover/src/routes/ops/klusters/+page.svelte, flaiover/src/routes/ops/deployments/+page.svelte
+- 3: flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/lib/components/LogFeed.svelte, flaiover/src/routes/api/kluster/log/+server.ts, flai/internal/hostapi/kluster.go
+- 4: flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/lib/components/LogFeed.svelte, flai/internal/kluster/deploy.go, flaiover/src/routes/ops/deployments/deployments.svelte.test.ts, flaiover/src/lib/components/LogFeed.svelte.test.ts

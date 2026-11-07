@@ -3,11 +3,11 @@ id: T-2608
 type: task
 nature: research
 title: "Explore and measure the writes: item.new, item.edit, item.finalize, item.move, issue.story, accept.run, and the close-out job"
-status: in-progress
+status: done
 parent: S-0596
 owner: alex
 created: 2026-11-07T22:10:12Z
-updated: 2026-11-07T22:12:52Z
+updated: 2026-11-07T22:36:12Z
 transitions:
   - to: ready
     at: 2026-11-07T22:12:50Z
@@ -15,8 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-11-07T22:12:52Z
     by: agent-S-0596
+  - to: done
+    at: 2026-11-07T22:36:12Z
+    by: agent-S-0596
 stream: S-0596
 tags: [cli]
+usage:
+  source: log
+  seconds: 1400
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 205
+      output: 59365
+      cache_read: 13429817
+      cache_write: 254761
+      cost: 5.4681
 ---
 # T-2608 Explore and measure the writes: item.new, item.edit, item.finalize, item.move, issue.story, accept.run, and the close-out job
 

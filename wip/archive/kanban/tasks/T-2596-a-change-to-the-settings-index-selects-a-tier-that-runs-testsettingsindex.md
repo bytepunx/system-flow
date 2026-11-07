@@ -23,9 +23,17 @@ tags: [flai, tests]
 touches: [system-flow.yaml, flai/internal/verify/select_test.go]
 after: [T-2594, T-2595]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 236
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 15
+      output: 2777
+      cache_read: 1674451
+      cache_write: 33977
+      cost: 0.6511
   strategic:
     - kind: orchestrator
       seconds: 7
