@@ -294,11 +294,22 @@ func (p *klusterPass) on(m manifest.Manifest) bool {
 	return m.Kluster != nil && p.o.Host.Enabled != nil && p.o.Host.Enabled(hostapi.ActionKluster, p.e.Root)
 }
 
+// klusterDeployable is whether manifest m's kluster: block names a deploy
+// command. A block with none, as enabling the action writes it (S-0586), is a
+// cluster whose deploys are not set up yet: the pass deploys and promotes
+// nothing for it, and still tears down what was deployed.
+func klusterDeployable(m manifest.Manifest) bool {
+	return m.Kluster != nil && len(m.Kluster.Deploy) > 0 && strings.TrimSpace(m.Kluster.Deploy[0]) != ""
+}
+
 // look queues a deploy of each story in review whose namespace was neither
 // deployed nor tried at its branch's head, a teardown of each deployed story
 // that left review, and one promotion when stories were accepted since the
 // last look, and wakes the worker. With the action off it queues nothing, and
-// the acceptances meanwhile promote nothing.
+// the acceptances meanwhile promote nothing. With a block that names no
+// deploy it queues only teardowns, and the acceptances meanwhile promote
+// nothing; it reads the block again at every look, so a deploy set later is
+// picked up at the next.
 func (p *klusterPass) look(ctx context.Context) {
 	p.lookMu.Lock()
 	defer p.lookMu.Unlock()
@@ -319,12 +330,18 @@ func (p *klusterPass) look(ctx context.Context) {
 	var changes []workitem.Change
 	changes, _, p.since, p.seen = news(items, nil, p.since, p.seen, now)
 	root := mainCheckout(repo)
-	queued := p.lookReview(ctx, items, root)
+	deployable := klusterDeployable(repo.Manifest)
+	var queued []string
+	if deployable {
+		queued = p.lookReview(ctx, items, root)
+	}
 	if ctx.Err() != nil {
 		return
 	}
 	queued = append(queued, p.lookLeft(items, root)...)
-	if acceptances := accepted(nil, changes); len(acceptances) > 0 || p.takeRepromote() {
+	if !deployable {
+		p.o.Logger.Debug("kluster block names no deploy, so no story is deployed and main is not promoted", "component", "serve", "root", p.e.Root)
+	} else if acceptances := accepted(nil, changes); len(acceptances) > 0 || p.takeRepromote() {
 		if p.enqueue(klusterJob{kind: klusterPromote}) {
 			queued = append(queued, klusterPromote)
 		}
@@ -513,7 +530,7 @@ func (p *klusterPass) drain(ctx context.Context) {
 }
 
 // run runs one job, unless the action was turned off or the block removed
-// since it was queued.
+// since it was queued, or, for a deploy or a promotion, its deploy command.
 func (p *klusterPass) run(ctx context.Context, j klusterJob) {
 	repo, err := workitem.Open(p.e.Root)
 	if err != nil {
@@ -521,6 +538,9 @@ func (p *klusterPass) run(ctx context.Context, j klusterJob) {
 		return
 	}
 	if !p.on(repo.Manifest) {
+		return
+	}
+	if j.kind != klusterTeardown && !klusterDeployable(repo.Manifest) {
 		return
 	}
 	switch j.kind {

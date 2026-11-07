@@ -572,6 +572,81 @@ func TestNoKlusterCommandRunsWithTheActionOffOrNoBlock(t *testing.T) {
 	}
 }
 
+// klusterNoDeploy is the block enabling the action writes (S-0586): a config
+// and no deploy.
+const klusterNoDeploy = "kluster:\n  config: kluster.yaml\n"
+
+// setBlock rewrites the manifest's kluster: block, as a save from the
+// dashboard does between two looks.
+func (lab *klusterLab) setBlock(block string) {
+	lab.t.Helper()
+	m := "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n" + block
+	if err := os.WriteFile(filepath.Join(lab.root, "system-flow.yaml"), []byte(m), 0o644); err != nil {
+		lab.t.Fatal(err)
+	}
+}
+
+func TestABlockWithNoDeployDeploysNothingUntilOneIsSet(t *testing.T) {
+	lab := newKlusterLab(t, klusterNoDeploy)
+	lab.kluster.absent = true
+	accepted := lab.inReview("Accepted", klHeadA)
+	review := lab.inReview("Review", klHeadB)
+	lab.accept(accepted)
+	lab.round()
+	if got := lab.kluster.all(); len(got) != 0 {
+		t.Fatalf("a block with no deploy ran %v, want no job, no bring-up, no promotion", got)
+	}
+	for _, story := range []string{accepted, review} {
+		if ths := lab.threadsOn(story); len(ths) != 0 {
+			t.Fatalf("a block with no deploy opened %d threads on %s", len(ths), story)
+		}
+	}
+	if ths := lab.titled(manifest.File, promoteFailureTitle()); len(ths) != 0 {
+		t.Fatalf("a block with no deploy opened %d promotion threads", len(ths))
+	}
+	ns, _ := kluster.StoryNamespace(review)
+	if _, ok := readKlusterTried(lab.root, ns); ok {
+		t.Fatalf("a block with no deploy recorded a try for %s, which would keep it from deploying once deploy is set", ns)
+	}
+
+	lab.setBlock("kluster:\n  config: kluster.yaml\n  deploy: [\"\"]\n")
+	lab.round()
+	if got := lab.kluster.all(); len(got) != 0 {
+		t.Fatalf("a deploy whose program is empty ran %v", got)
+	}
+
+	lab.setBlock("kluster:\n  config: kluster.yaml\n  deploy: [scripts/kluster-deploy.sh]\n")
+	lab.round()
+	want := "absent;up;deploy " + review + " " + klHeadB
+	if got := strings.Join(lab.kluster.all(), ";"); got != want {
+		t.Fatalf("calls once deploy is set = %s, want %s: the story in review deployed, and the acceptance before it not promoted", got, want)
+	}
+}
+
+func TestAJobQueuedBeforeDeployWasRemovedDoesNotRun(t *testing.T) {
+	lab := newKlusterLab(t, klusterBlock)
+	lab.inReview("Removed", klHeadA)
+	lab.pass.look(context.Background())
+	lab.setBlock(klusterNoDeploy)
+	lab.pass.drain(context.Background())
+	if got := lab.kluster.all(); len(got) != 0 {
+		t.Fatalf("a deploy queued before deploy was removed ran %v", got)
+	}
+}
+
+func TestADeployedStoryThatLeftReviewIsTornDownWithNoDeploySet(t *testing.T) {
+	lab := newKlusterLab(t, klusterBlock)
+	story := lab.inReview("Leaves", klHeadA)
+	lab.round()
+	lab.setBlock(klusterNoDeploy)
+	n := len(lab.kluster.all())
+	lab.move(story, workitem.InProgress)
+	lab.round()
+	if got := lab.kluster.since(n); strings.Join(got, ";") != "teardown "+story {
+		t.Fatalf("calls after %s left review with no deploy set = %v, want one teardown", story, got)
+	}
+}
+
 func TestABusyClusterOpensNoThreadAndTheNextLookTriesAgain(t *testing.T) {
 	lab := newKlusterLab(t, klusterBlock)
 	story := lab.inReview("Busy", klHeadA)
