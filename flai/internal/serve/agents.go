@@ -912,9 +912,21 @@ func judgeRun(root string, run *AgentRun, exit *int) {
 // A run whose log ends on the harness's usage limit is marked so
 // (limitEnded), and one judged failed says the limit as its why, as the
 // curator's does; that end feeds its provider's budget state, once, as every
-// end does (budgetEnd), and restartEnded does not restart it (S-0534).
+// end does (budgetEnd), and restartEnded does not restart it (S-0534). On a
+// harness that makes its own session IDs, the session its log names is
+// recorded as the run's, which a start that resumes it goes on in; a log that
+// names none leaves the one flai made, which the adapter refuses to resume.
 func (l *launcher) endRun(run *AgentRun, exit *int) {
 	judgeRun(l.entry.Root, run, exit)
+	if r, ok := harness.Adapters[run.Harness].(harness.SessionReader); ok && run.Log != "" {
+		log, err := os.ReadFile(run.Log)
+		if err != nil {
+			l.warn("run's log not read for its session", "log", run.Log, "err", err)
+		}
+		if session, ok := r.Session(log); ok {
+			run.Session = session
+		}
+	}
 	lim, _ := runLimit(run, l.warn)
 	run.limitEnded(lim)
 	if lim != nil && run.Outcome == OutcomeFailed {
@@ -2185,7 +2197,8 @@ func startWhy(story readyStory, run *AgentRun, limit int) string {
 // (mcpEnv, S-0506), the URL's host the container's own name for the host
 // when the container harness's network is not the host's (S-0508), and the
 // container's image the project's layer when its manifest names one
-// (containerImageHost, S-0510): every
+// (containerImageHost, S-0510), and the host's deny_protected for the
+// harness given to the adapter, which writes its deny rules (ADR-0260): every
 // start, a story's agent's and a strategic agent's, builds its command here.
 // On the container harness it readies the host for the start too, a story's
 // and a strategic agent's alike (S-0508, S-0509): containerAllowed before
@@ -2214,6 +2227,7 @@ func (l *launcher) startOf(cfg AgentConfig, run *AgentRun, adapter harness.Adapt
 		return harness.Start{}, nil, err
 	}
 	host := cfg.host(name)
+	host.DenyProtected = cfg.Lifts[name].DenyProtected
 	if name == harness.Container {
 		h, _, err := containerImageHost(l.entry.Root, cfg, innerOf(req.Agent))
 		if err != nil {

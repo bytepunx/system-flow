@@ -4393,3 +4393,217 @@ func TestTwoProjectsUnderOneServeFolderHoldOnOneState(t *testing.T) {
 	one.release(limited)
 	two.release(inTwo)
 }
+
+// openCodeRun is the stream the stub opencode replays: an opencode run
+// --format json in the event shapes of OpenCode v1.19.5 (agent-adapters.md
+// § The --format json events), two steps ending on stop, every event in
+// session openCodeRunSession.
+const (
+	openCodeRun        = "testdata/opencode-run.jsonl"
+	openCodeRunSession = "ses_1f2e3d4c5b6aQwErTyUiOpAsDf"
+)
+
+// openCodeStub has the lab's stories that name opencode run a stub opencode,
+// with nothing lifted and auto-approve on: on each run it records its
+// arguments, its FLAI_ and OPENCODE_ variables, and its directory under the
+// lab's out folder, numbered from 0 per story, its arguments last, so that a
+// run's arguments are there once all three are, replays openCodeRun on its
+// output, and then waits as the lab's stub does.
+func (lab *agentLab) openCodeStub() {
+	lab.t.Helper()
+	stream, err := filepath.Abs(openCodeRun)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	stub := filepath.Join(lab.outDir, "opencode")
+	script := "#!/bin/sh\n" +
+		"trap 'touch \"" + lab.outDir + "/ended-$$\"; exit 143' TERM\n" +
+		"n=$(ls \"" + lab.outDir + "\" | grep -c \"^$FLAI_STORY\\.args\\.\")\n" +
+		"out=\"" + lab.outDir + "/$FLAI_STORY\"\n" +
+		"env | grep -E '^(FLAI|OPENCODE)_' > \"$out.env.$n\"\n" +
+		"pwd -P > \"$out.dir.$n\"\n" +
+		"printf '%s\\0' \"$@\" > \"$out.argv\" && mv \"$out.argv\" \"$out.args.$n\"\n" +
+		"cat \"" + stream + "\"\n" +
+		"while [ -f \"" + lab.outDir + "/hold\" ] && [ ! -f \"" + lab.outDir + "/release-$FLAI_STORY\" ]; do sleep 0.05; done\n" +
+		"touch \"" + lab.outDir + "/ended-$$\"\n"
+	if err := os.WriteFile(stub, []byte(script), 0o755); err != nil {
+		lab.t.Fatal(err)
+	}
+	lab.cfg.Command, lab.cfg.Lifts, lab.cfg.AutoApprove = nil, nil, true
+	lab.cfg.Flai = "/usr/local/bin/flai"
+	lab.cfg.Harnesses = map[string]harness.Host{harness.OpenCode: {Program: stub}}
+}
+
+// openCodeCall is what the stub opencode was given on one run.
+type openCodeCall struct {
+	args []string
+	env  map[string]string
+	dir  string
+}
+
+// openCodeCalls are the stub opencode's runs for story, in the order made.
+func (lab *agentLab) openCodeCalls(story string) []openCodeCall {
+	lab.t.Helper()
+	var calls []openCodeCall
+	for n := 0; ; n++ {
+		file := func(what string) string { return filepath.Join(lab.outDir, fmt.Sprintf("%s.%s.%d", story, what, n)) }
+		args, err := os.ReadFile(file("args"))
+		if err != nil {
+			return calls
+		}
+		env, err := os.ReadFile(file("env"))
+		if err != nil {
+			lab.t.Fatal(err)
+		}
+		dir, err := os.ReadFile(file("dir"))
+		if err != nil {
+			lab.t.Fatal(err)
+		}
+		call := openCodeCall{args: strings.Split(strings.TrimSuffix(string(args), "\x00"), "\x00"), env: map[string]string{}, dir: strings.TrimSpace(string(dir))}
+		for line := range strings.Lines(string(env)) {
+			if k, v, ok := strings.Cut(strings.TrimSuffix(line, "\n"), "="); ok {
+				call.env[k] = v
+			}
+		}
+		calls = append(calls, call)
+	}
+}
+
+// openCodeAgent is a story's agent on opencode, its model as provider/model.
+var openCodeAgent = &manifest.Agent{Harness: harness.OpenCode, Model: "anthropic/claude-opus-5-5"}
+
+// S-0406, ADR-0260: flai serve starts a story's agent on opencode with
+// auto-approve on as opencode run, its events as JSON, its model, and the
+// prompt last, in the project's directory, with flai's MCP server in
+// OPENCODE_CONFIG_CONTENT, no deny rules, and no file of OpenCode's written
+// into the project. When the run ends asking, the session its stream names
+// is recorded, and the start that resumes it on the answer goes on in it.
+func TestAStorysAgentOnOpenCodeStartsAndResumesInItsSession(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.openCodeStub()
+	lab.hold()
+	id := lab.readyWith("Worked by opencode", openCodeAgent)
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs", func() bool { return lab.run(id).live() })
+	first := lab.run(id)
+	lab.move(id, workitem.InProgress)
+	th, err := threads.New(lab.repo, threads.NewOptions{Title: "Which port?", On: id, Author: first.Agent, Text: "Eight or nine?", Now: time.Now()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	lab.release(id)
+	waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+	if r := lab.run(id); r.Outcome != OutcomeAsked || r.Harness != harness.OpenCode || r.Session != openCodeRunSession {
+		t.Fatalf("the run that ended asking, in the session its stream names: %+v", r)
+	}
+	calls := lab.openCodeCalls(id)
+	if len(calls) != 1 {
+		t.Fatalf("%d runs of opencode; want 1", len(calls))
+	}
+	c := calls[0]
+	prompt := c.args[len(c.args)-1]
+	if want := []string{"run", "--format", "json", "--model", "anthropic/claude-opus-5-5"}; !slices.Equal(c.args[:len(c.args)-1], want) || !strings.HasPrefix(prompt, "You are builder-"+id) {
+		t.Errorf("opencode was given %q; want %q and the prompt last", c.args, want)
+	}
+	root, err := filepath.EvalSymlinks(lab.root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.dir != root {
+		t.Errorf("opencode ran in %s; want the project's %s", c.dir, root)
+	}
+	if !strings.Contains(c.env["OPENCODE_CONFIG_CONTENT"], `"command":["/usr/local/bin/flai","mcp","--agent","builder-`+id+`"]`) || c.env["OPENCODE_DISABLE_AUTOUPDATE"] != "1" || c.env["FLAI_STORY"] != id || c.env["FLAI_AGENT"] != "builder-"+id {
+		t.Errorf("opencode's environment: %q", c.env)
+	}
+	if p, ok := c.env["OPENCODE_PERMISSION"]; ok {
+		t.Errorf("deny rules with auto-approve on and deny_protected not set: %s", p)
+	}
+	for _, f := range []string{"opencode.json", "opencode.jsonc", ".opencode", "AGENTS.md"} {
+		if _, err := os.Stat(filepath.Join(lab.root, f)); err == nil {
+			t.Errorf("%s was written into the project", f)
+		}
+	}
+
+	if _, err := threads.Reply(lab.repo, th.ID, "alex", "Nine.", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	lab.l.look(ctx, false)
+	waitFor(t, "it ends again", func() bool { return !lab.run(id).live() })
+	calls = lab.openCodeCalls(id)
+	if len(calls) != 2 {
+		t.Fatalf("%d runs of opencode; want 2, the second resuming: %+v", len(calls), lab.run(id))
+	}
+	again := calls[1]
+	want := []string{"run", "--format", "json", "--model", "anthropic/claude-opus-5-5", "--session", openCodeRunSession}
+	if !slices.Equal(again.args[:len(again.args)-1], want) {
+		t.Errorf("the resumed opencode was given %q; want %q and the prompt last", again.args, want)
+	}
+	if r := lab.run(id); r.Answered != th.ID || r.Error != "" || r.Session != openCodeRunSession {
+		t.Errorf("the resumed run: %+v", r)
+	}
+}
+
+// S-0406, ADR-0131, ADR-0260: opencode can neither run flai guard nor ask
+// before a protected write, so flai serve refuses a story whose agent has
+// roles on it unless the host sets guard none, and any story unless
+// auto-approve is on or the host sets deny_protected for it, naming what
+// lifts each, with no process started. Under deny_protected it starts, and
+// opencode is given the deny rules for the protected paths.
+func TestAStorysAgentOnOpenCodeIsRefusedWhatOpenCodeCannotDo(t *testing.T) {
+	ctx := context.Background()
+	refused := func(t *testing.T, lab *agentLab, id string, want ...string) {
+		t.Helper()
+		r := lab.run(id)
+		if r == nil || r.Outcome != OutcomeFailed || r.PID != 0 || r.Harness != harness.OpenCode {
+			t.Fatalf("run %+v", r)
+		}
+		for _, w := range want {
+			if !strings.Contains(r.Why, w) {
+				t.Errorf("the refusal %q does not say %q", r.Why, w)
+			}
+		}
+		if calls := lab.openCodeCalls(id); len(calls) != 0 {
+			t.Errorf("opencode was started: %+v", calls)
+		}
+	}
+	t.Run("roles without the guard are refused", func(t *testing.T) {
+		lab := newAgentLab(t)
+		lab.openCodeStub()
+		id := lab.readyWith("Roles", &manifest.Agent{Harness: harness.OpenCode, Model: "anthropic/claude-opus-5-5", Roles: map[string]manifest.Role{manifest.RoleVerify: {Model: "sonnet"}}})
+		lab.l.look(ctx, false)
+		refused(t, lab, id, "harness opencode cannot run flai guard", "roles (verify)", "flai serve agent harness opencode --guard none")
+	})
+	t.Run("without auto-approve or deny_protected it is refused", func(t *testing.T) {
+		lab := newAgentLab(t)
+		lab.openCodeStub()
+		lab.cfg.AutoApprove = false
+		id := lab.readyWith("No ask", openCodeAgent)
+		lab.l.look(ctx, false)
+		refused(t, lab, id, "harness opencode cannot ask before a protected write", "flai serve enable auto-approve", "flai serve agent harness opencode --deny-protected")
+	})
+	t.Run("deny_protected starts it with the deny rules", func(t *testing.T) {
+		lab := newAgentLab(t)
+		lab.openCodeStub()
+		lab.cfg.AutoApprove = false
+		lab.cfg.Lifts = map[string]HarnessLifts{harness.OpenCode: {DenyProtected: true}}
+		id := lab.readyWith("Denied", openCodeAgent)
+		lab.l.look(ctx, false)
+		waitFor(t, "it ended", func() bool { r := lab.run(id); return r != nil && r.PID != 0 && !r.live() })
+		calls := lab.openCodeCalls(id)
+		if len(calls) != 1 {
+			t.Fatalf("%d runs of opencode; want 1", len(calls))
+		}
+		var permission struct {
+			Edit map[string]string `json:"edit"`
+		}
+		if err := json.Unmarshal([]byte(calls[0].env["OPENCODE_PERMISSION"]), &permission); err != nil {
+			t.Fatalf("OPENCODE_PERMISSION %q: %v", calls[0].env["OPENCODE_PERMISSION"], err)
+		}
+		for _, p := range []string{".claude/*", "*/.claude/*", ".opencode/*", "opencode.json", ".git/*"} {
+			if permission.Edit[p] != "deny" {
+				t.Errorf("OPENCODE_PERMISSION does not deny %s: %v", p, permission.Edit)
+			}
+		}
+	})
+}
