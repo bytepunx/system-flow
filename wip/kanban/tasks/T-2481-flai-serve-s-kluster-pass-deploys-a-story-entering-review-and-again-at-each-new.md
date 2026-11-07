@@ -3,15 +3,36 @@ id: T-2481
 type: task
 nature: feature
 title: flai serve's kluster pass deploys a story entering review and again at each new head, one deploy at a time per project, and opens one thread on a failed deploy, only while the kluster host action is on
-status: backlog
+status: done
 parent: S-0579
 owner: alex
 created: 2026-11-06T21:44:12Z
-updated: 2026-11-06T21:47:05Z
-transitions: []
+updated: 2026-11-07T02:50:56Z
+transitions:
+  - to: ready
+    at: 2026-11-07T02:38:57Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T02:38:58Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T02:50:56Z
+    by: agent-S-0579
 stream: S-0579
 tags: [kluster, serve]
 touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/serve.go, flai/cmd/serve_actions.go]
+usage:
+  source: log
+  seconds: 718
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 68
+      output: 387
+      cache_read: 10809548
+      cache_write: 90132
+      cost: 3.8894
 ---
 # T-2481 flai serve's kluster pass deploys a story entering review and again at each new head, one deploy at a time per project, and opens one thread on a failed deploy, only while the kluster host action is on
 

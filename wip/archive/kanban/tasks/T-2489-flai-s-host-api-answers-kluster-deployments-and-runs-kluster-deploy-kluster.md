@@ -3,15 +3,36 @@ id: T-2489
 type: task
 nature: feature
 title: flai's host API answers kluster.deployments and runs kluster.deploy, kluster.teardown, and kluster.promote in the background, refusing the writes while the kluster host action is off
-status: backlog
+status: done
 parent: S-0581
 owner: alex
 created: 2026-11-06T21:45:55Z
-updated: 2026-11-06T21:45:55Z
-transitions: []
+updated: 2026-11-07T02:55:06Z
+transitions:
+  - to: ready
+    at: 2026-11-07T02:37:27Z
+    by: agent-S-0581
+  - to: in-progress
+    at: 2026-11-07T02:37:28Z
+    by: agent-S-0581
+  - to: done
+    at: 2026-11-07T02:55:06Z
+    by: agent-S-0581
 stream: S-0581
 tags: [kluster, hostapi]
-touches: [flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go]
+touches: [flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, flaiover/src/lib/server/agent.ts, flai/internal/kluster/deploy.go]
+usage:
+  source: log
+  seconds: 1058
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 58
+      output: 30082
+      cache_read: 8046186
+      cache_write: 131565
+      cost: 3.1347
 ---
 # T-2489 flai's host API answers kluster.deployments and runs kluster.deploy, kluster.teardown, and kluster.promote in the background, refusing the writes while the kluster host action is off
 

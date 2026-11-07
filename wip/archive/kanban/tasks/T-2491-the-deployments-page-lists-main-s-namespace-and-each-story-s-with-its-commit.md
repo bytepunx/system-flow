@@ -3,16 +3,37 @@ id: T-2491
 type: task
 nature: feature
 title: The Deployments page lists main's namespace and each story's with its commit, outcome, logs, and demo access, and deploys, tears down, or promotes through the dashboard's API routes
-status: backlog
+status: done
 parent: S-0581
 owner: alex
 created: 2026-11-06T21:46:17Z
-updated: 2026-11-06T21:46:17Z
-transitions: []
+updated: 2026-11-07T03:03:13Z
+transitions:
+  - to: ready
+    at: 2026-11-07T02:55:37Z
+    by: agent-S-0581
+  - to: in-progress
+    at: 2026-11-07T02:55:38Z
+    by: agent-S-0581
+  - to: done
+    at: 2026-11-07T03:03:13Z
+    by: agent-S-0581
 stream: S-0581
 tags: [kluster, flaiover]
 touches: [flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/repo.ts, flaiover/src/routes/api/kluster/deployments/+server.ts, flaiover/src/routes/api/kluster/deploy/+server.ts, flaiover/src/routes/api/kluster/teardown/+server.ts, flaiover/src/routes/api/kluster/promote/+server.ts, flaiover/src/routes/api/kluster/deployments.test.ts, flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/routes/ops/deployments/deployments.svelte.test.ts]
 after: [T-2489, T-2490]
+usage:
+  source: log
+  seconds: 455
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 67
+      output: 34980
+      cache_read: 9356272
+      cache_write: 152987
+      cost: 3.6451
 ---
 # T-2491 The Deployments page lists main's namespace and each story's with its commit, outcome, logs, and demo access, and deploys, tears down, or promotes through the dashboard's API routes
 

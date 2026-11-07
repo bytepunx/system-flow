@@ -3,16 +3,37 @@ id: T-2492
 type: task
 nature: feature
 title: The dashboard design, the dashboard guide, and the kluster design describe the Deployments page
-status: backlog
+status: done
 parent: S-0581
 owner: alex
 created: 2026-11-06T21:46:22Z
-updated: 2026-11-06T21:46:22Z
-transitions: []
+updated: 2026-11-07T03:05:56Z
+transitions:
+  - to: ready
+    at: 2026-11-07T03:03:32Z
+    by: agent-S-0581
+  - to: in-progress
+    at: 2026-11-07T03:03:33Z
+    by: agent-S-0581
+  - to: done
+    at: 2026-11-07T03:05:56Z
+    by: agent-S-0581
 stream: S-0581
 tags: [kluster, docs]
 touches: [design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/system/kluster.md]
 after: [T-2491]
+usage:
+  source: log
+  seconds: 143
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 34
+      output: 17704
+      cache_read: 4735426
+      cache_write: 77430
+      cost: 1.8449
 ---
 # T-2492 The dashboard design, the dashboard guide, and the kluster design describe the Deployments page
 

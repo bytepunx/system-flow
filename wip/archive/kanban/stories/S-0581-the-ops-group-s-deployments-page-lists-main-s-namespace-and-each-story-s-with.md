@@ -3,11 +3,11 @@ id: S-0581
 type: story
 nature: feature
 title: The Ops group's Deployments page lists main's namespace and each story's, with its commit, outcome, log, and how to reach it for a demo, and deploys, tears down, or promotes through flai
-status: in-progress
+status: done
 parent: E-0032
 owner: alex
 created: 2026-11-06T21:40:41Z
-updated: 2026-11-07T02:35:50Z
+updated: 2026-11-07T03:14:42Z
 transitions:
   - to: ready
     at: 2026-11-07T00:52:07Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-11-07T02:35:50Z
     by: agent-S-0581
+  - to: review
+    at: 2026-11-07T03:13:08Z
+    by: agent-S-0581
+  - to: done
+    at: 2026-11-07T03:14:42Z
+    by: orchestrator
 tags: [kluster, flaiover, hostapi]
 topics: [kluster, dashboard, deployment]
-touches: [flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/repo.ts, flaiover/src/routes/api/kluster/deployments/+server.ts, flaiover/src/routes/api/kluster/deploy/+server.ts, flaiover/src/routes/api/kluster/teardown/+server.ts, flaiover/src/routes/api/kluster/promote/+server.ts, flaiover/src/routes/api/kluster/deployments.test.ts, flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/routes/ops/deployments/deployments.svelte.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/system/kluster.md]
+touches: [flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/repo.ts, flaiover/src/routes/api/kluster/deployments/+server.ts, flaiover/src/routes/api/kluster/deploy/+server.ts, flaiover/src/routes/api/kluster/teardown/+server.ts, flaiover/src/routes/api/kluster/promote/+server.ts, flaiover/src/routes/api/kluster/deployments.test.ts, flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/routes/ops/deployments/deployments.svelte.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/system/kluster.md, flai/internal/kluster/deploy.go]
 after: [S-0578, S-0580]
 agent:
   harness: claude-code
@@ -25,20 +31,32 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2263
+  priced_by: harness
+  turns:
+    - day: 2026-11-07
+      ceremony: 1
+      hand_edits: 2
+      work: 39
+  models:
+    - model: claude-opus-5-5
+      input: 208
+      output: 108275
+      cache_read: 28961228
+      cache_write: 473552
+      cost: 11.2831
   strategic:
     - kind: orchestrator
-      seconds: 30
+      seconds: 40
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 9
-          output: 60
-          cache_read: 341931
-          cache_write: 53189
-          cost: 0.0947
+          input: 13
+          output: 88
+          cache_read: 530372
+          cache_write: 56190
+          cost: 0.141
 cost_of_delay:
   value: 114.38
   by: planner-E-0032
@@ -61,13 +79,13 @@ The operator demos or tries a story's build from the dashboard, without waiting 
 
 ## Acceptance criteria
 
-- [ ] flai's host API gains a read, `kluster.deployments`, and three writes, `kluster.deploy` (with a story), `kluster.teardown` (with a story), and `kluster.promote`, which run what S-0578's commands run. The writes are refused, with flai's own sentence, while the project's `kluster` host action is off.
-- [ ] The rail's Ops group gains Deployments, at `/ops/deployments`, after Klusters. `sitemenu.test.ts` pins it.
-- [ ] The page lists the default namespace first, then each story's: the story's ID and title linking its item page, the namespace, the commit, when it was deployed, the outcome, and a link to each step's log. While a deploy runs, the page shows it running and refreshes until it ends.
-- [ ] Each row has the actions that fit it. A story in review that is not deployed, or deployed at an older commit, can be deployed. A story's namespace can be torn down, with confirmation first. Main can be promoted. flai's refusal or error text is shown verbatim.
-- [ ] Each deployment shows how to reach it for a demo, as S-0576's ADR decides, such as the hosts its services answer on and the port-forward command to run.
-- [ ] Page, route, and host API tests cover the list, each write, a refusal while the action is off, a running deploy, and an empty cluster.
-- [ ] `design/system/flaiover-dashboard.md` § Views and `docs/users/flaiover.md` describe the Deployments page.
+- [x] flai's host API gains a read, `kluster.deployments`, and three writes, `kluster.deploy` (with a story), `kluster.teardown` (with a story), and `kluster.promote`, which run what S-0578's commands run. The writes are refused, with flai's own sentence, while the project's `kluster` host action is off.
+- [x] The rail's Ops group gains Deployments, at `/ops/deployments`, after Klusters. `sitemenu.test.ts` pins it.
+- [x] The page lists the default namespace first, then each story's: the story's ID and title linking its item page, the namespace, the commit, when it was deployed, the outcome, and a link to each step's log. While a deploy runs, the page shows it running and refreshes until it ends.
+- [x] Each row has the actions that fit it. A story in review that is not deployed, or deployed at an older commit, can be deployed. A story's namespace can be torn down, with confirmation first. Main can be promoted. flai's refusal or error text is shown verbatim.
+- [x] Each deployment shows how to reach it for a demo, as S-0576's ADR decides, such as the hosts its services answer on and the port-forward command to run.
+- [x] Page, route, and host API tests cover the list, each write, a refusal while the action is off, a running deploy, and an empty cluster.
+- [x] `design/system/flaiover-dashboard.md` § Views and `docs/users/flaiover.md` describe the Deployments page.
 
 ## Tasks
 
@@ -96,3 +114,17 @@ The operator demos or tries a story's build from the dashboard, without waiting 
   - Layer 3: T-2492 (documents).
 - Forecast 42m: `flai forecast` as it stands, 107 s per unit over 110 large feature stories on claude-opus-5-5, at size 23.
 - Cost of delay 114.38 USD/week: `flai cod`'s share of E-0032's 1250 USD/week revenue input (alex, TH-0829), by forecast duration. It stands as flai gives it.
+
+### Accepted by the orchestrator
+
+- Verified: 409d27b117c88e4fc443e1c9ca1bf5d050795525
+- At: 2026-11-07T03:14:42Z
+
+Verdict: pass — all seven criteria are met, the close-out passed at 409d27b, and every changed file is inside the story's touches.
+- 1: flai/internal/hostapi/kluster.go, flai/internal/kluster/deploy.go, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/repo.ts, flaiover/src/routes/api/kluster/deployments/+server.ts, flaiover/src/routes/api/kluster/deploy/+server.ts, flaiover/src/routes/api/kluster/teardown/+server.ts, flaiover/src/routes/api/kluster/promote/+server.ts
+- 2: flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/routes/ops/deployments/+page.svelte
+- 3: flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/lib/server/repo.ts, flai/internal/hostapi/kluster.go
+- 4: flaiover/src/routes/ops/deployments/+page.svelte
+- 5: flai/internal/hostapi/kluster.go, flaiover/src/routes/ops/deployments/+page.svelte, design/system/kluster.md
+- 6: flai/internal/hostapi/kluster_test.go, flaiover/src/routes/api/kluster/deployments.test.ts, flaiover/src/routes/ops/deployments/deployments.svelte.test.ts, flaiover/src/lib/sitemenu.test.ts
+- 7: design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/system/kluster.md

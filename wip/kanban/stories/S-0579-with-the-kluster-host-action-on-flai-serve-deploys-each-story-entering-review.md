@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0032
 owner: alex
 created: 2026-11-06T21:40:13Z
-updated: 2026-11-07T02:36:31Z
+updated: 2026-11-07T03:05:32Z
 transitions:
   - to: ready
     at: 2026-11-07T00:52:00Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0579
 tags: [kluster, flai, serve]
 topics: [kluster, deployment, testing, review, host-actions]
-touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/serve.go, flai/cmd/serve_actions.go, flai/internal/serve/checks.go, flai/internal/serve/checks_test.go, docs/operators/index.md, design/system/kluster.md, docs/users/flaiover.md]
+touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/serve.go, flai/cmd/serve_actions.go, flai/internal/serve/checks.go, flai/internal/serve/checks_test.go, docs/operators/index.md, design/system/kluster.md, docs/users/flaiover.md, flai/cmd/checks.go, flai/cmd/serve.go]
 after: [S-0578]
 agent:
   harness: claude-code
@@ -25,20 +25,33 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2241
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-07
+      ceremony: 1
+      hand_edits: 3
+      work: 39
+  models:
+    - model: claude-opus-5-5
+      input: 226
+      output: 1424
+      cache_read: 33175752
+      cache_write: 502707
+      cost: 12.0178
   strategic:
     - kind: orchestrator
-      seconds: 41
+      seconds: 52
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 13
-          output: 77
-          cache_read: 459598
-          cache_write: 67223
-          cost: 0.1262
+          input: 17
+          output: 105
+          cache_read: 648040
+          cache_write: 70224
+          cost: 0.1725
 cost_of_delay:
   value: 163.4
   by: planner-E-0032

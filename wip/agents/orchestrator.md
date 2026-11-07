@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1981.6039
-accrued_seconds: 1510111
-tasks_completed: 1882
-last_run: 2026-11-07T02:35:01Z
+accrued_cost: 1982.1417
+accrued_seconds: 1510261
+tasks_completed: 1888
+last_run: 2026-11-07T02:38:05Z
 ---
 
 # Orchestrator activity
@@ -13205,6 +13205,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 93
 - Cost: 0.2976 USD, estimated
 
+### 2026-11-07T02:35:49Z
+
+- Summary: Accepted S-0578 at 9728de8 under accept_reviews (verify passed, verifier matched all 7 criteria, no blockers); merged, archived, committed. Unblocks S-0579 and S-0581 (after S-0578)
+- Items: S-0578
+- Seconds: 44
+- Cost: 0.1078 USD, estimated
+
+### 2026-11-07T02:36:22Z
+
+- Summary: Decided not to publish after accepting S-0578. Policy judgement: 6 pending (S-0520, S-0545, S-0577, S-0578, S-0580, S-0582), 388.63 USD/week, not met. E-0032's kluster work is mid-epic (S-0579, S-0581 just unblocked), and the publish formula's evaluate step (--require-met) always stops under judgement, as TH-0811 already asks the operator
+- Items: S-0578
+- Seconds: 33
+- Cost: 0.0223 USD, estimated
+
+### 2026-11-07T02:36:43Z
+
+- Summary: Ready column changed (S-0579, S-0581 pulled to in-progress after S-0578's acceptance); ran flai order --by throughput --apply: no ready stories to order
+- Items: S-0579, S-0581
+- Seconds: 21
+- Cost: 0.0925 USD, estimated
+
+### 2026-11-07T02:37:00Z
+
+- Summary: I accepted S-0578 as the orchestrator at commit 9728de8. Its branch is merged into main and archived, and the acceptance is committed as `chore: [S-0578] accept and archive`.
+- Items: none
+- Seconds: 17
+- Cost: 0.1091 USD, estimated
+
+### 2026-11-07T02:37:50Z
+
+- Summary: release-due S-0578: did not publish. release_evaluate: policy judgement, met false, count 6, 388.63 USD/week (S-0520 25, S-0545 20, S-0577 128, S-0578 73.53, S-0580 117.1, S-0582 25), nothing held_by_epic. I judge the batch incomplete: E-0032's kluster work is mid-epic (S-0579, S-0581 in progress). Under judgement the publish formula's step 2 (release --evaluate --require-met) always stops, and release_publish refuses beside the formula (ADR-0240); orchestration.release still has only value: 1000, and TH-0811 still awaits the operator. No instance started, no new thread.
+- Items: S-0578
+- Seconds: 20
+- Cost: 0.0888 USD, estimated
+
+### 2026-11-07T02:38:05Z
+
+- Summary: I didn't publish a release after S-0578 was accepted, and nothing in this project can publish until you answer TH-0811.
+- Items: none
+- Seconds: 15
+- Cost: 0.1173 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -13685,4 +13727,9 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-11-07T02:34:42Z
 
 - Call: `git range-diff 74529b1~1..74529b1 main..story/S-0578 2>&1`
+- Needs: none
+
+### 2026-11-07T02:36:36Z
+
+- Call: `flai order --by throughput --apply 2>&1`
 - Needs: none

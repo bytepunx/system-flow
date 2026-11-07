@@ -3,15 +3,36 @@ id: T-2490
 type: task
 nature: feature
 title: The rail's Ops group gains Deployments at /ops/deployments, after Klusters
-status: backlog
+status: done
 parent: S-0581
 owner: alex
 created: 2026-11-06T21:46:00Z
-updated: 2026-11-06T21:46:00Z
-transitions: []
+updated: 2026-11-07T02:55:19Z
+transitions:
+  - to: ready
+    at: 2026-11-07T02:37:29Z
+    by: agent-S-0581
+  - to: in-progress
+    at: 2026-11-07T02:37:30Z
+    by: agent-S-0581
+  - to: done
+    at: 2026-11-07T02:55:19Z
+    by: agent-S-0581
 stream: S-0581
 tags: [kluster, flaiover]
-touches: [flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts]
+touches: [flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/routes/ops/deployments/+page.svelte]
+usage:
+  source: log
+  seconds: 1069
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 6455
+      cache_read: 1726543
+      cache_write: 28231
+      cost: 0.6726
 ---
 # T-2490 The rail's Ops group gains Deployments at /ops/deployments, after Klusters
 
